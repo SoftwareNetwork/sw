@@ -1,0 +1,18 @@
+# tex generated files
+*.log
+*.synctex.gz
+*.aux
+*.toc
+*.pdf
+*.blg
+
+# build files and directories
+/build*
+/win*
+
+/packages
+
+/*.bat
+
+*~
+*.user
