@@ -719,7 +719,7 @@ Project Config::load_project(const YAML::Node &root)
         p.include_directories.public_ = get_sequence_set<path, String>(n, "public");
         p.include_directories.private_ = get_sequence_set<path, String>(n, "private");
     });
-    if (p.include_directories.empty())
+    if (p.include_directories.public_.empty())
         p.include_directories.public_.insert("include");
 
     p.exclude_from_build = get_sequence_set<path, String>(root, "exclude_from_build");
