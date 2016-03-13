@@ -4,9 +4,11 @@ Use wiki to get help with CPPAN.
 
 Use issues to put your feedback, bugs and other stuff.
 
-## Client
+## Client binaries
 
 https://cppan.org/client/
+
+Binaries depends on gcc-5 ABI on linux and VC2015 redist on Windows.
 
 ## Build
 
