@@ -17,4 +17,4 @@ https://cppan.org/client/
     cmake ..
     make -j4
 
-On Windows you should download the latest LibreSSL and put it into 'dep/libressl' directory.
+On Windows you should download the latest LibreSSL and put it into 'dep/libressl' directory before cmake step.
