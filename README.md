@@ -2,7 +2,7 @@
 
 https://cppan.org/
 
-See [docs](https://github.com/cppan/cppan/tree/master/doc) to get help with CPPAN.
+Read [wiki](https://github.com/cppan/cppan/wiki) to get help with CPPAN.
 
 Use issues to put your feedback, bugs and other stuff.
 
