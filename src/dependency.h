@@ -25,6 +25,7 @@ struct Dependency
 {
     using Dependencies = std::map<String, Dependency>;
 
+    ProjectVersionId id;
     ProjectPath package;
     Version version;
     ProjectFlags flags;

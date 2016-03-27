@@ -36,12 +36,8 @@
 using String = std::string;
 using Strings = std::vector<String>;
 
-using UserId = uint64_t;
-using ProjectId = uint64_t;
 using ProjectVersionId = uint64_t;
 using ProjectVersionNumber = int32_t;
-using DownloadCount = uint64_t;
-using ProjectName = String;
 
 std::tuple<int, String> system_with_output(const String &cmd);
 std::tuple<int, String> system_with_output(const std::vector<String> &args);
