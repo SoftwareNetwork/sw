@@ -12,11 +12,11 @@ add_definitions(-DUSE_LOGGER=1)
 
 if (WIN32)
     add_definitions(-DLIBARCHIVE_STATIC)
-    include_directories(${CMAKE_SOURCE_DIR}/dep/libarchive)
-    include_directories(${CMAKE_SOURCE_DIR}/dep/libressl/include)
+    include_directories(${PROJECT_SOURCE_DIR}/dep/libarchive)
+    include_directories(${PROJECT_SOURCE_DIR}/dep/libressl/include)
 
     add_definitions(-DCURL_STATICLIB=1)
-    include_directories(${CMAKE_SOURCE_DIR}/dep/curl/include)
+    include_directories(${PROJECT_SOURCE_DIR}/dep/curl/include)
     include_directories(${CMAKE_BINARY_DIR}/dep/curl/include)
     include_directories(${CMAKE_BINARY_DIR}/dep/curl/include/curl)
 else()
@@ -25,7 +25,7 @@ else()
     include_directories(${OPENSSL_INCLUDE_DIR})
 endif()
 
-include_directories(${CMAKE_SOURCE_DIR}/dep/yaml-cpp/include)
+include_directories(${PROJECT_SOURCE_DIR}/dep/yaml-cpp/include)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
