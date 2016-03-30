@@ -1329,6 +1329,10 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
     }
 
     ctx.emptyLines(1);
+    ctx.addLine("set(lib " + pi.target_name + ")");
+    ctx.addLine("set(target " + pi.target_name + ")");
+
+    ctx.emptyLines(1);
 
     print_bs_insertion("post target", &BuildSystemConfigInsertions::post_target);
 
