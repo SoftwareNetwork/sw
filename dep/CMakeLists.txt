@@ -8,6 +8,9 @@ set(ENABLE_CPIO OFF)
 set(ENABLE_TAR OFF)
 set(ENABLE_CAT OFF)
 
+set(HAVE_WCSCPY 1)
+set(HAVE_WCSLEN 1)
+
 set(ZLIB_LIBRARY zlib)
 set(ZLIB_INCLUDE_DIR zlib)
 
