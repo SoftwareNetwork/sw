@@ -1388,7 +1388,7 @@ void Config::print_meta_config_file() const
     ctx.addLine();
 
     config_section_title(ctx, "variables");
-    ctx.addLine("set(USE_CPPAN 1 CACHE STRING \"CPPAN is turned on\")");
+    ctx.addLine("set(USES_CPPAN 1 CACHE STRING \"CPPAN is turned on\")");
     ctx.addLine();
     ctx.addLine("set(CPPAN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})");
     ctx.addLine("set(CPPAN_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})");
