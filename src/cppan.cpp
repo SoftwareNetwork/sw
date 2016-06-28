@@ -1349,6 +1349,12 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
         ctx.addLine();
     }
 
+    // export
+    config_section_title(ctx, "export");
+    ctx.addLine("export(TARGETS " + pi.target_name + " APPEND FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
+
+    ctx.emptyLines(1);
+
     print_bs_insertion("post alias", &BuildSystemConfigInsertions::post_alias);
 
     // eof
@@ -1382,6 +1388,8 @@ void Config::print_meta_config_file() const
     ctx.addLine();
 
     config_section_title(ctx, "variables");
+    ctx.addLine("set(USE_CPPAN 1 CACHE STRING \"CPPAN is turned on\")");
+    ctx.addLine();
     ctx.addLine("set(CPPAN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})");
     ctx.addLine("set(CPPAN_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})");
     ctx.addLine();
@@ -1465,7 +1473,9 @@ void Config::print_meta_config_file() const
         ctx.addLine(")");
         ctx.addLine();
     }
+    ctx.addLine("export(TARGETS " + cppan_project_name + " APPEND FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
 
+    ctx.emptyLines(1);
     ctx.addLine(config_delimeter);
     ctx.addLine();
 
@@ -1598,6 +1608,9 @@ include(TestBigEndian))");
     ctx.decreaseIndent();
     ctx.addLine(")");
     ctx.addLine();
+    // Do not use APPEND here. It's the first file that will clear cppan.cmake.
+    ctx.addLine("export(TARGETS cppan-helpers FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
+    ctx.emptyLines(1);
 
     config_section_title(ctx, "definitions");
 
