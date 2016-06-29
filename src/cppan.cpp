@@ -730,6 +730,7 @@ Project Config::load_project(const YAML::Node &root)
     });
     if (p.include_directories.public_.empty())
         p.include_directories.public_.insert("include");
+    p.include_directories.public_.insert("${CMAKE_CURRENT_BINARY_DIR}");
 
     p.exclude_from_build = get_sequence_set<path, String>(root, "exclude_from_build");
 
@@ -749,6 +750,7 @@ Project Config::load_project(const YAML::Node &root)
         option.include_directories = get_sequence_set<String, String>(opt_level.second, "include_directories");
         option.link_directories = get_sequence_set<String, String>(opt_level.second, "link_directories");
         option.link_libraries = get_sequence_set<String, String>(opt_level.second, "link_libraries");
+        option.global_definitions = get_sequence_set<String, String>(opt_level.second, "global_definitions");
 
         option.bs_insertions.get_config_insertions(opt_level.second);
     });
@@ -1326,6 +1328,9 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
             print_options();
             ctx.addLine("endif()");
         }
+
+        if (!ol.second.global_definitions.empty())
+            parent.global_options[ol.first].global_definitions.insert(ol.second.global_definitions.begin(), ol.second.global_definitions.end());
     }
 
     ctx.emptyLines(1);
@@ -1515,6 +1520,9 @@ include(TestBigEndian))");
     config_section_title(ctx, "common checks");
 
     ctx.addLine("test_big_endian(WORDS_BIGENDIAN)");
+    // aliases
+    ctx.addLine("set(BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
+    ctx.addLine("set(BIGENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
     ctx.addLine();
 
     config_section_title(ctx, "checks");
@@ -1605,6 +1613,12 @@ include(TestBigEndian))");
     ctx << "target_compile_definitions(cppan-helpers" << Context::eol;
     ctx.increaseIndent();
     ctx.addLine("INTERFACE CPPAN"); // build is performed under CPPAN
+    // gather global defines
+    for (auto &o : global_options)
+    {
+        for (auto &opt : o.second.global_definitions)
+            ctx.addLine("INTERFACE " + opt);
+    }
     ctx.decreaseIndent();
     ctx.addLine(")");
     ctx.addLine();

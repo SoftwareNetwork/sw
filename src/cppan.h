@@ -94,6 +94,7 @@ struct Options
     StringSet include_directories;
     StringSet link_directories;
     StringSet link_libraries;
+    StringSet global_definitions;
 };
 
 struct Project
@@ -145,6 +146,7 @@ struct Config
     StringSet check_libraries;
     BuildSystemConfigInsertions bs_insertions;
     std::map<String, Options> options;
+    std::map<String, Options> global_options;
 
     Config();
     Config(const path &p);
