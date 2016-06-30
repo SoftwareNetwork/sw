@@ -423,11 +423,38 @@ size_t write_string(char *ptr, size_t size, size_t nmemb, void *userdata)
     return read;
 }
 
-String url_post(const String &url, const String &data)
+String url_post(const String &url, const String &data, const Config *config = nullptr)
 {
+    std::string proxy_addr;
+    std::wstring wproxy_addr;
+#ifdef _WIN32
+    WINHTTP_PROXY_INFO proxy = { 0 };
+    WINHTTP_CURRENT_USER_IE_PROXY_CONFIG proxy2 = { 0 };
+    if (WinHttpGetDefaultProxyConfiguration(&proxy) && proxy.lpszProxy)
+        wproxy_addr = proxy.lpszProxy;
+    else if (WinHttpGetIEProxyConfigForCurrentUser(&proxy2) && proxy2.lpszProxy)
+        wproxy_addr = proxy2.lpszProxy;
+    proxy_addr = wstring2string(wproxy_addr);
+#endif
+
     auto curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    // proxy settings
+    if (!proxy_addr.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+    }
+    if (config && !config->proxy_host.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, config->proxy_host.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+        if (!config->proxy_user.empty())
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, config->proxy_user);
+    }
+
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_string);
     if (url.find("https") == 0)
@@ -444,7 +471,7 @@ String url_post(const String &url, const String &data)
     return response;
 }
 
-ptree url_post(const String &url, const ptree &data)
+ptree url_post(const String &url, const ptree &data, const Config *config = nullptr)
 {
     ptree p;
     std::ostringstream oss;
@@ -453,42 +480,7 @@ ptree url_post(const String &url, const ptree &data)
         , false
 #endif
         );
-    String s = oss.str();
-
-    std::string proxy_addr;
-    std::wstring wproxy_addr;
-#ifdef _WIN32
-    WINHTTP_PROXY_INFO proxy = { 0 };
-    WINHTTP_CURRENT_USER_IE_PROXY_CONFIG proxy2 = { 0 };
-    if (WinHttpGetDefaultProxyConfiguration(&proxy) && proxy.lpszProxy)
-        wproxy_addr = proxy.lpszProxy;
-    else if (WinHttpGetIEProxyConfigForCurrentUser(&proxy2) && proxy2.lpszProxy)
-        wproxy_addr = proxy2.lpszProxy;
-    proxy_addr = wstring2string(wproxy_addr);
-#endif
-
-    auto curl = curl_easy_init();
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-    if (!proxy_addr.empty())
-    {
-        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
-        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-    }
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, s.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_string);
-    if (url.find("https") == 0)
-    {
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
-    }
-    String response;
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    auto res = curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
-    if (res != CURLE_OK)
-        throw std::runtime_error(String(curl_easy_strerror(res)));
-    std::istringstream iss(response);
+    std::istringstream iss(url_post(url, oss.str(), config));
     pt::read_json(iss, p);
     return p;
 }
@@ -686,6 +678,8 @@ void Config::load_common(const YAML::Node &root)
 #define EXTRACT_AUTO(val) EXTRACT(val, decltype(val))
 
     EXTRACT_AUTO(host);
+    EXTRACT_AUTO(proxy_host);
+    EXTRACT_AUTO(proxy_user);
     EXTRACT(storage_dir, String);
     EXTRACT(root_project, String);
 
@@ -951,7 +945,7 @@ void Config::download_dependencies()
         return;
 
     LOG("Requesting dependency list");
-    dependency_tree = url_post(url + "/api/find_dependencies", data);
+    dependency_tree = url_post(url + "/api/find_dependencies", data, this);
 
     // 4. read deps urls
     // 5. download them

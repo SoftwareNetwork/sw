@@ -34,6 +34,26 @@
 int main(int argc, char *argv[])
 try
 {
+    // default run
+    if (argc == 1)
+    {
+        auto c = Config::load_user_config();
+        c.load_current_config();
+        c.download_dependencies();
+        c.create_build_files();
+        return 0;
+    }
+
+    // command selector
+    if (argv[1][0] != '-')
+    {
+        // config
+        // self-upgrade
+        return 0;
+    }
+
+    // default command run
+
     ProgramOptions options;
     bool r = options.parseArgs(argc, argv);
     if (!r || options().count("help"))
@@ -43,7 +63,7 @@ try
     }
     if (options["version"].as<bool>())
     {
-        std::cout << get_program_version_string("cppan");
+        std::cout << get_program_version_string("cppan") << "\n";
         return 0;
     }
     if (options().count("dir"))
