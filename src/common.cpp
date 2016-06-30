@@ -27,7 +27,9 @@
 
 #include "common.h"
 
+#include <codecvt>
 #include <fstream>
+#include <locale>
 #include <random>
 #include <regex>
 
@@ -455,4 +457,22 @@ bool check_filename(const String &s, String *error)
         }
     }
     return true;
+}
+
+inline auto& get_string_converter()
+{
+    static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter;
+}
+
+std::wstring string2wstring(const std::string &s)
+{
+    auto &converter = get_string_converter();
+    return converter.from_bytes(s.c_str());
+}
+
+std::string wstring2string(const std::wstring &s)
+{
+    auto &converter = get_string_converter();
+    return converter.to_bytes(s.c_str());
 }

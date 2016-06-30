@@ -123,3 +123,6 @@ struct Version
 
 Version get_program_version();
 String get_program_version_string(const String &prog_name);
+
+std::wstring string2wstring(const std::string &s);
+std::string wstring2string(const std::wstring &s);

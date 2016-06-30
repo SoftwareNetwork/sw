@@ -37,6 +37,11 @@
 #include <curl/easy.h>
 
 #ifdef WIN32
+#include <windows.h>
+
+#include <Winhttp.h>
+#pragma comment (lib, "Winhttp.lib")
+
 #include <libarchive/archive.h>
 #include <libarchive/archive_entry.h>
 #else
@@ -449,9 +454,27 @@ ptree url_post(const String &url, const ptree &data)
 #endif
         );
     String s = oss.str();
+
+    std::string proxy_addr;
+    std::wstring wproxy_addr;
+#ifdef _WIN32
+    WINHTTP_PROXY_INFO proxy = { 0 };
+    WINHTTP_CURRENT_USER_IE_PROXY_CONFIG proxy2 = { 0 };
+    if (WinHttpGetDefaultProxyConfiguration(&proxy) && proxy.lpszProxy)
+        wproxy_addr = proxy.lpszProxy;
+    else if (WinHttpGetIEProxyConfigForCurrentUser(&proxy2) && proxy2.lpszProxy)
+        wproxy_addr = proxy2.lpszProxy;
+    proxy_addr = wstring2string(wproxy_addr);
+#endif
+
     auto curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+    if (!proxy_addr.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+    }
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, s.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_string);
     if (url.find("https") == 0)
