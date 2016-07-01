@@ -39,9 +39,6 @@
 #ifdef WIN32
 #include <windows.h>
 
-#include <Winhttp.h>
-#pragma comment (lib, "Winhttp.lib")
-
 #include <libarchive/archive.h>
 #include <libarchive/archive_entry.h>
 #else
@@ -425,34 +422,23 @@ size_t write_string(char *ptr, size_t size, size_t nmemb, void *userdata)
 
 String url_post(const String &url, const String &data, const Config *config = nullptr)
 {
-    std::string proxy_addr;
-    std::wstring wproxy_addr;
-#ifdef _WIN32
-    WINHTTP_PROXY_INFO proxy = { 0 };
-    WINHTTP_CURRENT_USER_IE_PROXY_CONFIG proxy2 = { 0 };
-    if (WinHttpGetDefaultProxyConfiguration(&proxy) && proxy.lpszProxy)
-        wproxy_addr = proxy.lpszProxy;
-    else if (WinHttpGetIEProxyConfigForCurrentUser(&proxy2) && proxy2.lpszProxy)
-        wproxy_addr = proxy2.lpszProxy;
-    proxy_addr = wstring2string(wproxy_addr);
-#endif
-
     auto curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 
     // proxy settings
+    auto proxy_addr = getAutoProxy();
     if (!proxy_addr.empty())
     {
         curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
         curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
     }
-    if (config && !config->proxy_host.empty())
+    if (config && !config->proxy.host.empty())
     {
-        curl_easy_setopt(curl, CURLOPT_PROXY, config->proxy_host.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXY, config->proxy.host.c_str());
         curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-        if (!config->proxy_user.empty())
-            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, config->proxy_user);
+        if (!config->proxy.user.empty())
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, config->proxy.user);
     }
 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
@@ -669,17 +655,19 @@ void Config::load_common(const path &p)
 
 void Config::load_common(const YAML::Node &root)
 {
-#define EXTRACT(val, type) \
-    do { \
-        auto &n_##val = root[#val]; \
-        if (n_##val.IsDefined()) \
-            val = n_##val.as<type>(); \
+#define EXTRACT_VAR(val, var, type) \
+    do                              \
+    {                               \
+        auto &v = root[var];       \
+        if (v.IsDefined())          \
+            val = v.as<type>();     \
     } while (0)
+#define EXTRACT(val, type) EXTRACT_VAR(val, #val, type)
 #define EXTRACT_AUTO(val) EXTRACT(val, decltype(val))
 
     EXTRACT_AUTO(host);
-    EXTRACT_AUTO(proxy_host);
-    EXTRACT_AUTO(proxy_user);
+    EXTRACT_VAR(proxy.host, "proxy_host", String);
+    EXTRACT_VAR(proxy.user, "proxy_user", String);
     EXTRACT(storage_dir, String);
     EXTRACT(root_project, String);
 
@@ -1058,6 +1046,7 @@ void Config::download_dependencies()
             dd.url = package_url;
             dd.fn = fn;
             dd.dl_md5 = &dl_md5;
+            dd.proxy = proxy;
             LOG("Downloading: " << dep.package.toString() << "-" << dep.version.toString());
             download_file(dd);
 

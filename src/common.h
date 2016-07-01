@@ -62,6 +62,14 @@ String make_archive_name(const String &fn);
 path temp_directory_path();
 path get_temp_filename();
 
+struct ProxySettings
+{
+    String host;
+    String user;
+};
+
+String getAutoProxy();
+
 struct DownloadData
 {
     String url;
@@ -69,6 +77,7 @@ struct DownloadData
     int64_t file_size_limit = 1 * 1024 * 1024;
     String *dl_md5 = nullptr;
     std::ofstream *ofile = nullptr;
+    ProxySettings proxy;
 
     DownloadData();
     ~DownloadData();

@@ -37,6 +37,11 @@
 #include <curl/easy.h>
 
 #ifdef WIN32
+#include <windows.h>
+
+#include <Winhttp.h>
+#pragma comment (lib, "Winhttp.lib")
+
 #include <libarchive/archive.h>
 #include <libarchive/archive_entry.h>
 #else
@@ -341,6 +346,22 @@ void download_file(DownloadData &data)
     auto curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, data.url.c_str());
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    // proxy settings
+    auto proxy_addr = getAutoProxy();
+    if (!proxy_addr.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+    }
+    if (data.proxy.host.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, data.proxy.host.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+        if (!data.proxy.user.empty())
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, data.proxy.user);
+    }
+
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_file);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
     curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, transfer_info);
@@ -475,4 +496,20 @@ std::string wstring2string(const std::wstring &s)
 {
     auto &converter = get_string_converter();
     return converter.to_bytes(s.c_str());
+}
+
+String getAutoProxy()
+{
+    String proxy_addr;
+    std::wstring wproxy_addr;
+#ifdef _WIN32
+    WINHTTP_PROXY_INFO proxy = { 0 };
+    WINHTTP_CURRENT_USER_IE_PROXY_CONFIG proxy2 = { 0 };
+    if (WinHttpGetDefaultProxyConfiguration(&proxy) && proxy.lpszProxy)
+        wproxy_addr = proxy.lpszProxy;
+    else if (WinHttpGetIEProxyConfigForCurrentUser(&proxy2) && proxy2.lpszProxy)
+        wproxy_addr = proxy2.lpszProxy;
+    proxy_addr = wstring2string(wproxy_addr);
+#endif
+    return proxy_addr;
 }

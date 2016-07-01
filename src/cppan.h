@@ -135,8 +135,7 @@ PackagesDirType packages_dir_type_from_string(const String &s);
 struct Config
 {
     String host{ "https://cppan.org/" };
-    String proxy_host;
-    String proxy_user;
+    ProxySettings proxy;
     PackagesDirType packages_dir_type{ PackagesDirType::User };
     path storage_dir;
     ProjectPath root_project;
