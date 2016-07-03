@@ -352,7 +352,7 @@ void get_string_map(const YAML::Node &node, const String &key, T &data)
         if (!n.IsMap())
             throw std::runtime_error("'" + key + "' should be a map");
         for (const auto &v : n)
-            data[v.first.as<String>()] = v.second.as<String>();
+            data.emplace(v.first.as<String>(), v.second.as<String>());
     }
 };
 

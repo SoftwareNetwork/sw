@@ -52,7 +52,7 @@ struct PackageInfo
     PackageInfo(const Dependency &d);
 };
 
-using Definitions = std::map<String, String>;
+using Definitions = std::multimap<String, String>;
 using Files = std::set<path>;
 using Sources = std::set<String>;
 using StringSet = std::set<String>;
