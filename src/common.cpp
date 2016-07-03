@@ -434,7 +434,9 @@ String hash_to_string(const uint8_t *hash, uint32_t hash_size)
 
 String make_archive_name(const String &fn)
 {
-    return fn + ".tar.gz";
+    if (!fn.empty())
+        return fn + ".tar.gz";
+    return "cppan.tar.gz";
 }
 
 String sha1(const String &data)
