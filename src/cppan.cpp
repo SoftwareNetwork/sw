@@ -438,7 +438,7 @@ String url_post(const String &url, const String &data, const Config *config = nu
         curl_easy_setopt(curl, CURLOPT_PROXY, config->proxy.host.c_str());
         curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
         if (!config->proxy.user.empty())
-            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, config->proxy.user);
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, config->proxy.user.c_str());
     }
 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
@@ -655,21 +655,28 @@ void Config::load_common(const path &p)
 
 void Config::load_common(const YAML::Node &root)
 {
-#define EXTRACT_VAR(val, var, type) \
-    do                              \
-    {                               \
-        auto &v = root[var];       \
-        if (v.IsDefined())          \
-            val = v.as<type>();     \
+#define EXTRACT_VAR(r, val, var, type) \
+    do                                 \
+    {                                  \
+        auto &v = r[var];              \
+        if (v.IsDefined())             \
+            val = v.as<type>();        \
     } while (0)
-#define EXTRACT(val, type) EXTRACT_VAR(val, #val, type)
+#define EXTRACT(val, type) EXTRACT_VAR(root, val, #val, type)
 #define EXTRACT_AUTO(val) EXTRACT(val, decltype(val))
 
     EXTRACT_AUTO(host);
-    EXTRACT_VAR(proxy.host, "proxy_host", String);
-    EXTRACT_VAR(proxy.user, "proxy_user", String);
     EXTRACT(storage_dir, String);
     EXTRACT(root_project, String);
+
+    auto &p = root["proxy"];
+    if (p.IsDefined())
+    {
+        if (!p.IsMap())
+            throw std::runtime_error("'proxy' should be a map");
+        EXTRACT_VAR(p, proxy.host, "host", String);
+        EXTRACT_VAR(p, proxy.user, "user", String);
+    }
 
     packages_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "packages_dir", "user"));
 

@@ -354,12 +354,12 @@ void download_file(DownloadData &data)
         curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
         curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
     }
-    if (data.proxy.host.empty())
+    if (!data.proxy.host.empty())
     {
         curl_easy_setopt(curl, CURLOPT_PROXY, data.proxy.host.c_str());
         curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
         if (!data.proxy.user.empty())
-            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, data.proxy.user);
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, data.proxy.user.c_str());
     }
 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_file);
