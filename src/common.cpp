@@ -58,6 +58,8 @@ static const std::regex r_version1(R"((\d+))");
 static const std::regex r_version2(R"((\d+).(\d+))");
 static const std::regex r_version3(R"((-?\d+).(-?\d+).(-?\d+))");
 
+HttpSettings httpSettings;
+
 Version get_program_version()
 {
     return{ VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH };
@@ -334,6 +336,55 @@ int transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_
     return 0;
 }
 
+size_t write_string(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+    String &s = *(String *)userdata;
+    auto read = size * nmemb;
+    s.append(ptr, ptr + read);
+    return read;
+}
+
+String url_post(const String &url, const String &data)
+{
+    auto curl = curl_easy_init();
+
+    if (httpSettings.verbose)
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    // proxy settings
+    auto proxy_addr = getAutoProxy();
+    if (!proxy_addr.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+    }
+    if (!httpSettings.proxy.host.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, httpSettings.proxy.host.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+        if (!httpSettings.proxy.user.empty())
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, httpSettings.proxy.user.c_str());
+    }
+
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_string);
+    if (url.find("https") == 0)
+    {
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
+    }
+    String response;
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    auto res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+    if (res != CURLE_OK)
+        throw std::runtime_error(String(curl_easy_strerror(res)));
+    return response;
+}
+
 void download_file(DownloadData &data)
 {
     auto parent = data.fn.parent_path();
@@ -343,7 +394,13 @@ void download_file(DownloadData &data)
     if (!ofile)
         throw std::runtime_error("Cannot open file: " + data.fn.string());
     data.ofile = &ofile;
+
+    // set up curl request
     auto curl = curl_easy_init();
+
+    if (httpSettings.verbose)
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+
     curl_easy_setopt(curl, CURLOPT_URL, data.url.c_str());
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 
@@ -354,12 +411,12 @@ void download_file(DownloadData &data)
         curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
         curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
     }
-    if (!data.proxy.host.empty())
+    if (!httpSettings.proxy.host.empty())
     {
-        curl_easy_setopt(curl, CURLOPT_PROXY, data.proxy.host.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXY, httpSettings.proxy.host.c_str());
         curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-        if (!data.proxy.user.empty())
-            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, data.proxy.user.c_str());
+        if (!httpSettings.proxy.user.empty())
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, httpSettings.proxy.user.c_str());
     }
 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_file);

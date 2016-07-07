@@ -70,6 +70,14 @@ struct ProxySettings
 
 String getAutoProxy();
 
+struct HttpSettings
+{
+    bool verbose = false;
+    ProxySettings proxy;
+};
+
+extern HttpSettings httpSettings;
+
 struct DownloadData
 {
     String url;
@@ -77,7 +85,6 @@ struct DownloadData
     int64_t file_size_limit = 1 * 1024 * 1024;
     String *dl_md5 = nullptr;
     std::ofstream *ofile = nullptr;
-    ProxySettings proxy;
 
     DownloadData();
     ~DownloadData();
@@ -89,7 +96,9 @@ private:
     std::unique_ptr<EVP_MD_CTX> ctx;
 };
 
+String url_post(const String &url, const String &data);
 void download_file(DownloadData &data);
+
 void unpack_file(const path &fn, const path &dst);
 
 String read_file(const path &p);

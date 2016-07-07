@@ -412,52 +412,7 @@ void get_config_insertion(const YAML::Node &n, const String &key, String &dst)
         dst.resize(dst.size() - 1); // remove trailing \n
 }
 
-size_t write_string(char *ptr, size_t size, size_t nmemb, void *userdata)
-{
-    String &s = *(String *)userdata;
-    auto read = size * nmemb;
-    s.append(ptr, ptr + read);
-    return read;
-}
-
-String url_post(const String &url, const String &data, const Config *config = nullptr)
-{
-    auto curl = curl_easy_init();
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-
-    // proxy settings
-    auto proxy_addr = getAutoProxy();
-    if (!proxy_addr.empty())
-    {
-        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
-        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-    }
-    if (config && !config->proxy.host.empty())
-    {
-        curl_easy_setopt(curl, CURLOPT_PROXY, config->proxy.host.c_str());
-        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-        if (!config->proxy.user.empty())
-            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, config->proxy.user.c_str());
-    }
-
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_string);
-    if (url.find("https") == 0)
-    {
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
-    }
-    String response;
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    auto res = curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
-    if (res != CURLE_OK)
-        throw std::runtime_error(String(curl_easy_strerror(res)));
-    return response;
-}
-
-ptree url_post(const String &url, const ptree &data, const Config *config = nullptr)
+ptree url_post(const String &url, const ptree &data)
 {
     ptree p;
     std::ostringstream oss;
@@ -466,7 +421,7 @@ ptree url_post(const String &url, const ptree &data, const Config *config = null
         , false
 #endif
         );
-    std::istringstream iss(url_post(url, oss.str(), config));
+    std::istringstream iss(url_post(url, oss.str()));
     pt::read_json(iss, p);
     return p;
 }
@@ -723,7 +678,15 @@ Project Config::load_project(const YAML::Node &root)
 {
     Project p;
 
-    p.empty = root["empty"].IsDefined();
+#define GET_BOOL(b) p.b = root[#b].IsDefined()
+
+    GET_BOOL(empty);
+
+    GET_BOOL(shared_only);
+    GET_BOOL(static_only);
+
+    if (p.shared_only && p.static_only)
+        throw std::runtime_error("Project cannot be static and shared simultaneously");
 
     p.license = get_scalar<String>(root, "license");
 
@@ -917,6 +880,9 @@ void Config::save(const path &p) const
 
 void Config::download_dependencies()
 {
+    // setup curl settings if possible
+    httpSettings.proxy = proxy;
+
     // we must append private deps to public as we want to download them too
     for (auto &p : projects)
         p.dependencies.insert(p.dependencies_private.begin(), p.dependencies_private.end());
@@ -940,7 +906,7 @@ void Config::download_dependencies()
         return;
 
     LOG("Requesting dependency list");
-    dependency_tree = url_post(url + "/api/find_dependencies", data, this);
+    dependency_tree = url_post(url + "/api/find_dependencies", data);
 
     // 4. read deps urls
     // 5. download them
@@ -1053,7 +1019,6 @@ void Config::download_dependencies()
             dd.url = package_url;
             dd.fn = fn;
             dd.dl_md5 = &dl_md5;
-            dd.proxy = proxy;
             LOG("Downloading: " << dep.package.toString() << "-" << dep.version.toString());
             download_file(dd);
 
@@ -1101,6 +1066,20 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
     PackageInfo pi(d);
     bool header_only = pi.dependency->flags[pfHeaderOnly];
 
+    const Project *pp = &projects[0];
+    if (projects.size() > 1)
+    {
+        auto it_project = std::find_if(projects.begin(), projects.end(), [p2 = d.package](const auto &p)
+        {
+            return p.package == p2;
+        });
+        if (it_project == projects.end())
+            throw std::runtime_error("No such project '" + d.package.toString() + "' in dependencies list");
+
+        pp = &*it_project;
+    }
+    auto &p = *pp;
+
     // gather checks
 #define GATHER_CHECK(c) parent.c.insert(c.begin(), c.end())
     GATHER_CHECK(check_functions);
@@ -1133,21 +1112,13 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
     ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_" + pi.variable_name + "})");
     ctx.decreaseIndent();
     ctx.addLine("endif()");
-    ctx.addLine();
 
-    const Project *pp = &projects[0];
-    if (projects.size() > 1)
-    {
-        auto it_project = std::find_if(projects.begin(), projects.end(), [p2 = d.package](const auto &p)
-        {
-            return p.package == p2;
-        });
-        if (it_project == projects.end())
-            throw std::runtime_error("No such project '" + d.package.toString() + "' in dependencies list");
+    if (p.static_only)
+        ctx.addLine("set(LIBRARY_TYPE STATIC)");
+    else if (p.shared_only)
+        ctx.addLine("set(LIBRARY_TYPE SHARED)");
 
-        pp = &*it_project;
-    }
-    auto &p = *pp;
+    ctx.emptyLines(1);
 
     auto print_bs_insertion = [this, &p, &ctx](const String &name, const String BuildSystemConfigInsertions::*i)
     {

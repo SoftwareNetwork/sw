@@ -38,6 +38,7 @@ ProgramOptions::ProgramOptions()
         ("dir,d", po::value<std::string>(), "working directory")
         ("version,v", po::bool_switch(), "version")
         ("prepare-archive", po::bool_switch(), "prepare archive locally")
+        ("curl-verbose", po::bool_switch(), "set curl to verbose mode")
         //("build-app", po::value<std::vector<std::string>>(), "download and build requested executable")
         //("gen-dummy-config", po::bool_switch(), "download and build requested executable")
         ;

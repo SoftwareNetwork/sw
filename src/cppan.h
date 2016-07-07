@@ -111,9 +111,15 @@ struct Project
     BuildSystemConfigInsertions bs_insertions;
     std::map<String, Options> options;
 
-    //
+    // no files to compile
     bool header_only = false;
+
+    // no files (cmake only etc.)
     bool empty = false;
+
+    // library type
+    bool shared_only = false;
+    bool static_only = false;
 
     // files to include into archive
     Files files;

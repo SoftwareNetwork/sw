@@ -56,6 +56,7 @@ try
 
     ProgramOptions options;
     bool r = options.parseArgs(argc, argv);
+
     if (!r || options().count("help"))
     {
         std::cout << options.printHelp() << "\n";
@@ -68,6 +69,7 @@ try
     }
     if (options().count("dir"))
         fs::current_path(options["dir"].as<std::string>());
+    httpSettings.verbose = options["curl-verbose"].as<bool>();
 
     auto c = Config::load_user_config();
     c.load_current_config();
