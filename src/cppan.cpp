@@ -880,9 +880,6 @@ void Config::save(const path &p) const
 
 void Config::download_dependencies()
 {
-    // setup curl settings if possible
-    httpSettings.proxy = proxy;
-
     // we must append private deps to public as we want to download them too
     for (auto &p : projects)
         p.dependencies.insert(p.dependencies_private.begin(), p.dependencies_private.end());

@@ -84,6 +84,8 @@ struct DownloadData
     path fn;
     int64_t file_size_limit = 1 * 1024 * 1024;
     String *dl_md5 = nullptr;
+
+    // service
     std::ofstream *ofile = nullptr;
 
     DownloadData();
@@ -142,5 +144,5 @@ struct Version
 Version get_program_version();
 String get_program_version_string(const String &prog_name);
 
-std::wstring string2wstring(const std::string &s);
-std::string wstring2string(const std::wstring &s);
+std::wstring to_wstring(const std::string &s);
+std::string to_string(const std::wstring &s);

@@ -545,13 +545,13 @@ inline auto& get_string_converter()
     return converter;
 }
 
-std::wstring string2wstring(const std::string &s)
+std::wstring to_wstring(const std::string &s)
 {
     auto &converter = get_string_converter();
     return converter.from_bytes(s.c_str());
 }
 
-std::string wstring2string(const std::wstring &s)
+std::string to_string(const std::wstring &s)
 {
     auto &converter = get_string_converter();
     return converter.to_bytes(s.c_str());
@@ -568,7 +568,7 @@ String getAutoProxy()
         wproxy_addr = proxy.lpszProxy;
     else if (WinHttpGetIEProxyConfigForCurrentUser(&proxy2) && proxy2.lpszProxy)
         wproxy_addr = proxy2.lpszProxy;
-    proxy_addr = wstring2string(wproxy_addr);
+    proxy_addr = to_string(wproxy_addr);
 #endif
     return proxy_addr;
 }
