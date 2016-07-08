@@ -164,6 +164,7 @@ add_custom_target(package_client
     COMMAND ${CMAKE_CPACK_COMMAND}
         -G RPM
         -D CPACK_COMPONENTS_ALL=client
+    COMMAND zip -FS -j -9 cppan-master-Linux-client.zip $<TARGET_FILE:cppan>
 )
 endif()
 
