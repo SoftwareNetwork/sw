@@ -720,7 +720,18 @@ Project Config::load_project(const YAML::Node &root)
             throw std::runtime_error("'" + ol + "' should be a map");
 
         auto &option = p.options[ol];
-        get_string_map(opt_level.second, "definitions", option.definitions);
+        const auto &defs = opt_level.second["definitions"];
+
+        auto add_defs = [&option, &defs](const auto &s)
+        {
+            auto dd = get_sequence_set<String, String>(defs, s);
+            for (auto &d : dd)
+                option.definitions.insert({ s,d });
+        };
+
+        add_defs("public");
+        add_defs("private");
+        add_defs("interface");
 
         option.include_directories = get_sequence_set<String, String>(opt_level.second, "include_directories");
         option.link_directories = get_sequence_set<String, String>(opt_level.second, "link_directories");
