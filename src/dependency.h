@@ -34,7 +34,7 @@ struct Dependency
 {
     using Dependencies = std::map<String, Dependency>;
 
-    ProjectVersionId id;
+    ProjectVersionId id = 0;
     ProjectPath package;
     Version version;
     ProjectFlags flags;

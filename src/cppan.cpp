@@ -947,6 +947,7 @@ void Config::download_dependencies()
             Dependency dep2;
             dep2.package = v.first;
             dep2.version = v.second.get<String>("version");
+            dep2.flags = decltype(dep2.flags)(v.second.get<uint64_t>("flags"));
             dep.dependencies[dep2.package.toString()] = dep2;
         }
 
