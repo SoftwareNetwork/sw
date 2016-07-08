@@ -58,16 +58,14 @@ try
         // config
         return 1;
     }
+#ifdef _WIN32
     else if (String(argv[1]) == "--self-upgrade-copy")
     {
-#ifndef _WIN32
-        std::cout << "This feature is not supported on this platform" << "\n";
-        return 1;
-#endif
         // self upgrade via copy
         fs::copy_file(argv[0], argv[2], fs::copy_option::overwrite_if_exists);
         return 0;
     }
+#endif
 
     // default command run
 
@@ -143,12 +141,11 @@ catch (...)
 
 void self_upgrade(Config &c, const char *exe_path)
 {
-#ifndef _WIN32
-    std::cout << "This feature is not supported on this platform" << "\n";
-    return;
-#else
-
+#ifdef _WIN32
     String client = "/client/cppan-master-win32-client.zip";
+#else
+    String client = "/client/cppan-master-Linux-client.zip";
+#endif
 
     DownloadData dd;
     dd.url = c.host + client + ".md5";
@@ -170,6 +167,7 @@ void self_upgrade(Config &c, const char *exe_path)
     unpack_file(dd.fn, fs::temp_directory_path());
 
     // self update
+#ifdef _WIN32
     auto exe = (fs::temp_directory_path() / "cppan.exe").wstring();
     auto arg0 = L"\"" + exe + L"\"";
     WCHAR fn[1024] = { 0 };
@@ -181,5 +179,14 @@ void self_upgrade(Config &c, const char *exe_path)
         throw std::runtime_error(String("errno = ") + std::to_string(errno) + "\n" +
             "Cannot do a self upgrade. Replace this file with newer CPPAN client manually.");
     }
+#else
+    char dest[PATH_MAX];
+    if (readlink("/proc/self/exe", dest, PATH_MAX) == -1)
+        perror("readlink");
+    auto cppan = fs::temp_directory_path() / "cppan";
+    fs::permissions(cppan, fs::owner_all | fs::group_exe | fs::others_exe);
+    fs::remove(dest);
+    fs::copy_file(cppan, dest);
+    fs::remove(cppan);
 #endif
 }
