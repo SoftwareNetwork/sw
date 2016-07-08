@@ -144,7 +144,7 @@ void self_upgrade(Config &c, const char *exe_path)
 #ifdef _WIN32
     String client = "/client/cppan-master-win32-client.zip";
 #else
-    String client = "/client/cppan-master-Linux-client.zip";
+    String client = "/client/.service/cppan-master-Linux-client.zip";
 #endif
 
     DownloadData dd;
