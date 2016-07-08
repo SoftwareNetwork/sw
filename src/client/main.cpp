@@ -90,6 +90,7 @@ try
     if (options().count("dir"))
         fs::current_path(options["dir"].as<std::string>());
     httpSettings.verbose = options["curl-verbose"].as<bool>();
+    httpSettings.ignore_ssl_checks = options["ignore-ssl-checks"].as<bool>();
 
     auto c = Config::load_user_config();
 

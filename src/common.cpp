@@ -375,6 +375,11 @@ String url_post(const String &url, const String &data)
     {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
+        if (httpSettings.ignore_ssl_checks)
+        {
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
+        }
     }
     String response;
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
@@ -427,6 +432,11 @@ void download_file(DownloadData &data)
     {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
+        if (httpSettings.ignore_ssl_checks)
+        {
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
+        }
     }
     auto res = curl_easy_perform(curl);
     data.finalize();

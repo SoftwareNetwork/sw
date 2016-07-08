@@ -73,6 +73,7 @@ String getAutoProxy();
 struct HttpSettings
 {
     bool verbose = false;
+    bool ignore_ssl_checks = false;
     ProxySettings proxy;
 };
 
