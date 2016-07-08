@@ -917,17 +917,24 @@ void Config::download_dependencies()
     LOG("Requesting dependency list");
     dependency_tree = url_post(url + "/api/find_dependencies", data);
 
-    // 4. read deps urls
-    // 5. download them
-    // 6. unpack
+    // read deps urls, download them, unpack
+    int api = 0;
+    if (dependency_tree.find("api") != dependency_tree.not_found())
+        api = dependency_tree.get<int>("api");
+
     auto e = dependency_tree.find("error");
     if (e != dependency_tree.not_found())
         throw std::runtime_error(e->second.get_value<String>());
-    auto &deps = dependency_tree;
+
+    if (api == 0)
+        throw std::runtime_error("Api version is missing in the response");
+    if (api != 1)
+        throw std::runtime_error("Bad api version");
+
     String data_url = "data";
-    if (deps.find("data_dir") != deps.not_found())
-        data_url = deps.get<String>("data_dir");
-    auto &remote_packages = deps.get_child("packages");
+    if (dependency_tree.find("data_dir") != dependency_tree.not_found())
+        data_url = dependency_tree.get<String>("data_dir");
+    auto &remote_packages = dependency_tree.get_child("packages");
     for (auto &v : remote_packages)
     {
         Dependency dep;
