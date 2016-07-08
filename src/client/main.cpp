@@ -28,14 +28,14 @@
 #include <iostream>
 #include <string>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 #include <boost/algorithm/string.hpp>
 
 #include <cppan.h>
 #include "options.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 void self_upgrade(Config &c, const char *exe_path);
 

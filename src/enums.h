@@ -60,6 +60,10 @@ enum ProjectFlag
     pfFixed, // vf
     pfExecutable, // vf
     pfEmpty, // vf - can be used to load & include cmake packages
+    pfPrivate, // private dependency
+    // pfOptional?
+
+    // append only to end
 };
 
 enum class PackagesDirType

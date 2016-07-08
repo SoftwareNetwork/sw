@@ -759,9 +759,6 @@ Project Config::load_project(const YAML::Node &root)
     },
         [this, &p](const auto &dall)
     {
-        auto public_ = dall["public"];
-        auto private_ = dall["private"];
-
         auto get_dep = [this](auto &deps, const auto &d)
         {
             Dependency dependency;
@@ -791,10 +788,12 @@ Project Config::load_project(const YAML::Node &root)
             deps[dependency.package.toString()] = dependency;
         };
 
+        Dependencies dependencies_private;
+
         get_map_and_iterate(dall, "private",
-            [this, &p, &get_dep](const auto &d)
+            [this, &p, &get_dep, &dependencies_private](const auto &d)
         {
-            get_dep(p.dependencies_private, d);
+            get_dep(dependencies_private, d);
         });
         get_map_and_iterate(dall, "public",
             [this, &p, &get_dep](const auto &d)
@@ -802,7 +801,13 @@ Project Config::load_project(const YAML::Node &root)
             get_dep(p.dependencies, d);
         });
 
-        if (p.dependencies.empty() && p.dependencies_private.empty())
+        for (auto &d : dependencies_private)
+        {
+            d.second.flags.set(pfPrivate);
+            p.dependencies.insert(d);
+        }
+
+        if (p.dependencies.empty() && dependencies_private.empty())
         {
             for (auto d : dall)
             {
@@ -891,10 +896,6 @@ void Config::save(const path &p) const
 
 void Config::download_dependencies()
 {
-    // we must append private deps to public as we want to download them too
-    for (auto &p : projects)
-        p.dependencies.insert(p.dependencies_private.begin(), p.dependencies_private.end());
-
     // send request
     auto url = host;
     ptree data;
@@ -1250,7 +1251,12 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
         if (header_only)
             ctx.addLine("INTERFACE " + pi1.target_name);
         else
-            ctx.addLine("PUBLIC " + pi1.target_name);
+        {
+            if (d1.second.flags[pfPrivate])
+                ctx.addLine("PRIVATE " + pi1.target_name);
+            else
+                ctx.addLine("PUBLIC " + pi1.target_name);
+        }
     }
     ctx.decreaseIndent();
     ctx.addLine(")");

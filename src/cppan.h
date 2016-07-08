@@ -106,7 +106,6 @@ struct Project
     Sources build_files;
     BuildType buildType;
     Dependencies dependencies;
-    Dependencies dependencies_private;
     Files exclude_from_build;
     BuildSystemConfigInsertions bs_insertions;
     std::map<String, Options> options;
