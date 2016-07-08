@@ -146,7 +146,7 @@ void self_upgrade(Config &c, const char *exe_path)
 #ifndef _WIN32
     std::cout << "This feature is not supported on this platform" << "\n";
     return;
-#endif
+#else
 
     String client = "/client/cppan-master-win32-client.zip";
 
@@ -181,4 +181,5 @@ void self_upgrade(Config &c, const char *exe_path)
         throw std::runtime_error(String("errno = ") + std::to_string(errno) + "\n" +
             "Cannot do a self upgrade. Replace this file with newer CPPAN client manually.");
     }
+#endif
 }
