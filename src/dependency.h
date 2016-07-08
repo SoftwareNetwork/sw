@@ -38,7 +38,6 @@ struct Dependency
     ProjectPath package;
     Version version;
     ProjectFlags flags;
-    bool direct = false;
     String md5;
 
     // custom package dir can be used to apply project-wide patches

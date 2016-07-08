@@ -924,20 +924,21 @@ void Config::download_dependencies()
     if (e != dependency_tree.not_found())
         throw std::runtime_error(e->second.get_value<String>());
     auto &deps = dependency_tree;
-    auto data_url = deps.get<String>("data_dir");
+    String data_url = "data";
+    if (deps.find("data_dir") != deps.not_found())
+        data_url = deps.get<String>("data_dir");
     auto &remote_packages = deps.get_child("packages");
     for (auto &v : remote_packages)
     {
         Dependency dep;
         dep.package = v.first;
         dep.version = v.second.get<String>("version");
-        bool direct = v.second.get<bool>("direct");
         dep.flags = decltype(dep.flags)(v.second.get<uint64_t>("flags"));
         dep.md5 = v.second.get<String>("md5");
+        bool direct = v.second.get<bool>("direct");
 
         std::set<int> idx;
-        auto tree_deps = v.second.get_child("dependencies");
-        for (auto &tree_dep : tree_deps)
+        for (auto &tree_dep : v.second.get_child("dependencies"))
             idx.insert(tree_dep.second.get_value<int>());
         for (auto &v : remote_packages)
         {
