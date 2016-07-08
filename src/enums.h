@@ -61,6 +61,7 @@ enum ProjectFlag
     pfExecutable, // vf
     pfEmpty, // vf - can be used to load & include cmake packages
     pfPrivate, // private dependency
+    pfDirectDependency, // vf, response only
     // pfOptional?
 
     // append only to end
