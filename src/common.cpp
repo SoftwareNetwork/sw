@@ -348,6 +348,9 @@ String url_post(const String &url, const String &data)
 {
     auto curl = curl_easy_init();
 
+    // FIXME: remove after new curl released (> 7.49.1)
+    curl_easy_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, 0);
+
     if (httpSettings.verbose)
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 
@@ -402,6 +405,9 @@ void download_file(DownloadData &data)
 
     // set up curl request
     auto curl = curl_easy_init();
+
+    // FIXME: remove after new curl released (> 7.49.1)
+    curl_easy_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, 0);
 
     if (httpSettings.verbose)
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
