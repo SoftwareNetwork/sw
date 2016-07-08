@@ -139,7 +139,14 @@ struct Version
     bool isValid() const;
     bool isBranch() const { return !branch.empty(); }
 
+    // checks if this version can be rhs using upgrade rules
+    // does not check branches!
+    // rhs should be exact version
+    bool canBe(const Version &rhs) const;
+
     bool operator<(const Version &rhs) const;
+    bool operator==(const Version &rhs) const;
+    bool operator!=(const Version &rhs) const;
 };
 
 Version get_program_version();

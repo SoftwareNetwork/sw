@@ -942,7 +942,6 @@ void Config::download_dependencies()
         dep.version = v.second.get<String>("version");
         dep.flags = decltype(dep.flags)(v.second.get<uint64_t>("flags"));
         dep.md5 = v.second.get<String>("md5");
-        bool direct = v.second.get<bool>("direct");
 
         std::set<int> idx;
         for (auto &tree_dep : v.second.get_child("dependencies"))
@@ -960,7 +959,7 @@ void Config::download_dependencies()
         }
 
         path dir;
-        if (direct)
+        if (dep.flags[pfDirectDependency])
         {
             bool found = false;
             for (auto &p : projects)
@@ -1072,7 +1071,7 @@ void Config::download_dependencies()
 
         Config c(dep.package_dir);
         auto pi = c.print_package_config_file(ofile, dep, *this);
-        if (direct)
+        if (dep.flags[pfDirectDependency])
             packages[pi.dependency->package.toString()] = pi;
         else
             indirect_dependencies[dep.package.toString()] = dep;
@@ -1408,11 +1407,11 @@ void Config::print_meta_config_file() const
     ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
     ctx.addLine();
 
-    //o << "if (NOT CPPAN_LIBRARY_TYPE)\n";
-    //o << "    set(CPPAN_LIBRARY_TYPE STATIC)\n";
-    //o << "endif(NOT CPPAN_LIBRARY_TYPE)" << "\n";
+    /*o << "if (NOT CPPAN_LIBRARY_TYPE)\n";
+    o << "    set(CPPAN_LIBRARY_TYPE STATIC)\n";
+    o << "endif(NOT CPPAN_LIBRARY_TYPE)" << "\n";
 
-    /*o << config_section_title("library types");
+    o << config_section_title("library types");
     o << "set(LIBRARY_TYPE_cppan ${CPPAN_LIBRARY_TYPE})" << "\n";
     o << "\n";
     for (auto &p : packages)
@@ -1428,23 +1427,21 @@ void Config::print_meta_config_file() const
     }
     o << "\n";*/
 
-    //config_section_title(ctx, "global definitions");
-    //o << "add_definitions(-DCPPAN=1)" << "\n";
-    //o << "\n";
+    auto add_dep_subdir = [&ctx](const auto &package_dir)
+    {
+        auto src_dir = package_dir.string();
+        boost::algorithm::replace_all(src_dir, "\\", "/");
+        auto bin_dir = (package_dir.parent_path().filename() / package_dir.filename()).string();
+        boost::algorithm::replace_all(bin_dir, "\\", "/");
+        bin_dir = sha1(bin_dir).substr(0, 6);
+        ctx << "add_subdirectory(" << src_dir << " " << bin_dir << ")" << Context::eol;
+    };
 
     if (!packages.empty())
     {
         config_section_title(ctx, "direct dependencies");
         for (auto &p : packages)
-        {
-            auto src_dir = p.second.dependency->package_dir.string();
-            boost::algorithm::replace_all(src_dir, "\\", "/");
-            auto bin_dir = (p.second.dependency->package_dir.parent_path().filename() /
-                p.second.dependency->package_dir.filename()).string();
-            boost::algorithm::replace_all(bin_dir, "\\", "/");
-            bin_dir = sha1(bin_dir).substr(0, 6);
-            ctx << "add_subdirectory(" << src_dir << " " << bin_dir << ")" << Context::eol;
-        }
+            add_dep_subdir(p.second.dependency->package_dir);
         ctx.addLine();
     }
 
@@ -1452,15 +1449,7 @@ void Config::print_meta_config_file() const
     {
         config_section_title(ctx, "indirect dependencies");
         for (auto &id : indirect_dependencies)
-        {
-            auto src_dir = id.second.package_dir.string();
-            boost::algorithm::replace_all(src_dir, "\\", "/");
-            auto bin_dir = (id.second.package_dir.parent_path().filename() /
-                id.second.package_dir.filename()).string();
-            boost::algorithm::replace_all(bin_dir, "\\", "/");
-            bin_dir = sha1(bin_dir).substr(0, 6);
-            ctx << "add_subdirectory(" << src_dir << " " << bin_dir << ")" << Context::eol;
-        }
+            add_dep_subdir(id.second.package_dir);
         ctx.addLine();
     }
 

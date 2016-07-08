@@ -165,6 +165,40 @@ bool Version::operator<(const Version &rhs) const
     return std::tie(major, minor, patch) < std::tie(rhs.major, rhs.minor, rhs.patch);
 }
 
+bool Version::operator==(const Version &rhs) const
+{
+    if (isBranch() && rhs.isBranch())
+        return branch == rhs.branch;
+    if (isBranch() || rhs.isBranch())
+        return false;
+    return std::tie(major, minor, patch) == std::tie(rhs.major, rhs.minor, rhs.patch);
+}
+
+bool Version::operator!=(const Version &rhs) const
+{
+    return !operator==(rhs);
+}
+
+bool Version::canBe(const Version &rhs) const
+{
+    if (*this == rhs)
+        return true;
+
+    // *.*.* canBe anything
+    if (major == -1 && minor == -1 && patch == -1)
+        return true;
+
+    // 1.*.* == 1.*.*
+    if (major == rhs.major && minor == -1 && patch == -1)
+        return true;
+
+    // 1.2.* == 1.2.*
+    if (major == rhs.major && minor == rhs.minor && patch == -1)
+        return true;
+
+    return false;
+}
+
 std::tuple<int, String> system_with_output(const String &cmd)
 {
 #ifdef WIN32
