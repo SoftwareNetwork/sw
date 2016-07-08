@@ -417,7 +417,7 @@ ptree url_post(const String &url, const ptree &data)
     ptree p;
     std::ostringstream oss;
     pt::write_json(oss, data
-#ifndef CPPAN_TEST
+#if !defined(CPPAN_TEST)
         , false
 #endif
         );
@@ -439,8 +439,9 @@ void BuildSystemConfigInsertions::get_config_insertions(const YAML::Node &n)
 PackageInfo::PackageInfo(const Dependency &d)
 {
     dependency = std::make_unique<Dependency>(d);
-    target_name = d.package.toString() + "-" + d.version.toString();
-    variable_name = d.package.toString() + "_" + d.version.toString();
+    auto v = d.version.toAnyVersion();
+    target_name = d.package.toString() + (v == "*" ? "" : ("-" + v));
+    variable_name = d.package.toString() + "_" + (v == "*" ? "" : ("_" + v));
     std::replace(variable_name.begin(), variable_name.end(), '.', '_');
 }
 
@@ -943,19 +944,22 @@ void Config::download_dependencies()
         dep.flags = decltype(dep.flags)(v.second.get<uint64_t>("flags"));
         dep.md5 = v.second.get<String>("md5");
 
-        std::set<int> idx;
-        for (auto &tree_dep : v.second.get_child("dependencies"))
-            idx.insert(tree_dep.second.get_value<int>());
-        for (auto &v : remote_packages)
+        if (v.second.find("dependencies") != v.second.not_found())
         {
-            auto id = v.second.get<int>("id");
-            if (idx.find(id) == idx.end())
-                continue;
-            Dependency dep2;
-            dep2.package = v.first;
-            dep2.version = v.second.get<String>("version");
-            dep2.flags = decltype(dep2.flags)(v.second.get<uint64_t>("flags"));
-            dep.dependencies[dep2.package.toString()] = dep2;
+            std::set<int> idx;
+            for (auto &tree_dep : v.second.get_child("dependencies"))
+                idx.insert(tree_dep.second.get_value<int>());
+            for (auto &v : remote_packages)
+            {
+                auto id = v.second.get<int>("id");
+                if (idx.find(id) == idx.end())
+                    continue;
+                Dependency dep2;
+                dep2.package = v.first;
+                dep2.version = v.second.get<String>("version");
+                dep2.flags = decltype(dep2.flags)(v.second.get<uint64_t>("flags"));
+                dep.dependencies[dep2.package.toString()] = dep2;
+            }
         }
 
         path dir;
@@ -1251,9 +1255,10 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
     ctx.addLine("target_link_libraries         (" + pi.target_name);
     ctx.increaseIndent();
     ctx.addLine((!header_only ? "PUBLIC" : "INTERFACE") + String(" cppan-helpers"));
-    for (auto &d1 : d.dependencies)
+    for (auto &d1 : p.dependencies)
     {
-        if (d1.second.flags[pfExecutable])
+        auto iter = d.dependencies.find(d1.first);
+        if (iter != d.dependencies.end() && iter->second.flags[pfExecutable])
             continue;
         PackageInfo pi1(d1.second);
         if (header_only)
