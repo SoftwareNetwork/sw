@@ -1527,6 +1527,7 @@ include(TestBigEndian))");
     ctx.addLine("set(HOST_BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
     ctx.addLine();
 
+    // checks
     config_section_title(ctx, "checks");
 
     auto convert_function = [](const auto &s)
@@ -1604,6 +1605,15 @@ include(TestBigEndian))");
         ctx.addLine();
     }
 
+    // fixups
+    config_section_title(ctx, "some fixups");
+    ctx.addLine(R"(
+    if (MSVC AND MSVC_VERSION GREATER 1800)
+        set(HAVE_SNPRINTF 1) # it's not detected (cmake issue)
+    endif())");
+    ctx.emptyLines(1);
+
+    // library
     config_section_title(ctx, "library");
 
     ctx.addLine("add_library(cppan-helpers INTERFACE)");
