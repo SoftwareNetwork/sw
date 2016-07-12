@@ -26,6 +26,7 @@
  */
 
 #include <iostream>
+#include <thread>
 #include <string>
 
 #include <boost/algorithm/string.hpp>
@@ -62,6 +63,7 @@ try
     else if (String(argv[1]) == "--self-upgrade-copy")
     {
         // self upgrade via copy
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         fs::copy_file(argv[0], argv[2], fs::copy_option::overwrite_if_exists);
         return 0;
     }
