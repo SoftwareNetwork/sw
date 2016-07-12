@@ -1524,6 +1524,7 @@ include(TestBigEndian))");
     // aliases
     ctx.addLine("set(BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
     ctx.addLine("set(BIGENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
+    ctx.addLine("set(HOST_BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
     ctx.addLine();
 
     config_section_title(ctx, "checks");
@@ -1542,13 +1543,9 @@ include(TestBigEndian))");
         }
         return v_def;
     };
-    auto convert_type = [](const auto &s, bool size = false)
+    auto convert_type = [](const auto &s, const std::string &prefix = "HAVE_")
     {
-        String v_def;
-        if (size)
-            v_def += "SIZE_OF_";
-        else
-            v_def += "HAVE_";
+        String v_def = prefix;
         v_def += boost::algorithm::to_upper_copy(s);
         for (auto &c : v_def)
         {
@@ -1600,7 +1597,8 @@ include(TestBigEndian))");
     {
         ctx.addLine("if (" + convert_type(v) + ")");
         ctx.increaseIndent();
-        ctx.addLine("set(" + convert_type(v) + " " + convert_type(v, true) + ")");
+        ctx.addLine("set(" + convert_type(v, "SIZE_OF_") + " ${" + convert_type(v) + "})");
+        ctx.addLine("set(" + convert_type(v, "SIZEOF_")  + " ${" + convert_type(v) + "})");
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         ctx.addLine();
@@ -1629,7 +1627,7 @@ include(TestBigEndian))");
 
     config_section_title(ctx, "definitions");
 
-    add_if_definition("WORDS_BIGENDIAN", "BIGENDIAN", "BIG_ENDIAN");
+    add_if_definition("WORDS_BIGENDIAN", "BIGENDIAN", "BIG_ENDIAN", "HOST_BIG_ENDIAN");
 
     add_check_definitions(check_functions, convert_function);
     add_check_definitions(check_includes, convert_include);
