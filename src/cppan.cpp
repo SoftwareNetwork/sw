@@ -1607,10 +1607,9 @@ include(TestBigEndian))");
 
     // fixups
     config_section_title(ctx, "some fixups");
-    ctx.addLine(R"(
-    if (MSVC AND MSVC_VERSION GREATER 1800)
-        set(HAVE_SNPRINTF 1) # it's not detected (cmake issue)
-    endif())");
+    ctx.addLine(R"(if (MSVC AND MSVC_VERSION GREATER 1800)
+    set(HAVE_SNPRINTF 1) # it's not detected (cmake issue)
+endif())");
     ctx.emptyLines(1);
 
     // library
@@ -1622,7 +1621,32 @@ include(TestBigEndian))");
     ctx << "target_compile_definitions(cppan-helpers" << Context::eol;
     ctx.increaseIndent();
     ctx.addLine("INTERFACE CPPAN"); // build is performed under CPPAN
-    // gather global defines
+    ctx.decreaseIndent();
+    ctx.addLine(")");
+    ctx.addLine();
+
+    // common link libraries
+    ctx.addLine(R"(if (WIN32)
+target_link_libraries(cppan-helpers
+    INTERFACE Ws2_32
+)
+else()
+target_link_libraries(cppan-helpers
+    INTERFACE pthread
+)
+endif()
+)");
+    ctx.addLine();
+
+    // Do not use APPEND here. It's the first file that will clear cppan.cmake.
+    ctx.addLine("export(TARGETS cppan-helpers FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
+    ctx.emptyLines(1);
+
+    // global definitions
+    config_section_title(ctx, "global definitions");
+
+    ctx << "target_compile_definitions(cppan-helpers" << Context::eol;
+    ctx.increaseIndent();
     for (auto &o : global_options)
     {
         for (auto &opt : o.second.global_definitions)
@@ -1631,10 +1655,8 @@ include(TestBigEndian))");
     ctx.decreaseIndent();
     ctx.addLine(")");
     ctx.addLine();
-    // Do not use APPEND here. It's the first file that will clear cppan.cmake.
-    ctx.addLine("export(TARGETS cppan-helpers FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
-    ctx.emptyLines(1);
 
+    // definitions
     config_section_title(ctx, "definitions");
 
     add_if_definition("WORDS_BIGENDIAN", "BIGENDIAN", "BIG_ENDIAN", "HOST_BIG_ENDIAN");
