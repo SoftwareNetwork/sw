@@ -673,9 +673,9 @@ void Config::load_common(const YAML::Node &root)
     get_map_and_iterate(root, "check_symbol_exists", [this](const auto &root)
     {
         if (root.second.IsSequence())
-            check_symbols[root.first.as<String>()] = get_sequence_set<String>(root.second);
+            check_symbols[root.first.template as<String>()] = get_sequence_set<String>(root.second);
         else if (root.second.IsScalar())
-            check_symbols[root.first.as<String>()].insert(root.second.as<String>());
+            check_symbols[root.first.template as<String>()].insert(root.second.template as<String>());
         else
             throw std::runtime_error("Symbol headers should be a scalar or a set");
     });
