@@ -56,6 +56,7 @@ using Definitions = std::multimap<String, String>;
 using Files = std::set<path>;
 using Sources = std::set<String>;
 using StringSet = std::set<String>;
+using Symbols = std::map<String, StringSet>;
 
 enum class BuildType
 {
@@ -148,7 +149,7 @@ struct Config
     StringSet check_functions;
     StringSet check_includes;
     StringSet check_types;
-    StringSet check_symbols;
+    Symbols check_symbols;
     StringSet check_libraries;
     BuildSystemConfigInsertions bs_insertions;
     std::map<String, Options> options;

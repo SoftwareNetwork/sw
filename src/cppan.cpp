@@ -277,31 +277,54 @@ void get_scalar_f(const YAML::Node &node, const String &key, F &&f)
 };
 
 template <class T>
-auto get_sequence(const YAML::Node &node, const String &key, const T &default_ = T())
+auto get_sequence(const YAML::Node &node)
 {
     std::vector<T> result;
-    const auto &n = node[key];
-    if (n.IsDefined())
+    const auto &n = node;
+    if (!n.IsDefined())
+        return result;
+    if (n.IsScalar())
+        result.push_back(n.as<String>());
+    else
     {
-        if (n.IsScalar())
-            result.push_back(n.as<String>());
-        else
-        {
-            if (!n.IsSequence())
-                throw std::runtime_error("'" + key + "' should be a sequence");
-            for (const auto &v : n)
-                result.push_back(v.as<String>());
-        }
+        if (!n.IsSequence())
+            return result;
+        for (const auto &v : n)
+            result.push_back(v.as<String>());
     }
-    else if (!default_.empty())
+    return result;
+};
+
+template <class T>
+auto get_sequence(const YAML::Node &node, const String &key, const T &default_ = T())
+{
+    const auto &n = node[key];
+    if (n.IsDefined() && !(n.IsScalar() || n.IsSequence()))
+        throw std::runtime_error("'" + key + "' should be a sequence");
+    auto result = get_sequence<T>(n);
+    if (!default_.empty())
         result.push_back(default_);
     return result;
 };
 
-template <class T1, class T2>
-auto get_sequence_set(const YAML::Node &node, const String &key, const T2 &default_ = T2())
+template <class T>
+auto get_sequence_set(const YAML::Node &node)
 {
-    auto vs = get_sequence<T2>(node, key, default_);
+    auto vs = get_sequence<T>(node);
+    return std::set<T>(vs.begin(), vs.end());
+}
+
+template <class T>
+auto get_sequence_set(const YAML::Node &node, const String &key)
+{
+    auto vs = get_sequence<T>(node, key);
+    return std::set<T>(vs.begin(), vs.end());
+}
+
+template <class T1, class T2>
+auto get_sequence_set(const YAML::Node &node, const String &key)
+{
+    auto vs = get_sequence<T2>(node, key);
     return std::set<T1>(vs.begin(), vs.end());
 }
 
@@ -645,8 +668,17 @@ void Config::load_common(const YAML::Node &root)
     check(check_functions, "check_function_exists");
     check(check_includes, "check_include_exists");
     check(check_types, "check_type_size");
-    check(check_symbols, "check_symbol_exists");
     check(check_libraries, "check_library_exists");
+
+    get_map_and_iterate(root, "check_symbol_exists", [this](const auto &root)
+    {
+        if (root.second.IsSequence())
+            check_symbols[root.first.as<String>()] = get_sequence_set<String>(root.second);
+        else if (root.second.IsScalar())
+            check_symbols[root.first.as<String>()].insert(root.second.as<String>());
+        else
+            throw std::runtime_error("Symbol headers should be a scalar or a set");
+    });
 
     bs_insertions.get_config_insertions(root);
 }
@@ -1510,10 +1542,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
     // cmake includes
     config_section_title(ctx, "cmake includes");
-    ctx.addLine(R"(include(CheckFunctionExists)
+    ctx.addLine(R"(include(CheckCXXSymbolExists)
+include(CheckFunctionExists)
 include(CheckIncludeFiles)
 include(CheckLibraryExists)
-include(CheckSymbolExists)
 include(CheckTypeSize)
 include(TestBigEndian))");
     ctx.addLine();
@@ -1558,6 +1590,23 @@ include(TestBigEndian))");
         return v_def;
     };
 
+    auto add_checks = [&ctx](const auto &a, const String &s, auto &&f)
+    {
+        for (auto &v : a)
+            ctx.addLine(s + "(\"" + v + "\" " + f(v) + ")");
+        ctx.emptyLines(1);
+    };
+    auto add_symbol_checks = [&ctx](const auto &a, const String &s, auto &&f)
+    {
+        for (auto &v : a)
+        {
+            ctx << s + "(\"" + v.first + "\" \"";
+            for (auto &h : v.second)
+                ctx << h << ";";
+            ctx << "\" " << f(v.first) << ")" << Context::eol;
+        }
+        ctx.emptyLines(1);
+    };
     auto add_if_definition = [&ctx](const String &s, auto &&... defs)
     {
         auto print_def = [&ctx](auto &&s)
@@ -1578,19 +1627,19 @@ include(TestBigEndian))");
         ctx.addLine("endif()");
         ctx.addLine();
     };
-    auto add_checks = [&ctx](const auto &a, const String &s, auto &&f)
-    {
-        for (auto &v : a)
-            ctx.addLine(s + "(\"" + v + "\" " + f(v) + ")");
-        ctx.emptyLines(1);
-    };
     auto add_check_definitions = [&ctx, &add_if_definition](const auto &a, auto &&f)
     {
         for (auto &v : a)
             add_if_definition(f(v));
     };
+    auto add_check_symbol_definitions = [&ctx, &add_if_definition](const auto &a, auto &&f)
+    {
+        for (auto &v : a)
+            add_if_definition(f(v.first));
+    };
 
     add_checks(check_functions, "check_function_exists", convert_function);
+    add_symbol_checks(check_symbols, "check_cxx_symbol_exists", convert_function);
     add_checks(check_includes, "check_include_files", convert_include);
     add_checks(check_types, "check_type_size", convert_type);
 
@@ -1606,16 +1655,15 @@ include(TestBigEndian))");
     }
 
     // fixups
-    config_section_title(ctx, "some fixups");
-    ctx.addLine(R"(if (MSVC AND MSVC_VERSION GREATER 1800)
-    set(HAVE_SNPRINTF 1) # it's not detected (cmake issue)
-endif())");
+    // put bug workarounds here
+    //config_section_title(ctx, "fixups");
     ctx.emptyLines(1);
 
     // library
     config_section_title(ctx, "library");
 
     ctx.addLine("add_library(cppan-helpers INTERFACE)");
+    ctx.addLine();
 
     // common definitions
     ctx << "target_compile_definitions(cppan-helpers" << Context::eol;
@@ -1662,6 +1710,7 @@ endif()
     add_if_definition("WORDS_BIGENDIAN", "BIGENDIAN", "BIG_ENDIAN", "HOST_BIG_ENDIAN");
 
     add_check_definitions(check_functions, convert_function);
+    add_check_symbol_definitions(check_symbols, convert_function);
     add_check_definitions(check_includes, convert_include);
     add_check_definitions(check_types, convert_type);
 
