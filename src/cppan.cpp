@@ -314,14 +314,7 @@ auto get_sequence_set(const YAML::Node &node)
     return std::set<T>(vs.begin(), vs.end());
 }
 
-template <class T>
-auto get_sequence_set(const YAML::Node &node, const String &key)
-{
-    auto vs = get_sequence<T>(node, key);
-    return std::set<T>(vs.begin(), vs.end());
-}
-
-template <class T1, class T2>
+template <class T1, class T2 = T1>
 auto get_sequence_set(const YAML::Node &node, const String &key)
 {
     auto vs = get_sequence<T2>(node, key);
@@ -759,6 +752,8 @@ Project Config::load_project(const YAML::Node &root)
 
         auto add_defs = [&option, &defs](const auto &s)
         {
+            if (!defs.IsDefined())
+                return;
             auto dd = get_sequence_set<String, String>(defs, s);
             for (auto &d : dd)
                 option.definitions.insert({ s,d });
@@ -889,6 +884,8 @@ Project Config::load_project(const YAML::Node &root)
 
     read_sources(p.sources, "files");
     read_sources(p.build_files, "build");
+
+    p.aliases = get_sequence_set<String>(root, "aliases");
 
     return p;
 }
@@ -1154,6 +1151,9 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
 
     // settings
     config_section_title(ctx, "settings");
+    ctx.addLine("set(PACKAGE_NAME " + d.package.toString() + ")");
+    ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
+    ctx.addLine();
     ctx.addLine("set(LIBRARY_TYPE STATIC)");
     ctx.addLine();
     ctx.addLine("if (\"${CPPAN_BUILD_SHARED_LIBS}\" STREQUAL \"ON\")");
@@ -1390,13 +1390,21 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
     Version ver = pi.dependency->version;
     if (!ver.isBranch())
     {
+        String tt = d.flags[pfExecutable] ? "add_executable" : "add_library";
         config_section_title(ctx, "aliases");
         ver.patch = -1;
-        ctx << "add_library(" << pi.dependency->package.toString() + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
+        ctx << tt << "(" << pi.dependency->package.toString() + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
         ver.minor = -1;
-        ctx << "add_library(" << pi.dependency->package.toString() + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
-        ctx << "add_library(" << pi.dependency->package.toString() << " ALIAS " << pi.target_name << ")" << Context::eol;
+        ctx << tt << "(" << pi.dependency->package.toString() + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
+        ctx << tt << "(" << pi.dependency->package.toString() << " ALIAS " << pi.target_name << ")" << Context::eol;
         ctx.addLine();
+        if (!p.aliases.empty())
+        {
+            ctx.addLine("# user-defined");
+            for (auto &a : p.aliases)
+                ctx << tt << "(" << a << " ALIAS " << pi.target_name << ")" << Context::eol;
+            ctx.addLine();
+        }
     }
 
     // export
@@ -1695,16 +1703,23 @@ endif()
     // global definitions
     config_section_title(ctx, "global definitions");
 
-    ctx << "target_compile_definitions(cppan-helpers" << Context::eol;
-    ctx.increaseIndent();
+    Context local;
+    bool has_defs = false;
+    local << "target_compile_definitions(cppan-helpers" << Context::eol;
+    local.increaseIndent();
     for (auto &o : global_options)
     {
         for (auto &opt : o.second.global_definitions)
-            ctx.addLine("INTERFACE " + opt);
+        {
+            local.addLine("INTERFACE " + opt);
+            has_defs = true;
+        }
     }
-    ctx.decreaseIndent();
-    ctx.addLine(")");
-    ctx.addLine();
+    local.decreaseIndent();
+    local.addLine(")");
+    local.addLine();
+    if (has_defs)
+        ctx += local;
 
     // definitions
     config_section_title(ctx, "definitions");

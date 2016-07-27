@@ -110,6 +110,7 @@ struct Project
     Files exclude_from_build;
     BuildSystemConfigInsertions bs_insertions;
     std::map<String, Options> options;
+    StringSet aliases;
 
     // no files to compile
     bool header_only = false;
