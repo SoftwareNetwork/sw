@@ -9,6 +9,7 @@
 # build files and directories
 /build*
 /win*
+cppan
 
 /packages
 
