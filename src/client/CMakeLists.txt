@@ -4,23 +4,20 @@
 
 file(GLOB_RECURSE cppan_src "*.cpp" "*.h")
 
-add_executable(cppan ${cppan_src})
-target_link_libraries(cppan
+add_executable(client ${cppan_src})
+target_link_libraries(client
     common
     yaml-cpp
     ${Boost_LIBRARIES}
 )
-if (NOT WIN32)
-target_link_libraries(cppan pthread)
-endif()
 
 if (WIN32)
-install(TARGETS cppan RUNTIME
+install(TARGETS client RUNTIME
 	DESTINATION .
 	COMPONENT client
 )
 else()
-install(TARGETS cppan RUNTIME
+install(TARGETS client RUNTIME
 	DESTINATION /usr/local/bin
 	COMPONENT client
 )

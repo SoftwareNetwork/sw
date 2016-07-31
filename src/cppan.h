@@ -135,7 +135,7 @@ struct Project
     bool writeArchive(const String &filename) const;
 };
 
-using Projects = std::vector<Project>;
+using Projects = std::map<String, Project>;
 
 PackagesDirType packages_dir_type_from_string(const String &s);
 
@@ -188,4 +188,6 @@ private:
     void print_meta_config_file() const;
     void print_helper_file() const;
     PackageInfo print_package_config_file(std::ofstream &o, const Dependency &d, Config &parent) const;
+
+	//void parse(YAML::Node &r, Config &c, const path &p);
 };

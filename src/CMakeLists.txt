@@ -28,10 +28,39 @@ endif()
 include_directories(${PROJECT_SOURCE_DIR}/dep/yaml-cpp/include)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+########################################
+# context
+########################################
+
+set(context_src
+    context.cpp
+    context.h
+)
+add_library(context ${context_src})
+
+########################################
+# generator
+########################################
+
+#set(gen_src
+#    generator.cpp
+#	schema.json
+#)
+#add_executable(generator ${gen_src})
+#target_link_libraries(generator context cppan)
 
 ########################################
 # common
 ########################################
+
+#set(PARSER_SRC ${CMAKE_CURRENT_BINARY_DIR}/parser.h)
+
+#add_custom_command(OUTPUT ${PARSER_SRC}
+#	COMMAND generator ${CMAKE_CURRENT_SOURCE_DIR}/schema.json ${PARSER_SRC}
+#	DEPENDS generator ${CMAKE_CURRENT_SOURCE_DIR}/schema.json
+#)
 
 set(common_src
     common.cpp
@@ -45,8 +74,10 @@ set(common_src
     property_tree.h
     project_path.cpp
     project_path.h
-    context.cpp
-    context.h
+
+	#schema.json
+
+	#${PARSER_SRC}
 )
 add_library(common ${common_src})
 target_compile_definitions(common
@@ -54,6 +85,7 @@ target_compile_definitions(common
     PRIVATE -DVERSION_MINOR=${VERSION_MINOR}
     PRIVATE -DVERSION_PATCH=${VERSION_PATCH}
 )
+target_link_libraries(common context)# cppan)
 if (WIN32)
     target_link_libraries(common
         archive_static

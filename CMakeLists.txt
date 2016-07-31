@@ -45,6 +45,8 @@ set(VERSION_PATCH 5)
 set(output_dir ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
 
+#add_subdirectory(cppan)
+
 set(Boost_USE_STATIC_LIBS ON)
 
 find_package(Boost 1.60 REQUIRED filesystem program_options log system thread date_time)

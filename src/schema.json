@@ -1,0 +1,253 @@
+{
+  "variables": {
+    "host": {
+      "type": "single",
+      "datatype": "String"
+    },
+
+    "storage_dir": {
+      "comment": "Path to CPPAN storage",
+      "type": "single",
+      "datatype": "String"
+    },
+
+    "packages_dir_type": {
+      "comment": "Can be one of 'local|user|system'.\nSelects storage dir for current project.\nlocal means current 'storage_dir' dir value.\nuser means user's home dir.\nsystem means system dir (admin right required).",
+      "apply": "packages_dir_type_from_string",
+      "type": "single",
+      "datatype": "String",
+      "default": "user"
+    },
+
+    "proxy": {
+      "type": "map",
+      "datatype": "ProxySettings",
+
+      "variables": {
+        "host": {
+          "type": "single",
+          "datatype": "String"
+        },
+        "user": {
+          "type": "single",
+          "datatype": "String"
+        }
+      }
+    },
+
+    "root_project": {
+      "type": "single",
+      "datatype": "String"
+    },
+
+
+
+    "check_function_exists": {
+      "type": "set",
+      "datatype": "String",
+      "variable": "check_functions"
+    },
+
+    "check_include_exists": {
+      "type": "set",
+      "datatype": "String",
+      "variable": "check_includes"
+    },
+
+    "check_type_size": {
+      "type": "set",
+      "datatype": "String",
+      "variable": "check_types"
+    },
+
+    "check_library_exists": {
+      "type": "set",
+      "datatype": "String",
+      "variable": "check_libraries"
+    },
+
+    "check_symbol_exists": {
+      "type": "kv_map",
+      "datatype": "Symbols",
+      "variable": "check_symbols",
+
+      "second": {
+        "type": "set",
+        "datatype": "String"
+      }
+    },
+
+
+
+    "pre_sources": {
+      "type": "single",
+      "datatype": "String",
+      "access": "bs_insertions"
+    },
+    "post_sources": {
+      "type": "single",
+      "datatype": "String",
+      "access": "bs_insertions"
+    },
+    "post_target": {
+      "type": "single",
+      "datatype": "String",
+      "access": "bs_insertions"
+    },
+    "post_alias": {
+      "type": "single",
+      "datatype": "String",
+      "access": "bs_insertions"
+    },
+
+
+
+    "projects": {
+      "type": "kv_map",
+      "datatype": "Projects",
+
+      "variables": {
+
+        "pre_sources": {
+          "type": "single",
+          "datatype": "String",
+          "access": "bs_insertions"
+        },
+        "post_sources": {
+          "type": "single",
+          "datatype": "String",
+          "access": "bs_insertions"
+        },
+        "post_target": {
+          "type": "single",
+          "datatype": "String",
+          "access": "bs_insertions"
+        },
+        "post_alias": {
+          "type": "single",
+          "datatype": "String",
+          "access": "bs_insertions"
+        },
+
+
+        "empty": {
+          "type": "single",
+          "datatype": "bool"
+        },
+
+        "static_only": {
+          "type": "single",
+          "datatype": "bool"
+        },
+        "shared_only": {
+          "type": "single",
+          "datatype": "bool"
+        },
+
+        "license": {
+          "type": "single",
+          "datatype": "String"
+        },
+
+        "root_directory": {
+          "type": "single",
+          "datatype": "String"
+        },
+
+        "include_directories": {
+          "type": "map",
+          "datatype": "IncludeDirectories",
+
+          "variables": {
+            "public": {
+              "type": "set",
+              "datatype": "String",
+              "internal_datatype": "path",
+              "variable": "public_"
+            },
+            "private": {
+              "type": "set",
+              "datatype": "String",
+              "internal_datatype": "path",
+              "variable": "private_"
+            }
+          }
+        },
+
+        "exclude_from_build": {
+          "type": "set",
+          "datatype": "String",
+          "internal_datatype": "path"
+        },
+
+        "aliases": {
+          "type": "set",
+          "datatype": "String"
+        },
+
+        "options": {
+          "type": "kv_map",
+          "datatype": "std::map<String, Options>",
+          "allowed_keys": [
+            "any",
+            "static",
+            "shared"
+          ],
+
+          "variables": {
+              "definitions": {
+                "type": "kv_map",
+                "datatype": "Definitions",
+                "allowed_keys": [
+                  "public",
+                  "private",
+                  "interface"
+                ]
+              },
+
+              "include_directories": {
+                "type": "set",
+                "datatype": "String"
+              },
+              "link_directories": {
+                "type": "set",
+                "datatype": "String"
+              },
+              "link_libraries": {
+                "type": "set",
+                "datatype": "String"
+              },
+              "global_definitions": {
+                "type": "set",
+                "datatype": "String"
+              },
+
+              "pre_sources": {
+                "type": "single",
+                "datatype": "String",
+                "access": "bs_insertions"
+              },
+              "post_sources": {
+                "type": "single",
+                "datatype": "String",
+                "access": "bs_insertions"
+              },
+              "post_target": {
+                "type": "single",
+                "datatype": "String",
+                "access": "bs_insertions"
+              },
+              "post_alias": {
+                "type": "single",
+                "datatype": "String",
+                "access": "bs_insertions"
+              }
+            }
+
+        }
+
+      }
+    }
+
+  }
+}

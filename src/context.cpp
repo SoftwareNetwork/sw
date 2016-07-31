@@ -124,6 +124,7 @@ void Context::beginBlock(const Text &s, bool indent)
 void Context::endBlock(bool semicolon)
 {
     decreaseIndent();
+	emptyLines(0);
     addLine(semicolon ? "};" : "}");
 }
 

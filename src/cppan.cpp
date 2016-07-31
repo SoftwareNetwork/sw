@@ -51,6 +51,8 @@
 #include <property_tree.h>
 #include <project_path.h>
 
+//#include <parser.h>
+
 #define CPPAN_LOCAL_DIR "cppan"
 
 #define LOG(x) std::cout << x << "\n"
@@ -651,31 +653,6 @@ void Config::load_common(const YAML::Node &root)
     }
 
     packages_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "packages_dir", "user"));
-
-    auto check = [&root](auto &a, auto &&str)
-    {
-        auto s = get_sequence<String>(root, str);
-        a.insert(s.begin(), s.end());
-    };
-
-    check(check_functions, "check_function_exists");
-    check(check_includes, "check_include_exists");
-    check(check_types, "check_type_size");
-    check(check_libraries, "check_library_exists");
-
-    get_map_and_iterate(root, "check_symbol_exists", [this](const auto &root)
-    {
-        auto f = root.first.template as<String>();
-        auto s = root.second.template as<String>();
-        if (root.second.IsSequence())
-            check_symbols[f] = get_sequence_set<String>(root.second);
-        else if (root.second.IsScalar())
-            check_symbols[f].insert(s);
-        else
-            throw std::runtime_error("Symbol headers should be a scalar or a set");
-    });
-
-    bs_insertions.get_config_insertions(root);
 }
 
 void Config::load(const path &p)
@@ -683,11 +660,40 @@ void Config::load(const path &p)
     auto root = YAML::LoadFile(p.string());
     load_common(root);
 
+	//parse(root, *this, p);
+
+	// global
+	auto check = [&root](auto &a, auto &&str)
+	{
+		auto s = get_sequence<String>(root, str);
+		a.insert(s.begin(), s.end());
+	};
+
+	check(check_functions, "check_function_exists");
+	check(check_includes, "check_include_exists");
+	check(check_types, "check_type_size");
+	check(check_libraries, "check_library_exists");
+
+	get_map_and_iterate(root, "check_symbol_exists", [this](const auto &root)
+	{
+		auto f = root.first.template as<String>();
+		auto s = root.second.template as<String>();
+		if (root.second.IsSequence())
+			check_symbols[f] = get_sequence_set<String>(root.second);
+		else if (root.second.IsScalar())
+			check_symbols[f].insert(s);
+		else
+			throw std::runtime_error("Symbol headers should be a scalar or a set");
+	});
+
+	bs_insertions.get_config_insertions(root);
+
+	// project
     auto set_project = [this, &p](auto &&project, auto &&name)
     {
         project.cppan_filename = p.filename().string();
         project.package = relative_name_to_absolute(name);
-        projects.push_back(project);
+        projects[project.package.toString()] = project;
     };
 
     const auto &prjs = root["projects"];
@@ -783,7 +789,7 @@ Project Config::load_project(const YAML::Node &root)
         for (auto d : dall)
         {
             Dependency dependency;
-            dependency.package = this->relative_name_to_absolute(d.template as<String>());
+            dependency.package = relative_name_to_absolute(d.template as<String>());
             p.dependencies[dependency.package.toString()] = dependency;
         }
     },
@@ -933,7 +939,7 @@ void Config::download_dependencies()
     ptree data;
     for (auto &p : projects)
     {
-        for (auto &d : p.dependencies)
+        for (auto &d : p.second.dependencies)
         {
             if (d.second.package.is_relative())
                 continue;
@@ -999,10 +1005,10 @@ void Config::download_dependencies()
             bool found = false;
             for (auto &p : projects)
             {
-                auto i = p.dependencies.find(dep.package.toString());
-                if (i == p.dependencies.end())
+                auto i = p.second.dependencies.find(dep.package.toString());
+                if (i == p.second.dependencies.end())
                 {
-                    for (auto &d : p.dependencies)
+                    for (auto &d : p.second.dependencies)
                     {
                         std::regex r(d.second.package.toString() + ".*");
                         if (std::regex_match(dep.package.toString(), r))
@@ -1118,17 +1124,13 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
     PackageInfo pi(d);
     bool header_only = pi.dependency->flags[pfHeaderOnly];
 
-    const Project *pp = &projects[0];
+    const Project *pp = &projects.begin()->second;
     if (projects.size() > 1)
     {
-        auto it_project = std::find_if(projects.begin(), projects.end(), [p2 = d.package](const auto &p)
-        {
-            return p.package == p2;
-        });
-        if (it_project == projects.end())
+		auto it = projects.find(d.package.toString());
+		if (it == projects.end())
             throw std::runtime_error("No such project '" + d.package.toString() + "' in dependencies list");
-
-        pp = &*it_project;
+        pp = &it->second;
     }
     auto &p = *pp;
 

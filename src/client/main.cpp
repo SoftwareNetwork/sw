@@ -114,8 +114,9 @@ try
     if (options()["prepare-archive"].as<bool>())
     {
         Projects &projects = c.getProjects();
-        for (auto &project : projects)
+        for (auto &p : projects)
         {
+			auto &project = p.second;
             project.findSources(".");
             String archive_name = make_archive_name(project.package.toString());
             if (!project.writeArchive(archive_name))
