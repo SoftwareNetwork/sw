@@ -111,6 +111,7 @@ struct Project
     BuildSystemConfigInsertions bs_insertions;
     std::map<String, Options> options;
     StringSet aliases;
+    bool load_from_bazel = false;
 
     // no files to compile
     bool header_only = false;

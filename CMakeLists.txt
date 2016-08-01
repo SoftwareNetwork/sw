@@ -50,6 +50,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
 set(Boost_USE_STATIC_LIBS ON)
 
 find_package(Boost 1.60 REQUIRED filesystem program_options log system thread date_time)
+find_package(BISON 3.0 REQUIRED)
+find_package(FLEX REQUIRED)
 
 if (NOT WIN32)
     find_package(LibArchive REQUIRED)

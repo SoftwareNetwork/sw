@@ -719,6 +719,8 @@ Project Config::load_project(const YAML::Node &root)
     GET_BOOL(shared_only);
     GET_BOOL(static_only);
 
+    GET_BOOL(load_from_bazel);
+
     if (p.shared_only && p.static_only)
         throw std::runtime_error("Project cannot be static and shared simultaneously");
 
