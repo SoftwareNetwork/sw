@@ -659,7 +659,7 @@ void Config::load_common(const YAML::Node &root)
 
 void Config::load(const path &p)
 {
-    auto root = YAML::LoadFile(p.string());
+    const auto root = YAML::LoadFile(p.string());
     load_common(root);
 
 	//parse(root, *this, p);
@@ -811,7 +811,7 @@ Project Config::load_project(const YAML::Node &root)
         [this, &p](const YAML::Node &d)
     {
         Dependency dependency;
-        dependency.package = relative_name_to_absolute(d.as<String>());
+        dependency.package = this->relative_name_to_absolute(d.as<String>());
         p.dependencies[dependency.package.toString()] = dependency;
     },
         [this, &p](const auto &dall)
@@ -819,7 +819,7 @@ Project Config::load_project(const YAML::Node &root)
         for (auto d : dall)
         {
             Dependency dependency;
-            dependency.package = relative_name_to_absolute(d.template as<String>());
+            dependency.package = this->relative_name_to_absolute(d.template as<String>());
             p.dependencies[dependency.package.toString()] = dependency;
         }
     },
