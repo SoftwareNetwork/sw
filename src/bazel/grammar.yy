@@ -53,7 +53,7 @@ class ParserDriver;
 %token <std::string> STRING KEYWORD ID
 %token <int> INTEGER
 
-%type <std::string> identifier string
+%type <std::string> identifier string keyword
 
 %type <bazel::Function> function_call statement
 %type <bazel::File> statements
@@ -115,10 +115,18 @@ parameter: variable_decl
         p.values = $1;
         $$ = p;
     }
+    | kv_map
+    {
+        bazel::Parameter p;
+        p.name = "kv_map";
+        $$ = p;
+    }
 	;
 
 variable_decl: identifier EQUAL expr
 	{ $$ = bazel::Parameter{ $1, $3 }; }
+    | identifier EQUAL kv_map
+	{ $$ = bazel::Parameter{ $1 }; }
 	;
 
 expr: identifier
@@ -140,13 +148,36 @@ expr: identifier
         $1.insert($3.begin(), $3.end());
         $$ = std::move($1);
     }
+    // "src/" + s for s in RELATIVE_WELL_KNOWN_PROTOS
+	| expr PLUS expr keyword identifier keyword identifier
+    {
+        $1.insert($3.begin(), $3.end());
+        $$ = std::move($1);
+    }
 	| function_call
     {
         bazel::Values v;
         v.insert("fcall");
         $$ = v;
     }
+    /*| kv_map
+    {
+        bazel::Values v;
+        v.insert("kv_map");
+        $$ = v;
+    }*/
 	;
+
+kv_map: L_CURLY_BRACKET kv_map_values R_CURLY_BRACKET
+    ;
+
+kv_map_values: /* empty */
+    | kv_map_value
+    | kv_map_value COMMA kv_map_values
+    ;
+
+kv_map_value: string COLON expr
+    ;
 
 array: L_SQUARE_BRACKET array_contents R_SQUARE_BRACKET
     { $$ = std::move($2); }
@@ -173,6 +204,9 @@ identifier: ID
 string: STRING
 	{ $$ = $1; }
 	;
+keyword: KEYWORD
+	{ $$ = $1; }
+    ;
 
 %%
 

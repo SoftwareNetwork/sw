@@ -34,7 +34,9 @@ class ParserDriver
     };
 
 public:
-	bazel::File bazel_file;
+    bazel::File bazel_file;
+    bool debug = false;
+    bool can_throw = true;
 
     ParserDriver();
 
@@ -49,7 +51,6 @@ private:
     void *scanner;
     yy::location location;
     Mode parseMode;
-    bool debug;
 
     int parse();
 };

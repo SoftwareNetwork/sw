@@ -14,6 +14,8 @@ int main(int argc, char *argv[])
 		f += s + "\n";
 
 	ParserDriver driver;
+    driver.can_throw = false;
+    //driver.debug = true;
 	auto ret = driver.parse(f);
 
 	if (ret)

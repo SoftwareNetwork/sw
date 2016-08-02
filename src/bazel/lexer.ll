@@ -21,7 +21,9 @@
 %option noyywrap
 
 
-identifier      [_a-zA-Z][_a-zA-Z0-9]*
+identifier_old_no_integer [_a-zA-Z][_a-zA-Z0-9]*
+
+identifier      [_a-zA-Z0-9]+
 quote1          "\'"[^'\\]*"\'"
 quote2          "\""[^"\\]*"\""
 

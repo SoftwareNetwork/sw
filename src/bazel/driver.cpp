@@ -30,7 +30,6 @@ extern yy::parser::symbol_type yylex(yyscan_t yyscanner, yy::location &loc);
 
 ParserDriver::ParserDriver()
 {
-    debug = false;
 }
 
 yy::parser::symbol_type ParserDriver::lex()
@@ -62,13 +61,19 @@ int ParserDriver::parse()
 void ParserDriver::error(const yy::location &l, const std::string &m)
 {
     std::ostringstream ss;
-    ss << l << " " << m << std::endl;
-    throw std::runtime_error("Error during bazel parse: " + ss.str());
+    ss << l << " " << m << "\n";
+    if (!can_throw)
+        std::cerr << ss.str();
+    else
+        throw std::runtime_error("Error during bazel parse: " + ss.str());
 }
 
 void ParserDriver::error(const std::string& m)
 {
     std::ostringstream ss;
-    ss << m << std::endl;
-    throw std::runtime_error("Error during bazel parse: " + ss.str());
+    ss << m << "\n";
+    if (!can_throw)
+        std::cerr << ss.str();
+    else
+        throw std::runtime_error("Error during bazel parse: " + ss.str());
 }
