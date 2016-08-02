@@ -62,6 +62,9 @@ String make_archive_name(const String &fn);
 path temp_directory_path();
 path get_temp_filename();
 
+path temp_script_path();
+path temp_script_filename();
+
 struct ProxySettings
 {
     String host;
@@ -147,6 +150,22 @@ struct Version
     bool operator<(const Version &rhs) const;
     bool operator==(const Version &rhs) const;
     bool operator!=(const Version &rhs) const;
+};
+
+struct Source
+{
+    struct Git
+    {
+        String url;
+        String tag;
+        String commit;
+
+        bool empty() const { return url.empty(); }
+    };
+
+    // add svn, bzr, hg?
+    Git git;
+    String file;
 };
 
 Version get_program_version();

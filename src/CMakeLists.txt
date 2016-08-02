@@ -76,7 +76,6 @@ set(common_src
     project_path.h
 
 	#schema.json
-
 	#${PARSER_SRC}
 )
 add_library(common ${common_src})

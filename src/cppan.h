@@ -32,11 +32,11 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <common.h>
-#include <dependency.h>
-#include <filesystem.h>
-#include <project_path.h>
-#include <property_tree.h>
+#include "common.h"
+#include "dependency.h"
+#include "filesystem.h"
+#include "project_path.h"
+#include "property_tree.h"
 
 path get_home_directory();
 path get_root_directory();
@@ -146,6 +146,10 @@ struct Config
     ProxySettings proxy;
     PackagesDirType packages_dir_type{ PackagesDirType::User };
     path storage_dir;
+
+    Version version;
+    Source source;
+
     ProjectPath root_project;
 
     StringSet check_functions;

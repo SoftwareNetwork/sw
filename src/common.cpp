@@ -570,6 +570,18 @@ path get_temp_filename()
     return temp_directory_path() / fs::unique_path();
 }
 
+path temp_script_path()
+{
+    auto p = temp_directory_path() / "scripts";
+    fs::create_directory(p);
+    return p;
+}
+
+path temp_script_filename()
+{
+    return temp_script_path() / fs::unique_path();
+}
+
 bool check_filename(const String &s, String *error)
 {
     for (auto &c : s)

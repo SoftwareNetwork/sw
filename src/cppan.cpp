@@ -46,10 +46,7 @@
 #include <archive_entry.h>
 #endif
 
-#include <common.h>
-#include <context.h>
-#include <property_tree.h>
-#include <project_path.h>
+#include "context.h"
 
 //#include <parser.h>
 
@@ -582,10 +579,15 @@ Config::Config()
 Config::Config(const path &p)
     : Config()
 {
-    auto old = fs::current_path();
-    fs::current_path(p);
-    load_current_config();
-    fs::current_path(old);
+    if (fs::is_directory(p))
+    {
+        auto old = fs::current_path();
+        fs::current_path(p);
+        load_current_config();
+        fs::current_path(old);
+    }
+    else
+        load(p);
 }
 
 Config Config::load_system_config()
@@ -629,12 +631,12 @@ void Config::load_common(const path &p)
 
 void Config::load_common(const YAML::Node &root)
 {
-#define EXTRACT_VAR(r, val, var, type) \
-    do                                 \
-    {                                  \
-        auto &v = r[var];              \
-        if (v.IsDefined())             \
-            val = v.as<type>();        \
+#define EXTRACT_VAR(r, val, var, type)   \
+    do                                   \
+    {                                    \
+        auto &v = r[var];                \
+        if (v.IsDefined())               \
+            val = v.template as<type>(); \
     } while (0)
 #define EXTRACT(val, type) EXTRACT_VAR(root, val, #val, type)
 #define EXTRACT_AUTO(val) EXTRACT(val, decltype(val))
@@ -662,7 +664,32 @@ void Config::load(const path &p)
 
 	//parse(root, *this, p);
 
-	// global
+    // version
+    {
+        String ver;
+        EXTRACT_VAR(root, ver, "version", String);
+        if (!ver.empty())
+            version = Version(ver);
+    }
+
+    // source
+    auto &src = root["source"];
+    if (src.IsDefined())
+    {
+        EXTRACT_VAR(src, source.git.url, "git", String);
+        EXTRACT_VAR(src, source.git.tag, "tag", String);
+        EXTRACT_VAR(src, source.git.commit, "commit", String);
+        EXTRACT_VAR(src, source.file, "file", String);
+
+        if (!source.git.url.empty() &&
+            !source.file.empty())
+            throw std::runtime_error("Only one source (git or file) must be specified");
+
+        if (!source.git.empty() && !source.git.tag.empty() && !source.git.commit.empty())
+            throw std::runtime_error("Only one git source (tag or commit) must be specified");
+    }
+
+    // global checks
 	auto check = [&root](auto &a, auto &&str)
 	{
 		auto s = get_sequence<String>(root, str);
@@ -686,6 +713,7 @@ void Config::load(const path &p)
 			throw std::runtime_error("Symbol headers should be a scalar or a set");
 	});
 
+    // global insertions
 	bs_insertions.get_config_insertions(root);
 
 	// project
@@ -714,12 +742,12 @@ Project Config::load_project(const YAML::Node &root)
 
 #define GET_BOOL(b) p.b = root[#b].IsDefined()
 
-    GET_BOOL(empty);
+    EXTRACT_AUTO(p.empty);
 
-    GET_BOOL(shared_only);
-    GET_BOOL(static_only);
+    EXTRACT_AUTO(p.shared_only);
+    EXTRACT_AUTO(p.static_only);
 
-    GET_BOOL(load_from_bazel);
+    EXTRACT_AUTO(p.load_from_bazel);
 
     if (p.shared_only && p.static_only)
         throw std::runtime_error("Project cannot be static and shared simultaneously");
