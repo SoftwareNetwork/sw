@@ -47,6 +47,7 @@
 #endif
 
 #include "context.h"
+#include "bazel/bazel.h"
 
 //#include <parser.h>
 
@@ -464,6 +465,18 @@ void Project::findSources(path p)
 {
     p /= root_directory;
 
+    if (load_from_bazel)
+    {
+        auto b = read_file(p / "BUILD");
+        auto f = bazel::parse(b);
+        String project_name;
+        if (!package.empty())
+            project_name = package.back();
+        auto files = f.getFiles(project_name);
+        sources.insert(files.begin(), files.end());
+        sources.insert("BUILD");
+    }
+
     for (auto i = sources.begin(); i != sources.end();)
     {
         if (fs::exists(p / *i))
@@ -482,18 +495,21 @@ void Project::findSources(path p)
     for (auto &e : sources)
         rgxs[e] = std::regex(e);
 
-    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(p), {}))
+    if (!rgxs.empty())
     {
-        if (!fs::is_regular_file(f))
-            continue;
-
-        String s = relative(f.path(), p).string();
-        std::replace(s.begin(), s.end(), '\\', '/');
-
-        for (auto &e : rgxs)
+        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(p), {}))
         {
-            if (std::regex_match(s, e.second))
-                files.insert(s);
+            if (!fs::is_regular_file(f))
+                continue;
+
+            String s = relative(f.path(), p).string();
+            std::replace(s.begin(), s.end(), '\\', '/');
+
+            for (auto &e : rgxs)
+            {
+                if (std::regex_match(s, e.second))
+                    files.insert(s);
+            }
         }
     }
 
@@ -730,24 +746,22 @@ void Config::load(const path &p)
         if (!prjs.IsMap())
             throw std::runtime_error("'projects' should be a map");
         for (auto &prj : prjs)
-            set_project(load_project(prj.second), prj.first.as<String>());
+            set_project(load_project(prj.second, prj.first.template as<String>()), prj.first.template as<String>());
     }
     else
-        set_project(load_project(root), "");
+        set_project(load_project(root, ""), "");
 }
 
-Project Config::load_project(const YAML::Node &root)
+Project Config::load_project(const YAML::Node &root, const String &name)
 {
     Project p;
 
-#define GET_BOOL(b) p.b = root[#b].IsDefined()
+    EXTRACT_VAR(root, p.empty, "empty", bool);
 
-    EXTRACT_AUTO(p.empty);
+    EXTRACT_VAR(root, p.shared_only, "shared_only", bool);
+    EXTRACT_VAR(root, p.static_only, "static_only", bool);
 
-    EXTRACT_AUTO(p.shared_only);
-    EXTRACT_AUTO(p.static_only);
-
-    EXTRACT_AUTO(p.load_from_bazel);
+    EXTRACT_VAR(root, p.load_from_bazel, "load_from_bazel", bool);
 
     if (p.shared_only && p.static_only)
         throw std::runtime_error("Project cannot be static and shared simultaneously");

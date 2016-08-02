@@ -84,7 +84,7 @@ target_compile_definitions(common
     PRIVATE -DVERSION_MINOR=${VERSION_MINOR}
     PRIVATE -DVERSION_PATCH=${VERSION_PATCH}
 )
-target_link_libraries(common context)# cppan)
+target_link_libraries(common context bazel_parser)# cppan)
 if (WIN32)
     target_link_libraries(common
         archive_static

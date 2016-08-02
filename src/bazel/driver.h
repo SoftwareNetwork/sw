@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-#include <bazel.h>
+#include "bazel.h"
 
 #include <grammar.hpp>
 

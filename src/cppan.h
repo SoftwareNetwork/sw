@@ -184,7 +184,7 @@ private:
 
     void load_common(const path &p);
     void load_common(const YAML::Node &root);
-    Project load_project(const YAML::Node &root);
+    Project load_project(const YAML::Node &root, const String &name);
     ProjectPath relative_name_to_absolute(const String &name);
     path get_packages_dir(PackagesDirType type);
 

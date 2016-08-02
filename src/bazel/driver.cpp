@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <sstream>
 
 // Prevent using <unistd.h> because of bug in flex.
 #define YY_NO_UNISTD_H 1
@@ -60,10 +61,14 @@ int ParserDriver::parse()
 
 void ParserDriver::error(const yy::location &l, const std::string &m)
 {
-    std::cerr << l << " " << m << std::endl;
+    std::ostringstream ss;
+    ss << l << " " << m << std::endl;
+    throw std::runtime_error("Error during bazel parse: " + ss.str());
 }
 
 void ParserDriver::error(const std::string& m)
 {
-    std::cerr << m << std::endl;
+    std::ostringstream ss;
+    ss << m << std::endl;
+    throw std::runtime_error("Error during bazel parse: " + ss.str());
 }

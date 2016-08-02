@@ -88,6 +88,11 @@ public:
         return path_elements.empty();
     }
 
+    auto back() const
+    {
+        return path_elements.back();
+    }
+
     bool operator==(const ProjectPath &rhs) const
     {
         return path_elements == rhs.path_elements;

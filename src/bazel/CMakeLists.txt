@@ -30,6 +30,8 @@ set(parser_src
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/lexer.h PROPERTIES GENERATED TRUE)
 
 set(bazel_parser_src
+    bazel.cpp
+    bazel.h
     driver.cpp
     driver.h
 	grammar.yy
