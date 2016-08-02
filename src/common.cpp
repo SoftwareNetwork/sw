@@ -104,7 +104,7 @@ Version::Version(const String &s)
             throw std::runtime_error(error);
     }
     else
-        throw std::runtime_error("Bad version number");
+        throw std::runtime_error("Bad version");
 }
 
 String Version::toString() const
