@@ -1743,6 +1743,15 @@ include(TestBigEndian))");
     ctx.addLine(")");
     ctx.addLine();
 
+    // msvc definitions
+    ctx.addLine(R"(if (MSVC)
+target_compile_definitions(cppan-helpers
+    INTERFACE _CRT_SECURE_NO_WARNINGS # disable warning about non-standard functions
+)
+endif()
+)");
+    ctx.addLine();
+
     // common link libraries
     ctx.addLine(R"(if (WIN32)
 target_link_libraries(cppan-helpers
