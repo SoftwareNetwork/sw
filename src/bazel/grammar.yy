@@ -157,13 +157,13 @@ expr: identifier
 	| function_call
     {
         bazel::Values v;
-        v.insert("fcall");
+        //v.insert("fcall");
         $$ = v;
     }
     /*| kv_map
     {
         bazel::Values v;
-        v.insert("kv_map");
+        //v.insert("kv_map");
         $$ = v;
     }*/
 	;

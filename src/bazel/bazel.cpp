@@ -10,8 +10,15 @@ void trimQuotes(std::string &s)
 {
     if (s.empty())
         return;
-    s = s.substr(s.find_first_not_of("\""));
-    s = s.substr(0, s.find_last_not_of("\"") + 1);
+    if (s.front() == '\"')
+        s = s.substr(1);
+    if (s.empty())
+        return;
+    if (s.back() == '\"')
+        s = s.substr(0, s.size() - 1);
+
+    //s = s.substr(s.find_first_not_of("\""));
+    //s = s.substr(0, s.find_last_not_of("\"") + 1);
 }
 
 }
