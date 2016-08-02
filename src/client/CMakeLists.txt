@@ -10,6 +10,7 @@ target_link_libraries(client
     yaml-cpp
     ${Boost_LIBRARIES}
 )
+set_target_properties(client PROPERTIES OUTPUT_NAME cppan)
 
 if (WIN32)
 install(TARGETS client RUNTIME

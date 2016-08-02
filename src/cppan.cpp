@@ -746,7 +746,10 @@ void Config::load(const path &p)
         if (!prjs.IsMap())
             throw std::runtime_error("'projects' should be a map");
         for (auto &prj : prjs)
+        {
+            //std::cout << "loading project: " << prj.first.template as<String>() << std::endl;
             set_project(load_project(prj.second, prj.first.template as<String>()), prj.first.template as<String>());
+        }
     }
     else
         set_project(load_project(root, ""), "");
@@ -776,10 +779,21 @@ Project Config::load_project(const YAML::Node &root, const String &name)
             throw std::runtime_error("'root_directory' cannot be less than current: " + p.root_directory.string() + ", " + cp.string());
     });
 
-    get_map(root, "include_directories", [&p](const auto &n)
+    get_map_and_iterate(root, "include_directories", [&p](const auto &n)
     {
-        p.include_directories.public_ = get_sequence_set<path, String>(n, "public");
-        p.include_directories.private_ = get_sequence_set<path, String>(n, "private");
+        auto f = n.first.template as<String>();
+        if (f == "public")
+        {
+            auto s = get_sequence<String>(n.second);
+            p.include_directories.public_.insert(s.begin(), s.end());
+        }
+        else if (f == "private")
+        {
+            auto s = get_sequence<String>(n.second);
+            p.include_directories.private_.insert(s.begin(), s.end());
+        }
+        else
+            throw std::runtime_error("include key must be only 'public' or 'private'");
     });
     if (p.include_directories.public_.empty())
         p.include_directories.public_.insert("include");
