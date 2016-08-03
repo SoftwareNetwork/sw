@@ -425,8 +425,7 @@ void get_variety_and_iterate(const YAML::Node &node, const String &key, F1 &&f_s
 void get_config_insertion(const YAML::Node &n, const String &key, String &dst)
 {
     dst = get_scalar<String>(n, key);
-    if (!dst.empty())
-        dst.resize(dst.size() - 1); // remove trailing \n
+    boost::trim(dst);
 }
 
 ptree url_post(const String &url, const ptree &data)
