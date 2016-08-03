@@ -56,7 +56,7 @@ public:
     ProjectPath(const PathElements &pe);
     ProjectPath(String s);
 
-    String toString() const;
+    String toString(const String &delim = ".") const;
     String toPath() const;
     path toFileSystemPath() const;
 

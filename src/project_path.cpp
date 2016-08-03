@@ -50,14 +50,14 @@ ProjectPath::ProjectPath(const PathElements &pe)
 {
 }
 
-String ProjectPath::toString() const
+String ProjectPath::toString(const String &delim) const
 {
     String p;
     if (path_elements.empty())
         return p;
     for (auto &e : path_elements)
-        p += e + '.';
-    p.resize(p.size() - 1);
+        p += e + delim;
+    p.resize(p.size() - delim.size());
     return p;
 }
 

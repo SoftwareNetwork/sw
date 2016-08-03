@@ -52,6 +52,7 @@
 //#include <parser.h>
 
 #define CPPAN_LOCAL_DIR "cppan"
+#define BAZEL_BUILD_FILE "BUILD"
 
 #define LOG(x) std::cout << x << "\n"
 
@@ -465,16 +466,16 @@ void Project::findSources(path p)
 {
     p /= root_directory;
 
-    if (load_from_bazel)
+    if (import_from_bazel)
     {
-        auto b = read_file(p / "BUILD");
+        auto b = read_file(p / BAZEL_BUILD_FILE);
         auto f = bazel::parse(b);
         String project_name;
         if (!package.empty())
             project_name = package.back();
         auto files = f.getFiles(project_name);
         sources.insert(files.begin(), files.end());
-        sources.insert("BUILD");
+        sources.insert(BAZEL_BUILD_FILE);
     }
 
     for (auto i = sources.begin(); i != sources.end();)
@@ -764,7 +765,7 @@ Project Config::load_project(const YAML::Node &root, const String &name)
     EXTRACT_VAR(root, p.shared_only, "shared_only", bool);
     EXTRACT_VAR(root, p.static_only, "static_only", bool);
 
-    EXTRACT_VAR(root, p.load_from_bazel, "load_from_bazel", bool);
+    EXTRACT_VAR(root, p.import_from_bazel, "import_from_bazel", bool);
 
     if (p.shared_only && p.static_only)
         throw std::runtime_error("Project cannot be static and shared simultaneously");
@@ -800,6 +801,9 @@ Project Config::load_project(const YAML::Node &root, const String &name)
     p.include_directories.public_.insert("${CMAKE_CURRENT_BINARY_DIR}");
 
     p.exclude_from_build = get_sequence_set<path, String>(root, "exclude_from_build");
+
+    if (p.import_from_bazel)
+        p.exclude_from_build.insert(BAZEL_BUILD_FILE);
 
     p.bs_insertions.get_config_insertions(root);
 
@@ -1447,17 +1451,33 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
     print_bs_insertion("post target", &BuildSystemConfigInsertions::post_target);
 
     // aliases
-    Version ver = pi.dependency->version;
-    if (!ver.isBranch())
+    if (!pi.dependency->version.isBranch())
     {
         String tt = d.flags[pfExecutable] ? "add_executable" : "add_library";
+
         config_section_title(ctx, "aliases");
-        ver.patch = -1;
-        ctx << tt << "(" << pi.dependency->package.toString() + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
-        ver.minor = -1;
-        ctx << tt << "(" << pi.dependency->package.toString() + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
-        ctx << tt << "(" << pi.dependency->package.toString() << " ALIAS " << pi.target_name << ")" << Context::eol;
-        ctx.addLine();
+
+        {
+            Version ver = pi.dependency->version;
+            ver.patch = -1;
+            ctx << tt << "(" << pi.dependency->package.toString() + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
+            ver.minor = -1;
+            ctx << tt << "(" << pi.dependency->package.toString() + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
+            ctx << tt << "(" << pi.dependency->package.toString() << " ALIAS " << pi.target_name << ")" << Context::eol;
+            ctx.addLine();
+        }
+
+        {
+            Version ver = pi.dependency->version;
+            ctx << tt << "(" << pi.dependency->package.toString("::") + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
+            ver.patch = -1;
+            ctx << tt << "(" << pi.dependency->package.toString("::") + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
+            ver.minor = -1;
+            ctx << tt << "(" << pi.dependency->package.toString("::") + "-" + ver.toAnyVersion() << " ALIAS " << pi.target_name << ")" << Context::eol;
+            ctx << tt << "(" << pi.dependency->package.toString("::") << " ALIAS " << pi.target_name << ")" << Context::eol;
+            ctx.addLine();
+        }
+
         if (!p.aliases.empty())
         {
             ctx.addLine("# user-defined");
