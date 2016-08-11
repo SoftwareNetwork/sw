@@ -54,6 +54,7 @@
 #define CPPAN_LOCAL_DIR "cppan"
 #define BAZEL_BUILD_FILE "BUILD"
 
+#define LOG_NO_NEWLINE(x) std::cout << x
 #define LOG(x) std::cout << x << "\n"
 
 const String cmake_config_filename = "CMakeLists.txt";
@@ -1013,8 +1014,9 @@ void Config::download_dependencies()
     if (data.empty())
         return;
 
-    LOG("Requesting dependency list");
+    LOG_NO_NEWLINE("Requesting dependency list... ");
     dependency_tree = url_post(url + "/api/find_dependencies", data);
+    LOG("Finished");
 
     // read deps urls, download them, unpack
     int api = 0;
