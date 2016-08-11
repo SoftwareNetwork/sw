@@ -49,6 +49,9 @@
 #include <archive_entry.h>
 #endif
 
+// version numbers of different subsystems
+#define SOURCE_VERSION 2
+
 static const std::regex r_login("[a-z][a-z0-9_]+");
 static const std::regex r_org_name = r_login;
 static const std::regex r_project_name("[a-z_][a-z0-9_]+");
@@ -500,18 +503,17 @@ String read_file(const path &p)
         throw std::runtime_error("File '" + p.string() + "' does not exist");
 
     auto fn = p.string();
-    std::ifstream ifile(fn);
+    std::ifstream ifile(fn, std::ios::in | std::ios::binary);
     if (!ifile)
         throw std::runtime_error("Cannot open file " + fn);
 
-    auto sz = fs::file_size(p);
+    size_t sz = fs::file_size(p);
     if (sz > 1'000'000)
         throw std::runtime_error("File " + fn + " is very big (> ~1MB)");
 
-    String f, s;
-    f.reserve((int)sz + 1);
-    while (std::getline(ifile, s))
-        f += s + "\n";
+    String f;
+    f.resize(sz);
+    ifile.read(&f[0], sz);
     return f;
 }
 
