@@ -195,7 +195,7 @@ private:
     void create_build_files1(const Dependencies &deps) const;
     void print_meta_config_file() const;
     void print_helper_file() const;
-    PackageInfo print_package_config_file(std::ofstream &o, const Dependency &d, Config &parent) const;
+    PackageInfo print_package_config_file(const path &config_file, const Dependency &d, Config &parent) const;
 
 	//void parse(YAML::Node &r, Config &c, const path &p);
 };

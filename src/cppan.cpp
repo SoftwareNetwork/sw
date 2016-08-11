@@ -502,7 +502,7 @@ void Project::findSources(path p)
             if (!fs::is_regular_file(f))
                 continue;
 
-            String s = relative(f.path(), p).string();
+            String s = fs::relative(f.path(), p).string();
             std::replace(s.begin(), s.end(), '\\', '/');
 
             for (auto &e : rgxs)
@@ -1205,13 +1205,8 @@ void Config::download_dependencies()
             fs::remove(fn);
         }
 
-        auto config_file = version_dir / cmake_config_filename;
-        std::ofstream ofile(config_file.string());
-        if (!ofile)
-            throw std::runtime_error("Cannot create a file: " + config_file.string());
-
         Config c(dep.package_dir);
-        auto pi = c.print_package_config_file(ofile, dep, *this);
+        auto pi = c.print_package_config_file(version_dir / cmake_config_filename, dep, *this);
         if (dep.flags[pfDirectDependency])
             packages[pi.dependency->package.toString()] = pi;
         else
@@ -1219,7 +1214,7 @@ void Config::download_dependencies()
     }
 }
 
-PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency &d, Config &parent) const
+PackageInfo Config::print_package_config_file(const path &config_file, const Dependency &d, Config &parent) const
 {
     PackageInfo pi(d);
     bool header_only = pi.dependency->flags[pfHeaderOnly];
@@ -1314,27 +1309,24 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
 
     print_bs_insertion("pre sources", &BuildSystemConfigInsertions::pre_sources);
 
-    // sources
-    if (!header_only)
+    // sources (also used for headers)
+    config_section_title(ctx, "sources");
+    if (p.build_files.empty())
+        ctx.addLine("file(GLOB_RECURSE src \"*\")");
+    else
     {
-        config_section_title(ctx, "sources");
-        if (p.build_files.empty())
-            ctx.addLine("file(GLOB_RECURSE src \"*\")");
-        else
+        ctx.addLine("set(src");
+        ctx.increaseIndent();
+        for (auto &f : p.build_files)
         {
-            ctx.addLine("set(src");
-            ctx.increaseIndent();
-            for (auto &f : p.build_files)
-            {
-                auto s = f;
-                std::replace(s.begin(), s.end(), '\\', '/');
-                ctx.addLine("${CMAKE_CURRENT_SOURCE_DIR}/" + s);
-            }
-            ctx.decreaseIndent();
-            ctx.addLine(")");
+            auto s = f;
+            std::replace(s.begin(), s.end(), '\\', '/');
+            ctx.addLine("${CMAKE_CURRENT_SOURCE_DIR}/" + s);
         }
-        ctx.addLine();
+        ctx.decreaseIndent();
+        ctx.addLine(")");
     }
+    ctx.addLine();
 
     // exclude files
     if (!p.exclude_from_build.empty())
@@ -1533,12 +1525,45 @@ PackageInfo Config::print_package_config_file(std::ofstream &o, const Dependency
 
     print_bs_insertion("post alias", &BuildSystemConfigInsertions::post_alias);
 
+    // dummy target for IDEs with headers only
+    if (header_only)
+    {
+        config_section_title(ctx, "IDE dummy target for headers");
+
+        auto tgt = pi.target_name + "-hdrs";
+        ctx.addLine("add_custom_target(" + tgt + " SOURCES ${src})");
+        ctx.addLine();
+        ctx << "set_target_properties         (" << tgt << " PROPERTIES" << Context::eol;
+        ctx << "    FOLDER \"cppan/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
+        ctx << ")" << Context::eol;
+        ctx.emptyLines(1);
+    }
+
+    // source groups
+    config_section_title(ctx, "source groups");
+    auto dir = config_file.parent_path();
+    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+    {
+        if (!fs::is_directory(f))
+            continue;
+        auto s = fs::relative(f.path(), dir).string();
+        auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
+        boost::replace_all(s2, "/", "\\\\");
+        boost::replace_all(s, "\\", "/");
+        ctx.addLine("source_group(\"" + s2 + "\" REGULAR_EXPRESSION  \"" + s + "/*\")");
+    }
+    ctx.emptyLines(1);
+
     // eof
     ctx.addLine(config_delimeter);
     ctx.addLine();
 
     ctx.splitLines();
-    o << ctx.getText();
+
+    std::ofstream ofile(config_file.string());
+    if (!ofile)
+        throw std::runtime_error("Cannot create a file: " + config_file.string());
+    ofile << ctx.getText();
 
     return pi;
 }
