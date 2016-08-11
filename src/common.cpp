@@ -507,7 +507,7 @@ String read_file(const path &p)
     if (!ifile)
         throw std::runtime_error("Cannot open file " + fn);
 
-    size_t sz = fs::file_size(p);
+    size_t sz = (size_t)fs::file_size(p);
     if (sz > 1'000'000)
         throw std::runtime_error("File " + fn + " is very big (> ~1MB)");
 
