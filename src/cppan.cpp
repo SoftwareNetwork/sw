@@ -781,13 +781,13 @@ void Config::save_source(YAML::Node &root, const Source &source)
     {
         root["source"]["git"] = git.url;
         if (!git.tag.empty())
-            root["source"]["git"]["tag"] = git.tag;
+            root["source"]["tag"] = git.tag;
         if (!git.branch.empty())
-            root["source"]["git"]["branch"] = git.branch;
+            root["source"]["branch"] = git.branch;
     },
         [&root](const RemoteFile &rf)
     {
-        root["source"]["file"] = rf.url;
+        root["source"]["remote"] = rf.url;
     }
     );
 
