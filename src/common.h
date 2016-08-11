@@ -34,6 +34,7 @@
 #include <tuple>
 #include <vector>
 
+#include <boost/variant.hpp>
 #include <openssl/evp.h>
 
 #include "enums.h"
@@ -152,24 +153,75 @@ struct Version
     bool operator!=(const Version &rhs) const;
 };
 
-struct Source
+struct Git
 {
-    struct Git
+    String url;
+    String tag;
+    String branch;
+
+    bool empty() const { return url.empty(); }
+
+    bool isValid(String *error = nullptr) const
     {
-        String url;
-        String tag;
-        String commit;
-
-        bool empty() const { return url.empty(); }
-    };
-
-    // add svn, bzr, hg?
-    Git git;
-    String file;
+        if (empty())
+        {
+            if (error)
+                *error = "Git url is missing";
+            return false;
+        }
+        if (tag.empty() && branch.empty())
+        {
+            if (error)
+                *error = "No git sources (branch or tag) available";
+            return false;
+        }
+        if (!tag.empty() && !branch.empty())
+        {
+            if (error)
+                *error = "Only one git source (branch or tag) must be specified";
+            return false;
+        }
+        return true;
+    }
 };
+
+struct RemoteFile { String url; };
+
+// add svn, bzr, hg?
+// do not add local
+using Source = boost::variant<Git, RemoteFile>;
 
 Version get_program_version();
 String get_program_version_string(const String &prog_name);
 
 std::wstring to_wstring(const std::string &s);
 std::string to_string(const std::wstring &s);
+
+// lambda overloads
+template <class... Fs> struct overload_set;
+
+template <class F1, class... Fs>
+struct overload_set<F1, Fs...> : F1, overload_set<Fs...>::type
+{
+    typedef overload_set type;
+
+    overload_set(F1 head, Fs... tail)
+        : F1(head), overload_set<Fs...>::type(tail...)
+    {}
+
+    using F1::operator();
+    using overload_set<Fs...>::type::operator();
+};
+
+template <class F>
+struct overload_set<F> : F
+{
+    typedef F type;
+    using F::operator();
+};
+
+template <class... Fs>
+typename overload_set<Fs...>::type overload(Fs... x)
+{
+    return overload_set<Fs...>(x...);
+}

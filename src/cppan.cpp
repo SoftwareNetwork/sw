@@ -688,22 +688,7 @@ void Config::load(const path &p)
             version = Version(ver);
     }
 
-    // source
-    auto &src = root["source"];
-    if (src.IsDefined())
-    {
-        EXTRACT_VAR(src, source.git.url, "git", String);
-        EXTRACT_VAR(src, source.git.tag, "tag", String);
-        EXTRACT_VAR(src, source.git.commit, "commit", String);
-        EXTRACT_VAR(src, source.file, "file", String);
-
-        if (!source.git.url.empty() &&
-            !source.file.empty())
-            throw std::runtime_error("Only one source (git or file) must be specified");
-
-        if (!source.git.empty() && !source.git.tag.empty() && !source.git.commit.empty())
-            throw std::runtime_error("Only one git source (tag or commit) must be specified");
-    }
+    source = load_source(root);
 
     // global checks
 	auto check = [&root](auto &a, auto &&str)
@@ -753,6 +738,60 @@ void Config::load(const path &p)
     }
     else
         set_project(load_project(root, ""), "");
+}
+
+Source Config::load_source(const YAML::Node &root)
+{
+    Source source;
+    auto &src = root["source"];
+    if (!src.IsDefined())
+        return source;
+
+    auto error = "Only one source must be specified";
+
+    Git git;
+    EXTRACT_VAR(src, git.url, "git", String);
+    EXTRACT_VAR(src, git.branch, "branch", String);
+    EXTRACT_VAR(src, git.tag, "tag", String);
+
+    if (git.isValid())
+    {
+        if (src["file"].IsDefined())
+            throw std::runtime_error(error);
+        source = git;
+    }
+    else
+    {
+        RemoteFile rf;
+        EXTRACT_VAR(src, rf.url, "remote", String);
+
+        if (!rf.url.empty())
+            source = rf;
+        else
+            throw std::runtime_error(error);
+    }
+
+    return source;
+}
+
+void Config::save_source(YAML::Node &root, const Source &source)
+{
+    auto save_source = overload(
+        [&root](const Git &git)
+    {
+        root["source"]["git"] = git.url;
+        if (!git.tag.empty())
+            root["source"]["git"]["tag"] = git.tag;
+        if (!git.branch.empty())
+            root["source"]["git"]["branch"] = git.branch;
+    },
+        [&root](const RemoteFile &rf)
+    {
+        root["source"]["file"] = rf.url;
+    }
+    );
+
+    boost::apply_visitor(save_source, source);
 }
 
 Project Config::load_project(const YAML::Node &root, const String &name)

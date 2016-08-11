@@ -176,6 +176,9 @@ struct Config
 
     Projects &getProjects() { return projects; }
 
+    static Source load_source(const YAML::Node &root);
+    static void save_source(YAML::Node &root, const Source &source);
+
 private:
     ptree dependency_tree;
     mutable std::map<String, PackageInfo> packages;
