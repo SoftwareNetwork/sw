@@ -142,6 +142,7 @@ struct Version
 
     bool isValid() const;
     bool isBranch() const { return !branch.empty(); }
+    bool isVersion() const { return !isBranch(); }
 
     // checks if this version can be rhs using upgrade rules
     // does not check branches!
