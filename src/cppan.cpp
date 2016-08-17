@@ -1711,6 +1711,24 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
     if (!ofile)
         throw std::runtime_error("Cannot create a file: " + config_file.string());
     ofile << ctx.getText();
+
+    // renew file
+    Context ctx2;
+    ctx2.addLine(R"(if (NOT EXISTS ${TARGET_FILE})
+    return()
+endif()
+
+execute_process(
+    COMMAND ${CMAKE_COMMAND}
+        --build ${BUILD_DIR}
+        --config ${CONFIG}
+)
+)");
+    auto renew_file = config_file.parent_path() / "renew.cmake";
+    std::ofstream ofile2(renew_file.string());
+    if (!ofile2)
+        throw std::runtime_error("Cannot create a file: " + renew_file.string());
+    ofile2 << ctx2.getText();
 }
 
 void Config::print_meta_config_file() const
