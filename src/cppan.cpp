@@ -1561,8 +1561,8 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     }
 
     // export
-    //config_section_title(ctx, "export");
-    //ctx.addLine("export(TARGETS " + pi.target_name + " APPEND FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
+    config_section_title(ctx, "export");
+    ctx.addLine("export(TARGETS " + pi.target_name + " APPEND FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
 
     ctx.emptyLines(1);
 
