@@ -49,8 +49,6 @@
 #include "context.h"
 #include "bazel/bazel.h"
 
-//#include <parser.h>
-
 #define CPPAN_LOCAL_DIR "cppan"
 #define BAZEL_BUILD_FILE "BUILD"
 
@@ -58,7 +56,9 @@
 #define LOG(x) std::cout << x << "\n"
 
 const String cmake_config_filename = "CMakeLists.txt";
+const String cmake_object_config_filename = "obj.cmake";
 const String cmake_helpers_filename = "CppanHelpers.cmake";
+const String cppan_dummy_target = "cppan-dummy";
 
 using MimeType = String;
 using MimeTypes = std::set<MimeType>;
@@ -245,12 +245,13 @@ path get_root_directory()
 
 void config_section_title(Context &ctx, const String &t)
 {
+    ctx.emptyLines(1);
     ctx.addLine(config_delimeter);
     ctx.addLine("#");
     ctx.addLine("# " + t);
     ctx.addLine("#");
     ctx.addLine(config_delimeter);
-    ctx.addLine();
+    ctx.emptyLines(1);
 }
 
 template <class T>
@@ -441,6 +442,58 @@ ptree url_post(const String &url, const ptree &data)
     std::istringstream iss(url_post(url, oss.str()));
     pt::read_json(iss, p);
     return p;
+}
+
+String normalize_path(const path &p)
+{
+    String s = p.string();
+    boost::algorithm::replace_all(s, "\\", "/");
+    return s;
+}
+
+String get_binary_path(const ProjectPath &p, const Version &v)
+{
+    return sha1(p.toString() + " " + v.toString()).substr(0, 10);
+}
+
+String add_subdirectory(String src, String bin = String())
+{
+    boost::algorithm::replace_all(src, "\\", "/");
+    boost::algorithm::replace_all(bin, "\\", "/");
+    return "add_subdirectory(\"" + src + "\" \"" + bin + "\")";
+}
+
+void add_subdirectory(Context &ctx, const String &src, const String &bin = String())
+{
+    ctx << add_subdirectory(src, bin) << Context::eol;
+}
+
+void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, const Dependencies &id, const path &base_dir)
+{
+    auto add_deps = [&](const auto &dd, const String &prefix = String())
+    {
+        if (dd.empty())
+            return;
+
+        config_section_title(ctx, prefix + "direct dependencies");
+        for (auto &p : dd)
+        {
+            auto s = p.second.getPackageDir(p.second.flags[pfHeaderOnly] ? c.get_storage_dir_src() : base_dir).string();
+            if (c.build_local || p.second.flags[pfHeaderOnly])
+                add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
+            else
+                ctx.addLine("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
+        }
+        ctx.addLine();
+    };
+
+    add_deps(dd);
+    add_deps(id, "in");
+}
+
+void print_dependencies(Context &ctx, const Config &c, const path &base_dir)
+{
+    print_dependencies(ctx, c, c.getDirectDependencies(), c.getIndirectDependencies(), base_dir);
 }
 
 void BuildSystemConfigInsertions::get_config_insertions(const YAML::Node &n)
@@ -660,7 +713,7 @@ void Config::load_common(const YAML::Node &root)
 
     EXTRACT_AUTO(host);
     EXTRACT(storage_dir, String);
-    EXTRACT(root_project, String);
+    EXTRACT_AUTO(build_local);
 
     auto &p = root["proxy"];
     if (p.IsDefined())
@@ -672,14 +725,24 @@ void Config::load_common(const YAML::Node &root)
     }
 
     packages_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "packages_dir", "user"));
+
+    if (root["storage_dir"].IsDefined())
+    {
+        packages_dir_type = PackagesDirType::None;
+    }
 }
 
 void Config::load(const path &p)
 {
     const auto root = YAML::LoadFile(p.string());
-    load_common(root);
 
-	//parse(root, *this, p);
+    auto ls = root["local_settings"];
+    if (ls.IsDefined())
+    {
+        if (!ls.IsMap())
+            throw std::runtime_error("'local_settings' should be a map");
+        load_common(ls);
+    }
 
     // version
     {
@@ -690,6 +753,8 @@ void Config::load(const path &p)
     }
 
     source = load_source(root);
+
+    EXTRACT(root_project, String);
 
     // global checks
 	auto check = [&root](auto &a, auto &&str)
@@ -909,13 +974,14 @@ Project Config::load_project(const YAML::Node &root, const String &name)
                     auto key = v.first.template as<String>();
                     if (key == "version")
                         dependency.version = v.second.template as<String>();
-                    else if (key == "package_dir")
-                        dependency.package_dir_type = packages_dir_type_from_string(v.second.template as<String>());
-                    else if (key == "patches")
-                    {
-                        for (const auto &p : v.second)
-                            dependency.patches.push_back(p.template as<String>());
-                    }
+                    // TODO: re-enable when adding patches support
+                    //else if (key == "package_dir")
+                    //    dependency.package_dir_type = packages_dir_type_from_string(v.second.template as<String>());
+                    //else if (key == "patches")
+                    //{
+                    //    for (const auto &p : v.second)
+                    //        dependency.patches.push_back(p.template as<String>());
+                    //}
                     else
                         throw std::runtime_error("Unknown key: " + key);
                 }
@@ -1015,9 +1081,10 @@ ProjectPath Config::relative_name_to_absolute(const String &name)
 
 void Config::save(const path &p) const
 {
-#define EMIT_KV(k, v) \
-    do { \
-        e << YAML::Key << k; \
+#define EMIT_KV(k, v)          \
+    do                         \
+    {                          \
+        e << YAML::Key << k;   \
         e << YAML::Value << v; \
     } while (0)
 #define EMIT_KV_SAME(k) EMIT_KV(#k, k)
@@ -1055,7 +1122,7 @@ void Config::download_dependencies()
 
     LOG_NO_NEWLINE("Requesting dependency list... ");
     dependency_tree = url_post(url + "/api/find_dependencies", data);
-    LOG("Finished");
+    LOG("Ok");
 
     // read deps urls, download them, unpack
     int api = 0;
@@ -1074,10 +1141,13 @@ void Config::download_dependencies()
     String data_url = "data";
     if (dependency_tree.find("data_dir") != dependency_tree.not_found())
         data_url = dependency_tree.get<String>("data_dir");
+
     auto &remote_packages = dependency_tree.get_child("packages");
     for (auto &v : remote_packages)
     {
-        Dependency dep;
+        auto id = v.second.get<int>("id");
+
+        DownloadDependency dep;
         dep.package = v.first;
         dep.version = v.second.get<String>("version");
         dep.flags = decltype(dep.flags)(v.second.get<uint64_t>("flags"));
@@ -1088,67 +1158,20 @@ void Config::download_dependencies()
             std::set<int> idx;
             for (auto &tree_dep : v.second.get_child("dependencies"))
                 idx.insert(tree_dep.second.get_value<int>());
-            for (auto &v : remote_packages)
-            {
-                auto id = v.second.get<int>("id");
-                if (idx.find(id) == idx.end())
-                    continue;
-                Dependency dep2;
-                dep2.package = v.first;
-                dep2.version = v.second.get<String>("version");
-                dep2.flags = decltype(dep2.flags)(v.second.get<uint64_t>("flags"));
-                dep.dependencies[dep2.package.toString()] = dep2;
-            }
+            dep.setDependencyIds(idx);
         }
 
-        path dir;
-        if (dep.flags[pfDirectDependency])
-        {
-            bool found = false;
-            for (auto &p : projects)
-            {
-                auto i = p.second.dependencies.find(dep.package.toString());
-                if (i == p.second.dependencies.end())
-                {
-                    for (auto &d : p.second.dependencies)
-                    {
-                        std::regex r(d.second.package.toString() + ".*");
-                        if (std::regex_match(dep.package.toString(), r))
-                        {
-                            found = true;
-                            d.second.version = dep.version;
-                            dir = get_packages_dir(d.second.get_package_dir_type(packages_dir_type)) / dep.package.toString();
-                            break;
-                        }
-                    }
-                    if (!found)
-                        continue;
-                }
-                else
-                {
-                    found = true;
-                    auto &d = i->second;
-                    d.version = dep.version;
-                    dir = get_packages_dir(d.get_package_dir_type(packages_dir_type)) / d.package.toString();
-                }
-            }
-            if (!found)
-            {
-                // actually should not happen
-                throw std::logic_error("Internal error: cannot match received dependency");
-                //dir = storage_dir / dep.package.toString();
-            }
-        }
-        else
-        {
-            dir = storage_dir / dep.package.toString();
-        }
+        dep.map_ptr = &dependencies;
+        dependencies[id] = dep;
+    }
 
-        path version_dir = dir / dep.version.toString();
-        dep.package_dir = version_dir;
-
-        constexpr auto md5_filename = "archive.md5";
-        auto md5file = dep.package_dir.parent_path() / md5_filename;
+    // download & unpack
+    for (auto &dd : dependencies)
+    {
+        auto &d = dd.second;
+        auto version_dir = d.getPackageDir(get_storage_dir_src());
+        auto md5_filename = d.version.toString() + ".md5";
+        auto md5file = version_dir.parent_path() / md5_filename;
 
         // store md5 of archive
         bool must_download = false;
@@ -1160,7 +1183,7 @@ void Config::download_dependencies()
                 ifile >> file_md5;
                 ifile.close();
             }
-            if (file_md5 != dep.md5 || dep.md5.empty() || file_md5.empty())
+            if (file_md5 != d.md5 || d.md5.empty() || file_md5.empty())
                 must_download = true;
         }
 
@@ -1169,9 +1192,9 @@ void Config::download_dependencies()
             if (fs::exists(version_dir))
                 fs::remove_all(version_dir);
 
-            auto fs_path = ProjectPath(dep.package).toFileSystemPath().string();
+            auto fs_path = ProjectPath(d.package).toFileSystemPath().string();
             std::replace(fs_path.begin(), fs_path.end(), '\\', '/');
-            String package_url = url + "/" + data_url + "/" + fs_path + "/" + dep.version.toString() + ".tar.gz";
+            String package_url = url + "/" + data_url + "/" + fs_path + "/" + d.version.toString() + ".tar.gz";
             path fn = version_dir.string() + ".tar.gz";
 
             String dl_md5;
@@ -1179,20 +1202,21 @@ void Config::download_dependencies()
             dd.url = package_url;
             dd.fn = fn;
             dd.dl_md5 = &dl_md5;
-            LOG("Downloading: " << dep.package.toString() << "-" << dep.version.toString());
+            LOG_NO_NEWLINE("Downloading: " << d.package.toString() << "-" << d.version.toString() << "... ");
             download_file(dd);
 
-            if (dl_md5 != dep.md5)
-                throw std::runtime_error("md5 does not match for package '" + dep.package.toString() + "'");
+            if (dl_md5 != d.md5)
+            {
+                LOG("Fail");
+                throw std::runtime_error("md5 does not match for package '" + d.package.toString() + "'");
+            }
+            LOG("Ok");
 
             std::ofstream ofile(md5file.string());
-            if (ofile)
-            {
-                ofile << dep.md5;
-                ofile.close();
-            }
-            else
+            if (!ofile)
                 throw std::runtime_error("Cannot open the file '" + md5file.string() + "'");
+            ofile << d.md5;
+            ofile.close();
 
             LOG("Unpacking: " << fn.string());
             try
@@ -1206,17 +1230,33 @@ void Config::download_dependencies()
             }
             fs::remove(fn);
         }
-
-        Config c(dep.package_dir);
-        auto pi = c.print_package_config_file(version_dir / cmake_config_filename, dep, *this);
-        if (dep.flags[pfDirectDependency])
-            packages[pi.dependency->package.toString()] = pi;
-        else
-            indirect_dependencies[dep.package.toString()] = dep;
     }
+
+    // print configs
+    LOG_NO_NEWLINE("Generating build configs... ");
+    for (auto &dd : dependencies)
+    {
+        auto &d = dd.second;
+        auto version_dir = d.getPackageDir(get_storage_dir_src());
+
+        Config c(version_dir);
+        c.print_package_config_file(version_dir / cmake_config_filename, d, *this);
+
+        if (d.flags[pfHeaderOnly])
+            continue;
+
+        // print object config files for non-local building
+        auto obj_dir = get_storage_dir_obj() / d.package.toString() / d.version.toString();
+        auto bld_dir = obj_dir / "build";
+        boost::system::error_code ec;
+        fs::create_directories(bld_dir, ec);
+        c.print_object_config_file(bld_dir / cmake_config_filename, d, *this);
+        c.print_object_include_config_file(obj_dir / cmake_object_config_filename, d, *this);
+    }
+    LOG("Ok");
 }
 
-PackageInfo Config::print_package_config_file(const path &config_file, const Dependency &d, Config &parent) const
+void Config::print_package_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const
 {
     PackageInfo pi(d);
     bool header_only = pi.dependency->flags[pfHeaderOnly];
@@ -1224,8 +1264,8 @@ PackageInfo Config::print_package_config_file(const path &config_file, const Dep
     const Project *pp = &projects.begin()->second;
     if (projects.size() > 1)
     {
-		auto it = projects.find(d.package.toString());
-		if (it == projects.end())
+        auto it = projects.find(d.package.toString());
+        if (it == projects.end())
             throw std::runtime_error("No such project '" + d.package.toString() + "' in dependencies list");
         pp = &it->second;
     }
@@ -1249,30 +1289,32 @@ PackageInfo Config::print_package_config_file(const path &config_file, const Dep
     ctx.addLine();
 
     // settings
-    config_section_title(ctx, "settings");
-    ctx.addLine("set(PACKAGE_NAME " + d.package.toString() + ")");
-    ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
-    ctx.addLine();
-    ctx.addLine("set(LIBRARY_TYPE STATIC)");
-    ctx.addLine();
-    ctx.addLine("if (\"${CPPAN_BUILD_SHARED_LIBS}\" STREQUAL \"ON\")");
-    ctx.increaseIndent();
-    ctx.addLine("set(LIBRARY_TYPE SHARED)");
-    ctx.decreaseIndent();
-    ctx.addLine("endif()");
-    ctx.addLine();
-    ctx.addLine("if (LIBRARY_TYPE_" + pi.variable_name + ")");
-    ctx.increaseIndent();
-    ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_" + pi.variable_name + "})");
-    ctx.decreaseIndent();
-    ctx.addLine("endif()");
-
-    if (p.static_only)
+    {
+        config_section_title(ctx, "settings");
+        ctx.addLine("set(PACKAGE_NAME " + d.package.toString() + ")");
+        ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
+        ctx.addLine();
         ctx.addLine("set(LIBRARY_TYPE STATIC)");
-    else if (p.shared_only)
+        ctx.addLine();
+        ctx.addLine("if (\"${CPPAN_BUILD_SHARED_LIBS}\" STREQUAL \"ON\")");
+        ctx.increaseIndent();
         ctx.addLine("set(LIBRARY_TYPE SHARED)");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+        ctx.addLine("if (LIBRARY_TYPE_" + pi.variable_name + ")");
+        ctx.increaseIndent();
+        ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_" + pi.variable_name + "})");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
 
-    ctx.emptyLines(1);
+        if (p.static_only)
+            ctx.addLine("set(LIBRARY_TYPE STATIC)");
+        else if (p.shared_only)
+            ctx.addLine("set(LIBRARY_TYPE SHARED)");
+
+        ctx.emptyLines(1);
+    }
 
     auto print_bs_insertion = [this, &p, &ctx](const String &name, const String BuildSystemConfigInsertions::*i)
     {
@@ -1381,14 +1423,13 @@ PackageInfo Config::print_package_config_file(const path &config_file, const Dep
         ctx.addLine(")");
     }
 
-    // deps
+    // deps (direct)
     ctx.addLine("target_link_libraries         (" + pi.target_name);
     ctx.increaseIndent();
     ctx.addLine((!header_only ? "PUBLIC" : "INTERFACE") + String(" cppan-helpers"));
-    for (auto &d1 : p.dependencies)
+    for (auto &d1 : d.getDirectDependencies())
     {
-        auto iter = d.dependencies.find(d1.first);
-        if (iter != d.dependencies.end() && iter->second.flags[pfExecutable])
+        if (d1.second.flags[pfExecutable])
             continue;
         PackageInfo pi1(d1.second);
         if (header_only)
@@ -1520,8 +1561,8 @@ PackageInfo Config::print_package_config_file(const path &config_file, const Dep
     }
 
     // export
-    config_section_title(ctx, "export");
-    ctx.addLine("export(TARGETS " + pi.target_name + " APPEND FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
+    //config_section_title(ctx, "export");
+    //ctx.addLine("export(TARGETS " + pi.target_name + " APPEND FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
 
     ctx.emptyLines(1);
 
@@ -1566,8 +1607,110 @@ PackageInfo Config::print_package_config_file(const path &config_file, const Dep
     if (!ofile)
         throw std::runtime_error("Cannot create a file: " + config_file.string());
     ofile << ctx.getText();
+}
 
-    return pi;
+void Config::print_object_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const
+{
+    PackageInfo pi(d);
+
+    Context ctx;
+    ctx.addLine("#");
+    ctx.addLine("# cppan");
+    ctx.addLine("# package: " + d.package.toString());
+    ctx.addLine("# version: " + d.version.toString());
+    ctx.addLine("#");
+    ctx.addLine();
+
+    {
+        config_section_title(ctx, "cmake settings");
+        ctx.addLine("cmake_minimum_required(VERSION 3.0.0)");
+        ctx.addLine();
+        ctx.addLine("set(CMAKE_RUNTIME_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_bin()) + ")");
+        ctx.addLine("set(CMAKE_LIBRARY_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_lib()) + ")");
+        ctx.addLine("set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_lib()) + ")");
+        ctx.emptyLines(1);
+    }
+
+    config_section_title(ctx, "project settings");
+    ctx.addLine("project(" + pi.variable_name + " C CXX)");
+    ctx.addLine();
+
+    //config_section_title(ctx, "compiler & linker settings");
+
+    // main include
+    {
+        config_section_title(ctx, "main include");
+        auto mi = get_storage_dir_src() / d.package.toString() / d.version.toString();
+        add_subdirectory(ctx, mi.string(), get_binary_path(d.package, d.version));
+        ctx.emptyLines(1);
+    }
+
+    auto dd = d.getDirectDependencies();
+    auto id = d.getIndirectDependencies();
+    dd.erase(d.package.toString()); // erase self
+    id.erase(d.package.toString()); // erase self
+    print_dependencies(ctx, *this, dd, id, get_storage_dir_src()); // later get_storage_dir_obj?
+
+    // eof
+    ctx.addLine(config_delimeter);
+    ctx.addLine();
+
+    ctx.splitLines();
+
+    std::ofstream ofile(config_file.string());
+    if (!ofile)
+        throw std::runtime_error("Cannot create a file: " + config_file.string());
+    ofile << ctx.getText();
+}
+
+void Config::print_object_include_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const
+{
+    PackageInfo pi(d);
+
+    Context ctx;
+    ctx.addLine("#");
+    ctx.addLine("# cppan");
+    ctx.addLine("# package: " + d.package.toString());
+    ctx.addLine("# version: " + d.version.toString());
+    ctx.addLine("#");
+    ctx.addLine();
+
+    ctx.addLine("set(build_dir " + normalize_path(config_file.parent_path()) + "/build)");
+    ctx.addLine("set(import ${build_dir}/cppan.cmake)");
+    ctx.addLine();
+    ctx.addLine("if (NOT EXISTS ${import})");
+    ctx.increaseIndent();
+    ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -H${build_dir} -B${build_dir})");
+    //ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} --build ${build_dir} --config Release)");
+    ctx.decreaseIndent();
+    ctx.addLine("endif()");
+    ctx.addLine();
+    ctx.addLine("include(${import})");
+    ctx.emptyLines(1);
+
+    ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
+    ctx.increaseIndent();
+    ctx.addLine("COMMAND ${CMAKE_COMMAND}");
+    ctx.increaseIndent();
+    ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + pi.target_name + ">");
+    ctx.addLine("-DCONFIG=$<CONFIG>");
+    ctx.addLine("-DBUILD_DIR=${build_dir}");
+    ctx.addLine("-P " + normalize_path(get_storage_dir_obj() / d.package.toString() / d.version.toString()) + "/renew.cmake");
+    ctx.decreaseIndent();
+    ctx.decreaseIndent();
+    ctx.addLine(")");
+
+    // eof
+    ctx.emptyLines(1);
+    ctx.addLine(config_delimeter);
+    ctx.addLine();
+
+    ctx.splitLines();
+
+    std::ofstream ofile(config_file.string());
+    if (!ofile)
+        throw std::runtime_error("Cannot create a file: " + config_file.string());
+    ofile << ctx.getText();
 }
 
 void Config::print_meta_config_file() const
@@ -1619,31 +1762,10 @@ void Config::print_meta_config_file() const
     }
     o << "\n";*/
 
-    auto add_dep_subdir = [&ctx](const auto &package_dir)
-    {
-        auto src_dir = package_dir.string();
-        boost::algorithm::replace_all(src_dir, "\\", "/");
-        auto bin_dir = (package_dir.parent_path().filename() / package_dir.filename()).string();
-        boost::algorithm::replace_all(bin_dir, "\\", "/");
-        bin_dir = sha1(bin_dir).substr(0, 6);
-        ctx << "add_subdirectory(" << src_dir << " " << bin_dir << ")" << Context::eol;
-    };
-
-    if (!packages.empty())
-    {
-        config_section_title(ctx, "direct dependencies");
-        for (auto &p : packages)
-            add_dep_subdir(p.second.dependency->package_dir);
-        ctx.addLine();
-    }
-
-    if (!indirect_dependencies.empty())
-    {
-        config_section_title(ctx, "indirect dependencies");
-        for (auto &id : indirect_dependencies)
-            add_dep_subdir(id.second.package_dir);
-        ctx.addLine();
-    }
+    if (build_local)
+        print_dependencies(ctx, *this, get_storage_dir_src());
+    else
+        print_dependencies(ctx, *this, get_storage_dir_obj());
 
     ProjectFlags flags;
     flags[pfExecutable] = true;
@@ -1652,21 +1774,23 @@ void Config::print_meta_config_file() const
     const String cppan_project_name = "cppan";
     config_section_title(ctx, "main library");
     ctx.addLine("add_library                   (" + cppan_project_name + " INTERFACE)");
-    if (!packages.empty())
+    auto dd = getDirectDependencies();
+    if (!dd.empty())
     {
         ctx.addLine("target_link_libraries         (" + cppan_project_name);
         ctx.increaseIndent();
-        for (auto &p : packages)
+        for (auto &p : dd)
         {
-            if (p.second.dependency->flags[pfExecutable])
+            if (p.second.flags[pfExecutable])
                 continue;
-            ctx.addLine("INTERFACE " + p.second.target_name);
+            PackageInfo pi(p.second);
+            ctx.addLine("INTERFACE " + pi.target_name);
         }
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
     }
-    ctx.addLine("export(TARGETS " + cppan_project_name + " APPEND FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
+    //ctx.addLine("export(TARGETS " + cppan_project_name + " APPEND FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
 
     ctx.emptyLines(1);
     ctx.addLine(config_delimeter);
@@ -1689,6 +1813,11 @@ void Config::print_helper_file() const
     ctx.addLine("# helper routines");
     ctx.addLine("#");
     ctx.addLine();
+
+    {
+        //config_section_title(ctx, "macros & functions");
+        //ctx.addLine(R"()");
+    }
 
     config_section_title(ctx, "cmake setup");
     ctx.addLine(R"(# Use solution folders.
@@ -1814,10 +1943,20 @@ include(TestBigEndian))");
     //config_section_title(ctx, "fixups");
     ctx.emptyLines(1);
 
+    // dummy compiled target
+    {
+        config_section_title(ctx, "dummy compiled target");
+        ctx.addLine("# this target will be always built before any other");
+        ctx.addLine("add_custom_target(" + cppan_dummy_target + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
+        ctx.addLine("set_target_properties(" + cppan_dummy_target + " PROPERTIES\n    FOLDER \"cppan/service\"\n)");
+        ctx.emptyLines(1);
+    }
+
     // library
-    config_section_title(ctx, "library");
+    config_section_title(ctx, "helper interface library");
 
     ctx.addLine("add_library(cppan-helpers INTERFACE)");
+    ctx.addLine("add_dependencies(cppan-helpers " + cppan_dummy_target + ")");
     ctx.addLine();
 
     // common definitions
@@ -1851,7 +1990,7 @@ endif()
     ctx.addLine();
 
     // Do not use APPEND here. It's the first file that will clear cppan.cmake.
-    ctx.addLine("export(TARGETS cppan-helpers FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
+    //ctx.addLine("export(TARGETS cppan-helpers FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
     ctx.emptyLines(1);
 
     // global definitions
@@ -1894,7 +2033,7 @@ endif()
     SOURCES ${PROJECT_SOURCE_DIR}/cppan.yml
 )
 set_target_properties(run-cppan PROPERTIES
-    FOLDER "cppan"
+    FOLDER "cppan/service"
 ))");
     ctx.addLine();
 
@@ -1909,18 +2048,22 @@ void Config::create_build_files() const
     print_helper_file();
 }
 
-path Config::get_packages_dir(PackagesDirType type)
+path Config::get_packages_dir(PackagesDirType type) const
 {
+    static auto system_cfg = load_system_config();
+    static auto user_cfg = load_user_config();
+
     switch (type)
     {
     case PackagesDirType::Local:
-        return CPPAN_LOCAL_DIR;
+        return path(CPPAN_LOCAL_DIR) / "packages";
     case PackagesDirType::User:
-        return load_user_config().storage_dir;
+        return user_cfg.storage_dir;
     case PackagesDirType::System:
-        return load_system_config().storage_dir;
+        return system_cfg.storage_dir;
+    default:
+        return storage_dir;
     }
-    return storage_dir;
 }
 
 PackagesDirType packages_dir_type_from_string(const String &s)
@@ -1932,4 +2075,46 @@ PackagesDirType packages_dir_type_from_string(const String &s)
     if (s == "system")
         return PackagesDirType::System;
     throw std::runtime_error("Unknown 'packages_dir'. Should be one of [local, user, system]");
+}
+
+path Config::get_storage_dir_bin() const
+{
+    return get_packages_dir(packages_dir_type) / "bin";
+}
+
+path Config::get_storage_dir_lib() const
+{
+    return get_packages_dir(packages_dir_type) / "lib";
+}
+
+path Config::get_storage_dir_obj() const
+{
+    return get_packages_dir(packages_dir_type) / "obj";
+}
+
+path Config::get_storage_dir_src() const
+{
+    return get_packages_dir(packages_dir_type) / "src";
+}
+
+Dependencies Config::getDirectDependencies() const
+{
+    Dependencies deps;
+    for (auto d : dependencies)
+    {
+        if (d.second.flags[pfDirectDependency])
+            deps[d.second.package.toString()] = d.second;
+    }
+    return deps;
+}
+
+Dependencies Config::getIndirectDependencies() const
+{
+    Dependencies deps;
+    for (auto d : dependencies)
+    {
+        if (!d.second.flags[pfDirectDependency])
+            deps[d.second.package.toString()] = d.second;
+    }
+    return deps;
 }

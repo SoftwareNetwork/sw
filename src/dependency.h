@@ -34,29 +34,78 @@ struct Dependency
 {
     using Dependencies = std::map<String, Dependency>;
 
-    ProjectVersionId id = 0;
     ProjectPath package;
     Version version;
     ProjectFlags flags;
-    String md5;
 
-    // custom package dir can be used to apply project-wide patches
-    // that won't hit any system storage
-    PackagesDirType package_dir_type{ PackagesDirType::None };
-    path package_dir;
-    std::vector<path> patches;
-    //
-
-    Dependencies dependencies;
-
-    PackagesDirType get_package_dir_type(PackagesDirType default_type)
+    path getPackageDir(path base) const
     {
-        if (package_dir_type != PackagesDirType::None)
-            return package_dir_type;
-        return default_type;
+        return base / package.toString() / version.toString();
     }
 };
 
 using Dependencies = Dependency::Dependencies;
-using DependencyPair = std::pair<String, Version>;
-using DependenciesMap = std::map<DependencyPair, Dependency>;
+
+struct DownloadDependency : public Dependency
+{
+    using DownloadDependencies = std::map<int, DownloadDependency>;
+
+    String md5;
+
+private:
+    std::set<int> dependencies;
+
+public:
+    DownloadDependencies *map_ptr = nullptr;
+
+public:
+    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
+
+    Dependencies getDirectDependencies() const
+    {
+        Dependencies deps;
+        for (auto d : dependencies)
+        {
+            auto &dep = (*map_ptr)[d];
+            deps[dep.package.toString()] = dep;
+        }
+        return deps;
+    }
+
+    Dependencies getIndirectDependencies(const Dependencies &known_deps = Dependencies()) const
+    {
+        Dependencies deps = known_deps;
+        for (auto d : dependencies)
+        {
+            auto &dep = (*map_ptr)[d];
+            auto p = deps.insert({ dep.package.toString(), dep });
+            if (p.second)
+            {
+                auto id = dep.getIndirectDependencies(deps);
+                deps.insert(id.begin(), id.end());
+            }
+        }
+        if (known_deps.empty())
+        {
+            for (auto &d : getDirectDependencies())
+                deps.erase(d.first);
+        }
+        return deps;
+    }
+
+    // custom package dir can be used to apply project-wide patches
+    // that won't hit any system storage
+    /*PackagesDirType package_dir_type{ PackagesDirType::None };
+    path package_dir;
+    std::vector<path> patches;
+    //
+
+    PackagesDirType get_package_dir_type(PackagesDirType default_type)
+    {
+    if (package_dir_type != PackagesDirType::None)
+    return package_dir_type;
+    return default_type;
+    }*/
+};
+
+using DownloadDependencies = DownloadDependency::DownloadDependencies;

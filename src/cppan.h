@@ -142,14 +142,18 @@ PackagesDirType packages_dir_type_from_string(const String &s);
 
 struct Config
 {
+    // sys/user config settings
     String host{ "https://cppan.org/" };
     ProxySettings proxy;
     PackagesDirType packages_dir_type{ PackagesDirType::User };
     path storage_dir;
+    bool build_local = false;
 
+    // source (git, remote etc.)
     Version version;
     Source source;
 
+    // projects settings
     ProjectPath root_project;
 
     StringSet check_functions;
@@ -179,23 +183,28 @@ struct Config
     static Source load_source(const YAML::Node &root);
     static void save_source(YAML::Node &root, const Source &source);
 
+    Dependencies getDirectDependencies() const;
+    Dependencies getIndirectDependencies() const;
+
+    path get_packages_dir(PackagesDirType type) const;
+    path get_storage_dir_bin() const;
+    path get_storage_dir_lib() const;
+    path get_storage_dir_obj() const;
+    path get_storage_dir_src() const;
+
 private:
     ptree dependency_tree;
-    mutable std::map<String, PackageInfo> packages;
-    Dependencies indirect_dependencies;
+    DownloadDependencies dependencies;
     Projects projects;
 
     void load_common(const path &p);
     void load_common(const YAML::Node &root);
     Project load_project(const YAML::Node &root, const String &name);
     ProjectPath relative_name_to_absolute(const String &name);
-    path get_packages_dir(PackagesDirType type);
 
-    void download_and_unpack(const ptree &deps, Dependency &parent);
-    void create_build_files1(const Dependencies &deps) const;
     void print_meta_config_file() const;
     void print_helper_file() const;
-    PackageInfo print_package_config_file(const path &config_file, const Dependency &d, Config &parent) const;
-
-	//void parse(YAML::Node &r, Config &c, const path &p);
+    void print_package_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
+    void print_object_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
+    void print_object_include_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
 };
