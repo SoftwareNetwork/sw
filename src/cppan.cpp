@@ -59,6 +59,9 @@ const String cmake_config_filename = "CMakeLists.txt";
 const String cmake_object_config_filename = "obj.cmake";
 const String cmake_helpers_filename = "CppanHelpers.cmake";
 const String cppan_dummy_target = "cppan-dummy";
+const String exports_dir = "${CMAKE_BINARY_DIR}/exports/";
+const String non_local_build_file = "build.cmake";
+const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 
 using MimeType = String;
 using MimeTypes = std::set<MimeType>;
@@ -494,6 +497,27 @@ void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, c
 void print_dependencies(Context &ctx, const Config &c, const path &base_dir)
 {
     print_dependencies(ctx, c, c.getDirectDependencies(), c.getIndirectDependencies(), base_dir);
+}
+
+void print_source_groups(Context &ctx, const path &dir)
+{
+    bool once = false;
+    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+    {
+        if (!fs::is_directory(f))
+            continue;
+
+        if (!once)
+            config_section_title(ctx, "source groups");
+        once = true;
+
+        auto s = fs::relative(f.path(), dir).string();
+        auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
+        boost::replace_all(s2, "/", "\\\\");
+        boost::replace_all(s, "\\", "/");
+        ctx.addLine("source_group(\"" + s2 + "\" REGULAR_EXPRESSION  \"" + s + "/*\")");
+    }
+    ctx.emptyLines(1);
 }
 
 void BuildSystemConfigInsertions::get_config_insertions(const YAML::Node &n)
@@ -1247,7 +1271,7 @@ void Config::download_dependencies()
 
         // print object config files for non-local building
         auto obj_dir = get_storage_dir_obj() / d.package.toString() / d.version.toString();
-        auto bld_dir = obj_dir / "build";
+        auto bld_dir = obj_dir;
         boost::system::error_code ec;
         fs::create_directories(bld_dir, ec);
         c.print_object_config_file(bld_dir / cmake_config_filename, d, *this);
@@ -1562,7 +1586,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
 
     // export
     config_section_title(ctx, "export");
-    ctx.addLine("export(TARGETS " + pi.target_name + " APPEND FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
+    ctx.addLine("export(TARGETS " + pi.target_name + " FILE " + exports_dir + pi.variable_name + ".cmake)");
 
     ctx.emptyLines(1);
 
@@ -1583,19 +1607,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     }
 
     // source groups
-    config_section_title(ctx, "source groups");
-    auto dir = config_file.parent_path();
-    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
-    {
-        if (!fs::is_directory(f))
-            continue;
-        auto s = fs::relative(f.path(), dir).string();
-        auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
-        boost::replace_all(s2, "/", "\\\\");
-        boost::replace_all(s, "\\", "/");
-        ctx.addLine("source_group(\"" + s2 + "\" REGULAR_EXPRESSION  \"" + s + "/*\")");
-    }
-    ctx.emptyLines(1);
+    print_source_groups(ctx, config_file.parent_path());
 
     // eof
     ctx.addLine(config_delimeter);
@@ -1623,11 +1635,11 @@ void Config::print_object_config_file(const path &config_file, const DownloadDep
 
     {
         config_section_title(ctx, "cmake settings");
-        ctx.addLine("cmake_minimum_required(VERSION 3.0.0)");
+        ctx.addLine(cmake_minimum_required);
         ctx.addLine();
-        ctx.addLine("set(CMAKE_RUNTIME_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_bin()) + ")");
-        ctx.addLine("set(CMAKE_LIBRARY_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_lib()) + ")");
-        ctx.addLine("set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_lib()) + ")");
+        ctx.addLine("set(CMAKE_RUNTIME_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_bin()) + "/${OUTPUT_DIR})");
+        ctx.addLine("set(CMAKE_LIBRARY_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_lib()) + "/${OUTPUT_DIR})");
+        ctx.addLine("set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_lib()) + "/${OUTPUT_DIR})");
         ctx.emptyLines(1);
     }
 
@@ -1675,16 +1687,42 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
     ctx.addLine("#");
     ctx.addLine();
 
-    ctx.addLine("set(build_dir " + normalize_path(config_file.parent_path()) + "/build)");
-    ctx.addLine("set(import ${build_dir}/cppan.cmake)");
+    ctx.addLine("set(current_dir " + normalize_path(config_file.parent_path()) + ")");
     ctx.addLine();
-    ctx.addLine("if (NOT EXISTS ${import})");
-    ctx.increaseIndent();
-    ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -H${build_dir} -B${build_dir})");
-    //ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} --build ${build_dir} --config Release)");
-    ctx.decreaseIndent();
-    ctx.addLine("endif()");
+    ctx.addLine(R"(set(config ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
+string(REGEX MATCH "[0-9]+\\.[0-9]" version "${CMAKE_CXX_COMPILER_VERSION}")
+set(config ${config}-${version})
+math(EXPR bits "${CMAKE_SIZEOF_VOID_P}*8")
+set(config ${config}-${bits})
+string(TOLOWER ${config} config)
+
+set(build_dir ${current_dir}/build/${config})
+)");
+    ctx.addLine("set(import ${build_dir}/exports/" + pi.variable_name + ".cmake)");
     ctx.addLine();
+    ctx.addLine(R"(if (NOT EXISTS ${import})
+    set(lock ${build_dir}/generate.lock)
+
+    file(LOCK ${lock} RESULT_VARIABLE lock_result)
+    if (NOT ${lock_result} EQUAL 0)
+        message(FATAL_ERROR "Lock error: ${lock_result}")
+    endif()
+
+    # double check
+    if (NOT EXISTS ${import})
+        execute_process(
+            COMMAND ${CMAKE_COMMAND}
+                -H${current_dir} -B${build_dir}
+                -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                -DOUTPUT_DIR=${config}
+                -G "${CMAKE_GENERATOR}"
+        )
+    endif()
+
+    file(LOCK ${lock} RELEASE)
+endif()
+)");
     ctx.addLine("include(${import})");
     ctx.emptyLines(1);
 
@@ -1695,10 +1733,33 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
     ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + pi.target_name + ">");
     ctx.addLine("-DCONFIG=$<CONFIG>");
     ctx.addLine("-DBUILD_DIR=${build_dir}");
-    ctx.addLine("-P " + normalize_path(get_storage_dir_obj() / d.package.toString() / d.version.toString()) + "/renew.cmake");
+    ctx.addLine("-P " + normalize_path(get_storage_dir_obj() / d.package.toString() / d.version.toString()) + "/" + non_local_build_file);
     ctx.decreaseIndent();
     ctx.decreaseIndent();
     ctx.addLine(")");
+
+    // src target
+    {
+        auto target = pi.target_name + "-srcs";
+        auto dir = get_storage_dir_src() / d.package.toString() / d.version.toString();
+
+        config_section_title(ctx, "sources target (for IDE only)");
+        ctx.addLine("file(GLOB_RECURSE src \"" + normalize_path(dir) + "/*\")");
+        ctx.addLine();
+        ctx.addLine("add_custom_target(" + target);
+        ctx.addLine("    SOURCES ${src}");
+        ctx.addLine(")");
+        ctx.addLine();
+
+        // solution folder
+        ctx << "set_target_properties         (" << target << " PROPERTIES" << Context::eol;
+        ctx << "    FOLDER \"cppan/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
+        ctx << ")" << Context::eol;
+        ctx.emptyLines(1);
+
+        // source groups
+        print_source_groups(ctx, dir);
+    }
 
     // eof
     ctx.emptyLines(1);
@@ -1712,9 +1773,24 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
         throw std::runtime_error("Cannot create a file: " + config_file.string());
     ofile << ctx.getText();
 
-    // renew file
+    // build file
     Context ctx2;
-    ctx2.addLine(R"(if (NOT EXISTS ${TARGET_FILE})
+    ctx2.addLine(R"(if (EXISTS ${TARGET_FILE})
+    return()
+endif()
+
+set(lock ${BUILD_DIR}/build.lock)
+
+file(LOCK ${lock} RESULT_VARIABLE lock_result)
+if (NOT ${lock_result} EQUAL 0)
+    message(FATAL_ERROR "Lock error: ${lock_result}")
+endif()
+
+# double check
+if (EXISTS ${TARGET_FILE})
+    # release before exit
+    file(LOCK ${lock} RELEASE)
+
     return()
 endif()
 
@@ -1723,8 +1799,10 @@ execute_process(
         --build ${BUILD_DIR}
         --config ${CONFIG}
 )
+
+file(LOCK ${lock} RELEASE)
 )");
-    auto renew_file = config_file.parent_path() / "renew.cmake";
+    auto renew_file = config_file.parent_path() / non_local_build_file;
     std::ofstream ofile2(renew_file.string());
     if (!ofile2)
         throw std::runtime_error("Cannot create a file: " + renew_file.string());
@@ -1745,7 +1823,7 @@ void Config::print_meta_config_file() const
     ctx.addLine("# meta config file");
     ctx.addLine("#");
     ctx.addLine();
-    ctx.addLine("cmake_minimum_required(VERSION 3.0.0)");
+    ctx.addLine(cmake_minimum_required);
     ctx.addLine();
 
     ctx.addLine("include(" + cmake_helpers_filename + ")");
@@ -1808,7 +1886,7 @@ void Config::print_meta_config_file() const
         ctx.addLine(")");
         ctx.addLine();
     }
-    //ctx.addLine("export(TARGETS " + cppan_project_name + " APPEND FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
+    ctx.addLine("export(TARGETS " + cppan_project_name + " FILE " + exports_dir + "cppan.cmake)");
 
     ctx.emptyLines(1);
     ctx.addLine(config_delimeter);
@@ -1965,7 +2043,12 @@ include(TestBigEndian))");
     {
         config_section_title(ctx, "dummy compiled target");
         ctx.addLine("# this target will be always built before any other");
-        ctx.addLine("add_custom_target(" + cppan_dummy_target + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
+        ctx.addLine("if (MSVC)");
+        ctx.addLine("    add_custom_target(" + cppan_dummy_target + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
+        ctx.addLine("else()");
+        ctx.addLine("    add_custom_target(" + cppan_dummy_target + " ALL DEPENDS)");
+        ctx.addLine("endif()");
+        ctx.addLine();
         ctx.addLine("set_target_properties(" + cppan_dummy_target + " PROPERTIES\n    FOLDER \"cppan/service\"\n)");
         ctx.emptyLines(1);
     }
@@ -2008,7 +2091,7 @@ endif()
     ctx.addLine();
 
     // Do not use APPEND here. It's the first file that will clear cppan.cmake.
-    //ctx.addLine("export(TARGETS cppan-helpers FILE ${CMAKE_BINARY_DIR}/cppan.cmake)");
+    ctx.addLine("export(TARGETS cppan-helpers FILE " + exports_dir + "cppan-helpers.cmake)");
     ctx.emptyLines(1);
 
     // global definitions
