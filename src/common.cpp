@@ -359,13 +359,13 @@ size_t DownloadData::progress(char *ptr, size_t size, size_t nmemb)
     return read;
 }
 
-size_t write_file(char *ptr, size_t size, size_t nmemb, void *userdata)
+size_t curl_write_file(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
     DownloadData &data = *(DownloadData *)userdata;
     return data.progress(ptr, size, nmemb);
 }
 
-int transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+int curl_transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
 {
     int64_t file_size_limit = *(int64_t*)clientp;
     if (dlnow > file_size_limit)
@@ -373,7 +373,7 @@ int transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_
     return 0;
 }
 
-size_t write_string(char *ptr, size_t size, size_t nmemb, void *userdata)
+size_t curl_write_string(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
     String &s = *(String *)userdata;
     auto read = size * nmemb;
@@ -412,7 +412,7 @@ String url_post(const String &url, const String &data)
     }
 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_string);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_string);
     if (url.find("https") == 0)
     {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
@@ -471,9 +471,9 @@ void download_file(DownloadData &data)
             curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, httpSettings.proxy.user.c_str());
     }
 
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_file);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
-    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, transfer_info);
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curl_transfer_info);
     curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &data.file_size_limit);
     if (data.url.find("https") == 0)
     {
@@ -515,6 +515,14 @@ String read_file(const path &p)
     f.resize(sz);
     ifile.read(&f[0], sz);
     return f;
+}
+
+void write_file(const path &p, const String &s)
+{
+    std::ofstream ofile(p.string());
+    if (!ofile)
+        throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
+    ofile << s;
 }
 
 String generate_random_sequence(uint32_t len)
@@ -639,4 +647,15 @@ String getAutoProxy()
     proxy_addr = to_string(wproxy_addr);
 #endif
     return proxy_addr;
+}
+
+int system_no_output(const String &cmd)
+{
+    String s = cmd;
+#ifdef WIN32
+    s += " >nul 2>nul";
+#else
+    s += " >/dev/null 2>/dev/null";
+#endif
+    return std::system(s.c_str());
 }

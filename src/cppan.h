@@ -176,6 +176,7 @@ struct Config
     void load_current_config();
 
     void download_dependencies();
+    void download_dependencies(const path &p);
     void create_build_files() const;
 
     Projects &getProjects() { return projects; }
@@ -183,8 +184,9 @@ struct Config
     static Source load_source(const YAML::Node &root);
     static void save_source(YAML::Node &root, const Source &source);
 
-    Dependencies getDirectDependencies() const;
-    Dependencies getIndirectDependencies() const;
+    Dependencies getDirectDependencies() const; // from server
+    Dependencies getIndirectDependencies() const; // from server
+    Dependencies getDependencies() const; // from file
 
     path get_packages_dir(PackagesDirType type) const;
     path get_storage_dir_bin() const;
@@ -196,6 +198,7 @@ private:
     ptree dependency_tree;
     DownloadDependencies dependencies;
     Projects projects;
+    path server_response_file;
 
     void load_common(const path &p);
     void load_common(const YAML::Node &root);
@@ -205,6 +208,10 @@ private:
     void print_meta_config_file() const;
     void print_helper_file() const;
     void print_package_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
-    void print_object_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
-    void print_object_include_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
+    void print_object_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const;
+    void print_object_include_config_file(const path &config_file, const DownloadDependency &d) const;
+
+    void download_and_unpack(const String &data_url) const;
+    void print_configs();
+    static void extractDependencies(const ptree &dependency_tree, DownloadDependencies &dependencies);
 };

@@ -32,6 +32,8 @@
 #include <boost/algorithm/string.hpp>
 
 #include <cppan.h>
+
+#include "fix_imports.h"
 #include "options.h"
 
 #ifdef _WIN32
@@ -56,7 +58,19 @@ try
     // command selector
     if (argv[1][0] != '-')
     {
-        // config
+        String cmd = argv[1];
+        if (cmd == "internal-fix-imports")
+        {
+            if (argc != 6)
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan internal-fix-imports target aliases.file old.file new.file\n";
+            }
+            fix_imports(argv[2], argv[3], argv[4], argv[5]);
+            return 0;
+        }
+
+        std::cout << "unknown command\n";
         return 1;
     }
 #ifdef _WIN32
@@ -125,7 +139,10 @@ try
     }
     else
     {
-        c.download_dependencies();
+        if (options().count("server-response"))
+            c.download_dependencies(options()["server-response"].as<String>());
+        else
+            c.download_dependencies();
         c.create_build_files();
     }
 
@@ -133,12 +150,12 @@ try
 }
 catch (const std::exception &e)
 {
-    std::cout << e.what() << "\n";
+    std::cerr << e.what() << "\n";
     return 1;
 }
 catch (...)
 {
-    std::cout << "Unhandled unknown exception" << "\n";
+    std::cerr << "Unhandled unknown exception" << "\n";
     return 1;
 }
 

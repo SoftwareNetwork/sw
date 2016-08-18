@@ -30,6 +30,7 @@
 #include <fstream>
 #include <iostream>
 #include <regex>
+#include <tuple>
 
 #include <boost/algorithm/string.hpp>
 
@@ -56,7 +57,7 @@
 #define LOG(x) std::cout << x << "\n"
 
 const String cmake_config_filename = "CMakeLists.txt";
-const String cmake_object_config_filename = "obj.cmake";
+const String cmake_object_config_filename = "generate.cmake";
 const String cmake_helpers_filename = "CppanHelpers.cmake";
 const String cppan_dummy_target = "cppan-dummy";
 const String exports_dir = "${CMAKE_BINARY_DIR}/exports/";
@@ -433,7 +434,7 @@ void get_config_insertion(const YAML::Node &n, const String &key, String &dst)
     boost::trim(dst);
 }
 
-ptree url_post(const String &url, const ptree &data)
+std::tuple<ptree, String> url_post(const String &url, const ptree &data)
 {
     ptree p;
     std::ostringstream oss;
@@ -442,9 +443,10 @@ ptree url_post(const String &url, const ptree &data)
         , false
 #endif
         );
-    std::istringstream iss(url_post(url, oss.str()));
+    auto response = url_post(url, oss.str());
+    std::istringstream iss(response);
     pt::read_json(iss, p);
-    return p;
+    return{ p, response };
 }
 
 String normalize_path(const path &p)
@@ -515,7 +517,7 @@ void print_source_groups(Context &ctx, const path &dir)
         auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
         boost::replace_all(s2, "/", "\\\\");
         boost::replace_all(s, "\\", "/");
-        ctx.addLine("source_group(\"" + s2 + "\" REGULAR_EXPRESSION  \"" + s + "/*\")");
+        ctx.addLine("source_group(\"" + s2 + "\" REGULAR_EXPRESSION \"" + s + "/*\")");
     }
     ctx.emptyLines(1);
 }
@@ -1126,26 +1128,24 @@ void Config::save(const path &p) const
 
 void Config::download_dependencies()
 {
-    // send request
-    auto url = host;
-    ptree data;
-    for (auto &p : projects)
-    {
-        for (auto &d : p.second.dependencies)
-        {
-            if (d.second.package.is_relative())
-                continue;
-            ptree version;
-            version.put("version", d.second.version.toString());
-            data.put_child(ptree::path_type(d.second.package.toString(), '|'), version);
-        }
-    }
-    // no deps found
-    if (data.empty())
+    auto deps = getDependencies();
+    if (deps.empty())
         return;
 
+    // prepare request
+    ptree data;
+    for (auto &d : deps)
+    {
+        ptree version;
+        version.put("version", d.second.version.toString());
+        data.put_child(ptree::path_type(d.second.package.toString(), '|'), version);
+    }
+
     LOG_NO_NEWLINE("Requesting dependency list... ");
-    dependency_tree = url_post(url + "/api/find_dependencies", data);
+    String server_response;
+    std::tie(dependency_tree, server_response) = url_post(host + "/api/find_dependencies", data);
+    server_response_file = get_temp_filename();
+    write_file(server_response_file, server_response);
     LOG("Ok");
 
     // read deps urls, download them, unpack
@@ -1166,30 +1166,29 @@ void Config::download_dependencies()
     if (dependency_tree.find("data_dir") != dependency_tree.not_found())
         data_url = dependency_tree.get<String>("data_dir");
 
-    auto &remote_packages = dependency_tree.get_child("packages");
-    for (auto &v : remote_packages)
-    {
-        auto id = v.second.get<int>("id");
+    extractDependencies(dependency_tree, dependencies);
+    download_and_unpack(data_url);
+    print_configs();
 
-        DownloadDependency dep;
-        dep.package = v.first;
-        dep.version = v.second.get<String>("version");
-        dep.flags = decltype(dep.flags)(v.second.get<uint64_t>("flags"));
-        dep.md5 = v.second.get<String>("md5");
+    fs::remove(server_response_file);
+}
 
-        if (v.second.find("dependencies") != v.second.not_found())
-        {
-            std::set<int> idx;
-            for (auto &tree_dep : v.second.get_child("dependencies"))
-                idx.insert(tree_dep.second.get_value<int>());
-            dep.setDependencyIds(idx);
-        }
+void Config::download_dependencies(const path &p)
+{
+    auto deps = getDependencies();
+    if (deps.empty())
+        return;
 
-        dep.map_ptr = &dependencies;
-        dependencies[id] = dep;
-    }
+    // all deps are already downloaded and unpacked
+    server_response_file = p;
+    ptree dependency_tree;
+    pt::read_json(server_response_file.string(), dependency_tree);
+    extractDependencies(dependency_tree, dependencies);
+    print_configs();
+}
 
-    // download & unpack
+void Config::download_and_unpack(const String &data_url) const
+{
     for (auto &dd : dependencies)
     {
         auto &d = dd.second;
@@ -1218,7 +1217,7 @@ void Config::download_dependencies()
 
             auto fs_path = ProjectPath(d.package).toFileSystemPath().string();
             std::replace(fs_path.begin(), fs_path.end(), '\\', '/');
-            String package_url = url + "/" + data_url + "/" + fs_path + "/" + d.version.toString() + ".tar.gz";
+            String package_url = host + "/" + data_url + "/" + fs_path + "/" + d.version.toString() + ".tar.gz";
             path fn = version_dir.string() + ".tar.gz";
 
             String dl_md5;
@@ -1255,8 +1254,38 @@ void Config::download_dependencies()
             fs::remove(fn);
         }
     }
+}
 
-    // print configs
+void Config::extractDependencies(const ptree &dependency_tree, DownloadDependencies &dependencies)
+{
+    dependencies.clear();
+
+    auto &remote_packages = dependency_tree.get_child("packages");
+    for (auto &v : remote_packages)
+    {
+        auto id = v.second.get<int>("id");
+
+        DownloadDependency dep;
+        dep.package = v.first;
+        dep.version = v.second.get<String>("version");
+        dep.flags = decltype(dep.flags)(v.second.get<uint64_t>("flags"));
+        dep.md5 = v.second.get<String>("md5");
+
+        if (v.second.find("dependencies") != v.second.not_found())
+        {
+            std::set<int> idx;
+            for (auto &tree_dep : v.second.get_child("dependencies"))
+                idx.insert(tree_dep.second.get_value<int>());
+            dep.setDependencyIds(idx);
+        }
+
+        dep.map_ptr = &dependencies;
+        dependencies[id] = dep;
+    }
+}
+
+void Config::print_configs()
+{
     LOG_NO_NEWLINE("Generating build configs... ");
     for (auto &dd : dependencies)
     {
@@ -1266,7 +1295,7 @@ void Config::download_dependencies()
         Config c(version_dir);
         c.print_package_config_file(version_dir / cmake_config_filename, d, *this);
 
-        if (d.flags[pfHeaderOnly])
+        if (d.flags[pfHeaderOnly] || build_local)
             continue;
 
         // print object config files for non-local building
@@ -1275,7 +1304,7 @@ void Config::download_dependencies()
         boost::system::error_code ec;
         fs::create_directories(bld_dir, ec);
         c.print_object_config_file(bld_dir / cmake_config_filename, d, *this);
-        c.print_object_include_config_file(obj_dir / cmake_object_config_filename, d, *this);
+        c.print_object_include_config_file(obj_dir / cmake_object_config_filename, d);
     }
     LOG("Ok");
 }
@@ -1621,8 +1650,11 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     ofile << ctx.getText();
 }
 
-void Config::print_object_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const
+void Config::print_object_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const
 {
+    auto src_dir = get_storage_dir_src() / d.package.toString() / d.version.toString();
+    auto obj_dir = get_storage_dir_obj() / d.package.toString() / d.version.toString();
+
     PackageInfo pi(d);
 
     Context ctx;
@@ -1647,21 +1679,37 @@ void Config::print_object_config_file(const path &config_file, const DownloadDep
     ctx.addLine("project(" + pi.variable_name + " C CXX)");
     ctx.addLine();
 
-    //config_section_title(ctx, "compiler & linker settings");
+    config_section_title(ctx, "compiler & linker settings");
+    ctx.addLine(R"(if (MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+endif())");
 
     // main include
     {
         config_section_title(ctx, "main include");
-        auto mi = get_storage_dir_src() / d.package.toString() / d.version.toString();
+        auto mi = src_dir;
         add_subdirectory(ctx, mi.string(), get_binary_path(d.package, d.version));
         ctx.emptyLines(1);
     }
 
-    auto dd = d.getDirectDependencies();
-    auto id = d.getIndirectDependencies();
-    dd.erase(d.package.toString()); // erase self
-    id.erase(d.package.toString()); // erase self
-    print_dependencies(ctx, *this, dd, id, get_storage_dir_src()); // later get_storage_dir_obj?
+    {
+        // choose one variant below
+
+        // 1
+        ctx.addLine("add_subdirectory(cppan)");
+        fs::copy_file(src_dir / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
+        auto ret = system(String("cppan -d " + obj_dir.string() +
+            " --server-response " + parent.server_response_file.string() +
+            //" --visited-packages" + "" +
+        "").c_str());
+        if (ret)
+            throw std::runtime_error("Error during executing subcommand");
+
+        // 2
+        // this case requires correct generation of additional stuff (helpers)
+        //print_dependencies(ctx, *this, d.getDirectDependencies(), d.getIndirectDependencies(), get_storage_dir_obj());
+    }
 
     // eof
     ctx.addLine(config_delimeter);
@@ -1675,8 +1723,18 @@ void Config::print_object_config_file(const path &config_file, const DownloadDep
     ofile << ctx.getText();
 }
 
-void Config::print_object_include_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const
+void Config::print_object_include_config_file(const path &config_file, const DownloadDependency &d) const
 {
+    const Project *pp = &projects.begin()->second;
+    if (projects.size() > 1)
+    {
+        auto it = projects.find(d.package.toString());
+        if (it == projects.end())
+            throw std::runtime_error("No such project '" + d.package.toString() + "' in dependencies list");
+        pp = &it->second;
+    }
+    auto &p = *pp;
+
     PackageInfo pi(d);
 
     Context ctx;
@@ -1685,20 +1743,59 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
     ctx.addLine("# package: " + d.package.toString());
     ctx.addLine("# version: " + d.version.toString());
     ctx.addLine("#");
-    ctx.addLine();
 
+    ctx.addLine(R"(
+########################################
+# FUNCTION find_flag
+########################################
+
+function(find_flag in_flags f out)
+    if (NOT ${${out}} STREQUAL "")
+        return()
+    endif()
+    set(flags ${in_flags})
+    string(TOLOWER ${flags} flags)
+    string(FIND "${flags}" "${f}" flags)
+    if (NOT ${flags} EQUAL -1)
+        set(${out} -mt PARENT_SCOPE)
+    endif()
+endfunction(find_flag)
+
+########################################
+)");
+
+    ctx.addLine("set(target " + pi.target_name + ")");
+    ctx.addLine();
+    if (!p.aliases.empty())
+    {
+        ctx.addLine("set(aliases");
+        ctx.increaseIndent();
+        for (auto &a : p.aliases)
+            ctx.addLine(a);
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+    }
     ctx.addLine("set(current_dir " + normalize_path(config_file.parent_path()) + ")");
     ctx.addLine();
-    ctx.addLine(R"(set(config ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
+    ctx.addLine(R"(set(mt_flag)
+if (MSVC)
+    find_flag(${CMAKE_CXX_FLAGS_RELEASE} /mt mt_flag)
+    find_flag(${CMAKE_CXX_FLAGS_DEBUG} /mtd mt_flag)
+endif()
+
+set(config ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
 string(REGEX MATCH "[0-9]+\\.[0-9]" version "${CMAKE_CXX_COMPILER_VERSION}")
 set(config ${config}-${version})
 math(EXPR bits "${CMAKE_SIZEOF_VOID_P}*8")
-set(config ${config}-${bits})
+set(config ${config}-${bits}${mt_flag})
 string(TOLOWER ${config} config)
 
 set(build_dir ${current_dir}/build/${config})
-)");
-    ctx.addLine("set(import ${build_dir}/exports/" + pi.variable_name + ".cmake)");
+set(export_dir ${build_dir}/exports))");
+    ctx.addLine("set(import ${export_dir}/" + pi.variable_name + ".cmake)");
+    ctx.addLine("set(import_fixed ${export_dir}/" + pi.variable_name + "-fixed.cmake)");
+    ctx.addLine("set(aliases_file ${export_dir}/" + pi.variable_name + "-aliases.cmake)");
     ctx.addLine();
     ctx.addLine(R"(if (NOT EXISTS ${import})
     set(lock ${build_dir}/generate.lock)
@@ -1710,20 +1807,48 @@ set(build_dir ${current_dir}/build/${config})
 
     # double check
     if (NOT EXISTS ${import})
-        execute_process(
-            COMMAND ${CMAKE_COMMAND}
-                -H${current_dir} -B${build_dir}
-                -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                -DOUTPUT_DIR=${config}
-                -G "${CMAKE_GENERATOR}"
-        )
+        message(STATUS "")
+        message(STATUS "Preparing build tree for ${target}")
+        message(STATUS "")
+
+        find_program(ninja ninja)
+        set(generator Ninja)
+        if (MSVC OR ${ninja} STREQUAL "ninja-NOTFOUND")
+            set(generator ${CMAKE_GENERATOR})
+        endif()
+
+        if (CMAKE_TOOLCHAIN_FILE)
+            execute_process(
+                COMMAND ${CMAKE_COMMAND}
+                    -H${current_dir} -B${build_dir}
+                    -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+                    #-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+                    -DOUTPUT_DIR=${config}
+                    -G "${generator}"
+            )
+        else()
+            execute_process(
+                COMMAND ${CMAKE_COMMAND}
+                    -H${current_dir} -B${build_dir}
+                    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                    -DOUTPUT_DIR=${config}
+                    -G "${generator}"
+            )
+        endif()
     endif()
 
     file(LOCK ${lock} RELEASE)
 endif()
+
+if (NOT EXISTS ${import_fixed})
+    file(WRITE ${aliases_file} "${aliases}")
+    execute_process(
+        COMMAND cppan internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
+    )
+endif()
 )");
-    ctx.addLine("include(${import})");
+    ctx.addLine("include(${import_fixed})");
     ctx.emptyLines(1);
 
     ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
@@ -2083,9 +2208,12 @@ target_link_libraries(cppan-helpers
     INTERFACE Ws2_32
 )
 else()
-target_link_libraries(cppan-helpers
-    INTERFACE pthread
-)
+    find_library(pthread pthread)
+    if (NOT ${pthread} STREQUAL "pthread-NOTFOUND")
+        target_link_libraries(cppan-helpers
+            INTERFACE pthread
+        )
+    endif()
 endif()
 )");
     ctx.addLine();
@@ -2203,6 +2331,7 @@ Dependencies Config::getDirectDependencies() const
     Dependencies deps;
     for (auto d : dependencies)
     {
+        // TODO: manually find direct deps! remove pfDirectDependency flag
         if (d.second.flags[pfDirectDependency])
             deps[d.second.package.toString()] = d.second;
     }
@@ -2214,8 +2343,25 @@ Dependencies Config::getIndirectDependencies() const
     Dependencies deps;
     for (auto d : dependencies)
     {
+        // TODO: manually find direct deps! remove pfDirectDependency flag
         if (!d.second.flags[pfDirectDependency])
             deps[d.second.package.toString()] = d.second;
     }
     return deps;
+}
+
+Dependencies Config::getDependencies() const
+{
+    Dependencies dependencies;
+    for (auto &p : projects)
+    {
+        for (auto &d : p.second.dependencies)
+        {
+            // FIXME: why skip is_relative deps???
+            if (d.second.package.is_relative())
+                continue;
+            dependencies.insert({ d.second.package.toString(), { d.second.package, d.second.version} });
+        }
+    }
+    return dependencies;
 }

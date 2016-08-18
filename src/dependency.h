@@ -69,6 +69,7 @@ public:
             auto &dep = (*map_ptr)[d];
             deps[dep.package.toString()] = dep;
         }
+        deps.erase(package.toString()); // erase self
         return deps;
     }
 
@@ -87,8 +88,14 @@ public:
         }
         if (known_deps.empty())
         {
+            // first call in a chain
+
+            // erase direct deps
             for (auto &d : getDirectDependencies())
                 deps.erase(d.first);
+
+            // erase self
+            deps.erase(package.toString());
         }
         return deps;
     }

@@ -2,11 +2,31 @@
 # cppan
 #
 
-file(GLOB_RECURSE cppan_src "*.cpp" "*.h")
+########################################
+# fix imports
+########################################
+
+set(src
+    fix_imports.cpp
+    fix_imports.h
+)
+
+add_library(fix_imports ${src})
+
+########################################
+# cppan
+########################################
+
+set(cppan_src
+    main.cpp
+    options.cpp
+    options.h
+)
 
 add_executable(client ${cppan_src})
 target_link_libraries(client
     common
+    fix_imports
     yaml-cpp
     ${Boost_LIBRARIES}
 )
@@ -24,3 +44,4 @@ install(TARGETS client RUNTIME
 )
 endif()
 
+################################################################################

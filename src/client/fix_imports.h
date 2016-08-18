@@ -25,55 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "options.h"
+#pragma once
 
-#include <iostream>
-#include <sstream>
+#include <common.h>
 
-ProgramOptions::ProgramOptions()
-    :
-    visible("Allowed options"),
-    hidden("Hidden options")
-{
-    visible.add_options()
-        ("help,h", "produce this message")
-        ("dir,d", po::value<std::string>(), "working directory")
-        ("version,v", po::bool_switch(), "version")
-        ("prepare-archive", po::bool_switch(), "prepare archive locally")
-        ("curl-verbose", po::bool_switch(), "set curl to verbose mode")
-        ("self-upgrade", po::bool_switch(), "upgrade CPPAN client to the latest version")
-        ("ignore-ssl-checks,k", po::bool_switch(), "ignore ssl checks and errors")
-        //("build-app", po::value<std::vector<std::string>>(), "download and build requested executable")
-        //("gen-dummy-config", po::bool_switch(), "download and build requested executable")
-        ;
-
-    hidden.add_options()
-        ("server-response", po::value<std::string>(), "path to file with server response")
-        ("visited-packages", po::value<std::string>(), "path to file with visited packages")
-        ;
-}
-
-bool ProgramOptions::parseArgs(int argc, char *argv[])
-{
-    try
-    {
-        po::options_description all("Allowed options");
-        all.add(visible).add(hidden);
-
-        po::store(po::parse_command_line(argc, argv, all), vm);
-        po::notify(vm);
-    }
-    catch (const po::error &e)
-    {
-        std::cerr << e.what() << "\n\n";
-        return false;
-    }
-    return true;
-}
-
-std::string ProgramOptions::printHelp() const
-{
-    std::ostringstream oss;
-    oss << visible;
-    return oss.str();
-}
+void fix_imports(const String &target, const path &aliases_file, const path &old_file, const path &new_file);

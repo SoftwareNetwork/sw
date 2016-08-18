@@ -46,5 +46,6 @@ public:
 
 private:
     po::variables_map vm;
-    po::options_description desc;
+    po::options_description visible;
+    po::options_description hidden;
 };

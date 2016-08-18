@@ -66,6 +66,8 @@ path get_temp_filename();
 path temp_script_path();
 path temp_script_filename();
 
+int system_no_output(const String &cmd);
+
 struct ProxySettings
 {
     String host;
@@ -109,6 +111,7 @@ void download_file(DownloadData &data);
 void unpack_file(const path &fn, const path &dst);
 
 String read_file(const path &p);
+void write_file(const path &p, const String &s);
 
 String generate_random_sequence(uint32_t len);
 String hash_to_string(const uint8_t *hash, uint32_t hash_size);
