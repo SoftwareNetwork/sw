@@ -2302,16 +2302,21 @@ endif()
 
     // re-run cppan when root cppan.yml is changed
     config_section_title(ctx, "cppan regenerator");
-    ctx.addLine(R"(add_custom_target(run-cppan
-    COMMAND cppan
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    ctx.addLine(R"(set(file ${CMAKE_CURRENT_BINARY_DIR}/run-cppan.txt)
+add_custom_command(OUTPUT ${file}
+    COMMAND cppan -d ${PROJECT_SOURCE_DIR}
+    COMMAND ${CMAKE_COMMAND} -E echo "" > ${file}
     DEPENDS ${PROJECT_SOURCE_DIR}/cppan.yml
+)
+add_custom_target(run-cppan
+    DEPENDS ${file}
     SOURCES ${PROJECT_SOURCE_DIR}/cppan.yml
 )
+add_dependencies(cppan-helpers run-cppan)
 set_target_properties(run-cppan PROPERTIES
     FOLDER "cppan/service"
-))");
-    ctx.addLine();
+)
+)");
 
     ctx.addLine(config_delimeter);
     ctx.addLine();
