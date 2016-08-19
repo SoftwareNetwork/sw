@@ -53,8 +53,21 @@
 #define CPPAN_LOCAL_DIR "cppan"
 #define BAZEL_BUILD_FILE "BUILD"
 
-#define LOG_NO_NEWLINE(x) std::cout << x
-#define LOG(x) std::cout << x << "\n"
+#define LOG_NO_NEWLINE(x)   \
+    do                      \
+    {                       \
+        if (!silent)        \
+            std::cout << x; \
+    } while (0)
+
+#define LOG(x)                     \
+    do                             \
+    {                              \
+        if (!silent)               \
+            std::cout << x << "\n"; \
+    } while (0)
+
+bool silent = false;
 
 const String cmake_config_filename = "CMakeLists.txt";
 const String cmake_object_config_filename = "generate.cmake";
@@ -434,7 +447,7 @@ void get_config_insertion(const YAML::Node &n, const String &key, String &dst)
     boost::trim(dst);
 }
 
-std::tuple<ptree, String> url_post(const String &url, const ptree &data)
+ptree url_post(const String &url, const ptree &data)
 {
     ptree p;
     std::ostringstream oss;
@@ -446,7 +459,7 @@ std::tuple<ptree, String> url_post(const String &url, const ptree &data)
     auto response = url_post(url, oss.str());
     std::istringstream iss(response);
     pt::read_json(iss, p);
-    return{ p, response };
+    return p;
 }
 
 String normalize_path(const path &p)
@@ -1126,11 +1139,20 @@ void Config::save(const path &p) const
     e << YAML::EndMap;
 }
 
+void Config::process()
+{
+    download_dependencies();
+    create_build_files();
+}
+
 void Config::download_dependencies()
 {
     auto deps = getDependencies();
     if (deps.empty())
         return;
+
+    if (!dependency_tree.empty())
+        return process_response_file();
 
     // prepare request
     ptree data;
@@ -1142,10 +1164,7 @@ void Config::download_dependencies()
     }
 
     LOG_NO_NEWLINE("Requesting dependency list... ");
-    String server_response;
-    std::tie(dependency_tree, server_response) = url_post(host + "/api/find_dependencies", data);
-    server_response_file = get_temp_filename();
-    write_file(server_response_file, server_response);
+    dependency_tree = url_post(host + "/api/find_dependencies", data);
     LOG("Ok");
 
     // read deps urls, download them, unpack
@@ -1166,24 +1185,14 @@ void Config::download_dependencies()
     if (dependency_tree.find("data_dir") != dependency_tree.not_found())
         data_url = dependency_tree.get<String>("data_dir");
 
-    extractDependencies(dependency_tree, dependencies);
+    extractDependencies(dependency_tree);
     download_and_unpack(data_url);
     print_configs();
-
-    fs::remove(server_response_file);
 }
 
-void Config::download_dependencies(const path &p)
+void Config::process_response_file()
 {
-    auto deps = getDependencies();
-    if (deps.empty())
-        return;
-
-    // all deps are already downloaded and unpacked
-    server_response_file = p;
-    ptree dependency_tree;
-    pt::read_json(server_response_file.string(), dependency_tree);
-    extractDependencies(dependency_tree, dependencies);
+    extractDependencies(dependency_tree);
     print_configs();
 }
 
@@ -1256,7 +1265,7 @@ void Config::download_and_unpack(const String &data_url) const
     }
 }
 
-void Config::extractDependencies(const ptree &dependency_tree, DownloadDependencies &dependencies)
+void Config::extractDependencies(const ptree &dependency_tree)
 {
     dependencies.clear();
 
@@ -1281,6 +1290,23 @@ void Config::extractDependencies(const ptree &dependency_tree, DownloadDependenc
 
         dep.map_ptr = &dependencies;
         dependencies[id] = dep;
+    }
+
+    if (internal_options.current_package.empty())
+        return;
+
+    // remove current package and unneeded deps
+    for (auto &dd : dependencies)
+    {
+        auto &d = dd.second;
+        if (internal_options.current_package.package == d.package &&
+            internal_options.current_package.version == d.version)
+        {
+            dependencies = d.getDependencies();
+            for (auto &dd : dependencies)
+                dd.second.map_ptr = &dependencies;
+            break;
+        }
     }
 }
 
@@ -1685,30 +1711,44 @@ void Config::print_object_config_file(const path &config_file, const DownloadDep
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif())");
 
+    {
+        config_section_title(ctx, "cppan setup");
+
+        // choose one variant below
+
+        // 1
+        ctx.addLine("add_subdirectory(cppan)");
+        fs::copy_file(src_dir / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
+
+        if (parent.internal_options.invocations.find(d) != parent.internal_options.invocations.end())
+            throw std::runtime_error("Circular dependency detected. Project: " + pi.target_name);
+
+        silent = true;
+        auto old_dir = fs::current_path();
+        fs::current_path(obj_dir);
+
+        Config c(obj_dir);
+        c.dependency_tree = parent.dependency_tree;
+        c.internal_options.current_package = d;
+        c.internal_options.invocations = parent.internal_options.invocations;
+        c.internal_options.invocations.insert(d);
+        c.process();
+
+        fs::current_path(old_dir);
+        if (parent.internal_options.current_package.empty())
+            silent = false;
+
+        // 2
+        // this case requires correct generation of additional stuff (helpers)
+        //print_dependencies(ctx, *this, d.getDirectDependencies(), d.getIndirectDependencies(), get_storage_dir_obj());
+    }
+
     // main include
     {
         config_section_title(ctx, "main include");
         auto mi = src_dir;
         add_subdirectory(ctx, mi.string(), get_binary_path(d.package, d.version));
         ctx.emptyLines(1);
-    }
-
-    {
-        // choose one variant below
-
-        // 1
-        ctx.addLine("add_subdirectory(cppan)");
-        fs::copy_file(src_dir / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
-        auto ret = system(String("cppan -d " + obj_dir.string() +
-            " --server-response " + parent.server_response_file.string() +
-            //" --visited-packages" + "" +
-        "").c_str());
-        if (ret)
-            throw std::runtime_error("Error during executing subcommand");
-
-        // 2
-        // this case requires correct generation of additional stuff (helpers)
-        //print_dependencies(ctx, *this, d.getDirectDependencies(), d.getIndirectDependencies(), get_storage_dir_obj());
     }
 
     // eof
@@ -1800,9 +1840,16 @@ set(export_dir ${build_dir}/exports))");
     ctx.addLine(R"(if (NOT EXISTS ${import})
     set(lock ${build_dir}/generate.lock)
 
-    file(LOCK ${lock} RESULT_VARIABLE lock_result)
+    file(LOCK ${lock} TIMEOUT 0 RESULT_VARIABLE lock_result)
     if (NOT ${lock_result} EQUAL 0)
-        message(FATAL_ERROR "Lock error: ${lock_result}")
+        message(STATUS "WARNING: Other project is being bootstrapped right now or you hit a circular deadlock.")
+        message(STATUS "WARNING: If you aren't building other projects right not feel free to kill this process or it will be stopped in 5 minutes.")
+
+        file(LOCK ${lock} TIMEOUT 300 RESULT_VARIABLE lock_result)
+
+        if (NOT ${lock_result} EQUAL 0)
+            message(FATAL_ERROR "Lock error: ${lock_result}")
+        endif()
     endif()
 
     # double check

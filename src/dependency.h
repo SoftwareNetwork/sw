@@ -30,6 +30,8 @@
 #include "common.h"
 #include "project_path.h"
 
+#include <set>
+
 struct Dependency
 {
     using Dependencies = std::map<String, Dependency>;
@@ -38,10 +40,9 @@ struct Dependency
     Version version;
     ProjectFlags flags;
 
-    path getPackageDir(path base) const
-    {
-        return base / package.toString() / version.toString();
-    }
+    path getPackageDir(path base) const { return base / package.toString() / version.toString(); }
+    bool empty() const { return package.empty() || !version.isValid(); }
+    bool operator<(const Dependency &rhs) const { return std::tie(package, version) < std::tie(rhs.package, rhs.version); }
 };
 
 using Dependencies = Dependency::Dependencies;
@@ -51,54 +52,20 @@ struct DownloadDependency : public Dependency
     using DownloadDependencies = std::map<int, DownloadDependency>;
 
     String md5;
-
 private:
     std::set<int> dependencies;
-
 public:
     DownloadDependencies *map_ptr = nullptr;
 
 public:
     void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
 
-    Dependencies getDirectDependencies() const
-    {
-        Dependencies deps;
-        for (auto d : dependencies)
-        {
-            auto &dep = (*map_ptr)[d];
-            deps[dep.package.toString()] = dep;
-        }
-        deps.erase(package.toString()); // erase self
-        return deps;
-    }
+    Dependencies getDirectDependencies() const;
+    Dependencies getIndirectDependencies(const Dependencies &known_deps = Dependencies()) const;
+    DownloadDependencies getDependencies() const;
 
-    Dependencies getIndirectDependencies(const Dependencies &known_deps = Dependencies()) const
-    {
-        Dependencies deps = known_deps;
-        for (auto d : dependencies)
-        {
-            auto &dep = (*map_ptr)[d];
-            auto p = deps.insert({ dep.package.toString(), dep });
-            if (p.second)
-            {
-                auto id = dep.getIndirectDependencies(deps);
-                deps.insert(id.begin(), id.end());
-            }
-        }
-        if (known_deps.empty())
-        {
-            // first call in a chain
-
-            // erase direct deps
-            for (auto &d : getDirectDependencies())
-                deps.erase(d.first);
-
-            // erase self
-            deps.erase(package.toString());
-        }
-        return deps;
-    }
+private:
+    void getIndirectDependencies(std::set<int> &deps) const;
 
     // custom package dir can be used to apply project-wide patches
     // that won't hit any system storage
@@ -116,3 +83,5 @@ public:
 };
 
 using DownloadDependencies = DownloadDependency::DownloadDependencies;
+
+Dependency extractFromString(const String &target);

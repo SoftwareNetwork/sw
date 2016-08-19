@@ -47,9 +47,8 @@ ProgramOptions::ProgramOptions()
         //("gen-dummy-config", po::bool_switch(), "download and build requested executable")
         ;
 
+    // i - internal options
     hidden.add_options()
-        ("server-response", po::value<std::string>(), "path to file with server response")
-        ("visited-packages", po::value<std::string>(), "path to file with visited packages")
         ;
 }
 

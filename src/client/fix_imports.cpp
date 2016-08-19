@@ -63,16 +63,13 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
 {
     auto s = read_file(old_file);
     auto aliases_s = read_file(aliases_file);
-
-    ProjectPath p = target.substr(0, target.find('-'));
-    Version v = target.substr(target.find('-') + 1);
-    Dependency dep{ p,v };
+    auto dep = extractFromString(target);
 
     std::ofstream ofile(new_file.string());
     if (!ofile)
         throw std::runtime_error("Cannot open the output file for writing");
 
-    if (v.isBranch())
+    if (dep.version.isBranch())
     {
         ofile << s;
         return;

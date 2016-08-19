@@ -50,8 +50,7 @@ try
     {
         auto c = Config::load_user_config();
         c.load_current_config();
-        c.download_dependencies();
-        c.create_build_files();
+        c.process();
         return 0;
     }
 
@@ -139,11 +138,7 @@ try
     }
     else
     {
-        if (options().count("server-response"))
-            c.download_dependencies(options()["server-response"].as<String>());
-        else
-            c.download_dependencies();
-        c.create_build_files();
+        c.process();
     }
 
     return 0;

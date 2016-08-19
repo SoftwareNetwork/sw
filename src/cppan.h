@@ -165,7 +165,6 @@ struct Config
     std::map<String, Options> options;
     std::map<String, Options> global_options;
 
-    Config();
     Config(const path &p);
 
     void load(const path &p);
@@ -175,8 +174,8 @@ struct Config
     static Config load_user_config();
     void load_current_config();
 
+    void process();
     void download_dependencies();
-    void download_dependencies(const path &p);
     void create_build_files() const;
 
     Projects &getProjects() { return projects; }
@@ -195,10 +194,11 @@ struct Config
     path get_storage_dir_src() const;
 
 private:
+    Config();
+
     ptree dependency_tree;
     DownloadDependencies dependencies;
     Projects projects;
-    path server_response_file;
 
     void load_common(const path &p);
     void load_common(const YAML::Node &root);
@@ -213,5 +213,13 @@ private:
 
     void download_and_unpack(const String &data_url) const;
     void print_configs();
-    static void extractDependencies(const ptree &dependency_tree, DownloadDependencies &dependencies);
+    void extractDependencies(const ptree &dependency_tree);
+    void process_response_file();
+
+public:
+    struct InternalOptions
+    {
+        Dependency current_package;
+        std::set<Dependency> invocations;
+    } internal_options;
 };

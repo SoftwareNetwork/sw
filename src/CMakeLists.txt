@@ -67,6 +67,7 @@ set(common_src
     common.h
     cppan.cpp
     cppan.h
+    dependency.cpp
     dependency.h
     filesystem.h
     enums.cpp
