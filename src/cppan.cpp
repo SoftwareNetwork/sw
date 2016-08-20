@@ -76,6 +76,7 @@ const String cppan_dummy_target = "cppan-dummy";
 const String exports_dir = "${CMAKE_BINARY_DIR}/exports/";
 const String non_local_build_file = "build.cmake";
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
+const String packages_folder = "cppan/packages";
 
 using MimeType = String;
 using MimeTypes = std::set<MimeType>;
@@ -488,6 +489,8 @@ void add_subdirectory(Context &ctx, const String &src, const String &bin = Strin
 
 void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, const Dependencies &id, const path &base_dir)
 {
+    std::vector<String> includes;
+
     auto add_deps = [&](const auto &dd, const String &prefix = String())
     {
         if (dd.empty())
@@ -500,13 +503,20 @@ void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, c
             if (c.build_local || p.second.flags[pfHeaderOnly])
                 add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
             else
-                ctx.addLine("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
+                includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
         }
         ctx.addLine();
     };
 
     add_deps(dd);
     add_deps(id, "in");
+
+    if (!includes.empty())
+    {
+        config_section_title(ctx, "include dependencies (they should be placed at the end)");
+        for (auto &line : includes)
+            ctx.addLine(line);
+    }
 }
 
 void print_dependencies(Context &ctx, const Config &c, const path &base_dir)
@@ -983,7 +993,7 @@ Project Config::load_project(const YAML::Node &root, const String &name)
     });
 
     get_variety(root, "dependencies",
-        [this, &p](const YAML::Node &d)
+        [this, &p](const auto &d)
     {
         Dependency dependency;
         dependency.package = this->relative_name_to_absolute(d.as<String>());
@@ -1032,16 +1042,49 @@ Project Config::load_project(const YAML::Node &root, const String &name)
 
         Dependencies dependencies_private;
 
-        get_map_and_iterate(dall, "private",
-            [this, &p, &get_dep, &dependencies_private](const auto &d)
+        auto extract_deps = [&dall, this, &p, &get_dep](const auto &str, auto &deps)
         {
-            get_dep(dependencies_private, d);
-        });
-        get_map_and_iterate(dall, "public",
-            [this, &p, &get_dep](const auto &d)
-        {
-            get_dep(p.dependencies, d);
-        });
+            auto &priv = dall[str];
+            if (priv.IsDefined())
+            {
+                if (priv.IsMap())
+                {
+                    get_map_and_iterate(dall, str,
+                        [this, &p, &get_dep, &deps](const auto &d)
+                    {
+                        get_dep(deps, d);
+                    });
+                }
+                else if (priv.IsSequence())
+                {
+                    for (auto d : priv)
+                    {
+                        if (d.IsScalar())
+                        {
+                            Dependency dependency;
+                            dependency.package = this->relative_name_to_absolute(d.as<String>());
+                            deps[dependency.package.toString()] = dependency;
+                        }
+                        else if (d.IsMap())
+                        {
+                            Dependency dependency;
+                            if (d["name"].IsDefined())
+                                dependency.package = this->relative_name_to_absolute(d["name"].as<String>());
+                            if (d["package"].IsDefined())
+                                dependency.package = this->relative_name_to_absolute(d["package"].as<String>());
+                            if (d["version"].IsDefined())
+                                dependency.version = d["version"].template as<String>();
+                            if (d["only_headers"].IsDefined())
+                                dependency.flags.set(pfIncludeDirectories);
+                            deps[dependency.package.toString()] = dependency;
+                        }
+                    }
+                }
+            }
+        };
+
+        extract_deps("private", dependencies_private);
+        extract_deps("public", p.dependencies);
 
         for (auto &d : dependencies_private)
         {
@@ -1528,7 +1571,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     if (!header_only)
     {
         ctx << "set_target_properties         (" << pi.target_name << " PROPERTIES" << Context::eol;
-        ctx << "    FOLDER \"cppan/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
+        ctx << "    FOLDER \"" + packages_folder + "/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
         ctx << ")" << Context::eol;
         ctx.emptyLines(1);
     }
@@ -1652,11 +1695,11 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     {
         config_section_title(ctx, "IDE dummy target for headers");
 
-        auto tgt = pi.target_name + "-hdrs";
+        auto tgt = pi.target_name + "-headers";
         ctx.addLine("add_custom_target(" + tgt + " SOURCES ${src})");
         ctx.addLine();
         ctx << "set_target_properties         (" << tgt << " PROPERTIES" << Context::eol;
-        ctx << "    FOLDER \"cppan/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
+        ctx << "    FOLDER \"" + packages_folder + "/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
         ctx << ")" << Context::eol;
         ctx.emptyLines(1);
     }
@@ -1870,8 +1913,9 @@ set(export_dir ${build_dir}/exports))");
                     -H${current_dir} -B${build_dir}
                     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
                     #-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
-                    -DOUTPUT_DIR=${config}
                     -G "${generator}"
+                    -DOUTPUT_DIR=${config}
+                    -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
             )
         else()
             execute_process(
@@ -1879,8 +1923,9 @@ set(export_dir ${build_dir}/exports))");
                     -H${current_dir} -B${build_dir}
                     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                    -DOUTPUT_DIR=${config}
                     -G "${generator}"
+                    -DOUTPUT_DIR=${config}
+                    -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
             )
         endif()
     endif()
@@ -1925,7 +1970,7 @@ endif()
 
         // solution folder
         ctx << "set_target_properties         (" << target << " PROPERTIES" << Context::eol;
-        ctx << "    FOLDER \"cppan/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
+        ctx << "    FOLDER \"" + packages_folder + "/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
         ctx << ")" << Context::eol;
         ctx.emptyLines(1);
 
@@ -2261,6 +2306,12 @@ else()
             INTERFACE pthread
         )
     endif()
+    find_library(rt rt)
+    if (NOT ${rt} STREQUAL "rt-NOTFOUND")
+        target_link_libraries(cppan-helpers
+            INTERFACE rt
+        )
+    endif()
 endif()
 )");
     ctx.addLine();
@@ -2310,7 +2361,9 @@ add_custom_command(OUTPUT ${file}
 )
 add_custom_target(run-cppan
     DEPENDS ${file}
-    SOURCES ${PROJECT_SOURCE_DIR}/cppan.yml
+    SOURCES
+        ${PROJECT_SOURCE_DIR}/cppan.yml
+        ${PROJECT_SOURCE_DIR}/cppan/CppanHelpers.cmake
 )
 add_dependencies(cppan-helpers run-cppan)
 set_target_properties(run-cppan PROPERTIES

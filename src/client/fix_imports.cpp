@@ -71,6 +71,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
 
     if (dep.version.isBranch())
     {
+        boost::algorithm::replace_all(s, "\r", "");
         ofile << s;
         return;
     }
