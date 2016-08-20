@@ -77,6 +77,7 @@ const String exports_dir = "${CMAKE_BINARY_DIR}/exports/";
 const String non_local_build_file = "build.cmake";
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 const String packages_folder = "cppan/packages";
+const String header_only_option = "headers_only";
 
 using MimeType = String;
 using MimeTypes = std::set<MimeType>;
@@ -694,10 +695,20 @@ void Project::save_dependencies(yaml &node) const
     for (auto &dd : dependencies)
     {
         auto &d = dd.second;
+        yaml n;
         if (d.flags[pfPrivate])
-            root["private"][dd.first] = d.version.toAnyVersion();
+            n = root["private"];
         else
-            root["public"][dd.first] = d.version.toAnyVersion();
+            n = root["public"];
+        if (d.flags[pfIncludeDirectories])
+        {
+            yaml n2;
+            n2["version"] = d.version.toAnyVersion();
+            n2[header_only_option] = true;
+            n[dd.first] = n2;
+        }
+        else
+            n[dd.first] = d.version.toAnyVersion();
     }
     node[DEPENDENCIES_NODE] = root;
 }
@@ -1031,7 +1042,7 @@ Project Config::load_project(const yaml &root, const String &name)
                 dependency.package = this->relative_name_to_absolute(d["package"].as<String>());
             if (d["version"].IsDefined())
                 dependency.version = d["version"].template as<String>();
-            if (d["only_headers"].IsDefined())
+            if (d[header_only_option].IsDefined())
                 dependency.flags.set(pfIncludeDirectories);
             deps[dependency.package.toString()] = dependency;
         }
@@ -1064,6 +1075,8 @@ Project Config::load_project(const yaml &root, const String &name)
                     auto key = v.first.template as<String>();
                     if (key == "version")
                         dependency.version = v.second.template as<String>();
+                    else if (key == header_only_option)
+                        dependency.flags.set(pfIncludeDirectories);
                     // TODO: re-enable when adding patches support
                     //else if (key == "package_dir")
                     //    dependency.package_dir_type = packages_dir_type_from_string(v.second.template as<String>());
