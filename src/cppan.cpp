@@ -1014,6 +1014,29 @@ Project Config::load_project(const yaml &root, const String &name)
         option.bs_insertions.get_config_insertions(opt_level.second);
     });
 
+    auto read_single_dep = [this](auto &deps, const auto &d)
+    {
+        if (d.IsScalar())
+        {
+            Dependency dependency;
+            dependency.package = this->relative_name_to_absolute(d.as<String>());
+            deps[dependency.package.toString()] = dependency;
+        }
+        else if (d.IsMap())
+        {
+            Dependency dependency;
+            if (d["name"].IsDefined())
+                dependency.package = this->relative_name_to_absolute(d["name"].as<String>());
+            if (d["package"].IsDefined())
+                dependency.package = this->relative_name_to_absolute(d["package"].as<String>());
+            if (d["version"].IsDefined())
+                dependency.version = d["version"].template as<String>();
+            if (d["only_headers"].IsDefined())
+                dependency.flags.set(pfIncludeDirectories);
+            deps[dependency.package.toString()] = dependency;
+        }
+    };
+
     get_variety(root, DEPENDENCIES_NODE,
         [this, &p](const auto &d)
     {
@@ -1021,16 +1044,12 @@ Project Config::load_project(const yaml &root, const String &name)
         dependency.package = this->relative_name_to_absolute(d.as<String>());
         p.dependencies[dependency.package.toString()] = dependency;
     },
-        [this, &p](const auto &dall)
+        [this, &p, &read_single_dep](const auto &dall)
     {
         for (auto d : dall)
-        {
-            Dependency dependency;
-            dependency.package = this->relative_name_to_absolute(d.template as<String>());
-            p.dependencies[dependency.package.toString()] = dependency;
-        }
+            read_single_dep(p.dependencies, d);
     },
-        [this, &p](const auto &dall)
+        [this, &p, &read_single_dep](const auto &dall)
     {
         auto get_dep = [this](auto &deps, const auto &d)
         {
@@ -1064,7 +1083,7 @@ Project Config::load_project(const yaml &root, const String &name)
 
         Dependencies dependencies_private;
 
-        auto extract_deps = [&dall, this, &p, &get_dep](const auto &str, auto &deps)
+        auto extract_deps = [&dall, this, &p, &get_dep, &read_single_dep](const auto &str, auto &deps)
         {
             auto &priv = dall[str];
             if (priv.IsDefined())
@@ -1080,27 +1099,7 @@ Project Config::load_project(const yaml &root, const String &name)
                 else if (priv.IsSequence())
                 {
                     for (auto d : priv)
-                    {
-                        if (d.IsScalar())
-                        {
-                            Dependency dependency;
-                            dependency.package = this->relative_name_to_absolute(d.as<String>());
-                            deps[dependency.package.toString()] = dependency;
-                        }
-                        else if (d.IsMap())
-                        {
-                            Dependency dependency;
-                            if (d["name"].IsDefined())
-                                dependency.package = this->relative_name_to_absolute(d["name"].as<String>());
-                            if (d["package"].IsDefined())
-                                dependency.package = this->relative_name_to_absolute(d["package"].as<String>());
-                            if (d["version"].IsDefined())
-                                dependency.version = d["version"].template as<String>();
-                            if (d["only_headers"].IsDefined())
-                                dependency.flags.set(pfIncludeDirectories);
-                            deps[dependency.package.toString()] = dependency;
-                        }
-                    }
+                        read_single_dep(deps, d);
                 }
             }
         };
