@@ -38,6 +38,10 @@
 #include "project_path.h"
 #include "property_tree.h"
 
+#define DEPENDENCIES_NODE "dependencies"
+
+using yaml = YAML::Node;
+
 path get_home_directory();
 path get_root_directory();
 path get_config_filename();
@@ -85,7 +89,7 @@ struct BuildSystemConfigInsertions
     String post_target;
     String post_alias;
 
-    void get_config_insertions(const YAML::Node &n);
+    void get_config_insertions(const yaml &n);
 };
 
 struct Options
@@ -100,6 +104,7 @@ struct Options
 
 struct Project
 {
+    Source source;
     ProjectPath package;
     String license;
     IncludeDirectories include_directories;
@@ -134,6 +139,8 @@ struct Project
 
     void findSources(path p);
     bool writeArchive(const String &filename) const;
+
+    void save_dependencies(yaml &root) const;
 };
 
 using Projects = std::map<String, Project>;
@@ -165,8 +172,10 @@ struct Config
     std::map<String, Options> options;
     std::map<String, Options> global_options;
 
+    Config();
     Config(const path &p);
 
+    void load(const yaml &root, const path &p = CPPAN_FILENAME);
     void load(const path &p);
     void save(const path &p) const;
 
@@ -180,8 +189,8 @@ struct Config
 
     Projects &getProjects() { return projects; }
 
-    static Source load_source(const YAML::Node &root);
-    static void save_source(YAML::Node &root, const Source &source);
+    static Source load_source(const yaml &root);
+    static void save_source(yaml &root, const Source &source);
 
     Dependencies getDirectDependencies() const; // from server
     Dependencies getIndirectDependencies() const; // from server
@@ -194,15 +203,13 @@ struct Config
     path get_storage_dir_src() const;
 
 private:
-    Config();
-
     ptree dependency_tree;
     DownloadDependencies dependencies;
     Projects projects;
 
     void load_common(const path &p);
-    void load_common(const YAML::Node &root);
-    Project load_project(const YAML::Node &root, const String &name);
+    void load_common(const yaml &root);
+    Project load_project(const yaml &root, const String &name);
     ProjectPath relative_name_to_absolute(const String &name);
 
     void print_meta_config_file() const;

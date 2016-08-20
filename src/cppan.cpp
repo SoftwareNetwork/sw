@@ -273,7 +273,7 @@ void config_section_title(Context &ctx, const String &t)
 }
 
 template <class T>
-auto get_scalar(const YAML::Node &node, const String &key, const T &default_ = T())
+auto get_scalar(const yaml &node, const String &key, const T &default_ = T())
 {
     const auto &n = node[key];
     if (n.IsDefined())
@@ -286,7 +286,7 @@ auto get_scalar(const YAML::Node &node, const String &key, const T &default_ = T
 };
 
 template <class F>
-void get_scalar_f(const YAML::Node &node, const String &key, F &&f)
+void get_scalar_f(const yaml &node, const String &key, F &&f)
 {
     const auto &n = node[key];
     if (n.IsDefined())
@@ -298,7 +298,7 @@ void get_scalar_f(const YAML::Node &node, const String &key, F &&f)
 };
 
 template <class T>
-auto get_sequence(const YAML::Node &node)
+auto get_sequence(const yaml &node)
 {
     std::vector<T> result;
     const auto &n = node;
@@ -317,7 +317,7 @@ auto get_sequence(const YAML::Node &node)
 };
 
 template <class T>
-auto get_sequence(const YAML::Node &node, const String &key, const T &default_ = T())
+auto get_sequence(const yaml &node, const String &key, const T &default_ = T())
 {
     const auto &n = node[key];
     if (n.IsDefined() && !(n.IsScalar() || n.IsSequence()))
@@ -329,21 +329,21 @@ auto get_sequence(const YAML::Node &node, const String &key, const T &default_ =
 };
 
 template <class T>
-auto get_sequence_set(const YAML::Node &node)
+auto get_sequence_set(const yaml &node)
 {
     auto vs = get_sequence<T>(node);
     return std::set<T>(vs.begin(), vs.end());
 }
 
 template <class T1, class T2 = T1>
-auto get_sequence_set(const YAML::Node &node, const String &key)
+auto get_sequence_set(const yaml &node, const String &key)
 {
     auto vs = get_sequence<T2>(node, key);
     return std::set<T1>(vs.begin(), vs.end());
 }
 
 template <class F>
-void get_sequence_and_iterate(const YAML::Node &node, const String &key, F &&f)
+void get_sequence_and_iterate(const yaml &node, const String &key, F &&f)
 {
     const auto &n = node[key];
     if (n.IsDefined())
@@ -356,7 +356,7 @@ void get_sequence_and_iterate(const YAML::Node &node, const String &key, F &&f)
 };
 
 template <class F>
-void get_map(const YAML::Node &node, const String &key, F &&f)
+void get_map(const yaml &node, const String &key, F &&f)
 {
     const auto &n = node[key];
     if (n.IsDefined())
@@ -368,7 +368,7 @@ void get_map(const YAML::Node &node, const String &key, F &&f)
 };
 
 template <class F>
-void get_map_and_iterate(const YAML::Node &node, const String &key, F &&f)
+void get_map_and_iterate(const yaml &node, const String &key, F &&f)
 {
     const auto &n = node[key];
     if (n.IsDefined())
@@ -381,7 +381,7 @@ void get_map_and_iterate(const YAML::Node &node, const String &key, F &&f)
 };
 
 template <class T>
-void get_string_map(const YAML::Node &node, const String &key, T &data)
+void get_string_map(const yaml &node, const String &key, T &data)
 {
     const auto &n = node[key];
     if (n.IsDefined())
@@ -394,7 +394,7 @@ void get_string_map(const YAML::Node &node, const String &key, T &data)
 };
 
 template <class F1, class F2, class F3>
-void get_variety(const YAML::Node &node, const String &key, F1 &&f_scalar, F2 &&f_seq, F3 &&f_map)
+void get_variety(const yaml &node, const String &key, F1 &&f_scalar, F2 &&f_seq, F3 &&f_map)
 {
     const auto &n = node[key];
     if (!n.IsDefined())
@@ -414,7 +414,7 @@ void get_variety(const YAML::Node &node, const String &key, F1 &&f_scalar, F2 &&
 }
 
 template <class F1, class F3>
-void get_variety_and_iterate(const YAML::Node &node, F1 &&f_scalar, F3 &&f_map)
+void get_variety_and_iterate(const yaml &node, F1 &&f_scalar, F3 &&f_map)
 {
     const auto &n = node;
     if (!n.IsDefined())
@@ -436,13 +436,13 @@ void get_variety_and_iterate(const YAML::Node &node, F1 &&f_scalar, F3 &&f_map)
 }
 
 template <class F1, class F3>
-void get_variety_and_iterate(const YAML::Node &node, const String &key, F1 &&f_scalar, F3 &&f_map)
+void get_variety_and_iterate(const yaml &node, const String &key, F1 &&f_scalar, F3 &&f_map)
 {
     const auto &n = node[key];
     get_variety_and_iterate(n, std::forward<F1>(f_scalar), std::forward<F1>(f_map));
 }
 
-void get_config_insertion(const YAML::Node &n, const String &key, String &dst)
+void get_config_insertion(const yaml &n, const String &key, String &dst)
 {
     dst = get_scalar<String>(n, key);
     boost::trim(dst);
@@ -545,7 +545,7 @@ void print_source_groups(Context &ctx, const path &dir)
     ctx.emptyLines(1);
 }
 
-void BuildSystemConfigInsertions::get_config_insertions(const YAML::Node &n)
+void BuildSystemConfigInsertions::get_config_insertions(const yaml &n)
 {
 #define ADD_CFG_INSERTION(x) get_config_insertion(n, #x, x)
     ADD_CFG_INSERTION(pre_sources);
@@ -686,6 +686,22 @@ bool Project::writeArchive(const String &filename) const
     return result;
 }
 
+void Project::save_dependencies(yaml &node) const
+{
+    if (dependencies.empty())
+        return;
+    yaml root;
+    for (auto &dd : dependencies)
+    {
+        auto &d = dd.second;
+        if (d.flags[pfPrivate])
+            root["private"][dd.first] = d.version.toAnyVersion();
+        else
+            root["public"][dd.first] = d.version.toAnyVersion();
+    }
+    node[DEPENDENCIES_NODE] = root;
+}
+
 Config::Config()
 {
     storage_dir = get_root_directory() / "packages";
@@ -748,7 +764,7 @@ void Config::load_common(const path &p)
     load_common(root);
 }
 
-void Config::load_common(const YAML::Node &root)
+void Config::load_common(const yaml &root)
 {
 #define EXTRACT_VAR(r, val, var, type)   \
     do                                   \
@@ -784,7 +800,11 @@ void Config::load_common(const YAML::Node &root)
 void Config::load(const path &p)
 {
     const auto root = YAML::LoadFile(p.string());
+    load(root);
+}
 
+void Config::load(const yaml &root, const path &p)
+{
     auto ls = root["local_settings"];
     if (ls.IsDefined())
     {
@@ -806,33 +826,33 @@ void Config::load(const path &p)
     EXTRACT(root_project, String);
 
     // global checks
-	auto check = [&root](auto &a, auto &&str)
-	{
-		auto s = get_sequence<String>(root, str);
-		a.insert(s.begin(), s.end());
-	};
+    auto check = [&root](auto &a, auto &&str)
+    {
+        auto s = get_sequence<String>(root, str);
+        a.insert(s.begin(), s.end());
+    };
 
-	check(check_functions, "check_function_exists");
-	check(check_includes, "check_include_exists");
-	check(check_types, "check_type_size");
-	check(check_libraries, "check_library_exists");
+    check(check_functions, "check_function_exists");
+    check(check_includes, "check_include_exists");
+    check(check_types, "check_type_size");
+    check(check_libraries, "check_library_exists");
 
-	get_map_and_iterate(root, "check_symbol_exists", [this](const auto &root)
-	{
-		auto f = root.first.template as<String>();
-		auto s = root.second.template as<String>();
-		if (root.second.IsSequence())
-			check_symbols[f] = get_sequence_set<String>(root.second);
-		else if (root.second.IsScalar())
-			check_symbols[f].insert(s);
-		else
-			throw std::runtime_error("Symbol headers should be a scalar or a set");
-	});
+    get_map_and_iterate(root, "check_symbol_exists", [this](const auto &root)
+    {
+        auto f = root.first.template as<String>();
+        auto s = root.second.template as<String>();
+        if (root.second.IsSequence())
+            check_symbols[f] = get_sequence_set<String>(root.second);
+        else if (root.second.IsScalar())
+            check_symbols[f].insert(s);
+        else
+            throw std::runtime_error("Symbol headers should be a scalar or a set");
+    });
 
     // global insertions
-	bs_insertions.get_config_insertions(root);
+    bs_insertions.get_config_insertions(root);
 
-	// project
+    // project
     auto set_project = [this, &p](auto &&project, auto &&name)
     {
         project.cppan_filename = p.filename().string();
@@ -855,7 +875,7 @@ void Config::load(const path &p)
         set_project(load_project(root, ""), "");
 }
 
-Source Config::load_source(const YAML::Node &root)
+Source Config::load_source(const yaml &root)
 {
     Source source;
     auto &src = root["source"];
@@ -889,7 +909,7 @@ Source Config::load_source(const YAML::Node &root)
     return source;
 }
 
-void Config::save_source(YAML::Node &root, const Source &source)
+void Config::save_source(yaml &root, const Source &source)
 {
     auto save_source = overload(
         [&root](const Git &git)
@@ -909,9 +929,11 @@ void Config::save_source(YAML::Node &root, const Source &source)
     boost::apply_visitor(save_source, source);
 }
 
-Project Config::load_project(const YAML::Node &root, const String &name)
+Project Config::load_project(const yaml &root, const String &name)
 {
     Project p;
+
+    p.source = load_source(root);
 
     EXTRACT_VAR(root, p.empty, "empty", bool);
 
@@ -992,7 +1014,7 @@ Project Config::load_project(const YAML::Node &root, const String &name)
         option.bs_insertions.get_config_insertions(opt_level.second);
     });
 
-    get_variety(root, "dependencies",
+    get_variety(root, DEPENDENCIES_NODE,
         [this, &p](const auto &d)
     {
         Dependency dependency;
@@ -1323,10 +1345,10 @@ void Config::extractDependencies(const ptree &dependency_tree)
         dep.flags = decltype(dep.flags)(v.second.get<uint64_t>("flags"));
         dep.md5 = v.second.get<String>("md5");
 
-        if (v.second.find("dependencies") != v.second.not_found())
+        if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
         {
             std::set<int> idx;
-            for (auto &tree_dep : v.second.get_child("dependencies"))
+            for (auto &tree_dep : v.second.get_child(DEPENDENCIES_NODE))
                 idx.insert(tree_dep.second.get_value<int>());
             dep.setDependencyIds(idx);
         }
