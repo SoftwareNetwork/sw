@@ -1546,25 +1546,44 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
             ctx << "add_library                   (" << pi.target_name << " ${LIBRARY_TYPE} ${src})" << Context::eol;
     }
 
-    // includes
-    if (!p.include_directories.empty())
+    // include directories
     {
-        ctx << "target_include_directories    (" << pi.target_name << Context::eol;
-        ctx.increaseIndent();
-        if (header_only)
+        std::vector<Dependency> include_deps;
+        auto dd = getDirectDependencies();
+        for (auto &d : dd)
         {
-            for (auto &idir : p.include_directories.public_)
-                ctx.addLine("INTERFACE " + idir.string());
+            if (d.second.flags[pfIncludeDirectories])
+                include_deps.push_back(d.second);
         }
-        else
+        if (!p.include_directories.empty() || !include_deps.empty())
         {
-            for (auto &idir : p.include_directories.public_)
-                ctx.addLine("PUBLIC " + idir.string());
-            for (auto &idir : p.include_directories.private_)
-                ctx.addLine("PRIVATE " + idir.string());
+            ctx << "target_include_directories    (" << pi.target_name << Context::eol;
+            ctx.increaseIndent();
+            if (header_only)
+            {
+                for (auto &idir : p.include_directories.public_)
+                    ctx.addLine("INTERFACE " + idir.string());
+                for (auto &idir : include_deps)
+                {
+                    auto p = get_storage_dir_src() / idir.package.toString() / idir.version.toString();
+                    ctx.addLine("INTERFACE " +  p.string());
+                }
+            }
+            else
+            {
+                for (auto &idir : p.include_directories.public_)
+                    ctx.addLine("PUBLIC " + idir.string());
+                for (auto &idir : p.include_directories.private_)
+                    ctx.addLine("PRIVATE " + idir.string());
+                for (auto &idir : include_deps)
+                {
+                    auto p = get_storage_dir_src() / idir.package.toString() / idir.version.toString();
+                    ctx.addLine("INTERFACE " + p.string());
+                }
+            }
+            ctx.decreaseIndent();
+            ctx.addLine(")");
         }
-        ctx.decreaseIndent();
-        ctx.addLine(")");
     }
 
     // deps (direct)
