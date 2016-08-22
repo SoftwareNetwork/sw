@@ -50,6 +50,8 @@
 #include "context.h"
 #include "bazel/bazel.h"
 
+#include "inserts.h"
+
 #define CPPAN_LOCAL_DIR "cppan"
 #define BAZEL_BUILD_FILE "BUILD"
 
@@ -60,10 +62,10 @@
             std::cout << x; \
     } while (0)
 
-#define LOG(x)                     \
-    do                             \
-    {                              \
-        if (!silent)               \
+#define LOG(x)                      \
+    do                              \
+    {                               \
+        if (!silent)                \
             std::cout << x << "\n"; \
     } while (0)
 
@@ -72,12 +74,16 @@ bool silent = false;
 const String cmake_config_filename = "CMakeLists.txt";
 const String cmake_object_config_filename = "generate.cmake";
 const String cmake_helpers_filename = "CppanHelpers.cmake";
+const String cmake_functions_filename = "CppanFunctions.cmake";
 const String cppan_dummy_target = "cppan-dummy";
 const String exports_dir = "${CMAKE_BINARY_DIR}/exports/";
 const String non_local_build_file = "build.cmake";
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 const String packages_folder = "cppan/packages";
 const String header_only_option = "headers_only";
+
+using ConfigPtr = std::shared_ptr<Config>;
+std::map<path, ConfigPtr> config_store;
 
 using MimeType = String;
 using MimeTypes = std::set<MimeType>;
@@ -500,6 +506,8 @@ void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, c
         config_section_title(ctx, prefix + "direct dependencies");
         for (auto &p : dd)
         {
+            if (p.second.flags[pfIncludeDirectories])
+                continue;
             auto s = p.second.getPackageDir(p.second.flags[pfHeaderOnly] ? c.get_storage_dir_src() : base_dir).string();
             if (c.build_local || p.second.flags[pfHeaderOnly])
                 add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
@@ -544,6 +552,16 @@ void print_source_groups(Context &ctx, const path &dir)
         ctx.addLine("source_group(\"" + s2 + "\" REGULAR_EXPRESSION \"" + s + "/*\")");
     }
     ctx.emptyLines(1);
+}
+
+ConfigPtr getConfig(const path &version_dir)
+{
+    ConfigPtr c;
+    if (config_store.find(version_dir) == config_store.end())
+        c = config_store[version_dir] = std::make_shared<Config>(version_dir);
+    else
+        c = config_store[version_dir];
+    return c;
 }
 
 void BuildSystemConfigInsertions::get_config_insertions(const yaml &n)
@@ -625,7 +643,8 @@ void Project::findSources(path p)
     check_file_types(files, root_directory);
 #endif
 
-    header_only = std::none_of(files.begin(), files.end(), is_valid_source);
+    if (!header_only) // do not check if forced header_only
+        header_only = std::none_of(files.begin(), files.end(), is_valid_source);
 
     if (!license.empty())
     {
@@ -950,6 +969,7 @@ Project Config::load_project(const yaml &root, const String &name)
 
     EXTRACT_VAR(root, p.shared_only, "shared_only", bool);
     EXTRACT_VAR(root, p.static_only, "static_only", bool);
+    EXTRACT_VAR(root, p.header_only, "header_only", bool);
 
     EXTRACT_VAR(root, p.import_from_bazel, "import_from_bazel", bool);
 
@@ -1179,6 +1199,20 @@ Project Config::load_project(const yaml &root, const String &name)
     return p;
 }
 
+const Project *Config::getProject(const String &pname) const
+{
+    const Project *p = nullptr;
+    if (projects.size() == 1)
+        p = &projects.begin()->second;
+    else if (!projects.empty())
+    {
+        auto it = projects.find(pname);
+        if (it != projects.end())
+            p = &it->second;
+    }
+    return p;
+}
+
 ProjectPath Config::relative_name_to_absolute(const String &name)
 {
     ProjectPath package;
@@ -1395,8 +1429,8 @@ void Config::print_configs()
         auto &d = dd.second;
         auto version_dir = d.getPackageDir(get_storage_dir_src());
 
-        Config c(version_dir);
-        c.print_package_config_file(version_dir / cmake_config_filename, d, *this);
+        auto c = getConfig(version_dir);
+        c->print_package_config_file(version_dir / cmake_config_filename, d, *this);
 
         if (d.flags[pfHeaderOnly] || build_local)
             continue;
@@ -1406,8 +1440,8 @@ void Config::print_configs()
         auto bld_dir = obj_dir;
         boost::system::error_code ec;
         fs::create_directories(bld_dir, ec);
-        c.print_object_config_file(bld_dir / cmake_config_filename, d, *this);
-        c.print_object_include_config_file(obj_dir / cmake_object_config_filename, d);
+        c->print_object_config_file(bld_dir / cmake_config_filename, d, *this);
+        c->print_object_include_config_file(obj_dir / cmake_object_config_filename, d);
     }
     LOG("Ok");
 }
@@ -1417,14 +1451,9 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     PackageInfo pi(d);
     bool header_only = pi.dependency->flags[pfHeaderOnly];
 
-    const Project *pp = &projects.begin()->second;
-    if (projects.size() > 1)
-    {
-        auto it = projects.find(d.package.toString());
-        if (it == projects.end())
-            throw std::runtime_error("No such project '" + d.package.toString() + "' in dependencies list");
-        pp = &it->second;
-    }
+    const auto pp = getProject(d.package.toString());
+    if (!pp)
+        throw std::runtime_error("No such project '" + d.package.toString() + "' in dependencies list");
     auto &p = *pp;
 
     // gather checks
@@ -1561,7 +1590,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     // include directories
     {
         std::vector<Dependency> include_deps;
-        auto dd = getDirectDependencies();
+        auto dd = d.getDirectDependencies();
         for (auto &d : dd)
         {
             if (d.second.flags[pfIncludeDirectories])
@@ -1577,8 +1606,16 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
                     ctx.addLine("INTERFACE " + idir.string());
                 for (auto &idir : include_deps)
                 {
-                    auto p = get_storage_dir_src() / idir.package.toString() / idir.version.toString();
-                    ctx.addLine("INTERFACE " +  p.string());
+                    auto version_dir = idir.getPackageDir(get_storage_dir_src());
+                    auto c = getConfig(version_dir);
+                    auto proj = getProject(idir.package.toString());
+                    for (auto &i : proj->include_directories.public_)
+                    {
+                        auto ipath = version_dir / i;
+                        boost::system::error_code ec;
+                        if (fs::exists(ipath, ec))
+                            ctx.addLine("INTERFACE " + normalize_path(ipath));
+                    }
                 }
             }
             else
@@ -1589,8 +1626,23 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
                     ctx.addLine("PRIVATE " + idir.string());
                 for (auto &idir : include_deps)
                 {
-                    auto p = get_storage_dir_src() / idir.package.toString() / idir.version.toString();
-                    ctx.addLine("INTERFACE " + p.string());
+                    auto version_dir = idir.getPackageDir(get_storage_dir_src());
+                    auto c = getConfig(version_dir);
+                    auto proj = getProject(idir.package.toString());
+                    for (auto &i : proj->include_directories.public_)
+                    {
+                        auto ipath = version_dir / i;
+                        boost::system::error_code ec;
+                        if (fs::exists(ipath, ec))
+                            ctx.addLine("PUBLIC " + normalize_path(ipath));
+                    }
+                    for (auto &i : proj->include_directories.private_)
+                    {
+                        auto ipath = version_dir / i;
+                        boost::system::error_code ec;
+                        if (fs::exists(ipath, ec))
+                            ctx.addLine("PRIVATE " + normalize_path(ipath));
+                    }
                 }
             }
             ctx.decreaseIndent();
@@ -1602,9 +1654,11 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     ctx.addLine("target_link_libraries         (" + pi.target_name);
     ctx.increaseIndent();
     ctx.addLine((!header_only ? "PUBLIC" : "INTERFACE") + String(" cppan-helpers"));
+    if (!header_only)
+        ctx.addLine("PRIVATE" + String(" cppan-helpers-private"));
     for (auto &d1 : d.getDirectDependencies())
     {
-        if (d1.second.flags[pfExecutable])
+        if (d1.second.flags[pfExecutable] || d1.second.flags[pfIncludeDirectories])
             continue;
         PackageInfo pi1(d1.second);
         if (header_only)
@@ -1693,6 +1747,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     ctx.emptyLines(1);
     ctx.addLine("set(lib " + pi.target_name + ")");
     ctx.addLine("set(target " + pi.target_name + ")");
+    ctx.addLine("set(this " + pi.target_name + ")");
 
     ctx.emptyLines(1);
 
@@ -2180,10 +2235,8 @@ void Config::print_helper_file() const
     ctx.addLine("#");
     ctx.addLine();
 
-    {
-        //config_section_title(ctx, "macros & functions");
-        //ctx.addLine(R"()");
-    }
+    config_section_title(ctx, "macros & functions");
+    ctx.addLine("include(" + cmake_functions_filename + ")");
 
     config_section_title(ctx, "cmake setup");
     ctx.addLine(R"(# Use solution folders.
@@ -2323,32 +2376,24 @@ include(TestBigEndian))");
         ctx.emptyLines(1);
     }
 
-    // library
-    config_section_title(ctx, "helper interface library");
+    // public library
+    {
+        config_section_title(ctx, "helper interface library");
 
-    ctx.addLine("add_library(cppan-helpers INTERFACE)");
-    ctx.addLine("add_dependencies(cppan-helpers " + cppan_dummy_target + ")");
-    ctx.addLine();
+        ctx.addLine("add_library(cppan-helpers INTERFACE)");
+        ctx.addLine("add_dependencies(cppan-helpers " + cppan_dummy_target + ")");
+        ctx.addLine();
 
-    // common definitions
-    ctx << "target_compile_definitions(cppan-helpers" << Context::eol;
-    ctx.increaseIndent();
-    ctx.addLine("INTERFACE CPPAN"); // build is performed under CPPAN
-    ctx.decreaseIndent();
-    ctx.addLine(")");
-    ctx.addLine();
+        // common definitions
+        ctx << "target_compile_definitions(cppan-helpers" << Context::eol;
+        ctx.increaseIndent();
+        ctx.addLine("INTERFACE CPPAN"); // build is performed under CPPAN
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
 
-    // msvc definitions
-    ctx.addLine(R"(if (MSVC)
-target_compile_definitions(cppan-helpers
-    INTERFACE _CRT_SECURE_NO_WARNINGS # disable warning about non-standard functions
-)
-endif()
-)");
-    ctx.addLine();
-
-    // common link libraries
-    ctx.addLine(R"(if (WIN32)
+        // common link libraries
+        ctx.addLine(R"(if (WIN32)
 target_link_libraries(cppan-helpers
     INTERFACE Ws2_32
 )
@@ -2367,11 +2412,36 @@ else()
     endif()
 endif()
 )");
-    ctx.addLine();
+        ctx.addLine();
 
-    // Do not use APPEND here. It's the first file that will clear cppan.cmake.
-    ctx.addLine("export(TARGETS cppan-helpers FILE " + exports_dir + "cppan-helpers.cmake)");
-    ctx.emptyLines(1);
+        // Do not use APPEND here. It's the first file that will clear cppan.cmake.
+        ctx.addLine("export(TARGETS cppan-helpers FILE " + exports_dir + "cppan-helpers.cmake)");
+        ctx.emptyLines(1);
+    }
+
+    // private library
+    {
+        config_section_title(ctx, "private helper interface library");
+
+        ctx.addLine("add_library(cppan-helpers-private INTERFACE)");
+        ctx.addLine("add_dependencies(cppan-helpers-private " + cppan_dummy_target + ")");
+        ctx.addLine();
+
+        // msvc
+        ctx.addLine(R"(if (MSVC)
+target_compile_definitions(cppan-helpers-private
+    INTERFACE _CRT_SECURE_NO_WARNINGS # disable warning about non-standard functions
+)
+target_compile_options(cppan-helpers-private
+    INTERFACE /wd4005 # macro redefinition
+)
+endif()
+)");
+
+        // Do not use APPEND here. It's the first file that will clear cppan.cmake.
+        ctx.addLine("export(TARGETS cppan-helpers-private FILE " + exports_dir + "cppan-helpers-private.cmake)");
+        ctx.emptyLines(1);
+    }
 
     // global definitions
     config_section_title(ctx, "global definitions");
@@ -2427,6 +2497,8 @@ set_target_properties(run-cppan PROPERTIES
     ctx.addLine(config_delimeter);
     ctx.addLine();
     o << ctx.getText();
+
+    write_file(fs::current_path() / CPPAN_LOCAL_DIR / cmake_functions_filename, cmake_functions);
 }
 
 void Config::create_build_files() const

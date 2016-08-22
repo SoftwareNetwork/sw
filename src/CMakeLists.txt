@@ -41,26 +41,25 @@ set(context_src
 add_library(context ${context_src})
 
 ########################################
-# generator
+# inserter
 ########################################
 
-#set(gen_src
-#    generator.cpp
-#	schema.json
-#)
-#add_executable(generator ${gen_src})
-#target_link_libraries(generator context cppan)
+set(inserter_src
+    inserter.cpp
+)
+add_executable(inserter ${inserter_src})
+target_link_libraries(inserter)
 
 ########################################
 # common
 ########################################
 
-#set(PARSER_SRC ${CMAKE_CURRENT_BINARY_DIR}/parser.h)
-
-#add_custom_command(OUTPUT ${PARSER_SRC}
-#	COMMAND generator ${CMAKE_CURRENT_SOURCE_DIR}/schema.json ${PARSER_SRC}
-#	DEPENDS generator ${CMAKE_CURRENT_SOURCE_DIR}/schema.json
-#)
+add_custom_target(inserts_gen
+    COMMAND inserter ${CMAKE_CURRENT_SOURCE_DIR}/inserts.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
+    SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
+)
 
 set(common_src
     common.cpp
@@ -76,16 +75,18 @@ set(common_src
     project_path.cpp
     project_path.h
 
-	#schema.json
-	#${PARSER_SRC}
+    ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
+    inserts.cpp.in
+    inserts.h
 )
 add_library(common ${common_src})
+add_dependencies(common inserts_gen)
 target_compile_definitions(common
     PRIVATE -DVERSION_MAJOR=${VERSION_MAJOR}
     PRIVATE -DVERSION_MINOR=${VERSION_MINOR}
     PRIVATE -DVERSION_PATCH=${VERSION_PATCH}
 )
-target_link_libraries(common context bazel_parser)# cppan)
+target_link_libraries(common context bazel_parser)
 if (WIN32)
     target_link_libraries(common
         archive_static

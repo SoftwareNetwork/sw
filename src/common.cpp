@@ -519,7 +519,7 @@ String read_file(const path &p)
 
 void write_file(const path &p, const String &s)
 {
-    std::ofstream ofile(p.string());
+    std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
     if (!ofile)
         throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
     ofile << s;

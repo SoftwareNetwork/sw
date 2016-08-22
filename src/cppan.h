@@ -188,6 +188,7 @@ struct Config
     void create_build_files() const;
 
     Projects &getProjects() { return projects; }
+    const Project *getProject(const String &p) const;
 
     static Source load_source(const yaml &root);
     static void save_source(yaml &root, const Source &source);
