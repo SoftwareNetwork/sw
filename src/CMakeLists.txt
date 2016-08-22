@@ -60,6 +60,7 @@ add_custom_target(inserts_gen
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
     SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
 )
+set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp PROPERTIES GENERATED TRUE)
 
 set(common_src
     common.cpp
