@@ -56,9 +56,12 @@ String read_file(const path &p)
 
 void write_file(const path &p, const String &s)
 {
-    auto f = read_file(p);
-    if (f == s)
-        return;
+    if (fs::exists(p))
+    {
+        auto f = read_file(p);
+        if (f == s)
+            return;
+    }
 
     std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
     if (!ofile)
