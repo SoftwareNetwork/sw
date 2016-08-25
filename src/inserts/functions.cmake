@@ -80,6 +80,7 @@ endfunction(add_src_apple)
 
 function(remove_src var)
     list(REMOVE_ITEM src "${CMAKE_CURRENT_SOURCE_DIR}/${var}")
+    set(src ${src} PARENT_SCOPE)
 endfunction(remove_src)
 
 ########################################
@@ -89,6 +90,7 @@ endfunction(remove_src)
 function(remove_src_win32 var)
     if (WIN32)
         list(REMOVE_ITEM src "${CMAKE_CURRENT_SOURCE_DIR}/${var}")
+        set(src ${src} PARENT_SCOPE)
     endif()
 endfunction(remove_src_win32)
 
@@ -99,6 +101,7 @@ endfunction(remove_src_win32)
 function(remove_src_unix var)
     if (UNIX)
         list(REMOVE_ITEM src "${CMAKE_CURRENT_SOURCE_DIR}/${var}")
+        set(src ${src} PARENT_SCOPE)
     endif()
 endfunction(remove_src_unix)
 

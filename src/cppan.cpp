@@ -507,12 +507,16 @@ void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, c
         for (auto &p : dd)
         {
             if (p.second.flags[pfIncludeDirectories])
-                continue;
+                ctx.addLine("set(CPPAN_NO_TARGET 1)");
+
             auto s = p.second.getPackageDir(p.second.flags[pfHeaderOnly] ? c.get_storage_dir_src() : base_dir).string();
             if (c.build_local || p.second.flags[pfHeaderOnly])
                 add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
             else
                 includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
+
+            if (p.second.flags[pfIncludeDirectories])
+                ctx.addLine("set(CPPAN_NO_TARGET 0)");
         }
         ctx.addLine();
     };
@@ -549,7 +553,7 @@ void print_source_groups(Context &ctx, const path &dir)
         auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
         boost::replace_all(s2, "/", "\\\\");
         boost::replace_all(s, "\\", "/");
-        ctx.addLine("source_group(\"" + s2 + "\" REGULAR_EXPRESSION \"" + s + "/*\")");
+        ctx.addLine("source_group(\"" + s2 + "\" REGULAR_EXPRESSION \"" + s + "/.*\")");
     }
     ctx.emptyLines(1);
 }
@@ -1063,7 +1067,7 @@ Project Config::load_project(const yaml &root, const String &name)
             if (d["version"].IsDefined())
                 dependency.version = d["version"].template as<String>();
             if (d[header_only_option].IsDefined())
-                dependency.flags.set(pfIncludeDirectories);
+                dependency.flags.set(pfIncludeDirectories, d[header_only_option].template as<bool>());
             deps[dependency.package.toString()] = dependency;
         }
     };
@@ -1096,7 +1100,7 @@ Project Config::load_project(const yaml &root, const String &name)
                     if (key == "version")
                         dependency.version = v.second.template as<String>();
                     else if (key == header_only_option)
-                        dependency.flags.set(pfIncludeDirectories);
+                        dependency.flags.set(pfIncludeDirectories, v.second.template as<bool>());
                     // TODO: re-enable when adding patches support
                     //else if (key == "package_dir")
                     //    dependency.package_dir_type = packages_dir_type_from_string(v.second.template as<String>());
@@ -1573,6 +1577,13 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
             ctx.addLine("link_directories(" + ll + ")");
     ctx.emptyLines(1);
 
+    // exit if CPPAN_NO_TARGET
+    {
+        ctx.addLine("if (CPPAN_NO_TARGET)");
+        ctx.addLine("    return()");
+        ctx.addLine("endif()");
+    }
+
     // target
     config_section_title(ctx, "target: " + pi.target_name);
     if (d.flags[pfExecutable])
@@ -1636,13 +1647,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
                         if (fs::exists(ipath, ec))
                             ctx.addLine("PUBLIC " + normalize_path(ipath));
                     }
-                    for (auto &i : proj->include_directories.private_)
-                    {
-                        auto ipath = version_dir / i;
-                        boost::system::error_code ec;
-                        if (fs::exists(ipath, ec))
-                            ctx.addLine("PRIVATE " + normalize_path(ipath));
-                    }
+                    // no privates here
                 }
             }
             ctx.decreaseIndent();
@@ -2486,6 +2491,7 @@ add_custom_target(run-cppan
     DEPENDS ${file}
     SOURCES
         ${PROJECT_SOURCE_DIR}/cppan.yml
+        ${PROJECT_SOURCE_DIR}/cppan/CppanFunctions.cmake
         ${PROJECT_SOURCE_DIR}/cppan/CppanHelpers.cmake
 )
 add_dependencies(cppan-helpers run-cppan)
