@@ -1189,10 +1189,10 @@ Project Config::load_project(const yaml &root, const String &name)
                 }
                 else if (group.second.IsMap())
                 {
-                    path root = get_scalar<String>(group.second, "root");
+                    String root = get_scalar<String>(group.second, "root");
                     auto v = get_sequence<String>(group.second, "files");
                     for (auto &e : v)
-                        a.insert((root / e).string());
+                        a.insert(root + "/" + e);
                 }
             }
         }
