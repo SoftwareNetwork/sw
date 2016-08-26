@@ -207,6 +207,7 @@ private:
     ptree dependency_tree;
     DownloadDependencies dependencies;
     Projects projects;
+    mutable std::set<String> include_guards;
 
     void load_common(const path &p);
     void load_common(const yaml &root);
@@ -216,6 +217,7 @@ private:
     void print_meta_config_file() const;
     void print_helper_file() const;
     void print_package_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
+    void print_package_include_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
     void print_object_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const;
     void print_object_include_config_file(const path &config_file, const DownloadDependency &d) const;
 

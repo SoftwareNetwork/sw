@@ -63,6 +63,8 @@ public:
 
 public:
     Context(const Text &indent = "    ", const Text &newline = "\n");
+    Context(const Context &ctx);
+    Context &operator=(const Context &ctx);
 
     void initFromString(const std::string &s);
 
@@ -142,6 +144,16 @@ public:
         addLine(ss_line.str());
         ss_line = decltype(ss_line)();
         return *this;
+    }
+
+    void clear()
+    {
+        lines.clear();
+        before_.reset();
+        after_.reset();
+        while (!namespaces.empty())
+            namespaces.pop();
+        ss_line.clear();
     }
 
 private:

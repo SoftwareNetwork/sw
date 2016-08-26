@@ -48,6 +48,27 @@ Context::Context(const Text &indent, const Text &newline)
 {
 }
 
+Context::Context(const Context &ctx)
+{
+    lines = ctx.lines;
+    if (ctx.before_)
+        before_ = std::make_shared<Context>(*ctx.before_.get());
+    if (ctx.after_)
+        after_ = std::make_shared<Context>(*ctx.after_.get());
+
+    n_indents = ctx.n_indents;
+    indent = ctx.indent;
+    newline = ctx.newline;
+    namespaces = ctx.namespaces;
+}
+
+Context &Context::operator=(const Context &ctx)
+{
+    Context tmp(ctx);
+    std::swap(*this, tmp);
+    return *this;
+}
+
 void Context::initFromString(const std::string &s)
 {
     size_t p = 0;

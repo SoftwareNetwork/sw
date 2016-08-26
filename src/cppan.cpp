@@ -73,14 +73,17 @@ bool silent = false;
 
 const String cmake_config_filename = "CMakeLists.txt";
 const String cmake_object_config_filename = "generate.cmake";
-const String cmake_helpers_filename = "CppanHelpers.cmake";
-const String cmake_functions_filename = "CppanFunctions.cmake";
+const String cmake_helpers_filename = "Helpers.cmake";
+const String cmake_functions_filename = "Functions.cmake";
 const String cppan_dummy_target = "cppan-dummy";
 const String exports_dir = "${CMAKE_BINARY_DIR}/exports/";
 const String non_local_build_file = "build.cmake";
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 const String packages_folder = "cppan/packages";
-const String header_only_option = "headers_only";
+const String include_directories_only = "include_directories_only";
+const String include_guard_filename = "include.cmake";
+const String include_guard_prefix = "CPPAN_INCLUDE_GUARD_";
+const String actions_filename = "actions.cmake";
 
 using ConfigPtr = std::shared_ptr<Config>;
 std::map<path, ConfigPtr> config_store;
@@ -479,14 +482,15 @@ String normalize_path(const path &p)
 
 String get_binary_path(const ProjectPath &p, const Version &v)
 {
-    return sha1(p.toString() + " " + v.toString()).substr(0, 10);
+    return "${CMAKE_BINARY_DIR}/cppan/" + sha1(p.toString() + " " + v.toString()).substr(0, 10);
 }
 
 String add_subdirectory(String src, String bin = String())
 {
     boost::algorithm::replace_all(src, "\\", "/");
     boost::algorithm::replace_all(bin, "\\", "/");
-    return "add_subdirectory(\"" + src + "\" \"" + bin + "\")";
+    //return "add_subdirectory(\"" + src + "\" \"" + bin + "\")";
+    return "include(\"" + src + "/" + include_guard_filename + "\")";
 }
 
 void add_subdirectory(Context &ctx, const String &src, const String &bin = String())
@@ -506,23 +510,22 @@ void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, c
         config_section_title(ctx, prefix + "direct dependencies");
         for (auto &p : dd)
         {
-            if (p.second.flags[pfIncludeDirectories])
-                ctx.addLine("set(CPPAN_NO_TARGET 1)");
-
             auto s = p.second.getPackageDir(p.second.flags[pfHeaderOnly] ? c.get_storage_dir_src() : base_dir).string();
             if (c.build_local || p.second.flags[pfHeaderOnly])
-                add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
+            {
+                if (p.second.flags[pfIncludeDirectories])
+                    ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
+                else
+                    add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
+            }
             else
                 includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
-
-            if (p.second.flags[pfIncludeDirectories])
-                ctx.addLine("set(CPPAN_NO_TARGET 0)");
         }
         ctx.addLine();
     };
 
     add_deps(dd);
-    add_deps(id, "in");
+    //add_deps(id, "in");
 
     if (!includes.empty())
     {
@@ -727,7 +730,7 @@ void Project::save_dependencies(yaml &node) const
         {
             yaml n2;
             n2["version"] = d.version.toAnyVersion();
-            n2[header_only_option] = true;
+            n2[include_directories_only] = true;
             n[dd.first] = n2;
         }
         else
@@ -1066,8 +1069,8 @@ Project Config::load_project(const yaml &root, const String &name)
                 dependency.package = this->relative_name_to_absolute(d["package"].as<String>());
             if (d["version"].IsDefined())
                 dependency.version = d["version"].template as<String>();
-            if (d[header_only_option].IsDefined())
-                dependency.flags.set(pfIncludeDirectories, d[header_only_option].template as<bool>());
+            if (d[include_directories_only].IsDefined())
+                dependency.flags.set(pfIncludeDirectories, d[include_directories_only].template as<bool>());
             deps[dependency.package.toString()] = dependency;
         }
     };
@@ -1099,7 +1102,7 @@ Project Config::load_project(const yaml &root, const String &name)
                     auto key = v.first.template as<String>();
                     if (key == "version")
                         dependency.version = v.second.template as<String>();
-                    else if (key == header_only_option)
+                    else if (key == include_directories_only)
                         dependency.flags.set(pfIncludeDirectories, v.second.template as<bool>());
                     // TODO: re-enable when adding patches support
                     //else if (key == "package_dir")
@@ -1435,6 +1438,7 @@ void Config::print_configs()
 
         auto c = getConfig(version_dir);
         c->print_package_config_file(version_dir / cmake_config_filename, d, *this);
+        c->print_package_include_file(version_dir / cmake_config_filename, d, *this);
 
         if (d.flags[pfHeaderOnly] || build_local)
             continue;
@@ -1476,6 +1480,28 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     ctx.addLine("# version: " + d.version.toString());
     ctx.addLine("#");
     ctx.addLine();
+
+    // includes
+    {
+        auto dd = d.getDirectDependencies();
+        for (auto &di : dd)
+        {
+            auto &dep = di.second;
+            auto i = p.dependencies.find(di.first);
+            if (i == p.dependencies.end())
+            {
+                std::cerr << "warning: dependency '" << di.first << "' is not found" << "\n";
+                continue;
+            }
+            // replace separate flags
+            dep.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
+        }
+
+        if (parent.build_local)
+            print_dependencies(ctx, parent, dd, d.getIndirectDependencies(), get_storage_dir_src());
+        else
+            print_dependencies(ctx, parent, dd, d.getIndirectDependencies(), get_storage_dir_obj());
+    }
 
     // settings
     {
@@ -1577,13 +1603,6 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
             ctx.addLine("link_directories(" + ll + ")");
     ctx.emptyLines(1);
 
-    // exit if CPPAN_NO_TARGET
-    {
-        ctx.addLine("if (CPPAN_NO_TARGET)");
-        ctx.addLine("    return()");
-        ctx.addLine("endif()");
-    }
-
     // target
     config_section_title(ctx, "target: " + pi.target_name);
     if (d.flags[pfExecutable])
@@ -1663,7 +1682,11 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         ctx.addLine("PRIVATE" + String(" cppan-helpers-private"));
     for (auto &d1 : d.getDirectDependencies())
     {
-        if (d1.second.flags[pfExecutable] || d1.second.flags[pfIncludeDirectories])
+        if (d1.second.flags[pfExecutable] ||
+            // take pfIncludeDirectories flag from config file, not from server
+            (p.dependencies.find(d1.second.package.toString()) != p.dependencies.end() &&
+             p.dependencies.find(d1.second.package.toString())->second.flags[pfIncludeDirectories])
+            )
             continue;
         PackageInfo pi1(d1.second);
         if (header_only)
@@ -1826,10 +1849,46 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
 
     ctx.splitLines();
 
-    std::ofstream ofile(config_file.string());
-    if (!ofile)
-        throw std::runtime_error("Cannot create a file: " + config_file.string());
-    ofile << ctx.getText();
+    write_file(config_file, ctx.getText());
+
+    // print actions
+    ctx.clear();
+    ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR_OLD ${CMAKE_CURRENT_SOURCE_DIR})");
+    ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR \"" + normalize_path(config_file.parent_path().string()) + "\")");
+    print_bs_insertion("pre sources", &BuildSystemConfigInsertions::pre_sources);
+    ctx.addLine("file(GLOB_RECURSE src \"*\")");
+    print_bs_insertion("post sources", &BuildSystemConfigInsertions::post_sources);
+    print_bs_insertion("post target", &BuildSystemConfigInsertions::post_target);
+    print_bs_insertion("post alias", &BuildSystemConfigInsertions::post_alias);
+    ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR_OLD})");
+    write_file(config_file.parent_path() / actions_filename, ctx.getText());
+}
+
+void Config::print_package_include_file(const path &config_file, const DownloadDependency &d, Config &parent) const
+{
+    PackageInfo pi(d);
+
+    Context ctx;
+    ctx.addLine("#");
+    ctx.addLine("# cppan");
+    ctx.addLine("# package: " + d.package.toString());
+    ctx.addLine("# version: " + d.version.toString());
+    ctx.addLine("#");
+    ctx.addLine();
+
+    auto ig = include_guard_prefix + pi.variable_name;
+    parent.include_guards.insert(ig);
+
+    ctx.addLine("if (" + ig + ")");
+    ctx.addLine("    return()");
+    ctx.addLine("endif()");
+    ctx.addLine();
+    ctx.addLine("set(" + ig + " 1 CACHE BOOL \"\" FORCE)");
+    ctx.addLine();
+    ctx.addLine("add_subdirectory(\"" + normalize_path(config_file.parent_path().string()) + "\" \"" + get_binary_path(d.package, d.version) + "\")");
+    ctx.addLine();
+
+    write_file(config_file.parent_path() / include_guard_filename, ctx.getText());
 }
 
 void Config::print_object_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const
@@ -2188,10 +2247,20 @@ void Config::print_meta_config_file() const
     }
     o << "\n";*/
 
-    if (build_local)
-        print_dependencies(ctx, *this, get_storage_dir_src());
-    else
-        print_dependencies(ctx, *this, get_storage_dir_obj());
+    // deps
+    {
+        if (build_local)
+            print_dependencies(ctx, *this, get_storage_dir_src());
+        else
+            print_dependencies(ctx, *this, get_storage_dir_obj());
+
+        // turn off header guards
+        Context ctx2;
+        for (auto &ig : include_guards)
+            ctx2.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
+        write_file(fn.parent_path() / include_guard_filename, ctx2.getText());
+        ctx.addLine("include(" + include_guard_filename + ")");
+    }
 
     ProjectFlags flags;
     flags[pfExecutable] = true;
@@ -2491,8 +2560,8 @@ add_custom_target(run-cppan
     DEPENDS ${file}
     SOURCES
         ${PROJECT_SOURCE_DIR}/cppan.yml
-        ${PROJECT_SOURCE_DIR}/cppan/CppanFunctions.cmake
-        ${PROJECT_SOURCE_DIR}/cppan/CppanHelpers.cmake
+        ${PROJECT_SOURCE_DIR}/cppan/)" + cmake_functions_filename + R"(
+        ${PROJECT_SOURCE_DIR}/cppan/)" + cmake_helpers_filename + R"(
 )
 add_dependencies(cppan-helpers run-cppan)
 set_target_properties(run-cppan PROPERTIES
