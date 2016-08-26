@@ -1181,7 +1181,7 @@ Project Config::load_project(const yaml &root, const String &name)
             for (const auto &group : files)
             {
                 if (group.second.IsScalar())
-                    throw std::runtime_error("group '" + group.first.as<String>() + "' cannot be a scalar");
+                    a.insert(group.second.as<String>());
                 else if (group.second.IsSequence())
                 {
                     for (const auto &v : group.second)
@@ -1437,6 +1437,10 @@ void Config::print_configs()
         auto version_dir = d.getPackageDir(get_storage_dir_src());
 
         auto c = getConfig(version_dir);
+        if (c->printed)
+            continue;
+        c->printed = true;
+
         c->print_package_config_file(version_dir / cmake_config_filename, d, *this);
         c->print_package_include_file(version_dir / cmake_config_filename, d, *this);
 
@@ -1464,6 +1468,21 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         throw std::runtime_error("No such project '" + d.package.toString() + "' in dependencies list");
     auto &p = *pp;
 
+    // fix deps flags (add local deps flags, they are not sent from server)
+    auto dd = d.getDirectDependencies();
+    for (auto &di : dd)
+    {
+        auto &dep = di.second;
+        auto i = p.dependencies.find(di.first);
+        if (i == p.dependencies.end())
+        {
+            std::cerr << "warning: dependency '" << di.first << "' is not found" << "\n";
+            continue;
+        }
+        // replace separate flags
+        dep.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
+    }
+
     // gather checks
 #define GATHER_CHECK(c) parent.c.insert(c.begin(), c.end())
     GATHER_CHECK(check_functions);
@@ -1483,20 +1502,6 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
 
     // includes
     {
-        auto dd = d.getDirectDependencies();
-        for (auto &di : dd)
-        {
-            auto &dep = di.second;
-            auto i = p.dependencies.find(di.first);
-            if (i == p.dependencies.end())
-            {
-                std::cerr << "warning: dependency '" << di.first << "' is not found" << "\n";
-                continue;
-            }
-            // replace separate flags
-            dep.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
-        }
-
         if (parent.build_local)
             print_dependencies(ctx, parent, dd, d.getIndirectDependencies(), get_storage_dir_src());
         else
@@ -1620,7 +1625,6 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     // include directories
     {
         std::vector<Dependency> include_deps;
-        auto dd = d.getDirectDependencies();
         for (auto &d : dd)
         {
             if (d.second.flags[pfIncludeDirectories])
@@ -1680,7 +1684,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     ctx.addLine((!header_only ? "PUBLIC" : "INTERFACE") + String(" cppan-helpers"));
     if (!header_only)
         ctx.addLine("PRIVATE" + String(" cppan-helpers-private"));
-    for (auto &d1 : d.getDirectDependencies())
+    for (auto &d1 : dd)
     {
         if (d1.second.flags[pfExecutable] ||
             // take pfIncludeDirectories flag from config file, not from server
@@ -1936,7 +1940,12 @@ endif())");
         fs::copy_file(src_dir / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
 
         if (parent.internal_options.invocations.find(d) != parent.internal_options.invocations.end())
-            throw std::runtime_error("Circular dependency detected. Project: " + pi.target_name);
+        {
+            //throw std::runtime_error("Circular dependency detected. Project: " + pi.target_name);
+            //return;
+            String s = "Circular dependency detected. Project: " + pi.target_name;
+            std::cout << s << "\n";
+        }
 
         silent = true;
         auto old_dir = fs::current_path();
@@ -2021,6 +2030,8 @@ endfunction(find_flag)
 
     ctx.addLine("set(target " + pi.target_name + ")");
     ctx.addLine();
+    ctx.addLine("message(STATUS \"Entering ${target}\")");
+    ctx.addLine();
     if (!p.aliases.empty())
     {
         ctx.addLine("set(aliases");
@@ -2057,8 +2068,9 @@ set(export_dir ${build_dir}/exports))");
 
     file(LOCK ${lock} TIMEOUT 0 RESULT_VARIABLE lock_result)
     if (NOT ${lock_result} EQUAL 0)
+        message(STATUS "WARNING: Target: ${target}")
         message(STATUS "WARNING: Other project is being bootstrapped right now or you hit a circular deadlock.")
-        message(STATUS "WARNING: If you aren't building other projects right not feel free to kill this process or it will be stopped in 5 minutes.")
+        message(STATUS "WARNING: If you aren't building other projects right now feel free to kill this process or it will be stopped in 5 minutes.")
 
         file(LOCK ${lock} TIMEOUT 300 RESULT_VARIABLE lock_result)
 

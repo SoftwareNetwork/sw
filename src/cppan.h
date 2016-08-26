@@ -204,6 +204,7 @@ struct Config
     path get_storage_dir_src() const;
 
 private:
+    bool printed = false;
     ptree dependency_tree;
     DownloadDependencies dependencies;
     Projects projects;
