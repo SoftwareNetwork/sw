@@ -1938,7 +1938,11 @@ void Config::print_object_config_file(const path &config_file, const DownloadDep
     ctx.addLine();
 
     config_section_title(ctx, "compiler & linker settings");
-    ctx.addLine(R"(if (MSVC)
+    ctx.addLine(R"(if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if (MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
