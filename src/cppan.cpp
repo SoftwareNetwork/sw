@@ -818,6 +818,7 @@ void Config::load_common(const yaml &root)
     EXTRACT_AUTO(host);
     EXTRACT(storage_dir, String);
     EXTRACT_AUTO(local_build);
+    EXTRACT_AUTO(show_ide_projects);
 
     auto &p = root["proxy"];
     if (p.IsDefined())
@@ -1451,7 +1452,7 @@ void Config::print_configs()
         boost::system::error_code ec;
         fs::create_directories(bld_dir, ec);
         c->print_object_config_file(bld_dir / cmake_config_filename, d, *this);
-        c->print_object_include_config_file(obj_dir / cmake_object_config_filename, d);
+        c->print_object_include_config_file(obj_dir / cmake_object_config_filename, d, *this);
     }
     LOG("Ok");
 }
@@ -2018,7 +2019,7 @@ endif())");
     write_file_if_different(config_file, ctx.getText());
 }
 
-void Config::print_object_include_config_file(const path &config_file, const DownloadDependency &d) const
+void Config::print_object_include_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const
 {
     const auto pp = getProject(d.package.toString());
     if (!pp)
@@ -2174,23 +2175,26 @@ endif()
         auto target = pi.target_name + "-sources";
         auto dir = get_storage_dir_src() / d.package.toString() / d.version.toString();
 
-        config_section_title(ctx, "sources target (for IDE only)");
-        ctx.addLine("if (NOT TARGET " + target + ")");
-        ctx.increaseIndent();
-        ctx.addLine("file(GLOB_RECURSE src \"" + normalize_path(dir) + "/*\")");
-        ctx.addLine();
-        ctx.addLine("add_custom_target(" + target);
-        ctx.addLine("    SOURCES ${src}");
-        ctx.addLine(")");
-        ctx.addLine();
+        if (parent.show_ide_projects)
+        {
+            config_section_title(ctx, "sources target (for IDE only)");
+            ctx.addLine("if (NOT TARGET " + target + ")");
+            ctx.increaseIndent();
+            ctx.addLine("file(GLOB_RECURSE src \"" + normalize_path(dir) + "/*\")");
+            ctx.addLine();
+            ctx.addLine("add_custom_target(" + target);
+            ctx.addLine("    SOURCES ${src}");
+            ctx.addLine(")");
+            ctx.addLine();
 
-        // solution folder
-        ctx << "set_target_properties         (" << target << " PROPERTIES" << Context::eol;
-        ctx << "    FOLDER \"" + packages_folder + "/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
-        ctx << ")" << Context::eol;
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.emptyLines(1);
+            // solution folder
+            ctx << "set_target_properties         (" << target << " PROPERTIES" << Context::eol;
+            ctx << "    FOLDER \"" + packages_folder + "/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
+            ctx << ")" << Context::eol;
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+            ctx.emptyLines(1);
+        }
 
         // source groups
         print_source_groups(ctx, dir);

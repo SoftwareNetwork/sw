@@ -155,6 +155,7 @@ struct Config
     PackagesDirType packages_dir_type{ PackagesDirType::User };
     path storage_dir;
     bool local_build = false;
+    bool show_ide_projects = false;
 
     // source (git, remote etc.)
     Version version;
@@ -221,7 +222,7 @@ private:
     void print_package_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
     void print_package_include_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
     void print_object_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const;
-    void print_object_include_config_file(const path &config_file, const DownloadDependency &d) const;
+    void print_object_include_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const;
 
     void download_and_unpack(const String &data_url) const;
     void print_configs();
