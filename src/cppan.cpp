@@ -1065,16 +1065,16 @@ Project Config::load_project(const yaml &root, const String &name)
         if (d.IsScalar())
         {
             Dependency dependency;
-            dependency.package = this->relative_name_to_absolute(d.as<String>());
+            dependency.package = this->relative_name_to_absolute(d.template as<String>());
             deps[dependency.package.toString()] = dependency;
         }
         else if (d.IsMap())
         {
             Dependency dependency;
             if (d["name"].IsDefined())
-                dependency.package = this->relative_name_to_absolute(d["name"].as<String>());
+                dependency.package = this->relative_name_to_absolute(d["name"].template as<String>());
             if (d["package"].IsDefined())
-                dependency.package = this->relative_name_to_absolute(d["package"].as<String>());
+                dependency.package = this->relative_name_to_absolute(d["package"].template as<String>());
             if (d["version"].IsDefined())
                 dependency.version = d["version"].template as<String>();
             if (d[include_directories_only].IsDefined())
@@ -1087,7 +1087,7 @@ Project Config::load_project(const yaml &root, const String &name)
         [this, &p](const auto &d)
     {
         Dependency dependency;
-        dependency.package = this->relative_name_to_absolute(d.as<String>());
+        dependency.package = this->relative_name_to_absolute(d.template as<String>());
         p.dependencies[dependency.package.toString()] = dependency;
     },
         [this, &p, &read_single_dep](const auto &dall)

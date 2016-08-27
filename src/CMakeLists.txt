@@ -48,7 +48,7 @@ set(inserter_src
     inserter.cpp
 )
 add_executable(inserter ${inserter_src})
-target_link_libraries(inserter)
+target_link_libraries(inserter ${Boost_LIBRARIES})
 
 ########################################
 # common
