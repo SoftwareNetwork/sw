@@ -33,11 +33,12 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <deque>
 #include <iostream>
 #include <regex>
 #include <vector>
 
-using Lines = std::vector<String>;
+using Lines = std::deque<String>;
 
 Lines fix_imports(const Lines &lines_old, const String &old_target, const String new_target)
 {
@@ -49,6 +50,8 @@ Lines fix_imports(const Lines &lines_old, const String &old_target, const String
         if (line.find("add_library") == 0 || line.find("add_executable") == 0)
             boost::algorithm::replace_all(line, "IMPORTED", "IMPORTED GLOBAL");
     }
+    lines.push_front("if (NOT TARGET " + new_target + ")");
+    lines.push_back("endif()");
     return lines;
 }
 
@@ -91,10 +94,6 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     }
 
     String result;
-    result += "if (TARGET " + dep.package.toString() + "-" + dep.version.toAnyVersion() + ")\n";
-    result += "    return()\n";
-    result += "endif()\n";
-
     {
         auto &d = dep;
         // add GLOBAL for default target
