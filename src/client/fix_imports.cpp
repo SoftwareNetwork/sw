@@ -91,8 +91,12 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     }
 
     String result;
+    result += "if (TARGET " + dep.package.toString() + "-" + dep.version.toAnyVersion() + ")\n";
+    result += "    return()\n";
+    result += "endif()\n";
+
     {
-        auto d = dep;
+        auto &d = dep;
         // add GLOBAL for default target
         result += fix_imports(lines, target, d.package.toString() + "-" + d.version.toAnyVersion());
         d.version.patch = -1;
@@ -102,7 +106,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
         result += fix_imports(lines, target, d.package.toString());
     }
     {
-        auto d = dep;
+        auto &d = dep;
         result += fix_imports(lines, target, d.package.toString("::") + "-" + d.version.toAnyVersion());
         d.version.patch = -1;
         result += fix_imports(lines, target, d.package.toString("::") + "-" + d.version.toAnyVersion());
