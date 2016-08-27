@@ -28,3 +28,4 @@
 #include "common.h"
 
 extern const String cmake_functions;
+extern const String cppan_h;

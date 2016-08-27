@@ -29,10 +29,12 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <stdint.h>
 #include <tuple>
 #include <vector>
+#include <unordered_set>
 
 #include <boost/variant.hpp>
 #include <openssl/evp.h>
@@ -45,6 +47,9 @@
 
 using String = std::string;
 using Strings = std::vector<String>;
+
+using FilesSorted = std::set<path>;
+using Files = std::unordered_set<path>;
 
 using ProjectVersionId = uint64_t;
 using ProjectVersionNumber = int32_t;
@@ -108,7 +113,7 @@ private:
 String url_post(const String &url, const String &data);
 void download_file(DownloadData &data);
 
-void unpack_file(const path &fn, const path &dst);
+Files unpack_file(const path &fn, const path &dst);
 
 String read_file(const path &p);
 void write_file(const path &p, const String &s);

@@ -58,7 +58,9 @@ add_custom_target(inserts_gen
     COMMAND inserter ${CMAKE_CURRENT_SOURCE_DIR}/inserts.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
-    SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
+    SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/cppan.h
 )
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp PROPERTIES GENERATED TRUE)
 

@@ -28,3 +28,5 @@
 #include "inserts.h"
 
 const String cmake_functions = R"(CPPAN_INCLUDE<inserts/functions.cmake>)";
+
+const String cppan_h = R"(CPPAN_INCLUDE<inserts/cppan.h>)";

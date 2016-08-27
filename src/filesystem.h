@@ -28,6 +28,18 @@
 #pragma once
 
 #include <boost/filesystem.hpp>
+#include <boost/functional/hash.hpp>
 
 namespace fs = boost::filesystem;
 using path = fs::wpath;
+
+namespace std
+{
+    template<> struct hash<path>
+    {
+        size_t operator()(const path& p) const
+        {
+            return boost::filesystem::hash_value(p);
+        }
+    };
+}

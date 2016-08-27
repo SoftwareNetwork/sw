@@ -274,10 +274,12 @@ bool check_branch_name(const String &n, String *error)
     return true;
 }
 
-void unpack_file(const path &fn, const path &dst)
+Files unpack_file(const path &fn, const path &dst)
 {
     if (!fs::exists(dst))
         fs::create_directories(dst);
+
+    Files files;
 
     auto a = archive_read_new();
     archive_read_support_filter_all(a);
@@ -294,9 +296,8 @@ void unpack_file(const path &fn, const path &dst)
             fs::create_directories(fdir);
         path filename = f.filename();
         if (filename == "." || filename == "..")
-        {
             continue;
-        }
+        files.insert(f);
         std::ofstream o(f.string(), std::ios::out | std::ios::binary);
         if (!o)
             throw std::runtime_error("Cannot open file: " + f.string());
@@ -315,6 +316,8 @@ void unpack_file(const path &fn, const path &dst)
     }
     archive_read_close(a);
     archive_read_free(a);
+
+    return files;
 }
 
 DownloadData::DownloadData()

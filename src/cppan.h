@@ -57,7 +57,6 @@ struct PackageInfo
 };
 
 using Definitions = std::multimap<String, String>;
-using Files = std::set<path>;
 using Sources = std::set<String>;
 using StringSet = std::set<String>;
 using Symbols = std::map<String, StringSet>;
@@ -156,6 +155,7 @@ struct Config
     path storage_dir;
     bool local_build = false;
     bool show_ide_projects = false;
+    bool add_run_cppan_target = false;
 
     // source (git, remote etc.)
     Version version;

@@ -85,6 +85,9 @@ const String include_guard_filename = "include.cmake";
 const String include_guard_prefix = "CPPAN_INCLUDE_GUARD_";
 const String actions_filename = "actions.cmake";
 const String exports_filename = "exports.cmake";
+const String cpp_config_filename = "cppan.h";
+const String cppan_export = "CPPAN_EXPORT";
+const String cppan_export_prefix = "CPPAN_API_";
 
 using ConfigPtr = std::shared_ptr<Config>;
 std::map<path, ConfigPtr> config_store;
@@ -353,6 +356,13 @@ auto get_sequence_set(const yaml &node, const String &key)
     return std::set<T1>(vs.begin(), vs.end());
 }
 
+template <class T1, class T2 = T1>
+auto get_sequence_unordered_set(const yaml &node, const String &key)
+{
+    auto vs = get_sequence<T2>(node, key);
+    return std::unordered_set<T1>(vs.begin(), vs.end());
+}
+
 template <class F>
 void get_sequence_and_iterate(const yaml &node, const String &key, F &&f)
 {
@@ -579,6 +589,19 @@ ConfigPtr getConfig(const path &version_dir)
     else
         c = config_store[version_dir];
     return c;
+}
+
+void prepare_exports(const Files &files, const Dependency &d)
+{
+    PackageInfo pi(d);
+    auto api = cppan_export_prefix + pi.variable_name;
+
+    for (auto &f : files)
+    {
+        auto s = read_file(f);
+        boost::algorithm::replace_all(s, cppan_export, api);
+        write_file(f, s);
+    }
 }
 
 void BuildSystemConfigInsertions::get_config_insertions(const yaml &n)
@@ -827,6 +850,7 @@ void Config::load_common(const yaml &root)
     EXTRACT(storage_dir, String);
     EXTRACT_AUTO(local_build);
     EXTRACT_AUTO(show_ide_projects);
+    EXTRACT_AUTO(add_run_cppan_target);
 
     auto &p = root["proxy"];
     if (p.IsDefined())
@@ -1021,7 +1045,7 @@ Project Config::load_project(const yaml &root, const String &name)
         p.include_directories.public_.insert("include");
     p.include_directories.public_.insert("${CMAKE_CURRENT_BINARY_DIR}");
 
-    p.exclude_from_build = get_sequence_set<path, String>(root, "exclude_from_build");
+    p.exclude_from_build = get_sequence_unordered_set<path, String>(root, "exclude_from_build");
 
     if (p.import_from_bazel)
         p.exclude_from_build.insert(BAZEL_BUILD_FILE);
@@ -1373,9 +1397,10 @@ void Config::download_and_unpack(const String &data_url) const
             write_file(md5file, d.md5);
 
             LOG("Unpacking: " << fn.string());
+            Files files;
             try
             {
-                unpack_file(fn, version_dir);
+                files = unpack_file(fn, version_dir);
             }
             catch (...)
             {
@@ -1383,6 +1408,8 @@ void Config::download_and_unpack(const String &data_url) const
                 throw;
             }
             fs::remove(fn);
+
+            prepare_exports(files, d);
         }
     }
 }
@@ -1728,68 +1755,77 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         ctx.emptyLines(1);
     }
 
-    // defs
-    for (auto &ol : p.options)
+    // options (defs etc.)
     {
+        ctx.addLine("target_compile_definitions    (" + pi.target_name);
+        ctx.increaseIndent();
+        ctx.addLine("PRIVATE " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
+        ctx.addLine("PUBLIC  " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_IMPORT"));
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+
+        for (auto &ol : p.options)
+        {
+            ctx.emptyLines(1);
+
+            auto print_defs = [header_only, &ctx, &pi](const auto &ol)
+            {
+                if (ol.second.definitions.empty())
+                    return;
+                ctx << "target_compile_definitions    (" << pi.target_name << Context::eol;
+                ctx.increaseIndent();
+                for (auto &def : ol.second.definitions)
+                {
+                    if (header_only)
+                        ctx << "INTERFACE " << def.second << Context::eol;
+                    else
+                        ctx << boost::algorithm::to_upper_copy(def.first) << " " << def.second << Context::eol;
+                }
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+            };
+            auto print_set = [header_only, &ctx, &pi](const auto &a, const auto &s)
+            {
+                if (a.empty())
+                    return;
+                ctx << s << "(" << pi.target_name << Context::eol;
+                ctx.increaseIndent();
+                for (auto &def : a)
+                {
+                    if (header_only)
+                        ctx << "INTERFACE ";
+                    else
+                        ctx << "PUBLIC ";
+                    ctx << def << Context::eol;
+                }
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+                ctx.addLine();
+            };
+            auto print_options = [&ol, &print_defs, &print_set]
+            {
+                print_defs(ol);
+                print_set(ol.second.include_directories, "target_include_directories");
+                print_set(ol.second.link_libraries, "target_link_libraries");
+            };
+
+            if (ol.first == "any")
+            {
+                print_options();
+            }
+            else
+            {
+                ctx.addLine("if (LIBRARY_TYPE STREQUAL \"" + boost::algorithm::to_upper_copy(ol.first) + "\")");
+                print_options();
+                ctx.addLine("endif()");
+            }
+
+            if (!ol.second.global_definitions.empty())
+                parent.global_options[ol.first].global_definitions.insert(ol.second.global_definitions.begin(), ol.second.global_definitions.end());
+        }
         ctx.emptyLines(1);
-
-        auto print_defs = [header_only, &ctx, &pi](const auto &ol)
-        {
-            if (ol.second.definitions.empty())
-                return;
-            ctx << "target_compile_definitions    (" << pi.target_name << Context::eol;
-            ctx.increaseIndent();
-            for (auto &def : ol.second.definitions)
-            {
-                if (header_only)
-                    ctx << "INTERFACE " << def.second << Context::eol;
-                else
-                    ctx << boost::algorithm::to_upper_copy(def.first) << " " << def.second << Context::eol;
-            }
-            ctx.decreaseIndent();
-            ctx.addLine(")");
-        };
-        auto print_set = [header_only, &ctx, &pi](const auto &a, const auto &s)
-        {
-            if (a.empty())
-                return;
-            ctx << s << "(" << pi.target_name << Context::eol;
-            ctx.increaseIndent();
-            for (auto &def : a)
-            {
-                if (header_only)
-                    ctx << "INTERFACE ";
-                else
-                    ctx << "PUBLIC ";
-                ctx << def << Context::eol;
-            }
-            ctx.decreaseIndent();
-            ctx.addLine(")");
-            ctx.addLine();
-        };
-        auto print_options = [&ol, &print_defs, &print_set]
-        {
-            print_defs(ol);
-            print_set(ol.second.include_directories, "target_include_directories");
-            print_set(ol.second.link_libraries, "target_link_libraries");
-        };
-
-        if (ol.first == "any")
-        {
-            print_options();
-        }
-        else
-        {
-            ctx.addLine("if (LIBRARY_TYPE STREQUAL \"" + boost::algorithm::to_upper_copy(ol.first) + "\")");
-            print_options();
-            ctx.addLine("endif()");
-        }
-
-        if (!ol.second.global_definitions.empty())
-            parent.global_options[ol.first].global_definitions.insert(ol.second.global_definitions.begin(), ol.second.global_definitions.end());
     }
 
-    ctx.emptyLines(1);
     ctx.addLine("set(lib " + pi.target_name + ")");
     ctx.addLine("set(target " + pi.target_name + ")");
     ctx.addLine("set(this " + pi.target_name + ")");
@@ -1970,6 +2006,7 @@ if (MSVC)
     endif()
 endif())");
 
+    // recursive calls
     {
         config_section_title(ctx, "cppan setup");
 
@@ -2474,8 +2511,16 @@ include(TestBigEndian))");
         ctx.addLine("add_dependencies(cppan-helpers " + cppan_dummy_target + ")");
         ctx.addLine();
 
+        // common include directories
+        ctx.addLine("target_include_directories(cppan-helpers");
+        ctx.increaseIndent();
+        ctx.addLine("INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
         // common definitions
-        ctx << "target_compile_definitions(cppan-helpers" << Context::eol;
+        ctx.addLine("target_compile_definitions(cppan-helpers");
         ctx.increaseIndent();
         ctx.addLine("INTERFACE CPPAN"); // build is performed under CPPAN
         ctx.decreaseIndent();
@@ -2565,7 +2610,7 @@ endif()
     add_check_definitions(check_includes, convert_include);
     add_check_definitions(check_types, convert_type);
 
-    if (!disable_run_cppan_target)
+    if (add_run_cppan_target && !disable_run_cppan_target)
     {
         // re-run cppan when root cppan.yml is changed
         config_section_title(ctx, "cppan regenerator");
@@ -2617,6 +2662,7 @@ set_target_properties(run-cppan PROPERTIES
             }
         }
 
+        // pre
         for (auto &dp : dd)
         {
             auto &d = dp.second;
@@ -2640,6 +2686,46 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine(")");
             ctx.addLine();
         }
+
+        // post (copy)
+        // no copy for non local builds
+        if (internal_options.current_package.empty())
+        {
+            ctx.addLine("if (NOT CPPAN_LOCAL_BUILD AND CPPAN_BUILD_SHARED_LIBS)");
+            ctx.addLine();
+            for (auto &dp : dd)
+            {
+                auto &d = dp.second;
+                PackageInfo pi(d);
+
+                if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
+                    continue;
+
+                auto copy = [&ctx, &pi](bool config = false)
+                {
+                    ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
+                    ctx.increaseIndent();
+                    ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+                    ctx.increaseIndent();
+                    ctx.addLine("$<TARGET_FILE:" + pi.target_name + "> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" + (config ? "/$<CONFIG>" : ""));
+                    ctx.decreaseIndent();
+                    ctx.decreaseIndent();
+                    ctx.addLine(")");
+                    ctx.addLine();
+                };
+
+                ctx.addLine("if (MSVC OR XCODE)");
+                ctx.addLine();
+                copy(true);
+                ctx.addLine("else()");
+                ctx.addLine();
+                copy();
+                ctx.addLine("endif()");
+                ctx.addLine();
+            }
+            ctx.addLine("endif()");
+            ctx.addLine();
+        }
     }
 
     ctx.addLine(config_delimeter);
@@ -2647,6 +2733,7 @@ set_target_properties(run-cppan PROPERTIES
 
     write_file_if_different(fs::current_path() / CPPAN_LOCAL_DIR / cmake_helpers_filename, ctx.getText());
     write_file_if_different(fs::current_path() / CPPAN_LOCAL_DIR / cmake_functions_filename, cmake_functions);
+    write_file_if_different(fs::current_path() / CPPAN_LOCAL_DIR / cpp_config_filename, cppan_h);
 }
 
 void Config::create_build_files() const
