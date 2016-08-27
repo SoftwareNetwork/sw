@@ -490,7 +490,6 @@ String add_subdirectory(String src, String bin = String())
 {
     boost::algorithm::replace_all(src, "\\", "/");
     boost::algorithm::replace_all(bin, "\\", "/");
-    //return "add_subdirectory(\"" + src + "\" \"" + bin + "\")";
     return "include(\"" + src + "/" + include_guard_filename + "\")";
 }
 
@@ -906,10 +905,7 @@ void Config::load(const yaml &root, const path &p)
         if (!prjs.IsMap())
             throw std::runtime_error("'projects' should be a map");
         for (auto &prj : prjs)
-        {
-            //std::cout << "loading project: " << prj.first.template as<String>() << std::endl;
             set_project(load_project(prj.second, prj.first.template as<String>()), prj.first.template as<String>());
-        }
     }
     else
         set_project(load_project(root, ""), "");
@@ -1576,7 +1572,6 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     config_section_title(ctx, "sources");
     if (p.build_files.empty())
         ctx.addLine("file(GLOB_RECURSE src \"*\")");
-        //ctx.addLine("file(GLOB_RECURSE src \"${CMAKE_CURRENT_SOURCE_DIR}/*\")");
     else
     {
         ctx.addLine("set(src");
@@ -1900,21 +1895,6 @@ void Config::print_package_include_file(const path &config_file, const DownloadD
     ctx.addLine();
     ctx.addLine("add_subdirectory(\"" + normalize_path(config_file.parent_path().string()) + "\" \"" + get_binary_path(d.package, d.version) + "\")");
     ctx.addLine();
-    /*ctx.addLine(R"(if (CPPAN_LOCAL_BUILD)
-    add_subdirectory(")" + normalize_path(config_file.parent_path().string()) + "\" \"" + get_binary_path(d.package, d.version) + R"(")
-else()
-    set(CMAKE_CURRENT_SOURCE_DIR_OLD ${CMAKE_CURRENT_SOURCE_DIR})
-    set(CMAKE_CURRENT_BINARY_DIR_OLD ${CMAKE_CURRENT_BINARY_DIR})
-
-    set(CMAKE_CURRENT_SOURCE_DIR ")" + normalize_path(config_file.parent_path().string()) + R"(")
-    set(CMAKE_CURRENT_BINARY_DIR ")" + get_binary_path(d.package, d.version) + R"(")
-
-    include(")" + normalize_path((config_file.parent_path() / "CMakeLists.txt").string()) + R"(")
-
-    set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR_OLD})
-    set(CMAKE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR_OLD})
-endif()
-)");*/
 
     write_file_if_different(config_file.parent_path() / include_guard_filename, ctx.getText());
 }
@@ -1965,19 +1945,11 @@ endif())");
     {
         config_section_title(ctx, "cppan setup");
 
-        // choose one variant below
-
-        // 1
         ctx.addLine("add_subdirectory(cppan)");
         fs::copy_file(src_dir / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
 
         if (parent.internal_options.invocations.find(d) != parent.internal_options.invocations.end())
-        {
             throw std::runtime_error("Circular dependency detected. Project: " + pi.target_name);
-            //return;
-            //String s = "Circular dependency detected. Project: " + pi.target_name;
-            //std::cout << s << "\n";
-        }
 
         silent = true;
         auto old_dir = fs::current_path();
@@ -1994,10 +1966,6 @@ endif())");
         fs::current_path(old_dir);
         if (parent.internal_options.current_package.empty())
             silent = false;
-
-        // 2
-        // this case requires correct generation of additional stuff (helpers)
-        //print_dependencies(ctx, *this, d.getDirectDependencies(), d.getIndirectDependencies(), get_storage_dir_obj());
     }
 
     // main include
@@ -2271,26 +2239,6 @@ void Config::print_meta_config_file() const
     ctx.addLine();
     ctx.addLine(String("set(CPPAN_LOCAL_BUILD ") + (local_build ? "1" : "0") + ")");
     ctx.addLine();
-
-    /*o << "if (NOT CPPAN_LIBRARY_TYPE)\n";
-    o << "    set(CPPAN_LIBRARY_TYPE STATIC)\n";
-    o << "endif(NOT CPPAN_LIBRARY_TYPE)" << "\n";
-
-    o << config_section_title("library types");
-    o << "set(LIBRARY_TYPE_cppan ${CPPAN_LIBRARY_TYPE})" << "\n";
-    o << "\n";
-    for (auto &p : packages)
-    {
-        PackageInfo pi(p.second);
-        o << "set(LIBRARY_TYPE_" << pi.variable_name << " ${CPPAN_LIBRARY_TYPE})" << "\n";
-    }
-    o << "\n";
-    for (auto &id : indirect_dependencies)
-    {
-        PackageInfo pi(id.second);
-        //o << "set(LIBRARY_TYPE_" << pi.variable_name << " ${CPPAN_LIBRARY_TYPE})" << "\n";
-    }
-    o << "\n";*/
 
     // deps
     {
