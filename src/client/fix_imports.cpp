@@ -78,7 +78,8 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
 
     // finds all inside round brackets ()
     // also checks that closing bracket ) is not in quotes
-    String basic = R"r(\([^>]*?(?:(?:('|")[^'"]*?\1)[^>]*?)*\))r";
+    //String basic = R"r(\([^>]*?(?:(?:('|")[^'"]*?\1)[^>]*?)*\))r"; // regex_error(error_stack) - stack overflow
+    String basic = R"(\([^\)]*?\))";
     String add_library = "(add_library|add_executable|set_property|set_target_properties)" + basic;
 
     Lines lines;

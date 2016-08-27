@@ -123,4 +123,48 @@ function(file_write_once f c)
     endif()
 endfunction(file_write_once)
 
+########################################
+# FUNCTION find_flag
+########################################
+
+function(find_flag in_flags f out)
+    if (NOT ${${out}} STREQUAL "")
+        return()
+    endif()
+    set(flags ${in_flags})
+    string(TOLOWER ${flags} flags)
+    string(FIND "${flags}" "${f}" flags)
+    if (NOT ${flags} EQUAL -1)
+        set(${out} -mt PARENT_SCOPE)
+    endif()
+endfunction(find_flag)
+
+########################################
+# FUNCTION get_configuration
+########################################
+
+function(get_configuration out)
+    set(mt_flag)
+    if (MSVC)
+        find_flag(${CMAKE_CXX_FLAGS_RELEASE} /mt mt_flag)
+        find_flag(${CMAKE_CXX_FLAGS_DEBUG} /mtd mt_flag)
+    endif()
+
+    set(config ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
+    string(REGEX MATCH "[0-9]+\\.[0-9]" version "${CMAKE_CXX_COMPILER_VERSION}")
+    math(EXPR bits "${CMAKE_SIZEOF_VOID_P}*8")
+
+    set(dll)
+    if (CPPAN_BUILD_SHARED_LIBS)
+        set(dll -dll)
+    endif()
+
+    set(config ${config}-${version}-${bits}${mt_flag}${dll})
+    string(TOLOWER ${config} config)
+
+    set(${out} ${config} PARENT_SCOPE)
+endfunction(get_configuration)
+
+########################################
+
 ################################################################################

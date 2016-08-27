@@ -81,9 +81,10 @@ const String non_local_build_file = "build.cmake";
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 const String packages_folder = "cppan/packages";
 const String include_directories_only = "include_directories_only";
-const String include_guard_filename = "include.cmake";
+const String include_guard_filename = "Include.cmake";
 const String include_guard_prefix = "CPPAN_INCLUDE_GUARD_";
 const String actions_filename = "actions.cmake";
+const String exports_filename = "exports.cmake";
 
 using ConfigPtr = std::shared_ptr<Config>;
 std::map<path, ConfigPtr> config_store;
@@ -510,14 +511,15 @@ void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, c
         config_section_title(ctx, prefix + "direct dependencies");
         for (auto &p : dd)
         {
-            auto s = p.second.getPackageDir(p.second.flags[pfHeaderOnly] ? c.get_storage_dir_src() : base_dir).string();
-            if (c.build_local || p.second.flags[pfHeaderOnly])
-            {
-                if (p.second.flags[pfIncludeDirectories])
-                    ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
-                else
-                    add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
-            }
+            auto dir = base_dir;
+            if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectories])
+                dir = c.get_storage_dir_src();
+            auto s = p.second.getPackageDir(dir).string();
+
+            if (p.second.flags[pfIncludeDirectories])
+                ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
+            else if (c.local_build || p.second.flags[pfHeaderOnly])
+                add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
             else
                 includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
         }
@@ -815,7 +817,7 @@ void Config::load_common(const yaml &root)
 
     EXTRACT_AUTO(host);
     EXTRACT(storage_dir, String);
-    EXTRACT_AUTO(build_local);
+    EXTRACT_AUTO(local_build);
 
     auto &p = root["proxy"];
     if (p.IsDefined())
@@ -1444,7 +1446,7 @@ void Config::print_configs()
         c->print_package_config_file(version_dir / cmake_config_filename, d, *this);
         c->print_package_include_file(version_dir / cmake_config_filename, d, *this);
 
-        if (d.flags[pfHeaderOnly] || build_local)
+        if (d.flags[pfHeaderOnly] || local_build)
             continue;
 
         // print object config files for non-local building
@@ -1502,7 +1504,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
 
     // includes
     {
-        if (parent.build_local)
+        if (parent.local_build)
             print_dependencies(ctx, parent, dd, d.getIndirectDependencies(), get_storage_dir_src());
         else
             print_dependencies(ctx, parent, dd, d.getIndirectDependencies(), get_storage_dir_obj());
@@ -1516,7 +1518,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         ctx.addLine();
         ctx.addLine("set(LIBRARY_TYPE STATIC)");
         ctx.addLine();
-        ctx.addLine("if (\"${CPPAN_BUILD_SHARED_LIBS}\" STREQUAL \"ON\")");
+        ctx.addLine("if (CPPAN_BUILD_SHARED_LIBS)");
         ctx.increaseIndent();
         ctx.addLine("set(LIBRARY_TYPE SHARED)");
         ctx.decreaseIndent();
@@ -1577,6 +1579,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     config_section_title(ctx, "sources");
     if (p.build_files.empty())
         ctx.addLine("file(GLOB_RECURSE src \"*\")");
+        //ctx.addLine("file(GLOB_RECURSE src \"${CMAKE_CURRENT_SOURCE_DIR}/*\")");
     else
     {
         ctx.addLine("set(src");
@@ -1632,12 +1635,21 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         }
         if (!p.include_directories.empty() || !include_deps.empty())
         {
+            auto get_i_dir = [](const String &i)
+            {
+                return i;
+                if (i.find("${CMAKE_CURRENT_SOURCE_DIR}") != i.npos ||
+                    i.find("${CMAKE_CURRENT_BINARY_DIR}") != i.npos)
+                    return i;
+                return "${CMAKE_CURRENT_SOURCE_DIR}/" + i;
+            };
+
             ctx << "target_include_directories    (" << pi.target_name << Context::eol;
             ctx.increaseIndent();
             if (header_only)
             {
                 for (auto &idir : p.include_directories.public_)
-                    ctx.addLine("INTERFACE " + idir.string());
+                    ctx.addLine("INTERFACE " + get_i_dir(idir.string()));
                 for (auto &idir : include_deps)
                 {
                     auto version_dir = idir.getPackageDir(get_storage_dir_src());
@@ -1655,9 +1667,9 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
             else
             {
                 for (auto &idir : p.include_directories.public_)
-                    ctx.addLine("PUBLIC " + idir.string());
+                    ctx.addLine("PUBLIC " + get_i_dir(idir.string()));
                 for (auto &idir : p.include_directories.private_)
-                    ctx.addLine("PRIVATE " + idir.string());
+                    ctx.addLine("PRIVATE " + get_i_dir(idir.string()));
                 for (auto &idir : include_deps)
                 {
                     auto version_dir = idir.getPackageDir(get_storage_dir_src());
@@ -1853,7 +1865,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
 
     ctx.splitLines();
 
-    write_file(config_file, ctx.getText());
+    write_file_if_different(config_file, ctx.getText());
 
     // print actions
     ctx.clear();
@@ -1865,7 +1877,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     print_bs_insertion("post target", &BuildSystemConfigInsertions::post_target);
     print_bs_insertion("post alias", &BuildSystemConfigInsertions::post_alias);
     ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR_OLD})");
-    write_file(config_file.parent_path() / actions_filename, ctx.getText());
+    write_file_if_different(config_file.parent_path() / actions_filename, ctx.getText());
 }
 
 void Config::print_package_include_file(const path &config_file, const DownloadDependency &d, Config &parent) const
@@ -1891,8 +1903,23 @@ void Config::print_package_include_file(const path &config_file, const DownloadD
     ctx.addLine();
     ctx.addLine("add_subdirectory(\"" + normalize_path(config_file.parent_path().string()) + "\" \"" + get_binary_path(d.package, d.version) + "\")");
     ctx.addLine();
+    /*ctx.addLine(R"(if (CPPAN_LOCAL_BUILD)
+    add_subdirectory(")" + normalize_path(config_file.parent_path().string()) + "\" \"" + get_binary_path(d.package, d.version) + R"(")
+else()
+    set(CMAKE_CURRENT_SOURCE_DIR_OLD ${CMAKE_CURRENT_SOURCE_DIR})
+    set(CMAKE_CURRENT_BINARY_DIR_OLD ${CMAKE_CURRENT_BINARY_DIR})
 
-    write_file(config_file.parent_path() / include_guard_filename, ctx.getText());
+    set(CMAKE_CURRENT_SOURCE_DIR ")" + normalize_path(config_file.parent_path().string()) + R"(")
+    set(CMAKE_CURRENT_BINARY_DIR ")" + get_binary_path(d.package, d.version) + R"(")
+
+    include(")" + normalize_path((config_file.parent_path() / "CMakeLists.txt").string()) + R"(")
+
+    set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR_OLD})
+    set(CMAKE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR_OLD})
+endif()
+)");*/
+
+    write_file_if_different(config_file.parent_path() / include_guard_filename, ctx.getText());
 }
 
 void Config::print_object_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const
@@ -1928,6 +1955,14 @@ void Config::print_object_config_file(const path &config_file, const DownloadDep
     ctx.addLine(R"(if (MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+
+    string(FIND "${OUTPUT_DIR}" "-mt" mt)
+    if (NOT mt EQUAL -1)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} /MT")
+        set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS} /MT")
+        set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS} /MT")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /MTd")
+    endif()
 endif())");
 
     {
@@ -1941,10 +1976,10 @@ endif())");
 
         if (parent.internal_options.invocations.find(d) != parent.internal_options.invocations.end())
         {
-            //throw std::runtime_error("Circular dependency detected. Project: " + pi.target_name);
+            throw std::runtime_error("Circular dependency detected. Project: " + pi.target_name);
             //return;
-            String s = "Circular dependency detected. Project: " + pi.target_name;
-            std::cout << s << "\n";
+            //String s = "Circular dependency detected. Project: " + pi.target_name;
+            //std::cout << s << "\n";
         }
 
         silent = true;
@@ -1956,6 +1991,7 @@ endif())");
         c.internal_options.current_package = d;
         c.internal_options.invocations = parent.internal_options.invocations;
         c.internal_options.invocations.insert(d);
+        c.disable_run_cppan_target = true;
         c.process();
 
         fs::current_path(old_dir);
@@ -1973,6 +2009,9 @@ endif())");
         auto mi = src_dir;
         add_subdirectory(ctx, mi.string(), get_binary_path(d.package, d.version));
         ctx.emptyLines(1);
+        auto ig = include_guard_prefix + pi.variable_name;
+        ctx.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
+        ctx.emptyLines(1);
     }
 
     // eof
@@ -1989,15 +2028,25 @@ endif())");
 
 void Config::print_object_include_config_file(const path &config_file, const DownloadDependency &d) const
 {
-    const Project *pp = &projects.begin()->second;
-    if (projects.size() > 1)
-    {
-        auto it = projects.find(d.package.toString());
-        if (it == projects.end())
-            throw std::runtime_error("No such project '" + d.package.toString() + "' in dependencies list");
-        pp = &it->second;
-    }
+    const auto pp = getProject(d.package.toString());
+    if (!pp)
+        throw std::runtime_error("No such project '" + d.package.toString() + "' in dependencies list");
     auto &p = *pp;
+
+    // fix deps flags (add local deps flags, they are not sent from server)
+    auto dd = d.getDirectDependencies();
+    for (auto &di : dd)
+    {
+        auto &dep = di.second;
+        auto i = p.dependencies.find(di.first);
+        if (i == p.dependencies.end())
+        {
+            std::cerr << "warning: dependency '" << di.first << "' is not found" << "\n";
+            continue;
+        }
+        // replace separate flags
+        dep.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
+    }
 
     PackageInfo pi(d);
 
@@ -2007,30 +2056,9 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
     ctx.addLine("# package: " + d.package.toString());
     ctx.addLine("# version: " + d.version.toString());
     ctx.addLine("#");
-
-    ctx.addLine(R"(
-########################################
-# FUNCTION find_flag
-########################################
-
-function(find_flag in_flags f out)
-    if (NOT ${${out}} STREQUAL "")
-        return()
-    endif()
-    set(flags ${in_flags})
-    string(TOLOWER ${flags} flags)
-    string(FIND "${flags}" "${f}" flags)
-    if (NOT ${flags} EQUAL -1)
-        set(${out} -mt PARENT_SCOPE)
-    endif()
-endfunction(find_flag)
-
-########################################
-)");
+    ctx.addLine();
 
     ctx.addLine("set(target " + pi.target_name + ")");
-    ctx.addLine();
-    ctx.addLine("message(STATUS \"Entering ${target}\")");
     ctx.addLine();
     if (!p.aliases.empty())
     {
@@ -2043,22 +2071,9 @@ endfunction(find_flag)
         ctx.addLine();
     }
     ctx.addLine("set(current_dir " + normalize_path(config_file.parent_path()) + ")");
-    ctx.addLine();
-    ctx.addLine(R"(set(mt_flag)
-if (MSVC)
-    find_flag(${CMAKE_CXX_FLAGS_RELEASE} /mt mt_flag)
-    find_flag(${CMAKE_CXX_FLAGS_DEBUG} /mtd mt_flag)
-endif()
-
-set(config ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
-string(REGEX MATCH "[0-9]+\\.[0-9]" version "${CMAKE_CXX_COMPILER_VERSION}")
-set(config ${config}-${version})
-math(EXPR bits "${CMAKE_SIZEOF_VOID_P}*8")
-set(config ${config}-${bits}${mt_flag})
-string(TOLOWER ${config} config)
-
-set(build_dir ${current_dir}/build/${config})
-set(export_dir ${build_dir}/exports))");
+    ctx.addLine("get_configuration(config)");
+    ctx.addLine("set(build_dir ${current_dir}/build/${config})");
+    ctx.addLine("set(export_dir ${build_dir}/exports)");
     ctx.addLine("set(import ${export_dir}/" + pi.variable_name + ".cmake)");
     ctx.addLine("set(import_fixed ${export_dir}/" + pi.variable_name + "-fixed.cmake)");
     ctx.addLine("set(aliases_file ${export_dir}/" + pi.variable_name + "-aliases.cmake)");
@@ -2096,7 +2111,7 @@ set(export_dir ${build_dir}/exports))");
                 COMMAND ${CMAKE_COMMAND}
                     -H${current_dir} -B${build_dir}
                     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-                    #-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+                    -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                     -G "${generator}"
                     -DOUTPUT_DIR=${config}
                     -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
@@ -2124,27 +2139,52 @@ if (NOT EXISTS ${import_fixed})
     )
 endif()
 )");
-    ctx.addLine("include(${import_fixed})");
-    ctx.emptyLines(1);
+    ctx.addLine("if (NOT TARGET " + pi.target_name + ")");
+    ctx.addLine("     include(${import_fixed})");
+    ctx.addLine("endif()");
+    ctx.addLine();
+    // import direct deps
+    {
+        config_section_title(ctx, "import direct deps");
+        ctx.addLine("include(${current_dir}/exports.cmake)");
+        ctx.addLine();
 
-    ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
-    ctx.increaseIndent();
-    ctx.addLine("COMMAND ${CMAKE_COMMAND}");
-    ctx.increaseIndent();
-    ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + pi.target_name + ">");
-    ctx.addLine("-DCONFIG=$<CONFIG>");
-    ctx.addLine("-DBUILD_DIR=${build_dir}");
-    ctx.addLine("-P " + normalize_path(get_storage_dir_obj() / d.package.toString() / d.version.toString()) + "/" + non_local_build_file);
-    ctx.decreaseIndent();
-    ctx.decreaseIndent();
-    ctx.addLine(")");
+        Context ctx2;
+        for (auto &dp : dd)
+        {
+            auto &dep = dp.second;
+            PackageInfo pi(dep);
+
+            if (dep.flags[pfHeaderOnly] || dep.flags[pfIncludeDirectories])
+                continue;
+
+            auto b = get_storage_dir_obj() / dep.package.toString() / dep.version.toString();
+            auto p = b / "build" / "${config}" / "exports" / (pi.variable_name + "-fixed.cmake");
+
+            ctx2.addLine("include(\"" + normalize_path(b / exports_filename) + "\")");
+            ctx2.addLine("if (NOT TARGET " + pi.target_name + ")");
+            ctx2.increaseIndent();
+            ctx2.addLine("if (NOT EXISTS \"" + normalize_path(p) + "\")");
+            ctx2.addLine("    include(\"" + normalize_path(b / cmake_object_config_filename) + "\")");
+            ctx2.addLine("endif()");
+            ctx2.addLine("include(\"" + normalize_path(p) + "\")");
+            ctx2.decreaseIndent();
+            ctx2.addLine("endif()");
+            ctx2.addLine();
+        }
+
+        write_file_if_different(config_file.parent_path() / exports_filename, ctx2.getText());
+    }
+    ctx.emptyLines(1);
 
     // src target
     {
-        auto target = pi.target_name + "-srcs";
+        auto target = pi.target_name + "-sources";
         auto dir = get_storage_dir_src() / d.package.toString() / d.version.toString();
 
         config_section_title(ctx, "sources target (for IDE only)");
+        ctx.addLine("if (NOT TARGET " + target + ")");
+        ctx.increaseIndent();
         ctx.addLine("file(GLOB_RECURSE src \"" + normalize_path(dir) + "/*\")");
         ctx.addLine();
         ctx.addLine("add_custom_target(" + target);
@@ -2156,6 +2196,8 @@ endif()
         ctx << "set_target_properties         (" << target << " PROPERTIES" << Context::eol;
         ctx << "    FOLDER \"" + packages_folder + "/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
         ctx << ")" << Context::eol;
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
         ctx.emptyLines(1);
 
         // source groups
@@ -2195,11 +2237,18 @@ if (EXISTS ${TARGET_FILE})
     return()
 endif()
 
-execute_process(
-    COMMAND ${CMAKE_COMMAND}
-        --build ${BUILD_DIR}
-        --config ${CONFIG}
-)
+if (CONFIG)
+    execute_process(
+        COMMAND ${CMAKE_COMMAND}
+            --build ${BUILD_DIR}
+            --config ${CONFIG}
+    )
+else()
+    execute_process(
+        COMMAND ${CMAKE_COMMAND}
+            --build ${BUILD_DIR}
+    )
+endif()
 
 file(LOCK ${lock} RELEASE)
 )");
@@ -2238,6 +2287,8 @@ void Config::print_meta_config_file() const
     ctx.addLine();
     ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
     ctx.addLine();
+    ctx.addLine(String("set(CPPAN_LOCAL_BUILD ") + (local_build ? "1" : "0") + ")");
+    ctx.addLine();
 
     /*o << "if (NOT CPPAN_LIBRARY_TYPE)\n";
     o << "    set(CPPAN_LIBRARY_TYPE STATIC)\n";
@@ -2261,7 +2312,7 @@ void Config::print_meta_config_file() const
 
     // deps
     {
-        if (build_local)
+        if (local_build)
             print_dependencies(ctx, *this, get_storage_dir_src());
         else
             print_dependencies(ctx, *this, get_storage_dir_obj());
@@ -2270,7 +2321,7 @@ void Config::print_meta_config_file() const
         Context ctx2;
         for (auto &ig : include_guards)
             ctx2.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
-        write_file(fn.parent_path() / include_guard_filename, ctx2.getText());
+        write_file_if_different(fn.parent_path() / include_guard_filename, ctx2.getText());
         ctx.addLine("include(" + include_guard_filename + ")");
     }
 
@@ -2520,6 +2571,7 @@ target_compile_definitions(cppan-helpers-private
 )
 target_compile_options(cppan-helpers-private
     INTERFACE /wd4005 # macro redefinition
+    INTERFACE /wd4996 # The POSIX name for this item is deprecated.
 )
 endif()
 )");
@@ -2560,9 +2612,11 @@ endif()
     add_check_definitions(check_includes, convert_include);
     add_check_definitions(check_types, convert_type);
 
-    // re-run cppan when root cppan.yml is changed
-    config_section_title(ctx, "cppan regenerator");
-    ctx.addLine(R"(set(file ${CMAKE_CURRENT_BINARY_DIR}/run-cppan.txt)
+    if (!disable_run_cppan_target)
+    {
+        // re-run cppan when root cppan.yml is changed
+        config_section_title(ctx, "cppan regenerator");
+        ctx.addLine(R"(set(file ${CMAKE_CURRENT_BINARY_DIR}/run-cppan.txt)
 add_custom_command(OUTPUT ${file}
     COMMAND cppan -d ${PROJECT_SOURCE_DIR}
     COMMAND ${CMAKE_COMMAND} -E echo "" > ${file}
@@ -2578,14 +2632,68 @@ add_custom_target(run-cppan
 add_dependencies(cppan-helpers run-cppan)
 set_target_properties(run-cppan PROPERTIES
     FOLDER "cppan/service"
-)
-)");
+))");
+    }
+
+    // direct deps' build actions for non local build
+    if (!local_build)
+    {
+        config_section_title(ctx, "custom actions for dummy target");
+
+        ctx.addLine("get_configuration(config)");
+        ctx.addLine();
+
+        auto dd = getDirectDependencies();
+        if (!internal_options.current_package.empty())
+        {
+            dd = internal_options.current_package.getDirectDependencies();
+
+            // fix deps flags (add local deps flags, they are not sent from server)
+            auto &p = projects.begin()->second;
+            for (auto &di : dd)
+            {
+                auto &dep = di.second;
+                auto i = p.dependencies.find(di.first);
+                if (i == p.dependencies.end())
+                {
+                    std::cerr << "warning: dependency '" << di.first << "' is not found" << "\n";
+                    continue;
+                }
+                // replace separate flags
+                dep.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
+            }
+        }
+
+        for (auto &dp : dd)
+        {
+            auto &d = dp.second;
+            PackageInfo pi(d);
+
+            if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
+                continue;
+
+            ctx.addLine("set(current_dir " + normalize_path(get_storage_dir_obj() / d.package.toString() / d.version.toString()) + ")");
+            ctx.addLine("set(build_dir ${current_dir}/build/${config})");
+            ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
+            ctx.increaseIndent();
+            ctx.addLine("COMMAND ${CMAKE_COMMAND}");
+            ctx.increaseIndent();
+            ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + pi.target_name + ">");
+            ctx.addLine("-DCONFIG=$<CONFIG>");
+            ctx.addLine("-DBUILD_DIR=${build_dir}");
+            ctx.addLine("-P " + normalize_path(get_storage_dir_obj() / d.package.toString() / d.version.toString()) + "/" + non_local_build_file);
+            ctx.decreaseIndent();
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+            ctx.addLine();
+        }
+    }
 
     ctx.addLine(config_delimeter);
     ctx.addLine();
     o << ctx.getText();
 
-    write_file(fs::current_path() / CPPAN_LOCAL_DIR / cmake_functions_filename, cmake_functions);
+    write_file_if_different(fs::current_path() / CPPAN_LOCAL_DIR / cmake_functions_filename, cmake_functions);
 }
 
 void Config::create_build_files() const

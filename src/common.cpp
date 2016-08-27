@@ -525,6 +525,21 @@ void write_file(const path &p, const String &s)
     ofile << s;
 }
 
+void write_file_if_different(const path &p, const String &s)
+{
+    if (fs::exists(p))
+    {
+        auto s2 = read_file(p);
+        if (s == s2)
+            return;
+    }
+
+    std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
+    if (!ofile)
+        throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
+    ofile << s;
+}
+
 String generate_random_sequence(uint32_t len)
 {
     auto seed = std::random_device()();

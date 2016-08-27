@@ -112,6 +112,7 @@ void unpack_file(const path &fn, const path &dst);
 
 String read_file(const path &p);
 void write_file(const path &p, const String &s);
+void write_file_if_different(const path &p, const String &s);
 
 String generate_random_sequence(uint32_t len);
 String hash_to_string(const uint8_t *hash, uint32_t hash_size);

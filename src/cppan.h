@@ -154,7 +154,7 @@ struct Config
     ProxySettings proxy;
     PackagesDirType packages_dir_type{ PackagesDirType::User };
     path storage_dir;
-    bool build_local = false;
+    bool local_build = false;
 
     // source (git, remote etc.)
     Version version;
@@ -205,6 +205,7 @@ struct Config
 
 private:
     bool printed = false;
+    bool disable_run_cppan_target = false;
     ptree dependency_tree;
     DownloadDependencies dependencies;
     Projects projects;
@@ -230,7 +231,7 @@ private:
 public:
     struct InternalOptions
     {
-        Dependency current_package;
+        DownloadDependency current_package;
         std::set<Dependency> invocations;
     } internal_options;
 };
