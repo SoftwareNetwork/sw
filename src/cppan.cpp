@@ -556,8 +556,17 @@ void print_source_groups(Context &ctx, const path &dir)
         auto s = fs::relative(f.path(), dir).string();
         auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
         boost::replace_all(s2, "/", "\\\\");
-        boost::replace_all(s, "\\", "/");
-        ctx.addLine("source_group(\"" + s2 + "\" REGULAR_EXPRESSION \"" + s + "/.*\")");
+
+        ctx.addLine("source_group(\"" + s2 + "\" FILES");
+        ctx.increaseIndent();
+        for (auto &f2 : boost::make_iterator_range(fs::directory_iterator(f), {}))
+        {
+            if (!fs::is_regular_file(f2))
+                continue;
+            ctx.addLine("\"" + normalize_path(f2.path()) + "\"");
+        }
+        ctx.decreaseIndent();
+        ctx.addLine(")");
     }
     ctx.emptyLines(1);
 }
@@ -1448,7 +1457,7 @@ void Config::print_configs()
         boost::system::error_code ec;
         fs::create_directories(bld_dir, ec);
         c->print_object_config_file(bld_dir / cmake_config_filename, d, *this);
-        c->print_object_include_config_file(obj_dir / cmake_object_config_filename, d, *this);
+        c->print_object_include_config_file(obj_dir / cmake_object_config_filename, d);
     }
     LOG("Ok");
 }
@@ -1940,6 +1949,21 @@ void Config::print_object_config_file(const path &config_file, const DownloadDep
         set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS} /MT")
         set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /MTd")
     endif()
+
+    if (CMAKE_GENERATOR STREQUAL Ninja)
+        string(TOLOWER "${CMAKE_CXX_COMPILER}" inc)
+        string(REGEX MATCH ".*/vc/bin" inc "${inc}")
+
+        include_directories(BEFORE SYSTEM ${inc}/include)
+        set(ENV{INCLUDE} ${inc}/include)
+
+        set(lib)
+        if (CMAKE_SYSTEM_PROCESSOR STREQUAL amd64)
+            set(lib /${CMAKE_SYSTEM_PROCESSOR})
+        endif()
+        link_directories(${inc}/lib${lib})
+        set(ENV{LIB} ${inc}/lib${lib})
+    endif()
 endif())");
 
     {
@@ -1987,7 +2011,7 @@ endif())");
     write_file_if_different(config_file, ctx.getText());
 }
 
-void Config::print_object_include_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const
+void Config::print_object_include_config_file(const path &config_file, const DownloadDependency &d) const
 {
     const auto pp = getProject(d.package.toString());
     if (!pp)
@@ -2143,29 +2167,29 @@ endif()
         auto target = pi.target_name + "-sources";
         auto dir = get_storage_dir_src() / d.package.toString() / d.version.toString();
 
-        if (parent.show_ide_projects)
-        {
-            config_section_title(ctx, "sources target (for IDE only)");
-            ctx.addLine("if (NOT TARGET " + target + ")");
-            ctx.increaseIndent();
-            ctx.addLine("file(GLOB_RECURSE src \"" + normalize_path(dir) + "/*\")");
-            ctx.addLine();
-            ctx.addLine("add_custom_target(" + target);
-            ctx.addLine("    SOURCES ${src}");
-            ctx.addLine(")");
-            ctx.addLine();
+        ctx.addLine("if (CPPAN_SHOW_IDE_PROJECTS)");
+        ctx.addLine();
+        config_section_title(ctx, "sources target (for IDE only)");
+        ctx.addLine("if (NOT TARGET " + target + ")");
+        ctx.increaseIndent();
+        ctx.addLine("file(GLOB_RECURSE src \"" + normalize_path(dir) + "/*\")");
+        ctx.addLine();
+        ctx.addLine("add_custom_target(" + target);
+        ctx.addLine("    SOURCES ${src}");
+        ctx.addLine(")");
+        ctx.addLine();
 
-            // solution folder
-            ctx << "set_target_properties         (" << target << " PROPERTIES" << Context::eol;
-            ctx << "    FOLDER \"" + packages_folder + "/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
-            ctx << ")" << Context::eol;
-            ctx.decreaseIndent();
-            ctx.addLine("endif()");
-            ctx.emptyLines(1);
-        }
+        // solution folder
+        ctx << "set_target_properties         (" << target << " PROPERTIES" << Context::eol;
+        ctx << "    FOLDER \"" + packages_folder + "/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
+        ctx << ")" << Context::eol;
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.emptyLines(1);
 
         // source groups
         print_source_groups(ctx, dir);
+        ctx.addLine("endif(CPPAN_SHOW_IDE_PROJECTS)");
     }
 
     // eof
@@ -2238,6 +2262,7 @@ void Config::print_meta_config_file() const
     ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
     ctx.addLine();
     ctx.addLine(String("set(CPPAN_LOCAL_BUILD ") + (local_build ? "1" : "0") + ")");
+    ctx.addLine(String("set(CPPAN_SHOW_IDE_PROJECTS ") + (show_ide_projects ? "1" : "0") + ")");
     ctx.addLine();
 
     // deps
@@ -2427,7 +2452,7 @@ include(TestBigEndian))");
     {
         config_section_title(ctx, "dummy compiled target");
         ctx.addLine("# this target will be always built before any other");
-        ctx.addLine("if (MSVC)");
+        ctx.addLine("if (MSVC AND NOT CMAKE_GENERATOR STREQUAL Ninja)");
         ctx.addLine("    add_custom_target(" + cppan_dummy_target + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
         ctx.addLine("else()");
         ctx.addLine("    add_custom_target(" + cppan_dummy_target + " ALL DEPENDS)");

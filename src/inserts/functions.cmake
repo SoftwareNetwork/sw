@@ -150,7 +150,12 @@ function(get_configuration out)
         find_flag(${CMAKE_CXX_FLAGS_DEBUG} /mtd mt_flag)
     endif()
 
-    set(config ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
+    set(ninja_dir)
+    if (MSVC AND CMAKE_GENERATOR STREQUAL Ninja)
+        set(ninja_dir -ninja)
+    endif()
+
+    set(config ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID}${ninja_dir})
     string(REGEX MATCH "[0-9]+\\.[0-9]" version "${CMAKE_CXX_COMPILER_VERSION}")
     math(EXPR bits "${CMAKE_SIZEOF_VOID_P}*8")
 

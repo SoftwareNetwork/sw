@@ -222,7 +222,7 @@ private:
     void print_package_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
     void print_package_include_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
     void print_object_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const;
-    void print_object_include_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const;
+    void print_object_include_config_file(const path &config_file, const DownloadDependency &d) const;
 
     void download_and_unpack(const String &data_url) const;
     void print_configs();
