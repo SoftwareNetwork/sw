@@ -519,6 +519,8 @@ String read_file(const path &p)
 
 void write_file(const path &p, const String &s)
 {
+    fs::create_directories(p.parent_path());
+
     std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
     if (!ofile)
         throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
@@ -533,6 +535,8 @@ void write_file_if_different(const path &p, const String &s)
         if (s == s2)
             return;
     }
+
+    fs::create_directories(p.parent_path());
 
     std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
     if (!ofile)

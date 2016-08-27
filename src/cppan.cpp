@@ -1364,11 +1364,7 @@ void Config::download_and_unpack(const String &data_url) const
             }
             LOG("Ok");
 
-            std::ofstream ofile(md5file.string());
-            if (!ofile)
-                throw std::runtime_error("Cannot open the file '" + md5file.string() + "'");
-            ofile << d.md5;
-            ofile.close();
+            write_file(md5file, d.md5);
 
             LOG("Unpacking: " << fn.string());
             try
@@ -2017,13 +2013,9 @@ endif())");
     // eof
     ctx.addLine(config_delimeter);
     ctx.addLine();
-
     ctx.splitLines();
 
-    std::ofstream ofile(config_file.string());
-    if (!ofile)
-        throw std::runtime_error("Cannot create a file: " + config_file.string());
-    ofile << ctx.getText();
+    write_file_if_different(config_file, ctx.getText());
 }
 
 void Config::print_object_include_config_file(const path &config_file, const DownloadDependency &d) const
@@ -2208,13 +2200,7 @@ endif()
     ctx.emptyLines(1);
     ctx.addLine(config_delimeter);
     ctx.addLine();
-
     ctx.splitLines();
-
-    std::ofstream ofile(config_file.string());
-    if (!ofile)
-        throw std::runtime_error("Cannot create a file: " + config_file.string());
-    ofile << ctx.getText();
 
     // build file
     Context ctx2;
@@ -2252,21 +2238,13 @@ endif()
 
 file(LOCK ${lock} RELEASE)
 )");
-    auto renew_file = config_file.parent_path() / non_local_build_file;
-    std::ofstream ofile2(renew_file.string());
-    if (!ofile2)
-        throw std::runtime_error("Cannot create a file: " + renew_file.string());
-    ofile2 << ctx2.getText();
+
+    write_file_if_different(config_file, ctx.getText());
+    write_file_if_different(config_file.parent_path() / non_local_build_file, ctx2.getText());
 }
 
 void Config::print_meta_config_file() const
 {
-    auto fn = fs::current_path() / CPPAN_LOCAL_DIR / cmake_config_filename;
-    fs::create_directories(fn.parent_path());
-    std::ofstream o(fn.string());
-    if (!o)
-        throw std::runtime_error("Cannot create a file: " + fn.string());
-
     Context ctx;
     ctx.addLine("#");
     ctx.addLine("# cppan");
@@ -2321,7 +2299,7 @@ void Config::print_meta_config_file() const
         Context ctx2;
         for (auto &ig : include_guards)
             ctx2.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
-        write_file_if_different(fn.parent_path() / include_guard_filename, ctx2.getText());
+        write_file_if_different(fs::current_path() / CPPAN_LOCAL_DIR / include_guard_filename, ctx2.getText());
         ctx.addLine("include(" + include_guard_filename + ")");
     }
 
@@ -2354,17 +2332,11 @@ void Config::print_meta_config_file() const
     ctx.addLine(config_delimeter);
     ctx.addLine();
 
-    o << ctx.getText();
+    write_file_if_different(fs::current_path() / CPPAN_LOCAL_DIR / cmake_config_filename, ctx.getText());
 }
 
 void Config::print_helper_file() const
 {
-    auto fn = fs::current_path() / CPPAN_LOCAL_DIR / cmake_helpers_filename;
-    fs::create_directories(fn.parent_path());
-    std::ofstream o(fn.string());
-    if (!o)
-        throw std::runtime_error("Cannot create a file: " + fn.string());
-
     Context ctx;
     ctx.addLine("#");
     ctx.addLine("# cppan");
@@ -2691,8 +2663,8 @@ set_target_properties(run-cppan PROPERTIES
 
     ctx.addLine(config_delimeter);
     ctx.addLine();
-    o << ctx.getText();
 
+    write_file_if_different(fs::current_path() / CPPAN_LOCAL_DIR / cmake_helpers_filename, ctx.getText());
     write_file_if_different(fs::current_path() / CPPAN_LOCAL_DIR / cmake_functions_filename, cmake_functions);
 }
 
