@@ -593,6 +593,7 @@ ConfigPtr getConfig(const path &version_dir)
 
 void prepare_exports(const Files &files, const Dependency &d)
 {
+    // very stupid algorithm
     PackageInfo pi(d);
     auto api = cppan_export_prefix + pi.variable_name;
 
@@ -602,6 +603,11 @@ void prepare_exports(const Files &files, const Dependency &d)
         boost::algorithm::replace_all(s, cppan_export, api);
         write_file(f, s);
     }
+}
+
+String get_stamp_filename(const String &prefix)
+{
+    return prefix + ".md5";
 }
 
 void BuildSystemConfigInsertions::get_config_insertions(const yaml &n)
@@ -1352,7 +1358,7 @@ void Config::download_and_unpack(const String &data_url) const
     {
         auto &d = dd.second;
         auto version_dir = d.getPackageDir(get_storage_dir_src());
-        auto md5_filename = d.version.toString() + ".md5";
+        auto md5_filename = get_stamp_filename(d.version.toString());
         auto md5file = version_dir.parent_path() / md5_filename;
 
         // store md5 of archive
@@ -1759,8 +1765,8 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     {
         ctx.addLine("target_compile_definitions    (" + pi.target_name);
         ctx.increaseIndent();
-        ctx.addLine("PRIVATE " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
-        ctx.addLine("PUBLIC  " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_IMPORT"));
+        ctx.addLine("PRIVATE   " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
+        ctx.addLine("INTERFACE " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_IMPORT"));
         ctx.decreaseIndent();
         ctx.addLine(")");
 
@@ -1990,7 +1996,7 @@ if (MSVC)
         set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /MTd")
     endif()
 
-    if (CMAKE_GENERATOR STREQUAL Ninja)
+    if (0)# OR CMAKE_GENERATOR STREQUAL Ninja)
         string(TOLOWER "${CMAKE_CXX_COMPILER}" inc)
         string(REGEX MATCH ".*/vc/bin" inc "${inc}")
 
@@ -2004,7 +2010,8 @@ if (MSVC)
         link_directories(${inc}/lib${lib})
         set(ENV{LIB} ${inc}/lib${lib})
     endif()
-endif())");
+endif()
+)");
 
     // recursive calls
     {
@@ -2128,7 +2135,11 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
 
         find_program(ninja ninja)
         set(generator Ninja)
-        if (MSVC OR ${ninja} STREQUAL "ninja-NOTFOUND")
+        #set(generator ${CMAKE_GENERATOR})
+        if (MSVC
+            OR ${ninja} STREQUAL "ninja-NOTFOUND"
+            OR CYGWIN # for me it's not working atm
+        )
             set(generator ${CMAKE_GENERATOR})
         endif()
 
@@ -2141,6 +2152,8 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
                     -G "${generator}"
                     -DOUTPUT_DIR=${config}
                     -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
+                    -DWORDS_BIGENDIAN=${WORDS_BIGENDIAN}
+                    -DSIZEOF_VOID_P=${SIZEOF_VOID_P}
             )
         else()
             execute_process(
@@ -2151,6 +2164,8 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
                     -G "${generator}"
                     -DOUTPUT_DIR=${config}
                     -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
+                    -DWORDS_BIGENDIAN=${WORDS_BIGENDIAN}
+                    -DSIZEOF_VOID_P=${SIZEOF_VOID_P}
             )
         endif()
     endif()
@@ -2240,8 +2255,22 @@ endif()
     ctx.splitLines();
 
     // build file
+    auto fn1 = normalize_path(get_storage_dir_src() / d.package.toString() / get_stamp_filename(d.version.toString()));
     Context ctx2;
-    ctx2.addLine(R"(if (EXISTS ${TARGET_FILE})
+    ctx2.addLine(R"(set(REBUILD 1)
+
+set(fn1 ")" + fn1 + R"(")
+set(fn2 "${BUILD_DIR}/cppan_sources.stamp")
+
+file(READ ${fn1} f1)
+if (EXISTS ${fn2})
+    file(READ ${fn2} f2)
+    if (f1 STREQUAL f2)
+        set(REBUILD 0)
+    endif()
+endif()
+
+if (NOT REBUILD AND EXISTS ${TARGET_FILE})
     return()
 endif()
 
@@ -2253,12 +2282,14 @@ if (NOT ${lock_result} EQUAL 0)
 endif()
 
 # double check
-if (EXISTS ${TARGET_FILE})
+if (NOT REBUILD AND EXISTS ${TARGET_FILE})
     # release before exit
     file(LOCK ${lock} RELEASE)
 
     return()
 endif()
+
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${fn1} ${fn2})
 
 if (CONFIG)
     execute_process(
@@ -2291,19 +2322,21 @@ void Config::print_meta_config_file() const
     ctx.addLine(cmake_minimum_required);
     ctx.addLine();
 
-    ctx.addLine("include(" + cmake_helpers_filename + ")");
-    ctx.addLine();
-
     config_section_title(ctx, "variables");
-    ctx.addLine("set(USES_CPPAN 1 CACHE STRING \"CPPAN is turned on\")");
+    ctx.addLine("set(CPPAN_BUILD 1 CACHE STRING \"CPPAN is turned on\")");
     ctx.addLine();
     ctx.addLine("set(CPPAN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})");
     ctx.addLine("set(CPPAN_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})");
     ctx.addLine();
     ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
     ctx.addLine();
+    ctx.addLine("set(${CMAKE_CXX_COMPILER_ID} 1)");
+    ctx.addLine();
     ctx.addLine(String("set(CPPAN_LOCAL_BUILD ") + (local_build ? "1" : "0") + ")");
     ctx.addLine(String("set(CPPAN_SHOW_IDE_PROJECTS ") + (show_ide_projects ? "1" : "0") + ")");
+    ctx.addLine();
+
+    ctx.addLine("include(" + cmake_helpers_filename + ")");
     ctx.addLine();
 
     // deps
@@ -2362,13 +2395,42 @@ void Config::print_helper_file() const
     ctx.addLine("#");
     ctx.addLine();
 
-    config_section_title(ctx, "macros & functions");
-    ctx.addLine("include(" + cmake_functions_filename + ")");
-
     config_section_title(ctx, "cmake setup");
     ctx.addLine(R"(# Use solution folders.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine();
+
+    config_section_title(ctx, "macros & functions");
+    ctx.addLine("include(" + cmake_functions_filename + ")");
+
+    config_section_title(ctx, "variables");
+    ctx.addLine("get_configuration(config)");
+    ctx.addLine("#message(STATUS \"CPPAN config - ${config}\")");
+    ctx.addLine();
+
+    config_section_title(ctx, "export/import");
+    ctx.addLine(R"str(if (CPPAN_BUILD_SHARED_LIBS)
+    if (MSVC)
+        set(CPPAN_EXPORT "__declspec(dllexport)")
+        set(CPPAN_IMPORT "__declspec(dllimport)")
+    endif()
+
+    if (MINGW)
+        set(CPPAN_EXPORT "__attribute__((__dllexport__))")
+        set(import "__attribute__((__dllimport__))")
+    elseif(GNU)
+        set(CPPAN_EXPORT "__attribute__((__visibility__(\"default\")))")
+        set(CPPAN_IMPORT)
+    endif()
+
+    if (SUN) # TODO: check it in real environment
+        set(CPPAN_EXPORT "__global")
+        set(CPPAN_IMPORT "__global")
+    endif()
+else()
+    set(CPPAN_EXPORT)
+    set(CPPAN_IMPORT)
+endif())str");
 
     // cmake includes
     config_section_title(ctx, "cmake includes");
@@ -2382,7 +2444,9 @@ include(TestBigEndian))");
 
     config_section_title(ctx, "common checks");
 
+    ctx.addLine("if (NOT DEFINED WORDS_BIGENDIAN)");
     ctx.addLine("test_big_endian(WORDS_BIGENDIAN)");
+    ctx.addLine("endif()");
     // aliases
     ctx.addLine("set(BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
     ctx.addLine("set(BIGENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
@@ -2523,6 +2587,10 @@ include(TestBigEndian))");
         ctx.addLine("target_compile_definitions(cppan-helpers");
         ctx.increaseIndent();
         ctx.addLine("INTERFACE CPPAN"); // build is performed under CPPAN
+        ctx.addLine("INTERFACE CPPAN_CONFIG=\"${config}\"");
+        ctx.addLine("INTERFACE " + cppan_export);
+        ctx.addLine("INTERFACE CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
+        ctx.addLine("INTERFACE CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
@@ -2638,9 +2706,6 @@ set_target_properties(run-cppan PROPERTIES
     {
         config_section_title(ctx, "custom actions for dummy target");
 
-        ctx.addLine("get_configuration(config)");
-        ctx.addLine();
-
         auto dd = getDirectDependencies();
         if (!internal_options.current_package.empty())
         {
@@ -2693,36 +2758,43 @@ set_target_properties(run-cppan PROPERTIES
         {
             ctx.addLine("if (NOT CPPAN_LOCAL_BUILD AND CPPAN_BUILD_SHARED_LIBS)");
             ctx.addLine();
-            for (auto &dp : dd)
+
+            auto print_copy_deps = [&ctx](const auto &dd)
             {
-                auto &d = dp.second;
-                PackageInfo pi(d);
-
-                if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
-                    continue;
-
-                auto copy = [&ctx, &pi](bool config = false)
+                for (auto &dp : dd)
                 {
-                    ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
-                    ctx.increaseIndent();
-                    ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-                    ctx.increaseIndent();
-                    ctx.addLine("$<TARGET_FILE:" + pi.target_name + "> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" + (config ? "/$<CONFIG>" : ""));
-                    ctx.decreaseIndent();
-                    ctx.decreaseIndent();
-                    ctx.addLine(")");
-                    ctx.addLine();
-                };
+                    auto &d = dp.second;
+                    PackageInfo pi(d);
 
-                ctx.addLine("if (MSVC OR XCODE)");
-                ctx.addLine();
-                copy(true);
-                ctx.addLine("else()");
-                ctx.addLine();
-                copy();
-                ctx.addLine("endif()");
-                ctx.addLine();
-            }
+                    if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
+                        continue;
+
+                    auto copy = [&ctx, &pi](bool config = false)
+                    {
+                        ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
+                        ctx.increaseIndent();
+                        ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+                        ctx.increaseIndent();
+                        ctx.addLine("$<TARGET_FILE:" + pi.target_name + "> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" + (config ? "/$<CONFIG>" : ""));
+                        ctx.decreaseIndent();
+                        ctx.decreaseIndent();
+                        ctx.addLine(")");
+                        ctx.addLine();
+                    };
+
+                    ctx.addLine("if (MSVC OR XCODE)");
+                    ctx.addLine();
+                    copy(true);
+                    ctx.addLine("else()");
+                    ctx.addLine();
+                    copy();
+                    ctx.addLine("endif()");
+                    ctx.addLine();
+                }
+            };
+            print_copy_deps(dd);
+            print_copy_deps(getIndirectDependencies());
+
             ctx.addLine("endif()");
             ctx.addLine();
         }
