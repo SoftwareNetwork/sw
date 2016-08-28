@@ -33,6 +33,7 @@
 
 #include <cppan.h>
 
+#include "build.h"
 #include "fix_imports.h"
 #include "options.h"
 
@@ -81,6 +82,13 @@ try
         return 0;
     }
 #endif
+    else if (String(argv[1]) == "--build")
+    {
+        // build mode
+        if (argc < 3)
+            return 1;
+        return build(argv[2]);
+    }
 
     // default command run
 

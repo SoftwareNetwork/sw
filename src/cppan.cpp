@@ -781,6 +781,7 @@ void Project::save_dependencies(yaml &node) const
 Config::Config()
 {
     storage_dir = get_root_directory() / "packages";
+    build_directory = temp_directory_path() / "build";
 
     // add some common types
     check_types.insert("size_t");
@@ -857,6 +858,8 @@ void Config::load_common(const yaml &root)
     EXTRACT_AUTO(local_build);
     EXTRACT_AUTO(show_ide_projects);
     EXTRACT_AUTO(add_run_cppan_target);
+    EXTRACT(build_directory, String);
+    EXTRACT_AUTO(silent_build);
 
     auto &p = root["proxy"];
     if (p.IsDefined())
@@ -1465,6 +1468,90 @@ void Config::extractDependencies(const ptree &dependency_tree)
     }
 }
 
+void Config::prepare_build(const path &fn, const String &cppan)
+{
+    auto filename = fn.filename().string();
+    auto filename_without_ext = fn.filename().stem().string();
+
+    if (!silent_build)
+        build_directory = fs::current_path() / ("cppan-build-" + filename);
+    else
+        build_directory /= sha1(normalize_path(fn.string()));
+    fs::create_directories(build_directory);
+
+    auto &p = projects.begin()->second;
+    p.sources.insert(filename);
+    p.findSources(fn.parent_path());
+
+    write_file_if_different(build_directory / CPPAN_FILENAME, cppan);
+    Config conf(build_directory);
+    auto old = fs::current_path();
+    fs::current_path(build_directory);
+    conf.process(); // invoke cppan
+    fs::current_path(old);
+
+    Context ctx;
+    config_section_title(ctx, "cmake settings");
+    ctx.addLine(cmake_minimum_required);
+    ctx.addLine();
+
+    config_section_title(ctx, "project settings");
+    ctx.addLine("project(" + filename_without_ext + " C CXX)");
+    ctx.addLine();
+
+    config_section_title(ctx, "compiler & linker settings");
+    ctx.addLine(R"(# Output directory settings
+set(output_dir ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
+
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if (MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP /W1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /W1")
+endif()
+)");
+
+    config_section_title(ctx, "CPPAN include");
+    ctx.addLine("add_subdirectory(cppan)");
+    ctx.addLine();
+
+    // add GLOB later
+    config_section_title(ctx, "sources");
+    ctx.addLine("set(src");
+    ctx.increaseIndent();
+    for (auto &s : p.files)
+        ctx.addLine("\"" + normalize_path(fn.parent_path() / s) + "\"");
+    ctx.decreaseIndent();
+    ctx.addLine(")");
+    ctx.addLine();
+
+    config_section_title(ctx, "target");
+    ctx.addLine("set(this " + filename_without_ext + ")");
+    ctx.addLine("add_executable(${this} ${src})");
+    ctx.addLine("target_link_libraries(${this} cppan)");
+    ctx.addLine();
+    ctx.addLine(R"(add_custom_command(TARGET ${this} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${this}> )" + normalize_path(fs::current_path()) + R"(/
+))");
+
+    // eof
+    ctx.addLine(config_delimeter);
+    ctx.addLine();
+    ctx.splitLines();
+
+    write_file_if_different(build_directory / "CMakeLists.txt", ctx.getText());
+    String cmd = "cmake -H\"" + normalize_path(build_directory) + "\" -B\"" + normalize_path(build_directory / "build") + "\"";
+    system(cmd.c_str());
+    cmd = "cmake --build \"" + normalize_path(build_directory / "build") + "\"";
+#ifdef _WIN32
+    cmd += " --config Release";
+#endif
+    system(cmd.c_str());
+}
+
 void Config::print_configs()
 {
     LOG_NO_NEWLINE("Generating build configs... ");
@@ -1905,7 +1992,6 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     // eof
     ctx.addLine(config_delimeter);
     ctx.addLine();
-
     ctx.splitLines();
 
     write_file_if_different(config_file, ctx.getText());

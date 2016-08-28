@@ -156,6 +156,14 @@ struct Config
     bool local_build = false;
     bool show_ide_projects = false;
     bool add_run_cppan_target = false;
+    path build_directory;
+    bool silent_build =
+#ifdef _WIN32
+        false
+#else
+        true
+#endif
+        ;
 
     // source (git, remote etc.)
     Version version;
@@ -187,6 +195,7 @@ struct Config
     void process();
     void download_dependencies();
     void create_build_files() const;
+    void prepare_build(const path &fn, const String &cppan);
 
     Projects &getProjects() { return projects; }
     const Project *getProject(const String &p) const;
