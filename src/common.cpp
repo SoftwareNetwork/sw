@@ -508,7 +508,7 @@ String read_file(const path &p)
     auto fn = p.string();
     std::ifstream ifile(fn, std::ios::in | std::ios::binary);
     if (!ifile)
-        throw std::runtime_error("Cannot open file " + fn);
+        throw std::runtime_error("Cannot open file '" + fn + "' for reading");
 
     size_t sz = (size_t)fs::file_size(p);
     if (sz > 1'000'000)
@@ -522,7 +522,9 @@ String read_file(const path &p)
 
 void write_file(const path &p, const String &s)
 {
-    fs::create_directories(p.parent_path());
+    auto pp = p.parent_path();
+    if (!pp.empty())
+        fs::create_directories(pp);
 
     std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
     if (!ofile)

@@ -77,7 +77,6 @@ enum class PackagesDirType
 };
 
 using ProjectFlags = std::bitset<sizeof(uint64_t) * 8>;
-using UserFlags = std::bitset<sizeof(uint64_t) * 8>;
 
 template <typename E>
 constexpr std::size_t toIndex(E e)
