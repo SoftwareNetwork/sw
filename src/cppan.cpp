@@ -1649,6 +1649,10 @@ endif()
             ctx.addLine("add_library(${this} " + boost::to_upper_copy(build_settings.type) + " ${src})");
         }
         ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_EXPORT=CPPAN_SYMBOL_EXPORT)");
+        ctx.addLine(R"(set_target_properties(${this} PROPERTIES
+    INSTALL_RPATH .
+    BUILD_WITH_INSTALL_RPATH True
+))");
     }
     ctx.addLine("target_link_libraries(${this} cppan " + build_settings.link_libraries + ")");
     ctx.addLine();
@@ -2021,6 +2025,13 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         ctx.decreaseIndent();
         ctx.addLine("endif()");
 
+        if (!d.flags[pfExecutable])
+        {
+            ctx.addLine(R"(set_target_properties(${this} PROPERTIES
+    INSTALL_RPATH .
+    BUILD_WITH_INSTALL_RPATH True
+))");
+        }
 
         for (auto &ol : p.options)
         {
