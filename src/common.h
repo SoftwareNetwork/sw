@@ -72,6 +72,7 @@ path temp_script_path();
 path temp_script_filename();
 
 int system_no_output(const String &cmd);
+int system(const std::vector<String> &args);
 
 struct ProxySettings
 {
@@ -115,7 +116,7 @@ void download_file(DownloadData &data);
 
 Files unpack_file(const path &fn, const path &dst);
 
-String read_file(const path &p);
+String read_file(const path &p, bool no_size_check = false);
 void write_file(const path &p, const String &s);
 void write_file_if_different(const path &p, const String &s);
 

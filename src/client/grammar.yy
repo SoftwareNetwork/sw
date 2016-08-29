@@ -44,7 +44,7 @@ class ParserDriver;
 %token ERROR_SYMBOL
 
 %token <std::string> STRING
-%type <std::string> comment
+%type <std::string> comment err
 
 ////////////////////////////////////////
 
@@ -57,13 +57,15 @@ comments: comment
 	{ driver.comments.push_back($1); }
 	| comments comment
 	{ driver.comments.push_back($2); }
-    | comments ERROR_SYMBOL
-    { return 0; }
 	;
 
 comment: STRING
 	{ $$ = $1; }
+    | err
 	;
+err: ERROR_SYMBOL
+    { return 0; }
+    ;
 
 %%
 

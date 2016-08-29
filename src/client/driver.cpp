@@ -65,20 +65,24 @@ int ParserDriver::parse()
 
 void ParserDriver::error(const yy::location &l, const std::string &m)
 {
+    if (silent)
+        return;
     std::ostringstream ss;
     ss << l << " " << m << "\n";
     if (!can_throw)
         std::cerr << ss.str();
     else
-        throw std::runtime_error("Error during bazel parse: " + ss.str());
+        throw std::runtime_error("Error during parse: " + ss.str());
 }
 
 void ParserDriver::error(const std::string& m)
 {
+    if (silent)
+        return;
     std::ostringstream ss;
     ss << m << "\n";
     if (!can_throw)
         std::cerr << ss.str();
     else
-        throw std::runtime_error("Error during bazel parse: " + ss.str());
+        throw std::runtime_error("Error during parse: " + ss.str());
 }

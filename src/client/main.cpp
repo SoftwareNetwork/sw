@@ -89,6 +89,13 @@ try
             return 1;
         return build(argv[2]);
     }
+    else if (String(argv[1]) == "--generate")
+    {
+        // build mode
+        if (argc < 3)
+            return 1;
+        return generate(argv[2]);
+    }
 
     // default command run
 

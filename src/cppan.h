@@ -61,15 +61,6 @@ using Sources = std::set<String>;
 using StringSet = std::set<String>;
 using Symbols = std::map<String, StringSet>;
 
-enum class BuildType
-{
-    CMake,
-    Makefile,
-    VsProject,
-    Qmake,
-    Ninja
-};
-
 struct IncludeDirectories
 {
     Files public_;
@@ -109,7 +100,6 @@ struct Project
     IncludeDirectories include_directories;
     Sources sources;
     Sources build_files;
-    BuildType buildType;
     Dependencies dependencies;
     Files exclude_from_build;
     BuildSystemConfigInsertions bs_insertions;
@@ -144,26 +134,65 @@ struct Project
 
 using Projects = std::map<String, Project>;
 
-PackagesDirType packages_dir_type_from_string(const String &s);
+PackagesDirType packages_dir_type_from_string(const String &s, const String &key);
+
+struct BuildSettings
+{
+    enum CMakeConfigurationType
+    {
+        Debug,
+        MinSizeRel,
+        Release,
+        RelWithDebInfo,
+
+        Max
+    };
+
+    // from settings
+    String c_compiler;
+    String cxx_compiler;
+    String compiler;
+    String c_compiler_flags;
+    String c_compiler_flags_conf[CMakeConfigurationType::Max];
+    String cxx_compiler_flags;
+    String cxx_compiler_flags_conf[CMakeConfigurationType::Max];
+    String compiler_flags;
+    String compiler_flags_conf[CMakeConfigurationType::Max];
+    String link_flags;
+    String link_flags_conf[CMakeConfigurationType::Max];
+    String link_libraries;
+    String configuration{ "Release" };
+    String generator;
+    String toolset;
+    String type{ "executable" };
+    String library_type;
+    String executable_type;
+    bool use_shared_libs = false;
+    bool silent = false;
+
+    // own data
+    bool is_dir = false;
+    String filename;
+    String filename_without_ext;
+    path source_directory;
+    path binary_directory;
+
+    void load(const yaml &root);
+};
 
 struct Config
 {
     // sys/user config settings
     String host{ "https://cppan.org/" };
     ProxySettings proxy;
-    PackagesDirType packages_dir_type{ PackagesDirType::User };
+    PackagesDirType storage_dir_type{ PackagesDirType::User };
     path storage_dir;
+    PackagesDirType build_dir_type{ PackagesDirType::System };
+    path build_dir;
     bool local_build = false;
     bool show_ide_projects = false;
     bool add_run_cppan_target = false;
-    path build_directory;
-    bool silent_build =
-#ifdef _WIN32
-        false
-#else
-        true
-#endif
-        ;
+    BuildSettings build_settings;
 
     // source (git, remote etc.)
     Version version;
@@ -195,9 +224,13 @@ struct Config
     void process();
     void download_dependencies();
     void create_build_files() const;
-    void prepare_build(const path &fn, const String &cppan);
+
+    void prepare_build(path fn, const String &cppan);
+    int generate() const;
+    int build() const;
 
     Projects &getProjects() { return projects; }
+    Project &getDefaultProject();
     const Project *getProject(const String &p) const;
 
     static Source load_source(const yaml &root);
@@ -207,11 +240,14 @@ struct Config
     Dependencies getIndirectDependencies() const; // from server
     Dependencies getDependencies() const; // from file
 
-    path get_packages_dir(PackagesDirType type) const;
+    path get_storage_dir(PackagesDirType type) const;
     path get_storage_dir_bin() const;
     path get_storage_dir_lib() const;
     path get_storage_dir_obj() const;
     path get_storage_dir_src() const;
+    path get_storage_dir_user_obj() const;
+
+    path get_build_dir(PackagesDirType type) const;
 
 private:
     bool printed = false;

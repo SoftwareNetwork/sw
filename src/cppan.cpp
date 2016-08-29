@@ -37,11 +37,13 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 
 #include <libarchive/archive.h>
 #include <libarchive/archive_entry.h>
+
+#include "shell_link.h"
 #else
 #include <archive.h>
 #include <archive_entry.h>
@@ -69,6 +71,16 @@
             std::cout << x << "\n"; \
     } while (0)
 
+#define EXTRACT_VAR(r, val, var, type)   \
+    do                                   \
+    {                                    \
+        auto &v = r[var];                \
+        if (v.IsDefined())               \
+            val = v.template as<type>(); \
+    } while (0)
+#define EXTRACT(val, type) EXTRACT_VAR(root, val, #val, type)
+#define EXTRACT_AUTO(val) EXTRACT(val, decltype(val))
+
 bool silent = false;
 
 const String cmake_config_filename = "CMakeLists.txt";
@@ -88,6 +100,7 @@ const String exports_filename = "exports.cmake";
 const String cpp_config_filename = "cppan.h";
 const String cppan_export = "CPPAN_EXPORT";
 const String cppan_export_prefix = "CPPAN_API_";
+const std::vector<String> cmake_configuration_types = { "DEBUG", "MINSIZEREL", "RELEASE", "RELWITHDEBINFO" };
 
 using ConfigPtr = std::shared_ptr<Config>;
 std::map<path, ConfigPtr> config_store;
@@ -599,7 +612,7 @@ void prepare_exports(const Files &files, const Dependency &d)
 
     for (auto &f : files)
     {
-        auto s = read_file(f);
+        auto s = read_file(f, true);
         boost::algorithm::replace_all(s, cppan_export, api);
         write_file(f, s);
     }
@@ -778,10 +791,57 @@ void Project::save_dependencies(yaml &node) const
     node[DEPENDENCIES_NODE] = root;
 }
 
+void BuildSettings::load(const yaml &root)
+{
+    // extract
+    EXTRACT_AUTO(c_compiler);
+    EXTRACT_AUTO(cxx_compiler);
+    EXTRACT_AUTO(compiler);
+    EXTRACT_AUTO(c_compiler_flags);
+    EXTRACT_AUTO(cxx_compiler_flags);
+    EXTRACT_AUTO(compiler_flags);
+    EXTRACT_AUTO(link_flags);
+    EXTRACT_AUTO(link_libraries);
+    EXTRACT_AUTO(configuration);
+    EXTRACT_AUTO(generator);
+    EXTRACT_AUTO(toolset);
+    EXTRACT_AUTO(type);
+    EXTRACT_AUTO(library_type);
+    EXTRACT_AUTO(executable_type);
+    EXTRACT_AUTO(use_shared_libs);
+    EXTRACT_AUTO(silent);
+
+    for (int i = 0; i < CMakeConfigurationType::Max; i++)
+    {
+        auto t = cmake_configuration_types[i];
+        boost::to_lower(t);
+        EXTRACT_VAR(root, c_compiler_flags_conf[i], "c_compiler_flags_" + t, String);
+        EXTRACT_VAR(root, cxx_compiler_flags_conf[i], "cxx_compiler_flags_" + t, String);
+        EXTRACT_VAR(root, compiler_flags_conf[i], "compiler_flags_" + t, String);
+        EXTRACT_VAR(root, link_flags_conf[i], "link_flags_" + t, String);
+    }
+
+    // process
+    if (c_compiler.empty())
+        c_compiler = cxx_compiler;
+    if (c_compiler.empty())
+        c_compiler = compiler;
+    if (cxx_compiler.empty())
+        cxx_compiler = compiler;
+
+    c_compiler_flags += " " + compiler_flags;
+    cxx_compiler_flags += " " + compiler_flags;
+    for (int i = 0; i < BuildSettings::CMakeConfigurationType::Max; i++)
+    {
+        c_compiler_flags_conf[i] += " " + compiler_flags_conf[i];
+        cxx_compiler_flags_conf[i] += " " + compiler_flags_conf[i];
+    }
+}
+
 Config::Config()
 {
     storage_dir = get_root_directory() / "packages";
-    build_directory = temp_directory_path() / "build";
+    build_dir = temp_directory_path() / "build";
 
     // add some common types
     check_types.insert("size_t");
@@ -843,23 +903,12 @@ void Config::load_common(const path &p)
 
 void Config::load_common(const yaml &root)
 {
-#define EXTRACT_VAR(r, val, var, type)   \
-    do                                   \
-    {                                    \
-        auto &v = r[var];                \
-        if (v.IsDefined())               \
-            val = v.template as<type>(); \
-    } while (0)
-#define EXTRACT(val, type) EXTRACT_VAR(root, val, #val, type)
-#define EXTRACT_AUTO(val) EXTRACT(val, decltype(val))
-
     EXTRACT_AUTO(host);
-    EXTRACT(storage_dir, String);
     EXTRACT_AUTO(local_build);
     EXTRACT_AUTO(show_ide_projects);
     EXTRACT_AUTO(add_run_cppan_target);
-    EXTRACT(build_directory, String);
-    EXTRACT_AUTO(silent_build);
+    EXTRACT(storage_dir, String);
+    EXTRACT(build_dir, String);
 
     auto &p = root["proxy"];
     if (p.IsDefined())
@@ -870,12 +919,12 @@ void Config::load_common(const yaml &root)
         EXTRACT_VAR(p, proxy.user, "user", String);
     }
 
-    packages_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "packages_dir", "user"));
-
+    storage_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "storage_dir_type", "user"), "storage_dir_type");
     if (root["storage_dir"].IsDefined())
-    {
-        packages_dir_type = PackagesDirType::None;
-    }
+        storage_dir_type = PackagesDirType::None;
+    build_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "build_dir_type", "system"), "build_dir_type");
+    if (root["build_dir"].IsDefined())
+        build_dir_type = PackagesDirType::None;
 }
 
 void Config::load(const path &p)
@@ -892,6 +941,7 @@ void Config::load(const yaml &root, const path &p)
         if (!ls.IsMap())
             throw std::runtime_error("'local_settings' should be a map");
         load_common(ls);
+        build_settings.load(ls["build"]);
     }
 
     // version
@@ -1261,6 +1311,13 @@ const Project *Config::getProject(const String &pname) const
     return p;
 }
 
+Project &Config::getDefaultProject()
+{
+    if (projects.empty())
+        projects[""] = Project();
+    return projects.begin()->second;
+}
+
 ProjectPath Config::relative_name_to_absolute(const String &name)
 {
     ProjectPath package;
@@ -1405,7 +1462,7 @@ void Config::download_and_unpack(const String &data_url) const
 
             write_file(md5file, d.md5);
 
-            LOG("Unpacking: " << fn.string());
+            LOG_NO_NEWLINE("Unpacking: " << fn.string() << "... ");
             Files files;
             try
             {
@@ -1417,6 +1474,7 @@ void Config::download_and_unpack(const String &data_url) const
                 throw;
             }
             fs::remove(fn);
+            LOG("Ok");
 
             prepare_exports(files, d);
         }
@@ -1468,25 +1526,37 @@ void Config::extractDependencies(const ptree &dependency_tree)
     }
 }
 
-void Config::prepare_build(const path &fn, const String &cppan)
+void Config::prepare_build(path fn, const String &cppan)
 {
-    auto filename = fn.filename().string();
-    auto filename_without_ext = fn.filename().stem().string();
+    fn = fs::canonical(fs::absolute(fn));
 
-    if (!silent_build)
-        build_directory = fs::current_path() / ("cppan-build-" + filename);
+    build_settings.filename = fn.filename().string();
+    build_settings.filename_without_ext = fn.filename().stem().string();
+    if (build_settings.filename == CPPAN_FILENAME)
+    {
+        build_settings.is_dir = true;
+        build_settings.filename = fn.parent_path().filename().string();
+        build_settings.filename_without_ext = build_settings.filename;
+    }
+
+    build_settings.source_directory = get_build_dir(build_dir_type);
+    if (build_dir_type == PackagesDirType::Local || build_dir_type == PackagesDirType::None)
+        build_settings.source_directory /= ("cppan-build-" + build_settings.filename);
     else
-        build_directory /= sha1(normalize_path(fn.string()));
-    fs::create_directories(build_directory);
+        build_settings.source_directory /= sha1(normalize_path(fn.string()));
+    build_settings.binary_directory = build_settings.source_directory / "build";
+    fs::create_directories(build_settings.source_directory);
 
-    auto &p = projects.begin()->second;
-    p.sources.insert(filename);
+    auto &p = getDefaultProject();
+    if (!build_settings.is_dir)
+        p.sources.insert(build_settings.filename);
     p.findSources(fn.parent_path());
+    p.files.erase(CPPAN_FILENAME);
 
-    write_file_if_different(build_directory / CPPAN_FILENAME, cppan);
-    Config conf(build_directory);
+    write_file_if_different(build_settings.source_directory / CPPAN_FILENAME, cppan);
+    Config conf(build_settings.source_directory);
     auto old = fs::current_path();
-    fs::current_path(build_directory);
+    fs::current_path(build_settings.source_directory);
     conf.process(); // invoke cppan
     fs::current_path(old);
 
@@ -1496,7 +1566,7 @@ void Config::prepare_build(const path &fn, const String &cppan)
     ctx.addLine();
 
     config_section_title(ctx, "project settings");
-    ctx.addLine("project(" + filename_without_ext + " C CXX)");
+    ctx.addLine("project(" + build_settings.filename_without_ext + " C CXX)");
     ctx.addLine();
 
     config_section_title(ctx, "compiler & linker settings");
@@ -1509,12 +1579,45 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 if (MSVC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP /W1")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /W1")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif()
 )");
 
+    // compiler flags
+    ctx.addLine("set(CMAKE_C_FLAGS \"${CMAKE_C_FLAGS} " + build_settings.c_compiler_flags + "\")");
+    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} " + build_settings.cxx_compiler_flags + "\")");
+    ctx.addLine();
+
+    for (int i = 0; i < BuildSettings::CMakeConfigurationType::Max; i++)
+    {
+        auto &cfg = cmake_configuration_types[i];
+        ctx.addLine("set(CMAKE_C_FLAGS_" + cfg + " \"${CMAKE_C_FLAGS_" + cfg + "} " + build_settings.c_compiler_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_CXX_FLAGS_" + cfg + " \"${CMAKE_CXX_FLAGS_" + cfg + "} " + build_settings.cxx_compiler_flags_conf[i] + "\")");
+        ctx.addLine();
+    }
+
+    // linker flags
+    ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS \"${CMAKE_EXE_LINKER_FLAGS} " + build_settings.link_flags + "\")");
+    ctx.addLine("set(CMAKE_MODULE_LINKER_FLAGS \"${CMAKE_MODULE_LINKER_FLAGS} " + build_settings.link_flags + "\")");
+    ctx.addLine("set(CMAKE_SHARED_LINKER_FLAGS \"${CMAKE_SHARED_LINKER_FLAGS} " + build_settings.link_flags + "\")");
+    ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS \"${CMAKE_STATIC_LINKER_FLAGS} " + build_settings.link_flags + "\")");
+    ctx.addLine();
+
+    for (int i = 0; i < BuildSettings::CMakeConfigurationType::Max; i++)
+    {
+        auto &cfg = cmake_configuration_types[i];
+        ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS_" + cfg + " \"${CMAKE_EXE_LINKER_FLAGS_" + cfg + "} " + build_settings.link_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_MODULE_LINKER_FLAGS_" + cfg + " \"${CMAKE_MODULE_LINKER_FLAGS_" + cfg + "} " + build_settings.link_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_SHARED_LINKER_FLAGS_" + cfg + " \"${CMAKE_SHARED_LINKER_FLAGS_" + cfg + "} " + build_settings.link_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS_" + cfg + " \"${CMAKE_STATIC_LINKER_FLAGS_" + cfg + "} " + build_settings.link_flags_conf[i] + "\")");
+        ctx.addLine();
+    }
+
     config_section_title(ctx, "CPPAN include");
+    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
+    if (build_settings.use_shared_libs)
+        ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS 1)");
     ctx.addLine("add_subdirectory(cppan)");
     ctx.addLine();
 
@@ -1529,27 +1632,75 @@ endif()
     ctx.addLine();
 
     config_section_title(ctx, "target");
-    ctx.addLine("set(this " + filename_without_ext + ")");
-    ctx.addLine("add_executable(${this} ${src})");
-    ctx.addLine("target_link_libraries(${this} cppan)");
+    ctx.addLine("set(this " + build_settings.filename_without_ext + ")");
+    if (build_settings.type == "executable")
+    {
+        ctx.addLine("add_executable(${this} " + boost::to_upper_copy(build_settings.executable_type) + " ${src})");
+        ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_EXPORT=)");
+    }
+    else
+    {
+        if (build_settings.type == "library")
+        {
+            ctx.addLine("add_library(${this} " + boost::to_upper_copy(build_settings.library_type) + " ${src})");
+        }
+        else
+        {
+            ctx.addLine("add_library(${this} " + boost::to_upper_copy(build_settings.type) + " ${src})");
+        }
+        ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_EXPORT=CPPAN_SYMBOL_EXPORT)");
+    }
+    ctx.addLine("target_link_libraries(${this} cppan " + build_settings.link_libraries + ")");
     ctx.addLine();
     ctx.addLine(R"(add_custom_command(TARGET ${this} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${this}> )" + normalize_path(fs::current_path()) + R"(/
 ))");
+    ctx.addLine();
 
     // eof
     ctx.addLine(config_delimeter);
     ctx.addLine();
     ctx.splitLines();
 
-    write_file_if_different(build_directory / "CMakeLists.txt", ctx.getText());
-    String cmd = "cmake -H\"" + normalize_path(build_directory) + "\" -B\"" + normalize_path(build_directory / "build") + "\"";
-    system(cmd.c_str());
-    cmd = "cmake --build \"" + normalize_path(build_directory / "build") + "\"";
+    write_file_if_different(build_settings.source_directory / cmake_config_filename, ctx.getText());
+}
+
+int Config::generate() const
+{
+    std::vector<String> args;
+    args.push_back("cmake");
+    args.push_back("-H\"" + normalize_path(build_settings.source_directory) + "\"");
+    args.push_back("-B\"" + normalize_path(build_settings.binary_directory) + "\"");
+    if (!build_settings.c_compiler.empty())
+        args.push_back("-DCMAKE_C_COMPILER=\"" + build_settings.c_compiler + "\"");
+    if (!build_settings.cxx_compiler.empty())
+        args.push_back("-DCMAKE_CXX_COMPILER=\"" + build_settings.cxx_compiler + "\"");
+    if (!build_settings.generator.empty())
+        args.push_back("-G \"" + build_settings.generator + "\"");
+    if (!build_settings.toolset.empty())
+        args.push_back("-T " + build_settings.toolset + "");
+    args.push_back("-DCMAKE_BUILD_TYPE=" + build_settings.configuration + "");
+    auto ret = system(args);
+    if (!build_settings.silent)
+    {
 #ifdef _WIN32
-    cmd += " --config Release";
+        auto bld_dir = get_build_dir(PackagesDirType::Local);
+        auto sln = build_settings.binary_directory / (build_settings.filename_without_ext + ".sln");
+        auto sln_new = bld_dir / (build_settings.filename_without_ext + ".sln.lnk");
+        if (fs::exists(sln))
+            CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
 #endif
-    system(cmd.c_str());
+    }
+    return ret;
+}
+
+int Config::build() const
+{
+    std::vector<String> args;
+    args.push_back("cmake");
+    args.push_back("--build \"" + normalize_path(build_settings.binary_directory) + "\"");
+    args.push_back("--config " + build_settings.configuration);
+    return system(args);
 }
 
 void Config::print_configs()
@@ -1850,12 +2001,26 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
 
     // options (defs etc.)
     {
+
+        ctx.addLine("if (LIBRARY_TYPE STREQUAL \"SHARED\")");
+        ctx.increaseIndent();
         ctx.addLine("target_compile_definitions    (" + pi.target_name);
         ctx.increaseIndent();
         ctx.addLine("PRIVATE   " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
         ctx.addLine("INTERFACE " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_IMPORT"));
         ctx.decreaseIndent();
         ctx.addLine(")");
+        ctx.decreaseIndent();
+        ctx.addLine("else()");
+        ctx.increaseIndent();
+        ctx.addLine("target_compile_definitions    (" + pi.target_name);
+        ctx.increaseIndent();
+        ctx.addLine("PUBLIC    " + cppan_export_prefix + pi.variable_name + "=");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+
 
         for (auto &ol : p.options)
         {
@@ -2216,7 +2381,7 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
     # double check
     if (NOT EXISTS ${import})
         message(STATUS "")
-        message(STATUS "Preparing build tree for ${target}")
+        message(STATUS "Preparing build tree for ${target} with config ${config}")
         message(STATUS "")
 
         find_program(ninja ninja)
@@ -2440,10 +2605,6 @@ void Config::print_meta_config_file() const
         ctx.addLine("include(" + include_guard_filename + ")");
     }
 
-    ProjectFlags flags;
-    flags[pfExecutable] = true;
-    auto ulll = flags.to_ullong();
-
     const String cppan_project_name = "cppan";
     config_section_title(ctx, "main library");
     ctx.addLine("add_library                   (" + cppan_project_name + " INTERFACE)");
@@ -2495,27 +2656,22 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine();
 
     config_section_title(ctx, "export/import");
-    ctx.addLine(R"str(if (CPPAN_BUILD_SHARED_LIBS)
-    if (MSVC)
-        set(CPPAN_EXPORT "__declspec(dllexport)")
-        set(CPPAN_IMPORT "__declspec(dllimport)")
-    endif()
+    ctx.addLine(R"str(if (MSVC)
+    set(CPPAN_EXPORT "__declspec(dllexport)")
+    set(CPPAN_IMPORT "__declspec(dllimport)")
+endif()
 
-    if (MINGW)
-        set(CPPAN_EXPORT "__attribute__((__dllexport__))")
-        set(import "__attribute__((__dllimport__))")
-    elseif(GNU)
-        set(CPPAN_EXPORT "__attribute__((__visibility__(\"default\")))")
-        set(CPPAN_IMPORT)
-    endif()
-
-    if (SUN) # TODO: check it in real environment
-        set(CPPAN_EXPORT "__global")
-        set(CPPAN_IMPORT "__global")
-    endif()
-else()
-    set(CPPAN_EXPORT)
+if (MINGW)
+    set(CPPAN_EXPORT "__attribute__((__dllexport__))")
+    set(CPPAN_IMPORT "__attribute__((__dllimport__))")
+elseif(GNU)
+    set(CPPAN_EXPORT "__attribute__((__visibility__(\"default\")))")
     set(CPPAN_IMPORT)
+endif()
+
+if (SUN) # TODO: check it in real environment
+    set(CPPAN_EXPORT "__global")
+    set(CPPAN_IMPORT "__global")
 endif())str");
 
     // cmake includes
@@ -2674,7 +2830,6 @@ include(TestBigEndian))");
         ctx.increaseIndent();
         ctx.addLine("INTERFACE CPPAN"); // build is performed under CPPAN
         ctx.addLine("INTERFACE CPPAN_CONFIG=\"${config}\"");
-        ctx.addLine("INTERFACE " + cppan_export);
         ctx.addLine("INTERFACE CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
         ctx.addLine("INTERFACE CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
         ctx.decreaseIndent();
@@ -2844,6 +2999,14 @@ set_target_properties(run-cppan PROPERTIES
         {
             ctx.addLine("if (NOT CPPAN_LOCAL_BUILD AND CPPAN_BUILD_SHARED_LIBS)");
             ctx.addLine();
+            ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
+            ctx.addLine("if (MSVC OR XCODE)");
+            ctx.addLine("    set(output_dir ${output_dir}/$<CONFIG>)");
+            ctx.addLine("endif()");
+            ctx.addLine("if (CPPAN_BUILD_OUTPUT_DIR)");
+            ctx.addLine("    set(output_dir ${CPPAN_BUILD_OUTPUT_DIR})");
+            ctx.addLine("endif()");
+            ctx.addLine();
 
             auto print_copy_deps = [&ctx](const auto &dd)
             {
@@ -2852,29 +3015,17 @@ set_target_properties(run-cppan PROPERTIES
                     auto &d = dp.second;
                     PackageInfo pi(d);
 
-                    if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
+                    if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
                         continue;
 
-                    auto copy = [&ctx, &pi](bool config = false)
-                    {
-                        ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
-                        ctx.increaseIndent();
-                        ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-                        ctx.increaseIndent();
-                        ctx.addLine("$<TARGET_FILE:" + pi.target_name + "> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" + (config ? "/$<CONFIG>" : ""));
-                        ctx.decreaseIndent();
-                        ctx.decreaseIndent();
-                        ctx.addLine(")");
-                        ctx.addLine();
-                    };
-
-                    ctx.addLine("if (MSVC OR XCODE)");
-                    ctx.addLine();
-                    copy(true);
-                    ctx.addLine("else()");
-                    ctx.addLine();
-                    copy();
-                    ctx.addLine("endif()");
+                    ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
+                    ctx.increaseIndent();
+                    ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+                    ctx.increaseIndent();
+                    ctx.addLine("$<TARGET_FILE:" + pi.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + pi.target_name + ">");
+                    ctx.decreaseIndent();
+                    ctx.decreaseIndent();
+                    ctx.addLine(")");
                     ctx.addLine();
                 }
             };
@@ -2900,7 +3051,7 @@ void Config::create_build_files() const
     print_helper_file();
 }
 
-path Config::get_packages_dir(PackagesDirType type) const
+path Config::get_storage_dir(PackagesDirType type) const
 {
     static auto system_cfg = load_system_config();
     static auto user_cfg = load_user_config();
@@ -2918,7 +3069,7 @@ path Config::get_packages_dir(PackagesDirType type) const
     }
 }
 
-PackagesDirType packages_dir_type_from_string(const String &s)
+PackagesDirType packages_dir_type_from_string(const String &s, const String &key)
 {
     if (s == "local")
         return PackagesDirType::Local;
@@ -2926,27 +3077,47 @@ PackagesDirType packages_dir_type_from_string(const String &s)
         return PackagesDirType::User;
     if (s == "system")
         return PackagesDirType::System;
-    throw std::runtime_error("Unknown 'packages_dir'. Should be one of [local, user, system]");
+    throw std::runtime_error("Unknown '" + key + "'. Should be one of [local, user, system]");
 }
 
 path Config::get_storage_dir_bin() const
 {
-    return get_packages_dir(packages_dir_type) / "bin";
+    return get_storage_dir(storage_dir_type) / "bin";
 }
 
 path Config::get_storage_dir_lib() const
 {
-    return get_packages_dir(packages_dir_type) / "lib";
+    return get_storage_dir(storage_dir_type) / "lib";
 }
 
 path Config::get_storage_dir_obj() const
 {
-    return get_packages_dir(packages_dir_type) / "obj";
+    return get_storage_dir(storage_dir_type) / "obj";
 }
 
 path Config::get_storage_dir_src() const
 {
-    return get_packages_dir(packages_dir_type) / "src";
+    return get_storage_dir(storage_dir_type) / "src";
+}
+
+path Config::get_storage_dir_user_obj() const
+{
+    return get_storage_dir(storage_dir_type) / "usr" / "obj";
+}
+
+path Config::get_build_dir(PackagesDirType type) const
+{
+    switch (type)
+    {
+    case PackagesDirType::Local:
+        return fs::current_path();
+    case PackagesDirType::User:
+        return get_storage_dir_user_obj();
+    case PackagesDirType::System:
+        return temp_directory_path() / "build";
+    default:
+        return build_dir;
+    }
 }
 
 Dependencies Config::getDirectDependencies() const

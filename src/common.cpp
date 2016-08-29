@@ -500,7 +500,7 @@ void download_file(DownloadData &data)
         throw std::runtime_error(String(curl_easy_strerror(res)));
 }
 
-String read_file(const path &p)
+String read_file(const path &p, bool no_size_check)
 {
     if (!fs::exists(p))
         throw std::runtime_error("File '" + p.string() + "' does not exist");
@@ -511,7 +511,7 @@ String read_file(const path &p)
         throw std::runtime_error("Cannot open file '" + fn + "' for reading");
 
     size_t sz = (size_t)fs::file_size(p);
-    if (sz > 10'000'000)
+    if (!no_size_check && sz > 1'000'000)
         throw std::runtime_error("File " + fn + " is very big (> ~1MB)");
 
     String f;
@@ -682,4 +682,12 @@ int system_no_output(const String &cmd)
     s += " >/dev/null 2>/dev/null";
 #endif
     return std::system(s.c_str());
+}
+
+int system(const std::vector<String> &args)
+{
+    String cmd;
+    for (auto &a : args)
+        cmd += a + " ";
+    return system(cmd.c_str());
 }

@@ -33,34 +33,76 @@
 
 std::vector<std::string> extract_comments(const std::string &s);
 
-int build(const path &fn)
+Config generate_config(const path &fn, bool silent = true)
 {
-    auto s = read_file(fn);
-    auto comments = extract_comments(s);
-
     Config conf;
-    int loaded = -1;
-    int i = -1;
-    for (auto &comment : comments)
+
+    if (!fs::exists(fn))
+        throw std::runtime_error("File or directory does not exist: " + fn.string());
+
+    auto read_from_cpp = [&conf, &silent](const path &fn)
     {
-        try
+        auto s = read_file(fn);
+        auto comments = extract_comments(s);
+
+        int loaded = -1;
+        int i = -1;
+        for (auto &comment : comments)
         {
-            i++;
-            boost::trim(comment);
-            auto root = YAML::Load(comment);
-            auto sz = root.size();
-            if (sz == 0)
-                continue;
-            conf.load(root);
-            loaded = i;
-            break;
+            try
+            {
+                i++;
+                boost::trim(comment);
+                auto root = YAML::Load(comment);
+                auto sz = root.size();
+                if (sz == 0)
+                    continue;
+                conf.load(root);
+                loaded = i;
+                break;
+            }
+            catch (...)
+            {
+            }
         }
-        catch (...)
+
+        if (!silent)
+            conf.build_settings.silent = false;
+        conf.prepare_build(fn, comments.size() > (size_t)i ? comments[i] : "");
+    };
+
+    if (fs::is_regular_file(fn))
+    {
+        read_from_cpp(fn);
+    }
+    else if (fs::is_directory(fn))
+    {
+        if (fs::exists(fn / CPPAN_FILENAME))
         {
+            conf = Config(fn);
+            conf.prepare_build(fn / CPPAN_FILENAME, read_file(fn / CPPAN_FILENAME));
         }
+        else if (fs::exists(fn / "main.cpp"))
+        {
+            read_from_cpp(fn / "main.cpp");
+        }
+        else
+            throw std::runtime_error("No candidates {cppan.yml|main.cpp} for reading in directory " + fn.string());
     }
 
-    conf.prepare_build(fs::absolute(fn), comments[i]);
+    return conf;
+}
 
-    return 0;
+int generate(const path &fn)
+{
+    auto conf = generate_config(fn, false);
+    return conf.generate();
+}
+
+int build(const path &fn)
+{
+    auto conf = generate_config(fn);
+    if (conf.generate())
+        return 1;
+    return conf.build();
 }

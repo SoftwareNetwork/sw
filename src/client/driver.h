@@ -29,6 +29,7 @@ public:
     std::vector<std::string> comments;
     bool debug = false;
     bool can_throw = true;
+    bool silent = true;
 
     ParserDriver();
 
