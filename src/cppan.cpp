@@ -1724,8 +1724,10 @@ int Config::generate() const
         if (fs::exists(sln))
             CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
 #else
-        bld_dir /= (cppan_local_build_prefix + build_settings.filename) / cmake_config_filename;
-        fs::create_symlink(build_settings.source_directory / cmake_config_filename, bld_dir);
+        bld_dir /= path(cppan_local_build_prefix + build_settings.filename);
+        fs::create_directories(bld_dir);
+        boost::system::error_code ec;
+        fs::create_symlink(build_settings.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
 #endif
     }
     return ret;
@@ -2021,6 +2023,11 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     }
     ctx.decreaseIndent();
     ctx.addLine(")");
+    ctx.addLine();
+    ctx.addLine("if (NOT CPPAN_LOCAL_BUILD AND CMAKE_GENERATOR STREQUAL Ninja)");
+    ctx.addLine("target_link_libraries         (" + pi.target_name + " PRIVATE cppan-dummy)");
+    ctx.addLine("endif()");
+    ctx.addLine();
 
     // solution folder
     if (!header_only)
@@ -2423,9 +2430,9 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
         message(STATUS "Preparing build tree for ${target} with config ${config}")
         message(STATUS "")
 
-        find_program(ninja ninja)
-        set(generator Ninja)
-        #set(generator ${CMAKE_GENERATOR})
+        #find_program(ninja ninja)
+        #set(generator Ninja)
+        set(generator ${CMAKE_GENERATOR})
         if (MSVC
             OR ${ninja} STREQUAL "ninja-NOTFOUND"
             OR CYGWIN # for me it's not working atm
@@ -2588,10 +2595,18 @@ if (CONFIG)
             --config ${CONFIG}
     )
 else()
-    execute_process(
-        COMMAND ${CMAKE_COMMAND}
-            --build ${BUILD_DIR}
-    )
+    find_program(make make)
+    if (${make} STREQUAL "make-NOTFOUND")
+        execute_process(
+            COMMAND ${CMAKE_COMMAND}
+                --build ${BUILD_DIR}
+        )
+    else()
+        get_number_of_cores(N)
+        execute_process(
+            COMMAND make -j${N} -C ${BUILD_DIR}
+        )
+    endif()
 endif()
 
 file(LOCK ${lock} RELEASE)
@@ -2838,10 +2853,14 @@ include(TestBigEndian))");
     {
         config_section_title(ctx, "dummy compiled target");
         ctx.addLine("# this target will be always built before any other");
-        ctx.addLine("if (MSVC AND NOT CMAKE_GENERATOR STREQUAL Ninja)");
+        ctx.addLine("if (CMAKE_GENERATOR STREQUAL Ninja)");
+        ctx.addLine("    set(f ${CMAKE_CURRENT_BINARY_DIR}/cppan_dummy.cpp)");
+        ctx.addLine("    file_write_once(${f} \"void __cppan_dummy() {}\")");
+        ctx.addLine("    add_library(" + cppan_dummy_target + " ${f})");
+        ctx.addLine("elseif(MSVC)");
         ctx.addLine("    add_custom_target(" + cppan_dummy_target + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
         ctx.addLine("else()");
-        ctx.addLine("    add_custom_target(" + cppan_dummy_target + " ALL DEPENDS)");
+        ctx.addLine("    add_custom_target(" + cppan_dummy_target + " ALL)");
         ctx.addLine("endif()");
         ctx.addLine();
         ctx.addLine("set_target_properties(" + cppan_dummy_target + " PROPERTIES\n    FOLDER \"cppan/service\"\n)");

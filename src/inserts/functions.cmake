@@ -151,7 +151,7 @@ function(get_configuration out)
     endif()
 
     set(ninja_dir)
-    if (MSVC AND CMAKE_GENERATOR STREQUAL Ninja)
+    if (CMAKE_GENERATOR STREQUAL Ninja)
         set(ninja_dir -ninja)
     endif()
 
@@ -175,6 +175,19 @@ function(get_configuration out)
 
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration)
+
+########################################
+# FUNCTION get_number_of_cores
+########################################
+
+function(get_number_of_cores NC)
+    include(ProcessorCount)
+    ProcessorCount(N)
+    if(N EQUAL 0)
+        set(N 2)
+    endif()
+    set(${NC} ${N} PARENT_SCOPE)
+endfunction(get_number_of_cores)
 
 ########################################
 
