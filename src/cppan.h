@@ -168,7 +168,13 @@ struct BuildSettings
     String library_type;
     String executable_type;
     bool use_shared_libs = false;
-    bool silent = false;
+    bool silent =
+#ifdef _WIN32
+        false
+#else
+        true
+#endif
+        ;
 
     // own data
     bool is_dir = false;
