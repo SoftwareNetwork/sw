@@ -37,9 +37,11 @@ set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMake Targets")
 
 project(cppan C CXX)
 
+if (NOT DEFINED VERSION_MAJOR)
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 1)
 set(VERSION_PATCH 7)
+endif()
 
 # Output directory settings
 set(output_dir ${CMAKE_BINARY_DIR}/bin)

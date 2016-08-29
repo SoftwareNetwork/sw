@@ -256,6 +256,7 @@ private:
     DownloadDependencies dependencies;
     Projects projects;
     mutable std::set<String> include_guards;
+    path dir;
 
     void load_common(const path &p);
     void load_common(const yaml &root);

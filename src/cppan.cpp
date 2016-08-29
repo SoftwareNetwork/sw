@@ -100,10 +100,12 @@ const String exports_filename = "exports.cmake";
 const String cpp_config_filename = "cppan.h";
 const String cppan_export = "CPPAN_EXPORT";
 const String cppan_export_prefix = "CPPAN_API_";
+const String cppan_local_build_prefix = "cppan-build-";
+
 const std::vector<String> cmake_configuration_types = { "DEBUG", "MINSIZEREL", "RELEASE", "RELWITHDEBINFO" };
 
 using ConfigPtr = std::shared_ptr<Config>;
-std::map<path, ConfigPtr> config_store;
+std::map<Dependency, ConfigPtr> config_store;
 
 using MimeType = String;
 using MimeTypes = std::set<MimeType>;
@@ -594,13 +596,13 @@ void print_source_groups(Context &ctx, const path &dir)
     ctx.emptyLines(1);
 }
 
-ConfigPtr getConfig(const path &version_dir)
+ConfigPtr getConfig(const Dependency &d, const path &src_dir)
 {
     ConfigPtr c;
-    if (config_store.find(version_dir) == config_store.end())
-        c = config_store[version_dir] = std::make_shared<Config>(version_dir);
+    if (config_store.find(d) == config_store.end())
+        c = config_store[d] = std::make_shared<Config>(src_dir / d.package.toString() / d.version.toString());
     else
-        c = config_store[version_dir];
+        c = config_store[d];
     return c;
 }
 
@@ -621,6 +623,33 @@ void prepare_exports(const Files &files, const Dependency &d)
 String get_stamp_filename(const String &prefix)
 {
     return prefix + ".md5";
+}
+
+void print_copy_deps(Context &ctx, const Dependencies &dd)
+{
+    for (auto &dp : dd)
+    {
+        auto &d = dp.second;
+        PackageInfo pi(d);
+
+        if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
+            continue;
+
+        ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
+        ctx.increaseIndent();
+        ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+        ctx.increaseIndent();
+        ctx.addLine("$<TARGET_FILE:" + pi.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + pi.target_name + ">");
+        ctx.decreaseIndent();
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
+        auto i = config_store.find(d);
+        if (i == config_store.end())
+            continue;
+        print_copy_deps(ctx, i->second->getDefaultProject().dependencies);
+    }
 }
 
 void BuildSystemConfigInsertions::get_config_insertions(const yaml &n)
@@ -860,6 +889,7 @@ Config::Config(const path &p)
     }
     else
         load(p);
+    dir = p;
 }
 
 Config Config::load_system_config()
@@ -1541,7 +1571,7 @@ void Config::prepare_build(path fn, const String &cppan)
 
     build_settings.source_directory = get_build_dir(build_dir_type);
     if (build_dir_type == PackagesDirType::Local || build_dir_type == PackagesDirType::None)
-        build_settings.source_directory /= ("cppan-build-" + build_settings.filename);
+        build_settings.source_directory /= (cppan_local_build_prefix + build_settings.filename);
     else
         build_settings.source_directory /= sha1(normalize_path(fn.string()));
     build_settings.binary_directory = build_settings.source_directory / "build";
@@ -1687,12 +1717,15 @@ int Config::generate() const
     auto ret = system(args);
     if (!build_settings.silent)
     {
-#ifdef _WIN32
         auto bld_dir = get_build_dir(PackagesDirType::Local);
+#ifdef _WIN32
         auto sln = build_settings.binary_directory / (build_settings.filename_without_ext + ".sln");
         auto sln_new = bld_dir / (build_settings.filename_without_ext + ".sln.lnk");
         if (fs::exists(sln))
             CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
+#else
+        bld_dir /= (cppan_local_build_prefix + build_settings.filename) / cmake_config_filename;
+        fs::create_symlink(build_settings.source_directory / cmake_config_filename, bld_dir);
 #endif
     }
     return ret;
@@ -1715,7 +1748,7 @@ void Config::print_configs()
         auto &d = dd.second;
         auto version_dir = d.getPackageDir(get_storage_dir_src());
 
-        auto c = getConfig(version_dir);
+        auto c = getConfig(d, get_storage_dir_src());
         if (c->printed)
             continue;
         c->printed = true;
@@ -1928,12 +1961,11 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
                     ctx.addLine("INTERFACE " + get_i_dir(idir.string()));
                 for (auto &idir : include_deps)
                 {
-                    auto version_dir = idir.getPackageDir(get_storage_dir_src());
-                    auto c = getConfig(version_dir);
+                    auto c = getConfig(idir, get_storage_dir_src());
                     auto proj = getProject(idir.package.toString());
                     for (auto &i : proj->include_directories.public_)
                     {
-                        auto ipath = version_dir / i;
+                        auto ipath = c->dir / i;
                         boost::system::error_code ec;
                         if (fs::exists(ipath, ec))
                             ctx.addLine("INTERFACE " + normalize_path(ipath));
@@ -1948,12 +1980,11 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
                     ctx.addLine("PRIVATE " + get_i_dir(idir.string()));
                 for (auto &idir : include_deps)
                 {
-                    auto version_dir = idir.getPackageDir(get_storage_dir_src());
-                    auto c = getConfig(version_dir);
+                    auto c = getConfig(idir, get_storage_dir_src());
                     auto proj = getProject(idir.package.toString());
                     for (auto &i : proj->include_directories.public_)
                     {
-                        auto ipath = version_dir / i;
+                        auto ipath = c->dir / i;
                         boost::system::error_code ec;
                         if (fs::exists(ipath, ec))
                             ctx.addLine("PUBLIC " + normalize_path(ipath));
@@ -1975,10 +2006,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     for (auto &d1 : dd)
     {
         if (d1.second.flags[pfExecutable] ||
-            // take pfIncludeDirectories flag from config file, not from server
-            (p.dependencies.find(d1.second.package.toString()) != p.dependencies.end() &&
-             p.dependencies.find(d1.second.package.toString())->second.flags[pfIncludeDirectories])
-            )
+            d1.second.flags[pfIncludeDirectories])
             continue;
         PackageInfo pi1(d1.second);
         if (header_only)
@@ -3019,29 +3047,7 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine("endif()");
             ctx.addLine();
 
-            auto print_copy_deps = [&ctx](const auto &dd)
-            {
-                for (auto &dp : dd)
-                {
-                    auto &d = dp.second;
-                    PackageInfo pi(d);
-
-                    if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
-                        continue;
-
-                    ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
-                    ctx.increaseIndent();
-                    ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-                    ctx.increaseIndent();
-                    ctx.addLine("$<TARGET_FILE:" + pi.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + pi.target_name + ">");
-                    ctx.decreaseIndent();
-                    ctx.decreaseIndent();
-                    ctx.addLine(")");
-                    ctx.addLine();
-                }
-            };
-            print_copy_deps(dd);
-            print_copy_deps(getIndirectDependencies());
+            print_copy_deps(ctx, dd);
 
             ctx.addLine("endif()");
             ctx.addLine();
