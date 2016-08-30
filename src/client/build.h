@@ -30,4 +30,4 @@
 #include <common.h>
 
 int generate(const path &fn);
-int build(const path &fn);
+int build(const path &fn, bool rebuild = false);

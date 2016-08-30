@@ -89,12 +89,33 @@ try
             return 1;
         return build(argv[2]);
     }
+    else if (String(argv[1]) == "--rebuild")
+    {
+        // build mode
+        if (argc < 3)
+            return 1;
+        return build(argv[2], true);
+    }
     else if (String(argv[1]) == "--generate")
     {
         // build mode
         if (argc < 3)
             return 1;
         return generate(argv[2]);
+    }
+    else if (String(argv[1]) == "--clear-cmake-cache")
+    {
+        // build mode
+        Config c;
+        c.clean_cmake_cache(argc > 2 ? argv[2] : "");
+        return 0;
+    }
+    else if (String(argv[1]) == "--clear-vars-cache")
+    {
+        // build mode
+        Config c;
+        c.clean_vars_cache(argc > 2 ? argv[2] : "");
+        return 0;
     }
 
     // default command run

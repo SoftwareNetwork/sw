@@ -151,7 +151,7 @@ function(get_configuration out)
     endif()
 
     set(ninja_dir)
-    if (MSVC AND CMAKE_GENERATOR STREQUAL Ninja)
+    if (CMAKE_GENERATOR STREQUAL Ninja)
         set(ninja_dir -ninja)
     endif()
 
@@ -177,5 +177,100 @@ function(get_configuration out)
 endfunction(get_configuration)
 
 ########################################
+# FUNCTION get_number_of_cores
+########################################
+
+function(get_number_of_cores NC)
+    include(ProcessorCount)
+    ProcessorCount(N)
+    if(N EQUAL 0)
+        set(N 2)
+    endif()
+    set(${NC} ${N} PARENT_SCOPE)
+endfunction(get_number_of_cores)
+
+########################################
+# FUNCTION add_variable
+########################################
+
+function(add_variable v)
+    list(APPEND CPPAN_VARIABLES_TYPES "STRING")
+    list(APPEND CPPAN_VARIABLES_KEYS "${v}")
+    if ("${${v}}" STREQUAL "")
+        list(APPEND CPPAN_VARIABLES_VALUES "0")
+    else()
+        list(APPEND CPPAN_VARIABLES_VALUES "${${v}}")
+    endif()
+
+    set(CPPAN_VARIABLES_TYPES ${CPPAN_VARIABLES_TYPES} PARENT_SCOPE)
+    set(CPPAN_VARIABLES_KEYS ${CPPAN_VARIABLES_KEYS} PARENT_SCOPE)
+    set(CPPAN_VARIABLES_VALUES ${CPPAN_VARIABLES_VALUES} PARENT_SCOPE)
+
+    set(CPPAN_NEW_VARIABLE_ADDED 1 PARENT_SCOPE)
+endfunction(add_variable)
+
+########################################
+# FUNCTION read_variables_file
+########################################
+
+function(read_variables_file f)
+    set(lock ${f}.lock)
+    file(LOCK ${lock} RESULT_VARIABLE lock_result)
+    if (NOT ${lock_result} EQUAL 0)
+        message(FATAL_ERROR "Lock error: ${lock_result}")
+    endif()
+
+    if (NOT EXISTS ${f})
+        file(LOCK ${lock} RELEASE)
+        return()
+    endif()
+
+    file(STRINGS ${f} vars)
+    list(LENGTH vars N)
+    if (N EQUAL 0)
+        file(LOCK ${lock} RELEASE)
+        return()
+    endif()
+    math(EXPR N "${N}-1")
+    foreach(i RANGE ${N})
+        list(GET vars ${i} var)
+        list(GET var 0 t)
+        list(GET var 1 k)
+        list(GET var 2 v)
+        set(${k} "${v}" CACHE ${t} "Cached variable" FORCE)
+
+        add_variable(${k})
+        set(CPPAN_VARIABLES_TYPES ${CPPAN_VARIABLES_TYPES} PARENT_SCOPE)
+        set(CPPAN_VARIABLES_KEYS ${CPPAN_VARIABLES_KEYS} PARENT_SCOPE)
+        set(CPPAN_VARIABLES_VALUES ${CPPAN_VARIABLES_VALUES} PARENT_SCOPE)
+    endforeach()
+
+    file(LOCK ${lock} RELEASE)
+endfunction(read_variables_file)
+
+########################################
+# FUNCTION write_variables_file
+########################################
+
+function(write_variables_file f)
+    set(lock ${f}.lock)
+    file(LOCK ${lock} RESULT_VARIABLE lock_result)
+    if (NOT ${lock_result} EQUAL 0)
+        message(FATAL_ERROR "Lock error: ${lock_result}")
+    endif()
+
+    list(LENGTH CPPAN_VARIABLES_TYPES N)
+    math(EXPR N "${N}-1")
+    file(WRITE ${f} "")
+    foreach(i RANGE ${N})
+        list(GET CPPAN_VARIABLES_TYPES ${i} type)
+        list(GET CPPAN_VARIABLES_KEYS ${i} key)
+        list(GET CPPAN_VARIABLES_VALUES ${i} value)
+        set(vars "${type}" "${key}" "${value}")
+        file(APPEND ${f} "${vars}\n")
+    endforeach()
+
+    file(LOCK ${lock} RELEASE)
+endfunction(write_variables_file)
 
 ################################################################################

@@ -34,6 +34,21 @@ Dependency extractFromString(const String &target)
     return{ p,v };
 }
 
+path Dependency::getPackageDir(const path &base) const
+{
+    return base / package.toString() / version.toString();
+}
+
+path Dependency::getPackageDirHash(const path &base) const
+{
+    return base / getPackageDirHash();
+}
+
+String Dependency::getPackageDirHash() const
+{
+    return sha1(package.toString() + "/" + version.toString()).substr(0, 10);
+}
+
 Dependencies DownloadDependency::getDirectDependencies() const
 {
     Dependencies deps;
