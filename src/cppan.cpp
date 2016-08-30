@@ -523,35 +523,40 @@ void add_subdirectory(Context &ctx, const String &src, const String &bin = Strin
     ctx << add_subdirectory(src, bin) << Context::eol;
 }
 
-void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, const Dependencies &id, const path &base_dir)
+void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, const Dependencies &id, bool obj_dir = false)
 {
     std::vector<String> includes;
 
-    auto add_deps = [&](const auto &dd, const String &prefix = String())
+    if (dd.empty())
+        return;
+
+    auto base_dir = c.get_storage_dir_src();
+    if (obj_dir)
+        base_dir = c.get_storage_dir_obj();
+
+    config_section_title(ctx, "direct dependencies");
+    for (auto &p : dd)
     {
-        if (dd.empty())
-            return;
-
-        config_section_title(ctx, prefix + "direct dependencies");
-        for (auto &p : dd)
+        String s;
+        auto dir = base_dir;
+        if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectories])
         {
-            auto dir = base_dir;
-            if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectories])
-                dir = c.get_storage_dir_src();
-            auto s = p.second.getPackageDir(dir).string();
-
-            if (p.second.flags[pfIncludeDirectories])
-                ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
-            else if (c.local_build || p.second.flags[pfHeaderOnly])
-                add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
-            else
-                includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
+            dir = c.get_storage_dir_src();
+            s = p.second.getPackageDir(dir).string();
         }
-        ctx.addLine();
-    };
+        else if (obj_dir)
+        {
+            s = p.second.getPackageDirHash(dir).string();
+        }
 
-    add_deps(dd);
-    //add_deps(id, "in");
+        if (p.second.flags[pfIncludeDirectories])
+            ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
+        else if (c.local_build || p.second.flags[pfHeaderOnly])
+            add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
+        else
+            includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
+    }
+    ctx.addLine();
 
     if (!includes.empty())
     {
@@ -561,9 +566,9 @@ void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, c
     }
 }
 
-void print_dependencies(Context &ctx, const Config &c, const path &base_dir)
+void print_dependencies(Context &ctx, const Config &c, bool obj_dir = false)
 {
-    print_dependencies(ctx, c, c.getDirectDependencies(), c.getIndirectDependencies(), base_dir);
+    print_dependencies(ctx, c, c.getDirectDependencies(), c.getIndirectDependencies(), obj_dir);
 }
 
 void print_source_groups(Context &ctx, const path &dir)
@@ -1327,6 +1332,90 @@ Project Config::load_project(const yaml &root, const String &name)
     return p;
 }
 
+void remove_file(const path &p)
+{
+    boost::system::error_code ec;
+    fs::remove(p, ec);
+    if (ec)
+        std::cerr << "Cannot remove file: " << p.string() << "\n";
+}
+
+void Config::clean_cmake_cache(path p) const
+{
+    if (p.empty())
+        p = get_storage_dir_obj();
+
+    // projects
+    for (auto &fp : boost::make_iterator_range(fs::directory_iterator(p), {}))
+    {
+        if (!fs::is_directory(fp))
+            continue;
+
+        // versions
+        for (auto &fv : boost::make_iterator_range(fs::directory_iterator(fp), {}))
+        {
+            if (!fs::is_directory(fv) || !fs::exists(fv / "build"))
+                continue;
+
+            // configs
+            for (auto &fc : boost::make_iterator_range(fs::directory_iterator(fv / "build"), {}))
+            {
+                if (!fs::is_directory(fc))
+                    continue;
+                remove_file(fc / "CMakeCache.txt");
+            }
+        }
+    }
+
+    clean_cmake_exports(p);
+}
+
+void Config::clean_cmake_exports(path p) const
+{
+    if (p.empty())
+        p = get_storage_dir_obj();
+
+    // projects
+    for (auto &fp : boost::make_iterator_range(fs::directory_iterator(p), {}))
+    {
+        if (!fs::is_directory(fp))
+            continue;
+
+        // versions
+        for (auto &fv : boost::make_iterator_range(fs::directory_iterator(fp), {}))
+        {
+            if (!fs::is_directory(fv) || !fs::exists(fv / "build"))
+                continue;
+
+            if (!fs::is_directory(fv) || !fs::exists(fv / "build"))
+                continue;
+
+            // configs
+            for (auto &fc : boost::make_iterator_range(fs::directory_iterator(fv / "build"), {}))
+            {
+                if (!fs::is_directory(fc))
+                    continue;
+
+                boost::system::error_code ec;
+                fs::remove_all(fc / "exports", ec);
+            }
+        }
+    }
+}
+
+void Config::clean_vars_cache(path p) const
+{
+    if (p.empty())
+        p = get_storage_dir_cfg();
+
+    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(p), {}))
+    {
+        if (!fs::is_regular_file(f))
+            continue;
+        remove_file(f);
+    }
+}
+
 const Project *Config::getProject(const String &pname) const
 {
     const Project *p = nullptr;
@@ -1389,6 +1478,8 @@ void Config::process()
 {
     download_dependencies();
     create_build_files();
+
+    fs::create_directories(get_storage_dir_cfg());
 }
 
 void Config::download_dependencies()
@@ -1573,8 +1664,13 @@ void Config::prepare_build(path fn, const String &cppan)
     if (build_dir_type == PackagesDirType::Local || build_dir_type == PackagesDirType::None)
         build_settings.source_directory /= (cppan_local_build_prefix + build_settings.filename);
     else
-        build_settings.source_directory /= sha1(normalize_path(fn.string()));
+        build_settings.source_directory /= sha1(normalize_path(fn.string())).substr(0, 10);
     build_settings.binary_directory = build_settings.source_directory / "build";
+    if (build_settings.rebuild)
+    {
+        boost::system::error_code ec;
+        fs::remove_all(build_settings.source_directory, ec);
+    }
     fs::create_directories(build_settings.source_directory);
 
     auto &p = getDefaultProject();
@@ -1597,6 +1693,13 @@ void Config::prepare_build(path fn, const String &cppan)
 
     config_section_title(ctx, "project settings");
     ctx.addLine("project(" + build_settings.filename_without_ext + " C CXX)");
+    ctx.addLine();
+
+    config_section_title(ctx, "CPPAN include");
+    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
+    if (build_settings.use_shared_libs)
+        ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS 1)");
+    ctx.addLine("add_subdirectory(cppan)");
     ctx.addLine();
 
     config_section_title(ctx, "compiler & linker settings");
@@ -1643,13 +1746,6 @@ endif()
         ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS_" + cfg + " \"${CMAKE_STATIC_LINKER_FLAGS_" + cfg + "} " + build_settings.link_flags_conf[i] + "\")");
         ctx.addLine();
     }
-
-    config_section_title(ctx, "CPPAN include");
-    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
-    if (build_settings.use_shared_libs)
-        ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS 1)");
-    ctx.addLine("add_subdirectory(cppan)");
-    ctx.addLine();
 
     // add GLOB later
     config_section_title(ctx, "sources");
@@ -1762,7 +1858,7 @@ void Config::print_configs()
             continue;
 
         // print object config files for non-local building
-        auto obj_dir = get_storage_dir_obj() / d.package.toString() / d.version.toString();
+        auto obj_dir = d.getPackageDirHash(get_storage_dir_obj());
         auto bld_dir = obj_dir;
         boost::system::error_code ec;
         fs::create_directories(bld_dir, ec);
@@ -1817,9 +1913,9 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     // includes
     {
         if (parent.local_build)
-            print_dependencies(ctx, parent, dd, d.getIndirectDependencies(), get_storage_dir_src());
+            print_dependencies(ctx, parent, dd, d.getIndirectDependencies());
         else
-            print_dependencies(ctx, parent, dd, d.getIndirectDependencies(), get_storage_dir_obj());
+            print_dependencies(ctx, parent, dd, d.getIndirectDependencies(), true);
     }
 
     // settings
@@ -2249,8 +2345,8 @@ void Config::print_package_include_file(const path &config_file, const DownloadD
 
 void Config::print_object_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const
 {
-    auto src_dir = get_storage_dir_src() / d.package.toString() / d.version.toString();
-    auto obj_dir = get_storage_dir_obj() / d.package.toString() / d.version.toString();
+    auto src_dir = d.getPackageDir(get_storage_dir_src());
+    auto obj_dir = d.getPackageDirHash(get_storage_dir_obj());
 
     PackageInfo pi(d);
 
@@ -2408,16 +2504,16 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
     ctx.addLine("set(import_fixed ${export_dir}/" + pi.variable_name + "-fixed.cmake)");
     ctx.addLine("set(aliases_file ${export_dir}/" + pi.variable_name + "-aliases.cmake)");
     ctx.addLine();
-    ctx.addLine(R"(if (NOT EXISTS ${import})
+    ctx.addLine(R"(if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
     set(lock ${build_dir}/generate.lock)
 
     file(LOCK ${lock} TIMEOUT 0 RESULT_VARIABLE lock_result)
     if (NOT ${lock_result} EQUAL 0)
         message(STATUS "WARNING: Target: ${target}")
         message(STATUS "WARNING: Other project is being bootstrapped right now or you hit a circular deadlock.")
-        message(STATUS "WARNING: If you aren't building other projects right now feel free to kill this process or it will be stopped in 5 minutes.")
+        message(STATUS "WARNING: If you aren't building other projects right now feel free to kill this process or it will be stopped in 90 seconds.")
 
-        file(LOCK ${lock} TIMEOUT 300 RESULT_VARIABLE lock_result)
+        file(LOCK ${lock} TIMEOUT 90 RESULT_VARIABLE lock_result)
 
         if (NOT ${lock_result} EQUAL 0)
             message(FATAL_ERROR "Lock error: ${lock_result}")
@@ -2425,7 +2521,7 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
     endif()
 
     # double check
-    if (NOT EXISTS ${import})
+    if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         message(STATUS "")
         message(STATUS "Preparing build tree for ${target} with config ${config}")
         message(STATUS "")
@@ -2434,7 +2530,7 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
         #set(generator Ninja)
         set(generator ${CMAKE_GENERATOR})
         if (MSVC
-            OR ${ninja} STREQUAL "ninja-NOTFOUND"
+            OR "${ninja}" STREQUAL "ninja-NOTFOUND"
             OR CYGWIN # for me it's not working atm
         )
             set(generator ${CMAKE_GENERATOR})
@@ -2465,16 +2561,14 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
                     -DSIZEOF_VOID_P=${SIZEOF_VOID_P}
             )
         endif()
+
+        file(WRITE ${aliases_file} "${aliases}")
+        execute_process(
+            COMMAND cppan internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
+        )
     endif()
 
     file(LOCK ${lock} RELEASE)
-endif()
-
-if (NOT EXISTS ${import_fixed})
-    file(WRITE ${aliases_file} "${aliases}")
-    execute_process(
-        COMMAND cppan internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
-    )
 endif()
 )");
     ctx.addLine("if (NOT TARGET " + pi.target_name + ")");
@@ -2496,7 +2590,7 @@ endif()
             if (dep.flags[pfHeaderOnly] || dep.flags[pfIncludeDirectories])
                 continue;
 
-            auto b = get_storage_dir_obj() / dep.package.toString() / dep.version.toString();
+            auto b = dep.getPackageDirHash(get_storage_dir_obj());
             auto p = b / "build" / "${config}" / "exports" / (pi.variable_name + "-fixed.cmake");
 
             ctx2.addLine("include(\"" + normalize_path(b / exports_filename) + "\")");
@@ -2518,7 +2612,7 @@ endif()
     // src target
     {
         auto target = pi.target_name + "-sources";
-        auto dir = get_storage_dir_src() / d.package.toString() / d.version.toString();
+        auto dir = d.getPackageDir(get_storage_dir_src());
 
         ctx.addLine("if (CPPAN_SHOW_IDE_PROJECTS)");
         ctx.addLine();
@@ -2647,9 +2741,9 @@ void Config::print_meta_config_file() const
     // deps
     {
         if (local_build)
-            print_dependencies(ctx, *this, get_storage_dir_src());
+            print_dependencies(ctx, *this);
         else
-            print_dependencies(ctx, *this, get_storage_dir_obj());
+            print_dependencies(ctx, *this, true);
 
         // turn off header guards
         Context ctx2;
@@ -2740,8 +2834,16 @@ include(TestBigEndian))");
 
     config_section_title(ctx, "common checks");
 
+    // read vars file
+    ctx.addLine("set(vars_file \"" + normalize_path(get_storage_dir_cfg()) + "/${config}.cmake\")");
+    ctx.addLine("read_variables_file(${vars_file})");
+    ctx.addLine();
+
     ctx.addLine("if (NOT DEFINED WORDS_BIGENDIAN)");
+    ctx.increaseIndent();
     ctx.addLine("test_big_endian(WORDS_BIGENDIAN)");
+    ctx.addLine("add_variable(WORDS_BIGENDIAN)");
+    ctx.decreaseIndent();
     ctx.addLine("endif()");
     // aliases
     ctx.addLine("set(BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
@@ -2783,17 +2885,31 @@ include(TestBigEndian))");
     auto add_checks = [&ctx](const auto &a, const String &s, auto &&f)
     {
         for (auto &v : a)
-            ctx.addLine(s + "(\"" + v + "\" " + f(v) + ")");
+        {
+            auto val = f(v);
+            ctx.addLine("if (NOT DEFINED " + val + ")");
+            ctx.increaseIndent();
+            ctx.addLine(s + "(\"" + v + "\" " + val + ")");
+            ctx.addLine("add_variable(" + val + ")");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+        }
         ctx.emptyLines(1);
     };
     auto add_symbol_checks = [&ctx](const auto &a, const String &s, auto &&f)
     {
         for (auto &v : a)
         {
+            auto val = f(v.first);
+            ctx.addLine("if (NOT DEFINED " + val + ")");
+            ctx.increaseIndent();
             ctx << s + "(\"" + v.first + "\" \"";
             for (auto &h : v.second)
                 ctx << h << ";";
-            ctx << "\" " << f(v.first) << ")" << Context::eol;
+            ctx << "\" " << val << ")" << Context::eol;
+            ctx.addLine("add_variable(" + val + ")");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
         }
         ctx.emptyLines(1);
     };
@@ -2843,6 +2959,11 @@ include(TestBigEndian))");
         ctx.addLine("endif()");
         ctx.addLine();
     }
+
+    // write vars file
+    ctx.addLine("if (CPPAN_NEW_VARIABLE_ADDED)");
+    ctx.addLine("    write_variables_file(${vars_file})");
+    ctx.addLine("endif()");
 
     // fixups
     // put bug workarounds here
@@ -3035,7 +3156,7 @@ set_target_properties(run-cppan PROPERTIES
             if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
                 continue;
 
-            ctx.addLine("set(current_dir " + normalize_path(get_storage_dir_obj() / d.package.toString() / d.version.toString()) + ")");
+            ctx.addLine("set(current_dir " + normalize_path(d.getPackageDirHash(get_storage_dir_obj())) + ")");
             ctx.addLine("set(build_dir ${current_dir}/build/${config})");
             ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
             ctx.increaseIndent();
@@ -3044,7 +3165,7 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + pi.target_name + ">");
             ctx.addLine("-DCONFIG=$<CONFIG>");
             ctx.addLine("-DBUILD_DIR=${build_dir}");
-            ctx.addLine("-P " + normalize_path(get_storage_dir_obj() / d.package.toString() / d.version.toString()) + "/" + non_local_build_file);
+            ctx.addLine("-P " + normalize_path(d.getPackageDirHash(get_storage_dir_obj())) + "/" + non_local_build_file);
             ctx.decreaseIndent();
             ctx.decreaseIndent();
             ctx.addLine(")");
@@ -3119,6 +3240,11 @@ PackagesDirType packages_dir_type_from_string(const String &s, const String &key
 path Config::get_storage_dir_bin() const
 {
     return get_storage_dir(storage_dir_type) / "bin";
+}
+
+path Config::get_storage_dir_cfg() const
+{
+    return get_storage_dir(storage_dir_type) / "cfg";
 }
 
 path Config::get_storage_dir_lib() const

@@ -40,7 +40,9 @@ struct Dependency
     Version version;
     ProjectFlags flags;
 
-    path getPackageDir(path base) const { return base / package.toString() / version.toString(); }
+    path getPackageDir(const path &base) const;
+    path getPackageDirHash(const path &base) const;
+    String getPackageDirHash() const;
     bool empty() const { return package.empty() || !version.isValid(); }
     bool operator<(const Dependency &rhs) const { return std::tie(package, version) < std::tie(rhs.package, rhs.version); }
 };

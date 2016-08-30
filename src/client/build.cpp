@@ -33,14 +33,14 @@
 
 std::vector<std::string> extract_comments(const std::string &s);
 
-Config generate_config(const path &fn, bool silent = true)
+Config generate_config(const path &fn, bool silent = true, bool rebuild = false)
 {
     Config conf;
 
     if (!fs::exists(fn))
         throw std::runtime_error("File or directory does not exist: " + fn.string());
 
-    auto read_from_cpp = [&conf, &silent](const path &fn)
+    auto read_from_cpp = [&conf, &silent, &rebuild](const path &fn)
     {
         auto s = read_file(fn);
         auto comments = extract_comments(s);
@@ -68,6 +68,7 @@ Config generate_config(const path &fn, bool silent = true)
 
         if (!silent)
             conf.build_settings.silent = false;
+        conf.build_settings.rebuild = rebuild;
         conf.prepare_build(fn, comments.size() > (size_t)i ? comments[i] : "");
     };
 
@@ -99,9 +100,9 @@ int generate(const path &fn)
     return conf.generate();
 }
 
-int build(const path &fn)
+int build(const path &fn, bool rebuild)
 {
-    auto conf = generate_config(fn);
+    auto conf = generate_config(fn, true, rebuild);
     if (conf.generate())
         return 1;
     return conf.build();

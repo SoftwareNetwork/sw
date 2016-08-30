@@ -175,6 +175,7 @@ struct BuildSettings
         true
 #endif
         ;
+    bool rebuild = false;
 
     // own data
     bool is_dir = false;
@@ -231,6 +232,10 @@ struct Config
     void download_dependencies();
     void create_build_files() const;
 
+    void clean_cmake_cache(path p) const;
+    void clean_vars_cache(path p) const;
+    void clean_cmake_exports(path p) const;
+
     void prepare_build(path fn, const String &cppan);
     int generate() const;
     int build() const;
@@ -248,6 +253,7 @@ struct Config
 
     path get_storage_dir(PackagesDirType type) const;
     path get_storage_dir_bin() const;
+    path get_storage_dir_cfg() const;
     path get_storage_dir_lib() const;
     path get_storage_dir_obj() const;
     path get_storage_dir_src() const;
