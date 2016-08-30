@@ -673,6 +673,24 @@ PackageInfo::PackageInfo(const Dependency &d)
 
 void Project::findSources(path p)
 {
+    // try to auto choose root_directory
+    {
+        std::vector<path> pfiles;
+        std::vector<path> pdirs;
+        for (auto &pi : boost::make_iterator_range(fs::directory_iterator(p), {}))
+        {
+            auto f = pi.path().filename().string();
+            if (f == CPPAN_FILENAME)
+                continue;
+            if (fs::is_regular_file(pi))
+                pfiles.push_back(pi);
+            else if (fs::is_directory(pi))
+                pdirs.push_back(pi);
+        }
+        if (pfiles.empty() && pdirs.size() == 1 && root_directory.empty())
+            root_directory = fs::relative(*pdirs.begin(), p);
+    }
+
     p /= root_directory;
 
     if (import_from_bazel)
