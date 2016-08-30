@@ -2971,8 +2971,8 @@ include(TestBigEndian))");
     {
         ctx.addLine("if (" + convert_type(v) + ")");
         ctx.increaseIndent();
-        ctx.addLine("set(" + convert_type(v, "SIZE_OF_") + " ${" + convert_type(v) + "})");
-        ctx.addLine("set(" + convert_type(v, "SIZEOF_")  + " ${" + convert_type(v) + "})");
+        ctx.addLine("set(" + convert_type(v, "SIZE_OF_") + " ${" + convert_type(v) + "} CACHE STRING \"\")");
+        ctx.addLine("set(" + convert_type(v, "SIZEOF_")  + " ${" + convert_type(v) + "} CACHE STRING \"\")");
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         ctx.addLine();
