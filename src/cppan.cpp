@@ -1713,13 +1713,6 @@ void Config::prepare_build(path fn, const String &cppan)
     ctx.addLine("project(" + build_settings.filename_without_ext + " C CXX)");
     ctx.addLine();
 
-    config_section_title(ctx, "CPPAN include");
-    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
-    if (build_settings.use_shared_libs)
-        ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS 1)");
-    ctx.addLine("add_subdirectory(cppan)");
-    ctx.addLine();
-
     config_section_title(ctx, "compiler & linker settings");
     ctx.addLine(R"(# Output directory settings
 set(output_dir ${CMAKE_BINARY_DIR}/bin)
@@ -1764,6 +1757,14 @@ endif()
         ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS_" + cfg + " \"${CMAKE_STATIC_LINKER_FLAGS_" + cfg + "} " + build_settings.link_flags_conf[i] + "\")");
         ctx.addLine();
     }
+
+    // should be after flags
+    config_section_title(ctx, "CPPAN include");
+    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
+    if (build_settings.use_shared_libs)
+        ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS 1)");
+    ctx.addLine("add_subdirectory(cppan)");
+    ctx.addLine();
 
     // add GLOB later
     config_section_title(ctx, "sources");
