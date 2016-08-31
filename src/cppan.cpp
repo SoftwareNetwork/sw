@@ -88,6 +88,8 @@ const String cmake_object_config_filename = "generate.cmake";
 const String cmake_helpers_filename = "helpers.cmake";
 const String cmake_functions_filename = "functions.cmake";
 const String cppan_dummy_target = "cppan-dummy";
+const String cppan_helpers_target = "cppan-helpers";
+const String cppan_helpers_private_target = "cppan-helpers-private";
 const String exports_dir = "${CMAKE_BINARY_DIR}/exports/";
 const String non_local_build_file = "build.cmake";
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
@@ -2177,9 +2179,9 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     // deps (direct)
     ctx.addLine("target_link_libraries         (" + pi.target_name);
     ctx.increaseIndent();
-    ctx.addLine((!header_only ? "PUBLIC" : "INTERFACE") + String(" cppan-helpers"));
+    ctx.addLine((!header_only ? "PUBLIC" : "INTERFACE") + String(" ") + cppan_helpers_target);
     if (!header_only)
-        ctx.addLine("PRIVATE" + String(" cppan-helpers-private"));
+        ctx.addLine("PRIVATE" + String(" ") + cppan_helpers_private_target);
     for (auto &d1 : dd)
     {
         if (d1.second.flags[pfExecutable] ||
@@ -2918,23 +2920,39 @@ void Config::print_meta_config_file() const
     const String cppan_project_name = "cppan";
     config_section_title(ctx, "main library");
     ctx.addLine("add_library                   (" + cppan_project_name + " INTERFACE)");
-    auto dd = getDirectDependencies();
-    if (!dd.empty())
+    ctx.addLine("target_link_libraries         (" + cppan_project_name);
+    ctx.increaseIndent();
+    ctx.addLine("INTERFACE " + cppan_helpers_target);
+    for (auto &p : getDirectDependencies())
     {
-        ctx.addLine("target_link_libraries         (" + cppan_project_name);
-        ctx.increaseIndent();
-        for (auto &p : dd)
-        {
-            if (p.second.flags[pfExecutable])
-                continue;
-            PackageInfo pi(p.second);
-            ctx.addLine("INTERFACE " + pi.target_name);
-        }
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        ctx.addLine();
+        if (p.second.flags[pfExecutable])
+            continue;
+        PackageInfo pi(p.second);
+        ctx.addLine("INTERFACE " + pi.target_name);
     }
+    ctx.decreaseIndent();
+    ctx.addLine(")");
+    ctx.addLine();
     ctx.addLine("export(TARGETS " + cppan_project_name + " FILE " + exports_dir + "cppan.cmake)");
+
+    // exe deps
+    if (!local_build)
+    {
+        config_section_title(ctx, "exe deps");
+
+        auto dd = getDirectDependencies();
+        if (!internal_options.current_package.empty())
+            dd = internal_options.current_package.getDirectDependencies();
+
+        for (auto &dp : dd)
+        {
+            auto &d = dp.second;
+            PackageInfo pi(d);
+            if (!d.flags[pfExecutable])
+                continue;
+            ctx.addLine("add_dependencies(" + pi.target_name + " " + cppan_project_name + ")");
+        }
+    }
 
     ctx.emptyLines(1);
     ctx.addLine(config_delimeter);
@@ -3084,7 +3102,7 @@ include(TestBigEndian))");
         };
         ctx.addLine("if (" + s + ")");
         ctx.increaseIndent();
-        ctx << "target_compile_definitions(cppan-helpers" << Context::eol;
+        ctx << "target_compile_definitions(" << cppan_helpers_target << Context::eol;
         ctx.increaseIndent();
         print_def(s);
         using expand_type = int[];
@@ -3155,12 +3173,12 @@ include(TestBigEndian))");
     {
         config_section_title(ctx, "helper interface library");
 
-        ctx.addLine("add_library(cppan-helpers INTERFACE)");
-        ctx.addLine("add_dependencies(cppan-helpers " + cppan_dummy_target + ")");
+        ctx.addLine("add_library(" + cppan_helpers_target + " INTERFACE)");
+        ctx.addLine("add_dependencies(" + cppan_helpers_target + " " + cppan_dummy_target + ")");
         ctx.addLine();
 
         // common include directories
-        ctx.addLine("target_include_directories(cppan-helpers");
+        ctx.addLine("target_include_directories(" + cppan_helpers_target);
         ctx.increaseIndent();
         ctx.addLine("INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}");
         ctx.decreaseIndent();
@@ -3168,7 +3186,7 @@ include(TestBigEndian))");
         ctx.addLine();
 
         // common definitions
-        ctx.addLine("target_compile_definitions(cppan-helpers");
+        ctx.addLine("target_compile_definitions(" + cppan_helpers_target);
         ctx.increaseIndent();
         ctx.addLine("INTERFACE CPPAN"); // build is performed under CPPAN
         ctx.addLine("INTERFACE CPPAN_BUILD"); // build is performed under CPPAN
@@ -3181,19 +3199,19 @@ include(TestBigEndian))");
 
         // common link libraries
         ctx.addLine(R"(if (WIN32)
-target_link_libraries(cppan-helpers
+target_link_libraries()" + cppan_helpers_target + R"(
     INTERFACE Ws2_32
 )
 else()
     find_library(pthread pthread)
     if (NOT ${pthread} STREQUAL "pthread-NOTFOUND")
-        target_link_libraries(cppan-helpers
+        target_link_libraries()" + cppan_helpers_target + R"(
             INTERFACE pthread
         )
     endif()
     find_library(rt rt)
     if (NOT ${rt} STREQUAL "rt-NOTFOUND")
-        target_link_libraries(cppan-helpers
+        target_link_libraries()" + cppan_helpers_target + R"(
             INTERFACE rt
         )
     endif()
@@ -3202,7 +3220,7 @@ endif()
         ctx.addLine();
 
         // Do not use APPEND here. It's the first file that will clear cppan.cmake.
-        ctx.addLine("export(TARGETS cppan-helpers FILE " + exports_dir + "cppan-helpers.cmake)");
+        ctx.addLine("export(TARGETS " + cppan_helpers_target + " FILE " + exports_dir + cppan_helpers_target + ".cmake)");
         ctx.emptyLines(1);
     }
 
@@ -3210,16 +3228,16 @@ endif()
     {
         config_section_title(ctx, "private helper interface library");
 
-        ctx.addLine("add_library(cppan-helpers-private INTERFACE)");
-        ctx.addLine("add_dependencies(cppan-helpers-private " + cppan_dummy_target + ")");
+        ctx.addLine("add_library(" + cppan_helpers_private_target + " INTERFACE)");
+        ctx.addLine("add_dependencies(" + cppan_helpers_private_target + " " + cppan_dummy_target + ")");
         ctx.addLine();
 
         // msvc
         ctx.addLine(R"(if (MSVC)
-target_compile_definitions(cppan-helpers-private
+target_compile_definitions()" + cppan_helpers_private_target + R"(
     INTERFACE _CRT_SECURE_NO_WARNINGS # disable warning about non-standard functions
 )
-target_compile_options(cppan-helpers-private
+target_compile_options()" + cppan_helpers_private_target + R"(
     INTERFACE /wd4005 # macro redefinition
     INTERFACE /wd4996 # The POSIX name for this item is deprecated.
 )
@@ -3227,7 +3245,7 @@ endif()
 )");
 
         // Do not use APPEND here. It's the first file that will clear cppan.cmake.
-        ctx.addLine("export(TARGETS cppan-helpers-private FILE " + exports_dir + "cppan-helpers-private.cmake)");
+        ctx.addLine("export(TARGETS " + cppan_helpers_private_target + " FILE " + exports_dir + cppan_helpers_private_target + ".cmake)");
         ctx.emptyLines(1);
     }
 
@@ -3236,7 +3254,7 @@ endif()
 
     Context local;
     bool has_defs = false;
-    local << "target_compile_definitions(cppan-helpers" << Context::eol;
+    local << "target_compile_definitions(" << cppan_helpers_target << Context::eol;
     local.increaseIndent();
     for (auto &o : global_options)
     {
@@ -3279,7 +3297,7 @@ add_custom_target(run-cppan
         ${PROJECT_SOURCE_DIR}/cppan/)" + cmake_functions_filename + R"(
         ${PROJECT_SOURCE_DIR}/cppan/)" + cmake_helpers_filename + R"(
 )
-add_dependencies(cppan-helpers run-cppan)
+add_dependencies()" + cppan_helpers_target + R"( run-cppan)
 set_target_properties(run-cppan PROPERTIES
     FOLDER "cppan/service"
 ))");
@@ -3338,7 +3356,7 @@ set_target_properties(run-cppan PROPERTIES
             ctx.decreaseIndent();
             ctx.addLine(")");
             //if (d.flags[pfExecutable])
-            //    ctx.addLine("add_dependencies(" + pi.target_name + " " + cppan_dummy_target + ")");
+            //    ctx.addLine("add_dependencies(" + pi.target_name + " " + cppan_helpers_target + ")");
             ctx.addLine();
         }
 
