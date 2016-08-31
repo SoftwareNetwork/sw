@@ -2217,15 +2217,18 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
 
     // options (defs etc.)
     {
-        // pkg
-        ctx.addLine("target_compile_definitions    (" + pi.target_name);
-        ctx.increaseIndent();
-        ctx.addLine("PRIVATE   PACKAGE=\"" + d.package.toString() + "\"");
-        ctx.addLine("PRIVATE   PACKAGE_NAME=\"" + d.package.toString() + "\"");
-        ctx.addLine("PRIVATE   PACKAGE_VERSION=\"" + d.version.toString() + "\"");
-        ctx.addLine("PRIVATE   PACKAGE_STRING=\"" + pi.target_name + "\"");
-        ctx.decreaseIndent();
-        ctx.addLine(")");
+        if (!header_only)
+        {
+            // pkg
+            ctx.addLine("target_compile_definitions    (" + pi.target_name);
+            ctx.increaseIndent();
+            ctx.addLine("PRIVATE   PACKAGE=\"" + d.package.toString() + "\"");
+            ctx.addLine("PRIVATE   PACKAGE_NAME=\"" + d.package.toString() + "\"");
+            ctx.addLine("PRIVATE   PACKAGE_VERSION=\"" + d.version.toString() + "\"");
+            ctx.addLine("PRIVATE   PACKAGE_STRING=\"" + pi.target_name + "\"");
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+        }
 
         // export/import
         ctx.addLine("if (LIBRARY_TYPE STREQUAL \"SHARED\")");
@@ -2256,7 +2259,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         ctx.addLine("endif()");
         ctx.addLine();
 
-        if (!d.flags[pfExecutable])
+        if (!d.flags[pfExecutable] && !header_only)
         {
             ctx.addLine(R"(set_target_properties(${this} PROPERTIES
     INSTALL_RPATH .
