@@ -541,7 +541,8 @@ void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, c
         {
             String s;
             auto dir = base_dir;
-            if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectories])
+            if (p.second.flags[pfHeaderOnly] ||
+                p.second.flags[pfIncludeDirectories])
             {
                 dir = c.get_storage_dir_src();
                 s = p.second.getPackageDir(dir).string();
@@ -549,6 +550,11 @@ void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, c
             else if (obj_dir)
             {
                 s = p.second.getPackageDirHash(dir).string();
+            }
+            else
+            {
+                dir = c.get_storage_dir_src();
+                s = p.second.getPackageDir(dir).string();
             }
 
             if (p.second.flags[pfIncludeDirectories])
@@ -2197,7 +2203,17 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
 
     // options (defs etc.)
     {
+        // pkg
+        ctx.addLine("target_compile_definitions    (" + pi.target_name);
+        ctx.increaseIndent();
+        ctx.addLine("PRIVATE   PACKAGE=\"" + d.package.toString() + "\"");
+        ctx.addLine("PRIVATE   PACKAGE_NAME=\"" + d.package.toString() + "\"");
+        ctx.addLine("PRIVATE   PACKAGE_VERSION=\"" + d.version.toString() + "\"");
+        ctx.addLine("PRIVATE   PACKAGE_STRING=\"" + pi.target_name + "\"");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
 
+        // export/import
         ctx.addLine("if (LIBRARY_TYPE STREQUAL \"SHARED\")");
         ctx.increaseIndent();
         ctx.addLine("target_compile_definitions    (" + pi.target_name);

@@ -271,4 +271,15 @@ function(write_variables_file f)
     file(LOCK ${lock} RELEASE)
 endfunction(write_variables_file)
 
+########################################
+# FUNCTION set_c_sources_as_cpp
+########################################
+
+function(set_c_sources_as_cpp)
+    if (MSVC)
+        file(GLOB_RECURSE csrc "*.c")
+        set_source_files_properties(${csrc} PROPERTIES LANGUAGE CXX)
+    endif()
+endfunction(set_c_sources_as_cpp)
+
 ################################################################################
