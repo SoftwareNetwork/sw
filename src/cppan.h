@@ -167,6 +167,10 @@ struct BuildSettings
     String type{ "executable" };
     String library_type;
     String executable_type;
+
+    std::map<String, String> env;
+    std::vector<String> cmake_options;
+
     bool use_shared_libs = false;
     bool silent =
 #ifdef _WIN32

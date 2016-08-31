@@ -852,12 +852,20 @@ void Project::save_dependencies(yaml &node) const
 
 void BuildSettings::load(const yaml &root)
 {
+    if (root.IsNull())
+        return;
+
     // extract
+    EXTRACT_AUTO(cmake_options);
     EXTRACT_AUTO(c_compiler);
     EXTRACT_AUTO(cxx_compiler);
     EXTRACT_AUTO(compiler);
     EXTRACT_AUTO(c_compiler_flags);
+    if (c_compiler_flags.empty())
+        EXTRACT_VAR(root, c_compiler_flags, "c_flags", String);
     EXTRACT_AUTO(cxx_compiler_flags);
+    if (cxx_compiler_flags.empty())
+        EXTRACT_VAR(root, cxx_compiler_flags, "cxx_flags", String);
     EXTRACT_AUTO(compiler_flags);
     EXTRACT_AUTO(link_flags);
     EXTRACT_AUTO(link_libraries);
@@ -879,6 +887,9 @@ void BuildSettings::load(const yaml &root)
         EXTRACT_VAR(root, compiler_flags_conf[i], "compiler_flags_" + t, String);
         EXTRACT_VAR(root, link_flags_conf[i], "link_flags_" + t, String);
     }
+
+    cmake_options = get_sequence<String>(root["cmake_options"]);
+    get_string_map(root, "env", env);
 
     // process
     if (c_compiler.empty())
@@ -1001,7 +1012,12 @@ void Config::load(const yaml &root, const path &p)
         if (!ls.IsMap())
             throw std::runtime_error("'local_settings' should be a map");
         load_common(ls);
-        build_settings.load(ls["build"]);
+
+        // read build settings
+        if (ls["builds"].IsDefined() && ls["current_build"].IsDefined())
+            build_settings.load(ls["builds"][ls["current_build"].template as<String>()]);
+        else if (ls["build"].IsDefined())
+            build_settings.load(ls["build"]);
     }
 
     // version
@@ -1836,6 +1852,16 @@ int Config::generate() const
     if (!build_settings.toolset.empty())
         args.push_back("-T " + build_settings.toolset + "");
     args.push_back("-DCMAKE_BUILD_TYPE=" + build_settings.configuration + "");
+    for (auto &o : build_settings.cmake_options)
+        args.push_back(o);
+    for (auto &o : build_settings.env)
+    {
+#ifdef _WIN32
+        _putenv_s(o.first.c_str(), o.second.c_str());
+#else
+        setenv(o.first.c_str(), o.second.c_str(), 1);
+#endif
+    }
     auto ret = system(args);
     if (!build_settings.silent)
     {
