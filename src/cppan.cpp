@@ -534,29 +534,36 @@ void print_dependencies(Context &ctx, const Config &c, const Dependencies &dd, c
     if (obj_dir)
         base_dir = c.get_storage_dir_obj();
 
-    config_section_title(ctx, "direct dependencies");
-    for (auto &p : dd)
+    auto print_deps = [&](const auto &dd, const String &prefix = "")
     {
-        String s;
-        auto dir = base_dir;
-        if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectories])
+        config_section_title(ctx, prefix + "direct dependencies");
+        for (auto &p : dd)
         {
-            dir = c.get_storage_dir_src();
-            s = p.second.getPackageDir(dir).string();
-        }
-        else if (obj_dir)
-        {
-            s = p.second.getPackageDirHash(dir).string();
-        }
+            String s;
+            auto dir = base_dir;
+            if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectories])
+            {
+                dir = c.get_storage_dir_src();
+                s = p.second.getPackageDir(dir).string();
+            }
+            else if (obj_dir)
+            {
+                s = p.second.getPackageDirHash(dir).string();
+            }
 
-        if (p.second.flags[pfIncludeDirectories])
-            ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
-        else if (c.local_build || p.second.flags[pfHeaderOnly])
-            add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
-        else
-            includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
-    }
-    ctx.addLine();
+            if (p.second.flags[pfIncludeDirectories])
+                ;// ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
+            else if (c.local_build || p.second.flags[pfHeaderOnly])
+                add_subdirectory(ctx, s, get_binary_path(p.second.package, p.second.version));
+            else
+            {
+                includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
+            }
+        }
+        ctx.addLine();
+    };
+    print_deps(dd);
+    //print_deps(id, "in");
 
     if (!includes.empty())
     {
@@ -1866,12 +1873,21 @@ void Config::print_configs()
         auto version_dir = d.getPackageDir(get_storage_dir_src());
 
         auto c = getConfig(d, get_storage_dir_src());
+
+        // steps that should be performed even if printed
+        String include_quard;
+        {
+            PackageInfo pi(d);
+            include_quard = include_guard_prefix + pi.variable_name;
+            include_guards.insert(include_quard);
+        }
+
         if (c->printed)
             continue;
         c->printed = true;
 
         c->print_package_config_file(version_dir / cmake_config_filename, d, *this);
-        c->print_package_include_file(version_dir / cmake_config_filename, d, *this);
+        c->print_package_include_file(version_dir / cmake_config_filename, d, include_quard);
 
         if (d.flags[pfHeaderOnly] || local_build)
             continue;
@@ -2312,11 +2328,13 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         config_section_title(ctx, "IDE dummy target for headers");
 
         auto tgt = pi.target_name + "-headers";
+        ctx.addLine("if (CPPAN_SHOW_IDE_PROJECTS)");
         ctx.addLine("add_custom_target(" + tgt + " SOURCES ${src})");
         ctx.addLine();
         ctx << "set_target_properties         (" << tgt << " PROPERTIES" << Context::eol;
         ctx << "    FOLDER \"" + packages_folder + "/" << d.package.toString() << "/" << d.version.toString() << "\"" << Context::eol;
         ctx << ")" << Context::eol;
+        ctx.addLine("endif()");
         ctx.emptyLines(1);
     }
 
@@ -2343,7 +2361,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     write_file_if_different(config_file.parent_path() / actions_filename, ctx.getText());
 }
 
-void Config::print_package_include_file(const path &config_file, const DownloadDependency &d, Config &parent) const
+void Config::print_package_include_file(const path &config_file, const DownloadDependency &d, const String &ig) const
 {
     PackageInfo pi(d);
 
@@ -2354,9 +2372,6 @@ void Config::print_package_include_file(const path &config_file, const DownloadD
     ctx.addLine("# version: " + d.version.toString());
     ctx.addLine("#");
     ctx.addLine();
-
-    auto ig = include_guard_prefix + pi.variable_name;
-    parent.include_guards.insert(ig);
 
     ctx.addLine("if (" + ig + ")");
     ctx.addLine("    return()");
@@ -2614,19 +2629,25 @@ endif()
             auto &dep = dp.second;
             PackageInfo pi(dep);
 
-            if (dep.flags[pfHeaderOnly] || dep.flags[pfIncludeDirectories])
+            if (dep.flags[pfIncludeDirectories])
                 continue;
 
             auto b = dep.getPackageDirHash(get_storage_dir_obj());
             auto p = b / "build" / "${config}" / "exports" / (pi.variable_name + "-fixed.cmake");
 
-            ctx2.addLine("include(\"" + normalize_path(b / exports_filename) + "\")");
+            if (!dep.flags[pfHeaderOnly])
+                ctx2.addLine("include(\"" + normalize_path(b / exports_filename) + "\")");
             ctx2.addLine("if (NOT TARGET " + pi.target_name + ")");
             ctx2.increaseIndent();
-            ctx2.addLine("if (NOT EXISTS \"" + normalize_path(p) + "\")");
-            ctx2.addLine("    include(\"" + normalize_path(b / cmake_object_config_filename) + "\")");
-            ctx2.addLine("endif()");
-            ctx2.addLine("include(\"" + normalize_path(p) + "\")");
+            if (dep.flags[pfHeaderOnly])
+                add_subdirectory(ctx, dep.getPackageDir(get_storage_dir_src()).string());
+            else
+            {
+                ctx2.addLine("if (NOT EXISTS \"" + normalize_path(p) + "\")");
+                ctx2.addLine("    include(\"" + normalize_path(b / cmake_object_config_filename) + "\")");
+                ctx2.addLine("endif()");
+                ctx2.addLine("include(\"" + normalize_path(p) + "\")");
+            }
             ctx2.decreaseIndent();
             ctx2.addLine("endif()");
             ctx2.addLine();
@@ -3035,6 +3056,7 @@ include(TestBigEndian))");
         ctx.addLine("target_compile_definitions(cppan-helpers");
         ctx.increaseIndent();
         ctx.addLine("INTERFACE CPPAN"); // build is performed under CPPAN
+        ctx.addLine("INTERFACE CPPAN_BUILD"); // build is performed under CPPAN
         ctx.addLine("INTERFACE CPPAN_CONFIG=\"${config}\"");
         ctx.addLine("INTERFACE CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
         ctx.addLine("INTERFACE CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");

@@ -214,21 +214,21 @@ endfunction(add_variable)
 ########################################
 
 function(read_variables_file f)
+    if (NOT EXISTS ${f})
+        return()
+    endif()
+    
     set(lock ${f}.lock)
     file(LOCK ${lock} RESULT_VARIABLE lock_result)
     if (NOT ${lock_result} EQUAL 0)
         message(FATAL_ERROR "Lock error: ${lock_result}")
     endif()
 
-    if (NOT EXISTS ${f})
-        file(LOCK ${lock} RELEASE)
-        return()
-    endif()
-
     file(STRINGS ${f} vars)
+    file(LOCK ${lock} RELEASE)
+    
     list(LENGTH vars N)
     if (N EQUAL 0)
-        file(LOCK ${lock} RELEASE)
         return()
     endif()
     math(EXPR N "${N}-1")
@@ -244,8 +244,6 @@ function(read_variables_file f)
         set(CPPAN_VARIABLES_KEYS ${CPPAN_VARIABLES_KEYS} PARENT_SCOPE)
         set(CPPAN_VARIABLES_VALUES ${CPPAN_VARIABLES_VALUES} PARENT_SCOPE)
     endforeach()
-
-    file(LOCK ${lock} RELEASE)
 endfunction(read_variables_file)
 
 ########################################
