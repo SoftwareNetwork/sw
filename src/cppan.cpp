@@ -103,6 +103,7 @@ const String cppan_export_prefix = "CPPAN_API_";
 const String cppan_local_build_prefix = "cppan-build-";
 
 const std::vector<String> cmake_configuration_types = { "DEBUG", "MINSIZEREL", "RELEASE", "RELWITHDEBINFO" };
+const std::vector<String> cmake_configuration_types_no_rel = { "DEBUG", "MINSIZEREL", "RELWITHDEBINFO" };
 
 using ConfigPtr = std::shared_ptr<Config>;
 std::map<Dependency, ConfigPtr> config_store;
@@ -2098,6 +2099,17 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         else
             ctx << "add_library                   (" << pi.target_name << " ${LIBRARY_TYPE} ${src})" << Context::eol;
     }
+    ctx.addLine();
+
+    // local aliases
+    ctx.addLine("set(target " + pi.target_name + ")");
+    ctx.addLine("set(this " + pi.target_name + ")");
+    ctx.addLine();
+
+    //if (d.flags[pfExecutable])
+    //{
+        //ctx.addLine("add_dependencies(${this} " + cppan_dummy_target + ")");
+    //}
 
     // include directories
     {
@@ -2240,6 +2252,7 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         ctx.addLine(")");
         ctx.decreaseIndent();
         ctx.addLine("endif()");
+        ctx.addLine();
 
         if (!d.flags[pfExecutable])
         {
@@ -2248,6 +2261,29 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
     BUILD_WITH_INSTALL_RPATH True
 ))");
         }
+        ctx.addLine();
+
+        /*if (d.flags[pfExecutable])
+        {
+            ctx.addLine("if (MSVC OR XCODE)");
+            ctx.increaseIndent();
+            for (auto &c : {"Debug","MinSizeRel","RelWithDebInfo"})
+            {
+                ctx.addLine("add_custom_command(TARGET ${this} POST_BUILD");
+                ctx.increaseIndent();
+                ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+                ctx.increaseIndent();
+                ctx.addLine("$<TARGET_FILE:${this}>");
+                ctx.addLine("$<TARGET_FILE_DIR:${this}>/../" + String(c) + "/$<TARGET_FILE_NAME:${this}>");
+                ctx.decreaseIndent();
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+                ctx.addLine();
+            }
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+            ctx.addLine();
+        }*/
 
         for (auto &ol : p.options)
         {
@@ -2310,12 +2346,6 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         }
         ctx.emptyLines(1);
     }
-
-    ctx.addLine("set(lib " + pi.target_name + ")");
-    ctx.addLine("set(target " + pi.target_name + ")");
-    ctx.addLine("set(this " + pi.target_name + ")");
-
-    ctx.emptyLines(1);
 
     print_bs_insertion("post target", &BuildSystemConfigInsertions::post_target);
 
@@ -2449,7 +2479,16 @@ void Config::print_object_config_file(const path &config_file, const DownloadDep
         ctx.addLine("set(CMAKE_RUNTIME_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_bin()) + "/${OUTPUT_DIR})");
         ctx.addLine("set(CMAKE_LIBRARY_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_lib()) + "/${OUTPUT_DIR})");
         ctx.addLine("set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY " + normalize_path(get_storage_dir_lib()) + "/${OUTPUT_DIR})");
-        ctx.emptyLines(1);
+        ctx.addLine();
+
+        /*if (d.flags[pfExecutable])
+        {
+            ctx.addLine("if (MSVC OR XCODE)");
+            for (auto &c : cmake_configuration_types_no_rel)
+                ctx.addLine("set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_" + c + " ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Release)");
+            ctx.addLine("endif()");
+            ctx.addLine();
+        }*/
     }
 
     config_section_title(ctx, "project settings");
@@ -2581,7 +2620,10 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
         ctx.addLine();
     }
     ctx.addLine("set(current_dir " + normalize_path(config_file.parent_path()) + ")");
-    ctx.addLine("get_configuration(config)");
+    if (!d.flags[pfExecutable])
+        ctx.addLine("get_configuration(config)");
+    else
+        ctx.addLine("get_configuration_exe(config)");
     ctx.addLine("set(build_dir ${current_dir}/build/${config})");
     ctx.addLine("set(export_dir ${build_dir}/exports)");
     ctx.addLine("set(import ${export_dir}/" + pi.variable_name + ".cmake)");
@@ -2619,7 +2661,24 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
         )
             set(generator ${CMAKE_GENERATOR})
         endif()
-
+)");
+    if (d.flags[pfExecutable])
+    {
+        ctx.addLine(R"(
+            execute_process(
+                COMMAND ${CMAKE_COMMAND}
+                    -H${current_dir} -B${build_dir}
+                    #-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                    #-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                    #-G "${generator}"
+                    -DOUTPUT_DIR=${config}
+                    -DCPPAN_BUILD_SHARED_LIBS=0 # TODO: try to work 0->1
+            )
+)");
+    }
+    else
+    {
+        ctx.addLine(R"(
         if (CMAKE_TOOLCHAIN_FILE)
             execute_process(
                 COMMAND ${CMAKE_COMMAND}
@@ -2629,8 +2688,6 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
                     -G "${generator}"
                     -DOUTPUT_DIR=${config}
                     -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
-                    -DWORDS_BIGENDIAN=${WORDS_BIGENDIAN}
-                    -DSIZEOF_VOID_P=${SIZEOF_VOID_P}
             )
         else()
             execute_process(
@@ -2641,11 +2698,11 @@ void Config::print_object_include_config_file(const path &config_file, const Dow
                     -G "${generator}"
                     -DOUTPUT_DIR=${config}
                     -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
-                    -DWORDS_BIGENDIAN=${WORDS_BIGENDIAN}
-                    -DSIZEOF_VOID_P=${SIZEOF_VOID_P}
             )
         endif()
-
+)");
+    }
+    ctx.addLine(R"(
         file(WRITE ${aliases_file} "${aliases}")
         execute_process(
             COMMAND cppan internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
@@ -2773,11 +2830,26 @@ endif()
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${fn1} ${fn2})
 
 if (CONFIG)
+)");
+    if (d.flags[pfExecutable])
+    {
+        ctx2.addLine(R"(
+    execute_process(
+        COMMAND ${CMAKE_COMMAND}
+            --build ${BUILD_DIR}
+            --config ${CONFIG}#Release # FIXME: always build exe with Release conf
+    ))");
+    }
+    else
+    {
+        ctx2.addLine(R"(
     execute_process(
         COMMAND ${CMAKE_COMMAND}
             --build ${BUILD_DIR}
             --config ${CONFIG}
-    )
+    ))");
+    }
+    ctx2.addLine(R"(
 else()
     find_program(make make)
     if (${make} STREQUAL "make-NOTFOUND")
@@ -3060,7 +3132,7 @@ include(TestBigEndian))");
     //config_section_title(ctx, "fixups");
     ctx.emptyLines(1);
 
-    // dummy compiled target
+    // dummy (compiled?) target
     {
         config_section_title(ctx, "dummy compiled target");
         ctx.addLine("# this target will be always built before any other");
@@ -3068,6 +3140,7 @@ include(TestBigEndian))");
         ctx.addLine("    set(f ${CMAKE_CURRENT_BINARY_DIR}/cppan_dummy.cpp)");
         ctx.addLine("    file_write_once(${f} \"void __cppan_dummy() {}\")");
         ctx.addLine("    add_library(" + cppan_dummy_target + " ${f})");
+        //ctx.addLine("    export(TARGETS " + cppan_dummy_target + " FILE " + exports_dir + cppan_dummy_target + ".cmake)");
         ctx.addLine("elseif(MSVC)");
         ctx.addLine("    add_custom_target(" + cppan_dummy_target + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
         ctx.addLine("else()");
@@ -3247,6 +3320,10 @@ set_target_properties(run-cppan PROPERTIES
             if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
                 continue;
 
+            if (!d.flags[pfExecutable])
+                ctx.addLine("get_configuration(config)");
+            else
+                ctx.addLine("get_configuration_exe(config)");
             ctx.addLine("set(current_dir " + normalize_path(d.getPackageDirHash(get_storage_dir_obj())) + ")");
             ctx.addLine("set(build_dir ${current_dir}/build/${config})");
             ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
@@ -3260,6 +3337,8 @@ set_target_properties(run-cppan PROPERTIES
             ctx.decreaseIndent();
             ctx.decreaseIndent();
             ctx.addLine(")");
+            //if (d.flags[pfExecutable])
+            //    ctx.addLine("add_dependencies(" + pi.target_name + " " + cppan_dummy_target + ")");
             ctx.addLine();
         }
 

@@ -177,6 +177,16 @@ function(get_configuration out)
 endfunction(get_configuration)
 
 ########################################
+# FUNCTION get_configuration_exe
+########################################
+
+function(get_configuration_exe out)
+    set(config ${CMAKE_HOST_SYSTEM_PROCESSOR})
+    string(TOLOWER ${config} config)
+    set(${out} ${config} PARENT_SCOPE)
+endfunction(get_configuration_exe)
+
+########################################
 # FUNCTION get_number_of_cores
 ########################################
 
