@@ -2159,8 +2159,13 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         ctx.increaseIndent();
         ctx.addLine("target_compile_definitions    (" + pi.target_name);
         ctx.increaseIndent();
-        ctx.addLine("PRIVATE   " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
-        ctx.addLine("INTERFACE " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_IMPORT"));
+        if (!header_only)
+        {
+            ctx.addLine("PRIVATE   " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
+            ctx.addLine("INTERFACE " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_IMPORT"));
+        }
+        else
+            ctx.addLine("INTERFACE " + cppan_export_prefix + pi.variable_name + (d.flags[pfExecutable] ? "" : "="));
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.decreaseIndent();
@@ -2168,7 +2173,10 @@ void Config::print_package_config_file(const path &config_file, const DownloadDe
         ctx.increaseIndent();
         ctx.addLine("target_compile_definitions    (" + pi.target_name);
         ctx.increaseIndent();
-        ctx.addLine("PUBLIC    " + cppan_export_prefix + pi.variable_name + "=");
+        if (!header_only)
+            ctx.addLine("PUBLIC    " + cppan_export_prefix + pi.variable_name + "=");
+        else
+            ctx.addLine("INTERFACE    " + cppan_export_prefix + pi.variable_name + "=");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.decreaseIndent();
