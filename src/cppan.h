@@ -30,17 +30,14 @@
 #include <map>
 #include <set>
 
-#include <yaml-cpp/yaml.h>
-
 #include "common.h"
+#include "context.h"
 #include "dependency.h"
 #include "filesystem.h"
+#include "project.h"
 #include "project_path.h"
 #include "property_tree.h"
-
-#define DEPENDENCIES_NODE "dependencies"
-
-using yaml = YAML::Node;
+#include "yaml.h"
 
 path get_home_directory();
 path get_root_directory();
@@ -55,84 +52,6 @@ struct PackageInfo
     PackageInfo() {}
     PackageInfo(const Dependency &d);
 };
-
-using Definitions = std::multimap<String, String>;
-using Sources = std::set<String>;
-using StringSet = std::set<String>;
-using Symbols = std::map<String, StringSet>;
-
-struct IncludeDirectories
-{
-    Files public_;
-    Files private_;
-
-    bool empty() const
-    {
-        return public_.empty() && private_.empty();
-    }
-};
-
-struct BuildSystemConfigInsertions
-{
-    String pre_sources;
-    String post_sources;
-    String post_target;
-    String post_alias;
-
-    void get_config_insertions(const yaml &n);
-};
-
-struct Options
-{
-    Definitions definitions;
-    BuildSystemConfigInsertions bs_insertions;
-    StringSet include_directories;
-    StringSet link_directories;
-    StringSet link_libraries;
-    StringSet global_definitions;
-};
-
-struct Project
-{
-    Source source;
-    ProjectPath package;
-    String license;
-    IncludeDirectories include_directories;
-    Sources sources;
-    Sources build_files;
-    Dependencies dependencies;
-    Files exclude_from_build;
-    BuildSystemConfigInsertions bs_insertions;
-    std::map<String, Options> options;
-    StringSet aliases;
-    bool import_from_bazel = false;
-
-    // no files to compile
-    bool header_only = false;
-
-    // no files (cmake only etc.)
-    bool empty = false;
-
-    // library type
-    bool shared_only = false;
-    bool static_only = false;
-
-    // files to include into archive
-    Files files;
-
-    // this file
-    String cppan_filename;
-
-    // root_directory where all files is stored
-    path root_directory;
-
-    void findSources(path p);
-    bool writeArchive(const String &filename) const;
-
-    void save_dependencies(yaml &root) const;
-};
-
-using Projects = std::map<String, Project>;
 
 PackagesDirType packages_dir_type_from_string(const String &s, const String &key);
 
@@ -234,7 +153,6 @@ struct Config
 
     void process();
     void download_dependencies();
-    void create_build_files() const;
 
     void clean_cmake_cache(path p) const;
     void clean_vars_cache(path p) const;
@@ -246,10 +164,7 @@ struct Config
 
     Projects &getProjects() { return projects; }
     Project &getDefaultProject();
-    const Project *getProject(const String &p) const;
-
-    static Source load_source(const yaml &root);
-    static void save_source(yaml &root, const Source &source);
+    const Project &getProject(const String &p) const;
 
     Dependencies getDirectDependencies() const; // from server
     Dependencies getIndirectDependencies() const; // from server
@@ -258,6 +173,7 @@ struct Config
     path get_storage_dir(PackagesDirType type) const;
     path get_storage_dir_bin() const;
     path get_storage_dir_cfg() const;
+    path get_storage_dir_etc() const;
     path get_storage_dir_lib() const;
     path get_storage_dir_obj() const;
     path get_storage_dir_src() const;
@@ -273,23 +189,26 @@ private:
     Projects projects;
     mutable std::set<String> include_guards;
     path dir;
+    class AccessTable *access_table = nullptr;
 
     void load_common(const path &p);
     void load_common(const yaml &root);
-    Project load_project(const yaml &root, const String &name);
-    ProjectPath relative_name_to_absolute(const String &name);
 
     void print_meta_config_file() const;
+    void print_include_guards_file() const;
     void print_helper_file() const;
-    void print_package_config_file(const path &config_file, const DownloadDependency &d, Config &parent) const;
-    void print_package_include_file(const path &config_file, const DownloadDependency &d, const String &ig) const;
+    void print_package_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const;
+    void print_package_actions_file(const path &config_dir, const DownloadDependency &d) const;
+    void print_package_include_file(const path &config_dir, const DownloadDependency &d, const String &ig) const;
     void print_object_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const;
     void print_object_include_config_file(const path &config_file, const DownloadDependency &d) const;
+    void print_object_export_file(const path &config_dir, const DownloadDependency &d) const;
+    void print_object_build_file(const path &config_dir, const DownloadDependency &d) const;
+    void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
 
     void download_and_unpack(const String &data_url) const;
     void print_configs();
     void extractDependencies(const ptree &dependency_tree);
-    void process_response_file();
 
 public:
     struct InternalOptions

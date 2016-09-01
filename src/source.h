@@ -27,20 +27,49 @@
 
 #pragma once
 
-#include <boost/filesystem.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/range.hpp>
+#include "common.h"
 
-namespace fs = boost::filesystem;
-using path = fs::wpath;
+#include "yaml.h"
 
-namespace std
+#include <boost/variant.hpp>
+
+struct Git
 {
-    template<> struct hash<path>
+    String url;
+    String tag;
+    String branch;
+
+    bool empty() const { return url.empty(); }
+
+    bool isValid(String *error = nullptr) const
     {
-        size_t operator()(const path& p) const
+        if (empty())
         {
-            return boost::filesystem::hash_value(p);
+            if (error)
+                *error = "Git url is missing";
+            return false;
         }
-    };
-}
+        if (tag.empty() && branch.empty())
+        {
+            if (error)
+                *error = "No git sources (branch or tag) available";
+            return false;
+        }
+        if (!tag.empty() && !branch.empty())
+        {
+            if (error)
+                *error = "Only one git source (branch or tag) must be specified";
+            return false;
+        }
+        return true;
+    }
+};
+
+struct RemoteFile { String url; };
+
+// add svn, bzr, hg?
+// do not add local
+using Source = boost::variant<Git, RemoteFile>;
+
+Source load_source(const yaml &root);
+void save_source(yaml &root, const Source &source);

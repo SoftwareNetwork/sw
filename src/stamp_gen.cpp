@@ -25,22 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <iostream>
+#include <string>
+#include <time.h>
 
-#include <boost/filesystem.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/range.hpp>
-
-namespace fs = boost::filesystem;
-using path = fs::wpath;
-
-namespace std
+int main(int argc, char *argv)
 {
-    template<> struct hash<path>
-    {
-        size_t operator()(const path& p) const
-        {
-            return boost::filesystem::hash_value(p);
-        }
-    };
+    time_t v;
+    time(&v);
+    std::cout << "\"" << std::to_string(v) << "\"";
+
+    return 0;
 }

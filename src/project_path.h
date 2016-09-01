@@ -108,7 +108,7 @@ public:
         std::swap(tmp, *this);
         return *this;
     }
-    ProjectPath operator/(const String &e)
+    ProjectPath operator/(const String &e) const
     {
         if (e.empty())
             return *this;
@@ -116,7 +116,7 @@ public:
         tmp.path_elements.push_back(e);
         return tmp;
     }
-    ProjectPath operator/(const ProjectPath &e)
+    ProjectPath operator/(const ProjectPath &e) const
     {
         auto tmp = *this;
         tmp.path_elements.insert(tmp.path_elements.end(), e.path_elements.begin(), e.path_elements.end());

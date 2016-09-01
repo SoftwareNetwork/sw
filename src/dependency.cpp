@@ -27,6 +27,10 @@
 
 #include "dependency.h"
 
+#include "project.h"
+
+#include <iostream>
+
 Dependency extractFromString(const String &target)
 {
     ProjectPath p = target.substr(0, target.find('-'));
@@ -128,4 +132,23 @@ DownloadDependencies DownloadDependency::getDependencies() const
     }
 
     return download_deps;
+}
+
+Dependencies DownloadDependency::getDirectDependenciesFixed(const Project &p) const
+{
+    // fix deps flags (add local deps flags, they are not sent from server)
+    auto dd = getDirectDependencies();
+    for (auto &di : dd)
+    {
+        auto &dep = di.second;
+        auto i = p.dependencies.find(di.first);
+        if (i == p.dependencies.end())
+        {
+            std::cerr << "warning: dependency '" << di.first << "' is not found" << "\n";
+            continue;
+        }
+        // replace separate flags
+        dep.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
+    }
+    return dd;
 }

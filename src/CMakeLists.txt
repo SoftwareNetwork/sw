@@ -64,7 +64,13 @@ add_custom_target(inserts_gen
 )
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp PROPERTIES GENERATED TRUE)
 
+add_executable(stamp_gen stamp_gen.cpp)
+set(stamp ${CMAKE_CURRENT_BINARY_DIR}/stamp.h)
+set_source_files_properties(${stamp} PROPERTIES GENERATED True)
+
 set(common_src
+    access_table.cpp
+    access_table.h
     common.cpp
     common.h
     cppan.cpp
@@ -75,15 +81,25 @@ set(common_src
     enums.cpp
     enums.h
     property_tree.h
+    project.cpp
+    project.h
     project_path.cpp
     project_path.h
+    source.cpp
+    source.h
+    yaml.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
     inserts.cpp.in
     inserts.h
+    
+    ${stamp}
 )
 add_library(common ${common_src})
 add_dependencies(common inserts_gen)
+add_custom_command(TARGET common PRE_BUILD
+    COMMAND stamp_gen > ${stamp}
+)
 target_compile_definitions(common
     PRIVATE -DVERSION_MAJOR=${VERSION_MAJOR}
     PRIVATE -DVERSION_MINOR=${VERSION_MINOR}

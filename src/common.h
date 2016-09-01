@@ -36,7 +36,6 @@
 #include <vector>
 #include <unordered_set>
 
-#include <boost/variant.hpp>
 #include <openssl/evp.h>
 
 #include "enums.h"
@@ -163,44 +162,6 @@ struct Version
     bool operator==(const Version &rhs) const;
     bool operator!=(const Version &rhs) const;
 };
-
-struct Git
-{
-    String url;
-    String tag;
-    String branch;
-
-    bool empty() const { return url.empty(); }
-
-    bool isValid(String *error = nullptr) const
-    {
-        if (empty())
-        {
-            if (error)
-                *error = "Git url is missing";
-            return false;
-        }
-        if (tag.empty() && branch.empty())
-        {
-            if (error)
-                *error = "No git sources (branch or tag) available";
-            return false;
-        }
-        if (!tag.empty() && !branch.empty())
-        {
-            if (error)
-                *error = "Only one git source (branch or tag) must be specified";
-            return false;
-        }
-        return true;
-    }
-};
-
-struct RemoteFile { String url; };
-
-// add svn, bzr, hg?
-// do not add local
-using Source = boost::variant<Git, RemoteFile>;
 
 Version get_program_version();
 String get_program_version_string(const String &prog_name);

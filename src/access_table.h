@@ -27,20 +27,16 @@
 
 #pragma once
 
-#include <boost/filesystem.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/range.hpp>
+#include "common.h"
 
-namespace fs = boost::filesystem;
-using path = fs::wpath;
-
-namespace std
+class AccessTable
 {
-    template<> struct hash<path>
-    {
-        size_t operator()(const path& p) const
-        {
-            return boost::filesystem::hash_value(p);
-        }
-    };
-}
+public:
+    AccessTable(const path &root_dir);
+    ~AccessTable();
+
+    bool must_update_contents(const path &p) const;
+    void update_contents(const path &p, const String &s) const;
+    void write_if_older(const path &p, const String &s) const;
+    void clear() const;
+};

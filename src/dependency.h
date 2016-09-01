@@ -32,6 +32,8 @@
 
 #include <set>
 
+struct Project;
+
 struct Dependency
 {
     using Dependencies = std::map<String, Dependency>;
@@ -65,6 +67,8 @@ public:
     Dependencies getDirectDependencies() const;
     Dependencies getIndirectDependencies(const Dependencies &known_deps = Dependencies()) const;
     DownloadDependencies getDependencies() const;
+
+    Dependencies getDirectDependenciesFixed(const Project &p) const;
 
 private:
     void getIndirectDependencies(std::set<int> &deps) const;

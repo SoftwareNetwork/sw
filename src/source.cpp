@@ -25,22 +25,58 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "source.h"
 
-#include <boost/filesystem.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/range.hpp>
-
-namespace fs = boost::filesystem;
-using path = fs::wpath;
-
-namespace std
+Source load_source(const yaml &root)
 {
-    template<> struct hash<path>
+    Source source;
+    auto &src = root["source"];
+    if (!src.IsDefined())
+        return source;
+
+    auto error = "Only one source must be specified";
+
+    Git git;
+    EXTRACT_VAR(src, git.url, "git", String);
+    EXTRACT_VAR(src, git.branch, "branch", String);
+    EXTRACT_VAR(src, git.tag, "tag", String);
+
+    if (git.isValid())
     {
-        size_t operator()(const path& p) const
-        {
-            return boost::filesystem::hash_value(p);
-        }
-    };
+        if (src["file"].IsDefined())
+            throw std::runtime_error(error);
+        source = git;
+    }
+    else
+    {
+        RemoteFile rf;
+        EXTRACT_VAR(src, rf.url, "remote", String);
+
+        if (!rf.url.empty())
+            source = rf;
+        else
+            throw std::runtime_error(error);
+    }
+
+    return source;
+}
+
+void save_source(yaml &root, const Source &source)
+{
+    auto save_source = overload(
+        [&root](const Git &git)
+    {
+        root["source"]["git"] = git.url;
+        if (!git.tag.empty())
+            root["source"]["tag"] = git.tag;
+        if (!git.branch.empty())
+            root["source"]["branch"] = git.branch;
+    },
+        [&root](const RemoteFile &rf)
+    {
+        root["source"]["remote"] = rf.url;
+    }
+    );
+
+    boost::apply_visitor(save_source, source);
 }
