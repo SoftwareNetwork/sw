@@ -29,7 +29,7 @@
 #include <string>
 #include <time.h>
 
-int main(int argc, char *argv)
+int main()
 {
     time_t v;
     time(&v);

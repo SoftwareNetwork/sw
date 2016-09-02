@@ -188,11 +188,11 @@ void gather_build_deps(Context &ctx, const Packages &dd, Packages &out)
 void CMakePrinter::prepare_rebuild()
 {
     // remove stamp file to start rebuilding
-    for (auto &d : boost::make_iterator_range(fs::directory_iterator(d.getDirObj() / "build"), {}))
+    for (auto &dir : boost::make_iterator_range(fs::directory_iterator(d.getDirObj() / "build"), {}))
     {
-        if (!fs::is_directory(d))
+        if (!fs::is_directory(dir))
             continue;
-        for (auto &f : boost::make_iterator_range(fs::directory_iterator(d), {}))
+        for (auto &f : boost::make_iterator_range(fs::directory_iterator(dir), {}))
         {
             if (!fs::is_regular_file(f))
                 continue;
@@ -355,7 +355,7 @@ int CMakePrinter::generate() const
         if (fs::exists(sln))
             CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
 #else
-        bld_dir /= path(cppan_local_build_prefix + build_settings.filename);
+        bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + build_settings.filename);
         fs::create_directories(bld_dir);
         boost::system::error_code ec;
         fs::create_symlink(build_settings.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);

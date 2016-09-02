@@ -180,12 +180,12 @@ void ResponseData::download_and_unpack()
         path fn = version_dir.string() + ".tar.gz";
 
         String dl_md5;
-        DownloadData dd;
-        dd.url = package_url;
-        dd.fn = fn;
-        dd.dl_md5 = &dl_md5;
+        DownloadData ddata;
+        ddata.url = package_url;
+        ddata.fn = fn;
+        ddata.dl_md5 = &dl_md5;
         LOG_NO_NEWLINE("Downloading: " << d.ppath.toString() << "-" << d.version.toString() << "... ");
-        download_file(dd);
+        download_file(ddata);
 
         if (dl_md5 != d.md5)
         {
