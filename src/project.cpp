@@ -28,6 +28,7 @@
 #include "project.h"
 
 #include "bazel/bazel.h"
+#include "config.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -38,6 +39,8 @@
 #include <archive.h>
 #include <archive_entry.h>
 #endif
+
+#include <boost/algorithm/string.hpp>
 
 #include <regex>
 
@@ -190,18 +193,18 @@ void check_file_types(const Files &files, const path &root)
 
 ProjectPath relative_name_to_absolute(const ProjectPath &root_project, const String &name)
 {
-    ProjectPath package;
+    ProjectPath ppath;
     if (name.empty())
-        return package;
+        return ppath;
     if (ProjectPath(name).is_relative())
     {
         if (root_project.empty())
             throw std::runtime_error("You're using relative names, but 'root_project' is missing");
-        package = root_project / name;
+        ppath = root_project / name;
     }
     else
-        package = name;
-    return package;
+        ppath = name;
+    return ppath;
 }
 
 Project::Project(const ProjectPath &root_project)
@@ -236,8 +239,8 @@ void Project::findSources(path p)
         auto b = read_file(p / BAZEL_BUILD_FILE);
         auto f = bazel::parse(b);
         String project_name;
-        if (!package.empty())
-            project_name = package.back();
+        if (!ppath.empty())
+            project_name = ppath.back();
         auto files = f.getFiles(project_name);
         sources.insert(files.begin(), files.end());
         sources.insert(BAZEL_BUILD_FILE);
@@ -464,31 +467,31 @@ void Project::load(const yaml &root)
     {
         if (d.IsScalar())
         {
-            Dependency dependency;
-            dependency.package = relative_name_to_absolute(root_project, d.template as<String>());
-            deps[dependency.package.toString()] = dependency;
+            Package dependency;
+            dependency.ppath = relative_name_to_absolute(root_project, d.template as<String>());
+            deps[dependency.ppath.toString()] = dependency;
         }
         else if (d.IsMap())
         {
-            Dependency dependency;
+            Package dependency;
             if (d["name"].IsDefined())
-                dependency.package = relative_name_to_absolute(root_project, d["name"].template as<String>());
+                dependency.ppath = relative_name_to_absolute(root_project, d["name"].template as<String>());
             if (d["package"].IsDefined())
-                dependency.package = relative_name_to_absolute(root_project, d["package"].template as<String>());
+                dependency.ppath = relative_name_to_absolute(root_project, d["package"].template as<String>());
             if (d["version"].IsDefined())
                 dependency.version = d["version"].template as<String>();
             if (d[INCLUDE_DIRECTORIES_ONLY].IsDefined())
                 dependency.flags.set(pfIncludeDirectories, d[INCLUDE_DIRECTORIES_ONLY].template as<bool>());
-            deps[dependency.package.toString()] = dependency;
+            deps[dependency.ppath.toString()] = dependency;
         }
     };
 
     get_variety(root, DEPENDENCIES_NODE,
         [this](const auto &d)
     {
-        Dependency dependency;
-        dependency.package = relative_name_to_absolute(root_project, d.template as<String>());
-        dependencies[dependency.package.toString()] = dependency;
+        Package dependency;
+        dependency.ppath = relative_name_to_absolute(root_project, d.template as<String>());
+        dependencies[dependency.ppath.toString()] = dependency;
     },
         [this, &read_single_dep](const auto &dall)
     {
@@ -499,8 +502,8 @@ void Project::load(const yaml &root)
     {
         auto get_dep = [this](auto &deps, const auto &d)
         {
-            Dependency dependency;
-            dependency.package = relative_name_to_absolute(root_project, d.first.template as<String>());
+            Package dependency;
+            dependency.ppath = relative_name_to_absolute(root_project, d.first.template as<String>());
             if (d.second.IsScalar())
                 dependency.version = d.second.template as<String>();
             else if (d.second.IsMap())
@@ -526,10 +529,10 @@ void Project::load(const yaml &root)
             }
             else
                 throw std::runtime_error("Dependency should be a scalar or a map");
-            deps[dependency.package.toString()] = dependency;
+            deps[dependency.ppath.toString()] = dependency;
         };
 
-        Dependencies dependencies_private;
+        Packages dependencies_private;
 
         auto extract_deps = [&dall, this, &get_dep, &read_single_dep](const auto &str, auto &deps)
         {
@@ -610,4 +613,17 @@ void Project::load(const yaml &root)
     read_sources(build_files, "build");
 
     aliases = get_sequence_set<String>(root, "aliases");
+}
+
+void Project::prepareExports() const
+{
+    // very stupid algorithm
+    auto api = CPPAN_EXPORT_PREFIX + pkg.variable_name;
+
+    for (auto &f : files)
+    {
+        auto s = read_file(f, true);
+        boost::algorithm::replace_all(s, CPPAN_EXPORT, api);
+        write_file(f, s);
+    }
 }

@@ -31,47 +31,25 @@
 
 #include <iostream>
 
-Dependency extractFromString(const String &target)
+Packages DownloadDependency::getDirectDependencies() const
 {
-    ProjectPath p = target.substr(0, target.find('-'));
-    Version v = target.substr(target.find('-') + 1);
-    return{ p,v };
-}
-
-path Dependency::getPackageDir(const path &base) const
-{
-    return base / package.toString() / version.toString();
-}
-
-path Dependency::getPackageDirHash(const path &base) const
-{
-    return base / getPackageDirHash();
-}
-
-String Dependency::getPackageDirHash() const
-{
-    return sha1(package.toString() + "/" + version.toString()).substr(0, 10);
-}
-
-Dependencies DownloadDependency::getDirectDependencies() const
-{
-    Dependencies deps;
+    Packages deps;
     for (auto d : dependencies)
     {
         auto &dep = (*map_ptr)[d];
-        deps[dep.package.toString()] = dep;
+        deps[dep.ppath.toString()] = dep;
     }
-    deps.erase(package.toString()); // erase self
+    deps.erase(ppath.toString()); // erase self
     return deps;
 }
 
-Dependencies DownloadDependency::getIndirectDependencies(const Dependencies &known_deps) const
+Packages DownloadDependency::getIndirectDependencies(const Packages &known_deps) const
 {
-    Dependencies deps = known_deps;
+    Packages deps = known_deps;
     for (auto d : dependencies)
     {
         auto &dep = (*map_ptr)[d];
-        auto p = deps.insert({ dep.package.toString(), dep });
+        auto p = deps.insert({ dep.ppath.toString(), dep });
         if (p.second)
         {
             auto id = dep.getIndirectDependencies(deps);
@@ -87,7 +65,7 @@ Dependencies DownloadDependency::getIndirectDependencies(const Dependencies &kno
             deps.erase(d.first);
 
         // erase self
-        deps.erase(package.toString());
+        deps.erase(ppath.toString());
     }
     return deps;
 }
@@ -132,23 +110,4 @@ DownloadDependencies DownloadDependency::getDependencies() const
     }
 
     return download_deps;
-}
-
-Dependencies DownloadDependency::getDirectDependenciesFixed(const Project &p) const
-{
-    // fix deps flags (add local deps flags, they are not sent from server)
-    auto dd = getDirectDependencies();
-    for (auto &di : dd)
-    {
-        auto &dep = di.second;
-        auto i = p.dependencies.find(di.first);
-        if (i == p.dependencies.end())
-        {
-            std::cerr << "warning: dependency '" << di.first << "' is not found" << "\n";
-            continue;
-        }
-        // replace separate flags
-        dep.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
-    }
-    return dd;
 }

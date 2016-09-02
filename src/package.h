@@ -28,29 +28,27 @@
 #pragma once
 
 #include "common.h"
-#include "package.h"
+#include "project_path.h"
 
-#include <set>
-
-struct DownloadDependency : public Package
+struct Package
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    ProjectPath ppath;
+    Version version;
+    ProjectFlags flags;
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
+    path getDirSrc() const;
+    path getDirObj() const;
+    String getHash() const;
+    bool empty() const { return ppath.empty() || !version.isValid(); }
+    bool operator<(const Package &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
 
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
+    // misc data
+    String target_name;
+    String variable_name;
 
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
-
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
+    void createNames();
 };
 
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+using Packages = std::map<String, Package>;
+
+Package extractFromString(const String &target);

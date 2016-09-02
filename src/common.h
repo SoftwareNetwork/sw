@@ -40,8 +40,10 @@
 
 #include "enums.h"
 #include "filesystem.h"
+#include "property_tree.h"
 
 #define CONFIG_ROOT "/etc/cppan/"
+#define CPPAN_LOCAL_DIR "cppan"
 #define CPPAN_FILENAME "cppan.yml"
 
 using String = std::string;
@@ -61,14 +63,6 @@ bool check_org_name(const String &n, String *error = nullptr);
 bool check_project_name(const String &n, String *error = nullptr);
 bool check_branch_name(const String &n, String *error = nullptr);
 bool check_filename(const String &n, String *error = nullptr);
-
-String make_archive_name(const String &fn);
-
-path temp_directory_path();
-path get_temp_filename();
-
-path temp_script_path();
-path temp_script_filename();
 
 int system_no_output(const String &cmd);
 int system(const std::vector<String> &args);
@@ -111,13 +105,9 @@ private:
 };
 
 String url_post(const String &url, const String &data);
+ptree url_post(const String &url, const ptree &data);
 void download_file(DownloadData &data);
-
 Files unpack_file(const path &fn, const path &dst);
-
-String read_file(const path &p, bool no_size_check = false);
-void write_file(const path &p, const String &s);
-void write_file_if_different(const path &p, const String &s);
 
 String generate_random_sequence(uint32_t len);
 String hash_to_string(const uint8_t *hash, uint32_t hash_size);

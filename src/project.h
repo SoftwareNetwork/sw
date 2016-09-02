@@ -77,12 +77,12 @@ struct Project
 {
     // public data
     Source source;
-    ProjectPath package;
+    ProjectPath ppath;
     String license;
     IncludeDirectories include_directories;
     Sources sources;
     Sources build_files;
-    Dependencies dependencies;
+    Packages dependencies;
     Files exclude_from_build;
     BuildSystemConfigInsertions bs_insertions;
     std::map<String, Options> options;
@@ -105,13 +105,17 @@ struct Project
     // this file
     String cppan_filename;
 
-    // root_directory where all files is stored
+    // root_directory where all files are stored
     path root_directory;
+
+    // current package: ppath+version+flags
+    Package pkg;
 
     Project(const ProjectPath &root_project);
 
     void findSources(path p);
     bool writeArchive(const String &filename) const;
+    void prepareExports() const;
 
     void load(const yaml &root);
     void save_dependencies(yaml &root) const;

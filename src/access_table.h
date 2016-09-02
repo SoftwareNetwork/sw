@@ -32,11 +32,16 @@
 class AccessTable
 {
 public:
-    AccessTable(const path &root_dir);
+    AccessTable(const path &cfg_dir);
     ~AccessTable();
 
     bool must_update_contents(const path &p) const;
     void update_contents(const path &p, const String &s) const;
     void write_if_older(const path &p, const String &s) const;
     void clear() const;
+
+private:
+    path root_dir;
+
+    bool isUnderRoot(path p) const;
 };

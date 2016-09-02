@@ -28,29 +28,31 @@
 #pragma once
 
 #include "common.h"
-#include "package.h"
+#include "dependency.h"
+#include "property_tree.h"
 
-#include <set>
-
-struct DownloadDependency : public Package
+struct ResponseData
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    std::map<Package, std::unique_ptr<struct Config>> configs;
+    std::map<Package, Packages> dependencies;
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
-
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
-
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
+    void init(const String &host, const path &root_dir);
+    void download_dependencies(const Packages &d);
 
 private:
-    void getIndirectDependencies(std::set<int> &deps) const;
+    ptree request;
+    ptree dependency_tree;
+    DownloadDependencies download_dependencies_;
+    std::map<Package, int> dep_ids;
+    String host;
+    String data_url;
+    path root_dir;
+    bool executed = false;
+    bool initialized = false;
+
+    void extractDependencies();
+    void download_and_unpack();
+    void post_download();
 };
 
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+extern ResponseData rd;

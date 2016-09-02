@@ -73,27 +73,41 @@ set(common_src
     access_table.h
     common.cpp
     common.h
-    cppan.cpp
-    cppan.h
+    config.cpp
+    config.h
     dependency.cpp
     dependency.h
+    filesystem.cpp
     filesystem.h
     enums.cpp
     enums.h
+    log.cpp
+    log.h
+    package.cpp
+    package.h
     property_tree.h
     project.cpp
     project.h
     project_path.cpp
     project_path.h
+    response.cpp
+    response.h
     source.cpp
     source.h
     yaml.h
+    
+    printers/printer.cpp
+    printers/printer.h
+    printers/cmake.cpp
+    printers/cmake.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
     inserts.cpp.in
     inserts.h
     
     ${stamp}
+    
+    cppan.natvis
 )
 add_library(common ${common_src})
 add_dependencies(common inserts_gen)

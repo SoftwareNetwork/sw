@@ -32,28 +32,39 @@
 
 #include "common.h"
 #include "context.h"
-#include "dependency.h"
 #include "filesystem.h"
+#include "package.h"
 #include "project.h"
 #include "project_path.h"
 #include "property_tree.h"
 #include "yaml.h"
 
-path get_home_directory();
-path get_root_directory();
-path get_config_filename();
+#include "printers/printer.h"
 
-struct PackageInfo
+struct Directories
 {
-    String target_name;
-    String variable_name;
-    std::shared_ptr<Dependency> dependency;
+    path storage_dir;
+    path storage_dir_bin;
+    path storage_dir_cfg;
+    path storage_dir_etc;
+    path storage_dir_lib;
+    path storage_dir_obj;
+    path storage_dir_src;
+    path storage_dir_usr;
+    path build_dir;
 
-    PackageInfo() {}
-    PackageInfo(const Dependency &d);
+    PackagesDirType storage_dir_type;
+    PackagesDirType build_dir_type;
+
+    bool empty() const { return storage_dir.empty(); }
+
+    void set_storage_dir(const path &p);
+    void set_build_dir(const path &p);
 };
 
-PackagesDirType packages_dir_type_from_string(const String &s, const String &key);
+extern Directories directories;
+
+struct Config;
 
 struct BuildSettings
 {
@@ -91,13 +102,7 @@ struct BuildSettings
     std::vector<String> cmake_options;
 
     bool use_shared_libs = false;
-    bool silent =
-#ifdef _WIN32
-        false
-#else
-        true
-#endif
-        ;
+    bool silent = true;
     bool rebuild = false;
 
     // own data
@@ -106,11 +111,16 @@ struct BuildSettings
     String filename_without_ext;
     path source_directory;
     path binary_directory;
+    Config *c;
 
+    BuildSettings(Config *c);
+    
     void load(const yaml &root);
+    void prepare_build(path fn, const String &cppan);
+    void set_config(Config *config);
 };
 
-struct Config
+struct LocalSettings
 {
     // sys/user config settings
     String host{ "https://cppan.org/" };
@@ -124,13 +134,32 @@ struct Config
     bool add_run_cppan_target = false;
     BuildSettings build_settings;
 
+    // own data
+    Config *c;
+
+    LocalSettings(Config *c);
+
+    void load(const path &p);
+    void load(const yaml &root);
+    void set_config(Config *config);
+
+private:
+    void load_main(const yaml &root);
+};
+
+struct Config
+{
+    PrinterType printerType{PrinterType::CMake};
+
+    //
+    LocalSettings local_settings;
+
     // source (git, remote etc.)
     Version version;
     Source source;
 
     // projects settings
     ProjectPath root_project;
-
     StringSet check_functions;
     StringSet check_includes;
     StringSet check_types;
@@ -151,69 +180,38 @@ struct Config
     static Config load_user_config();
     void load_current_config();
 
-    void process();
-    void download_dependencies();
-
-    void clean_cmake_cache(path p) const;
-    void clean_vars_cache(path p) const;
-    void clean_cmake_exports(path p) const;
-
     void prepare_build(path fn, const String &cppan);
     int generate() const;
     int build() const;
 
+    void process(const path &p = path());
+    void post_download() const;
+
+    void clear_vars_cache(path p) const;
+
     Projects &getProjects() { return projects; }
-    Project &getDefaultProject();
-    const Project &getProject(const String &p) const;
+    Project &getDefaultProject() const;
+    Project &getProject(const String &p) const;
 
-    Dependencies getDirectDependencies() const; // from server
-    Dependencies getIndirectDependencies() const; // from server
-    Dependencies getDependencies() const; // from file
-
-    path get_storage_dir(PackagesDirType type) const;
-    path get_storage_dir_bin() const;
-    path get_storage_dir_cfg() const;
-    path get_storage_dir_etc() const;
-    path get_storage_dir_lib() const;
-    path get_storage_dir_obj() const;
-    path get_storage_dir_src() const;
-    path get_storage_dir_user_obj() const;
-
-    path get_build_dir(PackagesDirType type) const;
+    Packages getDependencies() const; // from file
 
 private:
-    bool printed = false;
-    bool disable_run_cppan_target = false;
-    ptree dependency_tree;
-    DownloadDependencies dependencies;
     Projects projects;
-    mutable std::set<String> include_guards;
     path dir;
-    class AccessTable *access_table = nullptr;
-
-    void load_common(const path &p);
-    void load_common(const yaml &root);
-
-    void print_meta_config_file() const;
-    void print_include_guards_file() const;
-    void print_helper_file() const;
-    void print_package_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const;
-    void print_package_actions_file(const path &config_dir, const DownloadDependency &d) const;
-    void print_package_include_file(const path &config_dir, const DownloadDependency &d, const String &ig) const;
-    void print_object_config_file(const path &config_file, const DownloadDependency &d, const Config &parent) const;
-    void print_object_include_config_file(const path &config_file, const DownloadDependency &d) const;
-    void print_object_export_file(const path &config_dir, const DownloadDependency &d) const;
-    void print_object_build_file(const path &config_dir, const DownloadDependency &d) const;
-    void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
-
-    void download_and_unpack(const String &data_url) const;
-    void print_configs();
-    void extractDependencies(const ptree &dependency_tree);
 
 public:
     struct InternalOptions
     {
-        DownloadDependency current_package;
-        std::set<Dependency> invocations;
+        Package current_package;
+        std::set<Package> invocations;
     } internal_options;
+
+    bool is_printed = false;
+    bool disable_run_cppan_target = false;
+
+    bool is_dependency = false;
+    bool downloaded = false;
+    Package pkg; // current package
 };
+
+

@@ -25,32 +25,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "dependency.h"
 
-#include "common.h"
-#include "package.h"
+#include "config.h"
 
-#include <set>
+#include <iostream>
 
-struct DownloadDependency : public Package
+Package extractFromString(const String &target)
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    ProjectPath p = target.substr(0, target.find('-'));
+    Version v = target.substr(target.find('-') + 1);
+    return{ p,v };
+}
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
+path Package::getDirSrc() const
+{
+    return directories.storage_dir_src / ppath.toString() / version.toString();
+}
 
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
+path Package::getDirObj() const
+{
+    return directories.storage_dir_obj / getHash();
+}
 
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
+String Package::getHash() const
+{
+    return sha1(ppath.toString() + "/" + version.toString()).substr(0, 10);
+}
 
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
-};
-
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+void Package::createNames()
+{
+    auto v = version.toAnyVersion();
+    target_name = ppath.toString() + (v == "*" ? "" : ("-" + v));
+    variable_name = ppath.toString() + "_" + (v == "*" ? "" : ("_" + v));
+    std::replace(variable_name.begin(), variable_name.end(), '.', '_');
+}

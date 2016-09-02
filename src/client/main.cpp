@@ -31,7 +31,9 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <cppan.h>
+#include <access_table.h>
+#include <config.h>
+#include <printers/cmake.h>
 
 #include "build.h"
 #include "fix_imports.h"
@@ -103,18 +105,18 @@ try
             return 1;
         return generate(argv[2]);
     }
-    else if (String(argv[1]) == "--clear-cmake-cache")
+    else if (String(argv[1]) == "--clear-cache")
     {
         // build mode
-        Config c;
-        c.clean_cmake_cache(argc > 2 ? argv[2] : "");
+        CMakePrinter c;
+        c.clear_cache(argc > 2 ? argv[2] : "");
         return 0;
     }
     else if (String(argv[1]) == "--clear-vars-cache")
     {
         // build mode
         Config c;
-        c.clean_vars_cache(argc > 2 ? argv[2] : "");
+        c.clear_vars_cache(argc > 2 ? argv[2] : "");
         return 0;
     }
 
@@ -145,7 +147,7 @@ try
 
     // setup curl settings if possible from config
     // other network users (options) should go below this line
-    httpSettings.proxy = c.proxy;
+    httpSettings.proxy = c.local_settings.proxy;
 
     // self-upgrade?
     if (options()["self-upgrade"].as<bool>())
@@ -158,7 +160,7 @@ try
     c.load_current_config();
 
     // update proxy settings?
-    httpSettings.proxy = c.proxy;
+    httpSettings.proxy = c.local_settings.proxy;
 
     if (options()["prepare-archive"].as<bool>())
     {
@@ -167,7 +169,7 @@ try
         {
 			auto &project = p.second;
             project.findSources(".");
-            String archive_name = make_archive_name(project.package.toString());
+            String archive_name = make_archive_name(project.ppath.toString());
             if (!project.writeArchive(archive_name))
                 throw std::runtime_error("Archive write failed");
         }
@@ -199,13 +201,13 @@ void self_upgrade(Config &c, const char *exe_path)
 #endif
 
     DownloadData dd;
-    dd.url = c.host + client + ".md5";
+    dd.url = c.local_settings.host + client + ".md5";
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     std::cout << "Downloading checksum file" << "\n";
     download_file(dd);
     auto md5 = boost::algorithm::trim_copy(read_file(dd.fn));
 
-    dd.url = c.host + client;
+    dd.url = c.local_settings.host + client;
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     String dl_md5;
     dd.dl_md5 = &dl_md5;
