@@ -4,7 +4,7 @@ notifications:
   email: false
   
 sudo: required
-dist: trusty
+#dist: trusty
 
 os:
   - linux
@@ -14,12 +14,12 @@ branches:
   only:
     - master
 
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    packages:
-    - gcc-5
+#addons:
+#  apt:
+#    sources:
+#    - ubuntu-toolchain-r-test
+#    packages:
+#   - gcc-5
 
 before_install:
   - if [[ $TRAVIS_OS_NAME == linux   ]]; then LINUX=true; fi
@@ -27,12 +27,13 @@ before_install:
   
 install:
   - if [[ $LINUX ]]; then sudo apt-get update; fi
-  - wget --no-check-certificate http://www.cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.sh
-  - sudo sh cmake-3.4.1-Linux-x86_64.sh --skip-license --prefix=/usr
-  - wget -O cppan.zip --no-check-certificate https://cppan.org/client/.service/cppan-master-Linux-client.zip
-  - unzip cppan.zip -d .
-  - sudo cp cppan /usr/bin
+  #- wget --no-check-certificate http://www.cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.sh
+  #- sudo sh cmake-3.4.1-Linux-x86_64.sh --skip-license --prefix=/usr
+  #- wget -O cppan.zip --no-check-certificate https://cppan.org/client/.service/cppan-master-Linux-client.zip
+  #- unzip cppan.zip -d .
+  #- sudo cp cppan /usr/bin
   - wget -O master.zip https://github.com/cppan/tests/archive/master.zip
+  - ls
   - unzip master.zip -d .
 
 script:
