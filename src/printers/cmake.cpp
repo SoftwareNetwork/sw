@@ -104,6 +104,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool local_build)
     {
         String s;
         auto dir = base_dir;
+        // do not "optimize" this condition
         if (p.second.flags[pfHeaderOnly] ||
             p.second.flags[pfIncludeDirectories])
         {
@@ -121,7 +122,11 @@ void print_dependencies(Context &ctx, const Packages &dd, bool local_build)
         }
 
         if (p.second.flags[pfIncludeDirectories])
-            ;// ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
+        {
+            // MUST be here!
+            // actions are executed from include_directories only projects
+            ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
+        }
         else if (local_build || p.second.flags[pfHeaderOnly])
         {
             ctx.addLine("# " + p.second.target_name);
@@ -188,7 +193,10 @@ void gather_build_deps(Context &ctx, const Packages &dd, Packages &out)
 void CMakePrinter::prepare_rebuild()
 {
     // remove stamp file to start rebuilding
-    for (auto &dir : boost::make_iterator_range(fs::directory_iterator(d.getDirObj() / "build"), {}))
+    auto odir = d.getDirObj() / "build";
+    if (!fs::exists(odir))
+        return;
+    for (auto &dir : boost::make_iterator_range(fs::directory_iterator(), {}))
     {
         if (!fs::is_directory(dir))
             continue;
