@@ -50,7 +50,8 @@ path Package::getDirObj() const
 
 String Package::getHash() const
 {
-    return sha1(ppath.toString() + "/" + version.toString()).substr(0, 10);
+    static const auto delim = "/";
+    return sha1(ppath.toString() + delim + version.toString()).substr(0, 10);
 }
 
 void Package::createNames()

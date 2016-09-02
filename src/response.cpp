@@ -86,12 +86,29 @@ void ResponseData::download_dependencies(const Packages &deps)
     download_and_unpack();
     post_download();
 
+    // add default (current, root) config
+    rd.dependencies[Package()] = deps;
+    for (auto &dd : download_dependencies_)
+    {
+        if (!dd.second.flags[pfDirectDependency])
+            continue;
+        auto &deps2 = rd.dependencies[Package()];
+        auto i = deps2.find(dd.second.ppath.toString());
+        if (i == deps2.end())
+            throw std::runtime_error("cannot match dependency");
+        auto &d = i->second;
+        d.version = dd.second.version;
+        d.flags |= dd.second.flags;
+        d.createNames();
+    }
+
     // last in functions
     executed = true;
 }
 
 void ResponseData::extractDependencies()
 {
+    LOG_NO_NEWLINE("Reading package specs... ");
     auto &remote_packages = dependency_tree.get_child("packages");
     for (auto &v : remote_packages)
     {
@@ -104,7 +121,9 @@ void ResponseData::extractDependencies()
         d.md5 = v.second.get<String>("md5");
         d.createNames();
         dep_ids[d] = id;
-        configs.emplace(d, std::make_unique<Config>(d.getDirSrc()));
+
+        if (fs::exists(d.getDirSrc()))
+            configs.emplace(d, std::make_unique<Config>(d.getDirSrc()));
 
         if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
         {
@@ -117,6 +136,7 @@ void ResponseData::extractDependencies()
         d.map_ptr = &download_dependencies_;
         download_dependencies_[id] = d;
     }
+    LOG("Ok");
 }
 
 void ResponseData::download_and_unpack()
@@ -182,8 +202,10 @@ void ResponseData::download_and_unpack()
             throw;
         }
         fs::remove(fn);
-        LOG("Ok");   
+        LOG("Ok");
 
+        if (configs.find(d) == configs.end())
+            configs.emplace(d, std::make_unique<Config>(d.getDirSrc()));
         configs[d]->downloaded = true;
     }
 }
@@ -207,7 +229,7 @@ void ResponseData::post_download()
             auto i = project.dependencies.find(d.ppath.toString());
             if (i == project.dependencies.end())
                 throw std::runtime_error("dependency '" + d.ppath.toString() + "' is not found");
-            d.flags |= i->second.flags;
+            d.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
             i->second.version = d.version;
             i->second.flags = d.flags;
             packages.emplace(d.ppath.toString(), d);

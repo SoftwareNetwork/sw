@@ -32,11 +32,12 @@ struct Printer
     Config *rc = nullptr; // root
     std::set<String> include_guards;
 
-    virtual void prepare_build(path fn, const String &cppan) = 0;
+    virtual void prepare_build(const path &fn, const String &cppan) = 0;
     virtual int generate() const = 0;
     virtual int build() const = 0;
 
     virtual void print() = 0;
+    virtual void print_meta() = 0;
 
     virtual void clear_cache(path p) const = 0;
     virtual void clear_exports(path p) const = 0;

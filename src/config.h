@@ -114,9 +114,9 @@ struct BuildSettings
     Config *c;
 
     BuildSettings(Config *c);
-    
+
     void load(const yaml &root);
-    void prepare_build(path fn, const String &cppan);
+    void prepare_build(const path &fn, const String &cppan);
     void set_config(Config *config);
 };
 

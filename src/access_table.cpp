@@ -73,7 +73,7 @@ struct AccessData
 
         boost::interprocess::file_lock lck(lock_file.string().c_str());
         lck.lock_sharable();
-        
+
         path p;
         time_t t;
         std::ifstream ifile(root_file.string());

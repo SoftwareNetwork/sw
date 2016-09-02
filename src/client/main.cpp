@@ -84,37 +84,14 @@ try
         return 0;
     }
 #endif
-    else if (String(argv[1]) == "--build")
-    {
-        // build mode
-        if (argc < 3)
-            return 1;
-        return build(argv[2]);
-    }
-    else if (String(argv[1]) == "--rebuild")
-    {
-        // build mode
-        if (argc < 3)
-            return 1;
-        return build(argv[2], true);
-    }
-    else if (String(argv[1]) == "--generate")
-    {
-        // build mode
-        if (argc < 3)
-            return 1;
-        return generate(argv[2]);
-    }
     else if (String(argv[1]) == "--clear-cache")
     {
-        // build mode
         CMakePrinter c;
         c.clear_cache(argc > 2 ? argv[2] : "");
         return 0;
     }
     else if (String(argv[1]) == "--clear-vars-cache")
     {
-        // build mode
         Config c;
         c.clear_vars_cache(argc > 2 ? argv[2] : "");
         return 0;
@@ -136,6 +113,13 @@ try
         std::cout << get_program_version_string("cppan") << "\n";
         return 0;
     }
+
+    if (options().count("build"))
+        return build(options["build"].as<String>());
+    else if (options().count("rebuild"))
+        return build(options["rebuild"].as<String>(), true);
+    else if (options().count("generate"))
+        return generate(options["generate"].as<String>());
 
     // set correct working directory to look for config file
     if (options().count("dir"))

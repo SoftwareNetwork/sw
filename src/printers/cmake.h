@@ -5,11 +5,12 @@
 
 struct CMakePrinter : Printer
 {
-    void prepare_build(path fn, const String &cppan) override;
+    void prepare_build(const path &fn, const String &cppan) override;
     int generate() const override;
     int build() const override;
 
     void print() override;
+    void print_meta() override;
 
     void clear_cache(path p) const override;
     void clear_exports(path p) const override;

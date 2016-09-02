@@ -362,7 +362,7 @@ void Project::save_dependencies(yaml &node) const
     {
         auto &d = dd.second;
         yaml n;
-        if (d.flags[pfPrivate])
+        if (d.flags[pfPrivateDependency])
             n = root["private"];
         else
             n = root["public"];
@@ -560,7 +560,7 @@ void Project::load(const yaml &root)
 
         for (auto &d : dependencies_private)
         {
-            d.second.flags.set(pfPrivate);
+            d.second.flags.set(pfPrivateDependency);
             dependencies.insert(d);
         }
 

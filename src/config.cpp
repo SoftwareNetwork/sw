@@ -168,10 +168,8 @@ void BuildSettings::load(const yaml &root)
     }
 }
 
-void BuildSettings::prepare_build(path fn, const String &cppan)
+void BuildSettings::prepare_build(const path &fn, const String &cppan)
 {
-    fn = fs::canonical(fs::absolute(fn));
-
     filename = fn.filename().string();
     filename_without_ext = fn.filename().stem().string();
     if (filename == CPPAN_FILENAME)
@@ -540,12 +538,16 @@ void Config::process(const path &p)
     LOG_NO_NEWLINE("Generating build configs... ");
 
     auto printer = Printer::create(printerType);
+    printer->access_table = access_table.get();
+
     printer->pc = this;
     printer->rc = this;
 
-    printer->access_table = access_table.get();
-    for (auto &cc : rd.configs)
-        printer->include_guards.insert(INCLUDE_GUARD_PREFIX + cc.first.variable_name);
+    if (pkg.empty())
+    {
+        for (auto &cc : rd.configs)
+            printer->include_guards.insert(INCLUDE_GUARD_PREFIX + cc.first.variable_name);
+    }
 
     for (auto &cc : rd.configs)
     {
@@ -579,6 +581,10 @@ void Config::process(const path &p)
 
         printer->print();
     }
+
+    printer->cc = this;
+    printer->d = pkg;
+    printer->print_meta();
 
     LOG("Ok");
 
@@ -628,7 +634,7 @@ Packages Config::getDependencies() const
         {
             // skip ill-formed deps
             if (d.second.ppath.is_relative())
-                continue;            
+                continue;
             dependencies.insert({ d.second.ppath.toString(), { d.second.ppath, d.second.version} });
         }
     }
@@ -637,6 +643,7 @@ Packages Config::getDependencies() const
 
 void Config::prepare_build(path fn, const String &cppan)
 {
+    fn = fs::canonical(fs::absolute(fn));
     local_settings.build_settings.prepare_build(fn, cppan);
 
     auto printer = Printer::create(printerType);

@@ -52,7 +52,21 @@ void config_section_title(Context &ctx, const String &t)
     ctx.emptyLines(1);
 }
 
-void CMakePrinter::prepare_build(path fn, const String &cppan)
+void file_title(Context &ctx, const Package &d)
+{
+    ctx.addLine("#");
+    ctx.addLine("# cppan");
+    ctx.addLine("# package: " + d.ppath.toString());
+    ctx.addLine("# version: " + d.version.toString());
+    ctx.addLine("#");
+    ctx.addLine("# source dir: " + normalize_path(d.getDirSrc().string()));
+    ctx.addLine("# binary dir: " + normalize_path(d.getDirObj().string()));
+    ctx.addLine("# package hash: " + d.getHash());
+    ctx.addLine("#");
+    ctx.addLine();
+}
+
+void CMakePrinter::prepare_build(const path &fn, const String &cppan)
 {
     auto &build_settings = rc->local_settings.build_settings;
     auto &p = rc->getDefaultProject();
@@ -179,17 +193,21 @@ void add_subdirectory(Context &ctx, const String &src, const String &bin = Strin
     ctx << add_subdirectory(src, bin) << Context::eol;
 }
 
-String get_binary_path(const ProjectPath &p, const Version &v)
+String get_binary_path(const Package &d)
 {
-    return "${CMAKE_BINARY_DIR}/cppan/" + sha1(p.toString() + " " + v.toString()).substr(0, 10);
+    return "${CMAKE_BINARY_DIR}/cppan/" + d.getHash();
 }
 
-void print_dependencies(Context &ctx, const Config &c, const Packages &dd, bool obj_dir = false)
+void print_dependencies(Context &ctx, const Packages &dd, bool local_build)
 {
     std::vector<String> includes;
 
     if (dd.empty())
         return;
+
+    bool obj_dir = true;
+    if (local_build)
+        obj_dir = false;
 
     auto base_dir = directories.storage_dir_src;
     if (obj_dir)
@@ -218,8 +236,11 @@ void print_dependencies(Context &ctx, const Config &c, const Packages &dd, bool 
 
         if (p.second.flags[pfIncludeDirectories])
             ;// ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
-        else if (c.local_settings.local_build || p.second.flags[pfHeaderOnly])
-            add_subdirectory(ctx, s, get_binary_path(p.second.ppath, p.second.version));
+        else if (local_build || p.second.flags[pfHeaderOnly])
+        {
+            ctx.addLine("# " + p.second.target_name);
+            add_subdirectory(ctx, s, get_binary_path(p.second));
+        }
         else
         {
             includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
@@ -284,58 +305,20 @@ void print_copy_deps(Context &ctx, const Packages &dd)
         ctx.addLine(")");
         ctx.addLine();
 
-        //auto i = config_store.find(d);
-        //if (i == config_store.end())
-        //    continue;
-        //print_copy_deps(ctx, i->second->getDefaultProject().dependencies);
+        print_copy_deps(ctx, rd.dependencies[d]);
     }
 }
 
-void print_build_deps(Context &ctx, const Packages &dd, const Config &c)
+void gather_build_deps(Context &ctx, const Packages &dd, Packages &out)
 {
     for (auto &dp : dd)
     {
         auto &d = dp.second;
-
         if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
             continue;
-
-        //if (target_cnd)
-        {
-            //ctx.addLine("if (TARGET " + pi.target_name + ")");
-            //ctx.increaseIndent();
-        }
-        if (!d.flags[pfExecutable])
-            ctx.addLine("get_configuration(config)");
-        else
-            ctx.addLine("get_configuration_exe(config)");
-        ctx.addLine("set(current_dir " + normalize_path(d.getDirObj()) + ")");
-        ctx.addLine("set(build_dir ${current_dir}/build/${config})");
-        ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
-        ctx.increaseIndent();
-        ctx.addLine("COMMAND ${CMAKE_COMMAND}");
-        ctx.increaseIndent();
-        ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + d.target_name + ">");
-        ctx.addLine("-DCONFIG=$<CONFIG>");
-        ctx.addLine("-DBUILD_DIR=${build_dir}");
-        ctx.addLine("-P " + normalize_path(d.getDirObj()) + "/" + non_local_build_file);
-        ctx.decreaseIndent();
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        //if (d.flags[pfExecutable])
-        //    ctx.addLine("add_dependencies(" + pi.target_name + " " + cppan_helpers_target + ")");
-        ctx.addLine();
-        //if (target_cnd)
-        {
-            //ctx.decreaseIndent();
-            //ctx.addLine("endif()");
-            //ctx.addLine();
-        }
-
-        //auto i = config_store.find(d);
-        //if (i == config_store.end())
-        //    continue;
-        //print_build_deps(ctx, i->second->getDefaultProject().dependencies, c);
+        auto i = out.insert(dp);
+        if (i.second)
+            gather_build_deps(ctx, rd.dependencies[d], out);
     }
 }
 
@@ -462,6 +445,10 @@ void CMakePrinter::clear_exports(path p) const
 void CMakePrinter::print()
 {
     print_configs();
+}
+
+void CMakePrinter::print_meta()
+{
     print_meta_config_file(fs::current_path() / CPPAN_LOCAL_DIR / cmake_config_filename);
     print_include_guards_file(fs::current_path() / CPPAN_LOCAL_DIR / include_guard_filename);
     print_helper_file(fs::current_path() / CPPAN_LOCAL_DIR / cmake_helpers_filename);
@@ -474,10 +461,7 @@ void CMakePrinter::print()
 void CMakePrinter::print_configs()
 {
     auto src_dir = d.getDirSrc();
-    auto obj_dir = d.getDirObj();
-
     fs::create_directories(src_dir);
-    fs::create_directories(obj_dir);
 
     print_package_config_file(src_dir / cmake_config_filename);
     print_package_actions_file(src_dir / actions_filename);
@@ -485,6 +469,9 @@ void CMakePrinter::print_configs()
 
     if (d.flags[pfHeaderOnly] || cc->local_settings.local_build)
         return;
+
+    auto obj_dir = d.getDirObj();
+    fs::create_directories(obj_dir);
 
     // print object config files for non-local building
     print_object_config_file(obj_dir / cmake_config_filename);
@@ -538,20 +525,10 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     const auto &dd = rd.dependencies[d];
 
     Context ctx;
-    ctx.addLine("#");
-    ctx.addLine("# cppan");
-    ctx.addLine("# package: " + d.ppath.toString());
-    ctx.addLine("# version: " + d.version.toString());
-    ctx.addLine("#");
-    ctx.addLine();
+    file_title(ctx, d);
 
-    // includes
-    {
-        if (pc->local_settings.local_build)
-            print_dependencies(ctx, *pc, rd.dependencies[pc->pkg]);
-        else
-            print_dependencies(ctx, *pc, rd.dependencies[pc->pkg], true);
-    }
+    // deps
+    print_dependencies(ctx, rd.dependencies[d], rc->local_settings.local_build);
 
     // settings
     {
@@ -714,7 +691,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             ctx.addLine("INTERFACE " + d1.second.target_name);
         else
         {
-            if (d1.second.flags[pfPrivate])
+            if (d1.second.flags[pfPrivateDependency])
                 ctx.addLine("PRIVATE " + d1.second.target_name);
             else
                 ctx.addLine("PUBLIC " + d1.second.target_name);
@@ -952,6 +929,7 @@ void CMakePrinter::print_package_actions_file(const path &fn) const
 
     const auto &p = cc->getProject(d.ppath.toString());
     Context ctx;
+    file_title(ctx, d);
     ctx.addLine(config_delimeter);
     ctx.addLine();
     ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR_OLD ${CMAKE_CURRENT_SOURCE_DIR})");
@@ -976,12 +954,7 @@ void CMakePrinter::print_package_include_file(const path &fn) const
     Context ctx;
     String ig = INCLUDE_GUARD_PREFIX + d.variable_name;
 
-    ctx.addLine("#");
-    ctx.addLine("# cppan");
-    ctx.addLine("# package: " + d.ppath.toString());
-    ctx.addLine("# version: " + d.version.toString());
-    ctx.addLine("#");
-    ctx.addLine();
+    file_title(ctx, d);
 
     ctx.addLine("if (" + ig + ")");
     ctx.addLine("    return()");
@@ -989,7 +962,7 @@ void CMakePrinter::print_package_include_file(const path &fn) const
     ctx.addLine();
     ctx.addLine("set(" + ig + " 1 CACHE BOOL \"\" FORCE)");
     ctx.addLine();
-    ctx.addLine("add_subdirectory(\"" + normalize_path(fn.parent_path().string()) + "\" \"" + get_binary_path(d.ppath, d.version) + "\")");
+    ctx.addLine("add_subdirectory(\"" + normalize_path(fn.parent_path().string()) + "\" \"" + get_binary_path(d) + "\")");
     ctx.addLine();
 
     access_table->write_if_older(fn, ctx.getText());
@@ -1004,12 +977,7 @@ void CMakePrinter::print_object_config_file(const path &fn) const
     auto obj_dir = d.getDirObj();
 
     Context ctx;
-    ctx.addLine("#");
-    ctx.addLine("# cppan");
-    ctx.addLine("# package: " + d.ppath.toString());
-    ctx.addLine("# version: " + d.version.toString());
-    ctx.addLine("#");
-    ctx.addLine();
+    file_title(ctx, d);
 
     {
         config_section_title(ctx, "cmake settings");
@@ -1083,6 +1051,7 @@ endif()
         fs::current_path(obj_dir);
 
         Config c(obj_dir);
+        c.pkg = d;
         c.internal_options.current_package = d;
         c.internal_options.invocations = pc->internal_options.invocations;
         c.internal_options.invocations.insert(d);
@@ -1098,10 +1067,10 @@ endif()
     {
         config_section_title(ctx, "main include");
         auto mi = src_dir;
-        add_subdirectory(ctx, mi.string(), get_binary_path(d.ppath, d.version));
+        add_subdirectory(ctx, mi.string(), get_binary_path(d));
         ctx.emptyLines(1);
         auto ig = INCLUDE_GUARD_PREFIX + d.variable_name;
-        ctx.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
+        //ctx.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
         ctx.emptyLines(1);
     }
 
@@ -1122,12 +1091,7 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
     const auto &dd = rd.dependencies[d];
 
     Context ctx;
-    ctx.addLine("#");
-    ctx.addLine("# cppan");
-    ctx.addLine("# package: " + d.ppath.toString());
-    ctx.addLine("# version: " + d.version.toString());
-    ctx.addLine("#");
-    ctx.addLine();
+    file_title(ctx, d);
 
     ctx.addLine("set(target " + d.target_name + ")");
     ctx.addLine();
@@ -1290,6 +1254,7 @@ void CMakePrinter::print_object_export_file(const path &fn) const
 
     const auto &dd = rd.dependencies[d];
     Context ctx;
+    file_title(ctx, d);
 
     for (auto &dp : dd)
     {
@@ -1329,11 +1294,10 @@ void CMakePrinter::print_object_build_file(const path &fn) const
 
     const auto &dd = rd.dependencies[d];
     Context ctx;
+    file_title(ctx, d);
 
     auto fn1 = normalize_path(directories.storage_dir_src / d.ppath.toString() / get_stamp_filename(d.version.toString()));
     ctx.addLine(R"(set(REBUILD 1)
-
-message("in build - ${BUILD_DIR}")
 
 set(fn1 ")" + fn1 + R"(")
 set(fn2 "${BUILD_DIR}/cppan_sources.stamp")
@@ -1440,17 +1404,13 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
 
     ctx.addLine("include(" + cmake_helpers_filename + ")");
-    ctx.addLine();
-
     // include guard before deps
     if (cc == rc)
         ctx.addLine("include(" + include_guard_filename + ")");
+    ctx.addLine();
 
     // deps
-    if (cc->local_settings.local_build)
-        print_dependencies(ctx, *cc, rd.dependencies[d]);
-    else
-        print_dependencies(ctx, *cc, rd.dependencies[d], true);
+    print_dependencies(ctx, rd.dependencies[d], cc->local_settings.local_build);
 
     // lib
     const String cppan_project_name = "cppan";
@@ -1461,7 +1421,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("INTERFACE " + cppan_helpers_target);
     for (auto &p : rd.dependencies[d])
     {
-        if (p.second.flags[pfExecutable])
+        if (p.second.flags[pfExecutable] || p.second.flags[pfIncludeDirectories])
             continue;
         ctx.addLine("INTERFACE " + p.second.target_name);
     }
@@ -1504,6 +1464,7 @@ void CMakePrinter::print_include_guards_file(const path &fn) const
 
     // turn off header guards
     Context ctx;
+    file_title(ctx, d);
     for (auto &ig : include_guards)
         ctx.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
     access_table->write_if_older(fn, ctx.getText());
@@ -1863,7 +1824,7 @@ set_target_properties(run-cppan PROPERTIES
         if (!cc->internal_options.current_package.empty())
             dd = rd.dependencies[cc->internal_options.current_package];
 
-        // pre
+        // pre - FIXME: remove???
         for (auto &dp : dd)
         {
             auto &d = dp.second;
@@ -1888,15 +1849,37 @@ set_target_properties(run-cppan PROPERTIES
             ctx.decreaseIndent();
             ctx.decreaseIndent();
             ctx.addLine(")");
-            //if (d.flags[pfExecutable])
-            //    ctx.addLine("add_dependencies(" + pi.target_name + " " + cppan_helpers_target + ")");
             ctx.addLine();
         }
 
         // deps
         ctx.addLine("if (NOT CPPAN_LOCAL_BUILD)");
         ctx.increaseIndent();
-        print_build_deps(ctx, dd, *cc);
+        Packages bdeps;
+        gather_build_deps(ctx, dd, bdeps);
+        for (auto &dp : bdeps)
+        {
+            auto &p = dp.second;
+            if (!p.flags[pfExecutable])
+                ctx.addLine("get_configuration(config)");
+            else
+                ctx.addLine("get_configuration_exe(config)");
+            ctx.addLine("set(current_dir " + normalize_path(p.getDirObj()) + ")");
+            ctx.addLine("set(build_dir ${current_dir}/build/${config})");
+            ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
+            ctx.increaseIndent();
+            ctx.addLine("COMMAND ${CMAKE_COMMAND}");
+            ctx.increaseIndent();
+            ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
+            ctx.addLine("-DCONFIG=$<CONFIG>");
+            ctx.addLine("-DBUILD_DIR=${build_dir}");
+            ctx.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
+            ctx.decreaseIndent();
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+            ctx.addLine();
+
+        }
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         ctx.addLine();
