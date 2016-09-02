@@ -497,7 +497,7 @@ Project &Config::getProject(const String &pname) const
 Project &Config::getDefaultProject() const
 {
     if (projects.empty())
-        std::runtime_error("Projects are emtpy");
+        throw std::runtime_error("Projects are empty");
     return (Project &)projects.begin()->second;
 }
 
