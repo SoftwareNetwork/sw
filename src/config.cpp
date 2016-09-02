@@ -186,18 +186,19 @@ void BuildSettings::prepare_build(const path &fn, const String &cppan)
     else
         source_directory /= sha1(normalize_path(fn.string())).substr(0, 10);
     binary_directory = source_directory / "build";
-    if (rebuild)
-    {
-        boost::system::error_code ec;
-        fs::remove_all(source_directory, ec);
-    }
-    fs::create_directories(source_directory);
 
     auto &p = c->getDefaultProject();
     if (!is_dir)
         p.sources.insert(filename);
     p.findSources(fn.parent_path());
     p.files.erase(CPPAN_FILENAME);
+
+    if (rebuild)
+    {
+        boost::system::error_code ec;
+        fs::remove_all(source_directory, ec);
+    }
+    fs::create_directories(source_directory);
 
     write_file_if_different(source_directory / CPPAN_FILENAME, cppan);
     Config conf(source_directory);
