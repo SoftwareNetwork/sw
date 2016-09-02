@@ -193,7 +193,7 @@ struct Config
     Project &getDefaultProject() const;
     Project &getProject(const String &p) const;
 
-    Packages getDependencies() const; // from file
+    Packages getFileDependencies() const; // from file
 
 private:
     Projects projects;

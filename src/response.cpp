@@ -33,13 +33,16 @@
 
 ResponseData rd;
 
-void ResponseData::init(const String &host, const path &root_dir)
+void ResponseData::init(Config *config, const String &host, const path &root_dir)
 {
     if (executed || initialized)
         return;
 
     this->host = host;
     this->root_dir = root_dir;
+
+    // add default (current, root) config
+    packages[Package()].config = config;
 
     initialized = true;
 }
@@ -87,12 +90,12 @@ void ResponseData::download_dependencies(const Packages &deps)
     post_download();
 
     // add default (current, root) config
-    rd.dependencies[Package()] = deps;
+    packages[Package()].dependencies = deps;
     for (auto &dd : download_dependencies_)
     {
         if (!dd.second.flags[pfDirectDependency])
             continue;
-        auto &deps2 = rd.dependencies[Package()];
+        auto &deps2 = packages[Package()].dependencies;
         auto i = deps2.find(dd.second.ppath.toString());
         if (i == deps2.end())
             throw std::runtime_error("cannot match dependency");
@@ -123,7 +126,10 @@ void ResponseData::extractDependencies()
         dep_ids[d] = id;
 
         if (fs::exists(d.getDirSrc()))
-            configs.emplace(d, std::make_unique<Config>(d.getDirSrc()));
+        {
+            auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
+            packages[d].config = p.first->get();
+        }
 
         if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
         {
@@ -205,42 +211,80 @@ void ResponseData::download_and_unpack()
         LOG("Ok");
 
         // re-read in any case
-        configs[d] = std::make_unique<Config>(d.getDirSrc());
-        configs[d]->downloaded = true;
+        // no need to remove old config, let it die with program
+        auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
+        packages[d].config = p.first->get();
+        packages[d].config->downloaded = true;
     }
 }
 
 void ResponseData::post_download()
 {
-    for (auto &cc : configs)
-    {
-        auto &p = cc.first;
-        auto &c = cc.second;
-        c->is_dependency = true;
-        c->pkg = p;
-        auto &project = c->getDefaultProject();
-        project.pkg = cc.first;
-
-        // prepare deps: extract real deps flags from configs
-        Packages packages;
-        for (auto &dep : download_dependencies_[dep_ids[p]].getDirectDependencies())
-        {
-            auto d = dep.second;
-            auto i = project.dependencies.find(d.ppath.toString());
-            if (i == project.dependencies.end())
-                throw std::runtime_error("dependency '" + d.ppath.toString() + "' is not found");
-            d.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
-            i->second.version = d.version;
-            i->second.flags = d.flags;
-            packages.emplace(d.ppath.toString(), d);
-        }
-        dependencies.emplace(p, packages);
-
-        c->post_download();
-    }
+    for (auto &cc : packages)
+        prepare_config(cc);
 }
 
-void ResponseData::prepare_config(Config *c)
+void ResponseData::prepare_config(PackageConfigs::value_type &cc)
 {
+    auto &p = cc.first;
+    auto &c = cc.second.config;
+    auto &dependencies = cc.second.dependencies;
+    c->is_dependency = true;
+    c->pkg = p;
+    auto &project = c->getDefaultProject();
+    project.pkg = cc.first;
 
+    // prepare deps: extract real deps flags from configs
+    for (auto &dep : download_dependencies_[dep_ids[p]].getDirectDependencies())
+    {
+        auto d = dep.second;
+        auto i = project.dependencies.find(d.ppath.toString());
+        if (i == project.dependencies.end())
+            throw std::runtime_error("dependency '" + d.ppath.toString() + "' is not found");
+        d.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
+        i->second.version = d.version;
+        i->second.flags = d.flags;
+        dependencies.emplace(d.ppath.toString(), d);
+    }
+
+    c->post_download();
+}
+
+ResponseData::PackageConfig &ResponseData::operator[](const Package &p)
+{
+    return packages[p];
+}
+
+const ResponseData::PackageConfig &ResponseData::operator[](const Package &p) const
+{
+    auto i = packages.find(p);
+    if (i == packages.end())
+        throw std::runtime_error("Package not found: " + p.getTargetName());
+    return i->second;
+}
+
+ResponseData::iterator ResponseData::begin()
+{
+    auto i = packages.find(Package());
+    if (i != packages.end())
+        return ++i;
+    return packages.begin();
+}
+
+ResponseData::iterator ResponseData::end()
+{
+    return packages.end();
+}
+
+ResponseData::const_iterator ResponseData::begin() const
+{
+    auto i = packages.find(Package());
+    if (i != packages.end())
+        return ++i;
+    return packages.begin();
+}
+
+ResponseData::const_iterator ResponseData::end() const
+{
+    return packages.end();
 }

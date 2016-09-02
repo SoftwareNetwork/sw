@@ -532,8 +532,8 @@ void Config::process(const path &p)
     auto access_table = std::make_unique<AccessTable>(directories.storage_dir_etc);
 
     // do a request
-    rd.init(local_settings.host, directories.storage_dir_src);
-    rd.download_dependencies(getDependencies());
+    rd.init(this, local_settings.host, directories.storage_dir_src);
+    rd.download_dependencies(getFileDependencies());
 
     LOG_NO_NEWLINE("Generating build configs... ");
 
@@ -545,14 +545,14 @@ void Config::process(const path &p)
 
     if (pkg.empty())
     {
-        for (auto &cc : rd.configs)
+        for (auto &cc : rd)
             printer->include_guards.insert(INCLUDE_GUARD_PREFIX + cc.first.variable_name);
     }
 
-    for (auto &cc : rd.configs)
+    for (auto &cc : rd)
     {
         auto &d = cc.first;
-        auto c = cc.second.get();
+        auto c = cc.second.config;
 
         if (c->is_printed)
             continue;
@@ -610,7 +610,7 @@ void Config::post_download() const
     printer->prepare_rebuild();
 }
 
-Packages Config::getDependencies() const
+Packages Config::getFileDependencies() const
 {
     Packages dependencies;
     for (auto &p : projects)

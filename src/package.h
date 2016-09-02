@@ -47,6 +47,8 @@ struct Package
     String variable_name;
 
     void createNames();
+    String getTargetName() const;
+    String getVariableName() const;
 };
 
 using Packages = std::map<String, Package>;

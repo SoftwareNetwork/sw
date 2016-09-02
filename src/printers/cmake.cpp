@@ -181,7 +181,7 @@ void gather_build_deps(Context &ctx, const Packages &dd, Packages &out)
             continue;
         auto i = out.insert(dp);
         if (i.second)
-            gather_build_deps(ctx, rd.dependencies[d], out);
+            gather_build_deps(ctx, rd[d].dependencies, out);
     }
 }
 
@@ -518,13 +518,13 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
     bool header_only = d.flags[pfHeaderOnly];
     const auto &p = cc->getProject(d.ppath.toString());
-    const auto &dd = rd.dependencies[d];
+    const auto &dd = rd[d].dependencies;
 
     Context ctx;
     file_title(ctx, d);
 
     // deps
-    print_dependencies(ctx, rd.dependencies[d], rc->local_settings.local_build);
+    print_dependencies(ctx, rd[d].dependencies, rc->local_settings.local_build);
 
     // settings
     {
@@ -1085,7 +1085,7 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
         return;
 
     const auto &p = cc->getProject(d.ppath.toString());
-    const auto &dd = rd.dependencies[d];
+    const auto &dd = rd[d].dependencies;
 
     Context ctx;
     file_title(ctx, d);
@@ -1249,7 +1249,7 @@ void CMakePrinter::print_object_export_file(const path &fn) const
     if (!access_table->must_update_contents(fn))
         return;
 
-    const auto &dd = rd.dependencies[d];
+    const auto &dd = rd[d].dependencies;
     Context ctx;
     file_title(ctx, d);
 
@@ -1289,7 +1289,7 @@ void CMakePrinter::print_object_build_file(const path &fn) const
     if (!access_table->must_update_contents(fn))
         return;
 
-    const auto &dd = rd.dependencies[d];
+    const auto &dd = rd[d].dependencies;
     Context ctx;
     file_title(ctx, d);
 
@@ -1407,7 +1407,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
 
     // deps
-    print_dependencies(ctx, rd.dependencies[d], cc->local_settings.local_build);
+    print_dependencies(ctx, rd[d].dependencies, cc->local_settings.local_build);
 
     // include guard after deps
     if (cc == rc)
@@ -1420,7 +1420,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("target_link_libraries         (" + cppan_project_name);
     ctx.increaseIndent();
     ctx.addLine("INTERFACE " + cppan_helpers_target);
-    for (auto &p : rd.dependencies[d])
+    for (auto &p : rd[d].dependencies)
     {
         if (p.second.flags[pfExecutable] || p.second.flags[pfIncludeDirectories])
             continue;
@@ -1436,9 +1436,9 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     {
         config_section_title(ctx, "exe deps");
 
-        auto dd = rd.dependencies[d];
+        auto dd = rd[d].dependencies;
         if (!cc->internal_options.current_package.empty())
-            dd = rd.dependencies[cc->internal_options.current_package];
+            dd = rd[cc->internal_options.current_package].dependencies;
 
         for (auto &dp : dd)
         {
@@ -1821,7 +1821,7 @@ set_target_properties(run-cppan PROPERTIES
         config_section_title(ctx, "custom actions for dummy target");
 
         Packages bdeps;
-        gather_build_deps(ctx, rd.dependencies[d], bdeps);
+        gather_build_deps(ctx, rd[d].dependencies, bdeps);
 
         // deps
         ctx.addLine("if (NOT CPPAN_LOCAL_BUILD)");

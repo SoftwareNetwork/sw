@@ -31,13 +31,31 @@
 #include "dependency.h"
 #include "property_tree.h"
 
+struct Config;
+
 struct ResponseData
 {
-    std::map<Package, std::unique_ptr<struct Config>> configs;
-    std::map<Package, Packages> dependencies;
+    struct PackageConfig
+    {
+        Config *config;
+        Packages dependencies;
+    };
+    using PackageConfigs = std::map<Package, PackageConfig>;
 
-    void init(const String &host, const path &root_dir);
+    using iterator = PackageConfigs::iterator;
+    using const_iterator = PackageConfigs::const_iterator;
+
+    void init(Config *config, const String &host, const path &root_dir);
     void download_dependencies(const Packages &d);
+
+    PackageConfig &operator[](const Package &p);
+    const PackageConfig &operator[](const Package &p) const;
+
+    iterator begin();
+    iterator end();
+
+    const_iterator begin() const;
+    const_iterator end() const;
 
 private:
     ptree request;
@@ -49,11 +67,13 @@ private:
     path root_dir;
     bool executed = false;
     bool initialized = false;
+    PackageConfigs packages;
+    std::set<std::unique_ptr<Config>> config_store;
 
     void extractDependencies();
     void download_and_unpack();
     void post_download();
-    void prepare_config(Config *c);
+    void prepare_config(PackageConfigs::value_type &cc);
 };
 
 extern ResponseData rd;

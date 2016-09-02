@@ -61,3 +61,25 @@ void Package::createNames()
     variable_name = ppath.toString() + "_" + (v == "*" ? "" : ("_" + v));
     std::replace(variable_name.begin(), variable_name.end(), '.', '_');
 }
+
+String Package::getTargetName() const
+{
+    if (target_name.empty())
+    {
+        auto v = version.toAnyVersion();
+        return ppath.toString() + (v == "*" ? "" : ("-" + v));
+    }
+    return target_name;
+}
+
+String Package::getVariableName() const
+{
+    if (variable_name.empty())
+    {
+        auto v = version.toAnyVersion();
+        auto vname = ppath.toString() + "_" + (v == "*" ? "" : ("_" + v));
+        std::replace(vname.begin(), vname.end(), '.', '_');
+        return vname;
+    }
+    return variable_name;
+}
