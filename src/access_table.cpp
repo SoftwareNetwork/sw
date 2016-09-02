@@ -146,6 +146,11 @@ void AccessTable::clear() const
 
 bool AccessTable::isUnderRoot(path p) const
 {
+    return isUnderRoot(p, root_dir);
+}
+
+bool AccessTable::isUnderRoot(path p, const path &root_dir)
+{
     while (!p.empty())
     {
         if (p == root_dir)
@@ -153,4 +158,16 @@ bool AccessTable::isUnderRoot(path p) const
         p = p.parent_path();
     }
     return false;
+}
+
+void AccessTable::remove(const path &p) const
+{
+    std::set<path> rm;
+    for (auto &s : data.stamps)
+    {
+        if (isUnderRoot(s.first, p))
+            rm.insert(s.first);
+    }
+    for (auto &s : rm)
+        data.stamps.erase(s);
 }

@@ -39,9 +39,11 @@ public:
     void update_contents(const path &p, const String &s) const;
     void write_if_older(const path &p, const String &s) const;
     void clear() const;
+    void remove(const path &p) const;
 
 private:
     path root_dir;
 
     bool isUnderRoot(path p) const;
+    static bool isUnderRoot(path p, const path &root_dir);
 };

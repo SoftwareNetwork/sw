@@ -600,29 +600,14 @@ void Config::post_download() const
     auto &p = getDefaultProject();
     p.prepareExports();
 
-    // FIXME: clear only related data instead all
-    // clear only src and obj dirs from array
+    // remove from table
     AccessTable at(directories.storage_dir_etc);
-    at.clear();
+    at.remove(pkg.getDirSrc());
+    at.remove(pkg.getDirObj());
 
-    // FIXME: remove this code?
-    // remove object files to rebuild
-    auto remove_files = [this](const path &dir)
-    {
-        boost::system::error_code ec;
-        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
-        {
-            if (!fs::is_regular_file(f))
-                continue;
-            if (f.path().string().find(pkg.target_name) == String::npos)
-                continue;
-            fs::remove(f, ec);
-            if (ec)
-                std::cerr << "Warning: cannot remove file: " << f.path().string() << ". The file is stale now, remove it manually.\n";
-        }
-    };
-    remove_files(directories.storage_dir_bin);
-    remove_files(directories.storage_dir_lib);
+    auto printer = Printer::create(printerType);
+    printer->d = pkg;
+    printer->prepare_rebuild();
 }
 
 Packages Config::getDependencies() const

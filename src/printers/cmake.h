@@ -5,6 +5,7 @@
 
 struct CMakePrinter : Printer
 {
+    void prepare_rebuild() override;
     void prepare_build(const path &fn, const String &cppan) override;
     int generate() const override;
     int build() const override;

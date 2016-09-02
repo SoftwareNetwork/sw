@@ -204,8 +204,8 @@ void ResponseData::download_and_unpack()
         fs::remove(fn);
         LOG("Ok");
 
-        if (configs.find(d) == configs.end())
-            configs.emplace(d, std::make_unique<Config>(d.getDirSrc()));
+        // re-read in any case
+        configs[d] = std::make_unique<Config>(d.getDirSrc());
         configs[d]->downloaded = true;
     }
 }
@@ -238,4 +238,9 @@ void ResponseData::post_download()
 
         c->post_download();
     }
+}
+
+void ResponseData::prepare_config(Config *c)
+{
+
 }

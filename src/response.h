@@ -53,6 +53,7 @@ private:
     void extractDependencies();
     void download_and_unpack();
     void post_download();
+    void prepare_config(Config *c);
 };
 
 extern ResponseData rd;

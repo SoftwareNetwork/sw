@@ -27,6 +27,7 @@ const String cmake_functions_filename = "functions.cmake";
 const String cmake_object_config_filename = "generate.cmake";
 const String cmake_helpers_filename = "helpers.cmake";
 const String include_guard_filename = "include.cmake";
+const String cppan_stamp_filename = "cppan_sources.stamp";
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 
 String repeat(const String &e, int n)
@@ -64,6 +65,142 @@ void file_title(Context &ctx, const Package &d)
     ctx.addLine("# package hash: " + d.getHash());
     ctx.addLine("#");
     ctx.addLine();
+}
+
+String add_subdirectory(String src, String bin = String())
+{
+    boost::algorithm::replace_all(src, "\\", "/");
+    boost::algorithm::replace_all(bin, "\\", "/");
+    return "include(\"" + src + "/" + include_guard_filename + "\")";
+}
+
+void add_subdirectory(Context &ctx, const String &src, const String &bin = String())
+{
+    ctx << add_subdirectory(src, bin) << Context::eol;
+}
+
+String get_binary_path(const Package &d)
+{
+    return "${CMAKE_BINARY_DIR}/cppan/" + d.getHash();
+}
+
+void print_dependencies(Context &ctx, const Packages &dd, bool local_build)
+{
+    std::vector<String> includes;
+
+    if (dd.empty())
+        return;
+
+    bool obj_dir = true;
+    if (local_build)
+        obj_dir = false;
+
+    auto base_dir = directories.storage_dir_src;
+    if (obj_dir)
+        base_dir = directories.storage_dir_obj;
+
+    config_section_title(ctx, "direct dependencies");
+    for (auto &p : dd)
+    {
+        String s;
+        auto dir = base_dir;
+        if (p.second.flags[pfHeaderOnly] ||
+            p.second.flags[pfIncludeDirectories])
+        {
+            dir = directories.storage_dir_src;
+            s = p.second.getDirSrc().string();
+        }
+        else if (obj_dir)
+        {
+            s = p.second.getDirObj().string();
+        }
+        else
+        {
+            dir = directories.storage_dir_src;
+            s = p.second.getDirSrc().string();
+        }
+
+        if (p.second.flags[pfIncludeDirectories])
+            ;// ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
+        else if (local_build || p.second.flags[pfHeaderOnly])
+        {
+            ctx.addLine("# " + p.second.target_name);
+            add_subdirectory(ctx, s, get_binary_path(p.second));
+        }
+        else
+        {
+            includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
+        }
+    }
+    ctx.addLine();
+
+    if (!includes.empty())
+    {
+        config_section_title(ctx, "include dependencies (they should be placed at the end)");
+        for (auto &line : includes)
+            ctx.addLine(line);
+    }
+}
+
+void print_source_groups(Context &ctx, const path &dir)
+{
+    bool once = false;
+    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+    {
+        if (!fs::is_directory(f))
+            continue;
+
+        if (!once)
+            config_section_title(ctx, "source groups");
+        once = true;
+
+        auto s = fs::relative(f.path(), dir).string();
+        auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
+        boost::replace_all(s2, "/", "\\\\");
+
+        ctx.addLine("source_group(\"" + s2 + "\" FILES");
+        ctx.increaseIndent();
+        for (auto &f2 : boost::make_iterator_range(fs::directory_iterator(f), {}))
+        {
+            if (!fs::is_regular_file(f2))
+                continue;
+            ctx.addLine("\"" + normalize_path(f2.path()) + "\"");
+        }
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+    }
+    ctx.emptyLines(1);
+}
+
+void gather_build_deps(Context &ctx, const Packages &dd, Packages &out)
+{
+    for (auto &dp : dd)
+    {
+        auto &d = dp.second;
+        if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
+            continue;
+        auto i = out.insert(dp);
+        if (i.second)
+            gather_build_deps(ctx, rd.dependencies[d], out);
+    }
+}
+
+void CMakePrinter::prepare_rebuild()
+{
+    // remove stamp file to start rebuilding
+    for (auto &d : boost::make_iterator_range(fs::directory_iterator(d.getDirObj() / "build"), {}))
+    {
+        if (!fs::is_directory(d))
+            continue;
+        for (auto &f : boost::make_iterator_range(fs::directory_iterator(d), {}))
+        {
+            if (!fs::is_regular_file(f))
+                continue;
+            if (f.path().filename().string() != cppan_stamp_filename)
+                continue;
+            remove_file(f);
+        }
+    }
 }
 
 void CMakePrinter::prepare_build(const path &fn, const String &cppan)
@@ -179,147 +316,6 @@ endif()
     ctx.splitLines();
 
     write_file_if_different(build_settings.source_directory / cmake_config_filename, ctx.getText());
-}
-
-String add_subdirectory(String src, String bin = String())
-{
-    boost::algorithm::replace_all(src, "\\", "/");
-    boost::algorithm::replace_all(bin, "\\", "/");
-    return "include(\"" + src + "/" + include_guard_filename + "\")";
-}
-
-void add_subdirectory(Context &ctx, const String &src, const String &bin = String())
-{
-    ctx << add_subdirectory(src, bin) << Context::eol;
-}
-
-String get_binary_path(const Package &d)
-{
-    return "${CMAKE_BINARY_DIR}/cppan/" + d.getHash();
-}
-
-void print_dependencies(Context &ctx, const Packages &dd, bool local_build)
-{
-    std::vector<String> includes;
-
-    if (dd.empty())
-        return;
-
-    bool obj_dir = true;
-    if (local_build)
-        obj_dir = false;
-
-    auto base_dir = directories.storage_dir_src;
-    if (obj_dir)
-        base_dir = directories.storage_dir_obj;
-
-    config_section_title(ctx, "direct dependencies");
-    for (auto &p : dd)
-    {
-        String s;
-        auto dir = base_dir;
-        if (p.second.flags[pfHeaderOnly] ||
-            p.second.flags[pfIncludeDirectories])
-        {
-            dir = directories.storage_dir_src;
-            s = p.second.getDirSrc().string();
-        }
-        else if (obj_dir)
-        {
-            s = p.second.getDirObj().string();
-        }
-        else
-        {
-            dir = directories.storage_dir_src;
-            s = p.second.getDirSrc().string();
-        }
-
-        if (p.second.flags[pfIncludeDirectories])
-            ;// ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
-        else if (local_build || p.second.flags[pfHeaderOnly])
-        {
-            ctx.addLine("# " + p.second.target_name);
-            add_subdirectory(ctx, s, get_binary_path(p.second));
-        }
-        else
-        {
-            includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
-        }
-    }
-    ctx.addLine();
-
-    if (!includes.empty())
-    {
-        config_section_title(ctx, "include dependencies (they should be placed at the end)");
-        for (auto &line : includes)
-            ctx.addLine(line);
-    }
-}
-
-void print_source_groups(Context &ctx, const path &dir)
-{
-    bool once = false;
-    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
-    {
-        if (!fs::is_directory(f))
-            continue;
-
-        if (!once)
-            config_section_title(ctx, "source groups");
-        once = true;
-
-        auto s = fs::relative(f.path(), dir).string();
-        auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
-        boost::replace_all(s2, "/", "\\\\");
-
-        ctx.addLine("source_group(\"" + s2 + "\" FILES");
-        ctx.increaseIndent();
-        for (auto &f2 : boost::make_iterator_range(fs::directory_iterator(f), {}))
-        {
-            if (!fs::is_regular_file(f2))
-                continue;
-            ctx.addLine("\"" + normalize_path(f2.path()) + "\"");
-        }
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-    }
-    ctx.emptyLines(1);
-}
-
-void print_copy_deps(Context &ctx, const Packages &dd)
-{
-    for (auto &dp : dd)
-    {
-        auto &d = dp.second;
-
-        if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
-            continue;
-
-        ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
-        ctx.increaseIndent();
-        ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-        ctx.increaseIndent();
-        ctx.addLine("$<TARGET_FILE:" + d.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + d.target_name + ">");
-        ctx.decreaseIndent();
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        ctx.addLine();
-
-        print_copy_deps(ctx, rd.dependencies[d]);
-    }
-}
-
-void gather_build_deps(Context &ctx, const Packages &dd, Packages &out)
-{
-    for (auto &dp : dd)
-    {
-        auto &d = dp.second;
-        if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
-            continue;
-        auto i = out.insert(dp);
-        if (i.second)
-            gather_build_deps(ctx, rd.dependencies[d], out);
-    }
 }
 
 int CMakePrinter::generate() const
@@ -1070,7 +1066,8 @@ endif()
         add_subdirectory(ctx, mi.string(), get_binary_path(d));
         ctx.emptyLines(1);
         auto ig = INCLUDE_GUARD_PREFIX + d.variable_name;
-        //ctx.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
+        // do not remove this as it turns off rebuilds
+        ctx.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
         ctx.emptyLines(1);
     }
 
@@ -1300,7 +1297,7 @@ void CMakePrinter::print_object_build_file(const path &fn) const
     ctx.addLine(R"(set(REBUILD 1)
 
 set(fn1 ")" + fn1 + R"(")
-set(fn2 "${BUILD_DIR}/cppan_sources.stamp")
+set(fn2 "${BUILD_DIR}/)" + cppan_stamp_filename + R"(")
 
 file(READ ${fn1} f1)
 if (EXISTS ${fn2})
@@ -1412,6 +1409,10 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     // deps
     print_dependencies(ctx, rd.dependencies[d], cc->local_settings.local_build);
 
+    // include guard after deps
+    if (cc == rc)
+        ctx.addLine("include(" + include_guard_filename + ")");
+
     // lib
     const String cppan_project_name = "cppan";
     config_section_title(ctx, "main library");
@@ -1492,7 +1493,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
     config_section_title(ctx, "variables");
     ctx.addLine("get_configuration(config)");
-    ctx.addLine("#message(STATUS \"CPPAN config - ${config}\")");
     ctx.addLine();
 
     config_section_title(ctx, "export/import");
@@ -1820,43 +1820,13 @@ set_target_properties(run-cppan PROPERTIES
     {
         config_section_title(ctx, "custom actions for dummy target");
 
-        auto dd = rd.dependencies[d];
-        if (!cc->internal_options.current_package.empty())
-            dd = rd.dependencies[cc->internal_options.current_package];
-
-        // pre - FIXME: remove???
-        for (auto &dp : dd)
-        {
-            auto &d = dp.second;
-
-            if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
-                continue;
-
-            if (!d.flags[pfExecutable])
-                ctx.addLine("get_configuration(config)");
-            else
-                ctx.addLine("get_configuration_exe(config)");
-            ctx.addLine("set(current_dir " + normalize_path(d.getDirObj()) + ")");
-            ctx.addLine("set(build_dir ${current_dir}/build/${config})");
-            ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
-            ctx.increaseIndent();
-            ctx.addLine("COMMAND ${CMAKE_COMMAND}");
-            ctx.increaseIndent();
-            ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + d.target_name + ">");
-            ctx.addLine("-DCONFIG=$<CONFIG>");
-            ctx.addLine("-DBUILD_DIR=${build_dir}");
-            ctx.addLine("-P " + normalize_path(d.getDirObj()) + "/" + non_local_build_file);
-            ctx.decreaseIndent();
-            ctx.decreaseIndent();
-            ctx.addLine(")");
-            ctx.addLine();
-        }
+        Packages bdeps;
+        gather_build_deps(ctx, rd.dependencies[d], bdeps);
 
         // deps
         ctx.addLine("if (NOT CPPAN_LOCAL_BUILD)");
         ctx.increaseIndent();
-        Packages bdeps;
-        gather_build_deps(ctx, dd, bdeps);
+        if (cc->pkg.empty())
         for (auto &dp : bdeps)
         {
             auto &p = dp.second;
@@ -1878,18 +1848,14 @@ set_target_properties(run-cppan PROPERTIES
             ctx.decreaseIndent();
             ctx.addLine(")");
             ctx.addLine();
-
         }
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
 
         // post (copy)
         // no copy for non local builds
         if (cc->internal_options.current_package.empty())
         {
-            ctx.addLine("if (NOT CPPAN_LOCAL_BUILD AND CPPAN_BUILD_SHARED_LIBS)");
-            ctx.addLine();
+            ctx.addLine("if (CPPAN_BUILD_SHARED_LIBS)");
+            ctx.increaseIndent();
             ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
             ctx.addLine("if (MSVC OR XCODE)");
             ctx.addLine("    set(output_dir ${output_dir}/$<CONFIG>)");
@@ -1899,11 +1865,27 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine("endif()");
             ctx.addLine();
 
-            print_copy_deps(ctx, dd);
+            for (auto &dp : bdeps)
+            {
+                ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
+                ctx.increaseIndent();
+                ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+                ctx.increaseIndent();
+                ctx.addLine("$<TARGET_FILE:" + d.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + d.target_name + ">");
+                ctx.decreaseIndent();
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+                ctx.addLine();
+            }
 
+            ctx.decreaseIndent();
             ctx.addLine("endif()");
             ctx.addLine();
         }
+
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
     }
 
     ctx.addLine(config_delimeter);
