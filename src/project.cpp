@@ -440,20 +440,25 @@ void Project::load(const yaml &root)
             throw std::runtime_error("'" + ol + "' should be a map");
 
         auto &option = options[ol];
-        const auto &defs = opt_level.second["definitions"];
 
-        auto add_defs = [&option, &defs](const auto &s)
+        auto add_opts = [&option](const auto &defs, const auto &s, auto member)
         {
             if (!defs.IsDefined())
                 return;
             auto dd = get_sequence_set<String, String>(defs, s);
             for (auto &d : dd)
-                option.definitions.insert({ s,d });
+                (option.*member).insert({ s,d });
+        };
+        auto add_opts_common = [&add_opts](const auto &opts, auto member)
+        {
+            add_opts(opts, "public", member);
+            add_opts(opts, "private", member);
+            add_opts(opts, "interface", member);
         };
 
-        add_defs("public");
-        add_defs("private");
-        add_defs("interface");
+        add_opts_common(opt_level.second["definitions"], &Options::definitions);
+        add_opts_common(opt_level.second["compile_options"], &Options::compile_options);
+        add_opts_common(opt_level.second["link_options"], &Options::link_options);
 
         option.include_directories = get_sequence_set<String, String>(opt_level.second, "include_directories");
         option.link_directories = get_sequence_set<String, String>(opt_level.second, "link_directories");

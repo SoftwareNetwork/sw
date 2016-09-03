@@ -31,3 +31,4 @@ extern const String cppan_h;
 extern const String cmake_functions;
 extern const String cmake_build_file;
 extern const String cmake_generate_file;
+extern const String cmake_export_import_file;

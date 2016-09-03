@@ -1,3 +1,30 @@
+/*
+ * Copyright (c) 2016, Egor Pugin
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     1. Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *     2. Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *     3. Neither the name of the copyright holder nor the names of
+ *        its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "cmake.h"
 
 #include "../access_table.h"
@@ -709,7 +736,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.emptyLines(1);
     }
 
-    // options (defs etc.)
+    // options (defs, compile options etc.)
     {
         if (!header_only)
         {
@@ -762,28 +789,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         }
         ctx.addLine();
 
-        /*if (d.flags[pfExecutable])
-        {
-        ctx.addLine("if (MSVC OR XCODE)");
-        ctx.increaseIndent();
-        for (auto &c : {"Debug","MinSizeRel","RelWithDebInfo"})
-        {
-        ctx.addLine("add_custom_command(TARGET ${this} POST_BUILD");
-        ctx.increaseIndent();
-        ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-        ctx.increaseIndent();
-        ctx.addLine("$<TARGET_FILE:${this}>");
-        ctx.addLine("$<TARGET_FILE_DIR:${this}>/../" + String(c) + "/$<TARGET_FILE_NAME:${this}>");
-        ctx.decreaseIndent();
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        ctx.addLine();
-        }
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
-        }*/
-
         for (auto &ol : p.options)
         {
             ctx.emptyLines(1);
@@ -792,9 +797,44 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             {
                 if (ol.second.definitions.empty())
                     return;
+                ctx.addLine("# definitions");
                 ctx << "target_compile_definitions    (" << d.target_name << Context::eol;
                 ctx.increaseIndent();
                 for (auto &def : ol.second.definitions)
+                {
+                    if (header_only)
+                        ctx << "INTERFACE " << def.second << Context::eol;
+                    else
+                        ctx << boost::algorithm::to_upper_copy(def.first) << " " << def.second << Context::eol;
+                }
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+            };
+            auto print_compile_opts = [header_only, &ctx, this](const auto &ol)
+            {
+                if (ol.second.compile_options.empty())
+                    return;
+                ctx.addLine("# compile options");
+                ctx << "target_compile_options        (" << d.target_name << Context::eol;
+                ctx.increaseIndent();
+                for (auto &def : ol.second.compile_options)
+                {
+                    if (header_only)
+                        ctx << "INTERFACE " << def.second << Context::eol;
+                    else
+                        ctx << boost::algorithm::to_upper_copy(def.first) << " " << def.second << Context::eol;
+                }
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+            };
+            auto print_linker_opts = [header_only, &ctx, this](const auto &ol)
+            {
+                if (ol.second.link_options.empty())
+                    return;
+                ctx.addLine("# link options");
+                ctx << "target_link_libraries         (" << d.target_name << Context::eol;
+                ctx.increaseIndent();
+                for (auto &def : ol.second.link_options)
                 {
                     if (header_only)
                         ctx << "INTERFACE " << def.second << Context::eol;
@@ -822,9 +862,11 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 ctx.addLine(")");
                 ctx.addLine();
             };
-            auto print_options = [&ol, &print_defs, &print_set]
+            auto print_options = [&ol, &print_defs, &print_set, &print_compile_opts, &print_linker_opts]
             {
                 print_defs(ol);
+                print_compile_opts(ol);
+                print_linker_opts(ol);
                 print_set(ol.second.include_directories, "target_include_directories");
                 print_set(ol.second.link_libraries, "target_link_libraries");
             };
@@ -982,15 +1024,6 @@ void CMakePrinter::print_object_config_file(const path &fn) const
         ctx.addLine("set(CMAKE_LIBRARY_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_lib) + "/${OUTPUT_DIR})");
         ctx.addLine("set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_lib) + "/${OUTPUT_DIR})");
         ctx.addLine();
-
-        /*if (d.flags[pfExecutable])
-        {
-        ctx.addLine("if (MSVC OR XCODE)");
-        for (auto &c : cmake_configuration_types_no_rel)
-        ctx.addLine("set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_" + c + " ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Release)");
-        ctx.addLine("endif()");
-        ctx.addLine();
-        }*/
     }
 
     config_section_title(ctx, "project settings");
@@ -1339,23 +1372,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine();
 
     config_section_title(ctx, "export/import");
-    ctx.addLine(R"str(if (MSVC)
-    set(CPPAN_EXPORT "__declspec(dllexport)")
-    set(CPPAN_IMPORT "__declspec(dllimport)")
-endif()
-
-if (MINGW)
-    set(CPPAN_EXPORT "__attribute__((__dllexport__))")
-    set(CPPAN_IMPORT "__attribute__((__dllimport__))")
-elseif(GNU)
-    set(CPPAN_EXPORT "__attribute__((__visibility__(\"default\")))")
-    set(CPPAN_IMPORT)
-endif()
-
-if (SUN) # TODO: check it in real environment
-    set(CPPAN_EXPORT "__global")
-    set(CPPAN_IMPORT "__global")
-endif())str");
+    ctx.addLine(cmake_export_import_file);
 
     // cmake includes
     config_section_title(ctx, "cmake includes");
@@ -1713,11 +1730,12 @@ set_target_properties(run-cppan PROPERTIES
 
             for (auto &dp : bdeps)
             {
+                auto &p = dp.second;
                 ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
                 ctx.increaseIndent();
                 ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
                 ctx.increaseIndent();
-                ctx.addLine("$<TARGET_FILE:" + d.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + d.target_name + ">");
+                ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
                 ctx.decreaseIndent();
                 ctx.decreaseIndent();
                 ctx.addLine(")");

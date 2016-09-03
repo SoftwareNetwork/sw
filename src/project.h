@@ -38,6 +38,8 @@
 #define INCLUDE_DIRECTORIES_ONLY "include_directories_only"
 
 using Definitions = std::multimap<String, String>;
+using CompileOptions = std::multimap<String, String>;
+using LinkOptions = std::multimap<String, String>;
 using Sources = std::set<String>;
 using StringSet = std::set<String>;
 using Symbols = std::map<String, StringSet>;
@@ -66,6 +68,8 @@ struct BuildSystemConfigInsertions
 struct Options
 {
     Definitions definitions;
+    CompileOptions compile_options;
+    LinkOptions link_options;
     BuildSystemConfigInsertions bs_insertions;
     StringSet include_directories;
     StringSet link_directories;

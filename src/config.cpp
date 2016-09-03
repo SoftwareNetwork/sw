@@ -301,9 +301,10 @@ void LocalSettings::load_main(const yaml &root)
     build_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "build_dir_type", "system"), "build_dir_type");
     if (root["build_dir"].IsDefined())
         build_dir_type = PackagesDirType::None;
+    if (local_build && build_dir_type != PackagesDirType::None)
+        build_dir_type = PackagesDirType::Local;
 
     // read build settings
-    build_settings.c = c;
     if (root["builds"].IsDefined() && root["current_build"].IsDefined())
         build_settings.load(root["builds"][root["current_build"].template as<String>()]);
     else if (root["build"].IsDefined())
