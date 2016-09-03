@@ -342,7 +342,6 @@ String LocalSettings::get_hash() const
 {
     Hasher h;
     h |= build_settings.get_hash();
-    h |= local_build;
     return h.hash;
 }
 
