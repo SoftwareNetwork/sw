@@ -195,7 +195,7 @@ void print_source_groups(Context &ctx, const path &dir)
     ctx.emptyLines(1);
 }
 
-void gather_build_deps(Context &ctx, const Packages &dd, Packages &out)
+void gather_build_deps(Context &ctx, const Packages &dd, Packages &out, bool recursive = false)
 {
     for (auto &dp : dd)
     {
@@ -203,8 +203,8 @@ void gather_build_deps(Context &ctx, const Packages &dd, Packages &out)
         if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
             continue;
         auto i = out.insert(dp);
-        if (i.second)
-            gather_build_deps(ctx, rd[d].dependencies, out);
+        if (i.second && recursive)
+            gather_build_deps(ctx, rd[d].dependencies, out, recursive);
     }
 }
 
@@ -1655,9 +1655,9 @@ endif()
     add_check_definitions(cc->check_includes, convert_include);
     add_check_definitions(cc->check_types, convert_type);
 
+    // re-run cppan when root cppan.yml is changed
     if (cc->local_settings.add_run_cppan_target && !cc->disable_run_cppan_target)
     {
-        // re-run cppan when root cppan.yml is changed
         config_section_title(ctx, "cppan regenerator");
         ctx.addLine(R"(set(file ${CMAKE_CURRENT_BINARY_DIR}/run-cppan.txt)
 add_custom_command(OUTPUT ${file}
@@ -1683,13 +1683,11 @@ set_target_properties(run-cppan PROPERTIES
     {
         config_section_title(ctx, "custom actions for dummy target");
 
-        Packages bdeps;
-        gather_build_deps(ctx, rd[d].dependencies, bdeps);
-
-        // deps
+        // build deps
         ctx.addLine("if (NOT CPPAN_LOCAL_BUILD)");
         ctx.increaseIndent();
-        if (cc->pkg.empty())
+        Packages bdeps;
+        gather_build_deps(ctx, rd[d].dependencies, bdeps);
         for (auto &dp : bdeps)
         {
             auto &p = dp.second;
@@ -1716,7 +1714,7 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine();
         }
 
-        // post (copy)
+        // post (copy deps)
         // no copy for non local builds
         if (cc->internal_options.current_package.empty())
         {
@@ -1731,7 +1729,9 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine("endif()");
             ctx.addLine();
 
-            for (auto &dp : bdeps)
+            Packages cdeps;
+            gather_build_deps(ctx, rd[d].dependencies, bdeps, true);
+            for (auto &dp : cdeps)
             {
                 auto &p = dp.second;
                 ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
