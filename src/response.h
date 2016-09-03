@@ -28,29 +28,52 @@
 #pragma once
 
 #include "common.h"
-#include "package.h"
+#include "dependency.h"
+#include "property_tree.h"
 
-#include <set>
+struct Config;
 
-struct DownloadDependency : public Package
+struct ResponseData
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    struct PackageConfig
+    {
+        Config *config;
+        Packages dependencies;
+    };
+    using PackageConfigs = std::map<Package, PackageConfig>;
 
-    String md5;
+    using iterator = PackageConfigs::iterator;
+    using const_iterator = PackageConfigs::const_iterator;
+
+    void init(Config *config, const String &host, const path &root_dir);
+    void download_dependencies(const Packages &d);
+
+    PackageConfig &operator[](const Package &p);
+    const PackageConfig &operator[](const Package &p) const;
+
+    iterator begin();
+    iterator end();
+
+    const_iterator begin() const;
+    const_iterator end() const;
+
 private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
+    ptree request;
+    ptree dependency_tree;
+    DownloadDependencies download_dependencies_;
+    std::map<Package, int> dep_ids;
+    String host;
+    String data_url;
+    path root_dir;
+    bool executed = false;
+    bool initialized = false;
+    PackageConfigs packages;
+    std::set<std::unique_ptr<Config>> config_store;
 
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
-
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
-
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
+    void extractDependencies();
+    void download_and_unpack();
+    void post_download();
+    void prepare_config(PackageConfigs::value_type &cc);
 };
 
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+extern ResponseData rd;

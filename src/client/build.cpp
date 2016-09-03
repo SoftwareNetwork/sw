@@ -29,7 +29,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <cppan.h>
+#include <config.h>
 
 std::vector<std::string> extract_comments(const std::string &s);
 
@@ -67,8 +67,8 @@ Config generate_config(const path &fn, bool silent = true, bool rebuild = false)
         }
 
         if (!silent)
-            conf.build_settings.silent = false;
-        conf.build_settings.rebuild = rebuild;
+            conf.local_settings.build_settings.silent = false;
+        conf.local_settings.build_settings.rebuild = rebuild;
         conf.prepare_build(fn, comments.size() > (size_t)i ? comments[i] : "");
     };
 

@@ -69,26 +69,58 @@ add_custom_target(inserts_gen
 )
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp PROPERTIES GENERATED TRUE)
 
+add_executable(stamp_genenerator stamp_gen.cpp)
+set(stamp ${CMAKE_CURRENT_BINARY_DIR}/stamp.h)
+set_source_files_properties(${stamp} PROPERTIES GENERATED True)
+
+add_custom_target(gen_stamp
+    COMMAND stamp_genenerator > ${stamp}
+)
+
 set(common_src
+    access_table.cpp
+    access_table.h
     common.cpp
     common.h
-    cppan.cpp
-    cppan.h
+    config.cpp
+    config.h
     dependency.cpp
     dependency.h
+    filesystem.cpp
     filesystem.h
     enums.cpp
     enums.h
+    log.cpp
+    log.h
+    package.cpp
+    package.h
     property_tree.h
+    project.cpp
+    project.h
     project_path.cpp
     project_path.h
+    response.cpp
+    response.h
+    source.cpp
+    source.h
+    yaml.h
+    
+    printers/printer.cpp
+    printers/printer.h
+    printers/cmake.cpp
+    printers/cmake.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
     inserts.cpp.in
     inserts.h
+    
+    ${stamp}
+    
+    cppan.natvis
 )
 add_library(common ${common_src})
-add_dependencies(common inserts_gen)
+add_dependencies(common inserts_gen gen_stamp)
+
 target_compile_definitions(common
     PRIVATE -DVERSION_MAJOR=${VERSION_MAJOR}
     PRIVATE -DVERSION_MINOR=${VERSION_MINOR}

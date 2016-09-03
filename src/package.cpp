@@ -25,32 +25,61 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "dependency.h"
 
-#include "common.h"
-#include "package.h"
+#include "config.h"
 
-#include <set>
+#include <iostream>
 
-struct DownloadDependency : public Package
+Package extractFromString(const String &target)
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    ProjectPath p = target.substr(0, target.find('-'));
+    Version v = target.substr(target.find('-') + 1);
+    return{ p,v };
+}
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
+path Package::getDirSrc() const
+{
+    return directories.storage_dir_src / ppath.toString() / version.toString();
+}
 
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
+path Package::getDirObj() const
+{
+    return directories.storage_dir_obj / getHash();
+}
 
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
+String Package::getHash() const
+{
+    static const auto delim = "/";
+    return sha1(ppath.toString() + delim + version.toString()).substr(0, 10);
+}
 
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
-};
+void Package::createNames()
+{
+    auto v = version.toAnyVersion();
+    target_name = ppath.toString() + (v == "*" ? "" : ("-" + v));
+    variable_name = ppath.toString() + "_" + (v == "*" ? "" : ("_" + v));
+    std::replace(variable_name.begin(), variable_name.end(), '.', '_');
+}
 
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+String Package::getTargetName() const
+{
+    if (target_name.empty())
+    {
+        auto v = version.toAnyVersion();
+        return ppath.toString() + (v == "*" ? "" : ("-" + v));
+    }
+    return target_name;
+}
+
+String Package::getVariableName() const
+{
+    if (variable_name.empty())
+    {
+        auto v = version.toAnyVersion();
+        auto vname = ppath.toString() + "_" + (v == "*" ? "" : ("_" + v));
+        std::replace(vname.begin(), vname.end(), '.', '_');
+        return vname;
+    }
+    return variable_name;
+}

@@ -177,6 +177,16 @@ function(get_configuration out)
 endfunction(get_configuration)
 
 ########################################
+# FUNCTION get_configuration_exe
+########################################
+
+function(get_configuration_exe out)
+    set(config ${CMAKE_HOST_SYSTEM_PROCESSOR})
+    string(TOLOWER ${config} config)
+    set(${out} ${config} PARENT_SCOPE)
+endfunction(get_configuration_exe)
+
+########################################
 # FUNCTION get_number_of_cores
 ########################################
 
@@ -214,21 +224,21 @@ endfunction(add_variable)
 ########################################
 
 function(read_variables_file f)
+    if (NOT EXISTS ${f})
+        return()
+    endif()
+
     set(lock ${f}.lock)
     file(LOCK ${lock} RESULT_VARIABLE lock_result)
     if (NOT ${lock_result} EQUAL 0)
         message(FATAL_ERROR "Lock error: ${lock_result}")
     endif()
 
-    if (NOT EXISTS ${f})
-        file(LOCK ${lock} RELEASE)
-        return()
-    endif()
-
     file(STRINGS ${f} vars)
+    file(LOCK ${lock} RELEASE)
+
     list(LENGTH vars N)
     if (N EQUAL 0)
-        file(LOCK ${lock} RELEASE)
         return()
     endif()
     math(EXPR N "${N}-1")
@@ -244,8 +254,6 @@ function(read_variables_file f)
         set(CPPAN_VARIABLES_KEYS ${CPPAN_VARIABLES_KEYS} PARENT_SCOPE)
         set(CPPAN_VARIABLES_VALUES ${CPPAN_VARIABLES_VALUES} PARENT_SCOPE)
     endforeach()
-
-    file(LOCK ${lock} RELEASE)
 endfunction(read_variables_file)
 
 ########################################
@@ -272,5 +280,16 @@ function(write_variables_file f)
 
     file(LOCK ${lock} RELEASE)
 endfunction(write_variables_file)
+
+########################################
+# FUNCTION set_c_sources_as_cpp
+########################################
+
+function(set_c_sources_as_cpp)
+    if (MSVC)
+        file(GLOB_RECURSE csrc "*.c")
+        set_source_files_properties(${csrc} PROPERTIES LANGUAGE CXX)
+    endif()
+endfunction(set_c_sources_as_cpp)
 
 ################################################################################

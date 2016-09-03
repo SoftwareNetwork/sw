@@ -27,30 +27,20 @@
 
 #pragma once
 
-#include "common.h"
-#include "package.h"
+#include <iostream>
 
-#include <set>
+#define LOG_NO_NEWLINE(x)   \
+    do                      \
+    {                       \
+        if (!silent)        \
+            std::cout << x; \
+    } while (0)
 
-struct DownloadDependency : public Package
-{
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+#define LOG(x)                      \
+    do                              \
+    {                               \
+        if (!silent)                \
+            std::cout << x << "\n"; \
+    } while (0)
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
-
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
-
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
-
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
-};
-
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+extern bool silent;

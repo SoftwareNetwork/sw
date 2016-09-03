@@ -28,7 +28,7 @@
 #include "fix_imports.h"
 
 #include <common.h>
-#include <cppan.h>
+#include <config.h>
 #include <project_path.h>
 
 #include <boost/algorithm/string.hpp>
@@ -97,21 +97,21 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     {
         auto &d = dep;
         // add GLOBAL for default target
-        result += fix_imports(lines, target, d.package.toString() + "-" + d.version.toAnyVersion());
+        result += fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion());
         d.version.patch = -1;
-        result += fix_imports(lines, target, d.package.toString() + "-" + d.version.toAnyVersion());
+        result += fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion());
         d.version.minor = -1;
-        result += fix_imports(lines, target, d.package.toString() + "-" + d.version.toAnyVersion());
-        result += fix_imports(lines, target, d.package.toString());
+        result += fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion());
+        result += fix_imports(lines, target, d.ppath.toString());
     }
     {
         auto &d = dep;
-        result += fix_imports(lines, target, d.package.toString("::") + "-" + d.version.toAnyVersion());
+        result += fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion());
         d.version.patch = -1;
-        result += fix_imports(lines, target, d.package.toString("::") + "-" + d.version.toAnyVersion());
+        result += fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion());
         d.version.minor = -1;
-        result += fix_imports(lines, target, d.package.toString("::") + "-" + d.version.toAnyVersion());
-        result += fix_imports(lines, target, d.package.toString("::"));
+        result += fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion());
+        result += fix_imports(lines, target, d.ppath.toString("::"));
     }
     {
         Lines aliases;

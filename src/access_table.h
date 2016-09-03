@@ -28,29 +28,22 @@
 #pragma once
 
 #include "common.h"
-#include "package.h"
 
-#include <set>
-
-struct DownloadDependency : public Package
+class AccessTable
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
-
-    String md5;
-private:
-    std::set<int> dependencies;
 public:
-    DownloadDependencies *map_ptr = nullptr;
+    AccessTable(const path &cfg_dir);
+    ~AccessTable();
 
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
-
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
+    bool must_update_contents(const path &p) const;
+    void update_contents(const path &p, const String &s) const;
+    void write_if_older(const path &p, const String &s) const;
+    void clear() const;
+    void remove(const path &p) const;
 
 private:
-    void getIndirectDependencies(std::set<int> &deps) const;
+    path root_dir;
+
+    bool isUnderRoot(path p) const;
+    static bool isUnderRoot(path p, const path &root_dir);
 };
-
-using DownloadDependencies = DownloadDependency::DownloadDependencies;

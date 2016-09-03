@@ -25,32 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <iostream>
+#include <string>
+#include <time.h>
 
-#include "common.h"
-#include "package.h"
-
-#include <set>
-
-struct DownloadDependency : public Package
+int main()
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    time_t v;
+    time(&v);
+    std::cout << "\"" << std::to_string(v) << "\"";
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
-
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
-
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
-
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
-};
-
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+    return 0;
+}

@@ -27,47 +27,29 @@
 
 #include "dependency.h"
 
-Dependency extractFromString(const String &target)
-{
-    ProjectPath p = target.substr(0, target.find('-'));
-    Version v = target.substr(target.find('-') + 1);
-    return{ p,v };
-}
+#include "project.h"
 
-path Dependency::getPackageDir(const path &base) const
-{
-    return base / package.toString() / version.toString();
-}
+#include <iostream>
 
-path Dependency::getPackageDirHash(const path &base) const
+Packages DownloadDependency::getDirectDependencies() const
 {
-    return base / getPackageDirHash();
-}
-
-String Dependency::getPackageDirHash() const
-{
-    return sha1(package.toString() + "/" + version.toString()).substr(0, 10);
-}
-
-Dependencies DownloadDependency::getDirectDependencies() const
-{
-    Dependencies deps;
+    Packages deps;
     for (auto d : dependencies)
     {
         auto &dep = (*map_ptr)[d];
-        deps[dep.package.toString()] = dep;
+        deps[dep.ppath.toString()] = dep;
     }
-    deps.erase(package.toString()); // erase self
+    deps.erase(ppath.toString()); // erase self
     return deps;
 }
 
-Dependencies DownloadDependency::getIndirectDependencies(const Dependencies &known_deps) const
+Packages DownloadDependency::getIndirectDependencies(const Packages &known_deps) const
 {
-    Dependencies deps = known_deps;
+    Packages deps = known_deps;
     for (auto d : dependencies)
     {
         auto &dep = (*map_ptr)[d];
-        auto p = deps.insert({ dep.package.toString(), dep });
+        auto p = deps.insert({ dep.ppath.toString(), dep });
         if (p.second)
         {
             auto id = dep.getIndirectDependencies(deps);
@@ -83,7 +65,7 @@ Dependencies DownloadDependency::getIndirectDependencies(const Dependencies &kno
             deps.erase(d.first);
 
         // erase self
-        deps.erase(package.toString());
+        deps.erase(ppath.toString());
     }
     return deps;
 }
