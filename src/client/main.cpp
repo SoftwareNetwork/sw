@@ -31,7 +31,9 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <cppan.h>
+#include <access_table.h>
+#include <config.h>
+#include <printers/cmake.h>
 
 #include "build.h"
 #include "fix_imports.h"
@@ -82,39 +84,16 @@ try
         return 0;
     }
 #endif
-    else if (String(argv[1]) == "--build")
+    else if (String(argv[1]) == "--clear-cache")
     {
-        // build mode
-        if (argc < 3)
-            return 1;
-        return build(argv[2]);
-    }
-    else if (String(argv[1]) == "--rebuild")
-    {
-        // build mode
-        if (argc < 3)
-            return 1;
-        return build(argv[2], true);
-    }
-    else if (String(argv[1]) == "--generate")
-    {
-        // build mode
-        if (argc < 3)
-            return 1;
-        return generate(argv[2]);
-    }
-    else if (String(argv[1]) == "--clear-cmake-cache")
-    {
-        // build mode
-        Config c;
-        c.clean_cmake_cache(argc > 2 ? argv[2] : "");
+        CMakePrinter c;
+        c.clear_cache(argc > 2 ? argv[2] : "");
         return 0;
     }
     else if (String(argv[1]) == "--clear-vars-cache")
     {
-        // build mode
         Config c;
-        c.clean_vars_cache(argc > 2 ? argv[2] : "");
+        c.clear_vars_cache(argc > 2 ? argv[2] : "");
         return 0;
     }
 
@@ -135,6 +114,13 @@ try
         return 0;
     }
 
+    if (options().count("build"))
+        return build(options["build"].as<String>());
+    else if (options().count("rebuild"))
+        return build(options["rebuild"].as<String>(), true);
+    else if (options().count("generate"))
+        return generate(options["generate"].as<String>());
+
     // set correct working directory to look for config file
     if (options().count("dir"))
         fs::current_path(options["dir"].as<std::string>());
@@ -145,7 +131,7 @@ try
 
     // setup curl settings if possible from config
     // other network users (options) should go below this line
-    httpSettings.proxy = c.proxy;
+    httpSettings.proxy = c.local_settings.proxy;
 
     // self-upgrade?
     if (options()["self-upgrade"].as<bool>())
@@ -158,7 +144,7 @@ try
     c.load_current_config();
 
     // update proxy settings?
-    httpSettings.proxy = c.proxy;
+    httpSettings.proxy = c.local_settings.proxy;
 
     if (options()["prepare-archive"].as<bool>())
     {
@@ -167,7 +153,7 @@ try
         {
 			auto &project = p.second;
             project.findSources(".");
-            String archive_name = make_archive_name(project.package.toString());
+            String archive_name = make_archive_name(project.ppath.toString());
             if (!project.writeArchive(archive_name))
                 throw std::runtime_error("Archive write failed");
         }
@@ -199,13 +185,13 @@ void self_upgrade(Config &c, const char *exe_path)
 #endif
 
     DownloadData dd;
-    dd.url = c.host + client + ".md5";
+    dd.url = c.local_settings.host + client + ".md5";
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     std::cout << "Downloading checksum file" << "\n";
     download_file(dd);
     auto md5 = boost::algorithm::trim_copy(read_file(dd.fn));
 
-    dd.url = c.host + client;
+    dd.url = c.local_settings.host + client;
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     String dl_md5;
     dd.dl_md5 = &dl_md5;

@@ -25,32 +25,65 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "hasher.h"
 
-#include "common.h"
-#include "package.h"
+#include <boost/algorithm/string.hpp>
 
-#include <set>
+#include <algorithm>
 
-struct DownloadDependency : public Package
+#define DEFINE_OPERATOR(t)        \
+    Hasher Hasher::operator|(t v) \
+    {                             \
+        auto tmp = *this;         \
+        tmp |= v;                 \
+        return tmp;               \
+    }
+
+DEFINE_OPERATOR(bool)
+DEFINE_OPERATOR(const String &)
+DEFINE_OPERATOR(const path &);
+
+void Hasher::do_hash()
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    hash = sha1(hash);
+}
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
+Hasher &Hasher::operator|=(bool b)
+{
+    hash += b ? "1" : "0";
+    do_hash();
+    return *this;
+}
 
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
+Hasher &Hasher::operator|=(const String &v)
+{
+    auto s = v;
+    boost::trim(s);
 
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
+    std::vector<String> out;
+    boost::split(out, s, boost::is_any_of(" \t\r\n\v\f"));
 
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
-};
+    std::vector<String> out2;
+    for (auto &o : out)
+    {
+        boost::trim(o);
+        if (o.empty())
+            continue;
+        out2.push_back(o);
+    }
 
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+    std::sort(out2.begin(), out2.end());
+
+    for (auto &o : out2)
+        hash += o;
+
+    do_hash();
+    return *this;
+}
+
+Hasher &Hasher::operator|=(const path &v)
+{
+    hash += normalize_path(v);
+    do_hash();
+    return *this;
+}

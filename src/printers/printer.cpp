@@ -25,32 +25,23 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "printer.h"
 
-#include "common.h"
-#include "package.h"
+#include "cmake.h"
 
-#include <set>
+const std::vector<String> configuration_types = { "DEBUG", "MINSIZEREL", "RELEASE", "RELWITHDEBINFO" };
+const std::vector<String> configuration_types_normal = { "Debug", "MinSizeRel", "Release", "RelWithDebInfo" };
+const std::vector<String> configuration_types_no_rel = { "DEBUG", "MINSIZEREL", "RELWITHDEBINFO" };
 
-struct DownloadDependency : public Package
+std::unique_ptr<Printer> Printer::create(PrinterType type)
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
-
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
-
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
-
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
-
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
-};
-
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+    switch (type)
+    {
+    case PrinterType::CMake:
+    {
+        return std::make_unique<CMakePrinter>();
+    }
+    default:
+        throw std::runtime_error("Undefined printer");
+    }
+}

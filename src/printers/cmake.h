@@ -27,30 +27,33 @@
 
 #pragma once
 
-#include "common.h"
-#include "package.h"
+#include "../config.h"
+#include "printer.h"
 
-#include <set>
-
-struct DownloadDependency : public Package
+struct CMakePrinter : Printer
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    void prepare_rebuild() override;
+    void prepare_build(const path &fn, const String &cppan) override;
+    int generate() const override;
+    int build() const override;
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
+    void print() override;
+    void print_meta() override;
 
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
-
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
+    void clear_cache(path p) const override;
+    void clear_exports(path p) const override;
 
 private:
-    void getIndirectDependencies(std::set<int> &deps) const;
+    void print_configs();
+    void print_helper_file(const path &fn) const;
+    void print_include_guards_file(const path &fn) const;
+    void print_meta_config_file(const path &fn) const;
+    void print_package_config_file(const path &fn) const;
+    void print_package_actions_file(const path &fn) const;
+    void print_package_include_file(const path &fn) const;
+    void print_object_config_file(const path &fn) const;
+    void print_object_include_config_file(const path &fn) const;
+    void print_object_export_file(const path &fn) const;
+    void print_object_build_file(const path &fn) const;
+    void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
 };
-
-using DownloadDependencies = DownloadDependency::DownloadDependencies;

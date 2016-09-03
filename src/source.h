@@ -28,29 +28,48 @@
 #pragma once
 
 #include "common.h"
-#include "package.h"
 
-#include <set>
+#include "yaml.h"
 
-struct DownloadDependency : public Package
+#include <boost/variant.hpp>
+
+struct Git
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    String url;
+    String tag;
+    String branch;
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
+    bool empty() const { return url.empty(); }
 
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
-
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
-
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
+    bool isValid(String *error = nullptr) const
+    {
+        if (empty())
+        {
+            if (error)
+                *error = "Git url is missing";
+            return false;
+        }
+        if (tag.empty() && branch.empty())
+        {
+            if (error)
+                *error = "No git sources (branch or tag) available";
+            return false;
+        }
+        if (!tag.empty() && !branch.empty())
+        {
+            if (error)
+                *error = "Only one git source (branch or tag) must be specified";
+            return false;
+        }
+        return true;
+    }
 };
 
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+struct RemoteFile { String url; };
+
+// add svn, bzr, hg?
+// do not add local
+using Source = boost::variant<Git, RemoteFile>;
+
+Source load_source(const yaml &root);
+void save_source(yaml &root, const Source &source);

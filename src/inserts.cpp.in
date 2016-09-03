@@ -27,6 +27,8 @@
 
 #include "inserts.h"
 
-const String cmake_functions = R"(CPPAN_INCLUDE<inserts/functions.cmake>)";
-
 const String cppan_h = R"(CPPAN_INCLUDE<inserts/cppan.h>)";
+const String cmake_functions = R"(CPPAN_INCLUDE<inserts/functions.cmake>)";
+const String cmake_build_file = R"(CPPAN_INCLUDE<inserts/build.cmake>)";
+const String cmake_generate_file = R"(CPPAN_INCLUDE<inserts/generate.cmake>)";
+const String cmake_export_import_file = R"my_ei_str(CPPAN_INCLUDE<inserts/exports.cmake>)my_ei_str";

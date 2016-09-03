@@ -227,7 +227,7 @@ function(read_variables_file f)
     if (NOT EXISTS ${f})
         return()
     endif()
-    
+
     set(lock ${f}.lock)
     file(LOCK ${lock} RESULT_VARIABLE lock_result)
     if (NOT ${lock_result} EQUAL 0)
@@ -236,7 +236,7 @@ function(read_variables_file f)
 
     file(STRINGS ${f} vars)
     file(LOCK ${lock} RELEASE)
-    
+
     list(LENGTH vars N)
     if (N EQUAL 0)
         return()

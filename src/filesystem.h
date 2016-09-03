@@ -29,9 +29,32 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/functional/hash.hpp>
+#include <boost/range.hpp>
+
+#define STAMPS_DIR "stamps"
+#define STORAGE_DIR "storage"
 
 namespace fs = boost::filesystem;
 using path = fs::wpath;
+
+path get_home_directory();
+path get_root_directory();
+path get_config_filename();
+
+path temp_directory_path();
+path get_temp_filename();
+path temp_script_path();
+path temp_script_filename();
+
+std::string read_file(const path &p, bool no_size_check = false);
+void write_file(const path &p, const std::string &s);
+void write_file_if_different(const path &p, const std::string &s);
+
+void remove_file(const path &p);
+std::string normalize_path(const path &p);
+
+std::string get_stamp_filename(const std::string &prefix);
+std::string make_archive_name(const std::string &fn);
 
 namespace std
 {

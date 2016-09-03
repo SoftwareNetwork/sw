@@ -25,32 +25,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "file_lock.h"
 
-#include "common.h"
-#include "package.h"
+#include <boost/interprocess/sync/file_lock.hpp>
 
-#include <set>
+#include <iostream>
 
-struct DownloadDependency : public Package
+std::string prepare_lock_file(const path &fn)
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    auto lock_file = fn.parent_path() / (fn.filename().string() + ".lock");
+    if (!fs::exists(lock_file))
+        std::ofstream(lock_file.string());
+    return lock_file.string();
+}
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
+ScopedFileLock::ScopedFileLock(const path &fn)
+{
+    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+    lock->lock_sharable();
+}
 
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
+ScopedFileLock::~ScopedFileLock()
+{
+    lock->unlock_sharable();
+}
 
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
+ScopedShareableFileLock::ScopedShareableFileLock(const path &fn)
+{
+    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+    lock->lock();
+}
 
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
-};
-
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+ScopedShareableFileLock::~ScopedShareableFileLock()
+{
+    lock->unlock();
+}

@@ -27,30 +27,37 @@
 
 #pragma once
 
-#include "common.h"
-#include "package.h"
+#include "filesystem.h"
 
-#include <set>
+#include <memory>
 
-struct DownloadDependency : public Package
+namespace boost
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    namespace interprocess
+    {
+        class file_lock;
+    }
+}
 
-    String md5;
-private:
-    std::set<int> dependencies;
+using FileLock = boost::interprocess::file_lock;
+using FileLockPtr = std::unique_ptr<FileLock>;
+
+class ScopedFileLock
+{
 public:
-    DownloadDependencies *map_ptr = nullptr;
-
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
-
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
+    ScopedFileLock(const path &fn);
+    ~ScopedFileLock();
 
 private:
-    void getIndirectDependencies(std::set<int> &deps) const;
+    FileLockPtr lock;
 };
 
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+class ScopedShareableFileLock
+{
+public:
+    ScopedShareableFileLock(const path &fn);
+    ~ScopedShareableFileLock();
+
+private:
+    FileLockPtr lock;
+};

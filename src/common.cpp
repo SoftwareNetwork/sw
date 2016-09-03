@@ -50,7 +50,7 @@
 #endif
 
 // version numbers of different subsystems
-#define SOURCE_VERSION 2
+#define SOURCE_VERSION 2 //?
 
 static const std::regex r_login("[a-z][a-z0-9_]+");
 static const std::regex r_org_name = r_login;
@@ -435,6 +435,21 @@ String url_post(const String &url, const String &data)
     return response;
 }
 
+ptree url_post(const String &url, const ptree &data)
+{
+    ptree p;
+    std::ostringstream oss;
+    pt::write_json(oss, data
+#if !defined(CPPAN_TEST)
+        , false
+#endif
+    );
+    auto response = url_post(url, oss.str());
+    std::istringstream iss(response);
+    pt::read_json(iss, p);
+    return p;
+}
+
 void download_file(DownloadData &data)
 {
     auto parent = data.fn.parent_path();
@@ -500,55 +515,6 @@ void download_file(DownloadData &data)
         throw std::runtime_error(String(curl_easy_strerror(res)));
 }
 
-String read_file(const path &p, bool no_size_check)
-{
-    if (!fs::exists(p))
-        throw std::runtime_error("File '" + p.string() + "' does not exist");
-
-    auto fn = p.string();
-    std::ifstream ifile(fn, std::ios::in | std::ios::binary);
-    if (!ifile)
-        throw std::runtime_error("Cannot open file '" + fn + "' for reading");
-
-    size_t sz = (size_t)fs::file_size(p);
-    if (!no_size_check && sz > 1'000'000)
-        throw std::runtime_error("File " + fn + " is very big (> ~1MB)");
-
-    String f;
-    f.resize(sz);
-    ifile.read(&f[0], sz);
-    return f;
-}
-
-void write_file(const path &p, const String &s)
-{
-    auto pp = p.parent_path();
-    if (!pp.empty())
-        fs::create_directories(pp);
-
-    std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
-    if (!ofile)
-        throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
-    ofile << s;
-}
-
-void write_file_if_different(const path &p, const String &s)
-{
-    if (fs::exists(p))
-    {
-        auto s2 = read_file(p);
-        if (s == s2)
-            return;
-    }
-
-    fs::create_directories(p.parent_path());
-
-    std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
-    if (!ofile)
-        throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
-    ofile << s;
-}
-
 String generate_random_sequence(uint32_t len)
 {
     auto seed = std::random_device()();
@@ -577,43 +543,12 @@ String hash_to_string(const uint8_t *hash, uint32_t hash_size)
     return s;
 }
 
-String make_archive_name(const String &fn)
-{
-    if (!fn.empty())
-        return fn + ".tar.gz";
-    return "cppan.tar.gz";
-}
-
 String sha1(const String &data)
 {
     uint8_t hash[EVP_MAX_MD_SIZE];
     uint32_t hash_size;
     EVP_Digest(data.data(), data.size(), hash, &hash_size, EVP_sha1(), nullptr);
     return hash_to_string(hash, hash_size);
-}
-
-path temp_directory_path()
-{
-    auto p = fs::temp_directory_path() / "cppan";
-    fs::create_directory(p);
-    return p;
-}
-
-path get_temp_filename()
-{
-    return temp_directory_path() / fs::unique_path();
-}
-
-path temp_script_path()
-{
-    auto p = temp_directory_path() / "scripts";
-    fs::create_directory(p);
-    return p;
-}
-
-path temp_script_filename()
-{
-    return temp_script_path() / fs::unique_path();
 }
 
 bool check_filename(const String &s, String *error)
@@ -690,4 +625,15 @@ int system(const std::vector<String> &args)
     for (auto &a : args)
         cmd += a + " ";
     return system(cmd.c_str());
+}
+
+String repeat(const String &e, int n)
+{
+    String s;
+    if (n < 0)
+        return s;
+    s.reserve(e.size() * n);
+    for (int i = 0; i < n; i++)
+        s += e;
+    return s;
 }

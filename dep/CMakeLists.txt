@@ -30,6 +30,15 @@ add_subdirectory(zlib)
 add_subdirectory(libressl)
 endif()
 
+if (APPLE)
+set(ENABLE_LZMA OFF)
+set(ENABLE_TEST OFF)
+set(ENABLE_CPIO OFF)
+set(ENABLE_TAR OFF)
+set(ENABLE_CAT OFF)
+add_subdirectory(libarchive)
+endif()
+
 set(YAML_CPP_BUILD_TOOLS OFF)
 set(YAML_CPP_BUILD_CONTRIB OFF)
 

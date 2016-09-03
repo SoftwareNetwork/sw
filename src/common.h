@@ -36,13 +36,14 @@
 #include <vector>
 #include <unordered_set>
 
-#include <boost/variant.hpp>
 #include <openssl/evp.h>
 
 #include "enums.h"
 #include "filesystem.h"
+#include "property_tree.h"
 
 #define CONFIG_ROOT "/etc/cppan/"
+#define CPPAN_LOCAL_DIR "cppan"
 #define CPPAN_FILENAME "cppan.yml"
 
 using String = std::string;
@@ -62,14 +63,6 @@ bool check_org_name(const String &n, String *error = nullptr);
 bool check_project_name(const String &n, String *error = nullptr);
 bool check_branch_name(const String &n, String *error = nullptr);
 bool check_filename(const String &n, String *error = nullptr);
-
-String make_archive_name(const String &fn);
-
-path temp_directory_path();
-path get_temp_filename();
-
-path temp_script_path();
-path temp_script_filename();
 
 int system_no_output(const String &cmd);
 int system(const std::vector<String> &args);
@@ -112,13 +105,9 @@ private:
 };
 
 String url_post(const String &url, const String &data);
+ptree url_post(const String &url, const ptree &data);
 void download_file(DownloadData &data);
-
 Files unpack_file(const path &fn, const path &dst);
-
-String read_file(const path &p, bool no_size_check = false);
-void write_file(const path &p, const String &s);
-void write_file_if_different(const path &p, const String &s);
 
 String generate_random_sequence(uint32_t len);
 String hash_to_string(const uint8_t *hash, uint32_t hash_size);
@@ -164,49 +153,13 @@ struct Version
     bool operator!=(const Version &rhs) const;
 };
 
-struct Git
-{
-    String url;
-    String tag;
-    String branch;
-
-    bool empty() const { return url.empty(); }
-
-    bool isValid(String *error = nullptr) const
-    {
-        if (empty())
-        {
-            if (error)
-                *error = "Git url is missing";
-            return false;
-        }
-        if (tag.empty() && branch.empty())
-        {
-            if (error)
-                *error = "No git sources (branch or tag) available";
-            return false;
-        }
-        if (!tag.empty() && !branch.empty())
-        {
-            if (error)
-                *error = "Only one git source (branch or tag) must be specified";
-            return false;
-        }
-        return true;
-    }
-};
-
-struct RemoteFile { String url; };
-
-// add svn, bzr, hg?
-// do not add local
-using Source = boost::variant<Git, RemoteFile>;
-
 Version get_program_version();
 String get_program_version_string(const String &prog_name);
 
 std::wstring to_wstring(const std::string &s);
 std::string to_string(const std::wstring &s);
+
+String repeat(const String &e, int n);
 
 // lambda overloads
 template <class... Fs> struct overload_set;

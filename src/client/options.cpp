@@ -38,9 +38,6 @@ ProgramOptions::ProgramOptions()
     visible.add_options()
         ("help,h", "produce this message")
         ("dir,d", po::value<std::string>(), "working directory")
-        ("build", po::value<std::string>(), "file or dir: an inline building")
-        ("rebuild", po::value<std::string>(), "file or dir: an inline building while removing previous version")
-        ("generate", po::value<std::string>(), "file or dir: an inline project generation")
         ("clear-cmake-cache", po::bool_switch(), "remove all CMakeCache.txt files")
         ("clear-vars-cache", po::bool_switch(), "remove all config variables caches")
         ("version,v", po::bool_switch(), "version")
@@ -48,8 +45,13 @@ ProgramOptions::ProgramOptions()
         ("curl-verbose", po::bool_switch(), "set curl to verbose mode")
         ("self-upgrade", po::bool_switch(), "upgrade CPPAN client to the latest version")
         ("ignore-ssl-checks,k", po::bool_switch(), "ignore ssl checks and errors")
-        //("build-app", po::value<std::vector<std::string>>(), "download and build requested executable")
-        //("gen-dummy-config", po::bool_switch(), "download and build requested executable")
+
+        ("build", po::value<std::string>(), "file or dir: an inline building")
+        ("rebuild", po::value<std::string>(), "file or dir: an inline building while removing previous version")
+        ("generate", po::value<std::string>(), "file or dir: an inline project generation")
+
+        ("clear-cache", po::bool_switch(), "clear CMakeCache.txt files")
+        ("clear-vars-cache", po::bool_switch(), "clear checked symbols, types, includes etc.")
         ;
 
     // i - internal options

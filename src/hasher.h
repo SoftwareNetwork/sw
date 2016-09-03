@@ -28,29 +28,21 @@
 #pragma once
 
 #include "common.h"
-#include "package.h"
 
-#include <set>
-
-struct DownloadDependency : public Package
+struct Hasher
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    String hash;
 
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
+#define ADD_OPERATOR(t)  \
+    Hasher operator|(t); \
+    Hasher &operator|=(t)
 
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
+    ADD_OPERATOR(bool);
+    ADD_OPERATOR(const String &);
+    ADD_OPERATOR(const path &);
 
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
+#undef ADD_OPERATOR
 
 private:
-    void getIndirectDependencies(std::set<int> &deps) const;
+    void do_hash();
 };
-
-using DownloadDependencies = DownloadDependency::DownloadDependencies;

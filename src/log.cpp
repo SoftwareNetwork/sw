@@ -25,32 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "log.h"
 
-#include "common.h"
-#include "package.h"
-
-#include <set>
-
-struct DownloadDependency : public Package
-{
-    using DownloadDependencies = std::map<int, DownloadDependency>;
-
-    String md5;
-private:
-    std::set<int> dependencies;
-public:
-    DownloadDependencies *map_ptr = nullptr;
-
-public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
-
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
-
-private:
-    void getIndirectDependencies(std::set<int> &deps) const;
-};
-
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+bool silent = false;

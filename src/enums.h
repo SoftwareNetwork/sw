@@ -60,7 +60,7 @@ enum ProjectFlag
     pfFixed, // vf
     pfExecutable, // vf
     pfEmpty, // vf - can be used to load & include cmake packages
-    pfPrivate, // private dependency
+    pfPrivateDependency, // private dependency
     pfDirectDependency, // vf, response only
     pfIncludeDirectories, // vf (dependency flag - take include dirs from this dep)
     // pfOptional?
