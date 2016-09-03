@@ -1,14 +1,10 @@
-# C++ Archive Network
+# [C++ Archive Network](https://cppan.org/)
 
-https://cppan.org/
-
-Read [wiki](https://github.com/cppan/cppan/wiki) to get help with CPPAN.
+Read [documentation](https://github.com/cppan/cppan/blob/master/doc/readme.md) to get help with CPPAN.
 
 Use issues to put your feedback, bugs and other stuff.
 
-## Client binaries
-
-https://cppan.org/client/
+## [Client binaries](https://cppan.org/client/)
 
 Binaries depends on gcc-5 ABI on linux and VC2015 redist on Windows.
 
