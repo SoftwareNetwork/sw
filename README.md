@@ -1,9 +1,10 @@
 # [C++ Archive Network](https://cppan.org/)
 
-- [Website](https://cppan.org/)
+- Visit [Website](https://cppan.org/) to find existing or add your own packages.
 - Read [Documentation](https://github.com/cppan/cppan/blob/master/doc/readme.md) to get help with CPPAN.
 - [Download](https://cppan.org/client/) precompiled client binaries.
 - Use [Issues](https://github.com/cppan/cppan/issues) page to put your feedback, bugs and other stuff.
+- Use [Forums](https://groups.google.com/forum/#!forum/cppan) to discuss features, usability, ask a question etc.
 
 ## Download & Install
 
