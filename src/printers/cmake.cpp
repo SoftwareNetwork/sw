@@ -1351,7 +1351,6 @@ if (CONFIG)
             COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}
                 --config ${CONFIG}#Release # FIXME: always build exe with Release conf
-                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         )
 )");
     }
@@ -1362,7 +1361,6 @@ if (CONFIG)
             COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}
                 --config ${CONFIG}
-                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         )
 )");
     }
