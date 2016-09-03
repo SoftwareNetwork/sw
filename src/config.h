@@ -65,6 +65,7 @@ struct Directories
 extern Directories directories;
 
 struct Config;
+struct LocalSettings;
 
 struct BuildSettings
 {
@@ -111,13 +112,18 @@ struct BuildSettings
     String filename_without_ext;
     path source_directory;
     path binary_directory;
+    String config;
     Config *c;
+    LocalSettings *ls;
 
-    BuildSettings(Config *c);
+    BuildSettings(Config *c, LocalSettings *ls);
 
     void load(const yaml &root);
     void prepare_build(const path &fn, const String &cppan);
+    void set_build_dirs(const path &fn);
+    void append_build_dirs(const path &p);
     void set_config(Config *config);
+    String get_hash() const;
 };
 
 struct LocalSettings
@@ -142,6 +148,7 @@ struct LocalSettings
     void load(const path &p);
     void load(const yaml &root);
     void set_config(Config *config);
+    String get_hash() const;
 
 private:
     void load_main(const yaml &root);
@@ -199,6 +206,8 @@ private:
     Projects projects;
     path dir;
 
+    bool need_probe() const;
+
 public:
     struct InternalOptions
     {
@@ -213,5 +222,3 @@ public:
     bool downloaded = false;
     Package pkg; // current package
 };
-
-

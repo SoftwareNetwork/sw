@@ -50,7 +50,7 @@ struct AccessData
         if (!fs::exists(root_dir))
             fs::create_directories(root_dir);
 
-        root_file = root_dir / stamp;
+        root_file = root_dir / cppan_stamp;
 
         initialized = true;
     }

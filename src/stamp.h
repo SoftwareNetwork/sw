@@ -29,4 +29,4 @@
 
 #include <string>
 
-extern const std::string stamp;
+extern const std::string cppan_stamp;

@@ -25,51 +25,65 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "hasher.h"
 
-#include "context.h"
-#include "project.h"
+#include <boost/algorithm/string.hpp>
 
-#define CPP_HEADER_FILENAME "cppan.h"
-#define CPPAN_EXPORT "CPPAN_EXPORT"
-#define CPPAN_EXPORT_PREFIX "CPPAN_API_"
-#define CPPAN_LOCAL_BUILD_PREFIX "cppan-build-"
-#define CPPAN_CONFIG_FILENAME "config.cmake"
+#include <algorithm>
 
-#define INCLUDE_GUARD_PREFIX "CPPAN_INCLUDE_GUARD_"
+#define DEFINE_OPERATOR(t)        \
+    Hasher Hasher::operator|(t v) \
+    {                             \
+        auto tmp = *this;         \
+        tmp |= v;                 \
+        return tmp;               \
+    }
 
-extern const std::vector<String> configuration_types;
-extern const std::vector<String> configuration_types_normal;
-extern const std::vector<String> configuration_types_no_rel;
+DEFINE_OPERATOR(bool)
+DEFINE_OPERATOR(const String &)
+DEFINE_OPERATOR(const path &);
 
-enum class PrinterType
+void Hasher::do_hash()
 {
-    CMake,
-    //Ninja,
-    // add more here
-};
+    hash = sha1(hash);
+}
 
-struct Config;
-
-struct Printer
+Hasher &Hasher::operator|=(bool b)
 {
-    Package d;
-    class AccessTable *access_table = nullptr;
-    Config *cc = nullptr; // current
-    Config *pc = nullptr; // parent
-    Config *rc = nullptr; // root
-    std::set<String> include_guards;
+    hash += b ? "1" : "0";
+    do_hash();
+    return *this;
+}
 
-    virtual void prepare_rebuild() = 0;
-    virtual void prepare_build(const path &fn, const String &cppan) = 0;
-    virtual int generate() const = 0;
-    virtual int build() const = 0;
+Hasher &Hasher::operator|=(const String &v)
+{
+    auto s = v;
+    boost::trim(s);
 
-    virtual void print() = 0;
-    virtual void print_meta() = 0;
+    std::vector<String> out;
+    boost::split(out, s, boost::is_any_of(" \t\r\n\v\f"));
 
-    virtual void clear_cache(path p) const = 0;
-    virtual void clear_exports(path p) const = 0;
+    std::vector<String> out2;
+    for (auto &o : out)
+    {
+        boost::trim(o);
+        if (o.empty())
+            continue;
+        out2.push_back(o);
+    }
 
-    static std::unique_ptr<Printer> create(PrinterType type);
-};
+    std::sort(out2.begin(), out2.end());
+
+    for (auto &o : out2)
+        hash += o;
+
+    do_hash();
+    return *this;
+}
+
+Hasher &Hasher::operator|=(const path &v)
+{
+    hash += normalize_path(v);
+    do_hash();
+    return *this;
+}

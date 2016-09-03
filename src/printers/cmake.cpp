@@ -231,7 +231,7 @@ void CMakePrinter::prepare_rebuild()
 
 void CMakePrinter::prepare_build(const path &fn, const String &cppan)
 {
-    auto &build_settings = rc->local_settings.build_settings;
+    auto &bs = rc->local_settings.build_settings;
     auto &p = rc->getDefaultProject();
 
     Context ctx;
@@ -240,7 +240,7 @@ void CMakePrinter::prepare_build(const path &fn, const String &cppan)
     ctx.addLine();
 
     config_section_title(ctx, "project settings");
-    ctx.addLine("project(" + build_settings.filename_without_ext + " C CXX)");
+    ctx.addLine("project(" + bs.filename_without_ext + " C CXX)");
     ctx.addLine();
 
     config_section_title(ctx, "compiler & linker settings");
@@ -259,39 +259,39 @@ endif()
 )");
 
     // compiler flags
-    ctx.addLine("set(CMAKE_C_FLAGS \"${CMAKE_C_FLAGS} " + build_settings.c_compiler_flags + "\")");
-    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} " + build_settings.cxx_compiler_flags + "\")");
+    ctx.addLine("set(CMAKE_C_FLAGS \"${CMAKE_C_FLAGS} " + bs.c_compiler_flags + "\")");
+    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} " + bs.cxx_compiler_flags + "\")");
     ctx.addLine();
 
     for (int i = 0; i < BuildSettings::CMakeConfigurationType::Max; i++)
     {
         auto &cfg = configuration_types[i];
-        ctx.addLine("set(CMAKE_C_FLAGS_" + cfg + " \"${CMAKE_C_FLAGS_" + cfg + "} " + build_settings.c_compiler_flags_conf[i] + "\")");
-        ctx.addLine("set(CMAKE_CXX_FLAGS_" + cfg + " \"${CMAKE_CXX_FLAGS_" + cfg + "} " + build_settings.cxx_compiler_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_C_FLAGS_" + cfg + " \"${CMAKE_C_FLAGS_" + cfg + "} " + bs.c_compiler_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_CXX_FLAGS_" + cfg + " \"${CMAKE_CXX_FLAGS_" + cfg + "} " + bs.cxx_compiler_flags_conf[i] + "\")");
         ctx.addLine();
     }
 
     // linker flags
-    ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS \"${CMAKE_EXE_LINKER_FLAGS} " + build_settings.link_flags + "\")");
-    ctx.addLine("set(CMAKE_MODULE_LINKER_FLAGS \"${CMAKE_MODULE_LINKER_FLAGS} " + build_settings.link_flags + "\")");
-    ctx.addLine("set(CMAKE_SHARED_LINKER_FLAGS \"${CMAKE_SHARED_LINKER_FLAGS} " + build_settings.link_flags + "\")");
-    ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS \"${CMAKE_STATIC_LINKER_FLAGS} " + build_settings.link_flags + "\")");
+    ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS \"${CMAKE_EXE_LINKER_FLAGS} " + bs.link_flags + "\")");
+    ctx.addLine("set(CMAKE_MODULE_LINKER_FLAGS \"${CMAKE_MODULE_LINKER_FLAGS} " + bs.link_flags + "\")");
+    ctx.addLine("set(CMAKE_SHARED_LINKER_FLAGS \"${CMAKE_SHARED_LINKER_FLAGS} " + bs.link_flags + "\")");
+    ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS \"${CMAKE_STATIC_LINKER_FLAGS} " + bs.link_flags + "\")");
     ctx.addLine();
 
     for (int i = 0; i < BuildSettings::CMakeConfigurationType::Max; i++)
     {
         auto &cfg = configuration_types[i];
-        ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS_" + cfg + " \"${CMAKE_EXE_LINKER_FLAGS_" + cfg + "} " + build_settings.link_flags_conf[i] + "\")");
-        ctx.addLine("set(CMAKE_MODULE_LINKER_FLAGS_" + cfg + " \"${CMAKE_MODULE_LINKER_FLAGS_" + cfg + "} " + build_settings.link_flags_conf[i] + "\")");
-        ctx.addLine("set(CMAKE_SHARED_LINKER_FLAGS_" + cfg + " \"${CMAKE_SHARED_LINKER_FLAGS_" + cfg + "} " + build_settings.link_flags_conf[i] + "\")");
-        ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS_" + cfg + " \"${CMAKE_STATIC_LINKER_FLAGS_" + cfg + "} " + build_settings.link_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS_" + cfg + " \"${CMAKE_EXE_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_MODULE_LINKER_FLAGS_" + cfg + " \"${CMAKE_MODULE_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_SHARED_LINKER_FLAGS_" + cfg + " \"${CMAKE_SHARED_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS_" + cfg + " \"${CMAKE_STATIC_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
         ctx.addLine();
     }
 
     // should be after flags
     config_section_title(ctx, "CPPAN include");
     ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
-    if (build_settings.use_shared_libs)
+    if (bs.use_shared_libs)
         ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS 1)");
     ctx.addLine("add_subdirectory(cppan)");
     ctx.addLine();
@@ -307,21 +307,21 @@ endif()
     ctx.addLine();
 
     config_section_title(ctx, "target");
-    ctx.addLine("set(this " + build_settings.filename_without_ext + ")");
-    if (build_settings.type == "executable")
+    ctx.addLine("set(this " + bs.filename_without_ext + ")");
+    if (bs.type == "executable")
     {
-        ctx.addLine("add_executable(${this} " + boost::to_upper_copy(build_settings.executable_type) + " ${src})");
+        ctx.addLine("add_executable(${this} " + boost::to_upper_copy(bs.executable_type) + " ${src})");
         ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_EXPORT=)");
     }
     else
     {
-        if (build_settings.type == "library")
+        if (bs.type == "library")
         {
-            ctx.addLine("add_library(${this} " + boost::to_upper_copy(build_settings.library_type) + " ${src})");
+            ctx.addLine("add_library(${this} " + boost::to_upper_copy(bs.library_type) + " ${src})");
         }
         else
         {
-            ctx.addLine("add_library(${this} " + boost::to_upper_copy(build_settings.type) + " ${src})");
+            ctx.addLine("add_library(${this} " + boost::to_upper_copy(bs.type) + " ${src})");
         }
         ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_EXPORT=CPPAN_SYMBOL_EXPORT)");
         ctx.addLine(R"(set_target_properties(${this} PROPERTIES
@@ -329,7 +329,7 @@ endif()
     BUILD_WITH_INSTALL_RPATH True
 ))");
     }
-    ctx.addLine("target_link_libraries(${this} cppan " + build_settings.link_libraries + ")");
+    ctx.addLine("target_link_libraries(${this} cppan " + bs.link_libraries + ")");
     ctx.addLine();
     ctx.addLine(R"(add_custom_command(TARGET ${this} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${this}> )" + normalize_path(fs::current_path()) + R"(/
@@ -341,29 +341,29 @@ endif()
     ctx.addLine();
     ctx.splitLines();
 
-    write_file_if_different(build_settings.source_directory / cmake_config_filename, ctx.getText());
+    write_file_if_different(bs.source_directory / cmake_config_filename, ctx.getText());
 }
 
 int CMakePrinter::generate() const
 {
-    auto &build_settings = rc->local_settings.build_settings;
+    auto &bs = rc->local_settings.build_settings;
 
     std::vector<String> args;
     args.push_back("cmake");
-    args.push_back("-H\"" + normalize_path(build_settings.source_directory) + "\"");
-    args.push_back("-B\"" + normalize_path(build_settings.binary_directory) + "\"");
-    if (!build_settings.c_compiler.empty())
-        args.push_back("-DCMAKE_C_COMPILER=\"" + build_settings.c_compiler + "\"");
-    if (!build_settings.cxx_compiler.empty())
-        args.push_back("-DCMAKE_CXX_COMPILER=\"" + build_settings.cxx_compiler + "\"");
-    if (!build_settings.generator.empty())
-        args.push_back("-G \"" + build_settings.generator + "\"");
-    if (!build_settings.toolset.empty())
-        args.push_back("-T " + build_settings.toolset + "");
-    args.push_back("-DCMAKE_BUILD_TYPE=" + build_settings.configuration + "");
-    for (auto &o : build_settings.cmake_options)
+    args.push_back("-H\"" + normalize_path(bs.source_directory) + "\"");
+    args.push_back("-B\"" + normalize_path(bs.binary_directory) + "\"");
+    if (!bs.c_compiler.empty())
+        args.push_back("-DCMAKE_C_COMPILER=\"" + bs.c_compiler + "\"");
+    if (!bs.cxx_compiler.empty())
+        args.push_back("-DCMAKE_CXX_COMPILER=\"" + bs.cxx_compiler + "\"");
+    if (!bs.generator.empty())
+        args.push_back("-G \"" + bs.generator + "\"");
+    if (!bs.toolset.empty())
+        args.push_back("-T " + bs.toolset + "");
+    args.push_back("-DCMAKE_BUILD_TYPE=" + bs.configuration + "");
+    for (auto &o : bs.cmake_options)
         args.push_back(o);
-    for (auto &o : build_settings.env)
+    for (auto &o : bs.env)
     {
 #ifdef _WIN32
         _putenv_s(o.first.c_str(), o.second.c_str());
@@ -372,19 +372,20 @@ int CMakePrinter::generate() const
 #endif
     }
     auto ret = system(args);
-    if (!build_settings.silent)
+    if (!bs.silent)
     {
         auto bld_dir = fs::current_path();
 #ifdef _WIN32
-        auto sln = build_settings.binary_directory / (build_settings.filename_without_ext + ".sln");
-        auto sln_new = bld_dir / (build_settings.filename_without_ext + ".sln.lnk");
+        auto sln = bs.binary_directory / (bs.filename_without_ext + ".sln");
+        auto sln_new = bld_dir /
+            (bs.filename_without_ext + "-" + bs.config + ".sln.lnk");
         if (fs::exists(sln))
             CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
 #else
-        bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + build_settings.filename);
+        bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename + "-" + bs.config);
         fs::create_directories(bld_dir);
         boost::system::error_code ec;
-        fs::create_symlink(build_settings.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
+        fs::create_symlink(bs.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
 #endif
     }
     return ret;
@@ -392,12 +393,12 @@ int CMakePrinter::generate() const
 
 int CMakePrinter::build() const
 {
-    auto &build_settings = rc->local_settings.build_settings;
+    auto &bs = rc->local_settings.build_settings;
 
     std::vector<String> args;
     args.push_back("cmake");
-    args.push_back("--build \"" + normalize_path(build_settings.binary_directory) + "\"");
-    args.push_back("--config " + build_settings.configuration);
+    args.push_back("--build \"" + normalize_path(bs.binary_directory) + "\"");
+    args.push_back("--config " + bs.configuration);
     return system(args);
 }
 
@@ -1369,6 +1370,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     config_section_title(ctx, "variables");
     ctx.addLine("get_configuration(config)");
     ctx.addLine("get_number_of_cores(N_CORES)");
+    ctx.addLine();
+    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config}\")");
     ctx.addLine();
 
     config_section_title(ctx, "export/import");

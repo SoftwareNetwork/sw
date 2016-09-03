@@ -39,8 +39,11 @@
 
 #include "access_table.h"
 #include "context.h"
+#include "file_lock.h"
+#include "hasher.h"
 #include "log.h"
 #include "response.h"
+#include "stamp.h"
 
 Directories directories;
 
@@ -87,8 +90,8 @@ void Directories::set_build_dir(const path &p)
     build_dir = p;
 }
 
-BuildSettings::BuildSettings(Config *c)
-    : c(c)
+BuildSettings::BuildSettings(Config *c, LocalSettings *ls)
+    : c(c), ls(ls)
 {
 }
 
@@ -168,7 +171,7 @@ void BuildSettings::load(const yaml &root)
     }
 }
 
-void BuildSettings::prepare_build(const path &fn, const String &cppan)
+void BuildSettings::set_build_dirs(const path &fn)
 {
     filename = fn.filename().string();
     filename_without_ext = fn.filename().stem().string();
@@ -186,7 +189,16 @@ void BuildSettings::prepare_build(const path &fn, const String &cppan)
     else
         source_directory /= sha1(normalize_path(fn.string())).substr(0, 6);
     binary_directory = source_directory / "build";
+}
 
+void BuildSettings::append_build_dirs(const path &p)
+{
+    source_directory /= p;
+    binary_directory = source_directory / "build";
+}
+
+void BuildSettings::prepare_build(const path &fn, const String &cppan)
+{
     auto &p = c->getDefaultProject();
     if (!is_dir)
         p.sources.insert(filename);
@@ -194,10 +206,7 @@ void BuildSettings::prepare_build(const path &fn, const String &cppan)
     p.files.erase(CPPAN_FILENAME);
 
     if (rebuild)
-    {
-        boost::system::error_code ec;
-        fs::remove_all(source_directory, ec);
-    }
+        fs::remove_all(source_directory);
     fs::create_directories(source_directory);
 
     write_file_if_different(source_directory / CPPAN_FILENAME, cppan);
@@ -205,8 +214,33 @@ void BuildSettings::prepare_build(const path &fn, const String &cppan)
     conf.process(source_directory); // invoke cppan
 }
 
+String BuildSettings::get_hash() const
+{
+    Hasher h;
+    h |= c_compiler;
+    h |= cxx_compiler;
+    h |= compiler;
+    h |= c_compiler_flags;
+for (int i = 0; i < CMakeConfigurationType::Max; i++)
+    h |= c_compiler_flags_conf[i];
+    h |= cxx_compiler_flags;
+for (int i = 0; i < CMakeConfigurationType::Max; i++)
+    h |= cxx_compiler_flags_conf[i];
+    h |= compiler_flags;
+for (int i = 0; i < CMakeConfigurationType::Max; i++)
+    h |= compiler_flags_conf[i];
+    h |= link_flags;
+for (int i = 0; i < CMakeConfigurationType::Max; i++)
+    h |= link_flags_conf[i];
+    h |= link_libraries;
+    h |= generator;
+    h |= toolset;
+    h |= use_shared_libs;
+    return h.hash;
+}
+
 LocalSettings::LocalSettings(Config *c)
-    : build_settings(c), c(c)
+    : build_settings(c, this), c(c)
 {
     build_dir = temp_directory_path() / "build";
     storage_dir = get_root_directory() / STORAGE_DIR;
@@ -315,6 +349,14 @@ void LocalSettings::set_config(Config *config)
 {
     c = config;
     build_settings.set_config(c);
+}
+
+String LocalSettings::get_hash() const
+{
+    Hasher h;
+    h |= build_settings.get_hash();
+    h |= local_build;
+    return h.hash;
 }
 
 Config::Config()
@@ -631,10 +673,77 @@ Packages Config::getFileDependencies() const
 void Config::prepare_build(path fn, const String &cppan)
 {
     fn = fs::canonical(fs::absolute(fn));
-    local_settings.build_settings.prepare_build(fn, cppan);
 
     auto printer = Printer::create(printerType);
     printer->rc = this;
+
+    String cfg;
+    {
+        auto stamps_dir = directories.storage_dir_etc / STAMPS_DIR / "configs";
+        if (!fs::exists(stamps_dir))
+            fs::create_directories(stamps_dir);
+        auto stamps_file = stamps_dir / cppan_stamp;
+
+        std::map<String, String> hash_configs;
+        {
+            ScopedShareableFileLock lock(stamps_file);
+
+            String hash;
+            String config;
+            std::ifstream ifile(stamps_file.string());
+            while (ifile >> hash >> config)
+                hash_configs[hash] = config;
+        }
+
+        auto h = local_settings.get_hash();
+        auto i = hash_configs.find(h);
+        if (i != hash_configs.end())
+        {
+            cfg = i->second;
+        }
+        else
+        {
+            // do a test build to extract config string
+            local_settings.build_settings.set_build_dirs(fn);
+            local_settings.build_settings.source_directory = get_temp_filename();
+            local_settings.build_settings.binary_directory = local_settings.build_settings.source_directory / "build";
+            local_settings.build_settings.prepare_build(fn, cppan);
+            printer->prepare_build(fn, cppan);
+
+            LOG("--");
+            LOG("-- Performing test build");
+            LOG("--");
+
+            auto olds = local_settings.build_settings.silent;
+            local_settings.build_settings.silent = true;
+            printer->generate();
+            local_settings.build_settings.silent = olds;
+
+            cfg = read_file(local_settings.build_settings.binary_directory / CPPAN_CONFIG_FILENAME);
+            hash_configs[h] = cfg;
+
+            fs::remove_all(local_settings.build_settings.source_directory);
+        }
+        local_settings.build_settings.config = cfg;
+
+        {
+            ScopedFileLock lock(stamps_file);
+
+            String hash;
+            String config;
+            std::ofstream ofile(stamps_file.string());
+            if (ofile)
+            {
+                for (auto &hc : hash_configs)
+                    ofile << hc.first << " " << hc.second << "\n";
+            }
+        }
+    }
+
+    local_settings.build_settings.set_build_dirs(fn);
+    local_settings.build_settings.append_build_dirs(cfg);
+    local_settings.build_settings.prepare_build(fn, cppan);
+
     printer->prepare_build(fn, cppan);
 }
 

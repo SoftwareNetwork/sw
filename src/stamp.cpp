@@ -27,6 +27,6 @@
 
 #include "stamp.h"
 
-const std::string stamp =
+const std::string cppan_stamp =
 #include <stamp.h.in>
 ;

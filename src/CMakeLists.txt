@@ -94,6 +94,8 @@ set(common_src
     file_lock.h
     filesystem.cpp
     filesystem.h
+    hasher.cpp
+    hasher.h
     log.cpp
     log.h
     package.cpp
