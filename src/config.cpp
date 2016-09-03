@@ -128,19 +128,6 @@ void BuildSettings::load(const yaml &root)
     EXTRACT_AUTO(use_shared_libs);
     EXTRACT_AUTO(silent);
 
-#define ABS_PATH(x)                              \
-    do                                           \
-    {                                            \
-        if (!x.empty())                          \
-            x = normalize_path(fs::absolute(x)); \
-    } while (0)
-
-    ABS_PATH(c_compiler);
-    ABS_PATH(cxx_compiler);
-    ABS_PATH(compiler);
-
-#undef ABS_PATH
-
     for (int i = 0; i < CMakeConfigurationType::Max; i++)
     {
         auto t = configuration_types[i];
