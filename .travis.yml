@@ -8,7 +8,7 @@ dist: trusty
 
 os:
   - linux
-  - osx
+  #- osx
 
 branches:
   only:
@@ -19,7 +19,7 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-   - gcc-5
+    - gcc-5
 
 before_install:
   - if [[ $TRAVIS_OS_NAME == linux   ]]; then LINUX=true; fi
