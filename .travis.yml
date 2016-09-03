@@ -35,7 +35,7 @@ install:
 script:
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
   - make -j2
   - sudo cp bin/cppan /usr/bin
   - cd ..
