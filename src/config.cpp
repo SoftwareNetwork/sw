@@ -184,7 +184,7 @@ void BuildSettings::prepare_build(const path &fn, const String &cppan)
         directories.build_dir_type == PackagesDirType::None)
         source_directory /= (CPPAN_LOCAL_BUILD_PREFIX + filename);
     else
-        source_directory /= sha1(normalize_path(fn.string())).substr(0, 10);
+        source_directory /= sha1(normalize_path(fn.string())).substr(0, 6);
     binary_directory = source_directory / "build";
 
     auto &p = c->getDefaultProject();
@@ -209,7 +209,7 @@ LocalSettings::LocalSettings(Config *c)
     : build_settings(c), c(c)
 {
     build_dir = temp_directory_path() / "build";
-    storage_dir = get_root_directory() / "packages";
+    storage_dir = get_root_directory() / STORAGE_DIR;
 }
 
 void LocalSettings::load(const path &p)
@@ -230,7 +230,7 @@ void LocalSettings::load(const yaml &root)
         switch (type)
         {
         case PackagesDirType::Local:
-            return path(CPPAN_LOCAL_DIR) / "packages";
+            return path(CPPAN_LOCAL_DIR) / STORAGE_DIR;
         case PackagesDirType::User:
             return user_cfg.local_settings.storage_dir;
         case PackagesDirType::System:

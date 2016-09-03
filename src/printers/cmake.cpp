@@ -30,15 +30,6 @@ const String include_guard_filename = "include.cmake";
 const String cppan_stamp_filename = "cppan_sources.stamp";
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 
-String repeat(const String &e, int n)
-{
-    String s;
-    s.reserve(e.size() * n);
-    for (int i = 0; i < n; i++)
-        s += e;
-    return s;
-}
-
 const String config_delimeter_short = repeat("#", 40);
 const String config_delimeter = config_delimeter_short + config_delimeter_short;
 
@@ -1003,7 +994,7 @@ void CMakePrinter::print_object_config_file(const path &fn) const
     }
 
     config_section_title(ctx, "project settings");
-    ctx.addLine("project(" + d.variable_name + " C CXX)");
+    ctx.addLine("project(" + d.getHash() + " C CXX)");
     ctx.addLine();
 
     config_section_title(ctx, "compiler & linker settings");
@@ -1111,98 +1102,12 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
         ctx.addLine();
     }
     ctx.addLine("set(current_dir " + normalize_path(fn.parent_path()) + ")");
-    if (!d.flags[pfExecutable])
-        ctx.addLine("get_configuration(config)");
-    else
-        ctx.addLine("get_configuration_exe(config)");
-    ctx.addLine("set(build_dir ${current_dir}/build/${config})");
-    ctx.addLine("set(export_dir ${build_dir}/exports)");
-    ctx.addLine("set(import ${export_dir}/" + d.variable_name + ".cmake)");
-    ctx.addLine("set(import_fixed ${export_dir}/" + d.variable_name + "-fixed.cmake)");
-    ctx.addLine("set(aliases_file ${export_dir}/" + d.variable_name + "-aliases.cmake)");
+    ctx.addLine("set(current_dir " + normalize_path(fn.parent_path()) + ")");
+    ctx.addLine("set(variable_name " + d.variable_name + ")");
+    ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();
-    ctx.addLine(R"(if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
-    set(lock ${build_dir}/generate.lock)
 
-    file(LOCK ${lock} TIMEOUT 0 RESULT_VARIABLE lock_result)
-    if (NOT ${lock_result} EQUAL 0)
-        message(STATUS "WARNING: Target: ${target}")
-        message(STATUS "WARNING: Other project is being bootstrapped right now or you hit a circular deadlock.")
-        message(STATUS "WARNING: If you aren't building other projects right now feel free to kill this process or it will be stopped in 90 seconds.")
-
-        file(LOCK ${lock} TIMEOUT 90 RESULT_VARIABLE lock_result)
-
-        if (NOT ${lock_result} EQUAL 0)
-            message(FATAL_ERROR "Lock error: ${lock_result}")
-        endif()
-    endif()
-
-    # double check
-    if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
-        message(STATUS "")
-        message(STATUS "Preparing build tree for ${target} with config ${config}")
-        message(STATUS "")
-
-        #find_program(ninja ninja)
-        #set(generator Ninja)
-        set(generator ${CMAKE_GENERATOR})
-        if (MSVC
-            OR "${ninja}" STREQUAL "ninja-NOTFOUND"
-            OR CYGWIN # for me it's not working atm
-        )
-            set(generator ${CMAKE_GENERATOR})
-        endif()
-)");
-    if (d.flags[pfExecutable])
-    {
-        ctx.addLine(R"(
-            execute_process(
-                COMMAND ${CMAKE_COMMAND}
-                    -H${current_dir} -B${build_dir}
-                    #-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                    #-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                    #-G "${generator}"
-                    -DOUTPUT_DIR=${config}
-                    -DCPPAN_BUILD_SHARED_LIBS=0 # TODO: try to work 0->1
-            )
-)");
-    }
-    else
-    {
-        ctx.addLine(R"(
-        if (CMAKE_TOOLCHAIN_FILE)
-            execute_process(
-                COMMAND ${CMAKE_COMMAND}
-                    -H${current_dir} -B${build_dir}
-                    -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-                    -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
-                    -G "${generator}"
-                    -DOUTPUT_DIR=${config}
-                    -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
-            )
-        else()
-            execute_process(
-                COMMAND ${CMAKE_COMMAND}
-                    -H${current_dir} -B${build_dir}
-                    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                    -G "${generator}"
-                    -DOUTPUT_DIR=${config}
-                    -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
-            )
-        endif()
-)");
-    }
-    ctx.addLine(R"(
-        file(WRITE ${aliases_file} "${aliases}")
-        execute_process(
-            COMMAND cppan internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
-        )
-    endif()
-
-    file(LOCK ${lock} RELEASE)
-endif()
-)");
+    ctx.addLine(cmake_generate_file);
 
     ctx.addLine("if (NOT TARGET " + d.target_name + ")");
     ctx.addLine("     include(${import_fixed})");
@@ -1301,91 +1206,10 @@ void CMakePrinter::print_object_build_file(const path &fn) const
     Context ctx;
     file_title(ctx, d);
 
-    auto fn1 = normalize_path(directories.storage_dir_src / d.ppath.toString() / get_stamp_filename(d.version.toString()));
-    ctx.addLine(R"(set(REBUILD 1)
-
-set(fn1 ")" + fn1 + R"(")
-set(fn2 "${BUILD_DIR}/)" + cppan_stamp_filename + R"(")
-
-file(READ ${fn1} f1)
-if (EXISTS ${fn2})
-    file(READ ${fn2} f2)
-    if (f1 STREQUAL f2)
-        set(REBUILD 0)
-    endif()
-else()
-    file(WRITE ${fn2} "${f1}")
-endif()
-
-if (NOT REBUILD AND EXISTS ${TARGET_FILE})
-    return()
-endif()
-
-set(lock ${BUILD_DIR}/build.lock)
-
-file(LOCK ${lock} RESULT_VARIABLE lock_result)
-if (NOT ${lock_result} EQUAL 0)
-    message(FATAL_ERROR "Lock error: ${lock_result}")
-endif()
-
-# double check
-if (NOT REBUILD AND EXISTS ${TARGET_FILE})
-    # release before exit
-    file(LOCK ${lock} RELEASE)
-
-    return()
-endif()
-
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${fn1} ${fn2})
-
-find_program(make make)
-
-if (CONFIG)
-
-    if (${make} STREQUAL "make-NOTFOUND")
-)");
-    if (d.flags[pfExecutable])
-    {
-        ctx.addLine(R"(
-        execute_process(
-            COMMAND ${CMAKE_COMMAND}
-                --build ${BUILD_DIR}
-                --config ${CONFIG}#Release # FIXME: always build exe with Release conf
-        )
-)");
-    }
-    else
-    {
-        ctx.addLine(R"(
-        execute_process(
-            COMMAND ${CMAKE_COMMAND}
-                --build ${BUILD_DIR}
-                --config ${CONFIG}
-        )
-)");
-    }
-    ctx.addLine(R"(
-
-    else()
-        execute_process(
-            COMMAND make -j${N_CORES} -C ${BUILD_DIR}
-        )
-    endif()
-else()
-    if (${make} STREQUAL "make-NOTFOUND")
-        execute_process(
-            COMMAND ${CMAKE_COMMAND}
-                --build ${BUILD_DIR}
-        )
-    else()
-        execute_process(
-            COMMAND make -j${N_CORES} -C ${BUILD_DIR}
-        )
-    endif()
-endif()
-
-file(LOCK ${lock} RELEASE)
-)");
+    ctx.addLine("set(fn1 \"" + normalize_path(d.getStampFilename()) + "\")");
+    ctx.addLine("set(fn2 \"${BUILD_DIR}/" + cppan_stamp_filename + "\")");
+    ctx.addLine();
+    ctx.addLine(cmake_build_file);
 
     access_table->write_if_older(fn, ctx.getText());
 }
@@ -1862,6 +1686,7 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
             ctx.addLine("-DCONFIG=$<CONFIG>");
             ctx.addLine("-DBUILD_DIR=${build_dir}");
+            ctx.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
             ctx.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
             ctx.addLine("-DN_CORES=${N_CORES}");
             ctx.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);

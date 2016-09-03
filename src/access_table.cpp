@@ -28,21 +28,16 @@
 #include "access_table.h"
 
 #include "common.h"
-
-#include <boost/interprocess/sync/file_lock.hpp>
+#include "file_lock.h"
+#include "stamp.h"
 
 #include <unordered_map>
-
-const String stamp =
-#include <stamp.h>
-;
 
 struct AccessData
 {
     bool initialized = false;
     path root_dir;
     path root_file;
-    path lock_file;
     std::unordered_map<path, time_t> stamps;
     int refs = 0;
 
@@ -51,15 +46,11 @@ struct AccessData
         if (initialized)
             return;
 
-        root_dir = rd / "stamps";
+        root_dir = rd / STAMPS_DIR / "cppan";
         if (!fs::exists(root_dir))
             fs::create_directories(root_dir);
 
         root_file = root_dir / stamp;
-        lock_file = root_dir / (stamp + ".lock");
-
-        if (!fs::exists(lock_file))
-            std::ofstream(lock_file.string());
 
         initialized = true;
     }
@@ -71,16 +62,12 @@ struct AccessData
         if (refs++ > 0)
             return;
 
-        boost::interprocess::file_lock lck(lock_file.string().c_str());
-        lck.lock_sharable();
-
+        ScopedShareableFileLock lock(root_file);
         path p;
         time_t t;
         std::ifstream ifile(root_file.string());
         while (ifile >> p >> t)
             stamps[p] = t;
-
-        lck.unlock_sharable();
     }
 
     void save()
@@ -88,14 +75,12 @@ struct AccessData
         if (--refs > 0)
             return;
 
-        boost::interprocess::file_lock lck(lock_file.string().c_str());
-        lck.lock();
-
+        ScopedFileLock lock(root_file);
         std::ofstream ofile(root_file.string());
+        if (!ofile)
+            return;
         for (auto &s : stamps)
             ofile << s.first << " " << s.second << "\n";
-
-        lck.unlock();
     }
 };
 

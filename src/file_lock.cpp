@@ -25,44 +25,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "file_lock.h"
 
-#include <boost/filesystem.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/range.hpp>
+#include <boost/interprocess/sync/file_lock.hpp>
 
-#define STAMPS_DIR "stamps"
-#define STORAGE_DIR "storage"
+#include <iostream>
 
-namespace fs = boost::filesystem;
-using path = fs::wpath;
-
-path get_home_directory();
-path get_root_directory();
-path get_config_filename();
-
-path temp_directory_path();
-path get_temp_filename();
-path temp_script_path();
-path temp_script_filename();
-
-std::string read_file(const path &p, bool no_size_check = false);
-void write_file(const path &p, const std::string &s);
-void write_file_if_different(const path &p, const std::string &s);
-
-void remove_file(const path &p);
-std::string normalize_path(const path &p);
-
-std::string get_stamp_filename(const std::string &prefix);
-std::string make_archive_name(const std::string &fn);
-
-namespace std
+std::string prepare_lock_file(const path &fn)
 {
-    template<> struct hash<path>
-    {
-        size_t operator()(const path& p) const
-        {
-            return boost::filesystem::hash_value(p);
-        }
-    };
+    auto lock_file = fn.parent_path() / (fn.filename().string() + ".lock");
+    if (!fs::exists(lock_file))
+        std::ofstream(lock_file.string());
+    return lock_file.string();
+}
+
+ScopedFileLock::ScopedFileLock(const path &fn)
+{
+    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+    lock->lock_sharable();
+}
+
+ScopedFileLock::~ScopedFileLock()
+{
+    lock->unlock_sharable();
+}
+
+ScopedShareableFileLock::ScopedShareableFileLock(const path &fn)
+{
+    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+    lock->lock();
+}
+
+ScopedShareableFileLock::~ScopedShareableFileLock()
+{
+    lock->unlock();
 }

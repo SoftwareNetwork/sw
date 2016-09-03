@@ -159,6 +159,8 @@ String get_program_version_string(const String &prog_name);
 std::wstring to_wstring(const std::string &s);
 std::string to_string(const std::wstring &s);
 
+String repeat(const String &e, int n);
+
 // lambda overloads
 template <class... Fs> struct overload_set;
 

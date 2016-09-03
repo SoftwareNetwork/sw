@@ -74,6 +74,7 @@ private:
     void download_and_unpack();
     void post_download();
     void prepare_config(PackageConfigs::value_type &cc);
+    void write_index() const;
 };
 
 extern ResponseData rd;

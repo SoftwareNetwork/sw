@@ -39,6 +39,9 @@ struct Package
     path getDirSrc() const;
     path getDirObj() const;
     String getHash() const;
+    path getHashPath() const;
+    path getStampFilename() const;
+
     bool empty() const { return ppath.empty() || !version.isValid(); }
     bool operator<(const Package &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
 

@@ -626,3 +626,14 @@ int system(const std::vector<String> &args)
         cmd += a + " ";
     return system(cmd.c_str());
 }
+
+String repeat(const String &e, int n)
+{
+    String s;
+    if (n < 0)
+        return s;
+    s.reserve(e.size() * n);
+    for (int i = 0; i < n; i++)
+        s += e;
+    return s;
+}

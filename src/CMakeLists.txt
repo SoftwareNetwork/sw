@@ -64,13 +64,15 @@ add_custom_target(inserts_gen
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
     SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/inserts/cppan.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/build.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/generate.cmake
 )
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp PROPERTIES GENERATED TRUE)
 
 add_executable(stamp_genenerator stamp_gen.cpp)
-set(stamp ${CMAKE_CURRENT_BINARY_DIR}/stamp.h)
+set(stamp ${CMAKE_CURRENT_BINARY_DIR}/stamp.h.in)
 set_source_files_properties(${stamp} PROPERTIES GENERATED True)
 
 add_custom_target(gen_stamp
@@ -86,10 +88,12 @@ set(common_src
     config.h
     dependency.cpp
     dependency.h
-    filesystem.cpp
-    filesystem.h
     enums.cpp
     enums.h
+    file_lock.cpp
+    file_lock.h
+    filesystem.cpp
+    filesystem.h
     log.cpp
     log.h
     package.cpp
@@ -103,8 +107,10 @@ set(common_src
     response.h
     source.cpp
     source.h
+    stamp.cpp
+    stamp.h
     yaml.h
-    
+
     printers/printer.cpp
     printers/printer.h
     printers/cmake.cpp
@@ -113,9 +119,9 @@ set(common_src
     ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
     inserts.cpp.in
     inserts.h
-    
+
     ${stamp}
-    
+
     cppan.natvis
 )
 add_library(common ${common_src})

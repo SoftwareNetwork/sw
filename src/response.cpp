@@ -28,6 +28,7 @@
 #include "response.h"
 
 #include "config.h"
+#include "file_lock.h"
 #include "log.h"
 #include "project.h"
 
@@ -88,6 +89,7 @@ void ResponseData::download_dependencies(const Packages &deps)
     extractDependencies();
     download_and_unpack();
     post_download();
+    write_index();
 
     // add default (current, root) config
     packages[Package()].dependencies = deps;
@@ -151,8 +153,7 @@ void ResponseData::download_and_unpack()
     {
         auto &d = dd.second;
         auto version_dir = d.getDirSrc();
-        auto md5_filename = get_stamp_filename(d.version.toString());
-        auto md5file = version_dir.parent_path() / md5_filename;
+        auto md5file = d.getStampFilename();
 
         // store md5 of archive
         bool must_download = false;
@@ -184,7 +185,7 @@ void ResponseData::download_and_unpack()
         ddata.url = package_url;
         ddata.fn = fn;
         ddata.dl_md5 = &dl_md5;
-        LOG_NO_NEWLINE("Downloading: " << d.ppath.toString() << "-" << d.version.toString() << "... ");
+        LOG_NO_NEWLINE("Downloading: " << d.target_name << "... ");
         download_file(ddata);
 
         if (dl_md5 != d.md5)
@@ -196,7 +197,7 @@ void ResponseData::download_and_unpack()
 
         write_file(md5file, d.md5);
 
-        LOG_NO_NEWLINE("Unpacking: " << fn.string() << "... ");
+        LOG_NO_NEWLINE("Unpacking  : " << d.target_name << "... ");
         Files files;
         try
         {
@@ -287,4 +288,44 @@ ResponseData::const_iterator ResponseData::begin() const
 ResponseData::const_iterator ResponseData::end() const
 {
     return packages.end();
+}
+
+void ResponseData::write_index() const
+{
+    auto renew_index = [this](const auto &fn, auto func)
+    {
+        std::map<String, path> pkgs;
+
+        {
+            ScopedShareableFileLock lock(fn);
+
+            std::ifstream ifile(fn.string());
+            if (ifile)
+            {
+                String target_name;
+                path p;
+                while (ifile >> p >> target_name)
+                    pkgs[target_name] = p;
+                ifile.close();
+            }
+        }
+
+        for (auto &cc : *this)
+            pkgs[cc.first.target_name] = (cc.first.*func)();
+
+        {
+            ScopedFileLock lock(fn);
+
+            std::ofstream ofile(fn.string());
+            if (!ofile)
+                return;
+
+            for (auto &pkg : pkgs)
+                ofile << normalize_path(pkg.second) << "\t\t" << pkg.first << "\n";
+        }
+    };
+
+    auto index = "index.txt";
+    renew_index(directories.storage_dir_src / index, &Package::getDirSrc);
+    renew_index(directories.storage_dir_obj / index, &Package::getDirObj);
 }

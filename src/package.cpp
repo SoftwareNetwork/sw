@@ -40,18 +40,37 @@ Package extractFromString(const String &target)
 
 path Package::getDirSrc() const
 {
-    return directories.storage_dir_src / ppath.toString() / version.toString();
+    return directories.storage_dir_src / getHashPath();
 }
 
 path Package::getDirObj() const
 {
-    return directories.storage_dir_obj / getHash();
+    return directories.storage_dir_obj / getHashPath();
+}
+
+path Package::getStampFilename() const
+{
+    auto b = directories.storage_dir_etc / STAMPS_DIR / "packages" / getHashPath();
+    auto f = b.filename();
+    b = b.parent_path();
+    b /= get_stamp_filename(f.string());
+    return b;
 }
 
 String Package::getHash() const
 {
     static const auto delim = "/";
-    return sha1(ppath.toString() + delim + version.toString()).substr(0, 10);
+    return sha1(ppath.toString() + delim + version.toString()).substr(0, 8);
+}
+
+path Package::getHashPath() const
+{
+    auto h = getHash();
+    path p;
+    p /= h.substr(0, 2);
+    p /= h.substr(2, 2);
+    p /= h.substr(4);
+    return p;
 }
 
 void Package::createNames()
