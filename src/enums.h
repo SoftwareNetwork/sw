@@ -88,3 +88,4 @@ std::string toString(ProjectType e);
 std::string toString(ProjectPathNamespace e);
 std::string toString(PackagesDirType e);
 
+std::string getFlagsString(const ProjectFlags &flags);

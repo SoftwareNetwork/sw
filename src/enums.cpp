@@ -71,3 +71,13 @@ std::string toString(PackagesDirType e)
     }
     return std::to_string(toIndex(e));
 }
+
+std::string getFlagsString(const ProjectFlags &flags)
+{
+    std::string s;
+    if (flags[pfHeaderOnly])
+        s += "H";
+    if (flags[pfExecutable])
+        s += "E";
+    return s;
+}
