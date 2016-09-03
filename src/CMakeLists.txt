@@ -25,6 +25,11 @@ else()
     include_directories(${OPENSSL_INCLUDE_DIR})
 endif()
 
+if (APPLE)
+    add_definitions(-DLIBARCHIVE_STATIC)
+    include_directories(${PROJECT_SOURCE_DIR}/dep/libarchive/libarchive)
+endif()
+
 include_directories(${PROJECT_SOURCE_DIR}/dep/yaml-cpp/include)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -96,6 +101,14 @@ if (WIN32)
         libcurl
         crypto
         yaml-cpp
+        ${Boost_LIBRARIES}
+    )
+elseif (APPLE)
+    target_link_libraries(common
+        yaml-cpp
+	 archive_static
+        ${CURL_LIBRARIES}
+        ${OPENSSL_LIBRARIES}
         ${Boost_LIBRARIES}
     )
 else()
