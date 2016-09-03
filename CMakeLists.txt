@@ -164,6 +164,10 @@ add_custom_target(package_client
         -G ZIP
         -D CPACK_COMPONENTS_ALL=client
 )
+elseif (APPLE)
+add_custom_target(package_client
+    COMMAND zip -FS -j -9 cppan-master-macOS-client.zip $<TARGET_FILE:client>
+)
 else()
 add_custom_target(package_client
     COMMAND ${CMAKE_CPACK_COMMAND}
