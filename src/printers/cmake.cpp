@@ -1338,38 +1338,50 @@ endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${fn1} ${fn2})
 
+find_program(make make)
+
 if (CONFIG)
+
+    if (${make} STREQUAL "make-NOTFOUND")
 )");
     if (d.flags[pfExecutable])
     {
         ctx.addLine(R"(
-    execute_process(
-        COMMAND ${CMAKE_COMMAND}
-            --build ${BUILD_DIR}
-            --config ${CONFIG}#Release # FIXME: always build exe with Release conf
-    ))");
+        execute_process(
+            COMMAND ${CMAKE_COMMAND}
+                --build ${BUILD_DIR}
+                --config ${CONFIG}#Release # FIXME: always build exe with Release conf
+                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        )
+)");
     }
     else
     {
         ctx.addLine(R"(
-    execute_process(
-        COMMAND ${CMAKE_COMMAND}
-            --build ${BUILD_DIR}
-            --config ${CONFIG}
-    ))");
+        execute_process(
+            COMMAND ${CMAKE_COMMAND}
+                --build ${BUILD_DIR}
+                --config ${CONFIG}
+                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        )
+)");
     }
     ctx.addLine(R"(
+
+    else()
+        execute_process(
+            COMMAND make -j${N_CORES} -C ${BUILD_DIR}
+        )
+    endif()
 else()
-    find_program(make make)
     if (${make} STREQUAL "make-NOTFOUND")
         execute_process(
             COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}
         )
     else()
-        get_number_of_cores(N)
         execute_process(
-            COMMAND make -j${N} -C ${BUILD_DIR}
+            COMMAND make -j${N_CORES} -C ${BUILD_DIR}
         )
     endif()
 endif()
@@ -1501,6 +1513,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
     config_section_title(ctx, "variables");
     ctx.addLine("get_configuration(config)");
+    ctx.addLine("get_number_of_cores(N_CORES)");
     ctx.addLine();
 
     config_section_title(ctx, "export/import");
@@ -1851,6 +1864,8 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
             ctx.addLine("-DCONFIG=$<CONFIG>");
             ctx.addLine("-DBUILD_DIR=${build_dir}");
+            ctx.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
+            ctx.addLine("-DN_CORES=${N_CORES}");
             ctx.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
             ctx.decreaseIndent();
             ctx.decreaseIndent();
