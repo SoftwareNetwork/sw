@@ -34,10 +34,8 @@ install:
   - sudo cp cppan /usr/bin
   - wget -O master.zip https://github.com/cppan/tests/archive/master.zip
   - unzip master.zip -d .
-  - ls
 
 script:
-  - ls
-  - cd tests-master/ok
+  - cd tests-master/tests/ok
   - for i in *.cpp; do cppan --build $i; done
   
