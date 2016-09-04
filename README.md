@@ -10,7 +10,7 @@
 
 ### Dependencies
 
-- CMake >= 3.2
+- `CMake >= 3.2`
 
 ### Download & Install
 
@@ -19,6 +19,7 @@
 ##### Ubuntu 16.04
 
 ```
+sudo apt install cmake
 wget https://cppan.org/client/cppan-0.1.8-Linux-client.deb 
 sudo dpkg -i cppan-0.1.8-Linux-client.deb
 ```
@@ -26,8 +27,10 @@ sudo dpkg -i cppan-0.1.8-Linux-client.deb
 ##### Ubuntu 14.04
 
 ```
+wget --no-check-certificate https://www.cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.sh
+sudo sh cmake-3.6.1-Linux-x86_64.sh --skip-license --prefix=/usr
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test 
-sudo apt-get update && sudo apt-get install gcc-5 
+sudo apt-get update && sudo apt-get install gcc-5
 wget https://cppan.org/client/cppan-0.1.8-Linux-client.deb 
 sudo dpkg -i cppan-0.1.8-Linux-client.deb
 ```
