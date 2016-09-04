@@ -585,6 +585,16 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             ctx.addLine("set(LIBRARY_TYPE SHARED)");
 
         ctx.emptyLines(1);
+
+        ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
+        ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
+
+        // local aliases
+        ctx.addLine("set(target " + d.target_name + ")");
+        ctx.addLine("set(this " + d.target_name + ")");
+        ctx.addLine();
+
+        ctx.emptyLines(1);
     }
 
     print_bs_insertion(ctx, p, "pre sources", &BuildSystemConfigInsertions::pre_sources);
@@ -637,11 +647,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         else
             ctx << "add_library                   (" << d.target_name << " ${LIBRARY_TYPE} ${src})" << Context::eol;
     }
-    ctx.addLine();
-
-    // local aliases
-    ctx.addLine("set(target " + d.target_name + ")");
-    ctx.addLine("set(this " + d.target_name + ")");
     ctx.addLine();
 
     // include directories
