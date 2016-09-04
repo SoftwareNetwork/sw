@@ -196,7 +196,17 @@ void print_source_groups(Context &ctx, const path &dir)
     ctx.emptyLines(1);
 }
 
-void gather_build_deps(Context &ctx, const Packages &dd, Packages &out, bool recursive = false)
+void gather_build_deps(Context &ctx, const Packages &dd, Packages &out)
+{
+    for (auto &dp : dd)
+    {
+        auto &d = dp.second;
+        if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
+            continue;out.insert(dp);
+    }
+}
+
+void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
 {
     for (auto &dp : dd)
     {
@@ -204,8 +214,8 @@ void gather_build_deps(Context &ctx, const Packages &dd, Packages &out, bool rec
         if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
             continue;
         auto i = out.insert(dp);
-        if (i.second && recursive)
-            gather_build_deps(ctx, rd[d].dependencies, out, recursive);
+        if (i.second)
+            gather_copy_deps(ctx, rd[d].dependencies, out);
     }
 }
 
@@ -588,6 +598,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
         ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
         ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
+        ctx.addLine();
 
         // local aliases
         ctx.addLine("set(target " + d.target_name + ")");
@@ -956,7 +967,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     // export
     config_section_title(ctx, "export");
     ctx.addLine("export(TARGETS " + d.target_name + " FILE " + exports_dir + d.variable_name + ".cmake)");
-
     ctx.emptyLines(1);
 
     print_bs_insertion(ctx, p, "post alias", &BuildSystemConfigInsertions::post_alias);
@@ -1000,11 +1010,14 @@ void CMakePrinter::print_package_actions_file(const path &fn) const
     ctx.addLine();
     ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR_OLD ${CMAKE_CURRENT_SOURCE_DIR})");
     ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR \"" + normalize_path(fn.parent_path().string()) + "\")");
+    ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR_OLD ${CMAKE_CURRENT_BINARY_DIR})");
+    ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR \"" + normalize_path(get_binary_path(d)) + "\")");
     print_bs_insertion(ctx, p, "pre sources", &BuildSystemConfigInsertions::pre_sources);
     ctx.addLine("file(GLOB_RECURSE src \"*\")");
     print_bs_insertion(ctx, p, "post sources", &BuildSystemConfigInsertions::post_sources);
     print_bs_insertion(ctx, p, "post target", &BuildSystemConfigInsertions::post_target);
     print_bs_insertion(ctx, p, "post alias", &BuildSystemConfigInsertions::post_alias);
+    ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR_OLD})");
     ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR_OLD})");
     ctx.addLine();
     ctx.addLine(config_delimeter);
@@ -1758,7 +1771,7 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine();
 
             Packages cdeps;
-            gather_build_deps(ctx, rd[d].dependencies, bdeps, true);
+            gather_copy_deps(ctx, rd[d].dependencies, bdeps);
             for (auto &dp : cdeps)
             {
                 auto &p = dp.second;
