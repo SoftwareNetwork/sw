@@ -441,24 +441,34 @@ void Project::load(const yaml &root)
 
         auto &option = options[ol];
 
-        auto add_opts = [&option](const auto &defs, const auto &s, auto member)
+        auto add_opts = [](const auto &defs, const auto &s, auto &c)
         {
             if (!defs.IsDefined())
                 return;
             auto dd = get_sequence_set<String, String>(defs, s);
             for (auto &d : dd)
-                (option.*member).insert({ s,d });
+                c.insert({ s,d });
         };
-        auto add_opts_common = [&add_opts](const auto &opts, auto member)
+        auto add_opts_common = [&add_opts](const auto &opts, auto &c, auto &sc)
         {
-            add_opts(opts, "public", member);
-            add_opts(opts, "private", member);
-            add_opts(opts, "interface", member);
-        };
+            add_opts(opts, "public", c);
+            add_opts(opts, "private", c);
+            add_opts(opts, "interface", c);
 
-        add_opts_common(opt_level.second["definitions"], &Options::definitions);
-        add_opts_common(opt_level.second["compile_options"], &Options::compile_options);
-        add_opts_common(opt_level.second["link_options"], &Options::link_options);
+            for (auto kv : opts)
+            {
+                auto f = kv.first.template as<String>();
+                if (f == "public" || f == "private" || f == "interface")
+                    continue;
+                auto &scv = sc[f];
+                add_opts(kv.second, "public", scv);
+                add_opts(kv.second, "private", scv);
+                add_opts(kv.second, "interface", scv);
+            }
+        };
+        add_opts_common(opt_level.second["definitions"], option.definitions, option.system_definitions);
+        add_opts_common(opt_level.second["compile_options"], option.compile_options, option.system_compile_options);
+        add_opts_common(opt_level.second["link_options"], option.link_options, option.system_link_options);
 
         option.include_directories = get_sequence_set<String, String>(opt_level.second, "include_directories");
         option.link_directories = get_sequence_set<String, String>(opt_level.second, "link_directories");

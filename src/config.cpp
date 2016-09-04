@@ -697,17 +697,22 @@ void Config::prepare_build(path fn, const String &cppan)
             printer->prepare_build(fn, cppan);
 
             LOG("--");
-            LOG("-- Performing test build");
+            LOG("-- Performing test run");
             LOG("--");
 
             auto olds = local_settings.build_settings.silent;
             local_settings.build_settings.silent = true;
-            printer->generate();
+            auto ret = printer->generate();
             local_settings.build_settings.silent = olds;
+
+            if (ret)
+            {
+                fs::remove_all(local_settings.build_settings.source_directory);
+                throw std::runtime_error("There are errors during test run");
+            }
 
             cfg = read_file(local_settings.build_settings.binary_directory / CPPAN_CONFIG_FILENAME);
             hash_configs[h] = cfg;
-
             fs::remove_all(local_settings.build_settings.source_directory);
         }
         local_settings.build_settings.config = cfg;

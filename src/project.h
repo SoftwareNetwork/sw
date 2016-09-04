@@ -40,6 +40,11 @@
 using Definitions = std::multimap<String, String>;
 using CompileOptions = std::multimap<String, String>;
 using LinkOptions = std::multimap<String, String>;
+
+using SystemDefinitions = std::map<String, Definitions>;
+using SystemCompileOptions = std::map<String, Definitions>;
+using SystemLinkOptions = std::map<String, Definitions>;
+
 using Sources = std::set<String>;
 using StringSet = std::set<String>;
 using Symbols = std::map<String, StringSet>;
@@ -70,7 +75,13 @@ struct Options
     Definitions definitions;
     CompileOptions compile_options;
     LinkOptions link_options;
+
+    SystemDefinitions system_definitions;
+    SystemCompileOptions system_compile_options;
+    SystemLinkOptions system_link_options;
+
     BuildSystemConfigInsertions bs_insertions;
+
     StringSet include_directories;
     StringSet link_directories;
     StringSet link_libraries;

@@ -382,7 +382,7 @@ int CMakePrinter::generate() const
         if (fs::exists(sln))
             CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
 #else
-        bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename + "-" + bs.config);
+        bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.config;
         fs::create_directories(bld_dir);
         boost::system::error_code ec;
         fs::create_symlink(bs.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
@@ -794,14 +794,14 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         {
             ctx.emptyLines(1);
 
-            auto print_defs = [header_only, &ctx, this](const auto &ol)
+            auto print_defs = [header_only, &ctx, this](const auto &defs)
             {
-                if (ol.second.definitions.empty())
+                if (defs.empty())
                     return;
                 ctx.addLine("# definitions");
                 ctx << "target_compile_definitions    (" << d.target_name << Context::eol;
                 ctx.increaseIndent();
-                for (auto &def : ol.second.definitions)
+                for (auto &def : defs)
                 {
                     if (header_only)
                         ctx << "INTERFACE " << def.second << Context::eol;
@@ -811,14 +811,14 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 ctx.decreaseIndent();
                 ctx.addLine(")");
             };
-            auto print_compile_opts = [header_only, &ctx, this](const auto &ol)
+            auto print_compile_opts = [header_only, &ctx, this](const auto &copts)
             {
-                if (ol.second.compile_options.empty())
+                if (copts.empty())
                     return;
                 ctx.addLine("# compile options");
                 ctx << "target_compile_options        (" << d.target_name << Context::eol;
                 ctx.increaseIndent();
-                for (auto &def : ol.second.compile_options)
+                for (auto &def : copts)
                 {
                     if (header_only)
                         ctx << "INTERFACE " << def.second << Context::eol;
@@ -828,14 +828,14 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 ctx.decreaseIndent();
                 ctx.addLine(")");
             };
-            auto print_linker_opts = [header_only, &ctx, this](const auto &ol)
+            auto print_linker_opts = [header_only, &ctx, this](const auto &lopts)
             {
-                if (ol.second.link_options.empty())
+                if (lopts.empty())
                     return;
                 ctx.addLine("# link options");
                 ctx << "target_link_libraries         (" << d.target_name << Context::eol;
                 ctx.increaseIndent();
-                for (auto &def : ol.second.link_options)
+                for (auto &def : lopts)
                 {
                     if (header_only)
                         ctx << "INTERFACE " << def.second << Context::eol;
@@ -863,11 +863,26 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 ctx.addLine(")");
                 ctx.addLine();
             };
-            auto print_options = [&ol, &print_defs, &print_set, &print_compile_opts, &print_linker_opts]
+            auto print_options = [&ctx, &ol, &print_defs, &print_set, &print_compile_opts, &print_linker_opts]
             {
-                print_defs(ol);
-                print_compile_opts(ol);
-                print_linker_opts(ol);
+                print_defs(ol.second.definitions);
+                print_compile_opts(ol.second.compile_options);
+                print_linker_opts(ol.second.link_options);
+
+                auto print_system = [&ctx](const auto &a, auto f)
+                {
+                    for (auto &kv : a)
+                    {
+                        auto k = boost::to_upper_copy(kv.first);
+                        ctx.addLine("if (" + k + ")");
+                        f(kv.second);
+                        ctx.addLine("endif()");
+                    }
+                };
+                print_system(ol.second.system_definitions, print_defs);
+                print_system(ol.second.system_compile_options, print_compile_opts);
+                print_system(ol.second.system_link_options, print_linker_opts);
+
                 print_set(ol.second.include_directories, "target_include_directories");
                 print_set(ol.second.link_libraries, "target_link_libraries");
             };
