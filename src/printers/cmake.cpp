@@ -879,6 +879,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 print_defs(ol.second.definitions);
                 print_compile_opts(ol.second.compile_options);
                 print_linker_opts(ol.second.link_options);
+                print_linker_opts(ol.second.link_libraries);
 
                 auto print_system = [&ctx](const auto &a, auto f)
                 {
@@ -890,12 +891,13 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                         ctx.addLine("endif()");
                     }
                 };
+
                 print_system(ol.second.system_definitions, print_defs);
                 print_system(ol.second.system_compile_options, print_compile_opts);
                 print_system(ol.second.system_link_options, print_linker_opts);
+                print_system(ol.second.system_link_libraries, print_linker_opts);
 
                 print_set(ol.second.include_directories, "target_include_directories");
-                print_set(ol.second.link_libraries, "target_link_libraries");
             };
 
             if (ol.first == "any")

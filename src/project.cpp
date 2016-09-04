@@ -469,10 +469,10 @@ void Project::load(const yaml &root)
         add_opts_common(opt_level.second["definitions"], option.definitions, option.system_definitions);
         add_opts_common(opt_level.second["compile_options"], option.compile_options, option.system_compile_options);
         add_opts_common(opt_level.second["link_options"], option.link_options, option.system_link_options);
+        add_opts_common(opt_level.second["link_libraries"], option.link_libraries, option.system_link_libraries);
 
         option.include_directories = get_sequence_set<String, String>(opt_level.second, "include_directories");
         option.link_directories = get_sequence_set<String, String>(opt_level.second, "link_directories");
-        option.link_libraries = get_sequence_set<String, String>(opt_level.second, "link_libraries");
         option.global_definitions = get_sequence_set<String, String>(opt_level.second, "global_definitions");
 
         option.bs_insertions.get_config_insertions(opt_level.second);
