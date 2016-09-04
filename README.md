@@ -8,6 +8,10 @@
 - Issue tracking: https://github.com/cppan/cppan/issues
 - Forum: https://groups.google.com/forum/#!forum/cppan
 
+### Dependencies
+
+- CMake >= 3.2
+
 ### Download & Install
 
 #### Linux
