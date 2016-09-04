@@ -1,3 +1,5 @@
+# THIS FILE IS OUTDATED! Use this document https://github.com/cppan/cppan/blob/master/doc/cppan.yml 
+
 This page describes `cppan.yml` command file and its directives. See working examples in this repository https://github.com/cppan/packages.
 
 ### files
