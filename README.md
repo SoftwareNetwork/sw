@@ -27,7 +27,7 @@ sudo dpkg -i cppan-0.1.8-Linux-client.deb
 ##### Ubuntu 14.04
 
 ```
-wget --no-check-certificate https://www.cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.sh
+wget https://www.cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.sh
 sudo sh cmake-3.6.1-Linux-x86_64.sh --skip-license --prefix=/usr
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test 
 sudo apt-get update && sudo apt-get install gcc-5
