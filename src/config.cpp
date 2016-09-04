@@ -106,7 +106,6 @@ void BuildSettings::load(const yaml &root)
         return;
 
     // extract
-    EXTRACT_AUTO(cmake_options);
     EXTRACT_AUTO(c_compiler);
     EXTRACT_AUTO(cxx_compiler);
     EXTRACT_AUTO(compiler);
@@ -322,8 +321,6 @@ void LocalSettings::load_main(const yaml &root)
     build_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "build_dir_type", "system"), "build_dir_type");
     if (root["build_dir"].IsDefined())
         build_dir_type = PackagesDirType::None;
-    if (local_build && build_dir_type != PackagesDirType::None)
-        build_dir_type = PackagesDirType::Local;
 
     // read build settings
     if (root["builds"].IsDefined() && root["current_build"].IsDefined())

@@ -104,10 +104,10 @@ struct BuildSettings
 
     bool use_shared_libs = false;
     bool silent = true;
-    bool rebuild = false;
 
     // own data
     bool is_dir = false;
+    bool rebuild = false;
     String filename;
     String filename_without_ext;
     path source_directory;
@@ -173,6 +173,8 @@ struct Config
     Symbols check_symbols;
     StringSet check_libraries;
     BuildSystemConfigInsertions bs_insertions;
+
+    // own data
     std::map<String, Options> options;
     std::map<String, Options> global_options;
 

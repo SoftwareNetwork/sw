@@ -1,0 +1,533 @@
+# This file shows all available options for cppan.yml file.
+# cppan.yml should be written in YAML language.
+# Place it near your sources (to repository root) to simplify uploading to CPPAN.
+
+####################################################################################################
+#
+# project settings
+#
+####################################################################################################
+
+# These settings will be used by server to gather input files.
+
+# license - path to license file.
+# Usually this will a file in root dir: COPYING, LICENSE, LICENSE.txt
+# Can be omitted.
+license: COPYING
+
+# empty - flag that tells the server that there will be no files in projects.
+# This is only configuration project.
+# For example, see cppan.yml spec at https://cppan.org/pvt.cppan.demo.cmake.postgresql/version/master
+# Such projects can be used to setup system's libs.
+# Default value: false.
+empty: true
+
+# shared_only - the project never won't be built as static.
+# Default value: false.
+shared_only: true
+
+# static_only - the project never won't be built as shared lib.
+# Default value: false.
+static_only: true
+
+# header_only - force project to be never built, use as header only storage.
+# CPPAN will track header only projects automatically.
+# This options is only for convenience when header dir contain .cpp files.
+# So, you set it do discard them.
+# Default value: false.
+header_only: true
+
+# import_from_bazel - try to parse bazel's BUILD file to get files from it.
+# Bazel is Google's build system. In some aspects CPPAN is similar to it.
+# This option is only useful when uploading from some Google's project.
+# Default value: false.
+import_from_bazel: true
+
+# root_directory - tells that server must enter this dir before processing any files.
+# Sometimes in your git repository there's more than one project stored.
+# This options is very helpful in this case. No need to manually prefix all files with this dir.
+# Default value: empty.
+root_directory: some_dir_in_project
+
+# files - main directive to specify which files will be taken from your project.
+# You can use regular expressions here.
+files:
+    - include/.*
+    - src/.*\.cpp
+    - src/.*\.hpp
+    - src2/my_other_file.cpp
+# or
+# Second variant contains file groups. Each group consists of 'root' directory and 'files' directive.
+files:
+    my_group1:
+        root: some/dir/in/project
+        files:
+            - files.cpp
+            - relative.h
+            - to_current_root.cpp
+            - directive.h
+    my_grp2:
+        root: other/dir
+        files:
+            - other_file.cpp
+
+# exclude_from_build - exclude some files from building, but keep in archive.
+# Sometimes you want to add files based on OS: you exclude them here and add later.
+exclude_from_build:
+    - my_windows_file.cpp
+    - my_unix_file.cpp
+
+# include_directories - specify project's include dirs.
+# Can be private, public and interface.
+# - private is seen only by project.
+# - public is seen both by project and projects that depend on this
+# - interface is seen only by projects that depend on this
+# Default values: 'include', '${CMAKE_CURRENT_BINARY_DIR}'
+# If you provide any value 'include' will be removed and '${CMAKE_CURRENT_BINARY_DIR}' will not.
+include_directories:
+    public:
+        - include_dir1
+        - include/dir2
+    private:
+        - src
+    interface:
+        - some_dir
+
+# build - files to build. When build is seen, 'files' are not used for building anymore.
+build:
+    my.cpp
+    my.h
+
+####################################################################################################
+#
+# Build system (BS) insertions
+#
+####################################################################################################
+
+# This directives provides raw interface to underlying build system (currently CMake).
+# So you can control it on a very precise level.
+# These BS insertions are on the project level.
+
+# pre_sources - inserted before all sources gathered
+# all these options should go into multiline YAML comment
+pre_sources: |
+    file(WRITE some_file.txt "contents")
+    string(REGEX ...)
+
+# post_sources - inserted after all sources gathered. You'll be using this options more frequent than others.
+post_sources: ...
+
+# post_target - inserted after target is defined
+post_sources: ...
+
+# post_alias - inserted after aliases are defined
+post_sources: ...
+
+####################################################################################################
+#
+# build options
+#
+####################################################################################################
+
+# These options control definitions, compiler and linker flags.
+
+# options - root of options directive.
+options:
+    # any - will be applied with any build type (static or shared).
+    any:
+        # definitions - C/C++ preprocessor definitions.
+        # Can be 'private', 'public', 'interface' or build system value.
+        definitions:
+            # private - available only for project itself
+            private:
+                - BUILDING_MY_LIBRARY
+                - OTHER_PRIVATE_DEF="my string"
+
+            # public - available for project and its users
+            public:
+                - MY_LIBRARY=1
+
+            # interface - available for project users
+            interface:
+                - LINKING_MY_LIBRARY
+
+            # following keys will be conditions in build system.
+            # Example: 'win32' will be 'if (WIN32)' in cmake.
+            # You can use any strings here.
+            win32:
+                # But here the key can be only one of the following:
+                # 'private', 'public', 'interface'
+                private:
+                    - MY_DEF_ON_WIN32_ONLY=0
+            unix:
+                public:
+                    - MY_UNIX_DEF
+            apple:
+                interface:
+                    - OTHER_DEF
+            cygwin:
+                public:
+                    - CYGWIN_DEF
+            # mingw etc.
+
+        # compile_options - options passed to compiler
+        compile_options:
+            # same as for definitions
+
+        # link_options - options passed to linker
+        link_options:
+            # same as for definitions
+
+        # link_libraries - specific libraries (Ws2_32, pthread etc.) linked to your project
+        link_libraries:
+            # same as for definitions
+
+        # include_directories - specific include directories for 'any'
+        include_directories:
+            - idir1
+
+        # link_directories - specific link directories for 'any'
+        link_directories:
+            - idir1
+
+        # global_definitions - global definitions for 'any'.
+        # TODO: clarify this statements
+        # They will be added to the every target.
+        global_definitions:
+            - DEF1=1
+            - DEF2
+
+        # specific bs insertions for 'any'
+        pre_sources:  ...
+        post_sources: ...
+        post_sources: ...
+        post_sources: ...
+
+    # static - options will be available only when building static library
+    static:
+        # same as for 'any'
+
+    # shared - options will be available only when building shared library
+    shared:
+        # same as for 'any'
+
+####################################################################################################
+#
+# dependencies
+#
+####################################################################################################
+
+# This is the main directive that will control you project's dependencies.
+# Specify full names (paths) of projects and their versions your project rely on.
+dependencies:
+    # dependency on the specific version
+    pvt.cppan.demo.zlib: 1.2.8
+
+    # dependency on the 1.61.* version
+    # If newer than local version is available, it will be automatically downloaded and included.
+    pvt.cppan.demo.boost.filesystem: 1.61
+
+    # dependency on the 3.*.* version
+    # If newer than local version is available, it will be automatically downloaded and included.
+    pvt.cppan.demo.google.protobuf: 3
+
+    # dependency on the *.*.* version
+    # If newer than local version is available, it will be automatically downloaded and included.
+    pvt.cppan.demo.sqlite3: "*" # YAML syntax requires star in quotes
+
+    # dependency on a branch, will be updated frequently
+    pvt.cppan.demo.range_v3: master
+
+# second form - use all "*" - *.*.* star deps; no branches allowed
+dependencies:
+    - pvt.cppan.demo.zlib
+    - pvt.cppan.demo.boost.filesystem
+
+####################################################################################################
+
+# aliases - only for executables.
+# They can be helpful to shorten you exe name for further use during build.
+# BUT BE CAREFUL to not get same aliases from different projects.
+aliases:
+    # For example, for 'pvt.cppan.demo.google.protobuf.protoc-3.0.0' the shorter name will be nice.
+    - protobuf
+    - protoc
+
+####################################################################################################
+#
+# Config settings
+#
+####################################################################################################
+
+# root_project - this option can be used to specify root project when uploading multiple children
+# from the same cppan.yml file.
+# With it you can use relative paths in 'projects' directive.
+root_project: pvt.cppan.demo.google.protobuf
+
+# projects - specify multiple projects in single cppan.yml
+projects:
+    # if no 'root_project' is given, use full paths.
+    pvt.cppan.demo.google.protobuf.protobuf_lite:
+        # protobuf_lite project settings go here
+# or
+# if 'root_project' is given, use relative paths.
+projects:
+    protobuf_lite:
+        # protobuf_lite project settings go here
+    protoc:
+        # protoc project settings go here
+
+# check_function_exists - specify list of functions that will be checked for availability with current settings.
+# After successful check a definition in form of HAVE_CAPSED_FUNCTION_NAME will be available.
+check_function_exists:
+    - strcasecmp
+    - strlcat
+    - strlcpy
+
+# check_include_exists - check includes existence
+# After successful check a definition in form of HAVE_MY_HEADER_H will be available.
+check_include_exists:
+    - unistd.h
+    - pthread.h
+    - windows.h
+
+# check_type_size - check type size
+# After successful check a definition in form of HAVE_TYPE will be available.
+# After successful check a definition in form of SIZEOF_TYPE=N will be available, N - sizeof(type).
+# After successful check a definition in form of SIZE_OF_TYPE=N will be available, N - sizeof(type).
+check_include_exists:
+    # SIZEOF_VOID_P
+    - "void *"
+
+    # SIZEOF_LONG_LONG
+    - long long
+
+# check_library_exists - check library existence
+# After successful check a definition in form of HAVE_LIBRARY will be available.
+check_include_exists:
+    - m
+    - pthread
+    - dl
+    - Ws2_32.lib
+    - kernel32.lin
+
+# check_symbol_exists - check symbol's existence.
+# After successful check a definition in form of HAVE_MY_SYMBOL will be available.
+check_include_exists:
+    - my_symbol
+    - ...
+
+# BS insertions - will be applied to every project in current cppan.yml file.
+# These BS insertions are on the config level.
+# See chapter above for more infomation on these.
+
+pre_sources:  ...
+post_sources: ...
+post_sources: ...
+post_sources: ...
+
+
+####################################################################################################
+#
+# source & version options
+#
+####################################################################################################
+
+# source directive specifies the source of files in the internet.
+# At the moment only git and remote files are supported.
+
+# For git case you must write:
+# - git: - your git repository url;
+# - one of the following:
+#   - tag: name of the tag to be retrieved
+#   - branch: name of the branch to be retrieved
+source:
+    git: https://github.com/boostorg/core
+    branch: master
+# or
+source:
+    git: https://github.com/boostorg/core
+    tag: boost-1.61.0
+
+# For remote file case you must write one 'remote' value - direct link to file archive.
+# .tag.* and .zip archives are supported.
+source:
+    remote: http://zlib.net/zlib-1.2.8.tar.gz
+
+# If you put cppan.yml to your sources, there's no need to specify 'source' directive.
+# Its values will be set by server.
+
+########################################
+
+# version directive states the version of uploaded sources.
+# It can be:
+# 1. Real version in format X.Y.Z in according to semantic versioning https://semver.org.
+# 2. Branch name: [a-zA-Z_][a-zA-Z0-9_-]*
+#
+# Versions will be fixed later. They're not updatable.
+# Branches can be updated to the latest sources.
+# Examples of branch names are: master, develop, unstable, windows_port etc.
+#
+
+version: 1.2.8
+# or
+version: master
+
+####################################################################################################
+#
+# local_settings
+#
+####################################################################################################
+
+# local_settings directive provides options that won't be delivered to project users.
+# For user or system CPPAN config suboptions from 'local_settings' available at global level.
+
+local_settings:
+    # host: server address in form host or host:port ; host is url or ip address
+    host: https://cppan.org
+
+    # proxy provides access to proxy options
+    proxy:
+        # host - same for local_settings.host
+        host: my_local_network_proxy_server:3128
+
+        # user - proxy auth options in form user:password
+        user: my_username:my_password
+
+    # storage_dir - CPPAN root directory in which it will store all its data.
+    # Default value: $HOME/.cppan/
+    storage_dir: /home/user/.cppan/
+
+    # storage_dir_type - gives you ability to select predefined storage_dir.
+    # Can be:
+    # 1. local - store all data in 'storage_dir' value from current config (not recommended);
+    # 2. user - store data in 'storage_dir' from your user config; (recommended)
+    # 3. system - store data in 'storage_dir' from your system config; (this will require sudo invocations of CPPAN)
+    # Default value: user.
+    storage_dir_type: user
+
+    # show_ide_projects - with this option you'll be able to navigate through dependencies projects in you IDE (VS, Xcode)
+    # Boolean, default value - false
+    show_ide_projects: false
+
+    ################################################
+    # following settings control program builds which are driven by CPPAN
+    ################################################
+
+    # build_dir - directory for storing generated build files and current project's objects files.
+    # Default value: $TEMP/cppan/build/
+    build_dir: /tmp/my_dir
+
+    # build_dir_type - gives you ability to select predefined build_dir.
+    # Can be:
+    # 1. local - store all data in 'build_dir' value from current config;
+    # 2. user - store data in 'build_dir' from your user config;
+    # 3. system - store data in 'build_dir' from your system config;
+    # Default value: system.
+    # If 'build_dir' value is specified, 'build_dir_type' won't be considered.
+    build_dir_type: system
+
+    # local_build - turn on building of all dependencies in build directory instead of CPPAN storage.
+    # This will build all deps in this dir.
+    # Default value: false
+    local_build: false
+
+    # add_run_cppan_target - this will add 'run-cppan' target that will track changes of cppan.yml
+    # and re-run CPPAN program automatically
+    # Default value: false.
+    add_run_cppan_target: false
+
+    ################################################
+    # build directive configures compilation settings under CPPAN control
+    ################################################
+
+    build:
+        # c_compiler - specify C family compiler.
+        # Should be either full program path or name of the program available in PATH.
+        # Default compiler is selected by CMake from your system.
+        c_compiler: gcc-5
+
+        # cxx_compiler - specify C++ family compiler.
+        # Should be either full program path or name of the program available in PATH.
+        # Default compiler is selected by CMake from your system.
+        cxx_compiler: g++-5
+
+        # compiler - specify C/C++ family compiler.
+        # Should be either full program path or name of the program available in PATH.
+        # Default compiler is selected by CMake from your system.
+        compiler: clang-3.9
+
+        # c_compiler_flags - options passed to C compiler.
+        c_compiler_flags: -Wall
+
+        # C++
+        cxx_compiler_flags: -Wall -W...
+
+        # C and C++
+        compiler_flags: -Wall -W...
+
+        # compiler flags for configuration builds.
+        # Used when applicable (MSVC, Xcode).
+        c_compiler_flags_debug: ...
+        c_compiler_flags_relwithdebinfo: ...
+        c_compiler_flags_release: ...
+        c_compiler_flags_minsizerel: ...
+
+        cxx_compiler_flags_{debug|relwithdebinfo|release|minsizerel}: ...
+        compiler_flags_{debug|relwithdebinfo|release|minsizerel}: ...
+
+        # link_flags - flags that passed to linker
+        link_flags: ...
+        link_flags_{debug|relwithdebinfo|release|minsizerel}: ...
+
+        # configuration - Debug|RelWithDebInfo|Release|MinSizeRel
+        # Default value - Release
+        configuration: Debug
+
+        # generator - CMake generator. See https://cmake.org/cmake/help/v3.6/manual/cmake-generators.7.html
+        # Default value is selected by CMake.
+        generator: Visual Studio 14 2015 Win64
+
+        # toolset - CMake's toolset for generator
+        toolset: v140_xp
+
+        # type - type of program.
+        # Can be:
+        # 1. executable (default)
+        # 2. library
+        type: library
+
+        # library_type - library type.
+        # Can be:
+        # 1. shared
+        # 2. static (default)
+        library_type: shared
+
+        # executable_type - additional executable type.
+        # On Windows can be 'WIN32'. This will result in producing GUI application.
+        # Default value is empty (console executable).
+        executable_type: WIN32
+
+        # use_shared_libs - how to link dependencies to your program.
+        # Can be:
+        # 1. true - link shared (default): you should distribute deps' .dll or .so files.
+        # 2. false - link static.
+        use_shared_libs: true
+
+        # silent - produce a link to project or solution file in current folder.
+        # Set to false for easy development and debugging.
+        # Default value: true
+        silent: false
+
+        # cmake_options - a set of strings that will be passed to CMake directly.
+        cmake_options:
+            - -DCMAKE_MAKE_PROGRAM="make"
+            - -DCMAKE_COOL_OPTION="some string"
+            - -DANOTHER_OPTION=ON
+
+        # env - set specific envorinment variables
+        env:
+            PATH=$PATH: /my/dir
+            ANDROID_NDK: /path/to/ndk
+
+####################################################################################################
