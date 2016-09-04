@@ -1,6 +1,6 @@
-# [C++ Archive Network](https://cppan.org/)
+### [C++ Archive Network](https://cppan.org/)
 
-## Resources
+#### Resources
 
 - Homepage: https://cppan.org/
 - Docs: https://github.com/cppan/cppan/blob/master/doc/
@@ -8,18 +8,18 @@
 - Issue tracking: https://github.com/cppan/cppan/issues
 - Forum: https://groups.google.com/forum/#!forum/cppan
 
-## Download & Install
+#### Download & Install
 
-### Linux
+##### Linux
 
-#### Ubuntu 16.04
+###### Ubuntu 16.04
 
 ```
 wget https://cppan.org/client/cppan-0.1.8-Linux-client.deb 
 sudo dpkg -i cppan-0.1.8-Linux-client.deb
 ```
 
-#### Ubuntu 14.04
+###### Ubuntu 14.04
 
 ```
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test 
@@ -28,11 +28,11 @@ wget https://cppan.org/client/cppan-0.1.8-Linux-client.deb
 sudo dpkg -i cppan-0.1.8-Linux-client.deb
 ```
 
-### Windows
+##### Windows
 
 [Download client](https://cppan.org/client/cppan-master-win32-client.zip), unzip it and put under PATH.
 
-### macOS
+##### macOS
 
 ```
 wget https://cppan.org/client/cppan-master-macOS-client.zip 
@@ -40,7 +40,7 @@ unzip cppan-master-macOS-client.zip
 sudo cp cppan /usr/local/bin 
 ```
 
-## Build
+#### Build
 
 ```
 git clone https://github.com/cppan/cppan
