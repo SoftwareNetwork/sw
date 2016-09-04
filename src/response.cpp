@@ -129,8 +129,18 @@ void ResponseData::extractDependencies()
 
         if (fs::exists(d.getDirSrc()))
         {
-            auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
-            packages[d].config = p.first->get();
+            auto old = fs::current_path();
+            try
+            {
+                auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
+                packages[d].config = p.first->get();
+            }
+            catch (std::exception &)
+            {
+                // something wrong, remove the whole dir to re-download it
+                fs::current_path(old);
+                fs::remove_all(d.getDirSrc());
+            }
         }
 
         if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())

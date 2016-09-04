@@ -402,7 +402,8 @@ void Config::load_current_config()
 
 void Config::load(const path &p)
 {
-    const auto root = YAML::LoadFile(p.string());
+    auto s = read_file(p);
+    const auto root = YAML::Load(s);
     load(root);
 }
 

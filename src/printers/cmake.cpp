@@ -42,7 +42,8 @@
 const String cppan_dummy_target = "cppan-dummy";
 const String cppan_helpers_target = "cppan-helpers";
 const String cppan_helpers_private_target = "cppan-helpers-private";
-const String exports_dir = "${CMAKE_BINARY_DIR}/exports/";
+const String exports_dir_name = "exports";
+const String exports_dir = "${CMAKE_BINARY_DIR}/" + exports_dir_name + "/";
 const String packages_folder = "cppan/packages";
 
 //
@@ -214,10 +215,15 @@ void CMakePrinter::prepare_rebuild()
     auto odir = d.getDirObj() / "build";
     if (!fs::exists(odir))
         return;
-    for (auto &dir : boost::make_iterator_range(fs::directory_iterator(), {}))
+    for (auto &dir : boost::make_iterator_range(fs::directory_iterator(odir), {}))
     {
         if (!fs::is_directory(dir))
             continue;
+
+        // remove exports to exported definitions, options etc.
+        fs::remove_all(dir / exports_dir_name);
+
+        // remove stamp files to cause rebuilding
         for (auto &f : boost::make_iterator_range(fs::directory_iterator(dir), {}))
         {
             if (!fs::is_regular_file(f))

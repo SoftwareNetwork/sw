@@ -35,12 +35,22 @@ function(set_apple var)
 endfunction(set_apple)
 
 ########################################
+# FUNCTION add_src
+########################################
+
+function(add_src var)
+    list(APPEND src "${CMAKE_CURRENT_SOURCE_DIR}/${var}")
+    set(src ${src} PARENT_SCOPE)
+endfunction(add_src)
+
+########################################
 # FUNCTION add_src_win32
 ########################################
 
 function(add_src_win32 var)
     if (WIN32)
-        set(${var} ${${var}} ${ARGN} PARENT_SCOPE)
+        list(APPEND src "${CMAKE_CURRENT_SOURCE_DIR}/${var}")
+        set(src ${src} PARENT_SCOPE)
     endif()
 endfunction(add_src_win32)
 
@@ -50,7 +60,8 @@ endfunction(add_src_win32)
 
 function(add_src_unix var)
     if (UNIX)
-        set(${var} ${${var}} ${ARGN} PARENT_SCOPE)
+        list(APPEND src "${CMAKE_CURRENT_SOURCE_DIR}/${var}")
+        set(src ${src} PARENT_SCOPE)
     endif()
 endfunction(add_src_unix)
 
@@ -60,7 +71,8 @@ endfunction(add_src_unix)
 
 function(add_src_unix_not_apple var)
     if (UNIX AND NOT APPLE)
-        set(${var} ${${var}} ${ARGN} PARENT_SCOPE)
+        list(APPEND src "${CMAKE_CURRENT_SOURCE_DIR}/${var}")
+        set(src ${src} PARENT_SCOPE)
     endif()
 endfunction(add_src_unix_not_apple)
 
@@ -70,7 +82,8 @@ endfunction(add_src_unix_not_apple)
 
 function(add_src_apple var)
     if (APPLE)
-        set(${var} ${${var}} ${ARGN} PARENT_SCOPE)
+        list(APPEND src "${CMAKE_CURRENT_SOURCE_DIR}/${var}")
+        set(src ${src} PARENT_SCOPE)
     endif()
 endfunction(add_src_apple)
 
