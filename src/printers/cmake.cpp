@@ -1313,8 +1313,12 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
     ctx.addLine("set(${CMAKE_CXX_COMPILER_ID} 1)");
     ctx.addLine();
+    ctx.addLine("if (NOT DEFINED CPPAN_LOCAL_BUILD)");
     ctx.addLine(String("set(CPPAN_LOCAL_BUILD ") + (cc->local_settings.local_build ? "1" : "0") + ")");
+    ctx.addLine("endif()");
+    ctx.addLine("if (NOT DEFINED CPPAN_SHOW_IDE_PROJECTS)");
     ctx.addLine(String("set(CPPAN_SHOW_IDE_PROJECTS ") + (cc->local_settings.show_ide_projects ? "1" : "0") + ")");
+    ctx.addLine("endif()");
     ctx.addLine();
 
     ctx.addLine("include(" + cmake_helpers_filename + ")");

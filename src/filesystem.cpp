@@ -54,7 +54,7 @@ path get_home_directory()
 
 path get_config_filename()
 {
-    return get_root_directory() / ".cppan";
+    return get_root_directory() / CPPAN_FILENAME;
 }
 
 path get_root_directory()
