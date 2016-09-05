@@ -242,6 +242,17 @@ dependencies:
 dependencies:
     - pvt.cppan.demo.zlib
     - pvt.cppan.demo.boost.filesystem
+    
+# third form - set private and public dependencies.
+# Private dependencies won't be available for users.
+# It may be useful when including depency for tests (test frameworks like gtest, gmock).
+depedencies:
+    public:
+        # Users will see zlib.
+        pvt.cppan.demo.zlib: 1
+    private:
+        # Users won't see gtest.
+        pvt.cppan.demo.google.googletest.gtest: 1
 
 ####################################################################################################
 
