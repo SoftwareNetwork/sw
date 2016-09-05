@@ -635,8 +635,10 @@ void Project::prepareExports() const
     // very stupid algorithm
     auto api = CPPAN_EXPORT_PREFIX + pkg.variable_name;
 
-    for (auto &f : files)
+    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(pkg.getDirSrc()), {}))
     {
+        if (!fs::is_regular_file(f) || f.path().filename() == CPPAN_FILENAME)
+            continue;
         auto s = read_file(f, true);
         boost::algorithm::replace_all(s, CPPAN_EXPORT, api);
         write_file(f, s);
