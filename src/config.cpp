@@ -90,16 +90,6 @@ void Directories::set_build_dir(const path &p)
     build_dir = p;
 }
 
-BuildSettings::BuildSettings(Config *c, LocalSettings *ls)
-    : c(c), ls(ls)
-{
-}
-
-void BuildSettings::set_config(Config *config)
-{
-    c = config;
-}
-
 void BuildSettings::load(const yaml &root)
 {
     if (root.IsNull())
@@ -183,7 +173,7 @@ void BuildSettings::append_build_dirs(const path &p)
     binary_directory = source_directory / "build";
 }
 
-void BuildSettings::prepare_build(const path &fn, const String &cppan)
+void BuildSettings::prepare_build(Config *c, const path &fn, String cppan)
 {
     auto &p = c->getDefaultProject();
     if (!is_dir)
@@ -225,8 +215,7 @@ for (int i = 0; i < CMakeConfigurationType::Max; i++)
     return h.hash;
 }
 
-LocalSettings::LocalSettings(Config *c)
-    : build_settings(c, this), c(c)
+LocalSettings::LocalSettings()
 {
     build_dir = temp_directory_path() / "build";
     storage_dir = get_root_directory() / STORAGE_DIR;
@@ -329,12 +318,6 @@ void LocalSettings::load_main(const yaml &root)
         build_settings.load(root["build"]);
 }
 
-void LocalSettings::set_config(Config *config)
-{
-    c = config;
-    build_settings.set_config(c);
-}
-
 String LocalSettings::get_hash() const
 {
     Hasher h;
@@ -343,7 +326,6 @@ String LocalSettings::get_hash() const
 }
 
 Config::Config()
-    : local_settings(this)
 {
 }
 
@@ -368,7 +350,6 @@ Config Config::load_system_config()
     Config c;
     if (!fs::exists(fn))
         return c;
-    c.local_settings.c = &c;
     c.local_settings.load(fn);
     return c;
 }
@@ -387,7 +368,6 @@ Config Config::load_user_config()
         return c;
     }
     Config c = load_system_config();
-    c.local_settings.c = &c;
     c.local_settings.load(fn);
     return c;
 }
@@ -411,7 +391,6 @@ void Config::load(const yaml &root, const path &p)
     {
         if (!ls.IsMap())
             throw std::runtime_error("'local_settings' should be a map");
-        local_settings.c = this;
         local_settings.load(root["local_settings"]);
     }
     else
@@ -419,7 +398,6 @@ void Config::load(const yaml &root, const path &p)
         // read user/system settings first
         auto uc = load_user_config();
         local_settings = uc.local_settings;
-        local_settings.set_config(this);
     }
 
     // version
@@ -522,11 +500,18 @@ Project &Config::getProject(const String &pname) const
     return (Project &)*p;
 }
 
-Project &Config::getDefaultProject() const
+Project &Config::getDefaultProject()
 {
     if (projects.empty())
         throw std::runtime_error("Projects are empty");
-    return (Project &)projects.begin()->second;
+    return projects.begin()->second;
+}
+
+const Project &Config::getDefaultProject() const
+{
+    if (projects.empty())
+        throw std::runtime_error("Projects are empty");
+    return projects.begin()->second;
 }
 
 void Config::save(const path &p) const
@@ -691,7 +676,7 @@ void Config::prepare_build(path fn, const String &cppan)
             local_settings.build_settings.set_build_dirs(fn);
             local_settings.build_settings.source_directory = get_temp_filename();
             local_settings.build_settings.binary_directory = local_settings.build_settings.source_directory / "build";
-            local_settings.build_settings.prepare_build(fn, cppan);
+            local_settings.build_settings.prepare_build(this, fn, cppan);
             printer->prepare_build(fn, cppan);
 
             LOG("--");
@@ -731,7 +716,7 @@ void Config::prepare_build(path fn, const String &cppan)
 
     local_settings.build_settings.set_build_dirs(fn);
     local_settings.build_settings.append_build_dirs(cfg);
-    local_settings.build_settings.prepare_build(fn, cppan);
+    local_settings.build_settings.prepare_build(this, fn, cppan);
 
     printer->prepare_build(fn, cppan);
 }

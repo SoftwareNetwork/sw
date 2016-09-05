@@ -113,16 +113,11 @@ struct BuildSettings
     path source_directory;
     path binary_directory;
     String config;
-    Config *c;
-    LocalSettings *ls;
-
-    BuildSettings(Config *c, LocalSettings *ls);
 
     void load(const yaml &root);
-    void prepare_build(const path &fn, const String &cppan);
+    void prepare_build(Config *c, const path &fn, String cppan);
     void set_build_dirs(const path &fn);
     void append_build_dirs(const path &p);
-    void set_config(Config *config);
     String get_hash() const;
 };
 
@@ -140,14 +135,10 @@ struct LocalSettings
     bool add_run_cppan_target = false;
     BuildSettings build_settings;
 
-    // own data
-    Config *c;
-
-    LocalSettings(Config *c);
+    LocalSettings();
 
     void load(const path &p);
     void load(const yaml &root);
-    void set_config(Config *config);
     String get_hash() const;
 
 private:
@@ -199,7 +190,8 @@ struct Config
     void clear_vars_cache(path p) const;
 
     Projects &getProjects() { return projects; }
-    Project &getDefaultProject() const;
+    Project &getDefaultProject();
+    const Project &getDefaultProject() const;
     Project &getProject(const String &p) const;
 
     Packages getFileDependencies() const; // from file
@@ -207,8 +199,6 @@ struct Config
 private:
     Projects projects;
     path dir;
-
-    bool need_probe() const;
 
 public:
     struct InternalOptions

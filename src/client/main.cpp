@@ -115,11 +115,11 @@ try
     }
 
     if (options().count("build"))
-        return build(options["build"].as<String>());
+        return build(options["build"].as<String>(), options["config"].as<String>());
     else if (options().count("rebuild"))
-        return build(options["rebuild"].as<String>(), true);
+        return build(options["rebuild"].as<String>(), options["config"].as<String>(), true);
     else if (options().count("generate"))
-        return generate(options["generate"].as<String>());
+        return generate(options["generate"].as<String>(), options["config"].as<String>());
 
     // set correct working directory to look for config file
     if (options().count("dir"))

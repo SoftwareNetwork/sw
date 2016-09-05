@@ -33,14 +33,14 @@
 
 std::vector<std::string> extract_comments(const std::string &s);
 
-Config generate_config(const path &fn, bool silent = true, bool rebuild = false)
+Config generate_config(const path &fn, const String &config, bool silent = true, bool rebuild = false)
 {
-    Config conf;
+    Config conf = Config::load_user_config();
 
     if (!fs::exists(fn))
         throw std::runtime_error("File or directory does not exist: " + fn.string());
 
-    auto read_from_cpp = [&conf, &silent, &rebuild](const path &fn)
+    auto read_from_cpp = [&conf, &silent, &rebuild, &config](const path &fn)
     {
         auto s = read_file(fn);
         auto comments = extract_comments(s);
@@ -57,6 +57,8 @@ Config generate_config(const path &fn, bool silent = true, bool rebuild = false)
                 auto sz = root.size();
                 if (sz == 0)
                     continue;
+                if (!config.empty())
+                    root["local_settings"]["current_build"] = config;
                 conf.load(root);
                 loaded = i;
                 break;
@@ -94,15 +96,15 @@ Config generate_config(const path &fn, bool silent = true, bool rebuild = false)
     return conf;
 }
 
-int generate(const path &fn)
+int generate(const path &fn, const String &config)
 {
-    auto conf = generate_config(fn, false);
+    auto conf = generate_config(fn, config, false);
     return conf.generate();
 }
 
-int build(const path &fn, bool rebuild)
+int build(const path &fn, const String &config, bool rebuild)
 {
-    auto conf = generate_config(fn, true, rebuild);
+    auto conf = generate_config(fn, config, true, rebuild);
     if (conf.generate())
         return 1;
     return conf.build();

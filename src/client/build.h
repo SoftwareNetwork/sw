@@ -29,5 +29,5 @@
 
 #include <common.h>
 
-int generate(const path &fn);
-int build(const path &fn, bool rebuild = false);
+int generate(const path &fn, const String &config);
+int build(const path &fn, const String &config, bool rebuild = false);

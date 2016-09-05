@@ -1727,32 +1727,35 @@ set_target_properties(run-cppan PROPERTIES
         // build deps
         ctx.addLine("if (NOT CPPAN_LOCAL_BUILD)");
         ctx.increaseIndent();
-        Packages bdeps;
-        gather_build_deps(ctx, rd[d].dependencies, bdeps);
-        for (auto &dp : bdeps)
+
         {
-            auto &p = dp.second;
-            if (!p.flags[pfExecutable])
-                ctx.addLine("get_configuration(config)");
-            else
-                ctx.addLine("get_configuration_exe(config)");
-            ctx.addLine("set(current_dir " + normalize_path(p.getDirObj()) + ")");
-            ctx.addLine("set(build_dir ${current_dir}/build/${config})");
-            ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
-            ctx.increaseIndent();
-            ctx.addLine("COMMAND ${CMAKE_COMMAND}");
-            ctx.increaseIndent();
-            ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
-            ctx.addLine("-DCONFIG=$<CONFIG>");
-            ctx.addLine("-DBUILD_DIR=${build_dir}");
-            ctx.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
-            ctx.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
-            ctx.addLine("-DN_CORES=${N_CORES}");
-            ctx.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
-            ctx.decreaseIndent();
-            ctx.decreaseIndent();
-            ctx.addLine(")");
-            ctx.addLine();
+            Packages bdeps;
+            gather_build_deps(ctx, rd[d].dependencies, bdeps);
+            for (auto &dp : bdeps)
+            {
+                auto &p = dp.second;
+                if (!p.flags[pfExecutable])
+                    ctx.addLine("get_configuration(config)");
+                else
+                    ctx.addLine("get_configuration_exe(config)");
+                ctx.addLine("set(current_dir " + normalize_path(p.getDirObj()) + ")");
+                ctx.addLine("set(build_dir ${current_dir}/build/${config})");
+                ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
+                ctx.increaseIndent();
+                ctx.addLine("COMMAND ${CMAKE_COMMAND}");
+                ctx.increaseIndent();
+                ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
+                ctx.addLine("-DCONFIG=$<CONFIG>");
+                ctx.addLine("-DBUILD_DIR=${build_dir}");
+                ctx.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
+                ctx.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
+                ctx.addLine("-DN_CORES=${N_CORES}");
+                ctx.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
+                ctx.decreaseIndent();
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+                ctx.addLine();
+            }
         }
 
         // post (copy deps)
@@ -1771,7 +1774,7 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine();
 
             Packages cdeps;
-            gather_copy_deps(ctx, rd[d].dependencies, bdeps);
+            gather_copy_deps(ctx, rd[d].dependencies, cdeps);
             for (auto &dp : cdeps)
             {
                 auto &p = dp.second;
