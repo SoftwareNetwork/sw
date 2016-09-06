@@ -11,7 +11,7 @@ set(import_fixed ${export_dir}/${variable_name}-fixed.cmake)
 set(aliases_file ${export_dir}/${variable_name}-aliases.cmake)
 
 if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
-    set(lock ${build_dir}/generate.lock)
+    set(lock ${build_dir}/cppan_generate.lock)
 
     file(LOCK ${lock} TIMEOUT 0 RESULT_VARIABLE lock_result)
     if (NOT ${lock_result} EQUAL 0)

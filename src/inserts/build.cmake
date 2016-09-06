@@ -14,7 +14,7 @@ if (NOT REBUILD AND EXISTS ${TARGET_FILE})
     return()
 endif()
 
-set(lock ${BUILD_DIR}/build.lock)
+set(lock ${BUILD_DIR}/cppan_build.lock)
 
 file(LOCK ${lock} RESULT_VARIABLE lock_result)
 if (NOT ${lock_result} EQUAL 0)
