@@ -305,4 +305,24 @@ function(set_c_sources_as_cpp)
     endif()
 endfunction(set_c_sources_as_cpp)
 
+########################################
+# FUNCTION add_win32_version_info
+########################################
+
+function(add_win32_version_info dir)
+    if (NOT WIN32)
+        return()
+    endif()
+
+    if (NOT EXECUTABLE AND
+        NOT LIBRARY_TYPE STREQUAL SHARED)
+        return()
+    endif()
+
+    set(rcfile ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
+    configure_file(${dir}/cppan/version.rc.in ${rcfile} @ONLY)
+
+    set(src ${src} ${rcfile} PARENT_SCOPE)
+endfunction(add_win32_version_info)
+
 ################################################################################

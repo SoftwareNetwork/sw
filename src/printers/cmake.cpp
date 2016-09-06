@@ -495,6 +495,7 @@ void CMakePrinter::print_meta()
     // print inserted files
     access_table->write_if_older(fs::current_path() / CPPAN_LOCAL_DIR / cmake_functions_filename, cmake_functions);
     access_table->write_if_older(fs::current_path() / CPPAN_LOCAL_DIR / CPP_HEADER_FILENAME, cppan_h);
+    access_table->write_if_older(fs::current_path() / CPPAN_LOCAL_DIR / "version.rc.in", version_rc_in);
 }
 
 void CMakePrinter::print_configs()
@@ -572,8 +573,13 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     // settings
     {
         config_section_title(ctx, "settings");
+        ctx.addLine("set(PACKAGE " + d.target_name + ")");
         ctx.addLine("set(PACKAGE_NAME " + d.ppath.toString() + ")");
         ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
+        ctx.addLine();
+        ctx.addLine("set(PACKAGE_VERSION_MAJOR " + std::to_string(d.version.major) + ")");
+        ctx.addLine("set(PACKAGE_VERSION_MINOR " + std::to_string(d.version.minor) + ")");
+        ctx.addLine("set(PACKAGE_VERSION_PATCH " + std::to_string(d.version.patch) + ")");
         ctx.addLine();
         ctx.addLine("set(LIBRARY_TYPE STATIC)");
         ctx.addLine();
@@ -588,13 +594,14 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_" + d.variable_name + "})");
         ctx.decreaseIndent();
         ctx.addLine("endif()");
+        ctx.addLine();
 
         if (p.static_only)
             ctx.addLine("set(LIBRARY_TYPE STATIC)");
         else if (p.shared_only)
             ctx.addLine("set(LIBRARY_TYPE SHARED)");
-
-        ctx.emptyLines(1);
+        ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
+        ctx.addLine();
 
         ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
         ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
@@ -627,6 +634,8 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.decreaseIndent();
         ctx.addLine(")");
     }
+    if (!d.empty())
+        ctx.addLine("add_win32_version_info(\"" + normalize_path(d.getDirObj()) + "\")");
     ctx.addLine();
 
     // exclude files
@@ -1790,7 +1799,6 @@ set_target_properties(run-cppan PROPERTIES
                 ctx.decreaseIndent();
                 ctx.decreaseIndent();
                 ctx.addLine(")");
-                ctx.addLine();
             }
 
             ctx.decreaseIndent();
