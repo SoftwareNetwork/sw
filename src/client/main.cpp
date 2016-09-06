@@ -237,7 +237,6 @@ void self_upgrade(Config &c, const char *exe_path)
     fs::remove(dest);
     fs::copy_file(cppan, dest);
     fs::remove(cppan);
-}
 #else
     char dest[PATH_MAX];
     if (readlink("/proc/self/exe", dest, PATH_MAX) == -1)
