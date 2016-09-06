@@ -423,25 +423,21 @@ void CMakePrinter::clear_cache(path p) const
     if (p.empty())
         p = directories.storage_dir_obj;
 
-    // projects
-    for (auto &fp : boost::make_iterator_range(fs::directory_iterator(p), {}))
-    {
-        if (!fs::is_directory(fp))
-            continue;
+    auto pkgs = readPackagesIndex(p);
 
-        // versions
-        for (auto &fv : boost::make_iterator_range(fs::directory_iterator(fp), {}))
+    // projects
+    for (auto &pkg : pkgs)
+    {
+        auto d = pkg.second / "build";
+        if (!fs::exists(d))
+            continue;
+        for (auto &fc : boost::make_iterator_range(fs::directory_iterator(d), {}))
         {
-            if (!fs::is_directory(fv) || !fs::exists(fv / "build"))
+            if (!fs::is_directory(fc))
                 continue;
 
-            // configs
-            for (auto &fc : boost::make_iterator_range(fs::directory_iterator(fv / "build"), {}))
-            {
-                if (!fs::is_directory(fc))
-                    continue;
-                remove_file(fc / "CMakeCache.txt");
-            }
+            auto fn = fc / "CMakeCache.txt";
+            remove_file(fn);
         }
     }
 
@@ -453,30 +449,21 @@ void CMakePrinter::clear_exports(path p) const
     if (p.empty())
         p = directories.storage_dir_obj;
 
+    auto pkgs = readPackagesIndex(p);
+
     // projects
-    for (auto &fp : boost::make_iterator_range(fs::directory_iterator(p), {}))
+    for (auto &pkg : pkgs)
     {
-        if (!fs::is_directory(fp))
+        auto d = pkg.second / "build";
+        if (!fs::exists(d))
             continue;
-
-        // versions
-        for (auto &fv : boost::make_iterator_range(fs::directory_iterator(fp), {}))
+        for (auto &fc : boost::make_iterator_range(fs::directory_iterator(d), {}))
         {
-            if (!fs::is_directory(fv) || !fs::exists(fv / "build"))
+            if (!fs::is_directory(fc))
                 continue;
 
-            if (!fs::is_directory(fv) || !fs::exists(fv / "build"))
-                continue;
-
-            // configs
-            for (auto &fc : boost::make_iterator_range(fs::directory_iterator(fv / "build"), {}))
-            {
-                if (!fs::is_directory(fc))
-                    continue;
-
-                boost::system::error_code ec;
-                fs::remove_all(fc / "exports", ec);
-            }
+            boost::system::error_code ec;
+            fs::remove_all(fc / exports_dir_name, ec);
         }
     }
 }

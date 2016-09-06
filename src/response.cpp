@@ -302,40 +302,14 @@ ResponseData::const_iterator ResponseData::end() const
 
 void ResponseData::write_index() const
 {
-    auto renew_index = [this](const auto &fn, auto func)
+    auto renew_index = [this](const auto &dir, auto func)
     {
-        std::map<String, path> pkgs;
-
-        {
-            ScopedShareableFileLock lock(fn);
-
-            std::ifstream ifile(fn.string());
-            if (ifile)
-            {
-                String target_name;
-                path p;
-                while (ifile >> p >> target_name)
-                    pkgs[target_name] = p;
-                ifile.close();
-            }
-        }
-
+        PackageIndex pkgs = readPackagesIndex(dir);
         for (auto &cc : *this)
             pkgs[cc.first.target_name] = (cc.first.*func)();
-
-        {
-            ScopedFileLock lock(fn);
-
-            std::ofstream ofile(fn.string());
-            if (!ofile)
-                return;
-
-            for (auto &pkg : pkgs)
-                ofile << normalize_path(pkg.second) << "\t\t" << pkg.first << "\n";
-        }
+        writePackagesIndex(dir, pkgs);
     };
 
-    auto index = "index.txt";
-    renew_index(directories.storage_dir_src / index, &Package::getDirSrc);
-    renew_index(directories.storage_dir_obj / index, &Package::getDirObj);
+    renew_index(directories.storage_dir_src, &Package::getDirSrc);
+    renew_index(directories.storage_dir_obj, &Package::getDirObj);
 }

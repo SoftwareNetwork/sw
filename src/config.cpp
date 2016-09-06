@@ -474,7 +474,7 @@ void Config::load(const yaml &root, const path &p)
 void Config::clear_vars_cache(path p) const
 {
     if (p.empty())
-        p = directories.storage_dir_obj;
+        p = directories.storage_dir_cfg;
 
     for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(p), {}))
     {

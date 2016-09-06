@@ -43,11 +43,19 @@
 #include <windows.h>
 #endif
 
+#ifdef __APPLE__
+#include <libproc.h>
+#include <unistd.h>
+#endif
+
 void self_upgrade(Config &c, const char *exe_path);
 
 int main(int argc, char *argv[])
 try
 {
+    // initialize CPPAN structures, do not remove
+    Config::load_user_config();
+
     // default run
     if (argc == 1)
     {
@@ -180,6 +188,8 @@ void self_upgrade(Config &c, const char *exe_path)
 {
 #ifdef _WIN32
     String client = "/client/cppan-master-win32-client.zip";
+#elif __APPLE__
+    String client = "/client/cppan-master-macOS-client.zip";
 #else
     String client = "/client/.service/cppan-master-Linux-client.zip";
 #endif
@@ -216,6 +226,18 @@ void self_upgrade(Config &c, const char *exe_path)
         throw std::runtime_error(String("errno = ") + std::to_string(errno) + "\n" +
             "Cannot do a self upgrade. Replace this file with newer CPPAN client manually.");
     }
+#elif __APPLE__
+    auto pid = getpid();
+    char dest[PROC_PIDPATHINFO_MAXSIZE];
+    auto ret = proc_pidpath(pid, dest, sizeof(dest));
+    if (ret <= 0)
+        return;
+    auto cppan = fs::temp_directory_path() / "cppan";
+    fs::permissions(cppan, fs::owner_all | fs::group_exe | fs::others_exe);
+    fs::remove(dest);
+    fs::copy_file(cppan, dest);
+    fs::remove(cppan);
+}
 #else
     char dest[PATH_MAX];
     if (readlink("/proc/self/exe", dest, PATH_MAX) == -1)

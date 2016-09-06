@@ -28,15 +28,11 @@
 #include "dependency.h"
 
 #include "config.h"
+#include "file_lock.h"
 
 #include <iostream>
 
-Package extractFromString(const String &target)
-{
-    ProjectPath p = target.substr(0, target.find('-'));
-    Version v = target.substr(target.find('-') + 1);
-    return{ p,v };
-}
+const String cppan_index_file = "index.txt";
 
 path Package::getDirSrc() const
 {
@@ -101,4 +97,42 @@ String Package::getVariableName() const
         return vname;
     }
     return variable_name;
+}
+
+Package extractFromString(const String &target)
+{
+    ProjectPath p = target.substr(0, target.find('-'));
+    Version v = target.substr(target.find('-') + 1);
+    return{ p,v };
+}
+
+PackageIndex readPackagesIndex(const path &dir)
+{
+    auto fn = dir / cppan_index_file;
+    ScopedShareableFileLock lock(fn);
+
+    PackageIndex pkgs;
+    std::ifstream ifile(fn.string());
+    if (!ifile)
+        return pkgs;
+
+    String target_name;
+    path p;
+    while (ifile >> p >> target_name)
+        pkgs[target_name] = p;
+
+    return pkgs;
+}
+
+void writePackagesIndex(const path &dir, const PackageIndex &idx)
+{
+    auto fn = dir / cppan_index_file;
+    ScopedFileLock lock(fn);
+
+    std::ofstream ofile(fn.string());
+    if (!ofile)
+        return;
+
+    for (auto &pkg : idx)
+        ofile << normalize_path(pkg.second) << "\t\t" << pkg.first << "\n";
 }
