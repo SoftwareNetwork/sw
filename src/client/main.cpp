@@ -211,11 +211,12 @@ void self_upgrade(Config &c, const char *exe_path)
         throw std::runtime_error("Downloaded bad file (md5 check failed)");
 
     std::cout << "Unpacking" << "\n";
-    unpack_file(dd.fn, fs::temp_directory_path());
+    auto tmp_dir = fs::temp_directory_path() / "cppan.bak";
+    unpack_file(dd.fn, tmp_dir);
 
     // self update
 #ifdef _WIN32
-    auto exe = (fs::temp_directory_path() / "cppan.exe").wstring();
+    auto exe = (tmp_dir / "cppan.exe").wstring();
     auto arg0 = L"\"" + exe + L"\"";
     WCHAR fn[1024] = { 0 };
     GetModuleFileNameW(NULL, fn, sizeof(fn) * sizeof(WCHAR));
@@ -228,11 +229,11 @@ void self_upgrade(Config &c, const char *exe_path)
     }
 #elif __APPLE__
     auto pid = getpid();
-    char dest[PROC_PIDPATHINFO_MAXSIZE];
+    char dest[PROC_PIDPATHINFO_MAXSIZE] = { 0 };
     auto ret = proc_pidpath(pid, dest, sizeof(dest));
     if (ret <= 0)
         return;
-    auto cppan = fs::temp_directory_path() / "cppan";
+    auto cppan = tmp_dir / "cppan";
     fs::permissions(cppan, fs::owner_all | fs::group_exe | fs::others_exe);
     fs::remove(dest);
     fs::copy_file(cppan, dest);
@@ -241,7 +242,7 @@ void self_upgrade(Config &c, const char *exe_path)
     char dest[PATH_MAX];
     if (readlink("/proc/self/exe", dest, PATH_MAX) == -1)
         perror("readlink");
-    auto cppan = fs::temp_directory_path() / "cppan";
+    auto cppan = tmp_dir / "cppan";
     fs::permissions(cppan, fs::owner_all | fs::group_exe | fs::others_exe);
     fs::remove(dest);
     fs::copy_file(cppan, dest);
