@@ -27,6 +27,8 @@
 
 #include "common.h"
 
+#include "stamp.h"
+
 #include <codecvt>
 #include <fstream>
 #include <locale>
@@ -35,6 +37,8 @@
 
 #include <curl/curl.h>
 #include <curl/easy.h>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #ifdef WIN32
 #include <windows.h>
@@ -70,7 +74,10 @@ Version get_program_version()
 
 String get_program_version_string(const String &prog_name)
 {
-    return prog_name + " version " + get_program_version().toString();
+    boost::posix_time::ptime t(boost::gregorian::date(1970, 1, 1));
+    t += boost::posix_time::seconds(static_cast<long>(std::stoi(cppan_stamp)));
+    return prog_name + " version " + get_program_version().toString() + "\n" +
+        "assembled " + boost::posix_time::to_simple_string(t);
 }
 
 Version::Version(ProjectVersionNumber ma, ProjectVersionNumber mi, ProjectVersionNumber pa)
