@@ -156,3 +156,15 @@ void write_file_if_different(const path &p, const String &s)
         throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
     ofile << s;
 }
+
+void copy_dir(const path &source, const path &destination)
+{
+    fs::create_directories(destination);
+    for (auto &f : boost::make_iterator_range(fs::directory_iterator(source), {}))
+    {
+        if (fs::is_directory(f))
+            copy_dir(f, destination / f.path().filename());
+        else
+            fs::copy_file(f, destination / f.path().filename());
+    }
+}

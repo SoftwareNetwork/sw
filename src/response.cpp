@@ -258,6 +258,43 @@ void ResponseData::prepare_config(PackageConfigs::value_type &cc)
         dependencies.emplace(d.ppath.toString(), d);
     }
 
+    // turn off this feature atm
+    // #include <pvt/cppan/demo/zlib.h>
+    // #include <org/boost/filesystem.hpp>
+    // #include <org/qt/widgets.h>
+    /*if (!p.empty())
+    {
+        // create include directory structure
+        auto dir = directories.storage_dir_lnk / "src" / p.version.toPath() / p.ppath.toPath();
+        auto src = p.getDirSrc();
+#ifndef _WIN32
+        // for non windows systems create symlink
+        // uncomment this when libs will provide all includes in include dir
+        fs::create_directory_symlink(src / "include", dir);
+#else
+        // windows requires to be admin or to be added to create_symlink policy
+        // so just copy includes
+        if (!fs::exists(dir) || c->downloaded)
+        {
+            if (c->downloaded)
+                fs::remove_all(dir);
+            fs::create_directories(dir);
+            for (auto &i : project.include_directories.public_)
+            {
+                if (!fs::exists(src / i))
+                    continue;
+                for (auto &f : boost::make_iterator_range(fs::directory_iterator(src / i), {}))
+                {
+                    if (fs::is_directory(f))
+                        copy_dir(f, dir / f.path().filename());
+                    else if (fs::is_regular_file(f))
+                        fs::copy_file(f, dir / f.path().filename());
+                }
+            }
+        }
+#endif
+    }*/
+
     c->post_download();
 }
 

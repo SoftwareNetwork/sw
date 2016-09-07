@@ -142,3 +142,23 @@ bool ProjectPath::is_relative() const
 {
     return !is_absolute();
 }
+
+ProjectPath ProjectPath::operator[](PathElementType e) const
+{
+    switch (e)
+    {
+    case PathElementType::Namespace:
+        if (path_elements.empty())
+            return *this;
+        return PathElements{ path_elements.begin(), path_elements.begin() + 1 };
+    case PathElementType::Owner:
+        if (path_elements.size() < 2)
+            return *this;
+        return PathElements{ path_elements.begin() + 1, path_elements.begin() + 2 };
+    case PathElementType::Tail:
+        if (path_elements.size() >= 2)
+            return *this;
+        return PathElements{ path_elements.begin() + 2, path_elements.end() };
+    }
+    return *this;
+}

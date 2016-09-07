@@ -421,7 +421,17 @@ void Project::load(const yaml &root)
             throw std::runtime_error("include key must be only 'public' or 'private'");
     });
     if (include_directories.public_.empty())
-        include_directories.public_.insert("include");
+    {
+        if (fs::exists("include"))
+            include_directories.public_.insert("include");
+        else
+            include_directories.public_.insert(".");
+    }
+    if (include_directories.private_.empty())
+    {
+        if (fs::exists("src"))
+            include_directories.private_.insert("src");
+    }
     include_directories.public_.insert("${CMAKE_CURRENT_BINARY_DIR}");
 
     exclude_from_build = get_sequence_unordered_set<path, String>(root, "exclude_from_build");
@@ -640,7 +650,23 @@ void Project::prepareExports() const
         if (!fs::is_regular_file(f) || f.path().filename() == CPPAN_FILENAME)
             continue;
         auto s = read_file(f, true);
+
         boost::algorithm::replace_all(s, CPPAN_EXPORT, api);
+
+        String p, e;
+        std::vector<String> ev;
+        for (auto &n : pkg.ppath)
+        {
+            p += "namespace " + n + " {\n";
+            ev.push_back("} // namespace " + n + "\n");
+        }
+        std::reverse(ev.begin(), ev.end());
+        for (auto &n : ev)
+            e += n;
+
+        boost::algorithm::replace_all(s, CPPAN_PROLOG, p);
+        boost::algorithm::replace_all(s, CPPAN_EPILOG, e);
+
         write_file(f, s);
     }
 }

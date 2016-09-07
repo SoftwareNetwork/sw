@@ -328,6 +328,8 @@ endif()
     {
         ctx.addLine("add_executable(${this} " + boost::to_upper_copy(bs.executable_type) + " ${src})");
         ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_EXPORT=)");
+        ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_PROLOG=)");
+        ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_EPILOG=)");
     }
     else
     {

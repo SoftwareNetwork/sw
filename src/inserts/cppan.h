@@ -22,4 +22,12 @@
 #define CPPAN_EXPORT
 #endif
 
+#ifndef CPPAN_PROLOG
+#define CPPAN_PROLOG
+#endif
+
+#ifndef CPPAN_EPILOG
+#define CPPAN_EPILOG
+#endif
+
 /******************************************************************************/

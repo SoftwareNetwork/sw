@@ -31,8 +31,12 @@
 #include "project.h"
 
 #define CPP_HEADER_FILENAME "cppan.h"
+
 #define CPPAN_EXPORT "CPPAN_EXPORT"
 #define CPPAN_EXPORT_PREFIX "CPPAN_API_"
+#define CPPAN_PROLOG "CPPAN_PROLOG"
+#define CPPAN_EPILOG "CPPAN_EPILOG"
+
 #define CPPAN_LOCAL_BUILD_PREFIX "cppan-build-"
 #define CPPAN_CONFIG_FILENAME "config.cmake"
 
