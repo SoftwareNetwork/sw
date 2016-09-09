@@ -39,31 +39,31 @@ if (CONFIG)
             execute_process(
                 COMMAND ${CMAKE_COMMAND}
                     --build ${BUILD_DIR}
-                    --config ${CONFIG}#Release # FIXME: always build exe with Release conf
+                    --config ${CONFIG}#Release # TODO: always build exe with Release conf
             )
-        else()
+        else(EXECUTABLE)
             execute_process(
                 COMMAND ${CMAKE_COMMAND}
                     --build ${BUILD_DIR}
                     --config ${CONFIG}
             )
-        endif()
-    else()
+        endif(EXECUTABLE)
+    else(${make} STREQUAL "make-NOTFOUND")
         execute_process(
             COMMAND make -j${N_CORES} -C ${BUILD_DIR}
         )
-    endif()
-else()
+    endif(${make} STREQUAL "make-NOTFOUND")
+else(CONFIG)
     if (${make} STREQUAL "make-NOTFOUND")
         execute_process(
             COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}
         )
-    else()
+    else(${make} STREQUAL "make-NOTFOUND")
         execute_process(
             COMMAND make -j${N_CORES} -C ${BUILD_DIR}
         )
-    endif()
-endif()
+    endif(${make} STREQUAL "make-NOTFOUND")
+endif(CONFIG)
 
 file(LOCK ${lock} RELEASE)

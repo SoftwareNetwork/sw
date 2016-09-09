@@ -219,6 +219,19 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
     }
 }
 
+void gather_project_deps(Context &ctx, const Packages &dd, Packages &out)
+{
+    for (auto &dp : dd)
+    {
+        auto &d = dp.second;
+        if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
+            continue;
+        auto i = out.insert(dp);
+        if (i.second)
+            gather_project_deps(ctx, rd[d].dependencies, out);
+    }
+}
+
 void CMakePrinter::prepare_rebuild()
 {
     // remove stamp file to start rebuilding
@@ -589,6 +602,9 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             ctx.addLine("set(LIBRARY_TYPE STATIC)");
         else if (p.shared_only)
             ctx.addLine("set(LIBRARY_TYPE SHARED)");
+        else if (d.flags[pfHeaderOnly])
+            ctx.addLine("set(LIBRARY_TYPE INTERFACE)");
+        ctx.emptyLines(1);
         ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
         ctx.addLine();
 
@@ -1730,10 +1746,42 @@ set_target_properties(run-cppan PROPERTIES
         ctx.addLine("if (NOT CPPAN_LOCAL_BUILD)");
         ctx.increaseIndent();
 
+        // setup cmake projects for all deps
         {
-            Packages bdeps;
-            gather_build_deps(ctx, rd[d].dependencies, bdeps);
-            for (auto &dp : bdeps)
+            Packages project_deps;
+            gather_project_deps(ctx, rd[d].dependencies, project_deps);
+            for (auto &dp : project_deps)
+            {
+                auto &p = dp.second;
+                if (!p.flags[pfExecutable])
+                    ctx.addLine("get_configuration(config)");
+                else
+                {
+                    ctx.addLine("get_configuration_exe(config)");
+                    // TODO: for exe we should find simple host conf
+                    continue;
+                }
+                ctx.addLine("set(current_dir " + normalize_path(p.getDirObj()) + ")");
+                ctx.addLine("set(build_dir ${current_dir}/build/${config})");
+                ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
+                ctx.increaseIndent();
+                ctx.addLine("COMMAND cppan");
+                ctx.increaseIndent();
+                ctx.addLine("--internal-copy-cmake-binary-dir");
+                ctx.addLine("${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}");
+                ctx.addLine("${build_dir}/CMakeFiles"); // copy directly inside CMakeFiles
+                ctx.decreaseIndent();
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+                ctx.addLine();
+            }
+        }
+
+        // run building of direct dependecies before project building
+        {
+            Packages build_deps;
+            gather_build_deps(ctx, rd[d].dependencies, build_deps);
+            for (auto &dp : build_deps)
             {
                 auto &p = dp.second;
                 if (!p.flags[pfExecutable])
@@ -1760,7 +1808,7 @@ set_target_properties(run-cppan PROPERTIES
             }
         }
 
-        // post (copy deps)
+        // copy deps
         // no copy for non local builds
         if (cc->internal_options.current_package.empty())
         {
@@ -1775,9 +1823,9 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine("endif()");
             ctx.addLine();
 
-            Packages cdeps;
-            gather_copy_deps(ctx, rd[d].dependencies, cdeps);
-            for (auto &dp : cdeps)
+            Packages copy_deps;
+            gather_copy_deps(ctx, rd[d].dependencies, copy_deps);
+            for (auto &dp : copy_deps)
             {
                 auto &p = dp.second;
                 ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");

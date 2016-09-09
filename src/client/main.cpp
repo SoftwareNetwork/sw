@@ -75,8 +75,29 @@ try
             {
                 std::cout << "invalid number of arguments\n";
                 std::cout << "usage: cppan internal-fix-imports target aliases.file old.file new.file\n";
+                return 1;
             }
             fix_imports(argv[2], argv[3], argv[4], argv[5]);
+            return 0;
+        }
+        if (cmd == "internal-copy-cmake-binary-dir")
+        {
+            if (argc != 4)
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan internal-copy-cmake-binary-dir src dst\n";
+                return 1;
+            }
+
+            path src = argv[2];
+            path dst = argv[3];
+
+            // always exit nicely to not trigger BS' asserts
+            if (!fs::exists(src) || fs::exists(dst))
+                return 0;
+
+            copy_dir(src, dst);
+
             return 0;
         }
 

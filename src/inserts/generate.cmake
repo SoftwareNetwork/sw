@@ -42,6 +42,27 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
             set(generator ${CMAKE_GENERATOR})
         endif()
 
+        # setup cmake projects for all deps
+        if (NOT EXISTS ${build_dir}/CMakeFiles/${CMAKE_VERSION})
+            if (EXECUTABLE)
+                # TODO: for exe we should find simple host conf to copy
+            else()
+                execute_process(
+                    COMMAND ${CMAKE_COMMAND} -E
+                        copy_directory
+                        ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}
+                        ${build_dir}/CMakeFiles/${CMAKE_VERSION}
+                )
+                #execute_process(
+                #    COMMAND cppan
+                #        internal-copy-cmake-binary-dir
+                #        ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}
+                #        ${build_dir}/CMakeFiles/${CMAKE_VERSION}
+                #)
+            endif()
+        endif()
+
+        # call cmake
         if (EXECUTABLE)
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}

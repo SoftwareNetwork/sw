@@ -675,7 +675,7 @@ void Config::prepare_build(path fn, const String &cppan)
         {
             // do a test build to extract config string
             local_settings.build_settings.set_build_dirs(fn);
-            local_settings.build_settings.source_directory = get_temp_filename();
+            local_settings.build_settings.source_directory = temp_directory_path() / "temp" / fs::unique_path();
             local_settings.build_settings.binary_directory = local_settings.build_settings.source_directory / "build";
             local_settings.build_settings.prepare_build(this, fn, cppan);
             printer->prepare_build(fn, cppan);
