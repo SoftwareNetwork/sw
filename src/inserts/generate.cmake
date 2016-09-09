@@ -53,12 +53,6 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}
                         ${build_dir}/CMakeFiles/${CMAKE_VERSION}
                 )
-                #execute_process(
-                #    COMMAND cppan
-                #        internal-copy-cmake-binary-dir
-                #        ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}
-                #        ${build_dir}/CMakeFiles/${CMAKE_VERSION}
-                #)
             endif()
         endif()
 

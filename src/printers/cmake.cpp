@@ -219,19 +219,6 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
     }
 }
 
-void gather_project_deps(Context &ctx, const Packages &dd, Packages &out)
-{
-    for (auto &dp : dd)
-    {
-        auto &d = dp.second;
-        if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
-            continue;
-        auto i = out.insert(dp);
-        if (i.second)
-            gather_project_deps(ctx, rd[d].dependencies, out);
-    }
-}
-
 void CMakePrinter::prepare_rebuild()
 {
     // remove stamp file to start rebuilding
@@ -1745,38 +1732,7 @@ set_target_properties(run-cppan PROPERTIES
         // build deps
         ctx.addLine("if (NOT CPPAN_LOCAL_BUILD)");
         ctx.increaseIndent();
-
-        // setup cmake projects for all deps
-        {
-            Packages project_deps;
-            gather_project_deps(ctx, rd[d].dependencies, project_deps);
-            for (auto &dp : project_deps)
-            {
-                auto &p = dp.second;
-                if (!p.flags[pfExecutable])
-                    ctx.addLine("get_configuration(config)");
-                else
-                {
-                    ctx.addLine("get_configuration_exe(config)");
-                    // TODO: for exe we should find simple host conf
-                    continue;
-                }
-                ctx.addLine("set(current_dir " + normalize_path(p.getDirObj()) + ")");
-                ctx.addLine("set(build_dir ${current_dir}/build/${config})");
-                ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
-                ctx.increaseIndent();
-                ctx.addLine("COMMAND cppan");
-                ctx.increaseIndent();
-                ctx.addLine("--internal-copy-cmake-binary-dir");
-                ctx.addLine("${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}");
-                ctx.addLine("${build_dir}/CMakeFiles"); // copy directly inside CMakeFiles
-                ctx.decreaseIndent();
-                ctx.decreaseIndent();
-                ctx.addLine(")");
-                ctx.addLine();
-            }
-        }
-
+        
         // run building of direct dependecies before project building
         {
             Packages build_deps;
