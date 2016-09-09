@@ -1418,6 +1418,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine("get_number_of_cores(N_CORES)");
     ctx.addLine();
     ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config}\")");
+    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CMAKE_VERSION_FILENAME " \"${CMAKE_VERSION}\")");
     ctx.addLine();
 
     config_section_title(ctx, "export/import");
@@ -1732,7 +1733,7 @@ set_target_properties(run-cppan PROPERTIES
         // build deps
         ctx.addLine("if (NOT CPPAN_LOCAL_BUILD)");
         ctx.increaseIndent();
-        
+
         // run building of direct dependecies before project building
         {
             Packages build_deps;

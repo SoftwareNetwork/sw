@@ -42,10 +42,11 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
             set(generator ${CMAKE_GENERATOR})
         endif()
 
-        # setup cmake projects for all deps
+        # copy cmake cache for faster bootstrapping
         if (NOT EXISTS ${build_dir}/CMakeFiles/${CMAKE_VERSION})
             if (EXECUTABLE)
                 # TODO: for exe we should find simple host conf to copy
+                # maybe create and store it in some place in storage
             else()
                 execute_process(
                     COMMAND ${CMAKE_COMMAND} -E

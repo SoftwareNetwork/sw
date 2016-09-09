@@ -647,7 +647,9 @@ void Config::prepare_build(path fn, const String &cppan)
     auto printer = Printer::create(printerType);
     printer->rc = this;
 
-    String cfg;
+    String cfg, cmake_version;
+    path test_src, test_bin;
+    bool tested = false;
     {
         auto stamps_dir = directories.storage_dir_etc / STAMPS_DIR / "configs";
         if (!fs::exists(stamps_dir))
@@ -695,9 +697,14 @@ void Config::prepare_build(path fn, const String &cppan)
                 throw std::runtime_error("There are errors during test run");
             }
 
+            // read cfg
             cfg = read_file(local_settings.build_settings.binary_directory / CPPAN_CONFIG_FILENAME);
+            cmake_version = read_file(local_settings.build_settings.binary_directory / CPPAN_CMAKE_VERSION_FILENAME);
             hash_configs[h] = cfg;
-            fs::remove_all(local_settings.build_settings.source_directory);
+
+            test_src = local_settings.build_settings.source_directory;
+            test_bin = local_settings.build_settings.binary_directory;
+            tested = true;
         }
         local_settings.build_settings.config = cfg;
 
@@ -715,10 +722,23 @@ void Config::prepare_build(path fn, const String &cppan)
         }
     }
 
+    // set new dirs
     local_settings.build_settings.set_build_dirs(fn);
     local_settings.build_settings.append_build_dirs(cfg);
+
+    if (tested)
+    {
+        // FIXME: move this to printer some time
+        // copy cached cmake config & remove test dir
+        copy_dir(test_bin / "CMakeFiles" / cmake_version,
+            local_settings.build_settings.binary_directory / "CMakeFiles" / cmake_version);
+        fs::remove_all(test_src);
+    }
+
+    // setup cppan config
     local_settings.build_settings.prepare_build(this, fn, cppan);
 
+    // setup printer config
     printer->prepare_build(fn, cppan);
 }
 

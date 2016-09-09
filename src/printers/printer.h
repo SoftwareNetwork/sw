@@ -39,6 +39,7 @@
 
 #define CPPAN_LOCAL_BUILD_PREFIX "cppan-build-"
 #define CPPAN_CONFIG_FILENAME "config.cmake"
+#define CPPAN_CMAKE_VERSION_FILENAME "cppan_cmake_version.cmake"
 
 #define INCLUDE_GUARD_PREFIX "CPPAN_INCLUDE_GUARD_"
 
