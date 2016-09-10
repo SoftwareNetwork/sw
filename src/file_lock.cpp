@@ -33,30 +33,47 @@
 
 std::string prepare_lock_file(const path &fn)
 {
+    fs::create_directories(fn.parent_path());
     auto lock_file = fn.parent_path() / (fn.filename().string() + ".lock");
     if (!fs::exists(lock_file))
         std::ofstream(lock_file.string());
     return lock_file.string();
 }
 
+////////////////////////////////////////
+
 ScopedFileLock::ScopedFileLock(const path &fn)
+{
+    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+    lock->lock();
+    locked = true;
+}
+
+ScopedFileLock::ScopedFileLock(const path &fn, std::defer_lock_t)
+{
+    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+}
+
+ScopedFileLock::~ScopedFileLock()
+{
+    if (locked)
+        lock->unlock();
+}
+
+bool ScopedFileLock::try_lock()
+{
+    return locked = lock->try_lock();
+}
+
+////////////////////////////////////////
+
+ScopedShareableFileLock::ScopedShareableFileLock(const path &fn)
 {
     lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
     lock->lock_sharable();
 }
 
-ScopedFileLock::~ScopedFileLock()
-{
-    lock->unlock_sharable();
-}
-
-ScopedShareableFileLock::ScopedShareableFileLock(const path &fn)
-{
-    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
-    lock->lock();
-}
-
 ScopedShareableFileLock::~ScopedShareableFileLock()
 {
-    lock->unlock();
+    lock->unlock_sharable();
 }

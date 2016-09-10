@@ -50,6 +50,17 @@ Context::Context(const Text &indent, const Text &newline)
 
 Context::Context(const Context &ctx)
 {
+    copy_from(ctx);
+}
+
+Context &Context::operator=(const Context &ctx)
+{
+    copy_from(ctx);
+    return *this;
+}
+
+void Context::copy_from(const Context &ctx)
+{
     lines = ctx.lines;
     if (ctx.before_)
         before_ = std::make_shared<Context>(*ctx.before_.get());
@@ -60,13 +71,6 @@ Context::Context(const Context &ctx)
     indent = ctx.indent;
     newline = ctx.newline;
     namespaces = ctx.namespaces;
-}
-
-Context &Context::operator=(const Context &ctx)
-{
-    Context tmp(ctx);
-    std::swap(*this, tmp);
-    return *this;
 }
 
 void Context::initFromString(const std::string &s)

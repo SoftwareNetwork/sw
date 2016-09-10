@@ -13,13 +13,23 @@ set(aliases_file ${export_dir}/${variable_name}-aliases.cmake)
 if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
     set(lock ${build_dir}/cppan_generate.lock)
 
-    file(LOCK ${lock} TIMEOUT 0 RESULT_VARIABLE lock_result)
+    file(
+        LOCK ${lock}
+        GUARD FILE # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
+        TIMEOUT 0
+        RESULT_VARIABLE lock_result
+    )
     if (NOT ${lock_result} EQUAL 0)
         message(STATUS "WARNING: Target: ${target}")
         message(STATUS "WARNING: Other project is being bootstrapped right now or you hit a circular deadlock.")
         message(STATUS "WARNING: If you aren't building other projects right now feel free to kill this process or it will be stopped in 90 seconds.")
 
-        file(LOCK ${lock} TIMEOUT 90 RESULT_VARIABLE lock_result)
+        file(
+            LOCK ${lock}
+            GUARD FILE # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
+            TIMEOUT 90
+            RESULT_VARIABLE lock_result
+        )
 
         if (NOT ${lock_result} EQUAL 0)
             message(FATAL_ERROR "Lock error: ${lock_result}")
@@ -29,7 +39,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
     # double check
     if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         message(STATUS "")
-        message(STATUS "Preparing build tree for ${target} with config ${config}")
+        message(STATUS "Preparing build tree for ${target} (${config})")
         message(STATUS "")
 
         #find_program(ninja ninja)
@@ -53,7 +63,9 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         copy_directory
                         ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}
                         ${build_dir}/CMakeFiles/${CMAKE_VERSION}
+                    RESULT_VARIABLE ret
                 )
+                check_result_variable(${ret})
             endif()
         endif()
 
@@ -67,7 +79,9 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         #-G "${generator}"
                         -DOUTPUT_DIR=${config}
                         -DCPPAN_BUILD_SHARED_LIBS=0 # TODO: try to work 0->1
+                    RESULT_VARIABLE ret
                 )
+                check_result_variable(${ret})
         else(EXECUTABLE)
             if (CMAKE_TOOLCHAIN_FILE)
                 execute_process(
@@ -78,7 +92,9 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -G "${generator}"
                         -DOUTPUT_DIR=${config}
                         -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
+                    RESULT_VARIABLE ret
                 )
+                check_result_variable(${ret})
             else(CMAKE_TOOLCHAIN_FILE)
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
@@ -88,14 +104,23 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -G "${generator}"
                         -DOUTPUT_DIR=${config}
                         -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
+                    RESULT_VARIABLE ret
                 )
+                check_result_variable(${ret})
             endif(CMAKE_TOOLCHAIN_FILE)
         endif(EXECUTABLE)
 
+        find_program(cppan cppan)
+        if ("${cppan}" STREQUAL "cppan-NOTFOUND")
+            message(FATAL_ERROR "'cppan' program was not found. Please, add it to PATH environment variable")
+        endif()
+
         file(WRITE ${aliases_file} "${aliases}")
         execute_process(
-            COMMAND cppan internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
+            COMMAND ${cppan} internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
+            RESULT_VARIABLE ret
         )
+        check_result_variable(${ret})
     endif()
 
     file(LOCK ${lock} RELEASE)

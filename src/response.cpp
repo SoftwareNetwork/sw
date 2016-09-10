@@ -182,6 +182,23 @@ void ResponseData::download_and_unpack()
         if (fs::exists(version_dir) && !must_download)
             continue;
 
+        auto add_config = [this, &d]()
+        {
+            auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
+            packages[d].config = p.first->get();
+            packages[d].config->downloaded = true;
+        };
+
+        // lock, so only one cppan process at the time could download the project
+        ScopedFileLock lck(md5file, std::defer_lock);
+        if (!lck.try_lock())
+        {
+            // wait & continue
+            ScopedFileLock lck2(md5file);
+            add_config();
+            continue;
+        }
+
         if (fs::exists(version_dir))
             fs::remove_all(version_dir);
 
@@ -223,9 +240,7 @@ void ResponseData::download_and_unpack()
 
         // re-read in any case
         // no need to remove old config, let it die with program
-        auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
-        packages[d].config = p.first->get();
-        packages[d].config->downloaded = true;
+        add_config();
     }
 }
 

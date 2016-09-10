@@ -31,39 +31,52 @@ endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${fn1} ${fn2})
 
-find_program(make make)
+# make could be found on win32 os from cygwin for example
+# so we deny it only for VS
+# maybe replace to
+# if (CYGWIN)
+if (NOT MSVC)
+    find_program(make make)
+endif()
 
 if (CONFIG)
-    if (${make} STREQUAL "make-NOTFOUND")
+    if (NOT DEFINED make OR
+        "${make}" STREQUAL "" OR
+        "${make}" STREQUAL "make-NOTFOUND")
         if (EXECUTABLE)
             execute_process(
                 COMMAND ${CMAKE_COMMAND}
                     --build ${BUILD_DIR}
                     --config ${CONFIG}#Release # TODO: always build exe with Release conf
+                RESULT_VARIABLE ret
             )
         else(EXECUTABLE)
             execute_process(
                 COMMAND ${CMAKE_COMMAND}
                     --build ${BUILD_DIR}
                     --config ${CONFIG}
+                RESULT_VARIABLE ret
             )
         endif(EXECUTABLE)
-    else(${make} STREQUAL "make-NOTFOUND")
+    else()
         execute_process(
             COMMAND make -j${N_CORES} -C ${BUILD_DIR}
+            RESULT_VARIABLE ret
         )
-    endif(${make} STREQUAL "make-NOTFOUND")
+    endif()
 else(CONFIG)
-    if (${make} STREQUAL "make-NOTFOUND")
+    if ("${make}" STREQUAL "make-NOTFOUND")
         execute_process(
             COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}
+            RESULT_VARIABLE ret
         )
-    else(${make} STREQUAL "make-NOTFOUND")
+    else()
         execute_process(
             COMMAND make -j${N_CORES} -C ${BUILD_DIR}
+            RESULT_VARIABLE ret
         )
-    endif(${make} STREQUAL "make-NOTFOUND")
+    endif()
 endif(CONFIG)
 
 file(LOCK ${lock} RELEASE)

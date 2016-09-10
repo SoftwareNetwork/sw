@@ -1013,11 +1013,20 @@ void CMakePrinter::print_package_actions_file(const path &fn) const
     ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR \"" + normalize_path(fn.parent_path().string()) + "\")");
     ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR_OLD ${CMAKE_CURRENT_BINARY_DIR})");
     ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR \"" + normalize_path(get_binary_path(d)) + "\")");
+    ctx.addLine();
+    ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
+    ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
+    ctx.addLine();
     print_bs_insertion(ctx, p, "pre sources", &BuildSystemConfigInsertions::pre_sources);
+    ctx.addLine();
     ctx.addLine("file(GLOB_RECURSE src \"*\")");
+    ctx.addLine();
     print_bs_insertion(ctx, p, "post sources", &BuildSystemConfigInsertions::post_sources);
+    ctx.addLine();
     print_bs_insertion(ctx, p, "post target", &BuildSystemConfigInsertions::post_target);
+    ctx.addLine();
     print_bs_insertion(ctx, p, "post alias", &BuildSystemConfigInsertions::post_alias);
+    ctx.addLine();
     ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR_OLD})");
     ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR_OLD})");
     ctx.addLine();
@@ -1112,7 +1121,8 @@ endif()
         config_section_title(ctx, "cppan setup");
 
         ctx.addLine("add_subdirectory(cppan)");
-        fs::copy_file(src_dir / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
+        boost::system::error_code ec; // ignore any errors
+        fs::copy_file(src_dir / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists, ec);
 
         if (pc->internal_options.invocations.find(d) != pc->internal_options.invocations.end())
             throw std::runtime_error("Circular dependency detected. Project: " + d.target_name);

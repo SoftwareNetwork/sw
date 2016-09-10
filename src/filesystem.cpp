@@ -165,6 +165,6 @@ void copy_dir(const path &source, const path &destination)
         if (fs::is_directory(f))
             copy_dir(f, destination / f.path().filename());
         else
-            fs::copy_file(f, destination / f.path().filename());
+            fs::copy_file(f, destination / f.path().filename(), fs::copy_option::overwrite_if_exists);
     }
 }

@@ -568,11 +568,16 @@ void Config::process(const path &p)
         auto &d = cc.first;
         auto c = cc.second.config;
 
+        // extra check, report gracefully
+        if (!c)
+            throw std::runtime_error("Config was not created for target: " + d.target_name);
+
         if (c->is_printed)
             continue;
         c->is_printed = true;
 
         // gather checks, options etc.
+        // add more necessary actions here
         {
 #define GATHER_CHECK(array) array.insert(c->array.begin(), c->array.end())
             GATHER_CHECK(check_functions);

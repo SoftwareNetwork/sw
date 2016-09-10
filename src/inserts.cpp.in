@@ -27,9 +27,9 @@
 
 #include "inserts.h"
 
-const String cppan_h = R"(CPPAN_INCLUDE<inserts/cppan.h>)";
-const String version_rc_in = R"(CPPAN_INCLUDE<inserts/version.rc.in>)";
-const String cmake_functions = R"(CPPAN_INCLUDE<inserts/functions.cmake>)";
-const String cmake_build_file = R"(CPPAN_INCLUDE<inserts/build.cmake>)";
-const String cmake_generate_file = R"(CPPAN_INCLUDE<inserts/generate.cmake>)";
-const String cmake_export_import_file = R"my_ei_str(CPPAN_INCLUDE<inserts/exports.cmake>)my_ei_str";
+const String cppan_h =                  R"my_cppan_str(CPPAN_INCLUDE<inserts/cppan.h>           )my_cppan_str";
+const String version_rc_in =            R"my_cppan_str(CPPAN_INCLUDE<inserts/version.rc.in>     )my_cppan_str";
+const String cmake_functions =          R"my_cppan_str(CPPAN_INCLUDE<inserts/functions.cmake>   )my_cppan_str";
+const String cmake_build_file =         R"my_cppan_str(CPPAN_INCLUDE<inserts/build.cmake>       )my_cppan_str";
+const String cmake_generate_file =      R"my_cppan_str(CPPAN_INCLUDE<inserts/generate.cmake>    )my_cppan_str";
+const String cmake_export_import_file = R"my_cppan_str(CPPAN_INCLUDE<inserts/exports.cmake>     )my_cppan_str";

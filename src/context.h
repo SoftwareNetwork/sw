@@ -166,4 +166,6 @@ private:
     Text newline;
     std::stack<Text> namespaces;
     std::ostringstream ss_line;
+
+    void copy_from(const Context &ctx);
 };

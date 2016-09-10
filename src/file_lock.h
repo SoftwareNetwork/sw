@@ -30,6 +30,7 @@
 #include "filesystem.h"
 
 #include <memory>
+#include <mutex>
 
 namespace boost
 {
@@ -46,10 +47,15 @@ class ScopedFileLock
 {
 public:
     ScopedFileLock(const path &fn);
+    ScopedFileLock(const path &fn, std::defer_lock_t);
     ~ScopedFileLock();
+
+    bool try_lock();
+    bool is_locked() const { return locked; }
 
 private:
     FileLockPtr lock;
+    bool locked = false;
 };
 
 class ScopedShareableFileLock

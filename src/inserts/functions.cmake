@@ -137,6 +137,23 @@ function(file_write_once f c)
 endfunction(file_write_once)
 
 ########################################
+# FUNCTION file_write_safe
+########################################
+
+function(file_write_safe f c)
+    set(lock ${f}.lock)
+    file(
+        LOCK ${lock}
+        GUARD FUNCTION # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
+        RESULT_VARIABLE lock_result
+    )
+
+    file(WRITE ${f} "${c}")
+
+    file(LOCK ${lock} RELEASE)
+endfunction(file_write_safe)
+
+########################################
 # FUNCTION find_flag
 ########################################
 
@@ -242,7 +259,11 @@ function(read_variables_file f)
     endif()
 
     set(lock ${f}.lock)
-    file(LOCK ${lock} RESULT_VARIABLE lock_result)
+    file(
+        LOCK ${lock}
+        GUARD FUNCTION # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
+        RESULT_VARIABLE lock_result
+    )
     if (NOT ${lock_result} EQUAL 0)
         message(FATAL_ERROR "Lock error: ${lock_result}")
     endif()
@@ -275,7 +296,11 @@ endfunction(read_variables_file)
 
 function(write_variables_file f)
     set(lock ${f}.lock)
-    file(LOCK ${lock} RESULT_VARIABLE lock_result)
+    file(
+        LOCK ${lock}
+        GUARD FUNCTION # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
+        RESULT_VARIABLE lock_result
+    )
     if (NOT ${lock_result} EQUAL 0)
         message(FATAL_ERROR "Lock error: ${lock_result}")
     endif()
@@ -324,5 +349,16 @@ function(add_win32_version_info dir)
 
     set(src ${src} ${rcfile} PARENT_SCOPE)
 endfunction(add_win32_version_info)
+
+########################################
+# FUNCTION check_result_variable
+########################################
+
+function(check_result_variable ret)
+    if (${ret} EQUAL 0)
+        return()
+    endif()
+    message(FATAL_ERROR "Last CMake execute_process() called failed with error: ${ret}")
+endfunction(check_result_variable)
 
 ################################################################################
