@@ -44,7 +44,7 @@ sudo dpkg -i cppan-0.1.8-Linux-client.deb
 ```
 wget https://cppan.org/client/cppan-master-macOS-client.zip 
 unzip cppan-master-macOS-client.zip 
-sudo cp cppan /usr/local/bin 
+sudo cp cppan /usr/local/bin/
 ```
 
 ### Build
