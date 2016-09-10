@@ -130,6 +130,13 @@ try
     else if (options().count("generate"))
         return generate(options["generate"].as<String>(), options["config"].as<String>());
 
+    if (options().count("clean-projects"))
+    {
+        Config c;
+        c.clean_project(options["clean-projects"].as<String>());
+        return 0;
+    }
+
     // set correct working directory to look for config file
     if (options().count("dir"))
         fs::current_path(options["dir"].as<std::string>());

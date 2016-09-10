@@ -32,6 +32,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <iostream>
+#include <regex>
 
 String get_stamp_filename(const String &prefix)
 {
@@ -166,5 +167,20 @@ void copy_dir(const path &source, const path &destination)
             copy_dir(f, destination / f.path().filename());
         else
             fs::copy_file(f, destination / f.path().filename(), fs::copy_option::overwrite_if_exists);
+    }
+}
+
+void remove_files_like(const path &dir, const String &regex)
+{
+    if (!fs::exists(dir))
+        return;
+    std::regex r(regex);
+    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+    {
+        if (!fs::is_regular_file(f))
+            continue;
+        if (!std::regex_match(f.path().filename().string(), r))
+            continue;
+        fs::remove(f);
     }
 }

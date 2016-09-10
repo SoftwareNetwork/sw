@@ -57,6 +57,7 @@ std::string get_stamp_filename(const std::string &prefix);
 std::string make_archive_name(const std::string &fn);
 
 void copy_dir(const path &source, const path &destination);
+void remove_files_like(const path &dir, const std::string &regex);
 
 namespace std
 {

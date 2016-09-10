@@ -189,6 +189,7 @@ struct Config
     void post_download() const;
 
     void clear_vars_cache(path p) const;
+    void clean_project(const String &s) const;
 
     Projects &getProjects() { return projects; }
     Project &getDefaultProject();

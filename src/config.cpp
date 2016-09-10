@@ -485,6 +485,31 @@ void Config::clear_vars_cache(path p) const
     }
 }
 
+void Config::clean_project(const String &s) const
+{
+    std::regex r(s);
+
+    auto remove = [&s, &r](const auto &dir)
+    {
+        auto pkgs = readPackagesIndex(dir);
+        std::vector<decltype(pkgs)::key_type> rms;
+        for (auto &pkg : pkgs)
+        {
+            if (!std::regex_match(pkg.first, r))
+                continue;
+            fs::remove_all(pkg.second);
+            rms.push_back(pkg.first);
+        }
+        for (auto &rm : rms)
+            pkgs.erase(rm);
+        writePackagesIndex(dir, pkgs);
+    };
+    remove(directories.storage_dir_src);
+    remove(directories.storage_dir_obj);
+    remove_files_like(directories.storage_dir_lib, s);
+    remove_files_like(directories.storage_dir_bin, s);
+}
+
 Project &Config::getProject(const String &pname) const
 {
     const Project *p = nullptr;

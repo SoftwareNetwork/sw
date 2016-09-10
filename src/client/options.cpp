@@ -51,6 +51,7 @@ ProgramOptions::ProgramOptions()
 
         ("clear-cache", po::bool_switch(), "clear CMakeCache.txt files")
         ("clear-vars-cache", po::bool_switch(), "clear checked symbols, types, includes etc.")
+        ("clean-projects", po::value<std::string>(), "completely clean project files for matched regex")
         ;
 
     // i - internal options
