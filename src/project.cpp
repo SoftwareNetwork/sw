@@ -48,6 +48,8 @@ using MimeType = String;
 using MimeTypes = std::set<MimeType>;
 
 static const MimeTypes source_mime_types{
+    "inode/x-empty", // empty file
+
     "text/x-asm",
     "text/x-c",
     "text/x-c++",
