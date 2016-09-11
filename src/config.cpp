@@ -492,7 +492,7 @@ void Config::clean_project(const String &s) const
     auto remove = [&s, &r](const auto &dir)
     {
         auto pkgs = readPackagesIndex(dir);
-        std::vector<decltype(pkgs)::key_type> rms;
+        std::vector<String> rms;
         for (auto &pkg : pkgs)
         {
             if (!std::regex_match(pkg.first, r))
