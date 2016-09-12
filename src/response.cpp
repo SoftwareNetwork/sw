@@ -100,7 +100,29 @@ void ResponseData::download_dependencies(const Packages &deps)
         auto &deps2 = packages[Package()].dependencies;
         auto i = deps2.find(dd.second.ppath.toString());
         if (i == deps2.end())
-            throw std::runtime_error("cannot match dependency");
+        {
+            // check if we chosen a root project match all subprojects
+            Packages to_add;
+            std::set<String> to_remove;
+            for (auto &root_dep : deps2)
+            {
+                for (auto &child_dep : download_dependencies_)
+                {
+                    if (root_dep.second.ppath.is_root_of(child_dep.second.ppath))
+                    {
+                        to_add.insert({ child_dep.second.ppath.toString(), child_dep.second });
+                        to_remove.insert(root_dep.second.ppath.toString());
+                    }
+                }
+            }
+            if (to_add.empty())
+                throw std::runtime_error("cannot match dependency");
+            for (auto &r : to_remove)
+                deps2.erase(r);
+            for (auto &a : to_add)
+                deps2.insert(a);
+            continue;
+        }
         auto &d = i->second;
         d.version = dd.second.version;
         d.flags |= dd.second.flags;

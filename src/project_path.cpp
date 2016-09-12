@@ -162,3 +162,15 @@ ProjectPath ProjectPath::operator[](PathElementType e) const
     }
     return *this;
 }
+
+bool ProjectPath::is_root_of(const ProjectPath &p) const
+{
+    if (path_elements.size() >= p.path_elements.size())
+        return false;
+    for (size_t i = 0; i < path_elements.size(); i++)
+    {
+        if (path_elements[i] != p.path_elements[i])
+            return false;
+    }
+    return true;
+}

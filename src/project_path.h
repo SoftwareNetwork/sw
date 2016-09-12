@@ -137,6 +137,7 @@ public:
 
     bool is_absolute() const;
     bool is_relative() const;
+    bool is_root_of(const ProjectPath &p) const;
 
     PathElement get_owner() const;
 

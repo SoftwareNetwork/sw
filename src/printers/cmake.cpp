@@ -380,9 +380,14 @@ endif()
 
 int CMakePrinter::generate() const
 {
+    return _generate(true);
+}
+
+int CMakePrinter::_generate(bool force) const
+{
     auto &bs = rc->local_settings.build_settings;
 
-    if (fs::exists(bs.binary_directory / "CMakeCache.txt"))
+    if (!force && fs::exists(bs.binary_directory / "CMakeCache.txt"))
         return 0;
 
     std::vector<String> args;
@@ -407,15 +412,23 @@ int CMakePrinter::generate() const
 #else
         setenv(o.first.c_str(), o.second.c_str(), 1);
 #endif
-    }
+}
     auto ret = system(args);
-    if (!bs.silent)
+    if (!bs.silent ||
+        rc->local_settings.build_dir_type == PackagesDirType::Local ||
+        rc->local_settings.build_dir_type == PackagesDirType::None)
     {
         auto bld_dir = fs::current_path();
 #ifdef _WIN32
+        auto name = bs.filename_without_ext + "-" + bs.config + ".sln.lnk";
+        if (rc->local_settings.build_dir_type == PackagesDirType::Local ||
+            rc->local_settings.build_dir_type == PackagesDirType::None)
+        {
+            bld_dir = bs.binary_directory / ".." / "..";
+            name = bs.config + ".sln.lnk";
+        }
         auto sln = bs.binary_directory / (bs.filename_without_ext + ".sln");
-        auto sln_new = bld_dir /
-            (bs.filename_without_ext + "-" + bs.config + ".sln.lnk");
+        auto sln_new = bld_dir / name;
         if (fs::exists(sln))
             CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
 #else
@@ -577,6 +590,10 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     Context ctx;
     file_title(ctx, d);
 
+    ctx.addLine("if (TARGET " + d.target_name + ")");
+    ctx.addLine("    return()");
+    ctx.addLine("endif()");
+
     // deps
     print_dependencies(ctx, rd[d].dependencies, rc->local_settings.uses_cache);
 
@@ -649,8 +666,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.decreaseIndent();
         ctx.addLine(")");
     }
-    if (!d.empty())
-        ctx.addLine("add_win32_version_info(\"" + normalize_path(d.getDirObj()) + "\")");
     ctx.addLine();
 
     // exclude files
@@ -668,6 +683,10 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         for (auto &ll : ol.second.link_directories)
             ctx.addLine("link_directories(" + ll + ")");
     ctx.emptyLines(1);
+
+    // do this right before target
+    if (!d.empty())
+        ctx.addLine("add_win32_version_info(\"" + normalize_path(d.getDirObj()) + "\")");
 
     // target
     config_section_title(ctx, "target: " + d.target_name);
@@ -1821,6 +1840,9 @@ set_target_properties(run-cppan PROPERTIES
             for (auto &dp : copy_deps)
             {
                 auto &p = dp.second;
+                // do not copy static only projects
+                if (rd[p].config->getDefaultProject().static_only)
+                    continue;
                 ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
                 ctx.increaseIndent();
                 ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");

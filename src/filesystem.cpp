@@ -120,8 +120,8 @@ String read_file(const path &p, bool no_size_check)
         throw std::runtime_error("Cannot open file '" + fn + "' for reading");
 
     size_t sz = (size_t)fs::file_size(p);
-    if (!no_size_check && sz > 1'000'000)
-        throw std::runtime_error("File " + fn + " is very big (> ~1MB)");
+    if (!no_size_check && sz > 10'000'000)
+        throw std::runtime_error("File " + fn + " is very big (> ~10 MB)");
 
     String f;
     f.resize(sz);
