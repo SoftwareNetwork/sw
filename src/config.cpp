@@ -30,6 +30,7 @@
 #include <fstream>
 #include <iostream>
 #include <regex>
+#include <thread>
 #include <tuple>
 
 #include <boost/algorithm/string.hpp>
@@ -65,9 +66,6 @@ void BuildSystemConfigInsertions::get_config_insertions(const yaml &n)
 
 void Directories::set_storage_dir(const path &p)
 {
-    if (!empty())
-        return;
-
     storage_dir = p;
 
 #define SET(x)                          \
@@ -89,6 +87,15 @@ void Directories::set_storage_dir(const path &p)
 void Directories::set_build_dir(const path &p)
 {
     build_dir = p;
+}
+
+void Directories::update(const Directories &dirs, ConfigType t)
+{
+    if (t <= type)
+        return;
+    auto dirs2 = dirs;
+    std::swap(*this, dirs2);
+    type = t;
 }
 
 void BuildSettings::load(const yaml &root)
@@ -184,7 +191,8 @@ void BuildSettings::prepare_build(Config *c, const path &fn, String cppan)
 
     if (rebuild)
         fs::remove_all(source_directory);
-    fs::create_directories(source_directory);
+    if (!fs::exists(source_directory))
+        fs::create_directories(source_directory);
 
     write_file_if_different(source_directory / CPPAN_FILENAME, cppan);
     Config conf(source_directory);
@@ -222,29 +230,30 @@ LocalSettings::LocalSettings()
     storage_dir = get_root_directory() / STORAGE_DIR;
 }
 
-void LocalSettings::load(const path &p)
+void LocalSettings::load(const path &p, const ConfigType type)
 {
     auto root = YAML::LoadFile(p.string());
-    load(root);
+    load(root, type);
 }
 
-void LocalSettings::load(const yaml &root)
+void LocalSettings::load(const yaml &root, const ConfigType type)
 {
     load_main(root);
 
     auto get_storage_dir = [this](PackagesDirType type)
     {
-        auto system_cfg = Config::load_system_config();
-        auto user_cfg = Config::load_user_config();
-
         switch (type)
         {
         case PackagesDirType::Local:
             return path(CPPAN_LOCAL_DIR) / STORAGE_DIR;
         case PackagesDirType::User:
-            return user_cfg.local_settings.storage_dir;
+            if (type == PackagesDirType::User)
+                return storage_dir;
+            return Config::get_user_config().local_settings.storage_dir;
         case PackagesDirType::System:
-            return system_cfg.local_settings.storage_dir;
+            if (type == PackagesDirType::System)
+                return storage_dir;
+            return Config::get_system_config().local_settings.storage_dir;
         default:
             return storage_dir;
         }
@@ -265,15 +274,12 @@ void LocalSettings::load(const yaml &root)
         }
     };
 
-    if (!directories.empty())
-        return;
-    directories.storage_dir_type = storage_dir_type;
-    directories.build_dir_type = build_dir_type;
-    directories.storage_dir = "."; // recursion stopper
-    auto sd = get_storage_dir(storage_dir_type);
-    directories.storage_dir.clear(); // allow changes again
-    directories.set_storage_dir(sd);
-    directories.set_build_dir(get_build_dir(build_dir, build_dir_type));
+    Directories dirs;
+    dirs.storage_dir_type = storage_dir_type;
+    dirs.set_storage_dir(get_storage_dir(storage_dir_type));
+    dirs.build_dir_type = build_dir_type;
+    dirs.set_build_dir(get_build_dir(build_dir, build_dir_type));
+    directories.update(dirs, type);
 }
 
 void LocalSettings::load_main(const yaml &root)
@@ -290,7 +296,7 @@ void LocalSettings::load_main(const yaml &root)
     };
 
     EXTRACT_AUTO(host);
-    EXTRACT_AUTO(local_build);
+    EXTRACT_AUTO(uses_cache);
     EXTRACT_AUTO(show_ide_projects);
     EXTRACT_AUTO(add_run_cppan_target);
     EXTRACT(storage_dir, String);
@@ -330,6 +336,39 @@ Config::Config()
 {
 }
 
+Config::Config(ConfigType type)
+    : type(type)
+{
+    switch (type)
+    {
+    case ConfigType::System:
+    {
+        auto fn = CONFIG_ROOT "default";
+        if (!fs::exists(fn))
+            break;
+        // do not move after the switch
+        // it should not be executed there
+        local_settings.load(fn, type);
+    }
+        break;
+    case ConfigType::User:
+    {
+        auto fn = get_config_filename();
+        if (!fs::exists(fn))
+        {
+            boost::system::error_code ec;
+            fs::create_directories(fn.parent_path(), ec);
+            if (ec)
+                throw std::runtime_error(ec.message());
+            Config c = get_system_config();
+            c.save(fn);
+        }
+        local_settings.load(fn, type);
+    }
+    break;
+    }
+}
+
 Config::Config(const path &p)
     : Config()
 {
@@ -345,31 +384,15 @@ Config::Config(const path &p)
     dir = p;
 }
 
-Config Config::load_system_config()
+Config Config::get_system_config()
 {
-    auto fn = CONFIG_ROOT "default";
-    Config c;
-    if (!fs::exists(fn))
-        return c;
-    c.local_settings.load(fn);
+    static Config c(ConfigType::System);
     return c;
 }
 
-Config Config::load_user_config()
+Config Config::get_user_config()
 {
-    auto fn = get_config_filename();
-    if (!fs::exists(fn))
-    {
-        boost::system::error_code ec;
-        fs::create_directories(fn.parent_path(), ec);
-        if (ec)
-            throw std::runtime_error(ec.message());
-        Config c = load_system_config();
-        c.save(fn);
-        return c;
-    }
-    Config c = load_system_config();
-    c.local_settings.load(fn);
+    static Config c(ConfigType::User);
     return c;
 }
 
@@ -392,12 +415,12 @@ void Config::load(const yaml &root, const path &p)
     {
         if (!ls.IsMap())
             throw std::runtime_error("'local_settings' should be a map");
-        local_settings.load(root["local_settings"]);
+        local_settings.load(root["local_settings"], type);
     }
     else
     {
         // read user/system settings first
-        auto uc = load_user_config();
+        auto uc = get_user_config();
         local_settings = uc.local_settings;
     }
 
@@ -664,7 +687,10 @@ Packages Config::getFileDependencies() const
             // skip ill-formed deps
             if (d.second.ppath.is_relative())
                 continue;
-            dependencies.insert({ d.second.ppath.toString(), { d.second.ppath, d.second.version} });
+            Package pkg;
+            pkg.ppath = d.second.ppath;
+            pkg.version = d.second.version;
+            dependencies.insert({ d.second.ppath.toString(), pkg });
         }
     }
     return dependencies;

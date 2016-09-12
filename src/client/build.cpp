@@ -35,7 +35,8 @@ std::vector<std::string> extract_comments(const std::string &s);
 
 Config generate_config(const path &fn, const String &config, bool silent = true, bool rebuild = false)
 {
-    Config conf = Config::load_user_config();
+    auto conf = Config::get_user_config();
+    conf.type = ConfigType::Local;
 
     if (!fs::exists(fn))
         throw std::runtime_error("File or directory does not exist: " + fn.string());

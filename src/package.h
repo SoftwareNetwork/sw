@@ -30,6 +30,8 @@
 #include "common.h"
 #include "project_path.h"
 
+struct Directories;
+
 struct Package
 {
     ProjectPath ppath;

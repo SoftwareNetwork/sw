@@ -41,6 +41,14 @@
 
 #include "printers/printer.h"
 
+enum class ConfigType
+{
+    None,
+    System,
+    User,
+    Local,
+};
+
 struct Directories
 {
     path storage_dir;
@@ -58,9 +66,13 @@ struct Directories
     PackagesDirType build_dir_type;
 
     bool empty() const { return storage_dir.empty(); }
+    void update(const Directories &dirs, ConfigType type);
 
     void set_storage_dir(const path &p);
     void set_build_dir(const path &p);
+
+private:
+    ConfigType type;
 };
 
 extern Directories directories;
@@ -131,15 +143,15 @@ struct LocalSettings
     path storage_dir;
     PackagesDirType build_dir_type{ PackagesDirType::System };
     path build_dir;
-    bool local_build = false;
+    bool uses_cache = true;
     bool show_ide_projects = false;
     bool add_run_cppan_target = false;
     BuildSettings build_settings;
 
     LocalSettings();
 
-    void load(const path &p);
-    void load(const yaml &root);
+    void load(const path &p, const ConfigType type);
+    void load(const yaml &root, const ConfigType type);
     String get_hash() const;
 
 private:
@@ -148,6 +160,7 @@ private:
 
 struct Config
 {
+    ConfigType type{ ConfigType::None };
     PrinterType printerType{PrinterType::CMake};
 
     //
@@ -171,14 +184,15 @@ struct Config
     std::map<String, Options> global_options;
 
     Config();
+    Config(ConfigType type);
     Config(const path &p);
 
     void load(const yaml &root, const path &p = CPPAN_FILENAME);
     void load(const path &p);
     void save(const path &p) const;
 
-    static Config load_system_config();
-    static Config load_user_config();
+    static Config get_system_config();
+    static Config get_user_config();
     void load_current_config();
 
     void prepare_build(path fn, const String &cppan);

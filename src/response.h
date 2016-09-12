@@ -32,9 +32,11 @@
 #include "property_tree.h"
 
 struct Config;
+struct Directories;
 
 struct ResponseData
 {
+public:
     struct PackageConfig
     {
         Config *config;
@@ -45,6 +47,7 @@ struct ResponseData
     using iterator = PackageConfigs::iterator;
     using const_iterator = PackageConfigs::const_iterator;
 
+public:
     void init(Config *config, const String &host, const path &root_dir);
     void download_dependencies(const Packages &d);
 

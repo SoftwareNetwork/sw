@@ -55,6 +55,7 @@ enum class PrinterType
 };
 
 struct Config;
+struct Directories;
 
 struct Printer
 {

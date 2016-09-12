@@ -669,6 +669,6 @@ void Project::prepareExports() const
         boost::algorithm::replace_all(s, CPPAN_PROLOG, p);
         boost::algorithm::replace_all(s, CPPAN_EPILOG, e);
 
-        write_file(f, s);
+        write_file_if_different(f, s);
     }
 }

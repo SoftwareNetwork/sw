@@ -54,12 +54,12 @@ int main(int argc, char *argv[])
 try
 {
     // initialize CPPAN structures, do not remove
-    Config::load_user_config();
+    Config::get_user_config();
 
     // default run
     if (argc == 1)
     {
-        auto c = Config::load_user_config();
+        auto c = Config::get_user_config();
         c.load_current_config();
         c.process();
         return 0;
@@ -143,7 +143,8 @@ try
     httpSettings.verbose = options["curl-verbose"].as<bool>();
     httpSettings.ignore_ssl_checks = options["ignore-ssl-checks"].as<bool>();
 
-    auto c = Config::load_user_config();
+    Config c = Config::get_user_config();
+    c.type = ConfigType::Local;
 
     // setup curl settings if possible from config
     // other network users (options) should go below this line

@@ -101,9 +101,10 @@ String Package::getVariableName() const
 
 Package extractFromString(const String &target)
 {
-    ProjectPath p = target.substr(0, target.find('-'));
-    Version v = target.substr(target.find('-') + 1);
-    return{ p,v };
+    Package p;
+    p.ppath = target.substr(0, target.find('-'));
+    p.version = target.substr(target.find('-') + 1);
+    return p;
 }
 
 PackageIndex readPackagesIndex(const path &dir)
