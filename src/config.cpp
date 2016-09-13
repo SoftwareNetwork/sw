@@ -319,8 +319,14 @@ void LocalSettings::load_main(const yaml &root)
         build_dir_type = PackagesDirType::None;
 
     // read build settings
-    if (root["builds"].IsDefined() && root["current_build"].IsDefined())
-        build_settings.load(root["builds"][root["current_build"].template as<String>()]);
+    if (root["builds"].IsDefined())
+    {
+        if (root["current_build"].IsDefined())
+            build_settings.load(root["builds"][root["current_build"].template as<String>()]);
+        else
+            // read from first build config
+            build_settings.load(*root["builds"].begin());
+    }
     else if (root["build"].IsDefined())
         build_settings.load(root["build"]);
 }
