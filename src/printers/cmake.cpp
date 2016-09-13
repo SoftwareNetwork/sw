@@ -364,7 +364,7 @@ endif()
     ctx.addLine("target_link_libraries(${this} cppan " + bs.link_libraries + ")");
     ctx.addLine();
 
-    if (rc->local_settings.use_cache)
+    if (!rc->local_settings.is_custom_build_dir())
     {
         ctx.addLine(R"(add_custom_command(TARGET ${this} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${this}> )" + normalize_path(fs::current_path()) + R"(/
@@ -416,15 +416,12 @@ int CMakePrinter::_generate(bool force) const
 #endif
 }
     auto ret = system(args);
-    if (!bs.silent ||
-        rc->local_settings.build_dir_type == PackagesDirType::Local ||
-        rc->local_settings.build_dir_type == PackagesDirType::None)
+    if (!bs.silent || rc->local_settings.is_custom_build_dir())
     {
         auto bld_dir = fs::current_path();
 #ifdef _WIN32
         auto name = bs.filename_without_ext + "-" + bs.config + ".sln.lnk";
-        if (rc->local_settings.build_dir_type == PackagesDirType::Local ||
-            rc->local_settings.build_dir_type == PackagesDirType::None)
+        if (rc->local_settings.is_custom_build_dir())
         {
             bld_dir = bs.binary_directory / ".." / "..";
             name = bs.config + ".sln.lnk";
@@ -434,10 +431,13 @@ int CMakePrinter::_generate(bool force) const
         if (fs::exists(sln))
             CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
 #else
-        bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.config;
-        fs::create_directories(bld_dir);
-        boost::system::error_code ec;
-        fs::create_symlink(bs.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
+        if (!rc->local_settings.is_custom_build_dir())
+        {
+            bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.config;
+            fs::create_directories(bld_dir);
+            boost::system::error_code ec;
+            fs::create_symlink(bs.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
+        }
 #endif
     }
     return ret;

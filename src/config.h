@@ -154,6 +154,8 @@ struct LocalSettings
     void load(const yaml &root, const ConfigType type);
     String get_hash() const;
 
+    bool is_custom_build_dir() const;
+
 private:
     void load_main(const yaml &root);
 };

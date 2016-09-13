@@ -321,14 +321,18 @@ void LocalSettings::load_main(const yaml &root)
     // read build settings
     if (root["builds"].IsDefined())
     {
+        // yaml will not keep sorting of keys in map
+        // so we can take 'first' build in document
         if (root["current_build"].IsDefined())
             build_settings.load(root["builds"][root["current_build"].template as<String>()]);
-        else
-            // read from first build config
-            build_settings.load(*root["builds"].begin());
     }
     else if (root["build"].IsDefined())
         build_settings.load(root["build"]);
+}
+
+bool LocalSettings::is_custom_build_dir() const
+{
+    return build_dir_type == PackagesDirType::Local || build_dir_type == PackagesDirType::None;
 }
 
 String LocalSettings::get_hash() const
