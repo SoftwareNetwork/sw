@@ -1789,6 +1789,8 @@ set_target_properties(run-cppan PROPERTIES
                 ctx.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
                 ctx.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
                 ctx.addLine("-DN_CORES=${N_CORES}");
+                if (d.empty())
+                    ctx.addLine("-DMULTICORE=1");
                 ctx.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
                 ctx.decreaseIndent();
                 ctx.decreaseIndent();
