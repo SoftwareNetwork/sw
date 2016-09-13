@@ -143,7 +143,7 @@ struct LocalSettings
     path storage_dir;
     PackagesDirType build_dir_type{ PackagesDirType::System };
     path build_dir;
-    bool uses_cache = true;
+    bool use_cache = true;
     bool show_ide_projects = false;
     bool add_run_cppan_target = false;
     BuildSettings build_settings;

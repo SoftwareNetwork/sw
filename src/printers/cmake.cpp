@@ -102,7 +102,7 @@ String get_binary_path(const Package &d)
     return "${CMAKE_BINARY_DIR}/cppan/" + d.getHash();
 }
 
-void print_dependencies(Context &ctx, const Packages &dd, bool uses_cache)
+void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
 {
     std::vector<String> includes;
     Context ctx2;
@@ -111,7 +111,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool uses_cache)
         return;
 
     bool obj_dir = true;
-    if (!uses_cache)
+    if (!use_cache)
         obj_dir = false;
 
     auto base_dir = directories.storage_dir_src;
@@ -145,7 +145,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool uses_cache)
             // actions are executed from include_directories only projects
             ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
         }
-        else if (!uses_cache || p.second.flags[pfHeaderOnly])
+        else if (!use_cache || p.second.flags[pfHeaderOnly])
         {
             ctx.addLine("# " + p.second.target_name);
             add_subdirectory(ctx, s);
@@ -164,7 +164,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool uses_cache)
     if (!includes.empty())
     {
         config_section_title(ctx, "include dependencies (they should be placed at the end)");
-        ctx.addLine("if (CPPAN_USES_CACHE)");
+        ctx.addLine("if (CPPAN_USE_CACHE)");
         ctx.increaseIndent();
         for (auto &line : includes)
             ctx.addLine(line);
@@ -364,7 +364,7 @@ endif()
     ctx.addLine("target_link_libraries(${this} cppan " + bs.link_libraries + ")");
     ctx.addLine();
 
-    if (rc->local_settings.uses_cache)
+    if (rc->local_settings.use_cache)
     {
         ctx.addLine(R"(add_custom_command(TARGET ${this} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${this}> )" + normalize_path(fs::current_path()) + R"(/
@@ -529,7 +529,7 @@ void CMakePrinter::print_configs()
     print_package_actions_file(src_dir / actions_filename);
     print_package_include_file(src_dir / include_guard_filename);
 
-    if (d.flags[pfHeaderOnly] || !cc->local_settings.uses_cache)
+    if (d.flags[pfHeaderOnly] || !cc->local_settings.use_cache)
         return;
 
     auto obj_dir = d.getDirObj();
@@ -597,7 +597,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     ctx.addLine("endif()");
 
     // deps
-    print_dependencies(ctx, rd[d].dependencies, rc->local_settings.uses_cache);
+    print_dependencies(ctx, rd[d].dependencies, rc->local_settings.use_cache);
 
     // settings
     {
@@ -790,7 +790,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     ctx.decreaseIndent();
     ctx.addLine(")");
     ctx.addLine();
-    ctx.addLine("if (CPPAN_USES_CACHE AND CMAKE_GENERATOR STREQUAL Ninja)");
+    ctx.addLine("if (CPPAN_USE_CACHE AND CMAKE_GENERATOR STREQUAL Ninja)");
     ctx.addLine("target_link_libraries         (" + d.target_name + " PRIVATE cppan-dummy)");
     ctx.addLine("endif()");
     ctx.addLine();
@@ -1369,8 +1369,8 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
     ctx.addLine("set(${CMAKE_CXX_COMPILER_ID} 1)");
     ctx.addLine();
-    ctx.addLine("if (NOT DEFINED CPPAN_USES_CACHE)");
-    ctx.addLine(String("set(CPPAN_USES_CACHE ") + (cc->local_settings.uses_cache ? "1" : "0") + ")");
+    ctx.addLine("if (NOT DEFINED CPPAN_USE_CACHE)");
+    ctx.addLine(String("set(CPPAN_USE_CACHE ") + (cc->local_settings.use_cache ? "1" : "0") + ")");
     ctx.addLine("endif()");
     ctx.addLine("if (NOT DEFINED CPPAN_SHOW_IDE_PROJECTS)");
     ctx.addLine(String("set(CPPAN_SHOW_IDE_PROJECTS ") + (cc->local_settings.show_ide_projects ? "1" : "0") + ")");
@@ -1381,7 +1381,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
 
     // deps
-    print_dependencies(ctx, rd[d].dependencies, cc->local_settings.uses_cache);
+    print_dependencies(ctx, rd[d].dependencies, cc->local_settings.use_cache);
 
     // lib
     const String cppan_project_name = "cppan";
@@ -1402,7 +1402,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("export(TARGETS " + cppan_project_name + " FILE " + exports_dir + "cppan.cmake)");
 
     // exe deps
-    if (cc->local_settings.uses_cache)
+    if (cc->local_settings.use_cache)
     {
         config_section_title(ctx, "exe deps");
 
@@ -1758,12 +1758,12 @@ set_target_properties(run-cppan PROPERTIES
     }
 
     // direct deps' build actions for non local build
-    if (cc->local_settings.uses_cache)
+    if (cc->local_settings.use_cache)
     {
         config_section_title(ctx, "custom actions for dummy target");
 
         // build deps
-        ctx.addLine("if (CPPAN_USES_CACHE)");
+        ctx.addLine("if (CPPAN_USE_CACHE)");
         ctx.increaseIndent();
 
         // run building of direct dependecies before project building

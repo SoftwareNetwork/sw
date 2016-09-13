@@ -296,7 +296,7 @@ void LocalSettings::load_main(const yaml &root)
     };
 
     EXTRACT_AUTO(host);
-    EXTRACT_AUTO(uses_cache);
+    EXTRACT_AUTO(use_cache);
     EXTRACT_AUTO(show_ide_projects);
     EXTRACT_AUTO(add_run_cppan_target);
     EXTRACT(storage_dir, String);
