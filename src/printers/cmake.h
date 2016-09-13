@@ -47,7 +47,6 @@ private:
     int _generate(bool force = false) const;
     void print_configs();
     void print_helper_file(const path &fn) const;
-    void print_include_guards_file(const path &fn) const;
     void print_meta_config_file(const path &fn) const;
     void print_package_config_file(const path &fn) const;
     void print_package_actions_file(const path &fn) const;

@@ -605,12 +605,6 @@ void Config::process(const path &p)
     printer->pc = this;
     printer->rc = this;
 
-    if (pkg.empty())
-    {
-        for (auto &cc : rd)
-            printer->include_guards.insert(INCLUDE_GUARD_PREFIX + cc.first.variable_name);
-    }
-
     for (auto &cc : rd)
     {
         auto &d = cc.first;
