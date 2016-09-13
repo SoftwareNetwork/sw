@@ -57,12 +57,8 @@ if (CONFIG)
             )
         endif(EXECUTABLE)
     else()
-        set(mc)
-        if (MULTICORE)
-            set(mc -j${N_CORES})
-        endif()
         execute_process(
-            COMMAND make ${mc} -C ${BUILD_DIR}
+            COMMAND make -j${N_CORES} -C ${BUILD_DIR}
             RESULT_VARIABLE ret
         )
     endif()
@@ -74,12 +70,8 @@ else(CONFIG)
             RESULT_VARIABLE ret
         )
     else()
-        set(mc)
-        if (MULTICORE)
-            set(mc -j${N_CORES})
-        endif()
         execute_process(
-            COMMAND make ${mc} -C ${BUILD_DIR}
+            COMMAND make -j${N_CORES} -C ${BUILD_DIR}
             RESULT_VARIABLE ret
         )
     endif()
