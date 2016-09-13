@@ -318,7 +318,9 @@ endif()
 
     // should be after flags
     config_section_title(ctx, "CPPAN include");
-    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
+    if (!(rc->local_settings.build_dir_type == PackagesDirType::Local ||
+        rc->local_settings.build_dir_type == PackagesDirType::None))
+        ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
     if (bs.use_shared_libs)
         ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS 1)");
     ctx.addLine("add_subdirectory(cppan)");
@@ -590,9 +592,16 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     Context ctx;
     file_title(ctx, d);
 
+    // prevent recursion
     ctx.addLine("if (TARGET " + d.target_name + ")");
     ctx.addLine("    return()");
     ctx.addLine("endif()");
+
+    // set dirs
+    //ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR_OLD ${CMAKE_CURRENT_SOURCE_DIR})");
+    //ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR \"" + normalize_path(fn.parent_path().string()) + "\")");
+    //ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR_OLD ${CMAKE_CURRENT_BINARY_DIR})");
+    //ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR \"" + normalize_path(get_binary_path(d)) + "\")");
 
     // deps
     print_dependencies(ctx, rd[d].dependencies, rc->local_settings.uses_cache);
@@ -1033,6 +1042,11 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     // source groups
     print_source_groups(ctx, fn.parent_path());
 
+    // restore sb dirs
+    //ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR_OLD})");
+    //ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR_OLD})");
+    ctx.addLine();
+
     // eof
     ctx.addLine(config_delimeter);
     ctx.addLine();
@@ -1090,13 +1104,19 @@ void CMakePrinter::print_package_include_file(const path &fn) const
 
     file_title(ctx, d);
 
-    ctx.addLine("if (" + ig + ")");
+    /*ctx.addLine("if (" + ig + ")");
     ctx.addLine("    return()");
     ctx.addLine("endif()");
     ctx.addLine();
     ctx.addLine("set(" + ig + " 1 CACHE BOOL \"\" FORCE)");
-    ctx.addLine();
+    ctx.addLine();*/
+
+    ctx.addLine("if (TARGET " + d.target_name + ")");
+    ctx.addLine("    return()");
+    ctx.addLine("endif()");
+
     ctx.addLine("add_subdirectory(\"" + normalize_path(fn.parent_path().string()) + "\" \"" + get_binary_path(d) + "\")");
+    //ctx.addLine("include(\"" + normalize_path(fn.parent_path().string()) + "/CMakeLists.txt\")");
     ctx.addLine();
 
     access_table->write_if_older(fn, ctx.getText());
@@ -1379,7 +1399,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
 
     ctx.addLine("include(" + cmake_helpers_filename + ")");
     // include guard before deps
-    if (cc == rc)
+    //if (cc == rc) // include always
         ctx.addLine("include(" + include_guard_filename + ")");
     ctx.addLine();
 
@@ -1387,7 +1407,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     print_dependencies(ctx, rd[d].dependencies, cc->local_settings.uses_cache);
 
     // include guard after deps
-    if (cc == rc)
+    //if (cc == rc) // include always
         ctx.addLine("include(" + include_guard_filename + ")");
 
     // lib
@@ -1437,14 +1457,20 @@ void CMakePrinter::print_include_guards_file(const path &fn) const
     if (!access_table->must_update_contents(fn))
         return;
 
-    if (cc != rc)
-        return;
+    auto igs = include_guards;
+    if (cc != rc && igs.empty())
+    {
+        for (auto &dep : rd[d].dependencies)
+        {
+            igs.insert(INCLUDE_GUARD_PREFIX + dep.second.variable_name);
+        }
+    }
 
     // turn off header guards
     Context ctx;
     file_title(ctx, d);
-    for (auto &ig : include_guards)
-        ctx.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
+    //for (auto &ig : igs)
+    //    ctx.addLine("set(" + ig + " 0 CACHE BOOL \"\" FORCE)");
     access_table->write_if_older(fn, ctx.getText());
 }
 

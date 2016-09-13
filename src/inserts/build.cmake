@@ -32,10 +32,8 @@ endif()
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${fn1} ${fn2})
 
 # make could be found on win32 os from cygwin for example
-# so we deny it only for VS
-# maybe replace to
-# if (NOT WIN32 OR CYGWIN)
-if (NOT MSVC)
+# we deny it on msvc and other build systems except for cygwin
+if (NOT WIN32 OR CYGWIN)
     find_program(make make)
 endif()
 
