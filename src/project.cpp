@@ -56,6 +56,8 @@ static const MimeTypes source_mime_types{
     "text/plain",
     "text/html", // ?
     "text/tex", // ? file with many comments can be this
+    "text/x-makefile", // some .in files
+    "text/x-shellscript", // some .in files
 };
 
 static const std::set<String> header_file_extensions{
