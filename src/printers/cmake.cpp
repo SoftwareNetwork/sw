@@ -321,8 +321,7 @@ endif()
     if (!(rc->local_settings.build_dir_type == PackagesDirType::Local ||
         rc->local_settings.build_dir_type == PackagesDirType::None))
         ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
-    if (bs.use_shared_libs)
-        ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS 1)");
+    ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
     ctx.addLine("add_subdirectory(cppan)");
     ctx.addLine();
 
@@ -1240,13 +1239,14 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
 
     ctx.addLine(cmake_generate_file);
 
+    config_section_title(ctx, "import direct deps");
+    ctx.addLine("include(${current_dir}/exports.cmake)");
+    ctx.addLine();
+
+    config_section_title(ctx, "include current export file");
     ctx.addLine("if (NOT TARGET " + d.target_name + ")");
     ctx.addLine("     include(${import_fixed})");
     ctx.addLine("endif()");
-    ctx.addLine();
-
-    config_section_title(ctx, "import direct deps");
-    ctx.addLine("include(${current_dir}/exports.cmake)");
     ctx.addLine();
 
     // src target
