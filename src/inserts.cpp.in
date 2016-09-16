@@ -29,6 +29,7 @@
 
 const String cppan_h =                  R"my_cppan_str(CPPAN_INCLUDE<inserts/cppan.h>           )my_cppan_str";
 const String version_rc_in =            R"my_cppan_str(CPPAN_INCLUDE<inserts/version.rc.in>     )my_cppan_str";
+const String branch_rc_in =             R"my_cppan_str(CPPAN_INCLUDE<inserts/branch.rc.in>      )my_cppan_str";
 const String cmake_functions =          R"my_cppan_str(CPPAN_INCLUDE<inserts/functions.cmake>   )my_cppan_str";
 const String cmake_build_file =         R"my_cppan_str(CPPAN_INCLUDE<inserts/build.cmake>       )my_cppan_str";
 const String cmake_generate_file =      R"my_cppan_str(CPPAN_INCLUDE<inserts/generate.cmake>    )my_cppan_str";

@@ -516,7 +516,7 @@ void CMakePrinter::print_meta()
     // print inserted files
     access_table->write_if_older(fs::current_path() / CPPAN_LOCAL_DIR / cmake_functions_filename, cmake_functions);
     access_table->write_if_older(fs::current_path() / CPPAN_LOCAL_DIR / CPP_HEADER_FILENAME, cppan_h);
-    access_table->write_if_older(fs::current_path() / CPPAN_LOCAL_DIR / "version.rc.in", version_rc_in);
+    access_table->write_if_older(fs::current_path() / CPPAN_LOCAL_DIR / "version.rc.in", d.version.isVersion() ? version_rc_in : branch_rc_in);
 }
 
 void CMakePrinter::print_configs()
