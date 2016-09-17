@@ -1471,6 +1471,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_dir}\")");
     ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CMAKE_VERSION_FILENAME " \"${CMAKE_VERSION}\")");
     ctx.addLine();
+    ctx.addLine("set(XCODE 0)");
+    ctx.addLine("if (CMAKE_GENERATOR STREQUAL \"Xcode\"");
+    ctx.addLine("    set(XCODE 1)");
+    ctx.addLine("endif()");
+    ctx.addLine();
 
     config_section_title(ctx, "export/import");
     ctx.addLine(cmake_export_import_file);
@@ -1810,6 +1815,7 @@ set_target_properties(run-cppan PROPERTIES
                 ctx.addLine("-DN_CORES=${N_CORES}");
                 if (d.empty())
                     ctx.addLine("-DMULTICORE=1");
+                ctx.addLine("-DXCODE=${XCODE}");
                 ctx.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
                 ctx.decreaseIndent();
                 ctx.decreaseIndent();
