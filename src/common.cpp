@@ -56,9 +56,6 @@
 // version numbers of different subsystems
 #define SOURCE_VERSION 2 //?
 
-static const std::regex r_login("[a-z][a-z0-9_]+");
-static const std::regex r_org_name = r_login;
-static const std::regex r_project_name("[a-z_][a-z0-9_]+");
 static const std::regex r_project_version_number(R"((\d+).(\d+).(\d+))");
 static const std::regex r_branch_name(R"(([a-zA-Z_][a-zA-Z0-9_-]*))");
 static const std::regex r_version1(R"((\d+))");
@@ -234,40 +231,6 @@ std::tuple<int, String> system_with_output(const std::vector<String> &args)
     for (auto &a : args)
         cmd += a + " ";
     return system_with_output(cmd);
-}
-
-bool check_login(const String &n, String *error)
-{
-    if (!std::regex_match(n, r_login))
-    {
-        if (error)
-            *error = "Username should contain alphanumeric characters or undescore symbols "
-            "starting with an alpha and minimum 2 characters length";
-        return false;
-    }
-    return true;
-}
-
-bool check_org_name(const String &n, String *error)
-{
-    if (!std::regex_match(n, r_org_name))
-    {
-        if (error)
-            *error = "Organization name should contain alphanumeric characters or undescore symbols starting with an alpha";
-        return false;
-    }
-    return true;
-}
-
-bool check_project_name(const String &n, String *error)
-{
-    if (!std::regex_match(n, r_project_name))
-    {
-        if (error)
-            *error = "Project name should be like a C++ identifier";
-        return false;
-    }
-    return true;
 }
 
 bool check_branch_name(const String &n, String *error)
