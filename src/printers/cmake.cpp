@@ -445,7 +445,7 @@ int CMakePrinter::_generate(bool force) const
         }
         else if (!rc->local_settings.is_custom_build_dir())
         {
-            bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.config;
+            bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.get_config_with_generator();
             fs::create_directories(bld_dir);
             boost::system::error_code ec;
             fs::create_symlink(bs.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
@@ -1318,7 +1318,12 @@ void CMakePrinter::print_object_export_file(const path &fn) const
             continue;
 
         auto b = dep.getDirObj();
-        auto p = b / "build" / "${config}" / "exports" / (dep.variable_name + "-fixed.cmake");
+        auto p = b / "build";
+        if (!dep.flags[pfExecutable])
+            p /= "${config_lib_gen}";
+        else
+            p /= "${config_exe}";
+        p /= path("exports") / (dep.variable_name + "-fixed.cmake");
 
         if (!dep.flags[pfHeaderOnly])
             ctx.addLine("include(\"" + normalize_path(b / exports_filename) + "\")");
@@ -1460,9 +1465,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
     config_section_title(ctx, "variables");
     ctx.addLine("get_configuration(config)");
+    ctx.addLine("get_configuration_with_generator(config_dir)");
     ctx.addLine("get_number_of_cores(N_CORES)");
     ctx.addLine();
-    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config}\")");
+    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_dir}\")");
     ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CMAKE_VERSION_FILENAME " \"${CMAKE_VERSION}\")");
     ctx.addLine();
 
@@ -1787,7 +1793,7 @@ set_target_properties(run-cppan PROPERTIES
             {
                 auto &p = dp.second;
                 if (!p.flags[pfExecutable])
-                    ctx.addLine("get_configuration(config)");
+                    ctx.addLine("get_configuration_with_generator(config)");
                 else
                     ctx.addLine("get_configuration_exe(config)");
                 ctx.addLine("set(current_dir " + normalize_path(p.getDirObj()) + ")");

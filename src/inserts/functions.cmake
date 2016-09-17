@@ -180,12 +180,7 @@ function(get_configuration out)
         find_flag(${CMAKE_CXX_FLAGS_DEBUG} /mtd mt_flag)
     endif()
 
-    set(ninja_dir)
-    if (CMAKE_GENERATOR STREQUAL Ninja)
-        set(ninja_dir -ninja)
-    endif()
-
-    set(config ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID}${ninja_dir})
+    set(config ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
     string(REGEX MATCH "[0-9]+\\.[0-9]" version "${CMAKE_CXX_COMPILER_VERSION}")
     if (CMAKE_SIZEOF_VOID_P)
         math(EXPR bits "${CMAKE_SIZEOF_VOID_P} * 8")
@@ -205,6 +200,23 @@ function(get_configuration out)
 
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration)
+
+########################################
+# FUNCTION get_configuration_with_generator
+########################################
+
+function(get_configuration_with_generator out)
+    get_configuration(config)
+
+    set(generator ${CMAKE_GENERATOR})
+    string(REPLACE " " "-" generator "${generator}")
+    if (NOT "${generator}" STREQUAL "")
+        set(config ${config}_${generator})
+    endif()
+    string(TOLOWER ${config} config)
+
+    set(${out} ${config} PARENT_SCOPE)
+endfunction(get_configuration_with_generator)
 
 ########################################
 # FUNCTION get_configuration_exe

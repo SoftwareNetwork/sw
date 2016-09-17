@@ -224,12 +224,22 @@ for (int i = 0; i < CMakeConfigurationType::Max; i++)
     return h.hash;
 }
 
-String BuildSettings::get_fs_generator()
+String BuildSettings::get_fs_generator() const
 {
     String g = generator;
     boost::to_lower(g);
-    boost::replace_all(g, " ", "_");
+    boost::replace_all(g, " ", "-");
     return g;
+}
+
+String BuildSettings::get_config_with_generator() const
+{
+    // some generators have same ABI, but cannot reside in the same folder
+    String cfg = config;
+    if (!generator.empty())
+        // do not put under more dirs (do not replace '_' with '/')
+        cfg += "_" + get_fs_generator();
+    return cfg;
 }
 
 LocalSettings::LocalSettings()
@@ -712,12 +722,11 @@ void Config::prepare_build(path fn, const String &cppan)
 {
     fn = fs::canonical(fs::absolute(fn));
 
+    auto &bs = local_settings.build_settings;
     auto printer = Printer::create(printerType);
     printer->rc = this;
 
-    String cfg, cmake_version;
-    path test_src, test_bin;
-    bool tested = false;
+    String cmake_version;
     {
         auto stamps_dir = directories.storage_dir_etc / STAMPS_DIR / "configs";
         if (!fs::exists(stamps_dir))
@@ -739,40 +748,45 @@ void Config::prepare_build(path fn, const String &cppan)
         auto i = hash_configs.find(h);
         if (i != hash_configs.end())
         {
-            cfg = i->second;
+            bs.config = i->second;
         }
         else
         {
             // do a test build to extract config string
-            local_settings.build_settings.set_build_dirs(fn);
-            local_settings.build_settings.source_directory = temp_directory_path() / "temp" / fs::unique_path();
-            local_settings.build_settings.binary_directory = local_settings.build_settings.source_directory / "build";
-            local_settings.build_settings.prepare_build(this, fn, cppan);
+            bs.set_build_dirs(fn);
+            bs.source_directory = temp_directory_path() / "temp" / fs::unique_path();
+            bs.binary_directory = bs.source_directory / "build";
+            bs.prepare_build(this, fn, cppan);
             printer->prepare_build(fn, cppan);
 
             LOG("--");
             LOG("-- Performing test run");
             LOG("--");
 
-            auto olds = local_settings.build_settings.silent;
-            local_settings.build_settings.silent = true;
+            auto olds = bs.silent;
+            bs.silent = true;
             auto ret = printer->generate();
-            local_settings.build_settings.silent = olds;
+            bs.silent = olds;
 
             if (ret)
             {
-                fs::remove_all(local_settings.build_settings.source_directory);
+                fs::remove_all(bs.source_directory);
                 throw std::runtime_error("There are errors during test run");
             }
 
             // read cfg
-            cfg = read_file(local_settings.build_settings.binary_directory / CPPAN_CONFIG_FILENAME);
-            cmake_version = read_file(local_settings.build_settings.binary_directory / CPPAN_CMAKE_VERSION_FILENAME);
-            hash_configs[h] = cfg;
+            bs.config = read_file(bs.binary_directory / CPPAN_CONFIG_FILENAME);
+            cmake_version = read_file(bs.binary_directory / CPPAN_CMAKE_VERSION_FILENAME);
+            hash_configs[h] = bs.config;
 
-            test_src = local_settings.build_settings.source_directory;
-            test_bin = local_settings.build_settings.binary_directory;
-            tested = true;
+            // move this to printer some time
+            // copy cached cmake config to storage
+            copy_dir(
+                bs.binary_directory / "CMakeFiles" / cmake_version,
+                directories.storage_dir_cfg / bs.get_config_with_generator() / "CMakeFiles" / cmake_version);
+
+            // remove test dir
+            fs::remove_all(bs.source_directory);
         }
 
         {
@@ -789,27 +803,18 @@ void Config::prepare_build(path fn, const String &cppan)
         }
     }
 
-    // some generators have same ABI, but cannot reside in the same folder
-    if (!local_settings.build_settings.generator.empty())
-        // do not put under more dirs (do not replace '-' with '/')
-        cfg += "-" + local_settings.build_settings.get_fs_generator();
-    local_settings.build_settings.config = cfg;
-
     // set new dirs
-    local_settings.build_settings.set_build_dirs(fn);
-    local_settings.build_settings.append_build_dirs(cfg);
+    bs.set_build_dirs(fn);
+    bs.append_build_dirs(bs.get_config_with_generator());
 
-    if (tested)
-    {
-        // FIXME: move this to printer some time
-        // copy cached cmake config & remove test dir
-        copy_dir(test_bin / "CMakeFiles" / cmake_version,
-            local_settings.build_settings.binary_directory / "CMakeFiles" / cmake_version);
-        fs::remove_all(test_src);
-    }
+    // move this to printer some time
+    // copy cached cmake config to bin dir
+    copy_dir(
+        directories.storage_dir_cfg / bs.config / "CMakeFiles" / cmake_version,
+        bs.binary_directory / "CMakeFiles" / cmake_version);
 
     // setup cppan config
-    local_settings.build_settings.prepare_build(this, fn, cppan);
+    bs.prepare_build(this, fn, cppan);
 
     // setup printer config
     printer->prepare_build(fn, cppan);
