@@ -40,7 +40,8 @@ endif()
 if (CONFIG)
     if (NOT DEFINED make OR
         "${make}" STREQUAL "" OR
-        "${make}" STREQUAL "make-NOTFOUND")
+        "${make}" STREQUAL "make-NOTFOUND" OR
+        XCODE)
         if (EXECUTABLE)
             execute_process(
                 COMMAND ${CMAKE_COMMAND}
