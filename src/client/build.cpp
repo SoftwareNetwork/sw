@@ -33,7 +33,7 @@
 
 std::vector<std::string> extract_comments(const std::string &s);
 
-Config generate_config(const path &fn, const String &config, bool silent = true, bool rebuild = false)
+Config generate_config(const path &fn, const String &config, bool silent = true, bool rebuild = false, bool prepare = true)
 {
     auto conf = Config::get_user_config();
     conf.type = ConfigType::Local;
@@ -41,7 +41,7 @@ Config generate_config(const path &fn, const String &config, bool silent = true,
     if (!fs::exists(fn))
         throw std::runtime_error("File or directory does not exist: " + fn.string());
 
-    auto read_from_cpp = [&conf, &silent, &rebuild, &config](const path &fn)
+    auto read_from_cpp = [&](const path &fn)
     {
         auto s = read_file(fn);
         auto comments = extract_comments(s);
@@ -72,7 +72,8 @@ Config generate_config(const path &fn, const String &config, bool silent = true,
         if (!silent)
             conf.local_settings.build_settings.silent = false;
         conf.local_settings.build_settings.rebuild = rebuild;
-        conf.prepare_build(fn, comments.size() > (size_t)i ? comments[i] : "");
+        if (prepare)
+            conf.prepare_build(fn, comments.size() > (size_t)i ? comments[i] : "");
     };
 
     if (fs::is_regular_file(fn))
@@ -84,7 +85,8 @@ Config generate_config(const path &fn, const String &config, bool silent = true,
         if (fs::exists(fn / CPPAN_FILENAME))
         {
             conf = Config(fn);
-            conf.prepare_build(fn / CPPAN_FILENAME, read_file(fn / CPPAN_FILENAME));
+            if (prepare)
+                conf.prepare_build(fn / CPPAN_FILENAME, read_file(fn / CPPAN_FILENAME));
         }
         else if (fs::exists(fn / "main.cpp"))
         {
@@ -108,5 +110,11 @@ int build(const path &fn, const String &config, bool rebuild)
     auto conf = generate_config(fn, config, true, rebuild);
     if (conf.generate())
         return 1;
+    return conf.build();
+}
+
+int build_only(const path &fn, const String &config)
+{
+    auto conf = generate_config(fn, config, true, false, false);
     return conf.build();
 }

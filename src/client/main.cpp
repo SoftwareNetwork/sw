@@ -125,6 +125,8 @@ try
 
     if (options().count("build"))
         return build(options["build"].as<String>(), options["config"].as<String>());
+    else if (options().count("build-only"))
+        return build_only(options["build-only"].as<String>(), options["config"].as<String>());
     else if (options().count("rebuild"))
         return build(options["rebuild"].as<String>(), options["config"].as<String>(), true);
     else if (options().count("generate"))
