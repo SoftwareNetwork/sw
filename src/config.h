@@ -121,6 +121,7 @@ struct BuildSettings
     // own data
     bool is_dir = false;
     bool rebuild = false;
+    bool prepare = true;
     String filename;
     String filename_without_ext;
     path source_directory;
@@ -128,7 +129,7 @@ struct BuildSettings
     String config;
 
     void load(const yaml &root);
-    void prepare_build(Config *c, const path &fn, String cppan);
+    void prepare_build(Config *c, const path &fn, String cppan, bool force = false);
     void set_build_dirs(const path &fn);
     void append_build_dirs(const path &p);
     String get_hash() const;

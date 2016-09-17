@@ -72,8 +72,8 @@ Config generate_config(const path &fn, const String &config, bool silent = true,
         if (!silent)
             conf.local_settings.build_settings.silent = false;
         conf.local_settings.build_settings.rebuild = rebuild;
-        if (prepare)
-            conf.prepare_build(fn, comments.size() > (size_t)i ? comments[i] : "");
+        conf.local_settings.build_settings.prepare = prepare;
+        conf.prepare_build(fn, comments.size() > (size_t)i ? comments[i] : "");
     };
 
     if (fs::is_regular_file(fn))
@@ -85,8 +85,8 @@ Config generate_config(const path &fn, const String &config, bool silent = true,
         if (fs::exists(fn / CPPAN_FILENAME))
         {
             conf = Config(fn);
-            if (prepare)
-                conf.prepare_build(fn / CPPAN_FILENAME, read_file(fn / CPPAN_FILENAME));
+            conf.local_settings.build_settings.prepare = prepare;
+            conf.prepare_build(fn / CPPAN_FILENAME, read_file(fn / CPPAN_FILENAME));
         }
         else if (fs::exists(fn / "main.cpp"))
         {

@@ -181,7 +181,7 @@ void BuildSettings::append_build_dirs(const path &p)
     binary_directory = source_directory / "build";
 }
 
-void BuildSettings::prepare_build(Config *c, const path &fn, String cppan)
+void BuildSettings::prepare_build(Config *c, const path &fn, String cppan, bool force)
 {
     auto &p = c->getDefaultProject();
     if (!is_dir)
@@ -195,6 +195,10 @@ void BuildSettings::prepare_build(Config *c, const path &fn, String cppan)
         fs::create_directories(source_directory);
 
     write_file_if_different(source_directory / CPPAN_FILENAME, cppan);
+
+    if (!prepare && !force)
+        return;
+
     Config conf(source_directory);
     conf.process(source_directory); // invoke cppan
 }
@@ -746,7 +750,7 @@ void Config::prepare_build(path fn, const String &cppan)
             bs.set_build_dirs(fn);
             bs.source_directory = temp_directory_path() / "temp" / fs::unique_path();
             bs.binary_directory = bs.source_directory / "build";
-            bs.prepare_build(this, fn, cppan);
+            bs.prepare_build(this, fn, cppan, true);
             printer->prepare_build(fn, cppan);
 
             LOG("--");
@@ -807,7 +811,8 @@ void Config::prepare_build(path fn, const String &cppan)
     bs.prepare_build(this, fn, cppan);
 
     // setup printer config
-    printer->prepare_build(fn, cppan);
+    if (bs.prepare)
+        printer->prepare_build(fn, cppan);
 }
 
 int Config::generate() const
