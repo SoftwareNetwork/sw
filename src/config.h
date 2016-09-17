@@ -132,6 +132,7 @@ struct BuildSettings
     void set_build_dirs(const path &fn);
     void append_build_dirs(const path &p);
     String get_hash() const;
+    String get_fs_generator();
 };
 
 struct LocalSettings

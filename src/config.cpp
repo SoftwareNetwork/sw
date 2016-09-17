@@ -224,6 +224,14 @@ for (int i = 0; i < CMakeConfigurationType::Max; i++)
     return h.hash;
 }
 
+String BuildSettings::get_fs_generator()
+{
+    String g = generator;
+    boost::to_lower(g);
+    boost::replace_all(g, " ", "_");
+    return g;
+}
+
 LocalSettings::LocalSettings()
 {
     build_dir = temp_directory_path() / "build";
@@ -766,7 +774,6 @@ void Config::prepare_build(path fn, const String &cppan)
             test_bin = local_settings.build_settings.binary_directory;
             tested = true;
         }
-        local_settings.build_settings.config = cfg;
 
         {
             ScopedFileLock lock(stamps_file);
@@ -781,6 +788,12 @@ void Config::prepare_build(path fn, const String &cppan)
             }
         }
     }
+
+    // some generators have same ABI, but cannot reside in the same folder
+    if (!local_settings.build_settings.generator.empty())
+        // do not put under more dirs (do not replace '-' with '/')
+        cfg += "-" + local_settings.build_settings.get_fs_generator();
+    local_settings.build_settings.config = cfg;
 
     // set new dirs
     local_settings.build_settings.set_build_dirs(fn);

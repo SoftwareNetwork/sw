@@ -430,7 +430,20 @@ int CMakePrinter::_generate(bool force) const
         if (fs::exists(sln))
             CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
 #else
-        if (!rc->local_settings.is_custom_build_dir())
+        if (bs.generator == "Xcode")
+        {
+            auto name = bs.filename_without_ext + "-" + bs.config + ".xcodeproj";
+            if (rc->local_settings.is_custom_build_dir())
+            {
+                bld_dir = bs.binary_directory / ".." / "..";
+                name = bs.config + ".xcodeproj";
+            }
+            auto sln = bs.binary_directory / (bs.filename_without_ext + ".xcodeproj");
+            auto sln_new = bld_dir / name;
+            boost::system::error_code ec;
+            fs::create_symlink(sln, sln_new, ec);
+        }
+        else if (!rc->local_settings.is_custom_build_dir())
         {
             bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.config;
             fs::create_directories(bld_dir);

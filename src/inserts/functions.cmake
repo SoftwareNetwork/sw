@@ -200,12 +200,7 @@ function(get_configuration out)
         set(dll -dll)
     endif()
 
-    set(xcode)
-    if (XCODE)
-        set(xcode -xcode)
-    endif()
-
-    set(config ${config}-${version}-${bits}${xcode}${mt_flag}${dll})
+    set(config ${config}-${version}-${bits}${mt_flag}${dll})
     string(TOLOWER ${config} config)
 
     set(${out} ${config} PARENT_SCOPE)
