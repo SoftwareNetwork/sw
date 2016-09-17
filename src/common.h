@@ -58,9 +58,6 @@ using ProjectVersionNumber = int32_t;
 std::tuple<int, String> system_with_output(const String &cmd);
 std::tuple<int, String> system_with_output(const std::vector<String> &args);
 
-bool check_login(const String &n, String *error = nullptr);
-bool check_org_name(const String &n, String *error = nullptr);
-bool check_project_name(const String &n, String *error = nullptr);
 bool check_branch_name(const String &n, String *error = nullptr);
 bool check_filename(const String &n, String *error = nullptr);
 
