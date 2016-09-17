@@ -1472,7 +1472,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CMAKE_VERSION_FILENAME " \"${CMAKE_VERSION}\")");
     ctx.addLine();
     ctx.addLine("set(XCODE 0)");
-    ctx.addLine("if (CMAKE_GENERATOR STREQUAL \"Xcode\"");
+    ctx.addLine("if (CMAKE_GENERATOR STREQUAL \"Xcode\")");
     ctx.addLine("    set(XCODE 1)");
     ctx.addLine("endif()");
     ctx.addLine();
