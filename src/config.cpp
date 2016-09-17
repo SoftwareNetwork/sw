@@ -232,16 +232,6 @@ String BuildSettings::get_fs_generator() const
     return g;
 }
 
-String BuildSettings::get_config_with_generator() const
-{
-    // some generators have same ABI, but cannot reside in the same folder
-    String cfg = config;
-    if (!generator.empty())
-        // do not put under more dirs (do not replace '_' with '/')
-        cfg += "_" + get_fs_generator();
-    return cfg;
-}
-
 LocalSettings::LocalSettings()
 {
     build_dir = temp_directory_path() / "build";
@@ -783,7 +773,7 @@ void Config::prepare_build(path fn, const String &cppan)
             // copy cached cmake config to storage
             copy_dir(
                 bs.binary_directory / "CMakeFiles" / cmake_version,
-                directories.storage_dir_cfg / bs.get_config_with_generator() / "CMakeFiles" / cmake_version);
+                directories.storage_dir_cfg / bs.config / "CMakeFiles" / cmake_version);
 
             // remove test dir
             fs::remove_all(bs.source_directory);
@@ -805,7 +795,7 @@ void Config::prepare_build(path fn, const String &cppan)
 
     // set new dirs
     bs.set_build_dirs(fn);
-    bs.append_build_dirs(bs.get_config_with_generator());
+    bs.append_build_dirs(bs.config);
 
     // move this to printer some time
     // copy cached cmake config to bin dir
