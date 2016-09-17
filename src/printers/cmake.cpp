@@ -445,7 +445,7 @@ int CMakePrinter::_generate(bool force) const
         }
         else if (!rc->local_settings.is_custom_build_dir())
         {
-            bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.get_config_with_generator();
+            bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.config;
             fs::create_directories(bld_dir);
             boost::system::error_code ec;
             fs::create_symlink(bs.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
