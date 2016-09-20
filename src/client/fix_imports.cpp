@@ -87,10 +87,51 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     Lines lines;
     std::regex r(add_library);
     std::smatch m;
+    bool exe = false;
     while (std::regex_search(s, m, r))
     {
+        exe |= m[1].str() == "add_executable";
         lines.push_back(m.str());
         s = m.suffix();
+    }
+
+    // set exe imports only to release binary
+    // maybe add an option for this behavior later
+    if (exe)
+    {
+        String rel_conf = "IMPORTED_LOCATION_RELEASE";
+        String confs = "(IMPORTED_LOCATION_DEBUG|IMPORTED_LOCATION_MINSIZEREL|IMPORTED_LOCATION_RELWITHDEBINFO)";
+        String rpath = "\\s*(\".*?\")";
+        String iloc = confs + rpath;
+        String release_path;
+        for (auto &line : lines)
+        {
+            if (line.find(rel_conf) != line.npos)
+            {
+                r = rel_conf + rpath;
+                if (std::regex_search(line, m, r))
+                {
+                    release_path = m[1].str();
+                    r = iloc;
+                    for (auto &line2 : lines)
+                    {
+                        if (std::regex_search(line2, m, r))
+                        {
+                            String t;
+                            t = m.prefix().str();
+                            t += m[1].str();
+                            t += " ";
+                            t += release_path;
+                            t += m.suffix().str();
+                            line2 = t;
+                        }
+                    }
+                }
+                else
+                    std::cerr << "Cannot extract file path from IMPORTED_LOCATION_RELEASE\n"; // cannot find std?
+                break;
+            }
+        }
     }
 
     String result;

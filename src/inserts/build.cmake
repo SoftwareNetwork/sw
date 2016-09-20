@@ -46,7 +46,9 @@ if (CONFIG)
             execute_process(
                 COMMAND ${CMAKE_COMMAND}
                     --build ${BUILD_DIR}
-                    --config ${CONFIG}#Release # TODO: always build exe with Release conf
+                    # maybe add an option for turning this feature off
+                    # build executables always in Release configuration
+                    --config Release
                 RESULT_VARIABLE ret
             )
         else(EXECUTABLE)

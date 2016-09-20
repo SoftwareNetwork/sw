@@ -757,7 +757,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             else
             {
                 for (auto &idir : p.include_directories.public_)
-                    ctx.addLine("PUBLIC " + get_i_dir(idir.string()));
+                    ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + get_i_dir(idir.string()));
                 for (auto &idir : p.include_directories.private_)
                     ctx.addLine("PRIVATE " + get_i_dir(idir.string()));
                 for (auto &pkg : include_deps)
@@ -768,7 +768,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                         auto ipath = pkg.getDirSrc() / i;
                         boost::system::error_code ec;
                         if (fs::exists(ipath, ec))
-                            ctx.addLine("PUBLIC " + normalize_path(ipath));
+                            ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(ipath));
                     }
                     // no privates here
                 }
@@ -781,7 +781,10 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     // deps (direct)
     ctx.addLine("target_link_libraries         (" + d.target_name);
     ctx.increaseIndent();
-    ctx.addLine((!header_only ? "PUBLIC" : "INTERFACE") + String(" ") + cppan_helpers_target);
+    if (!d.flags[pfExecutable])
+        ctx.addLine((!header_only ? "PUBLIC" : "INTERFACE") + String(" ") + cppan_helpers_target);
+    else
+        ctx.addLine("PRIVATE " + cppan_helpers_target);
     if (!header_only)
         ctx.addLine("PRIVATE" + String(" ") + cppan_helpers_private_target);
     for (auto &d1 : dd)
@@ -839,10 +842,15 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         if (!header_only)
         {
             ctx.addLine("PRIVATE   " + cppan_api + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
-            ctx.addLine("INTERFACE " + cppan_api + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_IMPORT"));
+            if (!d.flags[pfExecutable])
+                ctx.addLine("INTERFACE " + cppan_api + "=CPPAN_SYMBOL_IMPORT");
         }
         else
-            ctx.addLine("INTERFACE " + cppan_api + (d.flags[pfExecutable] ? "" : "="));
+        {
+            if (d.flags[pfExecutable])
+                throw std::runtime_error("Header only target should not be executable: " + d.target_name);
+            ctx.addLine("INTERFACE " + cppan_api + "=");
+        }
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.decreaseIndent();
@@ -850,10 +858,15 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.increaseIndent();
         ctx.addLine("target_compile_definitions    (" + d.target_name);
         ctx.increaseIndent();
-        if (!header_only)
-            ctx.addLine("PUBLIC    " + cppan_api + "=");
+        if (d.flags[pfExecutable])
+            ctx.addLine("PRIVATE    " + cppan_api + "=");
         else
-            ctx.addLine("INTERFACE    " + cppan_api + "=");
+        {
+            if (!header_only)
+                ctx.addLine("PUBLIC    " + cppan_api + "=");
+            else
+                ctx.addLine("INTERFACE    " + cppan_api + "=");
+        }
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.decreaseIndent();
@@ -884,6 +897,8 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 {
                     if (header_only)
                         ctx << "INTERFACE " << def.second << Context::eol;
+                    else if (d.flags[pfExecutable])
+                        ctx << "PRIVATE " << def.second << Context::eol;
                     else
                         ctx << boost::algorithm::to_upper_copy(def.first) << " " << def.second << Context::eol;
                 }
@@ -901,6 +916,8 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 {
                     if (header_only)
                         ctx << "INTERFACE " << def.second << Context::eol;
+                    else if (d.flags[pfExecutable])
+                        ctx << "PRIVATE " << def.second << Context::eol;
                     else
                         ctx << boost::algorithm::to_upper_copy(def.first) << " " << def.second << Context::eol;
                 }
@@ -918,6 +935,8 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 {
                     if (header_only)
                         ctx << "INTERFACE " << def.second << Context::eol;
+                    else if (d.flags[pfExecutable])
+                        ctx << "PRIVATE " << def.second << Context::eol;
                     else
                         ctx << boost::algorithm::to_upper_copy(def.first) << " " << def.second << Context::eol;
                 }
@@ -934,6 +953,8 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 {
                     if (header_only)
                         ctx << "INTERFACE ";
+                    else if (d.flags[pfExecutable])
+                        ctx << "PRIVATE ";
                     else
                         ctx << "PUBLIC ";
                     ctx << def << Context::eol;
