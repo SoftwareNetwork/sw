@@ -619,6 +619,12 @@ void Config::process(const path &p)
     rd.init(this, local_settings.host, directories.storage_dir_src);
     rd.download_dependencies(getFileDependencies());
 
+    // if we got a download we might need to refresh configs
+    // but we do not know what projects we should clear
+    // so clear the whole AT
+    if (rd.has_downloads())
+        access_table->clear();
+
     LOG_NO_NEWLINE("Generating build configs... ");
 
     auto printer = Printer::create(printerType);

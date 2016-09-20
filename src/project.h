@@ -126,6 +126,9 @@ struct Project
     // root_directory where all files are stored
     path root_directory;
 
+    // directory where all files are stored after unpack
+    path unpack_directory;
+
     // current package: ppath+version+flags
     Package pkg;
 

@@ -209,6 +209,7 @@ void ResponseData::download_and_unpack()
             auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
             packages[d].config = p.first->get();
             packages[d].config->downloaded = true;
+            return packages[d].config;
         };
 
         // lock, so only one cppan process at the time could download the project
@@ -236,6 +237,7 @@ void ResponseData::download_and_unpack()
         ddata.dl_md5 = &dl_md5;
         LOG_NO_NEWLINE("Downloading: " << d.target_name << "... ");
         download_file(ddata);
+        downloads++;
 
         if (dl_md5 != d.md5)
         {
@@ -262,7 +264,32 @@ void ResponseData::download_and_unpack()
 
         // re-read in any case
         // no need to remove old config, let it die with program
-        add_config();
+        auto c = add_config();
+
+        // move all files under unpack dir
+        auto ud = c->getDefaultProject().unpack_directory;
+        if (!ud.empty())
+        {
+            ud = version_dir / ud;
+            if (fs::exists(ud))
+                throw std::runtime_error("Cannot create unpack_directory '" + ud.string() + "' because fs object with the same name alreasy exists");
+            fs::create_directories(ud);
+            for (auto &f : boost::make_iterator_range(fs::directory_iterator(version_dir), {}))
+            {
+                if (f == ud || f.path().filename() == CPPAN_FILENAME)
+                    continue;
+                if (fs::is_directory(f))
+                {
+                    copy_dir(f, ud / f.path().filename());
+                    fs::remove_all(f);
+                }
+                else if (fs::is_regular_file(f))
+                {
+                    fs::copy_file(f, ud / f.path().filename());
+                    fs::remove(f);
+                }
+            }
+        }
     }
 }
 

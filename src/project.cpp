@@ -400,13 +400,18 @@ void Project::load(const yaml &root)
 
     license = get_scalar<String>(root, "license");
 
-    get_scalar_f(root, "root_directory", [this](const auto &n)
+    auto read_dir = [&root](auto &p, const String &s)
     {
-        auto cp = fs::current_path();
-        root_directory = n.template as<String>();
-        if (cp / root_directory < cp)
-            throw std::runtime_error("'root_directory' cannot be less than current: " + root_directory.string() + ", " + cp.string());
-    });
+        get_scalar_f(root, s, [&p, &s](const auto &n)
+        {
+            auto cp = fs::current_path();
+            p = n.template as<String>();
+            if (cp / p < cp)
+                throw std::runtime_error("'" + s + "' cannot be less than current: " + p.string() + ", " + cp.string());
+        });
+    };
+    read_dir(root_directory, "root_directory");
+    read_dir(unpack_directory, "unpack_directory");
 
     get_map_and_iterate(root, "include_directories", [this](const auto &n)
     {
