@@ -62,3 +62,4 @@ using PackageIndex = std::map<String, path>;
 Package extractFromString(const String &target);
 PackageIndex readPackagesIndex(const path &dir);
 void writePackagesIndex(const path &dir, const PackageIndex &idx);
+void cleanPackages(const String &s);

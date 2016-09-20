@@ -443,11 +443,6 @@ void Project::load(const yaml &root)
     }
     include_directories.public_.insert("${CMAKE_CURRENT_BINARY_DIR}");
 
-    exclude_from_build = get_sequence_unordered_set<path, String>(root, "exclude_from_build");
-
-    if (import_from_bazel)
-        exclude_from_build.insert(BAZEL_BUILD_FILE);
-
     bs_insertions.get_config_insertions(root);
 
     get_map_and_iterate(root, "options", [this](const auto &opt_level)
@@ -645,6 +640,9 @@ void Project::load(const yaml &root)
 
     read_sources(sources, "files");
     read_sources(build_files, "build");
+    read_sources(exclude_from_build, "exclude_from_build");
+    if (import_from_bazel)
+        exclude_from_build.insert(BAZEL_BUILD_FILE);
 
     aliases = get_sequence_set<String>(root, "aliases");
 }

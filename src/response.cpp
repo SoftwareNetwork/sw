@@ -222,8 +222,8 @@ void ResponseData::download_and_unpack()
             continue;
         }
 
-        if (fs::exists(version_dir))
-            fs::remove_all(version_dir);
+        // remove existing version
+        cleanPackages(d.target_name);
 
         auto fs_path = ProjectPath(d.ppath).toFileSystemPath().string();
         std::replace(fs_path.begin(), fs_path.end(), '\\', '/');

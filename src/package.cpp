@@ -31,6 +31,7 @@
 #include "file_lock.h"
 
 #include <iostream>
+#include <regex>
 
 const String cppan_index_file = "index.txt";
 
@@ -136,4 +137,30 @@ void writePackagesIndex(const path &dir, const PackageIndex &idx)
 
     for (auto &pkg : idx)
         ofile << normalize_path(pkg.second) << "\t\t" << pkg.first << "\n";
+}
+
+void cleanPackages(const String &s)
+{
+    std::regex r(s);
+
+    auto remove = [&s, &r](const auto &dir)
+    {
+        auto pkgs = readPackagesIndex(dir);
+        std::vector<String> rms;
+        for (auto &pkg : pkgs)
+        {
+            if (!std::regex_match(pkg.first, r))
+                continue;
+            if (fs::exists(pkg.second))
+                fs::remove_all(pkg.second);
+            rms.push_back(pkg.first);
+        }
+        for (auto &rm : rms)
+            pkgs.erase(rm);
+        writePackagesIndex(dir, pkgs);
+    };
+    remove(directories.storage_dir_src);
+    remove(directories.storage_dir_obj);
+    remove_files_like(directories.storage_dir_lib, s);
+    remove_files_like(directories.storage_dir_bin, s);
 }

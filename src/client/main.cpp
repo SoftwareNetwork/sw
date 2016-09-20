@@ -132,10 +132,9 @@ try
     else if (options().count("generate"))
         return generate(options["generate"].as<String>(), options["config"].as<String>());
 
-    if (options().count("clean-projects"))
+    if (options().count(CLEAN_PACKAGES))
     {
-        Config c;
-        c.clean_project(options["clean-projects"].as<String>());
+        cleanPackages(options[CLEAN_PACKAGES].as<String>());
         return 0;
     }
 

@@ -49,3 +49,5 @@ private:
     po::options_description visible;
     po::options_description hidden;
 };
+
+#define CLEAN_PACKAGES "clean-packages"
