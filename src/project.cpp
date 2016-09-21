@@ -395,6 +395,20 @@ void Project::load(const yaml &root)
 
     EXTRACT_VAR(root, import_from_bazel, "import_from_bazel", bool);
 
+    // standards
+    {
+        EXTRACT_AUTO(c_standard);
+        if (c_standard == 0)
+        {
+            EXTRACT_VAR(root, c_standard, "c", int);
+        }
+        EXTRACT_AUTO(cxx_standard);
+        if (cxx_standard == 0)
+        {
+            EXTRACT_VAR(root, cxx_standard, "c++", int);
+        }
+    }
+
     if (shared_only && static_only)
         throw std::runtime_error("Project cannot be static and shared simultaneously");
 

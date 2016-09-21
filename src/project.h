@@ -117,6 +117,10 @@ struct Project
     bool shared_only = false;
     bool static_only = false;
 
+    // c/c++ standard
+    int c_standard{ 0 };
+    int cxx_standard{ 0 };
+
     // files to include into archive
     Files files;
 
