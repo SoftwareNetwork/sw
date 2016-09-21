@@ -171,7 +171,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
         ctx.decreaseIndent();
         ctx.addLine("else()");
         ctx.increaseIndent();
-        ctx.addLine(ctx2.getText());
+        ctx.addLine(boost::trim_copy(ctx2.getText()));
         ctx.decreaseIndent();
         ctx.addLine("endif()");
     }
@@ -760,7 +760,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                     ctx.addLine("INTERFACE " + get_i_dir(idir.string()));
                 for (auto &pkg : include_deps)
                 {
-                    auto &proj = cc->getProject(pkg.ppath.toString());
+                    auto &proj = rd[pkg].config->getDefaultProject();
                     for (auto &i : proj.include_directories.public_)
                     {
                         auto ipath = pkg.getDirSrc() / i;
@@ -778,7 +778,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                     ctx.addLine("PRIVATE " + get_i_dir(idir.string()));
                 for (auto &pkg : include_deps)
                 {
-                    auto &proj = cc->getProject(pkg.ppath.toString());
+                    auto &proj = rd[pkg].config->getDefaultProject();
                     for (auto &i : proj.include_directories.public_)
                     {
                         auto ipath = pkg.getDirSrc() / i;
