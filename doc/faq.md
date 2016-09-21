@@ -6,6 +6,6 @@
 
 By default, in your user home directory. Like `$HOME/.cppan/storage` on *nix or `%USERPROFILE%/.cppan/storage` on Windows.
 
-#### How to change this directory?
+#### How to change that directory?
 
 Open `$HOME/.cppan/cppan.yml`, add `storage_dir: your/favourite/dir/for/cppan`.
