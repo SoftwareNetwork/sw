@@ -4,7 +4,7 @@
 
 #### Where does cppan download/generate stuff?
 
-By default, in your user home directory. Like `$HOME/.cppan/storage` on *nix or `%USERPROFILE/.cppan/storage%` on Windows.
+By default, in your user home directory. Like `$HOME/.cppan/storage` on *nix or `%USERPROFILE%/.cppan/storage` on Windows.
 
 #### How to change this directory?
 
