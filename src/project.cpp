@@ -264,9 +264,11 @@ void Project::findSources(path p)
     if ((sources.empty() && files.empty()) && !empty)
         throw std::runtime_error("'files' must be populated");
 
-    std::map<String, std::regex> rgxs;
+    std::map<String, std::regex> rgxs, rgxs_exclude;
     for (auto &e : sources)
         rgxs[e] = std::regex(e);
+    for (auto &e : exclude_from_package)
+        rgxs_exclude[e] = std::regex(e);
 
     if (!rgxs.empty())
     {
@@ -284,6 +286,26 @@ void Project::findSources(path p)
                     files.insert(s);
             }
         }
+    }
+
+    if (!rgxs_exclude.empty())
+    {
+        auto to_remove = files;
+        for (auto &f : files)
+        {
+            String s = fs::relative(f, p).string();
+            std::replace(s.begin(), s.end(), '\\', '/');
+
+            for (auto &e : rgxs_exclude)
+            {
+                if (std::regex_match(s, e.second))
+                {
+                    to_remove.erase(f);
+                    break;
+                }
+            }
+        }
+        files = to_remove;
     }
 
     if (files.empty() && !empty)
@@ -654,6 +676,7 @@ void Project::load(const yaml &root)
 
     read_sources(sources, "files");
     read_sources(build_files, "build");
+    read_sources(exclude_from_package, "exclude_from_package");
     read_sources(exclude_from_build, "exclude_from_build");
     if (import_from_bazel)
         exclude_from_build.insert(BAZEL_BUILD_FILE);

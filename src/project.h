@@ -100,6 +100,7 @@ struct Project
     IncludeDirectories include_directories;
     Sources sources;
     Sources build_files;
+    Sources exclude_from_package;
     Packages dependencies;
     Files exclude_from_build;
     BuildSystemConfigInsertions bs_insertions;

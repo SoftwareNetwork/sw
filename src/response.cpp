@@ -66,7 +66,6 @@ void ResponseData::download_dependencies(const Packages &deps)
 
     LOG_NO_NEWLINE("Requesting dependency list... ");
     dependency_tree = url_post(host + "/api/find_dependencies", request);
-    LOG("Ok");
 
     // read deps urls, download them, unpack
     int api = 0;
@@ -85,6 +84,9 @@ void ResponseData::download_dependencies(const Packages &deps)
     data_url = "data";
     if (dependency_tree.find("data_dir") != dependency_tree.not_found())
         data_url = dependency_tree.get<String>("data_dir");
+
+    // dependencies were received without error
+    LOG("Ok");
 
     extractDependencies();
     download_and_unpack();
