@@ -49,6 +49,7 @@ const String packages_folder = "cppan/packages";
 //
 const String cmake_config_filename = "CMakeLists.txt";
 const String actions_filename = "actions.cmake";
+const String cppan_build_dir = "build";
 const String non_local_build_file = "build.cmake";
 const String exports_filename = "exports.cmake";
 const String cmake_functions_filename = "functions.cmake";
@@ -97,9 +98,14 @@ void add_subdirectory(Context &ctx, const String &src)
     ctx << add_subdirectory(src) << Context::eol;
 }
 
+String get_binary_path(const Package &d, const String &prefix)
+{
+    return prefix + "/cppan/" + d.getHash();
+}
+
 String get_binary_path(const Package &d)
 {
-    return "${CMAKE_BINARY_DIR}/cppan/" + d.getHash();
+    return get_binary_path(d, "${CMAKE_BINARY_DIR}");
 }
 
 void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
@@ -234,7 +240,7 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
 void CMakePrinter::prepare_rebuild()
 {
     // remove stamp file to start rebuilding
-    auto odir = d.getDirObj() / "build";
+    auto odir = d.getDirObj() / cppan_build_dir;
     if (!fs::exists(odir))
         return;
     for (auto &dir : boost::make_iterator_range(fs::directory_iterator(odir), {}))
@@ -476,7 +482,7 @@ void CMakePrinter::clear_cache(path p) const
     // projects
     for (auto &pkg : pkgs)
     {
-        auto d = pkg.second / "build";
+        auto d = pkg.second / cppan_build_dir;
         if (!fs::exists(d))
             continue;
         for (auto &fc : boost::make_iterator_range(fs::directory_iterator(d), {}))
@@ -502,7 +508,7 @@ void CMakePrinter::clear_exports(path p) const
     // projects
     for (auto &pkg : pkgs)
     {
-        auto d = pkg.second / "build";
+        auto d = pkg.second / cppan_build_dir;
         if (!fs::exists(d))
             continue;
         for (auto &fc : boost::make_iterator_range(fs::directory_iterator(d), {}))
@@ -653,6 +659,9 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("set(LIBRARY_API " + cppan_api + ")");
         ctx.addLine();
 
+        // configs
+        ctx.addLine("get_configuration_variables()");
+
         // standards
         if (p.c_standard != 0)
         {
@@ -768,12 +777,17 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                         if (fs::exists(ipath, ec))
                             ctx.addLine("INTERFACE " + normalize_path(ipath));
                     }
+                    // no privates here
                 }
             }
             else
             {
                 for (auto &idir : p.include_directories.public_)
-                    ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + get_i_dir(idir.string()));
+                    // executable can export include dirs too (e.g. flex - FlexLexer.h)
+                    // TODO: but check it ^
+                    // export only exe's idirs, not deps' idirs
+                    // that's why target_link_libraries always private for exe
+                    ctx.addLine("PUBLIC " + get_i_dir(idir.string()));
                 for (auto &idir : p.include_directories.private_)
                     ctx.addLine("PRIVATE " + get_i_dir(idir.string()));
                 for (auto &pkg : include_deps)
@@ -784,6 +798,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                         auto ipath = pkg.getDirSrc() / i;
                         boost::system::error_code ec;
                         if (fs::exists(ipath, ec))
+                            // if 'd' is an executable, do not export foreign idirs (keep them private)
                             ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(ipath));
                     }
                     // no privates here
@@ -791,6 +806,30 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             }
             ctx.decreaseIndent();
             ctx.addLine(")");
+
+            // add BDIRs
+            for (auto &pkg : include_deps)
+            {
+                ctx.addLine("# Binary dir of include_directories_only dependency");
+                ctx.addLine("if (USE_CACHE)");
+
+                ctx << "target_include_directories    (" << d.target_name << Context::eol;
+                ctx.increaseIndent();
+                auto bdir = pkg.getDirObj() / cppan_build_dir / (pkg.flags[pfExecutable] ? "${config_exe}" : "${config_lib}");
+                ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(get_binary_path(pkg, bdir.string())));
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+
+                ctx.addLine("else()");
+
+                ctx << "target_include_directories    (" << d.target_name << Context::eol;
+                ctx.increaseIndent();
+                ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(get_binary_path(pkg)));
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+
+                ctx.addLine("endif()");
+            }
         }
     }
 
@@ -1355,7 +1394,7 @@ void CMakePrinter::print_object_export_file(const path &fn) const
             continue;
 
         auto b = dep.getDirObj();
-        auto p = b / "build";
+        auto p = b / cppan_build_dir;
         if (!dep.flags[pfExecutable])
             p /= "${config_lib_gen}";
         else

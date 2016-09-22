@@ -229,6 +229,30 @@ function(get_configuration_exe out)
 endfunction(get_configuration_exe)
 
 ########################################
+# FUNCTION get_configuration_variables
+########################################
+
+function(get_configuration_variables)
+    get_configuration(config_lib)
+    get_configuration_with_generator(config_lib_gen)
+    get_configuration_exe(config_exe)
+
+    if (NOT EXECUTABLE)
+        set(config ${config_lib})
+        set(config_dir ${config_lib_gen})
+    else()
+        set(config ${config_exe})
+        set(config_dir ${config_exe})
+    endif()
+
+    set(config_lib ${config_lib} PARENT_SCOPE)
+    set(config_lib_gen ${config_lib_gen} PARENT_SCOPE)
+    set(config_exe ${config_exe} PARENT_SCOPE)
+    set(config ${config} PARENT_SCOPE)
+    set(config_dir ${config_dir} PARENT_SCOPE)
+endfunction(get_configuration_variables)
+
+########################################
 # FUNCTION get_number_of_cores
 ########################################
 
