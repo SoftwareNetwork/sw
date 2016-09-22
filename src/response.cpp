@@ -317,7 +317,29 @@ void ResponseData::prepare_config(PackageConfigs::value_type &cc)
         auto d = dep.second;
         auto i = project.dependencies.find(d.ppath.toString());
         if (i == project.dependencies.end())
-            throw std::runtime_error("dependency '" + d.ppath.toString() + "' is not found");
+        {
+            // check if we chosen a root project match all subprojects
+            Packages to_add;
+            std::set<String> to_remove;
+            for (auto &root_dep : project.dependencies)
+            {
+                for (auto &child_dep : download_dependencies_[dep_ids[p]].getDirectDependencies())
+                {
+                    if (root_dep.second.ppath.is_root_of(child_dep.second.ppath))
+                    {
+                        to_add.insert({ child_dep.second.ppath.toString(), child_dep.second });
+                        to_remove.insert(root_dep.second.ppath.toString());
+                    }
+                }
+            }
+            if (to_add.empty())
+                throw std::runtime_error("dependency '" + d.ppath.toString() + "' is not found");
+            for (auto &r : to_remove)
+                project.dependencies.erase(r);
+            for (auto &a : to_add)
+                project.dependencies.insert(a);
+            continue;
+        }
         d.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
         i->second.version = d.version;
         i->second.flags = d.flags;
