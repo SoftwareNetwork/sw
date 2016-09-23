@@ -41,6 +41,8 @@ public:
     void clear() const;
     void remove(const path &p) const;
 
+    static void do_not_update_files(bool v);
+
 private:
     path root_dir;
 

@@ -442,8 +442,8 @@ void Project::load(const yaml &root)
         {
             auto cp = fs::current_path();
             p = n.template as<String>();
-            if (cp / p < cp)
-                throw std::runtime_error("'" + s + "' cannot be less than current: " + p.string() + ", " + cp.string());
+            if (!is_under_root(cp / p, cp))
+                throw std::runtime_error("'" + s + "' must not point outside the current dir: " + p.string() + ", " + cp.string());
         });
     };
     read_dir(root_directory, "root_directory");

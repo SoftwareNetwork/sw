@@ -184,3 +184,15 @@ void remove_files_like(const path &dir, const String &regex)
         fs::remove(f);
     }
 }
+
+bool is_under_root(path p, const path &root_dir)
+{
+    p = fs::canonical(p);
+    while (!p.empty())
+    {
+        if (p == root_dir)
+            return true;
+        p = p.parent_path();
+    }
+    return false;
+}

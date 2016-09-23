@@ -40,6 +40,7 @@ struct AccessData
     path root_file;
     std::unordered_map<path, time_t> stamps;
     int refs = 0;
+    bool do_not_update = false;
 
     void init(const path &rd)
     {
@@ -102,6 +103,8 @@ bool AccessTable::must_update_contents(const path &p) const
 {
     if (!fs::exists(p))
         return true;
+    if (data.do_not_update)
+        return false;
     if (!isUnderRoot(p))
         return true;
     return fs::last_write_time(p) != data.stamps[p];
@@ -131,18 +134,7 @@ void AccessTable::clear() const
 
 bool AccessTable::isUnderRoot(path p) const
 {
-    return isUnderRoot(p, root_dir);
-}
-
-bool AccessTable::isUnderRoot(path p, const path &root_dir)
-{
-    while (!p.empty())
-    {
-        if (p == root_dir)
-            return true;
-        p = p.parent_path();
-    }
-    return false;
+    return is_under_root(p, root_dir);
 }
 
 void AccessTable::remove(const path &p) const
@@ -155,4 +147,9 @@ void AccessTable::remove(const path &p) const
     }
     for (auto &s : rm)
         data.stamps.erase(s);
+}
+
+void AccessTable::do_not_update_files(bool v)
+{
+    data.do_not_update = v;
 }

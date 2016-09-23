@@ -75,6 +75,7 @@ struct Printer
 
     virtual void clear_cache(path p) const = 0;
     virtual void clear_exports(path p) const = 0;
+    virtual void clear_export(path p) const = 0;
 
     static std::unique_ptr<Printer> create(PrinterType type);
 };

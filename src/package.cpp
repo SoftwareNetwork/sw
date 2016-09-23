@@ -34,6 +34,7 @@
 #include <regex>
 
 const String cppan_index_file = "index.txt";
+const String cppan_package_dependencies_file = "dependencies.db.txt";
 
 path Package::getDirSrc() const
 {
@@ -139,8 +140,11 @@ void writePackagesIndex(const path &dir, const PackageIndex &idx)
         ofile << normalize_path(pkg.second) << "\t\t" << pkg.first << "\n";
 }
 
-void cleanPackages(const String &s)
+void cleanPackages(const String &s, CleanTarget targets)
 {
+    using CleanTargetFlags = std::bitset<sizeof(CleanTarget) * 8>;
+    CleanTargetFlags flags = (int)targets;
+
     std::regex r(s);
 
     auto remove = [&s, &r](const auto &dir)
@@ -159,8 +163,43 @@ void cleanPackages(const String &s)
             pkgs.erase(rm);
         writePackagesIndex(dir, pkgs);
     };
-    remove(directories.storage_dir_src);
-    remove(directories.storage_dir_obj);
-    remove_files_like(directories.storage_dir_lib, s);
-    remove_files_like(directories.storage_dir_bin, s);
+    if (flags[(int)CleanTarget::Src])
+        remove(directories.storage_dir_src);
+    if (flags[(int)CleanTarget::Obj])
+        remove(directories.storage_dir_obj);
+    if (flags[(int)CleanTarget::Lib])
+        remove_files_like(directories.storage_dir_lib, s);
+    if (flags[(int)CleanTarget::Bin])
+        remove_files_like(directories.storage_dir_bin, s);
+}
+
+PackageDependenciesIndex readPackageDependenciesIndex(const path &dir)
+{
+    auto fn = dir / cppan_package_dependencies_file;
+    ScopedShareableFileLock lock(fn);
+
+    PackageDependenciesIndex pkgs;
+    std::ifstream ifile(fn.string());
+    if (!ifile)
+        return pkgs;
+
+    String target_name, hash;
+    while (ifile >> hash >> target_name)
+        pkgs[target_name] = hash;
+
+    return pkgs;
+}
+
+void writePackageDependenciesIndex(const path &dir, const PackageDependenciesIndex &idx)
+{
+    auto fn = dir / cppan_package_dependencies_file;
+    ScopedFileLock lock(fn);
+
+    std::ofstream ofile(fn.string());
+    if (!ofile)
+        return;
+
+    for (auto &pkg : idx)
+        if (!pkg.second.empty())
+            ofile << pkg.second << "\t" << pkg.first << "\n";
 }

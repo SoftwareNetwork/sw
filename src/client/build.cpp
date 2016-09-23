@@ -29,6 +29,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <access_table.h>
 #include <config.h>
 
 std::vector<std::string> extract_comments(const std::string &s);
@@ -115,6 +116,7 @@ int build(const path &fn, const String &config, bool rebuild)
 
 int build_only(const path &fn, const String &config)
 {
+    AccessTable::do_not_update_files(true);
     auto conf = generate_config(fn, config, true, false, false);
     return conf.build();
 }

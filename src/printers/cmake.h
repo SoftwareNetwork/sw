@@ -42,6 +42,7 @@ struct CMakePrinter : Printer
 
     void clear_cache(path p) const override;
     void clear_exports(path p) const override;
+    void clear_export(path p) const override;
 
 private:
     int _generate(bool force = false) const;

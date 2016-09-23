@@ -5,10 +5,42 @@ set(export_dir ${build_dir}/exports)
 set(import ${export_dir}/${variable_name}.cmake)
 set(import_fixed ${export_dir}/${variable_name}-fixed.cmake)
 set(aliases_file ${export_dir}/${variable_name}-aliases.cmake)
+set(lock ${build_dir}/cppan_generate.lock)
+
+find_program(cppan cppan)
+if ("${cppan}" STREQUAL "cppan-NOTFOUND")
+    message(FATAL_ERROR "'cppan' program was not found. Please, add it to PATH environment variable")
+endif()
+
+########################################
+
+set(REGENERATE 0)
+if (EXISTS ${import} AND 0)
+    # compare ${import} file md5 with recorded md5
+    file(
+        LOCK ${import}.lock
+        GUARD FILE # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
+        TIMEOUT 0
+        RESULT_VARIABLE lock_result
+    )
+
+    file(MD5 ${import} md5)
+
+    if (EXISTS ${import}.md5)
+        file(READ ${import}.md5 md5old)
+    else()
+        set(md5old "")
+        file(WRITE ${import}.md5 "${md5}")
+    endif()
+
+    if (NOT "${md5}" STREQUAL "${md5old}")
+        set(REGENERATE 1)
+    endif()
+endif()
+
+########################################
 
 if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
-    set(lock ${build_dir}/cppan_generate.lock)
-
     file(
         LOCK ${lock}
         GUARD FILE # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
@@ -74,7 +106,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         #-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                         #-G "${generator}"
                         -DOUTPUT_DIR=${config}
-                        -DCPPAN_BUILD_SHARED_LIBS=0 # TODO: try to work 0->1
+                        -DCPPAN_BUILD_SHARED_LIBS=0 # TODO: try to work 0->1 <- why? maybe left as is?
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -106,11 +138,11 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
             endif(CMAKE_TOOLCHAIN_FILE)
         endif(EXECUTABLE)
 
-        find_program(cppan cppan)
-        if ("${cppan}" STREQUAL "cppan-NOTFOUND")
-            message(FATAL_ERROR "'cppan' program was not found. Please, add it to PATH environment variable")
-        endif()
+        # store ${import} file hash
+        file(MD5 ${import} md5)
+        file(WRITE ${import}.md5 "${md5}")
 
+        # fix
         file(WRITE ${aliases_file} "${aliases}")
         execute_process(
             COMMAND ${cppan} internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}

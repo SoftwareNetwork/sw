@@ -52,6 +52,7 @@ void write_file_if_different(const path &p, const std::string &s);
 
 void remove_file(const path &p);
 std::string normalize_path(const path &p);
+bool is_under_root(path p, const path &root_dir);
 
 std::string get_stamp_filename(const std::string &prefix);
 std::string make_archive_name(const std::string &fn);

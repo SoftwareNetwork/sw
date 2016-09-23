@@ -29,6 +29,7 @@
 
 #include "config.h"
 #include "file_lock.h"
+#include "hasher.h"
 #include "log.h"
 #include "project.h"
 
@@ -93,6 +94,28 @@ void ResponseData::download_dependencies(const Packages &deps)
     post_download();
     write_index();
 
+    // deps are now resolved
+    // now refresh dependencies database only for remote packages
+    // this file (local,current,root) packages will be refreshed anyway
+    auto deps_db = readPackageDependenciesIndex(directories.storage_dir_etc);
+    for (auto &cc : packages)
+    {
+        Hasher h;
+        for (auto &d : cc.second.dependencies)
+            h |= d.second.target_name;
+        if (deps_db[cc.first.target_name] != h.hash)
+        {
+            deps_changed = true;
+
+            // clear exports for this project, so it will be regenerated
+            auto p = Printer::create(cc.second.config->printerType);
+            p->clear_export(cc.first.getDirObj());
+            cleanPackages(cc.first.target_name, CleanTarget::Lib | CleanTarget::Bin);
+        }
+        deps_db[cc.first.target_name] = h.hash;
+    }
+    writePackageDependenciesIndex(directories.storage_dir_etc, deps_db);
+
     // add default (current, root) config
     packages[Package()].dependencies = deps;
     for (auto &dd : download_dependencies_)
@@ -131,7 +154,7 @@ void ResponseData::download_dependencies(const Packages &deps)
         d.createNames();
     }
 
-    // last in functions
+    // last in function
     executed = true;
 }
 
@@ -224,7 +247,7 @@ void ResponseData::download_and_unpack()
             continue;
         }
 
-        // remove existing version
+        // remove existing version dir
         cleanPackages(d.target_name);
 
         auto fs_path = ProjectPath(d.ppath).toFileSystemPath().string();

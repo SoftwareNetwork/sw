@@ -588,7 +588,7 @@ void Config::process(const path &p)
         fs::current_path(p);
 
     // main access table holder
-    auto access_table = std::make_unique<AccessTable>(directories.storage_dir_etc);
+    AccessTable access_table(directories.storage_dir_etc);
 
     // do a request
     rd.init(this, local_settings.host, directories.storage_dir_src);
@@ -597,13 +597,13 @@ void Config::process(const path &p)
     // if we got a download we might need to refresh configs
     // but we do not know what projects we should clear
     // so clear the whole AT
-    if (rd.has_downloads())
-        access_table->clear();
+    if (rd.rebuild_configs())
+        access_table.clear();
 
     LOG_NO_NEWLINE("Generating build configs... ");
 
     auto printer = Printer::create(printerType);
-    printer->access_table = access_table.get();
+    printer->access_table = &access_table;
 
     printer->pc = this;
     printer->rc = this;
@@ -792,7 +792,7 @@ void Config::prepare_build(path fn, const String &cppan)
     bs.prepare_build(this, fn, cppan);
 
     // setup printer config
-    if (bs.prepare)
+    //if (bs.prepare)
         printer->prepare_build(fn, cppan);
 }
 

@@ -149,6 +149,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
         {
             // MUST be here!
             // actions are executed from include_directories only projects
+            ctx.addLine("# " + p.second.target_name);
             ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
         }
         else if (!use_cache || p.second.flags[pfHeaderOnly])
@@ -162,7 +163,8 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
             ctx2.addLine("# " + p.second.target_name);
             add_subdirectory(ctx2, p.second.getDirSrc().string());
 
-            includes.push_back("include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
+            includes.push_back("# " + p.second.target_name + "\n" +
+                "include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
         }
     }
     ctx.addLine();
@@ -181,6 +183,8 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
         ctx.decreaseIndent();
         ctx.addLine("endif()");
     }
+
+    ctx.splitLines();
 }
 
 void print_source_groups(Context &ctx, const path &dir)
@@ -507,18 +511,21 @@ void CMakePrinter::clear_exports(path p) const
 
     // projects
     for (auto &pkg : pkgs)
-    {
-        auto d = pkg.second / cppan_build_dir;
-        if (!fs::exists(d))
-            continue;
-        for (auto &fc : boost::make_iterator_range(fs::directory_iterator(d), {}))
-        {
-            if (!fs::is_directory(fc))
-                continue;
+        clear_export(pkg.second);
+}
 
-            boost::system::error_code ec;
-            fs::remove_all(fc / exports_dir_name, ec);
-        }
+void CMakePrinter::clear_export(path p) const
+{
+    auto d = p / cppan_build_dir;
+    if (!fs::exists(d))
+        return;
+    for (auto &fc : boost::make_iterator_range(fs::directory_iterator(d), {}))
+    {
+        if (!fs::is_directory(fc))
+            continue;
+
+        boost::system::error_code ec;
+        fs::remove_all(fc / exports_dir_name, ec);
     }
 }
 

@@ -50,6 +50,8 @@ public:
 public:
     void init(Config *config, const String &host, const path &root_dir);
     void download_dependencies(const Packages &d);
+
+    bool rebuild_configs() { return has_downloads() || deps_changed; }
     bool has_downloads() const { return downloads > 0; }
 
     PackageConfig &operator[](const Package &p);
@@ -72,6 +74,7 @@ private:
     bool executed = false;
     bool initialized = false;
     int downloads = 0;
+    bool deps_changed = false;
     PackageConfigs packages;
     std::set<std::unique_ptr<Config>> config_store;
 
