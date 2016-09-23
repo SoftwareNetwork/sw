@@ -823,7 +823,10 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 ctx << "target_include_directories    (" << d.target_name << Context::eol;
                 ctx.increaseIndent();
                 auto bdir = pkg.getDirObj() / cppan_build_dir / (pkg.flags[pfExecutable] ? "${config_exe}" : "${config_lib}");
-                ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(get_binary_path(pkg, bdir.string())));
+                if (header_only)
+                    ctx.addLine("INTERFACE " + normalize_path(get_binary_path(pkg, bdir.string())));
+                else
+                    ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(get_binary_path(pkg, bdir.string())));
                 ctx.decreaseIndent();
                 ctx.addLine(")");
 
@@ -831,7 +834,10 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
                 ctx << "target_include_directories    (" << d.target_name << Context::eol;
                 ctx.increaseIndent();
-                ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(get_binary_path(pkg)));
+                if (header_only)
+                    ctx.addLine("INTERFACE " + normalize_path(get_binary_path(pkg)));
+                else
+                    ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(get_binary_path(pkg)));
                 ctx.decreaseIndent();
                 ctx.addLine(")");
 
