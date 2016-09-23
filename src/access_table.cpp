@@ -142,7 +142,7 @@ void AccessTable::remove(const path &p) const
     std::set<path> rm;
     for (auto &s : data.stamps)
     {
-        if (isUnderRoot(s.first, p))
+        if (is_under_root(s.first, p))
             rm.insert(s.first);
     }
     for (auto &s : rm)

@@ -187,7 +187,8 @@ void remove_files_like(const path &dir, const String &regex)
 
 bool is_under_root(path p, const path &root_dir)
 {
-    p = fs::canonical(p);
+    if (!p.empty() && fs::exists(p))
+        p = fs::canonical(p);
     while (!p.empty())
     {
         if (p == root_dir)

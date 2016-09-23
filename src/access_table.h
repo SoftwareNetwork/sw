@@ -47,5 +47,4 @@ private:
     path root_dir;
 
     bool isUnderRoot(path p) const;
-    static bool isUnderRoot(path p, const path &root_dir);
 };
