@@ -792,8 +792,7 @@ void Config::prepare_build(path fn, const String &cppan)
     bs.prepare_build(this, fn, cppan);
 
     // setup printer config
-    //if (bs.prepare)
-        printer->prepare_build(fn, cppan);
+    printer->prepare_build(fn, cppan);
 }
 
 int Config::generate() const

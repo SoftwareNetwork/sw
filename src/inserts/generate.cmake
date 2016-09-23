@@ -14,32 +14,6 @@ endif()
 
 ########################################
 
-set(REGENERATE 0)
-if (EXISTS ${import} AND 0)
-    # compare ${import} file md5 with recorded md5
-    file(
-        LOCK ${import}.lock
-        GUARD FILE # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
-        TIMEOUT 0
-        RESULT_VARIABLE lock_result
-    )
-
-    file(MD5 ${import} md5)
-
-    if (EXISTS ${import}.md5)
-        file(READ ${import}.md5 md5old)
-    else()
-        set(md5old "")
-        file(WRITE ${import}.md5 "${md5}")
-    endif()
-
-    if (NOT "${md5}" STREQUAL "${md5old}")
-        set(REGENERATE 1)
-    endif()
-endif()
-
-########################################
-
 if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
     file(
         LOCK ${lock}
