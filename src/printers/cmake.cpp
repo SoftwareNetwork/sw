@@ -669,6 +669,22 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         // configs
         ctx.addLine("get_configuration_variables()");
 
+        // copy exe cmake settings
+        ctx.addLine("if (EXECUTABLE AND CPPAN_USE_CACHE)");
+        ctx.increaseIndent();
+        ctx.addLine("set(to \"" + normalize_path(directories.storage_dir_cfg) + "/${config}/CMakeFiles/${CMAKE_VERSION}\")");
+        ctx.addLine("if (NOT EXISTS ${to})");
+        ctx.increaseIndent();
+        ctx.addLine("execute_process(");
+        ctx.addLine("    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION} ${to}");
+        ctx.addLine("    RESULT_VARIABLE ret");
+        ctx.addLine(")");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+
         // standards
         if (p.c_standard != 0)
         {
@@ -1218,6 +1234,8 @@ void CMakePrinter::print_object_config_file(const path &fn) const
         ctx.addLine("set(CMAKE_LIBRARY_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_lib) + "/${OUTPUT_DIR})");
         ctx.addLine("set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_lib) + "/${OUTPUT_DIR})");
         ctx.addLine();
+
+        ctx.addLine("set(CPPAN_USE_CACHE 1)");
     }
 
     config_section_title(ctx, "project settings");
@@ -1315,8 +1333,10 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
         ctx.addLine();
     }
     ctx.addLine("set(current_dir " + normalize_path(fn.parent_path()) + ")");
-    ctx.addLine("set(current_dir " + normalize_path(fn.parent_path()) + ")");
+    ctx.addLine("set(storage_cfg_dir " + normalize_path(directories.storage_dir_cfg) + ")");
+    ctx.addLine();
     ctx.addLine("set(variable_name " + d.variable_name + ")");
+    ctx.addLine();
     ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();
 
@@ -1548,7 +1568,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine();
 
     config_section_title(ctx, "export/import");
-    ctx.addLine(cmake_export_import_file);
+    ctx.addLine(boost::trim_copy(cmake_export_import_file));
 
     // cmake includes
     config_section_title(ctx, "cmake includes");

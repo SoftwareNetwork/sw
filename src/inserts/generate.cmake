@@ -47,16 +47,17 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         set(generator ${CMAKE_GENERATOR})
 
         # copy cmake cache for faster bootstrapping
-        if (NOT EXISTS ${build_dir}/CMakeFiles/${CMAKE_VERSION})
+        set(to ${build_dir}/CMakeFiles/${CMAKE_VERSION})
+        if (NOT EXISTS ${to})
             if (EXECUTABLE)
-                # TODO: for exe we should find simple host conf to copy
-                # maybe create and store it in some place in storage
+                set(from ${storage_cfg_dir}/${config_exe}/CMakeFiles/${CMAKE_VERSION})
             else()
+                set(from ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION})
+            endif()
+
+            if (EXISTS ${from})
                 execute_process(
-                    COMMAND ${CMAKE_COMMAND} -E
-                        copy_directory
-                        ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION}
-                        ${build_dir}/CMakeFiles/${CMAKE_VERSION}
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${from} ${to}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -68,9 +69,6 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
-                        #-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                        #-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                        #-G "${generator}"
                         -DOUTPUT_DIR=${config}
                         -DCPPAN_BUILD_SHARED_LIBS=0 # TODO: try to work 0->1 <- why? maybe left as is?
                     RESULT_VARIABLE ret
