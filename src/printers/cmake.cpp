@@ -176,6 +176,14 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
         ctx.increaseIndent();
         for (auto &line : includes)
             ctx.addLine(line);
+
+        // double include files to workaround errors with targets visibility
+        ctx.addLine();
+        ctx.addLine("# double include files to workaround errors with targets visibility");
+        for (auto &line : includes)
+            ctx.addLine(line);
+        //
+
         ctx.decreaseIndent();
         ctx.addLine("else()");
         ctx.increaseIndent();
@@ -1347,7 +1355,7 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
     ctx.addLine();
 
     config_section_title(ctx, "include current export file");
-    ctx.addLine("if (NOT TARGET " + d.target_name + ")");
+    ctx.addLine("if (NOT TARGET " + d.target_name + ")"); // remove cond?
     ctx.addLine("     include(${import_fixed})");
     ctx.addLine("endif()");
     ctx.addLine();
