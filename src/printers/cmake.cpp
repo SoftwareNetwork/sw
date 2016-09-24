@@ -873,10 +873,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     ctx.decreaseIndent();
     ctx.addLine(")");
     ctx.addLine();
-    ctx.addLine("if (CPPAN_USE_CACHE AND CMAKE_GENERATOR STREQUAL Ninja)");
-    ctx.addLine("target_link_libraries         (" + d.target_name + " PRIVATE cppan-dummy)");
-    ctx.addLine("endif()");
-    ctx.addLine();
 
     // solution folder
     if (!header_only)
@@ -1243,21 +1239,6 @@ if (MSVC)
         set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS} /MT")
         set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS} /MT")
         set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /MTd")
-    endif()
-
-    if (0)# OR CMAKE_GENERATOR STREQUAL Ninja)
-        string(TOLOWER "${CMAKE_CXX_COMPILER}" inc)
-        string(REGEX MATCH ".*/vc/bin" inc "${inc}")
-
-        include_directories(BEFORE SYSTEM ${inc}/include)
-        set(ENV{INCLUDE} ${inc}/include)
-
-        set(lib)
-        if (CMAKE_SYSTEM_PROCESSOR STREQUAL amd64)
-            set(lib /${CMAKE_SYSTEM_PROCESSOR})
-        endif()
-        link_directories(${inc}/lib${lib})
-        set(ENV{LIB} ${inc}/lib${lib})
     endif()
 endif()
 )");
@@ -1721,12 +1702,7 @@ include(TestBigEndian))");
     {
         config_section_title(ctx, "dummy compiled target");
         ctx.addLine("# this target will be always built before any other");
-        ctx.addLine("if (CMAKE_GENERATOR STREQUAL Ninja)");
-        ctx.addLine("    set(f ${CMAKE_CURRENT_BINARY_DIR}/cppan_dummy.cpp)");
-        ctx.addLine("    file_write_once(${f} \"void __cppan_dummy() {}\")");
-        ctx.addLine("    add_library(" + cppan_dummy_target + " ${f})");
-        //ctx.addLine("    export(TARGETS " + cppan_dummy_target + " FILE " + exports_dir + cppan_dummy_target + ".cmake)");
-        ctx.addLine("elseif(MSVC)");
+        ctx.addLine("if(MSVC)");
         ctx.addLine("    add_custom_target(" + cppan_dummy_target + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
         ctx.addLine("else()");
         ctx.addLine("    add_custom_target(" + cppan_dummy_target + " ALL)");

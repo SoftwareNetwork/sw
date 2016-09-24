@@ -44,15 +44,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         message(STATUS "Preparing build tree for ${target} (${config})")
         message(STATUS "")
 
-        #find_program(ninja ninja)
-        #set(generator Ninja)
         set(generator ${CMAKE_GENERATOR})
-        if (MSVC
-            OR "${ninja}" STREQUAL "ninja-NOTFOUND"
-            OR CYGWIN # for me it's not working atm
-        )
-            set(generator ${CMAKE_GENERATOR})
-        endif()
 
         # copy cmake cache for faster bootstrapping
         if (NOT EXISTS ${build_dir}/CMakeFiles/${CMAKE_VERSION})
