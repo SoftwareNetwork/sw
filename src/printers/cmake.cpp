@@ -225,14 +225,16 @@ void print_source_groups(Context &ctx, const path &dir)
     ctx.emptyLines(1);
 }
 
-void gather_build_deps(Context &ctx, const Packages &dd, Packages &out)
+void gather_build_deps(Context &ctx, const Packages &dd, Packages &out, bool recursive = false)
 {
     for (auto &dp : dd)
     {
         auto &d = dp.second;
         if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
             continue;
-        out.insert(dp);
+        auto i = out.insert(dp);
+        if (i.second && recursive)
+            gather_build_deps(ctx, rd[d].dependencies, out, recursive);
     }
 }
 
@@ -1886,7 +1888,8 @@ set_target_properties(run-cppan PROPERTIES
         // run building of direct dependecies before project building
         {
             Packages build_deps;
-            gather_build_deps(ctx, rd[d].dependencies, build_deps);
+            // at the moment we re-check all deps to see if we need to build them
+            gather_build_deps(ctx, rd[d].dependencies, build_deps, true);
             for (auto &dp : build_deps)
             {
                 auto &p = dp.second;
