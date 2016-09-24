@@ -140,11 +140,8 @@ void writePackagesIndex(const path &dir, const PackageIndex &idx)
         ofile << normalize_path(pkg.second) << "\t\t" << pkg.first << "\n";
 }
 
-void cleanPackages(const String &s, CleanTarget targets)
+void cleanPackages(const String &s, int flags)
 {
-    using CleanTargetFlags = std::bitset<sizeof(CleanTarget) * 8>;
-    CleanTargetFlags flags = (int)targets;
-
     std::regex r(s);
 
     auto remove = [&s, &r](const auto &dir)
@@ -163,13 +160,13 @@ void cleanPackages(const String &s, CleanTarget targets)
             pkgs.erase(rm);
         writePackagesIndex(dir, pkgs);
     };
-    if (flags[(int)CleanTarget::Src])
+    if (flags & CleanTarget::Src)
         remove(directories.storage_dir_src);
-    if (flags[(int)CleanTarget::Obj])
+    if (flags & CleanTarget::Obj)
         remove(directories.storage_dir_obj);
-    if (flags[(int)CleanTarget::Lib])
+    if (flags & CleanTarget::Lib)
         remove_files_like(directories.storage_dir_lib, s);
-    if (flags[(int)CleanTarget::Bin])
+    if (flags & CleanTarget::Bin)
         remove_files_like(directories.storage_dir_bin, s);
 }
 

@@ -69,23 +69,20 @@ void writePackagesIndex(const path &dir, const PackageIndex &idx);
 PackageDependenciesIndex readPackageDependenciesIndex(const path &dir);
 void writePackageDependenciesIndex(const path &dir, const PackageDependenciesIndex &idx);
 
-enum class CleanTarget
+struct CleanTarget
 {
-    None    =   0b0000'0000,
+    enum Type
+    {
+        None = 0b0000'0000,
 
-    Src     =   0b0000'0001,
-    Obj     =   0b0000'0010,
-    Lib     =   0b0000'0100,
-    Bin     =   0b0000'1000,
+        Src = 0b0000'0001,
+        Obj = 0b0000'0010,
+        Lib = 0b0000'0100,
+        Bin = 0b0000'1000,
 
-    All             = Src | Obj | Lib | Bin,
-    AllExceptSrc    =       Obj | Lib | Bin,
+        All = Src | Obj | Lib | Bin,
+        AllExceptSrc = Obj | Lib | Bin,
+    };
 };
 
-inline CleanTarget operator|(CleanTarget a, CleanTarget b)
-{
-    using UT = std::underlying_type_t<CleanTarget>;
-    return static_cast<CleanTarget>(static_cast<UT>(a) | static_cast<UT>(b));
-}
-
-void cleanPackages(const String &s, CleanTarget flags = CleanTarget::All);
+void cleanPackages(const String &s, int flags = CleanTarget::All);
