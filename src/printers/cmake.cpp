@@ -920,6 +920,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             ctx.addLine("PRIVATE   PACKAGE_NAME=\"" + d.ppath.toString() + "\"");
             ctx.addLine("PRIVATE   PACKAGE_VERSION=\"" + d.version.toString() + "\"");
             ctx.addLine("PRIVATE   PACKAGE_STRING=\"" + d.target_name + "\"");
+            ctx.addLine("PRIVATE   PACKAGE_BUILD_CONFIG=\"$<CONFIG>\"");
             ctx.decreaseIndent();
             ctx.addLine(")");
         }
