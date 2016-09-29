@@ -130,7 +130,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
         String s;
         auto dir = base_dir;
         // do not "optimize" this condition
-        if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectories])
+        if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectoriesOnly])
         {
             dir = directories.storage_dir_src;
             s = p.second.getDirSrc().string();
@@ -145,7 +145,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
             s = p.second.getDirSrc().string();
         }
 
-        if (p.second.flags[pfIncludeDirectories])
+        if (p.second.flags[pfIncludeDirectoriesOnly])
         {
             // MUST be here!
             // actions are executed from include_directories only projects
@@ -230,7 +230,7 @@ void gather_build_deps(Context &ctx, const Packages &dd, Packages &out, bool rec
     for (auto &dp : dd)
     {
         auto &d = dp.second;
-        if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
+        if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectoriesOnly])
             continue;
         auto i = out.insert(dp);
         if (i.second && recursive)
@@ -243,7 +243,7 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
     for (auto &dp : dd)
     {
         auto &d = dp.second;
-        if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectories])
+        if (d.flags[pfExecutable] || d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectoriesOnly])
             continue;
         auto i = out.insert(dp);
         if (i.second)
@@ -342,7 +342,7 @@ endif()
         rc->local_settings.build_dir_type == PackagesDirType::None))
         ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
     ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
-    ctx.addLine("add_subdirectory(cppan)");
+    ctx.addLine("add_subdirectory(" + normalize_path(rc->local_settings.cppan_dir) + ")");
     ctx.addLine();
 
     // add GLOB later
@@ -546,13 +546,13 @@ void CMakePrinter::print()
 
 void CMakePrinter::print_meta()
 {
-    print_meta_config_file(fs::current_path() / CPPAN_LOCAL_DIR / cmake_config_filename);
-    print_helper_file(fs::current_path() / CPPAN_LOCAL_DIR / cmake_helpers_filename);
+    print_meta_config_file(fs::current_path() / cc->local_settings.cppan_dir / cmake_config_filename);
+    print_helper_file(fs::current_path() / cc->local_settings.cppan_dir / cmake_helpers_filename);
 
     // print inserted files
-    access_table->write_if_older(fs::current_path() / CPPAN_LOCAL_DIR / cmake_functions_filename, cmake_functions);
-    access_table->write_if_older(fs::current_path() / CPPAN_LOCAL_DIR / CPP_HEADER_FILENAME, cppan_h);
-    access_table->write_if_older(fs::current_path() / CPPAN_LOCAL_DIR / "version.rc.in", d.version.isVersion() ? version_rc_in : branch_rc_in);
+    access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / cmake_functions_filename, cmake_functions);
+    access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / CPP_HEADER_FILENAME, cppan_h);
+    access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / "version.rc.in", d.version.isVersion() ? version_rc_in : branch_rc_in);
 }
 
 void CMakePrinter::print_configs()
@@ -780,7 +780,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         std::vector<Package> include_deps;
         for (auto &d : dd)
         {
-            if (d.second.flags[pfIncludeDirectories])
+            if (d.second.flags[pfIncludeDirectoriesOnly])
                 include_deps.push_back(d.second);
         }
         if (!p.include_directories.empty() || !include_deps.empty())
@@ -884,7 +884,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     for (auto &d1 : dd)
     {
         if (d1.second.flags[pfExecutable] ||
-            d1.second.flags[pfIncludeDirectories])
+            d1.second.flags[pfIncludeDirectoriesOnly])
             continue;
         if (header_only)
             ctx.addLine("INTERFACE " + d1.second.target_name);
@@ -1276,7 +1276,7 @@ endif()
     {
         config_section_title(ctx, "cppan setup");
 
-        ctx.addLine("add_subdirectory(cppan)");
+        ctx.addLine("add_subdirectory(" + normalize_path(cc->local_settings.cppan_dir) + ")");
         boost::system::error_code ec; // ignore any errors
         fs::copy_file(src_dir / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists, ec);
 
@@ -1415,7 +1415,7 @@ void CMakePrinter::print_object_export_file(const path &fn) const
     {
         auto &dep = dp.second;
 
-        if (dep.flags[pfIncludeDirectories])
+        if (dep.flags[pfIncludeDirectoriesOnly])
             continue;
 
         auto b = dep.getDirObj();
@@ -1511,7 +1511,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("INTERFACE " + cppan_helpers_target);
     for (auto &p : rd[d].dependencies)
     {
-        if (p.second.flags[pfExecutable] || p.second.flags[pfIncludeDirectories])
+        if (p.second.flags[pfExecutable] || p.second.flags[pfIncludeDirectoriesOnly])
             continue;
         ctx.addLine("INTERFACE " + p.second.target_name);
     }

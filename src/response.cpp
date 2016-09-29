@@ -363,7 +363,7 @@ void ResponseData::prepare_config(PackageConfigs::value_type &cc)
                 project.dependencies.insert(a);
             continue;
         }
-        d.flags[pfIncludeDirectories] = i->second.flags[pfIncludeDirectories];
+        d.flags[pfIncludeDirectoriesOnly] = i->second.flags[pfIncludeDirectoriesOnly];
         i->second.version = d.version;
         i->second.flags = d.flags;
         dependencies.emplace(d.ppath.toString(), d);

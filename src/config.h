@@ -145,6 +145,7 @@ struct LocalSettings
     path storage_dir;
     PackagesDirType build_dir_type{ PackagesDirType::System };
     path build_dir;
+    path cppan_dir = ".cppan";
     bool use_cache = true;
     bool show_ide_projects = false;
     bool add_run_cppan_target = false;

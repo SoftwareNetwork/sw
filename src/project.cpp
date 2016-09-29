@@ -392,7 +392,7 @@ void Project::save_dependencies(yaml &node) const
             n = root["private"];
         else
             n = root["public"];
-        if (d.flags[pfIncludeDirectories])
+        if (d.flags[pfIncludeDirectoriesOnly])
         {
             yaml n2;
             n2["version"] = d.version.toAnyVersion();
@@ -546,7 +546,7 @@ void Project::load(const yaml &root)
             if (d["version"].IsDefined())
                 dependency.version = d["version"].template as<String>();
             if (d[INCLUDE_DIRECTORIES_ONLY].IsDefined())
-                dependency.flags.set(pfIncludeDirectories, d[INCLUDE_DIRECTORIES_ONLY].template as<bool>());
+                dependency.flags.set(pfIncludeDirectoriesOnly, d[INCLUDE_DIRECTORIES_ONLY].template as<bool>());
             deps[dependency.ppath.toString()] = dependency;
         }
     };
@@ -579,7 +579,7 @@ void Project::load(const yaml &root)
                     if (key == "version")
                         dependency.version = v.second.template as<String>();
                     else if (key == INCLUDE_DIRECTORIES_ONLY)
-                        dependency.flags.set(pfIncludeDirectories, v.second.template as<bool>());
+                        dependency.flags.set(pfIncludeDirectoriesOnly, v.second.template as<bool>());
                     // TODO: re-enable when adding patches support
                     //else if (key == "package_dir")
                     //    dependency.package_dir_type = packages_dir_type_from_string(v.second.template as<String>());

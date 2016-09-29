@@ -43,7 +43,6 @@
 #include "property_tree.h"
 
 #define CONFIG_ROOT "/etc/cppan/"
-#define CPPAN_LOCAL_DIR "cppan"
 #define CPPAN_FILENAME "cppan.yml"
 
 using String = std::string;

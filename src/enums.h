@@ -52,17 +52,24 @@ enum ProjectFlag
 {
     // version flag = vf
     // project flag = pf
-    pfHeaderOnly, // vf
-    pfUnstable,
-    pfNonsecure,
-    pfOutdated,
-    pfNonOfficial,
-    pfFixed, // vf
-    pfExecutable, // vf
-    pfEmpty, // vf - can be used to load & include cmake packages
-    pfPrivateDependency, // private dependency
-    pfDirectDependency, // vf, response only
-    pfIncludeDirectories, // vf (dependency flag - take include dirs from this dep)
+    // dependency flag = df
+
+    pfHeaderOnly,               // vf
+    pfUnstable,                 // vf, unused??? not pfFixed
+    pfNonsecure,                // vf, pf, show warning, security flaws
+    pfOutdated,                 // vf, project is considered for removal
+    pfNonOfficial,              // pf, unused???
+    pfFixed,                    // vf, version is fixed and cannot be removed
+    pfExecutable,               // pf
+    pfEmpty,                    // vf, can be used to load & include cmake packages
+    pfPrivateDependency,        // df, private dependency
+    pfDirectDependency,         // vf, response only
+    pfIncludeDirectoriesOnly,   // df, take include dirs from this dep
+
+    //pfLibrary?,                  // pf
+    //pfRootProject?,              // pf
+    //pfDirectory?,                // pf
+
     // pfOptional?
 
     // append only to end

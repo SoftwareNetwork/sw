@@ -257,14 +257,10 @@ void LocalSettings::load(const yaml &root, const ConfigType type)
         switch (type)
         {
         case PackagesDirType::Local:
-            return path(CPPAN_LOCAL_DIR) / STORAGE_DIR;
+            return cppan_dir / STORAGE_DIR;
         case PackagesDirType::User:
-            if (type == PackagesDirType::User)
-                return storage_dir;
             return Config::get_user_config().local_settings.storage_dir;
         case PackagesDirType::System:
-            if (type == PackagesDirType::System)
-                return storage_dir;
             return Config::get_system_config().local_settings.storage_dir;
         default:
             return storage_dir;
@@ -313,6 +309,7 @@ void LocalSettings::load_main(const yaml &root)
     EXTRACT_AUTO(add_run_cppan_target);
     EXTRACT(storage_dir, String);
     EXTRACT(build_dir, String);
+    EXTRACT(cppan_dir, String);
 
     auto &p = root["proxy"];
     if (p.IsDefined())

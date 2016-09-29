@@ -104,6 +104,8 @@ void remove_file(const path &p)
 
 String normalize_path(const path &p)
 {
+    if (p.empty())
+        return "";
     String s = p.string();
     boost::algorithm::replace_all(s, "\\", "/");
     return s;
