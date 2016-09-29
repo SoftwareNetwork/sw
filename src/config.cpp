@@ -813,21 +813,21 @@ void Config::checkForUpdates() const
         return;
 
 #ifdef _WIN32
-    String stamp = "/client/.service/win32.stamp";
+    String stamp_file = "/client/.service/win32.stamp";
 #elif __APPLE__
-    String stamp = "/client/.service/macos.stamp";
+    String stamp_file = "/client/.service/macos.stamp";
 #else
-    String stamp = "/client/.service/linux.stamp";
+    String stamp_file = "/client/.service/linux.stamp";
 #endif
 
     DownloadData dd;
-    dd.url = local_settings.host + stamp;
+    dd.url = local_settings.host + stamp_file;
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     download_file(dd);
     auto stamp_remote = boost::trim_copy(read_file(dd.fn));
     boost::replace_all(stamp_remote, "\"", "");
-    uint64_t s1 = std::stoi(stamp);
-    uint64_t s2 = std::stoi(stamp_remote);
+    uint64_t s1 = std::stoull(cppan_stamp);
+    uint64_t s2 = std::stoull(stamp_remote);
     if (s1 != 0 && s2 != 0 && s2 > s1)
     {
         std::cout << "New version of the CPPAN client is available!" << "\n";
@@ -839,5 +839,6 @@ void Config::checkForUpdates() const
         std::cout << "or" << "\n";
         std::cout << "sudo cppan --self-upgrade" << "\n";
 #endif
+        std::cout << "\n";
     }
 }
