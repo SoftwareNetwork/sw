@@ -843,8 +843,11 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             // add BDIRs
             for (auto &pkg : include_deps)
             {
+                if (pkg.flags[pfHeaderOnly])
+                    continue;
+
                 ctx.addLine("# Binary dir of include_directories_only dependency");
-                ctx.addLine("if (USE_CACHE)");
+                ctx.addLine("if (CPPAN_USE_CACHE)");
 
                 ctx << "target_include_directories    (" << d.target_name << Context::eol;
                 ctx.increaseIndent();

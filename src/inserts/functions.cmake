@@ -381,7 +381,7 @@ function(add_win32_version_info dir)
     endif()
 
     set(rcfile ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
-    configure_file(${dir}/cppan/version.rc.in ${rcfile} @ONLY)
+    configure_file(${dir}/.cppan/version.rc.in ${rcfile} @ONLY)
 
     set(src ${src} ${rcfile} PARENT_SCOPE)
 endfunction(add_win32_version_info)
