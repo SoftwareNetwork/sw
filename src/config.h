@@ -149,6 +149,7 @@ struct LocalSettings
     bool use_cache = true;
     bool show_ide_projects = false;
     bool add_run_cppan_target = false;
+    bool disable_update_checks = false;
     BuildSettings build_settings;
 
     LocalSettings();
@@ -215,6 +216,8 @@ struct Config
     Project &getProject(const String &p) const;
 
     Packages getFileDependencies() const; // from file
+
+    void checkForUpdates() const;
 
 private:
     Projects projects;

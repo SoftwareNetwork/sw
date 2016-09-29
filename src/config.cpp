@@ -307,6 +307,7 @@ void LocalSettings::load_main(const yaml &root)
     EXTRACT_AUTO(use_cache);
     EXTRACT_AUTO(show_ide_projects);
     EXTRACT_AUTO(add_run_cppan_target);
+    EXTRACT_AUTO(disable_update_checks);
     EXTRACT(storage_dir, String);
     EXTRACT(build_dir, String);
     EXTRACT(cppan_dir, String);
@@ -804,4 +805,39 @@ int Config::build() const
     auto printer = Printer::create(printerType);
     printer->rc = (Config *)this;
     return printer->build();
+}
+
+void Config::checkForUpdates() const
+{
+    if (local_settings.disable_update_checks)
+        return;
+
+#ifdef _WIN32
+    String stamp = "/client/.service/win32.stamp";
+#elif __APPLE__
+    String stamp = "/client/.service/macos.stamp";
+#else
+    String stamp = "/client/.service/linux.stamp";
+#endif
+
+    DownloadData dd;
+    dd.url = local_settings.host + stamp;
+    dd.fn = fs::temp_directory_path() / fs::unique_path();
+    download_file(dd);
+    auto stamp_remote = boost::trim_copy(read_file(dd.fn));
+    boost::replace_all(stamp_remote, "\"", "");
+    uint64_t s1 = std::stoi(stamp);
+    uint64_t s2 = std::stoi(stamp_remote);
+    if (s1 != 0 && s2 != 0 && s2 > s1)
+    {
+        std::cout << "New version of the CPPAN client is available!" << "\n";
+        std::cout << "Feel free to upgrade it from website or simply run:" << "\n";
+        std::cout << "cppan --self-upgrade" << "\n";
+#ifdef _WIN32
+        std::cout << "(or the same command but from administrator)" << "\n";
+#else
+        std::cout << "or" << "\n";
+        std::cout << "sudo cppan --self-upgrade" << "\n";
+#endif
+    }
 }

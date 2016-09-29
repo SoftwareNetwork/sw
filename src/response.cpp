@@ -46,6 +46,15 @@ void ResponseData::init(Config *config, const String &host, const path &root_dir
     // add default (current, root) config
     packages[Package()].config = config;
 
+    // check for updates only 1 time, ignore errors
+    try
+    {
+        config->checkForUpdates();
+    }
+    catch (...)
+    {
+    }
+
     initialized = true;
 }
 
