@@ -131,8 +131,11 @@ endfunction(project_group)
 ########################################
 
 function(file_write_once f c)
-    if (NOT EXISTS ${f})
-        file(WRITE ${f} "${c}")
+    # multiple instances safe
+    set(once ${f}.cppan.once)
+    if (NOT EXISTS ${once})
+        file_write_safe(${f} "${c}")
+        file(WRITE ${once} "")
     endif()
 endfunction(file_write_once)
 
