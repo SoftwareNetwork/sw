@@ -119,6 +119,18 @@ function(remove_src_unix var)
 endfunction(remove_src_unix)
 
 ########################################
+# FUNCTION remove_src_dir
+########################################
+
+function(remove_src_dir var)
+    file(GLOB_RECURSE rm "${var}")
+    if (rm)
+        list(REMOVE_ITEM src ${rm})
+    endif()
+    set(src ${src} PARENT_SCOPE)
+endfunction(remove_src_dir)
+
+########################################
 # FUNCTION project_group
 ########################################
 

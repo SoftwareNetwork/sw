@@ -743,9 +743,21 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     // exclude files
     if (!p.exclude_from_build.empty())
     {
+        auto cpp_regex_2_cmake_regex = [](auto &s)
+        {
+            boost::replace_all(s, ".*", "*");
+        };
+
         config_section_title(ctx, "exclude files");
         for (auto &f : p.exclude_from_build)
-            ctx << "list(REMOVE_ITEM src \"${CMAKE_CURRENT_SOURCE_DIR}/" << f.string() << "\")" << Context::eol;
+        {
+            // try to remove twice (double check) - as a file and as a dir
+            auto s = normalize_path(f.string());
+            cpp_regex_2_cmake_regex(s);
+            ctx.addLine("remove_src    (\"${CMAKE_CURRENT_SOURCE_DIR}/" + s + "\")");
+            ctx.addLine("remove_src_dir(\"${CMAKE_CURRENT_SOURCE_DIR}/" + s + "\")");
+            ctx.addLine();
+        }
         ctx.emptyLines(1);
     }
 

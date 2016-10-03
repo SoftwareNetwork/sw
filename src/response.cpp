@@ -82,6 +82,7 @@ void ResponseData::download_dependencies(const Packages &deps)
             try
             {
                 dependency_tree = url_post(host + "/api/find_dependencies", request);
+                break;
             }
             catch (...)
             {
