@@ -75,7 +75,22 @@ void ResponseData::download_dependencies(const Packages &deps)
     }
 
     LOG_NO_NEWLINE("Requesting dependency list... ");
-    dependency_tree = url_post(host + "/api/find_dependencies", request);
+    {
+        int n_tries = 3;
+        while (1)
+        {
+            try
+            {
+                dependency_tree = url_post(host + "/api/find_dependencies", request);
+            }
+            catch (...)
+            {
+                if (--n_tries == 0)
+                    throw;
+                LOG_NO_NEWLINE("Retrying... ");
+            }
+        }
+    }
 
     // read deps urls, download them, unpack
     int api = 0;

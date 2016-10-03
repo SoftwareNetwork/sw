@@ -66,6 +66,8 @@ enum ProjectFlag
     pfDirectDependency,         // vf, response only
     pfIncludeDirectoriesOnly,   // df, take include dirs from this dep
 
+    //pfPreferBinary,   //pf, if binaries are available, do not build project, use precompiled
+
     //pfLibrary?,                  // pf
     //pfRootProject?,              // pf
     //pfDirectory?,                // pf
