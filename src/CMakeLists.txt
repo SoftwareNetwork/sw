@@ -114,6 +114,7 @@ set(common_src
     source.h
     stamp.cpp
     stamp.h
+    yaml.cpp
     yaml.h
 
     printers/printer.cpp
