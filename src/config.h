@@ -193,7 +193,7 @@ struct Config
     Config(ConfigType type);
     Config(const path &p);
 
-    void load(const yaml &root, const path &p = CPPAN_FILENAME);
+    void load(yaml root, const path &p = CPPAN_FILENAME);
     void load(const path &p);
     void save(const path &p) const;
 

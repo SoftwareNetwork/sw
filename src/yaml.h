@@ -216,3 +216,5 @@ void get_variety_and_iterate(const yaml &node, const String &key, F1 &&f_scalar,
     const auto &n = node[key];
     get_variety_and_iterate(n, std::forward<F1>(f_scalar), std::forward<F1>(f_map));
 }
+
+void merge(const yaml &from, yaml &to);
