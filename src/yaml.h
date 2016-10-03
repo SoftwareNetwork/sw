@@ -34,7 +34,7 @@
 #define EXTRACT_VAR(r, val, var, type)   \
     do                                   \
     {                                    \
-        auto &v = r[var];                \
+        auto v = r[var];                \
         if (v.IsDefined())               \
             val = v.template as<type>(); \
     } while (0)

@@ -35,7 +35,7 @@ void merge(const yaml &from, yaml &to)
         auto ff = f.second.Type();
 
         bool found = false;
-        for (auto &t : to)
+        for (auto t : to)
         {
             const auto st = t.first.as<String>();
             if (sf == st)

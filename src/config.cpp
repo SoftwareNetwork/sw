@@ -45,6 +45,7 @@
 #include "log.h"
 #include "response.h"
 #include "stamp.h"
+#include "yaml.h"
 
 Directories directories;
 
@@ -487,7 +488,7 @@ void Config::load(yaml root, const path &p)
     // global insertions
     bs_insertions.get_config_insertions(root);
 
-    auto &prjs = root["projects"];
+    auto prjs = root["projects"];
     if (prjs.IsDefined() && !prjs.IsMap())
         throw std::runtime_error("'projects' should be a map");
 
