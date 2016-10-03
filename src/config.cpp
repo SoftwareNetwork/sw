@@ -498,7 +498,7 @@ void Config::load(yaml root, const path &p)
     {
         if (prjs.IsDefined())
         {
-            for (auto &prj : prjs)
+            for (auto prj : prjs)
                 merge(common_settings, prj.second);
         }
         root.remove("common_settings");
@@ -514,7 +514,7 @@ void Config::load(yaml root, const path &p)
 
     if (prjs.IsDefined())
     {
-        for (auto &prj : prjs)
+        for (auto prj : prjs)
         {
             Project project(root_project);
             project.load(prj.second);
