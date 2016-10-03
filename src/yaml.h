@@ -28,7 +28,8 @@
 #pragma once
 
 #include <yaml-cpp/yaml.h>
-using yaml = YAML::Node;
+
+#include "common.h"
 
 #define EXTRACT_VAR(r, val, var, type)   \
     do                                   \
@@ -39,6 +40,8 @@ using yaml = YAML::Node;
     } while (0)
 #define EXTRACT(val, type) EXTRACT_VAR(root, val, #val, type)
 #define EXTRACT_AUTO(val) EXTRACT(val, decltype(val))
+
+using yaml = YAML::Node;
 
 template <class T>
 auto get_scalar(const yaml &node, const String &key, const T &default_ = T())
