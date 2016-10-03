@@ -428,7 +428,7 @@ void Config::load(const path &p)
     load(root);
 }
 
-void Config::load(const yaml &root, const path &p)
+void Config::load(yaml root, const path &p)
 {
     auto ls = root["local_settings"];
     if (ls.IsDefined())
@@ -487,6 +487,22 @@ void Config::load(const yaml &root, const path &p)
     // global insertions
     bs_insertions.get_config_insertions(root);
 
+    auto &prjs = root["projects"];
+    if (prjs.IsDefined() && !prjs.IsMap())
+        throw std::runtime_error("'projects' should be a map");
+
+    // copy common settings to all subprojects
+    const auto &common_settings = root["common_settings"];
+    if (common_settings.IsDefined())
+    {
+        if (prjs.IsDefined())
+        {
+            for (auto &prj : prjs)
+                merge(common_settings, prj.second);
+        }
+        root.remove("common_settings");
+    }
+
     // project
     auto set_project = [this, &p](auto &&project, auto &&name)
     {
@@ -495,11 +511,8 @@ void Config::load(const yaml &root, const path &p)
         projects.emplace(project.ppath.toString(), project);
     };
 
-    const auto &prjs = root["projects"];
     if (prjs.IsDefined())
     {
-        if (!prjs.IsMap())
-            throw std::runtime_error("'projects' should be a map");
         for (auto &prj : prjs)
         {
             Project project(root_project);
