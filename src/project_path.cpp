@@ -70,6 +70,7 @@ String ProjectPath::toPath() const
 
 path ProjectPath::toFileSystemPath() const
 {
+    // TODO: replace with hash, affects both server and client
     path p;
     if (path_elements.empty())
         return p;

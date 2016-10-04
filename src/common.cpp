@@ -53,6 +53,10 @@
 #include <archive_entry.h>
 #endif
 
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <linux/limits.h>
+#endif
+
 // version numbers of different subsystems
 #define SOURCE_VERSION 2 //?
 
@@ -112,6 +116,8 @@ Version::Version(const String &s)
     }
     else
         throw std::runtime_error("Bad version");
+    if (!isValid())
+        throw std::runtime_error("Bad version");
 }
 
 String Version::toString() const
@@ -156,7 +162,7 @@ bool Version::isValid() const
         return check_branch_name(branch);
     if (major == 0 && minor == 0 && patch == 0)
         return false;
-    if (major < -1 && minor < -1 && patch < -1)
+    if (major < -1 || minor < -1 || patch < -1)
         return false;
     return true;
 }
@@ -267,10 +273,21 @@ Files unpack_file(const path &fn, const path &dst)
         path filename = f.filename();
         if (filename == "." || filename == "..")
             continue;
-        files.insert(f);
-        std::ofstream o(f.string(), std::ios::out | std::ios::binary);
+        auto fn = fs::absolute(f).string();
+        std::ofstream o(fn, std::ios::out | std::ios::binary);
         if (!o)
+        {
+            // TODO: probably remove this and linux/limit.h header when server will be using hash paths
+#ifdef _WIN32
+            if (fn.size() >= MAX_PATH)
+                continue;
+#elif defined(__APPLE__)
+#else
+            if (fn.size() >= PATH_MAX)
+                continue;
+#endif
             throw std::runtime_error("Cannot open file: " + f.string());
+        }
         for (;;)
         {
             const void *buff;
@@ -283,6 +300,7 @@ Files unpack_file(const path &fn, const path &dst)
                 throw std::runtime_error(archive_error_string(a));
             o.write((const char *)buff, size);
         }
+        files.insert(f);
     }
     archive_read_close(a);
     archive_read_free(a);
