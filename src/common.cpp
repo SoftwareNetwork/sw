@@ -116,6 +116,8 @@ Version::Version(const String &s)
     }
     else
         throw std::runtime_error("Bad version");
+    if (!isValid())
+        throw std::runtime_error("Bad version");
 }
 
 String Version::toString() const
@@ -160,7 +162,7 @@ bool Version::isValid() const
         return check_branch_name(branch);
     if (major == 0 && minor == 0 && patch == 0)
         return false;
-    if (major < -1 && minor < -1 && patch < -1)
+    if (major < -1 || minor < -1 || patch < -1)
         return false;
     return true;
 }
