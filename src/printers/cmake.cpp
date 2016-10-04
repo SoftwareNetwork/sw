@@ -1593,6 +1593,17 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine("endif()");
     ctx.addLine();
 
+    // use response files when available
+    ctx.addLine("set(CMAKE_C_USE_RESPONSE_FILE_FOR_INCLUDES    1 CACHE STRING \"\")");
+    ctx.addLine("set(CMAKE_C_USE_RESPONSE_FILE_FOR_OBJECTS     1 CACHE STRING \"\")");
+    ctx.addLine("set(CMAKE_C_USE_RESPONSE_FILE_FOR_LIBRARIES   1 CACHE STRING \"\")");
+    ctx.addLine("set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_INCLUDES  1 CACHE STRING \"\")");
+    ctx.addLine("set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS   1 CACHE STRING \"\")");
+    ctx.addLine("set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES 1 CACHE STRING \"\")");
+    // unknown meaning atm, so turned off
+    //ctx.addLine("set(CMAKE_CXX_RESPONSE_FILE_LINK_FLAG \"@\" CACHE STRING \"\")");
+    ctx.addLine();
+
     config_section_title(ctx, "export/import");
     ctx.addLine(boost::trim_copy(cmake_export_import_file));
 

@@ -172,7 +172,7 @@ void BuildSettings::set_build_dirs(const path &fn)
         directories.build_dir_type == PackagesDirType::None)
         source_directory /= (CPPAN_LOCAL_BUILD_PREFIX + filename);
     else
-        source_directory /= sha1(normalize_path(fn.string())).substr(0, 6);
+        source_directory /= sha1(normalize_path(fn.string())).substr(0, 8);
     binary_directory = source_directory / "build";
 }
 
