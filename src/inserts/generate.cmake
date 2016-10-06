@@ -71,6 +71,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -H${current_dir} -B${build_dir}
                         -DOUTPUT_DIR=${config}
                         -DCPPAN_BUILD_SHARED_LIBS=0 # TODO: try to work 0->1 <- why? maybe left as is?
+                        -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -84,6 +85,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -G "${generator}"
                         -DOUTPUT_DIR=${config}
                         -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
+                        -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -96,6 +98,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -G "${generator}"
                         -DOUTPUT_DIR=${config}
                         -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
+                        -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})

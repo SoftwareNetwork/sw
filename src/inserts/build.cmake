@@ -43,14 +43,21 @@ if (CONFIG)
         "${make}" STREQUAL "make-NOTFOUND" OR
         XCODE)
         if (EXECUTABLE)
-            execute_process(
-                COMMAND ${CMAKE_COMMAND}
-                    --build ${BUILD_DIR}
-                    # maybe add an option for turning this feature off
-                    # build executables always in Release configuration
-                    --config Release
-                RESULT_VARIABLE ret
-            )
+            if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
+                execute_process(
+                    COMMAND ${CMAKE_COMMAND}
+                        --build ${BUILD_DIR}
+                        --config ${CONFIG}
+                    RESULT_VARIABLE ret
+                )
+            else()
+                execute_process(
+                    COMMAND ${CMAKE_COMMAND}
+                        --build ${BUILD_DIR}
+                        --config Release
+                    RESULT_VARIABLE ret
+                )
+            endif()
         else(EXECUTABLE)
             execute_process(
                 COMMAND ${CMAKE_COMMAND}

@@ -29,6 +29,7 @@
 
 #include <common.h>
 #include <config.h>
+#include <context.h>
 #include <project_path.h>
 
 #include <boost/algorithm/string.hpp>
@@ -38,28 +39,25 @@
 #include <regex>
 #include <vector>
 
-using Lines = std::deque<String>;
+using Lines = std::vector<String>;
 
-Lines fix_imports(const Lines &lines_old, const String &old_target, const String new_target)
+String fix_imports(const Lines &lines_old, const String &old_target, const String new_target)
 {
-    auto lines = lines_old;
-    for (auto &line : lines)
+    Context ctx;
+    for (auto &line1 : lines_old)
     {
+        auto line = line1;
         boost::algorithm::trim(line);
-        line = line.substr(0, line.find(old_target)) + new_target + line.substr(line.find(old_target) + old_target.size());
+        line = "    " + line.substr(0, line.find(old_target)) + new_target + line.substr(line.find(old_target) + old_target.size());
         if (line.find("add_library") == 0 || line.find("add_executable") == 0)
             boost::algorithm::replace_all(line, "IMPORTED", "IMPORTED GLOBAL");
+        ctx.addLine(line);
     }
-    lines.push_front("if (NOT TARGET " + new_target + ")");
-    lines.push_back("endif()");
-    return lines;
-}
-
-void operator+=(String &s, const Lines &lines)
-{
-    for (auto &line : lines)
-        s += line + "\n";
-    s += "\n\n\n";
+    ctx.before().addLine("if (NOT TARGET " + new_target + ")");
+    ctx.after().addLine("endif()");
+    ctx.after().emptyLines(3);
+    ctx.splitLines();
+    return ctx.getText();
 }
 
 void fix_imports(const String &target, const path &aliases_file, const path &old_file, const path &new_file)
@@ -97,6 +95,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
 
     // set exe imports only to release binary
     // maybe add an option for this behavior later
+    auto lines_not_exe = lines;
     if (exe)
     {
         String rel_conf = "IMPORTED_LOCATION_RELEASE";
@@ -134,37 +133,63 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
         }
     }
 
-    String result;
+    auto fix = [&target, &aliases_s](const auto &lines, auto dep)
     {
-        auto &d = dep;
-        // add GLOBAL for default target
-        result += fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion());
-        d.version.patch = -1;
-        result += fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion());
-        d.version.minor = -1;
-        result += fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion());
-        result += fix_imports(lines, target, d.ppath.toString());
+        Context ctx;
+        {
+            auto d = dep;
+            // add GLOBAL for default target
+            ctx.addLine(fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion()));
+            d.version.patch = -1;
+            ctx.addLine(fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion()));
+            d.version.minor = -1;
+            ctx.addLine(fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion()));
+            ctx.addLine(fix_imports(lines, target, d.ppath.toString()));
+        }
+        {
+            auto d = dep;
+            ctx.addLine(fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion()));
+            d.version.patch = -1;
+            ctx.addLine(fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion()));
+            d.version.minor = -1;
+            ctx.addLine(fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion()));
+            ctx.addLine(fix_imports(lines, target, d.ppath.toString("::")));
+        }
+        {
+            Lines aliases;
+            boost::algorithm::trim(aliases_s);
+            boost::algorithm::split(aliases, aliases_s, boost::is_any_of(";"));
+            for (auto &a : aliases)
+                boost::algorithm::trim(a);
+            for (auto &a : aliases)
+                if (!a.empty())
+                    ctx.addLine(fix_imports(lines, target, a));
+        }
+        ctx.emptyLines(1);
+        ctx.splitLines();
+        return ctx.getText();
+    };
+
+    Context ctx;
+    if (exe)
+    {
+        ctx.addLine("if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
+        ctx.increaseIndent();
+        ctx.addLine(fix(lines_not_exe, dep));
+        ctx.decreaseIndent();
+        ctx.addLine("else()");
+        ctx.increaseIndent();
+        ctx.addLine(fix(lines, dep));
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
     }
+    else
     {
-        auto &d = dep;
-        result += fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion());
-        d.version.patch = -1;
-        result += fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion());
-        d.version.minor = -1;
-        result += fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion());
-        result += fix_imports(lines, target, d.ppath.toString("::"));
-    }
-    {
-        Lines aliases;
-        boost::algorithm::trim(aliases_s);
-        boost::algorithm::split(aliases, aliases_s, boost::is_any_of(";"));
-        for (auto &a : aliases)
-            boost::algorithm::trim(a);
-        for (auto &a : aliases)
-            if (!a.empty())
-                result += fix_imports(lines, target, a);
+        ctx.addLine(fix(lines, dep));
     }
 
-    boost::algorithm::replace_all(result, "\r", "");
-    ofile << result;
+    ctx.splitLines();
+    auto t = ctx.getText();
+    boost::replace_all(t, "\r", "");
+    ofile << t;
 }

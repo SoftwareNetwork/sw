@@ -695,6 +695,11 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("endif()");
         ctx.addLine();
 
+        ctx.addLine("# prevents cmake warning about unused var");
+        ctx.addLine("if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
+        ctx.addLine("endif()");
+        ctx.addLine();
+
         // standards
         if (p.c_standard != 0)
         {
@@ -863,7 +868,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
                 ctx << "target_include_directories    (" << d.target_name << Context::eol;
                 ctx.increaseIndent();
-                auto bdir = pkg.getDirObj() / cppan_build_dir / (pkg.flags[pfExecutable] ? "${config_exe}" : "${config_lib}");
+                auto bdir = pkg.getDirObj() / cppan_build_dir / (pkg.flags[pfExecutable] ? "${config_exe}" : "${config_lib_gen}");
                 if (header_only)
                     ctx.addLine("INTERFACE " + normalize_path(get_binary_path(pkg, bdir.string())));
                 else
@@ -1653,6 +1658,16 @@ include(TestBigEndian))");
         }
         return v_def;
     };
+    auto convert_library = [](const auto &s)
+    {
+        auto v_def = "HAVE_LIB" + boost::algorithm::to_upper_copy(s);
+        for (auto &c : v_def)
+        {
+            if (!isalnum(c))
+                c = '_';
+        }
+        return v_def;
+    };
     auto convert_type = [](const auto &s, const std::string &prefix = "HAVE_")
     {
         String v_def = prefix;
@@ -1681,6 +1696,25 @@ include(TestBigEndian))");
         }
         ctx.emptyLines(1);
     };
+    auto add_library_checks = [&ctx](const auto &a, auto &&f)
+    {
+        for (auto &v : a)
+        {
+            auto val = f(v);
+            ctx.addLine("if (NOT DEFINED " + val + ")");
+            ctx.increaseIndent();
+            ctx.addLine("find_library(" + val + " " + v + ")");
+            ctx.addLine("if (\"${" + val + "}\" STREQUAL \"" + val + "-NOTFOUND\")");
+            ctx.addLine("    set(" + val + " 0)");
+            ctx.addLine("else()");
+            ctx.addLine("    set(" + val + " 1)");
+            ctx.addLine("endif()");
+            ctx.addLine("add_variable(" + val + ")");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+        }
+        ctx.emptyLines(1);
+    };
     auto add_symbol_checks = [&ctx](const auto &a, const String &s, auto &&f)
     {
         for (auto &v : a)
@@ -1702,7 +1736,27 @@ include(TestBigEndian))");
     {
         auto print_def = [&ctx](auto &&s)
         {
-            ctx << "INTERFACE " << s << Context::eol;
+            ctx << "INTERFACE " << s << "=1" << Context::eol;
+            return 0;
+        };
+        ctx.addLine("if (" + s + ")");
+        ctx.increaseIndent();
+        ctx << "target_compile_definitions(" << cppan_helpers_target << Context::eol;
+        ctx.increaseIndent();
+        print_def(s);
+        using expand_type = int[];
+        expand_type{ 0, print_def(std::forward<decltype(defs)>(defs))... };
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+    };
+    auto add_size_if_definition = [&ctx](const String &s, auto &&... defs)
+    {
+        auto print_def = [&ctx](auto &&s)
+        {
+            ctx << "INTERFACE " << s << "=${" << s << "}" << Context::eol;
             return 0;
         };
         ctx.addLine("if (" + s + ")");
@@ -1733,7 +1787,6 @@ include(TestBigEndian))");
     add_symbol_checks(cc->check_symbols, "check_cxx_symbol_exists", convert_function);
     add_checks(cc->check_includes, "check_include_files", convert_include);
     add_checks(cc->check_types, "check_type_size", convert_type);
-
     for (auto &v : cc->check_types)
     {
         ctx.addLine("if (" + convert_type(v) + ")");
@@ -1744,6 +1797,7 @@ include(TestBigEndian))");
         ctx.addLine("endif()");
         ctx.addLine();
     }
+    add_library_checks(cc->check_libraries, convert_library);
 
     // write vars file
     ctx.addLine("if (CPPAN_NEW_VARIABLE_ADDED)");
@@ -1879,6 +1933,12 @@ endif()
     add_check_symbol_definitions(cc->check_symbols, convert_function);
     add_check_definitions(cc->check_includes, convert_include);
     add_check_definitions(cc->check_types, convert_type);
+    for (auto &v : cc->check_types)
+    {
+        add_size_if_definition(convert_type(v, "SIZE_OF_"));
+        add_size_if_definition(convert_type(v, "SIZEOF_"));
+    }
+    add_check_definitions(cc->check_libraries, convert_library);
 
     // re-run cppan when root cppan.yml is changed
     if (cc->local_settings.add_run_cppan_target && !cc->disable_run_cppan_target)
@@ -1934,6 +1994,7 @@ set_target_properties(run-cppan PROPERTIES
                 ctx.addLine("-DCONFIG=$<CONFIG>");
                 ctx.addLine("-DBUILD_DIR=${build_dir}");
                 ctx.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
+                ctx.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
                 ctx.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
                 ctx.addLine("-DN_CORES=${N_CORES}");
                 if (d.empty())
