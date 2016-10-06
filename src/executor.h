@@ -115,8 +115,14 @@ private:
 
 class Executor
 {
-    using Threads = std::vector<std::thread>;
-    using TaskQueues = std::vector<TaskQueue>;
+    struct ThreadData
+    {
+        std::thread t;
+        TaskQueue q;
+        volatile bool busy = false;
+    };
+
+    using Threads = std::vector<ThreadData>;
 
 public:
     Executor(size_t nThreads = std::thread::hardware_concurrency());
@@ -133,30 +139,36 @@ public:
         auto i = index++;
         for (auto n = 0; n != nThreads; ++n)
         {
-            if (taskQueues[(i + n) % nThreads].try_push(task))
+            if (thread_pool[(i + n) % nThreads].q.try_push(task))
                 return;
         }
-        taskQueues[i % nThreads].push(task);
+        thread_pool[i % nThreads].q.push(task);
     }
 
     void stop()
     {
         done = true;
-        for (auto &q : taskQueues)
-            q.done();
+        for (auto &t : thread_pool)
+            t.q.done();
     }
 
     void wait()
     {
-        for (auto &q : taskQueues)
-            while (!q.empty());
+        // wait for empty queues
+        for (auto &t : thread_pool)
+            while (!t.q.empty())
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        // wait for end of execution
+        for (auto &t : thread_pool)
+            while (t.busy)
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
 private:
     Threads thread_pool;
-    TaskQueues taskQueues;
     size_t nThreads = 5;
-    std::atomic_size_t index;
+    std::atomic_size_t index{ 0 };
     bool done = false;
 
     void run(size_t i);

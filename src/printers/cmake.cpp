@@ -2109,12 +2109,14 @@ set_target_properties(run-cppan PROPERTIES
 
 void CMakePrinter::parallel_vars_check(const path &dir) const
 {
+    using Map = std::map<String, int>;
+
     struct symbols
     {
-        StringSet functions;
-        StringSet includes;
-        StringSet types;
-        StringSet libraries;
+        Map functions;
+        Map includes;
+        Map types;
+        Map libraries;
     };
 
     symbols all;
@@ -2129,7 +2131,7 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
             boost::trim(line);
             if (line.empty())
                 continue;
-            array.insert(line);
+            array[line];
         }
     };
 
@@ -2141,7 +2143,7 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
 
     static const String cppan_variable_result_filename = "result.cppan";
 
-    const int N = 20;
+    const int N = 10;
     Executor e(N);
 
     std::vector<symbols> workers(N);
@@ -2156,23 +2158,64 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
     SCATTER(types);
     SCATTER(libraries);
 
-    auto work = [](const auto &w)
+    auto work = [&dir](auto &w, int i)
     {
+        auto d = dir / std::to_string(i);
+        fs::create_directories(d);
 
-    };
+        Context ctx;
+        ctx.addLine(cmake_minimum_required);
+        ctx.addLine("project(x C CXX)");
+        ctx.addLine("include(CheckFunctionExists)");
+        ctx.addLine("include(CheckIncludeFiles)");
+        ctx.addLine("include(CheckTypeSize)");
+        ctx.addLine("include(CheckLibraryExists)");
+        ctx.addLine();
 
-    for (auto &w : workers)
-        e.push([&work, &w]() { work(w); });
+        auto check = [&ctx](const String &s, const String &v, const String &var)
+        {
+            ctx.addLine(s + "(\"" + v + "\" " + var + ")");
+            ctx.addLine("if (NOT " + var + ")");
+            ctx.addLine("    set(" + var + " 0)");
+            ctx.addLine("endif()");
+            ctx.addLine("file(WRITE " + var + " \"${" + var + "}\")");
+            ctx.addLine();
+        };
 
-    auto sync_output = [](auto &&s)
-    {
-        static std::mutex m;
-        //std::lock_guard<std::mutex> lock(m);
-        std::cerr << s << "\n";
-    };
+        for (auto &v : w.functions)
+        {
+            auto var = convert_function(v.first);
+            check("check_function_exists", v.first, var);
+        }
 
-    auto run_cmake = [&dir](path &d)
-    {
+        for (auto &v : w.includes)
+        {
+            auto var = convert_include(v.first);
+            check("check_include_files", v.first, var);
+        }
+
+        for (auto &v : w.types)
+        {
+            auto var = convert_type(v.first);
+            check("check_type_size", v.first, var);
+        }
+
+        for (auto &v : w.libraries)
+        {
+            auto var = convert_library(v.first);
+
+            ctx.addLine("find_library(" + var + " " + v.first + ")");
+            ctx.addLine("if (\"${" + var + "}\" STREQUAL \"" + var + "-NOTFOUND\")");
+            ctx.addLine("    set(" + var + " 0)");
+            ctx.addLine("else()");
+            ctx.addLine("    set(" + var + " 1)");
+            ctx.addLine("endif()");
+            ctx.addLine("file(WRITE " + var + " \"${" + var + "}\")");
+        }
+
+        write_file(d / cmake_config_filename, ctx.getText());
+
+        // run cmake
         copy_dir(dir / "CMakeFiles", d / "CMakeFiles");
 
         std::vector<String> args;
@@ -2182,110 +2225,52 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
         auto ret = system_no_output(args);
 
         if (ret)
-            throw std::runtime_error("Error during evaluating variable");
+            throw std::runtime_error("Error during evaluating variables");
 
-        auto v = read_file(d / cppan_variable_result_filename);
-        return std::stoi(v);
+        for (auto &v : w.functions)
+        {
+            auto var = convert_function(v.first);
+            auto s = read_file(d / var);
+            v.second = std::stoi(s);
+        }
+
+        for (auto &v : w.includes)
+        {
+            auto var = convert_include(v.first);
+            auto s = read_file(d / var);
+            v.second = std::stoi(s);
+        }
+
+        for (auto &v : w.types)
+        {
+            auto var = convert_type(v.first);
+            auto s = read_file(d / var);
+            v.second = std::stoi(s);
+        }
+
+        for (auto &v : w.libraries)
+        {
+            auto var = convert_library(v.first);
+            auto s = read_file(d / var);
+            v.second = std::stoi(s);
+        }
     };
 
-    auto check_function = [&dir, &run_cmake, &sync_output](const auto &name)
-    {
-        auto d = dir / sha1(name).substr(0, 8);
-        fs::create_directories(d);
-        auto var = convert_function(name);
-
-        Context ctx;
-        ctx.addLine(cmake_minimum_required);
-        ctx.addLine("project(x C CXX)");
-        ctx.addLine("include(CheckFunctionExists)");
-        ctx.addLine("check_function_exists(\"" + name + "\" " + var + ")");
-        ctx.addLine("if (NOT " + var + ")");
-        ctx.addLine("    set(" + var + " 0)");
-        ctx.addLine("endif()");
-        ctx.addLine("file(WRITE " + cppan_variable_result_filename + " \"${" + var + "}\")");
-
-        write_file(d / cmake_config_filename, ctx.getText());
-
-        auto r = run_cmake(d);
-        sync_output("-- Looking for " + name + " - " + (r == 0 ? "not " : "") + "found");
-    };
-
-    auto check_include = [&dir, &run_cmake, &sync_output](const auto &name)
-    {
-        auto d = dir / sha1(name).substr(0, 8);
-        fs::create_directories(d);
-        auto var = convert_include(name);
-
-        Context ctx;
-        ctx.addLine(cmake_minimum_required);
-        ctx.addLine("project(x C CXX)");
-        ctx.addLine("include(CheckIncludeFiles)");
-        ctx.addLine("check_include_files(\"" + name + "\" " + var + ")");
-        ctx.addLine("if (NOT " + var + ")");
-        ctx.addLine("    set(" + var + " 0)");
-        ctx.addLine("endif()");
-        ctx.addLine("file(WRITE " + cppan_variable_result_filename + " \"${" + var + "}\")");
-
-        write_file(d / cmake_config_filename, ctx.getText());
-
-        auto r = run_cmake(d);
-        sync_output("-- Looking for " + name + " - " + (r == 0 ? "not " : "") + "found");
-    };
-
-    auto check_type = [&dir, &run_cmake, &sync_output](const auto &name)
-    {
-        auto d = dir / sha1(name).substr(0, 8);
-        fs::create_directories(d);
-        auto var = convert_type(name);
-
-        Context ctx;
-        ctx.addLine(cmake_minimum_required);
-        ctx.addLine("project(x C CXX)");
-        ctx.addLine("include(CheckTypeSize)");
-        ctx.addLine("check_type_size(\"" + name + "\" " + var + ")");
-        ctx.addLine("if (NOT " + var + ")");
-        ctx.addLine("    set(" + var + " 0)");
-        ctx.addLine("endif()");
-        ctx.addLine("file(WRITE " + cppan_variable_result_filename + " \"${" + var + "}\")");
-
-        write_file(d / cmake_config_filename, ctx.getText());
-
-        auto r = run_cmake(d);
-        sync_output("-- Check size of " + name + " - " + (r == 0 ? "failed" : "done"));
-    };
-
-    auto check_library = [&dir, &run_cmake, &sync_output](const auto &name)
-    {
-        auto d = dir / sha1(name).substr(0, 8);
-        fs::create_directories(d);
-        auto var = convert_library(name);
-
-        Context ctx;
-        ctx.addLine(cmake_minimum_required);
-        ctx.addLine("project(x C CXX)");
-        ctx.addLine("include(CheckLibraryExists)");
-        ctx.addLine("find_library(" + var + " " + name + ")");
-        ctx.addLine("if (\"${" + var + "}\" STREQUAL \"" + var + "-NOTFOUND\")");
-        ctx.addLine("    set(" + var + " 0)");
-        ctx.addLine("else()");
-        ctx.addLine("    set(" + var + " 1)");
-        ctx.addLine("endif()");
-        ctx.addLine("file(WRITE " + cppan_variable_result_filename + " \"${" + var + "}\")");
-
-        write_file(d / cmake_config_filename, ctx.getText());
-
-        auto r = run_cmake(d);
-        sync_output("-- Looking for " + name + " - " + (r == 0 ? "not " : "") + "found");
-    };
-
-    for (auto &v : all.functions)
-        e.push([&check_function, &v]() { check_function(v); });
-    for (auto &v : all.includes)
-        e.push([&check_include, &v]() { check_include(v); });
-    for (auto &v : all.types)
-        e.push([&check_type, &v]() { check_type(v); });
-    for (auto &v : all.libraries)
-        e.push([&check_library, &v]() { check_library(v); });
+    i = 0;
+    for (auto &w : workers)
+        e.push([&work, &w, n = i++]() { work(w, n); });
 
     e.wait();
+
+    for (auto &w : workers)
+    {
+#define GATHER(x)           \
+        for (auto &v : w.x) \
+            all.x[v.first] = v.second
+
+        GATHER(functions);
+        GATHER(includes);
+        GATHER(types);
+        GATHER(libraries);
+    }
 }

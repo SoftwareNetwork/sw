@@ -35,16 +35,16 @@ DECLARE_STATIC_LOGGER(logger, "executor");
 Executor::Executor(size_t nThreads)
     : nThreads(nThreads)
 {
-    taskQueues.resize(nThreads);
+    thread_pool.resize(nThreads);
     for (size_t i = 0; i < nThreads; i++)
-        thread_pool.emplace_back([this, i] { run(i); });
+        thread_pool[i].t = std::move(std::thread([this, i] { run(i); }));
 }
 
 Executor::~Executor()
 {
     stop();
     for (auto &t : thread_pool)
-        t.join();
+        t.t.join();
 }
 
 void Executor::run(size_t i)
@@ -58,13 +58,17 @@ void Executor::run(size_t i)
                 const size_t spin_count = nThreads * 4;
                 for (auto n = 0; n != spin_count; ++n)
                 {
-                    if (taskQueues[(i + n) % nThreads].try_pop(t))
+                    if (thread_pool[(i + n) % nThreads].q.try_pop(t))
                         break;
                 }
+
                 // no task popped, probably shutdown command was issues
-                if (!t && !taskQueues[i].pop(t))
+                if (!t && !thread_pool[i].q.pop(t))
                     break;
+
+                thread_pool[i].busy = true;
                 t();
+                thread_pool[i].busy = false;
         }
         catch (const std::exception &e)
         {
