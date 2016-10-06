@@ -54,21 +54,21 @@ void Executor::run(size_t i)
         std::string error;
         try
         {
-                Task t;
-                const size_t spin_count = nThreads * 4;
-                for (auto n = 0; n != spin_count; ++n)
-                {
-                    if (thread_pool[(i + n) % nThreads].q.try_pop(t))
-                        break;
-                }
-
-                // no task popped, probably shutdown command was issues
-                if (!t && !thread_pool[i].q.pop(t))
+            Task t;
+            const size_t spin_count = nThreads * 4;
+            for (auto n = 0; n != spin_count; ++n)
+            {
+                if (thread_pool[(i + n) % nThreads].q.try_pop(t))
                     break;
+            }
 
-                thread_pool[i].busy = true;
-                t();
-                thread_pool[i].busy = false;
+            // no task popped, probably shutdown command was issues
+            if (!t && !thread_pool[i].q.pop(t))
+                break;
+
+            thread_pool[i].busy = true;
+            t();
+            thread_pool[i].busy = false;
         }
         catch (const std::exception &e)
         {
@@ -85,16 +85,22 @@ void Executor::run(size_t i)
     }
 }
 
-Executor &getTaskExecutor(Executor *e)
+void Executor::stop()
 {
-    static Executor *executor;
-    if (e)
-        executor = e;
-    return *executor;
+    done = true;
+    for (auto &t : thread_pool)
+        t.q.done();
 }
 
-Executor &getMailExecutor()
+void Executor::wait()
 {
-    static Executor executor;
-    return executor;
+    // wait for empty queues
+    for (auto &t : thread_pool)
+        while (!t.q.empty())
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // wait for end of execution
+    for (auto &t : thread_pool)
+        while (t.busy)
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }

@@ -145,25 +145,8 @@ public:
         thread_pool[i % nThreads].q.push(task);
     }
 
-    void stop()
-    {
-        done = true;
-        for (auto &t : thread_pool)
-            t.q.done();
-    }
-
-    void wait()
-    {
-        // wait for empty queues
-        for (auto &t : thread_pool)
-            while (!t.q.empty())
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-        // wait for end of execution
-        for (auto &t : thread_pool)
-            while (t.busy)
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+    void stop();
+    void wait();
 
 private:
     Threads thread_pool;
@@ -173,6 +156,3 @@ private:
 
     void run(size_t i);
 };
-
-Executor &getTaskExecutor(Executor *e = nullptr);
-Executor &getMailExecutor();
