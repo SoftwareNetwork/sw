@@ -7,11 +7,6 @@ set(import_fixed ${export_dir}/${variable_name}-fixed.cmake)
 set(aliases_file ${export_dir}/${variable_name}-aliases.cmake)
 set(lock ${build_dir}/cppan_generate.lock)
 
-find_program(cppan cppan)
-if ("${cppan}" STREQUAL "cppan-NOTFOUND")
-    message(FATAL_ERROR "'cppan' program was not found. Please, add it to PATH environment variable")
-endif()
-
 ########################################
 
 if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
@@ -72,6 +67,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -DOUTPUT_DIR=${config}
                         -DCPPAN_BUILD_SHARED_LIBS=0 # TODO: try to work 0->1 <- why? maybe left as is?
                         -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
+                        -DCPPAN_PROGRAM=${CPPAN_PROGRAM}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -86,6 +82,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -DOUTPUT_DIR=${config}
                         -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
                         -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
+                        -DCPPAN_PROGRAM=${CPPAN_PROGRAM}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -99,6 +96,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -DOUTPUT_DIR=${config}
                         -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
                         -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
+                        -DCPPAN_PROGRAM=${CPPAN_PROGRAM}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -112,7 +110,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         # fix
         file(WRITE ${aliases_file} "${aliases}")
         execute_process(
-            COMMAND ${cppan} internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
+            COMMAND ${CPPAN_PROGRAM} internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
             RESULT_VARIABLE ret
         )
         check_result_variable(${ret})

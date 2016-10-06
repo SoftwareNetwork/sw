@@ -225,37 +225,22 @@ void self_upgrade(Config &c, const char *exe_path)
     unpack_file(dd.fn, tmp_dir);
 
     // self update
+    auto program = get_program();
 #ifdef _WIN32
     auto exe = (tmp_dir / "cppan.exe").wstring();
     auto arg0 = L"\"" + exe + L"\"";
-    WCHAR fn[1024] = { 0 };
-    GetModuleFileNameW(NULL, fn, sizeof(fn) * sizeof(WCHAR));
-    auto dst = L"\"" + std::wstring(fn) + L"\"";
+    auto dst = L"\"" + program.wstring() + L"\"";
     std::cout << "Replacing client" << "\n";
     if (_wexecl(exe.c_str(), arg0.c_str(), L"--self-upgrade-copy", dst.c_str(), 0) == -1)
     {
         throw std::runtime_error(String("errno = ") + std::to_string(errno) + "\n" +
             "Cannot do a self upgrade. Replace this file with newer CPPAN client manually.");
     }
-#elif __APPLE__
-    auto pid = getpid();
-    char dest[PROC_PIDPATHINFO_MAXSIZE] = { 0 };
-    auto ret = proc_pidpath(pid, dest, sizeof(dest));
-    if (ret <= 0)
-        return;
-    auto cppan = tmp_dir / "cppan";
-    fs::permissions(cppan, fs::owner_all | fs::group_exe | fs::others_exe);
-    fs::remove(dest);
-    fs::copy_file(cppan, dest);
-    fs::remove(cppan);
 #else
-    char dest[PATH_MAX];
-    if (readlink("/proc/self/exe", dest, PATH_MAX) == -1)
-        perror("readlink");
     auto cppan = tmp_dir / "cppan";
     fs::permissions(cppan, fs::owner_all | fs::group_exe | fs::others_exe);
     fs::remove(dest);
-    fs::copy_file(cppan, dest);
+    fs::copy_file(cppan, program);
     fs::remove(cppan);
 #endif
 }

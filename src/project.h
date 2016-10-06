@@ -107,6 +107,7 @@ struct Project
     std::map<String, Options> options;
     StringSet aliases;
     bool import_from_bazel = false;
+    bool copy_to_output_dir = true;
 
     // no files to compile
     bool header_only = false;

@@ -424,6 +424,7 @@ int CMakePrinter::_generate(bool force) const
     if (!bs.toolset.empty())
         args.push_back("-T " + bs.toolset + "");
     args.push_back("-DCMAKE_BUILD_TYPE=" + bs.configuration + "");
+    args.push_back("-DCPPAN_PROGRAM=\"" + normalize_path(get_program()) + "\"");
     for (auto &o : bs.cmake_options)
         args.push_back(o);
     for (auto &o : bs.env)
@@ -697,6 +698,8 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
         ctx.addLine("# prevents cmake warning about unused var");
         ctx.addLine("if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
+        ctx.addLine("endif()");
+        ctx.addLine("if (CPPAN_PROGRAM)");
         ctx.addLine("endif()");
         ctx.addLine();
 
@@ -1585,6 +1588,20 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine("include(" + cmake_functions_filename + ")");
 
     config_section_title(ctx, "variables");
+    if (d.empty())
+    {
+        ctx.addLine("if (NOT CPPAN_PROGRAM)");
+        ctx.increaseIndent();
+        ctx.addLine("find_program(CPPAN_PROGRAM cppan)");
+        ctx.addLine("if (\"${CPPAN_PROGRAM}\" STREQUAL \"CPPAN_PROGRAM-NOTFOUND\")");
+        ctx.increaseIndent();
+        ctx.addLine("message(FATAL_ERROR \"'cppan' program was not found. Please, add it to PATH environment variable\")");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+    }
     ctx.addLine("get_configuration(config)");
     ctx.addLine("get_configuration_with_generator(config_dir)");
     ctx.addLine("get_number_of_cores(N_CORES)");
@@ -2029,7 +2046,8 @@ set_target_properties(run-cppan PROPERTIES
             {
                 auto &p = dp.second;
                 // do not copy static only projects
-                if (rd[p].config->getDefaultProject().static_only)
+                if ( rd[p].config->getDefaultProject().static_only ||
+                    !rd[p].config->getDefaultProject().copy_to_output_dir)
                     continue;
                 ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
                 ctx.increaseIndent();

@@ -53,6 +53,11 @@
 #include <archive_entry.h>
 #endif
 
+#ifdef __APPLE__
+#include <libproc.h>
+#include <unistd.h>
+#endif
+
 #if !defined(_WIN32) && !defined(__APPLE__)
 #include <linux/limits.h>
 #endif
@@ -624,4 +629,28 @@ String repeat(const String &e, int n)
     for (int i = 0; i < n; i++)
         s += e;
     return s;
+}
+
+path get_program()
+{
+#ifdef _WIN32
+    WCHAR fn[8192] = { 0 };
+    GetModuleFileNameW(NULL, fn, sizeof(fn) * sizeof(WCHAR));
+    return fn;
+#elif __APPLE__
+    auto pid = getpid();
+    char dest[PROC_PIDPATHINFO_MAXSIZE] = { 0 };
+    auto ret = proc_pidpath(pid, dest, sizeof(dest));
+    if (ret <= 0)
+        throw std::runtime_error("Cannot get program path");
+    return dest;
+#else
+    char dest[PATH_MAX];
+    if (readlink("/proc/self/exe", dest, PATH_MAX) == -1)
+    {
+        perror("readlink");
+        throw std::runtime_error("Cannot get program path");
+    }
+    return dest;
+#endif
 }

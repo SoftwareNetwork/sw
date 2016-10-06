@@ -417,6 +417,8 @@ void Project::load(const yaml &root)
 
     EXTRACT_VAR(root, import_from_bazel, "import_from_bazel", bool);
 
+    EXTRACT_VAR(root, copy_to_output_dir, "copy_to_output_dir", bool);
+
     // standards
     {
         EXTRACT_AUTO(c_standard);
