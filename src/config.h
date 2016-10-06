@@ -126,6 +126,7 @@ struct BuildSettings
     String filename_without_ext;
     path source_directory;
     path binary_directory;
+    String source_directory_hash;
     String config;
 
     void load(const yaml &root);

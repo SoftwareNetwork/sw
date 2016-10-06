@@ -25,59 +25,72 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "executor.h"
 
-#include "context.h"
-#include "project.h"
+#include <string>
 
-#define CPP_HEADER_FILENAME "cppan.h"
+#include "logger.h"
+DECLARE_STATIC_LOGGER(logger, "executor");
 
-#define CPPAN_EXPORT "CPPAN_EXPORT"
-#define CPPAN_EXPORT_PREFIX "CPPAN_API_"
-#define CPPAN_PROLOG "CPPAN_PROLOG"
-#define CPPAN_EPILOG "CPPAN_EPILOG"
-
-#define CPPAN_LOCAL_BUILD_PREFIX "cppan-build-"
-#define CPPAN_CONFIG_FILENAME "config.cmake"
-#define CPPAN_CMAKE_VERSION_FILENAME "cppan_cmake_version.cmake"
-
-#define INCLUDE_GUARD_PREFIX "CPPAN_INCLUDE_GUARD_"
-
-extern const std::vector<String> configuration_types;
-extern const std::vector<String> configuration_types_normal;
-extern const std::vector<String> configuration_types_no_rel;
-
-enum class PrinterType
+Executor::Executor(size_t nThreads)
+    : nThreads(nThreads)
 {
-    CMake,
-    //Ninja,
-    // add more here
-};
+    taskQueues.resize(nThreads);
+    for (size_t i = 0; i < nThreads; i++)
+        thread_pool.emplace_back([this, i] { run(i); });
+}
 
-struct Config;
-struct Directories;
-
-struct Printer
+Executor::~Executor()
 {
-    Package d;
-    class AccessTable *access_table = nullptr;
-    Config *cc = nullptr; // current
-    Config *pc = nullptr; // parent
-    Config *rc = nullptr; // root
+    stop();
+    for (auto &t : thread_pool)
+        t.join();
+}
 
-    virtual void prepare_rebuild() = 0;
-    virtual void prepare_build(const path &fn, const String &cppan) = 0;
-    virtual int generate() const = 0;
-    virtual int build() const = 0;
+void Executor::run(size_t i)
+{
+    while (!done)
+    {
+        std::string error;
+        try
+        {
+                Task t;
+                const size_t spin_count = nThreads * 4;
+                for (auto n = 0; n != spin_count; ++n)
+                {
+                    if (taskQueues[(i + n) % nThreads].try_pop(t))
+                        break;
+                }
+                // no task popped, probably shutdown command was issues
+                if (!t && !taskQueues[i].pop(t))
+                    break;
+                t();
+        }
+        catch (const std::exception &e)
+        {
+            error = e.what();
+        }
+        catch (...)
+        {
+            error = "unknown exception";
+        }
+        if (!error.empty())
+        {
+            LOG_ERROR(logger, "executor: " << this << ", thread #" << i + 1 << ", error: " << error);
+        }
+    }
+}
 
-    virtual void print() = 0;
-    virtual void print_meta() = 0;
+Executor &getTaskExecutor(Executor *e)
+{
+    static Executor *executor;
+    if (e)
+        executor = e;
+    return *executor;
+}
 
-    virtual void clear_cache(path p) const = 0;
-    virtual void clear_exports(path p) const = 0;
-    virtual void clear_export(path p) const = 0;
-
-    virtual void parallel_vars_check(const path &dir) const = 0;
-
-    static std::unique_ptr<Printer> create(PrinterType type);
-};
+Executor &getMailExecutor()
+{
+    static Executor executor;
+    return executor;
+}

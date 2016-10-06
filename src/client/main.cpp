@@ -33,6 +33,7 @@
 
 #include <access_table.h>
 #include <config.h>
+#include <logger.h>
 #include <printers/cmake.h>
 
 #include "build.h"
@@ -53,6 +54,8 @@ void self_upgrade(Config &c, const char *exe_path);
 int main(int argc, char *argv[])
 try
 {
+    initLogger("info");
+
     // initialize CPPAN structures, do not remove
     Config::get_user_config();
 
@@ -78,6 +81,18 @@ try
                 return 1;
             }
             fix_imports(argv[2], argv[3], argv[4], argv[5]);
+            return 0;
+        }
+        if (cmd == "internal-parallel-vars-check")
+        {
+            if (argc != 3)
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan internal-parallel-vars-check vars_dir\n";
+                return 1;
+            }
+            CMakePrinter c;
+            c.parallel_vars_check(argv[2]);
             return 0;
         }
 

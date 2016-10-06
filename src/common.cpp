@@ -612,6 +612,14 @@ int system_no_output(const String &cmd)
     return std::system(s.c_str());
 }
 
+int system_no_output(const std::vector<String> &args)
+{
+    String cmd;
+    for (auto &a : args)
+        cmd += a + " ";
+    return system_no_output(cmd.c_str());
+}
+
 int system(const std::vector<String> &args)
 {
     String cmd;

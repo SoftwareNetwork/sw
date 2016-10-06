@@ -61,6 +61,7 @@ bool check_branch_name(const String &n, String *error = nullptr);
 bool check_filename(const String &n, String *error = nullptr);
 
 int system_no_output(const String &cmd);
+int system_no_output(const std::vector<String> &args);
 int system(const std::vector<String> &args);
 
 struct ProxySettings

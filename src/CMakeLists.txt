@@ -93,6 +93,8 @@ set(common_src
     dependency.h
     enums.cpp
     enums.h
+    executor.cpp
+    executor.h
     file_lock.cpp
     file_lock.h
     filesystem.cpp
@@ -101,6 +103,8 @@ set(common_src
     hasher.h
     log.cpp
     log.h
+    logger.cpp
+    logger.h
     package.cpp
     package.h
     property_tree.h

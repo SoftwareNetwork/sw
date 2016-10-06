@@ -28,6 +28,7 @@
 #include "cmake.h"
 
 #include "../access_table.h"
+#include "../executor.h"
 #include "../inserts.h"
 #include "../log.h"
 #include "../response.h"
@@ -249,6 +250,47 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
         if (i.second)
             gather_copy_deps(ctx, rd[d].dependencies, out);
     }
+}
+
+auto convert_function(const String &s)
+{
+    return "HAVE_" + boost::algorithm::to_upper_copy(s);
+}
+
+auto convert_include(const String &s)
+{
+    auto v_def = "HAVE_" + boost::algorithm::to_upper_copy(s);
+    for (auto &c : v_def)
+    {
+        if (!isalnum(c))
+            c = '_';
+    }
+    return v_def;
+}
+
+auto convert_library(const String &s)
+{
+    auto v_def = "HAVE_LIB" + boost::algorithm::to_upper_copy(s);
+    for (auto &c : v_def)
+    {
+        if (!isalnum(c))
+            c = '_';
+    }
+    return v_def;
+}
+
+auto convert_type(const String &s, const std::string &prefix = "HAVE_")
+{
+    String v_def = prefix;
+    v_def += boost::algorithm::to_upper_copy(s);
+    for (auto &c : v_def)
+    {
+        if (c == '*')
+            c = 'P';
+        else if (!isalnum(c))
+            c = '_';
+    }
+    return v_def;
 }
 
 void CMakePrinter::prepare_rebuild()
@@ -1641,6 +1683,34 @@ include(TestBigEndian))");
 
     config_section_title(ctx, "common checks");
 
+    // parallel checks
+    ctx.addLine("set(tmp_dir \"" + normalize_path(temp_directory_path() / "vars") + "\")");
+    ctx.addLine("string(RANDOM LENGTH 8 vars_dir)");
+    ctx.addLine("set(tmp_dir \"${tmp_dir}/${vars_dir}\")");
+    ctx.addLine();
+
+    auto write_parallel_checks = [&ctx](const auto &array, const String &fn)
+    {
+        ctx.addLine("file(WRITE ${tmp_dir}/" + fn + ".txt \"");
+        ctx.increaseIndent();
+        for (auto &f : array)
+            ctx.addLine(f);
+        ctx.decreaseIndent();
+        ctx.addLine("\")");
+        ctx.addLine();
+    };
+    write_parallel_checks(cc->check_functions, "functions");
+    write_parallel_checks(cc->check_includes, "includes");
+    write_parallel_checks(cc->check_types, "types");
+    write_parallel_checks(cc->check_libraries, "libraries");
+
+    ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION} ${tmp_dir}/CMakeFiles/)");
+    //ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir})");
+    ctx.addLine();
+
+    ctx.addLine("file(REMOVE_RECURSE ${tmp_dir})");
+    ctx.addLine();
+
     // read vars file
     ctx.addLine("set(vars_file \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.cmake\")");
     ctx.addLine("read_variables_file(${vars_file})");
@@ -1660,44 +1730,6 @@ include(TestBigEndian))");
 
     // checks
     config_section_title(ctx, "checks");
-
-    auto convert_function = [](const auto &s)
-    {
-        return "HAVE_" + boost::algorithm::to_upper_copy(s);
-    };
-    auto convert_include = [](const auto &s)
-    {
-        auto v_def = "HAVE_" + boost::algorithm::to_upper_copy(s);
-        for (auto &c : v_def)
-        {
-            if (!isalnum(c))
-                c = '_';
-        }
-        return v_def;
-    };
-    auto convert_library = [](const auto &s)
-    {
-        auto v_def = "HAVE_LIB" + boost::algorithm::to_upper_copy(s);
-        for (auto &c : v_def)
-        {
-            if (!isalnum(c))
-                c = '_';
-        }
-        return v_def;
-    };
-    auto convert_type = [](const auto &s, const std::string &prefix = "HAVE_")
-    {
-        String v_def = prefix;
-        v_def += boost::algorithm::to_upper_copy(s);
-        for (auto &c : v_def)
-        {
-            if (c == '*')
-                c = 'P';
-            else if (!isalnum(c))
-                c = '_';
-        }
-        return v_def;
-    };
 
     auto add_checks = [&ctx](const auto &a, const String &s, auto &&f)
     {
@@ -1803,7 +1835,7 @@ include(TestBigEndian))");
     add_checks(cc->check_functions, "check_function_exists", convert_function);
     add_symbol_checks(cc->check_symbols, "check_cxx_symbol_exists", convert_function);
     add_checks(cc->check_includes, "check_include_files", convert_include);
-    add_checks(cc->check_types, "check_type_size", convert_type);
+    add_checks(cc->check_types, "check_type_size", [](auto &v) { return convert_type(v); });
     for (auto &v : cc->check_types)
     {
         ctx.addLine("if (" + convert_type(v) + ")");
@@ -1949,7 +1981,7 @@ endif()
     add_check_definitions(cc->check_functions, convert_function);
     add_check_symbol_definitions(cc->check_symbols, convert_function);
     add_check_definitions(cc->check_includes, convert_include);
-    add_check_definitions(cc->check_types, convert_type);
+    add_check_definitions(cc->check_types, [](auto &v) { return convert_type(v); });
     for (auto &v : cc->check_types)
     {
         add_size_if_definition(convert_type(v, "SIZE_OF_"));
@@ -2073,4 +2105,187 @@ set_target_properties(run-cppan PROPERTIES
     ctx.addLine();
 
     access_table->write_if_older(fn, ctx.getText());
+}
+
+void CMakePrinter::parallel_vars_check(const path &dir) const
+{
+    struct symbols
+    {
+        StringSet functions;
+        StringSet includes;
+        StringSet types;
+        StringSet libraries;
+    };
+
+    symbols all;
+
+    auto read_vars_file = [&dir](auto &array, const String &name)
+    {
+        auto s = read_file(dir / (name + ".txt"));
+        std::vector<String> v;
+        boost::split(v, s, boost::is_any_of("\r\n"));
+        for (auto &line : v)
+        {
+            boost::trim(line);
+            if (line.empty())
+                continue;
+            array.insert(line);
+        }
+    };
+
+#define READ(x) read_vars_file(all.x, #x)
+    READ(functions);
+    READ(includes);
+    READ(types);
+    READ(libraries);
+
+    static const String cppan_variable_result_filename = "result.cppan";
+
+    const int N = 20;
+    Executor e(N);
+
+    std::vector<symbols> workers(N);
+    int i = 0;
+
+#define SCATTER(x)        \
+    for (auto &v : all.x) \
+        workers[i++ % N].x.insert(v)
+
+    SCATTER(functions);
+    SCATTER(includes);
+    SCATTER(types);
+    SCATTER(libraries);
+
+    auto work = [](const auto &w)
+    {
+
+    };
+
+    for (auto &w : workers)
+        e.push([&work, &w]() { work(w); });
+
+    auto sync_output = [](auto &&s)
+    {
+        static std::mutex m;
+        //std::lock_guard<std::mutex> lock(m);
+        std::cerr << s << "\n";
+    };
+
+    auto run_cmake = [&dir](path &d)
+    {
+        copy_dir(dir / "CMakeFiles", d / "CMakeFiles");
+
+        std::vector<String> args;
+        args.push_back("cmake");
+        args.push_back("-H\"" + normalize_path(d) + "\"");
+        args.push_back("-B\"" + normalize_path(d) + "\"");
+        auto ret = system_no_output(args);
+
+        if (ret)
+            throw std::runtime_error("Error during evaluating variable");
+
+        auto v = read_file(d / cppan_variable_result_filename);
+        return std::stoi(v);
+    };
+
+    auto check_function = [&dir, &run_cmake, &sync_output](const auto &name)
+    {
+        auto d = dir / sha1(name).substr(0, 8);
+        fs::create_directories(d);
+        auto var = convert_function(name);
+
+        Context ctx;
+        ctx.addLine(cmake_minimum_required);
+        ctx.addLine("project(x C CXX)");
+        ctx.addLine("include(CheckFunctionExists)");
+        ctx.addLine("check_function_exists(\"" + name + "\" " + var + ")");
+        ctx.addLine("if (NOT " + var + ")");
+        ctx.addLine("    set(" + var + " 0)");
+        ctx.addLine("endif()");
+        ctx.addLine("file(WRITE " + cppan_variable_result_filename + " \"${" + var + "}\")");
+
+        write_file(d / cmake_config_filename, ctx.getText());
+
+        auto r = run_cmake(d);
+        sync_output("-- Looking for " + name + " - " + (r == 0 ? "not " : "") + "found");
+    };
+
+    auto check_include = [&dir, &run_cmake, &sync_output](const auto &name)
+    {
+        auto d = dir / sha1(name).substr(0, 8);
+        fs::create_directories(d);
+        auto var = convert_include(name);
+
+        Context ctx;
+        ctx.addLine(cmake_minimum_required);
+        ctx.addLine("project(x C CXX)");
+        ctx.addLine("include(CheckIncludeFiles)");
+        ctx.addLine("check_include_files(\"" + name + "\" " + var + ")");
+        ctx.addLine("if (NOT " + var + ")");
+        ctx.addLine("    set(" + var + " 0)");
+        ctx.addLine("endif()");
+        ctx.addLine("file(WRITE " + cppan_variable_result_filename + " \"${" + var + "}\")");
+
+        write_file(d / cmake_config_filename, ctx.getText());
+
+        auto r = run_cmake(d);
+        sync_output("-- Looking for " + name + " - " + (r == 0 ? "not " : "") + "found");
+    };
+
+    auto check_type = [&dir, &run_cmake, &sync_output](const auto &name)
+    {
+        auto d = dir / sha1(name).substr(0, 8);
+        fs::create_directories(d);
+        auto var = convert_type(name);
+
+        Context ctx;
+        ctx.addLine(cmake_minimum_required);
+        ctx.addLine("project(x C CXX)");
+        ctx.addLine("include(CheckTypeSize)");
+        ctx.addLine("check_type_size(\"" + name + "\" " + var + ")");
+        ctx.addLine("if (NOT " + var + ")");
+        ctx.addLine("    set(" + var + " 0)");
+        ctx.addLine("endif()");
+        ctx.addLine("file(WRITE " + cppan_variable_result_filename + " \"${" + var + "}\")");
+
+        write_file(d / cmake_config_filename, ctx.getText());
+
+        auto r = run_cmake(d);
+        sync_output("-- Check size of " + name + " - " + (r == 0 ? "failed" : "done"));
+    };
+
+    auto check_library = [&dir, &run_cmake, &sync_output](const auto &name)
+    {
+        auto d = dir / sha1(name).substr(0, 8);
+        fs::create_directories(d);
+        auto var = convert_library(name);
+
+        Context ctx;
+        ctx.addLine(cmake_minimum_required);
+        ctx.addLine("project(x C CXX)");
+        ctx.addLine("include(CheckLibraryExists)");
+        ctx.addLine("find_library(" + var + " " + name + ")");
+        ctx.addLine("if (\"${" + var + "}\" STREQUAL \"" + var + "-NOTFOUND\")");
+        ctx.addLine("    set(" + var + " 0)");
+        ctx.addLine("else()");
+        ctx.addLine("    set(" + var + " 1)");
+        ctx.addLine("endif()");
+        ctx.addLine("file(WRITE " + cppan_variable_result_filename + " \"${" + var + "}\")");
+
+        write_file(d / cmake_config_filename, ctx.getText());
+
+        auto r = run_cmake(d);
+        sync_output("-- Looking for " + name + " - " + (r == 0 ? "not " : "") + "found");
+    };
+
+    for (auto &v : all.functions)
+        e.push([&check_function, &v]() { check_function(v); });
+    for (auto &v : all.includes)
+        e.push([&check_include, &v]() { check_include(v); });
+    for (auto &v : all.types)
+        e.push([&check_type, &v]() { check_type(v); });
+    for (auto &v : all.libraries)
+        e.push([&check_library, &v]() { check_library(v); });
+
+    e.wait();
 }
