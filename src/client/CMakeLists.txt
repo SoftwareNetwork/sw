@@ -73,6 +73,12 @@ target_link_libraries(client
 set_target_properties(client PROPERTIES OUTPUT_NAME cppan)
 set_target_properties(client PROPERTIES OUTPUT_NAME_DEBUG cppand)
 
+if (NOT WIN32)
+target_link_libraries(client
+    pthread
+)
+endif()
+
 if (WIN32)
 install(TARGETS client RUNTIME
 	DESTINATION .
