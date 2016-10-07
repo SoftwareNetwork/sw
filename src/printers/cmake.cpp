@@ -911,28 +911,39 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 ctx.addLine("# Binary dir of include_directories_only dependency");
                 ctx.addLine("if (CPPAN_USE_CACHE)");
 
-                ctx << "target_include_directories    (" << d.target_name << Context::eol;
-                ctx.increaseIndent();
-                auto bdir = pkg.getDirObj() / cppan_build_dir / (pkg.flags[pfExecutable] ? "${config_exe}" : "${config_lib_gen}");
-                if (header_only)
-                    ctx.addLine("INTERFACE " + normalize_path(get_binary_path(pkg, bdir.string())));
-                else
-                    ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(get_binary_path(pkg, bdir.string())));
-                ctx.decreaseIndent();
-                ctx.addLine(")");
+                {
+                    auto bdir = pkg.getDirObj() / cppan_build_dir / (pkg.flags[pfExecutable] ? "${config_exe}" : "${config_lib_gen}");
+                    auto p = normalize_path(get_binary_path(pkg, bdir.string()));
+                    ctx.addLine("if (EXISTS \"" + p + "\")");
+                    ctx << "target_include_directories    (" << d.target_name << Context::eol;
+                    ctx.increaseIndent();
+                    if (header_only)
+                        ctx.addLine("INTERFACE " + p);
+                    else
+                        ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + p);
+                    ctx.decreaseIndent();
+                    ctx.addLine(")");
+                    ctx.addLine("endif()");
+                }
 
                 ctx.addLine("else()");
 
-                ctx << "target_include_directories    (" << d.target_name << Context::eol;
-                ctx.increaseIndent();
-                if (header_only)
-                    ctx.addLine("INTERFACE " + normalize_path(get_binary_path(pkg)));
-                else
-                    ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(get_binary_path(pkg)));
-                ctx.decreaseIndent();
-                ctx.addLine(")");
+                {
+                    auto p = normalize_path(get_binary_path(pkg));
+                    ctx.addLine("if (EXISTS \"" + p + "\")");
+                    ctx << "target_include_directories    (" << d.target_name << Context::eol;
+                    ctx.increaseIndent();
+                    if (header_only)
+                        ctx.addLine("INTERFACE " + p);
+                    else
+                        ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + p);
+                    ctx.decreaseIndent();
+                    ctx.addLine(")");
+                    ctx.addLine("endif()");
+                }
 
                 ctx.addLine("endif()");
+                ctx.addLine("");
             }
         }
     }
@@ -2307,24 +2318,22 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
         GATHER(libraries);
     }
 
-#define PRINT(x, f)                                                                             \
+#define PRINT(x, n, f)                                                                          \
     {                                                                                           \
-        String n = #x;                                                                          \
-        n = n.substr(0, n.size() - 1);                                                          \
         for (auto &v : all.x)                                                                   \
         {                                                                                       \
             if (v.second)                                                                       \
-                LOG("-- " + n + " " + v.first + " - found (" + std::to_string(v.second) + ")"); \
+                LOG("-- " n " " + v.first + " - found (" + std::to_string(v.second) + ")"); \
             else                                                                                \
-                LOG("-- " + n + " " + v.first + " - not found");                                \
+                LOG("-- " n " " + v.first + " - not found");                                \
             ctx.addLine("STRING;" + f(v.first) + ";" + std::to_string(v.second));               \
         }                                                                                       \
     }
 
-    PRINT(functions, convert_function);
-    PRINT(includes, convert_include);
-    PRINT(types, convert_type);
-    PRINT(libraries, convert_library);
+    PRINT(functions, "function", convert_function);
+    PRINT(includes, "include", convert_include);
+    PRINT(types, "type", convert_type);
+    PRINT(libraries, "library", convert_library);
 
     write_file(dir / "vars.txt", ctx.getText());
 
