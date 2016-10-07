@@ -1684,32 +1684,51 @@ include(TestBigEndian))");
     config_section_title(ctx, "common checks");
 
     // parallel checks
-    ctx.addLine("set(tmp_dir \"" + normalize_path(temp_directory_path() / "vars") + "\")");
-    ctx.addLine("string(RANDOM LENGTH 8 vars_dir)");
-    ctx.addLine("set(tmp_dir \"${tmp_dir}/${vars_dir}\")");
-    ctx.addLine();
-
-    auto write_parallel_checks = [&ctx](const auto &array, const String &fn)
     {
-        ctx.addLine("file(WRITE ${tmp_dir}/" + fn + ".txt \"");
-        ctx.increaseIndent();
-        for (auto &f : array)
-            ctx.addLine(f);
-        ctx.decreaseIndent();
-        ctx.addLine("\")");
+        ctx.addLine("set(tmp_dir \"" + normalize_path(temp_directory_path() / "vars") + "\")");
+        ctx.addLine("string(RANDOM LENGTH 8 vars_dir)");
+        ctx.addLine("set(tmp_dir \"${tmp_dir}/${vars_dir}\")");
         ctx.addLine();
-    };
-    write_parallel_checks(cc->check_functions, "functions");
-    write_parallel_checks(cc->check_includes, "includes");
-    write_parallel_checks(cc->check_types, "types");
-    write_parallel_checks(cc->check_libraries, "libraries");
+        ctx.addLine("set(vars_all)");
+        ctx.addLine();
 
-    ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION} ${tmp_dir}/CMakeFiles/)");
-    //ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir})");
-    ctx.addLine();
+        auto write_parallel_checks = [&ctx](const auto &array, const String &fn, auto &&f)
+        {
+            ctx.addLine("set(vars)");
+            ctx.addLine("file(WRITE ${tmp_dir}/" + fn + ".txt \"\")");
+            ctx.addLine();
+            for (auto &v : array)
+            {
+                ctx.addLine("if (NOT DEFINED " + f(v) + ")");
+                ctx.addLine("    list(APPEND vars \"" + v + "\")");
+                ctx.addLine("endif()");
+            }
+            ctx.addLine();
+            ctx.addLine("list(APPEND vars_all ${vars})");
+            ctx.addLine("foreach(v ${vars})");
+            ctx.addLine("    file(APPEND ${tmp_dir}/" + fn + ".txt \"${v}\\n\")");
+            ctx.addLine("endforeach()");
+            ctx.addLine();
 
-    ctx.addLine("file(REMOVE_RECURSE ${tmp_dir})");
-    ctx.addLine();
+        };
+        write_parallel_checks(cc->check_functions, "functions", convert_function);
+        write_parallel_checks(cc->check_includes, "includes", convert_include);
+        write_parallel_checks(cc->check_types, "types", [](auto &v) { return convert_type(v); });
+        write_parallel_checks(cc->check_libraries, "libraries", convert_library);
+
+        ctx.addLine("list(LENGTH vars_all len)");
+        ctx.addLine("if (${len} GREATER 8)");
+        ctx.increaseIndent();
+        ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION} ${tmp_dir}/CMakeFiles/)");
+        ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir})");
+        ctx.addLine("read_variables_file(${tmp_dir}/vars.txt)");
+        ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+        ctx.addLine("file(REMOVE_RECURSE ${tmp_dir})");
+        ctx.addLine();
+    }
 
     // read vars file
     ctx.addLine("set(vars_file \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.cmake\")");
@@ -2117,6 +2136,11 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
         Map includes;
         Map types;
         Map libraries;
+
+        bool empty() const
+        {
+            return functions.empty() && includes.empty() && types.empty() && libraries.empty();
+        }
     };
 
     symbols all;
@@ -2141,22 +2165,30 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
     READ(types);
     READ(libraries);
 
+    if (all.empty())
+        return;
+
     static const String cppan_variable_result_filename = "result.cppan";
 
-    const int N = 10;
+    const auto N = std::thread::hardware_concurrency();
     Executor e(N);
 
     std::vector<symbols> workers(N);
     int i = 0;
 
-#define SCATTER(x)        \
-    for (auto &v : all.x) \
-        workers[i++ % N].x.insert(v)
+#define SCATTER(x)                      \
+    for (auto &v : all.x)               \
+        workers[i++ % N].x.insert(v);   \
+    LOG("-- Looking for " + std::to_string(all.x.size()) + " " #x);
 
     SCATTER(functions);
     SCATTER(includes);
     SCATTER(types);
     SCATTER(libraries);
+
+    LOG("-- This process may take up to 5 minutes depending on your hardware.");
+    std::cout.flush();
+    std::cerr.flush();
 
     auto work = [&dir](auto &w, int i)
     {
@@ -2260,17 +2292,41 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
     for (auto &w : workers)
         e.push([&work, &w, n = i++]() { work(w, n); });
 
-    e.wait();
+    auto t = get_time_seconds([&e] { e.wait(); });
 
+    Context ctx;
     for (auto &w : workers)
     {
-#define GATHER(x)           \
-        for (auto &v : w.x) \
-            all.x[v.first] = v.second
+#define GATHER(x)                                                                 \
+    for (auto &v : w.x)                                                           \
+        all.x[v.first] = v.second
 
         GATHER(functions);
         GATHER(includes);
         GATHER(types);
         GATHER(libraries);
     }
+
+#define PRINT(x, f)                                                                             \
+    {                                                                                           \
+        String n = #x;                                                                          \
+        n = n.substr(0, n.size() - 1);                                                          \
+        for (auto &v : all.x)                                                                   \
+        {                                                                                       \
+            if (v.second)                                                                       \
+                LOG("-- " + n + " " + v.first + " - found (" + std::to_string(v.second) + ")"); \
+            else                                                                                \
+                LOG("-- " + n + " " + v.first + " - not found");                                \
+            ctx.addLine("STRING;" + f(v.first) + ";" + std::to_string(v.second));               \
+        }                                                                                       \
+    }
+
+    PRINT(functions, convert_function);
+    PRINT(includes, convert_include);
+    PRINT(types, convert_type);
+    PRINT(libraries, convert_library);
+
+    write_file(dir / "vars.txt", ctx.getText());
+
+    LOG("-- This operation took " + std::to_string(t) + " seconds to complete.");
 }
