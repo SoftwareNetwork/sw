@@ -254,7 +254,7 @@ void self_upgrade(Config &c, const char *exe_path)
 #else
     auto cppan = tmp_dir / "cppan";
     fs::permissions(cppan, fs::owner_all | fs::group_exe | fs::others_exe);
-    fs::remove(dest);
+    fs::remove(program);
     fs::copy_file(cppan, program);
     fs::remove(cppan);
 #endif
