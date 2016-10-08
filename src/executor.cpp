@@ -116,5 +116,5 @@ void Executor::wait()
 
 size_t get_max_threads(size_t N)
 {
-    return std::max(N, std::thread::hardware_concurrency());
+    return std::max<size_t>(N, std::thread::hardware_concurrency());
 }
