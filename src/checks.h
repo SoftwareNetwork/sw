@@ -33,6 +33,7 @@
 class Check
 {
 public:
+    // maybe variant: int, double, string?
     using Value = int;
 
 public:
@@ -41,9 +42,7 @@ public:
     // prepared variable
     virtual String getVariable() const = 0;
 
-    // get source value (functions, library, type etc.)
-    virtual String getData() const = 0;
-
+    String getData() const { return data; }
     Value getValue() const { return value; }
     String getMessage() const { return message; }
 
@@ -52,15 +51,14 @@ protected:
     // maybe store cached?
     String variable;
 
-    // e.g. symbol name (function, include, c/cxx source etc.)
-    // stdint.h, strncpy
+    // symbol name (function, include, c/cxx source etc.)
+    //    stdint.h, strncpy
+    // or source code
+    // or whatever
     String data;
 
-    // maybe variant: int, double, string?
     Value value = 0;
-
-    // message for printing
-    String message;
+    String message; // message for printing
 };
 
 struct Checks
