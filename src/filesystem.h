@@ -70,3 +70,24 @@ namespace std
         }
     };
 }
+
+class ScopedCurrentPath
+{
+public:
+    ScopedCurrentPath()
+    {
+        old = fs::current_path();
+    }
+    ScopedCurrentPath(const path &p)
+        : ScopedCurrentPath()
+    {
+        fs::current_path(p);
+    }
+    ~ScopedCurrentPath()
+    {
+        fs::current_path(old);
+    }
+
+private:
+    path old;
+};

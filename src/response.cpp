@@ -28,10 +28,14 @@
 #include "response.h"
 
 #include "config.h"
+#include "executor.h"
 #include "file_lock.h"
 #include "hasher.h"
 #include "log.h"
 #include "project.h"
+
+#include "logger.h"
+DECLARE_STATIC_LOGGER(logger, "response");
 
 ResponseData rd;
 
@@ -201,7 +205,6 @@ void ResponseData::extractDependencies()
 
         if (fs::exists(d.getDirSrc()))
         {
-            auto old = fs::current_path();
             try
             {
                 auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
@@ -210,7 +213,6 @@ void ResponseData::extractDependencies()
             catch (std::exception &)
             {
                 // something wrong, remove the whole dir to re-download it
-                fs::current_path(old);
                 fs::remove_all(d.getDirSrc());
             }
         }
@@ -231,7 +233,7 @@ void ResponseData::extractDependencies()
 
 void ResponseData::download_and_unpack()
 {
-    for (auto &dd : download_dependencies_)
+    auto download_dependency = [this](auto &dd)
     {
         auto &d = dd.second;
         auto version_dir = d.getDirSrc();
@@ -252,7 +254,7 @@ void ResponseData::download_and_unpack()
         }
 
         if (fs::exists(version_dir) && !must_download)
-            continue;
+            return;
 
         auto add_config = [this, &d]()
         {
@@ -269,7 +271,7 @@ void ResponseData::download_and_unpack()
             // wait & continue
             ScopedFileLock lck2(md5file);
             add_config();
-            continue;
+            return;
         }
 
         // remove existing version dir
@@ -285,20 +287,16 @@ void ResponseData::download_and_unpack()
         ddata.url = package_url;
         ddata.fn = fn;
         ddata.dl_md5 = &dl_md5;
-        LOG_NO_NEWLINE("Downloading: " << d.target_name << "... ");
+        LOG_INFO(logger, "Downloading: " << d.target_name << "...");
         download_file(ddata);
         downloads++;
 
         if (dl_md5 != d.md5)
-        {
-            LOG("Fail");
             throw std::runtime_error("md5 does not match for package '" + d.ppath.toString() + "'");
-        }
-        LOG("Ok");
 
         write_file(md5file, d.md5);
 
-        LOG_NO_NEWLINE("Unpacking  : " << d.target_name << "... ");
+        LOG_INFO(logger, "Unpacking  : " << d.target_name << "...");
         Files files;
         try
         {
@@ -310,7 +308,6 @@ void ResponseData::download_and_unpack()
             throw;
         }
         fs::remove(fn);
-        LOG("Ok");
 
         // re-read in any case
         // no need to remove old config, let it die with program
@@ -340,7 +337,19 @@ void ResponseData::download_and_unpack()
                 }
             }
         }
-    }
+    };
+
+    Executor e(get_max_threads(8));
+    e.throw_exceptions = true;
+
+    // threaded execution does not preserve object creation/destruction order,
+    // so current path is not correctly restored
+    ScopedCurrentPath cp;
+
+    for (auto &dd : download_dependencies_)
+        e.push([&download_dependency, &dd] { download_dependency(dd); });
+
+    e.wait();
 }
 
 void ResponseData::post_download()
@@ -366,7 +375,7 @@ void ResponseData::prepare_config(PackageConfigs::value_type &cc)
         auto i = project.dependencies.find(d.ppath.toString());
         if (i == project.dependencies.end())
         {
-            // check if we chosen a root project match all subprojects
+            // check if we chose a root project that matches all subprojects
             Packages to_add;
             std::set<String> to_remove;
             for (auto &root_dep : project.dependencies)

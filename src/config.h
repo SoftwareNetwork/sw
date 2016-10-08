@@ -128,6 +128,7 @@ struct BuildSettings
     path binary_directory;
     String source_directory_hash;
     String config;
+    bool allow_links = true;
 
     void load(const yaml &root);
     void prepare_build(Config *c, const path &fn, String cppan, bool force = false);

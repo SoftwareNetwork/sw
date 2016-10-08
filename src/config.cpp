@@ -400,10 +400,8 @@ Config::Config(const path &p)
 {
     if (fs::is_directory(p))
     {
-        auto old = fs::current_path();
-        fs::current_path(p);
+        ScopedCurrentPath cp(p);
         load_current_config();
-        fs::current_path(old);
     }
     else
         load(p);
@@ -600,9 +598,9 @@ void Config::save(const path &p) const
 
 void Config::process(const path &p)
 {
-    auto old = fs::current_path();
+    std::unique_ptr<ScopedCurrentPath> cp;
     if (!p.empty())
-        fs::current_path(p);
+        cp = std::make_unique<ScopedCurrentPath>(p);
 
     // main access table holder
     AccessTable access_table(directories.storage_dir_etc);
@@ -668,9 +666,6 @@ void Config::process(const path &p)
     printer->print_meta();
 
     LOG("Ok");
-
-    if (!p.empty())
-        fs::current_path(old);
 }
 
 void Config::post_download() const
@@ -755,14 +750,14 @@ void Config::prepare_build(path fn, const String &cppan)
             LOG("-- Performing test run");
             LOG("--");
 
-            auto olds = bs.silent;
-            bs.silent = true;
+            bs.allow_links = false;
             auto ret = printer->generate();
-            bs.silent = olds;
+            bs.allow_links = true;
 
+            boost::system::error_code ec;
             if (ret)
             {
-                fs::remove_all(bs.source_directory);
+                fs::remove_all(bs.source_directory, ec);
                 throw std::runtime_error("There are errors during test run");
             }
 
@@ -778,7 +773,7 @@ void Config::prepare_build(path fn, const String &cppan)
                 directories.storage_dir_cfg / bs.config / "CMakeFiles" / cmake_version);
 
             // remove test dir
-            fs::remove_all(bs.source_directory);
+            fs::remove_all(bs.source_directory, ec);
         }
 
         {

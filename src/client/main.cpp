@@ -54,7 +54,7 @@ void self_upgrade(Config &c, const char *exe_path);
 int main(int argc, char *argv[])
 try
 {
-    initLogger("info");
+    initLogger("info", "", true);
 
     // initialize CPPAN structures, do not remove
     Config::get_user_config();
@@ -154,8 +154,9 @@ try
     }
 
     // set correct working directory to look for config file
+    std::unique_ptr<ScopedCurrentPath> cp;
     if (options().count("dir"))
-        fs::current_path(options["dir"].as<std::string>());
+        cp = std::make_unique<ScopedCurrentPath>(options["dir"].as<std::string>());
     httpSettings.verbose = options["curl-verbose"].as<bool>();
     httpSettings.ignore_ssl_checks = options["ignore-ssl-checks"].as<bool>();
 

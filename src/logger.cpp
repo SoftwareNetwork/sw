@@ -63,7 +63,13 @@ void logFormatter(boost::log::record_view const& rec, boost::log::formatting_ost
             % rec[boost::log::expressions::smessage];
 }
 
-void initLogger(std::string logLevel, std::string logFile)
+void logFormatterSimple(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
+{
+    strm << boost::format("%s")
+        % rec[boost::log::expressions::smessage];
+}
+
+void initLogger(std::string logLevel, std::string logFile, bool simple_logger)
 {
     try
     {
@@ -81,7 +87,10 @@ void initLogger(std::string logLevel, std::string logFile)
         if (!disable_log)
         {
             auto c_log = boost::log::add_console_log();
-            c_log->set_formatter(&logFormatter);
+            if (simple_logger)
+                c_log->set_formatter(&logFormatterSimple);
+            else
+                c_log->set_formatter(&logFormatter);
             c_log->set_filter(boost::log::trivial::severity >= level);
         }
 
@@ -98,7 +107,10 @@ void initLogger(std::string logLevel, std::string logFile)
                 boost::log::keywords::auto_flush = true
             );
             auto sink = boost::make_shared<sfs>(backend);
-            sink->set_formatter(&logFormatter);
+            if (simple_logger)
+                sink->set_formatter(&logFormatterSimple);
+            else
+                sink->set_formatter(&logFormatter);
             sink->set_filter(boost::log::trivial::severity >= level);
             boost::log::core::get()->add_sink(sink);
 
@@ -111,7 +123,10 @@ void initLogger(std::string logLevel, std::string logFile)
                 boost::log::keywords::auto_flush = true
             );
             auto sink_trace = boost::make_shared<sfs>(backend_trace);
-            sink_trace->set_formatter(&logFormatter);
+            if (simple_logger)
+                sink_trace->set_formatter(&logFormatterSimple);
+            else
+                sink_trace->set_formatter(&logFormatter);
             sink_trace->set_filter(boost::log::trivial::severity >= trace);
             boost::log::core::get()->add_sink(sink_trace);
 #endif

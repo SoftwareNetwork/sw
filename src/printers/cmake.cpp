@@ -476,45 +476,51 @@ int CMakePrinter::_generate(bool force) const
 #else
         setenv(o.first.c_str(), o.second.c_str(), 1);
 #endif
-}
+    }
+
     auto ret = system(args);
-    if (!bs.silent || rc->local_settings.is_custom_build_dir())
+
+    if (bs.allow_links)
     {
-        auto bld_dir = fs::current_path();
+        if (!bs.silent || rc->local_settings.is_custom_build_dir())
+        {
+            auto bld_dir = fs::current_path();
 #ifdef _WIN32
-        auto name = bs.filename_without_ext + "-" + bs.config + ".sln.lnk";
-        if (rc->local_settings.is_custom_build_dir())
-        {
-            bld_dir = bs.binary_directory / ".." / "..";
-            name = bs.config + ".sln.lnk";
-        }
-        auto sln = bs.binary_directory / (bs.filename_without_ext + ".sln");
-        auto sln_new = bld_dir / name;
-        if (fs::exists(sln))
-            CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
-#else
-        if (bs.generator == "Xcode")
-        {
-            auto name = bs.filename_without_ext + "-" + bs.config + ".xcodeproj";
+            auto name = bs.filename_without_ext + "-" + bs.config + ".sln.lnk";
             if (rc->local_settings.is_custom_build_dir())
             {
                 bld_dir = bs.binary_directory / ".." / "..";
-                name = bs.config + ".xcodeproj";
+                name = bs.config + ".sln.lnk";
             }
-            auto sln = bs.binary_directory / (bs.filename_without_ext + ".xcodeproj");
+            auto sln = bs.binary_directory / (bs.filename_without_ext + ".sln");
             auto sln_new = bld_dir / name;
-            boost::system::error_code ec;
-            fs::create_symlink(sln, sln_new, ec);
-        }
-        else if (!rc->local_settings.is_custom_build_dir())
-        {
-            bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.config;
-            fs::create_directories(bld_dir);
-            boost::system::error_code ec;
-            fs::create_symlink(bs.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
-        }
+            if (fs::exists(sln))
+                CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
+#else
+            if (bs.generator == "Xcode")
+            {
+                auto name = bs.filename_without_ext + "-" + bs.config + ".xcodeproj";
+                if (rc->local_settings.is_custom_build_dir())
+                {
+                    bld_dir = bs.binary_directory / ".." / "..";
+                    name = bs.config + ".xcodeproj";
+                }
+                auto sln = bs.binary_directory / (bs.filename_without_ext + ".xcodeproj");
+                auto sln_new = bld_dir / name;
+                boost::system::error_code ec;
+                fs::create_symlink(sln, sln_new, ec);
+            }
+            else if (!rc->local_settings.is_custom_build_dir())
+            {
+                bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.config;
+                fs::create_directories(bld_dir);
+                boost::system::error_code ec;
+                fs::create_symlink(bs.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
+            }
 #endif
+        }
     }
+
     return ret;
 }
 
@@ -1360,8 +1366,7 @@ endif()
             throw std::runtime_error("Circular dependency detected. Project: " + d.target_name);
 
         silent = true;
-        auto old_dir = fs::current_path();
-        fs::current_path(obj_dir);
+        ScopedCurrentPath cp(obj_dir);
 
         Config c(obj_dir);
         c.pkg = d;
@@ -1371,7 +1376,6 @@ endif()
         c.disable_run_cppan_target = true;
         c.process();
 
-        fs::current_path(old_dir);
         if (pc->internal_options.current_package.empty())
             silent = false;
     }
@@ -2183,6 +2187,7 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
 
     const auto N = std::thread::hardware_concurrency();
     Executor e(N);
+    e.throw_exceptions = true;
 
     std::vector<symbols> workers(N);
     int i = 0;

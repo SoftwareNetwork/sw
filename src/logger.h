@@ -42,7 +42,11 @@
 #define DECLARE_STATIC_LOGGER(name, module) static DECLARE_LOGGER(name, module)
 
 //#define LOG(logger, level, message)
+#ifdef LOGGER_PRINT_MODULE
 #define LOG_BOOST_LOG_MESSAGE(logger, message) "[" << logger << "] " << message
+#else
+#define LOG_BOOST_LOG_MESSAGE(logger, message) message
+#endif
 #define LOG_TRACE(logger, message) BOOST_LOG_TRIVIAL(trace) << LOG_BOOST_LOG_MESSAGE(logger, message)
 #define LOG_DEBUG(logger, message) BOOST_LOG_TRIVIAL(debug) << LOG_BOOST_LOG_MESSAGE(logger, message)
 #define LOG_INFO(logger, message) BOOST_LOG_TRIVIAL(info) << LOG_BOOST_LOG_MESSAGE(logger, message)
@@ -50,7 +54,7 @@
 #define LOG_ERROR(logger, message) BOOST_LOG_TRIVIAL(error) << LOG_BOOST_LOG_MESSAGE(logger, message)
 #define LOG_FATAL(logger, message) BOOST_LOG_TRIVIAL(fatal) << LOG_BOOST_LOG_MESSAGE(logger, message)
 
-void initLogger(std::string logLevel = "DEBUG", std::string logFile = "");
+void initLogger(std::string logLevel = "DEBUG", std::string logFile = "", bool simple_logger = false);
 
 #else // !USE_LOGGER
 

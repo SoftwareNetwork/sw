@@ -155,10 +155,10 @@ void check_file_types(const Files &files, const path &root)
     std::ofstream o(fn.string(), std::ios::binary | std::ios::out);
     if (!o)
         throw std::runtime_error("Cannot open file for writing: " + fn.string());
-    auto cwd = fs::current_path();
+    auto cp = fs::current_path();
     for (auto &file : files)
     {
-        auto s = (cwd / root / file).string();
+        auto s = (cp / root / file).string();
         std::replace(s.begin(), s.end(), '\\', '/');
         o << "file -ib " << s << "\n";
     }

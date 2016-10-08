@@ -120,9 +120,13 @@ class Executor
         std::thread t;
         TaskQueue q;
         volatile bool busy = false;
+        std::exception_ptr eptr;
     };
 
     using Threads = std::vector<ThreadData>;
+
+public:
+    bool throw_exceptions = false;
 
 public:
     Executor(size_t nThreads = std::thread::hardware_concurrency());
@@ -156,3 +160,5 @@ private:
 
     void run(size_t i);
 };
+
+size_t get_max_threads(size_t N = 4);
