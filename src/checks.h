@@ -30,49 +30,43 @@
 #include "common.h"
 #include "yaml.h"
 
-#include <boost/variant.hpp>
-
-struct CheckData
+class Check
 {
-    int value = 0;
+public:
+    using Value = int;
+
+public:
+    virtual ~Check() {}
+
+    // prepared variable
+    virtual String getVariable() const = 0;
+
+    // get source value (functions, library, type etc.)
+    virtual String getData() const = 0;
+
+    Value getValue() const { return value; }
+    String getMessage() const { return message; }
+
+protected:
+    // e.g. HAVE_STDINT_H
+    // maybe store cached?
+    String variable;
+
+    // e.g. symbol name (function, include, c/cxx source etc.)
+    // stdint.h, strncpy
+    String data;
+
+    // maybe variant: int, double, string?
+    Value value = 0;
+
+    // message for printing
+    String message;
 };
-
-struct CheckFunction : public CheckData {};
-struct CheckInclude : public CheckData {};
-struct CheckType : public CheckData {};
-struct CheckSymbol : public CheckData {};
-struct CheckLibrary : public CheckData {};
-struct CheckCSourceCompiles : public CheckData {};
-struct CheckCSourceRuns : public CheckData {};
-struct CheckCXXSourceCompiles : public CheckData {};
-struct CheckCXXSourceRuns : public CheckData {};
-struct CheckCustom : public CheckData {};
-
-using Check = boost::variant<
-    CheckFunction,
-    CheckInclude,
-    CheckType,
-    CheckSymbol,
-    CheckLibrary,
-    CheckCSourceCompiles,
-    CheckCSourceRuns,
-    CheckCXXSourceCompiles,
-    CheckCXXSourceRuns,
-    CheckCustom
->;
 
 struct Checks
 {
-    StringSet functions;
-    StringSet includes;
-    StringSet types;
-    StringSet libraries;
-    Symbols symbols;
-    StringMap c_source_compiles;
-    StringMap c_source_runs;
-    StringMap cxx_source_compiles;
-    StringMap cxx_source_runs;
-    StringMap custom;
+    // first: variable (HAVE_SOMETHING), second: Check
+    std::map<String, std::unique_ptr<Check>> checks;
 
     bool empty() const;
     void load(const yaml &root);
