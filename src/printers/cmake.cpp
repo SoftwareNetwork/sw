@@ -265,47 +265,6 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
     }
 }
 
-auto convert_function(const String &s)
-{
-    return "HAVE_" + boost::algorithm::to_upper_copy(s);
-}
-
-auto convert_include(const String &s)
-{
-    auto v_def = "HAVE_" + boost::algorithm::to_upper_copy(s);
-    for (auto &c : v_def)
-    {
-        if (!isalnum(c))
-            c = '_';
-    }
-    return v_def;
-}
-
-auto convert_library(const String &s)
-{
-    auto v_def = "HAVE_LIB" + boost::algorithm::to_upper_copy(s);
-    for (auto &c : v_def)
-    {
-        if (!isalnum(c))
-            c = '_';
-    }
-    return v_def;
-}
-
-auto convert_type(const String &s, const std::string &prefix = "HAVE_")
-{
-    String v_def = prefix;
-    v_def += boost::algorithm::to_upper_copy(s);
-    for (auto &c : v_def)
-    {
-        if (c == '*')
-            c = 'P';
-        else if (!isalnum(c))
-            c = '_';
-    }
-    return v_def;
-}
-
 void CMakePrinter::prepare_rebuild()
 {
     // remove stamp file to start rebuilding
@@ -1714,29 +1673,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("set(vars_all)");
         ctx.addLine();
 
-        auto write_parallel_checks = [&ctx](const auto &array, const String &fn, auto &&f)
-        {
-            ctx.addLine("set(vars)");
-            ctx.addLine("file(WRITE ${tmp_dir}/" + fn + ".txt \"\")");
-            ctx.addLine();
-            for (auto &v : array)
-            {
-                ctx.addLine("if (NOT DEFINED " + f(v) + ")");
-                ctx.addLine("    list(APPEND vars \"" + v + "\")");
-                ctx.addLine("endif()");
-            }
-            ctx.addLine();
-            ctx.addLine("list(APPEND vars_all ${vars})");
-            ctx.addLine("foreach(v ${vars})");
-            ctx.addLine("    file(APPEND ${tmp_dir}/" + fn + ".txt \"${v}\\n\")");
-            ctx.addLine("endforeach()");
-            ctx.addLine();
-
-        };
-        write_parallel_checks(cc->check_functions, "functions", convert_function);
-        write_parallel_checks(cc->check_includes, "includes", convert_include);
-        write_parallel_checks(cc->check_types, "types", [](auto &v) { return convert_type(v); });
-        write_parallel_checks(cc->check_libraries, "libraries", convert_library);
+        cc->checks.write_parallel_checks(ctx);
 
         ctx.addLine("list(LENGTH vars_all len)");
         ctx.addLine("if (${len} GREATER 8)");

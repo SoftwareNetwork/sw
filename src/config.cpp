@@ -610,10 +610,10 @@ void Config::process(const path &p)
             continue;
         c->is_printed = true;
 
-        // gather checks, options etc.
+        // gather (merge) checks, options etc.
         // add more necessary actions here
         {
-            checks.merge(c->checks);
+            checks += c->checks;
 
             const auto &p = getProject(d.ppath.toString());
             for (auto &ol : p.options)

@@ -30,43 +30,82 @@
 #include "common.h"
 #include "yaml.h"
 
+class Context;
+
 class Check
 {
+public:
+    enum
+    {
+        Function,
+        Include,
+        Type,
+        Library,
+        Symbol,
+        CSourceCompiles,
+        CSourceRuns,
+        CXXSourceCompiles,
+        CXXSourceRuns,
+        Custom,
+
+        Max,
+    };
+
+    struct Information
+    {
+        int type;
+
+        // strings for printing/naming files
+        String singular;
+        String plural;
+    };
+
 public:
     // maybe variant: int, double, string?
     using Value = int;
 
 public:
+    Check(const Information &i);
     virtual ~Check() {}
 
-    // prepared variable
-    virtual String getVariable() const = 0;
-
+    const Information &getInformation() const { return information; }
+    String getVariable() const { return variable; }
     String getData() const { return data; }
     Value getValue() const { return value; }
     String getMessage() const { return message; }
 
 protected:
+    // self-information
+    Information information;
+
     // e.g. HAVE_STDINT_H
-    // maybe store cached?
     String variable;
 
     // symbol name (function, include, c/cxx source etc.)
-    //    stdint.h, strncpy
     // or source code
     // or whatever
     String data;
 
+    // (cmake) value
     Value value = 0;
-    String message; // message for printing
+
+    // message for printing
+    String message;
 };
 
 struct Checks
 {
     // first: variable (HAVE_SOMETHING), second: Check
-    std::map<String, std::unique_ptr<Check>> checks;
+    std::map<String, std::shared_ptr<Check>> checks;
 
     bool empty() const;
     void load(const yaml &root);
-    void merge(const Checks &rhs);
+
+    void write_parallel_checks(Context &ctx) const;
+
+    Checks &operator+=(const Checks &rhs);
+
+private:
+    template <class T, class ... Args>
+    void addCheck(Args && ... args);
 };
