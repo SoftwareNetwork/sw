@@ -25,6 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
+struct CheckFunction : public CheckData {};
+struct CheckInclude : public CheckData {};
+struct CheckType : public CheckData {};
+struct CheckSymbol : public CheckData {};
+struct CheckLibrary : public CheckData {};
+struct CheckCSourceCompiles : public CheckData {};
+struct CheckCSourceRuns : public CheckData {};
+struct CheckCXXSourceCompiles : public CheckData {};
+struct CheckCXXSourceRuns : public CheckData {};
+struct CheckCustom : public CheckData {};
+
 void Checks::load(const yaml &root)
 {
     auto load_string_set = [&root](auto &a, auto &&str)
