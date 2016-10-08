@@ -358,6 +358,70 @@ String LocalSettings::get_hash() const
     return h.hash;
 }
 
+void Checks::load(const yaml &root)
+{
+    auto load_string_set = [&root](auto &a, auto &&str)
+    {
+        auto s = get_sequence<String>(root, str);
+        a.insert(s.begin(), s.end());
+    };
+
+    auto load_string_map = [&root](auto &a, auto &&str)
+    {
+        get_map_and_iterate(root, str, [&a](const auto &v)
+        {
+            auto f = v.first.template as<String>();
+            auto s = v.second.template as<String>();
+            a[f] = s;
+        });
+    };
+
+    load_string_set(functions, "check_function_exists");
+    load_string_set(includes, "check_include_exists");
+    load_string_set(types, "check_type_size");
+    load_string_set(libraries, "check_library_exists");
+
+    // add some common types
+    types.insert("size_t");
+    types.insert("void *");
+
+    get_map_and_iterate(root, "check_symbol_exists", [this](const auto &root)
+    {
+        auto f = root.first.template as<String>();
+        auto s = root.second.template as<String>();
+        if (root.second.IsSequence())
+            symbols[f] = get_sequence_set<String>(root.second);
+        else if (root.second.IsScalar())
+            symbols[f].insert(s);
+        else
+            throw std::runtime_error("Symbol headers should be a scalar or a set");
+    });
+
+#define LOAD_MAP(x) load_string_map(x, "check_" ## #x)
+    LOAD_MAP(c_source_compiles);
+    LOAD_MAP(c_source_runs);
+    LOAD_MAP(cxx_source_compiles);
+    LOAD_MAP(cxx_source_runs);
+#undef LOAD_MAP
+    load_string_map(custom, "checks");
+}
+
+bool Checks::empty() const
+{
+#define CHECK_ACTION(array) && array.empty()
+    return 1
+#include "checks.inl"
+    ;
+#undef CHECK_ACTION
+}
+
+void Checks::merge(const Checks &rhs)
+{
+#define CHECK_ACTION(array) array.insert(rhs.array.begin(), rhs.array.end());
+#include "checks.inl"
+#undef CHECK_ACTION
+}
+
 Config::Config()
 {
 }
@@ -460,33 +524,7 @@ void Config::load(yaml root, const path &p)
 
     EXTRACT(root_project, String);
 
-    // global checks
-    auto check = [&root](auto &a, auto &&str)
-    {
-        auto s = get_sequence<String>(root, str);
-        a.insert(s.begin(), s.end());
-    };
-
-    check(check_functions, "check_function_exists");
-    check(check_includes, "check_include_exists");
-    check(check_types, "check_type_size");
-    check(check_libraries, "check_library_exists");
-
-    // add some common types
-    check_types.insert("size_t");
-    check_types.insert("void *");
-
-    get_map_and_iterate(root, "check_symbol_exists", [this](const auto &root)
-    {
-        auto f = root.first.template as<String>();
-        auto s = root.second.template as<String>();
-        if (root.second.IsSequence())
-            check_symbols[f] = get_sequence_set<String>(root.second);
-        else if (root.second.IsScalar())
-            check_symbols[f].insert(s);
-        else
-            throw std::runtime_error("Symbol headers should be a scalar or a set");
-    });
+    checks.load(root);
 
     // global insertions
     bs_insertions.get_config_insertions(root);
@@ -639,13 +677,7 @@ void Config::process(const path &p)
         // gather checks, options etc.
         // add more necessary actions here
         {
-#define GATHER_CHECK(array) array.insert(c->array.begin(), c->array.end())
-            GATHER_CHECK(check_functions);
-            GATHER_CHECK(check_includes);
-            GATHER_CHECK(check_types);
-            GATHER_CHECK(check_symbols);
-            GATHER_CHECK(check_libraries);
-#undef GATHER_CHECK
+            checks.merge(c->checks);
 
             const auto &p = getProject(d.ppath.toString());
             for (auto &ol : p.options)

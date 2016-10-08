@@ -48,6 +48,7 @@ using SystemLinkOptions = std::map<String, LinkOptions>;
 using SystemLinkLibraries = std::map<String, LinkLibraries>;
 
 using Sources = std::set<String>;
+using StringMap = std::map<String, String>;
 using StringSet = std::set<String>;
 using Symbols = std::map<String, StringSet>;
 

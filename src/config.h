@@ -30,6 +30,7 @@
 #include <map>
 #include <set>
 
+#include "checks.h"
 #include "common.h"
 #include "context.h"
 #include "filesystem.h"
@@ -180,11 +181,7 @@ struct Config
 
     // projects settings
     ProjectPath root_project;
-    StringSet check_functions;
-    StringSet check_includes;
-    StringSet check_types;
-    Symbols check_symbols;
-    StringSet check_libraries;
+    Checks checks;
     BuildSystemConfigInsertions bs_insertions;
 
     // own data

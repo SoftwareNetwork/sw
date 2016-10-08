@@ -63,6 +63,19 @@ const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 const String config_delimeter_short = repeat("#", 40);
 const String config_delimeter = config_delimeter_short + config_delimeter_short;
 
+const String cmake_includes = R"(
+include(CheckCXXSymbolExists)
+include(CheckFunctionExists)
+include(CheckIncludeFiles)
+include(CheckLibraryExists)
+include(CheckTypeSize)
+include(CheckCSourceCompiles)
+include(CheckCSourceRuns)
+include(CheckCXXSourceCompiles)
+include(CheckCXXSourceRuns)
+include(TestBigEndian)
+)";
+
 void config_section_title(Context &ctx, const String &t)
 {
     ctx.emptyLines(1);
@@ -1688,13 +1701,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
     // cmake includes
     config_section_title(ctx, "cmake includes");
-    ctx.addLine(R"(include(CheckCXXSymbolExists)
-include(CheckFunctionExists)
-include(CheckIncludeFiles)
-include(CheckLibraryExists)
-include(CheckTypeSize)
-include(TestBigEndian))");
-    ctx.addLine();
+    ctx.addLine(cmake_includes);
 
     config_section_title(ctx, "common checks");
 
@@ -2214,11 +2221,7 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
         Context ctx;
         ctx.addLine(cmake_minimum_required);
         ctx.addLine("project(x C CXX)");
-        ctx.addLine("include(CheckFunctionExists)");
-        ctx.addLine("include(CheckIncludeFiles)");
-        ctx.addLine("include(CheckTypeSize)");
-        ctx.addLine("include(CheckLibraryExists)");
-        ctx.addLine();
+        ctx.addLine(cmake_includes);
 
         auto check = [&ctx](const String &s, const String &v, const String &var)
         {
