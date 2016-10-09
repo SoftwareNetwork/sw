@@ -1768,21 +1768,24 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 target_link_libraries()" + cppan_helpers_target + R"(
     INTERFACE Ws2_32
 )
-else()
-    find_library(pthread pthread)
-    if (NOT ${pthread} STREQUAL "pthread-NOTFOUND")
-        target_link_libraries()" + cppan_helpers_target + R"(
-            INTERFACE pthread
-        )
-    endif()
-    find_library(rt rt)
-    if (NOT ${rt} STREQUAL "rt-NOTFOUND")
-        target_link_libraries()" + cppan_helpers_target + R"(
-            INTERFACE rt
-        )
-    endif()
-endif()
-)");
+else())");
+        ctx.increaseIndent();
+        auto add_unix_lib = [&ctx](const String &s)
+        {
+            ctx.addLine("find_library(" + s + " " + s + ")");
+            ctx.addLine("if (NOT ${" + s + "} STREQUAL \"" + s + "-NOTFOUND\")");
+            ctx.increaseIndent();
+            ctx.addLine("target_link_libraries(" + cppan_helpers_target + "");
+            ctx.addLine("    INTERFACE " + s + "");
+            ctx.addLine(")");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+        };
+        add_unix_lib("m");
+        add_unix_lib("pthread");
+        add_unix_lib("rt");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
         ctx.addLine();
 
         // Do not use APPEND here. It's the first file that will clear cppan.cmake.
