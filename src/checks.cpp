@@ -288,7 +288,7 @@ void Checks::load(const yaml &root)
     {
         auto f = root.first.template as<String>();
         if (root.second.IsSequence() || root.second.IsScalar())
-            addCheck<CheckSymbol>(f, get_sequence_set<String>(root.second));
+            this->addCheck<CheckSymbol>(f, get_sequence_set<String>(root.second));
         else
             throw std::runtime_error("Symbol headers should be a scalar or a set");
     });
@@ -297,7 +297,7 @@ void Checks::load(const yaml &root)
     get_map_and_iterate(root, s, [this](const auto &v) { \
         auto fi = v.first.template as<String>();         \
         auto se = v.second.template as<String>();        \
-        addCheck<t>(fi, se);                             \
+        this->addCheck<t>(fi, se);                       \
     })
 
     LOAD_MAP(CheckCSourceCompiles, "check_c_source_compiles");
