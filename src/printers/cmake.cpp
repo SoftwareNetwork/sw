@@ -73,6 +73,7 @@ include(CheckCSourceCompiles)
 include(CheckCSourceRuns)
 include(CheckCXXSourceCompiles)
 include(CheckCXXSourceRuns)
+include(CheckStructHasMember)
 include(TestBigEndian)
 )";
 
@@ -1708,123 +1709,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
     // checks
     config_section_title(ctx, "checks");
-
-    auto add_checks = [&ctx](const auto &a, const String &s, auto &&f)
-    {
-        for (auto &v : a)
-        {
-            auto val = f(v);
-            ctx.addLine("if (NOT DEFINED " + val + ")");
-            ctx.increaseIndent();
-            ctx.addLine(s + "(\"" + v + "\" " + val + ")");
-            ctx.addLine("add_variable(" + val + ")");
-            ctx.decreaseIndent();
-            ctx.addLine("endif()");
-        }
-        ctx.emptyLines(1);
-    };
-    auto add_library_checks = [&ctx](const auto &a, auto &&f)
-    {
-        for (auto &v : a)
-        {
-            auto val = f(v);
-            ctx.addLine("if (NOT DEFINED " + val + ")");
-            ctx.increaseIndent();
-            ctx.addLine("find_library(" + val + " " + v + ")");
-            ctx.addLine("if (\"${" + val + "}\" STREQUAL \"" + val + "-NOTFOUND\")");
-            ctx.addLine("    set(" + val + " 0)");
-            ctx.addLine("else()");
-            ctx.addLine("    set(" + val + " 1)");
-            ctx.addLine("endif()");
-            ctx.addLine("add_variable(" + val + ")");
-            ctx.decreaseIndent();
-            ctx.addLine("endif()");
-        }
-        ctx.emptyLines(1);
-    };
-    auto add_symbol_checks = [&ctx](const auto &a, const String &s, auto &&f)
-    {
-        for (auto &v : a)
-        {
-            auto val = f(v.first);
-            ctx.addLine("if (NOT DEFINED " + val + ")");
-            ctx.increaseIndent();
-            ctx << s + "(\"" + v.first + "\" \"";
-            for (auto &h : v.second)
-                ctx << h << ";";
-            ctx << "\" " << val << ")" << Context::eol;
-            ctx.addLine("add_variable(" + val + ")");
-            ctx.decreaseIndent();
-            ctx.addLine("endif()");
-        }
-        ctx.emptyLines(1);
-    };
-    auto add_if_definition = [&ctx](const String &s, auto &&... defs)
-    {
-        auto print_def = [&ctx](auto &&s)
-        {
-            ctx << "INTERFACE " << s << "=1" << Context::eol;
-            return 0;
-        };
-        ctx.addLine("if (" + s + ")");
-        ctx.increaseIndent();
-        ctx << "target_compile_definitions(" << cppan_helpers_target << Context::eol;
-        ctx.increaseIndent();
-        print_def(s);
-        using expand_type = int[];
-        expand_type{ 0, print_def(std::forward<decltype(defs)>(defs))... };
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
-    };
-    auto add_size_if_definition = [&ctx](const String &s, auto &&... defs)
-    {
-        auto print_def = [&ctx](auto &&s)
-        {
-            ctx << "INTERFACE " << s << "=${" << s << "}" << Context::eol;
-            return 0;
-        };
-        ctx.addLine("if (" + s + ")");
-        ctx.increaseIndent();
-        ctx << "target_compile_definitions(" << cppan_helpers_target << Context::eol;
-        ctx.increaseIndent();
-        print_def(s);
-        using expand_type = int[];
-        expand_type{ 0, print_def(std::forward<decltype(defs)>(defs))... };
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
-    };
-    auto add_check_definitions = [&ctx, &add_if_definition](const auto &a, auto &&f)
-    {
-        for (auto &v : a)
-            add_if_definition(f(v));
-    };
-    auto add_check_symbol_definitions = [&ctx, &add_if_definition](const auto &a, auto &&f)
-    {
-        for (auto &v : a)
-            add_if_definition(f(v.first));
-    };
-
-    add_checks(cc->check_functions, "check_function_exists", convert_function);
-    add_symbol_checks(cc->check_symbols, "check_cxx_symbol_exists", convert_function);
-    add_checks(cc->check_includes, "check_include_files", convert_include);
-    add_checks(cc->check_types, "check_type_size", [](auto &v) { return convert_type(v); });
-    for (auto &v : cc->check_types)
-    {
-        ctx.addLine("if (" + convert_type(v) + ")");
-        ctx.increaseIndent();
-        ctx.addLine("set(" + convert_type(v, "SIZE_OF_") + " ${" + convert_type(v) + "} CACHE STRING \"\")");
-        ctx.addLine("set(" + convert_type(v, "SIZEOF_") + " ${" + convert_type(v) + "} CACHE STRING \"\")");
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
-    }
-    add_library_checks(cc->check_libraries, convert_library);
+    cc->checks.write_checks(ctx);
 
     // write vars file
     ctx.addLine("if (CPPAN_NEW_VARIABLE_ADDED)");
@@ -1953,19 +1838,7 @@ endif()
 
     // definitions
     config_section_title(ctx, "definitions");
-
-    add_if_definition("WORDS_BIGENDIAN", "BIGENDIAN", "BIG_ENDIAN", "HOST_BIG_ENDIAN");
-
-    add_check_definitions(cc->check_functions, convert_function);
-    add_check_symbol_definitions(cc->check_symbols, convert_function);
-    add_check_definitions(cc->check_includes, convert_include);
-    add_check_definitions(cc->check_types, [](auto &v) { return convert_type(v); });
-    for (auto &v : cc->check_types)
-    {
-        add_size_if_definition(convert_type(v, "SIZE_OF_"));
-        add_size_if_definition(convert_type(v, "SIZEOF_"));
-    }
-    add_check_definitions(cc->check_libraries, convert_library);
+    cc->checks.write_definitions(ctx);
 
     // re-run cppan when root cppan.yml is changed
     if (cc->local_settings.add_run_cppan_target && !cc->disable_run_cppan_target)
@@ -2087,44 +1960,10 @@ set_target_properties(run-cppan PROPERTIES
 
 void CMakePrinter::parallel_vars_check(const path &dir) const
 {
-    using Map = std::map<String, int>;
+    Checks checks;
+    checks.load(dir);
 
-    struct symbols
-    {
-        Map functions;
-        Map includes;
-        Map types;
-        Map libraries;
-
-        bool empty() const
-        {
-            return functions.empty() && includes.empty() && types.empty() && libraries.empty();
-        }
-    };
-
-    symbols all;
-
-    auto read_vars_file = [&dir](auto &array, const String &name)
-    {
-        auto s = read_file(dir / (name + ".txt"));
-        std::vector<String> v;
-        boost::split(v, s, boost::is_any_of("\r\n"));
-        for (auto &line : v)
-        {
-            boost::trim(line);
-            if (line.empty())
-                continue;
-            array[line];
-        }
-    };
-
-#define READ(x) read_vars_file(all.x, #x)
-    READ(functions);
-    READ(includes);
-    READ(types);
-    READ(libraries);
-
-    if (all.empty())
+    if (checks.empty())
         return;
 
     static const String cppan_variable_result_filename = "result.cppan";
@@ -2133,20 +1972,10 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
     Executor e(N);
     e.throw_exceptions = true;
 
-    std::vector<symbols> workers(N);
-    int i = 0;
+    auto workers = checks.scatter(N);
 
-#define SCATTER(x)                      \
-    for (auto &v : all.x)               \
-        workers[i++ % N].x.insert(v);   \
-    LOG("-- Looking for " + std::to_string(all.x.size()) + " " #x);
-
-    SCATTER(functions);
-    SCATTER(includes);
-    SCATTER(types);
-    SCATTER(libraries);
-
-    LOG("-- This process may take up to 5 minutes depending on your hardware.");
+    LOG("-- Performing " + std::to_string(checks.checks.size()) + " checks");
+    LOG("-- This process may take up to 5 minutes depending on your hardware");
     std::cout.flush();
     std::cerr.flush();
 
@@ -2159,48 +1988,7 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
         ctx.addLine(cmake_minimum_required);
         ctx.addLine("project(x C CXX)");
         ctx.addLine(cmake_includes);
-
-        auto check = [&ctx](const String &s, const String &v, const String &var)
-        {
-            ctx.addLine(s + "(\"" + v + "\" " + var + ")");
-            ctx.addLine("if (NOT " + var + ")");
-            ctx.addLine("    set(" + var + " 0)");
-            ctx.addLine("endif()");
-            ctx.addLine("file(WRITE " + var + " \"${" + var + "}\")");
-            ctx.addLine();
-        };
-
-        for (auto &v : w.functions)
-        {
-            auto var = convert_function(v.first);
-            check("check_function_exists", v.first, var);
-        }
-
-        for (auto &v : w.includes)
-        {
-            auto var = convert_include(v.first);
-            check("check_include_files", v.first, var);
-        }
-
-        for (auto &v : w.types)
-        {
-            auto var = convert_type(v.first);
-            check("check_type_size", v.first, var);
-        }
-
-        for (auto &v : w.libraries)
-        {
-            auto var = convert_library(v.first);
-
-            ctx.addLine("find_library(" + var + " " + v.first + ")");
-            ctx.addLine("if (\"${" + var + "}\" STREQUAL \"" + var + "-NOTFOUND\")");
-            ctx.addLine("    set(" + var + " 0)");
-            ctx.addLine("else()");
-            ctx.addLine("    set(" + var + " 1)");
-            ctx.addLine("endif()");
-            ctx.addLine("file(WRITE " + var + " \"${" + var + "}\")");
-        }
-
+        w.write_parallel_checks_for_workers(ctx);
         write_file(d / cmake_config_filename, ctx.getText());
 
         // run cmake
@@ -2215,71 +2003,22 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
         if (ret)
             throw std::runtime_error("Error during evaluating variables");
 
-        for (auto &v : w.functions)
-        {
-            auto var = convert_function(v.first);
-            auto s = read_file(d / var);
-            v.second = std::stoi(s);
-        }
-
-        for (auto &v : w.includes)
-        {
-            auto var = convert_include(v.first);
-            auto s = read_file(d / var);
-            v.second = std::stoi(s);
-        }
-
-        for (auto &v : w.types)
-        {
-            auto var = convert_type(v.first);
-            auto s = read_file(d / var);
-            v.second = std::stoi(s);
-        }
-
-        for (auto &v : w.libraries)
-        {
-            auto var = convert_library(v.first);
-            auto s = read_file(d / var);
-            v.second = std::stoi(s);
-        }
+        w.read_parallel_checks_for_workers(d);
     };
 
-    i = 0;
+    int i = 0;
     for (auto &w : workers)
         e.push([&work, &w, n = i++]() { work(w, n); });
 
     auto t = get_time_seconds([&e] { e.wait(); });
 
-    Context ctx;
     for (auto &w : workers)
-    {
-#define GATHER(x)                                                                 \
-    for (auto &v : w.x)                                                           \
-        all.x[v.first] = v.second
+        checks += w;
 
-        GATHER(functions);
-        GATHER(includes);
-        GATHER(types);
-        GATHER(libraries);
-    }
+    checks.print_values();
 
-#define PRINT(x, n, f)                                                                          \
-    {                                                                                           \
-        for (auto &v : all.x)                                                                   \
-        {                                                                                       \
-            if (v.second)                                                                       \
-                LOG("-- " n " " + v.first + " - found (" + std::to_string(v.second) + ")"); \
-            else                                                                                \
-                LOG("-- " n " " + v.first + " - not found");                                \
-            ctx.addLine("STRING;" + f(v.first) + ";" + std::to_string(v.second));               \
-        }                                                                                       \
-    }
-
-    PRINT(functions, "function", convert_function);
-    PRINT(includes, "include", convert_include);
-    PRINT(types, "type", convert_type);
-    PRINT(libraries, "library", convert_library);
-
+    Context ctx;
+    checks.print_values(ctx);
     write_file(dir / "vars.txt", ctx.getText());
 
     LOG("-- This operation took " + std::to_string(t) + " seconds to complete.");

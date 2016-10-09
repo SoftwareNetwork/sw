@@ -55,6 +55,8 @@ public:
     {
         int type;
 
+        String function;
+
         // strings for printing/naming files
         String singular;
         String plural;
@@ -71,8 +73,13 @@ public:
     const Information &getInformation() const { return information; }
     String getVariable() const { return variable; }
     String getData() const { return data; }
+    String getDataEscaped() const;
     Value getValue() const { return value; }
     String getMessage() const { return message; }
+
+    virtual void writeCheck(Context &ctx) const {}
+
+    void setValue(const Value &v) { value = v; }
 
 protected:
     // self-information
@@ -91,21 +98,46 @@ protected:
 
     // message for printing
     String message;
+
+private:
+    template <class T>
+    friend struct less_check;
+};
+
+using CheckPtr = std::shared_ptr<Check>;
+
+template <class T>
+struct less_check
+{
+    bool operator()(const T &p1, const T &p2) const
+    {
+        if (p1 && p2)
+            return std::tie(p1->information.type, p1->variable) < std::tie(p2->information.type, p2->variable);
+        return p1 < p2;
+    }
 };
 
 struct Checks
 {
-    // first: variable (HAVE_SOMETHING), second: Check
-    std::map<String, std::shared_ptr<Check>> checks;
+    std::set<CheckPtr, less_check<CheckPtr>> checks;
 
     bool empty() const;
     void load(const yaml &root);
+    void load(const path &dir);
 
+    void write_checks(Context &ctx) const;
     void write_parallel_checks(Context &ctx) const;
+    void write_parallel_checks_for_workers(Context &ctx) const;
+    void read_parallel_checks_for_workers(const path &dir);
+    void write_definitions(Context &ctx) const;
+
+    std::vector<Checks> scatter(int N) const;
+    void print_values() const;
+    void print_values(Context &ctx) const;
 
     Checks &operator+=(const Checks &rhs);
 
 private:
     template <class T, class ... Args>
-    void addCheck(Args && ... args);
+    T *addCheck(Args && ... args);
 };

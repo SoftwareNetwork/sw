@@ -28,41 +28,45 @@
 #include "checks.h"
 
 #include "context.h"
+#include "printers/printer.h"
 
 #include <boost/algorithm/string.hpp>
 
 #include <memory>
 
+#include "logger.h"
+DECLARE_STATIC_LOGGER(logger, "checks");
+
 const std::map<int, Check::Information> check_information{
     { Check::Function,
-    { Check::Function, "function", "functions" } },
+    { Check::Function, "check_function_exists", "function", "functions" } },
 
     { Check::Include,
-    { Check::Include, "include", "includes" } },
+    { Check::Include, "check_include_files", "include", "includes" } },
 
     { Check::Type,
-    { Check::Type, "type", "types" } },
+    { Check::Type, "check_type_size", "type", "types" } },
 
     { Check::Library,
-    { Check::Library, "library", "libraries" } },
+    { Check::Library, "find_library", "library", "libraries" } },
 
     { Check::Symbol,
-    { Check::Symbol, "symbol", "symbols" } },
+    { Check::Symbol, "check_cxx_symbol_exists", "symbol", "symbols" } },
 
     { Check::CSourceCompiles,
-    { Check::CSourceCompiles, "c_source_compiles", "c_source_compiles" } },
+    { Check::CSourceCompiles, "check_c_source_compiles", "c_source_compiles", "c_source_compiles" } },
 
     { Check::CSourceRuns,
-    { Check::CSourceRuns, "c_source_runs", "c_source_runs" } },
+    { Check::CSourceRuns, "check_c_source_runs", "c_source_runs", "c_source_runs" } },
 
     { Check::CXXSourceCompiles,
-    { Check::CXXSourceCompiles, "cxx_source_compiles", "cxx_source_compiles" } },
+    { Check::CXXSourceCompiles, "check_cxx_source_compiles", "cxx_source_compiles", "cxx_source_compiles" } },
 
     { Check::CXXSourceRuns,
-    { Check::CXXSourceRuns, "cxx_source_runs", "cxx_source_runs" } },
+    { Check::CXXSourceRuns, "check_cxx_source_runs", "cxx_source_runs", "cxx_source_runs" } },
 
     { Check::Custom,
-    { Check::Custom, "custom", "custom" } },
+    { Check::Custom, "", "custom", "custom" } },
 };
 
 auto getCheckInformation(int type)
@@ -149,6 +153,8 @@ public:
 class CheckSymbol : public Check
 {
 public:
+    CheckSymbol() : Check(getCheckInformation(Symbol)) {}
+
     CheckSymbol(const String &s, const std::set<String> &headers)
         : Check(getCheckInformation(Symbol)),
           headers(headers)
@@ -158,6 +164,14 @@ public:
     }
 
     virtual ~CheckSymbol() {}
+
+    void writeCheck(Context &ctx) const override
+    {
+        ctx << information.function + "(\"" + getData() + "\" \"";
+        for (auto &h : headers)
+            ctx << h << ";";
+        ctx << "\" " << getVariable() << ")" << Context::eol;
+    }
 
 private:
     std::set<String> headers;
@@ -233,12 +247,21 @@ Check::Check(const Information &i)
 {
 }
 
+String Check::getDataEscaped() const
+{
+    auto d = getData();
+    boost::replace_all(d, "\\", "\\\\\\\\");
+    boost::replace_all(d, "\"", "\\\"");
+    return d;
+}
+
 template <class T, class ... Args>
-void Checks::addCheck(Args && ... args)
+T *Checks::addCheck(Args && ... args)
 {
     auto i = std::make_shared<T>(std::forward<Args>(args)...);
     auto p = i.get();
-    checks[p->getVariable()] = std::move(i);
+    checks.emplace(std::move(i));
+    return p;
 }
 
 void Checks::load(const yaml &root)
@@ -264,7 +287,6 @@ void Checks::load(const yaml &root)
     get_map_and_iterate(root, "check_symbol_exists", [this](const auto &root)
     {
         auto f = root.first.template as<String>();
-        auto s = root.second.template as<String>();
         if (root.second.IsSequence() || root.second.IsScalar())
             addCheck<CheckSymbol>(f, get_sequence_set<String>(root.second));
         else
@@ -297,6 +319,58 @@ Checks &Checks::operator+=(const Checks &rhs)
     return *this;
 }
 
+void Checks::write_checks(Context &ctx) const
+{
+    for (auto &c : checks)
+    {
+        auto &i = c->getInformation();
+        auto t = i.type;
+
+        ctx.addLine("if (NOT DEFINED " + c->getVariable() + ")");
+        ctx.increaseIndent();
+
+        switch (t)
+        {
+        case Check::Function:
+        case Check::Include:
+        case Check::Type:
+            ctx.addLine(i.function + "(\"" + c->getData() + "\" " + c->getVariable() + ")");
+            if (t == Check::Type)
+            {
+                CheckType ct (c->getData(), "SIZEOF_");
+                CheckType ct_(c->getData(), "SIZE_OF_");
+
+                ctx.addLine("if (" + c->getVariable() + ")");
+                ctx.increaseIndent();
+                ctx.addLine("set(" + ct_.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+                ctx.addLine("set(" + ct.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+                ctx.decreaseIndent();
+                ctx.addLine("endif()");
+            }
+            break;
+        case Check::Library:
+            ctx.addLine("find_library(" + c->getVariable() + " " + c->getData() + ")");
+            ctx.addLine("if (\"${" + c->getVariable() + "}\" STREQUAL \"" + c->getVariable() + "-NOTFOUND\")");
+            ctx.addLine("    set(" + c->getVariable() + " 0)");
+            ctx.addLine("else()");
+            ctx.addLine("    set(" + c->getVariable() + " 1)");
+            ctx.addLine("endif()");
+            break;
+        case Check::Symbol:
+            c->writeCheck(ctx);
+            break;
+        case Check::CSourceCompiles:
+            ctx.addLine(i.function + "(\"" + c->getDataEscaped() + "\" " + c->getVariable() + ")");
+            break;
+        }
+
+        ctx.addLine("add_variable(" + c->getVariable() + ")");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+    }
+}
+
 void Checks::write_parallel_checks(Context &ctx) const
 {
     for (int t = 0; t < Check::Max; t++)
@@ -308,18 +382,17 @@ void Checks::write_parallel_checks(Context &ctx) const
 
     for (auto &c : checks)
     {
-        auto t = c.second->getInformation().type;
+        auto t = c->getInformation().type;
         switch (t)
         {
         case Check::Function:
         case Check::Include:
         case Check::Type:
         case Check::Library:
-            ctx.addLine("if (NOT DEFINED " + c.second->getVariable() + ")");
-            ctx.addLine("    list(APPEND vars_" + getCheckInformation(t).plural + " \"" + c.second->getData() + "\")");
+            ctx.addLine("if (NOT DEFINED " + c->getVariable() + ")");
+            ctx.addLine("    list(APPEND vars_" + getCheckInformation(t).plural + " \"" + c->getData() + "\")");
             ctx.addLine("endif()");
             break;
-        // add more parallel checks here
         }
     }
 
@@ -331,5 +404,178 @@ void Checks::write_parallel_checks(Context &ctx) const
         ctx.addLine("    file(APPEND ${tmp_dir}/" + getCheckInformation(t).plural + ".txt \"${v}\\n\")");
         ctx.addLine("endforeach()");
         ctx.addLine();
+    }
+}
+
+void Checks::write_parallel_checks_for_workers(Context &ctx) const
+{
+    for (auto &c : checks)
+    {
+        auto &i = c->getInformation();
+        auto t = i.type;
+        switch (t)
+        {
+        case Check::Function:
+        case Check::Include:
+        case Check::Type:
+            ctx.addLine(i.function + "(\"" + c->getData() + "\" " + c->getVariable() + ")");
+            ctx.addLine("if (NOT " + c->getVariable() + ")");
+            ctx.addLine("    set(" + c->getVariable() + " 0)");
+            ctx.addLine("endif()");
+            ctx.addLine("file(WRITE " + c->getVariable() + " \"${" + c->getVariable() + "}\")");
+            ctx.addLine();
+            break;
+        case Check::Library:
+            ctx.addLine("find_library(" + c->getVariable() + " " + c->getData() + ")");
+            ctx.addLine("if (\"${" + c->getVariable() + "}\" STREQUAL \"" + c->getVariable() + "-NOTFOUND\")");
+            ctx.addLine("    set(" + c->getVariable() + " 0)");
+            ctx.addLine("else()");
+            ctx.addLine("    set(" + c->getVariable() + " 1)");
+            ctx.addLine("endif()");
+            ctx.addLine("file(WRITE " + c->getVariable() + " \"${" + c->getVariable() + "}\")");
+            break;
+        }
+    }
+}
+
+void Checks::read_parallel_checks_for_workers(const path &dir)
+{
+    for (auto &c : checks)
+    {
+        auto s = read_file(dir / c->getVariable());
+        c->setValue(std::stoi(s));
+    }
+}
+
+void Checks::write_definitions(Context &ctx) const
+{
+    auto print_def = [&ctx](const String &value, auto &&s)
+    {
+        ctx << "INTERFACE " << s << "=" << value << Context::eol;
+        return 0;
+    };
+
+    auto add_if_definition = [&ctx, &print_def](const String &s, const String &value, auto && ... defs)
+    {
+        ctx.addLine("if (" + s + ")");
+        ctx.increaseIndent();
+        ctx << "target_compile_definitions(" << cppan_helpers_target << Context::eol;
+        ctx.increaseIndent();
+        print_def(value, s);
+        using expand_type = int[];
+        expand_type{ 0, print_def(value, std::forward<decltype(defs)>(defs))... };
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+    };
+
+    // aliases
+    add_if_definition("WORDS_BIGENDIAN", "1", "BIGENDIAN", "BIG_ENDIAN", "HOST_BIG_ENDIAN");
+
+    for (auto &c : checks)
+    {
+        auto &i = c->getInformation();
+        auto t = i.type;
+
+        add_if_definition(c->getVariable(), "1");
+
+        if (t == Check::Type)
+        {
+            CheckType ct(c->getData(), "SIZEOF_");
+            CheckType ct_(c->getData(), "SIZE_OF_");
+
+            add_if_definition(ct.getVariable(), "${" + ct.getVariable() + "}");
+            add_if_definition(ct_.getVariable(), "${" + ct_.getVariable() + "}");
+        }
+    }
+}
+
+void Checks::load(const path &dir)
+{
+    auto get_lines = [](const auto &s)
+    {
+        std::vector<String> v, lines;
+        boost::split(v, s, boost::is_any_of("\r\n"));
+        for (auto &line : v)
+        {
+            boost::trim(line);
+            if (line.empty())
+                continue;
+            lines.push_back(line);
+        }
+        return lines;
+    };
+
+    for (int t = 0; t < Check::Max; t++)
+    {
+        auto s = read_file(dir / (getCheckInformation(t).plural + ".txt"));
+
+#define CASE_LINE(x)                 \
+    case Check::x:                   \
+        for (auto &v : get_lines(s)) \
+            addCheck<Check##x>(v);   \
+        break
+
+        switch (t)
+        {
+            CASE_LINE(Function);
+            CASE_LINE(Include);
+            CASE_LINE(Type);
+            CASE_LINE(Library);
+        }
+
+#undef CASE_LINE
+    }
+}
+
+std::vector<Checks> Checks::scatter(int N) const
+{
+    std::vector<Checks> workers(N);
+    int i = 0;
+    for (auto &c : checks)
+    {
+        auto &inf = c->getInformation();
+        auto t = inf.type;
+        switch (t)
+        {
+        case Check::Function:
+        case Check::Include:
+        case Check::Type:
+        case Check::Library:
+            workers[i++ % N].checks.insert(c);
+            break;
+        }
+    }
+    return workers;
+}
+
+void Checks::print_values() const
+{
+    for (auto &c : checks)
+    {
+        auto &i = c->getInformation();
+        auto t = i.type;
+        switch (t)
+        {
+        case Check::Function:
+        case Check::Include:
+        case Check::Type:
+        case Check::Library:
+            if (c->getValue())
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - found (" + std::to_string(c->getValue()) + ")");
+            else
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - not found");
+            break;
+        }
+    }
+}
+
+void Checks::print_values(Context &ctx) const
+{
+    for (auto &c : checks)
+    {
+        ctx.addLine("STRING;" + c->getVariable() + ";" + std::to_string(c->getValue()));
     }
 }

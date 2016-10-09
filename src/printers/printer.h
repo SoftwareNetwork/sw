@@ -43,6 +43,8 @@
 
 #define INCLUDE_GUARD_PREFIX "CPPAN_INCLUDE_GUARD_"
 
+extern const String cppan_helpers_target;
+
 extern const std::vector<String> configuration_types;
 extern const std::vector<String> configuration_types_normal;
 extern const std::vector<String> configuration_types_no_rel;
