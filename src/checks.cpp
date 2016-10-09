@@ -349,10 +349,11 @@ void Checks::write_checks(Context &ctx) const
 {
     auto invert = [&ctx](auto &c)
     {
+        ctx.addLine();
         ctx.addLine("if (" + c->getVariable() + ")");
-        ctx.addLine("set(" + c->getVariable() + " 0)");
+        ctx.addLine("    set(" + c->getVariable() + " 0)");
         ctx.addLine("else()");
-        ctx.addLine("set(" + c->getVariable() + " 1)");
+        ctx.addLine("    set(" + c->getVariable() + " 1)");
         ctx.addLine("endif()");
     };
 
@@ -370,18 +371,6 @@ void Checks::write_checks(Context &ctx) const
         case Check::Include:
         case Check::Type:
             ctx.addLine(i.function + "(\"" + c->getData() + "\" " + c->getVariable() + ")");
-            if (t == Check::Type)
-            {
-                CheckType ct (c->getData(), "SIZEOF_");
-                CheckType ct_(c->getData(), "SIZE_OF_");
-
-                ctx.addLine("if (" + c->getVariable() + ")");
-                ctx.increaseIndent();
-                ctx.addLine("set(" + ct_.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
-                ctx.addLine("set(" + ct.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
-                ctx.decreaseIndent();
-                ctx.addLine("endif()");
-            }
             break;
         case Check::Library:
             ctx.addLine("find_library(" + c->getVariable() + " " + c->getData() + ")");
@@ -419,6 +408,20 @@ void Checks::write_checks(Context &ctx) const
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         ctx.addLine();
+
+        if (t == Check::Type)
+        {
+            CheckType ct(c->getData(), "SIZEOF_");
+            CheckType ct_(c->getData(), "SIZE_OF_");
+
+            ctx.addLine("if (" + c->getVariable() + ")");
+            ctx.increaseIndent();
+            ctx.addLine("set(" + ct_.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+            ctx.addLine("set(" + ct.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+            ctx.addLine();
+        }
     }
 }
 
