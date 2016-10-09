@@ -300,30 +300,30 @@ void Checks::load(const yaml &root)
     {
         auto f = root.first.template as<String>();
         if (root.second.IsSequence() || root.second.IsScalar())
-            addCheck<CheckSymbol>(f, get_sequence_set<String>(root.second));
+            this->addCheck<CheckSymbol>(f, get_sequence_set<String>(root.second));
         else
             throw std::runtime_error("Symbol headers should be a scalar or a set");
     });
 
-#define LOAD_MAP(t, s)                                                    \
-    get_map_and_iterate(root, s, [this](const auto &v) {                  \
-        auto fi = v.first.template as<String>();                          \
-        if (v.second.IsScalar())                                          \
-        {                                                                 \
-            auto se = v.second.template as<String>();                     \
-            addCheck<t>(fi, se);                                          \
-        }                                                                 \
-        else if (v.second.IsMap())                                        \
-        {                                                                 \
-            auto se = v.second["text"].template as<String>();             \
-            auto p = addCheck<t>(fi, se);                                 \
-            if (v.second["invert"].IsDefined())                          \
+#define LOAD_MAP(t, s)                                                  \
+    get_map_and_iterate(root, s, [this](const auto &v) {                \
+        auto fi = v.first.template as<String>();                        \
+        if (v.second.IsScalar())                                        \
+        {                                                               \
+            auto se = v.second.template as<String>();                   \
+            this->addCheck<t>(fi, se);                                  \
+        }                                                               \
+        else if (v.second.IsMap())                                      \
+        {                                                               \
+            auto se = v.second["text"].template as<String>();           \
+            auto p = this->addCheck<t>(fi, se);                         \
+            if (v.second["invert"].IsDefined())                         \
                 p->invert = v.second["invert"].template as<bool>();     \
-        }                                                                 \
-        else                                                              \
-        {                                                                 \
-            throw std::runtime_error(s " should be a scalar or a map");   \
-        }                                                                 \
+        }                                                               \
+        else                                                            \
+        {                                                               \
+            throw std::runtime_error(s " should be a scalar or a map"); \
+        }                                                               \
     })
 
     LOAD_MAP(CheckCSourceCompiles, "check_c_source_compiles");
@@ -347,6 +347,15 @@ Checks &Checks::operator+=(const Checks &rhs)
 
 void Checks::write_checks(Context &ctx) const
 {
+    auto invert = [&ctx](auto &c)
+    {
+        ctx.addLine("if (" + c->getVariable() + ")");
+        ctx.addLine("set(" + c->getVariable() + " 0)");
+        ctx.addLine("else()");
+        ctx.addLine("set(" + c->getVariable() + " 1)");
+        ctx.addLine("endif()");
+    };
+
     for (auto &c : checks)
     {
         auto &i = c->getInformation();
@@ -393,13 +402,7 @@ void Checks::write_checks(Context &ctx) const
             {
                 auto p = (CheckSource *)c.get();
                 if (p->invert)
-                {
-                    ctx.addLine("if (" + c->getVariable() + ")");
-                    ctx.addLine("set(" + c->getVariable() + " 0)");
-                    ctx.addLine("else()");
-                    ctx.addLine("set(" + c->getVariable() + " 1)");
-                    ctx.addLine("endif()");
-                }
+                    invert(c);
             }
             break;
         case Check::Custom:
@@ -407,13 +410,7 @@ void Checks::write_checks(Context &ctx) const
             {
                 auto p = (CheckSource *)c.get();
                 if (p->invert)
-                {
-                    ctx.addLine("if (" + c->getVariable() + ")");
-                    ctx.addLine("set(" + c->getVariable() + " 0)");
-                    ctx.addLine("else()");
-                    ctx.addLine("set(" + c->getVariable() + " 1)");
-                    ctx.addLine("endif()");
-                }
+                    invert(c);
             }
             break;
         }
