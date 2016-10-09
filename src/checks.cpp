@@ -177,11 +177,23 @@ private:
     std::set<String> headers;
 };
 
-class CheckCSourceCompiles : public Check
+struct CheckSource : public Check
+{
+    CheckSource(const Check::Information &i)
+        : Check(i)
+    {
+    }
+
+    virtual ~CheckSource() {}
+
+    bool invert = false;
+};
+
+class CheckCSourceCompiles : public CheckSource
 {
 public:
     CheckCSourceCompiles(const String &var, const String &d)
-        : Check(getCheckInformation(CSourceCompiles))
+        : CheckSource(getCheckInformation(CSourceCompiles))
     {
         variable = var;
         data = d;
@@ -190,11 +202,11 @@ public:
     virtual ~CheckCSourceCompiles() {}
 };
 
-class CheckCSourceRuns : public Check
+class CheckCSourceRuns : public CheckSource
 {
 public:
     CheckCSourceRuns(const String &var, const String &d)
-        : Check(getCheckInformation(CSourceRuns))
+        : CheckSource(getCheckInformation(CSourceRuns))
     {
         variable = var;
         data = d;
@@ -203,11 +215,11 @@ public:
     virtual ~CheckCSourceRuns() {}
 };
 
-class CheckCXXSourceCompiles : public Check
+class CheckCXXSourceCompiles : public CheckSource
 {
 public:
     CheckCXXSourceCompiles(const String &var, const String &d)
-        : Check(getCheckInformation(CXXSourceCompiles))
+        : CheckSource(getCheckInformation(CXXSourceCompiles))
     {
         variable = var;
         data = d;
@@ -216,11 +228,11 @@ public:
     virtual ~CheckCXXSourceCompiles() {}
 };
 
-class CheckCXXSourceRuns : public Check
+class CheckCXXSourceRuns : public CheckSource
 {
 public:
     CheckCXXSourceRuns(const String &var, const String &d)
-        : Check(getCheckInformation(CXXSourceRuns))
+        : CheckSource(getCheckInformation(CXXSourceRuns))
     {
         variable = var;
         data = d;
@@ -229,11 +241,11 @@ public:
     virtual ~CheckCXXSourceRuns() {}
 };
 
-class CheckCustom : public Check
+class CheckCustom : public CheckSource
 {
 public:
     CheckCustom(const String &var, const String &d)
-        : Check(getCheckInformation(Custom))
+        : CheckSource(getCheckInformation(Custom))
     {
         variable = var;
         data = d;
@@ -293,11 +305,25 @@ void Checks::load(const yaml &root)
             throw std::runtime_error("Symbol headers should be a scalar or a set");
     });
 
-#define LOAD_MAP(t, s)                                   \
-    get_map_and_iterate(root, s, [this](const auto &v) { \
-        auto fi = v.first.template as<String>();         \
-        auto se = v.second.template as<String>();        \
-        addCheck<t>(fi, se);                             \
+#define LOAD_MAP(t, s)                                                    \
+    get_map_and_iterate(root, s, [this](const auto &v) {                  \
+        auto fi = v.first.template as<String>();                          \
+        if (v.second.IsScalar())                                          \
+        {                                                                 \
+            auto se = v.second.template as<String>();                     \
+            addCheck<t>(fi, se);                                          \
+        }                                                                 \
+        else if (v.second.IsMap())                                        \
+        {                                                                 \
+            auto se = v.second["text"].template as<String>();             \
+            auto p = addCheck<t>(fi, se);                                 \
+            if (v.second["invert"].IsDefined())                          \
+                p->invert = v.second["invert"].template as<bool>();     \
+        }                                                                 \
+        else                                                              \
+        {                                                                 \
+            throw std::runtime_error(s " should be a scalar or a map");   \
+        }                                                                 \
     })
 
     LOAD_MAP(CheckCSourceCompiles, "check_c_source_compiles");
@@ -360,7 +386,35 @@ void Checks::write_checks(Context &ctx) const
             c->writeCheck(ctx);
             break;
         case Check::CSourceCompiles:
+        case Check::CSourceRuns:
+        case Check::CXXSourceCompiles:
+        case Check::CXXSourceRuns:
             ctx.addLine(i.function + "(\"" + c->getDataEscaped() + "\" " + c->getVariable() + ")");
+            {
+                auto p = (CheckSource *)c.get();
+                if (p->invert)
+                {
+                    ctx.addLine("if (" + c->getVariable() + ")");
+                    ctx.addLine("set(" + c->getVariable() + " 0)");
+                    ctx.addLine("else()");
+                    ctx.addLine("set(" + c->getVariable() + " 1)");
+                    ctx.addLine("endif()");
+                }
+            }
+            break;
+        case Check::Custom:
+            ctx.addLine(c->getData());
+            {
+                auto p = (CheckSource *)c.get();
+                if (p->invert)
+                {
+                    ctx.addLine("if (" + c->getVariable() + ")");
+                    ctx.addLine("set(" + c->getVariable() + " 0)");
+                    ctx.addLine("else()");
+                    ctx.addLine("set(" + c->getVariable() + " 1)");
+                    ctx.addLine("endif()");
+                }
+            }
             break;
         }
 
