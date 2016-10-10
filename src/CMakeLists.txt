@@ -31,6 +31,7 @@ if (APPLE)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/dep/yaml-cpp/include)
+include_directories(${PROJECT_SOURCE_DIR}/dep/sqlite3)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
