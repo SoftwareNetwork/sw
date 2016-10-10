@@ -78,8 +78,8 @@ public:
     Value getValue() const { return value; }
     String getMessage() const { return message; }
 
-    virtual void writeCheck(Context &ctx) const {}
-    virtual void save(yaml &root) const {}
+    virtual void writeCheck(Context &/*ctx*/) const {}
+    virtual void save(yaml &/*root*/) const {}
 
     void setValue(const Value &v) { value = v; }
 

@@ -145,7 +145,11 @@ target_compile_definitions(common
     PRIVATE -DVERSION_MINOR=${VERSION_MINOR}
     PRIVATE -DVERSION_PATCH=${VERSION_PATCH}
 )
-target_link_libraries(common context bazel_parser)
+target_link_libraries(common
+    context
+    bazel_parser
+    sqlite3
+)
 if (WIN32)
     target_link_libraries(common
         archive_static
