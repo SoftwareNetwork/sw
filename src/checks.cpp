@@ -552,7 +552,6 @@ void Checks::read_parallel_checks_for_workers(const path &dir)
         {
             c->setValue(0);
             LOG_INFO(logger, "Empty value for variable: " + c->getVariable());
-            __asm { int 3 }
         }
     }
 }

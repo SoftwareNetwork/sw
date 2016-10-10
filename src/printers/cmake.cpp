@@ -1999,7 +1999,7 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
 
     if (checks.checks.size() <= 8)
     {
-        LOG_INFO(logger, "-- There's few checks only. Won't go in parallel mode.");
+        LOG_INFO(logger, "-- There are few checks only. Won't go in parallel mode.");
         return;
     }
 
