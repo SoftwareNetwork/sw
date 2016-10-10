@@ -54,7 +54,10 @@
 #define LOG_ERROR(logger, message) BOOST_LOG_TRIVIAL(error) << LOG_BOOST_LOG_MESSAGE(logger, message)
 #define LOG_FATAL(logger, message) BOOST_LOG_TRIVIAL(fatal) << LOG_BOOST_LOG_MESSAGE(logger, message)
 
+#define LOG_FLUSH() loggerFlush()
+
 void initLogger(std::string logLevel = "DEBUG", std::string logFile = "", bool simple_logger = false);
+void loggerFlush();
 
 #else // !USE_LOGGER
 
@@ -75,6 +78,8 @@ void initLogger(std::string logLevel = "DEBUG", std::string logFile = "", bool s
 #define LOG_WARN(logger, message)
 #define LOG_ERROR(logger, message)
 #define LOG_FATAL(logger, message)
+
+#define LOG_FLUSH()
 
 #define IS_LOG_TRACE_ENABLED(logger)
 #define IS_LOG_DEBUG_ENABLED(logger)

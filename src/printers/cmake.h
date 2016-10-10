@@ -44,7 +44,7 @@ struct CMakePrinter : Printer
     void clear_exports(path p) const override;
     void clear_export(path p) const override;
 
-    void parallel_vars_check(const path &dir) const override;
+    void parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file) const override;
 
 private:
     int _generate(bool force = false) const;

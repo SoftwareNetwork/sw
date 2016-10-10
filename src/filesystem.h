@@ -27,6 +27,9 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include <boost/filesystem.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/range.hpp>
@@ -49,6 +52,7 @@ path temp_script_filename();
 std::string read_file(const path &p, bool no_size_check = false);
 void write_file(const path &p, const std::string &s);
 void write_file_if_different(const path &p, const std::string &s);
+std::vector<std::string> read_lines(const path &p);
 
 void remove_file(const path &p);
 std::string normalize_path(const path &p);

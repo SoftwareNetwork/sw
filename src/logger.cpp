@@ -42,6 +42,17 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(timestamp, "TimeStamp", boost::posix_time::ptime)
 BOOST_LOG_ATTRIBUTE_KEYWORD(thread_id, "ThreadID", boost::log::attributes::current_thread_id::value_type)
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", boost::log::trivial::severity_level)
 
+typedef boost::log::sinks::text_file_backend tfb;
+typedef boost::log::sinks::synchronous_sink<tfb> sfs;
+
+boost::shared_ptr<tfb> backend;
+boost::shared_ptr<tfb> backend_trace;
+
+boost::shared_ptr<
+    boost::log::sinks::synchronous_sink<
+    boost::log::sinks::text_ostream_backend
+    >> c_log;
+
 void logFormatter(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
 {
     static boost::thread_specific_ptr<boost::posix_time::time_facet> tss(0);
@@ -87,6 +98,7 @@ void initLogger(std::string logLevel, std::string logFile, bool simple_logger)
         if (!disable_log)
         {
             auto c_log = boost::log::add_console_log();
+            ::c_log = c_log;
             if (simple_logger)
                 c_log->set_formatter(&logFormatterSimple);
             else
@@ -96,9 +108,6 @@ void initLogger(std::string logLevel, std::string logFile, bool simple_logger)
 
         if (logFile != "")
         {
-            typedef boost::log::sinks::text_file_backend tfb;
-            typedef boost::log::sinks::synchronous_sink<tfb> sfs;
-
             auto backend = boost::make_shared<tfb>
             (
                 boost::log::keywords::file_name = logFile + ".log." + logLevel,
@@ -106,6 +115,8 @@ void initLogger(std::string logLevel, std::string logFile, bool simple_logger)
                 //boost::log::keywords::open_mode = std::ios_base::app,
                 boost::log::keywords::auto_flush = true
             );
+            ::backend = backend;
+
             auto sink = boost::make_shared<sfs>(backend);
             if (simple_logger)
                 sink->set_formatter(&logFormatterSimple);
@@ -122,6 +133,8 @@ void initLogger(std::string logLevel, std::string logFile, bool simple_logger)
                 //boost::log::keywords::open_mode = std::ios_base::app,
                 boost::log::keywords::auto_flush = true
             );
+            ::backend_trace = backend_trace;
+
             auto sink_trace = boost::make_shared<sfs>(backend_trace);
             if (simple_logger)
                 sink_trace->set_formatter(&logFormatterSimple);
@@ -137,4 +150,14 @@ void initLogger(std::string logLevel, std::string logFile, bool simple_logger)
     {
         LOG_ERROR(logger, "logger initialization failed with exception " << e.what() << ", will use default logger settings");
     }
+}
+
+void loggerFlush()
+{
+    if (c_log)
+        c_log->flush();
+    if (backend)
+        backend->flush();
+    if (backend_trace)
+        backend_trace->flush();
 }

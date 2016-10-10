@@ -346,6 +346,11 @@ void Checks::load(const yaml &root)
     LOAD_MAP(Custom);
 }
 
+void Checks::load(const path &fn)
+{
+    load(YAML::LoadFile(fn.string()));
+}
+
 void Checks::save(yaml &root) const
 {
     for (auto &c : checks)
@@ -384,25 +389,25 @@ Checks &Checks::operator+=(const Checks &rhs)
     return *this;
 }
 
-String Checks::write_checks() const
+String Checks::save() const
 {
     yaml root;
     save(root);
     return YAML::Dump(root);
 }
 
+void invert(Context &ctx, const CheckPtr &c)
+{
+    ctx.addLine();
+    ctx.addLine("if (" + c->getVariable() + ")");
+    ctx.addLine("    set(" + c->getVariable() + " 0)");
+    ctx.addLine("else()");
+    ctx.addLine("    set(" + c->getVariable() + " 1)");
+    ctx.addLine("endif()");
+}
+
 void Checks::write_checks(Context &ctx) const
 {
-    auto invert = [&ctx](auto &c)
-    {
-        ctx.addLine();
-        ctx.addLine("if (" + c->getVariable() + ")");
-        ctx.addLine("    set(" + c->getVariable() + " 0)");
-        ctx.addLine("else()");
-        ctx.addLine("    set(" + c->getVariable() + " 1)");
-        ctx.addLine("endif()");
-    };
-
     for (auto &c : checks)
     {
         auto &i = c->getInformation();
@@ -437,17 +442,23 @@ void Checks::write_checks(Context &ctx) const
             {
                 auto p = (CheckSource *)c.get();
                 if (p->invert)
-                    invert(c);
+                    invert(ctx, c);
             }
             break;
         case Check::Custom:
+            // Why not c->getDataEscaped()?
+            // because user can write other cmake code that does not need escaping
+            // user should provide escaping (in e.g. check_c_code_compiles) himself
+            // note that such escaping is very tricky: '\' is '\\\\' when escaped
             ctx.addLine(c->getData());
             {
                 auto p = (CheckSource *)c.get();
                 if (p->invert)
-                    invert(c);
+                    invert(ctx, c);
             }
             break;
+        default:
+            throw std::logic_error("Write parallel check for type " + std::to_string(t) + " not implemented");
         }
 
         ctx.addLine("add_variable(" + c->getVariable() + ")");
@@ -471,42 +482,6 @@ void Checks::write_checks(Context &ctx) const
     }
 }
 
-void Checks::write_parallel_checks(Context &ctx) const
-{
-    for (int t = 0; t < Check::Max; t++)
-    {
-        ctx.addLine("set(vars_" + getCheckInformation(t).plural + ")");
-        ctx.addLine("file(WRITE ${tmp_dir}/" + getCheckInformation(t).plural + ".txt \"\")");
-        ctx.addLine();
-    }
-
-    for (auto &c : checks)
-    {
-        auto t = c->getInformation().type;
-        switch (t)
-        {
-        case Check::Function:
-        case Check::Include:
-        case Check::Type:
-        case Check::Library:
-            ctx.addLine("if (NOT DEFINED " + c->getVariable() + ")");
-            ctx.addLine("    list(APPEND vars_" + getCheckInformation(t).plural + " \"" + c->getData() + "\")");
-            ctx.addLine("endif()");
-            break;
-        }
-    }
-
-    for (int t = 0; t < Check::Max; t++)
-    {
-        ctx.addLine();
-        ctx.addLine("list(APPEND vars_all ${vars_" + getCheckInformation(t).plural + "})");
-        ctx.addLine("foreach(v ${vars_" + getCheckInformation(t).plural + "})");
-        ctx.addLine("    file(APPEND ${tmp_dir}/" + getCheckInformation(t).plural + ".txt \"${v}\\n\")");
-        ctx.addLine("endforeach()");
-        ctx.addLine();
-    }
-}
-
 void Checks::write_parallel_checks_for_workers(Context &ctx) const
 {
     for (auto &c : checks)
@@ -519,11 +494,6 @@ void Checks::write_parallel_checks_for_workers(Context &ctx) const
         case Check::Include:
         case Check::Type:
             ctx.addLine(i.function + "(\"" + c->getData() + "\" " + c->getVariable() + ")");
-            ctx.addLine("if (NOT " + c->getVariable() + ")");
-            ctx.addLine("    set(" + c->getVariable() + " 0)");
-            ctx.addLine("endif()");
-            ctx.addLine("file(WRITE " + c->getVariable() + " \"${" + c->getVariable() + "}\")");
-            ctx.addLine();
             break;
         case Check::Library:
             ctx.addLine("find_library(" + c->getVariable() + " " + c->getData() + ")");
@@ -532,9 +502,41 @@ void Checks::write_parallel_checks_for_workers(Context &ctx) const
             ctx.addLine("else()");
             ctx.addLine("    set(" + c->getVariable() + " 1)");
             ctx.addLine("endif()");
-            ctx.addLine("file(WRITE " + c->getVariable() + " \"${" + c->getVariable() + "}\")");
             break;
+        case Check::Symbol:
+            c->writeCheck(ctx);
+            break;
+        case Check::CSourceCompiles:
+        case Check::CSourceRuns:
+        case Check::CXXSourceCompiles:
+        case Check::CXXSourceRuns:
+            ctx.addLine(i.function + "(\"" + c->getDataEscaped() + "\" " + c->getVariable() + ")");
+            {
+                auto p = (CheckSource *)c.get();
+                if (p->invert)
+                    invert(ctx, c);
+            }
+            break;
+        case Check::Custom:
+            // Why not c->getDataEscaped()?
+            // because user can write other cmake code that does not need escaping
+            // user should provide escaping (in e.g. check_c_code_compiles) himself
+            // note that such escaping is very tricky: '\' is '\\\\' when escaped
+            ctx.addLine(c->getData());
+            {
+                auto p = (CheckSource *)c.get();
+                if (p->invert)
+                    invert(ctx, c);
+            }
+            break;
+        default:
+            throw std::logic_error("Write parallel check for type " + std::to_string(t) + " not implemented");
         }
+        ctx.addLine("if (NOT " + c->getVariable() + ")");
+        ctx.addLine("    set(" + c->getVariable() + " 0)");
+        ctx.addLine("endif()");
+        ctx.addLine("file(WRITE " + c->getVariable() + " \"${" + c->getVariable() + "}\")");
+        ctx.addLine();
     }
 }
 
@@ -543,7 +545,15 @@ void Checks::read_parallel_checks_for_workers(const path &dir)
     for (auto &c : checks)
     {
         auto s = read_file(dir / c->getVariable());
-        c->setValue(std::stoi(s));
+        boost::trim(s);
+        if (!s.empty())
+            c->setValue(std::stoi(s));
+        else
+        {
+            c->setValue(0);
+            LOG_INFO(logger, "Empty value for variable: " + c->getVariable());
+            __asm { int 3 }
+        }
     }
 }
 
@@ -592,41 +602,13 @@ void Checks::write_definitions(Context &ctx) const
     }
 }
 
-void Checks::load(const path &dir)
+void Checks::remove_known_vars(const std::set<String> &known_vars)
 {
-    auto get_lines = [](const auto &s)
+    auto checks_old = checks;
+    for (auto &c : checks_old)
     {
-        std::vector<String> v, lines;
-        boost::split(v, s, boost::is_any_of("\r\n"));
-        for (auto &line : v)
-        {
-            boost::trim(line);
-            if (line.empty())
-                continue;
-            lines.push_back(line);
-        }
-        return lines;
-    };
-
-    for (int t = 0; t < Check::Max; t++)
-    {
-        auto s = read_file(dir / (getCheckInformation(t).plural + ".txt"));
-
-#define CASE_LINE(x)                 \
-    case Check::x:                   \
-        for (auto &v : get_lines(s)) \
-            addCheck<Check##x>(v);   \
-        break
-
-        switch (t)
-        {
-            CASE_LINE(Function);
-            CASE_LINE(Include);
-            CASE_LINE(Type);
-            CASE_LINE(Library);
-        }
-
-#undef CASE_LINE
+        if (known_vars.find(c->getVariable()) != known_vars.end())
+            checks.erase(c);
     }
 }
 
@@ -635,19 +617,7 @@ std::vector<Checks> Checks::scatter(int N) const
     std::vector<Checks> workers(N);
     int i = 0;
     for (auto &c : checks)
-    {
-        auto &inf = c->getInformation();
-        auto t = inf.type;
-        switch (t)
-        {
-        case Check::Function:
-        case Check::Include:
-        case Check::Type:
-        case Check::Library:
-            workers[i++ % N].checks.insert(c);
-            break;
-        }
-    }
+        workers[i++ % N].checks.insert(c);
     return workers;
 }
 
@@ -667,6 +637,26 @@ void Checks::print_values() const
                 LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - found (" + std::to_string(c->getValue()) + ")");
             else
                 LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - not found");
+            break;
+        case Check::Symbol:
+            if (c->getValue())
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - found (" + std::to_string(c->getValue()) + ")");
+            else
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - not found");
+            break;
+        case Check::CSourceCompiles:
+        case Check::CSourceRuns:
+        case Check::CXXSourceCompiles:
+        case Check::CXXSourceRuns:
+        case Check::Custom:
+        {
+            auto cc = (CheckSource *)c.get();
+            if ((!cc->invert && c->getValue()) ||
+                (cc->invert && !c->getValue()))
+                LOG_INFO(logger, "-- Test " << c->getVariable() + " - Success (" + std::to_string(c->getValue()) + ")");
+            else
+                LOG_INFO(logger, "-- Test " << c->getVariable() + " - Failed");
+        }
             break;
         }
     }

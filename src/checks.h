@@ -126,16 +126,16 @@ struct Checks
     bool empty() const;
 
     void load(const yaml &root);
-    void load(const path &dir);
+    void load(const path &fn);
     void save(yaml &root) const;
+    String save() const;
 
-    String write_checks() const;
     void write_checks(Context &ctx) const;
-    void write_parallel_checks(Context &ctx) const;
     void write_parallel_checks_for_workers(Context &ctx) const;
     void read_parallel_checks_for_workers(const path &dir);
     void write_definitions(Context &ctx) const;
 
+    void remove_known_vars(const std::set<String> &known_vars);
     std::vector<Checks> scatter(int N) const;
     void print_values() const;
     void print_values(Context &ctx) const;

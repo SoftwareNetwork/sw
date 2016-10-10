@@ -85,14 +85,14 @@ try
         }
         if (cmd == "internal-parallel-vars-check")
         {
-            if (argc != 3)
+            if (argc != 5)
             {
                 std::cout << "invalid number of arguments\n";
-                std::cout << "usage: cppan internal-parallel-vars-check vars_dir\n";
+                std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file\n";
                 return 1;
             }
             CMakePrinter c;
-            c.parallel_vars_check(argv[2]);
+            c.parallel_vars_check(argv[2], argv[3], argv[4]);
             return 0;
         }
 

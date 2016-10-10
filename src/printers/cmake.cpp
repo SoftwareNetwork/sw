@@ -29,6 +29,7 @@
 
 #include "../access_table.h"
 #include "../executor.h"
+#include "../file_lock.h"
 #include "../inserts.h"
 #include "../log.h"
 #include "../response.h"
@@ -38,6 +39,9 @@
 #endif
 
 #include <boost/algorithm/string.hpp>
+
+#include "../logger.h"
+DECLARE_STATIC_LOGGER(logger, "cmake");
 
 // common?
 const String cppan_dummy_target = "cppan-dummy";
@@ -58,6 +62,7 @@ const String cmake_object_config_filename = "generate.cmake";
 const String cmake_helpers_filename = "helpers.cmake";
 const String include_guard_filename = "include.cmake";
 const String cppan_stamp_filename = "cppan_sources.stamp";
+const String cppan_checks_yml = "checks.yml";
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 
 const String config_delimeter_short = repeat("#", 40);
@@ -579,7 +584,7 @@ void CMakePrinter::print_meta()
     access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / "version.rc.in", d.version.isVersion() ? version_rc_in : branch_rc_in);
 
     if (d.empty())
-        access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / "checks.yml", cc->checks.write_checks());
+        access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / cppan_checks_yml, cc->checks.save());
 }
 
 void CMakePrinter::print_configs()
@@ -1697,20 +1702,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("string(RANDOM LENGTH 8 vars_dir)");
         ctx.addLine("set(tmp_dir \"${tmp_dir}/${vars_dir}\")");
         ctx.addLine();
-        ctx.addLine("set(vars_all)");
+        ctx.addLine("set(checks_file \"" + normalize_path(fs::current_path() / cc->local_settings.cppan_dir / cppan_checks_yml) + "\")");
         ctx.addLine();
-
-        cc->checks.write_parallel_checks(ctx);
-
-        ctx.addLine("list(LENGTH vars_all len)");
-        ctx.addLine("if (${len} GREATER 8)");
-        ctx.increaseIndent();
         ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION} ${tmp_dir}/CMakeFiles/)");
-        ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir})");
+        ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file})");
         ctx.addLine("read_variables_file(${tmp_dir}/vars.txt)");
         ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
         ctx.addLine();
         ctx.addLine("file(REMOVE_RECURSE ${tmp_dir})");
         ctx.addLine();
@@ -1970,29 +1967,56 @@ set_target_properties(run-cppan PROPERTIES
     access_table->write_if_older(fn, ctx.getText());
 }
 
-void CMakePrinter::parallel_vars_check(const path &dir) const
+void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file) const
 {
+    static const String cppan_variable_result_filename = "result.cppan";
+    const auto N = std::thread::hardware_concurrency();
+
     Checks checks;
-    checks.load(dir);
+    checks.load(checks_file);
+
+    // read known vars
+    if (fs::exists(vars_file))
+    {
+        std::set<String> known_vars;
+        std::vector<String> lines;
+        {
+            ScopedShareableFileLock lock(vars_file);
+            lines = read_lines(vars_file);
+        }
+        for (auto &l : lines)
+        {
+            std::vector<String> v;
+            boost::split(v, l, boost::is_any_of(";"));
+            if (v.size() == 3)
+                known_vars.insert(v[1]);
+        }
+        checks.remove_known_vars(known_vars);
+    }
 
     if (checks.empty())
         return;
 
-    static const String cppan_variable_result_filename = "result.cppan";
+    if (checks.checks.size() <= 8)
+    {
+        LOG_INFO(logger, "-- There's few checks only. Won't go in parallel mode.");
+        return;
+    }
 
-    const auto N = std::thread::hardware_concurrency();
     Executor e(N);
     e.throw_exceptions = true;
 
     auto workers = checks.scatter(N);
 
-    LOG("-- Performing " + std::to_string(checks.checks.size()) + " checks");
-    LOG("-- This process may take up to 5 minutes depending on your hardware");
-    std::cout.flush();
-    std::cerr.flush();
+    LOG_INFO(logger, "-- Performing " + std::to_string(checks.checks.size()) + " checks");
+    LOG_INFO(logger, "-- This process may take up to 5 minutes depending on your hardware");
+    LOG_FLUSH();
 
     auto work = [&dir](auto &w, int i)
     {
+        if (w.checks.empty())
+            return;
+
         auto d = dir / std::to_string(i);
         fs::create_directories(d);
 
@@ -2003,9 +2027,10 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
         w.write_parallel_checks_for_workers(ctx);
         write_file(d / cmake_config_filename, ctx.getText());
 
-        // run cmake
+        // copy cached cmake dir
         copy_dir(dir / "CMakeFiles", d / "CMakeFiles");
 
+        // run cmake
         std::vector<String> args;
         args.push_back("cmake");
         args.push_back("-H\"" + normalize_path(d) + "\"");
@@ -2028,12 +2053,11 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
         checks += w;
 
     checks.print_values();
-    std::cout.flush();
-    std::cerr.flush();
 
     Context ctx;
     checks.print_values(ctx);
     write_file(dir / "vars.txt", ctx.getText());
 
-    LOG("-- This operation took " + std::to_string(t) + " seconds to complete.");
+    LOG_FLUSH();
+    LOG_INFO(logger, "-- This operation took " + std::to_string(t) + " seconds to complete");
 }
