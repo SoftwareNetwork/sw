@@ -310,6 +310,8 @@ void CMakePrinter::prepare_build(const path &fn, const String &cppan)
     ctx.addLine(R"(# Output directory settings
 set(output_dir ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${output_dir})
+#set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${output_dir})
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -575,6 +577,9 @@ void CMakePrinter::print_meta()
     access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / cmake_functions_filename, cmake_functions);
     access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / CPP_HEADER_FILENAME, cppan_h);
     access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / "version.rc.in", d.version.isVersion() ? version_rc_in : branch_rc_in);
+
+    if (d.empty())
+        access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / "checks.yml", cc->checks.write_checks());
 }
 
 void CMakePrinter::print_configs()
@@ -1663,10 +1668,31 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     config_section_title(ctx, "cmake includes");
     ctx.addLine(cmake_includes);
 
+    // common checks
     config_section_title(ctx, "common checks");
 
+    // read vars file
+    ctx.addLine("set(vars_file \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.cmake\")");
+    ctx.addLine("read_variables_file(${vars_file})");
+    ctx.addLine();
+
+    ctx.addLine("if (NOT DEFINED WORDS_BIGENDIAN)");
+    ctx.increaseIndent();
+    ctx.addLine("test_big_endian(WORDS_BIGENDIAN)");
+    ctx.addLine("add_variable(WORDS_BIGENDIAN)");
+    ctx.decreaseIndent();
+    ctx.addLine("endif()");
+    // aliases
+    ctx.addLine("set(BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
+    ctx.addLine("set(BIGENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
+    ctx.addLine("set(HOST_BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
+    ctx.addLine();
+
     // parallel checks
+    if (d.empty())
     {
+        config_section_title(ctx, "parallel checks");
+
         ctx.addLine("set(tmp_dir \"" + normalize_path(temp_directory_path() / "vars") + "\")");
         ctx.addLine("string(RANDOM LENGTH 8 vars_dir)");
         ctx.addLine("set(tmp_dir \"${tmp_dir}/${vars_dir}\")");
@@ -1689,23 +1715,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("file(REMOVE_RECURSE ${tmp_dir})");
         ctx.addLine();
     }
-
-    // read vars file
-    ctx.addLine("set(vars_file \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.cmake\")");
-    ctx.addLine("read_variables_file(${vars_file})");
-    ctx.addLine();
-
-    ctx.addLine("if (NOT DEFINED WORDS_BIGENDIAN)");
-    ctx.increaseIndent();
-    ctx.addLine("test_big_endian(WORDS_BIGENDIAN)");
-    ctx.addLine("add_variable(WORDS_BIGENDIAN)");
-    ctx.decreaseIndent();
-    ctx.addLine("endif()");
-    // aliases
-    ctx.addLine("set(BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
-    ctx.addLine("set(BIGENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
-    ctx.addLine("set(HOST_BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
-    ctx.addLine();
 
     // checks
     config_section_title(ctx, "checks");
@@ -2019,6 +2028,8 @@ void CMakePrinter::parallel_vars_check(const path &dir) const
         checks += w;
 
     checks.print_values();
+    std::cout.flush();
+    std::cerr.flush();
 
     Context ctx;
     checks.print_values(ctx);

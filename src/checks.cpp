@@ -39,34 +39,34 @@ DECLARE_STATIC_LOGGER(logger, "checks");
 
 const std::map<int, Check::Information> check_information{
     { Check::Function,
-    { Check::Function, "check_function_exists", "function", "functions" } },
+    { Check::Function, "check_function_exists", "check_function_exists", "function", "functions" } },
 
     { Check::Include,
-    { Check::Include, "check_include_files", "include", "includes" } },
+    { Check::Include, "check_include_exists", "check_include_files", "include", "includes" } },
 
     { Check::Type,
-    { Check::Type, "check_type_size", "type", "types" } },
+    { Check::Type, "check_type_size", "check_type_size", "type", "types" } },
 
     { Check::Library,
-    { Check::Library, "find_library", "library", "libraries" } },
+    { Check::Library, "check_library_exists", "find_library", "library", "libraries" } },
 
     { Check::Symbol,
-    { Check::Symbol, "check_cxx_symbol_exists", "symbol", "symbols" } },
+    { Check::Symbol, "check_symbol_exists", "check_cxx_symbol_exists", "symbol", "symbols" } },
 
     { Check::CSourceCompiles,
-    { Check::CSourceCompiles, "check_c_source_compiles", "c_source_compiles", "c_source_compiles" } },
+    { Check::CSourceCompiles, "check_c_source_compiles", "check_c_source_compiles", "c_source_compiles", "c_source_compiles" } },
 
     { Check::CSourceRuns,
-    { Check::CSourceRuns, "check_c_source_runs", "c_source_runs", "c_source_runs" } },
+    { Check::CSourceRuns, "check_c_source_runs", "check_c_source_runs", "c_source_runs", "c_source_runs" } },
 
     { Check::CXXSourceCompiles,
-    { Check::CXXSourceCompiles, "check_cxx_source_compiles", "cxx_source_compiles", "cxx_source_compiles" } },
+    { Check::CXXSourceCompiles, "check_cxx_source_compiles", "check_cxx_source_compiles", "cxx_source_compiles", "cxx_source_compiles" } },
 
     { Check::CXXSourceRuns,
-    { Check::CXXSourceRuns, "check_cxx_source_runs", "cxx_source_runs", "cxx_source_runs" } },
+    { Check::CXXSourceRuns, "check_cxx_source_runs", "check_cxx_source_runs", "cxx_source_runs", "cxx_source_runs" } },
 
     { Check::Custom,
-    { Check::Custom, "", "custom", "custom" } },
+    { Check::Custom, "checks", "", "custom", "custom" } },
 };
 
 auto getCheckInformation(int type)
@@ -173,12 +173,20 @@ public:
         ctx << "\" " << getVariable() << ")" << Context::eol;
     }
 
+    void save(yaml &root) const override
+    {
+        for (auto &h : headers)
+            root[information.cppan_key][getData()].push_back(h);
+    }
+
 private:
     std::set<String> headers;
 };
 
 struct CheckSource : public Check
 {
+    bool invert = false;
+
     CheckSource(const Check::Information &i)
         : Check(i)
     {
@@ -186,7 +194,11 @@ struct CheckSource : public Check
 
     virtual ~CheckSource() {}
 
-    bool invert = false;
+    void save(yaml &root) const override
+    {
+        root[information.cppan_key][getVariable()]["text"] = getData();
+        root[information.cppan_key][getVariable()]["invert"] = invert;
+    }
 };
 
 class CheckCSourceCompiles : public CheckSource
@@ -278,25 +290,25 @@ T *Checks::addCheck(Args && ... args)
 
 void Checks::load(const yaml &root)
 {
-#define ADD_SET_CHECKS(t, s)                      \
-    do                                            \
-    {                                             \
-        auto seq = get_sequence<String>(root, s); \
-        for (auto &v : seq)                       \
-            addCheck<t>(v);                       \
+#define LOAD_SET(t)                                                                     \
+    do                                                                                  \
+    {                                                                                   \
+        auto seq = get_sequence<String>(root, getCheckInformation(Check::t).cppan_key); \
+        for (auto &v : seq)                                                             \
+            addCheck<Check##t>(v);                                                      \
     } while (0)
 
-    ADD_SET_CHECKS(CheckFunction, "check_function_exists");
-    ADD_SET_CHECKS(CheckInclude, "check_include_exists");
-    ADD_SET_CHECKS(CheckType, "check_type_size");
-    ADD_SET_CHECKS(CheckLibrary, "check_library_exists");
+    LOAD_SET(Function);
+    LOAD_SET(Include);
+    LOAD_SET(Type);
+    LOAD_SET(Library);
 
     // add some common types
     addCheck<CheckType>("size_t");
     addCheck<CheckType>("void *");
 
     // symbols
-    get_map_and_iterate(root, "check_symbol_exists", [this](const auto &root)
+    get_map_and_iterate(root, getCheckInformation(Check::Symbol).cppan_key, [this](const auto &root)
     {
         auto f = root.first.template as<String>();
         if (root.second.IsSequence() || root.second.IsScalar())
@@ -305,33 +317,60 @@ void Checks::load(const yaml &root)
             throw std::runtime_error("Symbol headers should be a scalar or a set");
     });
 
-#define LOAD_MAP(t, s)                                                  \
-    get_map_and_iterate(root, s, [this](const auto &v) {                \
-        auto fi = v.first.template as<String>();                        \
-        if (v.second.IsScalar())                                        \
-        {                                                               \
-            auto se = v.second.template as<String>();                   \
-            this->addCheck<t>(fi, se);                                  \
-        }                                                               \
-        else if (v.second.IsMap())                                      \
-        {                                                               \
-            auto se = v.second["text"].template as<String>();           \
-            auto p = this->addCheck<t>(fi, se);                         \
-            if (v.second["invert"].IsDefined())                         \
-                p->invert = v.second["invert"].template as<bool>();     \
-        }                                                               \
-        else                                                            \
-        {                                                               \
-            throw std::runtime_error(s " should be a scalar or a map"); \
-        }                                                               \
+#define LOAD_MAP(t)                                                                                             \
+    get_map_and_iterate(root, getCheckInformation(Check::t).cppan_key, [this](const auto &v) {                  \
+        auto fi = v.first.template as<String>();                                                                \
+        if (v.second.IsScalar())                                                                                \
+        {                                                                                                       \
+            auto se = v.second.template as<String>();                                                           \
+            this->addCheck<Check##t>(fi, se);                                                                   \
+        }                                                                                                       \
+        else if (v.second.IsMap())                                                                              \
+        {                                                                                                       \
+            auto se = v.second["text"].template as<String>();                                                   \
+            auto p = this->addCheck<Check##t>(fi, se);                                                          \
+            if (v.second["invert"].IsDefined())                                                                 \
+                p->invert = v.second["invert"].template as<bool>();                                             \
+        }                                                                                                       \
+        else                                                                                                    \
+        {                                                                                                       \
+            throw std::runtime_error(getCheckInformation(Check::t).cppan_key + " should be a scalar or a map"); \
+        }                                                                                                       \
     })
 
-    LOAD_MAP(CheckCSourceCompiles, "check_c_source_compiles");
-    LOAD_MAP(CheckCSourceRuns, "check_c_source_runs");
-    LOAD_MAP(CheckCXXSourceCompiles, "check_cxx_source_compiles");
-    LOAD_MAP(CheckCXXSourceRuns, "check_cxx_source_runs");
+    LOAD_MAP(CSourceCompiles);
+    LOAD_MAP(CSourceRuns);
+    LOAD_MAP(CXXSourceCompiles);
+    LOAD_MAP(CXXSourceRuns);
 
-    LOAD_MAP(CheckCustom, "checks");
+    LOAD_MAP(Custom);
+}
+
+void Checks::save(yaml &root) const
+{
+    for (auto &c : checks)
+    {
+        auto &i = c->getInformation();
+        auto t = i.type;
+
+        switch (t)
+        {
+        case Check::Function:
+        case Check::Include:
+        case Check::Type:
+        case Check::Library:
+            root[i.cppan_key].push_back(c->getData());
+            break;
+        case Check::Symbol:
+        case Check::CSourceCompiles:
+        case Check::CSourceRuns:
+        case Check::CXXSourceCompiles:
+        case Check::CXXSourceRuns:
+        case Check::Custom:
+            c->save(root);
+            break;
+        }
+    }
 }
 
 bool Checks::empty() const
@@ -343,6 +382,13 @@ Checks &Checks::operator+=(const Checks &rhs)
 {
     checks.insert(rhs.checks.begin(), rhs.checks.end());
     return *this;
+}
+
+String Checks::write_checks() const
+{
+    yaml root;
+    save(root);
+    return YAML::Dump(root);
 }
 
 void Checks::write_checks(Context &ctx) const

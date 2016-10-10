@@ -606,12 +606,9 @@ void Config::process(const path &p)
         if (!c)
             throw std::runtime_error("Config was not created for target: " + d.target_name);
 
-        if (c->is_printed)
-            continue;
-        c->is_printed = true;
-
         // gather (merge) checks, options etc.
         // add more necessary actions here
+        // should be before is_printed condition
         {
             checks += c->checks;
 
@@ -622,6 +619,10 @@ void Config::process(const path &p)
                     c->global_options[ol.first].global_definitions.insert(ol.second.global_definitions.begin(), ol.second.global_definitions.end());
             }
         }
+
+        if (c->is_printed)
+            continue;
+        c->is_printed = true;
 
         printer->d = d;
         printer->cc = c;

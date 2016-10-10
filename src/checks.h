@@ -55,6 +55,7 @@ public:
     {
         int type;
 
+        String cppan_key;
         String function;
 
         // strings for printing/naming files
@@ -78,6 +79,7 @@ public:
     String getMessage() const { return message; }
 
     virtual void writeCheck(Context &ctx) const {}
+    virtual void save(yaml &root) const {}
 
     void setValue(const Value &v) { value = v; }
 
@@ -122,9 +124,12 @@ struct Checks
     std::set<CheckPtr, less_check<CheckPtr>> checks;
 
     bool empty() const;
+
     void load(const yaml &root);
     void load(const path &dir);
+    void save(yaml &root) const;
 
+    String write_checks() const;
     void write_checks(Context &ctx) const;
     void write_parallel_checks(Context &ctx) const;
     void write_parallel_checks_for_workers(Context &ctx) const;
