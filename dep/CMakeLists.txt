@@ -70,3 +70,5 @@ if (WIN32)
         openssl
     PROPERTY FOLDER dep/libressl)
 endif()
+
+add_subdirectory(sqlite3)
