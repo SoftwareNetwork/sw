@@ -176,9 +176,9 @@ Result execute(const Args &args, const Options &opts)
     // copy env
 #ifndef _WIN32
     auto env = environ;
-    while (env)
+    while (*env)
     {
-        String s = *env;
+        std::string s = *env;
         auto p = s.find("=");
         if (p != s.npos)
             ctx.environment[s.substr(0, p)] = s.substr(p);
