@@ -124,6 +124,8 @@ set(common_src
     source.h
     stamp.cpp
     stamp.h
+    version.cpp
+    version.h
     yaml.cpp
     yaml.h
 

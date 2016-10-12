@@ -29,6 +29,7 @@
 
 #include "common.h"
 #include "project_path.h"
+#include "version.h"
 
 struct Directories;
 

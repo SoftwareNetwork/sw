@@ -52,9 +52,6 @@ using Strings = std::vector<String>;
 using FilesSorted = std::set<path>;
 using Files = std::unordered_set<path>;
 
-using ProjectVersionId = uint64_t;
-using ProjectVersionNumber = int32_t;
-
 bool check_branch_name(const String &n, String *error = nullptr);
 bool check_filename(const String &n, String *error = nullptr);
 
@@ -102,50 +99,12 @@ Files unpack_file(const path &fn, const path &dst);
 
 String generate_random_sequence(uint32_t len);
 String hash_to_string(const uint8_t *hash, uint32_t hash_size);
+String hash_to_string(const String &hash);
 
 String sha1(const String &data);
 
-struct Version
-{
-    // undef gcc symbols
-#ifdef major
-#undef major
-#endif
-#ifdef minor
-#undef minor
-#endif
-#ifdef patch
-#undef patch
-#endif
-
-    ProjectVersionNumber major = -1;
-    ProjectVersionNumber minor = -1;
-    ProjectVersionNumber patch = -1;
-    String branch;
-
-    Version(ProjectVersionNumber ma = -1, ProjectVersionNumber mi = -1, ProjectVersionNumber pa = -1);
-    Version(const String &s);
-
-    String toAnyVersion() const;
-    String toString() const;
-    path toPath() const;
-
-    bool isValid() const;
-    bool isBranch() const { return !branch.empty(); }
-    bool isVersion() const { return !isBranch(); }
-
-    // checks if this version can be rhs using upgrade rules
-    // does not check branches!
-    // rhs should be exact version
-    bool canBe(const Version &rhs) const;
-
-    bool operator<(const Version &rhs) const;
-    bool operator==(const Version &rhs) const;
-    bool operator!=(const Version &rhs) const;
-};
-
 path get_program();
-Version get_program_version();
+String get_program_version();
 String get_program_version_string(const String &prog_name);
 
 std::wstring to_wstring(const std::string &s);

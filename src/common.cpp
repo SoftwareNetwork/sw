@@ -28,6 +28,7 @@
 #include "common.h"
 
 #include "stamp.h"
+#include "version.h"
 
 #include <codecvt>
 #include <fstream>
@@ -62,156 +63,24 @@
 #include <linux/limits.h>
 #endif
 
-static const std::regex r_project_version_number(R"((\d+).(\d+).(\d+))");
-static const std::regex r_branch_name(R"(([a-zA-Z_][a-zA-Z0-9_-]*))");
-static const std::regex r_version1(R"((\d+))");
-static const std::regex r_version2(R"((\d+).(\d+))");
-static const std::regex r_version3(R"((-?\d+).(-?\d+).(-?\d+))");
-
 HttpSettings httpSettings;
 
-Version get_program_version()
+String get_program_version()
 {
-    return{ VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH };
+    String s;
+    s +=
+        std::to_string(VERSION_MAJOR) + "." +
+        std::to_string(VERSION_MINOR) + "." +
+        std::to_string(VERSION_PATCH);
+    return s;
 }
 
 String get_program_version_string(const String &prog_name)
 {
     boost::posix_time::ptime t(boost::gregorian::date(1970, 1, 1));
     t += boost::posix_time::seconds(static_cast<long>(std::stoi(cppan_stamp)));
-    return prog_name + " version " + get_program_version().toString() + "\n" +
+    return prog_name + " version " + get_program_version() + "\n" +
         "assembled " + boost::posix_time::to_simple_string(t);
-}
-
-Version::Version(ProjectVersionNumber ma, ProjectVersionNumber mi, ProjectVersionNumber pa)
-    : major(ma), minor(mi), patch(pa)
-{
-
-}
-
-Version::Version(const String &s)
-{
-    if (s == "*")
-        return;
-    std::smatch m;
-    if (std::regex_match(s, m, r_version3))
-    {
-        major = std::stoi(m[1].str());
-        minor = std::stoi(m[2].str());
-        patch = std::stoi(m[3].str());
-    }
-    else if (std::regex_match(s, m, r_version2))
-    {
-        major = std::stoi(m[1].str());
-        minor = std::stoi(m[2].str());
-    }
-    else if (std::regex_match(s, m, r_version1))
-    {
-        major = std::stoi(m[1].str());
-    }
-    else if (std::regex_match(s, m, r_branch_name))
-    {
-        branch = m[1].str();
-        String error;
-        if (!check_branch_name(branch, &error))
-            throw std::runtime_error(error);
-    }
-    else
-        throw std::runtime_error("Bad version");
-    if (!isValid())
-        throw std::runtime_error("Bad version");
-}
-
-String Version::toString() const
-{
-    if (!branch.empty())
-        return branch;
-    String s;
-    s += std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch);
-    return s;
-}
-
-String Version::toAnyVersion() const
-{
-    if (!branch.empty())
-        return branch;
-    if (major == -1 && minor == -1 && patch == -1)
-        return "*";
-    String s;
-    s += std::to_string(major) + ".";
-    if (minor != -1)
-        s += std::to_string(minor) + ".";
-    if (patch != -1)
-        s += std::to_string(patch) + ".";
-    s.resize(s.size() - 1);
-    return s;
-}
-
-path Version::toPath() const
-{
-    if (!branch.empty())
-        return branch;
-    path p;
-    p /= std::to_string(major);
-    p /= std::to_string(minor);
-    p /= std::to_string(patch);
-    return p;
-}
-
-bool Version::isValid() const
-{
-    if (!branch.empty())
-        return check_branch_name(branch);
-    if (major == 0 && minor == 0 && patch == 0)
-        return false;
-    if (major < -1 || minor < -1 || patch < -1)
-        return false;
-    return true;
-}
-
-bool Version::operator<(const Version &rhs) const
-{
-    if (isBranch() && rhs.isBranch())
-        return branch < rhs.branch;
-    if (isBranch())
-        return true;
-    if (rhs.isBranch())
-        return false;
-    return std::tie(major, minor, patch) < std::tie(rhs.major, rhs.minor, rhs.patch);
-}
-
-bool Version::operator==(const Version &rhs) const
-{
-    if (isBranch() && rhs.isBranch())
-        return branch == rhs.branch;
-    if (isBranch() || rhs.isBranch())
-        return false;
-    return std::tie(major, minor, patch) == std::tie(rhs.major, rhs.minor, rhs.patch);
-}
-
-bool Version::operator!=(const Version &rhs) const
-{
-    return !operator==(rhs);
-}
-
-bool Version::canBe(const Version &rhs) const
-{
-    if (*this == rhs)
-        return true;
-
-    // *.*.* canBe anything
-    if (major == -1 && minor == -1 && patch == -1)
-        return true;
-
-    // 1.*.* == 1.*.*
-    if (major == rhs.major && minor == -1 && patch == -1)
-        return true;
-
-    // 1.2.* == 1.2.*
-    if (major == rhs.major && minor == rhs.minor && patch == -1)
-        return true;
-
-    return false;
 }
 
 bool check_branch_name(const String &n, String *error)
@@ -494,10 +363,16 @@ String generate_random_sequence(uint32_t len)
     return user_session;
 };
 
+String hash_to_string(const String &hash)
+{
+    return hash_to_string((uint8_t *)hash.c_str(), hash.size());
+}
+
 String hash_to_string(const uint8_t *hash, uint32_t hash_size)
 {
+    static auto alnum16 = "0123456789abcdef";
+
     String s;
-    constexpr auto alnum16 = "0123456789abcdef";
     for (uint32_t i = 0; i < hash_size; i++)
     {
         s += alnum16[(hash[i] & 0xF0) >> 4];

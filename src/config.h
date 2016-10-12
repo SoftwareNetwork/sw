@@ -38,6 +38,7 @@
 #include "project.h"
 #include "project_path.h"
 #include "property_tree.h"
+#include "version.h"
 #include "yaml.h"
 
 #include "printers/printer.h"
