@@ -44,12 +44,14 @@ path get_home_directory()
 #ifdef WIN32
     auto home = getenv("USERPROFILE");
     if (!home)
-        throw std::runtime_error("Cannot get user's home directory (%USERPROFILE%)");
+        std::cerr << "Cannot get user's home directory (%USERPROFILE%)\n";
 #else
     auto home = getenv("HOME");
     if (!home)
-        throw std::runtime_error("Cannot get user's home directory ($HOME)");
+        std::cerr << "Cannot get user's home directory ($HOME)\n";
 #endif
+    if (home == nullptr)
+        return "";
     return home;
 }
 
