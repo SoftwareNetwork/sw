@@ -245,7 +245,15 @@ String BuildSettings::get_fs_generator() const
 LocalSettings::LocalSettings()
 {
     build_dir = temp_directory_path() / "build";
-    storage_dir = get_root_directory() / STORAGE_DIR;
+    path rd;
+    try
+    {
+        rd = get_root_directory();
+    }
+    catch (std::exception &)
+    {
+    }
+    storage_dir = rd / STORAGE_DIR;
 }
 
 void LocalSettings::load(const path &p, const ConfigType type)
