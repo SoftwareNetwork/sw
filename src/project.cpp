@@ -29,6 +29,7 @@
 
 #include "bazel/bazel.h"
 #include "config.h"
+#include "command.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -118,9 +119,12 @@ bool is_valid_file_type(const MimeTypes &types, const path &p, const String &s, 
 
 bool is_valid_file_type(const MimeTypes &types, const path &p, String *error = nullptr, bool check_ext = false)
 {
-    auto fret = system_with_output("file -ib " + p.string());
-    auto s = std::get<1>(fret);
-    return is_valid_file_type(types, p, s, error, check_ext);
+    command::Args args;
+    args.push_back("file");
+    args.push_back("-ib");
+    args.push_back(p.string());
+    auto fret = command::execute_and_capture(args);
+    return is_valid_file_type(types, p, fret.out, error, check_ext);
 }
 
 bool is_valid_source_mime_type(const path &p, String *error = nullptr)

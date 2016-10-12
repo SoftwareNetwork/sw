@@ -62,9 +62,6 @@
 #include <linux/limits.h>
 #endif
 
-// version numbers of different subsystems
-#define SOURCE_VERSION 2 //?
-
 static const std::regex r_project_version_number(R"((\d+).(\d+).(\d+))");
 static const std::regex r_branch_name(R"(([a-zA-Z_][a-zA-Z0-9_-]*))");
 static const std::regex r_version1(R"((\d+))");
@@ -215,33 +212,6 @@ bool Version::canBe(const Version &rhs) const
         return true;
 
     return false;
-}
-
-std::tuple<int, String> system_with_output(const String &cmd)
-{
-#ifdef WIN32
-#define popen _popen
-#define pclose _pclose
-#endif
-    String s;
-    auto f = popen(cmd.c_str(), "r");
-    if (!f)
-        return std::make_tuple(-1, s);
-    constexpr int sz = 128;
-    char buf[sz];
-    while (fgets(buf, sz, f))
-        s += buf;
-    int ret = pclose(f);
-    ret /= 256;
-    return std::make_tuple(ret, s);
-}
-
-std::tuple<int, String> system_with_output(const std::vector<String> &args)
-{
-    String cmd;
-    for (auto &a : args)
-        cmd += a + " ";
-    return system_with_output(cmd);
 }
 
 bool check_branch_name(const String &n, String *error)
@@ -599,33 +569,6 @@ String getAutoProxy()
     proxy_addr = to_string(wproxy_addr);
 #endif
     return proxy_addr;
-}
-
-int system_no_output(const String &cmd)
-{
-    String s = cmd;
-#ifdef WIN32
-    s += " >nul 2>nul";
-#else
-    s += " >/dev/null 2>/dev/null";
-#endif
-    return std::system(s.c_str());
-}
-
-int system_no_output(const std::vector<String> &args)
-{
-    String cmd;
-    for (auto &a : args)
-        cmd += a + " ";
-    return system_no_output(cmd.c_str());
-}
-
-int system(const std::vector<String> &args)
-{
-    String cmd;
-    for (auto &a : args)
-        cmd += a + " ";
-    return system(cmd.c_str());
 }
 
 String repeat(const String &e, int n)

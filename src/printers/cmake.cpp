@@ -28,6 +28,7 @@
 #include "cmake.h"
 
 #include "../access_table.h"
+#include "../command.h"
 #include "../executor.h"
 #include "../file_lock.h"
 #include "../inserts.h"
@@ -433,20 +434,26 @@ int CMakePrinter::_generate(bool force) const
     if (!force && fs::exists(bs.binary_directory / "CMakeCache.txt"))
         return 0;
 
-    std::vector<String> args;
+    command::Args args;
     args.push_back("cmake");
-    args.push_back("-H\"" + normalize_path(bs.source_directory) + "\"");
-    args.push_back("-B\"" + normalize_path(bs.binary_directory) + "\"");
+    args.push_back("-H" + normalize_path(bs.source_directory));
+    args.push_back("-B" + normalize_path(bs.binary_directory));
     if (!bs.c_compiler.empty())
-        args.push_back("-DCMAKE_C_COMPILER=\"" + bs.c_compiler + "\"");
+        args.push_back("-DCMAKE_C_COMPILER=" + bs.c_compiler);
     if (!bs.cxx_compiler.empty())
-        args.push_back("-DCMAKE_CXX_COMPILER=\"" + bs.cxx_compiler + "\"");
+        args.push_back("-DCMAKE_CXX_COMPILER=" + bs.cxx_compiler);
     if (!bs.generator.empty())
-        args.push_back("-G \"" + bs.generator + "\"");
+    {
+        args.push_back("-G");
+        args.push_back(bs.generator);
+    }
     if (!bs.toolset.empty())
-        args.push_back("-T " + bs.toolset + "");
-    args.push_back("-DCMAKE_BUILD_TYPE=" + bs.configuration + "");
-    args.push_back("-DCPPAN_PROGRAM=\"" + normalize_path(get_program()) + "\"");
+    {
+        args.push_back("-T");
+        args.push_back(bs.toolset);
+    }
+    args.push_back("-DCMAKE_BUILD_TYPE=" + bs.configuration);
+    args.push_back("-DCPPAN_PROGRAM=" + normalize_path(get_program()));
     for (auto &o : bs.cmake_options)
         args.push_back(o);
     for (auto &o : bs.env)
@@ -458,7 +465,7 @@ int CMakePrinter::_generate(bool force) const
 #endif
     }
 
-    auto ret = system(args);
+    auto ret = command::execute_with_output(args);
 
     if (bs.allow_links)
     {
@@ -501,18 +508,20 @@ int CMakePrinter::_generate(bool force) const
         }
     }
 
-    return ret;
+    return ret.rc;
 }
 
 int CMakePrinter::build() const
 {
     auto &bs = rc->local_settings.build_settings;
 
-    std::vector<String> args;
+    command::Args args;
     args.push_back("cmake");
-    args.push_back("--build \"" + normalize_path(bs.binary_directory) + "\"");
-    args.push_back("--config " + bs.configuration);
-    return system(args);
+    args.push_back("--build");
+    args.push_back(normalize_path(bs.binary_directory));
+    args.push_back("--config");
+    args.push_back(bs.configuration);
+    return command::execute_with_output(args).rc;
 }
 
 void CMakePrinter::clear_cache(path p) const
@@ -2051,13 +2060,13 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
         copy_dir(dir / "CMakeFiles", d / "CMakeFiles");
 
         // run cmake
-        std::vector<String> args;
+        command::Args args;
         args.push_back("cmake");
         args.push_back("-H\"" + normalize_path(d) + "\"");
         args.push_back("-B\"" + normalize_path(d) + "\"");
-        auto ret = system_no_output(args);
+        auto ret = command::execute(args);
 
-        if (ret)
+        if (ret.rc)
             throw std::runtime_error("Error during evaluating variables");
 
         w.read_parallel_checks_for_workers(d);

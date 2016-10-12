@@ -55,15 +55,8 @@ using Files = std::unordered_set<path>;
 using ProjectVersionId = uint64_t;
 using ProjectVersionNumber = int32_t;
 
-std::tuple<int, String> system_with_output(const String &cmd);
-std::tuple<int, String> system_with_output(const std::vector<String> &args);
-
 bool check_branch_name(const String &n, String *error = nullptr);
 bool check_filename(const String &n, String *error = nullptr);
-
-int system_no_output(const String &cmd);
-int system_no_output(const std::vector<String> &args);
-int system(const std::vector<String> &args);
 
 struct ProxySettings
 {

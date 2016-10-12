@@ -32,6 +32,7 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/dep/yaml-cpp/include)
 include_directories(${PROJECT_SOURCE_DIR}/dep/sqlite3)
+include_directories(${PROJECT_SOURCE_DIR}/dep/process)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -88,6 +89,8 @@ set(common_src
     access_table.h
     checks.cpp
     checks.h
+    command.cpp
+    command.h
     common.cpp
     common.h
     config.cpp
