@@ -98,6 +98,11 @@ inline std::string find_executable_in_path(const std::string &file, std::string 
     }
 #endif
 
+    {
+        if (::access(file.c_str(), X_OK) == 0)
+            return file;
+    }
+
     std::string::size_type pos1 = 0, pos2;
     do
     {
