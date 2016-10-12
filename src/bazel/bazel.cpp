@@ -21,6 +21,13 @@ void trimQuotes(std::string &s)
     //s = s.substr(0, s.find_last_not_of("\"") + 1);
 }
 
+std::string prepare_project_name(const std::string &s)
+{
+    std::string t;
+    std::replace(t.begin(), t.end(), '-', '_');
+    return t;
+}
+
 }
 
 namespace bazel
@@ -64,7 +71,7 @@ Values File::getFiles(const Name &name)
         {
             return "name" == p.name;
         });
-        if (i == f.parameters.end() || i->values.empty() || *i->values.begin() != name)
+        if (i == f.parameters.end() || i->values.empty() || prepare_project_name(*i->values.begin()) != name)
             continue;
 
         i = std::find_if(f.parameters.begin(), f.parameters.end(), [](const auto &p)
