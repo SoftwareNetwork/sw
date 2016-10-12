@@ -39,11 +39,22 @@
 #include "logger.h"
 DECLARE_STATIC_LOGGER(logger, "process");
 
+#ifndef _WIN32
+#if defined(__APPLE__) && defined(__DYNAMIC__)
+extern "C" { extern char ***_NSGetEnviron(void); }
+#   define environ (*_NSGetEnviron())
+#else
+#   include <unistd.h>
+#endif
+#endif
+
 bool has_executable_in_path(std::string &prog)
 {
     bool ret = true;
     try
     {
+        //if (fs::exists(prog))
+        //    return true;
         prog = boost::process::find_executable_in_path(prog);
     }
     catch (fs::filesystem_error &e)
@@ -161,6 +172,19 @@ Result execute(const Args &args, const Options &opts)
 
     set_behavior(ctx.stdout_behavior, opts.out);
     set_behavior(ctx.stderr_behavior, opts.err);
+
+    // copy env
+#ifndef _WIN32
+    auto env = environ;
+    while (env)
+    {
+        String s = *env;
+        auto p = s.find("=");
+        if (p != s.npos)
+            ctx.environment[s.substr(0, p)] = s.substr(p);
+        env++;
+    }
+#endif
 
     Result r;
 
