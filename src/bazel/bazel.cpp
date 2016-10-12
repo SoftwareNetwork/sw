@@ -23,7 +23,7 @@ void trimQuotes(std::string &s)
 
 std::string prepare_project_name(const std::string &s)
 {
-    std::string t;
+    std::string t = s;
     std::replace(t.begin(), t.end(), '-', '_');
     return t;
 }

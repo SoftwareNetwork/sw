@@ -136,6 +136,16 @@ Result execute(const Args &args, const Options &opts)
     boost::algorithm::replace_all(args_fixed[0], "/", "\\");
 #endif
 
+#ifndef NDEBUG
+    {
+        std::string s;
+        for (auto &a : args_fixed)
+            s += a + " ";
+        s.resize(s.size() - 1);
+        LOG_DEBUG(logger, "executing command: " << s);
+    }
+#endif
+
     context ctx;
     ctx.stdin_behavior = inherit_stream();
 

@@ -232,9 +232,16 @@ void Project::findSources(path p)
             if (f == CPPAN_FILENAME)
                 continue;
             if (fs::is_regular_file(pi))
+            {
                 pfiles.push_back(pi);
+                break;
+            }
             else if (fs::is_directory(pi))
+            {
                 pdirs.push_back(pi);
+                if (pdirs.size() > 1)
+                    break;
+            }
         }
         if (pfiles.empty() && pdirs.size() == 1 && root_directory.empty())
             root_directory = fs::relative(*pdirs.begin(), p);
