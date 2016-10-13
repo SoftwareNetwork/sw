@@ -181,7 +181,7 @@ Result execute(const Args &args, const Options &opts)
         std::string s = *env;
         auto p = s.find("=");
         if (p != s.npos)
-            ctx.environment[s.substr(0, p)] = s.substr(p);
+            ctx.environment[s.substr(0, p)] = s.substr(p + 1);
         env++;
     }
 #endif
