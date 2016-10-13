@@ -89,6 +89,7 @@ set(common_src
     access_table.h
     checks.cpp
     checks.h
+    checks_detail.h
     command.cpp
     command.h
     common.cpp
@@ -183,6 +184,7 @@ endif()
 
 ################################################################################
 
+add_subdirectory(autotools)
 add_subdirectory(bazel)
 add_subdirectory(client)
 

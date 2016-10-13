@@ -136,15 +136,7 @@ String read_file(const path &p, bool no_size_check)
 std::vector<String> read_lines(const path &p)
 {
     auto s = read_file(p);
-    std::vector<String> v, lines;
-    boost::split(v, s, boost::is_any_of("\r\n"));
-    for (auto &l : v)
-    {
-        boost::trim(l);
-        if (!l.empty())
-            lines.push_back(l);
-    }
-    return lines;
+    return split_lines(s);
 }
 
 void write_file(const path &p, const String &s)

@@ -64,6 +64,7 @@ set(cppan_src
 
 add_executable(client ${cppan_src})
 target_link_libraries(client
+    autotools
     builder
     common
     fix_imports

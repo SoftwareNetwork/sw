@@ -53,8 +53,6 @@ bool has_executable_in_path(std::string &prog)
     bool ret = true;
     try
     {
-        //if (fs::exists(prog))
-        //    return true;
         prog = boost::process::find_executable_in_path(prog);
     }
     catch (fs::filesystem_error &e)

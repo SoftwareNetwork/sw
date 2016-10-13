@@ -330,13 +330,47 @@ void Project::findSources(path p)
     if (!header_only) // do not check if forced header_only
         header_only = std::none_of(files.begin(), files.end(), is_valid_source);
 
+    auto check_license = [this](auto &name, String *error = nullptr)
+    {
+        auto license_error = [&error](auto &err)
+        {
+            if (error)
+            {
+                *error = err;
+                return false;
+            }
+            throw std::runtime_error(err);
+        };
+        if (!fs::exists(root_directory / name))
+            return license_error("license does not exists");
+        if (fs::file_size(root_directory / name) > 512 * 1024)
+            return license_error("license is invalid (should be text/plain and less than 512 KB)");
+        return true;
+    };
+
     if (!license.empty())
     {
-        if (!fs::exists(root_directory / license))
-            throw std::runtime_error("License does not exists");
-        if (fs::file_size(root_directory / license) > 512 * 1024)
-            throw std::runtime_error("license is invalid (should be text/plain and less than 512 KB)");
-        files.insert(license);
+        if (check_license(license))
+            files.insert(license);
+    }
+    else
+    {
+        String error;
+        auto try_license = [&error, &check_license, this](auto &lic)
+        {
+            if (check_license(lic, &error))
+            {
+                files.insert(lic);
+                return true;
+            }
+            return false;
+        };
+        if (try_license("LICENSE") ||
+            try_license("COPYING") ||
+            try_license("LICENSE.txt") ||
+            try_license("license.txt") ||
+            try_license("LICENSE.md"))
+            (void)error;
     }
 
     if (!root_directory.empty())

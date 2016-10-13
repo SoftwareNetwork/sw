@@ -39,6 +39,7 @@
 #include "build.h"
 #include "fix_imports.h"
 #include "options.h"
+#include "../autotools/autotools.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -72,6 +73,8 @@ try
     if (argv[1][0] != '-')
     {
         String cmd = argv[1];
+
+        // internal
         if (cmd == "internal-fix-imports")
         {
             if (argc != 6)
@@ -93,6 +96,19 @@ try
             }
             CMakePrinter c;
             c.parallel_vars_check(argv[2], argv[3], argv[4]);
+            return 0;
+        }
+
+        // normal options
+        if (cmd == "parse-configure-ac")
+        {
+            if (argc != 3)
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan parse-configure-ac configure.ac\n";
+                return 1;
+            }
+            process_configure_ac(argv[2]);
             return 0;
         }
 

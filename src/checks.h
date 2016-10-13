@@ -142,7 +142,6 @@ struct Checks
 
     Checks &operator+=(const Checks &rhs);
 
-private:
     template <class T, class ... Args>
     T *addCheck(Args && ... args);
 };

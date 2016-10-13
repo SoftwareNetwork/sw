@@ -39,6 +39,7 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #ifdef WIN32
@@ -389,6 +390,14 @@ String sha1(const String &data)
     return hash_to_string(hash, hash_size);
 }
 
+String sha256(const String &data)
+{
+    uint8_t hash[EVP_MAX_MD_SIZE];
+    uint32_t hash_size;
+    EVP_Digest(data.data(), data.size(), hash, &hash_size, EVP_sha256(), nullptr);
+    return hash_to_string(hash, hash_size);
+}
+
 bool check_filename(const String &s, String *error)
 {
     for (auto &c : s)
@@ -412,7 +421,7 @@ bool check_filename(const String &s, String *error)
     return true;
 }
 
-inline auto& get_string_converter()
+auto& get_string_converter()
 {
     static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     return converter;
@@ -479,4 +488,17 @@ path get_program()
     }
     return dest;
 #endif
+}
+
+std::vector<String> split_lines(const String &s)
+{
+    std::vector<String> v, lines;
+    boost::split(v, s, boost::is_any_of("\r\n"));
+    for (auto &l : v)
+    {
+        boost::trim(l);
+        if (!l.empty())
+            lines.push_back(l);
+    }
+    return lines;
 }

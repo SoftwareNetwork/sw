@@ -102,13 +102,13 @@ String hash_to_string(const uint8_t *hash, uint32_t hash_size);
 String hash_to_string(const String &hash);
 
 String sha1(const String &data);
+String sha256(const String &data);
 
 path get_program();
 String get_program_version();
 String get_program_version_string(const String &prog_name);
 
-std::wstring to_wstring(const std::string &s);
-std::string to_string(const std::wstring &s);
+std::vector<String> split_lines(const String &s);
 
 String repeat(const String &e, int n);
 
