@@ -71,7 +71,9 @@ target_link_libraries(client
     ${Boost_LIBRARIES}
 )
 set_target_properties(client PROPERTIES OUTPUT_NAME cppan)
+if (WIN32)
 set_target_properties(client PROPERTIES OUTPUT_NAME_DEBUG cppand)
+endif()
 
 if (NOT WIN32)
 target_link_libraries(client

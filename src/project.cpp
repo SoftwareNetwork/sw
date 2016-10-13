@@ -688,6 +688,12 @@ void Project::load(const yaml &root)
     };
 
     read_sources(sources, "files");
+    if (sources.empty())
+    {
+        // try to add some default dirs
+        sources.insert("include/.*");
+        sources.insert("src/.*");
+    }
     read_sources(build_files, "build");
     read_sources(exclude_from_package, "exclude_from_package");
     read_sources(exclude_from_build, "exclude_from_build");
