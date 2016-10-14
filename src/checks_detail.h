@@ -159,8 +159,10 @@ public:
 
     void save(yaml &root) const override
     {
-        root[information.cppan_key]["function"] = getData();
-        root[information.cppan_key]["library"] = library;
+        yaml v;
+        v["function"] = getData();
+        v["library"] = library;
+        root[information.cppan_key].push_back(v);
     }
 
     String library;

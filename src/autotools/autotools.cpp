@@ -36,22 +36,6 @@
 #include <regex>
 #include <vector>
 
-/*
-TODO
-
-AC_LINK_IFELSE(   [AC_LANG_PROGRAM([[]], [[
-unsigned int fpcr;
-__asm__ __volatile__ ("fmove.l %%fpcr,%0" : "=g" (fpcr));
-__asm__ __volatile__ ("fmove.l %0,%%fpcr" : : "g" (fpcr));
-]])],[have_gcc_asm_for_mc68881=yes],[have_gcc_asm_for_mc68881=no])
-AC_MSG_RESULT($have_gcc_asm_for_mc68881)
-if test "$have_gcc_asm_for_mc68881" = yes
-then
-AC_DEFINE(HAVE_GCC_ASM_FOR_MC68881, 1,
-[Define if we can use gcc inline assembler to get and set mc68881 fpcr])
-fi
-*/
-
 struct command
 {
     String name;
@@ -775,9 +759,7 @@ void ac_processor::process_AC_STRUCT_TIMEZONE(command &c)
 
 void ac_processor::process_AC_CHECK_LIB(command &c)
 {
-    auto variable = "HAVE_" + boost::algorithm::to_upper_copy(c.params[1]);
-    checks.addCheck<CheckCustom>(variable,
-        "CHECK_LIBRARY_EXISTS(" + c.params[0] + " " + c.params[1] + " \"\" " + variable + ")");
+    checks.addCheck<CheckLibraryFunction>(c.params[1], c.params[0]);
 }
 
 void ac_processor::process_AC_CHECK_MEMBERS(command &c)
