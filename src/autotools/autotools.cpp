@@ -89,7 +89,7 @@ struct ac_processor
     ac_processor(const path &p);
 
     template <class T>
-    void split_and_add(command &c, std::function<bool(String)> fun = std::function<bool(String)>());
+    auto split_and_add(command &c, std::function<bool(String)> fun = std::function<bool(String)>());
     template <class T>
     void ifdef_add(command &c);
     template <class T>
@@ -389,18 +389,20 @@ void ac_processor::process()
 }
 
 template <class T>
-void ac_processor::split_and_add(command &c, std::function<bool(String)> fun)
+auto ac_processor::split_and_add(command &c, std::function<bool(String)> fun)
 {
     boost::replace_all(c.params[0], "\\", "\n");
     boost::replace_all(c.params[0], "\t", "\n");
     boost::replace_all(c.params[0], " ", "\n");
     boost::replace_all(c.params[0], ",", "\n");
     auto funcs = split_lines(c.params[0]);
+    std::vector<T*> out;
     for (auto &f : funcs)
     {
         if (!fun || fun(f))
-            checks.addCheck<T>(f);
+            out.push_back(checks.addCheck<T>(f));
     }
+    return out;
 }
 
 template <class T>
@@ -648,7 +650,14 @@ void ac_processor::process_AC_TRY_RUN(command &c)
 void ac_processor::process_AC_CHECK_HEADER(command &c)
 {
     if (c.params.size() == 1)
-        split_and_add<CheckInclude>(c);
+    {
+        auto out = split_and_add<CheckInclude>(c);
+        if (cpp)
+        {
+            for (auto &o : out)
+                o->set_cpp(cpp);
+        }
+    }
     else
     {
         if (c.params[1].find("AC_") == 0)
@@ -659,7 +668,9 @@ void ac_processor::process_AC_CHECK_HEADER(command &c)
             else if (cmd == "AC_DEFINE")
             {
                 auto params = parse_arguments(c.params[1].substr(cmd.size() + 1));
-                checks.addCheck<CheckInclude>(c.params[0], params[0]);
+                auto p = checks.addCheck<CheckInclude>(c.params[0], params[0]);
+                if (cpp)
+                    p->set_cpp(cpp);
             }
             else
             {

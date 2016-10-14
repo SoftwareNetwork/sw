@@ -70,16 +70,20 @@ public:
 
     void save(yaml &root) const override
     {
-        auto var = convert(data);
-        if (var == getVariable())
-            root[information.cppan_key].push_back(getData());
+        yaml v;
+        v["file"] = getData();
+        v["variable"] = getVariable();
+        v["cpp"] = cpp;
+        root[information.cppan_key].push_back(v);
+    }
+
+    void set_cpp(bool c)
+    {
+        cpp = c;
+        if (cpp)
+            information.function = "CHECK_INCLUDE_FILE_CXX";
         else
-        {
-            yaml v;
-            v["file"] = getData();
-            v["variable"] = getVariable();
-            root[information.cppan_key].push_back(v);
-        }
+            information.function = getCheckInformation(Include).function;
     }
 
     static String convert(const String &s)
@@ -94,6 +98,9 @@ public:
     }
 
     virtual ~CheckInclude() {}
+
+private:
+    bool cpp = false;
 };
 
 class CheckType : public Check

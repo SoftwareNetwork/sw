@@ -73,6 +73,8 @@ const String cmake_includes = R"(
 include(CheckCXXSymbolExists)
 include(CheckFunctionExists)
 include(CheckIncludeFiles)
+include(CheckIncludeFile)
+include(CheckIncludeFileCXX)
 include(CheckLibraryExists)
 include(CheckTypeSize)
 include(CheckCSourceCompiles)

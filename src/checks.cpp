@@ -120,7 +120,9 @@ void Checks::load(const yaml &root)
         {
             auto f = v["file"].template as<String>();
             auto var = v["variable"].template as<String>();
-            this->addCheck<CheckInclude>(f, var);
+            auto cpp = v["cpp"].template as<bool>();
+            auto p = this->addCheck<CheckInclude>(f, var);
+            p->set_cpp(cpp);
         }
     });
 
