@@ -66,6 +66,7 @@ struct if_expr
         bool equ;
         String value;
         String action;
+        int start;
     };
 
     if_action if_actions;
@@ -82,6 +83,7 @@ struct ac_processor
     Checks checks;
     std::map<String, std::set<value>> vars;
     std::map<String, if_expr> conditions;
+    yaml root;
 
     ac_processor(const path &p);
 
@@ -89,12 +91,16 @@ struct ac_processor
     void split_and_add(command &c, std::function<bool(String)> fun = std::function<bool(String)>());
     template <class T>
     void ifdef_add(command &c);
+    template <class T>
+    void try_add(command &c);
 
+    void output();
     void process();
     void process_AC_CHECK_FUNCS(command &c);
     void process_AC_CHECK_DECLS(command &c);
     void process_AC_COMPILE_IFELSE(command &c);
     void process_AC_RUN_IFELSE(command &c);
+    void process_AC_TRY_COMPILE(command &c);
     void process_AC_TRY_RUN(command &c);
     void process_AC_CHECK_HEADERS(command &c);
     void process_AC_CHECK_TYPES(command &c);
@@ -106,6 +112,7 @@ struct ac_processor
     void process_AC_STRUCT_TIMEZONE(command &c);
     void process_AC_CHECK_LIB(command &c);
     void process_AC_CHECK_MEMBERS(command &c);
+    void process_AC_DEFINE(command &c);
 };
 
 int get_end_of_block(const String &s, int i = 1)
@@ -209,6 +216,7 @@ auto parse_configure_ac(String f)
         "AC_\\w+?_IFELSE",
         "AC_HEADER_\\w+",
         "AC_STRUCT_\\w+",
+        "\nAC_DEFINE"
     };
 
     String rx = "(";
@@ -227,6 +235,7 @@ auto parse_configure_ac(String f)
     {
         command cmd;
         cmd.name = m[1].str();
+        boost::trim(cmd.name);
         f = m.suffix();
         if (f[0] == '(')
             cmd.params = parse_command(f);
@@ -240,32 +249,30 @@ auto parse_conditions(String f)
     std::map<String, if_expr> conds;
 
     String s = f;
-    std::regex r_if(R"rrr(if\s+test\s+"?\$(\w+)"?\s+(\S+)\s+(\w+))rrr");
+    std::regex r_if(R"rrr(\sif\s+test\s+"?\$(\w+)"?\s+(\S+)\s+(\w+)\s*;?\s*then)rrr");
     std::smatch m;
     while (std::regex_search(s, m, r_if))
     {
         auto var = m[1].str();
         auto sign = m[2].str();
         auto val = m[3].str();
-        conds[var].if_actions.var = var;
-        conds[var].if_actions.equ = sign == "=";
+
+        if_expr::if_action a;
+        a.var = var;
+        a.equ = sign == "=";
+        a.value = val;
+        a.start = m[0].first - s.begin();
         if (sign != "=" && sign != "!=")
             std::cerr << "Unknown sign " << sign << "\n";
-        conds[var].if_actions.value = val;
-        s = m.suffix();
-
-        auto i = s.find("if test");
-        auto f = s.find("fi");
-        int n = 0;
-        while (i < f)
+        else
         {
-            i = s.find("if test", i + 1);
-            n++;
+            auto p = m[0].second - s.begin();
+            auto f = s.find("fi", p);
+            a.action = s.substr(p, f - p);
+            boost::trim(a.action);
+            conds[var].if_actions = a;
         }
-        while (n--)
-            f = s.find("fi", f + 1);
-        conds[var].if_actions.action = s.substr(0, f);
-        s = s.substr(f);
+        s = m.suffix();
     }
 
     return conds;
@@ -275,7 +282,7 @@ void process_configure_ac(const path &p)
 {
     ac_processor proc(p);
     proc.process();
-    std::cout << proc.checks.save();
+    proc.output();
 }
 
 ac_processor::ac_processor(const path &p)
@@ -287,6 +294,12 @@ ac_processor::ac_processor(const path &p)
 
     commands = parse_configure_ac(file);
     conditions = parse_conditions(file);
+}
+
+void ac_processor::output()
+{
+    checks.save(root);
+    std::cout << YAML::Dump(root);
 }
 
 void ac_processor::process()
@@ -331,6 +344,7 @@ void ac_processor::process()
 
         TWICE(CASE_NOT_EMPTY, AC_RUN_IFELSE);
 
+        TWICE(CASE_NOT_EMPTY, AC_TRY_COMPILE);
         TWICE(CASE_NOT_EMPTY, AC_TRY_RUN);
 
         CASE_NOT_EMPTY(AC_CHECK_HEADER, AC_CHECK_HEADERS);
@@ -351,7 +365,9 @@ void ac_processor::process()
         TWICE(CASE, AC_CHECK_LIB);
 
         CASE_NOT_EMPTY(AC_CHECK_MEMBER, AC_CHECK_MEMBERS);
-        TWICE(CASE, AC_CHECK_MEMBERS);
+        TWICE(CASE_NOT_EMPTY, AC_CHECK_MEMBERS);
+
+        TWICE(CASE_NOT_EMPTY, AC_DEFINE);
 
         SILENCE(AC_CHECK_PROG);
         SILENCE(AC_CHECK_PROGS);
@@ -388,6 +404,8 @@ void ac_processor::ifdef_add(command &c)
 
     String var;
     String input = c.params[0];
+    bool invert = false;
+
     if (c.params[0].find("AC_") == 0)
     {
         auto cmd = c.params[0].substr(0, c.params[0].find('('));
@@ -433,8 +451,10 @@ void ac_processor::ifdef_add(command &c)
                 var = params[0];
             }
             else
+            {
                 std::cerr << "Unhandled AC_ statement: " << cmd << "\n";
-            return;
+                return;
+            }
         }
         else
         {
@@ -445,6 +465,49 @@ void ac_processor::ifdef_add(command &c)
                 auto key = c.params[1].substr(0, p);
                 auto value = c.params[1].substr(p + 1);
                 vars[key].insert({ value, true });
+
+                if (conditions.count(key))
+                {
+                    auto act = conditions[key].if_actions;
+
+                    boost::replace_all(act.action, "\r", "");
+                    boost::replace_all(act.action, "then", "\r");
+                    std::vector<String> ifthen;
+                    boost::split(ifthen, act.action, boost::is_any_of("\r"));
+
+                    String acts;
+                    if (ifthen.size() > 1)
+                    {
+                        if (value == act.value)
+                            acts = act.equ ? ifthen[0] : ifthen[1];
+                        else
+                        {
+                            acts = !act.equ ? ifthen[0] : ifthen[1];
+                            invert = true;
+                        }
+                    }
+                    else
+                    {
+                        acts = ifthen[0];
+                        if (value == act.value)
+                        {
+                            if (!act.equ)
+                                invert = true;
+                        }
+                        else
+                        {
+                            if (act.equ)
+                                invert = true;
+                        }
+                    }
+
+                    if (acts.find("AC_DEFINE") == 0)
+                    {
+                        auto cmd = acts.substr(0, acts.find('('));
+                        auto params = parse_arguments(acts.substr(cmd.size() + 1));
+                        var = params[0];
+                    }
+                }
             }
             else
                 return;
@@ -463,8 +526,10 @@ void ac_processor::ifdef_add(command &c)
                 //var = params[0]; // this could be very dangerous
             }
             else
+            {
                 std::cerr << "Unhandled AC_ statement: " << cmd << "\n";
-            return;
+                return;
+            }
         }
         else
         {
@@ -475,14 +540,101 @@ void ac_processor::ifdef_add(command &c)
                 auto key = c.params[2].substr(0, p);
                 auto value = c.params[2].substr(p + 1);
                 vars[key].insert({ value, false });
+
+                if (conditions.count(key))
+                {
+                    auto act = conditions[key].if_actions;
+
+                    boost::replace_all(act.action, "\r", "");
+                    boost::replace_all(act.action, "then", "\r");
+                    std::vector<String> ifthen;
+                    boost::split(ifthen, act.action, boost::is_any_of("\r"));
+
+                    String acts;
+                    if (ifthen.size() > 1)
+                    {
+                        if (value == act.value)
+                            acts = act.equ ? ifthen[0] : ifthen[1];
+                        else
+                        {
+                            acts = !act.equ ? ifthen[0] : ifthen[1];
+                            invert = true;
+                        }
+                    }
+                    else
+                    {
+                        acts = ifthen[0];
+                        if (value == act.value)
+                        {
+                            if (!act.equ)
+                                invert = true;
+                        }
+                        else
+                        {
+                            if (act.equ)
+                                invert = true;
+                        }
+                    }
+
+                    if (acts.find("AC_DEFINE") == 0)
+                    {
+                        auto cmd = acts.substr(0, acts.find('('));
+                        auto params = parse_arguments(acts.substr(cmd.size() + 1));
+                        var = params[0];
+                    }
+                }
             }
             else
                 return;
         }
     }
+
     if (var.empty() || input.empty())
         return;
-    checks.addCheck<T>(var, input);
+
+    auto p = checks.addCheck<T>(var, input);
+    p->invert = invert;
+}
+
+template <class T>
+void ac_processor::try_add(command &c)
+{
+    String var;
+    String input = c.params[0];
+
+    input = c.params[0] + "\n\n int main() { \n\n";
+    input += c.params[1];
+    input += "\n\n ; return 0; }";
+
+    if (c.params.size() > 2)
+    {
+        if (c.params[2].find("AC_") == 0)
+        {
+            auto cmd = c.params[2].substr(0, c.params[2].find('('));
+            if (cmd == "AC_MSG_RESULT")
+                ; // this is a printer
+            else if (cmd == "AC_DEFINE")
+            {
+                auto params = parse_arguments(c.params[2].substr(cmd.size() + 1));
+                var = params[0];
+            }
+            else
+            {
+                std::cerr << "Unhandled AC_ statement: " << cmd << "\n";
+                return;
+            }
+        }
+    }
+
+    if (var.empty() || input.empty())
+        return;
+
+    auto p = checks.addCheck<T>(var, input);
+}
+
+void ac_processor::process_AC_DEFINE(command &c)
+{
+    root["options"]["any"]["definitions"]["public"].push_back(c.params[0]);
 }
 
 void ac_processor::process_AC_CHECK_FUNCS(command &c)
@@ -507,9 +659,14 @@ void ac_processor::process_AC_RUN_IFELSE(command &c)
     ifdef_add<CheckCSourceRuns>(c);
 }
 
+void ac_processor::process_AC_TRY_COMPILE(command &c)
+{
+    try_add<CheckCSourceCompiles>(c);
+}
+
 void ac_processor::process_AC_TRY_RUN(command &c)
 {
-    ifdef_add<CheckCSourceRuns>(c);
+    try_add<CheckCSourceRuns>(c);
 }
 
 void ac_processor::process_AC_CHECK_HEADERS(command &c)
