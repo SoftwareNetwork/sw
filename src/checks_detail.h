@@ -58,13 +58,39 @@ public:
         : Check(getCheckInformation(Include))
     {
         data = s;
-        auto v_def = "HAVE_" + boost::algorithm::to_upper_copy(data);
+        variable = convert(data);
+    }
+
+    CheckInclude(const String &s, const String &var)
+        : Check(getCheckInformation(Include))
+    {
+        data = s;
+        variable = var;
+    }
+
+    void save(yaml &root) const override
+    {
+        auto var = convert(data);
+        if (var == getVariable())
+            root[information.cppan_key].push_back(getData());
+        else
+        {
+            yaml v;
+            v["file"] = getData();
+            v["variable"] = getVariable();
+            root[information.cppan_key].push_back(v);
+        }
+    }
+
+    static String convert(const String &s)
+    {
+        auto v_def = "HAVE_" + boost::algorithm::to_upper_copy(s);
         for (auto &c : v_def)
         {
             if (!isalnum(c))
                 c = '_';
         }
-        variable = v_def;
+        return v_def;
     }
 
     virtual ~CheckInclude() {}

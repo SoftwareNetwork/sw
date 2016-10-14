@@ -84,6 +84,7 @@ struct ac_processor
     std::map<String, std::set<value>> vars;
     std::map<String, if_expr> conditions;
     yaml root;
+    bool cpp = false;
 
     ac_processor(const path &p);
 
@@ -96,12 +97,14 @@ struct ac_processor
 
     void output();
     void process();
+    void process_AC_LANG(command &c);
     void process_AC_CHECK_FUNCS(command &c);
     void process_AC_CHECK_DECLS(command &c);
     void process_AC_COMPILE_IFELSE(command &c);
     void process_AC_RUN_IFELSE(command &c);
     void process_AC_TRY_COMPILE(command &c);
     void process_AC_TRY_RUN(command &c);
+    void process_AC_CHECK_HEADER(command &c);
     void process_AC_CHECK_HEADERS(command &c);
     void process_AC_CHECK_TYPES(command &c);
     void process_AC_HEADER_DIRENT(command &c);
@@ -210,6 +213,7 @@ auto parse_command(const String &f)
 auto parse_configure_ac(String f)
 {
     auto ac = {
+        "AC_LANG",
         "AC_CHECK_\\w+",
         //"AC_EGREP_\\w+",
         "AC_TRY_\\w+",
@@ -347,7 +351,7 @@ void ac_processor::process()
         TWICE(CASE_NOT_EMPTY, AC_TRY_COMPILE);
         TWICE(CASE_NOT_EMPTY, AC_TRY_RUN);
 
-        CASE_NOT_EMPTY(AC_CHECK_HEADER, AC_CHECK_HEADERS);
+        TWICE(CASE_NOT_EMPTY, AC_CHECK_HEADER);
         TWICE(CASE_NOT_EMPTY, AC_CHECK_HEADERS);
 
         CASE_NOT_EMPTY(AC_CHECK_SIZEOF, AC_CHECK_TYPES);
@@ -368,6 +372,8 @@ void ac_processor::process()
         TWICE(CASE_NOT_EMPTY, AC_CHECK_MEMBERS);
 
         TWICE(CASE_NOT_EMPTY, AC_DEFINE);
+
+        TWICE(CASE_NOT_EMPTY, AC_LANG);
 
         SILENCE(AC_CHECK_PROG);
         SILENCE(AC_CHECK_PROGS);
@@ -475,37 +481,35 @@ void ac_processor::ifdef_add(command &c)
                     std::vector<String> ifthen;
                     boost::split(ifthen, act.action, boost::is_any_of("\r"));
 
-                    String acts;
+                    boost::trim(ifthen[0]);
                     if (ifthen.size() > 1)
+                        boost::trim(ifthen[1]);
+
+                    if (ifthen[0].find("AC_DEFINE") == 0)
                     {
+                        auto cmd = ifthen[0].substr(0, ifthen[0].find('('));
+                        auto params = parse_arguments(ifthen[0].substr(cmd.size() + 1));
+                        var = params[0];
+
                         if (value == act.value)
-                            acts = act.equ ? ifthen[0] : ifthen[1];
+                            invert = !act.equ;
                         else
-                        {
-                            acts = !act.equ ? ifthen[0] : ifthen[1];
-                            invert = true;
-                        }
-                    }
-                    else
-                    {
-                        acts = ifthen[0];
-                        if (value == act.value)
-                        {
-                            if (!act.equ)
-                                invert = true;
-                        }
-                        else
-                        {
-                            if (act.equ)
-                                invert = true;
-                        }
+                            invert = act.equ;
                     }
 
-                    if (acts.find("AC_DEFINE") == 0)
+                    if (ifthen.size() > 1)
                     {
-                        auto cmd = acts.substr(0, acts.find('('));
-                        auto params = parse_arguments(acts.substr(cmd.size() + 1));
-                        var = params[0];
+                        if (ifthen[0].find("AC_DEFINE") == 0)
+                        {
+                            auto cmd = ifthen[1].substr(0, ifthen[1].find('('));
+                            auto params = parse_arguments(ifthen[1].substr(cmd.size() + 1));
+                            var = params[0];
+                        }
+
+                        if (value == act.value)
+                            invert = act.equ;
+                        else
+                            invert = !act.equ;
                     }
                 }
             }
@@ -536,53 +540,7 @@ void ac_processor::ifdef_add(command &c)
             // if key-value?
             if (std::regex_match(c.params[2], r_kv))
             {
-                auto p = c.params[2].find('=');
-                auto key = c.params[2].substr(0, p);
-                auto value = c.params[2].substr(p + 1);
-                vars[key].insert({ value, false });
-
-                if (conditions.count(key))
-                {
-                    auto act = conditions[key].if_actions;
-
-                    boost::replace_all(act.action, "\r", "");
-                    boost::replace_all(act.action, "then", "\r");
-                    std::vector<String> ifthen;
-                    boost::split(ifthen, act.action, boost::is_any_of("\r"));
-
-                    String acts;
-                    if (ifthen.size() > 1)
-                    {
-                        if (value == act.value)
-                            acts = act.equ ? ifthen[0] : ifthen[1];
-                        else
-                        {
-                            acts = !act.equ ? ifthen[0] : ifthen[1];
-                            invert = true;
-                        }
-                    }
-                    else
-                    {
-                        acts = ifthen[0];
-                        if (value == act.value)
-                        {
-                            if (!act.equ)
-                                invert = true;
-                        }
-                        else
-                        {
-                            if (act.equ)
-                                invert = true;
-                        }
-                    }
-
-                    if (acts.find("AC_DEFINE") == 0)
-                    {
-                        auto cmd = acts.substr(0, acts.find('('));
-                        auto params = parse_arguments(acts.substr(cmd.size() + 1));
-                        var = params[0];
-                    }
-                }
+                // already handled in 'if (c.params.size() > 1)' above
             }
             else
                 return;
@@ -632,6 +590,12 @@ void ac_processor::try_add(command &c)
     auto p = checks.addCheck<T>(var, input);
 }
 
+void ac_processor::process_AC_LANG(command &c)
+{
+    boost::to_lower(c.params[0]);
+    cpp = c.params[0] == "c++";
+}
+
 void ac_processor::process_AC_DEFINE(command &c)
 {
     root["options"]["any"]["definitions"]["public"].push_back(c.params[0]);
@@ -651,22 +615,58 @@ void ac_processor::process_AC_CHECK_DECLS(command &c)
 
 void ac_processor::process_AC_COMPILE_IFELSE(command &c)
 {
-    ifdef_add<CheckCSourceCompiles>(c);
+    if (cpp)
+        ifdef_add<CheckCXXSourceCompiles>(c);
+    else
+        ifdef_add<CheckCSourceCompiles>(c);
 }
 
 void ac_processor::process_AC_RUN_IFELSE(command &c)
 {
-    ifdef_add<CheckCSourceRuns>(c);
+    if (cpp)
+        ifdef_add<CheckCXXSourceRuns>(c);
+    else
+        ifdef_add<CheckCSourceRuns>(c);
 }
 
 void ac_processor::process_AC_TRY_COMPILE(command &c)
 {
-    try_add<CheckCSourceCompiles>(c);
+    if (cpp)
+        try_add<CheckCXXSourceCompiles>(c);
+    else
+        try_add<CheckCSourceCompiles>(c);
 }
 
 void ac_processor::process_AC_TRY_RUN(command &c)
 {
-    try_add<CheckCSourceRuns>(c);
+    if (cpp)
+        try_add<CheckCXXSourceRuns>(c);
+    else
+        try_add<CheckCSourceRuns>(c);
+}
+
+void ac_processor::process_AC_CHECK_HEADER(command &c)
+{
+    if (c.params.size() == 1)
+        split_and_add<CheckInclude>(c);
+    else
+    {
+        if (c.params[1].find("AC_") == 0)
+        {
+            auto cmd = c.params[1].substr(0, c.params[1].find('('));
+            if (cmd == "AC_MSG_RESULT")
+                ; // this is a printer
+            else if (cmd == "AC_DEFINE")
+            {
+                auto params = parse_arguments(c.params[1].substr(cmd.size() + 1));
+                checks.addCheck<CheckInclude>(c.params[0], params[0]);
+            }
+            else
+            {
+                std::cerr << "Unhandled AC_ statement: " << cmd << "\n";
+            }
+        }
+    }
 }
 
 void ac_processor::process_AC_CHECK_HEADERS(command &c)

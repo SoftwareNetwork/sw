@@ -102,13 +102,27 @@ void Checks::load(const yaml &root)
     } while (0)
 
     LOAD_SET(Function);
-    LOAD_SET(Include);
-    LOAD_SET(Type);
     LOAD_SET(Library);
+    LOAD_SET(Type);
 
     // add some common types
     addCheck<CheckType>("size_t");
     addCheck<CheckType>("void *");
+
+    // includes
+    get_sequence_and_iterate(root, getCheckInformation(Check::Include).cppan_key, [this](const auto &v)
+    {
+        if (v.IsScalar())
+        {
+            addCheck<CheckInclude>(v.template as<String>());
+        }
+        else if (v.IsMap())
+        {
+            auto f = v["file"].template as<String>();
+            auto var = v["variable"].template as<String>();
+            addCheck<CheckInclude>(f, var);
+        }
+    });
 
     // symbols
     get_map_and_iterate(root, getCheckInformation(Check::Symbol).cppan_key, [this](const auto &root)
@@ -164,11 +178,11 @@ void Checks::save(yaml &root) const
         switch (t)
         {
         case Check::Function:
-        case Check::Include:
         case Check::Type:
         case Check::Library:
             root[i.cppan_key].push_back(c->getData());
             break;
+        case Check::Include:
         case Check::Symbol:
         case Check::CSourceCompiles:
         case Check::CSourceRuns:

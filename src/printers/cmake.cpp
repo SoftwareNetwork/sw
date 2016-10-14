@@ -2062,8 +2062,8 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
         // run cmake
         command::Args args;
         args.push_back("cmake");
-        args.push_back("-H\"" + normalize_path(d) + "\"");
-        args.push_back("-B\"" + normalize_path(d) + "\"");
+        args.push_back("-H" + normalize_path(d));
+        args.push_back("-B" + normalize_path(d));
         auto ret = command::execute(args);
 
         if (ret.rc)
