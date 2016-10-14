@@ -114,13 +114,13 @@ void Checks::load(const yaml &root)
     {
         if (v.IsScalar())
         {
-            addCheck<CheckInclude>(v.template as<String>());
+            this->addCheck<CheckInclude>(v.template as<String>());
         }
         else if (v.IsMap())
         {
             auto f = v["file"].template as<String>();
             auto var = v["variable"].template as<String>();
-            addCheck<CheckInclude>(f, var);
+            this->addCheck<CheckInclude>(f, var);
         }
     });
 
