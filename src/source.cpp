@@ -41,7 +41,7 @@ Source load_source(const yaml &root)
     EXTRACT_VAR(src, git.branch, "branch", String);
     EXTRACT_VAR(src, git.tag, "tag", String);
 
-    if (git.isValid())
+    if (!git.url.empty())
     {
         if (src["file"].IsDefined())
             throw std::runtime_error(error);

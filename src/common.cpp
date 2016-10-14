@@ -369,7 +369,7 @@ String hash_to_string(const String &hash)
     return hash_to_string((uint8_t *)hash.c_str(), hash.size());
 }
 
-String hash_to_string(const uint8_t *hash, uint32_t hash_size)
+String hash_to_string(const uint8_t *hash, size_t hash_size)
 {
     static auto alnum16 = "0123456789abcdef";
 

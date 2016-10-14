@@ -98,7 +98,7 @@ void download_file(DownloadData &data);
 Files unpack_file(const path &fn, const path &dst);
 
 String generate_random_sequence(uint32_t len);
-String hash_to_string(const uint8_t *hash, uint32_t hash_size);
+String hash_to_string(const uint8_t *hash, size_t hash_size);
 String hash_to_string(const String &hash);
 
 String sha1(const String &data);

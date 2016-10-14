@@ -448,15 +448,29 @@ void Config::load(yaml root, const path &p)
         local_settings = uc.local_settings;
     }
 
-    // version
+    // version & source
     {
         String ver;
         EXTRACT_VAR(root, ver, "version", String);
         if (!ver.empty())
             version = Version(ver);
-    }
 
-    source = load_source(root);
+        source = load_source(root);
+        if (source.which() == 0)
+        {
+            auto &git = boost::get<Git>(source);
+            if (version.isValid() && git.branch.empty() && git.tag.empty())
+            {
+                if (version.isBranch())
+                    git.branch = version.toString();
+                else
+                    git.tag = version.toString();
+            }
+            String error;
+            if (!git.isValid(&error))
+                throw std::runtime_error(error);
+        }
+    }
 
     EXTRACT(root_project, String);
 

@@ -265,7 +265,7 @@ auto parse_conditions(String f)
         a.var = var;
         a.equ = sign == "=";
         a.value = val;
-        a.start = m[0].first - s.begin();
+        a.start = (int)(m[0].first - s.begin());
         if (sign != "=" && sign != "!=")
             std::cerr << "Unknown sign " << sign << "\n";
         else
