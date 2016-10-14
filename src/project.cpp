@@ -168,23 +168,22 @@ void check_file_types(const Files &files, const path &root)
     }
     o.close();
 
-    auto fn2 = get_temp_filename();
-    system(("sh " + fn.string() + " > " + fn2.string()).c_str());
+    auto ret = command::execute_and_capture({ "sh", fn.string() });
     fs::remove(fn);
-    std::ifstream ifile(fn2.string());
-    if (!ifile)
-        throw std::runtime_error("Cannot open file for reading: " + fn2.string());
-    std::vector<String> lines;
-    String s;
-    while (std::getline(ifile, s))
+
+    if (ret.rc != 0)
+        throw std::runtime_error("Error during file checking: rc = " + std::to_string(ret.rc));
+
+    std::vector<String> lines, sh_out;
+    boost::split(sh_out, ret.out, boost::is_any_of("\r\n"));
+    for (auto &s : sh_out)
     {
+        boost::trim(s);
         if (!s.empty())
             lines.push_back(s);
     }
-    ifile.close();
-    fs::remove(fn2);
     if (lines.size() != files.size())
-        throw std::runtime_error("Error during file checking");
+        throw std::runtime_error("Error during file checking: number of output lines does not match");
 
     int i = 0;
     for (auto &file : files)
