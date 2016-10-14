@@ -28,11 +28,14 @@
 #include "response.h"
 
 #include "config.h"
+#include "database.h"
+#include "directories.h"
 #include "executor.h"
 #include "file_lock.h"
 #include "hasher.h"
 #include "log.h"
 #include "project.h"
+#include "sqlite_database.h"
 
 #include "logger.h"
 DECLARE_STATIC_LOGGER(logger, "response");
@@ -60,6 +63,8 @@ void ResponseData::init(Config *config, const String &host, const path &root_dir
     catch (...)
     {
     }
+
+    db = open_db();
 
     initialized = true;
 }

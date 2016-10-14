@@ -29,6 +29,7 @@
 
 #include "../access_table.h"
 #include "../command.h"
+#include "../directories.h"
 #include "../executor.h"
 #include "../file_lock.h"
 #include "../inserts.h"
@@ -363,8 +364,7 @@ endif()
 
     // should be after flags
     config_section_title(ctx, "CPPAN include");
-    if (!(rc->local_settings.build_dir_type == PackagesDirType::Local ||
-        rc->local_settings.build_dir_type == PackagesDirType::None))
+    if (!rc->local_settings.is_custom_build_dir())
         ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
     ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
     ctx.addLine("add_subdirectory(" + normalize_path(rc->local_settings.cppan_dir) + ")");

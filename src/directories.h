@@ -25,59 +25,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include "enums.h"
+#include "filesystem.h"
 
-std::string toString(ProjectType e)
+struct Directories
 {
-    switch (e)
-    {
-    case ProjectType::Library:
-        return "Library";
-    case ProjectType::Executable:
-        return "Executable";
-    case ProjectType::RootProject:
-        return "Root Project";
-    case ProjectType::Directory:
-        return "Directory";
-    }
-    return std::to_string(toIndex(e));
-}
+    path storage_dir;
+    path storage_dir_bin;
+    path storage_dir_cfg;
+    path storage_dir_etc;
+    path storage_dir_lib;
+    path storage_dir_lnk;
+    path storage_dir_obj;
+    path storage_dir_src;
+    path storage_dir_usr;
+    path build_dir;
 
-std::string toString(ProjectPathNamespace e)
-{
-#define CASE(name) \
-    case ProjectPathNamespace::name: return #name
+    ConfigType storage_dir_type;
+    ConfigType build_dir_type;
 
-    switch (e)
-    {
-        CASE(com);
-        CASE(org);
-        CASE(pvt);
-    }
-    return std::string();
-#undef CASE
-}
+    bool empty() const { return storage_dir.empty(); }
+    void update(const Directories &dirs, ConfigType type);
 
-std::string toString(ConfigType e)
-{
-    switch (e)
-    {
-    case ConfigType::Local:
-        return "local";
-    case ConfigType::User:
-        return "user";
-    case ConfigType::System:
-        return "system";
-    }
-    return std::to_string(toIndex(e));
-}
+    void set_storage_dir(const path &p);
+    void set_build_dir(const path &p);
 
-std::string getFlagsString(const ProjectFlags &flags)
-{
-    std::string s;
-    if (flags[pfHeaderOnly])
-        s += "H";
-    if (flags[pfExecutable])
-        s += "E";
-    return s;
-}
+private:
+    ConfigType type;
+};
+
+extern Directories directories;

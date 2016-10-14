@@ -33,6 +33,7 @@
 
 struct Config;
 struct Directories;
+class SqliteDatabase;
 
 struct ResponseData
 {
@@ -77,6 +78,7 @@ private:
     bool deps_changed = false;
     PackageConfigs packages;
     std::set<std::unique_ptr<Config>> config_store;
+    std::unique_ptr<SqliteDatabase> db;
 
     void extractDependencies();
     void download_and_unpack();

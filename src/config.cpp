@@ -27,19 +27,9 @@
 
 #include "config.h"
 
-#include <fstream>
-#include <iostream>
-#include <regex>
-#include <thread>
-#include <tuple>
-
-#include <boost/algorithm/string.hpp>
-
-#include <curl/curl.h>
-#include <curl/easy.h>
-
 #include "access_table.h"
 #include "context.h"
+#include "directories.h"
 #include "file_lock.h"
 #include "hasher.h"
 #include "log.h"
@@ -47,7 +37,16 @@
 #include "stamp.h"
 #include "yaml.h"
 
-Directories directories;
+#include <boost/algorithm/string.hpp>
+
+#include <curl/curl.h>
+#include <curl/easy.h>
+
+#include <fstream>
+#include <iostream>
+#include <regex>
+#include <thread>
+#include <tuple>
 
 void get_config_insertion(const yaml &n, const String &key, String &dst)
 {
@@ -63,40 +62,6 @@ void BuildSystemConfigInsertions::get_config_insertions(const yaml &n)
     ADD_CFG_INSERTION(post_target);
     ADD_CFG_INSERTION(post_alias);
 #undef ADD_CFG_INSERTION
-}
-
-void Directories::set_storage_dir(const path &p)
-{
-    storage_dir = p;
-
-#define SET(x)                          \
-    storage_dir_##x = storage_dir / #x; \
-    fs::create_directories(storage_dir_##x)
-
-    SET(bin);
-    SET(cfg);
-    SET(etc);
-    SET(lib);
-    SET(lnk);
-    SET(obj);
-    SET(src);
-    SET(usr);
-#undef SET
-
-}
-
-void Directories::set_build_dir(const path &p)
-{
-    build_dir = p;
-}
-
-void Directories::update(const Directories &dirs, ConfigType t)
-{
-    if (t <= type)
-        return;
-    auto dirs2 = dirs;
-    std::swap(*this, dirs2);
-    type = t;
 }
 
 void BuildSettings::load(const yaml &root)
@@ -168,8 +133,8 @@ void BuildSettings::set_build_dirs(const path &fn)
     }
 
     source_directory = directories.build_dir;
-    if (directories.build_dir_type == PackagesDirType::Local ||
-        directories.build_dir_type == PackagesDirType::None)
+    if (directories.build_dir_type == ConfigType::Local ||
+        directories.build_dir_type == ConfigType::None)
     {
         source_directory /= (CPPAN_LOCAL_BUILD_PREFIX + filename);
     }
@@ -258,30 +223,30 @@ void LocalSettings::load(const yaml &root, const ConfigType type)
 {
     load_main(root);
 
-    auto get_storage_dir = [this](PackagesDirType type)
+    auto get_storage_dir = [this](ConfigType type)
     {
         switch (type)
         {
-        case PackagesDirType::Local:
+        case ConfigType::Local:
             return cppan_dir / STORAGE_DIR;
-        case PackagesDirType::User:
+        case ConfigType::User:
             return Config::get_user_config().local_settings.storage_dir;
-        case PackagesDirType::System:
+        case ConfigType::System:
             return Config::get_system_config().local_settings.storage_dir;
         default:
             return storage_dir;
         }
     };
 
-    auto get_build_dir = [this](const path &p, PackagesDirType type)
+    auto get_build_dir = [this](const path &p, ConfigType type)
     {
         switch (type)
         {
-        case PackagesDirType::Local:
+        case ConfigType::Local:
             return fs::current_path();
-        case PackagesDirType::User:
+        case ConfigType::User:
             return directories.storage_dir_usr;
-        case PackagesDirType::System:
+        case ConfigType::System:
             return temp_directory_path() / "build";
         default:
             return p;
@@ -301,11 +266,11 @@ void LocalSettings::load_main(const yaml &root)
     auto packages_dir_type_from_string = [](const String &s, const String &key)
     {
         if (s == "local")
-            return PackagesDirType::Local;
+            return ConfigType::Local;
         if (s == "user")
-            return PackagesDirType::User;
+            return ConfigType::User;
         if (s == "system")
-            return PackagesDirType::System;
+            return ConfigType::System;
         throw std::runtime_error("Unknown '" + key + "'. Should be one of [local, user, system]");
     };
 
@@ -329,10 +294,10 @@ void LocalSettings::load_main(const yaml &root)
 
     storage_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "storage_dir_type", "user"), "storage_dir_type");
     if (root["storage_dir"].IsDefined())
-        storage_dir_type = PackagesDirType::None;
+        storage_dir_type = ConfigType::None;
     build_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "build_dir_type", "system"), "build_dir_type");
     if (root["build_dir"].IsDefined())
-        build_dir_type = PackagesDirType::None;
+        build_dir_type = ConfigType::None;
 
     // read build settings
     if (root["builds"].IsDefined())
@@ -348,7 +313,7 @@ void LocalSettings::load_main(const yaml &root)
 
 bool LocalSettings::is_custom_build_dir() const
 {
-    return build_dir_type == PackagesDirType::Local || build_dir_type == PackagesDirType::None;
+    return build_dir_type == ConfigType::Local || build_dir_type == ConfigType::None;
 }
 
 String LocalSettings::get_hash() const
@@ -400,12 +365,15 @@ Config::Config(const path &p)
 {
     if (fs::is_directory(p))
     {
+        dir = p;
         ScopedCurrentPath cp(p);
         load_current_config();
     }
     else
+    {
+        dir = p.parent_path();
         load(p);
-    dir = p;
+    }
 }
 
 Config Config::get_system_config()
@@ -422,7 +390,7 @@ Config Config::get_user_config()
 
 void Config::load_current_config()
 {
-    load(fs::current_path() / CPPAN_FILENAME);
+    load(dir / CPPAN_FILENAME);
 }
 
 void Config::load(const path &p)

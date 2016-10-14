@@ -29,6 +29,7 @@
 
 #include "config.h"
 #include "file_lock.h"
+#include "directories.h"
 
 #include <iostream>
 #include <regex>

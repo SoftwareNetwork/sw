@@ -96,8 +96,12 @@ set(common_src
     common.h
     config.cpp
     config.h
+    database.cpp
+    database.h
     dependency.cpp
     dependency.h
+    directories.cpp
+    directories.h
     enums.cpp
     enums.h
     executor.cpp
@@ -123,6 +127,8 @@ set(common_src
     response.h
     source.cpp
     source.h
+    sqlite_database.cpp
+    sqlite_database.h
     stamp.cpp
     stamp.h
     version.cpp

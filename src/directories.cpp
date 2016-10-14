@@ -25,59 +25,42 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "enums.h"
+#include "directories.h"
 
-std::string toString(ProjectType e)
+#include "common.h"
+
+Directories directories;
+
+void Directories::set_storage_dir(const path &p)
 {
-    switch (e)
-    {
-    case ProjectType::Library:
-        return "Library";
-    case ProjectType::Executable:
-        return "Executable";
-    case ProjectType::RootProject:
-        return "Root Project";
-    case ProjectType::Directory:
-        return "Directory";
-    }
-    return std::to_string(toIndex(e));
+    storage_dir = p;
+
+#define SET(x)                          \
+    storage_dir_##x = storage_dir / #x; \
+    fs::create_directories(storage_dir_##x)
+
+    SET(bin);
+    SET(cfg);
+    SET(etc);
+    SET(lib);
+    SET(lnk);
+    SET(obj);
+    SET(src);
+    SET(usr);
+#undef SET
+
 }
 
-std::string toString(ProjectPathNamespace e)
+void Directories::set_build_dir(const path &p)
 {
-#define CASE(name) \
-    case ProjectPathNamespace::name: return #name
-
-    switch (e)
-    {
-        CASE(com);
-        CASE(org);
-        CASE(pvt);
-    }
-    return std::string();
-#undef CASE
+    build_dir = p;
 }
 
-std::string toString(ConfigType e)
+void Directories::update(const Directories &dirs, ConfigType t)
 {
-    switch (e)
-    {
-    case ConfigType::Local:
-        return "local";
-    case ConfigType::User:
-        return "user";
-    case ConfigType::System:
-        return "system";
-    }
-    return std::to_string(toIndex(e));
-}
-
-std::string getFlagsString(const ProjectFlags &flags)
-{
-    std::string s;
-    if (flags[pfHeaderOnly])
-        s += "H";
-    if (flags[pfExecutable])
-        s += "E";
-    return s;
+    if (t <= type)
+        return;
+    auto dirs2 = dirs;
+    std::swap(*this, dirs2);
+    type = t;
 }

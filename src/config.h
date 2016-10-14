@@ -43,42 +43,6 @@
 
 #include "printers/printer.h"
 
-enum class ConfigType
-{
-    None,
-    System,
-    User,
-    Local,
-};
-
-struct Directories
-{
-    path storage_dir;
-    path storage_dir_bin;
-    path storage_dir_cfg;
-    path storage_dir_etc;
-    path storage_dir_lib;
-    path storage_dir_lnk;
-    path storage_dir_obj;
-    path storage_dir_src;
-    path storage_dir_usr;
-    path build_dir;
-
-    PackagesDirType storage_dir_type;
-    PackagesDirType build_dir_type;
-
-    bool empty() const { return storage_dir.empty(); }
-    void update(const Directories &dirs, ConfigType type);
-
-    void set_storage_dir(const path &p);
-    void set_build_dir(const path &p);
-
-private:
-    ConfigType type;
-};
-
-extern Directories directories;
-
 struct Config;
 struct LocalSettings;
 
@@ -145,9 +109,9 @@ struct LocalSettings
     // sys/user config settings
     String host{ "https://cppan.org/" };
     ProxySettings proxy;
-    PackagesDirType storage_dir_type{ PackagesDirType::User };
+    ConfigType storage_dir_type{ ConfigType::User };
     path storage_dir;
-    PackagesDirType build_dir_type{ PackagesDirType::System };
+    ConfigType build_dir_type{ ConfigType::System };
     path build_dir;
     path cppan_dir = ".cppan";
     bool use_cache = true;

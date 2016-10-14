@@ -25,59 +25,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "enums.h"
+#pragma once
 
-std::string toString(ProjectType e)
+#include "common.h"
+
+#include <functional>
+#include <memory>
+
+struct sqlite3;
+class SqliteDatabase;
+
+sqlite3 *load_from_file_to_memory(const String &fn);
+void save_from_memory_to_file(const String &fn, sqlite3 *db);
+
+class SqliteDatabase
 {
-    switch (e)
-    {
-    case ProjectType::Library:
-        return "Library";
-    case ProjectType::Executable:
-        return "Executable";
-    case ProjectType::RootProject:
-        return "Root Project";
-    case ProjectType::Directory:
-        return "Directory";
-    }
-    return std::to_string(toIndex(e));
-}
+    typedef int(*Sqlite3Callback)(void*, int, char**, char**);
+    typedef std::function<int(int, char**, char**)> DatabaseCallback;
 
-std::string toString(ProjectPathNamespace e)
-{
-#define CASE(name) \
-    case ProjectPathNamespace::name: return #name
+public:
+    SqliteDatabase();
+    SqliteDatabase(sqlite3 *db);
+    SqliteDatabase(const String &dbname);
+    ~SqliteDatabase();
 
-    switch (e)
-    {
-        CASE(com);
-        CASE(org);
-        CASE(pvt);
-    }
-    return std::string();
-#undef CASE
-}
+    void loadDatabase(const String &dbname);
+    void save(const path &fn) const;
 
-std::string toString(ConfigType e)
-{
-    switch (e)
-    {
-    case ConfigType::Local:
-        return "local";
-    case ConfigType::User:
-        return "user";
-    case ConfigType::System:
-        return "system";
-    }
-    return std::to_string(toIndex(e));
-}
+    bool isLoaded() const;
+    sqlite3 *getDb() const;
 
-std::string getFlagsString(const ProjectFlags &flags)
-{
-    std::string s;
-    if (flags[pfHeaderOnly])
-        s += "H";
-    if (flags[pfExecutable])
-        s += "E";
-    return s;
-}
+    String getName() const;
+    String getFullName() const;
+
+    bool execute(const String &sql, void *object, Sqlite3Callback callback, bool nothrow = false, String *errmsg = 0) const;
+    bool execute(const String &sql, DatabaseCallback callback = DatabaseCallback(), bool nothrow = false, String *errmsg = 0) const;
+
+private:
+    sqlite3 *db = nullptr;
+    String name;
+    String fullName;
+};

@@ -25,59 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "enums.h"
+#pragma once
 
-std::string toString(ProjectType e)
-{
-    switch (e)
-    {
-    case ProjectType::Library:
-        return "Library";
-    case ProjectType::Executable:
-        return "Executable";
-    case ProjectType::RootProject:
-        return "Root Project";
-    case ProjectType::Directory:
-        return "Directory";
-    }
-    return std::to_string(toIndex(e));
-}
+#include <memory>
 
-std::string toString(ProjectPathNamespace e)
-{
-#define CASE(name) \
-    case ProjectPathNamespace::name: return #name
+class SqliteDatabase;
 
-    switch (e)
-    {
-        CASE(com);
-        CASE(org);
-        CASE(pvt);
-    }
-    return std::string();
-#undef CASE
-}
-
-std::string toString(ConfigType e)
-{
-    switch (e)
-    {
-    case ConfigType::Local:
-        return "local";
-    case ConfigType::User:
-        return "user";
-    case ConfigType::System:
-        return "system";
-    }
-    return std::to_string(toIndex(e));
-}
-
-std::string getFlagsString(const ProjectFlags &flags)
-{
-    std::string s;
-    if (flags[pfHeaderOnly])
-        s += "H";
-    if (flags[pfExecutable])
-        s += "E";
-    return s;
-}
+std::unique_ptr<SqliteDatabase> open_db();

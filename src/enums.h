@@ -77,7 +77,7 @@ enum ProjectFlag
     // append only to end
 };
 
-enum class PackagesDirType
+enum class ConfigType
 {
     None, // use default (user)
     Local, // in current project, dir: cppan
@@ -95,6 +95,6 @@ constexpr std::size_t toIndex(E e)
 
 std::string toString(ProjectType e);
 std::string toString(ProjectPathNamespace e);
-std::string toString(PackagesDirType e);
+std::string toString(ConfigType e);
 
 std::string getFlagsString(const ProjectFlags &flags);

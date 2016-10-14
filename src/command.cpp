@@ -138,7 +138,7 @@ Result execute(const Args &args, const Options &opts)
     if (args_fixed[0].rfind(".exe") != args_fixed[0].size() - 4)
         args_fixed[0] += ".exe";
 #endif
-    if (!has_executable_in_path(args_fixed[0]))
+    if (args_fixed[0].find_first_of("\\/") == std::string::npos && !has_executable_in_path(args_fixed[0]))
         throw std::runtime_error("Program '" + args_fixed[0] + "' not found");
 
 #ifdef _WIN32
