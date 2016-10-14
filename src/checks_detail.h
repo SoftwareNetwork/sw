@@ -144,6 +144,28 @@ public:
     virtual ~CheckLibrary() {}
 };
 
+class CheckLibraryFunction : public Check
+{
+public:
+    CheckLibraryFunction(const String &s, const String &lib)
+        : Check(getCheckInformation(LibraryFunction))
+    {
+        data = s;
+        variable = "HAVE_" + boost::algorithm::to_upper_copy(data);
+        library = lib;
+    }
+
+    virtual ~CheckLibraryFunction() {}
+
+    void save(yaml &root) const override
+    {
+        root[information.cppan_key]["function"] = getData();
+        root[information.cppan_key]["library"] = library;
+    }
+
+    String library;
+};
+
 class CheckSymbol : public Check
 {
 public:

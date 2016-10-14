@@ -41,6 +41,7 @@ public:
         Include,
         Type,
         Library,
+        LibraryFunction,
         Symbol,
         CSourceCompiles,
         CSourceRuns,

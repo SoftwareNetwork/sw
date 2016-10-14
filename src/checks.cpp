@@ -51,6 +51,9 @@ const std::map<int, Check::Information> check_information{
     { Check::Library,
     { Check::Library, "check_library_exists", "find_library", "library", "libraries" } },
 
+    { Check::LibraryFunction,
+    { Check::LibraryFunction, "check_library_function", "check_library_exists", " library function", "functions" } },
+
     { Check::Symbol,
     { Check::Symbol, "check_symbol_exists", "check_cxx_symbol_exists", "symbol", "symbols" } },
 
@@ -126,6 +129,17 @@ void Checks::load(const yaml &root)
         }
     });
 
+    // library functions
+    get_sequence_and_iterate(root, getCheckInformation(Check::LibraryFunction).cppan_key, [this](const auto &v)
+    {
+        if (v.IsMap())
+        {
+            auto f = v["function"].template as<String>();
+            auto lib = v["library"].template as<String>();
+            auto p = this->addCheck<CheckInclude>(f, lib);
+        }
+    });
+
     // symbols
     get_map_and_iterate(root, getCheckInformation(Check::Symbol).cppan_key, [this](const auto &root)
     {
@@ -184,6 +198,7 @@ void Checks::save(yaml &root) const
         case Check::Library:
             root[i.cppan_key].push_back(c->getData());
             break;
+        case Check::LibraryFunction:
         case Check::Include:
         case Check::Symbol:
         case Check::CSourceCompiles:
@@ -249,6 +264,12 @@ void Checks::write_checks(Context &ctx) const
             ctx.addLine("else()");
             ctx.addLine("    set(" + c->getVariable() + " 1)");
             ctx.addLine("endif()");
+            break;
+        case Check::LibraryFunction:
+        {
+            auto p = (CheckLibraryFunction *)c.get();
+            ctx.addLine(i.function + "(" + p->library +" \"" + c->getData() + "\" \"\" " + c->getVariable() + ")");
+        }
             break;
         case Check::Symbol:
             c->writeCheck(ctx);
@@ -322,6 +343,12 @@ void Checks::write_parallel_checks_for_workers(Context &ctx) const
             ctx.addLine("    set(" + c->getVariable() + " 1)");
             ctx.addLine("endif()");
             break;
+        case Check::LibraryFunction:
+        {
+            auto p = (CheckLibraryFunction *)c.get();
+            ctx.addLine(i.function + "(" + p->library + " \"" + c->getData() + "\" \"\" " + c->getVariable() + ")");
+        }
+        break;
         case Check::Symbol:
             c->writeCheck(ctx);
             break;
@@ -451,6 +478,7 @@ void Checks::print_values() const
         case Check::Include:
         case Check::Type:
         case Check::Library:
+        case Check::LibraryFunction:
             if (c->getValue())
                 LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - found (" + std::to_string(c->getValue()) + ")");
             else
