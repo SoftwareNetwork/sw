@@ -37,6 +37,8 @@
 #include "logger.h"
 DECLARE_STATIC_LOGGER(logger, "response");
 
+#define CURRENT_API_LEVEL 1
+
 ResponseData rd;
 
 void ResponseData::init(Config *config, const String &host, const path &root_dir)
@@ -106,10 +108,16 @@ void ResponseData::download_dependencies(const Packages &deps)
     if (e != dependency_tree.not_found())
         throw std::runtime_error(e->second.get_value<String>());
 
+    auto info = dependency_tree.find("info");
+    if (info != dependency_tree.not_found())
+        std::cout << info->second.get_value<String>() << "\n";
+
     if (api == 0)
-        throw std::runtime_error("Api version is missing in the response");
-    if (api != 1)
-        throw std::runtime_error("Bad api version");
+        throw std::runtime_error("API version is missing in the response");
+    if (api > CURRENT_API_LEVEL)
+        throw std::runtime_error("Server uses more new API version. Please upgrade the cppan client from site or via --self-upgrade.");
+    if (api < CURRENT_API_LEVEL - 1)
+        throw std::runtime_error("Your client's API is newer than server's. Please, wait for server upgrade");
 
     data_url = "data";
     if (dependency_tree.find("data_dir") != dependency_tree.not_found())
@@ -199,7 +207,7 @@ void ResponseData::extractDependencies()
         d.ppath = v.first;
         d.version = v.second.get<String>("version");
         d.flags = decltype(d.flags)(v.second.get<uint64_t>("flags"));
-        d.md5 = v.second.get<String>("md5");
+        d.sha256 = v.second.get<String>("sha256");
         d.createNames();
         dep_ids[d] = id;
 
@@ -237,19 +245,19 @@ void ResponseData::download_and_unpack()
     {
         auto &d = dd.second;
         auto version_dir = d.getDirSrc();
-        auto md5file = d.getStampFilename();
+        auto hash_file = d.getStampFilename();
 
-        // store md5 of archive
+        // store hash of archive
         bool must_download = false;
         {
-            std::ifstream ifile(md5file.string());
-            String file_md5;
+            std::ifstream ifile(hash_file.string());
+            String hash;
             if (ifile)
             {
-                ifile >> file_md5;
+                ifile >> hash;
                 ifile.close();
             }
-            if (file_md5 != d.md5 || d.md5.empty() || file_md5.empty())
+            if (hash != d.sha256 || d.sha256.empty() || hash.empty())
                 must_download = true;
         }
 
@@ -265,11 +273,11 @@ void ResponseData::download_and_unpack()
         };
 
         // lock, so only one cppan process at the time could download the project
-        ScopedFileLock lck(md5file, std::defer_lock);
+        ScopedFileLock lck(hash_file, std::defer_lock);
         if (!lck.try_lock())
         {
             // wait & continue
-            ScopedFileLock lck2(md5file);
+            ScopedFileLock lck2(hash_file);
             add_config();
             return;
         }
@@ -282,19 +290,19 @@ void ResponseData::download_and_unpack()
         String package_url = host + "/" + data_url + "/" + fs_path + "/" + d.version.toString() + ".tar.gz";
         path fn = version_dir.string() + ".tar.gz";
 
-        String dl_md5;
+        String dl_hash;
         DownloadData ddata;
         ddata.url = package_url;
         ddata.fn = fn;
-        ddata.dl_md5 = &dl_md5;
+        ddata.sha256.hash = &dl_hash;
         LOG_INFO(logger, "Downloading: " << d.target_name << "...");
         download_file(ddata);
         downloads++;
 
-        if (dl_md5 != d.md5)
-            throw std::runtime_error("md5 does not match for package '" + d.ppath.toString() + "'");
+        if (dl_hash != d.sha256)
+            throw std::runtime_error("hashes do not match for package '" + d.ppath.toString() + "'");
 
-        write_file(md5file, d.md5);
+        write_file(hash_file, d.sha256);
 
         LOG_INFO(logger, "Unpacking  : " << d.target_name << "...");
         Files files;

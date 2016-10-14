@@ -74,22 +74,32 @@ extern HttpSettings httpSettings;
 
 struct DownloadData
 {
+    struct Hasher
+    {
+        String *hash = nullptr;
+        const EVP_MD *(*hash_function)(void) = nullptr;
+
+        ~Hasher();
+        void finalize();
+        void progress(char *ptr, size_t size, size_t nmemb);
+
+    private:
+        std::unique_ptr<EVP_MD_CTX> ctx;
+    };
+
     String url;
     path fn;
     int64_t file_size_limit = 1 * 1024 * 1024;
-    String *dl_md5 = nullptr;
+    Hasher md5;
+    Hasher sha256;
 
     // service
     std::ofstream *ofile = nullptr;
 
     DownloadData();
-    ~DownloadData();
 
     void finalize();
     size_t progress(char *ptr, size_t size, size_t nmemb);
-
-private:
-    std::unique_ptr<EVP_MD_CTX> ctx;
 };
 
 String url_post(const String &url, const String &data);

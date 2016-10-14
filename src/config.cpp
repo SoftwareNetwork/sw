@@ -459,16 +459,13 @@ void Config::load(yaml root, const path &p)
         if (source.which() == 0)
         {
             auto &git = boost::get<Git>(source);
-            if (version.isValid() && git.branch.empty() && git.tag.empty())
+            if (!ver.empty() && version.isValid() && git.branch.empty() && git.tag.empty())
             {
                 if (version.isBranch())
                     git.branch = version.toString();
                 else
                     git.tag = version.toString();
             }
-            String error;
-            if (!git.isValid(&error))
-                throw std::runtime_error(error);
         }
     }
 

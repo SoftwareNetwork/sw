@@ -1768,6 +1768,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     {
         config_section_title(ctx, "parallel checks");
 
+        // parallel cygwin process work really bad, so disable parallel checks for it
+        ctx.addLine("if (NOT CYGWIN)");
+        ctx.increaseIndent();
         ctx.addLine("set(tmp_dir \"" + normalize_path(temp_directory_path() / "vars") + "\")");
         ctx.addLine("string(RANDOM LENGTH 8 vars_dir)");
         ctx.addLine("set(tmp_dir \"${tmp_dir}/${vars_dir}\")");
@@ -1780,6 +1783,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");
         ctx.addLine();
         ctx.addLine("file(REMOVE_RECURSE ${tmp_dir})");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
         ctx.addLine();
     }
 

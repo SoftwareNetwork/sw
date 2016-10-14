@@ -36,7 +36,7 @@ struct DownloadDependency : public Package
 {
     using DownloadDependencies = std::map<int, DownloadDependency>;
 
-    String md5;
+    String sha256;
 private:
     std::set<int> dependencies;
 public:

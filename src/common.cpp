@@ -153,45 +153,56 @@ Files unpack_file(const path &fn, const path &dst)
     return files;
 }
 
-DownloadData::DownloadData()
-{
-}
-
-DownloadData::~DownloadData()
-{
-    if (ctx)
-    {
-        EVP_MD_CTX_cleanup(ctx.get());
-    }
-}
-
-void DownloadData::finalize()
+void DownloadData::Hasher::finalize()
 {
     if (!ctx)
         return;
     uint32_t hash_size = 0;
-    uint8_t hash[EVP_MAX_MD_SIZE] = { 0 };
-    EVP_DigestFinal_ex(ctx.get(), hash, &hash_size);
-    if (dl_md5)
-        *dl_md5 = hash_to_string(hash, hash_size);
+    uint8_t h[EVP_MAX_MD_SIZE] = { 0 };
+    EVP_DigestFinal_ex(ctx.get(), h, &hash_size);
+    if (hash)
+        *hash = hash_to_string(h, hash_size);
+}
+
+void DownloadData::Hasher::progress(char *ptr, size_t size, size_t nmemb)
+{
+    if (!hash)
+        return;
+    if (!ctx)
+    {
+        ctx = std::make_unique<EVP_MD_CTX>();
+        EVP_MD_CTX_init(ctx.get());
+        EVP_MD_CTX_set_flags(ctx.get(), EVP_MD_CTX_FLAG_ONESHOT);
+        EVP_DigestInit(ctx.get(), hash_function());
+    }
+    EVP_DigestUpdate(ctx.get(), ptr, size * nmemb);
+}
+
+DownloadData::Hasher::~Hasher()
+{
+    if (!ctx)
+        return;
+    EVP_MD_CTX_cleanup(ctx.get());
+}
+
+void DownloadData::finalize()
+{
+    md5.finalize();
+    sha256.finalize();
+}
+
+DownloadData::DownloadData()
+{
+    md5.hash_function = &EVP_md5;
+    sha256.hash_function = &EVP_sha256;
 }
 
 size_t DownloadData::progress(char *ptr, size_t size, size_t nmemb)
 {
-    if (dl_md5)
-    {
-        if (!ctx)
-        {
-            ctx = std::make_unique<EVP_MD_CTX>();
-            EVP_MD_CTX_init(ctx.get());
-            EVP_MD_CTX_set_flags(ctx.get(), EVP_MD_CTX_FLAG_ONESHOT);
-            EVP_DigestInit(ctx.get(), EVP_md5());
-        }
-    }
     auto read = size * nmemb;
     ofile->write(ptr, read);
-    if (ctx)
-        EVP_DigestUpdate(ctx.get(), ptr, read);
+    md5.progress(ptr, size, nmemb);
+    sha256.progress(ptr, size, nmemb);
     return read;
 }
 

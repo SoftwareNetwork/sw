@@ -36,7 +36,7 @@
 
 String get_stamp_filename(const String &prefix)
 {
-    return prefix + ".md5";
+    return prefix + ".sha1";
 }
 
 path get_home_directory()

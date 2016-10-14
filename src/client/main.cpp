@@ -41,15 +41,6 @@
 #include "options.h"
 #include "../autotools/autotools.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
-#ifdef __APPLE__
-#include <libproc.h>
-#include <unistd.h>
-#endif
-
 void self_upgrade(Config &c, const char *exe_path);
 
 int main(int argc, char *argv[])
@@ -246,7 +237,7 @@ void self_upgrade(Config &c, const char *exe_path)
     dd.url = c.local_settings.host + client;
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     String dl_md5;
-    dd.dl_md5 = &dl_md5;
+    dd.md5.hash = &dl_md5;
     std::cout << "Downloading the latest client" << "\n";
     download_file(dd);
     if (md5 != dl_md5)
