@@ -167,7 +167,7 @@ auto parse_arguments(const String &f)
     int sz = (int)f.size();
     std::vector<String> s;
 
-    auto add_to_s = [&s](auto &str)
+    auto add_to_s = [&s](auto str)
     {
         boost::trim(str);
         if (str.empty())
@@ -676,7 +676,7 @@ void ac_processor::process_AC_CHECK_HEADERS(command &c)
 
 void ac_processor::process_AC_CHECK_TYPES(command &c)
 {
-    split_and_add<CheckType>(c, [](auto &v)
+    split_and_add<CheckType>(c, [](const auto &v)
     {
         if (v == "*" || v == "void")
             return false;
@@ -684,14 +684,16 @@ void ac_processor::process_AC_CHECK_TYPES(command &c)
     });
 }
 
-void ac_processor::process_AC_HEADER_DIRENT(command &c)
+void ac_processor::process_AC_HEADER_DIRENT(command &)
 {
-    process_AC_CHECK_HEADERS(command{ "", {"dirent.h","sys/ndir.h","sys/dir.h","ndir.h"} });
+    command c{ "", {"dirent.h","sys/ndir.h","sys/dir.h","ndir.h"} };
+    process_AC_CHECK_HEADERS(c);
 }
 
-void ac_processor::process_AC_HEADER_TIME(command &c)
+void ac_processor::process_AC_HEADER_TIME(command &)
 {
-    process_AC_CHECK_HEADERS(command{ "",{ "time.h","sys/time.h" } });
+    command c{ "",{ "time.h","sys/time.h" } };
+    process_AC_CHECK_HEADERS(c);
     checks.addCheck<CheckCSourceCompiles>("HAVE_TIME_WITH_SYS_TIME", R"(
 #include <time.h>
 #include <sys/time.h>
@@ -699,9 +701,10 @@ int main() {return 0;}
 )");
 }
 
-void ac_processor::process_AC_HEADER_STDC(command &c)
+void ac_processor::process_AC_HEADER_STDC(command &)
 {
-    process_AC_CHECK_HEADERS(command{ "",{ "stdlib.h", "stdarg.h", "string.h", "float.h" } });
+    command c{ "",{ "stdlib.h", "stdarg.h", "string.h", "float.h" } };
+    process_AC_CHECK_HEADERS(c);
     checks.addCheck<CheckCSourceCompiles>("STDC_HEADERS", R"(
 #include <stdlib.h>
 #include <stdarg.h>
