@@ -202,7 +202,6 @@ void ResponseData::getDependenciesFromRemote(const Packages &deps)
     if (api < CURRENT_API_LEVEL - 1)
         throw std::runtime_error("Your client's API is newer than server's. Please, wait for server upgrade");
 
-    data_url = "data";
     if (dependency_tree.find("data_dir") != dependency_tree.not_found())
         data_url = dependency_tree.get<String>("data_dir");
 
@@ -304,7 +303,7 @@ void ResponseData::download_and_unpack()
         downloads++;
 
         if (dl_hash != d.sha256)
-            throw std::runtime_error("hashes do not match for package '" + d.ppath.toString() + "'");
+            throw std::runtime_error("Hashes do not match for package: " + d.target_name);
 
         write_file(hash_file, d.sha256);
 

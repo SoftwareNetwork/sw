@@ -211,6 +211,7 @@ PackagesDatabase::PackagesDatabase()
 
     if (isCurrentDbOld())
     {
+        LOG_INFO(logger, "Checking remote version");
         auto version_remote = std::stoi(download_file(db_version_url));
         if (version_remote > readPackagesDbVersion(db_repo_dir))
         {
@@ -222,7 +223,7 @@ PackagesDatabase::PackagesDatabase()
 
 void PackagesDatabase::download()
 {
-    LOG_INFO(logger, "Downloading database...");
+    LOG_INFO(logger, "Downloading database");
 
     fs::create_directories(db_repo_dir);
 

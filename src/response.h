@@ -70,7 +70,7 @@ private:
     DownloadDependencies download_dependencies_;
     std::map<Package, ProjectVersionId> dep_ids;
     String host;
-    String data_url;
+    String data_url{"data"};
     path root_dir;
     bool executed = false;
     bool initialized = false;
