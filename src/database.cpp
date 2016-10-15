@@ -165,7 +165,7 @@ Database::Database(const String &name, const TableDescriptors &tds)
         {
             db = std::make_unique<SqliteDatabase>(fn.string());
             for (auto &td : tds)
-                db->execute(td.create);
+                db->execute(td.query);
             created = true;
         }
     }

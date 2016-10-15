@@ -39,7 +39,7 @@ class SqliteDatabase;
 struct TableDescriptor
 {
     String name;
-    String create;
+    String query;
 };
 
 using TableDescriptors = const std::vector<TableDescriptor>;
