@@ -33,6 +33,7 @@
 
 #include <access_table.h>
 #include <config.h>
+#include <database.h>
 #include <logger.h>
 #include <printers/cmake.h>
 
@@ -100,6 +101,13 @@ try
                 return 1;
             }
             process_configure_ac(argv[2]);
+            return 0;
+        }
+
+        if (cmd == "list")
+        {
+            auto &db = getPackagesDatabase();
+            db.listPackages(argc > 2 ? argv[2] : "");
             return 0;
         }
 

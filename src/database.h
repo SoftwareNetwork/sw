@@ -79,6 +79,8 @@ public:
 
     DownloadDependencies findDependencies(const Packages &deps) const;
 
+    void listPackages(const String &name = String());
+
 private:
     path db_repo_dir;
 

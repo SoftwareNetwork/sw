@@ -73,7 +73,7 @@ const TableDescriptors data_tables{
             CREATE TABLE "Projects" (
             "id" INTEGER NOT NULL,
             "path" TEXT(2048) NOT NULL,
-            "type_id" INTEGER,
+            "type_id" INTEGER NOT NULL,
             "flags" INTEGER NOT NULL,
             PRIMARY KEY ("id")
             );
@@ -85,7 +85,7 @@ const TableDescriptors data_tables{
         R"(
             CREATE TABLE "ProjectVersions" (
             "id" INTEGER NOT NULL,
-            "project_id" INTEGER,
+            "project_id" INTEGER NOT NULL,
             "major" INTEGER,
             "minor" INTEGER,
             "patch" INTEGER,
@@ -211,7 +211,7 @@ PackagesDatabase::PackagesDatabase()
 
     if (isCurrentDbOld())
     {
-        LOG_INFO(logger, "Checking remote version");
+        LOG_DEBUG(logger, "Checking remote version");
         auto version_remote = std::stoi(download_file(db_version_url));
         if (version_remote > readPackagesDbVersion(db_repo_dir))
         {
@@ -572,4 +572,38 @@ PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(ProjectV
         dependencies[dependency.ppath.toString()] = dependency;
     }
     return dependencies;
+}
+
+void PackagesDatabase::listPackages(const String &name)
+{
+    if (name.empty())
+    {
+        // print all
+        db->execute("select path from Projects where type_id <> 3 order by path", [](SQLITE_CALLBACK_ARGS)
+        {
+            LOG_INFO(logger, cols[0]);
+            return 0;
+        });
+        return;
+    }
+
+    // print with where %%
+    db->execute("select id, path from Projects where type_id <> 3 and path like '%" + name + "%' order by path", [this](SQLITE_CALLBACK_ARGS)
+    {
+        String out = cols[1];
+        out += " (";
+        db->execute(
+            "select case when branch is not null then branch else major || '.' || minor || '.' || patch end as version "
+            "from ProjectVersions where project_id = " + String(cols[0]) + " order by branch, major, minor, patch",
+            [&out](SQLITE_CALLBACK_ARGS)
+        {
+            out += cols[0];
+            out += ", ";
+            return 0;
+        });
+        out.resize(out.size() - 2);
+        out += ")";
+        LOG_INFO(logger, out);
+        return 0;
+    });
 }
