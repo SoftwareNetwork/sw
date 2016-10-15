@@ -68,7 +68,7 @@ private:
     ptree request;
     ptree dependency_tree;
     DownloadDependencies download_dependencies_;
-    std::map<Package, int> dep_ids;
+    std::map<Package, ProjectVersionId> dep_ids;
     String host;
     String data_url;
     path root_dir;
@@ -78,13 +78,15 @@ private:
     bool deps_changed = false;
     PackageConfigs packages;
     std::set<std::unique_ptr<Config>> config_store;
-    std::unique_ptr<SqliteDatabase> db;
 
+    void getDependenciesFromRemote(const Packages &deps);
+    void getDependenciesFromDb(const Packages &deps);
     void extractDependencies();
     void download_and_unpack();
     void post_download();
     void prepare_config(PackageConfigs::value_type &cc);
     void write_index() const;
+    void read_config(const DownloadDependency &d);
 };
 
 extern ResponseData rd;

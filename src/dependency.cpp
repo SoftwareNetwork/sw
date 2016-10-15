@@ -34,7 +34,7 @@
 Packages DownloadDependency::getDirectDependencies() const
 {
     Packages deps;
-    for (auto d : dependencies)
+    for (auto d : id_dependencies)
     {
         auto &dep = (*map_ptr)[d];
         deps[dep.ppath.toString()] = dep;
@@ -46,7 +46,7 @@ Packages DownloadDependency::getDirectDependencies() const
 Packages DownloadDependency::getIndirectDependencies(const Packages &known_deps) const
 {
     Packages deps = known_deps;
-    for (auto d : dependencies)
+    for (auto d : id_dependencies)
     {
         auto &dep = (*map_ptr)[d];
         auto p = deps.insert({ dep.ppath.toString(), dep });
@@ -70,9 +70,9 @@ Packages DownloadDependency::getIndirectDependencies(const Packages &known_deps)
     return deps;
 }
 
-void DownloadDependency::getIndirectDependencies(std::set<int> &deps) const
+void DownloadDependency::getIndirectDependencies(std::set<ProjectVersionId> &deps) const
 {
-    for (auto d : dependencies)
+    for (auto d : id_dependencies)
     {
         if (deps.find(d) != deps.end())
             continue;
@@ -87,7 +87,7 @@ DownloadDependencies DownloadDependency::getDependencies() const
     DownloadDependencies download_deps;
 
     // direct
-    for (auto d : dependencies)
+    for (auto d : id_dependencies)
     {
         auto dep = (*map_ptr)[d];
         dep.flags.set(pfDirectDependency);
@@ -95,8 +95,8 @@ DownloadDependencies DownloadDependency::getDependencies() const
     }
 
     // indirect
-    std::set<int> indirect_deps;
-    for (auto d : dependencies)
+    std::set<ProjectVersionId> indirect_deps;
+    for (auto d : id_dependencies)
     {
         auto &dep = (*map_ptr)[d];
         dep.getIndirectDependencies(indirect_deps);

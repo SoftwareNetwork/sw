@@ -359,6 +359,18 @@ void download_file(DownloadData &data)
         throw std::runtime_error(String(curl_easy_strerror(res)));
 }
 
+String download_file(const String &url)
+{
+    DownloadData dd;
+    dd.url = url;
+    dd.file_size_limit = 1'000'000'000;
+    dd.fn = get_temp_filename();
+    download_file(dd);
+    auto s = read_file(dd.fn);
+    fs::remove(dd.fn);
+    return s;
+}
+
 String generate_random_sequence(uint32_t len)
 {
     auto seed = std::random_device()();

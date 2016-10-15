@@ -34,23 +34,27 @@
 
 struct DownloadDependency : public Package
 {
-    using DownloadDependencies = std::map<int, DownloadDependency>;
+    using DownloadDependencies = std::map<ProjectVersionId, DownloadDependency>;
+    using DbDependencies = std::map<String, DownloadDependency>;
 
+    // extended data
+    ProjectVersionId id = 0;
     String sha256;
-private:
-    std::set<int> dependencies;
-public:
+
+    // own data (private)
+    std::set<ProjectVersionId> id_dependencies;
+    DbDependencies dependencies;
     DownloadDependencies *map_ptr = nullptr;
 
 public:
-    void setDependencyIds(const std::set<int> &ids) { dependencies = ids; }
+    void setDependencyIds(const std::set<ProjectVersionId> &ids) { id_dependencies = ids; }
 
     Packages getDirectDependencies() const;
     Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
     DownloadDependencies getDependencies() const;
 
 private:
-    void getIndirectDependencies(std::set<int> &deps) const;
+    void getIndirectDependencies(std::set<ProjectVersionId> &deps) const;
 };
 
 using DownloadDependencies = DownloadDependency::DownloadDependencies;

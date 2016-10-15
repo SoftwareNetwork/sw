@@ -106,8 +106,8 @@ set(common_src
     enums.h
     executor.cpp
     executor.h
-    file_lock.cpp
-    file_lock.h
+    lock.cpp
+    lock.h
     filesystem.cpp
     filesystem.h
     hasher.cpp

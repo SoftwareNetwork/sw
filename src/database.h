@@ -27,8 +27,78 @@
 
 #pragma once
 
+#include "common.h"
+#include "dependency.h"
+
+#include <chrono>
 #include <memory>
+#include <vector>
 
 class SqliteDatabase;
 
-std::unique_ptr<SqliteDatabase> open_db();
+struct TableDescriptor
+{
+    String name;
+    String create;
+};
+
+using TableDescriptors = const std::vector<TableDescriptor>;
+
+class Database
+{
+public:
+    Database(const String &name, const TableDescriptors &tds);
+    Database(const Database &) = delete;
+    Database &operator=(const Database &) = delete;
+
+protected:
+    std::unique_ptr<SqliteDatabase> db;
+    path fn;
+    path db_dir;
+    bool created = false;
+};
+
+class ServiceDatabase : public Database
+{
+public:
+    ServiceDatabase();
+
+    int getNumberOfRuns() const;
+    int increaseNumberOfRuns(); // returns previous value
+};
+
+class PackagesDatabase : public Database
+{
+    using TimePoint = std::chrono::system_clock::time_point;
+
+    using Dependencies = DownloadDependency::DbDependencies;
+    using DependenciesMap = std::map<Package, DownloadDependency>;
+
+public:
+    PackagesDatabase();
+
+    DownloadDependencies findDependencies(const Packages &deps) const;
+
+private:
+    path db_repo_dir;
+
+    void download();
+    void load(bool drop = false);
+
+    void writeDownloadTime() const;
+    TimePoint readDownloadTime() const;
+
+    bool isCurrentDbOld() const;
+
+    ProjectVersionId getExactProjectVersionId(const DownloadDependency &project, Version &version, ProjectFlags &flags, String &sha256) const;
+    Dependencies getProjectDependencies(ProjectVersionId project_version_id, DependenciesMap &dm) const;
+};
+
+ServiceDatabase &getServiceDatabase();
+PackagesDatabase &getPackagesDatabase();
+
+int readPackagesDbSchemaVersion(const path &dir);
+void writePackagesDbSchemaVersion(const path &dir);
+
+int readPackagesDbVersion(const path &dir);
+void writePackagesDbVersion(const path &dir, int version);

@@ -30,7 +30,7 @@
 #include "access_table.h"
 #include "context.h"
 #include "directories.h"
-#include "file_lock.h"
+#include "lock.h"
 #include "hasher.h"
 #include "log.h"
 #include "response.h"

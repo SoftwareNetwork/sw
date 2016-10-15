@@ -31,6 +31,8 @@
 #include "project_path.h"
 #include "version.h"
 
+using ProjectId = uint64_t;
+
 struct Directories;
 
 struct Package

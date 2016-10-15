@@ -28,7 +28,7 @@
 #include "access_table.h"
 
 #include "common.h"
-#include "file_lock.h"
+#include "lock.h"
 #include "stamp.h"
 
 #include <unordered_map>

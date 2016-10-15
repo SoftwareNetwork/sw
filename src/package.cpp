@@ -28,7 +28,7 @@
 #include "dependency.h"
 
 #include "config.h"
-#include "file_lock.h"
+#include "lock.h"
 #include "directories.h"
 
 #include <iostream>

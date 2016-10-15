@@ -25,45 +25,55 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "lock.h"
 
-#include "filesystem.h"
+#include <boost/interprocess/sync/file_lock.hpp>
 
-#include <memory>
-#include <mutex>
+#include <iostream>
 
-namespace boost
+std::string prepare_lock_file(const path &fn)
 {
-    namespace interprocess
-    {
-        class file_lock;
-    }
+    fs::create_directories(fn.parent_path());
+    auto lock_file = fn.parent_path() / (fn.filename().string() + ".lock");
+    if (!fs::exists(lock_file))
+        std::ofstream(lock_file.string());
+    return lock_file.string();
 }
 
-using FileLock = boost::interprocess::file_lock;
-using FileLockPtr = std::unique_ptr<FileLock>;
+////////////////////////////////////////
 
-class ScopedFileLock
+ScopedFileLock::ScopedFileLock(const path &fn)
 {
-public:
-    ScopedFileLock(const path &fn);
-    ScopedFileLock(const path &fn, std::defer_lock_t);
-    ~ScopedFileLock();
+    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+    lock->lock();
+    locked = true;
+}
 
-    bool try_lock();
-    bool is_locked() const { return locked; }
-
-private:
-    FileLockPtr lock;
-    bool locked = false;
-};
-
-class ScopedShareableFileLock
+ScopedFileLock::ScopedFileLock(const path &fn, std::defer_lock_t)
 {
-public:
-    ScopedShareableFileLock(const path &fn);
-    ~ScopedShareableFileLock();
+    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+}
 
-private:
-    FileLockPtr lock;
-};
+ScopedFileLock::~ScopedFileLock()
+{
+    if (locked)
+        lock->unlock();
+}
+
+bool ScopedFileLock::try_lock()
+{
+    return locked = lock->try_lock();
+}
+
+////////////////////////////////////////
+
+ScopedShareableFileLock::ScopedShareableFileLock(const path &fn)
+{
+    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+    lock->lock_sharable();
+}
+
+ScopedShareableFileLock::~ScopedShareableFileLock()
+{
+    lock->unlock_sharable();
+}

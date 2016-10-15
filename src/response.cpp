@@ -31,7 +31,7 @@
 #include "database.h"
 #include "directories.h"
 #include "executor.h"
-#include "file_lock.h"
+#include "lock.h"
 #include "hasher.h"
 #include "log.h"
 #include "project.h"
@@ -55,7 +55,7 @@ void ResponseData::init(Config *config, const String &host, const path &root_dir
     // add default (current, root) config
     packages[Package()].config = config;
 
-    // check for updates only 1 time, ignore errors
+    // check for updates only once, ignore errors
     try
     {
         config->checkForUpdates();
@@ -63,8 +63,6 @@ void ResponseData::init(Config *config, const String &host, const path &root_dir
     catch (...)
     {
     }
-
-    db = open_db();
 
     initialized = true;
 }
@@ -77,61 +75,16 @@ void ResponseData::download_dependencies(const Packages &deps)
     if (deps.empty())
         return;
 
-    // prepare request
-    for (auto &d : deps)
+    try
     {
-        ptree version;
-        version.put("version", d.second.version.toString());
-        request.put_child(ptree::path_type(d.second.ppath.toString(), '|'), version);
+        getDependenciesFromDb(deps);
+    }
+    catch (std::exception &e)
+    {
+        LOG_ERROR(logger, "Cannot get dependencies from local database: " << e.what());
+        getDependenciesFromRemote(deps);
     }
 
-    LOG_NO_NEWLINE("Requesting dependency list... ");
-    {
-        int n_tries = 3;
-        while (1)
-        {
-            try
-            {
-                dependency_tree = url_post(host + "/api/find_dependencies", request);
-                break;
-            }
-            catch (...)
-            {
-                if (--n_tries == 0)
-                    throw;
-                LOG_NO_NEWLINE("Retrying... ");
-            }
-        }
-    }
-
-    // read deps urls, download them, unpack
-    int api = 0;
-    if (dependency_tree.find("api") != dependency_tree.not_found())
-        api = dependency_tree.get<int>("api");
-
-    auto e = dependency_tree.find("error");
-    if (e != dependency_tree.not_found())
-        throw std::runtime_error(e->second.get_value<String>());
-
-    auto info = dependency_tree.find("info");
-    if (info != dependency_tree.not_found())
-        std::cout << info->second.get_value<String>() << "\n";
-
-    if (api == 0)
-        throw std::runtime_error("API version is missing in the response");
-    if (api > CURRENT_API_LEVEL)
-        throw std::runtime_error("Server uses more new API version. Please upgrade the cppan client from site or via --self-upgrade.");
-    if (api < CURRENT_API_LEVEL - 1)
-        throw std::runtime_error("Your client's API is newer than server's. Please, wait for server upgrade");
-
-    data_url = "data";
-    if (dependency_tree.find("data_dir") != dependency_tree.not_found())
-        data_url = dependency_tree.get<String>("data_dir");
-
-    // dependencies were received without error
-    LOG("Ok");
-
-    extractDependencies();
     download_and_unpack();
     post_download();
     write_index();
@@ -200,13 +153,72 @@ void ResponseData::download_dependencies(const Packages &deps)
     executed = true;
 }
 
+void ResponseData::getDependenciesFromRemote(const Packages &deps)
+{
+    // prepare request
+    for (auto &d : deps)
+    {
+        ptree version;
+        version.put("version", d.second.version.toString());
+        request.put_child(ptree::path_type(d.second.ppath.toString(), '|'), version);
+    }
+
+    LOG_NO_NEWLINE("Requesting dependency list... ");
+    {
+        int n_tries = 3;
+        while (1)
+        {
+            try
+            {
+                dependency_tree = url_post(host + "/api/find_dependencies", request);
+                break;
+            }
+            catch (...)
+            {
+                if (--n_tries == 0)
+                    throw;
+                LOG_NO_NEWLINE("Retrying... ");
+            }
+        }
+    }
+
+    // read deps urls, download them, unpack
+    int api = 0;
+    if (dependency_tree.find("api") != dependency_tree.not_found())
+        api = dependency_tree.get<int>("api");
+
+    auto e = dependency_tree.find("error");
+    if (e != dependency_tree.not_found())
+        throw std::runtime_error(e->second.get_value<String>());
+
+    auto info = dependency_tree.find("info");
+    if (info != dependency_tree.not_found())
+        std::cout << info->second.get_value<String>() << "\n";
+
+    if (api == 0)
+        throw std::runtime_error("API version is missing in the response");
+    if (api > CURRENT_API_LEVEL)
+        throw std::runtime_error("Server uses more new API version. Please upgrade the cppan client from site or via --self-upgrade.");
+    if (api < CURRENT_API_LEVEL - 1)
+        throw std::runtime_error("Your client's API is newer than server's. Please, wait for server upgrade");
+
+    data_url = "data";
+    if (dependency_tree.find("data_dir") != dependency_tree.not_found())
+        data_url = dependency_tree.get<String>("data_dir");
+
+    // dependencies were received without error
+    LOG("Ok");
+
+    extractDependencies();
+}
+
 void ResponseData::extractDependencies()
 {
     LOG_NO_NEWLINE("Reading package specs... ");
     auto &remote_packages = dependency_tree.get_child("packages");
     for (auto &v : remote_packages)
     {
-        auto id = v.second.get<int>("id");
+        auto id = v.second.get<ProjectVersionId>("id");
 
         DownloadDependency d;
         d.ppath = v.first;
@@ -215,26 +227,13 @@ void ResponseData::extractDependencies()
         d.sha256 = v.second.get<String>("sha256");
         d.createNames();
         dep_ids[d] = id;
-
-        if (fs::exists(d.getDirSrc()))
-        {
-            try
-            {
-                auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
-                packages[d].config = p.first->get();
-            }
-            catch (std::exception &)
-            {
-                // something wrong, remove the whole dir to re-download it
-                fs::remove_all(d.getDirSrc());
-            }
-        }
+        read_config(d);
 
         if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
         {
-            std::set<int> idx;
+            std::set<ProjectVersionId> idx;
             for (auto &tree_dep : v.second.get_child(DEPENDENCIES_NODE))
-                idx.insert(tree_dep.second.get_value<int>());
+                idx.insert(tree_dep.second.get_value<ProjectVersionId>());
             d.setDependencyIds(idx);
         }
 
@@ -416,43 +415,6 @@ void ResponseData::prepare_config(PackageConfigs::value_type &cc)
         dependencies.emplace(d.ppath.toString(), d);
     }
 
-    // turn off this feature atm
-    // #include <pvt/cppan/demo/zlib.h>
-    // #include <org/boost/filesystem.hpp>
-    // #include <org/qt/widgets.h>
-    /*if (!p.empty())
-    {
-        // create include directory structure
-        auto dir = directories.storage_dir_lnk / "src" / p.version.toPath() / p.ppath.toPath();
-        auto src = p.getDirSrc();
-#ifndef _WIN32
-        // for non windows systems create symlink
-        // uncomment this when libs will provide all includes in include dir
-        fs::create_directory_symlink(src / "include", dir);
-#else
-        // windows requires to be admin or to be added to create_symlink policy
-        // so just copy includes
-        if (!fs::exists(dir) || c->downloaded)
-        {
-            if (c->downloaded)
-                fs::remove_all(dir);
-            fs::create_directories(dir);
-            for (auto &i : project.include_directories.public_)
-            {
-                if (!fs::exists(src / i))
-                    continue;
-                for (auto &f : boost::make_iterator_range(fs::directory_iterator(src / i), {}))
-                {
-                    if (fs::is_directory(f))
-                        copy_dir(f, dir / f.path().filename());
-                    else if (fs::is_regular_file(f))
-                        fs::copy_file(f, dir / f.path().filename());
-                }
-            }
-        }
-#endif
-    }*/
-
     c->post_download();
 }
 
@@ -507,4 +469,39 @@ void ResponseData::write_index() const
 
     renew_index(directories.storage_dir_src, &Package::getDirSrc);
     renew_index(directories.storage_dir_obj, &Package::getDirObj);
+}
+
+void ResponseData::getDependenciesFromDb(const Packages &deps)
+{
+    auto &db = getPackagesDatabase();
+    auto dl_deps = db.findDependencies(deps);
+
+    LOG_NO_NEWLINE("Reading package specs... ");
+    for (auto &v : dl_deps)
+    {
+        auto &d = v.second;
+        d.createNames();
+        dep_ids[d] = d.id;
+        read_config(d);
+        d.map_ptr = &download_dependencies_;
+        download_dependencies_[d.id] = d;
+    }
+    LOG("Ok");
+}
+
+void ResponseData::read_config(const DownloadDependency &d)
+{
+    if (!fs::exists(d.getDirSrc()))
+        return;
+
+    try
+    {
+        auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
+        packages[d].config = p.first->get();
+    }
+    catch (std::exception &)
+    {
+        // something wrong, remove the whole dir to re-download it
+        fs::remove_all(d.getDirSrc());
+    }
 }

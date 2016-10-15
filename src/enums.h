@@ -41,11 +41,11 @@ enum class ProjectType
 
 enum class ProjectPathNamespace
 {
-    None,          // invalid
+    None,       // invalid
 
-    com = 1, // closed-source
-    org, // open-source
-    pvt, // users' packages
+    com = 1,    // closed-or-commercial-source
+    org,        // open-source
+    pvt,        // users' packages
 };
 
 enum ProjectFlag
@@ -79,9 +79,9 @@ enum ProjectFlag
 
 enum class ConfigType
 {
-    None, // use default (user)
-    Local, // in current project, dir: cppan
-    User, // in user package store
+    None,   // use default (user)
+    Local,  // in current project, dir: cppan
+    User,   // in user package store
     System, // in system package store
 };
 

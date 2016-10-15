@@ -32,16 +32,14 @@
 #include <functional>
 #include <memory>
 
-struct sqlite3;
-class SqliteDatabase;
+#define SQLITE_CALLBACK_ARGS int ncols, char** cols, char** names
 
-sqlite3 *load_from_file_to_memory(const String &fn);
-void save_from_memory_to_file(const String &fn, sqlite3 *db);
+struct sqlite3;
 
 class SqliteDatabase
 {
-    typedef int(*Sqlite3Callback)(void*, int, char**, char**);
-    typedef std::function<int(int, char**, char**)> DatabaseCallback;
+    typedef int(*Sqlite3Callback)(void*, int /*ncols*/, char** /*cols*/, char** /*names*/);
+    typedef std::function<int(int /*ncols*/, char** /*cols*/, char** /*names*/)> DatabaseCallback;
 
 public:
     SqliteDatabase();
@@ -60,6 +58,8 @@ public:
 
     bool execute(const String &sql, void *object, Sqlite3Callback callback, bool nothrow = false, String *errmsg = 0) const;
     bool execute(const String &sql, DatabaseCallback callback = DatabaseCallback(), bool nothrow = false, String *errmsg = 0) const;
+
+    int getNumberOfColumns(const String &table) const;
 
 private:
     sqlite3 *db = nullptr;

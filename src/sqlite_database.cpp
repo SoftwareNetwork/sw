@@ -164,7 +164,9 @@ SqliteDatabase::SqliteDatabase(sqlite3 *db)
 SqliteDatabase::SqliteDatabase(const String &dbname)
 {
     LOG_TRACE(logger, "Initializing database: " << dbname);
+
     loadDatabase(dbname);
+
     name = dbname.substr(std::max((int)dbname.rfind("/"), (int)dbname.rfind("\\")) + 1);
     fullName = dbname;
 }
@@ -172,36 +174,42 @@ SqliteDatabase::SqliteDatabase(const String &dbname)
 SqliteDatabase::~SqliteDatabase()
 {
     sqlite3_close(db);
-    db = 0;
+    db = nullptr;
 }
 
 void SqliteDatabase::loadDatabase(const String &dbname)
 {
-    if (db)
+    if (isLoaded())
         return;
+
     LOG_TRACE(logger, "Opening database: " << dbname);
+
     db = load_from_file(dbname.c_str());
+
     execute("PRAGMA cache_size = -2000;"); // cache size (N * page size)
     execute("PRAGMA page_size = 4096;"); // page size bytes (N * page size)
     execute("PRAGMA journal_mode = OFF;"); // set to no journal
     //execute("PRAGMA synchronous = 1;"); // set to wait for OS sync (0 - no wait, 1 - wait OS, 2 - wait all)
-    execute("PRAGMA foreign_keys = OFF;");
+    execute("PRAGMA foreign_keys = ON;");
 }
 
 void SqliteDatabase::save(const path &fn) const
 {
-    if (!db)
+    if (!isLoaded())
         return;
     save_from_memory_to_file(fn.string(), db);
 }
 
 bool SqliteDatabase::isLoaded() const
 {
-    return db != 0;
+    return db != nullptr;
 }
 
 bool SqliteDatabase::execute(const String &sql, void *object, Sqlite3Callback callback, bool nothrow, String *err) const
 {
+    if (!isLoaded())
+        throw std::runtime_error("db is not loaded");
+
     LOG_TRACE(logger, "Executing sql statement: " << sql);
     char *errmsg;
     String error;
@@ -227,12 +235,15 @@ bool SqliteDatabase::execute(const String &sql, void *object, Sqlite3Callback ca
 
 bool SqliteDatabase::execute(const String &sql, DatabaseCallback callback, bool nothrow, String *err) const
 {
+    if (!isLoaded())
+        throw std::runtime_error("db is not loaded");
+
     LOG_TRACE(logger, "Executing sql statement: " << sql);
     char *errmsg;
     String error;
     auto cb = [](void *o, int ncols, char **cols, char **names)
     {
-        DatabaseCallback *f = (DatabaseCallback *)o;
+        auto f = (DatabaseCallback *)o;
         if (*f)
             return (*f)(ncols, cols, names);
         return 0;
@@ -285,4 +296,15 @@ String SqliteDatabase::getFullName() const
 sqlite3 *SqliteDatabase::getDb() const
 {
     return db;
+}
+
+int SqliteDatabase::getNumberOfColumns(const String &table) const
+{
+    int n = 0;
+    execute("pragma table_info(" + table + ");", [&n](int /*ncols*/, char** /*cols*/, char** /*names*/)
+    {
+        n++;
+        return 0;
+    });
+    return n;
 }

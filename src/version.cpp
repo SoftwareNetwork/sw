@@ -115,8 +115,6 @@ bool Version::isValid() const
         return false;
     if (major < -1 || minor < -1 || patch < -1)
         return false;
-    if (major > 9999 || minor > 9999 || patch > 9999) // increase or remove limits later
-        return false;
     return true;
 }
 

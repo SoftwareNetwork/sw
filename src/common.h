@@ -105,6 +105,7 @@ struct DownloadData
 String url_post(const String &url, const String &data);
 ptree url_post(const String &url, const ptree &data);
 void download_file(DownloadData &data);
+String download_file(const String &url);
 Files unpack_file(const path &fn, const path &dst);
 
 String generate_random_sequence(uint32_t len);

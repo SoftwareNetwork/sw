@@ -31,7 +31,7 @@
 #include "../command.h"
 #include "../directories.h"
 #include "../executor.h"
-#include "../file_lock.h"
+#include "../lock.h"
 #include "../inserts.h"
 #include "../log.h"
 #include "../response.h"
