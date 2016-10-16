@@ -310,8 +310,17 @@ void PackagesDatabase::load(bool drop)
 {
     auto &sdb = getServiceDatabase();
     auto sver_old = sdb.getPackagesDbSchemaVersion();
-    auto sver = readPackagesDbSchemaVersion(db_repo_dir);
-    if (sver != PACKAGES_DB_SCHEMA_VERSION)
+    int sver = 0;
+    try
+    {
+        // in case if client does not have schema.version file atm
+        // remove this try..catch later
+        sver = readPackagesDbSchemaVersion(db_repo_dir);
+    }
+    catch (std::exception &)
+    {
+    }
+    if (sver && sver != PACKAGES_DB_SCHEMA_VERSION)
     {
         if (sver > PACKAGES_DB_SCHEMA_VERSION)
             throw std::runtime_error("Client's packages db schema version is older than remote one. Upgrade the client.");

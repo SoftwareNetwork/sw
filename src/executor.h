@@ -154,7 +154,7 @@ public:
 
 private:
     Threads thread_pool;
-    size_t nThreads = 5;
+    size_t nThreads;
     std::atomic_size_t index{ 0 };
     bool done = false;
 

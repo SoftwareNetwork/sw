@@ -460,8 +460,8 @@ void Project::load(const yaml &root)
     EXTRACT_VAR(root, header_only, "header_only", bool);
 
     EXTRACT_VAR(root, import_from_bazel, "import_from_bazel", bool);
-
     EXTRACT_VAR(root, copy_to_output_dir, "copy_to_output_dir", bool);
+    EXTRACT_VAR(root, prefer_binaries, "prefer_binaries", bool);
 
     // standards
     {

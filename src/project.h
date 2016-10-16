@@ -109,6 +109,7 @@ struct Project
     StringSet aliases;
     bool import_from_bazel = false;
     bool copy_to_output_dir = true;
+    bool prefer_binaries = false;
 
     // no files to compile
     bool header_only = false;

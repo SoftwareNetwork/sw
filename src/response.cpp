@@ -30,6 +30,7 @@
 #include "config.h"
 #include "database.h"
 #include "directories.h"
+#include "exceptions.h"
 #include "executor.h"
 #include "lock.h"
 #include "hasher.h"
@@ -41,6 +42,8 @@
 DECLARE_STATIC_LOGGER(logger, "response");
 
 #define CURRENT_API_LEVEL 1
+
+TYPED_EXCEPTION(LocalDbHashException);
 
 ResponseData rd;
 
@@ -75,17 +78,41 @@ void ResponseData::download_dependencies(const Packages &deps)
     if (deps.empty())
         return;
 
-    try
+    // do 2 attempts: 1) local db, 2) remote db
+    int n_attempts = 2;
+    while (n_attempts--)
     {
-        getDependenciesFromDb(deps);
-    }
-    catch (std::exception &e)
-    {
-        LOG_ERROR(logger, "Cannot get dependencies from local database: " << e.what());
-        getDependenciesFromRemote(deps);
+        try
+        {
+            if (query_local_db)
+            {
+                try
+                {
+                    getDependenciesFromDb(deps);
+                }
+                catch (std::exception &e)
+                {
+                    LOG_ERROR(logger, "Cannot get dependencies from local database: " << e.what());
+
+                    query_local_db = false;
+                    getDependenciesFromRemote(deps);
+                }
+            }
+            else
+            {
+                getDependenciesFromRemote(deps);
+            }
+
+            download_and_unpack();
+        }
+        catch (LocalDbHashException &)
+        {
+            LOG_WARN(logger, "Local db data caused issues, trying remote one");
+            continue;
+        }
+        break;
     }
 
-    download_and_unpack();
     post_download();
     write_index();
 
@@ -155,6 +182,9 @@ void ResponseData::download_dependencies(const Packages &deps)
 
 void ResponseData::getDependenciesFromRemote(const Packages &deps)
 {
+    // clear before proceed
+    download_dependencies_.clear();
+
     // prepare request
     for (auto &d : deps)
     {
@@ -303,7 +333,14 @@ void ResponseData::download_and_unpack()
         downloads++;
 
         if (dl_hash != d.sha256)
+        {
+            // if we get hashes from local db
+            // they can be stalled within server refresh time (15 mins)
+            // in this case we should do request to server
+            if (query_local_db)
+                throw LocalDbHashException("Hashes do not match for package: " + d.target_name);
             throw std::runtime_error("Hashes do not match for package: " + d.target_name);
+        }
 
         write_file(hash_file, d.sha256);
 
@@ -361,6 +398,32 @@ void ResponseData::download_and_unpack()
         e.push([&download_dependency, &dd] { download_dependency(dd); });
 
     e.wait();
+
+    if (query_local_db)
+    {
+        // send download list, remove this when cppan will be widely used
+        // also because this download count can be easily abused
+        getExecutor().push([this]()
+        {
+            ptree request;
+            ptree children;
+            for (auto &d : download_dependencies_)
+            {
+                ptree c;
+                c.put("", d.second.id);
+                children.push_back(std::make_pair("", c));
+            }
+            request.add_child("vids", children);
+
+            try
+            {
+                url_post(host + "/api/add_downloads", request);
+            }
+            catch (...)
+            {
+            }
+        });
+    }
 }
 
 void ResponseData::post_download()
@@ -472,6 +535,9 @@ void ResponseData::write_index() const
 
 void ResponseData::getDependenciesFromDb(const Packages &deps)
 {
+    // clear before proceed
+    download_dependencies_.clear();
+
     auto &db = getPackagesDatabase();
     auto dl_deps = db.findDependencies(deps);
 
@@ -503,4 +569,14 @@ void ResponseData::read_config(const DownloadDependency &d)
         // something wrong, remove the whole dir to re-download it
         fs::remove_all(d.getDirSrc());
     }
+}
+
+Executor &ResponseData::getExecutor()
+{
+    if (executor)
+        return *executor;
+    // create small amount of thread at the moment
+    // because we use it very rarely and not extensively
+    executor = std::make_unique<Executor>(2);
+    return *executor;
 }

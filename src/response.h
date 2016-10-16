@@ -33,6 +33,7 @@
 
 struct Config;
 struct Directories;
+class Executor;
 class SqliteDatabase;
 
 struct ResponseData
@@ -78,6 +79,8 @@ private:
     bool deps_changed = false;
     PackageConfigs packages;
     std::set<std::unique_ptr<Config>> config_store;
+    bool query_local_db = true;
+    std::unique_ptr<Executor> executor;
 
     void getDependenciesFromRemote(const Packages &deps);
     void getDependenciesFromDb(const Packages &deps);
@@ -87,6 +90,7 @@ private:
     void prepare_config(PackageConfigs::value_type &cc);
     void write_index() const;
     void read_config(const DownloadDependency &d);
+    Executor &getExecutor();
 };
 
 extern ResponseData rd;
