@@ -37,7 +37,7 @@ sudo dpkg -i cppan-master-Linux-client.deb
 
 #### Windows
 
-[Download client](https://cppan.org/client/cppan-master-win32-client.zip), unzip it and put under PATH.
+[Download client](https://cppan.org/client/cppan-master-Windows-client.zip), unzip it and put under PATH.
 
 #### macOS
 
