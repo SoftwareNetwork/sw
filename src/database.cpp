@@ -54,17 +54,32 @@ const path db_repo_dir_name = "repository";
 const String packages_db_name = "packages.db";
 const String service_db_name = "service.db";
 
-const TableDescriptors service_tables{
-    {
-        "NRuns",
-        R"(
+const TableDescriptors &get_service_tables()
+{
+    // to prevent side effects as with global variable
+    // ! append new tables to the end only !
+    static const TableDescriptors service_tables{
+        {
+            "NRuns",
+            R"(
             CREATE TABLE "NRuns" (
             "n_runs" INTEGER NOT NULL
             );
             insert into NRuns values (0);
         )"
     },
-};
+    {
+        "PackagesDbSchemaVersion",
+        R"(
+            CREATE TABLE "PackagesDbSchemaVersion" (
+            "version" INTEGER NOT NULL
+            );
+            insert into PackagesDbSchemaVersion values ()" + std::to_string(PACKAGES_DB_SCHEMA_VERSION) + R"();
+        )"
+    },
+    };
+    return service_tables;
+}
 
 const TableDescriptors data_tables{
     {
@@ -155,6 +170,7 @@ PackagesDatabase &getPackagesDatabase()
 }
 
 Database::Database(const String &name, const TableDescriptors &tds)
+    : tds(tds)
 {
     db_dir = getDbDirectory();
     fn = db_dir / name;
@@ -173,15 +189,29 @@ Database::Database(const String &name, const TableDescriptors &tds)
         db = std::make_unique<SqliteDatabase>(fn.string());
 }
 
-ServiceDatabase::ServiceDatabase()
-    : Database(service_db_name, service_tables)
+void Database::recreate()
 {
+    db.reset();
+    ScopedFileLock lock(fn);
+    fs::remove(fn);
+    db = std::make_unique<SqliteDatabase>(fn.string());
+    for (auto &td : tds)
+        db->execute(td.query);
+    created = true;
+}
+
+ServiceDatabase::ServiceDatabase()
+    : Database(service_db_name, get_service_tables())
+{
+    // create new (appended) tables
+    for (auto i = db->getNumberOfTables(); i < (int)tds.size(); i++)
+        db->execute(tds[i].query);
 }
 
 int ServiceDatabase::getNumberOfRuns() const
 {
     int n_runs = 0;
-    db->execute("select n_runs from NRuns;", [&n_runs](int, char**cols, char**)
+    db->execute("select n_runs from NRuns;", [&n_runs](SQLITE_CALLBACK_ARGS)
     {
         n_runs = std::stoi(cols[0]);
         return 0;
@@ -194,6 +224,22 @@ int ServiceDatabase::increaseNumberOfRuns()
     auto prev = getNumberOfRuns();
     db->execute("update NRuns set n_runs = n_runs + 1;");
     return prev;
+}
+
+int ServiceDatabase::getPackagesDbSchemaVersion() const
+{
+    int version = 0;
+    db->execute("select version from PackagesDbSchemaVersion;", [&version](SQLITE_CALLBACK_ARGS)
+    {
+        version = std::stoi(cols[0]);
+        return 0;
+    });
+    return version;
+}
+
+void ServiceDatabase::setPackagesDbSchemaVersion(int version)
+{
+    db->execute("update PackagesDbSchemaVersion set version = " + std::to_string(version));
 }
 
 PackagesDatabase::PackagesDatabase()
@@ -262,6 +308,22 @@ void PackagesDatabase::download()
 
 void PackagesDatabase::load(bool drop)
 {
+    auto &sdb = getServiceDatabase();
+    auto sver_old = sdb.getPackagesDbSchemaVersion();
+    auto sver = readPackagesDbSchemaVersion(db_repo_dir);
+    if (sver != PACKAGES_DB_SCHEMA_VERSION)
+    {
+        if (sver > PACKAGES_DB_SCHEMA_VERSION)
+            throw std::runtime_error("Client's packages db schema version is older than remote one. Upgrade the client.");
+        if (sver < PACKAGES_DB_SCHEMA_VERSION)
+            throw std::runtime_error("Client's packages db schema version is newer than remote one. Wait for server upgrade.");
+    }
+    if (sver > sver_old)
+    {
+        recreate();
+        sdb.setPackagesDbSchemaVersion(sver);
+    }
+
     db->execute("PRAGMA foreign_keys = OFF;");
 
     auto mdb = db->getDb();

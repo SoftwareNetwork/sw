@@ -56,6 +56,9 @@ protected:
     path fn;
     path db_dir;
     bool created = false;
+    const TableDescriptors &tds;
+
+    void recreate();
 };
 
 class ServiceDatabase : public Database
@@ -65,6 +68,9 @@ public:
 
     int getNumberOfRuns() const;
     int increaseNumberOfRuns(); // returns previous value
+
+    int getPackagesDbSchemaVersion() const;
+    void setPackagesDbSchemaVersion(int version);
 };
 
 class PackagesDatabase : public Database

@@ -60,6 +60,7 @@ public:
     bool execute(const String &sql, DatabaseCallback callback = DatabaseCallback(), bool nothrow = false, String *errmsg = 0) const;
 
     int getNumberOfColumns(const String &table) const;
+    int getNumberOfTables() const;
 
 private:
     sqlite3 *db = nullptr;

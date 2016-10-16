@@ -301,9 +301,20 @@ sqlite3 *SqliteDatabase::getDb() const
 int SqliteDatabase::getNumberOfColumns(const String &table) const
 {
     int n = 0;
-    execute("pragma table_info(" + table + ");", [&n](int /*ncols*/, char** /*cols*/, char** /*names*/)
+    execute("pragma table_info(" + table + ");", [&n](SQLITE_CALLBACK_ARGS)
     {
         n++;
+        return 0;
+    });
+    return n;
+}
+
+int SqliteDatabase::getNumberOfTables() const
+{
+    int n = 0;
+    execute("select count(*) from sqlite_master as tables where type='table';", [&n](SQLITE_CALLBACK_ARGS)
+    {
+        n = std::stoi(cols[0]);
         return 0;
     });
     return n;
