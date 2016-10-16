@@ -33,6 +33,8 @@
 #include "source.h"
 #include "yaml.h"
 
+#include <unordered_map>
+
 #define BAZEL_BUILD_FILE "BUILD"
 #define DEPENDENCIES_NODE "dependencies"
 #define INCLUDE_DIRECTORIES_ONLY "include_directories_only"
@@ -92,6 +94,15 @@ struct Options
     StringSet global_definitions;
 };
 
+using ReplaceInFiles = std::unordered_map<String, String>;
+
+struct Patch
+{
+    ReplaceInFiles replace_in_files;
+
+    void load(const yaml &root);
+};
+
 struct Project
 {
     // public data
@@ -106,6 +117,7 @@ struct Project
     Files exclude_from_build;
     BuildSystemConfigInsertions bs_insertions;
     std::map<String, Options> options;
+    Patch patch;
     StringSet aliases;
     bool import_from_bazel = false;
     bool copy_to_output_dir = true;
@@ -126,7 +138,8 @@ struct Project
     int cxx_standard{ 0 };
 
     // files to include into archive
-    Files files;
+    // also is used for enumerating sources (mutable for this)
+    mutable Files files;
 
     // this file
     String cppan_filename;
@@ -145,12 +158,15 @@ struct Project
     void findSources(path p);
     bool writeArchive(const String &filename) const;
     void prepareExports() const;
+    void patchSources() const;
 
     void load(const yaml &root);
     void save_dependencies(yaml &root) const;
 
 private:
     ProjectPath root_project;
+
+    const Files &getSources() const;
 };
 
 using Projects = std::map<String, Project>;

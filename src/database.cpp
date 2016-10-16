@@ -453,14 +453,15 @@ DownloadDependencies PackagesDatabase::findDependencies(const Packages &deps) co
 
             // root projects should return all children (lib, exe)
             db->execute("select id, path, flags from Projects where path like '" + project.ppath.toString() +
-                ".%' and type_id in (1,2) order by path",
-                [&projects](SQLITE_CALLBACK_ARGS)
+                ".%' and type_id in ('1','2') order by path",
+                [&projects, &project](SQLITE_CALLBACK_ARGS)
             {
-                DownloadDependency project;
-                project.id = std::stoull(cols[0]);
-                project.ppath = String(cols[1]);
-                project.flags = std::stoull(cols[3]);
-                projects.push_back(project);
+                DownloadDependency dep;
+                dep.id = std::stoull(cols[0]);
+                dep.ppath = String(cols[1]);
+                dep.version = project.version;
+                dep.flags = std::stoull(cols[2]);
+                projects.push_back(dep);
                 return 0;
             });
 
@@ -506,10 +507,10 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
 
         db->execute(
             "select id, major, minor, patch, flags, sha256 from ProjectVersions where "
-            "project_id = " + std::to_string(project.id) + " and "
-            "major = " + std::to_string(v.major) + " and "
-            "minor = " + std::to_string(v.minor) + " and "
-            "patch = " + std::to_string(v.patch), [&id, &flags, &sha256](SQLITE_CALLBACK_ARGS)
+            "project_id = '" + std::to_string(project.id) + "' and "
+            "major = '" + std::to_string(v.major) + "' and "
+            "minor = '" + std::to_string(v.minor) + "' and "
+            "patch = '" + std::to_string(v.patch) + "'", [&id, &flags, &sha256](SQLITE_CALLBACK_ARGS)
         {
             id = std::stoull(cols[0]);
             flags |= decltype(project.flags)(std::stoull(cols[4]));
@@ -524,9 +525,9 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
 
             db->execute(
                 "select id, major, minor, patch, flags, sha256 from ProjectVersions where "
-                "project_id = " + std::to_string(project.id) + " and "
-                "major = " + std::to_string(v.major) + " and "
-                "minor = " + std::to_string(v.minor) + " and "
+                "project_id = '" + std::to_string(project.id) + "' and "
+                "major = '" + std::to_string(v.major) + "' and "
+                "minor = '" + std::to_string(v.minor) + "' and "
                 "branch is null order by major desc, minor desc, patch desc limit 1",
                 [&id, &version, &flags, &sha256](SQLITE_CALLBACK_ARGS)
             {
@@ -544,8 +545,8 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
 
                 db->execute(
                     "select id, major, minor, patch, flags, sha256 from ProjectVersions where "
-                    "project_id = " + std::to_string(project.id) + " and "
-                    "major = " + std::to_string(v.major) + " and "
+                    "project_id = '" + std::to_string(project.id) + "' and "
+                    "major = '" + std::to_string(v.major) + "' and "
                     "branch is null order by major desc, minor desc, patch desc limit 1",
                     [&id, &version, &flags, &sha256](SQLITE_CALLBACK_ARGS)
                 {
@@ -564,7 +565,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
 
                     db->execute(
                         "select id, major, minor, patch, flags, sha256 from ProjectVersions where "
-                        "project_id = " + std::to_string(project.id) + " and "
+                        "project_id = '" + std::to_string(project.id) + "' and "
                         "branch is null order by major desc, minor desc, patch desc limit 1",
                         [&id, &version, &flags, &sha256](SQLITE_CALLBACK_ARGS)
                     {
@@ -590,8 +591,8 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
     {
         db->execute(
             "select id, major, minor, patch, flags, sha256 from ProjectVersions where "
-            "project_id = " + std::to_string(project.id) + " and "
-            "branch = " + version.toString(), [&id, &flags, &sha256](SQLITE_CALLBACK_ARGS)
+            "project_id = '" + std::to_string(project.id) + "' and "
+            "branch = '" + version.toString() + "'", [&id, &flags, &sha256](SQLITE_CALLBACK_ARGS)
         {
             id = std::stoull(cols[0]);
             flags |= decltype(project.flags)(std::stoull(cols[4]));
@@ -617,7 +618,7 @@ PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(ProjectV
     db->execute(
         "select Projects.id, path, version, Projects.flags, ProjectVersionDependencies.flags "
         "from ProjectVersionDependencies join Projects on project_dependency_id = Projects.id "
-        "where project_version_id = " + std::to_string(project_version_id) + " order by path",
+        "where project_version_id = '" + std::to_string(project_version_id) + "' order by path",
         [&deps](SQLITE_CALLBACK_ARGS)
     {
         int col_id = 0;
@@ -650,7 +651,7 @@ void PackagesDatabase::listPackages(const String &name)
     if (name.empty())
     {
         // print all
-        db->execute("select path from Projects where type_id <> 3 order by path", [](SQLITE_CALLBACK_ARGS)
+        db->execute("select path from Projects where type_id <> '3' order by path", [](SQLITE_CALLBACK_ARGS)
         {
             LOG_INFO(logger, cols[0]);
             return 0;
@@ -659,13 +660,13 @@ void PackagesDatabase::listPackages(const String &name)
     }
 
     // print with where %%
-    db->execute("select id, path from Projects where type_id <> 3 and path like '%" + name + "%' order by path", [this](SQLITE_CALLBACK_ARGS)
+    db->execute("select id, path from Projects where type_id <> '3' and path like '%" + name + "%' order by path", [this](SQLITE_CALLBACK_ARGS)
     {
         String out = cols[1];
         out += " (";
         db->execute(
             "select case when branch is not null then branch else major || '.' || minor || '.' || patch end as version "
-            "from ProjectVersions where project_id = " + String(cols[0]) + " order by branch, major, minor, patch",
+            "from ProjectVersions where project_id = '" + String(cols[0]) + "' order by branch, major, minor, patch",
             [&out](SQLITE_CALLBACK_ARGS)
         {
             out += cols[0];

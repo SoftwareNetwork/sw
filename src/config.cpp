@@ -656,6 +656,7 @@ void Config::post_download() const
 
     auto &p = getDefaultProject();
     p.prepareExports();
+    p.patchSources();
 
     // remove from table
     AccessTable at(directories.storage_dir_etc);

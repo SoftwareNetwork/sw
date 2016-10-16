@@ -214,6 +214,20 @@ ProjectPath relative_name_to_absolute(const ProjectPath &root_project, const Str
     return ppath;
 }
 
+void Patch::load(const yaml &root)
+{
+    get_map_and_iterate(root, "replace_in_files", [this](auto &v)
+    {
+        if (!v.second.IsMap())
+            throw std::runtime_error("Members of 'replace_in_files' should be maps");
+        if (!(v.second["from"].IsDefined() && v.second["to"].IsDefined()))
+            throw std::runtime_error("There are no 'from' and 'to' inside 'replace_in_files'");
+        auto from = v.second["from"].template as<String>();
+        auto to = v.second["to"].template as<String>();
+        replace_in_files[from] = to;
+    });
+}
+
 Project::Project(const ProjectPath &root_project)
     : root_project(root_project)
 {
@@ -734,6 +748,10 @@ void Project::load(const yaml &root)
         exclude_from_build.insert(BAZEL_BUILD_FILE);
 
     aliases = get_sequence_set<String>(root, "aliases");
+
+    auto patch_node = root["patch"];
+    if (patch_node.IsDefined())
+        patch.load(patch_node);
 }
 
 void Project::prepareExports() const
@@ -741,10 +759,9 @@ void Project::prepareExports() const
     // very stupid algorithm
     auto api = CPPAN_EXPORT_PREFIX + pkg.variable_name;
 
-    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(pkg.getDirSrc()), {}))
+    auto &srcs = getSources();
+    for (auto &f : srcs)
     {
-        if (!fs::is_regular_file(f) || f.path().filename() == CPPAN_FILENAME)
-            continue;
         auto s = read_file(f, true);
 
         boost::algorithm::replace_all(s, CPPAN_EXPORT, api);
@@ -765,4 +782,29 @@ void Project::prepareExports() const
 
         write_file_if_different(f, s);
     }
+}
+
+void Project::patchSources() const
+{
+    auto &srcs = getSources();
+    for (auto &f : srcs)
+    {
+        auto s = read_file(f, true);
+        for (auto &p : patch.replace_in_files)
+            boost::algorithm::replace_all(s, p.first, p.second);
+        write_file_if_different(f, s);
+    }
+}
+
+const Files &Project::getSources() const
+{
+    if (!files.empty())
+        return files;
+    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(pkg.getDirSrc()), {}))
+    {
+        if (!fs::is_regular_file(f) || f.path().filename() == CPPAN_FILENAME)
+            continue;
+        files.insert(f);
+    }
+    return files;
 }
