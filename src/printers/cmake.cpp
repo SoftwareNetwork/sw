@@ -134,7 +134,7 @@ void add_subdirectory(Context &ctx, const String &src)
 
 String get_binary_path(const Package &d, const String &prefix)
 {
-    return prefix + "/cppan/" + d.getHash();
+    return prefix + "/cppan/" + d.getFilesystemHash();
 }
 
 String get_binary_path(const Package &d)
@@ -1348,7 +1348,7 @@ void CMakePrinter::print_object_config_file(const path &fn) const
     }
 
     config_section_title(ctx, "project settings");
-    ctx.addLine("project(" + d.getHash() + " C CXX)");
+    ctx.addLine("project(" + d.getFilesystemHash() + " C CXX)");
     ctx.addLine();
 
     config_section_title(ctx, "compiler & linker settings");
@@ -2067,7 +2067,7 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
 
     auto workers = checks.scatter(N);
 
-    LOG_INFO(logger, "-- Performing " + std::to_string(checks.checks.size()) + " checks");
+    LOG_INFO(logger, "-- Performing " << checks.checks.size() << " checks using " << N << " threads");
     LOG_INFO(logger, "-- This process may take up to 5 minutes depending on your hardware");
     LOG_FLUSH();
 

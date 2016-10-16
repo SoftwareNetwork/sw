@@ -44,6 +44,7 @@ struct Package
     path getDirSrc() const;
     path getDirObj() const;
     String getHash() const;
+    String getFilesystemHash() const;
     path getHashPath() const;
     path getStampFilename() const;
 
@@ -57,6 +58,10 @@ struct Package
     void createNames();
     String getTargetName() const;
     String getVariableName() const;
+
+private:
+    // cached vars
+    String hash;
 };
 
 using Packages = std::map<String, Package>;

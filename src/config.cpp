@@ -140,7 +140,7 @@ void BuildSettings::set_build_dirs(const path &fn)
     }
     else
     {
-        source_directory_hash = sha1(normalize_path(fn.string())).substr(0, 8);
+        source_directory_hash = sha256(normalize_path(fn.string())).substr(0, 8);
         source_directory /= source_directory_hash;
     }
     binary_directory = source_directory / "build";

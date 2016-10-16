@@ -45,7 +45,7 @@ DEFINE_OPERATOR(const path &);
 
 void Hasher::do_hash()
 {
-    hash = sha1(hash);
+    hash = sha256(hash);
 }
 
 Hasher &Hasher::operator|=(bool b)

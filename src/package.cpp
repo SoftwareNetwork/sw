@@ -59,12 +59,19 @@ path Package::getStampFilename() const
 String Package::getHash() const
 {
     static const auto delim = "/";
-    return sha1(ppath.toString() + delim + version.toString()).substr(0, 8);
+    if (hash.empty())
+        return sha256(ppath.toString() + delim + version.toString());
+    return hash;
+}
+
+String Package::getFilesystemHash() const
+{
+    return getHash().substr(0, 8);
 }
 
 path Package::getHashPath() const
 {
-    auto h = getHash();
+    auto h = getFilesystemHash();
     path p;
     p /= h.substr(0, 2);
     p /= h.substr(2, 2);
@@ -78,6 +85,7 @@ void Package::createNames()
     target_name = ppath.toString() + (v == "*" ? "" : ("-" + v));
     variable_name = ppath.toString() + "_" + (v == "*" ? "" : ("_" + v));
     std::replace(variable_name.begin(), variable_name.end(), '.', '_');
+    hash = getHash();
 }
 
 String Package::getTargetName() const
