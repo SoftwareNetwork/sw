@@ -386,19 +386,21 @@ endfunction(set_c_sources_as_cpp)
 ########################################
 
 function(add_win32_version_info dir)
-    if (NOT WIN32)
-        return()
+    if (WIN32 OR CYGWIN)
+        if (NOT EXECUTABLE AND NOT LIBRARY_TYPE STREQUAL SHARED)
+            return()
+        endif()
+
+        if (NOT CYGWIN)
+            # cygwin won't have this var, so it will be eliminated from rc file
+            set(PACKAGE_BUILD_CONFIG PACKAGE_BUILD_CONFIG)
+        endif()
+
+        set(rcfile ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
+        configure_file(${dir}/.cppan/version.rc.in ${rcfile} @ONLY)
+
+        set(src ${src} ${rcfile} PARENT_SCOPE)
     endif()
-
-    if (NOT EXECUTABLE AND
-        NOT LIBRARY_TYPE STREQUAL SHARED)
-        return()
-    endif()
-
-    set(rcfile ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
-    configure_file(${dir}/.cppan/version.rc.in ${rcfile} @ONLY)
-
-    set(src ${src} ${rcfile} PARENT_SCOPE)
 endfunction(add_win32_version_info)
 
 ########################################
