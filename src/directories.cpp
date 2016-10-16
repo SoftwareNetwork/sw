@@ -46,6 +46,7 @@ void Directories::set_storage_dir(const path &p)
     SET(lnk);
     SET(obj);
     SET(src);
+    SET(tmp);
     SET(usr);
 #undef SET
 
@@ -63,4 +64,14 @@ void Directories::update(const Directories &dirs, ConfigType t)
     auto dirs2 = dirs;
     std::swap(*this, dirs2);
     type = t;
+}
+
+path Directories::get_include_dir() const
+{
+    return storage_dir_usr / "include";
+}
+
+path Directories::get_static_files_dir() const
+{
+    return storage_dir_etc / "static";
 }

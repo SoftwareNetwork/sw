@@ -108,6 +108,8 @@ void ResponseData::download_dependencies(const Packages &deps)
         catch (LocalDbHashException &)
         {
             LOG_WARN(logger, "Local db data caused issues, trying remote one");
+
+            query_local_db = false;
             continue;
         }
         break;

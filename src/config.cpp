@@ -245,7 +245,7 @@ void LocalSettings::load(const yaml &root, const ConfigType type)
         case ConfigType::Local:
             return fs::current_path();
         case ConfigType::User:
-            return directories.storage_dir_usr;
+            return directories.storage_dir_tmp;
         case ConfigType::System:
             return temp_directory_path() / "build";
         default:

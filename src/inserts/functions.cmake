@@ -396,8 +396,14 @@ function(add_win32_version_info dir)
             set(PACKAGE_BUILD_CONFIG PACKAGE_BUILD_CONFIG)
         endif()
 
+        if (PACKAGE_IS_BRANCH)
+            set(rcfile_in ${STORAGE_DIR_ETC_STATIC}/branch.rc.in)
+        else(PACKAGE_IS_VERSION)
+            set(rcfile_in ${STORAGE_DIR_ETC_STATIC}/version.rc.in)
+        endif()
         set(rcfile ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
-        configure_file(${dir}/.cppan/version.rc.in ${rcfile} @ONLY)
+
+        configure_file(${rcfile_in} ${rcfile} @ONLY)
 
         set(src ${src} ${rcfile} PARENT_SCOPE)
     endif()

@@ -111,6 +111,16 @@ void file_title(Context &ctx, const Package &d)
     ctx.addLine();
 }
 
+void print_storage_dirs(Context &ctx)
+{
+    config_section_title(ctx, "storage dirs");
+    ctx.addLine("set(STORAGE_DIR \"" + normalize_path(directories.storage_dir) + "\")");
+    ctx.addLine("set(STORAGE_DIR_ETC \"" + normalize_path(directories.storage_dir_etc) + "\")");
+    ctx.addLine("set(STORAGE_DIR_ETC_STATIC \"" + normalize_path(directories.get_static_files_dir()) + "\")");
+    ctx.addLine("set(STORAGE_DIR_USR \"" + normalize_path(directories.storage_dir_usr) + "\")");
+    ctx.addLine();
+}
+
 String add_subdirectory(String src)
 {
     boost::algorithm::replace_all(src, "\\", "/");
@@ -589,13 +599,20 @@ void CMakePrinter::print_meta()
     print_meta_config_file(fs::current_path() / cc->local_settings.cppan_dir / cmake_config_filename);
     print_helper_file(fs::current_path() / cc->local_settings.cppan_dir / cmake_helpers_filename);
 
-    // print inserted files
-    access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / cmake_functions_filename, cmake_functions);
-    access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / CPP_HEADER_FILENAME, cppan_h);
-    access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / "version.rc.in", d.version.isVersion() ? version_rc_in : branch_rc_in);
+    // print inserted files (they'll be printed only once)
+    access_table->write_if_older(directories.get_static_files_dir() / cmake_functions_filename, cmake_functions);
+    access_table->write_if_older(directories.get_static_files_dir() / "branch.rc.in", branch_rc_in);
+    access_table->write_if_older(directories.get_static_files_dir() / "version.rc.in", version_rc_in);
+    access_table->write_if_older(directories.get_include_dir() / CPP_HEADER_FILENAME, cppan_h);
 
     if (d.empty())
+    {
+        // we write some static files to root project anyway
+        access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / CPP_HEADER_FILENAME, cppan_h);
+
+        // checks file
         access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / cppan_checks_yml, cc->checks.save());
+    }
 }
 
 void CMakePrinter::print_configs()
@@ -680,8 +697,13 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     // settings
     {
         config_section_title(ctx, "settings");
+        print_storage_dirs(ctx);
         ctx.addLine("set(PACKAGE " + d.target_name + ")");
         ctx.addLine("set(PACKAGE_NAME " + d.ppath.toString() + ")");
+        ctx.addLine();
+        ctx.addLine("set(PACKAGE_IS_BRANCH " + String(d.version.isBranch() ? "1" : "0") + ")");
+        ctx.addLine("set(PACKAGE_IS_VERSION " + String(d.version.isVersion() ? "1" : "0") + ")");
+        ctx.addLine();
         ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
         ctx.addLine();
         ctx.addLine("set(PACKAGE_VERSION_MAJOR " + std::to_string(d.version.major) + ")");
@@ -1555,8 +1577,9 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     config_section_title(ctx, "variables");
     ctx.addLine("set(CPPAN_BUILD 1 CACHE STRING \"CPPAN is turned on\")");
     ctx.addLine();
-    ctx.addLine("set(CPPAN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})");
-    ctx.addLine("set(CPPAN_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})");
+    print_storage_dirs(ctx);
+    ctx.addLine("set(CPPAN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})"); // why?
+    ctx.addLine("set(CPPAN_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})"); // why?
     ctx.addLine();
     ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
     ctx.addLine();
@@ -1695,7 +1718,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine();
 
     config_section_title(ctx, "macros & functions");
-    ctx.addLine("include(" + cmake_functions_filename + ")");
+    ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + ")");
 
     config_section_title(ctx, "variables");
     if (d.empty())
@@ -1938,7 +1961,7 @@ add_custom_target(run-cppan
     DEPENDS ${file}
     SOURCES
         ${PROJECT_SOURCE_DIR}/cppan.yml
-        ${PROJECT_SOURCE_DIR}/cppan/)" + cmake_functions_filename + R"(
+        \")" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + R"(\"
         ${PROJECT_SOURCE_DIR}/cppan/)" + cmake_helpers_filename + R"(
 )
 add_dependencies()" + cppan_helpers_target + R"( run-cppan)
