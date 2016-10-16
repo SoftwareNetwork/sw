@@ -20,8 +20,8 @@
 
 ```
 sudo apt install cmake
-wget https://cppan.org/client/cppan-0.1.8-Linux-client.deb 
-sudo dpkg -i cppan-0.1.8-Linux-client.deb
+wget https://cppan.org/client/cppan-master-Linux-client.deb 
+sudo dpkg -i cppan-master-Linux-client.deb
 ```
 
 ##### Ubuntu 14.04
@@ -31,8 +31,8 @@ wget https://www.cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.sh
 sudo sh cmake-3.6.1-Linux-x86_64.sh --skip-license --prefix=/usr
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test 
 sudo apt-get update && sudo apt-get install gcc-5
-wget https://cppan.org/client/cppan-0.1.8-Linux-client.deb 
-sudo dpkg -i cppan-0.1.8-Linux-client.deb
+wget https://cppan.org/client/cppan-master-Linux-client.deb 
+sudo dpkg -i cppan-master-Linux-client.deb
 ```
 
 #### Windows

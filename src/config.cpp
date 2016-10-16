@@ -427,7 +427,40 @@ void Config::load(yaml root, const path &p)
         if (source.which() == 0)
         {
             auto &git = boost::get<Git>(source);
-            if (!ver.empty() && version.isValid() && git.branch.empty() && git.tag.empty())
+            if (ver.empty())
+            {
+                if (git.branch.empty() && git.tag.empty())
+                {
+                    ver = "master";
+                    version = Version(ver);
+                }
+                else if (!git.branch.empty())
+                {
+                    ver = git.branch;
+                    try
+                    {
+                        // branch may contain bad symbols, so put in try...catch
+                        version = Version(ver);
+                    }
+                    catch (std::exception &)
+                    {
+                    }
+                }
+                else if (!git.tag.empty())
+                {
+                    ver = git.tag;
+                    try
+                    {
+                        // tag may contain bad symbols, so put in try...catch
+                        version = Version(ver);
+                    }
+                    catch (std::exception &)
+                    {
+                    }
+                }
+            }
+
+            if (version.isValid() && git.branch.empty() && git.tag.empty())
             {
                 if (version.isBranch())
                     git.branch = version.toString();
