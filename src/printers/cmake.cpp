@@ -106,7 +106,9 @@ void file_title(Context &ctx, const Package &d)
     ctx.addLine("#");
     ctx.addLine("# source dir: " + normalize_path(d.getDirSrc().string()));
     ctx.addLine("# binary dir: " + normalize_path(d.getDirObj().string()));
-    ctx.addLine("# package hash: " + d.getHash());
+    ctx.addLine("#");
+    ctx.addLine("# package hash      : " + d.getHash());
+    ctx.addLine("# package hash short: " + d.getFilesystemHash());
     ctx.addLine("#");
     ctx.addLine();
 }
@@ -700,15 +702,14 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         print_storage_dirs(ctx);
         ctx.addLine("set(PACKAGE " + d.target_name + ")");
         ctx.addLine("set(PACKAGE_NAME " + d.ppath.toString() + ")");
-        ctx.addLine();
-        ctx.addLine("set(PACKAGE_IS_BRANCH " + String(d.version.isBranch() ? "1" : "0") + ")");
-        ctx.addLine("set(PACKAGE_IS_VERSION " + String(d.version.isVersion() ? "1" : "0") + ")");
-        ctx.addLine();
         ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
         ctx.addLine();
         ctx.addLine("set(PACKAGE_VERSION_MAJOR " + std::to_string(d.version.major) + ")");
         ctx.addLine("set(PACKAGE_VERSION_MINOR " + std::to_string(d.version.minor) + ")");
         ctx.addLine("set(PACKAGE_VERSION_PATCH " + std::to_string(d.version.patch) + ")");
+        ctx.addLine();
+        ctx.addLine("set(PACKAGE_IS_BRANCH " + String(d.version.isBranch() ? "1" : "0") + ")");
+        ctx.addLine("set(PACKAGE_IS_VERSION " + String(d.version.isVersion() ? "1" : "0") + ")");
         ctx.addLine();
         ctx.addLine("set(LIBRARY_TYPE STATIC)");
         ctx.addLine();
