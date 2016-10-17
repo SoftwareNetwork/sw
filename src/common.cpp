@@ -40,6 +40,11 @@
 #include <windows.h>
 #endif
 
+#ifdef __APPLE__
+#include <libproc.h>
+#include <unistd.h>
+#endif
+
 String get_program_version()
 {
     String s;

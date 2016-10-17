@@ -42,11 +42,6 @@
 #include <iostream>
 #include <regex>
 
-#ifdef __APPLE__
-#include <libproc.h>
-#include <unistd.h>
-#endif
-
 #if !defined(_WIN32) && !defined(__APPLE__)
 #include <linux/limits.h>
 #endif

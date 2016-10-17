@@ -48,21 +48,6 @@
 
 #include <Winhttp.h>
 #pragma comment (lib, "Winhttp.lib")
-
-#include <libarchive/archive.h>
-#include <libarchive/archive_entry.h>
-#else
-#include <archive.h>
-#include <archive_entry.h>
-#endif
-
-#ifdef __APPLE__
-#include <libproc.h>
-#include <unistd.h>
-#endif
-
-#if !defined(_WIN32) && !defined(__APPLE__)
-#include <linux/limits.h>
 #endif
 
 HttpSettings httpSettings;
