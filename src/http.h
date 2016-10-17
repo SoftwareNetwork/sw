@@ -111,3 +111,5 @@ struct DownloadData
 HttpResponse url_request(const HttpRequest &settings);
 void download_file(DownloadData &data);
 String download_file(const String &url);
+
+bool isUrl(const String &s);

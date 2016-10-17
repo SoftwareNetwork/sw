@@ -40,15 +40,8 @@ void download_file(path &fn)
     // this function checks if fn is url,
     // tries to download it to current dir and run cppan on it
     auto s = fn.string();
-
-    if (!(
-        s.find("http://") == 0 ||
-        s.find("https://") == 0 ||
-        s.find("ftp://") == 0))
-    {
+    if (!isUrl(s))
         return;
-    }
-
     fn = fn.filename();
 
     DownloadData dd;

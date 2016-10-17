@@ -325,3 +325,14 @@ HttpResponse url_request(const HttpRequest &request)
         throw std::runtime_error(String(curl_easy_strerror(res)));
     return response;
 }
+
+bool isUrl(const String &s)
+{
+    if (s.find("http://") == 0 ||
+        s.find("https://") == 0 ||
+        s.find("ftp://") == 0)
+    {
+        return true;
+    }
+    return false;
+}

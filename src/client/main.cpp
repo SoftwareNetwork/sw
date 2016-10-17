@@ -34,6 +34,7 @@
 #include <access_table.h>
 #include <config.h>
 #include <database.h>
+#include <http.h>
 #include <logger.h>
 #include <printers/cmake.h>
 
@@ -43,6 +44,13 @@
 #include "../autotools/autotools.h"
 
 void self_upgrade(Config &c, const char *exe_path);
+
+void default_run()
+{
+    auto c = Config::get_user_config();
+    c.load_current_config();
+    c.process();
+}
 
 int main(int argc, char *argv[])
 try
@@ -55,9 +63,7 @@ try
     // default run
     if (argc == 1)
     {
-        auto c = Config::get_user_config();
-        c.load_current_config();
-        c.process();
+        default_run();
         return 0;
     }
 
@@ -109,6 +115,20 @@ try
             auto &db = getPackagesDatabase();
             db.listPackages(argc > 2 ? argv[2] : "");
             return 0;
+        }
+
+        if (isUrl(cmd))
+            return build(cmd);
+        if (fs::exists(cmd))
+        {
+            if (fs::is_directory(cmd))
+            {
+                fs::current_path(cmd);
+                default_run();
+                return 0;
+            }
+            if (fs::is_regular_file(cmd))
+                return build(cmd);
         }
 
         std::cout << "unknown command\n";
