@@ -64,7 +64,7 @@ std::string normalize_path(const path &p);
 bool is_under_root(path p, const path &root_dir);
 
 std::string get_stamp_filename(const std::string &prefix);
-std::string make_archive_name(const std::string &fn);
+std::string make_archive_name(const std::string &fn = std::string());
 
 void copy_dir(const path &source, const path &destination);
 void remove_files_like(const path &dir, const std::string &regex);
