@@ -161,6 +161,9 @@ target_compile_definitions(common
     PRIVATE -DVERSION_MINOR=${VERSION_MINOR}
     PRIVATE -DVERSION_PATCH=${VERSION_PATCH}
 )
+target_include_directories(common
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+)
 target_link_libraries(common
     context
     bazel_parser
