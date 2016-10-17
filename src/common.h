@@ -37,8 +37,6 @@
 #include <vector>
 #include <unordered_set>
 
-#include <openssl/evp.h>
-
 #include "enums.h"
 #include "filesystem.h"
 #include "property_tree.h"
@@ -49,71 +47,8 @@
 using String = std::string;
 using Strings = std::vector<String>;
 
-using FilesSorted = std::set<path>;
-using Files = std::unordered_set<path>;
-
 bool check_branch_name(const String &n, String *error = nullptr);
 bool check_filename(const String &n, String *error = nullptr);
-
-struct ProxySettings
-{
-    String host;
-    String user;
-};
-
-String getAutoProxy();
-
-struct HttpSettings
-{
-    bool verbose = false;
-    bool ignore_ssl_checks = false;
-    ProxySettings proxy;
-};
-
-extern HttpSettings httpSettings;
-
-struct DownloadData
-{
-    struct Hasher
-    {
-        String *hash = nullptr;
-        const EVP_MD *(*hash_function)(void) = nullptr;
-
-        ~Hasher();
-        void finalize();
-        void progress(char *ptr, size_t size, size_t nmemb);
-
-    private:
-        std::unique_ptr<EVP_MD_CTX> ctx;
-    };
-
-    String url;
-    path fn;
-    int64_t file_size_limit = 1 * 1024 * 1024;
-    Hasher md5;
-    Hasher sha256;
-
-    // service
-    std::ofstream *ofile = nullptr;
-
-    DownloadData();
-
-    void finalize();
-    size_t progress(char *ptr, size_t size, size_t nmemb);
-};
-
-String url_post(const String &url, const String &data);
-ptree url_post(const String &url, const ptree &data);
-void download_file(DownloadData &data);
-String download_file(const String &url);
-Files unpack_file(const path &fn, const path &dst);
-
-String generate_random_sequence(uint32_t len);
-String hash_to_string(const uint8_t *hash, size_t hash_size);
-String hash_to_string(const String &hash);
-
-String sha1(const String &data);
-String sha256(const String &data);
 
 path get_program();
 String get_program_version();

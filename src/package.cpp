@@ -28,6 +28,7 @@
 #include "dependency.h"
 
 #include "config.h"
+#include "hash.h"
 #include "lock.h"
 #include "directories.h"
 

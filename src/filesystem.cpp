@@ -31,8 +31,25 @@
 
 #include <boost/algorithm/string.hpp>
 
+#ifdef WIN32
+#include <libarchive/archive.h>
+#include <libarchive/archive_entry.h>
+#else
+#include <archive.h>
+#include <archive_entry.h>
+#endif
+
 #include <iostream>
 #include <regex>
+
+#ifdef __APPLE__
+#include <libproc.h>
+#include <unistd.h>
+#endif
+
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <linux/limits.h>
+#endif
 
 String get_stamp_filename(const String &prefix)
 {
@@ -206,4 +223,62 @@ bool is_under_root(path p, const path &root_dir)
         p = p.parent_path();
     }
     return false;
+}
+
+Files unpack_file(const path &fn, const path &dst)
+{
+    if (!fs::exists(dst))
+        fs::create_directories(dst);
+
+    Files files;
+
+    auto a = archive_read_new();
+    archive_read_support_filter_all(a);
+    archive_read_support_format_all(a);
+    auto r = archive_read_open_filename(a, fn.string().c_str(), 10240);
+    if (r != ARCHIVE_OK)
+        throw std::runtime_error(archive_error_string(a));
+    archive_entry *entry;
+    while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
+    {
+        path f = dst / archive_entry_pathname(entry);
+        path fdir = f.parent_path();
+        if (!fs::exists(fdir))
+            fs::create_directories(fdir);
+        path filename = f.filename();
+        if (filename == "." || filename == "..")
+            continue;
+        auto fn = fs::absolute(f).string();
+        std::ofstream o(fn, std::ios::out | std::ios::binary);
+        if (!o)
+        {
+            // TODO: probably remove this and linux/limit.h header when server will be using hash paths
+#ifdef _WIN32
+            if (fn.size() >= MAX_PATH)
+                continue;
+#elif defined(__APPLE__)
+#else
+            if (fn.size() >= PATH_MAX)
+                continue;
+#endif
+            throw std::runtime_error("Cannot open file: " + f.string());
+        }
+        for (;;)
+        {
+            const void *buff;
+            size_t size;
+            int64_t offset;
+            auto r = archive_read_data_block(a, &buff, &size, &offset);
+            if (r == ARCHIVE_EOF)
+                break;
+            if (r < ARCHIVE_OK)
+                throw std::runtime_error(archive_error_string(a));
+            o.write((const char *)buff, size);
+        }
+        files.insert(f);
+    }
+    archive_read_close(a);
+    archive_read_free(a);
+
+    return files;
 }

@@ -31,6 +31,7 @@
 #include "context.h"
 #include "directories.h"
 #include "lock.h"
+#include "hash.h"
 #include "hasher.h"
 #include "log.h"
 #include "response.h"

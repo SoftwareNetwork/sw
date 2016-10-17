@@ -34,6 +34,7 @@
 #include "common.h"
 #include "context.h"
 #include "filesystem.h"
+#include "http.h"
 #include "package.h"
 #include "project.h"
 #include "project_path.h"

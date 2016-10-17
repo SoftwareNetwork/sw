@@ -25,67 +25,59 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "hasher.h"
-
 #include "hash.h"
 
+#include <random>
+
 #include <boost/algorithm/string.hpp>
+#include <openssl/evp.h>
 
-#include <algorithm>
-
-#define DEFINE_OPERATOR(t)        \
-    Hasher Hasher::operator|(t v) \
-    {                             \
-        auto tmp = *this;         \
-        tmp |= v;                 \
-        return tmp;               \
-    }
-
-DEFINE_OPERATOR(bool)
-DEFINE_OPERATOR(const String &)
-DEFINE_OPERATOR(const path &);
-
-void Hasher::do_hash()
+String generate_random_sequence(uint32_t len)
 {
-    hash = sha256(hash);
-}
-
-Hasher &Hasher::operator|=(bool b)
-{
-    hash += b ? "1" : "0";
-    do_hash();
-    return *this;
-}
-
-Hasher &Hasher::operator|=(const String &v)
-{
-    auto s = v;
-    boost::trim(s);
-
-    std::vector<String> out;
-    boost::split(out, s, boost::is_any_of(" \t\r\n\v\f"));
-
-    std::vector<String> out2;
-    for (auto &o : out)
+    auto seed = std::random_device()();
+    std::mt19937 g(seed);
+    std::uniform_int_distribution<> d(0, 127);
+    String user_session(len, 0);
+    while (len)
     {
-        boost::trim(o);
-        if (o.empty())
-            continue;
-        out2.push_back(o);
+        char c;
+        do c = (char)d(g);
+        while (!isalnum(c));
+        user_session[--len] = c;
     }
+    return user_session;
+};
 
-    std::sort(out2.begin(), out2.end());
-
-    for (auto &o : out2)
-        hash += o;
-
-    do_hash();
-    return *this;
+String hash_to_string(const String &hash)
+{
+    return hash_to_string((uint8_t *)hash.c_str(), hash.size());
 }
 
-Hasher &Hasher::operator|=(const path &v)
+String hash_to_string(const uint8_t *hash, size_t hash_size)
 {
-    hash += normalize_path(v);
-    do_hash();
-    return *this;
+    static auto alnum16 = "0123456789abcdef";
+
+    String s;
+    for (uint32_t i = 0; i < hash_size; i++)
+    {
+        s += alnum16[(hash[i] & 0xF0) >> 4];
+        s += alnum16[(hash[i] & 0x0F) >> 0];
+    }
+    return s;
+}
+
+String sha1(const String &data)
+{
+    uint8_t hash[EVP_MAX_MD_SIZE];
+    uint32_t hash_size;
+    EVP_Digest(data.data(), data.size(), hash, &hash_size, EVP_sha1(), nullptr);
+    return hash_to_string(hash, hash_size);
+}
+
+String sha256(const String &data)
+{
+    uint8_t hash[EVP_MAX_MD_SIZE];
+    uint32_t hash_size;
+    EVP_Digest(data.data(), data.size(), hash, &hash_size, EVP_sha256(), nullptr);
+    return hash_to_string(hash, hash_size);
 }

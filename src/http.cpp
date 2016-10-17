@@ -1,0 +1,408 @@
+/*
+ * Copyright (c) 2016, Egor Pugin
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     1. Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *     2. Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *     3. Neither the name of the copyright holder nor the names of
+ *        its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "http.h"
+
+#include "hash.h"
+#include "stamp.h"
+#include "version.h"
+
+#include <codecvt>
+#include <fstream>
+#include <locale>
+#include <random>
+#include <regex>
+
+#include <curl/curl.h>
+#include <curl/easy.h>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+
+#ifdef WIN32
+#include <windows.h>
+
+#include <Winhttp.h>
+#pragma comment (lib, "Winhttp.lib")
+
+#include <libarchive/archive.h>
+#include <libarchive/archive_entry.h>
+#else
+#include <archive.h>
+#include <archive_entry.h>
+#endif
+
+#ifdef __APPLE__
+#include <libproc.h>
+#include <unistd.h>
+#endif
+
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <linux/limits.h>
+#endif
+
+HttpSettings httpSettings;
+
+auto& get_string_converter()
+{
+    static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter;
+}
+
+std::wstring to_wstring(const std::string &s)
+{
+    auto &converter = get_string_converter();
+    return converter.from_bytes(s.c_str());
+}
+
+std::string to_string(const std::wstring &s)
+{
+    auto &converter = get_string_converter();
+    return converter.to_bytes(s.c_str());
+}
+
+String getAutoProxy()
+{
+    String proxy_addr;
+    std::wstring wproxy_addr;
+#ifdef _WIN32
+    WINHTTP_PROXY_INFO proxy = { 0 };
+    WINHTTP_CURRENT_USER_IE_PROXY_CONFIG proxy2 = { 0 };
+    if (WinHttpGetDefaultProxyConfiguration(&proxy) && proxy.lpszProxy)
+        wproxy_addr = proxy.lpszProxy;
+    else if (WinHttpGetIEProxyConfigForCurrentUser(&proxy2) && proxy2.lpszProxy)
+        wproxy_addr = proxy2.lpszProxy;
+    proxy_addr = to_string(wproxy_addr);
+#endif
+    return proxy_addr;
+}
+
+void DownloadData::Hasher::finalize()
+{
+    if (!ctx)
+        return;
+    uint32_t hash_size = 0;
+    uint8_t h[EVP_MAX_MD_SIZE] = { 0 };
+    EVP_DigestFinal_ex(ctx.get(), h, &hash_size);
+    if (hash)
+        *hash = hash_to_string(h, hash_size);
+}
+
+void DownloadData::Hasher::progress(char *ptr, size_t size, size_t nmemb)
+{
+    if (!hash)
+        return;
+    if (!ctx)
+    {
+        ctx = std::make_unique<EVP_MD_CTX>();
+        EVP_MD_CTX_init(ctx.get());
+        EVP_MD_CTX_set_flags(ctx.get(), EVP_MD_CTX_FLAG_ONESHOT);
+        EVP_DigestInit(ctx.get(), hash_function());
+    }
+    EVP_DigestUpdate(ctx.get(), ptr, size * nmemb);
+}
+
+DownloadData::Hasher::~Hasher()
+{
+    if (!ctx)
+        return;
+    EVP_MD_CTX_cleanup(ctx.get());
+}
+
+void DownloadData::finalize()
+{
+    md5.finalize();
+    sha256.finalize();
+}
+
+DownloadData::DownloadData()
+{
+    md5.hash_function = &EVP_md5;
+    sha256.hash_function = &EVP_sha256;
+}
+
+size_t DownloadData::progress(char *ptr, size_t size, size_t nmemb)
+{
+    auto read = size * nmemb;
+    ofile->write(ptr, read);
+    md5.progress(ptr, size, nmemb);
+    sha256.progress(ptr, size, nmemb);
+    return read;
+}
+
+size_t curl_write_file(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+    DownloadData &data = *(DownloadData *)userdata;
+    return data.progress(ptr, size, nmemb);
+}
+
+int curl_transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+{
+    int64_t file_size_limit = *(int64_t*)clientp;
+    if (dlnow > file_size_limit)
+        return 1;
+    return 0;
+}
+
+size_t curl_write_string(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+    String &s = *(String *)userdata;
+    auto read = size * nmemb;
+    s.append(ptr, ptr + read);
+    return read;
+}
+
+String url_post(const String &url, const String &data)
+{
+    auto curl = curl_easy_init();
+
+#ifdef _WIN32
+    // FIXME: remove after new curl released (> 7.49.1)
+    curl_easy_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, 0);
+#endif
+
+    if (httpSettings.verbose)
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+
+    /*if (!httpSettings.agent.empty())
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, httpSettings.agent.c_str());
+    if (!httpSettings.username.empty())
+        curl_easy_setopt(curl, CURLOPT_USERNAME, httpSettings.username.c_str());
+    if (!httpSettings.password.empty())
+        curl_easy_setopt(curl, CURLOPT_USERPWD, httpSettings.password.c_str());*/
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    // proxy settings
+    auto proxy_addr = getAutoProxy();
+    if (!proxy_addr.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+    }
+    if (!httpSettings.proxy.host.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, httpSettings.proxy.host.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+        if (!httpSettings.proxy.user.empty())
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, httpSettings.proxy.user.c_str());
+    }
+
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_string);
+    if (url.find("https") == 0)
+    {
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
+        if (httpSettings.ignore_ssl_checks)
+        {
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+            //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
+        }
+    }
+    String response;
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    auto res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+    if (res != CURLE_OK)
+        throw std::runtime_error(String(curl_easy_strerror(res)));
+    return response;
+}
+
+ptree url_post(const String &url, const ptree &data)
+{
+    ptree p;
+    std::ostringstream oss;
+    pt::write_json(oss, data
+#if !defined(CPPAN_TEST)
+        , false
+#endif
+    );
+    auto response = url_post(url, oss.str());
+    std::istringstream iss(response);
+    pt::read_json(iss, p);
+    return p;
+}
+
+void download_file(DownloadData &data)
+{
+    auto parent = data.fn.parent_path();
+    if (!parent.empty() && !fs::exists(parent))
+        fs::create_directories(parent);
+    std::ofstream ofile(data.fn.string(), std::ios::out | std::ios::binary);
+    if (!ofile)
+        throw std::runtime_error("Cannot open file: " + data.fn.string());
+    data.ofile = &ofile;
+
+    // set up curl request
+    auto curl = curl_easy_init();
+
+#ifdef _WIN32
+    // FIXME: remove after new curl released (> 7.49.1)
+    curl_easy_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, 0);
+#endif
+
+    if (httpSettings.verbose)
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+
+    curl_easy_setopt(curl, CURLOPT_URL, data.url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    // proxy settings
+    auto proxy_addr = getAutoProxy();
+    if (!proxy_addr.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+    }
+    if (!httpSettings.proxy.host.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, httpSettings.proxy.host.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+        if (!httpSettings.proxy.user.empty())
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, httpSettings.proxy.user.c_str());
+    }
+
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curl_transfer_info);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &data.file_size_limit);
+    if (data.url.find("https") == 0)
+    {
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
+        if (httpSettings.ignore_ssl_checks)
+        {
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+            //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
+        }
+    }
+    auto res = curl_easy_perform(curl);
+    data.finalize();
+    curl_easy_cleanup(curl);
+    if (res == CURLE_ABORTED_BY_CALLBACK)
+    {
+        fs::remove(data.fn);
+        throw std::runtime_error("File '" + data.url + "' is too big. Limit is " + std::to_string(data.file_size_limit) + " bytes.");
+    }
+    if (res != CURLE_OK)
+        throw std::runtime_error(String(curl_easy_strerror(res)));
+}
+
+String download_file(const String &url)
+{
+    DownloadData dd;
+    dd.url = url;
+    dd.file_size_limit = 1'000'000'000;
+    dd.fn = get_temp_filename();
+    download_file(dd);
+    auto s = read_file(dd.fn);
+    fs::remove(dd.fn);
+    return s;
+}
+
+HttpResponse url_request(const HttpRequest &request)
+{
+    auto curl = curl_easy_init();
+
+#ifdef _WIN32
+    // FIXME: remove after new curl released (> 7.49.1)
+    curl_easy_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, 0);
+#endif
+
+    if (request.verbose)
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+
+    if (!request.agent.empty())
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, request.agent.c_str());
+    if (!request.username.empty())
+        curl_easy_setopt(curl, CURLOPT_USERNAME, request.username.c_str());
+    if (!request.password.empty())
+        curl_easy_setopt(curl, CURLOPT_USERPWD, request.password.c_str());
+
+    curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    // proxy settings
+    auto proxy_addr = getAutoProxy();
+    if (!proxy_addr.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+    }
+    if (!request.proxy.host.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, request.proxy.host.c_str());
+        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+        if (!request.proxy.user.empty())
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, request.proxy.user.c_str());
+    }
+
+    switch (request.type)
+    {
+        case HttpRequest::POST:
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.data.c_str());
+            break;
+#undef DELETE
+        case HttpRequest::DELETE:
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+            break;
+    }
+
+    if (request.url.find("https") == 0)
+    {
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
+        if (request.ignore_ssl_checks)
+        {
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+            //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
+        }
+    }
+
+    HttpResponse response;
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.response);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_string);
+
+    auto res = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response.http_code);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK)
+        throw std::runtime_error(String(curl_easy_strerror(res)));
+    return response;
+}
+
+ptree url_request_json(const HttpRequest &settings)
+{
+    auto response = url_request(settings);
+    std::istringstream iss(response.response);
+    ptree p;
+    pt::read_json(iss, p);
+    return p;
+}

@@ -27,78 +27,99 @@
 
 #pragma once
 
-#include <boost/filesystem.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/range.hpp>
-
+#include <chrono>
+#include <map>
+#include <memory>
 #include <set>
 #include <string>
-#include <unordered_set>
+#include <stdint.h>
+#include <tuple>
 #include <vector>
+#include <unordered_set>
 
-#define STAMPS_DIR "stamps"
-#define STORAGE_DIR "storage"
+#include <openssl/evp.h>
 
-namespace fs = boost::filesystem;
-using path = fs::wpath;
+#include "common.h"
+#include "filesystem.h"
 
-using FilesSorted = std::set<path>;
-using Files = std::unordered_set<path>;
-
-path get_home_directory();
-path get_root_directory();
-path get_config_filename();
-
-path temp_directory_path();
-path get_temp_filename();
-path temp_script_path();
-path temp_script_filename();
-
-std::string read_file(const path &p, bool no_size_check = false);
-void write_file(const path &p, const std::string &s);
-void write_file_if_different(const path &p, const std::string &s);
-std::vector<std::string> read_lines(const path &p);
-
-void remove_file(const path &p);
-std::string normalize_path(const path &p);
-bool is_under_root(path p, const path &root_dir);
-
-std::string get_stamp_filename(const std::string &prefix);
-std::string make_archive_name(const std::string &fn);
-
-void copy_dir(const path &source, const path &destination);
-void remove_files_like(const path &dir, const std::string &regex);
-
-Files unpack_file(const path &fn, const path &dst);
-
-namespace std
+struct ProxySettings
 {
-    template<> struct hash<path>
-    {
-        size_t operator()(const path& p) const
-        {
-            return boost::filesystem::hash_value(p);
-        }
-    };
-}
-
-class ScopedCurrentPath
-{
-public:
-    ScopedCurrentPath()
-    {
-        old = fs::current_path();
-    }
-    ScopedCurrentPath(const path &p)
-        : ScopedCurrentPath()
-    {
-        fs::current_path(p);
-    }
-    ~ScopedCurrentPath()
-    {
-        fs::current_path(old);
-    }
-
-private:
-    path old;
+    String host;
+    String user;
 };
+
+String getAutoProxy();
+
+struct HttpSettings
+{
+    bool verbose = false;
+    bool ignore_ssl_checks = false;
+    ProxySettings proxy;
+};
+
+extern HttpSettings httpSettings;
+
+struct HttpRequest : public HttpSettings
+{
+#undef DELETE
+    enum Type
+    {
+        GET,
+        POST,
+        DELETE
+    };
+
+    String url;
+    String agent;
+    String username;
+    String password;
+    int type = GET;
+    String data;
+
+    HttpRequest(const HttpSettings &parent)
+        : HttpSettings(parent)
+    {}
+};
+
+struct HttpResponse
+{
+    long http_code = 0;
+    String response;
+};
+
+struct DownloadData
+{
+    struct Hasher
+    {
+        String *hash = nullptr;
+        const EVP_MD *(*hash_function)(void) = nullptr;
+
+        ~Hasher();
+        void finalize();
+        void progress(char *ptr, size_t size, size_t nmemb);
+
+    private:
+        std::unique_ptr<EVP_MD_CTX> ctx;
+    };
+
+    String url;
+    path fn;
+    int64_t file_size_limit = 1 * 1024 * 1024;
+    Hasher md5;
+    Hasher sha256;
+
+    // service
+    std::ofstream *ofile = nullptr;
+
+    DownloadData();
+
+    void finalize();
+    size_t progress(char *ptr, size_t size, size_t nmemb);
+};
+
+HttpResponse url_request(const HttpRequest &settings);
+ptree url_request_json(const HttpRequest &settings);
+String url_post(const String &url, const String &data);
+ptree url_post(const String &url, const ptree &data);
+void download_file(DownloadData &data);
+String download_file(const String &url);
