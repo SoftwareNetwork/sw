@@ -392,6 +392,7 @@ endif()
     if (!rc->local_settings.is_custom_build_dir())
         ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
     ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
+    ctx.addLine(String("set(CPPAN_TEST_RUN ") + (bs.test_run ? "1" : "0") + ")");
     ctx.addLine("add_subdirectory(" + normalize_path(rc->local_settings.cppan_dir) + ")");
     ctx.addLine();
 
@@ -1780,58 +1781,64 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     config_section_title(ctx, "cmake includes");
     ctx.addLine(cmake_includes);
 
-    // common checks
-    config_section_title(ctx, "common checks");
-
-    // read vars file
-    ctx.addLine("set(vars_file \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.cmake\")");
-    ctx.addLine("read_variables_file(${vars_file})");
-    ctx.addLine();
-
-    ctx.addLine("if (NOT DEFINED WORDS_BIGENDIAN)");
-    ctx.increaseIndent();
-    ctx.addLine("test_big_endian(WORDS_BIGENDIAN)");
-    ctx.addLine("add_variable(WORDS_BIGENDIAN)");
-    ctx.decreaseIndent();
-    ctx.addLine("endif()");
-    // aliases
-    ctx.addLine("set(BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
-    ctx.addLine("set(BIGENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
-    ctx.addLine("set(HOST_BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
-    ctx.addLine();
-
-    // parallel checks
-    if (d.empty())
+    // checks
+    // checks is not available during test run
+    ctx.addLine("if (NOT CPPAN_TEST_RUN)");
     {
-        config_section_title(ctx, "parallel checks");
+        // common checks
+        config_section_title(ctx, "common checks");
 
-        // parallel cygwin process work really bad, so disable parallel checks for it
-        ctx.addLine("if (NOT CYGWIN)");
+        // read vars file
+        ctx.addLine("set(vars_file \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.cmake\")");
+        ctx.addLine("read_variables_file(${vars_file})");
+        ctx.addLine();
+
+        ctx.addLine("if (NOT DEFINED WORDS_BIGENDIAN)");
         ctx.increaseIndent();
-        ctx.addLine("set(tmp_dir \"" + normalize_path(temp_directory_path() / "vars") + "\")");
-        ctx.addLine("string(RANDOM LENGTH 8 vars_dir)");
-        ctx.addLine("set(tmp_dir \"${tmp_dir}/${vars_dir}\")");
-        ctx.addLine();
-        ctx.addLine("set(checks_file \"" + normalize_path(fs::current_path() / cc->local_settings.cppan_dir / cppan_checks_yml) + "\")");
-        ctx.addLine();
-        ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION} ${tmp_dir}/CMakeFiles/)");
-        ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file})");
-        ctx.addLine("read_variables_file(${tmp_dir}/vars.txt)");
-        ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");
-        ctx.addLine();
-        ctx.addLine("file(REMOVE_RECURSE ${tmp_dir})");
+        ctx.addLine("test_big_endian(WORDS_BIGENDIAN)");
+        ctx.addLine("add_variable(WORDS_BIGENDIAN)");
         ctx.decreaseIndent();
         ctx.addLine("endif()");
+        // aliases
+        ctx.addLine("set(BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
+        ctx.addLine("set(BIGENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
+        ctx.addLine("set(HOST_BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
         ctx.addLine();
+
+        // parallel checks
+        if (d.empty())
+        {
+            config_section_title(ctx, "parallel checks");
+
+            // parallel cygwin process work really bad, so disable parallel checks for it
+            ctx.addLine("if (NOT CYGWIN)");
+            ctx.increaseIndent();
+            ctx.addLine("set(tmp_dir \"" + normalize_path(temp_directory_path() / "vars") + "\")");
+            ctx.addLine("string(RANDOM LENGTH 8 vars_dir)");
+            ctx.addLine("set(tmp_dir \"${tmp_dir}/${vars_dir}\")");
+            ctx.addLine();
+            ctx.addLine("set(checks_file \"" + normalize_path(fs::current_path() / cc->local_settings.cppan_dir / cppan_checks_yml) + "\")");
+            ctx.addLine();
+            ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles ${tmp_dir}/CMakeFiles/)");
+            ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file})");
+            ctx.addLine("read_variables_file(${tmp_dir}/vars.txt)");
+            ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");
+            ctx.addLine();
+            ctx.addLine("file(REMOVE_RECURSE ${tmp_dir})");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+            ctx.addLine();
+        }
+
+        // checks
+        config_section_title(ctx, "checks");
+        cc->checks.write_checks(ctx);
+
+        // write vars file
+        ctx.addLine("if (CPPAN_NEW_VARIABLE_ADDED)");
+        ctx.addLine("    write_variables_file(${vars_file})");
+        ctx.addLine("endif()");
     }
-
-    // checks
-    config_section_title(ctx, "checks");
-    cc->checks.write_checks(ctx);
-
-    // write vars file
-    ctx.addLine("if (CPPAN_NEW_VARIABLE_ADDED)");
-    ctx.addLine("    write_variables_file(${vars_file})");
     ctx.addLine("endif()");
 
     // fixups

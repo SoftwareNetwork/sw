@@ -363,7 +363,7 @@ void ResponseData::download_and_unpack()
 
         // at first we try to download from github
         // if we failed,try from cppan (this should be removed)
-        if (!download_from_url(github_package_url))
+        if (!download_from_url(github_package_url, !query_local_db))
         {
             LOG_ERROR(logger, "Fallback to cppan.org");
             download_from_url(cppan_package_url, false);

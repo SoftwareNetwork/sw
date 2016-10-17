@@ -57,6 +57,9 @@ const std::map<int, Check::Information> check_information{
     { Check::Symbol,
     { Check::Symbol, "check_symbol_exists", "check_cxx_symbol_exists", "symbol", "symbols" } },
 
+    { Check::Decl,
+    { Check::Decl, "check_decl_exists", "check_c_source_compiles", "declaration", "declarations" } },
+
     { Check::CSourceCompiles,
     { Check::CSourceCompiles, "check_c_source_compiles", "check_c_source_compiles", "c_source_compiles", "c_source_compiles" } },
 
@@ -96,21 +99,24 @@ String Check::getDataEscaped() const
 
 void Checks::load(const yaml &root)
 {
+    bool has_decl = false;
+
 #define LOAD_SET(t)                                                                     \
     do                                                                                  \
     {                                                                                   \
         auto seq = get_sequence<String>(root, getCheckInformation(Check::t).cppan_key); \
         for (auto &v : seq)                                                             \
-            addCheck<Check##t>(v);                                                      \
+        {                                                                               \
+            auto p = addCheck<Check##t>(v);                                             \
+            if (p->getInformation().type == Check::Decl)                                \
+                has_decl = true;                                                        \
+        }                                                                               \
     } while (0)
 
     LOAD_SET(Function);
     LOAD_SET(Library);
     LOAD_SET(Type);
-
-    // add some common types
-    addCheck<CheckType>("size_t");
-    addCheck<CheckType>("void *");
+    LOAD_SET(Decl);
 
     // includes
     get_sequence_and_iterate(root, getCheckInformation(Check::Include).cppan_key, [this](const auto &v)
@@ -177,6 +183,36 @@ void Checks::load(const yaml &root)
     LOAD_MAP(CXXSourceRuns);
 
     LOAD_MAP(Custom);
+
+    // common checks
+
+    // add some common types
+    addCheck<CheckType>("size_t");
+    addCheck<CheckType>("void *");
+
+    if (has_decl)
+    {
+        // headers
+        addCheck<CheckInclude>("sys/types.h");
+        addCheck<CheckInclude>("sys/stat.h");
+        addCheck<CheckInclude>("stdlib.h");
+        addCheck<CheckInclude>("stddef.h");
+        addCheck<CheckInclude>("memory.h");
+        addCheck<CheckInclude>("string.h");
+        addCheck<CheckInclude>("strings.h");
+        addCheck<CheckInclude>("inttypes.h");
+        addCheck<CheckInclude>("stdint.h");
+        addCheck<CheckInclude>("unistd.h");
+
+        // STDC_HEADERS
+        addCheck<CheckCSourceCompiles>("STDC_HEADERS", R"(
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <float.h>
+int main() {return 0;}
+)");
+    }
 }
 
 void Checks::load(const path &fn)
@@ -196,6 +232,7 @@ void Checks::save(yaml &root) const
         case Check::Function:
         case Check::Type:
         case Check::Library:
+        case Check::Decl:
             root[i.cppan_key].push_back(c->getData());
             break;
         case Check::LibraryFunction:
@@ -270,7 +307,8 @@ void Checks::write_checks(Context &ctx) const
             auto p = (CheckLibraryFunction *)c.get();
             ctx.addLine(i.function + "(" + p->library +" \"" + c->getData() + "\" \"\" " + c->getVariable() + ")");
         }
-            break;
+        break;
+        case Check::Decl:
         case Check::Symbol:
             c->writeCheck(ctx);
             break;
@@ -349,6 +387,7 @@ void Checks::write_parallel_checks_for_workers(Context &ctx) const
             ctx.addLine(i.function + "(" + p->library + " \"" + c->getData() + "\" \"\" " + c->getVariable() + ")");
         }
         break;
+        case Check::Decl:
         case Check::Symbol:
             c->writeCheck(ctx);
             break;
@@ -434,6 +473,24 @@ void Checks::write_definitions(Context &ctx) const
         auto &i = c->getInformation();
         auto t = i.type;
 
+        if (t == Check::Decl)
+        {
+            // decl will be always defined
+            ctx.addLine("if (NOT DEFINED" + c->getVariable() + ")");
+            ctx.increaseIndent();
+            ctx.addLine("set(" + c->getVariable() + " 0)");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+            ctx.addLine();
+
+            ctx << "target_compile_definitions(" << cppan_helpers_target << Context::eol;
+            ctx.increaseIndent();
+            ctx << "INTERFACE " << c->getVariable() << "=" << "${" << c->getVariable() << "}" << Context::eol;
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+            continue;
+        }
+
         add_if_definition(c->getVariable(), "1");
 
         if (t == Check::Type)
@@ -485,6 +542,7 @@ void Checks::print_values() const
                 LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - not found");
             break;
         case Check::Symbol:
+        case Check::Decl:
             if (c->getValue())
                 LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - found (" + std::to_string(c->getValue()) + ")");
             else

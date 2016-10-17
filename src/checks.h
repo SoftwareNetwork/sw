@@ -47,6 +47,7 @@ public:
         CSourceRuns,
         CXXSourceCompiles,
         CXXSourceRuns,
+        Decl, // decl goes almost at the end!!! (sort order)
         Custom,
 
         Max,

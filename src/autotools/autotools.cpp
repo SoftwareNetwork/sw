@@ -384,7 +384,14 @@ auto ac_processor::split_and_add(command &c, std::function<bool(String)> fun)
     for (auto &f : funcs)
     {
         if (!fun || fun(f))
+        {
+            if (f == "snprintf")
+            {
+                checks.addCheck<CheckSymbol>(f, std::set<String>{ "stdio.h" });
+                continue;
+            }
             out.push_back(checks.addCheck<T>(f));
+        }
     }
     return out;
 }
@@ -594,9 +601,8 @@ void ac_processor::process_AC_CHECK_FUNCS(command &c)
 
 void ac_processor::process_AC_CHECK_DECLS(command &c)
 {
-    // TODO: add CheckDecl, HAVE_DECL_*
-    // when not found HAVE_DECL_symbol is defined to ‘0’ instead of leaving HAVE_DECL_symbol undeclared
-    process_AC_CHECK_FUNCS(c);
+    // TODO: add case when in 4th param there's include files
+    split_and_add<CheckDecl>(c);
 }
 
 void ac_processor::process_AC_COMPILE_IFELSE(command &c)

@@ -201,6 +201,129 @@ private:
     std::set<String> headers;
 };
 
+class CheckDecl : public Check
+{
+public:
+    CheckDecl(const String &s)
+        : Check(getCheckInformation(Decl))
+    {
+        data = s;
+        variable = "HAVE_DECL_" + boost::algorithm::to_upper_copy(data);
+    }
+
+    virtual ~CheckDecl() {}
+
+    void writeCheck(Context &ctx) const override
+    {
+        static const Strings headers = {
+            "HAVE_SYS_TYPES_H",
+            "HAVE_SYS_STAT_H",
+            "STDC_HEADERS",
+            "HAVE_STDLIB_H",
+            "HAVE_STRING_H",
+            "HAVE_MEMORY_H",
+            "HAVE_STRINGS_H",
+            "HAVE_INTTYPES_H",
+            "HAVE_STDINT_H",
+            "HAVE_UNISTD_H",
+        };
+
+        ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS)");
+        for (auto &h : headers)
+        {
+            ctx.addLine("if (" + h + ")");
+            ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS} -D" + h + "=${" + h + "})");
+            ctx.addLine("endif()");
+        }
+        ctx << information.function + "(\"" +
+            R"(
+
+/*
+#include <stdio.h>
+#if ${HAVE_SYS_TYPES_H}
+# include <sys/types.h>
+#endif
+#if ${HAVE_SYS_STAT_H}
+# include <sys/stat.h>
+#endif
+#if ${STDC_HEADERS}
+# include <stdlib.h>
+# include <stddef.h>
+#else
+# if ${HAVE_STDLIB_H}
+#  include <stdlib.h>
+# endif
+#endif
+#if ${HAVE_STRING_H}
+# if ! ${STDC_HEADERS} && ${HAVE_MEMORY_H}
+#  include <memory.h>
+# endif
+# include <string.h>
+#endif
+#if ${HAVE_STRINGS_H}
+# include <strings.h>
+#endif
+#if ${HAVE_INTTYPES_H}
+# include <inttypes.h>
+#endif
+#if ${HAVE_STDINT_H}
+# include <stdint.h>
+#endif
+#if ${HAVE_UNISTD_H}
+# include <unistd.h>
+#endif
+*/
+
+#include <stdio.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <stddef.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+#ifdef HAVE_STRING_H
+# if !defined STDC_HEADERS && defined HAVE_MEMORY_H
+#  include <memory.h>
+# endif
+# include <string.h>
+#endif
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
+int main()
+{
+    (void)
+)" +
+            getData() +
+            R"(
+    ;
+    return 0;
+}
+)"
+            "\" " << getVariable() << ")" << Context::eol;
+
+        ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS)");
+    }
+};
+
 struct CheckSource : public Check
 {
     bool invert = false;
