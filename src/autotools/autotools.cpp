@@ -204,7 +204,9 @@ auto parse_configure_ac(String f)
         "AC_\\w+?_IFELSE",
         "AC_HEADER_\\w+",
         "AC_STRUCT_\\w+",
-        "\nAC_DEFINE"
+        "\nAC_DEFINE",
+        "AC_FUNC_\\w+",
+        "AC_TYPE_\\w+",
     };
 
     String rx = "(";
@@ -365,6 +367,38 @@ void ac_processor::process()
         SILENCE(AC_CHECK_PROGS);
         SILENCE(AC_CHECK_TOOLS);
         SILENCE(AC_CHECK_FILE);
+
+        // particular checks
+        if (c.name == "AC_CHECK_HEADER_STDBOOL")
+        {
+            checks.addCheck<CheckInclude>("stdbool.h");
+            continue;
+        }
+
+
+        {
+            std::regex r("AC_FUNC_(\\w+)");
+            std::smatch m;
+            if (std::regex_match(c.name, m, r))
+            {
+                auto v = m[1].str();
+                boost::to_lower(v);
+                checks.addCheck<CheckFunction>(v);
+                continue;
+            }
+        }
+
+        {
+            std::regex r("AC_TYPE_(\\w+)");
+            std::smatch m;
+            if (std::regex_match(c.name, m, r))
+            {
+                auto v = m[1].str();
+                boost::to_lower(v);
+                checks.addCheck<CheckType>(v);
+                continue;
+            }
+        }
 
         if (unproc.find(c.name) == unproc.end())
         {
