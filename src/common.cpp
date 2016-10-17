@@ -28,7 +28,6 @@
 #include "common.h"
 
 #include "stamp.h"
-#include "version.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -57,51 +56,6 @@ String get_program_version_string(const String &prog_name)
     t += boost::posix_time::seconds(static_cast<long>(std::stoi(cppan_stamp)));
     return prog_name + " version " + get_program_version() + "\n" +
         "assembled " + boost::posix_time::to_simple_string(t);
-}
-
-bool check_branch_name(const String &n, String *error)
-{
-    if (!std::regex_match(n, r_branch_name))
-    {
-        if (error)
-            *error = "Branch name should be a-zA-Z0-9_- starting with letter or _";
-        return false;
-    }
-    return true;
-}
-
-bool check_filename(const String &s, String *error)
-{
-    for (auto &c : s)
-    {
-        if (isalnum((uint8_t)c))
-            continue;
-        switch (c)
-        {
-        case '/':
-        case '\\':
-        case ':':
-        case '.':
-        case '_':
-        case '-':
-        case '+':
-            break;
-        default:
-            return false;
-        }
-    }
-    return true;
-}
-
-String repeat(const String &e, int n)
-{
-    String s;
-    if (n < 0)
-        return s;
-    s.reserve(e.size() * n);
-    for (int i = 0; i < n; i++)
-        s += e;
-    return s;
 }
 
 path get_program()

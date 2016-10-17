@@ -162,3 +162,14 @@ bool Version::canBe(const Version &rhs) const
 
     return false;
 }
+
+bool Version::check_branch_name(const String &n, String *error)
+{
+    if (!std::regex_match(n, r_branch_name))
+    {
+        if (error)
+            *error = "Branch name should be a-zA-Z0-9_- starting with letter or _";
+        return false;
+    }
+    return true;
+}

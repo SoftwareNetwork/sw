@@ -28,8 +28,11 @@
 #pragma once
 
 #include "common.h"
+#include "enums.h"
 #include "project_path.h"
 #include "version.h"
+
+#include <map>
 
 using ProjectId = uint64_t;
 

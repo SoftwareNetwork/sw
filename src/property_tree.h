@@ -30,5 +30,10 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+#include <string>
+
 namespace pt = boost::property_tree;
 using ptree = pt::ptree;
+
+std::string ptree2string(const ptree &p);
+ptree string2ptree(const std::string &s);

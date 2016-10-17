@@ -45,6 +45,8 @@
 #include "../logger.h"
 DECLARE_STATIC_LOGGER(logger, "cmake");
 
+String repeat(const String &e, int n);
+
 // common?
 const String cppan_dummy_target = "cppan-dummy";
 const String cppan_helpers_target = "cppan-helpers";
@@ -85,6 +87,17 @@ include(CheckCXXSourceRuns)
 include(CheckStructHasMember)
 include(TestBigEndian)
 )";
+
+String repeat(const String &e, int n)
+{
+    String s;
+    if (n < 0)
+        return s;
+    s.reserve(e.size() * n);
+    for (int i = 0; i < n; i++)
+        s += e;
+    return s;
+}
 
 void config_section_title(Context &ctx, const String &t)
 {

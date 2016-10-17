@@ -34,8 +34,6 @@
 using ProjectVersionId = uint64_t;
 using ProjectVersionNumber = int32_t;
 
-extern const std::regex r_branch_name;
-
 struct Version
 {
     // undef gcc symbols
@@ -73,4 +71,7 @@ struct Version
     bool operator<(const Version &rhs) const;
     bool operator==(const Version &rhs) const;
     bool operator!=(const Version &rhs) const;
+
+private:
+    static bool check_branch_name(const String &n, String *error = nullptr);
 };

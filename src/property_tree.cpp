@@ -25,89 +25,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
-#include <openssl/evp.h>
-
-#include "common.h"
-#include "filesystem.h"
 #include "property_tree.h"
 
-struct ProxySettings
+#include <iostream>
+
+std::string ptree2string(const ptree &p)
 {
-    String host;
-    String user;
-};
+    std::ostringstream oss;
+    pt::write_json(oss, p, false);
+    return oss.str();
+}
 
-String getAutoProxy();
-
-struct HttpSettings
+ptree string2ptree(const std::string &s)
 {
-    bool verbose = false;
-    bool ignore_ssl_checks = false;
-    ProxySettings proxy;
-};
+    std::istringstream iss(s);
+    ptree p;
+    pt::read_json(iss, p);
+    return p;
+}
 
-extern HttpSettings httpSettings;
-
-struct HttpRequest : public HttpSettings
-{
-#undef DELETE
-    enum Type
-    {
-        GET,
-        POST,
-        DELETE
-    };
-
-    String url;
-    String agent;
-    String username;
-    String password;
-    int type = GET;
-    String data;
-
-    HttpRequest(const HttpSettings &parent)
-        : HttpSettings(parent)
-    {}
-};
-
-struct HttpResponse
-{
-    long http_code = 0;
-    String response;
-};
-
-struct DownloadData
-{
-    struct Hasher
-    {
-        String *hash = nullptr;
-        const EVP_MD *(*hash_function)(void) = nullptr;
-
-        ~Hasher();
-        void finalize();
-        void progress(char *ptr, size_t size, size_t nmemb);
-
-    private:
-        std::unique_ptr<EVP_MD_CTX> ctx;
-    };
-
-    String url;
-    path fn;
-    int64_t file_size_limit = 1 * 1024 * 1024;
-    Hasher md5;
-    Hasher sha256;
-
-    // service
-    std::ofstream *ofile = nullptr;
-
-    DownloadData();
-
-    void finalize();
-    size_t progress(char *ptr, size_t size, size_t nmemb);
-};
-
-HttpResponse url_request(const HttpRequest &settings);
-void download_file(DownloadData &data);
-String download_file(const String &url);

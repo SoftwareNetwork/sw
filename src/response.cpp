@@ -202,7 +202,14 @@ void ResponseData::getDependenciesFromRemote(const Packages &deps)
         {
             try
             {
-                dependency_tree = url_post(host + "/api/find_dependencies", request);
+                HttpRequest req = httpSettings;
+                req.type = HttpRequest::POST;
+                req.url = host + "/api/find_dependencies";
+                req.data = ptree2string(request);
+                auto resp = url_request(req);
+                if (resp.http_code != 200)
+                    throw std::runtime_error("Cannot get deps");
+                dependency_tree = string2ptree(resp.response);
                 break;
             }
             catch (...)
@@ -322,28 +329,47 @@ void ResponseData::download_and_unpack()
 
         auto fs_path = ProjectPath(d.ppath).toFileSystemPath().string();
         std::replace(fs_path.begin(), fs_path.end(), '\\', '/');
-        String package_url = host + "/" + data_url + "/" + fs_path + "/" + d.version.toString() + ".tar.gz";
+        String cppan_package_url = host + "/" + data_url + "/" + fs_path + "/" + d.version.toString() + ".tar.gz";
+        String github_package_url = "https://github.com/cppan-packages/" + d.getHash() + "/raw/master/" + make_archive_name();
         path fn = version_dir.string() + ".tar.gz";
 
         String dl_hash;
         DownloadData ddata;
-        ddata.url = package_url;
         ddata.fn = fn;
         ddata.sha256.hash = &dl_hash;
-        LOG_INFO(logger, "Downloading: " << d.target_name << "...");
-        download_file(ddata);
-        downloads++;
 
-        if (dl_hash != d.sha256)
+        LOG_INFO(logger, "Downloading: " << d.target_name << "...");
+
+        auto download_from_url = [this, &ddata, &dl_hash, &d](const auto &url, bool nothrow = true)
         {
-            // if we get hashes from local db
-            // they can be stalled within server refresh time (15 mins)
-            // in this case we should do request to server
-            if (query_local_db)
-                throw LocalDbHashException("Hashes do not match for package: " + d.target_name);
-            throw std::runtime_error("Hashes do not match for package: " + d.target_name);
+            ddata.url = url;
+            download_file(ddata);
+
+            if (dl_hash != d.sha256)
+            {
+                if (nothrow)
+                    return false;
+
+                // if we get hashes from local db
+                // they can be stalled within server refresh time (15 mins)
+                // in this case we should do request to server
+                if (query_local_db)
+                    throw LocalDbHashException("Hashes do not match for package: " + d.target_name);
+                throw std::runtime_error("Hashes do not match for package: " + d.target_name);
+            }
+
+            return true;
+        };
+
+        // at first we try to download from github
+        // if we failed,try from cppan (this should be removed)
+        if (!download_from_url(github_package_url))
+        {
+            LOG_ERROR(logger, "Fallback to cppan.org");
+            download_from_url(cppan_package_url, false);
         }
 
+        downloads++;
         write_file(hash_file, d.sha256);
 
         LOG_INFO(logger, "Unpacking  : " << d.target_name << "...");
@@ -419,7 +445,11 @@ void ResponseData::download_and_unpack()
 
             try
             {
-                url_post(host + "/api/add_downloads", request);
+                HttpRequest req = httpSettings;
+                req.type = HttpRequest::POST;
+                req.url = host + "/api/add_downloads";
+                req.data = ptree2string(request);
+                auto resp = url_request(req);
             }
             catch (...)
             {

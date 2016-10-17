@@ -110,6 +110,7 @@ void DownloadData::Hasher::finalize()
     EVP_DigestFinal_ex(ctx.get(), h, &hash_size);
     if (hash)
         *hash = hash_to_string(h, hash_size);
+    ctx.reset();
 }
 
 void DownloadData::Hasher::progress(char *ptr, size_t size, size_t nmemb)
@@ -174,79 +175,6 @@ size_t curl_write_string(char *ptr, size_t size, size_t nmemb, void *userdata)
     auto read = size * nmemb;
     s.append(ptr, ptr + read);
     return read;
-}
-
-String url_post(const String &url, const String &data)
-{
-    auto curl = curl_easy_init();
-
-#ifdef _WIN32
-    // FIXME: remove after new curl released (> 7.49.1)
-    curl_easy_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, 0);
-#endif
-
-    if (httpSettings.verbose)
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-
-    /*if (!httpSettings.agent.empty())
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, httpSettings.agent.c_str());
-    if (!httpSettings.username.empty())
-        curl_easy_setopt(curl, CURLOPT_USERNAME, httpSettings.username.c_str());
-    if (!httpSettings.password.empty())
-        curl_easy_setopt(curl, CURLOPT_USERPWD, httpSettings.password.c_str());*/
-
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-
-    // proxy settings
-    auto proxy_addr = getAutoProxy();
-    if (!proxy_addr.empty())
-    {
-        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
-        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-    }
-    if (!httpSettings.proxy.host.empty())
-    {
-        curl_easy_setopt(curl, CURLOPT_PROXY, httpSettings.proxy.host.c_str());
-        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-        if (!httpSettings.proxy.user.empty())
-            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, httpSettings.proxy.user.c_str());
-    }
-
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_string);
-    if (url.find("https") == 0)
-    {
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
-        if (httpSettings.ignore_ssl_checks)
-        {
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
-            //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
-        }
-    }
-    String response;
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    auto res = curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
-    if (res != CURLE_OK)
-        throw std::runtime_error(String(curl_easy_strerror(res)));
-    return response;
-}
-
-ptree url_post(const String &url, const ptree &data)
-{
-    ptree p;
-    std::ostringstream oss;
-    pt::write_json(oss, data
-#if !defined(CPPAN_TEST)
-        , false
-#endif
-    );
-    auto response = url_post(url, oss.str());
-    std::istringstream iss(response);
-    pt::read_json(iss, p);
-    return p;
 }
 
 void download_file(DownloadData &data)
@@ -396,13 +324,4 @@ HttpResponse url_request(const HttpRequest &request)
     if (res != CURLE_OK)
         throw std::runtime_error(String(curl_easy_strerror(res)));
     return response;
-}
-
-ptree url_request_json(const HttpRequest &settings)
-{
-    auto response = url_request(settings);
-    std::istringstream iss(response.response);
-    ptree p;
-    pt::read_json(iss, p);
-    return p;
 }

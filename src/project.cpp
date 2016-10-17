@@ -140,6 +140,31 @@ bool is_valid_source(const path &p)
     return source_file_extensions.find(e) != source_file_extensions.end();
 }
 
+bool check_filename(const String &s)
+{
+    for (auto &c : s)
+    {
+        if (c < 0 || c > 127)
+            return false;
+        if (isalnum((uint8_t)c))
+            continue;
+        switch (c)
+        {
+        case '/':
+        case '\\':
+        case ':':
+        case '.':
+        case '_':
+        case '-':
+        case '+':
+            break;
+        default:
+            return false;
+        }
+    }
+    return true;
+}
+
 void check_file_types(const Files &files, const path &root)
 {
     if (files.empty())

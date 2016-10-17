@@ -27,6 +27,8 @@
 
 #include "project_path.h"
 
+#include "enums.h"
+
 ProjectPath::ProjectPath(String s)
 {
     auto prev = s.begin();

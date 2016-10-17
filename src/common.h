@@ -28,18 +28,11 @@
 #pragma once
 
 #include <chrono>
-#include <map>
-#include <memory>
-#include <set>
 #include <string>
 #include <stdint.h>
-#include <tuple>
 #include <vector>
-#include <unordered_set>
 
-#include "enums.h"
 #include "filesystem.h"
-#include "property_tree.h"
 
 #define CONFIG_ROOT "/etc/cppan/"
 #define CPPAN_FILENAME "cppan.yml"
@@ -47,16 +40,11 @@
 using String = std::string;
 using Strings = std::vector<String>;
 
-bool check_branch_name(const String &n, String *error = nullptr);
-bool check_filename(const String &n, String *error = nullptr);
+Strings split_lines(const String &s);
 
 path get_program();
 String get_program_version();
 String get_program_version_string(const String &prog_name);
-
-std::vector<String> split_lines(const String &s);
-
-String repeat(const String &e, int n);
 
 // lambda overloads
 template <class... Fs> struct overload_set;
