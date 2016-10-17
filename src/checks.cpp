@@ -388,6 +388,7 @@ void Checks::write_parallel_checks_for_workers(Context &ctx) const
         }
         break;
         case Check::Decl:
+            continue; // do not participate in parallel
         case Check::Symbol:
             c->writeCheck(ctx);
             break;
@@ -431,13 +432,13 @@ void Checks::read_parallel_checks_for_workers(const path &dir)
     {
         auto s = read_file(dir / c->getVariable());
         boost::trim(s);
-        if (!s.empty())
-            c->setValue(std::stoi(s));
-        else
+        if (s.empty())
         {
-            c->setValue(0);
-            LOG_INFO(logger, "Empty value for variable: " + c->getVariable());
+            // if s empty, we do not read var
+            // it will be checked in normal mode
+            continue;
         }
+        c->setValue(std::stoi(s));
     }
 }
 
@@ -476,7 +477,7 @@ void Checks::write_definitions(Context &ctx) const
         if (t == Check::Decl)
         {
             // decl will be always defined
-            ctx.addLine("if (NOT DEFINED" + c->getVariable() + ")");
+            ctx.addLine("if (NOT DEFINED " + c->getVariable() + ")");
             ctx.increaseIndent();
             ctx.addLine("set(" + c->getVariable() + " 0)");
             ctx.decreaseIndent();
@@ -519,7 +520,19 @@ std::vector<Checks> Checks::scatter(int N) const
     std::vector<Checks> workers(N);
     int i = 0;
     for (auto &c : checks)
-        workers[i++ % N].checks.insert(c);
+    {
+        auto &inf = c->getInformation();
+        auto t = inf.type;
+
+        switch (t)
+        {
+        case Check::Decl: // do not participate in parallel
+            break;
+        default:
+            workers[i++ % N].checks.insert(c);
+            break;
+        }
+    }
     return workers;
 }
 
@@ -542,11 +555,17 @@ void Checks::print_values() const
                 LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - not found");
             break;
         case Check::Symbol:
-        case Check::Decl:
             if (c->getValue())
                 LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - found (" + std::to_string(c->getValue()) + ")");
             else
                 LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - not found");
+            break;
+        case Check::Decl:
+            break;
+            if (c->getValue())
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - found (" + std::to_string(c->getValue()) + ")");
+            else
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - not found (" + std::to_string(c->getValue()) + ")");
             break;
         case Check::CSourceCompiles:
         case Check::CSourceRuns:
@@ -570,6 +589,16 @@ void Checks::print_values(Context &ctx) const
 {
     for (auto &c : checks)
     {
-        ctx.addLine("STRING;" + c->getVariable() + ";" + std::to_string(c->getValue()));
+        auto &i = c->getInformation();
+        auto t = i.type;
+
+        switch (t)
+        {
+        case Check::Decl: // do not participate in parallel
+            break;
+        default:
+            ctx.addLine("STRING;" + c->getVariable() + ";" + std::to_string(c->getValue()));
+            break;
+        }
     }
 }

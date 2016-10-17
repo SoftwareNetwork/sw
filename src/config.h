@@ -96,7 +96,6 @@ struct BuildSettings
     String source_directory_hash;
     String config;
     bool allow_links = true;
-    bool test_run = false;
 
     void load(const yaml &root);
     void prepare_build(Config *c, const path &fn, String cppan, bool force = false);

@@ -729,9 +729,7 @@ void Config::prepare_build(path fn, const String &cppan)
             bs.source_directory = temp_directory_path() / "temp" / fs::unique_path();
             bs.binary_directory = bs.source_directory / "build";
             bs.prepare_build(this, fn, cppan, true);
-            bs.test_run = true;
             printer->prepare_build(fn, cppan);
-            bs.test_run = false;
 
             LOG("--");
             LOG("-- Performing test run");

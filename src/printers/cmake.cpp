@@ -392,7 +392,6 @@ endif()
     if (!rc->local_settings.is_custom_build_dir())
         ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
     ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
-    ctx.addLine(String("set(CPPAN_TEST_RUN ") + (bs.test_run ? "1" : "0") + ")");
     ctx.addLine("add_subdirectory(" + normalize_path(rc->local_settings.cppan_dir) + ")");
     ctx.addLine();
 
@@ -1782,8 +1781,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine(cmake_includes);
 
     // checks
-    // checks is not available during test run
-    ctx.addLine("if (NOT CPPAN_TEST_RUN)");
     {
         // common checks
         config_section_title(ctx, "common checks");
@@ -1839,7 +1836,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("    write_variables_file(${vars_file})");
         ctx.addLine("endif()");
     }
-    ctx.addLine("endif()");
 
     // fixups
     // put bug workarounds here
@@ -2087,8 +2083,11 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
     e.throw_exceptions = true;
 
     auto workers = checks.scatter(N);
+    size_t n_checks = 0;
+    for (auto &w : workers)
+        n_checks += w.checks.size();
 
-    LOG_INFO(logger, "-- Performing " << checks.checks.size() << " checks using " << N << " threads");
+    LOG_INFO(logger, "-- Performing " << n_checks << " checks using " << N << " threads");
     LOG_INFO(logger, "-- This process may take up to 5 minutes depending on your hardware");
     LOG_FLUSH();
 

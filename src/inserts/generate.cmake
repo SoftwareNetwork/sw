@@ -68,7 +68,6 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -DCPPAN_BUILD_SHARED_LIBS=0 # TODO: try to work 0->1 <- why? maybe left as is?
                         -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
                         -DCPPAN_PROGRAM=${CPPAN_PROGRAM}
-                        -DCPPAN_TEST_RUN=${CPPAN_TEST_RUN}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -84,7 +83,6 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
                         -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
                         -DCPPAN_PROGRAM=${CPPAN_PROGRAM}
-                        -DCPPAN_TEST_RUN=${CPPAN_TEST_RUN}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -99,7 +97,6 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
                         -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
                         -DCPPAN_PROGRAM=${CPPAN_PROGRAM}
-                        -DCPPAN_TEST_RUN=${CPPAN_TEST_RUN}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
