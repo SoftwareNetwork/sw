@@ -29,6 +29,6 @@
 
 #include <common.h>
 
-int generate(const path &fn, const String &config);
-int build(const path &fn, const String &config, bool rebuild = false);
-int build_only(const path &fn, const String &config);
+int generate(path fn, const String &config);
+int build(path fn, const String &config, bool rebuild = false);
+int build_only(path fn, const String &config);

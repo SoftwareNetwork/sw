@@ -31,13 +31,40 @@
 
 #include <access_table.h>
 #include <config.h>
+#include <http.h>
 
 std::vector<std::string> extract_comments(const std::string &s);
 
-Config generate_config(const path &fn, const String &config, bool silent = true, bool rebuild = false, bool prepare = true)
+void download_file(path &fn)
 {
+    // this function checks if fn is url,
+    // tries to download it to current dir and run cppan on it
+    auto s = fn.string();
+
+    if (!(
+        s.find("http://") == 0 ||
+        s.find("https://") == 0 ||
+        s.find("ftp://") == 0))
+    {
+        return;
+    }
+
+    fn = fn.filename();
+
+    DownloadData dd;
+    dd.url = s;
+    dd.file_size_limit = 1'000'000'000;
+    dd.fn = fn;
+    download_file(dd);
+}
+
+Config generate_config(path fn, const String &config, bool silent = true, bool rebuild = false, bool prepare = true)
+{
+    download_file(fn);
+
     auto conf = Config::get_user_config();
     conf.type = ConfigType::Local;
+    conf.defaults_allowed = false;
 
     if (!fs::exists(fn))
         throw std::runtime_error("File or directory does not exist: " + fn.string());
@@ -100,13 +127,13 @@ Config generate_config(const path &fn, const String &config, bool silent = true,
     return conf;
 }
 
-int generate(const path &fn, const String &config)
+int generate(path fn, const String &config)
 {
     auto conf = generate_config(fn, config, false);
     return conf.generate();
 }
 
-int build(const path &fn, const String &config, bool rebuild)
+int build(path fn, const String &config, bool rebuild)
 {
     auto conf = generate_config(fn, config, true, rebuild);
     if (conf.generate())
@@ -114,7 +141,7 @@ int build(const path &fn, const String &config, bool rebuild)
     return conf.build();
 }
 
-int build_only(const path &fn, const String &config)
+int build_only(path fn, const String &config)
 {
     AccessTable::do_not_update_files(true);
     auto conf = generate_config(fn, config, true, false, false);

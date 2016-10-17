@@ -550,14 +550,14 @@ void Project::load(const yaml &root)
         else
             throw std::runtime_error("include key must be only 'public' or 'private'");
     });
-    if (include_directories.public_.empty())
+    if (defaults_allowed && include_directories.public_.empty())
     {
         if (fs::exists("include"))
             include_directories.public_.insert("include");
         else
             include_directories.public_.insert(".");
     }
-    if (include_directories.private_.empty())
+    if (defaults_allowed && include_directories.private_.empty())
     {
         if (fs::exists("src"))
             include_directories.private_.insert("src");
@@ -760,7 +760,7 @@ void Project::load(const yaml &root)
     };
 
     read_sources(sources, "files");
-    if (sources.empty())
+    if (defaults_allowed && sources.empty())
     {
         // try to add some default dirs
         sources.insert("include/.*");

@@ -135,8 +135,10 @@ private:
 
 struct Config
 {
+    // own data
     ConfigType type{ ConfigType::None };
     PrinterType printerType{PrinterType::CMake};
+    bool defaults_allowed = true;
 
     //
     LocalSettings local_settings;

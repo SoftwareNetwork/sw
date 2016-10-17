@@ -507,6 +507,7 @@ void Config::load(yaml root, const path &p)
         for (auto prj : prjs)
         {
             Project project(root_project);
+            project.defaults_allowed = defaults_allowed;
             project.load(prj.second);
             set_project(project, prj.first.template as<String>());
         }
@@ -514,6 +515,7 @@ void Config::load(yaml root, const path &p)
     else
     {
         Project project(root_project);
+        project.defaults_allowed = defaults_allowed;
         project.load(root);
         set_project(project, "");
     }

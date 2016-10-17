@@ -153,6 +153,10 @@ struct Project
     // current package: ppath+version+flags
     Package pkg;
 
+    // allow default values if some parts are missing
+    bool defaults_allowed = true;
+
+public:
     Project(const ProjectPath &root_project);
 
     void findSources(path p);
