@@ -495,15 +495,16 @@ DownloadDependencies PackagesDatabase::findDependencies(const Packages &deps) co
     return dds;
 }
 
-void check_version_age(const std::chrono::system_clock::time_point &tstart, const char *created)
+void check_version_age(const boost::posix_time::ptime &tnow, const char *created)
 {
-    auto p = boost::posix_time::time_from_string(created);
-    auto t =  boost::posix_time::to_time_t(p);
-    auto tproj = std::chrono::system_clock::from_time_t(t);
-    auto d = tstart - tproj;
+    auto tproj = boost::posix_time::time_from_string(created);
+    auto t0 = std::chrono::system_clock::from_time_t(boost::posix_time::to_time_t(tproj));
+    auto t1 = std::chrono::system_clock::from_time_t(boost::posix_time::to_time_t(tnow));
+    auto d = t1 - t0;
+    auto mins = std::chrono::duration_cast<std::chrono::minutes>(d).count();
     // multiple by 2 because first time interval goes for uploading db
-    // and during second, the packet is really young
-    if (d < std::chrono::minutes(PACKAGES_DB_REFRESH_TIME_MINUTES * 2))
+    // and during the second one, the packet is really young
+    if (mins < PACKAGES_DB_REFRESH_TIME_MINUTES * 2)
         throw std::runtime_error("One of the queried packages is 'young'. Young packages must be retrieved from server.");
 }
 
@@ -516,11 +517,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
 
     // save current time during first call
     // it is used for detecting young packages
-    time_t t;
-    time(&t);
-    auto tmp = gmtime(&t);
-    auto tt = mktime(tmp);
-    static auto tstart = std::chrono::system_clock::from_time_t(tt);
+    static boost::posix_time::ptime tstart(boost::gregorian::day_clock::universal_day(), boost::posix_time::second_clock::universal_time().time_of_day());
 
     ProjectVersionId id = 0;
     static const String select = "select id, major, minor, patch, flags, sha256, created from ProjectVersions where ";
