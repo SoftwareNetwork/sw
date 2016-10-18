@@ -34,6 +34,8 @@
 #include <memory>
 #include <vector>
 
+#define PACKAGES_DB_REFRESH_TIME_MINUTES 15
+
 class SqliteDatabase;
 
 struct TableDescriptor

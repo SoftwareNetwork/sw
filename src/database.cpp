@@ -35,6 +35,7 @@
 #include "sqlite_database.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <sqlite3.h>
 
 #include <logger.h>
@@ -413,7 +414,7 @@ bool PackagesDatabase::isCurrentDbOld() const
 {
     auto tp_old = readDownloadTime();
     auto tp = std::chrono::system_clock::now();
-    return (tp - tp_old) > std::chrono::minutes(15);
+    return (tp - tp_old) > std::chrono::minutes(PACKAGES_DB_REFRESH_TIME_MINUTES);
 }
 
 DownloadDependencies PackagesDatabase::findDependencies(const Packages &deps) const
@@ -492,6 +493,18 @@ DownloadDependencies PackagesDatabase::findDependencies(const Packages &deps) co
     return dds;
 }
 
+void check_version_age(const std::chrono::system_clock::time_point &tstart, const char *created)
+{
+    auto p = boost::posix_time::time_from_string(created);
+    auto t =  boost::posix_time::to_time_t(p);
+    auto tproj = std::chrono::system_clock::from_time_t(t);
+    auto d = tstart - tproj;
+    // multiple by 2 because first time interval goes for uploading db
+    // and during second, the packet is really young
+    if (d < std::chrono::minutes(PACKAGES_DB_REFRESH_TIME_MINUTES * 2))
+        throw std::runtime_error("One of the queried packages is 'young'. Young packages must be retrieved from server.");
+}
+
 ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDependency &project, Version &version, ProjectFlags &flags, String &sha256) const
 {
     auto err = [](const auto &v, const auto &p)
@@ -499,14 +512,23 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
         return std::runtime_error("No such version/branch '" + v.toAnyVersion() + "' for project '" + p.toString() + "'");
     };
 
+    // save current time during first call
+    // it is used for detecting young packages
+    time_t t;
+    time(&t);
+    auto tmp = gmtime(&t);
+    auto tt = mktime(tmp);
+    static auto tstart = std::chrono::system_clock::from_time_t(tt);
+
     ProjectVersionId id = 0;
+    static const String select = "select id, major, minor, patch, flags, sha256, created from ProjectVersions where ";
 
     if (!version.isBranch())
     {
         auto &v = version;
 
         db->execute(
-            "select id, major, minor, patch, flags, sha256 from ProjectVersions where "
+            select + " "
             "project_id = '" + std::to_string(project.id) + "' and "
             "major = '" + std::to_string(v.major) + "' and "
             "minor = '" + std::to_string(v.minor) + "' and "
@@ -515,6 +537,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
             id = std::stoull(cols[0]);
             flags |= decltype(project.flags)(std::stoull(cols[4]));
             sha256 = cols[5];
+            check_version_age(tstart, cols[6]);
             return 0;
         });
 
@@ -524,7 +547,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
                 throw err(version, project.ppath);
 
             db->execute(
-                "select id, major, minor, patch, flags, sha256 from ProjectVersions where "
+                select + " "
                 "project_id = '" + std::to_string(project.id) + "' and "
                 "major = '" + std::to_string(v.major) + "' and "
                 "minor = '" + std::to_string(v.minor) + "' and "
@@ -535,6 +558,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
                 version.patch = std::stoi(cols[3]);
                 flags |= decltype(project.flags)(std::stoull(cols[4]));
                 sha256 = cols[5];
+                check_version_age(tstart, cols[6]);
                 return 0;
             });
 
@@ -544,7 +568,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
                     throw err(version, project.ppath);
 
                 db->execute(
-                    "select id, major, minor, patch, flags, sha256 from ProjectVersions where "
+                    select + " "
                     "project_id = '" + std::to_string(project.id) + "' and "
                     "major = '" + std::to_string(v.major) + "' and "
                     "branch is null order by major desc, minor desc, patch desc limit 1",
@@ -555,6 +579,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
                     version.patch = std::stoi(cols[3]);
                     flags |= decltype(project.flags)(std::stoull(cols[4]));
                     sha256 = cols[5];
+                    check_version_age(tstart, cols[6]);
                     return 0;
                 });
 
@@ -564,7 +589,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
                         throw err(version, project.ppath);
 
                     db->execute(
-                        "select id, major, minor, patch, flags, sha256 from ProjectVersions where "
+                        select + " "
                         "project_id = '" + std::to_string(project.id) + "' and "
                         "branch is null order by major desc, minor desc, patch desc limit 1",
                         [&id, &version, &flags, &sha256](SQLITE_CALLBACK_ARGS)
@@ -575,6 +600,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
                         version.patch = std::stoi(cols[3]);
                         flags |= decltype(project.flags)(std::stoull(cols[4]));
                         sha256 = cols[5];
+                        check_version_age(tstart, cols[6]);
                         return 0;
                     });
 
@@ -590,13 +616,14 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
     else
     {
         db->execute(
-            "select id, major, minor, patch, flags, sha256 from ProjectVersions where "
+            select + " "
             "project_id = '" + std::to_string(project.id) + "' and "
             "branch = '" + version.toString() + "'", [&id, &flags, &sha256](SQLITE_CALLBACK_ARGS)
         {
             id = std::stoull(cols[0]);
             flags |= decltype(project.flags)(std::stoull(cols[4]));
             sha256 = cols[5];
+            check_version_age(tstart, cols[6]);
             return 0;
         });
 
