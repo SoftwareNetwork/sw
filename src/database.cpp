@@ -41,6 +41,8 @@
 #include <logger.h>
 DECLARE_STATIC_LOGGER(logger, "db");
 
+#define PACKAGES_DB_REFRESH_TIME_MINUTES 15
+
 #define PACKAGES_DB_SCHEMA_VERSION 1
 #define PACKAGES_DB_SCHEMA_VERSION_FILE "schema.version"
 #define PACKAGES_DB_VERSION_FILE "db.version"
