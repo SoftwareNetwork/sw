@@ -403,6 +403,9 @@ void Config::load(const path &p)
 
 void Config::load(yaml root, const path &p)
 {
+    if (!root.IsMap())
+        throw std::runtime_error("Spec file should be a map");
+
     auto ls = root["local_settings"];
     if (ls.IsDefined())
     {
