@@ -87,6 +87,7 @@ struct ac_processor
     void process_AC_COMPILE_IFELSE(command &c);
     void process_AC_RUN_IFELSE(command &c);
     void process_AC_TRY_COMPILE(command &c);
+    void process_AC_TRY_LINK(command &c);
     void process_AC_TRY_RUN(command &c);
     void process_AC_CHECK_HEADER(command &c);
     void process_AC_CHECK_HEADERS(command &c);
@@ -336,6 +337,7 @@ void ac_processor::process()
         TWICE(CASE_NOT_EMPTY, AC_RUN_IFELSE);
 
         TWICE(CASE_NOT_EMPTY, AC_TRY_COMPILE);
+        TWICE(CASE_NOT_EMPTY, AC_TRY_LINK);
         TWICE(CASE_NOT_EMPTY, AC_TRY_RUN);
 
         TWICE(CASE_NOT_EMPTY, AC_CHECK_HEADER);
@@ -658,6 +660,23 @@ void ac_processor::process_AC_RUN_IFELSE(command &c)
 }
 
 void ac_processor::process_AC_TRY_COMPILE(command &c)
+{
+    // sometimes parser swallows empty first arg, so fix it
+    if (c.params[1].find("AC_") == 0)
+    {
+        auto p = c.params;
+        c.params.clear();
+        c.params.push_back("");
+        c.params.insert(c.params.end(), p.begin(), p.end());
+    }
+
+    if (cpp)
+        try_add<CheckCXXSourceCompiles>(c);
+    else
+        try_add<CheckCSourceCompiles>(c);
+}
+
+void ac_processor::process_AC_TRY_LINK(command &c)
 {
     // sometimes parser swallows empty first arg, so fix it
     if (c.params[1].find("AC_") == 0)
