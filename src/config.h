@@ -98,7 +98,7 @@ struct BuildSettings
     bool allow_links = true;
 
     void load(const yaml &root);
-    void prepare_build(Config *c, const path &fn, String cppan, bool force = false);
+    void prepare_build(Config *c, const path &fn, const String &cppan, bool force = false);
     void set_build_dirs(const path &fn);
     void append_build_dirs(const path &p);
     String get_hash() const;
@@ -182,6 +182,8 @@ struct Config
     const Project &getDefaultProject() const;
     Project &getProject(const String &p) const;
 
+    void setPackage(const Package &pkg);
+
     Packages getFileDependencies() const; // from file
 
     void checkForUpdates() const;
@@ -201,6 +203,10 @@ public:
     bool disable_run_cppan_target = false;
 
     bool is_dependency = false;
-    bool downloaded = false;
-    Package pkg; // current package
+
+    // we create this project for the first time (downloaded, locally created etc.)
+    bool created = false;
+
+    // current package
+    Package pkg;
 };

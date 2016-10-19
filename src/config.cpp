@@ -153,7 +153,7 @@ void BuildSettings::append_build_dirs(const path &p)
     binary_directory = source_directory / "build";
 }
 
-void BuildSettings::prepare_build(Config *c, const path &fn, String cppan, bool force)
+void BuildSettings::prepare_build(Config *c, const path &fn, const String &cppan, bool force)
 {
     auto &p = c->getDefaultProject();
     if (!is_dir)
@@ -657,7 +657,7 @@ void Config::process(const path &p)
 
 void Config::post_download() const
 {
-    if (!downloaded)
+    if (!created)
         return;
 
     auto &p = getDefaultProject();
@@ -842,5 +842,16 @@ void Config::checkForUpdates() const
         std::cout << "sudo cppan --self-upgrade" << "\n";
 #endif
         std::cout << "\n";
+    }
+}
+
+void Config::setPackage(const Package &p)
+{
+    pkg = p;
+    for (auto &project : projects)
+    {
+        // modify p
+        // p.ppath = project.name;
+        project.second.pkg = p;
     }
 }

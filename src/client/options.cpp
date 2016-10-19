@@ -49,6 +49,7 @@ ProgramOptions::ProgramOptions()
         ("build-only", po::value<std::string>(), "file or dir: an inline building without touching any configs")
         ("rebuild", po::value<std::string>(), "file or dir: an inline building while removing previous version")
         ("generate", po::value<std::string>(), "file or dir: an inline project generation")
+        ("dry-run", po::value<std::string>(), "dir: locally simulate project download and build")
 
         ("clear-cache", po::bool_switch(), "clear CMakeCache.txt files")
         ("clear-vars-cache", po::bool_switch(), "clear checked symbols, types, includes etc.")

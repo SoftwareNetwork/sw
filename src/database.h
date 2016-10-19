@@ -58,6 +58,7 @@ protected:
     bool created = false;
     const TableDescriptors &tds;
 
+    void open(bool read_only = false);
     void recreate();
 };
 

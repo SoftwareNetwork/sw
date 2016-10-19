@@ -181,6 +181,8 @@ try
         return build(options["rebuild"].as<String>(), options["config"].as<String>(), true);
     else if (options().count("generate"))
         return generate(options["generate"].as<String>(), options["config"].as<String>());
+    else if (options().count("dry-run"))
+        return dry_run(options["dry-run"].as<String>(), options["config"].as<String>());
 
     if (options().count(CLEAN_PACKAGES))
     {

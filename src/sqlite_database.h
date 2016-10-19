@@ -44,7 +44,7 @@ class SqliteDatabase
 public:
     SqliteDatabase();
     SqliteDatabase(sqlite3 *db);
-    SqliteDatabase(const String &dbname);
+    SqliteDatabase(const String &dbname, bool read_only = false);
     ~SqliteDatabase();
 
     void loadDatabase(const String &dbname);
@@ -64,6 +64,7 @@ public:
 
 private:
     sqlite3 *db = nullptr;
+    bool read_only = false;
     String name;
     String fullName;
 };

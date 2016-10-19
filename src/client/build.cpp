@@ -31,7 +31,18 @@
 
 #include <access_table.h>
 #include <config.h>
+#include <hash.h>
 #include <http.h>
+#include <response.h>
+
+struct Parameters
+{
+    String config;
+    bool silent = true;
+    bool rebuild = false;
+    bool prepare = true;
+    bool download = true;
+};
 
 std::vector<std::string> extract_comments(const std::string &s);
 
@@ -51,18 +62,19 @@ void download_file(path &fn)
     download_file(dd);
 }
 
-Config generate_config(path fn, const String &config, bool silent = true, bool rebuild = false, bool prepare = true)
+Config generate_config(path p, const Parameters &params)
 {
-    download_file(fn);
+    if (params.download)
+        download_file(p);
 
     auto conf = Config::get_user_config();
     conf.type = ConfigType::Local;
     conf.defaults_allowed = false;
 
-    if (!fs::exists(fn))
-        throw std::runtime_error("File or directory does not exist: " + fn.string());
+    if (!fs::exists(p))
+        throw std::runtime_error("File or directory does not exist: " + p.string());
 
-    auto read_from_cpp = [&](const path &fn)
+    auto read_from_cpp = [&conf, &params](const path &fn)
     {
         auto s = read_file(fn);
         auto comments = extract_comments(s);
@@ -79,8 +91,8 @@ Config generate_config(path fn, const String &config, bool silent = true, bool r
                 auto sz = root.size();
                 if (sz == 0)
                     continue;
-                if (!config.empty())
-                    root["local_settings"]["current_build"] = config;
+                if (!params.config.empty())
+                    root["local_settings"]["current_build"] = params.config;
                 conf.load(root);
                 loaded = i;
                 break;
@@ -90,31 +102,31 @@ Config generate_config(path fn, const String &config, bool silent = true, bool r
             }
         }
 
-        if (!silent)
-            conf.local_settings.build_settings.silent = false;
-        conf.local_settings.build_settings.rebuild = rebuild;
-        conf.local_settings.build_settings.prepare = prepare;
+        conf.local_settings.build_settings.silent = params.silent;
+        conf.local_settings.build_settings.rebuild = params.rebuild;
+        conf.local_settings.build_settings.prepare = params.prepare;
         conf.prepare_build(fn, comments.size() > (size_t)i ? comments[i] : "");
     };
 
-    if (fs::is_regular_file(fn))
+    if (fs::is_regular_file(p))
     {
-        read_from_cpp(fn);
+        read_from_cpp(p);
     }
-    else if (fs::is_directory(fn))
+    else if (fs::is_directory(p))
     {
-        if (fs::exists(fn / CPPAN_FILENAME))
+        auto cppan_fn = p / CPPAN_FILENAME;
+        if (fs::exists(cppan_fn))
         {
-            conf = Config(fn);
-            conf.local_settings.build_settings.prepare = prepare;
-            conf.prepare_build(fn / CPPAN_FILENAME, read_file(fn / CPPAN_FILENAME));
+            conf = Config(p);
+            conf.local_settings.build_settings.prepare = params.prepare;
+            conf.prepare_build(cppan_fn, read_file(cppan_fn));
         }
-        else if (fs::exists(fn / "main.cpp"))
+        else if (fs::exists(p / "main.cpp"))
         {
-            read_from_cpp(fn / "main.cpp");
+            read_from_cpp(p / "main.cpp");
         }
         else
-            throw std::runtime_error("No candidates {cppan.yml|main.cpp} for reading in directory " + fn.string());
+            throw std::runtime_error("No candidates {cppan.yml|main.cpp} for reading in directory " + p.string());
     }
 
     return conf;
@@ -122,13 +134,19 @@ Config generate_config(path fn, const String &config, bool silent = true, bool r
 
 int generate(path fn, const String &config)
 {
-    auto conf = generate_config(fn, config, false);
+    Parameters params;
+    params.config = config;
+    params.silent = false;
+    auto conf = generate_config(fn, params);
     return conf.generate();
 }
 
 int build(path fn, const String &config, bool rebuild)
 {
-    auto conf = generate_config(fn, config, true, rebuild);
+    Parameters params;
+    params.config = config;
+    params.rebuild = rebuild;
+    auto conf = generate_config(fn, params);
     if (conf.generate())
         return 1;
     return conf.build();
@@ -137,6 +155,47 @@ int build(path fn, const String &config, bool rebuild)
 int build_only(path fn, const String &config)
 {
     AccessTable::do_not_update_files(true);
-    auto conf = generate_config(fn, config, true, false, false);
+
+    Parameters params;
+    params.config = config;
+    params.prepare = false;
+    auto conf = generate_config(fn, params);
+    return conf.build();
+}
+
+int dry_run(path p, const String &config)
+{
+    Config c(p);
+    auto cppan_fn = p / CPPAN_FILENAME;
+    c.prepare_build(cppan_fn, read_file(cppan_fn));
+
+    auto &project = c.getDefaultProject();
+    auto dst = c.local_settings.build_settings.source_directory / "src";
+    for (auto &f : project.files)
+    {
+        fs::create_directories((dst / f).parent_path());
+        fs::copy_file(p / f, dst / f, fs::copy_option::overwrite_if_exists);
+    }
+    fs::copy_file(p / CPPAN_FILENAME, dst / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
+
+    Config c2(dst);
+    Package pkg;
+    pkg.setLocalSourceDir(dst);
+
+    // TODO: add more robust ppath, version choser
+    pkg.flags.set(pfLocalProject);
+    pkg.ppath = sha256(c.local_settings.build_settings.source_directory.string());
+    if (c.version.isValid())
+        pkg.version = c.version;
+    else
+        pkg.version = String("master");
+
+    c2.setPackage(pkg);
+    rd.add_config(std::make_unique<Config>(c2), true);
+
+    Parameters params;
+    params.config = config;
+    params.download = false;
+    auto conf = generate_config(p, params);
     return conf.build();
 }

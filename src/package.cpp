@@ -40,11 +40,15 @@ const String cppan_package_dependencies_file = "dependencies.db.txt";
 
 path Package::getDirSrc() const
 {
+    if (flags[pfLocalProject])
+        return local_source_dir;
     return directories.storage_dir_src / getHashPath();
 }
 
 path Package::getDirObj() const
 {
+    if (flags[pfLocalProject])
+        return directories.storage_dir_usr / "obj" / getHashPath();
     return directories.storage_dir_obj / getHashPath();
 }
 

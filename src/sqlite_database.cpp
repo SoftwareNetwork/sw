@@ -102,12 +102,18 @@ int loadOrSaveDb(sqlite3 *pInMemory, const char *zFilename, int isSave)
     return rc;
 }
 
-sqlite3 *load_from_file(const String &fn)
+sqlite3 *load_from_file(const String &fn, bool read_only)
 {
     sqlite3 *db = nullptr;
-    if (sqlite3_open(fn.c_str(), &db))
+    bool ok = true;
+    if (read_only)
+        ok = sqlite3_open_v2(fn.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK;
+    else
+        ok = sqlite3_open(fn.c_str(), &db) == SQLITE_OK;
+    if (!ok)
     {
         String error = "Can't open database file: " + fn + " error: " + sqlite3_errmsg(db);
+        sqlite3_close(db);
         LOG_ERROR(logger, error);
         throw std::runtime_error(error);
     }
@@ -161,7 +167,8 @@ SqliteDatabase::SqliteDatabase(sqlite3 *db)
 {
 }
 
-SqliteDatabase::SqliteDatabase(const String &dbname)
+SqliteDatabase::SqliteDatabase(const String &dbname, bool read_only)
+    : read_only(read_only)
 {
     LOG_TRACE(logger, "Initializing database: " << dbname);
 
@@ -184,7 +191,7 @@ void SqliteDatabase::loadDatabase(const String &dbname)
 
     LOG_TRACE(logger, "Opening database: " << dbname);
 
-    db = load_from_file(dbname.c_str());
+    db = load_from_file(dbname.c_str(), read_only);
 
     execute("PRAGMA cache_size = -2000;"); // cache size (N * page size)
     execute("PRAGMA page_size = 4096;"); // page size bytes (N * page size)

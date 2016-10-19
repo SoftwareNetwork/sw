@@ -182,14 +182,19 @@ Database::Database(const String &name, const TableDescriptors &tds)
         ScopedFileLock lock(fn);
         if (!fs::exists(fn))
         {
-            db = std::make_unique<SqliteDatabase>(fn.string());
+            open();
             for (auto &td : tds)
                 db->execute(td.query);
             created = true;
         }
     }
     if (!db)
-        db = std::make_unique<SqliteDatabase>(fn.string());
+        open();
+}
+
+void Database::open(bool read_only)
+{
+    db = std::make_unique<SqliteDatabase>(fn.string(), read_only);
 }
 
 void Database::recreate()
@@ -255,10 +260,9 @@ PackagesDatabase::PackagesDatabase()
         LOG_INFO(logger, "Packages database was not found");
         download();
         load();
-        return;
     }
 
-    if (isCurrentDbOld())
+    if (!created && isCurrentDbOld())
     {
         LOG_DEBUG(logger, "Checking remote version");
         auto version_remote = std::stoi(download_file(db_version_url));
@@ -268,6 +272,9 @@ PackagesDatabase::PackagesDatabase()
             load(true);
         }
     }
+
+    // at the end we always reopen packages db as read only
+    open(true);
 }
 
 void PackagesDatabase::download()
@@ -326,9 +333,9 @@ void PackagesDatabase::load(bool drop)
     if (sver && sver != PACKAGES_DB_SCHEMA_VERSION)
     {
         if (sver > PACKAGES_DB_SCHEMA_VERSION)
-            throw std::runtime_error("Client's packages db schema version is older than remote one. Upgrade the client.");
+            throw std::runtime_error("Client's packages db schema version is older than remote one. Please, upgrade the cppan client from site or via --self-upgrade");
         if (sver < PACKAGES_DB_SCHEMA_VERSION)
-            throw std::runtime_error("Client's packages db schema version is newer than remote one. Wait for server upgrade.");
+            throw std::runtime_error("Client's packages db schema version is newer than remote one. Please, wait for server upgrade");
     }
     if (sver > sver_old)
     {

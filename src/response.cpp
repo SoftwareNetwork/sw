@@ -237,7 +237,7 @@ void ResponseData::getDependenciesFromRemote(const Packages &deps)
     if (api == 0)
         throw std::runtime_error("API version is missing in the response");
     if (api > CURRENT_API_LEVEL)
-        throw std::runtime_error("Server uses more new API version. Please upgrade the cppan client from site or via --self-upgrade.");
+        throw std::runtime_error("Server uses more new API version. Please, upgrade the cppan client from site or via --self-upgrade");
     if (api < CURRENT_API_LEVEL - 1)
         throw std::runtime_error("Your client's API is newer than server's. Please, wait for server upgrade");
 
@@ -306,21 +306,13 @@ void ResponseData::download_and_unpack()
         if (fs::exists(version_dir) && !must_download)
             return;
 
-        auto add_config = [this, &d]()
-        {
-            auto p = config_store.insert(std::make_unique<Config>(d.getDirSrc()));
-            packages[d].config = p.first->get();
-            packages[d].config->downloaded = true;
-            return packages[d].config;
-        };
-
         // lock, so only one cppan process at the time could download the project
         ScopedFileLock lck(hash_file, std::defer_lock);
         if (!lck.try_lock())
         {
             // wait & continue
             ScopedFileLock lck2(hash_file);
-            add_config();
+            add_config(d.getDirSrc());
             return;
         }
 
@@ -387,7 +379,7 @@ void ResponseData::download_and_unpack()
 
         // re-read in any case
         // no need to remove old config, let it die with program
-        auto c = add_config();
+        auto c = add_config(d.getDirSrc());
 
         // move all files under unpack dir
         auto ud = c->getDefaultProject().unpack_directory;
@@ -470,9 +462,8 @@ void ResponseData::prepare_config(PackageConfigs::value_type &cc)
     auto &c = cc.second.config;
     auto &dependencies = cc.second.dependencies;
     c->is_dependency = true;
-    c->pkg = p;
+    c->setPackage(p);
     auto &project = c->getDefaultProject();
-    project.pkg = cc.first;
 
     // prepare deps: extract real deps flags from configs
     for (auto &dep : download_dependencies_[dep_ids[p]].getDirectDependencies())
@@ -611,4 +602,18 @@ Executor &ResponseData::getExecutor()
     // because we use it very rarely and not extensively
     executor = std::make_unique<Executor>(2);
     return *executor;
+}
+
+Config *ResponseData::add_config(std::unique_ptr<Config> &&config, bool created)
+{
+    auto cfg = config.get();
+    auto i = config_store.insert(std::move(config));
+    packages[cfg->pkg].config = i.first->get();
+    packages[cfg->pkg].config->created = created;
+    return packages[cfg->pkg].config;
+}
+
+Config *ResponseData::add_config(const path &p)
+{
+    return add_config(std::make_unique<Config>(p), true);
 }

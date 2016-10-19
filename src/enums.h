@@ -65,6 +65,7 @@ enum ProjectFlag
     pfPrivateDependency,        // df, private dependency
     pfDirectDependency,         // vf, response only
     pfIncludeDirectoriesOnly,   // df, take include dirs from this dep
+    pfLocalProject,             // vf, not from server, local bs project
 
     //pfPreferBinary,   //pf, if binaries are available, do not build project, use precompiled
 
