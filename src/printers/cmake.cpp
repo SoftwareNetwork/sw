@@ -2001,22 +2001,22 @@ set_target_properties(run-cppan PROPERTIES
             Packages build_deps;
             // at the moment we re-check all deps to see if we need to build them
             gather_build_deps(ctx, rd[d].dependencies, build_deps, true);
+
+            ctx.addLine("get_configuration_with_generator(config)");
+            ctx.addLine("get_configuration_exe(config_exe)");
+
+            ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
+            ctx.increaseIndent();
             for (auto &dp : build_deps)
             {
                 auto &p = dp.second;
-                if (!p.flags[pfExecutable])
-                    ctx.addLine("get_configuration_with_generator(config)");
-                else
-                    ctx.addLine("get_configuration_exe(config)");
-                ctx.addLine("set(current_dir " + normalize_path(p.getDirObj()) + ")");
-                ctx.addLine("set(build_dir ${current_dir}/build/${config})");
-                ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " PRE_BUILD");
-                ctx.increaseIndent();
+
                 ctx.addLine("COMMAND ${CMAKE_COMMAND}");
                 ctx.increaseIndent();
                 ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
                 ctx.addLine("-DCONFIG=$<CONFIG>");
-                ctx.addLine("-DBUILD_DIR=${build_dir}");
+                ctx.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) +
+                    "/build/${" + String(p.flags[pfExecutable] ? "config_exe" : "config") + "}");
                 ctx.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
                 ctx.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
                 ctx.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
@@ -2026,10 +2026,11 @@ set_target_properties(run-cppan PROPERTIES
                 ctx.addLine("-DXCODE=${XCODE}");
                 ctx.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
                 ctx.decreaseIndent();
-                ctx.decreaseIndent();
-                ctx.addLine(")");
                 ctx.addLine();
             }
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+            ctx.addLine();
         }
 
         ctx.decreaseIndent();
