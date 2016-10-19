@@ -77,6 +77,10 @@ static const std::set<String> source_file_extensions{
     ".cxx",
     ".c++",
     ".CPP",
+    // Objective-C
+    ".m",
+    ".mm",
+    ".C"
 };
 
 static const std::set<String> other_source_file_extensions{
@@ -763,8 +767,21 @@ void Project::load(const yaml &root)
     if (defaults_allowed && sources.empty())
     {
         // try to add some default dirs
-        sources.insert("include/.*");
-        sources.insert("src/.*");
+        if (fs::exists("include"))
+            sources.insert("include/.*");
+        if (fs::exists("src"))
+            sources.insert("src/.*");
+
+        if (sources.empty())
+        {
+            // no include, src dirs
+            // try to add all types of C/C++ program files to gather
+            // regex means all sources in root dir (without slashes '/')
+            for (auto &v : header_file_extensions)
+                sources.insert("[^/]*\\" + v);
+            for (auto &v : source_file_extensions)
+                sources.insert("[^/]*\\" + v);
+        }
     }
     read_sources(build_files, "build");
     read_sources(exclude_from_package, "exclude_from_package");
