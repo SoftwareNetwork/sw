@@ -69,6 +69,8 @@ const String cppan_stamp_filename = "cppan_sources.stamp";
 const String cppan_checks_yml = "checks.yml";
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 
+const String parallel_checks_file = "vars.txt";
+
 const String config_delimeter_short = repeat("#", 40);
 const String config_delimeter = config_delimeter_short + config_delimeter_short;
 
@@ -1353,6 +1355,13 @@ void CMakePrinter::print_object_config_file(const path &fn) const
         config_section_title(ctx, "cmake settings");
         ctx.addLine(cmake_minimum_required);
         ctx.addLine();
+        config_section_title(ctx, "macros & functions");
+        ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + ")");
+        ctx.addLine();
+        config_section_title(ctx, "read passed variables");
+        ctx.addLine("read_variables_file(GEN_CHILD_VARS ${VARIABLES_FILE})");
+        ctx.addLine();
+        config_section_title(ctx, "output settings");
         ctx.addLine("set(CMAKE_RUNTIME_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_bin) + "/${OUTPUT_DIR})");
         ctx.addLine("set(CMAKE_LIBRARY_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_lib) + "/${OUTPUT_DIR})");
         ctx.addLine("set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_lib) + "/${OUTPUT_DIR})");
@@ -1374,12 +1383,16 @@ if (MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
-    string(FIND "${OUTPUT_DIR}" "-mt" mt)
-    if (NOT mt EQUAL -1)
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} /MT")
-        set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS} /MT")
-        set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS} /MT")
-        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /MTd")
+    if (CPPAN_MT_BUILD)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
+        set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /MT")
+        set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} /MT")
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
+
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+        set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MT")
+        set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /MT")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
     endif()
 endif()
 )");
@@ -1787,13 +1800,13 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
         // read vars file
         ctx.addLine("set(vars_file \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.cmake\")");
-        ctx.addLine("read_variables_file(${vars_file})");
+        ctx.addLine("read_check_variables_file(${vars_file})");
         ctx.addLine();
 
         ctx.addLine("if (NOT DEFINED WORDS_BIGENDIAN)");
         ctx.increaseIndent();
         ctx.addLine("test_big_endian(WORDS_BIGENDIAN)");
-        ctx.addLine("add_variable(WORDS_BIGENDIAN)");
+        ctx.addLine("add_check_variable(WORDS_BIGENDIAN)");
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         // aliases
@@ -1818,7 +1831,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
             ctx.addLine();
             ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles ${tmp_dir}/CMakeFiles/)");
             ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file})");
-            ctx.addLine("read_variables_file(${tmp_dir}/vars.txt)");
+            // this file is created by parallel checks dispatcher
+            ctx.addLine("read_check_variables_file(${tmp_dir}/" + parallel_checks_file + ")");
             ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");
             ctx.addLine();
             ctx.addLine("file(REMOVE_RECURSE ${tmp_dir})");
@@ -1833,7 +1847,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
         // write vars file
         ctx.addLine("if (CPPAN_NEW_VARIABLE_ADDED)");
-        ctx.addLine("    write_variables_file(${vars_file})");
+        ctx.addLine("    write_check_variables_file(${vars_file})");
         ctx.addLine("endif()");
     }
 
@@ -2139,7 +2153,7 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
 
     Context ctx;
     checks.print_values(ctx);
-    write_file(dir / "vars.txt", ctx.getText());
+    write_file(dir / parallel_checks_file, ctx.getText());
 
     LOG_FLUSH();
     LOG_INFO(logger, "-- This operation took " + std::to_string(t) + " seconds to complete");

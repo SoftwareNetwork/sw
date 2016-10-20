@@ -1,10 +1,12 @@
 get_configuration_variables()
 
-set(build_dir ${current_dir}/build/${config_dir})
+set(build_dir_name build)
+set(build_dir ${current_dir}/${build_dir_name}/${config_dir})
 set(export_dir ${build_dir}/exports)
 set(import ${export_dir}/${variable_name}.cmake)
 set(import_fixed ${export_dir}/${variable_name}-fixed.cmake)
 set(aliases_file ${export_dir}/${variable_name}-aliases.cmake)
+set(variables_file ${build_dir}.gen.vars)
 set(lock ${build_dir}/cppan_generate.lock)
 
 ########################################
@@ -59,15 +61,27 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
             endif()
         endif()
 
+        # prepare variables for child process
+        set(OUTPUT_DIR ${config})
+        if (EXECUTABLE)
+            # TODO: try to work 0->1 <- why? maybe left as is?
+            set(CPPAN_BUILD_SHARED_LIBS 0)
+        endif()
+
+        add_variable(GEN_CHILD_VARS OUTPUT_DIR)
+        add_variable(GEN_CHILD_VARS CPPAN_BUILD_SHARED_LIBS)
+        add_variable(GEN_CHILD_VARS CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
+        add_variable(GEN_CHILD_VARS CPPAN_PROGRAM)
+        add_variable(GEN_CHILD_VARS CPPAN_MT_BUILD)
+        write_variables_file(GEN_CHILD_VARS ${variables_file})
+        #
+
         # call cmake
         if (EXECUTABLE)
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
-                        -DOUTPUT_DIR=${config}
-                        -DCPPAN_BUILD_SHARED_LIBS=0 # TODO: try to work 0->1 <- why? maybe left as is?
-                        -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
-                        -DCPPAN_PROGRAM=${CPPAN_PROGRAM}
+                        -DVARIABLES_FILE=${variables_file}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -79,10 +93,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
                         -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                         -G "${generator}"
-                        -DOUTPUT_DIR=${config}
-                        -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
-                        -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
-                        -DCPPAN_PROGRAM=${CPPAN_PROGRAM}
+                        -DVARIABLES_FILE=${variables_file}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -93,10 +104,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                         -G "${generator}"
-                        -DOUTPUT_DIR=${config}
-                        -DCPPAN_BUILD_SHARED_LIBS=${CPPAN_BUILD_SHARED_LIBS}
-                        -DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}
-                        -DCPPAN_PROGRAM=${CPPAN_PROGRAM}
+                        -DVARIABLES_FILE=${variables_file}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})

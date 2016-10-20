@@ -177,10 +177,13 @@ function(find_flag in_flags f out)
         return()
     endif()
     set(flags ${in_flags})
+    string(TOLOWER ${f} f)
     string(TOLOWER ${flags} flags)
     string(FIND "${flags}" "${f}" flags)
     if (NOT ${flags} EQUAL -1)
-        set(${out} -mt PARENT_SCOPE)
+        set(${out} 1 PARENT_SCOPE)
+    else()
+        set(${out} 0 PARENT_SCOPE)
     endif()
 endfunction(find_flag)
 
@@ -191,11 +194,25 @@ endfunction(find_flag)
 function(get_configuration out)
     set(mt_flag)
     if (MSVC)
-        find_flag(${CMAKE_CXX_FLAGS_RELEASE} /mt mt_flag)
-        find_flag(${CMAKE_CXX_FLAGS_DEBUG} /mtd mt_flag)
+        find_flag(${CMAKE_CXX_FLAGS_RELEASE} /MT MTR)
+        find_flag(${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MT MTRWDI)
+        find_flag(${CMAKE_CXX_FLAGS_MINSIZEREL} /MT MTMSR)
+        find_flag(${CMAKE_CXX_FLAGS_DEBUG} /MTd MTD)
+
+        if (MTR OR MTRWDI OR MTMSR OR MTD)
+            set(mt_flag -mt)
+            set(CPPAN_MT_BUILD 1 CACHE STRING "MT (static crt) flag" FORCE)
+        else()
+            set(CPPAN_MT_BUILD 0 CACHE STRING "MT (static crt) flag" FORCE)
+        endif()
     endif()
 
-    set(config ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
+    set(cyg)
+    if (CYGWIN)
+        set(cyg cyg-)
+    endif()
+
+    set(config ${cyg}${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
     string(REGEX MATCH "[0-9]+\\.[0-9]" version "${CMAKE_CXX_COMPILER_VERSION}")
     if (CMAKE_SIZEOF_VOID_P)
         math(EXPR bits "${CMAKE_SIZEOF_VOID_P} * 8")
@@ -238,7 +255,12 @@ endfunction(get_configuration_with_generator)
 ########################################
 
 function(get_configuration_exe out)
-    set(config ${CMAKE_HOST_SYSTEM_PROCESSOR})
+    set(cyg)
+    if (CYGWIN)
+        set(cyg cyg-)
+    endif()
+
+    set(config ${cyg}${CMAKE_HOST_SYSTEM_PROCESSOR})
     string(TOLOWER ${config} config)
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_exe)
@@ -284,27 +306,25 @@ endfunction(get_number_of_cores)
 # FUNCTION add_variable
 ########################################
 
-function(add_variable v)
-    list(APPEND CPPAN_VARIABLES_TYPES "STRING")
-    list(APPEND CPPAN_VARIABLES_KEYS "${v}")
-    if ("${${v}}" STREQUAL "")
-        list(APPEND CPPAN_VARIABLES_VALUES "0")
+function(add_variable array variable)
+    list(APPEND ${array}_TYPES "STRING")
+    list(APPEND ${array}_KEYS "${variable}")
+    if ("${${variable}}" STREQUAL "")
+        list(APPEND ${array}_VALUES "0")
     else()
-        list(APPEND CPPAN_VARIABLES_VALUES "${${v}}")
+        list(APPEND ${array}_VALUES "${${variable}}")
     endif()
 
-    set(CPPAN_VARIABLES_TYPES ${CPPAN_VARIABLES_TYPES} PARENT_SCOPE)
-    set(CPPAN_VARIABLES_KEYS ${CPPAN_VARIABLES_KEYS} PARENT_SCOPE)
-    set(CPPAN_VARIABLES_VALUES ${CPPAN_VARIABLES_VALUES} PARENT_SCOPE)
-
-    set(CPPAN_NEW_VARIABLE_ADDED 1 PARENT_SCOPE)
+    set(${array}_TYPES ${${array}_TYPES} PARENT_SCOPE)
+    set(${array}_KEYS ${${array}_KEYS} PARENT_SCOPE)
+    set(${array}_VALUES ${${array}_VALUES} PARENT_SCOPE)
 endfunction(add_variable)
 
 ########################################
 # FUNCTION read_variables_file
 ########################################
 
-function(read_variables_file f)
+function(read_variables_file array f)
     if (NOT EXISTS ${f})
         return()
     endif()
@@ -334,18 +354,19 @@ function(read_variables_file f)
         list(GET var 2 v)
         set(${k} "${v}" CACHE ${t} "Cached variable" FORCE)
 
-        add_variable(${k})
-        set(CPPAN_VARIABLES_TYPES ${CPPAN_VARIABLES_TYPES} PARENT_SCOPE)
-        set(CPPAN_VARIABLES_KEYS ${CPPAN_VARIABLES_KEYS} PARENT_SCOPE)
-        set(CPPAN_VARIABLES_VALUES ${CPPAN_VARIABLES_VALUES} PARENT_SCOPE)
+        add_variable(${array} ${k})
     endforeach()
+
+    set(${array}_TYPES ${${array}_TYPES} PARENT_SCOPE)
+    set(${array}_KEYS ${${array}_KEYS} PARENT_SCOPE)
+    set(${array}_VALUES ${${array}_VALUES} PARENT_SCOPE)
 endfunction(read_variables_file)
 
 ########################################
 # FUNCTION write_variables_file
 ########################################
 
-function(write_variables_file f)
+function(write_variables_file array f)
     set(lock ${f}.lock)
     file(
         LOCK ${lock}
@@ -356,19 +377,53 @@ function(write_variables_file f)
         message(FATAL_ERROR "Lock error: ${lock_result}")
     endif()
 
-    list(LENGTH CPPAN_VARIABLES_TYPES N)
+    list(LENGTH ${array}_TYPES N)
     math(EXPR N "${N}-1")
     file(WRITE ${f} "")
     foreach(i RANGE ${N})
-        list(GET CPPAN_VARIABLES_TYPES ${i} type)
-        list(GET CPPAN_VARIABLES_KEYS ${i} key)
-        list(GET CPPAN_VARIABLES_VALUES ${i} value)
+        list(GET ${array}_TYPES ${i} type)
+        list(GET ${array}_KEYS ${i} key)
+        list(GET ${array}_VALUES ${i} value)
         set(vars "${type}" "${key}" "${value}")
         file(APPEND ${f} "${vars}\n")
     endforeach()
 
     file(LOCK ${lock} RELEASE)
 endfunction(write_variables_file)
+
+########################################
+# FUNCTION add_check_variable
+########################################
+
+function(add_check_variable v)
+    add_variable(CPPAN_VARIABLES ${v})
+
+    set(CPPAN_VARIABLES_TYPES ${CPPAN_VARIABLES_TYPES} PARENT_SCOPE)
+    set(CPPAN_VARIABLES_KEYS ${CPPAN_VARIABLES_KEYS} PARENT_SCOPE)
+    set(CPPAN_VARIABLES_VALUES ${CPPAN_VARIABLES_VALUES} PARENT_SCOPE)
+
+    set(CPPAN_NEW_VARIABLE_ADDED 1 PARENT_SCOPE)
+endfunction(add_check_variable)
+
+########################################
+# FUNCTION read_check_variables_file
+########################################
+
+function(read_check_variables_file f)
+    read_variables_file(CPPAN_VARIABLES ${f})
+
+    set(CPPAN_VARIABLES_TYPES ${CPPAN_VARIABLES_TYPES} PARENT_SCOPE)
+    set(CPPAN_VARIABLES_KEYS ${CPPAN_VARIABLES_KEYS} PARENT_SCOPE)
+    set(CPPAN_VARIABLES_VALUES ${CPPAN_VARIABLES_VALUES} PARENT_SCOPE)
+endfunction(read_check_variables_file)
+
+########################################
+# FUNCTION write_check_variables_file
+########################################
+
+function(write_check_variables_file f)
+    write_variables_file(CPPAN_VARIABLES ${f})
+endfunction(write_check_variables_file)
 
 ########################################
 # FUNCTION set_c_sources_as_cpp

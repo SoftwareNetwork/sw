@@ -339,7 +339,7 @@ void Checks::write_checks(Context &ctx) const
             throw std::logic_error("Write parallel check for type " + std::to_string(t) + " not implemented");
         }
 
-        ctx.addLine("add_variable(" + c->getVariable() + ")");
+        ctx.addLine("add_check_variable(" + c->getVariable() + ")");
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         ctx.addLine();
