@@ -117,7 +117,12 @@ Config generate_config(path p, const Parameters &params)
         auto cppan_fn = p / CPPAN_FILENAME;
         if (fs::exists(cppan_fn))
         {
-            conf = Config(p);
+            conf = Config();
+            auto s = read_file(cppan_fn);
+            boost::trim(s);
+            if (s.empty())
+                s = "__k: __v";
+            conf.load(YAML::Load(s));
             conf.local_settings.build_settings.prepare = params.prepare;
             conf.prepare_build(cppan_fn, read_file(cppan_fn));
         }

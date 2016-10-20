@@ -777,10 +777,14 @@ void Project::load(const yaml &root)
             // no include, src dirs
             // try to add all types of C/C++ program files to gather
             // regex means all sources in root dir (without slashes '/')
+            auto r_replace = [](auto &s)
+            {
+                return boost::replace_all_copy(s, "+", "\\+");
+            };
             for (auto &v : header_file_extensions)
-                sources.insert("[^/]*\\" + v);
+                sources.insert("[^/]*\\" + r_replace(v));
             for (auto &v : source_file_extensions)
-                sources.insert("[^/]*\\" + v);
+                sources.insert("[^/]*\\" + r_replace(v));
         }
     }
     read_sources(build_files, "build");
