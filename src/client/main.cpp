@@ -259,7 +259,7 @@ catch (...)
 void self_upgrade(Config &c, const char *exe_path)
 {
 #ifdef _WIN32
-    String client = "/client/cppan-master-win32-client.zip";
+    String client = "/client/cppan-master-Windows-client.zip";
 #elif __APPLE__
     String client = "/client/cppan-master-macOS-client.zip";
 #else
