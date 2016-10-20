@@ -27,36 +27,33 @@
 
 #pragma once
 
-#include "../config.h"
-#include "printer.h"
+#include "common.h"
 
-struct CMakePrinter : Printer
+#include <chrono>
+
+using TimePoint = std::chrono::system_clock::time_point;
+
+TimePoint getUtc();
+TimePoint string2timepoint(const String &s);
+time_t string2time_t(const String &s);
+
+// time of operation
+template <typename F, typename ... Args>
+auto get_time(F &&f, Args && ... args)
 {
-    void prepare_rebuild() override;
-    void prepare_build(const path &fn, const String &cppan) override;
-    int generate() const override;
-    int build() const override;
+    using namespace std::chrono;
 
-    void print() override;
-    void print_meta() override;
+    auto t0 = high_resolution_clock::now();
+    std::forward<F>(f)(std::forward<Args...>(args)...);
+    auto t1 = high_resolution_clock::now();
+    return t1 - t0;
+}
 
-    void clear_cache(path p = path()) const override;
-    void clear_exports(path p) const override;
-    void clear_export(path p) const override;
+template <typename F, typename ... Args>
+auto get_time_seconds(F &&f, Args && ... args)
+{
+    using namespace std::chrono;
 
-    void parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain = String()) const override;
-
-private:
-    int _generate(bool force = false) const;
-    void print_configs();
-    void print_helper_file(const path &fn) const;
-    void print_meta_config_file(const path &fn) const;
-    void print_package_config_file(const path &fn) const;
-    void print_package_actions_file(const path &fn) const;
-    void print_package_include_file(const path &fn) const;
-    void print_object_config_file(const path &fn) const;
-    void print_object_include_config_file(const path &fn) const;
-    void print_object_export_file(const path &fn) const;
-    void print_object_build_file(const path &fn) const;
-    void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
-};
+    auto t = get_time(std::forward<F>(f), std::forward<Args...>(args)...);
+    return std::chrono::duration_cast<std::chrono::seconds>(t).count();
+}

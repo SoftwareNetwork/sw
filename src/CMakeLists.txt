@@ -98,6 +98,8 @@ set(common_src
     config.h
     database.cpp
     database.h
+    date_time.cpp
+    date_time.h
     dependency.cpp
     dependency.h
     directories.cpp

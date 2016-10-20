@@ -27,6 +27,8 @@
 
 #include "lock.h"
 
+#include "directories.h"
+
 #include <boost/interprocess/sync/file_lock.hpp>
 
 #include <iostream>
@@ -38,6 +40,11 @@ std::string prepare_lock_file(const path &fn)
     if (!fs::exists(lock_file))
         std::ofstream(lock_file.string());
     return lock_file.string();
+}
+
+path get_lock(const path &fn)
+{
+    return directories.storage_dir_etc / "locks" / fn.filename();
 }
 
 ////////////////////////////////////////

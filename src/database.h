@@ -44,6 +44,17 @@ struct TableDescriptor
 
 using TableDescriptors = const std::vector<TableDescriptor>;
 
+struct StartupAction
+{
+    enum Type
+    {
+        CLEAR_CACHE = 0,
+    };
+
+    String timestamp;
+    int action;
+};
+
 class Database
 {
 public:
@@ -71,7 +82,10 @@ public:
     int increaseNumberOfRuns(); // returns previous value
 
     int getPackagesDbSchemaVersion() const;
-    void setPackagesDbSchemaVersion(int version);
+    void setPackagesDbSchemaVersion(int version) const;
+
+    bool isActionPerformed(const StartupAction &action) const;
+    void setActionPerformed(const StartupAction &action) const;
 };
 
 class PackagesDatabase : public Database

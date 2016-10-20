@@ -55,10 +55,16 @@ void default_run()
 int main(int argc, char *argv[])
 try
 {
-    initLogger("info", "", true);
+    // initial sequence
+    {
+        initLogger("info", "", true);
 
-    // initialize CPPAN structures, do not remove
-    Config::get_user_config();
+        // initialize CPPAN structures, do not remove
+        Config::get_user_config();
+
+        // initialize internal db
+        getServiceDatabase();
+    }
 
     // default run
     if (argc == 1)
@@ -86,14 +92,17 @@ try
         }
         if (cmd == "internal-parallel-vars-check")
         {
-            if (argc != 5)
+            if (argc < 6)
             {
-                std::cout << "invalid number of arguments\n";
-                std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file\n";
+                std::cout << "invalid number of arguments: " << argc << "\n";
+                std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file generator [toolchain]\n";
                 return 1;
             }
             CMakePrinter c;
-            c.parallel_vars_check(argv[2], argv[3], argv[4]);
+            if (argc == 6)
+                c.parallel_vars_check(argv[2], argv[3], argv[4], argv[5]);
+            else if (argc == 7)
+                c.parallel_vars_check(argv[2], argv[3], argv[4], argv[5], argv[6]);
             return 0;
         }
 

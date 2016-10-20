@@ -25,38 +25,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "date_time.h"
 
-#include "../config.h"
-#include "printer.h"
+#include <boost/date_time/posix_time/posix_time.hpp>
 
-struct CMakePrinter : Printer
+TimePoint getUtc()
 {
-    void prepare_rebuild() override;
-    void prepare_build(const path &fn, const String &cppan) override;
-    int generate() const override;
-    int build() const override;
+    boost::posix_time::ptime t(
+        boost::gregorian::day_clock::universal_day(),
+        boost::posix_time::second_clock::universal_time().time_of_day());
+    return std::chrono::system_clock::from_time_t(boost::posix_time::to_time_t(t));
+}
 
-    void print() override;
-    void print_meta() override;
+TimePoint string2timepoint(const String &s)
+{
+    auto t = boost::posix_time::time_from_string(s);
+    return std::chrono::system_clock::from_time_t(boost::posix_time::to_time_t(t));
+}
 
-    void clear_cache(path p = path()) const override;
-    void clear_exports(path p) const override;
-    void clear_export(path p) const override;
-
-    void parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain = String()) const override;
-
-private:
-    int _generate(bool force = false) const;
-    void print_configs();
-    void print_helper_file(const path &fn) const;
-    void print_meta_config_file(const path &fn) const;
-    void print_package_config_file(const path &fn) const;
-    void print_package_actions_file(const path &fn) const;
-    void print_package_include_file(const path &fn) const;
-    void print_object_config_file(const path &fn) const;
-    void print_object_include_config_file(const path &fn) const;
-    void print_object_export_file(const path &fn) const;
-    void print_object_build_file(const path &fn) const;
-    void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
-};
+time_t string2time_t(const String &s)
+{
+    return std::chrono::system_clock::to_time_t(string2timepoint(s));
+}

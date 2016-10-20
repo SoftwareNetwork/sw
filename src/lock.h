@@ -53,6 +53,8 @@ using FileLockPtr = std::unique_ptr<FileLock>;
 
 using InterprocessMutex = Interprocess::named_mutex;
 
+path get_lock(const path &fn);
+
 class ScopedFileLock
 {
 public:

@@ -29,6 +29,7 @@
 
 #include "../access_table.h"
 #include "../command.h"
+#include "../date_time.h"
 #include "../directories.h"
 #include "../executor.h"
 #include "../lock.h"
@@ -773,13 +774,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
-
-        ctx.addLine("# prevents cmake warning about unused var");
-        ctx.addLine("if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
-        ctx.addLine("endif()");
-        ctx.addLine("if (CPPAN_PROGRAM)");
         ctx.addLine("endif()");
         ctx.addLine();
 
@@ -1830,7 +1824,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
             ctx.addLine("set(checks_file \"" + normalize_path(fs::current_path() / cc->local_settings.cppan_dir / cppan_checks_yml) + "\")");
             ctx.addLine();
             ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles ${tmp_dir}/CMakeFiles/)");
-            ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file})");
+            ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file} ${CMAKE_GENERATOR} ${CMAKE_TOOLCHAIN_FILE})");
             // this file is created by parallel checks dispatcher
             ctx.addLine("read_check_variables_file(${tmp_dir}/" + parallel_checks_file + ")");
             ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");
@@ -2061,7 +2055,7 @@ set_target_properties(run-cppan PROPERTIES
     access_table->write_if_older(fn, ctx.getText());
 }
 
-void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file) const
+void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain) const
 {
     static const String cppan_variable_result_filename = "result.cppan";
     const auto N = std::thread::hardware_concurrency();
@@ -2109,7 +2103,7 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
     LOG_INFO(logger, "-- This process may take up to 5 minutes depending on your hardware");
     LOG_FLUSH();
 
-    auto work = [&dir](auto &w, int i)
+    auto work = [&dir, &generator, &toolchain](auto &w, int i)
     {
         if (w.checks.empty())
             return;
@@ -2132,6 +2126,10 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
         args.push_back("cmake");
         args.push_back("-H" + normalize_path(d));
         args.push_back("-B" + normalize_path(d));
+        args.push_back("-G");
+        args.push_back(generator);
+        if (!toolchain.empty())
+            args.push_back("-DCMAKE_TOOLCHAIN_FILE=" + toolchain);
         auto ret = command::execute(args);
 
         if (ret.rc)

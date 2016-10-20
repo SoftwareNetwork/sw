@@ -29,10 +29,12 @@
 
 #include "command.h"
 #include "config.h"
+#include "date_time.h"
 #include "directories.h"
 #include "enums.h"
 #include "lock.h"
 #include "sqlite_database.h"
+#include "printers/cmake.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -57,16 +59,20 @@ const path db_repo_dir_name = "repository";
 const String packages_db_name = "packages.db";
 const String service_db_name = "service.db";
 
+std::vector<StartupAction> startup_actions{
+    { "2016-10-20 15:00:00", StartupAction::CLEAR_CACHE },
+};
+
 const TableDescriptors &get_service_tables()
 {
     // to prevent side effects as with global variable
     // ! append new tables to the end only !
     static const TableDescriptors service_tables{
-        {
-            "NRuns",
-            R"(
+    {
+        "NRuns",
+        R"(
             CREATE TABLE "NRuns" (
-            "n_runs" INTEGER NOT NULL
+                "n_runs" INTEGER NOT NULL
             );
             insert into NRuns values (0);
         )"
@@ -75,9 +81,19 @@ const TableDescriptors &get_service_tables()
         "PackagesDbSchemaVersion",
         R"(
             CREATE TABLE "PackagesDbSchemaVersion" (
-            "version" INTEGER NOT NULL
+                "version" INTEGER NOT NULL
             );
             insert into PackagesDbSchemaVersion values ()" + std::to_string(PACKAGES_DB_SCHEMA_VERSION) + R"();
+        )"
+    },
+    {
+        "StartupActions",
+        R"(
+            CREATE TABLE "StartupActions" (
+                "timestamp" INTEGER NOT NULL,
+                "action" INTEGER NOT NULL,
+                PRIMARY KEY ("timestamp", "action")
+            );
         )"
     },
     };
@@ -89,11 +105,11 @@ const TableDescriptors data_tables{
         "Projects",
         R"(
             CREATE TABLE "Projects" (
-            "id" INTEGER NOT NULL,
-            "path" TEXT(2048) NOT NULL,
-            "type_id" INTEGER NOT NULL,
-            "flags" INTEGER NOT NULL,
-            PRIMARY KEY ("id")
+                "id" INTEGER NOT NULL,
+                "path" TEXT(2048) NOT NULL,
+                "type_id" INTEGER NOT NULL,
+                "flags" INTEGER NOT NULL,
+                PRIMARY KEY ("id")
             );
             CREATE UNIQUE INDEX "ProjectPath" ON "Projects" ("path" ASC);
         )"
@@ -102,17 +118,17 @@ const TableDescriptors data_tables{
         "ProjectVersions",
         R"(
             CREATE TABLE "ProjectVersions" (
-            "id" INTEGER NOT NULL,
-            "project_id" INTEGER NOT NULL,
-            "major" INTEGER,
-            "minor" INTEGER,
-            "patch" INTEGER,
-            "branch" TEXT,
-            "flags" INTEGER NOT NULL,
-            "created" DATE NOT NULL,
-            "sha256" TEXT NOT NULL,
-            PRIMARY KEY ("id"),
-            FOREIGN KEY ("project_id") REFERENCES "Projects" ("id")
+                "id" INTEGER NOT NULL,
+                "project_id" INTEGER NOT NULL,
+                "major" INTEGER,
+                "minor" INTEGER,
+                "patch" INTEGER,
+                "branch" TEXT,
+                "flags" INTEGER NOT NULL,
+                "created" DATE NOT NULL,
+                "sha256" TEXT NOT NULL,
+                PRIMARY KEY ("id"),
+                FOREIGN KEY ("project_id") REFERENCES "Projects" ("id")
             );
         )"
     },
@@ -120,13 +136,13 @@ const TableDescriptors data_tables{
         "ProjectVersionDependencies",
         R"(
             CREATE TABLE "ProjectVersionDependencies" (
-            "project_version_id" INTEGER NOT NULL,
-            "project_dependency_id" INTEGER NOT NULL,
-            "version" TEXT NOT NULL,
-            "flags" INTEGER NOT NULL,
-            PRIMARY KEY ("project_version_id", "project_dependency_id"),
-            FOREIGN KEY ("project_version_id") REFERENCES "ProjectVersions" ("id"),
-            FOREIGN KEY ("project_dependency_id") REFERENCES "Projects" ("id")
+                "project_version_id" INTEGER NOT NULL,
+                "project_dependency_id" INTEGER NOT NULL,
+                "version" TEXT NOT NULL,
+                "flags" INTEGER NOT NULL,
+                PRIMARY KEY ("project_version_id", "project_dependency_id"),
+                FOREIGN KEY ("project_version_id") REFERENCES "ProjectVersions" ("id"),
+                FOREIGN KEY ("project_dependency_id") REFERENCES "Projects" ("id")
             );
         )"
     },
@@ -214,6 +230,55 @@ ServiceDatabase::ServiceDatabase()
     // create new (appended) tables
     for (auto i = db->getNumberOfTables(); i < (int)tds.size(); i++)
         db->execute(tds[i].query);
+
+    // perform startup actions on client update
+    try
+    {
+        bool once = false;
+        std::set<int> actions_performed; // prevent multiple execution of the same actions
+        for (auto &a : startup_actions)
+        {
+            if (isActionPerformed(a) || actions_performed.find(a.action) != actions_performed.end())
+                continue;
+            if (!once)
+                LOG_INFO(logger, "Performing actions for the new client version");
+            once = true;
+            switch (a.action)
+            {
+            case StartupAction::CLEAR_CACHE:
+                CMakePrinter().clear_cache();
+                break;
+            }
+            actions_performed.insert(a.action);
+            setActionPerformed(a);
+        }
+    }
+    catch (std::exception &e)
+    {
+        // do not fail
+        LOG_WARN(logger, "Warning: " << e.what());
+    }
+}
+
+bool ServiceDatabase::isActionPerformed(const StartupAction &action) const
+{
+    int n = 0;
+    auto t = string2time_t(action.timestamp);
+    db->execute("select count(*) from StartupActions where timestamp = '" +
+        std::to_string(t) + "' and action = '" + std::to_string(action.action) + "'",
+        [&n](SQLITE_CALLBACK_ARGS)
+    {
+        n = std::stoi(cols[0]);
+        return 0;
+    });
+    return n == 1;
+}
+
+void ServiceDatabase::setActionPerformed(const StartupAction &action) const
+{
+    auto t = string2time_t(action.timestamp);
+    db->execute("insert into StartupActions values ('" +
+        std::to_string(t) + "', '" + std::to_string(action.action) + "')");
 }
 
 int ServiceDatabase::getNumberOfRuns() const
@@ -245,7 +310,7 @@ int ServiceDatabase::getPackagesDbSchemaVersion() const
     return version;
 }
 
-void ServiceDatabase::setPackagesDbSchemaVersion(int version)
+void ServiceDatabase::setPackagesDbSchemaVersion(int version) const
 {
     db->execute("update PackagesDbSchemaVersion set version = " + std::to_string(version));
 }
@@ -502,12 +567,9 @@ DownloadDependencies PackagesDatabase::findDependencies(const Packages &deps) co
     return dds;
 }
 
-void check_version_age(const boost::posix_time::ptime &tnow, const char *created)
+void check_version_age(const TimePoint &t1, const char *created)
 {
-    auto tproj = boost::posix_time::time_from_string(created);
-    auto t0 = std::chrono::system_clock::from_time_t(boost::posix_time::to_time_t(tproj));
-    auto t1 = std::chrono::system_clock::from_time_t(boost::posix_time::to_time_t(tnow));
-    auto d = t1 - t0;
+    auto d = t1 - string2timepoint(created);
     auto mins = std::chrono::duration_cast<std::chrono::minutes>(d).count();
     // multiple by 2 because first time interval goes for uploading db
     // and during the second one, the packet is really young
@@ -524,7 +586,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
 
     // save current time during first call
     // it is used for detecting young packages
-    static boost::posix_time::ptime tstart(boost::gregorian::day_clock::universal_day(), boost::posix_time::second_clock::universal_time().time_of_day());
+    static auto tstart = getUtc();
 
     ProjectVersionId id = 0;
     static const String select = "select id, major, minor, patch, flags, sha256, created from ProjectVersions where ";
