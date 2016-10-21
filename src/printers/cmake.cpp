@@ -777,22 +777,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("endif()");
         ctx.addLine();
 
-        // standards
-        if (p.c_standard != 0)
-        {
-            // always off extensions by default
-            // if you need gnuXX extensions, set compiler flags in options or post sources
-            ctx.addLine("set(C_EXTENSIONS OFF)");
-            ctx.addLine("set(CMAKE_C_STANDARD " + std::to_string(p.c_standard) + ")");
-        }
-        if (p.cxx_standard != 0)
-        {
-            // always off extensions by default
-            // if you need gnuXX extensions, set compiler flags in options or post sources
-            ctx.addLine("set(CXX_EXTENSIONS OFF)");
-            ctx.addLine("set(CMAKE_CXX_STANDARD " + std::to_string(p.cxx_standard) + ")");
-        }
-
         // local aliases
         ctx.addLine("set(target " + d.target_name + ")");
         ctx.addLine("set(this " + d.target_name + ")");
@@ -868,6 +852,26 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             ctx << "add_library                   (" << d.target_name << " ${LIBRARY_TYPE} ${src})" << Context::eol;
     }
     ctx.addLine();
+
+    // properties
+    {
+        // standards
+        // always off extensions by default
+        // if you need gnuXX extensions, set compiler flags in options or post target
+        if (!header_only)
+        {
+            if (p.c_standard != 0)
+            {
+                ctx.addLine("set_property(TARGET ${this} PROPERTY C_EXTENSIONS OFF)");
+                ctx.addLine("set_property(TARGET ${this} PROPERTY C_STANDARD " + std::to_string(p.c_standard) + ")");
+            }
+            if (p.cxx_standard != 0)
+            {
+                ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_EXTENSIONS OFF)");
+                ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_STANDARD " + std::to_string(p.cxx_standard) + ")");
+            }
+        }
+    }
 
     // include directories
     {

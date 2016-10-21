@@ -399,6 +399,8 @@ void Config::addDefaultProject()
     Project p{ ProjectPath() };
     p.load(yaml());
     p.cppan_filename = CPPAN_FILENAME;
+    p.pkg = pkg;
+    projects.clear();
     projects.emplace("", p);
 }
 
@@ -418,7 +420,8 @@ void Config::load(yaml root, const path &p)
 {
     if (root.IsNull() || !root.IsMap())
     {
-        LOG_WARN(logger, "Spec file should be a map");
+        addDefaultProject();
+        LOG_DEBUG(logger, "Spec file should be a map");
         return;
     }
 

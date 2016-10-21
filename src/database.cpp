@@ -330,7 +330,15 @@ PackagesDatabase::PackagesDatabase()
     if (!created && isCurrentDbOld())
     {
         LOG_DEBUG(logger, "Checking remote version");
-        auto version_remote = std::stoi(download_file(db_version_url));
+        int version_remote = 0;
+        try
+        {
+            version_remote = std::stoi(download_file(db_version_url));
+        }
+        catch (std::exception &e)
+        {
+            LOG_DEBUG(logger, "Couldn't download db version file: " << e.what());
+        }
         if (version_remote > readPackagesDbVersion(db_repo_dir))
         {
             download();

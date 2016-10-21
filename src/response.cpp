@@ -312,7 +312,7 @@ void ResponseData::download_and_unpack()
         {
             // wait & continue
             ScopedFileLock lck2(hash_file);
-            add_config(d.getDirSrc());
+            add_config(d);
             return;
         }
 
@@ -335,7 +335,16 @@ void ResponseData::download_and_unpack()
         auto download_from_url = [this, &ddata, &dl_hash, &d](const auto &url, bool nothrow = true)
         {
             ddata.url = url;
-            download_file(ddata);
+            try
+            {
+                download_file(ddata);
+            }
+            catch (...)
+            {
+                if (nothrow)
+                    return false;
+                throw;
+            }
 
             if (dl_hash != d.sha256)
             {
@@ -379,7 +388,7 @@ void ResponseData::download_and_unpack()
 
         // re-read in any case
         // no need to remove old config, let it die with program
-        auto c = add_config(d.getDirSrc());
+        auto c = add_config(d);
 
         // move all files under unpack dir
         auto ud = c->getDefaultProject().unpack_directory;
@@ -613,7 +622,9 @@ Config *ResponseData::add_config(std::unique_ptr<Config> &&config, bool created)
     return packages[cfg->pkg].config;
 }
 
-Config *ResponseData::add_config(const path &p)
+Config *ResponseData::add_config(const Package &p)
 {
-    return add_config(std::make_unique<Config>(p), true);
+    auto c = std::make_unique<Config>(p.getDirSrc());
+    c->setPackage(p);
+    return add_config(std::move(c), true);
 }

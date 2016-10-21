@@ -53,7 +53,7 @@ public:
     void init(Config *config, const String &host, const path &root_dir);
     void download_dependencies(const Packages &d);
     Config *add_config(std::unique_ptr<Config> &&config, bool created);
-    Config *add_config(const path &p);
+    Config *add_config(const Package &p);
 
     bool rebuild_configs() { return has_downloads() || deps_changed; }
     bool has_downloads() const { return downloads > 0; }

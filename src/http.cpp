@@ -215,9 +215,13 @@ void download_file(DownloadData &data)
             //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
         }
     }
+
     auto res = curl_easy_perform(curl);
     data.finalize();
+    long http_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     curl_easy_cleanup(curl);
+
     if (res == CURLE_ABORTED_BY_CALLBACK)
     {
         fs::remove(data.fn);
@@ -225,6 +229,9 @@ void download_file(DownloadData &data)
     }
     if (res != CURLE_OK)
         throw std::runtime_error(String(curl_easy_strerror(res)));
+
+    if (http_code != 200)
+        throw std::runtime_error("Http returned " + std::to_string(http_code));
 }
 
 String download_file(const String &url)
