@@ -192,6 +192,8 @@ private:
     Projects projects;
     path dir;
 
+    void addDefaultProject();
+
 public:
     struct InternalOptions
     {

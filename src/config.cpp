@@ -49,6 +49,9 @@
 #include <thread>
 #include <tuple>
 
+#include "logger.h"
+DECLARE_STATIC_LOGGER(logger, "config");
+
 void get_config_insertion(const yaml &n, const String &key, String &dst)
 {
     dst = get_scalar<String>(n, key);
@@ -326,6 +329,7 @@ String LocalSettings::get_hash() const
 
 Config::Config()
 {
+    addDefaultProject();
 }
 
 Config::Config(ConfigType type)
@@ -359,6 +363,7 @@ Config::Config(ConfigType type)
     }
     break;
     }
+    addDefaultProject();
 }
 
 Config::Config(const path &p)
@@ -389,6 +394,14 @@ Config Config::get_user_config()
     return c;
 }
 
+void Config::addDefaultProject()
+{
+    Project p{ ProjectPath() };
+    p.load(yaml());
+    p.cppan_filename = CPPAN_FILENAME;
+    projects.emplace("", p);
+}
+
 void Config::load_current_config()
 {
     load(dir / CPPAN_FILENAME);
@@ -403,8 +416,11 @@ void Config::load(const path &p)
 
 void Config::load(yaml root, const path &p)
 {
-    if (!root.IsMap())
-        throw std::runtime_error("Spec file should be a map");
+    if (root.IsNull() || !root.IsMap())
+    {
+        LOG_WARN(logger, "Spec file should be a map");
+        return;
+    }
 
     auto ls = root["local_settings"];
     if (ls.IsDefined())
@@ -505,6 +521,7 @@ void Config::load(yaml root, const path &p)
         projects.emplace(project.ppath.toString(), project);
     };
 
+    projects.clear();
     if (prjs.IsDefined())
     {
         for (auto prj : prjs)
