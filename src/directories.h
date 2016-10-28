@@ -54,6 +54,7 @@ struct Directories
     void set_build_dir(const path &p);
 
     path get_include_dir() const;
+    path get_local_dir() const;
     path get_static_files_dir() const;
 
 private:

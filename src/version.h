@@ -34,6 +34,14 @@
 using ProjectVersionId = uint64_t;
 using ProjectVersionNumber = int32_t;
 
+enum class VersionType
+{
+    Any,
+    Equal,
+    Version,
+    Branch,
+};
+
 struct Version
 {
     // undef gcc symbols
@@ -59,9 +67,11 @@ struct Version
     String toString() const;
     path toPath() const;
 
+    VersionType getType() const { return type; }
+
     bool isValid() const;
-    bool isBranch() const { return !branch.empty(); }
-    bool isVersion() const { return !isBranch(); }
+    bool isBranch() const;
+    bool isVersion() const;
 
     // checks if this version can be rhs using upgrade rules
     // does not check branches!
@@ -73,5 +83,7 @@ struct Version
     bool operator!=(const Version &rhs) const;
 
 private:
+    VersionType type{ VersionType::Any };
+
     static bool check_branch_name(const String &n, String *error = nullptr);
 };

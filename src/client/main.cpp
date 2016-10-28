@@ -192,6 +192,8 @@ try
         return generate(options["generate"].as<String>(), options["config"].as<String>());
     else if (options().count("dry-run"))
         return dry_run(options["dry-run"].as<String>(), options["config"].as<String>());
+    else if (options().count("build-package"))
+        return build_package(options["build-package"].as<String>(), options["settings"].as<String>(), options["config"].as<String>());
 
     if (options().count(CLEAN_PACKAGES))
     {
@@ -211,7 +213,7 @@ try
 
     // setup curl settings if possible from config
     // other network users (options) should go below this line
-    httpSettings.proxy = c.local_settings.proxy;
+    httpSettings.proxy = c.settings.proxy;
 
     // self-upgrade?
     if (options()["self-upgrade"].as<bool>())
@@ -224,7 +226,7 @@ try
     c.load_current_config();
 
     // update proxy settings?
-    httpSettings.proxy = c.local_settings.proxy;
+    httpSettings.proxy = c.settings.proxy;
 
     if (options()["prepare-archive"].as<bool>())
     {
@@ -267,13 +269,13 @@ void self_upgrade(Config &c, const char *exe_path)
 #endif
 
     DownloadData dd;
-    dd.url = c.local_settings.host + client + ".md5";
+    dd.url = c.settings.host + client + ".md5";
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     std::cout << "Downloading checksum file" << "\n";
     download_file(dd);
     auto md5 = boost::algorithm::trim_copy(read_file(dd.fn));
 
-    dd.url = c.local_settings.host + client;
+    dd.url = c.settings.host + client;
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     String dl_md5;
     dd.md5.hash = &dl_md5;

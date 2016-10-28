@@ -30,18 +30,29 @@
 const std::regex r_branch_name(R"(([a-zA-Z_][a-zA-Z0-9_-]*))");
 const std::regex r_version1(R"((\d+))");
 const std::regex r_version2(R"((\d+).(\d+))");
-const std::regex r_version3(R"((-?\d+).(-?\d+).(-?\d+))");
+const std::regex r_version3(R"((\d+).(\d+).(\d+))");
 
 Version::Version(ProjectVersionNumber ma, ProjectVersionNumber mi, ProjectVersionNumber pa)
     : major(ma), minor(mi), patch(pa)
 {
-
 }
 
 Version::Version(const String &s)
 {
     if (s == "*")
+    {
+        type = VersionType::Any;
         return;
+    }
+
+    if (s == "=")
+    {
+        type = VersionType::Equal;
+        return;
+    }
+
+    type = VersionType::Version;
+
     std::smatch m;
     if (std::regex_match(s, m, r_version3))
     {
@@ -64,11 +75,19 @@ Version::Version(const String &s)
         String error;
         if (!check_branch_name(branch, &error))
             throw std::runtime_error(error);
+        type = VersionType::Branch;
     }
     else
+    {
+        type = VersionType::Any;
         throw std::runtime_error("Bad version");
+    }
+
     if (!isValid())
+    {
+        type = VersionType::Any;
         throw std::runtime_error("Bad version");
+    }
 }
 
 String Version::toString() const
@@ -84,6 +103,8 @@ String Version::toAnyVersion() const
 {
     if (!branch.empty())
         return branch;
+    if (type == VersionType::Equal)
+        return "=";
     if (major == -1 && minor == -1 && patch == -1)
         return "*";
     String s;
@@ -116,6 +137,16 @@ bool Version::isValid() const
     if (major < -1 || minor < -1 || patch < -1)
         return false;
     return true;
+}
+
+bool Version::isBranch() const
+{
+    return !branch.empty();
+}
+
+bool Version::isVersion() const
+{
+    return !isBranch();
 }
 
 bool Version::operator<(const Version &rhs) const

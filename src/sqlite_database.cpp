@@ -114,7 +114,6 @@ sqlite3 *load_from_file(const String &fn, bool read_only)
     {
         String error = "Can't open database file: " + fn + " error: " + sqlite3_errmsg(db);
         sqlite3_close(db);
-        LOG_ERROR(logger, error);
         throw std::runtime_error(error);
     }
     return db;
@@ -127,7 +126,7 @@ sqlite3 *open_in_memory()
     {
         String error = "Can't open in memory database, error: ";
         error += sqlite3_errmsg(db);
-        LOG_ERROR(logger, error);
+        sqlite3_close(db);
         throw std::runtime_error(error);
     }
     return db;
@@ -140,7 +139,7 @@ sqlite3 *load_from_file_to_memory(const String &fn)
     if (ret != SQLITE_OK)
     {
         String error = "Can't load database: " + fn + " error: " + sqlite3_errstr(ret);
-        LOG_ERROR(logger, error);
+        sqlite3_close(db);
         throw std::runtime_error(error);
     }
     return db;
@@ -152,7 +151,7 @@ void save_from_memory_to_file(const String &fn, sqlite3 *db)
     if (ret != SQLITE_OK)
     {
         String error = "Can't save database: " + fn + " error: " + sqlite3_errstr(ret);
-        LOG_ERROR(logger, error);
+        sqlite3_close(db);
         throw std::runtime_error(error);
     }
 }
@@ -228,7 +227,6 @@ bool SqliteDatabase::execute(const String &sql, void *object, Sqlite3Callback ca
             s += "...";
         error = "Error executing sql statement:\n" + s + "\nError: " + errmsg;
         sqlite3_free(errmsg);
-        LOG_ERROR(logger, error);
         if (nothrow)
         {
             if (errmsg)
@@ -263,7 +261,6 @@ bool SqliteDatabase::execute(const String &sql, DatabaseCallback callback, bool 
             s += "...";
         error = "Error executing sql statement:\n" + s + "\nError: " + errmsg;
         sqlite3_free(errmsg);
-        LOG_ERROR(logger, error);
         if (nothrow)
         {
             if (errmsg)
@@ -278,7 +275,6 @@ bool SqliteDatabase::execute(const String &sql, DatabaseCallback callback, bool 
         if (sql.size() > MAX_ERROR_SQL_LENGTH)
             s += "...";
         error = "Error executing sql statement:\n" + s;
-        LOG_ERROR(logger, error);
         if (nothrow)
         {
             if (errmsg)

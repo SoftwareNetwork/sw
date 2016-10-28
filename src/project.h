@@ -106,7 +106,11 @@ struct Patch
 struct Project
 {
     // public data
+
+    // source (git, remote etc.)
+    Version version;
     Source source;
+
     ProjectPath ppath;
     String license;
     IncludeDirectories include_directories;
@@ -141,9 +145,6 @@ struct Project
     // also is used for enumerating sources (mutable for this)
     mutable Files files;
 
-    // this file
-    String cppan_filename;
-
     // root_directory where all files are stored
     path root_directory;
 
@@ -164,6 +165,8 @@ public:
     void prepareExports() const;
     void patchSources() const;
 
+    void setRelativePath(const ProjectPath &root_project, const String &name);
+
     void load(const yaml &root);
     void save_dependencies(yaml &root) const;
 
@@ -175,4 +178,4 @@ private:
 
 using Projects = std::map<String, Project>;
 
-ProjectPath relative_name_to_absolute(const ProjectPath &root_project, const String &name);
+void load_source_and_version(const yaml &root, Source &source, Version &version);

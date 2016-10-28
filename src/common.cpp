@@ -27,6 +27,7 @@
 
 #include "common.h"
 
+#include "command.h"
 #include "stamp.h"
 
 #include <boost/algorithm/string.hpp>
@@ -98,4 +99,24 @@ std::vector<String> split_lines(const String &s)
             lines.push_back(l);
     }
     return lines;
+}
+
+String get_cmake_version()
+{
+    static const auto err = "Cannot get cmake version";
+    static const std::regex r("cmake version (\\S+)");
+
+    auto ret = command::execute_and_capture({ "cmake", "--version" });
+    if (ret.rc != 0)
+        throw std::runtime_error(err);
+
+    std::smatch m;
+    if (std::regex_search(ret.out, m, r))
+    {
+        if (m[0].first != ret.out.begin())
+            throw std::runtime_error(err);
+        return m[1].str();
+    }
+
+    throw std::runtime_error(err);
 }

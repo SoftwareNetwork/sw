@@ -51,6 +51,9 @@ ProgramOptions::ProgramOptions()
         ("generate", po::value<std::string>(), "file or dir: an inline project generation")
         ("dry-run", po::value<std::string>(), "dir: locally simulate project download and build")
 
+        ("settings", po::value<std::string>()->default_value(""), "file to take settings from")
+        ("build-package", po::value<std::string>(), "build existing cppan package")
+
         ("clear-cache", po::bool_switch(), "clear CMakeCache.txt files")
         ("clear-vars-cache", po::bool_switch(), "clear checked symbols, types, includes etc.")
         (CLEAN_PACKAGES, po::value<std::string>(), "completely clean packages files for matched regex")

@@ -86,6 +86,9 @@ public:
 
     bool isActionPerformed(const StartupAction &action) const;
     void setActionPerformed(const StartupAction &action) const;
+
+    String getConfigByHash(const String &hash) const;
+    void addConfigHash(const String &hash, const String &config) const;
 };
 
 class PackagesDatabase : public Database

@@ -29,303 +29,22 @@
 
 #include "access_table.h"
 #include "context.h"
+#include "database.h"
 #include "directories.h"
 #include "lock.h"
 #include "hash.h"
 #include "hasher.h"
 #include "log.h"
 #include "response.h"
-#include "stamp.h"
 #include "yaml.h"
 
 #include <boost/algorithm/string.hpp>
 
-#include <curl/curl.h>
-#include <curl/easy.h>
-
 #include <fstream>
 #include <iostream>
-#include <regex>
-#include <thread>
-#include <tuple>
 
 #include "logger.h"
 DECLARE_STATIC_LOGGER(logger, "config");
-
-void get_config_insertion(const yaml &n, const String &key, String &dst)
-{
-    dst = get_scalar<String>(n, key);
-    boost::trim(dst);
-}
-
-void BuildSystemConfigInsertions::get_config_insertions(const yaml &n)
-{
-#define ADD_CFG_INSERTION(x) get_config_insertion(n, #x, x)
-    ADD_CFG_INSERTION(pre_sources);
-    ADD_CFG_INSERTION(post_sources);
-    ADD_CFG_INSERTION(post_target);
-    ADD_CFG_INSERTION(post_alias);
-#undef ADD_CFG_INSERTION
-}
-
-void BuildSettings::load(const yaml &root)
-{
-    if (root.IsNull())
-        return;
-
-    // extract
-    EXTRACT_AUTO(c_compiler);
-    EXTRACT_AUTO(cxx_compiler);
-    EXTRACT_AUTO(compiler);
-    EXTRACT_AUTO(c_compiler_flags);
-    if (c_compiler_flags.empty())
-        EXTRACT_VAR(root, c_compiler_flags, "c_flags", String);
-    EXTRACT_AUTO(cxx_compiler_flags);
-    if (cxx_compiler_flags.empty())
-        EXTRACT_VAR(root, cxx_compiler_flags, "cxx_flags", String);
-    EXTRACT_AUTO(compiler_flags);
-    EXTRACT_AUTO(link_flags);
-    EXTRACT_AUTO(link_libraries);
-    EXTRACT_AUTO(configuration);
-    EXTRACT_AUTO(generator);
-    EXTRACT_AUTO(toolset);
-    EXTRACT_AUTO(type);
-    EXTRACT_AUTO(library_type);
-    EXTRACT_AUTO(executable_type);
-    EXTRACT_AUTO(use_shared_libs);
-    EXTRACT_AUTO(silent);
-
-    for (int i = 0; i < CMakeConfigurationType::Max; i++)
-    {
-        auto t = configuration_types[i];
-        boost::to_lower(t);
-        EXTRACT_VAR(root, c_compiler_flags_conf[i], "c_compiler_flags_" + t, String);
-        EXTRACT_VAR(root, cxx_compiler_flags_conf[i], "cxx_compiler_flags_" + t, String);
-        EXTRACT_VAR(root, compiler_flags_conf[i], "compiler_flags_" + t, String);
-        EXTRACT_VAR(root, link_flags_conf[i], "link_flags_" + t, String);
-    }
-
-    cmake_options = get_sequence<String>(root["cmake_options"]);
-    get_string_map(root, "env", env);
-
-    // process
-    if (c_compiler.empty())
-        c_compiler = cxx_compiler;
-    if (c_compiler.empty())
-        c_compiler = compiler;
-    if (cxx_compiler.empty())
-        cxx_compiler = compiler;
-
-    c_compiler_flags += " " + compiler_flags;
-    cxx_compiler_flags += " " + compiler_flags;
-    for (int i = 0; i < BuildSettings::CMakeConfigurationType::Max; i++)
-    {
-        c_compiler_flags_conf[i] += " " + compiler_flags_conf[i];
-        cxx_compiler_flags_conf[i] += " " + compiler_flags_conf[i];
-    }
-}
-
-void BuildSettings::set_build_dirs(const path &fn)
-{
-    filename = fn.filename().string();
-    filename_without_ext = fn.filename().stem().string();
-    if (filename == CPPAN_FILENAME)
-    {
-        is_dir = true;
-        filename = fn.parent_path().filename().string();
-        filename_without_ext = filename;
-    }
-
-    source_directory = directories.build_dir;
-    if (directories.build_dir_type == ConfigType::Local ||
-        directories.build_dir_type == ConfigType::None)
-    {
-        source_directory /= (CPPAN_LOCAL_BUILD_PREFIX + filename);
-    }
-    else
-    {
-        source_directory_hash = sha256(normalize_path(fn.string())).substr(0, 8);
-        source_directory /= source_directory_hash;
-    }
-    binary_directory = source_directory / "build";
-}
-
-void BuildSettings::append_build_dirs(const path &p)
-{
-    source_directory /= p;
-    binary_directory = source_directory / "build";
-}
-
-void BuildSettings::prepare_build(Config *c, const path &fn, const String &cppan, bool force)
-{
-    auto &p = c->getDefaultProject();
-    if (!is_dir)
-        p.sources.insert(filename);
-    p.findSources(fn.parent_path());
-    p.files.erase(CPPAN_FILENAME);
-
-    if (rebuild)
-        fs::remove_all(source_directory);
-    if (!fs::exists(source_directory))
-        fs::create_directories(source_directory);
-
-    write_file_if_different(source_directory / CPPAN_FILENAME, cppan);
-
-    if (!prepare && !force)
-        return;
-
-    Config conf(source_directory);
-    conf.process(source_directory); // invoke cppan
-}
-
-String BuildSettings::get_hash() const
-{
-    Hasher h;
-    h |= c_compiler;
-    h |= cxx_compiler;
-    h |= compiler;
-    h |= c_compiler_flags;
-for (int i = 0; i < CMakeConfigurationType::Max; i++)
-    h |= c_compiler_flags_conf[i];
-    h |= cxx_compiler_flags;
-for (int i = 0; i < CMakeConfigurationType::Max; i++)
-    h |= cxx_compiler_flags_conf[i];
-    h |= compiler_flags;
-for (int i = 0; i < CMakeConfigurationType::Max; i++)
-    h |= compiler_flags_conf[i];
-    h |= link_flags;
-for (int i = 0; i < CMakeConfigurationType::Max; i++)
-    h |= link_flags_conf[i];
-    h |= link_libraries;
-    h |= generator;
-    h |= toolset;
-    h |= use_shared_libs;
-    return h.hash;
-}
-
-String BuildSettings::get_fs_generator() const
-{
-    String g = generator;
-    boost::to_lower(g);
-    boost::replace_all(g, " ", "-");
-    return g;
-}
-
-LocalSettings::LocalSettings()
-{
-    build_dir = temp_directory_path() / "build";
-    storage_dir = get_root_directory() / STORAGE_DIR;
-}
-
-void LocalSettings::load(const path &p, const ConfigType type)
-{
-    auto root = YAML::LoadFile(p.string());
-    load(root, type);
-}
-
-void LocalSettings::load(const yaml &root, const ConfigType type)
-{
-    load_main(root);
-
-    auto get_storage_dir = [this](ConfigType type)
-    {
-        switch (type)
-        {
-        case ConfigType::Local:
-            return cppan_dir / STORAGE_DIR;
-        case ConfigType::User:
-            return Config::get_user_config().local_settings.storage_dir;
-        case ConfigType::System:
-            return Config::get_system_config().local_settings.storage_dir;
-        default:
-            return storage_dir;
-        }
-    };
-
-    auto get_build_dir = [this](const path &p, ConfigType type)
-    {
-        switch (type)
-        {
-        case ConfigType::Local:
-            return fs::current_path();
-        case ConfigType::User:
-            return directories.storage_dir_tmp;
-        case ConfigType::System:
-            return temp_directory_path() / "build";
-        default:
-            return p;
-        }
-    };
-
-    Directories dirs;
-    dirs.storage_dir_type = storage_dir_type;
-    dirs.set_storage_dir(get_storage_dir(storage_dir_type));
-    dirs.build_dir_type = build_dir_type;
-    dirs.set_build_dir(get_build_dir(build_dir, build_dir_type));
-    directories.update(dirs, type);
-}
-
-void LocalSettings::load_main(const yaml &root)
-{
-    auto packages_dir_type_from_string = [](const String &s, const String &key)
-    {
-        if (s == "local")
-            return ConfigType::Local;
-        if (s == "user")
-            return ConfigType::User;
-        if (s == "system")
-            return ConfigType::System;
-        throw std::runtime_error("Unknown '" + key + "'. Should be one of [local, user, system]");
-    };
-
-    EXTRACT_AUTO(host);
-    EXTRACT_AUTO(use_cache);
-    EXTRACT_AUTO(show_ide_projects);
-    EXTRACT_AUTO(add_run_cppan_target);
-    EXTRACT_AUTO(disable_update_checks);
-    EXTRACT(storage_dir, String);
-    EXTRACT(build_dir, String);
-    EXTRACT(cppan_dir, String);
-
-    auto &p = root["proxy"];
-    if (p.IsDefined())
-    {
-        if (!p.IsMap())
-            throw std::runtime_error("'proxy' should be a map");
-        EXTRACT_VAR(p, proxy.host, "host", String);
-        EXTRACT_VAR(p, proxy.user, "user", String);
-    }
-
-    storage_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "storage_dir_type", "user"), "storage_dir_type");
-    if (root["storage_dir"].IsDefined())
-        storage_dir_type = ConfigType::None;
-    build_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "build_dir_type", "system"), "build_dir_type");
-    if (root["build_dir"].IsDefined())
-        build_dir_type = ConfigType::None;
-
-    // read build settings
-    if (root["builds"].IsDefined())
-    {
-        // yaml will not keep sorting of keys in map
-        // so we can take 'first' build in document
-        if (root["current_build"].IsDefined())
-            build_settings.load(root["builds"][root["current_build"].template as<String>()]);
-    }
-    else if (root["build"].IsDefined())
-        build_settings.load(root["build"]);
-}
-
-bool LocalSettings::is_custom_build_dir() const
-{
-    return build_dir_type == ConfigType::Local || build_dir_type == ConfigType::None;
-}
-
-String LocalSettings::get_hash() const
-{
-    Hasher h;
-    h |= build_settings.get_hash();
-    return h.hash;
-}
 
 Config::Config()
 {
@@ -344,7 +63,7 @@ Config::Config(ConfigType type)
             break;
         // do not move after the switch
         // it should not be executed there
-        local_settings.load(fn, type);
+        settings.load(fn, type);
     }
         break;
     case ConfigType::User:
@@ -359,7 +78,7 @@ Config::Config(ConfigType type)
             Config c = get_system_config();
             c.save(fn);
         }
-        local_settings.load(fn, type);
+        settings.load(fn, type);
     }
     break;
     }
@@ -398,7 +117,6 @@ void Config::addDefaultProject()
 {
     Project p{ ProjectPath() };
     p.load(yaml());
-    p.cppan_filename = CPPAN_FILENAME;
     p.pkg = pkg;
     projects.clear();
     projects.emplace("", p);
@@ -416,7 +134,7 @@ void Config::load(const path &p)
     load(root);
 }
 
-void Config::load(yaml root, const path &p)
+void Config::load(yaml root)
 {
     if (root.IsNull() || !root.IsMap())
     {
@@ -430,68 +148,19 @@ void Config::load(yaml root, const path &p)
     {
         if (!ls.IsMap())
             throw std::runtime_error("'local_settings' should be a map");
-        local_settings.load(root["local_settings"], type);
+        settings.load(root["local_settings"], type);
     }
     else
     {
         // read user/system settings first
         auto uc = get_user_config();
-        local_settings = uc.local_settings;
+        settings = uc.settings;
     }
 
     // version & source
-    {
-        String ver;
-        EXTRACT_VAR(root, ver, "version", String);
-        if (!ver.empty())
-            version = Version(ver);
-
-        source = load_source(root);
-        if (source.which() == 0)
-        {
-            auto &git = boost::get<Git>(source);
-            if (ver.empty())
-            {
-                if (git.branch.empty() && git.tag.empty())
-                {
-                    ver = "master";
-                    version = Version(ver);
-                }
-                else if (!git.branch.empty())
-                {
-                    ver = git.branch;
-                    try
-                    {
-                        // branch may contain bad symbols, so put in try...catch
-                        version = Version(ver);
-                    }
-                    catch (std::exception &)
-                    {
-                    }
-                }
-                else if (!git.tag.empty())
-                {
-                    ver = git.tag;
-                    try
-                    {
-                        // tag may contain bad symbols, so put in try...catch
-                        version = Version(ver);
-                    }
-                    catch (std::exception &)
-                    {
-                    }
-                }
-            }
-
-            if (version.isValid() && git.branch.empty() && git.tag.empty())
-            {
-                if (version.isBranch())
-                    git.branch = version.toString();
-                else
-                    git.tag = version.toString();
-            }
-        }
-    }
+    Source source;
+    Version version;
+    load_source_and_version(root, source, version);
 
     EXTRACT(root_project, String);
 
@@ -516,11 +185,14 @@ void Config::load(yaml root, const path &p)
         root.remove("common_settings");
     }
 
-    // project
-    auto set_project = [this, &p](auto &&project, auto &&name)
+    auto add_project = [this, &source, &version](auto &root, auto &&name)
     {
-        project.cppan_filename = p.filename().string();
-        project.ppath = relative_name_to_absolute(root_project, name);
+        Project project(root_project);
+        project.defaults_allowed = defaults_allowed;
+        project.source = source;
+        project.version = version;
+        project.load(root);
+        project.setRelativePath(root_project, name);
         projects.emplace(project.ppath.toString(), project);
     };
 
@@ -528,19 +200,11 @@ void Config::load(yaml root, const path &p)
     if (prjs.IsDefined())
     {
         for (auto prj : prjs)
-        {
-            Project project(root_project);
-            project.defaults_allowed = defaults_allowed;
-            project.load(prj.second);
-            set_project(project, prj.first.template as<String>());
-        }
+            add_project(prj.second, prj.first.template as<String>());
     }
     else
     {
-        Project project(root_project);
-        project.defaults_allowed = defaults_allowed;
-        project.load(root);
-        set_project(project, "");
+        add_project(root, "");
     }
 }
 
@@ -603,8 +267,8 @@ void Config::save(const path &p) const
     YAML::Emitter e(o);
     e.SetIndent(4);
     e << YAML::BeginMap;
-    EMIT_KV("host", local_settings.host);
-    EMIT_KV("storage_dir", local_settings.storage_dir.string());
+    EMIT_KV("host", settings.host);
+    EMIT_KV("storage_dir", settings.storage_dir.string());
     e << YAML::EndMap;
 }
 
@@ -618,7 +282,7 @@ void Config::process(const path &p)
     AccessTable access_table(directories.storage_dir_etc);
 
     // do a request
-    rd.init(this, local_settings.host, directories.storage_dir_src);
+    rd.init(this, settings.host, directories.storage_dir_src);
     rd.download_dependencies(getFileDependencies());
 
     // if we got a download we might need to refresh configs
@@ -629,7 +293,7 @@ void Config::process(const path &p)
 
     LOG_NO_NEWLINE("Generating build configs... ");
 
-    auto printer = Printer::create(printerType);
+    auto printer = Printer::create(settings.printerType);
     printer->access_table = &access_table;
 
     printer->pc = this;
@@ -689,7 +353,7 @@ void Config::post_download() const
     at.remove(pkg.getDirSrc());
     at.remove(pkg.getDirObj());
 
-    auto printer = Printer::create(printerType);
+    auto printer = Printer::create(settings.printerType);
     printer->d = pkg;
     printer->prepare_rebuild();
 }
@@ -711,158 +375,6 @@ Packages Config::getFileDependencies() const
         }
     }
     return dependencies;
-}
-
-void Config::prepare_build(path fn, const String &cppan)
-{
-    fn = fs::canonical(fs::absolute(fn));
-
-    auto &bs = local_settings.build_settings;
-    auto printer = Printer::create(printerType);
-    printer->rc = this;
-
-    String cmake_version;
-    {
-        auto stamps_dir = directories.storage_dir_etc / STAMPS_DIR / "configs";
-        if (!fs::exists(stamps_dir))
-            fs::create_directories(stamps_dir);
-        auto stamps_file = stamps_dir / cppan_stamp;
-
-        std::map<String, String> hash_configs;
-        {
-            ScopedShareableFileLock lock(stamps_file);
-
-            String hash;
-            String config;
-            std::ifstream ifile(stamps_file.string());
-            while (ifile >> hash >> config)
-                hash_configs[hash] = config;
-        }
-
-        auto h = local_settings.get_hash();
-        auto i = hash_configs.find(h);
-        if (i != hash_configs.end())
-        {
-            bs.config = i->second;
-        }
-        else
-        {
-            // do a test build to extract config string
-            bs.set_build_dirs(fn);
-            bs.source_directory = temp_directory_path() / "temp" / fs::unique_path();
-            bs.binary_directory = bs.source_directory / "build";
-            bs.prepare_build(this, fn, cppan, true);
-            printer->prepare_build(fn, cppan);
-
-            LOG("--");
-            LOG("-- Performing test run");
-            LOG("--");
-
-            bs.allow_links = false;
-            auto ret = printer->generate();
-            bs.allow_links = true;
-
-            boost::system::error_code ec;
-            if (ret)
-            {
-                fs::remove_all(bs.source_directory, ec);
-                throw std::runtime_error("There are errors during test run");
-            }
-
-            // read cfg
-            bs.config = read_file(bs.binary_directory / CPPAN_CONFIG_FILENAME);
-            cmake_version = read_file(bs.binary_directory / CPPAN_CMAKE_VERSION_FILENAME);
-            hash_configs[h] = bs.config;
-
-            // move this to printer some time
-            // copy cached cmake config to storage
-            copy_dir(
-                bs.binary_directory / "CMakeFiles" / cmake_version,
-                directories.storage_dir_cfg / bs.config / "CMakeFiles" / cmake_version);
-
-            // remove test dir
-            fs::remove_all(bs.source_directory, ec);
-        }
-
-        {
-            ScopedFileLock lock(stamps_file);
-
-            String hash;
-            String config;
-            std::ofstream ofile(stamps_file.string());
-            if (ofile)
-            {
-                for (auto &hc : hash_configs)
-                    ofile << hc.first << " " << hc.second << "\n";
-            }
-        }
-    }
-
-    // set new dirs
-    bs.set_build_dirs(fn);
-    bs.append_build_dirs(bs.config);
-
-    // move this to printer some time
-    // copy cached cmake config to bin dir
-    copy_dir(
-        directories.storage_dir_cfg / bs.config / "CMakeFiles" / cmake_version,
-        bs.binary_directory / "CMakeFiles" / cmake_version);
-
-    // setup cppan config
-    bs.prepare_build(this, fn, cppan);
-
-    // setup printer config
-    printer->prepare_build(fn, cppan);
-}
-
-int Config::generate() const
-{
-    auto printer = Printer::create(printerType);
-    printer->rc = (Config *)this;
-    return printer->generate();
-}
-
-int Config::build() const
-{
-    auto printer = Printer::create(printerType);
-    printer->rc = (Config *)this;
-    return printer->build();
-}
-
-void Config::checkForUpdates() const
-{
-    if (local_settings.disable_update_checks)
-        return;
-
-#ifdef _WIN32
-    String stamp_file = "/client/.service/win32.stamp";
-#elif __APPLE__
-    String stamp_file = "/client/.service/macos.stamp";
-#else
-    String stamp_file = "/client/.service/linux.stamp";
-#endif
-
-    DownloadData dd;
-    dd.url = local_settings.host + stamp_file;
-    dd.fn = fs::temp_directory_path() / fs::unique_path();
-    download_file(dd);
-    auto stamp_remote = boost::trim_copy(read_file(dd.fn));
-    boost::replace_all(stamp_remote, "\"", "");
-    uint64_t s1 = std::stoull(cppan_stamp);
-    uint64_t s2 = std::stoull(stamp_remote);
-    if (s1 != 0 && s2 != 0 && s2 > s1)
-    {
-        std::cout << "New version of the CPPAN client is available!" << "\n";
-        std::cout << "Feel free to upgrade it from website or simply run:" << "\n";
-        std::cout << "cppan --self-upgrade" << "\n";
-#ifdef _WIN32
-        std::cout << "(or the same command but from administrator)" << "\n";
-#else
-        std::cout << "or" << "\n";
-        std::cout << "sudo cppan --self-upgrade" << "\n";
-#endif
-        std::cout << "\n";
-    }
 }
 
 void Config::setPackage(const Package &p)

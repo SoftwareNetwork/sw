@@ -61,7 +61,7 @@ void ResponseData::init(Config *config, const String &host, const path &root_dir
     // check for updates only once, ignore errors
     try
     {
-        config->checkForUpdates();
+        config->settings.checkForUpdates();
     }
     catch (...)
     {
@@ -132,7 +132,7 @@ void ResponseData::download_dependencies(const Packages &deps)
             deps_changed = true;
 
             // clear exports for this project, so it will be regenerated
-            auto p = Printer::create(cc.second.config->printerType);
+            auto p = Printer::create(cc.second.config->settings.printerType);
             p->clear_export(cc.first.getDirObj());
             cleanPackages(cc.first.target_name, CleanTarget::Lib | CleanTarget::Bin);
         }

@@ -69,7 +69,7 @@ const TableDescriptors &get_service_tables()
     // ! append new tables to the end only !
     static const TableDescriptors service_tables{
     {
-        "NRuns",
+        "NRuns", // unneeded?
         R"(
             CREATE TABLE "NRuns" (
                 "n_runs" INTEGER NOT NULL
@@ -93,6 +93,16 @@ const TableDescriptors &get_service_tables()
                 "timestamp" INTEGER NOT NULL,
                 "action" INTEGER NOT NULL,
                 PRIMARY KEY ("timestamp", "action")
+            );
+        )"
+    },
+    {
+        "ConfigHashes",
+        R"(
+            CREATE TABLE "ConfigHashes" (
+                "hash" TEXT NOT NULL,
+                "config" TEXT NOT NULL,
+                PRIMARY KEY ("hash")
             );
         )"
     },
@@ -152,7 +162,7 @@ path getDbDirectory()
 {
     // try to keep databases only to user storage dir, not local one
     Directories dirs;
-    dirs.set_storage_dir(Config::get_user_config().local_settings.storage_dir);
+    dirs.set_storage_dir(Config::get_user_config().settings.storage_dir);
     return dirs.storage_dir_etc / db_dir_name;
 }
 
@@ -258,6 +268,8 @@ ServiceDatabase::ServiceDatabase()
         // do not fail
         LOG_WARN(logger, "Warning: " << e.what());
     }
+
+    increaseNumberOfRuns();
 }
 
 bool ServiceDatabase::isActionPerformed(const StartupAction &action) const
@@ -313,6 +325,25 @@ int ServiceDatabase::getPackagesDbSchemaVersion() const
 void ServiceDatabase::setPackagesDbSchemaVersion(int version) const
 {
     db->execute("update PackagesDbSchemaVersion set version = " + std::to_string(version));
+}
+
+String ServiceDatabase::getConfigByHash(const String &hash) const
+{
+    String c;
+    db->execute("select config from ConfigHashes where hash = '" + hash + "'",
+        [&c](SQLITE_CALLBACK_ARGS)
+    {
+        c = cols[0];
+        return 0;
+    });
+    return c;
+}
+
+void ServiceDatabase::addConfigHash(const String &hash, const String &config) const
+{
+    if (config.empty())
+        return;
+    db->execute("replace into ConfigHashes values ('" + hash + "', '" + config + "')");
 }
 
 PackagesDatabase::PackagesDatabase()

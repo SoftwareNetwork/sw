@@ -243,6 +243,76 @@ ProjectPath relative_name_to_absolute(const ProjectPath &root_project, const Str
     return ppath;
 }
 
+void get_config_insertion(const yaml &n, const String &key, String &dst)
+{
+    dst = get_scalar<String>(n, key);
+    boost::trim(dst);
+}
+
+void load_source_and_version(const yaml &root, Source &source, Version &version)
+{
+    String ver;
+    EXTRACT_VAR(root, ver, "version", String);
+    if (!ver.empty())
+        version = Version(ver);
+
+    source = load_source(root);
+    if (source.which() == 0)
+    {
+        auto &git = boost::get<Git>(source);
+        if (ver.empty())
+        {
+            if (git.branch.empty() && git.tag.empty())
+            {
+                ver = "master";
+                version = Version(ver);
+            }
+            else if (!git.branch.empty())
+            {
+                ver = git.branch;
+                try
+                {
+                    // branch may contain bad symbols, so put in try...catch
+                    version = Version(ver);
+                }
+                catch (std::exception &)
+                {
+                }
+            }
+            else if (!git.tag.empty())
+            {
+                ver = git.tag;
+                try
+                {
+                    // tag may contain bad symbols, so put in try...catch
+                    version = Version(ver);
+                }
+                catch (std::exception &)
+                {
+                }
+            }
+        }
+
+        if (version.isValid() && git.branch.empty() && git.tag.empty())
+        {
+            if (version.isBranch())
+                git.branch = version.toString();
+            else
+                git.tag = version.toString();
+        }
+    }
+}
+
+void BuildSystemConfigInsertions::get_config_insertions(const yaml &n)
+{
+#define ADD_CFG_INSERTION(x) get_config_insertion(n, #x, x)
+    ADD_CFG_INSERTION(pre_sources);
+    ADD_CFG_INSERTION(post_sources);
+    ADD_CFG_INSERTION(post_target);
+    ADD_CFG_INSERTION(post_alias);
+#undef ADD_CFG_INSERTION
+}
+
 void Patch::load(const yaml &root)
 {
     get_map_and_iterate(root, "replace_in_files", [this](auto &v)
@@ -416,8 +486,8 @@ void Project::findSources(path p)
     }
 
     if (!root_directory.empty())
-        fs::copy_file(cppan_filename, root_directory / cppan_filename, fs::copy_option::overwrite_if_exists);
-    files.insert(cppan_filename);
+        fs::copy_file(CPPAN_FILENAME, root_directory / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
+    files.insert(CPPAN_FILENAME);
 }
 
 bool Project::writeArchive(const String &filename) const
@@ -502,6 +572,9 @@ void Project::load(const yaml &root)
     EXTRACT_VAR(root, static_only, "static_only", bool);
     EXTRACT_VAR(root, header_only, "header_only", bool);
 
+    if (shared_only && static_only)
+        throw std::runtime_error("Project cannot be static and shared simultaneously");
+
     EXTRACT_VAR(root, import_from_bazel, "import_from_bazel", bool);
     EXTRACT_VAR(root, copy_to_output_dir, "copy_to_output_dir", bool);
     EXTRACT_VAR(root, prefer_binaries, "prefer_binaries", bool);
@@ -520,8 +593,7 @@ void Project::load(const yaml &root)
         }
     }
 
-    if (shared_only && static_only)
-        throw std::runtime_error("Project cannot be static and shared simultaneously");
+    load_source_and_version(root, source, version);
 
     license = get_scalar<String>(root, "license");
 
@@ -853,4 +925,9 @@ const Files &Project::getSources() const
         files.insert(f);
     }
     return files;
+}
+
+void Project::setRelativePath(const ProjectPath &root_project, const String &name)
+{
+    ppath = relative_name_to_absolute(root_project, name);
 }

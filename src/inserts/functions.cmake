@@ -242,6 +242,7 @@ function(get_configuration_with_generator out)
 
     set(generator ${CMAKE_GENERATOR})
     string(REPLACE " " "-" generator "${generator}")
+    string(REPLACE "_" "-" generator "${generator}") # to made rfind('_') possible
     if (NOT "${generator}" STREQUAL "")
         set(config ${config}_${generator})
     endif()

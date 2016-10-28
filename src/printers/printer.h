@@ -39,7 +39,6 @@
 
 #define CPPAN_LOCAL_BUILD_PREFIX "cppan-build-"
 #define CPPAN_CONFIG_FILENAME "config.cmake"
-#define CPPAN_CMAKE_VERSION_FILENAME "cppan_cmake_version.cmake"
 
 #define INCLUDE_GUARD_PREFIX "CPPAN_INCLUDE_GUARD_"
 
@@ -67,8 +66,9 @@ struct Printer
     Config *pc = nullptr; // parent
     Config *rc = nullptr; // root
 
+    virtual void prepare_build(const path &fn) = 0;
+    virtual void prepare_build2() = 0;
     virtual void prepare_rebuild() = 0;
-    virtual void prepare_build(const path &fn, const String &cppan) = 0;
     virtual int generate() const = 0;
     virtual int build() const = 0;
 

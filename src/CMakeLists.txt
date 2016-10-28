@@ -132,12 +132,15 @@ set(common_src
     project_path.h
     response.cpp
     response.h
+    settings.cpp
+    settings.h
     source.cpp
     source.h
     sqlite_database.cpp
     sqlite_database.h
     stamp.cpp
     stamp.h
+    templates.h
     version.cpp
     version.h
     yaml.cpp
@@ -153,8 +156,6 @@ set(common_src
     inserts.h
 
     ${stamp}
-
-    cppan.natvis
 )
 add_library(common ${common_src})
 add_dependencies(common inserts_gen gen_stamp)

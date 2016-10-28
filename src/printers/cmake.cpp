@@ -329,9 +329,9 @@ void CMakePrinter::prepare_rebuild()
     }
 }
 
-void CMakePrinter::prepare_build(const path &fn, const String &cppan)
+void CMakePrinter::prepare_build(const path &fn)
 {
-    auto &bs = rc->local_settings.build_settings;
+    auto &bs = rc->settings;
     auto &p = rc->getDefaultProject();
 
     Context ctx;
@@ -365,7 +365,7 @@ endif()
     ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} " + bs.cxx_compiler_flags + "\")");
     ctx.addLine();
 
-    for (int i = 0; i < BuildSettings::CMakeConfigurationType::Max; i++)
+    for (int i = 0; i < Settings::CMakeConfigurationType::Max; i++)
     {
         auto &cfg = configuration_types[i];
         ctx.addLine("set(CMAKE_C_FLAGS_" + cfg + " \"${CMAKE_C_FLAGS_" + cfg + "} " + bs.c_compiler_flags_conf[i] + "\")");
@@ -380,7 +380,7 @@ endif()
     ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS \"${CMAKE_STATIC_LINKER_FLAGS} " + bs.link_flags + "\")");
     ctx.addLine();
 
-    for (int i = 0; i < BuildSettings::CMakeConfigurationType::Max; i++)
+    for (int i = 0; i < Settings::CMakeConfigurationType::Max; i++)
     {
         auto &cfg = configuration_types[i];
         ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS_" + cfg + " \"${CMAKE_EXE_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
@@ -392,10 +392,10 @@ endif()
 
     // should be after flags
     config_section_title(ctx, "CPPAN include");
-    if (!rc->local_settings.is_custom_build_dir())
+    if (!bs.is_custom_build_dir())
         ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
     ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
-    ctx.addLine("add_subdirectory(" + normalize_path(rc->local_settings.cppan_dir) + ")");
+    ctx.addLine("add_subdirectory(" + normalize_path(bs.cppan_dir) + ")");
     ctx.addLine();
 
     // add GLOB later
@@ -436,13 +436,88 @@ endif()
     ctx.addLine("target_link_libraries(${this} cppan " + bs.link_libraries + ")");
     ctx.addLine();
 
-    if (!rc->local_settings.is_custom_build_dir())
+    if (!bs.is_custom_build_dir())
     {
         ctx.addLine(R"(add_custom_command(TARGET ${this} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${this}> )" + normalize_path(fs::current_path()) + R"(/
 ))");
         ctx.addLine();
     }
+
+    // eof
+    ctx.addLine(config_delimeter);
+    ctx.addLine();
+    ctx.splitLines();
+
+    write_file_if_different(bs.source_directory / cmake_config_filename, ctx.getText());
+}
+
+void CMakePrinter::prepare_build2()
+{
+    auto &bs = rc->settings;
+    auto &p = rc->getDefaultProject();
+
+    Context ctx;
+    config_section_title(ctx, "cmake settings");
+    ctx.addLine(cmake_minimum_required);
+    ctx.addLine();
+
+    config_section_title(ctx, "project settings");
+    ctx.addLine("project(X C CXX)");
+    ctx.addLine();
+
+    config_section_title(ctx, "compiler & linker settings");
+    ctx.addLine(R"(# Output directory settings
+set(output_dir ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${output_dir})
+#set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${output_dir})
+
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if (MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+endif()
+)");
+
+    // compiler flags
+    ctx.addLine("set(CMAKE_C_FLAGS \"${CMAKE_C_FLAGS} " + bs.c_compiler_flags + "\")");
+    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} " + bs.cxx_compiler_flags + "\")");
+    ctx.addLine();
+
+    for (int i = 0; i < Settings::CMakeConfigurationType::Max; i++)
+    {
+        auto &cfg = configuration_types[i];
+        ctx.addLine("set(CMAKE_C_FLAGS_" + cfg + " \"${CMAKE_C_FLAGS_" + cfg + "} " + bs.c_compiler_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_CXX_FLAGS_" + cfg + " \"${CMAKE_CXX_FLAGS_" + cfg + "} " + bs.cxx_compiler_flags_conf[i] + "\")");
+        ctx.addLine();
+    }
+
+    // linker flags
+    ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS \"${CMAKE_EXE_LINKER_FLAGS} " + bs.link_flags + "\")");
+    ctx.addLine("set(CMAKE_MODULE_LINKER_FLAGS \"${CMAKE_MODULE_LINKER_FLAGS} " + bs.link_flags + "\")");
+    ctx.addLine("set(CMAKE_SHARED_LINKER_FLAGS \"${CMAKE_SHARED_LINKER_FLAGS} " + bs.link_flags + "\")");
+    ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS \"${CMAKE_STATIC_LINKER_FLAGS} " + bs.link_flags + "\")");
+    ctx.addLine();
+
+    for (int i = 0; i < Settings::CMakeConfigurationType::Max; i++)
+    {
+        auto &cfg = configuration_types[i];
+        ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS_" + cfg + " \"${CMAKE_EXE_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_MODULE_LINKER_FLAGS_" + cfg + " \"${CMAKE_MODULE_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_SHARED_LINKER_FLAGS_" + cfg + " \"${CMAKE_SHARED_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
+        ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS_" + cfg + " \"${CMAKE_STATIC_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
+        ctx.addLine();
+    }
+
+    // should be after flags
+    config_section_title(ctx, "CPPAN include");
+    ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
+    ctx.addLine("add_subdirectory(" + normalize_path(bs.cppan_dir) + ")");
+    ctx.addLine();
 
     // eof
     ctx.addLine(config_delimeter);
@@ -459,7 +534,7 @@ int CMakePrinter::generate() const
 
 int CMakePrinter::_generate(bool force) const
 {
-    auto &bs = rc->local_settings.build_settings;
+    auto &bs = rc->settings;
 
     if (!force && fs::exists(bs.binary_directory / "CMakeCache.txt"))
         return 0;
@@ -483,7 +558,7 @@ int CMakePrinter::_generate(bool force) const
         args.push_back(bs.toolset);
     }
     args.push_back("-DCMAKE_BUILD_TYPE=" + bs.configuration);
-    args.push_back("-DCPPAN_PROGRAM=" + normalize_path(get_program()));
+    args.push_back("-DCPPAN_COMMAND=" + normalize_path(get_program()));
     for (auto &o : bs.cmake_options)
         args.push_back(o);
     for (auto &o : bs.env)
@@ -499,12 +574,12 @@ int CMakePrinter::_generate(bool force) const
 
     if (bs.allow_links)
     {
-        if (!bs.silent || rc->local_settings.is_custom_build_dir())
+        if (!bs.silent || bs.is_custom_build_dir())
         {
             auto bld_dir = fs::current_path();
 #ifdef _WIN32
             auto name = bs.filename_without_ext + "-" + bs.config + ".sln.lnk";
-            if (rc->local_settings.is_custom_build_dir())
+            if (bs.is_custom_build_dir())
             {
                 bld_dir = bs.binary_directory / ".." / "..";
                 name = bs.config + ".sln.lnk";
@@ -517,7 +592,7 @@ int CMakePrinter::_generate(bool force) const
             if (bs.generator == "Xcode")
             {
                 auto name = bs.filename_without_ext + "-" + bs.config + ".xcodeproj";
-                if (rc->local_settings.is_custom_build_dir())
+                if (bs.is_custom_build_dir())
                 {
                     bld_dir = bs.binary_directory / ".." / "..";
                     name = bs.config + ".xcodeproj";
@@ -527,7 +602,7 @@ int CMakePrinter::_generate(bool force) const
                 boost::system::error_code ec;
                 fs::create_symlink(sln, sln_new, ec);
             }
-            else if (!rc->local_settings.is_custom_build_dir())
+            else if (!bs.is_custom_build_dir())
             {
                 bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.config;
                 fs::create_directories(bld_dir);
@@ -543,7 +618,7 @@ int CMakePrinter::_generate(bool force) const
 
 int CMakePrinter::build() const
 {
-    auto &bs = rc->local_settings.build_settings;
+    auto &bs = rc->settings;
 
     command::Args args;
     args.push_back("cmake");
@@ -614,8 +689,8 @@ void CMakePrinter::print()
 
 void CMakePrinter::print_meta()
 {
-    print_meta_config_file(fs::current_path() / cc->local_settings.cppan_dir / cmake_config_filename);
-    print_helper_file(fs::current_path() / cc->local_settings.cppan_dir / cmake_helpers_filename);
+    print_meta_config_file(fs::current_path() / cc->settings.cppan_dir / cmake_config_filename);
+    print_helper_file(fs::current_path() / cc->settings.cppan_dir / cmake_helpers_filename);
 
     // print inserted files (they'll be printed only once)
     access_table->write_if_older(directories.get_static_files_dir() / cmake_functions_filename, cmake_functions);
@@ -626,10 +701,10 @@ void CMakePrinter::print_meta()
     if (d.empty())
     {
         // we write some static files to root project anyway
-        access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / CPP_HEADER_FILENAME, cppan_h);
+        access_table->write_if_older(fs::current_path() / cc->settings.cppan_dir / CPP_HEADER_FILENAME, cppan_h);
 
         // checks file
-        access_table->write_if_older(fs::current_path() / cc->local_settings.cppan_dir / cppan_checks_yml, cc->checks.save());
+        access_table->write_if_older(fs::current_path() / cc->settings.cppan_dir / cppan_checks_yml, cc->checks.save());
     }
 }
 
@@ -642,7 +717,7 @@ void CMakePrinter::print_configs()
     print_package_actions_file(src_dir / actions_filename);
     print_package_include_file(src_dir / include_guard_filename);
 
-    if (d.flags[pfHeaderOnly] || !cc->local_settings.use_cache)
+    if (d.flags[pfHeaderOnly])
         return;
 
     auto obj_dir = d.getDirObj();
@@ -710,7 +785,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     ctx.addLine("endif()");
 
     // deps
-    print_dependencies(ctx, rd[d].dependencies, rc->local_settings.use_cache);
+    print_dependencies(ctx, rd[d].dependencies, rc->settings.use_cache);
 
     // settings
     {
@@ -858,6 +933,8 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         // standards
         // always off extensions by default
         // if you need gnuXX extensions, set compiler flags in options or post target
+        // TODO: propagate standards to dependent packages
+        // (i.e. dependent packages should be built >= this standard value)
         if (!header_only)
         {
             if (p.c_standard != 0)
@@ -1399,7 +1476,7 @@ endif()
     {
         config_section_title(ctx, "cppan setup");
 
-        ctx.addLine("add_subdirectory(" + normalize_path(cc->local_settings.cppan_dir) + ")");
+        ctx.addLine("add_subdirectory(" + normalize_path(cc->settings.cppan_dir) + ")");
         boost::system::error_code ec; // ignore any errors
         fs::copy_file(src_dir / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists, ec);
 
@@ -1611,10 +1688,10 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("set(${CMAKE_CXX_COMPILER_ID} 1)");
     ctx.addLine();
     ctx.addLine("if (NOT DEFINED CPPAN_USE_CACHE)");
-    ctx.addLine(String("set(CPPAN_USE_CACHE ") + (cc->local_settings.use_cache ? "1" : "0") + ")");
+    ctx.addLine(String("set(CPPAN_USE_CACHE ") + (cc->settings.use_cache ? "1" : "0") + ")");
     ctx.addLine("endif()");
     ctx.addLine("if (NOT DEFINED CPPAN_SHOW_IDE_PROJECTS)");
-    ctx.addLine(String("set(CPPAN_SHOW_IDE_PROJECTS ") + (cc->local_settings.show_ide_projects ? "1" : "0") + ")");
+    ctx.addLine(String("set(CPPAN_SHOW_IDE_PROJECTS ") + (cc->settings.show_ide_projects ? "1" : "0") + ")");
     ctx.addLine("endif()");
     ctx.addLine();
 
@@ -1622,7 +1699,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
 
     // deps
-    print_dependencies(ctx, rd[d].dependencies, cc->local_settings.use_cache);
+    print_dependencies(ctx, rd[d].dependencies, cc->settings.use_cache);
 
     // lib
     const String cppan_project_name = "cppan";
@@ -1643,9 +1720,11 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("export(TARGETS " + cppan_project_name + " FILE " + exports_dir + "cppan.cmake)");
 
     // exe deps
-    if (cc->local_settings.use_cache)
     {
         config_section_title(ctx, "exe deps");
+
+        ctx.addLine("if (CPPAN_USE_CACHE)");
+        ctx.increaseIndent();
 
         auto dd = rd[d].dependencies;
         if (!cc->internal_options.current_package.empty())
@@ -1657,10 +1736,13 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
             if (d.flags[pfExecutable])
                 ctx.addLine("add_dependencies(" + d.target_name + " " + cppan_project_name + ")");
         }
+
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
     }
 
     // copy deps
-    if (cc->local_settings.use_cache)
     {
         config_section_title(ctx, "custom actions for dummy target");
 
@@ -1748,10 +1830,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     config_section_title(ctx, "variables");
     if (d.empty())
     {
-        ctx.addLine("if (NOT CPPAN_PROGRAM)");
+        ctx.addLine("if (NOT CPPAN_COMMAND)");
         ctx.increaseIndent();
-        ctx.addLine("find_program(CPPAN_PROGRAM cppan)");
-        ctx.addLine("if (\"${CPPAN_PROGRAM}\" STREQUAL \"CPPAN_PROGRAM-NOTFOUND\")");
+        ctx.addLine("find_program(CPPAN_COMMAND cppan)");
+        ctx.addLine("if (\"${CPPAN_COMMAND}\" STREQUAL \"CPPAN_COMMAND-NOTFOUND\")");
         ctx.increaseIndent();
         ctx.addLine("message(FATAL_ERROR \"'cppan' program was not found. Please, add it to PATH environment variable\")");
         ctx.decreaseIndent();
@@ -1765,7 +1847,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine("get_number_of_cores(N_CORES)");
     ctx.addLine();
     ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_dir}\")");
-    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CMAKE_VERSION_FILENAME " \"${CMAKE_VERSION}\")");
     ctx.addLine();
     ctx.addLine("set(XCODE 0)");
     ctx.addLine("if (CMAKE_GENERATOR STREQUAL \"Xcode\")");
@@ -1825,10 +1906,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
             ctx.addLine("string(RANDOM LENGTH 8 vars_dir)");
             ctx.addLine("set(tmp_dir \"${tmp_dir}/${vars_dir}\")");
             ctx.addLine();
-            ctx.addLine("set(checks_file \"" + normalize_path(fs::current_path() / cc->local_settings.cppan_dir / cppan_checks_yml) + "\")");
+            ctx.addLine("set(checks_file \"" + normalize_path(fs::current_path() / cc->settings.cppan_dir / cppan_checks_yml) + "\")");
             ctx.addLine();
             ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles ${tmp_dir}/CMakeFiles/)");
-            ctx.addLine("execute_process(COMMAND ${CPPAN_PROGRAM} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file} ${CMAKE_GENERATOR} ${CMAKE_TOOLCHAIN_FILE})");
+            ctx.addLine("execute_process(COMMAND ${CPPAN_COMMAND} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file} ${CMAKE_GENERATOR} ${CMAKE_TOOLCHAIN_FILE})");
             // this file is created by parallel checks dispatcher
             ctx.addLine("read_check_variables_file(${tmp_dir}/" + parallel_checks_file + ")");
             ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");
@@ -1977,7 +2058,7 @@ endif()
     cc->checks.write_definitions(ctx);
 
     // re-run cppan when root cppan.yml is changed
-    if (cc->local_settings.add_run_cppan_target && !cc->disable_run_cppan_target)
+    if (cc->settings.add_run_cppan_target && !cc->disable_run_cppan_target)
     {
         config_section_title(ctx, "cppan regenerator");
         ctx.addLine(R"(set(file ${CMAKE_CURRENT_BINARY_DIR}/run-cppan.txt)
@@ -2000,7 +2081,6 @@ set_target_properties(run-cppan PROPERTIES
     }
 
     // direct deps' build actions for non local build
-    if (cc->local_settings.use_cache)
     {
         config_section_title(ctx, "custom actions for dummy target");
 

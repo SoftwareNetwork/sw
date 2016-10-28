@@ -68,10 +68,11 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
             set(CPPAN_BUILD_SHARED_LIBS 0)
         endif()
 
+        #
         add_variable(GEN_CHILD_VARS OUTPUT_DIR)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_SHARED_LIBS)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
-        add_variable(GEN_CHILD_VARS CPPAN_PROGRAM)
+        add_variable(GEN_CHILD_VARS CPPAN_COMMAND)
         add_variable(GEN_CHILD_VARS CPPAN_MT_BUILD)
         write_variables_file(GEN_CHILD_VARS ${variables_file})
         #
@@ -118,7 +119,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         # fix
         file(WRITE ${aliases_file} "${aliases}")
         execute_process(
-            COMMAND ${CPPAN_PROGRAM} internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
+            COMMAND ${CPPAN_COMMAND} internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
             RESULT_VARIABLE ret
         )
         check_result_variable(${ret})

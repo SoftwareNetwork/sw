@@ -102,34 +102,36 @@ Config generate_config(path p, const Parameters &params)
             }
         }
 
-        conf.local_settings.build_settings.silent = params.silent;
-        conf.local_settings.build_settings.rebuild = params.rebuild;
-        conf.local_settings.build_settings.prepare = params.prepare;
-        conf.prepare_build(fn, comments.size() > (size_t)i ? comments[i] : "");
+        conf.settings.silent = params.silent;
+        conf.settings.rebuild = params.rebuild;
+        conf.settings.prepare = params.prepare;
+        conf.settings.prepare_build(&conf, fn, comments.size() > (size_t)i ? comments[i] : "");
+    };
+
+    auto build_spec_file = [&](const path &fn)
+    {
+        conf = Config();
+        auto s = read_file(fn);
+        boost::trim(s);
+        conf.load(YAML::Load(s));
+        conf.settings.prepare = params.prepare;
+        conf.settings.prepare_build(&conf, fn, read_file(fn));
     };
 
     if (fs::is_regular_file(p))
     {
-        read_from_cpp(p);
+        if (p.filename() == CPPAN_FILENAME)
+            build_spec_file(p);
+        else
+            read_from_cpp(p);
     }
     else if (fs::is_directory(p))
     {
         auto cppan_fn = p / CPPAN_FILENAME;
         if (fs::exists(cppan_fn))
-        {
-            conf = Config();
-            auto s = read_file(cppan_fn);
-            boost::trim(s);
-            if (s.empty())
-                s = "__k: __v";
-            conf.load(YAML::Load(s));
-            conf.local_settings.build_settings.prepare = params.prepare;
-            conf.prepare_build(cppan_fn, read_file(cppan_fn));
-        }
+            build_spec_file(cppan_fn);
         else if (fs::exists(p / "main.cpp"))
-        {
             read_from_cpp(p / "main.cpp");
-        }
         else
             throw std::runtime_error("No candidates {cppan.yml|main.cpp} for reading in directory " + p.string());
     }
@@ -143,7 +145,7 @@ int generate(path fn, const String &config)
     params.config = config;
     params.silent = false;
     auto conf = generate_config(fn, params);
-    return conf.generate();
+    return conf.settings.generate(&conf);
 }
 
 int build(path fn, const String &config, bool rebuild)
@@ -152,9 +154,9 @@ int build(path fn, const String &config, bool rebuild)
     params.config = config;
     params.rebuild = rebuild;
     auto conf = generate_config(fn, params);
-    if (conf.generate())
+    if (conf.settings.generate(&conf))
         return 1;
-    return conf.build();
+    return conf.settings.build(&conf);
 }
 
 int build_only(path fn, const String &config)
@@ -165,17 +167,17 @@ int build_only(path fn, const String &config)
     params.config = config;
     params.prepare = false;
     auto conf = generate_config(fn, params);
-    return conf.build();
+    return conf.settings.build(&conf);
 }
 
 int dry_run(path p, const String &config)
 {
     Config c(p);
     auto cppan_fn = p / CPPAN_FILENAME;
-    c.prepare_build(cppan_fn, read_file(cppan_fn));
+    c.settings.prepare_build(&c, cppan_fn, read_file(cppan_fn));
 
     auto &project = c.getDefaultProject();
-    auto dst = c.local_settings.build_settings.source_directory / "src";
+    auto dst = c.settings.source_directory / "src";
     for (auto &f : project.files)
     {
         fs::create_directories((dst / f).parent_path());
@@ -189,9 +191,9 @@ int dry_run(path p, const String &config)
 
     // TODO: add more robust ppath, version choser
     pkg.flags.set(pfLocalProject);
-    pkg.ppath = sha256(c.local_settings.build_settings.source_directory.string());
-    if (c.version.isValid())
-        pkg.version = c.version;
+    pkg.ppath = sha256(c.settings.source_directory.string());
+    if (project.version.isValid())
+        pkg.version = project.version;
     else
         pkg.version = String("master");
 
@@ -202,5 +204,23 @@ int dry_run(path p, const String &config)
     params.config = config;
     params.download = false;
     auto conf = generate_config(p, params);
-    return conf.build();
+    return conf.settings.build(&conf);
+}
+
+int build_package(const String &target_name, const path &settings, const String &config)
+{
+    yaml root;
+    auto p = extractFromString(target_name);
+    root["dependencies"][p.ppath.toString()] = p.version.toString();
+    if (!settings.empty())
+    {
+        auto s = YAML::LoadFile(settings.string());
+        merge(s, root);
+    }
+    if (!config.empty())
+        root["local_settings"]["current_build"] = config;
+
+    Config c;
+    c.load(root);
+    return c.settings.build_package(&c);
 }

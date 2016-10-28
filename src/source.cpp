@@ -27,6 +27,8 @@
 
 #include "source.h"
 
+#include "templates.h"
+
 Source load_source(const yaml &root)
 {
     Source source;

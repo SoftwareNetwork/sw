@@ -71,6 +71,11 @@ path Directories::get_include_dir() const
     return storage_dir_usr / "include";
 }
 
+path Directories::get_local_dir() const
+{
+    return storage_dir_usr / "local";
+}
+
 path Directories::get_static_files_dir() const
 {
     return storage_dir_etc / "static";
