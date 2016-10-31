@@ -110,9 +110,13 @@ String Version::toAnyVersion() const
     String s;
     s += std::to_string(major) + ".";
     if (minor != -1)
+    {
         s += std::to_string(minor) + ".";
+    }
     if (patch != -1)
+    {
         s += std::to_string(patch) + ".";
+    }
     s.resize(s.size() - 1);
     return s;
 }

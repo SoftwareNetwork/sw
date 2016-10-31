@@ -40,15 +40,15 @@ const String cppan_package_dependencies_file = "dependencies.db.txt";
 
 path Package::getDirSrc() const
 {
-    if (flags[pfLocalProject])
-        return local_source_dir;
+    //if (flags[pfLocalProject])
+    //    return local_source_dir;
     return directories.storage_dir_src / getHashPath();
 }
 
 path Package::getDirObj() const
 {
-    if (flags[pfLocalProject])
-        return directories.storage_dir_usr / "obj" / getHashPath();
+    //if (flags[pfLocalProject])
+    //    return directories.storage_dir_usr / "obj" / getHashPath();
     return directories.storage_dir_obj / getHashPath();
 }
 
@@ -151,7 +151,10 @@ void writePackagesIndex(const path &dir, const PackageIndex &idx)
         return;
 
     for (auto &pkg : idx)
-        ofile << normalize_path(pkg.second) << "\t\t" << pkg.first << "\n";
+    {
+        if (!pkg.first.empty())
+            ofile << normalize_path(pkg.second) << "\t\t" << pkg.first << "\n";
+    }
 }
 
 void cleanPackages(const String &s, int flags)

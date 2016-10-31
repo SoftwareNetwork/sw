@@ -402,6 +402,7 @@ void Settings::prepare_build(Config *c, path fn, const String &cppan)
     // copy cached cmake config to bin dir
     copy_dir(src, binary_directory / "CMakeFiles" / cmake_version);
 
+    // TODO: remove?
     // setup cppan config
     _prepare_build(c, fn, cppan);
 
@@ -432,19 +433,19 @@ int Settings::build_package(Config *c)
     // copy cached cmake config to bin dir
     copy_dir(src, binary_directory / "CMakeFiles" / cmake_version);
 
-    SCOPE_EXIT
+    /*SCOPE_EXIT
     {
         boost::system::error_code ec;
         fs::remove_all(source_directory, ec);
-    };
+    };*/
 
     // setup printer config
     c->process(source_directory);
     printer->prepare_build2();
 
     auto ret = generate(c);
-    if (generate(c))
-        return 1;
+    if (ret)
+        return ret;
     return build(c);
 }
 

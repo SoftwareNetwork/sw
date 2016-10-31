@@ -59,6 +59,7 @@ struct Version
     ProjectVersionNumber minor = -1;
     ProjectVersionNumber patch = -1;
     String branch;
+    VersionType type{ VersionType::Any };
 
     Version(ProjectVersionNumber ma = -1, ProjectVersionNumber mi = -1, ProjectVersionNumber pa = -1);
     Version(const String &s);
@@ -66,8 +67,6 @@ struct Version
     String toAnyVersion() const;
     String toString() const;
     path toPath() const;
-
-    VersionType getType() const { return type; }
 
     bool isValid() const;
     bool isBranch() const;
@@ -83,7 +82,5 @@ struct Version
     bool operator!=(const Version &rhs) const;
 
 private:
-    VersionType type{ VersionType::Any };
-
     static bool check_branch_name(const String &n, String *error = nullptr);
 };

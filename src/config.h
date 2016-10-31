@@ -77,6 +77,9 @@ public:
 
     void setPackage(const Package &pkg);
 
+    // split current conf into several with only one project in it
+    std::vector<Config> split() const;
+
     Packages getFileDependencies() const; // from file
 
 private:

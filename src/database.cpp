@@ -535,6 +535,9 @@ DownloadDependencies PackagesDatabase::findDependencies(const Packages &deps) co
     DependenciesMap all_deps;
     for (auto &dep : deps)
     {
+        if (dep.second.flags[pfLocalProject])
+            continue;
+
         ProjectType type;
         DownloadDependency project;
         project.ppath = dep.second.ppath;

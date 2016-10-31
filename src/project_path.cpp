@@ -101,6 +101,7 @@ bool ProjectPath::operator<(const ProjectPath &p) const
     auto &pp0 = p.path_elements[0];
     if (p0 == pp0)
         return path_elements < p.path_elements;
+    // ??
     if (p0 == "org")
         return true;
     if (pp0 == "org")
@@ -118,7 +119,8 @@ bool ProjectPath::has_namespace() const
         return false;
     if (path_elements[0] == pvt().path_elements[0] ||
         path_elements[0] == org().path_elements[0] ||
-        path_elements[0] == com().path_elements[0])
+        path_elements[0] == com().path_elements[0] ||
+        path_elements[0] == loc().path_elements[0])
         return true;
     return false;
 }
@@ -134,8 +136,6 @@ bool ProjectPath::is_absolute() const
 {
     if (!has_namespace())
         return false;
-    if (path_elements[0] == pvt().path_elements[0] && path_elements.size() > 2)
-        return true;
     if (path_elements.size() > 1)
         return true;
     return false;

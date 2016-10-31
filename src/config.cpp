@@ -192,6 +192,8 @@ void Config::load(yaml root)
         project.source = source;
         project.version = version;
         project.load(root);
+        if (project.name.empty())
+            project.name = name;
         project.setRelativePath(root_project, name);
         projects.emplace(project.ppath.toString(), project);
     };
@@ -368,10 +370,7 @@ Packages Config::getFileDependencies() const
             // skip ill-formed deps
             if (d.second.ppath.is_relative())
                 continue;
-            Package pkg;
-            pkg.ppath = d.second.ppath;
-            pkg.version = d.second.version;
-            dependencies.insert({ d.second.ppath.toString(), pkg });
+            dependencies.insert({ d.second.ppath.toString(), d.second });
         }
     }
     return dependencies;
@@ -386,4 +385,17 @@ void Config::setPackage(const Package &p)
         // p.ppath = project.name;
         project.second.pkg = p;
     }
+}
+
+std::vector<Config> Config::split() const
+{
+    std::vector<Config> configs;
+    for (auto &p : projects)
+    {
+        Config c = *this;
+        c.projects.clear();
+        c.projects.insert(p);
+        configs.push_back(c);
+    }
+    return configs;
 }

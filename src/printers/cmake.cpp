@@ -864,8 +864,19 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
     // sources (also used for headers)
     config_section_title(ctx, "sources");
-    if (p.build_files.empty())
+    if (d.flags[pfLocalProject])
+    {
+        ctx.addLine("set(src");
+        ctx.increaseIndent();
+        for (auto &f : p.files)
+            ctx.addLine("\"" + normalize_path(f) + "\"");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+    }
+    else if (p.build_files.empty())
+    {
         ctx.addLine("file(GLOB_RECURSE src \"*\")");
+    }
     else
     {
         ctx.addLine("set(src");
@@ -1420,9 +1431,6 @@ void CMakePrinter::print_object_config_file(const path &fn) const
     if (!access_table->must_update_contents(fn))
         return;
 
-    auto src_dir = d.getDirSrc();
-    auto obj_dir = d.getDirObj();
-
     Context ctx;
     file_title(ctx, d);
 
@@ -1477,17 +1485,16 @@ endif()
         config_section_title(ctx, "cppan setup");
 
         ctx.addLine("add_subdirectory(" + normalize_path(cc->settings.cppan_dir) + ")");
-        boost::system::error_code ec; // ignore any errors
-        fs::copy_file(src_dir / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists, ec);
+        //boost::system::error_code ec; // ignore any errors
+        //fs::copy_file(d.getDirSrc() / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists, ec);
 
         if (pc->internal_options.invocations.find(d) != pc->internal_options.invocations.end())
             throw std::runtime_error("Circular dependency detected. Project: " + d.target_name);
 
         silent = true;
-        ScopedCurrentPath cp(obj_dir);
+        ScopedCurrentPath cp(d.getDirObj());
 
-        Config c(obj_dir);
-        c.pkg = d;
+        Config c = *rd[d].config;
         c.internal_options.current_package = d;
         c.internal_options.invocations = pc->internal_options.invocations;
         c.internal_options.invocations.insert(d);
@@ -1501,7 +1508,7 @@ endif()
     // main include
     {
         config_section_title(ctx, "main include");
-        auto mi = src_dir;
+        auto mi = d.getDirSrc();
         add_subdirectory(ctx, mi.string());
         ctx.emptyLines(1);
         auto ig = INCLUDE_GUARD_PREFIX + d.variable_name;

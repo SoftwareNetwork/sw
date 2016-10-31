@@ -29,10 +29,14 @@
 
 #include "common.h"
 
-#define ROOT_PROJECT_PATH(name) \
-    static ProjectPath name() \
-    { \
-        return ProjectPath(#name); \
+#define ROOT_PROJECT_PATH(name)           \
+    static ProjectPath name()             \
+    {                                     \
+        return ProjectPath(#name);        \
+    }                                     \
+    bool is_##name() const                \
+    {                                     \
+        return path_elements[0] == #name; \
     }
 
 enum class PathElementType
@@ -143,8 +147,9 @@ public:
 
     bool operator<(const ProjectPath &rhs) const;
 
-    ROOT_PROJECT_PATH(org);
     ROOT_PROJECT_PATH(com);
+    ROOT_PROJECT_PATH(loc);
+    ROOT_PROJECT_PATH(org);
     ROOT_PROJECT_PATH(pvt);
 
 private:

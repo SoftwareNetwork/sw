@@ -35,7 +35,6 @@
 
 #include <unordered_map>
 
-#define BAZEL_BUILD_FILE "BUILD"
 #define DEPENDENCIES_NODE "dependencies"
 #define INCLUDE_DIRECTORIES_ONLY "include_directories_only"
 
@@ -153,6 +152,9 @@ struct Project
 
     // current package: ppath+version+flags
     Package pkg;
+
+    // optional
+    String name;
 
     // allow default values if some parts are missing
     bool defaults_allowed = true;

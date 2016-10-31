@@ -52,10 +52,13 @@ public:
 public:
     void init(Config *config, const String &host, const path &root_dir);
     void download_dependencies(const Packages &d);
+    void write_index() const;
+
     Config *add_config(std::unique_ptr<Config> &&config, bool created);
     Config *add_config(const Package &p);
+    Config *add_local_config(const Config &c);
 
-    bool rebuild_configs() { return has_downloads() || deps_changed; }
+    bool rebuild_configs() const { return has_downloads() || deps_changed; }
     bool has_downloads() const { return downloads > 0; }
 
     PackageConfig &operator[](const Package &p);
@@ -90,7 +93,6 @@ private:
     void download_and_unpack();
     void post_download();
     void prepare_config(PackageConfigs::value_type &cc);
-    void write_index() const;
     void read_config(const DownloadDependency &d);
     Executor &getExecutor();
 };

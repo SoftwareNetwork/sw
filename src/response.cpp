@@ -474,6 +474,9 @@ void ResponseData::prepare_config(PackageConfigs::value_type &cc)
     c->setPackage(p);
     auto &project = c->getDefaultProject();
 
+    if (p.flags[pfLocalProject])
+        return;
+
     // prepare deps: extract real deps flags from configs
     for (auto &dep : download_dependencies_[dep_ids[p]].getDirectDependencies())
     {
@@ -627,4 +630,15 @@ Config *ResponseData::add_config(const Package &p)
     auto c = std::make_unique<Config>(p.getDirSrc());
     c->setPackage(p);
     return add_config(std::move(c), true);
+}
+
+Config *ResponseData::add_local_config(const Config &co)
+{
+    auto cu = std::make_unique<Config>(co);
+    auto cp = add_config(std::move(cu), true);
+    packages[cp->pkg].dependencies = cp->getDefaultProject().dependencies;
+    // batch resolve first?
+    for (auto &p : cp->getDefaultProject().dependencies)
+        add_config(p.second); // resolve first; create names if not created during resolving; merge flags
+    return cp;
 }

@@ -28,9 +28,9 @@
 #include "stamp.h"
 
 const std::string cppan_stamp =
-#ifdef NDEBUG
+//#ifdef NDEBUG
 #include <stamp.h.in>
-#else
-"0"
-#endif
+//#else
+//"0"
+//#endif
 ;

@@ -45,6 +45,7 @@ struct Parameters
 };
 
 std::vector<std::string> extract_comments(const std::string &s);
+int build_package(const Package &p, const path &settings, const String &config);
 
 void download_file(path &fn)
 {
@@ -62,10 +63,11 @@ void download_file(path &fn)
     download_file(dd);
 }
 
-Config generate_config(path p, const Parameters &params)
+std::vector<Package> extract_packages(path p, const Parameters &params)
 {
     if (params.download)
         download_file(p);
+    p = fs::absolute(p);
 
     auto conf = Config::get_user_config();
     conf.type = ConfigType::Local;
@@ -79,33 +81,49 @@ Config generate_config(path p, const Parameters &params)
         auto s = read_file(fn);
         auto comments = extract_comments(s);
 
-        int loaded = -1;
-        int i = -1;
-        for (auto &comment : comments)
+        std::vector<int> load_ok;
+        bool found = false;
+        for (size_t i = 0; i < comments.size(); i++)
         {
             try
             {
-                i++;
-                boost::trim(comment);
-                auto root = YAML::Load(comment);
+                boost::trim(comments[i]);
+                auto root = YAML::Load(comments[i]);
+
                 auto sz = root.size();
                 if (sz == 0)
                     continue;
+
+                bool probably_this = root.IsMap() && (
+                    root["local_settings"].IsDefined() ||
+                    root["files"].IsDefined() ||
+                    root["dependencies"].IsDefined()
+                    );
+
                 if (!params.config.empty())
                     root["local_settings"]["current_build"] = params.config;
                 conf.load(root);
-                loaded = i;
-                break;
+
+                if (probably_this)
+                {
+                    found = true;
+                    break;
+                }
+                load_ok.push_back(i);
             }
             catch (...)
             {
             }
         }
 
+        // fallback to the first comment w/out error
+        if (!found && !load_ok.empty())
+            conf.load(comments[load_ok.front()]);
+
         conf.settings.silent = params.silent;
         conf.settings.rebuild = params.rebuild;
         conf.settings.prepare = params.prepare;
-        conf.settings.prepare_build(&conf, fn, comments.size() > (size_t)i ? comments[i] : "");
+        //conf.settings.prepare_build(&conf, fn, comments.size() > (size_t)i ? comments[i] : "");
     };
 
     auto build_spec_file = [&](const path &fn)
@@ -115,28 +133,86 @@ Config generate_config(path p, const Parameters &params)
         boost::trim(s);
         conf.load(YAML::Load(s));
         conf.settings.prepare = params.prepare;
-        conf.settings.prepare_build(&conf, fn, read_file(fn));
+        //conf.settings.prepare_build(&conf, fn, read_file(fn));
     };
 
+    String sname;
+    path cpp_fn;
     if (fs::is_regular_file(p))
     {
         if (p.filename() == CPPAN_FILENAME)
+        {
+            // allow defaults for spec file
+            conf.defaults_allowed = true;
+
             build_spec_file(p);
+            sname = p.parent_path().filename().string();
+        }
         else
+        {
             read_from_cpp(p);
+            sname = p.filename().stem().string();
+            cpp_fn = p;
+        }
     }
     else if (fs::is_directory(p))
     {
         auto cppan_fn = p / CPPAN_FILENAME;
+        auto main_fn = p / "main.cpp";
         if (fs::exists(cppan_fn))
+        {
+            // allow defaults for spec file
+            conf.defaults_allowed = true;
+
             build_spec_file(cppan_fn);
-        else if (fs::exists(p / "main.cpp"))
-            read_from_cpp(p / "main.cpp");
+            sname = cppan_fn.parent_path().filename().string();
+            p = cppan_fn;
+        }
+        else if (fs::exists(main_fn))
+        {
+            read_from_cpp(main_fn);
+            sname = p.filename().string();
+            cpp_fn = main_fn;
+            p = main_fn;
+        }
         else
             throw std::runtime_error("No candidates {cppan.yml|main.cpp} for reading in directory " + p.string());
     }
+    else
+        throw std::runtime_error("Unknown file type " + p.string());
 
-    return conf;
+    std::vector<Package> packages;
+    auto configs = conf.split();
+    // batch resolve of deps first; merge flags?
+    for (auto &c : configs)
+    {
+        auto &project = c.getDefaultProject();
+
+        String spath = "loc." + sha256(normalize_path(p)).substr(0, 10) + ".";
+        if (!project.name.empty())
+            spath += project.name;
+        else
+            spath += sname;
+
+        Package pkg;
+        pkg.ppath = spath;
+        pkg.version = Version("local");
+        pkg.flags.set(pfLocalProject);
+        pkg.createNames();
+        c.setPackage(pkg);
+
+        // sources
+        if (!cpp_fn.empty())
+            project.sources.insert(cpp_fn.filename().string());
+        project.findSources(p.parent_path());
+        project.files.erase(CPPAN_FILENAME);
+
+        rd.add_local_config(c);
+
+        packages.push_back(pkg);
+    }
+    rd.write_index();
+    return packages;
 }
 
 int generate(path fn, const String &config)
@@ -144,8 +220,9 @@ int generate(path fn, const String &config)
     Parameters params;
     params.config = config;
     params.silent = false;
-    auto conf = generate_config(fn, params);
-    return conf.settings.generate(&conf);
+    //auto conf = generate_config(fn, params);
+    //return conf.settings.generate(&conf);
+    return 0;
 }
 
 int build(path fn, const String &config, bool rebuild)
@@ -153,10 +230,14 @@ int build(path fn, const String &config, bool rebuild)
     Parameters params;
     params.config = config;
     params.rebuild = rebuild;
-    auto conf = generate_config(fn, params);
-    if (conf.settings.generate(&conf))
-        return 1;
-    return conf.settings.build(&conf);
+    auto pkgs = extract_packages(fn, params);
+    bool r = true;
+    for (auto &pkg : pkgs)
+        r &= build_package(pkg, "", "") == 0;
+    return r;
+    //if (conf.settings.generate(&conf))
+    //    return 1;
+    //return conf.settings.build(&conf);
 }
 
 int build_only(path fn, const String &config)
@@ -166,8 +247,9 @@ int build_only(path fn, const String &config)
     Parameters params;
     params.config = config;
     params.prepare = false;
-    auto conf = generate_config(fn, params);
-    return conf.settings.build(&conf);
+    //auto conf = generate_config(fn, params);
+    //return conf.settings.build(&conf);
+    return 0;
 }
 
 int dry_run(path p, const String &config)
@@ -203,14 +285,14 @@ int dry_run(path p, const String &config)
     Parameters params;
     params.config = config;
     params.download = false;
-    auto conf = generate_config(p, params);
-    return conf.settings.build(&conf);
+    //auto conf = generate_config(p, params);
+    //return conf.settings.build(&conf);
+    return 0;
 }
 
-int build_package(const String &target_name, const path &settings, const String &config)
+int build_package(const Package &p, const path &settings, const String &config)
 {
     yaml root;
-    auto p = extractFromString(target_name);
     root["dependencies"][p.ppath.toString()] = p.version.toString();
     if (!settings.empty())
     {
@@ -223,4 +305,10 @@ int build_package(const String &target_name, const path &settings, const String 
     Config c;
     c.load(root);
     return c.settings.build_package(&c);
+}
+
+int build_package(const String &target_name, const path &settings, const String &config)
+{
+    auto p = extractFromString(target_name);
+    return build_package(p, settings, config);
 }

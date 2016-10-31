@@ -48,7 +48,7 @@
 using MimeType = String;
 using MimeTypes = std::set<MimeType>;
 
-static const MimeTypes source_mime_types{
+const MimeTypes source_mime_types{
     "inode/x-empty", // empty file
 
     "text/x-asm",
@@ -61,7 +61,7 @@ static const MimeTypes source_mime_types{
     "text/x-shellscript", // some .in files
 };
 
-static const std::set<String> header_file_extensions{
+const std::set<String> header_file_extensions{
     ".h",
     ".hh",
     ".hpp",
@@ -70,7 +70,7 @@ static const std::set<String> header_file_extensions{
     ".HPP",
 };
 
-static const std::set<String> source_file_extensions{
+const std::set<String> source_file_extensions{
     ".c",
     ".cc",
     ".cpp",
@@ -83,12 +83,14 @@ static const std::set<String> source_file_extensions{
     ".C"
 };
 
-static const std::set<String> other_source_file_extensions{
+const std::set<String> other_source_file_extensions{
     ".s",
     ".S",
     ".asm",
     ".ipp",
 };
+
+const auto bazel_filenames = { "BUILD", "BUILD.bazel" };
 
 bool is_allowed_file_extension(const path &p)
 {
@@ -363,21 +365,34 @@ void Project::findSources(path p)
 
     if (import_from_bazel)
     {
-        auto b = read_file(p / BAZEL_BUILD_FILE);
+        path bfn;
+        for (auto &f : bazel_filenames)
+        {
+            if (fs::exists(p / f))
+            {
+                bfn = p / f;
+                break;
+            }
+        }
+
+        auto b = read_file(bfn);
         auto f = bazel::parse(b);
         String project_name;
         if (!ppath.empty())
             project_name = ppath.back();
         auto files = f.getFiles(project_name);
         sources.insert(files.begin(), files.end());
-        sources.insert(BAZEL_BUILD_FILE);
+        sources.insert(bfn.filename().string());
     }
 
     for (auto i = sources.begin(); i != sources.end();)
     {
         if (fs::exists(p / *i))
         {
-            files.insert(*i);
+            if (pkg.flags[pfLocalProject])
+                files.insert(p / *i);
+            else
+                files.insert(*i);
             sources.erase(i++);
             continue;
         }
@@ -689,115 +704,132 @@ void Project::load(const yaml &root)
         option.bs_insertions.get_config_insertions(opt_level.second);
     });
 
-    auto read_single_dep = [this](auto &deps, const auto &d)
+    // deps
     {
-        if (d.IsScalar())
+        auto read_single_dep = [this](auto &deps, const auto &d)
+        {
+            if (d.IsScalar())
+            {
+                Package dependency;
+                dependency.ppath = relative_name_to_absolute(root_project, d.template as<String>());
+                deps[dependency.ppath.toString()] = dependency;
+            }
+            else if (d.IsMap())
+            {
+                Package dependency;
+                if (d["name"].IsDefined())
+                    dependency.ppath = relative_name_to_absolute(root_project, d["name"].template as<String>());
+                if (d["package"].IsDefined())
+                    dependency.ppath = relative_name_to_absolute(root_project, d["package"].template as<String>());
+                if (dependency.ppath.is_loc())
+                    dependency.flags.set(pfLocalProject);
+                if (d["version"].IsDefined())
+                    dependency.version = d["version"].template as<String>();
+                if (d[INCLUDE_DIRECTORIES_ONLY].IsDefined())
+                    dependency.flags.set(pfIncludeDirectoriesOnly, d[INCLUDE_DIRECTORIES_ONLY].template as<bool>());
+                deps[dependency.ppath.toString()] = dependency;
+            }
+        };
+
+        get_variety(root, DEPENDENCIES_NODE,
+            [this](const auto &d)
         {
             Package dependency;
             dependency.ppath = relative_name_to_absolute(root_project, d.template as<String>());
-            deps[dependency.ppath.toString()] = dependency;
-        }
-        else if (d.IsMap())
-        {
-            Package dependency;
-            if (d["name"].IsDefined())
-                dependency.ppath = relative_name_to_absolute(root_project, d["name"].template as<String>());
-            if (d["package"].IsDefined())
-                dependency.ppath = relative_name_to_absolute(root_project, d["package"].template as<String>());
-            if (d["version"].IsDefined())
-                dependency.version = d["version"].template as<String>();
-            if (d[INCLUDE_DIRECTORIES_ONLY].IsDefined())
-                dependency.flags.set(pfIncludeDirectoriesOnly, d[INCLUDE_DIRECTORIES_ONLY].template as<bool>());
-            deps[dependency.ppath.toString()] = dependency;
-        }
-    };
-
-    get_variety(root, DEPENDENCIES_NODE,
-        [this](const auto &d)
-    {
-        Package dependency;
-        dependency.ppath = relative_name_to_absolute(root_project, d.template as<String>());
-        dependencies[dependency.ppath.toString()] = dependency;
-    },
-        [this, &read_single_dep](const auto &dall)
-    {
-        for (auto d : dall)
-            read_single_dep(dependencies, d);
-    },
-        [this, &read_single_dep](const auto &dall)
-    {
-        auto get_dep = [this](auto &deps, const auto &d)
-        {
-            Package dependency;
-            dependency.ppath = relative_name_to_absolute(root_project, d.first.template as<String>());
-            if (d.second.IsScalar())
-                dependency.version = d.second.template as<String>();
-            else if (d.second.IsMap())
-            {
-                for (const auto &v : d.second)
-                {
-                    auto key = v.first.template as<String>();
-                    if (key == "version")
-                        dependency.version = v.second.template as<String>();
-                    else if (key == INCLUDE_DIRECTORIES_ONLY)
-                        dependency.flags.set(pfIncludeDirectoriesOnly, v.second.template as<bool>());
-                    // TODO: re-enable when adding patches support
-                    //else if (key == "package_dir")
-                    //    dependency.package_dir_type = packages_dir_type_from_string(v.second.template as<String>());
-                    //else if (key == "patches")
-                    //{
-                    //    for (const auto &p : v.second)
-                    //        dependency.patches.push_back(template as<String>());
-                    //}
-                    else
-                        throw std::runtime_error("Unknown key: " + key);
-                }
-            }
-            else
-                throw std::runtime_error("Dependency should be a scalar or a map");
-            deps[dependency.ppath.toString()] = dependency;
-        };
-
-        Packages dependencies_private;
-
-        auto extract_deps = [&dall, this, &get_dep, &read_single_dep](const auto &str, auto &deps)
-        {
-            auto &priv = dall[str];
-            if (priv.IsDefined())
-            {
-                if (priv.IsMap())
-                {
-                    get_map_and_iterate(dall, str,
-                        [this, &get_dep, &deps](const auto &d)
-                    {
-                        get_dep(deps, d);
-                    });
-                }
-                else if (priv.IsSequence())
-                {
-                    for (auto d : priv)
-                        read_single_dep(deps, d);
-                }
-            }
-        };
-
-        extract_deps("private", dependencies_private);
-        extract_deps("public", dependencies);
-
-        for (auto &d : dependencies_private)
-        {
-            d.second.flags.set(pfPrivateDependency);
-            dependencies.insert(d);
-        }
-
-        if (dependencies.empty() && dependencies_private.empty())
+            if (dependency.ppath.is_loc())
+                dependency.flags.set(pfLocalProject);
+            dependencies[dependency.ppath.toString()] = dependency;
+        },
+            [this, &read_single_dep](const auto &dall)
         {
             for (auto d : dall)
+                read_single_dep(dependencies, d);
+        },
+            [this, &read_single_dep](const auto &dall)
+        {
+            auto get_dep = [this](auto &deps, const auto &d)
             {
-                get_dep(dependencies, d);
+                Package dependency;
+                dependency.ppath = relative_name_to_absolute(root_project, d.first.template as<String>());
+                if (dependency.ppath.is_loc())
+                    dependency.flags.set(pfLocalProject);
+                if (d.second.IsScalar())
+                {
+                    dependency.version = d.second.template as<String>();
+                }
+                else if (d.second.IsMap())
+                {
+                    for (const auto &v : d.second)
+                    {
+                        auto key = v.first.template as<String>();
+                        if (key == "version")
+                        {
+                            dependency.version = v.second.template as<String>();
+                        }
+                        else if (key == INCLUDE_DIRECTORIES_ONLY)
+                            dependency.flags.set(pfIncludeDirectoriesOnly, v.second.template as<bool>());
+                        // TODO: re-enable when adding patches support
+                        //else if (key == "package_dir")
+                        //    dependency.package_dir_type = packages_dir_type_from_string(v.second.template as<String>());
+                        //else if (key == "patches")
+                        //{
+                        //    for (const auto &p : v.second)
+                        //        dependency.patches.push_back(template as<String>());
+                        //}
+                        else
+                            throw std::runtime_error("Unknown key: " + key);
+                    }
+                }
+                else
+                    throw std::runtime_error("Dependency should be a scalar or a map");
+                deps[dependency.ppath.toString()] = dependency;
+            };
+
+            Packages dependencies_private;
+
+            auto extract_deps = [&dall, this, &get_dep, &read_single_dep](const auto &str, auto &deps)
+            {
+                auto &priv = dall[str];
+                if (priv.IsDefined())
+                {
+                    if (priv.IsMap())
+                    {
+                        get_map_and_iterate(dall, str,
+                            [this, &get_dep, &deps](const auto &d)
+                        {
+                            get_dep(deps, d);
+                        });
+                    }
+                    else if (priv.IsSequence())
+                    {
+                        for (auto d : priv)
+                            read_single_dep(deps, d);
+                    }
+                }
+            };
+
+            extract_deps("private", dependencies_private);
+            extract_deps("public", dependencies);
+
+            for (auto &d : dependencies_private)
+            {
+                d.second.flags.set(pfPrivateDependency);
+                dependencies.insert(d);
             }
-        }
-    });
+
+            if (dependencies.empty() && dependencies_private.empty())
+            {
+                for (auto d : dall)
+                {
+                    get_dep(dependencies, d);
+                }
+            }
+        });
+
+        //remove, handled in other places
+        //for (auto &d : dependencies)
+        //    d.second.createNames();
+    }
 
     auto read_sources = [&root](auto &a, const String &key, bool required = true)
     {
@@ -863,13 +895,18 @@ void Project::load(const yaml &root)
     read_sources(exclude_from_package, "exclude_from_package");
     read_sources(exclude_from_build, "exclude_from_build");
     if (import_from_bazel)
-        exclude_from_build.insert(BAZEL_BUILD_FILE);
+    {
+        for (auto &bfn : bazel_filenames)
+            exclude_from_build.insert(bfn);
+    }
 
     aliases = get_sequence_set<String>(root, "aliases");
 
     auto patch_node = root["patch"];
     if (patch_node.IsDefined())
         patch.load(patch_node);
+
+    EXTRACT_AUTO(name);
 }
 
 void Project::prepareExports() const
