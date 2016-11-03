@@ -47,25 +47,16 @@ TYPED_EXCEPTION(LocalDbHashException);
 
 ResponseData rd;
 
-void ResponseData::init(Config *config, const String &host, const path &root_dir)
+void ResponseData::init(Config *config, const String &host)
 {
-    if (executed || initialized)
+    if (initialized)
         return;
 
     this->host = host;
-    this->root_dir = root_dir;
 
+    // remove from here?
     // add default (current, root) config
     packages[Package()].config = config;
-
-    // check for updates only once, ignore errors
-    try
-    {
-        config->settings.checkForUpdates();
-    }
-    catch (...)
-    {
-    }
 
     initialized = true;
 }
@@ -82,6 +73,9 @@ void ResponseData::download_dependencies(const Packages &deps)
     int n_attempts = 2;
     while (n_attempts--)
     {
+        // clear before proceed
+        download_dependencies_.clear();
+
         try
         {
             if (query_local_db)
@@ -115,30 +109,10 @@ void ResponseData::download_dependencies(const Packages &deps)
         break;
     }
 
+    read_configs();
     post_download();
     write_index();
-
-    // deps are now resolved
-    // now refresh dependencies database only for remote packages
-    // this file (local,current,root) packages will be refreshed anyway
-    auto deps_db = readPackageDependenciesIndex(directories.storage_dir_etc);
-    for (auto &cc : packages)
-    {
-        Hasher h;
-        for (auto &d : cc.second.dependencies)
-            h |= d.second.target_name;
-        if (deps_db[cc.first.target_name] != h.hash)
-        {
-            deps_changed = true;
-
-            // clear exports for this project, so it will be regenerated
-            auto p = Printer::create(cc.second.config->settings.printerType);
-            p->clear_export(cc.first.getDirObj());
-            cleanPackages(cc.first.target_name, CleanTarget::Lib | CleanTarget::Bin);
-        }
-        deps_db[cc.first.target_name] = h.hash;
-    }
-    writePackageDependenciesIndex(directories.storage_dir_etc, deps_db);
+    check_deps_changed();
 
     // add default (current, root) config
     packages[Package()].dependencies = deps;
@@ -182,11 +156,36 @@ void ResponseData::download_dependencies(const Packages &deps)
     executed = true;
 }
 
+void ResponseData::check_deps_changed()
+{
+    // already executed
+    if (deps_changed)
+        return;
+
+    // deps are now resolved
+    // now refresh dependencies database only for remote packages
+    // this file (local,current,root) packages will be refreshed anyway
+    auto &sdb = getServiceDatabase();
+    for (auto &cc : packages)
+    {
+        Hasher h;
+        for (auto &d : cc.second.dependencies)
+            h |= d.second.target_name;
+        if (!sdb.hasPackageDependenciesHash(cc.first, h.hash))
+        {
+            deps_changed = true;
+
+            // clear exports for this project, so it will be regenerated
+            auto p = Printer::create(cc.second.config->settings.printerType);
+            p->clear_export(cc.first.getDirObj());
+            cleanPackages(cc.first.target_name, CleanTarget::Lib | CleanTarget::Bin);
+        }
+        sdb.setPackageDependenciesHash(cc.first, h.hash);
+    }
+}
+
 void ResponseData::getDependenciesFromRemote(const Packages &deps)
 {
-    // clear before proceed
-    download_dependencies_.clear();
-
     // prepare request
     for (auto &d : deps)
     {
@@ -247,12 +246,7 @@ void ResponseData::getDependenciesFromRemote(const Packages &deps)
     // dependencies were received without error
     LOG("Ok");
 
-    extractDependencies();
-}
-
-void ResponseData::extractDependencies()
-{
-    LOG_NO_NEWLINE("Reading package specs... ");
+    // set dependencies
     auto &remote_packages = dependency_tree.get_child("packages");
     for (auto &v : remote_packages)
     {
@@ -265,7 +259,6 @@ void ResponseData::extractDependencies()
         d.sha256 = v.second.get<String>("sha256");
         d.createNames();
         dep_ids[d] = id;
-        read_config(d);
 
         if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
         {
@@ -278,7 +271,22 @@ void ResponseData::extractDependencies()
         d.map_ptr = &download_dependencies_;
         download_dependencies_[id] = d;
     }
-    LOG("Ok");
+}
+
+void ResponseData::getDependenciesFromDb(const Packages &deps)
+{
+    auto &db = getPackagesDatabase();
+    auto dl_deps = db.findDependencies(deps);
+
+    // set dependencies
+    for (auto &v : dl_deps)
+    {
+        auto &d = v.second;
+        d.createNames();
+        dep_ids[d] = d.id;
+        d.map_ptr = &download_dependencies_;
+        download_dependencies_[d.id] = d;
+    }
 }
 
 void ResponseData::download_and_unpack()
@@ -430,7 +438,8 @@ void ResponseData::download_and_unpack()
 
     if (query_local_db)
     {
-        // send download list, remove this when cppan will be widely used
+        // send download list
+        // remove this when cppan will be widely used
         // also because this download count can be easily abused
         getExecutor().push([this]()
         {
@@ -455,6 +464,26 @@ void ResponseData::download_and_unpack()
             catch (...)
             {
             }
+        });
+
+        // send download action once
+        static std::once_flag flag;
+        std::call_once(flag, [this]
+        {
+            getExecutor().push([this]
+            {
+                try
+                {
+                    HttpRequest req = httpSettings;
+                    req.type = HttpRequest::POST;
+                    req.url = host + "/api/add_client_call";
+                    req.data = "{}"; // empty json
+                    auto resp = url_request(req);
+                }
+                catch (...)
+                {
+                }
+            });
         });
     }
 }
@@ -556,36 +585,16 @@ ResponseData::const_iterator ResponseData::end() const
 
 void ResponseData::write_index() const
 {
-    auto renew_index = [this](const auto &dir, auto func)
-    {
-        PackageIndex pkgs = readPackagesIndex(dir);
-        for (auto &cc : *this)
-            pkgs[cc.first.target_name] = (cc.first.*func)();
-        writePackagesIndex(dir, pkgs);
-    };
-
-    renew_index(directories.storage_dir_src, &Package::getDirSrc);
-    renew_index(directories.storage_dir_obj, &Package::getDirObj);
+    auto &sdb = getServiceDatabase();
+    for (auto &cc : *this)
+        sdb.addInstalledPackage(cc.first);
 }
 
-void ResponseData::getDependenciesFromDb(const Packages &deps)
+void ResponseData::read_configs()
 {
-    // clear before proceed
-    download_dependencies_.clear();
-
-    auto &db = getPackagesDatabase();
-    auto dl_deps = db.findDependencies(deps);
-
     LOG_NO_NEWLINE("Reading package specs... ");
-    for (auto &v : dl_deps)
-    {
-        auto &d = v.second;
-        d.createNames();
-        dep_ids[d] = d.id;
-        read_config(d);
-        d.map_ptr = &download_dependencies_;
-        download_dependencies_[d.id] = d;
-    }
+    for (auto &d : download_dependencies_)
+        read_config(d.second);
     LOG("Ok");
 }
 

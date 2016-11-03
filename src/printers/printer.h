@@ -75,9 +75,9 @@ struct Printer
     virtual void print() = 0;
     virtual void print_meta() = 0;
 
-    virtual void clear_cache(path p = path()) const = 0;
-    virtual void clear_exports(path p) const = 0;
-    virtual void clear_export(path p) const = 0;
+    virtual void clear_cache() const = 0;
+    virtual void clear_exports() const = 0;
+    virtual void clear_export(const path &p) const = 0;
 
     virtual void parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain = String()) const = 0;
 

@@ -210,12 +210,9 @@ void Config::load(yaml root)
     }
 }
 
-void Config::clear_vars_cache(path p) const
+void Config::clear_vars_cache() const
 {
-    if (p.empty())
-        p = directories.storage_dir_cfg;
-
-    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(p), {}))
+    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(directories.storage_dir_cfg), {}))
     {
         if (!fs::is_regular_file(f))
             continue;
@@ -284,7 +281,7 @@ void Config::process(const path &p)
     AccessTable access_table(directories.storage_dir_etc);
 
     // do a request
-    rd.init(this, settings.host, directories.storage_dir_src);
+    rd.init(this, settings.host);
     rd.download_dependencies(getFileDependencies());
 
     // if we got a download we might need to refresh configs

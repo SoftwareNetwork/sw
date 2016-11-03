@@ -50,7 +50,7 @@ public:
     using const_iterator = PackageConfigs::const_iterator;
 
 public:
-    void init(Config *config, const String &host, const path &root_dir);
+    void init(Config *config, const String &host);
     void download_dependencies(const Packages &d);
     void write_index() const;
 
@@ -71,6 +71,10 @@ public:
     const_iterator end() const;
 
 private:
+    PackageConfigs packages;
+    std::set<std::unique_ptr<Config>> config_store;
+    std::unique_ptr<Executor> executor;
+
     ptree request;
     ptree dependency_tree;
     DownloadDependencies download_dependencies_;
@@ -82,18 +86,16 @@ private:
     bool initialized = false;
     int downloads = 0;
     bool deps_changed = false;
-    PackageConfigs packages;
-    std::set<std::unique_ptr<Config>> config_store;
     bool query_local_db = true;
-    std::unique_ptr<Executor> executor;
 
     void getDependenciesFromRemote(const Packages &deps);
     void getDependenciesFromDb(const Packages &deps);
-    void extractDependencies();
+    void read_configs();
     void download_and_unpack();
     void post_download();
     void prepare_config(PackageConfigs::value_type &cc);
     void read_config(const DownloadDependency &d);
+    void check_deps_changed();
     Executor &getExecutor();
 };
 

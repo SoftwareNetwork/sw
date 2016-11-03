@@ -30,6 +30,7 @@
 #include "../access_table.h"
 #include "../command.h"
 #include "../date_time.h"
+#include "../database.h"
 #include "../directories.h"
 #include "../executor.h"
 #include "../lock.h"
@@ -629,17 +630,15 @@ int CMakePrinter::build() const
     return command::execute_with_output(args).rc;
 }
 
-void CMakePrinter::clear_cache(path p) const
+void CMakePrinter::clear_cache() const
 {
-    if (p.empty())
-        p = directories.storage_dir_obj;
-
-    auto pkgs = readPackagesIndex(p);
+    auto &sdb = getServiceDatabase();
+    auto pkgs = sdb.getInstalledPackages();
 
     // projects
     for (auto &pkg : pkgs)
     {
-        auto d = pkg.second / cppan_build_dir;
+        auto d = pkg.getDirObj() / cppan_build_dir;
         if (!fs::exists(d))
             continue;
         for (auto &fc : boost::make_iterator_range(fs::directory_iterator(d), {}))
@@ -652,22 +651,20 @@ void CMakePrinter::clear_cache(path p) const
         }
     }
 
-    clear_exports(p);
+    clear_exports();
 }
 
-void CMakePrinter::clear_exports(path p) const
+void CMakePrinter::clear_exports() const
 {
-    if (p.empty())
-        p = directories.storage_dir_obj;
-
-    auto pkgs = readPackagesIndex(p);
+    auto &sdb = getServiceDatabase();
+    auto pkgs = sdb.getInstalledPackages();
 
     // projects
     for (auto &pkg : pkgs)
-        clear_export(pkg.second);
+        clear_export(pkg.getDirObj());
 }
 
-void CMakePrinter::clear_export(path p) const
+void CMakePrinter::clear_export(const path &p) const
 {
     auto d = p / cppan_build_dir;
     if (!fs::exists(d))

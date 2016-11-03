@@ -155,13 +155,15 @@ try
     else if (String(argv[1]) == "--clear-cache")
     {
         CMakePrinter c;
-        c.clear_cache(argc > 2 ? argv[2] : "");
+        // TODO: provide better way of opening passed storage in argv[2]
+        c.clear_cache();
         return 0;
     }
     else if (String(argv[1]) == "--clear-vars-cache")
     {
         Config c;
-        c.clear_vars_cache(argc > 2 ? argv[2] : "");
+        // TODO: provide better way of opening passed storage in argv[2]
+        c.clear_vars_cache();
         return 0;
     }
 

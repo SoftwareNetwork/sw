@@ -68,7 +68,7 @@ public:
     void process(const path &p = path());
     void post_download() const;
 
-    void clear_vars_cache(path p) const;
+    void clear_vars_cache() const;
 
     Projects &getProjects() { return projects; }
     Project &getDefaultProject();

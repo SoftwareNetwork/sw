@@ -28,9 +28,10 @@
 #include "dependency.h"
 
 #include "config.h"
+#include "database.h"
+#include "directories.h"
 #include "hash.h"
 #include "lock.h"
-#include "directories.h"
 
 #include <iostream>
 #include <regex>
@@ -123,97 +124,31 @@ Package extractFromString(const String &target)
     return p;
 }
 
-PackageIndex readPackagesIndex(const path &dir)
-{
-    auto fn = dir / cppan_index_file;
-    ScopedShareableFileLock lock(fn);
-
-    PackageIndex pkgs;
-    std::ifstream ifile(fn.string());
-    if (!ifile)
-        return pkgs;
-
-    String target_name;
-    path p;
-    while (ifile >> p >> target_name)
-        pkgs[target_name] = p;
-
-    return pkgs;
-}
-
-void writePackagesIndex(const path &dir, const PackageIndex &idx)
-{
-    auto fn = dir / cppan_index_file;
-    ScopedFileLock lock(fn);
-
-    std::ofstream ofile(fn.string());
-    if (!ofile)
-        return;
-
-    for (auto &pkg : idx)
-    {
-        if (!pkg.first.empty())
-            ofile << normalize_path(pkg.second) << "\t\t" << pkg.first << "\n";
-    }
-}
-
 void cleanPackages(const String &s, int flags)
 {
     std::regex r(s);
 
-    auto remove = [&s, &r](const auto &dir)
+    auto &sdb = getServiceDatabase();
+
+    auto remove = [&sdb, &s, &r](auto f)
     {
-        auto pkgs = readPackagesIndex(dir);
-        std::vector<String> rms;
+        auto pkgs = sdb.getInstalledPackages();
         for (auto &pkg : pkgs)
         {
-            if (!std::regex_match(pkg.first, r))
+            if (!std::regex_match(pkg.target_name, r))
                 continue;
-            if (fs::exists(pkg.second))
-                fs::remove_all(pkg.second);
-            rms.push_back(pkg.first);
+            auto p = (pkg.*f)();
+            if (fs::exists(p))
+                fs::remove_all(p);
+            sdb.removeInstalledPackage(pkg);
         }
-        for (auto &rm : rms)
-            pkgs.erase(rm);
-        writePackagesIndex(dir, pkgs);
     };
     if (flags & CleanTarget::Src)
-        remove(directories.storage_dir_src);
+        remove(&Package::getDirSrc);
     if (flags & CleanTarget::Obj)
-        remove(directories.storage_dir_obj);
+        remove(&Package::getDirObj);
     if (flags & CleanTarget::Lib)
         remove_files_like(directories.storage_dir_lib, s);
     if (flags & CleanTarget::Bin)
         remove_files_like(directories.storage_dir_bin, s);
-}
-
-PackageDependenciesIndex readPackageDependenciesIndex(const path &dir)
-{
-    auto fn = dir / cppan_package_dependencies_file;
-    ScopedShareableFileLock lock(fn);
-
-    PackageDependenciesIndex pkgs;
-    std::ifstream ifile(fn.string());
-    if (!ifile)
-        return pkgs;
-
-    String target_name, hash;
-    while (ifile >> hash >> target_name)
-        pkgs[target_name] = hash;
-
-    return pkgs;
-}
-
-void writePackageDependenciesIndex(const path &dir, const PackageDependenciesIndex &idx)
-{
-    auto fn = dir / cppan_package_dependencies_file;
-    ScopedFileLock lock(fn);
-
-    std::ofstream ofile(fn.string());
-    if (!ofile)
-        return;
-
-    for (auto &pkg : idx)
-        if (!pkg.second.empty())
-            ofile << pkg.second << "\t" << pkg.first << "\n";
 }

@@ -106,6 +106,34 @@ const TableDescriptors &get_service_tables()
             );
         )"
     },
+    {
+        "PackageDependenciesHashes",
+        R"(
+            CREATE TABLE "PackageDependenciesHashes" (
+                "package" TEXT NOT NULL,
+                "dependencies" TEXT NOT NULL,
+                PRIMARY KEY ("package")
+            );
+        )"
+    },
+    {
+        "InstalledPackages",
+        R"(
+            CREATE TABLE "InstalledPackages" (
+                "package" TEXT NOT NULL,
+                PRIMARY KEY ("package")
+            );
+        )"
+    },
+    {
+        "NextClientVersionCheck",
+        R"(
+            CREATE TABLE "NextClientVersionCheck" (
+                "timestamp" INTEGER NOT NULL
+            );
+            insert into NextClientVersionCheck values (0);
+        )"
+    },
     };
     return service_tables;
 }
@@ -270,6 +298,43 @@ ServiceDatabase::ServiceDatabase()
     }
 
     increaseNumberOfRuns();
+    checkForUpdates();
+}
+
+void ServiceDatabase::checkForUpdates() const
+{
+    auto d = std::chrono::system_clock::now() - getLastClientUpdateCheck();
+    if (d < std::chrono::hours(3))
+        return;
+
+    try
+    {
+        // if there are updates, do not set last check time
+        // to issue a message every run
+        if (!Config::get_user_config().settings.checkForUpdates())
+            setLastClientUpdateCheck();
+    }
+    catch (...)
+    {
+    }
+}
+
+TimePoint ServiceDatabase::getLastClientUpdateCheck() const
+{
+    TimePoint tp;
+    db->execute("select * from NextClientVersionCheck",
+        [&tp](SQLITE_CALLBACK_ARGS)
+    {
+        tp = std::chrono::system_clock::from_time_t(std::stoll(cols[0]));
+        return 0;
+    });
+    return tp;
+}
+
+void ServiceDatabase::setLastClientUpdateCheck() const
+{
+    db->execute("update NextClientVersionCheck set timestamp = '" +
+        std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())) + "'");
 }
 
 bool ServiceDatabase::isActionPerformed(const StartupAction &action) const
@@ -304,7 +369,7 @@ int ServiceDatabase::getNumberOfRuns() const
     return n_runs;
 }
 
-int ServiceDatabase::increaseNumberOfRuns()
+int ServiceDatabase::increaseNumberOfRuns() const
 {
     auto prev = getNumberOfRuns();
     db->execute("update NRuns set n_runs = n_runs + 1;");
@@ -344,6 +409,48 @@ void ServiceDatabase::addConfigHash(const String &hash, const String &config) co
     if (config.empty())
         return;
     db->execute("replace into ConfigHashes values ('" + hash + "', '" + config + "')");
+}
+
+void ServiceDatabase::setPackageDependenciesHash(const Package &p, const String &hash) const
+{
+    db->execute("replace into PackageDependenciesHashes values ('" + p.target_name + "', '" + hash + "')");
+}
+
+bool ServiceDatabase::hasPackageDependenciesHash(const Package &p, const String &hash) const
+{
+    bool has = false;
+    db->execute("select * from PackageDependenciesHashes where package = '" + p.target_name + "' "
+        "and dependencies = '" + hash + "'",
+        [&has](SQLITE_CALLBACK_ARGS)
+    {
+        has = true;
+        return 0;
+    });
+    return has;
+}
+
+void ServiceDatabase::addInstalledPackage(const Package &p) const
+{
+    db->execute("replace into InstalledPackages values ('" + p.target_name + "')");
+}
+
+void ServiceDatabase::removeInstalledPackage(const Package &p) const
+{
+    db->execute("delete from InstalledPackages where pacakge = '" + p.target_name + "'");
+}
+
+std::set<Package> ServiceDatabase::getInstalledPackages() const
+{
+    std::set<Package> pkgs;
+    db->execute("select * from InstalledPackages",
+        [&pkgs](SQLITE_CALLBACK_ARGS)
+    {
+        auto pkg = extractFromString(cols[0]);
+        pkg.createNames();
+        pkgs.insert(pkg);
+        return 0;
+    });
+    return pkgs;
 }
 
 PackagesDatabase::PackagesDatabase()
@@ -513,7 +620,7 @@ void PackagesDatabase::writeDownloadTime() const
     write_file(db_dir / PACKAGES_DB_DOWNLOAD_TIME_FILE, std::to_string(time));
 }
 
-PackagesDatabase::TimePoint PackagesDatabase::readDownloadTime() const
+TimePoint PackagesDatabase::readDownloadTime() const
 {
     auto fn = db_dir / PACKAGES_DB_DOWNLOAD_TIME_FILE;
     String ts = "0";

@@ -76,16 +76,7 @@ private:
 
 using Packages = std::map<String, Package>;
 
-using PackageIndex = std::map<String, path>;
-using PackageDependenciesIndex = std::map<String, String>;
-
 Package extractFromString(const String &target);
-
-PackageIndex readPackagesIndex(const path &dir);
-void writePackagesIndex(const path &dir, const PackageIndex &idx);
-
-PackageDependenciesIndex readPackageDependenciesIndex(const path &dir);
-void writePackageDependenciesIndex(const path &dir, const PackageDependenciesIndex &idx);
 
 struct CleanTarget
 {

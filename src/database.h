@@ -28,6 +28,7 @@
 #pragma once
 
 #include "common.h"
+#include "date_time.h"
 #include "dependency.h"
 
 #include <chrono>
@@ -35,6 +36,7 @@
 #include <vector>
 
 class SqliteDatabase;
+struct Package;
 
 struct TableDescriptor
 {
@@ -78,8 +80,12 @@ class ServiceDatabase : public Database
 public:
     ServiceDatabase();
 
+    void checkForUpdates() const;
+    TimePoint getLastClientUpdateCheck() const;
+    void setLastClientUpdateCheck() const;
+
     int getNumberOfRuns() const;
-    int increaseNumberOfRuns(); // returns previous value
+    int increaseNumberOfRuns() const; // returns previous value
 
     int getPackagesDbSchemaVersion() const;
     void setPackagesDbSchemaVersion(int version) const;
@@ -89,12 +95,17 @@ public:
 
     String getConfigByHash(const String &hash) const;
     void addConfigHash(const String &hash, const String &config) const;
+
+    void setPackageDependenciesHash(const Package &p, const String &hash) const;
+    bool hasPackageDependenciesHash(const Package &p, const String &hash) const;
+
+    void addInstalledPackage(const Package &p) const;
+    void removeInstalledPackage(const Package &p) const;
+    std::set<Package> getInstalledPackages() const;
 };
 
 class PackagesDatabase : public Database
 {
-    using TimePoint = std::chrono::system_clock::time_point;
-
     using Dependencies = DownloadDependency::DbDependencies;
     using DependenciesMap = std::map<Package, DownloadDependency>;
 

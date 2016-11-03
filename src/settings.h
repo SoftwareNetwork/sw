@@ -126,7 +126,7 @@ public:
     int build(Config *c) const;
     int build_package(Config *c);
 
-    void checkForUpdates() const;
+    bool checkForUpdates() const;
 
 private:
     void load_main(const yaml &root, const ConfigType type);

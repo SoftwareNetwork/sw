@@ -41,9 +41,9 @@ struct CMakePrinter : Printer
     void print() override;
     void print_meta() override;
 
-    void clear_cache(path p = path()) const override;
-    void clear_exports(path p) const override;
-    void clear_export(path p) const override;
+    void clear_cache() const override;
+    void clear_exports() const override;
+    void clear_export(const path &p) const override;
 
     void parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain = String()) const override;
 
