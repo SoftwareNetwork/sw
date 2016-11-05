@@ -69,6 +69,7 @@ std::string make_archive_name(const std::string &fn = std::string());
 void copy_dir(const path &source, const path &destination);
 void remove_files_like(const path &dir, const std::string &regex);
 
+bool pack_files(const path &fn, const Files &files);
 Files unpack_file(const path &fn, const path &dst);
 
 namespace std

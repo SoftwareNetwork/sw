@@ -44,7 +44,7 @@ auto get_time(F &&f, Args && ... args)
     using namespace std::chrono;
 
     auto t0 = high_resolution_clock::now();
-    std::forward<F>(f)(std::forward<Args...>(args)...);
+    std::forward<F>(f)(std::forward<Args>(args)...);
     auto t1 = high_resolution_clock::now();
     return t1 - t0;
 }

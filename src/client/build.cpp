@@ -304,6 +304,8 @@ int build_package(const Package &p, const path &settings, const String &config)
 
     Config c;
     c.load(root);
+    for (auto &d : c.getDefaultProject().dependencies)
+        d.second.createNames();
     return c.settings.build_package(&c);
 }
 

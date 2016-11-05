@@ -1486,12 +1486,15 @@ endif()
         //fs::copy_file(d.getDirSrc() / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists, ec);
 
         if (pc->internal_options.invocations.find(d) != pc->internal_options.invocations.end())
-            throw std::runtime_error("Circular dependency detected. Project: " + d.target_name);
+        {
+            //if (!d.ppath.is_loc())
+                //throw std::runtime_error("Circular dependency detected. Project: " + d.target_name);
+        }
 
         silent = true;
         ScopedCurrentPath cp(d.getDirObj());
 
-        Config c = *rd[d].config;
+        Config &c = *rd[d].config;
         c.internal_options.current_package = d;
         c.internal_options.invocations = pc->internal_options.invocations;
         c.internal_options.invocations.insert(d);
@@ -2201,7 +2204,7 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
 
         Context ctx;
         ctx.addLine(cmake_minimum_required);
-        ctx.addLine("project(x C CXX)");
+        ctx.addLine("project(X C CXX)");
         ctx.addLine(cmake_includes);
         w.write_parallel_checks_for_workers(ctx);
         write_file(d / cmake_config_filename, ctx.getText());

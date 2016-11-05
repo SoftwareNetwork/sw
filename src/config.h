@@ -70,7 +70,8 @@ public:
 
     void clear_vars_cache() const;
 
-    Projects &getProjects() { return projects; }
+    auto &getProjects() { return projects; }
+    auto &getProjects() const { return projects; }
     Project &getDefaultProject();
     const Project &getDefaultProject() const;
     Project &getProject(const String &p) const;
@@ -98,6 +99,7 @@ public:
         std::set<Package> invocations;
     } internal_options;
 
+    bool is_processed = false;
     bool is_printed = false;
     bool disable_run_cppan_target = false;
 

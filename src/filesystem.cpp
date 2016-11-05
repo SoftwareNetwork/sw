@@ -220,6 +220,55 @@ bool is_under_root(path p, const path &root_dir)
     return false;
 }
 
+bool pack_files(const path &fn, const Files &files)
+{
+    bool result = true;
+    auto a = archive_write_new();
+    archive_write_add_filter_gzip(a);
+    archive_write_set_format_pax_restricted(a);
+    archive_write_open_filename(a, fn.string().c_str());
+    for (auto &f : files)
+    {
+        if (!fs::exists(f))
+        {
+            result = false;
+            continue;
+        }
+
+        // skip symlinks too
+        if (!fs::is_regular_file(f))
+            continue;
+
+        auto sz = fs::file_size(f);
+        auto e = archive_entry_new();
+        archive_entry_set_pathname(e, f.string().c_str());
+        archive_entry_set_size(e, sz);
+        archive_entry_set_filetype(e, AE_IFREG);
+        archive_entry_set_perm(e, 0644);
+        archive_write_header(a, e);
+        auto fp = fopen(f.string().c_str(), "rb");
+        if (!fp)
+        {
+            archive_entry_free(e);
+            result = false;
+            continue;
+        }
+        char buff[8192];
+        size_t len;
+        len = fread(buff, 1, sizeof(buff), fp);
+        while (len > 0)
+        {
+            archive_write_data(a, buff, len);
+            len = fread(buff, 1, sizeof(buff), fp);
+        }
+        fclose(fp);
+        archive_entry_free(e);
+    }
+    archive_write_close(a);
+    archive_write_free(a);
+    return result;
+}
+
 Files unpack_file(const path &fn, const path &dst)
 {
     if (!fs::exists(dst))
@@ -236,6 +285,11 @@ Files unpack_file(const path &fn, const path &dst)
     archive_entry *entry;
     while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
     {
+        // do not act on symlinks
+        auto type = archive_entry_filetype(entry);
+        if (type == AE_IFLNK || type != AE_IFREG)
+            continue;
+
         path f = dst / archive_entry_pathname(entry);
         path fdir = f.parent_path();
         if (!fs::exists(fdir))

@@ -47,6 +47,12 @@ TYPED_EXCEPTION(LocalDbHashException);
 
 ResponseData rd;
 
+Executor &getExecutor()
+{
+    static Executor executor(2);
+    return executor;
+}
+
 void ResponseData::init(Config *config, const String &host)
 {
     if (initialized)
@@ -61,7 +67,7 @@ void ResponseData::init(Config *config, const String &host)
     initialized = true;
 }
 
-void ResponseData::download_dependencies(const Packages &deps)
+void ResponseData::download_dependencies(const Config &c, const Packages &deps)
 {
     if (executed || !initialized)
         return;
@@ -115,12 +121,12 @@ void ResponseData::download_dependencies(const Packages &deps)
     check_deps_changed();
 
     // add default (current, root) config
-    packages[Package()].dependencies = deps;
+    packages[c.pkg].dependencies = deps;
     for (auto &dd : download_dependencies_)
     {
         if (!dd.second.flags[pfDirectDependency])
             continue;
-        auto &deps2 = packages[Package()].dependencies;
+        auto &deps2 = packages[c.pkg].dependencies;
         auto i = deps2.find(dd.second.ppath.toString());
         if (i == deps2.end())
         {
@@ -156,6 +162,107 @@ void ResponseData::download_dependencies(const Packages &deps)
     executed = true;
 }
 
+void ResponseData::resolve_dependencies(const Config &c)
+{
+    if (c.getProjects().size() > 1)
+        throw std::runtime_error("Make sure your config has only one project (call split())");
+
+    Packages deps;
+
+    // remove local packages
+    for (auto &d : c.getDefaultProject().dependencies)
+    {
+        if (!d.second.ppath.is_loc())
+            deps.insert(d);
+    }
+
+    if (deps.empty())
+        return;
+
+    // do 2 attempts: 1) local db, 2) remote db
+    int n_attempts = 2;
+    while (n_attempts--)
+    {
+        // clear before proceed
+        download_dependencies_.clear();
+
+        try
+        {
+            if (query_local_db)
+            {
+                try
+                {
+                    getDependenciesFromDb(deps);
+                }
+                catch (std::exception &e)
+                {
+                    LOG_ERROR(logger, "Cannot get dependencies from local database: " << e.what());
+
+                    query_local_db = false;
+                    getDependenciesFromRemote(deps);
+                }
+            }
+            else
+            {
+                getDependenciesFromRemote(deps);
+            }
+
+            download_and_unpack();
+        }
+        catch (LocalDbHashException &)
+        {
+            LOG_WARN(logger, "Local db data caused issues, trying remote one");
+
+            query_local_db = false;
+            continue;
+        }
+        break;
+    }
+
+    read_configs();
+    post_download();
+    write_index();
+    check_deps_changed();
+
+    // add default (current, root) config
+    packages[c.pkg].dependencies = deps;
+    for (auto &dd : download_dependencies_)
+    {
+        if (!dd.second.flags[pfDirectDependency])
+            continue;
+        auto &deps2 = packages[c.pkg].dependencies;
+        auto i = deps2.find(dd.second.ppath.toString());
+        if (i == deps2.end())
+        {
+            // check if we chosen a root project match all subprojects
+            Packages to_add;
+            std::set<String> to_remove;
+            for (auto &root_dep : deps2)
+            {
+                for (auto &child_dep : download_dependencies_)
+                {
+                    if (root_dep.second.ppath.is_root_of(child_dep.second.ppath))
+                    {
+                        to_add.insert({ child_dep.second.ppath.toString(), child_dep.second });
+                        to_remove.insert(root_dep.second.ppath.toString());
+                    }
+                }
+            }
+            if (to_add.empty())
+                throw std::runtime_error("cannot match dependency");
+            for (auto &r : to_remove)
+                deps2.erase(r);
+            for (auto &a : to_add)
+                deps2.insert(a);
+            continue;
+        }
+        auto &d = i->second;
+        d.version = dd.second.version;
+        d.flags |= dd.second.flags;
+        d.createNames();
+    }
+}
+
 void ResponseData::check_deps_changed()
 {
     // already executed
@@ -187,6 +294,8 @@ void ResponseData::check_deps_changed()
 void ResponseData::getDependenciesFromRemote(const Packages &deps)
 {
     // prepare request
+    ptree request;
+    ptree dependency_tree;
     for (auto &d : deps)
     {
         ptree version;
@@ -615,16 +724,6 @@ void ResponseData::read_config(const DownloadDependency &d)
     }
 }
 
-Executor &ResponseData::getExecutor()
-{
-    if (executor)
-        return *executor;
-    // create small amount of thread at the moment
-    // because we use it very rarely and not extensively
-    executor = std::make_unique<Executor>(2);
-    return *executor;
-}
-
 Config *ResponseData::add_config(std::unique_ptr<Config> &&config, bool created)
 {
     auto cfg = config.get();
@@ -645,9 +744,11 @@ Config *ResponseData::add_local_config(const Config &co)
 {
     auto cu = std::make_unique<Config>(co);
     auto cp = add_config(std::move(cu), true);
-    packages[cp->pkg].dependencies = cp->getDefaultProject().dependencies;
+    //packages[cp->pkg].dependencies = cp->getDefaultProject().dependencies;
     // batch resolve first?
-    for (auto &p : cp->getDefaultProject().dependencies)
-        add_config(p.second); // resolve first; create names if not created during resolving; merge flags
+    resolve_dependencies(*cp);
+    //resolve_dependencies(cp->getDefaultProject().dependencies);
+    //for (auto &p : cp->getDefaultProject().dependencies)
+        //add_config(p.second); // resolve first; create names if not created during resolving; merge flags
     return cp;
 }

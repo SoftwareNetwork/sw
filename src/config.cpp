@@ -273,6 +273,10 @@ void Config::save(const path &p) const
 
 void Config::process(const path &p)
 {
+    if (is_processed)
+        return;
+    is_processed = true;
+
     std::unique_ptr<ScopedCurrentPath> cp;
     if (!p.empty())
         cp = std::make_unique<ScopedCurrentPath>(p);
@@ -282,7 +286,7 @@ void Config::process(const path &p)
 
     // do a request
     rd.init(this, settings.host);
-    rd.download_dependencies(getFileDependencies());
+    rd.download_dependencies(*this, getFileDependencies());
 
     // if we got a download we might need to refresh configs
     // but we do not know what projects we should clear

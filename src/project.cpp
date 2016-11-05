@@ -507,48 +507,10 @@ void Project::findSources(path p)
 
 bool Project::writeArchive(const String &filename) const
 {
-    bool result = true;
-    auto a = archive_write_new();
-    archive_write_add_filter_gzip(a);
-    archive_write_set_format_pax_restricted(a);
-    archive_write_open_filename(a, filename.c_str());
+    Files files_real;
     for (auto &f : files)
-    {
-        auto fn = f.string();
-        auto fn_real = root_directory / f;
-        if (!fs::exists(fn_real))
-        {
-            result = false;
-            continue;
-        }
-        auto sz = fs::file_size(fn_real);
-        auto e = archive_entry_new();
-        archive_entry_set_pathname(e, fn.c_str());
-        archive_entry_set_size(e, sz);
-        archive_entry_set_filetype(e, AE_IFREG);
-        archive_entry_set_perm(e, 0644);
-        archive_write_header(a, e);
-        auto fp = fopen(fn_real.string().c_str(), "rb");
-        if (!fp)
-        {
-            archive_entry_free(e);
-            result = false;
-            continue;
-        }
-        char buff[8192];
-        size_t len;
-        len = fread(buff, 1, sizeof(buff), fp);
-        while (len > 0)
-        {
-            archive_write_data(a, buff, len);
-            len = fread(buff, 1, sizeof(buff), fp);
-        }
-        fclose(fp);
-        archive_entry_free(e);
-    }
-    archive_write_close(a);
-    archive_write_free(a);
-    return result;
+        files_real.insert(root_directory / f);
+    return pack_files(filename, files_real);
 }
 
 void Project::save_dependencies(yaml &node) const
@@ -651,7 +613,12 @@ void Project::load(const yaml &root)
     if (defaults_allowed && include_directories.private_.empty())
     {
         if (fs::exists("src"))
-            include_directories.private_.insert("src");
+        {
+            if (fs::exists("include"))
+                include_directories.private_.insert("src");
+            else
+                include_directories.public_.insert("src");
+        }
     }
     include_directories.public_.insert("${CMAKE_CURRENT_BINARY_DIR}");
 
@@ -825,10 +792,6 @@ void Project::load(const yaml &root)
                 }
             }
         });
-
-        //remove, handled in other places
-        //for (auto &d : dependencies)
-        //    d.second.createNames();
     }
 
     auto read_sources = [&root](auto &a, const String &key, bool required = true)

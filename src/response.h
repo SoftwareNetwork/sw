@@ -51,7 +51,8 @@ public:
 
 public:
     void init(Config *config, const String &host);
-    void download_dependencies(const Packages &d);
+    void download_dependencies(const Config &c, const Packages &deps);
+    void resolve_dependencies(const Config &c);
     void write_index() const;
 
     Config *add_config(std::unique_ptr<Config> &&config, bool created);
@@ -73,15 +74,13 @@ public:
 private:
     PackageConfigs packages;
     std::set<std::unique_ptr<Config>> config_store;
-    std::unique_ptr<Executor> executor;
 
-    ptree request;
-    ptree dependency_tree;
     DownloadDependencies download_dependencies_;
     std::map<Package, ProjectVersionId> dep_ids;
+
     String host;
     String data_url{"data"};
-    path root_dir;
+
     bool executed = false;
     bool initialized = false;
     int downloads = 0;
@@ -96,7 +95,6 @@ private:
     void prepare_config(PackageConfigs::value_type &cc);
     void read_config(const DownloadDependency &d);
     void check_deps_changed();
-    Executor &getExecutor();
 };
 
 extern ResponseData rd;
