@@ -284,9 +284,7 @@ void Config::process(const path &p)
     // main access table holder
     AccessTable access_table(directories.storage_dir_etc);
 
-    // do a request
-    rd.init(this, settings.host);
-    rd.download_dependencies(*this, getFileDependencies());
+    rd.resolve_dependencies(*this);
 
     // if we got a download we might need to refresh configs
     // but we do not know what projects we should clear

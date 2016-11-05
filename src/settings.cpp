@@ -255,28 +255,6 @@ void Settings::append_build_dirs(const path &p)
     binary_directory = source_directory / "build";
 }
 
-void Settings::_prepare_build(Config *c, const path &fn, const String &cppan, bool force) const
-{
-    auto &p = c->getDefaultProject();
-    if (!is_dir)
-        p.sources.insert(filename);
-    p.findSources(fn.parent_path());
-    p.files.erase(CPPAN_FILENAME);
-
-    if (rebuild)
-        fs::remove_all(source_directory);
-    if (!fs::exists(source_directory))
-        fs::create_directories(source_directory);
-
-    write_file_if_different(source_directory / CPPAN_FILENAME, cppan);
-
-    if (!prepare && !force)
-        return;
-
-    Config conf(source_directory);
-    conf.process(source_directory); // invoke cppan
-}
-
 String Settings::get_hash() const
 {
     Hasher h;
@@ -376,46 +354,21 @@ String test_run(const Settings &settings)
     return c;
 }
 
-void Settings::prepare_build(Config *c, path fn, const String &cppan)
-{
-    fn = fs::canonical(fs::absolute(fn));
-
-    auto printer = Printer::create(printerType);
-    printer->rc = c;
-
-    config = get_config(*this);
-
-    // set new dirs
-    set_build_dirs(fn);
-    append_build_dirs(config);
-
-    auto cmake_version = get_cmake_version();
-    auto src = directories.storage_dir_cfg / config / "CMakeFiles" / cmake_version;
-
-    // if dir does not exist it means probably we have new cmake version
-    // we have config value but there was not a test run with copying cmake prepared files
-    // so start unconditional test run
-    if (!fs::exists(src))
-        test_run(*this);
-
-    // move this to printer some time
-    // copy cached cmake config to bin dir
-    copy_dir(src, binary_directory / "CMakeFiles" / cmake_version);
-
-    // TODO: remove?
-    // setup cppan config
-    _prepare_build(c, fn, cppan);
-
-    // setup printer config
-    printer->prepare_build(fn);
-}
-
 int Settings::build_package(Config *c)
 {
     auto printer = Printer::create(printerType);
     printer->rc = c;
 
     auto config = get_config(*this);
+
+    /*
+    void Settings::prepare_build(Config *c, path fn, const String &cppan)
+
+    fn = fs::canonical(fs::absolute(fn));
+    // set new dirs
+    set_build_dirs(fn);
+    append_build_dirs(config);
+    */
 
     source_directory = temp_directory_path() / "temp" / fs::unique_path();
     binary_directory = source_directory / "build";

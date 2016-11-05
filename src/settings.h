@@ -98,7 +98,6 @@ struct Settings
     // maybe mutable?
     bool is_dir = false;
     bool rebuild = false;
-    bool prepare = true;
     bool allow_links = true;
     String filename;
     String filename_without_ext;
@@ -121,7 +120,6 @@ public:
     String get_hash() const;
     String get_fs_generator() const;
 
-    void prepare_build(Config *c, path fn, const String &cppan);
     int generate(Config *c) const;
     int build(Config *c) const;
     int build_package(Config *c);
@@ -131,8 +129,6 @@ public:
 private:
     void load_main(const yaml &root, const ConfigType type);
     void load_build(const yaml &root);
-
-    void _prepare_build(Config *c, const path &fn, const String &cppan, bool force = false) const;
 };
 
 String get_config(const Settings &settings);

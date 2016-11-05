@@ -93,12 +93,6 @@ public:
     ConfigType type{ ConfigType::None };
     bool defaults_allowed = true;
 
-    struct InternalOptions
-    {
-        Package current_package;
-        std::set<Package> invocations;
-    } internal_options;
-
     bool is_processed = false;
     bool is_printed = false;
     bool disable_run_cppan_target = false;

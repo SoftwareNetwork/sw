@@ -53,115 +53,6 @@ Executor &getExecutor()
     return executor;
 }
 
-void ResponseData::init(Config *config, const String &host)
-{
-    if (initialized)
-        return;
-
-    this->host = host;
-
-    // remove from here?
-    // add default (current, root) config
-    packages[Package()].config = config;
-
-    initialized = true;
-}
-
-void ResponseData::download_dependencies(const Config &c, const Packages &deps)
-{
-    if (executed || !initialized)
-        return;
-
-    if (deps.empty())
-        return;
-
-    // do 2 attempts: 1) local db, 2) remote db
-    int n_attempts = 2;
-    while (n_attempts--)
-    {
-        // clear before proceed
-        download_dependencies_.clear();
-
-        try
-        {
-            if (query_local_db)
-            {
-                try
-                {
-                    getDependenciesFromDb(deps);
-                }
-                catch (std::exception &e)
-                {
-                    LOG_ERROR(logger, "Cannot get dependencies from local database: " << e.what());
-
-                    query_local_db = false;
-                    getDependenciesFromRemote(deps);
-                }
-            }
-            else
-            {
-                getDependenciesFromRemote(deps);
-            }
-
-            download_and_unpack();
-        }
-        catch (LocalDbHashException &)
-        {
-            LOG_WARN(logger, "Local db data caused issues, trying remote one");
-
-            query_local_db = false;
-            continue;
-        }
-        break;
-    }
-
-    read_configs();
-    post_download();
-    write_index();
-    check_deps_changed();
-
-    // add default (current, root) config
-    packages[c.pkg].dependencies = deps;
-    for (auto &dd : download_dependencies_)
-    {
-        if (!dd.second.flags[pfDirectDependency])
-            continue;
-        auto &deps2 = packages[c.pkg].dependencies;
-        auto i = deps2.find(dd.second.ppath.toString());
-        if (i == deps2.end())
-        {
-            // check if we chosen a root project match all subprojects
-            Packages to_add;
-            std::set<String> to_remove;
-            for (auto &root_dep : deps2)
-            {
-                for (auto &child_dep : download_dependencies_)
-                {
-                    if (root_dep.second.ppath.is_root_of(child_dep.second.ppath))
-                    {
-                        to_add.insert({ child_dep.second.ppath.toString(), child_dep.second });
-                        to_remove.insert(root_dep.second.ppath.toString());
-                    }
-                }
-            }
-            if (to_add.empty())
-                throw std::runtime_error("cannot match dependency");
-            for (auto &r : to_remove)
-                deps2.erase(r);
-            for (auto &a : to_add)
-                deps2.insert(a);
-            continue;
-        }
-        auto &d = i->second;
-        d.version = dd.second.version;
-        d.flags |= dd.second.flags;
-        d.createNames();
-    }
-
-    // last in function
-    executed = true;
-}
-
 void ResponseData::resolve_dependencies(const Config &c)
 {
     if (c.getProjects().size() > 1)
@@ -169,15 +60,24 @@ void ResponseData::resolve_dependencies(const Config &c)
 
     Packages deps;
 
-    // remove local packages
-    for (auto &d : c.getDefaultProject().dependencies)
+    // remove some packages
+    for (auto &d : c.getFileDependencies())
     {
-        if (!d.second.ppath.is_loc())
-            deps.insert(d);
+        // remove local packages
+        if (d.second.ppath.is_loc())
+            continue;
+
+        // remove already downloaded packages
+        if (resolved_packages.find(d.second) != resolved_packages.end())
+            continue;
+
+        deps.insert(d);
     }
 
     if (deps.empty())
         return;
+
+    host = c.settings.host;
 
     // do 2 attempts: 1) local db, 2) remote db
     int n_attempts = 2;
@@ -261,6 +161,10 @@ void ResponseData::resolve_dependencies(const Config &c)
         d.flags |= dd.second.flags;
         d.createNames();
     }
+
+    // mark packages as resolved
+    for (auto &d : deps)
+        resolved_packages.insert(d.second);
 }
 
 void ResponseData::check_deps_changed()
@@ -349,9 +253,6 @@ void ResponseData::getDependenciesFromRemote(const Packages &deps)
     if (api < CURRENT_API_LEVEL - 1)
         throw std::runtime_error("Your client's API is newer than server's. Please, wait for server upgrade");
 
-    if (dependency_tree.find("data_dir") != dependency_tree.not_found())
-        data_url = dependency_tree.get<String>("data_dir");
-
     // dependencies were received without error
     LOG("Ok");
 
@@ -438,7 +339,7 @@ void ResponseData::download_and_unpack()
 
         auto fs_path = ProjectPath(d.ppath).toFileSystemPath().string();
         std::replace(fs_path.begin(), fs_path.end(), '\\', '/');
-        String cppan_package_url = host + "/" + data_url + "/" + fs_path + "/" + d.version.toString() + ".tar.gz";
+        String cppan_package_url = host + "/data/" + fs_path + "/" + d.version.toString() + ".tar.gz";
         String github_package_url = "https://github.com/cppan-packages/" + d.getHash() + "/raw/master/" + make_archive_name();
         path fn = version_dir.string() + ".tar.gz";
 
@@ -744,11 +645,6 @@ Config *ResponseData::add_local_config(const Config &co)
 {
     auto cu = std::make_unique<Config>(co);
     auto cp = add_config(std::move(cu), true);
-    //packages[cp->pkg].dependencies = cp->getDefaultProject().dependencies;
-    // batch resolve first?
     resolve_dependencies(*cp);
-    //resolve_dependencies(cp->getDefaultProject().dependencies);
-    //for (auto &p : cp->getDefaultProject().dependencies)
-        //add_config(p.second); // resolve first; create names if not created during resolving; merge flags
     return cp;
 }

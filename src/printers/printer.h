@@ -66,7 +66,6 @@ struct Printer
     Config *pc = nullptr; // parent
     Config *rc = nullptr; // root
 
-    virtual void prepare_build(const path &fn) = 0;
     virtual void prepare_build2() = 0;
     virtual void prepare_rebuild() = 0;
     virtual int generate() const = 0;

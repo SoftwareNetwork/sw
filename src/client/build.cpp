@@ -122,8 +122,6 @@ std::vector<Package> extract_packages(path p, const Parameters &params)
 
         conf.settings.silent = params.silent;
         conf.settings.rebuild = params.rebuild;
-        conf.settings.prepare = params.prepare;
-        //conf.settings.prepare_build(&conf, fn, comments.size() > (size_t)i ? comments[i] : "");
     };
 
     auto build_spec_file = [&](const path &fn)
@@ -132,8 +130,6 @@ std::vector<Package> extract_packages(path p, const Parameters &params)
         auto s = read_file(fn);
         boost::trim(s);
         conf.load(YAML::Load(s));
-        conf.settings.prepare = params.prepare;
-        //conf.settings.prepare_build(&conf, fn, read_file(fn));
     };
 
     String sname;
@@ -235,9 +231,6 @@ int build(path fn, const String &config, bool rebuild)
     for (auto &pkg : pkgs)
         r &= build_package(pkg, "", "") == 0;
     return r;
-    //if (conf.settings.generate(&conf))
-    //    return 1;
-    //return conf.settings.build(&conf);
 }
 
 int build_only(path fn, const String &config)
@@ -246,7 +239,6 @@ int build_only(path fn, const String &config)
 
     Parameters params;
     params.config = config;
-    params.prepare = false;
     //auto conf = generate_config(fn, params);
     //return conf.settings.build(&conf);
     return 0;
@@ -256,7 +248,7 @@ int dry_run(path p, const String &config)
 {
     Config c(p);
     auto cppan_fn = p / CPPAN_FILENAME;
-    c.settings.prepare_build(&c, cppan_fn, read_file(cppan_fn));
+    //c.settings.prepare_build(&c, cppan_fn, read_file(cppan_fn));
 
     auto &project = c.getDefaultProject();
     auto dst = c.settings.source_directory / "src";

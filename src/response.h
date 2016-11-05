@@ -50,8 +50,6 @@ public:
     using const_iterator = PackageConfigs::const_iterator;
 
 public:
-    void init(Config *config, const String &host);
-    void download_dependencies(const Config &c, const Packages &deps);
     void resolve_dependencies(const Config &c);
     void write_index() const;
 
@@ -77,12 +75,9 @@ private:
 
     DownloadDependencies download_dependencies_;
     std::map<Package, ProjectVersionId> dep_ids;
+    std::set<Package> resolved_packages;
 
     String host;
-    String data_url{"data"};
-
-    bool executed = false;
-    bool initialized = false;
     int downloads = 0;
     bool deps_changed = false;
     bool query_local_db = true;

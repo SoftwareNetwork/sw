@@ -330,129 +330,6 @@ void CMakePrinter::prepare_rebuild()
     }
 }
 
-void CMakePrinter::prepare_build(const path &fn)
-{
-    auto &bs = rc->settings;
-    auto &p = rc->getDefaultProject();
-
-    Context ctx;
-    config_section_title(ctx, "cmake settings");
-    ctx.addLine(cmake_minimum_required);
-    ctx.addLine();
-
-    config_section_title(ctx, "project settings");
-    ctx.addLine("project(" + bs.filename_without_ext + " C CXX)");
-    ctx.addLine();
-
-    config_section_title(ctx, "compiler & linker settings");
-    ctx.addLine(R"(# Output directory settings
-set(output_dir ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${output_dir})
-#set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${output_dir})
-
-if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif()
-
-if (MSVC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
-endif()
-)");
-
-    // compiler flags
-    ctx.addLine("set(CMAKE_C_FLAGS \"${CMAKE_C_FLAGS} " + bs.c_compiler_flags + "\")");
-    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} " + bs.cxx_compiler_flags + "\")");
-    ctx.addLine();
-
-    for (int i = 0; i < Settings::CMakeConfigurationType::Max; i++)
-    {
-        auto &cfg = configuration_types[i];
-        ctx.addLine("set(CMAKE_C_FLAGS_" + cfg + " \"${CMAKE_C_FLAGS_" + cfg + "} " + bs.c_compiler_flags_conf[i] + "\")");
-        ctx.addLine("set(CMAKE_CXX_FLAGS_" + cfg + " \"${CMAKE_CXX_FLAGS_" + cfg + "} " + bs.cxx_compiler_flags_conf[i] + "\")");
-        ctx.addLine();
-    }
-
-    // linker flags
-    ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS \"${CMAKE_EXE_LINKER_FLAGS} " + bs.link_flags + "\")");
-    ctx.addLine("set(CMAKE_MODULE_LINKER_FLAGS \"${CMAKE_MODULE_LINKER_FLAGS} " + bs.link_flags + "\")");
-    ctx.addLine("set(CMAKE_SHARED_LINKER_FLAGS \"${CMAKE_SHARED_LINKER_FLAGS} " + bs.link_flags + "\")");
-    ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS \"${CMAKE_STATIC_LINKER_FLAGS} " + bs.link_flags + "\")");
-    ctx.addLine();
-
-    for (int i = 0; i < Settings::CMakeConfigurationType::Max; i++)
-    {
-        auto &cfg = configuration_types[i];
-        ctx.addLine("set(CMAKE_EXE_LINKER_FLAGS_" + cfg + " \"${CMAKE_EXE_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
-        ctx.addLine("set(CMAKE_MODULE_LINKER_FLAGS_" + cfg + " \"${CMAKE_MODULE_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
-        ctx.addLine("set(CMAKE_SHARED_LINKER_FLAGS_" + cfg + " \"${CMAKE_SHARED_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
-        ctx.addLine("set(CMAKE_STATIC_LINKER_FLAGS_" + cfg + " \"${CMAKE_STATIC_LINKER_FLAGS_" + cfg + "} " + bs.link_flags_conf[i] + "\")");
-        ctx.addLine();
-    }
-
-    // should be after flags
-    config_section_title(ctx, "CPPAN include");
-    if (!bs.is_custom_build_dir())
-        ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
-    ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
-    ctx.addLine("add_subdirectory(" + normalize_path(bs.cppan_dir) + ")");
-    ctx.addLine();
-
-    // add GLOB later
-    config_section_title(ctx, "sources");
-    ctx.addLine("set(src");
-    ctx.increaseIndent();
-    for (auto &s : p.files)
-        ctx.addLine("\"" + normalize_path(fn.parent_path() / s) + "\"");
-    ctx.decreaseIndent();
-    ctx.addLine(")");
-    ctx.addLine();
-
-    config_section_title(ctx, "target");
-    ctx.addLine("set(this " + bs.filename_without_ext + ")");
-    if (bs.type == "executable")
-    {
-        ctx.addLine("add_executable(${this} " + boost::to_upper_copy(bs.executable_type) + " ${src})");
-        ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_EXPORT=)");
-        ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_PROLOG=)");
-        ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_EPILOG=)");
-    }
-    else
-    {
-        if (bs.type == "library")
-        {
-            ctx.addLine("add_library(${this} " + boost::to_upper_copy(bs.library_type) + " ${src})");
-        }
-        else
-        {
-            ctx.addLine("add_library(${this} " + boost::to_upper_copy(bs.type) + " ${src})");
-        }
-        ctx.addLine("target_compile_definitions(${this} PRIVATE CPPAN_EXPORT=CPPAN_SYMBOL_EXPORT)");
-        ctx.addLine(R"(set_target_properties(${this} PROPERTIES
-    INSTALL_RPATH .
-    BUILD_WITH_INSTALL_RPATH True
-))");
-    }
-    ctx.addLine("target_link_libraries(${this} cppan " + bs.link_libraries + ")");
-    ctx.addLine();
-
-    if (!bs.is_custom_build_dir())
-    {
-        ctx.addLine(R"(add_custom_command(TARGET ${this} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${this}> )" + normalize_path(fs::current_path()) + R"(/
-))");
-        ctx.addLine();
-    }
-
-    // eof
-    ctx.addLine(config_delimeter);
-    ctx.addLine();
-    ctx.splitLines();
-
-    write_file_if_different(bs.source_directory / cmake_config_filename, ctx.getText());
-}
-
 void CMakePrinter::prepare_build2()
 {
     auto &bs = rc->settings;
@@ -1485,23 +1362,14 @@ endif()
         //boost::system::error_code ec; // ignore any errors
         //fs::copy_file(d.getDirSrc() / CPPAN_FILENAME, obj_dir / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists, ec);
 
-        if (pc->internal_options.invocations.find(d) != pc->internal_options.invocations.end())
-        {
-            //if (!d.ppath.is_loc())
-                //throw std::runtime_error("Circular dependency detected. Project: " + d.target_name);
-        }
-
         silent = true;
         ScopedCurrentPath cp(d.getDirObj());
 
         Config &c = *rd[d].config;
-        c.internal_options.current_package = d;
-        c.internal_options.invocations = pc->internal_options.invocations;
-        c.internal_options.invocations.insert(d);
         c.disable_run_cppan_target = true;
         c.process();
 
-        if (pc->internal_options.current_package.empty())
+        if (d.empty())
             silent = false;
     }
 
@@ -1733,11 +1601,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
         ctx.addLine("if (CPPAN_USE_CACHE)");
         ctx.increaseIndent();
 
-        auto dd = rd[d].dependencies;
-        if (!cc->internal_options.current_package.empty())
-            dd = rd[cc->internal_options.current_package].dependencies;
-
-        for (auto &dp : dd)
+        for (auto &dp : rd[d].dependencies)
         {
             auto &d = dp.second;
             if (d.flags[pfExecutable])
@@ -1758,7 +1622,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
         ctx.increaseIndent();
 
         // no copy for non local builds
-        if (cc->internal_options.current_package.empty())
+        if (d.empty())
         {
             ctx.addLine("if (NOT COPY_LIBRARIES_TO_OUTPUT)");
             ctx.increaseIndent();
