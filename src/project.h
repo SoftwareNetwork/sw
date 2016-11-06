@@ -155,6 +155,9 @@ struct Project
 
     // optional
     String name;
+    ProjectType type{ ProjectType::Executable };
+    LibraryType library_type{ LibraryType::Static };
+    ExecutableType executable_type{ ExecutableType::Default };
 
     // allow default values if some parts are missing
     bool defaults_allowed = true;
@@ -162,6 +165,7 @@ struct Project
 public:
     Project(const ProjectPath &root_project);
 
+    void applyFlags(ProjectFlags &flags) const;
     void findSources(path p);
     bool writeArchive(const String &filename) const;
     void prepareExports() const;

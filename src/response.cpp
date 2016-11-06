@@ -65,11 +65,20 @@ void ResponseData::resolve_dependencies(const Config &c)
     {
         // remove local packages
         if (d.second.ppath.is_loc())
+        {
+            // but still insert as a dependency
+            packages[c.pkg].dependencies.insert(d);
             continue;
+        }
 
         // remove already downloaded packages
-        if (resolved_packages.find(d.second) != resolved_packages.end())
+        auto i = resolved_packages.find(d.second);
+        if (i != resolved_packages.end())
+        {
+            // but still insert as a dependency
+            packages[c.pkg].dependencies.insert({ i->ppath.toString(), *i });
             continue;
+        }
 
         deps.insert(d);
     }

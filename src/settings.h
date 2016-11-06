@@ -78,9 +78,6 @@ struct Settings
     String configuration{ "Release" };
     String generator;
     String toolset;
-    String type{ "executable" };
-    String library_type;
-    String executable_type;
 
     std::map<String, String> env;
     std::vector<String> cmake_options;
@@ -96,7 +93,6 @@ struct Settings
 
     // own data
     // maybe mutable?
-    bool is_dir = false;
     bool rebuild = false;
     bool allow_links = true;
     String filename;
@@ -115,20 +111,22 @@ public:
     bool is_custom_build_dir() const;
 
     void load(const yaml &root);
-    void set_build_dirs(const path &fn);
-    void append_build_dirs(const path &p);
-    String get_hash() const;
-    String get_fs_generator() const;
 
-    int generate(Config *c) const;
-    int build(Config *c) const;
-    int build_package(Config *c);
+    String get_hash() const;
+
+    int generate(Config &c) const;
+    int build(Config &c) const;
+    int build_package(Config &c, const Package &p);
 
     bool checkForUpdates() const;
 
 private:
     void load_main(const yaml &root, const ConfigType type);
     void load_build(const yaml &root);
+
+    void set_build_dirs(const Package &p);
+    void append_build_dirs(const path &p);
+    String get_fs_generator() const;
 };
 
 String get_config(const Settings &settings);

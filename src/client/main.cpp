@@ -63,7 +63,8 @@ try
         Config::get_user_config();
 
         // initialize internal db
-        getServiceDatabase();
+        auto &sdb = getServiceDatabase();
+        sdb.performStartupActions();
     }
 
     // default run

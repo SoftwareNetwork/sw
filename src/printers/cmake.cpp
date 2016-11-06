@@ -701,6 +701,12 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
         ctx.addLine();
 
+        if (d.ppath.is_loc())
+        {
+            ctx.addLine("set(LOCAL_PROJECT 1)");
+            ctx.addLine();
+        }
+
         ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
         ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
         ctx.addLine();
@@ -802,7 +808,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     config_section_title(ctx, "target: " + d.target_name);
     if (d.flags[pfExecutable])
     {
-        ctx << "add_executable                (" << d.target_name << " ${src})" << Context::eol;
+        ctx << "add_executable                (" << d.target_name << " " << (p.executable_type == ExecutableType::Win32 ? "WIN32" : "") << " ${src})" << Context::eol;
     }
     else
     {
@@ -1424,6 +1430,12 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
     ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();
 
+    if (d.ppath.is_loc())
+    {
+        ctx.addLine("set(LOCAL_PROJECT 1)");
+        ctx.addLine();
+    }
+
     ctx.addLine(cmake_generate_file);
 
     config_section_title(ctx, "import direct deps");
@@ -1570,6 +1582,12 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("endif()");
     ctx.addLine();
 
+    if (d.ppath.is_loc())
+    {
+        ctx.addLine("set(LOCAL_PROJECT 1)");
+        ctx.addLine();
+    }
+
     ctx.addLine("include(" + cmake_helpers_filename + ")");
     ctx.addLine();
 
@@ -1652,7 +1670,10 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
                 ctx.increaseIndent();
                 ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
                 ctx.increaseIndent();
-                ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
+                if (d.ppath.is_loc())
+                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + d.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}>");
+                else
+                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
                 ctx.decreaseIndent();
                 ctx.decreaseIndent();
                 ctx.addLine(")");
@@ -1980,14 +2001,18 @@ set_target_properties(run-cppan PROPERTIES
                     ctx.increaseIndent();
                     ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
                     ctx.addLine("-DCONFIG=$<CONFIG>");
-                    ctx.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) +
-                        "/build/${" + String(p.flags[pfExecutable] ? "config_exe" : "config") + "}");
+                    String cfg = "config";
+                    if (p.flags[pfExecutable] && !p.ppath.is_loc())
+                        cfg = "config_exe";
+                    ctx.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
                     ctx.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
                     ctx.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
                     ctx.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
                     ctx.addLine("-DN_CORES=${N_CORES}");
                     if (d.empty())
                         ctx.addLine("-DMULTICORE=1");
+                    if (p.ppath.is_loc())
+                        ctx.addLine("-DLOCAL_PROJECT=1");
                     ctx.addLine("-DXCODE=${XCODE}");
                     ctx.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
                     ctx.decreaseIndent();

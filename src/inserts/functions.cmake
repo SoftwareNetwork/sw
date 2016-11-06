@@ -275,7 +275,7 @@ function(get_configuration_variables)
     get_configuration_with_generator(config_lib_gen)
     get_configuration_exe(config_exe)
 
-    if (NOT EXECUTABLE)
+    if (NOT EXECUTABLE OR LOCAL_PROJECT)
         set(config ${config_lib})
         set(config_dir ${config_lib_gen})
     else()

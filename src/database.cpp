@@ -121,6 +121,7 @@ const TableDescriptors &get_service_tables()
         R"(
             CREATE TABLE "InstalledPackages" (
                 "package" TEXT NOT NULL,
+                "hash" TEXT NOT NULL,
                 PRIMARY KEY ("package")
             );
         )"
@@ -269,6 +270,12 @@ ServiceDatabase::ServiceDatabase()
     for (auto i = db->getNumberOfTables(); i < (int)tds.size(); i++)
         db->execute(tds[i].query);
 
+    increaseNumberOfRuns();
+    checkForUpdates();
+}
+
+void ServiceDatabase::performStartupActions() const
+{
     // perform startup actions on client update
     try
     {
@@ -276,19 +283,23 @@ ServiceDatabase::ServiceDatabase()
         std::set<int> actions_performed; // prevent multiple execution of the same actions
         for (auto &a : startup_actions)
         {
-            if (isActionPerformed(a) || actions_performed.find(a.action) != actions_performed.end())
+            if (isActionPerformed(a) ||
+                actions_performed.find(a.action) != actions_performed.end())
                 continue;
+
             if (!once)
                 LOG_INFO(logger, "Performing actions for the new client version");
             once = true;
+
+            actions_performed.insert(a.action);
+            setActionPerformed(a);
+
             switch (a.action)
             {
             case StartupAction::CLEAR_CACHE:
                 CMakePrinter().clear_cache();
                 break;
             }
-            actions_performed.insert(a.action);
-            setActionPerformed(a);
         }
     }
     catch (std::exception &e)
@@ -296,9 +307,6 @@ ServiceDatabase::ServiceDatabase()
         // do not fail
         LOG_WARN(logger, "Warning: " << e.what());
     }
-
-    increaseNumberOfRuns();
-    checkForUpdates();
 }
 
 void ServiceDatabase::checkForUpdates() const
@@ -431,12 +439,12 @@ bool ServiceDatabase::hasPackageDependenciesHash(const Package &p, const String 
 
 void ServiceDatabase::addInstalledPackage(const Package &p) const
 {
-    db->execute("replace into InstalledPackages values ('" + p.target_name + "')");
+    db->execute("replace into InstalledPackages values ('" + p.target_name + "', '" + p.getFilesystemHash() + "')");
 }
 
 void ServiceDatabase::removeInstalledPackage(const Package &p) const
 {
-    db->execute("delete from InstalledPackages where pacakge = '" + p.target_name + "'");
+    db->execute("delete from InstalledPackages where package = '" + p.target_name + "'");
 }
 
 std::set<Package> ServiceDatabase::getInstalledPackages() const

@@ -180,9 +180,6 @@ void Settings::load_build(const yaml &root)
     EXTRACT_AUTO(configuration);
     EXTRACT_AUTO(generator);
     EXTRACT_AUTO(toolset);
-    EXTRACT_AUTO(type);
-    EXTRACT_AUTO(library_type);
-    EXTRACT_AUTO(executable_type);
     EXTRACT_AUTO(use_shared_libs);
     EXTRACT_AUTO(silent);
     EXTRACT_AUTO(use_cache);
@@ -224,15 +221,17 @@ bool Settings::is_custom_build_dir() const
     return build_dir_type == ConfigType::Local || build_dir_type == ConfigType::None;
 }
 
-void Settings::set_build_dirs(const path &fn)
+void Settings::set_build_dirs(const Package &p)
 {
-    filename = fn.filename().string();
-    filename_without_ext = fn.filename().stem().string();
-    if (filename == CPPAN_FILENAME)
+    if (p.ppath.is_loc())
     {
-        is_dir = true;
-        filename = fn.parent_path().filename().string();
-        filename_without_ext = filename;
+        filename = p.ppath.back();
+        filename_without_ext = p.ppath.back();
+    }
+    else
+    {
+        filename = p.ppath.toString();
+        filename_without_ext = p.ppath.toString();
     }
 
     source_directory = directories.build_dir;
@@ -243,7 +242,7 @@ void Settings::set_build_dirs(const path &fn)
     }
     else
     {
-        source_directory_hash = sha256(normalize_path(fn.string())).substr(0, 8);
+        source_directory_hash = p.getHash().substr(0, 8);
         source_directory /= source_directory_hash;
     }
     binary_directory = source_directory / "build";
@@ -354,24 +353,15 @@ String test_run(const Settings &settings)
     return c;
 }
 
-int Settings::build_package(Config *c)
+int Settings::build_package(Config &c, const Package &p)
 {
     auto printer = Printer::create(printerType);
-    printer->rc = c;
+    printer->rc = &c;
 
     auto config = get_config(*this);
 
-    /*
-    void Settings::prepare_build(Config *c, path fn, const String &cppan)
-
-    fn = fs::canonical(fs::absolute(fn));
-    // set new dirs
-    set_build_dirs(fn);
+    set_build_dirs(p);
     append_build_dirs(config);
-    */
-
-    source_directory = temp_directory_path() / "temp" / fs::unique_path();
-    binary_directory = source_directory / "build";
 
     auto cmake_version = get_cmake_version();
     auto src = directories.storage_dir_cfg / config / "CMakeFiles" / cmake_version;
@@ -386,14 +376,8 @@ int Settings::build_package(Config *c)
     // copy cached cmake config to bin dir
     copy_dir(src, binary_directory / "CMakeFiles" / cmake_version);
 
-    /*SCOPE_EXIT
-    {
-        boost::system::error_code ec;
-        fs::remove_all(source_directory, ec);
-    };*/
-
     // setup printer config
-    c->process(source_directory);
+    c.process(source_directory);
     printer->prepare_build2();
 
     auto ret = generate(c);
@@ -402,17 +386,17 @@ int Settings::build_package(Config *c)
     return build(c);
 }
 
-int Settings::generate(Config *c) const
+int Settings::generate(Config &c) const
 {
     auto printer = Printer::create(printerType);
-    printer->rc = c;
+    printer->rc = &c;
     return printer->generate();
 }
 
-int Settings::build(Config *c) const
+int Settings::build(Config &c) const
 {
     auto printer = Printer::create(printerType);
-    printer->rc = c;
+    printer->rc = &c;
     return printer->build();
 }
 

@@ -34,7 +34,6 @@
 #include "lock.h"
 #include "hash.h"
 #include "hasher.h"
-#include "log.h"
 #include "response.h"
 #include "yaml.h"
 
@@ -292,8 +291,6 @@ void Config::process(const path &p)
     if (rd.rebuild_configs())
         access_table.clear();
 
-    LOG_NO_NEWLINE("Generating build configs... ");
-
     auto printer = Printer::create(settings.printerType);
     printer->access_table = &access_table;
 
@@ -336,8 +333,6 @@ void Config::process(const path &p)
     printer->cc = this;
     printer->d = pkg;
     printer->print_meta();
-
-    LOG("Ok");
 }
 
 void Config::post_download() const

@@ -80,6 +80,8 @@ class ServiceDatabase : public Database
 public:
     ServiceDatabase();
 
+    void performStartupActions() const;
+
     void checkForUpdates() const;
     TimePoint getLastClientUpdateCheck() const;
     void setLastClientUpdateCheck() const;

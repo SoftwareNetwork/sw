@@ -195,6 +195,7 @@ std::vector<Package> extract_packages(path p, const Parameters &params)
         pkg.version = Version("local");
         pkg.flags.set(pfLocalProject);
         pkg.createNames();
+        project.applyFlags(pkg.flags);
         c.setPackage(pkg);
 
         // sources
@@ -298,7 +299,7 @@ int build_package(const Package &p, const path &settings, const String &config)
     c.load(root);
     for (auto &d : c.getDefaultProject().dependencies)
         d.second.createNames();
-    return c.settings.build_package(&c);
+    return c.settings.build_package(c, p);
 }
 
 int build_package(const String &target_name, const path &settings, const String &config)

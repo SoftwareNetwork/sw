@@ -36,6 +36,8 @@
     }                                     \
     bool is_##name() const                \
     {                                     \
+        if (path_elements.empty())        \
+            return false;                 \
         return path_elements[0] == #name; \
     }
 

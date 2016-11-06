@@ -870,6 +870,36 @@ void Project::load(const yaml &root)
         patch.load(patch_node);
 
     EXTRACT_AUTO(name);
+
+    String pt;
+    EXTRACT_VAR(root, pt, "type", String);
+    if (pt == "l" || pt == "lib" || pt == "library")
+        type = ProjectType::Library;
+    else if (pt == "e" || pt == "exe" || pt == "executable")
+        type = ProjectType::Executable;
+
+    String lt;
+    EXTRACT_VAR(root, lt, "library_type", String);
+    if (lt == "static")
+    {
+        library_type = LibraryType::Static;
+        static_only = true;
+    }
+    if (lt == "shared")
+    {
+        library_type = LibraryType::Shared;
+        shared_only = true;
+    }
+    if (lt == "module")
+    {
+        library_type = LibraryType::Module;
+        shared_only = true;
+    }
+
+    String et;
+    EXTRACT_VAR(root, et, "executable_type", String);
+    if (et == "win32")
+        executable_type = ExecutableType::Win32;
 }
 
 void Project::prepareExports() const
@@ -930,4 +960,10 @@ const Files &Project::getSources() const
 void Project::setRelativePath(const ProjectPath &root_project, const String &name)
 {
     ppath = relative_name_to_absolute(root_project, name);
+}
+
+void Project::applyFlags(ProjectFlags &flags) const
+{
+    if (type == ProjectType::Executable)
+        flags.set(pfExecutable);
 }

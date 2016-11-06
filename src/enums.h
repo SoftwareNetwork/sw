@@ -39,6 +39,19 @@ enum class ProjectType
     Directory,
 };
 
+enum class LibraryType
+{
+    Static,
+    Shared,
+    Module, // from CMake
+};
+
+enum class ExecutableType
+{
+    Default,
+    Win32,
+};
+
 enum class ProjectPathNamespace
 {
     None,       // invalid
