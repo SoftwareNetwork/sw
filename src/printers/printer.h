@@ -37,12 +37,14 @@
 #define CPPAN_PROLOG "CPPAN_PROLOG"
 #define CPPAN_EPILOG "CPPAN_EPILOG"
 
+#define CPPAN_HELPERS_TARGET_NAME "CPPAN_HELPERS_TARGET"
+#define CPPAN_HELPERS_TARGET  "${" CPPAN_HELPERS_TARGET_NAME "}"
+
+#define CPPAN_HELPERS_PRIVATE_TARGET_NAME "CPPAN_HELPERS_PRIVATE_TARGET"
+#define CPPAN_HELPERS_PRIVATE_TARGET  "${" CPPAN_HELPERS_PRIVATE_TARGET_NAME "}"
+
 #define CPPAN_LOCAL_BUILD_PREFIX "cppan-build-"
 #define CPPAN_CONFIG_FILENAME "config.cmake"
-
-#define INCLUDE_GUARD_PREFIX "CPPAN_INCLUDE_GUARD_"
-
-extern const String cppan_helpers_target;
 
 extern const std::vector<String> configuration_types;
 extern const std::vector<String> configuration_types_normal;

@@ -30,7 +30,7 @@
 #include <common.h>
 
 int generate(path fn, const String &config);
-int build(path fn, const String &config = String(), bool rebuild = false);
+int build(path fn, const String &config = String());
 int build_only(path fn, const String &config);
 int dry_run(path fn, const String &config);
 

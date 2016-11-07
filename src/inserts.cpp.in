@@ -34,3 +34,4 @@ const String cmake_functions =          R"my_cppan_str(CPPAN_INCLUDE<inserts/fun
 const String cmake_build_file =         R"my_cppan_str(CPPAN_INCLUDE<inserts/build.cmake>)my_cppan_str";
 const String cmake_generate_file =      R"my_cppan_str(CPPAN_INCLUDE<inserts/generate.cmake>)my_cppan_str";
 const String cmake_export_import_file = R"my_cppan_str(CPPAN_INCLUDE<inserts/exports.cmake>)my_cppan_str";
+const String cmake_header =             R"my_cppan_str(CPPAN_INCLUDE<inserts/header.cmake>)my_cppan_str";

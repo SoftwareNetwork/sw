@@ -47,6 +47,7 @@ struct Package
     path getDirSrc() const;
     path getDirObj() const;
     String getHash() const;
+    String getHashShort() const;
     String getFilesystemHash() const;
     path getHashPath() const;
     path getStampFilename() const;

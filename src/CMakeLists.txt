@@ -71,6 +71,7 @@ add_custom_target(inserts_gen
         ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/inserts/generate.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/inserts/exports.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/header.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/inserts/version.rc.in
         ${CMAKE_CURRENT_SOURCE_DIR}/inserts/branch.rc.in
 )

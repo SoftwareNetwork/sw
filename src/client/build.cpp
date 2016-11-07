@@ -27,25 +27,27 @@
 
 #include "build.h"
 
-#include <boost/algorithm/string.hpp>
-
 #include <access_table.h>
 #include <config.h>
 #include <hash.h>
 #include <http.h>
 #include <response.h>
 
+#include <boost/algorithm/string.hpp>
+
+#include <iostream>
+
 struct Parameters
 {
     String config;
-    bool silent = true;
-    bool rebuild = false;
-    bool prepare = true;
-    bool download = true;
+    //bool silent = true;
+    //bool prepare = true;
+    //bool download = true;
 };
 
 std::vector<std::string> extract_comments(const std::string &s);
 int build_package(const Package &p, const path &settings, const String &config);
+int build_package(const Package &p, const Settings &settings);
 
 void download_file(path &fn)
 {
@@ -63,10 +65,10 @@ void download_file(path &fn)
     download_file(dd);
 }
 
-std::vector<Package> extract_packages(path p, const Parameters &params)
+std::tuple<std::vector<Package>, Config> extract_packages(path p, const Parameters &params)
 {
-    if (params.download)
-        download_file(p);
+    //if (params.download)
+    download_file(p);
     p = fs::absolute(p);
 
     auto conf = Config::get_user_config();
@@ -120,8 +122,8 @@ std::vector<Package> extract_packages(path p, const Parameters &params)
         if (!found && !load_ok.empty())
             conf.load(comments[load_ok.front()]);
 
-        conf.settings.silent = params.silent;
-        conf.settings.rebuild = params.rebuild;
+        //conf.settings.silent = params.silent;
+        //conf.settings.rebuild = params.rebuild;
     };
 
     auto build_spec_file = [&](const path &fn)
@@ -184,7 +186,7 @@ std::vector<Package> extract_packages(path p, const Parameters &params)
     {
         auto &project = c.getDefaultProject();
 
-        String spath = "loc." + sha256(normalize_path(p)).substr(0, 10) + ".";
+        String spath = "loc." + sha256_short(normalize_path(p)) + ".";
         if (!project.name.empty())
             spath += project.name;
         else
@@ -209,28 +211,29 @@ std::vector<Package> extract_packages(path p, const Parameters &params)
         packages.push_back(pkg);
     }
     rd.write_index();
-    return packages;
+    return{ packages, conf };
 }
 
 int generate(path fn, const String &config)
 {
     Parameters params;
     params.config = config;
-    params.silent = false;
+    //params.silent = false;
     //auto conf = generate_config(fn, params);
     //return conf.settings.generate(&conf);
     return 0;
 }
 
-int build(path fn, const String &config, bool rebuild)
+int build(path fn, const String &config)
 {
     Parameters params;
     params.config = config;
-    params.rebuild = rebuild;
-    auto pkgs = extract_packages(fn, params);
+    std::vector<Package> pkgs;
+    Config c;
+    std::tie(pkgs, c) = extract_packages(fn, params);
     bool r = true;
     for (auto &pkg : pkgs)
-        r &= build_package(pkg, "", "") == 0;
+        r &= build_package(pkg, c.settings) == 0;
     return r;
 }
 
@@ -277,10 +280,23 @@ int dry_run(path p, const String &config)
 
     Parameters params;
     params.config = config;
-    params.download = false;
+    //params.download = false;
     //auto conf = generate_config(p, params);
     //return conf.settings.build(&conf);
     return 0;
+}
+
+int build_package(const Package &p, const Settings &settings)
+{
+    yaml root;
+    root["dependencies"][p.ppath.toString()] = p.version.toString();
+
+    Config c;
+    c.load(root);
+    c.settings = settings;
+    for (auto &d : c.getDefaultProject().dependencies)
+        d.second.createNames();
+    return c.settings.build_package(c, p);
 }
 
 int build_package(const Package &p, const path &settings, const String &config)
@@ -291,9 +307,10 @@ int build_package(const Package &p, const path &settings, const String &config)
     {
         auto s = YAML::LoadFile(settings.string());
         merge(s, root);
+
+        if (!config.empty())
+            root["local_settings"]["current_build"] = config;
     }
-    if (!config.empty())
-        root["local_settings"]["current_build"] = config;
 
     Config c;
     c.load(root);

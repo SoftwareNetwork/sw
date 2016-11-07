@@ -70,9 +70,14 @@ String Package::getHash() const
     return hash;
 }
 
+String Package::getHashShort() const
+{
+    return shorten_hash(getHash());
+}
+
 String Package::getFilesystemHash() const
 {
-    return getHash().substr(0, 8);
+    return getHashShort();
 }
 
 path Package::getHashPath() const

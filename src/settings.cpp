@@ -133,9 +133,10 @@ void Settings::load_main(const yaml &root, const ConfigType type)
 
     // read these first from local settings
     // and they'll be overriden in bs (if they exist there)
-    EXTRACT_VAR(root, use_cache, "use_cache", bool);
-    EXTRACT_VAR(root, show_ide_projects, "show_ide_projects", bool);
-    EXTRACT_VAR(root, add_run_cppan_target, "add_run_cppan_target", bool);
+    EXTRACT_AUTO(use_cache);
+    EXTRACT_AUTO(show_ide_projects);
+    EXTRACT_AUTO(add_run_cppan_target);
+    EXTRACT_AUTO(cmake_verbose);
 
     // read build settings
     if (type == ConfigType::Local)
@@ -185,6 +186,7 @@ void Settings::load_build(const yaml &root)
     EXTRACT_AUTO(use_cache);
     EXTRACT_AUTO(show_ide_projects);
     EXTRACT_AUTO(add_run_cppan_target);
+    EXTRACT_AUTO(cmake_verbose);
 
     for (int i = 0; i < CMakeConfigurationType::Max; i++)
     {
@@ -242,7 +244,7 @@ void Settings::set_build_dirs(const Package &p)
     }
     else
     {
-        source_directory_hash = p.getHash().substr(0, 8);
+        source_directory_hash = p.getHashShort();
         source_directory /= source_directory_hash;
     }
     binary_directory = source_directory / "build";
@@ -304,8 +306,6 @@ String get_config(const Settings &settings)
 
 String test_run(const Settings &settings)
 {
-    String c;
-
     // do a test build to extract config string
     auto src_dir = temp_directory_path() / "temp" / fs::unique_path();
     auto bin_dir = src_dir / "build";
@@ -341,7 +341,7 @@ String test_run(const Settings &settings)
         throw std::runtime_error("There are errors during test run");
 
     // read cfg
-    c = read_file(bin_dir / CPPAN_CONFIG_FILENAME);
+    auto c = read_file(bin_dir / CPPAN_CONFIG_FILENAME);
     auto cmake_version = get_cmake_version();
 
     // move this to printer some time
@@ -358,7 +358,7 @@ int Settings::build_package(Config &c, const Package &p)
     auto printer = Printer::create(printerType);
     printer->rc = &c;
 
-    auto config = get_config(*this);
+    config = get_config(*this);
 
     set_build_dirs(p);
     append_build_dirs(config);

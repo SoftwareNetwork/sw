@@ -52,20 +52,23 @@ void default_run()
     c.process();
 }
 
+void init()
+{
+    // initial sequence
+    initLogger("info", "", true);
+
+    // initialize CPPAN structures, do not remove
+    Config::get_user_config();
+
+    // initialize internal db
+    auto &sdb = getServiceDatabase();
+    sdb.performStartupActions();
+}
+
 int main(int argc, char *argv[])
 try
 {
-    // initial sequence
-    {
-        initLogger("info", "", true);
-
-        // initialize CPPAN structures, do not remove
-        Config::get_user_config();
-
-        // initialize internal db
-        auto &sdb = getServiceDatabase();
-        sdb.performStartupActions();
-    }
+    init();
 
     // default run
     if (argc == 1)
@@ -189,8 +192,6 @@ try
         return build(options["build"].as<String>(), options["config"].as<String>());
     else if (options().count("build-only"))
         return build_only(options["build-only"].as<String>(), options["config"].as<String>());
-    else if (options().count("rebuild"))
-        return build(options["rebuild"].as<String>(), options["config"].as<String>(), true);
     else if (options().count("generate"))
         return generate(options["generate"].as<String>(), options["config"].as<String>());
     else if (options().count("dry-run"))

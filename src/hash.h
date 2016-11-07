@@ -35,3 +35,6 @@ String hash_to_string(const String &hash);
 
 String sha1(const String &data);
 String sha256(const String &data);
+String sha256_short(const String &data);
+
+String shorten_hash(const String &data);

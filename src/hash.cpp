@@ -66,6 +66,13 @@ String hash_to_string(const uint8_t *hash, size_t hash_size)
     return s;
 }
 
+String shorten_hash(const String &data)
+{
+    if (data.size() <= 8)
+        return data;
+    return data.substr(0, 8);
+}
+
 String sha1(const String &data)
 {
     uint8_t hash[EVP_MAX_MD_SIZE];
@@ -80,4 +87,9 @@ String sha256(const String &data)
     uint32_t hash_size;
     EVP_Digest(data.data(), data.size(), hash, &hash_size, EVP_sha256(), nullptr);
     return hash_to_string(hash, hash_size);
+}
+
+String sha256_short(const String &data)
+{
+    return shorten_hash(sha256(data));
 }

@@ -47,7 +47,6 @@ struct CMakePrinter : Printer
     void parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain = String()) const override;
 
 private:
-    int _generate(bool force = false) const;
     void print_configs();
     void print_helper_file(const path &fn) const;
     void print_meta_config_file(const path &fn) const;

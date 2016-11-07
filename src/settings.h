@@ -86,10 +86,12 @@ struct Settings
     // do not create links to projects (.sln, CMakeLists.txt)
     bool silent = true;
 
+    // following settings can be overriden in current build config
     bool use_cache = true;
     bool show_ide_projects = false;
     // auto re-run cppan when spec file is changed
     bool add_run_cppan_target = false;
+    bool cmake_verbose = false;
 
     // own data
     // maybe mutable?

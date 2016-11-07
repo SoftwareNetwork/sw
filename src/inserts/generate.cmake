@@ -46,7 +46,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         # copy cmake cache for faster bootstrapping
         set(to ${build_dir}/CMakeFiles/${CMAKE_VERSION})
         if (NOT EXISTS ${to})
-            if (EXECUTABLE)
+            if (EXECUTABLE AND NOT LOCAL_PROJECT)
                 set(from ${storage_cfg_dir}/${config_exe}/CMakeFiles/${CMAKE_VERSION})
             else()
                 set(from ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION})
@@ -63,7 +63,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
 
         # prepare variables for child process
         set(OUTPUT_DIR ${config})
-        if (EXECUTABLE)
+        if (EXECUTABLE AND NOT LOCAL_PROJECT)
             # TODO: try to work 0->1 <- why? maybe left as is?
             set(CPPAN_BUILD_SHARED_LIBS 0)
         endif()
@@ -74,11 +74,12 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
         add_variable(GEN_CHILD_VARS CPPAN_COMMAND)
         add_variable(GEN_CHILD_VARS CPPAN_MT_BUILD)
+        add_variable(GEN_CHILD_VARS CPPAN_CMAKE_VERBOSE)
         write_variables_file(GEN_CHILD_VARS ${variables_file})
         #
 
         # call cmake
-        if (EXECUTABLE)
+        if (EXECUTABLE AND NOT LOCAL_PROJECT)
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
@@ -86,7 +87,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
-        else(EXECUTABLE)
+        else()
             if (CMAKE_TOOLCHAIN_FILE)
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
@@ -110,7 +111,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                 )
                 check_result_variable(${ret})
             endif(CMAKE_TOOLCHAIN_FILE)
-        endif(EXECUTABLE)
+        endif()
 
         # store ${import} file hash
         file(MD5 ${import} md5)

@@ -44,15 +44,22 @@ using Lines = std::vector<String>;
 String fix_imports(const Lines &lines_old, const String &old_target, const String new_target)
 {
     Context ctx;
+    ctx.increaseIndent();
     for (auto &line1 : lines_old)
     {
         auto line = line1;
         boost::algorithm::trim(line);
-        line = "    " + line.substr(0, line.find(old_target)) + new_target + line.substr(line.find(old_target) + old_target.size());
+        line = line.substr(0, line.find(old_target)) + new_target + line.substr(line.find(old_target) + old_target.size());
         if (line.find("add_library") == 0 || line.find("add_executable") == 0)
             boost::algorithm::replace_all(line, "IMPORTED", "IMPORTED GLOBAL");
+        else if (line.find("set_target_properties") == 0)
+        {
+            static std::regex r("INTERFACE_LINK_LIBRARIES\\s*\\S+");
+            line = std::regex_replace(line, r, "");
+        }
         ctx.addLine(line);
     }
+    ctx.decreaseIndent();
     ctx.before().addLine("if (NOT TARGET " + new_target + ")");
     ctx.after().addLine("endif()");
     ctx.after().emptyLines(3);

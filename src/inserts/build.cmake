@@ -46,30 +46,30 @@ if (CONFIG)
         "${make}" STREQUAL "" OR
         "${make}" STREQUAL "make-NOTFOUND" OR
         XCODE)
-        if (EXECUTABLE)
-            if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG OR LOCAL_PROJECT)
+        if (EXECUTABLE AND NOT LOCAL_PROJECT)
+                if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
+                    execute_process(
+                        COMMAND ${CMAKE_COMMAND}
+                            --build ${BUILD_DIR}
+                            --config ${CONFIG}
+                        RESULT_VARIABLE ret
+                    )
+                else()
+                    execute_process(
+                        COMMAND ${CMAKE_COMMAND}
+                            --build ${BUILD_DIR}
+                            --config Release
+                        RESULT_VARIABLE ret
+                    )
+                endif()
+        else()
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         --build ${BUILD_DIR}
                         --config ${CONFIG}
                     RESULT_VARIABLE ret
                 )
-            else()
-                execute_process(
-                    COMMAND ${CMAKE_COMMAND}
-                        --build ${BUILD_DIR}
-                        --config Release
-                    RESULT_VARIABLE ret
-                )
-            endif()
-        else(EXECUTABLE)
-            execute_process(
-                COMMAND ${CMAKE_COMMAND}
-                    --build ${BUILD_DIR}
-                    --config ${CONFIG}
-                RESULT_VARIABLE ret
-            )
-        endif(EXECUTABLE)
+        endif()
     else()
         execute_process(
             COMMAND make -j${N_CORES} -C ${BUILD_DIR}

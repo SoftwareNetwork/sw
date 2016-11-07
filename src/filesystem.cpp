@@ -122,6 +122,9 @@ String normalize_path(const path &p)
         return "";
     String s = p.string();
     boost::algorithm::replace_all(s, "\\", "/");
+#ifdef _WIN32
+    boost::to_lower(s);
+#endif
     return s;
 }
 
