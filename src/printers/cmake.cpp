@@ -393,6 +393,7 @@ endif()
 
     // should be after flags
     config_section_title(ctx, "CPPAN include");
+    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
     ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
     ctx.addLine("add_subdirectory(" + normalize_path(bs.cppan_dir) + ")");
     ctx.addLine();
@@ -1632,60 +1633,57 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     }
 
     // copy deps
+    // no copy for non local builds
+    if (d.empty())
     {
-        config_section_title(ctx, "custom actions for dummy target");
+        config_section_title(ctx, "copy dependencies");
 
-        ctx.addLine("# copy dependencies");
         ctx.addLine("if (CPPAN_USE_CACHE)");
         ctx.increaseIndent();
 
-        // no copy for non local builds
-        if (d.empty())
+        ctx.addLine("if (NOT COPY_LIBRARIES_TO_OUTPUT)");
+        ctx.increaseIndent();
+        ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
+        ctx.addLine("if (MSVC OR XCODE)");
+        ctx.addLine("    set(output_dir ${output_dir}/$<CONFIG>)");
+        ctx.addLine("endif()");
+        ctx.addLine("if (CPPAN_BUILD_OUTPUT_DIR)");
+        ctx.addLine("    set(output_dir ${CPPAN_BUILD_OUTPUT_DIR})");
+        ctx.addLine("endif()");
+        ctx.addLine();
+
+        Packages copy_deps;
+        gather_copy_deps(ctx, rd[d].dependencies, copy_deps);
+        for (auto &dp : copy_deps)
         {
-            ctx.addLine("if (NOT COPY_LIBRARIES_TO_OUTPUT)");
+            auto &p = dp.second;
+            // do not copy static only projects
+            if (rd[p].config->getDefaultProject().static_only ||
+                !rd[p].config->getDefaultProject().copy_to_output_dir)
+                continue;
+
+            ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
+            ctx.addLine("if (NOT ${type} STREQUAL STATIC_LIBRARY)");
             ctx.increaseIndent();
-            ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
-            ctx.addLine("if (MSVC OR XCODE)");
-            ctx.addLine("    set(output_dir ${output_dir}/$<CONFIG>)");
-            ctx.addLine("endif()");
-            ctx.addLine("if (CPPAN_BUILD_OUTPUT_DIR)");
-            ctx.addLine("    set(output_dir ${CPPAN_BUILD_OUTPUT_DIR})");
-            ctx.addLine("endif()");
-            ctx.addLine();
-
-            Packages copy_deps;
-            gather_copy_deps(ctx, rd[d].dependencies, copy_deps);
-            for (auto &dp : copy_deps)
-            {
-                auto &p = dp.second;
-                // do not copy static only projects
-                if (rd[p].config->getDefaultProject().static_only ||
-                    !rd[p].config->getDefaultProject().copy_to_output_dir)
-                    continue;
-
-                ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
-                ctx.addLine("if (NOT ${type} STREQUAL STATIC_LIBRARY)");
-                ctx.increaseIndent();
-                ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
-                ctx.increaseIndent();
-                ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-                ctx.increaseIndent();
-                if (d.ppath.is_loc())
-                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + d.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}>");
-                else
-                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
-                ctx.decreaseIndent();
-                ctx.decreaseIndent();
-                ctx.addLine(")");
-                ctx.decreaseIndent();
-                ctx.addLine("endif()");
-                ctx.addLine();
-            }
-
+            ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target + " POST_BUILD");
+            ctx.increaseIndent();
+            ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+            ctx.increaseIndent();
+            if (p.ppath.is_loc())
+                ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}");
+            else
+                ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
+            ctx.decreaseIndent();
+            ctx.decreaseIndent();
+            ctx.addLine(")");
             ctx.decreaseIndent();
             ctx.addLine("endif()");
             ctx.addLine();
         }
+
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
 
         ctx.decreaseIndent();
         ctx.addLine("endif()");
