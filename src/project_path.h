@@ -99,6 +99,11 @@ public:
         return path_elements.back();
     }
 
+    void push_back(const PathElement &pe)
+    {
+        path_elements.push_back(pe);
+    }
+
     bool operator==(const ProjectPath &rhs) const
     {
         return path_elements == rhs.path_elements;

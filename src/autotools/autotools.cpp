@@ -103,48 +103,6 @@ struct ac_processor
     void process_AC_DEFINE(command &c);
 };
 
-int get_end_of_block(const String &s, int i = 1)
-{
-    auto c = s[i - 1];
-    int n_curly = c == '(';
-    int n_square = c == '[';
-    int n_quotes = c == '\"';
-    auto sz = (int)s.size();
-    while ((n_curly > 0 || n_square > 0 || n_quotes > 0) && i < sz)
-    {
-        c = s[i];
-
-        if (c == '\"')
-        {
-            if (n_quotes == 0)
-                i = get_end_of_block(s.c_str(), i + 1) - 1;
-            else if (s[i - 1] == '\\')
-                ;
-            else
-                n_quotes--;
-        }
-        else
-        {
-            switch (c)
-            {
-            case '(':
-            case '[':
-                i = get_end_of_block(s.c_str(), i + 1) - 1;
-                break;
-            case ')':
-                n_curly--;
-                break;
-            case ']':
-                n_square--;
-                break;
-            }
-        }
-
-        i++;
-    }
-    return i;
-}
-
 auto parse_arguments(const String &f)
 {
     int start = 0;
@@ -168,7 +126,7 @@ auto parse_arguments(const String &f)
         switch (c)
         {
         case '\"':
-            i = get_end_of_block(f, i + 1) - 1;
+            i = get_end_of_string_block(f, i + 1) - 1;
             break;
         case ',':
             add_to_s(f.substr(start, i - start));
@@ -176,7 +134,7 @@ auto parse_arguments(const String &f)
             break;
         case '(':
         case '[':
-            i = get_end_of_block(f, i + 1) - 1;
+            i = get_end_of_string_block(f, i + 1) - 1;
             add_to_s(f.substr(start, i - start + 1));
             start = i + 1;
             break;
@@ -189,7 +147,7 @@ auto parse_arguments(const String &f)
 
 auto parse_command(const String &f)
 {
-    auto i = get_end_of_block(f.c_str());
+    auto i = get_end_of_string_block(f.c_str());
     auto s = f.substr(1, i - 2);
     boost::trim(s);
     return parse_arguments(s);

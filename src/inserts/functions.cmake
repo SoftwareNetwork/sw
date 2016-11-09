@@ -308,6 +308,11 @@ endfunction(get_number_of_cores)
 ########################################
 
 function(add_variable array variable)
+    list(FIND ${array}_KEYS "${variable}" found)
+    if(NOT found EQUAL -1)
+        return()
+    endif()
+
     list(APPEND ${array}_TYPES "STRING")
     list(APPEND ${array}_KEYS "${variable}")
     if ("${${variable}}" STREQUAL "")
@@ -320,20 +325,6 @@ function(add_variable array variable)
     set(${array}_KEYS ${${array}_KEYS} PARENT_SCOPE)
     set(${array}_VALUES ${${array}_VALUES} PARENT_SCOPE)
 endfunction(add_variable)
-
-########################################
-# FUNCTION unique_array
-########################################
-
-function(unique_array array)
-    list(REMOVE_DUPLICATES ${array}_TYPES)
-    list(REMOVE_DUPLICATES ${array}_KEYS)
-    list(REMOVE_DUPLICATES ${array}_VALUES)
-
-    set(${array}_TYPES ${${array}_TYPES} PARENT_SCOPE)
-    set(${array}_KEYS ${${array}_KEYS} PARENT_SCOPE)
-    set(${array}_VALUES ${${array}_VALUES} PARENT_SCOPE)
-endfunction(unique_array)
 
 ########################################
 # FUNCTION read_variables_file
@@ -372,9 +363,6 @@ function(read_variables_file array f)
         add_variable(${array} ${k})
     endforeach()
 
-    # keep unique
-    unique_array(${array})
-
     set(${array}_TYPES ${${array}_TYPES} PARENT_SCOPE)
     set(${array}_KEYS ${${array}_KEYS} PARENT_SCOPE)
     set(${array}_VALUES ${${array}_VALUES} PARENT_SCOPE)
@@ -394,9 +382,6 @@ function(write_variables_file array f)
     if (NOT ${lock_result} EQUAL 0)
         message(FATAL_ERROR "Lock error: ${lock_result}")
     endif()
-
-    # keep unique
-    unique_array(${array})
 
     list(LENGTH ${array}_TYPES N)
     math(EXPR N "${N}-1")

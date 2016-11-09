@@ -166,6 +166,8 @@ public:
     Project(const ProjectPath &root_project);
 
     void applyFlags(ProjectFlags &flags) const;
+    void addDependency(const Package &p);
+
     void findSources(path p);
     bool writeArchive(const String &filename) const;
     void prepareExports() const;

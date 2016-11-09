@@ -103,6 +103,7 @@ public:
 
     void addInstalledPackage(const Package &p) const;
     void removeInstalledPackage(const Package &p) const;
+    String getInstalledPackageHash(const Package &p) const;
     std::set<Package> getInstalledPackages() const;
 };
 

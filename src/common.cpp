@@ -120,3 +120,45 @@ String get_cmake_version()
 
     throw std::runtime_error(err);
 }
+
+int get_end_of_string_block(const String &s, int i)
+{
+    auto c = s[i - 1];
+    int n_curly = c == '(';
+    int n_square = c == '[';
+    int n_quotes = c == '\"';
+    auto sz = (int)s.size();
+    while ((n_curly > 0 || n_square > 0 || n_quotes > 0) && i < sz)
+    {
+        c = s[i];
+
+        if (c == '\"')
+        {
+            if (n_quotes == 0)
+                i = get_end_of_string_block(s.c_str(), i + 1) - 1;
+            else if (s[i - 1] == '\\')
+                ;
+            else
+                n_quotes--;
+        }
+        else
+        {
+            switch (c)
+            {
+            case '(':
+            case '[':
+                i = get_end_of_string_block(s.c_str(), i + 1) - 1;
+                break;
+            case ')':
+                n_curly--;
+                break;
+            case ']':
+                n_square--;
+                break;
+            }
+        }
+
+        i++;
+    }
+    return i;
+}

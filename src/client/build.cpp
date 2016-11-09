@@ -186,14 +186,13 @@ std::tuple<std::vector<Package>, Config> extract_packages(path p, const Paramete
     {
         auto &project = c.getDefaultProject();
 
-        String spath = "loc." + sha256_short(normalize_path(p)) + ".";
-        if (!project.name.empty())
-            spath += project.name;
-        else
-            spath += sname;
-
         Package pkg;
-        pkg.ppath = spath;
+        pkg.ppath.push_back("loc");
+        pkg.ppath.push_back(sha256_short(normalize_path(p)));
+        if (!project.name.empty())
+            pkg.ppath.push_back(project.name);
+        else
+            pkg.ppath.push_back(sname);
         pkg.version = Version("local");
         pkg.flags.set(pfLocalProject);
         pkg.createNames();
@@ -288,34 +287,29 @@ int dry_run(path p, const String &config)
 
 int build_package(const Package &p, const Settings &settings)
 {
-    yaml root;
-    root["dependencies"][p.ppath.toString()] = p.version.toString();
-
     Config c;
-    c.load(root);
+    c.getDefaultProject().addDependency(p);
     c.settings = settings;
-    for (auto &d : c.getDefaultProject().dependencies)
-        d.second.createNames();
     return c.settings.build_package(c, p);
 }
 
 int build_package(const Package &p, const path &settings, const String &config)
 {
-    yaml root;
-    root["dependencies"][p.ppath.toString()] = p.version.toString();
+    Config c;
     if (!settings.empty())
     {
+        yaml root;
         auto s = YAML::LoadFile(settings.string());
         merge(s, root);
 
         if (!config.empty())
             root["local_settings"]["current_build"] = config;
+        Config c2;
+        c2.load(root);
+        c.settings = c2.settings;
     }
 
-    Config c;
-    c.load(root);
-    for (auto &d : c.getDefaultProject().dependencies)
-        d.second.createNames();
+    c.getDefaultProject().addDependency(p);
     return c.settings.build_package(c, p);
 }
 

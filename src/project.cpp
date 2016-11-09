@@ -967,3 +967,9 @@ void Project::applyFlags(ProjectFlags &flags) const
     if (type == ProjectType::Executable)
         flags.set(pfExecutable);
 }
+
+void Project::addDependency(const Package &p)
+{
+    auto i = dependencies.insert({ p.ppath.toString(), p });
+    i.first->second.createNames();
+}

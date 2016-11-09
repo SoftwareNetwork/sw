@@ -439,12 +439,27 @@ bool ServiceDatabase::hasPackageDependenciesHash(const Package &p, const String 
 
 void ServiceDatabase::addInstalledPackage(const Package &p) const
 {
+    auto h = p.getFilesystemHash();
+    if (getInstalledPackageHash(p) == h)
+        return;
     db->execute("replace into InstalledPackages values ('" + p.target_name + "', '" + p.getFilesystemHash() + "')");
 }
 
 void ServiceDatabase::removeInstalledPackage(const Package &p) const
 {
     db->execute("delete from InstalledPackages where package = '" + p.target_name + "'");
+}
+
+String ServiceDatabase::getInstalledPackageHash(const Package &p) const
+{
+    String hash;
+    db->execute("select hash from InstalledPackages where package = '" + p.target_name + "'",
+        [&hash](SQLITE_CALLBACK_ARGS)
+    {
+        hash = cols[0];
+        return 0;
+    });
+    return hash;
 }
 
 std::set<Package> ServiceDatabase::getInstalledPackages() const

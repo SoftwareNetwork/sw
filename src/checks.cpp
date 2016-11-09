@@ -454,7 +454,7 @@ void Checks::write_definitions(Context &ctx) const
     {
         ctx.addLine("if (" + s + ")");
         ctx.increaseIndent();
-        ctx.addLine("target_compile_definitions(" CPPAN_HELPERS_TARGET);
+        ctx.addLine("target_compile_definitions(${this}");
         ctx.increaseIndent();
         print_def(value, s);
         using expand_type = int[];
@@ -484,7 +484,7 @@ void Checks::write_definitions(Context &ctx) const
             ctx.addLine("endif()");
             ctx.addLine();
 
-            ctx.addLine("target_compile_definitions(" CPPAN_HELPERS_TARGET);
+            ctx.addLine("target_compile_definitions(${this}");
             ctx.increaseIndent();
             ctx << "INTERFACE " << c->getVariable() << "=" << "${" << c->getVariable() << "}" << Context::eol;
             ctx.decreaseIndent();

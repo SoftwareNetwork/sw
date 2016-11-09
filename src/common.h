@@ -41,6 +41,7 @@ using String = std::string;
 using Strings = std::vector<String>;
 
 Strings split_lines(const String &s);
+int get_end_of_string_block(const String &s, int i = 1);
 
 path get_program();
 String get_program_version();

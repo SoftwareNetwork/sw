@@ -52,11 +52,11 @@ String fix_imports(const Lines &lines_old, const String &old_target, const Strin
         line = line.substr(0, line.find(old_target)) + new_target + line.substr(line.find(old_target) + old_target.size());
         if (line.find("add_library") == 0 || line.find("add_executable") == 0)
             boost::algorithm::replace_all(line, "IMPORTED", "IMPORTED GLOBAL");
-        else if (line.find("set_target_properties") == 0)
+        /*else if (line.find("set_target_properties") == 0)
         {
             static std::regex r("INTERFACE_LINK_LIBRARIES\\s*\\S+");
             line = std::regex_replace(line, r, "");
-        }
+        }*/
         ctx.addLine(line);
     }
     ctx.decreaseIndent();
@@ -86,8 +86,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
 
     // finds all inside round brackets ()
     // also checks that closing bracket ) is not in quotes
-    String basic = R"(\([^\)]*?\))";
-    String add_library = "(add_library|add_executable|set_property|set_target_properties)" + basic;
+    String add_library = "(add_library|add_executable|set_property|set_target_properties)\\(";
 
     Lines lines;
     std::regex r(add_library);
@@ -96,7 +95,11 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     while (std::regex_search(s, m, r))
     {
         exe |= m[1].str() == "add_executable";
-        lines.push_back(m.str());
+
+        auto b = m[1].first - s.begin();
+        auto e = get_end_of_string_block(s, m.suffix().first - s.begin());
+
+        lines.push_back(s.substr(b, e - b));
         s = m.suffix();
     }
 

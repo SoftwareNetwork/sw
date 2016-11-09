@@ -186,7 +186,7 @@ void ResponseData::check_deps_changed()
     // now refresh dependencies database only for remote packages
     // this file (local,current,root) packages will be refreshed anyway
     auto &sdb = getServiceDatabase();
-    for (auto &cc : packages)
+    for (auto &cc : *this)
     {
         Hasher h;
         for (auto &d : cc.second.dependencies)
@@ -199,8 +199,8 @@ void ResponseData::check_deps_changed()
             auto p = Printer::create(cc.second.config->settings.printerType);
             p->clear_export(cc.first.getDirObj());
             cleanPackages(cc.first.target_name, CleanTarget::Lib | CleanTarget::Bin);
+            sdb.setPackageDependenciesHash(cc.first, h.hash);
         }
-        sdb.setPackageDependenciesHash(cc.first, h.hash);
     }
 }
 
@@ -509,7 +509,7 @@ void ResponseData::download_and_unpack()
 
 void ResponseData::post_download()
 {
-    for (auto &cc : packages)
+    for (auto &cc : *this)
         prepare_config(cc);
 }
 
