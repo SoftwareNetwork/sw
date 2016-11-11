@@ -37,7 +37,7 @@ struct Directories
     path storage_dir_cfg;
     path storage_dir_etc;
     path storage_dir_lib;
-    path storage_dir_lnk;
+    //path storage_dir_lnk;
     path storage_dir_obj;
     path storage_dir_src;
     path storage_dir_tmp;

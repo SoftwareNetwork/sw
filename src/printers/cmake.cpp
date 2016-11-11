@@ -776,6 +776,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
         // configs
         ctx.addLine("get_configuration_variables()");
+        ctx.addLine();
 
         // copy exe cmake settings
         ctx.addLine("if (EXECUTABLE AND CPPAN_USE_CACHE)");
@@ -1005,28 +1006,43 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     }
 
     // deps (direct)
-    ctx.addLine("target_link_libraries         (${this}");
-    ctx.increaseIndent();
-    for (auto &dep : rd[d].dependencies)
     {
-        if (dep.second.flags[pfExecutable] ||
-            dep.second.flags[pfIncludeDirectoriesOnly])
-            continue;
-        if (header_only)
-            ctx.addLine("INTERFACE " + dep.second.target_name);
-        else
+        config_section_title(ctx, "dependencies");
+
+        Strings deps;
+        for (auto &dep : rd[d].dependencies)
         {
-            if (dep.second.flags[pfPrivateDependency])
-                ctx.addLine("PRIVATE " + dep.second.target_name);
+            if (dep.second.flags[pfExecutable] ||
+                dep.second.flags[pfIncludeDirectoriesOnly])
+                continue;
+
+            ctx.addLine("if (NOT TARGET " + dep.second.target_name + ")");
+            ctx.addLine("message(FATAL_ERROR \"Target '" + dep.second.target_name + "' is not visible at this place\")");
+            ctx.addLine("endif()");
+            ctx.addLine();
+
+            if (header_only)
+                deps.push_back("INTERFACE " + dep.second.target_name);
             else
-                ctx.addLine("PUBLIC " + dep.second.target_name);
+            {
+                if (dep.second.flags[pfPrivateDependency])
+                    deps.push_back("PRIVATE " + dep.second.target_name);
+                else
+                    deps.push_back("PUBLIC " + dep.second.target_name);
+            }
         }
+
+        ctx.addLine("target_link_libraries         (${this}");
+        ctx.increaseIndent();
+        for (auto &dep : deps)
+            ctx.addLine(dep);
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
     }
-    ctx.decreaseIndent();
-    ctx.addLine(")");
-    ctx.addLine();
 
     // solution folder
+    config_section_title(ctx, "options");
     if (!header_only && !d.flags[pfLocalProject])
     {
         ctx.addLine("set_target_properties         (${this} PROPERTIES");
@@ -1689,14 +1705,6 @@ void CMakePrinter::print_object_export_file(const path &fn) const
     Context ctx;
     file_header(ctx, d);
 
-
-    LOG_INFO(logger, "export for " << d.target_name);
-    if (d.ppath.toString().find("boost.log") != String::npos)
-    {
-
-        LOG_INFO(logger, "export for " << d.target_name);
-    }
-
     for (auto &dp : dd)
     {
         auto &dep = dp.second;
@@ -1833,6 +1841,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
             {
                 auto &d = dp.second;
                 if (d.flags[pfExecutable])
+                    // maybe switch d.target_name and cppan_project_name
                     ctx.addLine("add_dependencies(" + d.target_name + " " + cppan_project_name + ")");
             }
 

@@ -77,13 +77,6 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     if (!ofile)
         throw std::runtime_error("Cannot open the output file for writing");
 
-    if (dep.version.isBranch())
-    {
-        boost::algorithm::replace_all(s, "\r", "");
-        ofile << s;
-        return;
-    }
-
     // finds all inside round brackets ()
     // also checks that closing bracket ) is not in quotes
     String add_library = "(add_library|add_executable|set_property|set_target_properties)\\(";

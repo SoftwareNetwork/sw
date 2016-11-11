@@ -58,6 +58,9 @@ void ResponseData::resolve_dependencies(const Config &c)
     if (c.getProjects().size() > 1)
         throw std::runtime_error("Make sure your config has only one project (call split())");
 
+    if (!packages[c.pkg].dependencies.empty())
+        return;
+
     Packages deps;
 
     // remove some packages

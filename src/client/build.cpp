@@ -169,9 +169,9 @@ std::tuple<std::vector<Package>, Config> extract_packages(path p, const Paramete
         else if (fs::exists(main_fn))
         {
             read_from_cpp(main_fn);
-            sname = p.filename().string();
-            cpp_fn = main_fn;
             p = main_fn;
+            sname = p.filename().string();
+            cpp_fn = p;
         }
         else
             throw std::runtime_error("No candidates {cppan.yml|main.cpp} for reading in directory " + p.string());

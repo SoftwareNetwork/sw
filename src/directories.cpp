@@ -43,7 +43,7 @@ void Directories::set_storage_dir(const path &p)
     SET(cfg);
     SET(etc);
     SET(lib);
-    SET(lnk);
+    //SET(lnk);
     SET(obj);
     SET(src);
     SET(tmp);
