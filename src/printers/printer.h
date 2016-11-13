@@ -59,8 +59,8 @@ struct Printer
     Package d;
     class AccessTable *access_table = nullptr;
     Config *cc = nullptr; // current
-    Config *pc = nullptr; // parent
     Config *rc = nullptr; // root
+    path cwd;
 
     virtual void prepare_build2() = 0;
     virtual void prepare_rebuild() = 0;

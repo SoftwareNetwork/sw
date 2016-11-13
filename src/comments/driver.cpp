@@ -35,44 +35,44 @@
 #define YY_NO_UNISTD_H 1
 #define YY_DECL 1
 #include <lexer.h>
-extern yy::parser::symbol_type yylex(yyscan_t yyscanner, yy::location &loc);
+extern yy_comments::parser::symbol_type ll_commentslex(yyscan_t yyscanner, yy_comments::location &loc);
 
 std::vector<std::string> extract_comments(const std::string &s)
 {
-    ParserDriver driver;
+    CommentsParserDriver driver;
     driver.parse(s);
     return driver.comments;
 }
 
-ParserDriver::ParserDriver()
+CommentsParserDriver::CommentsParserDriver()
 {
 }
 
-yy::parser::symbol_type ParserDriver::lex()
+yy_comments::parser::symbol_type CommentsParserDriver::lex()
 {
-	auto ret = yylex(scanner, location);
+	auto ret = ll_commentslex(scanner, location);
 	return ret;
 }
 
-int ParserDriver::parse(const std::string &s)
+int CommentsParserDriver::parse(const std::string &s)
 {
-    yylex_init(&scanner);
-    yy_scan_string(s.c_str(), scanner);
+    ll_commentslex_init(&scanner);
+    ll_comments_scan_string(s.c_str(), scanner);
     auto res = parse();
-    yylex_destroy(scanner);
+    ll_commentslex_destroy(scanner);
 
     return res;
 }
 
-int ParserDriver::parse()
+int CommentsParserDriver::parse()
 {
-    yy::parser parser(*this);
+    yy_comments::parser parser(*this);
     parser.set_debug_level(debug);
     int res = parser.parse();
     return res;
 }
 
-void ParserDriver::error(const yy::location &l, const std::string &m)
+void CommentsParserDriver::error(const yy_comments::location &l, const std::string &m)
 {
     if (silent)
         return;
@@ -84,7 +84,7 @@ void ParserDriver::error(const yy::location &l, const std::string &m)
         throw std::runtime_error("Error during parse: " + ss.str());
 }
 
-void ParserDriver::error(const std::string& m)
+void CommentsParserDriver::error(const std::string& m)
 {
     if (silent)
         return;

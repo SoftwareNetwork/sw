@@ -35,39 +35,39 @@
 #define YY_NO_UNISTD_H 1
 #define YY_DECL 1
 #include <lexer.h>
-extern yy::parser::symbol_type yylex(yyscan_t yyscanner, yy::location &loc);
+extern yy_bazel::parser::symbol_type ll_bazellex(yyscan_t yyscanner, yy_bazel::location &loc);
 
-ParserDriver::ParserDriver()
+BazelParserDriver::BazelParserDriver()
 {
 }
 
-yy::parser::symbol_type ParserDriver::lex()
+yy_bazel::parser::symbol_type BazelParserDriver::lex()
 {
-	auto ret = yylex(scanner, location);
+	auto ret = ll_bazellex(scanner, location);
 	return ret;
 }
 
-int ParserDriver::parse(const std::string &s)
+int BazelParserDriver::parse(const std::string &s)
 {
     parseMode = Mode::String;
 
-    yylex_init(&scanner);
-    yy_scan_string(s.c_str(), scanner);
+    ll_bazellex_init(&scanner);
+    ll_bazel_scan_string(s.c_str(), scanner);
     auto res = parse();
-    yylex_destroy(scanner);
+    ll_bazellex_destroy(scanner);
 
     return res;
 }
 
-int ParserDriver::parse()
+int BazelParserDriver::parse()
 {
-    yy::parser parser(*this);
+    yy_bazel::parser parser(*this);
     parser.set_debug_level(debug);
     int res = parser.parse();
     return res;
 }
 
-void ParserDriver::error(const yy::location &l, const std::string &m)
+void BazelParserDriver::error(const yy_bazel::location &l, const std::string &m)
 {
     std::ostringstream ss;
     ss << l << " " << m << "\n";
@@ -77,7 +77,7 @@ void ParserDriver::error(const yy::location &l, const std::string &m)
         throw std::runtime_error("Error during bazel parse: " + ss.str());
 }
 
-void ParserDriver::error(const std::string& m)
+void BazelParserDriver::error(const std::string& m)
 {
     std::ostringstream ss;
     ss << m << "\n";

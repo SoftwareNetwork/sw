@@ -32,7 +32,7 @@
 
 #include <grammar.hpp>
 
-class ParserDriver
+class CommentsParserDriver
 {
 public:
     std::vector<std::string> comments;
@@ -40,18 +40,18 @@ public:
     bool can_throw = true;
     bool silent = true;
 
-    ParserDriver();
+    CommentsParserDriver();
 
-    yy::parser::symbol_type lex();
+    yy_comments::parser::symbol_type lex();
     int parse(const std::string &s);
 
-    void error(const yy::location &l, const std::string &m);
+    void error(const yy_comments::location &l, const std::string &m);
     void error(const std::string &m);
 
     // lex & parse
 private:
     void *scanner;
-    yy::location location;
+    yy_comments::location location;
 
     int parse();
 };

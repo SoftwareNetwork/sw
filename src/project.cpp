@@ -30,6 +30,7 @@
 #include "bazel/bazel.h"
 #include "config.h"
 #include "command.h"
+#include "resolver.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -67,6 +68,7 @@ const std::set<String> header_file_extensions{
     ".hpp",
     ".hxx",
     ".h++",
+    ".H++",
     ".HPP",
 };
 
@@ -76,6 +78,7 @@ const std::set<String> source_file_extensions{
     ".cpp",
     ".cxx",
     ".c++",
+    ".C++",
     ".CPP",
     // Objective-C
     ".m",
@@ -227,22 +230,6 @@ void check_file_types(const Files &files, const path &root)
     }
     if (!errors.empty())
         throw std::runtime_error("Project did not pass file checks:\n" + errors);
-}
-
-ProjectPath relative_name_to_absolute(const ProjectPath &root_project, const String &name)
-{
-    ProjectPath ppath;
-    if (name.empty())
-        return ppath;
-    if (ProjectPath(name).is_relative())
-    {
-        if (root_project.empty())
-            throw std::runtime_error("You're using relative names, but 'root_project' is missing");
-        ppath = root_project / name;
-    }
-    else
-        ppath = name;
-    return ppath;
 }
 
 void get_config_insertion(const yaml &n, const String &key, String &dst)
@@ -457,6 +444,14 @@ void Project::findSources(path p)
     if (!header_only) // do not check if forced header_only
         header_only = std::none_of(files.begin(), files.end(), is_valid_source);
 
+    // when we see only headers, mark type as library
+    // useful for local projects
+    if (header_only)
+    {
+        type = ProjectType::Library;
+        pkg.flags.set(pfHeaderOnly);
+    }
+
     auto check_license = [this](auto &name, String *error = nullptr)
     {
         auto license_error = [&error](auto &err)
@@ -537,6 +532,35 @@ void Project::save_dependencies(yaml &node) const
             n[dd.first] = d.version.toAnyVersion();
     }
     node[DEPENDENCIES_NODE] = root;
+}
+
+ProjectPath Project::relative_name_to_absolute(const String &name)
+{
+    ProjectPath ppath;
+    if (name.empty())
+        return ppath;
+    if (ProjectPath(name).is_relative())
+    {
+        if (allow_local_dependencies && (fs::exists(name) || isUrl(name)))
+        {
+            std::set<Package> pkgs;
+            Config c;
+            String n;
+            std::tie(pkgs, c, n) = rd.read_packages_from_file(name);
+            return c.pkg.ppath;
+        }
+        if (allow_relative_project_names)
+        {
+            ppath.push_back(name);
+            return ppath;
+        }
+        if (root_project.empty())
+            throw std::runtime_error("You're using relative names, but 'root_project' is missing");
+        ppath = root_project / name;
+    }
+    else
+        ppath = name;
+    return ppath;
 }
 
 void Project::load(const yaml &root)
@@ -673,82 +697,103 @@ void Project::load(const yaml &root)
 
     // deps
     {
-        auto read_single_dep = [this](auto &deps, const auto &d)
+        auto read_version = [](auto &dependency, const auto &node)
         {
-            if (d.IsScalar())
+            if (!dependency.flags[pfLocalProject])
             {
-                Package dependency;
-                dependency.ppath = relative_name_to_absolute(root_project, d.template as<String>());
-                deps[dependency.ppath.toString()] = dependency;
+                dependency.version = node.template as<String>();
+                return;
             }
-            else if (d.IsMap())
+
+            if (rd.has_local_package(dependency.ppath))
+                dependency.version = Version(LOCAL_VERSION_NAME);
+            else
             {
-                Package dependency;
-                if (d["name"].IsDefined())
-                    dependency.ppath = relative_name_to_absolute(root_project, d["name"].template as<String>());
-                if (d["package"].IsDefined())
-                    dependency.ppath = relative_name_to_absolute(root_project, d["package"].template as<String>());
-                if (dependency.ppath.is_loc())
-                    dependency.flags.set(pfLocalProject);
-                if (d["version"].IsDefined())
-                    dependency.version = d["version"].template as<String>();
-                if (d[INCLUDE_DIRECTORIES_ONLY].IsDefined())
-                    dependency.flags.set(pfIncludeDirectoriesOnly, d[INCLUDE_DIRECTORIES_ONLY].template as<bool>());
-                deps[dependency.ppath.toString()] = dependency;
+                auto nppath = dependency.ppath / node.template as<String>();
+                if (rd.has_local_package(nppath))
+                {
+                    dependency.ppath = nppath;
+                    dependency.version = Version(LOCAL_VERSION_NAME);
+                }
+                else
+                    throw std::runtime_error("Unknown local dependency: " + dependency.ppath.toString());
             }
         };
 
-        get_variety(root, DEPENDENCIES_NODE,
-            [this](const auto &d)
+        auto read_single_dep = [this, &read_version](auto &deps, const auto &d)
         {
             Package dependency;
-            dependency.ppath = relative_name_to_absolute(root_project, d.template as<String>());
+
+            if (d.IsScalar())
+            {
+                dependency.ppath = relative_name_to_absolute(d.template as<String>());
+            }
+            else if (d.IsMap())
+            {
+                if (d["name"].IsDefined())
+                    dependency.ppath = relative_name_to_absolute(d["name"].template as<String>());
+                if (d["package"].IsDefined())
+                    dependency.ppath = relative_name_to_absolute(d["package"].template as<String>());
+            }
+
             if (dependency.ppath.is_loc())
                 dependency.flags.set(pfLocalProject);
-            dependencies[dependency.ppath.toString()] = dependency;
+
+            if (d.IsMap())
+            {
+                if (d["version"].IsDefined())
+                    read_version(dependency, d["version"]);
+                if (d[INCLUDE_DIRECTORIES_ONLY].IsDefined())
+                    dependency.flags.set(pfIncludeDirectoriesOnly, d[INCLUDE_DIRECTORIES_ONLY].template as<bool>());
+            }
+
+            if (dependency.flags[pfLocalProject])
+                dependency.createNames();
+
+            deps[dependency.ppath.toString()] = dependency;
+        };
+
+        get_variety(root, DEPENDENCIES_NODE,
+            [this, &read_single_dep](const auto &d)
+        {
+            read_single_dep(dependencies, d);
         },
             [this, &read_single_dep](const auto &dall)
         {
             for (auto d : dall)
                 read_single_dep(dependencies, d);
         },
-            [this, &read_single_dep](const auto &dall)
+            [this, &read_single_dep, &read_version](const auto &dall)
         {
-            auto get_dep = [this](auto &deps, const auto &d)
+            auto get_dep = [this, &read_version](auto &deps, const auto &d)
             {
                 Package dependency;
-                dependency.ppath = relative_name_to_absolute(root_project, d.first.template as<String>());
+
+                dependency.ppath = relative_name_to_absolute(d.first.template as<String>());
                 if (dependency.ppath.is_loc())
                     dependency.flags.set(pfLocalProject);
+
                 if (d.second.IsScalar())
-                {
-                    dependency.version = d.second.template as<String>();
-                }
+                    read_version(dependency, d.second);
                 else if (d.second.IsMap())
                 {
                     for (const auto &v : d.second)
                     {
                         auto key = v.first.template as<String>();
                         if (key == "version")
-                        {
-                            dependency.version = v.second.template as<String>();
-                        }
+                            read_version(dependency, v.second);
                         else if (key == INCLUDE_DIRECTORIES_ONLY)
                             dependency.flags.set(pfIncludeDirectoriesOnly, v.second.template as<bool>());
-                        // TODO: re-enable when adding patches support
-                        //else if (key == "package_dir")
-                        //    dependency.package_dir_type = packages_dir_type_from_string(v.second.template as<String>());
-                        //else if (key == "patches")
-                        //{
-                        //    for (const auto &p : v.second)
-                        //        dependency.patches.push_back(template as<String>());
-                        //}
                         else
                             throw std::runtime_error("Unknown key: " + key);
                     }
                 }
                 else
                     throw std::runtime_error("Dependency should be a scalar or a map");
+
+                if (dependency.flags[pfLocalProject])
+                    dependency.createNames();
+
                 deps[dependency.ppath.toString()] = dependency;
             };
 
@@ -757,21 +802,20 @@ void Project::load(const yaml &root)
             auto extract_deps = [&dall, this, &get_dep, &read_single_dep](const auto &str, auto &deps)
             {
                 auto &priv = dall[str];
-                if (priv.IsDefined())
+                if (!priv.IsDefined())
+                    return;
+                if (priv.IsMap())
                 {
-                    if (priv.IsMap())
+                    get_map_and_iterate(dall, str,
+                        [this, &get_dep, &deps](const auto &d)
                     {
-                        get_map_and_iterate(dall, str,
-                            [this, &get_dep, &deps](const auto &d)
-                        {
-                            get_dep(deps, d);
-                        });
-                    }
-                    else if (priv.IsSequence())
-                    {
-                        for (auto d : priv)
-                            read_single_dep(deps, d);
-                    }
+                        get_dep(deps, d);
+                    });
+                }
+                else if (priv.IsSequence())
+                {
+                    for (auto d : priv)
+                        read_single_dep(deps, d);
                 }
             };
 
@@ -787,9 +831,7 @@ void Project::load(const yaml &root)
             if (dependencies.empty() && dependencies_private.empty())
             {
                 for (auto d : dall)
-                {
                     get_dep(dependencies, d);
-                }
             }
         });
     }
@@ -959,13 +1001,12 @@ const Files &Project::getSources() const
 
 void Project::setRelativePath(const ProjectPath &root_project, const String &name)
 {
-    ppath = relative_name_to_absolute(root_project, name);
+    ppath = relative_name_to_absolute(name);
 }
 
 void Project::applyFlags(ProjectFlags &flags) const
 {
-    if (type == ProjectType::Executable)
-        flags.set(pfExecutable);
+    flags.set(pfExecutable, type == ProjectType::Executable);
 }
 
 void Project::addDependency(const Package &p)

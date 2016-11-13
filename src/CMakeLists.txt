@@ -131,8 +131,8 @@ set(common_src
     project.h
     project_path.cpp
     project_path.h
-    response.cpp
-    response.h
+    resolver.cpp
+    resolver.h
     settings.cpp
     settings.h
     source.cpp
@@ -173,6 +173,7 @@ target_link_libraries(common
     context
     bazel_parser
     sqlite3
+    extract_comments
 )
 if (WIN32)
     target_link_libraries(common
@@ -205,5 +206,6 @@ endif()
 add_subdirectory(autotools)
 add_subdirectory(bazel)
 add_subdirectory(client)
+add_subdirectory(comments)
 
 ################################################################################

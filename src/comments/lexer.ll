@@ -6,10 +6,10 @@
 
 #define YY_USER_ACTION loc.columns(yyleng);
 
-#define YY_DECL yy::parser::symbol_type yylex(yyscan_t yyscanner, yy::location &loc)
+#define YY_DECL yy_comments::parser::symbol_type yylex(yyscan_t yyscanner, yy_comments::location &loc)
 
-#define MAKE(x) yy::parser::make_ ## x(loc)
-#define MAKE_VALUE(x, v) yy::parser::make_ ## x((v), loc)
+#define MAKE(x) yy_comments::parser::make_ ## x(loc)
+#define MAKE_VALUE(x, v) yy_comments::parser::make_ ## x((v), loc)
 
 std::string comment;
 %}
@@ -21,6 +21,7 @@ std::string comment;
 %option never-interactive
 %option reentrant
 %option noyywrap
+%option prefix="ll_comments"
 
 %x COMMENT
 

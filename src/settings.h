@@ -118,7 +118,7 @@ public:
 
     int generate(Config &c) const;
     int build(Config &c) const;
-    int build_package(Config &c, const Package &p);
+    int build_packages(Config &c, const String &name);
 
     bool checkForUpdates() const;
 
@@ -126,7 +126,7 @@ private:
     void load_main(const yaml &root, const ConfigType type);
     void load_build(const yaml &root);
 
-    void set_build_dirs(const Package &p);
+    void set_build_dirs(const String &name);
     void append_build_dirs(const path &p);
     String get_fs_generator() const;
 };

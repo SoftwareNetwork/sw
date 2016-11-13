@@ -31,6 +31,8 @@
 
 #include <regex>
 
+#define LOCAL_VERSION_NAME "local"
+
 using ProjectVersionId = uint64_t;
 using ProjectVersionNumber = int32_t;
 
@@ -81,6 +83,5 @@ struct Version
     bool operator==(const Version &rhs) const;
     bool operator!=(const Version &rhs) const;
 
-private:
     static bool check_branch_name(const String &n, String *error = nullptr);
 };

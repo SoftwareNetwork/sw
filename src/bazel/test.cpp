@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
 	while (std::getline(ifile, s))
 		f += s + "\n";
 
-	ParserDriver driver;
+    BazelParserDriver driver;
     driver.can_throw = false;
     //driver.debug = true;
 	auto ret = driver.parse(f);

@@ -97,7 +97,7 @@ Values File::getFiles(const Name &name)
 
 File parse(const std::string &s)
 {
-    ParserDriver pd;
+    BazelParserDriver pd;
     pd.parse(s);
     pd.bazel_file.trimQuotes();
     return pd.bazel_file;

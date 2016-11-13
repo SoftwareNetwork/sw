@@ -89,17 +89,22 @@ public:
     ScopedCurrentPath()
     {
         old = fs::current_path();
+        cwd = old;
     }
     ScopedCurrentPath(const path &p)
         : ScopedCurrentPath()
     {
         fs::current_path(p);
+        cwd = p;
     }
     ~ScopedCurrentPath()
     {
         fs::current_path(old);
     }
 
+    path get_cwd() const { return cwd; }
+
 private:
     path old;
+    path cwd;
 };

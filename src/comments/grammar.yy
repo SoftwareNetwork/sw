@@ -24,18 +24,19 @@
 // c++ skeleton and options
 %skeleton "lalr1.cc"
 
+%define api.prefix {yy_comments}
 %define api.value.type variant
 %define api.token.constructor // C++ style of handling variants
 %define parse.assert // check C++ variant types
 
 %code requires // forward decl of C++ driver (our parser) in HPP
 {
-class ParserDriver;
+class CommentsParserDriver;
 }
 
-// param to yy::parser() constructor
+// param to yy_comments::parser() constructor
 // the parsing context
-%param { ParserDriver &driver }
+%param { CommentsParserDriver &driver }
 
 ////////////////////////////////////////
 
@@ -69,7 +70,7 @@ err: ERROR_SYMBOL
 
 %%
 
-void yy::parser::error(const location_type& l, const std::string& m)
+void yy_comments::parser::error(const location_type& l, const std::string& m)
 {
     driver.error(l, m);
 }

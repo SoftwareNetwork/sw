@@ -36,7 +36,7 @@ struct Directories;
 class Executor;
 class SqliteDatabase;
 
-struct ResponseData
+struct Resolver
 {
 public:
     struct PackageConfig
@@ -51,6 +51,10 @@ public:
 
 public:
     void resolve_dependencies(const Config &c);
+    std::tuple<std::set<Package>, Config, String> read_packages_from_file(path p, const String &config_name = String());
+    bool has_local_package(const ProjectPath &ppath) const;
+    void process(const path &p = path());
+
     void write_index() const;
 
     Config *add_config(std::unique_ptr<Config> &&config, bool created);
@@ -76,11 +80,13 @@ private:
     DownloadDependencies download_dependencies_;
     std::map<Package, ProjectVersionId> dep_ids;
     std::set<Package> resolved_packages;
+    std::set<ProjectPath> local_packages;
 
     String host;
     int downloads = 0;
     bool deps_changed = false;
     bool query_local_db = true;
+    bool processing = false;
 
     void getDependenciesFromRemote(const Packages &deps);
     void getDependenciesFromDb(const Packages &deps);
@@ -92,4 +98,4 @@ private:
     void check_deps_changed();
 };
 
-extern ResponseData rd;
+extern Resolver rd;

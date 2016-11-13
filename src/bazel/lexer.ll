@@ -6,10 +6,10 @@
 
 #define YY_USER_ACTION loc.columns(yyleng);
 
-#define YY_DECL yy::parser::symbol_type yylex(yyscan_t yyscanner, yy::location &loc)
+#define YY_DECL yy_bazel::parser::symbol_type yylex(yyscan_t yyscanner, yy_bazel::location &loc)
 
-#define MAKE(x) yy::parser::make_ ## x(loc)
-#define MAKE_VALUE(x, v) yy::parser::make_ ## x((v), loc)
+#define MAKE(x) yy_bazel::parser::make_ ## x(loc)
+#define MAKE_VALUE(x, v) yy_bazel::parser::make_ ## x((v), loc)
 %}
 
 %option nounistd
@@ -19,7 +19,7 @@
 %option never-interactive
 %option reentrant
 %option noyywrap
-
+%option prefix="ll_bazel"
 
 identifier_old_no_integer [_a-zA-Z][_a-zA-Z0-9]*
 

@@ -24,6 +24,7 @@
 // c++ skeleton and options
 %skeleton "lalr1.cc"
 
+%define api.prefix {yy_bazel}
 %define api.value.type variant
 %define api.token.constructor // C++ style of handling variants
 %define parse.assert // check C++ variant types
@@ -32,12 +33,12 @@
 {
 #include "bazel.h"
 
-class ParserDriver;
+class BazelParserDriver;
 }
 
-// param to yy::parser() constructor
+// param to yy_bazel::parser() constructor
 // the parsing context
-%param { ParserDriver &driver }
+%param { BazelParserDriver &driver }
 
 ////////////////////////////////////////
 
@@ -210,7 +211,7 @@ keyword: KEYWORD
 
 %%
 
-void yy::parser::error(const location_type& l, const std::string& m)
+void yy_bazel::parser::error(const location_type& l, const std::string& m)
 {
     driver.error(l, m);
 }

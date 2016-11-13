@@ -34,7 +34,7 @@
 #include "lock.h"
 #include "hash.h"
 #include "hasher.h"
-#include "response.h"
+#include "resolver.h"
 #include "yaml.h"
 
 #include <boost/algorithm/string.hpp>
@@ -188,6 +188,8 @@ void Config::load(yaml root)
     {
         Project project(root_project);
         project.defaults_allowed = defaults_allowed;
+        project.allow_relative_project_names = allow_relative_project_names;
+        project.allow_local_dependencies = allow_local_dependencies;
         project.source = source;
         project.version = version;
         project.load(root);
@@ -272,67 +274,8 @@ void Config::save(const path &p) const
 
 void Config::process(const path &p)
 {
-    if (is_processed)
-        return;
-    is_processed = true;
-
-    std::unique_ptr<ScopedCurrentPath> cp;
-    if (!p.empty())
-        cp = std::make_unique<ScopedCurrentPath>(p);
-
-    // main access table holder
-    AccessTable access_table(directories.storage_dir_etc);
-
-    rd.resolve_dependencies(*this);
-
-    // if we got a download we might need to refresh configs
-    // but we do not know what projects we should clear
-    // so clear the whole AT
-    if (rd.rebuild_configs())
-        access_table.clear();
-
-    auto printer = Printer::create(settings.printerType);
-    printer->access_table = &access_table;
-
-    printer->pc = this;
-    printer->rc = this;
-
-    for (auto &cc : rd)
-    {
-        auto &d = cc.first;
-        auto c = cc.second.config;
-
-        // extra check, report gracefully
-        if (!c)
-            throw std::runtime_error("Config was not created for target: " + d.target_name);
-
-        // gather (merge) checks, options etc.
-        // add more necessary actions here
-        // should be before is_printed condition
-        {
-            checks += c->checks;
-
-            const auto &p = getProject(d.ppath.toString());
-            for (auto &ol : p.options)
-            {
-                if (!ol.second.global_definitions.empty())
-                    c->global_options[ol.first].global_definitions.insert(ol.second.global_definitions.begin(), ol.second.global_definitions.end());
-            }
-        }
-
-        if (c->is_printed)
-            continue;
-        c->is_printed = true;
-
-        printer->d = d;
-        printer->cc = c;
-
-        printer->print();
-    }
-
-    printer->cc = this;
-    printer->d = pkg;
-    printer->print_meta();
+    rd[pkg].config = this;
+    rd.process(p);
 }
 
 void Config::post_download() const

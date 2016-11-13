@@ -25,18 +25,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "response.h"
+#include "resolver.h"
 
+#include "access_table.h"
 #include "config.h"
 #include "database.h"
 #include "directories.h"
 #include "exceptions.h"
 #include "executor.h"
-#include "lock.h"
+#include "hash.h"
 #include "hasher.h"
+#include "lock.h"
 #include "log.h"
 #include "project.h"
 #include "sqlite_database.h"
+
+#include <boost/algorithm/string.hpp>
 
 #include "logger.h"
 DECLARE_STATIC_LOGGER(logger, "response");
@@ -45,7 +49,9 @@ DECLARE_STATIC_LOGGER(logger, "response");
 
 TYPED_EXCEPTION(LocalDbHashException);
 
-ResponseData rd;
+// legacy varname rd
+// was: response data
+Resolver rd;
 
 Executor &getExecutor()
 {
@@ -53,7 +59,93 @@ Executor &getExecutor()
     return executor;
 }
 
-void ResponseData::resolve_dependencies(const Config &c)
+void Resolver::process(const path &p)
+{
+    if (processing)
+        return;
+    processing = true;
+
+    // resolve deps
+    for (auto &c : packages)
+    {
+        // extra check, report gracefully
+        if (!c.second.config)
+            throw std::runtime_error("Config was not created for target: " + c.first.target_name);
+
+        resolve_dependencies(*c.second.config);
+    }
+
+    // set correct package flags to rd[d].dependencies
+    for (auto &c : packages)
+    {
+        for (auto &d : c.second.dependencies)
+        {
+            // i->first equals to d.second but have correct flags!!!
+            // so we assign them to d.second
+            auto i = packages.find(d.second);
+            d.second.flags = i->first.flags;
+        }
+    }
+
+    // main access table holder
+    AccessTable access_table(directories.storage_dir_etc);
+
+    // if we got a download we might need to refresh configs
+    // but we do not know what projects we should clear
+    // so clear the whole AT
+    if (rebuild_configs())
+        access_table.clear();
+
+    auto &root = packages[Package()].config;
+
+    // gather (merge) checks, options etc.
+    // add more necessary actions here
+    for (auto &cc : *this)
+    {
+        auto &d = cc.first;
+        auto c = cc.second.config;
+
+        root->checks += c->checks;
+
+        const auto &p = c->getDefaultProject();
+        for (auto &ol : p.options)
+        {
+            if (!ol.second.global_definitions.empty())
+                c->global_options[ol.first].global_definitions.insert(
+                    ol.second.global_definitions.begin(), ol.second.global_definitions.end());
+        }
+    }
+
+    auto printer = Printer::create(root->settings.printerType);
+    printer->access_table = &access_table;
+    printer->rc = root;
+
+    // print deps
+    for (auto &cc : *this)
+    {
+        auto &d = cc.first;
+        auto c = cc.second.config;
+
+        printer->d = d;
+        printer->cc = c;
+        printer->cwd = d.getDirObj();
+
+        printer->print();
+        printer->print_meta();
+    }
+
+    std::unique_ptr<ScopedCurrentPath> cp;
+    if (!p.empty())
+        cp = std::make_unique<ScopedCurrentPath>(p);
+
+    // print root config
+    printer->cc = root;
+    printer->d = Package();
+    printer->cwd = cp->get_cwd();
+    printer->print_meta();
+}
+
+void Resolver::resolve_dependencies(const Config &c)
 {
     if (c.getProjects().size() > 1)
         throw std::runtime_error("Make sure your config has only one project (call split())");
@@ -179,7 +271,7 @@ void ResponseData::resolve_dependencies(const Config &c)
         resolved_packages.insert(d.second);
 }
 
-void ResponseData::check_deps_changed()
+void Resolver::check_deps_changed()
 {
     // already executed
     if (deps_changed)
@@ -207,7 +299,7 @@ void ResponseData::check_deps_changed()
     }
 }
 
-void ResponseData::getDependenciesFromRemote(const Packages &deps)
+void Resolver::getDependenciesFromRemote(const Packages &deps)
 {
     // prepare request
     ptree request;
@@ -295,7 +387,7 @@ void ResponseData::getDependenciesFromRemote(const Packages &deps)
     }
 }
 
-void ResponseData::getDependenciesFromDb(const Packages &deps)
+void Resolver::getDependenciesFromDb(const Packages &deps)
 {
     auto &db = getPackagesDatabase();
     auto dl_deps = db.findDependencies(deps);
@@ -311,7 +403,7 @@ void ResponseData::getDependenciesFromDb(const Packages &deps)
     }
 }
 
-void ResponseData::download_and_unpack()
+void Resolver::download_and_unpack()
 {
     auto download_dependency = [this](auto &dd)
     {
@@ -510,18 +602,17 @@ void ResponseData::download_and_unpack()
     }
 }
 
-void ResponseData::post_download()
+void Resolver::post_download()
 {
     for (auto &cc : *this)
         prepare_config(cc);
 }
 
-void ResponseData::prepare_config(PackageConfigs::value_type &cc)
+void Resolver::prepare_config(PackageConfigs::value_type &cc)
 {
     auto &p = cc.first;
     auto &c = cc.second.config;
     auto &dependencies = cc.second.dependencies;
-    c->is_dependency = true;
     c->setPackage(p);
     auto &project = c->getDefaultProject();
 
@@ -566,12 +657,12 @@ void ResponseData::prepare_config(PackageConfigs::value_type &cc)
     c->post_download();
 }
 
-ResponseData::PackageConfig &ResponseData::operator[](const Package &p)
+Resolver::PackageConfig &Resolver::operator[](const Package &p)
 {
     return packages[p];
 }
 
-const ResponseData::PackageConfig &ResponseData::operator[](const Package &p) const
+const Resolver::PackageConfig &Resolver::operator[](const Package &p) const
 {
     auto i = packages.find(p);
     if (i == packages.end())
@@ -579,7 +670,7 @@ const ResponseData::PackageConfig &ResponseData::operator[](const Package &p) co
     return i->second;
 }
 
-ResponseData::iterator ResponseData::begin()
+Resolver::iterator Resolver::begin()
 {
     auto i = packages.find(Package());
     if (i != packages.end())
@@ -587,12 +678,12 @@ ResponseData::iterator ResponseData::begin()
     return packages.begin();
 }
 
-ResponseData::iterator ResponseData::end()
+Resolver::iterator Resolver::end()
 {
     return packages.end();
 }
 
-ResponseData::const_iterator ResponseData::begin() const
+Resolver::const_iterator Resolver::begin() const
 {
     auto i = packages.find(Package());
     if (i != packages.end())
@@ -600,19 +691,19 @@ ResponseData::const_iterator ResponseData::begin() const
     return packages.begin();
 }
 
-ResponseData::const_iterator ResponseData::end() const
+Resolver::const_iterator Resolver::end() const
 {
     return packages.end();
 }
 
-void ResponseData::write_index() const
+void Resolver::write_index() const
 {
     auto &sdb = getServiceDatabase();
     for (auto &cc : *this)
         sdb.addInstalledPackage(cc.first);
 }
 
-void ResponseData::read_configs()
+void Resolver::read_configs()
 {
     LOG_NO_NEWLINE("Reading package specs... ");
     for (auto &d : download_dependencies_)
@@ -620,7 +711,7 @@ void ResponseData::read_configs()
     LOG("Ok");
 }
 
-void ResponseData::read_config(const DownloadDependency &d)
+void Resolver::read_config(const DownloadDependency &d)
 {
     if (!fs::exists(d.getDirSrc()))
         return;
@@ -637,7 +728,7 @@ void ResponseData::read_config(const DownloadDependency &d)
     }
 }
 
-Config *ResponseData::add_config(std::unique_ptr<Config> &&config, bool created)
+Config *Resolver::add_config(std::unique_ptr<Config> &&config, bool created)
 {
     auto cfg = config.get();
     auto i = config_store.insert(std::move(config));
@@ -646,17 +737,214 @@ Config *ResponseData::add_config(std::unique_ptr<Config> &&config, bool created)
     return packages[cfg->pkg].config;
 }
 
-Config *ResponseData::add_config(const Package &p)
+Config *Resolver::add_config(const Package &p)
 {
     auto c = std::make_unique<Config>(p.getDirSrc());
     c->setPackage(p);
     return add_config(std::move(c), true);
 }
 
-Config *ResponseData::add_local_config(const Config &co)
+Config *Resolver::add_local_config(const Config &co)
 {
     auto cu = std::make_unique<Config>(co);
     auto cp = add_config(std::move(cu), true);
     resolve_dependencies(*cp);
     return cp;
+}
+
+Strings extract_comments(const String &s);
+
+void download_file(path &fn)
+{
+    // this function checks if fn is url,
+    // tries to download it to current dir and run cppan on it
+    auto s = fn.string();
+    if (!isUrl(s))
+        return;
+    fn = fn.filename();
+
+    DownloadData dd;
+    dd.url = s;
+    dd.file_size_limit = 1'000'000'000;
+    dd.fn = fn;
+    download_file(dd);
+}
+
+std::tuple<std::set<Package>, Config, String> Resolver::read_packages_from_file(path p, const String &config_name)
+{
+    download_file(p);
+    p = fs::canonical(fs::absolute(p));
+
+    auto conf = Config::get_user_config();
+    conf.type = ConfigType::Local;
+    conf.defaults_allowed = false;
+    conf.allow_local_dependencies = true;
+
+    if (!fs::exists(p))
+        throw std::runtime_error("File or directory does not exist: " + p.string());
+
+    auto read_from_cpp = [&conf, &config_name](const path &fn)
+    {
+        auto s = read_file(fn);
+        auto comments = extract_comments(s);
+
+        std::vector<int> load_ok;
+        bool found = false;
+        for (size_t i = 0; i < comments.size(); i++)
+        {
+            bool probably_this = false;
+            try
+            {
+                boost::trim(comments[i]);
+                auto root = YAML::Load(comments[i]);
+
+                auto sz = root.size();
+                if (sz == 0)
+                    continue;
+
+                probably_this = root.IsMap() && (
+                    root["local_settings"].IsDefined() ||
+                    root["files"].IsDefined() ||
+                    root["dependencies"].IsDefined()
+                    );
+
+                if (!config_name.empty())
+                    root["local_settings"]["current_build"] = config_name;
+                conf.load(root);
+
+                if (probably_this)
+                {
+                    found = true;
+                    break;
+                }
+                load_ok.push_back(i);
+            }
+            catch (...)
+            {
+                if (probably_this)
+                    throw;
+            }
+        }
+
+        // fallback to the first comment w/out error
+        if (!found && !load_ok.empty())
+        {
+            auto root = YAML::Load(comments[load_ok.front()]);
+            conf.load(root);
+        }
+    };
+
+    auto build_spec_file = [&](const path &fn)
+    {
+        auto s = read_file(fn);
+        boost::trim(s);
+        conf.load(YAML::Load(s));
+    };
+
+    String sname;
+    path cpp_fn;
+    if (fs::is_regular_file(p))
+    {
+        if (p.filename() == CPPAN_FILENAME)
+        {
+            // allow defaults for spec file
+            conf.defaults_allowed = true;
+
+            // allow relative project names
+            conf.allow_relative_project_names = true;
+
+            build_spec_file(p);
+            sname = p.parent_path().filename().string();
+        }
+        else
+        {
+            read_from_cpp(p);
+            sname = p.filename().stem().string();
+            cpp_fn = p;
+        }
+    }
+    else if (fs::is_directory(p))
+    {
+        auto cppan_fn = p / CPPAN_FILENAME;
+        auto main_fn = p / "main.cpp";
+        if (fs::exists(cppan_fn))
+        {
+            // allow defaults for spec file
+            conf.defaults_allowed = true;
+
+            // allow relative project names
+            conf.allow_relative_project_names = true;
+
+            build_spec_file(cppan_fn);
+            sname = cppan_fn.parent_path().filename().string();
+            p = cppan_fn;
+        }
+        else if (fs::exists(main_fn))
+        {
+            read_from_cpp(main_fn);
+            p = main_fn;
+            sname = p.filename().string();
+            cpp_fn = p;
+        }
+        else
+            throw std::runtime_error("No candidates {cppan.yml|main.cpp} for reading in directory " + p.string());
+    }
+    else
+        throw std::runtime_error("Unknown file type " + p.string());
+
+    // set package for root config
+    {
+        Package pkg;
+        pkg.ppath.push_back("loc");
+        pkg.ppath.push_back(sha256_short(normalize_path(p)));
+        pkg.ppath.push_back(sname);
+        pkg.version = Version(LOCAL_VERSION_NAME);
+        pkg.flags.set(pfLocalProject);
+        pkg.createNames();
+        conf.setPackage(pkg);
+    }
+
+    std::set<Package> packages;
+    auto configs = conf.split();
+    // batch resolve of deps first; merge flags?
+    for (auto &c : configs)
+    {
+        auto &project = c.getDefaultProject();
+
+        Package pkg;
+        pkg.ppath.push_back("loc");
+        pkg.ppath.push_back(sha256_short(normalize_path(p)));
+        if (!project.name.empty() && configs.size() > 1)
+            pkg.ppath.push_back(project.name);
+        else
+            pkg.ppath.push_back(sname);
+        pkg.version = Version(LOCAL_VERSION_NAME);
+        pkg.flags.set(pfLocalProject);
+        pkg.createNames();
+        project.applyFlags(pkg.flags);
+        c.setPackage(pkg);
+        local_packages.insert(pkg.ppath);
+
+        // sources
+        if (!cpp_fn.empty())
+            project.sources.insert(cpp_fn.filename().string());
+        project.findSources(p.parent_path());
+        project.files.erase(CPPAN_FILENAME);
+
+        // update flags and pkg again after findSources()
+        // project type may be different
+        // at this time we take project.pkg, not just local variable (pkg)
+        project.applyFlags(project.pkg.flags);
+        c.setPackage(project.pkg);
+
+        rd.add_local_config(c);
+
+        packages.insert(pkg);
+    }
+    return{ packages, conf, sname };
+}
+
+bool Resolver::has_local_package(const ProjectPath &ppath) const
+{
+    return local_packages.find(ppath) != local_packages.end();
 }

@@ -36,7 +36,7 @@
 #include "../lock.h"
 #include "../inserts.h"
 #include "../log.h"
-#include "../response.h"
+#include "../resolver.h"
 
 #ifdef _WIN32
 #include "shell_link.h"
@@ -238,7 +238,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
         String s;
         auto dir = base_dir;
         // do not "optimize" this condition (whole if..else)
-        if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectoriesOnly])// || p.second.flags[pfLocalProject])
+        if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectoriesOnly])
         {
             dir = directories.storage_dir_src;
             s = p.second.getDirSrc().string();
@@ -267,8 +267,9 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
         }
         else if (p.second.flags[pfLocalProject])
         {
-            ctx.addLine("# " + p.second.target_name);
+            ctx.addLine("if (NOT TARGET " + p.second.target_name + ")");
             ctx.addLine("add_subdirectory(\"" + normalize_path(s) + "\" \"" + normalize_path(p.second.getDirObj() / "build/${config_dir}") + "\")");
+            ctx.addLine("endif()");
         }
         else
         {
@@ -618,8 +619,8 @@ void CMakePrinter::print()
 
 void CMakePrinter::print_meta()
 {
-    print_meta_config_file(fs::current_path() / cc->settings.cppan_dir / cmake_config_filename);
-    print_helper_file(fs::current_path() / cc->settings.cppan_dir / cmake_helpers_filename);
+    print_meta_config_file(cwd / cc->settings.cppan_dir / cmake_config_filename);
+    print_helper_file(cwd / cc->settings.cppan_dir / cmake_helpers_filename);
 
     // print inserted files (they'll be printed only once)
     access_table->write_if_older(directories.get_static_files_dir() / cmake_functions_filename, cmake_functions);
@@ -632,10 +633,10 @@ void CMakePrinter::print_meta()
     if (d.empty())
     {
         // we write some static files to root project anyway
-        access_table->write_if_older(fs::current_path() / cc->settings.cppan_dir / CPP_HEADER_FILENAME, cppan_h);
+        access_table->write_if_older(cwd / cc->settings.cppan_dir / CPP_HEADER_FILENAME, cppan_h);
 
         // checks file
-        access_table->write_if_older(fs::current_path() / cc->settings.cppan_dir / cppan_checks_yml, cc->checks.save());
+        access_table->write_if_older(cwd / cc->settings.cppan_dir / cppan_checks_yml, cc->checks.save());
     }
 }
 
@@ -698,7 +699,7 @@ void CMakePrinter::print_bs_insertion(Context &ctx, const Project &p, const Stri
 
 void CMakePrinter::print_package_config_file(const path &fn) const
 {
-    if (!access_table->must_update_contents(fn))
+    if (!must_update_contents(fn))
         return;
 
     bool header_only = d.flags[pfHeaderOnly];
@@ -1252,6 +1253,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     }
 
     // private definitions
+    if (!header_only)
     {
         config_section_title(ctx, "private definitions");
 
@@ -1446,7 +1448,7 @@ else())");
 
 void CMakePrinter::print_package_actions_file(const path &fn) const
 {
-    if (!access_table->must_update_contents(fn))
+    if (!must_update_contents(fn))
         return;
 
     const auto &p = cc->getProject(d.ppath.toString());
@@ -1486,7 +1488,7 @@ void CMakePrinter::print_package_actions_file(const path &fn) const
 
 void CMakePrinter::print_package_include_file(const path &fn) const
 {
-    if (!access_table->must_update_contents(fn))
+    if (!must_update_contents(fn))
         return;
 
     Context ctx;
@@ -1507,7 +1509,7 @@ void CMakePrinter::print_package_include_file(const path &fn) const
 
 void CMakePrinter::print_object_config_file(const path &fn) const
 {
-    if (!access_table->must_update_contents(fn))
+    if (!must_update_contents(fn))
         return;
 
     Context ctx;
@@ -1569,22 +1571,8 @@ if (MSVC)
 endif()
 )");
 
-    // recursive calls
-    {
-        config_section_title(ctx, "cppan setup");
-
-        ctx.addLine("add_subdirectory(" + normalize_path(cc->settings.cppan_dir) + ")");
-
-        silent = true;
-        ScopedCurrentPath cp(d.getDirObj());
-
-        Config &c = *rd[d].config;
-        c.disable_run_cppan_target = true;
-        c.process();
-
-        if (d.empty())
-            silent = false;
-    }
+    config_section_title(ctx, "cppan setup");
+    ctx.addLine("add_subdirectory(" + normalize_path(cc->settings.cppan_dir) + ")");
 
     // main include
     {
@@ -1601,7 +1589,7 @@ endif()
 
 void CMakePrinter::print_object_include_config_file(const path &fn) const
 {
-    if (!access_table->must_update_contents(fn))
+    if (!must_update_contents(fn))
         return;
 
     const auto &p = cc->getProject(d.ppath.toString());
@@ -1698,7 +1686,7 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
 
 void CMakePrinter::print_object_export_file(const path &fn) const
 {
-    if (!access_table->must_update_contents(fn))
+    if (!must_update_contents(fn))
         return;
 
     const auto &dd = rd[d].dependencies;
@@ -1743,7 +1731,7 @@ void CMakePrinter::print_object_export_file(const path &fn) const
 
 void CMakePrinter::print_object_build_file(const path &fn) const
 {
-    if (!access_table->must_update_contents(fn))
+    if (!must_update_contents(fn))
         return;
 
     const auto &dd = rd[d].dependencies;
@@ -1760,7 +1748,7 @@ void CMakePrinter::print_object_build_file(const path &fn) const
 
 void CMakePrinter::print_meta_config_file(const path &fn) const
 {
-    if (!access_table->must_update_contents(fn))
+    if (!must_update_contents(fn))
         return;
 
     Context ctx;
@@ -1851,7 +1839,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
         }
 
         // re-run cppan when root cppan.yml is changed
-        if (cc->settings.add_run_cppan_target && !cc->disable_run_cppan_target)
+        if (d.empty() && cc->settings.add_run_cppan_target)
         {
             config_section_title(ctx, "cppan regenerator");
             ctx.addLine(R"(set(file ${CMAKE_CURRENT_BINARY_DIR}/run-cppan.txt)
@@ -1904,6 +1892,13 @@ set_target_properties(run-cppan PROPERTIES
                 !rd[p].config->getDefaultProject().copy_to_output_dir)
                 continue;
 
+            if (p.flags[pfLocalProject])
+            {
+                auto &dp = rd[p].config->getDefaultProject();
+                if (dp.type == ProjectType::Library && (dp.library_type == LibraryType::Static && !dp.shared_only))
+                    continue;
+            }
+
             ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
             ctx.addLine("if (NOT ${type} STREQUAL STATIC_LIBRARY)");
             ctx.increaseIndent();
@@ -1912,7 +1907,13 @@ set_target_properties(run-cppan PROPERTIES
             ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
             ctx.increaseIndent();
             if (p.flags[pfLocalProject])
-                ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}");
+            {
+                auto &dp = rd[p].config->getDefaultProject();
+                if (dp.type == ProjectType::Executable)
+                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}");
+                else if (dp.library_type == LibraryType::Shared || dp.shared_only)
+                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_SHARED_LIBRARY_SUFFIX}");
+            }
             else
                 ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
             ctx.decreaseIndent();
@@ -1939,7 +1940,7 @@ set_target_properties(run-cppan PROPERTIES
 
 void CMakePrinter::print_helper_file(const path &fn) const
 {
-    if (!access_table->must_update_contents(fn))
+    if (!must_update_contents(fn))
         return;
 
     Context ctx;
@@ -2033,7 +2034,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
             ctx.addLine("string(RANDOM LENGTH 8 vars_dir)");
             ctx.addLine("set(tmp_dir \"${tmp_dir}/${vars_dir}\")");
             ctx.addLine();
-            ctx.addLine("set(checks_file \"" + normalize_path(fs::current_path() / cc->settings.cppan_dir / cppan_checks_yml) + "\")");
+            ctx.addLine("set(checks_file \"" + normalize_path(cwd / cc->settings.cppan_dir / cppan_checks_yml) + "\")");
             ctx.addLine();
             ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles ${tmp_dir}/CMakeFiles/)");
             ctx.addLine("execute_process(COMMAND ${CPPAN_COMMAND} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file} ${CMAKE_GENERATOR} ${CMAKE_TOOLCHAIN_FILE})");
@@ -2179,4 +2180,12 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
 
     LOG_FLUSH();
     LOG_INFO(logger, "-- This operation took " + std::to_string(t) + " seconds to complete");
+}
+
+bool CMakePrinter::must_update_contents(const path &fn) const
+{
+    if (d.flags[pfLocalProject])
+        return true;
+
+    return access_table->must_update_contents(fn);
 }

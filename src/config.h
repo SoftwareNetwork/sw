@@ -92,12 +92,8 @@ private:
 public:
     ConfigType type{ ConfigType::None };
     bool defaults_allowed = true;
-
-    bool is_processed = false;
-    bool is_printed = false;
-    bool disable_run_cppan_target = false;
-
-    bool is_dependency = false;
+    bool allow_relative_project_names = false;
+    bool allow_local_dependencies = false;
 
     // we create this project for the first time (downloaded, locally created etc.)
     bool created = false;

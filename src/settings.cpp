@@ -223,18 +223,10 @@ bool Settings::is_custom_build_dir() const
     return build_dir_type == ConfigType::Local || build_dir_type == ConfigType::None;
 }
 
-void Settings::set_build_dirs(const Package &p)
+void Settings::set_build_dirs(const String &name)
 {
-    if (p.ppath.is_loc())
-    {
-        filename = p.ppath.back();
-        filename_without_ext = p.ppath.back();
-    }
-    else
-    {
-        filename = p.ppath.toString();
-        filename_without_ext = p.ppath.toString();
-    }
+    filename = name;
+    filename_without_ext = name;
 
     source_directory = directories.build_dir;
     if (directories.build_dir_type == ConfigType::Local ||
@@ -244,7 +236,7 @@ void Settings::set_build_dirs(const Package &p)
     }
     else
     {
-        source_directory_hash = p.getHashShort();
+        source_directory_hash = sha256_short(name);
         source_directory /= source_directory_hash;
     }
     binary_directory = source_directory / "build";
@@ -353,14 +345,14 @@ String test_run(const Settings &settings)
     return c;
 }
 
-int Settings::build_package(Config &c, const Package &p)
+int Settings::build_packages(Config &c, const String &name)
 {
     auto printer = Printer::create(printerType);
     printer->rc = &c;
 
     config = get_config(*this);
 
-    set_build_dirs(p);
+    set_build_dirs(name);
     append_build_dirs(config);
 
     auto cmake_version = get_cmake_version();

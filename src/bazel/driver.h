@@ -34,7 +34,7 @@
 
 #include <grammar.hpp>
 
-class ParserDriver
+class BazelParserDriver
 {
     enum class Mode
     {
@@ -47,18 +47,18 @@ public:
     bool debug = false;
     bool can_throw = true;
 
-    ParserDriver();
+    BazelParserDriver();
 
-    yy::parser::symbol_type lex();
+    yy_bazel::parser::symbol_type lex();
     int parse(const std::string &s);
 
-    void error(const yy::location &l, const std::string &m);
+    void error(const yy_bazel::location &l, const std::string &m);
     void error(const std::string &m);
 
     // lex & parse
 private:
     void *scanner;
-    yy::location location;
+    yy_bazel::location location;
     Mode parseMode;
 
     int parse();

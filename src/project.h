@@ -162,6 +162,12 @@ struct Project
     // allow default values if some parts are missing
     bool defaults_allowed = true;
 
+    // allow relative project paths
+    bool allow_local_dependencies = false;
+
+    // allow relative project paths
+    bool allow_relative_project_names = false;
+
 public:
     Project(const ProjectPath &root_project);
 
@@ -182,6 +188,7 @@ private:
     ProjectPath root_project;
 
     const Files &getSources() const;
+    ProjectPath relative_name_to_absolute(const String &name);
 };
 
 using Projects = std::map<String, Project>;
