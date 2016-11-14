@@ -291,13 +291,6 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
         for (auto &line : includes)
             ctx.addLine(line);
 
-        // double include files to workaround errors with targets visibility
-        /*ctx.addLine();
-        ctx.addLine("# double include files to workaround errors with targets visibility");
-        for (auto &line : includes)
-            ctx.addLine(line);*/
-        //
-
         ctx.decreaseIndent();
         ctx.addLine("else()");
         ctx.increaseIndent();
