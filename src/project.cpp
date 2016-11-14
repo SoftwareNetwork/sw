@@ -482,29 +482,32 @@ void Project::findSources(path p)
         return true;
     };
 
-    if (!license.empty())
+    if (!pkg.flags[pfLocalProject])
     {
-        if (check_license(license))
-            files.insert(license);
-    }
-    else
-    {
-        String error;
-        auto try_license = [&error, &check_license, this](auto &lic)
+        if (!license.empty())
         {
-            if (check_license(lic, &error))
+            if (check_license(license))
+                files.insert(license);
+        }
+        else
+        {
+            String error;
+            auto try_license = [&error, &check_license, this](auto &lic)
             {
-                files.insert(lic);
-                return true;
-            }
-            return false;
-        };
-        if (try_license("LICENSE") ||
-            try_license("COPYING") ||
-            try_license("LICENSE.txt") ||
-            try_license("license.txt") ||
-            try_license("LICENSE.md"))
-            (void)error;
+                if (check_license(lic, &error))
+                {
+                    files.insert(lic);
+                    return true;
+                }
+                return false;
+            };
+            if (try_license("LICENSE") ||
+                try_license("COPYING") ||
+                try_license("LICENSE.txt") ||
+                try_license("license.txt") ||
+                try_license("LICENSE.md"))
+                (void)error;
+        }
     }
 
     if (!root_directory.empty() && !pkg.flags[pfLocalProject])

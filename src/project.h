@@ -116,8 +116,8 @@ struct Project
     Sources sources;
     Sources build_files;
     Sources exclude_from_package;
-    Packages dependencies;
     Files exclude_from_build;
+    Packages dependencies;
     BuildSystemConfigInsertions bs_insertions;
     std::map<String, Options> options;
     Patch patch;

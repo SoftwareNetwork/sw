@@ -292,10 +292,10 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
             ctx.addLine(line);
 
         // double include files to workaround errors with targets visibility
-        ctx.addLine();
+        /*ctx.addLine();
         ctx.addLine("# double include files to workaround errors with targets visibility");
         for (auto &line : includes)
-            ctx.addLine(line);
+            ctx.addLine(line);*/
         //
 
         ctx.decreaseIndent();
@@ -766,11 +766,11 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
         ctx.addLine();
 
-        if (d.flags[pfLocalProject])
+        /*if (d.flags[pfLocalProject])
         {
             ctx.addLine("set(LOCAL_PROJECT 1)");
             ctx.addLine();
-        }
+        }*/
 
         if (d.flags[pfLocalProject])
             ctx.addLine("set(SDIR \"" + normalize_path(p.root_directory) + "\")");
@@ -845,8 +845,8 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             // try to remove twice (double check) - as a file and as a dir
             auto s = normalize_path(f.string());
             cpp_regex_2_cmake_regex(s);
-            ctx.addLine("remove_src    (\"${CMAKE_CURRENT_SOURCE_DIR}/" + s + "\")");
-            ctx.addLine("remove_src_dir(\"${CMAKE_CURRENT_SOURCE_DIR}/" + s + "\")");
+            ctx.addLine("remove_src    (\"${SDIR}/" + s + "\")");
+            ctx.addLine("remove_src_dir(\"${SDIR}/" + s + "\")");
             ctx.addLine();
         }
         ctx.emptyLines(1);
@@ -1630,11 +1630,11 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
     ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();
 
-    if (d.flags[pfLocalProject])
+    /*if (d.flags[pfLocalProject])
     {
         ctx.addLine("set(LOCAL_PROJECT 1)");
         ctx.addLine();
-    }
+    }*/
 
     ctx.addLine(cmake_generate_file);
 
@@ -1792,18 +1792,23 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("if (NOT DEFINED CPPAN_USE_CACHE)");
     ctx.addLine(String("set(CPPAN_USE_CACHE ") + (cc->settings.use_cache ? "1" : "0") + ")");
     ctx.addLine("endif()");
+    ctx.addLine();
     ctx.addLine("if (NOT DEFINED CPPAN_SHOW_IDE_PROJECTS)");
     ctx.addLine(String("set(CPPAN_SHOW_IDE_PROJECTS ") + (cc->settings.show_ide_projects ? "1" : "0") + ")");
+    ctx.addLine("endif()");
+    ctx.addLine();
+    ctx.addLine("if (NOT DEFINED CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
+    ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 0)");
     ctx.addLine("endif()");
     ctx.addLine();
     ctx.addLine("get_configuration_variables()");
     ctx.addLine();
 
-    if (d.flags[pfLocalProject])
+    /*if (d.flags[pfLocalProject])
     {
         ctx.addLine("set(LOCAL_PROJECT 1)");
         ctx.addLine();
-    }
+    }*/
 
     ctx.addLine("include(" + cmake_helpers_filename + ")");
     ctx.addLine();

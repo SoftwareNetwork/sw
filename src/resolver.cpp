@@ -837,7 +837,7 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
 
     auto build_spec_file = [](const path &p)
     {
-        Config c;
+        Config c(ConfigType::Local);
 
         // allow defaults for spec file
         c.defaults_allowed = true;
@@ -891,19 +891,21 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
                 ". Assuming default config.");
 
             conf = build_spec_file(p);
-
             sname = p.filename().string();
         }
     }
     else
         throw std::runtime_error("Unknown file type " + p.string());
 
+    ProjectPath ppath;
+    ppath.push_back("loc");
+    ppath.push_back(sha256_short(normalize_path(p)));
+    ppath.push_back(sname);
+
     // set package for root config
     {
         Package pkg;
-        pkg.ppath.push_back("loc");
-        pkg.ppath.push_back(sha256_short(normalize_path(p)));
-        pkg.ppath.push_back(sname);
+        pkg.ppath = ppath;
         pkg.version = Version(LOCAL_VERSION_NAME);
         pkg.flags.set(pfLocalProject);
         pkg.flags.set(pfDirectDependency, direct_dependency);
@@ -919,9 +921,7 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
         auto &project = c.getDefaultProject();
 
         Package pkg;
-        pkg.ppath.push_back("loc");
-        pkg.ppath.push_back(sha256_short(normalize_path(p)));
-        pkg.ppath.push_back(sname);
+        pkg.ppath = ppath;
         if (!project.name.empty())
             pkg.ppath.push_back(project.name);
         pkg.version = Version(LOCAL_VERSION_NAME);
@@ -949,8 +949,26 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
         project.applyFlags(project.pkg.flags);
         c.setPackage(project.pkg);
 
+        // check if project's deps are relative
+        // this means that there's a local dependency
+        auto deps = project.dependencies;
+        for (auto &d : deps)
+        {
+            if (!d.second.ppath.is_relative())
+                continue;
+
+            project.dependencies.erase(d.second.ppath.toString());
+
+            d.second.ppath = ppath / d.second.ppath;
+            d.second.version = Version(LOCAL_VERSION_NAME);
+            d.second.createNames();
+            project.dependencies.insert({ d.second.ppath.toString(), d.second });
+        }
+
+        // add config to storage
         rd.add_local_config(c);
 
+        // add package for result
         packages.insert(pkg);
     }
 

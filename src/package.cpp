@@ -120,8 +120,8 @@ String Package::getVariableName() const
 Package extractFromString(const String &target)
 {
     Package p;
-    p.ppath = target.substr(0, target.find('-'));
-    p.version = target.substr(target.find('-') + 1);
+    p.ppath = target.substr(0, target.rfind('-'));
+    p.version = target.substr(target.rfind('-') + 1);
     return p;
 }
 
