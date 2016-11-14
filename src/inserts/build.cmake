@@ -31,9 +31,7 @@ if (NOT REBUILD AND EXISTS ${TARGET_FILE})
     return()
 endif()
 
-if (NOT LOCAL_PROJECT)
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${fn1} ${fn2})
-endif()
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${fn1} ${fn2})
 
 # make could be found on win32 os from cygwin for example
 # we deny it on msvc and other build systems except for cygwin
@@ -46,7 +44,7 @@ if (CONFIG)
         "${make}" STREQUAL "" OR
         "${make}" STREQUAL "make-NOTFOUND" OR
         XCODE)
-        if (EXECUTABLE AND NOT LOCAL_PROJECT)
+        if (EXECUTABLE)
                 if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
                     execute_process(
                         COMMAND ${CMAKE_COMMAND}

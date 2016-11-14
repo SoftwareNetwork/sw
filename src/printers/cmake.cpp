@@ -766,12 +766,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
         ctx.addLine();
 
-        /*if (d.flags[pfLocalProject])
-        {
-            ctx.addLine("set(LOCAL_PROJECT 1)");
-            ctx.addLine();
-        }*/
-
         if (d.flags[pfLocalProject])
             ctx.addLine("set(SDIR \"" + normalize_path(p.root_directory) + "\")");
         else
@@ -1406,8 +1400,6 @@ else())");
                     local.addLine("-DN_CORES=${N_CORES}");
                     if (d.empty())
                         local.addLine("-DMULTICORE=1");
-                    if (p.flags[pfLocalProject])
-                        local.addLine("-DLOCAL_PROJECT=1");
                     local.addLine("-DXCODE=${XCODE}");
                     local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
                     local.decreaseIndent();
@@ -1630,12 +1622,6 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
     ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();
 
-    /*if (d.flags[pfLocalProject])
-    {
-        ctx.addLine("set(LOCAL_PROJECT 1)");
-        ctx.addLine();
-    }*/
-
     ctx.addLine(cmake_generate_file);
 
     config_section_title(ctx, "import direct deps");
@@ -1803,12 +1789,6 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
     ctx.addLine("get_configuration_variables()");
     ctx.addLine();
-
-    /*if (d.flags[pfLocalProject])
-    {
-        ctx.addLine("set(LOCAL_PROJECT 1)");
-        ctx.addLine();
-    }*/
 
     ctx.addLine("include(" + cmake_helpers_filename + ")");
     ctx.addLine();

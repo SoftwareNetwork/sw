@@ -46,7 +46,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         # copy cmake cache for faster bootstrapping
         set(to ${build_dir}/CMakeFiles/${CMAKE_VERSION})
         if (NOT EXISTS ${to})
-            if (EXECUTABLE AND NOT LOCAL_PROJECT)
+            if (EXECUTABLE)
                 set(from ${storage_cfg_dir}/${config_exe}/CMakeFiles/${CMAKE_VERSION})
             else()
                 set(from ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION})
@@ -63,7 +63,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
 
         # prepare variables for child process
         set(OUTPUT_DIR ${config})
-        if (EXECUTABLE AND NOT LOCAL_PROJECT)
+        if (EXECUTABLE)
             # TODO: try to work 0->1 <- why? maybe left as is?
             set(CPPAN_BUILD_SHARED_LIBS 0)
         endif()
@@ -79,7 +79,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         #
 
         # call cmake
-        if (EXECUTABLE AND NOT LOCAL_PROJECT)
+        if (EXECUTABLE)
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
