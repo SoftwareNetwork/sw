@@ -357,10 +357,13 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
     for (auto &dp : dd)
     {
         auto &d = dp.second;
-        if ((d.flags[pfExecutable] && !d.flags[pfLocalProject]) ||
-            d.flags[pfHeaderOnly] ||
+        if (d.flags[pfHeaderOnly] ||
             d.flags[pfIncludeDirectoriesOnly])
             continue;
+        if (d.flags[pfExecutable] && !d.flags[pfLocalProject])
+            continue;
+        if (d.flags[pfExecutable] && d.flags[pfLocalProject] && !d.flags[pfDirectDependency])
+            continue; // but maybe copy its deps?
         auto i = out.insert(dp);
         if (i.second)
             gather_copy_deps(ctx, rd[d].dependencies, out);
@@ -703,7 +706,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         return;
 
     bool header_only = d.flags[pfHeaderOnly];
-    const auto &p = cc->getProject(d.ppath.toString());
+    const auto &p = cc->getDefaultProject();
 
     const String cppan_api = CPPAN_EXPORT_PREFIX + d.variable_name;
 
@@ -769,7 +772,10 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             ctx.addLine();
         }
 
-        ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
+        if (d.flags[pfLocalProject])
+            ctx.addLine("set(SDIR \"" + normalize_path(p.root_directory) + "\")");
+        else
+            ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
         ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
         ctx.addLine();
         ctx.addLine("set(LIBRARY_API " + cppan_api + ")");
@@ -905,13 +911,11 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         }
         if (!p.include_directories.empty() || !include_deps.empty())
         {
-            auto get_i_dir = [](const String &i)
+            auto get_i_dir = [this](const String &i)
             {
-                return i;
-                if (i.find("${CMAKE_CURRENT_SOURCE_DIR}") != i.npos ||
-                    i.find("${CMAKE_CURRENT_BINARY_DIR}") != i.npos)
+                if (i.find("${") != i.npos)
                     return i;
-                return "${CMAKE_CURRENT_SOURCE_DIR}/" + i;
+                return "${SDIR}/" + i;
             };
 
             ctx.addLine("target_include_directories    (${this}");
@@ -1299,6 +1303,8 @@ endif()
         ctx.addLine(visibility + " CPPAN_CONFIG=\"${config}\"");
         ctx.addLine(visibility + " CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
         ctx.addLine(visibility + " CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
+        if (d.flags[pfLocalProject])
+            ctx.addLine(visibility + " CPPAN_EXPORT=");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
@@ -1370,11 +1376,13 @@ else())");
 
             if (!build_deps.empty())
             {
-                ctx.addLine("get_configuration_with_generator(config)");
-                ctx.addLine("get_configuration_exe(config_exe)");
+                Context local;
+                local.addLine("get_configuration_with_generator(config)");
+                local.addLine("get_configuration_exe(config_exe)");
 
-                ctx.addLine("add_custom_command(TARGET ${this} PRE_BUILD");
-                ctx.increaseIndent();
+                local.addLine("add_custom_command(TARGET ${this} PRE_BUILD");
+                local.increaseIndent();
+                bool has_build_deps = false;
                 for (auto &dp : build_deps)
                 {
                     auto &p = dp.second;
@@ -1383,30 +1391,34 @@ else())");
                     if (p.flags[pfLocalProject])
                         continue;
 
-                    ctx.addLine("COMMAND ${CMAKE_COMMAND}");
-                    ctx.increaseIndent();
-                    ctx.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
-                    ctx.addLine("-DCONFIG=$<CONFIG>");
+                    has_build_deps = true;
+                    local.addLine("COMMAND ${CMAKE_COMMAND}");
+                    local.increaseIndent();
+                    local.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
+                    local.addLine("-DCONFIG=$<CONFIG>");
                     String cfg = "config";
                     if (p.flags[pfExecutable] && !p.flags[pfLocalProject])
                         cfg = "config_exe";
-                    ctx.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
-                    ctx.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
-                    ctx.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
-                    ctx.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
-                    ctx.addLine("-DN_CORES=${N_CORES}");
+                    local.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
+                    local.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
+                    local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
+                    local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
+                    local.addLine("-DN_CORES=${N_CORES}");
                     if (d.empty())
-                        ctx.addLine("-DMULTICORE=1");
+                        local.addLine("-DMULTICORE=1");
                     if (p.flags[pfLocalProject])
-                        ctx.addLine("-DLOCAL_PROJECT=1");
-                    ctx.addLine("-DXCODE=${XCODE}");
-                    ctx.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
-                    ctx.decreaseIndent();
-                    ctx.addLine();
+                        local.addLine("-DLOCAL_PROJECT=1");
+                    local.addLine("-DXCODE=${XCODE}");
+                    local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
+                    local.decreaseIndent();
+                    local.addLine();
                 }
-                ctx.decreaseIndent();
-                ctx.addLine(")");
-                ctx.addLine();
+                local.decreaseIndent();
+                local.addLine(")");
+                local.addLine();
+
+                if (has_build_deps)
+                    ctx += local;
             }
         }
 
@@ -1451,7 +1463,7 @@ void CMakePrinter::print_package_actions_file(const path &fn) const
     if (!must_update_contents(fn))
         return;
 
-    const auto &p = cc->getProject(d.ppath.toString());
+    const auto &p = cc->getDefaultProject();
     const String cppan_api = CPPAN_EXPORT_PREFIX + d.variable_name;
     Context ctx;
     file_header(ctx, d);
@@ -1592,7 +1604,7 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
     if (!must_update_contents(fn))
         return;
 
-    const auto &p = cc->getProject(d.ppath.toString());
+    const auto &p = cc->getDefaultProject();
     const auto &dd = rd[d].dependencies;
 
     Context ctx;
@@ -2067,6 +2079,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.emptyLines(1);
 
     // dummy (compiled?) target
+    if (d.empty())
     {
         config_section_title(ctx, "dummy compiled target");
         ctx.addLine("# this target will be always built before any other");

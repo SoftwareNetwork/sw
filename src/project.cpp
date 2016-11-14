@@ -324,6 +324,7 @@ Project::Project(const ProjectPath &root_project)
 void Project::findSources(path p)
 {
     // try to auto choose root_directory
+    if (!p.empty())
     {
         std::vector<path> pfiles;
         std::vector<path> pdirs;
@@ -348,7 +349,10 @@ void Project::findSources(path p)
             root_directory = fs::relative(*pdirs.begin(), p);
     }
 
-    p /= root_directory;
+    if (p.empty())
+        p = root_directory;
+    else
+        p /= root_directory;
 
     if (import_from_bazel)
     {
@@ -408,7 +412,12 @@ void Project::findSources(path p)
             for (auto &e : rgxs)
             {
                 if (std::regex_match(s, e.second))
-                    files.insert(s);
+                {
+                    if (pkg.flags[pfLocalProject])
+                        files.insert(p / s);
+                    else
+                        files.insert(s);
+                }
             }
         }
     }
@@ -425,8 +434,11 @@ void Project::findSources(path p)
             {
                 if (std::regex_match(s, e.second))
                 {
-                    to_remove.erase(f);
-                    break;
+                    if (pkg.flags[pfLocalProject])
+                        to_remove.erase(p / f);
+                    else
+                        to_remove.erase(f);
+                    break; // why?
                 }
             }
         }
@@ -495,7 +507,7 @@ void Project::findSources(path p)
             (void)error;
     }
 
-    if (!root_directory.empty())
+    if (!root_directory.empty() && !pkg.flags[pfLocalProject])
         fs::copy_file(CPPAN_FILENAME, root_directory / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
     files.insert(CPPAN_FILENAME);
 }
@@ -716,7 +728,7 @@ void Project::load(const yaml &root)
                     dependency.version = Version(LOCAL_VERSION_NAME);
                 }
                 else
-                    throw std::runtime_error("Unknown local dependency: " + dependency.ppath.toString());
+                    throw std::runtime_error("Unknown local dependency: " + nppath.toString());
             }
         };
 

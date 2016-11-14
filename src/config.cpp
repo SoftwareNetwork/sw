@@ -87,6 +87,11 @@ Config::Config(ConfigType type)
 Config::Config(const path &p)
     : Config()
 {
+    reload(p);
+}
+
+void Config::reload(const path &p)
+{
     if (fs::is_directory(p))
     {
         dir = p;
@@ -123,7 +128,10 @@ void Config::addDefaultProject()
 
 void Config::load_current_config()
 {
-    load(dir / CPPAN_FILENAME);
+    if (fs::exists(dir / CPPAN_FILENAME))
+        load(dir / CPPAN_FILENAME);
+    else
+        addDefaultProject();
 }
 
 void Config::load(const path &p)
@@ -274,8 +282,7 @@ void Config::save(const path &p) const
 
 void Config::process(const path &p)
 {
-    rd[pkg].config = this;
-    rd.process(p);
+    rd.process(p, *this);
 }
 
 void Config::post_download() const

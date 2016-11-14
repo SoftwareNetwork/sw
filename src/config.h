@@ -50,7 +50,7 @@ struct Config
     BuildSystemConfigInsertions bs_insertions;
 
     std::map<String, Options> options;
-    std::map<String, Options> global_options;
+    std::map<String, Options> global_options; // remove?
 
 public:
     Config();
@@ -59,6 +59,7 @@ public:
 
     void load(yaml root);
     void load(const path &p);
+    void reload(const path &p);
     void save(const path &p) const;
 
     static Config get_system_config();

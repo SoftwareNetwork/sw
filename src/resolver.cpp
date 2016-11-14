@@ -59,16 +59,18 @@ Executor &getExecutor()
     return executor;
 }
 
-void Resolver::process(const path &p)
+void Resolver::process(const path &p, Config &root)
 {
     if (processing)
         return;
     processing = true;
 
+    // insert root config
+    packages[root.pkg].config = &root;
+
     // resolve deps
     for (auto &c : packages)
     {
-        // extra check, report gracefully
         if (!c.second.config)
             throw std::runtime_error("Config was not created for target: " + c.first.target_name);
 
@@ -96,8 +98,6 @@ void Resolver::process(const path &p)
     if (rebuild_configs())
         access_table.clear();
 
-    auto &root = packages[Package()].config;
-
     // gather (merge) checks, options etc.
     // add more necessary actions here
     for (auto &cc : *this)
@@ -105,7 +105,7 @@ void Resolver::process(const path &p)
         auto &d = cc.first;
         auto c = cc.second.config;
 
-        root->checks += c->checks;
+        root.checks += c->checks;
 
         const auto &p = c->getDefaultProject();
         for (auto &ol : p.options)
@@ -116,9 +116,9 @@ void Resolver::process(const path &p)
         }
     }
 
-    auto printer = Printer::create(root->settings.printerType);
+    auto printer = Printer::create(root.settings.printerType);
     printer->access_table = &access_table;
-    printer->rc = root;
+    printer->rc = &root;
 
     // print deps
     for (auto &cc : *this)
@@ -139,7 +139,7 @@ void Resolver::process(const path &p)
         cp = std::make_unique<ScopedCurrentPath>(p);
 
     // print root config
-    printer->cc = root;
+    printer->cc = &root;
     printer->d = Package();
     printer->cwd = cp->get_cwd();
     printer->print_meta();
@@ -770,7 +770,8 @@ void download_file(path &fn)
     download_file(dd);
 }
 
-std::tuple<std::set<Package>, Config, String> Resolver::read_packages_from_file(path p, const String &config_name)
+std::tuple<std::set<Package>, Config, String>
+Resolver::read_packages_from_file(path p, const String &config_name, bool direct_dependency)
 {
     download_file(p);
     p = fs::canonical(fs::absolute(p));
@@ -834,11 +835,18 @@ std::tuple<std::set<Package>, Config, String> Resolver::read_packages_from_file(
         }
     };
 
-    auto build_spec_file = [&](const path &fn)
+    auto build_spec_file = [](const path &p)
     {
-        auto s = read_file(fn);
-        boost::trim(s);
-        conf.load(YAML::Load(s));
+        Config c;
+
+        // allow defaults for spec file
+        c.defaults_allowed = true;
+
+        // allow relative project names
+        c.allow_relative_project_names = true;
+
+        c.reload(p);
+        return c;
     };
 
     String sname;
@@ -847,13 +855,7 @@ std::tuple<std::set<Package>, Config, String> Resolver::read_packages_from_file(
     {
         if (p.filename() == CPPAN_FILENAME)
         {
-            // allow defaults for spec file
-            conf.defaults_allowed = true;
-
-            // allow relative project names
-            conf.allow_relative_project_names = true;
-
-            build_spec_file(p);
+            conf = build_spec_file(p.parent_path());
             sname = p.parent_path().filename().string();
         }
         else
@@ -865,17 +867,14 @@ std::tuple<std::set<Package>, Config, String> Resolver::read_packages_from_file(
     }
     else if (fs::is_directory(p))
     {
+        // config.load() will use proper defaults
+        ScopedCurrentPath cp(p);
+
         auto cppan_fn = p / CPPAN_FILENAME;
         auto main_fn = p / "main.cpp";
         if (fs::exists(cppan_fn))
         {
-            // allow defaults for spec file
-            conf.defaults_allowed = true;
-
-            // allow relative project names
-            conf.allow_relative_project_names = true;
-
-            build_spec_file(cppan_fn);
+            conf = build_spec_file(cppan_fn.parent_path());
             sname = cppan_fn.parent_path().filename().string();
             p = cppan_fn;
         }
@@ -883,11 +882,18 @@ std::tuple<std::set<Package>, Config, String> Resolver::read_packages_from_file(
         {
             read_from_cpp(main_fn);
             p = main_fn;
-            sname = p.filename().string();
+            sname = p.filename().stem().string();
             cpp_fn = p;
         }
         else
-            throw std::runtime_error("No candidates {cppan.yml|main.cpp} for reading in directory " + p.string());
+        {
+            LOG_DEBUG(logger, "No candidates {cppan.yml|main.cpp} for reading in directory " + p.string() +
+                ". Assuming default config.");
+
+            conf = build_spec_file(p);
+
+            sname = p.filename().string();
+        }
     }
     else
         throw std::runtime_error("Unknown file type " + p.string());
@@ -900,6 +906,7 @@ std::tuple<std::set<Package>, Config, String> Resolver::read_packages_from_file(
         pkg.ppath.push_back(sname);
         pkg.version = Version(LOCAL_VERSION_NAME);
         pkg.flags.set(pfLocalProject);
+        pkg.flags.set(pfDirectDependency, direct_dependency);
         pkg.createNames();
         conf.setPackage(pkg);
     }
@@ -914,12 +921,12 @@ std::tuple<std::set<Package>, Config, String> Resolver::read_packages_from_file(
         Package pkg;
         pkg.ppath.push_back("loc");
         pkg.ppath.push_back(sha256_short(normalize_path(p)));
-        if (!project.name.empty() && configs.size() > 1)
+        pkg.ppath.push_back(sname);
+        if (!project.name.empty())
             pkg.ppath.push_back(project.name);
-        else
-            pkg.ppath.push_back(sname);
         pkg.version = Version(LOCAL_VERSION_NAME);
         pkg.flags.set(pfLocalProject);
+        pkg.flags.set(pfDirectDependency, direct_dependency);
         pkg.createNames();
         project.applyFlags(pkg.flags);
         c.setPackage(pkg);
@@ -927,8 +934,13 @@ std::tuple<std::set<Package>, Config, String> Resolver::read_packages_from_file(
 
         // sources
         if (!cpp_fn.empty())
+        {
+            // clear default sources first
+            project.sources.clear();
             project.sources.insert(cpp_fn.filename().string());
-        project.findSources(p.parent_path());
+        }
+        project.root_directory = fs::is_regular_file(p) ? p.parent_path() : p;
+        project.findSources(path());
         project.files.erase(CPPAN_FILENAME);
 
         // update flags and pkg again after findSources()
@@ -941,6 +953,11 @@ std::tuple<std::set<Package>, Config, String> Resolver::read_packages_from_file(
 
         packages.insert(pkg);
     }
+
+    // write local packages to index
+    // do not remove
+    rd.write_index();
+
     return{ packages, conf, sname };
 }
 

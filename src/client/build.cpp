@@ -50,7 +50,7 @@ int build(path fn, const String &config)
     std::set<Package> pkgs;
     Config c;
     String name;
-    std::tie(pkgs, c, name) = rd.read_packages_from_file(fn, config);
+    std::tie(pkgs, c, name) = rd.read_packages_from_file(fn, config, true);
     return build_packages(name, pkgs, c.settings) == 0;
 }
 

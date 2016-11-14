@@ -51,9 +51,10 @@ public:
 
 public:
     void resolve_dependencies(const Config &c);
-    std::tuple<std::set<Package>, Config, String> read_packages_from_file(path p, const String &config_name = String());
+    std::tuple<std::set<Package>, Config, String>
+    read_packages_from_file(path p, const String &config_name = String(), bool direct_dependency = false);
     bool has_local_package(const ProjectPath &ppath) const;
-    void process(const path &p = path());
+    void process(const path &p, Config &root);
 
     void write_index() const;
 
@@ -72,6 +73,9 @@ public:
 
     const_iterator begin() const;
     const_iterator end() const;
+
+    iterator find(const PackageConfigs::key_type &k) { return packages.find(k); }
+    const_iterator find(const PackageConfigs::key_type &k) const { return packages.find(k); }
 
 private:
     PackageConfigs packages;
