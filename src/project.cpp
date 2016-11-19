@@ -245,8 +245,7 @@ void load_source_and_version(const yaml &root, Source &source, Version &version)
     if (!ver.empty())
         version = Version(ver);
 
-    source = load_source(root);
-    if (source.which() == 0)
+    if (load_source(root, source) && source.which() == 0)
     {
         auto &git = boost::get<Git>(source);
         if (ver.empty())
@@ -580,7 +579,7 @@ ProjectPath Project::relative_name_to_absolute(const String &name)
 
 void Project::load(const yaml &root)
 {
-    source = load_source(root);
+    load_source(root, source);
 
     EXTRACT_VAR(root, empty, "empty", bool);
 

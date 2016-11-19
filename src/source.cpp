@@ -29,12 +29,11 @@
 
 #include "templates.h"
 
-Source load_source(const yaml &root)
+bool load_source(const yaml &root, Source &source)
 {
-    Source source;
     auto &src = root["source"];
     if (!src.IsDefined())
-        return source;
+        return false;
 
     auto error = "Only one source must be specified";
 
@@ -60,7 +59,7 @@ Source load_source(const yaml &root)
             throw std::runtime_error(error);
     }
 
-    return source;
+    return true;
 }
 
 void save_source(yaml &root, const Source &source)

@@ -90,7 +90,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
         exe |= m[1].str() == "add_executable";
 
         auto b = m[1].first - s.begin();
-        auto e = get_end_of_string_block(s, m.suffix().first - s.begin());
+        auto e = get_end_of_string_block(s, (int)(m.suffix().first - s.begin()));
 
         lines.push_back(s.substr(b, e - b));
         s = m.suffix();
