@@ -789,7 +789,7 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
         auto s = read_file(fn);
         auto comments = extract_comments(s);
 
-        std::vector<int> load_ok;
+        std::vector<size_t> load_ok;
         bool found = false;
         for (size_t i = 0; i < comments.size(); i++)
         {

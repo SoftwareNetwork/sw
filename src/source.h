@@ -71,5 +71,5 @@ struct RemoteFile { String url; };
 // do not add local
 using Source = boost::variant<Git, RemoteFile>;
 
-Source load_source(const yaml &root);
+bool load_source(const yaml &root, Source &source);
 void save_source(yaml &root, const Source &source);
