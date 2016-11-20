@@ -151,6 +151,8 @@ public:
     bool is_root_of(const ProjectPath &p) const;
 
     PathElement get_owner() const;
+    auto get_name() const { return back(); }
+    ProjectPath parent() const { return PathElements(path_elements.begin(), path_elements.end() - 1); }
 
     bool operator<(const ProjectPath &rhs) const;
 
