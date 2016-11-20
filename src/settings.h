@@ -37,6 +37,24 @@
 
 #include "printers/printer.h"
 
+#define DEFAULT_REMOTE_NAME "origin"
+
+struct Remote
+{
+    using Url = String;
+    using SourcesUrls = std::vector<Url>;
+
+    String name;
+    Url url;
+    String data_dir;
+    SourcesUrls sources_urls;
+    String user;
+    String token;
+};
+
+using Remotes = std::vector<Remote>;
+extern const Remotes default_remotes;
+
 struct Settings
 {
     enum CMakeConfigurationType
@@ -49,9 +67,11 @@ struct Settings
         Max
     };
 
-    // sys/user config settings
-    String host{ "https://cppan.org/" };
+    // connection
+    Remotes remotes{ default_remotes };
     ProxySettings proxy;
+
+    // sys/user config settings
     ConfigType storage_dir_type{ ConfigType::User };
     path storage_dir;
     ConfigType build_dir_type{ ConfigType::System };
