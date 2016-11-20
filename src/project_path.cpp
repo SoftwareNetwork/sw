@@ -31,10 +31,16 @@
 
 ProjectPath::ProjectPath(String s)
 {
+    if (s.size() > 2048)
+        throw std::runtime_error("Too long project path (must be <= 2048)");
+
     auto prev = s.begin();
     for (auto i = s.begin(); i != s.end(); ++i)
     {
         auto &c = *i;
+        if (c < 0 || c > 127 ||
+            !(isalnum(c) || c == '.' || c == '_'))
+            throw std::runtime_error("Bad symbol in project name");
         if (isupper(c))
             c = (char)tolower(c);
         if (c == '.')

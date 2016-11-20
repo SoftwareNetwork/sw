@@ -261,23 +261,13 @@ const Project &Config::getDefaultProject() const
 
 void Config::save(const path &p) const
 {
-#define EMIT_KV(k, v)          \
-    do                         \
-    {                          \
-        e << YAML::Key << k;   \
-        e << YAML::Value << v; \
-    } while (0)
-#define EMIT_KV_SAME(k) EMIT_KV(#k, k)
-
     std::ofstream o(p.string());
     if (!o)
         throw std::runtime_error("Cannot open file: " + p.string());
-    YAML::Emitter e(o);
-    e.SetIndent(4);
-    e << YAML::BeginMap;
-    EMIT_KV("host", settings.host);
-    EMIT_KV("storage_dir", settings.storage_dir.string());
-    e << YAML::EndMap;
+    yaml root;
+    root["remotes"][DEFAULT_REMOTE_NAME]["url"] = settings.remotes[0].url;
+    root["storage_dir"] = settings.storage_dir.string();
+    o << YAML::Dump(root);
 }
 
 void Config::process(const path &p)

@@ -34,9 +34,11 @@
 #include <access_table.h>
 #include <config.h>
 #include <database.h>
+#include <filesystem.h>
 #include <http.h>
 #include <logger.h>
 #include <printers/cmake.h>
+#include <resolver.h>
 
 #include "build.h"
 #include "fix_imports.h"
@@ -127,6 +129,234 @@ try
         {
             auto &db = getPackagesDatabase();
             db.listPackages(argc > 2 ? argv[2] : "");
+            return 0;
+        }
+
+        // normal options
+        if (cmd == "add")
+        {
+            if (argc < 3)
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan add project|version [remote] name ...\n";
+                return 1;
+            }
+
+            int arg = 2;
+            String what = argv[arg++];
+            if (what == "project")
+            {
+                auto proj_usage = []
+                {
+                    std::cout << "invalid number of arguments\n";
+                    std::cout << "usage: cppan add project [remote] name [type]\n";
+                };
+
+                if (argc < arg + 1)
+                {
+                    proj_usage();
+                    return 1;
+                }
+
+                String remote = DEFAULT_REMOTE_NAME;
+                ProjectPath p(argv[arg++]);
+                if (p.is_relative())
+                {
+                    remote = argv[arg - 1];
+
+                    if (argc < arg + 1)
+                    {
+                        proj_usage();
+                        return 1;
+                    }
+
+                    p = ProjectPath(argv[arg++]);
+                }
+
+                // type
+                ProjectType type = ProjectType::Library;
+                if (argc > arg)
+                {
+                    String t = argv[arg++];
+                    if (t == "l" || t == "lib" || t == "library")
+                        type = ProjectType::Library;
+                    else if (t == "e" || t == "exe" || t == "executable")
+                        type = ProjectType::Executable;
+                    else if (t == "r" || t == "root" || t == "root_project")
+                        type = ProjectType::RootProject;
+                    else if (t == "d" || t == "dir" || t == "directory")
+                        type = ProjectType::Directory;
+                }
+
+                auto c = Config::get_user_config();
+                auto i = std::find_if(c.settings.remotes.begin(), c.settings.remotes.end(),
+                    [&remote](auto &v) { return v.name == remote; });
+                if (i == c.settings.remotes.end())
+                {
+                    std::cout << "unknown remote: " << remote << "\n";
+                    return 1;
+                }
+
+                rd.add_project(*i, p, type);
+                return 0;
+            }
+
+            if (what == "version")
+            {
+                auto proj_usage = []
+                {
+                    std::cout << "invalid number of arguments\n";
+                    std::cout << "usage: cppan add version [remote] name cppan.yml\n";
+                };
+
+                if (argc < arg + 1)
+                {
+                    proj_usage();
+                    return 1;
+                }
+
+                String remote = DEFAULT_REMOTE_NAME;
+                ProjectPath p(argv[arg++]);
+                if (p.is_relative())
+                {
+                    remote = argv[arg - 1];
+
+                    if (argc < arg + 1)
+                    {
+                        proj_usage();
+                        return 1;
+                    }
+
+                    p = ProjectPath(argv[arg++]);
+                }
+
+                if (argc < arg + 1)
+                {
+                    proj_usage();
+                    return 1;
+                }
+
+                path fn = argv[arg++];
+
+                auto c = Config::get_user_config();
+                auto i = std::find_if(c.settings.remotes.begin(), c.settings.remotes.end(),
+                    [&remote](auto &v) { return v.name == remote; });
+                if (i == c.settings.remotes.end())
+                {
+                    std::cout << "unknown remote: " << remote << "\n";
+                    return 1;
+                }
+
+                rd.add_version(*i, p, read_file(fn));
+                return 0;
+            }
+
+            return 0;
+        }
+
+        if (cmd == "remove")
+        {
+            if (argc < 3)
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan remove project|version [remote] name ...\n";
+                return 1;
+            }
+
+            int arg = 2;
+            String what = argv[arg++];
+            if (what == "project")
+            {
+                auto proj_usage = []
+                {
+                    std::cout << "invalid number of arguments\n";
+                    std::cout << "usage: cppan remove project [remote] name\n";
+                };
+
+                if (argc < arg + 1)
+                {
+                    proj_usage();
+                    return 1;
+                }
+
+                String remote = DEFAULT_REMOTE_NAME;
+                ProjectPath p(argv[arg++]);
+                if (p.is_relative())
+                {
+                    remote = argv[arg - 1];
+
+                    if (argc < arg + 1)
+                    {
+                        proj_usage();
+                        return 1;
+                    }
+
+                    p = ProjectPath(argv[arg++]);
+                }
+
+                auto c = Config::get_user_config();
+                auto i = std::find_if(c.settings.remotes.begin(), c.settings.remotes.end(),
+                    [&remote](auto &v) { return v.name == remote; });
+                if (i == c.settings.remotes.end())
+                {
+                    std::cout << "unknown remote: " << remote << "\n";
+                    return 1;
+                }
+
+                rd.remove_project(*i, p);
+                return 0;
+            }
+
+            if (what == "version")
+            {
+                auto proj_usage = []
+                {
+                    std::cout << "invalid number of arguments\n";
+                    std::cout << "usage: cppan remove version [remote] name version\n";
+                };
+
+                if (argc < arg + 1)
+                {
+                    proj_usage();
+                    return 1;
+                }
+
+                String remote = DEFAULT_REMOTE_NAME;
+                ProjectPath p(argv[arg++]);
+                if (p.is_relative())
+                {
+                    remote = argv[arg - 1];
+
+                    if (argc < arg + 1)
+                    {
+                        proj_usage();
+                        return 1;
+                    }
+
+                    p = ProjectPath(argv[arg++]);
+                }
+
+                if (argc < arg + 1)
+                {
+                    proj_usage();
+                    return 1;
+                }
+
+                Version v = String(argv[arg++]);
+
+                auto c = Config::get_user_config();
+                auto i = std::find_if(c.settings.remotes.begin(), c.settings.remotes.end(),
+                    [&remote](auto &v) { return v.name == remote; });
+                if (i == c.settings.remotes.end())
+                {
+                    std::cout << "unknown remote: " << remote << "\n";
+                    return 1;
+                }
+
+                rd.remove_version(*i, p, v);
+                return 0;
+            }
+
             return 0;
         }
 
@@ -273,13 +503,13 @@ void self_upgrade(Config &c, const char *exe_path)
 #endif
 
     DownloadData dd;
-    dd.url = c.settings.host + client + ".md5";
+    dd.url = c.settings.remotes[0].url + client + ".md5";
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     std::cout << "Downloading checksum file" << "\n";
     download_file(dd);
     auto md5 = boost::algorithm::trim_copy(read_file(dd.fn));
 
-    dd.url = c.settings.host + client;
+    dd.url = c.settings.remotes[0].url + client;
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     String dl_md5;
     dd.md5.hash = &dl_md5;

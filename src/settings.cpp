@@ -42,6 +42,14 @@
 #include "logger.h"
 DECLARE_STATIC_LOGGER(logger, "settings");
 
+const Remotes default_remotes{
+    {
+        DEFAULT_REMOTE_NAME,
+        "https://cppan.org/",
+        "data"
+    },
+};
+
 Settings::Settings()
 {
     build_dir = temp_directory_path() / "build";
@@ -109,7 +117,21 @@ void Settings::load_main(const yaml &root, const ConfigType type)
         throw std::runtime_error("Unknown '" + key + "'. Should be one of [local, user, system]");
     };
 
-    EXTRACT_AUTO(host);
+    get_map_and_iterate(root, "remotes", [this](auto &kv)
+    {
+        auto n = kv.first.template as<String>();
+        bool o = n == DEFAULT_REMOTE_NAME; // origin
+        Remote rm;
+        Remote *prm = o ? &remotes[0] : &rm;
+        prm->name = n;
+        EXTRACT_VAR(kv.second, prm->url, "url", String);
+        EXTRACT_VAR(kv.second, prm->data_dir, "data_dir", String);
+        EXTRACT_VAR(kv.second, prm->user, "user", String);
+        EXTRACT_VAR(kv.second, prm->token, "token", String);
+        if (!o)
+            remotes.push_back(*prm);
+    });
+
     EXTRACT_AUTO(disable_update_checks);
     EXTRACT(storage_dir, String);
     EXTRACT(build_dir, String);
@@ -406,7 +428,7 @@ bool Settings::checkForUpdates() const
 #endif
 
     DownloadData dd;
-    dd.url = host + stamp_file;
+    dd.url = remotes[0].url + stamp_file;
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     download_file(dd);
     auto stamp_remote = boost::trim_copy(read_file(dd.fn));
