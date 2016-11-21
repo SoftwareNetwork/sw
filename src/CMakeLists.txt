@@ -88,6 +88,8 @@ add_custom_target(gen_stamp
 set(common_src
     access_table.cpp
     access_table.h
+    api.cpp
+    api.h
     checks.cpp
     checks.h
     checks_detail.h

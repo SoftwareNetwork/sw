@@ -69,12 +69,6 @@ public:
     bool rebuild_configs() const { return has_downloads() || deps_changed; }
     bool has_downloads() const { return downloads > 0; }
 
-    // server api
-    void add_project(const Remote &r, const ProjectPath &p, ProjectType t);
-    void remove_project(const Remote &r, const ProjectPath &p);
-    void add_version(const Remote &r, const ProjectPath &p, const String &cppan);
-    void remove_version(const Remote &r, const ProjectPath &p, const Version &v);
-
 public:
     PackageConfig &operator[](const Package &p);
     const PackageConfig &operator[](const Package &p) const;

@@ -91,6 +91,15 @@ enum ProjectFlag
     // append only to end
 };
 
+enum class NotificationType
+{
+    None,
+    Message,
+    Success,
+    Warning,
+    Error,
+};
+
 enum class ConfigType
 {
     None,   // use default (user)

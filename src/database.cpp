@@ -121,6 +121,7 @@ const TableDescriptors &get_service_tables()
         R"(
             CREATE TABLE "InstalledPackages" (
                 "package" TEXT NOT NULL,
+                "version" TEXT NOT NULL,
                 "hash" TEXT NOT NULL,
                 PRIMARY KEY ("package")
             );
@@ -442,18 +443,18 @@ void ServiceDatabase::addInstalledPackage(const Package &p) const
     auto h = p.getFilesystemHash();
     if (getInstalledPackageHash(p) == h)
         return;
-    db->execute("replace into InstalledPackages values ('" + p.target_name + "', '" + p.getFilesystemHash() + "')");
+    db->execute("replace into InstalledPackages values ('" + p.ppath.toString() + "', '" + p.version.toString() + "', '" + p.getFilesystemHash() + "')");
 }
 
 void ServiceDatabase::removeInstalledPackage(const Package &p) const
 {
-    db->execute("delete from InstalledPackages where package = '" + p.target_name + "'");
+    db->execute("delete from InstalledPackages where package = '" + p.ppath.toString() + "' and version = '" + p.version.toString() + "'");
 }
 
 String ServiceDatabase::getInstalledPackageHash(const Package &p) const
 {
     String hash;
-    db->execute("select hash from InstalledPackages where package = '" + p.target_name + "'",
+    db->execute("select hash from InstalledPackages where package = '" + p.ppath.toString() + "' and version = '" + p.version.toString() + "'",
         [&hash](SQLITE_CALLBACK_ARGS)
     {
         hash = cols[0];
@@ -464,15 +465,23 @@ String ServiceDatabase::getInstalledPackageHash(const Package &p) const
 
 std::set<Package> ServiceDatabase::getInstalledPackages() const
 {
-    std::set<Package> pkgs;
+    std::set<std::pair<String, String>> pkgs_s;
     db->execute("select * from InstalledPackages",
-        [&pkgs](SQLITE_CALLBACK_ARGS)
+        [&pkgs_s](SQLITE_CALLBACK_ARGS)
     {
-        auto pkg = extractFromString(cols[0]);
-        pkg.createNames();
-        pkgs.insert(pkg);
+        pkgs_s.insert({ cols[0], cols[1] });
         return 0;
     });
+
+    std::set<Package> pkgs;
+    for (auto &p : pkgs_s)
+    {
+        Package pkg;
+        pkg.ppath = p.first;
+        pkg.version = p.second;
+        pkg.createNames();
+        pkgs.insert(pkg);
+    }
     return pkgs;
 }
 

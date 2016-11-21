@@ -32,13 +32,13 @@
 #include <boost/algorithm/string.hpp>
 
 #include <access_table.h>
+#include <api.h>
 #include <config.h>
 #include <database.h>
 #include <filesystem.h>
 #include <http.h>
 #include <logger.h>
 #include <printers/cmake.h>
-#include <resolver.h>
 
 #include "build.h"
 #include "fix_imports.h"
@@ -46,26 +46,8 @@
 #include "../autotools/autotools.h"
 
 void self_upgrade(Config &c, const char *exe_path);
-
-void default_run()
-{
-    auto c = Config::get_user_config();
-    c.load_current_config();
-    c.process();
-}
-
-void init()
-{
-    // initial sequence
-    initLogger("info", "", true);
-
-    // initialize CPPAN structures, do not remove
-    Config::get_user_config();
-
-    // initialize internal db
-    auto &sdb = getServiceDatabase();
-    sdb.performStartupActions();
-}
+void default_run();
+void init();
 
 int main(int argc, char *argv[])
 try
@@ -82,6 +64,16 @@ try
     // command selector
     if (argv[1][0] != '-')
     {
+        auto find_remote = [](const String &remote)
+        {
+            auto c = Config::get_user_config();
+            auto i = std::find_if(c.settings.remotes.begin(), c.settings.remotes.end(),
+                [&remote](auto &v) { return v.name == remote; });
+            if (i == c.settings.remotes.end())
+                throw std::runtime_error("unknown remote: " + remote);
+            return *i;
+        };
+
         String cmd = argv[1];
 
         // internal
@@ -188,16 +180,7 @@ try
                         type = ProjectType::Directory;
                 }
 
-                auto c = Config::get_user_config();
-                auto i = std::find_if(c.settings.remotes.begin(), c.settings.remotes.end(),
-                    [&remote](auto &v) { return v.name == remote; });
-                if (i == c.settings.remotes.end())
-                {
-                    std::cout << "unknown remote: " << remote << "\n";
-                    return 1;
-                }
-
-                rd.add_project(*i, p, type);
+                Api().add_project(find_remote(remote), p, type);
                 return 0;
             }
 
@@ -236,18 +219,7 @@ try
                     return 1;
                 }
 
-                path fn = argv[arg++];
-
-                auto c = Config::get_user_config();
-                auto i = std::find_if(c.settings.remotes.begin(), c.settings.remotes.end(),
-                    [&remote](auto &v) { return v.name == remote; });
-                if (i == c.settings.remotes.end())
-                {
-                    std::cout << "unknown remote: " << remote << "\n";
-                    return 1;
-                }
-
-                rd.add_version(*i, p, read_file(fn));
+                Api().add_version(find_remote(remote), p, read_file(argv[arg++]));
                 return 0;
             }
 
@@ -294,16 +266,7 @@ try
                     p = ProjectPath(argv[arg++]);
                 }
 
-                auto c = Config::get_user_config();
-                auto i = std::find_if(c.settings.remotes.begin(), c.settings.remotes.end(),
-                    [&remote](auto &v) { return v.name == remote; });
-                if (i == c.settings.remotes.end())
-                {
-                    std::cout << "unknown remote: " << remote << "\n";
-                    return 1;
-                }
-
-                rd.remove_project(*i, p);
+                Api().remove_project(find_remote(remote), p);
                 return 0;
             }
 
@@ -342,22 +305,68 @@ try
                     return 1;
                 }
 
-                Version v = String(argv[arg++]);
-
-                auto c = Config::get_user_config();
-                auto i = std::find_if(c.settings.remotes.begin(), c.settings.remotes.end(),
-                    [&remote](auto &v) { return v.name == remote; });
-                if (i == c.settings.remotes.end())
-                {
-                    std::cout << "unknown remote: " << remote << "\n";
-                    return 1;
-                }
-
-                rd.remove_version(*i, p, v);
+                Api().remove_version(find_remote(remote), p, String(argv[arg++]));
                 return 0;
             }
 
             return 0;
+        }
+
+        if (cmd == "notifications")
+        {
+            auto proj_usage = []
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan notifications [origin] [clear] [N]\n";
+            };
+
+            int arg = 2;
+
+            String remote = DEFAULT_REMOTE_NAME;
+            if (argc < arg + 1)
+            {
+                Api().get_notifications(find_remote(remote));
+                return 0;
+            }
+
+            String arg2 = argv[arg++];
+            if (argc < arg + 1)
+            {
+                if (arg2 == "clear")
+                {
+                    Api().clear_notifications(find_remote(remote));
+                    return 0;
+                }
+
+                int n = 10;
+                try
+                {
+                    n = std::stoi(arg2);
+                }
+                catch (const std::exception&)
+                {
+                    Api().get_notifications(find_remote(arg2));
+                    return 0;
+                }
+
+                Api().get_notifications(find_remote(remote), n);
+                return 0;
+            }
+
+            String arg3 = argv[arg++];
+            if (argc < arg + 1)
+            {
+                if (arg3 == "clear")
+                {
+                    Api().clear_notifications(find_remote(arg2));
+                    return 0;
+                }
+
+                Api().get_notifications(find_remote(arg2), std::stoi(arg3));
+                return 0;
+            }
+
+            return 1;
         }
 
         if (isUrl(cmd))
@@ -490,6 +499,26 @@ catch (...)
 {
     std::cerr << "Unhandled unknown exception" << "\n";
     return 1;
+}
+
+void default_run()
+{
+    auto c = Config::get_user_config();
+    c.load_current_config();
+    c.process();
+}
+
+void init()
+{
+    // initial sequence
+    initLogger("info", "", true);
+
+    // initialize CPPAN structures, do not remove
+    Config::get_user_config();
+
+    // initialize internal db
+    auto &sdb = getServiceDatabase();
+    sdb.performStartupActions();
 }
 
 void self_upgrade(Config &c, const char *exe_path)
