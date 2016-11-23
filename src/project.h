@@ -140,6 +140,8 @@ struct Project
     int c_standard{ 0 };
     int cxx_standard{ 0 };
 
+    bool export_all_symbols = false;
+
     // files to include into archive
     // also is used for enumerating sources (mutable for this)
     mutable Files files;

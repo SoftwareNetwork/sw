@@ -99,10 +99,7 @@ public:
         return path_elements.back();
     }
 
-    void push_back(const PathElement &pe)
-    {
-        path_elements.push_back(pe);
-    }
+    void push_back(const PathElement &pe);
 
     bool operator==(const ProjectPath &rhs) const
     {
@@ -124,7 +121,7 @@ public:
         if (e.empty())
             return *this;
         auto tmp = *this;
-        tmp.path_elements.push_back(e);
+        tmp.push_back(e);
         return tmp;
     }
     ProjectPath operator/(const ProjectPath &e) const

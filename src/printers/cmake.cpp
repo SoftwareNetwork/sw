@@ -177,7 +177,7 @@ void print_local_project_files(Context &ctx, const Project &p)
 {
     ctx.addLine("set(src");
     ctx.increaseIndent();
-    for (auto &f : p.files)
+    for (auto &f : FilesSorted(p.files.begin(), p.files.end()))
         ctx.addLine("\"" + normalize_path(f) + "\"");
     ctx.decreaseIndent();
     ctx.addLine(")");
@@ -791,9 +791,12 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.emptyLines(1);
     }
 
+    config_section_title(ctx, "export/import");
+    ctx.addLine("include(\"" + normalize_path(directories.get_static_files_dir() / cmake_export_filename) + "\")");
+
     print_bs_insertion(ctx, p, "pre sources", &BuildSystemConfigInsertions::pre_sources);
 
-    // sources (also used for headers)
+    // sources
     config_section_title(ctx, "sources");
     if (d.flags[pfLocalProject])
     {
@@ -811,7 +814,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         {
             auto s = f;
             std::replace(s.begin(), s.end(), '\\', '/');
-            ctx.addLine("${CMAKE_CURRENT_SOURCE_DIR}/" + s);
+            ctx.addLine("${SDIR}/" + s);
         }
         ctx.decreaseIndent();
         ctx.addLine(")");
@@ -830,7 +833,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         for (auto &f : p.exclude_from_build)
         {
             // try to remove twice (double check) - as a file and as a dir
-            auto s = normalize_path(f.string());
+            auto s = normalize_path(f);
             cpp_regex_2_cmake_regex(s);
             ctx.addLine("remove_src    (\"${SDIR}/" + s + "\")");
             ctx.addLine("remove_src_dir(\"${SDIR}/" + s + "\")");
@@ -886,6 +889,12 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_STANDARD " + std::to_string(p.cxx_standard) + ")");
             }
         }
+
+        if (p.export_all_symbols)
+        {
+            ctx.addLine("set_target_properties(${this} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS True)");
+        }
+        ctx.addLine();
     }
 
     // include directories
@@ -1261,9 +1270,6 @@ endif()
 )");
     }
 
-    config_section_title(ctx, "export/import");
-    ctx.addLine(boost::trim_copy(cmake_export_import_file));
-
     // public definitions
     {
         config_section_title(ctx, "public definitions");
@@ -1440,7 +1446,7 @@ else())");
 
     file_footer(ctx, d);
 
-    access_table->write_if_older(fn, ctx.getText());
+    write_if_older(fn, ctx.getText());
 }
 
 void CMakePrinter::print_package_actions_file(const path &fn) const
@@ -1480,7 +1486,7 @@ void CMakePrinter::print_package_actions_file(const path &fn) const
 
     file_footer(ctx, d);
 
-    access_table->write_if_older(fn, ctx.getText());
+    write_if_older(fn, ctx.getText());
 }
 
 void CMakePrinter::print_package_include_file(const path &fn) const
@@ -1501,7 +1507,7 @@ void CMakePrinter::print_package_include_file(const path &fn) const
         ctx.addLine("add_subdirectory(\"" + normalize_path(fn.parent_path().string()) + "\" \"" + get_binary_path(d) + "\")");
     ctx.addLine();
 
-    access_table->write_if_older(fn, ctx.getText());
+    write_if_older(fn, ctx.getText());
 }
 
 void CMakePrinter::print_object_config_file(const path &fn) const
@@ -1581,7 +1587,7 @@ endif()
 
     file_footer(ctx, d);
 
-    access_table->write_if_older(fn, ctx.getText());
+    write_if_older(fn, ctx.getText());
 }
 
 void CMakePrinter::print_object_include_config_file(const path &fn) const
@@ -1672,7 +1678,7 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
 
     file_footer(ctx, d);
 
-    access_table->write_if_older(fn, ctx.getText());
+    write_if_older(fn, ctx.getText());
 }
 
 void CMakePrinter::print_object_export_file(const path &fn) const
@@ -1717,7 +1723,7 @@ void CMakePrinter::print_object_export_file(const path &fn) const
         ctx.addLine();
     }
 
-    access_table->write_if_older(fn, ctx.getText());
+    write_if_older(fn, ctx.getText());
 }
 
 void CMakePrinter::print_object_build_file(const path &fn) const
@@ -1734,7 +1740,7 @@ void CMakePrinter::print_object_build_file(const path &fn) const
     ctx.addLine();
     ctx.addLine(cmake_build_file);
 
-    access_table->write_if_older(fn, ctx.getText());
+    write_if_older(fn, ctx.getText());
 }
 
 void CMakePrinter::print_meta_config_file(const path &fn) const
@@ -1925,7 +1931,7 @@ set_target_properties(run-cppan PROPERTIES
 
     file_footer(ctx, d);
 
-    access_table->write_if_older(fn, ctx.getText());
+    write_if_older(fn, ctx.getText());
 }
 
 void CMakePrinter::print_helper_file(const path &fn) const
@@ -2073,7 +2079,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
     file_footer(ctx, d);
 
-    access_table->write_if_older(fn, ctx.getText());
+    write_if_older(fn, ctx.getText());
 }
 
 void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain) const
@@ -2179,4 +2185,11 @@ bool CMakePrinter::must_update_contents(const path &fn) const
         return true;
 
     return access_table->must_update_contents(fn);
+}
+
+void CMakePrinter::write_if_older(const path &fn, const String &s) const
+{
+    if (d.ppath.is_loc())
+        return write_file_if_different(fn, s);
+    access_table->write_if_older(fn, s);
 }

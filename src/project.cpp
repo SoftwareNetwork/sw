@@ -581,18 +581,19 @@ void Project::load(const yaml &root)
 {
     load_source(root, source);
 
-    EXTRACT_VAR(root, empty, "empty", bool);
+    EXTRACT_AUTO(empty);
 
-    EXTRACT_VAR(root, shared_only, "shared_only", bool);
-    EXTRACT_VAR(root, static_only, "static_only", bool);
-    EXTRACT_VAR(root, header_only, "header_only", bool);
+    EXTRACT_AUTO(shared_only);
+    EXTRACT_AUTO(static_only);
+    EXTRACT_AUTO(header_only);
 
     if (shared_only && static_only)
         throw std::runtime_error("Project cannot be static and shared simultaneously");
 
-    EXTRACT_VAR(root, import_from_bazel, "import_from_bazel", bool);
-    EXTRACT_VAR(root, copy_to_output_dir, "copy_to_output_dir", bool);
-    EXTRACT_VAR(root, prefer_binaries, "prefer_binaries", bool);
+    EXTRACT_AUTO(import_from_bazel);
+    EXTRACT_AUTO(copy_to_output_dir);
+    EXTRACT_AUTO(prefer_binaries);
+    EXTRACT_AUTO(export_all_symbols);
 
     // standards
     {
@@ -941,7 +942,7 @@ void Project::load(const yaml &root)
         library_type = LibraryType::Static;
         static_only = true;
     }
-    if (lt == "shared")
+    if (lt == "shared" || lt == "dll")
     {
         library_type = LibraryType::Shared;
         shared_only = true;

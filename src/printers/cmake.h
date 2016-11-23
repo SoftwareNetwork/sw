@@ -60,4 +60,5 @@ private:
     void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
 
     bool must_update_contents(const path &fn) const;
+    void write_if_older(const path &fn, const String &s) const;
 };

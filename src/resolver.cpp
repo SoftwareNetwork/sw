@@ -897,9 +897,15 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
     else
         throw std::runtime_error("Unknown file type " + p.string());
 
+    auto pname = normalize_path(p);
+#ifdef _WIN32 // || macos/ios?
+    // prevent different project names for lower/upper case folders
+    boost::to_lower(pname);
+#endif
+
     ProjectPath ppath;
     ppath.push_back("loc");
-    ppath.push_back(sha256_short(normalize_path(p)));
+    ppath.push_back(sha256_short(pname));
     ppath.push_back(sname);
 
     // set package for root config

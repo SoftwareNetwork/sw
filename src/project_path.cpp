@@ -183,3 +183,8 @@ bool ProjectPath::is_root_of(const ProjectPath &p) const
     }
     return true;
 }
+
+void ProjectPath::push_back(const PathElement &pe)
+{
+    path_elements.push_back(pe);
+}
