@@ -481,4 +481,110 @@ function(check_result_variable ret)
     message(FATAL_ERROR "Last CMake execute_process() called failed with error: ${ret}")
 endfunction(check_result_variable)
 
+########################################
+# FUNCTION replace_in_file_once
+########################################
+
+function(replace_in_file_once f from to)
+    string(SHA1 h "${f}${from}${to}")
+    string(SUBSTRING "${h}" 0 5 h)
+    set(h ${f}.${h})
+
+    if (EXISTS ${h})
+        return()
+    endif()
+
+    set(lock ${f}.lock)
+    file(
+        LOCK ${lock}
+        GUARD FUNCTION # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
+        RESULT_VARIABLE lock_result
+    )
+    if (NOT ${lock_result} EQUAL 0)
+        message(FATAL_ERROR "Lock error: ${lock_result}")
+    endif()
+
+    # double check
+    if (EXISTS ${h})
+        return()
+    endif()
+
+    file(READ ${f} fc)
+    string(REPLACE "${from}" "${to}" fc "${fc}")
+    file(WRITE "${f}" "${fc}")
+
+    # create flag file
+    file(WRITE ${h} "")
+endfunction(replace_in_file_once)
+
+########################################
+# FUNCTION push_front_to_file_once
+########################################
+
+function(push_front_to_file_once f what)
+    string(SHA1 h "${f}${what}")
+    string(SUBSTRING "${h}" 0 5 h)
+    set(h ${f}.${h})
+
+    if (EXISTS ${h})
+        return()
+    endif()
+
+    set(lock ${f}.lock)
+    file(
+        LOCK ${lock}
+        GUARD FUNCTION # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
+        RESULT_VARIABLE lock_result
+    )
+    if (NOT ${lock_result} EQUAL 0)
+        message(FATAL_ERROR "Lock error: ${lock_result}")
+    endif()
+
+    # double check
+    if (EXISTS ${h})
+        return()
+    endif()
+
+    file(READ ${f} fc)
+    file(WRITE "${f}" "${what}\n\n${fc}")
+
+    # create flag file
+    file(WRITE ${h} "")
+endfunction(push_front_to_file_once)
+
+########################################
+# FUNCTION push_back_to_file_once
+########################################
+
+function(push_back_to_file_once f what)
+    string(SHA1 h "${f}${what}")
+    string(SUBSTRING "${h}" 0 5 h)
+    set(h ${f}.${h})
+
+    if (EXISTS ${h})
+        return()
+    endif()
+
+    set(lock ${f}.lock)
+    file(
+        LOCK ${lock}
+        GUARD FUNCTION # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
+        RESULT_VARIABLE lock_result
+    )
+    if (NOT ${lock_result} EQUAL 0)
+        message(FATAL_ERROR "Lock error: ${lock_result}")
+    endif()
+
+    # double check
+    if (EXISTS ${h})
+        return()
+    endif()
+
+    file(READ ${f} fc)
+    file(WRITE "${f}" "${fc}\n\n${what}")
+
+    # create flag file
+    file(WRITE ${h} "")
+endfunction(push_back_to_file_once)
+
 ################################################################################

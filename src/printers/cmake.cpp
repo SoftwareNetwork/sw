@@ -72,6 +72,8 @@ const String parallel_checks_file = "vars.txt";
 
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 const String cmake_debug_message_fun = "cppan_debug_message";
+const String cppan_dummy_build_target = "build";
+const String cppan_dummy_copy_target = "copy";
 
 const String config_delimeter_short = repeat("#", 40);
 const String config_delimeter = config_delimeter_short + config_delimeter_short;
@@ -183,11 +185,25 @@ void print_local_project_files(Context &ctx, const Project &p)
     ctx.addLine(")");
 }
 
-String cppan_dummy_target(const Package &p)
+String cppan_dummy_target(const String &name)
 {
-    if (p.empty())
+    if (name.empty())
         return "cppan-dummy";
-    return "cppan-dummy-" + p.target_name;
+    return "cppan-dummy-" + name;
+}
+
+void declare_dummy_target(Context &ctx, const String &name)
+{
+    config_section_title(ctx, "dummy compiled target " + name);
+    ctx.addLine("# this target will be always built before any other");
+    ctx.addLine("if(MSVC)");
+    ctx.addLine("    add_custom_target(" + cppan_dummy_target(name) + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
+    ctx.addLine("else()");
+    ctx.addLine("    add_custom_target(" + cppan_dummy_target(name) + " ALL)");
+    ctx.addLine("endif()");
+    ctx.addLine();
+    ctx.addLine("set_target_properties(" + cppan_dummy_target(name) + " PROPERTIES\n    FOLDER \"cppan/service\"\n)");
+    ctx.emptyLines(1);
 }
 
 String cmake_debug_message(const String &s)
@@ -889,25 +905,31 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     ctx.addLine();
 
     // exclude files
-    if (!p.exclude_from_build.empty())
+    auto exclude_files = [&ctx](const auto &exclude_from_build)
     {
-        auto cpp_regex_2_cmake_regex = [](auto &s)
+        if (!exclude_from_build.empty())
         {
-            boost::replace_all(s, ".*", "*");
-        };
+            auto cpp_regex_2_cmake_regex = [](auto &s)
+            {
+                boost::replace_all(s, ".*", "*");
+            };
 
-        config_section_title(ctx, "exclude files");
-        for (auto &f : p.exclude_from_build)
-        {
-            // try to remove twice (double check) - as a file and as a dir
-            auto s = normalize_path(f);
-            cpp_regex_2_cmake_regex(s);
-            ctx.addLine("remove_src    (\"${SDIR}/" + s + "\")");
-            ctx.addLine("remove_src_dir(\"${SDIR}/" + s + "\")");
-            ctx.addLine();
+            config_section_title(ctx, "exclude files");
+            for (auto &f : exclude_from_build)
+            {
+                // try to remove twice (double check) - as a file and as a dir
+                auto s = normalize_path(f);
+                cpp_regex_2_cmake_regex(s);
+                ctx.addLine("remove_src    (\"${SDIR}/" + s + "\")");
+                ctx.addLine("remove_src_dir(\"${SDIR}/" + s + "\")");
+                ctx.addLine();
+            }
+            ctx.emptyLines(1);
         }
-        ctx.emptyLines(1);
-    }
+    };
+    exclude_files(p.exclude_from_build);
+    if (d.flags[pfLocalProject])
+        exclude_files(p.exclude_from_package);
 
     print_bs_insertion(ctx, p, "post sources", &BuildSystemConfigInsertions::post_sources);
 
@@ -1817,7 +1839,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
         }
         ctx.decreaseIndent();
         ctx.addLine(")");
-        ctx.addLine("add_dependencies(" + cppan_project_name + " " + cppan_dummy_target(d) + ")");
+        ctx.addLine("add_dependencies(" + cppan_project_name + " " + cppan_dummy_target(cppan_dummy_copy_target) + ")");
         ctx.addLine();
         ctx.addLine("export(TARGETS " + cppan_project_name + " FILE " + exports_dir + "cppan.cmake)");
 
@@ -1865,67 +1887,69 @@ set_target_properties(run-cppan PROPERTIES
         }
 
         // build deps
-        print_build_dependencies(ctx, d, cppan_dummy_target(d));
+        print_build_dependencies(ctx, d, cppan_dummy_target(cppan_dummy_build_target));
 
         // copy deps
-        config_section_title(ctx, "copy dependencies");
-
-        ctx.addLine("if (CPPAN_USE_CACHE)");
-        ctx.increaseIndent();
-
-        ctx.addLine("if (NOT COPY_LIBRARIES_TO_OUTPUT)");
-        ctx.increaseIndent();
-        ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
-        ctx.addLine("if (MSVC OR XCODE)");
-        ctx.addLine("    set(output_dir ${output_dir}/$<CONFIG>)");
-        ctx.addLine("endif()");
-        ctx.addLine("if (CPPAN_BUILD_OUTPUT_DIR)");
-        ctx.addLine("    set(output_dir ${CPPAN_BUILD_OUTPUT_DIR})");
-        ctx.addLine("endif()");
-        ctx.addLine();
-
-        Packages copy_deps;
-        gather_copy_deps(ctx, rd[d].dependencies, copy_deps);
-        for (auto &dp : copy_deps)
         {
-            auto &p = dp.second;
-            // do not copy static only projects
-            if (rd[p].config->getDefaultProject().static_only ||
-                !rd[p].config->getDefaultProject().copy_to_output_dir)
-                continue;
+            config_section_title(ctx, "copy dependencies");
 
-            ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
-            ctx.addLine("if (NOT ${type} STREQUAL STATIC_LIBRARY)");
+            ctx.addLine("if (CPPAN_USE_CACHE)");
             ctx.increaseIndent();
-            ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target(d) + " POST_BUILD");
+
+            ctx.addLine("if (NOT COPY_LIBRARIES_TO_OUTPUT)");
             ctx.increaseIndent();
-            ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-            ctx.increaseIndent();
-            if (p.flags[pfLocalProject])
+            ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
+            ctx.addLine("if (MSVC OR XCODE)");
+            ctx.addLine("    set(output_dir ${output_dir}/$<CONFIG>)");
+            ctx.addLine("endif()");
+            ctx.addLine("if (CPPAN_BUILD_OUTPUT_DIR)");
+            ctx.addLine("    set(output_dir ${CPPAN_BUILD_OUTPUT_DIR})");
+            ctx.addLine("endif()");
+            ctx.addLine();
+
+            Packages copy_deps;
+            gather_copy_deps(ctx, rd[d].dependencies, copy_deps);
+            for (auto &dp : copy_deps)
             {
-                auto &dp = rd[p].config->getDefaultProject();
-                if (dp.type == ProjectType::Executable)
-                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}");
+                auto &p = dp.second;
+                // do not copy static only projects
+                if (rd[p].config->getDefaultProject().static_only ||
+                    !rd[p].config->getDefaultProject().copy_to_output_dir)
+                    continue;
+
+                ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
+                ctx.addLine("if (NOT ${type} STREQUAL STATIC_LIBRARY)");
+                ctx.increaseIndent();
+                ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target(cppan_dummy_copy_target) + " POST_BUILD");
+                ctx.increaseIndent();
+                ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+                ctx.increaseIndent();
+                if (p.flags[pfLocalProject])
+                {
+                    auto &dp = rd[p].config->getDefaultProject();
+                    if (dp.type == ProjectType::Executable)
+                        ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}");
+                    else
+                        ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_SHARED_LIBRARY_SUFFIX}");
+                }
                 else
-                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_SHARED_LIBRARY_SUFFIX}");
+                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
+                ctx.decreaseIndent();
+                ctx.decreaseIndent();
+                ctx.addLine(")");
+                ctx.decreaseIndent();
+                ctx.addLine("endif()");
+                ctx.addLine();
             }
-            else
-                ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
+
             ctx.decreaseIndent();
-            ctx.decreaseIndent();
-            ctx.addLine(")");
+            ctx.addLine("endif()");
+            ctx.addLine();
+
             ctx.decreaseIndent();
             ctx.addLine("endif()");
             ctx.addLine();
         }
-
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
-
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
     }
 
     file_footer(ctx, d);
@@ -2064,16 +2088,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     // dummy (compiled?) target
     if (d.empty())
     {
-        config_section_title(ctx, "dummy compiled target");
-        ctx.addLine("# this target will be always built before any other");
-        ctx.addLine("if(MSVC)");
-        ctx.addLine("    add_custom_target(" + cppan_dummy_target(d) + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
-        ctx.addLine("else()");
-        ctx.addLine("    add_custom_target(" + cppan_dummy_target(d) + " ALL)");
-        ctx.addLine("endif()");
-        ctx.addLine();
-        ctx.addLine("set_target_properties(" + cppan_dummy_target(d) + " PROPERTIES\n    FOLDER \"cppan/service\"\n)");
-        ctx.emptyLines(1);
+        declare_dummy_target(ctx, cppan_dummy_build_target);
+        declare_dummy_target(ctx, cppan_dummy_copy_target);
     }
 
     file_footer(ctx, d);
