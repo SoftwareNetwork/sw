@@ -64,14 +64,24 @@ try
     // command selector
     if (argv[1][0] != '-')
     {
-        auto find_remote = [](const String &remote)
+        auto uc = Config::get_user_config();
+
+        auto get_remote = [&uc](const String &remote)
         {
-            auto c = Config::get_user_config();
-            auto i = std::find_if(c.settings.remotes.begin(), c.settings.remotes.end(),
+            auto i = std::find_if(uc.settings.remotes.begin(), uc.settings.remotes.end(),
                 [&remote](auto &v) { return v.name == remote; });
-            if (i == c.settings.remotes.end())
+            return i;
+        };
+        auto find_remote = [&get_remote, &uc](const String &remote)
+        {
+            auto i = get_remote(remote);
+            if (i == uc.settings.remotes.end())
                 throw std::runtime_error("unknown remote: " + remote);
             return *i;
+        };
+        auto has_remote = [&get_remote, &uc](const String &remote)
+        {
+            return get_remote(remote) != uc.settings.remotes.end();
         };
 
         String cmd = argv[1];
@@ -125,7 +135,7 @@ try
         }
 
         // normal options
-        if (cmd == "add")
+        if (cmd == "add" || cmd == "create")
         {
             if (argc < 3)
             {
@@ -136,7 +146,7 @@ try
 
             int arg = 2;
             String what = argv[arg++];
-            if (what == "project")
+            if (what == "project" || what == "package")
             {
                 auto proj_usage = []
                 {
@@ -152,7 +162,7 @@ try
 
                 String remote = DEFAULT_REMOTE_NAME;
                 ProjectPath p(argv[arg++]);
-                if (p.is_relative())
+                if (has_remote(remote) && p.is_relative() && p.size() == 1)
                 {
                     remote = argv[arg - 1];
 
@@ -200,7 +210,7 @@ try
 
                 String remote = DEFAULT_REMOTE_NAME;
                 ProjectPath p(argv[arg++]);
-                if (p.is_relative())
+                if (has_remote(remote) && p.is_relative() && p.size() == 1)
                 {
                     remote = argv[arg - 1];
 
@@ -237,7 +247,7 @@ try
 
             int arg = 2;
             String what = argv[arg++];
-            if (what == "project")
+            if (what == "project" || what == "package")
             {
                 auto proj_usage = []
                 {
@@ -253,7 +263,7 @@ try
 
                 String remote = DEFAULT_REMOTE_NAME;
                 ProjectPath p(argv[arg++]);
-                if (p.is_relative())
+                if (has_remote(remote) && p.is_relative() && p.size() == 1)
                 {
                     remote = argv[arg - 1];
 
@@ -286,7 +296,7 @@ try
 
                 String remote = DEFAULT_REMOTE_NAME;
                 ProjectPath p(argv[arg++]);
-                if (p.is_relative())
+                if (has_remote(remote) && p.is_relative() && p.size() == 1)
                 {
                     remote = argv[arg - 1];
 

@@ -143,8 +143,8 @@ public:
 
     bool has_namespace() const;
 
-    bool is_absolute() const;
-    bool is_relative() const;
+    bool is_absolute(const String &username = String()) const;
+    bool is_relative(const String &username = String()) const;
     bool is_root_of(const ProjectPath &p) const;
 
     PathElement get_owner() const;

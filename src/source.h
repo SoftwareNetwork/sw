@@ -73,3 +73,14 @@ using Source = boost::variant<Git, RemoteFile>;
 
 bool load_source(const yaml &root, Source &source);
 void save_source(yaml &root, const Source &source);
+
+struct DownloadSource
+{
+    path root_dir;
+    int64_t max_file_size = 0;
+
+    void operator()(const Git &git);
+    void operator()(const RemoteFile &rf);
+
+    void download(const Source &source);
+};

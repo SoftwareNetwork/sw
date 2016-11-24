@@ -55,31 +55,41 @@ ptree api_call(const Remote &r, const String &api, ptree request)
     return string2ptree(resp.response);
 }
 
-void Api::add_project(const Remote &r, const ProjectPath &p, ProjectType t)
+void check_relative(const Remote &r, ProjectPath &p)
 {
+    if (p.is_relative(r.user))
+        p = "pvt." + r.user + "." + p.toString();
+}
+
+void Api::add_project(const Remote &r, ProjectPath p, ProjectType t)
+{
+    check_relative(r, p);
     ptree request;
     request.put("project", p.toString());
     request.put("type", toIndex(t));
     api_call(r, "add_project", request);
 }
 
-void Api::remove_project(const Remote &r, const ProjectPath &p)
+void Api::remove_project(const Remote &r, ProjectPath p)
 {
+    check_relative(r, p);
     ptree request;
     request.put("project", p.toString());
     api_call(r, "remove_project", request);
 }
 
-void Api::add_version(const Remote &r, const ProjectPath &p, const String &cppan)
+void Api::add_version(const Remote &r, ProjectPath p, const String &cppan)
 {
+    check_relative(r, p);
     ptree request;
     request.put("project", p.toString());
     request.put("cppan", cppan);
     api_call(r, "add_version", request);
 }
 
-void Api::remove_version(const Remote &r, const ProjectPath &p, const Version &v)
+void Api::remove_version(const Remote &r, ProjectPath p, const Version &v)
 {
+    check_relative(r, p);
     ptree request;
     request.put("project", p.toString());
     request.put("version", v.toString());

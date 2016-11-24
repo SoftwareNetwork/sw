@@ -138,18 +138,24 @@ ProjectPath::PathElement ProjectPath::get_owner() const
     return path_elements[1];
 }
 
-bool ProjectPath::is_absolute() const
+bool ProjectPath::is_absolute(const String &username) const
 {
     if (!has_namespace())
         return false;
-    if (path_elements.size() > 1)
+    if (username.empty())
+    {
+        if (path_elements.size() > 1)
+            return true;
+        return false;
+    }
+    if (path_elements.size() > 2 && path_elements[1] == username)
         return true;
     return false;
 }
 
-bool ProjectPath::is_relative() const
+bool ProjectPath::is_relative(const String &username) const
 {
-    return !is_absolute();
+    return !is_absolute(username);
 }
 
 ProjectPath ProjectPath::operator[](PathElementType e) const
