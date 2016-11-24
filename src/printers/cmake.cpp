@@ -350,8 +350,7 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
     for (auto &dp : dd)
     {
         auto &d = dp.second;
-        if (d.flags[pfHeaderOnly] ||
-            d.flags[pfIncludeDirectoriesOnly])
+        if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectoriesOnly])
             continue;
         if (d.flags[pfExecutable] && !d.flags[pfLocalProject])
             continue;
@@ -360,6 +359,74 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
         auto i = out.insert(dp);
         if (i.second)
             gather_copy_deps(ctx, rd[d].dependencies, out);
+    }
+}
+
+void print_build_dependencies(Context &ctx, const Package &d, const String &target)
+{
+    // direct deps' build actions for non local build
+    {
+        config_section_title(ctx, "build dependencies");
+
+        // build deps
+        ctx.addLine("if (CPPAN_USE_CACHE)");
+        ctx.increaseIndent();
+
+        // run building of direct dependecies before project building
+        {
+            Packages build_deps;
+            // at the moment we re-check all deps to see if we need to build them
+            gather_build_deps(ctx, rd[d].dependencies, build_deps, true);
+
+            if (!build_deps.empty())
+            {
+                Context local;
+                local.addLine("get_configuration_with_generator(config)");
+                local.addLine("get_configuration_exe(config_exe)");
+
+                local.addLine("add_custom_command(TARGET " + target + " PRE_BUILD");
+                local.increaseIndent();
+                bool has_build_deps = false;
+                for (auto &dp : build_deps)
+                {
+                    auto &p = dp.second;
+
+                    // local projects are always built inside solution
+                    if (p.flags[pfLocalProject])
+                        continue;
+
+                    has_build_deps = true;
+                    local.addLine("COMMAND ${CMAKE_COMMAND}");
+                    local.increaseIndent();
+                    local.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
+                    local.addLine("-DCONFIG=$<CONFIG>");
+                    String cfg = "config";
+                    if (p.flags[pfExecutable] && !p.flags[pfLocalProject])
+                        cfg = "config_exe";
+                    local.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
+                    local.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
+                    local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
+                    local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
+                    local.addLine("-DN_CORES=${N_CORES}");
+                    if (d.empty())
+                        local.addLine("-DMULTICORE=1");
+                    local.addLine("-DXCODE=${XCODE}");
+                    local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
+                    local.decreaseIndent();
+                    local.addLine();
+                }
+                local.decreaseIndent();
+                local.addLine(")");
+                local.addLine();
+
+                if (has_build_deps)
+                    ctx += local;
+            }
+        }
+
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
     }
 }
 
@@ -1353,70 +1420,8 @@ else())");
     config_section_title(ctx, "definitions");
     cc->checks.write_definitions(ctx);
 
-    // direct deps' build actions for non local build
-    {
-        config_section_title(ctx, "build dependencies");
-
-        // build deps
-        ctx.addLine("if (CPPAN_USE_CACHE)");
-        ctx.increaseIndent();
-
-        // run building of direct dependecies before project building
-        {
-            Packages build_deps;
-            // at the moment we re-check all deps to see if we need to build them
-            gather_build_deps(ctx, rd[d].dependencies, build_deps, true);
-
-            if (!build_deps.empty())
-            {
-                Context local;
-                local.addLine("get_configuration_with_generator(config)");
-                local.addLine("get_configuration_exe(config_exe)");
-
-                local.addLine("add_custom_command(TARGET ${this} PRE_BUILD");
-                local.increaseIndent();
-                bool has_build_deps = false;
-                for (auto &dp : build_deps)
-                {
-                    auto &p = dp.second;
-
-                    // local projects are always built inside solution
-                    if (p.flags[pfLocalProject])
-                        continue;
-
-                    has_build_deps = true;
-                    local.addLine("COMMAND ${CMAKE_COMMAND}");
-                    local.increaseIndent();
-                    local.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
-                    local.addLine("-DCONFIG=$<CONFIG>");
-                    String cfg = "config";
-                    if (p.flags[pfExecutable] && !p.flags[pfLocalProject])
-                        cfg = "config_exe";
-                    local.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
-                    local.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
-                    local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
-                    local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
-                    local.addLine("-DN_CORES=${N_CORES}");
-                    if (d.empty())
-                        local.addLine("-DMULTICORE=1");
-                    local.addLine("-DXCODE=${XCODE}");
-                    local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
-                    local.decreaseIndent();
-                    local.addLine();
-                }
-                local.decreaseIndent();
-                local.addLine(")");
-                local.addLine();
-
-                if (has_build_deps)
-                    ctx += local;
-            }
-        }
-
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
-    }
+    // build deps
+    print_build_dependencies(ctx, d, "${this}");
 
     // export
     config_section_title(ctx, "export");
@@ -1767,8 +1772,8 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("set(CPPAN_BUILD 1 CACHE STRING \"CPPAN is turned on\")");
     ctx.addLine();
     print_storage_dirs(ctx);
-    ctx.addLine("set(CPPAN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})"); // why?
-    ctx.addLine("set(CPPAN_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})"); // why?
+    //ctx.addLine("set(CPPAN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})"); // why?
+    //ctx.addLine("set(CPPAN_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})"); // why?
     ctx.addLine();
     ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
     ctx.addLine();
@@ -1795,10 +1800,11 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     // deps
     print_dependencies(ctx, rd[d].dependencies, cc->settings.use_cache);
 
-    // lib
+    const String cppan_project_name = "cppan";
+
     if (d.empty())
     {
-        const String cppan_project_name = "cppan";
+        // lib
         config_section_title(ctx, "main library");
         ctx.addLine("add_library                   (" + cppan_project_name + " INTERFACE)");
         ctx.addLine("target_link_libraries         (" + cppan_project_name);
@@ -1811,6 +1817,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
         }
         ctx.decreaseIndent();
         ctx.addLine(")");
+        ctx.addLine("add_dependencies(" + cppan_project_name + " " + cppan_dummy_target(d) + ")");
         ctx.addLine();
         ctx.addLine("export(TARGETS " + cppan_project_name + " FILE " + exports_dir + "cppan.cmake)");
 
@@ -1835,7 +1842,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
         }
 
         // re-run cppan when root cppan.yml is changed
-        if (d.empty() && cc->settings.add_run_cppan_target)
+        if (cc->settings.add_run_cppan_target)
         {
             config_section_title(ctx, "cppan regenerator");
             ctx.addLine(R"(set(file ${CMAKE_CURRENT_BINARY_DIR}/run-cppan.txt)
@@ -1856,12 +1863,11 @@ set_target_properties(run-cppan PROPERTIES
     FOLDER "cppan/service"
 ))");
         }
-    }
 
-    // copy deps
-    // no copy for non local builds
-    if (d.empty())
-    {
+        // build deps
+        print_build_dependencies(ctx, d, cppan_dummy_target(d));
+
+        // copy deps
         config_section_title(ctx, "copy dependencies");
 
         ctx.addLine("if (CPPAN_USE_CACHE)");
@@ -1888,13 +1894,6 @@ set_target_properties(run-cppan PROPERTIES
                 !rd[p].config->getDefaultProject().copy_to_output_dir)
                 continue;
 
-            if (p.flags[pfLocalProject])
-            {
-                auto &dp = rd[p].config->getDefaultProject();
-                if (dp.type == ProjectType::Library && (dp.library_type == LibraryType::Static && !dp.shared_only))
-                    continue;
-            }
-
             ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
             ctx.addLine("if (NOT ${type} STREQUAL STATIC_LIBRARY)");
             ctx.increaseIndent();
@@ -1907,7 +1906,7 @@ set_target_properties(run-cppan PROPERTIES
                 auto &dp = rd[p].config->getDefaultProject();
                 if (dp.type == ProjectType::Executable)
                     ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}");
-                else if (dp.library_type == LibraryType::Shared || dp.shared_only)
+                else
                     ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_SHARED_LIBRARY_SUFFIX}");
             }
             else

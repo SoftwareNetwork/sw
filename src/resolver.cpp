@@ -134,14 +134,12 @@ void Resolver::process(const path &p, Config &root)
         printer->print_meta();
     }
 
-    std::unique_ptr<ScopedCurrentPath> cp;
-    if (!p.empty())
-        cp = std::make_unique<ScopedCurrentPath>(p);
+    ScopedCurrentPath cp(p);
 
     // print root config
     printer->cc = &root;
     printer->d = Package();
-    printer->cwd = cp->get_cwd();
+    printer->cwd = cp.get_cwd();
     printer->print_meta();
 }
 
@@ -897,11 +895,18 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
     else
         throw std::runtime_error("Unknown file type " + p.string());
 
+    // prepare names
     auto pname = normalize_path(p);
 #ifdef _WIN32 // || macos/ios?
     // prevent different project names for lower/upper case folders
     boost::to_lower(pname);
 #endif
+
+    for (auto &c : sname)
+    {
+        if (c < 0 || c > 127 || !isalnum(c))
+            c = '_';
+    }
 
     ProjectPath ppath;
     ppath.push_back("loc");

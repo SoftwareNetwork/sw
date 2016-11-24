@@ -94,8 +94,11 @@ public:
     ScopedCurrentPath(const path &p)
         : ScopedCurrentPath()
     {
-        fs::current_path(p);
-        cwd = p;
+        if (!p.empty())
+        {
+            fs::current_path(p);
+            cwd = p;
+        }
     }
     ~ScopedCurrentPath()
     {
