@@ -177,7 +177,7 @@ public:
     void addDependency(const Package &p);
 
     void findSources(path p);
-    bool writeArchive(const String &filename) const;
+    bool writeArchive(path fn) const;
     void prepareExports() const;
     void patchSources() const;
 

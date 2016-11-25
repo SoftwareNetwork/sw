@@ -97,7 +97,8 @@ public:
         if (!p.empty())
         {
             fs::current_path(p);
-            cwd = p;
+            // abs path, not probably relative p
+            cwd = fs::current_path();
         }
     }
     ~ScopedCurrentPath()
