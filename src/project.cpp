@@ -741,14 +741,14 @@ void Project::load(const yaml &root)
 
             if (d.IsScalar())
             {
-                dependency.ppath = relative_name_to_absolute(d.template as<String>());
+                dependency.ppath = this->relative_name_to_absolute(d.template as<String>());
             }
             else if (d.IsMap())
             {
                 if (d["name"].IsDefined())
-                    dependency.ppath = relative_name_to_absolute(d["name"].template as<String>());
+                    dependency.ppath = this->relative_name_to_absolute(d["name"].template as<String>());
                 if (d["package"].IsDefined())
-                    dependency.ppath = relative_name_to_absolute(d["package"].template as<String>());
+                    dependency.ppath = this->relative_name_to_absolute(d["package"].template as<String>());
             }
 
             if (dependency.ppath.is_loc())
@@ -784,7 +784,7 @@ void Project::load(const yaml &root)
             {
                 Package dependency;
 
-                dependency.ppath = relative_name_to_absolute(d.first.template as<String>());
+                dependency.ppath = this->relative_name_to_absolute(d.first.template as<String>());
                 if (dependency.ppath.is_loc())
                     dependency.flags.set(pfLocalProject);
 
