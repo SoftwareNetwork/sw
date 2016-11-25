@@ -32,6 +32,8 @@
 
 #include <set>
 
+struct Remote;
+
 struct DownloadDependency : public Package
 {
     using DownloadDependencies = std::map<ProjectVersionId, DownloadDependency>;
@@ -42,6 +44,7 @@ struct DownloadDependency : public Package
     String sha256;
 
     // own data (private)
+    const Remote *remote = nullptr;
     std::set<ProjectVersionId> id_dependencies;
     DbDependencies dependencies;
     DownloadDependencies *map_ptr = nullptr;

@@ -810,6 +810,25 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("set(PACKAGE_NAME " + d.ppath.toString() + ")");
         ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
         ctx.addLine();
+        if (d.version.isBranch())
+        {
+            ctx.addLine("set(PACKAGE_VERSION_NUM  \"0\")");
+            ctx.addLine("set(PACKAGE_VERSION_NUM2 \"0LL\")");
+        }
+        else
+        {
+            auto ver2hex = [this](int n)
+            {
+                std::ostringstream ss;
+                ss << std::hex << std::setfill('0') << std::setw(n) << d.version.major;
+                ss << std::hex << std::setfill('0') << std::setw(n) << d.version.minor;
+                ss << std::hex << std::setfill('0') << std::setw(n) << d.version.patch;
+                return ss.str();
+            };
+            ctx.addLine("set(PACKAGE_VERSION_NUM  \"0x" + ver2hex(2) + "\")");
+            ctx.addLine("set(PACKAGE_VERSION_NUM2 \"0x" + ver2hex(4) + "LL\")");
+        }
+        ctx.addLine();
         ctx.addLine("set(PACKAGE_VERSION_MAJOR " + std::to_string(d.version.major) + ")");
         ctx.addLine("set(PACKAGE_VERSION_MINOR " + std::to_string(d.version.minor) + ")");
         ctx.addLine("set(PACKAGE_VERSION_PATCH " + std::to_string(d.version.patch) + ")");

@@ -94,6 +94,7 @@ struct ac_processor
     void process_AC_CHECK_TYPES(command &c);
     void process_AC_HEADER_DIRENT(command &c);
     void process_AC_HEADER_TIME(command &c);
+    void process_AC_HEADER_ASSERT(command &c);
     void process_AC_HEADER_STDC(command &c);
     void process_AC_HEADER_MAJOR(command &c);
     void process_AC_STRUCT_TM(command &c);
@@ -308,13 +309,14 @@ void ac_processor::process()
 
         TWICE(CASE, AC_HEADER_DIRENT);
         TWICE(CASE, AC_HEADER_TIME);
+        TWICE(CASE, AC_HEADER_ASSERT);
         TWICE(CASE, AC_HEADER_STDC);
         TWICE(CASE, AC_HEADER_MAJOR);
 
         TWICE(CASE, AC_STRUCT_TM);
         TWICE(CASE, AC_STRUCT_TIMEZONE);
 
-        TWICE(CASE, AC_CHECK_LIB);
+        TWICE(CASE_NOT_EMPTY, AC_CHECK_LIB);
 
         CASE_NOT_EMPTY(AC_CHECK_MEMBER, AC_CHECK_MEMBERS);
         TWICE(CASE_NOT_EMPTY, AC_CHECK_MEMBERS);
@@ -334,7 +336,6 @@ void ac_processor::process()
             checks.addCheck<CheckInclude>("stdbool.h");
             continue;
         }
-
 
         {
             std::regex r("AC_FUNC_(\\w+)");
@@ -720,6 +721,11 @@ void ac_processor::process_AC_HEADER_DIRENT(command &)
 {
     command c{ "", {"dirent.h","sys/ndir.h","sys/dir.h","ndir.h"} };
     process_AC_CHECK_HEADERS(c);
+}
+
+void ac_processor::process_AC_HEADER_ASSERT(command &)
+{
+    checks.addCheck<CheckInclude>("assert.h");
 }
 
 void ac_processor::process_AC_HEADER_TIME(command &)

@@ -179,7 +179,34 @@ void Resolver::resolve_dependencies(const Config &c)
     if (deps.empty())
         return;
 
-    host = c.settings.remotes[0].url;
+    auto uc = Config::get_user_config();
+    auto cr = uc.settings.remotes.begin();
+    current_remote = &*cr++;
+
+    auto resolve_remote_deps = [this, &deps, &cr, &uc]()
+    {
+        bool again = true;
+        while (again)
+        {
+            again = false;
+            try
+            {
+                LOG_INFO(logger, "Trying " + current_remote->name + " remote");
+                getDependenciesFromRemote(deps);
+            }
+            catch (const std::exception &e)
+            {
+                if (cr != uc.settings.remotes.end())
+                {
+                    LOG(e.what());
+                    current_remote = &*cr++;
+                    again = true;
+                }
+                else
+                    throw;
+            }
+        }
+    };
 
     // do 2 attempts: 1) local db, 2) remote db
     int n_attempts = 2;
@@ -201,12 +228,12 @@ void Resolver::resolve_dependencies(const Config &c)
                     LOG_ERROR(logger, "Cannot get dependencies from local database: " << e.what());
 
                     query_local_db = false;
-                    getDependenciesFromRemote(deps);
+                    resolve_remote_deps();
                 }
             }
             else
             {
-                getDependenciesFromRemote(deps);
+                resolve_remote_deps();
             }
 
             download_and_unpack();
@@ -305,7 +332,7 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
     for (auto &d : deps)
     {
         ptree version;
-        version.put("version", d.second.version.toString());
+        version.put("version", d.second.version.toAnyVersion());
         request.put_child(ptree::path_type(d.second.ppath.toString(), '|'), version);
     }
 
@@ -314,13 +341,14 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
         int n_tries = 3;
         while (1)
         {
+            HttpResponse resp;
             try
             {
                 HttpRequest req = httpSettings;
                 req.type = HttpRequest::POST;
-                req.url = host + "/api/find_dependencies";
+                req.url = current_remote->url + "/api/find_dependencies";
                 req.data = ptree2string(request);
-                auto resp = url_request(req);
+                resp = url_request(req);
                 if (resp.http_code != 200)
                     throw std::runtime_error("Cannot get deps");
                 dependency_tree = string2ptree(resp.response);
@@ -329,7 +357,12 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
             catch (...)
             {
                 if (--n_tries == 0)
+                {
+                    dependency_tree = string2ptree(resp.response);
+                    auto e = dependency_tree.find("error");
+                    LOG(e->second.get_value<String>());
                     throw;
+                }
                 LOG_NO_NEWLINE("Retrying... ");
             }
         }
@@ -381,6 +414,7 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
         }
 
         d.map_ptr = &download_dependencies_;
+        d.remote = current_remote;
         download_dependencies_[id] = d;
     }
 }
@@ -397,6 +431,7 @@ void Resolver::getDependenciesFromDb(const Packages &deps)
         d.createNames();
         dep_ids[d] = d.id;
         d.map_ptr = &download_dependencies_;
+        d.remote = current_remote;
         download_dependencies_[d.id] = d;
     }
 }
@@ -441,7 +476,7 @@ void Resolver::download_and_unpack()
 
         auto fs_path = ProjectPath(d.ppath).toFileSystemPath().string();
         std::replace(fs_path.begin(), fs_path.end(), '\\', '/');
-        String cppan_package_url = host + "/data/" + fs_path + "/" + d.version.toString() + ".tar.gz";
+        String cppan_package_url = d.remote->url + "/" + d.remote->data_dir + "/" + fs_path + "/" + d.version.toString() + ".tar.gz";
         String github_package_url = "https://github.com/cppan-packages/" + d.getHash() + "/raw/master/" + make_archive_name();
         path fn = version_dir.string() + ".tar.gz";
 
@@ -486,7 +521,7 @@ void Resolver::download_and_unpack()
         // if we failed,try from cppan (this should be removed)
         if (!download_from_url(github_package_url, !query_local_db))
         {
-            LOG_ERROR(logger, "Fallback to cppan.org");
+            //LOG_ERROR(logger, "Fallback to cppan.org");
             download_from_url(cppan_package_url, false);
         }
 
@@ -569,7 +604,7 @@ void Resolver::download_and_unpack()
             {
                 HttpRequest req = httpSettings;
                 req.type = HttpRequest::POST;
-                req.url = host + "/api/add_downloads";
+                req.url = current_remote->url + "/api/add_downloads";
                 req.data = ptree2string(request);
                 auto resp = url_request(req);
             }
@@ -588,7 +623,7 @@ void Resolver::download_and_unpack()
                 {
                     HttpRequest req = httpSettings;
                     req.type = HttpRequest::POST;
-                    req.url = host + "/api/add_client_call";
+                    req.url = current_remote->url + "/api/add_client_call";
                     req.data = "{}"; // empty json
                     auto resp = url_request(req);
                 }

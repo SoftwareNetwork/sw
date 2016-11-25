@@ -91,7 +91,7 @@ private:
     std::set<Package> resolved_packages;
     std::set<ProjectPath> local_packages;
 
-    String host;
+    const Remote *current_remote = nullptr;
     int downloads = 0;
     bool deps_changed = false;
     bool query_local_db = true;
