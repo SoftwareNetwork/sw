@@ -674,7 +674,7 @@ void Resolver::prepare_config(PackageConfigs::value_type &cc)
                 }
             }
             if (to_add.empty())
-                throw std::runtime_error("dependency '" + d.ppath.toString() + "' is not found");
+                throw std::runtime_error("dependency '" + d.ppath.toString() + "' not found");
             for (auto &r : to_remove)
                 project.dependencies.erase(r);
             for (auto &a : to_add)
@@ -1022,7 +1022,7 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
     // do not remove
     rd.write_index();
 
-    return{ packages, conf, sname };
+    return std::tuple<std::set<Package>, Config, String>{ packages, conf, sname };
 }
 
 bool Resolver::has_local_package(const ProjectPath &ppath) const
