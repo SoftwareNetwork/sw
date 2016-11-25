@@ -97,6 +97,7 @@ struct ac_processor
     void process_AC_HEADER_ASSERT(command &c);
     void process_AC_HEADER_STDC(command &c);
     void process_AC_HEADER_MAJOR(command &c);
+    void process_AC_HEADER_SYS_WAIT(command &c);
     void process_AC_STRUCT_TM(command &c);
     void process_AC_STRUCT_TIMEZONE(command &c);
     void process_AC_CHECK_LIB(command &c);
@@ -312,6 +313,7 @@ void ac_processor::process()
         TWICE(CASE, AC_HEADER_ASSERT);
         TWICE(CASE, AC_HEADER_STDC);
         TWICE(CASE, AC_HEADER_MAJOR);
+        TWICE(CASE, AC_HEADER_SYS_WAIT);
 
         TWICE(CASE, AC_STRUCT_TM);
         TWICE(CASE, AC_STRUCT_TIMEZONE);
@@ -329,6 +331,7 @@ void ac_processor::process()
         SILENCE(AC_CHECK_PROGS);
         SILENCE(AC_CHECK_TOOLS);
         SILENCE(AC_CHECK_FILE);
+        SILENCE(AC_CHECK_TOOL);
 
         // particular checks
         if (c.name == "AC_CHECK_HEADER_STDBOOL")
@@ -728,6 +731,11 @@ void ac_processor::process_AC_HEADER_ASSERT(command &)
     checks.addCheck<CheckInclude>("assert.h");
 }
 
+void ac_processor::process_AC_HEADER_SYS_WAIT(command &)
+{
+    checks.addCheck<CheckInclude>("sys/wait.h");
+}
+
 void ac_processor::process_AC_HEADER_TIME(command &)
 {
     command c{ "",{ "time.h","sys/time.h" } };
@@ -789,20 +797,25 @@ void ac_processor::process_AC_CHECK_LIB(command &c)
 
 void ac_processor::process_AC_CHECK_MEMBERS(command &c)
 {
-    auto variable = c.params[0];
-    boost::replace_all(variable, "  ", " ");
-    boost::replace_all(variable, " ", "_");
-    boost::replace_all(variable, ".", "_");
-    variable = "HAVE_" + boost::algorithm::to_upper_copy(variable);
+    auto vars = split_string(c.params[0], ",");
+    for (auto &variable : vars)
+    {
+        boost::replace_all(variable, "  ", " ");
+        boost::replace_all(variable, " ", "_");
+        boost::replace_all(variable, ".", "_");
+        variable = "HAVE_" + boost::algorithm::to_upper_copy(variable);
 
-    auto p = c.params[0].find('.');
-    auto struct_ = c.params[0].substr(0, p);
-    auto member = c.params[0].substr(p + 1);
-    String header;
-    if (struct_ == "struct stat")
-        header = "sys/stat.h";
-    // add more headers here
+        auto p = c.params[0].find('.');
+        auto struct_ = c.params[0].substr(0, p);
+        auto member = c.params[0].substr(p + 1);
+        String header;
+        if (struct_ == "struct stat")
+            header = "sys/stat.h";
+        else if (struct_ == "struct tm")
+            header = "time.h";
+        // add more headers here
 
-    checks.addCheck<CheckCustom>(variable,
-        "CHECK_STRUCT_HAS_MEMBER(\"" + struct_ + "\" " + member + " \"" + header + "\" " + variable + ")");
+        checks.addCheck<CheckCustom>(variable,
+            "CHECK_STRUCT_HAS_MEMBER(\"" + struct_ + "\" " + member + " \"" + header + "\" " + variable + ")");
+    }
 }

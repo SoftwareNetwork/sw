@@ -40,6 +40,7 @@
 using String = std::string;
 using Strings = std::vector<String>;
 
+Strings split_string(const String &s, const String &delims);
 Strings split_lines(const String &s);
 int get_end_of_string_block(const String &s, int i = 1);
 

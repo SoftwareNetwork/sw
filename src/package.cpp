@@ -130,26 +130,34 @@ void cleanPackages(const String &s, int flags)
     std::regex r(s);
 
     auto &sdb = getServiceDatabase();
-
-    auto remove = [&sdb, &s, &r](auto f)
+    std::set<Package> pkgs;
+    for (auto &pkg : sdb.getInstalledPackages())
     {
-        auto pkgs = sdb.getInstalledPackages();
-        for (auto &pkg : pkgs)
-        {
-            if (!std::regex_match(pkg.target_name, r))
-                continue;
-            auto p = (pkg.*f)();
-            if (fs::exists(p))
-                fs::remove_all(p);
-            sdb.removeInstalledPackage(pkg);
-        }
+        if (!std::regex_match(pkg.target_name, r))
+            continue;
+        pkgs.insert(pkg);
+    }
+
+    auto rm = [](auto &p)
+    {
+        if (fs::exists(p))
+            fs::remove_all(p);
     };
-    if (flags & CleanTarget::Src)
-        remove(&Package::getDirSrc);
-    if (flags & CleanTarget::Obj)
-        remove(&Package::getDirObj);
+
+    for (auto &pkg : pkgs)
+    {
+        if (flags & CleanTarget::Src)
+            rm(pkg.getDirSrc());
+        if (flags & CleanTarget::Obj)
+            rm(pkg.getDirObj());
+    }
+
     if (flags & CleanTarget::Lib)
         remove_files_like(directories.storage_dir_lib, s);
     if (flags & CleanTarget::Bin)
         remove_files_like(directories.storage_dir_bin, s);
+
+    // remove packages at the end
+    for (auto &pkg : pkgs)
+        sdb.removeInstalledPackage(pkg);
 }

@@ -44,6 +44,8 @@ ProgramOptions::ProgramOptions()
         ("self-upgrade", po::bool_switch(), "upgrade CPPAN client to the latest version")
         ("ignore-ssl-checks,k", po::bool_switch(), "ignore ssl checks and errors")
 
+        (SERVER_QUERY ",s", po::bool_switch(), "force query server")
+
         ("config", po::value<std::string>()->default_value(""), "config name for building")
         ("build", po::value<std::string>(), "file or dir: an inline building")
         ("build-only", po::value<std::string>(), "file or dir: an inline building without touching any configs")

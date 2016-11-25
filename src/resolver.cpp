@@ -208,8 +208,9 @@ void Resolver::resolve_dependencies(const Config &c)
         }
     };
 
+    query_local_db = !c.settings.force_server_query;
     // do 2 attempts: 1) local db, 2) remote db
-    int n_attempts = 2;
+    int n_attempts = query_local_db ? 2 : 1;
     while (n_attempts--)
     {
         // clear before proceed
@@ -612,27 +613,27 @@ void Resolver::download_and_unpack()
             {
             }
         });
-
-        // send download action once
-        static std::once_flag flag;
-        std::call_once(flag, [this]
-        {
-            getExecutor().push([this]
-            {
-                try
-                {
-                    HttpRequest req = httpSettings;
-                    req.type = HttpRequest::POST;
-                    req.url = current_remote->url + "/api/add_client_call";
-                    req.data = "{}"; // empty json
-                    auto resp = url_request(req);
-                }
-                catch (...)
-                {
-                }
-            });
-        });
     }
+
+    // send download action once
+    static std::once_flag flag;
+    std::call_once(flag, [this]
+    {
+        getExecutor().push([this]
+        {
+            try
+            {
+                HttpRequest req = httpSettings;
+                req.type = HttpRequest::POST;
+                req.url = current_remote->url + "/api/add_client_call";
+                req.data = "{}"; // empty json
+                auto resp = url_request(req);
+            }
+            catch (...)
+            {
+            }
+        });
+    });
 }
 
 void Resolver::post_download()
@@ -994,6 +995,14 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
         // at this time we take project.pkg, not just local variable (pkg)
         project.applyFlags(project.pkg.flags);
         c.setPackage(project.pkg);
+
+        /*if (project.type == ProjectType::Executable)
+        {
+            if (!project.name.empty())
+                project.aliases.insert(project.name);
+            else
+                project.aliases.insert(sname);
+        }*/
 
         // check if project's deps are relative
         // this means that there's a local dependency

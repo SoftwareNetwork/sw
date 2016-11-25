@@ -994,7 +994,28 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             if (p.cxx_standard != 0)
             {
                 ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_EXTENSIONS OFF)");
-                ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_STANDARD " + std::to_string(p.cxx_standard) + ")");
+                switch (p.cxx_standard)
+                {
+                case 17:
+                    ctx.addLine("if (UNIX)");
+                    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} -std=c++1z\")");
+                    ctx.addLine("endif()");
+                    break;
+                case 20:
+                    ctx.addLine("if (UNIX)");
+                    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} -std=c++2x\")");
+                    ctx.addLine("endif()");
+                    break;
+                default:
+                    ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_STANDARD " + std::to_string(p.cxx_standard) + ")");
+                    break;
+                }
+                if (p.cxx_standard > 14)
+                {
+                    ctx.addLine("if (MSVC)");
+                    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} /std:c++latest\")");
+                    ctx.addLine("endif()");
+                }
             }
         }
 
@@ -1324,31 +1345,34 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     print_bs_insertion(ctx, p, "post target", &BuildSystemConfigInsertions::post_target);
 
     // aliases
-    if (!d.version.isBranch())
     {
         String tt = d.flags[pfExecutable] ? "add_executable" : "add_library";
 
         config_section_title(ctx, "aliases");
 
+        if (!d.version.isBranch())
         {
-            Version ver = d.version;
-            ver.patch = -1;
-            ctx.addLine(tt + "(" + d.ppath.toString() + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-            ver.minor = -1;
-            ctx.addLine(tt + "(" + d.ppath.toString() + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-            ctx.addLine(tt + "(" + d.ppath.toString() + " ALIAS ${this})");
-            ctx.addLine();
-        }
 
-        {
-            Version ver = d.version;
-            ctx.addLine(tt + "(" + d.ppath.toString("::") + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-            ver.patch = -1;
-            ctx.addLine(tt + "(" + d.ppath.toString("::") + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-            ver.minor = -1;
-            ctx.addLine(tt + "(" + d.ppath.toString("::") + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-            ctx.addLine(tt + "(" + d.ppath.toString("::") + " ALIAS ${this})");
-            ctx.addLine();
+            {
+                Version ver = d.version;
+                ver.patch = -1;
+                ctx.addLine(tt + "(" + d.ppath.toString() + "-" + ver.toAnyVersion() + " ALIAS ${this})");
+                ver.minor = -1;
+                ctx.addLine(tt + "(" + d.ppath.toString() + "-" + ver.toAnyVersion() + " ALIAS ${this})");
+                ctx.addLine(tt + "(" + d.ppath.toString() + " ALIAS ${this})");
+                ctx.addLine();
+            }
+
+            {
+                Version ver = d.version;
+                ctx.addLine(tt + "(" + d.ppath.toString("::") + "-" + ver.toAnyVersion() + " ALIAS ${this})");
+                ver.patch = -1;
+                ctx.addLine(tt + "(" + d.ppath.toString("::") + "-" + ver.toAnyVersion() + " ALIAS ${this})");
+                ver.minor = -1;
+                ctx.addLine(tt + "(" + d.ppath.toString("::") + "-" + ver.toAnyVersion() + " ALIAS ${this})");
+                ctx.addLine(tt + "(" + d.ppath.toString("::") + " ALIAS ${this})");
+                ctx.addLine();
+            }
         }
 
         if (!p.aliases.empty())
@@ -1459,7 +1483,7 @@ else())");
 
     // definitions
     config_section_title(ctx, "definitions");
-    cc->checks.write_definitions(ctx);
+    cc->checks.write_definitions(ctx, d);
 
     // build deps
     print_build_dependencies(ctx, d, "${this}");
@@ -1863,7 +1887,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
         ctx.addLine("export(TARGETS " + cppan_project_name + " FILE " + exports_dir + "cppan.cmake)");
 
         // exe deps
-        {
+        /*{
             config_section_title(ctx, "exe deps");
 
             ctx.addLine("if (CPPAN_USE_CACHE)");
@@ -1880,7 +1904,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
             ctx.decreaseIndent();
             ctx.addLine("endif()");
             ctx.addLine();
-        }
+        }*/
 
         // re-run cppan when root cppan.yml is changed
         if (cc->settings.add_run_cppan_target)

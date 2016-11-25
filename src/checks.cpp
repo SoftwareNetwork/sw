@@ -430,7 +430,10 @@ void Checks::read_parallel_checks_for_workers(const path &dir)
 {
     for (auto &c : checks)
     {
-        auto s = read_file(dir / c->getVariable());
+        auto fn = dir / c->getVariable();
+        if (!fs::exists(fn))
+            continue;
+        auto s = read_file(fn);
         boost::trim(s);
         if (s.empty())
         {
@@ -442,11 +445,15 @@ void Checks::read_parallel_checks_for_workers(const path &dir)
     }
 }
 
-void Checks::write_definitions(Context &ctx) const
+void Checks::write_definitions(Context &ctx, const Package &d) const
 {
-    auto print_def = [&ctx](const String &value, auto &&s)
+    String m = "INTERFACE";
+    if (!d.flags[pfHeaderOnly])
+        m = "PUBLIC";
+
+    auto print_def = [&ctx, &m](const String &value, auto &&s)
     {
-        ctx << "INTERFACE " << s << "=" << value << Context::eol;
+        ctx << m << " " << s << "=" << value << Context::eol;
         return 0;
     };
 
@@ -486,7 +493,7 @@ void Checks::write_definitions(Context &ctx) const
 
             ctx.addLine("target_compile_definitions(${this}");
             ctx.increaseIndent();
-            ctx << "INTERFACE " << c->getVariable() << "=" << "${" << c->getVariable() << "}" << Context::eol;
+            ctx << m << " " << c->getVariable() << "=" << "${" << c->getVariable() << "}" << Context::eol;
             ctx.decreaseIndent();
             ctx.addLine(")");
             continue;

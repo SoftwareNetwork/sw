@@ -478,6 +478,8 @@ try
     // load config from current dir
     c.load_current_config();
 
+    c.settings.force_server_query = options().count(SERVER_QUERY) > 0;
+
     // update proxy settings?
     httpSettings.proxy = c.settings.proxy;
 

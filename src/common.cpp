@@ -88,10 +88,10 @@ path get_program()
 #endif
 }
 
-std::vector<String> split_lines(const String &s)
+Strings split_string(const String &s, const String &delims)
 {
     std::vector<String> v, lines;
-    boost::split(v, s, boost::is_any_of("\r\n"));
+    boost::split(v, s, boost::is_any_of(delims));
     for (auto &l : v)
     {
         boost::trim(l);
@@ -99,6 +99,11 @@ std::vector<String> split_lines(const String &s)
             lines.push_back(l);
     }
     return lines;
+}
+
+Strings split_lines(const String &s)
+{
+    return split_string(s, "\r\n");
 }
 
 String get_cmake_version()

@@ -31,6 +31,7 @@
 #include "yaml.h"
 
 class Context;
+struct Package;
 
 class Check
 {
@@ -135,7 +136,7 @@ struct Checks
     void write_checks(Context &ctx) const;
     void write_parallel_checks_for_workers(Context &ctx) const;
     void read_parallel_checks_for_workers(const path &dir);
-    void write_definitions(Context &ctx) const;
+    void write_definitions(Context &ctx, const Package &d) const;
 
     void remove_known_vars(const std::set<String> &known_vars);
     std::vector<Checks> scatter(int N) const;

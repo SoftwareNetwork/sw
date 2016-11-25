@@ -117,6 +117,7 @@ struct Settings
     // maybe mutable?
     bool rebuild = false;
     bool allow_links = true;
+    bool force_server_query = false;
     String filename;
     String filename_without_ext;
     path source_directory;

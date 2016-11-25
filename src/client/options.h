@@ -51,3 +51,4 @@ private:
 };
 
 #define CLEAN_PACKAGES "clean-packages"
+#define SERVER_QUERY "server-query"

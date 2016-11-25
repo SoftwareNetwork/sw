@@ -405,7 +405,7 @@ void Project::findSources(path p)
             if (!fs::is_regular_file(f))
                 continue;
 
-            String s = fs::relative(f.path(), p).string();
+            String s = fs::relative(f, p).string();
             std::replace(s.begin(), s.end(), '\\', '/');
 
             for (auto &e : rgxs)
@@ -416,6 +416,9 @@ void Project::findSources(path p)
                         files.insert(p / s);
                     else
                         files.insert(s);
+                    // we added file, so other regexes won't work
+                    // or will try to add it again
+                    break;
                 }
             }
         }
@@ -434,10 +437,12 @@ void Project::findSources(path p)
                 if (std::regex_match(s, e.second))
                 {
                     if (pkg.flags[pfLocalProject])
-                        to_remove.erase(p / f);
+                        to_remove.erase(p / s);
                     else
-                        to_remove.erase(f);
-                    break; // why?
+                        to_remove.erase(s);
+                    // we removed file, so other regexes won't work
+                    // or will try to removed it again
+                    break;
                 }
             }
         }
@@ -604,10 +609,22 @@ void Project::load(const yaml &root)
         {
             EXTRACT_VAR(root, c_standard, "c", int);
         }
-        EXTRACT_AUTO(cxx_standard);
-        if (cxx_standard == 0)
+
+        String cxx;
+        EXTRACT_VAR(root, cxx, "cxx_standard", String);
+        if (cxx.empty())
+            EXTRACT_VAR(root, cxx, "c++", String);
+
+        try
         {
-            EXTRACT_VAR(root, cxx_standard, "c++", int);
+            cxx_standard = std::stoi(cxx);
+        }
+        catch (const std::exception&)
+        {
+            if (cxx == "1z")
+                cxx_standard = 17;
+            else if (cxx == "2x")
+                cxx_standard = 20;
         }
     }
 
