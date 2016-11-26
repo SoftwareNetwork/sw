@@ -379,10 +379,7 @@ void Project::findSources(path p)
     {
         if (fs::exists(p / *i))
         {
-            if (pkg.flags[pfLocalProject])
-                files.insert(p / *i);
-            else
-                files.insert(*i);
+            files.insert(*i);
             sources.erase(i++);
             continue;
         }
@@ -393,11 +390,9 @@ void Project::findSources(path p)
         throw std::runtime_error("'files' must be populated");
 
     std::map<String, std::regex> rgxs, rgxs_exclude;
+
     for (auto &e : sources)
         rgxs[e] = std::regex(e);
-    for (auto &e : exclude_from_package)
-        rgxs_exclude[e] = std::regex(e);
-
     if (!rgxs.empty())
     {
         for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(p), {}))
@@ -410,20 +405,16 @@ void Project::findSources(path p)
 
             for (auto &e : rgxs)
             {
-                if (std::regex_match(s, e.second))
-                {
-                    if (pkg.flags[pfLocalProject])
-                        files.insert(p / s);
-                    else
-                        files.insert(s);
-                    // we added file, so other regexes won't work
-                    // or will try to add it again
-                    break;
-                }
+                if (!std::regex_match(s, e.second))
+                    continue;
+                files.insert(s);
+                break;
             }
         }
     }
 
+    for (auto &e : exclude_from_package)
+        rgxs_exclude[e] = std::regex(e);
     if (!rgxs_exclude.empty())
     {
         auto to_remove = files;
@@ -434,16 +425,10 @@ void Project::findSources(path p)
 
             for (auto &e : rgxs_exclude)
             {
-                if (std::regex_match(s, e.second))
-                {
-                    if (pkg.flags[pfLocalProject])
-                        to_remove.erase(p / s);
-                    else
-                        to_remove.erase(s);
-                    // we removed file, so other regexes won't work
-                    // or will try to removed it again
-                    break;
-                }
+                if (!std::regex_match(s, e.second))
+                    continue;
+                to_remove.erase(s);
+                break;
             }
         }
         files = to_remove;

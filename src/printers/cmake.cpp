@@ -180,7 +180,7 @@ void print_local_project_files(Context &ctx, const Project &p)
     ctx.addLine("set(src");
     ctx.increaseIndent();
     for (auto &f : FilesSorted(p.files.begin(), p.files.end()))
-        ctx.addLine("\"" + normalize_path(f) + "\"");
+        ctx.addLine("\"${SDIR}/" + normalize_path(f) + "\"");
     ctx.decreaseIndent();
     ctx.addLine(")");
 }
@@ -947,8 +947,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         }
     };
     exclude_files(p.exclude_from_build);
-    if (d.flags[pfLocalProject])
-        exclude_files(p.exclude_from_package);
 
     print_bs_insertion(ctx, p, "post sources", &BuildSystemConfigInsertions::post_sources);
 

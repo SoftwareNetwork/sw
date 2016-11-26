@@ -113,6 +113,8 @@ struct Project
     ProjectPath ppath;
     String license;
     IncludeDirectories include_directories;
+    // files to compile only
+    // when not empty it will be main source to take files from
     Sources sources;
     Sources build_files;
     Sources exclude_from_package;
