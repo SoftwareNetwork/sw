@@ -27,11 +27,15 @@
 
 #include "common.h"
 
-extern const String cppan_h;
-extern const String version_rc_in;
-extern const String branch_rc_in;
-extern const String cmake_functions;
-extern const String cmake_build_file;
-extern const String cmake_generate_file;
-extern const String cmake_export_import_file;
-extern const String cmake_header;
+#define DECLARE_TEXT_VAR(x) extern const String x
+
+DECLARE_TEXT_VAR(cppan_h);
+DECLARE_TEXT_VAR(version_rc_in);
+DECLARE_TEXT_VAR(branch_rc_in);
+DECLARE_TEXT_VAR(cmake_functions);
+DECLARE_TEXT_VAR(cmake_build_file);
+DECLARE_TEXT_VAR(cmake_generate_file);
+DECLARE_TEXT_VAR(cmake_export_import_file);
+DECLARE_TEXT_VAR(cmake_header);
+
+#undef DECLARE_TEXT_VAR

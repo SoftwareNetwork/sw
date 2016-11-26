@@ -69,6 +69,26 @@ void write_file(const path &p, const String &s)
     ofile << s;
 }
 
+String preprocess_file(const String &s)
+{
+    String o;
+    int i = 0;
+    for (auto &c : s)
+    {
+        String h(2, 0);
+        sprintf(&h[0], "%02x", c);
+        o += "0x" + h + ",";
+        if (++i % 25 == 0)
+            o += "\n";
+        else
+            o += " ";
+    }
+    o += "0x00,";
+    if (++i % 25 == 0)
+        o += "\n";
+    return o;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc != 3)
@@ -94,7 +114,7 @@ int main(int argc, char *argv[])
             std::cerr << "no such file: " << f.string() << "\n";
             return 1;
         }
-        str += read_file(f);
+        str += preprocess_file(read_file(f));
         str += m.suffix();
         s = str;
     }

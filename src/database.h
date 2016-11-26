@@ -50,7 +50,8 @@ struct StartupAction
 {
     enum Type
     {
-        CLEAR_CACHE = 0,
+        ClearCache = 0,
+        ServiceDbClearConfigHashes,
     };
 
     String timestamp;
@@ -97,6 +98,7 @@ public:
 
     String getConfigByHash(const String &hash) const;
     void addConfigHash(const String &hash, const String &config) const;
+    void clearConfigHashes() const;
 
     void setPackageDependenciesHash(const Package &p, const String &hash) const;
     bool hasPackageDependenciesHash(const Package &p, const String &hash) const;

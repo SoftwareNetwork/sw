@@ -438,7 +438,7 @@ try
     }
 
     auto &uc = Config::get_user_config();
-    uc.settings.force_server_query = options().count(SERVER_QUERY) > 0;
+    uc.settings.force_server_query = options()[SERVER_QUERY].as<bool>();
 
     if (options().count("build"))
         return build(options["build"].as<String>(), options["config"].as<String>());

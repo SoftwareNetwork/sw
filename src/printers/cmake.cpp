@@ -948,6 +948,9 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     };
     exclude_files(p.exclude_from_build);
 
+    //
+    ctx.addLine("set(src ${src} \"" + normalize_path(d.getDirSrc() / cmake_config_filename) + "\")");
+
     print_bs_insertion(ctx, p, "post sources", &BuildSystemConfigInsertions::post_sources);
 
     for (auto &ol : p.options)
@@ -1342,6 +1345,118 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
     print_bs_insertion(ctx, p, "post target", &BuildSystemConfigInsertions::post_target);
 
+    // private definitions
+    if (!header_only)
+    {
+        config_section_title(ctx, "private definitions");
+
+        // msvc
+        ctx.addLine(R"(if (MSVC)
+target_compile_definitions(${this}
+    PRIVATE _CRT_SECURE_NO_WARNINGS # disable warning about non-standard functions
+)
+target_compile_options(${this}
+    PRIVATE /wd4005 # macro redefinition
+    PRIVATE /wd4996 # The POSIX name for this item is deprecated.
+)
+endif()
+)");
+    }
+
+    // public definitions
+    {
+        config_section_title(ctx, "public definitions");
+
+        // common include directories
+        ctx.addLine("target_include_directories(${this}");
+        ctx.increaseIndent();
+        ctx.addLine("PRIVATE ${SDIR}"); // why?
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
+        // common definitions
+        ctx.addLine("target_compile_definitions(${this}");
+        ctx.increaseIndent();
+        ctx.addLine("PRIVATE CPPAN"); // build is performed under CPPAN
+        ctx.addLine("PRIVATE CPPAN_BUILD"); // build is performed under CPPAN
+        ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\"");
+        ctx.addLine("PRIVATE CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
+        ctx.addLine("PRIVATE CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
+        // CPPAN_EXPORT is a macro that will be expanded
+        // to proper export/import decls after install from server
+        if (d.flags[pfLocalProject])
+            ctx.addLine("PUBLIC CPPAN_EXPORT=");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
+        // common link libraries
+        ctx.addLine(R"(if (WIN32)
+target_link_libraries(${this}
+    PUBLIC Ws2_32
+)
+else())");
+        ctx.increaseIndent();
+        auto add_unix_lib = [this, &ctx](const String &s)
+        {
+            ctx.addLine("find_library(" + s + " " + s + ")");
+            ctx.addLine("if (NOT ${" + s + "} STREQUAL \"" + s + "-NOTFOUND\")");
+            ctx.increaseIndent();
+            ctx.addLine("target_link_libraries(${this}");
+            ctx.addLine("    PUBLIC " + s + "");
+            ctx.addLine(")");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+        };
+        add_unix_lib("m");
+        add_unix_lib("pthread");
+        add_unix_lib("rt");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+
+        // global definitions - why???
+        config_section_title(ctx, "global definitions");
+
+        // why???
+        String visibility;
+        if (!d.flags[pfExecutable])
+            visibility = !header_only ? "PUBLIC" : "INTERFACE";
+        else
+            visibility = "PRIVATE";
+
+        Context local;
+        bool has_defs = false;
+        local.addLine("target_compile_definitions(${this}");
+        local.increaseIndent();
+        for (auto &o : cc->global_options)
+        {
+            for (auto &opt : o.second.global_definitions)
+            {
+                local.addLine(visibility + " " + opt); // why visibility???
+                has_defs = true;
+            }
+        }
+        local.decreaseIndent();
+        local.addLine(")");
+        local.addLine();
+        if (has_defs)
+            ctx += local;
+    }
+
+    // definitions
+    config_section_title(ctx, "definitions");
+    cc->checks.write_definitions(ctx, d);
+
+    // build deps
+    print_build_dependencies(ctx, d, "${this}");
+
+    // export
+    config_section_title(ctx, "export");
+    ctx.addLine("export(TARGETS ${this} FILE " + exports_dir + d.variable_name + ".cmake)");
+    ctx.emptyLines(1);
+
     // aliases
     {
         String tt = d.flags[pfExecutable] ? "add_executable" : "add_library";
@@ -1381,115 +1496,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             ctx.addLine();
         }
     }
-
-    // private definitions
-    if (!header_only)
-    {
-        config_section_title(ctx, "private definitions");
-
-        // msvc
-        ctx.addLine(R"(if (MSVC)
-target_compile_definitions(${this}
-    PRIVATE _CRT_SECURE_NO_WARNINGS # disable warning about non-standard functions
-)
-target_compile_options(${this}
-    PRIVATE /wd4005 # macro redefinition
-    PRIVATE /wd4996 # The POSIX name for this item is deprecated.
-)
-endif()
-)");
-    }
-
-    // public definitions
-    {
-        config_section_title(ctx, "public definitions");
-
-        String visibility;
-        if (!d.flags[pfExecutable])
-            visibility = !header_only ? "PUBLIC" : "INTERFACE";
-        else
-            visibility = "PRIVATE";
-
-        // common include directories
-        ctx.addLine("target_include_directories(${this}");
-        ctx.increaseIndent();
-        ctx.addLine(visibility + " ${CMAKE_CURRENT_SOURCE_DIR}");
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        ctx.addLine();
-
-        // common definitions
-        ctx.addLine("target_compile_definitions(${this}");
-        ctx.increaseIndent();
-        ctx.addLine(visibility + " CPPAN"); // build is performed under CPPAN
-        ctx.addLine(visibility + " CPPAN_BUILD"); // build is performed under CPPAN
-        ctx.addLine(visibility + " CPPAN_CONFIG=\"${config}\"");
-        ctx.addLine(visibility + " CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
-        ctx.addLine(visibility + " CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
-        if (d.flags[pfLocalProject])
-            ctx.addLine(visibility + " CPPAN_EXPORT=");
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        ctx.addLine();
-
-        // common link libraries
-        ctx.addLine(R"(if (WIN32)
-target_link_libraries(${this}
-    )" + visibility + R"( Ws2_32
-)
-else())");
-        ctx.increaseIndent();
-        auto add_unix_lib = [this, &ctx, &visibility](const String &s)
-        {
-            ctx.addLine("find_library(" + s + " " + s + ")");
-            ctx.addLine("if (NOT ${" + s + "} STREQUAL \"" + s + "-NOTFOUND\")");
-            ctx.increaseIndent();
-            ctx.addLine("target_link_libraries(${this}");
-            ctx.addLine("    " + visibility + " " + s + "");
-            ctx.addLine(")");
-            ctx.decreaseIndent();
-            ctx.addLine("endif()");
-        };
-        add_unix_lib("m");
-        add_unix_lib("pthread");
-        add_unix_lib("rt");
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
-
-        // global definitions
-        config_section_title(ctx, "global definitions");
-
-        Context local;
-        bool has_defs = false;
-        local.addLine("target_compile_definitions(${this}");
-        local.increaseIndent();
-        for (auto &o : cc->global_options)
-        {
-            for (auto &opt : o.second.global_definitions)
-            {
-                local.addLine(visibility + " " + opt);
-                has_defs = true;
-            }
-        }
-        local.decreaseIndent();
-        local.addLine(")");
-        local.addLine();
-        if (has_defs)
-            ctx += local;
-    }
-
-    // definitions
-    config_section_title(ctx, "definitions");
-    cc->checks.write_definitions(ctx, d);
-
-    // build deps
-    print_build_dependencies(ctx, d, "${this}");
-
-    // export
-    config_section_title(ctx, "export");
-    ctx.addLine("export(TARGETS ${this} FILE " + exports_dir + d.variable_name + ".cmake)");
-    ctx.emptyLines(1);
 
     print_bs_insertion(ctx, p, "post alias", &BuildSystemConfigInsertions::post_alias);
 
@@ -2165,17 +2171,14 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
         checks.remove_known_vars(known_vars);
     }
 
-    // There are few checks only. Won't go in parallel mode.
-    if (checks.checks.size() <= 8)
-        return;
-
-    Executor e(N);
-    e.throw_exceptions = true;
-
     auto workers = checks.scatter(N);
     size_t n_checks = 0;
     for (auto &w : workers)
         n_checks += w.checks.size();
+
+    // There are few checks only. Won't go in parallel mode.
+    if (n_checks <= 8)
+        return;
 
     LOG_INFO(logger, "-- Performing " << n_checks << " checks using " << N << " threads");
     LOG_INFO(logger, "-- This process may take up to 5 minutes depending on your hardware");
@@ -2215,6 +2218,9 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
 
         w.read_parallel_checks_for_workers(d);
     };
+
+    Executor e(N);
+    e.throw_exceptions = true;
 
     int i = 0;
     for (auto &w : workers)

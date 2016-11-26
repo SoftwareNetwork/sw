@@ -60,7 +60,8 @@ const String packages_db_name = "packages.db";
 const String service_db_name = "service.db";
 
 std::vector<StartupAction> startup_actions{
-    { "2016-10-20 15:00:00", StartupAction::CLEAR_CACHE },
+    { "2016-10-20 15:00:00", StartupAction::ClearCache },
+    { "2016-11-27 15:00:00", StartupAction::ServiceDbClearConfigHashes },
 };
 
 const TableDescriptors &get_service_tables()
@@ -297,9 +298,20 @@ void ServiceDatabase::performStartupActions() const
 
             switch (a.action)
             {
-            case StartupAction::CLEAR_CACHE:
+            case StartupAction::ClearCache:
                 CMakePrinter().clear_cache();
                 break;
+            case StartupAction::ServiceDbClearConfigHashes:
+            {
+                clearConfigHashes();
+
+                // also cleanup temp build dir
+                boost::system::error_code ec;
+                fs::remove_all(temp_directory_path(), ec);
+            }
+                break;
+            default:
+                throw std::logic_error("Startup action was not defined. Report this to the maintainer!");
             }
         }
     }
@@ -399,6 +411,11 @@ int ServiceDatabase::getPackagesDbSchemaVersion() const
 void ServiceDatabase::setPackagesDbSchemaVersion(int version) const
 {
     db->execute("update PackagesDbSchemaVersion set version = " + std::to_string(version));
+}
+
+void ServiceDatabase::clearConfigHashes() const
+{
+    db->execute("delete from ConfigHashes");
 }
 
 String ServiceDatabase::getConfigByHash(const String &hash) const

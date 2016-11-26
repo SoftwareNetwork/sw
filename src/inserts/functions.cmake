@@ -196,18 +196,33 @@ function(find_flag in_flags f out)
 endfunction(find_flag)
 
 ########################################
-# FUNCTION get_configuration
+# FUNCTION get_config_hash
 ########################################
 
-function(get_configuration out)
+function(get_config_hash c o)
+    string(SHA256 h "${c}")
+    string(SUBSTRING "${h}" 0 8 h)
+    set(${o} "${h}" PARENT_SCOPE)
+endfunction(get_config_hash)
+
+########################################
+# FUNCTION get_configuration_unhashed
+########################################
+
+function(get_configuration_unhashed out)
     set(mt_flag)
     if (MSVC)
-        find_flag(${CMAKE_CXX_FLAGS_RELEASE} /MT MTR)
-        find_flag(${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MT MTRWDI)
-        find_flag(${CMAKE_CXX_FLAGS_MINSIZEREL} /MT MTMSR)
-        find_flag(${CMAKE_CXX_FLAGS_DEBUG} /MTd MTD)
+        find_flag(${CMAKE_C_FLAGS_RELEASE}          /MT    C_MTR        )
+        find_flag(${CMAKE_C_FLAGS_RELWITHDEBINFO}   /MT    C_MTRWDI     )
+        find_flag(${CMAKE_C_FLAGS_MINSIZEREL}       /MT    C_MTMSR      )
+        find_flag(${CMAKE_C_FLAGS_DEBUG}            /MTd   C_MTD        )
+        find_flag(${CMAKE_CXX_FLAGS_RELEASE}        /MT  CXX_MTR        )
+        find_flag(${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MT  CXX_MTRWDI     )
+        find_flag(${CMAKE_CXX_FLAGS_MINSIZEREL}     /MT  CXX_MTMSR      )
+        find_flag(${CMAKE_CXX_FLAGS_DEBUG}          /MTd CXX_MTD        )
 
-        if (MTR OR MTRWDI OR MTMSR OR MTD)
+        if (  C_MTR OR   C_MTRWDI OR   C_MTMSR OR   C_MTD OR
+            CXX_MTR OR CXX_MTRWDI OR CXX_MTMSR OR CXX_MTD)
             set(mt_flag -mt)
             set(CPPAN_MT_BUILD 1 CACHE STRING "MT (static crt) flag" FORCE)
         else()
@@ -217,10 +232,10 @@ function(get_configuration out)
 
     set(cyg)
     if (CYGWIN)
-        set(cyg cyg-)
+        set(cyg -cyg)
     endif()
 
-    set(config ${cyg}${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
+    set(config ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
     string(REGEX MATCH "[0-9]+\\.[0-9]" version "${CMAKE_CXX_COMPILER_VERSION}")
     if (CMAKE_SIZEOF_VOID_P)
         math(EXPR bits "${CMAKE_SIZEOF_VOID_P} * 8")
@@ -235,9 +250,19 @@ function(get_configuration out)
         set(dll -dll)
     endif()
 
-    set(config ${config}-${version}-${bits}${mt_flag}${dll})
+    set(config ${config}-${version}-${bits}${mt_flag}${dll}${cyg})
     string(TOLOWER ${config} config)
 
+    set(${out} ${config} PARENT_SCOPE)
+endfunction(get_configuration_unhashed)
+
+########################################
+# FUNCTION get_configuration
+########################################
+
+function(get_configuration out)
+    get_configuration_unhashed(config)
+    get_config_hash(${config} config)
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration)
 
@@ -246,7 +271,7 @@ endfunction(get_configuration)
 ########################################
 
 function(get_configuration_with_generator out)
-    get_configuration(config)
+    get_configuration_unhashed(config)
 
     set(generator ${CMAKE_GENERATOR})
     string(REPLACE " " "-" generator "${generator}")
@@ -256,6 +281,7 @@ function(get_configuration_with_generator out)
     endif()
     string(TOLOWER ${config} config)
 
+    get_config_hash(${config} config)
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_with_generator)
 
@@ -266,11 +292,13 @@ endfunction(get_configuration_with_generator)
 function(get_configuration_exe out)
     set(cyg)
     if (CYGWIN)
-        set(cyg cyg-)
+        set(cyg -cyg)
     endif()
 
-    set(config ${cyg}${CMAKE_HOST_SYSTEM_PROCESSOR})
+    set(config ${CMAKE_SYSTEM_NAME}-${CMAKE_HOST_SYSTEM_PROCESSOR}${cyg})
     string(TOLOWER ${config} config)
+
+    get_config_hash(${config} config)
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_exe)
 

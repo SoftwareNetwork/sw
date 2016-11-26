@@ -639,7 +639,11 @@ void Project::load(const yaml &root)
         });
     };
     read_dir(root_directory, "root_directory");
+    if (root_directory.empty())
+        read_dir(root_directory, "root_dir");
     read_dir(unpack_directory, "unpack_directory");
+    if (unpack_directory.empty())
+        read_dir(unpack_directory, "unpack_dir");
 
     // we're trying to find root directory
     // to make some following default checks available
