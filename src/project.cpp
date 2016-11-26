@@ -421,6 +421,8 @@ void Project::findSources(path p)
         for (auto &f : files)
         {
             String s = fs::relative(f, p).string();
+            if (s.empty())
+                s = f.string();
             std::replace(s.begin(), s.end(), '\\', '/');
 
             for (auto &e : rgxs_exclude)
