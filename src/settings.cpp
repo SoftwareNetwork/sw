@@ -305,17 +305,20 @@ String Settings::get_fs_generator() const
 
 String get_config(const Settings &settings)
 {
+    // add original config to db
+    // but return hashed
+
     auto &db = getServiceDatabase();
     auto h = settings.get_hash();
     auto c = db.getConfigByHash(h);
 
     if (!c.empty())
-        return c;
+        return hash_config(c);
 
     c = test_run(settings);
     db.addConfigHash(h, c);
 
-    return c;
+    return hash_config(c);
 }
 
 String test_run(const Settings &settings)
@@ -343,7 +346,7 @@ String test_run(const Settings &settings)
 
     auto printer = Printer::create(settings.printerType);
     printer->rc = &conf;
-    printer->prepare_build2();
+    printer->prepare_build();
 
     LOG("--");
     LOG("-- Performing test run");
@@ -362,7 +365,7 @@ String test_run(const Settings &settings)
     // copy cached cmake config to storage
     copy_dir(
         bin_dir / "CMakeFiles" / cmake_version,
-        directories.storage_dir_cfg / c / "CMakeFiles" / cmake_version);
+        directories.storage_dir_cfg / hash_config(c) / "CMakeFiles" / cmake_version);
 
     return c;
 }
@@ -392,7 +395,7 @@ int Settings::build_packages(Config &c, const String &name)
 
     // setup printer config
     c.process(source_directory);
-    printer->prepare_build2();
+    printer->prepare_build();
 
     auto ret = generate(c);
     if (ret)

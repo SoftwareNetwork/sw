@@ -200,8 +200,8 @@ endfunction(find_flag)
 ########################################
 
 function(get_config_hash c o)
-    string(SHA256 h "${c}")
-    string(SUBSTRING "${h}" 0 8 h)
+    string(${CPPAN_CONFIG_HASH_METHOD} h "${c}")
+    string(SUBSTRING "${h}" 0 ${CPPAN_CONFIG_HASH_SHORT_LENGTH} h)
     set(${o} "${h}" PARENT_SCOPE)
 endfunction(get_config_hash)
 
@@ -257,6 +257,24 @@ function(get_configuration_unhashed out)
 endfunction(get_configuration_unhashed)
 
 ########################################
+# FUNCTION get_configuration_with_generator_unhashed
+########################################
+
+function(get_configuration_with_generator_unhashed out)
+    get_configuration_unhashed(config)
+
+    set(generator ${CMAKE_GENERATOR})
+    string(REPLACE " " "-" generator "${generator}")
+    string(REPLACE "_" "-" generator "${generator}") # to made rfind('_') possible
+    if (NOT "${generator}" STREQUAL "")
+        set(config ${config}_${generator})
+    endif()
+    string(TOLOWER ${config} config)
+
+    set(${out} ${config} PARENT_SCOPE)
+endfunction(get_configuration_with_generator_unhashed)
+
+########################################
 # FUNCTION get_configuration
 ########################################
 
@@ -271,16 +289,7 @@ endfunction(get_configuration)
 ########################################
 
 function(get_configuration_with_generator out)
-    get_configuration_unhashed(config)
-
-    set(generator ${CMAKE_GENERATOR})
-    string(REPLACE " " "-" generator "${generator}")
-    string(REPLACE "_" "-" generator "${generator}") # to made rfind('_') possible
-    if (NOT "${generator}" STREQUAL "")
-        set(config ${config}_${generator})
-    endif()
-    string(TOLOWER ${config} config)
-
+    get_configuration_with_generator_unhashed(config)
     get_config_hash(${config} config)
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_with_generator)

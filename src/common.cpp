@@ -58,10 +58,12 @@ String get_program_version()
 
 String get_program_version_string(const String &prog_name)
 {
-    boost::posix_time::ptime t(boost::gregorian::date(1970, 1, 1));
-    t += boost::posix_time::seconds(static_cast<long>(std::stoi(cppan_stamp)));
-    return prog_name + " version " + get_program_version() + "\n" +
-        "assembled " + boost::posix_time::to_simple_string(t);
+    auto t = static_cast<time_t>(std::stoll(cppan_stamp));
+    auto tm = localtime(&t);
+    std::ostringstream ss;
+    ss << prog_name << " version " << get_program_version() << "\n" <<
+        "assembled " << std::put_time(tm, "%F %T");
+    return ss.str();
 }
 
 path get_program()

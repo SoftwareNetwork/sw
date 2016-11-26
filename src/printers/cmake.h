@@ -32,7 +32,7 @@
 
 struct CMakePrinter : Printer
 {
-    void prepare_build2() override;
+    void prepare_build() override;
     void prepare_rebuild() override;
     int generate() const override;
     int build() const override;

@@ -29,6 +29,9 @@
 
 #include "common.h"
 
+#define CPPAN_CONFIG_HASH_METHOD "SHA256"
+#define CPPAN_CONFIG_HASH_SHORT_LENGTH 8
+
 String generate_random_sequence(uint32_t len);
 String hash_to_string(const uint8_t *hash, size_t hash_size);
 String hash_to_string(const String &hash);
@@ -38,3 +41,5 @@ String sha256(const String &data);
 String sha256_short(const String &data);
 
 String shorten_hash(const String &data);
+
+String hash_config(const String &c);

@@ -68,9 +68,9 @@ String hash_to_string(const uint8_t *hash, size_t hash_size)
 
 String shorten_hash(const String &data)
 {
-    if (data.size() <= 8)
+    if (data.size() <= CPPAN_CONFIG_HASH_SHORT_LENGTH)
         return data;
-    return data.substr(0, 8);
+    return data.substr(0, CPPAN_CONFIG_HASH_SHORT_LENGTH);
 }
 
 String sha1(const String &data)
@@ -92,4 +92,9 @@ String sha256(const String &data)
 String sha256_short(const String &data)
 {
     return shorten_hash(sha256(data));
+}
+
+String hash_config(const String &c)
+{
+    return sha256_short(c);
 }

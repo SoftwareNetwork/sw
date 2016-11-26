@@ -33,6 +33,7 @@
 #include "../database.h"
 #include "../directories.h"
 #include "../executor.h"
+#include "../hash.h"
 #include "../lock.h"
 #include "../inserts.h"
 #include "../log.h"
@@ -472,7 +473,7 @@ void CMakePrinter::prepare_rebuild()
     }
 }
 
-void CMakePrinter::prepare_build2()
+void CMakePrinter::prepare_build()
 {
     auto &bs = rc->settings;
     auto &p = rc->getDefaultProject();
@@ -702,7 +703,12 @@ void CMakePrinter::print_meta()
     print_helper_file(cwd / cc->settings.cppan_dir / cmake_helpers_filename);
 
     // print inserted files (they'll be printed only once)
-    access_table->write_if_older(directories.get_static_files_dir() / cmake_functions_filename, cmake_functions);
+    access_table->write_if_older(directories.get_static_files_dir() / cmake_functions_filename,
+        "# global options from cppan source code\n"
+        "set(CPPAN_CONFIG_HASH_METHOD " CPPAN_CONFIG_HASH_METHOD ")\n"
+        "set(CPPAN_CONFIG_HASH_SHORT_LENGTH " + std::to_string(CPPAN_CONFIG_HASH_SHORT_LENGTH) + ")\n"
+        "\n"
+        + cmake_functions);
     access_table->write_if_older(directories.get_static_files_dir() / cmake_header_filename, cmake_header);
     access_table->write_if_older(directories.get_static_files_dir() / cmake_export_filename, cmake_export_import_file);
     access_table->write_if_older(directories.get_static_files_dir() / "branch.rc.in", branch_rc_in);
@@ -2040,9 +2046,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     }
     ctx.addLine("get_configuration(config)");
     ctx.addLine("get_configuration_with_generator(config_dir)");
+    ctx.addLine("get_configuration_with_generator_unhashed(config_name)");
     ctx.addLine("get_number_of_cores(N_CORES)");
     ctx.addLine();
-    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_dir}\")");
+    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_name}\")");
     ctx.addLine();
     ctx.addLine("set(XCODE 0)");
     ctx.addLine("if (CMAKE_GENERATOR STREQUAL \"Xcode\")");

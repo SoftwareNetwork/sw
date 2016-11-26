@@ -62,7 +62,7 @@ struct Printer
     Config *rc = nullptr; // root
     path cwd;
 
-    virtual void prepare_build2() = 0;
+    virtual void prepare_build() = 0;
     virtual void prepare_rebuild() = 0;
     virtual int generate() const = 0;
     virtual int build() const = 0;
