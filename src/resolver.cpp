@@ -986,7 +986,7 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
             project.sources.clear();
             project.sources.insert(cpp_fn.filename().string());
         }
-        project.root_directory = fs::is_regular_file(p) ? p.parent_path() : p;
+        project.root_directory = (fs::is_regular_file(p) ? p.parent_path() : p) / project.root_directory;
         project.findSources(path());
         project.files.erase(CPPAN_FILENAME);
 
@@ -995,14 +995,6 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
         // at this time we take project.pkg, not just local variable (pkg)
         project.applyFlags(project.pkg.flags);
         c.setPackage(project.pkg);
-
-        /*if (project.type == ProjectType::Executable)
-        {
-            if (!project.name.empty())
-                project.aliases.insert(project.name);
-            else
-                project.aliases.insert(sname);
-        }*/
 
         // check if project's deps are relative
         // this means that there's a local dependency

@@ -323,38 +323,44 @@ Project::Project(const ProjectPath &root_project)
 {
 }
 
+void Project::findRootDirectory(const path &p, int depth)
+{
+    // limit recursion
+    if (depth++ > 10)
+        return;
+
+    std::vector<path> pfiles;
+    std::vector<path> pdirs;
+    for (auto &pi : boost::make_iterator_range(fs::directory_iterator(p), {}))
+    {
+        auto f = pi.path().filename().string();
+        if (f == CPPAN_FILENAME)
+            continue;
+        if (fs::is_regular_file(pi))
+        {
+            pfiles.push_back(pi);
+            break;
+        }
+        else if (fs::is_directory(pi))
+        {
+            pdirs.push_back(pi);
+            if (pdirs.size() > 1)
+                break;
+        }
+    }
+    if (pfiles.empty() && pdirs.size() == 1)
+    {
+        auto d = fs::relative(*pdirs.begin(), p);
+        root_directory /= d;
+        findRootDirectory(p / d);
+    }
+}
+
 void Project::findSources(path p)
 {
-    // try to auto choose root_directory
-    if (!p.empty())
-    {
-        std::vector<path> pfiles;
-        std::vector<path> pdirs;
-        for (auto &pi : boost::make_iterator_range(fs::directory_iterator(p), {}))
-        {
-            auto f = pi.path().filename().string();
-            if (f == CPPAN_FILENAME)
-                continue;
-            if (fs::is_regular_file(pi))
-            {
-                pfiles.push_back(pi);
-                break;
-            }
-            else if (fs::is_directory(pi))
-            {
-                pdirs.push_back(pi);
-                if (pdirs.size() > 1)
-                    break;
-            }
-        }
-        if (pfiles.empty() && pdirs.size() == 1 && root_directory.empty())
-            root_directory = fs::relative(*pdirs.begin(), p);
-    }
-
-    if (p.empty())
-        p = root_directory;
-    else
-        p /= root_directory;
+    if (root_directory.empty())
+        findRootDirectory(p);
+    p /= root_directory;
 
     if (import_from_bazel)
     {
@@ -635,6 +641,11 @@ void Project::load(const yaml &root)
     read_dir(root_directory, "root_directory");
     read_dir(unpack_directory, "unpack_directory");
 
+    // we're trying to find root directory
+    // to make some following default checks available
+    if (root_directory.empty())
+        findRootDirectory(fs::current_path());
+
     get_map_and_iterate(root, "include_directories", [this](const auto &n)
     {
         auto f = n.first.template as<String>();
@@ -653,22 +664,22 @@ void Project::load(const yaml &root)
     });
     if (defaults_allowed && include_directories.public_.empty())
     {
-        if (fs::exists("include"))
+        if (fs::exists(root_directory / "include"))
             include_directories.public_.insert("include");
         else
             include_directories.public_.insert(".");
     }
     if (defaults_allowed && include_directories.private_.empty())
     {
-        if (fs::exists("src"))
+        if (fs::exists(root_directory / "src"))
         {
-            if (fs::exists("include"))
+            if (fs::exists(root_directory / "include"))
                 include_directories.private_.insert("src");
             else
                 include_directories.public_.insert("src");
         }
     }
-    include_directories.public_.insert("${CMAKE_CURRENT_BINARY_DIR}");
+    include_directories.public_.insert("${BDIR}");
 
     bs_insertions.get_config_insertions(root);
 
@@ -900,9 +911,9 @@ void Project::load(const yaml &root)
     if (defaults_allowed && sources.empty())
     {
         // try to add some default dirs
-        if (fs::exists("include"))
+        if (fs::exists(root_directory / "include"))
             sources.insert("include/.*");
-        if (fs::exists("src"))
+        if (fs::exists(root_directory / "src"))
             sources.insert("src/.*");
 
         if (sources.empty())

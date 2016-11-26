@@ -193,6 +193,7 @@ private:
 
     const Files &getSources() const;
     ProjectPath relative_name_to_absolute(const String &name);
+    void findRootDirectory(const path &p, int depth = 0);
 };
 
 using Projects = std::map<String, Project>;
