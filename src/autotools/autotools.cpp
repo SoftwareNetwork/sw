@@ -98,6 +98,7 @@ struct ac_processor
     void process_AC_HEADER_STDC(command &c);
     void process_AC_HEADER_MAJOR(command &c);
     void process_AC_HEADER_SYS_WAIT(command &c);
+    void process_AC_HEADER_STDBOOL(command &c);
     void process_AC_STRUCT_TM(command &c);
     void process_AC_STRUCT_TIMEZONE(command &c);
     void process_AC_CHECK_LIB(command &c);
@@ -314,6 +315,7 @@ void ac_processor::process()
         TWICE(CASE, AC_HEADER_STDC);
         TWICE(CASE, AC_HEADER_MAJOR);
         TWICE(CASE, AC_HEADER_SYS_WAIT);
+        TWICE(CASE, AC_HEADER_STDBOOL);
 
         TWICE(CASE, AC_STRUCT_TM);
         TWICE(CASE, AC_STRUCT_TIMEZONE);
@@ -734,6 +736,11 @@ void ac_processor::process_AC_HEADER_ASSERT(command &)
 void ac_processor::process_AC_HEADER_SYS_WAIT(command &)
 {
     checks.addCheck<CheckInclude>("sys/wait.h");
+}
+
+void ac_processor::process_AC_HEADER_STDBOOL(command &c)
+{
+    checks.addCheck<CheckInclude>("stdbool.h");
 }
 
 void ac_processor::process_AC_HEADER_TIME(command &)

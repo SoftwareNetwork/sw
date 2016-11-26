@@ -46,6 +46,9 @@
 
 #include <regex>
 
+#include "logger.h"
+DECLARE_STATIC_LOGGER(logger, "project");
+
 using MimeType = String;
 using MimeTypes = std::set<MimeType>;
 

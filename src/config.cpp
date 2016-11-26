@@ -105,13 +105,13 @@ void Config::reload(const path &p)
     }
 }
 
-Config Config::get_system_config()
+Config &Config::get_system_config()
 {
     static Config c(ConfigType::System);
     return c;
 }
 
-Config Config::get_user_config()
+Config &Config::get_user_config()
 {
     static Config c(ConfigType::User);
     return c;

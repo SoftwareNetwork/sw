@@ -138,7 +138,7 @@ void cleanPackages(const String &s, int flags)
         pkgs.insert(pkg);
     }
 
-    auto rm = [](auto &p)
+    auto rm = [](const auto &p)
     {
         if (fs::exists(p))
             fs::remove_all(p);

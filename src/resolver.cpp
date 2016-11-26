@@ -208,7 +208,7 @@ void Resolver::resolve_dependencies(const Config &c)
         }
     };
 
-    query_local_db = !c.settings.force_server_query;
+    query_local_db = !uc.settings.force_server_query;
     // do 2 attempts: 1) local db, 2) remote db
     int n_attempts = query_local_db ? 2 : 1;
     while (n_attempts--)

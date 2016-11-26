@@ -62,8 +62,8 @@ public:
     void reload(const path &p);
     void save(const path &p) const;
 
-    static Config get_system_config();
-    static Config get_user_config();
+    static Config &get_system_config();
+    static Config &get_user_config();
     void load_current_config();
 
     void process(const path &p = path());

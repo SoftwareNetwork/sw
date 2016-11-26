@@ -437,6 +437,9 @@ try
         return 0;
     }
 
+    auto &uc = Config::get_user_config();
+    uc.settings.force_server_query = options().count(SERVER_QUERY) > 0;
+
     if (options().count("build"))
         return build(options["build"].as<String>(), options["config"].as<String>());
     else if (options().count("build-only"))
@@ -477,8 +480,6 @@ try
 
     // load config from current dir
     c.load_current_config();
-
-    c.settings.force_server_query = options().count(SERVER_QUERY) > 0;
 
     // update proxy settings?
     httpSettings.proxy = c.settings.proxy;

@@ -29,6 +29,10 @@
 
 void merge(const yaml &from, yaml &to)
 {
+    // if 'to' node is not a map, make it so
+    if (!to.IsMap())
+        to = yaml();
+
     for (auto &f : from)
     {
         auto sf = f.first.as<String>();
