@@ -393,7 +393,9 @@ int Settings::build_packages(Config &c, const String &name)
 
     // move this to printer some time
     // copy cached cmake config to bin dir
-    copy_dir(src, binary_directory / "CMakeFiles" / cmake_version);
+    auto dst = binary_directory / "CMakeFiles" / cmake_version;
+    if (!fs::exists(dst))
+        copy_dir(src, dst);
 
     // setup printer config
     c.process(source_directory);
