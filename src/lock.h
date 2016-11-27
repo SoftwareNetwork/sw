@@ -64,9 +64,10 @@ public:
 
     bool try_lock();
     bool is_locked() const { return locked; }
+    void lock();
 
 private:
-    FileLockPtr lock;
+    FileLockPtr lock_;
     bool locked = false;
 };
 

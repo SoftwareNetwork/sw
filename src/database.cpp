@@ -470,8 +470,10 @@ Stamps ServiceDatabase::getFileStamps() const
 
 void ServiceDatabase::setFileStamps(const Stamps &stamps) const
 {
+    String q;
     for (auto &s : stamps)
-        db->execute("replace into FileStamps values ('" + normalize_path(s.first) + "', '" + std::to_string(s.second) + "')");
+        q += "replace into FileStamps values ('" + normalize_path(s.first) + "', '" + std::to_string(s.second) + "');\n";
+    db->execute(q);
 }
 
 void ServiceDatabase::clearFileStamps() const

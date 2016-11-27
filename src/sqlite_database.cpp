@@ -27,9 +27,12 @@
 
 #include "sqlite_database.h"
 
-#include <algorithm>
+#include "lock.h"
 
+#include <boost/algorithm/string.hpp>
 #include <sqlite3.h>
+
+#include <algorithm>
 
 #include <logger.h>
 DECLARE_STATIC_LOGGER(logger, "sqlite_db");
@@ -166,15 +169,12 @@ SqliteDatabase::SqliteDatabase(sqlite3 *db)
 {
 }
 
-SqliteDatabase::SqliteDatabase(const String &dbname, bool read_only)
+SqliteDatabase::SqliteDatabase(const path &dbname, bool read_only)
     : read_only(read_only)
 {
     LOG_TRACE(logger, "Initializing database: " << dbname);
 
     loadDatabase(dbname);
-
-    name = dbname.substr(std::max((int)dbname.rfind("/"), (int)dbname.rfind("\\")) + 1);
-    fullName = dbname;
 }
 
 SqliteDatabase::~SqliteDatabase()
@@ -183,20 +183,24 @@ SqliteDatabase::~SqliteDatabase()
     db = nullptr;
 }
 
-void SqliteDatabase::loadDatabase(const String &dbname)
+void SqliteDatabase::loadDatabase(const path &dbname)
 {
     if (isLoaded())
         return;
 
     LOG_TRACE(logger, "Opening database: " << dbname);
 
-    db = load_from_file(dbname.c_str(), read_only);
+    db = load_from_file(dbname.string(), read_only);
 
-    execute("PRAGMA cache_size = -2000;"); // cache size (N * page size)
-    execute("PRAGMA page_size = 4096;"); // page size bytes (N * page size)
-    execute("PRAGMA journal_mode = OFF;"); // set to no journal
+    name = dbname.string();
+    fullName = dbname;
+
+    execute("pragma cache_size = -2000;"); // cache size (N * page size)
+    execute("pragma page_size = 4096;"); // page size bytes (N * page size)
+    execute("pragma journal_mode = OFF;"); // set to no journal
+    execute("pragma foreign_keys = ON;");
+
     //execute("PRAGMA synchronous = 1;"); // set to wait for OS sync (0 - no wait, 1 - wait OS, 2 - wait all)
-    execute("PRAGMA foreign_keys = ON;");
 }
 
 void SqliteDatabase::save(const path &fn) const
@@ -211,10 +215,25 @@ bool SqliteDatabase::isLoaded() const
     return db != nullptr;
 }
 
-bool SqliteDatabase::execute(const String &sql, void *object, Sqlite3Callback callback, bool nothrow, String *err) const
+bool SqliteDatabase::execute(String sql, void *object, Sqlite3Callback callback, bool nothrow, String *err) const
 {
     if (!isLoaded())
         throw std::runtime_error("db is not loaded");
+
+    boost::trim(sql);
+
+    // lock always for now
+    // maybe replace with InterprocessMutex?
+    ScopedFileLock lock(get_lock(fullName));
+
+    // lock db on writes
+    /*ScopedFileLock lock(get_lock(fullName), std::defer_lock);
+    if (sql.find("insert") == 0 ||
+        sql.find("update") == 0 ||
+        sql.find("delete") == 0 ||
+        sql.find("replace") == 0 ||
+        sql.find("pragma") == 0)
+        lock.lock();*/
 
     LOG_TRACE(logger, "Executing sql statement: " << sql);
     char *errmsg;
@@ -229,7 +248,7 @@ bool SqliteDatabase::execute(const String &sql, void *object, Sqlite3Callback ca
         sqlite3_free(errmsg);
         if (nothrow)
         {
-            if (errmsg)
+            if (errmsg && err)
                 *err = error;
         }
         else
@@ -238,11 +257,27 @@ bool SqliteDatabase::execute(const String &sql, void *object, Sqlite3Callback ca
     return error.empty();
 }
 
-bool SqliteDatabase::execute(const String &sql, DatabaseCallback callback, bool nothrow, String *err) const
+bool SqliteDatabase::execute(String sql, DatabaseCallback callback, bool nothrow, String *err) const
 {
     if (!isLoaded())
         throw std::runtime_error("db is not loaded");
 
+    boost::trim(sql);
+
+    // lock always for now
+    // maybe replace with InterprocessMutex?
+    ScopedFileLock lock(get_lock(fullName));
+
+    // lock db on writes
+    /*ScopedFileLock lock(get_lock(fullName), std::defer_lock);
+    if (sql.find("insert") == 0 ||
+        sql.find("update") == 0 ||
+        sql.find("delete") == 0 ||
+        sql.find("replace") == 0 ||
+        sql.find("pragma") == 0)
+        lock.lock();*/
+
+    //
     LOG_TRACE(logger, "Executing sql statement: " << sql);
     char *errmsg;
     String error;
@@ -263,7 +298,7 @@ bool SqliteDatabase::execute(const String &sql, DatabaseCallback callback, bool 
         sqlite3_free(errmsg);
         if (nothrow)
         {
-            if (errmsg)
+            if (errmsg && err)
                 *err = error;
         }
         else
@@ -277,7 +312,7 @@ bool SqliteDatabase::execute(const String &sql, DatabaseCallback callback, bool 
         error = "Error executing sql statement:\n" + s;
         if (nothrow)
         {
-            if (errmsg)
+            if (errmsg && err)
                 *err = error;
         }
         else
@@ -291,7 +326,7 @@ String SqliteDatabase::getName() const
     return name;
 }
 
-String SqliteDatabase::getFullName() const
+path SqliteDatabase::getFullName() const
 {
     return fullName;
 }

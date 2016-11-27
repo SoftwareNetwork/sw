@@ -51,25 +51,31 @@ path get_lock(const path &fn)
 
 ScopedFileLock::ScopedFileLock(const path &fn)
 {
-    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
-    lock->lock();
+    lock_ = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+    lock_->lock();
     locked = true;
 }
 
 ScopedFileLock::ScopedFileLock(const path &fn, std::defer_lock_t)
 {
-    lock = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
+    lock_ = std::make_unique<FileLock>(prepare_lock_file(fn).c_str());
 }
 
 ScopedFileLock::~ScopedFileLock()
 {
     if (locked)
-        lock->unlock();
+        lock_->unlock();
 }
 
 bool ScopedFileLock::try_lock()
 {
-    return locked = lock->try_lock();
+    return locked = lock_->try_lock();
+}
+
+void ScopedFileLock::lock()
+{
+    lock_->lock();
+    locked = true;
 }
 
 ////////////////////////////////////////

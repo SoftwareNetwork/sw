@@ -184,6 +184,9 @@ void Resolver::resolve_dependencies(const Config &c)
         deps.insert(d);
     }
 
+    if (deps.empty())
+        return;
+
     resolve_dependencies(deps);
     read_configs();
     post_download();

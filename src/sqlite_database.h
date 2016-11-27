@@ -44,20 +44,20 @@ class SqliteDatabase
 public:
     SqliteDatabase();
     SqliteDatabase(sqlite3 *db);
-    SqliteDatabase(const String &dbname, bool read_only = false);
+    SqliteDatabase(const path &dbname, bool read_only = false);
     ~SqliteDatabase();
 
-    void loadDatabase(const String &dbname);
+    void loadDatabase(const path &dbname);
     void save(const path &fn) const;
 
     bool isLoaded() const;
     sqlite3 *getDb() const;
 
     String getName() const;
-    String getFullName() const;
+    path getFullName() const;
 
-    bool execute(const String &sql, void *object, Sqlite3Callback callback, bool nothrow = false, String *errmsg = 0) const;
-    bool execute(const String &sql, DatabaseCallback callback = DatabaseCallback(), bool nothrow = false, String *errmsg = 0) const;
+    bool execute(String sql, void *object, Sqlite3Callback callback, bool nothrow = false, String *errmsg = nullptr) const;
+    bool execute(String sql, DatabaseCallback callback = DatabaseCallback(), bool nothrow = false, String *errmsg = nullptr) const;
 
     int getNumberOfColumns(const String &table) const;
     int getNumberOfTables() const;
@@ -68,5 +68,5 @@ private:
     sqlite3 *db = nullptr;
     bool read_only = false;
     String name;
-    String fullName;
+    path fullName;
 };
