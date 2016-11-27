@@ -196,6 +196,17 @@ function(find_flag in_flags f out)
 endfunction(find_flag)
 
 ########################################
+# FUNCTION prepare_config_part
+########################################
+
+function(prepare_config_part o i)
+    string(REPLACE " " "_" i "${i}")
+    string(REPLACE "${CPPAN_CONFIG_PART_DELIMETER}" "_" i "${i}")
+    string(TOLOWER ${i} i)
+    set(${o} "${i}" PARENT_SCOPE)
+endfunction(prepare_config_part)
+
+########################################
 # FUNCTION get_config_hash
 ########################################
 
@@ -223,7 +234,7 @@ function(get_configuration_unhashed out)
 
         if (  C_MTR OR   C_MTRWDI OR   C_MTMSR OR   C_MTD OR
             CXX_MTR OR CXX_MTRWDI OR CXX_MTMSR OR CXX_MTD)
-            set(mt_flag -mt)
+            set(mt_flag ${CPPAN_CONFIG_PART_DELIMETER}mt)
             set(CPPAN_MT_BUILD 1 CACHE STRING "MT (static crt) flag" FORCE)
         else()
             set(CPPAN_MT_BUILD 0 CACHE STRING "MT (static crt) flag" FORCE)
@@ -232,10 +243,14 @@ function(get_configuration_unhashed out)
 
     set(cyg)
     if (CYGWIN)
-        set(cyg -cyg)
+        set(cyg ${CPPAN_CONFIG_PART_DELIMETER}cyg)
     endif()
 
-    set(config ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_CXX_COMPILER_ID})
+    prepare_config_part(system ${CMAKE_SYSTEM_NAME})
+    prepare_config_part(processor ${CMAKE_SYSTEM_PROCESSOR})
+    prepare_config_part(compiler ${CMAKE_CXX_COMPILER_ID})
+    set(config ${system}${CPPAN_CONFIG_PART_DELIMETER}${processor}${CPPAN_CONFIG_PART_DELIMETER}${compiler})
+
     string(REGEX MATCH "[0-9]+\\.[0-9]" version "${CMAKE_CXX_COMPILER_VERSION}")
     if (CMAKE_SIZEOF_VOID_P)
         math(EXPR bits "${CMAKE_SIZEOF_VOID_P} * 8")
@@ -247,11 +262,10 @@ function(get_configuration_unhashed out)
 
     set(dll)
     if (CPPAN_BUILD_SHARED_LIBS)
-        set(dll -dll)
+        set(dll ${CPPAN_CONFIG_PART_DELIMETER}dll)
     endif()
 
-    set(config ${config}-${version}-${bits}${mt_flag}${dll}${cyg})
-    string(TOLOWER ${config} config)
+    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${version}${CPPAN_CONFIG_PART_DELIMETER}${bits}${mt_flag}${dll}${cyg})
 
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_unhashed)
@@ -263,13 +277,10 @@ endfunction(get_configuration_unhashed)
 function(get_configuration_with_generator_unhashed out)
     get_configuration_unhashed(config)
 
-    set(generator ${CMAKE_GENERATOR})
-    string(REPLACE " " "-" generator "${generator}")
-    string(REPLACE "_" "-" generator "${generator}") # to made rfind('_') possible
+    prepare_config_part(generator ${CMAKE_GENERATOR})
     if (NOT "${generator}" STREQUAL "")
-        set(config ${config}_${generator})
+        set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${generator})
     endif()
-    string(TOLOWER ${config} config)
 
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_with_generator_unhashed)
@@ -301,11 +312,12 @@ endfunction(get_configuration_with_generator)
 function(get_configuration_exe out)
     set(cyg)
     if (CYGWIN)
-        set(cyg -cyg)
+        set(cyg ${CPPAN_CONFIG_PART_DELIMETER}cyg)
     endif()
 
-    set(config ${CMAKE_SYSTEM_NAME}-${CMAKE_HOST_SYSTEM_PROCESSOR}${cyg})
-    string(TOLOWER ${config} config)
+    prepare_config_part(system ${CMAKE_SYSTEM_NAME})
+    prepare_config_part(processor ${CMAKE_HOST_SYSTEM_PROCESSOR})
+    set(config ${system}${CPPAN_CONFIG_PART_DELIMETER}${processor}${cyg})
 
     get_config_hash(${config} config)
     set(${out} ${config} PARENT_SCOPE)
@@ -328,10 +340,10 @@ function(get_configuration_variables)
         set(config_dir ${config_exe})
     endif()
 
+    set(config ${config} PARENT_SCOPE)
     set(config_lib ${config_lib} PARENT_SCOPE)
     set(config_lib_gen ${config_lib_gen} PARENT_SCOPE)
     set(config_exe ${config_exe} PARENT_SCOPE)
-    set(config ${config} PARENT_SCOPE)
     set(config_dir ${config_dir} PARENT_SCOPE)
 endfunction(get_configuration_variables)
 

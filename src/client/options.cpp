@@ -49,12 +49,9 @@ ProgramOptions::ProgramOptions()
         ("config", po::value<std::string>()->default_value(""), "config name for building")
         ("build", po::value<std::string>(), "file or dir: an inline building")
         ("build-only", po::value<std::string>(), "file or dir: an inline building without touching any configs")
-        //("rebuild", po::value<std::string>(), "file or dir: an inline building while removing previous version")
-        ("generate", po::value<std::string>(), "file or dir: an inline project generation")
-        ("dry-run", po::value<std::string>(), "dir: locally simulate project download and build")
+        ("build-package", po::value<std::string>(), "build existing cppan package")
 
         ("settings", po::value<std::string>()->default_value(""), "file to take settings from")
-        ("build-package", po::value<std::string>(), "build existing cppan package")
 
         ("clear-cache", po::bool_switch(), "clear CMakeCache.txt files")
         ("clear-vars-cache", po::bool_switch(), "clear checked symbols, types, includes etc.")

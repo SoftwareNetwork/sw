@@ -27,25 +27,7 @@
 
 #pragma once
 
-#include "common.h"
+#include <boost/optional.hpp>
 
-class AccessTable
-{
-public:
-    AccessTable(const path &cfg_dir);
-    ~AccessTable();
-
-    bool updates_disabled() const;
-    bool must_update_contents(const path &p) const;
-    void update_contents(const path &p, const String &s) const;
-    void write_if_older(const path &p, const String &s) const;
-    void clear() const;
-    void remove(const path &p) const;
-
-    static void do_not_update_files(bool v);
-
-private:
-    path root_dir;
-
-    bool isUnderRoot(path p) const;
-};
+template <class T>
+using optional = boost::optional<T>;

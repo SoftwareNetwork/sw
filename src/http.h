@@ -66,6 +66,8 @@ struct HttpRequest : public HttpSettings
     String password;
     int type = GET;
     String data;
+    int timeout = -1;
+    int connect_timeout = -1;
 
     HttpRequest(const HttpSettings &parent)
         : HttpSettings(parent)

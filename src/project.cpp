@@ -558,14 +558,9 @@ ProjectPath Project::relative_name_to_absolute(const String &name)
         return ppath;
     if (ProjectPath(name).is_relative())
     {
-        if (allow_local_dependencies && (fs::exists(name) || isUrl(name)))
-        {
-            std::set<Package> pkgs;
-            Config c;
-            String n;
-            std::tie(pkgs, c, n) = rd.read_packages_from_file(name);
-            return c.pkg.ppath;
-        }
+        auto ld = load_local_dependency(name);
+        if (ld)
+            return ld.value();
         if (allow_relative_project_names)
         {
             ppath.push_back(name);
@@ -578,6 +573,20 @@ ProjectPath Project::relative_name_to_absolute(const String &name)
     else
         ppath = name;
     return ppath;
+}
+
+optional<ProjectPath> Project::load_local_dependency(const String &name)
+{
+    optional<ProjectPath> pp;
+    if (allow_local_dependencies && (fs::exists(name) || isUrl(name)))
+    {
+        std::set<Package> pkgs;
+        Config c;
+        String n;
+        std::tie(pkgs, c, n) = rd.read_packages_from_file(name);
+        pp = c.pkg.ppath;
+    }
+    return pp;
 }
 
 void Project::load(const yaml &root)
@@ -759,10 +768,8 @@ void Project::load(const yaml &root)
             }
         };
 
-        auto read_single_dep = [this, &read_version](auto &deps, const auto &d)
+        auto read_single_dep = [this, &read_version](auto &deps, const auto &d, Package dependency = Package())
         {
-            Package dependency;
-
             if (d.IsScalar())
             {
                 dependency.ppath = this->relative_name_to_absolute(d.template as<String>());
@@ -773,10 +780,24 @@ void Project::load(const yaml &root)
                     dependency.ppath = this->relative_name_to_absolute(d["name"].template as<String>());
                 if (d["package"].IsDefined())
                     dependency.ppath = this->relative_name_to_absolute(d["package"].template as<String>());
+                if (d["local"].IsDefined())
+                {
+                    auto lp = d["local"].template as<String>();
+                    auto ld = load_local_dependency(lp);
+                    if (!ld)
+                        throw std::runtime_error("Could not load local project: " + lp);
+                    dependency.ppath = ld.value();
+                }
             }
 
             if (dependency.ppath.is_loc())
+            {
                 dependency.flags.set(pfLocalProject);
+
+                // version will be read for local project
+                // even 2nd arg is not valid
+                read_version(dependency, d["version"]);
+            }
 
             if (d.IsMap())
             {
@@ -804,7 +825,7 @@ void Project::load(const yaml &root)
         },
             [this, &read_single_dep, &read_version](const auto &dall)
         {
-            auto get_dep = [this, &read_version](auto &deps, const auto &d)
+            auto get_dep = [this, &read_version, &read_single_dep](auto &deps, const auto &d)
             {
                 Package dependency;
 
@@ -816,16 +837,8 @@ void Project::load(const yaml &root)
                     read_version(dependency, d.second);
                 else if (d.second.IsMap())
                 {
-                    for (const auto &v : d.second)
-                    {
-                        auto key = v.first.template as<String>();
-                        if (key == "version")
-                            read_version(dependency, v.second);
-                        else if (key == INCLUDE_DIRECTORIES_ONLY)
-                            dependency.flags.set(pfIncludeDirectoriesOnly, v.second.template as<bool>());
-                        else
-                            throw std::runtime_error("Unknown key: " + key);
-                    }
+                    read_single_dep(deps, d.second, dependency);
+                    return;
                 }
                 else
                     throw std::runtime_error("Dependency should be a scalar or a map");
@@ -877,6 +890,7 @@ void Project::load(const yaml &root)
 
     auto read_sources = [&root](auto &a, const String &key, bool required = true)
     {
+        a.clear();
         auto files = root[key];
         if (!files.IsDefined())
             return;
@@ -912,6 +926,7 @@ void Project::load(const yaml &root)
     };
 
     read_sources(sources, "files");
+    files_loaded = root["files"].IsDefined() && !sources.empty();
     if (defaults_allowed && sources.empty())
     {
         // try to add some default dirs

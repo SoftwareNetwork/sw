@@ -39,6 +39,7 @@
 #include "log.h"
 #include "project.h"
 #include "sqlite_database.h"
+#include "templates.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -65,6 +66,11 @@ void Resolver::process(const path &p, Config &root)
         return;
     processing = true;
 
+    SCOPE_EXIT
+    {
+        processing = false;
+    };
+
     // insert root config
     packages[root.pkg].config = &root;
 
@@ -85,6 +91,8 @@ void Resolver::process(const path &p, Config &root)
             // i->first equals to d.second but have correct flags!!!
             // so we assign them to d.second
             auto i = packages.find(d.second);
+            if (i == packages.end())
+                throw std::runtime_error("Cannot find match for " + d.second.target_name);
             d.second.flags = i->first.flags;
         }
     }
@@ -92,7 +100,7 @@ void Resolver::process(const path &p, Config &root)
     // main access table holder
     AccessTable access_table(directories.storage_dir_etc);
 
-    // if we got a download we might need to refresh configs
+    // TODO: if we got a download we might need to refresh configs
     // but we do not know what projects we should clear
     // so clear the whole AT
     if (rebuild_configs())
@@ -339,6 +347,8 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
 
     LOG_NO_NEWLINE("Requesting dependency list... ");
     {
+        int ct = 5;
+        int t = 10;
         int n_tries = 3;
         while (1)
         {
@@ -346,6 +356,8 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
             try
             {
                 HttpRequest req = httpSettings;
+                req.connect_timeout = ct;
+                req.timeout = t;
                 req.type = HttpRequest::POST;
                 req.url = current_remote->url + "/api/find_dependencies";
                 req.data = ptree2string(request);
@@ -359,10 +371,28 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
             {
                 if (--n_tries == 0)
                 {
-                    dependency_tree = string2ptree(resp.response);
-                    auto e = dependency_tree.find("error");
-                    LOG(e->second.get_value<String>());
+                    switch (resp.http_code)
+                    {
+                    case 200:
+                    {
+                        dependency_tree = string2ptree(resp.response);
+                        auto e = dependency_tree.find("error");
+                        LOG(e->second.get_value<String>());
+                    }
+                        break;
+                    case 0:
+                        LOG("Could not connect to server");
+                        break;
+                    default:
+                        LOG("Error code: " + std::to_string(resp.http_code));
+                        break;
+                    }
                     throw;
+                }
+                else if (resp.http_code == 0)
+                {
+                    ct /= 2;
+                    t /= 2;
                 }
                 LOG_NO_NEWLINE("Retrying... ");
             }
@@ -393,6 +423,7 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
     LOG("Ok");
 
     // set dependencies
+    auto unresolved = deps.size();
     auto &remote_packages = dependency_tree.get_child("packages");
     for (auto &v : remote_packages)
     {
@@ -417,7 +448,12 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
         d.map_ptr = &download_dependencies_;
         d.remote = current_remote;
         download_dependencies_[id] = d;
+
+        unresolved--;
     }
+
+    if (unresolved != 0)
+        throw std::runtime_error("Some packages (" + std::to_string(unresolved) + ") are unresolved");
 }
 
 void Resolver::getDependenciesFromDb(const Packages &deps)
@@ -812,8 +848,10 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
 
     auto conf = Config::get_user_config();
     conf.type = ConfigType::Local;
-    conf.defaults_allowed = false;
+    conf.defaults_allowed = true; // was false
     conf.allow_local_dependencies = true;
+    // allow relative project names
+    conf.allow_relative_project_names = true;
 
     if (!fs::exists(p))
         throw std::runtime_error("File or directory does not exist: " + p.string());
@@ -980,7 +1018,7 @@ Resolver::read_packages_from_file(path p, const String &config_name, bool direct
         local_packages.insert(pkg.ppath);
 
         // sources
-        if (!cpp_fn.empty())
+        if (!cpp_fn.empty() && !project.files_loaded)
         {
             // clear default sources first
             project.sources.clear();

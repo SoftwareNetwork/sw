@@ -375,7 +375,6 @@ template <class T, class ... Args>
 T *Checks::addCheck(Args && ... args)
 {
     auto i = std::make_shared<T>(std::forward<Args>(args)...);
-    auto p = i.get();
-    checks.emplace(std::move(i));
-    return p;
+    auto r = checks.emplace(std::move(i));
+    return (T*)r.first->get();
 }

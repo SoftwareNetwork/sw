@@ -322,3 +322,8 @@ int SqliteDatabase::getNumberOfTables() const
     });
     return n;
 }
+
+void SqliteDatabase::dropTable(const String &table) const
+{
+    execute("drop table " + table + ";");
+}

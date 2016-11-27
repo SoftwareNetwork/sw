@@ -118,6 +118,7 @@ struct Settings
     bool rebuild = false;
     bool allow_links = true;
     bool force_server_query = false;
+    bool disable_checks = false;
     String filename;
     String filename_without_ext;
     path source_directory;

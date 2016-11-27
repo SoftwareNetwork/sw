@@ -62,6 +62,8 @@ public:
     int getNumberOfColumns(const String &table) const;
     int getNumberOfTables() const;
 
+    void dropTable(const String &table) const;
+
 private:
     sqlite3 *db = nullptr;
     bool read_only = false;

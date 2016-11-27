@@ -32,8 +32,10 @@
 #include "date_time.h"
 #include "directories.h"
 #include "enums.h"
+#include "hash.h"
 #include "lock.h"
 #include "sqlite_database.h"
+#include "stamp.h"
 #include "printers/cmake.h"
 
 #include <boost/algorithm/string.hpp>
@@ -60,8 +62,9 @@ const String packages_db_name = "packages.db";
 const String service_db_name = "service.db";
 
 std::vector<StartupAction> startup_actions{
-    { "2016-10-20 15:00:00", StartupAction::ClearCache },
-    { "2016-11-27 15:00:00", StartupAction::ServiceDbClearConfigHashes },
+    { "2016-10-20 00:00:00", StartupAction::ClearCache },
+    { "2016-11-27 00:00:00", StartupAction::ServiceDbClearConfigHashes },
+    { "2016-11-27 00:00:02", StartupAction::CheckSchema },
 };
 
 const TableDescriptors &get_service_tables()
@@ -69,74 +72,94 @@ const TableDescriptors &get_service_tables()
     // to prevent side effects as with global variable
     // ! append new tables to the end only !
     static const TableDescriptors service_tables{
-    {
-        "NRuns", // unneeded?
+
+        { "ClientStamp",
         R"(
-            CREATE TABLE "NRuns" (
-                "n_runs" INTEGER NOT NULL
+            CREATE TABLE "ClientStamp" (
+                "stamp" INTEGER NOT NULL
             );
-            insert into NRuns values (0);
-        )"
-    },
-    {
-        "PackagesDbSchemaVersion",
-        R"(
-            CREATE TABLE "PackagesDbSchemaVersion" (
-                "version" INTEGER NOT NULL
-            );
-            insert into PackagesDbSchemaVersion values ()" + std::to_string(PACKAGES_DB_SCHEMA_VERSION) + R"();
-        )"
-    },
-    {
-        "StartupActions",
-        R"(
-            CREATE TABLE "StartupActions" (
-                "timestamp" INTEGER NOT NULL,
-                "action" INTEGER NOT NULL,
-                PRIMARY KEY ("timestamp", "action")
-            );
-        )"
-    },
-    {
-        "ConfigHashes",
-        R"(
+        )" },
+
+        {"ConfigHashes",
+         R"(
             CREATE TABLE "ConfigHashes" (
-                "hash" TEXT NOT NULL,
-                "config" TEXT NOT NULL,
+                "hash" TEXT NOT NULL,           -- program (settings) hash
+                "config" TEXT NOT NULL,         -- config
+                "config_hash" TEXT NOT NULL,    -- config hash
                 PRIMARY KEY ("hash")
             );
-        )"
-    },
-    {
-        "PackageDependenciesHashes",
+        )"},
+
+        { "FileStamps",
         R"(
-            CREATE TABLE "PackageDependenciesHashes" (
-                "package" TEXT NOT NULL,
-                "dependencies" TEXT NOT NULL,
-                PRIMARY KEY ("package")
+            CREATE TABLE "FileStamps" (
+                "file" TEXT NOT NULL,
+                "stamp" INTEGER NOT NULL,
+                PRIMARY KEY ("file")
             );
-        )"
-    },
-    {
-        "InstalledPackages",
-        R"(
+        )" },
+
+        {"InstalledPackages",
+         R"(
             CREATE TABLE "InstalledPackages" (
                 "package" TEXT NOT NULL,
                 "version" TEXT NOT NULL,
                 "hash" TEXT NOT NULL,
                 PRIMARY KEY ("package")
             );
-        )"
-    },
-    {
-        "NextClientVersionCheck",
-        R"(
+        )"},
+
+        {"NextClientVersionCheck",
+         R"(
             CREATE TABLE "NextClientVersionCheck" (
                 "timestamp" INTEGER NOT NULL
             );
             insert into NextClientVersionCheck values (0);
-        )"
-    },
+        )"},
+
+        {"NRuns", // unneeded?
+         R"(
+            CREATE TABLE "NRuns" (
+                "n_runs" INTEGER NOT NULL
+            );
+            insert into NRuns values (0);
+        )"},
+
+        {"PackagesDbSchemaVersion",
+         R"(
+            CREATE TABLE "PackagesDbSchemaVersion" (
+                "version" INTEGER NOT NULL
+            );
+            insert into PackagesDbSchemaVersion values ()" +
+             std::to_string(PACKAGES_DB_SCHEMA_VERSION) + R"();
+        )"},
+
+        {"PackageDependenciesHashes",
+         R"(
+            CREATE TABLE "PackageDependenciesHashes" (
+                "package" TEXT NOT NULL,
+                "dependencies" TEXT NOT NULL,
+                PRIMARY KEY ("package")
+            );
+        )"},
+
+        {"StartupActions",
+         R"(
+            CREATE TABLE "StartupActions" (
+                "timestamp" INTEGER NOT NULL,
+                "action" INTEGER NOT NULL,
+                PRIMARY KEY ("timestamp", "action")
+            );
+        )"},
+
+        {"TableHashes",
+         R"(
+            CREATE TABLE "TableHashes" (
+                "tbl" TEXT NOT NULL,
+                "hash" TEXT NOT NULL,
+                PRIMARY KEY ("tbl")
+            );
+        )"},
     };
     return service_tables;
 }
@@ -268,12 +291,55 @@ void Database::recreate()
 ServiceDatabase::ServiceDatabase()
     : Database(service_db_name, get_service_tables())
 {
-    // create new (appended) tables
-    for (auto i = db->getNumberOfTables(); i < (int)tds.size(); i++)
-        db->execute(tds[i].query);
-
+    createTables();
+    checkStamp();
     increaseNumberOfRuns();
     checkForUpdates();
+}
+
+void ServiceDatabase::createTables() const
+{
+    // add table hashes
+    if (created)
+    {
+        for (auto &td : tds)
+            setTableHash(td.name, sha256(td.query));
+    }
+
+    // create only new tables
+    for (auto &td : tds)
+    {
+        if (db->getNumberOfColumns(td.name))
+            continue;
+
+        auto h = sha256(td.query);
+        setTableHash(td.name, h);
+        db->execute(td.query);
+    }
+}
+
+void ServiceDatabase::checkStamp() const
+{
+    bool assigned = false;
+    String s;
+    db->execute("select * from ClientStamp",
+        [&s, &assigned](SQLITE_CALLBACK_ARGS)
+    {
+        s = cols[0];
+        return 0;
+    });
+
+    if (s == cppan_stamp)
+        return;
+
+    if (s.empty())
+        db->execute("replace into ClientStamp values ('" + cppan_stamp + "')");
+    else
+        db->execute("update ClientStamp set stamp = '" + cppan_stamp + "'");
+
+    // if stamp is changed, we do some usual stuff between versions
+
+    clearFileStamps();
 }
 
 void ServiceDatabase::performStartupActions() const
@@ -309,6 +375,21 @@ void ServiceDatabase::performStartupActions() const
                 boost::system::error_code ec;
                 fs::remove_all(temp_directory_path(), ec);
             }
+                break;
+            case StartupAction::CheckSchema:
+                // create new tables
+                createTables();
+
+                // re-create changed tables
+                for (auto &td : tds)
+                {
+                    auto h = sha256(td.query);
+                    if (getTableHash(td.name) == h)
+                        continue;
+                    db->dropTable(td.name);
+                    db->execute(td.query);
+                    setTableHash(td.name, h);
+                }
                 break;
             default:
                 throw std::logic_error("Startup action was not defined. Report this to the maintainer!");
@@ -356,6 +437,46 @@ void ServiceDatabase::setLastClientUpdateCheck() const
 {
     db->execute("update NextClientVersionCheck set timestamp = '" +
         std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())) + "'");
+}
+
+String ServiceDatabase::getTableHash(const String &table) const
+{
+    String h;
+    db->execute("select hash from TableHashes where tbl = '" + table + "'",
+        [&h](SQLITE_CALLBACK_ARGS)
+    {
+        h = cols[0];
+        return 0;
+    });
+    return h;
+}
+
+void ServiceDatabase::setTableHash(const String &table, const String &hash) const
+{
+    db->execute("replace into TableHashes values ('" + table + "', '" + hash + "')");
+}
+
+Stamps ServiceDatabase::getFileStamps() const
+{
+    Stamps st;
+    db->execute("select * from FileStamps",
+        [&st](SQLITE_CALLBACK_ARGS)
+    {
+        st[cols[0]] = std::stoll(cols[1]);
+        return 0;
+    });
+    return st;
+}
+
+void ServiceDatabase::setFileStamps(const Stamps &stamps) const
+{
+    for (auto &s : stamps)
+        db->execute("replace into FileStamps values ('" + normalize_path(s.first) + "', '" + std::to_string(s.second) + "')");
+}
+
+void ServiceDatabase::clearFileStamps() const
+{
+    db->execute("delete from FileStamps");
 }
 
 bool ServiceDatabase::isActionPerformed(const StartupAction &action) const
@@ -418,10 +539,10 @@ void ServiceDatabase::clearConfigHashes() const
     db->execute("delete from ConfigHashes");
 }
 
-String ServiceDatabase::getConfigByHash(const String &hash) const
+String ServiceDatabase::getConfigByHash(const String &settings_hash) const
 {
     String c;
-    db->execute("select config from ConfigHashes where hash = '" + hash + "'",
+    db->execute("select config from ConfigHashes where hash = '" + settings_hash + "'",
         [&c](SQLITE_CALLBACK_ARGS)
     {
         c = cols[0];
@@ -430,11 +551,11 @@ String ServiceDatabase::getConfigByHash(const String &hash) const
     return c;
 }
 
-void ServiceDatabase::addConfigHash(const String &hash, const String &config) const
+void ServiceDatabase::addConfigHash(const String &settings_hash, const String &config, const String &config_hash) const
 {
     if (config.empty())
         return;
-    db->execute("replace into ConfigHashes values ('" + hash + "', '" + config + "')");
+    db->execute("replace into ConfigHashes values ('" + settings_hash + "', '" + config + "', '" + config_hash + "'" + ")");
 }
 
 void ServiceDatabase::setPackageDependenciesHash(const Package &p, const String &hash) const

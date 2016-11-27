@@ -257,6 +257,10 @@ HttpResponse url_request(const HttpRequest &request)
 
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+    if (request.connect_timeout != -1)
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, request.connect_timeout);
+    if (request.timeout != -1)
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, request.timeout);
 
     // proxy settings
     auto proxy_addr = getAutoProxy();

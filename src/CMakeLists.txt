@@ -125,6 +125,7 @@ set(common_src
     log.h
     logger.cpp
     logger.h
+    optional.h
     package.cpp
     package.h
     property_tree.cpp

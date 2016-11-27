@@ -50,8 +50,10 @@ struct StartupAction
 {
     enum Type
     {
+        // append only
         ClearCache = 0,
         ServiceDbClearConfigHashes,
+        CheckSchema,
     };
 
     String timestamp;
@@ -96,8 +98,8 @@ public:
     bool isActionPerformed(const StartupAction &action) const;
     void setActionPerformed(const StartupAction &action) const;
 
-    String getConfigByHash(const String &hash) const;
-    void addConfigHash(const String &hash, const String &config) const;
+    String getConfigByHash(const String &settings_hash) const;
+    void addConfigHash(const String &settings_hash, const String &config, const String &config_hash) const;
     void clearConfigHashes() const;
 
     void setPackageDependenciesHash(const Package &p, const String &hash) const;
@@ -107,6 +109,17 @@ public:
     void removeInstalledPackage(const Package &p) const;
     String getInstalledPackageHash(const Package &p) const;
     std::set<Package> getInstalledPackages() const;
+
+    String getTableHash(const String &table) const;
+    void setTableHash(const String &table, const String &hash) const;
+
+    Stamps getFileStamps() const;
+    void setFileStamps(const Stamps &stamps) const;
+    void clearFileStamps() const;
+
+private:
+    void createTables() const;
+    void checkStamp() const;
 };
 
 class PackagesDatabase : public Database

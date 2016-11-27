@@ -316,9 +316,10 @@ String get_config(const Settings &settings)
         return hash_config(c);
 
     c = test_run(settings);
-    db.addConfigHash(h, c);
+    auto ch = hash_config(c);
+    db.addConfigHash(h, c, ch);
 
-    return hash_config(c);
+    return ch;
 }
 
 String test_run(const Settings &settings)
@@ -341,6 +342,7 @@ String test_run(const Settings &settings)
     conf.process(src_dir);
     conf.settings = settings;
     conf.settings.allow_links = false;
+    conf.settings.disable_checks = true;
     conf.settings.source_directory = src_dir;
     conf.settings.binary_directory = bin_dir;
 

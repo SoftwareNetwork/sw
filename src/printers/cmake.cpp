@@ -540,6 +540,7 @@ endif()
     config_section_title(ctx, "CPPAN include");
     ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
     ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
+    ctx.addLine(String("set(CPPAN_DISABLE_CHECKS ") + (bs.disable_checks ? "1" : "0") + ")");
     ctx.addLine("add_subdirectory(" + normalize_path(bs.cppan_dir) + ")");
     ctx.addLine();
 
@@ -707,6 +708,8 @@ void CMakePrinter::print_meta()
         "# global options from cppan source code\n"
         "set(CPPAN_CONFIG_HASH_METHOD " CPPAN_CONFIG_HASH_METHOD ")\n"
         "set(CPPAN_CONFIG_HASH_SHORT_LENGTH " + std::to_string(CPPAN_CONFIG_HASH_SHORT_LENGTH) + ")\n"
+        "\n"
+        "set(CPPAN_CONFIG_PART_DELIMETER -)\n"
         "\n"
         + cmake_functions);
     access_table->write_if_older(directories.get_static_files_dir() / cmake_header_filename, cmake_header);
@@ -2045,11 +2048,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine();
     }
     ctx.addLine("get_configuration(config)");
+    ctx.addLine("get_configuration_unhashed(config_name)");
     ctx.addLine("get_configuration_with_generator(config_dir)");
-    ctx.addLine("get_configuration_with_generator_unhashed(config_name)");
+    ctx.addLine("get_configuration_with_generator_unhashed(config_gen_name)");
     ctx.addLine("get_number_of_cores(N_CORES)");
     ctx.addLine();
-    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_name}\")");
+    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_gen_name}\")");
     ctx.addLine();
     ctx.addLine("set(XCODE 0)");
     ctx.addLine("if (CMAKE_GENERATOR STREQUAL \"Xcode\")");
@@ -2077,8 +2081,13 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         // common checks
         config_section_title(ctx, "common checks");
 
+        ctx.addLine("if (NOT CPPAN_DISABLE_CHECKS)");
+        ctx.addLine();
+
         // read vars file
         ctx.addLine("set(vars_file \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.cmake\")");
+        // helper will show match between config with gen and just config
+        ctx.addLine("set(vars_file_helper \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.${config_dir}.cmake\")");
         if (!d.flags[pfLocalProject])
             ctx.addLine("read_check_variables_file(${vars_file})");
         ctx.addLine();
@@ -2130,8 +2139,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         {
             ctx.addLine("if (CPPAN_NEW_VARIABLE_ADDED)");
             ctx.addLine("    write_check_variables_file(${vars_file})");
+            ctx.addLine("    file(WRITE ${vars_file_helper} \"\")");
             ctx.addLine("endif()");
         }
+
+        ctx.addLine("endif(NOT CPPAN_DISABLE_CHECKS)");
+        ctx.addLine();
     }
 
     // fixups
@@ -2250,6 +2263,9 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
 
 bool CMakePrinter::must_update_contents(const path &fn) const
 {
+    if (access_table->updates_disabled())
+        return false;
+
     if (d.flags[pfLocalProject])
         return true;
 

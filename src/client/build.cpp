@@ -38,13 +38,6 @@
 int build_packages(const String &name, const std::set<Package> &pkgs, const path &settings, const String &config);
 int build_packages(const String &name, const std::set<Package> &pkgs, const Settings &settings);
 
-int generate(path fn, const String &config)
-{
-    //auto conf = generate_config(fn, config);
-    //return conf.settings.generate(&conf);
-    return 0;
-}
-
 int build(path fn, const String &config)
 {
     std::set<Package> pkgs;
@@ -56,46 +49,8 @@ int build(path fn, const String &config)
 
 int build_only(path fn, const String &config)
 {
-    //AccessTable::do_not_update_files(true);
-
-    //auto conf = generate_config(fn, config);
-    //return conf.settings.build(&conf);
-    return 0;
-}
-
-int dry_run(path p, const String &config)
-{
-    Config c(p);
-    auto cppan_fn = p / CPPAN_FILENAME;
-    //c.settings.prepare_build(&c, cppan_fn, read_file(cppan_fn));
-
-    auto &project = c.getDefaultProject();
-    auto dst = c.settings.source_directory / "src";
-    for (auto &f : project.files)
-    {
-        fs::create_directories((dst / f).parent_path());
-        fs::copy_file(p / f, dst / f, fs::copy_option::overwrite_if_exists);
-    }
-    fs::copy_file(p / CPPAN_FILENAME, dst / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
-
-    Config c2(dst);
-    Package pkg;
-    pkg.setLocalSourceDir(dst);
-
-    // TODO: add more robust ppath, version choser
-    pkg.flags.set(pfLocalProject);
-    pkg.ppath = sha256(c.settings.source_directory.string());
-    if (project.version.isValid())
-        pkg.version = project.version;
-    else
-        pkg.version = String("master");
-
-    c2.setPackage(pkg);
-    rd.add_config(std::make_unique<Config>(c2), true);
-
-    //auto conf = generate_config(p, config);
-    //return conf.settings.build(&conf);
-    return 0;
+    AccessTable::do_not_update_files(true);
+    return build(fn, config);
 }
 
 int build_packages(const String &name, const std::set<Package> &pkgs, const Settings &settings)

@@ -444,10 +444,6 @@ try
         return build(options["build"].as<String>(), options["config"].as<String>());
     else if (options().count("build-only"))
         return build_only(options["build-only"].as<String>(), options["config"].as<String>());
-    else if (options().count("generate"))
-        return generate(options["generate"].as<String>(), options["config"].as<String>());
-    else if (options().count("dry-run"))
-        return dry_run(options["dry-run"].as<String>(), options["config"].as<String>());
     else if (options().count("build-package"))
         return build_package(options["build-package"].as<String>(), options["settings"].as<String>(), options["config"].as<String>());
 

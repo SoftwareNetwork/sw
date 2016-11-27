@@ -28,6 +28,7 @@
 #include "access_table.h"
 
 #include "common.h"
+#include "database.h"
 #include "lock.h"
 #include "stamp.h"
 
@@ -35,40 +36,16 @@
 
 struct AccessData
 {
-    bool initialized = false;
-    path root_dir;
-    path root_file;
-    std::unordered_map<path, time_t> stamps;
-    int refs = 0;
+    Stamps stamps;
     bool do_not_update = false;
-
-    void init(const path &rd)
-    {
-        if (initialized)
-            return;
-
-        root_dir = rd / STAMPS_DIR / "cppan";
-        if (!fs::exists(root_dir))
-            fs::create_directories(root_dir);
-
-        root_file = root_dir / cppan_stamp;
-
-        initialized = true;
-    }
+    int refs = 0;
 
     void load()
     {
-        if (!fs::exists(root_file))
-            return;
         if (refs++ > 0)
             return;
 
-        ScopedShareableFileLock lock(root_file);
-        path p;
-        time_t t;
-        std::ifstream ifile(root_file.string());
-        while (ifile >> p >> t)
-            stamps[p] = t;
+        stamps = getServiceDatabase().getFileStamps();
     }
 
     void save()
@@ -76,12 +53,13 @@ struct AccessData
         if (--refs > 0)
             return;
 
-        ScopedFileLock lock(root_file);
-        std::ofstream ofile(root_file.string());
-        if (!ofile)
-            return;
-        for (auto &s : stamps)
-            ofile << s.first << " " << s.second << "\n";
+        getServiceDatabase().setFileStamps(stamps);
+    }
+
+    void clear()
+    {
+        stamps.clear();
+        getServiceDatabase().clearFileStamps();
     }
 };
 
@@ -90,7 +68,6 @@ static AccessData data;
 AccessTable::AccessTable(const path &cfg_dir)
     : root_dir(cfg_dir.parent_path())
 {
-    data.init(cfg_dir);
     data.load();
 }
 
@@ -108,6 +85,11 @@ bool AccessTable::must_update_contents(const path &p) const
     if (!isUnderRoot(p))
         return true;
     return fs::last_write_time(p) != data.stamps[p];
+}
+
+bool AccessTable::updates_disabled() const
+{
+    return data.do_not_update;
 }
 
 void AccessTable::update_contents(const path &p, const String &s) const
@@ -129,7 +111,7 @@ void AccessTable::write_if_older(const path &p, const String &s) const
 
 void AccessTable::clear() const
 {
-    data.stamps.clear();
+    data.clear();
 }
 
 bool AccessTable::isUnderRoot(path p) const

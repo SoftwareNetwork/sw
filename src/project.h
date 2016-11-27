@@ -29,6 +29,7 @@
 
 #include "common.h"
 #include "dependency.h"
+#include <optional.h>
 #include "project_path.h"
 #include "source.h"
 #include "yaml.h"
@@ -172,6 +173,11 @@ struct Project
     // allow relative project paths
     bool allow_relative_project_names = false;
 
+    // own data, not from config
+public:
+    // flag shows that files were loaded from 'files' node
+    bool files_loaded = false;
+
 public:
     Project(const ProjectPath &root_project);
 
@@ -193,6 +199,7 @@ private:
 
     const Files &getSources() const;
     ProjectPath relative_name_to_absolute(const String &name);
+    optional<ProjectPath> load_local_dependency(const String &name);
     void findRootDirectory(const path &p, int depth = 0);
 };
 

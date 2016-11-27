@@ -33,6 +33,7 @@
 
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -44,6 +45,8 @@ using path = fs::wpath;
 
 using FilesSorted = std::set<path>;
 using Files = std::unordered_set<path>;
+
+using Stamps = std::unordered_map<path, time_t>;
 
 path get_home_directory();
 path get_root_directory();
