@@ -184,6 +184,70 @@ void Resolver::resolve_dependencies(const Config &c)
         deps.insert(d);
     }
 
+    resolve_dependencies(deps);
+    read_configs();
+    post_download();
+    write_index();
+    check_deps_changed();
+
+    // add input config
+    packages[c.pkg].dependencies = deps;
+    for (auto &dd : download_dependencies_)
+    {
+        if (!dd.second.flags[pfDirectDependency])
+            continue;
+        auto &deps2 = packages[c.pkg].dependencies;
+        auto i = deps2.find(dd.second.ppath.toString());
+        if (i == deps2.end())
+        {
+            // check if we chose a root project match all subprojects
+            Packages to_add;
+            std::set<String> to_remove;
+            for (auto &root_dep : deps2)
+            {
+                for (auto &child_dep : download_dependencies_)
+                {
+                    if (root_dep.second.ppath.is_root_of(child_dep.second.ppath))
+                    {
+                        to_add.insert({ child_dep.second.ppath.toString(), child_dep.second });
+                        to_remove.insert(root_dep.second.ppath.toString());
+                    }
+                }
+            }
+            if (to_add.empty())
+                throw std::runtime_error("cannot match dependency");
+            for (auto &r : to_remove)
+                deps2.erase(r);
+            for (auto &a : to_add)
+                deps2.insert(a);
+            continue;
+        }
+        auto &d = i->second;
+        d.version = dd.second.version;
+        d.flags |= dd.second.flags;
+        d.createNames();
+    }
+}
+
+void Resolver::resolve_dependencies(const Packages &dependencies)
+{
+    Packages deps;
+
+    // remove some packages
+    for (auto &d : dependencies)
+    {
+        // remove local packages
+        if (d.second.ppath.is_loc())
+            continue;
+
+        // remove already downloaded packages
+        auto i = resolved_packages.find(d.second);
+        if (i != resolved_packages.end())
+            continue;
+
+        deps.insert(d);
+    }
+
     if (deps.empty())
         return;
 
@@ -255,49 +319,6 @@ void Resolver::resolve_dependencies(const Config &c)
             continue;
         }
         break;
-    }
-
-    read_configs();
-    post_download();
-    write_index();
-    check_deps_changed();
-
-    // add default (current, root) config
-    packages[c.pkg].dependencies = deps;
-    for (auto &dd : download_dependencies_)
-    {
-        if (!dd.second.flags[pfDirectDependency])
-            continue;
-        auto &deps2 = packages[c.pkg].dependencies;
-        auto i = deps2.find(dd.second.ppath.toString());
-        if (i == deps2.end())
-        {
-            // check if we chosen a root project match all subprojects
-            Packages to_add;
-            std::set<String> to_remove;
-            for (auto &root_dep : deps2)
-            {
-                for (auto &child_dep : download_dependencies_)
-                {
-                    if (root_dep.second.ppath.is_root_of(child_dep.second.ppath))
-                    {
-                        to_add.insert({ child_dep.second.ppath.toString(), child_dep.second });
-                        to_remove.insert(root_dep.second.ppath.toString());
-                    }
-                }
-            }
-            if (to_add.empty())
-                throw std::runtime_error("cannot match dependency");
-            for (auto &r : to_remove)
-                deps2.erase(r);
-            for (auto &a : to_add)
-                deps2.insert(a);
-            continue;
-        }
-        auto &d = i->second;
-        d.version = dd.second.version;
-        d.flags |= dd.second.flags;
-        d.createNames();
     }
 
     // mark packages as resolved
@@ -775,6 +796,8 @@ void Resolver::write_index() const
 
 void Resolver::read_configs()
 {
+    if (download_dependencies_.empty())
+        return;
     LOG_NO_NEWLINE("Reading package specs... ");
     for (auto &d : download_dependencies_)
         read_config(d.second);

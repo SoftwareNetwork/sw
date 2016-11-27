@@ -55,6 +55,7 @@ public:
 
 public:
     void resolve_dependencies(const Config &c);
+    void resolve_dependencies(const Packages &deps);
     std::tuple<std::set<Package>, Config, String>
     read_packages_from_file(path p, const String &config_name = String(), bool direct_dependency = false);
     bool has_local_package(const ProjectPath &ppath) const;

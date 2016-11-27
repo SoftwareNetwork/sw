@@ -63,16 +63,9 @@ struct Package
     String getTargetName() const;
     String getVariableName() const;
 
-    // maybe add same for bin dir
-    // location somewhere near user project or whatever
-    void setLocalSourceDir(const path &p) { local_source_dir = p; }
-
 private:
     // cached vars
     String hash;
-
-    // own data
-    path local_source_dir;
 };
 
 using Packages = std::map<String, Package>;

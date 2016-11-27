@@ -782,10 +782,34 @@ void Project::load(const yaml &root)
                     dependency.ppath = this->relative_name_to_absolute(d["package"].template as<String>());
                 if (d["local"].IsDefined())
                 {
+                    // WARNING!
+                    // probably this could be dangerous, maybe remove?
+                    // if set local dep for a secure file on the system
+                    // it will be read (or not?); how this affects system?
+                    // will not lead to exec shell code somehow or whatever?
+                    // ???
                     auto lp = d["local"].template as<String>();
                     auto ld = load_local_dependency(lp);
                     if (!ld)
-                        throw std::runtime_error("Could not load local project: " + lp);
+                    {
+                        if (!dependency.ppath.empty() && !dependency.ppath.is_loc())
+                        {
+                            try
+                            {
+                                Packages p;
+                                p[dependency.ppath.toString()] = dependency;
+                                rd.resolve_dependencies(p);
+                            }
+                            catch (const std::exception &)
+                            {
+                                // if not resolved, fail finally
+                                throw;
+                            }
+                        }
+
+                        if (dependency.ppath.empty())
+                            throw std::runtime_error("Could not load local project: " + lp);
+                    }
                     dependency.ppath = ld.value();
                 }
             }
