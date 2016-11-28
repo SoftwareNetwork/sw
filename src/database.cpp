@@ -64,7 +64,7 @@ const String service_db_name = "service.db";
 std::vector<StartupAction> startup_actions{
     { "2016-10-20 00:00:00", StartupAction::ClearCache },
     { "2016-11-27 00:00:00", StartupAction::ServiceDbClearConfigHashes },
-    { "2016-11-27 00:00:02", StartupAction::CheckSchema },
+    { "2016-11-27 00:00:03", StartupAction::CheckSchema },
 };
 
 const TableDescriptors &get_service_tables()
@@ -102,10 +102,11 @@ const TableDescriptors &get_service_tables()
         {"InstalledPackages",
          R"(
             CREATE TABLE "InstalledPackages" (
+                "id" INTEGER NOT NULL,
                 "package" TEXT NOT NULL,
                 "version" TEXT NOT NULL,
                 "hash" TEXT NOT NULL,
-                PRIMARY KEY ("package")
+                PRIMARY KEY ("id")
             );
         )"},
 
@@ -142,6 +143,26 @@ const TableDescriptors &get_service_tables()
                 PRIMARY KEY ("package")
             );
         )"},
+
+        { "SourceGroups",
+        R"(
+            CREATE TABLE "SourceGroups" (
+                "id" INTEGER NOT NULL,
+                "package_id" INTEGER NOT NULL,
+                "path" TEXT NOT NULL,
+                PRIMARY KEY ("id"),
+                FOREIGN KEY ("package_id") REFERENCES "InstalledPackages" ("id") ON DELETE CASCADE
+            );
+        )" },
+
+        { "SourceGroupFiles",
+        R"(
+            CREATE TABLE "SourceGroupFiles" (
+                "source_group_id" INTEGER NOT NULL,
+                "path" TEXT NOT NULL,
+                FOREIGN KEY ("source_group_id") REFERENCES "SourceGroups" ("id") ON DELETE CASCADE
+            );
+        )" },
 
         {"StartupActions",
          R"(
@@ -215,9 +236,7 @@ const TableDescriptors data_tables{
 path getDbDirectory()
 {
     // try to keep databases only to user storage dir, not local one
-    Directories dirs;
-    dirs.set_storage_dir(Config::get_user_config().settings.storage_dir);
-    return dirs.storage_dir_etc / db_dir_name;
+    return get_user_directories().storage_dir_etc / db_dir_name;
 }
 
 int readPackagesDbSchemaVersion(const path &dir)
@@ -470,9 +489,11 @@ Stamps ServiceDatabase::getFileStamps() const
 
 void ServiceDatabase::setFileStamps(const Stamps &stamps) const
 {
-    String q;
+    String q = "replace into FileStamps values ";
     for (auto &s : stamps)
-        q += "replace into FileStamps values ('" + normalize_path(s.first) + "', '" + std::to_string(s.second) + "');\n";
+        q += "('" + normalize_path(s.first) + "', '" + std::to_string(s.second) + "'),";
+    q.resize(q.size() - 1);
+    q += ";";
     db->execute(q);
 }
 
@@ -578,12 +599,70 @@ bool ServiceDatabase::hasPackageDependenciesHash(const Package &p, const String 
     return has;
 }
 
+void ServiceDatabase::setSourceGroups(const Package &p, const SourceGroups &sgs) const
+{
+    auto id = getInstalledPackageId(p);
+    if (id == 0)
+        return;
+    removeSourceGroups(id);
+    for (auto &sg : sgs)
+    {
+        db->execute("insert into SourceGroups (package_id, path) values ('" + std::to_string(id) + "', '" + sg.first + "');");
+        auto sg_id = db->getLastRowId();
+        String q = "insert into SourceGroupFiles values ";
+        for (auto &f : sg.second)
+            q += "('" + std::to_string(sg_id) + "', '" + f + "'),";
+        q.resize(q.size() - 1);
+        q += ";";
+        db->execute(q);
+    }
+}
+
+SourceGroups ServiceDatabase::getSourceGroups(const Package &p) const
+{
+    SourceGroups sgs;
+    auto id = getInstalledPackageId(p);
+    if (id == 0)
+        return sgs;
+    std::map<int, String> ids;
+    db->execute("select id, path from SourceGroups where package_id = '" + std::to_string(id) + "';",
+        [&ids](SQLITE_CALLBACK_ARGS)
+    {
+        ids[std::stoi(cols[0])] = cols[1];
+        return 0;
+    });
+    for (auto &i : ids)
+    {
+        auto &sg = sgs[i.second];
+        db->execute("select path from SourceGroupFiles where source_group_id = '" + std::to_string(i.first) + "';",
+            [&sg](SQLITE_CALLBACK_ARGS)
+        {
+            sg.insert(cols[0]);
+            return 0;
+        });
+    }
+    return sgs;
+}
+
+void ServiceDatabase::removeSourceGroups(const Package &p) const
+{
+    auto id = getInstalledPackageId(p);
+    if (id == 0)
+        return;
+    removeSourceGroups(id);
+}
+
+void ServiceDatabase::removeSourceGroups(int id) const
+{
+    db->execute("delete from SourceGroups where package_id = '" + std::to_string(id) + "';");
+}
+
 void ServiceDatabase::addInstalledPackage(const Package &p) const
 {
     auto h = p.getFilesystemHash();
     if (getInstalledPackageHash(p) == h)
         return;
-    db->execute("replace into InstalledPackages values ('" + p.ppath.toString() + "', '" + p.version.toString() + "', '" + p.getFilesystemHash() + "')");
+    db->execute("replace into InstalledPackages (package, version, hash) values ('" + p.ppath.toString() + "', '" + p.version.toString() + "', '" + p.getFilesystemHash() + "')");
 }
 
 void ServiceDatabase::removeInstalledPackage(const Package &p) const
@@ -603,10 +682,22 @@ String ServiceDatabase::getInstalledPackageHash(const Package &p) const
     return hash;
 }
 
+int ServiceDatabase::getInstalledPackageId(const Package &p) const
+{
+    int id = 0;
+    db->execute("select id from InstalledPackages where package = '" + p.ppath.toString() + "' and version = '" + p.version.toString() + "'",
+        [&id](SQLITE_CALLBACK_ARGS)
+    {
+        id = std::stoi(cols[0]);
+        return 0;
+    });
+    return id;
+}
+
 std::set<Package> ServiceDatabase::getInstalledPackages() const
 {
     std::set<std::pair<String, String>> pkgs_s;
-    db->execute("select * from InstalledPackages",
+    db->execute("select package, version from InstalledPackages",
         [&pkgs_s](SQLITE_CALLBACK_ARGS)
     {
         pkgs_s.insert({ cols[0], cols[1] });

@@ -677,19 +677,36 @@ void Project::load(const yaml &root)
     });
     if (defaults_allowed && include_directories.public_.empty())
     {
-        if (fs::exists(root_directory / "include"))
+        if (fs::exists("include"))
             include_directories.public_.insert("include");
         else
-            include_directories.public_.insert(".");
+        {
+            if (fs::exists(root_directory / "include"))
+                include_directories.public_.insert(normalize_path(root_directory / "include"));
+            else
+                include_directories.public_.insert(".");
+            // one case left: root_directory / "."
+        }
     }
     if (defaults_allowed && include_directories.private_.empty())
     {
-        if (fs::exists(root_directory / "src"))
+        if (fs::exists("src"))
         {
-            if (fs::exists(root_directory / "include"))
+            if (fs::exists("include"))
                 include_directories.private_.insert("src");
             else
                 include_directories.public_.insert("src");
+        }
+        else
+        {
+            if (fs::exists(root_directory / "src"))
+            {
+                if (fs::exists(root_directory / "include"))
+                    include_directories.private_.insert(normalize_path(root_directory / "src"));
+                else
+                    include_directories.public_.insert("src");
+                // one case left: root_directory / "src"
+            }
         }
     }
     include_directories.public_.insert("${BDIR}");

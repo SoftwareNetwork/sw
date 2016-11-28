@@ -28,6 +28,7 @@
 #include "directories.h"
 
 #include "common.h"
+#include "config.h"
 
 Directories directories;
 
@@ -59,7 +60,7 @@ void Directories::set_build_dir(const path &p)
 
 void Directories::update(const Directories &dirs, ConfigType t)
 {
-    if (t <= type)
+    if (t > type)
         return;
     auto dirs2 = dirs;
     std::swap(*this, dirs2);
@@ -79,4 +80,12 @@ path Directories::get_local_dir() const
 path Directories::get_static_files_dir() const
 {
     return storage_dir_etc / "static";
+}
+
+const Directories &get_user_directories()
+{
+    static Directories dirs;
+    if (dirs.empty())
+        dirs.set_storage_dir(Config::get_user_config().settings.storage_dir);
+    return dirs;
 }

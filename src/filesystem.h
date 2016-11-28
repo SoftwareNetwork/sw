@@ -31,6 +31,7 @@
 #include <boost/functional/hash.hpp>
 #include <boost/range.hpp>
 
+#include <map>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -47,6 +48,7 @@ using FilesSorted = std::set<path>;
 using Files = std::unordered_set<path>;
 
 using Stamps = std::unordered_map<path, time_t>;
+using SourceGroups = std::map<std::string, std::set<std::string>>;
 
 path get_home_directory();
 path get_root_directory();

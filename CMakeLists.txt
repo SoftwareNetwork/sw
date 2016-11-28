@@ -51,21 +51,27 @@ endif()
 set(output_dir ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
 
-#add_subdirectory(cppan)
+if(EXISTS ${PROJECT_SOURCE_DIR}/.cppan AND USE_CPPAN_BUILD)
+    set(CPPAN_BUILD_SHARED_LIBS 1)
+    add_subdirectory(.cppan)
+endif()
 
-set(Boost_USE_STATIC_LIBS ON)
-
-find_package(Boost 1.60 REQUIRED filesystem program_options log system thread date_time)
 find_package(BISON 3.0 REQUIRED)
 find_package(FLEX REQUIRED)
 
-if (NOT WIN32)
-    if (NOT APPLE)
-        find_package(LibArchive REQUIRED)
+if (NOT CPPAN_BUILD)
+    set(Boost_USE_STATIC_LIBS ON)
+
+    find_package(Boost 1.60 REQUIRED filesystem program_options log system thread date_time)
+
+    if (NOT WIN32)
+        if (NOT APPLE)
+            find_package(LibArchive REQUIRED)
+        endif()
+        find_package(CURL REQUIRED)
+        find_package(ZLIB REQUIRED)
+        find_package(OpenSSL REQUIRED)
     endif()
-    find_package(CURL REQUIRED)
-    find_package(ZLIB REQUIRED)
-    find_package(OpenSSL REQUIRED)
 endif()
 
 ################################################################################
@@ -102,15 +108,17 @@ endif()
 #
 ################################################################################
 
-include_directories(${Boost_INCLUDE_DIRS})
-
-link_directories(${Boost_LIBRARY_DIRS})
+if (NOT CPPAN_BUILD)
+    include_directories(${Boost_INCLUDE_DIRS})
+    link_directories(${Boost_LIBRARY_DIRS})
 
 ########################################
 # subdirectories
 ########################################
 
-add_subdirectory(dep)
+    add_subdirectory(dep)
+endif()
+
 add_subdirectory(src)
 
 ###############################################################################

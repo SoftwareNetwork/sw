@@ -52,7 +52,7 @@ const std::map<int, Check::Information> check_information{
     { Check::Library, "check_library_exists", "find_library", "library", "libraries" } },
 
     { Check::LibraryFunction,
-    { Check::LibraryFunction, "check_library_function", "check_library_exists", " library function", "functions" } },
+    { Check::LibraryFunction, "check_library_function", "check_library_exists", "library function", "functions" } },
 
     { Check::Symbol,
     { Check::Symbol, "check_symbol_exists", "check_cxx_symbol_exists", "symbol", "symbols" } },
@@ -142,7 +142,7 @@ void Checks::load(const yaml &root)
         {
             auto f = v["function"].template as<String>();
             auto lib = v["library"].template as<String>();
-            auto p = this->addCheck<CheckInclude>(f, lib);
+            auto p = this->addCheck<CheckLibraryFunction>(f, lib);
         }
     });
 

@@ -10,28 +10,32 @@ endif()
 
 add_definitions(-DUSE_LOGGER=1)
 
-if (WIN32)
-    add_definitions(-DLIBARCHIVE_STATIC)
-    include_directories(${PROJECT_SOURCE_DIR}/dep/libarchive)
-    include_directories(${PROJECT_SOURCE_DIR}/dep/libressl/include)
+if (NOT CPPAN_BUILD)
+    if (WIN32)
+        add_definitions(-DLIBARCHIVE_STATIC)
+        include_directories(${PROJECT_SOURCE_DIR}/dep/libarchive)
+        include_directories(${PROJECT_SOURCE_DIR}/dep/libressl/include)
 
-    add_definitions(-DCURL_STATICLIB=1)
-    include_directories(${PROJECT_SOURCE_DIR}/dep/curl/include)
-    include_directories(${PROJECT_BINARY_DIR}/dep/curl/include)
-    include_directories(${PROJECT_BINARY_DIR}/dep/curl/include/curl)
-else()
-    include_directories(${LibArchive_INCLUDE_DIRS})
-    include_directories(${CURL_INCLUDE_DIRS})
-    include_directories(${OPENSSL_INCLUDE_DIR})
+        add_definitions(-DCURL_STATICLIB=1)
+        include_directories(${PROJECT_SOURCE_DIR}/dep/curl/include)
+        include_directories(${PROJECT_BINARY_DIR}/dep/curl/include)
+        include_directories(${PROJECT_BINARY_DIR}/dep/curl/include/curl)
+    else()
+        include_directories(${LibArchive_INCLUDE_DIRS})
+        include_directories(${CURL_INCLUDE_DIRS})
+        include_directories(${OPENSSL_INCLUDE_DIR})
+    endif()
+
+    if (APPLE)
+        add_definitions(-DLIBARCHIVE_STATIC)
+        include_directories(${PROJECT_SOURCE_DIR}/dep/libarchive/libarchive)
+    endif()
+
+    include_directories(${PROJECT_SOURCE_DIR}/dep/yaml-cpp/include)
+    include_directories(${PROJECT_SOURCE_DIR}/dep/sqlite3)
 endif()
 
-if (APPLE)
-    add_definitions(-DLIBARCHIVE_STATIC)
-    include_directories(${PROJECT_SOURCE_DIR}/dep/libarchive/libarchive)
-endif()
-
-include_directories(${PROJECT_SOURCE_DIR}/dep/yaml-cpp/include)
-include_directories(${PROJECT_SOURCE_DIR}/dep/sqlite3)
+# process is still in deps
 include_directories(${PROJECT_SOURCE_DIR}/dep/process)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -55,7 +59,11 @@ set(inserter_src
     inserter.cpp
 )
 add_executable(inserter ${inserter_src})
-target_link_libraries(inserter ${Boost_LIBRARIES})
+if (NOT CPPAN_BUILD)
+    target_link_libraries(inserter ${Boost_LIBRARIES})
+else()
+    target_link_libraries(inserter pvt.cppan.demo.boost.filesystem)
+endif()
 
 ########################################
 # common
@@ -175,34 +183,42 @@ target_include_directories(common
 target_link_libraries(common
     context
     bazel_parser
-    sqlite3
     extract_comments
 )
-if (WIN32)
-    target_link_libraries(common
-        archive_static
-        libcurl
-        crypto
-        yaml-cpp
-        ${Boost_LIBRARIES}
-    )
-elseif (APPLE)
-    target_link_libraries(common
-        yaml-cpp
-	 archive_static
-        ${CURL_LIBRARIES}
-        ${OPENSSL_LIBRARIES}
-        ${Boost_LIBRARIES}
-    )
+
+if (NOT CPPAN_BUILD)
+    if (WIN32)
+        target_link_libraries(common
+            archive_static
+            libcurl
+            crypto
+            sqlite3
+            yaml-cpp
+            ${Boost_LIBRARIES}
+        )
+    elseif (APPLE)
+        target_link_libraries(common
+            yaml-cpp
+            archive_static
+            sqlite3
+            ${CURL_LIBRARIES}
+            ${OPENSSL_LIBRARIES}
+            ${Boost_LIBRARIES}
+        )
+    else()
+        target_link_libraries(common
+            yaml-cpp
+            sqlite3
+            ${LibArchive_LIBRARIES}
+            ${CURL_LIBRARIES}
+            ${OPENSSL_LIBRARIES}
+            ${Boost_LIBRARIES}
+        )
+    endif()
 else()
-    target_link_libraries(common
-        yaml-cpp
-        ${LibArchive_LIBRARIES}
-        ${CURL_LIBRARIES}
-        ${OPENSSL_LIBRARIES}
-        ${Boost_LIBRARIES}
-    )
+    target_link_libraries(common cppan)
 endif()
+
 
 ################################################################################
 

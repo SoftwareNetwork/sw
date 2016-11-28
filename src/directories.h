@@ -58,7 +58,9 @@ struct Directories
     path get_static_files_dir() const;
 
 private:
-    ConfigType type;
+    ConfigType type{ ConfigType::Max };
 };
 
 extern Directories directories;
+
+const Directories &get_user_directories();

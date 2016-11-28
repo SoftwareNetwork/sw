@@ -49,6 +49,7 @@ public:
 
     void loadDatabase(const path &dbname);
     void save(const path &fn) const;
+    void close();
 
     bool isLoaded() const;
     sqlite3 *getDb() const;
@@ -61,6 +62,7 @@ public:
 
     int getNumberOfColumns(const String &table) const;
     int getNumberOfTables() const;
+    int64_t getLastRowId() const;
 
     void dropTable(const String &table) const;
 

@@ -77,7 +77,8 @@ void Settings::load(const yaml &root, const ConfigType type)
         case ConfigType::System:
             return Config::get_system_config().settings.storage_dir;
         default:
-            return storage_dir;
+            fs::create_directories(storage_dir);
+            return fs::canonical(storage_dir);
         }
     };
 
@@ -98,7 +99,8 @@ void Settings::load(const yaml &root, const ConfigType type)
 
     Directories dirs;
     dirs.storage_dir_type = storage_dir_type;
-    dirs.set_storage_dir(get_storage_dir(storage_dir_type));
+    auto sd = get_storage_dir(storage_dir_type);
+    dirs.set_storage_dir(sd);
     dirs.build_dir_type = build_dir_type;
     dirs.set_build_dir(get_build_dir(build_dir, build_dir_type));
     directories.update(dirs, type);
@@ -159,6 +161,7 @@ void Settings::load_main(const yaml &root, const ConfigType type)
     EXTRACT_AUTO(show_ide_projects);
     EXTRACT_AUTO(add_run_cppan_target);
     EXTRACT_AUTO(cmake_verbose);
+    EXTRACT_AUTO(var_check_jobs);
 
     // read build settings
     if (type == ConfigType::Local)
@@ -209,6 +212,7 @@ void Settings::load_build(const yaml &root)
     EXTRACT_AUTO(show_ide_projects);
     EXTRACT_AUTO(add_run_cppan_target);
     EXTRACT_AUTO(cmake_verbose);
+    EXTRACT_AUTO(var_check_jobs);
 
     for (int i = 0; i < CMakeConfigurationType::Max; i++)
     {

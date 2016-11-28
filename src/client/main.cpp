@@ -523,7 +523,15 @@ void init()
     initLogger("info", "", true);
 
     // initialize CPPAN structures, do not remove
-    Config::get_user_config();
+    auto c = Config::get_user_config();
+    try
+    {
+        c.load_current_config(); // for storage dir
+    }
+    catch (...)
+    {
+        // ignore everything
+    }
 
     // initialize internal db
     auto &sdb = getServiceDatabase();

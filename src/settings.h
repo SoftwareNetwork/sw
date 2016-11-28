@@ -103,8 +103,12 @@ struct Settings
     std::vector<String> cmake_options;
 
     bool use_shared_libs = false;
+
     // do not create links to projects (.sln, CMakeLists.txt)
     bool silent = true;
+
+    // number of parallel jobs for variable checks
+    int var_check_jobs = 0;
 
     // following settings can be overriden in current build config
     bool use_cache = true;
@@ -115,7 +119,6 @@ struct Settings
 
     // own data
     // maybe mutable?
-    bool rebuild = false;
     bool allow_links = true;
     bool force_server_query = false;
     bool disable_checks = false;

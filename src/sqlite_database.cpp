@@ -179,6 +179,17 @@ SqliteDatabase::SqliteDatabase(const path &dbname, bool read_only)
 
 SqliteDatabase::~SqliteDatabase()
 {
+    close();
+}
+
+void SqliteDatabase::close()
+{
+    if (!isLoaded())
+        return;
+
+    // turn on only for memory db
+    //save(fullName);
+
     sqlite3_close(db);
     db = nullptr;
 }
@@ -188,19 +199,17 @@ void SqliteDatabase::loadDatabase(const path &dbname)
     if (isLoaded())
         return;
 
+    close();
+
     LOG_TRACE(logger, "Opening database: " << dbname);
 
-    db = load_from_file(dbname.string(), read_only);
+    if (read_only)
+        db = load_from_file_to_memory(dbname.string());
+    else
+        db = load_from_file(dbname.string(), read_only);
 
     name = dbname.string();
     fullName = dbname;
-
-    execute("pragma cache_size = -2000;"); // cache size (N * page size)
-    execute("pragma page_size = 4096;"); // page size bytes (N * page size)
-    execute("pragma journal_mode = OFF;"); // set to no journal
-    execute("pragma foreign_keys = ON;");
-
-    //execute("PRAGMA synchronous = 1;"); // set to wait for OS sync (0 - no wait, 1 - wait OS, 2 - wait all)
 }
 
 void SqliteDatabase::save(const path &fn) const
@@ -223,17 +232,9 @@ bool SqliteDatabase::execute(String sql, void *object, Sqlite3Callback callback,
     boost::trim(sql);
 
     // lock always for now
-    // maybe replace with InterprocessMutex?
-    ScopedFileLock lock(get_lock(fullName));
-
-    // lock db on writes
-    /*ScopedFileLock lock(get_lock(fullName), std::defer_lock);
-    if (sql.find("insert") == 0 ||
-        sql.find("update") == 0 ||
-        sql.find("delete") == 0 ||
-        sql.find("replace") == 0 ||
-        sql.find("pragma") == 0)
-        lock.lock();*/
+    ScopedFileLock lock(get_lock(fullName), std::defer_lock);
+    if (!read_only)
+        lock.lock();
 
     LOG_TRACE(logger, "Executing sql statement: " << sql);
     char *errmsg;
@@ -265,17 +266,9 @@ bool SqliteDatabase::execute(String sql, DatabaseCallback callback, bool nothrow
     boost::trim(sql);
 
     // lock always for now
-    // maybe replace with InterprocessMutex?
-    ScopedFileLock lock(get_lock(fullName));
-
-    // lock db on writes
-    /*ScopedFileLock lock(get_lock(fullName), std::defer_lock);
-    if (sql.find("insert") == 0 ||
-        sql.find("update") == 0 ||
-        sql.find("delete") == 0 ||
-        sql.find("replace") == 0 ||
-        sql.find("pragma") == 0)
-        lock.lock();*/
+    ScopedFileLock lock(get_lock(fullName), std::defer_lock);
+    if (!read_only)
+        lock.lock();
 
     //
     LOG_TRACE(logger, "Executing sql statement: " << sql);
@@ -361,4 +354,9 @@ int SqliteDatabase::getNumberOfTables() const
 void SqliteDatabase::dropTable(const String &table) const
 {
     execute("drop table " + table + ";");
+}
+
+int64_t SqliteDatabase::getLastRowId() const
+{
+    return sqlite3_last_insert_rowid(db);
 }

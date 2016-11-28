@@ -31,9 +31,15 @@ target_link_libraries(client
     autotools
     common
     fix_imports
+)
+
+if (NOT CPPAN_BUILD)
+target_link_libraries(client
     yaml-cpp
     ${Boost_LIBRARIES}
 )
+endif()
+
 set_target_properties(client PROPERTIES OUTPUT_NAME cppan)
 if (WIN32)
 set_target_properties(client PROPERTIES OUTPUT_NAME_DEBUG cppand)

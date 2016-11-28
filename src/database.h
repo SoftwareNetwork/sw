@@ -108,10 +108,13 @@ public:
     void addInstalledPackage(const Package &p) const;
     void removeInstalledPackage(const Package &p) const;
     String getInstalledPackageHash(const Package &p) const;
+    int getInstalledPackageId(const Package &p) const;
     std::set<Package> getInstalledPackages() const;
 
-    String getTableHash(const String &table) const;
-    void setTableHash(const String &table, const String &hash) const;
+    void setSourceGroups(const Package &p, const SourceGroups &sg) const;
+    SourceGroups getSourceGroups(const Package &p) const;
+    void removeSourceGroups(const Package &p) const;
+    void removeSourceGroups(int id) const;
 
     Stamps getFileStamps() const;
     void setFileStamps(const Stamps &stamps) const;
@@ -120,6 +123,9 @@ public:
 private:
     void createTables() const;
     void checkStamp() const;
+
+    String getTableHash(const String &table) const;
+    void setTableHash(const String &table, const String &hash) const;
 };
 
 class PackagesDatabase : public Database

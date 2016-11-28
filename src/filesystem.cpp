@@ -209,7 +209,11 @@ void remove_files_like(const path &dir, const String &regex)
 
 bool is_under_root(path p, const path &root_dir)
 {
-    if (!p.empty() && fs::exists(p))
+    if (p.empty())
+        return false;
+    if (fs::exists(p))
+        // Converts p, which must exist, to an absolute path
+        // that has no symbolic link, dot, or dot-dot elements.
         p = fs::canonical(p);
     while (!p.empty())
     {

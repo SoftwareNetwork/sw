@@ -47,6 +47,8 @@ struct CMakePrinter : Printer
     void parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain = String()) const override;
 
 private:
+    mutable SourceGroups sgs;
+
     void print_configs();
     void print_helper_file(const path &fn) const;
     void print_meta_config_file(const path &fn) const;
@@ -58,6 +60,7 @@ private:
     void print_object_export_file(const path &fn) const;
     void print_object_build_file(const path &fn) const;
     void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
+    void print_source_groups(Context &ctx, const path &dir) const;
 
     bool must_update_contents(const path &fn) const;
     void write_if_older(const path &fn, const String &s) const;

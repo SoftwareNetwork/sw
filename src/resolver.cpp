@@ -84,7 +84,7 @@ void Resolver::process(const path &p, Config &root)
     }
 
     // set correct package flags to rd[d].dependencies
-    for (auto &c : packages)
+    /*for (auto &c : packages)
     {
         for (auto &d : c.second.dependencies)
         {
@@ -93,9 +93,11 @@ void Resolver::process(const path &p, Config &root)
             auto i = packages.find(d.second);
             if (i == packages.end())
                 throw std::runtime_error("Cannot find match for " + d.second.target_name);
+            bool ido = d.second.flags[pfIncludeDirectoriesOnly] | i->first.flags[pfIncludeDirectoriesOnly];
             d.second.flags = i->first.flags;
+            d.second.flags.set(pfIncludeDirectoriesOnly, ido);
         }
-    }
+    }*/
 
     // main access table holder
     AccessTable access_table(directories.storage_dir_etc);
@@ -254,7 +256,8 @@ void Resolver::resolve_dependencies(const Packages &dependencies)
     if (deps.empty())
         return;
 
-    auto uc = Config::get_user_config();
+    // ref to not invalidate all ptrs
+    auto &uc = Config::get_user_config();
     auto cr = uc.settings.remotes.begin();
     current_remote = &*cr++;
 
@@ -447,7 +450,7 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
     LOG("Ok");
 
     // set dependencies
-    auto unresolved = deps.size();
+    int unresolved = (int)deps.size();
     auto &remote_packages = dependency_tree.get_child("packages");
     for (auto &v : remote_packages)
     {
@@ -476,7 +479,7 @@ void Resolver::getDependenciesFromRemote(const Packages &deps)
         unresolved--;
     }
 
-    if (unresolved != 0)
+    if (unresolved > 0)
         throw std::runtime_error("Some packages (" + std::to_string(unresolved) + ") are unresolved");
 }
 
@@ -499,6 +502,9 @@ void Resolver::getDependenciesFromDb(const Packages &deps)
 
 void Resolver::download_and_unpack()
 {
+    if (download_dependencies_.empty())
+        return;
+
     auto download_dependency = [this](auto &dd)
     {
         auto &d = dd.second;
@@ -649,8 +655,15 @@ void Resolver::download_and_unpack()
         // send download list
         // remove this when cppan will be widely used
         // also because this download count can be easily abused
-        getExecutor().push([this]()
+        getExecutor().push([
+            // copy, these values may change before executor start the job
+            download_dependencies_ = download_dependencies_,
+            current_remote = current_remote
+        ]()
         {
+            if (!current_remote)
+                return;
+
             ptree request;
             ptree children;
             for (auto &d : download_dependencies_)

@@ -319,36 +319,6 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
     ctx.splitLines();
 }
 
-void print_source_groups(Context &ctx, const path &dir)
-{
-    bool once = false;
-    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
-    {
-        if (!fs::is_directory(f))
-            continue;
-
-        if (!once)
-            config_section_title(ctx, "source groups");
-        once = true;
-
-        auto s = fs::relative(f.path(), dir).string();
-        auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
-        boost::replace_all(s2, "/", "\\\\");
-
-        ctx.addLine("source_group(\"" + s2 + "\" FILES");
-        ctx.increaseIndent();
-        for (auto &f2 : boost::make_iterator_range(fs::directory_iterator(f), {}))
-        {
-            if (!fs::is_regular_file(f2))
-                continue;
-            ctx.addLine("\"" + normalize_path(f2.path()) + "\"");
-        }
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-    }
-    ctx.emptyLines(1);
-}
-
 void gather_build_deps(Context &ctx, const Packages &dd, Packages &out, bool recursive = false)
 {
     for (auto &dp : dd)
@@ -1374,66 +1344,81 @@ endif()
 
     // public definitions
     {
-        config_section_title(ctx, "public definitions");
-
-        // common include directories
-        ctx.addLine("target_include_directories(${this}");
-        ctx.increaseIndent();
-        ctx.addLine("PRIVATE ${SDIR}"); // why?
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        ctx.addLine();
-
-        // common definitions
-        ctx.addLine("target_compile_definitions(${this}");
-        ctx.increaseIndent();
-        ctx.addLine("PRIVATE CPPAN"); // build is performed under CPPAN
-        ctx.addLine("PRIVATE CPPAN_BUILD"); // build is performed under CPPAN
-        ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\"");
-        ctx.addLine("PRIVATE CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
-        ctx.addLine("PRIVATE CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
-        // CPPAN_EXPORT is a macro that will be expanded
-        // to proper export/import decls after install from server
-        if (d.flags[pfLocalProject])
-            ctx.addLine("PUBLIC CPPAN_EXPORT=");
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        ctx.addLine();
-
-        // common link libraries
-        ctx.addLine(R"(if (WIN32)
-target_link_libraries(${this}
-    PUBLIC Ws2_32
-)
-else())");
-        ctx.increaseIndent();
-        auto add_unix_lib = [this, &ctx](const String &s)
-        {
-            ctx.addLine("find_library(" + s + " " + s + ")");
-            ctx.addLine("if (NOT ${" + s + "} STREQUAL \"" + s + "-NOTFOUND\")");
-            ctx.increaseIndent();
-            ctx.addLine("target_link_libraries(${this}");
-            ctx.addLine("    PUBLIC " + s + "");
-            ctx.addLine(")");
-            ctx.decreaseIndent();
-            ctx.addLine("endif()");
-        };
-        add_unix_lib("m");
-        add_unix_lib("pthread");
-        add_unix_lib("rt");
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
-
-        // global definitions - why???
-        config_section_title(ctx, "global definitions");
-
         // why???
+        // it is used only in two places and they're very questionable
         String visibility;
         if (!d.flags[pfExecutable])
             visibility = !header_only ? "PUBLIC" : "INTERFACE";
         else
             visibility = "PRIVATE";
+
+        config_section_title(ctx, "public definitions");
+
+        // common include directories
+        ctx.addLine("target_include_directories(${this}");
+        ctx.increaseIndent();
+        ctx.addLine(visibility + " ${SDIR}"); // why???
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
+        // common definitions
+        if (!header_only)
+        {
+            ctx.addLine("target_compile_definitions(${this}");
+            ctx.increaseIndent();
+            ctx.addLine("PRIVATE CPPAN"); // build is performed under CPPAN
+            ctx.addLine("PRIVATE CPPAN_BUILD"); // build is performed under CPPAN
+            ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\"");
+            ctx.addLine("PRIVATE CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
+            ctx.addLine("PRIVATE CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+            ctx.addLine();
+        }
+
+        // CPPAN_EXPORT is a macro that will be expanded
+        // to proper export/import decls after install from server
+        if (d.flags[pfLocalProject])
+        {
+            ctx.addLine("target_compile_definitions(${this}");
+            ctx.increaseIndent();
+            ctx.addLine("PUBLIC CPPAN_EXPORT=");
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+            ctx.addLine();
+        }
+
+        // common link libraries
+        if (!header_only)
+        {
+            ctx.addLine(R"(if (WIN32)
+target_link_libraries(${this}
+    PUBLIC Ws2_32
+)
+else())");
+            ctx.increaseIndent();
+            auto add_unix_lib = [this, &ctx](const String &s)
+            {
+                ctx.addLine("find_library(" + s + " " + s + ")");
+                ctx.addLine("if (NOT ${" + s + "} STREQUAL \"" + s + "-NOTFOUND\")");
+                ctx.increaseIndent();
+                ctx.addLine("target_link_libraries(${this}");
+                ctx.addLine("    PUBLIC " + s + "");
+                ctx.addLine(")");
+                ctx.decreaseIndent();
+                ctx.addLine("endif()");
+            };
+            add_unix_lib("m");
+            add_unix_lib("pthread");
+            add_unix_lib("rt");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+            ctx.addLine();
+        }
+
+        // global definitions - why???
+        config_section_title(ctx, "global definitions");
 
         Context local;
         bool has_defs = false;
@@ -2084,10 +2069,14 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("if (NOT CPPAN_DISABLE_CHECKS)");
         ctx.addLine();
 
+        // if we use user config storage for storing vars
+        // we won't be able to bootstrap client itself on systems without cppan
+        auto cfg_dir = directories.storage_dir_cfg;
+
         // read vars file
-        ctx.addLine("set(vars_file \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.cmake\")");
+        ctx.addLine("set(vars_file \"" + normalize_path(cfg_dir) + "/${config}.cmake\")");
         // helper will show match between config with gen and just config
-        ctx.addLine("set(vars_file_helper \"" + normalize_path(directories.storage_dir_cfg) + "/${config}.${config_dir}.cmake\")");
+        ctx.addLine("set(vars_file_helper \"" + normalize_path(cfg_dir) + "/${config}.${config_dir}.cmake\")");
         if (!d.flags[pfLocalProject])
             ctx.addLine("read_check_variables_file(${vars_file})");
         ctx.addLine();
@@ -2157,6 +2146,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     {
         declare_dummy_target(ctx, cppan_dummy_build_target);
         declare_dummy_target(ctx, cppan_dummy_copy_target);
+        ctx.addLine("add_dependencies(" + cppan_dummy_target(cppan_dummy_copy_target) + " " + cppan_dummy_target(cppan_dummy_build_target) + ")");
     }
 
     file_footer(ctx, d);
@@ -2167,7 +2157,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain) const
 {
     static const String cppan_variable_result_filename = "result.cppan";
-    const auto N = std::thread::hardware_concurrency();
+
+    const auto &uc = Config::get_user_config();
+
+    int N = std::thread::hardware_concurrency();
+    if (uc.settings.var_check_jobs > 0)
+        N = std::min<int>(N, uc.settings.var_check_jobs);
 
     Checks checks;
     checks.load(checks_file);
@@ -2200,11 +2195,11 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
     if (n_checks <= 8)
         return;
 
-    LOG_INFO(logger, "-- Performing " << n_checks << " checks using " << N << " threads");
+    LOG_INFO(logger, "-- Performing " << n_checks << " checks using " << N << " thread(s)");
     LOG_INFO(logger, "-- This process may take up to 5 minutes depending on your hardware");
     LOG_FLUSH();
 
-    auto work = [&dir, &generator, &toolchain](auto &w, int i)
+    auto work = [&dir, &generator, &toolchain, &N](auto &w, int i)
     {
         if (w.checks.empty())
             return;
@@ -2231,7 +2226,12 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
         args.push_back(generator);
         if (!toolchain.empty())
             args.push_back("-DCMAKE_TOOLCHAIN_FILE=" + toolchain);
-        auto ret = command::execute(args);
+
+        command::Result ret;
+        if (N != 1)
+            ret = command::execute(args);
+        else
+            ret = command::execute_with_output(args);
 
         if (ret.rc)
             throw std::runtime_error("Error during evaluating variables");
@@ -2277,4 +2277,52 @@ void CMakePrinter::write_if_older(const path &fn, const String &s) const
     if (d.ppath.is_loc())
         return write_file_if_different(fn, s);
     access_table->write_if_older(fn, s);
+}
+
+void CMakePrinter::print_source_groups(Context &ctx, const path &dir) const
+{
+    // check own data
+    if (sgs.empty())
+    {
+        // check db data
+        auto &sdb = getServiceDatabase();
+        sgs = sdb.getSourceGroups(d);
+        if (sgs.empty())
+        {
+            for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+            {
+                if (!fs::is_directory(f))
+                    continue;
+
+                auto s = fs::relative(f.path(), dir).string();
+                auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
+                boost::replace_all(s2, "/", "\\\\");
+
+                for (auto &f2 : boost::make_iterator_range(fs::directory_iterator(f), {}))
+                {
+                    if (!fs::is_regular_file(f2))
+                        continue;
+                    auto s3 = normalize_path(f2.path());
+                    sgs[s2].insert(s3);
+                }
+            }
+            sdb.setSourceGroups(d, sgs);
+        }
+    }
+
+    bool once = false;
+    for (auto &sg : sgs)
+    {
+        if (!once)
+            config_section_title(ctx, "source groups");
+        once = true;
+
+        ctx.addLine("source_group(\"" + sg.first + "\" FILES");
+        ctx.increaseIndent();
+        for (auto &f : sg.second)
+            ctx.addLine("\"" + f + "\"");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+    }
+    ctx.emptyLines(1);
 }

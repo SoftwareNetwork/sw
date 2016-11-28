@@ -106,6 +106,7 @@ enum class ConfigType
     Local,  // in current project, dir: cppan
     User,   // in user package store
     System, // in system package store
+    Max,
 };
 
 using ProjectFlags = std::bitset<sizeof(uint64_t) * 8>;
