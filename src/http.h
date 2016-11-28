@@ -95,7 +95,7 @@ struct DownloadData
 #ifndef CPPAN_BUILD
         std::unique_ptr<EVP_MD_CTX> ctx;
 #else
-        EVP_MD_CTX *ctx;
+        EVP_MD_CTX *ctx = nullptr;
 #endif
     };
 

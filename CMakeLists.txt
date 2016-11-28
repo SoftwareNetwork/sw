@@ -52,7 +52,7 @@ set(output_dir ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
 
 if(EXISTS ${PROJECT_SOURCE_DIR}/.cppan AND USE_CPPAN_BUILD)
-    set(CPPAN_BUILD_SHARED_LIBS 1)
+    #set(CPPAN_BUILD_SHARED_LIBS 0)
     add_subdirectory(.cppan)
 endif()
 
