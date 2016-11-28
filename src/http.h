@@ -92,7 +92,11 @@ struct DownloadData
         void progress(char *ptr, size_t size, size_t nmemb);
 
     private:
+#ifndef CPPAN_BUILD
         std::unique_ptr<EVP_MD_CTX> ctx;
+#else
+        EVP_MD_CTX *ctx;
+#endif
     };
 
     String url;

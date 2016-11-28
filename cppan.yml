@@ -5,7 +5,9 @@ dependencies:
     pvt.cppan.demo.boost.filesystem: 1
     pvt.cppan.demo.boost.log: 1
     pvt.cppan.demo.boost.optional: 1
+    pvt.cppan.demo.boost.program_options: 1
     pvt.cppan.demo.boost.property_tree: 1
+    pvt.cppan.demo.boost.variant: 1
     pvt.cppan.demo.badger.curl.libcurl: 7
     pvt.cppan.demo.libarchive.libarchive: 3
     pvt.cppan.demo.openssl.crypto: 1

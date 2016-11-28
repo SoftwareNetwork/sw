@@ -92,10 +92,18 @@ void DownloadData::Hasher::finalize()
         return;
     uint32_t hash_size = 0;
     uint8_t h[EVP_MAX_MD_SIZE] = { 0 };
+#ifndef CPPAN_BUILD
     EVP_DigestFinal_ex(ctx.get(), h, &hash_size);
+#else
+    EVP_DigestFinal_ex(ctx, h, &hash_size);
+#endif
     if (hash)
         *hash = hash_to_string(h, hash_size);
+#ifndef CPPAN_BUILD
     ctx.reset();
+#else
+    EVP_MD_CTX_reset(ctx);
+#endif
 }
 
 void DownloadData::Hasher::progress(char *ptr, size_t size, size_t nmemb)
@@ -104,19 +112,34 @@ void DownloadData::Hasher::progress(char *ptr, size_t size, size_t nmemb)
         return;
     if (!ctx)
     {
+#ifndef CPPAN_BUILD
         ctx = std::make_unique<EVP_MD_CTX>();
         EVP_MD_CTX_init(ctx.get());
         EVP_MD_CTX_set_flags(ctx.get(), EVP_MD_CTX_FLAG_ONESHOT);
         EVP_DigestInit(ctx.get(), hash_function());
+#else
+        ctx = EVP_MD_CTX_create();
+        EVP_MD_CTX_init(ctx);
+        EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_ONESHOT);
+        EVP_DigestInit(ctx, hash_function());
+#endif
     }
+#ifndef CPPAN_BUILD
     EVP_DigestUpdate(ctx.get(), ptr, size * nmemb);
+#else
+    EVP_DigestUpdate(ctx, ptr, size * nmemb);
+#endif
 }
 
 DownloadData::Hasher::~Hasher()
 {
     if (!ctx)
         return;
+#ifndef CPPAN_BUILD
     EVP_MD_CTX_cleanup(ctx.get());
+#else
+    EVP_MD_CTX_destroy(ctx);
+#endif
 }
 
 void DownloadData::finalize()

@@ -1344,8 +1344,9 @@ endif()
 
     // public definitions
     {
-        // why???
-        // it is used only in two places and they're very questionable
+        // visibility is set for some common vars
+        // the appropriate value is selected based on target type
+        // do not remove!
         String visibility;
         if (!d.flags[pfExecutable])
             visibility = !header_only ? "PUBLIC" : "INTERFACE";
@@ -1363,19 +1364,19 @@ endif()
         ctx.addLine();
 
         // common definitions
-        if (!header_only)
-        {
-            ctx.addLine("target_compile_definitions(${this}");
-            ctx.increaseIndent();
-            ctx.addLine("PRIVATE CPPAN"); // build is performed under CPPAN
-            ctx.addLine("PRIVATE CPPAN_BUILD"); // build is performed under CPPAN
-            ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\"");
-            ctx.addLine("PRIVATE CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
-            ctx.addLine("PRIVATE CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
-            ctx.decreaseIndent();
-            ctx.addLine(")");
-            ctx.addLine();
-        }
+        // this variables do a small but very important thing
+        // they expose CPPAN vars to their users
+        // do not remove!
+        ctx.addLine("target_compile_definitions(${this}");
+        ctx.increaseIndent();
+        ctx.addLine(visibility + " CPPAN"); // build is performed under CPPAN
+        ctx.addLine(visibility + " CPPAN_BUILD"); // build is performed under CPPAN
+        ctx.addLine(visibility + " CPPAN_CONFIG=\"${config}\"");
+        ctx.addLine(visibility + " CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
+        ctx.addLine(visibility + " CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
 
         // CPPAN_EXPORT is a macro that will be expanded
         // to proper export/import decls after install from server
