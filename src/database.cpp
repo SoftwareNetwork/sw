@@ -235,8 +235,8 @@ const TableDescriptors data_tables{
 
 path getDbDirectory()
 {
-    // try to keep databases only to user storage dir, not local one
-    return get_user_directories().storage_dir_etc / db_dir_name;
+    // db per storage
+    return directories.storage_dir_etc / db_dir_name;
 }
 
 int readPackagesDbSchemaVersion(const path &dir)

@@ -44,7 +44,7 @@ std::string prepare_lock_file(const path &fn)
 
 path get_lock(const path &fn)
 {
-    return get_user_directories().storage_dir_etc / "locks" / fn.filename();
+    return directories.storage_dir_etc / "locks" / fn.filename();
 }
 
 ////////////////////////////////////////

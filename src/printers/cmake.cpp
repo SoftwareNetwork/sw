@@ -509,8 +509,8 @@ endif()
     // should be after flags
     config_section_title(ctx, "CPPAN include");
     ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
-    ctx.addLine(String("set(CPPAN_BUILD_SHARED_LIBS ") + (bs.use_shared_libs ? "1" : "0") + ")");
-    ctx.addLine(String("set(CPPAN_DISABLE_CHECKS ") + (bs.disable_checks ? "1" : "0") + ")");
+    ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS "s + (bs.use_shared_libs ? "1" : "0") + ")");
+    ctx.addLine("set(CPPAN_DISABLE_CHECKS "s + (bs.disable_checks ? "1" : "0") + ")");
     ctx.addLine("add_subdirectory(" + normalize_path(bs.cppan_dir) + ")");
     ctx.addLine();
 
@@ -1844,11 +1844,11 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("set(${CMAKE_CXX_COMPILER_ID} 1)");
     ctx.addLine();
     ctx.addLine("if (NOT DEFINED CPPAN_USE_CACHE)");
-    ctx.addLine(String("set(CPPAN_USE_CACHE ") + (cc->settings.use_cache ? "1" : "0") + ")");
+    ctx.addLine("set(CPPAN_USE_CACHE "s + (cc->settings.use_cache ? "1" : "0") + ")");
     ctx.addLine("endif()");
     ctx.addLine();
     ctx.addLine("if (NOT DEFINED CPPAN_SHOW_IDE_PROJECTS)");
-    ctx.addLine(String("set(CPPAN_SHOW_IDE_PROJECTS ") + (cc->settings.show_ide_projects ? "1" : "0") + ")");
+    ctx.addLine("set(CPPAN_SHOW_IDE_PROJECTS "s + (cc->settings.show_ide_projects ? "1" : "0") + ")");
     ctx.addLine("endif()");
     ctx.addLine();
     ctx.addLine("if (NOT DEFINED CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");

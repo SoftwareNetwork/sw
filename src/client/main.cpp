@@ -577,7 +577,7 @@ void self_upgrade(Config &c, const char *exe_path)
     std::cout << "Replacing client" << "\n";
     if (_wexecl(exe.c_str(), arg0.c_str(), L"--self-upgrade-copy", dst.c_str(), 0) == -1)
     {
-        throw std::runtime_error(String("errno = ") + std::to_string(errno) + "\n" +
+        throw std::runtime_error("errno = "s + std::to_string(errno) + "\n" +
             "Cannot do a self upgrade. Replace this file with newer CPPAN client manually.");
     }
 #else
