@@ -27,85 +27,24 @@
 
 #pragma once
 
-#include "common.h"
 #include "dependency.h"
-#include "enums.h"
-#include "property_tree.h"
-
-struct Config;
-struct Directories;
-struct Remote;
-
-class Executor;
-class ProjectPath;
-class SqliteDatabase;
+#include "package_store.h"
 
 struct Resolver
 {
-public:
-    struct PackageConfig
-    {
-        Config *config;
-        Packages dependencies;
-    };
-    using PackageConfigs = std::map<Package, PackageConfig>;
-
-    using iterator = PackageConfigs::iterator;
-    using const_iterator = PackageConfigs::const_iterator;
-
-public:
-    void resolve_dependencies(const Config &c);
-    void resolve_dependencies(const Packages &deps);
-    std::tuple<std::set<Package>, Config, String>
-    read_packages_from_file(path p, const String &config_name = String(), bool direct_dependency = false);
-    bool has_local_package(const ProjectPath &ppath) const;
-    void process(const path &p, Config &root);
-
-    void write_index() const;
-
-    Config *add_config(std::unique_ptr<Config> &&config, bool created);
-    Config *add_config(const Package &p);
-    Config *add_local_config(const Config &c);
-
-    bool rebuild_configs() const { return has_downloads() || deps_changed; }
-    bool has_downloads() const { return downloads > 0; }
-
-public:
-    PackageConfig &operator[](const Package &p);
-    const PackageConfig &operator[](const Package &p) const;
-
-    iterator begin();
-    iterator end();
-
-    const_iterator begin() const;
-    const_iterator end() const;
-
-    iterator find(const PackageConfigs::key_type &k) { return packages.find(k); }
-    const_iterator find(const PackageConfigs::key_type &k) const { return packages.find(k); }
-
-private:
-    PackageConfigs packages;
-    std::set<std::unique_ptr<Config>> config_store;
-
     DownloadDependencies download_dependencies_;
     std::map<Package, ProjectVersionId> dep_ids;
-    std::set<Package> resolved_packages;
-    std::set<ProjectPath> local_packages;
 
     const Remote *current_remote = nullptr;
-    int downloads = 0;
-    bool deps_changed = false;
     bool query_local_db = true;
-    bool processing = false;
 
+    void resolve_dependencies(const Packages &deps);
     void getDependenciesFromRemote(const Packages &deps);
     void getDependenciesFromDb(const Packages &deps);
     void read_configs();
     void download_and_unpack();
     void post_download();
-    void prepare_config(PackageConfigs::value_type &cc);
+    void prepare_config(PackageStore::PackageConfigs::value_type &cc);
     void read_config(const DownloadDependency &d);
-    void check_deps_changed();
+    void assign_dependencies(const Package &p, const Packages &deps); // why such name?
 };
-
-extern Resolver rd;

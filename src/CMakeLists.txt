@@ -136,6 +136,8 @@ set(common_src
     optional.h
     package.cpp
     package.h
+    package_store.cpp
+    package_store.h
     property_tree.cpp
     property_tree.h
     project.cpp

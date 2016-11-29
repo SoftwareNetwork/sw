@@ -797,7 +797,7 @@ void Project::load(const yaml &root)
                     dependency.ppath = this->relative_name_to_absolute(d["name"].template as<String>());
                 if (d["package"].IsDefined())
                     dependency.ppath = this->relative_name_to_absolute(d["package"].template as<String>());
-                if (d["local"].IsDefined())
+                if (d["local"].IsDefined() && allow_local_dependencies)
                 {
                     // WARNING!
                     // probably this could be dangerous, maybe remove?
@@ -815,7 +815,7 @@ void Project::load(const yaml &root)
                             {
                                 Packages p;
                                 p[dependency.ppath.toString()] = dependency;
-                                rd.resolve_dependencies(p);
+                                resolve_dependencies(p);
                             }
                             catch (const std::exception &)
                             {
