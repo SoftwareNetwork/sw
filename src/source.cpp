@@ -49,7 +49,7 @@ bool load_source(const yaml &root, Source &source)
             throw std::runtime_error(error);
         source = git;
     }
-    else if (root["remote"].IsDefined())
+    else if (src["remote"].IsDefined())
     {
         RemoteFile rf;
         EXTRACT_VAR(src, rf.url, "remote", String);
@@ -59,10 +59,10 @@ bool load_source(const yaml &root, Source &source)
         else
             throw std::runtime_error(error);
     }
-    else if (root["files"].IsDefined())
+    else if (src["files"].IsDefined())
     {
         RemoteFiles rfs;
-        rfs.urls = get_sequence_set<String>(root, "files");
+        rfs.urls = get_sequence_set<String>(src, "files");
         if (rfs.urls.empty())
             throw std::runtime_error("Empty remote files");
         source = rfs;
@@ -213,4 +213,30 @@ void DownloadSource::download_and_unpack(const String &url, const path &fn)
 void DownloadSource::download(const Source &source)
 {
     boost::apply_visitor(*this, source);
+}
+
+bool isValidSourceUrl(const Source &source)
+{
+    auto check_url = overload(
+        [](const Git &git)
+    {
+        if (!isValidSourceUrl(git.url))
+            return false;
+        return true;
+    },
+        [](const RemoteFile &rf)
+    {
+        if (!isValidSourceUrl(rf.url))
+            return false;
+        return true;
+    },
+        [](const RemoteFiles &rfs)
+    {
+        for (auto &rf : rfs.urls)
+            if (!isValidSourceUrl(rf))
+                return false;
+        return true;
+    }
+    );
+    return boost::apply_visitor(check_url, source);
 }

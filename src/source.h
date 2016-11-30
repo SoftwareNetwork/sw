@@ -92,3 +92,5 @@ private:
     void download_file(const String &url, const path &fn);
     void download_and_unpack(const String &url, const path &fn);
 };
+
+bool isValidSourceUrl(const Source &source);
