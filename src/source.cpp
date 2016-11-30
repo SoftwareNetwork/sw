@@ -49,7 +49,7 @@ bool load_source(const yaml &root, Source &source)
             throw std::runtime_error(error);
         source = git;
     }
-    else
+    else if (root["remote"].IsDefined())
     {
         RemoteFile rf;
         EXTRACT_VAR(src, rf.url, "remote", String);
@@ -58,6 +58,14 @@ bool load_source(const yaml &root, Source &source)
             source = rf;
         else
             throw std::runtime_error(error);
+    }
+    else if (root["files"].IsDefined())
+    {
+        RemoteFiles rfs;
+        rfs.urls = get_sequence_set<String>(root, "files");
+        if (rfs.urls.empty())
+            throw std::runtime_error("Empty remote files");
+        source = rfs;
     }
 
     return true;
@@ -77,6 +85,11 @@ void save_source(yaml &root, const Source &source)
         [&root](const RemoteFile &rf)
     {
         root["source"]["remote"] = rf.url;
+    },
+        [&root](const RemoteFiles &rfs)
+    {
+        for (auto &rf : rfs.urls)
+            root["source"]["files"].push_back(rf);
     }
     );
 
@@ -111,14 +124,7 @@ void DownloadSource::operator()(const Git &git)
 
         try
         {
-            DownloadData dd;
-            dd.url = url;
-            dd.fn = fn;
-            dd.file_size_limit = max_file_size;
-            ::download_file(dd);
-
-            unpack_file(fn, ".");
-            fs::remove(fn);
+            download_and_unpack(url, fn);
 
             std::set<path> dirs;
             for (auto &f : boost::make_iterator_range(fs::directory_iterator(fs::current_path()), {}))
@@ -177,14 +183,29 @@ void DownloadSource::operator()(const Git &git)
 
 void DownloadSource::operator()(const RemoteFile &rf)
 {
-    auto fn = path(rf.url).filename();
+    download_and_unpack(rf.url, path(rf.url).filename());
+}
+
+void DownloadSource::operator()(const RemoteFiles &rfs)
+{
+    for (auto &rf : rfs.urls)
+        download_file(rf, path(rf).filename());
+}
+
+void DownloadSource::download_file(const String &url, const path &fn)
+{
+    checkSourceUrl(url);
 
     DownloadData dd;
-    dd.url = rf.url;
+    dd.url = url;
     dd.fn = fn;
     dd.file_size_limit = max_file_size;
     ::download_file(dd);
+}
 
+void DownloadSource::download_and_unpack(const String &url, const path &fn)
+{
+    download_file(url, fn);
     unpack_file(fn, ".");
     fs::remove(fn);
 }

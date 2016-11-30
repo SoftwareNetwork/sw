@@ -1494,6 +1494,13 @@ else())");
 
     print_bs_insertion(ctx, p, "post alias", &BuildSystemConfigInsertions::post_alias);
 
+    // test
+    {
+        // cotire
+        //ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / "cotire.cmake") + ")");
+        //ctx.addLine("cotire(${this})");
+    }
+
     // dummy target for IDEs with headers only
     if (header_only)
     {

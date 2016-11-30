@@ -33,6 +33,8 @@
 
 #include <boost/variant.hpp>
 
+#include <set>
+
 struct Git
 {
     String url;
@@ -66,10 +68,11 @@ struct Git
 };
 
 struct RemoteFile { String url; };
+struct RemoteFiles { std::set<String> urls; };
 
 // add svn, bzr, hg?
-// do not add local
-using Source = boost::variant<Git, RemoteFile>;
+// do not add local files
+using Source = boost::variant<Git, RemoteFile, RemoteFiles>;
 
 bool load_source(const yaml &root, Source &source);
 void save_source(yaml &root, const Source &source);
@@ -81,6 +84,11 @@ struct DownloadSource
 
     void operator()(const Git &git);
     void operator()(const RemoteFile &rf);
+    void operator()(const RemoteFiles &rfs);
 
     void download(const Source &source);
+
+private:
+    void download_file(const String &url, const path &fn);
+    void download_and_unpack(const String &url, const path &fn);
 };

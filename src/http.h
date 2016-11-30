@@ -119,3 +119,5 @@ void download_file(DownloadData &data);
 String download_file(const String &url);
 
 bool isUrl(const String &s);
+bool isValidSourceUrl(const String &url);
+void checkSourceUrl(const String &url);
