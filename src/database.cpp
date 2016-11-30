@@ -325,15 +325,27 @@ void ServiceDatabase::createTables() const
             setTableHash(td.name, sha256(td.query));
     }
 
+    auto create_table = [this](const auto &td)
+    {
+        db->execute(td.query);
+        auto h = sha256(td.query);
+        setTableHash(td.name, h);
+    };
+
+    // TableHashes first, out of order
+    auto th = std::find_if(tds.begin(), tds.end(), [](const auto &td)
+    {
+        return td.name == "TableHashes";
+    });
+    if (!db->getNumberOfColumns(th->name))
+        create_table(*th);
+
     // create only new tables
     for (auto &td : tds)
     {
         if (db->getNumberOfColumns(td.name))
             continue;
-
-        auto h = sha256(td.query);
-        setTableHash(td.name, h);
-        db->execute(td.query);
+        create_table(td);
     }
 }
 
