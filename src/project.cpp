@@ -806,7 +806,7 @@ void Project::load(const yaml &root)
                     // will not lead to exec shell code somehow or whatever?
                     // ???
                     auto lp = d["local"].template as<String>();
-                    auto ld = load_local_dependency(lp);
+                    auto ld = this->load_local_dependency(lp);
                     if (!ld)
                     {
                         if (!dependency.ppath.empty() && !dependency.ppath.is_loc())
