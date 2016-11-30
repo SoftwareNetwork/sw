@@ -80,7 +80,7 @@ path get_program()
         throw std::runtime_error("Cannot get program path");
     return dest;
 #else
-    char dest[PATH_MAX];
+    char dest[PATH_MAX] = { 0 };
     if (readlink("/proc/self/exe", dest, PATH_MAX) == -1)
     {
         perror("readlink");
