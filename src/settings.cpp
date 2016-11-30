@@ -78,9 +78,9 @@ void Settings::load(const yaml &root, const ConfigType type)
             return Config::get_system_config().settings.storage_dir;
         default:
         {
-            auto d = fs::canonical(storage_dir);
+            auto d = fs::absolute(storage_dir);
             fs::create_directories(d);
-            return d;
+            return fs::canonical(d);
         }
         }
     };
