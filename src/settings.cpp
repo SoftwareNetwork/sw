@@ -77,8 +77,11 @@ void Settings::load(const yaml &root, const ConfigType type)
         case ConfigType::System:
             return Config::get_system_config().settings.storage_dir;
         default:
-            fs::create_directories(storage_dir);
-            return fs::canonical(storage_dir);
+        {
+            auto d = fs::canonical(storage_dir);
+            fs::create_directories(d);
+            return d;
+        }
         }
     };
 

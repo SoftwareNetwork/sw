@@ -34,7 +34,7 @@ Directories directories;
 
 void Directories::set_storage_dir(const path &p)
 {
-    storage_dir = p;
+    storage_dir = fs::absolute(p);
 
 #define SET(x)                          \
     storage_dir_##x = storage_dir / #x; \
