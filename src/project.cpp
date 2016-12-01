@@ -683,30 +683,45 @@ void Project::load(const yaml &root)
             if (fs::exists(root_directory / "include"))
                 include_directories.public_.insert(normalize_path(root_directory / "include"));
             else
+            {
                 include_directories.public_.insert(".");
-            // one case left: root_directory / "."
+                // one case left: root_directory / "."
+            }
         }
     }
     if (defaults_allowed && include_directories.private_.empty())
     {
-        if (fs::exists("src"))
+        std::function<void(const String &, const String &)> autodetect_source_dir;
+        autodetect_source_dir = [this, &autodetect_source_dir](const String &current, const String &next = String())
         {
-            if (fs::exists("include"))
-                include_directories.private_.insert("src");
-            else
-                include_directories.public_.insert("src");
-        }
-        else
-        {
-            if (fs::exists(root_directory / "src"))
+            if (fs::exists(current))
             {
-                if (fs::exists(root_directory / "include"))
-                    include_directories.private_.insert(normalize_path(root_directory / "src"));
+                if (fs::exists("include"))
+                    include_directories.private_.insert(current);
                 else
-                    include_directories.public_.insert("src");
-                // one case left: root_directory / "src"
+                    include_directories.public_.insert(current);
             }
-        }
+            else
+            {
+                if (fs::exists(root_directory / current))
+                {
+                    if (fs::exists(root_directory / "include"))
+                        include_directories.private_.insert(normalize_path(root_directory / current));
+                    else
+                    {
+                        include_directories.public_.insert(current);
+                        // one case left: root_directory / "src"
+                    }
+                }
+                else
+                {
+                    // now check next dir
+                    if (!next.empty())
+                        autodetect_source_dir(next, "");
+                }
+            }
+        };
+        autodetect_source_dir("src", "lib");
     }
     include_directories.public_.insert("${BDIR}");
 

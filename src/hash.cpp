@@ -32,20 +32,18 @@
 #include <boost/algorithm/string.hpp>
 #include <openssl/evp.h>
 
+ // keep always digits,lowercase,uppercase
+static const char alnum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
 String generate_random_sequence(uint32_t len)
 {
     auto seed = std::random_device()();
     std::mt19937 g(seed);
-    std::uniform_int_distribution<> d(0, 127);
-    String user_session(len, 0);
+    std::uniform_int_distribution<> d(1, sizeof(alnum) - 1);
+    String seq(len, 0);
     while (len)
-    {
-        char c;
-        do c = (char)d(g);
-        while (!isalnum(c));
-        user_session[--len] = c;
-    }
-    return user_session;
+        seq[--len] = alnum[d(g) - 1];
+    return seq;
 };
 
 String hash_to_string(const String &hash)
@@ -55,13 +53,11 @@ String hash_to_string(const String &hash)
 
 String hash_to_string(const uint8_t *hash, size_t hash_size)
 {
-    static auto alnum16 = "0123456789abcdef";
-
     String s;
     for (uint32_t i = 0; i < hash_size; i++)
     {
-        s += alnum16[(hash[i] & 0xF0) >> 4];
-        s += alnum16[(hash[i] & 0x0F) >> 0];
+        s += alnum[(hash[i] & 0xF0) >> 4];
+        s += alnum[(hash[i] & 0x0F) >> 0];
     }
     return s;
 }
