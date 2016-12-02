@@ -27,70 +27,37 @@
 
 #pragma once
 
-#include "common.h"
+#include <string>
+#include <vector>
 
-#include "yaml.h"
-
-#include <boost/variant.hpp>
-
-#include <set>
-
-struct Git
+namespace command
 {
-    String url;
-    String tag;
-    String branch;
 
-    bool empty() const { return url.empty(); }
+using Args = std::vector<std::string>;
 
-    bool isValid(String *error = nullptr) const
+struct Options
+{
+    struct Stream
     {
-        if (empty())
-        {
-            if (error)
-                *error = "Git url is missing";
-            return false;
-        }
-        if (tag.empty() && branch.empty())
-        {
-            if (error)
-                *error = "No git sources (branch or tag) available";
-            return false;
-        }
-        if (!tag.empty() && !branch.empty())
-        {
-            if (error)
-                *error = "Only one git source (branch or tag) must be specified";
-            return false;
-        }
-        return true;
-    }
+        bool capture = false;
+        bool inherit = false;
+    };
+
+    Stream out;
+    Stream err;
 };
 
-struct RemoteFile { String url; };
-struct RemoteFiles { std::set<String> urls; };
-
-// add svn, bzr, hg?
-// do not add local files
-using Source = boost::variant<Git, RemoteFile, RemoteFiles>;
-
-bool load_source(const yaml &root, Source &source);
-void save_source(yaml &root, const Source &source);
-
-struct DownloadSource
+struct Result
 {
-    path root_dir;
-    int64_t max_file_size = 0;
-
-    void operator()(const Git &git);
-    void operator()(const RemoteFile &rf);
-    void operator()(const RemoteFiles &rfs);
-
-    void download(const Source &source);
-
-private:
-    void download_file(const String &url, const path &fn);
-    void download_and_unpack(const String &url, const path &fn);
+    int rc;
+    std::string out;
+    std::string err;
 };
 
-bool isValidSourceUrl(const Source &source);
+Result execute(const Args &args, const Options &options = Options());
+Result execute_with_output(const Args &args, const Options &options = Options());
+Result execute_and_capture(const Args &args, const Options &options = Options());
+
+} // namespace command
+
+bool has_executable_in_path(std::string &exe, bool silent = false);

@@ -39,9 +39,7 @@
 #include <regex>
 #include <vector>
 
-using Lines = std::vector<String>;
-
-String fix_imports(const Lines &lines_old, const String &old_target, const String new_target)
+String fix_imports(const Strings &lines_old, const String &old_target, const String new_target)
 {
     Context ctx;
     ctx.increaseIndent();
@@ -81,7 +79,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     // also checks that closing bracket ) is not in quotes
     String add_library = "(add_library|add_executable|set_property|set_target_properties)\\(";
 
-    Lines lines;
+    Strings lines;
     std::regex r(add_library);
     std::smatch m;
     bool exe = false;
@@ -159,7 +157,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
             ctx.addLine(fix_imports(lines, target, d.ppath.toString("::")));
         }
         {
-            Lines aliases;
+            Strings aliases;
             boost::algorithm::trim(aliases_s);
             boost::algorithm::split(aliases, aliases_s, boost::is_any_of(";"));
             for (auto &a : aliases)

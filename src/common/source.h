@@ -27,41 +27,74 @@
 
 #pragma once
 
-#include "config.h"
-#include "printer.h"
+#include "common.h"
 
-struct CMakePrinter : Printer
+#include "property_tree.h"
+#include "yaml.h"
+
+#include <boost/variant.hpp>
+
+#include <set>
+
+struct Git
 {
-    void prepare_build() override;
-    void prepare_rebuild() override;
-    int generate() const override;
-    int build() const override;
+    String url;
+    String tag;
+    String branch;
 
-    void print() override;
-    void print_meta() override;
+    bool empty() const { return url.empty(); }
 
-    void clear_cache() const override;
-    void clear_exports() const override;
-    void clear_export(const path &p) const override;
+    bool isValid(String *error = nullptr) const
+    {
+        if (empty())
+        {
+            if (error)
+                *error = "Git url is missing";
+            return false;
+        }
+        if (tag.empty() && branch.empty())
+        {
+            if (error)
+                *error = "No git sources (branch or tag) available";
+            return false;
+        }
+        if (!tag.empty() && !branch.empty())
+        {
+            if (error)
+                *error = "Only one git source (branch or tag) must be specified";
+            return false;
+        }
+        return true;
+    }
+};
 
-    void parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain = String()) const override;
+struct RemoteFile { String url; };
+struct RemoteFiles { std::set<String> urls; };
+
+// add svn, bzr, hg?
+// do not add local files
+using Source = boost::variant<Git, RemoteFile, RemoteFiles>;
+
+bool load_source(const yaml &root, Source &source);
+void save_source(yaml &root, const Source &source);
+
+Source load_source(const ptree &p);
+void save_source(ptree &p, const Source &source);
+
+struct DownloadSource
+{
+    path root_dir;
+    int64_t max_file_size = 0;
+
+    void operator()(const Git &git);
+    void operator()(const RemoteFile &rf);
+    void operator()(const RemoteFiles &rfs);
+
+    void download(const Source &source);
 
 private:
-    mutable SourceGroups sgs;
-
-    void print_configs();
-    void print_helper_file(const path &fn) const;
-    void print_meta_config_file(const path &fn) const;
-    void print_package_config_file(const path &fn) const;
-    void print_package_actions_file(const path &fn) const;
-    void print_package_include_file(const path &fn) const;
-    void print_object_config_file(const path &fn) const;
-    void print_object_include_config_file(const path &fn) const;
-    void print_object_export_file(const path &fn) const;
-    void print_object_build_file(const path &fn) const;
-    void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
-    void print_source_groups(Context &ctx, const path &dir) const;
-
-    bool must_update_contents(const path &fn) const;
-    void write_if_older(const path &fn, const String &s) const;
+    void download_file(const String &url, const path &fn);
+    void download_and_unpack(const String &url, const path &fn);
 };
+
+bool isValidSourceUrl(const Source &source);

@@ -39,6 +39,7 @@
 #include <http.h>
 #include <logger.h>
 #include <printers/cmake.h>
+#include <verify.h>
 
 #include "build.h"
 #include "fix_imports.h"
@@ -439,6 +440,9 @@ try
 
     auto &uc = Config::get_user_config();
     uc.settings.force_server_query = options()[SERVER_QUERY].as<bool>();
+
+    if (options().count("verify"))
+        return verify(options["verify"].as<String>());
 
     if (options().count("build"))
         return build(options["build"].as<String>(), options["config"].as<String>());

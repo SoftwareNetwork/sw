@@ -25,43 +25,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "verify.h"
 
-#include "config.h"
-#include "printer.h"
+#include "command.h"
+#include "http.h"
+#include "package.h"
+#include "property_tree.h"
+#include "spec.h"
 
-struct CMakePrinter : Printer
+void verify(const String &target_name)
 {
-    void prepare_build() override;
-    void prepare_rebuild() override;
-    int generate() const override;
-    int build() const override;
+    auto pkg = extractFromString(target_name);
+    auto spec = download_specification(pkg);
+    if (spec.package != pkg)
+        throw std::runtime_error("Packages do not match (" + pkg.target_name + " vs. " + spec.package.target_name + ")");
 
-    void print() override;
-    void print_meta() override;
+    // a directory for comparison
+    auto dir = temp_directory_path();
+    auto dir_original = dir / "original";
+    auto dir_cppan = dir / "cppan";
 
-    void clear_cache() const override;
-    void clear_exports() const override;
-    void clear_export(const path &p) const override;
+    ScopedCurrentPath cp(dir_original);
 
-    void parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain = String()) const override;
+    DownloadSource ds;
+    ds.download(spec.source);
 
-private:
-    mutable SourceGroups sgs;
-
-    void print_configs();
-    void print_helper_file(const path &fn) const;
-    void print_meta_config_file(const path &fn) const;
-    void print_package_config_file(const path &fn) const;
-    void print_package_actions_file(const path &fn) const;
-    void print_package_include_file(const path &fn) const;
-    void print_object_config_file(const path &fn) const;
-    void print_object_include_config_file(const path &fn) const;
-    void print_object_export_file(const path &fn) const;
-    void print_object_build_file(const path &fn) const;
-    void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
-    void print_source_groups(Context &ctx, const path &dir) const;
-
-    bool must_update_contents(const path &fn) const;
-    void write_if_older(const path &fn, const String &s) const;
-};
+    int a = 5;
+    a++;
+}

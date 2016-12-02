@@ -27,37 +27,67 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include "common.h"
+#include "enums.h"
+#include "project_path.h"
+#include "version.h"
 
-namespace command
+#include <map>
+
+using ProjectId = uint64_t;
+
+struct Directories;
+
+struct Package
 {
+    ProjectPath ppath;
+    Version version;
+    ProjectFlags flags;
 
-using Args = std::vector<std::string>;
+    path getDirSrc() const;
+    path getDirObj() const;
+    String getHash() const;
+    String getHashShort() const;
+    String getFilesystemHash() const;
+    path getHashPath() const;
+    path getStampFilename() const;
 
-struct Options
+    bool empty() const { return ppath.empty() || !version.isValid(); }
+    bool operator<(const Package &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
+    bool operator==(const Package &rhs) const { return std::tie(ppath, version) == std::tie(rhs.ppath, rhs.version); }
+    bool operator!=(const Package &rhs) const { return !operator==(rhs); }
+
+    // misc data
+    String target_name;
+    String variable_name;
+
+    void createNames();
+    String getTargetName() const;
+    String getVariableName() const;
+
+private:
+    // cached vars
+    String hash;
+};
+
+using Packages = std::map<String, Package>;
+
+Package extractFromString(const String &target);
+
+struct CleanTarget
 {
-    struct Stream
+    enum Type
     {
-        bool capture = false;
-        bool inherit = false;
+        None = 0b0000'0000,
+
+        Src = 0b0000'0001,
+        Obj = 0b0000'0010,
+        Lib = 0b0000'0100,
+        Bin = 0b0000'1000,
+
+        All = Src | Obj | Lib | Bin,
+        AllExceptSrc = Obj | Lib | Bin,
     };
-
-    Stream out;
-    Stream err;
 };
 
-struct Result
-{
-    int rc;
-    std::string out;
-    std::string err;
-};
-
-Result execute(const Args &args, const Options &options = Options());
-Result execute_with_output(const Args &args, const Options &options = Options());
-Result execute_and_capture(const Args &args, const Options &options = Options());
-
-} // namespace command
-
-bool has_executable_in_path(std::string &exe);
+void cleanPackages(const String &s, int flags = CleanTarget::All);

@@ -46,10 +46,11 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 ########################################
 
 set(context_src
-    context.cpp
-    context.h
+    context/context.cpp
+    context/context.h
 )
 add_library(context ${context_src})
+target_include_directories(context INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/context)
 
 ########################################
 # inserter
@@ -93,81 +94,10 @@ add_custom_target(gen_stamp
     COMMAND stamp_genenerator > ${stamp}
 )
 
-set(common_src
-    access_table.cpp
-    access_table.h
-    api.cpp
-    api.h
-    checks.cpp
-    checks.h
-    checks_detail.h
-    command.cpp
-    command.h
-    common.cpp
-    common.h
-    config.cpp
-    config.h
-    database.cpp
-    database.h
-    date_time.cpp
-    date_time.h
-    dependency.cpp
-    dependency.h
-    directories.cpp
-    directories.h
-    enums.cpp
-    enums.h
-    executor.cpp
-    executor.h
-    hash.cpp
-    hash.h
-    http.cpp
-    http.h
-    lock.cpp
-    lock.h
-    filesystem.cpp
-    filesystem.h
-    hasher.cpp
-    hasher.h
-    log.cpp
-    log.h
-    logger.cpp
-    logger.h
-    optional.h
-    package.cpp
-    package.h
-    package_store.cpp
-    package_store.h
-    property_tree.cpp
-    property_tree.h
-    project.cpp
-    project.h
-    project_path.cpp
-    project_path.h
-    resolver.cpp
-    resolver.h
-    settings.cpp
-    settings.h
-    source.cpp
-    source.h
-    sqlite_database.cpp
-    sqlite_database.h
-    stamp.cpp
-    stamp.h
-    templates.h
-    version.cpp
-    version.h
-    yaml.cpp
-    yaml.h
-
-    printers/printer.cpp
-    printers/printer.h
-    printers/cmake.cpp
-    printers/cmake.h
-
+file(GLOB common_src "common/*" "printers/*")
+set(common_src ${common_src}
     ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
     inserts.cpp.in
-    inserts.h
 
     ${stamp}
 )
@@ -180,7 +110,7 @@ target_compile_definitions(common
     PRIVATE -DVERSION_PATCH=${VERSION_PATCH}
 )
 target_include_directories(common
-    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common
 )
 target_link_libraries(common
     context
@@ -220,7 +150,6 @@ if (NOT CPPAN_BUILD)
 else()
     target_link_libraries(common cppan)
 endif()
-
 
 ################################################################################
 

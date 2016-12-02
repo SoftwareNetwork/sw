@@ -62,9 +62,9 @@ const String packages_db_name = "packages.db";
 const String service_db_name = "service.db";
 
 std::vector<StartupAction> startup_actions{
-    { "2016-10-20 00:00:00", StartupAction::ClearCache },
-    { "2016-11-27 00:00:00", StartupAction::ServiceDbClearConfigHashes },
-    { "2016-11-27 00:00:03", StartupAction::CheckSchema },
+    { 1, StartupAction::ClearCache },
+    { 2, StartupAction::ServiceDbClearConfigHashes },
+    { 3, StartupAction::CheckSchema },
 };
 
 const TableDescriptors &get_service_tables()
@@ -106,7 +106,8 @@ const TableDescriptors &get_service_tables()
                 "package" TEXT NOT NULL,
                 "version" TEXT NOT NULL,
                 "hash" TEXT NOT NULL,
-                PRIMARY KEY ("id")
+                PRIMARY KEY ("id"),
+                UNIQUE ("package", "version")
             );
         )"},
 
@@ -167,9 +168,9 @@ const TableDescriptors &get_service_tables()
         {"StartupActions",
          R"(
             CREATE TABLE "StartupActions" (
-                "timestamp" INTEGER NOT NULL,
+                "id" INTEGER NOT NULL,
                 "action" INTEGER NOT NULL,
-                PRIMARY KEY ("timestamp", "action")
+                PRIMARY KEY ("id", "action")
             );
         )"},
 
@@ -517,9 +518,8 @@ void ServiceDatabase::clearFileStamps() const
 bool ServiceDatabase::isActionPerformed(const StartupAction &action) const
 {
     int n = 0;
-    auto t = string2time_t(action.timestamp);
-    db->execute("select count(*) from StartupActions where timestamp = '" +
-        std::to_string(t) + "' and action = '" + std::to_string(action.action) + "'",
+    db->execute("select count(*) from StartupActions where id = '" +
+        std::to_string(action.id) + "' and action = '" + std::to_string(action.action) + "'",
         [&n](SQLITE_CALLBACK_ARGS)
     {
         n = std::stoi(cols[0]);
@@ -530,9 +530,8 @@ bool ServiceDatabase::isActionPerformed(const StartupAction &action) const
 
 void ServiceDatabase::setActionPerformed(const StartupAction &action) const
 {
-    auto t = string2time_t(action.timestamp);
     db->execute("insert into StartupActions values ('" +
-        std::to_string(t) + "', '" + std::to_string(action.action) + "')");
+        std::to_string(action.id) + "', '" + std::to_string(action.action) + "')");
 }
 
 int ServiceDatabase::getNumberOfRuns() const
@@ -770,7 +769,7 @@ void PackagesDatabase::download()
     fs::create_directories(db_repo_dir);
 
     String git = "git";
-    if (has_executable_in_path(git))
+    if (has_executable_in_path(git, true))
     {
         if (!fs::exists(db_repo_dir / ".git"))
         {

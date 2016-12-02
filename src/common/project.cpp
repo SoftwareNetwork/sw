@@ -985,14 +985,18 @@ void Project::load(const yaml &root)
     if (defaults_allowed && sources.empty())
     {
         // try to add some default dirs
+        // root_directory will be removed (entered),
+        // so do not insert like 'insert(root_directory / "dir/.*");'
         if (fs::exists(root_directory / "include"))
             sources.insert("include/.*");
         if (fs::exists(root_directory / "src"))
             sources.insert("src/.*");
+        else if (fs::exists(root_directory / "lib"))
+            sources.insert("lib/.*");
 
         if (sources.empty())
         {
-            // no include, src dirs
+            // no include, source dirs
             // try to add all types of C/C++ program files to gather
             // regex means all sources in root dir (without slashes '/')
             auto r_replace = [](auto &s)

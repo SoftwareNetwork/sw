@@ -51,15 +51,10 @@ endif()
 set(output_dir ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
 
-if(EXISTS ${PROJECT_SOURCE_DIR}/.cppan AND USE_CPPAN_BUILD)
-    #set(CPPAN_BUILD_SHARED_LIBS 0)
-    add_subdirectory(.cppan)
-endif()
-
 find_package(BISON 3.0 REQUIRED)
 find_package(FLEX REQUIRED)
 
-if (NOT CPPAN_BUILD)
+if (NOT CPPAN_BUILD AND NOT USE_CPPAN_BUILD)
     set(Boost_USE_STATIC_LIBS ON)
 
     find_package(Boost 1.60 REQUIRED filesystem program_options log system thread date_time)
@@ -108,7 +103,7 @@ endif()
 #
 ################################################################################
 
-if (NOT CPPAN_BUILD)
+if (NOT CPPAN_BUILD AND NOT USE_CPPAN_BUILD)
     include_directories(${Boost_INCLUDE_DIRS})
     link_directories(${Boost_LIBRARY_DIRS})
 
@@ -117,6 +112,11 @@ if (NOT CPPAN_BUILD)
 ########################################
 
     add_subdirectory(dep)
+endif()
+
+if(EXISTS ${PROJECT_SOURCE_DIR}/.cppan AND USE_CPPAN_BUILD)
+    #set(CPPAN_BUILD_SHARED_LIBS 0)
+    add_subdirectory(.cppan)
 endif()
 
 add_subdirectory(src)

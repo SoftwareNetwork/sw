@@ -48,7 +48,7 @@ extern "C" { extern char ***_NSGetEnviron(void); }
 #endif
 #endif
 
-bool has_executable_in_path(std::string &prog)
+bool has_executable_in_path(std::string &prog, bool silent)
 {
     bool ret = true;
     try
@@ -57,7 +57,8 @@ bool has_executable_in_path(std::string &prog)
     }
     catch (fs::filesystem_error &e)
     {
-        LOG_WARN(logger, "'" << prog << "' is missing in your path environment variable. Error: " << e.what());
+        if (!silent)
+            LOG_WARN(logger, "'" << prog << "' is missing in your path environment variable. Error: " << e.what());
         ret = false;
     }
     return ret;

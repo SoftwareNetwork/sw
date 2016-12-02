@@ -56,7 +56,7 @@ struct StartupAction
         CheckSchema,
     };
 
-    String timestamp;
+    int id;
     int action;
 };
 

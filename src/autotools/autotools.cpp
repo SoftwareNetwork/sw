@@ -27,8 +27,7 @@
 
 #include "autotools.h"
 
-#include "../checks_detail.h"
-#include "../common.h"
+#include "checks_detail.h"
 
 #include <boost/algorithm/string.hpp>
 

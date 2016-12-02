@@ -25,67 +25,51 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "spec.h"
 
-#include "common.h"
-#include "enums.h"
-#include "project_path.h"
-#include "version.h"
+#include "command.h"
+#include "http.h"
+#include "package.h"
+#include "property_tree.h"
 
-#include <map>
+//#define SPEC_FILES_LOCATION "https://github.com/cppan/specs"s
+#define SPEC_FILES_LOCATION "https://raw.githubusercontent.com/cppan/specs/master/"s
 
-using ProjectId = uint64_t;
-
-struct Directories;
-
-struct Package
+Specification download_specification(const Package &pkg)
 {
-    ProjectPath ppath;
-    Version version;
-    ProjectFlags flags;
+    auto url = path(SPEC_FILES_LOCATION) / pkg.ppath.toFileSystemPath() / (pkg.version.toString() + SPEC_FILE_EXTENSION);
+    auto spec = download_file(normalize_path(url));
+    return read_specification(spec);
+}
 
-    path getDirSrc() const;
-    path getDirObj() const;
-    String getHash() const;
-    String getHashShort() const;
-    String getFilesystemHash() const;
-    path getHashPath() const;
-    path getStampFilename() const;
-
-    bool empty() const { return ppath.empty() || !version.isValid(); }
-    bool operator<(const Package &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
-
-    // misc data
-    String target_name;
-    String variable_name;
-
-    void createNames();
-    String getTargetName() const;
-    String getVariableName() const;
-
-private:
-    // cached vars
-    String hash;
-};
-
-using Packages = std::map<String, Package>;
-
-Package extractFromString(const String &target);
-
-struct CleanTarget
+Specification read_specification(const String &s)
 {
-    enum Type
+    auto p = string2ptree(s);
+    return read_specification(p);
+}
+
+Specification read_specification(const ptree &p)
+{
+    Specification s;
+
+    auto get_val = [&p](auto &v, auto &&key)
     {
-        None = 0b0000'0000,
-
-        Src = 0b0000'0001,
-        Obj = 0b0000'0010,
-        Lib = 0b0000'0100,
-        Bin = 0b0000'1000,
-
-        All = Src | Obj | Lib | Bin,
-        AllExceptSrc = Obj | Lib | Bin,
+        if (p.find(key) != p.not_found())
+            v = p.get<std::remove_reference_t<String>>(key);
     };
-};
 
-void cleanPackages(const String &s, int flags = CleanTarget::All);
+    String version;
+    String created;
+
+    get_val(s.package.ppath, "project");
+    get_val(version, "version");
+    get_val(s.cppan, "cppan");
+    get_val(s.sha256, "sha256");
+    get_val(created, "created");
+
+    s.package.version = Version(version);
+    s.source = load_source(p);
+    s.created = string2timepoint(created);
+
+    return s;
+}

@@ -240,3 +240,69 @@ bool isValidSourceUrl(const Source &source)
     );
     return boost::apply_visitor(check_url, source);
 }
+
+Source load_source(const ptree &p)
+{
+    {
+        Git git;
+        git.url = p.get("source.git.url", "");
+        git.tag = p.get("source.git.tag", "");
+        git.branch = p.get("source.git.branch", "");
+        if (!git.empty())
+            return git;
+    }
+
+    {
+        RemoteFile rf;
+        rf.url = p.get("source.remote.url", "");
+        if (!rf.url.empty())
+            return rf;
+    }
+
+    {
+        RemoteFiles rfs;
+        auto urls = p.get_child("source.files");
+        for (auto &url : urls)
+            rfs.urls.insert(url.second.get("url", ""s));
+        if (!rfs.urls.empty())
+            return rfs;
+    }
+
+    throw std::runtime_error("Bad source");
+}
+
+void save_source(ptree &p, const Source &source)
+{
+    auto write_json = overload(
+        [&p](const Git &git)
+    {
+        if (git.empty())
+            return;
+        p.add("source.git.url", git.url);
+        if (!git.tag.empty())
+            p.add("source.git.tag", git.tag);
+        if (!git.branch.empty())
+            p.add("source.git.branch", git.branch);
+    },
+        [&p](const RemoteFile &rf)
+    {
+        if (rf.url.empty())
+            return;
+        p.add("source.remote.url", rf.url);
+    },
+        [&p](const RemoteFiles &rfs)
+    {
+        if (rfs.urls.empty())
+            return;
+        ptree children;
+        for (auto &rf : rfs.urls)
+        {
+            ptree c;
+            c.put("url", rf);
+            children.push_back(std::make_pair("", c));
+        }
+        p.add_child("source.files", children);
+    }
+    );
+    return boost::apply_visitor(write_json, source);
+}

@@ -12,7 +12,7 @@ set(src
 )
 
 add_library(fix_imports ${src})
-target_link_libraries(fix_imports context)
+target_link_libraries(fix_imports common)
 
 if (CPPAN_BUILD)
 target_link_libraries(fix_imports cppan)

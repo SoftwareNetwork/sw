@@ -122,6 +122,7 @@ Package extractFromString(const String &target)
     Package p;
     p.ppath = target.substr(0, target.rfind('-'));
     p.version = target.substr(target.rfind('-') + 1);
+    p.createNames();
     return p;
 }
 

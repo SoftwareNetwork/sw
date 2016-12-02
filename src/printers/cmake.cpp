@@ -27,17 +27,17 @@
 
 #include "cmake.h"
 
-#include "../access_table.h"
-#include "../command.h"
-#include "../date_time.h"
-#include "../database.h"
-#include "../directories.h"
-#include "../executor.h"
-#include "../hash.h"
-#include "../lock.h"
-#include "../inserts.h"
-#include "../log.h"
-#include "../resolver.h"
+#include <access_table.h>
+#include <command.h>
+#include <date_time.h>
+#include <database.h>
+#include <directories.h>
+#include <executor.h>
+#include <hash.h>
+#include <lock.h>
+#include <inserts.h>
+#include <log.h>
+#include <resolver.h>
 
 #ifdef _WIN32
 #include "shell_link.h"
@@ -45,7 +45,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "../logger.h"
+#include <logger.h>
 DECLARE_STATIC_LOGGER(logger, "cmake");
 
 String repeat(const String &e, int n);
@@ -768,9 +768,9 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     Context ctx;
     file_header(ctx, d);
 
-    // local aliases
-    ctx.addLine("set(target " + d.target_name + ")");
+    // variables for target
     ctx.addLine("set(this " + d.target_name + ")");
+    ctx.addLine("set(target ${this})");
     ctx.addLine();
 
     // prevent errors
@@ -1843,8 +1843,6 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("set(CPPAN_BUILD 1 CACHE STRING \"CPPAN is turned on\")");
     ctx.addLine();
     print_storage_dirs(ctx);
-    //ctx.addLine("set(CPPAN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})"); // why?
-    //ctx.addLine("set(CPPAN_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})"); // why?
     ctx.addLine();
     ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
     ctx.addLine();
@@ -1918,7 +1916,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
             config_section_title(ctx, "cppan regenerator");
             ctx.addLine(R"(set(file ${CMAKE_CURRENT_BINARY_DIR}/run-cppan.txt)
 add_custom_command(OUTPUT ${file}
-    COMMAND cppan -d ${PROJECT_SOURCE_DIR}
+    COMMAND ${CPPAN_COMMAND} -d ${PROJECT_SOURCE_DIR}
     COMMAND ${CMAKE_COMMAND} -E echo "" > ${file}
     DEPENDS ${PROJECT_SOURCE_DIR}/cppan.yml
 )
@@ -2171,6 +2169,11 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
     int N = std::thread::hardware_concurrency();
     if (uc.settings.var_check_jobs > 0)
         N = std::min<int>(N, uc.settings.var_check_jobs);
+    else
+    {
+        N -= 2; // leave 2 free cores to process other tasks
+        N = std::max<int>(1, N);
+    }
 
     Checks checks;
     checks.load(checks_file);
