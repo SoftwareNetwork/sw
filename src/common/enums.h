@@ -112,9 +112,9 @@ enum class ConfigType
 using ProjectFlags = std::bitset<sizeof(uint64_t) * 8>;
 
 template <typename E>
-constexpr std::size_t toIndex(E e)
+constexpr std::underlying_type_t<E> toIndex(E e)
 {
-    return static_cast<std::size_t>(e);
+    return static_cast<std::underlying_type_t<E>>(e);
 }
 
 std::string toString(ProjectType e);
