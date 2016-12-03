@@ -75,12 +75,6 @@ struct RemoteFiles { std::set<String> urls; };
 // do not add local files
 using Source = boost::variant<Git, RemoteFile, RemoteFiles>;
 
-bool load_source(const yaml &root, Source &source);
-void save_source(yaml &root, const Source &source);
-
-Source load_source(const ptree &p);
-void save_source(ptree &p, const Source &source);
-
 struct DownloadSource
 {
     path root_dir;
@@ -96,5 +90,13 @@ private:
     void download_file(const String &url, const path &fn);
     void download_and_unpack(const String &url, const path &fn);
 };
+
+bool load_source(const yaml &root, Source &source);
+void save_source(yaml &root, const Source &source);
+
+Source load_source(const ptree &p);
+void save_source(ptree &p, const Source &source);
+
+String print_source(const Source &source);
 
 bool isValidSourceUrl(const Source &source);

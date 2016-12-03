@@ -64,7 +64,7 @@ const String service_db_name = "service.db";
 std::vector<StartupAction> startup_actions{
     { 1, StartupAction::ClearCache },
     { 2, StartupAction::ServiceDbClearConfigHashes },
-    { 3, StartupAction::CheckSchema },
+    { 4, StartupAction::CheckSchema },
 };
 
 const TableDescriptors &get_service_tables()
@@ -329,8 +329,7 @@ void ServiceDatabase::createTables() const
     auto create_table = [this](const auto &td)
     {
         db->execute(td.query);
-        auto h = sha256(td.query);
-        setTableHash(td.name, h);
+        setTableHash(td.name, sha256(td.query));
     };
 
     // TableHashes first, out of order
@@ -348,6 +347,13 @@ void ServiceDatabase::createTables() const
             continue;
         create_table(td);
     }
+}
+
+void ServiceDatabase::recreateTable(const TableDescriptor &td) const
+{
+    db->dropTable(td.name);
+    db->execute(td.query);
+    setTableHash(td.name, sha256(td.query));
 }
 
 void ServiceDatabase::checkStamp() const
@@ -518,13 +524,25 @@ void ServiceDatabase::clearFileStamps() const
 bool ServiceDatabase::isActionPerformed(const StartupAction &action) const
 {
     int n = 0;
-    db->execute("select count(*) from StartupActions where id = '" +
-        std::to_string(action.id) + "' and action = '" + std::to_string(action.action) + "'",
-        [&n](SQLITE_CALLBACK_ARGS)
+    try
     {
-        n = std::stoi(cols[0]);
-        return 0;
-    });
+        db->execute("select count(*) from StartupActions where id = '" +
+            std::to_string(action.id) + "' and action = '" + std::to_string(action.action) + "'",
+            [&n](SQLITE_CALLBACK_ARGS)
+        {
+            n = std::stoi(cols[0]);
+            return 0;
+        });
+    }
+    catch (const std::exception&)
+    {
+        // if error is in StartupActions, recreate it
+        auto th = std::find_if(tds.begin(), tds.end(), [](const auto &td)
+        {
+            return td.name == "StartupActions";
+        });
+        recreateTable(*th);
+    }
     return n == 1;
 }
 

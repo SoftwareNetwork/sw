@@ -84,28 +84,16 @@ String make_archive_name(const String &fn)
     return "cppan.tar.gz";
 }
 
-path temp_directory_path()
+path temp_directory_path(const path &subdir)
 {
-    auto p = fs::temp_directory_path() / "cppan";
+    auto p = fs::temp_directory_path() / "cppan" / subdir;
     fs::create_directory(p);
     return p;
 }
 
-path get_temp_filename()
+path get_temp_filename(const path &subdir)
 {
-    return temp_directory_path() / fs::unique_path();
-}
-
-path temp_script_path()
-{
-    auto p = temp_directory_path() / "scripts";
-    fs::create_directory(p);
-    return p;
-}
-
-path temp_script_filename()
-{
-    return temp_script_path() / fs::unique_path();
+    return temp_directory_path(subdir) / fs::unique_path();
 }
 
 void remove_file(const path &p)
@@ -334,4 +322,72 @@ Files unpack_file(const path &fn, const path &dst)
     archive_read_free(a);
 
     return files;
+}
+
+bool compare_files(const path &fn1, const path &fn2)
+{
+    // open files at the end
+    std::ifstream file1(fn1.string(), std::ifstream::ate | std::ifstream::binary);
+    std::ifstream file2(fn2.string(), std::ifstream::ate | std::ifstream::binary);
+
+    // different sizes
+    if (file1.tellg() != file2.tellg())
+        return false;
+
+    // rewind
+    file1.seekg(0);
+    file2.seekg(0);
+
+    const int N = 8192;
+    char buf1[N], buf2[N];
+
+    while (!file1.eof() && !file2.eof())
+    {
+        file1.read(buf1, N);
+        file2.read(buf2, N);
+
+        auto sz1 = file1.gcount();
+        auto sz2 = file2.gcount();
+
+        if (sz1 != sz2)
+            return false;
+
+        if (memcmp(buf1, buf2, (size_t)sz1) != 0)
+            return false;
+    }
+    return true;
+}
+
+bool compare_dirs(const path &dir1, const path &dir2)
+{
+    auto traverse_dir = [](const auto &dir)
+    {
+        std::vector<path> files;
+        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+        {
+            if (!fs::is_regular_file(f))
+                continue;
+            files.push_back(f);
+        }
+        return files;
+    };
+
+    auto files1 = traverse_dir(dir1);
+    auto files2 = traverse_dir(dir2);
+
+    if (files1.empty())
+        return false; // throw std::runtime_error("left side has no files");
+    if (files2.empty())
+        return false; // throw std::runtime_error("right side has no files");
+    if (files1.size() != files2.size())
+        return false; // throw std::runtime_error("different number of files");
+
+    auto sz = files1.size();
+    for (size_t i = 0; i < sz; i++)
+    {
+        if (!compare_files(files1[i], files2[i]))
+            return false;
+    }
+
+    return true;
 }

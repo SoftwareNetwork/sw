@@ -51,6 +51,7 @@ struct Package
     String getFilesystemHash() const;
     path getHashPath() const;
     path getStampFilename() const;
+    String getStampHash() const;
 
     bool empty() const { return ppath.empty() || !version.isValid(); }
     bool operator<(const Package &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
@@ -78,15 +79,15 @@ struct CleanTarget
 {
     enum Type
     {
-        None = 0b0000'0000,
+        None= 0b0000'0000,
 
         Src = 0b0000'0001,
         Obj = 0b0000'0010,
         Lib = 0b0000'0100,
         Bin = 0b0000'1000,
 
-        All = Src | Obj | Lib | Bin,
-        AllExceptSrc = Obj | Lib | Bin,
+        All =           Src | Obj | Lib | Bin,
+        AllExceptSrc =        Obj | Lib | Bin,
     };
 };
 

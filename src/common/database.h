@@ -126,6 +126,8 @@ private:
 
     String getTableHash(const String &table) const;
     void setTableHash(const String &table, const String &hash) const;
+
+    void recreateTable(const TableDescriptor &td) const;
 };
 
 class PackagesDatabase : public Database

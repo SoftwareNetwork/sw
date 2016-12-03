@@ -39,21 +39,38 @@
 
 #define DEFAULT_REMOTE_NAME "origin"
 
+String default_source_provider(const Package &);
+
 struct Remote
 {
     using Url = String;
     using SourcesUrls = std::vector<Url>;
+    using SourceUrlProvider = std::function<String(const Remote &, const Package &)>;
 
     String name;
+
     Url url;
     String data_dir;
-    SourcesUrls sources_urls;
+
     String user;
     String token;
+
+    // own data
+
+    // sources
+    std::vector<SourceUrlProvider> primary_sources;
+    SourceUrlProvider default_source{ &Remote::default_source_provider };
+    std::vector<SourceUrlProvider> additional_sources;
+
+    bool downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first = false) const;
+
+public:
+    String default_source_provider(const Package &) const;
+    String github_source_provider(const Package &) const;
 };
 
 using Remotes = std::vector<Remote>;
-extern const Remotes default_remotes;
+Remotes get_default_remotes();
 
 struct Settings
 {
@@ -68,7 +85,7 @@ struct Settings
     };
 
     // connection
-    Remotes remotes{ default_remotes };
+    Remotes remotes{ get_default_remotes() };
     ProxySettings proxy;
 
     // sys/user config settings

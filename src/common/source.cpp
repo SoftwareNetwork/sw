@@ -113,8 +113,8 @@ void DownloadSource::operator()(const Git &git)
         url += "/archive/";
         if (!git.tag.empty())
         {
-            url += git.tag + ".tar.gz";
-            fn = "1.tar.gz";
+            url += make_archive_name(git.tag);
+            fn = make_archive_name("1");
         }
         else if (!git.branch.empty())
         {
@@ -305,4 +305,40 @@ void save_source(ptree &p, const Source &source)
     }
     );
     return boost::apply_visitor(write_json, source);
+}
+
+String print_source(const Source &source)
+{
+    auto write_string = overload(
+        [](const Git &git)
+    {
+        String r = "git:\n";
+        if (git.empty())
+            return r;
+        r += "url: " + git.url + "\n";
+        if (!git.tag.empty())
+            r += "tag: " + git.tag + "\n";
+        if (!git.branch.empty())
+            r += "branch: " + git.branch + "\n";
+        return r;
+    },
+        [](const RemoteFile &rf)
+    {
+        String r = "remote:\n";
+        if (rf.url.empty())
+            return r;
+        r += "url: " + rf.url + "\n";
+        return r;
+    },
+        [](const RemoteFiles &rfs)
+    {
+        String r = "files:\n";
+        if (rfs.urls.empty())
+            return r;
+        for (auto &rf : rfs.urls)
+            r += "url: " + rf + "\n";
+        return r;
+    }
+    );
+    return boost::apply_visitor(write_string, source);
 }

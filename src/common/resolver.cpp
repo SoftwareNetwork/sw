@@ -57,6 +57,18 @@ Executor &getExecutor()
     return executor;
 }
 
+void resolve_dependencies(const Packages &deps)
+{
+    Resolver r;
+    r.resolve_dependencies(deps);
+}
+
+void resolve_and_download(const Package &p, const path &fn)
+{
+    Resolver r;
+    r.resolve_and_download(p, fn);
+}
+
 void Resolver::resolve_dependencies(const Packages &dependencies)
 {
     Packages deps;
@@ -78,6 +90,37 @@ void Resolver::resolve_dependencies(const Packages &dependencies)
 
     if (deps.empty())
         return;
+
+    resolve(deps, [this] { download_and_unpack(); });
+
+    // mark packages as resolved
+    for (auto &d : deps)
+        rd.resolved_packages.insert(d.second);
+
+    // other related stuff
+    read_configs();
+    post_download();
+}
+
+void Resolver::resolve_and_download(const Package &p, const path &fn)
+{
+    resolve({ { p.ppath.toString(), p } }, [&]
+    {
+        for (auto &dd : download_dependencies_)
+        {
+            if (dd.second == p)
+            {
+                download(dd.second, fn);
+                break;
+            }
+        }
+    });
+}
+
+void Resolver::resolve(const Packages &deps, std::function<void()> resolve_action)
+{
+    if (!resolve_action)
+        throw std::logic_error("Empty resolve action!");
 
     // ref to not invalidate all ptrs
     auto &uc = Config::get_user_config();
@@ -135,7 +178,7 @@ void Resolver::resolve_dependencies(const Packages &dependencies)
                 resolve_remote_deps();
             }
 
-            download_and_unpack();
+            resolve_action();
         }
         catch (LocalDbHashException &)
         {
@@ -146,14 +189,22 @@ void Resolver::resolve_dependencies(const Packages &dependencies)
         }
         break;
     }
+}
 
-    // mark packages as resolved
-    for (auto &d : deps)
-        rd.resolved_packages.insert(d.second);
+void Resolver::download(const DownloadDependency &d, const path &fn)
+{
+    LOG_INFO(logger, "Downloading: " << d.target_name << "...");
 
-    // other related stuff
-    read_configs();
-    post_download();
+    if (!d.remote->downloadPackage(d, d.sha256, fn, query_local_db))
+    {
+        // if we get hashes from local db
+        // they can be stalled within server refresh time (15 mins)
+        // in this case we should do request to server
+        auto err = "Hashes do not match for package: " + d.target_name;
+        if (query_local_db)
+            throw LocalDbHashException(err);
+        throw std::runtime_error(err);
+    }
 }
 
 void Resolver::getDependenciesFromRemote(const Packages &deps)
@@ -306,20 +357,7 @@ void Resolver::download_and_unpack()
         auto &d = dd.second;
         auto version_dir = d.getDirSrc();
         auto hash_file = d.getStampFilename();
-
-        // store hash of archive
-        bool must_download = false;
-        {
-            std::ifstream ifile(hash_file.string());
-            String hash;
-            if (ifile)
-            {
-                ifile >> hash;
-                ifile.close();
-            }
-            if (hash != d.sha256 || d.sha256.empty() || hash.empty())
-                must_download = true;
-        }
+        bool must_download = d.getStampHash() != d.sha256 || d.sha256.empty();
 
         if (fs::exists(version_dir) && !must_download)
             return;
@@ -328,7 +366,7 @@ void Resolver::download_and_unpack()
         ScopedFileLock lck(hash_file, std::defer_lock);
         if (!lck.try_lock())
         {
-            // wait & continue
+            // download is in progress, wait and register config
             ScopedFileLock lck2(hash_file);
             rd.add_config(d);
             return;
@@ -337,56 +375,10 @@ void Resolver::download_and_unpack()
         // remove existing version dir
         cleanPackages(d.target_name);
 
-        auto fs_path = ProjectPath(d.ppath).toFileSystemPath().string();
-        std::replace(fs_path.begin(), fs_path.end(), '\\', '/');
-        String cppan_package_url = d.remote->url + "/" + d.remote->data_dir + "/" + fs_path + "/" + d.version.toString() + ".tar.gz";
-        String github_package_url = "https://github.com/cppan-packages/" + d.getHash() + "/raw/master/" + make_archive_name();
-        path fn = version_dir.string() + ".tar.gz";
-
-        String dl_hash;
-        DownloadData ddata;
-        ddata.fn = fn;
-        ddata.sha256.hash = &dl_hash;
-
-        LOG_INFO(logger, "Downloading: " << d.target_name << "...");
-
-        auto download_from_url = [this, &ddata, &dl_hash, &d](const auto &url, bool nothrow = true)
-        {
-            ddata.url = url;
-            try
-            {
-                download_file(ddata);
-            }
-            catch (...)
-            {
-                if (nothrow)
-                    return false;
-                throw;
-            }
-
-            if (dl_hash != d.sha256)
-            {
-                if (nothrow)
-                    return false;
-
-                // if we get hashes from local db
-                // they can be stalled within server refresh time (15 mins)
-                // in this case we should do request to server
-                if (query_local_db)
-                    throw LocalDbHashException("Hashes do not match for package: " + d.target_name);
-                throw std::runtime_error("Hashes do not match for package: " + d.target_name);
-            }
-
-            return true;
-        };
-
-        // at first we try to download from github
-        // if we failed,try from cppan (this should be removed)
-        if (!download_from_url(github_package_url, !query_local_db))
-        {
-            //LOG_ERROR(logger, "Fallback to cppan.org");
-            download_from_url(cppan_package_url, false);
-        }
+        // dl
+        // maybe d.target_name instead of version_dir.string()?
+        path fn = make_archive_name(version_dir.string());
+        download(d, fn);
 
         rd.downloads++;
         write_file(hash_file, d.sha256);

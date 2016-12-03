@@ -32,13 +32,17 @@
 
 struct Resolver
 {
+    void resolve_dependencies(const Packages &deps);
+    void resolve_and_download(const Package &p, const path &fn);
+    void assign_dependencies(const Package &p, const Packages &deps); // why such name?
+
+private:
     DownloadDependencies download_dependencies_;
     std::map<Package, ProjectVersionId> dep_ids;
 
     const Remote *current_remote = nullptr;
     bool query_local_db = true;
 
-    void resolve_dependencies(const Packages &deps);
     void getDependenciesFromRemote(const Packages &deps);
     void getDependenciesFromDb(const Packages &deps);
     void read_configs();
@@ -46,5 +50,10 @@ struct Resolver
     void post_download();
     void prepare_config(PackageStore::PackageConfigs::value_type &cc);
     void read_config(const DownloadDependency &d);
-    void assign_dependencies(const Package &p, const Packages &deps); // why such name?
+
+    void resolve(const Packages &deps, std::function<void()> resolve_action);
+    void download(const DownloadDependency &d, const path &fn);
 };
+
+void resolve_and_download(const Package &p, const path &fn);
+void resolve_dependencies(const Packages &deps);

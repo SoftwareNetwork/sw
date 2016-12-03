@@ -68,12 +68,6 @@ void download_file(path &fn)
     download_file(dd);
 }
 
-void resolve_dependencies(const Packages &deps)
-{
-    Resolver r;
-    r.resolve_dependencies(deps);
-}
-
 void PackageStore::process(const path &p, Config &root)
 {
     if (processing)

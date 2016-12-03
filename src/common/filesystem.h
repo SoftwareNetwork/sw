@@ -54,10 +54,8 @@ path get_home_directory();
 path get_root_directory();
 path get_config_filename();
 
-path temp_directory_path();
-path get_temp_filename();
-path temp_script_path();
-path temp_script_filename();
+path temp_directory_path(const path &subdir = path());
+path get_temp_filename(const path &subdir = path());
 
 std::string read_file(const path &p, bool no_size_check = false);
 void write_file(const path &p, const std::string &s);
@@ -76,6 +74,9 @@ void remove_files_like(const path &dir, const std::string &regex);
 
 bool pack_files(const path &fn, const Files &files);
 Files unpack_file(const path &fn, const path &dst);
+
+bool compare_files(const path &fn1, const path &fn2);
+bool compare_dirs(const path &dir1, const path &dir2);
 
 namespace std
 {

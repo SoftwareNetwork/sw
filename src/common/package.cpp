@@ -58,6 +58,15 @@ path Package::getStampFilename() const
     return b;
 }
 
+String Package::getStampHash() const
+{
+    String hash;
+    std::ifstream ifile(getStampFilename().string());
+    if (ifile)
+        ifile >> hash;
+    return hash;
+}
+
 String Package::getHash() const
 {
     static const auto delim = "/";

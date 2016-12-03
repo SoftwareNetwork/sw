@@ -90,6 +90,4 @@ private:
     friend struct Resolver;
 };
 
-void resolve_dependencies(const Packages &deps);
-
 extern PackageStore rd;

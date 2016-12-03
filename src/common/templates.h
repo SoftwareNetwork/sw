@@ -6,14 +6,21 @@
 #define CONCATENATE_IMPL(s1, s2) s1##s2
 #define CONCATENATE(s1, s2) CONCATENATE_IMPL(s1, s2)
 
+#define ANONYMOUS_VARIABLE_COUNTER(s) CONCATENATE(s, __COUNTER__)
+#define ANONYMOUS_VARIABLE_LINE(s) CONCATENATE(s, __LINE__)
+
 #ifdef __COUNTER__
-#define ANONYMOUS_VARIABLE(str) CONCATENATE(str, __COUNTER__)
+#define ANONYMOUS_VARIABLE(s) ANONYMOUS_VARIABLE_COUNTER(s)
 #else
-#define ANONYMOUS_VARIABLE(str) CONCATENATE(str, __LINE__)
+#define ANONYMOUS_VARIABLE(s) ANONYMOUS_VARIABLE_LINE(s)
 #endif
 
 #define SCOPE_EXIT \
     auto ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = ::detail::ScopeGuardOnExit() + [&]()
+
+#define RUN_ONCE_BEGIN \
+    static std::once_flag ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG); std::call_once(ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG), [&]()
+#define RUN_ONCE_END )
 
 template <class F>
 class ScopeGuard
