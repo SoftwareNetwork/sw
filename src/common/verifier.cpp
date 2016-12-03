@@ -72,6 +72,7 @@ void verify(const String &target_name)
     }
 
     // only after cppan resolve step
+    LOG_INFO(logger, "Downloading package specification...");
     auto spec = download_specification(pkg);
     if (spec.package != pkg)
         throw std::runtime_error("Packages do not match (" + pkg.target_name + " vs. " + spec.package.target_name + ")");
