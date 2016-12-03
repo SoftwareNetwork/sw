@@ -45,6 +45,8 @@
 #include "logger.h"
 DECLARE_STATIC_LOGGER(logger, "config");
 
+#define CONFIG_ROOT "/etc/cppan/"
+
 Config::Config()
 {
     addDefaultProject();

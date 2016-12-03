@@ -30,20 +30,9 @@
 #include "cppan_string.h"
 #include "filesystem.h"
 
-struct Hasher
-{
-    String hash;
+path get_program();
+String get_program_version();
+String get_program_version_string(const String &prog_name);
 
-#define ADD_OPERATOR(t)  \
-    Hasher operator|(t); \
-    Hasher &operator|=(t)
+String get_cmake_version();
 
-    ADD_OPERATOR(bool);
-    ADD_OPERATOR(const String &);
-    ADD_OPERATOR(const path &);
-
-#undef ADD_OPERATOR
-
-private:
-    void do_hash();
-};

@@ -31,7 +31,7 @@
 #include <set>
 
 #include "checks.h"
-#include "common.h"
+#include "cppan_string.h"
 #include "filesystem.h"
 #include "package.h"
 #include "project.h"

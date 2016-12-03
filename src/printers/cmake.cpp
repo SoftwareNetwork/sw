@@ -37,6 +37,7 @@
 #include <lock.h>
 #include <inserts.h>
 #include <log.h>
+#include <program.h>
 #include <resolver.h>
 
 #ifdef _WIN32

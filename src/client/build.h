@@ -27,7 +27,8 @@
 
 #pragma once
 
-#include <common.h>
+#include <cppan_string.h>
+#include <filesystem.h>
 
 int build(path fn, const String &config = String());
 int build_only(path fn, const String &config = String());

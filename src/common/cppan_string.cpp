@@ -25,30 +25,66 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "cppan_string.h"
 
-#include <chrono>
-#include <string>
-#include <stdint.h>
-#include <vector>
+#include <boost/algorithm/string.hpp>
 
-#include "filesystem.h"
+Strings split_string(const String &s, const String &delims)
+{
+    std::vector<String> v, lines;
+    boost::split(v, s, boost::is_any_of(delims));
+    for (auto &l : v)
+    {
+        boost::trim(l);
+        if (!l.empty())
+            lines.push_back(l);
+    }
+    return lines;
+}
 
-#define CONFIG_ROOT "/etc/cppan/"
-#define CPPAN_FILENAME "cppan.yml"
+Strings split_lines(const String &s)
+{
+    return split_string(s, "\r\n");
+}
 
-using String = std::string;
-using Strings = std::vector<String>;
+int get_end_of_string_block(const String &s, int i)
+{
+    auto c = s[i - 1];
+    int n_curly = c == '(';
+    int n_square = c == '[';
+    int n_quotes = c == '\"';
+    auto sz = (int)s.size();
+    while ((n_curly > 0 || n_square > 0 || n_quotes > 0) && i < sz)
+    {
+        c = s[i];
 
-using namespace std::literals;
+        if (c == '\"')
+        {
+            if (n_quotes == 0)
+                i = get_end_of_string_block(s.c_str(), i + 1) - 1;
+            else if (s[i - 1] == '\\')
+                ;
+            else
+                n_quotes--;
+        }
+        else
+        {
+            switch (c)
+            {
+            case '(':
+            case '[':
+                i = get_end_of_string_block(s.c_str(), i + 1) - 1;
+                break;
+            case ')':
+                n_curly--;
+                break;
+            case ']':
+                n_square--;
+                break;
+            }
+        }
 
-Strings split_string(const String &s, const String &delims);
-Strings split_lines(const String &s);
-int get_end_of_string_block(const String &s, int i = 1);
-
-path get_program();
-String get_program_version();
-String get_program_version_string(const String &prog_name);
-
-String get_cmake_version();
-
+        i++;
+    }
+    return i;
+}

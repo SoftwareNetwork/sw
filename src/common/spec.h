@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "common.h"
+#include "cppan_string.h"
 #include "date_time.h"
 #include "package.h"
 #include "source.h"

@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "common.h"
+#include "cppan_string.h"
 
 #include <chrono>
 

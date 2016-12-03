@@ -34,6 +34,7 @@
 #include "hash.h"
 #include "hasher.h"
 #include "log.h"
+#include "program.h"
 #include "templates.h"
 #include "stamp.h"
 

@@ -29,7 +29,7 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include "common.h"
+#include "cppan_string.h"
 
 #define EXTRACT_VAR(r, val, var, type)   \
     do                                   \

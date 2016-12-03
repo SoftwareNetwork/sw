@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "common.h"
+#include "cppan_string.h"
 
 #define CPPAN_CONFIG_HASH_METHOD "SHA256"
 #define CPPAN_CONFIG_HASH_SHORT_LENGTH 8

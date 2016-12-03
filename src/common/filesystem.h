@@ -40,6 +40,7 @@
 
 #define STAMPS_DIR "stamps"
 #define STORAGE_DIR "storage"
+#define CPPAN_FILENAME "cppan.yml"
 
 namespace fs = boost::filesystem;
 using path = fs::wpath;

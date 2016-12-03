@@ -27,7 +27,7 @@
 
 #include "directories.h"
 
-#include "common.h"
+#include "cppan_string.h"
 #include "config.h"
 
 Directories directories;

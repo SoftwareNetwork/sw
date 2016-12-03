@@ -25,17 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "common.h"
+#include "program.h"
 
 #include "command.h"
 #include "stamp.h"
 
-#include <boost/algorithm/string.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-
-#include <fstream>
-#include <random>
+#include <iomanip>
 #include <regex>
+#include <sstream>
 
 #ifdef WIN32
 #include <windows.h>
@@ -90,24 +87,6 @@ path get_program()
 #endif
 }
 
-Strings split_string(const String &s, const String &delims)
-{
-    std::vector<String> v, lines;
-    boost::split(v, s, boost::is_any_of(delims));
-    for (auto &l : v)
-    {
-        boost::trim(l);
-        if (!l.empty())
-            lines.push_back(l);
-    }
-    return lines;
-}
-
-Strings split_lines(const String &s)
-{
-    return split_string(s, "\r\n");
-}
-
 String get_cmake_version()
 {
     static const auto err = "Cannot get cmake version";
@@ -127,46 +106,3 @@ String get_cmake_version()
 
     throw std::runtime_error(err);
 }
-
-int get_end_of_string_block(const String &s, int i)
-{
-    auto c = s[i - 1];
-    int n_curly = c == '(';
-    int n_square = c == '[';
-    int n_quotes = c == '\"';
-    auto sz = (int)s.size();
-    while ((n_curly > 0 || n_square > 0 || n_quotes > 0) && i < sz)
-    {
-        c = s[i];
-
-        if (c == '\"')
-        {
-            if (n_quotes == 0)
-                i = get_end_of_string_block(s.c_str(), i + 1) - 1;
-            else if (s[i - 1] == '\\')
-                ;
-            else
-                n_quotes--;
-        }
-        else
-        {
-            switch (c)
-            {
-            case '(':
-            case '[':
-                i = get_end_of_string_block(s.c_str(), i + 1) - 1;
-                break;
-            case ')':
-                n_curly--;
-                break;
-            case ']':
-                n_square--;
-                break;
-            }
-        }
-
-        i++;
-    }
-    return i;
-}
-

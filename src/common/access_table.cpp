@@ -27,7 +27,7 @@
 
 #include "access_table.h"
 
-#include "common.h"
+#include "cppan_string.h"
 #include "database.h"
 #include "lock.h"
 #include "stamp.h"

@@ -27,6 +27,8 @@
 
 #include "version.h"
 
+#include <regex>
+
 const std::regex r_branch_name(R"(([a-zA-Z_][a-zA-Z0-9_-]*))");
 const std::regex r_version1(R"((\d+))");
 const std::regex r_version2(R"((\d+)\.(\d+))");

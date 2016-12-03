@@ -27,7 +27,7 @@
 
 #include "filesystem.h"
 
-#include "common.h"
+#include "cppan_string.h"
 
 #include <boost/algorithm/string.hpp>
 

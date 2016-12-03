@@ -27,9 +27,8 @@
 
 #pragma once
 
-#include "common.h"
-
-#include <regex>
+#include "cppan_string.h"
+#include "filesystem.h"
 
 #define LOCAL_VERSION_NAME "local"
 

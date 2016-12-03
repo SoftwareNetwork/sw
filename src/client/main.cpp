@@ -39,6 +39,7 @@
 #include <http.h>
 #include <logger.h>
 #include <printers/cmake.h>
+#include <program.h>
 #include <verifier.h>
 
 #include "build.h"

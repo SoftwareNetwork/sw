@@ -27,6 +27,6 @@
 
 #pragma once
 
-#include "common.h"
+#include "cppan_string.h"
 
 void verify(const String &target_name);

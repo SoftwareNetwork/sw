@@ -27,6 +27,7 @@
 
 #pragma once
 
-#include <common.h>
+#include <cppan_string.h>
+#include <filesystem.h>
 
 void fix_imports(const String &target, const path &aliases_file, const path &old_file, const path &new_file);

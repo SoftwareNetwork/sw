@@ -29,7 +29,7 @@
 
 #include <map>
 
-#include "common.h"
+#include "cppan_string.h"
 #include "filesystem.h"
 #include "http.h"
 #include "version.h"

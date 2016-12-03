@@ -27,8 +27,9 @@
 
 #pragma once
 
-#include "common.h"
+#include "cppan_string.h"
 #include "enums.h"
+#include "filesystem.h"
 #include "project_path.h"
 #include "version.h"
 

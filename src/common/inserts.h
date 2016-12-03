@@ -25,7 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "common.h"
+#include "cppan_string.h"
 
 #define DECLARE_TEXT_VAR(x) extern const String x
 

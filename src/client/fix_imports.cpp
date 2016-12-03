@@ -27,7 +27,6 @@
 
 #include "fix_imports.h"
 
-#include <common.h>
 #include <config.h>
 #include <context.h>
 #include <project_path.h>

@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include "common.h"
+#include "cppan_string.h"
 #include "dependency.h"
-#include <optional.h>
+#include "optional.h"
 #include "project_path.h"
 #include "source.h"
 #include "yaml.h"
