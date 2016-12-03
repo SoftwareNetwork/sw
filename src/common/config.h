@@ -40,6 +40,8 @@
 #include "version.h"
 #include "yaml.h"
 
+#define CONFIG_ROOT "/etc/cppan/"
+
 struct Config
 {
     Settings settings;
