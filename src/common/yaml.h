@@ -27,9 +27,11 @@
 
 #pragma once
 
+#include "cppan_string.h"
+
 #include <yaml-cpp/yaml.h>
 
-#include "cppan_string.h"
+#include <unordered_set>
 
 #define EXTRACT_VAR(r, val, var, type)   \
     do                                   \

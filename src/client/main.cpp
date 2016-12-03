@@ -443,7 +443,10 @@ try
     uc.settings.force_server_query = options()[SERVER_QUERY].as<bool>();
 
     if (options().count("verify"))
-        return verify(options["verify"].as<String>());
+    {
+        verify(options["verify"].as<String>());
+        return 0;
+    }
 
     if (options().count("build"))
         return build(options["build"].as<String>(), options["config"].as<String>());
