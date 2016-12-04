@@ -305,12 +305,18 @@ void Settings::load_build(const yaml &root)
     if (cxx_compiler.empty())
         cxx_compiler = compiler;
 
-    c_compiler_flags += " " + compiler_flags;
-    cxx_compiler_flags += " " + compiler_flags;
+    if (!compiler_flags.empty())
+    {
+        c_compiler_flags += " " + compiler_flags;
+        cxx_compiler_flags += " " + compiler_flags;
+    }
     for (int i = 0; i < CMakeConfigurationType::Max; i++)
     {
-        c_compiler_flags_conf[i] += " " + compiler_flags_conf[i];
-        cxx_compiler_flags_conf[i] += " " + compiler_flags_conf[i];
+        if (!compiler_flags_conf[i].empty())
+        {
+            c_compiler_flags_conf[i] += " " + compiler_flags_conf[i];
+            cxx_compiler_flags_conf[i] += " " + compiler_flags_conf[i];
+        }
     }
 }
 
