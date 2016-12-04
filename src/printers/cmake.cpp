@@ -372,7 +372,14 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                 local.addLine("get_configuration_with_generator(config)");
                 local.addLine("get_configuration_exe(config_exe)");
 
-                local.addLine("add_custom_command(TARGET " + target + " PRE_BUILD");
+                // we're in helper, set this var to build target
+                if (d.empty())
+                    local.addLine("set(this " + target + ")");
+
+                // do not use add_custom_command as it doesn't work
+                // add custom target and add a dependency below
+                // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
+                local.addLine("add_custom_target(${this}-build-deps");
                 local.increaseIndent();
                 bool has_build_deps = false;
                 for (auto &dp : build_deps)
@@ -405,6 +412,7 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                 }
                 local.decreaseIndent();
                 local.addLine(")");
+                local.addLine("add_dependencies(${this} ${this}-build-deps)");
                 local.addLine();
 
                 if (has_build_deps)
