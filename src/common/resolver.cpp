@@ -432,6 +432,7 @@ void Resolver::download_and_unpack()
 
     e.wait();
 
+    // two following blocks use executor to do parallel queries
     if (query_local_db)
     {
         // send download list
