@@ -55,6 +55,7 @@ String repeat(const String &e, int n);
 const String exports_dir_name = "exports";
 const String exports_dir = "${CMAKE_BINARY_DIR}/" + exports_dir_name + "/";
 const String packages_folder = "cppan/packages";
+const String dummy_folder = "cppan/dummy";
 
 //
 const String cmake_config_filename = "CMakeLists.txt";
@@ -206,6 +207,13 @@ void declare_dummy_target(Context &ctx, const String &name)
     ctx.addLine();
     ctx.addLine("set_target_properties(" + cppan_dummy_target(name) + " PROPERTIES\n    FOLDER \"cppan/service\"\n)");
     ctx.emptyLines(1);
+}
+
+void print_solution_folder(Context &ctx, const String &target, const path &folder)
+{
+    ctx.addLine("set_target_properties(" + target + " PROPERTIES");
+    ctx.addLine("    FOLDER \"" + normalize_path(folder) + "\"");
+    ctx.addLine(")");
 }
 
 String cmake_debug_message(const String &s)
@@ -376,10 +384,12 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                 if (d.empty())
                     local.addLine("set(this " + target + ")");
 
+                String build_deps_tgt = "${this}-build-deps";
+
                 // do not use add_custom_command as it doesn't work
                 // add custom target and add a dependency below
                 // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
-                local.addLine("add_custom_target(${this}-build-deps");
+                local.addLine("add_custom_target(" + build_deps_tgt);
                 local.increaseIndent();
                 bool has_build_deps = false;
                 for (auto &dp : build_deps)
@@ -412,7 +422,8 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                 }
                 local.decreaseIndent();
                 local.addLine(")");
-                local.addLine("add_dependencies(${this} ${this}-build-deps)");
+                local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
+                print_solution_folder(local, build_deps_tgt, dummy_folder);
                 local.addLine();
 
                 if (has_build_deps)
@@ -1164,9 +1175,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     config_section_title(ctx, "options");
     if (!header_only && !d.flags[pfLocalProject])
     {
-        ctx.addLine("set_target_properties         (${this} PROPERTIES");
-        ctx.addLine("    FOLDER \"" + packages_folder + "/" + d.ppath.toString() + "/" + d.version.toString() + "\"");
-        ctx.addLine(")");
+        print_solution_folder(ctx, "${this}", path(packages_folder) / d.ppath.toString() / d.version.toString());
         ctx.emptyLines(1);
     }
 
@@ -1519,9 +1528,7 @@ else())");
         ctx.addLine("if (CPPAN_SHOW_IDE_PROJECTS)");
         ctx.addLine("add_custom_target(" + tgt + " SOURCES ${src})");
         ctx.addLine();
-        ctx.addLine("set_target_properties         (" + tgt + " PROPERTIES");
-        ctx.addLine("    FOLDER \"" + packages_folder + "/" + d.ppath.toString() + "/" + d.version.toString() + "\"");
-        ctx.addLine(")");
+        print_solution_folder(ctx, tgt, path(packages_folder) / d.ppath.toString() / d.version.toString());
         ctx.addLine("endif()");
         ctx.emptyLines(1);
     }
@@ -1744,11 +1751,7 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
 
         // solution folder
         if (!d.flags[pfLocalProject])
-        {
-            ctx.addLine("set_target_properties         (" + target + " PROPERTIES");
-            ctx.addLine("    FOLDER \"" + packages_folder + "/" + d.ppath.toString() + "/" + d.version.toString() + "\"");
-            ctx.addLine(")");
-        }
+            print_solution_folder(ctx, target, path(packages_folder) / d.ppath.toString() / d.version.toString());
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         ctx.emptyLines(1);
@@ -1937,9 +1940,8 @@ add_custom_target(run-cppan
         ${PROJECT_SOURCE_DIR}/cppan/)" + cmake_helpers_filename + R"(
 )
 add_dependencies()" + cppan_project_name + R"( run-cppan)
-set_target_properties(run-cppan PROPERTIES
-    FOLDER "cppan/service"
-))");
+)");
+            print_solution_folder(ctx, "run-cppan", "cppan/service");
         }
 
         // build deps

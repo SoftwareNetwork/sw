@@ -33,7 +33,13 @@ int main()
 {
     time_t v;
     time(&v);
-    std::cout << "\"" << std::to_string(v) << "\"";
+    std::cout << "\"" <<
+#ifdef NDEBUG
+        std::to_string(v)
+#else
+        "0"
+#endif
+        << "\"";
 
     return 0;
 }
