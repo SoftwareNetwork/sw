@@ -2248,8 +2248,9 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
         else
             ret = command::execute_with_output(args);
 
+        // do not fail (throw), try to read already found variables
         if (ret.rc)
-            throw std::runtime_error("Error during evaluating variables");
+            LOG_WARN(logger, "-- Thread #" << i << ": error during evaluating variables");
 
         w.read_parallel_checks_for_workers(d);
     };
