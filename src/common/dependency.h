@@ -36,8 +36,9 @@ struct Remote;
 
 struct DownloadDependency : public Package
 {
-    using DownloadDependencies = std::map<ProjectVersionId, DownloadDependency>;
+    using IdDependencies = std::map<ProjectVersionId, DownloadDependency>;
     using DbDependencies = std::map<String, DownloadDependency>;
+    using Dependencies = std::map<Package, DownloadDependency>;
 
     // extended data
     ProjectVersionId id = 0;
@@ -45,19 +46,36 @@ struct DownloadDependency : public Package
 
     // own data (private)
     const Remote *remote = nullptr;
-    std::set<ProjectVersionId> id_dependencies;
-    DbDependencies dependencies;
-    DownloadDependencies *map_ptr = nullptr;
+    DbDependencies db_dependencies;
 
 public:
-    void setDependencyIds(const std::set<ProjectVersionId> &ids) { id_dependencies = ids; }
+    void setDependencyIds(const std::set<ProjectVersionId> &ids)
+    {
+        id_dependencies = ids;
+    }
 
-    Packages getDirectDependencies() const;
-    Packages getIndirectDependencies(const Packages &known_deps = Packages()) const;
-    DownloadDependencies getDependencies() const;
+    Dependencies getDependencies() const
+    {
+        return dependencies;
+    }
+
+    void prepareDependencies(const IdDependencies &dd)
+    {
+        for (auto d : id_dependencies)
+        {
+            auto i = dd.find(d);
+            if (i == dd.end())
+                throw std::runtime_error("cannot find dep by id");
+            auto dep = i->second;
+            dep.createNames();
+            dependencies[dep] = dep;
+        }
+        dependencies.erase(*this); // erase self
+    }
 
 private:
-    void getIndirectDependencies(std::set<ProjectVersionId> &deps) const;
+    std::set<ProjectVersionId> id_dependencies;
+    Dependencies dependencies;
 };
 
-using DownloadDependencies = DownloadDependency::DownloadDependencies;
+using IdDependencies = DownloadDependency::IdDependencies;

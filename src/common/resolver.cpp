@@ -51,6 +51,10 @@ DECLARE_STATIC_LOGGER(logger, "resolver");
 TYPED_EXCEPTION(LocalDbHashException);
 TYPED_EXCEPTION(DependencyNotResolved);
 
+Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Remote *current_remote);
+Resolver::Dependencies getDependenciesFromDb(const Packages &deps, const Remote *current_remote);
+Resolver::Dependencies prepareIdDependencies(const IdDependencies &id_deps, const Remote *current_remote);
+
 void resolve_dependencies(const Packages &deps)
 {
     Resolver r;
@@ -130,7 +134,7 @@ void Resolver::resolve(const Packages &deps, std::function<void()> resolve_actio
             try
             {
                 LOG_INFO(logger, "Trying " + current_remote->name + " remote");
-                getDependenciesFromRemote(deps);
+                download_dependencies_ = getDependenciesFromRemote(deps, current_remote);
             }
             catch (const std::exception &e)
             {
@@ -157,7 +161,7 @@ void Resolver::resolve(const Packages &deps, std::function<void()> resolve_actio
             {
                 try
                 {
-                    getDependenciesFromDb(deps);
+                    download_dependencies_ = getDependenciesFromDb(deps, current_remote);
                 }
                 catch (std::exception &e)
                 {
@@ -198,146 +202,6 @@ void Resolver::download(const DownloadDependency &d, const path &fn)
         if (query_local_db)
             throw LocalDbHashException(err);
         throw std::runtime_error(err);
-    }
-}
-
-void Resolver::getDependenciesFromRemote(const Packages &deps)
-{
-    // prepare request
-    ptree request;
-    ptree dependency_tree;
-    for (auto &d : deps)
-    {
-        ptree version;
-        version.put("version", d.second.version.toAnyVersion());
-        request.put_child(ptree::path_type(d.second.ppath.toString(), '|'), version);
-    }
-
-    LOG_NO_NEWLINE("Requesting dependency list... ");
-    {
-        int ct = 5;
-        int t = 10;
-        int n_tries = 3;
-        while (1)
-        {
-            HttpResponse resp;
-            try
-            {
-                HttpRequest req = httpSettings;
-                req.connect_timeout = ct;
-                req.timeout = t;
-                req.type = HttpRequest::POST;
-                req.url = current_remote->url + "/api/find_dependencies";
-                req.data = ptree2string(request);
-                resp = url_request(req);
-                if (resp.http_code != 200)
-                    throw std::runtime_error("Cannot get deps");
-                dependency_tree = string2ptree(resp.response);
-                break;
-            }
-            catch (...)
-            {
-                if (--n_tries == 0)
-                {
-                    switch (resp.http_code)
-                    {
-                    case 200:
-                    {
-                        dependency_tree = string2ptree(resp.response);
-                        auto e = dependency_tree.find("error");
-                        LOG(e->second.get_value<String>());
-                    }
-                        break;
-                    case 0:
-                        LOG("Could not connect to server");
-                        break;
-                    default:
-                        LOG("Error code: " + std::to_string(resp.http_code));
-                        break;
-                    }
-                    throw;
-                }
-                else if (resp.http_code == 0)
-                {
-                    ct /= 2;
-                    t /= 2;
-                }
-                LOG_NO_NEWLINE("Retrying... ");
-            }
-        }
-    }
-
-    // read deps urls, download them, unpack
-    int api = 0;
-    if (dependency_tree.find("api") != dependency_tree.not_found())
-        api = dependency_tree.get<int>("api");
-
-    auto e = dependency_tree.find("error");
-    if (e != dependency_tree.not_found())
-        throw std::runtime_error(e->second.get_value<String>());
-
-    auto info = dependency_tree.find("info");
-    if (info != dependency_tree.not_found())
-        std::cout << info->second.get_value<String>() << "\n";
-
-    if (api == 0)
-        throw std::runtime_error("API version is missing in the response");
-    if (api > CURRENT_API_LEVEL)
-        throw std::runtime_error("Server uses more new API version. Please, upgrade the cppan client from site or via --self-upgrade");
-    if (api < CURRENT_API_LEVEL - 1)
-        throw std::runtime_error("Your client's API is newer than server's. Please, wait for server upgrade");
-
-    // dependencies were received without error
-    LOG("Ok");
-
-    // set dependencies
-    int unresolved = (int)deps.size();
-    auto &remote_packages = dependency_tree.get_child("packages");
-    for (auto &v : remote_packages)
-    {
-        auto id = v.second.get<ProjectVersionId>("id");
-
-        DownloadDependency d;
-        d.ppath = v.first;
-        d.version = v.second.get<String>("version");
-        d.flags = decltype(d.flags)(v.second.get<uint64_t>("flags"));
-        d.sha256 = v.second.get<String>("sha256");
-        d.createNames();
-        dep_ids[d] = id;
-
-        if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
-        {
-            std::set<ProjectVersionId> idx;
-            for (auto &tree_dep : v.second.get_child(DEPENDENCIES_NODE))
-                idx.insert(tree_dep.second.get_value<ProjectVersionId>());
-            d.setDependencyIds(idx);
-        }
-
-        d.map_ptr = &download_dependencies_;
-        d.remote = current_remote;
-        download_dependencies_[id] = d;
-
-        unresolved--;
-    }
-
-    if (unresolved > 0)
-        throw std::runtime_error("Some packages (" + std::to_string(unresolved) + ") are unresolved");
-}
-
-void Resolver::getDependenciesFromDb(const Packages &deps)
-{
-    auto &db = getPackagesDatabase();
-    auto dl_deps = db.findDependencies(deps);
-
-    // set dependencies
-    for (auto &v : dl_deps)
-    {
-        auto &d = v.second;
-        d.createNames();
-        dep_ids[d] = d.id;
-        d.map_ptr = &download_dependencies_;
-        d.remote = current_remote;
-        download_dependencies_[d.id] = d;
     }
 }
 
@@ -508,7 +372,7 @@ void Resolver::prepare_config(PackageStore::PackageConfigs::value_type &cc)
         return;
 
     // prepare deps: extract real deps flags from configs
-    for (auto &dep : download_dependencies_[dep_ids[p]].getDirectDependencies())
+    for (auto &dep : download_dependencies_[p].getDependencies())
     {
         auto d = dep.second;
         auto i = project.dependencies.find(d.ppath.toString());
@@ -519,7 +383,7 @@ void Resolver::prepare_config(PackageStore::PackageConfigs::value_type &cc)
             std::set<String> to_remove;
             for (auto &root_dep : project.dependencies)
             {
-                for (auto &child_dep : download_dependencies_[dep_ids[p]].getDirectDependencies())
+                for (auto &child_dep : download_dependencies_[p].getDependencies())
                 {
                     if (root_dep.second.ppath.is_root_of(child_dep.second.ppath))
                     {
@@ -618,4 +482,147 @@ void Resolver::assign_dependencies(const Package &pkg, const Packages &deps)
         d.flags |= dd.second.flags;
         d.createNames();
     }
+}
+
+Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Remote *current_remote)
+{
+    // prepare request
+    ptree request;
+    ptree dependency_tree;
+    for (auto &d : deps)
+    {
+        ptree version;
+        version.put("version", d.second.version.toAnyVersion());
+        request.put_child(ptree::path_type(d.second.ppath.toString(), '|'), version);
+    }
+
+    LOG_NO_NEWLINE("Requesting dependency list... ");
+    {
+        int ct = 5;
+        int t = 10;
+        int n_tries = 3;
+        while (1)
+        {
+            HttpResponse resp;
+            try
+            {
+                HttpRequest req = httpSettings;
+                req.connect_timeout = ct;
+                req.timeout = t;
+                req.type = HttpRequest::POST;
+                req.url = current_remote->url + "/api/find_dependencies";
+                req.data = ptree2string(request);
+                resp = url_request(req);
+                if (resp.http_code != 200)
+                    throw std::runtime_error("Cannot get deps");
+                dependency_tree = string2ptree(resp.response);
+                break;
+            }
+            catch (...)
+            {
+                if (--n_tries == 0)
+                {
+                    switch (resp.http_code)
+                    {
+                    case 200:
+                    {
+                        dependency_tree = string2ptree(resp.response);
+                        auto e = dependency_tree.find("error");
+                        LOG(e->second.get_value<String>());
+                    }
+                    break;
+                    case 0:
+                        LOG("Could not connect to server");
+                        break;
+                    default:
+                        LOG("Error code: " + std::to_string(resp.http_code));
+                        break;
+                    }
+                    throw;
+                }
+                else if (resp.http_code == 0)
+                {
+                    ct /= 2;
+                    t /= 2;
+                }
+                LOG_NO_NEWLINE("Retrying... ");
+            }
+        }
+    }
+
+    // read deps urls, download them, unpack
+    int api = 0;
+    if (dependency_tree.find("api") != dependency_tree.not_found())
+        api = dependency_tree.get<int>("api");
+
+    auto e = dependency_tree.find("error");
+    if (e != dependency_tree.not_found())
+        throw std::runtime_error(e->second.get_value<String>());
+
+    auto info = dependency_tree.find("info");
+    if (info != dependency_tree.not_found())
+        std::cout << info->second.get_value<String>() << "\n";
+
+    if (api == 0)
+        throw std::runtime_error("API version is missing in the response");
+    if (api > CURRENT_API_LEVEL)
+        throw std::runtime_error("Server uses more new API version. Please, upgrade the cppan client from site or via --self-upgrade");
+    if (api < CURRENT_API_LEVEL - 1)
+        throw std::runtime_error("Your client's API is newer than server's. Please, wait for server upgrade");
+
+    // dependencies were received without error
+    LOG("Ok");
+
+    // set id dependencies
+    IdDependencies id_deps;
+    int unresolved = (int)deps.size();
+    auto &remote_packages = dependency_tree.get_child("packages");
+    for (auto &v : remote_packages)
+    {
+        auto id = v.second.get<ProjectVersionId>("id");
+
+        DownloadDependency d;
+        d.ppath = v.first;
+        d.version = v.second.get<String>("version");
+        d.flags = decltype(d.flags)(v.second.get<uint64_t>("flags"));
+        d.sha256 = v.second.get<String>("sha256");
+
+        if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
+        {
+            std::set<ProjectVersionId> idx;
+            for (auto &tree_dep : v.second.get_child(DEPENDENCIES_NODE))
+                idx.insert(tree_dep.second.get_value<ProjectVersionId>());
+            d.setDependencyIds(idx);
+        }
+
+        id_deps[id] = d;
+
+        unresolved--;
+    }
+
+    if (unresolved > 0)
+        throw std::runtime_error("Some packages (" + std::to_string(unresolved) + ") are unresolved");
+
+    return prepareIdDependencies(id_deps, current_remote);
+}
+
+Resolver::Dependencies getDependenciesFromDb(const Packages &deps, const Remote *current_remote)
+{
+    auto &db = getPackagesDatabase();
+    auto id_deps = db.findDependencies(deps);
+    return prepareIdDependencies(id_deps, current_remote);
+}
+
+Resolver::Dependencies prepareIdDependencies(const IdDependencies &id_deps, const Remote *current_remote)
+{
+    Resolver::Dependencies dependencies;
+    for (auto &v : id_deps)
+    {
+        auto d = v.second;
+        d.createNames();
+        d.remote = current_remote;
+        d.prepareDependencies(id_deps);
+        dependencies[d] = d;
+    }
+    return dependencies;
 }

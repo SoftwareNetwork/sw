@@ -139,7 +139,7 @@ class PackagesDatabase : public Database
 public:
     PackagesDatabase();
 
-    DownloadDependencies findDependencies(const Packages &deps) const;
+    IdDependencies findDependencies(const Packages &deps) const;
 
     void listPackages(const String &name = String());
 

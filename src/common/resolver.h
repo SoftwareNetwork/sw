@@ -32,19 +32,19 @@
 
 struct Resolver
 {
+public:
+    using Dependencies = DownloadDependency::Dependencies;
+
+public:
     void resolve_dependencies(const Packages &deps);
     void resolve_and_download(const Package &p, const path &fn);
     void assign_dependencies(const Package &p, const Packages &deps); // why such name?
 
 private:
-    DownloadDependencies download_dependencies_;
-    std::map<Package, ProjectVersionId> dep_ids;
-
+    Dependencies download_dependencies_;
     const Remote *current_remote = nullptr;
     bool query_local_db = true;
 
-    void getDependenciesFromRemote(const Packages &deps);
-    void getDependenciesFromDb(const Packages &deps);
     void read_configs();
     void download_and_unpack();
     void post_download();

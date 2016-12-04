@@ -929,7 +929,7 @@ bool PackagesDatabase::isCurrentDbOld() const
     return (tp - tp_old) > std::chrono::minutes(PACKAGES_DB_REFRESH_TIME_MINUTES);
 }
 
-DownloadDependencies PackagesDatabase::findDependencies(const Packages &deps) const
+IdDependencies PackagesDatabase::findDependencies(const Packages &deps) const
 {
     DependenciesMap all_deps;
     for (auto &dep : deps)
@@ -960,7 +960,7 @@ DownloadDependencies PackagesDatabase::findDependencies(const Packages &deps) co
             dependency.flags.set(pfDirectDependency);
             dependency.id = getExactProjectVersionId(dependency, dependency.version, dependency.flags, dependency.sha256);
             all_deps[dependency] = dependency; // assign first, deps assign second
-            all_deps[dependency].dependencies = getProjectDependencies(dependency.id, all_deps);
+            all_deps[dependency].db_dependencies = getProjectDependencies(dependency.id, all_deps);
         };
 
         if (type == ProjectType::RootProject)
@@ -995,12 +995,12 @@ DownloadDependencies PackagesDatabase::findDependencies(const Packages &deps) co
     }
 
     // make id deps
-    DownloadDependencies dds;
+    IdDependencies dds;
     for (auto &ad : all_deps)
     {
         auto &d = ad.second;
         std::set<ProjectVersionId> ids;
-        for (auto &dd2 : d.dependencies)
+        for (auto &dd2 : d.db_dependencies)
             ids.insert(dd2.second.id);
         d.setDependencyIds(ids);
         dds[d.id] = d;
@@ -1175,7 +1175,7 @@ PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(ProjectV
         if (i == dm.end())
         {
             dm[dependency] = dependency; // assign first, deps assign second
-            dm[dependency].dependencies = getProjectDependencies(dependency.id, dm);
+            dm[dependency].db_dependencies = getProjectDependencies(dependency.id, dm);
         }
         dependencies[dependency.ppath.toString()] = dependency;
     }
