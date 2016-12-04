@@ -47,7 +47,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <logger.h>
-DECLARE_STATIC_LOGGER(logger, "cmake");
+//DECLARE_STATIC_LOGGER(logger, "cmake");
 
 String repeat(const String &e, int n);
 
