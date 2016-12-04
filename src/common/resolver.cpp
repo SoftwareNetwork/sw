@@ -51,12 +51,6 @@ DECLARE_STATIC_LOGGER(logger, "resolver");
 TYPED_EXCEPTION(LocalDbHashException);
 TYPED_EXCEPTION(DependencyNotResolved);
 
-Executor &getExecutor()
-{
-    static Executor executor(2);
-    return executor;
-}
-
 void resolve_dependencies(const Packages &deps)
 {
     Resolver r;
@@ -443,11 +437,7 @@ void Resolver::download_and_unpack()
         // send download list
         // remove this when cppan will be widely used
         // also because this download count can be easily abused
-        getExecutor().push([
-            // copy, these values may change before executor start the job
-            download_dependencies_ = download_dependencies_,
-            current_remote = current_remote
-        ]()
+        e.push([this]()
         {
             if (!current_remote)
                 return;
@@ -477,10 +467,9 @@ void Resolver::download_and_unpack()
     }
 
     // send download action once
-    static std::once_flag flag;
-    std::call_once(flag, [this]
+    RUN_ONCE_BEGIN
     {
-        getExecutor().push([this]
+        e.push([this]
         {
             try
             {
@@ -494,7 +483,10 @@ void Resolver::download_and_unpack()
             {
             }
         });
-    });
+    }
+    RUN_ONCE_END;
+
+    e.wait();
 }
 
 void Resolver::post_download()

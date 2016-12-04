@@ -2170,11 +2170,14 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
     int N = std::thread::hardware_concurrency();
     if (uc.settings.var_check_jobs > 0)
         N = std::min<int>(N, uc.settings.var_check_jobs);
+#ifdef _WIN32
     else
     {
+        // only for win32
         N -= 2; // leave 2 free cores to process other tasks
         N = std::max<int>(1, N);
     }
+#endif
 
     Checks checks;
     checks.load(checks_file);
