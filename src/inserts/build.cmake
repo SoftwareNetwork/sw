@@ -18,7 +18,11 @@ endif()
 
 set(lock ${BUILD_DIR}/cppan_build.lock)
 
-file(LOCK ${lock} RESULT_VARIABLE lock_result)
+file(
+    LOCK ${lock}
+    GUARD FILE # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
+    RESULT_VARIABLE lock_result
+)
 if (NOT ${lock_result} EQUAL 0)
     message(FATAL_ERROR "Lock error: ${lock_result}")
 endif()
