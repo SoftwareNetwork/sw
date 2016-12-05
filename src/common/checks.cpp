@@ -57,6 +57,9 @@ const std::map<int, Check::Information> check_information{
     { Check::Symbol,
     { Check::Symbol, "check_symbol_exists", "check_cxx_symbol_exists", "symbol", "symbols" } },
 
+    { Check::Alignment,
+    { Check::Alignment, "check_type_alignment", "check_type_alignment", "alignment", "alignments" } },
+
     { Check::Decl,
     { Check::Decl, "check_decl_exists", "check_c_source_compiles", "declaration", "declarations" } },
 
@@ -117,6 +120,7 @@ void Checks::load(const yaml &root)
     LOAD_SET(Library);
     LOAD_SET(Type);
     LOAD_SET(Decl);
+    LOAD_SET(Alignment);
 
     // includes
     get_sequence_and_iterate(root, getCheckInformation(Check::Include).cppan_key, [this](const auto &v)
@@ -233,6 +237,7 @@ void Checks::save(yaml &root) const
         case Check::Type:
         case Check::Library:
         case Check::Decl:
+        case Check::Alignment:
             root[i.cppan_key].push_back(c->getData());
             break;
         case Check::LibraryFunction:
@@ -293,6 +298,10 @@ void Checks::write_checks(Context &ctx) const
         case Check::Include:
         case Check::Type:
             ctx.addLine(i.function + "(\"" + c->getData() + "\" " + c->getVariable() + ")");
+            break;
+        case Check::Alignment:
+            // for C language, can be opted later for C++
+            ctx.addLine(i.function + "(\"" + c->getData() + "\" C " + c->getVariable() + ")");
             break;
         case Check::Library:
             ctx.addLine("find_library(" + c->getVariable() + " " + c->getData() + ")");
@@ -372,6 +381,10 @@ void Checks::write_parallel_checks_for_workers(Context &ctx) const
         case Check::Include:
         case Check::Type:
             ctx.addLine(i.function + "(\"" + c->getData() + "\" " + c->getVariable() + ")");
+            break;
+        case Check::Alignment:
+            // for C language, can be opted later for C++
+            ctx.addLine(i.function + "(\"" + c->getData() + "\" C " + c->getVariable() + ")");
             break;
         case Check::Library:
             ctx.addLine("find_library(" + c->getVariable() + " " + c->getData() + ")");
@@ -499,7 +512,12 @@ void Checks::write_definitions(Context &ctx, const Package &d) const
             continue;
         }
 
-        add_if_definition(c->getVariable(), "1");
+        String value = "1";
+
+        if (t == Check::Alignment)
+            value = "${" + c->getVariable() + "}";
+
+        add_if_definition(c->getVariable(), value);
 
         if (t == Check::Type)
         {
@@ -554,6 +572,7 @@ void Checks::print_values() const
         case Check::Function:
         case Check::Include:
         case Check::Type:
+        case Check::Alignment:
         case Check::Library:
         case Check::LibraryFunction:
             if (c->getValue())

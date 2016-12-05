@@ -232,6 +232,13 @@ void add_subdirectory(Context &ctx, const String &src)
     ctx.addLine(add_subdirectory(src));
 }
 
+String prepare_include_directory(const String &i)
+{
+    if (i.find("${") != i.npos)
+        return i;
+    return "${SDIR}/" + i;
+};
+
 String get_binary_path(const Package &d, const String &prefix)
 {
     return prefix + "/cppan/" + d.getFilesystemHash();
@@ -850,6 +857,19 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("endif()");
         ctx.addLine();
 
+        ctx.addLine("if (NOT CPPAN_COMMAND)");
+        ctx.increaseIndent();
+        ctx.addLine("find_program(CPPAN_COMMAND cppan)");
+        ctx.addLine("if (\"${CPPAN_COMMAND}\" STREQUAL \"CPPAN_COMMAND-NOTFOUND\")");
+        ctx.increaseIndent();
+        ctx.addLine("message(FATAL_ERROR \"'cppan' program was not found. Please, add it to PATH environment variable\")");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine("set(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
+        ctx.addLine();
+
         if (p.static_only)
             ctx.addLine("set(LIBRARY_TYPE STATIC)");
         else if (p.shared_only)
@@ -1036,19 +1056,12 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         }
         if (!p.include_directories.empty() || !include_deps.empty())
         {
-            auto get_i_dir = [this](const String &i)
-            {
-                if (i.find("${") != i.npos)
-                    return i;
-                return "${SDIR}/" + i;
-            };
-
             ctx.addLine("target_include_directories    (${this}");
             ctx.increaseIndent();
             if (header_only)
             {
                 for (auto &idir : p.include_directories.public_)
-                    ctx.addLine("INTERFACE " + get_i_dir(idir.string()));
+                    ctx.addLine("INTERFACE " + prepare_include_directory(idir.string()));
                 for (auto &pkg : include_deps)
                 {
                     auto &proj = rd[pkg].config->getDefaultProject();
@@ -1069,9 +1082,9 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                     // TODO: but check it ^
                     // export only exe's idirs, not deps' idirs
                     // that's why target_link_libraries always private for exe
-                    ctx.addLine("PUBLIC " + get_i_dir(idir.string()));
+                    ctx.addLine("PUBLIC " + prepare_include_directory(idir.string()));
                 for (auto &idir : p.include_directories.private_)
-                    ctx.addLine("PRIVATE " + get_i_dir(idir.string()));
+                    ctx.addLine("PRIVATE " + prepare_include_directory(idir.string()));
                 for (auto &pkg : include_deps)
                 {
                     auto &proj = rd[pkg].config->getDefaultProject();
@@ -1247,7 +1260,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         {
             ctx.emptyLines(1);
 
-            auto print_target_options = [header_only, &ctx, this](const auto &opts, const String &comment, const String &type)
+            auto print_target_options = [header_only, &ctx, this](const auto &opts, const String &comment, const String &type, const std::function<String(String)> &f = {})
             {
                 if (opts.empty())
                     return;
@@ -1256,12 +1269,15 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 ctx.increaseIndent();
                 for (auto &opt : opts)
                 {
+                    auto s = opt.second;
+                    if (f)
+                        s = f(s);
                     if (header_only)
-                        ctx.addLine("INTERFACE " + opt.second);
+                        ctx.addLine("INTERFACE " + s);
                     else if (d.flags[pfExecutable])
-                        ctx.addLine("PRIVATE " + opt.second);
+                        ctx.addLine("PRIVATE " + s);
                     else
-                        ctx.addLine(boost::algorithm::to_upper_copy(opt.first) + " " + opt.second);
+                        ctx.addLine(boost::algorithm::to_upper_copy(opt.first) + " " + s);
                 }
                 ctx.decreaseIndent();
                 ctx.addLine(")");
@@ -1270,6 +1286,10 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             auto print_defs = [header_only, &ctx, this, &print_target_options](const auto &defs)
             {
                 print_target_options(defs, "definitions", "target_compile_definitions");
+            };
+            auto print_include_dirs = [header_only, &ctx, this, &print_target_options](const auto &defs)
+            {
+                print_target_options(defs, "include directories", "target_include_directories", &prepare_include_directory);
             };
             auto print_compile_opts = [header_only, &ctx, this, &print_target_options](const auto &copts)
             {
@@ -1300,9 +1320,10 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 ctx.addLine(")");
                 ctx.addLine();
             };
-            auto print_options = [&ctx, &ol, &print_defs, &print_set, &print_compile_opts, &print_linker_opts]
+            auto print_options = [&ctx, &ol, &print_defs, &print_set, &print_compile_opts, &print_linker_opts, &print_include_dirs]
             {
                 print_defs(ol.second.definitions);
+                print_include_dirs(ol.second.include_directories);
                 print_compile_opts(ol.second.compile_options);
                 print_linker_opts(ol.second.link_options);
                 print_linker_opts(ol.second.link_libraries);
@@ -1319,11 +1340,10 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 };
 
                 print_system(ol.second.system_definitions, print_defs);
+                print_system(ol.second.system_include_directories, print_include_dirs);
                 print_system(ol.second.system_compile_options, print_compile_opts);
                 print_system(ol.second.system_link_options, print_linker_opts);
                 print_system(ol.second.system_link_libraries, print_linker_opts);
-
-                print_set(ol.second.include_directories, "target_include_directories");
             };
 
             if (ol.first == "any")
@@ -1435,27 +1455,6 @@ else())");
             ctx.addLine("endif()");
             ctx.addLine();
         }
-
-        // global definitions - why???
-        config_section_title(ctx, "global definitions");
-
-        Context local;
-        bool has_defs = false;
-        local.addLine("target_compile_definitions(${this}");
-        local.increaseIndent();
-        for (auto &o : cc->global_options)
-        {
-            for (auto &opt : o.second.global_definitions)
-            {
-                local.addLine(visibility + " " + opt); // why visibility???
-                has_defs = true;
-            }
-        }
-        local.decreaseIndent();
-        local.addLine(")");
-        local.addLine();
-        if (has_defs)
-            ctx += local;
     }
 
     // definitions
@@ -1617,16 +1616,24 @@ void CMakePrinter::print_object_config_file(const path &fn) const
         config_section_title(ctx, "macros & functions");
         ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + ")");
         ctx.addLine();
-        if (!d.flags[pfLocalProject])
+        //if (!d.flags[pfLocalProject])
         {
             config_section_title(ctx, "read passed variables");
+            if (d.flags[pfLocalProject])
+                ctx.addLine("if (VARIABLES_FILE)");
             ctx.addLine("read_variables_file(GEN_CHILD_VARS ${VARIABLES_FILE})");
+            if (d.flags[pfLocalProject])
+            {
+                ctx.addLine("else()");
+                ctx.addLine("set(OUTPUT_DIR ${config})");
+                ctx.addLine("endif()");
+            }
             ctx.addLine();
         }
-        else
+        //else
         {
-            config_section_title(ctx, "setup variables");
-            ctx.addLine("set(OUTPUT_DIR ${config})");
+            //config_section_title(ctx, "setup variables");
+            //ctx.addLine("set(OUTPUT_DIR ${config})");
         }
         ctx.addLine();
         config_section_title(ctx, "output settings");
@@ -1740,7 +1747,11 @@ void CMakePrinter::print_object_include_config_file(const path &fn) const
         ctx.addLine("if (NOT TARGET " + target + ")");
         ctx.increaseIndent();
         if (d.flags[pfLocalProject])
+        {
+            ctx.addLine("set(SDIR \"" + normalize_path(p.root_directory) + "\")");
             print_local_project_files(ctx, p);
+            ctx.addLine("set(SDIR)");
+        }
         else
             ctx.addLine("file(GLOB_RECURSE src \"" + normalize_path(dir) + "/*\")");
         ctx.addLine();
@@ -2047,6 +2058,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("endif()");
         ctx.decreaseIndent();
         ctx.addLine("endif()");
+        ctx.addLine("set(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
         ctx.addLine();
     }
     ctx.addLine("get_configuration(config)");
@@ -2124,8 +2136,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
             ctx.addLine();
             ctx.addLine("set(checks_file \"" + normalize_path(cwd / cc->settings.cppan_dir / cppan_checks_yml) + "\")");
             ctx.addLine();
-            ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles ${tmp_dir}/CMakeFiles/)");
-            ctx.addLine("execute_process(COMMAND ${CPPAN_COMMAND} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file} ${CMAKE_GENERATOR} ${CMAKE_TOOLCHAIN_FILE})");
+            ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles ${tmp_dir}/CMakeFiles/ RESULT_VARIABLE ret)");
+            ctx.addLine("execute_process(COMMAND ${CPPAN_COMMAND} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file} ${CMAKE_GENERATOR} ${CMAKE_TOOLCHAIN_FILE} RESULT_VARIABLE ret)");
+            ctx.addLine("check_result_variable(${ret} \"COMMAND ${CPPAN_COMMAND} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file} ${CMAKE_GENERATOR} ${CMAKE_TOOLCHAIN_FILE}\")");
             // this file is created by parallel checks dispatcher
             ctx.addLine("read_check_variables_file(${tmp_dir}/" + parallel_checks_file + ")");
             ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");

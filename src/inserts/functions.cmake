@@ -546,7 +546,7 @@ function(check_result_variable ret)
     if (${ret} EQUAL 0)
         return()
     endif()
-    message(FATAL_ERROR "Last CMake execute_process() called failed with error: ${ret}")
+    message(FATAL_ERROR "Last execute_process() with message '${ARGN}' failed with error: ${ret}")
 endfunction(check_result_variable)
 
 ########################################
@@ -662,5 +662,50 @@ function(push_back_to_file_once f what)
     # create flag file
     file(WRITE ${h} "")
 endfunction(push_back_to_file_once)
+
+########################################
+# FUNCTION check_type_alignment
+########################################
+
+function(check_type_alignment TYPE LANG NAME)
+    if (DEFINED ${NAME})
+        return()
+    endif()
+
+    message(STATUS "Check alignment of ${TYPE} in ${LANG}")
+
+    set(INCLUDE_HEADERS
+        "#include <stddef.h>
+        #include <stdio.h>
+        #include <stdlib.h>")
+
+    foreach(f ${CMAKE_REQUIRED_INCLUDES})
+        set(INCLUDE_HEADERS "${INCLUDE_HEADERS}\n#include <${f}>\n")
+    endforeach()
+
+    if (HAVE_STDINT_H)
+        set(INCLUDE_HEADERS "${INCLUDE_HEADERS}\n#include <stdint.h>\n")
+    endif()
+
+    file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/c_get_${NAME}_alignment.${LANG}"
+        "${INCLUDE_HEADERS}
+        int main()
+        {
+            char diff;
+            struct foo {char a; ${TYPE} b;};
+            struct foo *p = (struct foo *) malloc(sizeof(struct foo));
+            diff = ((char *)&p->b) - ((char *)&p->a);
+            return diff;
+        }"
+    )
+
+    try_run(${NAME} COMPILE_RESULT "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
+        "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/c_get_${NAME}_alignment.${LANG}"
+        COMPILE_OUTPUT_VARIABLE "${NAME}_COMPILE_VAR")
+
+    message(STATUS "Check alignment of ${TYPE} in ${LANG}: ${${NAME}}")
+
+    set(${NAME} ${${NAME}} CACHE STRING "Alignment of type: ${TYPE}" FORCE)
+endfunction(check_type_alignment)
 
 ################################################################################

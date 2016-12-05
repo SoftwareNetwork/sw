@@ -125,6 +125,28 @@ public:
     virtual ~CheckType() {}
 };
 
+class CheckAlignment : public Check
+{
+public:
+    CheckAlignment(const String &s, const String &prefix = "ALIGNOF_")
+        : Check(getCheckInformation(Alignment))
+    {
+        data = s;
+        String v_def = prefix;
+        v_def += boost::algorithm::to_upper_copy(s);
+        for (auto &c : v_def)
+        {
+            if (c == '*')
+                c = 'P';
+            else if (!isalnum(c))
+                c = '_';
+        }
+        variable = v_def;
+    }
+
+    virtual ~CheckAlignment() {}
+};
+
 class CheckLibrary : public Check
 {
 public:

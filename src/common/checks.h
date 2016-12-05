@@ -42,6 +42,7 @@ public:
         Function,
         Include,
         Type,
+        Alignment,
         Library,
         LibraryFunction,
         Symbol,

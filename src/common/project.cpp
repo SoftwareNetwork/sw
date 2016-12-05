@@ -727,52 +727,7 @@ void Project::load(const yaml &root)
 
     bs_insertions.get_config_insertions(root);
 
-    get_map_and_iterate(root, "options", [this](const auto &opt_level)
-    {
-        auto ol = opt_level.first.template as<String>();
-        if (!(ol == "any" || ol == "static" || ol == "shared"))
-            throw std::runtime_error("Wrong option level dicrective");
-        if (!opt_level.second.IsMap())
-            throw std::runtime_error("'" + ol + "' should be a map");
-
-        auto &option = options[ol];
-
-        auto add_opts = [](const auto &defs, const auto &s, auto &c)
-        {
-            if (!defs.IsDefined())
-                return;
-            auto dd = get_sequence_set<String, String>(defs, s);
-            for (auto &d : dd)
-                c.insert({ s,d });
-        };
-        auto add_opts_common = [&add_opts](const auto &opts, auto &c, auto &sc)
-        {
-            add_opts(opts, "public", c);
-            add_opts(opts, "private", c);
-            add_opts(opts, "interface", c);
-
-            for (auto kv : opts)
-            {
-                auto f = kv.first.template as<String>();
-                if (f == "public" || f == "private" || f == "interface")
-                    continue;
-                auto &scv = sc[f];
-                add_opts(kv.second, "public", scv);
-                add_opts(kv.second, "private", scv);
-                add_opts(kv.second, "interface", scv);
-            }
-        };
-        add_opts_common(opt_level.second["definitions"], option.definitions, option.system_definitions);
-        add_opts_common(opt_level.second["compile_options"], option.compile_options, option.system_compile_options);
-        add_opts_common(opt_level.second["link_options"], option.link_options, option.system_link_options);
-        add_opts_common(opt_level.second["link_libraries"], option.link_libraries, option.system_link_libraries);
-
-        option.include_directories = get_sequence_set<String, String>(opt_level.second, "include_directories");
-        option.link_directories = get_sequence_set<String, String>(opt_level.second, "link_directories");
-        option.global_definitions = get_sequence_set<String, String>(opt_level.second, "global_definitions");
-
-        option.bs_insertions.get_config_insertions(opt_level.second);
-    });
+    options = loadOptionsMap(root);
 
     // deps
     {
@@ -1126,4 +1081,102 @@ void Project::addDependency(const Package &p)
 {
     auto i = dependencies.insert({ p.ppath.toString(), p });
     i.first->second.createNames();
+}
+
+void Project::merge(const OptionsMap &in_options)
+{
+    for (auto &o : in_options)
+    {
+        auto i = options.find(o.first);
+        if (i != options.end())
+            i->second.merge(o.second);
+        else
+            options.insert(o);
+    }
+}
+
+void Options::merge(const Options &in_options)
+{
+#define MERGE(x) x.insert(in_options.x.begin(), in_options.x.end())
+
+    MERGE(definitions);
+    MERGE(include_directories);
+    MERGE(compile_options);
+    MERGE(link_options);
+    MERGE(link_libraries);
+
+    MERGE(system_definitions);
+    MERGE(system_include_directories);
+    MERGE(system_compile_options);
+    MERGE(system_link_options);
+    MERGE(system_link_libraries);
+
+    MERGE(link_directories);
+
+    bs_insertions.merge(in_options.bs_insertions);
+
+#undef MERGE
+}
+
+void BuildSystemConfigInsertions::merge(const BuildSystemConfigInsertions &bs)
+{
+#define MERGE(x) x += "\n\n" + bs.x
+
+    MERGE(pre_sources);
+    MERGE(post_sources);
+    MERGE(post_target);
+    MERGE(post_alias);
+
+#undef MERGE
+}
+
+OptionsMap loadOptionsMap(const yaml &root)
+{
+    OptionsMap options;
+    get_map_and_iterate(root, "options", [&options](const auto &opt_level)
+    {
+        auto ol = opt_level.first.template as<String>();
+        if (!(ol == "any" || ol == "static" || ol == "shared"))
+            throw std::runtime_error("Wrong option level dicrective");
+        if (!opt_level.second.IsMap())
+            throw std::runtime_error("'" + ol + "' should be a map");
+
+        auto &option = options[ol];
+
+        auto add_opts = [](const auto &defs, const auto &s, auto &c)
+        {
+            if (!defs.IsDefined())
+                return;
+            auto dd = get_sequence_set<String, String>(defs, s);
+            for (auto &d : dd)
+                c.insert({ s,d });
+        };
+        auto add_opts_common = [&add_opts](const auto &opts, auto &c, auto &sc)
+        {
+            add_opts(opts, "public", c);
+            add_opts(opts, "private", c);
+            add_opts(opts, "interface", c);
+
+            for (auto kv : opts)
+            {
+                auto f = kv.first.template as<String>();
+                if (f == "public" || f == "private" || f == "interface")
+                    continue;
+                auto &scv = sc[f];
+                add_opts(kv.second, "public", scv);
+                add_opts(kv.second, "private", scv);
+                add_opts(kv.second, "interface", scv);
+            }
+        };
+        add_opts_common(opt_level.second["definitions"], option.definitions, option.system_definitions);
+        add_opts_common(opt_level.second["include_directories"], option.include_directories, option.system_include_directories);
+        add_opts_common(opt_level.second["compile_options"], option.compile_options, option.system_compile_options);
+        add_opts_common(opt_level.second["link_options"], option.link_options, option.system_link_options);
+        add_opts_common(opt_level.second["link_libraries"], option.link_libraries, option.system_link_libraries);
+
+        option.link_directories = get_sequence_set<String, String>(opt_level.second, "link_directories");
+
+        option.bs_insertions.get_config_insertions(opt_level.second);
+    });
+    return options;
 }

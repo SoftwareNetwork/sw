@@ -92,6 +92,7 @@ struct ac_processor
     void process_AC_CHECK_HEADERS(command &c);
     void process_AC_CHECK_TYPES(command &c);
     void process_AC_HEADER_DIRENT(command &c);
+    void process_AC_STRUCT_DIRENT_D_TYPE(command &c);
     void process_AC_HEADER_TIME(command &c);
     void process_AC_HEADER_ASSERT(command &c);
     void process_AC_HEADER_STDC(command &c);
@@ -103,6 +104,7 @@ struct ac_processor
     void process_AC_CHECK_LIB(command &c);
     void process_AC_CHECK_MEMBERS(command &c);
     void process_AC_DEFINE(command &c);
+    void process_AC_CHECK_ALIGNOF(command &c);
 };
 
 auto parse_arguments(const String &f)
@@ -290,8 +292,10 @@ void ac_processor::process()
         CASE_NOT_EMPTY(AC_CHECK_DECL, AC_CHECK_DECLS);
         TWICE(CASE_NOT_EMPTY, AC_CHECK_DECLS);
 
+        CASE_NOT_EMPTY(AC_COMPILE_IFELSE, AC_COMPILE_IFELSE);
         CASE_NOT_EMPTY(AC_LINK_IFELSE, AC_COMPILE_IFELSE);
         CASE_NOT_EMPTY(AC_PREPROC_IFELSE, AC_COMPILE_IFELSE);
+        CASE_NOT_EMPTY(AC_TRY_CPP, AC_COMPILE_IFELSE); // AC_TRY_CPP is an obsolete of AC_PREPROC_IFELSE
         TWICE(CASE_NOT_EMPTY, AC_COMPILE_IFELSE);
 
         TWICE(CASE_NOT_EMPTY, AC_RUN_IFELSE);
@@ -308,6 +312,7 @@ void ac_processor::process()
         CASE_NOT_EMPTY(AC_CHECK_TYPE, AC_CHECK_TYPES);
         TWICE(CASE_NOT_EMPTY, AC_CHECK_TYPES);
 
+        TWICE(CASE, AC_STRUCT_DIRENT_D_TYPE);
         TWICE(CASE, AC_HEADER_DIRENT);
         TWICE(CASE, AC_HEADER_TIME);
         TWICE(CASE, AC_HEADER_ASSERT);
@@ -315,6 +320,7 @@ void ac_processor::process()
         TWICE(CASE, AC_HEADER_MAJOR);
         TWICE(CASE, AC_HEADER_SYS_WAIT);
         TWICE(CASE, AC_HEADER_STDBOOL);
+        CASE_NOT_EMPTY(AC_CHECK_HEADER_STDBOOL, AC_HEADER_STDBOOL);
 
         TWICE(CASE, AC_STRUCT_TM);
         TWICE(CASE, AC_STRUCT_TIMEZONE);
@@ -328,19 +334,17 @@ void ac_processor::process()
 
         TWICE(CASE_NOT_EMPTY, AC_LANG);
 
+        TWICE(CASE_NOT_EMPTY, AC_CHECK_ALIGNOF);
+
         SILENCE(AC_CHECK_PROG);
         SILENCE(AC_CHECK_PROGS);
         SILENCE(AC_CHECK_TOOLS);
         SILENCE(AC_CHECK_FILE);
         SILENCE(AC_CHECK_TOOL);
+        SILENCE(AC_MSG_ERROR);
+        SILENCE(AC_TRY_COMMAND);
 
-        // particular checks
-        if (c.name == "AC_CHECK_HEADER_STDBOOL")
-        {
-            checks.addCheck<CheckInclude>("stdbool.h");
-            continue;
-        }
-
+        // specific checks
         {
             std::regex r("AC_FUNC_(\\w+)");
             std::smatch m;
@@ -419,6 +423,8 @@ void ac_processor::ifdef_add(command &c)
         }
         else if (cmd == "AC_MSG_RESULT")
             ; // this is a printer
+        else if (cmd == "AC_MSG_ERROR")
+            ; // this is a printer
         else if (cmd == "AC_LANG_SOURCE")
         {
             auto params = parse_arguments(c.params[0].substr(cmd.size() + 1));
@@ -444,6 +450,8 @@ void ac_processor::ifdef_add(command &c)
         {
             auto cmd = c.params[1].substr(0, c.params[1].find('('));
             if (cmd == "AC_MSG_RESULT")
+                ; // this is a printer
+            else if (cmd == "AC_MSG_ERROR")
                 ; // this is a printer
             else if (cmd == "AC_DEFINE")
             {
@@ -518,6 +526,8 @@ void ac_processor::ifdef_add(command &c)
             auto cmd = c.params[2].substr(0, c.params[2].find('('));
             if (cmd == "AC_MSG_RESULT")
                 ; // this is a printer
+            else if (cmd == "AC_MSG_ERROR")
+                ; // this is a printer
             else if (cmd == "AC_DEFINE")
             {
                 auto params = parse_arguments(c.params[2].substr(cmd.size() + 1));
@@ -564,6 +574,8 @@ void ac_processor::try_add(command &c)
         {
             auto cmd = c.params[2].substr(0, c.params[2].find('('));
             if (cmd == "AC_MSG_RESULT")
+                ; // this is a printer
+            else if (cmd == "AC_MSG_ERROR")
                 ; // this is a printer
             else if (cmd == "AC_DEFINE")
             {
@@ -691,6 +703,8 @@ void ac_processor::process_AC_CHECK_HEADER(command &c)
             auto cmd = c.params[1].substr(0, c.params[1].find('('));
             if (cmd == "AC_MSG_RESULT")
                 ; // this is a printer
+            else if (cmd == "AC_MSG_ERROR")
+                ; // this is a printer
             else if (cmd == "AC_DEFINE")
             {
                 auto params = parse_arguments(c.params[1].substr(cmd.size() + 1));
@@ -725,6 +739,13 @@ void ac_processor::process_AC_HEADER_DIRENT(command &)
 {
     command c{ "", {"dirent.h","sys/ndir.h","sys/dir.h","ndir.h"} };
     process_AC_CHECK_HEADERS(c);
+}
+
+void ac_processor::process_AC_STRUCT_DIRENT_D_TYPE(command &)
+{
+    command c{ "", {"struct dirent.d_type"} };
+    process_AC_HEADER_DIRENT(c);
+    process_AC_CHECK_MEMBERS(c);
 }
 
 void ac_processor::process_AC_HEADER_ASSERT(command &)
@@ -803,7 +824,7 @@ void ac_processor::process_AC_CHECK_LIB(command &c)
 
 void ac_processor::process_AC_CHECK_MEMBERS(command &c)
 {
-    auto vars = split_string(c.params[0], ",");
+    auto vars = split_string(c.params[0], ",;");
     for (auto &variable : vars)
     {
         boost::replace_all(variable, "  ", " ");
@@ -811,17 +832,24 @@ void ac_processor::process_AC_CHECK_MEMBERS(command &c)
         boost::replace_all(variable, ".", "_");
         variable = "HAVE_" + boost::algorithm::to_upper_copy(variable);
 
-        auto p = c.params[0].find('.');
-        auto struct_ = c.params[0].substr(0, p);
-        auto member = c.params[0].substr(p + 1);
+        auto p = variable.find('.');
+        auto struct_ = variable.substr(0, p);
+        auto member = variable.substr(p + 1);
         String header;
         if (struct_ == "struct stat")
             header = "sys/stat.h";
         else if (struct_ == "struct tm")
             header = "time.h";
+        else if (struct_ == "struct dirent")
+            header = "dirent.h";
         // add more headers here
 
         checks.addCheck<CheckCustom>(variable,
             "CHECK_STRUCT_HAS_MEMBER(\"" + struct_ + "\" " + member + " \"" + header + "\" " + variable + ")");
     }
+}
+
+void ac_processor::process_AC_CHECK_ALIGNOF(command &c)
+{
+    checks.addCheck<CheckAlignment>(c.params[0]);
 }

@@ -37,10 +37,6 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
 
     # double check
     if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
-        message(STATUS "")
-        message(STATUS "Preparing build tree for ${target} (${config})")
-        message(STATUS "")
-
         set(generator ${CMAKE_GENERATOR})
 
         # copy cmake cache for faster bootstrapping
@@ -68,6 +64,10 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
             set(CPPAN_BUILD_SHARED_LIBS 0)
         endif()
 
+        if (NOT CPPAN_COMMAND)
+            message(FATAL_ERROR "cppan command '${CPPAN_COMMAND}' not found - ${CMAKE_CURRENT_LIST_FILE} - ${target}")
+        endif()
+
         #
         add_variable(GEN_CHILD_VARS OUTPUT_DIR)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_SHARED_LIBS)
@@ -78,8 +78,15 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         write_variables_file(GEN_CHILD_VARS ${variables_file})
         #
 
+        message(STATUS "")
+        message(STATUS "Preparing build tree for ${target} (${config})")
+        message(STATUS "")
+
         # call cmake
         if (EXECUTABLE)
+                cppan_debug_message("COMMAND ${CMAKE_COMMAND}
+                        -H${current_dir} -B${build_dir}
+                        -DVARIABLES_FILE=${variables_file}")
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
@@ -89,6 +96,12 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                 check_result_variable(${ret})
         else()
             if (CMAKE_TOOLCHAIN_FILE)
+                cppan_debug_message("COMMAND ${CMAKE_COMMAND}
+                        -H${current_dir} -B${build_dir}
+                        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+                        -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+                        -G \"${generator}\"
+                        -DVARIABLES_FILE=${variables_file}")
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
@@ -100,6 +113,12 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                 )
                 check_result_variable(${ret})
             else(CMAKE_TOOLCHAIN_FILE)
+                cppan_debug_message("COMMAND ${CMAKE_COMMAND}
+                        -H${current_dir} -B${build_dir}
+                        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                        -G \"${generator}\"
+                        -DVARIABLES_FILE=${variables_file}")
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
@@ -119,6 +138,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
 
         # fix
         file(WRITE ${aliases_file} "${aliases}")
+        cppan_debug_message("COMMAND ${CPPAN_COMMAND} internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}")
         execute_process(
             COMMAND ${CPPAN_COMMAND} internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}
             RESULT_VARIABLE ret

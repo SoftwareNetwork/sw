@@ -39,16 +39,6 @@
 #define DEPENDENCIES_NODE "dependencies"
 #define INCLUDE_DIRECTORIES_ONLY "include_directories_only"
 
-using Definitions = std::multimap<String, String>;
-using CompileOptions = std::multimap<String, String>;
-using LinkOptions = std::multimap<String, String>;
-using LinkLibraries = std::multimap<String, String>;
-
-using SystemDefinitions = std::map<String, Definitions>;
-using SystemCompileOptions = std::map<String, CompileOptions>;
-using SystemLinkOptions = std::map<String, LinkOptions>;
-using SystemLinkLibraries = std::map<String, LinkLibraries>;
-
 using Sources = std::set<String>;
 using StringMap = std::map<String, String>;
 using StringSet = std::set<String>;
@@ -73,26 +63,47 @@ struct BuildSystemConfigInsertions
     String post_alias;
 
     void get_config_insertions(const yaml &n);
+    void merge(const BuildSystemConfigInsertions &bs);
 };
 
 struct Options
 {
+    using ValueContainer = std::set<std::pair<String, String>>;
+
+    using Definitions = ValueContainer;
+    using IncludeDirectories = ValueContainer;
+    using CompileOptions = ValueContainer;
+    using LinkOptions = ValueContainer;
+    using LinkLibraries = ValueContainer;
+
+    using SystemDefinitions = std::map<String, Definitions>;
+    using SystemIncludeDirectories = std::map<String, IncludeDirectories>;
+    using SystemCompileOptions = std::map<String, CompileOptions>;
+    using SystemLinkOptions = std::map<String, LinkOptions>;
+    using SystemLinkLibraries = std::map<String, LinkLibraries>;
+
     Definitions definitions;
+    IncludeDirectories include_directories;
     CompileOptions compile_options;
     LinkOptions link_options;
     LinkLibraries link_libraries;
 
     SystemDefinitions system_definitions;
+    SystemIncludeDirectories system_include_directories;
     SystemCompileOptions system_compile_options;
     SystemLinkOptions system_link_options;
     SystemLinkLibraries system_link_libraries;
 
+    StringSet link_directories;
+
     BuildSystemConfigInsertions bs_insertions;
 
-    StringSet include_directories;
-    StringSet link_directories;
-    StringSet global_definitions;
+    void merge(const Options &in_options);
 };
+
+using OptionsMap = std::map<String, Options>;
+
+OptionsMap loadOptionsMap(const yaml &root);
 
 using ReplaceInFiles = std::unordered_map<String, String>;
 
@@ -122,7 +133,7 @@ struct Project
     Files exclude_from_build;
     Packages dependencies;
     BuildSystemConfigInsertions bs_insertions;
-    std::map<String, Options> options;
+    OptionsMap options;
     Patch patch;
     StringSet aliases;
     bool import_from_bazel = false;
@@ -193,6 +204,8 @@ public:
 
     void load(const yaml &root);
     void save_dependencies(yaml &root) const;
+
+    void merge(const OptionsMap &in_options);
 
 private:
     ProjectPath root_project;

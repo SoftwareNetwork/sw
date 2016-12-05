@@ -172,6 +172,7 @@ void Config::load(yaml root)
     EXTRACT(root_project, String);
 
     checks.load(root);
+    common_options = loadOptionsMap(root);
 
     // global insertions
     bs_insertions.get_config_insertions(root);
@@ -204,6 +205,7 @@ void Config::load(yaml root)
         if (project.name.empty())
             project.name = name;
         project.setRelativePath(root_project, name);
+        project.merge(common_options);
         projects.emplace(project.ppath.toString(), project);
     };
 

@@ -91,9 +91,12 @@ void PackageStore::process(const path &p, Config &root)
         resolve_dependencies(*c.second.config);
     }
 
-    // set correct package flags to rd[d].dependencies
-    /*for (auto &c : packages)
+    // set correct local package flags to rd[d].dependencies
+    for (auto &c : packages)
     {
+        if (!c.first.flags[pfLocalProject])
+            continue;
+        // only for local packages!!!
         for (auto &d : c.second.dependencies)
         {
             // i->first equals to d.second but have correct flags!!!
@@ -101,11 +104,11 @@ void PackageStore::process(const path &p, Config &root)
             auto i = packages.find(d.second);
             if (i == packages.end())
                 throw std::runtime_error("Cannot find match for " + d.second.target_name);
-            bool ido = d.second.flags[pfIncludeDirectoriesOnly] | i->first.flags[pfIncludeDirectoriesOnly];
+            bool ido = d.second.flags[pfIncludeDirectoriesOnly] | i->first.flags[pfIncludeDirectoriesOnly]; // remove?
             d.second.flags = i->first.flags;
             d.second.flags.set(pfIncludeDirectoriesOnly, ido);
         }
-    }*/
+    }
 
     // main access table holder
     AccessTable access_table(directories.storage_dir_etc);
@@ -122,16 +125,7 @@ void PackageStore::process(const path &p, Config &root)
     {
         auto &d = cc.first;
         auto c = cc.second.config;
-
         root.checks += c->checks;
-
-        const auto &p = c->getDefaultProject();
-        for (auto &ol : p.options)
-        {
-            if (!ol.second.global_definitions.empty())
-                c->global_options[ol.first].global_definitions.insert(
-                    ol.second.global_definitions.begin(), ol.second.global_definitions.end());
-        }
     }
 
     auto printer = Printer::create(root.settings.printerType);

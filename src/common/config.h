@@ -50,9 +50,7 @@ struct Config
     ProjectPath root_project;
     Checks checks; // move to proj?
     BuildSystemConfigInsertions bs_insertions;
-
-    std::map<String, Options> options;
-    std::map<String, Options> global_options; // remove?
+    OptionsMap common_options;
 
 public:
     Config();
@@ -88,7 +86,7 @@ public:
 
 private:
     Projects projects;
-    path dir;
+    path dir; // cwd
 
     void addDefaultProject();
 
