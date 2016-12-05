@@ -339,7 +339,10 @@ bool isUrl(const String &s)
 {
     if (s.find("http://") == 0 ||
         s.find("https://") == 0 ||
-        s.find("ftp://") == 0)
+        s.find("ftp://") == 0 ||
+        s.find("git://") == 0 ||
+        0
+        )
     {
         return true;
     }

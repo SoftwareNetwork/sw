@@ -88,6 +88,17 @@ function(add_src_apple var)
 endfunction(add_src_apple)
 
 ########################################
+# FUNCTION add_src_dir
+########################################
+
+function(add_src_dir var)
+    file(GLOB_RECURSE add "${SDIR}/${var}")
+    if (add)
+        set(src ${src} ${add} PARENT_SCOPE)
+    endif()
+endfunction(add_src_dir)
+
+########################################
 # FUNCTION remove_src
 ########################################
 
@@ -123,7 +134,7 @@ endfunction(remove_src_unix)
 ########################################
 
 function(remove_src_dir var)
-    file(GLOB_RECURSE rm "${var}")
+    file(GLOB_RECURSE rm "${SDIR}/${var}")
     if (rm)
         list(REMOVE_ITEM src ${rm})
     endif()
@@ -573,6 +584,14 @@ function(replace_in_file_once f from to)
     # create flag file
     file(WRITE ${h} "")
 endfunction(replace_in_file_once)
+
+########################################
+# FUNCTION delete_in_file_once
+########################################
+
+function(delete_in_file_once f from)
+    replace_in_file_once(${f} "${from}" "")
+endfunction(delete_in_file_once)
 
 ########################################
 # FUNCTION push_front_to_file_once

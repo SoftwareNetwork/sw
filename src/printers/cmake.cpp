@@ -938,8 +938,8 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 // try to remove twice (double check) - as a file and as a dir
                 auto s = normalize_path(f);
                 cpp_regex_2_cmake_regex(s);
-                ctx.addLine("remove_src    (\"${SDIR}/" + s + "\")");
-                ctx.addLine("remove_src_dir(\"${SDIR}/" + s + "\")");
+                ctx.addLine("remove_src    (\"" + s + "\")");
+                ctx.addLine("remove_src_dir(\"" + s + "\")");
                 ctx.addLine();
             }
             ctx.emptyLines(1);
