@@ -67,10 +67,7 @@ int build_packages(const String &name, const std::set<Package> &pkgs, const path
     Config c;
     if (!settings.empty())
     {
-        yaml root;
-        auto s = YAML::LoadFile(settings.string());
-        merge(s, root);
-
+        auto root = load_yaml_config(settings);
         if (!config.empty())
             root["local_settings"]["current_build"] = config;
         Config c2;

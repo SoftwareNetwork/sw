@@ -125,7 +125,7 @@ Settings::Settings()
 
 void Settings::load(const path &p, const ConfigType type)
 {
-    auto root = YAML::LoadFile(p.string());
+    auto root = load_yaml_config(p);
     load(root, type);
 }
 

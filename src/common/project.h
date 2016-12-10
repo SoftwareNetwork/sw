@@ -63,7 +63,6 @@ struct BuildSystemConfigInsertions
     String post_alias;
 
     void get_config_insertions(const yaml &n);
-    void merge(const BuildSystemConfigInsertions &bs);
 };
 
 struct Options
@@ -97,8 +96,6 @@ struct Options
     StringSet link_directories;
 
     BuildSystemConfigInsertions bs_insertions;
-
-    void merge(const Options &in_options);
 };
 
 using OptionsMap = std::map<String, Options>;
@@ -204,8 +201,6 @@ public:
 
     void load(const yaml &root);
     void save_dependencies(yaml &root) const;
-
-    void merge(const OptionsMap &in_options);
 
 private:
     ProjectPath root_project;

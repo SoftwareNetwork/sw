@@ -1184,19 +1184,25 @@ PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(ProjectV
 
 void PackagesDatabase::listPackages(const String &name)
 {
+    int n = 0;
+    String nothing = "nothing found";
+
     if (name.empty())
     {
         // print all
-        db->execute("select path from Projects where type_id <> '3' order by path", [](SQLITE_CALLBACK_ARGS)
+        db->execute("select path from Projects where type_id <> '3' order by path", [&n](SQLITE_CALLBACK_ARGS)
         {
             LOG_INFO(logger, cols[0]);
+            n++;
             return 0;
         });
+        if (n == 0)
+            LOG_INFO(logger, nothing);
         return;
     }
 
     // print with where %%
-    db->execute("select id, path from Projects where type_id <> '3' and path like '%" + name + "%' order by path", [this](SQLITE_CALLBACK_ARGS)
+    db->execute("select id, path from Projects where type_id <> '3' and path like '%" + name + "%' order by path", [this, &n](SQLITE_CALLBACK_ARGS)
     {
         String out = cols[1];
         out += " (";
@@ -1212,6 +1218,9 @@ void PackagesDatabase::listPackages(const String &name)
         out.resize(out.size() - 2);
         out += ")";
         LOG_INFO(logger, out);
+        n++;
         return 0;
     });
+    if (n == 0)
+        LOG_INFO(logger, nothing);
 }

@@ -326,7 +326,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
             try
             {
                 boost::trim(comments[i]);
-                auto root = YAML::Load(comments[i]);
+                auto root = load_yaml_config(comments[i]);
 
                 auto sz = root.size();
                 if (sz == 0)
@@ -359,7 +359,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
         // fallback to the first comment w/out error
         if (!found && !load_ok.empty())
         {
-            auto root = YAML::Load(comments[load_ok.front()]);
+            auto root = load_yaml_config(comments[load_ok.front()]);
             conf.load(root);
         }
     };

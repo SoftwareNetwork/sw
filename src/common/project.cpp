@@ -73,6 +73,7 @@ const std::set<String> header_file_extensions{
     ".h++",
     ".H++",
     ".HPP",
+    ".H",
 };
 
 const std::set<String> source_file_extensions{
@@ -86,7 +87,7 @@ const std::set<String> source_file_extensions{
     // Objective-C
     ".m",
     ".mm",
-    ".C"
+    ".C",
 };
 
 const std::set<String> other_source_file_extensions{
@@ -1081,53 +1082,6 @@ void Project::addDependency(const Package &p)
 {
     auto i = dependencies.insert({ p.ppath.toString(), p });
     i.first->second.createNames();
-}
-
-void Project::merge(const OptionsMap &in_options)
-{
-    for (auto &o : in_options)
-    {
-        auto i = options.find(o.first);
-        if (i != options.end())
-            i->second.merge(o.second);
-        else
-            options.insert(o);
-    }
-}
-
-void Options::merge(const Options &in_options)
-{
-#define MERGE(x) x.insert(in_options.x.begin(), in_options.x.end())
-
-    MERGE(definitions);
-    MERGE(include_directories);
-    MERGE(compile_options);
-    MERGE(link_options);
-    MERGE(link_libraries);
-
-    MERGE(system_definitions);
-    MERGE(system_include_directories);
-    MERGE(system_compile_options);
-    MERGE(system_link_options);
-    MERGE(system_link_libraries);
-
-    MERGE(link_directories);
-
-    bs_insertions.merge(in_options.bs_insertions);
-
-#undef MERGE
-}
-
-void BuildSystemConfigInsertions::merge(const BuildSystemConfigInsertions &bs)
-{
-#define MERGE(x) x += "\n\n" + bs.x
-
-    MERGE(pre_sources);
-    MERGE(post_sources);
-    MERGE(post_target);
-    MERGE(post_alias);
-
-#undef MERGE
 }
 
 OptionsMap loadOptionsMap(const yaml &root)

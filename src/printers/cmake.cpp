@@ -47,7 +47,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <logger.h>
-//DECLARE_STATIC_LOGGER(logger, "cmake");
+DECLARE_STATIC_LOGGER(logger, "cmake");
 
 String repeat(const String &e, int n);
 
@@ -494,7 +494,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${output_dir})
 #set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${output_dir})
 
 if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE )" + bs.default_configuration + R"()
 endif()
 
 if (MSVC)
@@ -630,6 +630,8 @@ int CMakePrinter::generate() const
 
 int CMakePrinter::build() const
 {
+    LOG_INFO(logger, "Starting build process");
+
     auto &bs = rc->settings;
 
     command::Args args;
@@ -750,14 +752,12 @@ void CMakePrinter::print_configs()
 void CMakePrinter::print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const
 {
     config_section_title(ctx, name);
-    if (cc->getProjects().size() > 1)
-    {
-        ctx.addLine(cc->bs_insertions.*i);
-        ctx.emptyLines(1);
-    }
+
+    // project's bsi
     ctx.addLine(p.bs_insertions.*i);
     ctx.emptyLines(1);
 
+    // options' specific bsi
     for (auto &ol : p.options)
     {
         auto &s = ol.second.bs_insertions.*i;

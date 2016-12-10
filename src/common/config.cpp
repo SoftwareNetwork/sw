@@ -136,8 +136,7 @@ void Config::load_current_config()
 
 void Config::load(const path &p)
 {
-    auto s = read_file(p);
-    const auto root = YAML::Load(s);
+    auto root = load_yaml_config(p);
     load(root);
 }
 
@@ -164,48 +163,23 @@ void Config::load(yaml root)
         settings = uc.settings;
     }
 
-    // version & source
-    Source source;
-    Version version;
-    load_source_and_version(root, source, version);
-
     EXTRACT(root_project, String);
-
     checks.load(root);
-    common_options = loadOptionsMap(root);
-
-    // global insertions
-    bs_insertions.get_config_insertions(root);
 
     auto prjs = root["projects"];
     if (prjs.IsDefined() && !prjs.IsMap())
         throw std::runtime_error("'projects' should be a map");
 
-    // copy common settings to all subprojects
-    const auto &common_settings = root["common_settings"];
-    if (common_settings.IsDefined())
-    {
-        if (prjs.IsDefined())
-        {
-            for (auto prj : prjs)
-                merge(common_settings, prj.second);
-        }
-        root.remove("common_settings");
-    }
-
-    auto add_project = [this, &source, &version](auto &root, auto &&name)
+    auto add_project = [this](auto &root, auto &&name)
     {
         Project project(root_project);
         project.defaults_allowed = defaults_allowed;
         project.allow_relative_project_names = allow_relative_project_names;
         project.allow_local_dependencies = allow_local_dependencies;
-        project.source = source;
-        project.version = version;
         project.load(root);
         if (project.name.empty())
             project.name = name;
         project.setRelativePath(root_project, name);
-        project.merge(common_options);
         projects.emplace(project.ppath.toString(), project);
     };
 

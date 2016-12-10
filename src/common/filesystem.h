@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include "cppan_string.h"
+
 #include <boost/filesystem.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/range.hpp>
@@ -49,7 +51,7 @@ using FilesSorted = std::set<path>;
 using Files = std::unordered_set<path>;
 
 using Stamps = std::unordered_map<path, time_t>;
-using SourceGroups = std::map<std::string, std::set<std::string>>;
+using SourceGroups = std::map<String, std::set<String>>;
 
 path get_home_directory();
 path get_root_directory();
@@ -58,20 +60,20 @@ path get_config_filename();
 path temp_directory_path(const path &subdir = path());
 path get_temp_filename(const path &subdir = path());
 
-std::string read_file(const path &p, bool no_size_check = false);
-void write_file(const path &p, const std::string &s);
-void write_file_if_different(const path &p, const std::string &s);
-std::vector<std::string> read_lines(const path &p);
+String read_file(const path &p, bool no_size_check = false);
+void write_file(const path &p, const String &s);
+void write_file_if_different(const path &p, const String &s);
+std::vector<String> read_lines(const path &p);
 
 void remove_file(const path &p);
-std::string normalize_path(const path &p);
+String normalize_path(const path &p);
 bool is_under_root(path p, const path &root_dir);
 
-std::string get_stamp_filename(const std::string &prefix);
-std::string make_archive_name(const std::string &fn = std::string());
+String get_stamp_filename(const String &prefix);
+String make_archive_name(const String &fn = String());
 
 void copy_dir(const path &source, const path &destination);
-void remove_files_like(const path &dir, const std::string &regex);
+void remove_files_like(const path &dir, const String &regex);
 
 bool pack_files(const path &fn, const Files &files);
 Files unpack_file(const path &fn, const path &dst);

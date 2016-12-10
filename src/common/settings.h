@@ -113,6 +113,7 @@ struct Settings
     String link_flags_conf[CMakeConfigurationType::Max];
     String link_libraries;
     String configuration{ "Release" };
+    String default_configuration{ "Release" }; // for global settings
     String generator;
     String toolset;
 

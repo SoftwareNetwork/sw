@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "cppan_string.h"
+#include "filesystem.h"
 
 #include <yaml-cpp/yaml.h>
 
@@ -222,4 +222,7 @@ void get_variety_and_iterate(const yaml &node, const String &key, F1 &&f_scalar,
     get_variety_and_iterate(n, std::forward<F1>(f_scalar), std::forward<F1>(f_map));
 }
 
-void merge(const yaml &from, yaml &to);
+void merge(yaml &to, const yaml &from);
+
+yaml load_yaml_config(const path &p);
+yaml load_yaml_config(const String &s);
