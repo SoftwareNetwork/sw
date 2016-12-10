@@ -109,7 +109,7 @@ String normalize_path(const path &p)
     if (p.empty())
         return "";
     String s = p.string();
-    boost::algorithm::replace_all(s, "\\", "/");
+    normalize_string(s);
     return s;
 }
 

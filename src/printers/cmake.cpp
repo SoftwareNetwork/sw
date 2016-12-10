@@ -183,7 +183,7 @@ void print_local_project_files(Context &ctx, const Project &p)
     ctx.addLine("set(src");
     ctx.increaseIndent();
     for (auto &f : FilesSorted(p.files.begin(), p.files.end()))
-        ctx.addLine("\"${SDIR}/" + normalize_path(f) + "\"");
+        ctx.addLine("\"" + normalize_path(f) + "\"");
     ctx.decreaseIndent();
     ctx.addLine(")");
 }
@@ -223,7 +223,7 @@ String cmake_debug_message(const String &s)
 
 String add_subdirectory(String src)
 {
-    boost::algorithm::replace_all(src, "\\", "/");
+    normalize_string(src);
     return "include(\"" + src + "/" + include_guard_filename + "\")";
 }
 
@@ -548,6 +548,8 @@ endif()
 
 int CMakePrinter::generate() const
 {
+    LOG_INFO(logger, "Generating build files");
+
     auto &bs = rc->settings;
 
     command::Args args;
@@ -787,9 +789,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     if (!must_update_contents(fn))
         return;
 
-    bool header_only = d.flags[pfHeaderOnly];
     const auto &p = cc->getDefaultProject();
-
     const String cppan_api = CPPAN_EXPORT_PREFIX + d.variable_name;
 
     Context ctx;
@@ -932,11 +932,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("set(src");
         ctx.increaseIndent();
         for (auto &f : p.build_files)
-        {
-            auto s = f;
-            std::replace(s.begin(), s.end(), '\\', '/');
-            ctx.addLine("${SDIR}/" + s);
-        }
+            ctx.addLine("${SDIR}/" + normalize_string_copy(f));
         ctx.decreaseIndent();
         ctx.addLine(")");
     }
@@ -990,7 +986,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     }
     else
     {
-        if (header_only)
+        if (d.flags[pfHeaderOnly])
             ctx.addLine("add_library                   (${this} INTERFACE)");
         else
             ctx.addLine("add_library                   (${this} ${LIBRARY_TYPE} ${src})");
@@ -1004,7 +1000,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         // if you need gnuXX extensions, set compiler flags in options or post target
         // TODO: propagate standards to dependent packages
         // (i.e. dependent packages should be built >= this standard value)
-        if (!header_only)
+        if (!d.flags[pfHeaderOnly])
         {
             if (p.c_standard != 0)
             {
@@ -1051,56 +1047,60 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         std::vector<Package> include_deps;
         for (auto &dep : rd[d].dependencies)
         {
-            if (dep.second.flags[pfIncludeDirectoriesOnly])
-                include_deps.push_back(dep.second);
+            if (!dep.second.flags[pfIncludeDirectoriesOnly])
+                continue;
+            include_deps.push_back(dep.second);
         }
         if (!p.include_directories.empty() || !include_deps.empty())
         {
-            ctx.addLine("target_include_directories    (${this}");
-            ctx.increaseIndent();
-            if (header_only)
+            auto print_ideps = [&ctx, include_deps, this]()
             {
-                for (auto &idir : p.include_directories.public_)
-                    ctx.addLine("INTERFACE " + prepare_include_directory(idir.string()));
+                String visibility = "INTERFACE";
+                if (!d.flags[pfHeaderOnly])
+                    visibility = d.flags[pfExecutable] ? "PRIVATE" : "PUBLIC";
+                visibility += " ";
+
                 for (auto &pkg : include_deps)
                 {
                     auto &proj = rd[pkg].config->getDefaultProject();
+                    // only public idirs here
                     for (auto &i : proj.include_directories.public_)
                     {
-                        auto ipath = pkg.getDirSrc() / i;
+                        path ipath;
+                        if (!pkg.flags[pfLocalProject])
+                            ipath = pkg.getDirSrc();
+                        else
+                            ipath = rd.get_local_package_dir(pkg.ppath);
+                        ipath /= i;
                         boost::system::error_code ec;
                         if (fs::exists(ipath, ec))
-                            ctx.addLine("INTERFACE " + normalize_path(ipath));
+                            ctx.addLine(visibility + normalize_path(ipath));
                     }
-                    // no privates here
                 }
+            };
+
+            ctx.addLine("target_include_directories    (${this}");
+            ctx.increaseIndent();
+            if (d.flags[pfHeaderOnly])
+            {
+                for (auto &idir : p.include_directories.public_)
+                    ctx.addLine("INTERFACE " + prepare_include_directory(idir.string()));
             }
             else
             {
                 for (auto &idir : p.include_directories.public_)
                     // executable can export include dirs too (e.g. flex - FlexLexer.h)
-                    // TODO: but check it ^
+                    // TODO: but check it ^^^
                     // export only exe's idirs, not deps' idirs
                     // that's why target_link_libraries always private for exe
                     ctx.addLine("PUBLIC " + prepare_include_directory(idir.string()));
                 for (auto &idir : p.include_directories.private_)
                     ctx.addLine("PRIVATE " + prepare_include_directory(idir.string()));
-                for (auto &pkg : include_deps)
-                {
-                    auto &proj = rd[pkg].config->getDefaultProject();
-                    for (auto &i : proj.include_directories.public_)
-                    {
-                        auto ipath = pkg.getDirSrc() / i;
-                        boost::system::error_code ec;
-                        if (fs::exists(ipath, ec))
-                            // if 'd' is an executable, do not export foreign idirs (keep them private)
-                            ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + normalize_path(ipath));
-                    }
-                    // no privates here
-                }
             }
+            print_ideps();
             ctx.decreaseIndent();
             ctx.addLine(")");
+            ctx.emptyLines(1);
 
             // add BDIRs
             for (auto &pkg : include_deps)
@@ -1110,40 +1110,49 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
                 ctx.addLine("# Binary dir of include_directories_only dependency");
                 ctx.addLine("if (CPPAN_USE_CACHE)");
+                ctx.increaseIndent();
 
                 {
                     auto bdir = pkg.getDirObj() / cppan_build_dir / (pkg.flags[pfExecutable] ? "${config_exe}" : "${config_lib_gen}");
                     auto p = normalize_path(get_binary_path(pkg, bdir.string()));
                     ctx.addLine("if (EXISTS \"" + p + "\")");
+                    ctx.increaseIndent();
                     ctx.addLine("target_include_directories    (${this}");
                     ctx.increaseIndent();
-                    if (header_only)
+                    if (d.flags[pfHeaderOnly])
                         ctx.addLine("INTERFACE " + p);
                     else
                         ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + p);
                     ctx.decreaseIndent();
                     ctx.addLine(")");
+                    ctx.decreaseIndent();
                     ctx.addLine("endif()");
                 }
 
+                ctx.decreaseIndent();
                 ctx.addLine("else()");
+                ctx.increaseIndent();
 
                 {
                     auto p = normalize_path(get_binary_path(pkg));
                     ctx.addLine("if (EXISTS \"" + p + "\")");
+                    ctx.increaseIndent();
                     ctx.addLine("target_include_directories    (${this}");
                     ctx.increaseIndent();
-                    if (header_only)
+                    if (d.flags[pfHeaderOnly])
                         ctx.addLine("INTERFACE " + p);
                     else
                         ctx.addLine((d.flags[pfExecutable] ? "PRIVATE " : "PUBLIC ") + p);
                     ctx.decreaseIndent();
                     ctx.addLine(")");
+                    ctx.decreaseIndent();
                     ctx.addLine("endif()");
                 }
 
+                ctx.decreaseIndent();
                 ctx.addLine("endif()");
-                ctx.addLine("");
+                ctx.addLine();
+                ctx.emptyLines(1);
             }
         }
     }
@@ -1164,7 +1173,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             ctx.addLine("endif()");
             ctx.addLine();
 
-            if (header_only)
+            if (d.flags[pfHeaderOnly])
                 deps.push_back("INTERFACE " + dep.second.target_name);
             else
             {
@@ -1186,7 +1195,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
     // solution folder
     config_section_title(ctx, "options");
-    if (!header_only && !d.flags[pfLocalProject])
+    if (!d.flags[pfHeaderOnly] && !d.flags[pfLocalProject])
     {
         print_solution_folder(ctx, "${this}", path(packages_folder) / d.ppath.toString() / d.version.toString());
         ctx.emptyLines(1);
@@ -1194,7 +1203,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
 
     // options (defs, compile options etc.)
     {
-        if (!header_only)
+        if (!d.flags[pfHeaderOnly])
         {
             // pkg
             ctx.addLine("target_compile_definitions    (${this}");
@@ -1213,7 +1222,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.increaseIndent();
         ctx.addLine("target_compile_definitions    (${this}");
         ctx.increaseIndent();
-        if (!header_only)
+        if (!d.flags[pfHeaderOnly])
         {
             ctx.addLine("PRIVATE   " + cppan_api + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
             if (!d.flags[pfExecutable])
@@ -1236,7 +1245,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             ctx.addLine("PRIVATE    " + cppan_api + "=");
         else
         {
-            if (!header_only)
+            if (!d.flags[pfHeaderOnly])
                 ctx.addLine("PUBLIC    " + cppan_api + "=");
             else
                 ctx.addLine("INTERFACE    " + cppan_api + "=");
@@ -1247,7 +1256,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.addLine("endif()");
         ctx.addLine();
 
-        if (!d.flags[pfExecutable] && !header_only)
+        if (!d.flags[pfExecutable] && !d.flags[pfHeaderOnly])
         {
             ctx.addLine(R"(set_target_properties(${this} PROPERTIES
     INSTALL_RPATH .
@@ -1260,7 +1269,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         {
             ctx.emptyLines(1);
 
-            auto print_target_options = [header_only, &ctx, this](const auto &opts, const String &comment, const String &type, const std::function<String(String)> &f = {})
+            auto print_target_options = [&ctx, this](const auto &opts, const String &comment, const String &type, const std::function<String(String)> &f = {})
             {
                 if (opts.empty())
                     return;
@@ -1272,7 +1281,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                     auto s = opt.second;
                     if (f)
                         s = f(s);
-                    if (header_only)
+                    if (d.flags[pfHeaderOnly])
                         ctx.addLine("INTERFACE " + s);
                     else if (d.flags[pfExecutable])
                         ctx.addLine("PRIVATE " + s);
@@ -1283,23 +1292,23 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 ctx.addLine(")");
             };
 
-            auto print_defs = [header_only, &ctx, this, &print_target_options](const auto &defs)
+            auto print_defs = [&ctx, this, &print_target_options](const auto &defs)
             {
                 print_target_options(defs, "definitions", "target_compile_definitions");
             };
-            auto print_include_dirs = [header_only, &ctx, this, &print_target_options](const auto &defs)
+            auto print_include_dirs = [&ctx, this, &print_target_options](const auto &defs)
             {
                 print_target_options(defs, "include directories", "target_include_directories", &prepare_include_directory);
             };
-            auto print_compile_opts = [header_only, &ctx, this, &print_target_options](const auto &copts)
+            auto print_compile_opts = [&ctx, this, &print_target_options](const auto &copts)
             {
                 print_target_options(copts, "compile options", "target_compile_options");
             };
-            auto print_linker_opts = [header_only, &ctx, this, &print_target_options](const auto &lopts)
+            auto print_linker_opts = [&ctx, this, &print_target_options](const auto &lopts)
             {
                 print_target_options(lopts, "link options", "target_link_libraries");
             };
-            auto print_set = [header_only, &ctx, this](const auto &a, const String &s)
+            auto print_set = [&ctx, this](const auto &a, const String &s)
             {
                 if (a.empty())
                     return;
@@ -1308,7 +1317,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
                 for (auto &def : a)
                 {
                     String i;
-                    if (header_only)
+                    if (d.flags[pfHeaderOnly])
                         i = "INTERFACE";
                     else if (d.flags[pfExecutable])
                         i = "PRIVATE";
@@ -1363,7 +1372,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     print_bs_insertion(ctx, p, "post target", &BuildSystemConfigInsertions::post_target);
 
     // private definitions
-    if (!header_only)
+    if (!d.flags[pfHeaderOnly])
     {
         config_section_title(ctx, "private definitions");
 
@@ -1387,7 +1396,7 @@ endif()
         // do not remove!
         String visibility;
         if (!d.flags[pfExecutable])
-            visibility = !header_only ? "PUBLIC" : "INTERFACE";
+            visibility = !d.flags[pfHeaderOnly] ? "PUBLIC" : "INTERFACE";
         else
             visibility = "PRIVATE";
 
@@ -1422,14 +1431,14 @@ endif()
         {
             ctx.addLine("target_compile_definitions(${this}");
             ctx.increaseIndent();
-            ctx.addLine("PUBLIC CPPAN_EXPORT=");
+            ctx.addLine(visibility + " CPPAN_EXPORT=");
             ctx.decreaseIndent();
             ctx.addLine(")");
             ctx.addLine();
         }
 
         // common link libraries
-        if (!header_only)
+        if (!d.flags[pfHeaderOnly])
         {
             ctx.addLine(R"(if (WIN32)
 target_link_libraries(${this}
@@ -1519,7 +1528,7 @@ else())");
     }
 
     // dummy target for IDEs with headers only
-    if (header_only)
+    if (d.flags[pfHeaderOnly])
     {
         config_section_title(ctx, "IDE dummy target for headers");
 
@@ -1993,14 +2002,8 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
                 ctx.increaseIndent();
                 ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
                 ctx.increaseIndent();
-                if (p.flags[pfLocalProject])
-                {
-                    auto &dp = rd[p].config->getDefaultProject();
-                    if (dp.type == ProjectType::Executable)
-                        ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}");
-                    else
-                        ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_SHARED_LIBRARY_SUFFIX}");
-                }
+                if (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable)
+                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}");
                 else
                     ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
                 ctx.decreaseIndent();

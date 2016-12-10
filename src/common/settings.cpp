@@ -107,7 +107,7 @@ String Remote::default_source_provider(const Package &d) const
     // change later to format strings (or simple replacement)
     // %U - url, %D - data dir etc.
     auto fs_path = ProjectPath(d.ppath).toFileSystemPath().string();
-    std::replace(fs_path.begin(), fs_path.end(), '\\', '/');
+    normalize_string(fs_path);
     String package_url = url + "/" + data_dir + "/" + fs_path + "/" + make_archive_name(d.version.toString());
     return package_url;
 }

@@ -38,3 +38,11 @@ using namespace std::literals;
 Strings split_string(const String &s, const String &delims);
 Strings split_lines(const String &s);
 int get_end_of_string_block(const String &s, int i = 1);
+
+#ifdef _WIN32
+void normalize_string(String &s);
+String normalize_string_copy(String s);
+#else
+#define normalize_string(s) (s)
+#define normalize_string_copy(s) (s)
+#endif

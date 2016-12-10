@@ -51,6 +51,7 @@ public:
     std::tuple<std::set<Package>, Config, String>
         read_packages_from_file(path p, const String &config_name = String(), bool direct_dependency = false);
     bool has_local_package(const ProjectPath &ppath) const;
+    path get_local_package_dir(const ProjectPath &ppath) const;
     void process(const path &p, Config &root);
 
     Config *add_config(std::unique_ptr<Config> &&config, bool created);
@@ -78,7 +79,7 @@ private:
     std::set<std::unique_ptr<Config>> config_store;
 
     std::set<Package> resolved_packages;
-    std::set<ProjectPath> local_packages;
+    std::map<ProjectPath, path> local_packages;
 
     bool processing = false;
     int downloads = 0;

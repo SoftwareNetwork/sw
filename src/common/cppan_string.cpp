@@ -88,3 +88,16 @@ int get_end_of_string_block(const String &s, int i)
     }
     return i;
 }
+
+#ifdef _WIN32
+void normalize_string(String &s)
+{
+    std::replace(s.begin(), s.end(), '\\', '/');
+}
+
+String normalize_string_copy(String s)
+{
+    normalize_string(s);
+    return s;
+}
+#endif

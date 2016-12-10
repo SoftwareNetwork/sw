@@ -200,7 +200,7 @@ void check_file_types(const Files &files, const path &root)
     for (auto &file : files)
     {
         auto s = (root / file).string();
-        std::replace(s.begin(), s.end(), '\\', '/');
+        normalize_string(s);
         o << "file -ib " << s << "\n";
     }
     o.close();
@@ -358,6 +358,9 @@ void Project::findRootDirectory(const path &p, int depth)
 
 void Project::findSources(path p)
 {
+    // output file list (files) must contain absolute paths
+    //
+
     if (root_directory.empty())
         findRootDirectory(p);
     p /= root_directory;
@@ -386,9 +389,10 @@ void Project::findSources(path p)
 
     for (auto i = sources.begin(); i != sources.end();)
     {
-        if (fs::exists(p / *i))
+        auto f = p / *i;
+        if (fs::exists(f) && fs::is_regular_file(f))
         {
-            files.insert(*i);
+            files.insert(f);
             sources.erase(i++);
             continue;
         }
@@ -398,10 +402,18 @@ void Project::findSources(path p)
     if ((sources.empty() && files.empty()) && !empty)
         throw std::runtime_error("'files' must be populated");
 
+    auto create_regex = [&p](const auto &e)
+    {
+        auto s = normalize_path(p);
+        if (!s.empty() && s.back() != '/')
+            s += "/";
+        return std::regex(s + e);
+    };
+
     std::map<String, std::regex> rgxs, rgxs_exclude;
 
     for (auto &e : sources)
-        rgxs[e] = std::regex(e);
+        rgxs[e] = create_regex(e);
     if (!rgxs.empty())
     {
         for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(p), {}))
@@ -409,36 +421,30 @@ void Project::findSources(path p)
             if (!fs::is_regular_file(f))
                 continue;
 
-            String s = fs::relative(f, p).string();
-            std::replace(s.begin(), s.end(), '\\', '/');
-
+            auto s = normalize_path(f);
             for (auto &e : rgxs)
             {
                 if (!std::regex_match(s, e.second))
                     continue;
-                files.insert(s);
+                files.insert(f);
                 break;
             }
         }
     }
 
     for (auto &e : exclude_from_package)
-        rgxs_exclude[e] = std::regex(e);
+        rgxs_exclude[e] = create_regex(e);
     if (!rgxs_exclude.empty())
     {
         auto to_remove = files;
         for (auto &f : files)
         {
-            String s = fs::relative(f, p).string();
-            if (s.empty())
-                s = f.string();
-            std::replace(s.begin(), s.end(), '\\', '/');
-
+            auto s = normalize_path(f);
             for (auto &e : rgxs_exclude)
             {
                 if (!std::regex_match(s, e.second))
                     continue;
-                to_remove.erase(s);
+                to_remove.erase(f);
                 break;
             }
         }

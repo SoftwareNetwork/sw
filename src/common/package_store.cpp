@@ -461,6 +461,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
     for (auto &c : configs)
     {
         auto &project = c.getDefaultProject();
+        auto root_directory = (fs::is_regular_file(p) ? p.parent_path() : p) / project.root_directory;
 
         Package pkg;
         pkg.ppath = ppath;
@@ -472,7 +473,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
         pkg.createNames();
         project.applyFlags(pkg.flags);
         c.setPackage(pkg);
-        local_packages.insert(pkg.ppath);
+        local_packages[pkg.ppath] = root_directory;
 
         // sources
         if (!cpp_fn.empty() && !project.files_loaded)
@@ -481,7 +482,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
             project.sources.clear();
             project.sources.insert(cpp_fn.filename().string());
         }
-        project.root_directory = (fs::is_regular_file(p) ? p.parent_path() : p) / project.root_directory;
+        project.root_directory = root_directory;
         project.findSources(path());
         project.files.erase(CPPAN_FILENAME);
 
@@ -524,4 +525,12 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
 bool PackageStore::has_local_package(const ProjectPath &ppath) const
 {
     return local_packages.find(ppath) != local_packages.end();
+}
+
+path PackageStore::get_local_package_dir(const ProjectPath &ppath) const
+{
+    auto i = local_packages.find(ppath);
+    if (i != local_packages.end())
+        return i->second;
+    return path();
 }
