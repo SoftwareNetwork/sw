@@ -35,10 +35,6 @@
 
 #include <map>
 
-using ProjectId = uint64_t;
-
-struct Directories;
-
 struct Package
 {
     ProjectPath ppath;
