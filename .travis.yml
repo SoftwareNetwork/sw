@@ -20,6 +20,7 @@ addons:
     - ubuntu-toolchain-r-test
     packages:
     - gcc-5
+    - g++-5
 
 before_install:
   - if [[ $TRAVIS_OS_NAME == linux   ]]; then LINUX=true; fi
@@ -27,18 +28,18 @@ before_install:
   
 install:
   - if [[ $LINUX ]]; then sudo apt-get update; fi
-  - wget --no-check-certificate http://www.cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.sh
-  - sudo sh cmake-3.4.1-Linux-x86_64.sh --skip-license --prefix=/usr
-  - wget -O master.zip https://github.com/cppan/tests/archive/master.zip
-  - unzip master.zip -d .
+  - wget --no-check-certificate http://www.cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.sh
+  - sudo sh cmake-3.7.1-Linux-x86_64.sh --skip-license --prefix=/usr
+  #- wget -O master.zip https://github.com/cppan/tests/archive/master.zip
+  #- unzip master.zip -d .
 
 script:
   - mkdir build
   - cd build
   - cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
   - make -j2
-  - sudo cp bin/cppan /usr/bin
-  - cd ..
-  - cd tests-master/tests/ok
-  - for i in *.cpp; do cppan --build $i; done
+  #- sudo cp bin/cppan /usr/bin
+  #- cd ..
+  #- cd tests-master/tests/ok
+  #- for i in *.cpp; do cppan --build $i; done
   
