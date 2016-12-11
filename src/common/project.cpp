@@ -544,15 +544,17 @@ void Project::save_dependencies(yaml &node) const
             n = root["private"];
         else
             n = root["public"];
+
+        // always save as map
+        yaml n2;
+        n2["version"] = d.version.toAnyVersion();
+
+        if (!d.reference.empty())
+            n2["reference"] = d.reference;
         if (d.flags[pfIncludeDirectoriesOnly])
-        {
-            yaml n2;
-            n2["version"] = d.version.toAnyVersion();
             n2[INCLUDE_DIRECTORIES_ONLY] = true;
-            n[dd.first] = n2;
-        }
-        else
-            n[dd.first] = d.version.toAnyVersion();
+
+        n[dd.first] = n2;
     }
     node[DEPENDENCIES_NODE] = root;
 }
@@ -769,6 +771,7 @@ void Project::load(const yaml &root)
             }
             else if (d.IsMap())
             {
+                // read only field related to ppath - name, local
                 if (d["name"].IsDefined())
                     dependency.ppath = this->relative_name_to_absolute(d["name"].template as<String>());
                 if (d["package"].IsDefined())
@@ -818,8 +821,13 @@ void Project::load(const yaml &root)
 
             if (d.IsMap())
             {
+                // read other map fields
                 if (d["version"].IsDefined())
                     read_version(dependency, d["version"]);
+                if (d["ref"].IsDefined())
+                    dependency.reference = d["ref"].template as<String>();
+                if (d["reference"].IsDefined())
+                    dependency.reference = d["reference"].template as<String>();
                 if (d[INCLUDE_DIRECTORIES_ONLY].IsDefined())
                     dependency.flags.set(pfIncludeDirectoriesOnly, d[INCLUDE_DIRECTORIES_ONLY].template as<bool>());
             }

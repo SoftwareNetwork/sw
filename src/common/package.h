@@ -41,6 +41,10 @@ struct Package
     Version version;
     ProjectFlags flags;
 
+    // extended data
+    // probably can be moved to child struct Dependency
+    String reference;
+
     path getDirSrc() const;
     path getDirObj() const;
     String getHash() const;
@@ -66,6 +70,8 @@ struct Package
 private:
     // cached vars
     String hash;
+
+    path getDir(const path &p) const;
 };
 
 using Packages = std::map<String, Package>;

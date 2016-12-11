@@ -808,6 +808,18 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     // deps
     print_dependencies(ctx, rd[d].dependencies, rc->settings.use_cache);
 
+    // references
+    {
+        config_section_title(ctx, "references");
+        for (const auto &dep : p.dependencies)
+        {
+            auto &dd = dep.second;
+            if (dd.reference.empty())
+                continue;
+            ctx.addLine("set(" + dd.reference + " " + dd.target_name + ")");
+        }
+    }
+
     // settings
     {
         config_section_title(ctx, "settings");

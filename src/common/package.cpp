@@ -36,17 +36,19 @@
 #include <iostream>
 #include <regex>
 
-const String cppan_index_file = "index.txt";
-const String cppan_package_dependencies_file = "dependencies.db.txt";
+path Package::getDir(const path &p) const
+{
+    return p / getHashPath();
+}
 
 path Package::getDirSrc() const
 {
-    return directories.storage_dir_src / getHashPath();
+    return getDir(directories.storage_dir_src);
 }
 
 path Package::getDirObj() const
 {
-    return directories.storage_dir_obj / getHashPath();
+    return getDir(directories.storage_dir_obj);
 }
 
 path Package::getStampFilename() const
