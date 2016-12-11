@@ -178,7 +178,7 @@ bool check_filename(const String &s)
     return true;
 }
 
-void check_file_types(const Files &files, const path &root)
+void check_file_types(const Files &files)
 {
     if (files.empty())
         return;
@@ -186,7 +186,7 @@ void check_file_types(const Files &files, const path &root)
     String errors;
     for (auto &file : files)
     {
-        auto s = (root / file).string();
+        auto s = file.string();
         if (!check_filename(s))
             errors += "File '" + s + "' has prohibited symbols\n";
     }
@@ -198,11 +198,7 @@ void check_file_types(const Files &files, const path &root)
     if (!o)
         throw std::runtime_error("Cannot open file for writing: " + fn.string());
     for (auto &file : files)
-    {
-        auto s = (root / file).string();
-        normalize_string(s);
-        o << "file -ib " << s << "\n";
-    }
+        o << "file -ib " << normalize_path(file) << "\n";
     o.close();
 
     auto ret = command::execute_and_capture({ "sh", fn.string() });
@@ -456,7 +452,7 @@ void Project::findSources(path p)
 
     // disable on windows during testing
 #ifndef WIN32
-    check_file_types(files, root_directory);
+    check_file_types(files);
 #endif
 
     if (!header_only) // do not check if forced header_only
