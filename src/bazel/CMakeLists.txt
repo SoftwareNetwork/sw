@@ -45,5 +45,6 @@ add_library(bazel_parser ${parser_src} ${bazel_parser_src})
 
 add_executable(bazel_parser_test test.cpp)
 target_link_libraries(bazel_parser_test bazel_parser)
+set_property(TARGET bazel_parser_test PROPERTY FOLDER test)
 
 ################################################################################
