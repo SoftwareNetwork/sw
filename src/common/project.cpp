@@ -626,16 +626,19 @@ void Project::load(const yaml &root)
         if (cxx.empty())
             EXTRACT_VAR(root, cxx, "c++", String);
 
-        try
+        if (!cxx.empty())
         {
-            cxx_standard = std::stoi(cxx);
-        }
-        catch (const std::exception&)
-        {
-            if (cxx == "1z")
-                cxx_standard = 17;
-            else if (cxx == "2x")
-                cxx_standard = 20;
+            try
+            {
+                cxx_standard = std::stoi(cxx);
+            }
+            catch (const std::exception&)
+            {
+                if (cxx == "1z")
+                    cxx_standard = 17;
+                else if (cxx == "2x")
+                    cxx_standard = 20;
+            }
         }
     }
 

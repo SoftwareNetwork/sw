@@ -60,6 +60,7 @@ set(inserter_src
     inserter.cpp
 )
 add_executable(inserter ${inserter_src})
+set_property(TARGET inserter PROPERTY FOLDER gen)
 if (NOT CPPAN_BUILD)
     target_link_libraries(inserter ${Boost_LIBRARIES})
 else()
@@ -87,12 +88,14 @@ add_custom_target(inserts_gen
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp PROPERTIES GENERATED TRUE)
 
 add_executable(stamp_genenerator stamp_gen.cpp)
+set_property(TARGET stamp_genenerator PROPERTY FOLDER gen)
 set(stamp ${CMAKE_CURRENT_BINARY_DIR}/stamp.h.in)
 set_source_files_properties(${stamp} PROPERTIES GENERATED True)
 
 add_custom_target(gen_stamp
     COMMAND stamp_genenerator > ${stamp}
 )
+set_property(TARGET gen_stamp PROPERTY FOLDER gen)
 
 file(GLOB common_src "common/*" "printers/*")
 set(common_src ${common_src}
