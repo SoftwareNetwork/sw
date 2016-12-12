@@ -99,6 +99,7 @@ public:
     {
         return path_elements.back();
     }
+    ProjectPath back(const ProjectPath &root) const;
 
     void push_back(const PathElement &pe);
 
@@ -146,7 +147,7 @@ public:
 
     bool is_absolute(const String &username = String()) const;
     bool is_relative(const String &username = String()) const;
-    bool is_root_of(const ProjectPath &p) const;
+    bool is_root_of(const ProjectPath &rhs) const;
 
     PathElement get_owner() const;
     auto get_name() const { return back(); }

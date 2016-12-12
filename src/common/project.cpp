@@ -532,6 +532,7 @@ void Project::save_dependencies(yaml &node) const
 {
     if (dependencies.empty())
         return;
+
     yaml root;
     for (auto &dd : dependencies)
     {

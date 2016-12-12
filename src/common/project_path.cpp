@@ -178,16 +178,34 @@ ProjectPath ProjectPath::operator[](PathElementType e) const
     return *this;
 }
 
-bool ProjectPath::is_root_of(const ProjectPath &p) const
+bool ProjectPath::is_root_of(const ProjectPath &rhs) const
 {
-    if (path_elements.size() >= p.path_elements.size())
+    if (path_elements.size() >= rhs.path_elements.size())
         return false;
     for (size_t i = 0; i < path_elements.size(); i++)
     {
-        if (path_elements[i] != p.path_elements[i])
+        if (path_elements[i] != rhs.path_elements[i])
             return false;
     }
     return true;
+}
+
+ProjectPath ProjectPath::back(const ProjectPath &root) const
+{
+    ProjectPath p;
+    if (!root.is_root_of(*this))
+        return p;
+    for (size_t i = 0; i < root.path_elements.size(); i++)
+    {
+        if (path_elements[i] != root.path_elements[i])
+        {
+            p.path_elements.assign(path_elements.begin() + i, path_elements.end());
+            break;
+        }
+    }
+    if (p.path_elements.empty())
+        p.path_elements.assign(path_elements.end() - (path_elements.size() - root.path_elements.size()), path_elements.end());
+    return p;
 }
 
 void ProjectPath::push_back(const PathElement &pe)

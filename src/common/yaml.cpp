@@ -27,22 +27,24 @@
 
 #include "yaml.h"
 
-void merge(yaml &to, const yaml &from, const YamlMergeFlags &flags)
+// no links allowed
+// to do this we call YAML::Clone()
+void merge(yaml &dst, const yaml &src, const YamlMergeFlags &flags)
 {
-    if (!from.IsDefined())
+    if (!src.IsDefined())
         return;
 
-    // if 'to' node is not a map, make it so
-    if (!to.IsMap())
-        to = yaml();
+    // if 'dst' node is not a map, make it so
+    if (!dst.IsMap())
+        dst = yaml();
 
-    for (auto &f : from)
+    for (auto &f : src)
     {
         auto sf = f.first.as<String>();
         auto ff = f.second.Type();
 
         bool found = false;
-        for (auto t : to)
+        for (auto t : dst)
         {
             const auto st = t.first.as<String>();
             if (sf == st)
@@ -57,11 +59,11 @@ void merge(yaml &to, const yaml &from, const YamlMergeFlags &flags)
                         yaml nn;
                         nn.push_back(t.second);
                         nn.push_back(f.second);
-                        to[st] = nn;
+                        dst[st] = nn;
                         break;
                     }
                     case YamlMergeFlags::OverwriteScalars:
-                        to[st] = from[sf];
+                        dst[st] = YAML::Clone(src[sf]);
                         break;
                     case YamlMergeFlags::DontTouchScalars:
                         break;
@@ -75,12 +77,12 @@ void merge(yaml &to, const yaml &from, const YamlMergeFlags &flags)
                 {
                     yaml nn = YAML::Clone(f);
                     nn.push_back(t.second);
-                    to[st] = nn;
+                    dst[st] = nn;
                 }
                 else if (ff == YAML::NodeType::Sequence && ft == YAML::NodeType::Sequence)
                 {
                     for (auto &fv : f)
-                        t.second.push_back(fv);
+                        t.second.push_back(YAML::Clone(fv));
                 }
                 else if (ff == YAML::NodeType::Map && ft == YAML::NodeType::Map)
                     merge(t.second, f.second);
@@ -91,16 +93,19 @@ void merge(yaml &to, const yaml &from, const YamlMergeFlags &flags)
         }
         if (!found)
         {
-            to[sf] = f.second;
+            dst[sf] = YAML::Clone(f.second);
         }
     }
 }
 
-void prepare_yaml_config(yaml &root)
+void prepare_yaml_config(yaml root)
 {
     // can be all node checks from config, project, settings moved here?
 
-    //
+    // no effect
+    if (!root.IsMap())
+        return;
+
     auto prjs = root["projects"];
     if (prjs.IsDefined() && !prjs.IsMap())
         throw std::runtime_error("'projects' should be a map");
@@ -151,7 +156,7 @@ void prepare_yaml_config(yaml &root)
                     CHECK_BSI("post_alias");
 #undef CHECK_BSI
 
-                    root[kv.first] = kv.second;
+                    root[kv.first] = YAML::Clone(kv.second);
                 }
             }
         }
@@ -165,8 +170,9 @@ void prepare_yaml_config(yaml &root)
             {
                 YamlMergeFlags flags;
                 flags.scalar_scalar = YamlMergeFlags::DontTouchScalars;
-                merge(prj, root["source"], flags);
-                merge(prj, root["version"], flags);
+                merge(prj.second["source"], root["source"], flags);
+                if (!prj.second["version"].IsDefined() && root["version"].IsDefined())
+                    prj.second["version"] = YAML::Clone(root["version"]);
             }
         }
     }
