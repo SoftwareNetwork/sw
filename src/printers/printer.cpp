@@ -38,9 +38,7 @@ std::unique_ptr<Printer> Printer::create(PrinterType type)
     switch (type)
     {
     case PrinterType::CMake:
-    {
         return std::make_unique<CMakePrinter>();
-    }
     default:
         throw std::runtime_error("Undefined printer");
     }

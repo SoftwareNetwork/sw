@@ -100,8 +100,8 @@ path Package::getHashPath() const
 void Package::createNames()
 {
     auto v = version.toAnyVersion();
-    target_name = ppath.toString() + (v == "*" ? "" : ("-" + v));
-    variable_name = ppath.toString() + "_" + (v == "*" ? "" : ("_" + v));
+    target_name   = ppath.toString() + (v == "*" ? "" : ("-" + v));
+    variable_name = ppath.toString() + (v == "*" ? "" : ("_" + v));
     std::replace(variable_name.begin(), variable_name.end(), '.', '_');
     hash = getHash();
 }

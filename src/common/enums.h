@@ -59,26 +59,29 @@ enum class ProjectPathNamespace
     com = 1,    // closed-or-commercial-source
     org,        // open-source
     pvt,        // users' packages
+    // pub?
+    // std?
 };
 
+// append only!
 enum ProjectFlag
 {
     // version flag = vf
     // project flag = pf
     // dependency flag = df
 
-    pfHeaderOnly,               // vf
-    pfUnstable,                 // vf, unused??? not pfFixed
-    pfNonsecure,                // vf, pf, show warning, security flaws
-    pfOutdated,                 // vf, project is considered for removal
-    pfNonOfficial,              // pf, unused???
-    pfFixed,                    // vf, version is fixed and cannot be removed
-    pfExecutable,               // pf
-    pfEmpty,                    // vf, can be used to load & include cmake packages
-    pfPrivateDependency,        // df, private dependency
-    pfDirectDependency,         // vf, response only
-    pfIncludeDirectoriesOnly,   // df, take include dirs from this dep
-    pfLocalProject,             // vf, not from server, local bs project
+    pfHeaderOnly                = 0,    // vf
+    //pfUnstable                  = 1,    // vf, unused, not pfFixed
+    //pfNonsecure                 = 2,    // vf, unused, pf, show warning, security flaws
+    //pfOutdated                  = 3,    // vf, unused, project is considered for removal
+    //pfNonOfficial               = 4,    // pf, unused,
+    //pfFixed                     = 5,    // vf, unused, version is fixed and cannot be removed
+    pfExecutable                = 6,    // pf
+    //pfEmpty                     = 7,    // vf, unused, can be used to load & include cmake packages
+    pfPrivateDependency         = 8,    // df, private dependency
+    pfDirectDependency          = 9,    // vf, response only
+    pfIncludeDirectoriesOnly    = 10,   // df, take include dirs from this dep
+    pfLocalProject              = 11,   // vf, not from server, local bs project
 
     //pfPreferBinary,   //pf, if binaries are available, do not build project, use precompiled
 
@@ -87,8 +90,6 @@ enum ProjectFlag
     //pfDirectory?,                // pf
 
     // pfOptional?
-
-    // append only to end
 };
 
 enum class NotificationType

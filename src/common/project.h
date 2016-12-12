@@ -138,7 +138,7 @@ struct Project
     bool prefer_binaries = false;
 
     // no files to compile
-    bool header_only = false;
+    optional<bool> header_only;
 
     // no files (cmake only etc.)
     bool empty = false;

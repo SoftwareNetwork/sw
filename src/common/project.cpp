@@ -459,12 +459,13 @@ void Project::findSources(path p)
     check_file_types(files, root_directory);
 #endif
 
-    if (!header_only) // do not check if forced header_only
+    // do not check if forced header_only (no matter true or false)
+    if (!header_only)
         header_only = std::none_of(files.begin(), files.end(), is_valid_source);
 
     // when we see only headers, mark type as library
     // useful for local projects
-    if (header_only)
+    if (header_only && header_only.get())
     {
         type = ProjectType::Library;
         pkg.flags.set(pfHeaderOnly);
@@ -605,7 +606,7 @@ void Project::load(const yaml &root)
 
     EXTRACT_AUTO(shared_only);
     EXTRACT_AUTO(static_only);
-    EXTRACT_AUTO(header_only);
+    EXTRACT_VAR(root, header_only, "header_only", bool);
 
     if (shared_only && static_only)
         throw std::runtime_error("Project cannot be static and shared simultaneously");

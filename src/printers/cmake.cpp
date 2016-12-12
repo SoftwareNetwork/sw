@@ -798,6 +798,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     // variables for target
     ctx.addLine("set(this " + d.target_name + ")");
     ctx.addLine("set(target ${this})");
+    ctx.addLine("set(this_variable " + d.variable_name + ")");
     ctx.addLine();
 
     // prevent errors

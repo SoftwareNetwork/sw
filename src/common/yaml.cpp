@@ -27,7 +27,7 @@
 
 #include "yaml.h"
 
-void merge(yaml &to, const yaml &from)
+void merge(yaml &to, const yaml &from, const YamlMergeFlags &flags)
 {
     if (!from.IsDefined())
         return;
@@ -50,10 +50,22 @@ void merge(yaml &to, const yaml &from)
                 const auto ft = t.second.Type();
                 if (ff == YAML::NodeType::Scalar && ft == YAML::NodeType::Scalar)
                 {
-                    yaml nn;
-                    nn.push_back(t.second);
-                    nn.push_back(f.second);
-                    to[st] = nn;
+                    switch (flags.scalar_scalar)
+                    {
+                    case YamlMergeFlags::ScalarsToSet:
+                    {
+                        yaml nn;
+                        nn.push_back(t.second);
+                        nn.push_back(f.second);
+                        to[st] = nn;
+                        break;
+                    }
+                    case YamlMergeFlags::OverwriteScalars:
+                        to[st] = from[sf];
+                        break;
+                    case YamlMergeFlags::DontTouchScalars:
+                        break;
+                    }
                 }
                 else if (ff == YAML::NodeType::Scalar && ft == YAML::NodeType::Sequence)
                 {
@@ -151,8 +163,10 @@ void prepare_yaml_config(yaml &root)
         {
             for (auto prj : prjs)
             {
-                merge(prj, root["source"]);
-                merge(prj, root["version"]);
+                YamlMergeFlags flags;
+                flags.scalar_scalar = YamlMergeFlags::DontTouchScalars;
+                merge(prj, root["source"], flags);
+                merge(prj, root["version"], flags);
             }
         }
     }

@@ -222,7 +222,19 @@ void get_variety_and_iterate(const yaml &node, const String &key, F1 &&f_scalar,
     get_variety_and_iterate(n, std::forward<F1>(f_scalar), std::forward<F1>(f_map));
 }
 
-void merge(yaml &to, const yaml &from);
+struct YamlMergeFlags
+{
+    enum
+    {
+        ScalarsToSet,
+        OverwriteScalars,
+        DontTouchScalars,
+    };
+
+    int scalar_scalar = 0;
+};
+
+void merge(yaml &to, const yaml &from, const YamlMergeFlags &flags = YamlMergeFlags());
 
 yaml load_yaml_config(const path &p);
 yaml load_yaml_config(const String &s);
