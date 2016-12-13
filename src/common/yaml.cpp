@@ -29,7 +29,7 @@
 
 // no links allowed
 // to do this we call YAML::Clone()
-void merge(yaml &dst, const yaml &src, const YamlMergeFlags &flags)
+void merge(yaml dst, const yaml &src, const YamlMergeFlags &flags)
 {
     if (!src.IsDefined())
         return;
