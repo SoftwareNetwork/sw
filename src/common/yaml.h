@@ -36,7 +36,7 @@
 #define EXTRACT_VAR(r, val, var, type)   \
     do                                   \
     {                                    \
-        auto v = r[var];                \
+        auto v = r[var];                 \
         if (v.IsDefined())               \
             val = v.template as<type>(); \
     } while (0)
@@ -238,3 +238,6 @@ void merge(yaml dst, const yaml &src, const YamlMergeFlags &flags = YamlMergeFla
 
 yaml load_yaml_config(const path &p);
 yaml load_yaml_config(const String &s);
+
+void dump_yaml_config(const path &p, const yaml &root);
+String dump_yaml_config(const yaml &root);

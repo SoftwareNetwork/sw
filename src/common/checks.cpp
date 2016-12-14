@@ -269,7 +269,7 @@ String Checks::save() const
 {
     yaml root;
     save(root);
-    return YAML::Dump(root);
+    return dump_yaml_config(root);
 }
 
 void invert(Context &ctx, const CheckPtr &c)

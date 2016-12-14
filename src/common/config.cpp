@@ -243,7 +243,7 @@ void Config::save(const path &p) const
     yaml root;
     root["remotes"][DEFAULT_REMOTE_NAME]["url"] = settings.remotes[0].url;
     root["storage_dir"] = settings.storage_dir.string();
-    o << YAML::Dump(root);
+    o << dump_yaml_config(root);
 }
 
 void Config::process(const path &p)

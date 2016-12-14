@@ -190,3 +190,14 @@ yaml load_yaml_config(const String &s)
     prepare_yaml_config(root);
     return root;
 }
+
+void dump_yaml_config(const path &p, const yaml &root)
+{
+    write_file(p, dump_yaml_config(root));
+}
+
+String dump_yaml_config(const yaml &root)
+{
+    // TODO: sort keys
+    return YAML::Dump(root);
+}

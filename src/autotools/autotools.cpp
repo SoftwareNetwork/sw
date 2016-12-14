@@ -252,7 +252,7 @@ ac_processor::ac_processor(const path &p)
 void ac_processor::output()
 {
     checks.save(root);
-    std::cout << YAML::Dump(root);
+    std::cout << dump_yaml_config(root);
 }
 
 void ac_processor::process()
