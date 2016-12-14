@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <utility>
 
 // scope guard
@@ -18,30 +19,49 @@
 #define SCOPE_EXIT \
     auto ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = ::detail::ScopeGuardOnExit() + [&]()
 
-#define RUN_ONCE_BEGIN \
-    static std::once_flag ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG); std::call_once(ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG), [&]()
-#define RUN_ONCE_END )
+#define SCOPE_EXIT_NO_EXCEPTIONS \
+    auto ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = ::detail::ScopeGuardOnExitWithoutExceptions() + [&]()
 
-template <class F>
+#define RUN_ONCE_IMPL(kv) \
+    kv std::once_flag ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG); ScopeGuard(&ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG)) + [&]()
+
+#define RUN_ONCE              RUN_ONCE_IMPL(static)
+#define RUN_ONCE_THREAD_LOCAL RUN_ONCE_IMPL(thread_local)
+
 class ScopeGuard
 {
-    F f;
-    bool active{ true };
+    using Function = std::function<void()>;
 
 public:
-    ScopeGuard(F f)
-        : f(std::move(f))
+    ScopeGuard(Function f, bool during_exception = true)
+        : f(std::move(f)), during_exception(during_exception)
+    {}
+    ScopeGuard(std::once_flag *flag)
+        : flag(flag)
     {}
     ~ScopeGuard()
     {
-        if (active)
-            f();
+        if (!active)
+            return;
+        if (during_exception)
+            run();
+        else if (!std::current_exception())
+            run();
     }
+
     void dismiss()
     {
         active = false;
     }
 
+    template <typename F>
+    ScopeGuard &operator+(F &&fn)
+    {
+        f = std::move(fn);
+        return *this;
+    }
+
+public:
     ScopeGuard() = delete;
     ScopeGuard(const ScopeGuard &) = delete;
     ScopeGuard &operator=(const ScopeGuard &) = delete;
@@ -51,16 +71,40 @@ public:
     {
         rhs.dismiss();
     }
+
+private:
+    Function f;
+    bool active{ true };
+    bool during_exception{ true };
+    std::once_flag *flag{ nullptr };
+
+    void run()
+    {
+        if (!f)
+            return;
+
+        if (flag)
+            std::call_once(*flag, f);
+        else
+            f();
+    }
 };
 
 namespace detail
 {
     enum class ScopeGuardOnExit {};
+    enum class ScopeGuardOnExitWithoutExceptions {};
 
     template <typename F>
-    ScopeGuard<F> operator+(ScopeGuardOnExit, F &&fn)
+    ScopeGuard operator+(ScopeGuardOnExit, F &&fn)
     {
-        return ScopeGuard<F>(std::forward<F>(fn));
+        return ScopeGuard(std::forward<F>(fn));
+    }
+
+    template <typename F>
+    ScopeGuard operator+(ScopeGuardOnExitWithoutExceptions, F &&fn)
+    {
+        return ScopeGuard(std::forward<F>(fn), false);
     }
 }
 
