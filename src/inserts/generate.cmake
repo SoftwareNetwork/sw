@@ -75,6 +75,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         add_variable(GEN_CHILD_VARS CPPAN_COMMAND)
         add_variable(GEN_CHILD_VARS CPPAN_MT_BUILD)
         add_variable(GEN_CHILD_VARS CPPAN_CMAKE_VERBOSE)
+        add_variable(GEN_CHILD_VARS CPPAN_BUILD_VERBOSE)
         write_variables_file(GEN_CHILD_VARS ${variables_file})
         #
 

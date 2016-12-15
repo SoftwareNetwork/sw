@@ -36,12 +36,21 @@ if (NOT REBUILD AND EXISTS ${TARGET_FILE})
     return()
 endif()
 
+# save file
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${fn1} ${fn2})
 
 # make could be found on win32 os from cygwin for example
 # we deny it on msvc and other build systems except for cygwin
 if (NOT WIN32 OR CYGWIN)
     find_program(make make)
+endif()
+
+# set vars
+set(OUTPUT_QUIET)
+set(ERROR_QUIET)
+if (DEFINED CPPAN_BUILD_VERBOSE AND NOT CPPAN_BUILD_VERBOSE)
+    set(OUTPUT_QUIET OUTPUT_QUIET)
+    set(ERROR_QUIET ERROR_QUIET)
 endif()
 
 if (CONFIG)
@@ -55,6 +64,8 @@ if (CONFIG)
                         COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
                             --config ${CONFIG}
+                        ${OUTPUT_QUIET}
+                        ${ERROR_QUIET}
                         RESULT_VARIABLE ret
                     )
                 else()
@@ -62,6 +73,8 @@ if (CONFIG)
                         COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
                             --config Release
+                        ${OUTPUT_QUIET}
+                        ${ERROR_QUIET}
                         RESULT_VARIABLE ret
                     )
                 endif()
@@ -70,12 +83,16 @@ if (CONFIG)
                     COMMAND ${CMAKE_COMMAND}
                         --build ${BUILD_DIR}
                         --config ${CONFIG}
+                    ${OUTPUT_QUIET}
+                    ${ERROR_QUIET}
                     RESULT_VARIABLE ret
                 )
         endif()
     else()
         execute_process(
             COMMAND make -j${N_CORES} -C ${BUILD_DIR}
+            ${OUTPUT_QUIET}
+            ${ERROR_QUIET}
             RESULT_VARIABLE ret
         )
     endif()
@@ -84,11 +101,15 @@ else(CONFIG)
         execute_process(
             COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}
+            ${OUTPUT_QUIET}
+            ${ERROR_QUIET}
             RESULT_VARIABLE ret
         )
     else()
         execute_process(
             COMMAND make -j${N_CORES} -C ${BUILD_DIR}
+            ${OUTPUT_QUIET}
+            ${ERROR_QUIET}
             RESULT_VARIABLE ret
         )
     endif()

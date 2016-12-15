@@ -368,80 +368,79 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
 void print_build_dependencies(Context &ctx, const Package &d, const String &target)
 {
     // direct deps' build actions for non local build
+    config_section_title(ctx, "build dependencies");
+
+    // build deps
+    ctx.addLine("if (CPPAN_USE_CACHE)");
+    ctx.increaseIndent();
+
+    // run building of direct dependecies before project building
     {
-        config_section_title(ctx, "build dependencies");
+        Packages build_deps;
+        // at the moment we re-check all deps to see if we need to build them
+        gather_build_deps(ctx, rd[d].dependencies, build_deps, true);
 
-        // build deps
-        ctx.addLine("if (CPPAN_USE_CACHE)");
-        ctx.increaseIndent();
-
-        // run building of direct dependecies before project building
+        if (!build_deps.empty())
         {
-            Packages build_deps;
-            // at the moment we re-check all deps to see if we need to build them
-            gather_build_deps(ctx, rd[d].dependencies, build_deps, true);
+            Context local;
+            local.addLine("get_configuration_with_generator(config)");
+            local.addLine("get_configuration_exe(config_exe)");
 
-            if (!build_deps.empty())
+            // we're in helper, set this var to build target
+            if (d.empty())
+                local.addLine("set(this " + target + ")");
+
+            String build_deps_tgt = "${this}-build-deps";
+
+            // do not use add_custom_command as it doesn't work
+            // add custom target and add a dependency below
+            // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
+            local.addLine("add_custom_target(" + build_deps_tgt);
+            local.increaseIndent();
+            bool has_build_deps = false;
+            for (auto &dp : build_deps)
             {
-                Context local;
-                local.addLine("get_configuration_with_generator(config)");
-                local.addLine("get_configuration_exe(config_exe)");
+                auto &p = dp.second;
 
-                // we're in helper, set this var to build target
-                if (d.empty())
-                    local.addLine("set(this " + target + ")");
+                // local projects are always built inside solution
+                if (p.flags[pfLocalProject])
+                    continue;
 
-                String build_deps_tgt = "${this}-build-deps";
-
-                // do not use add_custom_command as it doesn't work
-                // add custom target and add a dependency below
-                // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
-                local.addLine("add_custom_target(" + build_deps_tgt);
+                has_build_deps = true;
+                local.addLine("COMMAND ${CMAKE_COMMAND}");
                 local.increaseIndent();
-                bool has_build_deps = false;
-                for (auto &dp : build_deps)
-                {
-                    auto &p = dp.second;
-
-                    // local projects are always built inside solution
-                    if (p.flags[pfLocalProject])
-                        continue;
-
-                    has_build_deps = true;
-                    local.addLine("COMMAND ${CMAKE_COMMAND}");
-                    local.increaseIndent();
-                    local.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
-                    local.addLine("-DCONFIG=$<CONFIG>");
-                    String cfg = "config";
-                    if (p.flags[pfExecutable] && !p.flags[pfLocalProject])
-                        cfg = "config_exe";
-                    local.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
-                    local.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
-                    local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
-                    local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
-                    local.addLine("-DN_CORES=${N_CORES}");
-                    if (d.empty())
-                        local.addLine("-DMULTICORE=1");
-                    local.addLine("-DXCODE=${XCODE}");
-                    local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
-                    local.decreaseIndent();
-                    local.addLine();
-                }
+                local.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
+                local.addLine("-DCONFIG=$<CONFIG>");
+                String cfg = "config";
+                if (p.flags[pfExecutable] && !p.flags[pfLocalProject])
+                    cfg = "config_exe";
+                local.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
+                local.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
+                local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
+                local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
+                local.addLine("-DCPPAN_BUILD_VERBOSE=${CPPAN_BUILD_VERBOSE}");
+                local.addLine("-DN_CORES=${N_CORES}");
+                if (d.empty())
+                    local.addLine("-DMULTICORE=1");
+                local.addLine("-DXCODE=${XCODE}");
+                local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
                 local.decreaseIndent();
-                local.addLine(")");
-                local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
-                print_solution_folder(local, build_deps_tgt, dummy_folder);
                 local.addLine();
-
-                if (has_build_deps)
-                    ctx += local;
             }
-        }
+            local.decreaseIndent();
+            local.addLine(")");
+            local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
+            print_solution_folder(local, build_deps_tgt, dummy_folder);
+            local.addLine();
 
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
+            if (has_build_deps)
+                ctx += local;
+        }
     }
+
+    ctx.decreaseIndent();
+    ctx.addLine("endif()");
+    ctx.addLine();
 }
 
 auto run_command(const Settings &bs, const command::Args &args)
@@ -552,6 +551,7 @@ endif()
     ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
     ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS "s + (bs.use_shared_libs ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_DISABLE_CHECKS "s + (bs.disable_checks ? "1" : "0") + ")");
+    ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (bs.build_system_verbose ? "1" : "0") + ")");
     ctx.addLine("add_subdirectory(" + normalize_path(bs.cppan_dir) + ")");
     ctx.addLine();
 
@@ -587,6 +587,7 @@ int CMakePrinter::generate() const
     args.push_back("-DCMAKE_BUILD_TYPE=" + bs.configuration);
     args.push_back("-DCPPAN_COMMAND=" + normalize_path(get_program()));
     args.push_back("-DCPPAN_CMAKE_VERBOSE=" + String(bs.cmake_verbose ? "1" : "0"));
+    args.push_back("-DCPPAN_BUILD_VERBOSE=" + String(bs.build_system_verbose ? "1" : "0"));
     for (auto &o : bs.cmake_options)
         args.push_back(o);
     for (auto &o : bs.env)
@@ -1918,6 +1919,10 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
     ctx.addLine("if (NOT DEFINED CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
     ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 0)");
+    ctx.addLine("endif()");
+    ctx.addLine();
+    ctx.addLine("if (NOT DEFINED CPPAN_BUILD_VERBOSE)");
+    ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (cc->settings.build_system_verbose ? "1" : "0") + ")");
     ctx.addLine("endif()");
     ctx.addLine();
     ctx.addLine("get_configuration_variables()");
