@@ -332,7 +332,7 @@ void Resolver::download_and_unpack()
     }
 
     // send download action once
-    RUN_ONCE_BEGIN
+    RUN_ONCE
     {
         e.push([this]
         {
@@ -348,8 +348,7 @@ void Resolver::download_and_unpack()
             {
             }
         });
-    }
-    RUN_ONCE_END;
+    };
 
     e.wait();
 }

@@ -48,7 +48,7 @@ DECLARE_STATIC_LOGGER(logger, "settings");
 Remotes get_default_remotes()
 {
     static Remotes rms;
-    RUN_ONCE_BEGIN
+    RUN_ONCE
     {
         Remote r;
         r.name = DEFAULT_REMOTE_NAME;
@@ -56,8 +56,7 @@ Remotes get_default_remotes()
         r.data_dir = "data";
         r.primary_sources.push_back(&Remote::github_source_provider);
         rms.push_back(r);
-    }
-    RUN_ONCE_END;
+    };
     return rms;
 }
 
