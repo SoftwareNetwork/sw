@@ -227,4 +227,12 @@ Result execute_with_output(const Args &args, const Options &options)
     return execute(args, opts);
 }
 
+void Result::write(path p) const
+{
+    auto fn = p.filename().string();
+    p = p.parent_path();
+    write_file(p / (fn + "_out.txt"), out);
+    write_file(p / (fn + "_err.txt"), err);
+}
+
 } // namespace command

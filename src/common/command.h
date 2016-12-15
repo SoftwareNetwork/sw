@@ -27,13 +27,13 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include "cppan_string.h"
+#include "filesystem.h"
 
 namespace command
 {
 
-using Args = std::vector<std::string>;
+using Args = Strings;
 
 struct Options
 {
@@ -50,8 +50,10 @@ struct Options
 struct Result
 {
     int rc;
-    std::string out;
-    std::string err;
+    String out;
+    String err;
+
+    void write(path p) const;
 };
 
 Result execute(const Args &args, const Options &options = Options());
@@ -60,4 +62,4 @@ Result execute_and_capture(const Args &args, const Options &options = Options())
 
 } // namespace command
 
-bool has_executable_in_path(std::string &exe, bool silent = false);
+bool has_executable_in_path(String &exe, bool silent = false);

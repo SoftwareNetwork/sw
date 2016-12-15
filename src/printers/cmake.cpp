@@ -444,6 +444,20 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
     }
 }
 
+auto run_command(const Settings &bs, const command::Args &args)
+{
+    auto ret = bs.build_system_verbose ? command::execute_with_output(args) : command::execute_and_capture(args);
+    if (ret.rc && bs.build_system_verbose)
+    {
+        auto fn = get_temp_filename("logs");
+        ret.write(fn);
+        LOG_ERROR(logger, "Output files are available at " << fn);
+    }
+    if (ret.rc == 0 && !bs.build_system_verbose)
+        LOG_INFO(logger, "Ok");
+    return ret;
+}
+
 void CMakePrinter::prepare_rebuild()
 {
     // remove stamp file to start rebuilding
@@ -548,7 +562,7 @@ endif()
 
 int CMakePrinter::generate() const
 {
-    LOG_INFO(logger, "Generating build files");
+    LOG_INFO(logger, "Generating build files...");
 
     auto &bs = rc->settings;
 
@@ -584,7 +598,7 @@ int CMakePrinter::generate() const
 #endif
     }
 
-    auto ret = command::execute_with_output(args);
+    auto ret = run_command(bs, args);
 
     if (bs.allow_links)
     {
@@ -632,7 +646,7 @@ int CMakePrinter::generate() const
 
 int CMakePrinter::build() const
 {
-    LOG_INFO(logger, "Starting build process");
+    LOG_INFO(logger, "Starting build process...");
 
     auto &bs = rc->settings;
 
@@ -642,7 +656,8 @@ int CMakePrinter::build() const
     args.push_back(normalize_path(bs.binary_directory));
     args.push_back("--config");
     args.push_back(bs.configuration);
-    return command::execute_with_output(args).rc;
+
+    return run_command(bs, args).rc;
 }
 
 void CMakePrinter::clear_cache() const

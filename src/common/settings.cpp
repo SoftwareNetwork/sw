@@ -231,6 +231,7 @@ void Settings::load_main(const yaml &root, const ConfigType type)
     EXTRACT_AUTO(show_ide_projects);
     EXTRACT_AUTO(add_run_cppan_target);
     EXTRACT_AUTO(cmake_verbose);
+    EXTRACT_AUTO(build_system_verbose);
     EXTRACT_AUTO(var_check_jobs);
 
     // read build settings
@@ -282,6 +283,7 @@ void Settings::load_build(const yaml &root)
     EXTRACT_AUTO(show_ide_projects);
     EXTRACT_AUTO(add_run_cppan_target);
     EXTRACT_AUTO(cmake_verbose);
+    EXTRACT_AUTO(build_system_verbose);
     EXTRACT_AUTO(var_check_jobs);
 
     for (int i = 0; i < CMakeConfigurationType::Max; i++)

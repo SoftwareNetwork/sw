@@ -134,6 +134,7 @@ struct Settings
     // auto re-run cppan when spec file is changed
     bool add_run_cppan_target = false;
     bool cmake_verbose = false;
+    bool build_system_verbose = true;
 
     // own data
     // maybe mutable?
