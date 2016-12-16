@@ -496,7 +496,7 @@ try
 			auto &project = p.second;
             project.findSources(".");
             String archive_name = make_archive_name(project.ppath.toString());
-            if (!project.writeArchive(archive_name))
+            if (!project.writeArchive(fs::absolute(archive_name)))
                 throw std::runtime_error("Archive write failed");
         }
     }

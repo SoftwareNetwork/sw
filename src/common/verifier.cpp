@@ -92,7 +92,7 @@ void verify(const String &target_name)
         auto &project = c.getDefaultProject();
         project.findSources(".");
         String archive_name = make_archive_name("original");
-        if (!project.writeArchive(archive_name))
+        if (!project.writeArchive(fs::absolute(archive_name)))
             throw std::runtime_error("Archive write failed");
 
         unpack_file(archive_name, dir_original);

@@ -833,7 +833,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             auto &dd = dep.second;
             if (dd.reference.empty())
                 continue;
-            ctx.addLine("set(" + dd.reference + " " + dd.target_name + ")");
+            ctx.addLine("set(" + dd.reference + " " + rd[d].dependencies[dd.ppath.toString()].target_name + ")");
         }
     }
 

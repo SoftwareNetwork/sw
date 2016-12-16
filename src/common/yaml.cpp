@@ -198,6 +198,6 @@ void dump_yaml_config(const path &p, const yaml &root)
 
 String dump_yaml_config(const yaml &root)
 {
-    // TODO: sort keys
+    // TODO: sort keys, also remove duplicates
     return YAML::Dump(root);
 }
