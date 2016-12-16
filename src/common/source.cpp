@@ -126,6 +126,8 @@ void DownloadSource::operator()(const Git &git)
         {
             download_and_unpack(url, fn);
 
+            // try to detect root dir
+            // TODO: remove this and move the code outside (to project.findSources())
             std::set<path> dirs;
             for (auto &f : boost::make_iterator_range(fs::directory_iterator(fs::current_path()), {}))
             {

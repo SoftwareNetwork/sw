@@ -142,6 +142,10 @@ public:
     // no files (cmake only etc.)
     bool empty = false;
 
+    // do not check mime types
+    // project may contain different files
+    bool custom = false;
+
     // library type
     bool shared_only = false;
     bool static_only = false;

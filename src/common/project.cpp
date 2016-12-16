@@ -450,13 +450,14 @@ void Project::findSources(path p)
     if (files.empty() && !empty)
         throw std::runtime_error("no files found");
 
-    // disable on windows during testing
-#ifndef WIN32
-    check_file_types(files);
+    // disable on windows
+#ifndef _WIN32
+    if (!custom)
+        check_file_types(files);
 #endif
 
     // do not check if forced header_only (no matter true or false)
-    if (!header_only)
+    if (!header_only && !custom)
         header_only = std::none_of(files.begin(), files.end(), is_valid_source);
 
     // when we see only headers, mark type as library
@@ -596,6 +597,7 @@ void Project::load(const yaml &root)
     load_source(root, source);
 
     EXTRACT_AUTO(empty);
+    EXTRACT_AUTO(custom);
 
     EXTRACT_AUTO(shared_only);
     EXTRACT_AUTO(static_only);

@@ -87,7 +87,7 @@ String make_archive_name(const String &fn)
 path temp_directory_path(const path &subdir)
 {
     auto p = fs::temp_directory_path() / "cppan" / subdir;
-    fs::create_directory(p);
+    fs::create_directories(p);
     return p;
 }
 
