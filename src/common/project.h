@@ -192,7 +192,7 @@ public:
     void addDependency(const Package &p);
 
     void findSources(path p);
-    bool writeArchive(path fn) const;
+    bool writeArchive(const path &fn) const;
     void prepareExports() const;
     void patchSources() const;
 

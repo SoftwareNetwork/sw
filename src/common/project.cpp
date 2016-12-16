@@ -518,14 +518,10 @@ void Project::findSources(path p)
     files.insert(CPPAN_FILENAME);
 }
 
-bool Project::writeArchive(path fn) const
+bool Project::writeArchive(const path &fn) const
 {
-    fn = fs::absolute(fn);
     ScopedCurrentPath cp(root_directory);
-    Files files_real;
-    for (auto &f : files)
-        files_real.insert(f);
-    return pack_files(fn, files_real);
+    return pack_files(fn, files, cp.get_cwd());
 }
 
 void Project::save_dependencies(yaml &node) const

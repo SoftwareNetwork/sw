@@ -212,7 +212,7 @@ bool is_under_root(path p, const path &root_dir)
     return false;
 }
 
-bool pack_files(const path &fn, const Files &files)
+bool pack_files(const path &fn, const Files &files, const path &root_dir)
 {
     bool result = true;
     auto a = archive_write_new();
@@ -233,7 +233,7 @@ bool pack_files(const path &fn, const Files &files)
 
         auto sz = fs::file_size(f);
         auto e = archive_entry_new();
-        archive_entry_set_pathname(e, f.string().c_str());
+        archive_entry_set_pathname(e, fs::relative(f, root_dir).string().c_str());
         archive_entry_set_size(e, sz);
         archive_entry_set_filetype(e, AE_IFREG);
         archive_entry_set_perm(e, 0644);
@@ -246,13 +246,8 @@ bool pack_files(const path &fn, const Files &files)
             continue;
         }
         char buff[8192];
-        size_t len;
-        len = fread(buff, 1, sizeof(buff), fp);
-        while (len > 0)
-        {
+        while (auto len = fread(buff, 1, sizeof(buff), fp))
             archive_write_data(a, buff, len);
-            len = fread(buff, 1, sizeof(buff), fp);
-        }
         fclose(fp);
         archive_entry_free(e);
     }
