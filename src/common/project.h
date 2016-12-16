@@ -67,6 +67,7 @@ struct BuildSystemConfigInsertions
 
 struct Options
 {
+public:
     using ValueContainer = std::set<std::pair<String, String>>;
 
     using Definitions = ValueContainer;
@@ -81,6 +82,7 @@ struct Options
     using SystemLinkOptions = std::map<String, LinkOptions>;
     using SystemLinkLibraries = std::map<String, LinkLibraries>;
 
+public:
     Definitions definitions;
     IncludeDirectories include_directories;
     CompileOptions compile_options;
@@ -114,7 +116,7 @@ struct Patch
 struct Project
 {
     // public data
-
+public:
     // source (git, remote etc.)
     Version version;
     Source source;
@@ -136,9 +138,6 @@ struct Project
     bool import_from_bazel = false;
     bool copy_to_output_dir = true;
     bool prefer_binaries = false;
-
-    // no files to compile
-    optional<bool> header_only;
 
     // no files (cmake only etc.)
     bool empty = false;
@@ -181,10 +180,10 @@ struct Project
     // allow relative project paths
     bool allow_relative_project_names = false;
 
-    // own data, not from config
-public:
-    // flag shows that files were loaded from 'files' node
-    bool files_loaded = false;
+    // private data
+private:
+    // no files to compile
+    optional<bool> header_only;
 
 public:
     Project(const ProjectPath &root_project);
@@ -201,6 +200,11 @@ public:
 
     void load(const yaml &root);
     void save_dependencies(yaml &root) const;
+
+    // own data, not from config
+public:
+    // flag shows that files were loaded from 'files' node
+    bool files_loaded = false;
 
 private:
     ProjectPath root_project;

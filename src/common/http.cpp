@@ -248,7 +248,7 @@ void download_file(DownloadData &data)
     if (res != CURLE_OK)
         throw std::runtime_error(String(curl_easy_strerror(res)));
 
-    if (http_code != 200)
+    if (http_code / 100 != 2)
         throw std::runtime_error("Http returned " + std::to_string(http_code));
 }
 
