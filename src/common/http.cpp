@@ -331,7 +331,8 @@ HttpResponse url_request(const HttpRequest &request)
     curl_easy_cleanup(curl);
 
     if (res != CURLE_OK)
-        throw std::runtime_error(String(curl_easy_strerror(res)));
+        throw std::runtime_error("curl error: "s + curl_easy_strerror(res));
+
     return response;
 }
 
