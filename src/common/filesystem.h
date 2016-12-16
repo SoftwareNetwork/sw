@@ -106,13 +106,22 @@ public:
         if (!p.empty())
         {
             fs::current_path(p);
-            // abs path, not probably relative p
+            // abs path, not possibly relative p
             cwd = fs::current_path();
         }
     }
     ~ScopedCurrentPath()
     {
+        return_back();
+    }
+
+    void return_back()
+    {
+        if (!active)
+            return;
         fs::current_path(old);
+        cwd = old;
+        active = false;
     }
 
     path get_cwd() const { return cwd; }
@@ -120,4 +129,5 @@ public:
 private:
     path old;
     path cwd;
+    bool active = true;
 };
