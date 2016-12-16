@@ -1,9 +1,9 @@
-if (${LIBRARY_TYPE} STREQUAL STATIC)
+if (LIBRARY_TYPE STREQUAL STATIC)
     set(CPPAN_EXPORT)
     set(CPPAN_IMPORT)
 endif()
 
-if (${LIBRARY_TYPE} STREQUAL SHARED)
+if (LIBRARY_TYPE STREQUAL SHARED)
 
     if (MSVC)
         set(CPPAN_EXPORT "__declspec(dllexport)")

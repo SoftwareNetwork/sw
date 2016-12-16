@@ -156,6 +156,8 @@ public:
 
     bool export_all_symbols = false;
 
+    String api_name;
+
     // files to include into archive
     // also is used for enumerating sources (mutable for this)
     mutable Files files;

@@ -611,6 +611,8 @@ void Project::load(const yaml &root)
     EXTRACT_AUTO(prefer_binaries);
     EXTRACT_AUTO(export_all_symbols);
 
+    EXTRACT_AUTO(api_name);
+
     // standards
     {
         EXTRACT_AUTO(c_standard);

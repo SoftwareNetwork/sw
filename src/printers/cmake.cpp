@@ -199,7 +199,7 @@ void declare_dummy_target(Context &ctx, const String &name)
 {
     config_section_title(ctx, "dummy compiled target " + name);
     ctx.addLine("# this target will be always built before any other");
-    ctx.addLine("if(MSVC)");
+    ctx.addLine("if (MSVC)");
     ctx.addLine("    add_custom_target(" + cppan_dummy_target(name) + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
     ctx.addLine("else()");
     ctx.addLine("    add_custom_target(" + cppan_dummy_target(name) + " ALL)");
@@ -455,6 +455,11 @@ auto run_command(const Settings &bs, const command::Args &args)
     if (ret.rc == 0 && !bs.build_system_verbose)
         LOG_INFO(logger, "Ok");
     return ret;
+}
+
+auto library_api(const Package &d)
+{
+    return CPPAN_EXPORT_PREFIX + d.variable_name;
 }
 
 void CMakePrinter::prepare_rebuild()
@@ -806,7 +811,6 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         return;
 
     const auto &p = cc->getDefaultProject();
-    const String cppan_api = CPPAN_EXPORT_PREFIX + d.variable_name;
 
     Context ctx;
     file_header(ctx, d);
@@ -879,7 +883,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         ctx.addLine();
-        ctx.addLine("if (LIBRARY_TYPE_" + d.variable_name + ")");
+        ctx.addLine("if (NOT LIBRARY_TYPE_" + d.variable_name + " STREQUAL \"\")");
         ctx.increaseIndent();
         ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_" + d.variable_name + "})");
         ctx.decreaseIndent();
@@ -915,7 +919,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
         ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
         ctx.addLine();
-        ctx.addLine("set(LIBRARY_API " + cppan_api + ")");
+        ctx.addLine("set(LIBRARY_API " + library_api(d) + ")");
         ctx.addLine();
 
         // configs
@@ -1247,37 +1251,37 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         }
 
         // export/import
-        ctx.addLine("if (LIBRARY_TYPE STREQUAL \"SHARED\")");
+        ctx.addLine("if (LIBRARY_TYPE STREQUAL SHARED)");
         ctx.increaseIndent();
         ctx.addLine("target_compile_definitions    (${this}");
         ctx.increaseIndent();
         if (!d.flags[pfHeaderOnly])
         {
-            ctx.addLine("PRIVATE   " + cppan_api + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
+            ctx.addLine("PRIVATE   ${LIBRARY_API}"s + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
             if (!d.flags[pfExecutable])
-                ctx.addLine("INTERFACE " + cppan_api + "=CPPAN_SYMBOL_IMPORT");
+                ctx.addLine("INTERFACE ${LIBRARY_API}=CPPAN_SYMBOL_IMPORT");
         }
         else
         {
             if (d.flags[pfExecutable])
                 throw std::runtime_error("Header only target should not be executable: " + d.target_name);
-            ctx.addLine("INTERFACE " + cppan_api + "=");
+            ctx.addLine("INTERFACE ${LIBRARY_API}=");
         }
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.decreaseIndent();
-        ctx.addLine("else()");
+        ctx.addLine("else()"); // STATIC
         ctx.increaseIndent();
         ctx.addLine("target_compile_definitions    (${this}");
         ctx.increaseIndent();
         if (d.flags[pfExecutable])
-            ctx.addLine("PRIVATE    " + cppan_api + "=");
+            ctx.addLine("PRIVATE    ${LIBRARY_API}=");
         else
         {
             if (!d.flags[pfHeaderOnly])
-                ctx.addLine("PUBLIC    " + cppan_api + "=");
+                ctx.addLine("PUBLIC    ${LIBRARY_API}=");
             else
-                ctx.addLine("INTERFACE    " + cppan_api + "=");
+                ctx.addLine("INTERFACE    ${LIBRARY_API}=");
         }
         ctx.decreaseIndent();
         ctx.addLine(")");
@@ -1450,6 +1454,8 @@ endif()
         ctx.addLine(visibility + " CPPAN_CONFIG=\"${config}\"");
         ctx.addLine(visibility + " CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
         ctx.addLine(visibility + " CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
+        if (!p.api_name.empty())
+            ctx.addLine(visibility + " " + p.api_name + "=${LIBRARY_API}");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
@@ -1584,7 +1590,6 @@ void CMakePrinter::print_package_actions_file(const path &fn) const
         return;
 
     const auto &p = cc->getDefaultProject();
-    const String cppan_api = CPPAN_EXPORT_PREFIX + d.variable_name;
     Context ctx;
     file_header(ctx, d);
     ctx.addLine(config_delimeter);
@@ -1597,7 +1602,7 @@ void CMakePrinter::print_package_actions_file(const path &fn) const
     ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
     ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
     ctx.addLine();
-    ctx.addLine("set(LIBRARY_API " + cppan_api + ")");
+    ctx.addLine("set(LIBRARY_API " + library_api(d) + ")");
     ctx.addLine();
     print_bs_insertion(ctx, p, "pre sources", &BuildSystemConfigInsertions::pre_sources);
     ctx.addLine();

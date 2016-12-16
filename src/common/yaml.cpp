@@ -98,7 +98,7 @@ void merge(yaml dst, const yaml &src, const YamlMergeFlags &flags)
     }
 }
 
-void prepare_yaml_config(yaml root)
+void prepare_config_for_reading(yaml root)
 {
     // can be all node checks from config, project, settings moved here?
 
@@ -178,6 +178,16 @@ void prepare_yaml_config(yaml root)
     }
 }
 
+yaml prepare_config_for_writing(const yaml &root)
+{
+    // TODO: sort keys, also remove duplicates
+
+    // do global sort
+    // ...
+
+    return root;
+}
+
 yaml load_yaml_config(const path &p)
 {
     auto s = read_file(p);
@@ -187,7 +197,7 @@ yaml load_yaml_config(const path &p)
 yaml load_yaml_config(const String &s)
 {
     auto root = YAML::Load(s);
-    prepare_yaml_config(root);
+    prepare_config_for_reading(root);
     return root;
 }
 
@@ -198,6 +208,5 @@ void dump_yaml_config(const path &p, const yaml &root)
 
 String dump_yaml_config(const yaml &root)
 {
-    // TODO: sort keys, also remove duplicates
-    return YAML::Dump(root);
+    return YAML::Dump(prepare_config_for_writing(root));
 }
