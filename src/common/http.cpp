@@ -246,7 +246,7 @@ void download_file(DownloadData &data)
         throw std::runtime_error("File '" + data.url + "' is too big. Limit is " + std::to_string(data.file_size_limit) + " bytes.");
     }
     if (res != CURLE_OK)
-        throw std::runtime_error(String(curl_easy_strerror(res)));
+        throw std::runtime_error("curl error: "s + curl_easy_strerror(res));
 
     if (http_code / 100 != 2)
         throw std::runtime_error("Http returned " + std::to_string(http_code));
