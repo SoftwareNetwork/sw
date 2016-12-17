@@ -173,7 +173,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     Context ctx;
     if (exe)
     {
-        ctx.addLine("if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
+        ctx.addLine("if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION)");
         ctx.increaseIndent();
         ctx.addLine(fix(lines_not_exe, dep));
         ctx.decreaseIndent();

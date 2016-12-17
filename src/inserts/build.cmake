@@ -59,7 +59,7 @@ if (CONFIG)
         "${make}" STREQUAL "make-NOTFOUND" OR
         XCODE)
         if (EXECUTABLE)
-                if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
+                if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION)
                     execute_process(
                         COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}

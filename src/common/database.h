@@ -88,7 +88,7 @@ public:
 
     void checkForUpdates() const;
     TimePoint getLastClientUpdateCheck() const;
-    void setLastClientUpdateCheck() const;
+    void setLastClientUpdateCheck(const TimePoint &p = Clock::now()) const;
 
     int getNumberOfRuns() const;
     int increaseNumberOfRuns() const; // returns previous value

@@ -443,15 +443,20 @@ void ServiceDatabase::performStartupActions() const
 
 void ServiceDatabase::checkForUpdates() const
 {
-    auto d = std::chrono::system_clock::now() - getLastClientUpdateCheck();
-    if (d < std::chrono::hours(3))
+    using namespace std::literals;
+
+    auto last_check = getLastClientUpdateCheck();
+    auto d = std::chrono::system_clock::now() - last_check;
+    if (d < 3h)
         return;
 
     try
     {
-        // if there are updates, do not set last check time
+        // if there are updates, set next check (and notification) in 20 mins
         // to issue a message every run
-        if (!Config::get_user_config().settings.checkForUpdates())
+        if (Config::get_user_config().settings.checkForUpdates())
+            setLastClientUpdateCheck(last_check + 20min);
+        else
             setLastClientUpdateCheck();
     }
     catch (...)
@@ -471,10 +476,10 @@ TimePoint ServiceDatabase::getLastClientUpdateCheck() const
     return tp;
 }
 
-void ServiceDatabase::setLastClientUpdateCheck() const
+void ServiceDatabase::setLastClientUpdateCheck(const TimePoint &p) const
 {
     db->execute("update NextClientVersionCheck set timestamp = '" +
-        std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())) + "'");
+        std::to_string(std::chrono::system_clock::to_time_t(p)) + "'");
 }
 
 String ServiceDatabase::getTableHash(const String &table) const

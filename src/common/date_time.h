@@ -31,7 +31,10 @@
 
 #include <chrono>
 
-using TimePoint = std::chrono::system_clock::time_point;
+using namespace std::literals;
+
+using Clock = std::chrono::system_clock;
+using TimePoint = Clock::time_point;
 
 TimePoint getUtc();
 TimePoint string2timepoint(const String &s);
@@ -49,11 +52,11 @@ auto get_time(F &&f, Args && ... args)
     return t1 - t0;
 }
 
-template <typename F, typename ... Args>
-auto get_time_seconds(F &&f, Args && ... args)
+template <typename T, typename F, typename ... Args>
+auto get_time(F &&f, Args && ... args)
 {
     using namespace std::chrono;
 
     auto t = get_time(std::forward<F>(f), std::forward<Args...>(args)...);
-    return std::chrono::duration_cast<std::chrono::seconds>(t).count();
+    return std::chrono::duration_cast<T>(t).count();
 }

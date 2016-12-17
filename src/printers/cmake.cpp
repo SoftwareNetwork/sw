@@ -251,67 +251,54 @@ String get_binary_path(const Package &d)
 
 void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
 {
-    std::vector<String> includes;
-    Context ctx2;
-
     if (dd.empty())
         return;
 
-    bool obj_dir = true;
-    if (!use_cache)
-        obj_dir = false;
-
-    auto base_dir = directories.storage_dir_src;
-    if (obj_dir)
-        base_dir = directories.storage_dir_obj;
+    std::vector<String> includes;
+    Context ctx2;
 
     config_section_title(ctx, "direct dependencies");
     for (auto &p : dd)
     {
-        String s;
-        auto dir = base_dir;
-        // do not "optimize" this condition (whole if..else)
-        if (p.second.flags[pfHeaderOnly] || p.second.flags[pfIncludeDirectoriesOnly])
-        {
-            dir = directories.storage_dir_src;
-            s = p.second.getDirSrc().string();
-        }
-        else if (obj_dir)
-        {
-            s = p.second.getDirObj().string();
-        }
-        else
-        {
-            dir = directories.storage_dir_src;
-            s = p.second.getDirSrc().string();
-        }
+        auto &dep = p.second;
 
-        if (p.second.flags[pfIncludeDirectoriesOnly])
+        const auto dir = [&dep, &use_cache]
+        {
+            // do not "optimize" this condition (whole if..else)
+            if (dep.flags[pfHeaderOnly] || dep.flags[pfIncludeDirectoriesOnly])
+                return dep.getDirSrc();
+            else if (use_cache)
+                return dep.getDirObj();
+            else
+                return dep.getDirSrc();
+        }();
+
+        if (dep.flags[pfIncludeDirectoriesOnly])
         {
             // MUST be here!
             // actions are executed from include_directories only projects
-            ctx.addLine("# " + p.second.target_name);
-            ctx.addLine("include(\"" + normalize_path(s) + "/" + actions_filename + "\")");
+            ctx.addLine("# " + dep.target_name);
+            ctx.addLine("include(\"" + normalize_path(dir / actions_filename) + "\")");
         }
-        else if (!use_cache || p.second.flags[pfHeaderOnly])
+        else if (!use_cache || dep.flags[pfHeaderOnly])
         {
-            ctx.addLine("# " + p.second.target_name);
-            add_subdirectory(ctx, s);
+            ctx.addLine("# " + dep.target_name);
+            add_subdirectory(ctx, dir.string());
         }
-        else if (p.second.flags[pfLocalProject])
+        else if (dep.flags[pfLocalProject])
         {
-            ctx.addLine("if (NOT TARGET " + p.second.target_name + ")");
-            ctx.addLine("add_subdirectory(\"" + normalize_path(s) + "\" \"" + normalize_path(p.second.getDirObj() / "build/${config_dir}") + "\")");
+            ctx.addLine("if (NOT TARGET " + dep.target_name + ")");
+            ctx.addLine("add_subdirectory(\"" + normalize_path(dir) + "\" \"" + normalize_path(dep.getDirObj() / "build/${config_dir}") + "\")");
             ctx.addLine("endif()");
         }
         else
         {
             // add local build includes
-            ctx2.addLine("# " + p.second.target_name);
-            add_subdirectory(ctx2, p.second.getDirSrc().string());
+            ctx2.addLine("# " + dep.target_name);
+            add_subdirectory(ctx2, dep.getDirSrc().string());
 
-            includes.push_back("# " + p.second.target_name + "\n" +
-                "include(\"" + normalize_path(s) + "/" + cmake_object_config_filename + "\")");
+            includes.push_back("# " + dep.target_name + "\n" +
+                "include(\"" + normalize_path(dir / cmake_object_config_filename) + "\")");
         }
     }
     ctx.addLine();
@@ -379,12 +366,22 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
         Packages build_deps;
         // at the moment we re-check all deps to see if we need to build them
         gather_build_deps(ctx, rd[d].dependencies, build_deps, true);
+        // build only direct deps
+        //gather_build_deps(ctx, rd[d].dependencies, build_deps, false);
 
         if (!build_deps.empty())
         {
             Context local;
             local.addLine("get_configuration_with_generator(config)");
+            local.addLine("if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
+            local.increaseIndent();
+            local.addLine("get_configuration_with_generator(config_exe)");
+            local.decreaseIndent();
+            local.addLine("else()");
+            local.increaseIndent();
             local.addLine("get_configuration_exe(config_exe)");
+            local.decreaseIndent();
+            local.addLine("endif()");
 
             // we're in helper, set this var to build target
             if (d.empty())
@@ -417,6 +414,7 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                 local.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
                 local.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
                 local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
+                local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION}");
                 local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
                 local.addLine("-DCPPAN_BUILD_VERBOSE=${CPPAN_BUILD_VERBOSE}");
                 local.addLine("-DCPPAN_BUILD_WARNING_LEVEL=${CPPAN_BUILD_WARNING_LEVEL}");
@@ -1936,6 +1934,10 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 0)");
     ctx.addLine("endif()");
     ctx.addLine();
+    ctx.addLine("if (NOT DEFINED CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION)");
+    ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION 0)");
+    ctx.addLine("endif()");
+    ctx.addLine();
     ctx.addLine("if (NOT DEFINED CPPAN_BUILD_VERBOSE)");
     ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (cc->settings.build_system_verbose ? "1" : "0") + ")");
     ctx.addLine("endif()");
@@ -2332,7 +2334,7 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
     for (auto &w : workers)
         e.push([&work, &w, n = i++]() { work(w, n); });
 
-    auto t = get_time_seconds([&e] { e.wait(); });
+    auto t = get_time<std::chrono::seconds>([&e] { e.wait(); });
 
     for (auto &w : workers)
         checks += w;

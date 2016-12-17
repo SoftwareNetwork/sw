@@ -71,7 +71,10 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         #
         add_variable(GEN_CHILD_VARS OUTPUT_DIR)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_SHARED_LIBS)
+        # if turned on, build exe with the same config (arch, toolchain, generator etc.)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
+        # if turned on, build exe with the same configiguration (debug, relwithdebinfo etc.)
+        add_variable(GEN_CHILD_VARS CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION)
         add_variable(GEN_CHILD_VARS CPPAN_COMMAND)
         add_variable(GEN_CHILD_VARS CPPAN_MT_BUILD)
         add_variable(GEN_CHILD_VARS CPPAN_CMAKE_VERBOSE)
@@ -85,7 +88,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         message(STATUS "")
 
         # call cmake
-        if (EXECUTABLE)
+        if (EXECUTABLE AND NOT CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
                 cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
                         -DVARIABLES_FILE=${variables_file}")
