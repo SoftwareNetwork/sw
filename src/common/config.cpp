@@ -47,6 +47,7 @@ DECLARE_STATIC_LOGGER(logger, "config");
 
 Config::Config()
 {
+    settings = Config::get_user_config().settings;
     addDefaultProject();
 }
 
@@ -79,7 +80,10 @@ Config::Config(ConfigType type)
         }
         settings.load(fn, type);
     }
-    break;
+        break;
+    default:
+        settings = Config::get_user_config().settings;
+        break;
     }
     addDefaultProject();
 }

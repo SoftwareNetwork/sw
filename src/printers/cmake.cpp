@@ -419,6 +419,7 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                 local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
                 local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
                 local.addLine("-DCPPAN_BUILD_VERBOSE=${CPPAN_BUILD_VERBOSE}");
+                local.addLine("-DCPPAN_BUILD_WARNING_LEVEL=${CPPAN_BUILD_WARNING_LEVEL}");
                 local.addLine("-DN_CORES=${N_CORES}");
                 if (d.empty())
                     local.addLine("-DMULTICORE=1");
@@ -557,6 +558,7 @@ endif()
     ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS "s + (bs.use_shared_libs ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_DISABLE_CHECKS "s + (bs.disable_checks ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (bs.build_system_verbose ? "1" : "0") + ")");
+    ctx.addLine("set(CPPAN_BUILD_WARNING_LEVEL "s + (bs.build_warning_level ? std::to_string(bs.build_warning_level.get()) : "3") + ")");
     ctx.addLine("add_subdirectory(" + normalize_path(bs.cppan_dir) + ")");
     ctx.addLine();
 
@@ -591,8 +593,9 @@ int CMakePrinter::generate() const
     }
     args.push_back("-DCMAKE_BUILD_TYPE=" + bs.configuration);
     args.push_back("-DCPPAN_COMMAND=" + normalize_path(get_program()));
-    args.push_back("-DCPPAN_CMAKE_VERBOSE=" + String(bs.cmake_verbose ? "1" : "0"));
-    args.push_back("-DCPPAN_BUILD_VERBOSE=" + String(bs.build_system_verbose ? "1" : "0"));
+    args.push_back("-DCPPAN_CMAKE_VERBOSE="s + (bs.cmake_verbose ? "1" : "0"));
+    args.push_back("-DCPPAN_BUILD_VERBOSE="s + (bs.build_system_verbose ? "1" : "0"));
+    args.push_back("-DCPPAN_BUILD_WARNING_LEVEL="s + (bs.build_warning_level ? std::to_string(bs.build_warning_level.get()) : "3"));
     for (auto &o : bs.cmake_options)
         args.push_back(o);
     for (auto &o : bs.env)
@@ -793,7 +796,7 @@ void CMakePrinter::print_bs_insertion(Context &ctx, const Project &p, const Stri
         }
         else
         {
-            ctx.addLine("if (LIBRARY_TYPE STREQUAL \"" + boost::algorithm::to_upper_copy(ol.first) + "\")");
+            ctx.addLine("if (\"${LIBRARY_TYPE}\" STREQUAL \"" + boost::algorithm::to_upper_copy(ol.first) + "\")");
             ctx.increaseIndent();
             ctx.addLine(s);
             ctx.decreaseIndent();
@@ -883,7 +886,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         ctx.addLine();
-        ctx.addLine("if (NOT LIBRARY_TYPE_" + d.variable_name + " STREQUAL \"\")");
+        ctx.addLine("if (NOT \"${LIBRARY_TYPE_" + d.variable_name + "}\" STREQUAL \"\")");
         ctx.increaseIndent();
         ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_" + d.variable_name + "})");
         ctx.decreaseIndent();
@@ -1009,6 +1012,18 @@ void CMakePrinter::print_package_config_file(const path &fn) const
     // do this right before target
     if (!d.empty())
         ctx.addLine("add_win32_version_info(\"" + normalize_path(d.getDirObj()) + "\")");
+
+    // warning level, before target
+    config_section_title(ctx, "warning levels");
+    ctx.addLine(R"(
+if (DEFINED CPPAN_BUILD_WARNING_LEVEL AND
+    CPPAN_BUILD_WARNING_LEVEL GREATER -1 AND CPPAN_BUILD_WARNING_LEVEL LESS 5)
+    if (MSVC)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W${CPPAN_BUILD_WARNING_LEVEL}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W${CPPAN_BUILD_WARNING_LEVEL}")
+    endif()
+endif()
+)");
 
     // target
     config_section_title(ctx, "target: " + d.target_name);
@@ -1209,12 +1224,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             if (d.flags[pfHeaderOnly])
                 deps.push_back("INTERFACE " + dep.second.target_name);
             else
-            {
-                if (dep.second.flags[pfPrivateDependency])
-                    deps.push_back("PRIVATE " + dep.second.target_name);
-                else
-                    deps.push_back("PUBLIC " + dep.second.target_name);
-            }
+                deps.push_back((dep.second.flags[pfPrivateDependency] ? "PRIVATE" : "PUBLIC") + " "s + dep.second.target_name);
         }
 
         ctx.addLine("target_link_libraries         (${this}");
@@ -1251,7 +1261,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
         }
 
         // export/import
-        ctx.addLine("if (LIBRARY_TYPE STREQUAL SHARED)");
+        ctx.addLine("if (\"${LIBRARY_TYPE}\" STREQUAL \"SHARED\")");
         ctx.increaseIndent();
         ctx.addLine("target_compile_definitions    (${this}");
         ctx.increaseIndent();
@@ -1394,7 +1404,7 @@ void CMakePrinter::print_package_config_file(const path &fn) const
             }
             else
             {
-                ctx.addLine("if (LIBRARY_TYPE STREQUAL \"" + boost::algorithm::to_upper_copy(ol.first) + "\")");
+                ctx.addLine("if (\"${LIBRARY_TYPE}\" STREQUAL \"" + boost::algorithm::to_upper_copy(ol.first) + "\")");
                 print_options();
                 ctx.addLine("endif()");
             }
@@ -1928,6 +1938,10 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
     ctx.addLine("if (NOT DEFINED CPPAN_BUILD_VERBOSE)");
     ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (cc->settings.build_system_verbose ? "1" : "0") + ")");
+    ctx.addLine("endif()");
+    ctx.addLine();
+    ctx.addLine("if (NOT DEFINED CPPAN_BUILD_WARNING_LEVEL)");
+    ctx.addLine("set(CPPAN_BUILD_WARNING_LEVEL "s + (cc->settings.build_warning_level ? std::to_string(cc->settings.build_warning_level.get()) : "3") + ")");
     ctx.addLine("endif()");
     ctx.addLine();
     ctx.addLine("get_configuration_variables()");

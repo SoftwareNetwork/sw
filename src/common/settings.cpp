@@ -232,6 +232,7 @@ void Settings::load_main(const yaml &root, const ConfigType type)
     EXTRACT_AUTO(cmake_verbose);
     EXTRACT_AUTO(build_system_verbose);
     EXTRACT_AUTO(var_check_jobs);
+    EXTRACT_VAR(root, build_warning_level, "build_warning_level", int);
 
     // read build settings
     if (type == ConfigType::Local)
@@ -284,6 +285,7 @@ void Settings::load_build(const yaml &root)
     EXTRACT_AUTO(cmake_verbose);
     EXTRACT_AUTO(build_system_verbose);
     EXTRACT_AUTO(var_check_jobs);
+    EXTRACT_VAR(root, build_warning_level, "build_warning_level", int);
 
     for (int i = 0; i < CMakeConfigurationType::Max; i++)
     {

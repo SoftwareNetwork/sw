@@ -128,6 +128,8 @@ struct Settings
     // number of parallel jobs for variable checks
     int var_check_jobs = 0;
 
+    optional<int> build_warning_level;
+
     // following settings can be overriden in current build config
     bool use_cache = true;
     bool show_ide_projects = false;
