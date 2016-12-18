@@ -128,7 +128,7 @@ void PackageStore::process(const path &p, Config &root)
         root.checks += cc.second.config->checks;
     }
 
-    auto printer = Printer::create(Settings::get_user_settings().printerType);
+    auto printer = Printer::create(Settings::get_local_settings().printerType);
     printer->access_table = &access_table;
 
     // print deps

@@ -344,20 +344,17 @@ bool Settings::checkForUpdates() const
 
 Settings &Settings::get(SettingsType type)
 {
-    static Settings settings[toIndex(SettingsType::Max)];
+    static Settings settings[toIndex(SettingsType::Max) + 1];
 
     auto i = toIndex(type);
     auto &s = settings[i];
-    if (type == SettingsType::None)
-        return s;
-
     switch (type)
     {
     case SettingsType::Local:
     {
         RUN_ONCE
         {
-            s = get((SettingsType)(i - 1));
+            s = get(SettingsType::User);
         };
     }
         break;
@@ -365,7 +362,7 @@ Settings &Settings::get(SettingsType type)
     {
         RUN_ONCE
         {
-            s = get((SettingsType)(i - 1));
+            s = get(SettingsType::System);
 
             auto fn = get_config_filename();
             if (!fs::exists(fn))
@@ -385,8 +382,6 @@ Settings &Settings::get(SettingsType type)
     {
         RUN_ONCE
         {
-            s = get((SettingsType)(i - 1));
-
             auto fn = CONFIG_ROOT "default";
             if (!fs::exists(fn))
                 return;
