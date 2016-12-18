@@ -277,8 +277,10 @@ String get_binary_path(const Package &d)
     return get_binary_path(d, "${CMAKE_BINARY_DIR}");
 }
 
-void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
+void print_dependencies(Context &ctx, const Package &d, bool use_cache)
 {
+    auto &dd = rd[d].dependencies;
+
     if (dd.empty())
         return;
 
@@ -286,6 +288,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
     Context ctx2;
 
     config_section_title(ctx, "direct dependencies");
+
     for (auto &p : dd)
     {
         auto &dep = p.second;
@@ -336,6 +339,13 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
         config_section_title(ctx, "include dependencies (they should be placed at the end)");
         ctx.addLine("if (CPPAN_USE_CACHE)");
         ctx.increaseIndent();
+
+        if (!d.empty() && rd[d].config->getDefaultProject().build_dependencies_with_same_config)
+        {
+            ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 1)");
+            ctx.addLine();
+        }
+
         for (auto &line : includes)
             ctx.addLine(line);
 
@@ -853,7 +863,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
     ctx.addLine("endif()");
 
     // deps
-    print_dependencies(ctx, rd[d].dependencies, Settings::get_local_settings().use_cache);
+    print_dependencies(ctx, d, Settings::get_local_settings().use_cache);
 
     // references
     {
@@ -1800,12 +1810,6 @@ void CMakePrinter::print_obj_generate_file(const path &fn) const
     ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();
 
-    if (p.build_dependencies_with_same_config)
-    {
-        ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 1)");
-        ctx.addLine();
-    }
-
     ctx.addLine(cmake_generate_file);
 
     // executable is the last in the chain
@@ -2005,7 +2009,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
 
     // deps
-    print_dependencies(ctx, rd[d].dependencies, settings.use_cache);
+    print_dependencies(ctx, d, settings.use_cache);
 
     const String cppan_project_name = "cppan";
 

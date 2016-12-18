@@ -162,9 +162,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         )
         check_result_variable(${ret})
 
-        message(STATUS "")
-        message(STATUS "Prepared  build tree for ${target} (${config_unhashed} - ${config_dir})")
-        message(STATUS "")
+        cppan_debug_message("-- Prepared  build tree for ${target} (${config_unhashed} - ${config_dir})")
     endif()
 
     file(LOCK ${lock} RELEASE)
