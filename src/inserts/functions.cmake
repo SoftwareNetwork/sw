@@ -697,6 +697,15 @@ function(push_back_to_file_once f what)
 endfunction(push_back_to_file_once)
 
 ########################################
+# FUNCTION cppan_include
+########################################
+
+# this functions prevents changing variables in current scope
+function(cppan_include f)
+    include(${f})
+endfunction(cppan_include)
+
+########################################
 # FUNCTION check_type_alignment
 ########################################
 

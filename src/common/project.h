@@ -155,6 +155,7 @@ public:
     int cxx_standard{ 0 };
 
     bool export_all_symbols = false;
+    bool build_dependencies_with_same_config = false;
 
     String api_name;
 

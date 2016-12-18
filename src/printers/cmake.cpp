@@ -60,19 +60,21 @@ const String dummy_folder = "cppan/dummy";
 
 //
 const String cmake_config_filename = "CMakeLists.txt";
-const String actions_filename = "actions.cmake";
 const String cppan_build_dir = "build";
-const String non_local_build_file = "build.cmake";
-const String exports_filename = "exports.cmake";
 const String cmake_functions_filename = "functions.cmake";
 const String cmake_header_filename = "header.cmake";
-const String cmake_export_filename = "export.cmake";
-const String cmake_object_config_filename = "generate.cmake";
+const String cmake_export_import_filename = "export.cmake";
 const String cmake_helpers_filename = "helpers.cmake";
-const String include_guard_filename = "include.cmake";
 const String cppan_stamp_filename = "cppan_sources.stamp";
 const String cppan_checks_yml = "checks.yml";
 const String parallel_checks_file = "vars.txt";
+
+const String cmake_src_actions_filename = "actions.cmake";
+const String cmake_src_include_guard_filename = "include.cmake";
+
+const String cmake_obj_build_filename = "build.cmake";
+const String cmake_obj_generate_filename = "generate.cmake";
+const String cmake_obj_exports_filename = "exports.cmake";
 
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 const String cmake_debug_message_fun = "cppan_debug_message";
@@ -250,7 +252,7 @@ String cmake_debug_message(const String &s)
 String add_subdirectory(String src)
 {
     normalize_string(src);
-    return "include(\"" + src + "/" + include_guard_filename + "\")";
+    return "cppan_include(\"" + src + "/" + cmake_src_include_guard_filename + "\")";
 }
 
 void add_subdirectory(Context &ctx, const String &src)
@@ -304,7 +306,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
             // MUST be here!
             // actions are executed from include_directories only projects
             ctx.addLine("# " + dep.target_name);
-            ctx.addLine("include(\"" + normalize_path(dir / actions_filename) + "\")");
+            ctx.addLine("cppan_include(\"" + normalize_path(dir / cmake_src_actions_filename) + "\")");
         }
         else if (!use_cache || dep.flags[pfHeaderOnly])
         {
@@ -324,7 +326,7 @@ void print_dependencies(Context &ctx, const Packages &dd, bool use_cache)
             add_subdirectory(ctx2, dep.getDirSrc().string());
 
             includes.push_back("# " + dep.target_name + "\n" +
-                "include(\"" + normalize_path(dir / cmake_object_config_filename) + "\")");
+                "cppan_include(\"" + normalize_path(dir / cmake_obj_generate_filename) + "\")");
         }
     }
     ctx.addLine();
@@ -446,7 +448,7 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                 if (d.empty())
                     local.addLine("-DMULTICORE=1");
                 local.addLine("-DXCODE=${XCODE}");
-                local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + non_local_build_file);
+                local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
                 local.decreaseIndent();
                 local.addLine();
             }
@@ -759,7 +761,7 @@ void CMakePrinter::print_meta() const
         "\n"
         + cmake_functions);
     access_table->write_if_older(directories.get_static_files_dir() / cmake_header_filename, cmake_header);
-    access_table->write_if_older(directories.get_static_files_dir() / cmake_export_filename, cmake_export_import_file);
+    access_table->write_if_older(directories.get_static_files_dir() / cmake_export_import_filename, cmake_export_import_file);
     access_table->write_if_older(directories.get_static_files_dir() / "branch.rc.in", branch_rc_in);
     access_table->write_if_older(directories.get_static_files_dir() / "version.rc.in", version_rc_in);
     access_table->write_if_older(directories.get_include_dir() / CPP_HEADER_FILENAME, cppan_h);
@@ -780,8 +782,8 @@ void CMakePrinter::print_configs() const
     fs::create_directories(src_dir);
 
     print_src_config_file(src_dir / cmake_config_filename);
-    print_src_actions_file(src_dir / actions_filename);
-    print_src_include_file(src_dir / include_guard_filename);
+    print_src_actions_file(src_dir / cmake_src_actions_filename);
+    print_src_include_file(src_dir / cmake_src_include_guard_filename);
 
     if (d.flags[pfHeaderOnly])
         return;
@@ -791,9 +793,9 @@ void CMakePrinter::print_configs() const
 
     // print object config files for non-local building
     print_obj_config_file(obj_dir / cmake_config_filename);
-    print_obj_generate_file(obj_dir / cmake_object_config_filename);
-    print_obj_export_file(obj_dir / exports_filename);
-    print_obj_build_file(obj_dir / non_local_build_file);
+    print_obj_generate_file(obj_dir / cmake_obj_generate_filename);
+    print_obj_export_file(obj_dir / cmake_obj_exports_filename);
+    print_obj_build_file(obj_dir / cmake_obj_build_filename);
 }
 
 void CMakePrinter::print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const
@@ -970,7 +972,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
     }
 
     config_section_title(ctx, "export/import");
-    ctx.addLine("include(\"" + normalize_path(directories.get_static_files_dir() / cmake_export_filename) + "\")");
+    ctx.addLine("include(\"" + normalize_path(directories.get_static_files_dir() / cmake_export_import_filename) + "\")");
 
     print_bs_insertion(ctx, p, "pre sources", &BuildSystemConfigInsertions::pre_sources);
 
@@ -1589,7 +1591,7 @@ else())");
     // test
     {
         // cotire
-        //ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / "cotire.cmake") + ")");
+        //ctx.addLine("cppan_include(" + normalize_path(directories.get_static_files_dir() / "cotire.cmake") + ")");
         //ctx.addLine("cotire(${this})");
     }
 
@@ -1669,7 +1671,7 @@ void CMakePrinter::print_src_include_file(const path &fn) const
     ctx.addLine("endif()");
     ctx.addLine();
     if (d.flags[pfLocalProject])
-        ctx.addLine("include(\"" + normalize_path(fn.parent_path().string()) + "/" + cmake_config_filename + "\")");
+        ctx.addLine("cppan_include(\"" + normalize_path(fn.parent_path().string()) + "/" + cmake_config_filename + "\")");
     else
         ctx.addLine("add_subdirectory(\"" + normalize_path(fn.parent_path().string()) + "\" \"" + get_binary_path(d) + "\")");
     ctx.addLine();
@@ -1798,19 +1800,26 @@ void CMakePrinter::print_obj_generate_file(const path &fn) const
     ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();
 
+    if (p.build_dependencies_with_same_config)
+    {
+        ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 1)");
+        ctx.addLine();
+    }
+
     ctx.addLine(cmake_generate_file);
 
-    ctx.addLine("# save file name because it will be changed in exports");
-    ctx.addLine("set(import_fixed_" + d.variable_name + " ${import_fixed})");
-    ctx.addLine();
-
-    config_section_title(ctx, "import direct deps");
-    ctx.addLine("include(${current_dir}/exports.cmake)");
-    ctx.addLine();
+    // executable is the last in the chain
+    // we do not use its exported symbols or whatever
+    if (!d.flags[pfExecutable])
+    {
+        config_section_title(ctx, "import direct deps");
+        ctx.addLine("cppan_include(${current_dir}/exports.cmake)");
+        ctx.addLine();
+    }
 
     config_section_title(ctx, "include current export file");
-    ctx.addLine("if (NOT TARGET " + d.target_name + ")"); // remove cond?
-    ctx.addLine("    include(${import_fixed_" + d.variable_name + "})");
+    ctx.addLine("if (NOT TARGET " + d.target_name + ")");
+    ctx.addLine("    cppan_include(${import_fixed})");
     ctx.addLine("endif()");
     ctx.addLine();
 
@@ -1879,14 +1888,15 @@ void CMakePrinter::print_obj_export_file(const path &fn) const
 
         auto b = dep.getDirObj();
         auto p = b / cppan_build_dir;
-        if (!dep.flags[pfExecutable])
-            p /= "${config_lib_gen}";
-        else
-            p /= "${config_exe}";
+        //if (!dep.flags[pfExecutable])
+        //    p /= "${config_lib_gen}";
+        //else
+        //    p /= "${config_exe}";
+        p /= "${config_dir}";
         p /= path("exports") / (dep.variable_name + "-fixed.cmake");
 
         if (!dep.flags[pfHeaderOnly])
-            ctx.addLine("include(\"" + normalize_path(b / cmake_object_config_filename) + "\")");
+            ctx.addLine("cppan_include(\"" + normalize_path(b / cmake_obj_generate_filename) + "\")");
         ctx.addLine("if (NOT TARGET " + dep.target_name + ")");
         ctx.increaseIndent();
         if (dep.flags[pfHeaderOnly])
@@ -1894,9 +1904,9 @@ void CMakePrinter::print_obj_export_file(const path &fn) const
         else
         {
             ctx.addLine("if (NOT EXISTS \"" + normalize_path(p) + "\")");
-            ctx.addLine("    include(\"" + normalize_path(b / cmake_object_config_filename) + "\")");
+            ctx.addLine("    cppan_include(\"" + normalize_path(b / cmake_obj_generate_filename) + "\")");
             ctx.addLine("endif()");
-            ctx.addLine("include(\"" + normalize_path(p) + "\")");
+            ctx.addLine("cppan_include(\"" + normalize_path(p) + "\")");
         }
         ctx.decreaseIndent();
         ctx.addLine("endif()");
@@ -1915,6 +1925,9 @@ void CMakePrinter::print_obj_build_file(const path &fn) const
 
     Context ctx;
     file_header(ctx, d);
+
+    config_section_title(ctx, "macros & functions");
+    ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + ")");
 
     ctx.addLine("set(fn1 \"" + normalize_path(d.getStampFilename()) + "\")");
     ctx.addLine("set(fn2 \"${BUILD_DIR}/" + cppan_stamp_filename + "\")");

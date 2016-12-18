@@ -2,10 +2,6 @@
 # cppan
 #
 
-if (NOT CPPAN_CMAKE_VERBOSE)
-    set(CPPAN_CMAKE_VERBOSE 0)
-endif()
-
 ########################################
 # FUNCTION cppan_debug_message
 ########################################

@@ -1,5 +1,10 @@
 ########################################
 
+# we disable EXECUTABLE mode for executables with same configs
+if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
+    set(EXECUTABLE 0)
+endif()
+
 # CPPAN_BUILD_SHARED_LIBS has influence on config vars
 if (EXECUTABLE)
     # TODO: try to work 0->1 <- why? maybe left as is?
@@ -84,14 +89,14 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         add_variable(GEN_CHILD_VARS CPPAN_COMMAND)
         add_variable(GEN_CHILD_VARS CPPAN_MT_BUILD)
         add_variable(GEN_CHILD_VARS CPPAN_CMAKE_VERBOSE)
-        #add_variable(GEN_CHILD_VARS CPPAN_DEBUG_STACK_SPACE)
+        add_variable(GEN_CHILD_VARS CPPAN_DEBUG_STACK_SPACE)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_VERBOSE)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_WARNING_LEVEL)
         write_variables_file(GEN_CHILD_VARS ${variables_file})
         #
 
         message(STATUS "")
-        message(STATUS "Preparing build tree for ${target} (${config_unhashed} - ${config})")
+        message(STATUS "Preparing build tree for ${target} (${config_unhashed} - ${config_dir})")
         message(STATUS "")
 
         # call cmake
@@ -156,6 +161,10 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
             RESULT_VARIABLE ret
         )
         check_result_variable(${ret})
+
+        message(STATUS "")
+        message(STATUS "Prepared  build tree for ${target} (${config_unhashed} - ${config_dir})")
+        message(STATUS "")
     endif()
 
     file(LOCK ${lock} RELEASE)

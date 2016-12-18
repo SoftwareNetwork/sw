@@ -613,6 +613,7 @@ void Project::load(const yaml &root)
     EXTRACT_AUTO(copy_to_output_dir);
     EXTRACT_AUTO(prefer_binaries);
     EXTRACT_AUTO(export_all_symbols);
+    EXTRACT_AUTO(build_dependencies_with_same_config);
 
     EXTRACT_AUTO(api_name);
 

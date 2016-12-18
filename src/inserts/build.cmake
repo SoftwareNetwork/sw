@@ -1,3 +1,5 @@
+########################################
+
 set(REBUILD 1)
 
 if (EXISTS ${fn1})
@@ -60,6 +62,9 @@ if (CONFIG)
         XCODE)
         if (EXECUTABLE)
                 if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION)
+                    cppan_debug_message("COMMAND ${CMAKE_COMMAND}
+                            --build ${BUILD_DIR}
+                            --config ${CONFIG}")
                     execute_process(
                         COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
@@ -69,6 +74,9 @@ if (CONFIG)
                         RESULT_VARIABLE ret
                     )
                 else()
+                    cppan_debug_message("COMMAND ${CMAKE_COMMAND}
+                            --build ${BUILD_DIR}
+                            --config Release")
                     execute_process(
                         COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
@@ -79,6 +87,9 @@ if (CONFIG)
                     )
                 endif()
         else()
+                cppan_debug_message("COMMAND ${CMAKE_COMMAND}
+                        --build ${BUILD_DIR}
+                        --config ${CONFIG}")
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         --build ${BUILD_DIR}
@@ -89,6 +100,7 @@ if (CONFIG)
                 )
         endif()
     else()
+        cppan_debug_message("COMMAND make -j${N_CORES} -C ${BUILD_DIR}")
         execute_process(
             COMMAND make -j${N_CORES} -C ${BUILD_DIR}
             ${OUTPUT_QUIET}
@@ -98,6 +110,8 @@ if (CONFIG)
     endif()
 else(CONFIG)
     if ("${make}" STREQUAL "make-NOTFOUND")
+        cppan_debug_message("COMMAND ${CMAKE_COMMAND}
+                --build ${BUILD_DIR}")
         execute_process(
             COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}
@@ -106,6 +120,7 @@ else(CONFIG)
             RESULT_VARIABLE ret
         )
     else()
+        cppan_debug_message("COMMAND make -j${N_CORES} -C ${BUILD_DIR}")
         execute_process(
             COMMAND make -j${N_CORES} -C ${BUILD_DIR}
             ${OUTPUT_QUIET}
@@ -115,4 +130,8 @@ else(CONFIG)
     endif()
 endif(CONFIG)
 
+check_result_variable(${ret})
+
 file(LOCK ${lock} RELEASE)
+
+########################################
