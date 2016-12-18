@@ -58,15 +58,15 @@ std::string toString(ProjectPathNamespace e)
 #undef CASE
 }
 
-std::string toString(ConfigType e)
+std::string toString(SettingsType e)
 {
     switch (e)
     {
-    case ConfigType::Local:
+    case SettingsType::Local:
         return "local";
-    case ConfigType::User:
+    case SettingsType::User:
         return "user";
-    case ConfigType::System:
+    case SettingsType::System:
         return "system";
     }
     return std::to_string(toIndex(e));

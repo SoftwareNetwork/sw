@@ -30,15 +30,18 @@
 #include "config.h"
 #include "printer.h"
 
+void file_header(Context &ctx, const Package &d, bool root = false);
+void file_footer(Context &ctx, const Package &d);
+
 struct CMakePrinter : Printer
 {
-    void prepare_build() override;
-    void prepare_rebuild() override;
-    int generate() const override;
-    int build() const override;
+    void prepare_build(const BuildSettings &bs) const override;
+    void prepare_rebuild() const override;
+    int generate(const BuildSettings &bs) const override;
+    int build(const BuildSettings &bs) const override;
 
-    void print() override;
-    void print_meta() override;
+    void print() const override;
+    void print_meta() const override;
 
     void clear_cache() const override;
     void clear_exports() const override;
@@ -49,16 +52,16 @@ struct CMakePrinter : Printer
 private:
     mutable SourceGroups sgs;
 
-    void print_configs();
+    void print_configs() const;
     void print_helper_file(const path &fn) const;
     void print_meta_config_file(const path &fn) const;
-    void print_package_config_file(const path &fn) const;
-    void print_package_actions_file(const path &fn) const;
-    void print_package_include_file(const path &fn) const;
-    void print_object_config_file(const path &fn) const;
-    void print_object_include_config_file(const path &fn) const;
-    void print_object_export_file(const path &fn) const;
-    void print_object_build_file(const path &fn) const;
+    void print_src_config_file(const path &fn) const;
+    void print_src_actions_file(const path &fn) const;
+    void print_src_include_file(const path &fn) const;
+    void print_obj_config_file(const path &fn) const;
+    void print_obj_generate_file(const path &fn) const;
+    void print_obj_export_file(const path &fn) const;
+    void print_obj_build_file(const path &fn) const;
     void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
     void print_source_groups(Context &ctx, const path &dir) const;
 

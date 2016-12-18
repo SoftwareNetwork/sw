@@ -1,3 +1,13 @@
+########################################
+
+# CPPAN_BUILD_SHARED_LIBS has influence on config vars
+if (EXECUTABLE)
+    # TODO: try to work 0->1 <- why? maybe left as is?
+    set(CPPAN_BUILD_SHARED_LIBS 0)
+endif()
+
+# after all settings
+get_configuration_variables_unhashed()
 get_configuration_variables()
 
 set(build_dir_name build)
@@ -58,11 +68,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         endif()
 
         # prepare variables for child process
-        set(OUTPUT_DIR ${config})
-        if (EXECUTABLE)
-            # TODO: try to work 0->1 <- why? maybe left as is?
-            set(CPPAN_BUILD_SHARED_LIBS 0)
-        endif()
+        set(OUTPUT_DIR ${config}) # ???
 
         if (NOT CPPAN_COMMAND)
             message(FATAL_ERROR "cppan command '${CPPAN_COMMAND}' not found - ${CMAKE_CURRENT_LIST_FILE} - ${target}")
@@ -78,13 +84,14 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         add_variable(GEN_CHILD_VARS CPPAN_COMMAND)
         add_variable(GEN_CHILD_VARS CPPAN_MT_BUILD)
         add_variable(GEN_CHILD_VARS CPPAN_CMAKE_VERBOSE)
+        #add_variable(GEN_CHILD_VARS CPPAN_DEBUG_STACK_SPACE)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_VERBOSE)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_WARNING_LEVEL)
         write_variables_file(GEN_CHILD_VARS ${variables_file})
         #
 
         message(STATUS "")
-        message(STATUS "Preparing build tree for ${target} (${config})")
+        message(STATUS "Preparing build tree for ${target} (${config_unhashed} - ${config})")
         message(STATUS "")
 
         # call cmake
@@ -153,3 +160,5 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
 
     file(LOCK ${lock} RELEASE)
 endif()
+
+########################################

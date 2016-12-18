@@ -36,6 +36,7 @@ struct Directories
     path storage_dir_bin;
     path storage_dir_cfg;
     path storage_dir_etc;
+    path storage_dir_exp;
     path storage_dir_lib;
     //path storage_dir_lnk;
     path storage_dir_obj;
@@ -44,11 +45,11 @@ struct Directories
     path storage_dir_usr;
     path build_dir;
 
-    ConfigType storage_dir_type;
-    ConfigType build_dir_type;
+    SettingsType storage_dir_type;
+    SettingsType build_dir_type;
 
     bool empty() const { return storage_dir.empty(); }
-    void update(const Directories &dirs, ConfigType type);
+    void update(const Directories &dirs, SettingsType type);
 
     void set_storage_dir(const path &p);
     void set_build_dir(const path &p);
@@ -58,7 +59,7 @@ struct Directories
     path get_static_files_dir() const;
 
 private:
-    ConfigType type{ ConfigType::Max };
+    SettingsType type{ SettingsType::Max };
 };
 
 extern Directories directories;

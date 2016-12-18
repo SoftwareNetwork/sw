@@ -25,7 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#include "settings.h"
 
 #include "access_table.h"
 #include "config.h"
@@ -40,80 +40,32 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <mutex>
-
 #include "logger.h"
 DECLARE_STATIC_LOGGER(logger, "settings");
 
-Remotes get_default_remotes()
+void BuildSettings::set_build_dirs(const String &name)
 {
-    static Remotes rms;
-    RUN_ONCE
+    filename = name;
+    filename_without_ext = name;
+
+    source_directory = directories.build_dir;
+    if (directories.build_dir_type == SettingsType::Local ||
+        directories.build_dir_type == SettingsType::None)
     {
-        Remote r;
-        r.name = DEFAULT_REMOTE_NAME;
-        r.url = "https://cppan.org/";
-        r.data_dir = "data";
-        r.primary_sources.push_back(&Remote::github_source_provider);
-        rms.push_back(r);
-    };
-    return rms;
-}
-
-bool Remote::downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first) const
-{
-    String dl_hash;
-    DownloadData ddata;
-    ddata.fn = fn;
-    ddata.sha256.hash = &dl_hash;
-
-    auto download_from_source = [&](const auto &s)
+        source_directory /= (CPPAN_LOCAL_BUILD_PREFIX + filename);
+    }
+    else
     {
-        ddata.url = s(*this, d);
-        try
-        {
-            download_file(ddata);
-        }
-        catch (const std::exception&)
-        {
-            return false;
-        }
-        if (dl_hash != hash)
-            return false;
-        return true;
-    };
-
-    for (auto &s : primary_sources)
-        if (download_from_source(s))
-            return true;
-        else if (try_only_first)
-            return false;
-
-    if (download_from_source(default_source))
-        return true;
-    else if (try_only_first)
-        return false;
-
-    // no try_only_first for additional sources
-    for (auto &s : additional_sources)
-        if (download_from_source(s))
-            return true;
-    return true;
+        source_directory_hash = sha256_short(name);
+        source_directory /= source_directory_hash;
+    }
+    binary_directory = source_directory / "build";
 }
 
-String Remote::default_source_provider(const Package &d) const
+void BuildSettings::append_build_dirs(const path &p)
 {
-    // change later to format strings (or simple replacement)
-    // %U - url, %D - data dir etc.
-    auto fs_path = ProjectPath(d.ppath).toFileSystemPath().string();
-    normalize_string(fs_path);
-    String package_url = url + "/" + data_dir + "/" + fs_path + "/" + make_archive_name(d.version.toString());
-    return package_url;
-}
-
-String Remote::github_source_provider(const Package &d) const
-{
-    return "https://github.com/cppan-packages/" + d.getHash() + "/raw/master/" + make_archive_name();
+    source_directory /= p;
+    binary_directory = source_directory / "build";
 }
 
 Settings::Settings()
@@ -122,26 +74,26 @@ Settings::Settings()
     storage_dir = get_root_directory() / STORAGE_DIR;
 }
 
-void Settings::load(const path &p, const ConfigType type)
+void Settings::load(const path &p, const SettingsType type)
 {
     auto root = load_yaml_config(p);
     load(root, type);
 }
 
-void Settings::load(const yaml &root, const ConfigType type)
+void Settings::load(const yaml &root, const SettingsType type)
 {
     load_main(root, type);
 
-    auto get_storage_dir = [this](ConfigType type)
+    auto get_storage_dir = [this](SettingsType type)
     {
         switch (type)
         {
-        case ConfigType::Local:
+        case SettingsType::Local:
             return cppan_dir / STORAGE_DIR;
-        case ConfigType::User:
-            return Config::get_user_config().settings.storage_dir;
-        case ConfigType::System:
-            return Config::get_system_config().settings.storage_dir;
+        case SettingsType::User:
+            return Settings::get_user_settings().storage_dir;
+        case SettingsType::System:
+            return Settings::get_system_settings().storage_dir;
         default:
         {
             auto d = fs::absolute(storage_dir);
@@ -151,15 +103,15 @@ void Settings::load(const yaml &root, const ConfigType type)
         }
     };
 
-    auto get_build_dir = [this](const path &p, ConfigType type)
+    auto get_build_dir = [this](const path &p, SettingsType type)
     {
         switch (type)
         {
-        case ConfigType::Local:
+        case SettingsType::Local:
             return fs::current_path();
-        case ConfigType::User:
+        case SettingsType::User:
             return directories.storage_dir_tmp;
-        case ConfigType::System:
+        case SettingsType::System:
             return temp_directory_path() / "build";
         default:
             return p;
@@ -175,16 +127,16 @@ void Settings::load(const yaml &root, const ConfigType type)
     directories.update(dirs, type);
 }
 
-void Settings::load_main(const yaml &root, const ConfigType type)
+void Settings::load_main(const yaml &root, const SettingsType type)
 {
     auto packages_dir_type_from_string = [](const String &s, const String &key)
     {
         if (s == "local")
-            return ConfigType::Local;
+            return SettingsType::Local;
         if (s == "user")
-            return ConfigType::User;
+            return SettingsType::User;
         if (s == "system")
-            return ConfigType::System;
+            return SettingsType::System;
         throw std::runtime_error("Unknown '" + key + "'. Should be one of [local, user, system]");
     };
 
@@ -219,10 +171,10 @@ void Settings::load_main(const yaml &root, const ConfigType type)
 
     storage_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "storage_dir_type", "user"), "storage_dir_type");
     if (root["storage_dir"].IsDefined())
-        storage_dir_type = ConfigType::None;
+        storage_dir_type = SettingsType::None;
     build_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "build_dir_type", "system"), "build_dir_type");
     if (root["build_dir"].IsDefined())
-        build_dir_type = ConfigType::None;
+        build_dir_type = SettingsType::None;
 
     // read these first from local settings
     // and they'll be overriden in bs (if they exist there)
@@ -235,7 +187,7 @@ void Settings::load_main(const yaml &root, const ConfigType type)
     EXTRACT_VAR(root, build_warning_level, "build_warning_level", int);
 
     // read build settings
-    if (type == ConfigType::Local)
+    if (type == SettingsType::Local)
     {
         // at first, we load bs from current root
         load_build(root);
@@ -325,32 +277,7 @@ void Settings::load_build(const yaml &root)
 
 bool Settings::is_custom_build_dir() const
 {
-    return build_dir_type == ConfigType::Local || build_dir_type == ConfigType::None;
-}
-
-void Settings::set_build_dirs(const String &name)
-{
-    filename = name;
-    filename_without_ext = name;
-
-    source_directory = directories.build_dir;
-    if (directories.build_dir_type == ConfigType::Local ||
-        directories.build_dir_type == ConfigType::None)
-    {
-        source_directory /= (CPPAN_LOCAL_BUILD_PREFIX + filename);
-    }
-    else
-    {
-        source_directory_hash = sha256_short(name);
-        source_directory /= source_directory_hash;
-    }
-    binary_directory = source_directory / "build";
-}
-
-void Settings::append_build_dirs(const path &p)
-{
-    source_directory /= p;
-    binary_directory = source_directory / "build";
+    return build_dir_type == SettingsType::Local || build_dir_type == SettingsType::None;
 }
 
 String Settings::get_hash() const
@@ -376,132 +303,6 @@ String Settings::get_hash() const
     h |= toolset;
     h |= use_shared_libs;
     return h.hash;
-}
-
-String Settings::get_fs_generator() const
-{
-    String g = generator;
-    boost::to_lower(g);
-    boost::replace_all(g, " ", "-");
-    return g;
-}
-
-String get_config(const Settings &settings)
-{
-    // add original config to db
-    // but return hashed
-
-    auto &db = getServiceDatabase();
-    auto h = settings.get_hash();
-    auto c = db.getConfigByHash(h);
-
-    if (!c.empty())
-        return hash_config(c);
-
-    c = test_run(settings);
-    auto ch = hash_config(c);
-    db.addConfigHash(h, c, ch);
-
-    return ch;
-}
-
-String test_run(const Settings &settings)
-{
-    // do a test build to extract config string
-    auto src_dir = temp_directory_path() / "temp" / fs::unique_path();
-    auto bin_dir = src_dir / "build";
-
-    fs::create_directories(src_dir);
-    write_file(src_dir / CPPAN_FILENAME, "");
-    SCOPE_EXIT
-    {
-        // remove test dir
-        boost::system::error_code ec;
-        fs::remove_all(src_dir, ec);
-    };
-
-    // invoke cppan
-    Config conf(src_dir);
-    conf.process(src_dir);
-    conf.settings = settings;
-    conf.settings.allow_links = false;
-    conf.settings.disable_checks = true;
-    conf.settings.source_directory = src_dir;
-    conf.settings.binary_directory = bin_dir;
-
-    auto printer = Printer::create(settings.printerType);
-    printer->rc = &conf;
-    printer->prepare_build();
-
-    LOG("--");
-    LOG("-- Performing test run");
-    LOG("--");
-
-    auto ret = printer->generate();
-
-    if (ret)
-        throw std::runtime_error("There are errors during test run");
-
-    // read cfg
-    auto c = read_file(bin_dir / CPPAN_CONFIG_FILENAME);
-    auto cmake_version = get_cmake_version();
-
-    // move this to printer some time
-    // copy cached cmake config to storage
-    copy_dir(
-        bin_dir / "CMakeFiles" / cmake_version,
-        directories.storage_dir_cfg / hash_config(c) / "CMakeFiles" / cmake_version);
-
-    return c;
-}
-
-int Settings::build_packages(Config &c, const String &name)
-{
-    auto printer = Printer::create(printerType);
-    printer->rc = &c;
-
-    config = get_config(*this);
-
-    set_build_dirs(name);
-    append_build_dirs(config);
-
-    auto cmake_version = get_cmake_version();
-    auto src = directories.storage_dir_cfg / config / "CMakeFiles" / cmake_version;
-
-    // if dir does not exist it means probably we have new cmake version
-    // we have config value but there was not a test run with copying cmake prepared files
-    // so start unconditional test run
-    if (!fs::exists(src))
-        test_run(*this);
-
-    // move this to printer some time
-    // copy cached cmake config to bin dir
-    auto dst = binary_directory / "CMakeFiles" / cmake_version;
-    if (!fs::exists(dst))
-        copy_dir(src, dst);
-
-    // setup printer config
-    c.process(source_directory);
-    printer->prepare_build();
-
-    auto ret = generate(c);
-    if (ret)
-        return ret;
-    return build(c);
-}
-
-int Settings::generate(Config &c) const
-{
-    auto printer = Printer::create(printerType);
-    printer->rc = &c;
-    return printer->generate();
-}
-
-int Settings::build(Config &c) const
-{
-    auto printer = Printer::create(printerType);
-    printer->rc = &c;
-    return printer->build();
 }
 
 bool Settings::checkForUpdates() const
@@ -539,4 +340,86 @@ bool Settings::checkForUpdates() const
 #endif
     std::cout << "\n";
     return true;
+}
+
+Settings &Settings::get(SettingsType type)
+{
+    static Settings settings[toIndex(SettingsType::Max)];
+
+    auto i = toIndex(type);
+    auto &s = settings[i];
+    if (type == SettingsType::None)
+        return s;
+
+    switch (type)
+    {
+    case SettingsType::Local:
+    {
+        RUN_ONCE
+        {
+            s = get((SettingsType)(i - 1));
+        };
+    }
+        break;
+    case SettingsType::User:
+    {
+        RUN_ONCE
+        {
+            s = get((SettingsType)(i - 1));
+
+            auto fn = get_config_filename();
+            if (!fs::exists(fn))
+            {
+                boost::system::error_code ec;
+                fs::create_directories(fn.parent_path(), ec);
+                if (ec)
+                    throw std::runtime_error(ec.message());
+                auto ss = get(SettingsType::System);
+                ss.save(fn);
+            }
+            s.load(fn, SettingsType::User);
+        };
+    }
+        break;
+    case SettingsType::System:
+    {
+        RUN_ONCE
+        {
+            s = get((SettingsType)(i - 1));
+
+            auto fn = CONFIG_ROOT "default";
+            if (!fs::exists(fn))
+                return;
+            s.load(fn, SettingsType::System);
+        };
+    }
+        break;
+    }
+    return s;
+}
+
+Settings &Settings::get_system_settings()
+{
+    return get(SettingsType::System);
+}
+
+Settings &Settings::get_user_settings()
+{
+    return get(SettingsType::User);
+}
+
+Settings &Settings::get_local_settings()
+{
+    return get(SettingsType::Local);
+}
+
+void Settings::save(const path &p) const
+{
+    std::ofstream o(p.string());
+    if (!o)
+        throw std::runtime_error("Cannot open file: " + p.string());
+    yaml root;
+    root["remotes"][DEFAULT_REMOTE_NAME]["url"] = remotes[0].url;
+    root["storage_dir"] = storage_dir.string();
+    o << dump_yaml_config(root);
 }

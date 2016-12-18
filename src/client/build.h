@@ -32,4 +32,4 @@
 
 int build(path fn, const String &config = String());
 int build_only(path fn, const String &config = String());
-int build_package(const String &target_name, const path &settings = path(), const String &config = String());
+int build_package(const String &target_name, const path &settings_fn = path(), const String &config = String());

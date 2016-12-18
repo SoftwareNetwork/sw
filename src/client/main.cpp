@@ -40,14 +40,15 @@
 #include <logger.h>
 #include <printers/cmake.h>
 #include <program.h>
+#include <settings.h>
 #include <verifier.h>
 
 #include "build.h"
 #include "fix_imports.h"
 #include "options.h"
-#include "../autotools/autotools.h"
+#include "autotools.h"
 
-void self_upgrade(Config &c, const char *exe_path);
+void self_upgrade(const char *exe_path);
 void default_run();
 void init();
 
@@ -66,24 +67,24 @@ try
     // command selector
     if (argv[1][0] != '-')
     {
-        auto uc = Config::get_user_config();
+        auto us = Settings::get_user_settings();
 
-        auto get_remote = [&uc](const String &remote)
+        auto get_remote = [&us](const String &remote)
         {
-            auto i = std::find_if(uc.settings.remotes.begin(), uc.settings.remotes.end(),
+            auto i = std::find_if(us.remotes.begin(), us.remotes.end(),
                 [&remote](auto &v) { return v.name == remote; });
             return i;
         };
-        auto find_remote = [&get_remote, &uc](const String &remote)
+        auto find_remote = [&get_remote, &us](const String &remote)
         {
             auto i = get_remote(remote);
-            if (i == uc.settings.remotes.end())
+            if (i == us.remotes.end())
                 throw std::runtime_error("unknown remote: " + remote);
             return *i;
         };
-        auto has_remote = [&get_remote, &uc](const String &remote)
+        auto has_remote = [&get_remote, &us](const String &remote)
         {
-            return get_remote(remote) != uc.settings.remotes.end();
+            return get_remote(remote) != us.remotes.end();
         };
 
         String cmd = argv[1];
@@ -439,8 +440,7 @@ try
         return 0;
     }
 
-    auto &uc = Config::get_user_config();
-    uc.settings.force_server_query = options()[SERVER_QUERY].as<bool>();
+    Settings::get_user_settings().force_server_query = options()[SERVER_QUERY].as<bool>();
 
     if (options().count("verify"))
     {
@@ -468,25 +468,19 @@ try
     httpSettings.verbose = options["curl-verbose"].as<bool>();
     httpSettings.ignore_ssl_checks = options["ignore-ssl-checks"].as<bool>();
 
-    Config c = Config::get_user_config();
-    c.type = ConfigType::Local;
-
-    // setup curl settings if possible from config
-    // other network users (options) should go below this line
-    httpSettings.proxy = c.settings.proxy;
-
     // self-upgrade?
     if (options()["self-upgrade"].as<bool>())
     {
-        self_upgrade(c, argv[0]);
+        self_upgrade(argv[0]);
         return 0;
     }
 
     // load config from current dir
+    Config c;
     c.load_current_config();
 
     // update proxy settings?
-    httpSettings.proxy = c.settings.proxy;
+    httpSettings.proxy = Settings::get_local_settings().proxy;
 
     if (options()["prepare-archive"].as<bool>())
     {
@@ -520,7 +514,7 @@ catch (...)
 
 void default_run()
 {
-    auto c = Config::get_user_config();
+    Config c;
     c.load_current_config();
     c.process();
 }
@@ -531,10 +525,13 @@ void init()
     initLogger("info", "", true);
 
     // initialize CPPAN structures, do not remove
-    auto c = Config::get_user_config();
+    Settings::get_user_settings();
+
     try
     {
-        c.load_current_config(); // for storage dir
+        // load local settings for storage dir
+        Config c;
+        c.load_current_config();
     }
     catch (...)
     {
@@ -546,7 +543,7 @@ void init()
     sdb.performStartupActions();
 }
 
-void self_upgrade(Config &c, const char *exe_path)
+void self_upgrade(const char *exe_path)
 {
 #ifdef _WIN32
     String client = "/client/cppan-master-Windows-client.zip";
@@ -556,14 +553,16 @@ void self_upgrade(Config &c, const char *exe_path)
     String client = "/client/.service/cppan-master-Linux-client.zip";
 #endif
 
+    auto &s = Settings::get_user_settings();
+
     DownloadData dd;
-    dd.url = c.settings.remotes[0].url + client + ".md5";
+    dd.url = s.remotes[0].url + client + ".md5";
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     std::cout << "Downloading checksum file" << "\n";
     download_file(dd);
     auto md5 = boost::algorithm::trim_copy(read_file(dd.fn));
 
-    dd.url = c.settings.remotes[0].url + client;
+    dd.url = s.remotes[0].url + client;
     dd.fn = fs::temp_directory_path() / fs::unique_path();
     String dl_md5;
     dd.md5.hash = &dl_md5;

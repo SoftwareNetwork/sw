@@ -36,35 +36,27 @@
 #include "package.h"
 #include "project.h"
 #include "project_path.h"
-#include "settings.h"
-#include "version.h"
 #include "yaml.h"
 
 #define CONFIG_ROOT "/etc/cppan/"
 
 struct Config
 {
-    Settings settings;
-
     // projects settings
     ProjectPath root_project;
     Checks checks; // move to proj?
 
 public:
     Config();
-    Config(ConfigType type);
     Config(const path &p);
 
     void load(yaml root);
     void load(const path &p);
     void reload(const path &p);
-    void save(const path &p) const;
 
-    static Config &get_system_config();
-    static Config &get_user_config();
     void load_current_config();
 
-    void process(const path &p = path());
+    void process(const path &p = path()) const;
     void post_download() const;
 
     void clear_vars_cache() const;
@@ -89,7 +81,6 @@ private:
     void addDefaultProject();
 
 public:
-    ConfigType type{ ConfigType::None };
     bool defaults_allowed = true;
     bool allow_relative_project_names = false;
     bool allow_local_dependencies = false;

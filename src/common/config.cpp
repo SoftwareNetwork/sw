@@ -35,6 +35,7 @@
 #include "hash.h"
 #include "hasher.h"
 #include "resolver.h"
+#include "settings.h"
 #include "yaml.h"
 
 #include <boost/algorithm/string.hpp>
@@ -47,44 +48,6 @@ DECLARE_STATIC_LOGGER(logger, "config");
 
 Config::Config()
 {
-    settings = Config::get_user_config().settings;
-    addDefaultProject();
-}
-
-Config::Config(ConfigType type)
-    : type(type)
-{
-    switch (type)
-    {
-    case ConfigType::System:
-    {
-        auto fn = CONFIG_ROOT "default";
-        if (!fs::exists(fn))
-            break;
-        // do not move after the switch
-        // it should not be executed there
-        settings.load(fn, type);
-    }
-        break;
-    case ConfigType::User:
-    {
-        auto fn = get_config_filename();
-        if (!fs::exists(fn))
-        {
-            boost::system::error_code ec;
-            fs::create_directories(fn.parent_path(), ec);
-            if (ec)
-                throw std::runtime_error(ec.message());
-            Config c = get_system_config();
-            c.save(fn);
-        }
-        settings.load(fn, type);
-    }
-        break;
-    default:
-        settings = Config::get_user_config().settings;
-        break;
-    }
     addDefaultProject();
 }
 
@@ -107,18 +70,6 @@ void Config::reload(const path &p)
         dir = p.parent_path();
         load(p);
     }
-}
-
-Config &Config::get_system_config()
-{
-    static Config c(ConfigType::System);
-    return c;
-}
-
-Config &Config::get_user_config()
-{
-    static Config c(ConfigType::User);
-    return c;
 }
 
 void Config::addDefaultProject()
@@ -158,13 +109,7 @@ void Config::load(yaml root)
     {
         if (!ls.IsMap())
             throw std::runtime_error("'local_settings' should be a map");
-        settings.load(root["local_settings"], type);
-    }
-    else
-    {
-        // read user/system settings first
-        auto uc = get_user_config();
-        settings = uc.settings;
+        Settings::get_local_settings().load(root["local_settings"], SettingsType::Local);
     }
 
     EXTRACT(root_project, String);
@@ -239,20 +184,9 @@ const Project &Config::getDefaultProject() const
     return projects.begin()->second;
 }
 
-void Config::save(const path &p) const
+void Config::process(const path &p) const
 {
-    std::ofstream o(p.string());
-    if (!o)
-        throw std::runtime_error("Cannot open file: " + p.string());
-    yaml root;
-    root["remotes"][DEFAULT_REMOTE_NAME]["url"] = settings.remotes[0].url;
-    root["storage_dir"] = settings.storage_dir.string();
-    o << dump_yaml_config(root);
-}
-
-void Config::process(const path &p)
-{
-    rd.process(p, *this);
+    rd.process(p, (Config&)*this);
 }
 
 void Config::post_download() const
@@ -269,7 +203,7 @@ void Config::post_download() const
     at.remove(pkg.getDirSrc());
     at.remove(pkg.getDirObj());
 
-    auto printer = Printer::create(settings.printerType);
+    auto printer = Printer::create(Settings::get_local_settings().printerType);
     printer->d = pkg;
     printer->prepare_rebuild();
 }

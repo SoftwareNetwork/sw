@@ -156,7 +156,6 @@ endif()
 
 ################################################################################
 
-add_subdirectory(autotools)
 add_subdirectory(bazel)
 add_subdirectory(client)
 add_subdirectory(comments)

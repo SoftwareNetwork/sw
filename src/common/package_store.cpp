@@ -35,10 +35,12 @@
 #include "executor.h"
 #include "hash.h"
 #include "hasher.h"
+#include "http.h"
 #include "lock.h"
 #include "log.h"
 #include "project.h"
 #include "resolver.h"
+#include "settings.h"
 #include "sqlite_database.h"
 #include "templates.h"
 
@@ -123,25 +125,19 @@ void PackageStore::process(const path &p, Config &root)
     // add more necessary actions here
     for (auto &cc : *this)
     {
-        auto &d = cc.first;
-        auto c = cc.second.config;
-        root.checks += c->checks;
+        root.checks += cc.second.config->checks;
     }
 
-    auto printer = Printer::create(root.settings.printerType);
+    auto printer = Printer::create(Settings::get_user_settings().printerType);
     printer->access_table = &access_table;
-    printer->rc = &root;
 
     // print deps
     for (auto &cc : *this)
     {
         auto &d = cc.first;
-        auto c = cc.second.config;
 
         printer->d = d;
-        printer->cc = c;
         printer->cwd = d.getDirObj();
-
         printer->print();
         printer->print_meta();
     }
@@ -149,8 +145,7 @@ void PackageStore::process(const path &p, Config &root)
     ScopedCurrentPath cp(p);
 
     // print root config
-    printer->cc = &root;
-    printer->d = Package();
+    printer->d = root.pkg;
     printer->cwd = cp.get_cwd();
     printer->print_meta();
 }
@@ -219,7 +214,7 @@ void PackageStore::check_deps_changed()
             deps_changed = true;
 
             // clear exports for this project, so it will be regenerated
-            auto p = Printer::create(cc.second.config->settings.printerType);
+            auto p = Printer::create(Settings::get_local_settings().printerType);
             p->clear_export(cc.first.getDirObj());
             cleanPackages(cc.first.target_name, CleanTarget::Lib | CleanTarget::Bin);
             sdb.setPackageDependenciesHash(cc.first, h.hash);
@@ -303,8 +298,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
     download_file(p);
     p = fs::canonical(fs::absolute(p));
 
-    auto conf = Config::get_user_config();
-    conf.type = ConfigType::Local;
+    Config conf;
     conf.defaults_allowed = true; // was false
     conf.allow_local_dependencies = true;
     // allow relative project names
@@ -366,7 +360,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
 
     auto build_spec_file = [](const path &p)
     {
-        Config c(ConfigType::Local);
+        Config c;
 
         // allow defaults for spec file
         c.defaults_allowed = true;

@@ -28,12 +28,13 @@
 #include "database.h"
 
 #include "command.h"
-#include "config.h"
 #include "date_time.h"
 #include "directories.h"
 #include "enums.h"
 #include "hash.h"
+#include "http.h"
 #include "lock.h"
+#include "settings.h"
 #include "sqlite_database.h"
 #include "stamp.h"
 #include "printers/cmake.h"
@@ -454,7 +455,7 @@ void ServiceDatabase::checkForUpdates() const
     {
         // if there are updates, set next check (and notification) in 20 mins
         // to issue a message every run
-        if (Config::get_user_config().settings.checkForUpdates())
+        if (Settings::get_user_settings().checkForUpdates())
             setLastClientUpdateCheck(last_check + 20min);
         else
             setLastClientUpdateCheck();

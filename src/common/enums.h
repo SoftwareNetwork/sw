@@ -101,7 +101,7 @@ enum class NotificationType
     Error,
 };
 
-enum class ConfigType
+enum class SettingsType
 {
     None,   // use default (user)
     Local,  // in current project, dir: cppan
@@ -120,6 +120,6 @@ constexpr std::underlying_type_t<E> toIndex(E e)
 
 std::string toString(ProjectType e);
 std::string toString(ProjectPathNamespace e);
-std::string toString(ConfigType e);
+std::string toString(SettingsType e);
 
 std::string getFlagsString(const ProjectFlags &flags);

@@ -31,6 +31,8 @@
 #include <context.h>
 #include <project_path.h>
 
+#include <printers/cmake.h>
+
 #include <boost/algorithm/string.hpp>
 
 #include <deque>
@@ -171,6 +173,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     };
 
     Context ctx;
+    file_header(ctx, dep);
     if (exe)
     {
         ctx.addLine("if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION)");
@@ -187,6 +190,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     {
         ctx.addLine(fix(lines, dep));
     }
+    file_footer(ctx, dep);
 
     ctx.splitLines();
     auto t = ctx.getText();

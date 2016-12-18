@@ -12,7 +12,7 @@ endif()
 
 function(cppan_debug_message)
     if (CPPAN_CMAKE_VERBOSE)
-        message(STATUS "${ARGV}")
+        message(STATUS "${CPPAN_DEBUG_STACK_SPACE}${ARGV}")
     endif()
 endfunction(cppan_debug_message)
 

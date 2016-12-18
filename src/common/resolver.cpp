@@ -38,6 +38,7 @@
 #include "lock.h"
 #include "log.h"
 #include "project.h"
+#include "settings.h"
 #include "sqlite_database.h"
 #include "templates.h"
 
@@ -121,11 +122,11 @@ void Resolver::resolve(const Packages &deps, std::function<void()> resolve_actio
         throw std::logic_error("Empty resolve action!");
 
     // ref to not invalidate all ptrs
-    auto &uc = Config::get_user_config();
-    auto cr = uc.settings.remotes.begin();
+    auto &us = Settings::get_user_settings();
+    auto cr = us.remotes.begin();
     current_remote = &*cr++;
 
-    auto resolve_remote_deps = [this, &deps, &cr, &uc]()
+    auto resolve_remote_deps = [this, &deps, &cr, &us]()
     {
         bool again = true;
         while (again)
@@ -139,7 +140,7 @@ void Resolver::resolve(const Packages &deps, std::function<void()> resolve_actio
             catch (const std::exception &e)
             {
                 LOG(e.what());
-                if (cr != uc.settings.remotes.end())
+                if (cr != us.remotes.end())
                 {
                     current_remote = &*cr++;
                     again = true;
@@ -150,7 +151,7 @@ void Resolver::resolve(const Packages &deps, std::function<void()> resolve_actio
         }
     };
 
-    query_local_db = !uc.settings.force_server_query;
+    query_local_db = !us.force_server_query;
     // do 2 attempts: 1) local db, 2) remote db
     int n_attempts = query_local_db ? 2 : 1;
     while (n_attempts--)

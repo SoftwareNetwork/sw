@@ -40,9 +40,9 @@
 #define CPPAN_LOCAL_BUILD_PREFIX "cppan-build-"
 #define CPPAN_CONFIG_FILENAME "config.cmake"
 
-extern const std::vector<String> configuration_types;
-extern const std::vector<String> configuration_types_normal;
-extern const std::vector<String> configuration_types_no_rel;
+extern const Strings configuration_types;
+extern const Strings configuration_types_normal;
+extern const Strings configuration_types_no_rel;
 
 enum class PrinterType
 {
@@ -51,24 +51,27 @@ enum class PrinterType
     // add more here
 };
 
+struct BuildSettings;
 struct Config;
 struct Directories;
+struct Settings;
 
 struct Printer
 {
     Package d;
     class AccessTable *access_table = nullptr;
-    Config *cc = nullptr; // current
-    Config *rc = nullptr; // root
     path cwd;
+    Settings &settings;
 
-    virtual void prepare_build() = 0;
-    virtual void prepare_rebuild() = 0;
-    virtual int generate() const = 0;
-    virtual int build() const = 0;
+    Printer();
 
-    virtual void print() = 0;
-    virtual void print_meta() = 0;
+    virtual void prepare_build(const BuildSettings &bs) const = 0;
+    virtual void prepare_rebuild() const = 0;
+    virtual int generate(const BuildSettings &bs) const = 0;
+    virtual int build(const BuildSettings &bs) const = 0;
+
+    virtual void print() const = 0;
+    virtual void print_meta() const = 0;
 
     virtual void clear_cache() const = 0;
     virtual void clear_exports() const = 0;

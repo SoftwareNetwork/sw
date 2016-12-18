@@ -25,69 +25,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "directories.h"
+#pragma once
 
 #include "cppan_string.h"
-#include "config.h"
-#include "settings.h"
+#include "filesystem.h"
+#include "http.h"
 
-Directories directories;
+#define DEFAULT_REMOTE_NAME "origin"
 
-void Directories::set_storage_dir(const path &p)
+struct Package;
+
+String default_source_provider(const Package &);
+
+struct Remote
 {
-    storage_dir = fs::absolute(p);
+    using Url = String;
+    using SourcesUrls = std::vector<Url>;
+    using SourceUrlProvider = std::function<String(const Remote &, const Package &)>;
 
-#define SET(x)                          \
-    storage_dir_##x = storage_dir / #x; \
-    fs::create_directories(storage_dir_##x)
+    String name;
 
-    SET(bin);
-    SET(cfg);
-    SET(etc);
-    SET(exp);
-    SET(lib);
-    //SET(lnk);
-    SET(obj);
-    SET(src);
-    SET(tmp);
-    SET(usr);
-#undef SET
+    Url url;
+    String data_dir;
 
-}
+    String user;
+    String token;
 
-void Directories::set_build_dir(const path &p)
-{
-    build_dir = p;
-}
+    // own data
+    // sources
+    std::vector<SourceUrlProvider> primary_sources;
+    SourceUrlProvider default_source{ &Remote::default_source_provider };
+    std::vector<SourceUrlProvider> additional_sources;
 
-void Directories::update(const Directories &dirs, SettingsType t)
-{
-    if (t > type)
-        return;
-    auto dirs2 = dirs;
-    std::swap(*this, dirs2);
-    type = t;
-}
+    bool downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first = false) const;
 
-path Directories::get_include_dir() const
-{
-    return storage_dir_usr / "include";
-}
+public:
+    String default_source_provider(const Package &) const;
+    String github_source_provider(const Package &) const;
+};
 
-path Directories::get_local_dir() const
-{
-    return storage_dir_usr / "local";
-}
-
-path Directories::get_static_files_dir() const
-{
-    return storage_dir_etc / "static";
-}
-
-const Directories &get_user_directories()
-{
-    static Directories dirs;
-    if (dirs.empty())
-        dirs.set_storage_dir(Settings::get_user_settings().storage_dir);
-    return dirs;
-}
+using Remotes = std::vector<Remote>;
+Remotes get_default_remotes();

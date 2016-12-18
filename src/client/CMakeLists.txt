@@ -3,39 +3,13 @@
 #
 
 ########################################
-# fix imports
-########################################
-
-set(src
-    fix_imports.cpp
-    fix_imports.h
-)
-
-add_library(fix_imports ${src})
-target_link_libraries(fix_imports common)
-
-if (CPPAN_BUILD)
-target_link_libraries(fix_imports cppan)
-endif()
-
-########################################
 # cppan
 ########################################
 
-set(cppan_src
-    main.cpp
-    build.cpp
-    build.h
-    options.cpp
-    options.h
-)
+file(GLOB cppan_src "*")
 
 add_executable(client ${cppan_src})
-target_link_libraries(client
-    autotools
-    common
-    fix_imports
-)
+target_link_libraries(client common)
 
 if (NOT CPPAN_BUILD)
 target_link_libraries(client

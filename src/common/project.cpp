@@ -30,7 +30,10 @@
 #include "bazel/bazel.h"
 #include "config.h"
 #include "command.h"
+#include "http.h"
 #include "resolver.h"
+
+#include "printers/printer.h"
 
 #ifdef _WIN32
 #include <windows.h>

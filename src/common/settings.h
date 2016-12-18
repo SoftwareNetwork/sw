@@ -32,45 +32,26 @@
 #include "cppan_string.h"
 #include "filesystem.h"
 #include "http.h"
+#include "remote.h"
 #include "version.h"
 #include "yaml.h"
 
 #include "printers/printer.h"
 
-#define DEFAULT_REMOTE_NAME "origin"
-
-String default_source_provider(const Package &);
-
-struct Remote
+struct BuildSettings
 {
-    using Url = String;
-    using SourcesUrls = std::vector<Url>;
-    using SourceUrlProvider = std::function<String(const Remote &, const Package &)>;
+    bool allow_links = true;
+    bool disable_checks = false;
+    String filename;
+    String filename_without_ext;
+    path source_directory;
+    path binary_directory;
+    String source_directory_hash;
+    String config;
 
-    String name;
-
-    Url url;
-    String data_dir;
-
-    String user;
-    String token;
-
-    // own data
-
-    // sources
-    std::vector<SourceUrlProvider> primary_sources;
-    SourceUrlProvider default_source{ &Remote::default_source_provider };
-    std::vector<SourceUrlProvider> additional_sources;
-
-    bool downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first = false) const;
-
-public:
-    String default_source_provider(const Package &) const;
-    String github_source_provider(const Package &) const;
+    void set_build_dirs(const String &name);
+    void append_build_dirs(const path &p);
 };
-
-using Remotes = std::vector<Remote>;
-Remotes get_default_remotes();
 
 struct Settings
 {
@@ -89,9 +70,9 @@ struct Settings
     ProxySettings proxy;
 
     // sys/user config settings
-    ConfigType storage_dir_type{ ConfigType::User };
+    SettingsType storage_dir_type{ SettingsType::User };
     path storage_dir;
-    ConfigType build_dir_type{ ConfigType::System };
+    SettingsType build_dir_type{ SettingsType::System };
     path build_dir;
     path cppan_dir = ".cppan";
     // printer
@@ -137,45 +118,26 @@ struct Settings
     bool add_run_cppan_target = false;
     bool cmake_verbose = false;
     bool build_system_verbose = true;
-
-    // own data
-    // maybe mutable?
-    bool allow_links = true;
     bool force_server_query = false;
-    bool disable_checks = false;
-    String filename;
-    String filename_without_ext;
-    path source_directory;
-    path binary_directory;
-    String source_directory_hash;
-    String config;
 
 public:
     Settings();
 
-    void load(const path &p, const ConfigType type);
-    void load(const yaml &root, const ConfigType type);
+    void load(const path &p, const SettingsType type);
+    void load(const yaml &root, const SettingsType type);
+    void save(const path &p) const;
 
     bool is_custom_build_dir() const;
-
-    void load(const yaml &root);
-
     String get_hash() const;
-
-    int generate(Config &c) const;
-    int build(Config &c) const;
-    int build_packages(Config &c, const String &name);
-
     bool checkForUpdates() const;
 
 private:
-    void load_main(const yaml &root, const ConfigType type);
+    void load_main(const yaml &root, const SettingsType type);
     void load_build(const yaml &root);
 
-    void set_build_dirs(const String &name);
-    void append_build_dirs(const path &p);
-    String get_fs_generator() const;
+public:
+    static Settings &get(SettingsType type);
+    static Settings &get_system_settings();
+    static Settings &get_user_settings();
+    static Settings &get_local_settings();
 };
-
-String get_config(const Settings &settings);
-String test_run(const Settings &settings);

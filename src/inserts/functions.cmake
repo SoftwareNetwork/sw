@@ -297,6 +297,47 @@ function(get_configuration_with_generator_unhashed out)
 endfunction(get_configuration_with_generator_unhashed)
 
 ########################################
+# FUNCTION get_configuration_exe_unhashed
+########################################
+
+function(get_configuration_exe_unhashed out)
+    set(cyg)
+    if (CYGWIN)
+        set(cyg ${CPPAN_CONFIG_PART_DELIMETER}cyg)
+    endif()
+
+    prepare_config_part(system ${CMAKE_SYSTEM_NAME})
+    prepare_config_part(processor ${CMAKE_HOST_SYSTEM_PROCESSOR})
+    set(config ${system}${CPPAN_CONFIG_PART_DELIMETER}${processor}${cyg})
+
+    set(${out} ${config} PARENT_SCOPE)
+endfunction(get_configuration_exe_unhashed)
+
+########################################
+# FUNCTION get_configuration_variables_unhashed
+########################################
+
+function(get_configuration_variables_unhashed)
+    get_configuration_unhashed(config_lib)
+    get_configuration_with_generator_unhashed(config_lib_gen)
+    get_configuration_exe_unhashed(config_exe)
+
+    if (NOT EXECUTABLE)
+        set(config ${config_lib})
+        set(config_dir ${config_lib_gen})
+    else()
+        set(config ${config_exe})
+        set(config_dir ${config_exe})
+    endif()
+
+    set(config_unhashed ${config} PARENT_SCOPE)
+    set(config_lib_unhashed ${config_lib} PARENT_SCOPE)
+    set(config_lib_gen_unhashed ${config_lib_gen} PARENT_SCOPE)
+    set(config_exe_unhashed ${config_exe} PARENT_SCOPE)
+    set(config_dir_unhashed ${config_dir} PARENT_SCOPE)
+endfunction(get_configuration_variables_unhashed)
+
+########################################
 # FUNCTION get_configuration
 ########################################
 
@@ -321,15 +362,7 @@ endfunction(get_configuration_with_generator)
 ########################################
 
 function(get_configuration_exe out)
-    set(cyg)
-    if (CYGWIN)
-        set(cyg ${CPPAN_CONFIG_PART_DELIMETER}cyg)
-    endif()
-
-    prepare_config_part(system ${CMAKE_SYSTEM_NAME})
-    prepare_config_part(processor ${CMAKE_HOST_SYSTEM_PROCESSOR})
-    set(config ${system}${CPPAN_CONFIG_PART_DELIMETER}${processor}${cyg})
-
+    get_configuration_exe_unhashed(config)
     get_config_hash(${config} config)
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_exe)
