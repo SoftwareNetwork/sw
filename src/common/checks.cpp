@@ -463,6 +463,8 @@ void Checks::write_definitions(Context &ctx, const Package &d) const
     String m = "INTERFACE";
     if (!d.flags[pfHeaderOnly])
         m = "PUBLIC";
+    if (d.flags[pfExecutable])
+        m = "PRIVATE";
 
     auto print_def = [&ctx, &m](const String &value, auto &&s)
     {

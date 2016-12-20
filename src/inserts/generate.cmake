@@ -19,7 +19,8 @@ set(build_dir_name build)
 set(build_dir ${current_dir}/${build_dir_name}/${config_dir})
 set(export_dir ${build_dir}/exports)
 set(import ${export_dir}/${variable_name}.cmake)
-set(import_fixed ${export_dir}/${variable_name}-fixed.cmake)
+#set(import_fixed ${export_dir}/${variable_name}-fixed.cmake) # old
+set(import_fixed ${storage_dir_exp}/${config_dir}/${target}.cmake)
 set(aliases_file ${export_dir}/${variable_name}-aliases.cmake)
 set(variables_file ${build_dir}.gen.vars)
 set(lock ${build_dir}/cppan_generate.lock)
@@ -58,7 +59,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         set(to ${build_dir}/CMakeFiles/${CMAKE_VERSION})
         if (NOT EXISTS ${to})
             if (EXECUTABLE)
-                set(from ${storage_cfg_dir}/${config_exe}/CMakeFiles/${CMAKE_VERSION})
+                set(from ${storage_dir_cfg}/${config_exe}/CMakeFiles/${CMAKE_VERSION})
             else()
                 set(from ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION})
             endif()
@@ -80,6 +81,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         endif()
 
         #
+        clear_variables(GEN_CHILD_VARS)
         add_variable(GEN_CHILD_VARS OUTPUT_DIR)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_SHARED_LIBS)
         # if turned on, build exe with the same config (arch, toolchain, generator etc.)
@@ -87,7 +89,9 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         # if turned on, build exe with the same configiguration (debug, relwithdebinfo etc.)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION)
         add_variable(GEN_CHILD_VARS CPPAN_COMMAND)
-        add_variable(GEN_CHILD_VARS CPPAN_MT_BUILD)
+        if (EXECUTABLE)
+            add_variable(GEN_CHILD_VARS CPPAN_MT_BUILD) # not for exe
+        endif()
         add_variable(GEN_CHILD_VARS CPPAN_CMAKE_VERBOSE)
         add_variable(GEN_CHILD_VARS CPPAN_DEBUG_STACK_SPACE)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_VERBOSE)
@@ -153,7 +157,8 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         file(MD5 ${import} md5)
         file(WRITE ${import}.md5 "${md5}")
 
-        # fix
+        # fix imports
+        # TODO: move exports to exp dir
         file(WRITE ${aliases_file} "${aliases}")
         cppan_debug_message("COMMAND ${CPPAN_COMMAND} internal-fix-imports ${target} ${aliases_file} ${import} ${import_fixed}")
         execute_process(
@@ -161,6 +166,18 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
             RESULT_VARIABLE ret
         )
         check_result_variable(${ret})
+
+        # create links to solution files
+        # TODO: replace condition with if (VS generator)
+        set(target_lnk ${storage_dir_lnk}/${config_dir}/${target}.sln.lnk)
+        if (MSVC AND NOT EXISTS ${target_lnk})
+            cppan_debug_message("COMMAND ${CPPAN_COMMAND} internal-create-link-to-solution ${build_dir} ${target_lnk}")
+            execute_process(
+                COMMAND ${CPPAN_COMMAND} internal-create-link-to-solution ${build_dir}/${package_hash_short}.sln ${target_lnk}
+                RESULT_VARIABLE ret
+            )
+            # no check_result_variable(): ignore errors
+        endif()
 
         cppan_debug_message("-- Prepared  build tree for ${target} (${config_unhashed} - ${config_dir})")
     endif()

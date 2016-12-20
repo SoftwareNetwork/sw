@@ -35,16 +35,6 @@
 
 #include "printers/printer.h"
 
-#ifdef _WIN32
-#include <windows.h>
-
-#include <libarchive/archive.h>
-#include <libarchive/archive_entry.h>
-#else
-#include <archive.h>
-#include <archive_entry.h>
-#endif
-
 #include <boost/algorithm/string.hpp>
 
 #include <regex>

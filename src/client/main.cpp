@@ -41,6 +41,7 @@
 #include <printers/cmake.h>
 #include <program.h>
 #include <settings.h>
+#include <shell_link.h>
 #include <verifier.h>
 
 #include "build.h"
@@ -48,9 +49,17 @@
 #include "options.h"
 #include "autotools.h"
 
-void self_upgrade(const char *exe_path);
+enum class ApiResult
+{
+    Handled,
+    NotHandled,
+    Error,
+};
+
+ApiResult api_call(const String &cmd, int argc, char *argv[]);
 void default_run();
 void init();
+void self_upgrade(const char *exe_path);
 
 int main(int argc, char *argv[])
 try
@@ -67,25 +76,6 @@ try
     // command selector
     if (argv[1][0] != '-')
     {
-        auto us = Settings::get_user_settings();
-
-        auto get_remote = [&us](const String &remote)
-        {
-            auto i = std::find_if(us.remotes.begin(), us.remotes.end(),
-                [&remote](auto &v) { return v.name == remote; });
-            return i;
-        };
-        auto find_remote = [&get_remote, &us](const String &remote)
-        {
-            auto i = get_remote(remote);
-            if (i == us.remotes.end())
-                throw std::runtime_error("unknown remote: " + remote);
-            return *i;
-        };
-        auto has_remote = [&get_remote, &us](const String &remote)
-        {
-            return get_remote(remote) != us.remotes.end();
-        };
 
         String cmd = argv[1];
 
@@ -101,6 +91,7 @@ try
             fix_imports(argv[2], argv[3], argv[4], argv[5]);
             return 0;
         }
+
         if (cmd == "internal-parallel-vars-check")
         {
             if (argc < 6)
@@ -114,6 +105,22 @@ try
                 c.parallel_vars_check(argv[2], argv[3], argv[4], argv[5]);
             else if (argc == 7)
                 c.parallel_vars_check(argv[2], argv[3], argv[4], argv[5], argv[6]);
+            return 0;
+        }
+
+        if (cmd == "internal-create-link-to-solution")
+        {
+#ifndef _WIN32
+            return 0;
+#endif
+            if (argc != 4)
+            {
+                std::cout << "invalid number of arguments: " << argc << "\n";
+                std::cout << "usage: cppan internal-create-link-to-solution solution.sln link.lnk\n";
+                return 1;
+            }
+            if (!create_link(argv[2], argv[3], "Link to CPPAN Solution"))
+                return 1;
             return 0;
         }
 
@@ -137,251 +144,16 @@ try
             return 0;
         }
 
-        // normal options
-        if (cmd == "add" || cmd == "create")
+        // api
+        switch (api_call(cmd, argc, argv))
         {
-            if (argc < 3)
-            {
-                std::cout << "invalid number of arguments\n";
-                std::cout << "usage: cppan add project|version [remote] name ...\n";
-                return 1;
-            }
-
-            int arg = 2;
-            String what = argv[arg++];
-            if (what == "project" || what == "package")
-            {
-                auto proj_usage = []
-                {
-                    std::cout << "invalid number of arguments\n";
-                    std::cout << "usage: cppan add project [remote] name [type]\n";
-                };
-
-                if (argc < arg + 1)
-                {
-                    proj_usage();
-                    return 1;
-                }
-
-                String remote = DEFAULT_REMOTE_NAME;
-                ProjectPath p(argv[arg++]);
-                if (has_remote(remote) && p.is_relative() && p.size() == 1)
-                {
-                    remote = argv[arg - 1];
-
-                    if (argc < arg + 1)
-                    {
-                        proj_usage();
-                        return 1;
-                    }
-
-                    p = ProjectPath(argv[arg++]);
-                }
-
-                // type
-                ProjectType type = ProjectType::Library;
-                if (argc > arg)
-                {
-                    String t = argv[arg++];
-                    if (t == "l" || t == "lib" || t == "library")
-                        type = ProjectType::Library;
-                    else if (t == "e" || t == "exe" || t == "executable")
-                        type = ProjectType::Executable;
-                    else if (t == "r" || t == "root" || t == "root_project")
-                        type = ProjectType::RootProject;
-                    else if (t == "d" || t == "dir" || t == "directory")
-                        type = ProjectType::Directory;
-                }
-
-                Api().add_project(find_remote(remote), p, type);
-                return 0;
-            }
-
-            if (what == "version")
-            {
-                auto proj_usage = []
-                {
-                    std::cout << "invalid number of arguments\n";
-                    std::cout << "usage: cppan add version [remote] name cppan.yml\n";
-                };
-
-                if (argc < arg + 1)
-                {
-                    proj_usage();
-                    return 1;
-                }
-
-                String remote = DEFAULT_REMOTE_NAME;
-                ProjectPath p(argv[arg++]);
-                if (has_remote(remote) && p.is_relative() && p.size() == 1)
-                {
-                    remote = argv[arg - 1];
-
-                    if (argc < arg + 1)
-                    {
-                        proj_usage();
-                        return 1;
-                    }
-
-                    p = ProjectPath(argv[arg++]);
-                }
-
-                if (argc < arg + 1)
-                {
-                    proj_usage();
-                    return 1;
-                }
-
-                Api().add_version(find_remote(remote), p, read_file(argv[arg++]));
-                return 0;
-            }
-
+        case ApiResult::Handled:
             return 0;
-        }
-
-        if (cmd == "remove")
-        {
-            if (argc < 3)
-            {
-                std::cout << "invalid number of arguments\n";
-                std::cout << "usage: cppan remove project|version [remote] name ...\n";
-                return 1;
-            }
-
-            int arg = 2;
-            String what = argv[arg++];
-            if (what == "project" || what == "package")
-            {
-                auto proj_usage = []
-                {
-                    std::cout << "invalid number of arguments\n";
-                    std::cout << "usage: cppan remove project [remote] name\n";
-                };
-
-                if (argc < arg + 1)
-                {
-                    proj_usage();
-                    return 1;
-                }
-
-                String remote = DEFAULT_REMOTE_NAME;
-                ProjectPath p(argv[arg++]);
-                if (has_remote(remote) && p.is_relative() && p.size() == 1)
-                {
-                    remote = argv[arg - 1];
-
-                    if (argc < arg + 1)
-                    {
-                        proj_usage();
-                        return 1;
-                    }
-
-                    p = ProjectPath(argv[arg++]);
-                }
-
-                Api().remove_project(find_remote(remote), p);
-                return 0;
-            }
-
-            if (what == "version")
-            {
-                auto proj_usage = []
-                {
-                    std::cout << "invalid number of arguments\n";
-                    std::cout << "usage: cppan remove version [remote] name version\n";
-                };
-
-                if (argc < arg + 1)
-                {
-                    proj_usage();
-                    return 1;
-                }
-
-                String remote = DEFAULT_REMOTE_NAME;
-                ProjectPath p(argv[arg++]);
-                if (has_remote(remote) && p.is_relative() && p.size() == 1)
-                {
-                    remote = argv[arg - 1];
-
-                    if (argc < arg + 1)
-                    {
-                        proj_usage();
-                        return 1;
-                    }
-
-                    p = ProjectPath(argv[arg++]);
-                }
-
-                if (argc < arg + 1)
-                {
-                    proj_usage();
-                    return 1;
-                }
-
-                Api().remove_version(find_remote(remote), p, String(argv[arg++]));
-                return 0;
-            }
-
-            return 0;
-        }
-
-        if (cmd == "notifications")
-        {
-            auto proj_usage = []
-            {
-                std::cout << "invalid number of arguments\n";
-                std::cout << "usage: cppan notifications [origin] [clear] [N]\n";
-            };
-
-            int arg = 2;
-
-            String remote = DEFAULT_REMOTE_NAME;
-            if (argc < arg + 1)
-            {
-                Api().get_notifications(find_remote(remote));
-                return 0;
-            }
-
-            String arg2 = argv[arg++];
-            if (argc < arg + 1)
-            {
-                if (arg2 == "clear")
-                {
-                    Api().clear_notifications(find_remote(remote));
-                    return 0;
-                }
-
-                int n = 10;
-                try
-                {
-                    n = std::stoi(arg2);
-                }
-                catch (const std::exception&)
-                {
-                    Api().get_notifications(find_remote(arg2));
-                    return 0;
-                }
-
-                Api().get_notifications(find_remote(remote), n);
-                return 0;
-            }
-
-            String arg3 = argv[arg++];
-            if (argc < arg + 1)
-            {
-                if (arg3 == "clear")
-                {
-                    Api().clear_notifications(find_remote(arg2));
-                    return 0;
-                }
-
-                Api().get_notifications(find_remote(arg2), std::stoi(arg3));
-                return 0;
-            }
-
+        case ApiResult::Error:
             return 1;
         }
 
+        // file/url arg
         if (isUrl(cmd))
             return build(cmd);
         if (fs::exists(cmd))
@@ -594,4 +366,273 @@ void self_upgrade(const char *exe_path)
     fs::copy_file(cppan, program);
     fs::remove(cppan);
 #endif
+}
+
+ApiResult api_call(const String &cmd, int argc, char *argv[])
+{
+    auto us = Settings::get_user_settings();
+
+    auto get_remote = [&us](const String &remote)
+    {
+        auto i = std::find_if(us.remotes.begin(), us.remotes.end(),
+            [&remote](auto &v) { return v.name == remote; });
+        return i;
+    };
+    auto find_remote = [&get_remote, &us](const String &remote)
+    {
+        auto i = get_remote(remote);
+        if (i == us.remotes.end())
+            throw std::runtime_error("unknown remote: " + remote);
+        return *i;
+    };
+    auto has_remote = [&get_remote, &us](const String &remote)
+    {
+        return get_remote(remote) != us.remotes.end();
+    };
+
+    if (cmd == "add" || cmd == "create")
+    {
+        if (argc < 3)
+        {
+            std::cout << "invalid number of arguments\n";
+            std::cout << "usage: cppan add project|version [remote] name ...\n";
+            return ApiResult::Error;
+        }
+
+        int arg = 2;
+        String what = argv[arg++];
+        if (what == "project" || what == "package")
+        {
+            auto proj_usage = []
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan add project [remote] name [type]\n";
+            };
+
+            if (argc < arg + 1)
+            {
+                proj_usage();
+                return ApiResult::Error;
+            }
+
+            String remote = DEFAULT_REMOTE_NAME;
+            ProjectPath p(argv[arg++]);
+            if (has_remote(remote) && p.is_relative() && p.size() == 1)
+            {
+                remote = argv[arg - 1];
+
+                if (argc < arg + 1)
+                {
+                    proj_usage();
+                    return ApiResult::Error;
+                }
+
+                p = ProjectPath(argv[arg++]);
+            }
+
+            // type
+            ProjectType type = ProjectType::Library;
+            if (argc > arg)
+            {
+                String t = argv[arg++];
+                if (t == "l" || t == "lib" || t == "library")
+                    type = ProjectType::Library;
+                else if (t == "e" || t == "exe" || t == "executable")
+                    type = ProjectType::Executable;
+                else if (t == "r" || t == "root" || t == "root_project")
+                    type = ProjectType::RootProject;
+                else if (t == "d" || t == "dir" || t == "directory")
+                    type = ProjectType::Directory;
+            }
+
+            Api().add_project(find_remote(remote), p, type);
+            return ApiResult::Handled;
+        }
+
+        if (what == "version")
+        {
+            auto proj_usage = []
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan add version [remote] name cppan.yml\n";
+            };
+
+            if (argc < arg + 1)
+            {
+                proj_usage();
+                return ApiResult::Error;
+            }
+
+            String remote = DEFAULT_REMOTE_NAME;
+            ProjectPath p(argv[arg++]);
+            if (has_remote(remote) && p.is_relative() && p.size() == 1)
+            {
+                remote = argv[arg - 1];
+
+                if (argc < arg + 1)
+                {
+                    proj_usage();
+                    return ApiResult::Error;
+                }
+
+                p = ProjectPath(argv[arg++]);
+            }
+
+            if (argc < arg + 1)
+            {
+                proj_usage();
+                return ApiResult::Error;
+            }
+
+            Api().add_version(find_remote(remote), p, read_file(argv[arg++]));
+            return ApiResult::Handled;
+        }
+
+        return ApiResult::Handled;
+    }
+
+    if (cmd == "remove")
+    {
+        if (argc < 3)
+        {
+            std::cout << "invalid number of arguments\n";
+            std::cout << "usage: cppan remove project|version [remote] name ...\n";
+            return ApiResult::Error;
+        }
+
+        int arg = 2;
+        String what = argv[arg++];
+        if (what == "project" || what == "package")
+        {
+            auto proj_usage = []
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan remove project [remote] name\n";
+            };
+
+            if (argc < arg + 1)
+            {
+                proj_usage();
+                return ApiResult::Error;
+            }
+
+            String remote = DEFAULT_REMOTE_NAME;
+            ProjectPath p(argv[arg++]);
+            if (has_remote(remote) && p.is_relative() && p.size() == 1)
+            {
+                remote = argv[arg - 1];
+
+                if (argc < arg + 1)
+                {
+                    proj_usage();
+                    return ApiResult::Error;
+                }
+
+                p = ProjectPath(argv[arg++]);
+            }
+
+            Api().remove_project(find_remote(remote), p);
+            return ApiResult::Handled;
+        }
+
+        if (what == "version")
+        {
+            auto proj_usage = []
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan remove version [remote] name version\n";
+            };
+
+            if (argc < arg + 1)
+            {
+                proj_usage();
+                return ApiResult::Error;
+            }
+
+            String remote = DEFAULT_REMOTE_NAME;
+            ProjectPath p(argv[arg++]);
+            if (has_remote(remote) && p.is_relative() && p.size() == 1)
+            {
+                remote = argv[arg - 1];
+
+                if (argc < arg + 1)
+                {
+                    proj_usage();
+                    return ApiResult::Error;
+                }
+
+                p = ProjectPath(argv[arg++]);
+            }
+
+            if (argc < arg + 1)
+            {
+                proj_usage();
+                return ApiResult::Error;
+            }
+
+            Api().remove_version(find_remote(remote), p, String(argv[arg++]));
+            return ApiResult::Handled;
+        }
+
+        return ApiResult::Handled;
+    }
+
+    if (cmd == "notifications")
+    {
+        auto proj_usage = []
+        {
+            std::cout << "invalid number of arguments\n";
+            std::cout << "usage: cppan notifications [origin] [clear] [N]\n";
+        };
+
+        int arg = 2;
+
+        String remote = DEFAULT_REMOTE_NAME;
+        if (argc < arg + 1)
+        {
+            Api().get_notifications(find_remote(remote));
+            return ApiResult::Handled;
+        }
+
+        String arg2 = argv[arg++];
+        if (argc < arg + 1)
+        {
+            if (arg2 == "clear")
+            {
+                Api().clear_notifications(find_remote(remote));
+                return ApiResult::Handled;
+            }
+
+            int n = 10;
+            try
+            {
+                n = std::stoi(arg2);
+            }
+            catch (const std::exception&)
+            {
+                Api().get_notifications(find_remote(arg2));
+                return ApiResult::Handled;
+            }
+
+            Api().get_notifications(find_remote(remote), n);
+            return ApiResult::Handled;
+        }
+
+        String arg3 = argv[arg++];
+        if (argc < arg + 1)
+        {
+            if (arg3 == "clear")
+            {
+                Api().clear_notifications(find_remote(arg2));
+                return ApiResult::Handled;
+            }
+
+            Api().get_notifications(find_remote(arg2), std::stoi(arg3));
+            return ApiResult::Handled;
+        }
+
+        return ApiResult::Error;
+    }
+
+    return ApiResult::NotHandled;
 }

@@ -657,7 +657,7 @@ int CMakePrinter::generate(const BuildSettings &bs) const
             auto sln = bs.binary_directory / (bs.filename_without_ext + ".sln");
             auto sln_new = bld_dir / name;
             if (fs::exists(sln))
-                CreateLink(sln.string().c_str(), sln_new.string().c_str(), "Link to CPPAN Solution");
+                create_link(sln, sln_new, "Link to CPPAN Solution");
 #else
             if (bs.generator == "Xcode")
             {
@@ -1803,9 +1803,14 @@ void CMakePrinter::print_obj_generate_file(const path &fn) const
         ctx.addLine();
     }
     ctx.addLine("set(current_dir " + normalize_path(fn.parent_path()) + ")");
-    ctx.addLine("set(storage_cfg_dir " + normalize_path(directories.storage_dir_cfg) + ")");
+    ctx.addLine("set(storage_dir_cfg " + normalize_path(directories.storage_dir_cfg) + ")");
+    ctx.addLine("set(storage_dir_exp " + normalize_path(directories.storage_dir_exp) + ")");
+#ifdef _WIN32
+    ctx.addLine("set(storage_dir_lnk " + normalize_path(directories.storage_dir_lnk) + ")");
+#endif
     ctx.addLine();
     ctx.addLine("set(variable_name " + d.variable_name + ")");
+    ctx.addLine("set(package_hash_short " + d.getFilesystemHash() + ")");
     ctx.addLine();
     ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();
@@ -1891,13 +1896,8 @@ void CMakePrinter::print_obj_export_file(const path &fn) const
             continue;
 
         auto b = dep.getDirObj();
-        auto p = b / cppan_build_dir;
-        //if (!dep.flags[pfExecutable])
-        //    p /= "${config_lib_gen}";
-        //else
-        //    p /= "${config_exe}";
-        p /= "${config_dir}";
-        p /= path("exports") / (dep.variable_name + "-fixed.cmake");
+        //auto p = b / cppan_build_dir / "${config_dir}" / path("exports") / (dep.variable_name + "-fixed.cmake"); // old
+        auto p = directories.storage_dir_exp / "${config_dir}" / (dep.target_name + ".cmake");
 
         if (!dep.flags[pfHeaderOnly])
             ctx.addLine("cppan_include(\"" + normalize_path(b / cmake_obj_generate_filename) + "\")");

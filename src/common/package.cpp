@@ -36,6 +36,9 @@
 #include <iostream>
 #include <regex>
 
+#include <logger.h>
+DECLARE_STATIC_LOGGER(logger, "package");
+
 path Package::getDir(const path &p) const
 {
     return p / getHashPath();
@@ -148,6 +151,9 @@ void cleanPackages(const String &s, int flags)
         if (!std::regex_match(pkg.target_name, r))
             continue;
         pkgs.insert(pkg);
+
+        if (flags == CleanTarget::All)
+            LOG_INFO(logger, "Cleaning   : " + pkg.target_name + "...");
     }
 
     auto rm = [](const auto &p)

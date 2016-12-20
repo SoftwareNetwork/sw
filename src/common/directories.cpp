@@ -46,7 +46,9 @@ void Directories::set_storage_dir(const path &p)
     SET(etc);
     SET(exp);
     SET(lib);
-    //SET(lnk);
+#ifdef _WIN32
+    SET(lnk);
+#endif
     SET(obj);
     SET(src);
     SET(tmp);

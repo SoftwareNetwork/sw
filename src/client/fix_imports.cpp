@@ -72,6 +72,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     auto aliases_s = read_file(aliases_file);
     auto dep = extractFromString(target);
 
+    fs::create_directories(new_file.parent_path());
     std::ofstream ofile(new_file.string());
     if (!ofile)
         throw std::runtime_error("Cannot open the output file for writing");

@@ -428,6 +428,20 @@ function(add_variable array variable)
 endfunction(add_variable)
 
 ########################################
+# FUNCTION clear_variables
+########################################
+
+function(clear_variables array)
+    set(${array}_TYPES)
+    set(${array}_KEYS)
+    set(${array}_VALUES)
+
+    set(${array}_TYPES ${${array}_TYPES} PARENT_SCOPE)
+    set(${array}_KEYS ${${array}_KEYS} PARENT_SCOPE)
+    set(${array}_VALUES ${${array}_VALUES} PARENT_SCOPE)
+endfunction(clear_variables)
+
+########################################
 # FUNCTION read_variables_file
 ########################################
 

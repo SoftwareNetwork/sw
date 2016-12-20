@@ -272,9 +272,9 @@ Files unpack_file(const path &fn, const path &dst)
     archive_entry *entry;
     while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
     {
-        // do not act on symlinks
+        // act on regular files only
         auto type = archive_entry_filetype(entry);
-        if (type == AE_IFLNK || type != AE_IFREG)
+        if (type != AE_IFREG)
             continue;
 
         path f = dst / archive_entry_pathname(entry);
@@ -284,7 +284,10 @@ Files unpack_file(const path &fn, const path &dst)
         path filename = f.filename();
         if (filename == "." || filename == "..")
             continue;
+
         auto fn = fs::absolute(f).string();
+        // do not use fopen() because MSVC's file streams support UTF-16 characters
+        // and we won't be able to unpack files under some tricky dir names
         std::ofstream o(fn, std::ios::out | std::ios::binary);
         if (!o)
         {
@@ -299,7 +302,7 @@ Files unpack_file(const path &fn, const path &dst)
 #endif
             throw std::runtime_error("Cannot open file: " + f.string());
         }
-        for (;;)
+        while (1)
         {
             const void *buff;
             size_t size;
