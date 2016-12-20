@@ -447,7 +447,7 @@ void ServiceDatabase::checkForUpdates() const
     using namespace std::literals;
 
     auto last_check = getLastClientUpdateCheck();
-    auto d = std::chrono::system_clock::now() - last_check;
+    auto d = Clock::now() - last_check;
     if (d < 3h)
         return;
 
@@ -471,7 +471,7 @@ TimePoint ServiceDatabase::getLastClientUpdateCheck() const
     db->execute("select * from NextClientVersionCheck",
         [&tp](SQLITE_CALLBACK_ARGS)
     {
-        tp = std::chrono::system_clock::from_time_t(std::stoll(cols[0]));
+        tp = Clock::from_time_t(std::stoll(cols[0]));
         return 0;
     });
     return tp;
@@ -480,7 +480,7 @@ TimePoint ServiceDatabase::getLastClientUpdateCheck() const
 void ServiceDatabase::setLastClientUpdateCheck(const TimePoint &p) const
 {
     db->execute("update NextClientVersionCheck set timestamp = '" +
-        std::to_string(std::chrono::system_clock::to_time_t(p)) + "'");
+        std::to_string(Clock::to_time_t(p)) + "'");
 }
 
 String ServiceDatabase::getTableHash(const String &table) const

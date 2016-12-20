@@ -57,6 +57,7 @@ enum class ApiResult
 };
 
 ApiResult api_call(const String &cmd, int argc, char *argv[]);
+void check_spec_file();
 void default_run();
 void init();
 void self_upgrade(const char *exe_path);
@@ -247,6 +248,8 @@ try
         return 0;
     }
 
+    check_spec_file();
+
     // load config from current dir
     Config c;
     c.load_current_config();
@@ -284,8 +287,17 @@ catch (...)
     return 1;
 }
 
+void check_spec_file()
+{
+    // no config - cannot do anything more
+    if (!fs::exists(CPPAN_FILENAME))
+        throw std::runtime_error("No spec file found");
+}
+
 void default_run()
 {
+    check_spec_file();
+
     Config c;
     c.load_current_config();
     c.process();
