@@ -175,6 +175,40 @@ void cleanPackages(const String &s, int flags)
     if (flags & CleanTarget::Bin)
         remove_files_like(directories.storage_dir_bin, s);
 
+    // cmake exports
+    if (flags & CleanTarget::Exp)
+    {
+        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(directories.storage_dir_exp), {}))
+        {
+            if (!fs::is_regular_file(f))
+                continue;
+            auto fn = f.path().filename().string();
+            for (auto &pkg : pkgs)
+            {
+                if (fn == pkg.target_name + ".cmake")
+                    fs::remove(f);
+            }
+        }
+    }
+
+#ifdef _WIN32
+    // solution links
+    if (flags & CleanTarget::Lnk)
+    {
+        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(directories.storage_dir_lnk), {}))
+        {
+            if (!fs::is_regular_file(f))
+                continue;
+            auto fn = f.path().filename().string();
+            for (auto &pkg : pkgs)
+            {
+                if (fn == pkg.target_name + ".sln.lnk")
+                    fs::remove(f);
+            }
+        }
+    }
+#endif
+
     // remove packages at the end
     for (auto &pkg : pkgs)
         sdb.removeInstalledPackage(pkg);

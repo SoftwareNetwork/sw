@@ -88,9 +88,11 @@ struct CleanTarget
         Obj = 0b0000'0010,
         Lib = 0b0000'0100,
         Bin = 0b0000'1000,
+        Exp = 0b0001'0000,
+        Lnk = 0b0010'0000,
 
-        All =           Src | Obj | Lib | Bin,
-        AllExceptSrc =        Obj | Lib | Bin,
+        All = 0xFF,
+        AllExceptSrc = All & ~Src,
     };
 };
 
