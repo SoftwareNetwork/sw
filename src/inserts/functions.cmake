@@ -446,6 +446,9 @@ endfunction(clear_variables)
 ########################################
 
 function(read_variables_file array f)
+    # TODO: maybe add a global flag for array,
+    # so if array is already read, we don't read it again
+
     if (NOT EXISTS ${f})
         return()
     endif()
@@ -467,6 +470,9 @@ function(read_variables_file array f)
     if (N EQUAL 0)
         return()
     endif()
+
+    clear_variables(${array})
+
     math(EXPR N "${N}-1")
     foreach(i RANGE ${N})
         list(GET vars ${i} var)

@@ -59,7 +59,9 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         set(to ${build_dir}/CMakeFiles/${CMAKE_VERSION})
         if (NOT EXISTS ${to})
             if (EXECUTABLE)
-                set(from ${storage_dir_cfg}/${config_exe}/CMakeFiles/${CMAKE_VERSION})
+                # TODO: fix executables bootstrapping
+                # BUG: copying bad cmake config dirs (32 - 64 bits)
+                #set(from ${storage_dir_cfg}/${config_dir}/CMakeFiles/${CMAKE_VERSION})
             else()
                 set(from ${CMAKE_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION})
             endif()
@@ -100,11 +102,11 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         #
 
         message(STATUS "")
-        message(STATUS "Preparing build tree for ${target} (${config_unhashed} - ${config_dir})")
+        message(STATUS "Preparing build tree for ${target} (${config_unhashed} - ${config_dir} - ${generator})")
         message(STATUS "")
 
         # call cmake
-        if (EXECUTABLE AND NOT CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
+        if (EXECUTABLE)# AND NOT CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
                 cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
                         -DVARIABLES_FILE=${variables_file}")

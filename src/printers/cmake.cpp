@@ -290,8 +290,8 @@ void print_dependencies(Context &ctx, const Package &d, bool use_cache)
     config_section_title(ctx, "direct dependencies");
 
     // make sure this var is 0
-    ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 0)");
-    ctx.addLine();
+    //ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 0)");
+    //ctx.addLine();
 
     for (auto &p : dd)
     {
@@ -344,9 +344,10 @@ void print_dependencies(Context &ctx, const Package &d, bool use_cache)
         ctx.addLine("if (CPPAN_USE_CACHE)");
         ctx.increaseIndent();
 
-        if (!d.empty() && rd[d].config->getDefaultProject().build_dependencies_with_same_config)
+        if (!d.empty())
         {
-            ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 1)");
+            ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG "s + (
+                rd[d].config->getDefaultProject().build_dependencies_with_same_config ? "1" : "0") + ")");
             ctx.addLine();
         }
 
@@ -453,7 +454,8 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                     cfg = "config_exe";
                 local.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
                 local.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
-                local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
+                // we do not pass this var to children
+                //local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
                 local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION}");
                 local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
                 local.addLine("-DCPPAN_BUILD_VERBOSE=${CPPAN_BUILD_VERBOSE}");
@@ -930,6 +932,9 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_" + d.variable_name + "})");
         ctx.decreaseIndent();
         ctx.addLine("endif()");
+        ctx.addLine();
+
+        ctx.addLine("read_variables_file(GEN_CHILD_VARS \"${VARIABLES_FILE}\")");
         ctx.addLine();
 
         ctx.addLine("if (NOT CPPAN_COMMAND)");
@@ -1717,7 +1722,7 @@ void CMakePrinter::print_obj_config_file(const path &fn) const
             config_section_title(ctx, "read passed variables");
             if (d.flags[pfLocalProject])
                 ctx.addLine("if (VARIABLES_FILE)");
-            ctx.addLine("read_variables_file(GEN_CHILD_VARS ${VARIABLES_FILE})");
+            ctx.addLine("read_variables_file(GEN_CHILD_VARS \"${VARIABLES_FILE}\")");
             if (d.flags[pfLocalProject])
             {
                 ctx.addLine("else()");
@@ -1894,6 +1899,12 @@ void CMakePrinter::print_obj_export_file(const path &fn) const
     Context ctx;
     file_header(ctx, d);
 
+    // before every export include 'cmake_obj_generate_filename'
+    // set CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG var
+    ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG "s + (
+        rd[d].config->getDefaultProject().build_dependencies_with_same_config ? "1" : "0") + ")");
+    ctx.addLine();
+
     for (auto &dp : rd[d].dependencies)
     {
         auto &dep = dp.second;
@@ -1993,9 +2004,9 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("set(CPPAN_SHOW_IDE_PROJECTS "s + (settings.show_ide_projects ? "1" : "0") + ")");
     ctx.addLine("endif()");
     ctx.addLine();
-    ctx.addLine("if (NOT DEFINED CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
-    ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 0)");
-    ctx.addLine("endif()");
+    //ctx.addLine("if (NOT DEFINED CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
+    //ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 0)");
+    //ctx.addLine("endif()");
     ctx.addLine();
     ctx.addLine("if (NOT DEFINED CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION)");
     ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION 0)");
@@ -2293,6 +2304,9 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
     int N = std::thread::hardware_concurrency();
     if (us.var_check_jobs > 0)
         N = std::min<int>(N, us.var_check_jobs);
+
+    if (N <= 1)
+        return;
 
     Checks checks;
     checks.load(checks_file);
