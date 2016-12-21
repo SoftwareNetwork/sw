@@ -28,6 +28,7 @@
 #include "resolver.h"
 
 #include "access_table.h"
+#include "archive.h"
 #include "config.h"
 #include "database.h"
 #include "directories.h"

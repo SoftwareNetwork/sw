@@ -27,6 +27,7 @@
 
 #include "verifier.h"
 
+#include "archive.h"
 #include "command.h"
 #include "config.h"
 #include "http.h"

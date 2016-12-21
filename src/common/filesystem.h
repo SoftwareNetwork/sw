@@ -75,9 +75,6 @@ String make_archive_name(const String &fn = String());
 void copy_dir(const path &source, const path &destination);
 void remove_files_like(const path &dir, const String &regex);
 
-bool pack_files(const path &fn, const Files &files, const path &root_dir);
-Files unpack_file(const path &fn, const path &dst);
-
 bool compare_files(const path &fn1, const path &fn2);
 bool compare_dirs(const path &dir1, const path &dir2);
 
@@ -87,7 +84,7 @@ namespace std
     {
         size_t operator()(const path& p) const
         {
-            return boost::filesystem::hash_value(p);
+            return fs::hash_value(p);
         }
     };
 }

@@ -33,6 +33,7 @@
 
 #include <access_table.h>
 #include <api.h>
+#include <archive.h>
 #include <config.h>
 #include <database.h>
 #include <filesystem.h>

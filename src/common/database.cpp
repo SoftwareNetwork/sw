@@ -27,6 +27,7 @@
 
 #include "database.h"
 
+#include "archive.h"
 #include "command.h"
 #include "date_time.h"
 #include "directories.h"

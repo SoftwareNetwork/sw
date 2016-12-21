@@ -27,6 +27,7 @@
 
 #include "source.h"
 
+#include "archive.h"
 #include "http.h"
 #include "templates.h"
 

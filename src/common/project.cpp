@@ -27,6 +27,7 @@
 
 #include "project.h"
 
+#include "archive.h"
 #include "bazel/bazel.h"
 #include "config.h"
 #include "command.h"
