@@ -28,7 +28,6 @@
 #include "resolver.h"
 
 #include "access_table.h"
-#include "archive.h"
 #include "config.h"
 #include "database.h"
 #include "directories.h"
@@ -38,6 +37,7 @@
 #include "hasher.h"
 #include "lock.h"
 #include "log.h"
+#include "pack.h"
 #include "project.h"
 #include "settings.h"
 #include "sqlite_database.h"

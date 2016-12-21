@@ -27,13 +27,13 @@
 
 #include "verifier.h"
 
-#include "archive.h"
 #include "command.h"
 #include "config.h"
 #include "http.h"
+#include "pack.h"
 #include "package.h"
-#include "resolver.h"
 #include "property_tree.h"
+#include "resolver.h"
 #include "spec.h"
 #include "templates.h"
 

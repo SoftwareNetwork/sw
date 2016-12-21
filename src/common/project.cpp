@@ -27,11 +27,11 @@
 
 #include "project.h"
 
-#include "archive.h"
 #include "bazel/bazel.h"
 #include "config.h"
 #include "command.h"
 #include "http.h"
+#include "pack.h"
 #include "resolver.h"
 
 #include "printers/printer.h"

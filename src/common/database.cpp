@@ -27,7 +27,6 @@
 
 #include "database.h"
 
-#include "archive.h"
 #include "command.h"
 #include "date_time.h"
 #include "directories.h"
@@ -35,6 +34,7 @@
 #include "hash.h"
 #include "http.h"
 #include "lock.h"
+#include "pack.h"
 #include "settings.h"
 #include "sqlite_database.h"
 #include "stamp.h"

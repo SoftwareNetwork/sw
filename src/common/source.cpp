@@ -27,8 +27,8 @@
 
 #include "source.h"
 
-#include "archive.h"
 #include "http.h"
+#include "pack.h"
 #include "templates.h"
 
 bool load_source(const yaml &root, Source &source)

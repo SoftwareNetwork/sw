@@ -33,12 +33,13 @@
 
 #include <access_table.h>
 #include <api.h>
-#include <archive.h>
+#include <pack.h>
 #include <config.h>
 #include <database.h>
 #include <filesystem.h>
 #include <http.h>
 #include <logger.h>
+#include <pack.h>
 #include <printers/cmake.h>
 #include <program.h>
 #include <settings.h>
