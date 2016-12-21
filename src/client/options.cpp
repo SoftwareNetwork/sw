@@ -38,7 +38,7 @@ ProgramOptions::ProgramOptions()
     visible.add_options()
         ("help,h", "produce this message")
         ("dir,d", po::value<std::string>(), "working directory")
-        ("version,v", po::bool_switch(), "version")
+        ("version,V", po::bool_switch(), "version")
         ("prepare-archive", po::bool_switch(), "prepare archive locally")
         ("curl-verbose", po::bool_switch(), "set curl to verbose mode")
         ("self-upgrade", po::bool_switch(), "upgrade CPPAN client to the latest version")
@@ -65,7 +65,7 @@ ProgramOptions::ProgramOptions()
         ;
 }
 
-bool ProgramOptions::parseArgs(int argc, char *argv[])
+bool ProgramOptions::parseArgs(int argc, const char * const * argv)
 {
     try
     {
@@ -81,6 +81,14 @@ bool ProgramOptions::parseArgs(int argc, char *argv[])
         return false;
     }
     return true;
+}
+
+bool ProgramOptions::parseArgs(const Strings &args)
+{
+    std::vector<const char *> argv;
+    for (const auto &a : args)
+        argv.push_back(&a[0]);
+    return parseArgs(argv.size(), &argv[0]);
 }
 
 std::string ProgramOptions::printHelp() const

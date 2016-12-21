@@ -140,4 +140,5 @@ public:
     static Settings &get_system_settings();
     static Settings &get_user_settings();
     static Settings &get_local_settings();
+    static void clear_local_settings();
 };

@@ -408,6 +408,11 @@ Settings &Settings::get_local_settings()
     return get(SettingsType::Local);
 }
 
+void Settings::clear_local_settings()
+{
+    get_local_settings() = get_user_settings();
+}
+
 void Settings::save(const path &p) const
 {
     std::ofstream o(p.string());

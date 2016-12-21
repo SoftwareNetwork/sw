@@ -38,7 +38,8 @@ class ProgramOptions
 public:
     ProgramOptions();
 
-    bool parseArgs(int argc, char *argv[]);
+    bool parseArgs(int argc, const char * const *argv);
+    bool parseArgs(const Strings &args);
     std::string printHelp() const;
 
     const po::variable_value& operator[](const std::string& name) const { return vm[name]; }
