@@ -74,6 +74,9 @@ public:
     iterator find(const PackageConfigs::key_type &k) { return packages.find(k); }
     const_iterator find(const PackageConfigs::key_type &k) const { return packages.find(k); }
 
+    bool empty() const { return packages.empty(); }
+    size_t size() const { return packages.size(); }
+
 private:
     PackageConfigs packages;
     std::set<std::unique_ptr<Config>> config_store;

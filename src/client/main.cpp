@@ -162,7 +162,7 @@ try
         {
             if (fs::is_directory(cmd))
             {
-                fs::current_path(cmd);
+                ScopedCurrentPath cp(cmd);
                 default_run();
                 return 0;
             }
