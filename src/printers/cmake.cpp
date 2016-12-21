@@ -289,6 +289,10 @@ void print_dependencies(Context &ctx, const Package &d, bool use_cache)
 
     config_section_title(ctx, "direct dependencies");
 
+    // make sure this var is 0
+    ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 0)");
+    ctx.addLine();
+
     for (auto &p : dd)
     {
         auto &dep = p.second;
@@ -772,6 +776,8 @@ void CMakePrinter::print_meta() const
         + cmake_functions);
     access_table->write_if_older(directories.get_static_files_dir() / cmake_header_filename, cmake_header);
     access_table->write_if_older(directories.get_static_files_dir() / cmake_export_import_filename, cmake_export_import_file);
+    access_table->write_if_older(directories.get_static_files_dir() / cmake_obj_generate_filename, cmake_generate_file);
+    access_table->write_if_older(directories.get_static_files_dir() / cmake_obj_build_filename, cmake_build_file);
     access_table->write_if_older(directories.get_static_files_dir() / "branch.rc.in", branch_rc_in);
     access_table->write_if_older(directories.get_static_files_dir() / "version.rc.in", version_rc_in);
     access_table->write_if_older(directories.get_include_dir() / CPP_HEADER_FILENAME, cppan_h);
@@ -1815,7 +1821,7 @@ void CMakePrinter::print_obj_generate_file(const path &fn) const
     ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();
 
-    ctx.addLine(cmake_generate_file);
+    ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_obj_generate_filename) + ")");
 
     // executable is the last in the chain
     // we do not use its exported symbols or whatever
@@ -1936,7 +1942,8 @@ void CMakePrinter::print_obj_build_file(const path &fn) const
     ctx.addLine("set(fn1 \"" + normalize_path(d.getStampFilename()) + "\")");
     ctx.addLine("set(fn2 \"${BUILD_DIR}/" + cppan_stamp_filename + "\")");
     ctx.addLine();
-    ctx.addLine(cmake_build_file);
+
+    ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_obj_build_filename) + ")");
 
     file_footer(ctx, d);
 
