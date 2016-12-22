@@ -104,6 +104,14 @@ try
                 log_level = "trace";
                 args_copy.erase(args_copy.begin() + i, args_copy.begin() + i + 1);
             }
+
+            // additional build args
+            if (args[i] == "--"s)
+            {
+                auto &s = Settings::get_user_settings();
+                s.additional_build_args.assign(args_copy.begin() + i + 1, args_copy.end());
+                args_copy.erase(args_copy.begin() + i, args_copy.end());
+            }
         }
         args = args_copy;
     }

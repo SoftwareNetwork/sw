@@ -696,16 +696,24 @@ int CMakePrinter::build(const BuildSettings &bs) const
 {
     LOG_INFO(logger, "Starting build process...");
 
-    auto &s = Settings::get_local_settings();
+    auto &ls = Settings::get_local_settings();
 
     command::Args args;
     args.push_back("cmake");
     args.push_back("--build");
     args.push_back(normalize_path(bs.binary_directory));
     args.push_back("--config");
-    args.push_back(s.configuration);
+    args.push_back(ls.configuration);
 
-    return run_command(s, args).rc;
+    auto &us = Settings::get_local_settings();
+    if (!us.additional_build_args.empty())
+    {
+        args.push_back("--");
+        for (auto &a : us.additional_build_args)
+            args.push_back(a);
+    }
+
+    return run_command(ls, args).rc;
 }
 
 void CMakePrinter::clear_cache() const
@@ -1065,6 +1073,10 @@ if (DEFINED CPPAN_BUILD_WARNING_LEVEL AND
     if (MSVC)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W${CPPAN_BUILD_WARNING_LEVEL}")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W${CPPAN_BUILD_WARNING_LEVEL}")
+    endif()
+    if (CLANG OR GCC)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
     endif()
 endif()
 )");
