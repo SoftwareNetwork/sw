@@ -62,7 +62,7 @@ endif()
 # maybe add similar options to cppan? '-- pass all args after two dashes to cmake build'
 set(parallel)
 if (MULTICORE)
-    set(parallel "-j ${N_CORES}") # temporary
+    #set(parallel "-j ${N_CORES}") # temporary
 endif()
 
 if (CONFIG)
