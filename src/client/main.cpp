@@ -345,7 +345,22 @@ void default_run()
     Config c;
     auto &deps = Settings::get_local_settings().dependencies;
     if (deps.empty())
+    {
         c.load_current_config();
+
+        // if we have several projects, gather deps in a new config
+        const auto &projects = c.getProjects();
+        if (projects.size() > 1)
+        {
+            Config c2;
+            for (auto &p : projects)
+            {
+                c2.getDefaultProject().dependencies.insert(
+                    p.second.dependencies.begin(), p.second.dependencies.end());
+            }
+            c = c2;
+        }
+    }
     else
         c.getDefaultProject().dependencies = deps;
     c.process();

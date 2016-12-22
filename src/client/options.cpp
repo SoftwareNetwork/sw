@@ -91,7 +91,7 @@ bool ProgramOptions::parseArgs(const Strings &args)
     std::vector<const char *> argv;
     for (const auto &a : args)
         argv.push_back(&a[0]);
-    return parseArgs(argv.size(), &argv[0]);
+    return parseArgs((int)argv.size(), &argv[0]);
 }
 
 std::string ProgramOptions::printHelp() const
