@@ -55,6 +55,16 @@ if (DEFINED CPPAN_BUILD_VERBOSE AND NOT CPPAN_BUILD_VERBOSE)
     set(ERROR_QUIET ERROR_QUIET)
 endif()
 
+# TODO: maybe provide better way of parallel build
+# from cppan's build() call
+# Q: how to pass -j options to cmake --build?
+# A: cmake --build .  *more args* -- -jN
+# maybe add similar options to cppan? '-- pass all args after two dashes to cmake build'
+set(parallel)
+if (MULTICORE)
+    set(parallel -j${N_CORES})
+endif()
+
 if (CONFIG)
     if (NOT DEFINED make OR
         "${make}" STREQUAL "" OR
@@ -100,9 +110,9 @@ if (CONFIG)
                 )
         endif()
     else()
-        cppan_debug_message("COMMAND make -j${N_CORES} -C ${BUILD_DIR}")
+        cppan_debug_message("COMMAND make ${parallel} -C ${BUILD_DIR}")
         execute_process(
-            COMMAND make -j${N_CORES} -C ${BUILD_DIR}
+            COMMAND make ${parallel} -C ${BUILD_DIR}
             ${OUTPUT_QUIET}
             ${ERROR_QUIET}
             RESULT_VARIABLE ret
@@ -120,9 +130,9 @@ else(CONFIG)
             RESULT_VARIABLE ret
         )
     else()
-        cppan_debug_message("COMMAND make -j${N_CORES} -C ${BUILD_DIR}")
+        cppan_debug_message("COMMAND make ${parallel} -C ${BUILD_DIR}")
         execute_process(
-            COMMAND make -j${N_CORES} -C ${BUILD_DIR}
+            COMMAND make ${parallel} -C ${BUILD_DIR}
             ${OUTPUT_QUIET}
             ${ERROR_QUIET}
             RESULT_VARIABLE ret
