@@ -110,7 +110,7 @@ public:
     void removeInstalledPackage(const Package &p) const;
     String getInstalledPackageHash(const Package &p) const;
     int getInstalledPackageId(const Package &p) const;
-    std::set<Package> getInstalledPackages() const;
+    PackagesSet getInstalledPackages() const;
 
     void setSourceGroups(const Package &p, const SourceGroups &sg) const;
     SourceGroups getSourceGroups(const Package &p) const;
@@ -142,6 +142,10 @@ public:
     IdDependencies findDependencies(const Packages &deps) const;
 
     void listPackages(const String &name = String());
+
+    PackagesSet getDependentPackages(const Package &pkg);
+    PackagesSet getDependentPackages(const PackagesSet &pkgs);
+    PackagesSet getTransitiveDependentPackages(const PackagesSet &pkgs);
 
 private:
     path db_repo_dir;

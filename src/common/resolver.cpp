@@ -42,6 +42,7 @@
 #include "settings.h"
 #include "sqlite_database.h"
 #include "templates.h"
+#include "verifier.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -193,8 +194,6 @@ void Resolver::resolve(const Packages &deps, std::function<void()> resolve_actio
 
 void Resolver::download(const DownloadDependency &d, const path &fn)
 {
-    LOG_INFO(logger, "Downloading: " << d.target_name << "...");
-
     if (!d.remote->downloadPackage(d, d.sha256, fn, query_local_db))
     {
         // if we get hashes from local db
@@ -232,10 +231,16 @@ void Resolver::download_and_unpack()
             return;
         }
 
+        // verify before any actions, so stop on error
+        if (Settings::get_local_settings().verify_all)
+            verify(d);
+
         // remove existing version dir
         cleanPackages(d.target_name);
 
         // dl
+        LOG_INFO(logger, "Downloading: " << d.target_name << "...");
+
         // maybe d.target_name instead of version_dir.string()?
         path fn = make_archive_name(version_dir.string());
         download(d, fn);

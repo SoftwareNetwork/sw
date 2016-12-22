@@ -27,6 +27,7 @@
 
 #pragma once
 
-#include "cppan_string.h"
+#include "package.h"
 
 void verify(const String &target_name);
+void verify(const Package &pkg);

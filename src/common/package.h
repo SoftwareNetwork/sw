@@ -75,6 +75,7 @@ private:
 };
 
 using Packages = std::map<String, Package>;
+using PackagesSet = std::set<Package>;
 
 Package extractFromString(const String &target);
 
@@ -97,3 +98,4 @@ struct CleanTarget
 };
 
 void cleanPackages(const String &s, int flags = CleanTarget::All);
+void cleanPackages(const PackagesSet &pkgs, int flags);

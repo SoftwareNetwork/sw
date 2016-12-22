@@ -119,6 +119,7 @@ struct Settings
     bool cmake_verbose = false;
     bool build_system_verbose = true;
     bool force_server_query = false;
+    bool verify_all = false;
 
 public:
     Settings();

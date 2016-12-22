@@ -183,6 +183,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     EXTRACT_AUTO(add_run_cppan_target);
     EXTRACT_AUTO(cmake_verbose);
     EXTRACT_AUTO(build_system_verbose);
+    EXTRACT_AUTO(verify_all);
     EXTRACT_AUTO(var_check_jobs);
     EXTRACT_VAR(root, build_warning_level, "build_warning_level", int);
 
@@ -236,6 +237,7 @@ void Settings::load_build(const yaml &root)
     EXTRACT_AUTO(add_run_cppan_target);
     EXTRACT_AUTO(cmake_verbose);
     EXTRACT_AUTO(build_system_verbose);
+    EXTRACT_AUTO(verify_all);
     EXTRACT_AUTO(var_check_jobs);
     EXTRACT_VAR(root, build_warning_level, "build_warning_level", int);
 

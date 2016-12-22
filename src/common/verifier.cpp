@@ -43,6 +43,12 @@ DECLARE_STATIC_LOGGER(logger, "verifier");
 void verify(const String &target_name)
 {
     auto pkg = extractFromString(target_name);
+    verify(pkg);
+}
+
+void verify(const Package &pkg)
+{
+    LOG_INFO(logger, "Verifying  : " << pkg.target_name << "...");
 
     auto dir = get_temp_filename("verifier");
     auto dir_original_unprepared = dir / "original_unprepared";
@@ -62,26 +68,27 @@ void verify(const String &target_name)
     // download & prepare cppan sources
     // we also resolve dependency here
     {
-        LOG_INFO(logger, "Resolving  : " << pkg.target_name << "...");
+        LOG_DEBUG(logger, "Resolving  : " << pkg.target_name << "...");
+        LOG_DEBUG(logger, "Downloading: " << pkg.target_name << "...");
 
         auto fn = dir_cppan / make_archive_name();
         resolve_and_download(pkg, fn);
 
-        LOG_INFO(logger, "Unpacking  : " << pkg.target_name << "...");
+        LOG_DEBUG(logger, "Unpacking  : " << pkg.target_name << "...");
         unpack_file(fn, dir_cppan);
         fs::remove(fn);
     }
 
     // only after cppan resolve step
-    LOG_INFO(logger, "Downloading package specification...");
+    LOG_DEBUG(logger, "Downloading package specification...");
     auto spec = download_specification(pkg);
     if (spec.package != pkg)
         throw std::runtime_error("Packages do not match (" + pkg.target_name + " vs. " + spec.package.target_name + ")");
 
     // download & prepare original sources
     {
-        LOG_INFO(logger, "Downloading original package from source...");
-        LOG_INFO(logger, print_source(spec.source));
+        LOG_DEBUG(logger, "Downloading original package from source...");
+        LOG_DEBUG(logger, print_source(spec.source));
 
         ScopedCurrentPath cp(dir_original_unprepared);
 
@@ -104,8 +111,7 @@ void verify(const String &target_name)
     fs::remove(dir_cppan / CPPAN_FILENAME);
     fs::remove(dir_original / CPPAN_FILENAME);
 
-    LOG_INFO(logger, "Comparing packages...");
+    LOG_DEBUG(logger, "Comparing packages...");
     if (!compare_dirs(dir_cppan, dir_original))
         throw std::runtime_error("Error! Packages are different.");
-    LOG_INFO(logger, "Verified... Ok. Packages are the same.");
 }

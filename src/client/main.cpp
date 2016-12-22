@@ -78,7 +78,7 @@ try
     // set correct working directory to look for config file
     std::unique_ptr<ScopedCurrentPath> cp;
 
-    // do a manual check of critical arguments
+    // do manual checks of critical arguments
     {
         Strings args_copy = args;
         for (size_t i = 1; i < args.size(); i++)
@@ -283,6 +283,7 @@ try
     if (options().count("verify"))
     {
         verify(options["verify"].as<String>());
+        LOG_INFO(logger, "Verified... Ok. Packages are the same.");
         return 0;
     }
 
@@ -417,7 +418,7 @@ void self_upgrade()
     auto arg0 = L"\"" + exe + L"\"";
     auto dst = L"\"" + program.wstring() + L"\"";
     std::cout << "Replacing client" << "\n";
-    if (_wexecl(exe.c_str(), arg0.c_str(), L"--self-upgrade-copy", dst.c_str(), 0) == -1)
+    if (_wexecl(exe.c_str(), arg0.c_str(), L"internal-self-upgrade-copy", dst.c_str(), 0) == -1)
     {
         throw std::runtime_error("errno = "s + std::to_string(errno) + "\n" +
             "Cannot do a self upgrade. Replace this file with newer CPPAN client manually.");

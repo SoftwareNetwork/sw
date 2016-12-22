@@ -730,7 +730,7 @@ int ServiceDatabase::getInstalledPackageId(const Package &p) const
     return id;
 }
 
-std::set<Package> ServiceDatabase::getInstalledPackages() const
+PackagesSet ServiceDatabase::getInstalledPackages() const
 {
     std::set<std::pair<String, String>> pkgs_s;
     db->execute("select package, version from InstalledPackages",
@@ -740,7 +740,7 @@ std::set<Package> ServiceDatabase::getInstalledPackages() const
         return 0;
     });
 
-    std::set<Package> pkgs;
+    PackagesSet pkgs;
     for (auto &p : pkgs_s)
     {
         Package pkg;
@@ -1230,4 +1230,91 @@ void PackagesDatabase::listPackages(const String &name)
     });
     if (n == 0)
         LOG_INFO(logger, nothing);
+}
+
+PackagesSet PackagesDatabase::getDependentPackages(const Package &pkg)
+{
+    PackagesSet r;
+
+    // 1. Find current project version id.
+    String project_id;
+    db->execute("select id from Projects where path = '" + pkg.ppath.toString() + "'",
+        [&project_id](SQLITE_CALLBACK_ARGS)
+    {
+        project_id = cols[0];
+        return 0;
+    });
+
+    // 2. Find project versions dependent on this version.
+    std::set<std::pair<String, String>> pkgs_s;
+    db->execute(
+        "select path, case when branch is not null then branch else major || '.' || minor || '.' || patch end as version "
+        "from ProjectVersionDependencies "
+        "join ProjectVersions on ProjectVersions.id = project_version_id "
+        "join Projects on Projects.id = project_id "
+        "where project_dependency_id = '" + project_id + "'",
+        [&pkgs_s](SQLITE_CALLBACK_ARGS)
+    {
+        pkgs_s.insert({ cols[0], cols[1] });
+        return 0;
+    });
+
+    for (auto &p : pkgs_s)
+    {
+        Package pkg;
+        pkg.ppath = p.first;
+        pkg.version = p.second;
+        pkg.createNames();
+        r.insert(pkg);
+    }
+
+    return r;
+}
+
+PackagesSet PackagesDatabase::getDependentPackages(const PackagesSet &pkgs)
+{
+    PackagesSet r;
+    for (auto &pkg : pkgs)
+    {
+        auto dpkgs = getDependentPackages(pkg);
+        r.insert(dpkgs.begin(), dpkgs.end());
+    }
+
+    // exclude input
+    for (auto &pkg : pkgs)
+        r.erase(pkg);
+
+    return r;
+}
+
+PackagesSet PackagesDatabase::getTransitiveDependentPackages(const PackagesSet &pkgs)
+{
+    auto r = pkgs;
+    std::map<Package, bool> retrieved;
+    while (1)
+    {
+        bool changed = false;
+
+        for (auto &pkg : r)
+        {
+            if (retrieved[pkg])
+                continue;
+
+            retrieved[pkg] = true;
+            changed = true;
+
+            auto dpkgs = getDependentPackages(pkg);
+            r.insert(dpkgs.begin(), dpkgs.end());
+            break;
+        }
+
+        if (!changed)
+            break;
+    }
+
+    // exclude input
+    for (auto &pkg : pkgs)
+        r.erase(pkg);
+
+    return r;
 }

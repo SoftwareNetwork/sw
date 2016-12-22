@@ -143,18 +143,53 @@ Package extractFromString(const String &target)
 void cleanPackages(const String &s, int flags)
 {
     std::regex r(s);
+    PackagesSet pkgs;
 
+    // find direct packages
     auto &sdb = getServiceDatabase();
-    std::set<Package> pkgs;
-    for (auto &pkg : sdb.getInstalledPackages())
+    auto ipkgs = sdb.getInstalledPackages();
+    for (auto &pkg : ipkgs)
     {
         if (!std::regex_match(pkg.target_name, r))
             continue;
         pkgs.insert(pkg);
-
-        if (flags == CleanTarget::All)
-            LOG_INFO(logger, "Cleaning   : " + pkg.target_name + "...");
     }
+
+    // find dependent packages and remove non installed
+    auto dpkgs = getPackagesDatabase().getTransitiveDependentPackages(pkgs);
+    for (auto i = dpkgs.begin(); i != dpkgs.end();)
+    {
+        if (ipkgs.find(*i) == ipkgs.end())
+            i = dpkgs.erase(i);
+        else
+            ++i;
+    }
+
+    auto log = [&flags](const auto &pkgs)
+    {
+        for (auto &pkg : pkgs)
+        {
+            if (flags == CleanTarget::All)
+                LOG_INFO(logger, "Cleaning   : " + pkg.target_name + "...");
+        }
+    };
+
+    log(pkgs);
+    log(dpkgs);
+
+    cleanPackages(pkgs, flags);
+
+    // dependent packages must be rebuilt but with only limited set of flags
+    cleanPackages(dpkgs,
+        CleanTarget::Bin |
+        CleanTarget::Lib |
+        CleanTarget::Obj |
+        CleanTarget::Exp);
+}
+
+void cleanPackages(const PackagesSet &pkgs, int flags)
+{
+    auto &sdb = getServiceDatabase();
 
     auto rm = [](const auto &p)
     {
@@ -168,12 +203,12 @@ void cleanPackages(const String &s, int flags)
             rm(pkg.getDirSrc());
         if (flags & CleanTarget::Obj)
             rm(pkg.getDirObj());
-    }
 
-    if (flags & CleanTarget::Lib)
-        remove_files_like(directories.storage_dir_lib, s);
-    if (flags & CleanTarget::Bin)
-        remove_files_like(directories.storage_dir_bin, s);
+        if (flags & CleanTarget::Lib)
+            remove_files_like(directories.storage_dir_lib, ".*" + pkg.target_name + ".*");
+        if (flags & CleanTarget::Bin)
+            remove_files_like(directories.storage_dir_bin, ".*" + pkg.target_name + ".*");
+    }
 
     // cmake exports
     if (flags & CleanTarget::Exp)

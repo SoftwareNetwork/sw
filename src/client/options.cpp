@@ -55,6 +55,9 @@ ProgramOptions::ProgramOptions()
 
         ("settings", po::value<std::string>()->default_value(""), "file to take settings from")
 
+        ("verbose,v", po::bool_switch(), "verbose output")
+        ("trace", po::bool_switch(), "trace output")
+
         ("clear-cache", po::bool_switch(), "clear CMakeCache.txt files")
         ("clear-vars-cache", po::bool_switch(), "clear checked symbols, types, includes etc.")
         (CLEAN_PACKAGES, po::value<std::string>(), "completely clean packages files for matched regex")
