@@ -193,6 +193,7 @@ private:
     optional<bool> header_only;
 
 public:
+    Project();
     Project(const ProjectPath &root_project);
 
     void applyFlags(ProjectFlags &flags) const;

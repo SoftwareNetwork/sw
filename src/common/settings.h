@@ -121,6 +121,10 @@ struct Settings
     bool force_server_query = false;
     bool verify_all = false;
 
+    // some project-like variables
+    // later this could be replaced with local_settings' Config c;
+    Packages dependencies;
+
 public:
     Settings();
 

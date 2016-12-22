@@ -343,7 +343,11 @@ void default_run()
     check_spec_file();
 
     Config c;
-    c.load_current_config();
+    auto &deps = Settings::get_local_settings().dependencies;
+    if (deps.empty())
+        c.load_current_config();
+    else
+        c.getDefaultProject().dependencies = deps;
     c.process();
 }
 

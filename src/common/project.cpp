@@ -308,6 +308,12 @@ void Patch::load(const yaml &root)
     });
 }
 
+Project::Project()
+    : Project(ProjectPath())
+{
+
+}
+
 Project::Project(const ProjectPath &root_project)
     : root_project(root_project)
 {
@@ -731,7 +737,6 @@ void Project::load(const yaml &root)
     include_directories.public_.insert("${BDIR}");
 
     bs_insertions.get_config_insertions(root);
-
     options = loadOptionsMap(root);
 
     // deps

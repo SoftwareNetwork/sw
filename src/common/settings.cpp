@@ -207,6 +207,14 @@ void Settings::load_main(const yaml &root, const SettingsType type)
 
         load_build(current_build);
     }
+
+    // read project settings (deps etc.)
+    if (type == SettingsType::Local)
+    {
+        Project p;
+        p.load(root);
+        dependencies = p.dependencies;
+    }
 }
 
 void Settings::load_build(const yaml &root)
