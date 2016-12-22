@@ -116,7 +116,20 @@ try
         args = args_copy;
     }
 
-    // TODO: change verbosity somewhere here and pass it to init
+    // check if single arg is dir name
+    if (args.size() == 2)
+    {
+        auto cmd = args[1];
+
+        // file/url arg
+        if (!isUrl(cmd) && fs::is_directory(cmd))
+        {
+            cp = std::make_unique<ScopedCurrentPath>(cmd);
+            args.erase(args.end() - 1);
+        }
+    }
+
+    // main cppan client init routine
     init(log_level);
 
     // default run
