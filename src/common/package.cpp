@@ -189,12 +189,27 @@ void cleanPackages(const String &s, int flags)
 
 void cleanPackages(const PackagesSet &pkgs, int flags)
 {
-    auto &sdb = getServiceDatabase();
-
     auto rm = [](const auto &p)
     {
         if (fs::exists(p))
             fs::remove_all(p);
+    };
+
+    auto rm_recursive = [&pkgs](const auto &dir, const auto &ext)
+    {
+        if (!fs::exists(dir))
+            return;
+        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+        {
+            if (!fs::is_regular_file(f))
+                continue;
+            auto fn = f.path().filename().string();
+            for (auto &pkg : pkgs)
+            {
+                if (fn == pkg.target_name + ext)
+                    fs::remove(f);
+            }
+        }
     };
 
     for (auto &pkg : pkgs)
@@ -212,39 +227,16 @@ void cleanPackages(const PackagesSet &pkgs, int flags)
 
     // cmake exports
     if (flags & CleanTarget::Exp)
-    {
-        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(directories.storage_dir_exp), {}))
-        {
-            if (!fs::is_regular_file(f))
-                continue;
-            auto fn = f.path().filename().string();
-            for (auto &pkg : pkgs)
-            {
-                if (fn == pkg.target_name + ".cmake")
-                    fs::remove(f);
-            }
-        }
-    }
+        rm_recursive(directories.storage_dir_exp, ".cmake");
 
 #ifdef _WIN32
     // solution links
     if (flags & CleanTarget::Lnk)
-    {
-        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(directories.storage_dir_lnk), {}))
-        {
-            if (!fs::is_regular_file(f))
-                continue;
-            auto fn = f.path().filename().string();
-            for (auto &pkg : pkgs)
-            {
-                if (fn == pkg.target_name + ".sln.lnk")
-                    fs::remove(f);
-            }
-        }
-    }
+        rm_recursive(directories.storage_dir_lnk, ".sln.lnk");
 #endif
 
     // remove packages at the end
+    auto &sdb = getServiceDatabase();
     for (auto &pkg : pkgs)
         sdb.removeInstalledPackage(pkg);
 }

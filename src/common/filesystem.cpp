@@ -237,6 +237,7 @@ bool compare_dirs(const path &dir1, const path &dir2)
     auto traverse_dir = [](const auto &dir)
     {
         std::vector<path> files;
+        if (fs::exists(dir))
         for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
         {
             if (!fs::is_regular_file(f))
