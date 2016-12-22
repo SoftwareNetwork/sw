@@ -312,6 +312,54 @@ String Settings::get_hash() const
     h |= generator;
     h |= toolset;
     h |= use_shared_libs;
+
+    // besides we track all valuable ENV vars
+    // to be sure that we'll load correct config
+    auto add_env = [&h](const char *var)
+    {
+        auto e = getenv(var);
+        if (!e)
+            return;
+        h |= String(e);
+    };
+
+    add_env("PATH");
+    add_env("Path");
+    add_env("FPATH");
+    add_env("CPATH");
+
+    // windows, msvc
+    add_env("VSCOMNTOOLS");
+    add_env("VS71COMNTOOLS");
+    add_env("VS80COMNTOOLS");
+    add_env("VS90COMNTOOLS");
+    add_env("VS100COMNTOOLS");
+    add_env("VS110COMNTOOLS");
+    add_env("VS120COMNTOOLS");
+    add_env("VS130COMNTOOLS");
+    add_env("VS140COMNTOOLS");
+    add_env("VS141COMNTOOLS"); // 2017?
+    add_env("VS150COMNTOOLS");
+    add_env("VS151COMNTOOLS");
+    add_env("VS160COMNTOOLS"); // for the future
+
+    add_env("INCLUDE");
+    add_env("LIB");
+
+    // gcc
+    add_env("COMPILER_PATH");
+    add_env("LIBRARY_PATH");
+    add_env("C_INCLUDE_PATH");
+    add_env("CPLUS_INCLUDE_PATH");
+    add_env("OBJC_INCLUDE_PATH");
+    //add_env("LD_LIBRARY_PATH"); // do we need these?
+    //add_env("DYLD_LIBRARY_PATH");
+
+    add_env("CC");
+    add_env("CFLAGS");
+    add_env("CXXFLAGS");
+    add_env("CPPFLAGS");
+
     return h.hash;
 }
 

@@ -38,7 +38,7 @@
 struct command
 {
     String name;
-    std::vector<String> params;
+    Strings params;
 };
 
 struct if_expr
@@ -112,7 +112,7 @@ auto parse_arguments(const String &f)
     int start = 0;
     int i = 0;
     int sz = (int)f.size();
-    std::vector<String> s;
+    Strings s;
 
     auto add_to_s = [&s](auto str)
     {
@@ -480,7 +480,7 @@ void ac_processor::ifdef_add(command &c)
 
                     boost::replace_all(act.action, "\r", "");
                     boost::replace_all(act.action, "then", "\r");
-                    std::vector<String> ifthen;
+                    Strings ifthen;
                     boost::split(ifthen, act.action, boost::is_any_of("\r"));
 
                     boost::trim(ifthen[0]);
@@ -532,6 +532,11 @@ void ac_processor::ifdef_add(command &c)
             {
                 auto params = parse_arguments(c.params[2].substr(cmd.size() + 1));
                 //var = params[0]; // this could be very dangerous
+            }
+            else if (cmd == "AC_COMPILE_IFELSE")
+            {
+                command c2{ "",parse_arguments(c.params[2].substr(cmd.size() + 1)) };
+                process_AC_COMPILE_IFELSE(c2);
             }
             else
             {
@@ -825,13 +830,8 @@ void ac_processor::process_AC_CHECK_LIB(command &c)
 void ac_processor::process_AC_CHECK_MEMBERS(command &c)
 {
     auto vars = split_string(c.params[0], ",;");
-    for (auto &variable : vars)
+    for (const auto &variable : vars)
     {
-        boost::replace_all(variable, "  ", " ");
-        boost::replace_all(variable, " ", "_");
-        boost::replace_all(variable, ".", "_");
-        variable = "HAVE_" + boost::algorithm::to_upper_copy(variable);
-
         auto p = variable.find('.');
         auto struct_ = variable.substr(0, p);
         auto member = variable.substr(p + 1);
@@ -844,8 +844,14 @@ void ac_processor::process_AC_CHECK_MEMBERS(command &c)
             header = "dirent.h";
         // add more headers here
 
-        checks.addCheck<CheckCustom>(variable,
-            "CHECK_STRUCT_HAS_MEMBER(\"" + struct_ + "\" " + member + " \"" + header + "\" " + variable + ")");
+        auto var = variable;
+        boost::replace_all(var, "  ", " ");
+        boost::replace_all(var, " ", "_");
+        boost::replace_all(var, ".", "_");
+        var = "HAVE_" + boost::algorithm::to_upper_copy(var);
+
+        checks.addCheck<CheckCustom>(var,
+            "CHECK_STRUCT_HAS_MEMBER(\"" + struct_ + "\" " + member + " \"" + header + "\" " + var + ")");
     }
 }
 

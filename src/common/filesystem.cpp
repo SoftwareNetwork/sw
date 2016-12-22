@@ -154,15 +154,15 @@ void write_file_if_different(const path &p, const String &s)
     ofile << s;
 }
 
-void copy_dir(const path &source, const path &destination)
+void copy_dir(const path &src, const path &dst)
 {
-    fs::create_directories(destination);
-    for (auto &f : boost::make_iterator_range(fs::directory_iterator(source), {}))
+    fs::create_directories(dst);
+    for (auto &f : boost::make_iterator_range(fs::directory_iterator(src), {}))
     {
         if (fs::is_directory(f))
-            copy_dir(f, destination / f.path().filename());
+            copy_dir(f, dst / f.path().filename());
         else
-            fs::copy_file(f, destination / f.path().filename(), fs::copy_option::overwrite_if_exists);
+            fs::copy_file(f, dst / f.path().filename(), fs::copy_option::overwrite_if_exists);
     }
 }
 

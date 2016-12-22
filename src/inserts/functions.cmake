@@ -252,11 +252,6 @@ function(get_configuration_unhashed out)
         endif()
     endif()
 
-    set(cyg)
-    if (CYGWIN)
-        set(cyg ${CPPAN_CONFIG_PART_DELIMETER}cyg)
-    endif()
-
     prepare_config_part(system ${CMAKE_SYSTEM_NAME})
     prepare_config_part(processor ${CMAKE_SYSTEM_PROCESSOR})
     prepare_config_part(compiler ${CMAKE_CXX_COMPILER_ID})
@@ -301,11 +296,6 @@ endfunction(get_configuration_with_generator_unhashed)
 ########################################
 
 function(get_configuration_exe_unhashed out)
-    set(cyg)
-    if (CYGWIN)
-        set(cyg ${CPPAN_CONFIG_PART_DELIMETER}cyg)
-    endif()
-
     prepare_config_part(system ${CMAKE_SYSTEM_NAME})
     prepare_config_part(processor ${CMAKE_HOST_SYSTEM_PROCESSOR})
     set(config ${system}${CPPAN_CONFIG_PART_DELIMETER}${processor}${cyg})

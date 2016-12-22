@@ -118,18 +118,39 @@ int build_packages(const Config &c, const String &name)
 {
     BuildSettings bs;
 
-    bs.config = get_config();
-    bs.set_build_dirs(name);
-    bs.append_build_dirs(bs.config);
+    path src;
+    String cmake_version;
 
-    auto cmake_version = get_cmake_version();
-    auto src = directories.storage_dir_cfg / bs.config / "CMakeFiles" / cmake_version;
+    auto set_config = [&](const String &config)
+    {
+        bs.config = config;
+        bs.set_build_dirs(name);
+        bs.append_build_dirs(bs.config);
+
+        cmake_version = get_cmake_version();
+        src = directories.storage_dir_cfg / bs.config / "CMakeFiles" / cmake_version;
+    };
+
+    set_config(get_config());
 
     // if dir does not exist it means probably we have new cmake version
     // we have config value but there was not a test run with copying cmake prepared files
     // so start unconditional test run
     if (!fs::exists(src))
-        test_run();
+    {
+        auto config = test_run();
+        if (bs.config != config)
+        {
+            // the original config was detected incorrectly, re-apply
+            set_config(config);
+
+            // do we need to addConfigHash() here? like in get_config()
+            // or config must be very unique?
+        }
+    }
+
+    if (!fs::exists(src))
+        throw std::runtime_error("src dir does not exist");
 
     // move this to printer some time
     // copy cached cmake config to bin dir
