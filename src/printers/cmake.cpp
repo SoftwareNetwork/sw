@@ -1205,7 +1205,7 @@ endif()
                 ctx.increaseIndent();
 
                 {
-                    auto bdir = pkg.getDirObj() / cppan_build_dir / (pkg.flags[pfExecutable] ? "${config_exe}" : "${config_lib_gen}");
+                    auto bdir = pkg.getDirObj() / cppan_build_dir / "${config_dir}";
                     auto p = normalize_path(get_binary_path(pkg, bdir.string()));
                     ctx.addLine("if (EXISTS \"" + p + "\")");
                     ctx.increaseIndent();
