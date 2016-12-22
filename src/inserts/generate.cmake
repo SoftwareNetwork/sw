@@ -98,6 +98,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         add_variable(GEN_CHILD_VARS CPPAN_DEBUG_STACK_SPACE)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_VERBOSE)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_WARNING_LEVEL)
+        add_variable(GEN_CHILD_VARS CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT)
         write_variables_file(GEN_CHILD_VARS ${variables_file})
         #
 

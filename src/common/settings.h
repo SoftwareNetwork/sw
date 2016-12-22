@@ -120,6 +120,7 @@ struct Settings
     bool build_system_verbose = true;
     bool force_server_query = false;
     bool verify_all = false;
+    bool copy_all_libraries_to_output = false;
 
     // for build command
     Strings additional_build_args;

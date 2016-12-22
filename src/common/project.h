@@ -136,7 +136,6 @@ public:
     Patch patch;
     StringSet aliases;
     bool import_from_bazel = false;
-    bool copy_to_output_dir = true;
     bool prefer_binaries = false;
 
     // no files (cmake only etc.)

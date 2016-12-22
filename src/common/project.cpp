@@ -607,7 +607,6 @@ void Project::load(const yaml &root)
         throw std::runtime_error("Project cannot be static and shared simultaneously");
 
     EXTRACT_AUTO(import_from_bazel);
-    EXTRACT_AUTO(copy_to_output_dir);
     EXTRACT_AUTO(prefer_binaries);
     EXTRACT_AUTO(export_all_symbols);
     EXTRACT_AUTO(build_dependencies_with_same_config);

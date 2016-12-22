@@ -184,6 +184,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     EXTRACT_AUTO(cmake_verbose);
     EXTRACT_AUTO(build_system_verbose);
     EXTRACT_AUTO(verify_all);
+    EXTRACT_AUTO(copy_all_libraries_to_output);
     EXTRACT_AUTO(var_check_jobs);
     EXTRACT_VAR(root, build_warning_level, "build_warning_level", int);
 
@@ -239,6 +240,7 @@ void Settings::load_build(const yaml &root)
     EXTRACT_AUTO(generator);
     EXTRACT_AUTO(toolset);
     EXTRACT_AUTO(use_shared_libs);
+    EXTRACT_VAR(root, use_shared_libs, "build_shared_libs", bool);
     EXTRACT_AUTO(silent);
     EXTRACT_AUTO(use_cache);
     EXTRACT_AUTO(show_ide_projects);
@@ -246,6 +248,7 @@ void Settings::load_build(const yaml &root)
     EXTRACT_AUTO(cmake_verbose);
     EXTRACT_AUTO(build_system_verbose);
     EXTRACT_AUTO(verify_all);
+    EXTRACT_AUTO(copy_all_libraries_to_output);
     EXTRACT_AUTO(var_check_jobs);
     EXTRACT_VAR(root, build_warning_level, "build_warning_level", int);
 

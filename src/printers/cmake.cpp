@@ -460,6 +460,7 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                 local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
                 local.addLine("-DCPPAN_BUILD_VERBOSE=${CPPAN_BUILD_VERBOSE}");
                 local.addLine("-DCPPAN_BUILD_WARNING_LEVEL=${CPPAN_BUILD_WARNING_LEVEL}");
+                local.addLine("-DCPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT=${CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT}");
                 local.addLine("-DN_CORES=${N_CORES}");
                 if (d.empty())
                     local.addLine("-DMULTICORE=1");
@@ -598,6 +599,8 @@ endif()
     ctx.addLine("set(CPPAN_DISABLE_CHECKS "s + (bs.disable_checks ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (s.build_system_verbose ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_BUILD_WARNING_LEVEL "s + (s.build_warning_level ? std::to_string(s.build_warning_level.get()) : "3") + ")");
+    ctx.addLine("set(CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT "s + (s.copy_all_libraries_to_output ? "1" : "0") + ")");
+    ctx.addLine();
     ctx.addLine("add_subdirectory(" + normalize_path(s.cppan_dir) + ")");
     ctx.addLine();
 
@@ -2094,8 +2097,6 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
             ctx.addLine("if (CPPAN_USE_CACHE)");
             ctx.increaseIndent();
 
-            ctx.addLine("if (NOT COPY_LIBRARIES_TO_OUTPUT)");
-            ctx.increaseIndent();
             ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
             ctx.addLine("if (MSVC OR XCODE)");
             ctx.addLine("    set(output_dir ${output_dir}/$<CONFIG>)");
@@ -2110,13 +2111,25 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
             for (auto &dp : copy_deps)
             {
                 auto &p = dp.second;
-                // do not copy static only projects
-                if (rd[p].config->getDefaultProject().static_only ||
-                    !rd[p].config->getDefaultProject().copy_to_output_dir)
-                    continue;
 
+                ctx.addLine("set(copy 1)");
                 ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
-                ctx.addLine("if (NOT ${type} STREQUAL STATIC_LIBRARY)");
+
+                ctx.addLine("if (${type} STREQUAL STATIC_LIBRARY)");
+                ctx.increaseIndent();
+                ctx.addLine("set(copy 0)");
+                ctx.decreaseIndent();
+                ctx.addLine("endif()");
+                ctx.addLine();
+
+                ctx.addLine("if (CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT)");
+                ctx.increaseIndent();
+                ctx.addLine("set(copy 1)");
+                ctx.decreaseIndent();
+                ctx.addLine("endif()");
+                ctx.addLine();
+
+                ctx.addLine("if (copy)");
                 ctx.increaseIndent();
                 ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target(cppan_dummy_copy_target) + " POST_BUILD");
                 ctx.increaseIndent();
@@ -2129,14 +2142,28 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
                 ctx.decreaseIndent();
                 ctx.decreaseIndent();
                 ctx.addLine(")");
+                ctx.addLine();
+
+                // import library for shared libs
+                {
+                    ctx.addLine("if (${type} STREQUAL SHARED_LIBRARY)");
+                    ctx.increaseIndent();
+                    ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target(cppan_dummy_copy_target) + " POST_BUILD");
+                    ctx.increaseIndent();
+                    ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+                    ctx.increaseIndent();
+                    ctx.addLine("$<TARGET_LINKER_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_LINKER_FILE_NAME:" + p.target_name + ">");
+                    ctx.decreaseIndent();
+                    ctx.decreaseIndent();
+                    ctx.addLine(")");
+                    ctx.decreaseIndent();
+                    ctx.addLine("endif()");
+                }
+
                 ctx.decreaseIndent();
                 ctx.addLine("endif()");
                 ctx.addLine();
             }
-
-            ctx.decreaseIndent();
-            ctx.addLine("endif()");
-            ctx.addLine();
 
             ctx.decreaseIndent();
             ctx.addLine("endif()");

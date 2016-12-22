@@ -210,6 +210,7 @@ int build_packages(const String &name, const std::set<Package> &pkgs, const path
 
 int build_package(const String &target_name, const path &settings_fn, const String &config)
 {
+    Settings::get_local_settings().copy_all_libraries_to_output = true;
     auto p = extractFromString(target_name);
     return build_packages(p.ppath.back(), { p }, settings_fn, config);
 }
