@@ -452,7 +452,7 @@ void Resolver::read_config(const DownloadDependency &d)
 
 void Resolver::assign_dependencies(const Package &pkg, const Packages &deps)
 {
-    rd.packages[pkg].dependencies = deps;
+    rd.packages[pkg].dependencies.insert(deps.begin(), deps.end());
     for (auto &dd : download_dependencies_)
     {
         if (!dd.second.flags[pfDirectDependency])

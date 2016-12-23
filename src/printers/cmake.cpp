@@ -385,10 +385,16 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
         auto &d = dp.second;
         if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectoriesOnly])
             continue;
-        if (d.flags[pfExecutable] && !d.flags[pfLocalProject])
-            continue;
-        if (d.flags[pfExecutable] && d.flags[pfLocalProject] && !d.flags[pfDirectDependency])
-            continue; // but maybe copy its deps?
+        if (d.flags[pfExecutable])
+        {
+            if (!Settings::get_local_settings().copy_all_libraries_to_output)
+            {
+                if (!d.flags[pfLocalProject])
+                    continue;
+                if (d.flags[pfLocalProject] && !d.flags[pfDirectDependency])
+                    continue; // but maybe copy its deps?
+            }
+        }
         auto i = out.insert(dp);
         if (i.second)
             gather_copy_deps(ctx, rd[d].dependencies, out);
@@ -2111,6 +2117,15 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
             for (auto &dp : copy_deps)
             {
                 auto &p = dp.second;
+
+                if (dp.second.flags[pfExecutable])
+                {
+                    // if we have an exe, we must include all dependent targets
+                    // because they're not visible from exe directly
+                    config_section_title(ctx, "Executable build deps for " + dp.second.target_name);
+                    print_dependencies(ctx, dp.second, settings.use_cache);
+                    ctx.emptyLines(1);
+                }
 
                 ctx.addLine("set(copy 1)");
                 ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");

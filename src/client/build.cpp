@@ -147,10 +147,10 @@ int build_packages(const Config &c, const String &name)
             // do we need to addConfigHash() here? like in get_config()
             // or config must be very unique?
         }
-    }
 
-    if (!fs::exists(src))
-        throw std::runtime_error("src dir does not exist");
+        if (!fs::exists(src))
+            throw std::runtime_error("src dir does not exist");
+    }
 
     // move this to printer some time
     // copy cached cmake config to bin dir
