@@ -27,6 +27,8 @@
 
 #include "yaml.h"
 
+#include "checks.h"
+
 // no links allowed
 // to do this we call YAML::Clone()
 void merge(yaml dst, const yaml &src, const YamlMergeFlags &flags)
@@ -178,16 +180,6 @@ void prepare_config_for_reading(yaml root)
     }
 }
 
-yaml prepare_config_for_writing(const yaml &root)
-{
-    // TODO: sort keys, also remove duplicates
-
-    // do global sort
-    // ...
-
-    return root;
-}
-
 yaml load_yaml_config(const path &p)
 {
     auto s = read_file(p);
@@ -208,5 +200,157 @@ void dump_yaml_config(const path &p, const yaml &root)
 
 String dump_yaml_config(const yaml &root)
 {
-    return YAML::Dump(prepare_config_for_writing(root));
+    using namespace YAML;
+
+    if (!root.IsMap())
+        return Dump(root);
+
+    Emitter e;
+    e.SetIndent(4);
+    e << BeginMap;
+
+    auto emit = [&e](auto root, const String &k, bool literal = false)
+    {
+        e << Key << k;
+        e << Value;
+        if (literal)
+            e << Literal;
+        e << root[k];
+        e << Newline << Newline;
+    };
+
+    Strings begin
+    {
+        "local_settings",
+
+        "source",
+        "version",
+
+        "common_settings",
+
+        "root_project",
+    };
+
+    Strings project
+    {
+        "name",
+        "license",
+
+        "type",
+        "library_type",
+        "executable_type",
+
+        "root_directory",
+        "root_dir",
+        "unpack_directory",
+        "unpack_dir",
+
+        "c_standard",
+        "c",
+        "cxx_standard",
+        "c++",
+
+        "empty",
+        "custom",
+
+        "static_only",
+        "shared_only",
+        "header_only",
+
+        "import_from_bazel",
+        "prefer_binaries",
+        "export_all_symbols",
+        "build_dependencies_with_same_config",
+
+        "api_name",
+
+        "files",
+        "build",
+        "exclude_from_package",
+        "exclude_from_build",
+
+        "include_directories",
+        "options",
+        "aliases",
+        "dependencies",
+
+        "patch",
+    };
+
+    Strings end;
+    for (int i = 0; i < Check::Max; i++)
+    {
+        auto inf = getCheckInformation(i);
+        end.push_back(inf.cppan_key);
+    }
+
+    Strings literal
+    {
+        "pre_sources",
+        "post_sources",
+        "post_target",
+        "post_alias",
+    };
+
+    std::set<String> keys;
+    keys.insert(begin.begin(), begin.end());
+    keys.insert("projects");
+    keys.insert(project.begin(), project.end());
+    keys.insert(end.begin(), end.end());
+    keys.insert(literal.begin(), literal.end());
+
+    auto print = [&emit, &literal](auto root, const auto &v)
+    {
+        for (auto &b : v)
+        {
+            if (!root[b].IsDefined())
+                continue;
+            emit(root, b, std::find(literal.begin(), literal.end(), b) != literal.end());
+        }
+    };
+
+    auto print_rest = [&keys, &print, &emit, &literal, &end](auto root)
+    {
+        // emit not enumerated keys
+        for (auto n : root)
+        {
+            auto k = n.first.template as<String>();
+            if (keys.find(k) == keys.end())
+                emit(root, k);
+        }
+
+        print(root, literal);
+        print(root, end);
+    };
+
+    print(root, begin);
+
+    if (root["projects"].IsDefined())
+    {
+        e << Key << "projects";
+        e << Value;
+        e << BeginMap;
+        for (auto p : root["projects"])
+        {
+            auto k = p.first.template as<String>();
+            e << Key << k;
+            e << Value;
+            e << BeginMap;
+            // can have source
+            print(p.second, begin);
+            // main data
+            print(p.second, project);
+            // rest
+            print_rest(p.second);
+            e << EndMap;
+        }
+        e << EndMap;
+    }
+    else
+        print(root, project);
+
+    print_rest(root);
+
+    e << EndMap;
+    return e.c_str();
 }

@@ -150,3 +150,5 @@ struct Checks
     template <class T, class ... Args>
     T *addCheck(Args && ... args);
 };
+
+Check::Information getCheckInformation(int type);

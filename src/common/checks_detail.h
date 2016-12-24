@@ -36,8 +36,6 @@
 
 extern const std::map<int, Check::Information> check_information;
 
-Check::Information getCheckInformation(int type);
-
 class CheckFunction : public Check
 {
 public:
