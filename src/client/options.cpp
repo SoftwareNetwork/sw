@@ -51,7 +51,7 @@ ProgramOptions::ProgramOptions()
         ("config", po::value<std::string>()->default_value(""), "config name for building")
         ("build", po::value<std::string>(), "file or dir: an inline building")
         ("build-only", po::value<std::string>(), "file or dir: an inline building without touching any configs")
-        ("build-package", po::value<std::string>(), "build existing cppan package")
+        (BUILD_PACKAGES, po::value<Strings>()->multitoken(), "build existing cppan package")
 
         ("settings", po::value<std::string>()->default_value(""), "file to take settings from")
 
@@ -60,7 +60,7 @@ ProgramOptions::ProgramOptions()
 
         ("clear-cache", po::bool_switch(), "clear CMakeCache.txt files")
         ("clear-vars-cache", po::bool_switch(), "clear checked symbols, types, includes etc.")
-        (CLEAN_PACKAGES, po::value<std::string>(), "completely clean packages files for matched regex")
+        (CLEAN_PACKAGES, po::value<Strings>()->multitoken(), "completely clean packages files for matched regex")
         ;
 
     // i - internal options

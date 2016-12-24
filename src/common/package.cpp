@@ -33,6 +33,8 @@
 #include "hash.h"
 #include "lock.h"
 
+#include <boost/algorithm/string.hpp>
+
 #include <iostream>
 #include <regex>
 
@@ -142,6 +144,10 @@ Package extractFromString(const String &target)
 
 void cleanPackages(const String &s, int flags)
 {
+    // on source flag remove all
+    if (flags & CleanTarget::Src)
+        flags = CleanTarget::All;
+
     std::regex r(s);
     PackagesSet pkgs;
 
@@ -167,11 +173,22 @@ void cleanPackages(const String &s, int flags)
 
     auto log = [&flags](const auto &pkgs)
     {
-        for (auto &pkg : pkgs)
+        String s;
+        if (flags != CleanTarget::All)
         {
-            if (flags == CleanTarget::All)
-                LOG_INFO(logger, "Cleaning   : " + pkg.target_name + "...");
+            s += " (";
+            auto fs = CleanTarget::getStringsById();
+            for (auto &f : fs)
+            {
+                if (flags & f.first)
+                    s += f.second + ", ";
+            }
+            if (s.size() > 2)
+                s.resize(s.size() - 2);
+            s += ")";
         }
+        for (auto &pkg : pkgs)
+            LOG_INFO(logger, "Cleaning   : " + pkg.target_name + "..." + s);
     };
 
     log(pkgs);
@@ -179,12 +196,20 @@ void cleanPackages(const String &s, int flags)
 
     cleanPackages(pkgs, flags);
 
-    // dependent packages must be rebuilt but with only limited set of flags
-    cleanPackages(dpkgs,
-        CleanTarget::Bin |
-        CleanTarget::Lib |
-        CleanTarget::Obj |
-        CleanTarget::Exp);
+    if (flags & CleanTarget::Src)
+    {
+        // dependent packages must be rebuilt but with only limited set of the flags
+        cleanPackages(dpkgs,
+            CleanTarget::Bin |
+            CleanTarget::Lib |
+            CleanTarget::Obj |
+            CleanTarget::Exp);
+    }
+    else
+    {
+        // dependent packages must be rebuilt with the same set of the flags
+        cleanPackages(dpkgs, flags);
+    }
 }
 
 void cleanPackages(const PackagesSet &pkgs, int flags)
@@ -235,8 +260,38 @@ void cleanPackages(const PackagesSet &pkgs, int flags)
         rm_recursive(directories.storage_dir_lnk, ".sln.lnk");
 #endif
 
-    // remove packages at the end
-    auto &sdb = getServiceDatabase();
-    for (auto &pkg : pkgs)
-        sdb.removeInstalledPackage(pkg);
+    // remove packages at the end in case we're removing sources
+    if (flags & CleanTarget::Src)
+    {
+        auto &sdb = getServiceDatabase();
+        for (auto &pkg : pkgs)
+            sdb.removeInstalledPackage(pkg);
+    }
+}
+
+std::map<int, String> CleanTarget::getStringsById()
+{
+    static std::map<int, String> m
+    {
+#define ADD(x) { CleanTarget::x, boost::to_lower_copy(String(#x)) }
+
+        ADD(Src),
+        ADD(Obj),
+        ADD(Lib),
+        ADD(Bin),
+        ADD(Exp),
+        ADD(Lnk),
+
+#undef ADD
+    };
+    return m;
+}
+
+std::map<String, int> CleanTarget::getStrings()
+{
+    auto m = CleanTarget::getStringsById();
+    std::map<String, int> m2;
+    for (auto &s : m)
+        m2[s.second] = s.first;
+    return m2;
 }

@@ -95,6 +95,9 @@ struct CleanTarget
         All = 0xFF,
         AllExceptSrc = All & ~Src,
     };
+
+    static std::map<String, int> getStrings();
+    static std::map<int, String> getStringsById();
 };
 
 void cleanPackages(const String &s, int flags = CleanTarget::All);

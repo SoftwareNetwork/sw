@@ -295,7 +295,23 @@ try
     }
     if (options().count(CLEAN_PACKAGES))
     {
-        cleanPackages(options[CLEAN_PACKAGES].as<String>());
+        auto fs = CleanTarget::getStrings();
+        int flags = 0;
+        auto opts = options[CLEAN_PACKAGES].as<Strings>();
+        for (auto &o : opts)
+        {
+            auto i = fs.find(o);
+            if (i != fs.end())
+                flags |= i->second;
+        }
+        if (flags == 0)
+            flags = CleanTarget::All;
+        for (auto &o : opts)
+        {
+            auto i = fs.find(o);
+            if (i == fs.end())
+                cleanPackages(o, flags);
+        }
         return 0;
     }
 
@@ -304,7 +320,7 @@ try
     if (options().count("verify"))
     {
         verify(options["verify"].as<String>());
-        LOG_INFO(logger, "Verified... Ok. Packages are the same.");
+        LOG_INFO(logger, "Verified...  Ok. Packages are the same.");
         return 0;
     }
 
@@ -316,9 +332,16 @@ try
     {
         return build_only(options["build-only"].as<String>(), options["config"].as<String>());
     }
-    if (options().count("build-package"))
+    if (options().count(BUILD_PACKAGES))
     {
-        return build_package(options["build-package"].as<String>(), options["settings"].as<String>(), options["config"].as<String>());
+        auto pkgs = options[BUILD_PACKAGES].as<Strings>();
+        for (auto &pkg : pkgs)
+        {
+            auto r = build_package(pkg, options["settings"].as<String>(), options["config"].as<String>());
+            if (r)
+                return r;
+        }
+        return 0;
     }
 
     if (options()["prepare-archive"].as<bool>())
