@@ -171,7 +171,7 @@ void cleanPackages(const String &s, int flags)
             ++i;
     }
 
-    auto log = [&flags](const auto &pkgs)
+    auto log = [](const auto &pkgs, int flags)
     {
         String s;
         if (flags != CleanTarget::All)
@@ -191,25 +191,20 @@ void cleanPackages(const String &s, int flags)
             LOG_INFO(logger, "Cleaning   : " + pkg.target_name + "..." + s);
     };
 
-    log(pkgs);
-    log(dpkgs);
-
+    log(pkgs, flags);
     cleanPackages(pkgs, flags);
 
     if (flags & CleanTarget::Src)
     {
         // dependent packages must be rebuilt but with only limited set of the flags
-        cleanPackages(dpkgs,
-            CleanTarget::Bin |
-            CleanTarget::Lib |
-            CleanTarget::Obj |
-            CleanTarget::Exp);
+        flags = CleanTarget::Bin |
+                CleanTarget::Lib |
+                CleanTarget::Obj |
+                CleanTarget::Exp ;
     }
-    else
-    {
-        // dependent packages must be rebuilt with the same set of the flags
-        cleanPackages(dpkgs, flags);
-    }
+
+    log(dpkgs, flags);
+    cleanPackages(dpkgs, flags);
 }
 
 void cleanPackages(const PackagesSet &pkgs, int flags)
