@@ -42,7 +42,6 @@
 using Sources = std::set<String>;
 using StringMap = std::map<String, String>;
 using StringSet = std::set<String>;
-using Symbols = std::map<String, StringSet>;
 
 struct IncludeDirectories
 {
@@ -62,7 +61,8 @@ struct BuildSystemConfigInsertions
     String post_target;
     String post_alias;
 
-    void get_config_insertions(const yaml &n);
+    void load(const yaml &n);
+    void save(yaml &n) const;
 };
 
 struct Options
@@ -103,6 +103,7 @@ public:
 using OptionsMap = std::map<String, Options>;
 
 OptionsMap loadOptionsMap(const yaml &root);
+void saveOptionsMap(yaml &root, const OptionsMap &m);
 
 using ReplaceInFiles = std::unordered_map<String, String>;
 
@@ -111,6 +112,7 @@ struct Patch
     ReplaceInFiles replace_in_files;
 
     void load(const yaml &root);
+    void save(yaml &root) const;
 };
 
 struct Project
@@ -129,14 +131,12 @@ public:
     Sources sources;
     Sources build_files;
     Sources exclude_from_package;
-    Files exclude_from_build;
+    Sources exclude_from_build;
     Packages dependencies;
     BuildSystemConfigInsertions bs_insertions;
     OptionsMap options;
     Patch patch;
     StringSet aliases;
-    bool import_from_bazel = false;
-    bool prefer_binaries = false;
 
     // no files (cmake only etc.)
     bool empty = false;
@@ -153,6 +153,8 @@ public:
     int c_standard{ 0 };
     int cxx_standard{ 0 };
 
+    bool import_from_bazel = false;
+    bool prefer_binaries = false;
     bool export_all_symbols = false;
     bool build_dependencies_with_same_config = false;
 
@@ -206,12 +208,16 @@ public:
     void setRelativePath(const String &name);
 
     void load(const yaml &root);
+    yaml save() const;
     void save_dependencies(yaml &root) const;
 
     // own data, not from config
 public:
     // flag shows that files were loaded from 'files' node
     bool files_loaded = false;
+
+    // cloned data from input file for future save() calls
+    std::shared_ptr<Project> original_project;
 
 private:
     ProjectPath root_project;

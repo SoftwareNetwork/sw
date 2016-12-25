@@ -284,9 +284,24 @@ void load_source_and_version(const yaml &root, Source &source, Version &version)
     }
 }
 
-void BuildSystemConfigInsertions::get_config_insertions(const yaml &n)
+void BuildSystemConfigInsertions::load(const yaml &n)
 {
 #define ADD_CFG_INSERTION(x) get_config_insertion(n, #x, x)
+    ADD_CFG_INSERTION(pre_sources);
+    ADD_CFG_INSERTION(post_sources);
+    ADD_CFG_INSERTION(post_target);
+    ADD_CFG_INSERTION(post_alias);
+#undef ADD_CFG_INSERTION
+}
+
+void BuildSystemConfigInsertions::save(yaml &n) const
+{
+#define ADD_CFG_INSERTION(x) \
+    if (!x.empty())          \
+    {                        \
+        n[#x] = x;           \
+    }
+
     ADD_CFG_INSERTION(pre_sources);
     ADD_CFG_INSERTION(post_sources);
     ADD_CFG_INSERTION(post_target);
@@ -306,6 +321,15 @@ void Patch::load(const yaml &root)
         auto to = v.second["to"].template as<String>();
         replace_in_files[from] = to;
     });
+}
+
+void Patch::save(yaml &node) const
+{
+    yaml root;
+    for (auto &r : replace_in_files)
+        root[r.first] = r.second;
+    if (!replace_in_files.empty())
+        node["patch"] = root;
 }
 
 Project::Project()
@@ -594,7 +618,7 @@ optional<ProjectPath> Project::load_local_dependency(const String &name)
 
 void Project::load(const yaml &root)
 {
-    load_source(root, source);
+    load_source_and_version(root, source, version);
 
     EXTRACT_AUTO(empty);
     EXTRACT_AUTO(custom);
@@ -642,8 +666,6 @@ void Project::load(const yaml &root)
         }
     }
 
-    load_source_and_version(root, source, version);
-
     license = get_scalar<String>(root, "license");
 
     auto read_dir = [&root](auto &p, const String &s)
@@ -656,17 +678,13 @@ void Project::load(const yaml &root)
                 throw std::runtime_error("'" + s + "' must not point outside the current dir: " + p.string() + ", " + cp.string());
         });
     };
+
     read_dir(root_directory, "root_directory");
     if (root_directory.empty())
         read_dir(root_directory, "root_dir");
     read_dir(unpack_directory, "unpack_directory");
     if (unpack_directory.empty())
         read_dir(unpack_directory, "unpack_dir");
-
-    // we're trying to find root directory
-    // to make some following default checks available
-    if (root_directory.empty())
-        findRootDirectory(fs::current_path());
 
     get_map_and_iterate(root, "include_directories", [this](const auto &n)
     {
@@ -684,58 +702,8 @@ void Project::load(const yaml &root)
         else
             throw std::runtime_error("include key must be only 'public' or 'private'");
     });
-    if (defaults_allowed && include_directories.public_.empty())
-    {
-        if (fs::exists("include"))
-            include_directories.public_.insert("include");
-        else
-        {
-            if (fs::exists(root_directory / "include"))
-                include_directories.public_.insert(normalize_path(root_directory / "include"));
-            else
-            {
-                include_directories.public_.insert(".");
-                // one case left: root_directory / "."
-            }
-        }
-    }
-    if (defaults_allowed && include_directories.private_.empty())
-    {
-        std::function<void(const String &, const String &)> autodetect_source_dir;
-        autodetect_source_dir = [this, &autodetect_source_dir](const String &current, const String &next = String())
-        {
-            if (fs::exists(current))
-            {
-                if (fs::exists("include"))
-                    include_directories.private_.insert(current);
-                else
-                    include_directories.public_.insert(current);
-            }
-            else
-            {
-                if (fs::exists(root_directory / current))
-                {
-                    if (fs::exists(root_directory / "include"))
-                        include_directories.private_.insert(normalize_path(root_directory / current));
-                    else
-                    {
-                        include_directories.public_.insert(current);
-                        // one case left: root_directory / "src"
-                    }
-                }
-                else
-                {
-                    // now check next dir
-                    if (!next.empty())
-                        autodetect_source_dir(next, "");
-                }
-            }
-        };
-        autodetect_source_dir("src", "lib");
-    }
-    include_directories.public_.insert("${BDIR}");
 
-    bs_insertions.get_config_insertions(root);
+    bs_insertions.load(root);
     options = loadOptionsMap(root);
 
     // deps
@@ -951,42 +919,9 @@ void Project::load(const yaml &root)
     };
 
     read_sources(sources, "files");
-    files_loaded = root["files"].IsDefined() && !sources.empty();
-    if (defaults_allowed && sources.empty())
-    {
-        // try to add some default dirs
-        // root_directory will be removed (entered),
-        // so do not insert like 'insert(root_directory / "dir/.*");'
-        if (fs::exists(root_directory / "include"))
-            sources.insert("include/.*");
-        if (fs::exists(root_directory / "src"))
-            sources.insert("src/.*");
-        else if (fs::exists(root_directory / "lib"))
-            sources.insert("lib/.*");
-
-        if (sources.empty())
-        {
-            // no include, source dirs
-            // try to add all types of C/C++ program files to gather
-            // regex means all sources in root dir (without slashes '/')
-            auto r_replace = [](auto &s)
-            {
-                return boost::replace_all_copy(s, "+", "\\+");
-            };
-            for (auto &v : header_file_extensions)
-                sources.insert("[^/]*\\" + r_replace(v));
-            for (auto &v : source_file_extensions)
-                sources.insert("[^/]*\\" + r_replace(v));
-        }
-    }
     read_sources(build_files, "build");
     read_sources(exclude_from_package, "exclude_from_package");
     read_sources(exclude_from_build, "exclude_from_build");
-    if (import_from_bazel)
-    {
-        for (auto &bfn : bazel_filenames)
-            exclude_from_build.insert(bfn);
-    }
 
     aliases = get_sequence_set<String>(root, "aliases");
 
@@ -1025,6 +960,173 @@ void Project::load(const yaml &root)
     EXTRACT_VAR(root, et, "executable_type", String);
     if (et == "win32")
         executable_type = ExecutableType::Win32;
+
+    // after loading process input data where it's necessary
+
+    // we also store original data in ptr
+    // this is useful for printing original config (project)
+    original_project = std::make_shared<Project>(*this);
+
+    // we're trying to find root directory
+    // to make some following default checks available
+    if (root_directory.empty())
+        findRootDirectory(fs::current_path());
+
+    // idirs
+    if (defaults_allowed && include_directories.public_.empty())
+    {
+        if (fs::exists("include"))
+            include_directories.public_.insert("include");
+        else
+        {
+            if (fs::exists(root_directory / "include"))
+                include_directories.public_.insert(normalize_path(root_directory / "include"));
+            else
+            {
+                include_directories.public_.insert(".");
+                // one case left: root_directory / "."
+            }
+        }
+    }
+    if (defaults_allowed && include_directories.private_.empty())
+    {
+        std::function<void(const String &, const String &)> autodetect_source_dir;
+        autodetect_source_dir = [this, &autodetect_source_dir](const String &current, const String &next = String())
+        {
+            if (fs::exists(current))
+            {
+                if (fs::exists("include"))
+                    include_directories.private_.insert(current);
+                else
+                    include_directories.public_.insert(current);
+            }
+            else
+            {
+                if (fs::exists(root_directory / current))
+                {
+                    if (fs::exists(root_directory / "include"))
+                        include_directories.private_.insert(normalize_path(root_directory / current));
+                    else
+                    {
+                        include_directories.public_.insert(current);
+                        // one case left: root_directory / "src"
+                    }
+                }
+                else
+                {
+                    // now check next dir
+                    if (!next.empty())
+                        autodetect_source_dir(next, "");
+                }
+            }
+        };
+        autodetect_source_dir("src", "lib");
+    }
+    include_directories.public_.insert("${BDIR}");
+
+    // files
+    files_loaded = root["files"].IsDefined() && !sources.empty();
+    if (defaults_allowed && sources.empty())
+    {
+        // try to add some default dirs
+        // root_directory will be removed (entered),
+        // so do not insert like 'insert(root_directory / "dir/.*");'
+        if (fs::exists(root_directory / "include"))
+            sources.insert("include/.*");
+        if (fs::exists(root_directory / "src"))
+            sources.insert("src/.*");
+        else if (fs::exists(root_directory / "lib"))
+            sources.insert("lib/.*");
+
+        if (sources.empty())
+        {
+            // no include, source dirs
+            // try to add all types of C/C++ program files to gather
+            // regex means all sources in root dir (without slashes '/')
+            auto r_replace = [](auto &s)
+            {
+                return boost::replace_all_copy(s, "+", "\\+");
+            };
+            for (auto &v : header_file_extensions)
+                sources.insert("[^/]*\\" + r_replace(v));
+            for (auto &v : source_file_extensions)
+                sources.insert("[^/]*\\" + r_replace(v));
+        }
+    }
+    if (import_from_bazel)
+    {
+        for (auto &bfn : bazel_filenames)
+            exclude_from_build.insert(bfn);
+    }
+}
+
+yaml Project::save() const
+{
+    if (original_project)
+        return original_project->save();
+
+    yaml root;
+
+#define ADD_IF_VAL(x, c, v) if (c) root[#x] = v
+#define ADD_IF_VAL_TRIPLE(x) ADD_IF_VAL(x, x, x)
+#define ADD_IF_NOT_EMPTY_VAL(x, v) ADD_IF_VAL(x, !x.empty(), v)
+#define ADD_IF_NOT_EMPTY(x) ADD_IF_NOT_EMPTY_VAL(x, x)
+#define ADD_IF_EQU_VAL(x, e, v) ADD_IF_VAL(x, (x) == (e), v)
+#define ADD_SET(x, s) for (auto &v : s) root[#x].push_back(v)
+
+    if (isValidSourceUrl(source))
+        save_source(root, source);
+    if (version.isValid() &&
+        (version.type == VersionType::Version || version.type == VersionType::Branch))
+        root["version"] = version.toString();
+
+    ADD_IF_NOT_EMPTY(name);
+    ADD_IF_NOT_EMPTY(license);
+
+    ADD_IF_EQU_VAL(type, ProjectType::Library, "library");
+    ADD_IF_EQU_VAL(library_type, LibraryType::Shared, "shared");
+    ADD_IF_EQU_VAL(library_type, LibraryType::Module, "module");
+    ADD_IF_EQU_VAL(executable_type, ExecutableType::Win32, "win32");
+
+    ADD_IF_NOT_EMPTY_VAL(root_directory, normalize_path(root_directory));
+    ADD_IF_NOT_EMPTY_VAL(unpack_directory, normalize_path(unpack_directory));
+
+    if (c_standard)
+        root["c"] = c_standard;
+    if (cxx_standard)
+        root["c++"] = cxx_standard;
+
+    ADD_IF_VAL_TRIPLE(empty);
+    ADD_IF_VAL_TRIPLE(custom);
+
+    ADD_IF_VAL_TRIPLE(static_only);
+    ADD_IF_VAL_TRIPLE(shared_only);
+    if (header_only)
+        root["header_only"] = header_only.get();
+
+    ADD_IF_VAL_TRIPLE(import_from_bazel);
+    ADD_IF_VAL_TRIPLE(prefer_binaries);
+    ADD_IF_VAL_TRIPLE(export_all_symbols);
+    ADD_IF_VAL_TRIPLE(build_dependencies_with_same_config);
+
+    ADD_IF_NOT_EMPTY(api_name);
+
+    ADD_SET(files, sources);
+    ADD_SET(build, build_files);
+    ADD_SET(exclude_from_package, exclude_from_package);
+    ADD_SET(exclude_from_build, exclude_from_build);
+
+    for (auto &v : include_directories.public_)
+        root["include_directories"]["public"].push_back(normalize_path(v));
+    for (auto &v : include_directories.private_)
+        root["include_directories"]["private"].push_back(normalize_path(v));
+    saveOptionsMap(root, options);
+    ADD_SET(aliases, aliases);
+    save_dependencies(root);
+    patch.save(root);
+    bs_insertions.save(root);
+
+    return root;
 }
 
 void Project::prepareExports() const
@@ -1144,7 +1246,42 @@ OptionsMap loadOptionsMap(const yaml &root)
 
         option.link_directories = get_sequence_set<String, String>(opt_level.second, "link_directories");
 
-        option.bs_insertions.get_config_insertions(opt_level.second);
+        option.bs_insertions.load(opt_level.second);
     });
     return options;
+}
+
+void saveOptionsMap(yaml &node, const OptionsMap &m)
+{
+    yaml root;
+    for (auto &ol : m)
+    {
+        auto &o = ol.second;
+
+#define ADD_OPT(x) \
+        for (auto &v : o.x) \
+            root[ol.first][#x][v.first].push_back(v.second)
+#define ADD_OPT_SYS(x) \
+        for (auto &v1 : o.system_##x) \
+            for (auto &v : v1.second) \
+                root[ol.first][#x][v1.first][v.first].push_back(v.second)
+
+        ADD_OPT(definitions);
+        ADD_OPT(include_directories);
+        ADD_OPT(compile_options);
+        ADD_OPT(link_options);
+        ADD_OPT(link_libraries);
+
+        ADD_OPT_SYS(definitions);
+        ADD_OPT_SYS(include_directories);
+        ADD_OPT_SYS(compile_options);
+        ADD_OPT_SYS(link_options);
+        ADD_OPT_SYS(link_libraries);
+
+        for (auto &v : o.link_directories)
+            root[ol.first]["link_directories"].push_back(v);
+
+        o.bs_insertions.save(root[ol.first]);
+    }
+    node["options"] = root;
 }

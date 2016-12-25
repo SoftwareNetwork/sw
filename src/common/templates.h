@@ -19,9 +19,6 @@
 #define SCOPE_EXIT \
     auto ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = ::detail::ScopeGuardOnExit() + [&]()
 
-#define SCOPE_EXIT_NO_EXCEPTIONS \
-    auto ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = ::detail::ScopeGuardOnExitWithoutExceptions() + [&]()
-
 #define RUN_ONCE_IMPL(kv) \
     kv std::once_flag ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG); ScopeGuard(&ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG)) + [&]()
 
@@ -33,8 +30,8 @@ class ScopeGuard
     using Function = std::function<void()>;
 
 public:
-    ScopeGuard(Function f, bool during_exception = true)
-        : f(std::move(f)), during_exception(during_exception)
+    ScopeGuard(Function f)
+        : f(std::move(f))
     {}
     ScopeGuard(std::once_flag *flag)
         : flag(flag)
@@ -43,10 +40,7 @@ public:
     {
         if (!active)
             return;
-        if (during_exception)
-            run();
-        else if (!std::current_exception())
-            run();
+        run();
     }
 
     void dismiss()
@@ -75,7 +69,6 @@ public:
 private:
     Function f;
     bool active{ true };
-    bool during_exception{ true };
     std::once_flag *flag{ nullptr };
 
     void run()
@@ -93,18 +86,11 @@ private:
 namespace detail
 {
     enum class ScopeGuardOnExit {};
-    enum class ScopeGuardOnExitWithoutExceptions {};
 
     template <typename F>
     ScopeGuard operator+(ScopeGuardOnExit, F &&fn)
     {
         return ScopeGuard(std::forward<F>(fn));
-    }
-
-    template <typename F>
-    ScopeGuard operator+(ScopeGuardOnExitWithoutExceptions, F &&fn)
-    {
-        return ScopeGuard(std::forward<F>(fn), false);
     }
 }
 
