@@ -37,7 +37,6 @@
 #include "hasher.h"
 #include "http.h"
 #include "lock.h"
-#include "log.h"
 #include "project.h"
 #include "resolver.h"
 #include "settings.h"

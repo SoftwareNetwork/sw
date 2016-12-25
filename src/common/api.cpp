@@ -28,7 +28,6 @@
 #include "api.h"
 
 #include "http.h"
-#include "log.h"
 #include "project.h"
 #include "settings.h"
 
@@ -111,23 +110,25 @@ void Api::get_notifications(const Remote &r, int n)
         auto nt = (NotificationType)n.second.get<int>("type", 0);
         auto t = n.second.get<String>("text", "");
         auto ts = n.second.get<String>("timestamp", "");
-        std::cout << i++ << " ";
+
+        std::ostringstream ss;
+        ss << i++ << " ";
         switch (nt)
         {
             case NotificationType::Error:
-                std::cout << "E";
+                ss << "E";
                 break;
             case NotificationType::Warning:
-                std::cout << "W";
+                ss << "W";
                 break;
             case NotificationType::Message:
-                std::cout << "I";
+                ss << "I";
                 break;
             case NotificationType::Success:
-                std::cout << "OK";
+                ss << "OK";
                 break;
         }
-        std::cout << " " << ts << " " << t << "\n";
+        LOG_INFO(logger, ss.str() << " " << ts << " " << t);
     }
 }
 

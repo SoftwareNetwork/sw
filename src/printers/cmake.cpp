@@ -36,7 +36,6 @@
 #include <hash.h>
 #include <lock.h>
 #include <inserts.h>
-#include <log.h>
 #include <program.h>
 #include <resolver.h>
 #include <settings.h>
@@ -393,6 +392,12 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
                     continue;
                 if (d.flags[pfLocalProject] && !d.flags[pfDirectDependency])
                     continue; // but maybe copy its deps?
+            }
+            else
+            {
+                // copy only direct executables
+                if (!d.flags[pfDirectDependency])
+                    continue;
             }
         }
         auto i = out.insert(dp);
@@ -953,6 +958,15 @@ void CMakePrinter::print_src_config_file(const path &fn) const
 
         ctx.addLine("read_variables_file(GEN_CHILD_VARS \"${VARIABLES_FILE}\")");
         ctx.addLine();
+
+        if (!d.flags[pfLocalProject])
+        {
+            // read check vars file
+            ctx.addLine("set(vars_dir \"" + normalize_path(directories.storage_dir_cfg) + "\")");
+            ctx.addLine("set(vars_file \"${vars_dir}/${config}.cmake\")");
+            ctx.addLine("read_check_variables_file(${vars_file})");
+            ctx.addLine();
+        }
 
         ctx.addLine("if (NOT CPPAN_COMMAND)");
         ctx.increaseIndent();
@@ -2124,8 +2138,11 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
                     // because they're not visible from exe directly
                     config_section_title(ctx, "Executable build deps for " + dp.second.target_name);
                     print_dependencies(ctx, dp.second, settings.use_cache);
+                    config_section_title(ctx, "End of executable build deps for " + dp.second.target_name);
                     ctx.emptyLines(1);
                 }
+
+                config_section_title(ctx, "Copy " + dp.second.target_name);
 
                 ctx.addLine("set(copy 1)");
                 ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
@@ -2263,14 +2280,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("if (NOT CPPAN_DISABLE_CHECKS)");
         ctx.addLine();
 
-        // if we use user config storage for storing vars
-        // we won't be able to bootstrap client itself on systems without cppan
-        auto cfg_dir = directories.storage_dir_cfg;
-
         // read vars file
-        ctx.addLine("set(vars_file \"" + normalize_path(cfg_dir) + "/${config}.cmake\")");
+        ctx.addLine("set(vars_dir \"" + normalize_path(directories.storage_dir_cfg) + "\")");
+        ctx.addLine("set(vars_file \"${vars_dir}/${config}.cmake\")");
         // helper will show match between config with gen and just config
-        ctx.addLine("set(vars_file_helper \"" + normalize_path(cfg_dir) + "/${config}.${config_dir}.cmake\")");
+        ctx.addLine("set(vars_file_helper \"${vars_dir}//${config}.${config_dir}.cmake\")");
         if (!d.flags[pfLocalProject])
             ctx.addLine("read_check_variables_file(${vars_file})");
         ctx.addLine();
@@ -2409,6 +2423,7 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
         ctx.addLine(cmake_minimum_required);
         ctx.addLine("project(" + std::to_string(i) + " LANGUAGES C CXX)");
         ctx.addLine(cmake_includes);
+        ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + ")");
         w.write_parallel_checks_for_workers(ctx);
         write_file(d / cmake_config_filename, ctx.getText());
 

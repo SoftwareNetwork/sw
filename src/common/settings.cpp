@@ -33,7 +33,6 @@
 #include "directories.h"
 #include "hash.h"
 #include "hasher.h"
-#include "log.h"
 #include "program.h"
 #include "templates.h"
 #include "stamp.h"
@@ -390,16 +389,16 @@ bool Settings::checkForUpdates() const
     if (!(s1 != 0 && s2 != 0 && s2 > s1))
         return false;
 
-    std::cout << "New version of the CPPAN client is available!" << "\n";
-    std::cout << "Feel free to upgrade it from website or simply run:" << "\n";
-    std::cout << "cppan --self-upgrade" << "\n";
+    LOG_INFO(logger, "New version of the CPPAN client is available!");
+    LOG_INFO(logger, "Feel free to upgrade it from website or simply run:");
+    LOG_INFO(logger, "cppan --self-upgrade");
 #ifdef _WIN32
-    std::cout << "(or the same command but from administrator)" << "\n";
+    LOG_INFO(logger, "(or the same command but from administrator)");
 #else
-    std::cout << "or" << "\n";
-    std::cout << "sudo cppan --self-upgrade" << "\n";
+    LOG_INFO(logger, "or");
+    LOG_INFO(logger, "sudo cppan --self-upgrade");
 #endif
-    std::cout << "\n";
+    LOG_INFO(logger, "");
     return true;
 }
 

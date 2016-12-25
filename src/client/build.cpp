@@ -33,13 +33,15 @@
 #include <directories.h>
 #include <hash.h>
 #include <http.h>
-#include <log.h>
 #include <program.h>
 #include <resolver.h>
 #include <settings.h>
 #include <templates.h>
 
 #include <iostream>
+
+#include "logger.h"
+DECLARE_STATIC_LOGGER(logger, "build");
 
 int build_packages(const String &name, const std::set<Package> &pkgs, const path &settings_fn, const String &config);
 int build_packages(const String &name, const std::set<Package> &pkgs);
@@ -73,9 +75,9 @@ String test_run()
     auto printer = Printer::create(Settings::get_local_settings().printerType);
     printer->prepare_build(s);
 
-    LOG("--");
-    LOG("-- Performing test run");
-    LOG("--");
+    LOG_INFO(logger, "--");
+    LOG_INFO(logger, "-- Performing test run");
+    LOG_INFO(logger, "--");
 
     auto ret = printer->generate(s);
 

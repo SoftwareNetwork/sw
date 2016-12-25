@@ -36,7 +36,6 @@
 #include "hash.h"
 #include "hasher.h"
 #include "lock.h"
-#include "log.h"
 #include "pack.h"
 #include "project.h"
 #include "settings.h"
@@ -141,7 +140,7 @@ void Resolver::resolve(const Packages &deps, std::function<void()> resolve_actio
             }
             catch (const std::exception &e)
             {
-                LOG(e.what());
+                LOG_WARN(logger, e.what());
                 if (cr != us.remotes.end())
                 {
                     current_remote = &*cr++;
@@ -419,10 +418,9 @@ void Resolver::read_configs()
 {
     if (download_dependencies_.empty())
         return;
-    LOG_NO_NEWLINE("Reading package specs... ");
+    LOG_INFO(logger, "Reading package specs... ");
     for (auto &d : download_dependencies_)
         read_config(d.second);
-    LOG("Ok");
 }
 
 void Resolver::read_config(const DownloadDependency &d)
@@ -502,7 +500,7 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
         request.put_child(ptree::path_type(d.second.ppath.toString(), '|'), version);
     }
 
-    LOG_NO_NEWLINE("Requesting dependency list... ");
+    LOG_INFO(logger, "Requesting dependency list... ");
     {
         int ct = 5;
         int t = 10;
@@ -534,14 +532,14 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
                     {
                         dependency_tree = string2ptree(resp.response);
                         auto e = dependency_tree.find("error");
-                        LOG(e->second.get_value<String>());
+                        LOG_WARN(logger, e->second.get_value<String>());
                     }
                     break;
                     case 0:
-                        LOG("Could not connect to server");
+                        LOG_WARN(logger, "Could not connect to server");
                         break;
                     default:
-                        LOG("Error code: " + std::to_string(resp.http_code));
+                        LOG_WARN(logger, "Error code: " + std::to_string(resp.http_code));
                         break;
                     }
                     throw;
@@ -551,7 +549,7 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
                     ct /= 2;
                     t /= 2;
                 }
-                LOG_NO_NEWLINE("Retrying... ");
+                LOG_INFO(logger, "Retrying... ");
             }
         }
     }
@@ -567,7 +565,7 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
 
     auto info = dependency_tree.find("info");
     if (info != dependency_tree.not_found())
-        std::cout << info->second.get_value<String>() << "\n";
+        LOG_INFO(logger, info->second.get_value<String>());
 
     if (api == 0)
         throw std::runtime_error("API version is missing in the response");
@@ -577,7 +575,6 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
         throw std::runtime_error("Your client's API is newer than server's. Please, wait for server upgrade");
 
     // dependencies were received without error
-    LOG("Ok");
 
     // set id dependencies
     IdDependencies id_deps;
