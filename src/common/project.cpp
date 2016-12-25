@@ -1082,7 +1082,7 @@ const Files &Project::getSources() const
     return files;
 }
 
-void Project::setRelativePath(const ProjectPath &root_project, const String &name)
+void Project::setRelativePath(const String &name)
 {
     ppath = relative_name_to_absolute(name);
 }

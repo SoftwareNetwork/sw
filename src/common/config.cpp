@@ -112,6 +112,7 @@ void Config::load(yaml root)
         Settings::get_local_settings().load(root["local_settings"], SettingsType::Local);
     }
 
+    ProjectPath root_project;
     EXTRACT(root_project, String);
     checks.load(root);
 
@@ -119,7 +120,7 @@ void Config::load(yaml root)
     if (prjs.IsDefined() && !prjs.IsMap())
         throw std::runtime_error("'projects' should be a map");
 
-    auto add_project = [this](auto &root, auto &&name)
+    auto add_project = [this, &root_project](auto &root, auto &&name)
     {
         Project project(root_project);
         project.defaults_allowed = defaults_allowed;
@@ -128,7 +129,7 @@ void Config::load(yaml root)
         project.load(root);
         if (project.name.empty())
             project.name = name;
-        project.setRelativePath(root_project, name);
+        project.setRelativePath(name);
         projects.emplace(project.ppath.toString(), project);
     };
 

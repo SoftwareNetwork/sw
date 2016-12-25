@@ -29,6 +29,8 @@
 
 #include "checks.h"
 
+#include <boost/algorithm/string.hpp>
+
 // no links allowed
 // to do this we call YAML::Clone()
 void merge(yaml dst, const yaml &src, const YamlMergeFlags &flags)
@@ -87,7 +89,7 @@ void merge(yaml dst, const yaml &src, const YamlMergeFlags &flags)
                         t.second.push_back(YAML::Clone(fv));
                 }
                 else if (ff == YAML::NodeType::Map && ft == YAML::NodeType::Map)
-                    merge(t.second, f.second);
+                    merge(t.second, f.second, flags);
                 else // elaborate more on this?
                     throw std::runtime_error("yaml merge: nodes ('" + sf + "') has incompatible types");
                 found = true;
@@ -172,7 +174,8 @@ void prepare_config_for_reading(yaml root)
             {
                 YamlMergeFlags flags;
                 flags.scalar_scalar = YamlMergeFlags::DontTouchScalars;
-                merge(prj.second["source"], root["source"], flags);
+                if (!prj.second["source"].IsDefined() && root["source"].IsDefined())
+                    merge(prj.second["source"], root["source"], flags);
                 if (!prj.second["version"].IsDefined() && root["version"].IsDefined())
                     prj.second["version"] = YAML::Clone(root["version"]);
             }

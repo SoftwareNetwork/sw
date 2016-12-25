@@ -43,7 +43,6 @@
 struct Config
 {
     // projects settings
-    ProjectPath root_project;
     Checks checks; // move to proj?
 
 public:

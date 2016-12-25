@@ -203,7 +203,7 @@ public:
     void prepareExports() const;
     void patchSources() const;
 
-    void setRelativePath(const ProjectPath &root_project, const String &name);
+    void setRelativePath(const String &name);
 
     void load(const yaml &root);
     void save_dependencies(yaml &root) const;
