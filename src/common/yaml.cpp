@@ -214,8 +214,12 @@ String dump_yaml_config(const yaml &root)
         e << Key << k;
         e << Value;
         if (literal)
+        {
             e << Literal;
-        e << root[k];
+            e << boost::trim_copy(root[k].template as<String>());
+        }
+        else
+            e << root[k];
         e << Newline << Newline;
     };
 

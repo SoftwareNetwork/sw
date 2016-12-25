@@ -314,6 +314,13 @@ try
         }
         return 0;
     }
+    if (options().count("beautify"))
+    {
+        path p = options["beautify"].as<String>();
+        auto y = load_yaml_config(p);
+        dump_yaml_config(p, y);
+        return 0;
+    }
 
     Settings::get_user_settings().force_server_query = options()[SERVER_QUERY].as<bool>();
 

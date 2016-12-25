@@ -61,6 +61,8 @@ ProgramOptions::ProgramOptions()
         ("clear-cache", po::bool_switch(), "clear CMakeCache.txt files")
         ("clear-vars-cache", po::bool_switch(), "clear checked symbols, types, includes etc.")
         (CLEAN_PACKAGES, po::value<Strings>()->multitoken(), "completely clean packages files for matched regex")
+
+        ("beautify", po::value<String>(), "beautify yaml script")
         ;
 
     // i - internal options
