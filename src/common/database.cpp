@@ -244,7 +244,10 @@ path getDbDirectory()
 
 int readPackagesDbSchemaVersion(const path &dir)
 {
-    return std::stoi(read_file(dir / PACKAGES_DB_SCHEMA_VERSION_FILE));
+    auto p = dir / PACKAGES_DB_SCHEMA_VERSION_FILE;
+    if (fs::exists(p))
+        return 0;
+    return std::stoi(read_file(p));
 }
 
 void writePackagesDbSchemaVersion(const path &dir)
@@ -254,7 +257,10 @@ void writePackagesDbSchemaVersion(const path &dir)
 
 int readPackagesDbVersion(const path &dir)
 {
-    return std::stoi(read_file(dir / PACKAGES_DB_VERSION_FILE));
+    auto p = dir / PACKAGES_DB_VERSION_FILE;
+    if (fs::exists(p))
+        return 0;
+    return std::stoi(read_file(p));
 }
 
 void writePackagesDbVersion(const path &dir, int version)
@@ -830,16 +836,7 @@ void PackagesDatabase::load(bool drop)
 {
     auto &sdb = getServiceDatabase();
     auto sver_old = sdb.getPackagesDbSchemaVersion();
-    int sver = 0;
-    try
-    {
-        // in case if client does not have schema.version file atm
-        // remove this try..catch later
-        sver = readPackagesDbSchemaVersion(db_repo_dir);
-    }
-    catch (std::exception &)
-    {
-    }
+    int sver = readPackagesDbSchemaVersion(db_repo_dir);
     if (sver && sver != PACKAGES_DB_SCHEMA_VERSION)
     {
         if (sver > PACKAGES_DB_SCHEMA_VERSION)
