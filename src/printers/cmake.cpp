@@ -1164,6 +1164,9 @@ endif()
 
         if (p.export_all_symbols)
         {
+            ctx.addLine("if (WIN32 AND (CMAKE_VERSION VERSION_EQUAL 3.6 OR (CMAKE_VERSION VERSION_GREATER 3.6 AND CMAKE_VERSION VERSION_LESS 3.7)))");
+            ctx.addLine("    message(FATAL_ERROR \"You have bugged CMake version 3.6 which is known to not work with CPPAN. Please, upgrade CMake.\")");
+            ctx.addLine("endif()");
             ctx.addLine("set_target_properties(${this} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS True)");
         }
         ctx.addLine();

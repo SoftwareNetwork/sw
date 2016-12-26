@@ -130,55 +130,36 @@ void prepare_config_for_reading(yaml root)
         }
     }
 
-    // merge bs insertions
+    if (prjs.IsDefined())
     {
-        if (prjs.IsDefined())
+        for (auto prj : prjs)
         {
-            for (auto prj : prjs)
-            {
-#define PREPEND_ROOT_BSI(x)                        \
-    if (root[x].IsDefined() && prj[x].IsDefined()) \
-    root[x] = root[x].as<String>() + "\n\n" + prj[x].as<String>()
+#define MERGE_BSI(x)                                                                  \
+    do                                                                                \
+    {                                                                                 \
+        if (root[x].IsDefined())                                                      \
+        {                                                                             \
+            if (prj.second[x].IsDefined())                                            \
+                root[x] = root[x].as<String>() + "\n\n" + prj.second[x].as<String>(); \
+            else                                                                      \
+                prj.second[x] = root[x].as<String>();                                 \
+        }                                                                             \
+    } while (0)
 
-                // concat bs insertions, root's first
-                PREPEND_ROOT_BSI("pre_sources");
-                PREPEND_ROOT_BSI("post_sources");
-                PREPEND_ROOT_BSI("post_target");
-                PREPEND_ROOT_BSI("post_alias");
-#undef PREPEND_ROOT_BSI
+            // merge bs insertions, root's first
+            MERGE_BSI("pre_sources");
+            MERGE_BSI("post_sources");
+            MERGE_BSI("post_target");
+            MERGE_BSI("post_alias");
+#undef MERGE_BSI
 
-                // if there's no such node in child, add it
-                for (auto kv : prj)
-                {
-                    auto f = kv.first.as<String>();
-
-#define CHECK_BSI(x) if (f == x && root[x].IsDefined()) continue
-                    // do not copy if already concat'ed
-                    CHECK_BSI("pre_sources");
-                    CHECK_BSI("post_sources");
-                    CHECK_BSI("post_target");
-                    CHECK_BSI("post_alias");
-#undef CHECK_BSI
-
-                    root[kv.first] = YAML::Clone(kv.second);
-                }
-            }
-        }
-    }
-
-    // source & version
-    {
-        if (prjs.IsDefined())
-        {
-            for (auto prj : prjs)
-            {
-                YamlMergeFlags flags;
-                flags.scalar_scalar = YamlMergeFlags::DontTouchScalars;
-                if (!prj.second["source"].IsDefined() && root["source"].IsDefined())
-                    merge(prj.second["source"], root["source"], flags);
-                if (!prj.second["version"].IsDefined() && root["version"].IsDefined())
-                    prj.second["version"] = YAML::Clone(root["version"]);
-            }
+            // source & version
+            YamlMergeFlags flags;
+            flags.scalar_scalar = YamlMergeFlags::DontTouchScalars;
+            if (!prj.second["source"].IsDefined() && root["source"].IsDefined())
+                merge(prj.second["source"], root["source"], flags);
+            if (!prj.second["version"].IsDefined() && root["version"].IsDefined())
+                prj.second["version"] = YAML::Clone(root["version"]);
         }
     }
 }
