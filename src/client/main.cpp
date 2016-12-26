@@ -141,6 +141,13 @@ try
 
     if (args.size() > 1)
     {
+        auto self_upgrade = [&args]()
+        {
+            // self upgrade via copy
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            fs::copy_file(args[0], args[2], fs::copy_option::overwrite_if_exists);
+        };
+
         // command selector, always exit inside this if()
         if (args[1][0] != '-')
         {
@@ -189,7 +196,13 @@ try
                 if (!create_link(args[2], args[3], "Link to CPPAN Solution"))
                     return 1;
                 return 0;
-        }
+            }
+
+            if (args[1] == "internal-self-upgrade-copy")
+            {
+                self_upgrade();
+                return 0;
+            }
 
             // normal options
             if (cmd == "parse-configure-ac")
@@ -239,13 +252,9 @@ try
             return 1;
     }
 #ifdef _WIN32
-        else if (
-            String(args[1]) == "--self-upgrade-copy" || // remove this very very later (at 0.3.0 - 0.5.0)
-            String(args[1]) == "internal-self-upgrade-copy")
+        else if (args[1] == "--self-upgrade-copy") // remove this very very later (at 0.3.0 - 0.5.0)
         {
-            // self upgrade via copy
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            fs::copy_file(args[0], args[2], fs::copy_option::overwrite_if_exists);
+            self_upgrade();
             return 0;
         }
 #endif
