@@ -119,11 +119,8 @@ struct Project
 {
     // public data
 public:
-    // source (git, remote etc.)
-    Version version;
     Source source;
-
-    ProjectPath ppath;
+    Package pkg;
     String license;
     IncludeDirectories include_directories;
     // files to compile only
@@ -169,9 +166,6 @@ public:
 
     // directory where all files are stored after unpack
     path unpack_directory;
-
-    // current package: ppath+version+flags
-    Package pkg;
 
     // optional
     String name;

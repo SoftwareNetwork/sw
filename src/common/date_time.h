@@ -60,3 +60,12 @@ auto get_time(F &&f, Args && ... args)
     auto t = get_time(std::forward<F>(f), std::forward<Args...>(args)...);
     return std::chrono::duration_cast<T>(t).count();
 }
+
+template <typename T, typename F, typename ... Args>
+auto get_time_custom(F &&f, Args && ... args)
+{
+    using namespace std::chrono;
+
+    auto t = get_time(std::forward<F>(f), std::forward<Args...>(args)...);
+    return std::chrono::duration_cast<std::chrono::duration<T>>(t).count();
+}

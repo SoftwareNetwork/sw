@@ -130,7 +130,7 @@ void Config::load(yaml root)
         if (project.name.empty())
             project.name = name;
         project.setRelativePath(name);
-        projects.emplace(project.ppath.toString(), project);
+        projects.emplace(project.pkg.ppath.toString(), project);
     };
 
     projects.clear();

@@ -400,8 +400,8 @@ void Project::findSources(path p)
         auto b = read_file(bfn);
         auto f = bazel::parse(b);
         String project_name;
-        if (!ppath.empty())
-            project_name = ppath.back();
+        if (!pkg.ppath.empty())
+            project_name = pkg.ppath.back();
         auto files = f.getFiles(project_name);
         sources.insert(files.begin(), files.end());
         sources.insert(bfn.filename().string());
@@ -618,7 +618,7 @@ optional<ProjectPath> Project::load_local_dependency(const String &name)
 
 void Project::load(const yaml &root)
 {
-    load_source_and_version(root, source, version);
+    load_source_and_version(root, source, pkg.version);
 
     EXTRACT_AUTO(empty);
     EXTRACT_AUTO(custom);
@@ -1076,9 +1076,10 @@ yaml Project::save() const
 
     if (isValidSourceUrl(source))
         save_source(root, source);
-    if (version.isValid() &&
-        (version.type == VersionType::Version || version.type == VersionType::Branch))
-        root["version"] = version.toString();
+    if (pkg.version.isValid() &&
+        (pkg.version.type == VersionType::Version ||
+         pkg.version.type == VersionType::Branch))
+        root["version"] = pkg.version.toString();
 
     ADD_IF_NOT_EMPTY(name);
     ADD_IF_NOT_EMPTY(license);
@@ -1186,7 +1187,7 @@ const Files &Project::getSources() const
 
 void Project::setRelativePath(const String &name)
 {
-    ppath = relative_name_to_absolute(name);
+    pkg.ppath = relative_name_to_absolute(name);
 }
 
 void Project::applyFlags(ProjectFlags &flags) const
