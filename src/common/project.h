@@ -62,7 +62,7 @@ struct BuildSystemConfigInsertions
     String post_alias;
 
     void load(const yaml &n);
-    void save(yaml &n) const;
+    void save(yaml n) const;
 };
 
 struct Options
@@ -103,7 +103,7 @@ public:
 using OptionsMap = std::map<String, Options>;
 
 OptionsMap loadOptionsMap(const yaml &root);
-void saveOptionsMap(yaml &root, const OptionsMap &m);
+void saveOptionsMap(yaml root, const OptionsMap &m);
 
 using ReplaceInFiles = std::unordered_map<String, String>;
 
@@ -112,7 +112,7 @@ struct Patch
     ReplaceInFiles replace_in_files;
 
     void load(const yaml &root);
-    void save(yaml &root) const;
+    void save(yaml root) const;
 };
 
 struct Project
@@ -203,7 +203,7 @@ public:
 
     void load(const yaml &root);
     yaml save() const;
-    void save_dependencies(yaml &root) const;
+    void save_dependencies(yaml root) const;
 
     // own data, not from config
 public:

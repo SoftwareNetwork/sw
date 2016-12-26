@@ -66,7 +66,7 @@ public:
         variable = var;
     }
 
-    void save(yaml &root) const override
+    void save(yaml root) const override
     {
         yaml v;
         v["file"] = getData();
@@ -177,7 +177,7 @@ public:
 
     virtual ~CheckLibraryFunction() {}
 
-    void save(yaml &root) const override
+    void save(yaml root) const override
     {
         yaml v;
         v["function"] = getData();
@@ -211,7 +211,7 @@ public:
         ctx << "\" " << getVariable() << ")" << Context::eol;
     }
 
-    void save(yaml &root) const override
+    void save(yaml root) const override
     {
         for (auto &h : headers)
             root[information.cppan_key][getData()].push_back(h);
@@ -319,7 +319,7 @@ struct CheckSource : public Check
 
     virtual ~CheckSource() {}
 
-    void save(yaml &root) const override
+    void save(yaml root) const override
     {
         root[information.cppan_key][getVariable()]["text"] = getData();
         root[information.cppan_key][getVariable()]["invert"] = invert;

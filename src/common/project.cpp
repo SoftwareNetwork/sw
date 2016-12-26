@@ -294,7 +294,7 @@ void BuildSystemConfigInsertions::load(const yaml &n)
 #undef ADD_CFG_INSERTION
 }
 
-void BuildSystemConfigInsertions::save(yaml &n) const
+void BuildSystemConfigInsertions::save(yaml n) const
 {
 #define ADD_CFG_INSERTION(x) \
     if (!x.empty())          \
@@ -323,7 +323,7 @@ void Patch::load(const yaml &root)
     });
 }
 
-void Patch::save(yaml &node) const
+void Patch::save(yaml node) const
 {
     yaml root;
     for (auto &r : replace_in_files)
@@ -549,7 +549,7 @@ bool Project::writeArchive(const path &fn) const
     return pack_files(fn, files, cp.get_cwd());
 }
 
-void Project::save_dependencies(yaml &node) const
+void Project::save_dependencies(yaml node) const
 {
     if (dependencies.empty())
         return;
@@ -1252,7 +1252,7 @@ OptionsMap loadOptionsMap(const yaml &root)
     return options;
 }
 
-void saveOptionsMap(yaml &node, const OptionsMap &m)
+void saveOptionsMap(yaml node, const OptionsMap &m)
 {
     yaml root;
     for (auto &ol : m)

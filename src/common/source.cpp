@@ -72,7 +72,7 @@ bool load_source(const yaml &root, Source &source)
     return true;
 }
 
-void save_source(yaml &root, const Source &source)
+void save_source(yaml root, const Source &source)
 {
     auto save_source = overload(
         [&root](const Git &git)

@@ -92,7 +92,7 @@ private:
 };
 
 bool load_source(const yaml &root, Source &source);
-void save_source(yaml &root, const Source &source);
+void save_source(yaml root, const Source &source);
 
 Source load_source(const ptree &p);
 void save_source(ptree &p, const Source &source);

@@ -84,7 +84,7 @@ public:
     String getMessage() const { return message; }
 
     virtual void writeCheck(Context &/*ctx*/) const {}
-    virtual void save(yaml &/*root*/) const {}
+    virtual void save(yaml /*root*/) const {}
 
     void setValue(const Value &v) { value = v; }
 
@@ -132,7 +132,7 @@ struct Checks
 
     void load(const yaml &root);
     void load(const path &fn);
-    void save(yaml &root) const;
+    void save(yaml root) const;
     String save() const;
 
     void write_checks(Context &ctx) const;

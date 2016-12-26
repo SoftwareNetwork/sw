@@ -224,7 +224,7 @@ void Checks::load(const path &fn)
     load(YAML::LoadFile(fn.string()));
 }
 
-void Checks::save(yaml &root) const
+void Checks::save(yaml root) const
 {
     for (auto &c : checks)
     {
