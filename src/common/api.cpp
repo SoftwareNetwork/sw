@@ -36,6 +36,11 @@ DECLARE_STATIC_LOGGER(logger, "api");
 
 ptree api_call(const Remote &r, const String &api, ptree request)
 {
+    if (r.user.empty())
+        throw std::runtime_error("Remote user is empty");
+    if (r.token.empty())
+        throw std::runtime_error("Remote token is empty");
+
     request.put("auth.user", r.user);
     request.put("auth.token", r.token);
 
