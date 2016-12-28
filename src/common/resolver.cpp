@@ -265,7 +265,7 @@ void Resolver::download_and_unpack()
         auto c = rd.add_config(d);
 
         // move all files under unpack dir
-        auto ud = c->getDefaultProject().unpack_directory;
+        auto ud = c->getDefaultProject(d.ppath).unpack_directory;
         if (!ud.empty())
         {
             ud = version_dir / ud;
@@ -371,7 +371,7 @@ void Resolver::prepare_config(PackageStore::PackageConfigs::value_type &cc)
     auto &c = cc.second.config;
     auto &dependencies = cc.second.dependencies;
     c->setPackage(p);
-    auto &project = c->getDefaultProject();
+    auto &project = c->getDefaultProject(p.ppath);
 
     if (p.flags[pfLocalProject])
         return;

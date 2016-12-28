@@ -155,34 +155,36 @@ void Config::clear_vars_cache() const
     }
 }
 
-Project &Config::getProject(const String &pname) const
+Project &Config::getProject1(const ProjectPath &ppath)
 {
-    const Project *p = nullptr;
+    if (projects.empty())
+        throw std::runtime_error("Projects are empty");
     if (projects.size() == 1)
-        p = &projects.begin()->second;
-    else if (!projects.empty())
-    {
-        auto it = projects.find(pname);
-        if (it != projects.end())
-            p = &it->second;
-    }
-    if (!p)
-        throw std::runtime_error("No such project '" + pname + "' in dependencies list");
-    return (Project &)*p;
+        return projects.begin()->second;
+    auto i = projects.find(ppath.toString());
+    if (i == projects.end())
+        throw std::runtime_error("No such project '" + ppath.toString() + "' in config");
+    return i->second;
 }
 
-Project &Config::getDefaultProject()
+Project &Config::getProject(const ProjectPath &ppath)
 {
-    if (projects.empty())
-        throw std::runtime_error("Projects are empty");
-    return projects.begin()->second;
+    return getProject1(ppath);
 }
 
-const Project &Config::getDefaultProject() const
+const Project &Config::getProject(const ProjectPath &ppath) const
 {
-    if (projects.empty())
-        throw std::runtime_error("Projects are empty");
-    return projects.begin()->second;
+    return (const Project &)((Config *)this)->getProject1(ppath);
+}
+
+Project &Config::getDefaultProject(const ProjectPath &ppath)
+{
+    return getProject(ppath);
+}
+
+const Project &Config::getDefaultProject(const ProjectPath &ppath) const
+{
+    return getProject(ppath);
 }
 
 void Config::process(const path &p) const

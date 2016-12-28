@@ -62,9 +62,10 @@ public:
 
     auto &getProjects() { return projects; }
     auto &getProjects() const { return projects; }
-    Project &getDefaultProject();
-    const Project &getDefaultProject() const;
-    Project &getProject(const String &p) const;
+    Project &getDefaultProject(const ProjectPath &ppath = ProjectPath());
+    const Project &getDefaultProject(const ProjectPath &ppath = ProjectPath()) const;
+    Project &getProject(const ProjectPath &ppath);
+    const Project &getProject(const ProjectPath &ppath) const;
 
     void setPackage(const Package &pkg);
 
@@ -78,6 +79,7 @@ private:
     path dir; // cwd
 
     void addDefaultProject();
+    Project &getProject1(const ProjectPath &ppath);
 
 public:
     bool defaults_allowed = true;
