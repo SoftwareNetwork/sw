@@ -38,6 +38,9 @@
 
 #include "printers/printer.h"
 
+void cleanConfig(const String &config);
+void cleanConfigs(const Strings &configs);
+
 struct BuildSettings
 {
     bool allow_links = true;

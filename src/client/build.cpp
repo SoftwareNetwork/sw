@@ -141,10 +141,11 @@ int build_packages(const Config &c, const String &name)
     if (!fs::exists(src))
     {
         auto config = test_run();
-        if (bs.config != config)
+        auto ch = hash_config(config);
+        if (bs.config != ch)
         {
             // the original config was detected incorrectly, re-apply
-            set_config(config);
+            set_config(ch);
 
             // do we need to addConfigHash() here? like in get_config()
             // or config must be very unique?

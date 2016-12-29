@@ -53,4 +53,5 @@ private:
 
 #define BUILD_PACKAGES "build-packages"
 #define CLEAN_PACKAGES "clean-packages"
+#define CLEAN_CONFIGS "clean-configs"
 #define SERVER_QUERY "server-query"

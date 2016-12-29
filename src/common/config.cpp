@@ -114,7 +114,6 @@ void Config::load(yaml root)
 
     ProjectPath root_project;
     EXTRACT(root_project, String);
-    checks.load(root);
 
     auto prjs = root["projects"];
     if (prjs.IsDefined() && !prjs.IsMap())

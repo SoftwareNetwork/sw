@@ -101,3 +101,24 @@ String normalize_string_copy(String s)
     return s;
 }
 #endif
+
+String trim_double_quotes(String s)
+{
+    boost::trim(s);
+    while (!s.empty())
+    {
+        if (s.front() == '"')
+        {
+            s = s.substr(1);
+            continue;
+        }
+        if (s.back() == '"')
+        {
+            s.resize(s.size() - 1);
+            continue;
+        }
+        break;
+    }
+    boost::trim(s);
+    return s;
+}

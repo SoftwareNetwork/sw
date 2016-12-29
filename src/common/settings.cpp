@@ -255,9 +255,17 @@ void Settings::load_build(const yaml &root)
     {
         auto t = configuration_types[i];
         boost::to_lower(t);
+
         EXTRACT_VAR(root, c_compiler_flags_conf[i], "c_compiler_flags_" + t, String);
+        if (c_compiler_flags_conf[i].empty())
+            EXTRACT_VAR(root, c_compiler_flags_conf[i], "c_flags_" + t, String);
+
         EXTRACT_VAR(root, cxx_compiler_flags_conf[i], "cxx_compiler_flags_" + t, String);
+        if (cxx_compiler_flags_conf[i].empty())
+            EXTRACT_VAR(root, cxx_compiler_flags_conf[i], "cxx_flags_" + t, String);
+
         EXTRACT_VAR(root, compiler_flags_conf[i], "compiler_flags_" + t, String);
+
         EXTRACT_VAR(root, link_flags_conf[i], "link_flags_" + t, String);
     }
 
@@ -482,4 +490,68 @@ void Settings::save(const path &p) const
     root["remotes"][DEFAULT_REMOTE_NAME]["url"] = remotes[0].url;
     root["storage_dir"] = storage_dir.string();
     o << dump_yaml_config(root);
+}
+
+void cleanConfig(const String &c)
+{
+    if (c.empty())
+        return;
+
+    auto h = hash_config(c);
+
+    auto remove_pair = [&](const auto &dir)
+    {
+        fs::remove_all(dir / c);
+        fs::remove_all(dir / h);
+    };
+
+    remove_pair(directories.storage_dir_bin);
+    remove_pair(directories.storage_dir_lib);
+    remove_pair(directories.storage_dir_exp);
+#ifdef _WIN32
+    remove_pair(directories.storage_dir_lnk);
+#endif
+
+    // for cfg we also remove xxx.c.cmake files
+    remove_pair(directories.storage_dir_cfg);
+    for (auto &f : boost::make_iterator_range(fs::directory_iterator(directories.storage_dir_cfg), {}))
+    {
+        if (!fs::is_regular_file(f) || f.path().extension() != ".cmake")
+            continue;
+        auto parts = split_string(f.path().string(), ".");
+        if (parts.size() == 2)
+        {
+            if (parts[0] == c || parts[0] == h)
+                fs::remove(f);
+            continue;
+        }
+        if (parts.size() == 3)
+        {
+            if (parts[1] == c || parts[1] == h)
+                fs::remove(f);
+            continue;
+        }
+    }
+
+    // obj
+    auto &sdb = getServiceDatabase();
+    for (auto &p : sdb.getInstalledPackages())
+    {
+        auto d = p.getDirObj() / "build";
+        if (!fs::exists(d))
+            continue;
+        for (auto &f : boost::make_iterator_range(fs::directory_iterator(d), {}))
+        {
+            if (!fs::is_directory(f))
+                continue;
+            if (f.path().filename() == c || f.path().filename() == h)
+                fs::remove_all(f);
+        }
+    }
+}
+
+void cleanConfigs(const Strings &configs)
+{
+    for (auto &c : configs)
+        cleanConfig(c);
 }

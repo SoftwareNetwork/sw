@@ -124,7 +124,7 @@ void PackageStore::process(const path &p, Config &root)
     // add more necessary actions here
     for (auto &cc : *this)
     {
-        root.checks += cc.second.config->checks;
+        root.getDefaultProject().checks += cc.second.config->getDefaultProject().checks;
     }
 
     auto printer = Printer::create(Settings::get_local_settings().printerType);

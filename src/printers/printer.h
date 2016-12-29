@@ -28,6 +28,7 @@
 #pragma once
 
 #include "context.h"
+#include "checks.h"
 #include "project.h"
 
 #define CPP_HEADER_FILENAME "cppan.h"
@@ -77,7 +78,7 @@ struct Printer
     virtual void clear_exports() const = 0;
     virtual void clear_export(const path &p) const = 0;
 
-    virtual void parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain = String()) const = 0;
+    virtual void parallel_vars_check(const ParallelCheckOptions &options) const = 0;
 
     static std::unique_ptr<Printer> create(PrinterType type);
 };

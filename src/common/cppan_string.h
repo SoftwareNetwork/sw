@@ -37,6 +37,8 @@ using namespace std::literals;
 
 Strings split_string(const String &s, const String &delims);
 Strings split_lines(const String &s);
+String trim_double_quotes(String s);
+
 int get_end_of_string_block(const String &s, int i = 1);
 
 #ifdef _WIN32

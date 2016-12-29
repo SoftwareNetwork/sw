@@ -30,7 +30,6 @@
 #include <map>
 #include <set>
 
-#include "checks.h"
 #include "cppan_string.h"
 #include "filesystem.h"
 #include "package.h"
@@ -42,10 +41,6 @@
 
 struct Config
 {
-    // projects settings
-    Checks checks; // move to proj?
-
-public:
     Config();
     Config(const path &p);
 

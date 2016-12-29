@@ -294,7 +294,7 @@ void BuildSystemConfigInsertions::load(const yaml &n)
 #undef ADD_CFG_INSERTION
 }
 
-void BuildSystemConfigInsertions::save(yaml n) const
+void BuildSystemConfigInsertions::save(yaml &n) const
 {
 #define ADD_CFG_INSERTION(x) \
     if (!x.empty())          \
@@ -323,7 +323,7 @@ void Patch::load(const yaml &root)
     });
 }
 
-void Patch::save(yaml node) const
+void Patch::save(yaml &node) const
 {
     yaml root;
     for (auto &r : replace_in_files)
@@ -549,7 +549,7 @@ bool Project::writeArchive(const path &fn) const
     return pack_files(fn, files, cp.get_cwd());
 }
 
-void Project::save_dependencies(yaml node) const
+void Project::save_dependencies(yaml &node) const
 {
     if (dependencies.empty())
         return;
@@ -924,6 +924,7 @@ void Project::load(const yaml &root)
     read_sources(exclude_from_build, "exclude_from_build");
 
     aliases = get_sequence_set<String>(root, "aliases");
+    checks.load(root);
 
     auto patch_node = root["patch"];
     if (patch_node.IsDefined())
@@ -1123,6 +1124,7 @@ yaml Project::save() const
         root["include_directories"]["private"].push_back(normalize_path(v));
     saveOptionsMap(root, options);
     ADD_SET(aliases, aliases);
+    checks.save(root);
     save_dependencies(root);
     patch.save(root);
     bs_insertions.save(root);
@@ -1204,6 +1206,8 @@ void Project::addDependency(const Package &p)
 OptionsMap loadOptionsMap(const yaml &root)
 {
     OptionsMap options;
+    if (!root.IsMap())
+        return options;
     get_map_and_iterate(root, "options", [&options](const auto &opt_level)
     {
         auto ol = opt_level.first.template as<String>();
@@ -1252,8 +1256,11 @@ OptionsMap loadOptionsMap(const yaml &root)
     return options;
 }
 
-void saveOptionsMap(yaml node, const OptionsMap &m)
+void saveOptionsMap(yaml &node, const OptionsMap &m)
 {
+    if (m.empty())
+        return;
+
     yaml root;
     for (auto &ol : m)
     {

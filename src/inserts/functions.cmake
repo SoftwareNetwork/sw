@@ -271,7 +271,13 @@ function(get_configuration_unhashed out)
         set(dll ${CPPAN_CONFIG_PART_DELIMETER}dll)
     endif()
 
-    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${version}${CPPAN_CONFIG_PART_DELIMETER}${bits}${mt_flag}${dll}${cyg})
+    set(toolset)
+    if (CMAKE_GENERATOR_TOOLSET)
+        prepare_config_part(toolset ${CMAKE_GENERATOR_TOOLSET})
+        set(toolset ${CPPAN_CONFIG_PART_DELIMETER}${toolset})
+    endif()
+
+    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${version}${CPPAN_CONFIG_PART_DELIMETER}${bits}${mt_flag}${dll}${toolset})
 
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_unhashed)
@@ -298,7 +304,7 @@ endfunction(get_configuration_with_generator_unhashed)
 function(get_configuration_exe_unhashed out)
     prepare_config_part(system ${CMAKE_SYSTEM_NAME})
     prepare_config_part(processor ${CMAKE_HOST_SYSTEM_PROCESSOR})
-    set(config ${system}${CPPAN_CONFIG_PART_DELIMETER}${processor}${cyg})
+    set(config ${system}${CPPAN_CONFIG_PART_DELIMETER}${processor})
 
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_exe_unhashed)

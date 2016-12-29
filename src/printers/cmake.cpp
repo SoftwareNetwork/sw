@@ -812,7 +812,7 @@ void CMakePrinter::print_meta() const
         access_table->write_if_older(cwd / settings.cppan_dir / CPP_HEADER_FILENAME, cppan_h);
 
         // checks file
-        access_table->write_if_older(cwd / settings.cppan_dir / cppan_checks_yml, rd[d].config->checks.save());
+        access_table->write_if_older(cwd / settings.cppan_dir / cppan_checks_yml, rd[d].config->getDefaultProject().checks.save());
     }
 }
 
@@ -1595,7 +1595,7 @@ else())");
 
     // definitions
     config_section_title(ctx, "definitions");
-    rd[d].config->checks.write_definitions(ctx, d);
+    p.checks.write_definitions(ctx, d);
 
     // build deps
     print_build_dependencies(ctx, d, "${this}");
@@ -2319,8 +2319,18 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
             ctx.addLine("set(checks_file \"" + normalize_path(cwd / settings.cppan_dir / cppan_checks_yml) + "\")");
             ctx.addLine();
             ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles ${tmp_dir}/CMakeFiles/ RESULT_VARIABLE ret)");
-            ctx.addLine("execute_process(COMMAND ${CPPAN_COMMAND} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file} ${CMAKE_GENERATOR} ${CMAKE_TOOLCHAIN_FILE} RESULT_VARIABLE ret)");
-            ctx.addLine("check_result_variable(${ret} \"COMMAND ${CPPAN_COMMAND} internal-parallel-vars-check ${tmp_dir} ${vars_file} ${checks_file} ${CMAKE_GENERATOR} ${CMAKE_TOOLCHAIN_FILE}\")");
+            auto cmd = R"(COMMAND ${CPPAN_COMMAND}
+                            internal-parallel-vars-check
+                                \"${tmp_dir}\"
+                                \"${vars_file}\"
+                                \"${checks_file}\"
+                                \"${CMAKE_GENERATOR}\"
+                                \"${CMAKE_GENERATOR_TOOLSET}\"
+                                \"${CMAKE_TOOLCHAIN_FILE}\"
+                            )"s;
+            ctx.addLine("cppan_debug_message(\"" + cmd + "\")");
+            ctx.addLine("execute_process(" + cmd + " RESULT_VARIABLE ret)");
+            ctx.addLine("check_result_variable(${ret} \"" + cmd + "\")");
             // this file is created by parallel checks dispatcher
             ctx.addLine("read_check_variables_file(${tmp_dir}/" + parallel_checks_file + ")");
             ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");
@@ -2333,7 +2343,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
         // checks
         config_section_title(ctx, "checks");
-        rd[d].config->checks.write_checks(ctx);
+        rd[d].config->getDefaultProject().checks.write_checks(ctx);
 
         // write vars file
         if (!d.flags[pfLocalProject])
@@ -2366,9 +2376,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     write_if_older(fn, ctx.getText());
 }
 
-void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, const path &checks_file, const String &generator, const String &toolchain) const
+void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
 {
     static const String cppan_variable_result_filename = "result.cppan";
+
+    LOG_DEBUG(logger, "-- Preparing parallel checker");
 
     const auto &us = Settings::get_user_settings();
 
@@ -2380,16 +2392,16 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
         return;
 
     Checks checks;
-    checks.load(checks_file);
+    checks.load(o.checks_file);
 
     // read known vars
-    if (fs::exists(vars_file))
+    if (fs::exists(o.vars_file))
     {
         std::set<String> known_vars;
         std::vector<String> lines;
         {
-            ScopedShareableFileLock lock(vars_file);
-            lines = read_lines(vars_file);
+            ScopedShareableFileLock lock(o.vars_file);
+            lines = read_lines(o.vars_file);
         }
         for (auto &l : lines)
         {
@@ -2414,12 +2426,12 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
     LOG_INFO(logger, "-- This process may take up to 5 minutes depending on your hardware");
     LOG_FLUSH();
 
-    auto work = [&dir, &generator, &toolchain, &N](auto &w, int i)
+    auto work = [&o, &N](auto &w, int i)
     {
         if (w.checks.empty())
             return;
 
-        auto d = dir / std::to_string(i);
+        auto d = o.dir / std::to_string(i);
         fs::create_directories(d);
 
         Context ctx;
@@ -2431,7 +2443,7 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
         write_file(d / cmake_config_filename, ctx.getText());
 
         // copy cached cmake dir
-        copy_dir(dir / "CMakeFiles", d / "CMakeFiles");
+        copy_dir(o.dir / "CMakeFiles", d / "CMakeFiles");
 
         // run cmake
         command::Args args;
@@ -2439,9 +2451,14 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
         args.push_back("-H" + normalize_path(d));
         args.push_back("-B" + normalize_path(d));
         args.push_back("-G");
-        args.push_back(generator);
-        if (!toolchain.empty())
-            args.push_back("-DCMAKE_TOOLCHAIN_FILE=" + toolchain);
+        args.push_back(o.generator);
+        if (!o.toolset.empty())
+        {
+            args.push_back("-T");
+            args.push_back(o.toolset);
+        }
+        if (!o.toolchain.empty())
+            args.push_back("-DCMAKE_TOOLCHAIN_FILE=" + o.toolchain);
 
         command::Result ret;
         if (N != 1)
@@ -2472,7 +2489,7 @@ void CMakePrinter::parallel_vars_check(const path &dir, const path &vars_file, c
 
     Context ctx;
     checks.print_values(ctx);
-    write_file(dir / parallel_checks_file, ctx.getText());
+    write_file(o.dir / parallel_checks_file, ctx.getText());
 
     LOG_FLUSH();
     LOG_INFO(logger, "-- This operation took " + std::to_string(t) + " seconds to complete");

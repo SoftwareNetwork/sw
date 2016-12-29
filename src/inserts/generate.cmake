@@ -102,6 +102,11 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         write_variables_file(GEN_CHILD_VARS ${variables_file})
         #
 
+        set(toolset)
+        if (CMAKE_GENERATOR_TOOLSET)
+            set(toolset "-T${CMAKE_GENERATOR_TOOLSET}")
+        endif()
+
         message(STATUS "")
         message(STATUS "Preparing build tree for ${target} (${config_unhashed} - ${config_dir} - ${generator})")
         message(STATUS "")
@@ -149,6 +154,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                         -G "${generator}"
+                        ${toolset}
                         -DVARIABLES_FILE=${variables_file}
                     RESULT_VARIABLE ret
                 )
@@ -182,7 +188,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
             # no check_result_variable(): ignore errors
         endif()
 
-        cppan_debug_message("-- Prepared  build tree for ${target} (${config_unhashed} - ${config_dir})")
+        cppan_debug_message("-- Prepared  build tree for ${target} (${config_unhashed} - ${config_dir} - ${generator})")
     endif()
 
     file(LOCK ${lock} RELEASE)

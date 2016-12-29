@@ -33,7 +33,6 @@
 
 #include <access_table.h>
 #include <api.h>
-#include <pack.h>
 #include <config.h>
 #include <database.h>
 #include <filesystem.h>
@@ -171,14 +170,26 @@ try
                 if (args.size() < 6)
                 {
                     std::cout << "invalid number of arguments: " << args.size() << "\n";
-                    std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file generator [toolchain]\n";
+                    std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file generator toolset toolchain\n";
                     return 1;
                 }
+
+                size_t a = 2;
+
+#define ASSIGN_ARG(x) if (a < args.size()) o.x = trim_double_quotes(args[a++])
+
+                ParallelCheckOptions o;
+                ASSIGN_ARG(dir);
+                ASSIGN_ARG(vars_file);
+                ASSIGN_ARG(checks_file);
+                ASSIGN_ARG(generator);
+                ASSIGN_ARG(toolset);
+                ASSIGN_ARG(toolchain);
+
+#undef ASSIGN_ARG
+
                 CMakePrinter c;
-                if (args.size() == 6)
-                    c.parallel_vars_check(args[2], args[3], args[4], args[5]);
-                else if (args.size() == 7)
-                    c.parallel_vars_check(args[2], args[3], args[4], args[5], args[6]);
+                c.parallel_vars_check(o);
                 return 0;
             }
 
@@ -321,6 +332,11 @@ try
             if (i == fs.end())
                 cleanPackages(o, flags);
         }
+        return 0;
+    }
+    if (options().count(CLEAN_CONFIGS))
+    {
+        cleanConfigs(options[CLEAN_CONFIGS].as<Strings>());
         return 0;
     }
     if (options().count("beautify"))
