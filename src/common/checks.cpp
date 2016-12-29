@@ -188,25 +188,25 @@ void Checks::load(const yaml &root)
 
     LOAD_MAP(Custom);
 
-    // common checks
+    // common (default) checks
 
     // add some common types
-    addCheck<CheckType>("size_t");
-    addCheck<CheckType>("void *");
+    addCheck<CheckType>("size_t")->default = true;
+    addCheck<CheckType>("void *")->default = true;
 
     if (has_decl)
     {
         // headers
-        addCheck<CheckInclude>("sys/types.h");
-        addCheck<CheckInclude>("sys/stat.h");
-        addCheck<CheckInclude>("stdlib.h");
-        addCheck<CheckInclude>("stddef.h");
-        addCheck<CheckInclude>("memory.h");
-        addCheck<CheckInclude>("string.h");
-        addCheck<CheckInclude>("strings.h");
-        addCheck<CheckInclude>("inttypes.h");
-        addCheck<CheckInclude>("stdint.h");
-        addCheck<CheckInclude>("unistd.h");
+        addCheck<CheckInclude>("sys/types.h")->default = true;
+        addCheck<CheckInclude>("sys/stat.h")->default = true;
+        addCheck<CheckInclude>("stdlib.h")->default = true;
+        addCheck<CheckInclude>("stddef.h")->default = true;
+        addCheck<CheckInclude>("memory.h")->default = true;
+        addCheck<CheckInclude>("string.h")->default = true;
+        addCheck<CheckInclude>("strings.h")->default = true;
+        addCheck<CheckInclude>("inttypes.h")->default = true;
+        addCheck<CheckInclude>("stdint.h")->default = true;
+        addCheck<CheckInclude>("unistd.h")->default = true;
 
         // STDC_HEADERS
         addCheck<CheckCSourceCompiles>("STDC_HEADERS", R"(
@@ -215,7 +215,7 @@ void Checks::load(const yaml &root)
 #include <string.h>
 #include <float.h>
 int main() {return 0;}
-)");
+)")->default = true;
     }
 }
 
@@ -228,6 +228,9 @@ void Checks::save(yaml &root) const
 {
     for (auto &c : checks)
     {
+        if (c->default)
+            continue;
+
         auto &i = c->getInformation();
         auto t = i.type;
 

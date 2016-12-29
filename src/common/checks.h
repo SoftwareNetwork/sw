@@ -106,6 +106,10 @@ protected:
     // message for printing
     String message;
 
+public:
+    // default check won't be printed
+    bool default = false;
+
 private:
     template <class T>
     friend struct less_check;
