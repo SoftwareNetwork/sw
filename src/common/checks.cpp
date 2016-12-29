@@ -191,22 +191,22 @@ void Checks::load(const yaml &root)
     // common (default) checks
 
     // add some common types
-    addCheck<CheckType>("size_t")->default = true;
-    addCheck<CheckType>("void *")->default = true;
+    addCheck<CheckType>("size_t")->default_ = true;
+    addCheck<CheckType>("void *")->default_ = true;
 
     if (has_decl)
     {
         // headers
-        addCheck<CheckInclude>("sys/types.h")->default = true;
-        addCheck<CheckInclude>("sys/stat.h")->default = true;
-        addCheck<CheckInclude>("stdlib.h")->default = true;
-        addCheck<CheckInclude>("stddef.h")->default = true;
-        addCheck<CheckInclude>("memory.h")->default = true;
-        addCheck<CheckInclude>("string.h")->default = true;
-        addCheck<CheckInclude>("strings.h")->default = true;
-        addCheck<CheckInclude>("inttypes.h")->default = true;
-        addCheck<CheckInclude>("stdint.h")->default = true;
-        addCheck<CheckInclude>("unistd.h")->default = true;
+        addCheck<CheckInclude>("sys/types.h")->default_ = true;
+        addCheck<CheckInclude>("sys/stat.h")->default_ = true;
+        addCheck<CheckInclude>("stdlib.h")->default_ = true;
+        addCheck<CheckInclude>("stddef.h")->default_ = true;
+        addCheck<CheckInclude>("memory.h")->default_ = true;
+        addCheck<CheckInclude>("string.h")->default_ = true;
+        addCheck<CheckInclude>("strings.h")->default_ = true;
+        addCheck<CheckInclude>("inttypes.h")->default_ = true;
+        addCheck<CheckInclude>("stdint.h")->default_ = true;
+        addCheck<CheckInclude>("unistd.h")->default_ = true;
 
         // STDC_HEADERS
         addCheck<CheckCSourceCompiles>("STDC_HEADERS", R"(
@@ -215,7 +215,7 @@ void Checks::load(const yaml &root)
 #include <string.h>
 #include <float.h>
 int main() {return 0;}
-)")->default = true;
+)")->default_ = true;
     }
 }
 
@@ -228,7 +228,7 @@ void Checks::save(yaml &root) const
 {
     for (auto &c : checks)
     {
-        if (c->default)
+        if (c->default_)
             continue;
 
         auto &i = c->getInformation();

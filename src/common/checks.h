@@ -108,7 +108,7 @@ protected:
 
 public:
     // default check won't be printed
-    bool default = false;
+    bool default_ = false;
 
 private:
     template <class T>

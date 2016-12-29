@@ -1289,7 +1289,8 @@ void saveOptionsMap(yaml &node, const OptionsMap &m)
         for (auto &v : o.link_directories)
             root[ol.first]["link_directories"].push_back(v);
 
-        o.bs_insertions.save(root[ol.first]);
+        auto n = root[ol.first];
+        o.bs_insertions.save(n);
     }
     node["options"] = root;
 }
