@@ -245,7 +245,7 @@ path getDbDirectory()
 int readPackagesDbSchemaVersion(const path &dir)
 {
     auto p = dir / PACKAGES_DB_SCHEMA_VERSION_FILE;
-    if (fs::exists(p))
+    if (!fs::exists(p))
         return 0;
     return std::stoi(read_file(p));
 }
@@ -258,7 +258,7 @@ void writePackagesDbSchemaVersion(const path &dir)
 int readPackagesDbVersion(const path &dir)
 {
     auto p = dir / PACKAGES_DB_VERSION_FILE;
-    if (fs::exists(p))
+    if (!fs::exists(p))
         return 0;
     return std::stoi(read_file(p));
 }
