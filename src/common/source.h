@@ -41,35 +41,35 @@ struct Git
     String url;
     String tag;
     String branch;
+    String commit;
 
     bool empty() const { return url.empty(); }
-
-    bool isValid(String *error = nullptr) const
+    bool isValid(String *error = nullptr) const;
+    bool operator==(const Git &rhs) const
     {
-        if (empty())
-        {
-            if (error)
-                *error = "Git url is missing";
-            return false;
-        }
-        if (tag.empty() && branch.empty())
-        {
-            if (error)
-                *error = "No git sources (branch or tag) available";
-            return false;
-        }
-        if (!tag.empty() && !branch.empty())
-        {
-            if (error)
-                *error = "Only one git source (branch or tag) must be specified";
-            return false;
-        }
-        return true;
+        return std::tie(url, tag, branch, commit) == std::tie(rhs.url, rhs.tag, rhs.branch, rhs.commit);
     }
 };
 
-struct RemoteFile { String url; };
-struct RemoteFiles { std::set<String> urls; };
+struct RemoteFile
+{
+    String url;
+
+    bool operator==(const RemoteFile &rhs) const
+    {
+        return std::tie(url) == std::tie(rhs.url);
+    }
+};
+
+struct RemoteFiles
+{
+    std::set<String> urls;
+
+    bool operator==(const RemoteFiles &rhs) const
+    {
+        return std::tie(urls) == std::tie(rhs.urls);
+    }
+};
 
 // add svn, bzr, hg?
 // do not add local files
@@ -77,7 +77,6 @@ using Source = boost::variant<Git, RemoteFile, RemoteFiles>;
 
 struct DownloadSource
 {
-    path root_dir;
     int64_t max_file_size = 0;
 
     void operator()(const Git &git);
@@ -92,7 +91,7 @@ private:
 };
 
 bool load_source(const yaml &root, Source &source);
-void save_source(yaml root, const Source &source);
+void save_source(yaml &root, const Source &source);
 
 Source load_source(const ptree &p);
 void save_source(ptree &p, const Source &source);

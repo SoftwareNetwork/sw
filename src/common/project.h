@@ -196,7 +196,7 @@ public:
     void applyFlags(ProjectFlags &flags) const;
     void addDependency(const Package &p);
 
-    void findSources(path p);
+    void findSources(path p = path());
     bool writeArchive(const path &fn) const;
     void prepareExports() const;
     void patchSources() const;
@@ -221,7 +221,7 @@ private:
     const Files &getSources() const;
     ProjectPath relative_name_to_absolute(const String &name);
     optional<ProjectPath> load_local_dependency(const String &name);
-    void findRootDirectory(const path &p, int depth = 0);
+    static void findRootDirectory(const path &p, path &root, int depth = 0);
 };
 
 using Projects = std::map<String, Project>;

@@ -476,7 +476,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
             project.sources.insert(cpp_fn.filename().string());
         }
         project.root_directory = root_directory;
-        project.findSources(path());
+        project.findSources();
         project.files.erase(CPPAN_FILENAME);
 
         // update flags and pkg again after findSources()

@@ -512,7 +512,7 @@ void cleanConfig(const String &c)
     remove_pair(directories.storage_dir_lnk);
 #endif
 
-    // for cfg we also remove xxx.c.cmake files
+    // for cfg we also remove xxx.cmake files (found with xxx.c.cmake files)
     remove_pair(directories.storage_dir_cfg);
     for (auto &f : boost::make_iterator_range(fs::directory_iterator(directories.storage_dir_cfg), {}))
     {
@@ -528,7 +528,7 @@ void cleanConfig(const String &c)
         if (parts.size() == 3)
         {
             if (parts[1] == c || parts[1] == h)
-                fs::remove(f);
+                fs::remove(parts[0] + ".cmake");
             continue;
         }
     }

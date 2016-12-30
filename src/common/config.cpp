@@ -178,11 +178,15 @@ const Project &Config::getProject(const ProjectPath &ppath) const
 
 Project &Config::getDefaultProject(const ProjectPath &ppath)
 {
+    if (ppath.empty() && projects.size() > 1)
+        return projects.begin()->second;
     return getProject(ppath);
 }
 
 const Project &Config::getDefaultProject(const ProjectPath &ppath) const
 {
+    if (ppath.empty() && projects.size() > 1)
+        return projects.begin()->second;
     return getProject(ppath);
 }
 

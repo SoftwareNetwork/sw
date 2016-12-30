@@ -274,7 +274,7 @@ void load_source_and_version(const yaml &root, Source &source, Version &version)
             }
         }
 
-        if (version.isValid() && git.branch.empty() && git.tag.empty())
+        if (version.isValid() && git.branch.empty() && git.tag.empty() && git.commit.empty())
         {
             if (version.isBranch())
                 git.branch = version.toString();
@@ -343,7 +343,7 @@ Project::Project(const ProjectPath &root_project)
 {
 }
 
-void Project::findRootDirectory(const path &p, int depth)
+void Project::findRootDirectory(const path &p, path &root, int depth)
 {
     // limit recursion
     if (depth++ > 10)
@@ -371,8 +371,8 @@ void Project::findRootDirectory(const path &p, int depth)
     if (pfiles.empty() && pdirs.size() == 1)
     {
         auto d = fs::relative(*pdirs.begin(), p);
-        root_directory /= d;
-        findRootDirectory(p / d);
+        root /= d;
+        findRootDirectory(p / d, root);
     }
 }
 
@@ -381,8 +381,9 @@ void Project::findSources(path p)
     // output file list (files) must contain absolute paths
     //
 
-    if (root_directory.empty())
-        findRootDirectory(p);
+    // correct root dir is detected and set during load phase
+    if (p.empty())
+        p = fs::current_path();
     p /= root_directory;
 
     if (import_from_bazel)
@@ -970,8 +971,15 @@ void Project::load(const yaml &root)
 
     // we're trying to find root directory
     // to make some following default checks available
-    if (root_directory.empty())
-        findRootDirectory(fs::current_path());
+    // try to detect and prepend root dir
+    {
+        path root;
+        findRootDirectory(fs::current_path(), root);
+        if (root_directory.empty())
+            root_directory = root;
+        else if (root_directory != root)
+            root_directory = root / root_directory;
+    }
 
     // idirs
     if (defaults_allowed && include_directories.public_.empty())

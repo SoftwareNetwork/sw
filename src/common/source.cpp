@@ -31,6 +31,37 @@
 #include "pack.h"
 #include "templates.h"
 
+bool Git::isValid(String *error) const
+{
+    if (empty())
+    {
+        if (error)
+            *error = "Git url is missing";
+        return false;
+    }
+
+    int e = 0;
+    e += !tag.empty();
+    e += !branch.empty();
+    e += !commit.empty();
+
+    if (e == 0)
+    {
+        if (error)
+            *error = "No git sources (tag or branch or commit) available";
+        return false;
+    }
+
+    if (e > 1)
+    {
+        if (error)
+            *error = "Only one git source (tag or branch or commit) must be specified";
+        return false;
+    }
+
+    return true;
+}
+
 bool load_source(const yaml &root, Source &source)
 {
     auto &src = root["source"];
@@ -41,8 +72,9 @@ bool load_source(const yaml &root, Source &source)
 
     Git git;
     EXTRACT_VAR(src, git.url, "git", String);
-    EXTRACT_VAR(src, git.branch, "branch", String);
     EXTRACT_VAR(src, git.tag, "tag", String);
+    EXTRACT_VAR(src, git.branch, "branch", String);
+    EXTRACT_VAR(src, git.commit, "commit", String);
 
     if (!git.url.empty())
     {
@@ -72,7 +104,7 @@ bool load_source(const yaml &root, Source &source)
     return true;
 }
 
-void save_source(yaml root, const Source &source)
+void save_source(yaml &root, const Source &source)
 {
     auto save_source = overload(
         [&root](const Git &git)
@@ -82,6 +114,8 @@ void save_source(yaml root, const Source &source)
             root["source"]["tag"] = git.tag;
         if (!git.branch.empty())
             root["source"]["branch"] = git.branch;
+        if (!git.commit.empty())
+            root["source"]["commit"] = git.commit;
     },
         [&root](const RemoteFile &rf)
     {
@@ -122,26 +156,15 @@ void DownloadSource::operator()(const Git &git)
             url += git.branch + ".zip"; // but use .zip for branches!
             fn = "1.zip";
         }
+        else if (!git.commit.empty())
+        {
+            url += git.commit + ".zip"; // but use .zip for branches!
+            fn = "1.zip";
+        }
 
         try
         {
             download_and_unpack(url, fn);
-
-            // try to detect root dir
-            // TODO: remove this and move the code outside (to project.findSources())
-            std::set<path> dirs;
-            for (auto &f : boost::make_iterator_range(fs::directory_iterator(fs::current_path()), {}))
-            {
-                if (!fs::is_directory(f))
-                    continue;
-                dirs.insert(f);
-            }
-            if (dirs.size() == 1)
-            {
-                fs::current_path(*dirs.begin());
-                root_dir = *dirs.begin();
-            }
-
             return;
         }
         catch (...)
@@ -173,6 +196,11 @@ void DownloadSource::operator()(const Git &git)
                 run("git fetch --depth 1 origin refs/tags/" + git.tag);
             else if (!git.branch.empty())
                 run("git fetch --depth 1 origin " + git.branch);
+            else if (!git.commit.empty())
+            {
+                run("git fetch");
+                run("git checkout " + git.commit);
+            }
             run("git reset --hard FETCH_HEAD");
             break;
         }
@@ -251,6 +279,7 @@ Source load_source(const ptree &p)
         git.url = p.get("source.git.url", "");
         git.tag = p.get("source.git.tag", "");
         git.branch = p.get("source.git.branch", "");
+        git.commit = p.get("source.git.commit", "");
         if (!git.empty())
             return git;
     }
@@ -286,6 +315,8 @@ void save_source(ptree &p, const Source &source)
             p.add("source.git.tag", git.tag);
         if (!git.branch.empty())
             p.add("source.git.branch", git.branch);
+        if (!git.commit.empty())
+            p.add("source.git.commit", git.commit);
     },
         [&p](const RemoteFile &rf)
     {
@@ -323,6 +354,8 @@ String print_source(const Source &source)
             r += "tag: " + git.tag + "\n";
         if (!git.branch.empty())
             r += "branch: " + git.branch + "\n";
+        if (!git.commit.empty())
+            r += "commit: " + git.commit + "\n";
         return r;
     },
         [](const RemoteFile &rf)

@@ -98,7 +98,7 @@ void verify(const Package &pkg)
 
         Config c(CPPAN_FILENAME);
         auto &project = c.getDefaultProject();
-        project.findSources(".");
+        project.findSources();
         String archive_name = make_archive_name("original");
         if (!project.writeArchive(fs::absolute(archive_name)))
             throw std::runtime_error("Archive write failed");
