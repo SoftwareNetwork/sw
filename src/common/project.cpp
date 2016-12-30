@@ -1214,7 +1214,7 @@ void Project::addDependency(const Package &p)
 OptionsMap loadOptionsMap(const yaml &root)
 {
     OptionsMap options;
-    if (!root.IsMap())
+    if (root["options"].IsDefined() && !root["options"].IsMap())
         return options;
     get_map_and_iterate(root, "options", [&options](const auto &opt_level)
     {
