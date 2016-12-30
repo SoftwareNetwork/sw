@@ -623,6 +623,11 @@ void ServiceDatabase::addConfigHash(const String &settings_hash, const String &c
     db->execute("replace into ConfigHashes values ('" + settings_hash + "', '" + config + "', '" + config_hash + "'" + ")");
 }
 
+void ServiceDatabase::removeConfigHashes(const String &h) const
+{
+    db->execute("delete from ConfigHashes where config_hash = '" + h + "'");
+}
+
 void ServiceDatabase::setPackageDependenciesHash(const Package &p, const String &hash) const
 {
     db->execute("replace into PackageDependenciesHashes values ('" + p.target_name + "', '" + hash + "')");

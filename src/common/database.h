@@ -102,6 +102,7 @@ public:
     String getConfigByHash(const String &settings_hash) const;
     void addConfigHash(const String &settings_hash, const String &config, const String &config_hash) const;
     void clearConfigHashes() const;
+    void removeConfigHashes(const String &config_hash) const;
 
     void setPackageDependenciesHash(const Package &p, const String &hash) const;
     bool hasPackageDependenciesHash(const Package &p, const String &hash) const;

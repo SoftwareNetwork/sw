@@ -384,7 +384,8 @@ void Project::findSources(path p)
     // correct root dir is detected and set during load phase
     if (p.empty())
         p = fs::current_path();
-    p /= root_directory;
+    if (p != root_directory)
+        p /= root_directory;
 
     if (import_from_bazel)
     {
