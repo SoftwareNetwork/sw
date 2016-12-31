@@ -266,3 +266,43 @@ bool compare_dirs(const path &dir1, const path &dir2)
 
     return true;
 }
+
+void findRootDirectory1(const path &p, path &root, int depth = 0)
+{
+    // limit recursion
+    if (depth++ > 10)
+        return;
+
+    std::vector<path> pfiles;
+    std::vector<path> pdirs;
+    for (auto &pi : boost::make_iterator_range(fs::directory_iterator(p), {}))
+    {
+        auto f = pi.path().filename().string();
+        if (f == CPPAN_FILENAME)
+            continue;
+        if (fs::is_regular_file(pi))
+        {
+            pfiles.push_back(pi);
+            break;
+        }
+        else if (fs::is_directory(pi))
+        {
+            pdirs.push_back(pi);
+            if (pdirs.size() > 1)
+                break;
+        }
+    }
+    if (pfiles.empty() && pdirs.size() == 1)
+    {
+        auto d = fs::relative(*pdirs.begin(), p);
+        root /= d;
+        findRootDirectory1(p / d, root);
+    }
+}
+
+path findRootDirectory(const path &p)
+{
+    path root;
+    findRootDirectory1(p, root);
+    return root;
+}

@@ -221,7 +221,6 @@ private:
     const Files &getSources() const;
     ProjectPath relative_name_to_absolute(const String &name);
     optional<ProjectPath> load_local_dependency(const String &name);
-    static void findRootDirectory(const path &p, path &root, int depth = 0);
 };
 
 using Projects = std::map<String, Project>;

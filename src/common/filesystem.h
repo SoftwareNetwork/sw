@@ -78,6 +78,8 @@ void remove_files_like(const path &dir, const String &regex);
 bool compare_files(const path &fn1, const path &fn2);
 bool compare_dirs(const path &dir1, const path &dir2);
 
+path findRootDirectory(const path &p = fs::current_path());
+
 namespace std
 {
     template<> struct hash<path>

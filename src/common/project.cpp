@@ -343,39 +343,6 @@ Project::Project(const ProjectPath &root_project)
 {
 }
 
-void Project::findRootDirectory(const path &p, path &root, int depth)
-{
-    // limit recursion
-    if (depth++ > 10)
-        return;
-
-    std::vector<path> pfiles;
-    std::vector<path> pdirs;
-    for (auto &pi : boost::make_iterator_range(fs::directory_iterator(p), {}))
-    {
-        auto f = pi.path().filename().string();
-        if (f == CPPAN_FILENAME)
-            continue;
-        if (fs::is_regular_file(pi))
-        {
-            pfiles.push_back(pi);
-            break;
-        }
-        else if (fs::is_directory(pi))
-        {
-            pdirs.push_back(pi);
-            if (pdirs.size() > 1)
-                break;
-        }
-    }
-    if (pfiles.empty() && pdirs.size() == 1)
-    {
-        auto d = fs::relative(*pdirs.begin(), p);
-        root /= d;
-        findRootDirectory(p / d, root);
-    }
-}
-
 void Project::findSources(path p)
 {
     // output file list (files) must contain absolute paths
@@ -973,8 +940,7 @@ void Project::load(const yaml &root)
     // to make some following default checks available
     // try to detect and prepend root dir
     {
-        path root;
-        findRootDirectory(fs::current_path(), root);
+        auto root = findRootDirectory();
         if (root_directory.empty())
             root_directory = root;
         else if (root_directory != root)
