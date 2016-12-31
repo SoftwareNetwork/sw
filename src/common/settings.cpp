@@ -528,7 +528,11 @@ void cleanConfig(const String &c)
         if (parts.size() == 3)
         {
             if (parts[1] == c || parts[1] == h)
+            {
                 fs::remove(parts[0] + ".cmake");
+                fs::remove(parts[1] + ".cmake");
+                fs::remove(f);
+            }
             continue;
         }
     }
@@ -548,6 +552,10 @@ void cleanConfig(const String &c)
                 fs::remove_all(f);
         }
     }
+
+    // config hashes (in sdb)
+    sdb.removeConfigHashes(c);
+    sdb.removeConfigHashes(h);
 }
 
 void cleanConfigs(const Strings &configs)
