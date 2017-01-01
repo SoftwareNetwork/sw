@@ -677,11 +677,11 @@ void Project::load(const yaml &root)
 
     // deps
     {
-        auto read_version = [](auto &dependency, const auto &node)
+        auto read_version = [](auto &dependency, const String &v)
         {
             if (!dependency.flags[pfLocalProject])
             {
-                dependency.version = node.template as<String>();
+                dependency.version = v;
                 return;
             }
 
@@ -689,7 +689,7 @@ void Project::load(const yaml &root)
                 dependency.version = Version(LOCAL_VERSION_NAME);
             else
             {
-                auto nppath = dependency.ppath / node.template as<String>();
+                auto nppath = dependency.ppath / v;
                 if (rd.has_local_package(nppath))
                 {
                     dependency.ppath = nppath;
@@ -713,6 +713,13 @@ void Project::load(const yaml &root)
                     dependency.ppath = this->relative_name_to_absolute(d["name"].template as<String>());
                 if (d["package"].IsDefined())
                     dependency.ppath = this->relative_name_to_absolute(d["package"].template as<String>());
+                if (dependency.ppath.empty() && d.size() == 1)
+                {
+                    dependency.ppath = this->relative_name_to_absolute(d.begin()->first.template as<String>());
+                    if (dependency.ppath.is_loc())
+                        dependency.flags.set(pfLocalProject);
+                    read_version(dependency, d.begin()->second.template as<String>());
+                }
                 if (d["local"].IsDefined() && allow_local_dependencies)
                 {
                     // WARNING!
@@ -753,14 +760,14 @@ void Project::load(const yaml &root)
 
                 // version will be read for local project
                 // even 2nd arg is not valid
-                read_version(dependency, d["version"]);
+                read_version(dependency, d["version"].template as<String>());
             }
 
             if (d.IsMap())
             {
                 // read other map fields
                 if (d["version"].IsDefined())
-                    read_version(dependency, d["version"]);
+                    read_version(dependency, d["version"].template as<String>());
                 if (d["ref"].IsDefined())
                     dependency.reference = d["ref"].template as<String>();
                 if (d["reference"].IsDefined())
@@ -796,7 +803,7 @@ void Project::load(const yaml &root)
                     dependency.flags.set(pfLocalProject);
 
                 if (d.second.IsScalar())
-                    read_version(dependency, d.second);
+                    read_version(dependency, d.second.template as<String>());
                 else if (d.second.IsMap())
                 {
                     read_single_dep(deps, d.second, dependency);
@@ -811,11 +818,9 @@ void Project::load(const yaml &root)
                 deps[dependency.ppath.toString()] = dependency;
             };
 
-            Packages dependencies_private;
-
             auto extract_deps = [&dall, this, &get_dep, &read_single_dep](const auto &str, auto &deps)
             {
-                auto &priv = dall[str];
+                auto priv = dall[str];
                 if (!priv.IsDefined())
                     return;
                 if (priv.IsMap())
@@ -833,6 +838,7 @@ void Project::load(const yaml &root)
                 }
             };
 
+            Packages dependencies_private;
             extract_deps("private", dependencies_private);
             extract_deps("public", dependencies);
 

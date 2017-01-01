@@ -33,7 +33,7 @@
 struct Config;
 class ProjectPath;
 
-struct PackageStore
+class PackageStore
 {
 public:
     struct PackageConfig
@@ -81,7 +81,7 @@ private:
     PackageConfigs packages;
     std::set<std::unique_ptr<Config>> config_store;
 
-    std::set<Package> resolved_packages;
+    std::map<Package, Package> resolved_packages;
     std::map<ProjectPath, path> local_packages;
 
     bool processing = false;
@@ -91,7 +91,7 @@ private:
     void write_index() const;
     void check_deps_changed();
 
-    friend struct Resolver;
+    friend class Resolver;
 };
 
 extern PackageStore rd;

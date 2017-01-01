@@ -30,7 +30,7 @@
 #include "dependency.h"
 #include "package_store.h"
 
-struct Resolver
+class Resolver
 {
 public:
     using Dependencies = DownloadDependency::Dependencies;

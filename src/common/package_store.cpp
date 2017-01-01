@@ -104,10 +104,30 @@ void PackageStore::process(const path &p, Config &root)
             // so we assign them to d.second
             auto i = packages.find(d.second);
             if (i == packages.end())
-                throw std::runtime_error("Cannot find match for " + d.second.target_name);
-            bool ido = d.second.flags[pfIncludeDirectoriesOnly] | i->first.flags[pfIncludeDirectoriesOnly]; // remove?
+            {
+                // for pretty error message
+                auto dep = d.second;
+                dep.createNames();
+
+                // we try to resolve again
+                ::resolve_dependencies({ d });
+
+                auto irp = resolved_packages.find(d.second);
+                if (irp == resolved_packages.end())
+                    throw std::runtime_error(c.first.target_name + ": cannot find match for " + dep.target_name);
+
+                i = packages.find(irp->second);
+                if (i == packages.end())
+                {
+                    throw std::logic_error("resolved package does not exist in packages var! " +
+                        c.first.target_name + ": cannot find match for " + dep.target_name);
+                }
+            }
+            bool ido = d.second.flags[pfIncludeDirectoriesOnly] | i->first.flags[pfIncludeDirectoriesOnly];
+            bool pvt = d.second.flags[pfPrivateDependency] | i->first.flags[pfPrivateDependency];
             d.second.flags = i->first.flags;
             d.second.flags.set(pfIncludeDirectoriesOnly, ido);
+            d.second.flags.set(pfPrivateDependency, pvt);
         }
     }
 
@@ -175,7 +195,7 @@ void PackageStore::resolve_dependencies(const Config &c)
         if (i != resolved_packages.end())
         {
             // but still insert as a dependency
-            packages[c.pkg].dependencies.insert({ i->ppath.toString(), *i });
+            packages[c.pkg].dependencies.insert({ i->second.ppath.toString(), i->second });
             continue;
         }
 

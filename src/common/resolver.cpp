@@ -95,7 +95,16 @@ void Resolver::resolve_dependencies(const Packages &dependencies)
 
     // mark packages as resolved
     for (auto &d : deps)
-        rd.resolved_packages.insert(d.second);
+    {
+        for (auto &dl : download_dependencies_)
+        {
+            if (d.second.ppath == dl.second.ppath && dl.second.flags[pfDirectDependency])
+            {
+                rd.resolved_packages[d.second] = dl.second;
+                break;
+            }
+        }
+    }
 
     // other related stuff
     read_configs();

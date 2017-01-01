@@ -7,8 +7,7 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             //VALUE "CompanyName", "TODO: <Company name>"
-            // TODO: replace with file name? or something meaningfull?
-            VALUE "FileDescription", "@config@ " @PACKAGE_BUILD_CONFIG@
+            VALUE "FileDescription", PACKAGE_NAME_LAST " - @config@ - " @PACKAGE_BUILD_CONFIG@
             VALUE "FileVersion", "@PACKAGE_VERSION_MAJOR@.@PACKAGE_VERSION_MINOR@.@PACKAGE_VERSION_PATCH@"
             //VALUE "InternalName", "@PACKAGE@"
             VALUE "LegalCopyright", "Powered by C++ Archive Network"

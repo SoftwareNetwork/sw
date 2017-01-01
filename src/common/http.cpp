@@ -342,6 +342,7 @@ bool isUrl(const String &s)
         s.find("https://") == 0 ||
         s.find("ftp://") == 0 ||
         s.find("git://") == 0 ||
+        s.find("ssh://") == 0 ||
         0
         )
     {
@@ -356,8 +357,9 @@ bool isValidSourceUrl(const String &url)
         return false;
     if (!isUrl(url))
         return false;
-    if (url.find_first_of(R"b('"`\|;$ !@#^*()<>[],)b") != url.npos)
+    if (url.find_first_of(R"bbb('"`\|;$ !#^*()<>[],)bbb") != url.npos)
         return false;
+    // remove? will fail: ssh://name:pass@web.site
     if (std::count(url.begin(), url.end(), ':') > 1)
         return false;
     if (url.find("&&") != url.npos)

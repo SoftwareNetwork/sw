@@ -1335,6 +1335,7 @@ endif()
             ctx.increaseIndent();
             ctx.addLine("PRIVATE   PACKAGE=\"" + d.ppath.toString() + "\"");
             ctx.addLine("PRIVATE   PACKAGE_NAME=\"" + d.ppath.toString() + "\"");
+            ctx.addLine("PRIVATE   PACKAGE_NAME_LAST=\"" + d.ppath.back() + "\"");
             ctx.addLine("PRIVATE   PACKAGE_VERSION=\"" + d.version.toString() + "\"");
             ctx.addLine("PRIVATE   PACKAGE_STRING=\"${this}\"");
             ctx.addLine("PRIVATE   PACKAGE_BUILD_CONFIG=\"$<CONFIG>\"");
