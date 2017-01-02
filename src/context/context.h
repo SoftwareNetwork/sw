@@ -113,7 +113,7 @@ public:
         return *after_;
     }
 
-    void emptyLines(int n);
+    void emptyLines(int n = 1);
 
     // add with "as is" indent
     Context &operator+=(const Context &rhs);

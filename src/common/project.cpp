@@ -672,18 +672,15 @@ void Project::load(const yaml &root)
             get_map_and_iterate(root, "include_directories", [this](const auto &n)
             {
                 auto f = n.first.template as<String>();
+                auto s = get_sequence<String>(n.second);
                 if (f == "public")
-                {
-                    auto s = get_sequence<String>(n.second);
                     include_directories.public_.insert(s.begin(), s.end());
-                }
                 else if (f == "private")
-                {
-                    auto s = get_sequence<String>(n.second);
                     include_directories.private_.insert(s.begin(), s.end());
-                }
+                else if (f == "interface")
+                    include_directories.interface_.insert(s.begin(), s.end());
                 else
-                    throw std::runtime_error("include key must be only 'public' or 'private'");
+                    throw std::runtime_error("include key must be only 'public' or 'private' or 'interface'");
             });
         });
     }
@@ -1119,6 +1116,8 @@ yaml Project::save() const
         root["include_directories"]["public"].push_back(normalize_path(v));
     for (auto &v : include_directories.private_)
         root["include_directories"]["private"].push_back(normalize_path(v));
+    for (auto &v : include_directories.interface_)
+        root["include_directories"]["interface"].push_back(normalize_path(v));
     saveOptionsMap(root, options);
     ADD_SET(aliases, aliases);
     checks.save(root);

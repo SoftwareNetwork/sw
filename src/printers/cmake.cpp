@@ -77,8 +77,8 @@ const String cmake_obj_exports_filename = "exports.cmake";
 
 const String cmake_minimum_required = "cmake_minimum_required(VERSION 3.2.0)";
 const String cmake_debug_message_fun = "cppan_debug_message";
-const String cppan_dummy_build_target = "build";
-const String cppan_dummy_copy_target = "copy";
+const String cppan_dummy_build_target = "b"; // build
+const String cppan_dummy_copy_target = "c"; // copy
 
 const String debug_stack_space_diff = repeat(" ", 4);
 const String config_delimeter_short = repeat("#", 40);
@@ -140,7 +140,7 @@ void file_header(Context &ctx, const Package &d, bool root)
         ctx.addLine("# binary dir: " + normalize_path(d.getDirObj().string()));
         ctx.addLine("#");
         ctx.addLine("# package hash      : " + d.getHash());
-        ctx.addLine("# package hash short: " + d.getFilesystemHash());
+        ctx.addLine("# package hash short: " + d.getHashShort());
         ctx.addLine("#");
     }
     else
@@ -218,8 +218,18 @@ void print_local_project_files(Context &ctx, const Project &p)
 String cppan_dummy_target(const String &name)
 {
     if (name.empty())
-        return "cppan-dummy";
-    return "cppan-dummy-" + name;
+        return "cppan-d";
+    return "cppan-d-" + name;
+}
+
+void set_target_properties(Context &ctx, const String &name, const String &property, const String &value)
+{
+    ctx.addLine("set_target_properties(" + name + " PROPERTIES " + property + " " + value + ")");
+}
+
+void set_target_properties(Context &ctx, const String &property, const String &value)
+{
+    ctx.addLine("set_target_properties(${this} PROPERTIES " + property + " " + value + ")");
 }
 
 void declare_dummy_target(Context &ctx, const String &name)
@@ -232,15 +242,13 @@ void declare_dummy_target(Context &ctx, const String &name)
     ctx.addLine("    add_custom_target(" + cppan_dummy_target(name) + " ALL)");
     ctx.addLine("endif()");
     ctx.addLine();
-    ctx.addLine("set_target_properties(" + cppan_dummy_target(name) + " PROPERTIES\n    FOLDER \"cppan/service\"\n)");
+    set_target_properties(ctx, cppan_dummy_target(name), "FOLDER", "\"cppan/service\"");
     ctx.emptyLines(1);
 }
 
 void print_solution_folder(Context &ctx, const String &target, const path &folder)
 {
-    ctx.addLine("set_target_properties(" + target + " PROPERTIES");
-    ctx.addLine("    FOLDER \"" + normalize_path(folder) + "\"");
-    ctx.addLine(")");
+    set_target_properties(ctx, target, "FOLDER", "\"" + normalize_path(folder) + "\"");
 }
 
 String cmake_debug_message(const String &s)
@@ -268,7 +276,7 @@ String prepare_include_directory(const String &i)
 
 String get_binary_path(const Package &d, const String &prefix)
 {
-    return prefix + "/cppan/" + d.getFilesystemHash();
+    return prefix + "/cppan/" + d.getHashShort();
 }
 
 String get_binary_path(const Package &d)
@@ -439,7 +447,11 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
             if (d.empty())
                 local.addLine("set(this " + target + ")");
 
-            String build_deps_tgt = "${this}-build-deps";
+            String build_deps_tgt = "${this}";
+            if (d.empty() && target.find("-b") != target.npos)
+                build_deps_tgt += "-d"; // deps
+            else
+                build_deps_tgt += "-b-d";
 
             // do not use add_custom_command as it doesn't work
             // add custom target and add a dependency below
@@ -611,6 +623,9 @@ endif()
     ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (s.build_system_verbose ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_BUILD_WARNING_LEVEL "s + (s.build_warning_level ? std::to_string(s.build_warning_level.get()) : "3") + ")");
     ctx.addLine("set(CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT "s + (s.copy_all_libraries_to_output ? "1" : "0") + ")");
+    // build top level executables with input settings
+    // otherwise it won't use them
+    ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG 1)");
     ctx.addLine();
     ctx.addLine("add_subdirectory(" + normalize_path(s.cppan_dir) + ")");
     ctx.addLine();
@@ -882,7 +897,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
     file_header(ctx, d);
 
     // variables for target
-    ctx.addLine("set(this " + d.target_name + ")");
+    ctx.addLine("set(this " + d.target_name_hash + ")");
     ctx.addLine("set(target ${this})");
     ctx.addLine("set(this_variable " + d.variable_name + ")");
     ctx.addLine();
@@ -1029,53 +1044,55 @@ void CMakePrinter::print_src_config_file(const path &fn) const
     print_bs_insertion(ctx, p, "pre sources", &BuildSystemConfigInsertions::pre_sources);
 
     // sources
-    config_section_title(ctx, "sources");
-    if (d.flags[pfLocalProject])
     {
-        print_local_project_files(ctx, p);
-    }
-    else if (p.build_files.empty())
-    {
-        ctx.addLine("file(GLOB_RECURSE src \"*\")");
-    }
-    else
-    {
-        ctx.addLine("set(src");
-        ctx.increaseIndent();
-        for (auto &f : p.build_files)
-            ctx.addLine("${SDIR}/" + normalize_string_copy(f));
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-    }
-    ctx.addLine();
-
-    // exclude files
-    auto exclude_files = [&ctx](const auto &exclude_from_build)
-    {
-        if (!exclude_from_build.empty())
+        config_section_title(ctx, "sources");
+        if (d.flags[pfLocalProject])
         {
-            auto cpp_regex_2_cmake_regex = [](auto &s)
-            {
-                boost::replace_all(s, ".*", "*");
-            };
-
-            config_section_title(ctx, "exclude files");
-            for (auto &f : exclude_from_build)
-            {
-                // try to remove twice (double check) - as a file and as a dir
-                auto s = normalize_path(f);
-                cpp_regex_2_cmake_regex(s);
-                ctx.addLine("remove_src    (\"" + s + "\")");
-                ctx.addLine("remove_src_dir(\"" + s + "\")");
-                ctx.addLine();
-            }
-            ctx.emptyLines(1);
+            print_local_project_files(ctx, p);
         }
-    };
-    exclude_files(p.exclude_from_build);
+        else if (p.build_files.empty())
+        {
+            ctx.addLine("file(GLOB_RECURSE src \"*\")");
+        }
+        else
+        {
+            ctx.addLine("set(src");
+            ctx.increaseIndent();
+            for (auto &f : p.build_files)
+                ctx.addLine("${SDIR}/" + normalize_string_copy(f));
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+        }
+        ctx.addLine();
 
-    //
-    ctx.addLine("set(src ${src} \"" + normalize_path(d.getDirSrc() / cmake_config_filename) + "\")");
+        // exclude files
+        auto exclude_files = [&ctx](const auto &exclude_from_build)
+        {
+            if (!exclude_from_build.empty())
+            {
+                auto cpp_regex_2_cmake_regex = [](auto &s)
+                {
+                    boost::replace_all(s, ".*", "*");
+                };
+
+                config_section_title(ctx, "exclude files");
+                for (auto &f : exclude_from_build)
+                {
+                    // try to remove twice (double check) - as a file and as a dir
+                    auto s = normalize_path(f);
+                    cpp_regex_2_cmake_regex(s);
+                    ctx.addLine("remove_src    (\"" + s + "\")");
+                    ctx.addLine("remove_src_dir(\"" + s + "\")");
+                    ctx.addLine();
+                }
+                ctx.emptyLines(1);
+            }
+        };
+        exclude_files(p.exclude_from_build);
+
+        //
+        ctx.addLine("set(src ${src} \"" + normalize_path(d.getDirSrc() / cmake_config_filename) + "\")");
+    }
 
     print_bs_insertion(ctx, p, "post sources", &BuildSystemConfigInsertions::post_sources);
 
@@ -1105,20 +1122,22 @@ endif()
 )");
 
     // target
-    config_section_title(ctx, "target: " + d.target_name);
-    if (d.flags[pfExecutable])
     {
-        ctx.addLine("add_executable                (${this} " +
-            String(p.executable_type == ExecutableType::Win32 ? "WIN32" : "") + " ${src})");
-    }
-    else
-    {
-        if (d.flags[pfHeaderOnly])
-            ctx.addLine("add_library                   (${this} INTERFACE)");
+        config_section_title(ctx, "target: " + d.target_name);
+        if (d.flags[pfExecutable])
+        {
+            ctx.addLine("add_executable                (${this} " +
+                String(p.executable_type == ExecutableType::Win32 ? "WIN32" : "") + " ${src})");
+        }
         else
-            ctx.addLine("add_library                   (${this} ${LIBRARY_TYPE} ${src})");
+        {
+            if (d.flags[pfHeaderOnly])
+                ctx.addLine("add_library                   (${this} INTERFACE)");
+            else
+                ctx.addLine("add_library                   (${this} ${LIBRARY_TYPE} ${src})");
+        }
+        ctx.addLine();
     }
-    ctx.addLine();
 
     // properties
     {
@@ -1161,15 +1180,26 @@ endif()
                 }
             }
         }
+        ctx.emptyLines();
 
         if (p.export_all_symbols)
         {
             ctx.addLine("if (WIN32 AND (CMAKE_VERSION VERSION_EQUAL 3.6 OR (CMAKE_VERSION VERSION_GREATER 3.6 AND CMAKE_VERSION VERSION_LESS 3.7)))");
             ctx.addLine("    message(FATAL_ERROR \"You have bugged CMake version 3.6 which is known to not work with CPPAN. Please, upgrade CMake.\")");
             ctx.addLine("endif()");
-            ctx.addLine("set_target_properties(${this} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS True)");
+            set_target_properties(ctx, "WINDOWS_EXPORT_ALL_SYMBOLS", "True");
         }
-        ctx.addLine();
+        ctx.emptyLines();
+
+        if (!d.flags[pfHeaderOnly])
+        {
+            set_target_properties(ctx, "OUTPUT_NAME", d.target_name);
+            if (d.flags[pfLocalProject])
+                set_target_properties(ctx, "PROJECT_LABEL", d.ppath.back());
+            else
+                set_target_properties(ctx, "PROJECT_LABEL", d.target_name);
+            ctx.emptyLines();
+        }
     }
 
     // include directories
@@ -1226,6 +1256,8 @@ endif()
                     ctx.addLine("PUBLIC " + prepare_include_directory(idir.string()));
                 for (auto &idir : p.include_directories.private_)
                     ctx.addLine("PRIVATE " + prepare_include_directory(idir.string()));
+                for (auto &idir : p.include_directories.interface_)
+                    ctx.addLine("INTERFACE " + prepare_include_directory(idir.string()));
             }
             print_ideps();
             ctx.decreaseIndent();
@@ -1384,10 +1416,8 @@ endif()
 
         if (!d.flags[pfExecutable] && !d.flags[pfHeaderOnly])
         {
-            ctx.addLine(R"(set_target_properties(${this} PROPERTIES
-    INSTALL_RPATH .
-    BUILD_WITH_INSTALL_RPATH True
-))");
+            set_target_properties(ctx, "INSTALL_RPATH", ".");
+            set_target_properties(ctx, "BUILD_WITH_INSTALL_RPATH", "True");
         }
         ctx.addLine();
 
@@ -1608,34 +1638,23 @@ else())");
 
     // aliases
     {
-        String tt = d.flags[pfExecutable] ? "add_executable" : "add_library";
+        const String tt = d.flags[pfExecutable] ? "add_executable" : "add_library";
 
         config_section_title(ctx, "aliases");
 
-        if (!d.version.isBranch())
+        auto add_aliases = [this, &tt, &ctx](const auto &delim)
         {
-
-            {
-                Version ver = d.version;
-                ver.patch = -1;
-                ctx.addLine(tt + "(" + d.ppath.toString() + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-                ver.minor = -1;
-                ctx.addLine(tt + "(" + d.ppath.toString() + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-                ctx.addLine(tt + "(" + d.ppath.toString() + " ALIAS ${this})");
-                ctx.addLine();
-            }
-
-            {
-                Version ver = d.version;
-                ctx.addLine(tt + "(" + d.ppath.toString("::") + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-                ver.patch = -1;
-                ctx.addLine(tt + "(" + d.ppath.toString("::") + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-                ver.minor = -1;
-                ctx.addLine(tt + "(" + d.ppath.toString("::") + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-                ctx.addLine(tt + "(" + d.ppath.toString("::") + " ALIAS ${this})");
-                ctx.addLine();
-            }
-        }
+            Version ver = d.version;
+            ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ALIAS ${this})");
+            ver.patch = -1;
+            ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ALIAS ${this})");
+            ver.minor = -1;
+            ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ALIAS ${this})");
+            ctx.addLine(tt + "(" + d.ppath.toString(delim) + " ALIAS ${this})");
+            ctx.addLine();
+        };
+        add_aliases(".");
+        add_aliases("::");
 
         if (!p.aliases.empty())
         {
@@ -1787,7 +1806,7 @@ void CMakePrinter::print_obj_config_file(const path &fn) const
 
     // no need to create a solution for local project
     config_section_title(ctx, "project settings");
-    ctx.addLine("project(" + d.getFilesystemHash() + " LANGUAGES C CXX)");
+    ctx.addLine("project(" + d.getHashShort() + " LANGUAGES C CXX)");
     ctx.addLine();
 
     config_section_title(ctx, "compiler & linker settings");
@@ -1860,7 +1879,7 @@ void CMakePrinter::print_obj_generate_file(const path &fn) const
 #endif
     ctx.addLine();
     ctx.addLine("set(variable_name " + d.variable_name + ")");
-    ctx.addLine("set(package_hash_short " + d.getFilesystemHash() + ")");
+    ctx.addLine("set(package_hash_short " + d.getHashShort() + ")");
     ctx.addLine();
     ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();

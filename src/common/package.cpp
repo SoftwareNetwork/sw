@@ -108,6 +108,7 @@ void Package::createNames()
     target_name   = ppath.toString() + (v == "*" ? "" : ("-" + v));
     variable_name = ppath.toString() + (v == "*" ? "" : ("_" + v));
     std::replace(variable_name.begin(), variable_name.end(), '.', '_');
+    target_name_hash = getHashShort();
     hash = getHash();
 }
 

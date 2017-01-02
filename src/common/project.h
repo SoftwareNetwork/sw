@@ -48,10 +48,11 @@ struct IncludeDirectories
 {
     Files public_;
     Files private_;
+    Files interface_;
 
     bool empty() const
     {
-        return public_.empty() && private_.empty();
+        return public_.empty() && private_.empty() && interface_.empty();
     }
 };
 

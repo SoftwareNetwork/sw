@@ -60,7 +60,7 @@ enum class ApiResult
 ApiResult api_call(const String &cmd, const Strings &args);
 void check_spec_file();
 void default_run();
-void init(const String &log_level);
+void init(const Strings &args, const String &log_level);
 void init_service_db();
 void load_current_config();
 void self_upgrade();
@@ -129,7 +129,7 @@ try
     }
 
     // main cppan client init routine
-    init(log_level);
+    init(args, log_level);
 
     // default run
     if (args.size() == 1)
@@ -153,65 +153,70 @@ try
             String cmd = args[1];
 
             // internal
-            if (cmd == "internal-fix-imports")
+            if (cmd.find("internal-") == 0)
             {
-                if (args.size() != 6)
+                if (cmd == "internal-fix-imports")
                 {
-                    std::cout << "invalid number of arguments\n";
-                    std::cout << "usage: cppan internal-fix-imports target aliases.file old.file new.file\n";
-                    return 1;
-                }
-                fix_imports(args[2], args[3], args[4], args[5]);
-                return 0;
-            }
-
-            if (cmd == "internal-parallel-vars-check")
-            {
-                if (args.size() < 6)
-                {
-                    std::cout << "invalid number of arguments: " << args.size() << "\n";
-                    std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file generator toolset toolchain\n";
-                    return 1;
+                    if (args.size() != 6)
+                    {
+                        std::cout << "invalid number of arguments\n";
+                        std::cout << "usage: cppan internal-fix-imports target aliases.file old.file new.file\n";
+                        return 1;
+                    }
+                    fix_imports(args[2], args[3], args[4], args[5]);
+                    return 0;
                 }
 
-                size_t a = 2;
+                if (cmd == "internal-parallel-vars-check")
+                {
+                    if (args.size() < 6)
+                    {
+                        std::cout << "invalid number of arguments: " << args.size() << "\n";
+                        std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file generator toolset toolchain\n";
+                        return 1;
+                    }
+
+                    size_t a = 2;
 
 #define ASSIGN_ARG(x) if (a < args.size()) o.x = trim_double_quotes(args[a++])
 
-                ParallelCheckOptions o;
-                ASSIGN_ARG(dir);
-                ASSIGN_ARG(vars_file);
-                ASSIGN_ARG(checks_file);
-                ASSIGN_ARG(generator);
-                ASSIGN_ARG(toolset);
-                ASSIGN_ARG(toolchain);
+                    ParallelCheckOptions o;
+                    ASSIGN_ARG(dir);
+                    ASSIGN_ARG(vars_file);
+                    ASSIGN_ARG(checks_file);
+                    ASSIGN_ARG(generator);
+                    ASSIGN_ARG(toolset);
+                    ASSIGN_ARG(toolchain);
 
 #undef ASSIGN_ARG
 
-                CMakePrinter c;
-                c.parallel_vars_check(o);
-                return 0;
-            }
-
-            if (cmd == "internal-create-link-to-solution")
-            {
-#ifndef _WIN32
-                return 0;
-#endif
-                if (args.size() != 4)
-                {
-                    std::cout << "invalid number of arguments: " << args.size() << "\n";
-                    std::cout << "usage: cppan internal-create-link-to-solution solution.sln link.lnk\n";
-                    return 1;
+                    CMakePrinter c;
+                    c.parallel_vars_check(o);
+                    return 0;
                 }
-                if (!create_link(args[2], args[3], "Link to CPPAN Solution"))
-                    return 1;
-                return 0;
-            }
 
-            if (args[1] == "internal-self-upgrade-copy")
-            {
-                self_upgrade();
+                if (cmd == "internal-create-link-to-solution")
+                {
+#ifndef _WIN32
+                    return 0;
+#endif
+                    if (args.size() != 4)
+                    {
+                        std::cout << "invalid number of arguments: " << args.size() << "\n";
+                        std::cout << "usage: cppan internal-create-link-to-solution solution.sln link.lnk\n";
+                        return 1;
+                    }
+                    if (!create_link(args[2], args[3], "Link to CPPAN Solution"))
+                        return 1;
+                    return 0;
+                }
+
+                if (args[1] == "internal-self-upgrade-copy")
+                {
+                    self_upgrade();
+                    return 0;
+                }
+
                 return 0;
             }
 
@@ -442,13 +447,17 @@ void default_run()
     c.process();
 }
 
-void init(const String &log_level)
+void init(const Strings &args, const String &log_level)
 {
     // initial sequence
     initLogger(log_level, "", true);
 
-    // initialize CPPAN structures, do not remove
-    Settings::get_user_settings();
+    // initialize CPPAN structures (settings), do not remove
+    auto &us = Settings::get_user_settings();
+
+    // disable update checks for internal commands
+    if (args.size() > 1 && args[1].find("internal-") == 0)
+        us.disable_update_checks = true;
 
     load_current_config();
     init_service_db();

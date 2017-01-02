@@ -61,6 +61,7 @@ struct Package
 
     // misc data
     String target_name;
+    String target_name_hash;
     String variable_name;
 
     void createNames();

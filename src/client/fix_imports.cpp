@@ -40,7 +40,7 @@
 #include <regex>
 #include <vector>
 
-String fix_imports(const Strings &lines_old, const String &old_target, const String new_target)
+String fix_imports(const Strings &lines_old, const String &old_target, const String &new_target)
 {
     Context ctx;
     ctx.increaseIndent();
@@ -136,28 +136,24 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
         }
     }
 
-    auto fix = [&target, &aliases_s](const auto &lines, auto dep)
+    auto fix = [&aliases_s](const auto &lines, const auto &dep)
     {
+        const auto &tgt = dep.target_name_hash;
         Context ctx;
+
+        auto add_aliases = [this, &ctx, &dep, &tgt, &lines](const auto &delim)
         {
             auto d = dep;
-            // add GLOBAL for default target
-            ctx.addLine(fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion()));
+            ctx.addLine(fix_imports(lines, tgt, d.ppath.toString(delim) + "-" + d.version.toAnyVersion()));
             d.version.patch = -1;
-            ctx.addLine(fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion()));
+            ctx.addLine(fix_imports(lines, tgt, d.ppath.toString(delim) + "-" + d.version.toAnyVersion()));
             d.version.minor = -1;
-            ctx.addLine(fix_imports(lines, target, d.ppath.toString() + "-" + d.version.toAnyVersion()));
-            ctx.addLine(fix_imports(lines, target, d.ppath.toString()));
-        }
-        {
-            auto d = dep;
-            ctx.addLine(fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion()));
-            d.version.patch = -1;
-            ctx.addLine(fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion()));
-            d.version.minor = -1;
-            ctx.addLine(fix_imports(lines, target, d.ppath.toString("::") + "-" + d.version.toAnyVersion()));
-            ctx.addLine(fix_imports(lines, target, d.ppath.toString("::")));
-        }
+            ctx.addLine(fix_imports(lines, tgt, d.ppath.toString(delim) + "-" + d.version.toAnyVersion()));
+            ctx.addLine(fix_imports(lines, tgt, d.ppath.toString(delim)));
+        };
+        add_aliases(".");
+        add_aliases("::");
+
         {
             Strings aliases;
             boost::algorithm::trim(aliases_s);
@@ -166,8 +162,9 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
                 boost::algorithm::trim(a);
             for (auto &a : aliases)
                 if (!a.empty())
-                    ctx.addLine(fix_imports(lines, target, a));
+                    ctx.addLine(fix_imports(lines, tgt, a));
         }
+
         ctx.emptyLines(1);
         ctx.splitLines();
         return ctx.getText();
