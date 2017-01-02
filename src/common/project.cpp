@@ -655,22 +655,38 @@ void Project::load(const yaml &root)
     if (unpack_directory.empty())
         read_dir(unpack_directory, "unpack_dir");
 
-    get_map_and_iterate(root, "include_directories", [this](const auto &n)
+    // include_directories
     {
-        auto f = n.first.template as<String>();
-        if (f == "public")
+        get_variety(root, "include_directories",
+            [this](const auto &d)
         {
-            auto s = get_sequence<String>(n.second);
-            include_directories.public_.insert(s.begin(), s.end());
-        }
-        else if (f == "private")
+            include_directories.public_.insert(d.template as<String>());
+        },
+            [this](const auto &dall)
         {
-            auto s = get_sequence<String>(n.second);
-            include_directories.private_.insert(s.begin(), s.end());
-        }
-        else
-            throw std::runtime_error("include key must be only 'public' or 'private'");
-    });
+            for (auto d : dall)
+                include_directories.public_.insert(d.template as<String>());
+        },
+            [this, &root](const auto &)
+        {
+            get_map_and_iterate(root, "include_directories", [this](const auto &n)
+            {
+                auto f = n.first.template as<String>();
+                if (f == "public")
+                {
+                    auto s = get_sequence<String>(n.second);
+                    include_directories.public_.insert(s.begin(), s.end());
+                }
+                else if (f == "private")
+                {
+                    auto s = get_sequence<String>(n.second);
+                    include_directories.private_.insert(s.begin(), s.end());
+                }
+                else
+                    throw std::runtime_error("include key must be only 'public' or 'private'");
+            });
+        });
+    }
 
     bs_insertions.load(root);
     options = loadOptionsMap(root);
