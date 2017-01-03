@@ -579,11 +579,23 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE )" + s.default_configuration + R"()
 endif()
 
+if (WIN32)
+    set(CMAKE_INSTALL_PREFIX "C:\\cppan")
+else()
+    set(CMAKE_INSTALL_PREFIX "/opt/local/cppan")
+endif()
+
 if (MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif()
 )");
+
+    if (!s.install_prefix.empty())
+    {
+        ctx.addLine("set(CMAKE_INSTALL_PREFIX " + s.install_prefix + ")");
+        ctx.addLine();
+    }
 
     // compiler flags
     ctx.addLine("set(CMAKE_C_FLAGS \"${CMAKE_C_FLAGS} " + s.c_compiler_flags + "\")");
@@ -2024,6 +2036,8 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     if (!must_update_contents(fn))
         return;
 
+    const auto &ls = Settings::get_local_settings();
+
     Context ctx;
     file_header(ctx, d, true);
 
@@ -2155,7 +2169,7 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
             {
                 auto &p = dp.second;
 
-                if (dp.second.flags[pfExecutable])
+                if (p.flags[pfExecutable])
                 {
                     // if we have an exe, we must include all dependent targets
                     // because they're not visible from exe directly
@@ -2190,10 +2204,20 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
                 ctx.increaseIndent();
                 ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
                 ctx.increaseIndent();
-                if (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable)
-                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}");
+                if (p.flags[pfExecutable] || (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable))
+                {
+                    String name;
+                    if (ls.full_path_executables)
+                        name = "$<TARGET_FILE_NAME:" + p.target_name + ">";
+                    else
+                        name = p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}";
+                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + name);
+                }
                 else
+                {
+                    // if we change non-exe name, we still won't fix linker information about dependencies' names
                     ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
+                }
                 ctx.decreaseIndent();
                 ctx.decreaseIndent();
                 ctx.addLine(")");

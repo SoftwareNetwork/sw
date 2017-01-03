@@ -264,6 +264,16 @@ try
                     return build(cmd);
             }
 
+            // maybe we entered a package?
+            try
+            {
+                build_package(cmd);
+                return 0;
+            }
+            catch (const std::exception &)
+            {
+            }
+
             std::cout << "unknown command\n";
             return 1;
     }
