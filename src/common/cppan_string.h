@@ -16,11 +16,15 @@
 
 #pragma once
 
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 
 using String = std::string;
 using Strings = std::vector<String>;
+using StringMap = std::map<String, String>;
+using StringSet = std::set<String>;
 
 using namespace std::literals;
 

@@ -23,6 +23,25 @@
 class Context;
 struct Package;
 
+struct CheckParameters
+{
+    Strings headers;
+    StringSet definitions;
+    StringSet include_directories;
+    StringSet libraries;
+    StringSet flags;
+
+    void writeHeadersBefore(Context &ctx) const;
+    void writeHeadersAfter(Context &ctx) const;
+    void writeBefore(Context &ctx) const;
+    void writeAfter(Context &ctx) const;
+    void load(const yaml &n);
+    void save(yaml &n) const;
+    bool empty() const;
+    String getHash() const;
+    bool operator<(const CheckParameters &p) const;
+};
+
 class Check
 {
 public:
@@ -35,6 +54,7 @@ public:
         Library,
         LibraryFunction,
         Symbol,
+        StructMember,
         CSourceCompiles,
         CSourceRuns,
         CXXSourceCompiles,
@@ -62,7 +82,7 @@ public:
     using Value = int;
 
 public:
-    Check(const Information &i);
+    Check(const Information &i, const CheckParameters &parameters = CheckParameters());
     virtual ~Check() {}
 
     const Information &getInformation() const { return information; }
@@ -76,6 +96,11 @@ public:
     virtual void save(yaml &/*root*/) const {}
 
     void setValue(const Value &v) { value = v; }
+
+    bool get_cpp() const { return cpp; }
+    virtual void set_cpp(bool c) {}
+
+    String getFileName() const;
 
 protected:
     // self-information
@@ -95,9 +120,19 @@ protected:
     // message for printing
     String message;
 
+    bool cpp = false;
+
 public:
     // default check won't be printed
     bool default_ = false;
+
+    // parameters
+    CheckParameters parameters;
+
+public:
+    static String make_include_var(const String &i);
+    static String make_type_var(const String &t, const String &prefix = "HAVE_");
+    static String make_struct_member_var(const String &m, const String &s);
 
 private:
     template <class T>
@@ -112,7 +147,9 @@ struct less_check
     bool operator()(const T &p1, const T &p2) const
     {
         if (p1 && p2)
-            return std::tie(p1->information.type, p1->variable) < std::tie(p2->information.type, p2->variable);
+            return
+            std::tie(p1->information.type, p1->variable, p1->parameters) <
+            std::tie(p2->information.type, p2->variable, p2->parameters);
         return p1 < p2;
     }
 };

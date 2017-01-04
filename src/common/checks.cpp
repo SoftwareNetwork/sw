@@ -18,6 +18,7 @@
 #include "checks_detail.h"
 
 #include "context.h"
+#include "hash.h"
 #include "printers/printer.h"
 
 #include <boost/algorithm/string.hpp>
@@ -29,43 +30,116 @@ DECLARE_STATIC_LOGGER(logger, "checks");
 
 const std::map<int, Check::Information> check_information{
     { Check::Function,
-    { Check::Function, "check_function_exists", "check_function_exists", "function", "functions" } },
+    {
+        Check::Function,
+        "check_function_exists",
+        "check_function_exists",
+        "function",
+        "functions" } },
 
     { Check::Include,
-    { Check::Include, "check_include_exists", "check_include_files", "include", "includes" } },
+    {
+        Check::Include,
+        "check_include_exists",
+        "check_include_files",
+        "include",
+        "includes" } },
 
     { Check::Type,
-    { Check::Type, "check_type_size", "check_type_size", "type", "types" } },
+    {
+        Check::Type,
+        "check_type_size",
+        "check_type_size",
+        "type",
+        "types" } },
 
     { Check::Library,
-    { Check::Library, "check_library_exists", "find_library", "library", "libraries" } },
+    {
+        Check::Library,
+        "check_library_exists",
+        "find_library",
+        "library",
+        "libraries" } },
 
     { Check::LibraryFunction,
-    { Check::LibraryFunction, "check_library_function", "check_library_exists", "library function", "functions" } },
+    {
+        Check::LibraryFunction,
+        "check_library_function",
+        "check_library_exists",
+        "library function",
+        "functions" } },
 
     { Check::Symbol,
-    { Check::Symbol, "check_symbol_exists", "check_cxx_symbol_exists", "symbol", "symbols" } },
+    {
+        Check::Symbol,
+        "check_symbol_exists",
+        "check_symbol_exists",
+        "symbol",
+        "symbols" } },
+
+    { Check::StructMember,
+    {
+        Check::StructMember,
+        "check_struct_member",
+        "check_struct_has_member",
+        "member",
+        "members" } },
 
     { Check::Alignment,
-    { Check::Alignment, "check_type_alignment", "check_type_alignment", "alignment", "alignments" } },
+    {
+        Check::Alignment,
+        "check_type_alignment",
+        "check_type_alignment",
+        "alignment",
+        "alignments" } },
 
     { Check::Decl,
-    { Check::Decl, "check_decl_exists", "check_c_source_compiles", "declaration", "declarations" } },
+    {
+        Check::Decl,
+        "check_decl_exists",
+        "check_c_source_compiles",
+        "declaration",
+        "declarations" } },
 
     { Check::CSourceCompiles,
-    { Check::CSourceCompiles, "check_c_source_compiles", "check_c_source_compiles", "c_source_compiles", "c_source_compiles" } },
+    {
+        Check::CSourceCompiles,
+        "check_c_source_compiles",
+        "check_c_source_compiles",
+        "c_source_compiles",
+        "c_source_compiles" } },
 
     { Check::CSourceRuns,
-    { Check::CSourceRuns, "check_c_source_runs", "check_c_source_runs", "c_source_runs", "c_source_runs" } },
+    {
+        Check::CSourceRuns,
+        "check_c_source_runs",
+        "check_c_source_runs",
+        "c_source_runs",
+        "c_source_runs" } },
 
     { Check::CXXSourceCompiles,
-    { Check::CXXSourceCompiles, "check_cxx_source_compiles", "check_cxx_source_compiles", "cxx_source_compiles", "cxx_source_compiles" } },
+    {
+        Check::CXXSourceCompiles,
+        "check_cxx_source_compiles",
+        "check_cxx_source_compiles",
+        "cxx_source_compiles",
+        "cxx_source_compiles" } },
 
     { Check::CXXSourceRuns,
-    { Check::CXXSourceRuns, "check_cxx_source_runs", "check_cxx_source_runs", "cxx_source_runs", "cxx_source_runs" } },
+    {
+        Check::CXXSourceRuns,
+        "check_cxx_source_runs",
+        "check_cxx_source_runs",
+        "cxx_source_runs",
+        "cxx_source_runs" } },
 
     { Check::Custom,
-    { Check::Custom, "checks", "", "custom", "custom" } },
+    {
+        Check::Custom,
+        "checks",
+        "",
+        "custom",
+        "custom" } },
 };
 
 Check::Information getCheckInformation(int type)
@@ -76,8 +150,8 @@ Check::Information getCheckInformation(int type)
     return i->second;
 }
 
-Check::Check(const Information &i)
-    : information(i)
+Check::Check(const Information &i, const CheckParameters &parameters)
+    : information(i), parameters(parameters)
 {
 }
 
@@ -91,6 +165,85 @@ String Check::getDataEscaped() const
 
 void Checks::load(const yaml &root)
 {
+    // functions
+    get_sequence_and_iterate(root, getCheckInformation(Check::Function).cppan_key, [this](const auto &n)
+    {
+        if (n.IsScalar())
+            addCheck<CheckFunction>(n.template as<String>());
+        else if (n.IsMap())
+        {
+            String f;
+            if (n["name"].IsDefined())
+                f = n["name"].template as<String>();
+            else if (n["function"].IsDefined())
+                f = n["function"].template as<String>();
+            CheckParameters p;
+            p.load(n);
+            auto ptr = addCheck<CheckFunction>(f, p);
+            if (n["cpp"].IsDefined())
+                ptr->set_cpp(n["cpp"].template as<bool>());
+        }
+    });
+
+    // types
+    get_sequence_and_iterate(root, getCheckInformation(Check::Type).cppan_key, [this](const auto &n)
+    {
+        if (n.IsScalar())
+            addCheck<CheckType>(n.template as<String>());
+        else if (n.IsMap())
+        {
+            if (n.size() == 1)
+            {
+                auto i = n.begin();
+                auto s = i->first.template as<String>();
+                auto h = i->second.template as<String>();
+                CheckParameters p;
+                p.headers = { h };
+                addCheck<CheckType>(s, p);
+                return;
+            }
+            String t;
+            if (n["name"].IsDefined())
+                t = n["name"].template as<String>();
+            else if (n["type"].IsDefined())
+                t = n["type"].template as<String>();
+            CheckParameters p;
+            p.load(n);
+            auto ptr = addCheck<CheckType>(t, p);
+            if (n["cpp"].IsDefined())
+                ptr->set_cpp(n["cpp"].template as<bool>());
+        }
+    });
+
+    // struct members
+    get_sequence_and_iterate(root, getCheckInformation(Check::StructMember).cppan_key, [this](const auto &n)
+    {
+        if (n.IsMap())
+        {
+            if (n.size() == 1)
+            {
+                auto i = n.begin();
+                auto m = i->first.template as<String>();
+                auto s = i->second.template as<String>();
+                addCheck<CheckStructMember>(m, s);
+                return;
+            }
+            String m;
+            if (n["name"].IsDefined())
+                m = n["name"].template as<String>();
+            else if (n["member"].IsDefined())
+                m = n["member"].template as<String>();
+            auto s = n["struct"].template as<String>();
+            CheckParameters p;
+            p.load(n);
+            auto ptr = addCheck<CheckStructMember>(m, s, p);
+            if (n["cpp"].IsDefined())
+                ptr->set_cpp(n["cpp"].template as<bool>());
+        }
+        else
+            throw std::runtime_error("struct member must be a map");
+    });
+
     bool has_decl = false;
 
 #define LOAD_SET(t)                                                                     \
@@ -105,11 +258,9 @@ void Checks::load(const yaml &root)
         }                                                                               \
     } while (0)
 
-    LOAD_SET(Function);
     LOAD_SET(Library);
-    LOAD_SET(Type);
-    LOAD_SET(Decl);
     LOAD_SET(Alignment);
+    LOAD_SET(Decl);
 
     // includes
     get_sequence_and_iterate(root, getCheckInformation(Check::Include).cppan_key, [this](const auto &v)
@@ -140,14 +291,58 @@ void Checks::load(const yaml &root)
     });
 
     // symbols
-    get_map_and_iterate(root, getCheckInformation(Check::Symbol).cppan_key, [this](const auto &root)
+    const auto &skey = getCheckInformation(Check::Symbol).cppan_key;
+    if (root[skey].IsDefined())
     {
-        auto f = root.first.template as<String>();
-        if (root.second.IsSequence() || root.second.IsScalar())
-            this->addCheck<CheckSymbol>(f, get_sequence_set<String>(root.second));
-        else
-            throw std::runtime_error("Symbol headers should be a scalar or a set");
-    });
+        if (root[skey].IsMap())
+        {
+            get_map_and_iterate(root, skey, [this](const auto &root)
+            {
+                auto f = root.first.template as<String>();
+                if (root.second.IsSequence() || root.second.IsScalar())
+                {
+                    CheckParameters p;
+                    p.headers = get_sequence<String>(root.second);
+                    this->addCheck<CheckSymbol>(f, p);
+                }
+                else
+                    throw std::runtime_error("Symbol headers should be a scalar or a set");
+            });
+        }
+        else if (root[skey].IsSequence())
+        {
+            get_sequence_and_iterate(root, skey, [this](const auto &n)
+            {
+                if (n.IsMap())
+                {
+                    if (n.size() == 1)
+                    {
+                        auto i = n.begin();
+                        auto s = i->first.template as<String>();
+                        auto h = i->second.template as<String>();
+                        CheckParameters p;
+                        p.headers = { h };
+                        addCheck<CheckSymbol>(s, p);
+                        return;
+                    }
+                    String s;
+                    if (n["name"].IsDefined())
+                        s = n["name"].template as<String>();
+                    else if (n["symbol"].IsDefined())
+                        s = n["symbol"].template as<String>();
+                    auto h = get_sequence<String>(n["headers"]);
+                    CheckParameters p;
+                    p.headers = { h };
+                    p.load(n);
+                    auto ptr = addCheck<CheckSymbol>(s, p);
+                    if (n["cpp"].IsDefined())
+                        ptr->set_cpp(n["cpp"].template as<bool>());
+                    return;
+                }
+                throw std::runtime_error("symbol must be a map");
+            });
+        }
+    }
 
 #define LOAD_MAP(t)                                                                                             \
     get_map_and_iterate(root, getCheckInformation(Check::t).cppan_key, [this](const auto &v) {                  \
@@ -225,16 +420,17 @@ void Checks::save(yaml &root) const
 
         switch (t)
         {
-        case Check::Function:
-        case Check::Type:
         case Check::Library:
         case Check::Decl:
         case Check::Alignment:
             root[i.cppan_key].push_back(c->getData());
             break;
+        case Check::Type:
+        case Check::Function:
         case Check::LibraryFunction:
         case Check::Include:
         case Check::Symbol:
+        case Check::StructMember:
         case Check::CSourceCompiles:
         case Check::CSourceRuns:
         case Check::CXXSourceCompiles:
@@ -286,9 +482,7 @@ void Checks::write_checks(Context &ctx) const
 
         switch (t)
         {
-        case Check::Function:
         case Check::Include:
-        case Check::Type:
             ctx.addLine(i.function + "(\"" + c->getData() + "\" " + c->getVariable() + ")");
             break;
         case Check::Alignment:
@@ -308,9 +502,12 @@ void Checks::write_checks(Context &ctx) const
             auto p = (CheckLibraryFunction *)c.get();
             ctx.addLine(i.function + "(" + p->library +" \"" + c->getData() + "\" \"\" " + c->getVariable() + ")");
         }
-        break;
+            break;
+        case Check::Function:
         case Check::Decl:
         case Check::Symbol:
+        case Check::StructMember:
+        case Check::Type:
             c->writeCheck(ctx);
             break;
         case Check::CSourceCompiles:
@@ -345,6 +542,25 @@ void Checks::write_checks(Context &ctx) const
         ctx.addLine("endif()");
         ctx.addLine();
 
+        if (t == Check::Symbol)
+        {
+            auto f = (CheckSymbol*)c.get();
+            if (!f->parameters.headers.empty())
+            {
+                ctx.addLine("if (" + c->getVariable() + ")");
+                ctx.increaseIndent();
+                for (auto &i : f->parameters.headers)
+                {
+                    auto iv = Check::make_include_var(i);
+                    ctx.addLine("set(" + iv + " 1 CACHE STRING \"\")");
+                    ctx.addLine("add_check_variable(" + iv + ")");
+                }
+                ctx.decreaseIndent();
+                ctx.addLine("endif()");
+                ctx.addLine();
+            }
+        }
+
         if (t == Check::Type)
         {
             CheckType ct(c->getData(), "SIZEOF_");
@@ -369,9 +585,7 @@ void Checks::write_parallel_checks_for_workers(Context &ctx) const
         auto t = i.type;
         switch (t)
         {
-        case Check::Function:
         case Check::Include:
-        case Check::Type:
             ctx.addLine(i.function + "(\"" + c->getData() + "\" " + c->getVariable() + ")");
             break;
         case Check::Alignment:
@@ -391,10 +605,13 @@ void Checks::write_parallel_checks_for_workers(Context &ctx) const
             auto p = (CheckLibraryFunction *)c.get();
             ctx.addLine(i.function + "(" + p->library + " \"" + c->getData() + "\" \"\" " + c->getVariable() + ")");
         }
-        break;
+            break;
         case Check::Decl:
             continue; // do not participate in parallel
+        case Check::Function:
         case Check::Symbol:
+        case Check::StructMember:
+        case Check::Type:
             c->writeCheck(ctx);
             break;
         case Check::CSourceCompiles:
@@ -424,9 +641,28 @@ void Checks::write_parallel_checks_for_workers(Context &ctx) const
             throw std::logic_error("Write parallel check for type " + std::to_string(t) + " not implemented");
         }
         ctx.addLine("if (NOT " + c->getVariable() + ")");
-        ctx.addLine("    set(" + c->getVariable() + " 0)");
+        ctx.increaseIndent();
+        ctx.addLine("set(" + c->getVariable() + " 0)");
+        ctx.decreaseIndent();
+        ctx.addLine("else()");
+        ctx.increaseIndent();
+
+        if (t == Check::Symbol)
+        {
+            auto f = (CheckSymbol*)c.get();
+            if (!f->parameters.headers.empty())
+            {
+                for (auto &i : f->parameters.headers)
+                {
+                    auto iv = Check::make_include_var(i);
+                    ctx.addLine("file(WRITE " + iv + " \"1\")");
+                }
+            }
+        }
+
+        ctx.decreaseIndent();
         ctx.addLine("endif()");
-        ctx.addLine("file(WRITE " + c->getVariable() + " \"${" + c->getVariable() + "}\")");
+        ctx.addLine("file(WRITE " + c->getFileName() + " \"${" + c->getVariable() + "}\")");
         ctx.addLine();
     }
 }
@@ -435,7 +671,7 @@ void Checks::read_parallel_checks_for_workers(const path &dir)
 {
     for (auto &c : checks)
     {
-        auto fn = dir / c->getVariable();
+        auto fn = dir / c->getFileName();
         if (!fs::exists(fn))
             continue;
         auto s = read_file(fn);
@@ -574,18 +810,27 @@ void Checks::print_values() const
             else
                 LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - not found");
             break;
+        case Check::StructMember:
+        {
+            auto sm = (CheckStructMember*)c.get();
+            if (c->getValue())
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " of " + sm->struct_ + " - found (" + std::to_string(c->getValue()) + ")");
+            else
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " of " + sm->struct_ + " - not found");
+            break;
+        }
         case Check::Symbol:
             if (c->getValue())
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - found (" + std::to_string(c->getValue()) + ")");
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - found (" + std::to_string(c->getValue()) + ")");
             else
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - not found");
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - not found");
             break;
         case Check::Decl:
             break;
             if (c->getValue())
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - found (" + std::to_string(c->getValue()) + ")");
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - found (" + std::to_string(c->getValue()) + ")");
             else
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getVariable() + " - not found (" + std::to_string(c->getValue()) + ")");
+                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - not found (" + std::to_string(c->getValue()) + ")");
             break;
         case Check::CSourceCompiles:
         case Check::CSourceRuns:
@@ -607,6 +852,7 @@ void Checks::print_values() const
 
 void Checks::print_values(Context &ctx) const
 {
+    std::map<String, int> m;
     for (auto &c : checks)
     {
         auto &i = c->getInformation();
@@ -616,9 +862,179 @@ void Checks::print_values(Context &ctx) const
         {
         case Check::Decl: // do not participate in parallel
             break;
+        case Check::Symbol:
+        {
+            auto f = (CheckSymbol*)c.get();
+            if (f->getValue())
+            {
+                for (auto &i : f->parameters.headers)
+                    m[Check::make_include_var(i)] = 1;
+            }
+            //[[fallthrough]];
+        }
         default:
-            ctx.addLine("STRING;" + c->getVariable() + ";" + std::to_string(c->getValue()));
+            // if we have duplicate values, choose non-null one
+            if (m[c->getVariable()])
+                break;
+            m[c->getVariable()] = c->getValue();
             break;
         }
     }
+    for (auto &kv : m)
+        ctx.addLine("STRING;" + kv.first + ";" + std::to_string(kv.second));
+}
+
+String Check::make_include_var(const String &i)
+{
+    auto v_def = "HAVE_" + boost::algorithm::to_upper_copy(i);
+    for (auto &c : v_def)
+    {
+        if (!isalnum(c))
+            c = '_';
+    }
+    return v_def;
+}
+
+String Check::make_type_var(const String &t, const String &prefix)
+{
+    String v_def = prefix;
+    v_def += boost::algorithm::to_upper_copy(t);
+    for (auto &c : v_def)
+    {
+        if (c == '*')
+            c = 'P';
+        else if (!isalnum(c))
+            c = '_';
+    }
+    return v_def;
+}
+
+String Check::make_struct_member_var(const String &m, const String &s)
+{
+    return make_include_var(s + " " + m);
+}
+
+String Check::getFileName() const
+{
+    if (parameters.empty())
+        return getVariable();
+    return getVariable() + "_" + parameters.getHash();
+}
+
+String CheckParameters::getHash() const
+{
+    String h;
+#define ADD_PARAMS(x) for (auto &v : x) h += v
+    ADD_PARAMS(headers);
+    ADD_PARAMS(definitions);
+    ADD_PARAMS(include_directories);
+    ADD_PARAMS(libraries);
+    ADD_PARAMS(flags);
+    h = sha256(h);
+    h.substr(0, 4);
+    return h;
+}
+
+void CheckParameters::writeHeadersBefore(Context &ctx) const
+{
+    if (!headers.empty())
+    {
+        ctx.addLine("set(_oh ${CMAKE_EXTRA_INCLUDE_FILES})");
+        ctx.addLine("set(CMAKE_EXTRA_INCLUDE_FILES");
+        for (auto &d : headers)
+            ctx.addLine(d);
+        ctx.addLine(")");
+    }
+}
+
+void CheckParameters::writeHeadersAfter(Context &ctx) const
+{
+    if (!headers.empty())
+        ctx.addLine("set(CMAKE_EXTRA_INCLUDE_FILES ${_oh})");
+}
+
+void CheckParameters::writeBefore(Context &ctx) const
+{
+    if (!definitions.empty())
+    {
+        ctx.addLine("set(_od ${CMAKE_REQUIRED_DEFINITIONS})");
+        ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS");
+        for (auto &d : definitions)
+            ctx.addLine(d);
+        ctx.addLine(")");
+    }
+    if (!include_directories.empty())
+    {
+        ctx.addLine("set(_oi ${CMAKE_REQUIRED_INCLUDES})");
+        ctx.addLine("set(CMAKE_REQUIRED_INCLUDES");
+        for (auto &d : include_directories)
+            ctx.addLine(d);
+        ctx.addLine(")");
+    }
+    if (!libraries.empty())
+    {
+        ctx.addLine("set(_ol ${CMAKE_REQUIRED_LIBRARIES})");
+        ctx.addLine("set(CMAKE_REQUIRED_LIBRARIES");
+        for (auto &d : libraries)
+            ctx.addLine(d);
+        ctx.addLine(")");
+    }
+    if (!flags.empty())
+    {
+        ctx.addLine("set(_of ${CMAKE_REQUIRED_FLAGS})");
+        ctx.addLine("set(CMAKE_REQUIRED_FLAGS");
+        for (auto &d : flags)
+            ctx.addLine(d);
+        ctx.addLine(")");
+    }
+}
+
+void CheckParameters::writeAfter(Context &ctx) const
+{
+    if (!definitions.empty())
+        ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS ${_od})");
+    if (!include_directories.empty())
+        ctx.addLine("set(CMAKE_REQUIRED_INCLUDES    ${_oi})");
+    if (!libraries.empty())
+        ctx.addLine("set(CMAKE_REQUIRED_LIBRARIES   ${_ol})");
+    if (!flags.empty())
+        ctx.addLine("set(CMAKE_REQUIRED_FLAGS       ${_of})");
+}
+
+void CheckParameters::load(const yaml &n)
+{
+    headers = get_sequence<String>(n["headers"]);
+    definitions = get_sequence_set<String>(n["definitions"]);
+    include_directories = get_sequence_set<String>(n["include_directories"]);
+    libraries = get_sequence_set<String>(n["libraries"]);
+    flags = get_sequence_set<String>(n["flags"]);
+}
+
+void CheckParameters::save(yaml &n) const
+{
+#define ADD_SET(x) for (auto &v : x) n[#x].push_back(v)
+    ADD_SET(headers);
+    ADD_SET(definitions);
+    ADD_SET(include_directories);
+    ADD_SET(libraries);
+    ADD_SET(flags);
+}
+
+bool CheckParameters::empty() const
+{
+    return
+        headers.empty() &&
+        definitions.empty() &&
+        include_directories.empty() &&
+        libraries.empty() &&
+        flags.empty() &&
+        1
+        ;
+}
+
+bool CheckParameters::operator<(const CheckParameters &p) const
+{
+    return
+        std::tie(headers, definitions, include_directories, libraries, flags) <
+        std::tie(p.headers, p.definitions, p.include_directories, p.libraries, p.flags);
 }

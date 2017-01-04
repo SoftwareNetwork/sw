@@ -30,8 +30,6 @@
 #define INCLUDE_DIRECTORIES_ONLY "include_directories_only"
 
 using Sources = std::set<String>;
-using StringMap = std::map<String, String>;
-using StringSet = std::set<String>;
 
 struct IncludeDirectories
 {
@@ -47,13 +45,14 @@ struct IncludeDirectories
 
 struct BuildSystemConfigInsertions
 {
-    String pre_sources;
-    String post_sources;
-    String post_target;
-    String post_alias;
+#define BSI(x) String x;
+#include "bsi.inl"
+#undef BSI
 
     void load(const yaml &n);
     void save(yaml &n) const;
+    static void merge(yaml &root, yaml &n);
+    static Strings getStrings();
 };
 
 struct Options

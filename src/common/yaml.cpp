@@ -17,12 +17,13 @@
 #include "yaml.h"
 
 #include "checks.h"
+#include "project.h"
 
 #include <boost/algorithm/string.hpp>
 
 // no links allowed
 // to do this we call YAML::Clone()
-void merge(yaml dst, const yaml &src, const YamlMergeFlags &flags)
+void merge(yaml &dst, const yaml &src, const YamlMergeFlags &flags)
 {
     if (!src.IsDefined())
         return;
@@ -91,7 +92,7 @@ void merge(yaml dst, const yaml &src, const YamlMergeFlags &flags)
     }
 }
 
-void prepare_config_for_reading(yaml root)
+void prepare_config_for_reading(yaml &root)
 {
     // can be all node checks from config, project, settings moved here?
 
@@ -108,6 +109,9 @@ void prepare_config_for_reading(yaml root)
         const auto &common_settings = root["common_settings"];
         if (common_settings.IsDefined())
         {
+            // TODO: check and remove bsi first
+            // only then merge
+
             if (prjs.IsDefined())
             {
                 for (auto prj : prjs)
@@ -123,24 +127,7 @@ void prepare_config_for_reading(yaml root)
     {
         for (auto prj : prjs)
         {
-#define MERGE_BSI(x)                                                                  \
-    do                                                                                \
-    {                                                                                 \
-        if (root[x].IsDefined())                                                      \
-        {                                                                             \
-            if (prj.second[x].IsDefined())                                            \
-                root[x] = root[x].as<String>() + "\n\n" + prj.second[x].as<String>(); \
-            else                                                                      \
-                prj.second[x] = root[x].as<String>();                                 \
-        }                                                                             \
-    } while (0)
-
-            // merge bs insertions, root's first
-            MERGE_BSI("pre_sources");
-            MERGE_BSI("post_sources");
-            MERGE_BSI("post_target");
-            MERGE_BSI("post_alias");
-#undef MERGE_BSI
+            BuildSystemConfigInsertions::merge(root, prj.second);
 
             // source & version
             YamlMergeFlags flags;
@@ -261,13 +248,7 @@ String dump_yaml_config(const yaml &root)
         end.push_back(inf.cppan_key);
     }
 
-    Strings literal
-    {
-        "pre_sources",
-        "post_sources",
-        "post_target",
-        "post_alias",
-    };
+    Strings literal = BuildSystemConfigInsertions::getStrings();
 
     std::set<String> keys;
     keys.insert(begin.begin(), begin.end());

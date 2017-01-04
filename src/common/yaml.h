@@ -223,7 +223,7 @@ struct YamlMergeFlags
     int scalar_scalar = 0;
 };
 
-void merge(yaml dst, const yaml &src, const YamlMergeFlags &flags = YamlMergeFlags());
+void merge(yaml &dst, const yaml &src, const YamlMergeFlags &flags = YamlMergeFlags());
 
 yaml load_yaml_config(const path &p);
 yaml load_yaml_config(const String &s);

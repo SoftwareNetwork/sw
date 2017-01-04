@@ -1766,6 +1766,8 @@ void CMakePrinter::print_obj_config_file(const path &fn) const
     if (!must_update_contents(fn))
         return;
 
+    const auto &p = rd[d].config->getDefaultProject();
+
     Context ctx;
     file_header(ctx, d);
 
@@ -1805,10 +1807,14 @@ void CMakePrinter::print_obj_config_file(const path &fn) const
         ctx.addLine("set(CPPAN_USE_CACHE 1)");
     }
 
+    print_bs_insertion(ctx, p, "pre project", &BuildSystemConfigInsertions::pre_project);
+
     // no need to create a solution for local project
     config_section_title(ctx, "project settings");
     ctx.addLine("project(" + d.getHashShort() + " LANGUAGES C CXX)");
     ctx.addLine();
+
+    print_bs_insertion(ctx, p, "post project", &BuildSystemConfigInsertions::post_project);
 
     config_section_title(ctx, "compiler & linker settings");
     ctx.addLine(R"(if (NOT CMAKE_BUILD_TYPE)

@@ -381,7 +381,9 @@ auto ac_processor::split_and_add(command &c, std::function<bool(String)> fun)
         {
             if (f == "snprintf")
             {
-                checks.addCheck<CheckSymbol>(f, std::set<String>{ "stdio.h" });
+                CheckParameters p;
+                p.headers = { "stdio.h" };
+                checks.addCheck<CheckSymbol>(f, p);
                 continue;
             }
             out.push_back(checks.addCheck<T>(f));
@@ -808,7 +810,9 @@ void ac_processor::process_AC_STRUCT_TIMEZONE(command &c)
     // Figure out how to get the current timezone.If struct tm has a tm_zone member,
     // define HAVE_STRUCT_TM_TM_ZONE(and the obsoleted HAVE_TM_ZONE).
     // Otherwise, if the external array tzname is found, define HAVE_TZNAME.
-    checks.addCheck<CheckSymbol>("tzname", std::set<String>{ "time.h" });
+    CheckParameters p;
+    p.headers = { "time.h" };
+    checks.addCheck<CheckSymbol>("tzname", p);
 }
 
 void ac_processor::process_AC_CHECK_LIB(command &c)

@@ -33,7 +33,7 @@ struct Config
     Config();
     Config(const path &p);
 
-    void load(yaml root);
+    void load(const yaml &root);
     void load(const path &p);
     void reload(const path &p);
 

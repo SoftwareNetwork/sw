@@ -275,27 +275,41 @@ void load_source_and_version(const yaml &root, Source &source, Version &version)
 
 void BuildSystemConfigInsertions::load(const yaml &n)
 {
-#define ADD_CFG_INSERTION(x) get_config_insertion(n, #x, x)
-    ADD_CFG_INSERTION(pre_sources);
-    ADD_CFG_INSERTION(post_sources);
-    ADD_CFG_INSERTION(post_target);
-    ADD_CFG_INSERTION(post_alias);
-#undef ADD_CFG_INSERTION
+#define BSI(x) get_config_insertion(n, #x, x);
+#include "bsi.inl"
+#undef BSI
 }
 
 void BuildSystemConfigInsertions::save(yaml &n) const
 {
-#define ADD_CFG_INSERTION(x) \
-    if (!x.empty())          \
-    {                        \
-        n[#x] = x;           \
-    }
+#define BSI(x) if (!x.empty()) n[#x] = x;
+#include "bsi.inl"
+#undef BSI
+}
 
-    ADD_CFG_INSERTION(pre_sources);
-    ADD_CFG_INSERTION(post_sources);
-    ADD_CFG_INSERTION(post_target);
-    ADD_CFG_INSERTION(post_alias);
-#undef ADD_CFG_INSERTION
+void BuildSystemConfigInsertions::merge(yaml &root, yaml &n)
+{
+#define BSI(x)                                                           \
+    if (root[#x].IsDefined())                                            \
+    {                                                                    \
+        if (n[#x].IsDefined())                                           \
+            n[#x] = root[#x].as<String>() + "\n\n" + n[#x].as<String>(); \
+        else                                                             \
+            n[#x] = root[#x].as<String>();                               \
+    }
+#include "bsi.inl"
+#undef BSI
+}
+
+Strings BuildSystemConfigInsertions::getStrings()
+{
+    static Strings strings
+    {
+#define BSI(x) #x,
+#include "bsi.inl"
+#undef BSI
+    };
+    return strings;
 }
 
 void Patch::load(const yaml &root)

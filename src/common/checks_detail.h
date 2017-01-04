@@ -25,17 +25,59 @@
 
 extern const std::map<int, Check::Information> check_information;
 
+class CheckParametersScopedWriter
+{
+    Context &ctx;
+    const CheckParameters &p;
+    bool with_headers;
+public:
+    CheckParametersScopedWriter(Context &ctx, const CheckParameters &p, bool with_headers = false)
+        : ctx(ctx), p(p), with_headers(with_headers)
+    {
+        if (with_headers)
+            p.writeHeadersBefore(ctx);
+        p.writeBefore(ctx);
+    }
+    ~CheckParametersScopedWriter()
+    {
+        p.writeAfter(ctx);
+        if (with_headers)
+            p.writeHeadersAfter(ctx);
+    }
+};
+
 class CheckFunction : public Check
 {
 public:
-    CheckFunction(const String &s)
-        : Check(getCheckInformation(Function))
+    CheckFunction(const String &f, const CheckParameters &p = CheckParameters())
+        : Check(getCheckInformation(Function), p)
     {
-        data = s;
+        data = f;
         variable = "HAVE_" + boost::algorithm::to_upper_copy(data);
     }
 
     virtual ~CheckFunction() {}
+
+    void save(yaml &root) const override
+    {
+        if (parameters.empty())
+        {
+            root[information.cppan_key].push_back(getData());
+            return;
+        }
+
+        yaml y;
+        y["function"] = getData();
+        parameters.save(y);
+        root[information.cppan_key].push_back(y);
+    }
+
+    void writeCheck(Context &ctx) const override
+    {
+        CheckParametersScopedWriter p(ctx, parameters);
+        ctx << information.function + "(" + getData() + " ";
+        ctx << getVariable() << ")" << Context::eol;
+    }
 };
 
 class CheckInclude : public Check
@@ -45,7 +87,7 @@ public:
         : Check(getCheckInformation(Include))
     {
         data = s;
-        variable = convert(data);
+        variable = make_include_var(data);
     }
 
     CheckInclude(const String &s, const String &var)
@@ -64,7 +106,7 @@ public:
         root[information.cppan_key].push_back(v);
     }
 
-    void set_cpp(bool c)
+    void set_cpp(bool c) override
     {
         cpp = c;
         if (cpp)
@@ -73,43 +115,79 @@ public:
             information.function = getCheckInformation(Include).function;
     }
 
-    static String convert(const String &s)
-    {
-        auto v_def = "HAVE_" + boost::algorithm::to_upper_copy(s);
-        for (auto &c : v_def)
-        {
-            if (!isalnum(c))
-                c = '_';
-        }
-        return v_def;
-    }
-
     virtual ~CheckInclude() {}
-
-private:
-    bool cpp = false;
 };
 
 class CheckType : public Check
 {
 public:
-    CheckType(const String &s, const String &prefix = "HAVE_")
+    CheckType(const String &t, const String &prefix = "HAVE_")
         : Check(getCheckInformation(Type))
     {
-        data = s;
-        String v_def = prefix;
-        v_def += boost::algorithm::to_upper_copy(s);
-        for (auto &c : v_def)
-        {
-            if (c == '*')
-                c = 'P';
-            else if (!isalnum(c))
-                c = '_';
-        }
-        variable = v_def;
+        data = t;
+        variable = make_type_var(data, prefix);
+    }
+
+    CheckType(const String &t, const CheckParameters &p)
+        : Check(getCheckInformation(Type), p)
+    {
+        data = t;
+        variable = make_type_var(data);
     }
 
     virtual ~CheckType() {}
+
+    void writeCheck(Context &ctx) const override
+    {
+        CheckParametersScopedWriter p(ctx, parameters, true);
+        ctx.addLine(information.function + "(\"" + getData() + "\" " + getVariable() + ")");
+    }
+
+    void save(yaml &root) const override
+    {
+        yaml n;
+        n["type"] = getData();
+        parameters.save(n);
+        root[information.cppan_key].push_back(n);
+    }
+};
+
+class CheckStructMember : public Check
+{
+public:
+    CheckStructMember(const String &m, const String &s, const CheckParameters &p = CheckParameters())
+        : Check(getCheckInformation(StructMember), p)
+    {
+        data = m;
+        struct_ = s;
+        variable = make_struct_member_var(data, struct_);
+    }
+
+    virtual ~CheckStructMember() {}
+
+    void writeCheck(Context &ctx) const override
+    {
+        CheckParametersScopedWriter p(ctx, parameters);
+        ctx << information.function + "(\"" + struct_ + "\" \"" + getData() + "\" \"";
+        for (auto &h : parameters.headers)
+            ctx << h << ";";
+        ctx << "\" " << getVariable();
+        if (cpp)
+            ctx << " LANGUAGE CXX";
+        ctx << ")" << Context::eol;
+    }
+
+    void save(yaml &root) const override
+    {
+        yaml n;
+        n["member"] = getData();
+        n["struct"] = struct_;
+        parameters.save(n);
+        root[information.cppan_key].push_back(n);
+    }
+
+public:
+    String struct_;
 };
 
 class CheckAlignment : public Check
@@ -180,11 +258,8 @@ public:
 class CheckSymbol : public Check
 {
 public:
-    CheckSymbol() : Check(getCheckInformation(Symbol)) {}
-
-    CheckSymbol(const String &s, const std::set<String> &headers)
-        : Check(getCheckInformation(Symbol)),
-          headers(headers)
+    CheckSymbol(const String &s, const CheckParameters &p = CheckParameters())
+        : Check(getCheckInformation(Symbol), p)
     {
         data = s;
         variable = "HAVE_" + boost::algorithm::to_upper_copy(data);
@@ -194,20 +269,31 @@ public:
 
     void writeCheck(Context &ctx) const override
     {
+        CheckParametersScopedWriter p(ctx, parameters);
         ctx << information.function + "(\"" + getData() + "\" \"";
-        for (auto &h : headers)
+        for (auto &h : parameters.headers)
             ctx << h << ";";
         ctx << "\" " << getVariable() << ")" << Context::eol;
     }
 
     void save(yaml &root) const override
     {
-        for (auto &h : headers)
-            root[information.cppan_key][getData()].push_back(h);
+        yaml n;
+        if (cpp)
+            n["cpp"] = cpp;
+        n["symbol"] = getData();
+        parameters.save(n);
+        root[information.cppan_key].push_back(n);
     }
 
-private:
-    std::set<String> headers;
+    void set_cpp(bool c) override
+    {
+        cpp = c;
+        if (cpp)
+            information.function = "check_cxx_symbol_exists";
+        else
+            information.function = getCheckInformation(Symbol).function;
+    }
 };
 
 class CheckDecl : public Check

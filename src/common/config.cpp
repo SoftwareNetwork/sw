@@ -84,7 +84,7 @@ void Config::load(const path &p)
     load(root);
 }
 
-void Config::load(yaml root)
+void Config::load(const yaml &root)
 {
     if (root.IsNull() || !root.IsMap())
     {
