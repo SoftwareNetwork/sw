@@ -2505,11 +2505,14 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         if (!o.toolchain.empty())
             args.push_back("-DCMAKE_TOOLCHAIN_FILE=" + o.toolchain);
 
-        command::Result ret;
-        if (N != 1)
-            ret = command::execute(args);
-        else
-            ret = command::execute_with_output(args);
+        auto print = [](const String &s)
+        {
+            LOG_INFO(logger, s);
+        };
+        command::Options o;
+        o.out.action = print;
+        o.err.action = print;
+        auto ret = command::execute_and_capture(args, o);
 
         // do not fail (throw), try to read already found variables
         if (ret.rc)

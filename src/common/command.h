@@ -30,6 +30,7 @@ struct Options
     {
         bool capture = false;
         bool inherit = false;
+        std::function<void(const String &)> action;
     };
 
     Stream out;

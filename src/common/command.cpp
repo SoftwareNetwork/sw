@@ -109,6 +109,10 @@ private:
         std::string s;
         while (::safe_getline(in, s))
         {
+            // before newline
+            if (opts.action)
+                opts.action(s);
+
             s += "\n";
             if (opts.capture)
                 buffer += s;
@@ -182,6 +186,8 @@ Result execute(const Args &args, const Options &opts)
 
         std::unique_ptr<stream_reader> rdout, rderr;
 
+        // run only if captured
+        // inherit will be automatically done by boost::process
 #define RUN_READER(x) \
         if (opts.x.capture) \
             rd ## x = std::make_unique<stream_reader>(c.get_std ## x(), std::c ## x, r.x, opts.x)
