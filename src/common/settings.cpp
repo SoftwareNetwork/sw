@@ -391,7 +391,7 @@ bool Settings::checkForUpdates() const
         return false;
 
     LOG_INFO(logger, "New version of the CPPAN client is available!");
-    LOG_INFO(logger, "Feel free to upgrade it from website or simply run:");
+    LOG_INFO(logger, "Feel free to upgrade it from website (https://cppan.org/) or simply run:");
     LOG_INFO(logger, "cppan --self-upgrade");
 #ifdef _WIN32
     LOG_INFO(logger, "(or the same command but from administrator)");

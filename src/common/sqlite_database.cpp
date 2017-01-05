@@ -55,7 +55,10 @@ int loadOrSaveDb(sqlite3 *pInMemory, const char *zFilename, int isSave)
 
     /* Open the database file identified by zFilename. Exit early if this fails
                               ** for any reason. */
-    rc = sqlite3_open(zFilename, &pFile);
+    if (!isSave)
+        rc = sqlite3_open_v2(zFilename, &pFile, SQLITE_OPEN_READONLY, nullptr);
+    else
+        rc = sqlite3_open(zFilename, &pFile);
     if (rc == SQLITE_OK)
     {
 
@@ -94,17 +97,17 @@ int loadOrSaveDb(sqlite3 *pInMemory, const char *zFilename, int isSave)
     return rc;
 }
 
-sqlite3 *load_from_file(const String &fn, bool read_only)
+sqlite3 *load_from_file(const path &fn, bool read_only)
 {
     sqlite3 *db = nullptr;
     bool ok = true;
     if (read_only)
-        ok = sqlite3_open_v2(fn.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK;
+        ok = sqlite3_open_v2(fn.string().c_str(), &db, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK;
     else
-        ok = sqlite3_open(fn.c_str(), &db) == SQLITE_OK;
+        ok = sqlite3_open(fn.string().c_str(), &db) == SQLITE_OK;
     if (!ok)
     {
-        String error = "Can't open database file: " + fn + " error: " + sqlite3_errmsg(db);
+        String error = "Can't open database file: " + fn.string() + " error: " + sqlite3_errmsg(db);
         sqlite3_close(db);
         throw std::runtime_error(error);
     }
@@ -124,25 +127,25 @@ sqlite3 *open_in_memory()
     return db;
 }
 
-sqlite3 *load_from_file_to_memory(const String &fn)
+sqlite3 *load_from_file_to_memory(const path &fn)
 {
     sqlite3 *db = open_in_memory();
-    auto ret = loadOrSaveDb(db, fn.c_str(), 0);
+    auto ret = loadOrSaveDb(db, fn.string().c_str(), 0);
     if (ret != SQLITE_OK)
     {
-        String error = "Can't load database: " + fn + " error: " + sqlite3_errstr(ret);
+        String error = "Can't load database: " + fn.string() + " error: " + sqlite3_errstr(ret);
         sqlite3_close(db);
         throw std::runtime_error(error);
     }
     return db;
 }
 
-void save_from_memory_to_file(const String &fn, sqlite3 *db)
+void save_from_memory_to_file(const path &fn, sqlite3 *db)
 {
-    auto ret = loadOrSaveDb(db, fn.c_str(), 1);
+    auto ret = loadOrSaveDb(db, fn.string().c_str(), 1);
     if (ret != SQLITE_OK)
     {
-        String error = "Can't save database: " + fn + " error: " + sqlite3_errstr(ret);
+        String error = "Can't save database: " + fn.string() + " error: " + sqlite3_errstr(ret);
         sqlite3_close(db);
         throw std::runtime_error(error);
     }
@@ -193,11 +196,10 @@ void SqliteDatabase::loadDatabase(const path &dbname)
     LOG_TRACE(logger, "Opening database: " << dbname);
 
     if (read_only)
-        db = load_from_file_to_memory(dbname.string());
+        db = load_from_file_to_memory(dbname);
     else
-        db = load_from_file(dbname.string(), read_only);
+        db = load_from_file(dbname, read_only);
 
-    name = dbname.string();
     fullName = dbname;
 }
 
@@ -205,7 +207,7 @@ void SqliteDatabase::save(const path &fn) const
 {
     if (!isLoaded())
         return;
-    save_from_memory_to_file(fn.string(), db);
+    save_from_memory_to_file(fn, db);
 }
 
 bool SqliteDatabase::isLoaded() const
@@ -301,11 +303,6 @@ bool SqliteDatabase::execute(String sql, DatabaseCallback callback, bool nothrow
             throw std::runtime_error(error);
     }
     return error.empty();
-}
-
-String SqliteDatabase::getName() const
-{
-    return name;
 }
 
 path SqliteDatabase::getFullName() const

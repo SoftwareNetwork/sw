@@ -44,7 +44,6 @@ public:
     bool isLoaded() const;
     sqlite3 *getDb() const;
 
-    String getName() const;
     path getFullName() const;
 
     bool execute(String sql, void *object, Sqlite3Callback callback, bool nothrow = false, String *errmsg = nullptr) const;
@@ -59,6 +58,5 @@ public:
 private:
     sqlite3 *db = nullptr;
     bool read_only = false;
-    String name;
     path fullName;
 };
