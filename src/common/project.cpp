@@ -287,16 +287,29 @@ void BuildSystemConfigInsertions::save(yaml &n) const
 #undef BSI
 }
 
-void BuildSystemConfigInsertions::merge(yaml &root, yaml &n)
+void BuildSystemConfigInsertions::merge(yaml &dst, const yaml &src)
 {
-#define BSI(x)                                                           \
-    if (root[#x].IsDefined())                                            \
-    {                                                                    \
-        if (n[#x].IsDefined())                                           \
-            n[#x] = root[#x].as<String>() + "\n\n" + n[#x].as<String>(); \
-        else                                                             \
-            n[#x] = root[#x].as<String>();                               \
+#define BSI(x)                                                              \
+    if (src[#x].IsDefined())                                                \
+    {                                                                       \
+        if (dst[#x].IsDefined())                                            \
+            dst[#x] = src[#x].as<String>() + "\n\n" + dst[#x].as<String>(); \
+        else                                                                \
+            dst[#x] = src[#x].as<String>();                                 \
     }
+#include "bsi.inl"
+#undef BSI
+}
+
+void BuildSystemConfigInsertions::merge_and_remove(yaml &dst, yaml &src)
+{
+    merge(dst, src);
+    remove(src);
+}
+
+void BuildSystemConfigInsertions::remove(yaml &src)
+{
+#define BSI(x) src.remove(#x);
 #include "bsi.inl"
 #undef BSI
 }

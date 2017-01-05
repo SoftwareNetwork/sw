@@ -106,19 +106,23 @@ void prepare_config_for_reading(yaml &root)
 
     // copy common settings to all subprojects
     {
-        const auto &common_settings = root["common_settings"];
+        auto &common_settings = root["common_settings"];
         if (common_settings.IsDefined())
         {
-            // TODO: check and remove bsi first
-            // only then merge
-
             if (prjs.IsDefined())
             {
                 for (auto prj : prjs)
+                {
+                    BuildSystemConfigInsertions::merge_and_remove(prj.second, common_settings);
                     merge(prj.second, common_settings);
+                }
             }
             else
+            {
+                BuildSystemConfigInsertions::merge_and_remove(root, common_settings);
                 merge(root, common_settings);
+                //throw std::runtime_error("'common_settings' is meaningless when no 'projects' exist");
+            }
             root.remove("common_settings");
         }
     }
@@ -127,7 +131,7 @@ void prepare_config_for_reading(yaml &root)
     {
         for (auto prj : prjs)
         {
-            BuildSystemConfigInsertions::merge(root, prj.second);
+            BuildSystemConfigInsertions::merge_and_remove(prj.second, root);
 
             // source & version
             YamlMergeFlags flags;

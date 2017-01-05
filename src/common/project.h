@@ -51,7 +51,10 @@ struct BuildSystemConfigInsertions
 
     void load(const yaml &n);
     void save(yaml &n) const;
-    static void merge(yaml &root, yaml &n);
+
+    static void merge(yaml &dst, const yaml &src);
+    static void merge_and_remove(yaml &dst, yaml &src);
+    static void remove(yaml &src);
     static Strings getStrings();
 };
 
