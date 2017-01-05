@@ -104,7 +104,7 @@ String repeat(const String &e, int n)
 
 void config_section_title(Context &ctx, const String &t, bool nodebug = false)
 {
-    ctx.emptyLines(1);
+    ctx.emptyLines();
     ctx.addLine(config_delimeter);
     ctx.addLine("#");
     ctx.addLine("# " + t);
@@ -113,7 +113,7 @@ void config_section_title(Context &ctx, const String &t, bool nodebug = false)
     ctx.addLine();
     if (!nodebug)
         ctx.addLine(cmake_debug_message("Section: " + t));
-    ctx.emptyLines(1);
+    ctx.emptyLines();
 }
 
 void file_header(Context &ctx, const Package &d, bool root)
@@ -232,7 +232,7 @@ void declare_dummy_target(Context &ctx, const String &name)
     ctx.addLine("endif()");
     ctx.addLine();
     set_target_properties(ctx, cppan_dummy_target(name), "FOLDER", "\"cppan/service\"");
-    ctx.emptyLines(1);
+    ctx.emptyLines();
 }
 
 void print_solution_folder(Context &ctx, const String &target, const path &folder)
@@ -860,7 +860,7 @@ void CMakePrinter::print_bs_insertion(Context &ctx, const Project &p, const Stri
 
     // project's bsi
     ctx.addLine(p.bs_insertions.*i);
-    ctx.emptyLines(1);
+    ctx.emptyLines();
 
     // options' specific bsi
     for (auto &ol : p.options)
@@ -880,11 +880,11 @@ void CMakePrinter::print_bs_insertion(Context &ctx, const Project &p, const Stri
             ctx.addLine(s);
             ctx.decreaseIndent();
             ctx.addLine("endif()");
-            ctx.emptyLines(1);
+            ctx.emptyLines();
         }
     }
 
-    ctx.emptyLines(1);
+    ctx.emptyLines();
 }
 
 void CMakePrinter::print_src_config_file(const path &fn) const
@@ -1003,7 +1003,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
             ctx.addLine("set(LIBRARY_TYPE SHARED)");
         else if (d.flags[pfHeaderOnly])
             ctx.addLine("set(LIBRARY_TYPE INTERFACE)");
-        ctx.emptyLines(1);
+        ctx.emptyLines();
         ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
         ctx.addLine();
 
@@ -1036,7 +1036,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         ctx.addLine("endif()");
         ctx.addLine();
 
-        ctx.emptyLines(1);
+        ctx.emptyLines();
     }
 
     config_section_title(ctx, "export/import");
@@ -1086,7 +1086,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
                     ctx.addLine("remove_src_dir(\"" + s + "\")");
                     ctx.addLine();
                 }
-                ctx.emptyLines(1);
+                ctx.emptyLines();
             }
         };
         exclude_files(p.exclude_from_build);
@@ -1100,7 +1100,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
     for (auto &ol : p.options)
         for (auto &ll : ol.second.link_directories)
             ctx.addLine("link_directories(" + ll + ")");
-    ctx.emptyLines(1);
+    ctx.emptyLines();
 
     // do this right before target
     if (!d.empty())
@@ -1263,7 +1263,7 @@ endif()
             print_ideps();
             ctx.decreaseIndent();
             ctx.addLine(")");
-            ctx.emptyLines(1);
+            ctx.emptyLines();
 
             // add BDIRs
             for (auto &pkg : include_deps)
@@ -1315,7 +1315,7 @@ endif()
                 ctx.decreaseIndent();
                 ctx.addLine("endif()");
                 ctx.addLine();
-                ctx.emptyLines(1);
+                ctx.emptyLines();
             }
         }
     }
@@ -1356,7 +1356,7 @@ endif()
     if (!d.flags[pfHeaderOnly] && !d.flags[pfLocalProject])
     {
         print_solution_folder(ctx, "${this}", path(packages_folder) / d.ppath.toString() / d.version.toString());
-        ctx.emptyLines(1);
+        ctx.emptyLines();
     }
 
     // options (defs, compile options etc.)
@@ -1424,7 +1424,7 @@ endif()
 
         for (auto &ol : p.options)
         {
-            ctx.emptyLines(1);
+            ctx.emptyLines();
 
             auto print_target_options = [&ctx, this](const auto &opts, const String &comment, const String &type, const std::function<String(String)> &f = {})
             {
@@ -1523,7 +1523,7 @@ endif()
                 ctx.addLine("endif()");
             }
         }
-        ctx.emptyLines(1);
+        ctx.emptyLines();
     }
 
     print_bs_insertion(ctx, p, "post target", &BuildSystemConfigInsertions::post_target);
@@ -1635,7 +1635,7 @@ else())");
     // export
     config_section_title(ctx, "export");
     ctx.addLine("export(TARGETS ${this} FILE " + exports_dir + d.variable_name + ".cmake)");
-    ctx.emptyLines(1);
+    ctx.emptyLines();
 
     // aliases
     {
@@ -1686,7 +1686,7 @@ else())");
         ctx.addLine();
         print_solution_folder(ctx, tgt, path(packages_folder) / d.ppath.toString() / d.version.toString());
         ctx.addLine("endif()");
-        ctx.emptyLines(1);
+        ctx.emptyLines();
     }
 
     // source groups
@@ -1847,7 +1847,7 @@ endif()
         config_section_title(ctx, "main include");
         auto mi = d.getDirSrc();
         add_subdirectory(ctx, mi.string());
-        ctx.emptyLines(1);
+        ctx.emptyLines();
     }
 
     file_footer(ctx, d);
@@ -1941,7 +1941,7 @@ void CMakePrinter::print_obj_generate_file(const path &fn) const
             print_solution_folder(ctx, target, path(packages_folder) / d.ppath.toString() / d.version.toString());
         ctx.decreaseIndent();
         ctx.addLine("endif()");
-        ctx.emptyLines(1);
+        ctx.emptyLines();
 
         // source groups
         print_source_groups(ctx, dir);
@@ -2171,7 +2171,7 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
                     config_section_title(ctx, "Executable build deps for " + dp.second.target_name);
                     print_dependencies(ctx, dp.second, settings.use_cache);
                     config_section_title(ctx, "End of executable build deps for " + dp.second.target_name);
-                    ctx.emptyLines(1);
+                    ctx.emptyLines();
                 }
 
                 config_section_title(ctx, "Copy " + dp.second.target_name);
@@ -2400,7 +2400,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     // fixups
     // put bug workarounds here
     //config_section_title(ctx, "fixups");
-    ctx.emptyLines(1);
+    ctx.emptyLines();
 
     // dummy (compiled?) target
     if (d.empty())
@@ -2597,5 +2597,5 @@ void CMakePrinter::print_source_groups(Context &ctx, const path &dir) const
         ctx.decreaseIndent();
         ctx.addLine(")");
     }
-    ctx.emptyLines(1);
+    ctx.emptyLines();
 }
