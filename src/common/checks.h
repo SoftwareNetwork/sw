@@ -102,6 +102,19 @@ public:
 
     String getFileName() const;
 
+    virtual String printStatus() const
+    {
+        if (getValue())
+            return "-- " + information.singular + " " + getData() + " - found (" + std::to_string(getValue()) + ")";
+        else
+            return "-- " + information.singular + " " + getData() + " - not found";
+    }
+
+    virtual bool isOk() const
+    {
+        return !!getValue();
+    }
+
 protected:
     // self-information
     Information information;
@@ -136,13 +149,13 @@ public:
 
 private:
     template <class T>
-    friend struct less_check;
+    friend struct CheckPtrLess;
 };
 
 using CheckPtr = std::shared_ptr<Check>;
 
 template <class T>
-struct less_check
+struct CheckPtrLess
 {
     bool operator()(const T &p1, const T &p2) const
     {
@@ -154,9 +167,11 @@ struct less_check
     }
 };
 
+using ChecksSet = std::set<CheckPtr, CheckPtrLess<CheckPtr>>;
+
 struct Checks
 {
-    std::set<CheckPtr, less_check<CheckPtr>> checks;
+    ChecksSet checks;
 
     bool empty() const;
 

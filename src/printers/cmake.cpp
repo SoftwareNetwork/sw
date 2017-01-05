@@ -2428,7 +2428,10 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         N = std::min<int>(N, us.var_check_jobs);
 
     if (N <= 1)
+    {
+        LOG_DEBUG(logger, "-- Sequential checks mode selected");
         return;
+    }
 
     Checks checks;
     checks.load(o.checks_file);
@@ -2459,7 +2462,10 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
 
     // There are few checks only. Won't go in parallel mode.
     if (n_checks <= 8)
+    {
+        LOG_DEBUG(logger, "-- There are few checks (" << n_checks << ") only. Won't go in parallel mode.");
         return;
+    }
 
     LOG_INFO(logger, "-- Performing " << n_checks << " checks using " << N << " thread(s)");
     LOG_INFO(logger, "-- This process may take up to 5 minutes depending on your hardware");
@@ -2525,12 +2531,12 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         checks += w;
 
     checks.print_values();
+    LOG_FLUSH();
 
     Context ctx;
     checks.print_values(ctx);
     write_file(o.dir / parallel_checks_file, ctx.getText());
 
-    LOG_FLUSH();
     LOG_INFO(logger, "-- This operation took " + std::to_string(t) + " seconds to complete");
 }
 

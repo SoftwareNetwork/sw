@@ -85,7 +85,7 @@ namespace command
 class stream_reader
 {
 public:
-    stream_reader(boost::process::pistream &in, std::ostream &out, std::string &buffer, Options::Stream opts)
+    stream_reader(boost::process::pistream &in, std::ostream &out, std::string &buffer, const Options::Stream &opts)
         : in(in), out(out), buffer(buffer), opts(opts)
     {
         t = std::move(std::thread([&t = *this] { t(); }));
@@ -102,7 +102,7 @@ private:
     boost::process::pistream &in;
     std::ostream &out;
     std::string &buffer;
-    Options::Stream opts;
+    const Options::Stream &opts;
 
     void operator()()
     {

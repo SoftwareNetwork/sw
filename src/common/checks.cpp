@@ -192,16 +192,6 @@ void Checks::load(const yaml &root)
             addCheck<CheckType>(n.template as<String>());
         else if (n.IsMap())
         {
-            if (n.size() == 1)
-            {
-                auto i = n.begin();
-                auto s = i->first.template as<String>();
-                auto h = i->second.template as<String>();
-                CheckParameters p;
-                p.headers = { h };
-                addCheck<CheckType>(s, p);
-                return;
-            }
             String t;
             if (n["name"].IsDefined())
                 t = n["name"].template as<String>();
@@ -795,66 +785,34 @@ std::vector<Checks> Checks::scatter(int N) const
 
 void Checks::print_values() const
 {
+    std::map<String, CheckPtr> checks_to_print;
     for (auto &c : checks)
     {
         auto &i = c->getInformation();
         auto t = i.type;
-        switch (t)
-        {
-        case Check::Function:
-        case Check::Include:
-        case Check::Type:
-        case Check::Alignment:
-        case Check::Library:
-        case Check::LibraryFunction:
-            if (c->getValue())
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - found (" + std::to_string(c->getValue()) + ")");
-            else
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - not found");
-            break;
-        case Check::StructMember:
-        {
-            auto sm = (CheckStructMember*)c.get();
-            if (c->getValue())
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " of " + sm->struct_ + " - found (" + std::to_string(c->getValue()) + ")");
-            else
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " of " + sm->struct_ + " - not found");
-            break;
-        }
-        case Check::Symbol:
-            if (c->getValue())
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - found (" + std::to_string(c->getValue()) + ")");
-            else
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - not found");
-            break;
-        case Check::Decl:
-            break;
-            if (c->getValue())
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - found (" + std::to_string(c->getValue()) + ")");
-            else
-                LOG_INFO(logger, "-- " << i.singular << " " + c->getData() + " - not found (" + std::to_string(c->getValue()) + ")");
-            break;
-        case Check::CSourceCompiles:
-        case Check::CSourceRuns:
-        case Check::CXXSourceCompiles:
-        case Check::CXXSourceRuns:
-        case Check::Custom:
-        {
-            auto cc = (CheckSource *)c.get();
-            if ((!cc->invert && c->getValue()) ||
-                (cc->invert && !c->getValue()))
-                LOG_INFO(logger, "-- Test " << c->getVariable() + " - Success (" + std::to_string(c->getValue()) + ")");
-            else
-                LOG_INFO(logger, "-- Test " << c->getVariable() + " - Failed");
-        }
-            break;
-        }
+
+        // skip decls
+        if (t == Check::Decl)
+            continue;
+
+        // if we have duplicate values, choose the ok one
+        auto &m = checks_to_print[c->getVariable()];
+        if (m && m->isOk())
+            continue;
+        m = c;
     }
+
+    // correctly sort
+    ChecksSet s;
+    for (auto &kv : checks_to_print)
+        s.insert(kv.second);
+    for (auto &v : s)
+        LOG_INFO(logger, v->printStatus());
 }
 
 void Checks::print_values(Context &ctx) const
 {
-    std::map<String, int> m;
+    std::map<String, CheckPtr> checks_to_print;
     for (auto &c : checks)
     {
         auto &i = c->getInformation();
@@ -865,25 +823,28 @@ void Checks::print_values(Context &ctx) const
         case Check::Decl: // do not participate in parallel
             break;
         case Check::Symbol:
-        {
-            auto f = (CheckSymbol*)c.get();
-            if (f->getValue())
+            if (c->isOk())
             {
+                // add headers as found directly to ctx
+                auto f = (CheckSymbol*)c.get();
                 for (auto &i : f->parameters.headers)
-                    m[Check::make_include_var(i)] = 1;
+                    ctx.addLine("STRING;" + Check::make_include_var(i) + ";1");
             }
             //[[fallthrough]];
-        }
         default:
-            // if we have duplicate values, choose non-null one
-            if (m[c->getVariable()])
-                break;
-            m[c->getVariable()] = c->getValue();
+        {
+            // if we have duplicate values, choose the ok one
+            auto &m = checks_to_print[c->getVariable()];
+            if (m && m->isOk())
+                continue;
+            m = c;
             break;
         }
+        }
     }
-    for (auto &kv : m)
-        ctx.addLine("STRING;" + kv.first + ";" + std::to_string(kv.second));
+
+    for (auto &kv : checks_to_print)
+        ctx.addLine("STRING;" + kv.second->getVariable() + ";" + std::to_string(kv.second->getValue()));
 }
 
 String Check::make_include_var(const String &i)
@@ -933,7 +894,7 @@ String CheckParameters::getHash() const
     ADD_PARAMS(libraries);
     ADD_PARAMS(flags);
     h = sha256(h);
-    h.substr(0, 4);
+    h = h.substr(0, 4);
     return h;
 }
 

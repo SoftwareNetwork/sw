@@ -186,6 +186,14 @@ public:
         root[information.cppan_key].push_back(n);
     }
 
+    String printStatus() const override
+    {
+        if (getValue())
+            return "-- " + information.singular + " " + getData() + " of " + struct_ + " - found (" + std::to_string(getValue()) + ")";
+        else
+            return "-- " + information.singular + " " + getData() + " of " + struct_ + " - not found";
+    }
+
 public:
     String struct_;
 };
@@ -398,6 +406,19 @@ struct CheckSource : public Check
     {
         root[information.cppan_key][getVariable()]["text"] = getData();
         root[information.cppan_key][getVariable()]["invert"] = invert;
+    }
+
+    String printStatus() const override
+    {
+        if (isOk())
+            return "-- Test " + getVariable() + " - Success (" + std::to_string(getValue()) + ")";
+        else
+            return "-- Test " + getVariable() + " - Failed";
+    }
+
+    bool isOk() const override
+    {
+        return !invert && getValue() || invert && !getValue();
     }
 };
 
