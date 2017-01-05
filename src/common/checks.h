@@ -98,7 +98,7 @@ public:
     void setValue(const Value &v) { value = v; }
 
     bool get_cpp() const { return cpp; }
-    virtual void set_cpp(bool c) {}
+    virtual void set_cpp(bool) {}
 
     String getFileName() const;
 
