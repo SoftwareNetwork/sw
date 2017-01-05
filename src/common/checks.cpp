@@ -727,7 +727,8 @@ void Checks::write_definitions(Context &ctx, const Package &d) const
         if (t == Check::Decl)
         {
             // decl will be always defined
-            ctx.addLine("if (NOT DEFINED " + c->getVariable() + ")");
+            // TODO: watch over this condition, it fails sometimes
+            ctx.addLine("if (NOT DEFINED " + c->getVariable() + " OR NOT " + c->getVariable() + ")");
             ctx.increaseIndent();
             ctx.addLine("set(" + c->getVariable() + " 0)");
             ctx.decreaseIndent();
@@ -739,6 +740,7 @@ void Checks::write_definitions(Context &ctx, const Package &d) const
             ctx << m << " " << c->getVariable() << "=" << "${" << c->getVariable() << "}" << Context::eol;
             ctx.decreaseIndent();
             ctx.addLine(")");
+            ctx.addLine();
             continue;
         }
 
