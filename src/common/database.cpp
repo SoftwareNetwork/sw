@@ -259,15 +259,23 @@ void writePackagesDbVersion(const path &dir, int version)
 
 ServiceDatabase &getServiceDatabase()
 {
-    //static ServiceDatabase db;
-    thread_local ServiceDatabase db;
+#ifdef _WIN32
+    thread_local
+#else
+    static
+#endif
+    ServiceDatabase db;
     return db;
 }
 
 PackagesDatabase &getPackagesDatabase()
 {
-    //static PackagesDatabase db;
-    thread_local PackagesDatabase db;
+#ifdef _WIN32
+    thread_local
+#else
+    static
+#endif
+    PackagesDatabase db;
     return db;
 }
 
