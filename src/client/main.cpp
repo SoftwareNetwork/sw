@@ -362,7 +362,21 @@ try
 
     if (options().count("build"))
     {
-        return build(options["build"].as<String>(), options["config"].as<String>());
+        auto build_arg = options["build"].as<String>();
+        if (fs::exists(build_arg) && !isUrl(build_arg))
+            return build(build_arg, options["config"].as<String>());
+        else
+        {
+            try
+            {
+                build_package(options["build"].as<String>(), options["settings"].as<String>(), options["config"].as<String>());
+                return 0;
+            }
+            catch (const std::exception &)
+            {
+            }
+            LOG_ERROR(logger, "No such file or directory");
+        }
     }
     if (options().count("build-only"))
     {
