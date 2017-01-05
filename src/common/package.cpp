@@ -161,7 +161,38 @@ void cleanPackages(const String &s, int flags)
             ++i;
     }
 
-    auto log = [](const auto &pkgs, int flags)
+    cleanPackages(pkgs, flags);
+
+    if (flags & CleanTarget::Src)
+    {
+        // dependent packages must be rebuilt but with only limited set of the flags
+        flags = CleanTarget::Bin |
+                CleanTarget::Lib |
+                CleanTarget::Obj |
+                CleanTarget::Exp ;
+    }
+
+    cleanPackages(dpkgs, flags);
+}
+
+void cleanPackage(const Package &pkg, int flags)
+{
+    static std::map<Package, int> cleaned_packages;
+
+    static const auto cache_dir_bin = enumerate_files(directories.storage_dir_bin);
+    static const auto cache_dir_exp = enumerate_files(directories.storage_dir_exp);
+    static const auto cache_dir_lib = enumerate_files(directories.storage_dir_lib);
+#ifdef _WIN32
+    static const auto cache_dir_lnk = enumerate_files(directories.storage_dir_lnk);
+#endif
+
+    // only clean yet uncleaned flags
+    flags = flags & ~cleaned_packages[pkg];
+
+    if (flags == 0)
+        return;
+
+    // log message
     {
         String s;
         if (flags != CleanTarget::All)
@@ -177,81 +208,60 @@ void cleanPackages(const String &s, int flags)
                 s.resize(s.size() - 2);
             s += ")";
         }
-        for (auto &pkg : pkgs)
-            LOG_INFO(logger, "Cleaning   : " + pkg.target_name + "..." + s);
-    };
-
-    log(pkgs, flags);
-    cleanPackages(pkgs, flags);
-
-    if (flags & CleanTarget::Src)
-    {
-        // dependent packages must be rebuilt but with only limited set of the flags
-        flags = CleanTarget::Bin |
-                CleanTarget::Lib |
-                CleanTarget::Obj |
-                CleanTarget::Exp ;
+        LOG_INFO(logger, "Cleaning   : " + pkg.target_name + "..." + s);
     }
 
-    log(dpkgs, flags);
-    cleanPackages(dpkgs, flags);
-}
-
-void cleanPackages(const PackagesSet &pkgs, int flags)
-{
     auto rm = [](const auto &p)
     {
         if (fs::exists(p))
             fs::remove_all(p);
     };
 
-    auto rm_recursive = [&pkgs](const auto &dir, const auto &ext)
+    auto rm_recursive = [](const auto &pkg, const auto &files, const auto &ext)
     {
-        if (!fs::exists(dir))
-            return;
-        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+        for (auto &f : files)
         {
-            if (!fs::is_regular_file(f))
-                continue;
-            auto fn = f.path().filename().string();
-            for (auto &pkg : pkgs)
-            {
-                if (fn == pkg.target_name + ext)
-                    fs::remove(f);
-            }
+            auto fn = f.filename().string();
+            if (fn == pkg.target_name + ext)
+                fs::remove(f);
         }
     };
 
-    for (auto &pkg : pkgs)
-    {
-        if (flags & CleanTarget::Src)
-            rm(pkg.getDirSrc());
-        if (flags & CleanTarget::Obj)
-            rm(pkg.getDirObj());
+    if (flags & CleanTarget::Src)
+        rm(pkg.getDirSrc());
+    if (flags & CleanTarget::Obj)
+        rm(pkg.getDirObj());
 
-        if (flags & CleanTarget::Lib)
-            remove_files_like(directories.storage_dir_lib, ".*" + pkg.target_name + ".*");
-        if (flags & CleanTarget::Bin)
-            remove_files_like(directories.storage_dir_bin, ".*" + pkg.target_name + ".*");
-    }
+    if (flags & CleanTarget::Bin)
+        remove_files_like(cache_dir_bin, ".*" + pkg.target_name + ".*");
+    if (flags & CleanTarget::Lib)
+        remove_files_like(cache_dir_lib, ".*" + pkg.target_name + ".*");
 
     // cmake exports
     if (flags & CleanTarget::Exp)
-        rm_recursive(directories.storage_dir_exp, ".cmake");
+        rm_recursive(pkg, cache_dir_exp, ".cmake");
 
 #ifdef _WIN32
     // solution links
     if (flags & CleanTarget::Lnk)
-        rm_recursive(directories.storage_dir_lnk, ".sln.lnk");
+        rm_recursive(pkg, cache_dir_lnk, ".sln.lnk");
 #endif
 
     // remove packages at the end in case we're removing sources
     if (flags & CleanTarget::Src)
     {
         auto &sdb = getServiceDatabase();
-        for (auto &pkg : pkgs)
-            sdb.removeInstalledPackage(pkg);
+        sdb.removeInstalledPackage(pkg);
     }
+
+    // save cleaned packages
+    cleaned_packages[pkg] |= flags;
+}
+
+void cleanPackages(const PackagesSet &pkgs, int flags)
+{
+    for (auto &pkg : pkgs)
+        cleanPackage(pkg, flags);
 }
 
 std::map<int, String> CleanTarget::getStringsById()

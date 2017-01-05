@@ -155,19 +155,34 @@ void copy_dir(const path &src, const path &dst)
     }
 }
 
+void remove_files_like(const Files &files, const String &regex)
+{
+    std::regex r(regex);
+    for (auto &f : files)
+    {
+        if (!std::regex_match(f.filename().string(), r))
+            continue;
+        fs::remove(f);
+    }
+}
+
 void remove_files_like(const path &dir, const String &regex)
 {
+    remove_files_like(enumerate_files(dir), regex);
+}
+
+Files enumerate_files(const path &dir)
+{
+    Files files;
     if (!fs::exists(dir))
-        return;
-    std::regex r(regex);
+        return files;
     for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
     {
         if (!fs::is_regular_file(f))
             continue;
-        if (!std::regex_match(f.path().filename().string(), r))
-            continue;
-        fs::remove(f);
+        files.insert(f);
     }
+    return files;
 }
 
 bool is_under_root(path p, const path &root_dir)

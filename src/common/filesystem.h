@@ -63,6 +63,9 @@ String make_archive_name(const String &fn = String());
 
 void copy_dir(const path &source, const path &destination);
 void remove_files_like(const path &dir, const String &regex);
+void remove_files_like(const Files &files, const String &regex);
+
+Files enumerate_files(const path &dir);
 
 bool compare_files(const path &fn1, const path &fn2);
 bool compare_dirs(const path &dir1, const path &dir2);
