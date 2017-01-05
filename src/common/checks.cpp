@@ -192,6 +192,21 @@ void Checks::load(const yaml &root)
             this->addCheck<CheckType>(n.template as<String>());
         else if (n.IsMap())
         {
+            if (n.size() == 1)
+            {
+                auto i = n.begin();
+                auto t = i->first.template as<String>();
+                auto h = i->second.template as<String>();
+                CheckParameters p;
+                // if we see onliner 'type: struct tm' interpret it as
+                // type 'struct tm', not type 'type' and header 'struct tm'
+                if (t == "type")
+                    t = h;
+                else
+                    p.headers.push_back(h);
+                this->addCheck<CheckType>(t, p);
+                return;
+            }
             String t;
             if (n["name"].IsDefined())
                 t = n["name"].template as<String>();
