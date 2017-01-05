@@ -130,7 +130,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
         const auto &tgt = dep.target_name_hash;
         Context ctx;
 
-        auto add_aliases = [this, &ctx, &dep, &tgt, &lines](const auto &delim)
+        auto add_aliases = [&ctx, &dep, &tgt, &lines](const auto &delim)
         {
             auto d = dep;
             ctx.addLine(fix_imports(lines, tgt, d.ppath.toString(delim) + "-" + d.version.toAnyVersion()));
