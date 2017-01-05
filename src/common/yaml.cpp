@@ -112,10 +112,11 @@ void prepare_config_for_reading(yaml &root)
             if (prjs.IsDefined())
             {
                 for (auto prj : prjs)
-                {
-                    BuildSystemConfigInsertions::merge_and_remove(prj.second, common_settings);
+                    BuildSystemConfigInsertions::merge(prj.second, common_settings);
+                BuildSystemConfigInsertions::remove(common_settings);
+
+                for (auto prj : prjs)
                     merge(prj.second, common_settings);
-                }
             }
             else
             {
@@ -130,9 +131,11 @@ void prepare_config_for_reading(yaml &root)
     if (prjs.IsDefined())
     {
         for (auto prj : prjs)
-        {
-            BuildSystemConfigInsertions::merge_and_remove(prj.second, root);
+            BuildSystemConfigInsertions::merge(prj.second, root);
+        BuildSystemConfigInsertions::remove(root);
 
+        for (auto prj : prjs)
+        {
             // source & version
             YamlMergeFlags flags;
             flags.scalar_scalar = YamlMergeFlags::DontTouchScalars;
