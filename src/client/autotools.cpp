@@ -837,14 +837,10 @@ void ac_processor::process_AC_CHECK_MEMBERS(command &c)
             header = "dirent.h";
         // add more headers here
 
-        auto var = variable;
-        boost::replace_all(var, "  ", " ");
-        boost::replace_all(var, " ", "_");
-        boost::replace_all(var, ".", "_");
-        var = "HAVE_" + boost::algorithm::to_upper_copy(var);
-
-        checks.addCheck<CheckCustom>(var,
-            "CHECK_STRUCT_HAS_MEMBER(\"" + struct_ + "\" " + member + " \"" + header + "\" " + var + ")");
+        CheckParameters pa;
+        if (!header.empty())
+            pa.headers.push_back(header);
+        checks.addCheck<CheckStructMember>(member, struct_, pa);
     }
 }
 
