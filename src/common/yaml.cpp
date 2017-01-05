@@ -106,7 +106,7 @@ void prepare_config_for_reading(yaml &root)
 
     // copy common settings to all subprojects
     {
-        auto &common_settings = root["common_settings"];
+        auto common_settings = root["common_settings"];
         if (common_settings.IsDefined())
         {
             if (prjs.IsDefined())
@@ -137,7 +137,10 @@ void prepare_config_for_reading(yaml &root)
             YamlMergeFlags flags;
             flags.scalar_scalar = YamlMergeFlags::DontTouchScalars;
             if (!prj.second["source"].IsDefined() && root["source"].IsDefined())
-                merge(prj.second["source"], root["source"], flags);
+            {
+                auto s = prj.second["source"];
+                merge(s, root["source"], flags);
+            }
             if (!prj.second["version"].IsDefined() && root["version"].IsDefined())
                 prj.second["version"] = YAML::Clone(root["version"]);
         }
