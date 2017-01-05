@@ -169,7 +169,7 @@ void Checks::load(const yaml &root)
     get_sequence_and_iterate(root, getCheckInformation(Check::Function).cppan_key, [this](const auto &n)
     {
         if (n.IsScalar())
-            addCheck<CheckFunction>(n.template as<String>());
+            this->addCheck<CheckFunction>(n.template as<String>());
         else if (n.IsMap())
         {
             String f;
@@ -179,7 +179,7 @@ void Checks::load(const yaml &root)
                 f = n["function"].template as<String>();
             CheckParameters p;
             p.load(n);
-            auto ptr = addCheck<CheckFunction>(f, p);
+            auto ptr = this->addCheck<CheckFunction>(f, p);
             if (n["cpp"].IsDefined())
                 ptr->set_cpp(n["cpp"].template as<bool>());
         }
@@ -189,7 +189,7 @@ void Checks::load(const yaml &root)
     get_sequence_and_iterate(root, getCheckInformation(Check::Type).cppan_key, [this](const auto &n)
     {
         if (n.IsScalar())
-            addCheck<CheckType>(n.template as<String>());
+            this->addCheck<CheckType>(n.template as<String>());
         else if (n.IsMap())
         {
             String t;
@@ -199,7 +199,7 @@ void Checks::load(const yaml &root)
                 t = n["type"].template as<String>();
             CheckParameters p;
             p.load(n);
-            auto ptr = addCheck<CheckType>(t, p);
+            auto ptr = this->addCheck<CheckType>(t, p);
             if (n["cpp"].IsDefined())
                 ptr->set_cpp(n["cpp"].template as<bool>());
         }
@@ -215,7 +215,7 @@ void Checks::load(const yaml &root)
                 auto i = n.begin();
                 auto m = i->first.template as<String>();
                 auto s = i->second.template as<String>();
-                addCheck<CheckStructMember>(m, s);
+                this->addCheck<CheckStructMember>(m, s);
                 return;
             }
             String m;
@@ -226,7 +226,7 @@ void Checks::load(const yaml &root)
             auto s = n["struct"].template as<String>();
             CheckParameters p;
             p.load(n);
-            auto ptr = addCheck<CheckStructMember>(m, s, p);
+            auto ptr = this->addCheck<CheckStructMember>(m, s, p);
             if (n["cpp"].IsDefined())
                 ptr->set_cpp(n["cpp"].template as<bool>());
         }
@@ -312,7 +312,7 @@ void Checks::load(const yaml &root)
                         auto h = i->second.template as<String>();
                         CheckParameters p;
                         p.headers = { h };
-                        addCheck<CheckSymbol>(s, p);
+                        this->addCheck<CheckSymbol>(s, p);
                         return;
                     }
                     String s;
@@ -324,7 +324,7 @@ void Checks::load(const yaml &root)
                     CheckParameters p;
                     p.headers = { h };
                     p.load(n);
-                    auto ptr = addCheck<CheckSymbol>(s, p);
+                    auto ptr = this->addCheck<CheckSymbol>(s, p);
                     if (n["cpp"].IsDefined())
                         ptr->set_cpp(n["cpp"].template as<bool>());
                     return;
