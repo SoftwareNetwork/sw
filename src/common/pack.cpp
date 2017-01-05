@@ -28,6 +28,8 @@
 #include <linux/limits.h>
 #endif
 
+#define BLOCK_SIZE 8192
+
 bool pack_files(const path &fn, const Files &files, const path &root_dir)
 {
     bool result = true;
@@ -61,7 +63,7 @@ bool pack_files(const path &fn, const Files &files, const path &root_dir)
             result = false;
             continue;
         }
-        char buff[8192];
+        char buff[BLOCK_SIZE];
         while (auto len = fread(buff, 1, sizeof(buff), fp))
             archive_write_data(a, buff, len);
         fclose(fp);
@@ -82,7 +84,7 @@ Files unpack_file(const path &fn, const path &dst)
     auto a = archive_read_new();
     archive_read_support_filter_all(a);
     archive_read_support_format_all(a);
-    auto r = archive_read_open_filename(a, fn.string().c_str(), 10240);
+    auto r = archive_read_open_filename(a, fn.string().c_str(), BLOCK_SIZE);
     if (r != ARCHIVE_OK)
         throw std::runtime_error(archive_error_string(a));
     archive_entry *entry;

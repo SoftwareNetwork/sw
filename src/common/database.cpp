@@ -259,13 +259,15 @@ void writePackagesDbVersion(const path &dir, int version)
 
 ServiceDatabase &getServiceDatabase()
 {
-    static ServiceDatabase db;
+    //static ServiceDatabase db;
+    thread_local ServiceDatabase db;
     return db;
 }
 
 PackagesDatabase &getPackagesDatabase()
 {
-    static PackagesDatabase db;
+    //static PackagesDatabase db;
+    thread_local PackagesDatabase db;
     return db;
 }
 

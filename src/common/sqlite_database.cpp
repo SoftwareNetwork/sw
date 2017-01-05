@@ -166,6 +166,9 @@ SqliteDatabase::SqliteDatabase(const path &dbname, bool read_only)
 {
     LOG_TRACE(logger, "Initializing database: " << dbname);
 
+    // TODO: remove when memory db is turned on
+    read_only = false;
+
     loadDatabase(dbname);
 }
 
@@ -195,9 +198,9 @@ void SqliteDatabase::loadDatabase(const path &dbname)
 
     LOG_TRACE(logger, "Opening database: " << dbname);
 
-    if (read_only)
-        db = load_from_file_to_memory(dbname);
-    else
+    //if (read_only)
+    //    db = load_from_file_to_memory(dbname);
+    //else
         db = load_from_file(dbname, read_only);
 
     fullName = dbname;

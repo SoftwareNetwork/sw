@@ -254,13 +254,15 @@ try
             }
 
             // maybe we entered a package?
+            LOG_WARN(logger, "Trying to build as package");
             try
             {
                 build_package(cmd);
                 return 0;
             }
-            catch (const std::exception &)
+            catch (const std::exception &e)
             {
+                LOG_ERROR(logger, e.what());
             }
 
             std::cout << "unknown command\n";
@@ -363,19 +365,21 @@ try
     if (options().count("build"))
     {
         auto build_arg = options["build"].as<String>();
-        if (fs::exists(build_arg) && !isUrl(build_arg))
+        if (fs::exists(build_arg) || isUrl(build_arg))
             return build(build_arg, options["config"].as<String>());
         else
         {
+            LOG_WARN(logger, "No such file or directory, trying to build as package");
             try
             {
-                build_package(options["build"].as<String>(), options["settings"].as<String>(), options["config"].as<String>());
+                build_package(build_arg, options["settings"].as<String>(), options["config"].as<String>());
                 return 0;
             }
-            catch (const std::exception &)
+            catch (const std::exception &e)
             {
+                LOG_ERROR(logger, e.what());
             }
-            LOG_ERROR(logger, "No such file or directory");
+            return 1;
         }
     }
     if (options().count("build-only"))
