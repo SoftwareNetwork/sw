@@ -1893,9 +1893,9 @@ void CMakePrinter::print_obj_generate_file(const path &fn) const
 
     ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_obj_generate_filename) + ")");
 
-    // executable is the last in the chain
+    // executable (non-direct) is the last in the chain
     // we do not use its exported symbols or whatever
-    if (!d.flags[pfExecutable])
+    if (!(d.flags[pfExecutable] && !d.flags[pfDirectDependency]))
     {
         config_section_title(ctx, "import direct deps");
         ctx.addLine("cppan_include(${current_dir}/exports.cmake)");
