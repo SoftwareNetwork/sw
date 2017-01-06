@@ -163,10 +163,6 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
             endif(CMAKE_TOOLCHAIN_FILE)
         endif()
 
-        # store ${import} file hash
-        file(MD5 ${import} md5)
-        file(WRITE ${import}.md5 "${md5}")
-
         # fix imports
         # TODO: move exports to exp dir
         file(WRITE ${aliases_file} "${aliases}")

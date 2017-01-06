@@ -246,7 +246,7 @@ String dump_yaml_config(const yaml &root)
         "include_directories",
         "options",
         "aliases",
-        "dependencies",
+        "dependencies", // move above options?
 
         "patch",
     };
