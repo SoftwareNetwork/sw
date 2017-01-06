@@ -80,6 +80,33 @@ void Api::add_version(const Remote &r, ProjectPath p, const String &cppan)
     api_call(r, "add_version", request);
 }
 
+void Api::add_version(const Remote &r, ProjectPath p, const Version &vnew)
+{
+    add_version(r, p, vnew, String());
+}
+
+void Api::add_version(const Remote &r, ProjectPath p, const Version &vnew, const String &vold)
+{
+    check_relative(r, p);
+    ptree request;
+    request.put("project", p.toString());
+    request.put("new", vnew.toString());
+    if (!vold.empty())
+        request.put("old", vold);
+    api_call(r, "add_version", request);
+}
+
+void Api::update_version(const Remote &r, ProjectPath p, const Version &v)
+{
+    if (!v.isBranch())
+        throw std::runtime_error("Only branches can be updated");
+    check_relative(r, p);
+    ptree request;
+    request.put("project", p.toString());
+    request.put("version", v.toString());
+    api_call(r, "update_version", request);
+}
+
 void Api::remove_version(const Remote &r, ProjectPath p, const Version &v)
 {
     check_relative(r, p);

@@ -669,11 +669,80 @@ ApiResult api_call(const String &cmd, const Strings &args)
                 return ApiResult::Error;
             }
 
-            Api().add_version(find_remote(remote), p, read_file(args[arg++]));
+            auto f = args[arg++];
+            if (fs::exists(f) && fs::is_regular_file(f))
+            {
+                Api().add_version(find_remote(remote), p, read_file(f));
+                return ApiResult::Handled;
+            }
+
+            if (args.size() < arg + 1)
+            {
+                Api().add_version(find_remote(remote), p, Version(f));
+                return ApiResult::Handled;
+            }
+
+            auto vold = args[arg++];
+            Api().add_version(find_remote(remote), p, Version(f), vold);
+
             return ApiResult::Handled;
         }
 
         return ApiResult::Handled;
+    }
+
+    if (cmd == "update")
+    {
+        if (args.size() < 3)
+        {
+            std::cout << "invalid number of arguments\n";
+            std::cout << "usage: cppan update version [remote] name version\n";
+            return ApiResult::Error;
+        }
+
+        size_t arg = 2;
+        String what = args[arg++];
+
+        if (what == "version")
+        {
+            auto proj_usage = []
+            {
+                std::cout << "invalid number of arguments\n";
+                std::cout << "usage: cppan update version [remote] name version\n";
+            };
+
+            if (args.size() < arg + 1)
+            {
+                proj_usage();
+                return ApiResult::Error;
+            }
+
+            String remote = DEFAULT_REMOTE_NAME;
+            ProjectPath p(args[arg++]);
+            if (has_remote(remote) && p.is_relative() && p.size() == 1)
+            {
+                remote = args[arg - 1];
+
+                if (args.size() < arg + 1)
+                {
+                    proj_usage();
+                    return ApiResult::Error;
+                }
+
+                p = ProjectPath(args[arg++]);
+            }
+
+            if (args.size() < arg + 1)
+            {
+                proj_usage();
+                return ApiResult::Error;
+            }
+
+            Api().update_version(find_remote(remote), p, String(args[arg++]));
+            return ApiResult::Handled;
+        }
+
+        return ApiResult::NotHandled;
     }
 
     if (cmd == "remove")

@@ -28,6 +28,9 @@ struct Api
     void add_project(const Remote &r, ProjectPath p, ProjectType t);
     void remove_project(const Remote &r, ProjectPath p);
     void add_version(const Remote &r, ProjectPath p, const String &cppan);
+    void add_version(const Remote &r, ProjectPath p, const Version &vnew);
+    void add_version(const Remote &r, ProjectPath p, const Version &vnew, const String &vold);
+    void update_version(const Remote &r, ProjectPath p, const Version &v);
     void remove_version(const Remote &r, ProjectPath p, const Version &v);
     void get_notifications(const Remote &r, int n = 10);
     void clear_notifications(const Remote &r);

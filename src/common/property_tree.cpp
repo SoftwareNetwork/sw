@@ -27,8 +27,10 @@ std::string ptree2string(const ptree &p)
 
 ptree string2ptree(const std::string &s)
 {
-    std::istringstream iss(s);
     ptree p;
+    if (s.empty())
+        return p;
+    std::istringstream iss(s);
     pt::read_json(iss, p);
     return p;
 }
