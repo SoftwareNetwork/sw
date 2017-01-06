@@ -281,12 +281,12 @@ function(get_configuration_unhashed out)
     # for non VS/XCODE builds
     set(configuration)
     if (NOT (XCODE OR VISUAL_STUDIO))
-        set(configuration ${CMAKE_BUILD_TYPE})
+        set(configuration ${CPPAN_CONFIG_PART_DELIMETER}${CMAKE_BUILD_TYPE})
     endif()
 
     set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${version})
     set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${bits}${mt_flag}${dll}${toolset})
-    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${configuration})
+    set(config ${config}${configuration})
 
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_unhashed)

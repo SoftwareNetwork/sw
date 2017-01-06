@@ -991,6 +991,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         print_storage_dirs(ctx);
         ctx.addLine("set(PACKAGE ${this})");
         ctx.addLine("set(PACKAGE_NAME " + d.ppath.toString() + ")");
+        ctx.addLine("set(PACKAGE_NAME_LAST " + d.ppath.back() + ")");
         ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
         ctx.addLine();
         if (d.version.isBranch())
@@ -1641,7 +1642,8 @@ endif()
         ctx.increaseIndent();
         ctx.addLine(visibility + " CPPAN"); // build is performed under CPPAN
         ctx.addLine(visibility + " CPPAN_BUILD"); // build is performed under CPPAN
-        ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\""); // CPPAN_CONFIG is private for a package!
+        if (!d.flags[pfHeaderOnly])
+            ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\""); // CPPAN_CONFIG is private for a package!
         ctx.addLine(visibility + " CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
         ctx.addLine(visibility + " CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
         if (!p.api_name.empty())
