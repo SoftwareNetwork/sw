@@ -221,7 +221,7 @@ void set_target_properties(Context &ctx, const String &property, const String &v
     ctx.addLine("set_target_properties(${this} PROPERTIES " + property + " " + value + ")");
 }
 
-void declare_dummy_target(Context &ctx, const String &name, const Package &d = Package(), bool set_deps = false)
+void declare_dummy_target(Context &ctx, const String &name)
 {
     config_section_title(ctx, "dummy compiled target " + name);
     ctx.addLine("# this target will be always built before any other");
@@ -231,19 +231,7 @@ void declare_dummy_target(Context &ctx, const String &name, const Package &d = P
     ctx.decreaseIndent();
     ctx.addLine("elseif(NINJA)");
     ctx.increaseIndent();
-    ctx.addLine("add_custom_target(" + cppan_dummy_target(name) + " ALL");
-    if (set_deps)
-    {
-        ctx.increaseIndent();
-        ctx.addLine("${CMAKE_COMMAND} -E sleep 0");
-        ctx.addLine("BYPRODUCTS");
-        ctx.increaseIndent();
-        for (auto &dep : rd[d].dependencies)
-            ctx.addLine(dep.second.target_name);
-        ctx.decreaseIndent();
-        ctx.decreaseIndent();
-    }
-    ctx.addLine(")");
+    ctx.addLine("add_custom_target(" + cppan_dummy_target(name) + " ALL)");
     ctx.decreaseIndent();
     ctx.addLine("else()");
     ctx.increaseIndent();
@@ -2155,14 +2143,6 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     // deps
     print_dependencies(ctx, d, settings.use_cache);
 
-    // dummy build target
-    if (d.empty())
-    {
-        config_section_title(ctx, "dummy build target");
-        declare_dummy_target(ctx, cppan_dummy_build_target/*, d, true*/);
-        ctx.addLine("add_dependencies(" + cppan_dummy_target(cppan_dummy_copy_target) + " " + cppan_dummy_target(cppan_dummy_build_target) + ")");
-    }
-
     const String cppan_project_name = "cppan";
 
     if (d.empty())
@@ -2477,7 +2457,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     // dummy (compiled?) target
     if (d.empty())
     {
+        declare_dummy_target(ctx, cppan_dummy_build_target);
         declare_dummy_target(ctx, cppan_dummy_copy_target);
+        ctx.addLine("add_dependencies(" + cppan_dummy_target(cppan_dummy_copy_target) + " " + cppan_dummy_target(cppan_dummy_build_target) + ")");
     }
 
     file_footer(ctx, d);
