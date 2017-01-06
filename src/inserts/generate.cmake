@@ -84,6 +84,9 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
 
         #
         clear_variables(GEN_CHILD_VARS)
+        if (NOT EXECUTABLE)
+            add_variable(GEN_CHILD_VARS CMAKE_BUILD_TYPE)
+        endif()
         add_variable(GEN_CHILD_VARS OUTPUT_DIR)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_SHARED_LIBS)
         # if turned on, build exe with the same config (arch, toolchain, generator etc.)
@@ -100,6 +103,9 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_VERBOSE)
         add_variable(GEN_CHILD_VARS CPPAN_BUILD_WARNING_LEVEL)
         add_variable(GEN_CHILD_VARS CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT)
+        add_variable(GEN_CHILD_VARS XCODE)
+        add_variable(GEN_CHILD_VARS VISUAL_STUDIO)
+        add_variable(GEN_CHILD_VARS NINJA)
         write_variables_file(GEN_CHILD_VARS ${variables_file})
         #
 
@@ -176,7 +182,7 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         # create links to solution files
         # TODO: replace condition with if (VS generator)
         set(target_lnk ${storage_dir_lnk}/${config_dir}/${target}.sln.lnk)
-        if (MSVC AND NOT EXISTS ${target_lnk})
+        if (VISUAL_STUDIO AND NOT EXISTS ${target_lnk})
             cppan_debug_message("COMMAND ${CPPAN_COMMAND} internal-create-link-to-solution ${build_dir} ${target_lnk}")
             execute_process(
                 COMMAND ${CPPAN_COMMAND} internal-create-link-to-solution ${build_dir}/${package_hash_short}.sln ${target_lnk}

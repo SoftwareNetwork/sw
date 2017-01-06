@@ -277,7 +277,16 @@ function(get_configuration_unhashed out)
         set(toolset ${CPPAN_CONFIG_PART_DELIMETER}${toolset})
     endif()
 
-    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${version}${CPPAN_CONFIG_PART_DELIMETER}${bits}${mt_flag}${dll}${toolset})
+    # add suffix (configuration) to distinguish build types
+    # for non VS/XCODE builds
+    set(configuration)
+    if (NOT (XCODE OR VISUAL_STUDIO))
+        set(configuration ${CMAKE_BUILD_TYPE})
+    endif()
+
+    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${version})
+    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${bits}${mt_flag}${dll}${toolset})
+    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${configuration})
 
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_unhashed)
