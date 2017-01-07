@@ -33,7 +33,7 @@ install:
   #- wget -O master.zip https://github.com/cppan/tests/archive/master.zip
   #- unzip master.zip -d .
   - if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
-  - sudo dpkg -i cppan*
+  - sudo dpkg -i cppan-master-Linux-client.deb
 
 script:
   - cppan
