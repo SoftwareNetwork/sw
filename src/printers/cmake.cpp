@@ -608,7 +608,7 @@ endif()
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
 
 if (WIN32)
-    set(CMAKE_INSTALL_PREFIX "C:\\cppan")
+    set(CMAKE_INSTALL_PREFIX "C:\\\\cppan")
 else()
     set(CMAKE_INSTALL_PREFIX "/opt/local/cppan")
 endif()
@@ -741,10 +741,6 @@ int CMakePrinter::generate(const BuildSettings &bs) const
             // add more != generators
             if (s.generator != "Ninja")
             {
-                LOG_INFO(logger, s.generator);
-                LOG_INFO(logger, s.generator);
-                LOG_INFO(logger, s.generator);
-                LOG_INFO(logger, s.generator);
                 auto name = bs.filename_without_ext + "-" + bs.config + ".sln.lnk";
                 if (s.is_custom_build_dir())
                 {
@@ -993,6 +989,10 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         ctx.addLine("set(PACKAGE_NAME " + d.ppath.toString() + ")");
         ctx.addLine("set(PACKAGE_NAME_LAST " + d.ppath.back() + ")");
         ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
+        ctx.addLine("set(PACKAGE_STRING " + d.target_name + ")");
+        ctx.addLine("set(PACKAGE_TARNAME)");
+        ctx.addLine("set(PACKAGE_URL)");
+        ctx.addLine("set(PACKAGE_BUGREPORT)");
         ctx.addLine();
         if (d.version.isBranch())
         {
@@ -1013,10 +1013,17 @@ void CMakePrinter::print_src_config_file(const path &fn) const
             ctx.addLine("set(PACKAGE_VERSION_NUM2 \"0x" + ver2hex(4) + "LL\")");
         }
         ctx.addLine();
+
+        // duplicate if someone will do a mistake
         ctx.addLine("set(PACKAGE_VERSION_MAJOR " + std::to_string(d.version.major) + ")");
         ctx.addLine("set(PACKAGE_VERSION_MINOR " + std::to_string(d.version.minor) + ")");
         ctx.addLine("set(PACKAGE_VERSION_PATCH " + std::to_string(d.version.patch) + ")");
         ctx.addLine();
+        ctx.addLine("set(PACKAGE_MAJOR_VERSION " + std::to_string(d.version.major) + ")");
+        ctx.addLine("set(PACKAGE_MINOR_VERSION " + std::to_string(d.version.minor) + ")");
+        ctx.addLine("set(PACKAGE_PATCH_VERSION " + std::to_string(d.version.patch) + ")");
+        ctx.addLine();
+
         ctx.addLine("set(PACKAGE_IS_BRANCH " + String(d.version.isBranch() ? "1" : "0") + ")");
         ctx.addLine("set(PACKAGE_IS_VERSION " + String(d.version.isVersion() ? "1" : "0") + ")");
         ctx.addLine();
