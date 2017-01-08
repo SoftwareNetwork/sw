@@ -488,6 +488,8 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
         project.findSources(root_directory);
         // maybe remove? let user see cppan.yml in local project
         project.files.erase(CPPAN_FILENAME);
+        // patch if any
+        project.patchSources();
 
         // update flags and pkg again after findSources()
         // project type may be different

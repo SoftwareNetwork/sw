@@ -1176,13 +1176,16 @@ void Project::prepareExports() const
 
 void Project::patchSources() const
 {
-    auto &srcs = getSources();
-    for (auto &f : srcs)
+    if (!patch.replace_in_files.empty())
     {
-        auto s = read_file(f, true);
-        for (auto &p : patch.replace_in_files)
-            boost::algorithm::replace_all(s, p.first, p.second);
-        write_file_if_different(f, s);
+        auto &srcs = getSources();
+        for (auto &f : srcs)
+        {
+            auto s = read_file(f, true);
+            for (auto &p : patch.replace_in_files)
+                boost::algorithm::replace_all(s, p.first, p.second);
+            write_file_if_different(f, s);
+        }
     }
 }
 

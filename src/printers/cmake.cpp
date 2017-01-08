@@ -225,10 +225,18 @@ void declare_dummy_target(Context &ctx, const String &name)
 {
     config_section_title(ctx, "dummy compiled target " + name);
     ctx.addLine("# this target will be always built before any other");
-    ctx.addLine("if (MSVC)");
-    ctx.addLine("    add_custom_target(" + cppan_dummy_target(name) + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
+    ctx.addLine("if (VISUAL_STUDIO)");
+    ctx.increaseIndent();
+    ctx.addLine("add_custom_target(" + cppan_dummy_target(name) + " ALL DEPENDS cppan_intentionally_missing_file.txt)");
+    ctx.decreaseIndent();
+    ctx.addLine("elseif(NINJA)");
+    ctx.increaseIndent();
+    ctx.addLine("add_custom_target(" + cppan_dummy_target(name) + " ALL)");
+    ctx.decreaseIndent();
     ctx.addLine("else()");
-    ctx.addLine("    add_custom_target(" + cppan_dummy_target(name) + " ALL)");
+    ctx.increaseIndent();
+    ctx.addLine("add_custom_target(" + cppan_dummy_target(name) + " ALL)");
+    ctx.decreaseIndent();
     ctx.addLine("endif()");
     ctx.addLine();
     set_target_properties(ctx, cppan_dummy_target(name), "FOLDER", "\"cppan/service\"");
@@ -435,6 +443,21 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
             // we're in helper, set this var to build target
             if (d.empty())
                 local.addLine("set(this " + target + ")");
+            local.emptyLines();
+
+            Packages build_deps_all;
+            gather_build_deps(ctx, rd[d].dependencies, build_deps_all, true);
+            for (auto &dp : build_deps_all)
+            {
+                auto &p = dp.second;
+
+                // local projects are always built inside solution
+                if (p.flags[pfLocalProject])
+                    continue;
+
+                local.addLine("get_target_property(implib_" + p.variable_name + " " + p.target_name + " IMPORTED_IMPLIB_${CMAKE_BUILD_TYPE_UPPER})");
+            }
+            local.emptyLines();
 
             String build_deps_tgt = "${this}";
             if (d.empty() && target.find("-b") != target.npos)
@@ -477,10 +500,25 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                 if (d.empty())
                     local.addLine("-DMULTICORE=1");
                 local.addLine("-DXCODE=${XCODE}");
+                local.addLine("-DXCODE=${NINJA}");
+                local.addLine("-DVISUAL_STUDIO=${VISUAL_STUDIO}");
                 local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
                 local.decreaseIndent();
                 local.addLine();
             }
+            local.addLine("BYPRODUCTS");
+            local.increaseIndent();
+            for (auto &dp : build_deps_all)
+            {
+                auto &p = dp.second;
+
+                // local projects are always built inside solution
+                if (p.flags[pfLocalProject])
+                    continue;
+
+                local.addLine("${implib_" + p.variable_name + "}");
+            }
+            local.decreaseIndent();
             local.decreaseIndent();
             local.addLine(")");
             local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
@@ -567,9 +605,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${output_dir})
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE )" + s.default_configuration + R"()
 endif()
+string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
 
 if (WIN32)
-    set(CMAKE_INSTALL_PREFIX "C:\\cppan")
+    set(CMAKE_INSTALL_PREFIX "C:\\\\cppan")
 else()
     set(CMAKE_INSTALL_PREFIX "/opt/local/cppan")
 endif()
@@ -577,6 +616,21 @@ endif()
 if (MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+endif()
+
+set(XCODE 0)
+if (CMAKE_GENERATOR STREQUAL Xcode)
+    set(XCODE 1)
+endif()
+
+set(NINJA 0)
+if (CMAKE_GENERATOR STREQUAL Ninja)
+    set(NINJA 1)
+endif()
+
+set(VISUAL_STUDIO 0)
+if (MSVC AND NOT NINJA)
+    set(VISUAL_STUDIO 1)
 endif()
 )");
 
@@ -684,16 +738,20 @@ int CMakePrinter::generate(const BuildSettings &bs) const
         {
             auto bld_dir = fs::current_path();
 #ifdef _WIN32
-            auto name = bs.filename_without_ext + "-" + bs.config + ".sln.lnk";
-            if (s.is_custom_build_dir())
+            // add more != generators
+            if (s.generator != "Ninja")
             {
-                bld_dir = bs.binary_directory / ".." / "..";
-                name = bs.config + ".sln.lnk";
+                auto name = bs.filename_without_ext + "-" + bs.config + ".sln.lnk";
+                if (s.is_custom_build_dir())
+                {
+                    bld_dir = bs.binary_directory / ".." / "..";
+                    name = bs.config + ".sln.lnk";
+                }
+                auto sln = bs.binary_directory / (bs.filename_without_ext + ".sln");
+                auto sln_new = bld_dir / name;
+                if (fs::exists(sln))
+                    create_link(sln, sln_new, "Link to CPPAN Solution");
             }
-            auto sln = bs.binary_directory / (bs.filename_without_ext + ".sln");
-            auto sln_new = bld_dir / name;
-            if (fs::exists(sln))
-                create_link(sln, sln_new, "Link to CPPAN Solution");
 #else
             if (s.generator == "Xcode")
             {
@@ -929,7 +987,12 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         print_storage_dirs(ctx);
         ctx.addLine("set(PACKAGE ${this})");
         ctx.addLine("set(PACKAGE_NAME " + d.ppath.toString() + ")");
+        ctx.addLine("set(PACKAGE_NAME_LAST " + d.ppath.back() + ")");
         ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
+        ctx.addLine("set(PACKAGE_STRING " + d.target_name + ")");
+        ctx.addLine("set(PACKAGE_TARNAME)");
+        ctx.addLine("set(PACKAGE_URL)");
+        ctx.addLine("set(PACKAGE_BUGREPORT)");
         ctx.addLine();
         if (d.version.isBranch())
         {
@@ -950,10 +1013,17 @@ void CMakePrinter::print_src_config_file(const path &fn) const
             ctx.addLine("set(PACKAGE_VERSION_NUM2 \"0x" + ver2hex(4) + "LL\")");
         }
         ctx.addLine();
+
+        // duplicate if someone will do a mistake
         ctx.addLine("set(PACKAGE_VERSION_MAJOR " + std::to_string(d.version.major) + ")");
         ctx.addLine("set(PACKAGE_VERSION_MINOR " + std::to_string(d.version.minor) + ")");
         ctx.addLine("set(PACKAGE_VERSION_PATCH " + std::to_string(d.version.patch) + ")");
         ctx.addLine();
+        ctx.addLine("set(PACKAGE_MAJOR_VERSION " + std::to_string(d.version.major) + ")");
+        ctx.addLine("set(PACKAGE_MINOR_VERSION " + std::to_string(d.version.minor) + ")");
+        ctx.addLine("set(PACKAGE_PATCH_VERSION " + std::to_string(d.version.patch) + ")");
+        ctx.addLine();
+
         ctx.addLine("set(PACKAGE_IS_BRANCH " + String(d.version.isBranch() ? "1" : "0") + ")");
         ctx.addLine("set(PACKAGE_IS_VERSION " + String(d.version.isVersion() ? "1" : "0") + ")");
         ctx.addLine();
@@ -1112,6 +1182,10 @@ void CMakePrinter::print_src_config_file(const path &fn) const
 if (DEFINED CPPAN_BUILD_WARNING_LEVEL AND
     CPPAN_BUILD_WARNING_LEVEL GREATER -1 AND CPPAN_BUILD_WARNING_LEVEL LESS 5)
     if (MSVC)
+        # clear old flag (/W3) by default
+        string(REPLACE "/W3" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
+        string(REPLACE "/W3" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W${CPPAN_BUILD_WARNING_LEVEL}")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W${CPPAN_BUILD_WARNING_LEVEL}")
     endif()
@@ -1575,7 +1649,8 @@ endif()
         ctx.increaseIndent();
         ctx.addLine(visibility + " CPPAN"); // build is performed under CPPAN
         ctx.addLine(visibility + " CPPAN_BUILD"); // build is performed under CPPAN
-        ctx.addLine(visibility + " CPPAN_CONFIG=\"${config}\"");
+        if (!d.flags[pfHeaderOnly])
+            ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\""); // CPPAN_CONFIG is private for a package!
         ctx.addLine(visibility + " CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
         ctx.addLine(visibility + " CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
         if (!p.api_name.empty())
@@ -1798,10 +1873,26 @@ void CMakePrinter::print_obj_config_file(const path &fn) const
             //ctx.addLine("set(OUTPUT_DIR ${config})");
         }
         ctx.addLine();
+
+        config_section_title(ctx, "global settings");
+        ctx.addLine(R"(if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
+
+# TODO:
+#set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_job_pool=8)
+#set(CMAKE_JOB_POOL_COMPILE compile_job_pool)
+)");
+
         config_section_title(ctx, "output settings");
-        ctx.addLine("set(CMAKE_RUNTIME_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_bin) + "/${OUTPUT_DIR})");
-        ctx.addLine("set(CMAKE_LIBRARY_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_lib) + "/${OUTPUT_DIR})");
-        ctx.addLine("set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_lib) + "/${OUTPUT_DIR})");
+        ctx.addLine("if (NOT (VISUAL_STUDIO OR XCODE))");
+        ctx.addLine("set(output_dir_suffix ${CMAKE_BUILD_TYPE})");
+        ctx.addLine("endif()");
+        ctx.addLine();
+        ctx.addLine("set(CMAKE_RUNTIME_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_bin) + "/${OUTPUT_DIR}/${output_dir_suffix})");
+        ctx.addLine("set(CMAKE_LIBRARY_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_lib) + "/${OUTPUT_DIR}/${output_dir_suffix})");
+        ctx.addLine("set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY " + normalize_path(directories.storage_dir_lib) + "/${OUTPUT_DIR}/${output_dir_suffix})");
         ctx.addLine();
 
         ctx.addLine("set(CPPAN_USE_CACHE 1)");
@@ -1817,13 +1908,13 @@ void CMakePrinter::print_obj_config_file(const path &fn) const
     print_bs_insertion(ctx, p, "post project", &BuildSystemConfigInsertions::post_project);
 
     config_section_title(ctx, "compiler & linker settings");
-    ctx.addLine(R"(if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif()
-
+    ctx.addLine(R"(
 if (MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+
+    # not working for some reason
+    #set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} /nologo")
 
     if (CPPAN_MT_BUILD)
         set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
@@ -2150,7 +2241,7 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
             ctx.increaseIndent();
 
             ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
-            ctx.addLine("if (MSVC OR XCODE)");
+            ctx.addLine("if (VISUAL_STUDIO OR XCODE)");
             ctx.addLine("    set(output_dir ${output_dir}/$<CONFIG>)");
             ctx.addLine("endif()");
             ctx.addLine("if (CPPAN_BUILD_OUTPUT_DIR)");
@@ -2294,8 +2385,18 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_gen_name}\")");
     ctx.addLine();
     ctx.addLine("set(XCODE 0)");
-    ctx.addLine("if (CMAKE_GENERATOR STREQUAL \"Xcode\")");
+    ctx.addLine("if (CMAKE_GENERATOR STREQUAL Xcode)");
     ctx.addLine("    set(XCODE 1)");
+    ctx.addLine("endif()");
+    ctx.addLine();
+    ctx.addLine("set(NINJA 0)");
+    ctx.addLine("if (CMAKE_GENERATOR STREQUAL Ninja)");
+    ctx.addLine("    set(NINJA 1)");
+    ctx.addLine("endif()");
+    ctx.addLine();
+    ctx.addLine("set(VISUAL_STUDIO 0)");
+    ctx.addLine("if (MSVC AND NOT NINJA)");
+    ctx.addLine("    set(VISUAL_STUDIO 1)");
     ctx.addLine("endif()");
     ctx.addLine();
 

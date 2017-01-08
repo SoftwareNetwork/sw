@@ -32,11 +32,14 @@ install:
   - sudo sh cmake-3.7.1-Linux-x86_64.sh --skip-license --prefix=/usr
   #- wget -O master.zip https://github.com/cppan/tests/archive/master.zip
   #- unzip master.zip -d .
+  - if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
+  - sudo dpkg -i cppan-master-Linux-client.deb
 
 script:
+  - cppan
   - mkdir build
   - cd build
-  - cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
+  - cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5 -DUSE_CPPAN_BUILD=1
   - make -j2
   #- sudo cp bin/cppan /usr/bin
   #- cd ..
