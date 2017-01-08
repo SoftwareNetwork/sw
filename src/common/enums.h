@@ -16,8 +16,9 @@
 
 #pragma once
 
+#include "cppan_string.h"
+
 #include <bitset>
-#include <string>
 
 enum class ProjectType
 {
@@ -41,22 +42,11 @@ enum class ExecutableType
     Win32,
 };
 
-enum class ProjectPathNamespace
-{
-    None,       // invalid
-
-    com = 1,    // closed-or-commercial-source
-    org,        // open-source
-    pvt,        // users' packages
-    // pub?
-    // std?
-};
-
 // append only!
 enum ProjectFlag
 {
-    // version flag = vf
-    // project flag = pf
+    // version flag    = vf
+    // project flag    = pf
     // dependency flag = df
 
     pfHeaderOnly                = 0,    // vf
@@ -72,13 +62,13 @@ enum ProjectFlag
     pfIncludeDirectoriesOnly    = 10,   // df, take include dirs from this dep
     pfLocalProject              = 11,   // vf, not from server, local bs project
 
-    //pfPreferBinary,   //pf, if binaries are available, do not build project, use precompiled
+    //pfPreferBinary,   //pf, if binaries are available, do not build the project, use precompiled
 
     //pfLibrary?,                  // pf
     //pfRootProject?,              // pf
     //pfDirectory?,                // pf
 
-    // pfOptional?
+    //pfOptional?                  // df
 };
 
 enum class NotificationType
@@ -107,8 +97,7 @@ constexpr std::underlying_type_t<E> toIndex(E e)
     return static_cast<std::underlying_type_t<E>>(e);
 }
 
-std::string toString(ProjectType e);
-std::string toString(ProjectPathNamespace e);
-std::string toString(SettingsType e);
+String toString(ProjectType e);
+String toString(SettingsType e);
 
-std::string getFlagsString(const ProjectFlags &flags);
+String getFlagsString(const ProjectFlags &flags);

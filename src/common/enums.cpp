@@ -16,7 +16,7 @@
 
 #include "enums.h"
 
-std::string toString(ProjectType e)
+String toString(ProjectType e)
 {
     switch (e)
     {
@@ -32,22 +32,7 @@ std::string toString(ProjectType e)
     return std::to_string(toIndex(e));
 }
 
-std::string toString(ProjectPathNamespace e)
-{
-#define CASE(name) \
-    case ProjectPathNamespace::name: return #name
-
-    switch (e)
-    {
-        CASE(com);
-        CASE(org);
-        CASE(pvt);
-    }
-    return std::string();
-#undef CASE
-}
-
-std::string toString(SettingsType e)
+String toString(SettingsType e)
 {
     switch (e)
     {
@@ -61,12 +46,14 @@ std::string toString(SettingsType e)
     return std::to_string(toIndex(e));
 }
 
-std::string getFlagsString(const ProjectFlags &flags)
+String getFlagsString(const ProjectFlags &flags)
 {
-    std::string s;
-    if (flags[pfHeaderOnly])
-        s += "H";
-    if (flags[pfExecutable])
-        s += "E";
-    return s;
+    // keep sorted
+    String str;
+#define ADD_FLAG(f, s) if (flags[f]) str += s
+    ADD_FLAG(pfExecutable, "E");
+    ADD_FLAG(pfHeaderOnly, "H");
+    ADD_FLAG(pfIncludeDirectoriesOnly, "I");
+    ADD_FLAG(pfPrivateDependency, "P");
+    return str;
 }
