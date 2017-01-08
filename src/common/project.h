@@ -98,14 +98,16 @@ using OptionsMap = std::map<String, Options>;
 OptionsMap loadOptionsMap(const yaml &root);
 void saveOptionsMap(yaml &root, const OptionsMap &m);
 
-using ReplaceInFiles = std::unordered_map<String, String>;
+using ReplaceInFiles = std::vector<std::pair<String, String>>;
 
 struct Patch
 {
-    ReplaceInFiles replace_in_files;
+    ReplaceInFiles replace;
+    ReplaceInFiles regex_replace;
 
     void load(const yaml &root);
     void save(yaml &root) const;
+    void patchSources(const Files &files) const;
 };
 
 struct Project

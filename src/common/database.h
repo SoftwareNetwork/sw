@@ -71,7 +71,8 @@ protected:
 class ServiceDatabase : public Database
 {
 public:
-    ServiceDatabase();
+    ServiceDatabase(bool init);
+    ~ServiceDatabase();
 
     void performStartupActions() const;
 
@@ -152,7 +153,7 @@ private:
     Dependencies getProjectDependencies(ProjectVersionId project_version_id, DependenciesMap &dm) const;
 };
 
-ServiceDatabase &getServiceDatabase();
+ServiceDatabase &getServiceDatabase(bool init = true);
 PackagesDatabase &getPackagesDatabase();
 
 int readPackagesDbSchemaVersion(const path &dir);

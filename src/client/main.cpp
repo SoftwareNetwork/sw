@@ -50,7 +50,7 @@ ApiResult api_call(const String &cmd, const Strings &args);
 void check_spec_file();
 void default_run();
 void init(const Strings &args, const String &log_level);
-void init_service_db();
+void init_service_db(bool init);
 void load_current_config();
 void self_upgrade();
 
@@ -473,18 +473,20 @@ void init(const Strings &args, const String &log_level)
     auto &us = Settings::get_user_settings();
 
     // disable update checks for internal commands
-    if (args.size() > 1 && args[1].find("internal-") == 0)
+    bool init = !(args.size() > 1 && args[1].find("internal-") == 0);
+    if (!init)
         us.disable_update_checks = true;
 
     load_current_config();
-    init_service_db();
+    init_service_db(init);
 }
 
-void init_service_db()
+void init_service_db(bool init)
 {
     // initialize internal db
-    auto &sdb = getServiceDatabase();
-    sdb.performStartupActions();
+    auto &sdb = getServiceDatabase(init);
+    if (init)
+        sdb.performStartupActions();
 }
 
 void load_current_config()

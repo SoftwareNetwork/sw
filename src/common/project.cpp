@@ -327,31 +327,68 @@ Strings BuildSystemConfigInsertions::getStrings()
 
 void Patch::load(const yaml &root)
 {
-    get_map_and_iterate(root, "replace_in_files", [this](auto &v)
+    auto load_replace = [&root](auto &a, const String &k)
     {
-        if (!v.second.IsMap())
-            throw std::runtime_error("Members of 'replace_in_files' should be maps");
-        if (!(v.second["from"].IsDefined() && v.second["to"].IsDefined()))
-            throw std::runtime_error("There are no 'from' and 'to' inside 'replace_in_files'");
-        auto from = v.second["from"].template as<String>();
-        auto to = v.second["to"].template as<String>();
-        replace_in_files[from] = to;
-    });
+        get_map_and_iterate(root, k, [&a, &k](auto &v)
+        {
+            auto k = v.first.template as<String>();
+            if (v.second.IsScalar())
+            {
+                auto vv = v.second.template as<String>();
+                a.emplace_back(k, vv);
+            }
+            else if (v.second.IsMap())
+            {
+                if (!(v.second["from"].IsDefined() && v.second["to"].IsDefined()))
+                    throw std::runtime_error("There are no 'from' and 'to' inside '" + k + "'");
+                auto from = v.second["from"].template as<String>();
+                auto to = v.second["to"].template as<String>();
+                a.emplace_back(from, to);
+            }
+            else
+                throw std::runtime_error("Members of '" + k + "' must be scalars or maps");
+        });
+    };
+    load_replace(replace, "replace");
+    load_replace(regex_replace, "regex_replace");
 }
 
 void Patch::save(yaml &node) const
 {
-    yaml root;
-    for (auto &r : replace_in_files)
-        root[r.first] = r.second;
-    if (!replace_in_files.empty())
-        node["patch"] = root;
+    auto save_replace = [&node](const auto &a, const auto &k)
+    {
+        if (a.empty())
+            return;
+        yaml root;
+        for (auto &r : a)
+            root[r.first] = r.second;
+        node["patch"][k] = root;
+    };
+    save_replace(replace, "replace");
+    save_replace(regex_replace, "regex_replace");
+}
+
+void Patch::patchSources(const Files &files) const
+{
+    if (replace.empty() && regex_replace.empty())
+        return;
+    std::vector<std::pair<std::regex, String>> regex_prepared;
+    for (auto &p : regex_replace)
+        regex_prepared.emplace_back(std::regex(p.first), p.second);
+    for (auto &f : files)
+    {
+        auto s = read_file(f, true);
+        for (auto &p : replace)
+            boost::algorithm::replace_all(s, p.first, p.second);
+        for (auto &p : regex_prepared)
+            s = std::regex_replace(s, p.first, p.second);
+        write_file_if_different(f, s);
+    }
 }
 
 Project::Project()
     : Project(ProjectPath())
 {
-
 }
 
 Project::Project(const ProjectPath &root_project)
@@ -930,7 +967,7 @@ void Project::load(const yaml &root)
     aliases = get_sequence_set<String>(root, "aliases");
     checks.load(root);
 
-    auto patch_node = root["patch"];
+    const auto &patch_node = root["patch"];
     if (patch_node.IsDefined())
         patch.load(patch_node);
 
@@ -1176,17 +1213,7 @@ void Project::prepareExports() const
 
 void Project::patchSources() const
 {
-    if (!patch.replace_in_files.empty())
-    {
-        auto &srcs = getSources();
-        for (auto &f : srcs)
-        {
-            auto s = read_file(f, true);
-            for (auto &p : patch.replace_in_files)
-                boost::algorithm::replace_all(s, p.first, p.second);
-            write_file_if_different(f, s);
-        }
-    }
+    patch.patchSources(getSources());
 }
 
 const Files &Project::getSources() const

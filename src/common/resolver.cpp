@@ -425,6 +425,8 @@ void Resolver::read_config(const DownloadDependency &d)
 {
     if (!fs::exists(d.getDirSrc()))
         return;
+    if (rd.packages.find(d) != rd.packages.end())
+        return;
 
     try
     {

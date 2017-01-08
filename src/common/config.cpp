@@ -194,7 +194,7 @@ void Config::post_download() const
     p.patchSources();
 
     // remove from table
-    AccessTable at(directories.storage_dir_etc);
+    AccessTable at;
     at.remove(pkg.getDirSrc());
     at.remove(pkg.getDirObj());
 

@@ -54,8 +54,7 @@ struct AccessData
 
 static AccessData data;
 
-AccessTable::AccessTable(const path &cfg_dir)
-    : root_dir(cfg_dir.parent_path())
+AccessTable::AccessTable()
 {
     data.load();
 }
@@ -71,8 +70,6 @@ bool AccessTable::must_update_contents(const path &p) const
         return true;
     if (data.do_not_update)
         return false;
-    if (!isUnderRoot(p))
-        return true;
     return fs::last_write_time(p) != data.stamps[p];
 }
 
@@ -89,11 +86,6 @@ void AccessTable::update_contents(const path &p, const String &s) const
 
 void AccessTable::write_if_older(const path &p, const String &s) const
 {
-    if (!isUnderRoot(p))
-    {
-        write_file_if_different(p, s);
-        return;
-    }
     if (must_update_contents(p))
         update_contents(p, s);
 }
@@ -101,11 +93,6 @@ void AccessTable::write_if_older(const path &p, const String &s) const
 void AccessTable::clear() const
 {
     data.clear();
-}
-
-bool AccessTable::isUnderRoot(path p) const
-{
-    return is_under_root(p, root_dir);
 }
 
 void AccessTable::remove(const path &p) const

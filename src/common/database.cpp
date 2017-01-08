@@ -257,14 +257,14 @@ void writePackagesDbVersion(const path &dir, int version)
     write_file(dir / PACKAGES_DB_VERSION_FILE, std::to_string(version));
 }
 
-ServiceDatabase &getServiceDatabase()
+ServiceDatabase &getServiceDatabase(bool init)
 {
 #ifdef _WIN32
     thread_local
 #else
     static
 #endif
-    ServiceDatabase db;
+    ServiceDatabase db(init);
     return db;
 }
 
@@ -315,13 +315,19 @@ void Database::recreate()
     created = true;
 }
 
-ServiceDatabase::ServiceDatabase()
+ServiceDatabase::ServiceDatabase(bool init)
     : Database(service_db_name, get_service_tables())
 {
+    if (!init)
+        return;
     createTables();
     checkStamp();
     increaseNumberOfRuns();
     checkForUpdates();
+}
+
+ServiceDatabase::~ServiceDatabase()
+{
 }
 
 void ServiceDatabase::createTables() const
@@ -520,6 +526,11 @@ Stamps ServiceDatabase::getFileStamps() const
 
 void ServiceDatabase::setFileStamps(const Stamps &stamps) const
 {
+    if (stamps.empty())
+    {
+        clearFileStamps();
+        return;
+    }
     String q = "replace into FileStamps values ";
     for (auto &s : stamps)
         q += "('" + normalize_path(s.first) + "', '" + std::to_string(s.second) + "'),";

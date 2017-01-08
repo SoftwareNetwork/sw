@@ -22,7 +22,7 @@
 class AccessTable
 {
 public:
-    AccessTable(const path &cfg_dir);
+    AccessTable();
     ~AccessTable();
 
     bool updates_disabled() const;
@@ -33,9 +33,4 @@ public:
     void remove(const path &p) const;
 
     static void do_not_update_files(bool v);
-
-private:
-    path root_dir;
-
-    bool isUnderRoot(path p) const;
 };

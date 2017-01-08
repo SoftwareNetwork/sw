@@ -69,6 +69,9 @@ void PackageStore::process(const path &p, Config &root)
         processing = false;
     };
 
+    // main access table holder
+    AccessTable access_table;
+
     // insert root config
     packages[root.pkg].config = &root;
 
@@ -119,9 +122,6 @@ void PackageStore::process(const path &p, Config &root)
             d.second.flags.set(pfPrivateDependency, pvt);
         }
     }
-
-    // main access table holder
-    AccessTable access_table(directories.storage_dir_etc);
 
     // TODO: if we got a download we might need to refresh configs
     // but we do not know what projects we should clear
