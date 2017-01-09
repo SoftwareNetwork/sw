@@ -1084,7 +1084,7 @@ void Project::load(const yaml &root)
 
     // files
     files_loaded = root["files"].IsDefined() && !sources.empty();
-    if (defaults_allowed && sources.empty())
+    if (defaults_allowed && sources.empty() && !import_from_bazel)
     {
         // try to add some default dirs
         // root_directory will be removed (entered),
