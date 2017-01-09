@@ -38,7 +38,7 @@ void merge(yaml &dst, const yaml &src, const YamlMergeFlags &flags)
         auto ff = f.second.Type();
 
         bool found = false;
-        for (auto &t : dst)
+        for (auto t : dst)
         {
             const auto st = t.first.as<String>();
             if (sf != st)
@@ -76,7 +76,7 @@ void merge(yaml &dst, const yaml &src, const YamlMergeFlags &flags)
             }
             else if (ff == YAML::NodeType::Sequence && ft == YAML::NodeType::Sequence)
             {
-                for (auto &fv : f.second)
+                for (const auto &fv : f.second)
                     t.second.push_back(YAML::Clone(fv));
             }
             else if (ff == YAML::NodeType::Map && ft == YAML::NodeType::Map)
