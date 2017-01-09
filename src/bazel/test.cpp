@@ -22,6 +22,15 @@ int main(int argc, char *argv[])
 		return ret;
 
 	auto bf = driver.bazel_file;
+    bf.trimQuotes();
+    auto files = bf.getFiles("protobuf");
+
+    bf = bazel::parse(f);
+    files = bf.getFiles("protobuf");
+    files = bf.getFiles("protoc_lib");
+    files = bf.getFiles("protobuf_lite");
+    files = bf.getFiles("protoc");
+    files = bf.getFiles("");
 
     return 0;
 }

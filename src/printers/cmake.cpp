@@ -301,6 +301,17 @@ void print_dependencies(Context &ctx, const Package &d, bool use_cache)
     {
         auto &dep = p.second;
 
+        if (dep.flags[pfLocalProject])
+            ctx.addLine("set(" + dep.variable_no_version_name + "_DIR " + normalize_path(rd[dep].config->getDefaultProject().root_directory) + ")");
+        else
+            ctx.addLine("set(" + dep.variable_no_version_name + "_DIR " + normalize_path(dep.getDirSrc()) +  ")");
+    }
+    ctx.emptyLines();
+
+    for (auto &p : dd)
+    {
+        auto &dep = p.second;
+
         const auto dir = [&dep, &use_cache]
         {
             // do not "optimize" this condition (whole if..else)
@@ -445,9 +456,11 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
                 local.addLine("set(this " + target + ")");
             local.emptyLines();
 
-            Packages build_deps_all;
-            gather_build_deps(ctx, rd[d].dependencies, build_deps_all, true);
-            for (auto &dp : build_deps_all)
+            // TODO: check with ninja and remove if ok
+            //Packages build_deps_all;
+            //gather_build_deps(ctx, rd[d].dependencies, build_deps_all, true);
+            //for (auto &dp : build_deps_all)
+            for (auto &dp : build_deps)
             {
                 auto &p = dp.second;
 
@@ -508,7 +521,8 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
             }
             local.addLine("BYPRODUCTS");
             local.increaseIndent();
-            for (auto &dp : build_deps_all)
+            for (auto &dp : build_deps)
+            //for (auto &dp : build_deps_all)
             {
                 auto &p = dp.second;
 
@@ -1702,7 +1716,7 @@ else())");
 
     // definitions
     config_section_title(ctx, "definitions");
-    p.checks.write_definitions(ctx, d);
+    p.checks.write_definitions(ctx, d, p.checks_prefixes);
 
     // build deps
     print_build_dependencies(ctx, d, "${this}");
@@ -2346,6 +2360,8 @@ void CMakePrinter::print_helper_file(const path &fn) const
     if (!must_update_contents(fn))
         return;
 
+    const auto &p = rd[d].config->getDefaultProject();
+
     Context ctx;
     file_header(ctx, d);
 
@@ -2483,7 +2499,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
 
         // checks
         config_section_title(ctx, "checks");
-        rd[d].config->getDefaultProject().checks.write_checks(ctx);
+        p.checks.write_checks(ctx, p.checks_prefixes);
 
         // write vars file
         if (!d.flags[pfLocalProject])

@@ -94,9 +94,15 @@ path Package::getHashPath() const
 void Package::createNames()
 {
     auto v = version.toAnyVersion();
+
     target_name   = ppath.toString() + (v == "*" ? "" : ("-" + v));
+
     variable_name = ppath.toString() + (v == "*" ? "" : ("_" + v));
     std::replace(variable_name.begin(), variable_name.end(), '.', '_');
+
+    variable_no_version_name = ppath.toString();
+    std::replace(variable_no_version_name.begin(), variable_no_version_name.end(), '.', '_');
+
     target_name_hash = getHashShort();
     hash = getHash();
 }

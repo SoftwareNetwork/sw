@@ -130,6 +130,7 @@ public:
     Patch patch;
     StringSet aliases;
     Checks checks;
+    StringSet checks_prefixes;
 
     // no files (cmake only etc.)
     bool empty = false;

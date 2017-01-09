@@ -52,6 +52,7 @@ struct Package
     String target_name;
     String target_name_hash;
     String variable_name;
+    String variable_no_version_name;
 
     void createNames();
     String getTargetName() const;

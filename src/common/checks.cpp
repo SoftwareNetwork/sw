@@ -475,7 +475,7 @@ void invert(Context &ctx, const CheckPtr &c)
     ctx.addLine("endif()");
 }
 
-void Checks::write_checks(Context &ctx) const
+void Checks::write_checks(Context &ctx, const StringSet &prefixes) const
 {
     for (auto &c : checks)
     {
@@ -547,6 +547,9 @@ void Checks::write_checks(Context &ctx) const
         ctx.addLine("endif()");
         ctx.addLine();
 
+        for (const auto &p : prefixes)
+            ctx.addLine("set(" + p + c->getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+
         if (t == Check::Symbol)
         {
             auto f = (CheckSymbol*)c.get();
@@ -558,6 +561,8 @@ void Checks::write_checks(Context &ctx) const
                 {
                     auto iv = Check::make_include_var(i);
                     ctx.addLine("set(" + iv + " 1 CACHE STRING \"\")");
+                    for (const auto &p : prefixes)
+                        ctx.addLine("set(" + p + iv + " ${" + iv + "} CACHE STRING \"\")");
                     ctx.addLine("add_check_variable(" + iv + ")");
                 }
                 ctx.decreaseIndent();
@@ -575,6 +580,11 @@ void Checks::write_checks(Context &ctx) const
             ctx.increaseIndent();
             ctx.addLine("set(" + ct_.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
             ctx.addLine("set(" + ct.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+            for (const auto &p : prefixes)
+            {
+                ctx.addLine("set(" + p + ct_.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+                ctx.addLine("set(" + p + ct.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+            }
             ctx.decreaseIndent();
             ctx.addLine("endif()");
             ctx.addLine();
@@ -691,7 +701,7 @@ void Checks::read_parallel_checks_for_workers(const path &dir)
     }
 }
 
-void Checks::write_definitions(Context &ctx, const Package &d) const
+void Checks::write_definitions(Context &ctx, const Package &d, const StringSet &prefixes) const
 {
     String m = "INTERFACE";
     if (!d.flags[pfHeaderOnly])
@@ -699,9 +709,11 @@ void Checks::write_definitions(Context &ctx, const Package &d) const
     if (d.flags[pfExecutable])
         m = "PRIVATE";
 
-    auto print_def = [&ctx, &m](const String &value, auto &&s)
+    auto print_def = [&ctx, &m, &prefixes](const String &value, auto &&s)
     {
         ctx << m << " " << s << "=" << value << Context::eol;
+        for (const auto &p : prefixes)
+            ctx << m << " " << p + s << "=" << value << Context::eol;
         return 0;
     };
 
@@ -743,6 +755,8 @@ void Checks::write_definitions(Context &ctx, const Package &d) const
             ctx.addLine("target_compile_definitions(${this}");
             ctx.increaseIndent();
             ctx << m << " " << c->getVariable() << "=" << "${" << c->getVariable() << "}" << Context::eol;
+            for (const auto &p : prefixes)
+                ctx << m << " " << p + c->getVariable() << "=" << "${" << c->getVariable() << "}" << Context::eol;
             ctx.decreaseIndent();
             ctx.addLine(")");
             ctx.addLine();

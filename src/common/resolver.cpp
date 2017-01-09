@@ -133,7 +133,8 @@ void Resolver::resolve(const Packages &deps, std::function<void()> resolve_actio
             again = false;
             try
             {
-                LOG_INFO(logger, "Trying " + current_remote->name + " remote");
+                if (us.remotes.size() > 1)
+                    LOG_INFO(logger, "Trying " + current_remote->name + " remote");
                 download_dependencies_ = getDependenciesFromRemote(deps, current_remote);
             }
             catch (const std::exception &e)

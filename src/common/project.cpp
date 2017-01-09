@@ -82,6 +82,11 @@ const std::set<String> other_source_file_extensions{
 
 const auto bazel_filenames = { "BUILD", "BUILD.bazel" };
 
+auto escape_regex_symbols(const String &s)
+{
+    return boost::replace_all_copy(s, "+", "\\+");
+}
+
 bool is_allowed_file_extension(const path &p)
 {
     auto e = p.extension().string();
@@ -447,6 +452,7 @@ void Project::findSources(path p)
     auto create_regex = [&p](const auto &e)
     {
         auto s = normalize_path(p);
+        s = escape_regex_symbols(s);
         if (!s.empty() && s.back() != '/')
             s += "/";
         return std::regex(s + e);
@@ -965,7 +971,11 @@ void Project::load(const yaml &root)
     read_sources(exclude_from_build, "exclude_from_build");
 
     aliases = get_sequence_set<String>(root, "aliases");
+
     checks.load(root);
+    checks_prefixes = get_sequence_set<String>(root, "checks_prefixes");
+    if (checks_prefixes.empty())
+        checks_prefixes = get_sequence_set<String>(root, "checks_prefix");
 
     const auto &patch_node = root["patch"];
     if (patch_node.IsDefined())
@@ -1091,14 +1101,10 @@ void Project::load(const yaml &root)
             // no include, source dirs
             // try to add all types of C/C++ program files to gather
             // regex means all sources in root dir (without slashes '/')
-            auto r_replace = [](auto &s)
-            {
-                return boost::replace_all_copy(s, "+", "\\+");
-            };
             for (auto &v : header_file_extensions)
-                sources.insert("[^/]*\\" + r_replace(v));
+                sources.insert("[^/]*\\" + escape_regex_symbols(v));
             for (auto &v : source_file_extensions)
-                sources.insert("[^/]*\\" + r_replace(v));
+                sources.insert("[^/]*\\" + escape_regex_symbols(v));
         }
     }
     if (import_from_bazel)
@@ -1173,6 +1179,7 @@ yaml Project::save() const
         root["include_directories"]["interface"].push_back(normalize_path(v));
     saveOptionsMap(root, options);
     ADD_SET(aliases, aliases);
+    ADD_SET(checks_prefixes, checks_prefixes);
     checks.save(root);
     save_dependencies(root);
     patch.save(root);
