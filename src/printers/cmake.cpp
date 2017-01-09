@@ -1078,7 +1078,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         ctx.addLine();
 
         if (d.flags[pfLocalProject])
-            ctx.addLine("set(SDIR \"" + normalize_path(p.root_directory) + "\")");
+            ctx.addLine("set(SDIR " + normalize_path(p.root_directory) + ")");
         else
             ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
         ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
@@ -1636,7 +1636,7 @@ endif()
         // common include directories
         ctx.addLine("target_include_directories(${this}");
         ctx.increaseIndent();
-        ctx.addLine(visibility + " ${SDIR}"); // why???
+        ctx.addLine(visibility + " ${SDIR}"); // why??? add an explanation
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
@@ -2015,7 +2015,7 @@ void CMakePrinter::print_obj_generate_file(const path &fn) const
         ctx.increaseIndent();
         if (d.flags[pfLocalProject])
         {
-            ctx.addLine("set(SDIR \"" + normalize_path(p.root_directory) + "\")");
+            ctx.addLine("set(SDIR " + normalize_path(p.root_directory) + ")");
             print_local_project_files(ctx, p);
             ctx.addLine("set(SDIR)");
         }
