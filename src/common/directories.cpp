@@ -22,9 +22,22 @@
 
 Directories directories;
 
+void checkPath(const path &p, const String &msg)
+{
+    const auto s = p.string();
+    for (auto &c : s)
+    {
+        if (isspace(c))
+            throw std::runtime_error("You have spaces in the " + msg + " path. CPPAN could not work in this directory: '" + s + "'");
+    }
+}
+
 void Directories::set_storage_dir(const path &p)
 {
-    storage_dir = fs::absolute(p);
+    auto ap = fs::absolute(p);
+    checkPath(ap, "storage directory");
+
+    storage_dir = ap;
 
 #define SET(x)                          \
     storage_dir_##x = storage_dir / #x; \
@@ -43,11 +56,11 @@ void Directories::set_storage_dir(const path &p)
     SET(tmp);
     SET(usr);
 #undef SET
-
 }
 
 void Directories::set_build_dir(const path &p)
 {
+    checkPath(p, "build directory");
     build_dir = p;
 }
 

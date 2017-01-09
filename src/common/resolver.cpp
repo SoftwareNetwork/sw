@@ -426,16 +426,18 @@ void Resolver::read_config(const DownloadDependency &d)
     if (!fs::exists(d.getDirSrc()))
         return;
 
+    if (rd.packages.find(d) != rd.packages.end())
+        return;
     // keep some set data for re-read configs
-    auto oldi = rd.packages.find(d);
+    //auto oldi = rd.packages.find(d);
     // Config::created is needed for patching sources and other initialization stuff
-    bool created = oldi != rd.packages.end() && oldi->second.config->created;
+    //bool created = oldi != rd.packages.end() && oldi->second.config->created;
 
     try
     {
         auto p = rd.config_store.insert(std::make_unique<Config>(d.getDirSrc()));
         auto ptr = rd.packages[d].config = p.first->get();
-        ptr->created = created;
+        //ptr->created = created;
     }
     catch (DependencyNotResolved &)
     {
