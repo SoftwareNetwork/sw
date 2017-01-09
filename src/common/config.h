@@ -35,6 +35,7 @@ struct Config
 
     void load(const yaml &root);
     void load(const path &p);
+    void load(const String &s);
     void reload(const path &p);
 
     void load_current_config();
