@@ -201,3 +201,29 @@ void ProjectPath::push_back(const PathElement &pe)
 {
     path_elements.push_back(pe);
 }
+
+ProjectPath ProjectPath::operator/(const String &e) const
+{
+    if (e.empty())
+        return *this;
+    auto tmp = *this;
+    tmp.push_back(e);
+    return tmp;
+}
+
+ProjectPath ProjectPath::operator/(const ProjectPath &e) const
+{
+    auto tmp = *this;
+    tmp.path_elements.insert(tmp.path_elements.end(), e.path_elements.begin(), e.path_elements.end());
+    return tmp;
+}
+
+ProjectPath &ProjectPath::operator/=(const String &e)
+{
+    return *this = *this / e;
+}
+
+ProjectPath &ProjectPath::operator/=(const ProjectPath &e)
+{
+    return *this = *this / e;
+}

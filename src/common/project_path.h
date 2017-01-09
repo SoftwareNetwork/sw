@@ -107,28 +107,11 @@ public:
         std::swap(tmp, *this);
         return *this;
     }
-    ProjectPath operator/(const String &e) const
-    {
-        if (e.empty())
-            return *this;
-        auto tmp = *this;
-        tmp.push_back(e);
-        return tmp;
-    }
-    ProjectPath operator/(const ProjectPath &e) const
-    {
-        auto tmp = *this;
-        tmp.path_elements.insert(tmp.path_elements.end(), e.path_elements.begin(), e.path_elements.end());
-        return tmp;
-    }
-    ProjectPath &operator/=(const String &e)
-    {
-        return *this = *this / e;
-    }
-    ProjectPath &operator/=(const ProjectPath &e)
-    {
-        return *this = *this / e;
-    }
+
+    ProjectPath operator/(const String &e) const;
+    ProjectPath operator/(const ProjectPath &e) const;
+    ProjectPath &operator/=(const String &e);
+    ProjectPath &operator/=(const ProjectPath &e);
 
     ProjectPath operator[](PathElementType e) const;
 

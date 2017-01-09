@@ -623,7 +623,8 @@ ProjectPath Project::relative_name_to_absolute(const String &name)
         }
         if (root_project.empty())
             throw std::runtime_error("You're using relative names, but 'root_project' is missing");
-        ppath = root_project / name;
+        // we split entered 'name' because it may contain dots also
+        ppath = root_project / ProjectPath(name);
     }
     else
         ppath = name;
