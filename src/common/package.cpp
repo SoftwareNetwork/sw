@@ -157,6 +157,9 @@ void cleanPackages(const String &s, int flags)
         pkgs.insert(pkg);
     }
 
+    if (pkgs.empty())
+        return;
+
     // find dependent packages and remove non installed
     auto dpkgs = getPackagesDatabase().getTransitiveDependentPackages(pkgs);
     for (auto i = dpkgs.begin(); i != dpkgs.end();)

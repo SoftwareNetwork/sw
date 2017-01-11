@@ -329,20 +329,20 @@ try
         auto fs = CleanTarget::getStrings();
         int flags = 0;
         auto opts = options[CLEAN_PACKAGES].as<Strings>();
-        for (auto &o : opts)
+        auto pkg = opts[0];
+        decltype(opts) opts2;
+        opts2.assign(opts.begin() + 1, opts.end());
+        for (auto &o : opts2)
         {
             auto i = fs.find(o);
             if (i != fs.end())
                 flags |= i->second;
+            else
+                throw std::runtime_error("No such flag: " + o);
         }
         if (flags == 0)
             flags = CleanTarget::All;
-        for (auto &o : opts)
-        {
-            auto i = fs.find(o);
-            if (i == fs.end())
-                cleanPackages(o, flags);
-        }
+        cleanPackages(pkg, flags);
         return 0;
     }
     if (options().count(CLEAN_CONFIGS))
