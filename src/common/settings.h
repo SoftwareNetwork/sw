@@ -113,6 +113,7 @@ struct Settings
     bool force_server_query = false;
     bool verify_all = false;
     bool copy_all_libraries_to_output = false;
+    bool copy_import_libs = false;
     bool full_path_executables = false;
 
     String install_prefix;

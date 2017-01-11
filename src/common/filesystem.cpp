@@ -79,6 +79,12 @@ void remove_file(const path &p)
         std::cerr << "Cannot remove file: " << p.string() << "\n";
 }
 
+void remove_all_from_dir(const path &dir)
+{
+    for (auto &f : boost::make_iterator_range(fs::directory_iterator(dir), {}))
+        fs::remove_all(f);
+}
+
 String normalize_path(const path &p)
 {
     if (p.empty())

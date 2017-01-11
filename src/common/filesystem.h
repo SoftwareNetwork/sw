@@ -55,6 +55,8 @@ void write_file_if_different(const path &p, const String &s);
 std::vector<String> read_lines(const path &p);
 
 void remove_file(const path &p);
+void remove_all_from_dir(const path &dir);
+
 String normalize_path(const path &p);
 bool is_under_root(path p, const path &root_dir);
 

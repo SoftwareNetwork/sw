@@ -44,6 +44,8 @@ struct StartupAction
         ClearCache = 0,
         ServiceDbClearConfigHashes,
         CheckSchema,
+        ClearStorageDirExp,
+        ClearSourceGroups,
     };
 
     int id;
@@ -107,6 +109,7 @@ public:
     SourceGroups getSourceGroups(const Package &p) const;
     void removeSourceGroups(const Package &p) const;
     void removeSourceGroups(int id) const;
+    void clearSourceGroups() const;
 
     Stamps getFileStamps() const;
     void setFileStamps(const Stamps &stamps) const;

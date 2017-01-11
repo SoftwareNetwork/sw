@@ -1118,6 +1118,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
             ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
         ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
         ctx.addLine();
+
         ctx.addLine("set(LIBRARY_API " + library_api(d) + ")");
         ctx.addLine();
 
@@ -1827,7 +1828,7 @@ else())");
     }
 
     // source groups
-    print_source_groups(ctx, fn.parent_path());
+    print_source_groups(ctx);
 
     file_footer(ctx, d);
 
@@ -2097,7 +2098,7 @@ void CMakePrinter::print_obj_generate_file(const path &fn) const
         ctx.emptyLines();
 
         // source groups
-        print_source_groups(ctx, dir);
+        print_source_groups(ctx);
 
         // end
         if (!d.flags[pfLocalProject])
@@ -2372,6 +2373,7 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
                 ctx.addLine();
 
                 // import library for shared libs
+                if (ls.copy_import_libs)
                 {
                     ctx.addLine("if (${type} STREQUAL SHARED_LIBRARY)");
                     ctx.increaseIndent();
@@ -2726,7 +2728,7 @@ void CMakePrinter::write_if_older(const path &fn, const String &s) const
     access_table->write_if_older(fn, s);
 }
 
-void CMakePrinter::print_source_groups(Context &ctx, const path &dir) const
+void CMakePrinter::print_source_groups(Context &ctx) const
 {
     // check own data
     if (sgs.empty())
@@ -2736,34 +2738,47 @@ void CMakePrinter::print_source_groups(Context &ctx, const path &dir) const
         sgs = sdb.getSourceGroups(d);
         if (sgs.empty())
         {
-            for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+            if (d.flags[pfLocalProject])
             {
-                if (!fs::is_directory(f))
-                    continue;
-
-                auto s = fs::relative(f.path(), dir).string();
-                auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
-                boost::replace_all(s2, "/", "\\\\");
-
-                for (auto &f2 : boost::make_iterator_range(fs::directory_iterator(f), {}))
+                const auto &p = rd[d].config->getDefaultProject();
+                for (auto &f : p.files)
                 {
-                    if (!fs::is_regular_file(f2))
+                    auto r = fs::relative(f, p.root_directory);
+                    auto s2 = boost::replace_all_copy(r.parent_path().string(), "\\", "\\\\");
+                    boost::replace_all(s2, "/", "\\\\");
+                    sgs[s2].insert(normalize_path(f));
+                }
+            }
+            else
+            {
+                const auto dir = d.getDirSrc();
+                for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+                {
+                    if (!fs::is_directory(f))
                         continue;
-                    auto s3 = normalize_path(f2.path());
-                    sgs[s2].insert(s3);
+
+                    auto s = fs::relative(f.path(), dir).string();
+                    auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
+                    boost::replace_all(s2, "/", "\\\\");
+
+                    for (auto &f2 : boost::make_iterator_range(fs::directory_iterator(f), {}))
+                    {
+                        if (!fs::is_regular_file(f2))
+                            continue;
+                        auto s3 = normalize_path(f2.path());
+                        sgs[s2].insert(s3);
+                    }
                 }
             }
             sdb.setSourceGroups(d, sgs);
         }
     }
 
-    bool once = false;
+    // print, there's always generated group
+    config_section_title(ctx, "source groups");
+    ctx.addLine("source_group(\"generated\" REGULAR_EXPRESSION \"" + normalize_path(d.getDirObj()) + "/*\")");
     for (auto &sg : sgs)
     {
-        if (!once)
-            config_section_title(ctx, "source groups");
-        once = true;
-
         ctx.addLine("source_group(\"" + sg.first + "\" FILES");
         ctx.increaseIndent();
         for (auto &f : sg.second)

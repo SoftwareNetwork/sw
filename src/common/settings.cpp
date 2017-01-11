@@ -173,6 +173,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     EXTRACT_AUTO(build_system_verbose);
     EXTRACT_AUTO(verify_all);
     EXTRACT_AUTO(copy_all_libraries_to_output);
+    EXTRACT_AUTO(copy_import_libs);
     EXTRACT_AUTO(full_path_executables);
     EXTRACT_AUTO(var_check_jobs);
     EXTRACT_AUTO(install_prefix);
@@ -239,6 +240,7 @@ void Settings::load_build(const yaml &root)
     EXTRACT_AUTO(build_system_verbose);
     EXTRACT_AUTO(verify_all);
     EXTRACT_AUTO(copy_all_libraries_to_output);
+    EXTRACT_AUTO(copy_import_libs);
     EXTRACT_AUTO(full_path_executables);
     EXTRACT_AUTO(var_check_jobs);
     EXTRACT_AUTO(install_prefix);

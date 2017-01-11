@@ -136,14 +136,15 @@ void PackageStore::process(const path &p, Config &root)
         root.getDefaultProject().checks += cc.second.config->getDefaultProject().checks;
     }
 
-    auto printer = Printer::create(Settings::get_local_settings().printerType);
-    printer->access_table = &access_table;
+    // make sure you have new printer every time
 
     // print deps
     for (auto &cc : *this)
     {
         auto &d = cc.first;
 
+        auto printer = Printer::create(Settings::get_local_settings().printerType);
+        printer->access_table = &access_table;
         printer->d = d;
         printer->cwd = d.getDirObj();
         printer->print();
@@ -153,6 +154,8 @@ void PackageStore::process(const path &p, Config &root)
     ScopedCurrentPath cp(p);
 
     // print root config
+    auto printer = Printer::create(Settings::get_local_settings().printerType);
+    printer->access_table = &access_table;
     printer->d = root.pkg;
     printer->cwd = cp.get_cwd();
     printer->print_meta();

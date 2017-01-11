@@ -52,7 +52,7 @@ private:
     void print_obj_export_file(const path &fn) const;
     void print_obj_build_file(const path &fn) const;
     void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
-    void print_source_groups(Context &ctx, const path &dir) const;
+    void print_source_groups(Context &ctx) const;
 
     bool must_update_contents(const path &fn) const;
     void write_if_older(const path &fn, const String &s) const;

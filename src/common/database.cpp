@@ -56,6 +56,8 @@ std::vector<StartupAction> startup_actions{
     { 1, StartupAction::ClearCache },
     { 2, StartupAction::ServiceDbClearConfigHashes },
     { 4, StartupAction::CheckSchema },
+    { 5, StartupAction::ClearStorageDirExp },
+    { 6, StartupAction::ClearSourceGroups },
 };
 
 const TableDescriptors &get_service_tables()
@@ -442,6 +444,12 @@ void ServiceDatabase::performStartupActions() const
                     setTableHash(td.name, h);
                 }
                 break;
+            case StartupAction::ClearStorageDirExp:
+                remove_all_from_dir(directories.storage_dir_exp);
+                break;
+            case StartupAction::ClearSourceGroups:
+                clearSourceGroups();
+                break;
             default:
                 throw std::logic_error("Startup action was not defined. Report this to the maintainer!");
             }
@@ -712,6 +720,12 @@ void ServiceDatabase::removeSourceGroups(const Package &p) const
 void ServiceDatabase::removeSourceGroups(int id) const
 {
     db->execute("delete from SourceGroups where package_id = '" + std::to_string(id) + "';");
+}
+
+void ServiceDatabase::clearSourceGroups() const
+{
+    db->execute("delete from SourceGroupFiles;");
+    db->execute("delete from SourceGroups;");
 }
 
 void ServiceDatabase::addInstalledPackage(const Package &p) const
