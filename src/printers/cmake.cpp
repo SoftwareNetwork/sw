@@ -2374,7 +2374,7 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
                 ctx.addLine();
 
                 // import library for shared libs
-                if (ls.copy_import_libs)
+                if (ls.copy_import_libs || ls.copy_all_libraries_to_output)
                 {
                     ctx.addLine("if (${type} STREQUAL SHARED_LIBRARY)");
                     ctx.increaseIndent();
