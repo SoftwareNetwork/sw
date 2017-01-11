@@ -136,7 +136,7 @@ void write_file_if_different(const path &p, const String &s)
 {
     if (fs::exists(p))
     {
-        auto s2 = read_file(p);
+        auto s2 = read_file(p, true);
         if (s == s2)
             return;
     }
