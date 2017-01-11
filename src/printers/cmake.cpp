@@ -1037,6 +1037,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         }
         ctx.addLine();
 
+        ctx.addLine("set(CPPAN_LOCAL_PROJECT 0)");
         if (d.flags[pfLocalProject])
         {
             ctx.addLine("set(CPPAN_LOCAL_PROJECT 1)");
