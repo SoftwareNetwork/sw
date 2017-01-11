@@ -1032,7 +1032,8 @@ void Project::load(const yaml &root)
     }
 
     // idirs
-    if (defaults_allowed && include_directories.public_.empty())
+    bool iempty = include_directories.empty();
+    if (defaults_allowed && iempty)
     {
         if (fs::exists("include"))
             include_directories.public_.insert("include");
@@ -1047,7 +1048,7 @@ void Project::load(const yaml &root)
             }
         }
     }
-    if (defaults_allowed && include_directories.private_.empty())
+    if (defaults_allowed && iempty)
     {
         std::function<void(const String &, const String &)> autodetect_source_dir;
         autodetect_source_dir = [this, &autodetect_source_dir](const String &current, const String &next = String())
