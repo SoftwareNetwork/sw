@@ -94,6 +94,7 @@ struct ac_processor
     void process_AC_CHECK_MEMBERS(command &c);
     void process_AC_DEFINE(command &c);
     void process_AC_CHECK_ALIGNOF(command &c);
+    void process_AC_CHECK_SYMBOL(command &c);
 };
 
 auto parse_arguments(const String &f)
@@ -324,6 +325,7 @@ void ac_processor::process()
         TWICE(CASE_NOT_EMPTY, AC_LANG);
 
         TWICE(CASE_NOT_EMPTY, AC_CHECK_ALIGNOF);
+        TWICE(CASE_NOT_EMPTY, AC_CHECK_SYMBOL);
 
         SILENCE(AC_CHECK_PROG);
         SILENCE(AC_CHECK_PROGS);
@@ -847,4 +849,11 @@ void ac_processor::process_AC_CHECK_MEMBERS(command &c)
 void ac_processor::process_AC_CHECK_ALIGNOF(command &c)
 {
     checks.addCheck<CheckAlignment>(c.params[0]);
+}
+
+void ac_processor::process_AC_CHECK_SYMBOL(command &c)
+{
+    CheckParameters p;
+    p.headers = { c.params[1] };
+    checks.addCheck<CheckSymbol>(c.params[0], p);
 }

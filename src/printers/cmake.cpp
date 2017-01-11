@@ -1008,6 +1008,14 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         ctx.addLine("set(PACKAGE_URL)");
         ctx.addLine("set(PACKAGE_BUGREPORT)");
         ctx.addLine();
+
+        auto n2hex = [this](int n, int w)
+        {
+            std::ostringstream ss;
+            ss << std::hex << std::setfill('0') << std::setw(w) << n;
+            return ss.str();
+        };
+
         if (d.version.isBranch())
         {
             ctx.addLine("set(PACKAGE_VERSION_NUM  \"0\")");
@@ -1015,18 +1023,25 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         }
         else
         {
-            auto ver2hex = [this](int n)
+            auto ver2hex = [this, &n2hex](int n)
             {
                 std::ostringstream ss;
-                ss << std::hex << std::setfill('0') << std::setw(n) << d.version.major;
-                ss << std::hex << std::setfill('0') << std::setw(n) << d.version.minor;
-                ss << std::hex << std::setfill('0') << std::setw(n) << d.version.patch;
+                ss << n2hex(d.version.major, n);
+                ss << n2hex(d.version.minor, n);
+                ss << n2hex(d.version.patch, n);
                 return ss.str();
             };
+
             ctx.addLine("set(PACKAGE_VERSION_NUM  \"0x" + ver2hex(2) + "\")");
             ctx.addLine("set(PACKAGE_VERSION_NUM2 \"0x" + ver2hex(4) + "LL\")");
         }
         ctx.addLine();
+
+        if (d.flags[pfLocalProject])
+        {
+            ctx.addLine("set(CPPAN_LOCAL_PROJECT 1)");
+            ctx.addLine();
+        }
 
         // duplicate if someone will do a mistake
         ctx.addLine("set(PACKAGE_VERSION_MAJOR " + std::to_string(d.version.major) + ")");
@@ -1036,6 +1051,12 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         ctx.addLine("set(PACKAGE_MAJOR_VERSION " + std::to_string(d.version.major) + ")");
         ctx.addLine("set(PACKAGE_MINOR_VERSION " + std::to_string(d.version.minor) + ")");
         ctx.addLine("set(PACKAGE_PATCH_VERSION " + std::to_string(d.version.patch) + ")");
+        ctx.addLine();
+
+
+        ctx.addLine("set(PACKAGE_VERSION_MAJOR_NUM " + n2hex(d.version.major, 2) + ")");
+        ctx.addLine("set(PACKAGE_VERSION_MINOR_NUM " + n2hex(d.version.minor, 2) + ")");
+        ctx.addLine("set(PACKAGE_VERSION_PATCH_NUM " + n2hex(d.version.patch, 2) + ")");
         ctx.addLine();
 
         ctx.addLine("set(PACKAGE_IS_BRANCH " + String(d.version.isBranch() ? "1" : "0") + ")");
@@ -1664,13 +1685,40 @@ endif()
         ctx.addLine(visibility + " CPPAN"); // build is performed under CPPAN
         ctx.addLine(visibility + " CPPAN_BUILD"); // build is performed under CPPAN
         if (!d.flags[pfHeaderOnly])
-            ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\""); // CPPAN_CONFIG is private for a package!
-        ctx.addLine(visibility + " CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
-        ctx.addLine(visibility + " CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
+        {
+            // CPPAN_CONFIG is private for a package!
+            ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\"");
+        }
         if (!p.api_name.empty())
             ctx.addLine(visibility + " " + p.api_name + "=${LIBRARY_API}");
         ctx.decreaseIndent();
         ctx.addLine(")");
+        ctx.addLine();
+
+        // export/import have special handling
+        // header only packages provide bad (empty) export/import symbols
+        ctx.addLine("if (CPPAN_EXPORT)");
+        ctx.increaseIndent();
+        ctx.addLine("target_compile_definitions(${this}");
+        ctx.increaseIndent();
+        ctx.addLine(visibility + " CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
+        ctx.addLine(visibility + " CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.decreaseIndent();
+        ctx.addLine("else()");
+        ctx.increaseIndent();
+        if (!d.flags[pfHeaderOnly])
+        {
+            ctx.addLine("target_compile_definitions(${this}");
+            ctx.increaseIndent();
+            ctx.addLine("PRIVATE CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
+            ctx.addLine("PRIVATE CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+        }
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
         ctx.addLine();
 
         // CPPAN_EXPORT is a macro that will be expanded

@@ -214,6 +214,11 @@ try
             {
                 if (args.size() != 3)
                 {
+                    if (fs::exists("configure.ac"))
+                    {
+                        process_configure_ac("configure.ac");
+                        return 0;
+                    }
                     std::cout << "invalid number of arguments\n";
                     std::cout << "usage: cppan parse-configure-ac configure.ac\n";
                     return 1;

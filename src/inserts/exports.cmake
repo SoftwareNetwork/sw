@@ -1,7 +1,5 @@
-if ("${LIBRARY_TYPE}" STREQUAL "STATIC")
-    set(CPPAN_EXPORT)
-    set(CPPAN_IMPORT)
-endif()
+set(CPPAN_EXPORT)
+set(CPPAN_IMPORT)
 
 if ("${LIBRARY_TYPE}" STREQUAL "SHARED")
 
