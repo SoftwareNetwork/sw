@@ -833,7 +833,10 @@ void Project::load(const yaml &root)
 
                 // version will be read for local project
                 // even 2nd arg is not valid
-                read_version(dependency, d["version"].template as<String>());
+                String v;
+                if (d["version"].IsDefined())
+                    v = d["version"].template as<String>();
+                read_version(dependency, v);
             }
 
             if (d.IsMap())
