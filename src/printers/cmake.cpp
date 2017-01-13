@@ -86,6 +86,7 @@ include(CheckCSourceRuns)
 include(CheckCXXSourceCompiles)
 include(CheckCXXSourceRuns)
 include(CheckStructHasMember)
+include(GenerateExportHeader)
 include(TestBigEndian)
 )";
 
@@ -1045,20 +1046,39 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         }
 
         // duplicate if someone will do a mistake
-        ctx.addLine("set(PACKAGE_VERSION_MAJOR " + std::to_string(d.version.major) + ")");
-        ctx.addLine("set(PACKAGE_VERSION_MINOR " + std::to_string(d.version.minor) + ")");
-        ctx.addLine("set(PACKAGE_VERSION_PATCH " + std::to_string(d.version.patch) + ")");
-        ctx.addLine();
-        ctx.addLine("set(PACKAGE_MAJOR_VERSION " + std::to_string(d.version.major) + ")");
-        ctx.addLine("set(PACKAGE_MINOR_VERSION " + std::to_string(d.version.minor) + ")");
-        ctx.addLine("set(PACKAGE_PATCH_VERSION " + std::to_string(d.version.patch) + ")");
-        ctx.addLine();
+        {
+            auto v = d.version;
+            if (d.flags[pfLocalProject])
+            {
+                if (p.pkg.version.isValid())
+                    v = p.pkg.version;
+                else
+                {
+                    v.major = 0;
+                    v.minor = 0;
+                    v.patch = 0;
+                }
+            }
 
+            auto print_ver = [&ctx, &v](const String &name)
+            {
+                ctx.addLine("set(" + name + "_VERSION_MAJOR " + std::to_string(v.major) + ")");
+                ctx.addLine("set(" + name + "_VERSION_MINOR " + std::to_string(v.minor) + ")");
+                ctx.addLine("set(" + name + "_VERSION_PATCH " + std::to_string(v.patch) + ")");
+                ctx.addLine();
+                ctx.addLine("set(" + name + "_MAJOR_VERSION " + std::to_string(v.major) + ")");
+                ctx.addLine("set(" + name + "_MINOR_VERSION " + std::to_string(v.minor) + ")");
+                ctx.addLine("set(" + name + "_PATCH_VERSION " + std::to_string(v.patch) + ")");
+                ctx.addLine();
+            };
+            print_ver("PACKAGE");
+            print_ver("PROJECT");
 
-        ctx.addLine("set(PACKAGE_VERSION_MAJOR_NUM " + n2hex(d.version.major, 2) + ")");
-        ctx.addLine("set(PACKAGE_VERSION_MINOR_NUM " + n2hex(d.version.minor, 2) + ")");
-        ctx.addLine("set(PACKAGE_VERSION_PATCH_NUM " + n2hex(d.version.patch, 2) + ")");
-        ctx.addLine();
+            ctx.addLine("set(PACKAGE_VERSION_MAJOR_NUM " + n2hex(v.major, 2) + ")");
+            ctx.addLine("set(PACKAGE_VERSION_MINOR_NUM " + n2hex(v.minor, 2) + ")");
+            ctx.addLine("set(PACKAGE_VERSION_PATCH_NUM " + n2hex(v.patch, 2) + ")");
+            ctx.addLine();
+        }
 
         ctx.addLine("set(PACKAGE_IS_BRANCH " + String(d.version.isBranch() ? "1" : "0") + ")");
         ctx.addLine("set(PACKAGE_IS_VERSION " + String(d.version.isVersion() ? "1" : "0") + ")");
