@@ -93,7 +93,7 @@ struct Settings
     std::map<String, String> env;
     std::vector<String> cmake_options;
 
-    bool use_shared_libs = false;
+    bool use_shared_libs = true;
 
     // do not create links to projects (.sln, CMakeLists.txt)
     bool silent = true;
