@@ -27,6 +27,7 @@
 #include "settings.h"
 #include "sqlite_database.h"
 #include "stamp.h"
+#include "templates.h"
 #include "printers/cmake.h"
 
 #include <boost/algorithm/string.hpp>
@@ -262,6 +263,10 @@ void writePackagesDbVersion(const path &dir, int version)
 ServiceDatabase &getServiceDatabase(bool init)
 {
 #ifdef _WIN32
+    // this holder will init on-disk sdb once
+    // later thread local calls will just open it
+    static ServiceDatabase run_once_db(init);
+
     thread_local
 #else
     static
@@ -322,10 +327,14 @@ ServiceDatabase::ServiceDatabase(bool init)
 {
     if (!init)
         return;
-    createTables();
-    checkStamp();
-    increaseNumberOfRuns();
-    checkForUpdates();
+    RUN_ONCE
+    {
+        createTables();
+        checkStamp();
+        increaseNumberOfRuns();
+        checkForUpdates();
+        performStartupActions();
+    };
 }
 
 ServiceDatabase::~ServiceDatabase()

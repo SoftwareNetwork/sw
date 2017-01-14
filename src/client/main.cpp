@@ -50,7 +50,6 @@ ApiResult api_call(const String &cmd, const Strings &args);
 void check_spec_file();
 void default_run();
 void init(const Strings &args, const String &log_level);
-void init_service_db(bool init);
 void load_current_config();
 void self_upgrade();
 
@@ -483,15 +482,7 @@ void init(const Strings &args, const String &log_level)
         us.disable_update_checks = true;
 
     load_current_config();
-    init_service_db(init);
-}
-
-void init_service_db(bool init)
-{
-    // initialize internal db
-    auto &sdb = getServiceDatabase(init);
-    if (init)
-        sdb.performStartupActions();
+    getServiceDatabase(init);
 }
 
 void load_current_config()
