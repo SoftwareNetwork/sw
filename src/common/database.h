@@ -73,8 +73,10 @@ protected:
 class ServiceDatabase : public Database
 {
 public:
-    ServiceDatabase(bool init);
+    ServiceDatabase();
     ~ServiceDatabase();
+
+    void init();
 
     void performStartupActions() const;
 

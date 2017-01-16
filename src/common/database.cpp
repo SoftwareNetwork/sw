@@ -265,13 +265,15 @@ ServiceDatabase &getServiceDatabase(bool init)
 #ifdef _WIN32
     // this holder will init on-disk sdb once
     // later thread local calls will just open it
-    static ServiceDatabase run_once_db(init);
+    static ServiceDatabase run_once_db;
+    if (init)
+        run_once_db.init();
 
     thread_local
 #else
     static
 #endif
-    ServiceDatabase db(init);
+    ServiceDatabase db;
     return db;
 }
 
@@ -322,23 +324,26 @@ void Database::recreate()
     created = true;
 }
 
-ServiceDatabase::ServiceDatabase(bool init)
+ServiceDatabase::ServiceDatabase()
     : Database(service_db_name, get_service_tables())
 {
-    if (!init)
-        return;
+}
+
+ServiceDatabase::~ServiceDatabase()
+{
+}
+
+void ServiceDatabase::init()
+{
     RUN_ONCE
     {
         createTables();
         checkStamp();
         increaseNumberOfRuns();
         checkForUpdates();
-        performStartupActions();
     };
-}
-
-ServiceDatabase::~ServiceDatabase()
-{
+    // move out of RUN_ONCE because it may try to init sdb again
+    performStartupActions();
 }
 
 void ServiceDatabase::createTables() const
@@ -409,7 +414,10 @@ void ServiceDatabase::performStartupActions() const
     // perform startup actions on client update
     try
     {
-        bool once = false;
+        static bool once = false;
+        if (once)
+            return;
+
         std::set<int> actions_performed; // prevent multiple execution of the same actions
         for (auto &a : startup_actions)
         {
