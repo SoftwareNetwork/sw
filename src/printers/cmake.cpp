@@ -1780,6 +1780,7 @@ else())");
             add_unix_lib("m");
             add_unix_lib("pthread");
             add_unix_lib("rt");
+            add_unix_lib("dl");
             ctx.decreaseIndent();
             ctx.addLine("endif()");
             ctx.addLine();
