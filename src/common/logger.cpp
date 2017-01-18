@@ -35,6 +35,7 @@ typedef boost::log::sinks::text_file_backend tfb;
 typedef boost::log::sinks::synchronous_sink<tfb> sfs;
 
 boost::shared_ptr<tfb> backend;
+boost::shared_ptr<tfb> backend_debug;
 boost::shared_ptr<tfb> backend_trace;
 
 boost::shared_ptr<
@@ -69,69 +70,82 @@ void logFormatterSimple(boost::log::record_view const& rec, boost::log::formatti
         % rec[boost::log::expressions::smessage];
 }
 
-void initLogger(std::string logLevel, std::string logFile, bool simple_logger)
+void initLogger(LoggerSettings &s)
 {
     try
     {
-        bool disable_log = logLevel == "";
+        bool disable_log = s.log_level == "";
 
-        boost::algorithm::to_lower(logLevel);
+        boost::algorithm::to_lower(s.log_level);
 
         boost::log::trivial::severity_level level;
-        std::stringstream(logLevel) >> level;
+        std::stringstream(s.log_level) >> level;
 
-        std::string logLevelTrace = "trace";
         boost::log::trivial::severity_level trace;
-        std::stringstream(logLevelTrace) >> trace;
+        std::stringstream("trace") >> trace;
 
         if (!disable_log)
         {
             auto c_log = boost::log::add_console_log();
             ::c_log = c_log;
-            if (simple_logger)
+            if (s.simple_logger)
                 c_log->set_formatter(&logFormatterSimple);
             else
                 c_log->set_formatter(&logFormatter);
             c_log->set_filter(boost::log::trivial::severity >= level);
         }
 
-        if (logFile != "")
+        if (s.log_file != "")
         {
-            auto backend = boost::make_shared<tfb>
-            (
-                boost::log::keywords::file_name = logFile + ".log." + logLevel,
-                boost::log::keywords::rotation_size = 10 * 1024 * 1024,
-                //boost::log::keywords::open_mode = std::ios_base::app,
-                boost::log::keywords::auto_flush = true
-            );
-            ::backend = backend;
+            auto open_mode = std::ios_base::out;
+            if (s.append)
+                open_mode = std::ios_base::app;
 
-            auto sink = boost::make_shared<sfs>(backend);
-            if (simple_logger)
-                sink->set_formatter(&logFormatterSimple);
-            else
-                sink->set_formatter(&logFormatter);
-            sink->set_filter(boost::log::trivial::severity >= level);
-            boost::log::core::get()->add_sink(sink);
+            // input
+            if (level > boost::log::trivial::severity_level::trace)
+            {
+                auto backend = boost::make_shared<tfb>
+                    (
+                        boost::log::keywords::file_name = s.log_file + ".log." + s.log_level,
+                        boost::log::keywords::rotation_size = 10 * 1024 * 1024,
+                        boost::log::keywords::open_mode = open_mode//,
+                        //boost::log::keywords::auto_flush = true
+                        );
+                ::backend = backend;
 
-#ifndef NDEBUG
-            auto backend_trace = boost::make_shared<tfb>
-            (
-                boost::log::keywords::file_name = logFile + ".log." + logLevelTrace,
-                boost::log::keywords::rotation_size = 10 * 1024 * 1024,
-                //boost::log::keywords::open_mode = std::ios_base::app,
-                boost::log::keywords::auto_flush = true
-            );
-            ::backend_trace = backend_trace;
+                auto sink = boost::make_shared<sfs>(backend);
+                if (s.simple_logger)
+                    sink->set_formatter(&logFormatterSimple);
+                else
+                    sink->set_formatter(&logFormatter);
+                sink->set_filter(boost::log::trivial::severity >= level);
+                boost::log::core::get()->add_sink(sink);
+            }
 
-            auto sink_trace = boost::make_shared<sfs>(backend_trace);
-            if (simple_logger)
-                sink_trace->set_formatter(&logFormatterSimple);
-            else
-                sink_trace->set_formatter(&logFormatter);
-            sink_trace->set_filter(boost::log::trivial::severity >= trace);
-            boost::log::core::get()->add_sink(sink_trace);
-#endif
+            if (level == boost::log::trivial::severity_level::trace || s.print_trace)
+            {
+                auto add_logger = [&s](auto severity, const auto &name, auto &g_backend)
+                {
+                    auto backend = boost::make_shared<tfb>
+                        (
+                            boost::log::keywords::file_name = s.log_file + ".log." + name,
+                            boost::log::keywords::rotation_size = 10 * 1024 * 1024,
+                            // always append to trace, do not recreate
+                            boost::log::keywords::open_mode = std::ios_base::app//,
+                                                                                //boost::log::keywords::auto_flush = true
+                            );
+                    g_backend = backend;
+
+                    auto sink_trace = boost::make_shared<sfs>(backend);
+                    // trace to file always has complex format
+                    sink_trace->set_formatter(&logFormatter);
+                    sink_trace->set_filter(boost::log::trivial::severity >= severity);
+                    boost::log::core::get()->add_sink(sink_trace);
+                };
+
+                add_logger(boost::log::trivial::severity_level::debug, "debug", ::backend_debug);
+                add_logger(boost::log::trivial::severity_level::trace, "trace", ::backend_trace);
+            }
         }
         boost::log::add_common_attributes();
     }

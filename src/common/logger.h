@@ -45,7 +45,16 @@
 
 #define LOG_FLUSH() loggerFlush()
 
-void initLogger(std::string logLevel = "DEBUG", std::string logFile = "", bool simple_logger = false);
+struct LoggerSettings
+{
+    std::string log_level = "DEBUG";
+    std::string log_file;
+    bool simple_logger = false;
+    bool print_trace = false;
+    bool append = false;
+};
+
+void initLogger(LoggerSettings &s);
 void loggerFlush();
 
 #else // !USE_LOGGER

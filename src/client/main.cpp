@@ -99,6 +99,11 @@ try
                 s.additional_build_args.assign(args_copy.begin() + i + 1, args_copy.end());
                 args_copy.erase(args_copy.begin() + i, args_copy.end());
             }
+
+            if (args[i] == "--self-upgrade")
+            {
+                Settings::get_user_settings().disable_update_checks = true;
+            }
         }
         args = args_copy;
     }
@@ -471,7 +476,17 @@ void default_run()
 void init(const Strings &args, const String &log_level)
 {
     // initial sequence
-    initLogger(log_level, "", true);
+
+    LoggerSettings log_settings;
+    log_settings.log_level = log_level;
+    log_settings.log_file = (get_root_directory() / "cppan").string();
+    log_settings.simple_logger = true;
+    log_settings.print_trace = true;
+    initLogger(log_settings);
+
+    // first trace message
+    LOG_TRACE(logger, "----------------------------------------");
+    LOG_TRACE(logger, "Starting cppan...");
 
     // initialize CPPAN structures (settings), do not remove
     auto &us = Settings::get_user_settings();
