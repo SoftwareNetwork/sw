@@ -1088,6 +1088,9 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         ctx.addLine("if (CPPAN_BUILD_SHARED_LIBS)");
         ctx.increaseIndent();
         ctx.addLine("set(LIBRARY_TYPE SHARED)");
+        // when linking to shared libs (even if lib is static only)
+        // lib must have PIC enabled
+        ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
         ctx.decreaseIndent();
         ctx.addLine("endif()");
         ctx.addLine();
