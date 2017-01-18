@@ -145,7 +145,9 @@ public:
 
     // c/c++ standard
     int c_standard{ 0 };
+    bool c_extensions = false;
     int cxx_standard{ 0 };
+    bool cxx_extensions = false;
 
     bool import_from_bazel = false;
     bool prefer_binaries = false;

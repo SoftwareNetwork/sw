@@ -673,11 +673,13 @@ void Project::load(const yaml &root)
         {
             EXTRACT_VAR(root, c_standard, "c", int);
         }
+        EXTRACT_AUTO(c_extensions);
 
         String cxx;
         EXTRACT_VAR(root, cxx, "cxx_standard", String);
         if (cxx.empty())
             EXTRACT_VAR(root, cxx, "c++", String);
+        EXTRACT_AUTO(cxx_extensions);
 
         if (!cxx.empty())
         {
@@ -1153,8 +1155,10 @@ yaml Project::save() const
 
     if (c_standard)
         root["c"] = c_standard;
+    ADD_IF_VAL_TRIPLE(c_extensions);
     if (cxx_standard)
         root["c++"] = cxx_standard;
+    ADD_IF_VAL_TRIPLE(cxx_extensions);
 
     ADD_IF_VAL_TRIPLE(empty);
     ADD_IF_VAL_TRIPLE(custom);

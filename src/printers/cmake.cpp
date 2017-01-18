@@ -1281,13 +1281,12 @@ endif()
         if (!d.flags[pfHeaderOnly])
         {
             if (p.c_standard != 0)
-            {
-                ctx.addLine("set_property(TARGET ${this} PROPERTY C_EXTENSIONS OFF)");
                 ctx.addLine("set_property(TARGET ${this} PROPERTY C_STANDARD " + std::to_string(p.c_standard) + ")");
-            }
+            ctx.addLine("set_property(TARGET ${this} PROPERTY C_EXTENSIONS "s + (p.c_extensions ? "ON" : "OFF") + ")");
+
+            ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_EXTENSIONS "s + (p.cxx_extensions ? "ON" : "OFF") + ")");
             if (p.cxx_standard != 0)
             {
-                ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_EXTENSIONS OFF)");
                 switch (p.cxx_standard)
                 {
                 case 17:

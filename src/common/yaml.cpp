@@ -221,8 +221,11 @@ String dump_yaml_config(const yaml &root)
 
         "c_standard",
         "c",
+        "c_extensions",
+
         "cxx_standard",
         "c++",
+        "cxx_extensions",
 
         "empty",
         "custom",
