@@ -59,6 +59,7 @@ std::vector<StartupAction> startup_actions{
     { 4, StartupAction::CheckSchema },
     { 5, StartupAction::ClearStorageDirExp },
     { 6, StartupAction::ClearSourceGroups },
+    { 7, StartupAction::ClearStorageDirExp | StartupAction::ClearStorageDirBin | StartupAction::ClearStorageDirLib },
 };
 
 const TableDescriptors &get_service_tables()
@@ -432,12 +433,13 @@ void ServiceDatabase::performStartupActions() const
             actions_performed.insert(a.action);
             setActionPerformed(a);
 
-            switch (a.action)
+            // do actions
+            if (a.action & StartupAction::ClearCache)
             {
-            case StartupAction::ClearCache:
                 CMakePrinter().clear_cache();
-                break;
-            case StartupAction::ServiceDbClearConfigHashes:
+            }
+
+            if (a.action & StartupAction::ServiceDbClearConfigHashes)
             {
                 clearConfigHashes();
 
@@ -445,8 +447,9 @@ void ServiceDatabase::performStartupActions() const
                 boost::system::error_code ec;
                 fs::remove_all(temp_directory_path(), ec);
             }
-                break;
-            case StartupAction::CheckSchema:
+
+            if (a.action & StartupAction::CheckSchema)
+            {
                 // create new tables
                 createTables();
 
@@ -460,15 +463,30 @@ void ServiceDatabase::performStartupActions() const
                     db->execute(td.query);
                     setTableHash(td.name, h);
                 }
-                break;
-            case StartupAction::ClearStorageDirExp:
+            }
+
+            if (a.action & StartupAction::ClearStorageDirExp)
+            {
                 remove_all_from_dir(directories.storage_dir_exp);
-                break;
-            case StartupAction::ClearSourceGroups:
+            }
+
+            if (a.action & StartupAction::ClearStorageDirBin)
+            {
+                // also remove exp to trigger cmake
+                remove_all_from_dir(directories.storage_dir_exp);
+                remove_all_from_dir(directories.storage_dir_bin);
+            }
+
+            if (a.action & StartupAction::ClearStorageDirLib)
+            {
+                // also remove exp to trigger cmake
+                remove_all_from_dir(directories.storage_dir_exp);
+                remove_all_from_dir(directories.storage_dir_lib);
+            }
+
+            if (a.action & StartupAction::ClearSourceGroups)
+            {
                 clearSourceGroups();
-                break;
-            default:
-                throw std::logic_error("Startup action was not defined. Report this to the maintainer!");
             }
         }
     }

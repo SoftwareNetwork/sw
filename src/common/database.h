@@ -41,11 +41,13 @@ struct StartupAction
     enum Type
     {
         // append only
-        ClearCache = 0,
-        ServiceDbClearConfigHashes,
-        CheckSchema,
-        ClearStorageDirExp,
-        ClearSourceGroups,
+        ClearCache                  = 0x0000,
+        ServiceDbClearConfigHashes  = 0x0001,
+        CheckSchema                 = 0x0002,
+        ClearStorageDirExp          = 0x0004,
+        ClearSourceGroups           = 0x0008,
+        ClearStorageDirBin          = 0x0010,
+        ClearStorageDirLib          = 0x0020,
     };
 
     int id;
