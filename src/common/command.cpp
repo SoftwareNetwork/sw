@@ -196,6 +196,9 @@ Result execute(const Args &args, const Options &opts)
         RUN_READER(err);
 
         r.rc = c.wait().exit_status();
+
+        if (r.rc)
+            LOG_WARN(logger, "Command exited with non zero status: " << args_fixed[0] << ", rc = " << r.rc);
     }
     catch (...)
     {

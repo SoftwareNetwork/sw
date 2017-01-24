@@ -61,10 +61,12 @@ bool Remote::downloadPackage(const Package &d, const String &hash, const path &f
     };
 
     for (auto &s : primary_sources)
+    {
         if (download_from_source(s))
             return true;
         else if (try_only_first)
             return false;
+    }
 
     if (download_from_source(default_source))
         return true;
@@ -73,8 +75,10 @@ bool Remote::downloadPackage(const Package &d, const String &hash, const path &f
 
     // no try_only_first for additional sources
     for (auto &s : additional_sources)
+    {
         if (download_from_source(s))
             return true;
+    }
     return true;
 }
 

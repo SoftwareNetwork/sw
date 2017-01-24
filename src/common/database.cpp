@@ -866,16 +866,25 @@ void PackagesDatabase::download()
     String git = "git";
     if (has_executable_in_path(git, true))
     {
-        if (!fs::exists(db_repo_dir / ".git"))
+        auto git_init = [this, &git]()
         {
             command::execute({ git,"-C",db_repo_dir.string(),"init","." });
             command::execute({ git,"-C",db_repo_dir.string(),"remote","add","github",db_repo_url });
             command::execute({ git,"-C",db_repo_dir.string(),"fetch","--depth","1","github","master" });
             command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard","FETCH_HEAD" });
+        };
+
+        if (!fs::exists(db_repo_dir / ".git"))
+        {
+            git_init();
         }
         else
         {
-            command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" });
+            if (command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }).rc)
+            {
+                remove_all(db_repo_dir / ".git");
+                git_init();
+            }
         }
     }
     else

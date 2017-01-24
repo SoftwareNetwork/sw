@@ -44,7 +44,7 @@ String repeat(const String &e, int n);
 const String exports_dir_name = "exports";
 const String exports_dir = "${CMAKE_BINARY_DIR}/" + exports_dir_name + "/";
 const String packages_folder = "cppan/packages";
-const String dummy_folder = "cppan/dummy";
+const String dummy_folder = "cppan/service";
 
 //
 const String cmake_config_filename = "CMakeLists.txt";
@@ -2357,7 +2357,7 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
                 ctx.addLine("set(copy 1)");
                 ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
 
-                ctx.addLine("if (${type} STREQUAL STATIC_LIBRARY)");
+                ctx.addLine("if (\"${type}\" STREQUAL STATIC_LIBRARY)");
                 ctx.increaseIndent();
                 ctx.addLine("set(copy 0)");
                 ctx.decreaseIndent();

@@ -96,7 +96,7 @@ struct Settings
     bool use_shared_libs = true;
 
     // do not create links to projects (.sln, CMakeLists.txt)
-    bool silent = true;
+    bool silent = false;
 
     // number of parallel jobs for variable checks
     int var_check_jobs = 0;
