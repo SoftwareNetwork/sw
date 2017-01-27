@@ -43,8 +43,9 @@ String repeat(const String &e, int n);
 // common?
 const String exports_dir_name = "exports";
 const String exports_dir = "${CMAKE_BINARY_DIR}/" + exports_dir_name + "/";
-const String packages_folder = "cppan/packages";
-const String dummy_folder = "cppan/service";
+const String cppan_ide_folder = "CPPAN Targets";
+const String packages_folder = cppan_ide_folder + "/Packages";
+const String service_folder = cppan_ide_folder + "/Service";
 
 //
 const String cmake_config_filename = "CMakeLists.txt";
@@ -240,7 +241,7 @@ void declare_dummy_target(Context &ctx, const String &name)
     ctx.decreaseIndent();
     ctx.addLine("endif()");
     ctx.addLine();
-    set_target_properties(ctx, cppan_dummy_target(name), "FOLDER", "\"cppan/service\"");
+    set_target_properties(ctx, cppan_dummy_target(name), "FOLDER", "\"" + service_folder + "\"");
     ctx.emptyLines();
 }
 
@@ -537,7 +538,7 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
             local.decreaseIndent();
             local.addLine(")");
             local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
-            print_solution_folder(local, build_deps_tgt, dummy_folder);
+            print_solution_folder(local, build_deps_tgt, service_folder);
             local.addLine();
 
             if (has_build_deps)
@@ -993,6 +994,10 @@ void CMakePrinter::print_src_config_file(const path &fn) const
             if (dd.reference.empty())
                 continue;
             ctx.addLine("set(" + dd.reference + " " + rd[d].dependencies[dd.ppath.toString()].target_name + ")");
+
+            ctx.addLine("get_target_property(a " + rd[d].dependencies[dd.ppath.toString()].target_name + " ALIASED_TARGET)");
+            ctx.addLine((rd[d].dependencies[dd.ppath.toString()].flags[pfExecutable] ? "add_executable(" : "add_library(") +
+                dd.reference + " ALIAS ${a})");
         }
     }
 
@@ -1505,6 +1510,9 @@ endif()
             ctx.addLine("PRIVATE   PACKAGE_VERSION=\"" + d.version.toString() + "\"");
             ctx.addLine("PRIVATE   PACKAGE_STRING=\"${this}\"");
             ctx.addLine("PRIVATE   PACKAGE_BUILD_CONFIG=\"$<CONFIG>\"");
+            ctx.addLine("PRIVATE   PACKAGE_BUGREPORT=\"\"");
+            ctx.addLine("PRIVATE   PACKAGE_URL=\"\"");
+            ctx.addLine("PRIVATE   PACKAGE_COPYRIGHT_YEAR=2017"); // FIXME: take current year
             ctx.decreaseIndent();
             ctx.addLine(")");
         }
@@ -2314,7 +2322,7 @@ add_custom_target(run-cppan
 )
 add_dependencies()" + cppan_project_name + R"( run-cppan)
 )");
-            print_solution_folder(ctx, "run-cppan", "cppan/service");
+            print_solution_folder(ctx, "run-cppan", service_folder);
         }
 
         // build deps

@@ -115,6 +115,8 @@ void PackageStore::process(const path &p, Config &root)
                         c.first.target_name + ": cannot find match for " + dep.target_name);
                 }
             }
+            if (!d.second.ppath.is_loc())
+                continue;
             bool ido = d.second.flags[pfIncludeDirectoriesOnly] | i->first.flags[pfIncludeDirectoriesOnly];
             bool pvt = d.second.flags[pfPrivateDependency] | i->first.flags[pfPrivateDependency];
             d.second.flags = i->first.flags;
