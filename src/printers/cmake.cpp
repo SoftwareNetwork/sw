@@ -995,9 +995,15 @@ void CMakePrinter::print_src_config_file(const path &fn) const
                 continue;
             ctx.addLine("set(" + dd.reference + " " + rd[d].dependencies[dd.ppath.toString()].target_name + ")");
 
+            // remove?
+            // do not have a good way for providing an alias to imported target or other alias
+            // ${reference} form must be used
             ctx.addLine("get_target_property(a " + rd[d].dependencies[dd.ppath.toString()].target_name + " ALIASED_TARGET)");
+            ctx.addLine("if(NOT a STREQUAL \"a-NOTFOUND\")");
             ctx.addLine((rd[d].dependencies[dd.ppath.toString()].flags[pfExecutable] ? "add_executable(" : "add_library(") +
                 dd.reference + " ALIAS ${a})");
+            ctx.addLine("endif()");
+            ctx.emptyLines();
         }
     }
 
