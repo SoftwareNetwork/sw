@@ -187,6 +187,7 @@ void cleanPackages(const String &s, int flags)
 void cleanPackage(const Package &pkg, int flags)
 {
     static std::map<Package, int> cleaned_packages;
+    static shared_mutex m;
 
     static const auto cache_dir_bin = enumerate_files(directories.storage_dir_bin);
     static const auto cache_dir_exp = enumerate_files(directories.storage_dir_exp);
@@ -196,7 +197,12 @@ void cleanPackage(const Package &pkg, int flags)
 #endif
 
     // only clean yet uncleaned flags
-    flags = flags & ~cleaned_packages[pkg];
+    {
+        std::shared_lock<shared_mutex> lock(m);
+        auto i = cleaned_packages.find(pkg);
+        if (i != cleaned_packages.end())
+            flags = flags & ~i->second;
+    }
 
     if (flags == 0)
         return;
@@ -268,7 +274,10 @@ void cleanPackage(const Package &pkg, int flags)
     }
 
     // save cleaned packages
-    cleaned_packages[pkg] |= flags;
+    {
+        std::lock_guard<shared_mutex> lock(m);
+        cleaned_packages[pkg] |= flags;
+    }
 }
 
 void cleanPackages(const PackagesSet &pkgs, int flags)

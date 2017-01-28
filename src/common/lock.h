@@ -22,6 +22,7 @@
 
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 
 #define CPPAN_INTERPROCESS_MUTEX(m) ("cppan." m ".m")
 #define CPPAN_STATIC_INTERPROCESS_MUTEX(m) \
@@ -41,6 +42,8 @@ using FileLock = Interprocess::file_lock;
 using FileLockPtr = std::unique_ptr<FileLock>;
 
 using InterprocessMutex = Interprocess::named_mutex;
+
+using shared_mutex = std::shared_timed_mutex;
 
 path get_lock(const path &fn);
 
