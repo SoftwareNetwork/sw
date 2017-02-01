@@ -1805,6 +1805,7 @@ else())");
 
     // aliases
     {
+        // target type
         const String tt = d.flags[pfExecutable] ? "add_executable" : "add_library";
 
         config_section_title(ctx, "aliases");
@@ -1822,6 +1823,12 @@ else())");
         };
         add_aliases(".");
         add_aliases("::");
+
+        if (d.flags[pfLocalProject])
+        {
+            ctx.addLine(tt + "(" + d.ppath.back() + " ALIAS ${this})");
+            ctx.emptyLines();
+        }
 
         if (!p.aliases.empty())
         {

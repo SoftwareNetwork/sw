@@ -36,6 +36,9 @@ using MimeType = String;
 using MimeTypes = std::set<MimeType>;
 
 const MimeTypes source_mime_types{
+    "application/xml",
+    "text/xml",
+
     "inode/x-empty", // empty file
 
     "text/x-asm",
@@ -825,7 +828,11 @@ void Project::load(const yaml &root)
                         if (dependency.ppath.empty())
                             throw std::runtime_error("Could not load local project: " + lp);
                     }
-                    dependency.ppath = ld.value();
+
+                    if (dependency.ppath.is_relative() && rd.has_local_package(ld.value() / dependency.ppath))
+                        dependency.ppath = ld.value() / dependency.ppath;
+                    else // is this really needed?
+                        dependency.ppath = ld.value();
                 }
             }
 
@@ -1055,9 +1062,11 @@ void Project::load(const yaml &root)
     }
     if (defaults_allowed && iempty)
     {
-        std::function<void(const String &, const String &)> autodetect_source_dir;
-        autodetect_source_dir = [this, &autodetect_source_dir](const String &current, const String &next = String())
+        std::function<void(const Strings &)> autodetect_source_dir;
+        autodetect_source_dir = [this, &autodetect_source_dir](const Strings &dirs)
         {
+            const auto &current = dirs[0];
+            const auto &next = dirs[1];
             if (fs::exists(current))
             {
                 if (fs::exists("include"))
@@ -1081,11 +1090,12 @@ void Project::load(const yaml &root)
                 {
                     // now check next dir
                     if (!next.empty())
-                        autodetect_source_dir(next, "");
+                        autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
                 }
             }
         };
-        autodetect_source_dir("src", "lib");
+        // keep empty entry at the end
+        autodetect_source_dir({ "src", "source", "sources", "lib", "" });
     }
     include_directories.public_.insert("${BDIR}");
 

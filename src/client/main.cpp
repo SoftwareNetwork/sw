@@ -450,6 +450,8 @@ void default_run()
     check_spec_file();
 
     Config c;
+    c.allow_relative_project_names = true;
+    c.allow_local_dependencies = true;
     auto &deps = Settings::get_local_settings().dependencies;
     if (deps.empty())
     {
@@ -505,7 +507,10 @@ void load_current_config()
     try
     {
         // load local settings for storage dir
-        Config().load_current_config();
+        Config c;
+        c.allow_relative_project_names = true;
+        c.allow_local_dependencies = true;
+        c.load_current_config();
     }
     catch (...)
     {

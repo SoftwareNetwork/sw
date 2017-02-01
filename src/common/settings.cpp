@@ -204,6 +204,8 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     if (type == SettingsType::Local)
     {
         Project p;
+        p.allow_relative_project_names = true;
+        p.allow_local_dependencies = true;
         p.load(root);
         dependencies = p.dependencies;
     }

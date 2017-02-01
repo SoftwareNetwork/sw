@@ -414,20 +414,26 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
             sname = cppan_fn.parent_path().filename().string();
             p = cppan_fn;
         }
-        else if (fs::exists(main_fn))
-        {
-            read_from_cpp(main_fn);
-            p = main_fn;
-            sname = p.filename().stem().string();
-            cpp_fn = p;
-        }
         else
         {
-            LOG_DEBUG(logger, "No candidates {cppan.yml|main.cpp} for reading in directory " + p.string() +
-                ". Assuming default config.");
+            if (!fs::exists(main_fn) && fs::exists("main.c"))
+                main_fn = "main.c";
 
-            conf = build_spec_file(p);
-            sname = p.filename().string();
+            if (fs::exists(main_fn))
+            {
+                read_from_cpp(main_fn);
+                p = main_fn;
+                sname = p.filename().stem().string();
+                cpp_fn = p;
+            }
+            else
+            {
+                LOG_DEBUG(logger, "No candidates {cppan.yml|main.c[pp]} for reading in directory " + p.string() +
+                    ". Assuming default config.");
+
+                conf = build_spec_file(p);
+                sname = p.filename().string();
+            }
         }
     }
     else
