@@ -863,31 +863,7 @@ void PackagesDatabase::download()
 
     fs::create_directories(db_repo_dir);
 
-    String git = "git";
-    if (has_executable_in_path(git, true))
-    {
-        auto git_init = [this, &git]()
-        {
-            command::execute({ git,"-C",db_repo_dir.string(),"init","." });
-            command::execute({ git,"-C",db_repo_dir.string(),"remote","add","github",db_repo_url });
-            command::execute({ git,"-C",db_repo_dir.string(),"fetch","--depth","1","github","master" });
-            command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard","FETCH_HEAD" });
-        };
-
-        if (!fs::exists(db_repo_dir / ".git"))
-        {
-            git_init();
-        }
-        else
-        {
-            if (command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }).rc)
-            {
-                remove_all(db_repo_dir / ".git");
-                git_init();
-            }
-        }
-    }
-    else
+    auto download_archive = [this]()
     {
         DownloadData dd;
         dd.url = db_master_url;
@@ -900,6 +876,42 @@ void PackagesDatabase::download()
             fs::copy_file(f, db_repo_dir / f.filename(), fs::copy_option::overwrite_if_exists);
         fs::remove_all(unpack_dir);
         fs::remove(dd.fn);
+    };
+
+    String git = "git";
+    if (has_executable_in_path(git, true))
+    {
+        auto git_init = [this, &git]()
+        {
+            command::execute({ git,"-C",db_repo_dir.string(),"init","." });
+            command::execute({ git,"-C",db_repo_dir.string(),"remote","add","github",db_repo_url });
+            command::execute({ git,"-C",db_repo_dir.string(),"fetch","--depth","1","github","master" });
+            command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard","FETCH_HEAD" });
+        };
+
+        try
+        {
+            if (!fs::exists(db_repo_dir / ".git"))
+            {
+                git_init();
+            }
+            else
+            {
+                if (command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }).rc)
+                {
+                    remove_all(db_repo_dir / ".git");
+                    git_init();
+                }
+            }
+        }
+        catch (const std::exception &)
+        {
+            download_archive();
+        }
+    }
+    else
+    {
+        download_archive();
     }
 
     writeDownloadTime();

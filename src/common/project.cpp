@@ -1043,6 +1043,8 @@ void Project::load(const yaml &root)
             root_directory = root / root_directory;
     }
 
+    static const auto source_dir_names = { "src", "source", "sources", "lib" };
+
     // idirs
     bool iempty = include_directories.empty();
     if (defaults_allowed && iempty)
@@ -1094,8 +1096,11 @@ void Project::load(const yaml &root)
                 }
             }
         };
-        // keep empty entry at the end
-        autodetect_source_dir({ "src", "source", "sources", "lib", "" });
+        static Strings dirs(source_dir_names.begin(), source_dir_names.end());
+        // keep the empty entry at the end for autodetect_source_dir()
+        if (dirs.back() != "")
+            dirs.push_back("");
+        autodetect_source_dir(dirs);
     }
     include_directories.public_.insert("${BDIR}");
 
@@ -1108,10 +1113,11 @@ void Project::load(const yaml &root)
         // so do not insert like 'insert(root_directory / "dir/.*");'
         if (fs::exists(root_directory / "include"))
             sources.insert("include/.*");
-        if (fs::exists(root_directory / "src"))
-            sources.insert("src/.*");
-        else if (fs::exists(root_directory / "lib"))
-            sources.insert("lib/.*");
+        for (auto &d : source_dir_names)
+        {
+            if (fs::exists(root_directory / d))
+                sources.insert(d + "/.*"s);
+        }
 
         if (sources.empty())
         {
