@@ -150,13 +150,15 @@ int build_packages(const Config &c, const String &name)
     if (!fs::exists(dst))
         copy_dir(src, dst);
 
+    auto &ls = Settings::get_local_settings();
+
     // setup printer config
     c.process(bs.source_directory);
-    auto printer = Printer::create(Settings::get_local_settings().printerType);
+    auto printer = Printer::create(ls.printerType);
     printer->prepare_build(bs);
 
     auto ret = printer->generate(bs);
-    if (ret)
+    if (ret || ls.generate_only)
         return ret;
     return printer->build(bs);
 }

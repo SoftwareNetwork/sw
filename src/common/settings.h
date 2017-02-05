@@ -125,6 +125,9 @@ struct Settings
     // later this could be replaced with local_settings' Config c;
     Packages dependencies;
 
+    // not for loading from config
+    bool generate_only = false;
+
 public:
     Settings();
 

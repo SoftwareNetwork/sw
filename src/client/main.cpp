@@ -371,9 +371,14 @@ try
         return 0;
     }
 
-    if (options().count("build"))
+    auto generate = options().count("generate");
+    if (options().count("build") || generate)
     {
-        auto build_arg = options["build"].as<String>();
+        if (generate)
+            Settings::get_local_settings().generate_only = true;
+
+        auto build_arg = options[generate ? "generate" : "build"].as<String>();
+
         if (fs::exists(build_arg) || isUrl(build_arg))
             return build(build_arg, options["config"].as<String>());
         else

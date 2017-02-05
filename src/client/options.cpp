@@ -38,8 +38,9 @@ ProgramOptions::ProgramOptions()
         ("verify", po::value<std::string>(), "verify package")
 
         ("config", po::value<std::string>()->default_value(""), "config name for building")
-        ("build", po::value<std::string>(), "file or dir: an inline building")
-        ("build-only", po::value<std::string>(), "file or dir: an inline building without touching any configs")
+        ("generate", po::value<std::string>(), "file or dir: generate project files for inline building")
+        ("build", po::value<std::string>(), "file or dir: inline building")
+        ("build-only", po::value<std::string>(), "file or dir: inline building without touching any configs")
         (BUILD_PACKAGES, po::value<Strings>()->multitoken(), "build existing cppan package")
 
         ("settings", po::value<std::string>()->default_value(""), "file to take settings from")
