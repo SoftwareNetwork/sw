@@ -1670,7 +1670,7 @@ endif()
     {
         config_section_title(ctx, "private definitions");
 
-        // msvc
+        // some compiler options
         ctx.addLine(R"(if (MSVC)
 target_compile_definitions(${this}
     PRIVATE _CRT_SECURE_NO_WARNINGS # disable warning about non-standard functions
@@ -1678,6 +1678,12 @@ target_compile_definitions(${this}
 target_compile_options(${this}
     PRIVATE /wd4005 # macro redefinition
     PRIVATE /wd4996 # The POSIX name for this item is deprecated.
+)
+endif()
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+target_compile_options(${this}
+    PRIVATE -Wmacro-redefined
 )
 endif()
 )");
