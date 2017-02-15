@@ -4,7 +4,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
 #define memset_s(W,WL,V,OL) memset(W,V,OL)
+#endif
 
 #define decshake(bits) \
   int shake##bits(uint8_t*, size_t, const uint8_t*, size_t);
