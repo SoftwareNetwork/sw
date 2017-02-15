@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#ifdef _WIN32
+#ifndef APPLE
 #define memset_s(W,WL,V,OL) memset(W,V,OL)
 #endif
 
