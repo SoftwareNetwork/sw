@@ -139,6 +139,7 @@ if (NOT CPPAN_BUILD)
             yaml-cpp
             archive_static
             sqlite3
+            sha3
             ${CURL_LIBRARIES}
             ${OPENSSL_LIBRARIES}
             ${Boost_LIBRARIES}
@@ -147,6 +148,7 @@ if (NOT CPPAN_BUILD)
         target_link_libraries(common
             yaml-cpp
             sqlite3
+            sha3
             ${LibArchive_LIBRARIES}
             ${CURL_LIBRARIES}
             ${OPENSSL_LIBRARIES}
