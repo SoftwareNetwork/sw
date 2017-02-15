@@ -129,6 +129,7 @@ if (NOT CPPAN_BUILD)
             crypto
             sqlite3
             yaml-cpp
+            sha3
             ${Boost_LIBRARIES}
         )
     elseif (APPLE)

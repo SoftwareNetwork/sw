@@ -19,6 +19,7 @@
 #include <openssl/evp.h>
 
 #include "cppan_string.h"
+#include "constants.h"
 #include "filesystem.h"
 #include "property_tree.h"
 
@@ -69,42 +70,8 @@ struct HttpResponse
     String response;
 };
 
-struct DownloadData
-{
-    struct Hasher
-    {
-        String *hash = nullptr;
-        const EVP_MD *(*hash_function)(void) = nullptr;
-
-        ~Hasher();
-        void finalize();
-        void progress(char *ptr, size_t size, size_t nmemb);
-
-    private:
-#ifndef CPPAN_BUILD
-        std::unique_ptr<EVP_MD_CTX> ctx;
-#else
-        EVP_MD_CTX *ctx = nullptr;
-#endif
-    };
-
-    String url;
-    path fn;
-    int64_t file_size_limit = 1 * 1024 * 1024;
-    Hasher md5;
-    Hasher sha256;
-
-    // service
-    std::ofstream *ofile = nullptr;
-
-    DownloadData();
-
-    void finalize();
-    size_t progress(char *ptr, size_t size, size_t nmemb);
-};
-
 HttpResponse url_request(const HttpRequest &settings);
-void download_file(DownloadData &data);
+void download_file(const String &url, const path &fn, int64_t file_size_limit = 1_MB);
 String download_file(const String &url);
 
 bool isUrl(const String &s);

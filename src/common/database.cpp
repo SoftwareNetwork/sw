@@ -865,17 +865,14 @@ void PackagesDatabase::download()
 
     auto download_archive = [this]()
     {
-        DownloadData dd;
-        dd.url = db_master_url;
-        dd.file_size_limit = 1'000'000'000;
-        dd.fn = get_temp_filename();
-        download_file(dd);
+        auto fn = get_temp_filename();
+        download_file(db_master_url, fn, 1_GB);
         auto unpack_dir = get_temp_filename();
-        auto files = unpack_file(dd.fn, unpack_dir);
+        auto files = unpack_file(fn, unpack_dir);
         for (auto &f : files)
             fs::copy_file(f, db_repo_dir / f.filename(), fs::copy_option::overwrite_if_exists);
         fs::remove_all(unpack_dir);
-        fs::remove(dd.fn);
+        fs::remove(fn);
     };
 
     String git = "git";

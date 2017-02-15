@@ -382,11 +382,10 @@ bool Settings::checkForUpdates() const
     String stamp_file = "/client/.service/linux.stamp";
 #endif
 
-    DownloadData dd;
-    dd.url = remotes[0].url + stamp_file;
-    dd.fn = fs::temp_directory_path() / fs::unique_path();
-    download_file(dd);
-    auto stamp_remote = boost::trim_copy(read_file(dd.fn));
+    auto fn = fs::temp_directory_path() / fs::unique_path();
+    download_file(remotes[0].url + stamp_file, fn);
+    auto stamp_remote = boost::trim_copy(read_file(fn));
+    fs::remove(fn);
     boost::replace_all(stamp_remote, "\"", "");
     uint64_t s1 = std::stoull(cppan_stamp);
     uint64_t s2 = std::stoull(stamp_remote);

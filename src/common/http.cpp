@@ -75,87 +75,12 @@ String getAutoProxy()
     return proxy_addr;
 }
 
-void DownloadData::Hasher::finalize()
-{
-    if (!ctx)
-        return;
-    uint32_t hash_size = 0;
-    uint8_t h[EVP_MAX_MD_SIZE] = { 0 };
-#ifndef CPPAN_BUILD
-    EVP_DigestFinal_ex(ctx.get(), h, &hash_size);
-#else
-    EVP_DigestFinal_ex(ctx, h, &hash_size);
-#endif
-    if (hash)
-        *hash = hash_to_string(h, hash_size);
-#ifndef CPPAN_BUILD
-    ctx.reset();
-#else
-    EVP_MD_CTX_reset(ctx);
-#endif
-}
-
-void DownloadData::Hasher::progress(char *ptr, size_t size, size_t nmemb)
-{
-    if (!hash)
-        return;
-    if (!ctx)
-    {
-#ifndef CPPAN_BUILD
-        ctx = std::make_unique<EVP_MD_CTX>();
-        EVP_MD_CTX_init(ctx.get());
-        EVP_MD_CTX_set_flags(ctx.get(), EVP_MD_CTX_FLAG_ONESHOT);
-        EVP_DigestInit(ctx.get(), hash_function());
-#else
-        ctx = EVP_MD_CTX_create();
-        EVP_MD_CTX_init(ctx);
-        EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_ONESHOT);
-        EVP_DigestInit(ctx, hash_function());
-#endif
-    }
-#ifndef CPPAN_BUILD
-    EVP_DigestUpdate(ctx.get(), ptr, size * nmemb);
-#else
-    EVP_DigestUpdate(ctx, ptr, size * nmemb);
-#endif
-}
-
-DownloadData::Hasher::~Hasher()
-{
-    if (!ctx)
-        return;
-#ifndef CPPAN_BUILD
-    EVP_MD_CTX_cleanup(ctx.get());
-#else
-    EVP_MD_CTX_destroy(ctx);
-#endif
-}
-
-void DownloadData::finalize()
-{
-    md5.finalize();
-    sha256.finalize();
-}
-
-DownloadData::DownloadData()
-{
-    md5.hash_function = &EVP_md5;
-    sha256.hash_function = &EVP_sha256;
-}
-
-size_t DownloadData::progress(char *ptr, size_t size, size_t nmemb)
-{
-    auto read = size * nmemb;
-    ofile->write(ptr, read);
-    md5.progress(ptr, size, nmemb);
-    sha256.progress(ptr, size, nmemb);
-    return read;
-}
-
 size_t curl_write_file(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-    DownloadData &data = *(DownloadData *)userdata;
-    return data.progress(ptr, size, nmemb);
+    auto ofile = (std::ofstream *)userdata;
+    auto read = size * nmemb;
+    ofile->write(ptr, read);
+    return read;
 }
 
 int curl_transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
@@ -174,15 +99,14 @@ size_t curl_write_string(char *ptr, size_t size, size_t nmemb, void *userdata)
     return read;
 }
 
-void download_file(DownloadData &data)
+void download_file(const String &url, const path &fn, int64_t file_size_limit)
 {
-    auto parent = data.fn.parent_path();
+    auto parent = fn.parent_path();
     if (!parent.empty() && !fs::exists(parent))
         fs::create_directories(parent);
-    std::ofstream ofile(data.fn.string(), std::ios::out | std::ios::binary);
+    std::ofstream ofile(fn.string(), std::ios::out | std::ios::binary);
     if (!ofile)
-        throw std::runtime_error("Cannot open file: " + data.fn.string());
-    data.ofile = &ofile;
+        throw std::runtime_error("Cannot open file: " + fn.string());
 
     // set up curl request
     auto curl = curl_easy_init();
@@ -190,7 +114,7 @@ void download_file(DownloadData &data)
     if (httpSettings.verbose)
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 
-    curl_easy_setopt(curl, CURLOPT_URL, data.url.c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 
     // proxy settings
@@ -209,10 +133,10 @@ void download_file(DownloadData &data)
     }
 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ofile);
     curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curl_transfer_info);
-    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &data.file_size_limit);
-    if (data.url.find("https") == 0)
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &file_size_limit);
+    if (url.find("https") == 0)
     {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
@@ -224,33 +148,20 @@ void download_file(DownloadData &data)
     }
 
     auto res = curl_easy_perform(curl);
-    data.finalize();
     long http_code = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     curl_easy_cleanup(curl);
 
     if (res == CURLE_ABORTED_BY_CALLBACK)
     {
-        fs::remove(data.fn);
-        throw std::runtime_error("File '" + data.url + "' is too big. Limit is " + std::to_string(data.file_size_limit) + " bytes.");
+        fs::remove(fn);
+        throw std::runtime_error("File '" + url + "' is too big. Limit is " + std::to_string(file_size_limit) + " bytes.");
     }
     if (res != CURLE_OK)
         throw std::runtime_error("curl error: "s + curl_easy_strerror(res));
 
     if (http_code / 100 != 2)
         throw std::runtime_error("Http returned " + std::to_string(http_code));
-}
-
-String download_file(const String &url)
-{
-    DownloadData dd;
-    dd.url = url;
-    dd.file_size_limit = 1'000'000'000;
-    dd.fn = get_temp_filename();
-    download_file(dd);
-    auto s = read_file(dd.fn);
-    fs::remove(dd.fn);
-    return s;
 }
 
 HttpResponse url_request(const HttpRequest &request)
@@ -323,6 +234,15 @@ HttpResponse url_request(const HttpRequest &request)
         throw std::runtime_error("curl error: "s + curl_easy_strerror(res));
 
     return response;
+}
+
+String download_file(const String &url)
+{
+    auto fn = get_temp_filename();
+    download_file(url, fn, 1_GB);
+    auto s = read_file(fn);
+    fs::remove(fn);
+    return s;
 }
 
 bool isUrl(const String &s)

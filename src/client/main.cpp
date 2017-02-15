@@ -25,6 +25,7 @@
 #include <config.h>
 #include <database.h>
 #include <filesystem.h>
+#include <hash.h>
 #include <http.h>
 #include <logger.h>
 #include <pack.h>
@@ -535,25 +536,20 @@ void self_upgrade()
 
     auto &s = Settings::get_user_settings();
 
-    DownloadData dd;
-    dd.url = s.remotes[0].url + client + ".md5";
-    dd.fn = fs::temp_directory_path() / fs::unique_path();
+    auto fn = fs::temp_directory_path() / fs::unique_path();
     std::cout << "Downloading checksum file" << "\n";
-    download_file(dd);
-    auto md5 = boost::algorithm::trim_copy(read_file(dd.fn));
+    download_file(s.remotes[0].url + client + ".md5", fn, 50_MB);
+    auto md5sum = boost::algorithm::trim_copy(read_file(fn));
 
-    dd.url = s.remotes[0].url + client;
-    dd.fn = fs::temp_directory_path() / fs::unique_path();
-    String dl_md5;
-    dd.md5.hash = &dl_md5;
+    fn = fs::temp_directory_path() / fs::unique_path();
     std::cout << "Downloading the latest client" << "\n";
-    download_file(dd);
-    if (md5 != dl_md5)
+    download_file(s.remotes[0].url + client, fn, 50_MB);
+    if (md5sum != md5(fn))
         throw std::runtime_error("Downloaded bad file (md5 check failed)");
 
     std::cout << "Unpacking" << "\n";
     auto tmp_dir = fs::temp_directory_path() / "cppan.bak";
-    unpack_file(dd.fn, tmp_dir);
+    unpack_file(fn, tmp_dir);
 
     // self update
     auto program = get_program();

@@ -50,12 +50,7 @@ void download_file(path &fn)
     if (!isUrl(s))
         return;
     fn = fn.filename();
-
-    DownloadData dd;
-    dd.url = s;
-    dd.file_size_limit = 1'000'000'000;
-    dd.fn = fn;
-    download_file(dd);
+    download_file(s, fn, 1_GB);
 }
 
 void PackageStore::process(const path &p, Config &root)

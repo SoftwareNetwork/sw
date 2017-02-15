@@ -13,3 +13,4 @@ local_settings:
         pvt.cppan.demo.openssl.crypto: 1
         pvt.cppan.demo.jbeder.yaml_cpp: master
         pvt.cppan.demo.sqlite3: 3
+        pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile

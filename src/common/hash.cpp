@@ -20,6 +20,9 @@
 
 #include <boost/algorithm/string.hpp>
 #include <openssl/evp.h>
+extern "C" {
+#include <keccak-tiny.h>
+}
 
  // keep always digits,lowercase,uppercase
 static const char alnum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -82,4 +85,42 @@ String sha256_short(const String &data)
 String hash_config(const String &c)
 {
     return sha256_short(c);
+}
+
+String sha3_256(const String &data)
+{
+    auto len = 256 / 8;
+    std::string o(len, 0);
+    sha3_256((uint8_t *)&o[0], len, (const uint8_t *)&data[0], data.size());
+    return hash_to_string(o);
+}
+
+String md5(const String &data)
+{
+    uint8_t hash[EVP_MAX_MD_SIZE];
+    uint32_t hash_size;
+    EVP_Digest(data.data(), data.size(), hash, &hash_size, EVP_md5(), nullptr);
+    return hash_to_string(hash, hash_size);
+}
+
+String md5(const path &fn)
+{
+    return md5(read_file(fn, true));
+}
+
+String sha256(const path &fn)
+{
+    return sha256(read_file(fn, true));
+}
+
+String strong_file_hash(const path &fn)
+{
+    // algorithm:
+    //  sha3(sha2(f+sz) + sha3(f+sz) + sz)
+    // sha2, sha3 - 256 bit versions
+
+    // TODO: switch to stream api when such sha3 alg will be available
+    auto sz = std::to_string(fs::file_size(fn));
+    auto f = read_file(fn, true) + sz;
+    return sha3_256(sha256(f) + sha3_256(f) + sz);
 }

@@ -215,12 +215,7 @@ void DownloadSource::operator()(const RemoteFiles &rfs)
 void DownloadSource::download_file(const String &url, const path &fn)
 {
     checkSourceUrl(url);
-
-    DownloadData dd;
-    dd.url = url;
-    dd.fn = fn;
-    dd.file_size_limit = max_file_size;
-    ::download_file(dd);
+    ::download_file(url, fn, max_file_size);
 }
 
 void DownloadSource::download_and_unpack(const String &url, const path &fn)

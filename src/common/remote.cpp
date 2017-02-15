@@ -16,6 +16,7 @@
 
 #include "remote.h"
 
+#include "hash.h"
 #include "package.h"
 #include "templates.h"
 
@@ -39,25 +40,20 @@ Remotes get_default_remotes()
 
 bool Remote::downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first) const
 {
-    String dl_hash;
-    DownloadData ddata;
-    ddata.fn = fn;
-    ddata.sha256.hash = &dl_hash;
-
     auto download_from_source = [&](const auto &s)
     {
-        ddata.url = s(*this, d);
         try
         {
-            download_file(ddata);
+            download_file(s(*this, d), fn);
         }
         catch (const std::exception&)
         {
             return false;
         }
-        if (dl_hash != hash)
-            return false;
-        return true;
+        // remove first cond when server will be using sfh
+        if (hash == sha256(fn) || hash == strong_file_hash(fn))
+            return true;
+        return false;
     };
 
     for (auto &s : primary_sources)
