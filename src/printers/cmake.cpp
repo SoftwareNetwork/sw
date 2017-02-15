@@ -220,7 +220,7 @@ void set_target_properties(Context &ctx, const String &name, const String &prope
 
 void set_target_properties(Context &ctx, const String &property, const String &value)
 {
-    ctx.addLine("set_target_properties(${this} PROPERTIES " + property + " " + value + ")");
+    set_target_properties(ctx, "${this}", property, value);
 }
 
 void declare_dummy_target(Context &ctx, const String &name)
@@ -272,6 +272,16 @@ String prepare_include_directory(const String &i)
         return i;
     return "${SDIR}/" + i;
 };
+
+void print_sdir_bdir(Context &ctx, const Package &d)
+{
+    if (d.flags[pfLocalProject])
+        ctx.addLine("set(SDIR " + normalize_path(rd[d].config->getDefaultProject().root_directory) + ")");
+    else
+        ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
+    ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
+    ctx.emptyLines();
+}
 
 String get_binary_path(const Package &d, const String &prefix)
 {
@@ -474,9 +484,13 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
             }
             local.emptyLines();
 
+            bool deps = false;
             String build_deps_tgt = "${this}";
             if (d.empty() && target.find("-b") != target.npos)
+            {
                 build_deps_tgt += "-d"; // deps
+                deps = true;
+            }
             else
                 build_deps_tgt += "-b-d";
 
@@ -539,6 +553,10 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
             local.addLine(")");
             local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
             print_solution_folder(local, build_deps_tgt, service_folder);
+            if (deps)
+                set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", "dependencies");
+            else
+                set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", (d.flags[pfLocalProject] ? d.ppath.back() : d.target_name) + "-build-dependencies");
             local.addLine();
 
             if (has_build_deps)
@@ -1137,12 +1155,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
         ctx.addLine();
 
-        if (d.flags[pfLocalProject])
-            ctx.addLine("set(SDIR " + normalize_path(p.root_directory) + ")");
-        else
-            ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
-        ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
-        ctx.addLine();
+        print_sdir_bdir(ctx, d);
 
         ctx.addLine("set(LIBRARY_API " + library_api(d) + ")");
         ctx.addLine();
@@ -1329,10 +1342,7 @@ endif()
         if (!d.flags[pfHeaderOnly])
         {
             set_target_properties(ctx, "OUTPUT_NAME", d.target_name);
-            if (d.flags[pfLocalProject])
-                set_target_properties(ctx, "PROJECT_LABEL", d.ppath.back());
-            else
-                set_target_properties(ctx, "PROJECT_LABEL", d.target_name);
+            set_target_properties(ctx, "PROJECT_LABEL", d.flags[pfLocalProject] ? d.ppath.back() : d.target_name);
             ctx.emptyLines();
         }
     }
@@ -1681,9 +1691,9 @@ target_compile_options(${this}
 )
 endif()
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 target_compile_options(${this}
-    PRIVATE -Wmacro-redefined
+    PRIVATE -Wno-macro-redefined
 )
 endif()
 )");
@@ -1893,9 +1903,7 @@ void CMakePrinter::print_src_actions_file(const path &fn) const
     ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR_OLD ${CMAKE_CURRENT_BINARY_DIR})");
     ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR \"" + normalize_path(get_binary_path(d)) + "\")");
     ctx.addLine();
-    ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
-    ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
-    ctx.addLine();
+    print_sdir_bdir(ctx, d);
     ctx.addLine("set(LIBRARY_API " + library_api(d) + ")");
     ctx.addLine();
     print_bs_insertion(ctx, p, "pre sources", &BuildSystemConfigInsertions::pre_sources);
@@ -2315,17 +2323,19 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
         // re-run cppan when root cppan.yml is changed
         if (settings.add_run_cppan_target)
         {
+            print_sdir_bdir(ctx, d);
+
             config_section_title(ctx, "cppan regenerator");
             ctx.addLine(R"(set(file ${CMAKE_CURRENT_BINARY_DIR}/run-cppan.txt)
 add_custom_command(OUTPUT ${file}
     COMMAND ${CPPAN_COMMAND} -d ${PROJECT_SOURCE_DIR}
     COMMAND ${CMAKE_COMMAND} -E echo "" > ${file}
-    DEPENDS ${PROJECT_SOURCE_DIR}/cppan.yml
+    DEPENDS ${SDIR}/cppan.yml
 )
 add_custom_target(run-cppan
     DEPENDS ${file}
     SOURCES
-        ${PROJECT_SOURCE_DIR}/cppan.yml
+        ${SDIR}/cppan.yml
         \")" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + R"(\"
         ${PROJECT_SOURCE_DIR}/cppan/)" + cmake_helpers_filename + R"(
 )
@@ -2614,7 +2624,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     if (d.empty())
     {
         declare_dummy_target(ctx, cppan_dummy_build_target);
+        set_target_properties(ctx, cppan_dummy_target(cppan_dummy_build_target), "PROJECT_LABEL", "build-dependencies");
+
         declare_dummy_target(ctx, cppan_dummy_copy_target);
+        set_target_properties(ctx, cppan_dummy_target(cppan_dummy_copy_target), "PROJECT_LABEL", "copy-dependencies");
+
         ctx.addLine("add_dependencies(" + cppan_dummy_target(cppan_dummy_copy_target) + " " + cppan_dummy_target(cppan_dummy_build_target) + ")");
     }
 
@@ -2713,6 +2727,8 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         if (!o.toolchain.empty())
             args.push_back("-DCMAKE_TOOLCHAIN_FILE=" + o.toolchain);
 
+        //
+        command::Result ret;
         auto print = [](const String &s)
         {
             LOG_INFO(logger, s);
@@ -2720,7 +2736,14 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         command::Options o;
         o.out.action = print;
         o.err.action = print;
-        auto ret = command::execute_and_capture(args, o);
+
+#ifndef _WIN32
+        // hide output for *nix as it very fast there
+        if (N >= 4)
+            ret = command::execute(args);
+        else
+#endif
+            ret = command::execute_and_capture(args, o);
 
         // do not fail (throw), try to read already found variables
         if (ret.rc)

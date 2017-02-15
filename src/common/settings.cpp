@@ -91,16 +91,15 @@ void Settings::load(const yaml &root, const SettingsType type)
         }
     };
 
-    auto get_build_dir = [this](const path &p, SettingsType type)
+    auto get_build_dir = [this](const path &p, SettingsType type, const auto &dirs)
     {
         switch (type)
         {
         case SettingsType::Local:
             return fs::current_path();
         case SettingsType::User:
-            return directories.storage_dir_tmp;
         case SettingsType::System:
-            return temp_directory_path() / "build";
+            return dirs.storage_dir_tmp / "build";
         default:
             return p;
         }
@@ -111,7 +110,7 @@ void Settings::load(const yaml &root, const SettingsType type)
     auto sd = get_storage_dir(storage_dir_type);
     dirs.set_storage_dir(sd);
     dirs.build_dir_type = build_dir_type;
-    dirs.set_build_dir(get_build_dir(build_dir, build_dir_type));
+    dirs.set_build_dir(get_build_dir(build_dir, build_dir_type, dirs));
     directories.update(dirs, type);
 }
 
