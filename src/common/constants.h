@@ -16,29 +16,28 @@
 
 #pragma once
 
-#include <stdint.h>
-
-constexpr auto operator "" _B(uint64_t i)
+constexpr auto operator "" _B(unsigned long long int i)
 {
     return i;
 }
 
-constexpr auto operator "" _KB(uint64_t i)
+constexpr auto operator "" _KB(unsigned long long int i)
 {
     return i * 1024_B;
 }
 
-constexpr auto operator "" _MB(uint64_t i)
+constexpr auto operator "" _MB(unsigned long long int i)
 {
     return i * 1024_KB;
 }
 
-constexpr auto operator "" _GB(uint64_t i)
+constexpr auto operator "" _GB(unsigned long long int i)
 {
     return i * 1024_MB;
 }
 
-constexpr auto operator "" _PB(uint64_t i)
+constexpr auto operator "" _PB(unsigned long long int i)
 {
     return i * 1024_GB;
 }
+
