@@ -33,6 +33,8 @@ if (NOT CPPAN_BUILD)
 
     include_directories(${PROJECT_SOURCE_DIR}/dep/yaml-cpp/include)
     include_directories(${PROJECT_SOURCE_DIR}/dep/sqlite3)
+
+    include_directories(${PROJECT_SOURCE_DIR}/dep/sha3)
 endif()
 
 # process is still in deps

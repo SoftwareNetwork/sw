@@ -77,5 +77,4 @@ add_subdirectory(sqlite3)
 file(GLOB src "sha3/*")
 add_library(sha3 ${src})
 set_property(TARGET sha3 PROPERTY FOLDER dep)
-target_include_directories(sha3 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/sha3)
 
