@@ -484,12 +484,12 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
             }
             local.emptyLines();
 
-            bool deps = false;
+            //bool deps = false;
             String build_deps_tgt = "${this}";
             if (d.empty() && target.find("-b") != target.npos)
             {
                 build_deps_tgt += "-d"; // deps
-                deps = true;
+                //deps = true;
             }
             else
                 build_deps_tgt += "-b-d";
@@ -553,10 +553,11 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
             local.addLine(")");
             local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
             print_solution_folder(local, build_deps_tgt, service_folder);
-            if (deps)
-                set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", "dependencies");
-            else
-                set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", (d.flags[pfLocalProject] ? d.ppath.back() : d.target_name) + "-build-dependencies");
+            //this causes long paths issue
+            //if (deps)
+            //    set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", "dependencies");
+            //else
+            //    set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", (d.flags[pfLocalProject] ? d.ppath.back() : d.target_name) + "-build-dependencies");
             local.addLine();
 
             if (has_build_deps)

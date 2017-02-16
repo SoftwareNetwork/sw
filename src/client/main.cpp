@@ -173,7 +173,6 @@ try
                     size_t a = 2;
 
 #define ASSIGN_ARG(x) if (a < args.size()) o.x = trim_double_quotes(args[a++])
-
                     ParallelCheckOptions o;
                     ASSIGN_ARG(dir);
                     ASSIGN_ARG(vars_file);
@@ -181,7 +180,6 @@ try
                     ASSIGN_ARG(generator);
                     ASSIGN_ARG(toolset);
                     ASSIGN_ARG(toolchain);
-
 #undef ASSIGN_ARG
 
                     CMakePrinter c;
