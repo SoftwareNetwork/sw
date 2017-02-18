@@ -46,6 +46,9 @@ const String exports_dir = "${CMAKE_BINARY_DIR}/" + exports_dir_name + "/";
 const String cppan_ide_folder = "CPPAN Targets";
 const String packages_folder = cppan_ide_folder + "/Packages";
 const String service_folder = cppan_ide_folder + "/Service";
+const String service_deps_folder = service_folder + "/Dependencies";
+const String dependencies_folder = cppan_ide_folder + "/Dependencies";
+const String local_dependencies_folder = dependencies_folder + "/Local";
 
 //
 const String cmake_config_filename = "CMakeLists.txt";
@@ -392,7 +395,7 @@ void print_dependencies(Context &ctx, const Package &d, bool use_cache)
     ctx.splitLines();
 }
 
-void gather_build_deps(Context &ctx, const Packages &dd, Packages &out, bool recursive = false)
+void gather_build_deps(const Packages &dd, Packages &out, bool recursive = false)
 {
     for (auto &dp : dd)
     {
@@ -401,11 +404,11 @@ void gather_build_deps(Context &ctx, const Packages &dd, Packages &out, bool rec
             continue;
         auto i = out.insert(dp);
         if (i.second && recursive)
-            gather_build_deps(ctx, rd[d].dependencies, out, recursive);
+            gather_build_deps(rd[d].dependencies, out, recursive);
     }
 }
 
-void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
+void gather_copy_deps(const Packages &dd, Packages &out)
 {
     for (auto &dp : dd)
     {
@@ -430,11 +433,30 @@ void gather_copy_deps(Context &ctx, const Packages &dd, Packages &out)
         }
         auto i = out.insert(dp);
         if (i.second)
-            gather_copy_deps(ctx, rd[d].dependencies, out);
+            gather_copy_deps(rd[d].dependencies, out);
     }
 }
 
-void print_build_dependencies(Context &ctx, const Package &d, const String &target)
+auto run_command(const Settings &bs, const command::Args &args)
+{
+    auto ret = bs.build_system_verbose ? command::execute_with_output(args) : command::execute_and_capture(args);
+    if (ret.rc && bs.build_system_verbose)
+    {
+        auto fn = get_temp_filename("logs");
+        ret.write(fn);
+        LOG_ERROR(logger, "Output files are available at " << fn);
+    }
+    if (ret.rc == 0 && !bs.build_system_verbose)
+        LOG_INFO(logger, "Ok");
+    return ret;
+}
+
+auto library_api(const Package &d)
+{
+    return CPPAN_EXPORT_PREFIX + d.variable_name;
+}
+
+void CMakePrinter::print_build_dependencies(Context &ctx, const String &target) const
 {
     // direct deps' build actions for non local build
     config_section_title(ctx, "build dependencies");
@@ -447,7 +469,7 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
     {
         Packages build_deps;
         // build only direct deps
-        gather_build_deps(ctx, rd[d].dependencies, build_deps);
+        gather_build_deps(rd[d].dependencies, build_deps);
 
         if (!build_deps.empty())
         {
@@ -470,7 +492,7 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
 
             // TODO: check with ninja and remove if ok
             //Packages build_deps_all;
-            //gather_build_deps(ctx, rd[d].dependencies, build_deps_all, true);
+            //gather_build_deps(rd[d].dependencies, build_deps_all, true);
             //for (auto &dp : build_deps_all)
             for (auto &dp : build_deps)
             {
@@ -484,12 +506,12 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
             }
             local.emptyLines();
 
-            //bool deps = false;
+            bool deps = false;
             String build_deps_tgt = "${this}";
             if (d.empty() && target.find("-b") != target.npos)
             {
                 build_deps_tgt += "-d"; // deps
-                //deps = true;
+                deps = true;
             }
             else
                 build_deps_tgt += "-b-d";
@@ -552,7 +574,7 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
             local.decreaseIndent();
             local.addLine(")");
             local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
-            print_solution_folder(local, build_deps_tgt, service_folder);
+            print_solution_folder(local, build_deps_tgt, deps ? service_folder : service_deps_folder);
             //this causes long paths issue
             //if (deps)
             //    set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", "dependencies");
@@ -570,23 +592,109 @@ void print_build_dependencies(Context &ctx, const Package &d, const String &targ
     ctx.addLine();
 }
 
-auto run_command(const Settings &bs, const command::Args &args)
+void CMakePrinter::print_copy_dependencies(Context &ctx, const String &target) const
 {
-    auto ret = bs.build_system_verbose ? command::execute_with_output(args) : command::execute_and_capture(args);
-    if (ret.rc && bs.build_system_verbose)
-    {
-        auto fn = get_temp_filename("logs");
-        ret.write(fn);
-        LOG_ERROR(logger, "Output files are available at " << fn);
-    }
-    if (ret.rc == 0 && !bs.build_system_verbose)
-        LOG_INFO(logger, "Ok");
-    return ret;
-}
+    config_section_title(ctx, "copy dependencies");
 
-auto library_api(const Package &d)
-{
-    return CPPAN_EXPORT_PREFIX + d.variable_name;
+    ctx.addLine("if (CPPAN_USE_CACHE)");
+    ctx.increaseIndent();
+
+    ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
+    ctx.addLine("if (VISUAL_STUDIO OR XCODE)");
+    ctx.addLine("    set(output_dir ${output_dir}/$<CONFIG>)");
+    ctx.addLine("endif()");
+    ctx.addLine("if (CPPAN_BUILD_OUTPUT_DIR)");
+    ctx.addLine("    set(output_dir ${CPPAN_BUILD_OUTPUT_DIR})");
+    ctx.addLine("endif()");
+    if (d.flags[pfLocalProject])
+        ctx.addLine("set(output_dir $<TARGET_FILE_DIR:${this}>)");
+    ctx.addLine();
+
+    Packages copy_deps;
+    gather_copy_deps(rd[d].dependencies, copy_deps);
+    for (auto &dp : copy_deps)
+    {
+        auto &p = dp.second;
+
+        if (p.flags[pfExecutable])
+        {
+            // if we have an exe, we must include all dependent targets
+            // because they're not visible from exe directly
+            config_section_title(ctx, "Executable build deps for " + dp.second.target_name);
+            print_dependencies(ctx, dp.second, settings.use_cache);
+            config_section_title(ctx, "End of executable build deps for " + dp.second.target_name);
+            ctx.emptyLines();
+        }
+
+        config_section_title(ctx, "Copy " + dp.second.target_name);
+
+        ctx.addLine("set(copy 1)");
+        ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
+
+        ctx.addLine("if (\"${type}\" STREQUAL STATIC_LIBRARY)");
+        ctx.increaseIndent();
+        ctx.addLine("set(copy 0)");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+
+        ctx.addLine("if (CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT)");
+        ctx.increaseIndent();
+        ctx.addLine("set(copy 1)");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+
+        ctx.addLine("if (copy)");
+        ctx.increaseIndent();
+        ctx.addLine("add_custom_command(TARGET " + target + " POST_BUILD");
+        ctx.increaseIndent();
+        ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+        ctx.increaseIndent();
+        if (p.flags[pfExecutable] || (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable))
+        {
+            String name;
+            if (settings.full_path_executables)
+                name = "$<TARGET_FILE_NAME:" + p.target_name + ">";
+            else
+                name = p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}";
+            ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + name);
+        }
+        else
+        {
+            // if we change non-exe name, we still won't fix linker information about dependencies' names
+            ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
+        }
+        ctx.decreaseIndent();
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
+        // import library for shared libs
+        if (settings.copy_import_libs || settings.copy_all_libraries_to_output)
+        {
+            ctx.addLine("if (${type} STREQUAL SHARED_LIBRARY)");
+            ctx.increaseIndent();
+            ctx.addLine("add_custom_command(TARGET " + target + " POST_BUILD");
+            ctx.increaseIndent();
+            ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
+            ctx.increaseIndent();
+            ctx.addLine("$<TARGET_LINKER_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_LINKER_FILE_NAME:" + p.target_name + ">");
+            ctx.decreaseIndent();
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+        }
+
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
+        ctx.addLine();
+    }
+
+    ctx.decreaseIndent();
+    ctx.addLine("endif()");
+    ctx.addLine();
 }
 
 void CMakePrinter::prepare_rebuild() const
@@ -819,14 +927,12 @@ int CMakePrinter::build(const BuildSettings &bs) const
 {
     LOG_INFO(logger, "Starting build process...");
 
-    auto &ls = Settings::get_local_settings();
-
     command::Args args;
     args.push_back("cmake");
     args.push_back("--build");
     args.push_back(normalize_path(bs.binary_directory));
     args.push_back("--config");
-    args.push_back(ls.configuration);
+    args.push_back(settings.configuration);
 
     auto &us = Settings::get_local_settings();
     if (!us.additional_build_args.empty())
@@ -836,7 +942,7 @@ int CMakePrinter::build(const BuildSettings &bs) const
             args.push_back(a);
     }
 
-    return run_command(ls, args).rc;
+    return run_command(settings, args).rc;
 }
 
 void CMakePrinter::clear_cache() const
@@ -1813,7 +1919,12 @@ else())");
     p.checks.write_definitions(ctx, d, p.checks_prefixes);
 
     // build deps
-    print_build_dependencies(ctx, d, "${this}");
+    print_build_dependencies(ctx, "${this}");
+
+    // copy deps for local projects
+    // this is needed for executables that may go to custom folder but without deps
+    if (d.flags[pfLocalProject])
+        print_copy_dependencies(ctx, "${this}");
 
     // export
     config_section_title(ctx, "export");
@@ -2345,110 +2456,17 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
             print_solution_folder(ctx, "run-cppan", service_folder);
         }
 
-        // build deps
-        print_build_dependencies(ctx, d, cppan_dummy_target(cppan_dummy_build_target));
+        print_build_dependencies(ctx, cppan_dummy_target(cppan_dummy_build_target));
+        print_copy_dependencies(ctx, cppan_dummy_target(cppan_dummy_copy_target));
 
-        // copy deps
+        // groups for local projects
+        config_section_title(ctx, "local project groups");
+        Packages out;
+        gather_build_deps({ { "", d } }, out, true);
+        for (auto &dep : out)
         {
-            config_section_title(ctx, "copy dependencies");
-
-            ctx.addLine("if (CPPAN_USE_CACHE)");
-            ctx.increaseIndent();
-
-            ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
-            ctx.addLine("if (VISUAL_STUDIO OR XCODE)");
-            ctx.addLine("    set(output_dir ${output_dir}/$<CONFIG>)");
-            ctx.addLine("endif()");
-            ctx.addLine("if (CPPAN_BUILD_OUTPUT_DIR)");
-            ctx.addLine("    set(output_dir ${CPPAN_BUILD_OUTPUT_DIR})");
-            ctx.addLine("endif()");
-            ctx.addLine();
-
-            Packages copy_deps;
-            gather_copy_deps(ctx, rd[d].dependencies, copy_deps);
-            for (auto &dp : copy_deps)
-            {
-                auto &p = dp.second;
-
-                if (p.flags[pfExecutable])
-                {
-                    // if we have an exe, we must include all dependent targets
-                    // because they're not visible from exe directly
-                    config_section_title(ctx, "Executable build deps for " + dp.second.target_name);
-                    print_dependencies(ctx, dp.second, settings.use_cache);
-                    config_section_title(ctx, "End of executable build deps for " + dp.second.target_name);
-                    ctx.emptyLines();
-                }
-
-                config_section_title(ctx, "Copy " + dp.second.target_name);
-
-                ctx.addLine("set(copy 1)");
-                ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
-
-                ctx.addLine("if (\"${type}\" STREQUAL STATIC_LIBRARY)");
-                ctx.increaseIndent();
-                ctx.addLine("set(copy 0)");
-                ctx.decreaseIndent();
-                ctx.addLine("endif()");
-                ctx.addLine();
-
-                ctx.addLine("if (CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT)");
-                ctx.increaseIndent();
-                ctx.addLine("set(copy 1)");
-                ctx.decreaseIndent();
-                ctx.addLine("endif()");
-                ctx.addLine();
-
-                ctx.addLine("if (copy)");
-                ctx.increaseIndent();
-                ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target(cppan_dummy_copy_target) + " POST_BUILD");
-                ctx.increaseIndent();
-                ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-                ctx.increaseIndent();
-                if (p.flags[pfExecutable] || (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable))
-                {
-                    String name;
-                    if (ls.full_path_executables)
-                        name = "$<TARGET_FILE_NAME:" + p.target_name + ">";
-                    else
-                        name = p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}";
-                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + name);
-                }
-                else
-                {
-                    // if we change non-exe name, we still won't fix linker information about dependencies' names
-                    ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
-                }
-                ctx.decreaseIndent();
-                ctx.decreaseIndent();
-                ctx.addLine(")");
-                ctx.addLine();
-
-                // import library for shared libs
-                if (ls.copy_import_libs || ls.copy_all_libraries_to_output)
-                {
-                    ctx.addLine("if (${type} STREQUAL SHARED_LIBRARY)");
-                    ctx.increaseIndent();
-                    ctx.addLine("add_custom_command(TARGET " + cppan_dummy_target(cppan_dummy_copy_target) + " POST_BUILD");
-                    ctx.increaseIndent();
-                    ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-                    ctx.increaseIndent();
-                    ctx.addLine("$<TARGET_LINKER_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_LINKER_FILE_NAME:" + p.target_name + ">");
-                    ctx.decreaseIndent();
-                    ctx.decreaseIndent();
-                    ctx.addLine(")");
-                    ctx.decreaseIndent();
-                    ctx.addLine("endif()");
-                }
-
-                ctx.decreaseIndent();
-                ctx.addLine("endif()");
-                ctx.addLine();
-            }
-
-            ctx.decreaseIndent();
-            ctx.addLine("endif()");
-            ctx.addLine();
+            if (dep.second.flags[pfLocalProject])
+                print_solution_folder(ctx, dep.second.target_name_hash, local_dependencies_folder);
         }
     }
 

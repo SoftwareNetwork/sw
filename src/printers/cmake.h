@@ -54,6 +54,9 @@ private:
     void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
     void print_source_groups(Context &ctx) const;
 
+    void print_build_dependencies(Context &ctx, const String &target) const;
+    void print_copy_dependencies(Context &ctx, const String &target) const;
+
     bool must_update_contents(const path &fn) const;
     void write_if_older(const path &fn, const String &s) const;
 };
