@@ -353,7 +353,17 @@ void print_dependencies(Context &ctx, const Package &d, bool use_cache)
         else if (dep.flags[pfLocalProject])
         {
             ctx.addLine("if (NOT TARGET " + dep.target_name + ")");
+            ctx.increaseIndent();
+            ctx.addLine("if (CPPAN_USE_CACHE)");
+            ctx.increaseIndent();
             ctx.addLine("add_subdirectory(\"" + normalize_path(dir) + "\" \"" + normalize_path(dep.getDirObj() / "build/${config_dir}") + "\")");
+            ctx.decreaseIndent();
+            ctx.addLine("else()");
+            ctx.increaseIndent();
+            ctx.addLine("add_subdirectory(\"" + normalize_path(dir) + "\" \"" + get_binary_path(dep) + "\")");
+            ctx.decreaseIndent();
+            ctx.addLine("endif()");
+            ctx.decreaseIndent();
             ctx.addLine("endif()");
         }
         else
@@ -2110,6 +2120,8 @@ string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
 )");
 
         config_section_title(ctx, "output settings");
+        ctx.addLine("if (NOT DEFINED CPPAN_USE_CACHE)");
+        ctx.increaseIndent();
         ctx.addLine("if (NOT (VISUAL_STUDIO OR XCODE))");
         ctx.addLine("set(output_dir_suffix ${CMAKE_BUILD_TYPE})");
         ctx.addLine("endif()");
@@ -2120,6 +2132,8 @@ string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
         ctx.addLine();
 
         ctx.addLine("set(CPPAN_USE_CACHE 1)");
+        ctx.decreaseIndent();
+        ctx.addLine("endif()");
     }
 
     print_bs_insertion(ctx, p, "pre project", &BuildSystemConfigInsertions::pre_project);
@@ -2463,11 +2477,13 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
         config_section_title(ctx, "local project groups");
         Packages out;
         gather_build_deps({ { "", d } }, out, true);
+        ctx.addLine("if (CPPAN_HIDE_LOCAL_DEPENDENCIES)");
         for (auto &dep : out)
         {
             if (dep.second.flags[pfLocalProject])
                 print_solution_folder(ctx, dep.second.target_name_hash, local_dependencies_folder);
         }
+        ctx.addLine("endif()");
     }
 
     file_footer(ctx, d);
