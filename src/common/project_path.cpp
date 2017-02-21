@@ -149,19 +149,17 @@ bool ProjectPath::is_relative(const String &username) const
 
 ProjectPath ProjectPath::operator[](PathElementType e) const
 {
+    if (path_elements.empty())
+        return *this;
     switch (e)
     {
     case PathElementType::Namespace:
-        if (path_elements.empty())
-            return *this;
-        return PathElements{ path_elements.begin(), path_elements.begin() + 1 };
+        return path_elements[0];
     case PathElementType::Owner:
-        if (path_elements.size() < 2)
-            return *this;
-        return PathElements{ path_elements.begin() + 1, path_elements.begin() + 2 };
+        return get_owner();
     case PathElementType::Tail:
-        if (path_elements.size() >= 2)
-            return *this;
+        if (path_elements.size() < 2)
+            return ProjectPath();
         return PathElements{ path_elements.begin() + 2, path_elements.end() };
     }
     return *this;

@@ -97,10 +97,16 @@ void Package::createNames()
 
     target_name   = ppath.toString() + (v == "*" ? "" : ("-" + v));
 
-    variable_name = ppath.toString() + (v == "*" ? "" : ("_" + v));
+    // for local projects we use simplified variable name without
+    // the second dir hash argument
+    auto vname = ppath.toString();
+    if (ppath.is_loc())
+        vname = ppath[PathElementType::Namespace] / ppath[PathElementType::Tail];
+
+    variable_name = vname + (v == "*" ? "" : ("_" + v));
     std::replace(variable_name.begin(), variable_name.end(), '.', '_');
 
-    variable_no_version_name = ppath.toString();
+    variable_no_version_name = vname;
     std::replace(variable_no_version_name.begin(), variable_no_version_name.end(), '.', '_');
 
     target_name_hash = getHashShort();

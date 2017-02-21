@@ -16,12 +16,9 @@
 
 #pragma once
 
-#include <openssl/evp.h>
-
 #include "cppan_string.h"
 #include "constants.h"
 #include "filesystem.h"
-#include "property_tree.h"
 
 struct ProxySettings
 {

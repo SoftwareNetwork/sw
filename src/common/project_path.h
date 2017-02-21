@@ -127,6 +127,11 @@ public:
 
     bool operator<(const ProjectPath &rhs) const;
 
+    operator String() const
+    {
+        return toString();
+    }
+
     ROOT_PROJECT_PATH(com);
     ROOT_PROJECT_PATH(loc);
     ROOT_PROJECT_PATH(org);

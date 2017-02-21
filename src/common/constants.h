@@ -36,8 +36,12 @@ constexpr auto operator "" _GB(unsigned long long int i)
     return i * 1024_MB;
 }
 
-constexpr auto operator "" _PB(unsigned long long int i)
+constexpr auto operator "" _TB(unsigned long long int i)
 {
     return i * 1024_GB;
 }
 
+constexpr auto operator "" _PB(unsigned long long int i)
+{
+    return i * 1024_TB;
+}
