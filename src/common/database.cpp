@@ -886,6 +886,12 @@ void PackagesDatabase::download()
             command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard","FETCH_HEAD" });
         };
 
+        auto recover = [this]()
+        {
+            boost::system::error_code ec;
+            remove_all(db_repo_dir / ".git", ec);
+        };
+
         try
         {
             if (!fs::exists(db_repo_dir / ".git"))
@@ -896,13 +902,14 @@ void PackagesDatabase::download()
             {
                 if (command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }).rc)
                 {
-                    remove_all(db_repo_dir / ".git");
+                    recover();
                     git_init();
                 }
             }
         }
         catch (const std::exception &)
         {
+            recover();
             download_archive();
         }
     }
