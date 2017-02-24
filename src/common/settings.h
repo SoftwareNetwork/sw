@@ -128,6 +128,7 @@ struct Settings
 
     // not for loading from config
     bool generate_only = false;
+    bool load_project = true;
 
 public:
     Settings();

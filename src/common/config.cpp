@@ -78,6 +78,14 @@ void Config::load_current_config()
         addDefaultProject();
 }
 
+void Config::load_current_config_settings()
+{
+    if (!fs::exists(dir / CPPAN_FILENAME))
+        return addDefaultProject();
+    auto root = load_yaml_config(dir / CPPAN_FILENAME);
+    load_settings(root, false);
+}
+
 void Config::load(const path &p)
 {
     auto root = load_yaml_config(p);
@@ -90,22 +98,40 @@ void Config::load(const String &s)
     load(root);
 }
 
-void Config::load(const yaml &root)
+void Config::load_settings(const yaml &root, bool load_project)
 {
-    if (root.IsNull() || !root.IsMap())
-    {
-        addDefaultProject();
-        LOG_DEBUG(logger, "Spec file should be a map");
+    if (!check_config_root(root))
         return;
-    }
 
     auto ls = root["local_settings"];
     if (ls.IsDefined())
     {
         if (!ls.IsMap())
             throw std::runtime_error("'local_settings' should be a map");
-        Settings::get_local_settings().load(root["local_settings"], SettingsType::Local);
+        auto &ls = Settings::get_local_settings();
+        ls.load_project = load_project;
+        ls.load(root["local_settings"], SettingsType::Local);
+        ls.load_project = true;
     }
+}
+
+bool Config::check_config_root(const yaml &root)
+{
+    if (root.IsNull() || !root.IsMap())
+    {
+        addDefaultProject();
+        LOG_DEBUG(logger, "Spec file should be a map");
+        return false;
+    }
+    return true;
+}
+
+void Config::load(const yaml &root)
+{
+    if (!check_config_root(root))
+        return;
+
+    load_settings(root);
 
     ProjectPath root_project;
     EXTRACT(root_project, String);

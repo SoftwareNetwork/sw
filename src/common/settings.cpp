@@ -201,7 +201,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     }
 
     // read project settings (deps etc.)
-    if (type == SettingsType::Local)
+    if (type == SettingsType::Local && load_project)
     {
         Project p;
         p.allow_relative_project_names = true;

@@ -512,9 +512,9 @@ void load_current_config()
     {
         // load local settings for storage dir
         Config c;
-        c.allow_relative_project_names = true;
-        c.allow_local_dependencies = true;
-        c.load_current_config();
+        //c.allow_relative_project_names = true;
+        //c.allow_local_dependencies = true;
+        c.load_current_config_settings();
     }
     catch (...)
     {

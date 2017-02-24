@@ -39,6 +39,7 @@ struct Config
     void reload(const path &p);
 
     void load_current_config();
+    void load_current_config_settings();
 
     void process(const path &p = path()) const;
     void post_download() const;
@@ -65,6 +66,9 @@ private:
 
     void addDefaultProject();
     Project &getProject1(const ProjectPath &ppath);
+
+    bool check_config_root(const yaml &root);
+    void load_settings(const yaml &root, bool load_project = true);
 
 public:
     bool defaults_allowed = true;
