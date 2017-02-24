@@ -67,6 +67,7 @@ struct Settings
     SettingsType build_dir_type{ SettingsType::System };
     path build_dir;
     path cppan_dir = ".cppan";
+    path output_dir = "bin";
     // printer
     PrinterType printerType{ PrinterType::CMake };
     // do not check for new cppan version

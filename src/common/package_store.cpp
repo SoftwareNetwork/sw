@@ -29,6 +29,7 @@
 #include "project.h"
 #include "resolver.h"
 #include "settings.h"
+#include "shell_link.h"
 #include "sqlite_database.h"
 #include "templates.h"
 
@@ -273,7 +274,13 @@ void PackageStore::write_index() const
 {
     auto &sdb = getServiceDatabase();
     for (auto &cc : *this)
+    {
         sdb.addInstalledPackage(cc.first);
+#ifdef _WIN32
+        create_link(cc.first.getDirSrc(), directories.storage_dir_lnk / "src" / (cc.first.target_name + ".lnk"), "CPPAN link");
+        create_link(cc.first.getDirObj(), directories.storage_dir_lnk / "obj" / (cc.first.target_name + ".lnk"), "CPPAN link");
+#endif
+    }
 }
 
 Config *PackageStore::add_config(std::unique_ptr<Config> &&config, bool created)

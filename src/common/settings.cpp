@@ -146,6 +146,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     EXTRACT(storage_dir, String);
     EXTRACT(build_dir, String);
     EXTRACT(cppan_dir, String);
+    EXTRACT(output_dir, String);
 
     auto &p = root["proxy"];
     if (p.IsDefined())

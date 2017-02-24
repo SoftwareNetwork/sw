@@ -28,10 +28,7 @@
 #include <program.h>
 #include <resolver.h>
 #include <settings.h>
-
-#ifdef _WIN32
-#include "shell_link.h"
-#endif
+#include <shell_link.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -825,7 +822,7 @@ endif()
 
     // should be after flags
     config_section_title(ctx, "CPPAN include");
-    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path()) + "\")");
+    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(fs::current_path() / s.output_dir) + "\")");
     ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS "s + (s.use_shared_libs ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_DISABLE_CHECKS "s + (bs.disable_checks ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (s.build_system_verbose ? "1" : "0") + ")");
