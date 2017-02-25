@@ -165,6 +165,27 @@ void Config::load(const yaml &root)
     }
 }
 
+void Config::save(const path &dir)
+{
+    dump_yaml_config(dir / CPPAN_FILENAME, save());
+}
+
+yaml Config::save()
+{
+    yaml root;
+    int i = 0;
+    for (auto &p : projects)
+    {
+        auto n = p.first;
+        if (n.empty())
+            n = p.second.name;
+        if (n.empty())
+            n = "name" + std::to_string(i++);
+        root["projects"][n] = p.second.save();
+    }
+    return root;
+}
+
 void Config::clear_vars_cache() const
 {
     for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(directories.storage_dir_cfg), {}))

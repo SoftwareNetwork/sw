@@ -14,6 +14,7 @@ target_link_libraries(client common)
 if (NOT CPPAN_BUILD)
 target_link_libraries(client
     yaml-cpp
+    #readline
     ${Boost_LIBRARIES}
 )
 endif()

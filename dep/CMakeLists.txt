@@ -78,3 +78,9 @@ file(GLOB src "sha3/*")
 add_library(sha3 ${src})
 set_property(TARGET sha3 PROPERTY FOLDER dep)
 
+#file(GLOB src "readline/*")
+#add_library(readline ${src})
+#target_include_directories(readline PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+#target_compile_definitions(readline PUBLIC HAVE_STRING_H)
+#set_property(TARGET readline PROPERTY FOLDER dep)
+

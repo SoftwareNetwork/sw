@@ -41,6 +41,9 @@ struct Config
     void load_current_config();
     void load_current_config_settings();
 
+    void save(const path &dir);
+    yaml save();
+
     void process(const path &p = path()) const;
     void post_download() const;
 

@@ -19,6 +19,7 @@
 #include <string>
 
 #include <boost/algorithm/string.hpp>
+//#include <readline/readline.h>
 
 #include <access_table.h>
 #include <api.h>
@@ -53,6 +54,7 @@ void default_run();
 void init(const Strings &args, const String &log_level);
 void load_current_config();
 void self_upgrade();
+void command_init(const Strings &args);
 
 int main(int argc, char *argv[])
 try
@@ -237,6 +239,12 @@ try
                 return 0;
             }
 
+            if (cmd == "init")
+            {
+                command_init(Strings(args.begin()+2,args.end()));
+                return 0;
+            }
+
             // api
             switch (api_call(cmd, args))
             {
@@ -262,18 +270,25 @@ try
             }
 
             // maybe we entered a package?
-            LOG_WARN(logger, "Trying to build as package");
             try
             {
-                build_package(cmd);
-                return 0;
+                extractFromString(cmd);
+                LOG_WARN(logger, "Trying to build as package");
+                try
+                {
+                    return build_package(cmd);
+                }
+                catch (const std::exception &e)
+                {
+                    LOG_ERROR(logger, e.what());
+                }
+                return 1;
             }
-            catch (const std::exception &e)
+            catch (const std::exception &)
             {
-                LOG_ERROR(logger, e.what());
             }
 
-            std::cout << "unknown command\n";
+            std::cout << "unknown command: " << cmd << "\n";
             return 1;
     }
 #ifdef _WIN32
@@ -906,4 +921,95 @@ ApiResult api_call(const String &cmd, const Strings &args)
     }
 
     return ApiResult::NotHandled;
+}
+
+void command_init(const Strings &args)
+{
+    String project_type = "e";
+    Project p;
+    p.name = fs::current_path().filename().string();
+
+    auto readline = [](String &d)
+    {
+        String s;
+        std::getline(std::cin, s);
+        if (!s.empty())
+            d = s;
+    };
+
+    // interactive mode
+    if (args.empty())
+    {
+        std::cout << "Enter project name [" << p.name << "]: ";
+        readline(p.name);
+        std::cout << "Enter project type (e - executable, l - library) [" << project_type << "]: ";
+        readline(project_type);
+        std::cout << "Add some dependencies (y/n) [n]: ";
+        String add_deps;
+        readline(add_deps);
+        if (add_deps[0] == 'y')
+        {
+            std::cout << "Start entering dependencies' names. You could use TAB to list matching packages.";
+        }
+    }
+    else
+    {
+
+    }
+
+    if (project_type[0] == 'l')
+        p.type = ProjectType::Library;
+
+    boost::system::error_code ec;
+    auto root = fs::current_path();
+
+    // checks first
+    if (fs::exists(root / p.name) ||
+        fs::exists(root / p.name / "src") ||
+        fs::exists(root / p.name / "include") ||
+        fs::exists(root / p.name / "include" / p.name) ||
+        fs::exists(root / p.name / "include" / p.name / (p.name + ".h")) ||
+        fs::exists(root / p.name / "src" / (p.name + ".cpp")) ||
+        0)
+        throw std::runtime_error("One of the fs objects to be created already exist");
+
+    // create, no checks
+    fs::create_directories(root / p.name / "src");
+    if (p.type == ProjectType::Library)
+    {
+        fs::create_directories(root / p.name / "include" / p.name);
+        write_file(root / p.name / "src" / (p.name + ".cpp"), "#include <" + p.name + "/" + p.name + ".h>\n\n");
+        write_file(root / p.name / "include" / p.name / (p.name + ".h"), "//#include <something>\n\n");
+    }
+    else
+    {
+        write_file(root / p.name / "src" / (p.name + ".cpp"), "//#include <something>\n\n"
+            "int main(int argc, char **argv)\n{\n    return 0;\n}\n");
+    }
+
+    p.root_directory = p.name;
+
+    yaml y;
+    if (!fs::exists(CPPAN_FILENAME))
+    {
+        y = p.save();
+    }
+    else
+    {
+        auto orig = load_yaml_config(path(CPPAN_FILENAME));
+        Config c;
+        c.allow_relative_project_names = true;
+        //c.allow_local_dependencies = true;
+        c.load(orig);
+        auto &projects = c.getProjects();
+        if (projects.find(p.name) != projects.end())
+            throw std::runtime_error("Project " + p.name + " already exists in the config");
+        projects[p.name] = p;
+        y = c.save();
+        orig["projects"] = y["projects"];
+        y = orig;
+    }
+    dump_yaml_config(CPPAN_FILENAME, y);
+
+    build(root);
 }

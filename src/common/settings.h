@@ -64,7 +64,7 @@ struct Settings
     // sys/user config settings
     SettingsType storage_dir_type{ SettingsType::User };
     path storage_dir;
-    SettingsType build_dir_type{ SettingsType::System };
+    SettingsType build_dir_type{ SettingsType::Local };
     path build_dir;
     path cppan_dir = ".cppan";
     path output_dir = "bin";

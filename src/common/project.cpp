@@ -1046,63 +1046,65 @@ void Project::load(const yaml &root)
     static const auto source_dir_names = { "src", "source", "sources", "lib" };
 
     // idirs
-    bool iempty = include_directories.empty();
-    if (defaults_allowed && iempty)
     {
-        if (fs::exists("include"))
-            include_directories.public_.insert("include");
-        else
+        bool iempty = include_directories.empty();
+        if (defaults_allowed && iempty)
         {
-            if (fs::exists(root_directory / "include"))
-                include_directories.public_.insert(normalize_path(root_directory / "include"));
+            if (fs::exists("include"))
+                include_directories.public_.insert("include");
             else
             {
-                include_directories.public_.insert(".");
-                // one case left: root_directory / "."
+                if (fs::exists(root_directory / "include"))
+                    include_directories.public_.insert("include");
+                else
+                {
+                    include_directories.public_.insert(".");
+                    // one case left: root_directory / "."
+                }
             }
         }
-    }
-    if (defaults_allowed && iempty)
-    {
-        std::function<void(const Strings &)> autodetect_source_dir;
-        autodetect_source_dir = [this, &autodetect_source_dir](const Strings &dirs)
+        if (defaults_allowed && iempty)
         {
-            const auto &current = dirs[0];
-            const auto &next = dirs[1];
-            if (fs::exists(current))
+            std::function<void(const Strings &)> autodetect_source_dir;
+            autodetect_source_dir = [this, &autodetect_source_dir](const Strings &dirs)
             {
-                if (fs::exists("include"))
-                    include_directories.private_.insert(current);
-                else
-                    include_directories.public_.insert(current);
-            }
-            else
-            {
-                if (fs::exists(root_directory / current))
+                const auto &current = dirs[0];
+                const auto &next = dirs[1];
+                if (fs::exists(current))
                 {
-                    if (fs::exists(root_directory / "include"))
-                        include_directories.private_.insert(normalize_path(root_directory / current));
+                    if (fs::exists("include"))
+                        include_directories.private_.insert(current);
+                    else
+                        include_directories.public_.insert(current);
+                }
+                else
+                {
+                    if (fs::exists(root_directory / current))
+                    {
+                        if (fs::exists(root_directory / "include"))
+                            include_directories.private_.insert(current);
+                        else
+                        {
+                            include_directories.public_.insert(current);
+                            // one case left: root_directory / "src"
+                        }
+                    }
                     else
                     {
-                        include_directories.public_.insert(current);
-                        // one case left: root_directory / "src"
+                        // now check next dir
+                        if (!next.empty())
+                            autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
                     }
                 }
-                else
-                {
-                    // now check next dir
-                    if (!next.empty())
-                        autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
-                }
-            }
-        };
-        static Strings dirs(source_dir_names.begin(), source_dir_names.end());
-        // keep the empty entry at the end for autodetect_source_dir()
-        if (dirs.back() != "")
-            dirs.push_back("");
-        autodetect_source_dir(dirs);
+            };
+            static Strings dirs(source_dir_names.begin(), source_dir_names.end());
+            // keep the empty entry at the end for autodetect_source_dir()
+            if (dirs.back() != "")
+                dirs.push_back("");
+            autodetect_source_dir(dirs);
+        }
+        include_directories.public_.insert("${BDIR}");
     }
-    include_directories.public_.insert("${BDIR}");
 
     // files
     files_loaded = root["files"].IsDefined() && !sources.empty();

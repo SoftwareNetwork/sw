@@ -137,9 +137,13 @@ String Package::getVariableName() const
 
 Package extractFromString(const String &target)
 {
+    auto pos = target.rfind('-');
+    if (pos == target.npos)
+        throw std::runtime_error("Not a package name");
+
     Package p;
-    p.ppath = target.substr(0, target.rfind('-'));
-    p.version = target.substr(target.rfind('-') + 1);
+    p.ppath = target.substr(0, pos);
+    p.version = target.substr(pos + 1);
     p.createNames();
     return p;
 }
