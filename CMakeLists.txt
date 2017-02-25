@@ -44,7 +44,7 @@ project(cppan_client C CXX)
 if (NOT DEFINED VERSION_MAJOR)
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 2)
-set(VERSION_PATCH 1)
+set(VERSION_PATCH 2)
 endif()
 
 # Output directory settings
