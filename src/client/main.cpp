@@ -489,8 +489,7 @@ void default_run()
             c = c2;
         }
     }
-    else
-        c.getDefaultProject().dependencies = deps;
+    c.getDefaultProject().dependencies.insert(deps.begin(), deps.end());
     c.process();
 }
 

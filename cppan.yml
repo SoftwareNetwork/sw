@@ -1,5 +1,5 @@
 local_settings:
-    storage_dir: .cppan_storage
+    #storage_dir: .cppan_storage
 
     dependencies:
         pvt.cppan.demo.boost.filesystem: 1
@@ -14,3 +14,4 @@ local_settings:
         pvt.cppan.demo.jbeder.yaml_cpp: master
         pvt.cppan.demo.sqlite3: 3
         pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile
+        pvt.cppan.demo.gnu.readline.readline: 7

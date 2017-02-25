@@ -54,21 +54,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
 find_package(BISON 3.0 REQUIRED)
 find_package(FLEX REQUIRED)
 
-if (NOT CPPAN_BUILD AND NOT USE_CPPAN_BUILD)
-    set(Boost_USE_STATIC_LIBS ON)
-
-    find_package(Boost 1.60 REQUIRED filesystem program_options log system thread date_time)
-
-    if (NOT WIN32)
-        if (NOT APPLE)
-            find_package(LibArchive REQUIRED)
-        endif()
-        find_package(CURL REQUIRED)
-        find_package(ZLIB REQUIRED)
-        find_package(OpenSSL REQUIRED)
-    endif()
-endif()
-
 ################################################################################
 #
 # compiler & linker settings
@@ -81,7 +66,7 @@ endif()
 
 if (WIN32)
     if (MSVC)
-        set(disable_msvc_warnings "/W3 /wd4458 /wd4714 /wd4127 -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS")
+        set(disable_msvc_warnings "/W3 /wd4458 /wd4714 /wd4127 /wd4275 -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP ${disable_msvc_warnings}")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP ${disable_msvc_warnings}")
 
@@ -91,7 +76,6 @@ if (WIN32)
         endif()
     endif(MSVC)
 endif(WIN32)
-
 
 if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
@@ -103,21 +87,10 @@ endif()
 #
 ################################################################################
 
-if (NOT CPPAN_BUILD AND NOT USE_CPPAN_BUILD)
-    include_directories(${Boost_INCLUDE_DIRS})
-    link_directories(${Boost_LIBRARY_DIRS})
-
-########################################
-# subdirectories
-########################################
-
-    add_subdirectory(dep)
+if (NOT DEFINED CPPAN_BUILD_SHARED_LIBS)
+    set(CPPAN_BUILD_SHARED_LIBS 1)
 endif()
-
-if(EXISTS ${PROJECT_SOURCE_DIR}/.cppan AND USE_CPPAN_BUILD)
-    #set(CPPAN_BUILD_SHARED_LIBS 0)
-    add_subdirectory(.cppan)
-endif()
+add_subdirectory(.cppan)
 
 add_subdirectory(src)
 

@@ -10,36 +10,10 @@ endif()
 
 add_definitions(-DUSE_LOGGER=1)
 
-if (NOT CPPAN_BUILD)
-    if (WIN32)
-        add_definitions(-DLIBARCHIVE_STATIC)
-        include_directories(${PROJECT_SOURCE_DIR}/dep/libarchive)
-        include_directories(${PROJECT_SOURCE_DIR}/dep/libressl/include)
-
-        add_definitions(-DCURL_STATICLIB=1)
-        include_directories(${PROJECT_SOURCE_DIR}/dep/curl/include)
-        include_directories(${PROJECT_BINARY_DIR}/dep/curl/include)
-        include_directories(${PROJECT_BINARY_DIR}/dep/curl/include/curl)
-    else()
-        include_directories(${LibArchive_INCLUDE_DIRS})
-        include_directories(${CURL_INCLUDE_DIRS})
-        include_directories(${OPENSSL_INCLUDE_DIR})
-    endif()
-
-    if (APPLE)
-        add_definitions(-DLIBARCHIVE_STATIC)
-        include_directories(${PROJECT_SOURCE_DIR}/dep/libarchive/libarchive)
-    endif()
-
-    include_directories(${PROJECT_SOURCE_DIR}/dep/yaml-cpp/include)
-    include_directories(${PROJECT_SOURCE_DIR}/dep/sqlite3)
-
-    include_directories(${PROJECT_SOURCE_DIR}/dep/sha3)
-endif()
-
 # process is still in deps
 include_directories(${PROJECT_SOURCE_DIR}/dep/process)
 
+# for dirs & stamps
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -63,11 +37,7 @@ set(inserter_src
 )
 add_executable(inserter ${inserter_src})
 set_property(TARGET inserter PROPERTY FOLDER gen)
-if (NOT CPPAN_BUILD)
-    target_link_libraries(inserter ${Boost_LIBRARIES})
-else()
-    target_link_libraries(inserter pvt.cppan.demo.boost.filesystem)
-endif()
+target_link_libraries(inserter pvt.cppan.demo.boost.filesystem)
 
 ########################################
 # common
@@ -123,41 +93,14 @@ target_link_libraries(common
     extract_comments
 )
 
-if (NOT CPPAN_BUILD)
-    if (WIN32)
-        target_link_libraries(common
-            archive_static
-            libcurl
-            crypto
-            sqlite3
-            yaml-cpp
-            sha3
-            ${Boost_LIBRARIES}
-        )
-    elseif (APPLE)
-        target_link_libraries(common
-            yaml-cpp
-            archive_static
-            sqlite3
-            sha3
-            ${CURL_LIBRARIES}
-            ${OPENSSL_LIBRARIES}
-            ${Boost_LIBRARIES}
-        )
-    else()
-        target_link_libraries(common
-            yaml-cpp
-            sqlite3
-            sha3
-            ${LibArchive_LIBRARIES}
-            ${CURL_LIBRARIES}
-            ${OPENSSL_LIBRARIES}
-            ${Boost_LIBRARIES}
-        )
-    endif()
-else()
-    target_link_libraries(common cppan)
-endif()
+target_link_libraries(common
+    pvt.cppan.demo.boost.log
+    pvt.cppan.demo.badger.curl.libcurl
+    pvt.cppan.demo.libarchive.libarchive
+    pvt.cppan.demo.jbeder.yaml_cpp
+    pvt.cppan.demo.sqlite3
+    pvt.cppan.demo.coruus.keccak_tiny_unrolled
+)
 
 ################################################################################
 
