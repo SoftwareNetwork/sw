@@ -14,5 +14,5 @@ local_settings:
         pvt.cppan.demo.jbeder.yaml_cpp: master
         pvt.cppan.demo.sqlite3: 3
         pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile
-        pvt.cppan.demo.gnu.readline.readline: 7
+        pvt.cppan.demo.yhirose.cpp_linenoise: master
 

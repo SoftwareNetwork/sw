@@ -118,12 +118,18 @@ public:
     Package pkg;
     String license;
     IncludeDirectories include_directories;
+
     // files to compile only
     // when not empty it will be main source to take files from
     Sources sources;
+
     Sources build_files;
     Sources exclude_from_package;
     Sources exclude_from_build;
+
+    Sources public_headers;
+    Sources include_hints;
+
     Packages dependencies;
     BuildSystemConfigInsertions bs_insertions;
     OptionsMap options;

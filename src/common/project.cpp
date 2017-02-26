@@ -982,6 +982,8 @@ void Project::load(const yaml &root)
     read_sources(build_files, "build");
     read_sources(exclude_from_package, "exclude_from_package");
     read_sources(exclude_from_build, "exclude_from_build");
+    read_sources(public_headers, "public_headers");
+    include_hints = get_sequence_set<String>(root, "include_hints");
 
     aliases = get_sequence_set<String>(root, "aliases");
 
@@ -1197,6 +1199,8 @@ yaml Project::save() const
     ADD_SET(build, build_files);
     ADD_SET(exclude_from_package, exclude_from_package);
     ADD_SET(exclude_from_build, exclude_from_build);
+    ADD_SET(public_headers, public_headers);
+    ADD_SET(include_hints, include_hints);
 
     for (auto &v : include_directories.public_)
         root["include_directories"]["public"].push_back(normalize_path(v));

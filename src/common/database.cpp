@@ -1296,6 +1296,19 @@ void PackagesDatabase::listPackages(const String &name) const
     }
 }
 
+Version PackagesDatabase::getExactVersionForPackage(const Package &p) const
+{
+    DownloadDependency d;
+    d.ppath = p.ppath;
+    d.id = getPackageId(p.ppath);
+
+    Version v = p.version;
+    ProjectFlags f;
+    String h;
+    getExactProjectVersionId(d, v, f, h);
+    return v;
+}
+
 template <template <class...> class C>
 C<ProjectPath> PackagesDatabase::getMatchingPackages(const String &name) const
 {

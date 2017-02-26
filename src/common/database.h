@@ -144,6 +144,7 @@ public:
     template <template <class...> class C>
     C<ProjectPath> getMatchingPackages(const String &name = String()) const;
     std::vector<Version> getVersionsForPackage(const ProjectPath &ppath) const;
+    Version getExactVersionForPackage(const Package &p) const;
 
     PackagesSet getDependentPackages(const Package &pkg);
     PackagesSet getDependentPackages(const PackagesSet &pkgs);

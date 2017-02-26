@@ -245,6 +245,8 @@ String dump_yaml_config(const yaml &root)
         "build",
         "exclude_from_package",
         "exclude_from_build",
+        "public_headers",
+        "include_hints",
 
         "include_directories",
         "options",

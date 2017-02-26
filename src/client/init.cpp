@@ -19,32 +19,54 @@
 #include <config.h>
 #include <database.h>
 
-#include <readline/readline.h>
-#include <readline/history.h>
+#include <linenoise.hpp>
 
 #include <iostream>
 
-#include <conio.h>
+const String invitation = "> ";
 
-char **character_name_completion(const char *, int, int);
-char *character_name_generator(const char *, int);
-int old_string = 0;
-String old_s;
+void completion_callback(const char *s, Strings &completions);
 
-int my_getc(FILE *f)
+bool is_y(const String &s)
 {
-    auto c = _getch();
-    old_string = !is_valid_project_path_symbol(c) &&
-        c != '\b' && c != '-';
-    if (!old_string)
+    if (s.empty())
+        return false;
+    return s[0] == 'y' || s[0] == 'Y';
+}
+
+auto read_packages(const String &s)
+{
+    auto &pdb = getPackagesDatabase();
+    auto pkgs = pdb.getMatchingPackages<std::unordered_set>(s);
+    std::vector<String> spkgs;
+    spkgs.reserve(pkgs.size());
+    for (auto &pkg : pkgs)
+        spkgs.push_back(pkg.toString());
+    return spkgs;
+}
+
+auto read_versions(const String &pkg)
+{
+    auto &pdb = getPackagesDatabase();
+    auto versions = pdb.getVersionsForPackage(pkg);
+    std::vector<String> spkgs;
+    spkgs.reserve(versions.size());
+    bool has_versions = false;
+    for (auto &v : versions)
     {
-        old_s = rl_line_buffer;
-        if (c != '\b')
-            old_s += c;
-        else if (!old_s.empty())
-            old_s.resize(old_s.size() - 1);
+        spkgs.push_back(pkg + "-" + v.toString());
+        if (v.isVersion())
+        {
+            has_versions = true;
+            v.patch = -1;
+            spkgs.push_back(pkg + "-" + v.toAnyVersion());
+            v.minor = -1;
+            spkgs.push_back(pkg + "-" + v.toAnyVersion());
+        }
     }
-    return c;
+    if (has_versions)
+        spkgs.push_back(pkg + "-*"); // self, * version
+    return spkgs;
 }
 
 void command_init(const Strings &args)
@@ -71,27 +93,47 @@ void command_init(const Strings &args)
         std::cout << "Add some dependencies (y/n) [n]: ";
         String add_deps;
         readline(add_deps);
-        if (add_deps[0] == 'y')
+        if (is_y(add_deps))
         {
-            std::cout << "Start entering dependencies' names. You could use TAB to list matching packages.\n";
+            std::cout << "Start entering dependency names. Press TAB to list matching packages, ESC to stop.\n";
 
-            rl_attempted_completion_function = character_name_completion;
-            rl_completion_query_items = 50;
-            //rl_editing_mode = 0; // vi mode
-            //rl_getc_function = my_getc;
-            //rl_variable_bind("show-mode-in-prompt", "1");
-            while (auto buffer = ::readline("> "))
+            linenoise::SetCompletionCallback(completion_callback);
+            std::string line;
+            while (!linenoise::Readline(invitation.c_str(), line))
             {
-                printf("You entered: %s\n", buffer);
-                if (*buffer)
-                    add_history(buffer);
-                free(buffer);
+                linenoise::AddHistory(line.c_str());
+                try
+                {
+                    auto d = extractFromString(line);
+
+                    // check pkg
+                    if (read_packages(d.ppath.toString()).empty())
+                    {
+                        std::cout << "No such package.\n";
+                        continue;
+                    }
+
+                    // check version
+                    auto &pdb = getPackagesDatabase();
+                    auto v = pdb.getExactVersionForPackage(d);
+
+                    p.dependencies[d.ppath.toString()] = d;
+                }
+                catch (const std::exception &e)
+                {
+                    if (read_packages(line).size() == 1)
+                    {
+                        std::cout << "Please, enter version after '-' symbol.\n";
+                        continue;
+                    }
+                    std::cout << e.what() << "\n";
+                }
             }
         }
     }
     else
     {
-
+        // use program options
     }
 
     if (project_type[0] == 'l')
@@ -100,7 +142,22 @@ void command_init(const Strings &args)
     boost::system::error_code ec;
     auto root = fs::current_path();
 
+    Config c;
+    c.allow_relative_project_names = true;
+    //c.allow_local_dependencies = true;
+
+    yaml orig;
+    if (fs::is_regular_file(CPPAN_FILENAME))
+    {
+        orig = load_yaml_config(path(CPPAN_FILENAME));
+        c.load(orig);
+    }
+
     // checks first
+    auto &projects = c.getProjects();
+    if (projects.find(p.name) != projects.end())
+        throw std::runtime_error("Project " + p.name + " already exists in the config");
+
     if (fs::exists(root / p.name) ||
         fs::exists(root / p.name / "src") ||
         fs::exists(root / p.name / "include") ||
@@ -108,7 +165,10 @@ void command_init(const Strings &args)
         fs::exists(root / p.name / "include" / p.name / (p.name + ".h")) ||
         fs::exists(root / p.name / "src" / (p.name + ".cpp")) ||
         0)
-        throw std::runtime_error("One of the fs objects to be created already exist");
+        throw std::runtime_error("File or dir with such name already exist");
+
+    // TODO: add deps includes from hints
+    // into header? cpp? <- cpp! to hide from users
 
     // create, no checks
     fs::create_directories(root / p.name / "src");
@@ -133,14 +193,6 @@ void command_init(const Strings &args)
     }
     else
     {
-        auto orig = load_yaml_config(path(CPPAN_FILENAME));
-        Config c;
-        c.allow_relative_project_names = true;
-        //c.allow_local_dependencies = true;
-        c.load(orig);
-        auto &projects = c.getProjects();
-        if (projects.find(p.name) != projects.end())
-            throw std::runtime_error("Project " + p.name + " already exists in the config");
         projects[p.name] = p;
         y = c.save();
         orig["projects"] = y["projects"];
@@ -148,77 +200,47 @@ void command_init(const Strings &args)
     }
     dump_yaml_config(CPPAN_FILENAME, y);
 
-    build(root);
+    build();
 }
 
-char **
-character_name_completion(const char *text, int start, int end)
+void completion_callback(const char *in, Strings &completions)
 {
-    rl_attempted_completion_over = 1;
-    rl_completion_suppress_append = 1;
-    if (*text == 0 && start)
-        return nullptr;
-    return rl_completion_matches(text, character_name_generator);
-}
-
-char *
-character_name_generator(const char *text, int state)
-{
-    static std::vector<String> spkgs;
-    static size_t i;
-    static String t;
-
-    auto read_packages = [](const String &s)
+    String s = in;
+    completions = read_packages(s);
+    if (completions.empty() && !s.empty())
     {
-        auto &pdb = getPackagesDatabase();
-        auto pkgs = pdb.getMatchingPackages<std::unordered_set>(s);
-        std::vector<String> spkgs;
-        spkgs.reserve(pkgs.size());
-        for (auto &pkg : pkgs)
-            spkgs.push_back(pkg.toString());
-        return spkgs;
-    };
-
-    auto read_versions = [](const String &pkg)
-    {
-        auto &pdb = getPackagesDatabase();
-        auto versions = pdb.getVersionsForPackage(pkg);
-        std::vector<String> spkgs;
-        spkgs.reserve(versions.size());
-        bool has_versions = false;
-        for (auto &v : versions)
-        {
-            spkgs.push_back(pkg + "-" + v.toString());
-            if (v.isVersion())
-            {
-                has_versions = true;
-                v.patch = -1;
-                spkgs.push_back(pkg + "-" + v.toAnyVersion());
-                v.minor = -1;
-                spkgs.push_back(pkg + "-" + v.toAnyVersion());
-            }
-        }
-        if (has_versions)
-            spkgs.push_back(pkg); // self, * version
-        return spkgs;
-    };
-
-    if (!state)
-    {
-        i = -1;
-        t = old_string ? old_s : text;
-        spkgs = read_packages(t);
-        if (spkgs.size() == 1)
-            spkgs = read_versions(spkgs[0]);
+        s.resize(s.size() - 1);
+        completions = read_packages(s);
     }
+    if (completions.size() == 1)
+        completions = read_versions(completions[0]);
 
-    while (++i < spkgs.size())
+    std::sort(completions.begin(), completions.end());
+    completions.erase(std::unique(completions.begin(), completions.end()), completions.end());
+
+    std::cout << "\n";
+    bool show = true;
+    if (completions.size() > 50)
     {
-        if (spkgs[i].find(t) != -1)
-        {
-            return strdup(spkgs[i].c_str());
-        }
+        show = false;
+        std::cout << "Display all " << completions.size() << " possibilities? (y or n)" << " ";
+        int c = 0;
+#ifdef _WIN32
+        linenoise::win32read(&c);
+#else
+        read(0, &c, 1);
+#endif
+        std::cout << "\n";
+        show = is_y(s = c);
+        if (!show)
+            completions.clear();
     }
-
-    return nullptr;
+    if (show)
+    {
+        std::ios_base::sync_with_stdio(false);
+        for (auto &c : completions)
+            std::cout << c << "\n";
+        std::ios_base::sync_with_stdio(true);
+    }
+    std::cout << invitation;
 }

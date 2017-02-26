@@ -88,7 +88,7 @@ endif()
 ################################################################################
 
 if (NOT DEFINED CPPAN_BUILD_SHARED_LIBS)
-    set(CPPAN_BUILD_SHARED_LIBS 1)
+    set(CPPAN_BUILD_SHARED_LIBS 0)
 endif()
 add_subdirectory(.cppan)
 
