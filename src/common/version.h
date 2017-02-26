@@ -21,6 +21,7 @@
 
 #define LOCAL_VERSION_NAME "local"
 
+using ProjectId = uint64_t;
 using ProjectVersionId = uint64_t;
 using ProjectVersionNumber = int32_t;
 

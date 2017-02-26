@@ -18,6 +18,14 @@
 
 #include "enums.h"
 
+bool is_valid_project_path_symbol(int c)
+{
+    return
+        c > 0 && c <= 127 &&
+        (isalnum(c) || c == '.' || c == '_')
+        ;
+}
+
 ProjectPath::ProjectPath(String s)
 {
     if (s.size() > 2048)
@@ -27,8 +35,7 @@ ProjectPath::ProjectPath(String s)
     for (auto i = s.begin(); i != s.end(); ++i)
     {
         auto &c = *i;
-        if (c < 0 || c > 127 ||
-            !(isalnum(c) || c == '.' || c == '_'))
+        if (!is_valid_project_path_symbol(c))
             throw std::runtime_error("Bad symbol in project name");
         if (isupper(c))
             c = (char)tolower(c);

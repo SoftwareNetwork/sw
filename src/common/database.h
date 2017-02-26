@@ -139,11 +139,17 @@ public:
 
     IdDependencies findDependencies(const Packages &deps) const;
 
-    void listPackages(const String &name = String());
+    void listPackages(const String &name = String()) const;
+
+    template <template <class...> class C>
+    C<ProjectPath> getMatchingPackages(const String &name = String()) const;
+    std::vector<Version> getVersionsForPackage(const ProjectPath &ppath) const;
 
     PackagesSet getDependentPackages(const Package &pkg);
     PackagesSet getDependentPackages(const PackagesSet &pkgs);
     PackagesSet getTransitiveDependentPackages(const PackagesSet &pkgs);
+
+    ProjectId getPackageId(const ProjectPath &ppath) const;
 
 private:
     path db_repo_dir;

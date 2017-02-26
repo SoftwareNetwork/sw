@@ -833,8 +833,7 @@ PackagesDatabase::PackagesDatabase()
         download();
         load();
     }
-
-    if (!created && isCurrentDbOld())
+    else if (Settings::get_system_settings().can_update_packages_db && isCurrentDbOld())
     {
         LOG_DEBUG(logger, "Checking remote version");
         int version_remote = 0;
@@ -1275,47 +1274,74 @@ PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(ProjectV
     return dependencies;
 }
 
-void PackagesDatabase::listPackages(const String &name)
+void PackagesDatabase::listPackages(const String &name) const
 {
-    int n = 0;
-    String nothing = "nothing found";
-
-    if (name.empty())
+    auto pkgs = getMatchingPackages<std::set>(name);
+    if (pkgs.empty())
     {
-        // print all
-        db->execute("select path from Projects where type_id <> '3' order by path", [&n](SQLITE_CALLBACK_ARGS)
-        {
-            LOG_INFO(logger, cols[0]);
-            n++;
-            return 0;
-        });
-        if (n == 0)
-            LOG_INFO(logger, nothing);
+        LOG_INFO(logger, "nothing found");
         return;
     }
 
-    // print with where %%
-    db->execute("select id, path from Projects where type_id <> '3' and path like '%" + name + "%' order by path", [this, &n](SQLITE_CALLBACK_ARGS)
+    for (auto &pkg : pkgs)
     {
-        String out = cols[1];
+        auto versions = getVersionsForPackage(pkg);
+        String out = pkg.toString();
         out += " (";
-        db->execute(
-            "select case when branch is not null then branch else major || '.' || minor || '.' || patch end as version "
-            "from ProjectVersions where project_id = '" + String(cols[0]) + "' order by branch, major, minor, patch",
-            [&out](SQLITE_CALLBACK_ARGS)
-        {
-            out += cols[0];
-            out += ", ";
-            return 0;
-        });
+        for (auto &v : versions)
+            out += v.toString() + ", ";
         out.resize(out.size() - 2);
         out += ")";
         LOG_INFO(logger, out);
-        n++;
+    }
+}
+
+template <template <class...> class C>
+C<ProjectPath> PackagesDatabase::getMatchingPackages(const String &name) const
+{
+    C<ProjectPath> pkgs;
+    String q;
+    if (name.empty())
+        q = "select path from Projects where type_id <> '3' order by path";
+    else
+        q = "select path from Projects where type_id <> '3' and path like '%" + name + "%' order by path";
+    db->execute(q, [&pkgs](SQLITE_CALLBACK_ARGS)
+    {
+        pkgs.insert(String(cols[0]));
         return 0;
     });
-    if (n == 0)
-        LOG_INFO(logger, nothing);
+    return pkgs;
+}
+
+template std::unordered_set<ProjectPath>
+PackagesDatabase::getMatchingPackages<std::unordered_set>(const String &) const;
+
+template std::set<ProjectPath>
+PackagesDatabase::getMatchingPackages<std::set>(const String &) const;
+
+std::vector<Version> PackagesDatabase::getVersionsForPackage(const ProjectPath &ppath) const
+{
+    std::vector<Version> versions;
+    db->execute(
+        "select case when branch is not null then branch else major || '.' || minor || '.' || patch end as version "
+        "from ProjectVersions where project_id = '" + std::to_string(getPackageId(ppath)) + "' order by branch, major, minor, patch",
+        [&versions](SQLITE_CALLBACK_ARGS)
+    {
+        versions.push_back(String(cols[0]));
+        return 0;
+    });
+    return versions;
+}
+
+ProjectId PackagesDatabase::getPackageId(const ProjectPath &ppath) const
+{
+    ProjectId id = 0;
+    db->execute("select id from Projects where path = '" + ppath.toString() + "'", [&id](SQLITE_CALLBACK_ARGS)
+    {
+        id = std::stoi(cols[0]);
+        return 0;
+    });
+    return id;
 }
 
 PackagesSet PackagesDatabase::getDependentPackages(const Package &pkg)
@@ -1323,13 +1349,7 @@ PackagesSet PackagesDatabase::getDependentPackages(const Package &pkg)
     PackagesSet r;
 
     // 1. Find current project version id.
-    String project_id;
-    db->execute("select id from Projects where path = '" + pkg.ppath.toString() + "'",
-        [&project_id](SQLITE_CALLBACK_ARGS)
-    {
-        project_id = cols[0];
-        return 0;
-    });
+    ProjectId project_id = getPackageId(pkg.ppath);
 
     // 2. Find project versions dependent on this version.
     std::set<std::pair<String, String>> pkgs_s;
@@ -1338,7 +1358,7 @@ PackagesSet PackagesDatabase::getDependentPackages(const Package &pkg)
         "from ProjectVersionDependencies "
         "join ProjectVersions on ProjectVersions.id = project_version_id "
         "join Projects on Projects.id = project_id "
-        "where project_dependency_id = '" + project_id + "'",
+        "where project_dependency_id = '" + std::to_string(project_id) + "'",
         [&pkgs_s](SQLITE_CALLBACK_ARGS)
     {
         pkgs_s.insert({ cols[0], cols[1] });

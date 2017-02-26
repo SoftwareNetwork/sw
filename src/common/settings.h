@@ -129,6 +129,7 @@ struct Settings
     // not for loading from config
     bool generate_only = false;
     bool load_project = true;
+    bool can_update_packages_db = true;
 
 public:
     Settings();

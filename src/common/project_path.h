@@ -31,6 +31,8 @@
         return path_elements[0] == #name; \
     }
 
+bool is_valid_project_path_symbol(int c);
+
 enum class PathElementType
 {
     Namespace,
@@ -139,4 +141,20 @@ public:
 
 private:
     PathElements path_elements;
+
+    friend struct std::hash<ProjectPath>;
 };
+
+namespace std
+{
+    template<> struct hash<ProjectPath>
+    {
+        size_t operator()(const ProjectPath& ppath) const
+        {
+            size_t r = 0;
+            for (const auto &e : ppath.path_elements)
+                r ^= std::hash<String>()(e);
+            return r;
+        }
+    };
+}
