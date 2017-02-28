@@ -31,6 +31,10 @@ struct CheckParameters
     StringSet libraries;
     StringSet flags;
 
+    // TODO: pass all found includes to this test
+    // it is possible only in sequential mode
+    bool all_includes = false;
+
     void writeHeadersBefore(Context &ctx) const;
     void writeHeadersAfter(Context &ctx) const;
     void writeBefore(Context &ctx) const;

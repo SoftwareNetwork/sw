@@ -23,6 +23,8 @@
 
 #include <iostream>
 
+using void_f = std::function<void(void)>;
+
 const String invitation = "> ";
 
 void completion_callback(const char *s, Strings &completions);
@@ -32,6 +34,14 @@ bool is_y(const String &s)
     if (s.empty())
         return false;
     return s[0] == 'y' || s[0] == 'Y';
+}
+
+void readline(String &d)
+{
+    String s;
+    std::getline(std::cin, s);
+    if (!s.empty())
+        d = s;
 }
 
 auto read_packages(const String &s)
@@ -69,31 +79,35 @@ auto read_versions(const String &pkg)
     return spkgs;
 }
 
+bool y_n_branch(const String &s, const void_f &yf = void_f(), const void_f &nf = void_f())
+{
+    std::cout << s << " (y/n) [n]: ";
+    String t;
+    readline(t);
+    bool y = is_y(t);
+    if (yf)
+        yf();
+    else if (nf)
+        nf();
+    return y;
+}
+
 void command_init(const Strings &args)
 {
+    bool script = false;
     String project_type = "e";
     Project p;
     p.name = fs::current_path().filename().string();
 
-    auto readline = [](String &d)
-    {
-        String s;
-        std::getline(std::cin, s);
-        if (!s.empty())
-            d = s;
-    };
-
     // interactive mode
     if (args.empty())
     {
+        script = y_n_branch("Create script?");
         std::cout << "Enter project name [" << p.name << "]: ";
         readline(p.name);
         std::cout << "Enter project type (e - executable, l - library) [" << project_type << "]: ";
         readline(project_type);
-        std::cout << "Add some dependencies (y/n) [n]: ";
-        String add_deps;
-        readline(add_deps);
-        if (is_y(add_deps))
+        y_n_branch("Add some dependencies?", [&]
         {
             std::cout << "Start entering dependency names. Press TAB to list matching packages, ESC to stop.\n";
 
@@ -129,7 +143,7 @@ void command_init(const Strings &args)
                     std::cout << e.what() << "\n";
                 }
             }
-        }
+        });
     }
     else
     {
@@ -142,65 +156,83 @@ void command_init(const Strings &args)
     boost::system::error_code ec;
     auto root = fs::current_path();
 
-    Config c;
-    c.allow_relative_project_names = true;
-    //c.allow_local_dependencies = true;
+    static const auto err_exist = "File or dir with such name already exist";
+    static const auto int_main = "int main(int argc, char **argv)\n{\n    return 0;\n}\n"s;
 
-    yaml orig;
-    if (fs::is_regular_file(CPPAN_FILENAME))
+    if (script)
     {
-        orig = load_yaml_config(path(CPPAN_FILENAME));
-        c.load(orig);
-    }
+        auto n = p.name + ".cpp";
+        if (fs::exists(root / n))
+            throw std::runtime_error(err_exist);
+        write_file(root / n, "/*\n" + dump_yaml_config(p.save()) + "*/\n\n" +
+            int_main);
 
-    // checks first
-    auto &projects = c.getProjects();
-    if (projects.find(p.name) != projects.end())
-        throw std::runtime_error("Project " + p.name + " already exists in the config");
-
-    if (fs::exists(root / p.name) ||
-        fs::exists(root / p.name / "src") ||
-        fs::exists(root / p.name / "include") ||
-        fs::exists(root / p.name / "include" / p.name) ||
-        fs::exists(root / p.name / "include" / p.name / (p.name + ".h")) ||
-        fs::exists(root / p.name / "src" / (p.name + ".cpp")) ||
-        0)
-        throw std::runtime_error("File or dir with such name already exist");
-
-    // TODO: add deps includes from hints
-    // into header? cpp? <- cpp! to hide from users
-
-    // create, no checks
-    fs::create_directories(root / p.name / "src");
-    if (p.type == ProjectType::Library)
-    {
-        fs::create_directories(root / p.name / "include" / p.name);
-        write_file(root / p.name / "src" / (p.name + ".cpp"), "#include <" + p.name + "/" + p.name + ".h>\n\n");
-        write_file(root / p.name / "include" / p.name / (p.name + ".h"), "//#include <something>\n\n");
+        if (y_n_branch("Build project?"))
+            build(root / n);
     }
     else
     {
-        write_file(root / p.name / "src" / (p.name + ".cpp"), "//#include <something>\n\n"
-            "int main(int argc, char **argv)\n{\n    return 0;\n}\n");
-    }
+        Config c;
+        c.allow_relative_project_names = true;
+        //c.allow_local_dependencies = true;
 
-    p.root_directory = p.name;
+        yaml orig;
+        if (fs::is_regular_file(CPPAN_FILENAME))
+        {
+            orig = load_yaml_config(path(CPPAN_FILENAME));
+            c.load(orig);
+        }
 
-    yaml y;
-    if (!fs::exists(CPPAN_FILENAME))
-    {
-        y = p.save();
-    }
-    else
-    {
-        projects[p.name] = p;
-        y = c.save();
-        orig["projects"] = y["projects"];
-        y = orig;
-    }
-    dump_yaml_config(CPPAN_FILENAME, y);
+        // checks first
+        auto &projects = c.getProjects();
+        if (projects.find(p.name) != projects.end())
+            throw std::runtime_error("Project " + p.name + " already exists in the config");
 
-    build();
+        if (fs::exists(root / p.name) ||
+            fs::exists(root / p.name / "src") ||
+            fs::exists(root / p.name / "include") ||
+            fs::exists(root / p.name / "include" / p.name) ||
+            fs::exists(root / p.name / "include" / p.name / (p.name + ".h")) ||
+            fs::exists(root / p.name / "src" / (p.name + ".cpp")) ||
+            0)
+            throw std::runtime_error(err_exist);
+
+        // TODO: add deps includes from hints
+        // into header? cpp? <- cpp! to hide from users
+
+        // create, no checks
+        fs::create_directories(root / p.name / "src");
+        if (p.type == ProjectType::Library)
+        {
+            fs::create_directories(root / p.name / "include" / p.name);
+            write_file(root / p.name / "src" / (p.name + ".cpp"), "#include <" + p.name + "/" + p.name + ".h>\n\n");
+            write_file(root / p.name / "include" / p.name / (p.name + ".h"), "//#include <something>\n\n");
+        }
+        else
+        {
+            write_file(root / p.name / "src" / (p.name + ".cpp"), "//#include <something>\n\n"
+                + int_main);
+        }
+
+        p.root_directory = p.name;
+
+        yaml y;
+        if (!fs::exists(CPPAN_FILENAME))
+        {
+            y = p.save();
+        }
+        else
+        {
+            projects[p.name] = p;
+            y = c.save();
+            orig["projects"] = y["projects"];
+            y = orig;
+        }
+        dump_yaml_config(CPPAN_FILENAME, y);
+
+        if (y_n_branch("Build project?"))
+            build();
+    }
 }
 
 void completion_callback(const char *in, Strings &completions)

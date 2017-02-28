@@ -19,4 +19,4 @@
 #include "package.h"
 
 void verify(const String &target_name);
-void verify(const Package &pkg);
+void verify(const Package &pkg, path fn = path());

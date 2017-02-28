@@ -35,7 +35,7 @@ void verify(const String &target_name)
     verify(pkg);
 }
 
-void verify(const Package &pkg)
+void verify(const Package &pkg, path fn)
 {
     LOG_INFO(logger, "Verifying  : " << pkg.target_name << "...");
 
@@ -57,15 +57,20 @@ void verify(const Package &pkg)
     // download & prepare cppan sources
     // we also resolve dependency here
     {
-        LOG_DEBUG(logger, "Resolving  : " << pkg.target_name << "...");
-        LOG_DEBUG(logger, "Downloading: " << pkg.target_name << "...");
+        bool rm = fn.empty();
+        if (fn.empty())
+        {
+            LOG_DEBUG(logger, "Resolving  : " << pkg.target_name << "...");
+            LOG_DEBUG(logger, "Downloading: " << pkg.target_name << "...");
 
-        auto fn = dir_cppan / make_archive_name();
-        resolve_and_download(pkg, fn);
+            fn = dir_cppan / make_archive_name();
+            resolve_and_download(pkg, fn);
+        }
 
         LOG_DEBUG(logger, "Unpacking  : " << pkg.target_name << "...");
         unpack_file(fn, dir_cppan);
-        fs::remove(fn);
+        if (rm)
+            fs::remove(fn);
     }
 
     // only after cppan resolve step

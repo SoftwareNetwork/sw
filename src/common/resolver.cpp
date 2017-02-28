@@ -229,19 +229,21 @@ void Resolver::download_and_unpack()
             return;
         }
 
-        // verify before any actions, so stop on error
-        if (Settings::get_local_settings().verify_all)
-            verify(d);
-
-        // remove existing version dir
-        cleanPackages(d.target_name);
-
-        // dl
+        // Do this before we clean previous package version!
+        // This is useful when we have network issues during download,
+        // so we won't lost existing package.
         LOG_INFO(logger, "Downloading: " << d.target_name << "...");
 
         // maybe d.target_name instead of version_dir.string()?
-        path fn = make_archive_name(version_dir.string());
+        path fn = make_archive_name((temp_directory_path("dl") / d.target_name).string());
         download(d, fn);
+
+        // verify before cleaning old pkg
+        if (Settings::get_local_settings().verify_all)
+            verify(d, fn);
+
+        // remove existing version dir
+        cleanPackages(d.target_name);
 
         rd.downloads++;
         write_file(hash_file, d.sha256);
@@ -254,6 +256,7 @@ void Resolver::download_and_unpack()
         }
         catch (...)
         {
+            fs::remove(fn);
             fs::remove_all(version_dir);
             throw;
         }
