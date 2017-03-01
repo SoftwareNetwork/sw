@@ -2826,11 +2826,14 @@ void CMakePrinter::write_if_older(const path &fn, const String &s) const
 
 void CMakePrinter::print_source_groups(Context &ctx) const
 {
+    // disabled as very very slow!
+    return;
+
     // check own data
     if (sgs.empty())
     {
         // check db data
-        auto &sdb = getServiceDatabase();
+        auto &sdb = getServiceDatabaseReadOnly();
         sgs = sdb.getSourceGroups(d);
         if (sgs.empty())
         {
@@ -2866,7 +2869,10 @@ void CMakePrinter::print_source_groups(Context &ctx) const
                     }
                 }
             }
-            sdb.setSourceGroups(d, sgs);
+            // add empty sgs to prevent directory lookup on the next run
+            if (sgs.empty())
+                sgs["__cppan_empty"];
+            getServiceDatabase().setSourceGroups(d, sgs);
         }
     }
 

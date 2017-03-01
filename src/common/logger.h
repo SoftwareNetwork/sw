@@ -16,7 +16,7 @@
 
 #pragma once
 
-#if USE_LOGGER
+#ifndef DISABLE_LOGGER
 
 #include <boost/log/trivial.hpp>
 

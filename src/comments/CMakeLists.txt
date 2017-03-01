@@ -17,9 +17,6 @@ FLEX_TARGET(lexer
 )
 ADD_FLEX_BISON_DEPENDENCY(lexer grammar)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 set(parser_src
     ${BISON_grammar_OUTPUTS}
     ${FLEX_lexer_OUTPUTS}

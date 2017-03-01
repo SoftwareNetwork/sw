@@ -61,6 +61,8 @@ public:
     Database(const Database &) = delete;
     Database &operator=(const Database &) = delete;
 
+    void open(bool read_only = false);
+
 protected:
     std::unique_ptr<SqliteDatabase> db;
     path fn;
@@ -68,7 +70,6 @@ protected:
     bool created = false;
     const TableDescriptors &tds;
 
-    void open(bool read_only = false);
     void recreate();
 };
 
@@ -168,6 +169,7 @@ private:
 };
 
 ServiceDatabase &getServiceDatabase(bool init = true);
+ServiceDatabase &getServiceDatabaseReadOnly();
 PackagesDatabase &getPackagesDatabase();
 
 int readPackagesDbSchemaVersion(const path &dir);

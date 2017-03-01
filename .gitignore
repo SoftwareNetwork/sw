@@ -1,14 +1,7 @@
-# tex generated files
-*.log
-*.synctex.gz
-*.aux
-*.toc
-*.pdf
-*.blg
-
 # build files and directories
 /build*
 /win*
+/bin*
 cppan
 .cppan*
 
@@ -18,3 +11,5 @@ cppan
 
 *~
 *.user
+
+*.lnk

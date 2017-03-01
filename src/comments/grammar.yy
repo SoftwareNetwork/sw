@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-#include "driver.h"
+#include "comments/driver.h"
 
 #define yylex(p) p.lex()
 %}

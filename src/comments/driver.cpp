@@ -23,7 +23,7 @@
 // Prevent using <unistd.h> because of bug in flex.
 #define YY_NO_UNISTD_H 1
 #define YY_DECL 1
-#include <lexer.h>
+#include <comments/lexer.h>
 extern yy_comments::parser::symbol_type ll_commentslex(yyscan_t yyscanner, yy_comments::location &loc);
 
 std::vector<std::string> extract_comments(const std::string &s)

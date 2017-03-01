@@ -23,7 +23,7 @@
 // Prevent using <unistd.h> because of bug in flex.
 #define YY_NO_UNISTD_H 1
 #define YY_DECL 1
-#include <lexer.h>
+#include <bazel/lexer.h>
 extern yy_bazel::parser::symbol_type ll_bazellex(yyscan_t yyscanner, yy_bazel::location &loc);
 
 BazelParserDriver::BazelParserDriver()

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-#include "driver.h"
+#include "bazel/driver.h"
 
 #define yylex(p) p.lex()
 %}
@@ -31,7 +31,7 @@
 
 %code requires // forward decl of C++ driver (our parser) in HPP
 {
-#include "bazel.h"
+#include "bazel/bazel.h"
 
 class BazelParserDriver;
 }

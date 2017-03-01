@@ -134,20 +134,28 @@ void PackageStore::process(const path &p, Config &root)
         root.getDefaultProject().checks += cc.second.config->getDefaultProject().checks;
     }
 
-    // make sure you have new printer every time
+    // make sure we have new printer every time
+
+    Executor e(get_max_threads(8));
+    e.throw_exceptions = true;
 
     // print deps
     for (auto &cc : *this)
     {
-        auto &d = cc.first;
+        e.push([&cc, &access_table]
+        {
+            auto &d = cc.first;
 
-        auto printer = Printer::create(Settings::get_local_settings().printerType);
-        printer->access_table = &access_table;
-        printer->d = d;
-        printer->cwd = d.getDirObj();
-        printer->print();
-        printer->print_meta();
+            auto printer = Printer::create(Settings::get_local_settings().printerType);
+            printer->access_table = &access_table;
+            printer->d = d;
+            printer->cwd = d.getDirObj();
+            printer->print();
+            printer->print_meta();
+        });
     }
+
+    e.wait();
 
     ScopedCurrentPath cp(p);
 
@@ -272,13 +280,19 @@ const PackageStore::PackageConfig &PackageStore::operator[](const Package &p) co
 
 void PackageStore::write_index() const
 {
+    auto create_link = [](const auto &p, const auto &ln)
+    {
+        if (!fs::exists(ln))
+            ::create_link(p, ln, "CPPAN link");
+    };
+
     auto &sdb = getServiceDatabase();
     for (auto &cc : *this)
     {
         sdb.addInstalledPackage(cc.first);
 #ifdef _WIN32
-        create_link(cc.first.getDirSrc(), directories.storage_dir_lnk / "src" / (cc.first.target_name + ".lnk"), "CPPAN link");
-        create_link(cc.first.getDirObj(), directories.storage_dir_lnk / "obj" / (cc.first.target_name + ".lnk"), "CPPAN link");
+        create_link(cc.first.getDirSrc(), directories.storage_dir_lnk / "src" / (cc.first.target_name + ".lnk"));
+        create_link(cc.first.getDirObj(), directories.storage_dir_lnk / "obj" / (cc.first.target_name + ".lnk"));
 #endif
     }
 }

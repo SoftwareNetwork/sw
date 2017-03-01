@@ -16,3 +16,143 @@ local_settings:
         pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile
         pvt.cppan.demo.yhirose.cpp_linenoise: master
 
+projects:
+    common:
+        type: lib
+        static_only: true
+
+        files:
+            - src/common/.*
+            - src/context/.*
+            - src/printers/.*
+            - dep/process/.*
+            - src/comments/.*
+            - src/bazel/.*
+
+        exclude_from_package:
+            - src/bazel/test.cpp
+            - src/bazel/.*\.txt
+            - src/comments/.*\.txt
+
+        include_directories:
+            public:
+                - src/common
+            private:
+                - src
+                - src/context
+                - dep/process
+
+        dependencies:
+            - stamp_generator
+            - inserts_generator
+            - pvt.cppan.demo.boost.filesystem: 1
+            - pvt.cppan.demo.boost.log: 1
+            - pvt.cppan.demo.boost.optional: 1
+            - pvt.cppan.demo.boost.program_options: 1
+            - pvt.cppan.demo.boost.property_tree: 1
+            - pvt.cppan.demo.boost.variant: 1
+            - pvt.cppan.demo.badger.curl.libcurl: 7
+            - pvt.cppan.demo.libarchive.libarchive: 3
+            - pvt.cppan.demo.openssl.crypto: 1
+            - pvt.cppan.demo.jbeder.yaml_cpp: master
+            - pvt.cppan.demo.sqlite3: 3
+            - pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile
+
+        options:
+            any:
+                definitions:
+                    private:
+                        - VERSION_MAJOR=0
+                        - VERSION_MINOR=2
+                        - VERSION_PATCH=2
+
+        post_sources: |
+            set(stamp ${BDIR}/stamp.h.in)
+            add_custom_target(gen_stamp
+                COMMAND stamp_generator > ${stamp}
+            )
+            set_property(TARGET gen_stamp PROPERTY FOLDER gen)
+            set_source_files_properties(${stamp} PROPERTIES GENERATED True)
+            set(src ${src} ${stamp})
+
+            add_custom_target(gen_inserts
+                COMMAND inserts_generator ${SDIR}/src/inserts.cpp.in ${BDIR}/inserts.cpp
+                WORKING_DIRECTORY ${SDIR}/src
+                DEPENDS ${SDIR}/src/inserts/functions.cmake
+                SOURCES
+                    ${SDIR}/src/inserts/cppan.h
+                    ${SDIR}/src/inserts/build.cmake
+                    ${SDIR}/src/inserts/functions.cmake
+                    ${SDIR}/src/inserts/generate.cmake
+                    ${SDIR}/src/inserts/exports.cmake
+                    ${SDIR}/src/inserts/header.cmake
+                    ${SDIR}/src/inserts/version.rc.in
+                    ${SDIR}/src/inserts/branch.rc.in
+            )
+            set_property(TARGET gen_inserts PROPERTY FOLDER gen)
+            set_source_files_properties(${BDIR}/inserts.cpp PROPERTIES GENERATED TRUE)
+            set(src ${src} ${BDIR}/inserts.cpp)
+
+            ########################################
+
+            find_package(BISON 3.0 REQUIRED)
+            find_package(FLEX REQUIRED)
+
+            ########################################
+            # bazel_parser
+            ########################################
+
+            BISON_TARGET(grammar_b
+                "${SDIR}/src/bazel/grammar.yy"
+                "${BDIR}/src/bazel/grammar.cpp"
+            )
+            FLEX_TARGET(lexer_b
+                "${SDIR}/src/bazel/lexer.ll"
+                "${BDIR}/src/bazel/lexer.cpp"
+                COMPILE_FLAGS --header-file=${BDIR}/src/bazel/lexer.h
+            )
+            ADD_FLEX_BISON_DEPENDENCY(lexer_b grammar_b)
+
+            set(parser_src
+                ${BISON_grammar_b_OUTPUTS}
+                ${FLEX_lexer_b_OUTPUTS}
+                ${BDIR}/src/bazel/lexer.h
+            )
+            set_source_files_properties(${BDIR}/src/bazel/lexer.h PROPERTIES GENERATED TRUE)
+            set(src ${src} ${parser_src})
+
+            ########################################
+            # extract_comments
+            ########################################
+
+            BISON_TARGET(grammar_c
+                "${SDIR}/src/comments/grammar.yy"
+                "${BDIR}/src/comments/grammar.cpp"
+            )
+            FLEX_TARGET(lexer_c
+                "${SDIR}/src/comments/lexer.ll"
+                "${BDIR}/src/comments/lexer.cpp"
+                COMPILE_FLAGS --header-file=${BDIR}/src/comments/lexer.h
+            )
+            ADD_FLEX_BISON_DEPENDENCY(lexer_c grammar_c)
+
+            set(parser_src
+                ${BISON_grammar_c_OUTPUTS}
+                ${FLEX_lexer_c_OUTPUTS}
+                ${BDIR}/src/comments/lexer.h
+            )
+            set_source_files_properties(${BDIR}/src/comments/lexer.h PROPERTIES GENERATED TRUE)
+            set(src ${src} ${parser_src})
+
+        post_target: |
+            target_include_directories(${this} PRIVATE ${BDIR}/src)
+            add_dependencies(${this} gen_stamp gen_inserts)
+
+    stamp_generator:
+        files: src/stamp_gen.cpp
+
+    inserts_generator:
+        files: src/inserter.cpp
+        dependencies:
+            - pvt.cppan.demo.boost.filesystem: 1
+

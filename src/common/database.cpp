@@ -263,29 +263,31 @@ void writePackagesDbVersion(const path &dir, int version)
 
 ServiceDatabase &getServiceDatabase(bool init)
 {
-#ifdef _WIN32
-    // this holder will init on-disk sdb once
-    // later thread local calls will just open it
-    static ServiceDatabase run_once_db;
+    static ServiceDatabase db;
     if (init)
-        run_once_db.init();
+        db.init();
+    return db;
+}
 
-    thread_local
-#else
-    static
-#endif
-    ServiceDatabase db;
+ServiceDatabase &getServiceDatabaseReadOnly()
+{
+    return getServiceDatabase();
+
+    RUN_ONCE
+    {
+        getServiceDatabase();
+    };
+    static ServiceDatabase db;
+    RUN_ONCE
+    {
+        db.open(true);
+    };
     return db;
 }
 
 PackagesDatabase &getPackagesDatabase()
 {
-#ifdef _WIN32
-    thread_local
-#else
-    static
-#endif
-    PackagesDatabase db;
+    static PackagesDatabase db;
     return db;
 }
 
@@ -708,13 +710,16 @@ void ServiceDatabase::setSourceGroups(const Package &p, const SourceGroups &sgs)
     for (auto &sg : sgs)
     {
         db->execute("insert into SourceGroups (package_id, path) values ('" + std::to_string(id) + "', '" + sg.first + "');");
-        auto sg_id = db->getLastRowId();
-        String q = "insert into SourceGroupFiles values ";
-        for (auto &f : sg.second)
-            q += "('" + std::to_string(sg_id) + "', '" + f + "'),";
-        q.resize(q.size() - 1);
-        q += ";";
-        db->execute(q);
+        if (!sg.second.empty())
+        {
+            auto sg_id = db->getLastRowId();
+            String q = "insert into SourceGroupFiles values ";
+            for (auto &f : sg.second)
+                q += "('" + std::to_string(sg_id) + "', '" + f + "'),";
+            q.resize(q.size() - 1);
+            q += ";";
+            db->execute(q);
+        }
     }
 }
 
