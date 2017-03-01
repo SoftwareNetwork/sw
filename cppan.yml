@@ -16,6 +16,8 @@ local_settings:
         pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile
         pvt.cppan.demo.yhirose.cpp_linenoise: master
 
+root_project: pvt.cppan.client
+
 projects:
     common:
         type: lib
@@ -36,9 +38,8 @@ projects:
 
         include_directories:
             public:
-                - src/common
-            private:
                 - src
+                - src/common
                 - src/context
                 - dep/process
 
@@ -156,3 +157,14 @@ projects:
         dependencies:
             - pvt.cppan.demo.boost.filesystem: 1
 
+    client:
+        files:
+            - src/client/.*
+
+        exclude_from_package:
+            - src/client/.*\.txt
+
+        dependencies:
+            - common
+            - pvt.cppan.demo.boost.program_options: 1
+            - pvt.cppan.demo.yhirose.cpp_linenoise: master
