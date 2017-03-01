@@ -80,7 +80,7 @@ projects:
             set(src ${src} ${stamp})
 
             add_custom_target(gen_inserts
-                COMMAND ${inserts_generator} ${SDIR}/src/inserts.cpp.in ${BDIR}/inserts.cpp
+                COMMAND ${inserts_generator} ${SDIR}/src/inserts/inserts.cpp.in ${BDIR}/inserts.cpp
                 WORKING_DIRECTORY ${SDIR}/src
                 DEPENDS ${SDIR}/src/inserts/functions.cmake
                 SOURCES
