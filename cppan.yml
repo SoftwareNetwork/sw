@@ -157,7 +157,7 @@ projects:
         dependencies:
             - pvt.cppan.demo.boost.filesystem: 1
 
-    client:
+    cppan:
         files:
             - src/client/.*
 
