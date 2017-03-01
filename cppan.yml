@@ -45,8 +45,10 @@ projects:
                 - dep/process
 
         dependencies:
-            - stamp_generator
-            - inserts_generator
+            - name: stamp_generator
+              aliases: stamp_generator
+            - name: inserts_generator
+              aliases: inserts_generator
             - pvt.cppan.demo.boost.filesystem: 1
             - pvt.cppan.demo.boost.log: 1
             - pvt.cppan.demo.boost.optional: 1
