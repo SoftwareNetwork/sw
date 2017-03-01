@@ -163,13 +163,12 @@ void copy_dir(const path &src, const path &dst)
 
 void remove_files_like(const Files &files, const String &regex)
 {
-    boost::system::error_code ec;
     std::regex r(regex);
     for (auto &f : files)
     {
         if (!std::regex_match(f.filename().string(), r))
             continue;
-        fs::remove(f, ec);
+        fs::remove(f);
     }
 }
 
