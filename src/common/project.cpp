@@ -1224,7 +1224,8 @@ void Project::prepareExports() const
     // very stupid algorithm
     auto api = CPPAN_EXPORT_PREFIX + pkg.variable_name;
 
-    auto &srcs = getSources();
+    // disabled because causes self-build issues
+    /*auto &srcs = getSources();
     for (auto &f : srcs)
     {
         auto s = read_file(f, true);
@@ -1246,7 +1247,7 @@ void Project::prepareExports() const
         boost::algorithm::replace_all(s, CPPAN_EPILOG, e);
 
         write_file_if_different(f, s);
-    }
+    }*/
 }
 
 void Project::patchSources() const

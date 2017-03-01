@@ -44,7 +44,7 @@ target_link_libraries(inserter pvt.cppan.demo.boost.filesystem)
 ########################################
 
 add_custom_target(inserts_gen
-    COMMAND inserter ${CMAKE_CURRENT_SOURCE_DIR}/inserts.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
+    COMMAND inserter ${CMAKE_CURRENT_SOURCE_DIR}/inserts/inserts.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
     SOURCES
@@ -72,7 +72,7 @@ set_property(TARGET gen_stamp PROPERTY FOLDER gen)
 file(GLOB common_src "common/*" "printers/*")
 set(common_src ${common_src}
     ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
-    inserts.cpp.in
+    inserts/inserts.cpp.in
 
     ${stamp}
 )
