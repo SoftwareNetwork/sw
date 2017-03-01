@@ -38,6 +38,7 @@ DECLARE_STATIC_LOGGER(logger, "cmake");
 String repeat(const String &e, int n);
 
 // common?
+const String cppan_project_name = "__cppan";
 const String exports_dir_name = "exports";
 const String exports_dir = "${CMAKE_BINARY_DIR}/" + exports_dir_name + "/";
 const String cppan_ide_folder = "CPPAN Targets";
@@ -2421,8 +2422,6 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
 
     // deps
     print_dependencies(ctx, d, settings.use_cache);
-
-    const String cppan_project_name = "cppan";
 
     if (d.empty())
     {

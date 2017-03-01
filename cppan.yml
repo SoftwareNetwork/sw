@@ -46,9 +46,9 @@ projects:
 
         dependencies:
             - name: stamp_generator
-              aliases: stamp_generator
+              ref: stamp_generator
             - name: inserts_generator
-              aliases: inserts_generator
+              ref: inserts_generator
             - pvt.cppan.demo.boost.filesystem: 1
             - pvt.cppan.demo.boost.log: 1
             - pvt.cppan.demo.boost.optional: 1
@@ -73,14 +73,14 @@ projects:
         post_sources: |
             set(stamp ${BDIR}/stamp.h.in)
             add_custom_target(gen_stamp
-                COMMAND stamp_generator > ${stamp}
+                COMMAND ${stamp_generator} > ${stamp}
             )
             set_property(TARGET gen_stamp PROPERTY FOLDER gen)
             set_source_files_properties(${stamp} PROPERTIES GENERATED True)
             set(src ${src} ${stamp})
 
             add_custom_target(gen_inserts
-                COMMAND inserts_generator ${SDIR}/src/inserts.cpp.in ${BDIR}/inserts.cpp
+                COMMAND ${inserts_generator} ${SDIR}/src/inserts.cpp.in ${BDIR}/inserts.cpp
                 WORKING_DIRECTORY ${SDIR}/src
                 DEPENDS ${SDIR}/src/inserts/functions.cmake
                 SOURCES
