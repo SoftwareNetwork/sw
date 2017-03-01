@@ -30,6 +30,7 @@ projects:
             - dep/process/.*
             - src/comments/.*
             - src/bazel/.*
+            - src/inserts/.*
 
         exclude_from_package:
             - src/bazel/test.cpp
