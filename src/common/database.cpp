@@ -263,9 +263,18 @@ void writePackagesDbVersion(const path &dir, int version)
 
 ServiceDatabase &getServiceDatabase(bool init)
 {
-    static ServiceDatabase db;
+#ifdef _WIN32
+    // this holder will init on-disk sdb once
+    // later thread local calls will just open it
+    static ServiceDatabase run_once_db;
     if (init)
-        db.init();
+        run_once_db.init();
+
+    thread_local
+#else
+    static
+#endif
+    ServiceDatabase db;
     return db;
 }
 
@@ -287,7 +296,12 @@ ServiceDatabase &getServiceDatabaseReadOnly()
 
 PackagesDatabase &getPackagesDatabase()
 {
-    static PackagesDatabase db;
+#ifdef _WIN32
+    thread_local
+#else
+    static
+#endif
+    PackagesDatabase db;
     return db;
 }
 
