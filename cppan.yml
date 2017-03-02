@@ -106,6 +106,8 @@ projects:
             # bazel_parser
             ########################################
 
+            execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BDIR}/src/bazel)
+
             BISON_TARGET(grammar_b
                 "${SDIR}/src/bazel/grammar.yy"
                 "${BDIR}/src/bazel/grammar.cpp"
@@ -128,6 +130,8 @@ projects:
             ########################################
             # extract_comments
             ########################################
+
+            execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BDIR}/src/comments)
 
             BISON_TARGET(grammar_c
                 "${SDIR}/src/comments/grammar.yy"

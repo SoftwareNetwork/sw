@@ -161,8 +161,8 @@ SqliteDatabase::SqliteDatabase(sqlite3 *db)
 {
 }
 
-SqliteDatabase::SqliteDatabase(const path &dbname, bool read_only)
-    : read_only(read_only)
+SqliteDatabase::SqliteDatabase(const path &dbname, bool ro)
+    : read_only(ro)
 {
     LOG_TRACE(logger, "Initializing database: " << dbname << (read_only ? ", in-memory mode" : ""));
 
