@@ -29,7 +29,7 @@
 
 #include <iostream>
 
-#include "logger.h"
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
 int build_packages(const String &name, const std::set<Package> &pkgs, const path &settings_fn, const String &config);

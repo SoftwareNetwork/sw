@@ -21,20 +21,21 @@
 #include "database.h"
 #include "directories.h"
 #include "exceptions.h"
-#include "executor.h"
-#include "hash.h"
-#include "hasher.h"
 #include "lock.h"
-#include "pack.h"
 #include "project.h"
 #include "settings.h"
 #include "sqlite_database.h"
-#include "templates.h"
 #include "verifier.h"
 
 #include <boost/algorithm/string.hpp>
 
-#include "logger.h"
+#include <primitives/executor.h>
+#include <primitives/hash.h>
+#include <primitives/hasher.h>
+#include <primitives/pack.h>
+#include <primitives/templates.h>
+
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "resolver");
 
 #define CURRENT_API_LEVEL 1

@@ -19,14 +19,15 @@
 #include "command.h"
 #include "config.h"
 #include "http.h"
-#include "pack.h"
 #include "package.h"
 #include "property_tree.h"
 #include "resolver.h"
 #include "spec.h"
 #include "templates.h"
 
-#include "logger.h"
+#include <primitives/pack.h>
+
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "verifier");
 
 void verify(const String &target_name)

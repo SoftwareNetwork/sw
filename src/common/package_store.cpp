@@ -21,21 +21,22 @@
 #include "database.h"
 #include "directories.h"
 #include "exceptions.h"
-#include "executor.h"
 #include "hash.h"
-#include "hasher.h"
-#include "http.h"
 #include "lock.h"
 #include "project.h"
 #include "resolver.h"
 #include "settings.h"
 #include "shell_link.h"
 #include "sqlite_database.h"
-#include "templates.h"
 
 #include <boost/algorithm/string.hpp>
 
-#include "logger.h"
+#include <primitives/executor.h>
+#include <primitives/hasher.h>
+#include <primitives/http.h>
+#include <primitives/templates.h>
+
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "package_store");
 
 // legacy varname rd - was: response data
@@ -136,26 +137,19 @@ void PackageStore::process(const path &p, Config &root)
 
     // make sure we have new printer every time
 
-    Executor e(get_max_threads(8));
-    e.throw_exceptions = true;
-
     // print deps
+    // do not multithread this! causes livelocks
     for (auto &cc : *this)
     {
-        e.push([&cc, &access_table]
-        {
-            auto &d = cc.first;
+        auto &d = cc.first;
 
-            auto printer = Printer::create(Settings::get_local_settings().printerType);
-            printer->access_table = &access_table;
-            printer->d = d;
-            printer->cwd = d.getDirObj();
-            printer->print();
-            printer->print_meta();
-        });
+        auto printer = Printer::create(Settings::get_local_settings().printerType);
+        printer->access_table = &access_table;
+        printer->d = d;
+        printer->cwd = d.getDirObj();
+        printer->print();
+        printer->print_meta();
     }
-
-    e.wait();
 
     ScopedCurrentPath cp(p);
 

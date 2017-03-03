@@ -17,24 +17,24 @@
 #include "database.h"
 
 #include "command.h"
-#include "date_time.h"
 #include "directories.h"
 #include "enums.h"
 #include "hash.h"
 #include "http.h"
 #include "lock.h"
-#include "pack.h"
 #include "settings.h"
 #include "sqlite_database.h"
 #include "stamp.h"
 #include "templates.h"
 #include "printers/cmake.h"
 
+#include <primitives/pack.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <sqlite3.h>
 
-#include <logger.h>
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "db");
 
 #define PACKAGES_DB_REFRESH_TIME_MINUTES 15

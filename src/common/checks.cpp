@@ -17,7 +17,6 @@
 #include "checks.h"
 #include "checks_detail.h"
 
-#include "context.h"
 #include "hash.h"
 #include "printers/printer.h"
 
@@ -25,7 +24,7 @@
 
 #include <memory>
 
-#include "logger.h"
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "checks");
 
 const std::map<int, Check::Information> check_information{

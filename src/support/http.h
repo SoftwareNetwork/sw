@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "filesystem.h"
+#include <primitives/http.h>
 
-bool pack_files(const path &fn, const Files &files, const path &root_dir);
-Files unpack_file(const path &fn, const path &dst);
+bool isValidSourceUrl(const String &url);
+void checkSourceUrl(const String &url);

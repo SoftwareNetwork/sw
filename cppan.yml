@@ -2,23 +2,24 @@ local_settings:
     #storage_dir: .cppan_storage
 
     dependencies:
-        pvt.cppan.demo.boost.filesystem: 1
-        pvt.cppan.demo.boost.log: 1
         pvt.cppan.demo.boost.optional: 1
         pvt.cppan.demo.boost.program_options: 1
         pvt.cppan.demo.boost.property_tree: 1
         pvt.cppan.demo.boost.variant: 1
-        pvt.cppan.demo.badger.curl.libcurl: 7
-        pvt.cppan.demo.libarchive.libarchive: 3
-        pvt.cppan.demo.openssl.crypto: 1
         pvt.cppan.demo.jbeder.yaml_cpp: master
         pvt.cppan.demo.sqlite3: 3
-        pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile
         pvt.cppan.demo.yhirose.cpp_linenoise: master
 
         pvt.egorpugin.primitives.string: master
         pvt.egorpugin.primitives.filesystem: master
         pvt.egorpugin.primitives.context: master
+        pvt.egorpugin.primitives.date_time: master
+        pvt.egorpugin.primitives.executor: master
+        pvt.egorpugin.primitives.hash: master
+        pvt.egorpugin.primitives.http: master
+        pvt.egorpugin.primitives.lock: master
+        pvt.egorpugin.primitives.log: master
+        pvt.egorpugin.primitives.pack: master
 
 root_project: pvt.cppan.client
 
@@ -29,7 +30,6 @@ projects:
 
         files:
             - src/common/.*
-            - src/context/.*
             - src/printers/.*
             - dep/process/.*
             - src/comments/.*
@@ -45,7 +45,6 @@ projects:
             public:
                 - src
                 - src/common
-                - src/context
                 - dep/process
 
         dependencies:

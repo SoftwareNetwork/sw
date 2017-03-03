@@ -20,7 +20,7 @@
 #include "project.h"
 #include "settings.h"
 
-#include "logger.h"
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "api");
 
 ptree api_call(const Remote &r, const String &api, ptree request)

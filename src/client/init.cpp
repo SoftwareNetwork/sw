@@ -81,7 +81,7 @@ auto read_versions(const String &pkg)
 
 bool y_n_branch(const String &s, const void_f &yf = void_f(), const void_f &nf = void_f())
 {
-    std::cout << s << " (y/n) [n]: ";
+    std::cout << s << " (yes/no) [no]: ";
     String t;
     readline(t);
     bool y = is_y(t);
@@ -96,6 +96,7 @@ void command_init(const Strings &args)
 {
     bool script = false;
     bool build_project = true;
+    bool header_only = false;
     String project_type = "e";
     String idir;
     Project p;
@@ -115,6 +116,8 @@ void command_init(const Strings &args)
         if (project_type[0] == 'l')
         {
             p.type = ProjectType::Library;
+
+            y_n_branch("Header only?", [&] { header_only = true; });
 
             std::cout << "Enter include directory name [" << idir << "]: ";
             readline(idir);
@@ -169,10 +172,12 @@ void command_init(const Strings &args)
         idir = p.name;
         project_type = args[i++];
 
-        if (project_type[0] == 'l')
+        if (project_type[0] == 'l' || project_type[0] == 'h')
         {
             p.type = ProjectType::Library;
             idir = args[i++];
+            if (project_type[0] == 'h')
+                header_only = true;
         }
 
         for (; i < (int)args.size(); i++)
@@ -262,7 +267,8 @@ void command_init(const Strings &args)
         {
             fs::create_directories(root / p.name / "include" / idir);
             write_file(root / p.name / "include" / idir / (p.name + ".h"), "//#include <something>\n\n");
-            write_file(root / p.name / "src" / (p.name + ".cpp"), "#include <" + idir + "/" + p.name + ".h>\n\n");
+            if (header_only)
+                write_file(root / p.name / "src" / (p.name + ".cpp"), "#include <" + idir + "/" + p.name + ".h>\n\n");
         }
         else
         {

@@ -25,7 +25,7 @@
 #include <mutex>
 #include <thread>
 
-#include "logger.h"
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "process");
 
 #ifndef _WIN32

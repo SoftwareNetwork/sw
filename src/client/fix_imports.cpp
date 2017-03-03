@@ -17,12 +17,12 @@
 #include "fix_imports.h"
 
 #include <config.h>
-#include <context.h>
 #include <project_path.h>
 
 #include <printers/cmake.h>
 
 #include <boost/algorithm/string.hpp>
+#include <primitives/context.h>
 
 #include <deque>
 #include <iostream>

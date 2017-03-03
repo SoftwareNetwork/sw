@@ -18,10 +18,8 @@
 
 #include <access_table.h>
 #include <command.h>
-#include <date_time.h>
 #include <database.h>
 #include <directories.h>
-#include <executor.h>
 #include <hash.h>
 #include <lock.h>
 #include <inserts.h>
@@ -32,7 +30,11 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <logger.h>
+#include <primitives/context.h>
+#include <primitives/date_time.h>
+#include <primitives/executor.h>
+
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "cmake");
 
 String repeat(const String &e, int n);

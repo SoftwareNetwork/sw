@@ -26,8 +26,6 @@
 #include <filesystem.h>
 #include <hash.h>
 #include <http.h>
-#include <logger.h>
-#include <pack.h>
 #include <printers/cmake.h>
 #include <program.h>
 #include <settings.h>
@@ -35,9 +33,13 @@
 #include <verifier.h>
 
 #include <boost/algorithm/string.hpp>
+#include <primitives/pack.h>
 
 #include <iostream>
 #include <thread>
+
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "main");
 
 enum class ApiResult
 {

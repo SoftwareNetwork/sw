@@ -18,17 +18,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 ########################################
-# context
-########################################
-
-set(context_src
-    context/context.cpp
-    context/context.h
-)
-add_library(context ${context_src})
-target_include_directories(context INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/context)
-
-########################################
 # inserter
 ########################################
 
@@ -38,6 +27,23 @@ set(inserter_src
 add_executable(inserter ${inserter_src})
 set_property(TARGET inserter PROPERTY FOLDER gen)
 target_link_libraries(inserter pvt.cppan.demo.boost.filesystem)
+
+########################################
+# support
+########################################
+
+file(GLOB common_src "support/*")
+set(common_src ${common_src})
+add_library(support ${common_src})
+add_dependencies(support inserts_gen gen_stamp)
+target_include_directories(support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
+
+target_link_libraries(support
+    pvt.egorpugin.primitives.hash
+    pvt.egorpugin.primitives.http
+    pvt.egorpugin.primitives.log
+    pvt.egorpugin.primitives.lock
+)
 
 ########################################
 # common
@@ -88,18 +94,19 @@ target_include_directories(common
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common
 )
 target_link_libraries(common
-    context
+    support
     bazel_parser
     extract_comments
 )
 
 target_link_libraries(common
-    pvt.cppan.demo.boost.log
-    pvt.cppan.demo.badger.curl.libcurl
-    pvt.cppan.demo.libarchive.libarchive
     pvt.cppan.demo.jbeder.yaml_cpp
     pvt.cppan.demo.sqlite3
-    pvt.cppan.demo.coruus.keccak_tiny_unrolled
+
+    pvt.egorpugin.primitives.context
+    pvt.egorpugin.primitives.pack
+    pvt.egorpugin.primitives.date_time
+    pvt.egorpugin.primitives.executor
 )
 
 ################################################################################

@@ -27,7 +27,7 @@
 #include <iostream>
 #include <regex>
 
-#include <logger.h>
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "package");
 
 path Package::getDir(const path &p) const

@@ -17,22 +17,22 @@
 #include "config.h"
 
 #include "access_table.h"
-#include "context.h"
 #include "database.h"
 #include "directories.h"
 #include "lock.h"
-#include "hash.h"
-#include "hasher.h"
 #include "resolver.h"
 #include "settings.h"
 #include "yaml.h"
 
 #include <boost/algorithm/string.hpp>
 
+#include <primitives/hash.h>
+#include <primitives/hasher.h>
+
 #include <fstream>
 #include <iostream>
 
-#include "logger.h"
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "config");
 
 Config::Config()

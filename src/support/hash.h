@@ -16,23 +16,22 @@
 
 #pragma once
 
-#include "cppan_string.h"
-#include "filesystem.h"
+#include <primitives/hash.h>
 
-struct Hasher
+#define CPPAN_CONFIG_HASH_METHOD "SHA256"
+#define CPPAN_CONFIG_HASH_SHORT_LENGTH 8
+
+inline String shorten_hash(const String &data)
 {
-    String hash;
+    return shorten_hash(data, CPPAN_CONFIG_HASH_SHORT_LENGTH);
+}
 
-#define ADD_OPERATOR(t)  \
-    Hasher operator|(t); \
-    Hasher &operator|=(t)
+inline String sha256_short(const String &data)
+{
+    return shorten_hash(sha256(data));
+}
 
-    ADD_OPERATOR(bool);
-    ADD_OPERATOR(const String &);
-    ADD_OPERATOR(const path &);
-
-#undef ADD_OPERATOR
-
-private:
-    void do_hash();
-};
+inline String hash_config(const String &c)
+{
+    return sha256_short(c);
+}

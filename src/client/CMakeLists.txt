@@ -13,6 +13,9 @@ target_link_libraries(client common
     pvt.cppan.demo.boost.program_options
     pvt.cppan.demo.yhirose.cpp_linenoise
 )
+add_custom_command(TARGET client POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:client> $<TARGET_FILE_DIR:client>/cppanx${CMAKE_EXECUTABLE_SUFFIX}
+)
 
 set_target_properties(client PROPERTIES OUTPUT_NAME cppan)
 if (WIN32)

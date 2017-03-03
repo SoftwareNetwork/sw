@@ -17,9 +17,10 @@
 #pragma once
 
 #include "cppan_string.h"
-#include "date_time.h"
 #include "package.h"
 #include "source.h"
+
+#include <primitives/date_time.h>
 
 #define SPEC_FILE_EXTENSION ".cppan"
 

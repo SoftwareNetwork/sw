@@ -21,14 +21,15 @@
 #include "database.h"
 #include "directories.h"
 #include "hash.h"
-#include "hasher.h"
 #include "program.h"
-#include "templates.h"
 #include "stamp.h"
 
 #include <boost/algorithm/string.hpp>
 
-#include "logger.h"
+#include <primitives/hasher.h>
+#include <primitives/templates.h>
+
+#include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "settings");
 
 void BuildSettings::set_build_dirs(const String &name)

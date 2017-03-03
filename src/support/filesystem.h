@@ -16,11 +16,22 @@
 
 #pragma once
 
-#include "directories.h"
+#include <primitives/filesystem.h>
 
-#include <primitives/lock.h>
+#define STAMPS_DIR "stamps"
+#define STORAGE_DIR "storage"
+#define CPPAN_FILENAME "cppan.yml"
 
-inline path get_lock(const path &fn)
-{
-    return directories.storage_dir_etc / "locks" / fn.filename();
-}
+using Stamps = std::unordered_map<path, time_t>;
+using SourceGroups = std::map<String, std::set<String>>;
+
+path get_root_directory();
+path get_config_filename();
+
+path temp_directory_path(const path &subdir = path());
+path get_temp_filename(const path &subdir = path());
+
+String get_stamp_filename(const String &prefix);
+String make_archive_name(const String &fn = String());
+
+path findRootDirectory(const path &p = fs::current_path());
