@@ -34,7 +34,7 @@
 #define CPPAN_FILENAME "cppan.yml"
 
 namespace fs = boost::filesystem;
-using path = fs::wpath;
+using path = fs::path;
 
 using FilesSorted = std::set<path>;
 using Files = std::unordered_set<path>;

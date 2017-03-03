@@ -85,7 +85,7 @@ bool y_n_branch(const String &s, const void_f &yf = void_f(), const void_f &nf =
     String t;
     readline(t);
     bool y = is_y(t);
-    if (yf)
+    if (y && yf)
         yf();
     else if (nf)
         nf();
@@ -96,6 +96,7 @@ void command_init(const Strings &args)
 {
     bool script = false;
     String project_type = "e";
+    String idir;
     Project p;
     p.name = fs::current_path().filename().string();
 
@@ -105,8 +106,19 @@ void command_init(const Strings &args)
         script = y_n_branch("Create script?");
         std::cout << "Enter project name [" << p.name << "]: ";
         readline(p.name);
+        idir = p.name;
+
         std::cout << "Enter project type (e - executable, l - library) [" << project_type << "]: ";
         readline(project_type);
+
+        if (project_type[0] == 'l')
+        {
+            p.type = ProjectType::Library;
+
+            std::cout << "Enter include directory name [" << idir << "]: ";
+            readline(idir);
+        }
+
         y_n_branch("Add some dependencies?", [&]
         {
             std::cout << "Start entering dependency names. Press TAB to list matching packages, ESC to stop.\n";
@@ -150,9 +162,6 @@ void command_init(const Strings &args)
         // use program options
     }
 
-    if (project_type[0] == 'l')
-        p.type = ProjectType::Library;
-
     boost::system::error_code ec;
     auto root = fs::current_path();
 
@@ -167,7 +176,7 @@ void command_init(const Strings &args)
         write_file(root / n, "/*\n" + dump_yaml_config(p.save()) + "*/\n\n" +
             int_main);
 
-        if (y_n_branch("Build project?"))
+        if (y_n_branch("Build the project?"))
             build(root / n);
     }
     else
@@ -191,8 +200,8 @@ void command_init(const Strings &args)
         if (fs::exists(root / p.name) ||
             fs::exists(root / p.name / "src") ||
             fs::exists(root / p.name / "include") ||
-            fs::exists(root / p.name / "include" / p.name) ||
-            fs::exists(root / p.name / "include" / p.name / (p.name + ".h")) ||
+            fs::exists(root / p.name / "include" / idir) ||
+            fs::exists(root / p.name / "include" / idir / (p.name + ".h")) ||
             fs::exists(root / p.name / "src" / (p.name + ".cpp")) ||
             0)
             throw std::runtime_error(err_exist);
@@ -204,9 +213,9 @@ void command_init(const Strings &args)
         fs::create_directories(root / p.name / "src");
         if (p.type == ProjectType::Library)
         {
-            fs::create_directories(root / p.name / "include" / p.name);
+            fs::create_directories(root / p.name / "include" / idir);
+            write_file(root / p.name / "include" / idir / (p.name + ".h"), "//#include <something>\n\n");
             write_file(root / p.name / "src" / (p.name + ".cpp"), "#include <" + p.name + "/" + p.name + ".h>\n\n");
-            write_file(root / p.name / "include" / p.name / (p.name + ".h"), "//#include <something>\n\n");
         }
         else
         {
