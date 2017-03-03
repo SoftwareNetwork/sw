@@ -35,35 +35,43 @@ projects:
             - src/comments/.*
             - src/bazel/.*
             - src/inserts/.*
+            - src/support/.*
+            - src/stamp_gen.cpp
+            - src/inserter.cpp
 
         exclude_from_package:
             - src/bazel/test.cpp
             - src/bazel/.*\.txt
             - src/comments/.*\.txt
 
+        exclude_from_build:
+            - src/stamp_gen.cpp
+            - src/inserter.cpp
+
         include_directories:
             public:
                 - src
                 - src/common
+                - src/support
                 - dep/process
 
         dependencies:
-            - name: stamp_generator
-              ref: stamp_generator
-            - name: inserts_generator
-              ref: inserts_generator
-            - pvt.cppan.demo.boost.filesystem: 1
-            - pvt.cppan.demo.boost.log: 1
             - pvt.cppan.demo.boost.optional: 1
-            - pvt.cppan.demo.boost.program_options: 1
             - pvt.cppan.demo.boost.property_tree: 1
             - pvt.cppan.demo.boost.variant: 1
-            - pvt.cppan.demo.badger.curl.libcurl: 7
-            - pvt.cppan.demo.libarchive.libarchive: 3
-            - pvt.cppan.demo.openssl.crypto: 1
             - pvt.cppan.demo.jbeder.yaml_cpp: master
             - pvt.cppan.demo.sqlite3: 3
-            - pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile
+
+            - pvt.egorpugin.primitives.string: master
+            - pvt.egorpugin.primitives.filesystem: master
+            - pvt.egorpugin.primitives.context: master
+            - pvt.egorpugin.primitives.date_time: master
+            - pvt.egorpugin.primitives.executor: master
+            - pvt.egorpugin.primitives.hash: master
+            - pvt.egorpugin.primitives.http: master
+            - pvt.egorpugin.primitives.lock: master
+            - pvt.egorpugin.primitives.log: master
+            - pvt.egorpugin.primitives.pack: master
 
         options:
             any:
@@ -74,16 +82,21 @@ projects:
                         - VERSION_PATCH=2
 
         post_sources: |
+            add_executable(stamp_generator ${SDIR}/src/stamp_gen.cpp)
+            set_property(TARGET stamp_generator PROPERTY FOLDER gen)
             set(stamp ${BDIR}/stamp.h.in)
             add_custom_target(gen_stamp
-                COMMAND ${stamp_generator} > ${stamp}
+                COMMAND stamp_generator > ${stamp}
             )
             set_property(TARGET gen_stamp PROPERTY FOLDER gen)
             set_source_files_properties(${stamp} PROPERTIES GENERATED True)
             set(src ${src} ${stamp})
 
+            add_executable(inserts_generator ${SDIR}/src/inserter.cpp)
+            set_property(TARGET inserts_generator PROPERTY FOLDER gen)
+            target_link_libraries(inserts_generator pvt.cppan.demo.boost.filesystem)
             add_custom_target(gen_inserts
-                COMMAND ${inserts_generator} ${SDIR}/src/inserts/inserts.cpp.in ${BDIR}/inserts.cpp
+                COMMAND inserts_generator ${SDIR}/src/inserts/inserts.cpp.in ${BDIR}/inserts.cpp
                 WORKING_DIRECTORY ${SDIR}/src
                 DEPENDS ${SDIR}/src/inserts/functions.cmake
                 SOURCES
@@ -158,14 +171,6 @@ projects:
         post_target: |
             target_include_directories(${this} PRIVATE ${BDIR}/src)
             add_dependencies(${this} gen_stamp gen_inserts)
-
-    stamp_generator:
-        files: src/stamp_gen.cpp
-
-    inserts_generator:
-        files: src/inserter.cpp
-        dependencies:
-            - pvt.cppan.demo.boost.filesystem: 1
 
     cppan:
         files:
