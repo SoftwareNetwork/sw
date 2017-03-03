@@ -95,6 +95,7 @@ bool y_n_branch(const String &s, const void_f &yf = void_f(), const void_f &nf =
 void command_init(const Strings &args)
 {
     bool script = false;
+    bool build_project = true;
     String project_type = "e";
     String idir;
     Project p;
@@ -159,7 +160,53 @@ void command_init(const Strings &args)
     }
     else
     {
-        // use program options
+        // TODO: use program options?
+
+        int i = 0;
+
+        script = args[i++] == "script";
+        p.name = args[i++];
+        idir = p.name;
+        project_type = args[i++];
+
+        if (project_type[0] == 'l')
+        {
+            p.type = ProjectType::Library;
+            idir = args[i++];
+        }
+
+        for (; i < (int)args.size(); i++)
+        {
+            const auto &line = args[i];
+            try
+            {
+                auto d = extractFromString(line);
+
+                // check pkg
+                if (read_packages(d.ppath.toString()).empty())
+                {
+                    std::cout << "No such package:" << line << "\n";
+                    continue;
+                }
+
+                // check version
+                auto &pdb = getPackagesDatabase();
+                auto v = pdb.getExactVersionForPackage(d);
+
+                p.dependencies[d.ppath.toString()] = d;
+            }
+            catch (const std::exception &e)
+            {
+                if (read_packages(line).size() == 1)
+                {
+                    std::cout << "Please, enter version after '-' symbol:" << line << "\n";
+                    continue;
+                }
+                std::cout << e.what() << "\n";
+            }
+        }
+
+        build_project = false;
     }
 
     boost::system::error_code ec;
@@ -176,7 +223,7 @@ void command_init(const Strings &args)
         write_file(root / n, "/*\n" + dump_yaml_config(p.save()) + "*/\n\n" +
             int_main);
 
-        if (y_n_branch("Build the project?"))
+        if (build_project && y_n_branch("Build the project?"))
             build(root / n);
     }
     else
@@ -215,7 +262,7 @@ void command_init(const Strings &args)
         {
             fs::create_directories(root / p.name / "include" / idir);
             write_file(root / p.name / "include" / idir / (p.name + ".h"), "//#include <something>\n\n");
-            write_file(root / p.name / "src" / (p.name + ".cpp"), "#include <" + p.name + "/" + p.name + ".h>\n\n");
+            write_file(root / p.name / "src" / (p.name + ".cpp"), "#include <" + idir + "/" + p.name + ".h>\n\n");
         }
         else
         {
@@ -239,7 +286,7 @@ void command_init(const Strings &args)
         }
         dump_yaml_config(CPPAN_FILENAME, y);
 
-        if (y_n_branch("Build project?"))
+        if (build_project && y_n_branch("Build project?"))
             build();
     }
 }

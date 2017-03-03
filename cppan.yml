@@ -16,6 +16,10 @@ local_settings:
         pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile
         pvt.cppan.demo.yhirose.cpp_linenoise: master
 
+        pvt.egorpugin.primitives.string: master
+        pvt.egorpugin.primitives.filesystem: master
+        pvt.egorpugin.primitives.context: master
+
 root_project: pvt.cppan.client
 
 projects:

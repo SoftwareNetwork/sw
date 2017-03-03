@@ -81,6 +81,7 @@ const std::set<String> other_source_file_extensions{
     ".S",
     ".asm",
     ".ipp",
+    ".inl",
 };
 
 const auto bazel_filenames = { "BUILD", "BUILD.bazel" };
