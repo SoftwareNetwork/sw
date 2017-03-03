@@ -25,7 +25,8 @@
 #include <program.h>
 #include <resolver.h>
 #include <settings.h>
-#include <templates.h>
+
+#include <primitives/templates.h>
 
 #include <iostream>
 

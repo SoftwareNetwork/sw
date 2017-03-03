@@ -18,7 +18,8 @@
 
 #include "hash.h"
 #include "package.h"
-#include "templates.h"
+
+#include <primitives/templates.h>
 
 //#include "logger.h"
 //DECLARE_STATIC_LOGGER(logger, "remote");

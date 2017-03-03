@@ -25,10 +25,10 @@
 #include "settings.h"
 #include "sqlite_database.h"
 #include "stamp.h"
-#include "templates.h"
 #include "printers/cmake.h"
 
 #include <primitives/pack.h>
+#include <primitives/templates.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>

@@ -17,8 +17,8 @@
 #include "source.h"
 
 #include "http.h"
-#include "templates.h"
 
+#include <primitives/overloads.h>
 #include <primitives/pack.h>
 
 bool Git::isValid(String *error) const

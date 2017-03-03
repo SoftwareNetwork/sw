@@ -23,9 +23,9 @@
 #include "property_tree.h"
 #include "resolver.h"
 #include "spec.h"
-#include "templates.h"
 
 #include <primitives/pack.h>
+#include <primitives/templates.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "verifier");
