@@ -486,17 +486,21 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
         auto &project = c.getDefaultProject();
         auto root_directory = (fs::is_regular_file(p) ? p.parent_path() : p) / project.root_directory;
 
-        Package pkg;
-        pkg.ppath = ppath;
-        if (!project.name.empty())
-            pkg.ppath.push_back(project.name);
-        pkg.version = Version(LOCAL_VERSION_NAME);
-        pkg.flags.set(pfLocalProject);
-        pkg.flags.set(pfDirectDependency, direct_dependency);
-        pkg.createNames();
-        project.applyFlags(pkg.flags);
-        c.setPackage(pkg);
-        local_packages[pkg.ppath] = root_directory;
+        // to prevent possible errors
+        // pkg must have small scope
+        {
+            Package pkg;
+            pkg.ppath = ppath;
+            if (!project.name.empty())
+                pkg.ppath.push_back(project.name);
+            pkg.version = Version(LOCAL_VERSION_NAME);
+            pkg.flags.set(pfLocalProject);
+            pkg.flags.set(pfDirectDependency, direct_dependency);
+            pkg.createNames();
+            project.applyFlags(pkg.flags);
+            c.setPackage(pkg);
+            local_packages[pkg.ppath] = root_directory;
+        }
 
         // sources
         if (!cpp_fn.empty() && !project.files_loaded)
@@ -538,7 +542,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
         rd.add_local_config(c);
 
         // add package for result
-        packages.insert(pkg);
+        packages.insert(project.pkg);
     }
 
     // write local packages to index
