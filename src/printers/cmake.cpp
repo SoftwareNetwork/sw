@@ -561,7 +561,7 @@ void CMakePrinter::print_build_dependencies(Context &ctx, const String &target) 
                 if (d.empty())
                     local.addLine("-DMULTICORE=1");
                 local.addLine("-DXCODE=${XCODE}");
-                local.addLine("-DXCODE=${NINJA}");
+                local.addLine("-DNINJA=${NINJA}");
                 local.addLine("-DVISUAL_STUDIO=${VISUAL_STUDIO}");
                 local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
                 local.decreaseIndent();
