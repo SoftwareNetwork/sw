@@ -14,49 +14,10 @@
  * limitations under the License.
  */
 
+#include <primitives/filesystem.h>
+
 #include <iostream>
 #include <regex>
-#include <string>
-
-#include <boost/filesystem.hpp>
-
-namespace fs = boost::filesystem;
-using path = fs::wpath;
-
-using String = std::string;
-
-String read_file(const path &p)
-{
-    if (!fs::exists(p))
-        throw std::runtime_error("File '" + p.string() + "' does not exist");
-
-    auto fn = p.string();
-    std::ifstream ifile(fn, std::ios::in | std::ios::binary);
-    if (!ifile)
-        throw std::runtime_error("Cannot open file " + fn);
-
-    size_t sz = (size_t)fs::file_size(p);
-
-    String f;
-    f.resize(sz);
-    ifile.read(&f[0], sz);
-    return f;
-}
-
-void write_file(const path &p, const String &s)
-{
-    if (fs::exists(p))
-    {
-        auto f = read_file(p);
-        if (f == s)
-            return;
-    }
-
-    std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
-    if (!ofile)
-        throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
-    ofile << s;
-}
 
 String preprocess_file(const String &s)
 {
@@ -79,6 +40,7 @@ String preprocess_file(const String &s)
 }
 
 int main(int argc, char *argv[])
+try
 {
     if (argc != 3)
         return 1;
@@ -111,4 +73,14 @@ int main(int argc, char *argv[])
     write_file(argv[2], s);
 
     return 0;
+}
+catch (const std::exception &e)
+{
+    std::cerr << e.what() << "\n";
+    return 1;
+}
+catch (...)
+{
+    std::cerr << "Unhandled unknown exception" << "\n";
+    return 1;
 }

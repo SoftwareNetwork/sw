@@ -26,7 +26,7 @@ set(inserter_src
 )
 add_executable(inserter ${inserter_src})
 set_property(TARGET inserter PROPERTY FOLDER gen)
-target_link_libraries(inserter pvt.cppan.demo.boost.filesystem)
+target_link_libraries(inserter pvt.egorpugin.primitives.filesystem)
 
 ########################################
 # support
@@ -63,6 +63,7 @@ add_custom_target(inserts_gen
         ${CMAKE_CURRENT_SOURCE_DIR}/inserts/version.rc.in
         ${CMAKE_CURRENT_SOURCE_DIR}/inserts/branch.rc.in
 )
+set_property(TARGET inserts_gen PROPERTY FOLDER gen)
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp PROPERTIES GENERATED TRUE)
 
 add_executable(stamp_genenerator stamp_gen.cpp)

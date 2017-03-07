@@ -13,3 +13,6 @@ cppan
 *.user
 
 *.lnk
+
+# bison generated
+*.output

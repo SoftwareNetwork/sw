@@ -51,8 +51,8 @@ endif()
 set(output_dir ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
 
-find_package(BISON 3.0 REQUIRED)
-find_package(FLEX REQUIRED)
+find_package(BISON 3.0)
+find_package(FLEX)
 
 ################################################################################
 #

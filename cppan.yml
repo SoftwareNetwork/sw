@@ -1,6 +1,10 @@
 local_settings:
     #storage_dir: .cppan_storage
 
+    use_shared_libs: false
+    build:
+        generator: Visual Studio 15 2017
+
     dependencies:
         pvt.cppan.demo.boost.optional: 1
         pvt.cppan.demo.boost.program_options: 1
@@ -40,7 +44,7 @@ projects:
             - src/inserter.cpp
 
         exclude_from_package:
-            - src/bazel/test.cpp
+            - src/bazel/test/test.cpp
             - src/bazel/.*\.txt
             - src/comments/.*\.txt
 
@@ -85,6 +89,8 @@ projects:
             add_executable(stamp_generator ${SDIR}/src/stamp_gen.cpp)
             set_property(TARGET stamp_generator PROPERTY FOLDER gen)
             set(stamp ${BDIR}/stamp.h.in)
+            # to run every time
+            # do not change to command
             add_custom_target(gen_stamp
                 COMMAND stamp_generator > ${stamp}
             )
@@ -94,7 +100,7 @@ projects:
 
             add_executable(inserts_generator ${SDIR}/src/inserter.cpp)
             set_property(TARGET inserts_generator PROPERTY FOLDER gen)
-            target_link_libraries(inserts_generator pvt.cppan.demo.boost.filesystem)
+            target_link_libraries(inserts_generator pvt.egorpugin.primitives.filesystem)
             set(gen
                 ${SDIR}/src/inserts/cppan.h
                 ${SDIR}/src/inserts/build.cmake
@@ -105,14 +111,15 @@ projects:
                 ${SDIR}/src/inserts/version.rc.in
                 ${SDIR}/src/inserts/branch.rc.in
             )
-            add_custom_command(OUTPUT ${BDIR}/inserts.cpp
+            add_custom_target(gen_inserts
                 COMMAND inserts_generator ${SDIR}/src/inserts/inserts.cpp.in ${BDIR}/inserts.cpp
-                WORKING_DIRECTORY ${SDIR}/src
+                # FIXME: not working on dll build
+                #WORKING_DIRECTORY ${output_dir}
                 DEPENDS ${gen}
                 SOURCES ${gen}
             )
-            #set_property(TARGET gen_inserts PROPERTY FOLDER gen)
-            #set_source_files_properties(${BDIR}/inserts.cpp PROPERTIES GENERATED TRUE)
+            set_property(TARGET gen_inserts PROPERTY FOLDER gen)
+            set_source_files_properties(${BDIR}/inserts.cpp PROPERTIES GENERATED TRUE)
             set(src ${src} ${BDIR}/inserts.cpp)
 
             ########################################
@@ -126,23 +133,27 @@ projects:
 
             execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BDIR}/src/bazel)
 
-            BISON_TARGET(grammar_b
-                "${SDIR}/src/bazel/grammar.yy"
-                "${BDIR}/src/bazel/grammar.cpp"
-            )
-            FLEX_TARGET(lexer_b
-                "${SDIR}/src/bazel/lexer.ll"
-                "${BDIR}/src/bazel/lexer.cpp"
-                COMPILE_FLAGS --header-file=${BDIR}/src/bazel/lexer.h
-            )
-            ADD_FLEX_BISON_DEPENDENCY(lexer_b grammar_b)
+            if (FLEX_FOUND AND BISON_FOUND)
+                BISON_TARGET(grammar_b
+                    "${SDIR}/src/bazel/grammar.yy"
+                    "${BDIR}/src/bazel/grammar.cpp"
+                )
+                FLEX_TARGET(lexer_b
+                    "${SDIR}/src/bazel/lexer.ll"
+                    "${BDIR}/src/bazel/lexer.cpp"
+                    COMPILE_FLAGS --header-file=${BDIR}/src/bazel/lexer.h
+                )
+                ADD_FLEX_BISON_DEPENDENCY(lexer_b grammar_b)
 
-            set(parser_src
-                ${BISON_grammar_b_OUTPUTS}
-                ${FLEX_lexer_b_OUTPUTS}
-                ${BDIR}/src/bazel/lexer.h
-            )
-            set_source_files_properties(${BDIR}/src/bazel/lexer.h PROPERTIES GENERATED TRUE)
+                set(parser_src
+                    ${BISON_grammar_b_OUTPUTS}
+                    ${FLEX_lexer_b_OUTPUTS}
+                    ${BDIR}/src/bazel/lexer.h
+                )
+                set_source_files_properties(${BDIR}/src/bazel/lexer.h PROPERTIES GENERATED TRUE)
+            else()
+                file(GLOB parser_src "${SDIR}/src/bazel/*")
+            endif()
             set(src ${src} ${parser_src})
 
             ########################################
@@ -151,28 +162,32 @@ projects:
 
             execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BDIR}/src/comments)
 
-            BISON_TARGET(grammar_c
-                "${SDIR}/src/comments/grammar.yy"
-                "${BDIR}/src/comments/grammar.cpp"
-            )
-            FLEX_TARGET(lexer_c
-                "${SDIR}/src/comments/lexer.ll"
-                "${BDIR}/src/comments/lexer.cpp"
-                COMPILE_FLAGS --header-file=${BDIR}/src/comments/lexer.h
-            )
-            ADD_FLEX_BISON_DEPENDENCY(lexer_c grammar_c)
+            if (FLEX_FOUND AND BISON_FOUND)
+                BISON_TARGET(grammar_c
+                    "${SDIR}/src/comments/grammar.yy"
+                    "${BDIR}/src/comments/grammar.cpp"
+                )
+                FLEX_TARGET(lexer_c
+                    "${SDIR}/src/comments/lexer.ll"
+                    "${BDIR}/src/comments/lexer.cpp"
+                    COMPILE_FLAGS --header-file=${BDIR}/src/comments/lexer.h
+                )
+                ADD_FLEX_BISON_DEPENDENCY(lexer_c grammar_c)
 
-            set(parser_src
-                ${BISON_grammar_c_OUTPUTS}
-                ${FLEX_lexer_c_OUTPUTS}
-                ${BDIR}/src/comments/lexer.h
-            )
-            set_source_files_properties(${BDIR}/src/comments/lexer.h PROPERTIES GENERATED TRUE)
+                set(parser_src
+                    ${BISON_grammar_c_OUTPUTS}
+                    ${FLEX_lexer_c_OUTPUTS}
+                    ${BDIR}/src/comments/lexer.h
+                )
+                set_source_files_properties(${BDIR}/src/comments/lexer.h PROPERTIES GENERATED TRUE)
+            else()
+                file(GLOB parser_src "${SDIR}/src/comments/*")
+            endif()
             set(src ${src} ${parser_src})
 
         post_target: |
             target_include_directories(${this} PRIVATE ${BDIR}/src)
-            #add_dependencies(${this} gen_stamp gen_inserts)
+            add_dependencies(${this} gen_stamp gen_inserts)
 
     cppan:
         files:

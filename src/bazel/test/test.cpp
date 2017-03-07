@@ -1,7 +1,7 @@
 #include <fstream>
 #include <string>
 
-#include "driver.h"
+#include "../driver.h"
 
 int main(int argc, char *argv[])
 {
