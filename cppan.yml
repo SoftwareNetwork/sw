@@ -95,22 +95,24 @@ projects:
             add_executable(inserts_generator ${SDIR}/src/inserter.cpp)
             set_property(TARGET inserts_generator PROPERTY FOLDER gen)
             target_link_libraries(inserts_generator pvt.cppan.demo.boost.filesystem)
-            add_custom_target(gen_inserts
+            set(gen
+                ${SDIR}/src/inserts/cppan.h
+                ${SDIR}/src/inserts/build.cmake
+                ${SDIR}/src/inserts/functions.cmake
+                ${SDIR}/src/inserts/generate.cmake
+                ${SDIR}/src/inserts/exports.cmake
+                ${SDIR}/src/inserts/header.cmake
+                ${SDIR}/src/inserts/version.rc.in
+                ${SDIR}/src/inserts/branch.rc.in
+            )
+            add_custom_command(OUTPUT ${BDIR}/inserts.cpp
                 COMMAND inserts_generator ${SDIR}/src/inserts/inserts.cpp.in ${BDIR}/inserts.cpp
                 WORKING_DIRECTORY ${SDIR}/src
-                DEPENDS ${SDIR}/src/inserts/functions.cmake
-                SOURCES
-                    ${SDIR}/src/inserts/cppan.h
-                    ${SDIR}/src/inserts/build.cmake
-                    ${SDIR}/src/inserts/functions.cmake
-                    ${SDIR}/src/inserts/generate.cmake
-                    ${SDIR}/src/inserts/exports.cmake
-                    ${SDIR}/src/inserts/header.cmake
-                    ${SDIR}/src/inserts/version.rc.in
-                    ${SDIR}/src/inserts/branch.rc.in
+                DEPENDS ${gen}
+                SOURCES ${gen}
             )
-            set_property(TARGET gen_inserts PROPERTY FOLDER gen)
-            set_source_files_properties(${BDIR}/inserts.cpp PROPERTIES GENERATED TRUE)
+            #set_property(TARGET gen_inserts PROPERTY FOLDER gen)
+            #set_source_files_properties(${BDIR}/inserts.cpp PROPERTIES GENERATED TRUE)
             set(src ${src} ${BDIR}/inserts.cpp)
 
             ########################################
@@ -170,7 +172,7 @@ projects:
 
         post_target: |
             target_include_directories(${this} PRIVATE ${BDIR}/src)
-            add_dependencies(${this} gen_stamp gen_inserts)
+            #add_dependencies(${this} gen_stamp gen_inserts)
 
     cppan:
         files:

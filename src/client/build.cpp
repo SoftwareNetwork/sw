@@ -128,6 +128,7 @@ int build_packages(const Config &c, const String &name)
     // if dir does not exist it means probably we have new cmake version
     // we have config value but there was not a test run with copying cmake prepared files
     // so start unconditional test run
+    bool new_config = false;
     if (!fs::exists(src))
     {
         auto config = test_run();
@@ -136,6 +137,12 @@ int build_packages(const Config &c, const String &name)
         {
             // the original config was detected incorrectly, re-apply
             set_config(ch);
+            new_config = true;
+
+            // also register in db
+            auto &sdb = getServiceDatabase();
+            auto h = Settings::get_local_settings().get_hash();
+            sdb.addConfigHash(h, config, ch);
 
             // do we need to addConfigHash() here? like in get_config()
             // or config must be very unique?
@@ -148,6 +155,8 @@ int build_packages(const Config &c, const String &name)
     // move this to printer some time
     // copy cached cmake config to bin dir
     auto dst = bs.binary_directory / "CMakeFiles" / cmake_version;
+    if (new_config)
+        fs::remove_all(dst);
     if (!fs::exists(dst))
         copy_dir(src, dst);
 

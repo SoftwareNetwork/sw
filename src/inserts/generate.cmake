@@ -72,7 +72,12 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
+                #message("Copied!")
+            else()
+                message(WARNING "From dir does not exist ${from}")
             endif()
+        else()
+            #message("To dir ${to}")
         endif()
 
         # prepare variables for child process
