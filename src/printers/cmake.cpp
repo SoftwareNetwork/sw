@@ -271,7 +271,7 @@ void add_subdirectory(Context &ctx, const String &src)
 
 String prepare_include_directory(const String &i)
 {
-    if (i.find("${") != i.npos)
+    if (i.find("${") == 0)
         return i;
     return "${SDIR}/" + i;
 };
@@ -1129,6 +1129,13 @@ void CMakePrinter::print_src_config_file(const path &fn) const
             if (dd.reference.empty())
                 continue;
             ctx.addLine("set(" + dd.reference + " " + rd[d].dependencies[dd.ppath.toString()].target_name + ")");
+            if (rd[d].config->getDefaultProject().pkg.flags[pfLocalProject])
+                ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd.get_local_package_dir(dd.ppath.toString())) + ")");
+            else
+                ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirSrc()) + ")");
+            ctx.addLine("set(" + dd.reference + "_BDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirObj()) + ")");
+            ctx.addLine("set(" + dd.reference + "_DIR ${" + dd.reference + "_SDIR})");
+            ctx.addLine();
         }
     }
 
@@ -1174,12 +1181,8 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         }
         ctx.addLine();
 
-        ctx.addLine("set(CPPAN_LOCAL_PROJECT 0)");
-        if (d.flags[pfLocalProject])
-        {
-            ctx.addLine("set(CPPAN_LOCAL_PROJECT 1)");
-            ctx.addLine();
-        }
+        ctx.addLine("set(CPPAN_LOCAL_PROJECT "s + (d.flags[pfLocalProject] ? "1" : "0") + ")");
+        ctx.addLine();
 
         // duplicate if someone will do a mistake
         {
@@ -1614,9 +1617,20 @@ endif()
 
     // solution folder
     config_section_title(ctx, "options");
-    if (!d.flags[pfHeaderOnly] && !d.flags[pfLocalProject])
+    if (!d.flags[pfHeaderOnly])
     {
-        print_solution_folder(ctx, "${this}", path(packages_folder) / d.ppath.toString() / d.version.toString());
+        if (!d.flags[pfLocalProject])
+            print_solution_folder(ctx, "${this}", path(packages_folder) / d.ppath.toString() / d.version.toString());
+        else if (d.ppath.back().find('.') != -1)
+        {
+            auto f = d.ppath.back();
+            auto p = f.rfind('.');
+            auto l = f.substr(p + 1);
+            f = f.substr(0, p);
+            std::replace(f.begin(), f.end(), '.', '/');
+            print_solution_folder(ctx, "${this}", f);
+            set_target_properties(ctx, "PROJECT_LABEL", l);
+        }
         ctx.emptyLines();
     }
 

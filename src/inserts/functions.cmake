@@ -783,4 +783,70 @@ function(check_type_alignment TYPE LANG NAME)
     set(${NAME} ${${NAME}} CACHE STRING "Alignment of type: ${TYPE}" FORCE)
 endfunction(check_type_alignment)
 
+########################################
+# FUNCTION copy_file_once
+########################################
+
+# this functions prevents changing variables in current scope
+function(copy_file_once from to)
+    if (NOT EXISTS ${to})
+        execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${from} ${to})
+    endif()
+endfunction(copy_file_once)
+
+########################################
+# FUNCTION find_moc_targets
+########################################
+
+function(find_moc_targets out)
+    set(o)
+    foreach(fn ${ARGN})
+        file(READ ${fn} f)
+        string(FIND "${f}" "Q_OBJECT" i)
+        if (NOT ${i} EQUAL -1)
+            set(o ${o} ${fn})
+        else()
+            string(FIND "${f}" "Q_GADGET" i)
+            if (NOT ${i} EQUAL -1)
+                set(o ${o} ${fn})
+            endif()
+        endif()
+    endforeach()
+    set(${out} ${o} PARENT_SCOPE)
+endfunction()
+
+########################################
+# FUNCTION set_src_header_only
+########################################
+
+function(set_src_header_only s)
+    set(src2 ${src})
+    list(FILTER src2 INCLUDE REGEX "${s}")
+    list(GET src2 0 f)
+    set_source_files_properties(${f} PROPERTIES HEADER_FILE_ONLY True)
+    set(src ${src} ${f} PARENT_SCOPE)
+endfunction()
+
+########################################
+# FUNCTION set_src_compiled
+########################################
+
+function(set_src_compiled s)
+    set(src2 ${src})
+    list(FILTER src2 INCLUDE REGEX "${s}")
+    list(GET src2 0 f)
+    set_source_files_properties(${f} PROPERTIES HEADER_FILE_ONLY False)
+    set(src ${src} ${f} PARENT_SCOPE)
+endfunction()
+
+########################################
+# FUNCTION moc_cpp_file
+########################################
+
+function(moc_cpp_file f)
+    get_filename_component(n ${f} NAME_WE)
+    qt5_create_moc_command(${SDIR}/${f} ${BDIR}/${n}.moc "" "" ${this} "")
+    set(src ${src} ${BDIR}/${n}.moc PARENT_SCOPE)
+endfunction()
+
 ################################################################################

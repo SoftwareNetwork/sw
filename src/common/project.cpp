@@ -508,8 +508,9 @@ void Project::findSources(path p)
 
     // disable on windows
 #ifndef _WIN32
-    if (!custom)
-        check_file_types(files);
+    // disabled for some time
+    //if (!custom)
+    //    check_file_types(files);
 #endif
 
     // do not check if forced header_only (no matter true or false)
@@ -1053,18 +1054,20 @@ void Project::load(const yaml &root)
         bool iempty = include_directories.empty();
         if (defaults_allowed && iempty)
         {
-            if (fs::exists("include"))
+            /*if (fs::exists("include"))
                 include_directories.public_.insert("include");
             else
-            {
-                if (fs::exists(root_directory / "include"))
+            {*/
+                // root_directory part must be checked on server side or during local pkg build
+                // second part - on installed package
+                if (fs::exists(root_directory / "include") || fs::exists("include"))
                     include_directories.public_.insert("include");
                 else
                 {
                     include_directories.public_.insert(".");
                     // one case left: root_directory / "."
                 }
-            }
+            //}
         }
         if (defaults_allowed && iempty)
         {
@@ -1073,7 +1076,7 @@ void Project::load(const yaml &root)
             {
                 const auto &current = dirs[0];
                 const auto &next = dirs[1];
-                if (fs::exists(current))
+                /*if (fs::exists(current))
                 {
                     if (fs::exists("include"))
                         include_directories.private_.insert(current);
@@ -1081,10 +1084,10 @@ void Project::load(const yaml &root)
                         include_directories.public_.insert(current);
                 }
                 else
-                {
-                    if (fs::exists(root_directory / current))
+                {*/
+                    if (fs::exists(root_directory / current) || fs::exists(current))
                     {
-                        if (fs::exists(root_directory / "include"))
+                        if (fs::exists(root_directory / "include") || fs::exists("include"))
                             include_directories.private_.insert(current);
                         else
                         {
@@ -1098,7 +1101,7 @@ void Project::load(const yaml &root)
                         if (!next.empty())
                             autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
                     }
-                }
+                //}
             };
             static Strings dirs(source_dir_names.begin(), source_dir_names.end());
             // keep the empty entry at the end for autodetect_source_dir()
