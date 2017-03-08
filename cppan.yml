@@ -114,7 +114,8 @@ projects:
             add_custom_target(gen_inserts
                 COMMAND inserts_generator ${SDIR}/src/inserts/inserts.cpp.in ${BDIR}/inserts.cpp
                 # FIXME: not working on dll build
-                #WORKING_DIRECTORY ${output_dir}
+                # it could not find deps dlls
+                WORKING_DIRECTORY ${SDIR}/src
                 DEPENDS ${gen}
                 SOURCES ${gen}
             )
