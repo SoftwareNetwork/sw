@@ -134,7 +134,7 @@ projects:
 
             execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BDIR}/src/bazel)
 
-            if (FLEX_FOUND AND BISON_FOUND)
+            if (FLEX_FOUND AND BISON_FOUND AND 0)
                 BISON_TARGET(grammar_b
                     "${SDIR}/src/bazel/grammar.yy"
                     "${BDIR}/src/bazel/grammar.cpp"
@@ -152,8 +152,6 @@ projects:
                     ${BDIR}/src/bazel/lexer.h
                 )
                 set_source_files_properties(${BDIR}/src/bazel/lexer.h PROPERTIES GENERATED TRUE)
-            else()
-                file(GLOB parser_src "${SDIR}/src/bazel/*")
             endif()
             set(src ${src} ${parser_src})
 
@@ -163,7 +161,7 @@ projects:
 
             execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BDIR}/src/comments)
 
-            if (FLEX_FOUND AND BISON_FOUND)
+            if (FLEX_FOUND AND BISON_FOUND AND 0)
                 BISON_TARGET(grammar_c
                     "${SDIR}/src/comments/grammar.yy"
                     "${BDIR}/src/comments/grammar.cpp"
@@ -181,8 +179,6 @@ projects:
                     ${BDIR}/src/comments/lexer.h
                 )
                 set_source_files_properties(${BDIR}/src/comments/lexer.h PROPERTIES GENERATED TRUE)
-            else()
-                file(GLOB parser_src "${SDIR}/src/comments/*")
             endif()
             set(src ${src} ${parser_src})
 
