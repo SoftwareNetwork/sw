@@ -235,7 +235,7 @@ ProjectPath &ProjectPath::operator/=(const ProjectPath &e)
 
 void fix_root_project(yaml &root, const ProjectPath &ppath)
 {
-    auto &rp = root["root_project"];
+    auto rp = root["root_project"];
     if (!rp.IsDefined())
     {
         rp = ppath.toString();
