@@ -232,3 +232,15 @@ ProjectPath &ProjectPath::operator/=(const ProjectPath &e)
 {
     return *this = *this / e;
 }
+
+void fix_root_project(yaml &root, const ProjectPath &ppath)
+{
+    auto &rp = root["root_project"];
+    if (!rp.IsDefined())
+    {
+        rp = ppath.toString();
+        return;
+    }
+    if (!ppath.is_root_of(rp.as<String>()))
+        rp = ppath.toString();
+}

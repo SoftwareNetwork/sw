@@ -18,6 +18,7 @@
 
 #include "cppan_string.h"
 #include "filesystem.h"
+#include "yaml.h"
 
 #define ROOT_PROJECT_PATH(name)           \
     static ProjectPath name()             \
@@ -144,6 +145,8 @@ private:
 
     friend struct std::hash<ProjectPath>;
 };
+
+void fix_root_project(yaml &root, const ProjectPath &ppath);
 
 namespace std
 {
