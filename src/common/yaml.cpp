@@ -218,6 +218,8 @@ String dump_yaml_config(const yaml &root)
         "root_dir",
         "unpack_directory",
         "unpack_dir",
+        "output_directory",
+        "output_dir",
 
         "c_standard",
         "c",

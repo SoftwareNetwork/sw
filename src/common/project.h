@@ -172,6 +172,9 @@ public:
     // directory where all files are stored after unpack
     path unpack_directory;
 
+    // directory where binary files are copied, no need to be a path
+    String output_directory;
+
     // optional
     String name;
     ProjectType type{ ProjectType::Executable };

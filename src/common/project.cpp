@@ -718,9 +718,14 @@ void Project::load(const yaml &root)
     read_dir(root_directory, "root_directory");
     if (root_directory.empty())
         read_dir(root_directory, "root_dir");
+
     read_dir(unpack_directory, "unpack_directory");
     if (unpack_directory.empty())
         read_dir(unpack_directory, "unpack_dir");
+
+    EXTRACT_AUTO(output_directory);
+    if (output_directory.empty())
+        EXTRACT_VAR(root, output_directory, "output_dir", String);
 
     // include_directories
     {
@@ -1176,6 +1181,7 @@ yaml Project::save() const
 
     ADD_IF_NOT_EMPTY_VAL(root_directory, normalize_path(root_directory));
     ADD_IF_NOT_EMPTY_VAL(unpack_directory, normalize_path(unpack_directory));
+    ADD_IF_NOT_EMPTY(output_directory);
 
     if (c_standard)
         root["c"] = c_standard;

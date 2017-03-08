@@ -655,6 +655,9 @@ void CMakePrinter::print_copy_dependencies(Context &ctx, const String &target) c
         ctx.addLine("endif()");
         ctx.addLine();
 
+        auto output_directory = "${output_dir}/"s;
+        output_directory += rd[p].config->getDefaultProject().output_directory + "/";
+
         ctx.addLine("if (copy)");
         ctx.increaseIndent();
         ctx.addLine("add_custom_command(TARGET " + target + " POST_BUILD");
@@ -668,12 +671,12 @@ void CMakePrinter::print_copy_dependencies(Context &ctx, const String &target) c
                 name = "$<TARGET_FILE_NAME:" + p.target_name + ">";
             else
                 name = p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}";
-            ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/" + name);
+            ctx.addLine("$<TARGET_FILE:" + p.target_name + "> " + output_directory + name);
         }
         else
         {
             // if we change non-exe name, we still won't fix linker information about dependencies' names
-            ctx.addLine("$<TARGET_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_FILE_NAME:" + p.target_name + ">");
+            ctx.addLine("$<TARGET_FILE:" + p.target_name + "> " + output_directory + "$<TARGET_FILE_NAME:" + p.target_name + ">");
         }
         ctx.decreaseIndent();
         ctx.decreaseIndent();
@@ -689,7 +692,7 @@ void CMakePrinter::print_copy_dependencies(Context &ctx, const String &target) c
             ctx.increaseIndent();
             ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
             ctx.increaseIndent();
-            ctx.addLine("$<TARGET_LINKER_FILE:" + p.target_name + "> ${output_dir}/$<TARGET_LINKER_FILE_NAME:" + p.target_name + ">");
+            ctx.addLine("$<TARGET_LINKER_FILE:" + p.target_name + "> " + output_directory + "$<TARGET_LINKER_FILE_NAME:" + p.target_name + ">");
             ctx.decreaseIndent();
             ctx.decreaseIndent();
             ctx.addLine(")");
