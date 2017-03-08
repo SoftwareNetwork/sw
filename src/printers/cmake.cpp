@@ -2737,7 +2737,7 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
     }
 
     LOG_INFO(logger, "-- Performing " << n_checks << " checks using " << N << " thread(s)");
-#ifdef _WIN32
+#ifndef _WIN32
     LOG_INFO(logger, "-- This process may take up to 5 minutes depending on your hardware");
 #else
     LOG_INFO(logger, "-- This process may take up to 10-20 minutes depending on your hardware");

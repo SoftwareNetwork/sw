@@ -293,7 +293,7 @@ void Resolver::download_and_unpack()
         }
     };
 
-    Executor e(get_max_threads(8));
+    Executor e(get_max_threads(8), "Download thread");
     e.throw_exceptions = true;
 
     // threaded execution does not preserve object creation/destruction order,

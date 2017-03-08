@@ -53,32 +53,6 @@ bool has_executable_in_path(std::string &prog, bool silent)
     return ret;
 }
 
-std::istream &safe_getline(std::istream &is, std::string &s)
-{
-    s.clear();
-
-    std::istream::sentry se(is, true);
-    std::streambuf* sb = is.rdbuf();
-
-    for (;;) {
-        int c = sb->sbumpc();
-        switch (c) {
-        case '\n':
-            return is;
-        case '\r':
-            if (sb->sgetc() == '\n')
-                sb->sbumpc();
-            return is;
-        case EOF:
-            if (s.empty())
-                is.setstate(std::ios::eofbit | std::ios::failbit);
-            return is;
-        default:
-            s += (char)c;
-        }
-    }
-}
-
 namespace command
 {
 
@@ -107,8 +81,10 @@ private:
     void operator()()
     {
         std::string s;
-        while (::safe_getline(in, s))
+        while (std::getline(in, s))
         {
+            boost::trim(s);
+
             // before newline
             if (opts.action)
                 opts.action(s);

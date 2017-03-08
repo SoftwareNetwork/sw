@@ -73,6 +73,9 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                 )
                 check_result_variable(${ret})
                 #message("Copied!")
+
+                # since cmake 3.8 we must initialize CMakeCache.txt with on record in it
+                file(WRITE ${build_dir}/CMakeCache.txt "CMAKE_PLATFORM_INFO_INITIALIZED:INTERNAL=1\n")
             else()
                 message(WARNING "From dir does not exist! ${from}")
             endif()
