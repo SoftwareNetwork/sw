@@ -60,6 +60,7 @@ std::vector<StartupAction> startup_actions{
     { 5, StartupAction::ClearStorageDirExp },
     { 6, StartupAction::ClearSourceGroups },
     { 7, StartupAction::ClearStorageDirExp | StartupAction::ClearStorageDirBin | StartupAction::ClearStorageDirLib },
+    { 8, StartupAction::ClearCfgDirs },
 };
 
 const TableDescriptors &get_service_tables()
@@ -495,6 +496,15 @@ void ServiceDatabase::performStartupActions() const
             if (a.action & StartupAction::ClearSourceGroups)
             {
                 clearSourceGroups();
+            }
+
+            if (a.action & StartupAction::ClearCfgDirs)
+            {
+                for (auto &i : boost::make_iterator_range(fs::directory_iterator(directories.storage_dir_cfg), {}))
+                {
+                    if (fs::is_directory(i))
+                        fs::remove_all(i);
+                }
             }
         }
     }

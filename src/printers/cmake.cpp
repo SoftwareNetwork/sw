@@ -1132,7 +1132,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
             if (dd.reference.empty())
                 continue;
             ctx.addLine("set(" + dd.reference + " " + rd[d].dependencies[dd.ppath.toString()].target_name + ")");
-            if (rd[d].config->getDefaultProject().pkg.flags[pfLocalProject])
+            if (dd.ppath.is_loc())
                 ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd.get_local_package_dir(dd.ppath.toString())) + ")");
             else
                 ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirSrc()) + ")");

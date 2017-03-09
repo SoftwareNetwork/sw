@@ -49,6 +49,7 @@ struct StartupAction
         ClearSourceGroups           = 0x0008,
         ClearStorageDirBin          = 0x0010,
         ClearStorageDirLib          = 0x0020,
+        ClearCfgDirs                = 0x0040,
     };
 
     int id;

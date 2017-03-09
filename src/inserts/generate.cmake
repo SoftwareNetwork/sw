@@ -27,7 +27,14 @@ set(lock ${build_dir}/cppan_generate.lock)
 
 ########################################
 
-if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
+# copy to (dst) dir
+set(to ${build_dir}/CMakeFiles/${CMAKE_VERSION})
+
+if (NOT EXISTS ${import} OR
+    NOT EXISTS ${import_fixed} OR
+    # this check works when newer cmake version is available
+    (EXISTS ${build_dir}/CMakeFiles AND NOT EXISTS ${to})
+    )
     file(
         LOCK ${lock}
         GUARD FILE # CMake bug workaround https://gitlab.kitware.com/cmake/cmake/issues/16295
@@ -52,11 +59,14 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
     endif()
 
     # double check
-    if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
+    if (NOT EXISTS ${import} OR
+        NOT EXISTS ${import_fixed} OR
+        # this check works when newer cmake version is available
+        (EXISTS ${build_dir}/CMakeFiles AND NOT EXISTS ${to})
+        )
         set(generator ${CMAKE_GENERATOR})
 
         # copy cmake cache for faster bootstrapping
-        set(to ${build_dir}/CMakeFiles/${CMAKE_VERSION})
         if (NOT EXISTS ${to})
             if (EXECUTABLE)
                 # TODO: fix executables bootstrapping
@@ -72,15 +82,15 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
-                #message("Copied!")
+                cppan_debug_message("Copied!")
 
                 # since cmake 3.8 we must initialize CMakeCache.txt with on record in it
                 file(WRITE ${build_dir}/CMakeCache.txt "CMAKE_PLATFORM_INFO_INITIALIZED:INTERNAL=1\n")
             else()
-                message(WARNING "From dir does not exist! ${from}")
+                cppan_debug_message("From dir does not exist! ${from}")
             endif()
         else()
-            #message("To dir ${to}")
+            cppan_debug_message("To dir ${to}")
         endif()
 
         # prepare variables for child process
@@ -130,11 +140,14 @@ if (NOT EXISTS ${import} OR NOT EXISTS ${import_fixed})
         if (EXECUTABLE)# AND NOT CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
                 cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
-                        -DVARIABLES_FILE=${variables_file}")
+                        -DVARIABLES_FILE=${variables_file}
+                        -G \"${generator}\""
+                )
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
                         -DVARIABLES_FILE=${variables_file}
+                        -G "${generator}"
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})

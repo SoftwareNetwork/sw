@@ -822,6 +822,10 @@ endfunction()
 function(set_src_header_only s)
     set(src2 ${src})
     list(FILTER src2 INCLUDE REGEX "${s}")
+    list(LENGTH src2 N)
+    if (N EQUAL 0)
+        return()
+    endif()
     list(GET src2 0 f)
     set_source_files_properties(${f} PROPERTIES HEADER_FILE_ONLY True)
     set(src ${src} ${f} PARENT_SCOPE)
@@ -847,6 +851,14 @@ function(moc_cpp_file f)
     get_filename_component(n ${f} NAME_WE)
     qt5_create_moc_command(${SDIR}/${f} ${BDIR}/${n}.moc "" "" ${this} "")
     set(src ${src} ${BDIR}/${n}.moc PARENT_SCOPE)
+endfunction()
+
+########################################
+# FUNCTION create_directory
+########################################
+
+function(create_directory d)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${d})
 endfunction()
 
 ################################################################################
