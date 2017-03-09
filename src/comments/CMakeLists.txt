@@ -34,7 +34,7 @@ if (FLEX_FOUND AND BISON_FOUND)
         ${parser_src}
     )
 else()
-    file(GLOB parser_src "*")
+    file(GLOB builder_src "*")
 endif()
 
 add_library(extract_comments ${builder_src})

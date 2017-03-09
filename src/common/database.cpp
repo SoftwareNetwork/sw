@@ -61,6 +61,7 @@ std::vector<StartupAction> startup_actions{
     { 6, StartupAction::ClearSourceGroups },
     { 7, StartupAction::ClearStorageDirExp | StartupAction::ClearStorageDirBin | StartupAction::ClearStorageDirLib },
     { 8, StartupAction::ClearCfgDirs },
+    { 9, StartupAction::ClearStorageDirExp },
 };
 
 const TableDescriptors &get_service_tables()

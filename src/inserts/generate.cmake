@@ -132,9 +132,9 @@ if (NOT EXISTS ${import} OR
             set(toolset "-T${CMAKE_GENERATOR_TOOLSET}")
         endif()
 
-        message(STATUS "")
+        #message(STATUS "")
         message(STATUS "Preparing build tree for ${target} (${config_unhashed} - ${config_dir} - ${generator})")
-        message(STATUS "")
+        #message(STATUS "")
 
         # call cmake
         if (EXECUTABLE)# AND NOT CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)

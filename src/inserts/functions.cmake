@@ -315,6 +315,12 @@ function(get_configuration_exe_unhashed out)
     prepare_config_part(processor ${CMAKE_HOST_SYSTEM_PROCESSOR})
     set(config ${system}${CPPAN_CONFIG_PART_DELIMETER}${processor})
 
+    # add generator to executables since we're using the same generator as for libraries
+    prepare_config_part(generator ${CMAKE_GENERATOR})
+    if (NOT "${generator}" STREQUAL "")
+        set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${generator})
+    endif()
+
     set(${out} ${config} PARENT_SCOPE)
 endfunction(get_configuration_exe_unhashed)
 
