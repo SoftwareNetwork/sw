@@ -476,125 +476,160 @@ void CMakePrinter::print_build_dependencies(Context &ctx, const String &target) 
     ctx.increaseIndent();
 
     // run building of direct dependecies before project building
+    Packages build_deps;
+    // build only direct deps
+    gather_build_deps(rd[d].dependencies, build_deps);
+
+    if (!build_deps.empty())
     {
-        Packages build_deps;
-        // build only direct deps
-        gather_build_deps(rd[d].dependencies, build_deps);
+        Context local;
+        local.addLine("get_configuration_with_generator(config)");
+        local.addLine("if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
+        local.increaseIndent();
+        local.addLine("get_configuration_with_generator(config_exe)");
+        local.decreaseIndent();
+        local.addLine("else()");
+        local.increaseIndent();
+        local.addLine("get_configuration_exe(config_exe)");
+        local.decreaseIndent();
+        local.addLine("endif()");
 
-        if (!build_deps.empty())
+        // we're in helper, set this var to build target
+        if (d.empty())
+            local.addLine("set(this " + target + ")");
+        local.emptyLines();
+
+        // TODO: check with ninja and remove if ok
+        //Packages build_deps_all;
+        //gather_build_deps(rd[d].dependencies, build_deps_all, true);
+        //for (auto &dp : build_deps_all)
+        for (auto &dp : build_deps)
         {
-            Context local;
-            local.addLine("get_configuration_with_generator(config)");
-            local.addLine("if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)");
-            local.increaseIndent();
-            local.addLine("get_configuration_with_generator(config_exe)");
-            local.decreaseIndent();
-            local.addLine("else()");
-            local.increaseIndent();
-            local.addLine("get_configuration_exe(config_exe)");
-            local.decreaseIndent();
-            local.addLine("endif()");
+            auto &p = dp.second;
 
-            // we're in helper, set this var to build target
-            if (d.empty())
-                local.addLine("set(this " + target + ")");
-            local.emptyLines();
+            // local projects are always built inside solution
+            if (p.flags[pfLocalProject])
+                continue;
 
-            // TODO: check with ninja and remove if ok
-            //Packages build_deps_all;
-            //gather_build_deps(rd[d].dependencies, build_deps_all, true);
-            //for (auto &dp : build_deps_all)
-            for (auto &dp : build_deps)
-            {
-                auto &p = dp.second;
-
-                // local projects are always built inside solution
-                if (p.flags[pfLocalProject])
-                    continue;
-
-                local.addLine("get_target_property(implib_" + p.variable_name + " " + p.target_name + " IMPORTED_IMPLIB_${CMAKE_BUILD_TYPE_UPPER})");
-            }
-            local.emptyLines();
-
-            bool deps = false;
-            String build_deps_tgt = "${this}";
-            if (d.empty() && target.find("-b") != target.npos)
-            {
-                build_deps_tgt += "-d"; // deps
-                deps = true;
-            }
-            else
-                build_deps_tgt += "-b-d";
-
-            // do not use add_custom_command as it doesn't work
-            // add custom target and add a dependency below
-            // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
-            local.addLine("add_custom_target(" + build_deps_tgt);
-            local.increaseIndent();
-            bool has_build_deps = false;
-            for (auto &dp : build_deps)
-            {
-                auto &p = dp.second;
-
-                // local projects are always built inside solution
-                if (p.flags[pfLocalProject])
-                    continue;
-
-                has_build_deps = true;
-                local.addLine("COMMAND ${CMAKE_COMMAND}");
-                local.increaseIndent();
-                local.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
-                local.addLine("-DCONFIG=$<CONFIG>");
-                String cfg = "config";
-                if (p.flags[pfExecutable] && !p.flags[pfLocalProject])
-                    cfg = "config_exe";
-                local.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
-                local.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
-                // we do not pass this var to children
-                //local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
-                local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION}");
-                local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
-                local.addLine("-DCPPAN_BUILD_VERBOSE=${CPPAN_BUILD_VERBOSE}");
-                local.addLine("-DCPPAN_BUILD_WARNING_LEVEL=${CPPAN_BUILD_WARNING_LEVEL}");
-                local.addLine("-DCPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT=${CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT}");
-                local.addLine("-DN_CORES=${N_CORES}");
-                if (d.empty())
-                    local.addLine("-DMULTICORE=1");
-                local.addLine("-DXCODE=${XCODE}");
-                local.addLine("-DNINJA=${NINJA}");
-                local.addLine("-DVISUAL_STUDIO=${VISUAL_STUDIO}");
-                local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
-                local.decreaseIndent();
-                local.addLine();
-            }
-            local.addLine("BYPRODUCTS");
-            local.increaseIndent();
-            for (auto &dp : build_deps)
-            //for (auto &dp : build_deps_all)
-            {
-                auto &p = dp.second;
-
-                // local projects are always built inside solution
-                if (p.flags[pfLocalProject])
-                    continue;
-
-                local.addLine("${implib_" + p.variable_name + "}");
-            }
-            local.decreaseIndent();
-            local.decreaseIndent();
-            local.addLine(")");
-            local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
-            print_solution_folder(local, build_deps_tgt, deps ? service_folder : service_deps_folder);
-            //this causes long paths issue
-            //if (deps)
-            //    set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", "dependencies");
-            //else
-            //    set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", (d.flags[pfLocalProject] ? d.ppath.back() : d.target_name) + "-build-dependencies");
-            local.addLine();
-
-            if (has_build_deps)
-                ctx += local;
+            local.addLine("get_target_property(implib_" + p.variable_name + " " + p.target_name + " IMPORTED_IMPLIB_${CMAKE_BUILD_TYPE_UPPER})");
         }
+        local.emptyLines();
+
+        bool deps = false;
+        String build_deps_tgt = "${this}";
+        if (d.empty() && target.find("-b") != target.npos)
+        {
+            build_deps_tgt += "-d"; // deps
+            deps = true;
+        }
+        else
+            build_deps_tgt += "-b-d";
+
+        // do not use add_custom_command as it doesn't work
+        // add custom target and add a dependency below
+        // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
+        local.addLine("add_custom_target(" + build_deps_tgt);
+        local.increaseIndent();
+        bool has_build_deps = false;
+        for (auto &dp : build_deps)
+        {
+            auto &p = dp.second;
+
+            // local projects are always built inside solution
+            if (p.flags[pfLocalProject])
+                continue;
+
+            has_build_deps = true;
+            local.addLine("COMMAND ${CMAKE_COMMAND}");
+            local.increaseIndent();
+            local.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
+            local.addLine("-DCONFIG=$<CONFIG>");
+            String cfg = "config";
+            if (p.flags[pfExecutable] && !p.flags[pfLocalProject])
+                cfg = "config_exe";
+            local.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
+            local.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
+            // we do not pass this var to children
+            //local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
+            local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION}");
+            local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
+            local.addLine("-DCPPAN_BUILD_VERBOSE=${CPPAN_BUILD_VERBOSE}");
+            local.addLine("-DCPPAN_BUILD_WARNING_LEVEL=${CPPAN_BUILD_WARNING_LEVEL}");
+            local.addLine("-DCPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT=${CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT}");
+            local.addLine("-DN_CORES=${N_CORES}");
+            if (d.empty())
+                local.addLine("-DMULTICORE=1");
+            local.addLine("-DXCODE=${XCODE}");
+            local.addLine("-DNINJA=${NINJA}");
+            local.addLine("-DVISUAL_STUDIO=${VISUAL_STUDIO}");
+            local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
+            local.decreaseIndent();
+            local.addLine();
+        }
+        local.addLine("BYPRODUCTS");
+        local.increaseIndent();
+        for (auto &dp : build_deps)
+        //for (auto &dp : build_deps_all)
+        {
+            auto &p = dp.second;
+
+            // local projects are always built inside solution
+            if (p.flags[pfLocalProject])
+                continue;
+
+            local.addLine("${implib_" + p.variable_name + "}");
+        }
+        local.decreaseIndent();
+        local.decreaseIndent();
+        local.addLine(")");
+        local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
+        print_solution_folder(local, build_deps_tgt, deps ? service_folder : service_deps_folder);
+        //this causes long paths issue
+        //if (deps)
+        //    set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", "dependencies");
+        //else
+        //    set_target_properties(local, build_deps_tgt, "PROJECT_LABEL", (d.flags[pfLocalProject] ? d.ppath.back() : d.target_name) + "-build-dependencies");
+        local.addLine();
+
+        // alias dependencies
+        if (d.empty())
+        {
+            auto tt = "add_dependencies"s;
+            for (auto &dp : build_deps)
+            {
+                auto &d = dp.second;
+                auto add_aliases = [&d, &tt, &ctx = local](const auto &delim)
+                {
+                    Version ver = d.version;
+                    ver.patch = -1;
+                    ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ${this})");
+                    ver.minor = -1;
+                    ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ${this})");
+                    ctx.addLine(tt + "(" + d.ppath.toString(delim) + " ${this})");
+                    ctx.addLine();
+                };
+                add_aliases(".");
+                add_aliases("::");
+
+                if (d.flags[pfLocalProject])
+                {
+                    ctx.addLine(tt + "(" + d.ppath.back() + " ${this})");
+                    ctx.emptyLines();
+                }
+
+                const auto &aliases = rd[dp.second].config->getDefaultProject().aliases;
+                if (!aliases.empty())
+                {
+                    ctx.addLine("# user-defined");
+                    for (auto &a : aliases)
+                        ctx.addLine(tt + "(" + a + " ${this})");
+                    ctx.addLine();
+                }
+            }
+        }
+
+        if (has_build_deps)
+            ctx += local;
     }
 
     ctx.decreaseIndent();
