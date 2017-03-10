@@ -598,18 +598,23 @@ void CMakePrinter::print_build_dependencies(Context &ctx, const String &target) 
             for (auto &dp : build_deps)
             {
                 auto &d = dp.second;
-                auto add_aliases = [&d, &tt, &ctx = local](const auto &delim)
+                auto add_aliases = [&d, &tt, &ctx = local](const auto &delim, bool all = false)
                 {
                     Version ver = d.version;
-                    ver.patch = -1;
-                    ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ${this})");
-                    ver.minor = -1;
-                    ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ${this})");
+                    if (!ver.isBranch())
+                    {
+                        ver.patch = -1;
+                        ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ${this})");
+                        ver.minor = -1;
+                        ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ${this})");
+                    }
+                    else if (all)
+                        ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ${this})");
                     ctx.addLine(tt + "(" + d.ppath.toString(delim) + " ${this})");
                     ctx.addLine();
                 };
                 add_aliases(".");
-                add_aliases("::");
+                add_aliases("::", true);
 
                 if (d.flags[pfLocalProject])
                 {
