@@ -40,11 +40,6 @@ String fix_imports(const Strings &lines_old, const String &old_target, const Str
         line = line.substr(0, line.find(old_target)) + new_target + line.substr(line.find(old_target) + old_target.size());
         if (line.find("add_library") == 0 || line.find("add_executable") == 0)
             boost::algorithm::replace_all(line, "IMPORTED", "IMPORTED GLOBAL");
-        /*else if (line.find("set_target_properties") == 0)
-        {
-            static std::regex r("INTERFACE_LINK_LIBRARIES\\s*\\S+");
-            line = std::regex_replace(line, r, "");
-        }*/
         ctx.addLine(line);
     }
     ctx.decreaseIndent();
@@ -130,29 +125,20 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
         const auto &tgt = dep.target_name_hash;
         CMakeContext ctx;
 
-        auto add_aliases = [&ctx, &dep, &tgt, &lines](const auto &delim)
+        StringSet aliases;
         {
-            auto d = dep;
-            ctx.addLine(fix_imports(lines, tgt, d.ppath.toString(delim) + "-" + d.version.toAnyVersion()));
-            d.version.patch = -1;
-            ctx.addLine(fix_imports(lines, tgt, d.ppath.toString(delim) + "-" + d.version.toAnyVersion()));
-            d.version.minor = -1;
-            ctx.addLine(fix_imports(lines, tgt, d.ppath.toString(delim) + "-" + d.version.toAnyVersion()));
-            ctx.addLine(fix_imports(lines, tgt, d.ppath.toString(delim)));
-        };
-        add_aliases(".");
-        add_aliases("::");
-
-        {
-            Strings aliases;
+            Strings aliasesv;
             boost::algorithm::trim(aliases_s);
-            boost::algorithm::split(aliases, aliases_s, boost::is_any_of(";"));
-            for (auto &a : aliases)
+            boost::algorithm::split(aliasesv, aliases_s, boost::is_any_of(";"));
+            for (auto &a : aliasesv)
                 boost::algorithm::trim(a);
-            for (auto &a : aliases)
-                if (!a.empty())
-                    ctx.addLine(fix_imports(lines, tgt, a));
+            aliases.insert(aliasesv.begin(), aliasesv.end());
         }
+
+        add_aliases(ctx, dep, true, aliases, [&lines, &tgt](const auto &s, const auto &v)
+        {
+            return fix_imports(lines, tgt, s);
+        });
 
         ctx.emptyLines(1);
         ctx.splitLines();

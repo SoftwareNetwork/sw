@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#pragma once
+
 #include <primitives/context.h>
 #include <primitives/string.h>
 

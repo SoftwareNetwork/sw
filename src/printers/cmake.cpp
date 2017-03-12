@@ -207,6 +207,13 @@ void print_local_project_files(CMakeContext &ctx, const Project &p)
     ctx.decreaseIndent(")");
 }
 
+String add_target(const Package &p)
+{
+    if (p.flags[pfExecutable])
+        return "add_executable";
+    return "add_library";
+}
+
 String cppan_dummy_target(const String &name)
 {
     if (name.empty())
@@ -295,7 +302,7 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
     if (dd.empty())
         return;
 
-    std::vector<String> includes;
+    std::vector<Package> includes;
     CMakeContext ctx2;
 
     config_section_title(ctx, "direct dependencies");
@@ -357,9 +364,7 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
             // add local build includes
             ctx2.addLine("# " + dep.target_name);
             add_subdirectory(ctx2, dep.getDirSrc().string());
-
-            includes.push_back("# " + dep.target_name + "\n" +
-                "cppan_include(\"" + normalize_path(dir / cmake_obj_generate_filename) + "\")");
+            includes.push_back(dep);
         }
     }
     ctx.addLine();
@@ -376,12 +381,24 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
             ctx.addLine();
         }
 
-        for (auto &line : includes)
-            ctx.addLine(line);
+        for (auto &dep : includes)
+        {
+            ctx.addLine("# " + dep.target_name + "\n" +
+                "cppan_include(\"" + normalize_path(dep.getDirObj() / cmake_obj_generate_filename) + "\")");
+        }
 
         ctx.else_();
         ctx.addLine(boost::trim_copy(ctx2.getText()));
         ctx.endif();
+
+        /*config_section_title(ctx, "aliases");
+        for (auto &dep : includes)
+        {
+            add_aliases(ctx, dep, [](const Package &d, const String &s)
+            {
+                return add_target(d) + "(" + s + " ALIAS " + d.target_name_hash + ")";
+            });
+        }*/
     }
 
     ctx.splitLines();
@@ -569,33 +586,12 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
             auto tt = "add_dependencies"s;
             for (auto &dp : build_deps)
             {
-                auto &d = dp.second;
-                auto add_aliases = [&d, &tt, &ctx = local](const auto &delim, bool all = false)
+                add_aliases(local, dp.second, false, [&tt](const auto &s, const auto &v)
                 {
-                    Version ver = d.version;
-                    if (!ver.isBranch())
-                    {
-                        ver.patch = -1;
-                        ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ${this})");
-                        ver.minor = -1;
-                        ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ${this})");
-                    }
-                    else if (all)
-                        ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ${this})");
-                    ctx.addLine(tt + "(" + d.ppath.toString(delim) + " ${this})");
-                    ctx.addLine();
-                };
-                add_aliases(".");
-                add_aliases("::", true);
-
-                const auto &aliases = rd[dp.second].config->getDefaultProject().aliases;
-                if (!aliases.empty())
-                {
-                    ctx.addLine("# user-defined");
-                    for (auto &a : aliases)
-                        ctx.addLine(tt + "(" + a + " ${this})");
-                    ctx.addLine();
-                }
+                    if (v.patch != -1)
+                        return ""s;
+                    return tt + "(" + s + " ${this})";
+                });
             }
         }
 
@@ -1886,33 +1882,15 @@ else())");
         const String tt = d.flags[pfExecutable] ? "add_executable" : "add_library";
 
         config_section_title(ctx, "aliases");
-
-        auto add_aliases = [this, &tt, &ctx](const auto &delim)
+        add_aliases(ctx, d, [&tt](const auto &s, const auto &v)
         {
-            Version ver = d.version;
-            ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-            ver.patch = -1;
-            ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-            ver.minor = -1;
-            ctx.addLine(tt + "(" + d.ppath.toString(delim) + "-" + ver.toAnyVersion() + " ALIAS ${this})");
-            ctx.addLine(tt + "(" + d.ppath.toString(delim) + " ALIAS ${this})");
-            ctx.addLine();
-        };
-        add_aliases(".");
-        add_aliases("::");
+            return tt + "(" + s + " ALIAS ${this})";
+        });
 
         if (d.flags[pfLocalProject])
         {
             ctx.addLine(tt + "(" + d.ppath.back() + " ALIAS ${this})");
             ctx.emptyLines();
-        }
-
-        if (!p.aliases.empty())
-        {
-            ctx.addLine("# user-defined");
-            for (auto &a : p.aliases)
-                ctx.addLine(tt + "(" + a + " ALIAS ${this})");
-            ctx.addLine();
         }
     }
 

@@ -62,6 +62,7 @@ std::vector<StartupAction> startup_actions{
     { 7, StartupAction::ClearStorageDirExp | StartupAction::ClearStorageDirBin | StartupAction::ClearStorageDirLib },
     { 8, StartupAction::ClearCfgDirs },
     { 9, StartupAction::ClearStorageDirExp },
+    // 10
 };
 
 const TableDescriptors &get_service_tables()
@@ -921,7 +922,8 @@ void PackagesDatabase::download()
             }
             else
             {
-                if (command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }).rc)
+                if (command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }).rc ||
+                    command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard" }).rc)
                 {
                     recover();
                     git_init();

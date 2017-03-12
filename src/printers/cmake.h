@@ -62,3 +62,56 @@ private:
     bool must_update_contents(const path &fn) const;
     void write_if_older(const path &fn, const String &s) const;
 };
+
+template <class F>
+void add_aliases(Context &ctx, const Package &d, bool all, const StringSet &aliases, F &&f)
+{
+    auto add_line = [&ctx](const auto &s)
+    {
+        if (!s.empty())
+            ctx.addLine(s);
+    };
+
+    auto add_aliases = [&](const auto &delim)
+    {
+        Version ver = d.version;
+        if (!ver.isBranch())
+        {
+            add_line(std::forward<F>(f)(d.ppath.toString(delim) + "-" + ver.toAnyVersion(), ver));
+            ver.patch = -1;
+            add_line(std::forward<F>(f)(d.ppath.toString(delim) + "-" + ver.toAnyVersion(), ver));
+            ver.minor = -1;
+            add_line(std::forward<F>(f)(d.ppath.toString(delim) + "-" + ver.toAnyVersion(), ver));
+        }
+        else if (all)
+            add_line(std::forward<F>(f)(d.ppath.toString(delim) + "-" + ver.toAnyVersion(), ver));
+        add_line(std::forward<F>(f)(d.ppath.toString(delim), ver));
+        ctx.addLine();
+    };
+    add_aliases(".");
+    add_aliases("::");
+
+    if (!aliases.empty())
+    {
+        ctx.addLine("# user-defined");
+        for (auto &a : aliases)
+        {
+            if (!a.empty())
+                add_line(std::forward<F>(f)(a, Version()));
+        }
+        ctx.addLine();
+    }
+}
+
+template <class F>
+void add_aliases(Context &ctx, const Package &d, bool all, F &&f)
+{
+    const auto &aliases = rd[d].config->getDefaultProject().aliases;
+    add_aliases(ctx, d, all, aliases, std::forward<F>(f));
+}
+
+template <class F>
+void add_aliases(Context &ctx, const Package &d, F &&f)
+{
+    add_aliases(ctx, d, true, std::forward<F>(f));
+}
