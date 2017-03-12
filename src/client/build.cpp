@@ -158,7 +158,11 @@ int build_packages(const Config &c, const String &name)
     if (new_config)
         fs::remove_all(dst);
     if (!fs::exists(dst))
+    {
         copy_dir(src, dst);
+        // since cmake 3.8
+        write_file(bs.binary_directory / "CMakeCache.txt", "CMAKE_PLATFORM_INFO_INITIALIZED:INTERNAL=1\n");
+    }
 
     auto &ls = Settings::get_local_settings();
 
