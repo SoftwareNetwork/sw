@@ -19,8 +19,10 @@
 #include "config.h"
 #include "printer.h"
 
-void file_header(Context &ctx, const Package &d, bool root = false);
-void file_footer(Context &ctx, const Package &d);
+class CMakeContext;
+
+void file_header(CMakeContext &ctx, const Package &d, bool root = false);
+void file_footer(CMakeContext &ctx, const Package &d);
 
 struct CMakePrinter : Printer
 {
@@ -51,11 +53,11 @@ private:
     void print_obj_generate_file(const path &fn) const;
     void print_obj_export_file(const path &fn) const;
     void print_obj_build_file(const path &fn) const;
-    void print_bs_insertion(Context &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
-    void print_source_groups(Context &ctx) const;
+    void print_bs_insertion(CMakeContext &ctx, const Project &p, const String &name, const String BuildSystemConfigInsertions::*i) const;
+    void print_source_groups(CMakeContext &ctx) const;
 
-    void print_build_dependencies(Context &ctx, const String &target) const;
-    void print_copy_dependencies(Context &ctx, const String &target) const;
+    void print_build_dependencies(CMakeContext &ctx, const String &target) const;
+    void print_copy_dependencies(CMakeContext &ctx, const String &target) const;
 
     bool must_update_contents(const path &fn) const;
     void write_if_older(const path &fn, const String &s) const;

@@ -39,6 +39,7 @@ add_dependencies(support inserts_gen gen_stamp)
 target_include_directories(support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
 
 target_link_libraries(support
+    pvt.egorpugin.primitives.context
     pvt.egorpugin.primitives.hash
     pvt.egorpugin.primitives.http
     pvt.egorpugin.primitives.log
@@ -104,7 +105,6 @@ target_link_libraries(common
     pvt.cppan.demo.jbeder.yaml_cpp
     pvt.cppan.demo.sqlite3
 
-    pvt.egorpugin.primitives.context
     pvt.egorpugin.primitives.pack
     pvt.egorpugin.primitives.date_time
     pvt.egorpugin.primitives.executor

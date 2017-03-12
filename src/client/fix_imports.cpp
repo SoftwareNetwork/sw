@@ -17,12 +17,12 @@
 #include "fix_imports.h"
 
 #include <config.h>
+#include <context.h>
 #include <project_path.h>
 
 #include <printers/cmake.h>
 
 #include <boost/algorithm/string.hpp>
-#include <primitives/context.h>
 
 #include <deque>
 #include <iostream>
@@ -31,7 +31,7 @@
 
 String fix_imports(const Strings &lines_old, const String &old_target, const String &new_target)
 {
-    Context ctx;
+    CMakeContext ctx;
     ctx.increaseIndent();
     for (auto &line1 : lines_old)
     {
@@ -128,7 +128,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
     auto fix = [&aliases_s](const auto &lines, const auto &dep)
     {
         const auto &tgt = dep.target_name_hash;
-        Context ctx;
+        CMakeContext ctx;
 
         auto add_aliases = [&ctx, &dep, &tgt, &lines](const auto &delim)
         {
@@ -159,7 +159,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
         return ctx.getText();
     };
 
-    Context ctx;
+    CMakeContext ctx;
     file_header(ctx, dep);
     if (exe)
     {
