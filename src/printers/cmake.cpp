@@ -1096,7 +1096,6 @@ void CMakePrinter::print_src_config_file(const path &fn) const
 
     // variables for target
     ctx.addLine("set(this " + d.target_name_hash + ")");
-    ctx.addLine("set(target ${this})");
     ctx.addLine("set(this_variable " + d.variable_name + ")");
     ctx.addLine();
 
@@ -1219,8 +1218,8 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
         ctx.endif();
         ctx.addLine();
-        ctx.if_("NOT \"${LIBRARY_TYPE_" + d.variable_name + "}\" STREQUAL \"\"");
-        ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_" + d.variable_name + "})");
+        ctx.if_("NOT \"${LIBRARY_TYPE_${this_variable}}\" STREQUAL \"\"");
+        ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_${this_variable}})");
         ctx.endif();
         ctx.addLine();
 
@@ -1878,7 +1877,7 @@ else())");
 
     // export
     config_section_title(ctx, "export");
-    ctx.addLine("export(TARGETS ${this} FILE " + exports_dir + d.variable_name + ".cmake)");
+    ctx.addLine("export(TARGETS ${this} FILE " + exports_dir + "${this_variable}.cmake)");
     ctx.emptyLines();
 
     // aliases
