@@ -391,7 +391,9 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
         ctx.addLine(boost::trim_copy(ctx2.getText()));
         ctx.endif();
 
-        /*config_section_title(ctx, "aliases");
+        /*
+        cmake currently does not support aliases to imported targets
+        config_section_title(ctx, "aliases");
         for (auto &dep : includes)
         {
             add_aliases(ctx, dep, [](const Package &d, const String &s)
