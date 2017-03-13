@@ -115,7 +115,7 @@ Result execute(const Args &args, const Options &opts)
     boost::algorithm::replace_all(args_fixed[0], "/", "\\");
 #endif
 
-#ifndef NDEBUG
+    // log
     {
         std::string s;
         for (auto &a : args_fixed)
@@ -123,7 +123,6 @@ Result execute(const Args &args, const Options &opts)
         s.resize(s.size() - 1);
         LOG_DEBUG(logger, "executing command: " << s);
     }
-#endif
 
     context ctx;
     ctx.stdin_behavior = inherit_stream();
@@ -142,7 +141,7 @@ Result execute(const Args &args, const Options &opts)
     set_behavior(ctx.stderr_behavior, opts.err);
 
     // copy env
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
     auto env = environ;
     while (*env)
     {
@@ -176,9 +175,9 @@ Result execute(const Args &args, const Options &opts)
         if (r.rc)
             LOG_WARN(logger, "Command exited with non zero status: " << args_fixed[0] << ", rc = " << r.rc);
     }
-    catch (...)
+    catch (std::exception &e)
     {
-        LOG_FATAL(logger, "Command failed: " << args_fixed[0]);
+        LOG_FATAL(logger, "Command failed: " << args_fixed[0] << ": " << e.what());
         throw;
     }
 
