@@ -904,8 +904,7 @@ void PackagesDatabase::download()
         {
             command::execute({ git,"-C",db_repo_dir.string(),"init","." });
             command::execute({ git,"-C",db_repo_dir.string(),"remote","add","github",db_repo_url });
-            command::execute({ git,"-C",db_repo_dir.string(),"fetch","--depth","1","github","master" });
-            command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard","FETCH_HEAD" });
+            command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" });
         };
 
         auto recover = [this]()
