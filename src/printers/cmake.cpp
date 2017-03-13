@@ -18,7 +18,6 @@
 
 #include <access_table.h>
 #include <command.h>
-#include <context.h>
 #include <database.h>
 #include <directories.h>
 #include <hash.h>
