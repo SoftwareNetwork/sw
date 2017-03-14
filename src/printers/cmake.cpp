@@ -2211,6 +2211,9 @@ void CMakePrinter::print_obj_export_file(const path &fn) const
         rd[d].config->getDefaultProject().build_dependencies_with_same_config ? "1" : "0") + ")");
     ctx.addLine();
 
+    // we skip executables because they may introduce wrong targets
+    // (dependent libraries in static config instead of shared)
+    if (!d.flags[pfExecutable])
     for (auto &dp : rd[d].dependencies)
     {
         auto &dep = dp.second;
