@@ -816,7 +816,7 @@ endif()
     ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS "s + (s.use_shared_libs ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_DISABLE_CHECKS "s + (bs.disable_checks ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (s.build_system_verbose ? "1" : "0") + ")");
-    ctx.addLine("set(CPPAN_BUILD_WARNING_LEVEL "s + (s.build_warning_level ? std::to_string(s.build_warning_level.get()) : "3") + ")");
+    ctx.addLine("set(CPPAN_BUILD_WARNING_LEVEL "s + std::to_string(s.build_warning_level) + ")");
     ctx.addLine("set(CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT "s + (s.copy_all_libraries_to_output ? "1" : "0") + ")");
     // build top level executables with input settings
     // otherwise it won't use them
@@ -858,7 +858,7 @@ int CMakePrinter::generate(const BuildSettings &bs) const
     args.push_back("-DCPPAN_COMMAND=" + normalize_path(get_program()));
     args.push_back("-DCPPAN_CMAKE_VERBOSE="s + (s.cmake_verbose ? "1" : "0"));
     args.push_back("-DCPPAN_BUILD_VERBOSE="s + (s.build_system_verbose ? "1" : "0"));
-    args.push_back("-DCPPAN_BUILD_WARNING_LEVEL="s + (s.build_warning_level ? std::to_string(s.build_warning_level.get()) : "3"));
+    args.push_back("-DCPPAN_BUILD_WARNING_LEVEL="s + std::to_string(s.build_warning_level));
     for (auto &o : s.cmake_options)
         args.push_back(o);
     for (auto &o : s.env)
@@ -2325,7 +2325,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.endif();
     ctx.addLine();
     ctx.if_("NOT DEFINED CPPAN_BUILD_WARNING_LEVEL");
-    ctx.addLine("set(CPPAN_BUILD_WARNING_LEVEL "s + (settings.build_warning_level ? std::to_string(settings.build_warning_level.get()) : "3") + ")");
+    ctx.addLine("set(CPPAN_BUILD_WARNING_LEVEL "s + std::to_string(settings.build_warning_level) + ")");
     ctx.endif();
     ctx.addLine();
     ctx.addLine("get_configuration_variables()");

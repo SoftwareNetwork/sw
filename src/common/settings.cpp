@@ -178,7 +178,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     EXTRACT_AUTO(full_path_executables);
     EXTRACT_AUTO(var_check_jobs);
     EXTRACT_AUTO(install_prefix);
-    EXTRACT_VAR(root, build_warning_level, "build_warning_level", int);
+    EXTRACT_AUTO(build_warning_level);
 
     // read build settings
     if (type == SettingsType::Local)
@@ -247,7 +247,7 @@ void Settings::load_build(const yaml &root)
     EXTRACT_AUTO(full_path_executables);
     EXTRACT_AUTO(var_check_jobs);
     EXTRACT_AUTO(install_prefix);
-    EXTRACT_VAR(root, build_warning_level, "build_warning_level", int);
+    EXTRACT_AUTO(build_warning_level);
 
     for (int i = 0; i < CMakeConfigurationType::Max; i++)
     {
