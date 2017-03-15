@@ -598,25 +598,6 @@ void Checks::write_checks(CMakeContext &ctx, const StringSet &prefixes) const
     }
 }
 
-/*void Checks::write_undefs(CMakeContext &ctx, const Package &d, const StringSet &prefixes = StringSet()) const
-{
-    for (auto &c : checks)
-    {
-        auto &i = c->getInformation();
-
-        if (!c->undef)
-            continue;
-
-        ctx.if_("DEFINED " + c->getVariable() + " AND NOT " + c->getVariable());
-        ctx.addLine("unset(" + c->getVariable() + " CACHE)");
-        for (const auto &p : prefixes)
-            ctx.addLine("unset(" + p + c->getVariable() + "CACHE)");
-        ctx.endif();
-
-        ctx.emptyLines();
-    }
-}*/
-
 void Checks::write_parallel_checks_for_workers(CMakeContext &ctx) const
 {
     for (auto &c : checks)

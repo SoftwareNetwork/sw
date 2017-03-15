@@ -310,7 +310,6 @@ public:
     CheckDecl(const String &s)
         : Check(getCheckInformation(Decl))
     {
-        //undef = false;
         data = s;
         variable = "HAVE_DECL_" + boost::algorithm::to_upper_copy(data);
     }

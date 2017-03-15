@@ -144,9 +144,6 @@ public:
     // default check won't be printed
     bool default_ = false;
 
-    // true if unset() when variable was not found
-    //bool undef = true;
-
     // parameters
     CheckParameters parameters;
 
@@ -189,7 +186,6 @@ struct Checks
     String save() const;
 
     void write_checks(CMakeContext &ctx, const StringSet &prefixes = StringSet()) const;
-    //void write_undefs(CMakeContext &ctx, const Package &d, const StringSet &prefixes = StringSet()) const;
     void write_definitions(CMakeContext &ctx, const Package &d, const StringSet &prefixes = StringSet()) const;
 
     void write_parallel_checks_for_workers(CMakeContext &ctx) const;
