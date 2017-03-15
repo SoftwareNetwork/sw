@@ -464,7 +464,7 @@ String Checks::save() const
     return dump_yaml_config(root);
 }
 
-void invert(Context &ctx, const CheckPtr &c)
+void invert(CMakeContext &ctx, const CheckPtr &c)
 {
     ctx.addLine();
     ctx.addLine("if (" + c->getVariable() + ")");
@@ -474,15 +474,14 @@ void invert(Context &ctx, const CheckPtr &c)
     ctx.addLine("endif()");
 }
 
-void Checks::write_checks(Context &ctx, const StringSet &prefixes) const
+void Checks::write_checks(CMakeContext &ctx, const StringSet &prefixes) const
 {
     for (auto &c : checks)
     {
         auto &i = c->getInformation();
         auto t = i.type;
 
-        ctx.addLine("if (NOT DEFINED " + c->getVariable() + ")");
-        ctx.increaseIndent();
+        ctx.if_("NOT DEFINED " + c->getVariable());
 
         switch (t)
         {
@@ -508,10 +507,10 @@ void Checks::write_checks(Context &ctx, const StringSet &prefixes) const
         }
             break;
         case Check::Function:
-        case Check::Decl:
         case Check::Symbol:
         case Check::StructMember:
         case Check::Type:
+        case Check::Decl:
             c->writeCheck(ctx);
             break;
         case Check::CSourceCompiles:
@@ -542,12 +541,15 @@ void Checks::write_checks(Context &ctx, const StringSet &prefixes) const
         }
 
         ctx.addLine("add_check_variable(" + c->getVariable() + ")");
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
-        ctx.addLine();
+        ctx.endif();
 
         for (const auto &p : prefixes)
+        {
             ctx.addLine("set(" + p + c->getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+            ctx.addLine("set(" + p + boost::to_lower_copy(c->getVariable()) + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+        }
+
+        ctx.emptyLines();
 
         if (t == Check::Symbol)
         {
@@ -561,7 +563,10 @@ void Checks::write_checks(Context &ctx, const StringSet &prefixes) const
                     auto iv = Check::make_include_var(i);
                     ctx.addLine("set(" + iv + " 1 CACHE STRING \"\")");
                     for (const auto &p : prefixes)
+                    {
                         ctx.addLine("set(" + p + iv + " ${" + iv + "} CACHE STRING \"\")");
+                        ctx.addLine("set(" + p + boost::to_lower_copy(iv) + " ${" + iv + "} CACHE STRING \"\")");
+                    }
                     ctx.addLine("add_check_variable(" + iv + ")");
                 }
                 ctx.decreaseIndent();
@@ -583,6 +588,8 @@ void Checks::write_checks(Context &ctx, const StringSet &prefixes) const
             {
                 ctx.addLine("set(" + p + ct_.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
                 ctx.addLine("set(" + p + ct.getVariable() + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+                ctx.addLine("set(" + p + boost::to_lower_copy(ct_.getVariable()) + " ${" + c->getVariable() + "} CACHE STRING \"\")");
+                ctx.addLine("set(" + p + boost::to_lower_copy(ct.getVariable()) + " ${" + c->getVariable() + "} CACHE STRING \"\")");
             }
             ctx.decreaseIndent();
             ctx.addLine("endif()");
@@ -591,7 +598,26 @@ void Checks::write_checks(Context &ctx, const StringSet &prefixes) const
     }
 }
 
-void Checks::write_parallel_checks_for_workers(Context &ctx) const
+/*void Checks::write_undefs(CMakeContext &ctx, const Package &d, const StringSet &prefixes = StringSet()) const
+{
+    for (auto &c : checks)
+    {
+        auto &i = c->getInformation();
+
+        if (!c->undef)
+            continue;
+
+        ctx.if_("DEFINED " + c->getVariable() + " AND NOT " + c->getVariable());
+        ctx.addLine("unset(" + c->getVariable() + " CACHE)");
+        for (const auto &p : prefixes)
+            ctx.addLine("unset(" + p + c->getVariable() + "CACHE)");
+        ctx.endif();
+
+        ctx.emptyLines();
+    }
+}*/
+
+void Checks::write_parallel_checks_for_workers(CMakeContext &ctx) const
 {
     for (auto &c : checks)
     {
@@ -700,7 +726,7 @@ void Checks::read_parallel_checks_for_workers(const path &dir)
     }
 }
 
-void Checks::write_definitions(Context &ctx, const Package &d, const StringSet &prefixes) const
+void Checks::write_definitions(CMakeContext &ctx, const Package &d, const StringSet &prefixes) const
 {
     String m = "INTERFACE";
     if (!d.flags[pfHeaderOnly])
@@ -710,9 +736,9 @@ void Checks::write_definitions(Context &ctx, const Package &d, const StringSet &
 
     auto print_def = [&ctx, &m, &prefixes](const String &value, auto &&s)
     {
-        ctx << m << " " << s << "=" << value << Context::eol;
+        ctx << m << " " << s << "=" << value << CMakeContext::eol;
         for (const auto &p : prefixes)
-            ctx << m << " " << p + s << "=" << value << Context::eol;
+            ctx << m << " " << p + s << "=" << value << CMakeContext::eol;
         return 0;
     };
 
@@ -753,9 +779,9 @@ void Checks::write_definitions(Context &ctx, const Package &d, const StringSet &
 
             ctx.addLine("target_compile_definitions(${this}");
             ctx.increaseIndent();
-            ctx << m << " " << c->getVariable() << "=" << "${" << c->getVariable() << "}" << Context::eol;
+            ctx << m << " " << c->getVariable() << "=" << "${" << c->getVariable() << "}" << CMakeContext::eol;
             for (const auto &p : prefixes)
-                ctx << m << " " << p + c->getVariable() << "=" << "${" << c->getVariable() << "}" << Context::eol;
+                ctx << m << " " << p + c->getVariable() << "=" << "${" << c->getVariable() << "}" << CMakeContext::eol;
             ctx.decreaseIndent();
             ctx.addLine(")");
             ctx.addLine();
@@ -838,7 +864,7 @@ void Checks::print_values() const
         LOG_INFO(logger, v->printStatus());
 }
 
-void Checks::print_values(Context &ctx) const
+void Checks::print_values(CMakeContext &ctx) const
 {
     std::map<String, CheckPtr> checks_to_print;
     for (auto &c : checks)
@@ -926,7 +952,7 @@ String CheckParameters::getHash() const
     return h;
 }
 
-void CheckParameters::writeHeadersBefore(Context &ctx) const
+void CheckParameters::writeHeadersBefore(CMakeContext &ctx) const
 {
     if (!headers.empty())
     {
@@ -938,13 +964,13 @@ void CheckParameters::writeHeadersBefore(Context &ctx) const
     }
 }
 
-void CheckParameters::writeHeadersAfter(Context &ctx) const
+void CheckParameters::writeHeadersAfter(CMakeContext &ctx) const
 {
     if (!headers.empty())
         ctx.addLine("set(CMAKE_EXTRA_INCLUDE_FILES ${_oh})");
 }
 
-void CheckParameters::writeBefore(Context &ctx) const
+void CheckParameters::writeBefore(CMakeContext &ctx) const
 {
     if (!definitions.empty())
     {
@@ -980,7 +1006,7 @@ void CheckParameters::writeBefore(Context &ctx) const
     }
 }
 
-void CheckParameters::writeAfter(Context &ctx) const
+void CheckParameters::writeAfter(CMakeContext &ctx) const
 {
     if (!definitions.empty())
         ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS ${_od})");

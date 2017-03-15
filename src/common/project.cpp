@@ -669,7 +669,7 @@ void Project::load(const yaml &root)
     EXTRACT_AUTO(export_all_symbols);
     EXTRACT_AUTO(build_dependencies_with_same_config);
 
-    EXTRACT_AUTO(api_name);
+    api_name = get_sequence_set<String>(root, "api_name");
 
     // standards
     {
@@ -1203,7 +1203,7 @@ yaml Project::save() const
     ADD_IF_VAL_TRIPLE(export_all_symbols);
     ADD_IF_VAL_TRIPLE(build_dependencies_with_same_config);
 
-    ADD_IF_NOT_EMPTY(api_name);
+    ADD_SET(api_name, api_name);
 
     ADD_SET(files, sources);
     ADD_SET(build, build_files);

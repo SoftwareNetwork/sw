@@ -16,11 +16,12 @@
 
 #pragma once
 
+#include "context.h"
 #include "cppan_string.h"
 #include "filesystem.h"
 #include "yaml.h"
 
-class Context;
+class CMakeContext;
 struct Package;
 
 struct CheckParameters
@@ -35,10 +36,10 @@ struct CheckParameters
     // it is possible only in sequential mode
     bool all_includes = false;
 
-    void writeHeadersBefore(Context &ctx) const;
-    void writeHeadersAfter(Context &ctx) const;
-    void writeBefore(Context &ctx) const;
-    void writeAfter(Context &ctx) const;
+    void writeHeadersBefore(CMakeContext &ctx) const;
+    void writeHeadersAfter(CMakeContext &ctx) const;
+    void writeBefore(CMakeContext &ctx) const;
+    void writeAfter(CMakeContext &ctx) const;
     void load(const yaml &n);
     void save(yaml &n) const;
     bool empty() const;
@@ -96,7 +97,7 @@ public:
     Value getValue() const { return value; }
     String getMessage() const { return message; }
 
-    virtual void writeCheck(Context &/*ctx*/) const {}
+    virtual void writeCheck(CMakeContext &/*ctx*/) const {}
     virtual void save(yaml &/*root*/) const {}
 
     void setValue(const Value &v) { value = v; }
@@ -143,6 +144,9 @@ public:
     // default check won't be printed
     bool default_ = false;
 
+    // true if unset() when variable was not found
+    //bool undef = true;
+
     // parameters
     CheckParameters parameters;
 
@@ -184,16 +188,17 @@ struct Checks
     void save(yaml &root) const;
     String save() const;
 
-    void write_checks(Context &ctx, const StringSet &prefixes = StringSet()) const;
-    void write_definitions(Context &ctx, const Package &d, const StringSet &prefixes = StringSet()) const;
+    void write_checks(CMakeContext &ctx, const StringSet &prefixes = StringSet()) const;
+    //void write_undefs(CMakeContext &ctx, const Package &d, const StringSet &prefixes = StringSet()) const;
+    void write_definitions(CMakeContext &ctx, const Package &d, const StringSet &prefixes = StringSet()) const;
 
-    void write_parallel_checks_for_workers(Context &ctx) const;
+    void write_parallel_checks_for_workers(CMakeContext &ctx) const;
     void read_parallel_checks_for_workers(const path &dir);
 
     void remove_known_vars(const std::set<String> &known_vars);
     std::vector<Checks> scatter(int N) const;
     void print_values() const;
-    void print_values(Context &ctx) const;
+    void print_values(CMakeContext &ctx) const;
 
     Checks &operator+=(const Checks &rhs);
 

@@ -27,11 +27,11 @@ extern const std::map<int, Check::Information> check_information;
 
 class CheckParametersScopedWriter
 {
-    Context &ctx;
+    CMakeContext &ctx;
     const CheckParameters &p;
     bool with_headers;
 public:
-    CheckParametersScopedWriter(Context &ctx, const CheckParameters &p, bool with_headers = false)
+    CheckParametersScopedWriter(CMakeContext &ctx, const CheckParameters &p, bool with_headers = false)
         : ctx(ctx), p(p), with_headers(with_headers)
     {
         if (with_headers)
@@ -72,11 +72,11 @@ public:
         root[information.cppan_key].push_back(y);
     }
 
-    void writeCheck(Context &ctx) const override
+    void writeCheck(CMakeContext &ctx) const override
     {
         CheckParametersScopedWriter p(ctx, parameters);
         ctx << information.function + "(" + getData() + " ";
-        ctx << getVariable() << ")" << Context::eol;
+        ctx << getVariable() << ")" << CMakeContext::eol;
     }
 };
 
@@ -137,7 +137,7 @@ public:
 
     virtual ~CheckType() {}
 
-    void writeCheck(Context &ctx) const override
+    void writeCheck(CMakeContext &ctx) const override
     {
         CheckParametersScopedWriter p(ctx, parameters, true);
         ctx.addLine(information.function + "(\"" + getData() + "\" " + getVariable() + ")");
@@ -165,7 +165,7 @@ public:
 
     virtual ~CheckStructMember() {}
 
-    void writeCheck(Context &ctx) const override
+    void writeCheck(CMakeContext &ctx) const override
     {
         CheckParametersScopedWriter p(ctx, parameters);
         ctx << information.function + "(\"" + struct_ + "\" \"" + getData() + "\" \"";
@@ -174,7 +174,7 @@ public:
         ctx << "\" " << getVariable();
         if (cpp)
             ctx << " LANGUAGE CXX";
-        ctx << ")" << Context::eol;
+        ctx << ")" << CMakeContext::eol;
     }
 
     void save(yaml &root) const override
@@ -275,13 +275,13 @@ public:
 
     virtual ~CheckSymbol() {}
 
-    void writeCheck(Context &ctx) const override
+    void writeCheck(CMakeContext &ctx) const override
     {
         CheckParametersScopedWriter p(ctx, parameters);
         ctx << information.function + "(\"" + getData() + "\" \"";
         for (auto &h : parameters.headers)
             ctx << h << ";";
-        ctx << "\" " << getVariable() << ")" << Context::eol;
+        ctx << "\" " << getVariable() << ")" << CMakeContext::eol;
     }
 
     void save(yaml &root) const override
@@ -310,13 +310,14 @@ public:
     CheckDecl(const String &s)
         : Check(getCheckInformation(Decl))
     {
+        //undef = false;
         data = s;
         variable = "HAVE_DECL_" + boost::algorithm::to_upper_copy(data);
     }
 
     virtual ~CheckDecl() {}
 
-    void writeCheck(Context &ctx) const override
+    void writeCheck(CMakeContext &ctx) const override
     {
         static const Strings headers = {
             "HAVE_SYS_TYPES_H",
@@ -385,7 +386,7 @@ int main()
     return 0;
 }
 )"
-            "\" " << getVariable() << ")" << Context::eol;
+            "\" " << getVariable() << ")" << CMakeContext::eol;
 
         ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS)");
     }

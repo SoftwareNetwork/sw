@@ -41,6 +41,13 @@ endif()
 # save file
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${fn1} ${fn2})
 
+########################################
+# preparation is over, build now
+########################################
+
+# TODO: add good message, close enough to generate message
+#message(STATUS "Building ${target} (${config_unhashed} - ${config_dir} - ${generator})")
+
 # make could be found on win32 os from cygwin for example
 # we deny it on msvc and other build systems except for cygwin
 if (NOT WIN32 OR CYGWIN)

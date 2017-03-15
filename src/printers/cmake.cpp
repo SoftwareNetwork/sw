@@ -1801,8 +1801,8 @@ endif()
             // CPPAN_CONFIG is private for a package!
             ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\"");
         }
-        if (!p.api_name.empty())
-            ctx.addLine(visibility + " " + p.api_name + "=${LIBRARY_API}");
+        for (auto &a : p.api_name)
+            ctx.addLine(visibility + " " + a + "=${LIBRARY_API}");
         ctx.decreaseIndent(")");
         ctx.addLine();
 
@@ -2477,7 +2477,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         config_section_title(ctx, "common checks");
 
         ctx.if_("NOT CPPAN_DISABLE_CHECKS");
-        ctx.addLine();
 
         // read vars file
         ctx.addLine("set(vars_dir \"" + normalize_path(directories.storage_dir_cfg) + "\")");

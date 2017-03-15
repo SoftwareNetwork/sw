@@ -160,7 +160,7 @@ public:
     bool export_all_symbols = false;
     bool build_dependencies_with_same_config = false;
 
-    String api_name;
+    StringSet api_name;
 
     // files to include into archive
     // also is used for enumerating sources (mutable for this)
