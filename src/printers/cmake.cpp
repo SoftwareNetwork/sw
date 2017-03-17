@@ -506,7 +506,7 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
             if (p.flags[pfLocalProject])
                 continue;
 
-            local.addLine("get_target_property(implib_" + p.variable_name + " " + p.target_name + " IMPORTED_IMPLIB_${CMAKE_BUILD_TYPE_UPPER})");
+            local.addLine("get_target_property(implib_" + p.variable_name + " " + p.target_name + " IMPORTED_LOCATION_${CMAKE_BUILD_TYPE_UPPER})");
         }
         local.emptyLines();
 
@@ -2493,8 +2493,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine("set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_INCLUDES  1 CACHE STRING \"\")");
     ctx.addLine("set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS   1 CACHE STRING \"\")");
     ctx.addLine("set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES 1 CACHE STRING \"\")");
-    // unknown meaning atm, so turned off
-    //ctx.addLine("set(CMAKE_CXX_RESPONSE_FILE_LINK_FLAG \"@\" CACHE STRING \"\")");
+    // unknown meaning atm
+    ctx.addLine("set(CMAKE_CXX_RESPONSE_FILE_LINK_FLAG \"@\" CACHE STRING \"\")");
     ctx.addLine();
 
     // cmake includes
