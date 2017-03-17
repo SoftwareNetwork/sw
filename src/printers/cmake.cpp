@@ -477,7 +477,7 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
     // run building of direct dependecies before project building
     Packages build_deps;
     // build only direct deps
-    gather_build_deps(rd[d].dependencies, build_deps);
+    gather_build_deps(rd[d].dependencies, build_deps, true);
 
     if (!build_deps.empty())
     {
@@ -587,6 +587,8 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
             auto tt = "add_dependencies"s;
             for (auto &dp : build_deps)
             {
+                if (dp.second.flags[pfLocalProject])
+                    continue;
                 add_aliases(local, dp.second, false, [&tt](const auto &s, const auto &v)
                 {
                     if (v.patch != -1)
@@ -824,6 +826,25 @@ endif()
     ctx.addLine();
     ctx.addLine("add_subdirectory(" + normalize_path(s.cppan_dir) + ")");
     ctx.addLine();
+
+    // vs startup project
+    bool once = false;
+    for (auto &dep : rd[Package()].dependencies)
+    {
+        if (!dep.second.flags[pfLocalProject])
+            continue;
+        if (dep.second.flags[pfExecutable])
+        {
+            if (!once)
+            {
+                // this or selected project below
+                ctx.addLine("set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT " + dep.second.target_name_hash + ")");
+                once = true;
+            }
+        }
+    }
+    // TODO: add local setting 'default_project'
+    //ctx.addLine("set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT " + ls.default_project + ")");
 
     file_footer(ctx, d);
 
@@ -2392,6 +2413,15 @@ add_dependencies()" + cppan_project_name + R"( run-cppan)
                 print_solution_folder(ctx, dep.second.target_name_hash, local_dependencies_folder);
         }
         ctx.endif();
+        ctx.emptyLines();
+
+        for (auto &dep : rd[d].dependencies)
+        {
+            if (!dep.second.flags[pfLocalProject])
+                continue;
+            if (dep.second.flags[pfExecutable])
+                ctx.addLine("set_target_properties(" + dep.second.target_name_hash + " PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CPPAN_BUILD_OUTPUT_DIR})");
+        }
     }
 
     file_footer(ctx, d);
