@@ -514,6 +514,49 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
         }
         local.emptyLines();
 
+        local.increaseIndent(R"(set(ext sh)
+if (WIN32)
+    set(ext bat)
+endif()
+file(GENERATE OUTPUT ${BDIR}/cppan_build_deps_$<CONFIG>.${ext} CONTENT "
+)");
+        bool has_build_deps = false;
+        for (auto &dp : build_deps)
+        {
+            auto &p = dp.second;
+
+            // local projects are always built inside solution
+            if (p.flags[pfLocalProject])
+                continue;
+
+            has_build_deps = true;
+            local.addText("\\\"${CMAKE_COMMAND}\\\" ");
+            local.addText("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + "> ");
+            local.addText("-DCONFIG=$<CONFIG> ");
+            String cfg = "config";
+            if (p.flags[pfExecutable] && !p.flags[pfLocalProject])
+                cfg = "config_exe";
+            local.addText("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "} ");
+            local.addText("-DEXECUTABLE="s + (p.flags[pfExecutable] ? "1" : "0") + " ");
+            // we do not pass this var to children
+            //local.addText("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG} ");
+            local.addText("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION} ");
+            local.addText("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ");
+            local.addText("-DCPPAN_BUILD_VERBOSE=${CPPAN_BUILD_VERBOSE} ");
+            local.addText("-DCPPAN_BUILD_WARNING_LEVEL=${CPPAN_BUILD_WARNING_LEVEL} ");
+            local.addText("-DCPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT=${CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT} ");
+            local.addText("-DN_CORES=${N_CORES} ");
+            if (d.empty())
+                local.addText("-DMULTICORE=1 ");
+            local.addText("-DXCODE=${XCODE} ");
+            local.addText("-DNINJA=${NINJA} ");
+            local.addText("-DVISUAL_STUDIO=${VISUAL_STUDIO} ");
+            local.addText("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
+            local.addLine();
+        }
+        local.addLine("\"");
+        local.decreaseIndent(")");
+
         bool deps = false;
         String build_deps_tgt = "${this}";
         if (d.empty() && target.find("-b") != target.npos)
@@ -528,41 +571,7 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
         // add custom target and add a dependency below
         // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
         local.increaseIndent("add_custom_target(" + build_deps_tgt);
-        bool has_build_deps = false;
-        for (auto &dp : build_deps)
-        {
-            auto &p = dp.second;
-
-            // local projects are always built inside solution
-            if (p.flags[pfLocalProject])
-                continue;
-
-            has_build_deps = true;
-            local.increaseIndent("COMMAND ${CMAKE_COMMAND}");
-            local.addLine("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + ">");
-            local.addLine("-DCONFIG=$<CONFIG>");
-            String cfg = "config";
-            if (p.flags[pfExecutable] && !p.flags[pfLocalProject])
-                cfg = "config_exe";
-            local.addLine("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "}");
-            local.addLine("-DEXECUTABLE=" + String(p.flags[pfExecutable] ? "1" : "0"));
-            // we do not pass this var to children
-            //local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG}");
-            local.addLine("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION}");
-            local.addLine("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}");
-            local.addLine("-DCPPAN_BUILD_VERBOSE=${CPPAN_BUILD_VERBOSE}");
-            local.addLine("-DCPPAN_BUILD_WARNING_LEVEL=${CPPAN_BUILD_WARNING_LEVEL}");
-            local.addLine("-DCPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT=${CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT}");
-            local.addLine("-DN_CORES=${N_CORES}");
-            if (d.empty())
-                local.addLine("-DMULTICORE=1");
-            local.addLine("-DXCODE=${XCODE}");
-            local.addLine("-DNINJA=${NINJA}");
-            local.addLine("-DVISUAL_STUDIO=${VISUAL_STUDIO}");
-            local.addLine("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
-            local.decreaseIndent();
-            local.addLine();
-        }
+        local.addLine("COMMAND ${BDIR}/cppan_build_deps_$<CONFIG>.${ext}");
         local.increaseIndent("BYPRODUCTS");
         for (auto &dp : build_deps)
         //for (auto &dp : build_deps_all)
@@ -2319,6 +2328,8 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     config_section_title(ctx, "macros & functions");
     ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + ")");
 
+    print_sdir_bdir(ctx, d);
+
     config_section_title(ctx, "variables");
     ctx.addLine("set(CPPAN_BUILD 1 CACHE STRING \"CPPAN is turned on\")");
     ctx.addLine();
@@ -2380,8 +2391,6 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
         // re-run cppan when root cppan.yml is changed
         if (settings.add_run_cppan_target)
         {
-            print_sdir_bdir(ctx, d);
-
             config_section_title(ctx, "cppan regenerator");
             ctx.addLine(R"(set(file ${CMAKE_CURRENT_BINARY_DIR}/run-cppan.txt)
 add_custom_command(OUTPUT ${file}
