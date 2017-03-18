@@ -489,6 +489,10 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
         local.addLine("get_configuration_exe(config_exe)");
         local.endif();
 
+        local.emptyLines();
+        local.addLine("string(TOUPPER \"${CMAKE_BUILD_TYPE}\" CMAKE_BUILD_TYPE_UPPER)");
+        local.emptyLines();
+
         // we're in helper, set this var to build target
         if (d.empty())
             local.addLine("set(this " + target + ")");
@@ -747,7 +751,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${output_dir})
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE )" + s.default_configuration + R"()
 endif()
-string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
 
 if (WIN32)
     set(CMAKE_INSTALL_PREFIX "C:\\\\cppan")
@@ -2051,7 +2054,6 @@ void CMakePrinter::print_obj_config_file(const path &fn) const
         ctx.addLine(R"(if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
-string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
 
 # TODO:
 #set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_job_pool=8)
