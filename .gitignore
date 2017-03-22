@@ -5,6 +5,8 @@
 cppan
 .cppan*
 
+*.kdev*
+
 /packages
 
 /*.bat

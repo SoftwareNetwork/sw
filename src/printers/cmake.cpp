@@ -413,6 +413,10 @@ void gather_build_deps(const Packages &dd, Packages &out, bool recursive = false
         if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectoriesOnly])
             continue;
         auto i = out.insert(dp);
+        // add executable, but not its deps
+        // exe will build its deps themselves
+        if (d.flags[pfExecutable])
+            continue;
         if (i.second && recursive)
             gather_build_deps(rd[d].dependencies, out, recursive);
     }
@@ -514,12 +518,31 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
         }
         local.emptyLines();
 
+#define ADD_VAR(v) rest += "-D" #v "=${" #v "} "
+        String rest;
+        // we do not pass this var to children
+        //ADD_VAR(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG);
+        ADD_VAR(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION);
+        ADD_VAR(CMAKE_BUILD_TYPE);
+        ADD_VAR(CPPAN_BUILD_VERBOSE);
+        ADD_VAR(CPPAN_BUILD_WARNING_LEVEL);
+        ADD_VAR(CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT);
+        ADD_VAR(N_CORES);
+        ADD_VAR(XCODE);
+        ADD_VAR(NINJA);
+        ADD_VAR(VISUAL_STUDIO);
+#undef ADD_VAR
+
+        local.addLine("set(rest \"" + rest + "\")");
+        local.emptyLines();
+
         local.increaseIndent(R"(set(ext sh)
 if (WIN32)
     set(ext bat)
 endif()
-file(GENERATE OUTPUT ${BDIR}/cppan_build_deps_$<CONFIG>.${ext} CONTENT "
-)");
+
+file(GENERATE OUTPUT ${BDIR}/cppan_build_deps_$<CONFIG>.${ext} CONTENT ")");
+
         bool has_build_deps = false;
         for (auto &dp : build_deps)
         {
@@ -529,33 +552,25 @@ file(GENERATE OUTPUT ${BDIR}/cppan_build_deps_$<CONFIG>.${ext} CONTENT "
             if (p.flags[pfLocalProject])
                 continue;
 
-            has_build_deps = true;
-            local.addText("\\\"${CMAKE_COMMAND}\\\" ");
-            local.addText("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + "> ");
-            local.addText("-DCONFIG=$<CONFIG> ");
             String cfg = "config";
             if (p.flags[pfExecutable] && !p.flags[pfLocalProject])
                 cfg = "config_exe";
+
+            has_build_deps = true;
+            local.addNoNewLine("");
+            local.addText("\\\"${CMAKE_COMMAND}\\\" ");
+            local.addText("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + "> ");
+            local.addText("-DCONFIG=$<CONFIG> ");
             local.addText("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "} ");
             local.addText("-DEXECUTABLE="s + (p.flags[pfExecutable] ? "1" : "0") + " ");
-            // we do not pass this var to children
-            //local.addText("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG} ");
-            local.addText("-DCPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION=${CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION} ");
-            local.addText("-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ");
-            local.addText("-DCPPAN_BUILD_VERBOSE=${CPPAN_BUILD_VERBOSE} ");
-            local.addText("-DCPPAN_BUILD_WARNING_LEVEL=${CPPAN_BUILD_WARNING_LEVEL} ");
-            local.addText("-DCPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT=${CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT} ");
-            local.addText("-DN_CORES=${N_CORES} ");
             if (d.empty())
                 local.addText("-DMULTICORE=1 ");
-            local.addText("-DXCODE=${XCODE} ");
-            local.addText("-DNINJA=${NINJA} ");
-            local.addText("-DVISUAL_STUDIO=${VISUAL_STUDIO} ");
+            local.addText("${rest} ");
+
             local.addText("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
-            local.addLine();
         }
-        local.addLine("\"");
-        local.decreaseIndent(")");
+        local.decreaseIndent("\")");
+        local.emptyLines();
 
         bool deps = false;
         String build_deps_tgt = "${this}";
@@ -612,7 +627,7 @@ file(GENERATE OUTPUT ${BDIR}/cppan_build_deps_$<CONFIG>.${ext} CONTENT "
         }
 
         if (has_build_deps)
-            ctx += local;
+            ctx.addWithRelativeIndent(local);
     }
 
     ctx.endif();
@@ -1431,12 +1446,13 @@ endif()
                 {
                 case 17:
                     ctx.if_("UNIX");
+                    // if compiler supports c++17, set it
                     ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} -std=c++1z\")");
                     ctx.endif();
                     break;
                 case 20:
                     ctx.if_("UNIX");
-                    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} -std=c++2x\")");
+                    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} -std=c++2x\")"); // 2a?
                     ctx.endif();
                     break;
                 default:
@@ -1786,19 +1802,19 @@ endif()
 
         // some compiler options
         ctx.addLine(R"(if (MSVC)
-target_compile_definitions(${this}
-    PRIVATE _CRT_SECURE_NO_WARNINGS # disable warning about non-standard functions
-)
-target_compile_options(${this}
-    PRIVATE /wd4005 # macro redefinition
-    PRIVATE /wd4996 # The POSIX name for this item is deprecated.
-)
+    target_compile_definitions(${this}
+        PRIVATE _CRT_SECURE_NO_WARNINGS # disable warning about non-standard functions
+    )
+    target_compile_options(${this}
+        PRIVATE /wd4005 # macro redefinition
+        PRIVATE /wd4996 # The POSIX name for this item is deprecated.
+    )
 endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-target_compile_options(${this}
-    PRIVATE -Wno-macro-redefined
-)
+    target_compile_options(${this}
+        PRIVATE -Wno-macro-redefined
+    )
 endif()
 )");
     }
@@ -1871,9 +1887,9 @@ endif()
         if (!d.flags[pfHeaderOnly])
         {
             ctx.increaseIndent(R"(if (WIN32)
-target_link_libraries(${this}
-    PUBLIC Ws2_32
-)
+    target_link_libraries(${this}
+        PUBLIC Ws2_32
+    )
 else())");
             auto add_unix_lib = [this, &ctx](const String &s)
             {
