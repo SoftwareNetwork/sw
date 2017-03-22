@@ -503,7 +503,7 @@ void init(const Strings &args, const String &log_level)
 
     LoggerSettings log_settings;
     log_settings.log_level = log_level;
-    log_settings.log_file = (get_root_directory() / "cppan").string();
+    //log_settings.log_file = (get_root_directory() / "cppan").string();
     log_settings.simple_logger = true;
     log_settings.print_trace = true;
     initLogger(log_settings);

@@ -405,20 +405,23 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
     ctx.splitLines();
 }
 
-void gather_build_deps(const Packages &dd, Packages &out, bool recursive = false)
+void gather_build_deps(const Packages &dd, Packages &out, bool recursive = false, int depth = 0)
 {
     for (auto &dp : dd)
     {
         auto &d = dp.second;
         if (d.flags[pfHeaderOnly] || d.flags[pfIncludeDirectoriesOnly])
             continue;
-        auto i = out.insert(dp);
-        // add executable, but not its deps
-        // exe will build its deps themselves
+        // add only direct dependencies of the invocation package
         if (d.flags[pfExecutable])
+        {
+            if (depth == 0)
+                out.insert(dp);
             continue;
+        }
+        auto i = out.insert(dp);
         if (i.second && recursive)
-            gather_build_deps(rd[d].dependencies, out, recursive);
+            gather_build_deps(rd[d].dependencies, out, recursive, depth + 1);
     }
 }
 
@@ -709,7 +712,7 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
         // import library for shared libs
         if (settings.copy_import_libs || settings.copy_all_libraries_to_output)
         {
-            ctx.if_("${type} STREQUAL SHARED_LIBRARY");
+            ctx.if_("\"${type}\" STREQUAL SHARED_LIBRARY");
             ctx.increaseIndent("add_custom_command(TARGET " + target + " POST_BUILD");
             ctx.increaseIndent("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
             ctx.addLine("$<TARGET_LINKER_FILE:" + p.target_name + "> " + output_directory + "$<TARGET_LINKER_FILE_NAME:" + p.target_name + ">");
@@ -2262,7 +2265,9 @@ void CMakePrinter::print_obj_export_file(const path &fn) const
 
     // we skip executables because they may introduce wrong targets
     // (dependent libraries in static config instead of shared)
-    if (!d.flags[pfExecutable])
+    if (!d.flags[pfDirectDependency] && d.flags[pfExecutable])
+        ctx.if_("CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG");
+
     for (auto &dp : rd[d].dependencies)
     {
         auto &dep = dp.second;
@@ -2289,6 +2294,9 @@ void CMakePrinter::print_obj_export_file(const path &fn) const
         ctx.endif();
         ctx.addLine();
     }
+
+    if (!d.flags[pfDirectDependency] && d.flags[pfExecutable])
+        ctx.endif();
 
     file_footer(ctx, d);
 
