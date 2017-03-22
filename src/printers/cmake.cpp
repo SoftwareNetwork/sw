@@ -2735,12 +2735,12 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
 
 #ifndef _WIN32
         // hide output for *nix as it very fast there
-        //if (N >= 4)
-            //ret = command::execute(args);
-        //else
+        if (N >= 4)
+            ret = command::execute(args);
+        else
 #endif
-            //ret = command::execute_and_capture(args, o);
-        ret = command::execute(args);
+            ret = command::execute_and_capture(args, o);
+        //ret = command::execute(args);
 
         // do not fail (throw), try to read already found variables
         if (ret.rc)
