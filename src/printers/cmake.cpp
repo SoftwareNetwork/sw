@@ -478,9 +478,10 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
     // build deps
     ctx.if_("CPPAN_USE_CACHE");
 
-    // run building of direct dependecies before project building
+    // Run building of dependencies before project building.
+    // We build all deps because if some dep is removed,
+    // build system give you and error about this.
     Packages build_deps;
-    // build only direct deps
     gather_build_deps(rd[d].dependencies, build_deps, true);
 
     if (!build_deps.empty())
