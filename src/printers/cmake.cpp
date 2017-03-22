@@ -2490,12 +2490,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("set(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
         ctx.addLine();
     }
-    ctx.addLine("get_configuration(config)");
-    ctx.addLine("get_configuration_unhashed(config_name)");
-    ctx.addLine("get_configuration_with_generator(config_dir)");
-    ctx.addLine("get_configuration_with_generator_unhashed(config_gen_name)");
-    ctx.addLine("get_number_of_cores(N_CORES)");
-    ctx.addLine();
     ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_gen_name}\")");
     ctx.addLine();
     ctx.addLine("set(XCODE 0)");
@@ -2512,6 +2506,14 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.if_("MSVC AND NOT NINJA");
     ctx.addLine("set(VISUAL_STUDIO 1)");
     ctx.endif();
+    ctx.addLine();
+
+    // after all vars are set
+    ctx.addLine("get_configuration(config)");
+    ctx.addLine("get_configuration_unhashed(config_name)");
+    ctx.addLine("get_configuration_with_generator(config_dir)");
+    ctx.addLine("get_configuration_with_generator_unhashed(config_gen_name)");
+    ctx.addLine("get_number_of_cores(N_CORES)");
     ctx.addLine();
 
     // use response files when available
@@ -2707,6 +2709,8 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
 
         // copy cached cmake dir
         copy_dir(o.dir / "CMakeFiles", d / "CMakeFiles");
+        // since cmake 3.8
+        write_file(d / "CMakeCache.txt", "CMAKE_PLATFORM_INFO_INITIALIZED:INTERNAL=1\n");
 
         // run cmake
         command::Args args;
