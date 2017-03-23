@@ -64,7 +64,13 @@ if (NOT EXISTS ${import} OR
         # this check works when newer cmake version is available
         (EXISTS ${build_dir}/CMakeFiles AND NOT EXISTS ${to})
         )
+
         set(generator ${CMAKE_GENERATOR})
+        #find_program(ninja ninja)
+        #if (NOT "${ninja}" STREQUAL "ninja-NOTFOUND")
+        #if (NINJA)
+        #    set(generator Ninja)
+        #endif()
 
         # copy cmake cache for faster bootstrapping
         if (NOT EXISTS ${to})

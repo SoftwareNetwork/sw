@@ -27,6 +27,7 @@
 #include "stamp.h"
 #include "printers/cmake.h"
 
+#include <primitives/lock.h>
 #include <primitives/pack.h>
 #include <primitives/templates.h>
 
@@ -870,8 +871,12 @@ PackagesDatabase::PackagesDatabase()
         }
         if (version_remote > readPackagesDbVersion(db_repo_dir))
         {
-            download();
-            load(true);
+            // multiprocess aware
+            single_process_job(get_lock("db_update"), [this]
+            {
+                download();
+                load(true);
+            });
         }
     }
 
@@ -907,12 +912,6 @@ void PackagesDatabase::download()
             command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" });
         };
 
-        auto recover = [this]()
-        {
-            boost::system::error_code ec;
-            remove_all(db_repo_dir / ".git", ec);
-        };
-
         try
         {
             if (!fs::exists(db_repo_dir / ".git"))
@@ -924,14 +923,18 @@ void PackagesDatabase::download()
                 if (command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }).rc ||
                     command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard" }).rc)
                 {
-                    recover();
+                    // can throw
+                    fs::remove_all(db_repo_dir);
                     git_init();
                 }
             }
         }
         catch (const std::exception &)
         {
-            recover();
+            // cannot throw
+            boost::system::error_code ec;
+            fs::remove_all(db_repo_dir, ec);
+
             download_archive();
         }
     }

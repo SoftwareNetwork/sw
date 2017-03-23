@@ -808,6 +808,11 @@ if (CMAKE_GENERATOR STREQUAL Ninja)
     set(NINJA 1)
 endif()
 
+#find_program(ninja ninja)
+#if (NOT "${ninja}" STREQUAL "ninja-NOTFOUND")
+#    set(NINJA 1)
+#endif()
+
 set(VISUAL_STUDIO 0)
 if (MSVC AND NOT NINJA)
     set(VISUAL_STUDIO 1)
