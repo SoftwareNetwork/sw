@@ -545,7 +545,8 @@ if (WIN32)
     set(ext bat)
 endif()
 
-file(GENERATE OUTPUT ${BDIR}/cppan_build_deps_$<CONFIG>.${ext} CONTENT ")");
+set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})
+file(GENERATE OUTPUT ${file} CONTENT ")");
 
         bool has_build_deps = false;
         for (auto &dp : build_deps)
@@ -576,6 +577,12 @@ file(GENERATE OUTPUT ${BDIR}/cppan_build_deps_$<CONFIG>.${ext} CONTENT ")");
         local.decreaseIndent("\")");
         local.emptyLines();
 
+        local.addLine(R"(
+if (UNIX)
+    set(file chmod u+x ${file} COMMAND ${file})
+endif()
+)");
+
         bool deps = false;
         String build_deps_tgt = "${this}";
         if (d.empty() && target.find("-b") != target.npos)
@@ -590,7 +597,7 @@ file(GENERATE OUTPUT ${BDIR}/cppan_build_deps_$<CONFIG>.${ext} CONTENT ")");
         // add custom target and add a dependency below
         // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
         local.increaseIndent("add_custom_target(" + build_deps_tgt);
-        local.addLine("COMMAND ${BDIR}/cppan_build_deps_$<CONFIG>.${ext}");
+        local.addLine("COMMAND ${file}");
         local.increaseIndent("BYPRODUCTS");
         for (auto &dp : build_deps)
         //for (auto &dp : build_deps_all)

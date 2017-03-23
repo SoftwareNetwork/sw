@@ -141,7 +141,7 @@ Result execute(const Args &args, const Options &opts)
     set_behavior(ctx.stderr_behavior, opts.err);
 
     // copy env
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if !defined(_WIN32)
     auto env = environ;
     while (*env)
     {
