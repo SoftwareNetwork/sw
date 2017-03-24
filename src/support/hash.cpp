@@ -33,10 +33,5 @@ String hash_config(const String &c)
 
 bool check_file_hash(const path &fn, const String &hash)
 {
-    // remove when server will be using strong_file_hash
-    if (hash == sha256(fn))
-        return true;
-    if (hash == strong_file_hash(fn))
-        return true;
-    return false;
+    return hash == strong_file_hash(fn);
 }

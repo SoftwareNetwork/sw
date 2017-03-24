@@ -40,8 +40,7 @@ projects:
             - src/bazel/.*
             - src/inserts/.*
             - src/support/.*
-            - src/stamp_gen.cpp
-            - src/inserter.cpp
+            - src/gen/.*
 
         exclude_from_package:
             - src/bazel/test/test.cpp
@@ -49,8 +48,7 @@ projects:
             - src/comments/.*\.txt
 
         exclude_from_build:
-            - src/stamp_gen.cpp
-            - src/inserter.cpp
+            - src/gen/.*
 
         include_directories:
             public:
@@ -86,7 +84,7 @@ projects:
                         - VERSION_PATCH=2
 
         post_sources: |
-            add_executable(stamp_generator ${SDIR}/src/stamp_gen.cpp)
+            add_executable(stamp_generator ${SDIR}/src/gen/stamp_gen.cpp)
             set_property(TARGET stamp_generator PROPERTY FOLDER gen)
             set(stamp ${BDIR}/stamp.h.in)
             # to run every time
@@ -98,7 +96,7 @@ projects:
             set_source_files_properties(${stamp} PROPERTIES GENERATED True)
             set(src ${src} ${stamp})
 
-            add_executable(inserts_generator ${SDIR}/src/inserter.cpp)
+            add_executable(inserts_generator ${SDIR}/src/gen/inserter.cpp)
             set_property(TARGET inserts_generator PROPERTY FOLDER gen)
             target_link_libraries(inserts_generator pvt.egorpugin.primitives.filesystem)
             set(gen

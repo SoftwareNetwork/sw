@@ -21,10 +21,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 # inserter
 ########################################
 
-set(inserter_src
-    inserter.cpp
-)
-add_executable(inserter ${inserter_src})
+add_executable(inserter gen/inserter.cpp)
 set_property(TARGET inserter PROPERTY FOLDER gen)
 target_link_libraries(inserter pvt.egorpugin.primitives.filesystem)
 
@@ -67,7 +64,7 @@ add_custom_target(inserts_gen
 set_property(TARGET inserts_gen PROPERTY FOLDER gen)
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp PROPERTIES GENERATED TRUE)
 
-add_executable(stamp_genenerator stamp_gen.cpp)
+add_executable(stamp_genenerator gen/stamp_gen.cpp)
 set_property(TARGET stamp_genenerator PROPERTY FOLDER gen)
 set(stamp ${CMAKE_CURRENT_BINARY_DIR}/stamp.h.in)
 set_source_files_properties(${stamp} PROPERTIES GENERATED True)
