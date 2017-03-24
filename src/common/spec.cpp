@@ -53,7 +53,7 @@ Specification read_specification(const ptree &p)
     get_val(s.package.ppath, "project");
     get_val(version, "version");
     get_val(s.cppan, "cppan");
-    get_val(s.sha256, "sha256");
+    get_val(s.hash, "hash");
     get_val(created, "created");
 
     s.package.version = Version(version);

@@ -51,10 +51,7 @@ bool Remote::downloadPackage(const Package &d, const String &hash, const path &f
         {
             return false;
         }
-        // remove first cond when server will be using sfh
-        if (hash == sha256(fn) || hash == strong_file_hash(fn))
-            return true;
-        return false;
+        return check_file_hash(fn, hash);
     };
 
     for (auto &s : primary_sources)

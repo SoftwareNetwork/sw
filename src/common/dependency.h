@@ -31,7 +31,7 @@ struct DownloadDependency : public Package
 
     // extended data
     ProjectVersionId id = 0;
-    String sha256;
+    String hash;
 
     // own data (private)
     const Remote *remote = nullptr;

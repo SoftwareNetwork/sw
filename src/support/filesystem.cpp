@@ -40,7 +40,7 @@ path get_temp_filename(const path &subdir)
 
 String get_stamp_filename(const String &prefix)
 {
-    return prefix + ".sha256";
+    return prefix + ".hash";
 }
 
 String make_archive_name(const String &fn)

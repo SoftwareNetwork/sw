@@ -50,6 +50,7 @@ struct StartupAction
         ClearStorageDirBin          = 0x0010,
         ClearStorageDirLib          = 0x0020,
         ClearCfgDirs                = 0x0040,
+        ClearPackagesDatabase       = 0x0080,
     };
 
     int id;
@@ -166,7 +167,7 @@ private:
 
     bool isCurrentDbOld() const;
 
-    ProjectVersionId getExactProjectVersionId(const DownloadDependency &project, Version &version, ProjectFlags &flags, String &sha256) const;
+    ProjectVersionId getExactProjectVersionId(const DownloadDependency &project, Version &version, ProjectFlags &flags, String &hash) const;
     Dependencies getProjectDependencies(ProjectVersionId project_version_id, DependenciesMap &dm) const;
 };
 

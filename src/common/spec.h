@@ -29,7 +29,7 @@ struct Specification
     Package package;
     Source source;
     String cppan;
-    String sha256;
+    String hash;
     TimePoint created;
 };
 

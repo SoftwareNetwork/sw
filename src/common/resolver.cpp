@@ -193,7 +193,7 @@ void Resolver::resolve(const Packages &deps, std::function<void()> resolve_actio
 
 void Resolver::download(const DownloadDependency &d, const path &fn)
 {
-    if (!d.remote->downloadPackage(d, d.sha256, fn, query_local_db))
+    if (!d.remote->downloadPackage(d, d.hash, fn, query_local_db))
     {
         // if we get hashes from local db
         // they can be stalled within server refresh time (15 mins)
@@ -215,7 +215,7 @@ void Resolver::download_and_unpack()
         auto &d = dd.second;
         auto version_dir = d.getDirSrc();
         auto hash_file = d.getStampFilename();
-        bool must_download = d.getStampHash() != d.sha256 || d.sha256.empty();
+        bool must_download = d.getStampHash() != d.hash || d.hash.empty();
 
         if (fs::exists(version_dir) && !must_download)
             return;
@@ -247,7 +247,7 @@ void Resolver::download_and_unpack()
         cleanPackages(d.target_name);
 
         rd.downloads++;
-        write_file(hash_file, d.sha256);
+        write_file(hash_file, d.hash);
 
         LOG_INFO(logger, "Unpacking  : " << d.target_name << "...");
         Files files;
@@ -599,7 +599,10 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
         d.ppath = v.first;
         d.version = v.second.get<String>("version");
         d.flags = decltype(d.flags)(v.second.get<uint64_t>("flags"));
-        d.sha256 = v.second.get<String>("sha256");
+        // TODO: remove later sha256 field
+        d.hash = v.second.get<String>("sha256", "empty_hash");
+        if (d.hash == "empty_hash")
+            d.hash = v.second.get<String>("hash", "empty_hash");
 
         if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
         {
