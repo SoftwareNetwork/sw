@@ -2510,8 +2510,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("set(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
         ctx.addLine();
     }
-    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_gen_name}\")");
-    ctx.addLine();
     ctx.addLine("set(XCODE 0)");
     ctx.if_("CMAKE_GENERATOR STREQUAL Xcode");
     ctx.addLine("set(XCODE 1)");
@@ -2534,6 +2532,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine("get_configuration_with_generator(config_dir)");
     ctx.addLine("get_configuration_with_generator_unhashed(config_gen_name)");
     ctx.addLine("get_number_of_cores(N_CORES)");
+    ctx.addLine();
+
+    // after config
+    ctx.addLine("file_write_once(${PROJECT_BINARY_DIR}/" CPPAN_CONFIG_FILENAME " \"${config_gen_name}\")");
     ctx.addLine();
 
     // use response files when available

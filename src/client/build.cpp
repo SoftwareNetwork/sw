@@ -76,6 +76,9 @@ String test_run()
 
     // read cfg
     auto c = read_file(bin_dir / CPPAN_CONFIG_FILENAME);
+    if (c.empty())
+        throw std::logic_error("Test config is empty");
+
     auto cmake_version = get_cmake_version();
 
     // move this to printer some time
