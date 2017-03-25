@@ -90,7 +90,7 @@ if (NOT EXISTS ${import} OR
                 check_result_variable(${ret})
                 cppan_debug_message("Copied!")
 
-                # since cmake 3.8 we must initialize CMakeCache.txt with on record in it
+                # since cmake 3.8 we must initialize CMakeCache.txt with one record in it
                 file(WRITE ${build_dir}/CMakeCache.txt "CMAKE_PLATFORM_INFO_INITIALIZED:INTERNAL=1\n")
             else()
                 cppan_debug_message("From dir does not exist! ${from}")
@@ -144,14 +144,19 @@ if (NOT EXISTS ${import} OR
 
         # call cmake
         if (EXECUTABLE)# AND NOT CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
+                # build with the same compiler, generator
                 cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
+                        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                         -DVARIABLES_FILE=${variables_file}
                         -G \"${generator}\""
                 )
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
+                        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                         -DVARIABLES_FILE=${variables_file}
                         -G "${generator}"
                     RESULT_VARIABLE ret

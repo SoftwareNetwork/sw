@@ -78,7 +78,7 @@ bool Remote::downloadPackage(const Package &d, const String &hash, const path &f
 
 String Remote::default_source_provider(const Package &d) const
 {
-    // change later to format strings (or simple replacement)
+    // TODO: change later to format strings (or simple replacement)
     // %U - url, %D - data dir etc.
     auto fs_path = ProjectPath(d.ppath).toFileSystemPath().string();
     normalize_string(fs_path);
