@@ -47,10 +47,11 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
 Resolver::Dependencies getDependenciesFromDb(const Packages &deps, const Remote *current_remote);
 Resolver::Dependencies prepareIdDependencies(const IdDependencies &id_deps, const Remote *current_remote);
 
-void resolve_dependencies(const Packages &deps)
+std::map<Package, Package> resolve_dependencies(const Packages &deps)
 {
     Resolver r;
     r.resolve_dependencies(deps);
+    return r.resolved_packages;
 }
 
 void resolve_and_download(const Package &p, const path &fn)
@@ -90,11 +91,13 @@ void Resolver::resolve_dependencies(const Packages &dependencies)
         {
             if (d.second.ppath == dl.second.ppath && dl.second.flags[pfDirectDependency])
             {
-                rd.resolved_packages[d.second] = dl.second;
+                resolved_packages[d.second] = dl.second;
                 break;
             }
         }
     }
+    // push to global
+    rd.resolved_packages.insert(resolved_packages.begin(), resolved_packages.end());
 
     // other related stuff
     read_configs();

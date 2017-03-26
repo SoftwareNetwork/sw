@@ -222,6 +222,34 @@ int build_packages(const String &name, const std::set<Package> &pkgs, const path
 int build_package(const String &target_name, const path &settings_fn, const String &config)
 {
     Settings::get_local_settings().copy_all_libraries_to_output = true;
-    auto p = extractFromString(target_name);
+
+    String target = target_name;
+    bool added_suffix = false;
+    if (target.rfind('-') == target.npos)
+    {
+        target += "-*"; // add the latest version
+        added_suffix = true;
+    }
+    auto p = extractFromString(target);
+    try
+    {
+        p = resolve_dependencies({ { p.ppath.toString(), p } })[p];
+    }
+    catch (const std::exception &)
+    {
+        if (!added_suffix)
+            throw;
+
+        target = target_name + "-master"; // add the master version
+        p = extractFromString(target);
+        p = resolve_dependencies({ { p.ppath.toString(), p } })[p];
+
+        // TODO: if no master version, try to get first branch from local db
+        // (another try ... catch)
+        //target = target_name + "-master"; // add the master version
+        //p = extractFromString(target);
+        //resolved_deps = resolve_dependencies({ { p.ppath.toString(), p } });
+
+    }
     return build_packages(p.ppath.back(), { p }, settings_fn, config);
 }

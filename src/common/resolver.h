@@ -25,6 +25,8 @@ public:
     using Dependencies = DownloadDependency::Dependencies;
 
 public:
+    std::map<Package, Package> resolved_packages;
+
     void resolve_dependencies(const Packages &deps);
     void resolve_and_download(const Package &p, const path &fn);
     void assign_dependencies(const Package &p, const Packages &deps); // why such name?
@@ -45,4 +47,4 @@ private:
 };
 
 void resolve_and_download(const Package &p, const path &fn);
-void resolve_dependencies(const Packages &deps);
+std::map<Package, Package> resolve_dependencies(const Packages &deps);
