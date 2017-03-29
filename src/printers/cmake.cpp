@@ -1307,7 +1307,8 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         ctx.if_("NOT CPPAN_COMMAND");
         ctx.addLine("find_program(CPPAN_COMMAND cppan)");
         ctx.if_("\"${CPPAN_COMMAND}\" STREQUAL \"CPPAN_COMMAND-NOTFOUND\"");
-        ctx.addLine("message(FATAL_ERROR \"'cppan' program was not found. Please, add it to PATH environment variable\")");
+        ctx.addLine("message(WARNING \"'cppan' program was not found. Please, add it to PATH environment variable\")");
+        ctx.addLine("set(CPPAN_COMMAND 0)");
         ctx.endif();
         ctx.endif();
         ctx.addLine("set(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
@@ -2512,7 +2513,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.if_("NOT CPPAN_COMMAND");
         ctx.addLine("find_program(CPPAN_COMMAND cppan)");
         ctx.if_("\"${CPPAN_COMMAND}\" STREQUAL \"CPPAN_COMMAND-NOTFOUND\"");
-        ctx.addLine("message(FATAL_ERROR \"'cppan' program was not found. Please, add it to PATH environment variable\")");
+        ctx.addLine("message(WARNING \"'cppan' program was not found. Please, add it to PATH environment variable\")");
+        ctx.addLine("set(CPPAN_COMMAND 0)");
         ctx.endif();
         ctx.endif();
         ctx.addLine("set(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
@@ -2610,9 +2612,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
                                 \"${CMAKE_GENERATOR_TOOLSET}\"
                                 \"${CMAKE_TOOLCHAIN_FILE}\"
                             )"s;
+            ctx.if_("CPPAN_COMMAND");
             ctx.addLine("cppan_debug_message(\"" + cmd + "\")");
             ctx.addLine("execute_process(" + cmd + " RESULT_VARIABLE ret)");
             ctx.addLine("check_result_variable(${ret} \"" + cmd + "\")");
+            ctx.endif();
             // this file is created by parallel checks dispatcher
             ctx.addLine("read_check_variables_file(${tmp_dir}/" + parallel_checks_file + ")");
             ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 1)");
