@@ -251,5 +251,7 @@ int build_package(const String &target_name, const path &settings_fn, const Stri
         //resolved_deps = resolve_dependencies({ { p.ppath.toString(), p } });
 
     }
+    if (p.flags[pfHeaderOnly])
+        throw std::runtime_error("You are trying to build header only project. This is not supported");
     return build_packages(p.ppath.back(), { p }, settings_fn, config);
 }

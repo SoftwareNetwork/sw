@@ -870,6 +870,14 @@ endif()
     ctx.addLine("add_subdirectory(" + normalize_path(s.cppan_dir) + ")");
     ctx.addLine();
 
+    // trigger building of requested target(s)
+    /*ctx.addLine("add_custom_target(cppan_all ALL)");
+    ctx.increaseIndent("add_dependencies(cppan_all ");
+    for (auto &d : rd[d].dependencies)
+        ctx.addLine(d.second.target_name);
+    ctx.decreaseIndent(")");
+    ctx.addLine();*/
+
     // vs startup project
     bool once = false;
     for (auto &dep : rd[Package()].dependencies)
