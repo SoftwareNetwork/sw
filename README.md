@@ -59,5 +59,3 @@ cmake ..
 # cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
 make -j4
 ```
-
-On Windows you should download the latest LibreSSL and put it into 'dep/libressl' directory before cmake step.
