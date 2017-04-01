@@ -50,9 +50,9 @@ sudo cp cppan /usr/local/bin/
 ### Build
 
 ```
-git clone https://github.com/cppan/cppan
-cd cppan
-git submodule update --init
+git clone https://github.com/cppan/cppan cppan_client
+cd cppan_client
+cppan
 mkdir build && cd build
 cmake ..
 # for linux
