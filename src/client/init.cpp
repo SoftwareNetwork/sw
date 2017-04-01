@@ -159,6 +159,8 @@ void command_init(const Strings &args)
                     std::cout << e.what() << "\n";
                 }
             }
+
+            // TODO: restore normal input!
         });
     }
     else
@@ -292,7 +294,7 @@ void command_init(const Strings &args)
         }
         dump_yaml_config(CPPAN_FILENAME, y);
 
-        if (build_project && y_n_branch("Build project?"))
+        if (build_project && y_n_branch("Build the project?"))
             build();
     }
 }

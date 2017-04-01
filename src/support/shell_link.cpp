@@ -84,6 +84,7 @@ bool create_link(const path &file, const path &link, const String &description)
 {
 #ifdef _WIN32
     fs::create_directories(link.parent_path());
+    //return SUCCEEDED(CreateLink(file.wstring().c_str(), link.wstring().c_str(), to_wstring(description).c_str()));
     return SUCCEEDED(CreateLink(file.string().c_str(), link.string().c_str(), description.c_str()));
 #else
     return true;

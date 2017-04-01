@@ -149,6 +149,15 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     EXTRACT(cppan_dir, String);
     EXTRACT(output_dir, String);
 
+/*#ifdef _WIN32
+    // correctly convert to utf-8
+#define CONVERT_DIR(x) x = to_wstring(x.string())
+    CONVERT_DIR(storage_dir);
+    CONVERT_DIR(build_dir);
+    CONVERT_DIR(cppan_dir);
+    CONVERT_DIR(output_dir);
+#endif*/
+
     auto &p = root["proxy"];
     if (p.IsDefined())
     {

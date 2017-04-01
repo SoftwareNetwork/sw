@@ -101,10 +101,12 @@ sqlite3 *load_from_file(const path &fn, bool read_only)
 {
     sqlite3 *db = nullptr;
     bool ok = true;
+    int flags = SQLITE_OPEN_FULLMUTEX;
     if (read_only)
-        ok = sqlite3_open_v2(fn.string().c_str(), &db, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK;
+        flags |= SQLITE_OPEN_READONLY;
     else
-        ok = sqlite3_open(fn.string().c_str(), &db) == SQLITE_OK;
+        flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+    ok = sqlite3_open_v2(fn.string().c_str(), &db, flags, nullptr) == SQLITE_OK;
     if (!ok)
     {
         String error = "Can't open database file: " + fn.string() + " error: " + sqlite3_errmsg(db);
