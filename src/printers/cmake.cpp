@@ -17,7 +17,6 @@
 #include "cmake.h"
 
 #include <access_table.h>
-#include <command.h>
 #include <database.h>
 #include <directories.h>
 #include <hash.h>
@@ -30,6 +29,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <primitives/command.h>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
 

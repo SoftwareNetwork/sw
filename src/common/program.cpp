@@ -16,8 +16,9 @@
 
 #include "program.h"
 
-#include "command.h"
 #include "stamp.h"
+
+#include <primitives/command.h>
 
 #include <iomanip>
 #include <regex>

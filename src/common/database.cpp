@@ -16,7 +16,6 @@
 
 #include "database.h"
 
-#include "command.h"
 #include "directories.h"
 #include "enums.h"
 #include "hash.h"
@@ -27,6 +26,7 @@
 #include "stamp.h"
 #include "printers/cmake.h"
 
+#include <primitives/command.h>
 #include <primitives/lock.h>
 #include <primitives/pack.h>
 #include <primitives/templates.h>

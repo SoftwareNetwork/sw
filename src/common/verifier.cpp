@@ -16,7 +16,6 @@
 
 #include "verifier.h"
 
-#include "command.h"
 #include "config.h"
 #include "http.h"
 #include "package.h"
@@ -24,6 +23,7 @@
 #include "resolver.h"
 #include "spec.h"
 
+#include <primitives/command.h>
 #include <primitives/pack.h>
 #include <primitives/templates.h>
 

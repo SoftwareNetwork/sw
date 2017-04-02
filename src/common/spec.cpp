@@ -16,10 +16,11 @@
 
 #include "spec.h"
 
-#include "command.h"
 #include "http.h"
 #include "package.h"
 #include "property_tree.h"
+
+#include <primitives/command.h>
 
 //#define SPEC_FILES_LOCATION "https://github.com/cppan/specs"s
 #define SPEC_FILES_LOCATION "https://raw.githubusercontent.com/cppan/specs/master/"s

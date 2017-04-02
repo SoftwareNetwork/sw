@@ -105,6 +105,7 @@ target_link_libraries(common
     pvt.egorpugin.primitives.pack
     pvt.egorpugin.primitives.date_time
     pvt.egorpugin.primitives.executor
+    pvt.egorpugin.primitives.command
 )
 
 ################################################################################

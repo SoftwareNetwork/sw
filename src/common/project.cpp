@@ -18,13 +18,14 @@
 
 #include "bazel/bazel.h"
 #include "config.h"
-#include "command.h"
 #include "http.h"
 #include "resolver.h"
 
 #include "printers/printer.h"
 
 #include <boost/algorithm/string.hpp>
+
+#include <primitives/command.h>
 #include <primitives/pack.h>
 
 #include <regex>

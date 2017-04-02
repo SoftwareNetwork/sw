@@ -14,6 +14,7 @@ local_settings:
         pvt.cppan.demo.sqlite3: 3
         pvt.cppan.demo.yhirose.cpp_linenoise: master
 
+        pvt.egorpugin.primitives.command: master
         pvt.egorpugin.primitives.string: master
         pvt.egorpugin.primitives.filesystem: master
         pvt.egorpugin.primitives.context: master
@@ -74,6 +75,7 @@ projects:
             - pvt.egorpugin.primitives.lock: master
             - pvt.egorpugin.primitives.log: master
             - pvt.egorpugin.primitives.pack: master
+            - pvt.egorpugin.primitives.command: master
 
         options:
             any:
