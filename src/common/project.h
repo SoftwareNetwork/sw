@@ -32,6 +32,80 @@
 
 using Sources = std::set<String>;
 
+
+
+
+
+
+enum class CompilerType
+{
+    Clang,
+    Gnu,
+    Msvc,
+    Intel,
+    // more
+};
+
+enum class LinkType
+{
+    Any,
+    Static,
+    Shared,
+};
+
+enum class Visibility
+{
+    Public,
+    Private,
+    Interface,
+};
+
+enum class Os
+{
+    Windows,
+    Linux,
+    Macos,
+};
+
+enum class Arch
+{
+    x86,
+    x64,
+    arm,
+    // more from clang
+};
+// subarch
+
+struct Compiler
+{
+    CompilerType type;
+    Version version;
+};
+
+struct Option
+{
+    enum Type
+    {
+        Definition,
+        IncludeDirectory,
+        CompileOption,
+        LinkOption,
+        LinkLibrary,
+    };
+
+    Type type;
+    String name;
+    Visibility visibility;
+    LinkType linkType;
+    CompilerType compilerType;
+    String condition;
+};
+
+
+
+
+
+
 struct IncludeDirectories
 {
     Files public_;
