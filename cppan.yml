@@ -6,11 +6,9 @@ local_settings:
         generator: Visual Studio 15 2017
 
     dependencies:
-        pvt.cppan.demo.boost.optional: 1
         pvt.cppan.demo.boost.program_options: 1
         pvt.cppan.demo.boost.property_tree: 1
         pvt.cppan.demo.boost.variant: 1
-        pvt.cppan.demo.jbeder.yaml_cpp: master
         pvt.cppan.demo.sqlite3: 3
         pvt.cppan.demo.yhirose.cpp_linenoise: master
 

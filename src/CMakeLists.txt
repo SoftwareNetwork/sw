@@ -100,7 +100,6 @@ target_link_libraries(common
 )
 
 target_link_libraries(common
-    pvt.cppan.demo.jbeder.yaml_cpp
     pvt.cppan.demo.sqlite3
 
     pvt.egorpugin.primitives.pack

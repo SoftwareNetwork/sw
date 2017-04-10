@@ -135,19 +135,19 @@ void Settings::load_main(const yaml &root, const SettingsType type)
         Remote rm;
         Remote *prm = o ? &remotes[0] : &rm;
         prm->name = n;
-        EXTRACT_VAR(kv.second, prm->url, "url", String);
-        EXTRACT_VAR(kv.second, prm->data_dir, "data_dir", String);
-        EXTRACT_VAR(kv.second, prm->user, "user", String);
-        EXTRACT_VAR(kv.second, prm->token, "token", String);
+        YAML_EXTRACT_VAR(kv.second, prm->url, "url", String);
+        YAML_EXTRACT_VAR(kv.second, prm->data_dir, "data_dir", String);
+        YAML_EXTRACT_VAR(kv.second, prm->user, "user", String);
+        YAML_EXTRACT_VAR(kv.second, prm->token, "token", String);
         if (!o)
             remotes.push_back(*prm);
     });
 
-    EXTRACT_AUTO(disable_update_checks);
-    EXTRACT(storage_dir, String);
-    EXTRACT(build_dir, String);
-    EXTRACT(cppan_dir, String);
-    EXTRACT(output_dir, String);
+    YAML_EXTRACT_AUTO(disable_update_checks);
+    YAML_EXTRACT(storage_dir, String);
+    YAML_EXTRACT(build_dir, String);
+    YAML_EXTRACT(cppan_dir, String);
+    YAML_EXTRACT(output_dir, String);
 
 /*#ifdef _WIN32
     // correctly convert to utf-8
@@ -163,8 +163,8 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     {
         if (!p.IsMap())
             throw std::runtime_error("'proxy' should be a map");
-        EXTRACT_VAR(p, proxy.host, "host", String);
-        EXTRACT_VAR(p, proxy.user, "user", String);
+        YAML_EXTRACT_VAR(p, proxy.host, "host", String);
+        YAML_EXTRACT_VAR(p, proxy.user, "user", String);
     }
 
     storage_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "storage_dir_type", "user"), "storage_dir_type");
@@ -176,18 +176,18 @@ void Settings::load_main(const yaml &root, const SettingsType type)
 
     // read these first from local settings
     // and they'll be overriden in bs (if they exist there)
-    EXTRACT_AUTO(use_cache);
-    EXTRACT_AUTO(show_ide_projects);
-    EXTRACT_AUTO(add_run_cppan_target);
-    EXTRACT_AUTO(cmake_verbose);
-    EXTRACT_AUTO(build_system_verbose);
-    EXTRACT_AUTO(verify_all);
-    EXTRACT_AUTO(copy_all_libraries_to_output);
-    EXTRACT_AUTO(copy_import_libs);
-    EXTRACT_AUTO(full_path_executables);
-    EXTRACT_AUTO(var_check_jobs);
-    EXTRACT_AUTO(install_prefix);
-    EXTRACT_AUTO(build_warning_level);
+    YAML_EXTRACT_AUTO(use_cache);
+    YAML_EXTRACT_AUTO(show_ide_projects);
+    YAML_EXTRACT_AUTO(add_run_cppan_target);
+    YAML_EXTRACT_AUTO(cmake_verbose);
+    YAML_EXTRACT_AUTO(build_system_verbose);
+    YAML_EXTRACT_AUTO(verify_all);
+    YAML_EXTRACT_AUTO(copy_all_libraries_to_output);
+    YAML_EXTRACT_AUTO(copy_import_libs);
+    YAML_EXTRACT_AUTO(full_path_executables);
+    YAML_EXTRACT_AUTO(var_check_jobs);
+    YAML_EXTRACT_AUTO(install_prefix);
+    YAML_EXTRACT_AUTO(build_warning_level);
 
     // read build settings
     if (type == SettingsType::Local)
@@ -227,53 +227,53 @@ void Settings::load_build(const yaml &root)
         return;
 
     // extract
-    EXTRACT_AUTO(c_compiler);
-    EXTRACT_AUTO(cxx_compiler);
-    EXTRACT_AUTO(compiler);
-    EXTRACT_AUTO(c_compiler_flags);
+    YAML_EXTRACT_AUTO(c_compiler);
+    YAML_EXTRACT_AUTO(cxx_compiler);
+    YAML_EXTRACT_AUTO(compiler);
+    YAML_EXTRACT_AUTO(c_compiler_flags);
     if (c_compiler_flags.empty())
-        EXTRACT_VAR(root, c_compiler_flags, "c_flags", String);
-    EXTRACT_AUTO(cxx_compiler_flags);
+        YAML_EXTRACT_VAR(root, c_compiler_flags, "c_flags", String);
+    YAML_EXTRACT_AUTO(cxx_compiler_flags);
     if (cxx_compiler_flags.empty())
-        EXTRACT_VAR(root, cxx_compiler_flags, "cxx_flags", String);
-    EXTRACT_AUTO(compiler_flags);
-    EXTRACT_AUTO(link_flags);
-    EXTRACT_AUTO(link_libraries);
-    EXTRACT_AUTO(configuration);
-    EXTRACT_AUTO(generator);
-    EXTRACT_AUTO(toolset);
-    EXTRACT_AUTO(use_shared_libs);
-    EXTRACT_VAR(root, use_shared_libs, "build_shared_libs", bool);
-    EXTRACT_AUTO(silent);
-    EXTRACT_AUTO(use_cache);
-    EXTRACT_AUTO(show_ide_projects);
-    EXTRACT_AUTO(add_run_cppan_target);
-    EXTRACT_AUTO(cmake_verbose);
-    EXTRACT_AUTO(build_system_verbose);
-    EXTRACT_AUTO(verify_all);
-    EXTRACT_AUTO(copy_all_libraries_to_output);
-    EXTRACT_AUTO(copy_import_libs);
-    EXTRACT_AUTO(full_path_executables);
-    EXTRACT_AUTO(var_check_jobs);
-    EXTRACT_AUTO(install_prefix);
-    EXTRACT_AUTO(build_warning_level);
+        YAML_EXTRACT_VAR(root, cxx_compiler_flags, "cxx_flags", String);
+    YAML_EXTRACT_AUTO(compiler_flags);
+    YAML_EXTRACT_AUTO(link_flags);
+    YAML_EXTRACT_AUTO(link_libraries);
+    YAML_EXTRACT_AUTO(configuration);
+    YAML_EXTRACT_AUTO(generator);
+    YAML_EXTRACT_AUTO(toolset);
+    YAML_EXTRACT_AUTO(use_shared_libs);
+    YAML_EXTRACT_VAR(root, use_shared_libs, "build_shared_libs", bool);
+    YAML_EXTRACT_AUTO(silent);
+    YAML_EXTRACT_AUTO(use_cache);
+    YAML_EXTRACT_AUTO(show_ide_projects);
+    YAML_EXTRACT_AUTO(add_run_cppan_target);
+    YAML_EXTRACT_AUTO(cmake_verbose);
+    YAML_EXTRACT_AUTO(build_system_verbose);
+    YAML_EXTRACT_AUTO(verify_all);
+    YAML_EXTRACT_AUTO(copy_all_libraries_to_output);
+    YAML_EXTRACT_AUTO(copy_import_libs);
+    YAML_EXTRACT_AUTO(full_path_executables);
+    YAML_EXTRACT_AUTO(var_check_jobs);
+    YAML_EXTRACT_AUTO(install_prefix);
+    YAML_EXTRACT_AUTO(build_warning_level);
 
     for (int i = 0; i < CMakeConfigurationType::Max; i++)
     {
         auto t = configuration_types[i];
         boost::to_lower(t);
 
-        EXTRACT_VAR(root, c_compiler_flags_conf[i], "c_compiler_flags_" + t, String);
+        YAML_EXTRACT_VAR(root, c_compiler_flags_conf[i], "c_compiler_flags_" + t, String);
         if (c_compiler_flags_conf[i].empty())
-            EXTRACT_VAR(root, c_compiler_flags_conf[i], "c_flags_" + t, String);
+            YAML_EXTRACT_VAR(root, c_compiler_flags_conf[i], "c_flags_" + t, String);
 
-        EXTRACT_VAR(root, cxx_compiler_flags_conf[i], "cxx_compiler_flags_" + t, String);
+        YAML_EXTRACT_VAR(root, cxx_compiler_flags_conf[i], "cxx_compiler_flags_" + t, String);
         if (cxx_compiler_flags_conf[i].empty())
-            EXTRACT_VAR(root, cxx_compiler_flags_conf[i], "cxx_flags_" + t, String);
+            YAML_EXTRACT_VAR(root, cxx_compiler_flags_conf[i], "cxx_flags_" + t, String);
 
-        EXTRACT_VAR(root, compiler_flags_conf[i], "compiler_flags_" + t, String);
+        YAML_EXTRACT_VAR(root, compiler_flags_conf[i], "compiler_flags_" + t, String);
 
-        EXTRACT_VAR(root, link_flags_conf[i], "link_flags_" + t, String);
+        YAML_EXTRACT_VAR(root, link_flags_conf[i], "link_flags_" + t, String);
     }
 
     cmake_options = get_sequence<String>(root["cmake_options"]);

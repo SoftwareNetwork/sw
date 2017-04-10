@@ -61,10 +61,10 @@ bool load_source(const yaml &root, Source &source)
     auto error = "Only one source must be specified";
 
     Git git;
-    EXTRACT_VAR(src, git.url, "git", String);
-    EXTRACT_VAR(src, git.tag, "tag", String);
-    EXTRACT_VAR(src, git.branch, "branch", String);
-    EXTRACT_VAR(src, git.commit, "commit", String);
+    YAML_EXTRACT_VAR(src, git.url, "git", String);
+    YAML_EXTRACT_VAR(src, git.tag, "tag", String);
+    YAML_EXTRACT_VAR(src, git.branch, "branch", String);
+    YAML_EXTRACT_VAR(src, git.commit, "commit", String);
 
     if (!git.url.empty())
     {
@@ -75,7 +75,7 @@ bool load_source(const yaml &root, Source &source)
     else if (src["remote"].IsDefined())
     {
         RemoteFile rf;
-        EXTRACT_VAR(src, rf.url, "remote", String);
+        YAML_EXTRACT_VAR(src, rf.url, "remote", String);
 
         if (!rf.url.empty())
             source = rf;

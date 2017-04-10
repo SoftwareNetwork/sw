@@ -233,7 +233,7 @@ void get_config_insertion(const yaml &n, const String &key, String &dst)
 void load_source_and_version(const yaml &root, Source &source, Version &version)
 {
     String ver;
-    EXTRACT_VAR(root, ver, "version", String);
+    YAML_EXTRACT_VAR(root, ver, "version", String);
     if (!ver.empty())
         version = Version(ver);
 
@@ -655,37 +655,37 @@ void Project::load(const yaml &root)
 {
     load_source_and_version(root, source, pkg.version);
 
-    EXTRACT_AUTO(empty);
-    EXTRACT_AUTO(custom);
+    YAML_EXTRACT_AUTO(empty);
+    YAML_EXTRACT_AUTO(custom);
 
-    EXTRACT_AUTO(shared_only);
-    EXTRACT_AUTO(static_only);
-    EXTRACT_VAR(root, header_only, "header_only", bool);
+    YAML_EXTRACT_AUTO(shared_only);
+    YAML_EXTRACT_AUTO(static_only);
+    YAML_EXTRACT_VAR(root, header_only, "header_only", bool);
 
     if (shared_only && static_only)
         throw std::runtime_error("Project cannot be static and shared simultaneously");
 
-    EXTRACT_AUTO(import_from_bazel);
-    EXTRACT_AUTO(prefer_binaries);
-    EXTRACT_AUTO(export_all_symbols);
-    EXTRACT_AUTO(build_dependencies_with_same_config);
+    YAML_EXTRACT_AUTO(import_from_bazel);
+    YAML_EXTRACT_AUTO(prefer_binaries);
+    YAML_EXTRACT_AUTO(export_all_symbols);
+    YAML_EXTRACT_AUTO(build_dependencies_with_same_config);
 
     api_name = get_sequence_set<String>(root, "api_name");
 
     // standards
     {
-        EXTRACT_AUTO(c_standard);
+        YAML_EXTRACT_AUTO(c_standard);
         if (c_standard == 0)
         {
-            EXTRACT_VAR(root, c_standard, "c", int);
+            YAML_EXTRACT_VAR(root, c_standard, "c", int);
         }
-        EXTRACT_AUTO(c_extensions);
+        YAML_EXTRACT_AUTO(c_extensions);
 
         String cxx;
-        EXTRACT_VAR(root, cxx, "cxx_standard", String);
+        YAML_EXTRACT_VAR(root, cxx, "cxx_standard", String);
         if (cxx.empty())
-            EXTRACT_VAR(root, cxx, "c++", String);
-        EXTRACT_AUTO(cxx_extensions);
+            YAML_EXTRACT_VAR(root, cxx, "c++", String);
+        YAML_EXTRACT_AUTO(cxx_extensions);
 
         if (!cxx.empty())
         {
@@ -724,9 +724,9 @@ void Project::load(const yaml &root)
     if (unpack_directory.empty())
         read_dir(unpack_directory, "unpack_dir");
 
-    EXTRACT_AUTO(output_directory);
+    YAML_EXTRACT_AUTO(output_directory);
     if (output_directory.empty())
-        EXTRACT_VAR(root, output_directory, "output_dir", String);
+        YAML_EXTRACT_VAR(root, output_directory, "output_dir", String);
 
     // include_directories
     {
@@ -1004,17 +1004,17 @@ void Project::load(const yaml &root)
     if (patch_node.IsDefined())
         patch.load(patch_node);
 
-    EXTRACT_AUTO(name);
+    YAML_EXTRACT_AUTO(name);
 
     String pt;
-    EXTRACT_VAR(root, pt, "type", String);
+    YAML_EXTRACT_VAR(root, pt, "type", String);
     if (pt == "l" || pt == "lib" || pt == "library")
         type = ProjectType::Library;
     else if (pt == "e" || pt == "exe" || pt == "executable")
         type = ProjectType::Executable;
 
     String lt;
-    EXTRACT_VAR(root, lt, "library_type", String);
+    YAML_EXTRACT_VAR(root, lt, "library_type", String);
     if (lt == "static")
     {
         library_type = LibraryType::Static;
@@ -1032,7 +1032,7 @@ void Project::load(const yaml &root)
     }
 
     String et;
-    EXTRACT_VAR(root, et, "executable_type", String);
+    YAML_EXTRACT_VAR(root, et, "executable_type", String);
     if (et == "win32")
         executable_type = ExecutableType::Win32;
 

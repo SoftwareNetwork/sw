@@ -134,7 +134,7 @@ void Config::load(const yaml &root)
     load_settings(root);
 
     ProjectPath root_project;
-    EXTRACT(root_project, String);
+    YAML_EXTRACT(root_project, String);
 
     auto prjs = root["projects"];
     if (prjs.IsDefined() && !prjs.IsMap())
