@@ -41,6 +41,7 @@ target_link_libraries(support
     pvt.egorpugin.primitives.http
     pvt.egorpugin.primitives.log
     pvt.egorpugin.primitives.lock
+    pvt.egorpugin.primitives.yaml
 )
 
 ########################################

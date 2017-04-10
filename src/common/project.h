@@ -19,10 +19,11 @@
 #include "checks.h"
 #include "cppan_string.h"
 #include "dependency.h"
-#include "optional.h"
 #include "project_path.h"
 #include "source.h"
 #include "yaml.h"
+
+#include <primitives/optional.h>
 
 #include <unordered_map>
 

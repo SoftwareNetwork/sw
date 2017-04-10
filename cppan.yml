@@ -25,6 +25,7 @@ local_settings:
         pvt.egorpugin.primitives.lock: master
         pvt.egorpugin.primitives.log: master
         pvt.egorpugin.primitives.pack: master
+        pvt.egorpugin.primitives.yaml: master
 
 root_project: pvt.cppan.client
 

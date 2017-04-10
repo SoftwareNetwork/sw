@@ -907,8 +907,8 @@ void PackagesDatabase::download()
         fs::remove(fn);
     };
 
-    String git = "git";
-    if (has_executable_in_path(git, true))
+    const String git = "git";
+    if (resolve_executable(git))
     {
         auto git_init = [this, &git]()
         {
