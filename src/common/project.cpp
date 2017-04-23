@@ -1053,7 +1053,7 @@ void Project::load(const yaml &root)
             root_directory = root / root_directory;
     }
 
-    static const auto source_dir_names = { "src", "source", "sources", "lib" };
+    static const auto source_dir_names = { "src", "source", "sources", "lib", "library" };
 
     // idirs
     {

@@ -34,6 +34,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/pack.h>
+#include <primitives/optional.h>
 
 #include <iostream>
 #include <thread>
@@ -54,6 +55,8 @@ void default_run();
 void init(const Strings &args, const String &log_level);
 void load_current_config();
 void self_upgrade();
+void self_upgrade_copy(const path &dst);
+optional<int> internal(const Strings &args);
 void command_init(const Strings &args);
 
 int main(int argc, char *argv[])
@@ -111,19 +114,6 @@ try
         args = args_copy;
     }
 
-    // check if single arg is dir name
-    if (args.size() == 2)
-    {
-        auto cmd = args[1];
-
-        // file/url arg
-        if (!isUrl(cmd) && fs::is_directory(cmd))
-        {
-            cp = std::make_unique<ScopedCurrentPath>(cmd);
-            args.erase(args.end() - 1);
-        }
-    }
-
     // main cppan client init routine
     init(args, log_level);
 
@@ -134,87 +124,16 @@ try
         return 0;
     }
 
+    if (auto r = internal(args))
+        return r.get();
+
     if (args.size() > 1)
     {
-        auto self_upgrade = [&args]()
-        {
-            // self upgrade via copy
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            fs::copy_file(args[0], args[2], fs::copy_option::overwrite_if_exists);
-        };
+        const auto cmd = args[1];
 
         // command selector, always exit inside this if()
-        if (args[1][0] != '-')
+        if (cmd[0] != '-')
         {
-            String cmd = args[1];
-
-            // internal
-            if (cmd.find("internal-") == 0)
-            {
-                if (cmd == "internal-fix-imports")
-                {
-                    if (args.size() != 6)
-                    {
-                        std::cout << "invalid number of arguments\n";
-                        std::cout << "usage: cppan internal-fix-imports target aliases.file old.file new.file\n";
-                        return 1;
-                    }
-                    fix_imports(args[2], args[3], args[4], args[5]);
-                    return 0;
-                }
-
-                if (cmd == "internal-parallel-vars-check")
-                {
-                    if (args.size() < 6)
-                    {
-                        std::cout << "invalid number of arguments: " << args.size() << "\n";
-                        std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file generator toolset toolchain\n";
-                        return 1;
-                    }
-
-                    size_t a = 2;
-
-#define ASSIGN_ARG(x) if (a < args.size()) o.x = trim_double_quotes(args[a++])
-                    ParallelCheckOptions o;
-                    ASSIGN_ARG(dir);
-                    ASSIGN_ARG(vars_file);
-                    ASSIGN_ARG(checks_file);
-                    ASSIGN_ARG(generator);
-                    ASSIGN_ARG(toolset);
-                    ASSIGN_ARG(toolchain);
-#undef ASSIGN_ARG
-
-                    CMakePrinter c;
-                    c.parallel_vars_check(o);
-                    return 0;
-                }
-
-                if (cmd == "internal-create-link-to-solution")
-                {
-#ifndef _WIN32
-                    return 0;
-#endif
-                    if (args.size() != 4)
-                    {
-                        std::cout << "invalid number of arguments: " << args.size() << "\n";
-                        std::cout << "usage: cppan internal-create-link-to-solution solution.sln link.lnk\n";
-                        return 1;
-                    }
-                    if (!create_link(args[2], args[3], "Link to CPPAN Solution"))
-                        return 1;
-                    return 0;
-                }
-
-                if (args[1] == "internal-self-upgrade-copy")
-                {
-                    self_upgrade();
-                    return 0;
-                }
-
-                return 0;
-            }
-
-            // normal options
             if (cmd == "parse-configure-ac")
             {
                 if (args.size() != 3)
@@ -294,11 +213,11 @@ try
 
             std::cout << "unknown command: " << cmd << "\n";
             return 1;
-    }
+        }
 #ifdef _WIN32
         else if (args[1] == "--self-upgrade-copy") // remove this very very later (at 0.3.0 - 0.5.0)
         {
-            self_upgrade();
+            self_upgrade_copy(args[2]);
             return 0;
         }
 #endif
@@ -586,6 +505,78 @@ void self_upgrade()
     fs::copy_file(cppan, program);
     fs::remove(cppan);
 #endif
+}
+
+void self_upgrade_copy(const path &dst)
+{
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    fs::copy_file(get_program(), dst, fs::copy_option::overwrite_if_exists);
+}
+
+optional<int> internal(const Strings &args)
+{
+    // internal stuff
+    if (args[1] == "internal-fix-imports")
+    {
+        if (args.size() != 6)
+        {
+            std::cout << "invalid number of arguments\n";
+            std::cout << "usage: cppan --internal-fix-imports target aliases.file old.file new.file\n";
+            return 1;
+        }
+        fix_imports(args[2], args[3], args[4], args[5]);
+        return 0;
+    }
+
+    if (args[1] == "internal-create-link-to-solution")
+    {
+#ifndef _WIN32
+        return 0;
+#endif
+        if (args.size() != 4)
+        {
+            std::cout << "invalid number of arguments: " << args.size() << "\n";
+            std::cout << "usage: cppan --internal-create-link-to-solution solution.sln link.lnk\n";
+            return 1;
+        }
+        if (!create_link(args[2], args[3], "Link to CPPAN Solution"))
+            return 1;
+        return 0;
+    }
+
+    if (args[1] == "internal-parallel-vars-check")
+    {
+        if (args.size() < 6)
+        {
+            std::cout << "invalid number of arguments: " << args.size() << "\n";
+            std::cout << "usage: cppan --internal-parallel-vars-check vars_dir vars_file checks_file generator toolset toolchain\n";
+            return 1;
+        }
+
+        size_t a = 2;
+
+#define ASSIGN_ARG(x) if (a < args.size()) o.x = trim_double_quotes(args[a++])
+        ParallelCheckOptions o;
+        ASSIGN_ARG(dir);
+        ASSIGN_ARG(vars_file);
+        ASSIGN_ARG(checks_file);
+        ASSIGN_ARG(generator);
+        ASSIGN_ARG(toolset);
+        ASSIGN_ARG(toolchain);
+#undef ASSIGN_ARG
+
+        CMakePrinter c;
+        c.parallel_vars_check(o);
+        return 0;
+    }
+
+    if (args[1] == "internal-self-upgrade-copy")
+    {
+        self_upgrade_copy(args[2]);
+        return 0;
+    }
+
+    return optional<int>();
 }
 
 ApiResult api_call(const String &cmd, const Strings &args)

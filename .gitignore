@@ -4,6 +4,7 @@
 /bin*
 cppan
 .cppan*
+.vs
 
 *.kdev*
 

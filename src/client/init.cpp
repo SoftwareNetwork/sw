@@ -159,8 +159,7 @@ void command_init(const Strings &args)
                     std::cout << e.what() << "\n";
                 }
             }
-
-            // TODO: restore normal input!
+            linenoise::disableRawMode(0);
         });
     }
     else
