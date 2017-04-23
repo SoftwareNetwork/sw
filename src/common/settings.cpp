@@ -188,6 +188,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     YAML_EXTRACT_AUTO(var_check_jobs);
     YAML_EXTRACT_AUTO(install_prefix);
     YAML_EXTRACT_AUTO(build_warning_level);
+    YAML_EXTRACT_AUTO(meta_target_suffix);
 
     // read build settings
     if (type == SettingsType::Local)
@@ -257,6 +258,7 @@ void Settings::load_build(const yaml &root)
     YAML_EXTRACT_AUTO(var_check_jobs);
     YAML_EXTRACT_AUTO(install_prefix);
     YAML_EXTRACT_AUTO(build_warning_level);
+    YAML_EXTRACT_AUTO(meta_target_suffix);
 
     for (int i = 0; i < CMakeConfigurationType::Max; i++)
     {

@@ -28,6 +28,7 @@
 #include <http.h>
 #include <printers/cmake.h>
 #include <program.h>
+#include <resolver.h>
 #include <settings.h>
 #include <shell_link.h>
 #include <verifier.h>
@@ -124,6 +125,7 @@ try
         return 0;
     }
 
+    // handle internal args
     if (auto r = internal(args))
         return r.get();
 
@@ -521,7 +523,7 @@ optional<int> internal(const Strings &args)
         if (args.size() != 6)
         {
             std::cout << "invalid number of arguments\n";
-            std::cout << "usage: cppan --internal-fix-imports target aliases.file old.file new.file\n";
+            std::cout << "usage: cppan internal-fix-imports target aliases.file old.file new.file\n";
             return 1;
         }
         fix_imports(args[2], args[3], args[4], args[5]);
@@ -536,7 +538,7 @@ optional<int> internal(const Strings &args)
         if (args.size() != 4)
         {
             std::cout << "invalid number of arguments: " << args.size() << "\n";
-            std::cout << "usage: cppan --internal-create-link-to-solution solution.sln link.lnk\n";
+            std::cout << "usage: cppan internal-create-link-to-solution solution.sln link.lnk\n";
             return 1;
         }
         if (!create_link(args[2], args[3], "Link to CPPAN Solution"))
@@ -549,7 +551,7 @@ optional<int> internal(const Strings &args)
         if (args.size() < 6)
         {
             std::cout << "invalid number of arguments: " << args.size() << "\n";
-            std::cout << "usage: cppan --internal-parallel-vars-check vars_dir vars_file checks_file generator toolset toolchain\n";
+            std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file generator toolset toolchain\n";
             return 1;
         }
 
@@ -575,6 +577,33 @@ optional<int> internal(const Strings &args)
         self_upgrade_copy(args[2]);
         return 0;
     }
+
+    if (args[1] == "internal-process-cmake-dependencies")
+    {
+        if (args.size() < 3)
+        {
+            std::cout << "invalid number of arguments: " << args.size() << "\n";
+            std::cout << "usage: cppan internal-process-cmake-dependencies deps.txt [out_dir]\n";
+            return 1;
+        }
+
+        if (args.size() == 4)
+        {
+            Settings::get_local_settings().cppan_dir = args[3];
+            Settings::get_local_settings().meta_target_suffix = args[3];
+        }
+
+        auto deps_file = path(args[2]);
+        auto deps = read_lines(deps_file);
+        Config c;
+        for (auto &d : deps)
+            c.getDefaultProject().addDependency(resolve_dependency(d));
+        c.process(deps_file.parent_path());
+        return 0;
+    }
+
+    if (args[1].find("internal-") == 0)
+        throw std::runtime_error("Unknown internal command: " + args[1]);
 
     return optional<int>();
 }

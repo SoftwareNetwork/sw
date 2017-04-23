@@ -646,3 +646,35 @@ Resolver::Dependencies prepareIdDependencies(const IdDependencies &id_deps, cons
     }
     return dependencies;
 }
+
+Package resolve_dependency(const String &target_name)
+{
+    String target = target_name;
+    bool added_suffix = false;
+    if (target.rfind('-') == target.npos)
+    {
+        target += "-*"; // add the latest version
+        added_suffix = true;
+    }
+    auto p = extractFromString(target);
+    try
+    {
+        p = resolve_dependencies({ { p.ppath.toString(), p } })[p];
+    }
+    catch (const std::exception &)
+    {
+        if (!added_suffix)
+            throw;
+
+        target = target_name + "-master"; // add the master version
+        p = extractFromString(target);
+        p = resolve_dependencies({ { p.ppath.toString(), p } })[p];
+
+        // TODO: if no master version, try to get first branch from local db
+        // (another try ... catch)
+        //target = target_name + "-master"; // add the master version
+        //p = extractFromString(target);
+        //resolved_deps = resolve_dependencies({ { p.ppath.toString(), p } });
+    }
+    return p;
+}

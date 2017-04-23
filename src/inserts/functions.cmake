@@ -869,4 +869,12 @@ function(create_directory d)
     execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${d})
 endfunction()
 
+########################################
+# FUNCTION set_cache_var
+########################################
+
+function(set_cache_var variable value)
+    set(${variable} ${value} CACHE STRING "" FORCE)
+endfunction()
+
 ################################################################################

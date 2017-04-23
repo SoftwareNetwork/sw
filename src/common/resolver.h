@@ -47,4 +47,5 @@ private:
 };
 
 void resolve_and_download(const Package &p, const path &fn);
+Package resolve_dependency(const String &d);
 std::map<Package, Package> resolve_dependencies(const Packages &deps);

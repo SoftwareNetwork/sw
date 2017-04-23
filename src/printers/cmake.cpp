@@ -213,11 +213,20 @@ String add_target(const Package &p)
     return "add_library";
 }
 
+String add_target_suffix(const String &t)
+{
+    auto &s = Settings::get_local_settings().meta_target_suffix;
+    if (!s.empty())
+        return t + "-" + s;
+    return t;
+}
+
 String cppan_dummy_target(const String &name)
 {
-    if (name.empty())
-        return "cppan-d";
-    return "cppan-d-" + name;
+    String t = "cppan-d";
+    if (!name.empty())
+        t += "-" + name;
+    return add_target_suffix(t);
 }
 
 void set_target_properties(CMakeContext &ctx, const String &name, const String &property, const String &value)
@@ -652,11 +661,20 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
     ctx.if_("CPPAN_USE_CACHE");
 
     ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
+    ctx.if_("NOT output_dir");
+    ctx.addLine("set(output_dir ${CMAKE_BINARY_DIR})");
+    ctx.endif();
     ctx.if_("VISUAL_STUDIO OR XCODE");
     ctx.addLine("set(output_dir ${output_dir}/$<CONFIG>)");
     ctx.endif();
     ctx.if_("CPPAN_BUILD_OUTPUT_DIR");
     ctx.addLine("set(output_dir ${CPPAN_BUILD_OUTPUT_DIR})");
+    /*ctx.elseif("MSVC");
+    ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
+    ctx.elseif("CMAKE_RUNTIME_OUTPUT_DIRECTORY");
+    ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
+    ctx.else_();
+    ctx.addLine("set(output_dir ${CMAKE_BINARY_DIR})");*/
     ctx.endif();
     if (d.flags[pfLocalProject])
         ctx.addLine("set(output_dir $<TARGET_FILE_DIR:${this}>)");
@@ -2380,16 +2398,16 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("set(CPPAN_BUILD 1 CACHE STRING \"CPPAN is turned on\")");
     ctx.addLine();
     print_storage_dirs(ctx);
-    ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
+    ctx.addLine("set_cache_var(CMAKE_POSITION_INDEPENDENT_CODE ON)");
     ctx.addLine();
-    ctx.addLine("set(${CMAKE_CXX_COMPILER_ID} 1)");
+    ctx.addLine("set_cache_var(${CMAKE_CXX_COMPILER_ID} 1)");
     ctx.addLine();
     ctx.if_("NOT DEFINED CPPAN_USE_CACHE");
-    ctx.addLine("set(CPPAN_USE_CACHE "s + (settings.use_cache ? "1" : "0") + ")");
+    ctx.addLine("set_cache_var(CPPAN_USE_CACHE "s + (settings.use_cache ? "1" : "0") + ")");
     ctx.endif();
     ctx.addLine();
     ctx.if_("NOT DEFINED CPPAN_SHOW_IDE_PROJECTS");
-    ctx.addLine("set(CPPAN_SHOW_IDE_PROJECTS "s + (settings.show_ide_projects ? "1" : "0") + ")");
+    ctx.addLine("set_cache_var(CPPAN_SHOW_IDE_PROJECTS "s + (settings.show_ide_projects ? "1" : "0") + ")");
     ctx.endif();
     ctx.addLine();
     //ctx.if_("NOT DEFINED CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG");
@@ -2397,15 +2415,18 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     //ctx.endif();
     //ctx.addLine();
     ctx.if_("NOT DEFINED CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION");
-    ctx.addLine("set(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION 0)");
+    ctx.addLine("set_cache_var(CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION 0)");
     ctx.endif();
     ctx.addLine();
     ctx.if_("NOT DEFINED CPPAN_BUILD_VERBOSE");
-    ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (settings.build_system_verbose ? "1" : "0") + ")");
+    ctx.addLine("set_cache_var(CPPAN_BUILD_VERBOSE "s + (settings.build_system_verbose ? "1" : "0") + ")");
+    ctx.endif();
+    ctx.if_("NOT DEFINED CPPAN_BUILD_SHARED_LIBS");
+    ctx.addLine("set_cache_var(CPPAN_BUILD_SHARED_LIBS "s + (settings.use_shared_libs ? "1" : "0") + ")");
     ctx.endif();
     ctx.addLine();
     ctx.if_("NOT DEFINED CPPAN_BUILD_WARNING_LEVEL");
-    ctx.addLine("set(CPPAN_BUILD_WARNING_LEVEL "s + std::to_string(settings.build_warning_level) + ")");
+    ctx.addLine("set_cache_var(CPPAN_BUILD_WARNING_LEVEL "s + std::to_string(settings.build_warning_level) + ")");
     ctx.endif();
     ctx.addLine();
     ctx.addLine("get_configuration_variables()");
@@ -2419,10 +2440,12 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
 
     if (d.empty())
     {
+        String old_cppan_target = add_target_suffix(cppan_project_name);
+
         // lib
         config_section_title(ctx, "main library");
-        ctx.addLine("add_library                   (" + cppan_project_name + " INTERFACE)");
-        ctx.increaseIndent("target_link_libraries         (" + cppan_project_name);
+        ctx.addLine("add_library                   (" + old_cppan_target + " INTERFACE)");
+        ctx.increaseIndent("target_link_libraries         (" + old_cppan_target);
         for (auto &p : rd[d].dependencies)
         {
             if (p.second.flags[pfExecutable] || p.second.flags[pfIncludeDirectoriesOnly])
@@ -2430,9 +2453,9 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
             ctx.addLine("INTERFACE " + p.second.target_name);
         }
         ctx.decreaseIndent(")");
-        ctx.addLine("add_dependencies(" + cppan_project_name + " " + cppan_dummy_target(cppan_dummy_copy_target) + ")");
+        ctx.addLine("add_dependencies(" + old_cppan_target + " " + cppan_dummy_target(cppan_dummy_copy_target) + ")");
         ctx.addLine();
-        ctx.addLine("export(TARGETS " + cppan_project_name + " FILE " + exports_dir + "cppan.cmake)");
+        ctx.addLine("export(TARGETS " + old_cppan_target + " FILE " + exports_dir + "cppan.cmake)");
 
         // re-run cppan when root cppan.yml is changed
         if (settings.add_run_cppan_target)
@@ -2451,7 +2474,7 @@ add_custom_target(run-cppan
         \")" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + R"(\"
         ${PROJECT_SOURCE_DIR}/cppan/)" + cmake_helpers_filename + R"(
 )
-add_dependencies()" + cppan_project_name + R"( run-cppan)
+add_dependencies()" + old_cppan_target + R"( run-cppan)
 )");
             print_solution_folder(ctx, "run-cppan", service_folder);
         }
@@ -2514,25 +2537,25 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("find_program(CPPAN_COMMAND cppan)");
         ctx.if_("\"${CPPAN_COMMAND}\" STREQUAL \"CPPAN_COMMAND-NOTFOUND\"");
         ctx.addLine("message(WARNING \"'cppan' program was not found. Please, add it to PATH environment variable\")");
-        ctx.addLine("set(CPPAN_COMMAND 0)");
+        ctx.addLine("set_cache_var(CPPAN_COMMAND 0)");
         ctx.endif();
         ctx.endif();
-        ctx.addLine("set(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
+        ctx.addLine("set_cache_var(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
         ctx.addLine();
     }
-    ctx.addLine("set(XCODE 0)");
+    ctx.addLine("set_cache_var(XCODE 0)");
     ctx.if_("CMAKE_GENERATOR STREQUAL Xcode");
-    ctx.addLine("set(XCODE 1)");
+    ctx.addLine("set_cache_var(XCODE 1)");
     ctx.endif();
     ctx.addLine();
-    ctx.addLine("set(NINJA 0)");
+    ctx.addLine("set_cache_var(NINJA 0)");
     ctx.if_("CMAKE_GENERATOR STREQUAL Ninja");
-    ctx.addLine("set(NINJA 1)");
+    ctx.addLine("set_cache_var(NINJA 1)");
     ctx.endif();
     ctx.addLine();
-    ctx.addLine("set(VISUAL_STUDIO 0)");
+    ctx.addLine("set_cache_var(VISUAL_STUDIO 0)");
     ctx.if_("MSVC AND NOT NINJA");
-    ctx.addLine("set(VISUAL_STUDIO 1)");
+    ctx.addLine("set_cache_var(VISUAL_STUDIO 1)");
     ctx.endif();
     ctx.addLine();
 
@@ -2549,14 +2572,14 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine();
 
     // use response files when available
-    ctx.addLine("set(CMAKE_C_USE_RESPONSE_FILE_FOR_INCLUDES    1 CACHE STRING \"\")");
-    ctx.addLine("set(CMAKE_C_USE_RESPONSE_FILE_FOR_OBJECTS     1 CACHE STRING \"\")");
-    ctx.addLine("set(CMAKE_C_USE_RESPONSE_FILE_FOR_LIBRARIES   1 CACHE STRING \"\")");
-    ctx.addLine("set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_INCLUDES  1 CACHE STRING \"\")");
-    ctx.addLine("set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS   1 CACHE STRING \"\")");
-    ctx.addLine("set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES 1 CACHE STRING \"\")");
+    ctx.addLine("set_cache_var(CMAKE_C_USE_RESPONSE_FILE_FOR_INCLUDES    1)");
+    ctx.addLine("set_cache_var(CMAKE_C_USE_RESPONSE_FILE_FOR_OBJECTS     1)");
+    ctx.addLine("set_cache_var(CMAKE_C_USE_RESPONSE_FILE_FOR_LIBRARIES   1)");
+    ctx.addLine("set_cache_var(CMAKE_CXX_USE_RESPONSE_FILE_FOR_INCLUDES  1)");
+    ctx.addLine("set_cache_var(CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS   1)");
+    ctx.addLine("set_cache_var(CMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES 1)");
     // unknown meaning atm
-    ctx.addLine("set(CMAKE_CXX_RESPONSE_FILE_LINK_FLAG \"@\" CACHE STRING \"\")");
+    ctx.addLine("set_cache_var(CMAKE_CXX_RESPONSE_FILE_LINK_FLAG \"@\")");
     ctx.addLine();
 
     // cmake includes
@@ -2584,9 +2607,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("add_check_variable(WORDS_BIGENDIAN)");
         ctx.endif();
         // aliases
-        ctx.addLine("set(BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
-        ctx.addLine("set(BIGENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
-        ctx.addLine("set(HOST_BIG_ENDIAN ${WORDS_BIGENDIAN} CACHE STRING \"endianness alias\")");
+        ctx.addLine("set_cache_var(BIG_ENDIAN ${WORDS_BIGENDIAN})");
+        ctx.addLine("set_cache_var(BIGENDIAN ${WORDS_BIGENDIAN})");
+        ctx.addLine("set_cache_var(HOST_BIG_ENDIAN ${WORDS_BIGENDIAN})");
         ctx.addLine();
 
         // parallel checks

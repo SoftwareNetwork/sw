@@ -123,6 +123,9 @@ struct Settings
     // for build command
     Strings additional_build_args;
 
+    // to differentiate different cmake invocations
+    String meta_target_suffix;
+
     // some project-like variables
     // later this could be replaced with local_settings' Config c;
     Packages dependencies;
