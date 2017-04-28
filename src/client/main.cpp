@@ -300,6 +300,13 @@ try
         dump_yaml_config(p, y);
         return 0;
     }
+    if (options().count("beautify-strict"))
+    {
+        path p = options["beautify-strict"].as<String>();
+        Config c(p);
+        c.save(p.parent_path());
+        return 0;
+    }
 
     Settings::get_user_settings().force_server_query = options()[SERVER_QUERY].as<bool>();
 
@@ -597,7 +604,13 @@ optional<int> internal(const Strings &args)
         auto deps = read_lines(deps_file);
         Config c;
         for (auto &d : deps)
-            c.getDefaultProject().addDependency(resolve_dependency(d));
+        {
+            Package p;
+            PackagesSet pkgs;
+            std::tie(p, pkgs) = resolve_dependency(d);
+            for (auto &pkg : pkgs)
+                c.getDefaultProject().addDependency(pkg);
+        }
         c.process(deps_file.parent_path());
         return 0;
     }

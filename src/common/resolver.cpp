@@ -47,7 +47,7 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
 Resolver::Dependencies getDependenciesFromDb(const Packages &deps, const Remote *current_remote);
 Resolver::Dependencies prepareIdDependencies(const IdDependencies &id_deps, const Remote *current_remote);
 
-std::map<Package, Package> resolve_dependencies(const Packages &deps)
+PackagesMap resolve_dependencies(const Packages &deps)
 {
     Resolver r;
     r.resolve_dependencies(deps);
@@ -89,11 +89,17 @@ void Resolver::resolve_dependencies(const Packages &dependencies)
     {
         for (auto &dl : download_dependencies_)
         {
-            if (d.second.ppath == dl.second.ppath && dl.second.flags[pfDirectDependency])
+            if (!dl.second.flags[pfDirectDependency])
+                continue;
+            if (d.second.ppath == dl.second.ppath)
             {
                 resolved_packages[d.second] = dl.second;
-                break;
+                continue;
             }
+            // if this is not exact match, assign to self
+            // TODO: or make resolved_packages multimap
+            if (d.second.ppath.is_root_of(dl.second.ppath))
+                resolved_packages[dl.second] = dl.second;
         }
     }
     // push to global
@@ -647,7 +653,7 @@ Resolver::Dependencies prepareIdDependencies(const IdDependencies &id_deps, cons
     return dependencies;
 }
 
-Package resolve_dependency(const String &target_name)
+std::tuple<Package, PackagesSet> resolve_dependency(const String &target_name)
 {
     String target = target_name;
     bool added_suffix = false;
@@ -657,9 +663,11 @@ Package resolve_dependency(const String &target_name)
         added_suffix = true;
     }
     auto p = extractFromString(target);
+    PackagesSet pkgs;
+    PackagesMap pkgs2;
     try
     {
-        p = resolve_dependencies({ { p.ppath.toString(), p } })[p];
+        pkgs2 = resolve_dependencies({ { p.ppath.toString(), p } });
     }
     catch (const std::exception &)
     {
@@ -668,7 +676,7 @@ Package resolve_dependency(const String &target_name)
 
         target = target_name + "-master"; // add the master version
         p = extractFromString(target);
-        p = resolve_dependencies({ { p.ppath.toString(), p } })[p];
+        pkgs2 = resolve_dependencies({ { p.ppath.toString(), p } });
 
         // TODO: if no master version, try to get first branch from local db
         // (another try ... catch)
@@ -676,5 +684,7 @@ Package resolve_dependency(const String &target_name)
         //p = extractFromString(target);
         //resolved_deps = resolve_dependencies({ { p.ppath.toString(), p } });
     }
-    return p;
+    for (auto &pkg : pkgs2)
+        pkgs.insert(pkg.second);
+    return { p,pkgs };
 }

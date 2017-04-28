@@ -305,7 +305,7 @@ String get_binary_path(const Package &d)
 
 void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
 {
-    auto &dd = rd[d].dependencies;
+    const auto &dd = rd[d].dependencies;
 
     if (dd.empty())
         return;

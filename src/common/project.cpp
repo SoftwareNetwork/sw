@@ -588,15 +588,15 @@ void Project::save_dependencies(yaml &node) const
     if (dependencies.empty())
         return;
 
-    yaml root;
     for (auto &dd : dependencies)
     {
         auto &d = dd.second;
+        yaml c = d.condition.empty() ? node[DEPENDENCIES_NODE] : node[DEPENDENCIES_NODE][d.condition];
         yaml n;
         if (d.flags[pfPrivateDependency])
-            n = root["private"];
+            n = c["private"];
         else
-            n = root["public"];
+            n = c["public"];
 
         // always save as map
         yaml n2;
@@ -609,7 +609,6 @@ void Project::save_dependencies(yaml &node) const
 
         n[dd.first] = n2;
     }
-    node[DEPENDENCIES_NODE] = root;
 }
 
 ProjectPath Project::relative_name_to_absolute(const String &name)
@@ -786,7 +785,7 @@ void Project::load(const yaml &root)
             }
         };
 
-        auto read_single_dep = [this, &read_version](auto &deps, const auto &d, Package dependency = Package())
+        auto read_single_dep = [this, &read_version](const auto &d, Package dependency = Package())
         {
             if (d.IsScalar())
             {
@@ -861,6 +860,8 @@ void Project::load(const yaml &root)
                 // read other map fields
                 if (d["version"].IsDefined())
                     read_version(dependency, d["version"].template as<String>());
+                if (d["condition"].IsDefined())
+                    dependency.condition = d["condition"].template as<String>();
                 if (d["ref"].IsDefined())
                     dependency.reference = d["ref"].template as<String>();
                 if (d["reference"].IsDefined())
@@ -872,81 +873,126 @@ void Project::load(const yaml &root)
             if (dependency.flags[pfLocalProject])
                 dependency.createNames();
 
-            deps[dependency.ppath.toString()] = dependency;
+            return dependency;
         };
 
-        get_variety(root, DEPENDENCIES_NODE,
-            [this, &read_single_dep](const auto &d)
+        auto get_deps = [&](const auto &node)
         {
-            read_single_dep(dependencies, d);
-        },
-            [this, &read_single_dep](const auto &dall)
-        {
-            for (auto d : dall)
-                read_single_dep(dependencies, d);
-        },
-            [this, &read_single_dep, &read_version](const auto &dall)
-        {
-            auto get_dep = [this, &read_version, &read_single_dep](auto &deps, const auto &d)
+            get_variety(root, node,
+                [this, &read_single_dep](const auto &d)
             {
-                Package dependency;
-
-                dependency.ppath = this->relative_name_to_absolute(d.first.template as<String>());
-                if (dependency.ppath.is_loc())
-                    dependency.flags.set(pfLocalProject);
-
-                if (d.second.IsScalar())
-                    read_version(dependency, d.second.template as<String>());
-                else if (d.second.IsMap())
-                {
-                    read_single_dep(deps, d.second, dependency);
-                    return;
-                }
-                else
-                    throw std::runtime_error("Dependency should be a scalar or a map");
-
-                if (dependency.flags[pfLocalProject])
-                    dependency.createNames();
-
-                deps[dependency.ppath.toString()] = dependency;
-            };
-
-            auto extract_deps = [&dall, this, &get_dep, &read_single_dep](const auto &str, auto &deps)
-            {
-                auto priv = dall[str];
-                if (!priv.IsDefined())
-                    return;
-                if (priv.IsMap())
-                {
-                    get_map_and_iterate(dall, str,
-                        [this, &get_dep, &deps](const auto &d)
-                    {
-                        get_dep(deps, d);
-                    });
-                }
-                else if (priv.IsSequence())
-                {
-                    for (auto d : priv)
-                        read_single_dep(deps, d);
-                }
-            };
-
-            Packages dependencies_private;
-            extract_deps("private", dependencies_private);
-            extract_deps("public", dependencies);
-
-            for (auto &d : dependencies_private)
-            {
-                d.second.flags.set(pfPrivateDependency);
-                dependencies.insert(d);
-            }
-
-            if (dependencies.empty() && dependencies_private.empty())
+                auto dep = read_single_dep(d);
+                dependencies[dep.ppath.toString()] = dep;
+            },
+                [this, &read_single_dep](const auto &dall)
             {
                 for (auto d : dall)
-                    get_dep(dependencies, d);
-            }
-        });
+                {
+                    auto dep = read_single_dep(d);
+                    dependencies[dep.ppath.toString()] = dep;
+                }
+            },
+                [this, &read_single_dep, &read_version](const auto &dall)
+            {
+                auto get_dep = [this, &read_version, &read_single_dep](const auto &d)
+                {
+                    Package dependency;
+
+                    dependency.ppath = this->relative_name_to_absolute(d.first.template as<String>());
+                    if (dependency.ppath.is_loc())
+                        dependency.flags.set(pfLocalProject);
+
+                    if (d.second.IsScalar())
+                        read_version(dependency, d.second.template as<String>());
+                    else if (d.second.IsMap())
+                        return read_single_dep(d.second, dependency);
+                    else
+                        throw std::runtime_error("Dependency should be a scalar or a map");
+
+                    if (dependency.flags[pfLocalProject])
+                        dependency.createNames();
+
+                    return dependency;
+                };
+
+                auto extract_deps = [&get_dep, &read_single_dep](const auto &dall, const auto &str)
+                {
+                    Packages deps;
+                    auto priv = dall[str];
+                    if (!priv.IsDefined())
+                        return deps;
+                    if (priv.IsMap())
+                    {
+                        get_map_and_iterate(dall, str,
+                            [&get_dep, &deps](const auto &d)
+                        {
+                            auto dep = get_dep(d);
+                            deps[dep.ppath.toString()] = dep;
+                        });
+                    }
+                    else if (priv.IsSequence())
+                    {
+                        for (auto d : priv)
+                        {
+                            auto dep = read_single_dep(d);
+                            deps[dep.ppath.toString()] = dep;
+                        }
+                    }
+                    return deps;
+                };
+
+                auto extract_deps_from_node = [&extract_deps](const auto &node, const String &condition = std::string())
+                {
+                    auto deps_private = extract_deps(node, "private");
+                    auto deps = extract_deps(node, "public");
+
+                    for (auto &d : deps_private)
+                    {
+                        d.second.flags.set(pfPrivateDependency);
+                        deps.insert(d);
+                    }
+
+                    for (auto &d : deps)
+                        d.second.condition = condition;
+
+                    return deps;
+                };
+
+                auto ed = extract_deps_from_node(dall);
+                dependencies.insert(ed.begin(), ed.end());
+
+                // conditional deps
+                for (auto n : dall)
+                {
+                    auto spec = n.first.as<String>();
+                    if (spec == "private" || spec == "public")
+                        continue;
+                    if (n.second.IsSequence())
+                    {
+                        for (auto d : n.second)
+                        {
+                            auto dep = read_single_dep(d);
+                            dep.condition = spec;
+                            dependencies[dep.ppath.toString()] = dep;
+                        }
+                    }
+                    else if (n.second.IsMap())
+                    {
+                        ed = extract_deps_from_node(n.second, spec);
+                        dependencies.insert(ed.begin(), ed.end());
+                    }
+                }
+
+                /*if (dependencies.empty() && dependencies_private.empty())
+                {
+                    for (auto d : dall)
+                        get_dep(d);
+                }*/
+            });
+        };
+
+        get_deps(DEPENDENCIES_NODE);
+        get_deps("deps");
     }
 
     auto read_sources = [&root](auto &a, const String &key, bool required = true)

@@ -2,14 +2,6 @@
 
 find_program(CPPAN_EXECUTABLE cppan)
 
-# download cppan locally if not found?
-if ("${CPPAN_EXECUTABLE}" STREQUAL "CPPAN_EXECUTABLE-NOTFOUND")
-    if (WIN32)
-    elseif (APPLE)
-    else()
-    endif()
-endif()
-
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(CPPAN DEFAULT_MSG CPPAN_EXECUTABLE)
 mark_as_advanced(CPPAN_EXECUTABLE)

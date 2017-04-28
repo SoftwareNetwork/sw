@@ -17,6 +17,7 @@
 #include "database.h"
 
 #include "directories.h"
+#include "exceptions.h"
 #include "enums.h"
 #include "hash.h"
 #include "http.h"
@@ -53,6 +54,8 @@ const path db_dir_name = "database";
 const path db_repo_dir_name = "repository";
 const String packages_db_name = "packages.db";
 const String service_db_name = "service.db";
+
+TYPED_EXCEPTION(NoSuchVersion);
 
 std::vector<StartupAction> startup_actions{
     { 1, StartupAction::ClearCache },
@@ -1108,8 +1111,23 @@ IdDependencies PackagesDatabase::findDependencies(const Packages &deps) const
                 // TODO: replace later with typed exception, so client will try to fetch same package from server
                 throw std::runtime_error("Root project '" + project.ppath.toString() + "' is empty");
 
+            int n = 0;
             for (auto &p : projects)
-                find_deps(p);
+            {
+                try
+                {
+                    find_deps(p);
+                    n++;
+                }
+                catch (NoSuchVersion &)
+                {
+                }
+            }
+            if (n == 0)
+            {
+                throw NoSuchVersion("No such version/branch '" + project.version.toAnyVersion() + "' for project '" +
+                    project.ppath.toString() + "'");
+            }
         }
         else
         {
@@ -1145,7 +1163,7 @@ ProjectVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDepend
 {
     auto err = [](const auto &v, const auto &p)
     {
-        return std::runtime_error("No such version/branch '" + v.toAnyVersion() + "' for project '" + p.toString() + "'");
+        return NoSuchVersion("No such version/branch '" + v.toAnyVersion() + "' for project '" + p.toString() + "'");
     };
 
     // save current time during first call

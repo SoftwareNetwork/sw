@@ -25,7 +25,7 @@ public:
     using Dependencies = DownloadDependency::Dependencies;
 
 public:
-    std::map<Package, Package> resolved_packages;
+    PackagesMap resolved_packages;
 
     void resolve_dependencies(const Packages &deps);
     void resolve_and_download(const Package &p, const path &fn);
@@ -47,5 +47,5 @@ private:
 };
 
 void resolve_and_download(const Package &p, const path &fn);
-Package resolve_dependency(const String &d);
-std::map<Package, Package> resolve_dependencies(const Packages &deps);
+std::tuple<Package, PackagesSet> resolve_dependency(const String &d);
+PackagesMap resolve_dependencies(const Packages &deps);

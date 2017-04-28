@@ -33,6 +33,7 @@ struct Package
     // extended data
     // probably can be moved to child struct Dependency
     String reference;
+    String condition;
 
     path getDirSrc() const;
     path getDirObj() const;
@@ -66,6 +67,7 @@ private:
 };
 
 using Packages = std::map<String, Package>;
+using PackagesMap = std::map<Package, Package>;
 using PackagesSet = std::set<Package>;
 
 Package extractFromString(const String &target);

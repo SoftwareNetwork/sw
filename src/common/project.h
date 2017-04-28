@@ -58,6 +58,7 @@ enum class Visibility
     Public,
     Private,
     Interface,
+    Other,
 };
 
 enum class Os

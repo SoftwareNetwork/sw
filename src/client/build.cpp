@@ -33,8 +33,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-int build_packages(const String &name, const std::set<Package> &pkgs, const path &settings_fn, const String &config);
-int build_packages(const String &name, const std::set<Package> &pkgs);
+int build_packages(const String &name, const PackagesSet &pkgs, const path &settings_fn, const String &config);
+int build_packages(const String &name, const PackagesSet &pkgs);
 int build_packages(const Config &c, const String &name);
 
 String test_run()
@@ -182,7 +182,7 @@ int build_packages(const Config &c, const String &name)
 
 int build(path fn, const String &config)
 {
-    std::set<Package> pkgs;
+    PackagesSet pkgs;
     Config c;
     String name;
     std::tie(pkgs, c, name) = rd.read_packages_from_file(fn, config, true);
@@ -195,7 +195,7 @@ int build_only(path fn, const String &config)
     return build(fn, config);
 }
 
-int build_packages(const String &name, const std::set<Package> &pkgs)
+int build_packages(const String &name, const PackagesSet &pkgs)
 {
     Config c;
     for (auto &p : pkgs)
@@ -203,7 +203,7 @@ int build_packages(const String &name, const std::set<Package> &pkgs)
     return build_packages(c, name);
 }
 
-int build_packages(const String &name, const std::set<Package> &pkgs, const path &settings_fn, const String &config)
+int build_packages(const String &name, const PackagesSet &pkgs, const path &settings_fn, const String &config)
 {
     Config c;
     if (!settings_fn.empty())
@@ -223,8 +223,10 @@ int build_package(const String &target_name, const path &settings_fn, const Stri
 {
     Settings::get_local_settings().copy_all_libraries_to_output = true;
 
-    auto p = resolve_dependency(target_name);
-    if (p.flags[pfHeaderOnly])
-        throw std::runtime_error("You are trying to build header only project. This is not supported");
-    return build_packages(p.ppath.back(), { p }, settings_fn, config);
+    Package p;
+    PackagesSet pkgs;
+    std::tie(p, pkgs) = resolve_dependency(target_name);
+    if (std::all_of(pkgs.begin(), pkgs.end(), [](const auto &p) { return p.flags[pfHeaderOnly]; }))
+        throw std::runtime_error("You are trying to build header only project. This is not supported.");
+    return build_packages(p.ppath.back(), pkgs, settings_fn, config);
 }

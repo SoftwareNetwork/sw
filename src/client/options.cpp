@@ -54,6 +54,7 @@ ProgramOptions::ProgramOptions()
         (CLEAN_CONFIGS, po::value<Strings>()->multitoken(), "clean config dirs and files")
 
         ("beautify", po::value<String>(), "beautify yaml script")
+        ("beautify-strict", po::value<String>(), "convert to strict cppan config")
         ;
 
     // i - internal options
