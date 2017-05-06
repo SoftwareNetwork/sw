@@ -941,7 +941,7 @@ void Project::load(const yaml &root)
                     return deps;
                 };
 
-                auto extract_deps_from_node = [&extract_deps](const auto &node, const String &condition = std::string())
+                auto extract_deps_from_node = [&extract_deps, &get_dep](const auto &node, const String &condition = std::string())
                 {
                     auto deps_private = extract_deps(node, "private");
                     auto deps = extract_deps(node, "public");
@@ -953,7 +953,16 @@ void Project::load(const yaml &root)
                     }
 
                     for (auto &d : deps)
-                        d.second.condition = condition;
+						d.second.condition = condition;
+
+					if (deps.empty() && deps_private.empty())
+					{
+						for (auto d : node)
+						{
+							auto dep = get_dep(d);
+							deps[dep.ppath.toString()] = dep;
+						}
+					}
 
                     return deps;
                 };
@@ -982,12 +991,6 @@ void Project::load(const yaml &root)
                         dependencies.insert(ed.begin(), ed.end());
                     }
                 }
-
-                /*if (dependencies.empty() && dependencies_private.empty())
-                {
-                    for (auto d : dall)
-                        get_dep(d);
-                }*/
             });
         };
 

@@ -32,7 +32,6 @@ target_link_libraries(inserter pvt.egorpugin.primitives.filesystem)
 file(GLOB common_src "support/*")
 set(common_src ${common_src})
 add_library(support ${common_src})
-add_dependencies(support inserts_gen gen_stamp)
 target_include_directories(support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
 
 target_link_libraries(support
@@ -48,42 +47,45 @@ target_link_libraries(support
 # common
 ########################################
 
-add_custom_target(inserts_gen
-    COMMAND inserter ${CMAKE_CURRENT_SOURCE_DIR}/inserts/inserts.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
-    SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/cppan.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/build.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/generate.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/exports.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/header.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/version.rc.in
-        ${CMAKE_CURRENT_SOURCE_DIR}/inserts/branch.rc.in
+set(gen_src
+	${CMAKE_CURRENT_SOURCE_DIR}/inserts/inserts.cpp.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/inserts/cppan.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/inserts/build.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/inserts/generate.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/inserts/exports.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/inserts/header.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/inserts/version.rc.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/inserts/branch.rc.in
 )
-set_property(TARGET inserts_gen PROPERTY FOLDER gen)
-set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp PROPERTIES GENERATED TRUE)
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
+    COMMAND inserter ${CMAKE_CURRENT_SOURCE_DIR}/inserts/inserts.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
+    DEPENDS ${gen_src}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 add_executable(stamp_genenerator gen/stamp_gen.cpp)
 set_property(TARGET stamp_genenerator PROPERTY FOLDER gen)
 set(stamp ${CMAKE_CURRENT_BINARY_DIR}/stamp.h.in)
 set_source_files_properties(${stamp} PROPERTIES GENERATED True)
 
+if (NOT CPPAN_TEST OR NOT EXISTS ${stamp} OR 0)
 add_custom_target(gen_stamp
     COMMAND stamp_genenerator > ${stamp}
 )
 set_property(TARGET gen_stamp PROPERTY FOLDER gen)
+add_dependencies(support gen_stamp)
+endif()
 
 file(GLOB common_src "common/*" "printers/*")
 set(common_src ${common_src}
     ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
-    inserts/inserts.cpp.in
+	${gen_src}
 
     ${stamp}
 )
 add_library(common ${common_src})
-add_dependencies(common inserts_gen gen_stamp)
 
 target_compile_definitions(common
     PRIVATE -DVERSION_MAJOR=${VERSION_MAJOR}

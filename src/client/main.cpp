@@ -518,8 +518,24 @@ void self_upgrade()
 
 void self_upgrade_copy(const path &dst)
 {
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    fs::copy_file(get_program(), dst, fs::copy_option::overwrite_if_exists);
+	int n = 3;
+	while (n--)
+	{
+		std::this_thread::sleep_for(std::chrono::seconds(2));
+		try
+		{
+			fs::copy_file(get_program(), dst, fs::copy_option::overwrite_if_exists);
+			break;
+		}
+		catch (std::exception &e)
+		{
+			std::cerr << "Cannot replace program with new executable: " << e.what() << "\n";
+			if (n == 0)
+				throw;
+			std::cerr << "Retrying... (" << n + 1 << ")\n";
+		}
+	}
+	std::cout << "Success!\n";
 }
 
 optional<int> internal(const Strings &args)
