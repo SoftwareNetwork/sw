@@ -93,7 +93,35 @@ include(GenerateExportHeader)
 include(TestBigEndian)
 )";
 
-String cmake_debug_message(const String &s);
+struct ScopedDependencyCondition
+{
+    CMakeContext &ctx;
+    const Package &d;
+    bool empty_lines;
+
+    ScopedDependencyCondition(CMakeContext &ctx, const Package &d, bool empty_lines = true)
+        : ctx(ctx), d(d), empty_lines(empty_lines)
+    {
+        if (d.condition.empty())
+            return;
+        ctx.addLine("# condition for dependency: " + d.target_name);
+        ctx.if_(d.condition);
+    }
+
+    ~ScopedDependencyCondition()
+    {
+        if (d.condition.empty())
+            return;
+        ctx.endif();
+        if (empty_lines)
+            ctx.emptyLines();
+    }
+};
+
+String cmake_debug_message(const String &s)
+{
+    return cmake_debug_message_fun + "(\"" + s + "\")";
+}
 
 String repeat(const String &e, int n)
 {
@@ -260,11 +288,6 @@ void print_solution_folder(CMakeContext &ctx, const String &target, const path &
     set_target_properties(ctx, target, "FOLDER", "\"" + normalize_path(folder) + "\"");
 }
 
-String cmake_debug_message(const String &s)
-{
-    return cmake_debug_message_fun + "(\"" + s + "\")";
-}
-
 String add_subdirectory(String src)
 {
     normalize_string(src);
@@ -323,6 +346,7 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
     {
         auto &dep = p.second;
 
+        ScopedDependencyCondition sdc(ctx, dep);
         if (dep.flags[pfLocalProject])
             ctx.addLine("set(" + dep.variable_no_version_name + "_DIR " + normalize_path(rd[dep].config->getDefaultProject().root_directory) + ")");
         else
@@ -349,16 +373,19 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
         {
             // MUST be here!
             // actions are executed from include_directories only projects
+            ScopedDependencyCondition sdc(ctx, dep);
             ctx.addLine("# " + dep.target_name);
             ctx.addLine("cppan_include(\"" + normalize_path(dir / cmake_src_actions_filename) + "\")");
         }
         else if (!use_cache || dep.flags[pfHeaderOnly])
         {
+            ScopedDependencyCondition sdc(ctx, dep);
             ctx.addLine("# " + dep.target_name);
             add_subdirectory(ctx, dir.string());
         }
         else if (dep.flags[pfLocalProject])
         {
+            ScopedDependencyCondition sdc(ctx, dep);
             ctx.if_("NOT TARGET " + dep.target_name + "");
             ctx.if_("CPPAN_USE_CACHE");
             ctx.addLine("add_subdirectory(\"" + normalize_path(dir) + "\" \"" + normalize_path(dep.getDirObj() / "build/${config_dir}") + "\")");
@@ -370,6 +397,7 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
         else
         {
             // add local build includes
+            ScopedDependencyCondition sdc2(ctx2, dep);
             ctx2.addLine("# " + dep.target_name);
             add_subdirectory(ctx2, dep.getDirSrc().string());
             includes.push_back(dep);
@@ -391,6 +419,7 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
 
         for (auto &dep : includes)
         {
+            ScopedDependencyCondition sdc(ctx, dep);
             ctx.addLine("# " + dep.target_name + "\n" +
                 "cppan_include(\"" + normalize_path(dep.getDirObj() / cmake_obj_generate_filename) + "\")");
         }
@@ -527,6 +556,7 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
             if (p.flags[pfLocalProject])
                 continue;
 
+            ScopedDependencyCondition sdc(local, p);
             local.addLine("get_target_property(implib_" + p.variable_name + " " + p.target_name + " IMPORTED_LOCATION_${CMAKE_BUILD_TYPE_UPPER})");
         }
         local.emptyLines();
@@ -549,13 +579,12 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
         local.addLine("set(rest \"" + rest + "\")");
         local.emptyLines();
 
-        local.increaseIndent(R"(set(ext sh)
+        local.addLine(R"(set(ext sh)
 if (WIN32)
     set(ext bat)
 endif()
 
-set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})
-file(GENERATE OUTPUT ${file} CONTENT ")");
+set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext}))");
 
         bool has_build_deps = false;
         for (auto &dp : build_deps)
@@ -571,7 +600,8 @@ file(GENERATE OUTPUT ${file} CONTENT ")");
                 cfg = "config_exe";
 
             has_build_deps = true;
-            local.addNoNewLine("");
+            ScopedDependencyCondition sdc(local, p, false);
+            local.addNoNewLine("set(bd_" + p.variable_name + " \"");
             local.addText("\\\"${CMAKE_COMMAND}\\\" ");
             local.addText("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + "> ");
             local.addText("-DCONFIG=$<CONFIG> ");
@@ -581,13 +611,25 @@ file(GENERATE OUTPUT ${file} CONTENT ")");
                 local.addText("-DMULTICORE=1 ");
             local.addText("${rest} ");
 
-            local.addText("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
+            local.addText("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename + "\")");
+        }
+        local.emptyLines();
+
+        local.increaseIndent("file(GENERATE OUTPUT ${file} CONTENT \"");
+        for (auto &dp : build_deps)
+        {
+            auto &p = dp.second;
+
+            // local projects are always built inside solution
+            if (p.flags[pfLocalProject])
+                continue;
+
+            local.addLine("${bd_" + p.variable_name + "}");
         }
         local.decreaseIndent("\")");
         local.emptyLines();
 
-        local.addLine(R"(
-if (UNIX)
+        local.addLine(R"(if (UNIX)
     set(file chmod u+x ${file} COMMAND ${file})
 endif()
 )");
@@ -605,11 +647,9 @@ endif()
         // do not use add_custom_command as it doesn't work
         // add custom target and add a dependency below
         // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
-        local.increaseIndent("add_custom_target(" + build_deps_tgt);
-        local.addLine("COMMAND ${file}");
-        local.increaseIndent("BYPRODUCTS");
-        for (auto &dp : build_deps)
+        local.addLine("set(bp)");
         //for (auto &dp : build_deps_all)
+        for (auto &dp : build_deps)
         {
             auto &p = dp.second;
 
@@ -617,8 +657,14 @@ endif()
             if (p.flags[pfLocalProject])
                 continue;
 
-            local.addLine("${implib_" + p.variable_name + "}");
+            ScopedDependencyCondition sdc(local, p, false);
+            local.addLine("set(bp ${bp} ${implib_" + p.variable_name + "})");
         }
+        local.emptyLines();
+
+        local.increaseIndent("add_custom_target(" + build_deps_tgt);
+        local.addLine("COMMAND ${file}");
+        local.increaseIndent("BYPRODUCTS ${bp}");
         local.decreaseIndent(")", 2);
         local.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
         print_solution_folder(local, build_deps_tgt, deps ? service_folder : service_deps_folder);
@@ -690,14 +736,16 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
         {
             // if we have an exe, we must include all dependent targets
             // because they're not visible from exe directly
-            config_section_title(ctx, "Executable build deps for " + dp.second.target_name);
-            print_dependencies(ctx, dp.second, settings.use_cache);
-            config_section_title(ctx, "End of executable build deps for " + dp.second.target_name);
+            ScopedDependencyCondition sdc(ctx, p);
+            config_section_title(ctx, "Executable build deps for " + p.target_name);
+            print_dependencies(ctx, p, settings.use_cache);
+            config_section_title(ctx, "End of executable build deps for " + p.target_name);
             ctx.emptyLines();
         }
 
-        config_section_title(ctx, "Copy " + dp.second.target_name);
+        config_section_title(ctx, "Copy " + p.target_name);
 
+        ScopedDependencyCondition sdc(ctx, p);
         ctx.addLine("set(copy 1)");
         ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
 
@@ -1202,6 +1250,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
             auto &dd = dep.second;
             if (dd.reference.empty())
                 continue;
+            ScopedDependencyCondition sdc(ctx, dd);
             ctx.addLine("set(" + dd.reference + " " + rd[d].dependencies[dd.ppath.toString()].target_name + ")");
             if (dd.ppath.is_loc())
                 ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd.get_local_package_dir(dd.ppath.toString())) + ")");
@@ -1561,7 +1610,13 @@ endif()
                         ipath /= i;
                         boost::system::error_code ec;
                         if (fs::exists(ipath, ec))
+                        {
+                            ScopedDependencyCondition sdc(ctx, pkg);
+                            ctx.increaseIndent("target_include_directories    (${this}");
                             ctx.addLine(visibility + normalize_path(ipath));
+                            ctx.decreaseIndent(")");
+                            ctx.emptyLines();
+                        }
                     }
                 }
             };
@@ -1585,9 +1640,10 @@ endif()
                 for (auto &idir : p.include_directories.interface_)
                     ctx.addLine("INTERFACE " + prepare_include_directory(idir.string()));
             }
-            print_ideps();
             ctx.decreaseIndent(")");
             ctx.emptyLines();
+
+            print_ideps();
 
             // add BDIRs
             for (auto &pkg : include_deps)
@@ -1595,6 +1651,7 @@ endif()
                 if (pkg.flags[pfHeaderOnly])
                     continue;
 
+                ScopedDependencyCondition sdc(ctx, pkg);
                 ctx.addLine("# Binary dir of include_directories_only dependency");
                 ctx.if_("CPPAN_USE_CACHE");
 
@@ -1636,29 +1693,26 @@ endif()
     {
         config_section_title(ctx, "dependencies");
 
-        Strings deps;
         for (auto &dep : rd[d].dependencies)
         {
             if (dep.second.flags[pfExecutable] ||
                 dep.second.flags[pfIncludeDirectoriesOnly])
                 continue;
 
+            ScopedDependencyCondition sdc(ctx, dep.second);
             ctx.if_("NOT TARGET " + dep.second.target_name + "");
             ctx.addLine("message(FATAL_ERROR \"Target '" + dep.second.target_name + "' is not visible at this place\")");
             ctx.endif();
             ctx.addLine();
 
+            ctx.increaseIndent("target_link_libraries         (${this}");
             if (d.flags[pfHeaderOnly])
-                deps.push_back("INTERFACE " + dep.second.target_name);
+                ctx.addLine("INTERFACE " + dep.second.target_name);
             else
-                deps.push_back((dep.second.flags[pfPrivateDependency] ? "PRIVATE" : "PUBLIC") + " "s + dep.second.target_name);
+                ctx.addLine((dep.second.flags[pfPrivateDependency] ? "PRIVATE" : "PUBLIC") + " "s + dep.second.target_name);
+            ctx.decreaseIndent(")");
+            ctx.addLine();
         }
-
-        ctx.increaseIndent("target_link_libraries         (${this}");
-        for (auto &dep : deps)
-            ctx.addLine(dep);
-        ctx.decreaseIndent(")");
-        ctx.addLine();
     }
 
     // solution folder
@@ -2197,7 +2251,6 @@ void CMakePrinter::print_obj_generate_file(const path &fn) const
         return;
 
     const auto &p = rd[d].config->getDefaultProject();
-    const auto &dd = rd[d].dependencies;
 
     CMakeContext ctx;
     file_header(ctx, d);
@@ -2315,9 +2368,9 @@ void CMakePrinter::print_obj_export_file(const path &fn) const
             continue;
 
         auto b = dep.getDirObj();
-        //auto p = b / cppan_build_dir / "${config_dir}" / path("exports") / (dep.variable_name + "-fixed.cmake"); // old
         auto p = directories.storage_dir_exp / "${config_dir}" / (dep.target_name + ".cmake");
 
+        ScopedDependencyCondition sdc(ctx, dep);
         if (!dep.flags[pfHeaderOnly])
             ctx.addLine("cppan_include(\"" + normalize_path(b / cmake_obj_generate_filename) + "\")");
         ctx.if_("NOT TARGET " + dep.target_name + "");
@@ -2445,14 +2498,15 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
         // lib
         config_section_title(ctx, "main library");
         ctx.addLine("add_library                   (" + old_cppan_target + " INTERFACE)");
-        ctx.increaseIndent("target_link_libraries         (" + old_cppan_target);
         for (auto &p : rd[d].dependencies)
         {
             if (p.second.flags[pfExecutable] || p.second.flags[pfIncludeDirectoriesOnly])
                 continue;
+            ScopedDependencyCondition sdc(ctx, p.second);
+            ctx.increaseIndent("target_link_libraries         (" + old_cppan_target);
             ctx.addLine("INTERFACE " + p.second.target_name);
+            ctx.decreaseIndent(")");
         }
-        ctx.decreaseIndent(")");
         ctx.addLine("add_dependencies(" + old_cppan_target + " " + cppan_dummy_target(cppan_dummy_copy_target) + ")");
         ctx.addLine();
         ctx.addLine("export(TARGETS " + old_cppan_target + " FILE " + exports_dir + "cppan.cmake)");
@@ -2500,7 +2554,10 @@ add_dependencies()" + old_cppan_target + R"( run-cppan)
             if (!dep.second.flags[pfLocalProject])
                 continue;
             if (dep.second.flags[pfExecutable])
+            {
+                ScopedDependencyCondition sdc(ctx, dep.second);
                 ctx.addLine("set_target_properties(" + dep.second.target_name_hash + " PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CPPAN_BUILD_OUTPUT_DIR})");
+            }
         }
     }
 

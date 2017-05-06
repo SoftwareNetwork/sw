@@ -70,7 +70,7 @@ set_property(TARGET stamp_genenerator PROPERTY FOLDER gen)
 set(stamp ${CMAKE_CURRENT_BINARY_DIR}/stamp.h.in)
 set_source_files_properties(${stamp} PROPERTIES GENERATED True)
 
-if (NOT CPPAN_TEST OR NOT EXISTS ${stamp} OR 0)
+if (NOT CPPAN_TEST OR NOT EXISTS ${stamp} OR 1)
 add_custom_target(gen_stamp
     COMMAND stamp_genenerator > ${stamp}
 )

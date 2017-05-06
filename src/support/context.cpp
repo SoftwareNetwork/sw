@@ -25,6 +25,7 @@ void CMakeContext::if_(const String &s)
 void CMakeContext::elseif(const String &s)
 {
     decreaseIndent();
+    emptyLines(0);
     addLine("elseif(" + s + ")");
     increaseIndent();
 }
@@ -32,6 +33,7 @@ void CMakeContext::elseif(const String &s)
 void CMakeContext::else_()
 {
     decreaseIndent();
+    emptyLines(0);
     addLine("else()");
     increaseIndent();
 }
@@ -39,5 +41,6 @@ void CMakeContext::else_()
 void CMakeContext::endif()
 {
     decreaseIndent();
+    emptyLines(0);
     addLine("endif()");
 }

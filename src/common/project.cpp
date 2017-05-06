@@ -591,7 +591,7 @@ void Project::save_dependencies(yaml &node) const
     for (auto &dd : dependencies)
     {
         auto &d = dd.second;
-        yaml c = d.condition.empty() ? node[DEPENDENCIES_NODE] : node[DEPENDENCIES_NODE][d.condition];
+        yaml c = node[DEPENDENCIES_NODE];
         yaml n;
         if (d.flags[pfPrivateDependency])
             n = c["private"];
@@ -604,6 +604,8 @@ void Project::save_dependencies(yaml &node) const
 
         if (!d.reference.empty())
             n2["reference"] = d.reference;
+        if (!d.condition.empty())
+            n2["condition"] = d.condition;
         if (d.flags[pfIncludeDirectoriesOnly])
             n2[INCLUDE_DIRECTORIES_ONLY] = true;
 
@@ -941,7 +943,7 @@ void Project::load(const yaml &root)
                     return deps;
                 };
 
-                auto extract_deps_from_node = [&extract_deps, &get_dep](const auto &node, const String &condition = std::string())
+                auto extract_deps_from_node = [&extract_deps, &get_dep](const auto &node)
                 {
                     auto deps_private = extract_deps(node, "private");
                     auto deps = extract_deps(node, "public");
@@ -952,17 +954,14 @@ void Project::load(const yaml &root)
                         deps.insert(d);
                     }
 
-                    for (auto &d : deps)
-						d.second.condition = condition;
-
-					if (deps.empty() && deps_private.empty())
-					{
-						for (auto d : node)
-						{
-							auto dep = get_dep(d);
-							deps[dep.ppath.toString()] = dep;
-						}
-					}
+                    if (deps.empty() && deps_private.empty())
+                    {
+                        for (auto d : node)
+                        {
+                            auto dep = get_dep(d);
+                            deps[dep.ppath.toString()] = dep;
+                        }
+                    }
 
                     return deps;
                 };
@@ -971,7 +970,7 @@ void Project::load(const yaml &root)
                 dependencies.insert(ed.begin(), ed.end());
 
                 // conditional deps
-                for (auto n : dall)
+                /*for (auto n : dall)
                 {
                     auto spec = n.first.as<String>();
                     if (spec == "private" || spec == "public")
@@ -991,6 +990,15 @@ void Project::load(const yaml &root)
                         dependencies.insert(ed.begin(), ed.end());
                     }
                 }
+
+                if (deps.empty() && deps_private.empty())
+                {
+                    for (auto d : node)
+                    {
+                        auto dep = get_dep(d);
+                        deps[dep.ppath.toString()] = dep;
+                    }
+                }*/
             });
         };
 

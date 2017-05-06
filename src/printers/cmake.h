@@ -19,8 +19,9 @@
 #include "config.h"
 #include "printer.h"
 
-#include <context.h>
 #include <package_store.h>
+
+class CMakeContext;
 
 void file_header(CMakeContext &ctx, const Package &d, bool root = false);
 void file_footer(CMakeContext &ctx, const Package &d);
