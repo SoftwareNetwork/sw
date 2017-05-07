@@ -1,5 +1,7 @@
 ## [C++ Archive Network](https://cppan.org/)
 
+[![Build status](https://ci.appveyor.com/api/projects/status/iacnrt6byhy8ox5v?svg=true)](https://ci.appveyor.com/project/egorpugin/cppan)
+
 ### Resources
 
 - Homepage: https://cppan.org/
