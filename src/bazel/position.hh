@@ -31,12 +31,12 @@
 // version 2.2 of Bison.
 
 /**
- ** \file G:/dev/cppan_client/src/bazel/position.hh
+ ** \file /home/egor/dev/cppan_client/src/bazel/position.hh
  ** Define the yy_bazel::position class.
  */
 
-#ifndef YY_YY_BAZEL_G_DEV_CPPAN_CLIENT_SRC_BAZEL_POSITION_HH_INCLUDED
-# define YY_YY_BAZEL_G_DEV_CPPAN_CLIENT_SRC_BAZEL_POSITION_HH_INCLUDED
+#ifndef YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_POSITION_HH_INCLUDED
+# define YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_POSITION_HH_INCLUDED
 
 # include <algorithm> // std::max
 # include <iostream>
@@ -52,7 +52,7 @@
 
 
 namespace yy_bazel {
-#line 56 "G:/dev/cppan_client/src/bazel/position.hh" // location.cc:296
+#line 56 "/home/egor/dev/cppan_client/src/bazel/position.hh" // location.cc:296
   /// Abstract a position.
   class position
   {
@@ -176,5 +176,5 @@ namespace yy_bazel {
 
 
 } // yy_bazel
-#line 180 "G:/dev/cppan_client/src/bazel/position.hh" // location.cc:296
-#endif // !YY_YY_BAZEL_G_DEV_CPPAN_CLIENT_SRC_BAZEL_POSITION_HH_INCLUDED
+#line 180 "/home/egor/dev/cppan_client/src/bazel/position.hh" // location.cc:296
+#endif // !YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_POSITION_HH_INCLUDED

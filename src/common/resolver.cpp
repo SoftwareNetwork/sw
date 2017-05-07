@@ -686,5 +686,5 @@ std::tuple<Package, PackagesSet> resolve_dependency(const String &target_name)
     }
     for (auto &pkg : pkgs2)
         pkgs.insert(pkg.second);
-    return { p,pkgs };
+    return std::make_tuple(p, pkgs);
 }
