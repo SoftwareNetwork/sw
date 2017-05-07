@@ -395,6 +395,13 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
         return c;
     };
 
+    auto set_config = [&config_name](const auto &fn)
+    {
+        auto root = load_yaml_config(fn);
+        root["local_settings"]["current_build"] = config_name;
+        Settings::get_local_settings().load(root["local_settings"], SettingsType::Local);
+    };
+
     String sname;
     path cpp_fn;
     if (fs::is_regular_file(p))
@@ -403,6 +410,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
         {
             conf = build_spec_file(p.parent_path());
             sname = p.parent_path().filename().string();
+            set_config(p);
         }
         else
         {
@@ -422,6 +430,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
         {
             conf = build_spec_file(cppan_fn.parent_path());
             sname = cppan_fn.parent_path().filename().string();
+            set_config(cppan_fn);
             p = cppan_fn;
         }
         else

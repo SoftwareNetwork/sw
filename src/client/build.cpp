@@ -206,12 +206,11 @@ int build_packages(const String &name, const PackagesSet &pkgs)
 int build_packages(const String &name, const PackagesSet &pkgs, const path &settings_fn, const String &config)
 {
     Config c;
-    if (!settings_fn.empty())
+    if (!config.empty() && (fs::exists(settings_fn) || fs::exists(CPPAN_FILENAME)))
     {
-        auto root = load_yaml_config(settings_fn);
-        if (!config.empty())
-            root["local_settings"]["current_build"] = config;
-        Settings::get_local_settings().load(root, SettingsType::Local);
+        auto root = load_yaml_config(settings_fn.empty() ? CPPAN_FILENAME : settings_fn);
+        root["local_settings"]["current_build"] = config;
+        Settings::get_local_settings().load(root["local_settings"], SettingsType::Local);
     }
 
     for (auto &p : pkgs)
