@@ -40,7 +40,7 @@ install:
   - if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
   - if [[ $LINUX ]]; then sudo dpkg -i cppan-master-Linux-client.deb; fi
   
-  - if [[ $OSX ]]; then brew upgrade cmake; fi
+  #- if [[ $OSX ]]; then brew upgrade cmake; fi
   - if [[ $OSX ]]; then wget https://cppan.org/client/cppan-master-macOS-client.zip; fi
   - if [[ $OSX ]]; then unzip cppan-master-macOS-client.zip; fi
   - if [[ $OSX ]]; then sudo cp cppan /usr/local/bin/cppan; fi
