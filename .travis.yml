@@ -49,8 +49,8 @@ script:
   - cppan -s
   - mkdir build
   - cd build
-  - if [[ $LINUX ]]; cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
-  - if [[ $OSX ]]; cmake ..
+  - if [[ $LINUX ]]; then cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5; fi
+  - if [[ $OSX ]]; then cmake ..; fi
   - make
   #- sudo cp bin/cppan /usr/bin
   #- cd ..
