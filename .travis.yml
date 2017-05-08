@@ -38,7 +38,7 @@ install:
   #- wget -O master.zip https://github.com/cppan/tests/archive/master.zip
   #- unzip master.zip -d .
   - if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
-  - if [[ $LINUX ]]; sudo dpkg -i cppan-master-Linux-client.deb; fi
+  - if [[ $LINUX ]]; then sudo dpkg -i cppan-master-Linux-client.deb; fi
   
   - if [[ $OSX ]]; then brew install cmake; fi
 
