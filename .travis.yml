@@ -40,13 +40,17 @@ install:
   - if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
   - if [[ $LINUX ]]; then sudo dpkg -i cppan-master-Linux-client.deb; fi
   
-  - if [[ $OSX ]]; then brew install cmake; fi
+  - if [[ $OSX ]]; then brew upgrade cmake; fi
+  - if [[ $OSX ]]; then wget https://cppan.org/client/cppan-master-macOS-client.zip; fi
+  - if [[ $OSX ]]; then unzip https://cppan.org/client/cppan-master-macOS-client.zip; fi
+  - if [[ $OSX ]]; then sudo cp cppan /usr/local/bin/cppan; fi
 
 script:
   - cppan -s
   - mkdir build
   - cd build
-  - cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
+  - if [[ $LINUX ]]; cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
+  - if [[ $OSX ]]; cmake ..
   - make
   #- sudo cp bin/cppan /usr/bin
   #- cd ..
