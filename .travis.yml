@@ -33,12 +33,14 @@ before_install:
 
 install:
   #- if [[ $LINUX ]]; then sudo apt-get update; fi
-  - wget --no-check-certificate http://www.cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.sh
-  - sudo sh cmake-3.7.1-Linux-x86_64.sh --skip-license --prefix=/usr
+  - if [[ $LINUX ]]; then wget --no-check-certificate http://www.cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.sh; fi
+  - if [[ $LINUX ]]; then sudo sh cmake-3.7.1-Linux-x86_64.sh --skip-license --prefix=/usr; fi
   #- wget -O master.zip https://github.com/cppan/tests/archive/master.zip
   #- unzip master.zip -d .
   - if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
-  - sudo dpkg -i cppan-master-Linux-client.deb
+  - if [[ $LINUX ]]; sudo dpkg -i cppan-master-Linux-client.deb; fi
+  
+  - if [[ $OSX ]]; then brew install cmake; fi
 
 script:
   - cppan -s
