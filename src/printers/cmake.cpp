@@ -93,26 +93,29 @@ include(GenerateExportHeader)
 include(TestBigEndian)
 )";
 
-struct ScopedDependencyCondition
+class ScopedDependencyCondition
 {
     CMakeContext &ctx;
     const Package &d;
     bool empty_lines;
 
+public:
     ScopedDependencyCondition(CMakeContext &ctx, const Package &d, bool empty_lines = true)
         : ctx(ctx), d(d), empty_lines(empty_lines)
     {
-        if (d.condition.empty())
+        if (d.conditions.empty())
             return;
-        ctx.addLine("# condition for dependency: " + d.target_name);
-        ctx.if_(d.condition);
+        ctx.addLine("# conditions for dependency: " + d.target_name);
+        for (auto &c : d.conditions)
+            ctx.if_(c);
     }
 
     ~ScopedDependencyCondition()
     {
-        if (d.condition.empty())
+        if (d.conditions.empty())
             return;
-        ctx.endif();
+        for (auto &c : d.conditions)
+            ctx.endif();
         if (empty_lines)
             ctx.emptyLines();
     }

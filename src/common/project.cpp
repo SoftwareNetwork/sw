@@ -604,8 +604,8 @@ void Project::save_dependencies(yaml &node) const
 
         if (!d.reference.empty())
             n2["reference"] = d.reference;
-        if (!d.condition.empty())
-            n2["condition"] = d.condition;
+        for (auto &c : d.conditions)
+            n2["conditions"].push_back(c);
         if (d.flags[pfIncludeDirectoriesOnly])
             n2[INCLUDE_DIRECTORIES_ONLY] = true;
 
@@ -862,14 +862,17 @@ void Project::load(const yaml &root)
                 // read other map fields
                 if (d["version"].IsDefined())
                     read_version(dependency, d["version"].template as<String>());
-                if (d["condition"].IsDefined())
-                    dependency.condition = d["condition"].template as<String>();
                 if (d["ref"].IsDefined())
                     dependency.reference = d["ref"].template as<String>();
                 if (d["reference"].IsDefined())
                     dependency.reference = d["reference"].template as<String>();
                 if (d[INCLUDE_DIRECTORIES_ONLY].IsDefined())
                     dependency.flags.set(pfIncludeDirectoriesOnly, d[INCLUDE_DIRECTORIES_ONLY].template as<bool>());
+
+                // conditions
+                dependency.conditions = get_sequence_set<String>(d, "condition");
+                auto conds = get_sequence_set<String>(d, "conditions");
+                dependency.conditions.insert(conds.begin(), conds.end());
             }
 
             if (dependency.flags[pfLocalProject])

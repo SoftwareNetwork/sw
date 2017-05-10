@@ -33,7 +33,7 @@ struct Package
     // extended data
     // probably can be moved to child struct Dependency
     String reference;
-    String condition;
+    StringSet conditions;
 
     path getDirSrc() const;
     path getDirObj() const;
