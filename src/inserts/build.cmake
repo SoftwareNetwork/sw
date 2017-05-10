@@ -1,5 +1,11 @@
 ########################################
 
+if (NOT EXISTS ${BUILD_DIR})
+    message(STATUS "Build dir does not exists for package ${PACKAGE_STRING} (${BUILD_DIR})")
+    message(STATUS "Re-run cppan to fix this warning.")
+    return()
+endif()
+
 set(REBUILD 1)
 
 if (EXISTS ${fn1})

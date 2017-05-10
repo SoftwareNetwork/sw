@@ -2406,6 +2406,9 @@ void CMakePrinter::print_obj_build_file(const path &fn) const
     CMakeContext ctx;
     file_header(ctx, d);
 
+    ctx.addLine("set(PACKAGE_NAME " + d.ppath.toString() + ")");
+    ctx.addLine("set(PACKAGE_STRING " + d.target_name + ")");
+
     config_section_title(ctx, "macros & functions");
     ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + ")");
 

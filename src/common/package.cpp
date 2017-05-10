@@ -259,7 +259,7 @@ void cleanPackage(const Package &pkg, int flags)
     if (flags & CleanTarget::Src)
         rm(pkg.getDirSrc());
     if (flags & CleanTarget::Obj)
-        rm(pkg.getDirObj());
+        rm(pkg.getDirObj() / "build"); // for object targets we remove subdir
 
     if (flags & CleanTarget::Bin)
         remove_files_like(cache_dir_bin, ".*" + pkg.target_name + ".*");
