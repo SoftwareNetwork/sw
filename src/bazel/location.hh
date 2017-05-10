@@ -31,18 +31,18 @@
 // version 2.2 of Bison.
 
 /**
- ** \file G:/dev/cppan_client/src/bazel/location.hh
+ ** \file /home/egor/dev/cppan_client/src/bazel/location.hh
  ** Define the yy_bazel::location class.
  */
 
-#ifndef YY_YY_BAZEL_G_DEV_CPPAN_CLIENT_SRC_BAZEL_LOCATION_HH_INCLUDED
-# define YY_YY_BAZEL_G_DEV_CPPAN_CLIENT_SRC_BAZEL_LOCATION_HH_INCLUDED
+#ifndef YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_LOCATION_HH_INCLUDED
+# define YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_LOCATION_HH_INCLUDED
 
 # include "position.hh"
 
 
 namespace yy_bazel {
-#line 46 "G:/dev/cppan_client/src/bazel/location.hh" // location.cc:296
+#line 46 "/home/egor/dev/cppan_client/src/bazel/location.hh" // location.cc:296
   /// Abstract a location.
   class location
   {
@@ -188,5 +188,5 @@ namespace yy_bazel {
 
 
 } // yy_bazel
-#line 192 "G:/dev/cppan_client/src/bazel/location.hh" // location.cc:296
-#endif // !YY_YY_BAZEL_G_DEV_CPPAN_CLIENT_SRC_BAZEL_LOCATION_HH_INCLUDED
+#line 192 "/home/egor/dev/cppan_client/src/bazel/location.hh" // location.cc:296
+#endif // !YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_LOCATION_HH_INCLUDED
