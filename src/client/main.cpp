@@ -36,6 +36,7 @@
 #include <boost/algorithm/string.hpp>
 #include <primitives/pack.h>
 #include <primitives/optional.h>
+#include <primitives/templates.h>
 
 #include <iostream>
 #include <thread>
@@ -358,17 +359,43 @@ try
         return 0;
     }
 
-    if (options()["prepare-archive"].as<bool>())
+    auto par = options()["prepare-archive-remote"].as<bool>();
+    if (options()["prepare-archive"].as<bool>() || par)
     {
+        path t = ".cppan/temp";
         Config c;
         c.load_current_config();
         Projects &projects = c.getProjects();
+        const auto cwd = fs::current_path();
         for (auto &p : projects)
         {
             auto &project = p.second;
+
+            auto p = cwd;
+            if (par)
+            {
+                p = t / fs::unique_path();
+                fs::create_directories(p);
+                fs::copy_file(CPPAN_FILENAME, p / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
+                fs::current_path(p);
+
+                if (!isValidSourceUrl(project.source))
+                    throw std::runtime_error("Source is empty");
+
+                DownloadSource ds;
+                ds.download(project.source);
+            }
+            SCOPE_EXIT
+            {
+                if (par)
+                {
+                    fs::current_path(cwd);
+                    remove_all_from_dir(p);
+                }
+            };
             project.findSources();
             String archive_name = make_archive_name(project.pkg.ppath.toString());
-            if (!project.writeArchive(fs::absolute(archive_name)))
+            if (!project.writeArchive(fs::absolute(cwd / archive_name)))
                 throw std::runtime_error("Archive write failed");
         }
         return 0;
