@@ -61,7 +61,6 @@ projects:
             - pvt.cppan.demo.boost.optional: 1
             - pvt.cppan.demo.boost.property_tree: 1
             - pvt.cppan.demo.boost.variant: 1
-            - pvt.cppan.demo.jbeder.yaml_cpp: master
             - pvt.cppan.demo.sqlite3: 3
 
             - pvt.egorpugin.primitives.string: master
@@ -75,6 +74,7 @@ projects:
             - pvt.egorpugin.primitives.log: master
             - pvt.egorpugin.primitives.pack: master
             - pvt.egorpugin.primitives.command: master
+            - pvt.egorpugin.primitives.yaml: master
 
         options:
             any:

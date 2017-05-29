@@ -367,9 +367,9 @@ try
         c.load_current_config();
         Projects &projects = c.getProjects();
         const auto cwd = fs::current_path();
-        for (auto &p : projects)
+        for (auto &ps : projects)
         {
-            auto &project = p.second;
+            auto &project = ps.second;
 
             auto p = cwd;
             if (par)

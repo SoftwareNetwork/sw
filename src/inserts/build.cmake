@@ -78,7 +78,15 @@ if (MULTICORE)
     #set(parallel "-j ${N_CORES}") # temporary
 endif()
 
-if (CONFIG)
+if (NINJA)
+    cppan_debug_message("COMMAND ninja -C ${BUILD_DIR}")
+    execute_process(
+        COMMAND ninja -C ${BUILD_DIR}
+        ${OUTPUT_QUIET}
+        ${ERROR_QUIET}
+        RESULT_VARIABLE ret
+    )
+elseif (CONFIG)
     if (NOT DEFINED make OR
         "${make}" STREQUAL "" OR
         "${make}" STREQUAL "make-NOTFOUND" OR
@@ -131,7 +139,7 @@ if (CONFIG)
             RESULT_VARIABLE ret
         )
     endif()
-else(CONFIG)
+else()
     if ("${make}" STREQUAL "make-NOTFOUND")
         cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}")
@@ -151,7 +159,7 @@ else(CONFIG)
             RESULT_VARIABLE ret
         )
     endif()
-endif(CONFIG)
+endif()
 
 check_result_variable(${ret})
 

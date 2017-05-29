@@ -709,38 +709,39 @@ void Checks::read_parallel_checks_for_workers(const path &dir)
 
 void Checks::write_definitions(CMakeContext &ctx, const Package &d, const StringSet &prefixes) const
 {
-    String m = "INTERFACE";
-    if (!d.flags[pfHeaderOnly])
-        m = "PUBLIC";
-    if (d.flags[pfExecutable])
-        m = "PRIVATE";
-
-    auto print_def = [&ctx, &m, &prefixes](const String &value, auto &&s)
+    const auto m = [&d]
     {
-        ctx << m << " " << s << "=" << value << CMakeContext::eol;
+        if (!d.flags[pfHeaderOnly])
+            return "PUBLIC"s;
+        if (d.flags[pfExecutable])
+            return "PRIVATE"s;
+        return "INTERFACE"s;
+    }();
+
+    auto print_def = [&ctx, &m, &prefixes](const auto &value, const auto &s)
+    {
+        ctx.addLine(m + " " + s + "=" + value);
         for (const auto &p : prefixes)
-            ctx << m << " " << p + s << "=" << value << CMakeContext::eol;
+            ctx.addLine(m + " " + p + s + "=" + value);
         return 0;
     };
 
-    auto add_if_definition = [&ctx, &print_def](const String &s, const String &value, auto && ... defs)
+    auto add_if_definition = [&ctx, &print_def](const String &s, const String &value, const std::vector<String> &defs = std::vector<String>())
     {
-        ctx.addLine("if (" + s + ")");
-        ctx.increaseIndent();
+        ctx.if_(s);
         ctx.addLine("target_compile_definitions(${this}");
         ctx.increaseIndent();
         print_def(value, s);
-        using expand_type = int[];
-        expand_type{ 0, print_def(value, std::forward<decltype(defs)>(defs))... };
+        for (auto &def : defs)
+            print_def(value, def);
         ctx.decreaseIndent();
         ctx.addLine(")");
-        ctx.decreaseIndent();
-        ctx.addLine("endif()");
+        ctx.endif();
         ctx.addLine();
     };
 
     // aliases
-    add_if_definition("WORDS_BIGENDIAN", "1", "BIGENDIAN", "BIG_ENDIAN", "HOST_BIG_ENDIAN");
+    add_if_definition("WORDS_BIGENDIAN", "1", {"BIGENDIAN", "BIG_ENDIAN", "HOST_BIG_ENDIAN"});
 
     for (auto &c : checks)
     {

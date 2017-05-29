@@ -4,7 +4,7 @@
 /bin*
 cppan
 .cppan*
-.vs
+.vs*
 
 *.kdev*
 
@@ -13,7 +13,7 @@ cppan
 /*.bat
 
 *~
-*.user
+*.user*
 
 *.lnk
 

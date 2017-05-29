@@ -614,7 +614,11 @@ set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext}))");
                 local.addText("-DMULTICORE=1 ");
             local.addText("${rest} ");
 
-            local.addText("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename + "\")");
+            local.addText("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
+#ifndef _WIN32
+            local.addText(" &");
+#endif
+            local.addText("\")");
         }
         local.emptyLines();
 
