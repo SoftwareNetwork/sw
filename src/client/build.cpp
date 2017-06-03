@@ -111,6 +111,13 @@ String get_config()
 
 int build_packages(const Config &c, const String &name)
 {
+    auto &sdb = getServiceDatabase();
+
+    // install all pkgs first
+    for (auto &p : c.getProjects())
+        for (auto &d : p.second.dependencies)
+            sdb.addInstalledPackage(d.second);
+
     BuildSettings bs;
 
     path src;
@@ -143,7 +150,6 @@ int build_packages(const Config &c, const String &name)
             new_config = true;
 
             // also register in db
-            auto &sdb = getServiceDatabase();
             auto h = Settings::get_local_settings().get_hash();
             sdb.addConfigHash(h, config, ch);
 
