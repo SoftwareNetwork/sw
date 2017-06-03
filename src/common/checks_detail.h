@@ -316,6 +316,14 @@ public:
 
     virtual ~CheckDecl() {}
 
+    void save(yaml &root) const override
+    {
+        yaml n;
+        n["decl"] = getData();
+        parameters.save(n);
+        root[information.cppan_key].push_back(n);
+    }
+
     void writeCheck(CMakeContext &ctx) const override
     {
         static const Strings headers = {

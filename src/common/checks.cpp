@@ -314,8 +314,6 @@ void Checks::load(const yaml &root)
                     CheckParameters p;
                     p.load(n);
                     auto ptr = this->addCheck<CheckDecl>(s, p);
-                    if (n["cpp"].IsDefined())
-                        ptr->set_cpp(n["cpp"].template as<bool>());
                     return;
                 }
                 else if (n.IsScalar())
