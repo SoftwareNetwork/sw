@@ -307,8 +307,8 @@ public:
 class CheckDecl : public Check
 {
 public:
-    CheckDecl(const String &s)
-        : Check(getCheckInformation(Decl))
+    CheckDecl(const String &s, const CheckParameters &p = CheckParameters())
+        : Check(getCheckInformation(Decl), p)
     {
         data = s;
         variable = "HAVE_DECL_" + boost::algorithm::to_upper_copy(data);
@@ -331,13 +331,26 @@ public:
             "HAVE_UNISTD_H",
         };
 
-        ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS)");
-        for (auto &h : headers)
+        auto print_header_def = [&ctx](const auto &h)
         {
             ctx.addLine("if (" + h + ")");
             ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS} -D" + h + "=${" + h + "})");
             ctx.addLine("endif()");
+        };
+
+        ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS)");
+        for (auto &h : headers)
+            print_header_def(h);
+        String more_headers;
+        for (auto &h : parameters.headers)
+        {
+            auto iv = make_include_var(h);
+            print_header_def(iv);
+            more_headers += "#ifdef " + iv + "\n";
+            more_headers += "# include <" + h + ">\n";
+            more_headers += "#endif\n";
         }
+
         ctx << information.function + "(\"" +
             R"(
 
@@ -374,6 +387,10 @@ public:
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
+
+)" +
+more_headers +
+R"(
 
 int main()
 {

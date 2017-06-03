@@ -162,6 +162,11 @@ String Check::getDataEscaped() const
     return d;
 }
 
+void Checks::load(const path &fn)
+{
+    load(YAML::LoadFile(fn.string()));
+}
+
 void Checks::load(const yaml &root)
 {
     // functions
@@ -264,7 +269,64 @@ void Checks::load(const yaml &root)
 
     LOAD_SET(Library);
     LOAD_SET(Alignment);
-    LOAD_SET(Decl);
+
+    // decls
+    const auto &decl_key = getCheckInformation(Check::Decl).cppan_key;
+    if (root[decl_key].IsDefined())
+    {
+        has_decl = true;
+        if (root[decl_key].IsMap())
+        {
+            get_map_and_iterate(root, decl_key, [this](const auto &root)
+            {
+                auto f = root.first.template as<String>();
+                if (root.second.IsSequence() || root.second.IsScalar())
+                {
+                    CheckParameters p;
+                    p.headers = get_sequence<String>(root.second);
+                    this->addCheck<CheckDecl>(f, p);
+                }
+                else
+                    throw std::runtime_error("Decl headers should be a scalar or a set");
+            });
+        }
+        else if (root[decl_key].IsSequence())
+        {
+            get_sequence_and_iterate(root, decl_key, [this](const auto &n)
+            {
+                if (n.IsMap())
+                {
+                    if (n.size() == 1)
+                    {
+                        auto i = n.begin();
+                        auto s = i->first.template as<String>();
+                        auto h = i->second.template as<String>();
+                        CheckParameters p;
+                        p.headers = { h };
+                        this->addCheck<CheckDecl>(s, p);
+                        return;
+                    }
+                    String s;
+                    if (n["name"].IsDefined())
+                        s = n["name"].template as<String>();
+                    else if (n["decl"].IsDefined())
+                        s = n["decl"].template as<String>();
+                    CheckParameters p;
+                    p.load(n);
+                    auto ptr = this->addCheck<CheckDecl>(s, p);
+                    if (n["cpp"].IsDefined())
+                        ptr->set_cpp(n["cpp"].template as<bool>());
+                    return;
+                }
+                else if (n.IsScalar())
+                {
+                    this->addCheck<CheckDecl>(n.template as<String>());
+                }
+                else
+                    throw std::runtime_error("decl must be a map or seq");
+            });
+        }
+    }
 
     // includes
     get_sequence_and_iterate(root, getCheckInformation(Check::Include).cppan_key, [this](const auto &v)
@@ -334,9 +396,7 @@ void Checks::load(const yaml &root)
                         s = n["name"].template as<String>();
                     else if (n["symbol"].IsDefined())
                         s = n["symbol"].template as<String>();
-                    auto h = get_sequence<String>(n["headers"]);
                     CheckParameters p;
-                    p.headers = { h };
                     p.load(n);
                     auto ptr = this->addCheck<CheckSymbol>(s, p);
                     if (n["cpp"].IsDefined())
@@ -407,11 +467,6 @@ int main() {return 0;}
     }
 }
 
-void Checks::load(const path &fn)
-{
-    load(YAML::LoadFile(fn.string()));
-}
-
 void Checks::save(yaml &root) const
 {
     for (auto &c : checks)
@@ -425,10 +480,10 @@ void Checks::save(yaml &root) const
         switch (t)
         {
         case Check::Library:
-        case Check::Decl:
         case Check::Alignment:
             root[i.cppan_key].push_back(c->getData());
             break;
+        case Check::Decl:
         case Check::Type:
         case Check::Function:
         case Check::LibraryFunction:
