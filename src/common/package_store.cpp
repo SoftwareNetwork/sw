@@ -489,69 +489,78 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
 
     std::set<Package> packages;
     auto configs = conf.split();
-    // batch resolve of deps first; merge flags?
+    // batch resolve of deps first in parallel; merge flags?
+    Executor e(std::thread::hardware_concurrency() * 2);
     for (auto &c : configs)
     {
-        auto &project = c.getDefaultProject();
-        auto root_directory = (fs::is_regular_file(p) ? p.parent_path() : p) / project.root_directory;
-
-        // to prevent possible errors
-        // pkg must have small scope
+        e.push([&]()
         {
-            Package pkg;
-            pkg.ppath = ppath;
-            if (!project.name.empty())
-                pkg.ppath.push_back(project.name);
-            pkg.version = Version(LOCAL_VERSION_NAME);
-            pkg.flags.set(pfLocalProject);
-            pkg.flags.set(pfDirectDependency, direct_dependency);
-            pkg.createNames();
-            project.applyFlags(pkg.flags);
-            c.setPackage(pkg);
-            local_packages[pkg.ppath] = root_directory;
-        }
+            auto &project = c.getDefaultProject();
+            auto root_directory = (fs::is_regular_file(p) ? p.parent_path() : p) / project.root_directory;
 
-        // sources
-        if (!cpp_fn.empty() && !project.files_loaded)
-        {
-            // clear default sources first
-            project.sources.clear();
-            project.sources.insert(cpp_fn.filename().string());
-        }
-        project.root_directory = root_directory;
-        project.findSources(root_directory);
-        // maybe remove? let user see cppan.yml in local project
-        project.files.erase(CPPAN_FILENAME);
-        // patch if any
-        project.patchSources();
+            // to prevent possible errors
+            // pkg must have small scope
+            {
+                Package pkg;
+                pkg.ppath = ppath;
+                if (!project.name.empty())
+                    pkg.ppath.push_back(project.name);
+                pkg.version = Version(LOCAL_VERSION_NAME);
+                pkg.flags.set(pfLocalProject);
+                pkg.flags.set(pfDirectDependency, direct_dependency);
+                pkg.createNames();
+                project.applyFlags(pkg.flags);
+                c.setPackage(pkg);
+                local_packages[pkg.ppath] = root_directory;
+            }
 
-        // update flags and pkg again after findSources()
-        // project type may be different
-        // at this time we take project.pkg, not just local variable (pkg)
-        project.applyFlags(project.pkg.flags);
-        c.setPackage(project.pkg);
+            // sources
+            if (!cpp_fn.empty() && !project.files_loaded)
+            {
+                // clear default sources first
+                project.sources.clear();
+                project.sources.insert(cpp_fn.filename().string());
+            }
+            project.root_directory = root_directory;
+            project.findSources(root_directory);
+            // maybe remove? let user see cppan.yml in local project
+            project.files.erase(CPPAN_FILENAME);
+            // patch if any
+            project.patchSources();
 
-        // check if project's deps are relative
-        // this means that there's a local dependency
-        auto deps = project.dependencies;
-        for (auto &d : deps)
-        {
-            if (!d.second.ppath.is_relative())
-                continue;
+            // update flags and pkg again after findSources()
+            // project type may be different
+            // at this time we take project.pkg, not just local variable (pkg)
+            project.applyFlags(project.pkg.flags);
+            c.setPackage(project.pkg);
 
-            project.dependencies.erase(d.second.ppath.toString());
+            // check if project's deps are relative
+            // this means that there's a local dependency
+            auto deps = project.dependencies;
+            for (auto &d : deps)
+            {
+                if (!d.second.ppath.is_relative())
+                    continue;
 
-            d.second.ppath = ppath / d.second.ppath;
-            d.second.version = Version(LOCAL_VERSION_NAME);
-            d.second.createNames();
-            project.dependencies.insert({ d.second.ppath.toString(), d.second });
-        }
+                project.dependencies.erase(d.second.ppath.toString());
 
+                d.second.ppath = ppath / d.second.ppath;
+                d.second.version = Version(LOCAL_VERSION_NAME);
+                d.second.createNames();
+                project.dependencies.insert({ d.second.ppath.toString(), d.second });
+            }
+
+            // add package for result
+            packages.insert(project.pkg);
+        });
+    }
+    e.wait();
+
+    // seq
+    for (auto &c : configs)
+    {
         // add config to storage
         rd.add_local_config(c);
-
-        // add package for result
-        packages.insert(project.pkg);
     }
 
     // write local packages to index
