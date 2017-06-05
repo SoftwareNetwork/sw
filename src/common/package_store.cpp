@@ -398,7 +398,8 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
     auto set_config = [&config_name](const auto &fn)
     {
         auto root = load_yaml_config(fn);
-        root["local_settings"]["current_build"] = config_name;
+        if (!config_name.empty())
+            root["local_settings"]["current_build"] = config_name;
         Settings::get_local_settings().load(root["local_settings"], SettingsType::Local);
     };
 

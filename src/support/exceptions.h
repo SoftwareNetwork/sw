@@ -16,6 +16,18 @@
 
 #pragma once
 
+#ifdef BOOST_USE_WINDOWS_H
+#undef BOOST_USE_WINDOWS_H
+#define REDEFINE_BOOST_USE_WINDOWS_H
+#endif
+
+#include <boost/stacktrace.hpp>
+#include <boost/exception/all.hpp>
+
+#ifdef REDEFINE_BOOST_USE_WINDOWS_H
+#define BOOST_USE_WINDOWS_H
+#endif
+
 #include <exception>
 
 #define TYPED_EXCEPTION(x)                       \
@@ -24,3 +36,11 @@
         using std::runtime_error::runtime_error; \
         x() : runtime_error("") {}               \
     }
+
+using traced_exception = boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace>;
+
+template <class E>
+void throw_with_trace(const E &e)
+{
+    throw boost::enable_error_info(e) << traced_exception(boost::stacktrace::stacktrace());
+}

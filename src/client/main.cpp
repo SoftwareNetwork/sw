@@ -23,6 +23,7 @@
 #include <api.h>
 #include <config.h>
 #include <database.h>
+#include <exceptions.h>
 #include <filesystem.h>
 #include <hash.h>
 #include <http.h>
@@ -408,6 +409,8 @@ try
 catch (const std::exception &e)
 {
     std::cerr << e.what() << "\n";
+    if (auto st = boost::get_error_info<traced_exception>(e))
+        std::cerr << *st << '\n';
     return 1;
 }
 catch (...)

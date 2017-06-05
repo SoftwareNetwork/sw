@@ -23,6 +23,8 @@
 
 #include "printers/printer.h"
 
+#include <exceptions.h>
+
 #include <boost/algorithm/string.hpp>
 
 #include <primitives/command.h>
@@ -505,7 +507,7 @@ void Project::findSources(path p)
     }
 
     if (files.empty() && !empty)
-        throw std::runtime_error("no files found");
+        throw_with_trace(std::runtime_error("no files found"));
 
     // disable on windows
 #ifndef _WIN32
