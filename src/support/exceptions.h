@@ -42,5 +42,6 @@ using traced_exception = boost::error_info<struct tag_stacktrace, boost::stacktr
 template <class E>
 void throw_with_trace(const E &e)
 {
-    throw boost::enable_error_info(e) << traced_exception(boost::stacktrace::stacktrace());
+    boost::stacktrace::stacktrace t(2, -1);
+    throw boost::enable_error_info(e) << traced_exception(t);
 }

@@ -20,6 +20,7 @@
 #include "config.h"
 #include "database.h"
 #include "directories.h"
+#include "exceptions.h"
 #include "hash.h"
 #include "program.h"
 #include "stamp.h"
@@ -203,7 +204,17 @@ void Settings::load_main(const yaml &root, const SettingsType type)
             // yaml will not keep sorting of keys in map
             // so we can take 'first' build in document
             if (root["current_build"].IsDefined())
-                current_build = root["builds"][root["current_build"].template as<String>()];
+            {
+                if (root["builds"][root["current_build"]].IsDefined())
+                    current_build = root["builds"][root["current_build"].template as<String>()];
+                else
+                {
+                    // on empty config name we build the first configuration
+                    LOG_WARN(logger, "No such build config '" + root["current_build"].template as<String>() +
+                        "' in builds directive. Trying to build the first configuration.");
+                    current_build = root["builds"].begin()->second;
+                }
+            }
         }
         else if (root["build"].IsDefined())
             current_build = root["build"];

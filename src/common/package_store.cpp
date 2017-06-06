@@ -398,8 +398,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
     auto set_config = [&config_name](const auto &fn)
     {
         auto root = load_yaml_config(fn);
-        if (!config_name.empty())
-            root["local_settings"]["current_build"] = config_name;
+        root["local_settings"]["current_build"] = config_name;
         Settings::get_local_settings().load(root["local_settings"], SettingsType::Local);
     };
 
@@ -492,6 +491,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
     auto configs = conf.split();
     // batch resolve of deps first in parallel; merge flags?
     Executor e(std::thread::hardware_concurrency() * 2);
+    e.throw_exceptions = true;
     for (auto &c : configs)
     {
         e.push([&]()
