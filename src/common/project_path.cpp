@@ -26,6 +26,18 @@ bool is_valid_project_path_symbol(int c)
         ;
 }
 
+void fix_root_project(yaml &root, const ProjectPath &ppath)
+{
+    auto rp = root["root_project"];
+    if (!rp.IsDefined())
+    {
+        rp = ppath.toString();
+        return;
+    }
+    if (!ppath.is_root_of(rp.as<String>()))
+        rp = ppath.toString();
+}
+
 ProjectPath::ProjectPath(String s)
 {
     if (s.size() > 2048)
@@ -233,14 +245,12 @@ ProjectPath &ProjectPath::operator/=(const ProjectPath &e)
     return *this = *this / e;
 }
 
-void fix_root_project(yaml &root, const ProjectPath &ppath)
+ProjectPath ProjectPath::slice(int start, int end) const
 {
-    auto rp = root["root_project"];
-    if (!rp.IsDefined())
-    {
-        rp = ppath.toString();
-        return;
-    }
-    if (!ppath.is_root_of(rp.as<String>()))
-        rp = ppath.toString();
+    auto p = *this;
+    if (end == -1)
+        p.path_elements = decltype(path_elements)(path_elements.begin() + start, path_elements.end());
+    else
+        p.path_elements = decltype(path_elements)(path_elements.begin() + start, path_elements.begin() + end);
+    return p;
 }

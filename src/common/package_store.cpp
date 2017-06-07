@@ -489,31 +489,38 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
 
     std::set<Package> packages;
     auto configs = conf.split();
-    // batch resolve of deps first in parallel; merge flags?
+
+    // batch resolve of deps first; merge flags?
+
+    // seq
+    for (auto &c : configs)
+    {
+        auto &project = c.getDefaultProject();
+        auto root_directory = (fs::is_regular_file(p) ? p.parent_path() : p) / project.root_directory;
+
+        // to prevent possible errors
+        // pkg must have small scope
+        Package pkg;
+        pkg.ppath = ppath;
+        if (!project.name.empty())
+            pkg.ppath.push_back(project.name);
+        pkg.version = Version(LOCAL_VERSION_NAME);
+        pkg.flags.set(pfLocalProject);
+        pkg.flags.set(pfDirectDependency, direct_dependency);
+        pkg.createNames();
+        project.applyFlags(pkg.flags);
+        c.setPackage(pkg);
+        local_packages[pkg.ppath] = root_directory;
+    }
+
     Executor e(std::thread::hardware_concurrency() * 2);
     e.throw_exceptions = true;
     for (auto &c : configs)
     {
-        e.push([&]()
+        e.push([&c, &p, &cpp_fn, &ppath]()
         {
             auto &project = c.getDefaultProject();
             auto root_directory = (fs::is_regular_file(p) ? p.parent_path() : p) / project.root_directory;
-
-            // to prevent possible errors
-            // pkg must have small scope
-            {
-                Package pkg;
-                pkg.ppath = ppath;
-                if (!project.name.empty())
-                    pkg.ppath.push_back(project.name);
-                pkg.version = Version(LOCAL_VERSION_NAME);
-                pkg.flags.set(pfLocalProject);
-                pkg.flags.set(pfDirectDependency, direct_dependency);
-                pkg.createNames();
-                project.applyFlags(pkg.flags);
-                c.setPackage(pkg);
-                local_packages[pkg.ppath] = root_directory;
-            }
 
             // sources
             if (!cpp_fn.empty() && !project.files_loaded)
@@ -523,6 +530,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
                 project.sources.insert(cpp_fn.filename().string());
             }
             project.root_directory = root_directory;
+            LOG_INFO(logger, "Finding sources for " + project.pkg.ppath.slice(2).toString());
             project.findSources(root_directory);
             // maybe remove? let user see cppan.yml in local project
             project.files.erase(CPPAN_FILENAME);
@@ -550,9 +558,6 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
                 d.second.createNames();
                 project.dependencies.insert({ d.second.ppath.toString(), d.second });
             }
-
-            // add package for result
-            packages.insert(project.pkg);
         });
     }
     e.wait();
@@ -560,6 +565,11 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
     // seq
     for (auto &c : configs)
     {
+        auto &project = c.getDefaultProject();
+
+        // add package for result
+        packages.insert(project.pkg);
+
         // add config to storage
         rd.add_local_config(c);
     }

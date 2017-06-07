@@ -128,6 +128,8 @@ public:
     auto get_name() const { return back(); }
     ProjectPath parent() const { return PathElements(path_elements.begin(), path_elements.end() - 1); }
 
+    ProjectPath slice(int start, int end = -1) const;
+
     bool operator<(const ProjectPath &rhs) const;
 
     operator String() const

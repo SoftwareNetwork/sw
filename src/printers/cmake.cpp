@@ -337,7 +337,7 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
         return;
 
     std::vector<Package> includes;
-    CMakeContext ctx2;
+    CMakeContext ctx2, ctx_actions;
 
     config_section_title(ctx, "direct dependencies");
 
@@ -376,9 +376,9 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
         {
             // MUST be here!
             // actions are executed from include_directories only projects
-            ScopedDependencyCondition sdc(ctx, dep);
-            ctx.addLine("# " + dep.target_name);
-            ctx.addLine("cppan_include(\"" + normalize_path(dir / cmake_src_actions_filename) + "\")");
+            ScopedDependencyCondition sdc(ctx_actions, dep);
+            ctx_actions.addLine("# " + dep.target_name);
+            ctx_actions.addLine("cppan_include(\"" + normalize_path(dir / cmake_src_actions_filename) + "\")");
         }
         else if (!use_cache || dep.flags[pfHeaderOnly])
         {
@@ -442,6 +442,9 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
             });
         }*/
     }
+
+    // after all deps
+    ctx += ctx_actions;
 
     ctx.splitLines();
 }
@@ -1226,6 +1229,183 @@ void CMakePrinter::print_bs_insertion(CMakeContext &ctx, const Project &p, const
     ctx.emptyLines();
 }
 
+void CMakePrinter::print_references(CMakeContext &ctx) const
+{
+    const auto &p = rd[d].config->getDefaultProject();
+
+    config_section_title(ctx, "references");
+    for (const auto &dep : p.dependencies)
+    {
+        auto &dd = dep.second;
+        if (dd.reference.empty())
+            continue;
+        ScopedDependencyCondition sdc(ctx, dd);
+        ctx.addLine("set(" + dd.reference + " " + rd[d].dependencies[dd.ppath.toString()].target_name + ")");
+        if (dd.ppath.is_loc())
+            ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd.get_local_package_dir(dd.ppath.toString())) + ")");
+        else
+            ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirSrc()) + ")");
+        ctx.addLine("set(" + dd.reference + "_BDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirObj()) + ")");
+        ctx.addLine("set(" + dd.reference + "_DIR ${" + dd.reference + "_SDIR})");
+        ctx.addLine();
+    }
+}
+
+void CMakePrinter::print_settings(CMakeContext &ctx) const
+{
+    const auto &p = rd[d].config->getDefaultProject();
+
+    config_section_title(ctx, "settings");
+    print_storage_dirs(ctx);
+    ctx.addLine("set(PACKAGE ${this})");
+    ctx.addLine("set(PACKAGE_NAME " + d.ppath.toString() + ")");
+    ctx.addLine("set(PACKAGE_NAME_LAST " + d.ppath.back() + ")");
+    ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
+    ctx.addLine("set(PACKAGE_STRING " + d.target_name + ")");
+    ctx.addLine("set(PACKAGE_TARNAME)");
+    ctx.addLine("set(PACKAGE_URL)");
+    ctx.addLine("set(PACKAGE_BUGREPORT)");
+    ctx.addLine();
+
+    auto n2hex = [this](int n, int w)
+    {
+        std::ostringstream ss;
+        ss << std::hex << std::setfill('0') << std::setw(w) << n;
+        return ss.str();
+    };
+
+    if (d.version.isBranch())
+    {
+        ctx.addLine("set(PACKAGE_VERSION_NUM  \"0\")");
+        ctx.addLine("set(PACKAGE_VERSION_NUM2 \"0LL\")");
+    }
+    else
+    {
+        auto ver2hex = [this, &n2hex](int n)
+        {
+            std::ostringstream ss;
+            ss << n2hex(d.version.major, n);
+            ss << n2hex(d.version.minor, n);
+            ss << n2hex(d.version.patch, n);
+            return ss.str();
+        };
+
+        ctx.addLine("set(PACKAGE_VERSION_NUM  \"0x" + ver2hex(2) + "\")");
+        ctx.addLine("set(PACKAGE_VERSION_NUM2 \"0x" + ver2hex(4) + "LL\")");
+    }
+    ctx.addLine();
+
+    ctx.addLine("set(CPPAN_LOCAL_PROJECT "s + (d.flags[pfLocalProject] ? "1" : "0") + ")");
+    ctx.addLine();
+
+    // duplicate if someone will do a mistake
+    {
+        auto v = d.version;
+        if (d.flags[pfLocalProject])
+        {
+            if (p.pkg.version.isValid())
+                v = p.pkg.version;
+            else
+            {
+                v.major = 0;
+                v.minor = 0;
+                v.patch = 0;
+            }
+        }
+
+        auto print_ver = [&ctx, &v](const String &name)
+        {
+            ctx.addLine("set(" + name + "_VERSION_MAJOR " + std::to_string(v.major) + ")");
+            ctx.addLine("set(" + name + "_VERSION_MINOR " + std::to_string(v.minor) + ")");
+            ctx.addLine("set(" + name + "_VERSION_PATCH " + std::to_string(v.patch) + ")");
+            ctx.addLine();
+            ctx.addLine("set(" + name + "_MAJOR_VERSION " + std::to_string(v.major) + ")");
+            ctx.addLine("set(" + name + "_MINOR_VERSION " + std::to_string(v.minor) + ")");
+            ctx.addLine("set(" + name + "_PATCH_VERSION " + std::to_string(v.patch) + ")");
+            ctx.addLine();
+        };
+        print_ver("PACKAGE");
+        print_ver("PROJECT");
+
+        ctx.addLine("set(PACKAGE_VERSION_MAJOR_NUM " + n2hex(v.major, 2) + ")");
+        ctx.addLine("set(PACKAGE_VERSION_MINOR_NUM " + n2hex(v.minor, 2) + ")");
+        ctx.addLine("set(PACKAGE_VERSION_PATCH_NUM " + n2hex(v.patch, 2) + ")");
+        ctx.addLine();
+    }
+
+    ctx.addLine("set(PACKAGE_IS_BRANCH " + String(d.version.isBranch() ? "1" : "0") + ")");
+    ctx.addLine("set(PACKAGE_IS_VERSION " + String(d.version.isVersion() ? "1" : "0") + ")");
+    ctx.addLine();
+    ctx.addLine("set(LIBRARY_TYPE STATIC)");
+    ctx.addLine();
+    ctx.if_("CPPAN_BUILD_SHARED_LIBS");
+    ctx.addLine("set(LIBRARY_TYPE SHARED)");
+    // when linking to shared libs (even if lib is static only)
+    // lib must have PIC enabled
+    ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
+    ctx.endif();
+    ctx.addLine();
+    ctx.if_("NOT \"${LIBRARY_TYPE_${this_variable}}\" STREQUAL \"\"");
+    ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_${this_variable}})");
+    ctx.endif();
+    ctx.addLine();
+
+    ctx.addLine("read_variables_file(GEN_CHILD_VARS \"${VARIABLES_FILE}\")");
+    ctx.addLine();
+
+    if (!d.flags[pfLocalProject])
+    {
+        // read check vars file
+        ctx.addLine("set(vars_dir \"" + normalize_path(directories.storage_dir_cfg) + "\")");
+        ctx.addLine("set(vars_file \"${vars_dir}/${config}.cmake\")");
+        ctx.addLine("read_check_variables_file(${vars_file})");
+        ctx.addLine();
+    }
+
+    ctx.if_("NOT CPPAN_COMMAND");
+    ctx.addLine("find_program(CPPAN_COMMAND cppan)");
+    ctx.if_("\"${CPPAN_COMMAND}\" STREQUAL \"CPPAN_COMMAND-NOTFOUND\"");
+    ctx.addLine("message(WARNING \"'cppan' program was not found. Please, add it to PATH environment variable\")");
+    ctx.addLine("set(CPPAN_COMMAND 0)");
+    ctx.endif();
+    ctx.endif();
+    ctx.addLine("set(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
+    ctx.addLine();
+
+    if (p.static_only)
+        ctx.addLine("set(LIBRARY_TYPE STATIC)");
+    else if (p.shared_only)
+        ctx.addLine("set(LIBRARY_TYPE SHARED)");
+    else if (d.flags[pfHeaderOnly])
+        ctx.addLine("set(LIBRARY_TYPE INTERFACE)");
+    ctx.emptyLines();
+    ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
+    ctx.addLine();
+
+    print_sdir_bdir(ctx, d);
+
+    ctx.addLine("set(LIBRARY_API " + library_api(d) + ")");
+    ctx.addLine();
+
+    // configs
+    ctx.addLine("get_configuration_variables()");
+    ctx.addLine();
+
+    // copy exe cmake settings
+    ctx.if_("EXECUTABLE AND CPPAN_USE_CACHE");
+    ctx.addLine("set(to \"" + normalize_path(directories.storage_dir_cfg) + "/${config}/CMakeFiles/${CMAKE_VERSION}\")");
+    ctx.if_("NOT EXISTS ${to}");
+    ctx.addLine("execute_process(");
+    ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION} ${to}");
+    ctx.addLine("    RESULT_VARIABLE ret");
+    ctx.addLine(")");
+    ctx.endif();
+    ctx.endif();
+    ctx.addLine();
+
+    ctx.emptyLines();
+}
+
 void CMakePrinter::print_src_config_file(const path &fn) const
 {
     if (!must_update_contents(fn))
@@ -1246,181 +1426,9 @@ void CMakePrinter::print_src_config_file(const path &fn) const
     ctx.addLine("return()");
     ctx.endif();
 
-    // deps
+    print_references(ctx);
     print_dependencies(ctx, d, Settings::get_local_settings().use_cache);
-
-    // references
-    {
-        config_section_title(ctx, "references");
-        for (const auto &dep : p.dependencies)
-        {
-            auto &dd = dep.second;
-            if (dd.reference.empty())
-                continue;
-            ScopedDependencyCondition sdc(ctx, dd);
-            ctx.addLine("set(" + dd.reference + " " + rd[d].dependencies[dd.ppath.toString()].target_name + ")");
-            if (dd.ppath.is_loc())
-                ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd.get_local_package_dir(dd.ppath.toString())) + ")");
-            else
-                ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirSrc()) + ")");
-            ctx.addLine("set(" + dd.reference + "_BDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirObj()) + ")");
-            ctx.addLine("set(" + dd.reference + "_DIR ${" + dd.reference + "_SDIR})");
-            ctx.addLine();
-        }
-    }
-
-    // settings
-    {
-        config_section_title(ctx, "settings");
-        print_storage_dirs(ctx);
-        ctx.addLine("set(PACKAGE ${this})");
-        ctx.addLine("set(PACKAGE_NAME " + d.ppath.toString() + ")");
-        ctx.addLine("set(PACKAGE_NAME_LAST " + d.ppath.back() + ")");
-        ctx.addLine("set(PACKAGE_VERSION " + d.version.toString() + ")");
-        ctx.addLine("set(PACKAGE_STRING " + d.target_name + ")");
-        ctx.addLine("set(PACKAGE_TARNAME)");
-        ctx.addLine("set(PACKAGE_URL)");
-        ctx.addLine("set(PACKAGE_BUGREPORT)");
-        ctx.addLine();
-
-        auto n2hex = [this](int n, int w)
-        {
-            std::ostringstream ss;
-            ss << std::hex << std::setfill('0') << std::setw(w) << n;
-            return ss.str();
-        };
-
-        if (d.version.isBranch())
-        {
-            ctx.addLine("set(PACKAGE_VERSION_NUM  \"0\")");
-            ctx.addLine("set(PACKAGE_VERSION_NUM2 \"0LL\")");
-        }
-        else
-        {
-            auto ver2hex = [this, &n2hex](int n)
-            {
-                std::ostringstream ss;
-                ss << n2hex(d.version.major, n);
-                ss << n2hex(d.version.minor, n);
-                ss << n2hex(d.version.patch, n);
-                return ss.str();
-            };
-
-            ctx.addLine("set(PACKAGE_VERSION_NUM  \"0x" + ver2hex(2) + "\")");
-            ctx.addLine("set(PACKAGE_VERSION_NUM2 \"0x" + ver2hex(4) + "LL\")");
-        }
-        ctx.addLine();
-
-        ctx.addLine("set(CPPAN_LOCAL_PROJECT "s + (d.flags[pfLocalProject] ? "1" : "0") + ")");
-        ctx.addLine();
-
-        // duplicate if someone will do a mistake
-        {
-            auto v = d.version;
-            if (d.flags[pfLocalProject])
-            {
-                if (p.pkg.version.isValid())
-                    v = p.pkg.version;
-                else
-                {
-                    v.major = 0;
-                    v.minor = 0;
-                    v.patch = 0;
-                }
-            }
-
-            auto print_ver = [&ctx, &v](const String &name)
-            {
-                ctx.addLine("set(" + name + "_VERSION_MAJOR " + std::to_string(v.major) + ")");
-                ctx.addLine("set(" + name + "_VERSION_MINOR " + std::to_string(v.minor) + ")");
-                ctx.addLine("set(" + name + "_VERSION_PATCH " + std::to_string(v.patch) + ")");
-                ctx.addLine();
-                ctx.addLine("set(" + name + "_MAJOR_VERSION " + std::to_string(v.major) + ")");
-                ctx.addLine("set(" + name + "_MINOR_VERSION " + std::to_string(v.minor) + ")");
-                ctx.addLine("set(" + name + "_PATCH_VERSION " + std::to_string(v.patch) + ")");
-                ctx.addLine();
-            };
-            print_ver("PACKAGE");
-            print_ver("PROJECT");
-
-            ctx.addLine("set(PACKAGE_VERSION_MAJOR_NUM " + n2hex(v.major, 2) + ")");
-            ctx.addLine("set(PACKAGE_VERSION_MINOR_NUM " + n2hex(v.minor, 2) + ")");
-            ctx.addLine("set(PACKAGE_VERSION_PATCH_NUM " + n2hex(v.patch, 2) + ")");
-            ctx.addLine();
-        }
-
-        ctx.addLine("set(PACKAGE_IS_BRANCH " + String(d.version.isBranch() ? "1" : "0") + ")");
-        ctx.addLine("set(PACKAGE_IS_VERSION " + String(d.version.isVersion() ? "1" : "0") + ")");
-        ctx.addLine();
-        ctx.addLine("set(LIBRARY_TYPE STATIC)");
-        ctx.addLine();
-        ctx.if_("CPPAN_BUILD_SHARED_LIBS");
-        ctx.addLine("set(LIBRARY_TYPE SHARED)");
-        // when linking to shared libs (even if lib is static only)
-        // lib must have PIC enabled
-        ctx.addLine("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
-        ctx.endif();
-        ctx.addLine();
-        ctx.if_("NOT \"${LIBRARY_TYPE_${this_variable}}\" STREQUAL \"\"");
-        ctx.addLine("set(LIBRARY_TYPE ${LIBRARY_TYPE_${this_variable}})");
-        ctx.endif();
-        ctx.addLine();
-
-        ctx.addLine("read_variables_file(GEN_CHILD_VARS \"${VARIABLES_FILE}\")");
-        ctx.addLine();
-
-        if (!d.flags[pfLocalProject])
-        {
-            // read check vars file
-            ctx.addLine("set(vars_dir \"" + normalize_path(directories.storage_dir_cfg) + "\")");
-            ctx.addLine("set(vars_file \"${vars_dir}/${config}.cmake\")");
-            ctx.addLine("read_check_variables_file(${vars_file})");
-            ctx.addLine();
-        }
-
-        ctx.if_("NOT CPPAN_COMMAND");
-        ctx.addLine("find_program(CPPAN_COMMAND cppan)");
-        ctx.if_("\"${CPPAN_COMMAND}\" STREQUAL \"CPPAN_COMMAND-NOTFOUND\"");
-        ctx.addLine("message(WARNING \"'cppan' program was not found. Please, add it to PATH environment variable\")");
-        ctx.addLine("set(CPPAN_COMMAND 0)");
-        ctx.endif();
-        ctx.endif();
-        ctx.addLine("set(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
-        ctx.addLine();
-
-        if (p.static_only)
-            ctx.addLine("set(LIBRARY_TYPE STATIC)");
-        else if (p.shared_only)
-            ctx.addLine("set(LIBRARY_TYPE SHARED)");
-        else if (d.flags[pfHeaderOnly])
-            ctx.addLine("set(LIBRARY_TYPE INTERFACE)");
-        ctx.emptyLines();
-        ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
-        ctx.addLine();
-
-        print_sdir_bdir(ctx, d);
-
-        ctx.addLine("set(LIBRARY_API " + library_api(d) + ")");
-        ctx.addLine();
-
-        // configs
-        ctx.addLine("get_configuration_variables()");
-        ctx.addLine();
-
-        // copy exe cmake settings
-        ctx.if_("EXECUTABLE AND CPPAN_USE_CACHE");
-        ctx.addLine("set(to \"" + normalize_path(directories.storage_dir_cfg) + "/${config}/CMakeFiles/${CMAKE_VERSION}\")");
-        ctx.if_("NOT EXISTS ${to}");
-        ctx.addLine("execute_process(");
-        ctx.addLine("COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles/${CMAKE_VERSION} ${to}");
-        ctx.addLine("    RESULT_VARIABLE ret");
-        ctx.addLine(")");
-        ctx.endif();
-        ctx.endif();
-        ctx.addLine();
-
-        ctx.emptyLines();
-    }
+    print_settings(ctx);
 
     config_section_title(ctx, "export/import");
     ctx.addLine("include(\"" + normalize_path(directories.get_static_files_dir() / cmake_export_import_filename) + "\")");
@@ -2022,7 +2030,7 @@ else())");
 
     // copy deps for local projects
     // this is needed for executables that may go to custom folder but without deps
-    if (d.flags[pfLocalProject])
+    if (d.flags[pfLocalProject] && !d.flags[pfHeaderOnly])
         print_copy_dependencies(ctx, "${this}");
 
     // export
@@ -2098,7 +2106,7 @@ void CMakePrinter::print_src_actions_file(const path &fn) const
     ctx.addLine();
     print_sdir_bdir(ctx, d);
     ctx.addLine("set(LIBRARY_API " + library_api(d) + ")");
-    ctx.addLine();
+    ctx.emptyLines();
     print_bs_insertion(ctx, p, "pre sources", &BuildSystemConfigInsertions::pre_sources);
     ctx.addLine();
     ctx.addLine("file(GLOB_RECURSE src \"*\")");
@@ -2499,6 +2507,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
 
     // deps
+    print_references(ctx);
     print_dependencies(ctx, d, settings.use_cache);
 
     if (d.empty())

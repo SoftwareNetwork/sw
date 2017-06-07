@@ -61,6 +61,9 @@ private:
     void print_build_dependencies(CMakeContext &ctx, const String &target) const;
     void print_copy_dependencies(CMakeContext &ctx, const String &target) const;
 
+    void print_references(CMakeContext &ctx) const;
+    void print_settings(CMakeContext &ctx) const;
+
     bool must_update_contents(const path &fn) const;
     void write_if_older(const path &fn, const String &s) const;
 };
