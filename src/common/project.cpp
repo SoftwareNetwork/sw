@@ -234,55 +234,110 @@ void get_config_insertion(const yaml &n, const String &key, String &dst)
 
 void load_source_and_version(const yaml &root, Source &source, Version &version)
 {
-    String ver;
-    YAML_EXTRACT_VAR(root, ver, "version", String);
-    if (!ver.empty())
-        version = Version(ver);
+	String ver;
+	YAML_EXTRACT_VAR(root, ver, "version", String);
+	if (!ver.empty())
+		version = Version(ver);
+	if (load_source(root, source) && source.which() == 0)
+	{
+		auto &git = boost::get<Git>(source);
+		if (ver.empty())
+		{
+			if (git.branch.empty() && git.tag.empty())
+			{
+				ver = "master";
+				version = Version(ver);
+			}
+			else if (!git.branch.empty())
+			{
+				ver = git.branch;
+				try
+				{
+					// branch may contain bad symbols, so put in try...catch
+					version = Version(ver);
+				}
+				catch (std::exception &)
+				{
+				}
+			}
+			else if (!git.tag.empty())
+			{
+				ver = git.tag;
+				try
+				{
+					// tag may contain bad symbols, so put in try...catch
+					version = Version(ver);
+				}
+				catch (std::exception &)
+				{
+				}
+			}
+		}
 
-    if (load_source(root, source) && source.which() == 0)
-    {
-        auto &git = boost::get<Git>(source);
-        if (ver.empty())
-        {
-            if (git.branch.empty() && git.tag.empty())
-            {
-                ver = "master";
-                version = Version(ver);
-            }
-            else if (!git.branch.empty())
-            {
-                ver = git.branch;
-                try
-                {
-                    // branch may contain bad symbols, so put in try...catch
-                    version = Version(ver);
-                }
-                catch (std::exception &)
-                {
-                }
-            }
-            else if (!git.tag.empty())
-            {
-                ver = git.tag;
-                try
-                {
-                    // tag may contain bad symbols, so put in try...catch
-                    version = Version(ver);
-                }
-                catch (std::exception &)
-                {
-                }
-            }
-        }
+		if (version.isValid() && git.branch.empty() && git.tag.empty() && git.commit.empty())
+		{
+			if (version.isBranch())
+				git.branch = version.toString();
+			else
+				git.tag = version.toString();
+		}
+	}
+	else if (load_source(root, source) && source.which() == 1)
+	{
+		auto &hg = boost::get<Hg>(source);
+		if (ver.empty())
+		{
+			if (hg.branch.empty() && hg.tag.empty() && hg.revision == -1)
+			{
+				ver = "default";
+				version = Version(ver);
+			}
+			else if (!hg.branch.empty())
+			{
+				ver = hg.branch;
+				try
+				{
+					// branch may contain bad symbols, so put in try...catch
+					version = Version(ver);
+				}
+				catch (std::exception &)
+				{
+				}
+			}
+			else if (!hg.tag.empty())
+			{
+				ver = hg.tag;
+				try
+				{
+					// tag may contain bad symbols, so put in try...catch
+					version = Version(ver);
+				}
+				catch (std::exception &)
+				{
+				}
+			}
+			else if (hg.revision != -1)
+			{
+				ver = hg.revision;
+				try
+				{
+					// tag may contain bad symbols, so put in try...catch
+					version = Version(ver);
+				}
+				catch (std::exception &)
+				{
+				}
+			}
+		}
 
-        if (version.isValid() && git.branch.empty() && git.tag.empty() && git.commit.empty())
-        {
-            if (version.isBranch())
-                git.branch = version.toString();
-            else
-                git.tag = version.toString();
-        }
-    }
+		if (version.isValid() && hg.branch.empty() && hg.tag.empty() && hg.commit.empty() && hg.revision == -1)
+		{
+			if (version.isBranch())
+				hg.branch = version.toString();
+			else
+				hg.tag = version.toString();
+		}
+	}
 }
 
 void BuildSystemConfigInsertions::load(const yaml &n)

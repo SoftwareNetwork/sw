@@ -40,6 +40,17 @@ struct Git
     }
 };
 
+struct Hg : Git
+{
+	int64_t revision = -1;
+
+	bool isValid(String *error = nullptr) const;
+	bool operator==(const Hg &rhs) const
+	{
+		return std::tie(url, tag, branch, commit, revision) == std::tie(rhs.url, rhs.tag, rhs.branch, rhs.commit, rhs.revision);
+	}
+};
+
 struct RemoteFile
 {
     String url;
@@ -60,15 +71,16 @@ struct RemoteFiles
     }
 };
 
-// add svn, bzr, hg?
+// add svn, bzr, fossil?
 // do not add local files
-using Source = boost::variant<Git, RemoteFile, RemoteFiles>;
+using Source = boost::variant<Git, Hg, RemoteFile, RemoteFiles>;
 
 struct DownloadSource
 {
     int64_t max_file_size = 0;
 
     void operator()(const Git &git);
+	void operator()(const Hg &hg);
     void operator()(const RemoteFile &rf);
     void operator()(const RemoteFiles &rfs);
 

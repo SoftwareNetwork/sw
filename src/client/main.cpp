@@ -377,7 +377,6 @@ try
             {
                 p = t / fs::unique_path();
                 fs::create_directories(p);
-                fs::copy_file(CPPAN_FILENAME, p / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
                 fs::current_path(p);
 
                 if (!isValidSourceUrl(project.source))
@@ -385,6 +384,8 @@ try
 
                 DownloadSource ds;
                 ds.download(project.source);
+
+				fs::copy_file(CPPAN_FILENAME, p / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
             }
             SCOPE_EXIT
             {
