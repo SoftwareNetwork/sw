@@ -71,7 +71,7 @@ struct RemoteFiles
     }
 };
 
-// add svn, bzr, fossil?
+// add svn, bzr, p4, fossil, cvs, darcs
 // do not add local files
 using Source = boost::variant<Git, Hg, RemoteFile, RemoteFiles>;
 
