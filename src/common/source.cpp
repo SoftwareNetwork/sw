@@ -54,126 +54,127 @@ bool Git::isValid(String *error) const
 
 bool Hg::isValid(String *error) const
 {
-	if (empty())
-	{
-		if (error)
-			*error = "Hg url is missing";
-		return false;
-	}
+    if (empty())
+    {
+        if (error)
+            *error = "Hg url is missing";
+        return false;
+    }
 
-	int e = 0;
-	e += !tag.empty();
-	e += !branch.empty();
-	e += !commit.empty();
-	e += revision + 1;
+    int e = 0;
+    e += !tag.empty();
+    e += !branch.empty();
+    e += !commit.empty();
+    e += revision != -1;
 
-	if (e == 0)
-	{
-		if (error)
-			*error = "No hg sources (tag or branch or commit) available";
-		return false;
-	}
 
-	if (e > 1)
-	{
-		if (error)
-			*error = "Only one hg source (tag or branch or commit) must be specified";
-		return false;
-	}
+    if (e == 0)
+    {
+        if (error)
+            *error = "No hg sources (tag or branch or commit) available";
+        return false;
+    }
 
-	return true;
+    if (e > 1)
+    {
+        if (error)
+            *error = "Only one hg source (tag or branch or commit) must be specified";
+        return false;
+    }
+
+    return true;
 }
 
 bool load_source(const yaml &root, Source &source)
 {
-	auto &src = root["source"];
-	if (!src.IsDefined())
-		return false;
+    auto &src = root["source"];
+    if (!src.IsDefined())
+        return false;
 
-	auto error = "Only one source must be specified";
+    auto error = "Only one source must be specified";
 
-	Strings nameRepo = { "git", "hg" };
-	String urlStr = "";
-	int iRepo;
-	for (size_t i = 0; i < nameRepo.size(); i++)
-	{
-		YAML_EXTRACT_VAR(src, urlStr, nameRepo[i], String);
-		if (urlStr != "")
-		{
-			iRepo = i;
-			break;
-		}
-	}
-	if (nameRepo[iRepo] == "git")
-	{
-		Git git;
-		YAML_EXTRACT_VAR(src, git.url, "git", String);
-		YAML_EXTRACT_VAR(src, git.tag, "tag", String);
-		YAML_EXTRACT_VAR(src, git.branch, "branch", String);
-		YAML_EXTRACT_VAR(src, git.commit, "commit", String);
+    Strings nameRepo = { "git", "hg" };
+    String urlStr = "";
+    int iRepo;
+    for (size_t i = 0; i < nameRepo.size(); i++)
+    {
+        YAML_EXTRACT_VAR(src, urlStr, nameRepo[i], String);
+        if (urlStr != "")
+        {
+            iRepo = i;
+            break;
+        }
+    }
+    if (nameRepo[iRepo] == "git")
+    {
+        Git git;
+        YAML_EXTRACT_VAR(src, git.url, "git", String);
+        YAML_EXTRACT_VAR(src, git.tag, "tag", String);
+        YAML_EXTRACT_VAR(src, git.branch, "branch", String);
+        YAML_EXTRACT_VAR(src, git.commit, "commit", String);
 
-		if (!git.url.empty())
-		{
-			if (src["file"].IsDefined())
-				throw std::runtime_error(error);
-			source = git;
-		}
-		else if (src["remote"].IsDefined())
-		{
-			RemoteFile rf;
-			YAML_EXTRACT_VAR(src, rf.url, "remote", String);
+        if (!git.url.empty())
+        {
+            if (src["file"].IsDefined())
+                throw std::runtime_error(error);
+            source = git;
+        }
+        else if (src["remote"].IsDefined())
+        {
+            RemoteFile rf;
+            YAML_EXTRACT_VAR(src, rf.url, "remote", String);
 
-			if (!rf.url.empty())
-				source = rf;
-			else
-				throw std::runtime_error(error);
-		}
-		else if (src["files"].IsDefined())
-		{
-			RemoteFiles rfs;
-			rfs.urls = get_sequence_set<String>(src, "files");
-			if (rfs.urls.empty())
-				throw std::runtime_error("Empty remote files");
-			source = rfs;
-		}
-	}
-	else if (nameRepo[iRepo] == "hg")
-	{
-		Hg hg;
-		YAML_EXTRACT_VAR(src, hg.url, "hg", String);
-		YAML_EXTRACT_VAR(src, hg.tag, "tag", String);
-		YAML_EXTRACT_VAR(src, hg.branch, "branch", String);
-		YAML_EXTRACT_VAR(src, hg.commit, "commit", String);
-		YAML_EXTRACT_VAR(src, hg.revision, "revision", int64_t);
-		//
+            if (!rf.url.empty())
+                source = rf;
+            else
+                throw std::runtime_error(error);
+        }
+        else if (src["files"].IsDefined())
+        {
+            RemoteFiles rfs;
+            rfs.urls = get_sequence_set<String>(src, "files");
+            if (rfs.urls.empty())
+                throw std::runtime_error("Empty remote files");
+            source = rfs;
+        }
+    }
+    else if (nameRepo[iRepo] == "hg")
+    {
+        Hg hg;
+        YAML_EXTRACT_VAR(src, hg.url, "hg", String);
+        YAML_EXTRACT_VAR(src, hg.tag, "tag", String);
+        YAML_EXTRACT_VAR(src, hg.branch, "branch", String);
+        YAML_EXTRACT_VAR(src, hg.commit, "commit", String);
+        YAML_EXTRACT_VAR(src, hg.revision, "revision", int64_t);
+        //
 
-		if (!hg.url.empty())
-		{
-			if (src["file"].IsDefined())
-				throw std::runtime_error(error);
-			source = hg;
-		}
-		else if (src["remote"].IsDefined())
-		{
-			RemoteFile rf;
-			YAML_EXTRACT_VAR(src, rf.url, "remote", String);
+        if (!hg.url.empty())
+        {
+            if (src["file"].IsDefined())
+                throw std::runtime_error(error);
+            source = hg;
+        }
+        else if (src["remote"].IsDefined())
+        {
+            RemoteFile rf;
+            YAML_EXTRACT_VAR(src, rf.url, "remote", String);
 
-			if (!rf.url.empty())
-				source = rf;
-			else
-				throw std::runtime_error(error);
-		}
-		else if (src["files"].IsDefined())
-		{
-			RemoteFiles rfs;
-			rfs.urls = get_sequence_set<String>(src, "files");
-			if (rfs.urls.empty())
-				throw std::runtime_error("Empty remote files");
-			source = rfs;
-		}
-	}
+            if (!rf.url.empty())
+                source = rf;
+            else
+                throw std::runtime_error(error);
+        }
+        else if (src["files"].IsDefined())
+        {
+            RemoteFiles rfs;
+            rfs.urls = get_sequence_set<String>(src, "files");
+            if (rfs.urls.empty())
+                throw std::runtime_error("Empty remote files");
+            source = rfs;
+        }
+    }
 
-	return true;
+    return true;
 }
 void save_source(yaml &root, const Source &source)
 {
@@ -188,18 +189,18 @@ void save_source(yaml &root, const Source &source)
         if (!git.commit.empty())
             root["source"]["commit"] = git.commit;
     },
-		[&root](const Hg &hg)
-	{
-		root["source"]["hg"] = hg.url;
-		if (!hg.tag.empty())
-			root["source"]["tag"] = hg.tag;
-		if (!hg.branch.empty())
-			root["source"]["branch"] = hg.branch;
-		if (!hg.commit.empty())
-			root["source"]["commit"] = hg.commit;
-		if (hg.revision != -1)
-			root["source"]["revision"] = hg.revision;
-	},
+        [&root](const Hg &hg)
+    {
+        root["source"]["hg"] = hg.url;
+        if (!hg.tag.empty())
+            root["source"]["tag"] = hg.tag;
+        if (!hg.branch.empty())
+            root["source"]["branch"] = hg.branch;
+        if (!hg.commit.empty())
+            root["source"]["commit"] = hg.commit;
+        if (hg.revision != -1)
+            root["source"]["revision"] = hg.revision;
+    },
         [&root](const RemoteFile &rf)
     {
         root["source"]["remote"] = rf.url;
@@ -297,36 +298,36 @@ void DownloadSource::operator()(const Git &git)
 
 void DownloadSource::operator()(const Hg &hg)
 {
-	auto run = [](const String &c)
-	{
-		if (std::system(c.c_str()) != 0)
-			throw std::runtime_error("Last command failed: " + c);
-	};
+    auto run = [](const String &c)
+    {
+        if (std::system(c.c_str()) != 0)
+            throw std::runtime_error("Last command failed: " + c);
+    };
 
-	int n_tries = 3;
-	while (n_tries--)
-	{
-		try
-		{
-			run("hg clone " + hg.url + " " + fs::current_path().string());
+    int n_tries = 3;
+    while (n_tries--)
+    {
+        try
+        {
+            run("hg clone " + hg.url + " " + fs::current_path().string());
 
-			if (!hg.tag.empty())
-				run("hg update " + hg.tag);
-			else if (!hg.branch.empty())
-				run("hg update " + hg.branch);
-			else if (!hg.commit.empty())
-				run("hg update " + hg.commit);
-			else if (hg.revision != -1)
-				run("hg update " + std::to_string(hg.revision));
+            if (!hg.tag.empty())
+                run("hg update " + hg.tag);
+            else if (!hg.branch.empty())
+                run("hg update " + hg.branch);
+            else if (!hg.commit.empty())
+                run("hg update " + hg.commit);
+            else if (hg.revision != -1)
+                run("hg update " + std::to_string(hg.revision));
 
-			break;
-		}
-		catch (...)
-		{
-			if (n_tries == 0)
-				throw;
-		}
-	}
+            break;
+        }
+        catch (...)
+        {
+            if (n_tries == 0)
+                throw;
+        }
+    }
 }
 
 void DownloadSource::operator()(const RemoteFile &rf)
@@ -367,12 +368,12 @@ bool isValidSourceUrl(const Source &source)
             return false;
         return true;
     },
-		[](const Hg &hg)
-	{
-		if (!isValidSourceUrl(hg.url))
-			return false;
-		return true;
-	},
+        [](const Hg &hg)
+    {
+        if (!isValidSourceUrl(hg.url))
+            return false;
+        return true;
+    },
         [](const RemoteFile &rf)
     {
         if (!isValidSourceUrl(rf.url))
@@ -402,16 +403,16 @@ Source load_source(const ptree &p)
             return git;
     }
 
-	{
-		Hg hg;
-		hg.url = p.get("source.hg.url", "");
-		hg.tag = p.get("source.hg.tag", "");
-		hg.branch = p.get("source.hg.branch", "");
-		hg.commit = p.get("source.hg.commit", "");
-		hg.revision = p.get("source.hg.revision", -1);
-		if (!hg.empty())
-			return hg;
-	}
+    {
+        Hg hg;
+        hg.url = p.get("source.hg.url", "");
+        hg.tag = p.get("source.hg.tag", "");
+        hg.branch = p.get("source.hg.branch", "");
+        hg.commit = p.get("source.hg.commit", "");
+        hg.revision = p.get("source.hg.revision", -1);
+        if (!hg.empty())
+            return hg;
+    }
 
     {
         RemoteFile rf;
@@ -447,20 +448,20 @@ void save_source(ptree &p, const Source &source)
         if (!git.commit.empty())
             p.add("source.git.commit", git.commit);
     },
-		[&p](const Hg &hg)
-	{
-		if (hg.empty())
-			return;
-		p.add("source.hg.url", hg.url);
-		if (!hg.tag.empty())
-			p.add("source.hg.tag", hg.tag);
-		if (!hg.branch.empty())
-			p.add("source.hg.branch", hg.branch);
-		if (!hg.commit.empty())
-			p.add("source.hg.commit", hg.commit);
-		if (hg.revision != -1)
-			p.add("source.hg.commit", hg.revision);
-	},
+        [&p](const Hg &hg)
+    {
+        if (hg.empty())
+            return;
+        p.add("source.hg.url", hg.url);
+        if (!hg.tag.empty())
+            p.add("source.hg.tag", hg.tag);
+        if (!hg.branch.empty())
+            p.add("source.hg.branch", hg.branch);
+        if (!hg.commit.empty())
+            p.add("source.hg.commit", hg.commit);
+        if (hg.revision != -1)
+            p.add("source.hg.revision", hg.revision);
+    },
         [&p](const RemoteFile &rf)
     {
         if (rf.url.empty())
@@ -501,22 +502,22 @@ String print_source(const Source &source)
             r += "commit: " + git.commit + "\n";
         return r;
     },
-		[](const Hg &hg)
-	{
-		String r = "hg:\n";
-		if (hg.empty())
-			return r;
-		r += "url: " + hg.url + "\n";
-		if (!hg.tag.empty())
-			r += "tag: " + hg.tag + "\n";
-		if (!hg.branch.empty())
-			r += "branch: " + hg.branch + "\n";
-		if (!hg.commit.empty())
-			r += "commit: " + hg.commit + "\n";
-		if (hg.revision != -1)
-			r += "revision: " + std::to_string(hg.revision) + "\n";
-		return r;
-	},
+        [](const Hg &hg)
+    {
+        String r = "hg:\n";
+        if (hg.empty())
+            return r;
+        r += "url: " + hg.url + "\n";
+        if (!hg.tag.empty())
+            r += "tag: " + hg.tag + "\n";
+        if (!hg.branch.empty())
+            r += "branch: " + hg.branch + "\n";
+        if (!hg.commit.empty())
+            r += "commit: " + hg.commit + "\n";
+        if (hg.revision != -1)
+            r += "revision: " + std::to_string(hg.revision) + "\n";
+        return r;
+    },
         [](const RemoteFile &rf)
     {
         String r = "remote:\n";

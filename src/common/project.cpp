@@ -234,110 +234,110 @@ void get_config_insertion(const yaml &n, const String &key, String &dst)
 
 void load_source_and_version(const yaml &root, Source &source, Version &version)
 {
-	String ver;
-	YAML_EXTRACT_VAR(root, ver, "version", String);
-	if (!ver.empty())
-		version = Version(ver);
-	if (load_source(root, source) && source.which() == 0)
-	{
-		auto &git = boost::get<Git>(source);
-		if (ver.empty())
-		{
-			if (git.branch.empty() && git.tag.empty())
-			{
-				ver = "master";
-				version = Version(ver);
-			}
-			else if (!git.branch.empty())
-			{
-				ver = git.branch;
-				try
-				{
-					// branch may contain bad symbols, so put in try...catch
-					version = Version(ver);
-				}
-				catch (std::exception &)
-				{
-				}
-			}
-			else if (!git.tag.empty())
-			{
-				ver = git.tag;
-				try
-				{
-					// tag may contain bad symbols, so put in try...catch
-					version = Version(ver);
-				}
-				catch (std::exception &)
-				{
-				}
-			}
-		}
+    String ver;
+    YAML_EXTRACT_VAR(root, ver, "version", String);
+    if (!ver.empty())
+        version = Version(ver);
+    if (load_source(root, source) && source.which() == 0)
+    {
+        auto &git = boost::get<Git>(source);
+        if (ver.empty())
+        {
+            if (git.branch.empty() && git.tag.empty())
+            {
+                ver = "master";
+                version = Version(ver);
+            }
+            else if (!git.branch.empty())
+            {
+                ver = git.branch;
+                try
+                {
+                    // branch may contain bad symbols, so put in try...catch
+                    version = Version(ver);
+                }
+                catch (std::exception &)
+                {
+                }
+            }
+            else if (!git.tag.empty())
+            {
+                ver = git.tag;
+                try
+                {
+                    // tag may contain bad symbols, so put in try...catch
+                    version = Version(ver);
+                }
+                catch (std::exception &)
+                {
+                }
+            }
+        }
 
-		if (version.isValid() && git.branch.empty() && git.tag.empty() && git.commit.empty())
-		{
-			if (version.isBranch())
-				git.branch = version.toString();
-			else
-				git.tag = version.toString();
-		}
-	}
-	else if (load_source(root, source) && source.which() == 1)
-	{
-		auto &hg = boost::get<Hg>(source);
-		if (ver.empty())
-		{
-			if (hg.branch.empty() && hg.tag.empty() && hg.revision == -1)
-			{
-				ver = "default";
-				version = Version(ver);
-			}
-			else if (!hg.branch.empty())
-			{
-				ver = hg.branch;
-				try
-				{
-					// branch may contain bad symbols, so put in try...catch
-					version = Version(ver);
-				}
-				catch (std::exception &)
-				{
-				}
-			}
-			else if (!hg.tag.empty())
-			{
-				ver = hg.tag;
-				try
-				{
-					// tag may contain bad symbols, so put in try...catch
-					version = Version(ver);
-				}
-				catch (std::exception &)
-				{
-				}
-			}
-			else if (hg.revision != -1)
-			{
-				ver = hg.revision;
-				try
-				{
-					// tag may contain bad symbols, so put in try...catch
-					version = Version(ver);
-				}
-				catch (std::exception &)
-				{
-				}
-			}
-		}
+        if (version.isValid() && git.branch.empty() && git.tag.empty() && git.commit.empty())
+        {
+            if (version.isBranch())
+                git.branch = version.toString();
+            else
+                git.tag = version.toString();
+        }
+    }
+    else if (load_source(root, source) && source.which() == 1)
+    {
+        auto &hg = boost::get<Hg>(source);
+        if (ver.empty())
+        {
+            if (hg.branch.empty() && hg.tag.empty() && hg.revision == -1)
+            {
+                ver = "default";
+                version = Version(ver);
+            }
+            else if (!hg.branch.empty())
+            {
+                ver = hg.branch;
+                try
+                {
+                    // branch may contain bad symbols, so put in try...catch
+                    version = Version(ver);
+                }
+                catch (std::exception &)
+                {
+                }
+            }
+            else if (!hg.tag.empty())
+            {
+                ver = hg.tag;
+                try
+                {
+                    // tag may contain bad symbols, so put in try...catch
+                    version = Version(ver);
+                }
+                catch (std::exception &)
+                {
+                }
+            }
+            else if (hg.revision != -1)
+            {
+                ver = hg.revision;
+                try
+                {
+                    // tag may contain bad symbols, so put in try...catch
+                    version = Version(ver);
+                }
+                catch (std::exception &)
+                {
+                }
+            }
+        }
 
-		if (version.isValid() && hg.branch.empty() && hg.tag.empty() && hg.commit.empty() && hg.revision == -1)
-		{
-			if (version.isBranch())
-				hg.branch = version.toString();
-			else
-				hg.tag = version.toString();
-		}
-	}
+        if (version.isValid() && hg.branch.empty() && hg.tag.empty() && hg.commit.empty() && hg.revision == -1)
+        {
+            if (version.isBranch())
+                hg.branch = version.toString();
+            else
+                hg.tag = version.toString();
+        }
+    }
 }
 
 void BuildSystemConfigInsertions::load(const yaml &n)
@@ -1181,15 +1181,15 @@ void Project::load(const yaml &root)
                 include_directories.public_.insert("include");
             else
             {*/
-                // root_directory part must be checked on server side or during local pkg build
-                // second part - on installed package
-                if (fs::exists(root_directory / "include") || fs::exists("include"))
-                    include_directories.public_.insert("include");
-                else
-                {
-                    include_directories.public_.insert(".");
-                    // one case left: root_directory / "."
-                }
+            // root_directory part must be checked on server side or during local pkg build
+            // second part - on installed package
+            if (fs::exists(root_directory / "include") || fs::exists("include"))
+                include_directories.public_.insert("include");
+            else
+            {
+                include_directories.public_.insert(".");
+                // one case left: root_directory / "."
+            }
             //}
         }
         if (defaults_allowed && iempty)
@@ -1208,22 +1208,22 @@ void Project::load(const yaml &root)
                 }
                 else
                 {*/
-                    if (fs::exists(root_directory / current) || fs::exists(current))
-                    {
-                        if (fs::exists(root_directory / "include") || fs::exists("include"))
-                            include_directories.private_.insert(current);
-                        else
-                        {
-                            include_directories.public_.insert(current);
-                            // one case left: root_directory / "src"
-                        }
-                    }
+                if (fs::exists(root_directory / current) || fs::exists(current))
+                {
+                    if (fs::exists(root_directory / "include") || fs::exists("include"))
+                        include_directories.private_.insert(current);
                     else
                     {
-                        // now check next dir
-                        if (!next.empty())
-                            autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
+                        include_directories.public_.insert(current);
+                        // one case left: root_directory / "src"
                     }
+                }
+                else
+                {
+                    // now check next dir
+                    if (!next.empty())
+                        autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
+                }
                 //}
             };
             static Strings dirs(source_dir_names.begin(), source_dir_names.end());
@@ -1286,7 +1286,7 @@ yaml Project::save() const
         save_source(root, source);
     if (pkg.version.isValid() &&
         (pkg.version.type == VersionType::Version ||
-         pkg.version.type == VersionType::Branch))
+            pkg.version.type == VersionType::Branch))
         root["version"] = pkg.version.toString();
 
     ADD_IF_NOT_EMPTY(name);

@@ -168,7 +168,7 @@ try
                 Settings::get_system_settings().can_update_packages_db = false;
                 getPackagesDatabase();
 
-                command_init(Strings(args.begin()+2,args.end()));
+                command_init(Strings(args.begin() + 2, args.end()));
                 return 0;
             }
 
@@ -385,7 +385,7 @@ try
                 DownloadSource ds;
                 ds.download(project.source);
 
-				fs::copy_file(CPPAN_FILENAME, p / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
+                fs::copy_file(CPPAN_FILENAME, p / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
             }
             SCOPE_EXIT
             {
@@ -549,24 +549,24 @@ void self_upgrade()
 
 void self_upgrade_copy(const path &dst)
 {
-	int n = 3;
-	while (n--)
-	{
-		std::this_thread::sleep_for(std::chrono::seconds(2));
-		try
-		{
-			fs::copy_file(get_program(), dst, fs::copy_option::overwrite_if_exists);
-			break;
-		}
-		catch (std::exception &e)
-		{
-			std::cerr << "Cannot replace program with new executable: " << e.what() << "\n";
-			if (n == 0)
-				throw;
-			std::cerr << "Retrying... (" << n + 1 << ")\n";
-		}
-	}
-	std::cout << "Success!\n";
+    int n = 3;
+    while (n--)
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        try
+        {
+            fs::copy_file(get_program(), dst, fs::copy_option::overwrite_if_exists);
+            break;
+        }
+        catch (std::exception &e)
+        {
+            std::cerr << "Cannot replace program with new executable: " << e.what() << "\n";
+            if (n == 0)
+                throw;
+            std::cerr << "Retrying... (" << n + 1 << ")\n";
+        }
+    }
+    std::cout << "Success!\n";
 }
 
 optional<int> internal(const Strings &args)
