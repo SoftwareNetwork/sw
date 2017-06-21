@@ -385,7 +385,7 @@ try
                 DownloadSource ds;
                 ds.download(project.source);
 
-                fs::copy_file(CPPAN_FILENAME, p / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
+                fs::copy_file(cwd / CPPAN_FILENAME, CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
             }
             SCOPE_EXIT
             {

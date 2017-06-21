@@ -318,7 +318,7 @@ void load_source_and_version(const yaml &root, Source &source, Version &version)
             }
             else if (hg.revision != -1)
             {
-                ver = hg.revision;
+                ver = "revision: " + std::to_string(hg.revision);
                 try
                 {
                     // tag may contain bad symbols, so put in try...catch
