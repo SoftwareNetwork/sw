@@ -205,7 +205,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
             // so we can take 'first' build in document
             if (root["current_build"].IsDefined())
             {
-                if (root["builds"][root["current_build"]].IsDefined())
+                if (root["builds"][root["current_build"].template as<String>()].IsDefined())
                     current_build = root["builds"][root["current_build"].template as<String>()];
                 else
                 {
