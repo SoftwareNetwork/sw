@@ -306,7 +306,7 @@ check_include_exists:
 # After successful check a definition in form of HAVE_TYPE will be available.
 # After successful check a definition in form of SIZEOF_TYPE=N will be available, N - sizeof(type).
 # After successful check a definition in form of SIZE_OF_TYPE=N will be available, N - sizeof(type).
-check_include_exists:
+check_type_size:
     # SIZEOF_VOID_P
     - "void *"
 
@@ -315,7 +315,7 @@ check_include_exists:
 
 # check_library_exists - check library existence
 # After successful check a definition in form of HAVE_LIBRARY will be available.
-check_include_exists:
+check_library_exists:
     - m
     - pthread
     - dl
@@ -324,7 +324,7 @@ check_include_exists:
 
 # check_symbol_exists - check symbol's existence.
 # After successful check a definition in form of HAVE_MY_SYMBOL will be available.
-check_include_exists:
+check_symbol_exists:
     - my_symbol
     - ...
 
