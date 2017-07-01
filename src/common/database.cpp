@@ -67,6 +67,7 @@ std::vector<StartupAction> startup_actions{
     { 8, StartupAction::ClearCfgDirs },
     { 9, StartupAction::ClearStorageDirExp },
     { 10, StartupAction::ClearPackagesDatabase },
+    { 11, StartupAction::ServiceDbClearConfigHashes },
 };
 
 const TableDescriptors &get_service_tables()
