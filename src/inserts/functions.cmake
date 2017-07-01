@@ -278,7 +278,7 @@ function(get_configuration_unhashed out)
     endif()
 
     set(msvc_arch)
-    if (MSVC AND MSVC_C_ARCHITECTURE_ID)
+    if (MSVC AND (MSVC_C_ARCHITECTURE_ID OR MSVC_CXX_ARCHITECTURE_ID))
         prepare_config_part(msvc_arch ${MSVC_C_ARCHITECTURE_ID})
         set(msvc_arch ${CPPAN_CONFIG_PART_DELIMETER}${msvc_arch})
 
