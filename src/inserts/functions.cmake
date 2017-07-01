@@ -277,6 +277,18 @@ function(get_configuration_unhashed out)
         set(toolset ${CPPAN_CONFIG_PART_DELIMETER}${toolset})
     endif()
 
+    set(msvc_arch)
+    if (MSVC AND MSVC_C_ARCHITECTURE_ID)
+        prepare_config_part(msvc_arch ${MSVC_C_ARCHITECTURE_ID})
+        set(msvc_arch ${CPPAN_CONFIG_PART_DELIMETER}${msvc_arch})
+
+        # can they differ?
+        if (MSVC_CXX_ARCHITECTURE_ID AND NOT "${MSVC_C_ARCHITECTURE_ID}" STREQUAL "${MSVC_CXX_ARCHITECTURE_ID}")
+            prepare_config_part(msvc_arch2 ${MSVC_CXX_ARCHITECTURE_ID})
+            set(msvc_arch ${msvc_arch}${CPPAN_CONFIG_PART_DELIMETER}${msvc_arch2})
+        endif()
+    endif()
+
     # add suffix (configuration) to distinguish build types
     # for non VS/XCODE builds
     set(configuration)
@@ -285,7 +297,7 @@ function(get_configuration_unhashed out)
     endif()
 
     set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${version})
-    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${bits}${mt_flag}${dll}${toolset})
+    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${bits}${msvc_arch}${mt_flag}${dll}${toolset})
     set(config ${config}${configuration})
 
     set(${out} ${config} PARENT_SCOPE)
