@@ -85,6 +85,38 @@ bool Hg::isValid(String *error) const
     return true;
 }
 
+bool Bzr::isValid(String *error) const
+{
+    if (empty())
+    {
+        if (error)
+            *error = "Bzr url is missing";
+        return false;
+    }
+
+    int e = 0;
+    e += !tag.empty();
+    e += revision != -1;
+
+
+    if (e == 0)
+    {
+        if (error)
+            *error = "No bzr sources (tag or revision) available";
+        return false;
+    }
+
+    if (e > 1)
+    {
+        if (error)
+            *error = "Only one Bzr source (tag or revision) must be specified";
+        return false;
+    }
+
+    return true;
+}
+
+
 bool load_source(const yaml &root, Source &source)
 {
     auto &src = root["source"];
@@ -93,7 +125,7 @@ bool load_source(const yaml &root, Source &source)
 
     auto error = "Only one source must be specified";
 
-    Strings nameRepo = { "git", "hg" };
+    Strings nameRepo = { "git", "hg" , "bzr" };
     String urlStr = "";
     int iRepo;
     for (size_t i = 0; i < nameRepo.size(); i++)
@@ -173,6 +205,39 @@ bool load_source(const yaml &root, Source &source)
             source = rfs;
         }
     }
+    else if (nameRepo[iRepo] == "bzr")
+    {
+        Bzr bzr;
+        YAML_EXTRACT_VAR(src, bzr.url, "bzr", String);
+        YAML_EXTRACT_VAR(src, bzr.tag, "tag", String);
+        YAML_EXTRACT_VAR(src, bzr.revision, "revision", int64_t);
+        //
+
+        if (!bzr.url.empty())
+        {
+            if (src["file"].IsDefined())
+                throw std::runtime_error(error);
+            source = bzr;
+        }
+        else if (src["remote"].IsDefined())
+        {
+            RemoteFile rf;
+            YAML_EXTRACT_VAR(src, rf.url, "remote", String);
+
+            if (!rf.url.empty())
+                source = rf;
+            else
+                throw std::runtime_error(error);
+        }
+        else if (src["files"].IsDefined())
+        {
+            RemoteFiles rfs;
+            rfs.urls = get_sequence_set<String>(src, "files");
+            if (rfs.urls.empty())
+                throw std::runtime_error("Empty remote files");
+            source = rfs;
+        }
+    }
 
     return true;
 }
@@ -200,6 +265,14 @@ void save_source(yaml &root, const Source &source)
             root["source"]["commit"] = hg.commit;
         if (hg.revision != -1)
             root["source"]["revision"] = hg.revision;
+    },
+        [&root](const Bzr &bzr)
+    {
+        root["source"]["bzr"] = bzr.url;
+        if (!bzr.tag.empty())
+            root["source"]["tag"] = bzr.tag;
+        if (bzr.revision != 0)
+            root["source"]["revision"] = bzr.revision;
     },
         [&root](const RemoteFile &rf)
     {
@@ -330,6 +403,41 @@ void DownloadSource::operator()(const Hg &hg)
     }
 }
 
+void DownloadSource::operator()(const Bzr &bzr)
+{
+    auto run = [](const String &c)
+    {
+        if (std::system(c.c_str()) != 0)
+            throw std::runtime_error("Last command failed: " + c);
+    };
+
+    int n_tries = 3;
+    while (n_tries--)
+    {
+        try
+        {
+            run("bzr branch " + bzr.url);
+
+            String branchPath = bzr.url.substr(bzr.url.find_last_of("/") + 1);
+            auto p = fs::current_path();
+            fs::current_path(p / branchPath);
+
+            if (!bzr.tag.empty())
+                run("bzr update -r tag:" + bzr.tag);
+            else if (bzr.revision != -1)
+                run("bzr update -r " + std::to_string(bzr.revision));
+
+            fs::current_path(p);
+            break;
+        }
+        catch (...)
+        {
+            if (n_tries == 0)
+                throw;
+        }
+    }
+}
+
 void DownloadSource::operator()(const RemoteFile &rf)
 {
     download_and_unpack(rf.url, path(rf.url).filename());
@@ -374,6 +482,12 @@ bool isValidSourceUrl(const Source &source)
             return false;
         return true;
     },
+        [](const Bzr &bzr)
+    {
+        if (!isValidSourceUrl(bzr.url))
+            return false;
+        return true;
+    },
         [](const RemoteFile &rf)
     {
         if (!isValidSourceUrl(rf.url))
@@ -412,6 +526,15 @@ Source load_source(const ptree &p)
         hg.revision = p.get("source.hg.revision", -1);
         if (!hg.empty())
             return hg;
+    }
+
+    {
+        Bzr bzr;
+        bzr.url = p.get("source.bzr.url", "");
+        bzr.tag = p.get("source.bzr.tag", "");
+        bzr.revision = p.get("source.bzr.revision", -1);
+        if (!bzr.empty())
+            return bzr;
     }
 
     {
@@ -461,6 +584,16 @@ void save_source(ptree &p, const Source &source)
             p.add("source.hg.commit", hg.commit);
         if (hg.revision != -1)
             p.add("source.hg.revision", hg.revision);
+    },
+        [&p](const Bzr &bzr)
+    {
+        if (bzr.empty())
+            return;
+        p.add("source.bzr.url", bzr.url);
+        if (!bzr.tag.empty())
+            p.add("source.bzr.tag", bzr.tag);
+        if (bzr.revision != -1)
+            p.add("source.bzr.revision", bzr.revision);
     },
         [&p](const RemoteFile &rf)
     {
@@ -516,6 +649,18 @@ String print_source(const Source &source)
             r += "commit: " + hg.commit + "\n";
         if (hg.revision != -1)
             r += "revision: " + std::to_string(hg.revision) + "\n";
+        return r;
+    },
+        [](const Bzr &bzr)
+    {
+        String r = "bzr:\n";
+        if (bzr.empty())
+            return r;
+        r += "url: " + bzr.url + "\n";
+        if (!bzr.tag.empty())
+            r += "tag: " + bzr.tag + "\n";
+        if (bzr.revision != -1)
+            r += "revision: " + std::to_string(bzr.revision) + "\n";
         return r;
     },
         [](const RemoteFile &rf)
