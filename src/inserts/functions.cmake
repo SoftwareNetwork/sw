@@ -637,9 +637,13 @@ endfunction(check_result_variable)
 # FUNCTION replace_in_file_once
 ########################################
 
+# TODO: create files in BDIR
 function(replace_in_file_once f from to)
     string(SHA1 h "${f}${from}${to}")
     string(SUBSTRING "${h}" 0 5 h)
+
+    # cannot set this file to bdir because multiple configs use
+    # different bdirs and will do multiple replacements
     set(h ${f}.${h})
 
     if (EXISTS ${h})

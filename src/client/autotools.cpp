@@ -205,7 +205,7 @@ auto parse_conditions(String f)
         a.equ = sign == "=";
         a.value = val;
         a.start = (int)(m[0].first - s.begin());
-        if (sign != "=" && sign != "!=")
+        if (sign != "=" && sign != "!=") // TODO: implement '-gt' sign
             std::cerr << "Unknown sign " << sign << "\n";
         else
         {
