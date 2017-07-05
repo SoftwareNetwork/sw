@@ -71,14 +71,14 @@ bool Hg::isValid(String *error) const
     if (e == 0)
     {
         if (error)
-            *error = "No hg sources (tag or branch or commit) available";
+            *error = "No hg sources (tag or branch or commit or revision) available";
         return false;
     }
 
     if (e > 1)
     {
         if (error)
-            *error = "Only one hg source (tag or branch or commit) must be specified";
+            *error = "Only one hg source (tag or branch or commit or revision) must be specified";
         return false;
     }
 
@@ -116,6 +116,36 @@ bool Bzr::isValid(String *error) const
     return true;
 }
 
+bool Fossil::isValid(String *error) const
+{
+    if (empty())
+    {
+        if (error)
+            *error = "Fossil url is missing";
+        return false;
+    }
+
+    int e = 0;
+    e += !tag.empty();
+    e += !branch.empty();
+    e += !commit.empty();
+
+    if (e == 0)
+    {
+        if (error)
+            *error = "No fossil sources (tag or branch or commit) available";
+        return false;
+    }
+
+    if (e > 1)
+    {
+        if (error)
+            *error = "Only one fossil source (tag or branch or commit) must be specified";
+        return false;
+    }
+
+    return true;
+}
 
 bool load_source(const yaml &root, Source &source)
 {
@@ -125,19 +155,18 @@ bool load_source(const yaml &root, Source &source)
 
     auto error = "Only one source must be specified";
 
-    Strings nameRepo = { "git", "hg" , "bzr" };
-    String urlStr = "";
-    int iRepo;
-    for (size_t i = 0; i < nameRepo.size(); i++)
+    const Strings nameRepo = { "git", "hg" , "bzr" , "fossil", "remote", "files"};
+    String urlStr;
+    for (auto i : nameRepo)
     {
-        YAML_EXTRACT_VAR(src, urlStr, nameRepo[i], String);
+        YAML_EXTRACT_VAR(src, urlStr, i, String);
         if (urlStr != "")
         {
-            iRepo = i;
+            urlStr = i;
             break;
         }
     }
-    if (nameRepo[iRepo] == "git")
+    if (urlStr == "git")
     {
         Git git;
         YAML_EXTRACT_VAR(src, git.url, "git", String);
@@ -145,32 +174,9 @@ bool load_source(const yaml &root, Source &source)
         YAML_EXTRACT_VAR(src, git.branch, "branch", String);
         YAML_EXTRACT_VAR(src, git.commit, "commit", String);
 
-        if (!git.url.empty())
-        {
-            if (src["file"].IsDefined())
-                throw std::runtime_error(error);
-            source = git;
-        }
-        else if (src["remote"].IsDefined())
-        {
-            RemoteFile rf;
-            YAML_EXTRACT_VAR(src, rf.url, "remote", String);
-
-            if (!rf.url.empty())
-                source = rf;
-            else
-                throw std::runtime_error(error);
-        }
-        else if (src["files"].IsDefined())
-        {
-            RemoteFiles rfs;
-            rfs.urls = get_sequence_set<String>(src, "files");
-            if (rfs.urls.empty())
-                throw std::runtime_error("Empty remote files");
-            source = rfs;
-        }
+        source = git;
     }
-    else if (nameRepo[iRepo] == "hg")
+    else if (urlStr == "hg")
     {
         Hg hg;
         YAML_EXTRACT_VAR(src, hg.url, "hg", String);
@@ -178,69 +184,52 @@ bool load_source(const yaml &root, Source &source)
         YAML_EXTRACT_VAR(src, hg.branch, "branch", String);
         YAML_EXTRACT_VAR(src, hg.commit, "commit", String);
         YAML_EXTRACT_VAR(src, hg.revision, "revision", int64_t);
-        //
 
-        if (!hg.url.empty())
-        {
-            if (src["file"].IsDefined())
-                throw std::runtime_error(error);
-            source = hg;
-        }
-        else if (src["remote"].IsDefined())
-        {
-            RemoteFile rf;
-            YAML_EXTRACT_VAR(src, rf.url, "remote", String);
-
-            if (!rf.url.empty())
-                source = rf;
-            else
-                throw std::runtime_error(error);
-        }
-        else if (src["files"].IsDefined())
-        {
-            RemoteFiles rfs;
-            rfs.urls = get_sequence_set<String>(src, "files");
-            if (rfs.urls.empty())
-                throw std::runtime_error("Empty remote files");
-            source = rfs;
-        }
+        source = hg;
     }
-    else if (nameRepo[iRepo] == "bzr")
+    else if (urlStr == "bzr")
     {
         Bzr bzr;
         YAML_EXTRACT_VAR(src, bzr.url, "bzr", String);
         YAML_EXTRACT_VAR(src, bzr.tag, "tag", String);
         YAML_EXTRACT_VAR(src, bzr.revision, "revision", int64_t);
-        //
 
-        if (!bzr.url.empty())
-        {
-            if (src["file"].IsDefined())
-                throw std::runtime_error(error);
-            source = bzr;
-        }
-        else if (src["remote"].IsDefined())
-        {
-            RemoteFile rf;
-            YAML_EXTRACT_VAR(src, rf.url, "remote", String);
-
-            if (!rf.url.empty())
-                source = rf;
-            else
-                throw std::runtime_error(error);
-        }
-        else if (src["files"].IsDefined())
-        {
-            RemoteFiles rfs;
-            rfs.urls = get_sequence_set<String>(src, "files");
-            if (rfs.urls.empty())
-                throw std::runtime_error("Empty remote files");
-            source = rfs;
-        }
+        source = bzr;
     }
+    else if (urlStr == "fossil")
+    {
+        Fossil fossil;
+        YAML_EXTRACT_VAR(src, fossil.url, "fossil", String);
+        YAML_EXTRACT_VAR(src, fossil.tag, "tag", String);
+        YAML_EXTRACT_VAR(src, fossil.branch, "branch", String);
+        YAML_EXTRACT_VAR(src, fossil.commit, "commit", String);
+        
+        source = fossil;
+    }
+    else if (urlStr == "remote")
+    {
+        RemoteFile rf;
+        YAML_EXTRACT_VAR(src, rf.url, "remote", String);
+
+        if (!rf.url.empty())
+            source = rf;
+        else
+            throw std::runtime_error(error);
+    }
+    else if (urlStr == "files")
+    {
+        RemoteFiles rfs;
+        rfs.urls = get_sequence_set<String>(src, "files");
+        if (rfs.urls.empty())
+            throw std::runtime_error("Empty remote files");
+        source = rfs;
+    }
+    else
+        throw std::runtime_error("Empty source");
 
     return true;
 }
+
 void save_source(yaml &root, const Source &source)
 {
     auto save_source = overload(
@@ -271,8 +260,18 @@ void save_source(yaml &root, const Source &source)
         root["source"]["bzr"] = bzr.url;
         if (!bzr.tag.empty())
             root["source"]["tag"] = bzr.tag;
-        if (bzr.revision != 0)
+        if (bzr.revision != -1)
             root["source"]["revision"] = bzr.revision;
+    },
+        [&root](const Fossil &fossil)
+    {
+        root["source"]["fossil"] = fossil.url;
+        if (!fossil.tag.empty())
+            root["source"]["tag"] = fossil.tag;
+        if (!fossil.branch.empty())
+            root["source"]["branch"] = fossil.branch;
+        if (!fossil.commit.empty())
+            root["source"]["commit"] = fossil.commit;
     },
         [&root](const RemoteFile &rf)
     {
@@ -286,6 +285,31 @@ void save_source(yaml &root, const Source &source)
     );
 
     boost::apply_visitor(save_source, source);
+}
+
+static void run(const String &c)
+{
+    if (std::system(c.c_str()) != 0)
+        throw std::runtime_error("Last command failed: " + c);
+}
+
+template <typename F>
+static void downloadRepo(F &&f)
+{
+    int n_tries = 3;
+    while (n_tries--)
+    {
+        try
+        {
+            f();
+            break;
+        }
+        catch (...)
+        {
+            if (n_tries == 0)
+                throw;
+        }
+    }
 }
 
 void DownloadSource::operator()(const Git &git)
@@ -336,106 +360,86 @@ void DownloadSource::operator()(const Git &git)
         return;
 #endif
 
-    auto run = [](const String &c)
+    downloadRepo([&git]()
     {
-        if (std::system(c.c_str()) != 0)
-            throw std::runtime_error("Last command failed: " + c);
-    };
+        String branchPath = git.url.substr(git.url.find_last_of("/") + 1);
+        fs::create_directory(branchPath);
+        ScopedCurrentPath scp(fs::current_path() / branchPath);
 
-    int n_tries = 3;
-    while (n_tries--)
-    {
-        try
+        run("git init");
+        run("git remote add origin " + git.url);
+        if (!git.tag.empty())
         {
-            run("git init");
-            run("git remote add origin " + git.url);
-            if (!git.tag.empty())
-                run("git fetch --depth 1 origin refs/tags/" + git.tag);
-            else if (!git.branch.empty())
-                run("git fetch --depth 1 origin " + git.branch);
-            else if (!git.commit.empty())
-            {
-                run("git fetch");
-                run("git checkout " + git.commit);
-            }
+            run("git fetch --depth 1 origin refs/tags/" + git.tag);
             run("git reset --hard FETCH_HEAD");
-            break;
         }
-        catch (...)
+        else if (!git.branch.empty())
         {
-            if (n_tries == 0)
-                throw;
+            run("git fetch --depth 1 origin " + git.branch);
+            run("git reset --hard FETCH_HEAD");
         }
-    }
+        else if (!git.commit.empty())
+        {
+            run("git fetch");
+            run("git checkout " + git.commit);
+        }
+    });
 }
 
 void DownloadSource::operator()(const Hg &hg)
 {
-    auto run = [](const String &c)
+    downloadRepo ([&hg]()
     {
-        if (std::system(c.c_str()) != 0)
-            throw std::runtime_error("Last command failed: " + c);
-    };
+        run("hg clone " + hg.url);
 
-    int n_tries = 3;
-    while (n_tries--)
-    {
-        try
-        {
-            run("hg clone " + hg.url + " " + fs::current_path().string());
+        String branchPath = hg.url.substr(hg.url.find_last_of("/") + 1);
+        ScopedCurrentPath scp(fs::current_path() / branchPath);
 
-            if (!hg.tag.empty())
-                run("hg update " + hg.tag);
-            else if (!hg.branch.empty())
-                run("hg update " + hg.branch);
-            else if (!hg.commit.empty())
-                run("hg update " + hg.commit);
-            else if (hg.revision != -1)
-                run("hg update " + std::to_string(hg.revision));
-
-            break;
-        }
-        catch (...)
-        {
-            if (n_tries == 0)
-                throw;
-        }
-    }
+        if (!hg.tag.empty())
+            run("hg update " + hg.tag);
+        else if (!hg.branch.empty())
+            run("hg update " + hg.branch);
+        else if (!hg.commit.empty())
+            run("hg update " + hg.commit);
+        else if (hg.revision != -1)
+            run("hg update " + std::to_string(hg.revision));
+    });
 }
 
 void DownloadSource::operator()(const Bzr &bzr)
 {
-    auto run = [](const String &c)
+    downloadRepo([&bzr]()
     {
-        if (std::system(c.c_str()) != 0)
-            throw std::runtime_error("Last command failed: " + c);
-    };
+        run("bzr branch " + bzr.url);
 
-    int n_tries = 3;
-    while (n_tries--)
+        String branchPath = bzr.url.substr(bzr.url.find_last_of("/") + 1);
+        ScopedCurrentPath scp(fs::current_path() / branchPath);
+
+        if (!bzr.tag.empty())
+            run("bzr update -r tag:" + bzr.tag);
+        else if (bzr.revision != -1)
+            run("bzr update -r " + std::to_string(bzr.revision));
+    });
+}
+
+void DownloadSource::operator()(const Fossil &fossil)
+{
+    downloadRepo([&fossil]()
     {
-        try
-        {
-            run("bzr branch " + bzr.url);
+        run("fossil clone " + fossil.url + " " + "temp.fossil");
 
-            String branchPath = bzr.url.substr(bzr.url.find_last_of("/") + 1);
-            auto p = fs::current_path();
-            fs::current_path(p / branchPath);
+        fs::create_directory("temp");
+        ScopedCurrentPath scp(fs::current_path() / "temp");
 
-            if (!bzr.tag.empty())
-                run("bzr update -r tag:" + bzr.tag);
-            else if (bzr.revision != -1)
-                run("bzr update -r " + std::to_string(bzr.revision));
+        run("fossil open ../temp.fossil");
 
-            fs::current_path(p);
-            break;
-        }
-        catch (...)
-        {
-            if (n_tries == 0)
-                throw;
-        }
-    }
+        if (!fossil.tag.empty())
+            run("fossil update " + fossil.tag);
+        else if (!fossil.branch.empty())
+            run("fossil update " + fossil.branch);
+        else if (!fossil.commit.empty())
+            run("fossil update " + fossil.commit);
+    });
 }
 
 void DownloadSource::operator()(const RemoteFile &rf)
@@ -488,6 +492,12 @@ bool isValidSourceUrl(const Source &source)
             return false;
         return true;
     },
+        [](const Fossil &fossil)
+    {
+        if (!isValidSourceUrl(fossil.url))
+            return false;
+        return true;
+    },
         [](const RemoteFile &rf)
     {
         if (!isValidSourceUrl(rf.url))
@@ -535,6 +545,15 @@ Source load_source(const ptree &p)
         bzr.revision = p.get("source.bzr.revision", -1);
         if (!bzr.empty())
             return bzr;
+    }
+    {
+        Fossil fossil;
+        fossil.url = p.get("source.fossil.url", "");
+        fossil.tag = p.get("source.fossil.tag", "");
+        fossil.branch = p.get("source.fossil.branch", "");
+        fossil.commit = p.get("source.fossil.commit", "");
+        if (!fossil.empty())
+            return fossil;
     }
 
     {
@@ -594,6 +613,18 @@ void save_source(ptree &p, const Source &source)
             p.add("source.bzr.tag", bzr.tag);
         if (bzr.revision != -1)
             p.add("source.bzr.revision", bzr.revision);
+    },
+        [&p](const Fossil &fossil)
+    {
+        if (fossil.empty())
+            return;
+        p.add("source.fossil.url", fossil.url);
+        if (!fossil.tag.empty())
+            p.add("source.fossil.tag", fossil.tag);
+        if (!fossil.branch.empty())
+            p.add("source.fossil.branch", fossil.branch);
+        if (!fossil.commit.empty())
+            p.add("source.fossil.commit", fossil.commit);
     },
         [&p](const RemoteFile &rf)
     {
@@ -661,6 +692,20 @@ String print_source(const Source &source)
             r += "tag: " + bzr.tag + "\n";
         if (bzr.revision != -1)
             r += "revision: " + std::to_string(bzr.revision) + "\n";
+        return r;
+    },
+        [](const Fossil &fossil)
+    {
+        String r = "fossil:\n";
+        if (fossil.empty())
+            return r;
+        r += "url: " + fossil.url + "\n";
+        if (!fossil.tag.empty())
+            r += "tag: " + fossil.tag + "\n";
+        if (!fossil.branch.empty())
+            r += "branch: " + fossil.branch + "\n";
+        if (!fossil.commit.empty())
+            r += "commit: " + fossil.commit + "\n";
         return r;
     },
         [](const RemoteFile &rf)
