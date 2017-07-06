@@ -615,7 +615,7 @@ void save_source(yaml &root, const Source &source)
 
 Source load_source(const ptree &p)
 {
-#define TRY_TO_LOAD_SOURCE(x) x x##_; if (x##_.load(p.get_child("source" + x::getString()))) return x##_
+#define TRY_TO_LOAD_SOURCE(x) x x##_; if (x##_.load(p.get_child("source." + x::getString()))) return x##_
     SOURCE_TYPES(TRY_TO_LOAD_SOURCE, DELIM_SEMICOLON);
     throw std::runtime_error("Bad source");
 }
