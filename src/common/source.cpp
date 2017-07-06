@@ -619,12 +619,14 @@ void save_source(yaml &root, const Source &source)
 
 Source load_source(const ptree &p)
 {
-#define TRY_TO_LOAD_SOURCE(x)                                  \
-    x x##_;                                                    \
-    if (p.find("source." + x::getString()) != p.not_found() && \
-        x##_.load(p.get_child("source." + x::getString())))    \
-    return x##_
-
+    auto c = p.get_child("source");
+#define TRY_TO_LOAD_SOURCE(x)                               \
+    if (c.find(x::getString()) != c.not_found())            \
+    {                                                       \
+        x x##_;                                             \
+        x##_.load(c.get_child(x::getString()));             \
+        return x##_;                                        \
+    }
     SOURCE_TYPES(TRY_TO_LOAD_SOURCE, DELIM_SEMICOLON);
     throw std::runtime_error("Bad source");
 }

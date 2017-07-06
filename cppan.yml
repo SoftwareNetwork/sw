@@ -26,6 +26,8 @@ local_settings:
         pvt.egorpugin.primitives.pack: master
         pvt.egorpugin.primitives.yaml: master
 
+        pvt.cppan.demo.philsquared.catch: 1
+
 root_project: pvt.cppan.client
 
 projects:

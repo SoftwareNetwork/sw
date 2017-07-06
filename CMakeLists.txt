@@ -98,6 +98,9 @@ add_subdirectory(.cppan)
 
 add_subdirectory(src)
 
+enable_testing()
+add_subdirectory(test)
+
 ###############################################################################
 #
 # install & uninstall
