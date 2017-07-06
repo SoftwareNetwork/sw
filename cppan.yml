@@ -36,7 +36,6 @@ projects:
         files:
             - src/common/.*
             - src/printers/.*
-            - dep/process/.*
             - src/comments/.*
             - src/bazel/.*
             - src/inserts/.*
@@ -56,7 +55,6 @@ projects:
                 - src
                 - src/common
                 - src/support
-                - dep/process
 
         dependencies:
             - pvt.cppan.demo.boost.optional: 1
