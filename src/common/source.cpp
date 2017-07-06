@@ -17,18 +17,86 @@
 #include "source.h"
 
 #include "http.h"
+#include "yaml.h"
 
 #include <primitives/overloads.h>
 #include <primitives/pack.h>
 
-bool Git::isValid(String *error) const
+#define PTREE_ADD(x) p.add(#x, x)
+#define PTREE_ADD_NOT_EMPTY(x) if (!x.empty()) PTREE_ADD(x)
+#define PTREE_ADD_NOT_MINUS_ONE(x) if (x != -1) PTREE_ADD(x)
+
+#define PTREE_GET_STRING(x) x = p.get(#x, "")
+#define PTREE_GET_INT(x) x = p.get(#x, -1)
+
+#define STRING_PRINT_VALUE(x, v) r += #x ": " + v + "\n"
+#define STRING_PRINT(x) STRING_PRINT_VALUE(#x, x)
+#define STRING_PRINT_NOT_EMPTY(x) if (!x.empty()) STRING_PRINT(x)
+#define STRING_PRINT_NOT_MINUS_ONE(x) if (x != -1) STRING_PRINT_VALUE(#x, std::to_string(x))
+
+#define YAML_SET(x, n) root[n] = x
+#define YAML_SET_NOT_EMPTY(x) if (!x.empty()) YAML_SET(x, #x)
+#define YAML_SET_NOT_MINUS_ONE(x) if (x != -1) YAML_SET(x, #x)
+
+SourceUrl::SourceUrl(const yaml &root, const String &name)
+{
+    YAML_EXTRACT_VAR(root, url, name, String);
+}
+
+bool SourceUrl::isValid(const String &name, String *error) const
+{
+    if (!empty())
+        return true;
+    if (error)
+        *error = name + " url is missing";
+    return false;
+}
+
+bool SourceUrl::isValidUrl() const
+{
+    return isValidSourceUrl(url);
+}
+
+bool SourceUrl::load(const ptree &p)
+{
+    PTREE_GET_STRING(url);
+    return !empty();
+}
+
+bool SourceUrl::save(ptree &p) const
 {
     if (empty())
-    {
-        if (error)
-            *error = "Git url is missing";
         return false;
-    }
+    PTREE_ADD(url);
+    return true;
+}
+
+void SourceUrl::save(yaml &root, const String &name) const
+{
+    YAML_SET(url, name);
+}
+
+String SourceUrl::print() const
+{
+    String r;
+    if (empty())
+        return r;
+    STRING_PRINT(url);
+    return r;
+}
+
+Git::Git(const yaml &root, const String &name)
+    : SourceUrl(root, name)
+{
+    YAML_EXTRACT_AUTO(tag);
+    YAML_EXTRACT_AUTO(branch);
+    YAML_EXTRACT_AUTO(commit);
+}
+
+bool Git::isValid(String *error) const
+{
+    if (!SourceUrl::isValid(getString(), error))
+        return false;
 
     int e = 0;
     e += !tag.empty();
@@ -52,21 +120,61 @@ bool Git::isValid(String *error) const
     return true;
 }
 
+bool Git::load(const ptree &p)
+{
+    if (!SourceUrl::load(p))
+        return false;
+    PTREE_GET_STRING(tag);
+    PTREE_GET_STRING(branch);
+    PTREE_GET_STRING(commit);
+    return true;
+}
+
+bool Git::save(ptree &p) const
+{
+    if (!SourceUrl::save(p))
+        return false;
+    PTREE_ADD_NOT_EMPTY(tag);
+    PTREE_ADD_NOT_EMPTY(branch);
+    PTREE_ADD_NOT_EMPTY(commit);
+    return true;
+}
+
+void Git::save(yaml &root, const String &name) const
+{
+    SourceUrl::save(root, name);
+    YAML_SET_NOT_EMPTY(tag);
+    YAML_SET_NOT_EMPTY(branch);
+    YAML_SET_NOT_EMPTY(commit);
+}
+
+String Git::print() const
+{
+    auto r = SourceUrl::print();
+    if (r.empty())
+        return r;
+    STRING_PRINT_NOT_EMPTY(tag);
+    STRING_PRINT_NOT_EMPTY(branch);
+    STRING_PRINT_NOT_EMPTY(commit);
+    return r;
+}
+
+Hg::Hg(const yaml &root, const String &name)
+    : Git(root, name)
+{
+    YAML_EXTRACT_AUTO(revision);
+}
+
 bool Hg::isValid(String *error) const
 {
-    if (empty())
-    {
-        if (error)
-            *error = "Hg url is missing";
+    if (!SourceUrl::isValid(getString(), error))
         return false;
-    }
 
     int e = 0;
     e += !tag.empty();
     e += !branch.empty();
     e += !commit.empty();
     e += revision != -1;
-
 
     if (e == 0)
     {
@@ -85,19 +193,52 @@ bool Hg::isValid(String *error) const
     return true;
 }
 
+bool Hg::load(const ptree &p)
+{
+    if (!Git::load(p))
+        return false;
+    PTREE_GET_INT(revision);
+    return true;
+}
+
+bool Hg::save(ptree &p) const
+{
+    if (!Git::save(p))
+        return false;
+    PTREE_ADD_NOT_MINUS_ONE(revision);
+    return true;
+}
+
+void Hg::save(yaml &root, const String &name) const
+{
+    Git::save(root, name);
+    YAML_SET_NOT_MINUS_ONE(revision);
+}
+
+String Hg::print() const
+{
+    auto r = Git::print();
+    if (r.empty())
+        return r;
+    STRING_PRINT_NOT_MINUS_ONE(revision);
+    return r;
+}
+
+Bzr::Bzr(const yaml &root, const String &name)
+    : SourceUrl(root, name)
+{
+    YAML_EXTRACT_AUTO(tag);
+    YAML_EXTRACT_AUTO(revision);
+}
+
 bool Bzr::isValid(String *error) const
 {
-    if (empty())
-    {
-        if (error)
-            *error = "Bzr url is missing";
+    if (!SourceUrl::isValid(getString(), error))
         return false;
-    }
 
     int e = 0;
     e += !tag.empty();
     e += revision != -1;
-
 
     if (e == 0)
     {
@@ -116,14 +257,50 @@ bool Bzr::isValid(String *error) const
     return true;
 }
 
+bool Bzr::load(const ptree &p)
+{
+    if (!SourceUrl::load(p))
+        return false;
+    PTREE_GET_STRING(tag);
+    PTREE_GET_INT(revision);
+    return true;
+}
+
+bool Bzr::save(ptree &p) const
+{
+    if (!SourceUrl::save(p))
+        return false;
+    PTREE_ADD_NOT_EMPTY(tag);
+    PTREE_ADD_NOT_MINUS_ONE(revision);
+    return true;
+}
+
+void Bzr::save(yaml &root, const String &name) const
+{
+    SourceUrl::save(root, name);
+    YAML_SET_NOT_EMPTY(tag);
+    YAML_SET_NOT_MINUS_ONE(revision);
+}
+
+String Bzr::print() const
+{
+    auto r = SourceUrl::print();
+    if (r.empty())
+        return r;
+    STRING_PRINT_NOT_EMPTY(tag);
+    STRING_PRINT_NOT_MINUS_ONE(revision);
+    return r;
+}
+
+Fossil::Fossil(const yaml &root, const String &name)
+    : Git(root, name)
+{
+}
+
 bool Fossil::isValid(String *error) const
 {
-    if (empty())
-    {
-        if (error)
-            *error = "Fossil url is missing";
+    if (!SourceUrl::isValid(getString(), error))
         return false;
-    }
 
     int e = 0;
     e += !tag.empty();
@@ -147,144 +324,70 @@ bool Fossil::isValid(String *error) const
     return true;
 }
 
-bool load_source(const yaml &root, Source &source)
+void Fossil::save(yaml &root, const String &name) const
 {
-    auto &src = root["source"];
-    if (!src.IsDefined())
+    Git::save(root, name);
+}
+
+RemoteFile::RemoteFile(const yaml &root, const String &name)
+    : SourceUrl(root, name)
+{
+    if (url.empty())
+        throw std::runtime_error("Remote url is missing");
+}
+
+void RemoteFile::save(yaml &root, const String &name) const
+{
+    SourceUrl::save(root, name);
+}
+
+RemoteFiles::RemoteFiles(const yaml &root, const String &name)
+{
+    urls = get_sequence_set<String>(root, name);
+    if (urls.empty())
+        throw std::runtime_error("Empty remote files");
+}
+
+bool RemoteFiles::isValidUrl() const
+{
+    return std::all_of(urls.begin(), urls.end(),
+        [](auto &u) { return isValidSourceUrl(u); });
+}
+
+bool RemoteFiles::load(const ptree &p)
+{
+    for (auto &url : p)
+        urls.insert(url.second.get("url", ""s));
+    return !empty();
+}
+
+bool RemoteFiles::save(ptree &p) const
+{
+    if (empty())
         return false;
-
-    auto error = "Only one source must be specified";
-
-    const Strings nameRepo = { "git", "hg" , "bzr" , "fossil", "remote", "files"};
-    String urlStr;
-    for (auto i : nameRepo)
+    for (auto &rf : urls)
     {
-        YAML_EXTRACT_VAR(src, urlStr, i, String);
-        if (urlStr != "")
-        {
-            urlStr = i;
-            break;
-        }
+        ptree c;
+        c.put("url", rf);
+        p.push_back(std::make_pair("", c));
     }
-    if (urlStr == "git")
-    {
-        Git git;
-        YAML_EXTRACT_VAR(src, git.url, "git", String);
-        YAML_EXTRACT_VAR(src, git.tag, "tag", String);
-        YAML_EXTRACT_VAR(src, git.branch, "branch", String);
-        YAML_EXTRACT_VAR(src, git.commit, "commit", String);
-
-        source = git;
-    }
-    else if (urlStr == "hg")
-    {
-        Hg hg;
-        YAML_EXTRACT_VAR(src, hg.url, "hg", String);
-        YAML_EXTRACT_VAR(src, hg.tag, "tag", String);
-        YAML_EXTRACT_VAR(src, hg.branch, "branch", String);
-        YAML_EXTRACT_VAR(src, hg.commit, "commit", String);
-        YAML_EXTRACT_VAR(src, hg.revision, "revision", int64_t);
-
-        source = hg;
-    }
-    else if (urlStr == "bzr")
-    {
-        Bzr bzr;
-        YAML_EXTRACT_VAR(src, bzr.url, "bzr", String);
-        YAML_EXTRACT_VAR(src, bzr.tag, "tag", String);
-        YAML_EXTRACT_VAR(src, bzr.revision, "revision", int64_t);
-
-        source = bzr;
-    }
-    else if (urlStr == "fossil")
-    {
-        Fossil fossil;
-        YAML_EXTRACT_VAR(src, fossil.url, "fossil", String);
-        YAML_EXTRACT_VAR(src, fossil.tag, "tag", String);
-        YAML_EXTRACT_VAR(src, fossil.branch, "branch", String);
-        YAML_EXTRACT_VAR(src, fossil.commit, "commit", String);
-        
-        source = fossil;
-    }
-    else if (urlStr == "remote")
-    {
-        RemoteFile rf;
-        YAML_EXTRACT_VAR(src, rf.url, "remote", String);
-
-        if (!rf.url.empty())
-            source = rf;
-        else
-            throw std::runtime_error(error);
-    }
-    else if (urlStr == "files")
-    {
-        RemoteFiles rfs;
-        rfs.urls = get_sequence_set<String>(src, "files");
-        if (rfs.urls.empty())
-            throw std::runtime_error("Empty remote files");
-        source = rfs;
-    }
-    else
-        throw std::runtime_error("Empty source");
-
     return true;
 }
 
-void save_source(yaml &root, const Source &source)
+void RemoteFiles::save(yaml &root, const String &name) const
 {
-    auto save_source = overload(
-        [&root](const Git &git)
-    {
-        root["source"]["git"] = git.url;
-        if (!git.tag.empty())
-            root["source"]["tag"] = git.tag;
-        if (!git.branch.empty())
-            root["source"]["branch"] = git.branch;
-        if (!git.commit.empty())
-            root["source"]["commit"] = git.commit;
-    },
-        [&root](const Hg &hg)
-    {
-        root["source"]["hg"] = hg.url;
-        if (!hg.tag.empty())
-            root["source"]["tag"] = hg.tag;
-        if (!hg.branch.empty())
-            root["source"]["branch"] = hg.branch;
-        if (!hg.commit.empty())
-            root["source"]["commit"] = hg.commit;
-        if (hg.revision != -1)
-            root["source"]["revision"] = hg.revision;
-    },
-        [&root](const Bzr &bzr)
-    {
-        root["source"]["bzr"] = bzr.url;
-        if (!bzr.tag.empty())
-            root["source"]["tag"] = bzr.tag;
-        if (bzr.revision != -1)
-            root["source"]["revision"] = bzr.revision;
-    },
-        [&root](const Fossil &fossil)
-    {
-        root["source"]["fossil"] = fossil.url;
-        if (!fossil.tag.empty())
-            root["source"]["tag"] = fossil.tag;
-        if (!fossil.branch.empty())
-            root["source"]["branch"] = fossil.branch;
-        if (!fossil.commit.empty())
-            root["source"]["commit"] = fossil.commit;
-    },
-        [&root](const RemoteFile &rf)
-    {
-        root["source"]["remote"] = rf.url;
-    },
-        [&root](const RemoteFiles &rfs)
-    {
-        for (auto &rf : rfs.urls)
-            root["source"]["files"].push_back(rf);
-    }
-    );
+    for (auto &rf : urls)
+        root[name].push_back(rf);
+}
 
-    boost::apply_visitor(save_source, source);
+String RemoteFiles::print() const
+{
+    String r;
+    if (empty())
+        return r;
+    for (auto &rf : urls)
+        STRING_PRINT_VALUE(url, rf);
+    return r;
 }
 
 static void run(const String &c)
@@ -294,7 +397,7 @@ static void run(const String &c)
 }
 
 template <typename F>
-static void downloadRepo(F &&f)
+static void downloadRepository(F &&f)
 {
     int n_tries = 3;
     while (n_tries--)
@@ -360,7 +463,7 @@ void DownloadSource::operator()(const Git &git)
         return;
 #endif
 
-    downloadRepo([&git]()
+    downloadRepository([&git]()
     {
         String branchPath = git.url.substr(git.url.find_last_of("/") + 1);
         fs::create_directory(branchPath);
@@ -388,7 +491,7 @@ void DownloadSource::operator()(const Git &git)
 
 void DownloadSource::operator()(const Hg &hg)
 {
-    downloadRepo ([&hg]()
+    downloadRepository([&hg]()
     {
         run("hg clone " + hg.url);
 
@@ -408,7 +511,7 @@ void DownloadSource::operator()(const Hg &hg)
 
 void DownloadSource::operator()(const Bzr &bzr)
 {
-    downloadRepo([&bzr]()
+    downloadRepository([&bzr]()
     {
         run("bzr branch " + bzr.url);
 
@@ -424,7 +527,7 @@ void DownloadSource::operator()(const Bzr &bzr)
 
 void DownloadSource::operator()(const Fossil &fossil)
 {
-    downloadRepo([&fossil]()
+    downloadRepository([&fossil]()
     {
         run("fossil clone " + fossil.url + " " + "temp.fossil");
 
@@ -473,258 +576,59 @@ void DownloadSource::download(const Source &source)
 
 bool isValidSourceUrl(const Source &source)
 {
-    auto check_url = overload(
-        [](const Git &git)
+    return boost::apply_visitor([](auto &v) { return v.isValidUrl(); }, source);
+}
+
+bool load_source(const yaml &root, Source &source)
+{
+    static const auto sources =
     {
-        if (!isValidSourceUrl(git.url))
-            return false;
-        return true;
-    },
-        [](const Hg &hg)
+#define GET_STRING(x) x::getString()
+        SOURCE_TYPES(GET_STRING, DELIM_COMMA)
+    };
+
+    auto &src = root["source"];
+    if (!src.IsDefined())
+        return false;
+
+    String s;
+    std::any_of(sources.begin(), sources.end(), [&src, &s](auto &i)
     {
-        if (!isValidSourceUrl(hg.url))
-            return false;
-        return true;
-    },
-        [](const Bzr &bzr)
-    {
-        if (!isValidSourceUrl(bzr.url))
-            return false;
-        return true;
-    },
-        [](const Fossil &fossil)
-    {
-        if (!isValidSourceUrl(fossil.url))
-            return false;
-        return true;
-    },
-        [](const RemoteFile &rf)
-    {
-        if (!isValidSourceUrl(rf.url))
-            return false;
-        return true;
-    },
-        [](const RemoteFiles &rfs)
-    {
-        for (auto &rf : rfs.urls)
-            if (!isValidSourceUrl(rf))
-                return false;
-        return true;
-    }
-    );
-    return boost::apply_visitor(check_url, source);
+        YAML_EXTRACT_VAR(src, s, i, String);
+        s = i;
+        return !s.empty();
+    });
+
+    if (0);
+#define IF_SOURCE(x) else if (s == x::getString()) source = x(src)
+    SOURCE_TYPES(IF_SOURCE, DELIM_SEMICOLON);
+    else
+        throw std::runtime_error("Empty source");
+    return true;
+}
+
+void save_source(yaml &root, const Source &source)
+{
+    // do not remove 'r' var, it creates 'source' key
+    boost::apply_visitor([&root](auto &v) { auto r = root["source"]; v.save(r); }, source);
 }
 
 Source load_source(const ptree &p)
 {
-    {
-        Git git;
-        git.url = p.get("source.git.url", "");
-        git.tag = p.get("source.git.tag", "");
-        git.branch = p.get("source.git.branch", "");
-        git.commit = p.get("source.git.commit", "");
-        if (!git.empty())
-            return git;
-    }
-
-    {
-        Hg hg;
-        hg.url = p.get("source.hg.url", "");
-        hg.tag = p.get("source.hg.tag", "");
-        hg.branch = p.get("source.hg.branch", "");
-        hg.commit = p.get("source.hg.commit", "");
-        hg.revision = p.get("source.hg.revision", -1);
-        if (!hg.empty())
-            return hg;
-    }
-
-    {
-        Bzr bzr;
-        bzr.url = p.get("source.bzr.url", "");
-        bzr.tag = p.get("source.bzr.tag", "");
-        bzr.revision = p.get("source.bzr.revision", -1);
-        if (!bzr.empty())
-            return bzr;
-    }
-    {
-        Fossil fossil;
-        fossil.url = p.get("source.fossil.url", "");
-        fossil.tag = p.get("source.fossil.tag", "");
-        fossil.branch = p.get("source.fossil.branch", "");
-        fossil.commit = p.get("source.fossil.commit", "");
-        if (!fossil.empty())
-            return fossil;
-    }
-
-    {
-        RemoteFile rf;
-        rf.url = p.get("source.remote.url", "");
-        if (!rf.url.empty())
-            return rf;
-    }
-
-    {
-        RemoteFiles rfs;
-        auto urls = p.get_child("source.files");
-        for (auto &url : urls)
-            rfs.urls.insert(url.second.get("url", ""s));
-        if (!rfs.urls.empty())
-            return rfs;
-    }
-
+#define TRY_TO_LOAD_SOURCE(x) x x##_; if (x##_.load(p.get_child("source" + x::getString()))) return x##_
+    SOURCE_TYPES(TRY_TO_LOAD_SOURCE, DELIM_SEMICOLON);
     throw std::runtime_error("Bad source");
 }
 
 void save_source(ptree &p, const Source &source)
 {
-    auto write_json = overload(
-        [&p](const Git &git)
+    return boost::apply_visitor([&p](auto &v)
     {
-        if (git.empty())
-            return;
-        p.add("source.git.url", git.url);
-        if (!git.tag.empty())
-            p.add("source.git.tag", git.tag);
-        if (!git.branch.empty())
-            p.add("source.git.branch", git.branch);
-        if (!git.commit.empty())
-            p.add("source.git.commit", git.commit);
-    },
-        [&p](const Hg &hg)
-    {
-        if (hg.empty())
-            return;
-        p.add("source.hg.url", hg.url);
-        if (!hg.tag.empty())
-            p.add("source.hg.tag", hg.tag);
-        if (!hg.branch.empty())
-            p.add("source.hg.branch", hg.branch);
-        if (!hg.commit.empty())
-            p.add("source.hg.commit", hg.commit);
-        if (hg.revision != -1)
-            p.add("source.hg.revision", hg.revision);
-    },
-        [&p](const Bzr &bzr)
-    {
-        if (bzr.empty())
-            return;
-        p.add("source.bzr.url", bzr.url);
-        if (!bzr.tag.empty())
-            p.add("source.bzr.tag", bzr.tag);
-        if (bzr.revision != -1)
-            p.add("source.bzr.revision", bzr.revision);
-    },
-        [&p](const Fossil &fossil)
-    {
-        if (fossil.empty())
-            return;
-        p.add("source.fossil.url", fossil.url);
-        if (!fossil.tag.empty())
-            p.add("source.fossil.tag", fossil.tag);
-        if (!fossil.branch.empty())
-            p.add("source.fossil.branch", fossil.branch);
-        if (!fossil.commit.empty())
-            p.add("source.fossil.commit", fossil.commit);
-    },
-        [&p](const RemoteFile &rf)
-    {
-        if (rf.url.empty())
-            return;
-        p.add("source.remote.url", rf.url);
-    },
-        [&p](const RemoteFiles &rfs)
-    {
-        if (rfs.urls.empty())
-            return;
-        ptree children;
-        for (auto &rf : rfs.urls)
-        {
-            ptree c;
-            c.put("url", rf);
-            children.push_back(std::make_pair("", c));
-        }
-        p.add_child("source.files", children);
-    }
-    );
-    return boost::apply_visitor(write_json, source);
+        v.save(p.get_child("source." + v.getString()));
+    }, source);
 }
 
 String print_source(const Source &source)
 {
-    auto write_string = overload(
-        [](const Git &git)
-    {
-        String r = "git:\n";
-        if (git.empty())
-            return r;
-        r += "url: " + git.url + "\n";
-        if (!git.tag.empty())
-            r += "tag: " + git.tag + "\n";
-        if (!git.branch.empty())
-            r += "branch: " + git.branch + "\n";
-        if (!git.commit.empty())
-            r += "commit: " + git.commit + "\n";
-        return r;
-    },
-        [](const Hg &hg)
-    {
-        String r = "hg:\n";
-        if (hg.empty())
-            return r;
-        r += "url: " + hg.url + "\n";
-        if (!hg.tag.empty())
-            r += "tag: " + hg.tag + "\n";
-        if (!hg.branch.empty())
-            r += "branch: " + hg.branch + "\n";
-        if (!hg.commit.empty())
-            r += "commit: " + hg.commit + "\n";
-        if (hg.revision != -1)
-            r += "revision: " + std::to_string(hg.revision) + "\n";
-        return r;
-    },
-        [](const Bzr &bzr)
-    {
-        String r = "bzr:\n";
-        if (bzr.empty())
-            return r;
-        r += "url: " + bzr.url + "\n";
-        if (!bzr.tag.empty())
-            r += "tag: " + bzr.tag + "\n";
-        if (bzr.revision != -1)
-            r += "revision: " + std::to_string(bzr.revision) + "\n";
-        return r;
-    },
-        [](const Fossil &fossil)
-    {
-        String r = "fossil:\n";
-        if (fossil.empty())
-            return r;
-        r += "url: " + fossil.url + "\n";
-        if (!fossil.tag.empty())
-            r += "tag: " + fossil.tag + "\n";
-        if (!fossil.branch.empty())
-            r += "branch: " + fossil.branch + "\n";
-        if (!fossil.commit.empty())
-            r += "commit: " + fossil.commit + "\n";
-        return r;
-    },
-        [](const RemoteFile &rf)
-    {
-        String r = "remote:\n";
-        if (rf.url.empty())
-            return r;
-        r += "url: " + rf.url + "\n";
-        return r;
-    },
-        [](const RemoteFiles &rfs)
-    {
-        String r = "files:\n";
-        if (rfs.urls.empty())
-            return r;
-        for (auto &rf : rfs.urls)
-            r += "url: " + rf + "\n";
-        return r;
-    }
-    );
-    return boost::apply_visitor(write_string, source);
+    return boost::apply_visitor([](auto &v) { return v.getString() + ":\n" + v.print(); }, source);
 }

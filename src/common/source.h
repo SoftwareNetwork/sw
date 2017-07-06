@@ -19,95 +19,174 @@
 #include "cppan_string.h"
 #include "filesystem.h"
 #include "property_tree.h"
-#include "yaml.h"
 
 #include <boost/variant.hpp>
 
 #include <set>
 
-struct Git
+namespace YAML { class Node; }
+using yaml = YAML::Node;
+
+struct SourceUrl
 {
     String url;
+
+    SourceUrl() = default;
+    SourceUrl(const yaml &root, const String &name);
+
+    bool empty() const { return url.empty(); }
+    bool isValid(const String &name, String *error = nullptr) const;
+    bool isValidUrl() const;
+    bool load(const ptree &p);
+    bool save(ptree &p) const;
+    void save(yaml &root, const String &name) const;
+    String print() const;
+};
+
+struct Git : SourceUrl
+{
     String tag;
     String branch;
     String commit;
 
-    bool empty() const { return url.empty(); }
+    Git() = default;
+    Git(const yaml &root, const String &name = Git::getString());
+
     bool isValid(String *error = nullptr) const;
+    bool load(const ptree &p);
+    bool save(ptree &p) const;
+    void save(yaml &root, const String &name = Git::getString()) const;
+    String print() const;
+
     bool operator==(const Git &rhs) const
     {
         return std::tie(url, tag, branch, commit) == std::tie(rhs.url, rhs.tag, rhs.branch, rhs.commit);
     }
+
+    static String getString() { return "git"; }
 };
 
 struct Hg : Git
 {
     int64_t revision = -1;
 
+    Hg() = default;
+    Hg(const yaml &root, const String &name = Hg::getString());
+
     bool isValid(String *error = nullptr) const;
+    bool load(const ptree &p);
+    bool save(ptree &p) const;
+    void save(yaml &root, const String &name = Hg::getString()) const;
+    String print() const;
+
     bool operator==(const Hg &rhs) const
     {
         return std::tie(url, tag, branch, commit, revision) == std::tie(rhs.url, rhs.tag, rhs.branch, rhs.commit, rhs.revision);
     }
+
+    static String getString() { return "hg"; }
 };
 
-struct Bzr
+struct Bzr : SourceUrl
 {
-    String url;
     String tag;
     int64_t revision = -1;
 
-    bool empty() const { return url.empty(); }
+    Bzr() = default;
+    Bzr(const yaml &root, const String &name = Bzr::getString());
+
     bool isValid(String *error = nullptr) const;
+    bool load(const ptree &p);
+    bool save(ptree &p) const;
+    void save(yaml &root, const String &name = Bzr::getString()) const;
+    String print() const;
+
     bool operator==(const Bzr &rhs) const
     {
         return std::tie(url, tag, revision) == std::tie(rhs.url, rhs.tag, rhs.revision);
     }
+
+    static String getString() { return "bzr"; }
 };
 
 struct Fossil : Git
 {
+    Fossil() = default;
+    Fossil(const yaml &root, const String &name = Fossil::getString());
+
     bool isValid(String *error = nullptr) const;
+    using Git::save;
+    void save(yaml &root, const String &name = Fossil::getString()) const;
+
     bool operator==(const Fossil &rhs) const
     {
         return std::tie(url, tag, branch, commit) == std::tie(rhs.url, rhs.tag, rhs.branch, rhs.commit);
     }
+
+    static String getString() { return "fossil"; }
 };
 
-struct RemoteFile
+struct RemoteFile : SourceUrl
 {
-    String url;
+    RemoteFile() = default;
+    RemoteFile(const yaml &root, const String &name = RemoteFile::getString());
+
+    using SourceUrl::save;
+    void save(yaml &root, const String &name = RemoteFile::getString()) const;
 
     bool operator==(const RemoteFile &rhs) const
     {
-        return std::tie(url) == std::tie(rhs.url);
+        return url == rhs.url;
     }
+
+    static String getString() { return "remote"; }
 };
 
 struct RemoteFiles
 {
-    std::set<String> urls;
+    StringSet urls;
+
+    RemoteFiles() = default;
+    RemoteFiles(const yaml &root, const String &name = RemoteFiles::getString());
+
+    bool empty() const { return urls.empty(); }
+    bool isValidUrl() const;
+    bool load(const ptree &p);
+    bool save(ptree &p) const;
+    void save(yaml &root, const String &name = RemoteFiles::getString()) const;
+    String print() const;
 
     bool operator==(const RemoteFiles &rhs) const
     {
-        return std::tie(urls) == std::tie(rhs.urls);
+        return urls == rhs.urls;
     }
+
+    static String getString() { return "files"; }
 };
 
-// add svn, p4, cvs, darcs
+// TODO: add: svn, cvs, darcs, p4
 // do not add local files
-using Source = boost::variant<Git, Hg, Bzr, Fossil, RemoteFile, RemoteFiles>;
+#define SOURCE_TYPES(f,d) \
+    f(Git) d \
+    f(Hg) d \
+    f(Bzr) d \
+    f(Fossil) d \
+    f(RemoteFile) d \
+    f(RemoteFiles)
+
+#define DELIM_COMMA ,
+#define DELIM_SEMICOLON ;
+#define SOURCE_TYPES_EMPTY(x) x
+using Source = boost::variant<SOURCE_TYPES(SOURCE_TYPES_EMPTY, DELIM_COMMA)>;
+#undef SOURCE_TYPES_EMPTY
 
 struct DownloadSource
 {
     int64_t max_file_size = 0;
 
-    void operator()(const Git &git);
-    void operator()(const Hg &hg);
-    void operator()(const Bzr &bzr);
-    void operator()(const Fossil &fossil);
-    void operator()(const RemoteFile &rf);
-    void operator()(const RemoteFiles &rfs);
+#define DOWNLOAD_SOURCE_OPERATOR(x) void operator()(const x &)
+    SOURCE_TYPES(DOWNLOAD_SOURCE_OPERATOR, DELIM_SEMICOLON);
+#undef DOWNLOAD_SOURCE_OPERATOR
 
     void download(const Source &source);
 
@@ -117,13 +196,9 @@ private:
 };
 
 bool load_source(const yaml &root, Source &source);
-void save_source(yaml &root, const Source &source);
-
 Source load_source(const ptree &p);
+void save_source(yaml &root, const Source &source);
 void save_source(ptree &p, const Source &source);
-
 String print_source(const Source &source);
 
 bool isValidSourceUrl(const Source &source);
-
-void run(const String &c);
