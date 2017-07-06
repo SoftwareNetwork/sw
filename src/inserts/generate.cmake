@@ -1,4 +1,4 @@
-########################################
+################################################################################
 
 # we disable EXECUTABLE mode for executables with same configs
 if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
@@ -25,7 +25,7 @@ set(aliases_file ${export_dir}/${variable_name}-aliases.cmake)
 set(variables_file ${build_dir}.gen.vars)
 set(lock ${build_dir}/cppan_generate.lock)
 
-########################################
+################################################################################
 
 # copy to (dst) dir
 set(to ${build_dir}/CMakeFiles/${CMAKE_VERSION})
@@ -229,4 +229,4 @@ if (NOT EXISTS ${import} OR
     file(LOCK ${lock} RELEASE)
 endif()
 
-########################################
+################################################################################

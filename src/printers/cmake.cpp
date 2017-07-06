@@ -619,7 +619,8 @@ set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext}))");
 
             local.addText("-P " + normalize_path(p.getDirObj()) + "/" + cmake_obj_build_filename);
 #ifndef _WIN32
-            local.addText(" &");
+            // causes system overloads
+            //local.addText(" &");
 #endif
             local.addText("\")");
         }
