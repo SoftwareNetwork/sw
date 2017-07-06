@@ -628,7 +628,9 @@ void save_source(ptree &p, const Source &source)
 {
     return boost::apply_visitor([&p](auto &v)
     {
-        v.save(p.get("source." + v.getString()));
+        ptree p2;
+        v.save(p2);
+        p.add_child("source." + v.getString(), p2);
     }, source);
 }
 
