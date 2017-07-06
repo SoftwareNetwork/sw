@@ -29,10 +29,10 @@ int get_end_of_string_block(const String &s, int i)
 
         if (c == '\"')
         {
-            if (n_quotes == 0)
-                i = get_end_of_string_block(s.c_str(), i + 1) - 1;
-            else if (s[i - 1] == '\\')
+            if (i && s[i - 1] == '\\')
                 ;
+            else if (n_quotes == 0)
+                i = get_end_of_string_block(s, i + 1) - 1;
             else
                 n_quotes--;
         }
@@ -42,7 +42,7 @@ int get_end_of_string_block(const String &s, int i)
             {
             case '(':
             case '[':
-                i = get_end_of_string_block(s.c_str(), i + 1) - 1;
+                i = get_end_of_string_block(s, i + 1) - 1;
                 break;
             case ')':
                 n_curly--;
