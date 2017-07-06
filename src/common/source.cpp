@@ -595,8 +595,12 @@ bool load_source(const yaml &root, Source &source)
     std::any_of(sources.begin(), sources.end(), [&src, &s](auto &i)
     {
         YAML_EXTRACT_VAR(src, s, i, String);
-        s = i;
-        return !s.empty();
+        if (!s.empty())
+        {
+            s = i;
+            return true;
+        }
+        return false;
     });
 
     if (0);
