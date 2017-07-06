@@ -92,7 +92,7 @@ if (NOT DEFINED CPPAN_BUILD_SHARED_LIBS)
     set(CPPAN_BUILD_SHARED_LIBS 0)
 endif()
 if (NOT WIN32)
-    #set(CPPAN_USE_CACHE 0)
+    set(CPPAN_USE_CACHE 0)
 endif()
 add_subdirectory(.cppan)
 

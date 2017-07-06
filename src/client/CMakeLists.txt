@@ -13,6 +13,7 @@ target_link_libraries(client common
     pvt.cppan.demo.boost.program_options
     pvt.cppan.demo.yhirose.cpp_linenoise
 )
+#target_link_libraries(client -static-libstdc++ -static-libgcc)
 
 if (CPPAN_TEST)
 add_custom_command(TARGET client POST_BUILD
