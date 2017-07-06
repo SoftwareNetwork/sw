@@ -52,6 +52,7 @@ struct Git : SourceUrl
     Git() = default;
     Git(const yaml &root, const String &name = Git::getString());
 
+    void download() const;
     bool isValid(String *error = nullptr) const;
     bool load(const ptree &p);
     bool save(ptree &p) const;
@@ -73,6 +74,7 @@ struct Hg : Git
     Hg() = default;
     Hg(const yaml &root, const String &name = Hg::getString());
 
+    void download() const;
     bool isValid(String *error = nullptr) const;
     bool load(const ptree &p);
     bool save(ptree &p) const;
@@ -95,6 +97,7 @@ struct Bzr : SourceUrl
     Bzr() = default;
     Bzr(const yaml &root, const String &name = Bzr::getString());
 
+    void download() const;
     bool isValid(String *error = nullptr) const;
     bool load(const ptree &p);
     bool save(ptree &p) const;
@@ -114,6 +117,7 @@ struct Fossil : Git
     Fossil() = default;
     Fossil(const yaml &root, const String &name = Fossil::getString());
 
+    void download() const;
     bool isValid(String *error = nullptr) const;
     using Git::save;
     void save(yaml &root, const String &name = Fossil::getString()) const;
@@ -131,6 +135,7 @@ struct RemoteFile : SourceUrl
     RemoteFile() = default;
     RemoteFile(const yaml &root, const String &name = RemoteFile::getString());
 
+    void download() const;
     using SourceUrl::save;
     void save(yaml &root, const String &name = RemoteFile::getString()) const;
 
@@ -149,6 +154,7 @@ struct RemoteFiles
     RemoteFiles() = default;
     RemoteFiles(const yaml &root, const String &name = RemoteFiles::getString());
 
+    void download() const;
     bool empty() const { return urls.empty(); }
     bool isValidUrl() const;
     bool load(const ptree &p);
@@ -180,21 +186,7 @@ struct RemoteFiles
 using Source = boost::variant<SOURCE_TYPES(SOURCE_TYPES_EMPTY, DELIM_COMMA)>;
 #undef SOURCE_TYPES_EMPTY
 
-struct DownloadSource
-{
-    int64_t max_file_size = 0;
-
-#define DOWNLOAD_SOURCE_OPERATOR(x) void operator()(const x &)
-    SOURCE_TYPES(DOWNLOAD_SOURCE_OPERATOR, DELIM_SEMICOLON);
-#undef DOWNLOAD_SOURCE_OPERATOR
-
-    void download(const Source &source);
-
-private:
-    void download_file(const String &url, const path &fn);
-    void download_and_unpack(const String &url, const path &fn);
-};
-
+void download(const Source &source, int64_t max_file_size = 0);
 bool load_source(const yaml &root, Source &source);
 Source load_source(const ptree &p);
 void save_source(yaml &root, const Source &source);

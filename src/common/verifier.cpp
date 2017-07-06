@@ -87,8 +87,7 @@ void verify(const Package &pkg, path fn)
 
         ScopedCurrentPath cp(dir_original_unprepared);
 
-        DownloadSource ds;
-        ds.download(spec.source);
+        download(spec.source);
         write_file(CPPAN_FILENAME, spec.cppan);
 
         Config c(CPPAN_FILENAME);

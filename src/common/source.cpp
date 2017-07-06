@@ -38,6 +38,44 @@
 #define YAML_SET_NOT_EMPTY(x) if (!x.empty()) YAML_SET(x, #x)
 #define YAML_SET_NOT_MINUS_ONE(x) if (x != -1) YAML_SET(x, #x)
 
+static void download_file_checked(const String &url, const path &fn, int64_t max_file_size = 0)
+{
+    checkSourceUrl(url);
+    download_file(url, fn, max_file_size);
+}
+
+static void download_and_unpack(const String &url, const path &fn, int64_t max_file_size = 0)
+{
+    download_file_checked(url, fn, max_file_size);
+    unpack_file(fn, ".");
+    fs::remove(fn);
+}
+
+template <typename F>
+static void downloadRepository(F &&f)
+{
+    int n_tries = 3;
+    while (n_tries--)
+    {
+        try
+        {
+            f();
+            break;
+        }
+        catch (...)
+        {
+            if (n_tries == 0)
+                throw;
+        }
+    }
+}
+
+static void run(const String &c)
+{
+    if (std::system(c.c_str()) != 0)
+        throw std::runtime_error("Last command failed: " + c);
+}
+
 SourceUrl::SourceUrl(const yaml &root, const String &name)
 {
     YAML_EXTRACT_VAR(root, url, name, String);
@@ -91,6 +129,80 @@ Git::Git(const yaml &root, const String &name)
     YAML_EXTRACT_AUTO(tag);
     YAML_EXTRACT_AUTO(branch);
     YAML_EXTRACT_AUTO(commit);
+}
+
+void Git::download() const
+{
+    // try to speed up git downloads from github
+    // add more sites below
+    if (url.find("github.com") != url.npos)
+    {
+        auto github_url = url;
+
+        // remove possible .git suffix
+        String suffix = ".git";
+        if (github_url.rfind(suffix) == github_url.size() - suffix.size())
+            github_url.substr(0, github_url.size() - suffix.size());
+
+        String fn;
+        github_url += "/archive/";
+        if (!tag.empty())
+        {
+            github_url += make_archive_name(tag);
+            fn = make_archive_name("1");
+        }
+        else if (!branch.empty())
+        {
+            github_url += branch + ".zip"; // but use .zip for branches!
+            fn = "1.zip";
+        }
+        else if (!commit.empty())
+        {
+            github_url += commit + ".zip"; // but use .zip for branches!
+            fn = "1.zip";
+        }
+
+        try
+        {
+            download_and_unpack(github_url, fn);
+            return;
+        }
+        catch (...)
+        {
+            // go to usual git download
+        }
+    }
+
+    // usual git download via clone
+#ifdef CPPAN_TEST
+    if (fs::exists(".git"))
+        return;
+#endif
+
+    downloadRepository([this]()
+    {
+        String branchPath = url.substr(url.find_last_of("/") + 1);
+        fs::create_directory(branchPath);
+        ScopedCurrentPath scp(fs::current_path() / branchPath);
+
+        run("git init");
+        run("git remote add origin " + url);
+        if (!tag.empty())
+        {
+            run("git fetch --depth 1 origin refs/tags/" + tag);
+            run("git reset --hard FETCH_HEAD");
+        }
+        else if (!branch.empty())
+        {
+            run("git fetch --depth 1 origin " + branch);
+            run("git reset --hard FETCH_HEAD");
+        }
+        else if (!commit.empty())
+        {
+            run("git fetch");
+            run("git checkout " + commit);
+        }
+    });
 }
 
 bool Git::isValid(String *error) const
@@ -165,6 +277,26 @@ Hg::Hg(const yaml &root, const String &name)
     YAML_EXTRACT_AUTO(revision);
 }
 
+void Hg::download() const
+{
+    downloadRepository([this]()
+    {
+        run("hg clone " + url);
+
+        String branchPath = url.substr(url.find_last_of("/") + 1);
+        ScopedCurrentPath scp(fs::current_path() / branchPath);
+
+        if (!tag.empty())
+            run("hg update " + tag);
+        else if (!branch.empty())
+            run("hg update " + branch);
+        else if (!commit.empty())
+            run("hg update " + commit);
+        else if (revision != -1)
+            run("hg update " + std::to_string(revision));
+    });
+}
+
 bool Hg::isValid(String *error) const
 {
     if (!SourceUrl::isValid(getString(), error))
@@ -229,6 +361,22 @@ Bzr::Bzr(const yaml &root, const String &name)
 {
     YAML_EXTRACT_AUTO(tag);
     YAML_EXTRACT_AUTO(revision);
+}
+
+void Bzr::download() const
+{
+    downloadRepository([this]()
+    {
+        run("bzr branch " + url);
+
+        String branchPath = url.substr(url.find_last_of("/") + 1);
+        ScopedCurrentPath scp(fs::current_path() / branchPath);
+
+        if (!tag.empty())
+            run("bzr update -r tag:" + tag);
+        else if (revision != -1)
+            run("bzr update -r " + std::to_string(revision));
+    });
 }
 
 bool Bzr::isValid(String *error) const
@@ -297,6 +445,26 @@ Fossil::Fossil(const yaml &root, const String &name)
 {
 }
 
+void Fossil::download() const
+{
+    downloadRepository([this]()
+    {
+        run("fossil clone " + url + " " + "temp.fossil");
+
+        fs::create_directory("temp");
+        ScopedCurrentPath scp(fs::current_path() / "temp");
+
+        run("fossil open ../temp.fossil");
+
+        if (!tag.empty())
+            run("fossil update " + tag);
+        else if (!branch.empty())
+            run("fossil update " + branch);
+        else if (!commit.empty())
+            run("fossil update " + commit);
+    });
+}
+
 bool Fossil::isValid(String *error) const
 {
     if (!SourceUrl::isValid(getString(), error))
@@ -336,6 +504,11 @@ RemoteFile::RemoteFile(const yaml &root, const String &name)
         throw std::runtime_error("Remote url is missing");
 }
 
+void RemoteFile::download() const
+{
+    download_and_unpack(url, path(url).filename());
+}
+
 void RemoteFile::save(yaml &root, const String &name) const
 {
     SourceUrl::save(root, name);
@@ -346,6 +519,12 @@ RemoteFiles::RemoteFiles(const yaml &root, const String &name)
     urls = get_sequence_set<String>(root, name);
     if (urls.empty())
         throw std::runtime_error("Empty remote files");
+}
+
+void RemoteFiles::download() const
+{
+    for (auto &rf : urls)
+        download_file_checked(rf, path(rf).filename());
 }
 
 bool RemoteFiles::isValidUrl() const
@@ -390,188 +569,9 @@ String RemoteFiles::print() const
     return r;
 }
 
-static void run(const String &c)
+void download(const Source &source, int64_t max_file_size)
 {
-    if (std::system(c.c_str()) != 0)
-        throw std::runtime_error("Last command failed: " + c);
-}
-
-template <typename F>
-static void downloadRepository(F &&f)
-{
-    int n_tries = 3;
-    while (n_tries--)
-    {
-        try
-        {
-            f();
-            break;
-        }
-        catch (...)
-        {
-            if (n_tries == 0)
-                throw;
-        }
-    }
-}
-
-void DownloadSource::operator()(const Git &git)
-{
-    // try to speed up git downloads from github
-    // add more sites below
-    if (git.url.find("github.com") != git.url.npos)
-    {
-        auto url = git.url;
-
-        // remove possible .git suffix
-        String suffix = ".git";
-        if (url.rfind(suffix) == url.size() - suffix.size())
-            url.substr(0, url.size() - suffix.size());
-
-        String fn;
-        url += "/archive/";
-        if (!git.tag.empty())
-        {
-            url += make_archive_name(git.tag);
-            fn = make_archive_name("1");
-        }
-        else if (!git.branch.empty())
-        {
-            url += git.branch + ".zip"; // but use .zip for branches!
-            fn = "1.zip";
-        }
-        else if (!git.commit.empty())
-        {
-            url += git.commit + ".zip"; // but use .zip for branches!
-            fn = "1.zip";
-        }
-
-        try
-        {
-            download_and_unpack(url, fn);
-            return;
-        }
-        catch (...)
-        {
-            // go to usual git download
-        }
-    }
-
-    // usual git download via clone
-#ifdef CPPAN_TEST
-    if (fs::exists(".git"))
-        return;
-#endif
-
-    downloadRepository([&git]()
-    {
-        String branchPath = git.url.substr(git.url.find_last_of("/") + 1);
-        fs::create_directory(branchPath);
-        ScopedCurrentPath scp(fs::current_path() / branchPath);
-
-        run("git init");
-        run("git remote add origin " + git.url);
-        if (!git.tag.empty())
-        {
-            run("git fetch --depth 1 origin refs/tags/" + git.tag);
-            run("git reset --hard FETCH_HEAD");
-        }
-        else if (!git.branch.empty())
-        {
-            run("git fetch --depth 1 origin " + git.branch);
-            run("git reset --hard FETCH_HEAD");
-        }
-        else if (!git.commit.empty())
-        {
-            run("git fetch");
-            run("git checkout " + git.commit);
-        }
-    });
-}
-
-void DownloadSource::operator()(const Hg &hg)
-{
-    downloadRepository([&hg]()
-    {
-        run("hg clone " + hg.url);
-
-        String branchPath = hg.url.substr(hg.url.find_last_of("/") + 1);
-        ScopedCurrentPath scp(fs::current_path() / branchPath);
-
-        if (!hg.tag.empty())
-            run("hg update " + hg.tag);
-        else if (!hg.branch.empty())
-            run("hg update " + hg.branch);
-        else if (!hg.commit.empty())
-            run("hg update " + hg.commit);
-        else if (hg.revision != -1)
-            run("hg update " + std::to_string(hg.revision));
-    });
-}
-
-void DownloadSource::operator()(const Bzr &bzr)
-{
-    downloadRepository([&bzr]()
-    {
-        run("bzr branch " + bzr.url);
-
-        String branchPath = bzr.url.substr(bzr.url.find_last_of("/") + 1);
-        ScopedCurrentPath scp(fs::current_path() / branchPath);
-
-        if (!bzr.tag.empty())
-            run("bzr update -r tag:" + bzr.tag);
-        else if (bzr.revision != -1)
-            run("bzr update -r " + std::to_string(bzr.revision));
-    });
-}
-
-void DownloadSource::operator()(const Fossil &fossil)
-{
-    downloadRepository([&fossil]()
-    {
-        run("fossil clone " + fossil.url + " " + "temp.fossil");
-
-        fs::create_directory("temp");
-        ScopedCurrentPath scp(fs::current_path() / "temp");
-
-        run("fossil open ../temp.fossil");
-
-        if (!fossil.tag.empty())
-            run("fossil update " + fossil.tag);
-        else if (!fossil.branch.empty())
-            run("fossil update " + fossil.branch);
-        else if (!fossil.commit.empty())
-            run("fossil update " + fossil.commit);
-    });
-}
-
-void DownloadSource::operator()(const RemoteFile &rf)
-{
-    download_and_unpack(rf.url, path(rf.url).filename());
-}
-
-void DownloadSource::operator()(const RemoteFiles &rfs)
-{
-    for (auto &rf : rfs.urls)
-        download_file(rf, path(rf).filename());
-}
-
-void DownloadSource::download_file(const String &url, const path &fn)
-{
-    checkSourceUrl(url);
-    ::download_file(url, fn, max_file_size);
-}
-
-void DownloadSource::download_and_unpack(const String &url, const path &fn)
-{
-    download_file(url, fn);
-    unpack_file(fn, ".");
-    fs::remove(fn);
-}
-
-void DownloadSource::download(const Source &source)
-{
-    boost::apply_visitor(*this, source);
+    boost::apply_visitor([](auto &v) { v.download(); }, source);
 }
 
 bool isValidSourceUrl(const Source &source)

@@ -382,9 +382,7 @@ try
                 if (!isValidSourceUrl(project.source))
                     throw std::runtime_error("Source is empty");
 
-                DownloadSource ds;
-                ds.download(project.source);
-
+                download(project.source);
                 fs::copy_file(cwd / CPPAN_FILENAME, CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
             }
             SCOPE_EXIT
