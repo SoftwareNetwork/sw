@@ -575,6 +575,7 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
         ADD_VAR(CMAKE_BUILD_TYPE);
         ADD_VAR(CPPAN_BUILD_VERBOSE);
         ADD_VAR(CPPAN_BUILD_WARNING_LEVEL);
+        ADD_VAR(CPPAN_RC_ENABLED);
         ADD_VAR(CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT);
         ADD_VAR(N_CORES);
         ADD_VAR(XCODE);
@@ -939,6 +940,7 @@ endif()
     ctx.addLine("set(CPPAN_DISABLE_CHECKS "s + (bs.disable_checks ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (s.build_system_verbose ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_BUILD_WARNING_LEVEL "s + std::to_string(s.build_warning_level) + ")");
+    ctx.addLine("set(CPPAN_RC_ENABLED "s + (s.rc_enabled ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_COPY_ALL_LIBRARIES_TO_OUTPUT "s + (s.copy_all_libraries_to_output ? "1" : "0") + ")");
     // build top level executables with input settings
     // otherwise it won't use them
@@ -1494,7 +1496,11 @@ void CMakePrinter::print_src_config_file(const path &fn) const
 
     // do this right before target
     if (!d.empty())
+    {
+        ctx.if_("CPPAN_RC_ENABLED");
         ctx.addLine("add_win32_version_info(\"" + normalize_path(d.getDirObj()) + "\")");
+        ctx.endif();
+    }
 
     // warning level, before target
     config_section_title(ctx, "warning levels");
@@ -2499,6 +2505,9 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine();
     ctx.if_("NOT DEFINED CPPAN_BUILD_WARNING_LEVEL");
     ctx.addLine("set_cache_var(CPPAN_BUILD_WARNING_LEVEL "s + std::to_string(settings.build_warning_level) + ")");
+    ctx.endif();
+    ctx.if_("NOT DEFINED CPPAN_RC_ENABLED");
+    ctx.addLine("set_cache_var(CPPAN_RC_ENABLED "s + (settings.rc_enabled ? "1" : "0") + ")");
     ctx.endif();
     ctx.addLine();
     ctx.addLine("get_configuration_variables()");

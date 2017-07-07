@@ -117,6 +117,7 @@ struct Settings
     bool copy_all_libraries_to_output = false;
     bool copy_import_libs = false;
     bool full_path_executables = false;
+    bool rc_enabled = true;
 
     String install_prefix;
 

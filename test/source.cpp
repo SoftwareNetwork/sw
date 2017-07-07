@@ -1,8 +1,3 @@
-/*
-name: main
-
-*/
-
 #include <source.h>
 
 #include <sstream>

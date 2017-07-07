@@ -185,6 +185,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     YAML_EXTRACT_AUTO(verify_all);
     YAML_EXTRACT_AUTO(copy_all_libraries_to_output);
     YAML_EXTRACT_AUTO(copy_import_libs);
+    YAML_EXTRACT_AUTO(rc_enabled);
     YAML_EXTRACT_AUTO(full_path_executables);
     YAML_EXTRACT_AUTO(var_check_jobs);
     YAML_EXTRACT_AUTO(install_prefix);
@@ -265,6 +266,7 @@ void Settings::load_build(const yaml &root)
     YAML_EXTRACT_AUTO(verify_all);
     YAML_EXTRACT_AUTO(copy_all_libraries_to_output);
     YAML_EXTRACT_AUTO(copy_import_libs);
+    YAML_EXTRACT_AUTO(rc_enabled);
     YAML_EXTRACT_AUTO(full_path_executables);
     YAML_EXTRACT_AUTO(var_check_jobs);
     YAML_EXTRACT_AUTO(install_prefix);

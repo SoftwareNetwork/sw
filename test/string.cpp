@@ -1,8 +1,3 @@
-/*
-name: main
-
-*/
-
 #include <cppan_string.h>
 
 #define CATCH_CONFIG_RUNNER
