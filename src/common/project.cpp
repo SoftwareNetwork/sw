@@ -811,6 +811,7 @@ void Project::load(const yaml &root)
     YAML_EXTRACT_AUTO(import_from_bazel);
     YAML_EXTRACT_AUTO(prefer_binaries);
     YAML_EXTRACT_AUTO(export_all_symbols);
+    YAML_EXTRACT_AUTO(rc_enabled);
     YAML_EXTRACT_AUTO(build_dependencies_with_same_config);
 
     api_name = get_sequence_set<String>(root, "api_name");
@@ -1367,7 +1368,9 @@ yaml Project::save() const
     yaml root;
 
 #define ADD_IF_VAL(x, c, v) if (c) root[#x] = v
+#define ADD_IF_NOT_VAL(x, c, v) if (!c) root[#x] = v
 #define ADD_IF_VAL_TRIPLE(x) ADD_IF_VAL(x, x, x)
+#define ADD_IF_NOT_VAL_TRIPLE(x) ADD_IF_VAL(x, x, x)
 #define ADD_IF_NOT_EMPTY_VAL(x, v) ADD_IF_VAL(x, !x.empty(), v)
 #define ADD_IF_NOT_EMPTY(x) ADD_IF_NOT_EMPTY_VAL(x, x)
 #define ADD_IF_EQU_VAL(x, e, v) ADD_IF_VAL(x, (x) == (e), v)
@@ -1410,6 +1413,7 @@ yaml Project::save() const
     ADD_IF_VAL_TRIPLE(import_from_bazel);
     ADD_IF_VAL_TRIPLE(prefer_binaries);
     ADD_IF_VAL_TRIPLE(export_all_symbols);
+    ADD_IF_NOT_VAL_TRIPLE(rc_enabled);
     ADD_IF_VAL_TRIPLE(build_dependencies_with_same_config);
 
     ADD_SET(api_name, api_name);

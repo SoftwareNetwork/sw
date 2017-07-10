@@ -168,6 +168,7 @@ String dump_yaml_config(const yaml &root)
         "import_from_bazel",
         "prefer_binaries",
         "export_all_symbols",
+        "rc_enabled",
         "build_dependencies_with_same_config",
 
         "api_name",

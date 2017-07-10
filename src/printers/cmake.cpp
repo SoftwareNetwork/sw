@@ -1495,7 +1495,7 @@ void CMakePrinter::print_src_config_file(const path &fn) const
     ctx.emptyLines();
 
     // do this right before target
-    if (!d.empty())
+    if (!d.empty() && p.rc_enabled)
     {
         ctx.if_("CPPAN_RC_ENABLED");
         ctx.addLine("add_win32_version_info(\"" + normalize_path(d.getDirObj()) + "\")");

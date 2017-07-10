@@ -235,6 +235,7 @@ public:
     bool prefer_binaries = false;
     bool export_all_symbols = false;
     bool build_dependencies_with_same_config = false;
+    bool rc_enabled = true;
 
     StringSet api_name;
 
