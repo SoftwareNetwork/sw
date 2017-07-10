@@ -598,7 +598,6 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
 
     // set id dependencies
     IdDependencies id_deps;
-    int unresolved = (int)deps.size();
     auto &remote_packages = dependency_tree.get_child("packages");
     for (auto &v : remote_packages)
     {
@@ -622,12 +621,21 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
         }
 
         id_deps[id] = d;
-
-        unresolved--;
     }
 
-    if (unresolved > 0)
-        throw std::runtime_error("Some packages (" + std::to_string(unresolved) + ") are unresolved");
+    // check resolved packages
+    auto d2 = deps;
+    for (auto &d : id_deps)
+        d2.erase(d.second.ppath);
+    if (!d2.empty())
+    {
+        for (auto &d : d2)
+        {
+            d.second.createNames();
+            LOG_FATAL(logger, "Unresolved package or its dependencies: " + d.second.target_name);
+        }
+        throw std::runtime_error("Some packages (" + std::to_string(d2.size()) + ") are unresolved");
+    }
 
     return prepareIdDependencies(id_deps, current_remote);
 }
