@@ -300,6 +300,10 @@ ServiceDatabase &getServiceDatabaseReadOnly()
 
 PackagesDatabase &getPackagesDatabase()
 {
+    // this holder will init on-disk pkgdb once
+    // later thread local calls will just open it
+    static PackagesDatabase run_once_db;
+
     thread_local
     PackagesDatabase db;
     return db;
@@ -860,6 +864,14 @@ PackagesDatabase::PackagesDatabase()
 {
     db_repo_dir = db_dir / db_repo_dir_name;
 
+    RUN_ONCE
+    {
+        init();
+    };
+}
+
+void PackagesDatabase::init()
+{
     if (created)
     {
         LOG_INFO(logger, "Packages database was not found");

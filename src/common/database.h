@@ -159,6 +159,7 @@ public:
 private:
     path db_repo_dir;
 
+    void init();
     void download();
     void load(bool drop = false);
 
