@@ -26,6 +26,7 @@
 #include <exceptions.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/nowide/fstream.hpp>
 
 #include <primitives/command.h>
 #include <primitives/pack.h>
@@ -189,7 +190,7 @@ void check_file_types(const Files &files)
         throw std::runtime_error("Project sources did not pass file checks:\n" + errors);
 
     auto fn = get_temp_filename();
-    std::ofstream o(fn.string(), std::ios::binary | std::ios::out);
+    boost::nowide::ofstream o(fn.string(), std::ios::binary | std::ios::out);
     if (!o)
         throw std::runtime_error("Cannot open file for writing: " + fn.string());
     for (auto &file : files)

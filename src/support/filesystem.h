@@ -18,6 +18,8 @@
 
 #include <primitives/filesystem.h>
 
+#include <unordered_map>
+
 #define STAMPS_DIR "stamps"
 #define STORAGE_DIR "storage"
 #define CPPAN_FILENAME "cppan.yml"

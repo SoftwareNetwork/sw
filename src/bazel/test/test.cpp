@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 		return 1;
 
 	std::string f, s;
-	std::ifstream ifile(argv[1]);
+    std::ifstream ifile(argv[1]);
 	while (std::getline(ifile, s))
 		f += s + "\n";
 

@@ -23,8 +23,8 @@
 #include "lock.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/nowide/fstream.hpp>
 
-#include <iostream>
 #include <regex>
 
 #include <primitives/log.h>
@@ -57,7 +57,7 @@ path Package::getStampFilename() const
 String Package::getStampHash() const
 {
     String hash;
-    std::ifstream ifile(getStampFilename().string());
+    boost::nowide::ifstream ifile(getStampFilename().string());
     if (ifile)
         ifile >> hash;
     return hash;

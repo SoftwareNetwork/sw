@@ -26,6 +26,7 @@
 #include "stamp.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/nowide/fstream.hpp>
 
 #include <primitives/hasher.h>
 #include <primitives/templates.h>
@@ -504,7 +505,7 @@ void Settings::clear_local_settings()
 
 void Settings::save(const path &p) const
 {
-    std::ofstream o(p.string());
+    boost::nowide::ofstream o(p.string());
     if (!o)
         throw std::runtime_error("Cannot open file: " + p.string());
     yaml root;

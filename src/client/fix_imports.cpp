@@ -23,6 +23,7 @@
 #include <printers/cmake.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/nowide/fstream.hpp>
 
 #include <deque>
 #include <iostream>
@@ -58,7 +59,7 @@ void fix_imports(const String &target, const path &aliases_file, const path &old
 
     if (!new_file.parent_path().empty())
         fs::create_directories(new_file.parent_path());
-    std::ofstream ofile(new_file.string());
+    boost::nowide::ofstream ofile(new_file.string());
     if (!ofile)
         throw std::runtime_error("Cannot open the output file for writing");
 

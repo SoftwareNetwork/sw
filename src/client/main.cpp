@@ -65,6 +65,10 @@ void command_init(const Strings &args);
 int main(int argc, char *argv[])
 try
 {
+    // library initializations
+    setup_utf8_filesystem();
+
+    //
     Strings args;
     for (auto i = 0; i < argc; i++)
         args.push_back(argv[i]);

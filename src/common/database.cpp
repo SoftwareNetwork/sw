@@ -34,6 +34,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/nowide/fstream.hpp>
 #include <sqlite3.h>
 
 #include <primitives/log.h>
@@ -1009,7 +1010,7 @@ void PackagesDatabase::load(bool drop)
             throw std::runtime_error(sqlite3_errmsg(mdb));
 
         auto fn = db_repo_dir / (td.name + ".csv");
-        std::ifstream ifile(fn.string());
+        boost::nowide::ifstream ifile(fn.string());
         if (!ifile)
             throw std::runtime_error("Cannot open file " + fn.string() + " for reading");
 
