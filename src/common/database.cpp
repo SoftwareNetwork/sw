@@ -868,6 +868,9 @@ PackagesDatabase::PackagesDatabase()
     {
         init();
     };
+
+    // at the end we always reopen packages db as read only
+    open(true);
 }
 
 void PackagesDatabase::init()
@@ -900,9 +903,6 @@ void PackagesDatabase::init()
             });
         }
     }
-
-    // at the end we always reopen packages db as read only
-    open(true);
 }
 
 void PackagesDatabase::download()
