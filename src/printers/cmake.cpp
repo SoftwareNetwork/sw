@@ -222,10 +222,10 @@ void file_footer(CMakeContext &ctx, const Package &d)
 void print_storage_dirs(CMakeContext &ctx)
 {
     config_section_title(ctx, "storage dirs");
-    ctx.addLine("set(STORAGE_DIR \"" + normalize_path(directories.storage_dir) + "\")");
-    ctx.addLine("set(STORAGE_DIR_ETC \"" + normalize_path(directories.storage_dir_etc) + "\")");
-    ctx.addLine("set(STORAGE_DIR_ETC_STATIC \"" + normalize_path(directories.get_static_files_dir()) + "\")");
-    ctx.addLine("set(STORAGE_DIR_USR \"" + normalize_path(directories.storage_dir_usr) + "\")");
+    ctx.addLine("set_cache_var(STORAGE_DIR \"" + normalize_path(directories.storage_dir) + "\")");
+    ctx.addLine("set_cache_var(STORAGE_DIR_ETC \"" + normalize_path(directories.storage_dir_etc) + "\")");
+    ctx.addLine("set_cache_var(STORAGE_DIR_ETC_STATIC \"" + normalize_path(directories.get_static_files_dir()) + "\")");
+    ctx.addLine("set_cache_var(STORAGE_DIR_USR \"" + normalize_path(directories.storage_dir_usr) + "\")");
     ctx.addLine();
 }
 

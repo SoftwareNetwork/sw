@@ -15,8 +15,8 @@ target_link_libraries(client common
 )
 set_property(DIRECTORY
     PROPERTY COTIRE_PREFIX_HEADER_IGNORE_PATH
-        "d:/dev/cppan_storage/src/74/81/c442/linenoise.hpp"
-        "d:/dev/cppan_storage/src/74/81/c442/"
+        "${STORAGE_DIR}/src/74/81/c442/linenoise.hpp"
+        "${STORAGE_DIR}/src/74/81/c442/"
         "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}")
 cotire(client)
 #target_link_libraries(client -static-libstdc++ -static-libgcc)
