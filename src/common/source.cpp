@@ -19,6 +19,7 @@
 #include "http.h"
 #include "yaml.h"
 
+#include <primitives/command.h>
 #include <primitives/overloads.h>
 #include <primitives/pack.h>
 
@@ -37,6 +38,8 @@
 #define YAML_SET(x, n) root[n] = x
 #define YAML_SET_NOT_EMPTY(x) if (!x.empty()) YAML_SET(x, #x)
 #define YAML_SET_NOT_MINUS_ONE(x) if (x != -1) YAML_SET(x, #x)
+
+using primitives::Command;
 
 static void download_file_checked(const String &url, const path &fn, int64_t max_file_size = 0)
 {
@@ -68,12 +71,6 @@ static void downloadRepository(F &&f)
                 throw;
         }
     }
-}
-
-static void run(const String &c)
-{
-    if (std::system(c.c_str()) != 0)
-        throw std::runtime_error("Last command failed: " + c);
 }
 
 SourceUrl::SourceUrl(const yaml &root, const String &name)
@@ -185,22 +182,22 @@ void Git::download() const
         fs::create_directory(branchPath);
         ScopedCurrentPath scp(fs::current_path() / branchPath);
 
-        run("git init");
-        run("git remote add origin " + url);
+        Command::execute({ "git", "init" });
+        Command::execute({ "git", "remote", "add", "origin", url });
         if (!tag.empty())
         {
-            run("git fetch --depth 1 origin refs/tags/" + tag);
-            run("git reset --hard FETCH_HEAD");
+            Command::execute({ "git", "fetch", "--depth", "1", "origin", "refs/tags/" + tag });
+            Command::execute({ "git", "reset", "--hard", "FETCH_HEAD" });
         }
         else if (!branch.empty())
         {
-            run("git fetch --depth 1 origin " + branch);
-            run("git reset --hard FETCH_HEAD");
+            Command::execute({ "git", "fetch", "--depth", "1", "origin", branch });
+            Command::execute({ "git", "reset", "--hard", "FETCH_HEAD" });
         }
         else if (!commit.empty())
         {
-            run("git fetch");
-            run("git checkout " + commit);
+            Command::execute({ "git", "fetch" });
+            Command::execute({ "git", "checkout", commit });
         }
     });
 }
@@ -281,19 +278,19 @@ void Hg::download() const
 {
     downloadRepository([this]()
     {
-        run("hg clone " + url);
+        Command::execute({ "hg", "clone", url });
 
         String branchPath = url.substr(url.find_last_of("/") + 1);
         ScopedCurrentPath scp(fs::current_path() / branchPath);
 
         if (!tag.empty())
-            run("hg update " + tag);
+            Command::execute({ "hg", "update", tag });
         else if (!branch.empty())
-            run("hg update " + branch);
+            Command::execute({ "hg", "update", branch });
         else if (!commit.empty())
-            run("hg update " + commit);
+            Command::execute({ "hg", "update", commit });
         else if (revision != -1)
-            run("hg update " + std::to_string(revision));
+            Command::execute({ "hg", "update", std::to_string(revision) });
     });
 }
 
@@ -367,15 +364,15 @@ void Bzr::download() const
 {
     downloadRepository([this]()
     {
-        run("bzr branch " + url);
+        Command::execute({ "bzr", "branch", url });
 
         String branchPath = url.substr(url.find_last_of("/") + 1);
         ScopedCurrentPath scp(fs::current_path() / branchPath);
 
         if (!tag.empty())
-            run("bzr update -r tag:" + tag);
+            Command::execute({ "bzr", "update", "-r", "tag:" + tag });
         else if (revision != -1)
-            run("bzr update -r " + std::to_string(revision));
+            Command::execute({ "bzr", "update", "-r", std::to_string(revision) });
     });
 }
 
@@ -449,19 +446,19 @@ void Fossil::download() const
 {
     downloadRepository([this]()
     {
-        run("fossil clone " + url + " " + "temp.fossil");
+        Command::execute({ "fossil", "clone", url, "temp.fossil" });
 
         fs::create_directory("temp");
         ScopedCurrentPath scp(fs::current_path() / "temp");
 
-        run("fossil open ../temp.fossil");
+        Command::execute({ "fossil", "open", "../temp.fossil" });
 
         if (!tag.empty())
-            run("fossil update " + tag);
+            Command::execute({ "fossil", "update", tag });
         else if (!branch.empty())
-            run("fossil update " + branch);
+            Command::execute({ "fossil", "update", branch });
         else if (!commit.empty())
-            run("fossil update " + commit);
+            Command::execute({ "fossil", "update", commit });
     });
 }
 
