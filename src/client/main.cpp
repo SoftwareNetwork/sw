@@ -36,7 +36,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/nowide/args.hpp>
-#include <boost/process.hpp>
 #include <primitives/pack.h>
 #include <primitives/optional.h>
 #include <primitives/templates.h>
@@ -540,12 +539,13 @@ void self_upgrade()
     auto arg0 = L"\"" + exe + L"\"";
     auto dst = L"\"" + program.wstring() + L"\"";
     std::cout << "Replacing client" << "\n";
-    //boost::process::child c();
-    //boost::process::spawn(boost::process::exe = L"x");// exe.c_str(), arg0.c_str(), L"internal-self-upgrade-copy", dst.c_str());
-    if (_wexecl(exe.c_str(), arg0.c_str(), L"internal-self-upgrade-copy", dst.c_str(), 0) == -1)
+    auto cmd_line = arg0 + L" internal-self-upgrade-copy " + dst;
+    STARTUPINFO si = { 0 };
+    PROCESS_INFORMATION pi = { 0 };
+    if (!CreateProcess(exe.c_str(), &cmd_line[0], 0, 0, 0, 0, 0, 0, &si, &pi))
     {
-        //throw std::runtime_error("errno = "s + std::to_string(errno) + "\n" +
-        //    "Cannot do a self upgrade. Replace this file with newer CPPAN client manually.");
+        throw std::runtime_error("errno = "s + std::to_string(errno) + "\n" +
+            "Cannot do a self upgrade. Replace this file with newer CPPAN client manually.");
     }
 #else
     auto cppan = tmp_dir / "cppan";
@@ -561,6 +561,7 @@ void self_upgrade_copy(const path &dst)
     int n = 3;
     while (n--)
     {
+        std::cout << "Waiting old program to exit...\n";
         std::this_thread::sleep_for(std::chrono::seconds(2));
         try
         {

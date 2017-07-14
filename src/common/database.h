@@ -80,7 +80,6 @@ class ServiceDatabase : public Database
 {
 public:
     ServiceDatabase();
-    ~ServiceDatabase();
 
     void init();
 

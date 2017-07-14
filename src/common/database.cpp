@@ -351,10 +351,6 @@ ServiceDatabase::ServiceDatabase()
 {
 }
 
-ServiceDatabase::~ServiceDatabase()
-{
-}
-
 void ServiceDatabase::init()
 {
     RUN_ONCE
