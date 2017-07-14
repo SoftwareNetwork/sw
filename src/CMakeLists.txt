@@ -43,6 +43,7 @@ target_link_libraries(support
     pvt.egorpugin.primitives.lock
     pvt.egorpugin.primitives.yaml
 )
+cotire(support)
 
 ########################################
 # common
@@ -110,6 +111,7 @@ target_link_libraries(common
     pvt.egorpugin.primitives.executor
     pvt.egorpugin.primitives.command
 )
+cotire(common)
 
 ################################################################################
 

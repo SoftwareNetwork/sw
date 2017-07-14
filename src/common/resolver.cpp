@@ -338,7 +338,7 @@ void Resolver::download_and_unpack()
             try
             {
                 HttpRequest req = httpSettings;
-                req.type = HttpRequest::POST;
+                req.type = HttpRequest::Post;
                 req.url = current_remote->url + "/api/add_downloads";
                 req.data = ptree2string(request);
                 auto resp = url_request(req);
@@ -357,7 +357,7 @@ void Resolver::download_and_unpack()
             try
             {
                 HttpRequest req = httpSettings;
-                req.type = HttpRequest::POST;
+                req.type = HttpRequest::Post;
                 req.url = current_remote->url + "/api/add_client_call";
                 req.data = "{}"; // empty json
                 auto resp = url_request(req);
@@ -533,7 +533,7 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
                 HttpRequest req = httpSettings;
                 req.connect_timeout = ct;
                 req.timeout = t;
-                req.type = HttpRequest::POST;
+                req.type = HttpRequest::Post;
                 req.url = current_remote->url + "/api/find_dependencies";
                 req.data = ptree2string(request);
                 resp = url_request(req);

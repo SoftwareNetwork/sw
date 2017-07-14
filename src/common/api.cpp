@@ -34,7 +34,7 @@ ptree api_call(const Remote &r, const String &api, ptree request)
     request.put("auth.token", r.token);
 
     HttpRequest req = httpSettings;
-    req.type = HttpRequest::POST;
+    req.type = HttpRequest::Post;
     req.url = r.url + "/api/" + api;
     req.data = ptree2string(request);
     auto resp = url_request(req);
