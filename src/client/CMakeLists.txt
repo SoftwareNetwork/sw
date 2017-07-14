@@ -13,12 +13,6 @@ target_link_libraries(client common
     pvt.cppan.demo.boost.program_options
     pvt.cppan.demo.yhirose.cpp_linenoise
 )
-set_property(DIRECTORY
-    PROPERTY COTIRE_PREFIX_HEADER_IGNORE_PATH
-        "${STORAGE_DIR}/src/74/81/c442/linenoise.hpp"
-        "${STORAGE_DIR}/src/74/81/c442/"
-        "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}")
-cotire(client)
 #target_link_libraries(client -static-libstdc++ -static-libgcc)
 
 if (CPPAN_TEST)

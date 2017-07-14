@@ -54,9 +54,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
 find_package(BISON 3.0)
 find_package(FLEX)
 
-set_property(GLOBAL PROPERTY COTIRE_ADD_UNITY_BUILD FALSE)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cotire.cmake)
-
 ################################################################################
 #
 # compiler & linker settings
