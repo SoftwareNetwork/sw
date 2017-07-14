@@ -82,14 +82,18 @@ String get_cmake_version()
     static const auto err = "Cannot get cmake version";
     static const std::regex r("cmake version (\\S+)");
 
-    auto ret = command::execute_and_capture({ "cmake", "--version" });
-    if (ret.rc != 0)
+    primitives::Command c;
+    c.program = "cmake";
+    c.args = { "--version" };
+    std::error_code ec;
+    c.execute(ec);
+    if (ec)
         throw std::runtime_error(err);
 
     std::smatch m;
-    if (std::regex_search(ret.out, m, r))
+    if (std::regex_search(c.out.text, m, r))
     {
-        if (m[0].first != ret.out.begin())
+        if (m[0].first != c.out.text.begin())
             throw std::runtime_error(err);
         return m[1].str();
     }

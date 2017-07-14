@@ -164,7 +164,7 @@ String Check::getDataEscaped() const
 
 void Checks::load(const path &fn)
 {
-    load(YAML::LoadFile(fn.string()));
+    load(YAML::Load(read_file(fn)));
 }
 
 void Checks::load(const yaml &root)

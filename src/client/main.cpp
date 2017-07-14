@@ -35,6 +35,8 @@
 #include <verifier.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/nowide/args.hpp>
+#include <boost/process.hpp>
 #include <primitives/pack.h>
 #include <primitives/optional.h>
 #include <primitives/templates.h>
@@ -67,6 +69,9 @@ try
 {
     // library initializations
     setup_utf8_filesystem();
+
+    // fix arguments - make them UTF-8
+    boost::nowide::args wargs(argc, argv);
 
     //
     Strings args;
@@ -535,10 +540,12 @@ void self_upgrade()
     auto arg0 = L"\"" + exe + L"\"";
     auto dst = L"\"" + program.wstring() + L"\"";
     std::cout << "Replacing client" << "\n";
+    //boost::process::child c();
+    //boost::process::spawn(boost::process::exe = L"x");// exe.c_str(), arg0.c_str(), L"internal-self-upgrade-copy", dst.c_str());
     if (_wexecl(exe.c_str(), arg0.c_str(), L"internal-self-upgrade-copy", dst.c_str(), 0) == -1)
     {
-        throw std::runtime_error("errno = "s + std::to_string(errno) + "\n" +
-            "Cannot do a self upgrade. Replace this file with newer CPPAN client manually.");
+        //throw std::runtime_error("errno = "s + std::to_string(errno) + "\n" +
+        //    "Cannot do a self upgrade. Replace this file with newer CPPAN client manually.");
     }
 #else
     auto cppan = tmp_dir / "cppan";
@@ -565,7 +572,7 @@ void self_upgrade_copy(const path &dst)
             std::cerr << "Cannot replace program with new executable: " << e.what() << "\n";
             if (n == 0)
                 throw;
-            std::cerr << "Retrying... (" << n + 1 << ")\n";
+            std::cerr << "Retrying... (" << n << ")\n";
         }
     }
     std::cout << "Success!\n";

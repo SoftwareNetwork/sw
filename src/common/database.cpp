@@ -925,13 +925,13 @@ void PackagesDatabase::download()
     };
 
     const String git = "git";
-    if (resolve_executable(git))
+    if (!primitives::resolve_executable(git).empty())
     {
         auto git_init = [this, &git]()
         {
-            command::execute({ git,"-C",db_repo_dir.string(),"init","." });
-            command::execute({ git,"-C",db_repo_dir.string(),"remote","add","github",db_repo_url });
-            command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" });
+            primitives::Command::execute({ git,"-C",db_repo_dir.string(),"init","." });
+            primitives::Command::execute({ git,"-C",db_repo_dir.string(),"remote","add","github",db_repo_url });
+            primitives::Command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" });
         };
 
         try
@@ -942,8 +942,10 @@ void PackagesDatabase::download()
             }
             else
             {
-                if (command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }).rc ||
-                    command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard" }).rc)
+                std::error_code ec;
+                primitives::Command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }, ec);
+                primitives::Command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard" }, ec);
+                if (ec)
                 {
                     // can throw
                     fs::remove_all(db_repo_dir);

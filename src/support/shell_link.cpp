@@ -38,7 +38,7 @@
 #include "objidl.h"
 #include "shlguid.h"
 
-HRESULT CreateLink(LPCSTR lpszPathObj, LPCSTR lpszPathLink, LPCSTR lpszDesc)
+HRESULT CreateLink(LPCWSTR lpszPathObj, LPCWSTR lpszPathLink, LPCWSTR lpszDesc)
 {
     HRESULT hres;
     IShellLink* psl;
@@ -62,16 +62,16 @@ HRESULT CreateLink(LPCSTR lpszPathObj, LPCSTR lpszPathLink, LPCSTR lpszDesc)
 
         if (SUCCEEDED(hres))
         {
-            WCHAR wsz[MAX_PATH];
+            //WCHAR wsz[MAX_PATH];
 
             // Ensure that the string is Unicode.
-            MultiByteToWideChar(CP_ACP, 0, lpszPathLink, -1, wsz, MAX_PATH);
+            //MultiByteToWideChar(CP_ACP, 0, lpszPathLink, -1, wsz, MAX_PATH);
 
             // Add code here to check return value from MultiByteWideChar
             // for success.
 
             // Save the link by calling IPersistFile::Save.
-            hres = ppf->Save(wsz, TRUE);
+            hres = ppf->Save(lpszPathLink, TRUE);
             ppf->Release();
         }
         psl->Release();
@@ -84,8 +84,7 @@ bool create_link(const path &file, const path &link, const String &description)
 {
 #ifdef _WIN32
     fs::create_directories(link.parent_path());
-    //return SUCCEEDED(CreateLink(file.wstring().c_str(), link.wstring().c_str(), to_wstring(description).c_str()));
-    return SUCCEEDED(CreateLink(file.string().c_str(), link.string().c_str(), description.c_str()));
+    return SUCCEEDED(CreateLink(file.wstring().c_str(), link.wstring().c_str(), to_wstring(description).c_str()));
 #else
     return true;
 #endif

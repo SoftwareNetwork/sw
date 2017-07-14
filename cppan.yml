@@ -85,6 +85,9 @@ projects:
                         - VERSION_MAJOR=0
                         - VERSION_MINOR=2
                         - VERSION_PATCH=3
+                    win32:
+                        public:
+                            - UNICODE
 
         post_sources: |
             add_executable(stamp_generator ${SDIR}/src/gen/stamp_gen.cpp)

@@ -128,12 +128,12 @@ bool is_valid_file_type(const MimeTypes &types, const path &p, const String &s, 
 
 bool is_valid_file_type(const MimeTypes &types, const path &p, String *error = nullptr, bool check_ext = false)
 {
-    command::Args args;
-    args.push_back("file");
-    args.push_back("-ib");
-    args.push_back(p.string());
-    auto fret = command::execute_and_capture(args);
-    return is_valid_file_type(types, p, fret.out, error, check_ext);
+    primitives::Command c;
+    c.program = "file";
+    c.args.push_back("-ib");
+    c.args.push_back(p.string());
+    c.execute();
+    return is_valid_file_type(types, p, c.out.text, error, check_ext);
 }
 
 bool is_valid_source_mime_type(const path &p, String *error = nullptr)
@@ -197,14 +197,18 @@ void check_file_types(const Files &files)
         o << "file -ib " << normalize_path(file) << "\n";
     o.close();
 
-    auto ret = command::execute_and_capture({ "sh", fn.string() });
+    primitives::Command c;
+    c.program = "sh";
+    c.args.push_back(fn.string());
+    std::error_code ec;
+    c.execute(ec);
     fs::remove(fn);
 
-    if (ret.rc != 0)
-        throw std::runtime_error("Error during file checking: rc = " + std::to_string(ret.rc));
+    if (ec)
+        throw std::runtime_error("Error during file checking: rc = " + std::to_string(c.exit_code));
 
     std::vector<String> lines, sh_out;
-    boost::split(sh_out, ret.out, boost::is_any_of("\r\n"));
+    boost::split(sh_out, c.out.text, boost::is_any_of("\r\n"));
     for (auto &s : sh_out)
     {
         boost::trim(s);
