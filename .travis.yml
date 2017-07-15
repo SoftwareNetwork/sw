@@ -58,3 +58,4 @@ script:
   #- cd ..
   #- cd tests-master/tests/ok
   #- for i in *.cpp; do cppan --build $i; done
+
