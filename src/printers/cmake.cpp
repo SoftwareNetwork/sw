@@ -501,10 +501,7 @@ void gather_copy_deps(const Packages &dd, Packages &out)
 auto run_command(const Settings &bs, primitives::Command &c)
 {
     if (bs.build_system_verbose)
-    {
         c.inherit = true;
-        c.buf_size = 256; // for frequent flushes
-    }
     std::error_code ec;
     c.execute(ec);
     if (ec && bs.build_system_verbose)
@@ -1027,6 +1024,7 @@ int CMakePrinter::generate(const BuildSettings &bs) const
 #endif
     }
 
+    c.buf_size = 256; // for frequent flushes
     auto ret = run_command(s, c);
 
     if (bs.allow_links)
