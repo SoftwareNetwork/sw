@@ -910,7 +910,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${output_dir})
 #set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${output_dir})
 
 if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE )" + s.default_configuration + R"()
+    set_cache_var(CMAKE_BUILD_TYPE )" + s.default_configuration + R"()
 endif()
 
 if (WIN32)
@@ -1476,6 +1476,12 @@ void CMakePrinter::print_src_config_file(const path &fn) const
     // prevent errors
     ctx.if_("TARGET ${this}");
     ctx.addLine("return()");
+    ctx.endif();
+    ctx.addLine();
+
+    // build type
+    ctx.if_("NOT CMAKE_BUILD_TYPE");
+    ctx.addLine("set_cache_var(CMAKE_BUILD_TYPE " + Settings::get_local_settings().default_configuration + ")");
     ctx.endif();
 
     print_references(ctx);
@@ -2153,6 +2159,11 @@ void CMakePrinter::print_src_actions_file(const path &fn) const
     CMakeContext ctx;
     file_header(ctx, d);
 
+    // build type
+    ctx.if_("NOT CMAKE_BUILD_TYPE");
+    ctx.addLine("set_cache_var(CMAKE_BUILD_TYPE" + Settings::get_local_settings().default_configuration + ")");
+    ctx.endif();
+
     ctx.addLine(config_delimeter);
     ctx.addLine();
     ctx.addLine("set(CMAKE_CURRENT_SOURCE_DIR_OLD ${CMAKE_CURRENT_SOURCE_DIR})");
@@ -2245,7 +2256,7 @@ void CMakePrinter::print_obj_config_file(const path &fn) const
 
         config_section_title(ctx, "global settings");
         ctx.addLine(R"(if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+    set_cache_var(CMAKE_BUILD_TYPE Release)
 endif()
 
 # TODO:

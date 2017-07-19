@@ -69,6 +69,7 @@ std::vector<StartupAction> startup_actions{
     { 9, StartupAction::ClearStorageDirExp },
     { 10, StartupAction::ClearPackagesDatabase },
     { 11, StartupAction::ServiceDbClearConfigHashes },
+    { 12, StartupAction::ClearStorageDirExp | StartupAction::ClearStorageDirObj },
 };
 
 const TableDescriptors &get_service_tables()
@@ -490,6 +491,11 @@ void ServiceDatabase::performStartupActions() const
             if (a.action & StartupAction::ClearStorageDirExp)
             {
                 remove_all_from_dir(directories.storage_dir_exp);
+            }
+
+            if (a.action & StartupAction::ClearStorageDirObj)
+            {
+                remove_all_from_dir(directories.storage_dir_obj);
             }
 
             if (a.action & StartupAction::ClearStorageDirBin)

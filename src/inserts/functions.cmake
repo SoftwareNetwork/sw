@@ -307,7 +307,9 @@ function(get_configuration_unhashed out)
     # for non VS/XCODE builds
     set(configuration)
     if (NOT (XCODE OR VISUAL_STUDIO))
-        set(configuration ${CPPAN_CONFIG_PART_DELIMETER}${CMAKE_BUILD_TYPE})
+        if (CMAKE_BUILD_TYPE)
+            set(configuration ${CPPAN_CONFIG_PART_DELIMETER}${CMAKE_BUILD_TYPE})
+        endif()
     endif()
 
     set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${version})
