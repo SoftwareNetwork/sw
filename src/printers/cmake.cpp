@@ -568,6 +568,7 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
             ScopedDependencyCondition sdc(local, p);
             local.addLine("get_target_property(implib_" + p.variable_name + " " + p.target_name + " IMPORTED_IMPLIB_${CMAKE_BUILD_TYPE_UPPER})");
             local.addLine("get_target_property(imploc_" + p.variable_name + " " + p.target_name + " IMPORTED_LOCATION_${CMAKE_BUILD_TYPE_UPPER})");
+            local.addLine("get_target_property(impson_" + p.variable_name + " " + p.target_name + " IMPORTED_SONAME_${CMAKE_BUILD_TYPE_UPPER})");
         }
         local.emptyLines();
 
@@ -676,6 +677,7 @@ endif()
             ScopedDependencyCondition sdc(local, p, false);
             local.addLine("set(bp ${bp} ${implib_" + p.variable_name + "})");
             local.addLine("set(bp ${bp} ${imploc_" + p.variable_name + "})");
+            local.addLine("set(bp ${bp} ${impson_" + p.variable_name + "})");
         }
         local.emptyLines();
 
