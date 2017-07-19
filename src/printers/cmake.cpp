@@ -723,6 +723,13 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
 
     ctx.if_("CPPAN_USE_CACHE");
 
+    // prepare copy files
+    ctx.addLine("set(file ${BDIR}/cppan_copy_deps_$<CONFIG>.${ext})");
+    ctx.addLine("set(copy_content)");
+    ctx.if_("WIN32");
+    ctx.addLine("set(copy_content \"${copy_content} setlocal\\n\")");
+    ctx.endif();
+
     ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
     ctx.if_("NOT output_dir");
     ctx.addLine("set(output_dir ${CMAKE_BINARY_DIR})");
@@ -780,39 +787,75 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
         output_directory += rd[p].config->getDefaultProject().output_directory + "/";
 
         ctx.if_("copy");
-        ctx.increaseIndent("add_custom_command(TARGET " + target + " POST_BUILD");
-        ctx.increaseIndent("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-        if (p.flags[pfExecutable] || (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable))
         {
-            String name;
-            if (settings.full_path_executables)
-                name = "$<TARGET_FILE_NAME:" + p.target_name + ">";
+            String s;
+            s += "set(copy_content \"${copy_content} \\\"${CMAKE_COMMAND}\\\" -E copy_if_different ";
+            if (p.flags[pfExecutable] || (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable))
+            {
+                String name;
+                if (settings.full_path_executables)
+                    name = "$<TARGET_FILE_NAME:" + p.target_name + ">";
+                else
+                    name = p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}";
+                s += "$<TARGET_FILE:" + p.target_name + "> " + output_directory + name;
+            }
             else
-                name = p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}";
-            ctx.addLine("$<TARGET_FILE:" + p.target_name + "> " + output_directory + name);
+            {
+                // if we change non-exe name, we still won't fix linker information about dependencies' names
+                s += "$<TARGET_FILE:" + p.target_name + "> " + output_directory + "$<TARGET_FILE_NAME:" + p.target_name + ">";
+            }
+            s += "\\n\")";
+            ctx.addLine(s);
+            ctx.addLine("add_dependencies(" + target + " " + p.target_name + ")");
+
+            ctx.if_("WIN32");
+            ctx.addLine("set(copy_content \"${copy_content} if %errorlevel% neq 0 goto :cmEnd\\n\")");
+            ctx.endif();
         }
-        else
-        {
-            // if we change non-exe name, we still won't fix linker information about dependencies' names
-            ctx.addLine("$<TARGET_FILE:" + p.target_name + "> " + output_directory + "$<TARGET_FILE_NAME:" + p.target_name + ">");
-        }
-        ctx.decreaseIndent(")", 2);
         ctx.addLine();
 
         // import library for shared libs
         if (settings.copy_import_libs || settings.copy_all_libraries_to_output)
         {
             ctx.if_("\"${type}\" STREQUAL SHARED_LIBRARY");
-            ctx.increaseIndent("add_custom_command(TARGET " + target + " POST_BUILD");
-            ctx.increaseIndent("COMMAND ${CMAKE_COMMAND} -E copy_if_different");
-            ctx.addLine("$<TARGET_LINKER_FILE:" + p.target_name + "> " + output_directory + "$<TARGET_LINKER_FILE_NAME:" + p.target_name + ">");
-            ctx.decreaseIndent(")", 2);
+            String s;
+            s += "set(copy_content \"${copy_content} \\\"${CMAKE_COMMAND}\\\" -E copy_if_different ";
+            s += "$<TARGET_LINKER_FILE:" + p.target_name + "> " + output_directory + "$<TARGET_LINKER_FILE_NAME:" + p.target_name + ">";
+            s += "\\n\")";
+            ctx.addLine(s);
+
+            ctx.if_("WIN32");
+            ctx.addLine("set(copy_content \"${copy_content} if %errorlevel% neq 0 goto :cmEnd\\n\")");
+            ctx.endif();
+
             ctx.endif();
         }
 
         ctx.endif();
         ctx.addLine();
     }
+
+    ctx.if_("WIN32");
+    ctx.addLine(R"(set(copy_content "${copy_content}\n
+exit /b 0
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel%
+:cmErrorLevel
+exit /b %1
+"))");
+    ctx.endif();
+
+    ctx.addLine(R"(
+file(GENERATE OUTPUT ${file} CONTENT "
+    ${copy_content}
+")
+if (UNIX)
+    set(file chmod u+x ${file} COMMAND ${file})
+endif()
+add_custom_command(TARGET )" + target + R"( POST_BUILD
+    COMMAND ${file}
+)
+)");
 
     ctx.endif();
     ctx.addLine();
@@ -2570,6 +2613,7 @@ add_dependencies()" + old_cppan_target + R"( run-cppan)
 
         print_build_dependencies(ctx, cppan_dummy_target(cppan_dummy_build_target));
         print_copy_dependencies(ctx, cppan_dummy_target(cppan_dummy_copy_target));
+        //ctx.addLine("add_dependencies(" + cppan_dummy_target(cppan_dummy_copy_target) + " " + cppan_dummy_target(cppan_dummy_build_target) + ")");
 
         // groups for local projects
         config_section_title(ctx, "local project groups");
