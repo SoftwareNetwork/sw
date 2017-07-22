@@ -95,13 +95,13 @@ static int checkEmpty(First &&f, Args && ... args)
 }
 
 template <typename ... Args>
-static String checkOne(Args && ... args)
+static String checkOne(const String &name, Args && ... args)
 {
     int n = checkEmpty(std::forward<Args>(args)...);
     if (n == 0)
-        return "No sources available";
+        return "No " + name + " sources available";
     if (n > 1)
-        return "Only one source must be specified";
+        return "Only one " + name + " source must be specified";
     return "";
 }
 
@@ -115,7 +115,7 @@ bool SourceUrl::checkValid(const String &name, String *error, Args && ... args) 
 {
     if (!isValid(name, error))
         return false;
-    auto e = checkOne(std::forward<Args>(args)...);
+    auto e = checkOne(name, std::forward<Args>(args)...);
     auto ret = e.empty();
     if (!ret && error)
         *error = e;
