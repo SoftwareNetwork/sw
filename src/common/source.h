@@ -41,6 +41,10 @@ struct SourceUrl
     bool save(ptree &p) const;
     void save(yaml &root, const String &name) const;
     String print() const;
+
+protected:
+    template <typename ... Args>
+    bool checkValid(const String &name, String *error, Args && ... args) const;
 };
 
 struct Git : SourceUrl
@@ -118,7 +122,6 @@ struct Fossil : Git
     Fossil(const yaml &root, const String &name = Fossil::getString());
 
     void download() const;
-    bool isValid(String *error = nullptr) const;
     using Git::save;
     void save(yaml &root, const String &name = Fossil::getString()) const;
 

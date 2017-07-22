@@ -73,9 +73,53 @@ static void downloadRepository(F &&f)
     }
 }
 
+static int isEmpty(int64_t i)
+{
+    return i == -1;
+}
+
+static int isEmpty(const String &s)
+{
+    return s.empty();
+}
+
+static int checkEmpty()
+{
+    return 0;
+}
+
+template <typename First, typename ... Args>
+static int checkEmpty(First &&f, Args && ... args)
+{
+    return isEmpty(f) + checkEmpty(std::forward<Args>(args)...);
+}
+
+template <typename ... Args>
+static String checkOne(Args && ... args)
+{
+    int n = checkEmpty(std::forward<Args>(args)...);
+    if (n == 0)
+        return "No sources available";
+    if (n > 1)
+        return "Only one source must be specified";
+    return "";
+}
+
 SourceUrl::SourceUrl(const yaml &root, const String &name)
 {
     YAML_EXTRACT_VAR(root, url, name, String);
+}
+
+template <typename ... Args>
+bool SourceUrl::checkValid(const String &name, String *error, Args && ... args) const
+{
+    if (!isValid(name, error))
+        return false;
+    auto e = checkOne(std::forward<Args>(args)...);
+    auto ret = e.empty();
+    if (!ret && error)
+        *error = e;
+    return ret;
 }
 
 bool SourceUrl::isValid(const String &name, String *error) const
@@ -204,29 +248,7 @@ void Git::download() const
 
 bool Git::isValid(String *error) const
 {
-    if (!SourceUrl::isValid(getString(), error))
-        return false;
-
-    int e = 0;
-    e += !tag.empty();
-    e += !branch.empty();
-    e += !commit.empty();
-
-    if (e == 0)
-    {
-        if (error)
-            *error = "No git sources (tag or branch or commit) available";
-        return false;
-    }
-
-    if (e > 1)
-    {
-        if (error)
-            *error = "Only one git source (tag or branch or commit) must be specified";
-        return false;
-    }
-
-    return true;
+    return checkValid(getString(), error, tag, branch, commit);
 }
 
 bool Git::load(const ptree &p)
@@ -296,30 +318,7 @@ void Hg::download() const
 
 bool Hg::isValid(String *error) const
 {
-    if (!SourceUrl::isValid(getString(), error))
-        return false;
-
-    int e = 0;
-    e += !tag.empty();
-    e += !branch.empty();
-    e += !commit.empty();
-    e += revision != -1;
-
-    if (e == 0)
-    {
-        if (error)
-            *error = "No hg sources (tag or branch or commit or revision) available";
-        return false;
-    }
-
-    if (e > 1)
-    {
-        if (error)
-            *error = "Only one hg source (tag or branch or commit or revision) must be specified";
-        return false;
-    }
-
-    return true;
+    return checkValid(getString(), error, tag, branch, commit, revision);
 }
 
 bool Hg::load(const ptree &p)
@@ -378,28 +377,7 @@ void Bzr::download() const
 
 bool Bzr::isValid(String *error) const
 {
-    if (!SourceUrl::isValid(getString(), error))
-        return false;
-
-    int e = 0;
-    e += !tag.empty();
-    e += revision != -1;
-
-    if (e == 0)
-    {
-        if (error)
-            *error = "No bzr sources (tag or revision) available";
-        return false;
-    }
-
-    if (e > 1)
-    {
-        if (error)
-            *error = "Only one Bzr source (tag or revision) must be specified";
-        return false;
-    }
-
-    return true;
+    return checkValid(getString(), error, tag, revision);
 }
 
 bool Bzr::load(const ptree &p)
@@ -460,33 +438,6 @@ void Fossil::download() const
         else if (!commit.empty())
             Command::execute({ "fossil", "update", commit });
     });
-}
-
-bool Fossil::isValid(String *error) const
-{
-    if (!SourceUrl::isValid(getString(), error))
-        return false;
-
-    int e = 0;
-    e += !tag.empty();
-    e += !branch.empty();
-    e += !commit.empty();
-
-    if (e == 0)
-    {
-        if (error)
-            *error = "No fossil sources (tag or branch or commit) available";
-        return false;
-    }
-
-    if (e > 1)
-    {
-        if (error)
-            *error = "Only one fossil source (tag or branch or commit) must be specified";
-        return false;
-    }
-
-    return true;
 }
 
 void Fossil::save(yaml &root, const String &name) const
