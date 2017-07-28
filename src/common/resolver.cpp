@@ -438,10 +438,25 @@ void Resolver::read_configs()
 void Resolver::read_config(const DownloadDependency &d)
 {
     if (!fs::exists(d.getDirSrc()))
+    {
+        LOG_DEBUG(logger, "Config dir does not exist: " << d.target_name);
         return;
+    }
 
     if (rd.packages.find(d) != rd.packages.end())
+    {
+        LOG_DEBUG(logger, "Package does not exist: " << d.target_name);
         return;
+    }
+
+    // CPPAN_FILENAME must exist
+    if (!fs::exists(d.getDirSrc() / CPPAN_FILENAME))
+    {
+        // if not - remove dir and fix everything on the next run
+        fs::remove_all(d.getDirSrc());
+        throw std::runtime_error("There is an error that cannot be resolved during this run, please, restart the program");
+    }
+
     // keep some set data for re-read configs
     //auto oldi = rd.packages.find(d);
     // Config::created is needed for patching sources and other initialization stuff
