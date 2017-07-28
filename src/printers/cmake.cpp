@@ -726,6 +726,10 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
     ctx.if_("CPPAN_USE_CACHE");
 
     // prepare copy files
+    ctx.addLine("set(ext sh)");
+    ctx.if_("WIN32");
+    ctx.addLine("set(ext bat)");
+    ctx.endif();
     ctx.addLine("set(file ${BDIR}/cppan_copy_deps_$<CONFIG>.${ext})");
     ctx.addLine("set(copy_content)");
     ctx.if_("WIN32");
