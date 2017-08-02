@@ -234,6 +234,7 @@ public:
     bool import_from_bazel = false;
     bool prefer_binaries = false;
     bool export_all_symbols = false;
+    bool export_if_static = false;
     bool build_dependencies_with_same_config = false;
     bool rc_enabled = true;
 

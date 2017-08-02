@@ -1440,6 +1440,9 @@ void CMakePrinter::print_settings(CMakeContext &ctx) const
     ctx.addLine("set(EXECUTABLE " + String(d.flags[pfExecutable] ? "1" : "0") + ")");
     ctx.addLine();
 
+    ctx.addLine("set(EXPORT_IF_STATIC " + String(p.export_if_static ? "1" : "0") + ")");
+    ctx.addLine();
+
     print_sdir_bdir(ctx, d);
 
     ctx.addLine("set(LIBRARY_API " + library_api(d) + ")");
@@ -1650,6 +1653,8 @@ endif()
             ctx.addLine("message(FATAL_ERROR \"You have bugged CMake version 3.6 which is known to not work with CPPAN. Please, upgrade CMake.\")");
             ctx.endif();
             set_target_properties(ctx, "WINDOWS_EXPORT_ALL_SYMBOLS", "True");
+            if (d.flags[pfExecutable])
+                set_target_properties(ctx, "ENABLE_EXPORTS", "1");
         }
         ctx.emptyLines();
 
@@ -1858,9 +1863,13 @@ endif()
         else
         {
             if (!d.flags[pfHeaderOnly])
-                ctx.addLine("PUBLIC    ${LIBRARY_API}=");
+            {
+                // for export_if_static
+                ctx.addLine("PRIVATE   ${LIBRARY_API}=CPPAN_SYMBOL_EXPORT");
+                ctx.addLine("INTERFACE ${LIBRARY_API}=CPPAN_SYMBOL_IMPORT");
+            }
             else
-                ctx.addLine("INTERFACE    ${LIBRARY_API}=");
+                ctx.addLine("INTERFACE    ${LIBRARY_API}=CPPAN_SYMBOL_IMPORT");
         }
         ctx.decreaseIndent(")");
         ctx.endif();

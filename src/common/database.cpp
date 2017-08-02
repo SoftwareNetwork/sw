@@ -944,10 +944,10 @@ void PackagesDatabase::download()
             }
             else
             {
-                std::error_code ec;
-                primitives::Command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }, ec);
-                primitives::Command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard" }, ec);
-                if (ec)
+                std::error_code ec1, ec2;
+                primitives::Command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" }, ec1);
+                primitives::Command::execute({ git,"-C",db_repo_dir.string(),"reset","--hard" }, ec2);
+                if (ec1 || ec2)
                 {
                     // can throw
                     fs::remove_all(db_repo_dir);

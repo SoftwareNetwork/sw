@@ -816,6 +816,7 @@ void Project::load(const yaml &root)
     YAML_EXTRACT_AUTO(import_from_bazel);
     YAML_EXTRACT_AUTO(prefer_binaries);
     YAML_EXTRACT_AUTO(export_all_symbols);
+    YAML_EXTRACT_AUTO(export_if_static);
     YAML_EXTRACT_AUTO(rc_enabled);
     YAML_EXTRACT_AUTO(build_dependencies_with_same_config);
 
@@ -1418,6 +1419,7 @@ yaml Project::save() const
     ADD_IF_VAL_TRIPLE(import_from_bazel);
     ADD_IF_VAL_TRIPLE(prefer_binaries);
     ADD_IF_VAL_TRIPLE(export_all_symbols);
+    ADD_IF_VAL_TRIPLE(export_if_static);
     ADD_IF_NOT_VAL_TRIPLE(rc_enabled);
     ADD_IF_VAL_TRIPLE(build_dependencies_with_same_config);
 
