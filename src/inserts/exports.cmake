@@ -23,8 +23,6 @@ endif()
 
 if ("${LIBRARY_TYPE}" STREQUAL "SHARED")
     # empty
-elseif ("${LIBRARY_TYPE}" STREQUAL "STATIC" AND EXPORT_IF_STATIC)
-    set(CPPAN_IMPORT ${CPPAN_EXPORT})
 else()
     set(CPPAN_EXPORT)
     set(CPPAN_IMPORT)

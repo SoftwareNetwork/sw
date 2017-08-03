@@ -1866,7 +1866,10 @@ endif()
             {
                 // for export_if_static
                 ctx.addLine("PRIVATE   ${LIBRARY_API}=CPPAN_SYMBOL_EXPORT");
-                ctx.addLine("INTERFACE ${LIBRARY_API}=CPPAN_SYMBOL_IMPORT");
+                if (p.export_if_static)
+                    ctx.addLine("INTERFACE ${LIBRARY_API}=CPPAN_SYMBOL_EXPORT");
+                else
+                    ctx.addLine("INTERFACE ${LIBRARY_API}=CPPAN_SYMBOL_IMPORT");
             }
             else
                 ctx.addLine("INTERFACE    ${LIBRARY_API}=CPPAN_SYMBOL_IMPORT");

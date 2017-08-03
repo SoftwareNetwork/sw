@@ -5,6 +5,7 @@
 cppan
 .cppan*
 .vs*
+.*
 
 *.kdev*
 
