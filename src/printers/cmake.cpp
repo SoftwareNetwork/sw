@@ -1860,9 +1860,12 @@ endif()
         ctx.increaseIndent("target_compile_definitions    (${this}");
         if (!d.flags[pfHeaderOnly])
         {
-            ctx.addLine("PRIVATE   ${LIBRARY_API}=");
             if (p.export_if_static)
-                ctx.addLine("INTERFACE ${LIBRARY_API}=CPPAN_SYMBOL_EXPORT");
+                // must be public, because when exporting from exe
+                // dllexport must be both in library and exe
+                ctx.addLine("PUBLIC    ${LIBRARY_API}=CPPAN_SYMBOL_EXPORT");
+            else
+                ctx.addLine("PRIVATE   ${LIBRARY_API}=");
         }
         else
             ctx.addLine("INTERFACE ${LIBRARY_API}=");
