@@ -1123,7 +1123,7 @@ int CMakePrinter::generate(const BuildSettings &bs) const
         }
     }
 
-    return ret;
+    return ret.get();
 }
 
 int CMakePrinter::build(const BuildSettings &bs) const
@@ -1145,7 +1145,7 @@ int CMakePrinter::build(const BuildSettings &bs) const
             c.args.push_back(a);
     }
 
-    return run_command(settings, c);
+    return run_command(settings, c).get();
 }
 
 void CMakePrinter::clear_cache() const
@@ -1858,22 +1858,14 @@ endif()
         ctx.decreaseIndent(")");
         ctx.else_(); // STATIC
         ctx.increaseIndent("target_compile_definitions    (${this}");
-        if (d.flags[pfExecutable])
-            ctx.addLine("PRIVATE    ${LIBRARY_API}=");
-        else
+        if (!d.flags[pfHeaderOnly])
         {
-            if (!d.flags[pfHeaderOnly])
-            {
-                // for export_if_static
-                ctx.addLine("PRIVATE   ${LIBRARY_API}=CPPAN_SYMBOL_EXPORT");
-                if (p.export_if_static)
-                    ctx.addLine("INTERFACE ${LIBRARY_API}=CPPAN_SYMBOL_EXPORT");
-                else
-                    ctx.addLine("INTERFACE ${LIBRARY_API}=CPPAN_SYMBOL_IMPORT");
-            }
-            else
-                ctx.addLine("INTERFACE    ${LIBRARY_API}=CPPAN_SYMBOL_IMPORT");
+            ctx.addLine("PRIVATE   ${LIBRARY_API}=");
+            if (p.export_if_static)
+                ctx.addLine("INTERFACE ${LIBRARY_API}=CPPAN_SYMBOL_EXPORT");
         }
+        else
+            ctx.addLine("INTERFACE ${LIBRARY_API}=");
         ctx.decreaseIndent(")");
         ctx.endif();
         ctx.addLine();
@@ -2047,14 +2039,7 @@ endif()
         ctx.decreaseIndent(")");
         ctx.addLine();
 
-        // export/import have special handling
-        // header only packages provide bad (empty) export/import symbols
-        ctx.if_("CPPAN_EXPORT");
-        ctx.increaseIndent("target_compile_definitions(${this}");
-        ctx.addLine(visibility + " CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
-        ctx.addLine(visibility + " CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
-        ctx.decreaseIndent(")");
-        ctx.else_();
+        // export/import
         if (!d.flags[pfHeaderOnly])
         {
             ctx.increaseIndent("target_compile_definitions(${this}");
@@ -2062,8 +2047,6 @@ endif()
             ctx.addLine("PRIVATE CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
             ctx.decreaseIndent(")");
         }
-        ctx.endif();
-        ctx.addLine();
 
         // CPPAN_EXPORT is a macro that will be expanded
         // to proper export/import decls after install from server

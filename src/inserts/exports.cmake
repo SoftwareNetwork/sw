@@ -21,12 +21,5 @@ if (SUN) # TODO: check it in real environment
     set(CPPAN_IMPORT "__global")
 endif()
 
-if ("${LIBRARY_TYPE}" STREQUAL "SHARED")
-    # empty
-else()
-    set(CPPAN_EXPORT)
-    set(CPPAN_IMPORT)
-endif()
-
 set(CPPAN_EXPORT ${CPPAN_EXPORT} PARENT_SCOPE)
 set(CPPAN_IMPORT ${CPPAN_IMPORT} PARENT_SCOPE)
