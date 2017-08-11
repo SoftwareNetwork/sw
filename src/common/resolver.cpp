@@ -264,8 +264,9 @@ void Resolver::download_and_unpack()
         {
             files = unpack_file(fn, version_dir);
         }
-        catch (...)
+        catch (std::exception &e)
         {
+            LOG_ERROR(logger, e.what());
             fs::remove(fn);
             fs::remove_all(version_dir);
             throw;

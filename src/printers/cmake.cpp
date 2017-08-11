@@ -1865,7 +1865,8 @@ endif()
                 // dllexport must be both in library and exe
                 ctx.addLine("PUBLIC    ${LIBRARY_API}=CPPAN_SYMBOL_EXPORT");
             else
-                ctx.addLine("PRIVATE   ${LIBRARY_API}=");
+                // must be public
+                ctx.addLine("PUBLIC    ${LIBRARY_API}=");
         }
         else
             ctx.addLine("INTERFACE ${LIBRARY_API}=");
