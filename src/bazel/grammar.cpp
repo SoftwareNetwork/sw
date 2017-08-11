@@ -34,7 +34,7 @@
 #define yylex   yy_bazellex
 
 // First part of user declarations.
-#line 1 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:404
+
 
 #include <assert.h>
 #include <iostream>
@@ -44,7 +44,7 @@
 
 #define yylex(p) p.lex()
 
-#line 48 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:404
+
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -58,7 +58,7 @@
 
 // User implementation prologue.
 
-#line 62 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:412
+
 
 
 #ifndef YY_
@@ -144,7 +144,7 @@
 
 
 namespace yy_bazel {
-#line 148 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:479
+
 
   /* Return YYSTR after stripping away unnecessary quotes and
      backslashes, so that it's suitable for yyerror.  The heuristic is
@@ -631,218 +631,218 @@ namespace yy_bazel {
           switch (yyn)
             {
   case 2:
-#line 70 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { driver.bazel_file = yystack_[1].value.as< bazel::File > (); }
-#line 637 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 3:
-#line 74 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::File > ().functions.push_back(yystack_[0].value.as< bazel::Function > ()); }
-#line 643 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 4:
-#line 76 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
 		yystack_[1].value.as< bazel::File > ().functions.push_back(yystack_[0].value.as< bazel::Function > ());
 		yylhs.value.as< bazel::File > () = std::move(yystack_[1].value.as< bazel::File > ());
 	}
-#line 652 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 5:
-#line 83 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::Function > () = yystack_[0].value.as< bazel::Function > (); }
-#line 658 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 6:
-#line 85 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
         yylhs.value.as< bazel::Function > ().name = yystack_[0].value.as< bazel::Parameter > ().name;
         yylhs.value.as< bazel::Function > ().parameters.push_back(yystack_[0].value.as< bazel::Parameter > ());
     }
-#line 667 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 7:
-#line 92 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
 		bazel::Function f;
 		f.name = yystack_[3].value.as< std::string > ();
         f.parameters = yystack_[1].value.as< bazel::Parameters > ();
 		yylhs.value.as< bazel::Function > () = f;
 	}
-#line 678 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 8:
-#line 101 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::Parameters > ().push_back(yystack_[0].value.as< bazel::Parameter > ()); }
-#line 684 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 9:
-#line 103 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::Parameters > ().push_back(yystack_[1].value.as< bazel::Parameter > ()); }
-#line 690 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 10:
-#line 105 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
         yystack_[0].value.as< bazel::Parameters > ().push_back(yystack_[2].value.as< bazel::Parameter > ());
         yylhs.value.as< bazel::Parameters > () = std::move(yystack_[0].value.as< bazel::Parameters > ());
     }
-#line 699 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 11:
-#line 112 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::Parameter > () = yystack_[0].value.as< bazel::Parameter > (); }
-#line 705 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 12:
-#line 114 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
         bazel::Parameter p;
         p.values = yystack_[0].value.as< bazel::Values > ();
         yylhs.value.as< bazel::Parameter > () = p;
     }
-#line 715 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 13:
-#line 120 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
         bazel::Parameter p;
         p.name = "kv_map";
         yylhs.value.as< bazel::Parameter > () = p;
     }
-#line 725 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 14:
-#line 128 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::Parameter > () = bazel::Parameter{ yystack_[2].value.as< std::string > (), yystack_[0].value.as< bazel::Values > () }; }
-#line 731 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 15:
-#line 130 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::Parameter > () = bazel::Parameter{ yystack_[2].value.as< std::string > () }; }
-#line 737 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 16:
-#line 134 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
         bazel::Values v;
         v.insert(yystack_[0].value.as< std::string > ());
         yylhs.value.as< bazel::Values > () = v;
     }
-#line 747 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 17:
-#line 140 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
         bazel::Values v;
         v.insert(yystack_[0].value.as< std::string > ());
         yylhs.value.as< bazel::Values > () = v;
     }
-#line 757 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 18:
-#line 146 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::Values > () = std::move(yystack_[0].value.as< bazel::Values > ()); }
-#line 763 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 19:
-#line 148 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
         yystack_[2].value.as< bazel::Values > ().insert(yystack_[0].value.as< bazel::Values > ().begin(), yystack_[0].value.as< bazel::Values > ().end());
         yylhs.value.as< bazel::Values > () = std::move(yystack_[2].value.as< bazel::Values > ());
     }
-#line 772 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 20:
-#line 154 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
         yystack_[6].value.as< bazel::Values > ().insert(yystack_[4].value.as< bazel::Values > ().begin(), yystack_[4].value.as< bazel::Values > ().end());
         yylhs.value.as< bazel::Values > () = std::move(yystack_[6].value.as< bazel::Values > ());
     }
-#line 781 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 21:
-#line 159 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
         bazel::Values v;
         //v.insert("fcall");
         yylhs.value.as< bazel::Values > () = v;
     }
-#line 791 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 27:
-#line 184 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::Values > () = std::move(yystack_[1].value.as< bazel::Values > ()); }
-#line 797 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 28:
-#line 188 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {}
-#line 803 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 29:
-#line 190 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::Values > () = std::move(yystack_[0].value.as< bazel::Values > ()); }
-#line 809 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 30:
-#line 192 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     {
         yystack_[0].value.as< bazel::Values > ().insert(yystack_[2].value.as< bazel::Values > ().begin(), yystack_[2].value.as< bazel::Values > ().end());
         yylhs.value.as< bazel::Values > () = std::move(yystack_[0].value.as< bazel::Values > ());
     }
-#line 818 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 31:
-#line 199 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< bazel::Values > () = std::move(yystack_[0].value.as< bazel::Values > ()); }
-#line 824 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 32:
-#line 203 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< std::string > () = yystack_[0].value.as< std::string > (); }
-#line 830 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 33:
-#line 206 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< std::string > () = yystack_[0].value.as< std::string > (); }
-#line 836 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 34:
-#line 209 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< std::string > () = yystack_[0].value.as< std::string > (); }
-#line 842 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
     break;
 
 
-#line 846 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:859
+
             default:
               break;
             }
@@ -1247,8 +1247,8 @@ namespace yy_bazel {
 
 
 } // yy_bazel
-#line 1251 "/home/egor/dev/cppan_client/src/bazel/grammar.cpp" // lalr1.cc:1167
-#line 212 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:1168
+
+
 
 
 void yy_bazel::parser::error(const location_type& l, const std::string& m)

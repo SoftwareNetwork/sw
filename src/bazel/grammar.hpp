@@ -31,22 +31,22 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/egor/dev/cppan_client/src/bazel/grammar.hpp
+ ** \file D:/dev/cppan_client/src/bazel/grammar.hpp
  ** Define the yy_bazel::parser class.
  */
 
 // C++ LALR(1) parser skeleton written by Akim Demaille.
 
-#ifndef YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_GRAMMAR_HPP_INCLUDED
-# define YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_GRAMMAR_HPP_INCLUDED
+#ifndef YY_YY_BAZEL_D_DEV_CPPAN_CLIENT_SRC_BAZEL_GRAMMAR_HPP_INCLUDED
+# define YY_YY_BAZEL_D_DEV_CPPAN_CLIENT_SRC_BAZEL_GRAMMAR_HPP_INCLUDED
 // //                    "%code requires" blocks.
-#line 33 "/home/egor/dev/cppan_client/src/bazel/grammar.yy" // lalr1.cc:377
+
 
 #include "bazel/bazel.h"
 
 class BazelParserDriver;
 
-#line 50 "/home/egor/dev/cppan_client/src/bazel/grammar.hpp" // lalr1.cc:377
+
 
 # include <cassert>
 # include <cstdlib> // std::abort
@@ -131,7 +131,7 @@ class BazelParserDriver;
 
 
 namespace yy_bazel {
-#line 135 "/home/egor/dev/cppan_client/src/bazel/grammar.hpp" // lalr1.cc:377
+
 
 
 
@@ -1346,9 +1346,9 @@ namespace yy_bazel {
 
 
 } // yy_bazel
-#line 1350 "/home/egor/dev/cppan_client/src/bazel/grammar.hpp" // lalr1.cc:377
 
 
 
 
-#endif // !YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_GRAMMAR_HPP_INCLUDED
+
+#endif // !YY_YY_BAZEL_D_DEV_CPPAN_CLIENT_SRC_BAZEL_GRAMMAR_HPP_INCLUDED

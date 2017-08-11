@@ -16,7 +16,7 @@
 %start file
 %locations
 %verbose
-//%no-lines
+%no-lines
 %error-verbose
 
 ////////////////////////////////////////

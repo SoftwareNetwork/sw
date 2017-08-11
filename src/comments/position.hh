@@ -31,12 +31,12 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/egor/dev/cppan_client/src/comments/position.hh
+ ** \file D:/dev/cppan_client/src/comments/position.hh
  ** Define the yy_comments::position class.
  */
 
-#ifndef YY_YY_COMMENTS_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_COMMENTS_POSITION_HH_INCLUDED
-# define YY_YY_COMMENTS_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_COMMENTS_POSITION_HH_INCLUDED
+#ifndef YY_YY_COMMENTS_D_DEV_CPPAN_CLIENT_SRC_COMMENTS_POSITION_HH_INCLUDED
+# define YY_YY_COMMENTS_D_DEV_CPPAN_CLIENT_SRC_COMMENTS_POSITION_HH_INCLUDED
 
 # include <algorithm> // std::max
 # include <iostream>
@@ -52,7 +52,7 @@
 
 
 namespace yy_comments {
-#line 56 "/home/egor/dev/cppan_client/src/comments/position.hh" // location.cc:296
+
   /// Abstract a position.
   class position
   {
@@ -176,5 +176,5 @@ namespace yy_comments {
 
 
 } // yy_comments
-#line 180 "/home/egor/dev/cppan_client/src/comments/position.hh" // location.cc:296
-#endif // !YY_YY_COMMENTS_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_COMMENTS_POSITION_HH_INCLUDED
+
+#endif // !YY_YY_COMMENTS_D_DEV_CPPAN_CLIENT_SRC_COMMENTS_POSITION_HH_INCLUDED

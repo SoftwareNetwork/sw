@@ -31,18 +31,18 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/egor/dev/cppan_client/src/bazel/stack.hh
+ ** \file D:/dev/cppan_client/src/bazel/stack.hh
  ** Define the yy_bazel::stack class.
  */
 
-#ifndef YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_STACK_HH_INCLUDED
-# define YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_STACK_HH_INCLUDED
+#ifndef YY_YY_BAZEL_D_DEV_CPPAN_CLIENT_SRC_BAZEL_STACK_HH_INCLUDED
+# define YY_YY_BAZEL_D_DEV_CPPAN_CLIENT_SRC_BAZEL_STACK_HH_INCLUDED
 
 # include <vector>
 
 
 namespace yy_bazel {
-#line 46 "/home/egor/dev/cppan_client/src/bazel/stack.hh" // stack.hh:132
+
   template <class T, class S = std::vector<T> >
   class stack
   {
@@ -152,6 +152,6 @@ namespace yy_bazel {
 
 
 } // yy_bazel
-#line 156 "/home/egor/dev/cppan_client/src/bazel/stack.hh" // stack.hh:132
 
-#endif // !YY_YY_BAZEL_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_BAZEL_STACK_HH_INCLUDED
+
+#endif // !YY_YY_BAZEL_D_DEV_CPPAN_CLIENT_SRC_BAZEL_STACK_HH_INCLUDED

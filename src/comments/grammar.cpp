@@ -34,7 +34,7 @@
 #define yylex   yy_commentslex
 
 // First part of user declarations.
-#line 1 "/home/egor/dev/cppan_client/src/comments/grammar.yy" // lalr1.cc:404
+
 
 #include <assert.h>
 #include <iostream>
@@ -44,7 +44,7 @@
 
 #define yylex(p) p.lex()
 
-#line 48 "/home/egor/dev/cppan_client/src/comments/grammar.cpp" // lalr1.cc:404
+
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -58,7 +58,7 @@
 
 // User implementation prologue.
 
-#line 62 "/home/egor/dev/cppan_client/src/comments/grammar.cpp" // lalr1.cc:412
+
 
 
 #ifndef YY_
@@ -144,7 +144,7 @@
 
 
 namespace yy_comments {
-#line 148 "/home/egor/dev/cppan_client/src/comments/grammar.cpp" // lalr1.cc:479
+
 
   /* Return YYSTR after stripping away unnecessary quotes and
      backslashes, so that it's suitable for yyerror.  The heuristic is
@@ -535,31 +535,31 @@ namespace yy_comments {
           switch (yyn)
             {
   case 3:
-#line 58 "/home/egor/dev/cppan_client/src/comments/grammar.yy" // lalr1.cc:859
+
     { driver.comments.push_back(yystack_[0].value.as< std::string > ()); }
-#line 541 "/home/egor/dev/cppan_client/src/comments/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 4:
-#line 60 "/home/egor/dev/cppan_client/src/comments/grammar.yy" // lalr1.cc:859
+
     { driver.comments.push_back(yystack_[0].value.as< std::string > ()); }
-#line 547 "/home/egor/dev/cppan_client/src/comments/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 5:
-#line 64 "/home/egor/dev/cppan_client/src/comments/grammar.yy" // lalr1.cc:859
+
     { yylhs.value.as< std::string > () = yystack_[0].value.as< std::string > (); }
-#line 553 "/home/egor/dev/cppan_client/src/comments/grammar.cpp" // lalr1.cc:859
+
     break;
 
   case 7:
-#line 68 "/home/egor/dev/cppan_client/src/comments/grammar.yy" // lalr1.cc:859
+
     { return 0; }
-#line 559 "/home/egor/dev/cppan_client/src/comments/grammar.cpp" // lalr1.cc:859
+
     break;
 
 
-#line 563 "/home/egor/dev/cppan_client/src/comments/grammar.cpp" // lalr1.cc:859
+
             default:
               break;
             }
@@ -922,8 +922,8 @@ namespace yy_comments {
 
 
 } // yy_comments
-#line 926 "/home/egor/dev/cppan_client/src/comments/grammar.cpp" // lalr1.cc:1167
-#line 71 "/home/egor/dev/cppan_client/src/comments/grammar.yy" // lalr1.cc:1168
+
+
 
 
 void yy_comments::parser::error(const location_type& l, const std::string& m)

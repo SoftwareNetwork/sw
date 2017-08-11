@@ -31,18 +31,18 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/egor/dev/cppan_client/src/comments/stack.hh
+ ** \file D:/dev/cppan_client/src/comments/stack.hh
  ** Define the yy_comments::stack class.
  */
 
-#ifndef YY_YY_COMMENTS_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_COMMENTS_STACK_HH_INCLUDED
-# define YY_YY_COMMENTS_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_COMMENTS_STACK_HH_INCLUDED
+#ifndef YY_YY_COMMENTS_D_DEV_CPPAN_CLIENT_SRC_COMMENTS_STACK_HH_INCLUDED
+# define YY_YY_COMMENTS_D_DEV_CPPAN_CLIENT_SRC_COMMENTS_STACK_HH_INCLUDED
 
 # include <vector>
 
 
 namespace yy_comments {
-#line 46 "/home/egor/dev/cppan_client/src/comments/stack.hh" // stack.hh:132
+
   template <class T, class S = std::vector<T> >
   class stack
   {
@@ -152,6 +152,6 @@ namespace yy_comments {
 
 
 } // yy_comments
-#line 156 "/home/egor/dev/cppan_client/src/comments/stack.hh" // stack.hh:132
 
-#endif // !YY_YY_COMMENTS_HOME_EGOR_DEV_CPPAN_CLIENT_SRC_COMMENTS_STACK_HH_INCLUDED
+
+#endif // !YY_YY_COMMENTS_D_DEV_CPPAN_CLIENT_SRC_COMMENTS_STACK_HH_INCLUDED
