@@ -1622,26 +1622,33 @@ endif()
             {
                 switch (p.cxx_standard)
                 {
+                case 14:
+                    ctx.if_("MSVC");
+                    ctx.addLine("target_compile_options(${this} PRIVATE -std:c++14)");
+                    ctx.else_();
+                    ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_STANDARD " + std::to_string(p.cxx_standard) + ")");
+                    ctx.endif();
+                    break;
                 case 17:
                     ctx.if_("UNIX");
                     // if compiler supports c++17, set it
-                    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} -std=c++1z\")");
+                    ctx.addLine("target_compile_options(${this} PRIVATE -std:c++1z)");
+                    ctx.elseif("MSVC");
+                    ctx.addLine("target_compile_options(${this} PRIVATE -std:c++17)");
+                    ctx.else_();
+                    ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_STANDARD " + std::to_string(p.cxx_standard) + ")");
                     ctx.endif();
                     break;
                 case 20:
                     ctx.if_("UNIX");
-                    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} -std=c++2x\")"); // 2a?
+                    ctx.addLine("target_compile_options(${this} PRIVATE -std:c++2a)");
+                    ctx.elseif("MSVC");
+                    ctx.addLine("target_compile_options(${this} PRIVATE -std:c++latest)");
                     ctx.endif();
                     break;
                 default:
                     ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_STANDARD " + std::to_string(p.cxx_standard) + ")");
                     break;
-                }
-                if (p.cxx_standard > 14)
-                {
-                    ctx.if_("MSVC");
-                    ctx.addLine("set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} /std:c++latest\")");
-                    ctx.endif();
                 }
             }
         }
@@ -1781,23 +1788,22 @@ endif()
     {
         config_section_title(ctx, "dependencies");
 
-        for (auto &dep : rd[d].dependencies)
+        for (auto &[k,v] : rd[d].dependencies)
         {
-            if (dep.second.flags[pfExecutable] ||
-                dep.second.flags[pfIncludeDirectoriesOnly])
+            if (v.flags[pfExecutable] || v.flags[pfIncludeDirectoriesOnly])
                 continue;
 
-            ScopedDependencyCondition sdc(ctx, dep.second);
-            ctx.if_("NOT TARGET " + dep.second.target_name + "");
-            ctx.addLine("message(FATAL_ERROR \"Target '" + dep.second.target_name + "' is not visible at this place\")");
+            ScopedDependencyCondition sdc(ctx, v);
+            ctx.if_("NOT TARGET " + v.target_name + "");
+            ctx.addLine("message(FATAL_ERROR \"Target '" + v.target_name + "' is not visible at this place\")");
             ctx.endif();
             ctx.addLine();
 
             ctx.increaseIndent("target_link_libraries         (${this}");
             if (d.flags[pfHeaderOnly])
-                ctx.addLine("INTERFACE " + dep.second.target_name);
+                ctx.addLine("INTERFACE " + v.target_name);
             else
-                ctx.addLine((dep.second.flags[pfPrivateDependency] ? "PRIVATE" : "PUBLIC") + " "s + dep.second.target_name);
+                ctx.addLine((v.flags[pfPrivateDependency] ? "PRIVATE" : "PUBLIC") + " "s + v.target_name);
             ctx.decreaseIndent(")");
             ctx.addLine();
         }
