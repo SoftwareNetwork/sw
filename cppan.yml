@@ -30,6 +30,9 @@ local_settings:
 
 root_project: pvt.cppan.client
 
+common_options:
+    c++: 17
+
 projects:
     common:
         type: lib
