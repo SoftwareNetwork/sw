@@ -1851,9 +1851,9 @@ endif()
         ctx.increaseIndent("target_compile_definitions    (${this}");
         if (!d.flags[pfHeaderOnly])
         {
-            ctx.addLine("PRIVATE   ${LIBRARY_API}"s + (d.flags[pfExecutable] ? "" : "=CPPAN_SYMBOL_EXPORT"));
+            ctx.addLine("PRIVATE   ${LIBRARY_API}"s + (d.flags[pfExecutable] ? "" : "=${CPPAN_EXPORT}"));
             if (!d.flags[pfExecutable])
-                ctx.addLine("INTERFACE ${LIBRARY_API}=CPPAN_SYMBOL_IMPORT");
+                ctx.addLine("INTERFACE ${LIBRARY_API}=${CPPAN_IMPORT}");
         }
         else
         {
@@ -1869,7 +1869,7 @@ endif()
             if (p.export_if_static)
                 // must be public, because when exporting from exe
                 // dllexport must be both in library and exe
-                ctx.addLine("PUBLIC    ${LIBRARY_API}=CPPAN_SYMBOL_EXPORT");
+                ctx.addLine("PUBLIC    ${LIBRARY_API}=${CPPAN_EXPORT}");
             else
                 // must be public
                 ctx.addLine("PUBLIC    ${LIBRARY_API}=");
@@ -2048,15 +2048,6 @@ endif()
             ctx.addLine(visibility + " " + a + "=${LIBRARY_API}");
         ctx.decreaseIndent(")");
         ctx.addLine();
-
-        // export/import
-        if (!d.flags[pfHeaderOnly])
-        {
-            ctx.increaseIndent("target_compile_definitions(${this}");
-            ctx.addLine("PRIVATE CPPAN_SYMBOL_EXPORT=${CPPAN_EXPORT}");
-            ctx.addLine("PRIVATE CPPAN_SYMBOL_IMPORT=${CPPAN_IMPORT}");
-            ctx.decreaseIndent(")");
-        }
 
         // CPPAN_EXPORT is a macro that will be expanded
         // to proper export/import decls after install from server

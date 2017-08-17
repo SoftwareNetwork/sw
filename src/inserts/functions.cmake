@@ -261,7 +261,7 @@ function(get_configuration_unhashed out)
     prepare_config_part(compiler "${CMAKE_CXX_COMPILER_ID}")
     set(config ${system}${CPPAN_CONFIG_PART_DELIMETER}${processor}${CPPAN_CONFIG_PART_DELIMETER}${compiler})
 
-    string(REGEX MATCH "[0-9]+\\.[0-9]" version "${CMAKE_CXX_COMPILER_VERSION}")
+    string(REGEX MATCH "[0-9]+\\.[0-9]+" version "${CMAKE_CXX_COMPILER_VERSION}")
     if (CMAKE_SIZEOF_VOID_P)
         math(EXPR bits "${CMAKE_SIZEOF_VOID_P} * 8")
     elseif(SIZEOF_VOID_P)
