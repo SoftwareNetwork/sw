@@ -1632,7 +1632,7 @@ endif()
                 case 17:
                     ctx.if_("UNIX");
                     // if compiler supports c++17, set it
-                    ctx.addLine("target_compile_options(${this} PRIVATE -std:c++1z)");
+                    ctx.addLine("target_compile_options(${this} PRIVATE -std=c++1z)");
                     ctx.elseif("MSVC");
                     ctx.addLine("target_compile_options(${this} PRIVATE -std:c++17)");
                     ctx.else_();
@@ -1641,7 +1641,7 @@ endif()
                     break;
                 case 20:
                     ctx.if_("UNIX");
-                    ctx.addLine("target_compile_options(${this} PRIVATE -std:c++2a)");
+                    ctx.addLine("target_compile_options(${this} PRIVATE -std=c++2a)");
                     ctx.elseif("MSVC");
                     ctx.addLine("target_compile_options(${this} PRIVATE -std:c++latest)");
                     ctx.endif();
