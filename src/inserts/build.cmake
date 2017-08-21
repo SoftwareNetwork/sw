@@ -75,7 +75,13 @@ endif()
 # maybe add similar options to cppan? '-- pass all args after two dashes to cmake build'
 set(parallel)
 if (MULTICORE)
+    #message(STATUS "this is multicore build")
     #set(parallel "-j ${N_CORES}") # temporary
+endif()
+if (VISUAL_STUDIO AND CLANG)
+    #message(STATUS "this is clang build")
+    #get_number_of_cores(N_CORES)
+    #set(parallel "/maxcpucount:${N_CORES}") # for msbuild
 endif()
 
 if (NINJA)
@@ -95,11 +101,13 @@ elseif (CONFIG)
                 if (CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIGURATION)
                     cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
-                            --config ${CONFIG}")
+                            --config ${CONFIG}
+                            -- ${parallel}")
                     execute_process(
                         COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
                             --config ${CONFIG}
+                            #-- ${parallel}
                         ${OUTPUT_QUIET}
                         ${ERROR_QUIET}
                         RESULT_VARIABLE ret
@@ -107,11 +115,13 @@ elseif (CONFIG)
                 else()
                     cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
-                            --config Release")
+                            --config Release
+                            -- ${parallel}")
                     execute_process(
                         COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
                             --config Release
+                            #-- ${parallel}
                         ${OUTPUT_QUIET}
                         ${ERROR_QUIET}
                         RESULT_VARIABLE ret
@@ -120,11 +130,13 @@ elseif (CONFIG)
         else()
                 cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                         --build ${BUILD_DIR}
-                        --config ${CONFIG}")
+                        --config ${CONFIG}
+                        -- ${parallel}")
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         --build ${BUILD_DIR}
                         --config ${CONFIG}
+                        #-- ${parallel}
                     ${OUTPUT_QUIET}
                     ${ERROR_QUIET}
                     RESULT_VARIABLE ret
@@ -142,10 +154,12 @@ elseif (CONFIG)
 else()
     if ("${make}" STREQUAL "make-NOTFOUND")
         cppan_debug_message("COMMAND ${CMAKE_COMMAND}
-                --build ${BUILD_DIR}")
+                --build ${BUILD_DIR}
+                -- ${parallel}")
         execute_process(
             COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}
+                #-- ${parallel}
             ${OUTPUT_QUIET}
             ${ERROR_QUIET}
             RESULT_VARIABLE ret

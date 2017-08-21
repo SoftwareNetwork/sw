@@ -586,6 +586,7 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
         ADD_VAR(XCODE);
         ADD_VAR(NINJA);
         ADD_VAR(VISUAL_STUDIO);
+        ADD_VAR(CLANG);
 #undef ADD_VAR
 
         local.addLine("set(rest \"" + rest + "\")");
@@ -596,7 +597,14 @@ if (WIN32)
     set(ext bat)
 endif()
 
-set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext}))");
+set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})
+
+#if (NOT CPPAN_BUILD_LEVEL)
+    #set(CPPAN_BUILD_LEVEL 0)
+#else()
+    #math(EXPR CPPAN_BUILD_LEVEL "${CPPAN_BUILD_LEVEL} + 1")
+#endif()
+)");
 
         bool has_build_deps = false;
         for (auto &dp : build_deps)
@@ -615,6 +623,7 @@ set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext}))");
             ScopedDependencyCondition sdc(local, p, false);
             local.addNoNewLine("set(bd_" + p.variable_name + " \"");
             local.addText("\\\"${CMAKE_COMMAND}\\\" ");
+            //local.addText("-DCPPAN_BUILD_LEVEL=${CPPAN_BUILD_LEVEL} ");
             local.addText("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + "> ");
             local.addText("-DCONFIG=$<CONFIG> ");
             local.addText("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "} ");
@@ -904,19 +913,21 @@ void CMakePrinter::prepare_build(const BuildSettings &bs) const
     ctx.addLine(cmake_minimum_required);
     ctx.addLine();
 
+    ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + ")");
+
     config_section_title(ctx, "project settings");
     ctx.addLine("project(" + bs.filename_without_ext + " LANGUAGES C CXX)");
     ctx.addLine();
 
     config_section_title(ctx, "compiler & linker settings");
-    ctx.addLine(R"(# Output directory settings
+    ctx.addLine(R"xxx(# Output directory settings
 set(output_dir ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${output_dir})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${output_dir})
 #set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${output_dir})
 
 if (NOT CMAKE_BUILD_TYPE)
-    set_cache_var(CMAKE_BUILD_TYPE )" + s.default_configuration + R"()
+    set_cache_var(CMAKE_BUILD_TYPE )xxx" + s.default_configuration + R"xxx()
 endif()
 
 if (WIN32)
@@ -925,31 +936,36 @@ else()
     set(CMAKE_INSTALL_PREFIX "/opt/local/cppan")
 endif()
 
-if (MSVC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
-endif()
-
-set(XCODE 0)
+set_cache_var(XCODE 0)
 if (CMAKE_GENERATOR STREQUAL Xcode)
-    set(XCODE 1)
+    set_cache_var(XCODE 1)
 endif()
 
-set(NINJA 0)
+set_cache_var(NINJA 0)
 if (CMAKE_GENERATOR STREQUAL Ninja)
-    set(NINJA 1)
+    set_cache_var(NINJA 1)
 endif()
 
-#find_program(ninja ninja)
-#if (NOT "${ninja}" STREQUAL "ninja-NOTFOUND")
-#    set(NINJA 1)
-#endif()
-
-set(VISUAL_STUDIO 0)
+set_cache_var(VISUAL_STUDIO 0)
 if (MSVC AND NOT NINJA)
-    set(VISUAL_STUDIO 1)
+    set_cache_var(VISUAL_STUDIO 1)
 endif()
-)");
+
+set_cache_var(CLANG 0)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    set_cache_var(CLANG 1)
+endif()
+if (CMAKE_VS_PLATFORM_TOOLSET MATCHES "(v[0-9]+_clang_.*|LLVM-vs[0-9]+.*)")
+    set_cache_var(CLANG 1)
+endif()
+
+if (MSVC)
+    if (NOT CLANG)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+    endif()
+endif()
+)xxx");
 
     if (!s.install_prefix.empty())
     {
@@ -1123,7 +1139,7 @@ int CMakePrinter::generate(const BuildSettings &bs) const
         }
     }
 
-    return ret.get();
+    return ret.value();
 }
 
 int CMakePrinter::build(const BuildSettings &bs) const
@@ -1145,7 +1161,7 @@ int CMakePrinter::build(const BuildSettings &bs) const
             c.args.push_back(a);
     }
 
-    return run_command(settings, c).get();
+    return run_command(settings, c).value();
 }
 
 void CMakePrinter::clear_cache() const
@@ -1624,7 +1640,11 @@ endif()
                 {
                 case 14:
                     ctx.if_("MSVC");
+                    ctx.if_("CLANG");
+                    ctx.addLine("target_compile_options(${this} PRIVATE -Xclang -std=c++14)");
+                    ctx.else_();
                     ctx.addLine("target_compile_options(${this} PRIVATE -std:c++14)");
+                    ctx.endif();
                     ctx.else_();
                     ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_STANDARD " + std::to_string(p.cxx_standard) + ")");
                     ctx.endif();
@@ -1634,7 +1654,11 @@ endif()
                     // if compiler supports c++17, set it
                     ctx.addLine("target_compile_options(${this} PRIVATE -std=c++1z)");
                     ctx.elseif("MSVC");
+                    ctx.if_("CLANG");
+                    ctx.addLine("target_compile_options(${this} PRIVATE -Xclang -std=c++17)");
+                    ctx.else_();
                     ctx.addLine("target_compile_options(${this} PRIVATE -std:c++17)");
+                    ctx.endif();
                     ctx.else_();
                     ctx.addLine("set_property(TARGET ${this} PROPERTY CXX_STANDARD " + std::to_string(p.cxx_standard) + ")");
                     ctx.endif();
@@ -1643,7 +1667,11 @@ endif()
                     ctx.if_("UNIX");
                     ctx.addLine("target_compile_options(${this} PRIVATE -std=c++2a)");
                     ctx.elseif("MSVC");
+                    ctx.if_("CLANG");
+                    ctx.addLine("target_compile_options(${this} PRIVATE -Xclang -std=c++2a)");
+                    ctx.else_();
                     ctx.addLine("target_compile_options(${this} PRIVATE -std:c++latest)");
+                    ctx.endif();
                     ctx.endif();
                     break;
                 default:
@@ -2005,7 +2033,7 @@ endif()
     )
 endif()
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+if (CLANG)
     target_compile_options(${this}
         PRIVATE -Wno-macro-redefined
     )
@@ -2293,8 +2321,10 @@ endif()
     config_section_title(ctx, "compiler & linker settings");
     ctx.addLine(R"(
 if (MSVC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+    if (NOT CLANG)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+    endif()
 
     # not working for some reason
     #set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} /nologo")

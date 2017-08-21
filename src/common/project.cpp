@@ -205,7 +205,7 @@ void check_file_types(const Files &files)
     fs::remove(fn);
 
     if (ec)
-        throw std::runtime_error("Error during file checking: rc = " + std::to_string(c.exit_code.get()));
+        throw std::runtime_error("Error during file checking: rc = " + std::to_string(c.exit_code.value()));
 
     std::vector<String> lines, sh_out;
     boost::split(sh_out, c.out.text, boost::is_any_of("\r\n"));

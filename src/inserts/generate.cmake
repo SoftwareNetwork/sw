@@ -130,6 +130,7 @@ if (NOT EXISTS ${import} OR
         add_variable(GEN_CHILD_VARS XCODE)
         add_variable(GEN_CHILD_VARS VISUAL_STUDIO)
         add_variable(GEN_CHILD_VARS NINJA)
+        add_variable(GEN_CHILD_VARS CLANG)
         write_variables_file(GEN_CHILD_VARS ${variables_file})
         #
 
