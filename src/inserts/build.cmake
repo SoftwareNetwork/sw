@@ -102,7 +102,7 @@ elseif (CONFIG)
                     cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
                             --config ${CONFIG}
-                            -- ${parallel}")
+                            #-- ${parallel}")
                     execute_process(
                         COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
@@ -116,7 +116,7 @@ elseif (CONFIG)
                     cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
                             --config Release
-                            -- ${parallel}")
+                            #-- ${parallel}")
                     execute_process(
                         COMMAND ${CMAKE_COMMAND}
                             --build ${BUILD_DIR}
@@ -131,7 +131,7 @@ elseif (CONFIG)
                 cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                         --build ${BUILD_DIR}
                         --config ${CONFIG}
-                        -- ${parallel}")
+                        #-- ${parallel}")
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         --build ${BUILD_DIR}
@@ -155,7 +155,7 @@ else()
     if ("${make}" STREQUAL "make-NOTFOUND")
         cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}
-                -- ${parallel}")
+                #-- ${parallel}")
         execute_process(
             COMMAND ${CMAKE_COMMAND}
                 --build ${BUILD_DIR}

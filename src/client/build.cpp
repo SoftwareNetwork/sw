@@ -61,6 +61,7 @@ String test_run()
     s.disable_checks = true;
     s.source_directory = src_dir;
     s.binary_directory = bin_dir;
+    s.test_run = true;
 
     auto printer = Printer::create(Settings::get_local_settings().printerType);
     printer->prepare_build(s);

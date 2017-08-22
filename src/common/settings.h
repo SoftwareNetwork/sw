@@ -34,6 +34,7 @@ struct BuildSettings
 {
     bool allow_links = true;
     bool disable_checks = false;
+    bool test_run = false;
     String filename;
     String filename_without_ext;
     path source_directory;

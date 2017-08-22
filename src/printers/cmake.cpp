@@ -537,12 +537,14 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
     if (!build_deps.empty())
     {
         CMakeContext local;
-        local.addLine("get_configuration_with_generator(config)");
+        local.addLine("set(CPPAN_GET_CHILDREN_VARIABLES 1)");
+        local.addLine("get_configuration_with_generator(config)"); // children
         local.if_("CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG");
         local.addLine("get_configuration_with_generator(config_exe)");
         local.else_();
         local.addLine("get_configuration_exe(config_exe)");
         local.endif();
+        local.addLine("set(CPPAN_GET_CHILDREN_VARIABLES 0)");
 
         local.emptyLines();
         local.addLine("string(TOUPPER \"${CMAKE_BUILD_TYPE}\" CMAKE_BUILD_TYPE_UPPER)");
@@ -585,6 +587,7 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
         ADD_VAR(N_CORES);
         ADD_VAR(XCODE);
         ADD_VAR(NINJA);
+        ADD_VAR(NINJA_FOUND);
         ADD_VAR(VISUAL_STUDIO);
         ADD_VAR(CLANG);
 #undef ADD_VAR
@@ -641,7 +644,21 @@ set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})
         }
         local.emptyLines();
 
+        if (d.empty() || d.ppath.is_loc())
+        {
+            local.addLine("set(preamble)");
+            local.if_("VISUAL_STUDIO_ACCELERATE_CLANG");
+            local.if_("CMAKE_SIZEOF_VOID_P EQUAL 8");
+            local.addLine("set(preamble call vcvars64)");
+            local.else_();
+            local.addLine("set(preamble call vcvars32)");
+            local.endif();
+            local.endif();
+        }
+
         local.increaseIndent("file(GENERATE OUTPUT ${file} CONTENT \"");
+        //if (d.empty() || d.ppath.is_loc())
+            //local.addLine("${preamble}");
         for (auto &dp : build_deps)
         {
             auto &p = dp.second;
@@ -946,6 +963,11 @@ if (CMAKE_GENERATOR STREQUAL Ninja)
     set_cache_var(NINJA 1)
 endif()
 
+find_program(ninja ninja)
+if (NOT "${ninja}" STREQUAL "ninja-NOTFOUND")
+    set_cache_var(NINJA_FOUND 1)
+endif()
+
 set_cache_var(VISUAL_STUDIO 0)
 if (MSVC AND NOT NINJA)
     set_cache_var(VISUAL_STUDIO 1)
@@ -957,6 +979,17 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" ST
 endif()
 if (CMAKE_VS_PLATFORM_TOOLSET MATCHES "(v[0-9]+_clang_.*|LLVM-vs[0-9]+.*)")
     set_cache_var(CLANG 1)
+endif()
+
+if (VISUAL_STUDIO AND CLANG AND NOT NINJA_FOUND)
+    message(STATUS "Warning: Build with MSVC and Clang without ninja will be single threaded - very very slow.")
+endif()
+
+if (VISUAL_STUDIO AND CLANG AND NINJA_FOUND AND NOT NINJA)
+    set_cache_var(VISUAL_STUDIO_ACCELERATE_CLANG 1)
+    if ("${CMAKE_LINKER}" STREQUAL "CMAKE_LINKER-NOTFOUND")
+        message(FATAL_ERROR "CMAKE_LINKER must be set in order to accelerate clang build with MSVC!")
+    endif()
 endif()
 
 if (MSVC)
@@ -1080,6 +1113,7 @@ int CMakePrinter::generate(const BuildSettings &bs) const
     c.args.push_back("-DCPPAN_CMAKE_VERBOSE="s + (s.cmake_verbose ? "1" : "0"));
     c.args.push_back("-DCPPAN_BUILD_VERBOSE="s + (s.build_system_verbose ? "1" : "0"));
     c.args.push_back("-DCPPAN_BUILD_WARNING_LEVEL="s + std::to_string(s.build_warning_level));
+    //c.args.push_back("-DCPPAN_TEST_RUN="s + (bs.test_run ? "1" : "0"));
     for (auto &o : s.cmake_options)
         c.args.push_back(o);
     for (auto &o : s.env)
@@ -1465,7 +1499,7 @@ void CMakePrinter::print_settings(CMakeContext &ctx) const
     ctx.addLine();
 
     // configs
-    ctx.addLine("get_configuration_variables()");
+    ctx.addLine("get_configuration_variables()"); // not children
     ctx.addLine();
 
     // copy exe cmake settings
@@ -2602,7 +2636,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.addLine("set_cache_var(CPPAN_RC_ENABLED "s + (settings.rc_enabled ? "1" : "0") + ")");
     ctx.endif();
     ctx.addLine();
-    ctx.addLine("get_configuration_variables()");
+    ctx.addLine("get_configuration_variables()"); // not children
     ctx.addLine();
 
     ctx.addLine("include(" + cmake_helpers_filename + ")");
@@ -2739,7 +2773,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
     ctx.addLine();
 
     // after all vars are set
-    ctx.addLine("get_configuration(config)");
+    ctx.addLine("get_configuration(config)"); // not children
     ctx.addLine("get_configuration_unhashed(config_name)");
     ctx.addLine("get_configuration_with_generator(config_dir)");
     ctx.addLine("get_configuration_with_generator_unhashed(config_gen_name)");
