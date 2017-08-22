@@ -310,11 +310,11 @@ function(get_configuration_unhashed out)
     # for non VS/XCODE builds
     set(configuration)
     if (NOT (XCODE OR VISUAL_STUDIO))
-        if (CMAKE_BUILD_TYPE)
+        if (CMAKE_BUILD_TYPE)# AND NOT CPPAN_CONFIG_NO_BUILD_TYPE)
             set(configuration ${CPPAN_CONFIG_PART_DELIMETER}${CMAKE_BUILD_TYPE})
         endif()
     endif()
-    if (VISUAL_STUDIO_ACCELERATE_CLANG AND CPPAN_GET_CHILDREN_VARIABLES)
+    if (VISUAL_STUDIO_ACCELERATE_CLANG AND CPPAN_GET_CHILDREN_VARIABLES)# AND NOT CPPAN_CONFIG_NO_BUILD_TYPE)
         set(configuration ${CPPAN_CONFIG_PART_DELIMETER}${CMAKE_BUILD_TYPE})
     endif()
 
@@ -334,10 +334,11 @@ function(get_configuration_with_generator_unhashed out)
 
     prepare_config_part(generator "${CMAKE_GENERATOR}")
     if (NOT "${generator}" STREQUAL "")
-        set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${generator})
-        if (VISUAL_STUDIO_ACCELERATE_CLANG AND NOT CPPAN_GET_CHILDREN_VARIABLES)
+        if (VISUAL_STUDIO_ACCELERATE_CLANG AND CPPAN_GET_CHILDREN_VARIABLES)
             # fake ninja generator to get correct config for deps building
-            set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}with_ninja)
+            set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}ninja)
+        else()
+            set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${generator})
         endif()
     endif()
 
@@ -356,10 +357,11 @@ function(get_configuration_exe_unhashed out)
     # add generator to executables since we're using the same generator as for libraries
     prepare_config_part(generator "${CMAKE_GENERATOR}")
     if (NOT "${generator}" STREQUAL "")
-        set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${generator})
-        if (VISUAL_STUDIO_ACCELERATE_CLANG AND NOT CPPAN_GET_CHILDREN_VARIABLES)
+        if (VISUAL_STUDIO_ACCELERATE_CLANG AND CPPAN_GET_CHILDREN_VARIABLES)
             # fake ninja generator to get correct config for deps building
-            set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}with_ninja)
+            set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}ninja)
+        else()
+            set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${generator})
         endif()
     endif()
 
@@ -598,6 +600,11 @@ endfunction(add_check_variable)
 ########################################
 
 function(read_check_variables_file f)
+    if (NOT EXISTS ${f})
+        #message(STATUS "Check variables file does not exist: ${f}")
+        return()
+    endif()
+
     read_variables_file(CPPAN_VARIABLES ${f})
 
     set(CPPAN_VARIABLES_TYPES ${CPPAN_VARIABLES_TYPES} PARENT_SCOPE)

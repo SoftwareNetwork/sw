@@ -644,21 +644,7 @@ set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})
         }
         local.emptyLines();
 
-        if (d.empty() || d.ppath.is_loc())
-        {
-            local.addLine("set(preamble)");
-            local.if_("VISUAL_STUDIO_ACCELERATE_CLANG");
-            local.if_("CMAKE_SIZEOF_VOID_P EQUAL 8");
-            local.addLine("set(preamble call vcvars64)");
-            local.else_();
-            local.addLine("set(preamble call vcvars32)");
-            local.endif();
-            local.endif();
-        }
-
         local.increaseIndent("file(GENERATE OUTPUT ${file} CONTENT \"");
-        //if (d.empty() || d.ppath.is_loc())
-            //local.addLine("${preamble}");
         for (auto &dp : build_deps)
         {
             auto &p = dp.second;
@@ -987,9 +973,9 @@ endif()
 
 if (VISUAL_STUDIO AND CLANG AND NINJA_FOUND AND NOT NINJA)
     set_cache_var(VISUAL_STUDIO_ACCELERATE_CLANG 1)
-    if ("${CMAKE_LINKER}" STREQUAL "CMAKE_LINKER-NOTFOUND")
-        message(FATAL_ERROR "CMAKE_LINKER must be set in order to accelerate clang build with MSVC!")
-    endif()
+    #if ("${CMAKE_LINKER}" STREQUAL "CMAKE_LINKER-NOTFOUND")
+    #    message(FATAL_ERROR "CMAKE_LINKER must be set in order to accelerate clang build with MSVC!")
+    #endif()
 endif()
 
 if (MSVC)
@@ -2320,7 +2306,7 @@ void CMakePrinter::print_obj_config_file(const path &fn) const
 
         config_section_title(ctx, "global settings");
         ctx.addLine(R"(if (NOT CMAKE_BUILD_TYPE)
-    set_cache_var(CMAKE_BUILD_TYPE Release)
+    set_cache_var(CMAKE_BUILD_TYPE )" + Settings::get_local_settings().default_configuration + R"()
 endif()
 
 # TODO:
@@ -2635,6 +2621,11 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     ctx.if_("NOT DEFINED CPPAN_RC_ENABLED");
     ctx.addLine("set_cache_var(CPPAN_RC_ENABLED "s + (settings.rc_enabled ? "1" : "0") + ")");
     ctx.endif();
+    ctx.addLine(R"(
+if (VISUAL_STUDIO AND CLANG AND NINJA_FOUND AND NOT NINJA)
+    set_cache_var(VISUAL_STUDIO_ACCELERATE_CLANG 1)
+endif()
+)");
     ctx.addLine();
     ctx.addLine("get_configuration_variables()"); // not children
     ctx.addLine();
@@ -2756,26 +2747,53 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.addLine("set_cache_var(CPPAN_COMMAND ${CPPAN_COMMAND} CACHE STRING \"CPPAN program.\" FORCE)");
         ctx.addLine();
     }
-    ctx.addLine("set_cache_var(XCODE 0)");
-    ctx.if_("CMAKE_GENERATOR STREQUAL Xcode");
-    ctx.addLine("set_cache_var(XCODE 1)");
-    ctx.endif();
-    ctx.addLine();
-    ctx.addLine("set_cache_var(NINJA 0)");
-    ctx.if_("CMAKE_GENERATOR STREQUAL Ninja");
-    ctx.addLine("set_cache_var(NINJA 1)");
-    ctx.endif();
-    ctx.addLine();
-    ctx.addLine("set_cache_var(VISUAL_STUDIO 0)");
-    ctx.if_("MSVC AND NOT NINJA");
-    ctx.addLine("set_cache_var(VISUAL_STUDIO 1)");
-    ctx.endif();
-    ctx.addLine();
+    ctx.addLine(R"xxx(
+set_cache_var(XCODE 0)
+if (CMAKE_GENERATOR STREQUAL Xcode)
+    set_cache_var(XCODE 1)
+endif()
+
+set_cache_var(NINJA 0)
+if (CMAKE_GENERATOR STREQUAL Ninja)
+    set_cache_var(NINJA 1)
+endif()
+
+find_program(ninja ninja)
+if (NOT "${ninja}" STREQUAL "ninja-NOTFOUND")
+    set_cache_var(NINJA_FOUND 1)
+endif()
+
+set_cache_var(VISUAL_STUDIO 0)
+if (MSVC AND NOT NINJA)
+    set_cache_var(VISUAL_STUDIO 1)
+endif()
+
+set_cache_var(CLANG 0)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    set_cache_var(CLANG 1)
+endif()
+if (CMAKE_VS_PLATFORM_TOOLSET MATCHES "(v[0-9]+_clang_.*|LLVM-vs[0-9]+.*)")
+    set_cache_var(CLANG 1)
+endif()
+
+if (VISUAL_STUDIO AND CLANG AND NOT NINJA_FOUND)
+    message(STATUS "Warning: Build with MSVC and Clang without ninja will be single threaded - very very slow.")
+endif()
+
+if (VISUAL_STUDIO AND CLANG AND NINJA_FOUND AND NOT NINJA)
+    set_cache_var(VISUAL_STUDIO_ACCELERATE_CLANG 1)
+    #if ("${CMAKE_LINKER}" STREQUAL "CMAKE_LINKER-NOTFOUND")
+    #    message(FATAL_ERROR "CMAKE_LINKER must be set in order to accelerate clang build with MSVC!")
+    #endif()
+endif()
+)xxx");
 
     // after all vars are set
+    //ctx.addLine("set(CPPAN_CONFIG_NO_BUILD_TYPE 1)");
     ctx.addLine("get_configuration(config)"); // not children
-    ctx.addLine("get_configuration_unhashed(config_name)");
     ctx.addLine("get_configuration_with_generator(config_dir)");
+    //ctx.addLine("set(CPPAN_CONFIG_NO_BUILD_TYPE 0)");
+    ctx.addLine("get_configuration_unhashed(config_name)");
     ctx.addLine("get_configuration_with_generator_unhashed(config_gen_name)");
     ctx.addLine("get_number_of_cores(N_CORES)");
     ctx.addLine();
@@ -2878,6 +2896,15 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON))");
         ctx.endif();
         ctx.addLine();
     }
+
+    // after all vars are set
+    // duplicate this to fix configs if needed
+    ctx.addLine("get_configuration(config)"); // not children
+    ctx.addLine("get_configuration_with_generator(config_dir)");
+    ctx.addLine("get_configuration_unhashed(config_name)");
+    ctx.addLine("get_configuration_with_generator_unhashed(config_gen_name)");
+    ctx.addLine("get_number_of_cores(N_CORES)");
+    ctx.addLine();
 
     // fixups
     // put bug workarounds here
