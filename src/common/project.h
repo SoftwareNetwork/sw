@@ -23,8 +23,7 @@
 #include "source.h"
 #include "yaml.h"
 
-#include <primitives/optional.h>
-
+#include <optional>
 #include <unordered_map>
 
 #define DEPENDENCIES_NODE "dependencies"
@@ -237,6 +236,7 @@ public:
     bool export_if_static = false;
     bool build_dependencies_with_same_config = false;
     bool rc_enabled = true;
+    bool disabled = false;
 
     StringSet api_name;
 
@@ -271,7 +271,7 @@ public:
     // private data
 private:
     // no files to compile
-    optional<bool> header_only;
+    std::optional<bool> header_only;
 
 public:
     Project();
@@ -304,7 +304,7 @@ private:
 
     const Files &getSources() const;
     ProjectPath relative_name_to_absolute(const String &name);
-    optional<ProjectPath> load_local_dependency(const String &name);
+    std::optional<ProjectPath> load_local_dependency(const String &name);
 };
 
 using Projects = std::map<String, Project>;

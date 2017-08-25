@@ -345,6 +345,8 @@ String Settings::get_hash() const
     h |= generator;
     h |= toolset;
     h |= use_shared_libs;
+    h |= configuration;
+    h |= default_configuration;
 
     // besides we track all valuable ENV vars
     // to be sure that we'll load correct config

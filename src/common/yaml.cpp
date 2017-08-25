@@ -171,6 +171,7 @@ String dump_yaml_config(const yaml &root)
         "export_if_static",
         "rc_enabled",
         "build_dependencies_with_same_config",
+        "disabled",
 
         "api_name",
 

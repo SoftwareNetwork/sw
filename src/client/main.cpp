@@ -37,7 +37,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/nowide/args.hpp>
 #include <primitives/pack.h>
-#include <primitives/optional.h>
 #include <primitives/templates.h>
 
 #include <iostream>
@@ -60,7 +59,7 @@ void init(const Strings &args, const String &log_level);
 void load_current_config();
 void self_upgrade();
 void self_upgrade_copy(const path &dst);
-optional<int> internal(const Strings &args);
+std::optional<int> internal(const Strings &args);
 void command_init(const Strings &args);
 
 int main(int argc, char *argv[])
@@ -137,7 +136,7 @@ try
 
     // handle internal args
     if (auto r = internal(args))
-        return r.get();
+        return r.value();
 
     if (args.size() > 1)
     {
@@ -579,7 +578,7 @@ void self_upgrade_copy(const path &dst)
     std::cout << "Success!\n";
 }
 
-optional<int> internal(const Strings &args)
+std::optional<int> internal(const Strings &args)
 {
     // internal stuff
     if (args[1] == "internal-fix-imports")
@@ -675,7 +674,7 @@ optional<int> internal(const Strings &args)
     if (args[1].find("internal-") == 0)
         throw std::runtime_error("Unknown internal command: " + args[1]);
 
-    return optional<int>();
+    return std::optional<int>();
 }
 
 ApiResult api_call(const String &cmd, const Strings &args)

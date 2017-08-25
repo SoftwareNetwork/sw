@@ -600,10 +600,10 @@ endfunction(add_check_variable)
 ########################################
 
 function(read_check_variables_file f)
-    if (NOT EXISTS ${f})
+    #if (NOT EXISTS ${f})
         #message(STATUS "Check variables file does not exist: ${f}")
-        return()
-    endif()
+        #return()
+    #endif()
 
     read_variables_file(CPPAN_VARIABLES ${f})
 

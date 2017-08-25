@@ -607,6 +607,11 @@ set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})
 #else()
     #math(EXPR CPPAN_BUILD_LEVEL "${CPPAN_BUILD_LEVEL} + 1")
 #endif()
+
+set(bat_file_error)
+if (WIN32)
+    set(bat_file_error "@if %errorlevel% neq 0 goto :cmEnd")
+endif()
 )");
 
         bool has_build_deps = false;
@@ -624,7 +629,11 @@ set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})
 
             has_build_deps = true;
             ScopedDependencyCondition sdc(local, p, false);
-            local.addNoNewLine("set(bd_" + p.variable_name + " \"");
+            local.addLine("set(bd_" + p.variable_name + " \"");
+            //local.addLine("@echo Building " + p.target_name + ": ${" + cfg + "}");
+#ifdef _WIN32
+            local.addNoNewLine("@");
+#endif
             local.addText("\\\"${CMAKE_COMMAND}\\\" ");
             //local.addText("-DCPPAN_BUILD_LEVEL=${CPPAN_BUILD_LEVEL} ");
             local.addText("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + "> ");
@@ -640,11 +649,24 @@ set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})
             // causes system overloads
             //local.addText(" &");
 #endif
-            local.addText("\")");
+            local.addText("\n${bat_file_error}\")");
         }
         local.emptyLines();
 
+        local.addLine("set(bat_file_begin)");
+        local.if_("WIN32");
+        local.addLine("set(bat_file_begin @setlocal)");
+        local.addLine(R"(set(bat_file_error "\n
+@exit /b 0
+:cmEnd
+@endlocal & @call :cmErrorLevel %errorlevel%
+:cmErrorLevel
+@exit /b %1
+"))");
+        local.endif();
+
         local.increaseIndent("file(GENERATE OUTPUT ${file} CONTENT \"");
+        local.addLine("${bat_file_begin}");
         for (auto &dp : build_deps)
         {
             auto &p = dp.second;
@@ -655,6 +677,7 @@ set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})
 
             local.addLine("${bd_" + p.variable_name + "}");
         }
+        local.addLine("${bat_file_error}");
         local.decreaseIndent("\")");
         local.emptyLines();
 
@@ -745,7 +768,7 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
     ctx.addLine("set(file ${BDIR}/cppan_copy_deps_$<CONFIG>.${ext})");
     ctx.addLine("set(copy_content)");
     ctx.if_("WIN32");
-    ctx.addLine("set(copy_content \"${copy_content} setlocal\\n\")");
+    ctx.addLine("set(copy_content \"${copy_content} @setlocal\\n\")");
     ctx.endif();
 
     ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
@@ -807,6 +830,9 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
         ctx.if_("copy");
         {
             String s;
+#ifdef _WIN32
+            s += "set(copy_content \"${copy_content} @\")";
+#endif
             s += "set(copy_content \"${copy_content} \\\"${CMAKE_COMMAND}\\\" -E copy_if_different ";
             if (p.flags[pfExecutable] || (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable))
             {
@@ -827,7 +853,7 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
             ctx.addLine("add_dependencies(" + target + " " + p.target_name + ")");
 
             ctx.if_("WIN32");
-            ctx.addLine("set(copy_content \"${copy_content} if %errorlevel% neq 0 goto :cmEnd\\n\")");
+            ctx.addLine("set(copy_content \"${copy_content} @if %errorlevel% neq 0 goto :cmEnd\\n\")");
             ctx.endif();
         }
         ctx.addLine();
@@ -843,7 +869,7 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
             ctx.addLine(s);
 
             ctx.if_("WIN32");
-            ctx.addLine("set(copy_content \"${copy_content} if %errorlevel% neq 0 goto :cmEnd\\n\")");
+            ctx.addLine("set(copy_content \"${copy_content} @if %errorlevel% neq 0 goto :cmEnd\\n\")");
             ctx.endif();
 
             ctx.endif();
@@ -855,11 +881,11 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
 
     ctx.if_("WIN32");
     ctx.addLine(R"(set(copy_content "${copy_content}\n
-exit /b 0
+@exit /b 0
 :cmEnd
-endlocal & call :cmErrorLevel %errorlevel%
+@endlocal & @call :cmErrorLevel %errorlevel%
 :cmErrorLevel
-exit /b %1
+@exit /b %1
 "))");
     ctx.endif();
 
@@ -1675,7 +1701,7 @@ endif()
                     ctx.addLine("target_compile_options(${this} PRIVATE -std=c++1z)");
                     ctx.elseif("MSVC");
                     ctx.if_("CLANG");
-                    ctx.addLine("target_compile_options(${this} PRIVATE -Xclang -std=c++17)");
+                    ctx.addLine("target_compile_options(${this} PRIVATE -Xclang -std=c++1z)");
                     ctx.else_();
                     ctx.addLine("target_compile_options(${this} PRIVATE -std:c++17)");
                     ctx.endif();
