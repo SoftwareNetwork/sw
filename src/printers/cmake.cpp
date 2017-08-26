@@ -831,7 +831,7 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
         {
             String s;
 #ifdef _WIN32
-            s += "set(copy_content \"${copy_content} @\")";
+            s += "set(copy_content \"${copy_content} @\")\n";
 #endif
             s += "set(copy_content \"${copy_content} \\\"${CMAKE_COMMAND}\\\" -E copy_if_different ";
             if (p.flags[pfExecutable] || (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable))
