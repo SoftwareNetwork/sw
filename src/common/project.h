@@ -291,6 +291,8 @@ public:
     yaml save() const;
     void save_dependencies(yaml &root) const;
 
+    String print_cpp();
+
     // own data, not from config
 public:
     // flag shows that files were loaded from 'files' node

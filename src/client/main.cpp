@@ -316,6 +316,14 @@ try
         c.save(p.parent_path());
         return 0;
     }
+    if (options().count("print-cpp"))
+    {
+        auto pkg = extractFromString(options["print-cpp"].as<String>());
+        Config c(pkg.getDirSrc());
+        c.getDefaultProject().pkg = pkg;
+        std::cout << c.getDefaultProject().print_cpp();
+        return 0;
+    }
 
     Settings::get_user_settings().force_server_query = options()[SERVER_QUERY].as<bool>();
 

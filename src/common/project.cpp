@@ -17,6 +17,7 @@
 #include "project.h"
 
 #include "bazel/bazel.h"
+#include "checks_detail.h"
 #include "config.h"
 #include "http.h"
 #include "resolver.h"
@@ -1606,4 +1607,268 @@ void saveOptionsMap(yaml &node, const OptionsMap &m)
         o.bs_insertions.save(n);
     }
     node["options"] = root;
+}
+
+String Project::print_cpp()
+{
+    Context ctx;
+
+    String name = pkg.ppath.back();
+
+    String type = "LibraryTarget";
+    if (static_only)
+        type = "StaticLibraryTarget";
+    else if (shared_only)
+        type = "SharedLibraryTarget";
+    else if (pkg.flags[pfExecutable])
+        type = "ExecutableTarget";
+    ctx.addLine("auto &" + name + " = addTarget<" + type + ">(s, \"" + pkg.ppath.toString() + "\", \"" + pkg.version.toString() + "\");");
+    ctx.beginBlock();
+
+    if (!checks.checks.empty())
+        ctx.addLine(name + ".setChecks(\"" + name + "\");");
+
+    if (!sources.empty())
+    {
+        ctx.addLine(name + " +=");
+        String s;
+        for (auto &t : sources)
+        {
+            s += "\"" + t + "\"";
+            if (t.find("\\") != -1)
+                s += "_rr";
+            s += ",\n";
+        }
+        boost::replace_all(s, "\\", "\\\\");
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.addLine(s);
+    }
+
+    if (!exclude_from_build.empty())
+    {
+        ctx.addLine(name + " -=");
+        String s;
+        for (auto &t : exclude_from_build)
+        {
+            s += "\"" + t + "\"";
+            if (t.find("\\") != -1)
+                s += "_rr";
+            s += ",\n";
+        }
+        boost::replace_all(s, "\\", "\\\\");
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.addLine(s);
+    }
+
+    /*if (!exclude_from_package.empty())
+    {
+        ctx.addLine(name + " -=");
+        String s;
+        for (auto &t : exclude_from_package)
+        {
+            s += "\"" + t + "\"";
+            if (t.find("\\") != -1)
+                s += "_rr";
+            s += ",\n";
+        }
+        boost::replace_all(s, "\\", "\\\\");
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.addLine(s);
+    }*/
+
+    if (!include_directories.private_.empty())
+    {
+        ctx.addLine(name + ".Private +=");
+        String s;
+        for (auto &t : include_directories.private_)
+            s += "\"" + t.string() + "\"_id,\n";
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.addLine(s);
+    }
+
+    if (include_directories.public_.size() > 1)
+    {
+        ctx.addLine(name + ".Public +=");
+        String s;
+        for (auto &t : include_directories.public_)
+        {
+            if (t.string().find("BDIR") == -1)
+                s += "\"" + t.string() + "\"_id,\n";
+        }
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.addLine(s);
+    }
+
+    if (!include_directories.interface_.empty())
+    {
+        ctx.addLine(name + ".Interface +=");
+        String s;
+        for (auto &t : include_directories.interface_)
+            s += "\"" + t.string() + "\"_id,\n";
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.addLine(s);
+    }
+
+    auto any = options.find("any");
+    if (any != options.end())
+    {
+        auto print_def = [&ctx, &name](auto &k, auto &v)
+        {
+            if (k == "private")
+                ctx.addLine(name + ".Private += \"" + v + "\"_d;");
+            else if (k == "public")
+                ctx.addLine(name + ".Public += \"" + v + "\"_d;");
+            else if (k == "interface")
+                ctx.addLine(name + ".Interface += \"" + v + "\"_d;");
+        };
+
+        if (!any->second.definitions.empty())
+        {
+            for (auto &[k, v] : any->second.definitions)
+                print_def(k, v);
+        }
+        if (!any->second.system_definitions.empty())
+        {
+            for (auto &[k2, v2] : any->second.system_definitions)
+            {
+                if (k2 == "win32")
+                {
+                    ctx.beginBlock("if (s.TargetOS.Type == OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+                else if (k2 == "unix")
+                {
+                    ctx.beginBlock("if (s.TargetOS.Type != OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+            }
+        }
+    }
+
+    auto shared = options.find("shared");
+    if (shared != options.end())
+    {
+        auto print_def = [&ctx, &name](auto &k, auto &v)
+        {
+            if (k == "private")
+                ctx.addLine(name + ".Private += sw::Shared, \"" + v + "\"_d;");
+            else if (k == "public")
+                ctx.addLine(name + ".Public += sw::Shared, \"" + v + "\"_d;");
+            else if (k == "interface")
+                ctx.addLine(name + ".Interface += sw::Shared, \"" + v + "\"_d;");
+        };
+
+        if (!shared->second.definitions.empty())
+        {
+            for (auto &[k, v] : shared->second.definitions)
+                print_def(k, v);
+        }
+        if (!shared->second.system_definitions.empty())
+        {
+            for (auto &[k2, v2] : shared->second.system_definitions)
+            {
+                if (k2 == "win32")
+                {
+                    ctx.beginBlock("if (s.TargetOS.Type == OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+                else if (k2 == "unix")
+                {
+                    ctx.beginBlock("if (s.TargetOS.Type != OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+            }
+        }
+    }
+
+    auto static_ = options.find("static");
+    if (static_ != options.end())
+    {
+        auto print_def = [&ctx, &name](auto &k, auto &v)
+        {
+            if (k == "private")
+                ctx.addLine(name + ".Private += sw::Static, \"" + v + "\"_d;");
+            else if (k == "public")
+                ctx.addLine(name + ".Public += sw::Static, \"" + v + "\"_d;");
+            else if (k == "interface")
+                ctx.addLine(name + ".Interface. += sw::Static, \"" + v + "\"_d;");
+        };
+
+        if (!static_->second.definitions.empty())
+        {
+            for (auto &[k, v] : static_->second.definitions)
+                print_def(k, v);
+        }
+        if (!static_->second.system_definitions.empty())
+        {
+            for (auto &[k2, v2] : static_->second.system_definitions)
+            {
+                if (k2 == "win32")
+                {
+                    ctx.beginBlock("if (s.TargetOS.Type == OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+                else if (k2 == "unix")
+                {
+                    ctx.beginBlock("if (s.TargetOS.Type != OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+            }
+        }
+    }
+
+    ctx.endBlock();
+    ctx.addLine();
+
+    if (!checks.checks.empty())
+    {
+        ctx.beginBlock();
+        ctx.addLine("auto &s = c.addSet(\"" + name + "\");");
+        for (auto &c : checks.checks)
+        {
+            switch (c->getInformation().type)
+            {
+            case Check::Function:
+                ctx.addLine("s.checkFunctionExists(\"" + c->getData() + "\");");
+                break;
+            case Check::Include:
+                ctx.addLine("s.checkIncludeExists(\"" + c->getData() + "\");");
+                //if (c->get_cpp())
+                break;
+            case Check::Type:
+                ctx.addLine("s.checkTypeSize(\"" + c->getData() + "\");");
+                break;
+            case Check::Decl:
+                ctx.addLine("s.checkDeclarationExists(\"" + c->getData() + "\");");
+                break;
+            case Check::LibraryFunction:
+                ctx.addLine("s.checkLibraryFunctionExists(\"" + ((CheckLibraryFunction*)c.get())->library + "\", \"" + c->getData() + "\");");
+                break;
+            case Check::CSourceCompiles:
+                ctx.addLine("s.checkSourceCompiles(\"" + c->getVariable() + "\", R\"xxx(" + c->getData() + ")xxx\");");
+                break;
+            }
+        }
+        ctx.endBlock();
+    }
+
+    return ctx.getText();
 }
