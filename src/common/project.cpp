@@ -1628,6 +1628,12 @@ String Project::print_cpp()
     if (!checks.checks.empty())
         ctx.addLine(name + ".setChecks(\"" + name + "\");");
 
+    if (export_all_symbols)
+        ctx.addLine(name + ".ExportAllSymbols = true;");
+
+    for (auto &n : api_name)
+        ctx.addLine(name + ".ApiNames.insert(\"" + n + "\");");
+
     if (!sources.empty())
     {
         ctx.addLine(name + " +=");
@@ -1635,7 +1641,7 @@ String Project::print_cpp()
         for (auto &t : sources)
         {
             s += "\"" + t + "\"";
-            if (t.find("\\") != -1)
+            if (t.find("\\") != -1 || t.find("*") != -1)
                 s += "_rr";
             s += ",\n";
         }
@@ -1652,7 +1658,7 @@ String Project::print_cpp()
         for (auto &t : exclude_from_build)
         {
             s += "\"" + t + "\"";
-            if (t.find("\\") != -1)
+            if (t.find("\\") != -1 || t.find("*") != -1)
                 s += "_rr";
             s += ",\n";
         }
@@ -1669,7 +1675,7 @@ String Project::print_cpp()
         for (auto &t : exclude_from_package)
         {
             s += "\"" + t + "\"";
-            if (t.find("\\") != -1)
+            if (t.find("\\") != -1 || t.find("*") != -1)
                 s += "_rr";
             s += ",\n";
         }
@@ -1835,6 +1841,17 @@ String Project::print_cpp()
         }
     }
 
+    ctx.emptyLines();
+
+    if (!dependencies.empty())
+    {
+        String s;
+        for (auto &d : dependencies)
+            s += d.second.ppath.back() + ", ";
+        s.resize(s.size() - 2);
+        ctx.addLine(name + ".Public += " + s + ";");
+    }
+
     ctx.endBlock();
     ctx.addLine();
 
@@ -1863,7 +1880,21 @@ String Project::print_cpp()
                 ctx.addLine("s.checkLibraryFunctionExists(\"" + ((CheckLibraryFunction*)c.get())->library + "\", \"" + c->getData() + "\");");
                 break;
             case Check::CSourceCompiles:
-                ctx.addLine("s.checkSourceCompiles(\"" + c->getVariable() + "\", R\"xxx(" + c->getData() + ")xxx\");");
+                ctx.addLine("s.checkSourceCompiles(\"" + c->getVariable() + "\", R\"sw_xxx(" + c->getData() + ")sw_xxx\");");
+                break;
+            case Check::StructMember:
+                ctx.beginBlock();
+                ctx.addLine("auto &c = s.checkStructMemberExists(\"" + ((CheckStructMember*)c.get())->struct_ + "\", \"" + c->getData() + "\");");
+                for (auto &i : c->parameters.headers)
+                    ctx.addLine("c.Parameters.Includes.push_back(\"" + i + "\");");
+                ctx.endBlock();
+                break;
+            case Check::Symbol:
+                ctx.beginBlock();
+                ctx.addLine("auto &c = s.checkSymbolExists(\"" + c->getData() + "\");");
+                for (auto &i : c->parameters.headers)
+                    ctx.addLine("c.Parameters.Includes.push_back(\"" + i + "\");");
+                ctx.endBlock();
                 break;
             }
         }

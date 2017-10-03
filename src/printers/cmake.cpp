@@ -1635,8 +1635,8 @@ if (DEFINED CPPAN_BUILD_WARNING_LEVEL AND
     CPPAN_BUILD_WARNING_LEVEL GREATER -1 AND CPPAN_BUILD_WARNING_LEVEL LESS 5)
     if (MSVC)
         # clear old flag (/W3) by default
-        string(REPLACE "/W3" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
-        string(REPLACE "/W3" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+        #string(REPLACE "/W3" "" CMAKE_C_FLAGS \"${CMAKE_C_FLAGS}\")
+        #string(REPLACE "/W3" "" CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS}\")
 
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W${CPPAN_BUILD_WARNING_LEVEL}")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W${CPPAN_BUILD_WARNING_LEVEL}")
@@ -3101,8 +3101,9 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         c.execute(ec);
 
         // do not fail (throw), try to read already found variables
-        if (c.exit_code)
-            LOG_WARN(logger, "-- Thread #" << i << ": error during evaluating variables");
+        // commited as it occurs alwaysm check cmake error or cmake normal exit has this value
+        //if (c.exit_code)
+        //    LOG_WARN(logger, "-- Thread #" << i << ": error during evaluating variables");
 
         w.read_parallel_checks_for_workers(d);
     };
