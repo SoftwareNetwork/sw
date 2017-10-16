@@ -504,17 +504,10 @@ auto run_command(const Settings &bs, primitives::Command &c)
         c.inherit = true;
     std::error_code ec;
     c.execute(ec);
-    if (ec && bs.build_system_verbose)
-    {
-        auto fn = get_temp_filename("logs");
-        c.write(fn);
-        LOG_ERROR(logger, "Output files are available at " << fn);
-    }
-    if (!ec && !bs.build_system_verbose)
-        LOG_INFO(logger, "Ok");
-    if (!c.exit_code)
-        return 1;
-    return c.exit_code.value();
+    if (ec)
+        throw std::runtime_error("Run command '" + c.print() + "', error: " + boost::trim_copy(ec.message()));
+    LOG_INFO(logger, "Ok");
+    return c.exit_code;
 }
 
 auto library_api(const Package &d)
@@ -1187,7 +1180,7 @@ int CMakePrinter::generate(const BuildSettings &bs) const
         }
     }
 
-    return ret;
+    return ret.value();
 }
 
 int CMakePrinter::build(const BuildSettings &bs) const
@@ -1209,7 +1202,7 @@ int CMakePrinter::build(const BuildSettings &bs) const
             c.args.push_back(a);
     }
 
-    return run_command(settings, c);
+    return run_command(settings, c).value();
 }
 
 void CMakePrinter::clear_cache() const
@@ -3104,7 +3097,7 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
 
         // do not fail (throw), try to read already found variables
         // commited as it occurs always check cmake error or cmake normal exit has this value
-        if (c.exit_code.value())
+        if (c.exit_code && c.exit_code.value() || !c.exit_code || ec)
             LOG_WARN(logger, "-- Thread #" << i << ": error during evaluating variables");
 
         w.read_parallel_checks_for_workers(d);
