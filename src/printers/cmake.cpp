@@ -512,7 +512,9 @@ auto run_command(const Settings &bs, primitives::Command &c)
     }
     if (!ec && !bs.build_system_verbose)
         LOG_INFO(logger, "Ok");
-    return c.exit_code;
+    if (!c.exit_code)
+        return 1;
+    return c.exit_code.value();
 }
 
 auto library_api(const Package &d)
@@ -3101,9 +3103,9 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         c.execute(ec);
 
         // do not fail (throw), try to read already found variables
-        // commited as it occurs alwaysm check cmake error or cmake normal exit has this value
-        //if (c.exit_code)
-        //    LOG_WARN(logger, "-- Thread #" << i << ": error during evaluating variables");
+        // commited as it occurs always check cmake error or cmake normal exit has this value
+        if (c.exit_code.value())
+            LOG_WARN(logger, "-- Thread #" << i << ": error during evaluating variables");
 
         w.read_parallel_checks_for_workers(d);
     };

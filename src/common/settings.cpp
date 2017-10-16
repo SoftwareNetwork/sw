@@ -452,22 +452,33 @@ Settings &Settings::get(SettingsType type)
         break;
     case SettingsType::User:
     {
+        std::exception_ptr eptr;
         RUN_ONCE
         {
-            s = get(SettingsType::System);
-
-            auto fn = get_config_filename();
-            if (!fs::exists(fn))
+            try
             {
-                boost::system::error_code ec;
-                fs::create_directories(fn.parent_path(), ec);
-                if (ec)
-                    throw std::runtime_error(ec.message());
-                auto ss = get(SettingsType::System);
-                ss.save(fn);
+                s = get(SettingsType::System);
+
+                auto fn = get_config_filename();
+                if (!fs::exists(fn))
+                {
+                    boost::system::error_code ec;
+                    fs::create_directories(fn.parent_path(), ec);
+                    if (ec)
+                        throw std::runtime_error(ec.message());
+                    auto ss = get(SettingsType::System);
+                    ss.save(fn);
+                }
+                s.load(fn, SettingsType::User);
             }
-            s.load(fn, SettingsType::User);
+            catch (...)
+            {
+                eptr = std::current_exception();
+            }
         };
+
+        if (eptr)
+            std::rethrow_exception(eptr);
     }
         break;
     case SettingsType::System:

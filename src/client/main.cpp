@@ -62,7 +62,7 @@ void self_upgrade_copy(const path &dst);
 std::optional<int> internal(const Strings &args);
 void command_init(const Strings &args);
 
-int main(int argc, char *argv[])
+int main1(int argc, char *argv[])
 try
 {
     // library initializations
@@ -431,6 +431,12 @@ catch (...)
 {
     std::cerr << "Unhandled unknown exception" << "\n";
     return 1;
+}
+
+int main(int argc, char *argv[])
+{
+    auto r = main1(argc, argv);
+    return r;
 }
 
 void check_spec_file()
