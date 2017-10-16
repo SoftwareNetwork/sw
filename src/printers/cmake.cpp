@@ -3109,13 +3109,19 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
     };
 
     Executor e(N);
-    e.throw_exceptions = true;
+    std::vector<Future<void>> fs;
 
     int i = 0;
     for (auto &w : workers)
-        e.push([&work, &w, n = i++]() { work(w, n); });
+        fs.push_back(e.push([&work, &w, n = i++]() { work(w, n); }));
 
-    auto t = get_time<std::chrono::seconds>([&e] { e.wait(); });
+    auto t = get_time<std::chrono::seconds>([&fs]
+    {
+        for (auto &f : fs)
+            f.wait();
+        for (auto &f : fs)
+            f.get();
+    });
 
     for (auto &w : workers)
         checks += w;

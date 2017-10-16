@@ -304,16 +304,19 @@ void Resolver::download_and_unpack()
     };
 
     Executor e(get_max_threads(8), "Download thread");
-    e.throw_exceptions = true;
+    std::vector<Future<void>> fs;
 
     // threaded execution does not preserve object creation/destruction order,
     // so current path is not correctly restored
     ScopedCurrentPath cp;
 
     for (auto &dd : download_dependencies_)
-        e.push([&download_dependency, &dd] { download_dependency(dd); });
+        fs.push_back(e.push([&download_dependency, &dd] { download_dependency(dd); }));
 
-    e.wait();
+    for (auto &f : fs)
+        f.wait();
+    for (auto &f : fs)
+        f.get();
 
     // two following blocks use executor to do parallel queries
     if (query_local_db)

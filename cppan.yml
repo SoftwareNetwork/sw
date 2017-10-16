@@ -4,6 +4,7 @@ local_settings:
     use_shared_libs: false
     build:
         generator: Visual Studio 15 2017
+        configuration: Debug
 
     dependencies:
         pvt.cppan.demo.boost.program_options: 1

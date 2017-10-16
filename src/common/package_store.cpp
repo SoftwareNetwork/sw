@@ -514,10 +514,10 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
     }
 
     Executor e(std::thread::hardware_concurrency() * 2);
-    e.throw_exceptions = true;
+    std::vector<Future<void>> fs;
     for (auto &c : configs)
     {
-        e.push([&c, &p, &cpp_fn, &ppath]()
+        auto f = e.push([&c, &p, &cpp_fn, &ppath]()
         {
             auto &project = c.getDefaultProject();
             auto root_directory = (fs::is_regular_file(p) ? p.parent_path() : p) / project.root_directory;
@@ -559,8 +559,12 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
                 project.dependencies.insert({ d.second.ppath.toString(), d.second });
             }
         });
+        fs.push_back(f);
     }
-    e.wait();
+    for (auto &f : fs)
+        f.wait();
+    for (auto &f : fs)
+        f.get();
 
     // seq
     for (auto &c : configs)
