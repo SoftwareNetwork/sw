@@ -1187,7 +1187,7 @@ int CMakePrinter::generate(const BuildSettings &bs) const
         }
     }
 
-    return ret.value();
+    return ret;
 }
 
 int CMakePrinter::build(const BuildSettings &bs) const
@@ -1209,7 +1209,7 @@ int CMakePrinter::build(const BuildSettings &bs) const
             c.args.push_back(a);
     }
 
-    return run_command(settings, c).value();
+    return run_command(settings, c);
 }
 
 void CMakePrinter::clear_cache() const
