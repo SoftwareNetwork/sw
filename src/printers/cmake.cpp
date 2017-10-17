@@ -19,6 +19,7 @@
 #include <access_table.h>
 #include <database.h>
 #include <directories.h>
+#include <exceptions.h>
 #include <hash.h>
 #include <lock.h>
 #include <inserts.h>
