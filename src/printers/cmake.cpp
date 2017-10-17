@@ -507,7 +507,8 @@ auto run_command(const Settings &bs, primitives::Command &c)
     c.execute(ec);
     if (ec)
         throw std::runtime_error("Run command '" + c.print() + "', error: " + boost::trim_copy(ec.message()));
-    LOG_INFO(logger, "Ok");
+    if (!bs.build_system_verbose)
+        LOG_INFO(logger, "Ok");
     return c.exit_code;
 }
 
