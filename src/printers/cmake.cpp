@@ -3098,7 +3098,13 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         // do not fail (throw), try to read already found variables
         // commited as it occurs always check cmake error or cmake normal exit has this value
         if (c.exit_code && c.exit_code.value() || !c.exit_code || ec)
-            LOG_WARN(logger, "-- Thread #" << i << ": error during evaluating variables");
+        {
+            String s;
+            s += "-- Thread #" + std::to_string(i) + ": error during evaluating variables";
+            if (ec)
+                s += ": " + ec.message();
+            throw_with_trace(std::runtime_error(s));
+        }
 
         w.read_parallel_checks_for_workers(d);
     };
