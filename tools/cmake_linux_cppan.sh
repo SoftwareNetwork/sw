@@ -1,4 +1,15 @@
 #!/bin/bash
 
-cmake -H. -Bbuild_cppan_static -DUSE_CPPAN_BUILD=1 -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
+CUR=.
+BLD=build_ninja
+
+if [ ! -d $BLD ]; then
+    cd ..
+else
+    cd .
+fi
+
+cmake -H. -B$BLD -DCMAKE_C_COMPILER=gcc-7 -DCMAKE_CXX_COMPILER=g++-7 -DCPPAN_COMMAND=cppan -DCMAKE_BUILD_TYPE=Debug
+
+cd -
 

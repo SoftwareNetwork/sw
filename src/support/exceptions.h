@@ -21,7 +21,11 @@
 #define REDEFINE_BOOST_USE_WINDOWS_H
 #endif
 
+#ifdef __linux__
+#define BOOST_STACKTRACE_USE_BACKTRACE
+#endif
 #include <boost/stacktrace.hpp>
+
 #include <boost/exception/all.hpp>
 
 #ifdef REDEFINE_BOOST_USE_WINDOWS_H
@@ -42,6 +46,12 @@ using traced_exception = boost::error_info<struct tag_stacktrace, boost::stacktr
 template <class E>
 void throw_with_trace(const E &e)
 {
-    boost::stacktrace::stacktrace t(2, -1);
+    boost::stacktrace::stacktrace t
+#ifdef _WIN32
+        (2, -1)
+#else
+        (1, -1)
+#endif
+;
     throw boost::enable_error_info(e) << traced_exception(t);
 }
