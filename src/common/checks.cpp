@@ -814,11 +814,10 @@ void Checks::write_definitions(CMakeContext &ctx, const Package &d, const String
 
             ctx.addLine("target_compile_definitions(${this}");
             ctx.increaseIndent();
-            ctx << m << " " << c->getVariable() << "=" << "${" << c->getVariable() << "}" << CMakeContext::eol;
+            ctx.addLine(m + " " + c->getVariable() + "=" + "${" + c->getVariable() + "}");
             for (const auto &p : prefixes)
-                ctx << m << " " << p + c->getVariable() << "=" << "${" << c->getVariable() << "}" << CMakeContext::eol;
-            ctx.decreaseIndent();
-            ctx.addLine(")");
+                ctx.addLine(m + " " + p + c->getVariable() + "=" + "${" + c->getVariable() + "}");
+            ctx.decreaseIndent(")");
             ctx.addLine();
             continue;
         }

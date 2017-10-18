@@ -75,8 +75,7 @@ public:
     void writeCheck(CMakeContext &ctx) const override
     {
         CheckParametersScopedWriter p(ctx, parameters);
-        ctx << information.function + "(" + getData() + " ";
-        ctx << getVariable() << ")" << CMakeContext::eol;
+        ctx.addLine(information.function + "(" + getData() + " " + getVariable() + ")");
     }
 };
 
@@ -168,13 +167,13 @@ public:
     void writeCheck(CMakeContext &ctx) const override
     {
         CheckParametersScopedWriter p(ctx, parameters);
-        ctx << information.function + "(\"" + struct_ + "\" \"" + getData() + "\" \"";
+        ctx.addLine(information.function + "(\"" + struct_ + "\" \"" + getData() + "\" \"");
         for (auto &h : parameters.headers)
-            ctx << h << ";";
-        ctx << "\" " << getVariable();
+            ctx.addText(h + ";");
+        ctx.addText("\" " + getVariable());
         if (cpp)
-            ctx << " LANGUAGE CXX";
-        ctx << ")" << CMakeContext::eol;
+            ctx.addText(" LANGUAGE CXX");
+        ctx.addText(")");
     }
 
     void save(yaml &root) const override
@@ -278,10 +277,10 @@ public:
     void writeCheck(CMakeContext &ctx) const override
     {
         CheckParametersScopedWriter p(ctx, parameters);
-        ctx << information.function + "(\"" + getData() + "\" \"";
+        ctx.addLine(information.function + "(\"" + getData() + "\" \"");
         for (auto &h : parameters.headers)
-            ctx << h << ";";
-        ctx << "\" " << getVariable() << ")" << CMakeContext::eol;
+            ctx.addText(h + ";");
+        ctx.addText("\" " + getVariable() + ")");
     }
 
     void save(yaml &root) const override
@@ -359,7 +358,7 @@ public:
             more_headers += "#endif\n";
         }
 
-        ctx << information.function + "(\"" +
+        ctx.addLine(information.function + "(\"" +
             R"(
 
 #include <stdio.h>
@@ -410,7 +409,7 @@ int main()
     return 0;
 }
 )"
-            "\" " << getVariable() << ")" << CMakeContext::eol;
+            "\" " + getVariable() + ")");
 
         ctx.addLine("set(CMAKE_REQUIRED_DEFINITIONS)");
     }
