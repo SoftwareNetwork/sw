@@ -633,7 +633,7 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
 
         if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
         {
-            std::set<ProjectVersionId> idx;
+            std::unordered_set<ProjectVersionId> idx;
             for (auto &tree_dep : v.second.get_child(DEPENDENCIES_NODE))
                 idx.insert(tree_dep.second.get_value<ProjectVersionId>());
             d.setDependencyIds(idx);

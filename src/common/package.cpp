@@ -26,6 +26,7 @@
 #include <boost/nowide/fstream.hpp>
 
 #include <regex>
+#include <shared_mutex>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "package");
@@ -196,8 +197,8 @@ void cleanPackages(const String &s, int flags)
 
 void cleanPackage(const Package &pkg, int flags)
 {
-    static std::map<Package, int> cleaned_packages;
-    static shared_mutex m;
+    static std::unordered_map<Package, int> cleaned_packages;
+    static std::shared_mutex m;
 
     static const auto cache_dir_bin = enumerate_files(directories.storage_dir_bin);
     static const auto cache_dir_exp = enumerate_files(directories.storage_dir_exp);
@@ -208,7 +209,7 @@ void cleanPackage(const Package &pkg, int flags)
 
     // only clean yet uncleaned flags
     {
-        std::shared_lock<shared_mutex> lock(m);
+        std::shared_lock<std::shared_mutex> lock(m);
         auto i = cleaned_packages.find(pkg);
         if (i != cleaned_packages.end())
             flags = flags & ~i->second;
@@ -285,7 +286,7 @@ void cleanPackage(const Package &pkg, int flags)
 
     // save cleaned packages
     {
-        std::lock_guard<shared_mutex> lock(m);
+        std::lock_guard<std::shared_mutex> lock(m);
         cleaned_packages[pkg] |= flags;
     }
 }
@@ -296,9 +297,9 @@ void cleanPackages(const PackagesSet &pkgs, int flags)
         cleanPackage(pkg, flags);
 }
 
-std::map<int, String> CleanTarget::getStringsById()
+std::unordered_map<int, String> CleanTarget::getStringsById()
 {
-    static std::map<int, String> m
+    static std::unordered_map<int, String> m
     {
 #define ADD(x) { CleanTarget::x, boost::to_lower_copy(String(#x)) }
 
@@ -314,10 +315,10 @@ std::map<int, String> CleanTarget::getStringsById()
     return m;
 }
 
-std::map<String, int> CleanTarget::getStrings()
+std::unordered_map<String, int> CleanTarget::getStrings()
 {
     auto m = CleanTarget::getStringsById();
-    std::map<String, int> m2;
+    std::unordered_map<String, int> m2;
     for (auto &s : m)
         m2[s.second] = s.first;
     return m2;

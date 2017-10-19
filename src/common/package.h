@@ -66,9 +66,9 @@ private:
     path getDir(const path &p) const;
 };
 
-using Packages = std::map<String, Package>;
-using PackagesMap = std::map<Package, Package>;
-using PackagesSet = std::set<Package>;
+using Packages = std::unordered_map<String, Package>;
+using PackagesMap = std::unordered_map<Package, Package>;
+using PackagesSet = std::unordered_set<Package>;
 
 Package extractFromString(const String &target);
 
@@ -89,9 +89,20 @@ struct CleanTarget
         AllExceptSrc = All & ~Src,
     };
 
-    static std::map<String, int> getStrings();
-    static std::map<int, String> getStringsById();
+    static std::unordered_map<String, int> getStrings();
+    static std::unordered_map<int, String> getStringsById();
 };
 
 void cleanPackages(const String &s, int flags = CleanTarget::All);
 void cleanPackages(const PackagesSet &pkgs, int flags);
+
+namespace std
+{
+template<> struct hash<Package>
+{
+    size_t operator()(const Package& p) const
+    {
+        return std::hash<ProjectPath>()(p.ppath) ^ std::hash<Version>()(p.version);
+    }
+};
+}

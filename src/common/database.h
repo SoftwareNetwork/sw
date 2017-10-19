@@ -136,7 +136,7 @@ private:
 class PackagesDatabase : public Database
 {
     using Dependencies = DownloadDependency::DbDependencies;
-    using DependenciesMap = std::map<Package, DownloadDependency>;
+    using DependenciesMap = std::unordered_map<Package, DownloadDependency>;
 
 public:
     PackagesDatabase();

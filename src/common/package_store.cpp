@@ -215,6 +215,7 @@ void PackageStore::check_deps_changed()
     // now refresh dependencies database only for remote packages
     // this file (local,current,root) packages will be refreshed anyway
     auto &sdb = getServiceDatabase();
+    std::unordered_set<String> clean_pkgs;
     for (auto &cc : *this)
     {
         Hasher h;
@@ -227,10 +228,19 @@ void PackageStore::check_deps_changed()
             // clear exports for this project, so it will be regenerated
             auto p = Printer::create(Settings::get_local_settings().printerType);
             p->clear_export(cc.first.getDirObj());
-            cleanPackages(cc.first.target_name, CleanTarget::Lib | CleanTarget::Bin);
+            clean_pkgs.insert(cc.first.target_name);
             sdb.setPackageDependenciesHash(cc.first, h.hash);
         }
     }
+
+    auto &e = getExecutor();
+    std::vector<Future<void>> fs;
+    for (auto &p : clean_pkgs)
+        fs.push_back(e.push([&p] {cleanPackages(p, CleanTarget::Lib | CleanTarget::Bin); }));
+    for (auto &f : fs)
+        f.wait();
+    for (auto &f : fs)
+        f.get();
 }
 
 PackageStore::iterator PackageStore::begin()
@@ -315,7 +325,7 @@ Config *PackageStore::add_local_config(const Config &co)
     return cp;
 }
 
-std::tuple<std::set<Package>, Config, String>
+std::tuple<PackagesSet, Config, String>
 PackageStore::read_packages_from_file(path p, const String &config_name, bool direct_dependency)
 {
     download_file(p);
@@ -487,7 +497,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
         conf.setPackage(pkg);
     }
 
-    std::set<Package> packages;
+    PackagesSet packages;
     auto configs = conf.split();
 
     // batch resolve of deps first; merge flags?
@@ -582,7 +592,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
     // do not remove
     rd.write_index();
 
-    return std::tuple<std::set<Package>, Config, String>{ packages, conf, sname };
+    return std::tuple<PackagesSet, Config, String>{ packages, conf, sname };
 }
 
 bool PackageStore::has_local_package(const ProjectPath &ppath) const

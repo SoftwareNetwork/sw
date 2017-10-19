@@ -74,3 +74,20 @@ struct Version
 
     static bool check_branch_name(const String &n, String *error = nullptr);
 };
+
+namespace std
+{
+template<> struct hash<Version>
+{
+    size_t operator()(const Version& v) const
+    {
+        if (!v.branch.empty())
+            return std::hash<String>()(v.branch);
+        size_t h = 0;
+        h ^= v.major;
+        h ^= v.minor;
+        h ^= v.patch;
+        return h;
+    }
+};
+}

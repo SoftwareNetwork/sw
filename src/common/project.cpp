@@ -611,7 +611,7 @@ void Project::findSources(path p)
         return std::regex(s + e);
     };
 
-    std::map<String, std::regex> rgxs, rgxs_exclude;
+    std::unordered_map<String, std::regex> rgxs, rgxs_exclude;
 
     for (auto &e : sources)
         rgxs[e] = create_regex(e);
@@ -791,7 +791,7 @@ std::optional<ProjectPath> Project::load_local_dependency(const String &name)
     std::optional<ProjectPath> pp;
     if (allow_local_dependencies && (fs::exists(name) || isUrl(name)))
     {
-        std::set<Package> pkgs;
+        PackagesSet pkgs;
         Config c;
         String n;
         std::tie(pkgs, c, n) = rd.read_packages_from_file(name);

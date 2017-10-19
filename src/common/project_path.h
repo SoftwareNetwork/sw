@@ -156,10 +156,10 @@ namespace std
     {
         size_t operator()(const ProjectPath& ppath) const
         {
-            size_t r = 0;
+            size_t h = 0;
             for (const auto &e : ppath.path_elements)
-                r ^= std::hash<String>()(e);
-            return r;
+                h ^= std::hash<String>()(e);
+            return h;
         }
     };
 }

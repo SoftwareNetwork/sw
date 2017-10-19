@@ -37,6 +37,8 @@
 #include <boost/nowide/fstream.hpp>
 #include <sqlite3.h>
 
+#include <shared_mutex>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "db");
 
@@ -1159,7 +1161,7 @@ IdDependencies PackagesDatabase::findDependencies(const Packages &deps) const
     for (auto &ad : all_deps)
     {
         auto &d = ad.second;
-        std::set<ProjectVersionId> ids;
+        std::unordered_set<ProjectVersionId> ids;
         for (auto &dd2 : d.db_dependencies)
             ids.insert(dd2.second.id);
         d.setDependencyIds(ids);
@@ -1476,22 +1478,36 @@ PackagesSet PackagesDatabase::getDependentPackages(const PackagesSet &pkgs)
 
 PackagesSet PackagesDatabase::getTransitiveDependentPackages(const PackagesSet &pkgs)
 {
+    using Retrieved = std::unordered_map<Package, PackagesSet>;
+
+    static std::shared_mutex m;
+    static Retrieved retrieved;
+
     auto r = pkgs;
-    std::map<Package, bool> retrieved;
     while (1)
     {
         bool changed = false;
 
         for (auto &pkg : r)
         {
-            if (retrieved[pkg])
-                continue;
+            {
+                std::shared_lock<std::shared_mutex> lk(m);
+                auto i = retrieved.find(pkg);
+                if (i != retrieved.end())
+                {
+                    r.insert(i->second.begin(), i->second.end());
+                    continue;
+                }
+            }
 
-            retrieved[pkg] = true;
             changed = true;
 
             auto dpkgs = getDependentPackages(pkg);
             r.insert(dpkgs.begin(), dpkgs.end());
+            {
+                std::unique_lock<std::shared_mutex> lk(m);
+                retrieved[pkg] = dpkgs;
+            }
             break;
         }
 

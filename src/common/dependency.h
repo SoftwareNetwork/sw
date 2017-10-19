@@ -25,9 +25,9 @@ struct Remote;
 
 struct DownloadDependency : public Package
 {
-    using IdDependencies = std::map<ProjectVersionId, DownloadDependency>;
-    using DbDependencies = std::map<String, DownloadDependency>;
-    using Dependencies = std::map<Package, DownloadDependency>;
+    using IdDependencies = std::unordered_map<ProjectVersionId, DownloadDependency>;
+    using DbDependencies = std::unordered_map<String, DownloadDependency>;
+    using Dependencies = std::unordered_map<Package, DownloadDependency>;
 
     // extended data
     ProjectVersionId id = 0;
@@ -38,7 +38,7 @@ struct DownloadDependency : public Package
     DbDependencies db_dependencies;
 
 public:
-    void setDependencyIds(const std::set<ProjectVersionId> &ids)
+    void setDependencyIds(const std::unordered_set<ProjectVersionId> &ids)
     {
         id_dependencies = ids;
     }
@@ -63,7 +63,7 @@ public:
     }
 
 private:
-    std::set<ProjectVersionId> id_dependencies;
+    std::unordered_set<ProjectVersionId> id_dependencies;
     Dependencies dependencies;
 };
 
