@@ -215,12 +215,17 @@ void PackageStore::check_deps_changed()
     // now refresh dependencies database only for remote packages
     // this file (local,current,root) packages will be refreshed anyway
     auto &sdb = getServiceDatabase();
-    std::unordered_set<String> clean_pkgs;
+    std::unordered_map<Package, String> clean_pkgs;
     for (auto &cc : *this)
     {
+        // make sure we have ordered deps
         Hasher h;
+        StringSet deps;
         for (auto &d : cc.second.dependencies)
-            h |= d.second.target_name;
+            deps.insert(d.second.target_name);
+        for (auto &d : deps)
+            h |= d;
+
         if (!sdb.hasPackageDependenciesHash(cc.first, h.hash))
         {
             deps_changed = true;
@@ -228,15 +233,21 @@ void PackageStore::check_deps_changed()
             // clear exports for this project, so it will be regenerated
             auto p = Printer::create(Settings::get_local_settings().printerType);
             p->clear_export(cc.first.getDirObj());
-            clean_pkgs.insert(cc.first.target_name);
-            sdb.setPackageDependenciesHash(cc.first, h.hash);
+            clean_pkgs.emplace(cc.first, h.hash);
         }
     }
 
     auto &e = getExecutor();
     std::vector<Future<void>> fs;
-    for (auto &p : clean_pkgs)
-        fs.push_back(e.push([&p] {cleanPackages(p, CleanTarget::Lib | CleanTarget::Bin); }));
+    for (auto &kv : clean_pkgs)
+    {
+        fs.push_back(e.push([&kv, &sdb]
+        {
+            cleanPackages(kv.first.target_name, CleanTarget::Lib | CleanTarget::Bin);
+            // set dep hash only after clean
+            sdb.setPackageDependenciesHash(kv.first, kv.second);
+        }));
+    }
     for (auto &f : fs)
         f.wait();
     for (auto &f : fs)

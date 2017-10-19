@@ -1435,26 +1435,33 @@ PackagesSet PackagesDatabase::getDependentPackages(const Package &pkg)
     ProjectId project_id = getPackageId(pkg.ppath);
 
     // 2. Find project versions dependent on this version.
-    std::set<std::pair<String, String>> pkgs_s;
+    // Probably set to ProjectVersionId, String, String to prevent throwing exceptions, but left as is for now.
+    std::set<std::tuple<Version, String, String>> pkgs_s;
     db->execute(
-        "select path, case when branch is not null then branch else major || '.' || minor || '.' || patch end as version "
-        "from ProjectVersionDependencies "
-        "join ProjectVersions on ProjectVersions.id = project_version_id "
-        "join Projects on Projects.id = project_id "
-        "where project_dependency_id = '" + std::to_string(project_id) + "'",
+        R"(select version, path,
+        case when branch is not null then branch else major || '.' || minor || '.' || patch end as version2
+        from ProjectVersionDependencies
+        join ProjectVersions on ProjectVersions.id = project_version_id
+        join Projects on Projects.id = project_id
+        where project_dependency_id = ')" + std::to_string(project_id) + "'",
         [&pkgs_s](SQLITE_CALLBACK_ARGS)
     {
-        pkgs_s.insert({ cols[0], cols[1] });
+        pkgs_s.emplace(cols[0], cols[1], cols[2]);
         return 0;
     });
 
+    // 3. Match versions.
     for (auto &p : pkgs_s)
     {
-        Package pkg;
-        pkg.ppath = p.first;
-        pkg.version = p.second;
-        pkg.createNames();
-        r.insert(pkg);
+        auto &v = std::get<0>(p);
+        if (v == pkg.version || v.canBe(pkg.version))
+        {
+            Package d;
+            d.ppath = std::get<1>(p);
+            d.version = std::get<2>(p);
+            d.createNames();
+            r.insert(d);
+        }
     }
 
     return r;

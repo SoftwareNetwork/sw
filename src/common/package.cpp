@@ -171,16 +171,6 @@ void cleanPackages(const String &s, int flags)
     if (pkgs.empty())
         return;
 
-    // find dependent packages and remove non installed
-    auto dpkgs = getPackagesDatabase().getTransitiveDependentPackages(pkgs);
-    for (auto i = dpkgs.begin(); i != dpkgs.end();)
-    {
-        if (ipkgs.find(*i) == ipkgs.end())
-            i = dpkgs.erase(i);
-        else
-            ++i;
-    }
-
     cleanPackages(pkgs, flags);
 
     if (flags & CleanTarget::Src)
@@ -190,6 +180,16 @@ void cleanPackages(const String &s, int flags)
                 CleanTarget::Lib |
                 CleanTarget::Obj |
                 CleanTarget::Exp ;
+    }
+
+    // find dependent packages and remove non installed
+    auto dpkgs = getPackagesDatabase().getTransitiveDependentPackages(pkgs);
+    for (auto i = dpkgs.begin(); i != dpkgs.end();)
+    {
+        if (ipkgs.find(*i) == ipkgs.end())
+            i = dpkgs.erase(i);
+        else
+            ++i;
     }
 
     cleanPackages(dpkgs, flags);
@@ -212,11 +212,22 @@ void cleanPackage(const Package &pkg, int flags)
         std::shared_lock<std::shared_mutex> lock(m);
         auto i = cleaned_packages.find(pkg);
         if (i != cleaned_packages.end())
-            flags = flags & ~i->second;
+            flags &= ~i->second;
+        if (flags == 0)
+            return;
     }
 
-    if (flags == 0)
-        return;
+    // save cleaned packages
+    {
+        std::unique_lock<std::shared_mutex> lock(m);
+        auto &f = cleaned_packages[pkg];
+        flags &= ~f;
+        f |= flags;
+
+        // double check, we have no upgrade lock
+        if (flags == 0)
+            return;
+    }
 
     // log message
     {
@@ -282,12 +293,6 @@ void cleanPackage(const Package &pkg, int flags)
     {
         auto &sdb = getServiceDatabase();
         sdb.removeInstalledPackage(pkg);
-    }
-
-    // save cleaned packages
-    {
-        std::lock_guard<std::shared_mutex> lock(m);
-        cleaned_packages[pkg] |= flags;
     }
 }
 
