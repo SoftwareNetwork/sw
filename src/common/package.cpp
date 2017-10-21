@@ -96,7 +96,7 @@ void Package::createNames()
 {
     auto v = version.toAnyVersion();
 
-    target_name   = ppath.toString() + (v == "*" ? "" : ("-" + v));
+    target_name = ppath.toString() + (v == "*" ? "" : ("-" + v));
 
     // for local projects we use simplified variable name without
     // the second dir hash argument
@@ -206,6 +206,12 @@ void cleanPackage(const Package &pkg, int flags)
 #ifdef _WIN32
     static const auto cache_dir_lnk = enumerate_files(directories.storage_dir_lnk);
 #endif
+
+    auto &sdb = getServiceDatabase();
+
+    // Clean only installed packages.
+    if (sdb.getInstalledPackageId(pkg) == 0)
+        return;
 
     // only clean yet uncleaned flags
     {
