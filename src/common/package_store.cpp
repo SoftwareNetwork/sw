@@ -257,26 +257,40 @@ void PackageStore::check_deps_changed()
 PackageStore::iterator PackageStore::begin()
 {
     auto i = packages.find(Package());
-    if (i != packages.end())
+    if (i == packages.begin())
         return ++i;
     return packages.begin();
 }
 
 PackageStore::iterator PackageStore::end()
 {
+    auto i = packages.find(Package());
+    if (i != packages.end())
+    {
+        if (i == --packages.end())
+            return i;
+        throw std::logic_error("Oops! Empty package not at the end of packages");
+    }
     return packages.end();
 }
 
 PackageStore::const_iterator PackageStore::begin() const
 {
     auto i = packages.find(Package());
-    if (i != packages.end())
+    if (i == packages.begin())
         return ++i;
     return packages.begin();
 }
 
 PackageStore::const_iterator PackageStore::end() const
 {
+    auto i = packages.find(Package());
+    if (i != packages.end())
+    {
+        if (i == --packages.end())
+            return i;
+        throw std::logic_error("Oops! Empty package not at the end of packages");
+    }
     return packages.end();
 }
 
