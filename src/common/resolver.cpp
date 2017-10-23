@@ -378,7 +378,11 @@ void Resolver::download_and_unpack()
 void Resolver::post_download()
 {
     for (auto &cc : rd)
+    {
+        if (cc.first == Package())
+            continue;
         prepare_config(cc);
+    }
 }
 
 void Resolver::prepare_config(PackageStore::PackageConfigs::value_type &cc)

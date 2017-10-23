@@ -132,6 +132,8 @@ void PackageStore::process(const path &p, Config &root)
     // add more necessary actions here
     for (auto &cc : *this)
     {
+        if (cc.first == Package())
+            continue;
         root.getDefaultProject().checks += cc.second.config->getDefaultProject().checks;
     }
 
@@ -141,6 +143,8 @@ void PackageStore::process(const path &p, Config &root)
     // do not multithread this! causes livelocks
     for (auto &cc : *this)
     {
+        if (cc.first == Package())
+            continue;
         auto &d = cc.first;
 
         auto printer = Printer::create(Settings::get_local_settings().printerType);
@@ -218,6 +222,8 @@ void PackageStore::check_deps_changed()
     std::unordered_map<Package, String> clean_pkgs;
     for (auto &cc : *this)
     {
+        if (cc.first == Package())
+            continue;
         // make sure we have ordered deps
         Hasher h;
         StringSet deps;
@@ -256,41 +262,21 @@ void PackageStore::check_deps_changed()
 
 PackageStore::iterator PackageStore::begin()
 {
-    auto i = packages.find(Package());
-    if (i == packages.begin())
-        return ++i;
     return packages.begin();
 }
 
 PackageStore::iterator PackageStore::end()
 {
-    auto i = packages.find(Package());
-    if (i != packages.end())
-    {
-        if (i == --packages.end())
-            return i;
-        throw std::logic_error("Oops! Empty package not at the end of packages");
-    }
     return packages.end();
 }
 
 PackageStore::const_iterator PackageStore::begin() const
 {
-    auto i = packages.find(Package());
-    if (i == packages.begin())
-        return ++i;
     return packages.begin();
 }
 
 PackageStore::const_iterator PackageStore::end() const
 {
-    auto i = packages.find(Package());
-    if (i != packages.end())
-    {
-        if (i == --packages.end())
-            return i;
-        throw std::logic_error("Oops! Empty package not at the end of packages");
-    }
     return packages.end();
 }
 
@@ -318,6 +304,8 @@ void PackageStore::write_index() const
     auto &sdb = getServiceDatabase();
     for (auto &cc : *this)
     {
+        if (cc.first == Package())
+            continue;
         sdb.addInstalledPackage(cc.first);
 #ifdef _WIN32
         create_link(cc.first.getDirSrc(), directories.storage_dir_lnk / "src" / (cc.first.target_name + ".lnk"));
