@@ -22,6 +22,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <iostream>
 #include <memory>
 
 #include <primitives/log.h>
@@ -895,7 +896,8 @@ void Checks::print_values() const
     for (auto &kv : checks_to_print)
         s.insert(kv.second);
     for (auto &v : s)
-        LOG_INFO(logger, v->printStatus());
+        std::cout << v->printStatus() << std::endl;
+        //LOG_INFO(logger, v->printStatus());
 }
 
 void Checks::print_values(CMakeContext &ctx) const
