@@ -3003,13 +3003,18 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         return;
     }
 
+    // disable boost logger as it seems broken here for some reason
+#undef LOG_INFO
+#define LOG_INFO(l, m) \
+    std::cout << m << std::endl
+
     LOG_INFO(logger, "-- Performing " << n_checks << " checks using " << N << " thread(s)");
 #ifndef _WIN32
     LOG_INFO(logger, "-- This process may take up to 5 minutes depending on your hardware");
 #else
     LOG_INFO(logger, "-- This process may take up to 10-20 minutes depending on your hardware");
 #endif
-    LOG_FLUSH();
+    //LOG_FLUSH();
 
     auto work = [&o, &N](auto &w, int i)
     {
@@ -3130,7 +3135,7 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         checks += w;
 
     checks.print_values();
-    LOG_FLUSH();
+    //LOG_FLUSH();
 
     CMakeContext ctx;
     checks.print_values(ctx);
