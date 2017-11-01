@@ -912,6 +912,16 @@ void Checks::print_values(CMakeContext &ctx) const
         {
         case Check::Decl: // do not participate in parallel
             break;
+        case Check::Type:
+        {
+            auto &m = checks_to_print[c->getVariable()];
+            if (m && m->isOk())
+                continue;
+            m = c;
+            checks_to_print[Check::make_type_var(c->getData(), "SIZEOF_")] = c;
+            checks_to_print[Check::make_type_var(c->getData(), "SIZE_OF_")] = c;
+            break;
+        }
         case Check::Symbol:
             if (c->isOk())
             {
@@ -934,7 +944,7 @@ void Checks::print_values(CMakeContext &ctx) const
     }
 
     for (auto &kv : checks_to_print)
-        ctx.addLine("STRING;" + kv.second->getVariable() + ";" + std::to_string(kv.second->getValue()));
+        ctx.addLine("STRING;" + kv.first + ";" + std::to_string(kv.second->getValue()));
 }
 
 String Check::make_include_var(const String &i)

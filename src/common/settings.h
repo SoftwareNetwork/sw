@@ -119,6 +119,7 @@ struct Settings
     bool copy_import_libs = false;
     bool full_path_executables = false;
     bool rc_enabled = true;
+    bool short_local_names = false;
 
     String install_prefix;
 

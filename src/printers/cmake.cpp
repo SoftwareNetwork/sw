@@ -1738,7 +1738,12 @@ endif()
 
         if (!d.flags[pfHeaderOnly])
         {
-            set_target_properties(ctx, "OUTPUT_NAME", d.target_name);
+            if (!d.flags[pfLocalProject])
+                set_target_properties(ctx, "OUTPUT_NAME", d.target_name);
+            else
+            {
+                set_target_properties(ctx, "OUTPUT_NAME", Settings::get_local_settings().short_local_names ? d.ppath.back() : d.target_name);
+            }
             set_target_properties(ctx, "PROJECT_LABEL", d.flags[pfLocalProject] ? d.ppath.back() : d.target_name);
             ctx.emptyLines();
         }
