@@ -38,6 +38,7 @@ DECLARE_STATIC_LOGGER(logger, "config");
 Config::Config()
 {
     addDefaultProject();
+	dir = ::current_path();
 }
 
 Config::Config(const path &p)
@@ -51,12 +52,13 @@ void Config::reload(const path &p)
     if (fs::is_directory(p))
     {
         dir = p;
-        ScopedCurrentPath cp(p);
+        ScopedCurrentPath cp(dir);
         load_current_config();
     }
     else
     {
         dir = p.parent_path();
+		ScopedCurrentPath cp(dir);
         load(p);
     }
 }
@@ -64,7 +66,7 @@ void Config::reload(const path &p)
 void Config::addDefaultProject()
 {
     Project p{ ProjectPath() };
-    p.load(yaml());
+	p.load(yaml());
     p.pkg = pkg;
     projects.clear();
     projects.emplace("", p);

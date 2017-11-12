@@ -561,7 +561,7 @@ void Project::findSources(path p)
 
     // correct root dir is detected and set during load phase
     if (p.empty())
-        p = fs::current_path();
+        p = ::current_path();
     if (p != root_directory)
         p /= root_directory;
 
@@ -722,7 +722,12 @@ void Project::findSources(path p)
 
     if (!root_directory.empty() && !pkg.flags[pfLocalProject])
         fs::copy_file(CPPAN_FILENAME, root_directory / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
-    files.insert(CPPAN_FILENAME);
+	if (fs::exists(p / CPPAN_FILENAME))
+		files.insert(p / CPPAN_FILENAME);
+	else if (fs::exists(::current_path() / CPPAN_FILENAME))
+		files.insert(::current_path() / CPPAN_FILENAME);
+	else
+		files.insert(CPPAN_FILENAME);
 }
 
 bool Project::writeArchive(const path &fn) const
@@ -789,7 +794,7 @@ ProjectPath Project::relative_name_to_absolute(const String &name)
 std::optional<ProjectPath> Project::load_local_dependency(const String &name)
 {
     std::optional<ProjectPath> pp;
-    if (allow_local_dependencies && (fs::exists(name) || isUrl(name)))
+    if (allow_local_dependencies && (fs::exists(::current_path() / name) || isUrl(name)))
     {
         PackagesSet pkgs;
         Config c;
@@ -861,7 +866,7 @@ void Project::load(const yaml &root)
     {
         get_scalar_f(root, s, [&p, &s](const auto &n)
         {
-            auto cp = fs::current_path();
+            auto cp = ::current_path();
             p = n.template as<String>();
             if (!is_under_root(cp / p, cp))
                 throw std::runtime_error("'" + s + "' must not point outside the current dir: " + p.string() + ", " + cp.string());
@@ -1258,7 +1263,7 @@ void Project::load(const yaml &root)
     // try to detect and prepend root dir
     {
         auto root = findRootDirectory();
-        if (root_directory.empty())
+        if (root_directory.empty() || !fs::exists(::current_path() / root_directory))
             root_directory = root;
         else if (root_directory != root)
             root_directory = root / root_directory;
@@ -1277,9 +1282,9 @@ void Project::load(const yaml &root)
             {*/
             // root_directory part must be checked on server side or during local pkg build
             // second part - on installed package
-            if (fs::exists(root_directory / "include") || fs::exists("include"))
+            if (fs::exists(root_directory / "include"))
                 include_directories.public_.insert("include");
-            else if (fs::exists(root_directory / "includes") || fs::exists("includes"))
+            else if (fs::exists(root_directory / "includes"))
                 include_directories.public_.insert("includes");
             else
             {
@@ -1304,11 +1309,11 @@ void Project::load(const yaml &root)
                 }
                 else
                 {*/
-                if (fs::exists(root_directory / current) || fs::exists(current))
+                if (fs::exists(root_directory / current))
                 {
-                    if (fs::exists(root_directory / "include") || fs::exists("include"))
+                    if (fs::exists(root_directory / "include"))
                         include_directories.private_.insert(current);
-                    else if (fs::exists(root_directory / "includes") || fs::exists("includes"))
+                    else if (fs::exists(root_directory / "includes"))
                         include_directories.private_.insert(current);
                     else
                     {
@@ -1320,7 +1325,7 @@ void Project::load(const yaml &root)
                 {
                     // now check next dir
                     if (!next.empty())
-                        autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
+						autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
                 }
                 //}
             };
@@ -1745,14 +1750,14 @@ String Project::print_cpp()
             {
                 if (k2 == "win32")
                 {
-                    ctx.beginBlock("if (s.TargetOS.Type == OSType::Windows)");
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type == OSType::Windows)");
                     for (auto &[k, v] : v2)
                         print_def(k, v);
                     ctx.endBlock();
                 }
                 else if (k2 == "unix")
                 {
-                    ctx.beginBlock("if (s.TargetOS.Type != OSType::Windows)");
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type != OSType::Windows)");
                     for (auto &[k, v] : v2)
                         print_def(k, v);
                     ctx.endBlock();
@@ -1785,14 +1790,14 @@ String Project::print_cpp()
             {
                 if (k2 == "win32")
                 {
-                    ctx.beginBlock("if (s.TargetOS.Type == OSType::Windows)");
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type == OSType::Windows)");
                     for (auto &[k, v] : v2)
                         print_def(k, v);
                     ctx.endBlock();
                 }
                 else if (k2 == "unix")
                 {
-                    ctx.beginBlock("if (s.TargetOS.Type != OSType::Windows)");
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type != OSType::Windows)");
                     for (auto &[k, v] : v2)
                         print_def(k, v);
                     ctx.endBlock();
@@ -1825,14 +1830,14 @@ String Project::print_cpp()
             {
                 if (k2 == "win32")
                 {
-                    ctx.beginBlock("if (s.TargetOS.Type == OSType::Windows)");
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type == OSType::Windows)");
                     for (auto &[k, v] : v2)
                         print_def(k, v);
                     ctx.endBlock();
                 }
                 else if (k2 == "unix")
                 {
-                    ctx.beginBlock("if (s.TargetOS.Type != OSType::Windows)");
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type != OSType::Windows)");
                     for (auto &[k, v] : v2)
                         print_def(k, v);
                     ctx.endBlock();
@@ -1901,5 +1906,341 @@ String Project::print_cpp()
         ctx.endBlock();
     }
 
+    return ctx.getText();
+}
+
+#include <iostream>
+
+String Project::print_cpp2()
+{
+    Context ctx;
+
+    String name = pkg.ppath.back();
+
+    String type = "LibraryTarget";
+    if (static_only)
+        type = "StaticLibraryTarget";
+    else if (shared_only)
+        type = "SharedLibraryTarget";
+    else if (pkg.flags[pfExecutable])
+        type = "ExecutableTarget";
+
+    ctx.beginBlock("void build(Solution &sln)");
+    ctx.addLine("auto &s = sln.addDirectory(\"demo\");");
+    ctx.addLine("auto &" + name + " = s.addTarget<" + type + ">(\"" + pkg.ppath.slice(3).toString() + "\", \"" + pkg.version.toString() + "\");");
+    auto src = print_source_cpp(source);
+    ctx.addLine(name + ".Source = " + src + ";");
+    ctx.emptyLines();
+
+    if (checks.checks.size() > 2)
+    {
+        ctx.addLine(name + ".setChecks(\"" + name + "\");");
+        ctx.emptyLines();
+    }
+
+    if (export_all_symbols)
+        ctx.addLine(name + ".ExportAllSymbols = true;");
+
+    for (auto &n : api_name)
+        ctx.addLine(name + ".ApiNames.insert(\"" + n + "\");");
+
+    if (!sources.empty())
+    {
+        ctx.addLine(name + " +=");
+        String s;
+        for (auto &t : sources)
+        {
+            s += "\"" + t + "\"";
+            if (t.find("\\") != -1 || t.find("*") != -1)
+                s += "_rr";
+            s += ",\n";
+        }
+        boost::replace_all(s, "\\", "\\\\");
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.increaseIndent();
+        ctx.addLine(s);
+        ctx.decreaseIndent();
+    }
+
+    if (!exclude_from_build.empty())
+    {
+        ctx.addLine(name + " -=");
+        String s;
+        for (auto &t : exclude_from_build)
+        {
+            s += "\"" + t + "\"";
+            if (t.find("\\") != -1 || t.find("*") != -1)
+                s += "_rr";
+            s += ",\n";
+        }
+        boost::replace_all(s, "\\", "\\\\");
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.increaseIndent();
+        ctx.addLine(s);
+        ctx.decreaseIndent();
+    }
+
+    /*if (!exclude_from_package.empty())
+    {
+    ctx.addLine(name + " -=");
+    String s;
+    for (auto &t : exclude_from_package)
+    {
+    s += "\"" + t + "\"";
+    if (t.find("\\") != -1 || t.find("*") != -1)
+    s += "_rr";
+    s += ",\n";
+    }
+    boost::replace_all(s, "\\", "\\\\");
+    s.resize(s.size() - 2);
+    s += ";\n";
+    ctx.addLine(s);
+    }*/
+
+    if (!include_directories.private_.empty())
+    {
+        ctx.addLine(name + ".Private +=");
+        String s;
+        for (auto &t : include_directories.private_)
+            s += "\"" + t.string() + "\"_id,\n";
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.increaseIndent();
+        ctx.addLine(s);
+        ctx.decreaseIndent();
+    }
+
+    if (include_directories.public_.size() > 1)
+    {
+        String s;
+        for (auto &t : include_directories.public_)
+        {
+            auto str = t.string();
+            if (str.find("BDIR") != -1)
+                continue;
+            if (str == ".")
+                continue;
+            s += "\"" + str + "\"_id,\n";
+        }
+		if (!s.empty())
+		{
+			s.resize(s.size() - 2);
+			s += ";\n";
+			ctx.addLine(name + ".Public +=");
+			ctx.increaseIndent();
+			ctx.addLine(s);
+			ctx.decreaseIndent();
+		}
+    }
+
+    if (!include_directories.interface_.empty())
+    {
+        ctx.addLine(name + ".Interface +=");
+        String s;
+        for (auto &t : include_directories.interface_)
+            s += "\"" + t.string() + "\"_id,\n";
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.increaseIndent();
+        ctx.addLine(s);
+        ctx.decreaseIndent();
+    }
+
+	auto escape_str = [](auto s)
+	{
+		boost::replace_all(s, "\\", "\\\\");
+		boost::replace_all(s, "\"", "\\\"");
+		return s;
+	};
+
+    auto any = options.find("any");
+    if (any != options.end())
+    {
+        auto print_def = [&ctx, &name, &escape_str](auto &k, auto &v)
+        {
+            if (k == "private")
+                ctx.addLine(name + ".Private += \"" + escape_str(v) + "\"_d;");
+            else if (k == "public")
+                ctx.addLine(name + ".Public += \"" + escape_str(v) + "\"_d;");
+            else if (k == "interface")
+                ctx.addLine(name + ".Interface += \"" + escape_str(v) + "\"_d;");
+        };
+
+        if (!any->second.definitions.empty())
+        {
+            for (auto &[k, v] : any->second.definitions)
+                print_def(k, v);
+        }
+        if (!any->second.system_definitions.empty())
+        {
+            for (auto &[k2, v2] : any->second.system_definitions)
+            {
+                if (k2 == "win32")
+                {
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type == OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+                else if (k2 == "unix")
+                {
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type != OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+            }
+        }
+    }
+
+    auto shared = options.find("shared");
+    if (shared != options.end())
+    {
+        auto print_def = [&ctx, &name, &escape_str](auto &k, auto &v)
+        {
+            if (k == "private")
+                ctx.addLine(name + ".Private += sw::Shared, \"" + escape_str(v) + "\"_d;");
+            else if (k == "public")
+                ctx.addLine(name + ".Public += sw::Shared, \"" + escape_str(v) + "\"_d;");
+            else if (k == "interface")
+                ctx.addLine(name + ".Interface += sw::Shared, \"" + escape_str(v) + "\"_d;");
+        };
+
+        if (!shared->second.definitions.empty())
+        {
+            for (auto &[k, v] : shared->second.definitions)
+                print_def(k, v);
+        }
+        if (!shared->second.system_definitions.empty())
+        {
+            for (auto &[k2, v2] : shared->second.system_definitions)
+            {
+                if (k2 == "win32")
+                {
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type == OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+                else if (k2 == "unix")
+                {
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type != OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+            }
+        }
+    }
+
+    auto static_ = options.find("static");
+    if (static_ != options.end())
+    {
+        auto print_def = [&ctx, &name, &escape_str](auto &k, auto &v)
+        {
+            if (k == "private")
+                ctx.addLine(name + ".Private += sw::Static, \"" + escape_str(v) + "\"_d;");
+            else if (k == "public")
+                ctx.addLine(name + ".Public += sw::Static, \"" + escape_str(v) + "\"_d;");
+            else if (k == "interface")
+                ctx.addLine(name + ".Interface. += sw::Static, \"" + escape_str(v) + "\"_d;");
+        };
+
+        if (!static_->second.definitions.empty())
+        {
+            for (auto &[k, v] : static_->second.definitions)
+                print_def(k, v);
+        }
+        if (!static_->second.system_definitions.empty())
+        {
+            for (auto &[k2, v2] : static_->second.system_definitions)
+            {
+                if (k2 == "win32")
+                {
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type == OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+                else if (k2 == "unix")
+                {
+                    ctx.beginBlock("if (s.Settings.TargetOS.Type != OSType::Windows)");
+                    for (auto &[k, v] : v2)
+                        print_def(k, v);
+                    ctx.endBlock();
+                }
+            }
+        }
+    }
+
+    ctx.emptyLines();
+
+    for (auto &d : dependencies)
+    {
+		auto pp = d.second.ppath.toString();
+		boost::replace_all(pp, "pvt.cppan", "pub.cppan2");
+		auto vv = d.second.version.toAnyVersion();
+		if (vv != "*")
+			vv = "-" + vv;
+		else
+			vv.clear();
+        if (d.second.flags[pfPrivateDependency])
+            ctx.addLine(name + " += \"" + pp + vv + "\"_dep;");
+        else
+            ctx.addLine(name + ".Public += \"" + pp + vv + "\"_dep;");
+    }
+
+    ctx.endBlock();
+    ctx.emptyLines();
+
+    if (checks.checks.size() > 2)
+    {
+        ctx.beginBlock("void check(Checker &c)");
+        ctx.addLine("auto &s = c.addSet(\"" + name + "\");");
+        for (auto &c : checks.checks)
+        {
+            switch (c->getInformation().type)
+            {
+            case Check::Function:
+                ctx.addLine("s.checkFunctionExists(\"" + c->getData() + "\");");
+                break;
+            case Check::Include:
+                ctx.addLine("s.checkIncludeExists(\"" + c->getData() + "\");");
+                //if (c->get_cpp())
+                break;
+            case Check::Type:
+                ctx.addLine("s.checkTypeSize(\"" + c->getData() + "\");");
+                break;
+            case Check::Decl:
+                ctx.addLine("s.checkDeclarationExists(\"" + c->getData() + "\");");
+                break;
+            case Check::LibraryFunction:
+                ctx.addLine("s.checkLibraryFunctionExists(\"" + ((CheckLibraryFunction*)c.get())->library + "\", \"" + c->getData() + "\");");
+                break;
+            case Check::CSourceCompiles:
+                ctx.addLine("s.checkSourceCompiles(\"" + c->getVariable() + "\", R\"sw_xxx(" + c->getData() + ")sw_xxx\");");
+                break;
+            case Check::StructMember:
+                ctx.beginBlock();
+                ctx.addLine("auto &c = s.checkStructMemberExists(\"" + ((CheckStructMember*)c.get())->struct_ + "\", \"" + c->getData() + "\");");
+                for (auto &i : c->parameters.headers)
+                    ctx.addLine("c.Parameters.Includes.push_back(\"" + i + "\");");
+                ctx.endBlock();
+                break;
+            case Check::Symbol:
+                ctx.beginBlock();
+                ctx.addLine("auto &c = s.checkSymbolExists(\"" + c->getData() + "\");");
+                for (auto &i : c->parameters.headers)
+                    ctx.addLine("c.Parameters.Includes.push_back(\"" + i + "\");");
+                ctx.endBlock();
+                break;
+            }
+        }
+        ctx.endBlock();
+    }
+
+    ctx.splitLines();
     return ctx.getText();
 }

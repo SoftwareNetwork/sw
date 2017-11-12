@@ -292,6 +292,7 @@ public:
     void save_dependencies(yaml &root) const;
 
     String print_cpp();
+    String print_cpp2();
 
     // own data, not from config
 public:

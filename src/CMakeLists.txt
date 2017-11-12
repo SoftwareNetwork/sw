@@ -93,9 +93,9 @@ set(common_src ${common_src}
 add_library(common ${common_src})
 
 target_compile_definitions(common
-    PRIVATE -DVERSION_MAJOR=${VERSION_MAJOR}
-    PRIVATE -DVERSION_MINOR=${VERSION_MINOR}
-    PRIVATE -DVERSION_PATCH=${VERSION_PATCH}
+    PUBLIC -DVERSION_MAJOR=${VERSION_MAJOR}
+    PUBLIC -DVERSION_MINOR=${VERSION_MINOR}
+    PUBLIC -DVERSION_PATCH=${VERSION_PATCH}
 )
 target_include_directories(common
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common

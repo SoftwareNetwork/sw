@@ -57,6 +57,7 @@ ProgramOptions::ProgramOptions()
         ("beautify", po::value<String>(), "beautify yaml script")
         ("beautify-strict", po::value<String>(), "convert to strict cppan config")
         ("print-cpp", po::value<String>(), "print config's values in cpp style")
+        ("print-cpp2", po::value<String>(), "print config's values in cpp style 2")
         ;
 
     // i - internal options

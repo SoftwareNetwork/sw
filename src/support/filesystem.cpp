@@ -81,6 +81,10 @@ void findRootDirectory1(const path &p, path &root, int depth = 0)
         root /= d;
         findRootDirectory1(p / d, root);
     }
+	else if (depth == 1)
+	{
+		root = p;
+	}
 }
 
 path findRootDirectory(const path &p)

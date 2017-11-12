@@ -543,7 +543,11 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
         auto f = e.push([&c, &p, &cpp_fn, &ppath]()
         {
             auto &project = c.getDefaultProject();
-            auto root_directory = (fs::is_regular_file(p) ? p.parent_path() : p) / project.root_directory;
+			auto root_directory = fs::is_regular_file(p) ? p.parent_path() : p;
+			if (project.root_directory.is_absolute())
+				root_directory = project.root_directory;
+			else
+				root_directory /= project.root_directory;
 
             // sources
             if (!cpp_fn.empty() && !project.files_loaded)
@@ -556,7 +560,8 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
             LOG_INFO(logger, "Finding sources for " + project.pkg.ppath.slice(2).toString());
             project.findSources(root_directory);
             // maybe remove? let user see cppan.yml in local project
-            project.files.erase(CPPAN_FILENAME);
+            project.files.erase(::current_path() / CPPAN_FILENAME);
+			project.files.erase(CPPAN_FILENAME);
             // patch if any
             project.patchSources();
 

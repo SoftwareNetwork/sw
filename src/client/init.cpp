@@ -100,7 +100,7 @@ void command_init(const Strings &args)
     String project_type = "e";
     String idir;
     Project p;
-    p.name = fs::current_path().filename().string();
+    p.name = ::current_path().filename().string();
 
     // interactive mode
     if (args.empty())
@@ -216,7 +216,7 @@ void command_init(const Strings &args)
     }
 
     boost::system::error_code ec;
-    auto root = fs::current_path();
+    auto root = ::current_path();
 
     static const auto err_exist = "File or dir with such name already exist";
     static const auto int_main = "int main(int argc, char **argv)\n{\n    return 0;\n}\n"s;

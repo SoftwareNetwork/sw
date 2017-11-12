@@ -19,6 +19,6 @@
 #include <cppan_string.h>
 #include <filesystem.h>
 
-int build(path fn = fs::current_path(), const String &config = String());
+int build(path fn = ::current_path(), const String &config = String());
 int build_only(path fn, const String &config = String());
 int build_package(const String &target_name, const path &settings_fn = path(), const String &config = String());

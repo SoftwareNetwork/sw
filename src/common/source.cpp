@@ -224,7 +224,7 @@ void Git::download() const
     {
         String branchPath = url.substr(url.find_last_of("/") + 1);
         fs::create_directory(branchPath);
-        ScopedCurrentPath scp(fs::current_path() / branchPath);
+        ScopedCurrentPath scp(::current_path() / branchPath);
 
         Command::execute({ "git", "init" });
         Command::execute({ "git", "remote", "add", "origin", url });
@@ -290,6 +290,21 @@ String Git::print() const
     return r;
 }
 
+String Git::printCpp() const
+{
+    String s;
+    s += "Git(\"" + url;
+    s += "\", \"" + tag;
+    if (tag.empty())
+    {
+        s += "\", \"" + branch;
+        if (branch.empty())
+            s += "\", \"" + commit;
+    }
+    s += "\")";
+    return s;
+}
+
 Hg::Hg(const yaml &root, const String &name)
     : Git(root, name)
 {
@@ -303,7 +318,7 @@ void Hg::download() const
         Command::execute({ "hg", "clone", url });
 
         String branchPath = url.substr(url.find_last_of("/") + 1);
-        ScopedCurrentPath scp(fs::current_path() / branchPath);
+        ScopedCurrentPath scp(::current_path() / branchPath);
 
         if (!tag.empty())
             Command::execute({ "hg", "update", tag });
@@ -352,6 +367,11 @@ String Hg::print() const
     return r;
 }
 
+String Hg::printCpp() const
+{
+    return String();
+}
+
 Bzr::Bzr(const yaml &root, const String &name)
     : SourceUrl(root, name)
 {
@@ -366,7 +386,7 @@ void Bzr::download() const
         Command::execute({ "bzr", "branch", url });
 
         String branchPath = url.substr(url.find_last_of("/") + 1);
-        ScopedCurrentPath scp(fs::current_path() / branchPath);
+        ScopedCurrentPath scp(::current_path() / branchPath);
 
         if (!tag.empty())
             Command::execute({ "bzr", "update", "-r", "tag:" + tag });
@@ -415,6 +435,11 @@ String Bzr::print() const
     return r;
 }
 
+String Bzr::printCpp() const
+{
+    return String();
+}
+
 Fossil::Fossil(const yaml &root, const String &name)
     : Git(root, name)
 {
@@ -427,7 +452,7 @@ void Fossil::download() const
         Command::execute({ "fossil", "clone", url, "temp.fossil" });
 
         fs::create_directory("temp");
-        ScopedCurrentPath scp(fs::current_path() / "temp");
+        ScopedCurrentPath scp(::current_path() / "temp");
 
         Command::execute({ "fossil", "open", "../temp.fossil" });
 
@@ -460,6 +485,14 @@ void RemoteFile::download() const
 void RemoteFile::save(yaml &root, const String &name) const
 {
     SourceUrl::save(root, name);
+}
+
+String RemoteFile::printCpp() const
+{
+    String s;
+    s += "RemoteFile(\"" + url;
+    s += "\")";
+    return s;
 }
 
 RemoteFiles::RemoteFiles(const yaml &root, const String &name)
@@ -515,6 +548,17 @@ String RemoteFiles::print() const
     for (auto &rf : urls)
         STRING_PRINT_VALUE(url, rf);
     return r;
+}
+
+String RemoteFiles::printCpp() const
+{
+    String s;
+    s += "RemoteFiles(";
+    for (auto &rf : urls)
+        s += "\"" + rf + "\", ";
+    s.resize(s.size() - 2);
+    s += ")";
+    return s;
 }
 
 void download(const Source &source, int64_t max_file_size)
@@ -592,4 +636,9 @@ void save_source(ptree &p, const Source &source)
 String print_source(const Source &source)
 {
     return boost::apply_visitor([](auto &v) { return v.getString() + ":\n" + v.print(); }, source);
+}
+
+String print_source_cpp(const Source &source)
+{
+    return boost::apply_visitor([](auto &v) { return v.printCpp(); }, source);
 }

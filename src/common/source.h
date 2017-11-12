@@ -62,6 +62,7 @@ struct Git : SourceUrl
     bool save(ptree &p) const;
     void save(yaml &root, const String &name = Git::getString()) const;
     String print() const;
+    String printCpp() const;
 
     bool operator==(const Git &rhs) const
     {
@@ -84,6 +85,7 @@ struct Hg : Git
     bool save(ptree &p) const;
     void save(yaml &root, const String &name = Hg::getString()) const;
     String print() const;
+    String printCpp() const;
 
     bool operator==(const Hg &rhs) const
     {
@@ -107,6 +109,7 @@ struct Bzr : SourceUrl
     bool save(ptree &p) const;
     void save(yaml &root, const String &name = Bzr::getString()) const;
     String print() const;
+    String printCpp() const;
 
     bool operator==(const Bzr &rhs) const
     {
@@ -141,6 +144,7 @@ struct RemoteFile : SourceUrl
     void download() const;
     using SourceUrl::save;
     void save(yaml &root, const String &name = RemoteFile::getString()) const;
+    String printCpp() const;
 
     bool operator==(const RemoteFile &rhs) const
     {
@@ -164,6 +168,7 @@ struct RemoteFiles
     bool save(ptree &p) const;
     void save(yaml &root, const String &name = RemoteFiles::getString()) const;
     String print() const;
+    String printCpp() const;
 
     bool operator==(const RemoteFiles &rhs) const
     {
@@ -195,5 +200,6 @@ Source load_source(const ptree &p);
 void save_source(yaml &root, const Source &source);
 void save_source(ptree &p, const Source &source);
 String print_source(const Source &source);
+String print_source_cpp(const Source &source);
 
 bool isValidSourceUrl(const Source &source);
