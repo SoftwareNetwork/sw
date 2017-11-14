@@ -21,11 +21,11 @@ To start work with cppan install its client into the system. On all systems and 
 
 Now you should run `cppan` client in project's root directory where `cppan.yml` is located. It will download necessary packages and do initial build system setup.
 
-After this you should include `cppan` subdirectory in your `CMakeLists.txt` file.
+After this you should include `.cppan` subdirectory in your `CMakeLists.txt` file.
 
-    add_subdirectory(cppan)
+    add_subdirectory(.cppan)
 
-You can do this after `project()` directive. In this case all dependencies won't be re-built after any compile flags. If you need your special compile flags to have influence on deps, write `add_subdirectory(cppan)` after compiler setup.
+You can do this after `project()` directive. In this case all dependencies won't be re-built after any compile flags. If you need your special compile flags to have influence on deps, write `add_subdirectory(.cppan)` after compiler setup.
 
 For your target(s) add `cppan` to `target_link_libraries()`:
 
