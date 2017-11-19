@@ -38,16 +38,11 @@
 #include <boost/nowide/args.hpp>
 #include <primitives/pack.h>
 #include <primitives/templates.h>
+#include <primitives/executor.h>
+#include <primitives/minidump.h>
 
 #include <iostream>
 #include <thread>
-
-#ifdef _WIN32
-#include <dbghelp.h>
-#include <shellapi.h>
-#include <shlobj.h>
-#include <Strsafe.h>
-#endif
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "main");
@@ -448,58 +443,27 @@ catch (...)
     return 1;
 }
 
-#ifdef _WIN32
-int GenerateDump(EXCEPTION_POINTERS* pExceptionPointers)
-{
-	BOOL bMiniDumpSuccessful;
-	WCHAR szPath[MAX_PATH];
-	WCHAR szFileName[MAX_PATH];
-	WCHAR* szAppName = L"cppan\\dump";
-	DWORD dwBufferSize = MAX_PATH;
-	HANDLE hDumpFile;
-	SYSTEMTIME stLocalTime;
-	MINIDUMP_EXCEPTION_INFORMATION ExpParam;
-
-	GetLocalTime(&stLocalTime);
-	GetTempPath(dwBufferSize, szPath);
-
-	StringCchPrintf(szFileName, MAX_PATH, L"%s%s", szPath, szAppName);
-	CreateDirectory(szFileName, NULL);
-
-	StringCchPrintf(szFileName, MAX_PATH, L"%s%s\\%d.%d.%d-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
-		szPath, szAppName, VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH,
-		stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
-		stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
-		GetCurrentProcessId(), GetCurrentThreadId());
-	hDumpFile = CreateFile(szFileName, GENERIC_READ | GENERIC_WRITE,
-		FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
-
-	ExpParam.ThreadId = GetCurrentThreadId();
-	ExpParam.ExceptionPointers = pExceptionPointers;
-	ExpParam.ClientPointers = TRUE;
-
-	bMiniDumpSuccessful = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
-		hDumpFile, MiniDumpWithDataSegs, &ExpParam, NULL, NULL);
-
-	return EXCEPTION_EXECUTE_HANDLER;
-}
-#endif
-
 int main(int argc, char *argv[])
 {
 #ifndef _WIN32
 	auto r = main1(argc, argv);
 	return r;
 #else
-	__try
-	{
-		auto r = main1(argc, argv);
-		return r;
-	}
-	__except (GenerateDump(GetExceptionInformation()))
-	{
-		return 1;
-	}
+    primitives::minidump::dir = L"cppan\\dump";
+    primitives::minidump::v_major = VERSION_MAJOR;
+    primitives::minidump::v_minor = VERSION_MINOR;
+    primitives::minidump::v_patch = VERSION_PATCH;
+    primitives::executor::bExecutorUseSEH = true;
+
+    __try
+    {
+        auto r = main1(argc, argv);
+        return r;
+    }
+    __except (PRIMITIVES_GENERATE_DUMP)
+    {
+        return 1;
+    }
 #endif
 }
 

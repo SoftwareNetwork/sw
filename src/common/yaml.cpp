@@ -150,6 +150,9 @@ String dump_yaml_config(const yaml &root)
         "output_directory",
         "output_dir",
 
+        "output_name",
+        "condition",
+
         "c_standard",
         "c",
         "c_extensions",

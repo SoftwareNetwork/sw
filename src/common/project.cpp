@@ -829,6 +829,9 @@ void Project::load(const yaml &root)
 
     api_name = get_sequence_set<String>(root, "api_name");
 
+    YAML_EXTRACT_AUTO(output_name);
+    YAML_EXTRACT_AUTO(condition);
+
     // standards
     {
         YAML_EXTRACT_AUTO(c_standard);
@@ -1408,6 +1411,9 @@ yaml Project::save() const
     ADD_IF_NOT_EMPTY_VAL(unpack_directory, normalize_path(unpack_directory));
     ADD_IF_NOT_EMPTY(output_directory);
 
+    ADD_IF_NOT_EMPTY(output_name);
+    ADD_IF_NOT_EMPTY(condition);
+
     if (c_standard)
         root["c"] = c_standard;
     ADD_IF_VAL_TRIPLE(c_extensions);
@@ -1982,22 +1988,24 @@ String Project::print_cpp2()
         ctx.decreaseIndent();
     }
 
-    /*if (!exclude_from_package.empty())
+    if (!exclude_from_package.empty())
     {
-    ctx.addLine(name + " -=");
-    String s;
-    for (auto &t : exclude_from_package)
-    {
-    s += "\"" + t + "\"";
-    if (t.find("\\") != -1 || t.find("*") != -1)
-    s += "_rr";
-    s += ",\n";
+        ctx.addLine(name + " -=");
+        String s;
+        for (auto &t : exclude_from_package)
+        {
+            s += "\"" + t + "\"";
+            if (t.find("\\") != -1 || t.find("*") != -1)
+                s += "_rr";
+            s += ",\n";
+        }
+        boost::replace_all(s, "\\", "\\\\");
+        s.resize(s.size() - 2);
+        s += ";\n";
+        ctx.increaseIndent();
+        ctx.addLine(s);
+        ctx.decreaseIndent();
     }
-    boost::replace_all(s, "\\", "\\\\");
-    s.resize(s.size() - 2);
-    s += ";\n";
-    ctx.addLine(s);
-    }*/
 
     if (!include_directories.private_.empty())
     {

@@ -821,8 +821,10 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
         ctx.endif();
         ctx.addLine();
 
+        auto prj = rd[p].config->getDefaultProject();
+
         auto output_directory = "${output_dir}/"s;
-        output_directory += rd[p].config->getDefaultProject().output_directory + "/";
+        output_directory += prj.output_directory + "/";
 
         ctx.if_("copy");
         {
@@ -831,20 +833,25 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
             s += "set(copy_content \"${copy_content} @\")\n";
 #endif
             s += "set(copy_content \"${copy_content} \\\"${CMAKE_COMMAND}\\\" -E copy_if_different ";
-            if (p.flags[pfExecutable] || (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable))
-            {
-                String name;
-                if (settings.full_path_executables)
-                    name = "$<TARGET_FILE_NAME:" + p.target_name + ">";
-                else
-                    name = p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}";
-                s += "$<TARGET_FILE:" + p.target_name + "> " + output_directory + name;
-            }
+            String name;
+            if (!prj.output_name.empty())
+                name = prj.output_name;
             else
             {
-                // if we change non-exe name, we still won't fix linker information about dependencies' names
-                s += "$<TARGET_FILE:" + p.target_name + "> " + output_directory + "$<TARGET_FILE_NAME:" + p.target_name + ">";
+                if (p.flags[pfExecutable] || (p.flags[pfLocalProject] && rd[p].config->getDefaultProject().type == ProjectType::Executable))
+                {
+                    if (settings.full_path_executables)
+                        name = "$<TARGET_FILE_NAME:" + p.target_name + ">";
+                    else
+                        name = p.ppath.back() + "${CMAKE_EXECUTABLE_SUFFIX}";
+                }
+                else
+                {
+                    // if we change non-exe name, we still won't fix linker information about dependencies' names
+                    name = "$<TARGET_FILE_NAME:" + p.target_name + ">";
+                }
             }
+            s += "$<TARGET_FILE:" + p.target_name + "> " + output_directory + name;
             s += "\\n\")";
             ctx.addLine(s);
             ctx.addLine("add_dependencies(" + target + " " + p.target_name + ")");
@@ -1547,6 +1554,14 @@ void CMakePrinter::print_src_config_file(const path &fn) const
     ctx.endif();
     ctx.addLine();
 
+    if (!p.condition.empty())
+    {
+        ctx.if_("NOT (" + p.condition + ")");
+        ctx.addLine("return()");
+        ctx.endif();
+        ctx.addLine();
+    }
+
     // build type
     ctx.if_("NOT CMAKE_BUILD_TYPE");
     ctx.addLine("set_cache_var(CMAKE_BUILD_TYPE " + Settings::get_local_settings().default_configuration + ")");
@@ -1738,11 +1753,18 @@ endif()
 
         if (!d.flags[pfHeaderOnly])
         {
-            if (!d.flags[pfLocalProject])
-                set_target_properties(ctx, "OUTPUT_NAME", d.target_name);
+            if (!p.output_name.empty())
+            {
+                set_target_properties(ctx, "OUTPUT_NAME", p.output_name);
+            }
             else
             {
-                set_target_properties(ctx, "OUTPUT_NAME", Settings::get_local_settings().short_local_names ? d.ppath.back() : d.target_name);
+                if (!d.flags[pfLocalProject])
+                    set_target_properties(ctx, "OUTPUT_NAME", d.target_name);
+                else
+                {
+                    set_target_properties(ctx, "OUTPUT_NAME", Settings::get_local_settings().short_local_names ? d.ppath.back() : d.target_name);
+                }
             }
             set_target_properties(ctx, "PROJECT_LABEL", d.flags[pfLocalProject] ? d.ppath.back() : d.target_name);
             ctx.emptyLines();

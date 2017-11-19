@@ -239,6 +239,8 @@ public:
     bool disabled = false;
 
     StringSet api_name;
+    String output_name; // file name
+    String condition; // when this target is active
 
     // files to include into archive
     // also is used for enumerating sources (mutable for this)
