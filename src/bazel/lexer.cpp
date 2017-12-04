@@ -920,7 +920,7 @@ yyg->yy_c_buf_p = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
 #line 38 "D:/dev/cppan_client/src/bazel/lexer.ll"
-; // ignore comments
+// ignore comments
 	YY_BREAK
 case 2:
 YY_RULE_SETUP

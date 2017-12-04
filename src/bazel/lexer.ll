@@ -35,7 +35,7 @@ quote2          "\""[^"\\]*"\""
     loc.step();
 %}
 
-#.*/\n                  ; // ignore comments
+#.*/\n                  // ignore comments
 
 [ \t]+                  loc.step();
 \r                      loc.step();

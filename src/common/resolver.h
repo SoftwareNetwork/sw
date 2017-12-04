@@ -22,7 +22,7 @@
 class Resolver
 {
 public:
-    using Dependencies = DownloadDependency::Dependencies;
+    using Dependencies = std::unordered_map<Package, DownloadDependency>;
 
 public:
     PackagesMap resolved_packages;
@@ -40,10 +40,10 @@ private:
     void download_and_unpack();
     void post_download();
     void prepare_config(PackageStore::PackageConfigs::value_type &cc);
-    void read_config(const DownloadDependency &d);
+    void read_config(const ExtendedPackageData &d);
 
     void resolve(const Packages &deps, std::function<void()> resolve_action);
-    void download(const DownloadDependency &d, const path &fn);
+    void download(const ExtendedPackageData &d, const path &fn);
 };
 
 void resolve_and_download(const Package &p, const path &fn);

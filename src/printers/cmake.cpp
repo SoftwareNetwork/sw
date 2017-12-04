@@ -3136,8 +3136,15 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
             String s;
             s += "-- Thread #" + std::to_string(i) + ": error during evaluating variables";
             if (ec)
-                s += ": " + ec.message();
-            throw_with_trace(std::runtime_error(s));
+            {
+                s += ": " + ec.message() + "\n";
+                s += ": out =\n" + c.out.text + "\n";
+                s += ": err =\n" + c.err.text + "\n";
+            }
+            LOG_ERROR(logger, s << "\ncppan: swallowing this error");
+            return;
+            //throw std::runtime_error(s);
+            //throw_with_trace(std::runtime_error(s));
         }
 
         w.read_parallel_checks_for_workers(d);

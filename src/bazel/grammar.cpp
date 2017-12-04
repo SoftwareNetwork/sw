@@ -275,9 +275,10 @@ namespace yy_bazel {
         break;
 
       case 32: // expr
-      case 36: // array
-      case 37: // array_contents
-      case 38: // array_content
+      case 33: // tuple
+      case 38: // array
+      case 39: // array_contents
+      case 40: // array_content
         value.move< bazel::Values > (that.value);
         break;
 
@@ -288,9 +289,9 @@ namespace yy_bazel {
       case 20: // STRING
       case 21: // KEYWORD
       case 22: // ID
-      case 39: // identifier
-      case 40: // string
-      case 41: // keyword
+      case 44: // identifier
+      case 45: // string
+      case 46: // keyword
         value.move< std::string > (that.value);
         break;
 
@@ -328,9 +329,10 @@ namespace yy_bazel {
         break;
 
       case 32: // expr
-      case 36: // array
-      case 37: // array_contents
-      case 38: // array_content
+      case 33: // tuple
+      case 38: // array
+      case 39: // array_contents
+      case 40: // array_content
         value.copy< bazel::Values > (that.value);
         break;
 
@@ -341,9 +343,9 @@ namespace yy_bazel {
       case 20: // STRING
       case 21: // KEYWORD
       case 22: // ID
-      case 39: // identifier
-      case 40: // string
-      case 41: // keyword
+      case 44: // identifier
+      case 45: // string
+      case 46: // keyword
         value.copy< std::string > (that.value);
         break;
 
@@ -594,9 +596,10 @@ namespace yy_bazel {
         break;
 
       case 32: // expr
-      case 36: // array
-      case 37: // array_contents
-      case 38: // array_content
+      case 33: // tuple
+      case 38: // array
+      case 39: // array_contents
+      case 40: // array_content
         yylhs.value.build< bazel::Values > ();
         break;
 
@@ -607,9 +610,9 @@ namespace yy_bazel {
       case 20: // STRING
       case 21: // KEYWORD
       case 22: // ID
-      case 39: // identifier
-      case 40: // string
-      case 41: // keyword
+      case 44: // identifier
+      case 45: // string
+      case 46: // keyword
         yylhs.value.build< std::string > ();
         break;
 
@@ -632,20 +635,20 @@ namespace yy_bazel {
             {
   case 2:
 
-    { driver.bazel_file = yystack_[1].value.as< bazel::File > (); }
+    { /*driver.bazel_file = $1;*/ }
 
     break;
 
   case 3:
 
-    { yylhs.value.as< bazel::File > ().functions.push_back(yystack_[0].value.as< bazel::Function > ()); }
+    { /*$$.functions.push_back($1);*/ }
 
     break;
 
   case 4:
 
     {
-		yystack_[1].value.as< bazel::File > ().functions.push_back(yystack_[0].value.as< bazel::Function > ());
+		/*$1.functions.push_back($2);*/
 		yylhs.value.as< bazel::File > () = std::move(yystack_[1].value.as< bazel::File > ());
 	}
 
@@ -653,16 +656,16 @@ namespace yy_bazel {
 
   case 5:
 
-    { yylhs.value.as< bazel::Function > () = yystack_[0].value.as< bazel::Function > (); }
+    {
+        yylhs.value.as< bazel::Function > ().name = yystack_[0].value.as< bazel::Parameter > ().name;
+        yylhs.value.as< bazel::Function > ().parameters.push_back(yystack_[0].value.as< bazel::Parameter > ());
+    }
 
     break;
 
   case 6:
 
-    {
-        yylhs.value.as< bazel::Function > ().name = yystack_[0].value.as< bazel::Parameter > ().name;
-        yylhs.value.as< bazel::Function > ().parameters.push_back(yystack_[0].value.as< bazel::Parameter > ());
-    }
+    { /*$$ = $1;*/ }
 
     break;
 
@@ -673,6 +676,7 @@ namespace yy_bazel {
 		f.name = yystack_[3].value.as< std::string > ();
         f.parameters = yystack_[1].value.as< bazel::Parameters > ();
 		yylhs.value.as< bazel::Function > () = f;
+        driver.bazel_file.functions.push_back(f);
 	}
 
     break;
@@ -700,11 +704,17 @@ namespace yy_bazel {
 
   case 11:
 
-    { yylhs.value.as< bazel::Parameter > () = yystack_[0].value.as< bazel::Parameter > (); }
+    {}
 
     break;
 
   case 12:
+
+    { yylhs.value.as< bazel::Parameter > () = yystack_[0].value.as< bazel::Parameter > (); }
+
+    break;
+
+  case 13:
 
     {
         bazel::Parameter p;
@@ -714,7 +724,7 @@ namespace yy_bazel {
 
     break;
 
-  case 13:
+  case 14:
 
     {
         bazel::Parameter p;
@@ -724,25 +734,15 @@ namespace yy_bazel {
 
     break;
 
-  case 14:
+  case 15:
 
     { yylhs.value.as< bazel::Parameter > () = bazel::Parameter{ yystack_[2].value.as< std::string > (), yystack_[0].value.as< bazel::Values > () }; }
 
     break;
 
-  case 15:
-
-    { yylhs.value.as< bazel::Parameter > () = bazel::Parameter{ yystack_[2].value.as< std::string > () }; }
-
-    break;
-
   case 16:
 
-    {
-        bazel::Values v;
-        v.insert(yystack_[0].value.as< std::string > ());
-        yylhs.value.as< bazel::Values > () = v;
-    }
+    { yylhs.value.as< bazel::Parameter > () = bazel::Parameter{ yystack_[2].value.as< std::string > () }; }
 
     break;
 
@@ -758,11 +758,31 @@ namespace yy_bazel {
 
   case 18:
 
-    { yylhs.value.as< bazel::Values > () = std::move(yystack_[0].value.as< bazel::Values > ()); }
+    {
+        bazel::Values v;
+        v.insert(yystack_[2].value.as< std::string > ());
+        yylhs.value.as< bazel::Values > () = v;
+    }
 
     break;
 
   case 19:
+
+    {
+        bazel::Values v;
+        v.insert(yystack_[0].value.as< std::string > ());
+        yylhs.value.as< bazel::Values > () = v;
+    }
+
+    break;
+
+  case 20:
+
+    { yylhs.value.as< bazel::Values > () = std::move(yystack_[0].value.as< bazel::Values > ()); }
+
+    break;
+
+  case 21:
 
     {
         yystack_[2].value.as< bazel::Values > ().insert(yystack_[0].value.as< bazel::Values > ().begin(), yystack_[0].value.as< bazel::Values > ().end());
@@ -771,44 +791,42 @@ namespace yy_bazel {
 
     break;
 
-  case 20:
-
-    {
-        yystack_[6].value.as< bazel::Values > ().insert(yystack_[4].value.as< bazel::Values > ().begin(), yystack_[4].value.as< bazel::Values > ().end());
-        yylhs.value.as< bazel::Values > () = std::move(yystack_[6].value.as< bazel::Values > ());
-    }
-
-    break;
-
-  case 21:
+  case 22:
 
     {
         bazel::Values v;
         //v.insert("fcall");
         yylhs.value.as< bazel::Values > () = v;
+        //$$ = $1;
     }
 
     break;
 
-  case 27:
-
-    { yylhs.value.as< bazel::Values > () = std::move(yystack_[1].value.as< bazel::Values > ()); }
-
-    break;
-
-  case 28:
+  case 24:
 
     {}
 
     break;
 
-  case 29:
+  case 33:
+
+    { yylhs.value.as< bazel::Values > () = std::move(yystack_[1].value.as< bazel::Values > ()); }
+
+    break;
+
+  case 35:
+
+    {}
+
+    break;
+
+  case 36:
 
     { yylhs.value.as< bazel::Values > () = std::move(yystack_[0].value.as< bazel::Values > ()); }
 
     break;
 
-  case 30:
+  case 37:
 
     {
         yystack_[0].value.as< bazel::Values > ().insert(yystack_[2].value.as< bazel::Values > ().begin(), yystack_[2].value.as< bazel::Values > ().end());
@@ -817,25 +835,31 @@ namespace yy_bazel {
 
     break;
 
-  case 31:
+  case 38:
 
     { yylhs.value.as< bazel::Values > () = std::move(yystack_[0].value.as< bazel::Values > ()); }
 
     break;
 
-  case 32:
+  case 43:
 
     { yylhs.value.as< std::string > () = yystack_[0].value.as< std::string > (); }
 
     break;
 
-  case 33:
+  case 44:
+
+    { yylhs.value.as< std::string > () = yystack_[1].value.as< std::string > (); }
+
+    break;
+
+  case 45:
 
     { yylhs.value.as< std::string > () = yystack_[0].value.as< std::string > (); }
 
     break;
 
-  case 34:
+  case 46:
 
     { yylhs.value.as< std::string > () = yystack_[0].value.as< std::string > (); }
 
@@ -1097,95 +1121,108 @@ namespace yy_bazel {
   }
 
 
-  const signed char parser::yypact_ninf_ = -13;
+  const signed char parser::yypact_ninf_ = -40;
 
-  const signed char parser::yytable_ninf_ = -1;
+  const signed char parser::yytable_ninf_ = -12;
 
   const signed char
   parser::yypact_[] =
   {
-     -12,   -13,    14,     1,   -13,   -13,   -13,     2,   -13,   -13,
-     -13,    -4,    -4,     5,    -7,   -13,   -13,    15,    21,   -13,
-      10,   -13,   -13,     2,   -13,    10,   -13,    29,    22,    30,
-      28,    10,    23,    32,   -13,    -4,    -7,   -13,     5,    -7,
-     -13,    -7,   -13,     3,   -13,    10,   -13,   -13,   -12,    18,
-     -12,   -13
+      49,    49,    49,   -40,    -6,    11,     5,   -40,   -40,   -40,
+      -3,   -40,   -40,     2,   -40,    -2,    17,     4,    -3,     6,
+      22,    49,   -40,    -6,   -40,   -40,   -40,    49,   -40,   -40,
+      12,    44,    12,    44,    49,   -40,   -40,    49,    28,   -40,
+      -3,     8,    15,    38,    35,   -40,    -3,   -40,   -40,    40,
+      -3,   -40,   -40,   -40,   -40,    49,    39,    51,    41,   -40,
+      36,    -3,   -40,    15,    49,   -40,   -40,    -3
   };
 
   const unsigned char
   parser::yydefact_[] =
   {
-       0,    32,     0,     0,     3,     5,     6,     0,     1,     2,
-       4,     0,     0,    23,    28,    33,    21,     0,     8,    11,
-      12,    13,    18,    16,    17,    14,    15,    16,     0,    24,
-       0,    31,     0,    29,     7,     9,     0,    22,    23,     0,
-      27,    28,    10,    19,    25,    26,    30,    34,     0,     0,
-       0,    20
+       0,    25,    35,    45,    43,     0,     0,     3,    22,     5,
+       6,    23,    20,    17,    19,    26,     0,    17,    38,     0,
+      36,     0,    44,    39,     1,     2,     4,     0,    46,    34,
+       0,    11,     0,     0,    25,    24,    33,    35,     0,    40,
+      21,     0,    29,     0,     8,    12,    13,    14,    18,     0,
+      15,    16,    27,    37,    41,     0,     0,    30,     0,     7,
+       9,    42,    28,    29,     0,    10,    31,    32
   };
 
   const signed char
   parser::yypgoto_[] =
   {
-     -13,   -13,   -13,    38,    19,     7,   -13,    -3,   -10,    31,
-       6,   -13,   -13,     4,   -13,     0,    -8,    -2
+     -40,   -40,   -40,    55,    30,    10,   -40,   -29,    -1,   -40,
+      34,    42,     9,   -40,   -40,    37,   -40,    50,   -40,   -40,
+       7,   -39,    43
   };
 
   const signed char
   parser::yydefgoto_[] =
   {
-      -1,     2,     3,     4,    16,    17,    18,     6,    20,    21,
-      28,    29,    22,    32,    33,    27,    24,    48
+      -1,     5,     6,     7,     8,    43,    44,     9,    10,    11,
+      16,    47,    56,    57,    12,    19,    20,    22,    23,    29,
+      17,    14,    30
   };
 
-  const unsigned char
+  const signed char
   parser::yytable_[] =
   {
-       7,     9,    25,     7,    31,    30,    11,    13,    19,    14,
-       1,    23,    14,    15,     8,     1,    15,    12,     1,     5,
-      34,    36,     5,     1,    47,    15,    43,    35,    36,    45,
-      30,    31,    19,    11,    37,    23,    38,    39,    41,    47,
-      40,    10,    42,    26,    44,    46,     0,    50,    49,     0,
-      51
+      15,    18,    45,    58,    34,    25,    31,    13,    31,     1,
+      21,    24,    32,    13,    32,    27,    27,    33,    28,    28,
+      38,     2,    35,    36,    58,     3,    40,     4,    37,    28,
+      46,    45,    50,    15,     4,     3,    18,    41,    13,    49,
+       1,    60,   -11,    59,    31,    54,    27,    42,     1,    28,
+      64,    62,     2,     1,    61,    42,     3,    63,     4,    46,
+       2,    26,    48,    67,     3,     2,     4,    13,    52,     3,
+      65,     4,    66,    39,    53,    51,     0,     0,     0,     0,
+       0,     0,     0,     0,    55
   };
 
   const signed char
   parser::yycheck_[] =
   {
-       0,     0,    12,     3,    14,    13,     4,    11,    11,    16,
-      22,    11,    16,    20,     0,    22,    20,    15,    22,     0,
-       5,    18,     3,    22,    21,    20,    36,     6,    18,    39,
-      38,    41,    35,     4,    12,    35,     6,     9,     6,    21,
-      17,     3,    35,    12,    38,    41,    -1,    49,    48,    -1,
-      50
+       1,     2,    31,    42,     6,     0,     4,     0,     4,     4,
+      16,     0,    10,     6,    10,    18,    18,    15,    21,    21,
+      21,    16,     5,    17,    63,    20,    27,    22,     6,    21,
+      31,    60,    33,    34,    22,    20,    37,    30,    31,    32,
+       4,     6,     6,     5,     4,    17,    18,    11,     4,    21,
+       9,    12,    16,     4,    55,    11,    20,     6,    22,    60,
+      16,     6,    32,    64,    20,    16,    22,    60,    34,    20,
+      60,    22,    63,    23,    37,    33,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    41
   };
 
   const unsigned char
   parser::yystos_[] =
   {
-       0,    22,    25,    26,    27,    28,    31,    39,     0,     0,
-      27,     4,    15,    11,    16,    20,    28,    29,    30,    31,
-      32,    33,    36,    39,    40,    32,    33,    39,    34,    35,
-      40,    32,    37,    38,     5,     6,    18,    12,     6,     9,
-      17,     6,    29,    32,    34,    32,    37,    21,    41,    39,
-      41,    39
+       0,     4,    16,    20,    22,    25,    26,    27,    28,    31,
+      32,    33,    38,    44,    45,    32,    34,    44,    32,    39,
+      40,    16,    41,    42,     0,     0,    27,    18,    21,    43,
+      46,     4,    10,    15,     6,     5,    17,     6,    32,    41,
+      32,    44,    11,    29,    30,    31,    32,    35,    28,    44,
+      32,    35,    34,    39,    17,    46,    36,    37,    45,     5,
+       6,    32,    12,     6,     9,    29,    36,    32
   };
 
   const unsigned char
   parser::yyr1_[] =
   {
        0,    24,    25,    26,    26,    27,    27,    28,    29,    29,
-      29,    30,    30,    30,    31,    31,    32,    32,    32,    32,
-      32,    32,    33,    34,    34,    34,    35,    36,    37,    37,
-      37,    38,    39,    40,    41
+      29,    30,    30,    30,    30,    31,    31,    32,    32,    32,
+      32,    32,    32,    32,    33,    34,    34,    34,    35,    36,
+      36,    36,    37,    38,    38,    39,    39,    39,    40,    41,
+      41,    42,    43,    44,    44,    45,    46
   };
 
   const unsigned char
   parser::yyr2_[] =
   {
        0,     2,     2,     1,     2,     1,     1,     4,     1,     2,
-       3,     1,     1,     1,     3,     3,     1,     1,     1,     3,
-       7,     1,     3,     0,     1,     3,     3,     3,     0,     1,
-       3,     1,     1,     1,     1
+       3,     0,     1,     1,     1,     3,     3,     1,     3,     1,
+       1,     3,     1,     1,     3,     0,     1,     3,     3,     0,
+       1,     3,     3,     3,     2,     0,     1,     3,     1,     1,
+       2,     3,     4,     1,     2,     1,     1
   };
 
 
@@ -1201,18 +1238,20 @@ namespace yy_bazel {
   "L_SQUARE_BRACKET", "R_SQUARE_BRACKET", "PLUS", "CLASS", "STRING",
   "KEYWORD", "ID", "INTEGER", "$accept", "file", "statements", "statement",
   "function_call", "parameters", "parameter", "variable_decl", "expr",
-  "kv_map", "kv_map_values", "kv_map_value", "array", "array_contents",
-  "array_content", "identifier", "string", "keyword", YY_NULLPTR
+  "tuple", "tuple_values", "kv_map", "kv_map_values", "kv_map_value",
+  "array", "array_contents", "array_content", "array_subscripts",
+  "array_subscript", "for_op", "identifier", "string", "keyword", YY_NULLPTR
   };
 
 #if YY_BAZELDEBUG
   const unsigned char
   parser::yyrline_[] =
   {
-       0,    69,    69,    73,    75,    82,    84,    91,   100,   102,
-     104,   111,   113,   119,   127,   129,   133,   139,   145,   147,
-     153,   158,   172,   175,   176,   177,   180,   183,   188,   189,
-     191,   198,   202,   205,   208
+       0,    69,    69,    73,    75,    84,    89,    93,   103,   105,
+     107,   115,   116,   118,   124,   132,   134,   138,   144,   150,
+     156,   158,   169,   176,   185,   189,   190,   191,   194,   197,
+     198,   199,   202,   205,   207,   211,   212,   214,   221,   225,
+     226,   229,   232,   235,   237,   240,   243
   };
 
   // Print the state stack on the debug stream.

@@ -101,11 +101,14 @@ sqlite3 *load_from_file(const path &fn, bool read_only)
 {
     sqlite3 *db = nullptr;
     bool ok = true;
-    int flags = SQLITE_OPEN_FULLMUTEX;
+    int flags = 0;
+    if (sqlite3_threadsafe())
+        flags |= SQLITE_OPEN_NOMUTEX;// SQLITE_OPEN_FULLMUTEX;
     if (read_only)
         flags |= SQLITE_OPEN_READONLY;
     else
         flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+    sqlite3_enable_shared_cache(1);
     ok = sqlite3_open_v2(fn.string().c_str(), &db, flags, nullptr) == SQLITE_OK;
     if (!ok)
     {

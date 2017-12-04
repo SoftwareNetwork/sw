@@ -313,6 +313,7 @@ namespace yy_bazel {
       char dummy4[sizeof(bazel::Parameters)];
 
       // expr
+      // tuple
       // array
       // array_contents
       // array_content
@@ -661,7 +662,7 @@ namespace yy_bazel {
   // YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
   // positive, shift that token.  If negative, reduce the rule whose
   // number is the opposite.  If YYTABLE_NINF, syntax error.
-  static const unsigned char yytable_[];
+  static const signed char yytable_[];
 
   static const signed char yycheck_[];
 
@@ -783,9 +784,9 @@ namespace yy_bazel {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 50,     ///< Last index in yytable_.
-      yynnts_ = 18,  ///< Number of nonterminal symbols.
-      yyfinal_ = 8, ///< Termination state number.
+      yylast_ = 84,     ///< Last index in yytable_.
+      yynnts_ = 23,  ///< Number of nonterminal symbols.
+      yyfinal_ = 24, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
       yyntokens_ = 24  ///< Number of tokens.
@@ -886,9 +887,10 @@ namespace yy_bazel {
         break;
 
       case 32: // expr
-      case 36: // array
-      case 37: // array_contents
-      case 38: // array_content
+      case 33: // tuple
+      case 38: // array
+      case 39: // array_contents
+      case 40: // array_content
         value.copy< bazel::Values > (other.value);
         break;
 
@@ -899,9 +901,9 @@ namespace yy_bazel {
       case 20: // STRING
       case 21: // KEYWORD
       case 22: // ID
-      case 39: // identifier
-      case 40: // string
-      case 41: // keyword
+      case 44: // identifier
+      case 45: // string
+      case 46: // keyword
         value.copy< std::string > (other.value);
         break;
 
@@ -941,9 +943,10 @@ namespace yy_bazel {
         break;
 
       case 32: // expr
-      case 36: // array
-      case 37: // array_contents
-      case 38: // array_content
+      case 33: // tuple
+      case 38: // array
+      case 39: // array_contents
+      case 40: // array_content
         value.copy< bazel::Values > (v);
         break;
 
@@ -954,9 +957,9 @@ namespace yy_bazel {
       case 20: // STRING
       case 21: // KEYWORD
       case 22: // ID
-      case 39: // identifier
-      case 40: // string
-      case 41: // keyword
+      case 44: // identifier
+      case 45: // string
+      case 46: // keyword
         value.copy< std::string > (v);
         break;
 
@@ -1069,9 +1072,10 @@ namespace yy_bazel {
         break;
 
       case 32: // expr
-      case 36: // array
-      case 37: // array_contents
-      case 38: // array_content
+      case 33: // tuple
+      case 38: // array
+      case 39: // array_contents
+      case 40: // array_content
         value.template destroy< bazel::Values > ();
         break;
 
@@ -1082,9 +1086,9 @@ namespace yy_bazel {
       case 20: // STRING
       case 21: // KEYWORD
       case 22: // ID
-      case 39: // identifier
-      case 40: // string
-      case 41: // keyword
+      case 44: // identifier
+      case 45: // string
+      case 46: // keyword
         value.template destroy< std::string > ();
         break;
 
@@ -1130,9 +1134,10 @@ namespace yy_bazel {
         break;
 
       case 32: // expr
-      case 36: // array
-      case 37: // array_contents
-      case 38: // array_content
+      case 33: // tuple
+      case 38: // array
+      case 39: // array_contents
+      case 40: // array_content
         value.move< bazel::Values > (s.value);
         break;
 
@@ -1143,9 +1148,9 @@ namespace yy_bazel {
       case 20: // STRING
       case 21: // KEYWORD
       case 22: // ID
-      case 39: // identifier
-      case 40: // string
-      case 41: // keyword
+      case 44: // identifier
+      case 45: // string
+      case 46: // keyword
         value.move< std::string > (s.value);
         break;
 

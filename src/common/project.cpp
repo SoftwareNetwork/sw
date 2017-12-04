@@ -713,6 +713,7 @@ void Project::findSources(path p)
             };
             if (try_license("LICENSE") ||
                 try_license("COPYING") ||
+                try_license("Copying.txt") ||
                 try_license("LICENSE.txt") ||
                 try_license("license.txt") ||
                 try_license("LICENSE.md"))
@@ -722,12 +723,12 @@ void Project::findSources(path p)
 
     if (!root_directory.empty() && !pkg.flags[pfLocalProject])
         fs::copy_file(CPPAN_FILENAME, root_directory / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
-	if (fs::exists(p / CPPAN_FILENAME))
-		files.insert(p / CPPAN_FILENAME);
-	else if (fs::exists(::current_path() / CPPAN_FILENAME))
-		files.insert(::current_path() / CPPAN_FILENAME);
-	else
-		files.insert(CPPAN_FILENAME);
+    if (fs::exists(p / CPPAN_FILENAME))
+        files.insert(p / CPPAN_FILENAME);
+    else if (fs::exists(::current_path() / CPPAN_FILENAME))
+        files.insert(::current_path() / CPPAN_FILENAME);
+    else
+        files.insert(CPPAN_FILENAME);
 }
 
 bool Project::writeArchive(const path &fn) const
@@ -1328,7 +1329,7 @@ void Project::load(const yaml &root)
                 {
                     // now check next dir
                     if (!next.empty())
-						autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
+                        autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
                 }
                 //}
             };
@@ -2032,15 +2033,15 @@ String Project::print_cpp2()
                 continue;
             s += "\"" + str + "\"_id,\n";
         }
-		if (!s.empty())
-		{
-			s.resize(s.size() - 2);
-			s += ";\n";
-			ctx.addLine(name + ".Public +=");
-			ctx.increaseIndent();
-			ctx.addLine(s);
-			ctx.decreaseIndent();
-		}
+        if (!s.empty())
+        {
+            s.resize(s.size() - 2);
+            s += ";\n";
+            ctx.addLine(name + ".Public +=");
+            ctx.increaseIndent();
+            ctx.addLine(s);
+            ctx.decreaseIndent();
+        }
     }
 
     if (!include_directories.interface_.empty())
@@ -2056,12 +2057,12 @@ String Project::print_cpp2()
         ctx.decreaseIndent();
     }
 
-	auto escape_str = [](auto s)
-	{
-		boost::replace_all(s, "\\", "\\\\");
-		boost::replace_all(s, "\"", "\\\"");
-		return s;
-	};
+    auto escape_str = [](auto s)
+    {
+        boost::replace_all(s, "\\", "\\\\");
+        boost::replace_all(s, "\"", "\\\"");
+        return s;
+    };
 
     auto any = options.find("any");
     if (any != options.end())
@@ -2187,13 +2188,13 @@ String Project::print_cpp2()
 
     for (auto &d : dependencies)
     {
-		auto pp = d.second.ppath.toString();
-		boost::replace_all(pp, "pvt.cppan", "pub.cppan2");
-		auto vv = d.second.version.toAnyVersion();
-		if (vv != "*")
-			vv = "-" + vv;
-		else
-			vv.clear();
+        auto pp = d.second.ppath.toString();
+        boost::replace_all(pp, "pvt.cppan", "pub.cppan2");
+        auto vv = d.second.version.toAnyVersion();
+        if (vv != "*")
+            vv = "-" + vv;
+        else
+            vv.clear();
         if (d.second.flags[pfPrivateDependency])
             ctx.addLine(name + " += \"" + pp + vv + "\"_dep;");
         else
@@ -2223,6 +2224,9 @@ String Project::print_cpp2()
                 break;
             case Check::Decl:
                 ctx.addLine("s.checkDeclarationExists(\"" + c->getData() + "\");");
+                break;
+            case Check::Alignment:
+                ctx.addLine("s.checkTypeAlignment(\"" + c->getData() + "\");");
                 break;
             case Check::LibraryFunction:
                 ctx.addLine("s.checkLibraryFunctionExists(\"" + ((CheckLibraryFunction*)c.get())->library + "\", \"" + c->getData() + "\");");
