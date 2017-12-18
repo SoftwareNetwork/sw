@@ -34,4 +34,3 @@ ptree string2ptree(const std::string &s)
     pt::read_json(iss, p);
     return p;
 }
-

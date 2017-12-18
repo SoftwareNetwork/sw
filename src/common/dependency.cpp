@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#pragma once
-
 #include "dependency.h"
 
 void DownloadDependency::setDependencyIds(const std::unordered_set<ProjectVersionId> &ids)

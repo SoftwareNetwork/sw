@@ -9,7 +9,6 @@ local_settings:
     dependencies:
         pvt.cppan.demo.boost.program_options: 1
         pvt.cppan.demo.boost.property_tree: 1
-        pvt.cppan.demo.boost.variant: 1
         pvt.cppan.demo.sqlite3: 3
         pvt.cppan.demo.yhirose.cpp_linenoise: master
         pvt.cppan.demo.apolukhin.stacktrace: master
@@ -65,7 +64,6 @@ projects:
         dependencies:
             - pvt.cppan.demo.boost.optional: 1
             - pvt.cppan.demo.boost.property_tree: 1
-            - pvt.cppan.demo.boost.variant: 1
             - pvt.cppan.demo.sqlite3: 3
             - pvt.cppan.demo.apolukhin.stacktrace: master
 

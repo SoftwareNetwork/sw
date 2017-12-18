@@ -67,7 +67,7 @@ endif()
 if (WIN32)
     add_definitions(-DUNICODE)
     if (MSVC)
-        set(disable_msvc_warnings "/W3 /wd4458 /wd4714 /wd4127 /wd4275 -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS")
+        set(disable_msvc_warnings "/W3 /wd4458 /wd4714 /wd4127 /wd4275 -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP ${disable_msvc_warnings}")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP ${disable_msvc_warnings}")
 
