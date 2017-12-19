@@ -230,6 +230,10 @@ bool SqliteDatabase::execute(String sql, void *object, Sqlite3Callback callback,
 
     boost::trim(sql);
 
+    // TODO: remove later when sqlite won't be crashing
+    static std::mutex m;
+    std::unique_lock<std::mutex> lk(m);
+
     // lock always for now
     ScopedFileLock lock(get_lock(fullName), std::defer_lock);
     if (!read_only)
@@ -263,6 +267,10 @@ bool SqliteDatabase::execute(String sql, DatabaseCallback callback, bool nothrow
         throw std::runtime_error("db is not loaded");
 
     boost::trim(sql);
+
+    // TODO: remove later when sqlite won't be crashing
+    static std::mutex m;
+    std::unique_lock<std::mutex> lk(m);
 
     // lock always for now
     ScopedFileLock lock(get_lock(fullName), std::defer_lock);

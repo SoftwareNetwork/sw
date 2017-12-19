@@ -39,7 +39,7 @@ target_link_libraries(support backtrace)
 endif()
 target_link_libraries(support
     pvt.cppan.demo.boost.property_tree
-    pvt.cppan.demo.apolukhin.stacktrace
+    pvt.cppan.demo.boost.stacktrace
     pvt.egorpugin.primitives.context
     pvt.egorpugin.primitives.hash
     pvt.egorpugin.primitives.http
