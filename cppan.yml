@@ -9,9 +9,9 @@ local_settings:
     dependencies:
         pvt.cppan.demo.boost.program_options: 1
         pvt.cppan.demo.boost.property_tree: 1
+        pvt.cppan.demo.boost.stacktrace: 1
         pvt.cppan.demo.sqlite3: 3
         pvt.cppan.demo.yhirose.cpp_linenoise: master
-        pvt.cppan.demo.apolukhin.stacktrace: master
 
         pvt.egorpugin.primitives.command: master
         pvt.egorpugin.primitives.string: master
@@ -65,7 +65,7 @@ projects:
             - pvt.cppan.demo.boost.optional: 1
             - pvt.cppan.demo.boost.property_tree: 1
             - pvt.cppan.demo.sqlite3: 3
-            - pvt.cppan.demo.apolukhin.stacktrace: master
+            - pvt.cppan.demo.boost.stacktrace: 1
 
             - pvt.egorpugin.primitives.string: master
             - pvt.egorpugin.primitives.filesystem: master
