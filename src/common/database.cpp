@@ -915,10 +915,9 @@ void PackagesDatabase::download()
 {
     LOG_INFO(logger, "Downloading database");
 
-    fs::create_directories(db_repo_dir);
-
     auto download_archive = [this]()
     {
+        fs::create_directories(db_repo_dir);
         auto fn = get_temp_filename();
         download_file(db_master_url, fn, 1_GB);
         auto unpack_dir = get_temp_filename();
@@ -934,6 +933,7 @@ void PackagesDatabase::download()
     {
         auto git_init = [this, &git]()
         {
+            fs::create_directories(db_repo_dir);
             primitives::Command::execute({ git,"-C",db_repo_dir.string(),"init","." });
             primitives::Command::execute({ git,"-C",db_repo_dir.string(),"remote","add","github",db_repo_url });
             primitives::Command::execute({ git,"-C",db_repo_dir.string(),"pull","github","master" });
