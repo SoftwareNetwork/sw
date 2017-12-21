@@ -84,10 +84,12 @@ if (VISUAL_STUDIO AND CLANG)
     #set(parallel "/maxcpucount:${N_CORES}") # for msbuild
 endif()
 
+# TODO: replace other make calls with ${CMAKE_MAKE_PROGRAM} ?
+
 if (NINJA)
-    cppan_debug_message("COMMAND ninja -C ${BUILD_DIR}")
+    cppan_debug_message("COMMAND ${CMAKE_MAKE_PROGRAM} -C ${BUILD_DIR}")
     execute_process(
-        COMMAND ninja -C ${BUILD_DIR}
+        COMMAND ${CMAKE_MAKE_PROGRAM} -C ${BUILD_DIR}
         ${OUTPUT_QUIET}
         ${ERROR_QUIET}
         RESULT_VARIABLE ret
