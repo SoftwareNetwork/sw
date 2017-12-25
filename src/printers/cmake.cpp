@@ -1444,13 +1444,14 @@ void CMakePrinter::print_settings(CMakeContext &ctx) const
 
         auto print_ver = [&ctx, &v](const String &name)
         {
-            ctx.addLine("set(" + name + "_VERSION_MAJOR " + std::to_string(v.major) + ")");
-            ctx.addLine("set(" + name + "_VERSION_MINOR " + std::to_string(v.minor) + ")");
-            ctx.addLine("set(" + name + "_VERSION_PATCH " + std::to_string(v.patch) + ")");
+            auto b = v.isBranch();
+            ctx.addLine("set(" + name + "_VERSION_MAJOR " + std::to_string(b ? 0 : v.major) + ")");
+            ctx.addLine("set(" + name + "_VERSION_MINOR " + std::to_string(b ? 0 : v.minor) + ")");
+            ctx.addLine("set(" + name + "_VERSION_PATCH " + std::to_string(b ? 0 : v.patch) + ")");
             ctx.addLine();
-            ctx.addLine("set(" + name + "_MAJOR_VERSION " + std::to_string(v.major) + ")");
-            ctx.addLine("set(" + name + "_MINOR_VERSION " + std::to_string(v.minor) + ")");
-            ctx.addLine("set(" + name + "_PATCH_VERSION " + std::to_string(v.patch) + ")");
+            ctx.addLine("set(" + name + "_MAJOR_VERSION " + std::to_string(b ? 0 : v.major) + ")");
+            ctx.addLine("set(" + name + "_MINOR_VERSION " + std::to_string(b ? 0 : v.minor) + ")");
+            ctx.addLine("set(" + name + "_PATCH_VERSION " + std::to_string(b ? 0 : v.patch) + ")");
             ctx.addLine();
         };
         print_ver("PACKAGE");
