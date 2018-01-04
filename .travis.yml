@@ -27,6 +27,7 @@ addons:
     - gcc-7
     - g++-7
     - ninja-build
+    - cmake
 
 before_install:
   - if [[ $TRAVIS_OS_NAME == linux   ]]; then LINUX=true; fi
@@ -34,8 +35,8 @@ before_install:
 
 install:
   #- if [[ $LINUX ]]; then sudo apt-get update; fi
-  - if [[ $LINUX ]]; then wget --no-check-certificate http://www.cmake.org/files/v3.10/cmake-3.10.1-Linux-x86_64.sh; fi
-  - if [[ $LINUX ]]; then sudo sh cmake-3.10.1-Linux-x86_64.sh --skip-license --prefix=/usr; fi
+  #- if [[ $LINUX ]]; then wget --no-check-certificate http://www.cmake.org/files/v3.10/cmake-3.10.1-Linux-x86_64.sh; fi
+  #- if [[ $LINUX ]]; then sudo sh cmake-3.10.1-Linux-x86_64.sh --skip-license --prefix=/usr; fi
   #- wget -O master.zip https://github.com/cppan/tests/archive/master.zip
   #- unzip master.zip -d .
   - if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
