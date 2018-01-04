@@ -249,7 +249,7 @@ void PackageStore::check_deps_changed()
     {
         fs.push_back(e.push([&kv, &sdb]
         {
-            cleanPackages(kv.first.target_name, CleanTarget::Lib | CleanTarget::Bin);
+            cleanPackages(kv.first.target_name, CleanTarget::Lib | CleanTarget::Bin | CleanTarget::Obj | CleanTarget::Exp);
             // set dep hash only after clean
             sdb.setPackageDependenciesHash(kv.first, kv.second);
         }));
