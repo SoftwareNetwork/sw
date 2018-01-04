@@ -91,6 +91,7 @@ struct ac_processor
     void process_AC_STRUCT_TM(command &c);
     void process_AC_STRUCT_TIMEZONE(command &c);
     void process_AC_CHECK_LIB(command &c);
+    void process_AC_CHECK_LIBM(command &c);
     void process_AC_CHECK_MEMBERS(command &c);
     void process_AC_DEFINE(command &c);
     void process_AC_CHECK_ALIGNOF(command &c);
@@ -316,6 +317,7 @@ void ac_processor::process()
         TWICE(CASE, AC_STRUCT_TIMEZONE);
 
         TWICE(CASE_NOT_EMPTY, AC_CHECK_LIB);
+        TWICE(CASE, AC_CHECK_LIBM);
 
         CASE_NOT_EMPTY(AC_CHECK_MEMBER, AC_CHECK_MEMBERS);
         TWICE(CASE_NOT_EMPTY, AC_CHECK_MEMBERS);
@@ -710,10 +712,27 @@ void ac_processor::process_AC_CHECK_HEADER(command &c)
                 if (cpp)
                     p->set_cpp(cpp);
             }
+            else if (cmd == "AC_CHECK_HEADER")
+            {
+                auto p = checks.addCheck<CheckInclude>(c.params[0]);
+                if (cpp)
+                    p->set_cpp(cpp);
+
+                command c2;
+                c2.name = cmd;
+                c2.params = parse_arguments(c.params[1].substr(cmd.size() + 1));
+                process_AC_CHECK_HEADER(c2);
+            }
             else
             {
                 std::cerr << "Unhandled AC_ statement: " << cmd << "\n";
             }
+        }
+        else
+        {
+            auto p = checks.addCheck<CheckInclude>(c.params[0]);
+            if (cpp)
+                p->set_cpp(cpp);
         }
     }
 }
@@ -820,6 +839,11 @@ void ac_processor::process_AC_STRUCT_TIMEZONE(command &c)
 void ac_processor::process_AC_CHECK_LIB(command &c)
 {
     checks.addCheck<CheckLibraryFunction>(c.params[1], c.params[0]);
+}
+
+void ac_processor::process_AC_CHECK_LIBM(command &c)
+{
+    checks.addCheck<CheckLibrary>("m");
 }
 
 void ac_processor::process_AC_CHECK_MEMBERS(command &c)
