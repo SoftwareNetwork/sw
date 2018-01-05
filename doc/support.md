@@ -1,6 +1,6 @@
 # Support C++ Archive Network
 
-Currently CPPAN server exists on my own funds almost for two years. Feel free to support the project and its development if you like it.
+Currently CPPAN server exists on my own funds almost for two years and development goes only in my spare time. Feel free to support the project and its development if you like it.
 
 ## Credit card transfers
 
