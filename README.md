@@ -65,4 +65,4 @@ make -j4
 
 ### Support CPPAN
 
-More info about supporting C++ Archive Network can be found [here](https://github.com/cppan/cppan/blob/master/doc/support.md)
+More info about supporting C++ Archive Network can be found [here](https://github.com/cppan/cppan/blob/master/doc/support.md).
