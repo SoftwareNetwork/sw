@@ -200,7 +200,7 @@ void Resolver::resolve(const Packages &deps, std::function<void()> resolve_actio
     }
 }
 
-void Resolver::download(const DownloadDependency &d, const path &fn)
+void Resolver::download(const ExtendedPackageData &d, const path &fn)
 {
     if (!d.remote->downloadPackage(d, d.hash, fn, query_local_db))
     {
@@ -397,7 +397,7 @@ void Resolver::prepare_config(PackageStore::PackageConfigs::value_type &cc)
         return;
 
     // prepare deps: extract real deps flags from configs
-    for (auto &dep : download_dependencies_[p].getDependencies())
+    for (auto &dep : download_dependencies_[p].dependencies)
     {
         auto d = dep.second;
         auto i = project.dependencies.find(d.ppath.toString());
@@ -408,7 +408,7 @@ void Resolver::prepare_config(PackageStore::PackageConfigs::value_type &cc)
             std::set<String> to_remove;
             for (auto &root_dep : project.dependencies)
             {
-                for (auto &child_dep : download_dependencies_[p].getDependencies())
+                for (auto &child_dep : download_dependencies_[p].dependencies)
                 {
                     if (root_dep.second.ppath.is_root_of(child_dep.second.ppath))
                     {
@@ -443,7 +443,7 @@ void Resolver::read_configs()
         read_config(d.second);
 }
 
-void Resolver::read_config(const DownloadDependency &d)
+void Resolver::read_config(const ExtendedPackageData &d)
 {
     if (!fs::exists(d.getDirSrc()))
     {

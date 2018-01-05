@@ -982,6 +982,11 @@ endif()
 find_program(ninja ninja)
 if (NOT "${ninja}" STREQUAL "ninja-NOTFOUND")
     set_cache_var(NINJA_FOUND 1)
+elseif()
+    find_program(ninja ninja-build)
+    if (NOT "${ninja}" STREQUAL "ninja-NOTFOUND")
+        set_cache_var(NINJA_FOUND 1)
+    endif()
 endif()
 
 set_cache_var(VISUAL_STUDIO 0)
@@ -1439,13 +1444,14 @@ void CMakePrinter::print_settings(CMakeContext &ctx) const
 
         auto print_ver = [&ctx, &v](const String &name)
         {
-            ctx.addLine("set(" + name + "_VERSION_MAJOR " + std::to_string(v.major) + ")");
-            ctx.addLine("set(" + name + "_VERSION_MINOR " + std::to_string(v.minor) + ")");
-            ctx.addLine("set(" + name + "_VERSION_PATCH " + std::to_string(v.patch) + ")");
+            auto b = v.isBranch();
+            ctx.addLine("set(" + name + "_VERSION_MAJOR " + std::to_string(b ? 0 : v.major) + ")");
+            ctx.addLine("set(" + name + "_VERSION_MINOR " + std::to_string(b ? 0 : v.minor) + ")");
+            ctx.addLine("set(" + name + "_VERSION_PATCH " + std::to_string(b ? 0 : v.patch) + ")");
             ctx.addLine();
-            ctx.addLine("set(" + name + "_MAJOR_VERSION " + std::to_string(v.major) + ")");
-            ctx.addLine("set(" + name + "_MINOR_VERSION " + std::to_string(v.minor) + ")");
-            ctx.addLine("set(" + name + "_PATCH_VERSION " + std::to_string(v.patch) + ")");
+            ctx.addLine("set(" + name + "_MAJOR_VERSION " + std::to_string(b ? 0 : v.major) + ")");
+            ctx.addLine("set(" + name + "_MINOR_VERSION " + std::to_string(b ? 0 : v.minor) + ")");
+            ctx.addLine("set(" + name + "_PATCH_VERSION " + std::to_string(b ? 0 : v.patch) + ")");
             ctx.addLine();
         };
         print_ver("PACKAGE");
@@ -2811,6 +2817,11 @@ endif()
 find_program(ninja ninja)
 if (NOT "${ninja}" STREQUAL "ninja-NOTFOUND")
     set_cache_var(NINJA_FOUND 1)
+elseif()
+    find_program(ninja ninja-build)
+    if (NOT "${ninja}" STREQUAL "ninja-NOTFOUND")
+        set_cache_var(NINJA_FOUND 1)
+    endif()
 endif()
 
 set_cache_var(VISUAL_STUDIO 0)
@@ -3136,8 +3147,15 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
             String s;
             s += "-- Thread #" + std::to_string(i) + ": error during evaluating variables";
             if (ec)
-                s += ": " + ec.message();
-            throw_with_trace(std::runtime_error(s));
+            {
+                s += ": " + ec.message() + "\n";
+                s += ": out =\n" + c.out.text + "\n";
+                s += ": err =\n" + c.err.text + "\n";
+            }
+            LOG_ERROR(logger, s << "\ncppan: swallowing this error");
+            return;
+            //throw std::runtime_error(s);
+            //throw_with_trace(std::runtime_error(s));
         }
 
         w.read_parallel_checks_for_workers(d);

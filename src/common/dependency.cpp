@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-#include "property_tree.h"
+#include "dependency.h"
 
-#include <iostream>
-
-std::string ptree2string(const ptree &p)
+void DownloadDependency::setDependencyIds(const std::unordered_set<ProjectVersionId> &ids)
 {
-    std::ostringstream oss;
-    pt::write_json(oss, p, false);
-    return oss.str();
+    id_dependencies = ids;
 }
 
-ptree string2ptree(const std::string &s)
+void DownloadDependency::prepareDependencies(const IdDependencies &dd)
 {
-    ptree p;
-    if (s.empty())
-        return p;
-    std::istringstream iss(s);
-    pt::read_json(iss, p);
-    return p;
+    for (auto d : id_dependencies)
+    {
+        auto i = dd.find(d);
+        if (i == dd.end())
+            throw std::runtime_error("cannot find dep by id");
+        auto dep = i->second;
+        dep.createNames();
+        dependencies[dep] = dep;
+    }
+    dependencies.erase(*this); // erase self
 }

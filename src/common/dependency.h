@@ -19,52 +19,33 @@
 #include "cppan_string.h"
 #include "package.h"
 
-#include <set>
+#include <unordered_map>
+#include <unordered_set>
 
 struct Remote;
 
-struct DownloadDependency : public Package
+struct ExtendedPackageData : Package
 {
-    using IdDependencies = std::unordered_map<ProjectVersionId, DownloadDependency>;
-    using DbDependencies = std::unordered_map<String, DownloadDependency>;
-    using Dependencies = std::unordered_map<Package, DownloadDependency>;
-
-    // extended data
     ProjectVersionId id = 0;
     String hash;
+    const Remote *remote = nullptr;
+};
+
+struct DownloadDependency : ExtendedPackageData
+{
+    using IdDependencies = std::unordered_map<ProjectVersionId, DownloadDependency>;
+    using DbDependencies = std::unordered_map<String, ExtendedPackageData>;
+    using Dependencies = std::unordered_map<Package, ExtendedPackageData>;
 
     // own data (private)
-    const Remote *remote = nullptr;
     DbDependencies db_dependencies;
+    Dependencies dependencies;
 
-public:
-    void setDependencyIds(const std::unordered_set<ProjectVersionId> &ids)
-    {
-        id_dependencies = ids;
-    }
-
-    Dependencies getDependencies() const
-    {
-        return dependencies;
-    }
-
-    void prepareDependencies(const IdDependencies &dd)
-    {
-        for (auto d : id_dependencies)
-        {
-            auto i = dd.find(d);
-            if (i == dd.end())
-                throw std::runtime_error("cannot find dep by id");
-            auto dep = i->second;
-            dep.createNames();
-            dependencies[dep] = dep;
-        }
-        dependencies.erase(*this); // erase self
-    }
+    void setDependencyIds(const std::unordered_set<ProjectVersionId> &ids);
+    void prepareDependencies(const IdDependencies &dd);
 
 private:
     std::unordered_set<ProjectVersionId> id_dependencies;
-    Dependencies dependencies;
 };
 
 using IdDependencies = DownloadDependency::IdDependencies;

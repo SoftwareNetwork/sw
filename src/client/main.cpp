@@ -433,8 +433,8 @@ try
 catch (const std::exception &e)
 {
     std::cerr << e.what() << "\n";
-    if (auto st = boost::get_error_info<traced_exception>(e))
-        std::cerr << *st << '\n';
+    //if (auto st = boost::get_error_info<traced_exception>(e))
+        //std::cerr << *st << '\n';
     return 1;
 }
 catch (...)
@@ -446,8 +446,8 @@ catch (...)
 int main(int argc, char *argv[])
 {
 #ifndef _WIN32
-	auto r = main1(argc, argv);
-	return r;
+    auto r = main1(argc, argv);
+    return r;
 #else
     primitives::minidump::dir = L"cppan\\dump";
     primitives::minidump::v_major = VERSION_MAJOR;

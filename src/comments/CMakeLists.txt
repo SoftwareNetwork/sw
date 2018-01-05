@@ -14,7 +14,7 @@ if (FLEX_FOUND AND BISON_FOUND)
     FLEX_TARGET(lexer
         "${CMAKE_CURRENT_SOURCE_DIR}/lexer.ll"
         "${CMAKE_CURRENT_SOURCE_DIR}/lexer.cpp"
-        COMPILE_FLAGS --header-file=${CMAKE_CURRENT_SOURCE_DIR}/lexer.h
+        COMPILE_FLAGS "--header-file=${CMAKE_CURRENT_SOURCE_DIR}/lexer.h -L"
     )
     ADD_FLEX_BISON_DEPENDENCY(lexer grammar)
 

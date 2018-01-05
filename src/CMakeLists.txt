@@ -34,12 +34,12 @@ set(common_src ${common_src})
 add_library(support ${common_src})
 target_include_directories(support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
 
-if (UNIX AND NOT APPLE)
+if (UNIX AND NOT APPLE AND NOT EXISTS "/etc/centos-release")
 target_link_libraries(support backtrace)
 endif()
 target_link_libraries(support
     pvt.cppan.demo.boost.property_tree
-    pvt.cppan.demo.apolukhin.stacktrace
+    pvt.cppan.demo.boost.stacktrace
     pvt.egorpugin.primitives.context
     pvt.egorpugin.primitives.hash
     pvt.egorpugin.primitives.http

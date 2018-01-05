@@ -5,11 +5,11 @@ notifications:
 
 #sudo: required
 dist: trusty
-osx_image: xcode8.3
+osx_image: xcode9.2
 
 os:
   - linux
-  - osx
+  #- osx
 
 branches:
   only:
@@ -24,9 +24,10 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - gcc-5
-    - g++-5
+    - gcc-7
+    - g++-7
     - ninja-build
+    - cmake
 
 before_install:
   - if [[ $TRAVIS_OS_NAME == linux   ]]; then LINUX=true; fi
@@ -34,8 +35,8 @@ before_install:
 
 install:
   #- if [[ $LINUX ]]; then sudo apt-get update; fi
-  - if [[ $LINUX ]]; then wget --no-check-certificate http://www.cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.sh; fi
-  - if [[ $LINUX ]]; then sudo sh cmake-3.7.1-Linux-x86_64.sh --skip-license --prefix=/usr; fi
+  #- if [[ $LINUX ]]; then wget --no-check-certificate http://www.cmake.org/files/v3.10/cmake-3.10.1-Linux-x86_64.sh; fi
+  #- if [[ $LINUX ]]; then sudo sh cmake-3.10.1-Linux-x86_64.sh --skip-license --prefix=/usr; fi
   #- wget -O master.zip https://github.com/cppan/tests/archive/master.zip
   #- unzip master.zip -d .
   - if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
@@ -50,7 +51,7 @@ script:
   - cppan -s
   - mkdir build
   - cd build
-  - if [[ $LINUX ]]; then cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5 -DCMAKE_BUILD_TYPE=Release 2> /dev/null; fi
+  - if [[ $LINUX ]]; then cmake .. -DCMAKE_C_COMPILER=gcc-7 -DCMAKE_CXX_COMPILER=g++-7 -DCMAKE_BUILD_TYPE=Release 2> /dev/null; fi
   - if [[ $OSX ]]; then cmake .. -DCMAKE_BUILD_TYPE=Release 2> /dev/null; fi
   - make
   - ctest -C Release
@@ -58,3 +59,4 @@ script:
   #- cd ..
   #- cd tests-master/tests/ok
   #- for i in *.cpp; do cppan --build $i; done
+
