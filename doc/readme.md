@@ -5,3 +5,4 @@
 - [Website Usage](https://github.com/cppan/cppan/blob/master/doc/website.md) - Describes basic usage of CPPAN site.
 - [Build Definitions](https://github.com/cppan/cppan/blob/master/doc/cpp_definitions.md) - Preprocessor variables you can rely on during CPPAN build.
 - [F.A.Q.](https://github.com/cppan/cppan/blob/master/doc/faq.md)
+- [Support CPPAN](https://github.com/cppan/cppan/blob/master/doc/support.md)
