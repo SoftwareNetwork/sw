@@ -18,6 +18,6 @@ https://www.patreon.com/egorpugin
 
 ## Crypto
 
-### Bitcoin
+- Bitcoin: 1GUsPwLfsjnE6mb1UVXtXkJ5HHkRp9GY2k
 
 
