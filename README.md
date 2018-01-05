@@ -62,3 +62,7 @@ cmake ..
 # cmake .. -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
 make -j4
 ```
+
+### Support CPPAN
+
+More info about supporting C++ Archive Network can be found [here](https://github.com/cppan/cppan/blob/master/doc/support.md)
