@@ -87,9 +87,16 @@ endif()
 # TODO: replace other make calls with ${CMAKE_MAKE_PROGRAM} ?
 
 if (NINJA)
-    cppan_debug_message("COMMAND ${CMAKE_MAKE_PROGRAM} -C ${BUILD_DIR}")
+    set(cmd ninja)
+    if (CMAKE_MAKE_PROGRAM)
+        find_program(cmd2 ${CMAKE_MAKE_PROGRAM})
+        if (NOT ${cmd2} STREQUAL "cmd2-NOTFOUND")
+            set(cmd ${CMAKE_MAKE_PROGRAM})
+        endif()
+    endif()
+    cppan_debug_message("COMMAND ${cmd} -C ${BUILD_DIR}")
     execute_process(
-        COMMAND ${CMAKE_MAKE_PROGRAM} -C ${BUILD_DIR}
+        COMMAND ${cmd} -C ${BUILD_DIR}
         ${OUTPUT_QUIET}
         ${ERROR_QUIET}
         RESULT_VARIABLE ret
