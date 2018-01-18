@@ -900,7 +900,11 @@ function(set_src_compiled s)
     if (N EQUAL 0)
         return()
     endif()
-    set_source_files_properties(${src2} PROPERTIES HEADER_FILE_ONLY False)
+    if (${ARGC} GREATER 1)
+        set_source_files_properties(${src2} PROPERTIES LANGUAGE ${ARGV1})
+    else()
+        set_source_files_properties(${src2} PROPERTIES LANGUAGE CXX)
+    endif()
     #set(src ${src} ${src2} PARENT_SCOPE)
 endfunction()
 
@@ -912,6 +916,8 @@ function(moc_cpp_file f)
     get_filename_component(n ${f} NAME_WE)
     qt5_create_moc_command(${SDIR}/${f} ${BDIR}/${n}.moc "" "" ${this} "")
     set(src ${src} ${BDIR}/${n}.moc PARENT_SCOPE)
+    # not all mocs must be compiled
+    #set_source_files_properties(${BDIR}/${n}.moc PROPERTIES LANGUAGE CXX)
 endfunction()
 
 ########################################
