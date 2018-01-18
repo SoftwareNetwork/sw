@@ -905,6 +905,7 @@ function(set_src_compiled s)
     else()
         set_source_files_properties(${src2} PROPERTIES LANGUAGE CXX)
     endif()
+    set_source_files_properties(${src2} PROPERTIES HEADER_FILE_ONLY False)
     #set(src ${src} ${src2} PARENT_SCOPE)
 endfunction()
 
