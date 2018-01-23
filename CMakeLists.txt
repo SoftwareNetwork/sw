@@ -166,13 +166,16 @@ elseif (APPLE)
 add_custom_target(package_client
     COMMAND zip -FS -j -9 cppan-master-macOS-client.zip $<TARGET_FILE:client>
 )
+elseif (EXISTS /etc/centos-release)
+add_custom_target(package_client
+    COMMAND ${CMAKE_CPACK_COMMAND}
+        -G RPM
+        -D CPACK_COMPONENTS_ALL=client
+)
 else()
 add_custom_target(package_client
     COMMAND ${CMAKE_CPACK_COMMAND}
         -G DEB
-        -D CPACK_COMPONENTS_ALL=client
-    COMMAND ${CMAKE_CPACK_COMMAND}
-        -G RPM
         -D CPACK_COMPONENTS_ALL=client
     COMMAND zip -FS -j -9 cppan-master-Linux-client.zip $<TARGET_FILE:client>
 )
