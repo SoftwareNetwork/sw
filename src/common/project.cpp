@@ -792,9 +792,9 @@ ProjectPath Project::relative_name_to_absolute(const String &name)
     return ppath;
 }
 
-std::optional<ProjectPath> Project::load_local_dependency(const String &name)
+optional<ProjectPath> Project::load_local_dependency(const String &name)
 {
-    std::optional<ProjectPath> pp;
+    optional<ProjectPath> pp;
     if (allow_local_dependencies && (fs::exists(::current_path() / name) || isUrl(name)))
     {
         PackagesSet pkgs;

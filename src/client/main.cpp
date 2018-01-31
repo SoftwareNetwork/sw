@@ -61,7 +61,7 @@ void init(const Strings &args, const String &log_level);
 void load_current_config();
 void self_upgrade();
 void self_upgrade_copy(const path &dst);
-std::optional<int> internal(const Strings &args);
+optional<int> internal(const Strings &args);
 void command_init(const Strings &args);
 
 int main1(int argc, char *argv[])
@@ -620,7 +620,7 @@ void self_upgrade_copy(const path &dst)
     std::cout << "Success!\n";
 }
 
-std::optional<int> internal(const Strings &args)
+optional<int> internal(const Strings &args)
 {
     // internal stuff
     if (args[1] == "internal-fix-imports")
@@ -716,7 +716,7 @@ std::optional<int> internal(const Strings &args)
     if (args[1].find("internal-") == 0)
         throw std::runtime_error("Unknown internal command: " + args[1]);
 
-    return std::optional<int>();
+    return optional<int>();
 }
 
 ApiResult api_call(const String &cmd, const Strings &args)
