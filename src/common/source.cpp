@@ -563,12 +563,12 @@ String RemoteFiles::printCpp() const
 
 void download(const Source &source, int64_t max_file_size)
 {
-    boost::apply_visitor([](auto &v) { v.download(); }, source);
+    std::visit([](auto &v) { v.download(); }, source);
 }
 
 bool isValidSourceUrl(const Source &source)
 {
-    return boost::apply_visitor([](auto &v) { return v.isValidUrl(); }, source);
+    return std::visit([](auto &v) { return v.isValidUrl(); }, source);
 }
 
 bool load_source(const yaml &root, Source &source)
@@ -606,7 +606,7 @@ bool load_source(const yaml &root, Source &source)
 void save_source(yaml &root, const Source &source)
 {
     // do not remove 'r' var, it creates 'source' key
-    boost::apply_visitor([&root](auto &v) { auto r = root["source"]; v.save(r); }, source);
+    std::visit([&root](auto &v) { auto r = root["source"]; v.save(r); }, source);
 }
 
 Source load_source(const ptree &p)
@@ -625,7 +625,7 @@ Source load_source(const ptree &p)
 
 void save_source(ptree &p, const Source &source)
 {
-    return boost::apply_visitor([&p](auto &v)
+    return std::visit([&p](auto &v)
     {
         ptree p2;
         v.save(p2);
@@ -635,10 +635,10 @@ void save_source(ptree &p, const Source &source)
 
 String print_source(const Source &source)
 {
-    return boost::apply_visitor([](auto &v) { return v.getString() + ":\n" + v.print(); }, source);
+    return std::visit([](auto &v) { return v.getString() + ":\n" + v.print(); }, source);
 }
 
 String print_source_cpp(const Source &source)
 {
-    return boost::apply_visitor([](auto &v) { return v.printCpp(); }, source);
+    return std::visit([](auto &v) { return v.printCpp(); }, source);
 }
