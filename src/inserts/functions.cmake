@@ -270,6 +270,12 @@ function(get_configuration_unhashed out)
         set(bits unk)
     endif()
 
+    set(sysver)
+    if (CMAKE_SYSTEM_VERSION)
+        prepare_config_part(sysver "${CMAKE_SYSTEM_VERSION}")
+        set(sysver ${CPPAN_CONFIG_PART_DELIMETER}${sysver})
+    endif()
+
     set(dll)
     if (CPPAN_BUILD_SHARED_LIBS)
         set(dll ${CPPAN_CONFIG_PART_DELIMETER}dll)
@@ -319,7 +325,7 @@ function(get_configuration_unhashed out)
     endif()
 
     set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${version})
-    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${bits}${msvc_arch}${mt_flag}${dll}${toolset})
+    set(config ${config}${CPPAN_CONFIG_PART_DELIMETER}${bits}${msvc_arch}${mt_flag}${dll}${sysver}${toolset})
     set(config ${config}${configuration})
 
     set(${out} ${config} PARENT_SCOPE)

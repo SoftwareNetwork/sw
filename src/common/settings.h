@@ -90,6 +90,7 @@ struct Settings
     String configuration{ "Release" };
     String default_configuration{ "Release" }; // for global settings
     String generator;
+    String system_version;
     String toolset;
 
     std::map<String, String> env;

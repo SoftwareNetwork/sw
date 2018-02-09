@@ -656,7 +656,7 @@ optional<int> internal(const Strings &args)
         if (args.size() < 6)
         {
             std::cout << "invalid number of arguments: " << args.size() << "\n";
-            std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file generator toolset toolchain\n";
+            std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file generator system_version toolset toolchain\n";
             return 1;
         }
 
@@ -668,6 +668,7 @@ optional<int> internal(const Strings &args)
         ASSIGN_ARG(vars_file);
         ASSIGN_ARG(checks_file);
         ASSIGN_ARG(generator);
+        ASSIGN_ARG(system_version);
         ASSIGN_ARG(toolset);
         ASSIGN_ARG(toolchain);
 #undef ASSIGN_ARG

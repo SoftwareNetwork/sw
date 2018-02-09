@@ -256,6 +256,7 @@ void Settings::load_build(const yaml &root)
     YAML_EXTRACT_AUTO(link_libraries);
     YAML_EXTRACT_AUTO(configuration);
     YAML_EXTRACT_AUTO(generator);
+    YAML_EXTRACT_AUTO(system_version);
     YAML_EXTRACT_AUTO(toolset);
     YAML_EXTRACT_AUTO(use_shared_libs);
     YAML_EXTRACT_VAR(root, use_shared_libs, "build_shared_libs", bool);
@@ -345,6 +346,7 @@ String Settings::get_hash() const
         h |= link_flags_conf[i];
     h |= link_libraries;
     h |= generator;
+    h |= system_version;
     h |= toolset;
     h |= use_shared_libs;
     h |= configuration;

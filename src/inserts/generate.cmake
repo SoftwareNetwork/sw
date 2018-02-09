@@ -185,7 +185,9 @@ if (NOT EXISTS ${import} OR
                         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
                         -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                         -G \"${generator}\"
-                        -DVARIABLES_FILE=${variables_file}")
+                        -DVARIABLES_FILE=${variables_file}"
+                        -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}
+                )
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
@@ -193,6 +195,7 @@ if (NOT EXISTS ${import} OR
                         -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                         -G "${generator}"
                         -DVARIABLES_FILE=${variables_file}
+                        -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -202,7 +205,9 @@ if (NOT EXISTS ${import} OR
                         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                         -G \"${generator}\"
-                        -DVARIABLES_FILE=${variables_file}")
+                        -DVARIABLES_FILE=${variables_file}"
+                        -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}
+                )
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
@@ -212,6 +217,7 @@ if (NOT EXISTS ${import} OR
                         -G "${generator}"
                         ${toolset}
                         -DVARIABLES_FILE=${variables_file}
+                        -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})

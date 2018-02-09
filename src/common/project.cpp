@@ -40,6 +40,14 @@ DECLARE_STATIC_LOGGER(logger, "project");
 using MimeType = String;
 using MimeTypes = std::set<MimeType>;
 
+static const std::vector<String> additional_include_dirs_public{
+    "${BDIR}",
+};
+
+static const std::vector<String> additional_include_dirs_private{
+    "${BDIR_PRIVATE}",
+};
+
 const MimeTypes source_mime_types{
     "application/xml",
     "text/xml",
@@ -1339,7 +1347,8 @@ void Project::load(const yaml &root)
                 dirs.push_back("");
             autodetect_source_dir(dirs);
         }
-        include_directories.public_.insert("${BDIR}");
+        include_directories.public_.insert(additional_include_dirs_public.begin(), additional_include_dirs_public.end());
+        include_directories.private_.insert(additional_include_dirs_private.begin(), additional_include_dirs_private.end());
     }
 
     // files
@@ -1697,18 +1706,21 @@ String Project::print_cpp()
         ctx.addLine(s);
     }*/
 
-    if (!include_directories.private_.empty())
+    if (include_directories.private_.size() > additional_include_dirs_private.size())
     {
         ctx.addLine(name + ".Private +=");
         String s;
         for (auto &t : include_directories.private_)
-            s += "\"" + t.string() + "\"_id,\n";
+        {
+            if (t.string().find("BDIR") == -1)
+                s += "\"" + t.string() + "\"_id,\n";
+        }
         s.resize(s.size() - 2);
         s += ";\n";
         ctx.addLine(s);
     }
 
-    if (include_directories.public_.size() > 1)
+    if (include_directories.public_.size() > additional_include_dirs_public.size())
     {
         ctx.addLine(name + ".Public +=");
         String s;
@@ -2008,12 +2020,15 @@ String Project::print_cpp2()
         ctx.decreaseIndent();
     }
 
-    if (!include_directories.private_.empty())
+    if (include_directories.private_.size() > additional_include_dirs_private.size())
     {
         ctx.addLine(name + ".Private +=");
         String s;
         for (auto &t : include_directories.private_)
-            s += "\"" + t.string() + "\"_id,\n";
+        {
+            if (t.string().find("BDIR") == -1)
+                s += "\"" + t.string() + "\"_id,\n";
+        }
         s.resize(s.size() - 2);
         s += ";\n";
         ctx.increaseIndent();
@@ -2021,7 +2036,7 @@ String Project::print_cpp2()
         ctx.decreaseIndent();
     }
 
-    if (include_directories.public_.size() > 1)
+    if (include_directories.public_.size() > additional_include_dirs_public.size())
     {
         String s;
         for (auto &t : include_directories.public_)

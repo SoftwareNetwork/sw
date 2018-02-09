@@ -317,6 +317,8 @@ void print_sdir_bdir(CMakeContext &ctx, const Package &d)
     else
         ctx.addLine("set(SDIR ${CMAKE_CURRENT_SOURCE_DIR})");
     ctx.addLine("set(BDIR ${CMAKE_CURRENT_BINARY_DIR})");
+    ctx.addLine("set(BDIR_PRIVATE ${BDIR}/cppan_private)");
+    ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BDIR_PRIVATE})");
     ctx.emptyLines();
 }
 
@@ -1124,6 +1126,8 @@ int CMakePrinter::generate(const BuildSettings &bs) const
         c.args.push_back("-G");
         c.args.push_back(s.generator);
     }
+    if (!s.system_version.empty())
+        c.args.push_back("-DCMAKE_SYSTEM_VERSION=" + s.system_version);
     if (!s.toolset.empty())
     {
         c.args.push_back("-T");
@@ -2924,6 +2928,7 @@ endif()
                                 \"${vars_file}\"
                                 \"${checks_file}\"
                                 \"${CMAKE_GENERATOR}\"
+                                \"${CMAKE_SYSTEM_VERSION}\"
                                 \"${CMAKE_GENERATOR_TOOLSET}\"
                                 \"${CMAKE_TOOLCHAIN_FILE}\"
                             )"s;
@@ -3082,6 +3087,8 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         c.args.push_back("-B" + normalize_path(d));
         c.args.push_back("-G");
         c.args.push_back(o.generator);
+        if (!o.system_version.empty())
+            c.args.push_back("-DCMAKE_SYSTEM_VERSION=" + o.system_version);
         if (!o.toolset.empty())
         {
             c.args.push_back("-T");

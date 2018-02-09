@@ -210,6 +210,7 @@ struct ParallelCheckOptions
     path vars_file;
     path checks_file;
     String generator;
+    String system_version;
     String toolset;
     String toolchain;
 };
