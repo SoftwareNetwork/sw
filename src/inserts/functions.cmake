@@ -271,7 +271,7 @@ function(get_configuration_unhashed out)
     endif()
 
     set(sysver)
-    if (CMAKE_SYSTEM_VERSION)
+    if (CMAKE_SYSTEM_VERSION AND (WIN32 OR APPLE)) # apple too?
         prepare_config_part(sysver "${CMAKE_SYSTEM_VERSION}")
         set(sysver ${CPPAN_CONFIG_PART_DELIMETER}${sysver})
     endif()

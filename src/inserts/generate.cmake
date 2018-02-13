@@ -124,6 +124,10 @@ if (NOT EXISTS ${import} OR
             set(linker "-DCMAKE_LINKER=${CMAKE_LINKER}")
         endif()
 
+        if (CMAKE_SYSTEM_VERSION AND (WIN32 OR APPLE)) # apple too?
+            set(sysver -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION})
+        endif()
+
         #
         clear_variables(GEN_CHILD_VARS)
         if (NOT EXECUTABLE)
@@ -186,7 +190,7 @@ if (NOT EXISTS ${import} OR
                         -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                         -G \"${generator}\"
                         -DVARIABLES_FILE=${variables_file}"
-                        -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}
+                        ${sysver}
                 )
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
@@ -195,7 +199,7 @@ if (NOT EXISTS ${import} OR
                         -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                         -G "${generator}"
                         -DVARIABLES_FILE=${variables_file}
-                        -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}
+                        ${sysver}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
@@ -206,7 +210,7 @@ if (NOT EXISTS ${import} OR
                         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                         -G \"${generator}\"
                         -DVARIABLES_FILE=${variables_file}"
-                        -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}
+                        ${sysver}
                 )
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
@@ -217,7 +221,7 @@ if (NOT EXISTS ${import} OR
                         -G "${generator}"
                         ${toolset}
                         -DVARIABLES_FILE=${variables_file}
-                        -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}
+                        ${sysver}
                     RESULT_VARIABLE ret
                 )
                 check_result_variable(${ret})
