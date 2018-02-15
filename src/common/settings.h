@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include <map>
-
 #include "cppan_string.h"
 #include "filesystem.h"
 #include "http.h"
@@ -26,6 +24,10 @@
 #include "yaml.h"
 
 #include "printers/printer.h"
+
+#include <primitives/executor.h>
+
+#include <map>
 
 void cleanConfig(const String &config);
 void cleanConfigs(const Strings &configs);
@@ -73,6 +75,7 @@ struct Settings
     PrinterType printerType{ PrinterType::CMake };
     // do not check for new cppan version
     bool disable_update_checks = false;
+    int max_download_threads = get_max_threads(8);
 
     // build settings
     String c_compiler;

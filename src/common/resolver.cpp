@@ -303,7 +303,7 @@ void Resolver::download_and_unpack()
         }
     };
 
-    Executor e(get_max_threads(8), "Download thread");
+    Executor e(Settings::get_local_settings().max_download_threads, "Download thread");
     std::vector<Future<void>> fs;
 
     // threaded execution does not preserve object creation/destruction order,

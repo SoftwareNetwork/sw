@@ -146,6 +146,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     });
 
     YAML_EXTRACT_AUTO(disable_update_checks);
+    YAML_EXTRACT_AUTO(max_download_threads);
     YAML_EXTRACT(storage_dir, String);
     YAML_EXTRACT(build_dir, String);
     YAML_EXTRACT(cppan_dir, String);
