@@ -1274,7 +1274,7 @@ void Project::load(const yaml &root)
     // to make some following default checks available
     // try to detect and prepend root dir
     {
-        auto root = findRootDirectory();
+        auto root = is_local ? findRootDirectory() : ::current_path();
         if (root_directory.empty() || !fs::exists(::current_path() / root_directory))
             root_directory = root;
         else if (root_directory != root)

@@ -41,9 +41,10 @@ Config::Config()
 	dir = ::current_path();
 }
 
-Config::Config(const path &p)
+Config::Config(const path &p, bool local)
     : Config()
 {
+    is_local = local;
     reload(p);
 }
 
@@ -148,6 +149,7 @@ void Config::load(const yaml &root)
         project.defaults_allowed = defaults_allowed;
         project.allow_relative_project_names = allow_relative_project_names;
         project.allow_local_dependencies = allow_local_dependencies;
+        project.is_local = is_local;
         project.load(root);
         if (project.name.empty())
             project.name = name;

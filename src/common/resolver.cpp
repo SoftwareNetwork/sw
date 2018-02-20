@@ -235,7 +235,7 @@ void Resolver::download_and_unpack()
         {
             // download is in progress, wait and register config
             ScopedFileLock lck2(hash_file);
-            rd.add_config(d);
+            rd.add_config(d, false);
             return;
         }
 
@@ -275,7 +275,7 @@ void Resolver::download_and_unpack()
 
         // re-read in any case
         // no need to remove old config, let it die with program
-        auto c = rd.add_config(d);
+        auto c = rd.add_config(d, false);
 
         // move all files under unpack dir
         auto ud = c->getDefaultProject(d.ppath).unpack_directory;
@@ -472,7 +472,7 @@ void Resolver::read_config(const ExtendedPackageData &d)
 
     try
     {
-        auto p = rd.config_store.insert(std::make_unique<Config>(d.getDirSrc()));
+        auto p = rd.config_store.insert(std::make_unique<Config>(d.getDirSrc(), false));
         auto ptr = rd.packages[d].config = p.first->get();
         //ptr->created = created;
     }

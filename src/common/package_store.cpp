@@ -323,9 +323,9 @@ Config *PackageStore::add_config(std::unique_ptr<Config> &&config, bool created)
     return packages[cfg->pkg].config;
 }
 
-Config *PackageStore::add_config(const Package &p)
+Config *PackageStore::add_config(const Package &p, bool local)
 {
-    auto c = std::make_unique<Config>(p.getDirSrc());
+    auto c = std::make_unique<Config>(p.getDirSrc(), local);
     c->setPackage(p);
     return add_config(std::move(c), true);
 }

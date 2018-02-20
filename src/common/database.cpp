@@ -454,7 +454,7 @@ void ServiceDatabase::performStartupActions() const
             }
 
             if (!once)
-                LOG_INFO(logger, "Performing initialization actions");
+                LOG_INFO(logger, "Initializing storage");
             once = true;
 
             actions_performed.insert(a.action);

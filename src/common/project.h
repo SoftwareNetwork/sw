@@ -271,6 +271,9 @@ public:
     // allow relative project paths
     bool allow_relative_project_names = false;
 
+    // package processed is not in storage on client system
+    bool is_local = true;
+
     // private data
 private:
     // no files to compile

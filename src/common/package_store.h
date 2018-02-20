@@ -44,7 +44,7 @@ public:
     void process(const path &p, Config &root);
 
     Config *add_config(std::unique_ptr<Config> &&config, bool created);
-    Config *add_config(const Package &p);
+    Config *add_config(const Package &p, bool local = true);
     Config *add_local_config(const Config &c);
 
     bool rebuild_configs() const { return has_downloads() || deps_changed; }

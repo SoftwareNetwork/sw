@@ -31,7 +31,7 @@
 struct Config
 {
     Config();
-    Config(const path &p);
+    Config(const path &p, bool local = true);
 
     void load(const yaml &root);
     void load(const path &p);
@@ -77,6 +77,7 @@ public:
     bool defaults_allowed = true;
     bool allow_relative_project_names = false;
     bool allow_local_dependencies = false;
+    bool is_local = true;
 
     // we create this project for the first time (downloaded, locally created etc.)
     bool created = false;
