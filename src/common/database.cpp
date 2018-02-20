@@ -364,6 +364,7 @@ void ServiceDatabase::init()
         increaseNumberOfRuns();
         checkForUpdates();
     };
+
     // move out of RUN_ONCE because it may try to init sdb again
     performStartupActions();
 }
@@ -443,12 +444,17 @@ void ServiceDatabase::performStartupActions() const
         std::set<int> actions_performed; // prevent multiple execution of the same actions
         for (auto &a : startup_actions)
         {
-            if (isActionPerformed(a) ||
-                actions_performed.find(a.action) != actions_performed.end())
+            if (isActionPerformed(a))
                 continue;
 
+            if (actions_performed.find(a.action) != actions_performed.end())
+            {
+                setActionPerformed(a);
+                continue;
+            }
+
             if (!once)
-                LOG_INFO(logger, "Performing actions for the new client version");
+                LOG_INFO(logger, "Performing initialization actions");
             once = true;
 
             actions_performed.insert(a.action);
