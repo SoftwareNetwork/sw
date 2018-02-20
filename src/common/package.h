@@ -22,6 +22,8 @@
 #include "project_path.h"
 #include "version.h"
 
+#include <primitives/hash.h>
+
 #include <map>
 
 struct Package
@@ -98,11 +100,14 @@ void cleanPackages(const PackagesSet &pkgs, int flags);
 
 namespace std
 {
+
 template<> struct hash<Package>
 {
     size_t operator()(const Package& p) const
     {
-        return std::hash<ProjectPath>()(p.ppath) ^ std::hash<Version>()(p.version);
+        auto h = std::hash<ProjectPath>()(p.ppath);
+        return hash_combine(h, std::hash<Version>()(p.version));
     }
 };
+
 }

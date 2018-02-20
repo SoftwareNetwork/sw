@@ -19,6 +19,8 @@
 #include "cppan_string.h"
 #include "filesystem.h"
 
+#include <primitives/hash.h>
+
 #define LOCAL_VERSION_NAME "local"
 
 using ProjectId = uint64_t;
@@ -77,6 +79,7 @@ struct Version
 
 namespace std
 {
+
 template<> struct hash<Version>
 {
     size_t operator()(const Version& v) const
@@ -84,10 +87,11 @@ template<> struct hash<Version>
         if (!v.branch.empty())
             return std::hash<String>()(v.branch);
         size_t h = 0;
-        h ^= v.major;
-        h ^= v.minor;
-        h ^= v.patch;
+        hash_combine(h, v.major);
+        hash_combine(h, v.minor);
+        hash_combine(h, v.patch);
         return h;
     }
 };
+
 }
