@@ -38,7 +38,7 @@ DECLARE_STATIC_LOGGER(logger, "config");
 Config::Config()
 {
     addDefaultProject();
-	dir = ::current_path();
+	dir = current_thread_path();
 }
 
 Config::Config(const path &p, bool local)

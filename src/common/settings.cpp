@@ -99,7 +99,7 @@ void Settings::load(const yaml &root, const SettingsType type)
         switch (type)
         {
         case SettingsType::Local:
-            return ::current_path();
+            return current_thread_path();
         case SettingsType::User:
         case SettingsType::System:
             return dirs.storage_dir_tmp / "build";

@@ -224,7 +224,7 @@ void Git::download() const
     {
         String branchPath = url.substr(url.find_last_of("/") + 1);
         fs::create_directory(branchPath);
-        ScopedCurrentPath scp(::current_path() / branchPath);
+        ScopedCurrentPath scp(current_thread_path() / branchPath);
 
         Command::execute({ "git", "init" });
         Command::execute({ "git", "remote", "add", "origin", url });
@@ -318,7 +318,7 @@ void Hg::download() const
         Command::execute({ "hg", "clone", url });
 
         String branchPath = url.substr(url.find_last_of("/") + 1);
-        ScopedCurrentPath scp(::current_path() / branchPath);
+        ScopedCurrentPath scp(current_thread_path() / branchPath);
 
         if (!tag.empty())
             Command::execute({ "hg", "update", tag });
@@ -386,7 +386,7 @@ void Bzr::download() const
         Command::execute({ "bzr", "branch", url });
 
         String branchPath = url.substr(url.find_last_of("/") + 1);
-        ScopedCurrentPath scp(::current_path() / branchPath);
+        ScopedCurrentPath scp(current_thread_path() / branchPath);
 
         if (!tag.empty())
             Command::execute({ "bzr", "update", "-r", "tag:" + tag });
@@ -452,7 +452,7 @@ void Fossil::download() const
         Command::execute({ "fossil", "clone", url, "temp.fossil" });
 
         fs::create_directory("temp");
-        ScopedCurrentPath scp(::current_path() / "temp");
+        ScopedCurrentPath scp(current_thread_path() / "temp");
 
         Command::execute({ "fossil", "open", "../temp.fossil" });
 

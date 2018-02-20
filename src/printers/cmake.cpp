@@ -1061,7 +1061,7 @@ endif()
 
     // should be after flags
     config_section_title(ctx, "CPPAN include");
-    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(::current_path() / s.output_dir) + "\")");
+    ctx.addLine("set(CPPAN_BUILD_OUTPUT_DIR \"" + normalize_path(current_thread_path() / s.output_dir) + "\")");
     ctx.addLine("set(CPPAN_BUILD_SHARED_LIBS "s + (s.use_shared_libs ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_DISABLE_CHECKS "s + (bs.disable_checks ? "1" : "0") + ")");
     ctx.addLine("set(CPPAN_BUILD_VERBOSE "s + (s.build_system_verbose ? "1" : "0") + ")");
@@ -1157,7 +1157,7 @@ int CMakePrinter::generate(const BuildSettings &bs) const
     {
         if (!s.silent || s.is_custom_build_dir())
         {
-            auto bld_dir = ::current_path();
+            auto bld_dir = current_thread_path();
 #ifdef _WIN32
             // add more != generators
             if (s.generator != "Ninja")

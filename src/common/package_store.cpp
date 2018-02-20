@@ -560,7 +560,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
             LOG_INFO(logger, "Finding sources for " + project.pkg.ppath.slice(2).toString());
             project.findSources(root_directory);
             // maybe remove? let user see cppan.yml in local project
-            project.files.erase(::current_path() / CPPAN_FILENAME);
+            project.files.erase(current_thread_path() / CPPAN_FILENAME);
 			project.files.erase(CPPAN_FILENAME);
             // patch if any
             project.patchSources();

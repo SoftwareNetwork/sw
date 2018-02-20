@@ -392,7 +392,7 @@ try
         Config c;
         c.load_current_config();
         Projects &projects = c.getProjects();
-        const auto cwd = ::current_path();
+        const auto cwd = current_thread_path();
         for (auto &ps : projects)
         {
             auto &project = ps.second;
@@ -402,7 +402,7 @@ try
             {
                 p = t / fs::unique_path();
                 fs::create_directories(p);
-                ::current_path(p);
+                current_thread_path(p);
 
                 if (!isValidSourceUrl(project.source))
                     throw std::runtime_error("Source is empty");
@@ -414,7 +414,7 @@ try
             {
                 if (par)
                 {
-                    ::current_path(cwd);
+                    current_thread_path(cwd);
                     remove_all_from_dir(p);
                 }
             };
@@ -470,7 +470,7 @@ int main(int argc, char *argv[])
 void check_spec_file()
 {
     // no config - cannot do anything more
-    if (!fs::exists(::current_path() / CPPAN_FILENAME))
+    if (!fs::exists(current_thread_path() / CPPAN_FILENAME))
         throw std::runtime_error("No spec file found");
 }
 

@@ -36,4 +36,4 @@ path get_temp_filename(const path &subdir = path());
 String get_stamp_filename(const String &prefix);
 String make_archive_name(const String &fn = String());
 
-path findRootDirectory(const path &p = ::current_path());
+path findRootDirectory(const path &p = current_thread_path());

@@ -569,7 +569,7 @@ void Project::findSources(path p)
 
     // correct root dir is detected and set during load phase
     if (p.empty())
-        p = ::current_path();
+        p = current_thread_path();
     if (p != root_directory)
         p /= root_directory;
 
@@ -733,8 +733,8 @@ void Project::findSources(path p)
         fs::copy_file(CPPAN_FILENAME, root_directory / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
     if (fs::exists(p / CPPAN_FILENAME))
         files.insert(p / CPPAN_FILENAME);
-    else if (fs::exists(::current_path() / CPPAN_FILENAME))
-        files.insert(::current_path() / CPPAN_FILENAME);
+    else if (fs::exists(current_thread_path() / CPPAN_FILENAME))
+        files.insert(current_thread_path() / CPPAN_FILENAME);
     else
         files.insert(CPPAN_FILENAME);
 }
@@ -803,7 +803,7 @@ ProjectPath Project::relative_name_to_absolute(const String &name)
 optional<ProjectPath> Project::load_local_dependency(const String &name)
 {
     optional<ProjectPath> pp;
-    if (allow_local_dependencies && (fs::exists(::current_path() / name) || isUrl(name)))
+    if (allow_local_dependencies && (fs::exists(current_thread_path() / name) || isUrl(name)))
     {
         PackagesSet pkgs;
         Config c;
@@ -878,7 +878,7 @@ void Project::load(const yaml &root)
     {
         get_scalar_f(root, s, [&p, &s](const auto &n)
         {
-            auto cp = ::current_path();
+            auto cp = current_thread_path();
             p = n.template as<String>();
             if (!is_under_root(cp / p, cp))
                 throw std::runtime_error("'" + s + "' must not point outside the current dir: " + p.string() + ", " + cp.string());
@@ -1274,8 +1274,8 @@ void Project::load(const yaml &root)
     // to make some following default checks available
     // try to detect and prepend root dir
     {
-        auto root = is_local ? findRootDirectory() : ::current_path();
-        if (root_directory.empty() || !fs::exists(::current_path() / root_directory))
+        auto root = is_local ? findRootDirectory() : current_thread_path();
+        if (root_directory.empty() || !fs::exists(current_thread_path() / root_directory))
             root_directory = root;
         else if (root_directory != root)
             root_directory = root / root_directory;
