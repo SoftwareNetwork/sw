@@ -53,13 +53,13 @@ void Config::reload(const path &p)
     if (fs::is_directory(p))
     {
         dir = p;
-        ScopedCurrentPath cp(dir);
+        ScopedCurrentPath cp(dir, CurrentPathScope::Thread);
         load_current_config();
     }
     else
     {
         dir = p.parent_path();
-		ScopedCurrentPath cp(dir);
+		ScopedCurrentPath cp(dir, CurrentPathScope::Thread);
         load(p);
     }
 }

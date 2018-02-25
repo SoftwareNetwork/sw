@@ -741,8 +741,7 @@ void Project::findSources(path p)
 
 bool Project::writeArchive(const path &fn) const
 {
-    ScopedCurrentPath cp(root_directory);
-    return pack_files(fn, files, cp.get_cwd());
+    return pack_files(fn, files, root_directory);
 }
 
 void Project::save_dependencies(yaml &node) const
@@ -1274,7 +1273,9 @@ void Project::load(const yaml &root)
     // to make some following default checks available
     // try to detect and prepend root dir
     {
-        auto root = is_local ? findRootDirectory() : current_thread_path();
+        auto root = current_thread_path();
+        if (is_local)
+            root = findRootDirectory(root);
         if (root_directory.empty() || !fs::exists(current_thread_path() / root_directory))
             root_directory = root;
         else if (root_directory != root)

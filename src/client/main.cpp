@@ -92,7 +92,7 @@ try
             if (args[i] == "-d"s || args[i] == "--dir"s)
             {
                 if (i + 1 < args.size())
-                    cp = std::make_unique<ScopedCurrentPath>(args[i + 1]);
+                    cp = std::make_unique<ScopedCurrentPath>(args[i + 1], CurrentPathScope::All);
                 else
                     throw std::runtime_error("Missing necessary argument for "s + args[i] + " option");
                 args_copy.erase(args_copy.begin() + i, args_copy.begin() + i + 2);
@@ -197,7 +197,7 @@ try
             {
                 if (fs::is_directory(cmd))
                 {
-                    ScopedCurrentPath cp(cmd);
+                    ScopedCurrentPath cp(cmd, CurrentPathScope::All);
                     default_run();
                     return 0;
                 }

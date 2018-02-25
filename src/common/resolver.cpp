@@ -308,7 +308,8 @@ void Resolver::download_and_unpack()
 
     // threaded execution does not preserve object creation/destruction order,
     // so current path is not correctly restored
-    ScopedCurrentPath cp;
+    // TODO: remove this! we must correctly run programs without this
+    ScopedCurrentPath cp(CurrentPathScope::All);
 
     for (auto &dd : download_dependencies_)
         fs.push_back(e.push([&download_dependency, &dd] { download_dependency(dd); }));

@@ -155,7 +155,9 @@ void PackageStore::process(const path &p, Config &root)
         printer->print_meta();
     }
 
-    ScopedCurrentPath cp(p);
+    // have some influence on printer->print_meta();
+    // do not remove
+    ScopedCurrentPath cp(p, CurrentPathScope::All);
 
     // print root config
     auto printer = Printer::create(Settings::get_local_settings().printerType);
@@ -445,7 +447,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
     else if (fs::is_directory(p))
     {
         // config.load() will use proper defaults
-        ScopedCurrentPath cp(p);
+        ScopedCurrentPath cp(p, CurrentPathScope::All);
 
         auto cppan_fn = p / CPPAN_FILENAME;
         auto main_fn = p / "main.cpp";

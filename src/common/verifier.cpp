@@ -85,7 +85,7 @@ void verify(const Package &pkg, path fn)
         LOG_DEBUG(logger, "Downloading original package from source...");
         LOG_DEBUG(logger, print_source(spec.source));
 
-        ScopedCurrentPath cp(dir_original_unprepared);
+        ScopedCurrentPath cp(dir_original_unprepared, CurrentPathScope::All);
 
         download(spec.source);
         write_file(CPPAN_FILENAME, spec.cppan);
