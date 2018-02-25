@@ -571,7 +571,12 @@ void Project::findSources(path p)
     if (p.empty())
         p = current_thread_path();
     if (p != root_directory)
-        p /= root_directory;
+    {
+        if (root_directory.is_absolute())
+            p = root_directory;
+        else
+            p /= root_directory;
+    }
 
     if (import_from_bazel)
     {
