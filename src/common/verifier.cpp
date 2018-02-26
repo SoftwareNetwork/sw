@@ -87,6 +87,7 @@ void verify(const Package &pkg, path fn)
 
         ScopedCurrentPath cp(dir_original_unprepared, CurrentPathScope::All);
 
+        applyVersionToUrl(spec.source, spec.package.version);
         download(spec.source);
         write_file(CPPAN_FILENAME, spec.cppan);
 
