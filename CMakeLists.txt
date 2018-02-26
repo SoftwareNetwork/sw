@@ -42,9 +42,24 @@ set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMake Targets")
 project(cppan_client C CXX)
 
 if (NOT DEFINED VERSION_MAJOR)
-set(VERSION_MAJOR 0)
-set(VERSION_MINOR 2)
-set(VERSION_PATCH 4)
+    set(VERSION_MAJOR 0)
+    set(VERSION_MINOR 2)
+    set(VERSION_PATCH 4)
+    set(BUILD_NUMBER 0)
+    set(CPPAN_VERSION_STRING ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+
+    find_program(git git)
+    if (NOT "${git}" STREQUAL "git-NOTFOUND")
+        execute_process(
+            COMMAND git rev-list --count HEAD
+            OUTPUT_VARIABLE BUILD_NUMBER2
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        )
+        if (BUILD_NUMBER2)
+            set(BUILD_NUMBER ${BUILD_NUMBER2})
+        endif()
+    endif()
 endif()
 
 # Output directory settings
