@@ -746,7 +746,10 @@ void Project::findSources(path p)
 
 bool Project::writeArchive(const path &fn) const
 {
-    return pack_files(fn, files, root_directory);
+    // some files have not abolute paths (e.g., license files)
+    // do not remove until fixed
+    ScopedCurrentPath cp(root_directory);
+    return pack_files(fn, files, cp.get_cwd());
 }
 
 void Project::save_dependencies(yaml &node) const
