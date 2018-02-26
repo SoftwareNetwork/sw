@@ -108,6 +108,7 @@ target_link_libraries(common
 
 target_link_libraries(common
     pvt.cppan.demo.sqlite3
+    pvt.cppan.demo.fmt
 
     pvt.egorpugin.primitives.pack
     pvt.egorpugin.primitives.date_time

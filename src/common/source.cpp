@@ -19,6 +19,7 @@
 #include "http.h"
 #include "yaml.h"
 
+#include <fmt/format.h>
 #include <primitives/command.h>
 #include <primitives/overloads.h>
 #include <primitives/pack.h>
@@ -40,6 +41,18 @@
 #define YAML_SET_NOT_MINUS_ONE(x) if (x != -1) YAML_SET(x, #x)
 
 using primitives::Command;
+
+void applyVersion(String &s, const Version &v)
+{
+    s = fmt::format(s,
+        fmt::arg("M", (int)v.major),
+        fmt::arg("m", (int)v.minor),
+        fmt::arg("p", (int)v.patch),
+        // "t" - tweak?
+        fmt::arg("b", v.branch),
+        fmt::arg("v", v.toString())
+    );
+}
 
 static void download_file_checked(const String &url, const path &fn, int64_t max_file_size = 0)
 {
@@ -162,6 +175,11 @@ String SourceUrl::print() const
         return r;
     STRING_PRINT(url);
     return r;
+}
+
+void SourceUrl::applyVersion(const Version &v)
+{
+    ::applyVersion(url, v);
 }
 
 Git::Git(const yaml &root, const String &name)
@@ -303,6 +321,13 @@ String Git::printCpp() const
     }
     s += "\")";
     return s;
+}
+
+void Git::applyVersion(const Version &v)
+{
+    SourceUrl::applyVersion(v);
+    ::applyVersion(tag, v);
+    ::applyVersion(branch, v);
 }
 
 Hg::Hg(const yaml &root, const String &name)
@@ -495,6 +520,11 @@ String RemoteFile::printCpp() const
     return s;
 }
 
+void RemoteFile::applyVersion(const Version &v)
+{
+    ::applyVersion(url, v);
+}
+
 RemoteFiles::RemoteFiles(const yaml &root, const String &name)
 {
     urls = get_sequence_set<String>(root, name);
@@ -559,6 +589,18 @@ String RemoteFiles::printCpp() const
     s.resize(s.size() - 2);
     s += ")";
     return s;
+}
+
+void RemoteFiles::applyVersion(const Version &v)
+{
+    decltype(urls) urls2;
+    for (auto &rf : urls)
+    {
+        auto u = rf;
+        ::applyVersion(u, v);
+        urls2.insert(u);
+    }
+    urls = urls2;
 }
 
 void download(const Source &source, int64_t max_file_size)
@@ -641,4 +683,9 @@ String print_source(const Source &source)
 String print_source_cpp(const Source &source)
 {
     return std::visit([](auto &v) { return v.printCpp(); }, source);
+}
+
+void applyVersionToUrl(Source &source, const Version &v)
+{
+    std::visit([&v](auto &s) { s.applyVersion(v); }, source);
 }

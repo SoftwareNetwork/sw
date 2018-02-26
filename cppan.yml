@@ -12,6 +12,7 @@ local_settings:
         pvt.cppan.demo.boost.stacktrace: 1
         pvt.cppan.demo.sqlite3: 3
         pvt.cppan.demo.yhirose.cpp_linenoise: master
+        pvt.cppan.demo.fmt: 4
 
         pvt.egorpugin.primitives.command: master
         pvt.egorpugin.primitives.string: master
@@ -79,6 +80,7 @@ projects:
             - pvt.egorpugin.primitives.pack: master
             - pvt.egorpugin.primitives.command: master
             - pvt.egorpugin.primitives.yaml: master
+            - pvt.cppan.demo.fmt: 4
 
         options:
             any:

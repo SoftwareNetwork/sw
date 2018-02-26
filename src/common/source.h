@@ -19,6 +19,7 @@
 #include "cppan_string.h"
 #include "filesystem.h"
 #include "property_tree.h"
+#include "version.h"
 
 #include <variant>
 
@@ -41,6 +42,7 @@ struct SourceUrl
     bool save(ptree &p) const;
     void save(yaml &root, const String &name) const;
     String print() const;
+    void applyVersion(const Version &v);
 
 protected:
     template <typename ... Args>
@@ -63,6 +65,7 @@ struct Git : SourceUrl
     void save(yaml &root, const String &name = Git::getString()) const;
     String print() const;
     String printCpp() const;
+    void applyVersion(const Version &v);
 
     bool operator==(const Git &rhs) const
     {
@@ -145,6 +148,7 @@ struct RemoteFile : SourceUrl
     using SourceUrl::save;
     void save(yaml &root, const String &name = RemoteFile::getString()) const;
     String printCpp() const;
+    void applyVersion(const Version &v);
 
     bool operator==(const RemoteFile &rhs) const
     {
@@ -169,6 +173,7 @@ struct RemoteFiles
     void save(yaml &root, const String &name = RemoteFiles::getString()) const;
     String print() const;
     String printCpp() const;
+    void applyVersion(const Version &v);
 
     bool operator==(const RemoteFiles &rhs) const
     {
@@ -201,5 +206,6 @@ void save_source(yaml &root, const Source &source);
 void save_source(ptree &p, const Source &source);
 String print_source(const Source &source);
 String print_source_cpp(const Source &source);
+void applyVersionToUrl(Source &source, const Version &v);
 
 bool isValidSourceUrl(const Source &source);
