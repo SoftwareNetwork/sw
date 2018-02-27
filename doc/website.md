@@ -19,9 +19,9 @@ Project version sources
 
 You can add either fixed version (`1.2.8`) or a branch (`master`, `develop`). Branch is updatable. Version is not.
 
-When adding version from git, it tries to found a tag in form `prefixX.Y.Z` where `X.Y.Z` is version provided and `prefix` is custom prefix on your tags. For example, boost uses `boost-` prefix, some projects use `v` and some use empty prefix. You cannot change `X.Y.Z` delimiters. It's always a point. So, if you want to add your project, consider to change your tag naming schema for future. 
+When adding version from git, it tries to find a tag in form `prefixX.Y.Z` where `X.Y.Z` is version provided and `prefix` is custom prefix on your tags. For example, boost uses `boost-` prefix, some projects use `v` and some use empty prefix. You cannot change `X.Y.Z` delimiters. It's always `.`. So, if you want to add your project, consider changing your tag naming schema for future. 
 
-When adding branch from git, it tries to found a branch with same name in the git repo.
+When adding branch from git, it tries to find a branch with same name in the git repo.
 
 Types of projects:
 
@@ -36,6 +36,6 @@ You can create a permanent `cppan.yml` file in your repository or an archive, so
 
 ## Organizations
 
-You can add an organization is you are representing one. Then you can add admins (can create,remove projects) and users (can  add versions of their projects).
+You can add an organization if you are representing one. Then you can add admins (can create, remove projects) and users (can  add versions of their projects).
 
 Organizations will receive two root namespaces: `org` for projects with open source licensed and `com` for proprietary code. Private repositories both for users and orgs probably will be introduced later.
