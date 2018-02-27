@@ -93,7 +93,16 @@ if (NINJA)
         if (NOT ${cmd2} STREQUAL "cmd2-NOTFOUND")
             set(cmd ${CMAKE_MAKE_PROGRAM})
         endif()
+    else()
+        find_program(cmd2 ${cmd})
+        if (${cmd2} STREQUAL "cmd2-NOTFOUND")
+            find_program(cmd2 ninja-build)
+            if (NOT ${cmd2} STREQUAL "cmd2-NOTFOUND")
+                set(cmd ${cmd2})
+            endif()
+        endif()
     endif()
+
     cppan_debug_message("COMMAND ${cmd} -C ${BUILD_DIR}")
     execute_process(
         COMMAND ${cmd} -C ${BUILD_DIR}
