@@ -653,12 +653,27 @@ Resolver::Dependencies getDependenciesFromRemote(const Packages &deps, const Rem
         d2.erase(d.second.ppath);
     if (!d2.empty())
     {
-        for (auto &d : d2)
+        // probably we have only root or dir dependency left
+        // that is called from command line
+        bool ok = false;
+        if (d2.size() == 1 &&
+            std::any_of(id_deps.begin(), id_deps.end(), [&d2](const auto &e) {
+                return d2.begin()->second.ppath.is_root_of(e.second.ppath);
+            }))
         {
-            d.second.createNames();
-            LOG_FATAL(logger, "Unresolved package or its dependencies: " + d.second.target_name);
+            LOG_WARN(logger, "Skipping unresolved project: " + d2.begin()->second.target_name + ". Probably this is intended");
+            ok = true;
         }
-        throw std::runtime_error("Some packages (" + std::to_string(d2.size()) + ") are unresolved");
+
+        if (!ok)
+        {
+            for (auto &d : d2)
+            {
+                d.second.createNames();
+                LOG_FATAL(logger, "Unresolved package or its dependencies: " + d.second.target_name);
+            }
+            throw std::runtime_error("Some packages (" + std::to_string(d2.size()) + ") are unresolved");
+        }
     }
 
     return prepareIdDependencies(id_deps, current_remote);
