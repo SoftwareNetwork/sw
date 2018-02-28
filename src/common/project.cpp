@@ -1406,7 +1406,7 @@ yaml Project::save() const
 #define ADD_IF_VAL(x, c, v) if (c) root[#x] = v
 #define ADD_IF_NOT_VAL(x, c, v) if (!c) root[#x] = v
 #define ADD_IF_VAL_TRIPLE(x) ADD_IF_VAL(x, x, x)
-#define ADD_IF_NOT_VAL_TRIPLE(x) ADD_IF_VAL(x, x, x)
+#define ADD_IF_NOT_VAL_TRIPLE(x) ADD_IF_NOT_VAL(x, x, x)
 #define ADD_IF_NOT_EMPTY_VAL(x, v) ADD_IF_VAL(x, !x.empty(), v)
 #define ADD_IF_NOT_EMPTY(x) ADD_IF_NOT_EMPTY_VAL(x, x)
 #define ADD_IF_EQU_VAL(x, e, v) ADD_IF_VAL(x, (x) == (e), v)
