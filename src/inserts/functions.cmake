@@ -291,6 +291,8 @@ function(get_configuration_unhashed out)
     endif()
 
     # msvc arch
+    # it can be same as ${bits}
+    # but still it is set explicitly for some rare cases
     set(msvc_arch)
     if (MSVC)
         set(msvc_c_arch)

@@ -120,7 +120,9 @@ if (NOT EXISTS ${import} OR
         endif()
 
         set(linker)
-        if (VISUAL_STUDIO_ACCELERATE_CLANG)# OR NINJA)
+        # if WIN32? if MSVC? everywhere?
+        if (WIN32 AND (VISUAL_STUDIO_ACCELERATE_CLANG OR NINJA))
+            # dont forget to pass linker with ninja!
             set(linker "-DCMAKE_LINKER=${CMAKE_LINKER}")
         endif()
 
@@ -163,11 +165,12 @@ if (NOT EXISTS ${import} OR
 
         # call cmake
         if (EXECUTABLE)# AND NOT CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG)
-                # build with the same compiler, generator
+                # build with the same compiler, generator and linker (in some cases)
                 cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
                         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                        ${linker}
                         -DVARIABLES_FILE=${variables_file}
                         -G \"${generator}\""
                 )
@@ -181,7 +184,6 @@ if (NOT EXISTS ${import} OR
                         -G "${generator}"
                     RESULT_VARIABLE ret
                 )
-                check_result_variable(${ret})
         else()
             if (CMAKE_TOOLCHAIN_FILE)
                 cppan_debug_message("COMMAND ${CMAKE_COMMAND}
@@ -202,7 +204,6 @@ if (NOT EXISTS ${import} OR
                         ${sysver}
                     RESULT_VARIABLE ret
                 )
-                check_result_variable(${ret})
             else(CMAKE_TOOLCHAIN_FILE)
                 cppan_debug_message("COMMAND ${CMAKE_COMMAND}
                         -H${current_dir} -B${build_dir}
@@ -224,9 +225,9 @@ if (NOT EXISTS ${import} OR
                         ${sysver}
                     RESULT_VARIABLE ret
                 )
-                check_result_variable(${ret})
             endif(CMAKE_TOOLCHAIN_FILE)
         endif()
+        check_result_variable(${ret})
 
         # fix imports
         # TODO: move exports to exp dir
