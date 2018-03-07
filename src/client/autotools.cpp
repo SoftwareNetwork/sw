@@ -246,6 +246,12 @@ void ac_processor::output()
     std::cout << dump_yaml_config(root);
 }
 
+void prepare_type(String &t)
+{
+    if (t == "long_long")
+        t = "long long";
+}
+
 void ac_processor::process()
 {
     std::set<String> unproc;
@@ -357,6 +363,7 @@ void ac_processor::process()
             {
                 auto v = m[1].str();
                 boost::to_lower(v);
+                prepare_type(v);
                 checks.addCheck<CheckType>(v);
                 continue;
             }
@@ -390,6 +397,8 @@ auto ac_processor::split_and_add(command &c, std::function<bool(String)> fun)
                 checks.addCheck<CheckSymbol>(f, p);
                 continue;
             }
+            if constexpr (std::is_same_v<T, CheckType>)
+                prepare_type(f);
             out.push_back(checks.addCheck<T>(f));
         }
     }
