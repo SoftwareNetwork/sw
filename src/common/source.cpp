@@ -626,16 +626,15 @@ bool load_source(const yaml &root, Source &source)
         return false;
 
     String s;
-    std::any_of(sources.begin(), sources.end(), [&src, &s](auto &i)
+    for (auto &i : sources)
     {
         YAML_EXTRACT_VAR(src, s, i, String);
         if (!s.empty())
         {
             s = i;
-            return true;
+            break;
         }
-        return false;
-    });
+    }
 
     if (0);
 #define IF_SOURCE(x) else if (s == x::getString()) source = x(src)
