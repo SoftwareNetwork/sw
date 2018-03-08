@@ -1285,7 +1285,7 @@ void Project::load(const yaml &root)
         auto root = current_thread_path();
         if (is_local)
             root = findRootDirectory(root);
-        if (root_directory.empty() || !fs::exists(current_thread_path() / root_directory))
+        if (root_directory.empty() || !fs::exists(root / root_directory))
             root_directory = root;
         else if (root_directory != root)
             root_directory = root / root_directory;
