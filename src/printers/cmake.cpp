@@ -1634,7 +1634,10 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         // exclude main CMakeLists.txt, it is added automatically
         ctx.addLine("list(FILTER src EXCLUDE REGEX \".*" + cmake_config_filename + "\")");
         // add CMakeLists.txt from object dir
-        ctx.addLine("set(src ${src} \"" + normalize_path(d.getDirObj() / cmake_config_filename) + "\")");
+        if (!p.pkg.flags[pfLocalProject])
+            ctx.addLine("set(src ${src} \"" + normalize_path(d.getDirObj() / cmake_config_filename) + "\")");
+        else
+            ctx.addLine("set(src ${src} \"" + normalize_path(d.getDirSrc() / cmake_config_filename) + "\")");
     }
 
     print_bs_insertion(ctx, p, "post sources", &BuildSystemConfigInsertions::post_sources);
