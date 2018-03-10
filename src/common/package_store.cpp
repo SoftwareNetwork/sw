@@ -37,7 +37,7 @@
 #include <primitives/templates.h>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "package_store");
+//DECLARE_STATIC_LOGGER(logger, "package_store");
 
 // legacy varname rd - was: response data
 PackageStore rd;

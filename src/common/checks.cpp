@@ -26,7 +26,7 @@
 #include <memory>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "checks");
+//DECLARE_STATIC_LOGGER(logger, "checks");
 
 const std::map<int, Check::Information> check_information{
     { Check::Function,
@@ -314,7 +314,7 @@ void Checks::load(const yaml &root)
                         s = n["decl"].template as<String>();
                     CheckParameters p;
                     p.load(n);
-                    auto ptr = this->addCheck<CheckDecl>(s, p);
+                    /*auto ptr = */this->addCheck<CheckDecl>(s, p);
                     return;
                 }
                 else if (n.IsScalar())
@@ -351,7 +351,7 @@ void Checks::load(const yaml &root)
         {
             auto f = v["function"].template as<String>();
             auto lib = v["library"].template as<String>();
-            auto p = this->addCheck<CheckLibraryFunction>(f, lib);
+            /*auto p = */this->addCheck<CheckLibraryFunction>(f, lib);
         }
     });
 

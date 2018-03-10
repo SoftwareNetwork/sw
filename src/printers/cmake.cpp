@@ -35,7 +35,7 @@
 #include <primitives/executor.h>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "cmake");
+//DECLARE_STATIC_LOGGER(logger, "cmake");
 
 String repeat(const String &e, int n);
 
@@ -115,7 +115,7 @@ public:
     {
         if (d.conditions.empty())
             return;
-        for (auto &c : d.conditions)
+        for (auto &c [[maybe_unused]] : d.conditions)
             ctx.endif();
         if (empty_lines)
             ctx.emptyLines();
@@ -1400,7 +1400,7 @@ void CMakePrinter::print_settings(CMakeContext &ctx) const
     ctx.addLine("set(PACKAGE_BUGREPORT)");
     ctx.addLine();
 
-    auto n2hex = [this](int n, int w)
+    auto n2hex = [](int n, int w)
     {
         std::ostringstream ss;
         ss << std::hex << std::setfill('0') << std::setw(w) << n;
@@ -1631,8 +1631,10 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         };
         exclude_files(p.exclude_from_build);
 
-        //
-        ctx.addLine("set(src ${src} \"" + normalize_path(d.getDirSrc() / cmake_config_filename) + "\")");
+        // exclude main CMakeLists.txt, it is added automatically
+        ctx.addLine("list(FILTER src EXCLUDE REGEX \".*" + cmake_config_filename + "\")");
+        // add CMakeLists.txt from object dir
+        ctx.addLine("set(src ${src} \"" + normalize_path(d.getDirObj() / cmake_config_filename) + "\")");
     }
 
     print_bs_insertion(ctx, p, "post sources", &BuildSystemConfigInsertions::post_sources);
@@ -2020,23 +2022,23 @@ endif()
                 ctx.decreaseIndent(")");
             };
 
-            auto print_defs = [&ctx, this, &print_target_options](const auto &defs)
+            auto print_defs = [&print_target_options](const auto &defs)
             {
                 print_target_options(defs, "definitions", "target_compile_definitions");
             };
-            auto print_include_dirs = [&ctx, this, &print_target_options](const auto &defs)
+            auto print_include_dirs = [&print_target_options](const auto &defs)
             {
                 print_target_options(defs, "include directories", "target_include_directories", &prepare_include_directory);
             };
-            auto print_compile_opts = [&ctx, this, &print_target_options](const auto &copts)
+            auto print_compile_opts = [&print_target_options](const auto &copts)
             {
                 print_target_options(copts, "compile options", "target_compile_options");
             };
-            auto print_linker_opts = [&ctx, this, &print_target_options](const auto &lopts)
+            auto print_linker_opts = [&print_target_options](const auto &lopts)
             {
                 print_target_options(lopts, "link options", "target_link_libraries");
             };
-            auto print_set = [&ctx, this](const auto &a, const String &s)
+            /*auto print_set = [&ctx, this](const auto &a, const String &s)
             {
                 if (a.empty())
                     return;
@@ -2054,8 +2056,8 @@ endif()
                 }
                 ctx.decreaseIndent(")");
                 ctx.addLine();
-            };
-            auto print_options = [&ctx, &ol, &print_defs, &print_set, &print_compile_opts, &print_linker_opts, &print_include_dirs]
+            };*/
+            auto print_options = [&ctx, &ol, &print_defs, &print_compile_opts, &print_linker_opts, &print_include_dirs]
             {
                 print_defs(ol.second.definitions);
                 print_include_dirs(ol.second.include_directories);
@@ -2175,7 +2177,7 @@ endif()
         PUBLIC Ws2_32
     )
 else())");
-            auto add_unix_lib = [this, &ctx](const String &s)
+            auto add_unix_lib = [&ctx](const String &s)
             {
                 ctx.addLine("find_library(" + s + " " + s + ")");
                 ctx.if_("NOT ${" + s + "} STREQUAL \"" + s + "-NOTFOUND\"");
@@ -2619,7 +2621,7 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     if (!must_update_contents(fn))
         return;
 
-    const auto &ls = Settings::get_local_settings();
+    /*const auto &ls = */Settings::get_local_settings();
 
     CMakeContext ctx;
     file_header(ctx, d, true);
@@ -3059,7 +3061,7 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
 #endif
     //LOG_FLUSH();
 
-    auto work = [&o, &N](auto &w, int i)
+    auto work = [&o](auto &w, int i)
     {
         if (w.checks.empty())
             return;
@@ -3149,7 +3151,7 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
 
         // do not fail (throw), try to read already found variables
         // commited as it occurs always check cmake error or cmake normal exit has this value
-        if (c.exit_code && c.exit_code.value() || !c.exit_code || ec)
+        if ((c.exit_code && c.exit_code.value()) || !c.exit_code || ec)
         {
             String s;
             s += "-- Thread #" + std::to_string(i) + ": error during evaluating variables";

@@ -28,6 +28,8 @@ String toString(ProjectType e)
         return "Root Project";
     case ProjectType::Directory:
         return "Directory";
+    default:
+        break;
     }
     return std::to_string(toIndex(e));
 }
@@ -42,6 +44,8 @@ String toString(SettingsType e)
         return "user";
     case SettingsType::System:
         return "system";
+    default:
+        break;
     }
     return std::to_string(toIndex(e));
 }

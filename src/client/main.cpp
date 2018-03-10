@@ -45,7 +45,7 @@
 #include <thread>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "main");
+//DECLARE_STATIC_LOGGER(logger, "main");
 
 enum class ApiResult
 {
@@ -188,6 +188,8 @@ try
                 return 0;
             case ApiResult::Error:
                 return 1;
+            default:
+                break;
             }
 
             // file/url arg
@@ -1001,11 +1003,11 @@ ApiResult api_call(const String &cmd, const Strings &args)
 
     if (cmd == "notifications")
     {
-        auto proj_usage = []
+        /*auto proj_usage = []
         {
             std::cout << "invalid number of arguments\n";
             std::cout << "usage: cppan notifications [origin] [clear] [N]\n";
-        };
+        };*/
 
         size_t arg = 2;
 

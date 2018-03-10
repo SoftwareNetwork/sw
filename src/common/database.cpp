@@ -40,7 +40,7 @@
 #include <shared_mutex>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "db");
+//DECLARE_STATIC_LOGGER(logger, "db");
 
 #define PACKAGES_DB_REFRESH_TIME_MINUTES 15
 
@@ -410,10 +410,9 @@ void ServiceDatabase::recreateTable(const TableDescriptor &td) const
 
 void ServiceDatabase::checkStamp() const
 {
-    bool assigned = false;
     String s;
     db->execute("select * from ClientStamp",
-        [&s, &assigned](SQLITE_CALLBACK_ARGS)
+        [&s](SQLITE_CALLBACK_ARGS)
     {
         s = cols[0];
         return 0;
@@ -1108,7 +1107,7 @@ IdDependencies PackagesDatabase::findDependencies(const Packages &deps) const
             // TODO: replace later with typed exception, so client will try to fetch same package from server
             throw std::runtime_error("Package '" + project.ppath.toString() + "' not found.");
 
-        auto find_deps = [&dep, &all_deps, this](auto &dependency)
+        auto find_deps = [&all_deps, this](auto &dependency)
         {
             dependency.flags.set(pfDirectDependency);
             dependency.id = getExactProjectVersionId(dependency, dependency.version, dependency.flags, dependency.hash);

@@ -442,7 +442,7 @@ struct CheckSource : public Check
 
     bool isOk() const override
     {
-        return !invert && getValue() || invert && !getValue();
+        return (!invert && getValue()) || (invert && !getValue());
     }
 };
 

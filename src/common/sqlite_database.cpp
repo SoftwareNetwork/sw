@@ -24,7 +24,7 @@
 #include <algorithm>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "sqlite_db");
+//DECLARE_STATIC_LOGGER(logger, "sqlite_db");
 
 #define MAX_ERROR_SQL_LENGTH 200
 

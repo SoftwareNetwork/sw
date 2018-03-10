@@ -28,7 +28,7 @@
 #include <primitives/templates.h>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "verifier");
+//DECLARE_STATIC_LOGGER(logger, "verifier");
 
 void verify(const String &target_name)
 {

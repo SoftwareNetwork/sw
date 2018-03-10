@@ -32,7 +32,7 @@
 #include <primitives/templates.h>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "settings");
+//DECLARE_STATIC_LOGGER(logger, "settings");
 
 void BuildSettings::set_build_dirs(const String &name)
 {
@@ -94,7 +94,7 @@ void Settings::load(const yaml &root, const SettingsType type)
         }
     };
 
-    auto get_build_dir = [this](const path &p, SettingsType type, const auto &dirs)
+    auto get_build_dir = [](const path &p, SettingsType type, const auto &dirs)
     {
         switch (type)
         {
@@ -496,6 +496,8 @@ Settings &Settings::get(SettingsType type)
             s.load(fn, SettingsType::System);
         };
     }
+        break;
+    default:
         break;
     }
     return s;

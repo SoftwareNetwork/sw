@@ -33,7 +33,7 @@
 #include <iostream>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "config");
+//DECLARE_STATIC_LOGGER(logger, "config");
 
 Config::Config()
 {

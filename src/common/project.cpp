@@ -35,7 +35,7 @@
 #include <regex>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "project");
+//DECLARE_STATIC_LOGGER(logger, "project");
 
 using MimeType = String;
 using MimeTypes = std::set<MimeType>;
@@ -495,7 +495,7 @@ void Patch::load(const yaml &root)
 {
     auto load_replace = [&root](auto &a, const String &k)
     {
-        get_map_and_iterate(root, k, [&a, &k](auto &v)
+        get_map_and_iterate(root, k, [&a](auto &v)
         {
             auto k = v.first.template as<String>();
             if (v.second.IsScalar())

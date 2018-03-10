@@ -36,7 +36,7 @@
 #include <primitives/templates.h>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "resolver");
+//DECLARE_STATIC_LOGGER(logger, "resolver");
 
 #define CURRENT_API_LEVEL 1
 
@@ -474,7 +474,7 @@ void Resolver::read_config(const ExtendedPackageData &d)
     try
     {
         auto p = rd.config_store.insert(std::make_unique<Config>(d.getDirSrc(), false));
-        auto ptr = rd.packages[d].config = p.first->get();
+        /*auto ptr = */rd.packages[d].config = p.first->get();
         //ptr->created = created;
     }
     catch (DependencyNotResolved &)

@@ -602,7 +602,7 @@ void ac_processor::try_add(command &c)
     if (var.empty() || input.empty())
         return;
 
-    auto p = checks.addCheck<T>(var, input);
+    /*auto p = */checks.addCheck<T>(var, input);
 }
 
 void ac_processor::process_AC_LANG(command &c)

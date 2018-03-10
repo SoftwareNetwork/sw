@@ -31,7 +31,7 @@
 #include <iostream>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "build");
+//DECLARE_STATIC_LOGGER(logger, "build");
 
 int build_packages(const String &name, const PackagesSet &pkgs, const path &settings_fn, const String &config);
 int build_packages(const String &name, const PackagesSet &pkgs);

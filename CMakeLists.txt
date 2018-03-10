@@ -76,15 +76,20 @@ find_package(FLEX)
 ################################################################################
 
 if (CPPAN_TEST)
-add_definitions(-DCPPAN_TEST)
+add_definitions(/DCPPAN_TEST)
 endif()
 
 if (WIN32)
-    add_definitions(-DUNICODE)
+    add_definitions(/DUNICODE)
     if (MSVC)
-        set(disable_msvc_warnings "/W3 /wd4458 /wd4714 /wd4127 /wd4275 -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP ${disable_msvc_warnings}")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP ${disable_msvc_warnings}")
+        set(disable_msvc_warnings "/W3 /wd4458 /wd4714 /wd4127 /wd4275 /D_SCL_SECURE_NO_WARNINGS /D_CRT_SECURE_NO_WARNINGS /D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${disable_msvc_warnings}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${disable_msvc_warnings}")
+
+        if (NOT CLANG)
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+        endif()
 
         if (MSVC_STATIC_RUNTIME)
             set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
@@ -101,6 +106,12 @@ if(UNIX)
 endif()
 if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std:c++17")
+endif()
+
+if (CLANG)
+    set(flags "-Wno-assume -Wno-potentially-evaluated-expression -Wno-delete-non-virtual-dtor")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${flags}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flags}")
 endif()
 
 ################################################################################

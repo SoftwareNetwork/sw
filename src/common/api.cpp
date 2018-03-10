@@ -21,7 +21,7 @@
 #include "settings.h"
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "api");
+//DECLARE_STATIC_LOGGER(logger, "api");
 
 ptree api_call(const Remote &r, const String &api, ptree request)
 {
@@ -147,6 +147,8 @@ void Api::get_notifications(const Remote &r, int n)
                 break;
             case NotificationType::Success:
                 ss << "OK";
+                break;
+            default:
                 break;
         }
         LOG_INFO(logger, ss.str() << " " << ts << " " << t);

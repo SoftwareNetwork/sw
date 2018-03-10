@@ -29,7 +29,7 @@
 #include <shared_mutex>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "package");
+//DECLARE_STATIC_LOGGER(logger, "package");
 
 path Package::getDir(const path &p) const
 {
