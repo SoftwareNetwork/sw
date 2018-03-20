@@ -97,8 +97,6 @@ const std::set<String> other_source_file_extensions{
     ".inl",
 };
 
-const auto bazel_filenames = { "BUILD", "BUILD.bazel" };
-
 auto escape_regex_symbols(const String &s)
 {
     return boost::replace_all_copy(s, "+", "\\+");
@@ -595,7 +593,18 @@ void Project::findSources(path p)
         String project_name;
         if (!pkg.ppath.empty())
             project_name = pkg.ppath.back();
-        auto files = f.getFiles(project_name);
+        auto files1 = f.getFiles(bazel_target_name.empty() ? project_name : bazel_target_name, bazel_target_function);
+        std::vector<std::string> files(files1.begin(), files1.end());
+
+        // prepare bazel filenames:
+        // - remove quotes
+        // - escape non-regex symbols
+        for (auto &f : files)
+        {
+            boost::replace_all(f, "\"", "");
+            boost::replace_all(f, "+", "\\+");
+        }
+
         sources.insert(files.begin(), files.end());
         sources.insert(bfn.filename().string());
     }
@@ -837,6 +846,9 @@ void Project::load(const yaml &root)
         throw std::runtime_error("Project cannot be static and shared simultaneously");
 
     YAML_EXTRACT_AUTO(import_from_bazel);
+    YAML_EXTRACT_AUTO(bazel_target_name);
+    YAML_EXTRACT_AUTO(bazel_target_function);
+
     YAML_EXTRACT_AUTO(prefer_binaries);
     YAML_EXTRACT_AUTO(export_all_symbols);
     YAML_EXTRACT_AUTO(export_if_static);
@@ -1450,6 +1462,9 @@ yaml Project::save() const
         root["header_only"] = header_only.value();
 
     ADD_IF_VAL_TRIPLE(import_from_bazel);
+    ADD_IF_NOT_EMPTY(bazel_target_name);
+    ADD_IF_NOT_EMPTY(bazel_target_function);
+
     ADD_IF_VAL_TRIPLE(prefer_binaries);
     ADD_IF_VAL_TRIPLE(export_all_symbols);
     ADD_IF_VAL_TRIPLE(export_if_static);

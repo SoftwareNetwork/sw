@@ -368,11 +368,13 @@ namespace yy_bazel {
         L_SQUARE_BRACKET = 271,
         R_SQUARE_BRACKET = 272,
         PLUS = 273,
-        CLASS = 274,
-        STRING = 275,
-        KEYWORD = 276,
-        ID = 277,
-        INTEGER = 278
+        DEF = 274,
+        END_OF_DEF = 275,
+        CLASS = 276,
+        STRING = 277,
+        KEYWORD = 278,
+        ID = 279,
+        INTEGER = 280
       };
     };
 
@@ -561,6 +563,14 @@ namespace yy_bazel {
 
     static inline
     symbol_type
+    make_DEF (const location_type& l);
+
+    static inline
+    symbol_type
+    make_END_OF_DEF (const location_type& l);
+
+    static inline
+    symbol_type
     make_CLASS (const location_type& l);
 
     static inline
@@ -685,7 +695,7 @@ namespace yy_bazel {
     static const char* const yytname_[];
 #if YY_BAZELDEBUG
   // YYRLINE[YYN] -- Source line where rule number YYN was defined.
-  static const unsigned char yyrline_[];
+  static const unsigned short int yyrline_[];
     /// Report on the debug stream that the rule \a r is going to be reduced.
     virtual void yy_reduce_print_ (int r);
     /// Print the state stack on the debug stream.
@@ -784,12 +794,12 @@ namespace yy_bazel {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 84,     ///< Last index in yytable_.
-      yynnts_ = 23,  ///< Number of nonterminal symbols.
-      yyfinal_ = 24, ///< Termination state number.
+      yylast_ = 141,     ///< Last index in yytable_.
+      yynnts_ = 25,  ///< Number of nonterminal symbols.
+      yyfinal_ = 30, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
-      yyntokens_ = 24  ///< Number of tokens.
+      yyntokens_ = 26  ///< Number of tokens.
     };
 
 
@@ -833,9 +843,10 @@ namespace yy_bazel {
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
-      15,    16,    17,    18,    19,    20,    21,    22,    23
+      15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
+      25
     };
-    const unsigned int user_token_number_max_ = 278;
+    const unsigned int user_token_number_max_ = 280;
     const token_number_type undef_token_ = 2;
 
     if (static_cast<int>(t) <= yyeof_)
@@ -868,42 +879,42 @@ namespace yy_bazel {
   {
       switch (other.type_get ())
     {
-      case 26: // statements
+      case 28: // statements
         value.copy< bazel::File > (other.value);
         break;
 
-      case 27: // statement
-      case 28: // function_call
+      case 29: // statement
+      case 31: // function_call
         value.copy< bazel::Function > (other.value);
         break;
 
-      case 30: // parameter
-      case 31: // variable_decl
+      case 33: // parameter
+      case 34: // variable_decl
         value.copy< bazel::Parameter > (other.value);
         break;
 
-      case 29: // parameters
+      case 32: // parameters
         value.copy< bazel::Parameters > (other.value);
         break;
 
-      case 32: // expr
-      case 33: // tuple
-      case 38: // array
-      case 39: // array_contents
-      case 40: // array_content
+      case 36: // expr
+      case 37: // tuple
+      case 42: // array
+      case 43: // array_contents
+      case 44: // array_content
         value.copy< bazel::Values > (other.value);
         break;
 
-      case 23: // INTEGER
+      case 25: // INTEGER
         value.copy< int > (other.value);
         break;
 
-      case 20: // STRING
-      case 21: // KEYWORD
-      case 22: // ID
-      case 44: // identifier
-      case 45: // string
-      case 46: // keyword
+      case 22: // STRING
+      case 23: // KEYWORD
+      case 24: // ID
+      case 48: // identifier
+      case 49: // string
+      case 50: // keyword
         value.copy< std::string > (other.value);
         break;
 
@@ -924,42 +935,42 @@ namespace yy_bazel {
     (void) v;
       switch (this->type_get ())
     {
-      case 26: // statements
+      case 28: // statements
         value.copy< bazel::File > (v);
         break;
 
-      case 27: // statement
-      case 28: // function_call
+      case 29: // statement
+      case 31: // function_call
         value.copy< bazel::Function > (v);
         break;
 
-      case 30: // parameter
-      case 31: // variable_decl
+      case 33: // parameter
+      case 34: // variable_decl
         value.copy< bazel::Parameter > (v);
         break;
 
-      case 29: // parameters
+      case 32: // parameters
         value.copy< bazel::Parameters > (v);
         break;
 
-      case 32: // expr
-      case 33: // tuple
-      case 38: // array
-      case 39: // array_contents
-      case 40: // array_content
+      case 36: // expr
+      case 37: // tuple
+      case 42: // array
+      case 43: // array_contents
+      case 44: // array_content
         value.copy< bazel::Values > (v);
         break;
 
-      case 23: // INTEGER
+      case 25: // INTEGER
         value.copy< int > (v);
         break;
 
-      case 20: // STRING
-      case 21: // KEYWORD
-      case 22: // ID
-      case 44: // identifier
-      case 45: // string
-      case 46: // keyword
+      case 22: // STRING
+      case 23: // KEYWORD
+      case 24: // ID
+      case 48: // identifier
+      case 49: // string
+      case 50: // keyword
         value.copy< std::string > (v);
         break;
 
@@ -1053,42 +1064,42 @@ namespace yy_bazel {
     // Type destructor.
     switch (yytype)
     {
-      case 26: // statements
+      case 28: // statements
         value.template destroy< bazel::File > ();
         break;
 
-      case 27: // statement
-      case 28: // function_call
+      case 29: // statement
+      case 31: // function_call
         value.template destroy< bazel::Function > ();
         break;
 
-      case 30: // parameter
-      case 31: // variable_decl
+      case 33: // parameter
+      case 34: // variable_decl
         value.template destroy< bazel::Parameter > ();
         break;
 
-      case 29: // parameters
+      case 32: // parameters
         value.template destroy< bazel::Parameters > ();
         break;
 
-      case 32: // expr
-      case 33: // tuple
-      case 38: // array
-      case 39: // array_contents
-      case 40: // array_content
+      case 36: // expr
+      case 37: // tuple
+      case 42: // array
+      case 43: // array_contents
+      case 44: // array_content
         value.template destroy< bazel::Values > ();
         break;
 
-      case 23: // INTEGER
+      case 25: // INTEGER
         value.template destroy< int > ();
         break;
 
-      case 20: // STRING
-      case 21: // KEYWORD
-      case 22: // ID
-      case 44: // identifier
-      case 45: // string
-      case 46: // keyword
+      case 22: // STRING
+      case 23: // KEYWORD
+      case 24: // ID
+      case 48: // identifier
+      case 49: // string
+      case 50: // keyword
         value.template destroy< std::string > ();
         break;
 
@@ -1115,42 +1126,42 @@ namespace yy_bazel {
     super_type::move(s);
       switch (this->type_get ())
     {
-      case 26: // statements
+      case 28: // statements
         value.move< bazel::File > (s.value);
         break;
 
-      case 27: // statement
-      case 28: // function_call
+      case 29: // statement
+      case 31: // function_call
         value.move< bazel::Function > (s.value);
         break;
 
-      case 30: // parameter
-      case 31: // variable_decl
+      case 33: // parameter
+      case 34: // variable_decl
         value.move< bazel::Parameter > (s.value);
         break;
 
-      case 29: // parameters
+      case 32: // parameters
         value.move< bazel::Parameters > (s.value);
         break;
 
-      case 32: // expr
-      case 33: // tuple
-      case 38: // array
-      case 39: // array_contents
-      case 40: // array_content
+      case 36: // expr
+      case 37: // tuple
+      case 42: // array
+      case 43: // array_contents
+      case 44: // array_content
         value.move< bazel::Values > (s.value);
         break;
 
-      case 23: // INTEGER
+      case 25: // INTEGER
         value.move< int > (s.value);
         break;
 
-      case 20: // STRING
-      case 21: // KEYWORD
-      case 22: // ID
-      case 44: // identifier
-      case 45: // string
-      case 46: // keyword
+      case 22: // STRING
+      case 23: // KEYWORD
+      case 24: // ID
+      case 48: // identifier
+      case 49: // string
+      case 50: // keyword
         value.move< std::string > (s.value);
         break;
 
@@ -1211,7 +1222,7 @@ namespace yy_bazel {
     {
        0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
      265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
-     275,   276,   277,   278
+     275,   276,   277,   278,   279,   280
     };
     return static_cast<token_type> (yytoken_number_[type]);
   }
@@ -1316,6 +1327,18 @@ namespace yy_bazel {
   parser::make_PLUS (const location_type& l)
   {
     return symbol_type (token::PLUS, l);
+  }
+
+  parser::symbol_type
+  parser::make_DEF (const location_type& l)
+  {
+    return symbol_type (token::DEF, l);
+  }
+
+  parser::symbol_type
+  parser::make_END_OF_DEF (const location_type& l)
+  {
+    return symbol_type (token::END_OF_DEF, l);
   }
 
   parser::symbol_type

@@ -51,5 +51,9 @@ DECLARE_TEXT_VAR_BEGIN(cmake_header)
 CPPAN_INCLUDE<inserts/header.cmake>
 DECLARE_TEXT_VAR_END(cmake_header);
 
+DECLARE_TEXT_VAR_BEGIN(cppan_cmake_config)
+CPPAN_INCLUDE<inserts/CPPANConfig.cmake>
+DECLARE_TEXT_VAR_END(cppan_cmake_config);
+
 #undef DECLARE_TEXT_VAR_BEGIN
 #undef DECLARE_TEXT_VAR_END

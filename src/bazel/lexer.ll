@@ -27,6 +27,7 @@ identifier      [_a-zA-Z0-9]+
 quote1          "\'"[^'\\]*"\'"
 quote2          "\""[^"\\]*"\""
 
+%s IN_FUNCTION
 
 %%
 
@@ -36,6 +37,13 @@ quote2          "\""[^"\\]*"\""
 %}
 
 #.*/\n                  // ignore comments
+
+<IN_FUNCTION>\n\n       {
+                            loc.lines(yyleng);
+                            loc.step();
+                            BEGIN(0);
+                            return MAKE(END_OF_DEF);
+                        }
 
 [ \t]+                  loc.step();
 \r                      loc.step();
@@ -57,6 +65,8 @@ quote2          "\""[^"\\]*"\""
 "\+"                    return MAKE(PLUS);
 "->"                    return MAKE(R_ARROW);
 "="                     return MAKE(EQUAL);
+
+"def"                   BEGIN(IN_FUNCTION); return MAKE(DEF);
 
 and|elif|global|or|assert|else|if|except|pass|break|import|print|exec|in|raise|continue|finally|is|return|for|lambda|try|del|from|not|while return MAKE_VALUE(KEYWORD, yytext);
 class					return MAKE(CLASS);

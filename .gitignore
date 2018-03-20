@@ -20,3 +20,5 @@ cppan
 
 # bison generated
 *.output
+
+CMakeSettings.json

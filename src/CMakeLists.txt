@@ -62,6 +62,7 @@ set(gen_src
     ${CMAKE_CURRENT_SOURCE_DIR}/inserts/header.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/inserts/version.rc.in
     ${CMAKE_CURRENT_SOURCE_DIR}/inserts/branch.rc.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/inserts/CPPANConfig.cmake
 )
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
@@ -117,6 +118,11 @@ target_link_libraries(common
     pvt.egorpugin.primitives.executor
     pvt.egorpugin.primitives.command
 )
+if (WIN32)
+target_link_libraries(common
+    pvt.cppan.demo.giovannidicanio.winreg
+)
+endif()
 
 ################################################################################
 

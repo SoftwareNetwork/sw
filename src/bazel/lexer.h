@@ -219,6 +219,7 @@ void ll_bazelfree (void * , yyscan_t yyscanner );
 
 #ifdef YY_HEADER_EXPORT_START_CONDITIONS
 #define INITIAL 0
+#define IN_FUNCTION 1
 
 #endif
 

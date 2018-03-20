@@ -169,6 +169,9 @@ String dump_yaml_config(const yaml &root)
         "header_only",
 
         "import_from_bazel",
+        "bazel_target_name",
+        "bazel_target_function",
+
         "prefer_binaries",
         "export_all_symbols",
         "export_if_static",

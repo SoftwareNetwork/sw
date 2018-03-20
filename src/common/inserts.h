@@ -26,5 +26,6 @@ DECLARE_TEXT_VAR(cmake_build_file);
 DECLARE_TEXT_VAR(cmake_generate_file);
 DECLARE_TEXT_VAR(cmake_export_import_file);
 DECLARE_TEXT_VAR(cmake_header);
+DECLARE_TEXT_VAR(cppan_cmake_config);
 
 #undef DECLARE_TEXT_VAR

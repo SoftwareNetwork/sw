@@ -34,6 +34,10 @@
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
 
+#ifdef _WIN32
+#include <WinReg.hpp>
+#endif
+
 #include <primitives/log.h>
 //DECLARE_STATIC_LOGGER(logger, "cmake");
 
@@ -55,6 +59,7 @@ const String cmake_config_filename = "CMakeLists.txt";
 const String cppan_build_dir = "build";
 const String cmake_functions_filename = "functions.cmake";
 const String cmake_header_filename = "header.cmake";
+const String cppan_cmake_config_filename = "CPPANConfig.cmake";
 const String cmake_export_import_filename = "export.cmake";
 const String cmake_helpers_filename = "helpers.cmake";
 const String cppan_stamp_filename = "cppan_sources.stamp";
@@ -1291,6 +1296,16 @@ void CMakePrinter::print_meta() const
         "set(CPPAN_CONFIG_PART_DELIMETER -)\n"
         "\n"
         + cmake_functions);
+
+    // register cmake package
+#ifdef _WIN32
+    winreg::RegKey icon(HKEY_CURRENT_USER, L"Software\\Kitware\\CMake\\Packages\\CPPAN");
+    icon.SetStringValue(L"", directories.get_static_files_dir().wstring().c_str());
+    access_table->write_if_older(directories.get_static_files_dir() / cppan_cmake_config_filename, cppan_cmake_config);
+#else
+    access_table->write_if_older(get_home_directory() / ".cmake" / "packages" / cppan_cmake_config_filename, cppan_cmake_config);
+#endif
+
     access_table->write_if_older(directories.get_static_files_dir() / cmake_header_filename, cmake_header);
     access_table->write_if_older(directories.get_static_files_dir() / cmake_export_import_filename, cmake_export_import_file);
     access_table->write_if_older(directories.get_static_files_dir() / cmake_obj_generate_filename, cmake_generate_file);

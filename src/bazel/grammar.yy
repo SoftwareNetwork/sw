@@ -48,7 +48,7 @@ class BazelParserDriver;
 %token L_BRACKET R_BRACKET COMMA QUOTE SEMICOLON COLON POINT
        L_CURLY_BRACKET R_CURLY_BRACKET SHARP R_ARROW EQUAL
        L_SQUARE_BRACKET R_SQUARE_BRACKET
-	   PLUS
+	   PLUS DEF END_OF_DEF
 %token CLASS
 
 %token <std::string> STRING KEYWORD ID
@@ -83,12 +83,19 @@ statement: /*function_call
 	{ $$ = $1; }
 	| */variable_decl
 	{
+        // ?
         $$.name = $1.name;
         $$.parameters.push_back($1);
+        // global vars
+        driver.bazel_file.parameters[$1.name] = $1;
     }
     | expr
 	{ /*$$ = $1;*/ }
+    | function_def
+	{ /*$$ = $1;*/ }
 	;
+
+function_def: DEF function_call COLON exprs END_OF_DEF
 
 function_call: identifier L_BRACKET parameters R_BRACKET
 	{
@@ -135,6 +142,12 @@ variable_decl: identifier EQUAL expr
 	{ $$ = bazel::Parameter{ $1 }; }
 	;
 
+exprs: expr
+	{}
+	| exprs expr
+	{}
+	;
+
 expr: identifier
     {
         bazel::Values v;
@@ -155,6 +168,12 @@ expr: identifier
     }
 	| array
     { $$ = std::move($1); }
+    | expr EQUAL expr
+    {
+        $1.clear();
+        $1.insert($3.begin(), $3.end());
+        $$ = std::move($1);
+    }
 	| expr PLUS expr
     {
         $1.insert($3.begin(), $3.end());
@@ -180,6 +199,10 @@ expr: identifier
         //v.insert("kv_map");
         $$ = v;
     }*/
+    | keyword expr
+	{ /*$$ = $1;*/ }
+    | keyword expr COLON
+	{ /*$$ = $1;*/ }
 	;
 
 tuple: L_BRACKET tuple_values R_BRACKET

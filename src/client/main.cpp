@@ -164,6 +164,39 @@ try
                 return 0;
             }
 
+            if (cmd == "parse-bazel")
+            {
+                void process_bazel(const path &p, const std::string &libname = "cc_library", const std::string &binname = "cc_binary");
+
+                if (args.size() == 2)
+                {
+                    for (auto &f : bazel_filenames)
+                    {
+                        if (fs::exists(f))
+                        {
+                            process_bazel(f);
+                            return 0;
+                        }
+                    }
+                    std::cout << "invalid number of arguments\n";
+                    std::cout << "usage: cppan parse-bazel BUILD.bazel\n";
+                    return 1;
+                }
+                switch (args.size())
+                {
+                case 3:
+                    process_bazel(args[2]);
+                    break;
+                case 4:
+                    process_bazel(args[2], args[3]);
+                    break;
+                case 5:
+                    process_bazel(args[2], args[3], args[4]);
+                    break;
+                }
+                return 0;
+            }
+
             if (cmd == "list")
             {
                 auto &db = getPackagesDatabase();
@@ -684,36 +717,6 @@ optional<int> internal(const Strings &args)
     if (args[1] == "internal-self-upgrade-copy")
     {
         self_upgrade_copy(args[2]);
-        return 0;
-    }
-
-    if (args[1] == "internal-process-cmake-dependencies")
-    {
-        if (args.size() < 3)
-        {
-            std::cout << "invalid number of arguments: " << args.size() << "\n";
-            std::cout << "usage: cppan internal-process-cmake-dependencies deps.txt [out_dir]\n";
-            return 1;
-        }
-
-        if (args.size() == 4)
-        {
-            Settings::get_local_settings().cppan_dir = args[3];
-            Settings::get_local_settings().meta_target_suffix = args[3];
-        }
-
-        auto deps_file = path(args[2]);
-        auto deps = read_lines(deps_file);
-        Config c;
-        for (auto &d : deps)
-        {
-            Package p;
-            PackagesSet pkgs;
-            std::tie(p, pkgs) = resolve_dependency(d);
-            for (auto &pkg : pkgs)
-                c.getDefaultProject().addDependency(pkg);
-        }
-        c.process(deps_file.parent_path());
         return 0;
     }
 

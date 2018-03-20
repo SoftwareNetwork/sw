@@ -232,6 +232,9 @@ public:
     bool cxx_extensions = false;
 
     bool import_from_bazel = false;
+    String bazel_target_function;
+    String bazel_target_name;
+
     bool prefer_binaries = false;
     bool export_all_symbols = false;
     bool export_if_static = false;
@@ -319,3 +322,5 @@ private:
 using Projects = std::map<String, Project>;
 
 void load_source_and_version(const yaml &root, Source &source, Version &version);
+
+inline const auto bazel_filenames = { "BUILD", "BUILD.bazel" };
