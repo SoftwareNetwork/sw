@@ -158,7 +158,7 @@ void process_bazel(const path &p, const std::string &libname = "cc_library", con
     auto b = read_file(p);
     auto file = bazel::parse(b);
     yaml root;
-    auto &projects = root["projects"];
+    auto projects = root["projects"];
     for (auto &f : file.functions)
     {
         enum
@@ -183,7 +183,7 @@ void process_bazel(const path &p, const std::string &libname = "cc_library", con
             continue;
 
         auto pname = prepare_project_name(*i->values.begin());
-        auto &project = projects[pname];
+        auto project = projects[pname];
         if (type == lib)
             project["type"] = "lib";
 
