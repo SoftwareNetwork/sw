@@ -26,7 +26,7 @@ target_link_libraries(myexe
   ...
 )
 ```
-1. Perform other usual CMake steps.
+4. Perform other usual CMake steps.
 
 Report if anything goes wrong with this workflow!
 
