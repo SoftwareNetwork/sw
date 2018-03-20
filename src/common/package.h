@@ -73,6 +73,7 @@ using PackagesMap = std::unordered_map<Package, Package>;
 using PackagesSet = std::unordered_set<Package>;
 
 Package extractFromString(const String &target);
+Package extractFromStringAny(const String &target);
 
 struct CleanTarget
 {

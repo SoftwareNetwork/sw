@@ -129,6 +129,9 @@ public:
 
 String cmake_debug_message(const String &s)
 {
+    if (!Settings::get_local_settings().debug_generated_cmake_configs)
+        return "";
+
     return cmake_debug_message_fun + "(\"" + s + "\")";
 }
 
@@ -184,6 +187,9 @@ void file_header(CMakeContext &ctx, const Package &d, bool root)
     ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_header_filename) + ")");
     ctx.addLine();
 
+    if (!Settings::get_local_settings().debug_generated_cmake_configs)
+        return;
+
     // before header message
     if (!root)
     {
@@ -205,6 +211,9 @@ void file_header(CMakeContext &ctx, const Package &d, bool root)
 
 void file_footer(CMakeContext &ctx, const Package &d)
 {
+    if (!Settings::get_local_settings().debug_generated_cmake_configs)
+        return;
+
     config_section_title(ctx, "footer", true);
     ctx.addLine(cmake_debug_message("Leaving file: ${CMAKE_CURRENT_LIST_FILE}"));
     ctx.addLine();
@@ -775,6 +784,11 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
     ctx.addLine("set(copy_content \"${copy_content} @setlocal\\n\")");
     ctx.endif();
 
+    // we're in helper, set this var to build target
+    if (d.empty())
+        ctx.addLine("set(this " + target + ")");
+    ctx.emptyLines();
+
     ctx.addLine("set(output_dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})");
     ctx.if_("NOT output_dir");
     ctx.addLine("set(output_dir ${CMAKE_BINARY_DIR})");
@@ -913,6 +927,61 @@ add_custom_command(TARGET )" + target + R"( POST_BUILD
 )");
 
     ctx.endif();
+    ctx.addLine();
+
+    // like with build deps
+    for (auto &dp : copy_deps)
+    {
+        auto &p = dp.second;
+
+        // local projects are always built inside solution
+        if (p.flags[pfLocalProject])
+            continue;
+
+        ScopedDependencyCondition sdc(ctx, p);
+        ctx.addLine("get_target_property(imploc_" + p.variable_name + " " + p.target_name + " IMPORTED_LOCATION_${CMAKE_BUILD_TYPE_UPPER})");
+    }
+    ctx.emptyLines();
+
+    bool deps = false;
+    String build_deps_tgt = "${this}";
+    if (d.empty() && target.find("-c") != target.npos)
+    {
+        build_deps_tgt += "-d"; // deps
+        deps = true;
+    }
+    else
+        build_deps_tgt += "-c-d";
+
+    // do not use add_custom_command as it doesn't work
+    // add custom target and add a dependency below
+    // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
+    ctx.addLine("set(bp)");
+    //for (auto &dp : build_deps_all)
+    for (auto &dp : copy_deps)
+    {
+        auto &p = dp.second;
+
+        // local projects are always built inside solution
+        if (p.flags[pfLocalProject])
+            continue;
+
+        ScopedDependencyCondition sdc(ctx, p, false);
+        ctx.addLine("set(bp ${bp} ${imploc_" + p.variable_name + "})");
+    }
+    ctx.emptyLines();
+
+    ctx.increaseIndent("add_custom_target(" + build_deps_tgt);
+    ctx.addLine("COMMAND ${file}");
+    ctx.increaseIndent("BYPRODUCTS ${bp}");
+    ctx.decreaseIndent(")", 2);
+    ctx.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
+    print_solution_folder(ctx, build_deps_tgt, deps ? service_folder : service_deps_folder);
+    //this causes long paths issue
+    //if (deps)
+    //    set_target_properties(ctx, build_deps_tgt, "PROJECT_LABEL", "dependencies");
+    //else
+    //    set_target_properties(ctx, build_deps_tgt, "PROJECT_LABEL", (d.flags[pfLocalProject] ? d.ppath.back() : d.target_name) + "-build-dependencies");
     ctx.addLine();
 }
 
@@ -2953,7 +3022,7 @@ endif()
                                 \"${CMAKE_TOOLCHAIN_FILE}\"
                             )"s;
             ctx.if_("CPPAN_COMMAND");
-            ctx.addLine("cppan_debug_message(\"" + cmd + "\")");
+            cmake_debug_message(cmd);
             ctx.addLine("execute_process(" + cmd + " RESULT_VARIABLE ret)");
             ctx.addLine("check_result_variable(${ret} \"" + cmd + "\")");
             ctx.endif();

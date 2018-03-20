@@ -979,7 +979,9 @@ void Project::load(const yaml &root)
         {
             if (d.IsScalar())
             {
-                dependency.ppath = this->relative_name_to_absolute(d.template as<String>());
+                auto p = extractFromStringAny(d.template as<String>());
+                dependency.ppath = this->relative_name_to_absolute(p.ppath.toString());
+                dependency.version = p.version;
             }
             else if (d.IsMap())
             {

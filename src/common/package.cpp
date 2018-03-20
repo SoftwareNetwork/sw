@@ -149,6 +149,18 @@ Package extractFromString(const String &target)
     return p;
 }
 
+Package extractFromStringAny(const String &target)
+{
+    auto pos = target.rfind('-');
+
+    Package p;
+    p.ppath = target.substr(0, pos);
+    if (pos != target.npos)
+        p.version = target.substr(pos + 1);
+    p.createNames();
+    return p;
+}
+
 void cleanPackages(const String &s, int flags)
 {
     // on source flag remove all

@@ -76,6 +76,7 @@ struct Settings
     // do not check for new cppan version
     bool disable_update_checks = false;
     int max_download_threads = get_max_threads(8);
+    bool debug_generated_cmake_configs = false;
 
     // build settings
     String c_compiler;
