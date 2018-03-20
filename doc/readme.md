@@ -52,7 +52,7 @@ On Linux (Ubuntu and Centos) use ninja.
 Both of clang/gcc works fine.
 Make works only with single job.
 
-Macos tested with defferent setups also gcc/clang/AppleClang/Xcode.
+Macos tested with different setups also gcc/clang/AppleClang/Xcode.
 Xcode and ninja uses multiple jobs.
 Make works only with single job.
 
