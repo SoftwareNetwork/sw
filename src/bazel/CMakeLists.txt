@@ -41,7 +41,7 @@ endif()
 
 add_library(bazel_parser ${parser_src} ${bazel_parser_src})
 target_link_libraries(bazel_parser
-    support
+    common
     pvt.cppan.demo.imageworks.pystring
 )
 set_property(TARGET bazel_parser PROPERTY FOLDER parse)
