@@ -151,7 +151,7 @@ void process_bazel(const path &p, const std::string &libname = "cc_library", con
             //return std::string();
         prepare_project_name(s);
         boost::replace_all(s, ":", "");
-        boost::replace_all(s, "+", "");
+        boost::replace_all(s, "+", "p");
         return s;
     };
 

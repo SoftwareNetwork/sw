@@ -930,6 +930,8 @@ add_custom_command(TARGET )" + target + R"( POST_BUILD
     ctx.addLine();
 
     // like with build deps
+    // only for ninja at the moment
+    ctx.if_("NINJA");
     for (auto &dp : copy_deps)
     {
         auto &p = dp.second;
@@ -982,6 +984,7 @@ add_custom_command(TARGET )" + target + R"( POST_BUILD
     //    set_target_properties(ctx, build_deps_tgt, "PROJECT_LABEL", "dependencies");
     //else
     //    set_target_properties(ctx, build_deps_tgt, "PROJECT_LABEL", (d.flags[pfLocalProject] ? d.ppath.back() : d.target_name) + "-build-dependencies");
+    ctx.endif();
     ctx.addLine();
 }
 
