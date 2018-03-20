@@ -30,6 +30,32 @@ target_link_libraries(myexe
 
 Report if anything goes wrong with this workflow!
 
+## Recommended and tested setups
+
+### Windows
+
+Make sure you are running the latest Visual Studio (2017), CMake.
+
+1. VS2017 - many setups.
+1. VS2017 + CMake + Ninja
+2. Clang-cl (6.0+)
+3. Clang-cl + Ninja
+
+Cygwin poorly tested, slow builds.
+Mingw not tested.
+Both in general should work fine.
+WSL works fine.
+
+### *nix
+
+On Linux (Ubuntu and Centos) use ninja.
+Both of clang/gcc works fine.
+Make works only with single job.
+
+Macos tested with defferent setups also gcc/clang/AppleClang/Xcode.
+Xcode and ninja uses multiple jobs.
+Make works only with single job.
+
 ## More links
 
 - [Getting Started](https://github.com/cppan/cppan/blob/master/doc/getting_started.md) - Running CPPAN client.
