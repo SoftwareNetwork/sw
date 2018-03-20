@@ -37,12 +37,12 @@ Report if anything goes wrong with this workflow!
 Make sure you are running the latest Visual Studio (2017), CMake.
 
 1. VS2017 - many setups.
-1. VS2017 + CMake + Ninja
-2. Clang-cl (6.0+)
-3. Clang-cl + Ninja
+1. VS2017 + CMake + Ninja.
+2. Clang-cl (6.0+).
+3. Clang-cl + Ninja.
 
 Cygwin poorly tested, slow builds.
-Mingw not tested.
+Mingw is not tested.
 Both in general should work fine.
 WSL works fine.
 
