@@ -86,21 +86,25 @@ projects:
                 - pvt.egorpugin.primitives.yaml: master
                 - pvt.cppan.demo.fmt: 4
                 - pvt.cppan.demo.imageworks.pystring: 1
-            win32:
+            #win32:
                 - pvt.cppan.demo.giovannidicanio.winreg: master
 
         options:
             any:
                 definitions:
-                    private:
+                    public:
                         - VERSION_MAJOR=0
                         - VERSION_MINOR=2
                         - VERSION_PATCH=5
+                        - BUILD_NUMBER=0
+                        - CPPAN_VERSION_STRING=${CPPAN_VERSION_STRING}
                     win32:
                         public:
                             - UNICODE
 
         post_sources: |
+            set(CPPAN_VERSION_STRING ${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH})
+
             add_executable(stamp_generator ${SDIR}/src/gen/stamp_gen.cpp)
             set_property(TARGET stamp_generator PROPERTY FOLDER gen)
             set(stamp ${BDIR}/stamp.h.in)
@@ -141,8 +145,8 @@ projects:
 
             ########################################
 
-            find_package(BISON 3.0 REQUIRED)
-            find_package(FLEX REQUIRED)
+            find_package(BISON 3.0)
+            find_package(FLEX)
 
             ########################################
             # bazel_parser
@@ -203,6 +207,7 @@ projects:
             add_dependencies(${this} gen_stamp gen_inserts)
 
     cppan:
+        rc_enabled: false
         files:
             - src/client/.*
 

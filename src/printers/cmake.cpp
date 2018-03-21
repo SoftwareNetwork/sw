@@ -612,10 +612,17 @@ void CMakePrinter::print_build_dependencies(CMakeContext &ctx, const String &tar
 if (WIN32)
     set(ext bat)
 endif()
+)");
+        local.emptyLines();
 
-set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})
+        if (d.empty())
+            local.addLine("set(file ${BDIR}/cppan_build_deps_$<CONFIG>.${ext})");
+        else
+            // FIXME: this is probably incorrect
+            local.addLine("set(file ${BDIR}/cppan_build_deps_" + d.target_name_hash + "_$<CONFIG>.${ext})");
+        local.emptyLines();
 
-#if (NOT CPPAN_BUILD_LEVEL)
+        local.addLine(R"(#if (NOT CPPAN_BUILD_LEVEL)
     #set(CPPAN_BUILD_LEVEL 0)
 #else()
     #math(EXPR CPPAN_BUILD_LEVEL "${CPPAN_BUILD_LEVEL} + 1")
@@ -778,7 +785,9 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
     ctx.if_("WIN32");
     ctx.addLine("set(ext bat)");
     ctx.endif();
+    ctx.emptyLines();
     ctx.addLine("set(file ${BDIR}/cppan_copy_deps_$<CONFIG>.${ext})");
+    ctx.emptyLines();
     ctx.addLine("set(copy_content)");
     ctx.if_("WIN32");
     ctx.addLine("set(copy_content \"${copy_content} @setlocal\\n\")");
@@ -1719,12 +1728,14 @@ void CMakePrinter::print_src_config_file(const path &fn) const
         exclude_files(p.exclude_from_build);
 
         // exclude main CMakeLists.txt, it is added automatically
+        ctx.if_("src");
         ctx.addLine("list(FILTER src EXCLUDE REGEX \".*" + cmake_config_filename + "\")");
         // add CMakeLists.txt from object dir
         if (!p.pkg.flags[pfLocalProject])
             ctx.addLine("set(src ${src} \"" + normalize_path(d.getDirObj() / cmake_config_filename) + "\")");
         else
             ctx.addLine("set(src ${src} \"" + normalize_path(d.getDirSrc() / cmake_config_filename) + "\")");
+        ctx.endif();
     }
 
     print_bs_insertion(ctx, p, "post sources", &BuildSystemConfigInsertions::post_sources);

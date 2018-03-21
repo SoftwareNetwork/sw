@@ -98,7 +98,8 @@ Values File::getFiles(const Name &name, const std::string &bazel_target_function
         {
             return "name" == p.name;
         });
-        if (i == f.parameters.end() || i->values.empty() || prepare_project_name(*i->values.begin()) != name)
+        if (i == f.parameters.end() || i->values.empty() ||
+            (prepare_project_name(*i->values.begin()) != name && *i->values.begin() != name))
             continue;
 
         for (auto &n : { "hdrs", "public_hdrs" })
@@ -127,7 +128,15 @@ Values File::getFiles(const Name &name, const std::string &bazel_target_function
         });
         if (i != f.parameters.end())
         {
-            values.insert(i->values.begin(), i->values.end());
+            // check if we has a variable
+            for (auto &v : i->values)
+            {
+                auto p = parameters.find(v);
+                if (p != parameters.end())
+                    values.insert(p->second.values.begin(), p->second.values.end());
+                else
+                    values.insert(i->values.begin(), i->values.end());
+            }
         }
     }
     return values;
@@ -191,17 +200,20 @@ void process_bazel(const path &p, const std::string &libname = "cc_library", con
         project["bazel_target_name"] = *i->values.begin();
         project["bazel_target_function"] = type == lib ? libname : binname;
 
-        i = std::find_if(f.parameters.begin(), f.parameters.end(), [](const auto &p)
+        for (auto &n : { "deps", "external_deps" })
         {
-            return "deps" == p.name;
-        });
-        if (!(i == f.parameters.end() || i->values.empty()))
-        {
-            for (auto &d : i->values)
+            i = std::find_if(f.parameters.begin(), f.parameters.end(), [&n](const auto &p)
             {
-                auto d2 = prepare_dep_name(d);
-                if (!d2.empty())
-                    project["dependencies"].push_back(d2);
+                return n == p.name;
+            });
+            if (!(i == f.parameters.end() || i->values.empty()))
+            {
+                for (auto &d : i->values)
+                {
+                    auto d2 = prepare_dep_name(d);
+                    if (!d2.empty())
+                        project["dependencies"].push_back(d2);
+                }
             }
         }
     }

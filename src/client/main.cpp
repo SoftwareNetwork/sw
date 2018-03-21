@@ -278,7 +278,6 @@ try
 
     httpSettings.verbose = options["curl-verbose"].as<bool>();
     httpSettings.ignore_ssl_checks = options["ignore-ssl-checks"].as<bool>();
-    httpSettings.proxy = Settings::get_local_settings().proxy;
 
     // always first
     if (!r || options().count("help"))
@@ -580,6 +579,9 @@ void load_current_config()
     {
         // ignore everything
     }
+
+	// load proxy settings early
+	httpSettings.proxy = Settings::get_local_settings().proxy;
 }
 
 void self_upgrade()

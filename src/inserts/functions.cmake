@@ -103,8 +103,10 @@ endfunction(add_src_dir)
 ########################################
 
 function(remove_src var)
-    list(REMOVE_ITEM src ${SDIR}/${var})
-    set(src ${src} PARENT_SCOPE)
+    if (src)
+        list(REMOVE_ITEM src ${SDIR}/${var})
+        set(src ${src} PARENT_SCOPE)
+    endif()
 endfunction(remove_src)
 
 ########################################
@@ -112,7 +114,7 @@ endfunction(remove_src)
 ########################################
 
 function(remove_src_win32 var)
-    if (WIN32)
+    if (WIN32 AND src)
         list(REMOVE_ITEM src ${SDIR}/${var})
         set(src ${src} PARENT_SCOPE)
     endif()
@@ -123,7 +125,7 @@ endfunction(remove_src_win32)
 ########################################
 
 function(remove_src_unix var)
-    if (UNIX)
+    if (UNIX AND src)
         list(REMOVE_ITEM src ${SDIR}/${var})
         set(src ${src} PARENT_SCOPE)
     endif()
@@ -135,10 +137,10 @@ endfunction(remove_src_unix)
 
 function(remove_src_dir var)
     file(GLOB_RECURSE rm ${SDIR}/${var})
-    if (rm)
+    if (rm AND src)
         list(REMOVE_ITEM src ${rm})
+        set(src ${src} PARENT_SCOPE)
     endif()
-    set(src ${src} PARENT_SCOPE)
 endfunction(remove_src_dir)
 
 ########################################
