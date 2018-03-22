@@ -204,6 +204,7 @@ projects:
 
         post_target: |
             target_include_directories(${this} PRIVATE ${BDIR}/src)
+            target_sources(${this} PUBLIC ${SDIR}/src/common/cppan.natvis)
             add_dependencies(${this} gen_stamp gen_inserts)
 
     cppan:
