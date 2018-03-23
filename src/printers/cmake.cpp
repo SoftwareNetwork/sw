@@ -1221,7 +1221,8 @@ int CMakePrinter::generate(const BuildSettings &bs) const
     }
     c.args.push_back("-DCMAKE_BUILD_TYPE=" + s.configuration);
     c.args.push_back("-DCPPAN_COMMAND=" + normalize_path(get_program()));
-    c.args.push_back("-DCPPAN_CMAKE_VERBOSE="s + (s.cmake_verbose ? "1" : "0"));
+    if (s.debug_generated_cmake_configs)
+        c.args.push_back("-DCPPAN_CMAKE_VERBOSE="s + (s.cmake_verbose ? "1" : "0"));
     c.args.push_back("-DCPPAN_BUILD_VERBOSE="s + (s.build_system_verbose ? "1" : "0"));
     c.args.push_back("-DCPPAN_BUILD_WARNING_LEVEL="s + std::to_string(s.build_warning_level));
     //c.args.push_back("-DCPPAN_TEST_RUN="s + (bs.test_run ? "1" : "0"));
@@ -3027,6 +3028,7 @@ endif()
             ctx.addLine("execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_BINARY_DIR}/CMakeFiles ${tmp_dir}/CMakeFiles/ RESULT_VARIABLE ret)");
             auto cmd = R"(COMMAND ${CPPAN_COMMAND}
                             internal-parallel-vars-check
+                                \"${CMAKE_COMMAND}\"
                                 \"${tmp_dir}\"
                                 \"${vars_file}\"
                                 \"${checks_file}\"
@@ -3185,7 +3187,7 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
 
         // run cmake
         primitives::Command c;
-        c.args.push_back("cmake");
+        c.args.push_back(o.cmake_binary.string());
         c.args.push_back("-H" + normalize_path(d));
         c.args.push_back("-B" + normalize_path(d));
         c.args.push_back("-G");
@@ -3254,6 +3256,7 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
         // commited as it occurs always check cmake error or cmake normal exit has this value
         if ((c.exit_code && c.exit_code.value()) || !c.exit_code || ec)
         {
+            w.valid = false;
             String s;
             s += "-- Thread #" + std::to_string(i) + ": error during evaluating variables";
             if (ec)
@@ -3286,8 +3289,10 @@ void CMakePrinter::parallel_vars_check(const ParallelCheckOptions &o) const
             f.get();
     });
 
+    checks.checks.clear();
     for (auto &w : workers)
-        checks += w;
+        if (w.valid)
+            checks += w;
 
     checks.print_values();
     //LOG_FLUSH();

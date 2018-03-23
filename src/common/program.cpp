@@ -79,7 +79,7 @@ path get_program()
 
 String get_cmake_version()
 {
-    static const auto err = "Cannot get cmake version";
+    static const auto err = "Cannot get cmake version. Do you have cmake added to PATH?";
     static const std::regex r("cmake version (\\S+)");
 
     primitives::Command c;

@@ -580,8 +580,8 @@ void load_current_config()
         // ignore everything
     }
 
-	// load proxy settings early
-	httpSettings.proxy = Settings::get_local_settings().proxy;
+    // load proxy settings early
+    httpSettings.proxy = Settings::get_local_settings().proxy;
 }
 
 void self_upgrade()
@@ -691,10 +691,10 @@ optional<int> internal(const Strings &args)
 
     if (args[1] == "internal-parallel-vars-check")
     {
-        if (args.size() < 6)
+        if (args.size() < 7)
         {
             std::cout << "invalid number of arguments: " << args.size() << "\n";
-            std::cout << "usage: cppan internal-parallel-vars-check vars_dir vars_file checks_file generator system_version toolset toolchain\n";
+            std::cout << "usage: cppan internal-parallel-vars-check cmake_binary vars_dir vars_file checks_file generator system_version toolset toolchain\n";
             return 1;
         }
 
@@ -702,6 +702,7 @@ optional<int> internal(const Strings &args)
 
 #define ASSIGN_ARG(x) if (a < args.size()) o.x = trim_double_quotes(args[a++])
         ParallelCheckOptions o;
+        ASSIGN_ARG(cmake_binary);
         ASSIGN_ARG(dir);
         ASSIGN_ARG(vars_file);
         ASSIGN_ARG(checks_file);
