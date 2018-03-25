@@ -252,7 +252,7 @@ void load_source_and_version(const yaml &root, Source &source, Version &version)
         version = Version(ver);
     if (load_source(root, source) && source.index() == 0)
     {
-        auto &git = std::get<Git>(source);
+        auto &git = get<Git>(source);
         if (ver.empty())
         {
             if (git.branch.empty() && git.tag.empty())
@@ -296,7 +296,7 @@ void load_source_and_version(const yaml &root, Source &source, Version &version)
     }
     else if (load_source(root, source) && source.index() == 1)
     {
-        auto &hg = std::get<Hg>(source);
+        auto &hg = get<Hg>(source);
         if (ver.empty())
         {
             if (hg.branch.empty() && hg.tag.empty() && hg.revision == -1)
@@ -352,7 +352,7 @@ void load_source_and_version(const yaml &root, Source &source, Version &version)
     }
     else if (load_source(root, source) && source.index() == 2)
     {
-        auto &bzr = std::get<Bzr>(source);
+        auto &bzr = get<Bzr>(source);
         if (ver.empty())
         {
             if (bzr.tag.empty() && bzr.revision == -1)
@@ -393,7 +393,7 @@ void load_source_and_version(const yaml &root, Source &source, Version &version)
     }
     else if (load_source(root, source) && source.index() == 3)
     {
-        auto &fossil = std::get<Fossil>(source);
+        auto &fossil = get<Fossil>(source);
         if (ver.empty())
         {
             if (fossil.branch.empty() && fossil.tag.empty())

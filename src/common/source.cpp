@@ -605,12 +605,12 @@ void RemoteFiles::applyVersion(const Version &v)
 
 void download(const Source &source, int64_t max_file_size)
 {
-    std::visit([](auto &v) { v.download(); }, source);
+    visit([](auto &v) { v.download(); }, source);
 }
 
 bool isValidSourceUrl(const Source &source)
 {
-    return std::visit([](auto &v) { return v.isValidUrl(); }, source);
+    return visit([](auto &v) { return v.isValidUrl(); }, source);
 }
 
 bool load_source(const yaml &root, Source &source)
@@ -647,7 +647,7 @@ bool load_source(const yaml &root, Source &source)
 void save_source(yaml &root, const Source &source)
 {
     // do not remove 'r' var, it creates 'source' key
-    std::visit([&root](auto &v) { auto r = root["source"]; v.save(r); }, source);
+    visit([&root](auto &v) { auto r = root["source"]; v.save(r); }, source);
 }
 
 Source load_source(const ptree &p)
@@ -666,7 +666,7 @@ Source load_source(const ptree &p)
 
 void save_source(ptree &p, const Source &source)
 {
-    return std::visit([&p](auto &v)
+    return visit([&p](auto &v)
     {
         ptree p2;
         v.save(p2);
@@ -676,15 +676,15 @@ void save_source(ptree &p, const Source &source)
 
 String print_source(const Source &source)
 {
-    return std::visit([](auto &v) { return v.getString() + ":\n" + v.print(); }, source);
+    return visit([](auto &v) { return v.getString() + ":\n" + v.print(); }, source);
 }
 
 String print_source_cpp(const Source &source)
 {
-    return std::visit([](auto &v) { return v.printCpp(); }, source);
+    return visit([](auto &v) { return v.printCpp(); }, source);
 }
 
 void applyVersionToUrl(Source &source, const Version &v)
 {
-    std::visit([&v](auto &s) { s.applyVersion(v); }, source);
+    visit([&v](auto &s) { s.applyVersion(v); }, source);
 }

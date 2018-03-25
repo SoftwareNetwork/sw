@@ -21,7 +21,7 @@
 #include "property_tree.h"
 #include "version.h"
 
-#include <variant>
+#include <primitives/stdcompat/variant.h>
 
 #include <set>
 
@@ -196,7 +196,7 @@ struct RemoteFiles
 #define DELIM_COMMA ,
 #define DELIM_SEMICOLON ;
 #define SOURCE_TYPES_EMPTY(x) x
-using Source = std::variant<SOURCE_TYPES(SOURCE_TYPES_EMPTY, DELIM_COMMA)>;
+using Source = variant<SOURCE_TYPES(SOURCE_TYPES_EMPTY, DELIM_COMMA)>;
 #undef SOURCE_TYPES_EMPTY
 
 void download(const Source &source, int64_t max_file_size = 0);
