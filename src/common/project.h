@@ -23,7 +23,7 @@
 #include "source.h"
 #include "yaml.h"
 
-#include <primitives/stdcompat.h>
+#include <primitives/stdcompat/optional.h>
 
 #include <unordered_map>
 
