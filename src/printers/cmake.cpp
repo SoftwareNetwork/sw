@@ -2029,15 +2029,10 @@ endif()
     {
         if (!d.flags[pfLocalProject])
             print_solution_folder(ctx, "${this}", path(packages_folder) / d.ppath.toString() / d.version.toString());
-        else if (d.ppath.back().find('.') != -1)
+        else if (d.ppath.size() > 4)
         {
-            auto f = d.ppath.back();
-            auto p = f.rfind('.');
-            auto l = f.substr(p + 1);
-            f = f.substr(0, p);
-            std::replace(f.begin(), f.end(), '.', '/');
-            print_solution_folder(ctx, "${this}", f);
-            set_target_properties(ctx, "PROJECT_LABEL", l);
+            print_solution_folder(ctx, "${this}", d.ppath.slice(3, d.ppath.size() - 1).toString("/"));
+            set_target_properties(ctx, "PROJECT_LABEL", d.ppath.back());
         }
         ctx.emptyLines();
     }
