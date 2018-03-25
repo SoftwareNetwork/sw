@@ -77,6 +77,7 @@ struct Settings
     bool disable_update_checks = false;
     int max_download_threads = get_max_threads(8);
     bool debug_generated_cmake_configs = false;
+    bool install_local_packages = false;
 
     // build settings
     String c_compiler;

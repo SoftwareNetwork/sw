@@ -804,7 +804,8 @@ ProjectPath Project::relative_name_to_absolute(const String &name)
             return ld.value();
         if (allow_relative_project_names)
         {
-            ppath.push_back(name);
+            //ppath.push_back(name);
+            ppath = name;
             return ppath;
         }
         if (root_project.empty())

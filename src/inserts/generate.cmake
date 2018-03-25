@@ -191,8 +191,8 @@ if (NOT EXISTS ${import} OR
                         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
                         -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                         -G \"${generator}\"
-                        -DVARIABLES_FILE=${variables_file}"
-                        ${sysver}
+                        -DVARIABLES_FILE=${variables_file}
+                        ${sysver}"
                 )
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}
@@ -210,8 +210,8 @@ if (NOT EXISTS ${import} OR
                         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                         -G \"${generator}\"
-                        -DVARIABLES_FILE=${variables_file}"
-                        ${sysver}
+                        -DVARIABLES_FILE=${variables_file}
+                        ${sysver}"
                 )
                 execute_process(
                     COMMAND ${CMAKE_COMMAND}

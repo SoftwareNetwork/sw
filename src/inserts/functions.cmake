@@ -486,7 +486,7 @@ function(add_variable array variable)
             list(REMOVE_AT ${array}_VALUES ${found})
             list(INSERT ${array}_VALUES ${found} "${${variable}}")
             #message(STATUS "New array: ${${array}_VALUES}")
-            set(${array}_VALUES ${${array}_VALUES} PARENT_SCOPE)
+            set(${array}_VALUES ${${array}_VALUES} CACHE STRING "Chached array." FORCE)
         endif()
 
         return()
@@ -500,9 +500,9 @@ function(add_variable array variable)
         list(APPEND ${array}_VALUES "${${variable}}")
     endif()
 
-    set(${array}_TYPES ${${array}_TYPES} PARENT_SCOPE)
-    set(${array}_KEYS ${${array}_KEYS} PARENT_SCOPE)
-    set(${array}_VALUES ${${array}_VALUES} PARENT_SCOPE)
+    set(${array}_TYPES ${${array}_TYPES} CACHE STRING "Chached array." FORCE)
+    set(${array}_KEYS ${${array}_KEYS} CACHE STRING "Chached array." FORCE)
+    set(${array}_VALUES ${${array}_VALUES} CACHE STRING "Chached array." FORCE)
 endfunction(add_variable)
 
 ########################################
@@ -510,13 +510,9 @@ endfunction(add_variable)
 ########################################
 
 function(clear_variables array)
-    set(${array}_TYPES)
-    set(${array}_KEYS)
-    set(${array}_VALUES)
-
-    set(${array}_TYPES ${${array}_TYPES} PARENT_SCOPE)
-    set(${array}_KEYS ${${array}_KEYS} PARENT_SCOPE)
-    set(${array}_VALUES ${${array}_VALUES} PARENT_SCOPE)
+    unset(${array}_TYPES CACHE)
+    unset(${array}_KEYS CACHE)
+    unset(${array}_VALUES CACHE)
 endfunction(clear_variables)
 
 ########################################
@@ -557,9 +553,9 @@ function(read_variables_file array f)
         add_variable(${array} ${k})
     endforeach()
 
-    set(${array}_TYPES ${${array}_TYPES} PARENT_SCOPE)
-    set(${array}_KEYS ${${array}_KEYS} PARENT_SCOPE)
-    set(${array}_VALUES ${${array}_VALUES} PARENT_SCOPE)
+    set(${array}_TYPES ${${array}_TYPES} CACHE STRING "Chached array." FORCE)
+    set(${array}_KEYS ${${array}_KEYS} CACHE STRING "Chached array." FORCE)
+    set(${array}_VALUES ${${array}_VALUES} CACHE STRING "Chached array." FORCE)
 endfunction(read_variables_file)
 
 ########################################
@@ -597,11 +593,6 @@ endfunction(write_variables_file)
 
 function(add_check_variable v)
     add_variable(CPPAN_VARIABLES ${v})
-
-    set(CPPAN_VARIABLES_TYPES ${CPPAN_VARIABLES_TYPES} PARENT_SCOPE)
-    set(CPPAN_VARIABLES_KEYS ${CPPAN_VARIABLES_KEYS} PARENT_SCOPE)
-    set(CPPAN_VARIABLES_VALUES ${CPPAN_VARIABLES_VALUES} PARENT_SCOPE)
-
     set(CPPAN_NEW_VARIABLE_ADDED 1 PARENT_SCOPE)
 endfunction(add_check_variable)
 
@@ -610,16 +601,7 @@ endfunction(add_check_variable)
 ########################################
 
 function(read_check_variables_file f)
-    #if (NOT EXISTS ${f})
-        #message(STATUS "Check variables file does not exist: ${f}")
-        #return()
-    #endif()
-
     read_variables_file(CPPAN_VARIABLES ${f})
-
-    set(CPPAN_VARIABLES_TYPES ${CPPAN_VARIABLES_TYPES} PARENT_SCOPE)
-    set(CPPAN_VARIABLES_KEYS ${CPPAN_VARIABLES_KEYS} PARENT_SCOPE)
-    set(CPPAN_VARIABLES_VALUES ${CPPAN_VARIABLES_VALUES} PARENT_SCOPE)
 endfunction(read_check_variables_file)
 
 ########################################
@@ -945,6 +927,31 @@ endfunction()
 
 function(set_cache_var variable value)
     set(${variable} ${value} CACHE STRING "" FORCE)
+endfunction()
+
+########################################
+# FUNCTION clear_once_variables
+########################################
+
+function(clear_once_variables)
+    #message(STATUS "clear_once_variables - ${CPPAN_ONCE_VARIABLES}")
+    if (NOT CPPAN_ONCE_VARIABLES)
+        return()
+    endif()
+
+    foreach(v ${CPPAN_ONCE_VARIABLES})
+        #message(STATUS "unsetting ${v}")
+        unset(${v} CACHE)
+    endforeach()
+endfunction()
+
+########################################
+# FUNCTION set_once_var
+########################################
+
+function(set_once_var variable)
+    set_cache_var(${variable} 1)
+    set(CPPAN_ONCE_VARIABLES ${CPPAN_ONCE_VARIABLES} ${variable} CACHE STRING "" FORCE)
 endfunction()
 
 ################################################################################

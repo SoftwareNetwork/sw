@@ -116,7 +116,7 @@ endif()
 
 ################################################################################
 #
-# build
+# dependencies
 #
 ################################################################################
 
@@ -126,7 +126,41 @@ endif()
 if (NOT WIN32)
     set(CPPAN_USE_CACHE 1)
 endif()
-add_subdirectory(.cppan)
+
+find_package(CPPAN REQUIRED)
+cppan_add_package(
+        pvt.cppan.demo.boost.program_options-1
+        pvt.cppan.demo.boost.property_tree-1
+        pvt.cppan.demo.boost.stacktrace-1
+        pvt.cppan.demo.sqlite3-3
+        pvt.cppan.demo.yhirose.cpp_linenoise-master
+        pvt.cppan.demo.fmt-4
+
+        pvt.egorpugin.primitives.command-master
+        pvt.egorpugin.primitives.string-master
+        pvt.egorpugin.primitives.filesystem-master
+        pvt.egorpugin.primitives.context-master
+        pvt.egorpugin.primitives.date_time-master
+        pvt.egorpugin.primitives.executor-master
+        pvt.egorpugin.primitives.hash-master
+        pvt.egorpugin.primitives.http-master
+        pvt.egorpugin.primitives.lock-master
+        pvt.egorpugin.primitives.log-master
+        pvt.egorpugin.primitives.pack-master
+        pvt.egorpugin.primitives.yaml-master
+
+        pvt.cppan.demo.imageworks.pystring-1
+        pvt.cppan.demo.giovannidicanio.winreg-master
+
+        pvt.cppan.demo.philsquared.catch-1
+)
+cppan_execute()
+
+################################################################################
+#
+# build
+#
+################################################################################
 
 add_subdirectory(src)
 

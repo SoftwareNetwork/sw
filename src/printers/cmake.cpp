@@ -2447,6 +2447,8 @@ void CMakePrinter::print_obj_config_file(const path &fn) const
         config_section_title(ctx, "macros & functions");
         ctx.addLine("include(" + normalize_path(directories.get_static_files_dir() / cmake_functions_filename) + ")");
         ctx.addLine();
+        ctx.addLine("clear_once_variables()");
+        ctx.addLine();
         //if (!d.flags[pfLocalProject])
         {
             config_section_title(ctx, "read passed variables");
@@ -2749,6 +2751,8 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     print_sdir_bdir(ctx, d);
 
     config_section_title(ctx, "variables");
+    ctx.addLine("clear_once_variables()");
+    ctx.addLine();
     ctx.addLine("set(CPPAN_BUILD 1 CACHE STRING \"CPPAN is turned on\")");
     ctx.addLine();
     print_storage_dirs(ctx);
@@ -2869,6 +2873,29 @@ add_dependencies()" + old_cppan_target + R"( run-cppan)
                 ScopedDependencyCondition sdc(ctx, dep.second);
                 ctx.addLine("set_target_properties(" + dep.second.target_name_hash + " PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CPPAN_BUILD_OUTPUT_DIR})");
             }
+        }
+
+        // install deps
+        config_section_title(ctx, "install");
+        Packages copy_deps;
+        gather_copy_deps(rd[d].dependencies, copy_deps);
+        for (auto &dp : copy_deps)
+        {
+            auto &p = dp.second;
+
+            if (p.flags[pfExecutable])
+                continue;
+
+            ScopedDependencyCondition sdc(ctx, p);
+
+            ctx.addLine("get_target_property(type " + p.target_name + " TYPE)");
+            ctx.if_("\"${type}\" STREQUAL STATIC_LIBRARY");
+            ctx.addLine("install(FILES $<TARGET_FILE:" + p.target_name + "> DESTINATION lib)");
+            ctx.else_();
+            ctx.addLine("install(FILES $<TARGET_FILE:" + p.target_name + "> DESTINATION bin)");
+            ctx.addLine("install(FILES $<TARGET_LINKER_FILE:" + p.target_name + "> DESTINATION lib)");
+            ctx.endif();
+            ctx.emptyLines();
         }
     }
 
@@ -2998,8 +3025,15 @@ endif()
         ctx.addLine("set(vars_file \"${vars_dir}/${config}.cmake\")");
         // helper will show match between config with gen and just config
         ctx.addLine("set(vars_file_helper \"${vars_dir}//${config}.${config_dir}.cmake\")");
-        if (!d.flags[pfLocalProject])
+        // conditions actually are needed anymore with protection of once vars
+        if (!d.flags[pfLocalProject] || Settings::get_local_settings().install_local_packages)
+        {
+            ctx.if_("NOT CPPAN_READ_CHECK_VARS_FILE_ONCE");
+            //ctx.addLine("message(STATUS \"reading vars from ${vars_file}\")");
+            ctx.addLine("set_once_var(CPPAN_READ_CHECK_VARS_FILE_ONCE)");
             ctx.addLine("read_check_variables_file(${vars_file})");
+            ctx.endif();
+        }
         ctx.addLine();
 
         ctx.if_("NOT DEFINED WORDS_BIGENDIAN");
@@ -3056,11 +3090,15 @@ endif()
         p.checks.write_checks(ctx, p.checks_prefixes);
 
         // write vars file
-        if (!d.flags[pfLocalProject])
+        // conditions actually are needed anymore with protection of once vars
+        if (!d.flags[pfLocalProject] || Settings::get_local_settings().install_local_packages)
         {
             ctx.if_("CPPAN_NEW_VARIABLE_ADDED");
+            //ctx.addLine("message(STATUS \"writing vars to ${vars_file}\")");
             ctx.addLine("write_check_variables_file(${vars_file})");
             ctx.addLine("file(WRITE ${vars_file_helper} \"\")");
+            ctx.addLine("set(CPPAN_NEW_VARIABLE_ADDED 0)");
+            //ctx.addLine("message(STATUS \"end of writing vars to ${vars_file}\")");
             ctx.endif();
         }
 
