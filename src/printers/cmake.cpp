@@ -1385,7 +1385,9 @@ void CMakePrinter::print_meta() const
     icon.SetStringValue(L"", directories.get_static_files_dir().wstring().c_str());
     access_table->write_if_older(directories.get_static_files_dir() / cppan_cmake_config_filename, cppan_cmake_config);
 #else
-    access_table->write_if_older(get_home_directory() / ".cmake" / "packages" / cppan_cmake_config_filename, cppan_cmake_config);
+    auto cppan_cmake_dir = get_home_directory() / ".cmake" / "packages";
+    access_table->write_if_older(cppan_cmake_dir / "CPPAN" / "1", cppan_cmake_dir.string());
+    access_table->write_if_older(cppan_cmake_dir / cppan_cmake_config_filename, cppan_cmake_config);
 #endif
 
     access_table->write_if_older(directories.get_static_files_dir() / cmake_header_filename, cmake_header);
