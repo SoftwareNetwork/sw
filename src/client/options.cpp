@@ -36,6 +36,7 @@ ProgramOptions::ProgramOptions()
 
         (SERVER_QUERY ",s", po::bool_switch(), "force query server")
 
+        ("fetch", po::bool_switch(), "fetch current source")
         ("verify", po::value<std::string>(), "verify package")
 
         ("config", po::value<std::string>()->default_value(""), "config name for building")

@@ -378,6 +378,16 @@ try
         return 0;
     }
 
+    if (options().count("fetch"))
+    {
+        Config c;
+        c.allow_relative_project_names = true;
+        c.reload(".");
+        download(c.getDefaultProject().source);
+        LOG_INFO(logger, "Fetched...  Ok.");
+        return 0;
+    }
+
     auto generate = options().count("generate");
     if (options().count("build") || generate)
     {
