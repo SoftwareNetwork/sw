@@ -378,7 +378,7 @@ try
         return 0;
     }
 
-    if (options().count("fetch"))
+    if (options()["fetch"].as<bool>())
     {
         Config c;
         c.allow_relative_project_names = true;

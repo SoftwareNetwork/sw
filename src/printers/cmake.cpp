@@ -656,7 +656,8 @@ endif()
 #endif
             local.addText("\\\"${CMAKE_COMMAND}\\\" ");
             //local.addText("-DCPPAN_BUILD_LEVEL=${CPPAN_BUILD_LEVEL} ");
-            local.addText("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + "> ");
+            //local.addText("-DTARGET_VAR=" + p.variable_name + " "); // remove!
+            //local.addText("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + "> ");
             local.addText("-DCONFIG=$<CONFIG> ");
             local.addText("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "} ");
             local.addText("-DEXECUTABLE="s + (p.flags[pfExecutable] ? "1" : "0") + " ");
@@ -2297,6 +2298,24 @@ else())");
     // definitions
     config_section_title(ctx, "definitions");
     p.checks.write_definitions(ctx, d, p.checks_prefixes);
+
+    // target info file, before deps
+    config_section_title(ctx, "target information");
+    if (!d.flags[pfHeaderOnly])
+    {
+        ctx.emptyLines();
+        //String var = "CPPAN_CREATE_TARGET_INFO_ONCE_" + d.variable_name;
+        //ctx.if_("NOT " + var);
+        //ctx.addLine("set_once_var(" + var + ")");
+        //ctx.addLine("message(STATUS \"3 - ${" + var + "}\")");
+        //ctx.increaseIndent("file(GENERATE OUTPUT ${BDIR}/cppan_target_info_$<CONFIG>.cmake CONTENT \"");
+        //ctx.addLine("set(TARGET_FILE $<TARGET_FILE:${this}> PARENT_SCOPE)");
+        //ctx.decreaseIndent("\")");
+        ctx.increaseIndent("add_custom_command(TARGET ${this} POST_BUILD");
+        ctx.addLine("COMMAND echo set(TARGET_FILE $<TARGET_FILE:${this}> PARENT_SCOPE) > " + normalize_path(d.getDirObj()) + "/build/${config_dir}/cppan_target_info_$<CONFIG>.cmake");
+        ctx.decreaseIndent(")");
+        //ctx.endif();
+    }
 
     // build deps
     print_build_dependencies(ctx, "${this}");

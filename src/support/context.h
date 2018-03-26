@@ -28,4 +28,9 @@ public:
     void endif();
 
     // set()
+
+    // TODO: add
+    //  beginOnce();
+    //  endOnce()
+    // based on ${CMAKE_CURRENT_LIST_FILE} ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_LINE}
 };
