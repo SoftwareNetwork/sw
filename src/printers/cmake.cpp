@@ -2322,7 +2322,7 @@ else())");
         //ctx.addLine("set(TARGET_FILE $<TARGET_FILE:${this}> PARENT_SCOPE)");
         //ctx.decreaseIndent("\")");
         ctx.increaseIndent("add_custom_command(TARGET ${this} PRE_BUILD");
-        ctx.addLine("COMMAND ${CMAKE_COMMAND} -E make_directory " + normalize_path(d.getDirObj()) + "/build/${config_dir}/cppan_target_info_$<CONFIG>.cmake");
+        ctx.addLine("COMMAND ${CMAKE_COMMAND} -E make_directory " + normalize_path(d.getDirObj()) + "/build/${config_dir}");
         auto q = ""s;
 #ifndef _WIN32
         q = "'"s;
