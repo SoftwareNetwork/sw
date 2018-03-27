@@ -2321,7 +2321,8 @@ else())");
         //ctx.increaseIndent("file(GENERATE OUTPUT ${BDIR}/cppan_target_info_$<CONFIG>.cmake CONTENT \"");
         //ctx.addLine("set(TARGET_FILE $<TARGET_FILE:${this}> PARENT_SCOPE)");
         //ctx.decreaseIndent("\")");
-        ctx.increaseIndent("add_custom_command(TARGET ${this} POST_BUILD");
+        ctx.increaseIndent("add_custom_command(TARGET ${this} PRE_BUILD");
+        ctx.addLine("COMMAND ${CMAKE_COMMAND} -E make_directory " + normalize_path(d.getDirObj()) + "/build/${config_dir}/cppan_target_info_$<CONFIG>.cmake");
         auto q = ""s;
 #ifndef _WIN32
         q = "'"s;
@@ -2331,6 +2332,9 @@ else())");
         ctx.addLine("COMMAND echo " + q + "set(TARGET_FILE $<TARGET_FILE:${this}> ) " + q + " > " + normalize_path(d.getDirObj()) + "/build/${config_dir}/cppan_target_info_$<CONFIG>.cmake");
         ctx.decreaseIndent(")");
         //ctx.endif();
+        ctx.increaseIndent("add_custom_command(TARGET ${this} PRE_BUILD");
+        ctx.addLine("COMMAND echo set(TARGET_FILE $<TARGET_FILE:${this}>) > " + normalize_path(d.getDirObj()) + "/build/${config_dir}/cppan_target_info_$<CONFIG>.cmake");
+
     }
 
     // build deps
