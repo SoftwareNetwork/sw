@@ -957,65 +957,67 @@ add_custom_command(TARGET )" + target + R"( POST_BUILD
 )
 )");
 
-    ctx.endif();
-    ctx.addLine();
-
-    // like with build deps
-    // only for ninja at the moment
-    ctx.if_("NINJA");
-    for (auto &dp : copy_deps)
     {
-        auto &p = dp.second;
+        // like with build deps
+        // only for ninja at the moment
+        ctx.if_("NINJA");
+        for (auto &dp : copy_deps)
+        {
+            auto &p = dp.second;
 
-        // local projects are always built inside solution
-        if (p.flags[pfLocalProject])
-            continue;
+            // local projects are always built inside solution
+            if (p.flags[pfLocalProject])
+                continue;
 
-        ScopedDependencyCondition sdc(ctx, p);
-        ctx.addLine("get_target_property(imploc_" + p.variable_name + " " + p.target_name + " IMPORTED_LOCATION_${CMAKE_BUILD_TYPE_UPPER})");
+            ScopedDependencyCondition sdc(ctx, p);
+            ctx.addLine("get_target_property(imploc_" + p.variable_name + " " + p.target_name + " IMPORTED_LOCATION_${CMAKE_BUILD_TYPE_UPPER})");
+        }
+        ctx.emptyLines();
+
+        bool deps = false;
+        String build_deps_tgt = "${this}";
+        if (d.empty() && target.find("-c") != target.npos)
+        {
+            build_deps_tgt += "-d"; // deps
+            deps = true;
+        }
+        else
+            build_deps_tgt += "-c-d";
+
+        // do not use add_custom_command as it doesn't work
+        // add custom target and add a dependency below
+        // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
+        ctx.addLine("set(bp)");
+        //for (auto &dp : build_deps_all)
+        for (auto &dp : copy_deps)
+        {
+            auto &p = dp.second;
+
+            // local projects are always built inside solution
+            if (p.flags[pfLocalProject])
+                continue;
+
+            ScopedDependencyCondition sdc(ctx, p, false);
+            ctx.addLine("set(bp ${bp} ${imploc_" + p.variable_name + "})");
+        }
+        ctx.emptyLines();
+
+        ctx.increaseIndent("add_custom_target(" + build_deps_tgt);
+        ctx.addLine("COMMAND ${file}");
+        ctx.increaseIndent("BYPRODUCTS ${bp}");
+        ctx.decreaseIndent(")", 2);
+        ctx.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
+        print_solution_folder(ctx, build_deps_tgt, deps ? service_folder : service_deps_folder);
+        //this causes long paths issue
+        //if (deps)
+        //    set_target_properties(ctx, build_deps_tgt, "PROJECT_LABEL", "dependencies");
+        //else
+        //    set_target_properties(ctx, build_deps_tgt, "PROJECT_LABEL", (d.flags[pfLocalProject] ? d.ppath.back() : d.target_name) + "-build-dependencies");
+        ctx.endif();
+        ctx.addLine();
     }
-    ctx.emptyLines();
 
-    bool deps = false;
-    String build_deps_tgt = "${this}";
-    if (d.empty() && target.find("-c") != target.npos)
-    {
-        build_deps_tgt += "-d"; // deps
-        deps = true;
-    }
-    else
-        build_deps_tgt += "-c-d";
-
-    // do not use add_custom_command as it doesn't work
-    // add custom target and add a dependency below
-    // second way is to use add custom target + add custom command (POST?(PRE)_BUILD)
-    ctx.addLine("set(bp)");
-    //for (auto &dp : build_deps_all)
-    for (auto &dp : copy_deps)
-    {
-        auto &p = dp.second;
-
-        // local projects are always built inside solution
-        if (p.flags[pfLocalProject])
-            continue;
-
-        ScopedDependencyCondition sdc(ctx, p, false);
-        ctx.addLine("set(bp ${bp} ${imploc_" + p.variable_name + "})");
-    }
-    ctx.emptyLines();
-
-    ctx.increaseIndent("add_custom_target(" + build_deps_tgt);
-    ctx.addLine("COMMAND ${file}");
-    ctx.increaseIndent("BYPRODUCTS ${bp}");
-    ctx.decreaseIndent(")", 2);
-    ctx.addLine("add_dependencies(${this} " + build_deps_tgt + ")");
-    print_solution_folder(ctx, build_deps_tgt, deps ? service_folder : service_deps_folder);
-    //this causes long paths issue
-    //if (deps)
-    //    set_target_properties(ctx, build_deps_tgt, "PROJECT_LABEL", "dependencies");
-    //else
-    //    set_target_properties(ctx, build_deps_tgt, "PROJECT_LABEL", (d.flags[pfLocalProject] ? d.ppath.back() : d.target_name) + "-build-dependencies");
-    ctx.endif();
+    ctx.endif(); // CPPAN_USE_CACHE
     ctx.addLine();
 }
 
