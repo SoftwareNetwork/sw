@@ -130,7 +130,8 @@ public:
 void registerCmakePackage()
 {
 #ifdef _WIN32
-    winreg::RegKey icon(is_elevated() ? HKEY_LOCAL_MACHINE : HKEY_CURRENT_USER, L"Software\\Kitware\\CMake\\Packages\\CPPAN");
+    // if we write into HKLM, we won't be able to access the pkg file in admins folder
+    winreg::RegKey icon(/*is_elevated() ? HKEY_LOCAL_MACHINE : */HKEY_CURRENT_USER, L"Software\\Kitware\\CMake\\Packages\\CPPAN");
     icon.SetStringValue(L"", directories.get_static_files_dir().wstring().c_str());
     write_file_if_different(directories.get_static_files_dir() / cppan_cmake_config_filename, cppan_cmake_config);
 #else
