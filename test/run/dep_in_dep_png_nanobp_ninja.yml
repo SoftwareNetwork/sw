@@ -1,0 +1,58 @@
+local_settings:
+    storage_dir: storage
+    build:
+        generator: Ninja
+
+projects:
+    examples.cpp.helloworld.server:
+        files: dummy.cpp
+        dependencies:
+            - pvt.cppan.demo.png: "*"
+            - pvt.cppan.demo.nanopb: "*"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
