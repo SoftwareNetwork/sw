@@ -5,5 +5,3 @@ macro(exec_check CMD)
     endif()
 endmacro()
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${COPY_FROM} ${COPY_TO})
-exec_check(${CPPAN_COMMAND})

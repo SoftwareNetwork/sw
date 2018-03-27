@@ -1,0 +1,5 @@
+local_settings:
+    storage_dir: storage
+    use_cache: false
+    dependencies:
+        - pvt.cppan.demo.madler.zlib: 1

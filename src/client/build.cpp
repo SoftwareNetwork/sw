@@ -193,7 +193,7 @@ int build(path fn, const String &config)
     Config c;
     String name;
     std::tie(pkgs, c, name) = rd.read_packages_from_file(fn, config, true);
-    return build_packages(name, pkgs) == 0;
+    return build_packages(name, pkgs);
 }
 
 int build_only(path fn, const String &config)

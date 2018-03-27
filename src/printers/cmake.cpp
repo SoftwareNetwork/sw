@@ -882,7 +882,7 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
 #ifdef _WIN32
             s += "set(copy_content \"${copy_content} @\")\n";
 #endif
-            s += "set(copy_content \"${copy_content} \\\"${CMAKE_COMMAND}\\\" -E copy_if_different ";
+            s += "        set(copy_content \"${copy_content} \\\"${CMAKE_COMMAND}\\\" -E copy_if_different ";
             String name;
             if (!prj.output_name.empty())
                 name = prj.output_name;
