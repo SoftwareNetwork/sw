@@ -53,9 +53,23 @@ macro(cppan_add_test_generate name)
     file(WRITE ${bdir}/dummy.cpp "int main(){}")
 endmacro()
 
-cppan_add_test_simple(simple_zlib)
-cppan_add_test_simple(simple_zlib_no_cache)
-cppan_add_test_simple(dep_in_dep_png_nanobp)
-cppan_add_test_generate(dep_in_dep_png_nanobp)
+macro(cppan_add_test_build name)
+    set(type build)
+    set_bdir(${name} ${type})
+    cppan_add_test_bdir(${name} ${type} --build .)
+
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${name}.yml ${bdir}/cppan.yml)
+    file(WRITE ${bdir}/dummy.cpp "int main(){}")
+endmacro()
+
+macro(cppan_add_test_suite name)
+    cppan_add_test_simple(${name})
+    cppan_add_test_generate(${name})
+    cppan_add_test_build(${name})
+endmacro()
+
+cppan_add_test_simple(zlib)
+cppan_add_test_simple(zlib_no_cache)
+cppan_add_test_suite(dep_in_dep_png_nanobp)
 
 ################################################################################
