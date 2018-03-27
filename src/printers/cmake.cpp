@@ -671,7 +671,13 @@ endif()
             //local.addText("-DCPPAN_BUILD_LEVEL=${CPPAN_BUILD_LEVEL} ");
             //local.addText("-DTARGET_VAR=" + p.variable_name + " "); // remove!
             //local.addText("-DTARGET_FILE=$<TARGET_FILE:" + p.target_name + "> ");
-            local.addText("-DCONFIG=$<CONFIG> ");
+
+            // this also probably must consider CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG
+            if (p.flags[pfExecutable] /* and not CPPAN_BUILD_EXECUTABLES_WITH_SAME_CONFIG */)
+                local.addText("-DCONFIG=Release ");
+            else
+                local.addText("-DCONFIG=$<CONFIG> ");
+
             local.addText("-DBUILD_DIR=" + normalize_path(p.getDirObj()) + "/build/${" + cfg + "} ");
             local.addText("-DEXECUTABLE="s + (p.flags[pfExecutable] ? "1" : "0") + " ");
             if (d.empty())
