@@ -1,5 +1,6 @@
 local_settings:
     storage_dir: storage
+    use_cache: false
 
 projects:
     examples.cpp.helloworld.server:
