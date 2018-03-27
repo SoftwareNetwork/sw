@@ -1328,8 +1328,7 @@ int CMakePrinter::build(const BuildSettings &bs) const
     if (!us.additional_build_args.empty())
     {
         c.args.push_back("--");
-        for (auto &a : us.additional_build_args)
-            c.args.push_back(a);
+        c.args.push_back(us.additional_build_args);
     }
 
     return run_command(settings, c).value();

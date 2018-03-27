@@ -114,7 +114,8 @@ try
             if (args[i] == "--"s)
             {
                 auto &s = Settings::get_user_settings();
-                s.additional_build_args.assign(args_copy.begin() + i + 1, args_copy.end());
+                for (auto &arg : decltype(args_copy){ args_copy.begin() + i + 1, args_copy.end() })
+                    s.additional_build_args += arg + " ";
                 args_copy.erase(args_copy.begin() + i, args_copy.end());
             }
 

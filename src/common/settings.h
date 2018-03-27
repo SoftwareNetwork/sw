@@ -130,7 +130,7 @@ struct Settings
     String install_prefix;
 
     // for build command
-    Strings additional_build_args;
+    String additional_build_args;
 
     // to differentiate different cmake invocations
     String meta_target_suffix;
