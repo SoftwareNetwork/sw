@@ -1,0 +1,61 @@
+local_settings:
+    storage_dir: storage
+    build:
+        generator: Ninja
+        additional_build_args:
+            - -w
+            - dupbuild=err
+
+projects:
+    examples.cpp.helloworld.server:
+        files: dummy.cpp
+        dependencies:
+            - pvt.cppan.demo.png: "*"
+            - pvt.cppan.demo.nanopb: "*"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
