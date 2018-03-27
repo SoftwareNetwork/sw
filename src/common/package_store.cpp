@@ -297,11 +297,13 @@ const PackageStore::PackageConfig &PackageStore::operator[](const Package &p) co
 
 void PackageStore::write_index() const
 {
+#ifdef _WIN32
     auto create_link = [](const auto &p, const auto &ln)
     {
         if (!fs::exists(ln))
             ::create_link(p, ln, "CPPAN link");
     };
+#endif
 
     auto &sdb = getServiceDatabase();
     for (auto &cc : *this)
