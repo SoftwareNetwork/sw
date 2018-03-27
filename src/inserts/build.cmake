@@ -27,10 +27,7 @@ if (EXISTS ${TARGET_INFO_FILE})
     include(${TARGET_INFO_FILE})
 endif()
 
-message("1 - ${TARGET_FILE}")
-
 if (NOT REBUILD AND EXISTS ${TARGET_FILE})
-    message("2 - returning")
     return()
 endif()
 
