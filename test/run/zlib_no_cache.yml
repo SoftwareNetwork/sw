@@ -3,3 +3,4 @@ local_settings:
     use_cache: false
     dependencies:
         - pvt.cppan.demo.madler.zlib: 1
+
