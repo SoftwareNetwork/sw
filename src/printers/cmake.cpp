@@ -704,11 +704,10 @@ endif()
 @exit /b %1
 "))");
         local.else_();
-        local.addLine("set(bat_file_begin \"#!/bin/sh\")");
+        local.addLine("set(bat_file_begin \"#!/bin/sh\\n\")");
         local.endif();
 
-        local.increaseIndent("file(GENERATE OUTPUT ${file} CONTENT \"");
-        local.addLine("${bat_file_begin}");
+        local.increaseIndent("file(GENERATE OUTPUT ${file} CONTENT \"${bat_file_begin}");
         for (auto &dp : build_deps)
         {
             auto &p = dp.second;
@@ -814,7 +813,7 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
     ctx.if_("WIN32");
     ctx.addLine("set(copy_content \"${copy_content} @setlocal\\n\")");
     ctx.else_();
-    ctx.addLine("set(copy_content \"#!/bin/sh\")");
+    ctx.addLine("set(copy_content \"#!/bin/sh\\n\")");
     ctx.endif();
 
     // we're in helper, set this var to build target
@@ -948,8 +947,7 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
     ctx.endif();
 
     ctx.addLine(R"(
-file(GENERATE OUTPUT ${file} CONTENT "
-    ${copy_content}
+file(GENERATE OUTPUT ${file} CONTENT "${copy_content}
 ")
 if (UNIX)
     set(file chmod u+x ${file} COMMAND ${file})
