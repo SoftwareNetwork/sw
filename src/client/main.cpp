@@ -31,7 +31,6 @@
 #include <program.h>
 #include <resolver.h>
 #include <settings.h>
-#include <shell_link.h>
 #include <verifier.h>
 
 #include <boost/algorithm/string.hpp>
@@ -40,6 +39,7 @@
 #include <primitives/templates.h>
 #include <primitives/executor.h>
 #include <primitives/minidump.h>
+#include <primitives/win32helpers.h>
 
 #include <iostream>
 #include <thread>

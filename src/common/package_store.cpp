@@ -26,7 +26,6 @@
 #include "project.h"
 #include "resolver.h"
 #include "settings.h"
-#include "shell_link.h"
 #include "sqlite_database.h"
 
 #include <boost/algorithm/string.hpp>
@@ -35,6 +34,7 @@
 #include <primitives/hasher.h>
 #include <primitives/http.h>
 #include <primitives/templates.h>
+#include <primitives/win32helpers.h>
 
 #include <primitives/log.h>
 //DECLARE_STATIC_LOGGER(logger, "package_store");

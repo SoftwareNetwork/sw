@@ -26,13 +26,13 @@
 #include <program.h>
 #include <resolver.h>
 #include <settings.h>
-#include <shell_link.h>
 
 #include <boost/algorithm/string.hpp>
 
 #include <primitives/command.h>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
+#include <primitives/win32helpers.h>
 
 #ifdef _WIN32
 #include <WinReg.hpp>
@@ -126,6 +126,19 @@ public:
             ctx.emptyLines();
     }
 };
+
+void registerCmakePackage()
+{
+#ifdef _WIN32
+    winreg::RegKey icon(is_elevated() ? HKEY_LOCAL_MACHINE : HKEY_CURRENT_USER, L"Software\\Kitware\\CMake\\Packages\\CPPAN");
+    icon.SetStringValue(L"", directories.get_static_files_dir().wstring().c_str());
+    write_file_if_different(directories.get_static_files_dir() / cppan_cmake_config_filename, cppan_cmake_config);
+#else
+    auto cppan_cmake_dir = get_home_directory() / ".cmake" / "packages";
+    write_file_if_different(cppan_cmake_dir / "CPPAN" / "1", cppan_cmake_dir.string());
+    write_file_if_different(cppan_cmake_dir / cppan_cmake_config_filename, cppan_cmake_config);
+#endif
+}
 
 String cmake_debug_message(const String &s)
 {
@@ -1379,17 +1392,6 @@ void CMakePrinter::print_meta() const
         "set(CPPAN_CONFIG_PART_DELIMETER -)\n"
         "\n"
         + cmake_functions);
-
-    // register cmake package
-#ifdef _WIN32
-    winreg::RegKey icon(HKEY_CURRENT_USER, L"Software\\Kitware\\CMake\\Packages\\CPPAN");
-    icon.SetStringValue(L"", directories.get_static_files_dir().wstring().c_str());
-    access_table->write_if_older(directories.get_static_files_dir() / cppan_cmake_config_filename, cppan_cmake_config);
-#else
-    auto cppan_cmake_dir = get_home_directory() / ".cmake" / "packages";
-    access_table->write_if_older(cppan_cmake_dir / "CPPAN" / "1", cppan_cmake_dir.string());
-    access_table->write_if_older(cppan_cmake_dir / cppan_cmake_config_filename, cppan_cmake_config);
-#endif
 
     access_table->write_if_older(directories.get_static_files_dir() / cmake_header_filename, cmake_header);
     access_table->write_if_older(directories.get_static_files_dir() / cmake_export_import_filename, cmake_export_import_file);

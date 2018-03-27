@@ -120,3 +120,5 @@ void add_aliases(Context &ctx, const Package &d, F &&f)
 {
     add_aliases(ctx, d, true, std::forward<F>(f));
 }
+
+void registerCmakePackage();

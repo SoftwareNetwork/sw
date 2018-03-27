@@ -118,6 +118,7 @@ target_link_libraries(common
     pvt.egorpugin.primitives.date_time
     pvt.egorpugin.primitives.executor
     pvt.egorpugin.primitives.command
+    pvt.egorpugin.primitives.win32helpers
 )
 if (WIN32)
 target_link_libraries(common

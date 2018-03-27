@@ -433,6 +433,8 @@ void ServiceDatabase::checkStamp() const
 
 void ServiceDatabase::performStartupActions() const
 {
+    registerCmakePackage();
+
     // perform startup actions on client update
     try
     {
