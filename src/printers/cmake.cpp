@@ -703,6 +703,8 @@ endif()
 :cmErrorLevel
 @exit /b %1
 "))");
+        local.else_();
+        local.addLine("set(bat_file_begin \"#!/bin/sh\")");
         local.endif();
 
         local.increaseIndent("file(GENERATE OUTPUT ${file} CONTENT \"");
@@ -811,6 +813,8 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
     ctx.addLine("set(copy_content)");
     ctx.if_("WIN32");
     ctx.addLine("set(copy_content \"${copy_content} @setlocal\\n\")");
+    ctx.else_();
+    ctx.addLine("set(copy_content \"#!/bin/sh\")");
     ctx.endif();
 
     // we're in helper, set this var to build target
