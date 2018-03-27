@@ -2324,9 +2324,11 @@ else())");
         ctx.increaseIndent("add_custom_command(TARGET ${this} POST_BUILD");
         auto q = ""s;
 #ifndef _WIN32
-        q = "\""s;
+        q = "'"s;
 #endif
-        ctx.addLine("COMMAND echo " + q + "set(TARGET_FILE $<TARGET_FILE:${this}>)" + q + " > " + normalize_path(d.getDirObj()) + "/build/${config_dir}/cppan_target_info_$<CONFIG>.cmake");
+        //                                                                 make cmake happy
+        //                                                                       v v
+        ctx.addLine("COMMAND echo " + q + "set(TARGET_FILE $<TARGET_FILE:${this}> ) " + q + " > " + normalize_path(d.getDirObj()) + "/build/${config_dir}/cppan_target_info_$<CONFIG>.cmake");
         ctx.decreaseIndent(")");
         //ctx.endif();
     }
