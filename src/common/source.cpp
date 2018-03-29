@@ -24,6 +24,8 @@
 #include <primitives/overloads.h>
 #include <primitives/pack.h>
 
+#include <regex>
+
 #define PTREE_ADD(x) p.add(#x, x)
 #define PTREE_ADD_NOT_EMPTY(x) if (!x.empty()) PTREE_ADD(x)
 #define PTREE_ADD_NOT_MINUS_ONE(x) if (x != -1) PTREE_ADD(x)
@@ -147,6 +149,14 @@ bool SourceUrl::isValid(const String &name, String *error) const
 bool SourceUrl::isValidUrl() const
 {
     return isValidSourceUrl(url);
+}
+
+bool Cvs::isValidUrl() const
+{
+    static const std::regex checkCvs("-d:([a-z0-9_-]+):([a-z0-9_-]+)@(\\S*):(\\S*)");
+    if (std::regex_match(url, checkCvs))
+        return true;
+    return false;
 }
 
 bool SourceUrl::load(const ptree &p)
@@ -330,6 +340,52 @@ void Git::applyVersion(const Version &v)
     ::applyVersion(branch, v);
 }
 
+void Git::loadVersion(Version &version)
+{
+    auto ver = !version.isValid() ? version.toString() : ""s;
+
+    if (ver.empty())
+    {
+        if (branch.empty() && tag.empty())
+        {
+            ver = "master";
+            version = Version(ver);
+        }
+        else if (!branch.empty())
+        {
+            ver = branch;
+            try
+            {
+                // branch may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+        else if (!tag.empty())
+        {
+            ver = tag;
+            try
+            {
+                // tag may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+    }
+
+    if (version.isValid() && branch.empty() && tag.empty() && commit.empty())
+    {
+        if (version.isBranch())
+            branch = version.toString();
+        else
+            tag = version.toString();
+    }
+}
+
 Hg::Hg(const yaml &root, const String &name)
     : Git(root, name)
 {
@@ -395,6 +451,64 @@ String Hg::print() const
 String Hg::printCpp() const
 {
     return String();
+}
+
+void Hg::loadVersion(Version &version)
+{
+    auto ver = !version.isValid() ? version.toString() : ""s;
+
+    if (ver.empty())
+    {
+        if (branch.empty() && tag.empty() && revision == -1)
+        {
+            ver = "default";
+            version = Version(ver);
+        }
+        else if (!branch.empty())
+        {
+            ver = branch;
+            try
+            {
+                // branch may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+        else if (!tag.empty())
+        {
+            ver = tag;
+            try
+            {
+                // tag may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+        else if (revision != -1)
+        {
+            ver = "revision: " + std::to_string(revision);
+            try
+            {
+                // tag may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+    }
+
+    if (version.isValid() && branch.empty() && tag.empty() && commit.empty() && revision == -1)
+    {
+        if (version.isBranch())
+            branch = version.toString();
+        else
+            tag = version.toString();
+    }
 }
 
 Bzr::Bzr(const yaml &root, const String &name)
@@ -465,6 +579,49 @@ String Bzr::printCpp() const
     return String();
 }
 
+void Bzr::loadVersion(Version &version)
+{
+    auto ver = !version.isValid() ? version.toString() : ""s;
+
+    if (ver.empty())
+    {
+        if (tag.empty() && revision == -1)
+        {
+            ver = "trunk";
+            version = Version(ver);
+        }
+        else if (!tag.empty())
+        {
+            ver = tag;
+            try
+            {
+                // tag may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+        else if (revision != -1)
+        {
+            ver = "revision: " + std::to_string(revision);
+            try
+            {
+                // tag may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+    }
+
+    if (version.isValid() && tag.empty() && revision == -1)
+    {
+        tag = version.toString();
+    }
+}
+
 Fossil::Fossil(const yaml &root, const String &name)
     : Git(root, name)
 {
@@ -493,6 +650,187 @@ void Fossil::download() const
 void Fossil::save(yaml &root, const String &name) const
 {
     Git::save(root, name);
+}
+
+void Fossil::loadVersion(Version &version)
+{
+    auto ver = !version.isValid() ? version.toString() : ""s;
+
+    if (ver.empty())
+    {
+        if (branch.empty() && tag.empty())
+        {
+            ver = "trunk";
+            version = Version(ver);
+        }
+        else if (!branch.empty())
+        {
+            ver = branch;
+            try
+            {
+                // branch may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+        else if (!tag.empty())
+        {
+            ver = tag;
+            try
+            {
+                // tag may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+    }
+
+    if (version.isValid() && branch.empty() && tag.empty() && commit.empty())
+    {
+        if (version.isBranch())
+            branch = version.toString();
+        else
+            tag = version.toString();
+    }
+}
+
+Cvs::Cvs(const yaml &root, const String &name)
+    : SourceUrl(root, name)
+{
+    YAML_EXTRACT_AUTO(tag);
+    YAML_EXTRACT_AUTO(branch);
+    YAML_EXTRACT_AUTO(revision);
+    YAML_EXTRACT_AUTO(module);
+}
+
+void Cvs::download() const
+{
+    downloadRepository([this]()
+    {
+		Command::execute({ "cvs", url, "co", module });
+
+        ScopedCurrentPath scp(current_thread_path() / module, CurrentPathScope::All);
+
+		if (!tag.empty())
+			Command::execute({ "cvs", "update", "-r", tag });
+		else if (!branch.empty())
+            Command::execute({ "cvs", "update", "-r", branch });
+		else if (!revision.empty())
+            Command::execute({ "cvs", "update", "-r", revision });
+    });
+}
+
+bool Cvs::isValid(String *error) const
+{
+    return checkValid(getString(), error, tag, branch, revision);
+}
+
+bool Cvs::load(const ptree &p)
+{
+    if (!SourceUrl::load(p))
+        return false;
+    PTREE_GET_STRING(tag);
+    PTREE_GET_STRING(branch);
+    PTREE_GET_STRING(revision);
+    PTREE_GET_STRING(module);
+    return true;
+}
+
+bool Cvs::save(ptree &p) const
+{
+    if (!SourceUrl::save(p))
+        return false;
+    PTREE_ADD_NOT_EMPTY(tag);
+    PTREE_ADD_NOT_EMPTY(branch);
+    PTREE_ADD_NOT_EMPTY(revision);
+    return true;
+}
+
+void Cvs::save(yaml &root, const String &name) const
+{
+    SourceUrl::save(root, name);
+    YAML_SET_NOT_EMPTY(tag);
+    YAML_SET_NOT_EMPTY(branch);
+    YAML_SET_NOT_EMPTY(revision);
+}
+
+String Cvs::print() const
+{
+    auto r = SourceUrl::print();
+    if (r.empty())
+        return r;
+    STRING_PRINT_NOT_EMPTY(tag);
+    STRING_PRINT_NOT_EMPTY(branch);
+    STRING_PRINT_NOT_EMPTY(revision);
+    STRING_PRINT_NOT_EMPTY(module);
+    return r;
+}
+
+String Cvs::printCpp() const
+{
+    return String();
+}
+
+void Cvs::loadVersion(Version &version)
+{
+    auto ver = !version.isValid() ? version.toString() : ""s;
+
+    if (ver.empty())
+    {
+        if (branch.empty() && tag.empty() && revision.empty())
+        {
+            ver = "trunk";
+            version = Version(ver);
+        }
+        else if (!branch.empty())
+        {
+            ver = branch;
+            try
+            {
+                // branch may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+        else if (!tag.empty())
+        {
+            ver = tag;
+            try
+            {
+                // tag may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+        else if (!revision.empty())
+        {
+            ver = revision;
+            try
+            {
+                // tag may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+    }
+
+    if (version.isValid() && branch.empty() && tag.empty() && revision.empty())
+    {
+        if (version.isBranch())
+            branch = version.toString();
+        else
+            tag = version.toString();
+    }
 }
 
 RemoteFile::RemoteFile(const yaml &root, const String &name)
