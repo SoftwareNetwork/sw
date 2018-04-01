@@ -154,7 +154,7 @@ cppan_add_package(
         pvt.cppan.demo.giovannidicanio.winreg-master
         pvt.cppan.demo.mpark.variant-1
 
-        pvt.cppan.demo.catchorg.catch2-1
+        pvt.cppan.demo.catchorg.catch2-2
 )
 cppan_execute()
 

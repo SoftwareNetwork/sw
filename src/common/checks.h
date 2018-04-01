@@ -87,7 +87,7 @@ public:
     using Value = int;
 
 public:
-    Check(Information i, const CheckParameters &parameters = CheckParameters());
+    Check(const Information &i, const CheckParameters &parameters = CheckParameters());
     virtual ~Check() = default;
 
     const Information &getInformation() const { return information; }
