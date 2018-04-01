@@ -178,6 +178,7 @@ String dump_yaml_config(const yaml &root)
         "rc_enabled",
         "build_dependencies_with_same_config",
         "disabled",
+        "skip_on_server",
 
         "api_name",
 

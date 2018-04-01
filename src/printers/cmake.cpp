@@ -972,7 +972,7 @@ add_custom_command(TARGET )" + target + R"( POST_BUILD
 
             ScopedDependencyCondition sdc(ctx, p);
             ctx.addLine("get_target_property(imploc_" + p.variable_name + " " + p.target_name + " IMPORTED_LOCATION_${CMAKE_BUILD_TYPE_UPPER})");
-            
+
             // FIXME: on apple some targets fail to find above var
             //ctx.if_("\"${imploc_" + p.variable_name + "}\" STREQUAL \"imploc_" + p.variable_name + "-NOTFOUND\"");
             //ctx.addLine("set(imploc_" + p.variable_name + ")");

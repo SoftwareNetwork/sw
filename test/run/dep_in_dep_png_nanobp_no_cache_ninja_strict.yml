@@ -2,6 +2,7 @@ local_settings:
     storage_dir: storage
     use_cache: false
     build:
+        ${test_compiler}
         generator: Ninja
         additional_build_args:
             - -w

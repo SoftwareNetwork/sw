@@ -854,7 +854,8 @@ void Project::load(const yaml &root)
     YAML_EXTRACT_AUTO(export_all_symbols);
     YAML_EXTRACT_AUTO(export_if_static);
     YAML_EXTRACT_AUTO(rc_enabled);
-    YAML_EXTRACT_AUTO(disabled);
+    //YAML_EXTRACT_AUTO(disabled);
+    YAML_EXTRACT_AUTO(skip_on_server);
     YAML_EXTRACT_AUTO(build_dependencies_with_same_config);
 
     api_name = get_sequence_set<String>(root, "api_name");
@@ -1472,7 +1473,8 @@ yaml Project::save() const
     ADD_IF_VAL_TRIPLE(export_all_symbols);
     ADD_IF_VAL_TRIPLE(export_if_static);
     ADD_IF_NOT_VAL_TRIPLE(rc_enabled);
-    ADD_IF_VAL_TRIPLE(disabled);
+    //ADD_IF_VAL_TRIPLE(disabled);
+    ADD_IF_VAL_TRIPLE(skip_on_server);
     ADD_IF_VAL_TRIPLE(build_dependencies_with_same_config);
 
     ADD_SET(api_name, api_name);

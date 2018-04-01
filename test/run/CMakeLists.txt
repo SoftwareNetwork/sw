@@ -34,14 +34,13 @@ endmacro()
 
 macro(cppan_add_test_bdir name type)
     cppan_add_test(${name} ${type} $<TARGET_FILE:client> -d ${bdir} ${ARGN})
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${name}.yml ${bdir}/cppan.yml)
 endmacro()
 
 macro(cppan_add_test_simple name)
     set(type simple)
     set_bdir(${name} ${type})
     cppan_add_test_bdir(${name} ${type})
-
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${name}.yml ${bdir}/cppan.yml)
 endmacro()
 
 macro(cppan_add_test_generate name)
@@ -49,7 +48,6 @@ macro(cppan_add_test_generate name)
     set_bdir(${name} ${type})
     cppan_add_test_bdir(${name} ${type} --generate .)
 
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${name}.yml ${bdir}/cppan.yml)
     file(WRITE ${bdir}/dummy.cpp "int main(){}")
 endmacro()
 
@@ -58,7 +56,6 @@ macro(cppan_add_test_build name)
     set_bdir(${name} ${type})
     cppan_add_test_bdir(${name} ${type} --build .)
 
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${name}.yml ${bdir}/cppan.yml)
     file(WRITE ${bdir}/dummy.cpp "int main(){}")
 endmacro()
 
@@ -77,6 +74,9 @@ cppan_add_test_suite(dep_in_dep_png_nanobp_no_cache)
 find_program(n ninja)
 find_program(nb ninja-build)
 if (NOT WIN32 AND NOT ("${n}" STREQUAL "n-NOTFOUND" AND "${nb}" STREQUAL "nb-NOTFOUND"))
+if (WIN32)
+set(test_compiler "compiler: \"${CMAKE_CXX_COMPILER}\"")
+endif()
 cppan_add_test_suite(dep_in_dep_png_nanobp_ninja)
 # FIXME:
 #cppan_add_test_suite(dep_in_dep_png_nanobp_ninja_strict)

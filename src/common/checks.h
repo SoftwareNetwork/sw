@@ -87,8 +87,8 @@ public:
     using Value = int;
 
 public:
-    Check(const Information &i, const CheckParameters &parameters = CheckParameters());
-    virtual ~Check() {}
+    Check(Information i, const CheckParameters &parameters = CheckParameters());
+    virtual ~Check() = default;
 
     const Information &getInformation() const { return information; }
     String getVariable() const { return variable; }

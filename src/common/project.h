@@ -240,7 +240,8 @@ public:
     bool export_if_static = false;
     bool build_dependencies_with_same_config = false;
     bool rc_enabled = true;
-    bool disabled = false;
+    //bool disabled = false;
+    bool skip_on_server = false;
 
     StringSet api_name;
     String output_name; // file name

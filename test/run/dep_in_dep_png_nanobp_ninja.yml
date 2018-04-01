@@ -1,6 +1,7 @@
 local_settings:
     storage_dir: storage
     build:
+        ${test_compiler}
         generator: Ninja
 
 projects:
