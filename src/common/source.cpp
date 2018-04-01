@@ -711,15 +711,15 @@ void Cvs::download() const
 {
     downloadRepository([this]()
     {
-		Command::execute({ "cvs", url, "co", module });
+        Command::execute({ "cvs", url, "co", module });
 
         ScopedCurrentPath scp(current_thread_path() / module, CurrentPathScope::All);
 
-		if (!tag.empty())
-			Command::execute({ "cvs", "update", "-r", tag });
-		else if (!branch.empty())
+        if (!tag.empty())
+            Command::execute({ "cvs", "update", "-r", tag });
+        else if (!branch.empty())
             Command::execute({ "cvs", "update", "-r", branch });
-		else if (!revision.empty())
+        else if (!revision.empty())
             Command::execute({ "cvs", "update", "-r", revision });
     });
 }
@@ -747,6 +747,7 @@ bool Cvs::save(ptree &p) const
     PTREE_ADD_NOT_EMPTY(tag);
     PTREE_ADD_NOT_EMPTY(branch);
     PTREE_ADD_NOT_EMPTY(revision);
+    PTREE_ADD_NOT_EMPTY(module);
     return true;
 }
 
@@ -756,6 +757,7 @@ void Cvs::save(yaml &root, const String &name) const
     YAML_SET_NOT_EMPTY(tag);
     YAML_SET_NOT_EMPTY(branch);
     YAML_SET_NOT_EMPTY(revision);
+    YAML_SET_NOT_EMPTY(module);
 }
 
 String Cvs::print() const
