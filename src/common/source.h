@@ -43,6 +43,7 @@ struct SourceUrl
     void save(yaml &root, const String &name) const;
     String print() const;
     void applyVersion(const Version &v);
+    void loadVersion(Version &v) {}
 
 protected:
     template <typename ... Args>
@@ -66,6 +67,7 @@ struct Git : SourceUrl
     String print() const;
     String printCpp() const;
     void applyVersion(const Version &v);
+    void loadVersion(Version &v);
 
     bool operator==(const Git &rhs) const
     {
@@ -89,6 +91,7 @@ struct Hg : Git
     void save(yaml &root, const String &name = Hg::getString()) const;
     String print() const;
     String printCpp() const;
+    void loadVersion(Version &v);
 
     bool operator==(const Hg &rhs) const
     {
@@ -113,6 +116,7 @@ struct Bzr : SourceUrl
     void save(yaml &root, const String &name = Bzr::getString()) const;
     String print() const;
     String printCpp() const;
+    void loadVersion(Version &v);
 
     bool operator==(const Bzr &rhs) const
     {
@@ -130,6 +134,7 @@ struct Fossil : Git
     void download() const;
     using Git::save;
     void save(yaml &root, const String &name = Fossil::getString()) const;
+    void loadVersion(Version &v);
 
     bool operator==(const Fossil &rhs) const
     {
@@ -137,6 +142,34 @@ struct Fossil : Git
     }
 
     static String getString() { return "fossil"; }
+};
+
+struct Cvs : SourceUrl
+{
+    String tag;
+    String branch;
+    String revision;
+    String module;
+
+    Cvs() = default;
+    Cvs(const yaml &root, const String &name = Cvs::getString());
+
+    void download() const;
+    bool isValid(String *error = nullptr) const;
+    bool isValidUrl() const;
+    bool load(const ptree &p);
+    bool save(ptree &p) const;
+    void save(yaml &root, const String &name = Cvs::getString()) const;
+    String print() const;
+    String printCpp() const;
+    void loadVersion(Version &v);
+
+    bool operator==(const Cvs &rhs) const
+    {
+        return std::tie(url, tag, branch, revision, module) == std::tie(rhs.url, rhs.tag, rhs.branch, rhs.revision, rhs.module);
+    }
+
+    static String getString() { return "cvs"; }
 };
 
 struct RemoteFile : SourceUrl
@@ -174,6 +207,7 @@ struct RemoteFiles
     String print() const;
     String printCpp() const;
     void applyVersion(const Version &v);
+    void loadVersion(Version &v) {}
 
     bool operator==(const RemoteFiles &rhs) const
     {
@@ -190,6 +224,7 @@ struct RemoteFiles
     f(Hg) d \
     f(Bzr) d \
     f(Fossil) d \
+    f(Cvs) d \
     f(RemoteFile) d \
     f(RemoteFiles)
 
