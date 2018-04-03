@@ -165,6 +165,7 @@ cppan_execute()
 ################################################################################
 
 add_subdirectory(src)
+set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT client)
 
 enable_testing()
 add_subdirectory(test)
