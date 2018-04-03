@@ -217,6 +217,9 @@ endfunction(find_flag)
 ########################################
 
 function(prepare_config_part o i)
+    if (NOT i)
+        return()
+    endif()
     string(REPLACE " " "_" i "${i}")
     string(REPLACE "${CPPAN_CONFIG_PART_DELIMETER}" "_" i "${i}")
     string(TOLOWER ${i} i)

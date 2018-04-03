@@ -382,9 +382,9 @@ void print_dependencies(CMakeContext &ctx, const Package &d, bool use_cache)
 
         ScopedDependencyCondition sdc(ctx, dep);
         if (dep.flags[pfLocalProject])
-            ctx.addLine("set(" + dep.variable_no_version_name + "_DIR " + normalize_path(rd[dep].config->getDefaultProject().root_directory) + ")");
+            ctx.addLine("set_cache_var(" + dep.variable_no_version_name + "_DIR " + normalize_path(rd[dep].config->getDefaultProject().root_directory) + ")");
         else
-            ctx.addLine("set(" + dep.variable_no_version_name + "_DIR " + normalize_path(dep.getDirSrc()) +  ")");
+            ctx.addLine("set_cache_var(" + dep.variable_no_version_name + "_DIR " + normalize_path(dep.getDirSrc()) +  ")");
     }
     ctx.emptyLines();
 
@@ -1497,7 +1497,7 @@ void CMakePrinter::print_references(CMakeContext &ctx) const
         else
             ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirSrc()) + ")");
         ctx.addLine("set(" + dd.reference + "_BDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirObj()) + ")");
-        ctx.addLine("set(" + dd.reference + "_DIR ${" + dd.reference + "_SDIR})");
+        ctx.addLine("set_cache_var(" + dd.reference + "_DIR ${" + dd.reference + "_SDIR})");
         ctx.addLine();
     }
 }
@@ -2799,7 +2799,9 @@ void CMakePrinter::print_meta_config_file(const path &fn) const
     print_storage_dirs(ctx);
     ctx.addLine("set_cache_var(CMAKE_POSITION_INDEPENDENT_CODE ON)");
     ctx.addLine();
+    ctx.if_("CMAKE_CXX_COMPILER_ID");
     ctx.addLine("set_cache_var(${CMAKE_CXX_COMPILER_ID} 1)");
+    ctx.endif();
     ctx.addLine();
     ctx.if_("NOT DEFINED CPPAN_USE_CACHE");
     ctx.addLine("set_cache_var(CPPAN_USE_CACHE "s + (settings.use_cache ? "1" : "0") + ")");
@@ -3058,6 +3060,10 @@ endif()
     {
         // common checks
         config_section_title(ctx, "common checks");
+
+        ctx.if_("NOT (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER)");
+        ctx.addLine("set(CPPAN_DISABLE_CHECKS 1)");
+        ctx.endif();
 
         ctx.if_("NOT CPPAN_DISABLE_CHECKS");
 

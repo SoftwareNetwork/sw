@@ -35,6 +35,7 @@ if (FLEX_FOUND AND BISON_FOUND)
     )
 else()
     file(GLOB builder_src "*")
+    list(FILTER builder_src EXCLUDE REGEX ".*CMakeLists.txt")
 endif()
 
 add_library(extract_comments ${builder_src})

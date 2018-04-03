@@ -37,6 +37,7 @@ if (FLEX_FOUND AND BISON_FOUND)
     )
 else()
     file(GLOB parser_src "*")
+    list(FILTER parser_src EXCLUDE REGEX ".*CMakeLists.txt")
 endif()
 
 add_library(bazel_parser ${parser_src} ${bazel_parser_src})
