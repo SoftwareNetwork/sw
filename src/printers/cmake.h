@@ -28,6 +28,8 @@ void file_footer(CMakeContext &ctx, const Package &d);
 
 struct CMakePrinter : Printer
 {
+    virtual ~CMakePrinter() = default;
+    
     void prepare_build(const BuildSettings &bs) const override;
     void prepare_rebuild() const override;
     int generate(const BuildSettings &bs) const override;

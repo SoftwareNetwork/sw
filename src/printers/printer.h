@@ -53,6 +53,7 @@ struct Printer
     Settings &settings;
 
     Printer();
+    virtual ~Printer() = default;
 
     virtual void prepare_build(const BuildSettings &bs) const = 0;
     virtual void prepare_rebuild() const = 0;
