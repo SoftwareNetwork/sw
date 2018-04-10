@@ -4,6 +4,7 @@ BDIR=build
 GENERATOR=
 COMPILER=
 BUILD_TYPE=-DCMAKE_BUILD_TYPE=Release
+OPTIONS=
 
 function base() {
 #echo "Setup:"
@@ -17,12 +18,14 @@ function base() {
         $COMPILER \
         $GENERATOR \
         $BUILD_TYPE \
+        $OPTIONS \
         $*
 }
 
 function xcode() {
     BDIR="${BDIR}_xcode"
     GENERATOR="-GXcode"
+    OPTIONS="-DCPPAN_USE_CACHE=0"
 }
 
 function gcc7() {
