@@ -772,7 +772,7 @@ endif()
         local.addLine();
 
         // alias dependencies
-        if (d.empty())
+        /*if (d.empty())
         {
             auto tt = "add_dependencies"s;
             for (auto &dp : build_deps)
@@ -786,7 +786,7 @@ endif()
                     return tt + "(" + s + " ${this})";
                 });
             }
-        }
+        }*/
 
         if (has_build_deps)
             ctx.addWithRelativeIndent(local);
@@ -800,7 +800,11 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
 {
     config_section_title(ctx, "copy dependencies");
 
-    ctx.if_("CPPAN_USE_CACHE");
+    //                                    comment out this part?
+    const auto cache_cond = !d.empty() && Settings::get_local_settings().build_dir_type != SettingsType::Local;
+
+    if (cache_cond)
+        ctx.if_("CPPAN_USE_CACHE");
 
     // prepare copy files
     ctx.addLine("set(ext sh)");
@@ -1023,7 +1027,8 @@ add_custom_command(TARGET )" + target + R"( POST_BUILD
         ctx.addLine();
     }
 
-    ctx.endif(); // CPPAN_USE_CACHE
+    if (cache_cond)
+        ctx.endif(); // CPPAN_USE_CACHE
     ctx.addLine();
 }
 
@@ -1255,6 +1260,8 @@ int CMakePrinter::generate(const BuildSettings &bs) const
         c.args.push_back("-DCPPAN_CMAKE_VERBOSE="s + (s.cmake_verbose ? "1" : "0"));
     c.args.push_back("-DCPPAN_BUILD_VERBOSE="s + (s.build_system_verbose ? "1" : "0"));
     c.args.push_back("-DCPPAN_BUILD_WARNING_LEVEL="s + std::to_string(s.build_warning_level));
+    c.args.push_back("-DCPPAN_USE_CACHE="s + (s.use_cache ? "1" : "0"));
+    c.args.push_back("-DCPPAN_SHORT_LOCAL_NAMES="s + (s.short_local_names ? "1" : "0"));
     //c.args.push_back("-DCPPAN_TEST_RUN="s + (bs.test_run ? "1" : "0"));
     for (auto &o : s.cmake_options)
         c.args.push_back(o);
@@ -1895,7 +1902,13 @@ endif()
             else
             {
                 if (!d.flags[pfLocalProject])
+                {
+                    ctx.if_("CPPAN_SHORT_LOCAL_NAMES");
+                    set_target_properties(ctx, "OUTPUT_NAME", d.ppath.back() + "-" + d.version.toString());
+                    ctx.else_();
                     set_target_properties(ctx, "OUTPUT_NAME", d.target_name);
+                    ctx.endif();
+                }
                 else
                 {
                     set_target_properties(ctx, "OUTPUT_NAME", Settings::get_local_settings().short_local_names ? d.ppath.back() : d.target_name);
@@ -2347,6 +2360,7 @@ else())");
 
     // copy deps for local projects
     // this is needed for executables that may go to custom folder but without deps
+    // only for cache
     if (d.flags[pfLocalProject] && !d.flags[pfHeaderOnly])
         print_copy_dependencies(ctx, "${this}");
 

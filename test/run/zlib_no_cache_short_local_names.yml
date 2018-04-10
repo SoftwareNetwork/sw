@@ -1,0 +1,10 @@
+local_settings:
+    storage_dir: storage
+    use_cache: false
+    short_local_names: true
+
+projects:
+    examples.cpp.helloworld.server:
+        files: dummy.cpp
+        dependencies:
+            - pvt.cppan.demo.madler.zlib: "*"
