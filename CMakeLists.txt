@@ -156,6 +156,7 @@ cppan_add_package(
 
         pvt.cppan.demo.catchorg.catch2-2
 )
+#set(CPPAN_FORCE 1)
 cppan_execute()
 
 ################################################################################

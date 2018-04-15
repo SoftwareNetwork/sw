@@ -30,8 +30,12 @@ endfunction()
 function(cppan_execute)
     message(STATUS "cppan: processing dependencies")
 
+    if (CPPAN_FORCE)
+        set(CPPAN_FORCE -s)
+    endif()
+
     execute_process(
-        COMMAND ${CPPAN_EXECUTABLE} -d "${CPPAN_DEPS_DIR}"
+        COMMAND ${CPPAN_EXECUTABLE} -d "${CPPAN_DEPS_DIR}" ${CPPAN_FORCE}
         RESULT_VARIABLE ret
     )
     if (NOT ${ret} EQUAL 0)

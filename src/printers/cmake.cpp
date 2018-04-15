@@ -772,7 +772,7 @@ endif()
         local.addLine();
 
         // alias dependencies
-        /*if (d.empty())
+        if (d.empty())
         {
             auto tt = "add_dependencies"s;
             for (auto &dp : build_deps)
@@ -786,7 +786,7 @@ endif()
                     return tt + "(" + s + " ${this})";
                 });
             }
-        }*/
+        }
 
         if (has_build_deps)
             ctx.addWithRelativeIndent(local);
@@ -1261,7 +1261,8 @@ int CMakePrinter::generate(const BuildSettings &bs) const
     c.args.push_back("-DCPPAN_BUILD_VERBOSE="s + (s.build_system_verbose ? "1" : "0"));
     c.args.push_back("-DCPPAN_BUILD_WARNING_LEVEL="s + std::to_string(s.build_warning_level));
     c.args.push_back("-DCPPAN_USE_CACHE="s + (s.use_cache ? "1" : "0"));
-    c.args.push_back("-DCPPAN_SHORT_LOCAL_NAMES="s + (s.short_local_names ? "1" : "0"));
+    if (s.short_local_names)
+        c.args.push_back("-DCPPAN_SHORT_LOCAL_NAMES="s + (s.short_local_names ? "1" : "0"));
     //c.args.push_back("-DCPPAN_TEST_RUN="s + (bs.test_run ? "1" : "0"));
     for (auto &o : s.cmake_options)
         c.args.push_back(o);
