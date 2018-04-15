@@ -69,16 +69,10 @@ Version::Version(const String &s)
         type = VersionType::Branch;
     }
     else
-    {
-        type = VersionType::Any;
         throw std::runtime_error("Bad version");
-    }
 
     if (!isValid())
-    {
-        type = VersionType::Any;
         throw std::runtime_error("Bad version");
-    }
 }
 
 String Version::toString() const

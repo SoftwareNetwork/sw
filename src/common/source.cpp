@@ -342,7 +342,7 @@ void Git::applyVersion(const Version &v)
 
 void Git::loadVersion(Version &version)
 {
-    auto ver = !version.isValid() ? version.toString() : ""s;
+    auto ver = (version.isValid() && version != Version(-1,-1,-1)) ? version.toString() : ""s;
 
     if (ver.empty())
     {
@@ -455,7 +455,7 @@ String Hg::printCpp() const
 
 void Hg::loadVersion(Version &version)
 {
-    auto ver = !version.isValid() ? version.toString() : ""s;
+    auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
 
     if (ver.empty())
     {
@@ -581,7 +581,7 @@ String Bzr::printCpp() const
 
 void Bzr::loadVersion(Version &version)
 {
-    auto ver = !version.isValid() ? version.toString() : ""s;
+    auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
 
     if (ver.empty())
     {
@@ -654,7 +654,7 @@ void Fossil::save(yaml &root, const String &name) const
 
 void Fossil::loadVersion(Version &version)
 {
-    auto ver = !version.isValid() ? version.toString() : ""s;
+    auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
 
     if (ver.empty())
     {
@@ -779,7 +779,7 @@ String Cvs::printCpp() const
 
 void Cvs::loadVersion(Version &version)
 {
-    auto ver = !version.isValid() ? version.toString() : ""s;
+    auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
 
     if (ver.empty())
     {
