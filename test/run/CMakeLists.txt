@@ -70,6 +70,7 @@ cppan_add_test_simple(zlib_no_cache)
 cppan_add_test_suite(zlib_no_cache_short_local_names)
 cppan_add_test_suite(dep_in_dep_png_nanobp)
 cppan_add_test_suite(dep_in_dep_png_nanobp_no_cache)
+cppan_add_test_suite(project_condition)
 
 # ninja
 find_program(n ninja)

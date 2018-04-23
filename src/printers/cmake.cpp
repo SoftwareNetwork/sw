@@ -852,6 +852,8 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
     {
         auto &p = dp.second;
 
+        p.conditions.insert(rd[p].config->getDefaultProject().condition);
+
         if (p.flags[pfExecutable])
         {
             // if we have an exe, we must include all dependent targets
@@ -1214,6 +1216,9 @@ endif()
         {
             if (!once)
             {
+                dep.second.conditions.insert(rd[dep.second].config->getDefaultProject().condition);
+                ScopedDependencyCondition sdc(ctx, dep.second);
+
                 // this or selected project below
                 ctx.addLine("set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT " + dep.second.target_name_hash + ")");
                 once = true;
@@ -2926,6 +2931,7 @@ add_dependencies()" + old_cppan_target + R"( run-cppan)
         {
             if (!dep.second.flags[pfLocalProject])
                 continue;
+            dep.second.conditions.insert(rd[dep.second].config->getDefaultProject().condition);
             if (dep.second.flags[pfExecutable])
             {
                 ScopedDependencyCondition sdc(ctx, dep.second);

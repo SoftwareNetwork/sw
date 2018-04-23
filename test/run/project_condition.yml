@@ -1,0 +1,9 @@
+local_settings:
+    storage_dir: storage
+
+projects:
+    examples.cpp.helloworld.server:
+        files: dummy.cpp
+        condition: 0
+
+
