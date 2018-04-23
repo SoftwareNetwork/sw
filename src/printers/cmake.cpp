@@ -1501,7 +1501,7 @@ void CMakePrinter::print_references(CMakeContext &ctx) const
         ScopedDependencyCondition sdc(ctx, dd);
         ctx.addLine("set(" + dd.reference + " " + rd[d].dependencies[dd.ppath.toString()].target_name + ")");
         if (dd.ppath.is_loc())
-            ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd.get_local_package_dir(dd.ppath.toString())) + ")");
+            ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd.get_local_package_dir(dd.ppath)) + ")");
         else
             ctx.addLine("set(" + dd.reference + "_SDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirSrc()) + ")");
         ctx.addLine("set(" + dd.reference + "_BDIR " + normalize_path(rd[d].dependencies[dd.ppath.toString()].getDirObj()) + ")");
@@ -2450,8 +2450,8 @@ void CMakePrinter::print_src_actions_file(const path &fn) const
     ctx.addLine();
     print_bs_insertion(ctx, p, "post sources", &BuildSystemConfigInsertions::post_sources);
     ctx.addLine();
-    print_bs_insertion(ctx, p, "post target", &BuildSystemConfigInsertions::post_target);
-    ctx.addLine();
+    //print_bs_insertion(ctx, p, "post target", &BuildSystemConfigInsertions::post_target);
+    //ctx.addLine();
     print_bs_insertion(ctx, p, "post alias", &BuildSystemConfigInsertions::post_alias);
     ctx.addLine();
     ctx.addLine("set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR_OLD})");

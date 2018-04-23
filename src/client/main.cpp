@@ -35,6 +35,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/nowide/args.hpp>
+#include <primitives/command.h>
 #include <primitives/pack.h>
 #include <primitives/templates.h>
 #include <primitives/executor.h>
@@ -724,6 +725,32 @@ optional<int> internal(const Strings &args)
 
         CMakePrinter c;
         c.parallel_vars_check(o);
+        return 0;
+    }
+
+    if (args[1] == "internal-parallel-moc")
+    {
+        if (args.size() != 3)
+        {
+            std::cout << "invalid number of arguments: " << args.size() << "\n";
+            std::cout << "usage: cppan internal-parallel-moc moc.list\n";
+            return 1;
+        }
+
+        path file = trim_double_quotes(args[2]);
+        auto lines = read_lines(file);
+        auto &e = getExecutor();
+        for (auto &line : lines)
+        {
+            // maybe read in stream with std::quoted
+            auto ss = split_string(line, " ");
+            primitives::Command c;
+            c.working_directory = ss[0];
+            c.args.assign(ss.begin() + 1, ss.end());
+            e.push([c]() mutable { c.execute(); });
+        }
+        e.wait();
+
         return 0;
     }
 

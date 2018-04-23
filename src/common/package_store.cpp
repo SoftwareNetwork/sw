@@ -359,7 +359,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
 
     auto read_from_cpp = [&conf, &config_name](const path &fn)
     {
-        auto s = read_file(fn);
+        auto s = read_file_without_bom(fn);
         auto comments = extract_comments(s);
 
         std::vector<size_t> load_ok;

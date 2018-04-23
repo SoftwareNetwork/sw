@@ -957,4 +957,114 @@ function(set_once_var variable)
     set(CPPAN_ONCE_VARIABLES ${CPPAN_ONCE_VARIABLES} ${variable} CACHE STRING "" FORCE)
 endfunction()
 
+########################################
+# FUNCTION cppan_QT5_MAKE_OUTPUT_FILE
+########################################
+
+# macro used to create the names of output files preserving relative dirs
+macro(cppan_QT5_MAKE_OUTPUT_FILE infile prefix ext outfile )
+    string(LENGTH ${CMAKE_CURRENT_BINARY_DIR} _binlength)
+    string(LENGTH ${infile} _infileLength)
+    set(_checkinfile ${CMAKE_CURRENT_SOURCE_DIR})
+    if(_infileLength GREATER _binlength)
+        string(SUBSTRING "${infile}" 0 ${_binlength} _checkinfile)
+        if(_checkinfile STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
+            file(RELATIVE_PATH rel ${CMAKE_CURRENT_BINARY_DIR} ${infile})
+        else()
+            file(RELATIVE_PATH rel ${CMAKE_CURRENT_SOURCE_DIR} ${infile})
+        endif()
+    else()
+        file(RELATIVE_PATH rel ${CMAKE_CURRENT_SOURCE_DIR} ${infile})
+    endif()
+    if(WIN32 AND rel MATCHES "^([a-zA-Z]):(.*)$") # absolute path
+        set(rel "${CMAKE_MATCH_1}_${CMAKE_MATCH_2}")
+    endif()
+    set(_outfile "${CMAKE_CURRENT_BINARY_DIR}/${rel}")
+    string(REPLACE ".." "__" _outfile ${_outfile})
+    get_filename_component(outpath ${_outfile} PATH)
+    get_filename_component(_outfile ${_outfile} NAME_WE)
+    file(MAKE_DIRECTORY ${outpath})
+    set(${outfile} ${outpath}/${prefix}${_outfile}.${ext})
+endmacro()
+
+########################################
+# FUNCTION cppan_QT5_CREATE_MOC_COMMAND
+########################################
+
+# helper macro to set up a moc rule
+function(cppan_QT5_CREATE_MOC_COMMAND infile outfile moc_flags moc_options moc_target moc_depends)
+    # Pass the parameters in a file.  Set the working directory to
+    # be that containing the parameters file and reference it by
+    # just the file name.  This is necessary because the moc tool on
+    # MinGW builds does not seem to handle spaces in the path to the
+    # file given with the @ syntax.
+    get_filename_component(_moc_outfile_name "${outfile}" NAME)
+    get_filename_component(_moc_outfile_dir "${outfile}" PATH)
+    if(_moc_outfile_dir)
+        set(_moc_working_dir WORKING_DIRECTORY ${_moc_outfile_dir})
+    endif()
+    set (_moc_parameters_file ${outfile}_parameters)
+    set (_moc_parameters ${moc_flags} ${moc_options} -o "${outfile}" "${infile}")
+    string (REPLACE ";" "\n" _moc_parameters "${_moc_parameters}")
+
+    if(moc_target)
+        set(_moc_parameters_file ${_moc_parameters_file}$<$<BOOL:$<CONFIGURATION>>:_$<CONFIGURATION>>)
+        set(targetincludes "$<TARGET_PROPERTY:${moc_target},INCLUDE_DIRECTORIES>")
+        set(targetdefines "$<TARGET_PROPERTY:${moc_target},COMPILE_DEFINITIONS>")
+
+        set(targetincludes "$<$<BOOL:${targetincludes}>:-I$<JOIN:${targetincludes},\n-I>\n>")
+        set(targetdefines "$<$<BOOL:${targetdefines}>:-D$<JOIN:${targetdefines},\n-D>\n>")
+
+        file (GENERATE
+            OUTPUT ${_moc_parameters_file}
+            CONTENT "${targetdefines}${targetincludes}${_moc_parameters}\n"
+        )
+
+        set(targetincludes)
+        set(targetdefines)
+    else()
+        file(WRITE ${_moc_parameters_file} "${_moc_parameters}\n")
+    endif()
+
+    set(_moc_extra_parameters_file @${_moc_parameters_file})
+    file(APPEND ${BDIR}/moc.list "\"${_moc_working_dir}\" \"${Qt5Core_MOC_EXECUTABLE}\" \"${_moc_extra_parameters_file}\"\n")
+    set_source_files_properties(${infile} PROPERTIES SKIP_AUTOMOC ON)
+    set_source_files_properties(${outfile} PROPERTIES SKIP_AUTOMOC ON)
+    set_source_files_properties(${outfile} PROPERTIES SKIP_AUTOUIC ON)
+endfunction()
+
+########################################
+# FUNCTION cppan_QT5_WRAP_CPP
+########################################
+
+function(cppan_QT5_WRAP_CPP outfiles )
+    # get include dirs
+    qt5_get_moc_flags(moc_flags)
+
+    set(options)
+    set(oneValueArgs TARGET)
+    set(multiValueArgs OPTIONS DEPENDS)
+
+    cmake_parse_arguments(_WRAP_CPP "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    set(moc_files ${_WRAP_CPP_UNPARSED_ARGUMENTS})
+    set(moc_options ${_WRAP_CPP_OPTIONS})
+    set(moc_target ${_WRAP_CPP_TARGET})
+    set(moc_depends ${_WRAP_CPP_DEPENDS})
+
+    if (moc_target AND CMAKE_VERSION VERSION_LESS 2.8.12)
+        message(FATAL_ERROR "The TARGET parameter to qt5_wrap_cpp is only available when using CMake 2.8.12 or later.")
+    endif()
+    foreach(it ${moc_files})
+        get_filename_component(it ${it} ABSOLUTE)
+        cppan_qt5_make_output_file(${it} moc_ cpp outfile)
+        cppan_qt5_create_moc_command(${it} ${outfile} "${moc_flags}" "${moc_options}" "${moc_target}" "${moc_depends}")
+        list(APPEND ${outfiles} ${outfile})
+    endforeach()
+    add_custom_command(OUTPUT ${outfiles}
+                       COMMAND ${CPPAN_COMMAND} internal-parallel-moc ${BDIR}/moc.list
+                       DEPENDS ${moc_files} ${moc_depends})
+    set(${outfiles} ${${outfiles}} PARENT_SCOPE)
+endfunction()
+
 ################################################################################
