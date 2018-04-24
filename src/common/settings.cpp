@@ -214,13 +214,14 @@ void Settings::load_main(const yaml &root, const SettingsType type)
             {
                 if (root["builds"][root["current_build"].template as<String>()].IsDefined())
                     current_build = root["builds"][root["current_build"].template as<String>()];
-                else
+                else if (!root["current_build"].template as<String>().empty())
                 {
-                    // on empty config name we build the first configuration
-                    LOG_WARN(logger, "No such build config '" + root["current_build"].template as<String>() +
+                    // on empty config name we throw an error
+                    throw std::runtime_error("No such build config '" + root["current_build"].template as<String>() +
                         "' in builds directive. Trying to build the first configuration.");
-                    current_build = root["builds"].begin()->second;
                 }
+                else
+                    current_build = root["builds"].begin()->second;
             }
         }
         else if (root["build"].IsDefined())
@@ -244,6 +245,15 @@ void Settings::load_build(const yaml &root)
 {
     if (root.IsNull())
         return;
+
+    //
+    YAML_EXTRACT(storage_dir, String);
+    YAML_EXTRACT(build_dir, String);
+    YAML_EXTRACT(cppan_dir, String);
+    YAML_EXTRACT(output_dir, String);
+
+    if (root["build_dir"].IsDefined())
+        build_dir_type = SettingsType::None;
 
     // extract
     YAML_EXTRACT_AUTO(c_compiler);
