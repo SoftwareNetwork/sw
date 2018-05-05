@@ -113,15 +113,17 @@ public:
             return;
         ctx.addLine("# conditions for dependency: " + d.target_name);
         for (auto &c : d.conditions)
-            ctx.if_(c);
+            if (!c.empty())
+                ctx.if_(c);
     }
 
     ~ScopedDependencyCondition()
     {
         if (d.conditions.empty())
             return;
-        for (auto &c [[maybe_unused]] : d.conditions)
-            ctx.endif();
+        for (auto &c[[maybe_unused]] : d.conditions)
+            if (!c.empty())
+                ctx.endif();
         if (empty_lines)
             ctx.emptyLines();
     }
@@ -1292,11 +1294,15 @@ int CMakePrinter::generate(const BuildSettings &bs) const
             // add more != generators
             if (s.generator != "Ninja")
             {
-                auto name = bs.filename_without_ext + "-" + bs.config + ".sln.lnk";
+                auto name = bs.filename_without_ext + "-";
+                bs.append_config_name(name);
+                name += ".sln.lnk";
                 if (s.is_custom_build_dir())
                 {
                     bld_dir = bs.binary_directory / ".." / "..";
-                    name = bs.config + ".sln.lnk";
+                    name.clear();
+                    bs.append_config_name(name);
+                    name += ".sln.lnk";
                 }
                 auto sln = bs.binary_directory / (bs.filename_without_ext + ".sln");
                 auto sln_new = bld_dir / name;
@@ -1306,11 +1312,15 @@ int CMakePrinter::generate(const BuildSettings &bs) const
 #else
             if (s.generator == "Xcode")
             {
-                auto name = bs.filename_without_ext + "-" + bs.config + ".xcodeproj";
+                auto name = bs.filename_without_ext + "-";
+                bs.append_config_name(name);
+                name += ".xcodeproj";
                 if (s.is_custom_build_dir())
                 {
                     bld_dir = bs.binary_directory / ".." / "..";
-                    name = bs.config + ".xcodeproj";
+                    name.clear();
+                    bs.append_config_name(name);
+                    name += ".xcodeproj";
                 }
                 auto sln = bs.binary_directory / (bs.filename_without_ext + ".xcodeproj");
                 auto sln_new = bld_dir / name;

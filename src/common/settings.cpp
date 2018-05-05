@@ -59,6 +59,14 @@ void BuildSettings::append_build_dirs(const path &p)
     binary_directory = source_directory / "build";
 }
 
+void BuildSettings::append_config_name(String &s) const
+{
+    if (config_fullname.empty() || s.size() + config_fullname.size() > 230)
+        s += config;
+    else
+        s += config_fullname;
+}
+
 Settings::Settings()
 {
     build_dir = temp_directory_path() / "build";

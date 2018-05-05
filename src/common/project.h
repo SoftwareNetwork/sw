@@ -17,15 +17,12 @@
 #pragma once
 
 #include "checks.h"
-#include "cppan_string.h"
 #include "dependency.h"
 #include "project_path.h"
 #include "source.h"
 #include "yaml.h"
 
 #include <primitives/stdcompat/optional.h>
-
-#include <unordered_map>
 
 #define DEPENDENCIES_NODE "dependencies"
 #define INCLUDE_DIRECTORIES_ONLY "include_directories_only"

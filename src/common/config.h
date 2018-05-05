@@ -16,10 +16,6 @@
 
 #pragma once
 
-#include <map>
-#include <set>
-
-#include "cppan_string.h"
 #include "filesystem.h"
 #include "package.h"
 #include "project.h"

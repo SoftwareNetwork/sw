@@ -16,14 +16,10 @@
 
 #pragma once
 
-#include "cppan_string.h"
-#include "filesystem.h"
 #include "property_tree.h"
 #include "version.h"
 
 #include <primitives/stdcompat/variant.h>
-
-#include <set>
 
 namespace YAML { class Node; }
 using yaml = YAML::Node;

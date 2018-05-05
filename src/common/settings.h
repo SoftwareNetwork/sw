@@ -43,9 +43,11 @@ struct BuildSettings
     path binary_directory;
     String source_directory_hash;
     String config;
+    String config_fullname;
 
     void set_build_dirs(const String &name);
     void append_build_dirs(const path &p);
+    void append_config_name(String &s) const;
 };
 
 struct Settings
