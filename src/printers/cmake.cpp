@@ -2307,7 +2307,7 @@ endif()
             ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\"");
         }
         auto api_names = p.api_name;
-        if (!p.skip_default_api)
+        if (p.create_default_api)
         {
             auto pp = p.pkg.ppath;
             while (!pp.empty() && pp.front() != p.default_api_start)

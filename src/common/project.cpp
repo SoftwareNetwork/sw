@@ -674,7 +674,7 @@ void Project::load(const yaml &root)
     YAML_EXTRACT_AUTO(rc_enabled);
     //YAML_EXTRACT_AUTO(disabled);
     YAML_EXTRACT_AUTO(skip_on_server);
-    YAML_EXTRACT_AUTO(skip_default_api);
+    YAML_EXTRACT_AUTO(create_default_api);
     YAML_EXTRACT_AUTO(default_api_start);
     YAML_EXTRACT_AUTO(build_dependencies_with_same_config);
 
@@ -1295,7 +1295,7 @@ yaml Project::save() const
     ADD_IF_NOT_VAL_TRIPLE(rc_enabled);
     //ADD_IF_VAL_TRIPLE(disabled);
     ADD_IF_VAL_TRIPLE(skip_on_server);
-    ADD_IF_VAL_TRIPLE(skip_default_api);
+    ADD_IF_VAL_TRIPLE(create_default_api);
     ADD_IF_NOT_EMPTY(default_api_start);
     ADD_IF_VAL_TRIPLE(build_dependencies_with_same_config);
 

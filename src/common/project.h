@@ -239,7 +239,7 @@ public:
     bool rc_enabled = true;
     //bool disabled = false;
     bool skip_on_server = false;
-    bool skip_default_api = false;
+    bool create_default_api = false;
     String default_api_start;
 
     StringSet api_name;
