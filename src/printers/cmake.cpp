@@ -969,7 +969,7 @@ add_custom_command(TARGET )" + target + R"( POST_BUILD
     {
         // like with build deps
         // only for ninja at the moment
-        ctx.if_("NINJA");
+        ctx.if_("NINJA AND WIN32");
         for (auto &dp : copy_deps)
         {
             auto &p = dp.second;
