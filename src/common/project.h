@@ -239,6 +239,8 @@ public:
     bool rc_enabled = true;
     //bool disabled = false;
     bool skip_on_server = false;
+    bool skip_default_api = false;
+    String default_api_start;
 
     StringSet api_name;
     String output_name; // file name

@@ -1285,6 +1285,9 @@ int CMakePrinter::generate(const BuildSettings &bs) const
     c.buf_size = 256; // for frequent flushes
     auto ret = run_command(s, c);
 
+    if (fs::exists(bs.binary_directory / CPPAN_CONFIG_FILENAME))
+        bs.config_fullname = read_file(bs.binary_directory / CPPAN_CONFIG_FILENAME);
+
     if (bs.allow_links)
     {
         if (!s.silent || s.is_custom_build_dir())
@@ -2108,7 +2111,9 @@ endif()
         ctx.increaseIndent("target_compile_definitions    (${this}");
         if (!d.flags[pfHeaderOnly])
         {
-            ctx.addLine("PRIVATE   ${LIBRARY_API}"s + (d.flags[pfExecutable] ? "" : "=${CPPAN_EXPORT}"));
+            // ?
+            //ctx.addLine("PRIVATE   ${LIBRARY_API}"s + (d.flags[pfExecutable] ? "" : "=${CPPAN_EXPORT}"));
+            ctx.addLine("PRIVATE   ${LIBRARY_API}=${CPPAN_EXPORT}");
             if (!d.flags[pfExecutable])
                 ctx.addLine("INTERFACE ${LIBRARY_API}=${CPPAN_IMPORT}");
         }
@@ -2301,7 +2306,15 @@ endif()
             // CPPAN_CONFIG is private for a package!
             ctx.addLine("PRIVATE CPPAN_CONFIG=\"${config}\"");
         }
-        for (auto &a : p.api_name)
+        auto api_names = p.api_name;
+        if (!p.skip_default_api)
+        {
+            auto pp = p.pkg.ppath;
+            while (!pp.empty() && pp.front() != p.default_api_start)
+                pp = pp.slice(1);
+            api_names.insert(boost::to_upper_copy(!pp.empty() ? pp.toString("_") : p.pkg.ppath.back()) + "_API");
+        }
+        for (auto &a : api_names)
             ctx.addLine(visibility + " " + a + "=${LIBRARY_API}");
         ctx.decreaseIndent(")");
         ctx.addLine();

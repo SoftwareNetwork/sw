@@ -89,6 +89,11 @@ public:
         return path_elements.empty();
     }
 
+    auto front() const
+    {
+        return path_elements.front();
+    }
+
     auto back() const
     {
         return path_elements.back();

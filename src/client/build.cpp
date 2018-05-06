@@ -37,11 +37,6 @@ int build_packages(const String &name, const PackagesSet &pkgs, const path &sett
 int build_packages(const String &name, const PackagesSet &pkgs);
 int build_packages(const Config &c, const String &name);
 
-String get_full_config_name(const path &bin_dir)
-{
-    return read_file(bin_dir / CPPAN_CONFIG_FILENAME);
-}
-
 String test_run()
 {
     // do a test build to extract config string
@@ -81,7 +76,7 @@ String test_run()
         throw std::runtime_error("There are errors during test run");
 
     // read cfg
-    auto c = get_full_config_name(bin_dir);
+    auto c = read_file(bin_dir / CPPAN_CONFIG_FILENAME);
     if (c.empty())
         throw std::logic_error("Test config is empty");
 
@@ -185,9 +180,6 @@ int build_packages(const Config &c, const String &name)
     c.process(bs.source_directory);
     auto printer = Printer::create(ls.printerType);
     printer->prepare_build(bs);
-
-    if (fs::exists(bs.binary_directory))
-        bs.config_fullname = get_full_config_name(bs.binary_directory);
 
     auto ret = printer->generate(bs);
     if (ret || ls.generate_only)
