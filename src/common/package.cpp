@@ -270,14 +270,14 @@ void cleanPackage(const Package &pkg, int flags)
     {
         if (fs::exists(p))
         {
-            boost::system::error_code ec;
+            error_code ec;
             fs::remove_all(p, ec);
         }
     };
 
     auto rm_recursive = [](const auto &pkg, const auto &files, const auto &ext)
     {
-        boost::system::error_code ec;
+        error_code ec;
         for (auto &f : files)
         {
             auto fn = f.filename().string();

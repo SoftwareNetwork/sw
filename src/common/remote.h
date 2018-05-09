@@ -20,6 +20,8 @@
 #include "filesystem.h"
 #include "http.h"
 
+#include <functional>
+
 #define DEFAULT_REMOTE_NAME "origin"
 
 struct Package;

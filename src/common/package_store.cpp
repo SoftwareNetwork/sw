@@ -586,7 +586,7 @@ PackageStore::read_packages_from_file(path p, const String &config_name, bool di
                 {
                     auto r = project.pkg.getDirSrc() / f.lexically_relative(root_directory);
                     create_directories(r.parent_path());
-                    fs::copy_file(f, r, fs::copy_option::overwrite_if_exists);
+                    fs::copy_file(f, r, fs::copy_options::overwrite_existing);
                     files.insert(r);
                 }
                 project.files = files;

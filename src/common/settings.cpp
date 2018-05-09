@@ -438,7 +438,7 @@ bool Settings::checkForUpdates() const
     String stamp_file = "/client/.service/linux.stamp";
 #endif
 
-    auto fn = fs::temp_directory_path() / fs::unique_path();
+    auto fn = fs::temp_directory_path() / unique_path();
     download_file(remotes[0].url + stamp_file, fn);
     auto stamp_remote = boost::trim_copy(read_file(fn));
     fs::remove(fn);
@@ -489,7 +489,7 @@ Settings &Settings::get(SettingsType type)
                 auto fn = get_config_filename();
                 if (!fs::exists(fn))
                 {
-                    boost::system::error_code ec;
+                    error_code ec;
                     fs::create_directories(fn.parent_path(), ec);
                     if (ec)
                         throw std::runtime_error(ec.message());

@@ -51,7 +51,7 @@ void verify(const Package &pkg, path fn)
 
     SCOPE_EXIT
     {
-        boost::system::error_code ec;
+        error_code ec;
         fs::remove_all(dir, ec);
     };
 

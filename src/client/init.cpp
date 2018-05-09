@@ -215,7 +215,7 @@ void command_init(const Strings &args)
         build_project = false;
     }
 
-    boost::system::error_code ec;
+    error_code ec;
     auto root = current_thread_path();
 
     static const auto err_exist = "File or dir with such name already exist";

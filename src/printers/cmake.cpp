@@ -1410,7 +1410,7 @@ void CMakePrinter::clear_export(const path &p) const
         if (!fs::is_directory(fc))
             continue;
 
-        boost::system::error_code ec;
+        error_code ec;
         fs::remove_all(fc / exports_dir_name, ec);
     }
 }
@@ -1968,7 +1968,7 @@ endif()
                         else
                             ipath = rd.get_local_package_dir(pkg.ppath);
                         ipath /= i;
-                        boost::system::error_code ec;
+                        error_code ec;
                         if (fs::exists(ipath, ec))
                         {
                             ScopedDependencyCondition sdc(ctx, pkg);

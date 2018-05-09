@@ -472,7 +472,7 @@ void ServiceDatabase::performStartupActions() const
                 clearConfigHashes();
 
                 // also cleanup temp build dir
-                boost::system::error_code ec;
+                error_code ec;
                 fs::remove_all(temp_directory_path(), ec);
             }
 
@@ -608,7 +608,7 @@ Stamps ServiceDatabase::getFileStamps() const
     db->execute("select * from FileStamps",
         [&st](SQLITE_CALLBACK_ARGS)
     {
-        st[cols[0]] = std::stoll(cols[1]);
+        st[cols[0]] = fs::file_time_type(fs::file_time_type::duration(std::stoll(cols[1])));
         return 0;
     });
     return st;
@@ -623,7 +623,7 @@ void ServiceDatabase::setFileStamps(const Stamps &stamps) const
     }
     String q = "replace into FileStamps values ";
     for (auto &s : stamps)
-        q += "('" + normalize_path(s.first) + "', '" + std::to_string(s.second) + "'),";
+        q += "('" + normalize_path(s.first) + "', '" + std::to_string(s.second.time_since_epoch().count()) + "'),";
     q.resize(q.size() - 1);
     q += ";";
     db->execute(q);
@@ -930,7 +930,7 @@ void PackagesDatabase::download()
         auto unpack_dir = get_temp_filename();
         auto files = unpack_file(fn, unpack_dir);
         for (auto &f : files)
-            fs::copy_file(f, db_repo_dir / f.filename(), fs::copy_option::overwrite_if_exists);
+            fs::copy_file(f, db_repo_dir / f.filename(), fs::copy_options::overwrite_existing);
         fs::remove_all(unpack_dir);
         fs::remove(fn);
     };
@@ -968,7 +968,7 @@ void PackagesDatabase::download()
         catch (const std::exception &)
         {
             // cannot throw
-            boost::system::error_code ec;
+            error_code ec;
             fs::remove_all(db_repo_dir, ec);
 
             download_archive();

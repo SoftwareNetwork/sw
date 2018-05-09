@@ -19,6 +19,8 @@
 #include "dependency.h"
 #include "package_store.h"
 
+#include <functional>
+
 class Resolver
 {
 public:

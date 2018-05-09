@@ -445,7 +445,7 @@ try
             auto p = cwd;
             if (par)
             {
-                p = t / fs::unique_path();
+                p = t / unique_path();
                 fs::create_directories(p);
                 current_thread_path(p);
 
@@ -454,7 +454,7 @@ try
 
                 applyVersionToUrl(project.source, project.pkg.version);
                 download(project.source);
-                fs::copy_file(cwd / CPPAN_FILENAME, CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
+                fs::copy_file(cwd / CPPAN_FILENAME, CPPAN_FILENAME, fs::copy_options::overwrite_existing);
             }
             SCOPE_EXIT
             {
@@ -607,12 +607,12 @@ void self_upgrade()
 
     auto &s = Settings::get_user_settings();
 
-    auto fn = fs::temp_directory_path() / fs::unique_path();
+    auto fn = fs::temp_directory_path() / unique_path();
     std::cout << "Downloading checksum file" << "\n";
     download_file(s.remotes[0].url + client + ".md5", fn, 50_MB);
     auto md5sum = boost::algorithm::trim_copy(read_file(fn));
 
-    fn = fs::temp_directory_path() / fs::unique_path();
+    fn = fs::temp_directory_path() / unique_path();
     std::cout << "Downloading the latest client" << "\n";
     download_file(s.remotes[0].url + client, fn, 50_MB);
     if (md5sum != md5(fn))
@@ -655,7 +655,7 @@ void self_upgrade_copy(const path &dst)
         std::this_thread::sleep_for(std::chrono::seconds(2));
         try
         {
-            fs::copy_file(get_program(), dst, fs::copy_option::overwrite_if_exists);
+            fs::copy_file(get_program(), dst, fs::copy_options::overwrite_existing);
             break;
         }
         catch (std::exception &e)

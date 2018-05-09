@@ -563,7 +563,7 @@ void Project::findSources(path p)
 
     if (!root_directory.empty() && !pkg.flags[pfLocalProject] &&
         fs::absolute(CPPAN_FILENAME) != fs::absolute(root_directory / CPPAN_FILENAME))
-        fs::copy_file(CPPAN_FILENAME, root_directory / CPPAN_FILENAME, fs::copy_option::overwrite_if_exists);
+        fs::copy_file(CPPAN_FILENAME, root_directory / CPPAN_FILENAME, fs::copy_options::overwrite_existing);
     if (fs::exists(p / CPPAN_FILENAME))
         files.insert(p / CPPAN_FILENAME);
     else if (fs::exists(current_thread_path() / CPPAN_FILENAME))

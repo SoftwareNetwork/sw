@@ -40,7 +40,7 @@ int build_packages(const Config &c, const String &name);
 String test_run()
 {
     // do a test build to extract config string
-    auto src_dir = temp_directory_path() / "temp" / fs::unique_path();
+    auto src_dir = temp_directory_path() / "temp" / unique_path();
     auto bin_dir = src_dir / "build";
 
     fs::create_directories(src_dir);
@@ -48,7 +48,7 @@ String test_run()
     SCOPE_EXIT
     {
         // remove test dir
-        boost::system::error_code ec;
+        error_code ec;
         fs::remove_all(src_dir, ec);
     };
 
