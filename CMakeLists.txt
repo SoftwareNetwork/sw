@@ -231,7 +231,7 @@ elseif (APPLE)
 add_custom_target(package_client
     COMMAND zip -FS -j -9 cppan-master-macOS-client.zip $<TARGET_FILE:client>
 )
-elseif (EXISTS /etc/centos-release)
+elseif (EXISTS "/etc/centos-release" OR EXISTS "/etc/fedora-release")
 add_custom_target(package_client
     COMMAND ${CMAKE_CPACK_COMMAND}
         -G RPM
