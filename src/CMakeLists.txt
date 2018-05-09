@@ -34,7 +34,7 @@ set(common_src ${common_src})
 add_library(support ${common_src})
 target_include_directories(support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
 
-if (UNIX AND NOT APPLE AND NOT EXISTS "/etc/centos-release")
+if (UNIX AND NOT APPLE AND NOT (EXISTS "/etc/centos-release" OR EXISTS "/etc/fedora-release"))
 target_link_libraries(support backtrace)
 endif()
 target_link_libraries(support
@@ -53,7 +53,7 @@ target_link_libraries(support
 ########################################
 
 set(gen_src
-	${CMAKE_CURRENT_SOURCE_DIR}/inserts/inserts.cpp.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/inserts/inserts.cpp.in
     ${CMAKE_CURRENT_SOURCE_DIR}/inserts/cppan.h
     ${CMAKE_CURRENT_SOURCE_DIR}/inserts/build.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/inserts/functions.cmake
