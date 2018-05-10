@@ -427,10 +427,11 @@ void Project::findSources(path p)
         sources.insert(bfn.filename().string());
     }
 
+    error_code ec;
     for (auto i = sources.begin(); i != sources.end();)
     {
         auto f = p / *i;
-        if (fs::exists(f) && fs::is_regular_file(f))
+        if (fs::exists(f, ec) && fs::is_regular_file(f))
         {
             files.insert(f);
             sources.erase(i++);
