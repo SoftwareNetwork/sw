@@ -1327,14 +1327,14 @@ int CMakePrinter::generate(const BuildSettings &bs) const
                 }
                 auto sln = bs.binary_directory / (bs.filename_without_ext + ".xcodeproj");
                 auto sln_new = bld_dir / name;
-                boost::system::error_code ec;
+                error_code ec;
                 fs::create_symlink(sln, sln_new, ec);
             }
             else if (!s.is_custom_build_dir())
             {
                 bld_dir /= path(CPPAN_LOCAL_BUILD_PREFIX + bs.filename) / bs.config;
                 fs::create_directories(bld_dir);
-                boost::system::error_code ec;
+                error_code ec;
                 fs::create_symlink(bs.source_directory / cmake_config_filename, bld_dir / cmake_config_filename, ec);
             }
 #endif
