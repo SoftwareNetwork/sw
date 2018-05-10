@@ -16,6 +16,8 @@
 
 #include "http.h"
 
+#include <algorithm>
+
 bool isValidSourceUrl(const String &url)
 {
     if (url.empty())
