@@ -211,7 +211,7 @@ void Git::download() const
         // remove possible .git suffix
         String suffix = ".git";
         if (github_url.rfind(suffix) == github_url.size() - suffix.size())
-            github_url.substr(0, github_url.size() - suffix.size());
+            github_url = github_url.substr(0, github_url.size() - suffix.size());
 
         String fn;
         github_url += "/archive/";
