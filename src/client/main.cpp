@@ -639,7 +639,7 @@ void self_upgrade()
     }
 #else
     auto cppan = tmp_dir / "cppan";
-    fs::permissions(cppan, fs::owner_all | fs::group_exe | fs::others_exe);
+    fs::permissions(cppan, fs::perms::owner_all | fs::perms::group_exec | fs::perms::others_exec);
     fs::remove(program);
     fs::copy_file(cppan, program);
     fs::remove(cppan);

@@ -33,6 +33,11 @@
 #include <unistd.h>
 #endif
 
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <linux/limits.h>
+#include <unistd.h>
+#endif
+
 String get_program_version()
 {
     String s;
