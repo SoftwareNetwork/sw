@@ -150,6 +150,8 @@ cppan_add_package(
         pvt.egorpugin.primitives.yaml-master
         pvt.egorpugin.primitives.win32helpers-master
 
+        pvt.egorpugin.primitives.embedder-master
+
         pvt.cppan.demo.imageworks.pystring-1
         pvt.cppan.demo.giovannidicanio.winreg-master
         pvt.cppan.demo.mpark.variant-1

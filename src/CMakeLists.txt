@@ -18,14 +18,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 ########################################
-# inserter
-########################################
-
-add_executable(inserter gen/inserter.cpp)
-set_property(TARGET inserter PROPERTY FOLDER gen)
-target_link_libraries(inserter pvt.egorpugin.primitives.filesystem)
-
-########################################
 # support
 ########################################
 
@@ -66,8 +58,8 @@ set(gen_src
 )
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
-    COMMAND inserter ${CMAKE_CURRENT_SOURCE_DIR}/inserts/inserts.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
-    DEPENDS ${gen_src}
+    COMMAND pvt.egorpugin.primitives.embedder ${CMAKE_CURRENT_SOURCE_DIR}/inserts/inserts.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/inserts.cpp
+    DEPENDS pvt.egorpugin.primitives.embedder ${gen_src}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

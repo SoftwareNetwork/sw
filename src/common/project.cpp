@@ -458,7 +458,7 @@ void Project::findSources(path p)
         rgxs[e] = create_regex(e);
     if (!rgxs.empty())
     {
-        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(p), {}))
+        for (auto &f : fs::recursive_directory_iterator(p))
         {
             if (!fs::is_regular_file(f))
                 continue;
@@ -678,6 +678,7 @@ void Project::load(const yaml &root)
     YAML_EXTRACT_AUTO(create_default_api);
     YAML_EXTRACT_AUTO(default_api_start);
     YAML_EXTRACT_AUTO(build_dependencies_with_same_config);
+    YAML_EXTRACT_AUTO(copy_to_output_dir);
 
     api_name = get_sequence_set<String>(root, "api_name");
 
@@ -1299,6 +1300,7 @@ yaml Project::save() const
     ADD_IF_VAL_TRIPLE(create_default_api);
     ADD_IF_NOT_EMPTY(default_api_start);
     ADD_IF_VAL_TRIPLE(build_dependencies_with_same_config);
+    ADD_IF_NOT_VAL_TRIPLE(copy_to_output_dir);
 
     ADD_SET(api_name, api_name);
 
@@ -1366,7 +1368,7 @@ const Files &Project::getSources() const
 {
     if (!files.empty())
         return files;
-    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(pkg.getDirSrc()), {}))
+    for (auto &f : fs::recursive_directory_iterator(pkg.getDirSrc()))
     {
         if (!fs::is_regular_file(f) || f.path().filename() == CPPAN_FILENAME)
             continue;

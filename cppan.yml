@@ -63,6 +63,9 @@ projects:
                 - pvt.cppan.demo.imageworks.pystring: 1
             #win32:
                 - pvt.cppan.demo.giovannidicanio.winreg: master
+                - name: pvt.egorpugin.primitives.embedder
+                  version: master
+                  ref: embedder
 
         options:
             any:
@@ -92,10 +95,6 @@ projects:
             set_source_files_properties(${stamp} PROPERTIES GENERATED True)
             set(src ${src} ${stamp})
 
-            add_executable(inserts_generator ${SDIR}/src/gen/inserter.cpp)
-            set_property(TARGET inserts_generator PROPERTY CXX_STANDARD 17)
-            set_property(TARGET inserts_generator PROPERTY FOLDER gen)
-            target_link_libraries(inserts_generator pvt.egorpugin.primitives.filesystem)
             set(gen
                 ${SDIR}/src/inserts/cppan.h
                 ${SDIR}/src/inserts/build.cmake
@@ -107,11 +106,11 @@ projects:
                 ${SDIR}/src/inserts/branch.rc.in
             )
             add_custom_target(gen_inserts
-                COMMAND inserts_generator ${SDIR}/src/inserts/inserts.cpp.in ${BDIR}/inserts.cpp
+                COMMAND ${embedder} ${SDIR}/src/inserts/inserts.cpp.in ${BDIR}/inserts.cpp
                 # FIXME: not working on dll build
                 # it could not find deps dlls
                 WORKING_DIRECTORY ${SDIR}/src
-                DEPENDS ${gen}
+                DEPENDS ${embedder} ${gen}
                 SOURCES ${gen}
             )
             set_property(TARGET gen_inserts PROPERTY FOLDER gen)

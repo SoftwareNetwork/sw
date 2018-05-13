@@ -181,6 +181,7 @@ String dump_yaml_config(const yaml &root)
         "skip_on_server",
         "create_default_api",
         "default_api_start",
+        "copy_to_output_dir",
 
         "api_name",
 

@@ -241,6 +241,7 @@ public:
     bool skip_on_server = false;
     bool create_default_api = false;
     String default_api_start;
+    bool copy_to_output_dir = true;
 
     StringSet api_name;
     String output_name; // file name

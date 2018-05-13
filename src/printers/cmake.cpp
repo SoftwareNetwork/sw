@@ -511,6 +511,8 @@ void gather_copy_deps(const Packages &dd, Packages &out)
             continue;
         if (d.flags[pfExecutable])
         {
+            if (!rd[d].config->getDefaultProject().copy_to_output_dir)
+                continue;
             if (!Settings::get_local_settings().copy_all_libraries_to_output)
             {
                 if (!d.flags[pfLocalProject])

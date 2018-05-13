@@ -20,39 +20,39 @@
 #define DECLARE_TEXT_VAR_END(x) }; const String x = _##x;
 
 DECLARE_TEXT_VAR_BEGIN(cppan_h)
-CPPAN_INCLUDE<inserts/cppan.h>
+EMBED<inserts/cppan.h>
 DECLARE_TEXT_VAR_END(cppan_h);
 
 DECLARE_TEXT_VAR_BEGIN(branch_rc_in)
-CPPAN_INCLUDE<inserts/branch.rc.in>
+EMBED<inserts/branch.rc.in>
 DECLARE_TEXT_VAR_END(branch_rc_in);
 
 DECLARE_TEXT_VAR_BEGIN(version_rc_in)
-CPPAN_INCLUDE<inserts/version.rc.in>
+EMBED<inserts/version.rc.in>
 DECLARE_TEXT_VAR_END(version_rc_in);
 
 DECLARE_TEXT_VAR_BEGIN(cmake_functions)
-CPPAN_INCLUDE<inserts/functions.cmake>
+EMBED<inserts/functions.cmake>
 DECLARE_TEXT_VAR_END(cmake_functions);
 
 DECLARE_TEXT_VAR_BEGIN(cmake_build_file)
-CPPAN_INCLUDE<inserts/build.cmake>
+EMBED<inserts/build.cmake>
 DECLARE_TEXT_VAR_END(cmake_build_file);
 
 DECLARE_TEXT_VAR_BEGIN(cmake_generate_file)
-CPPAN_INCLUDE<inserts/generate.cmake>
+EMBED<inserts/generate.cmake>
 DECLARE_TEXT_VAR_END(cmake_generate_file);
 
 DECLARE_TEXT_VAR_BEGIN(cmake_export_import_file)
-CPPAN_INCLUDE<inserts/exports.cmake>
+EMBED<inserts/exports.cmake>
 DECLARE_TEXT_VAR_END(cmake_export_import_file);
 
 DECLARE_TEXT_VAR_BEGIN(cmake_header)
-CPPAN_INCLUDE<inserts/header.cmake>
+EMBED<inserts/header.cmake>
 DECLARE_TEXT_VAR_END(cmake_header);
 
 DECLARE_TEXT_VAR_BEGIN(cppan_cmake_config)
-CPPAN_INCLUDE<inserts/CPPANConfig.cmake>
+EMBED<inserts/CPPANConfig.cmake>
 DECLARE_TEXT_VAR_END(cppan_cmake_config);
 
 #undef DECLARE_TEXT_VAR_BEGIN
