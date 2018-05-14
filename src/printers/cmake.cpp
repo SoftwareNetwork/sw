@@ -1044,16 +1044,16 @@ void CMakePrinter::prepare_rebuild() const
     auto odir = d.getDirObj() / cppan_build_dir;
     if (!fs::exists(odir))
         return;
-    for (auto &dir : boost::make_iterator_range(fs::directory_iterator(odir), {}))
+    for (auto &dir : fs::directory_iterator(odir))
     {
         if (!fs::is_directory(dir))
             continue;
 
         // remove exports to exported definitions, options etc.
-        fs::remove_all(dir / exports_dir_name);
+        fs::remove_all(dir.path() / exports_dir_name);
 
         // remove stamp files to cause rebuilding
-        for (auto &f : boost::make_iterator_range(fs::directory_iterator(dir), {}))
+        for (auto &f : fs::directory_iterator(dir))
         {
             if (!fs::is_regular_file(f))
                 continue;
@@ -1379,12 +1379,12 @@ void CMakePrinter::clear_cache() const
         auto d = pkg.getDirObj() / cppan_build_dir;
         if (!fs::exists(d))
             continue;
-        for (auto &fc : boost::make_iterator_range(fs::directory_iterator(d), {}))
+        for (auto &fc : fs::directory_iterator(d))
         {
             if (!fs::is_directory(fc))
                 continue;
 
-            auto fn = fc / "CMakeCache.txt";
+            auto fn = fc.path() / "CMakeCache.txt";
             remove_file(fn);
         }
     }
@@ -1407,13 +1407,13 @@ void CMakePrinter::clear_export(const path &p) const
     auto d = p / cppan_build_dir;
     if (!fs::exists(d))
         return;
-    for (auto &fc : boost::make_iterator_range(fs::directory_iterator(d), {}))
+    for (auto &fc : fs::directory_iterator(d))
     {
         if (!fs::is_directory(fc))
             continue;
 
         error_code ec;
-        fs::remove_all(fc / exports_dir_name, ec);
+        fs::remove_all(fc.path() / exports_dir_name, ec);
     }
 }
 
@@ -3480,7 +3480,7 @@ void CMakePrinter::print_source_groups(CMakeContext &ctx) const
             else
             {
                 const auto dir = d.getDirSrc();
-                for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+                for (auto &f : fs::recursive_directory_iterator(dir))
                 {
                     if (!fs::is_directory(f))
                         continue;
@@ -3489,7 +3489,7 @@ void CMakePrinter::print_source_groups(CMakeContext &ctx) const
                     auto s2 = boost::replace_all_copy(s, "\\", "\\\\");
                     boost::replace_all(s2, "/", "\\\\");
 
-                    for (auto &f2 : boost::make_iterator_range(fs::directory_iterator(f), {}))
+                    for (auto &f2 : fs::directory_iterator(f))
                     {
                         if (!fs::is_regular_file(f2))
                             continue;
