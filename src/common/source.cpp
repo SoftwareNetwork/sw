@@ -50,9 +50,22 @@ void applyVersion(String &s, const Version &v)
         fmt::arg("M", (int)v.major),
         fmt::arg("m", (int)v.minor),
         fmt::arg("p", (int)v.patch),
-        // "t" - tweak?
+        //fmt::arg("t", (int)v.Tweak),
+        // letter variants
+        // captical
+        fmt::arg("ML", (char)((int)v.major) + 'A'),
+        fmt::arg("mL", (char)((int)v.minor) + 'A'),
+        fmt::arg("pL", (char)((int)v.patch) + 'A'),
+        //fmt::arg("tL", (char)((int)v.Tweak) + 'A'),
+        // small
+        fmt::arg("Ml", (char)((int)v.major) + 'a'),
+        fmt::arg("ml", (char)((int)v.minor) + 'a'),
+        fmt::arg("pl", (char)((int)v.patch) + 'a'),
+        //fmt::arg("tl", (char)((int)v.Tweak) + 'a'),
+        //
         fmt::arg("b", v.branch),
-        fmt::arg("v", v.toString())
+        fmt::arg("v", v.toString()
+        )
     );
 }
 
@@ -149,14 +162,6 @@ bool SourceUrl::isValid(const String &name, String *error) const
 bool SourceUrl::isValidUrl() const
 {
     return isValidSourceUrl(url);
-}
-
-bool Cvs::isValidUrl() const
-{
-    static const std::regex checkCvs("-d:([a-z0-9_-]+):([a-z0-9_-]+)@(\\S*):(\\S*)");
-    if (std::regex_match(url, checkCvs))
-        return true;
-    return false;
 }
 
 bool SourceUrl::load(const ptree &p)
@@ -705,6 +710,14 @@ Cvs::Cvs(const yaml &root, const String &name)
     YAML_EXTRACT_AUTO(branch);
     YAML_EXTRACT_AUTO(revision);
     YAML_EXTRACT_AUTO(module);
+}
+
+bool Cvs::isValidUrl() const
+{
+    static const std::regex checkCvs("-d:([a-z0-9_-]+):([a-z0-9_-]+)@(\\S*):(\\S*)");
+    if (std::regex_match(url, checkCvs))
+        return true;
+    return false;
 }
 
 void Cvs::download() const

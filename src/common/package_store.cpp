@@ -122,6 +122,15 @@ void PackageStore::process(const path &p, Config &root)
         }
     }
 
+    // set correct deps conditions
+    for (auto &c : packages)
+    {
+        for (auto &d : c.second.dependencies)
+        {
+            d.second.conditions = c.second.config->getDefaultProject().dependencies[d.first].conditions;
+        }
+    }
+
     // TODO: if we got a download we might need to refresh configs
     // but we do not know what projects we should clear
     // so clear the whole AT
