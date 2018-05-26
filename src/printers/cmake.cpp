@@ -650,6 +650,11 @@ set(bat_file_error)
 if (WIN32)
     set(bat_file_error "@if %errorlevel% neq 0 goto :cmEnd")
 endif()
+
+set(at_symbol)
+if (WIN32)
+    set(at_symbol @)
+endif()
 )");
 
         bool has_build_deps = false;
@@ -669,9 +674,7 @@ endif()
             ScopedDependencyCondition sdc(local, p, false);
             local.addLine("set(bd_" + p.variable_name + " \"");
             //local.addLine("@echo Building " + p.target_name + ": ${" + cfg + "}");
-#ifdef _WIN32
-            local.addNoNewLine("@");
-#endif
+            local.addNoNewLine("${at_symbol}");
             local.addText("\\\"${CMAKE_COMMAND}\\\" ");
             //local.addText("-DCPPAN_BUILD_LEVEL=${CPPAN_BUILD_LEVEL} ");
             //local.addText("-DTARGET_VAR=" + p.variable_name + " "); // remove!
@@ -727,7 +730,9 @@ endif()
         local.decreaseIndent("\")");
         local.emptyLines();
 
-        local.addLine(R"(if (UNIX)
+        local.addLine(R"(
+if (ANDROID)
+elseif (UNIX)
     set(file chmod u+x ${file} COMMAND ${file})
 endif()
 )");
@@ -850,6 +855,13 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
         ctx.addLine("set(output_dir $<TARGET_FILE_DIR:${this}>)");
     ctx.addLine();
 
+    ctx.addLine(R"(
+set(at_symbol)
+if (WIN32)
+    set(at_symbol @)
+endif()
+)");
+
     Packages copy_deps;
     gather_copy_deps(rd[d].dependencies, copy_deps);
     for (auto &dp : copy_deps)
@@ -893,9 +905,7 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
         ctx.if_("copy");
         {
             String s;
-#ifdef _WIN32
-            s += "set(copy_content \"${copy_content} @\")\n";
-#endif
+            s += "set(copy_content \"${copy_content} ${at_symbol}\")\n";
             s += "        set(copy_content \"${copy_content} \\\"${CMAKE_COMMAND}\\\" -E copy_if_different ";
             String name;
             if (!prj.output_name.empty())
@@ -960,7 +970,8 @@ void CMakePrinter::print_copy_dependencies(CMakeContext &ctx, const String &targ
     ctx.addLine(R"(
 file(GENERATE OUTPUT ${file} CONTENT "${copy_content}
 ")
-if (UNIX)
+if (ANDROID)
+elseif (UNIX)
     set(file chmod u+x ${file} COMMAND ${file})
 endif()
 add_custom_command(TARGET )" + target + R"( POST_BUILD
