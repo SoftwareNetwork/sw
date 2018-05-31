@@ -59,7 +59,7 @@ projects:
                 - pvt.egorpugin.primitives.command: master
                 - pvt.egorpugin.primitives.yaml: master
                 - pvt.egorpugin.primitives.win32helpers: master
-                - pvt.cppan.demo.fmt: 4
+                - pvt.cppan.demo.fmt: "*"
                 - pvt.cppan.demo.imageworks.pystring: 1
             #win32:
                 - pvt.cppan.demo.giovannidicanio.winreg: master
