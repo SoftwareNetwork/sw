@@ -738,15 +738,19 @@ optional<int> internal(const Strings &args)
         }
 
         path file = trim_double_quotes(args[2]);
-        auto lines = read_lines(file);
+        std::istringstream f(read_file(file));
         auto &e = getExecutor();
-        for (auto &line : lines)
+        while (1)
         {
-            // maybe read in stream with std::quoted
-            auto ss = split_string(line, " ");
+            std::string wd, prog, arg;
+            f >> std::quoted(wd);
+            if (!f)
+                break;
+            f >> std::quoted(prog) >> std::quoted(arg);
             primitives::Command c;
-            c.working_directory = ss[0];
-            c.args.assign(ss.begin() + 1, ss.end());
+            c.working_directory = wd;
+            c.program = prog;
+            c.args.push_back(arg);
             e.push([c]() mutable { c.execute(); });
         }
         e.wait();

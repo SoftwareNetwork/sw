@@ -958,11 +958,11 @@ function(set_once_var variable)
 endfunction()
 
 ########################################
-# FUNCTION cppan_QT5_MAKE_OUTPUT_FILE
+# FUNCTION cppan_qt5_make_output_file
 ########################################
 
 # macro used to create the names of output files preserving relative dirs
-macro(cppan_QT5_MAKE_OUTPUT_FILE infile prefix ext outfile )
+macro(cppan_qt5_make_output_file infile prefix ext outfile )
     string(LENGTH ${CMAKE_CURRENT_BINARY_DIR} _binlength)
     string(LENGTH ${infile} _infileLength)
     set(_checkinfile ${CMAKE_CURRENT_SOURCE_DIR})
@@ -988,11 +988,11 @@ macro(cppan_QT5_MAKE_OUTPUT_FILE infile prefix ext outfile )
 endmacro()
 
 ########################################
-# FUNCTION cppan_QT5_CREATE_MOC_COMMAND
+# FUNCTION cppan_qt5_create_moc_command
 ########################################
 
 # helper macro to set up a moc rule
-function(cppan_QT5_CREATE_MOC_COMMAND infile outfile moc_flags moc_options moc_target moc_depends)
+function(cppan_qt5_create_moc_command infile outfile moc_flags moc_options moc_target moc_depends)
     # Pass the parameters in a file.  Set the working directory to
     # be that containing the parameters file and reference it by
     # just the file name.  This is necessary because the moc tool on
@@ -1001,7 +1001,7 @@ function(cppan_QT5_CREATE_MOC_COMMAND infile outfile moc_flags moc_options moc_t
     get_filename_component(_moc_outfile_name "${outfile}" NAME)
     get_filename_component(_moc_outfile_dir "${outfile}" PATH)
     if(_moc_outfile_dir)
-        set(_moc_working_dir WORKING_DIRECTORY ${_moc_outfile_dir})
+        set(_moc_working_dir ${_moc_outfile_dir})
     endif()
     set (_moc_parameters_file ${outfile}_parameters)
     set (_moc_parameters ${moc_flags} ${moc_options} -o "${outfile}" "${infile}")
@@ -1027,17 +1027,17 @@ function(cppan_QT5_CREATE_MOC_COMMAND infile outfile moc_flags moc_options moc_t
     endif()
 
     set(_moc_extra_parameters_file @${_moc_parameters_file})
-    file(APPEND ${BDIR}/moc.list "\"${_moc_working_dir}\" \"${Qt5Core_MOC_EXECUTABLE}\" \"${_moc_extra_parameters_file}\"\n")
+    file(APPEND ${BDIR}/moc.list "\"${_moc_working_dir}\" \"$<TARGET_FILE:${Qt5Core_MOC_EXECUTABLE}>\" \"${_moc_extra_parameters_file}\"\n")
     set_source_files_properties(${infile} PROPERTIES SKIP_AUTOMOC ON)
     set_source_files_properties(${outfile} PROPERTIES SKIP_AUTOMOC ON)
     set_source_files_properties(${outfile} PROPERTIES SKIP_AUTOUIC ON)
 endfunction()
 
 ########################################
-# FUNCTION cppan_QT5_WRAP_CPP
+# FUNCTION cppan_qt5_wrap_cpp
 ########################################
 
-function(cppan_QT5_WRAP_CPP outfiles )
+function(cppan_qt5_wrap_cpp outfiles)
     # get include dirs
     qt5_get_moc_flags(moc_flags)
 
@@ -1055,16 +1055,23 @@ function(cppan_QT5_WRAP_CPP outfiles )
     if (moc_target AND CMAKE_VERSION VERSION_LESS 2.8.12)
         message(FATAL_ERROR "The TARGET parameter to qt5_wrap_cpp is only available when using CMake 2.8.12 or later.")
     endif()
+    file(WRITE ${BDIR}/moc.list "")
+    set(lst)
     foreach(it ${moc_files})
         get_filename_component(it ${it} ABSOLUTE)
         cppan_qt5_make_output_file(${it} moc_ cpp outfile)
         cppan_qt5_create_moc_command(${it} ${outfile} "${moc_flags}" "${moc_options}" "${moc_target}" "${moc_depends}")
-        list(APPEND ${outfiles} ${outfile})
+        list(APPEND lst ${outfile})
     endforeach()
-    add_custom_command(OUTPUT ${outfiles}
-                       COMMAND ${CPPAN_COMMAND} internal-parallel-moc ${BDIR}/moc.list
-                       DEPENDS ${moc_files} ${moc_depends})
-    set(${outfiles} ${${outfiles}} PARENT_SCOPE)
+    file(READ ${BDIR}/moc.list f)
+    file(GENERATE OUTPUT ${BDIR}/moc_$<CONFIGURATION>.list CONTENT "${f}")
+    list(LENGTH lst N)
+    if (${N} GREATER 0)
+        add_custom_command(OUTPUT ${lst}
+                           COMMAND ${CPPAN_COMMAND} internal-parallel-moc ${BDIR}/moc_$<CONFIGURATION>.list
+                           DEPENDS ${moc_files} ${moc_depends})
+        set(${outfiles} ${lst} PARENT_SCOPE)
+    endif()
 endfunction()
 
 ################################################################################
