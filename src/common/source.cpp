@@ -1041,3 +1041,141 @@ void applyVersionToUrl(Source &source, const Version &v)
 {
     visit([&v](auto &s) { s.applyVersion(v); }, source);
 }
+
+void Svn::download() const
+{
+    downloadRepository([this]()
+    {
+        Command::execute({ "svn", "checkout", url + "/trunk"});
+
+        if (!tag.empty())
+            Command::execute({ "svn", "sw", url + "/tags/" + tag}); //tag
+        else if (!branch.empty())
+            Command::execute({ "svn", "sw", url + "/branches/" + branch}); //branch
+        else if (revision != -1) 
+            Command::execute({ "svn", "up", "-r" + revision });
+    });
+}
+
+Svn::Svn(const yaml &root, const String &name)
+    : SourceUrl(root, name)
+{
+    YAML_EXTRACT_AUTO(tag);
+    YAML_EXTRACT_AUTO(branch);
+    YAML_EXTRACT_AUTO(revision);
+}
+
+
+bool Svn::isValid(String *error) const
+{
+    return checkValid(getString(), error, tag, branch, revision);
+}
+
+bool Svn::load(const ptree &p)
+{
+    if (!SourceUrl::load(p))
+        return false;
+    PTREE_GET_STRING(tag);
+    PTREE_GET_STRING(branch);
+    PTREE_GET_INT(revision);
+    return true;
+}
+
+bool Svn::save(ptree &p) const
+{
+    if (!SourceUrl::save(p))
+        return false;
+    PTREE_ADD_NOT_EMPTY(tag);
+    PTREE_ADD_NOT_EMPTY(branch);
+    PTREE_ADD_NOT_MINUS_ONE(revision);
+    return true;
+}
+
+void Svn::save(yaml &root, const String &name) const
+{
+    SourceUrl::save(root, name);
+    YAML_SET_NOT_EMPTY(tag);
+    YAML_SET_NOT_EMPTY(branch);
+    YAML_SET_NOT_MINUS_ONE(revision);
+}
+
+String Svn::print() const
+{
+    auto r = SourceUrl::print();
+    if (r.empty())
+        return r;
+    STRING_PRINT_NOT_EMPTY(tag);
+    STRING_PRINT_NOT_EMPTY(branch);
+    STRING_PRINT_NOT_MINUS_ONE(revision);
+    return r;
+}
+
+String Svn::printCpp() const
+{
+    return String();
+}
+
+void Svn::applyVersion(const Version &v)
+{
+    SourceUrl::applyVersion(v);
+    ::applyVersion(tag, v);
+    ::applyVersion(branch, v);
+}
+
+void Svn::loadVersion(Version &version)
+{
+    auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
+
+    if (ver.empty())
+    {
+        if (branch.empty() && tag.empty() && revision == -1)
+        {
+            ver = "trunk";
+            version = Version(ver);
+        }
+        else if (!branch.empty())
+        {
+            ver = branch;
+            try
+            {
+                // branch may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+        else if (!tag.empty())
+        {
+            ver = tag;
+            try
+            {
+                // tag may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+        else if (revision != -1)
+        {
+            ver = revision;
+            try
+            {
+                // tag may contain bad symbols, so put in try...catch
+                version = Version(ver);
+            }
+            catch (std::exception &)
+            {
+            }
+        }
+    }
+
+    if (version.isValid() && branch.empty() && tag.empty() && revision != -1)
+    {
+        if (version.isBranch())
+            branch = version.toString();
+        else
+            tag = version.toString();
+    }
+}

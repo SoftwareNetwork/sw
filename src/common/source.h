@@ -168,6 +168,33 @@ struct Cvs : SourceUrl
     static String getString() { return "cvs"; }
 };
 
+struct Svn : SourceUrl
+{
+    String tag;
+    String branch;
+    int64_t revision = -1;
+
+    Svn() = default;
+    Svn(const yaml &root, const String &name = Svn::getString());
+
+    void download() const;
+    bool isValid(String *error = nullptr) const;
+    bool load(const ptree &p);
+    bool save(ptree &p) const;
+    void save(yaml &root, const String &name = Svn::getString()) const;
+    String print() const;
+    String printCpp() const;
+    void applyVersion(const Version &v);
+    void loadVersion(Version &v);
+
+    bool operator==(const Svn &rhs) const
+    {
+        return std::tie(url, tag, branch, revision) == std::tie(rhs.url, rhs.tag, rhs.branch, rhs.revision);
+    }
+
+    static String getString() { return "svn"; }
+};
+
 struct RemoteFile : SourceUrl
 {
     RemoteFile() = default;
@@ -221,6 +248,7 @@ struct RemoteFiles
     f(Bzr) d \
     f(Fossil) d \
     f(Cvs) d \
+    f(Svn) d \
     f(RemoteFile) d \
     f(RemoteFiles)
 
@@ -240,3 +268,4 @@ String print_source_cpp(const Source &source);
 void applyVersionToUrl(Source &source, const Version &v);
 
 bool isValidSourceUrl(const Source &source);
+
