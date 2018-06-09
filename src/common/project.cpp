@@ -359,7 +359,7 @@ void Patch::patchSources(const Files &files) const
         regex_prepared.emplace_back(std::regex(p.first), p.second);
     for (auto &f : files)
     {
-        auto s = read_file(f, true);
+        auto s = read_file(f);
         for (auto &p : replace)
             boost::algorithm::replace_all(s, p.first, p.second);
         for (auto &p : regex_prepared)
@@ -1337,7 +1337,7 @@ void Project::prepareExports() const
     /*auto &srcs = getSources();
     for (auto &f : srcs)
     {
-        auto s = read_file(f, true);
+        auto s = read_file(f);
 
         boost::algorithm::replace_all(s, CPPAN_EXPORT, api);
 

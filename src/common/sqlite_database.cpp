@@ -102,8 +102,8 @@ sqlite3 *load_from_file(const path &fn, bool read_only)
     sqlite3 *db = nullptr;
     bool ok = true;
     int flags = 0;
-    if (sqlite3_threadsafe())
-        flags |= SQLITE_OPEN_NOMUTEX;// SQLITE_OPEN_FULLMUTEX;
+    //if (sqlite3_threadsafe())
+    flags |= SQLITE_OPEN_FULLMUTEX;
     if (read_only)
         flags |= SQLITE_OPEN_READONLY;
     else
@@ -116,6 +116,7 @@ sqlite3 *load_from_file(const path &fn, bool read_only)
         sqlite3_close(db);
         throw std::runtime_error(error);
     }
+    sqlite3_busy_timeout(db, 60000);
     return db;
 }
 
@@ -231,8 +232,8 @@ bool SqliteDatabase::execute(String sql, void *object, Sqlite3Callback callback,
     boost::trim(sql);
 
     // TODO: remove later when sqlite won't be crashing
-    static std::mutex m;
-    std::unique_lock<std::mutex> lk(m);
+    //static std::mutex m;
+    //std::unique_lock<std::mutex> lk(m);
 
     // lock always for now
     ScopedFileLock lock(get_lock(fullName), std::defer_lock);
@@ -269,8 +270,8 @@ bool SqliteDatabase::execute(String sql, DatabaseCallback callback, bool nothrow
     boost::trim(sql);
 
     // TODO: remove later when sqlite won't be crashing
-    static std::mutex m;
-    std::unique_lock<std::mutex> lk(m);
+    //static std::mutex m;
+    //std::unique_lock<std::mutex> lk(m);
 
     // lock always for now
     ScopedFileLock lock(get_lock(fullName), std::defer_lock);
