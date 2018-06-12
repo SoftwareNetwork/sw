@@ -5,7 +5,7 @@ notifications:
 
 #sudo: required
 dist: trusty
-osx_image: xcode9.2
+#osx_image: xcode9.4
 
 os:
   - linux
@@ -15,9 +15,9 @@ branches:
   only:
     - master
 
-cache:
-  directories:
-    - $HOME/.cppan/storage
+#cache:
+#  directories:
+#    - $HOME/.cppan/storage
 
 addons:
   apt:
