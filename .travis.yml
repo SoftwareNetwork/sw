@@ -15,9 +15,9 @@ branches:
   only:
     - master
 
-#cache:
-#  directories:
-#    - $HOME/.cppan/storage
+cache:
+  directories:
+    - $HOME/.cppan/storage
 
 addons:
   apt:
