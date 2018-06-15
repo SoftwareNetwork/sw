@@ -1275,7 +1275,11 @@ int CMakePrinter::generate(const BuildSettings &bs) const
         c.args.push_back(s.toolset);
     }
     c.args.push_back("-DCMAKE_BUILD_TYPE=" + s.configuration);
+#ifdef CPPAN_CLIENT
     c.args.push_back("-DCPPAN_COMMAND=" + normalize_path(get_program()));
+#else
+    c.args.push_back("-DCPPAN_COMMAND=cppan");
+#endif
     if (s.debug_generated_cmake_configs)
         c.args.push_back("-DCPPAN_CMAKE_VERBOSE="s + (s.cmake_verbose ? "1" : "0"));
     c.args.push_back("-DCPPAN_BUILD_VERBOSE="s + (s.build_system_verbose ? "1" : "0"));

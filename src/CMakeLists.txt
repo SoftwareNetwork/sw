@@ -91,6 +91,7 @@ target_compile_definitions(common
     PUBLIC -DVERSION_PATCH=${VERSION_PATCH}
     PUBLIC -DBUILD_NUMBER=${BUILD_NUMBER}
     PUBLIC -DCPPAN_VERSION_STRING="${CPPAN_VERSION_STRING}"
+    PUBLIC -DCPPAN_CLIENT
 )
 target_include_directories(common
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common
