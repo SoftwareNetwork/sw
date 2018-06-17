@@ -26,7 +26,11 @@ set(common_src ${common_src})
 add_library(support ${common_src})
 target_include_directories(support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
 
-if (UNIX AND NOT APPLE AND NOT (EXISTS "/etc/centos-release" OR EXISTS "/etc/fedora-release"))
+if (UNIX AND NOT APPLE AND NOT (
+    EXISTS "/etc/centos-release" OR
+    EXISTS "/etc/fedora-release" OR
+    EXISTS "/etc/arch-release"
+))
 target_link_libraries(support backtrace)
 endif()
 target_link_libraries(support
