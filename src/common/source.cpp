@@ -1046,14 +1046,14 @@ void Svn::download() const
 {
     downloadRepository([this]()
     {
-        Command::execute({ "svn", "checkout", url + "/trunk"});
-
         if (!tag.empty())
-            Command::execute({ "svn", "sw", url + "/tags/" + tag}); //tag
+            Command::execute({ "svn", "checkout", url + "/tags/" + tag}); //tag
         else if (!branch.empty())
-            Command::execute({ "svn", "sw", url + "/branches/" + branch}); //branch
-        else if (revision != -1) 
-            Command::execute({ "svn", "up", "-r" + revision });
+            Command::execute({ "svn", "checkout", url + "/branches/" + branch}); //branch
+        else if (revision != -1)
+            Command::execute({ "svn", "checkout", "-r", std::to_string(revision), url });
+		else
+			Command::execute({ "svn", "checkout", url + "/trunk" });
     });
 }
 
@@ -1159,7 +1159,7 @@ void Svn::loadVersion(Version &version)
         }
         else if (revision != -1)
         {
-            ver = revision;
+			ver = "revision: " + std::to_string(revision);
             try
             {
                 // tag may contain bad symbols, so put in try...catch
@@ -1169,13 +1169,5 @@ void Svn::loadVersion(Version &version)
             {
             }
         }
-    }
-
-    if (version.isValid() && branch.empty() && tag.empty() && revision != -1)
-    {
-        if (version.isBranch())
-            branch = version.toString();
-        else
-            tag = version.toString();
     }
 }
