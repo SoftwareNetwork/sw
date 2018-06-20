@@ -39,7 +39,7 @@ struct SourceUrl
     void save(yaml &root, const String &name) const;
     String print() const;
     void applyVersion(const Version &v);
-    void loadVersion(Version &v) {}
+    void loadVersion(Version &v) const {}
 
 protected:
     template <typename ... Args>
@@ -63,7 +63,7 @@ struct Git : SourceUrl
     String print() const;
     String printCpp() const;
     void applyVersion(const Version &v);
-    void loadVersion(Version &v);
+    void loadVersion(Version &v) const;
 
     bool operator==(const Git &rhs) const
     {
@@ -87,7 +87,7 @@ struct Hg : Git
     void save(yaml &root, const String &name = Hg::getString()) const;
     String print() const;
     String printCpp() const;
-    void loadVersion(Version &v);
+    void loadVersion(Version &v) const;
 
     bool operator==(const Hg &rhs) const
     {
@@ -112,7 +112,7 @@ struct Bzr : SourceUrl
     void save(yaml &root, const String &name = Bzr::getString()) const;
     String print() const;
     String printCpp() const;
-    void loadVersion(Version &v);
+    void loadVersion(Version &v) const;
 
     bool operator==(const Bzr &rhs) const
     {
@@ -130,7 +130,7 @@ struct Fossil : Git
     void download() const;
     using Git::save;
     void save(yaml &root, const String &name = Fossil::getString()) const;
-    void loadVersion(Version &v);
+    void loadVersion(Version &v) const;
 
     bool operator==(const Fossil &rhs) const
     {
@@ -158,7 +158,7 @@ struct Cvs : SourceUrl
     void save(yaml &root, const String &name = Cvs::getString()) const;
     String print() const;
     String printCpp() const;
-    void loadVersion(Version &v);
+    void loadVersion(Version &v) const;
 
     bool operator==(const Cvs &rhs) const
     {
@@ -185,7 +185,7 @@ struct Svn : SourceUrl
     String print() const;
     String printCpp() const;
     void applyVersion(const Version &v);
-    void loadVersion(Version &v);
+    void loadVersion(Version &v) const;
 
     bool operator==(const Svn &rhs) const
     {
@@ -230,7 +230,7 @@ struct RemoteFiles
     String print() const;
     String printCpp() const;
     void applyVersion(const Version &v);
-    void loadVersion(Version &v) {}
+    void loadVersion(Version &v) const {}
 
     bool operator==(const RemoteFiles &rhs) const
     {
@@ -268,4 +268,3 @@ String print_source_cpp(const Source &source);
 void applyVersionToUrl(Source &source, const Version &v);
 
 bool isValidSourceUrl(const Source &source);
-

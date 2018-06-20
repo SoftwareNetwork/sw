@@ -345,49 +345,41 @@ void Git::applyVersion(const Version &v)
     ::applyVersion(branch, v);
 }
 
-void Git::loadVersion(Version &version)
+void Git::loadVersion(Version &version) const
 {
     auto ver = (version.isValid() && version != Version(-1,-1,-1)) ? version.toString() : ""s;
 
-    if (ver.empty())
+    if (!ver.empty())
+        return;
+
+    if (branch.empty() && tag.empty())
     {
-        if (branch.empty() && tag.empty())
+        ver = "master";
+        version = Version(ver);
+    }
+    else if (!branch.empty())
+    {
+        ver = branch;
+        try
         {
-            ver = "master";
+            // branch may contain bad symbols, so put in try...catch
             version = Version(ver);
         }
-        else if (!branch.empty())
+        catch (std::exception &)
         {
-            ver = branch;
-            try
-            {
-                // branch may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
-        }
-        else if (!tag.empty())
-        {
-            ver = tag;
-            try
-            {
-                // tag may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
         }
     }
-
-    if (version.isValid() && branch.empty() && tag.empty() && commit.empty())
+    else if (!tag.empty())
     {
-        if (version.isBranch())
-            branch = version.toString();
-        else
-            tag = version.toString();
+        ver = tag;
+        try
+        {
+            // tag may contain bad symbols, so put in try...catch
+            version = Version(ver);
+        }
+        catch (std::exception &)
+        {
+        }
     }
 }
 
@@ -458,61 +450,53 @@ String Hg::printCpp() const
     return String();
 }
 
-void Hg::loadVersion(Version &version)
+void Hg::loadVersion(Version &version) const
 {
     auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
 
-    if (ver.empty())
+    if (!ver.empty())
+        return;
+
+    if (branch.empty() && tag.empty() && revision == -1)
     {
-        if (branch.empty() && tag.empty() && revision == -1)
+        ver = "default";
+        version = Version(ver);
+    }
+    else if (!branch.empty())
+    {
+        ver = branch;
+        try
         {
-            ver = "default";
+            // branch may contain bad symbols, so put in try...catch
             version = Version(ver);
         }
-        else if (!branch.empty())
+        catch (std::exception &)
         {
-            ver = branch;
-            try
-            {
-                // branch may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
-        }
-        else if (!tag.empty())
-        {
-            ver = tag;
-            try
-            {
-                // tag may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
-        }
-        else if (revision != -1)
-        {
-            ver = "revision: " + std::to_string(revision);
-            try
-            {
-                // tag may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
         }
     }
-
-    if (version.isValid() && branch.empty() && tag.empty() && commit.empty() && revision == -1)
+    else if (!tag.empty())
     {
-        if (version.isBranch())
-            branch = version.toString();
-        else
-            tag = version.toString();
+        ver = tag;
+        try
+        {
+            // tag may contain bad symbols, so put in try...catch
+            version = Version(ver);
+        }
+        catch (std::exception &)
+        {
+        }
+    }
+    else if (revision != -1)
+    {
+        ver = "revision: " + std::to_string(revision);
+        try
+        {
+            // tag may contain bad symbols, so put in try...catch
+            version = Version(ver);
+        }
+        catch (std::exception &)
+        {
+        }
     }
 }
 
@@ -584,46 +568,41 @@ String Bzr::printCpp() const
     return String();
 }
 
-void Bzr::loadVersion(Version &version)
+void Bzr::loadVersion(Version &version) const
 {
     auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
 
-    if (ver.empty())
+    if (!ver.empty())
+        return;
+
+    if (tag.empty() && revision == -1)
     {
-        if (tag.empty() && revision == -1)
+        ver = "trunk";
+        version = Version(ver);
+    }
+    else if (!tag.empty())
+    {
+        ver = tag;
+        try
         {
-            ver = "trunk";
+            // tag may contain bad symbols, so put in try...catch
             version = Version(ver);
         }
-        else if (!tag.empty())
+        catch (std::exception &)
         {
-            ver = tag;
-            try
-            {
-                // tag may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
-        }
-        else if (revision != -1)
-        {
-            ver = "revision: " + std::to_string(revision);
-            try
-            {
-                // tag may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
         }
     }
-
-    if (version.isValid() && tag.empty() && revision == -1)
+    else if (revision != -1)
     {
-        tag = version.toString();
+        ver = "revision: " + std::to_string(revision);
+        try
+        {
+            // tag may contain bad symbols, so put in try...catch
+            version = Version(ver);
+        }
+        catch (std::exception &)
+        {
+        }
     }
 }
 
@@ -657,49 +636,41 @@ void Fossil::save(yaml &root, const String &name) const
     Git::save(root, name);
 }
 
-void Fossil::loadVersion(Version &version)
+void Fossil::loadVersion(Version &version) const
 {
     auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
 
-    if (ver.empty())
+    if (!ver.empty())
+        return;
+
+    if (branch.empty() && tag.empty())
     {
-        if (branch.empty() && tag.empty())
+        ver = "trunk";
+        version = Version(ver);
+    }
+    else if (!branch.empty())
+    {
+        ver = branch;
+        try
         {
-            ver = "trunk";
+            // branch may contain bad symbols, so put in try...catch
             version = Version(ver);
         }
-        else if (!branch.empty())
+        catch (std::exception &)
         {
-            ver = branch;
-            try
-            {
-                // branch may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
-        }
-        else if (!tag.empty())
-        {
-            ver = tag;
-            try
-            {
-                // tag may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
         }
     }
-
-    if (version.isValid() && branch.empty() && tag.empty() && commit.empty())
+    else if (!tag.empty())
     {
-        if (version.isBranch())
-            branch = version.toString();
-        else
-            tag = version.toString();
+        ver = tag;
+        try
+        {
+            // tag may contain bad symbols, so put in try...catch
+            version = Version(ver);
+        }
+        catch (std::exception &)
+        {
+        }
     }
 }
 
@@ -790,61 +761,182 @@ String Cvs::printCpp() const
     return String();
 }
 
-void Cvs::loadVersion(Version &version)
+void Cvs::loadVersion(Version &version) const
 {
     auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
 
-    if (ver.empty())
+    if (!ver.empty())
+        return;
+
+    if (branch.empty() && tag.empty() && revision.empty())
     {
-        if (branch.empty() && tag.empty() && revision.empty())
+        ver = "trunk";
+        version = Version(ver);
+    }
+    else if (!branch.empty())
+    {
+        ver = branch;
+        try
         {
-            ver = "trunk";
+            // branch may contain bad symbols, so put in try...catch
             version = Version(ver);
         }
-        else if (!branch.empty())
+        catch (std::exception &)
         {
-            ver = branch;
-            try
-            {
-                // branch may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
-        }
-        else if (!tag.empty())
-        {
-            ver = tag;
-            try
-            {
-                // tag may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
-        }
-        else if (!revision.empty())
-        {
-            ver = revision;
-            try
-            {
-                // tag may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
         }
     }
-
-    if (version.isValid() && branch.empty() && tag.empty() && revision.empty())
+    else if (!tag.empty())
     {
-        if (version.isBranch())
-            branch = version.toString();
+        ver = tag;
+        try
+        {
+            // tag may contain bad symbols, so put in try...catch
+            version = Version(ver);
+        }
+        catch (std::exception &)
+        {
+        }
+    }
+    else if (!revision.empty())
+    {
+        ver = revision;
+        try
+        {
+            // tag may contain bad symbols, so put in try...catch
+            version = Version(ver);
+        }
+        catch (std::exception &)
+        {
+        }
+    }
+}
+
+Svn::Svn(const yaml &root, const String &name)
+    : SourceUrl(root, name)
+{
+    YAML_EXTRACT_AUTO(tag);
+    YAML_EXTRACT_AUTO(branch);
+    YAML_EXTRACT_AUTO(revision);
+}
+
+void Svn::download() const
+{
+    downloadRepository([this]()
+    {
+        if (!tag.empty())
+            Command::execute({ "svn", "checkout", url + "/tags/" + tag }); //tag
+        else if (!branch.empty())
+            Command::execute({ "svn", "checkout", url + "/branches/" + branch }); //branch
+        else if (revision != -1)
+            Command::execute({ "svn", "checkout", "-r", std::to_string(revision), url });
         else
-            tag = version.toString();
+            Command::execute({ "svn", "checkout", url + "/trunk" });
+    });
+}
+
+bool Svn::isValid(String *error) const
+{
+    return checkValid(getString(), error, tag, branch, revision);
+}
+
+bool Svn::load(const ptree &p)
+{
+    if (!SourceUrl::load(p))
+        return false;
+    PTREE_GET_STRING(tag);
+    PTREE_GET_STRING(branch);
+    PTREE_GET_INT(revision);
+    return true;
+}
+
+bool Svn::save(ptree &p) const
+{
+    if (!SourceUrl::save(p))
+        return false;
+    PTREE_ADD_NOT_EMPTY(tag);
+    PTREE_ADD_NOT_EMPTY(branch);
+    PTREE_ADD_NOT_MINUS_ONE(revision);
+    return true;
+}
+
+void Svn::save(yaml &root, const String &name) const
+{
+    SourceUrl::save(root, name);
+    YAML_SET_NOT_EMPTY(tag);
+    YAML_SET_NOT_EMPTY(branch);
+    YAML_SET_NOT_MINUS_ONE(revision);
+}
+
+String Svn::print() const
+{
+    auto r = SourceUrl::print();
+    if (r.empty())
+        return r;
+    STRING_PRINT_NOT_EMPTY(tag);
+    STRING_PRINT_NOT_EMPTY(branch);
+    STRING_PRINT_NOT_MINUS_ONE(revision);
+    return r;
+}
+
+String Svn::printCpp() const
+{
+    return String();
+}
+
+void Svn::applyVersion(const Version &v)
+{
+    SourceUrl::applyVersion(v);
+    ::applyVersion(tag, v);
+    ::applyVersion(branch, v);
+}
+
+void Svn::loadVersion(Version &version) const
+{
+    auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
+
+    if (!ver.empty())
+        return;
+
+    if (branch.empty() && tag.empty() && revision == -1)
+    {
+        ver = "trunk";
+        version = Version(ver);
+    }
+    else if (!branch.empty())
+    {
+        ver = branch;
+        try
+        {
+            // branch may contain bad symbols, so put in try...catch
+            version = Version(ver);
+        }
+        catch (std::exception &)
+        {
+        }
+    }
+    else if (!tag.empty())
+    {
+        ver = tag;
+        try
+        {
+            // tag may contain bad symbols, so put in try...catch
+            version = Version(ver);
+        }
+        catch (std::exception &)
+        {
+        }
+    }
+    else if (revision != -1)
+    {
+        ver = "revision: " + std::to_string(revision);
+        try
+        {
+            // tag may contain bad symbols, so put in try...catch
+            version = Version(ver);
+        }
+        catch (std::exception &)
+        {
+        }
     }
 }
 
@@ -1040,134 +1132,4 @@ String print_source_cpp(const Source &source)
 void applyVersionToUrl(Source &source, const Version &v)
 {
     visit([&v](auto &s) { s.applyVersion(v); }, source);
-}
-
-void Svn::download() const
-{
-    downloadRepository([this]()
-    {
-        if (!tag.empty())
-            Command::execute({ "svn", "checkout", url + "/tags/" + tag}); //tag
-        else if (!branch.empty())
-            Command::execute({ "svn", "checkout", url + "/branches/" + branch}); //branch
-        else if (revision != -1)
-            Command::execute({ "svn", "checkout", "-r", std::to_string(revision), url });
-		else
-			Command::execute({ "svn", "checkout", url + "/trunk" });
-    });
-}
-
-Svn::Svn(const yaml &root, const String &name)
-    : SourceUrl(root, name)
-{
-    YAML_EXTRACT_AUTO(tag);
-    YAML_EXTRACT_AUTO(branch);
-    YAML_EXTRACT_AUTO(revision);
-}
-
-
-bool Svn::isValid(String *error) const
-{
-    return checkValid(getString(), error, tag, branch, revision);
-}
-
-bool Svn::load(const ptree &p)
-{
-    if (!SourceUrl::load(p))
-        return false;
-    PTREE_GET_STRING(tag);
-    PTREE_GET_STRING(branch);
-    PTREE_GET_INT(revision);
-    return true;
-}
-
-bool Svn::save(ptree &p) const
-{
-    if (!SourceUrl::save(p))
-        return false;
-    PTREE_ADD_NOT_EMPTY(tag);
-    PTREE_ADD_NOT_EMPTY(branch);
-    PTREE_ADD_NOT_MINUS_ONE(revision);
-    return true;
-}
-
-void Svn::save(yaml &root, const String &name) const
-{
-    SourceUrl::save(root, name);
-    YAML_SET_NOT_EMPTY(tag);
-    YAML_SET_NOT_EMPTY(branch);
-    YAML_SET_NOT_MINUS_ONE(revision);
-}
-
-String Svn::print() const
-{
-    auto r = SourceUrl::print();
-    if (r.empty())
-        return r;
-    STRING_PRINT_NOT_EMPTY(tag);
-    STRING_PRINT_NOT_EMPTY(branch);
-    STRING_PRINT_NOT_MINUS_ONE(revision);
-    return r;
-}
-
-String Svn::printCpp() const
-{
-    return String();
-}
-
-void Svn::applyVersion(const Version &v)
-{
-    SourceUrl::applyVersion(v);
-    ::applyVersion(tag, v);
-    ::applyVersion(branch, v);
-}
-
-void Svn::loadVersion(Version &version)
-{
-    auto ver = (version.isValid() && version != Version(-1, -1, -1)) ? version.toString() : ""s;
-
-    if (ver.empty())
-    {
-        if (branch.empty() && tag.empty() && revision == -1)
-        {
-            ver = "trunk";
-            version = Version(ver);
-        }
-        else if (!branch.empty())
-        {
-            ver = branch;
-            try
-            {
-                // branch may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
-        }
-        else if (!tag.empty())
-        {
-            ver = tag;
-            try
-            {
-                // tag may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
-        }
-        else if (revision != -1)
-        {
-			ver = "revision: " + std::to_string(revision);
-            try
-            {
-                // tag may contain bad symbols, so put in try...catch
-                version = Version(ver);
-            }
-            catch (std::exception &)
-            {
-            }
-        }
-    }
 }

@@ -384,6 +384,7 @@ try
         Config c;
         c.allow_relative_project_names = true;
         c.reload(".");
+        applyVersionToUrl(c.getDefaultProject().source, c.getDefaultProject().pkg.version);
         download(c.getDefaultProject().source);
         LOG_INFO(logger, "Fetched...  Ok.");
         return 0;
