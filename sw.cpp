@@ -80,15 +80,6 @@ void build(Solution &s)
         "pub.cppan2.demo.taywee.args"_dep,
         "pub.cppan2.demo.giovannidicanio.winreg-master"_dep;
 
-    auto &srv = p.addDirectory("server");
-    auto &webapp = srv.addTarget<ExecutableTarget>("webapp");
-    webapp.setRootDirectory("src/server/webapp");
-    webapp += ".*"_rr;
-    webapp.CPPVersion = CPPLanguageStandard::CPP17;
-    webapp += builder,
-        "pub.cppan2.demo.emweb.wt.http"_dep,
-        "pub.cppan2.demo.jtv.pqxx"_dep;
-
     auto &t = p.addDirectory("tools");
     if (s.Settings.TargetOS.Type == OSType::Windows)
     {
