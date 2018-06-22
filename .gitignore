@@ -1,24 +1,30 @@
-# build files and directories
-/build*
-/win*
-/bin*
-cppan
-.cppan*
-.vs*
+# tex generated files
+*.log
+*.synctex.gz
+*.aux
+*.toc
+*.pdf
+*.blg
 .*
 
-*.kdev*
+# build files and directories
+/build*
+/temp*
+bin
 
-/packages
+.cppan
 
 /*.bat
 
 *~
-*.user*
+*.user
 
+*.aps
+*.exe
+*.dll
 *.lnk
+*.pdb
 
-# bison generated
-*.output
-
-CMakeSettings.json
+ddl2cpp
+doc/build
+cppan-build*

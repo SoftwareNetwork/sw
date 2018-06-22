@@ -1,20 +1,15 @@
-/*
- * Copyright (C) 2016-2017, Egor Pugin
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright (C) 2016-2018 Egor Pugin <egor.pugin@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "filesystem.h"
+
+#include <boost/thread/shared_mutex.hpp>
+#include <boost/thread/lock_types.hpp>
+
+#define CPPAN_NAME "cppan2"
 
 path get_config_filename()
 {
@@ -23,12 +18,12 @@ path get_config_filename()
 
 path get_root_directory()
 {
-    return get_home_directory() / ".cppan";
+    return get_home_directory() / "." CPPAN_NAME;
 }
 
 path temp_directory_path(const path &subdir)
 {
-    auto p = fs::temp_directory_path() / "cppan" / subdir;
+    auto p = fs::temp_directory_path() / CPPAN_NAME / subdir;
     fs::create_directories(p);
     return p;
 }
@@ -47,7 +42,7 @@ String make_archive_name(const String &fn)
 {
     if (!fn.empty())
         return fn + ".tar.gz";
-    return "cppan.tar.gz";
+    return CPPAN_NAME ".tar.gz";
 }
 
 void findRootDirectory1(const path &p, path &root, int depth = 0)
@@ -61,8 +56,6 @@ void findRootDirectory1(const path &p, path &root, int depth = 0)
     for (auto &pi : fs::directory_iterator(p))
     {
         auto f = pi.path().filename().string();
-        if (f == CPPAN_FILENAME)
-            continue;
         if (fs::is_regular_file(pi))
         {
             pfiles.push_back(pi);
@@ -81,10 +74,10 @@ void findRootDirectory1(const path &p, path &root, int depth = 0)
         root /= d;
         findRootDirectory1(p / d, root);
     }
-    else if (depth == 1)
+    /*else if (depth == 1)
     {
         root = p;
-    }
+    }*/
 }
 
 path findRootDirectory(const path &p)
@@ -92,4 +85,16 @@ path findRootDirectory(const path &p)
     path root;
     findRootDirectory1(p, root);
     return root;
+}
+
+void create_directories(const path &p)
+{
+    static std::unordered_set<path> dirs;
+    static boost::upgrade_mutex m;
+    boost::upgrade_lock lk(m);
+    if (dirs.find(p) != dirs.end())
+        return;
+    fs::create_directories(p);
+    boost::upgrade_to_unique_lock lk2(lk);
+    dirs.insert(p);
 }

@@ -1,0 +1,8 @@
+Different parts of this repository (project) are subject of different licences.
+
+Core library(s):    MPLv2.
+Client tool:        GPLv3+.
+Server tools:       AGPLv3+.
+Utilities, helpers: APLv2.
+
+See specific files for detailed information about their license.

@@ -6,105 +6,99 @@ void configure(Solution &s)
 
 void build(Solution &s)
 {
-    auto &p = s.addProject("cppan", "master");
-    p.Source = Git("https://github.com/cppan/cppan", "", "{v}");
+    auto &p = s.addProject("cppan2", "0.3.0");
 
-    auto &common = p.addTarget<StaticLibraryTarget>("common");
-    common.CPPVersion = CPPLanguageStandard::CPP17;
-    common +=
-        "src/common/.*"_rr,
-        "src/printers/.*"_rr,
-        "src/comments/.*"_rr,
-        "src/bazel/.*"_rr,
-        "src/inserts/.*"_rr,
-        "src/support/.*"_rr,
-        "src/gen/.*"_rr;
-
-    common -= "src/bazel/test/test.cpp", "src/gen/.*"_rr;
-    common.Public += "src"_id, "src/common"_id, "src/support"_id;
-
-    common.Public += "VERSION_MAJOR=0"_d;
-    common.Public += "VERSION_MINOR=2"_d;
-    common.Public += "VERSION_PATCH=4"_d;
-    if (s.Settings.TargetOS.Type == OSType::Windows)
-        common.Public += "UNICODE"_d;
-
-    common.Public +=
-        "pub.cppan2.demo.boost.optional-1"_dep,
-        "pub.cppan2.demo.boost.property_tree-1"_dep,
-        "pub.cppan2.demo.boost.variant-1"_dep,
-        //"pub.cppan2.demo.boost.stacktrace-1"_dep,
-        "pub.cppan2.demo.apolukhin.stacktrace-master"_dep,
-        "pub.cppan2.demo.sqlite3-3"_dep,
-
-        "pub.egorpugin.primitives.string-master"_dep,
-        "pub.egorpugin.primitives.filesystem-master"_dep,
-        "pub.egorpugin.primitives.context-master"_dep,
-        "pub.egorpugin.primitives.date_time-master"_dep,
-        "pub.egorpugin.primitives.executor-master"_dep,
+    auto &support = p.addTarget<StaticLibraryTarget>("support");
+    support.setRootDirectory("src/support");
+    support.CPPVersion = CPPLanguageStandard::CPP17;
+    support += ".*"_rr;
+    support.Public +=
         "pub.egorpugin.primitives.hash-master"_dep,
         "pub.egorpugin.primitives.http-master"_dep,
-        "pub.egorpugin.primitives.lock-master"_dep,
-        "pub.egorpugin.primitives.log-master"_dep,
-        "pub.egorpugin.primitives.pack-master"_dep,
         "pub.egorpugin.primitives.command-master"_dep,
-        "pub.egorpugin.primitives.yaml-master"_dep;
+        "pub.egorpugin.primitives.log-master"_dep,
+        "pub.egorpugin.primitives.executor-master"_dep,
+        "pub.cppan2.demo.boost.property_tree-1"_dep,
+        "pub.cppan2.demo.boost.dll-1"_dep;
+    if (s.Settings.TargetOS.Type == OSType::Windows)
+        support.Public += "UNICODE"_d;
 
-    time_t v;
-    time(&v);
-    common.fileWriteSafe("stamp.h.in", "\"" + std::to_string(v) + "\"", true);
+    auto &manager = p.addTarget<LibraryTarget>("manager");
+    manager.setRootDirectory("src/manager");
+    manager.ApiName = "CPPAN_MANAGER_API";
+    manager.ExportIfStatic = true;
+    manager.CPPVersion = CPPLanguageStandard::CPP17;
+    manager += ".*"_rr;
+    manager.Public += support,
+        "pub.egorpugin.primitives.yaml-master"_dep,
+        "pub.egorpugin.primitives.date_time-master"_dep,
+        "pub.egorpugin.primitives.lock-master"_dep,
+        "pub.egorpugin.primitives.pack-master"_dep,
+        "pub.cppan2.demo.boost.variant-1"_dep,
+        "pub.cppan2.demo.boost.stacktrace-1"_dep,
+        "pub.cppan2.demo.sqlite3-3"_dep,
+        "pub.cppan2.demo.fmt"_dep;
+    manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().version.Major);
+    manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().version.Minor);
+    manager.Public.Definitions["VERSION_PATCH"] += std::to_string(manager.getPackage().version.Patch);
 
-    auto &inserts_generator = p.addTarget<ExecutableTarget>("inserts_generator");
-    inserts_generator.CPPVersion = CPPLanguageStandard::CPP17;
-    inserts_generator += "src/gen/inserter.cpp";
-    inserts_generator += "pub.egorpugin.primitives.filesystem-master"_dep;
+    auto &inserter = p.addTarget<ExecutableTarget>("inserter");
+    inserter.setRootDirectory("src/inserts");
+    inserter.CPPVersion = CPPLanguageStandard::CPP17;
+    inserter += ".*"_rr;
+    inserter += "pub.egorpugin.primitives.filesystem-master"_dep;
+
+    auto &builder = p.addTarget<LibraryTarget>("builder");
+    builder.setRootDirectory("src/builder");
+    builder.ApiName = "CPPAN_BUILDER_API";
+    builder.ExportIfStatic = true;
+    builder.CPPVersion = CPPLanguageStandard::CPP17;
+    builder += ".*"_rr;
+    builder -= "db_sqlite.*"_rr;
+    builder.Public += manager,
+        "pub.cppan2.demo.boost.assign-1"_dep,
+        "pub.cppan2.demo.rbock.sqlpp11_connector_sqlite3-0.24"_dep,
+        "pub.cppan2.preshing.junction-master"_dep;
 
     {
+        auto in = inserter.SourceDir / "inserts.cpp.in";
+        auto out = builder.BinaryDir / "inserts.cpp";
         auto c = std::make_shared<Command>();
-        c->program = inserts_generator.getOutputFile();
-        c->args.push_back((common.SourceDir / "src/inserts/inserts.cpp.in").string());
-        c->args.push_back((common.BinaryDir / "inserts.cpp").string());
-        c->working_directory = common.SourceDir / "src";
-        c->addInput(c->args[0]);
-        c->addOutput(c->args[1]);
-        common += path(c->args[1]);
+        c->program = inserter.getOutputFile();
+        c->args = { in.string(), out.string() };
+        c->working_directory = inserter.SourceDir;
+        c->addInput(in);
+        c->addOutput(out);
+        builder += out;
     }
 
-    auto flex_bison = [&common](const std::string &name)
-    {
-
-        fs::create_directories(common.BinaryDir / ("src/" + name));
-
-        // flex/bison
-        {
-            auto c = std::make_shared<Command>();
-            c->program = "bison.exe";
-            c->args.push_back("-d");
-            c->args.push_back("-o" + (common.BinaryDir / ("src/" + name + "/grammar.cpp")).string());
-            c->args.push_back((common.SourceDir / ("src/" + name + "/grammar.yy")).string());
-            c->addInput(common.SourceDir / ("src/" + name + "/grammar.yy"));
-            c->addOutput(common.BinaryDir / ("src/" + name + "/grammar.cpp"));
-            common += path(common.BinaryDir / ("src/" + name + "/grammar.cpp"));
-        }
-        {
-            auto c = std::make_shared<Command>();
-            c->program = "flex.exe";
-            c->args.push_back("--header-file=" + (common.BinaryDir / ("src/" + name + "/lexer.h")).string());
-            c->args.push_back("-o" + (common.BinaryDir / ("src/" + name + "/lexer.cpp")).string());
-            c->args.push_back((common.SourceDir / ("src/" + name + "/lexer.ll")).string());
-            c->addInput(common.SourceDir / ("src/" + name + "/lexer.ll"));
-            c->addOutput(common.BinaryDir / ("src/" + name + "/lexer.h"));
-            c->addOutput(common.BinaryDir / ("src/" + name + "/lexer.cpp"));
-            common += path(common.BinaryDir / ("src/" + name + "/lexer.cpp"));
-        }
-    };
-
-    //flex_bison("bazel");
-    //flex_bison("comments");
-
     auto &client = p.addTarget<ExecutableTarget>("client");
+    client.setRootDirectory("src/client");
+    client += ".*"_rr;
     client.CPPVersion = CPPLanguageStandard::CPP17;
-    client += "src/client/.*"_rr, common,
-        "pub.cppan2.demo.boost.program_options-1"_dep,
-        "pub.cppan2.demo.yhirose.cpp_linenoise-master"_dep;
+    client += builder,
+        "pub.cppan2.demo.taywee.args"_dep,
+        "pub.cppan2.demo.giovannidicanio.winreg-master"_dep;
+
+    auto &srv = p.addDirectory("server");
+    auto &webapp = srv.addTarget<ExecutableTarget>("webapp");
+    webapp.setRootDirectory("src/server/webapp");
+    webapp += ".*"_rr;
+    webapp.CPPVersion = CPPLanguageStandard::CPP17;
+    webapp += builder,
+        "pub.cppan2.demo.emweb.wt.http"_dep,
+        "pub.cppan2.demo.jtv.pqxx"_dep;
+
+    auto &t = p.addDirectory("tools");
+    if (s.Settings.TargetOS.Type == OSType::Windows)
+    {
+        auto &client = t.addTarget<ExecutableTarget>("client");
+        client += "src/tools/client.cpp";
+        client +=
+            "pub.cppan2.demo.boost.dll-1"_dep,
+            "pub.cppan2.demo.boost.filesystem-1"_dep,
+            "user32.lib"_lib;
+        if (s.Settings.TargetOS.Type == OSType::Windows)
+            client.Public += "UNICODE"_d;
+    }
 }

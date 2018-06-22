@@ -1,195 +1,498 @@
 local_settings:
-    #storage_dir: .cppan_storage
-
     use_shared_libs: false
-    build:
-        generator: Visual Studio 15 2017
-        configuration: Debug
+    rc_enabled: false
+    #storage_dir: .s
+    #build_dir_type: local
+    #use_cache: true
+    builds:
+        vs_release:
+            generator: Visual Studio 15 2017 Win64
 
-root_project: pvt.cppan.client
+        vs_preview:
+            c_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.12.25805/bin/Hostx64/x64/cl.exe
+            cxx_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.12.25805/bin/Hostx64/x64/cl.exe
+
+        vs_llvm:
+            generator: Visual Studio 15 2017 Win64
+            toolset: LLVM-vs2014
+            configuration: Debug
+
+        # run vcvars64 before this config
+        win_clang_ninja_dbg:
+            generator: Ninja
+            c_compiler: clang-cl
+            cxx_compiler: clang-cl
+            configuration: Debug
+
+        # run vcvars64 before this config
+        win_clang_ninja_rwdi:
+            generator: Ninja
+            c_compiler: clang-cl
+            cxx_compiler: clang-cl
+            configuration: RelWithDebInfo
+
+        # run vcvars64 before this config
+        win_clang_ninja_rel:
+            generator: Ninja
+            c_compiler: clang-cl
+            cxx_compiler: clang-cl
+            configuration: Release
+
+        gcc8:
+            generator: Ninja
+            c_compiler: gcc-8
+            cxx_compiler: g++-8
+            c_flags: -w
+            cxx_flags: -w
+
+        gcc8_debug:
+            generator: Ninja
+            c_compiler: gcc-8
+            cxx_compiler: g++-8
+            c_flags: -w
+            cxx_flags: -w
+            configuration: Debug
+            use_cache: false
+            build_dir: build_ninja_gcc_debug
+
+        clang6_debug:
+            generator: Ninja
+            c_compiler: clang-6.0
+            cxx_compiler: clang++-6.0
+            configuration: Debug
+            use_cache: false
+            build_dir: build_ninja_clang_debug
 
 common_settings:
     c++: 17
+    options:
+        any:
+            compile_options:
+                msvc:
+                    public:
+                        - -permissive-
+
 
 projects:
-    common:
-        type: lib
-        static_only: true
+    server.webapp:
+        root_directory: src/server/webapp
+        files: .*
+
+        dependencies:
+            - builder
+            - driver.cpp
+            - name: server.tools.pg_queries
+              ref: pg_queries
+            - pvt.cppan.demo.emweb.wt.http: 4
+            - pvt.cppan.demo.jtv.pqxx: "*"
+            - pvt.egorpugin.primitives.cron: master
+            - pvt.egorpugin.primitives.db.postgresql: master
+            - name: pvt.egorpugin.primitives.embedder
+              version: master
+              ref: embedder
+
+        post_sources: |
+            file(GLOB_RECURSE x "${SDIR}/*")
+            source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
+
+            set(gen_src
+                ${SDIR}/inserts/inserts.cpp.in
+                ${SDIR}/inserts/webapp_db_schema.sql
+            )
+            add_custom_command(OUTPUT ${BDIR}/inserts.webapp.cpp
+                COMMAND ${embedder} ${SDIR}/inserts/inserts.cpp.in ${BDIR}/inserts.webapp.cpp
+                DEPENDS ${embedder} ${gen_src}
+                WORKING_DIRECTORY ${SDIR}/inserts
+            )
+            set(src ${src} ${BDIR}/inserts.webapp.cpp ${gen_src})
+
+            set(gen_src
+                ${SDIR}/pg_queries.sql
+            )
+            add_custom_command(OUTPUT ${BDIR}/pg_queries.cpp ${BDIR}/pg_queries.h
+                COMMAND ${pg_queries} ${SDIR}/pg_queries.sql ${BDIR}/pg_queries.cpp ${BDIR}/pg_queries.h
+                DEPENDS ${pg_queries} ${gen_src}
+                WORKING_DIRECTORY ${SDIR}
+            )
+            set(src ${src} ${gen_src} ${BDIR}/pg_queries.h)
+
+    server.tools.pg_queries:
+        files:
+            - src/server/tools/pg_queries.cpp
+        dependencies:
+            - pvt.egorpugin.primitives.filesystem: master
+
+
+    tools.client:
+        root_directory: src/tools
+        files: client.cpp
+        condition: WIN32
+        output_name: client.com
+        options:
+            any:
+                definitions:
+                    public:
+                        - UNICODE
+        dependencies:
+            - pvt.cppan.demo.boost.dll: 1
+            - pvt.cppan.demo.boost.filesystem: 1
+
+    tools.sqlite2cpp:
+        files:
+            - src/tools/sqlite2cpp.cpp
+        dependencies:
+            - pvt.egorpugin.primitives.filesystem: master
+            - pvt.egorpugin.primitives.context: master
+            - pvt.cppan.demo.sqlite3: 3
+
+    client:
+        root_directory: src/client
+        executable_type: win32
+        files: .*
+        #api_name:
+        #    - CPPAN_BUILDER_API
+        #    - CPPAN_MANAGER_API
+        dependencies:
+            - builder
+            - driver.cpp
+            - pvt.cppan.demo.taywee.args: "*"
+            - pvt.egorpugin.primitives.minidump: master
+            - pvt.cppan.demo.giovannidicanio.winreg: master
+
+        post_sources: |
+            file(GLOB_RECURSE x "${SDIR}/*")
+            source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
+
+    driver.cpp:
+        type: library
+        #static_only: true
+        api_name: SW_DRIVER_CPP_API
+        export_if_static: true
 
         files:
-            - src/common/.*
-            - src/printers/.*
-            - src/comments/.*
-            - src/bazel/.*
-            - src/inserts/.*
-            - src/support/.*
-            - src/gen/.*
-
-        exclude_from_package:
-            - src/bazel/test/test.cpp
-            - src/bazel/.*\.txt
-            - src/comments/.*\.txt
-
+            - include/sw/driver/cpp/.*
+            - src/driver/cpp/.*
         exclude_from_build:
-            - src/gen/.*
+            - src/driver/cpp/misc/.*
 
         include_directories:
-            public:
-                - src
-                - src/common
-                - src/support
+            - include
+            - src/driver/cpp # make private
+
+        options:
+            any:
+                compile_options:
+                    msvc:
+                        public:
+                            - /wd4244 # conversion from to, possible loss of data
+                            - /bigobj
 
         dependencies:
             public:
-                - pvt.cppan.demo.boost.optional: 1
-                - pvt.cppan.demo.boost.property_tree: 1
-                - pvt.cppan.demo.sqlite3: 3
-                - pvt.cppan.demo.boost.stacktrace: 1
-
-                - pvt.egorpugin.primitives.string: master
-                - pvt.egorpugin.primitives.filesystem: master
+                - builder
+                - pvt.cppan.demo.boost.assign: 1
+            private:
                 - pvt.egorpugin.primitives.context: master
-                - pvt.egorpugin.primitives.date_time: master
-                - pvt.egorpugin.primitives.executor: master
-                - pvt.egorpugin.primitives.hash: master
-                - pvt.egorpugin.primitives.http: master
-                - pvt.egorpugin.primitives.lock: master
-                - pvt.egorpugin.primitives.log: master
-                - pvt.egorpugin.primitives.pack: master
-                - pvt.egorpugin.primitives.command: master
-                - pvt.egorpugin.primitives.yaml: master
-                - pvt.egorpugin.primitives.win32helpers: master
-                - pvt.cppan.demo.fmt: "*"
-                - pvt.cppan.demo.imageworks.pystring: 1
-            #win32:
-                - pvt.cppan.demo.giovannidicanio.winreg: master
+                - pvt.cppan.demo.boost.uuid: 1
                 - name: pvt.egorpugin.primitives.embedder
                   version: master
                   ref: embedder
+                - name: pvt.cppan.demo.lexxmark.winflexbison.flex
+                  version: master
+                  ref: flex
+                  condition:
+                      - WIN32
+                - name: pvt.cppan.demo.lexxmark.winflexbison.bison
+                  version: master
+                  ref: bison
+                  condition:
+                      - WIN32
+
+        post_sources: |
+            if (WIN32)
+                add_src_dir(src/driver/cpp/misc/*)
+            endif()
+
+            file(GLOB_RECURSE x "${SDIR}/*")
+            source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
+
+            set(gen_src
+                ${SDIR}/src/driver/cpp/inserts/inserts.cpp.in
+                ${SDIR}/src/driver/cpp/inserts/cppan.cpp
+            )
+
+            add_custom_command(OUTPUT ${BDIR}/inserts.driver.cpp.cpp
+                COMMAND ${embedder} ${SDIR}/src/driver/cpp/inserts/inserts.cpp.in ${BDIR}/inserts.driver.cpp.cpp
+                DEPENDS ${embedder} ${gen_src}
+                WORKING_DIRECTORY ${SDIR}/src/driver/cpp/inserts
+            )
+            set(src ${src} ${BDIR}/inserts.driver.cpp.cpp ${gen_src})
+            set_source_files_properties(${gen_src} PROPERTIES HEADER_FILE_ONLY TRUE)
+
+        post_target: |
+            macro(flex_bison lexer parser)
+                set(bdir ${BDIR_PRIVATE}/fb)
+
+                if (NOT WIN32)
+                    set(flex flex)
+                    set(bison bison)
+                endif()
+
+                get_filename_component(d ${parser} DIRECTORY)
+                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
+
+                add_custom_command(OUTPUT
+                        ${bdir}/${parser}.cpp
+                        ${bdir}/${parser}.hpp
+                    COMMAND ${bison} -o ${bdir}/${parser}.cpp --defines=${bdir}/${parser}.hpp ${SDIR}/${parser}
+                    DEPENDS ${bison} ${SDIR}/${parser}
+                    WORKING_DIRECTORY ${bdir}/${d}
+                )
+                target_include_directories(${this} PRIVATE ${bdir}/${d})
+
+                get_filename_component(d ${lexer} DIRECTORY)
+                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
+
+                add_custom_command(OUTPUT
+                        ${bdir}/${lexer}.cpp
+                        #${bdir}/${lexer}.h
+                    #COMMAND ${flex} -o ${bdir}/${lexer}.cpp --header-file=${lexer}.h ${SDIR}/${lexer}
+                    COMMAND ${flex} -o ${bdir}/${lexer}.cpp ${SDIR}/${lexer}
+                    DEPENDS ${flex} ${SDIR}/${lexer} ${bdir}/${parser}.hpp
+                    WORKING_DIRECTORY ${bdir}
+                )
+                target_include_directories(${this} PRIVATE ${bdir}/${d})
+
+                target_sources(${this} PRIVATE
+                    ${bdir}/${parser}.cpp
+                    ${bdir}/${parser}.hpp
+                    ${bdir}/${lexer}.cpp
+                    #${bdir}/${lexer}.h
+                )
+            endmacro()
+
+            flex_bison(src/driver/cpp/bazel/lexer.ll src/driver/cpp/bazel/grammar.yy)
+
+
+    driver.cppan:
+        type: library
+        #static_only: true
+        api_name: SW_DRIVER_CPP_API
+        #export_if_static: true
+
+        files:
+            - include/sw/driver/cppan/.*
+            - src/driver/cppan/.*
+
+        include_directories:
+            - include
+
+        dependencies:
+            - builder
+
+    builder:
+        type: library
+        api_name: SW_BUILDER_API
+        export_if_static: true
+
+        files:
+            - include/sw/builder/.*
+            - src/builder/.*
+        exclude_from_build:
+            - src/builder/db_sqlite.*
+            - src/builder/inserts/.*
+
+        include_directories:
+            - include
+            - src/builder # make private
+
+        options:
+            any:
+                compile_options:
+                    msvc:
+                        public:
+                            - /wd4244 # conversion from to, possible loss of data
+                            - /bigobj
+
+        dependencies:
+            public:
+                - manager
+                - pvt.cppan.demo.preshing.junction: master
+            private:
+                - name: pvt.egorpugin.primitives.embedder
+                  version: master
+                  ref: embedder
+
+        post_sources: |
+            file(GLOB_RECURSE x "${SDIR}/*")
+            source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
+
+    manager:
+        type: library
+        #static_only: true
+        api_name:
+            - SW_MANAGER_API
+        #export_if_static: true
+
+        files:
+            - include/sw/manager/.*
+            - src/manager/.*
+
+        include_directories:
+            - include
+            - src/manager # make private
 
         options:
             any:
                 definitions:
                     public:
                         - VERSION_MAJOR=0
-                        - VERSION_MINOR=2
-                        - VERSION_PATCH=5
-                        - BUILD_NUMBER=0
-                        - CPPAN_VERSION_STRING=${CPPAN_VERSION_STRING}
-                    win32:
+                        - VERSION_MINOR=3
+                        - VERSION_PATCH=0
+                compile_options:
+                    msvc:
                         public:
-                            - UNICODE
-
-        post_sources: |
-            set(CPPAN_VERSION_STRING ${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH})
-
-            add_executable(stamp_generator ${SDIR}/src/gen/stamp_gen.cpp)
-            set_property(TARGET stamp_generator PROPERTY FOLDER gen)
-            set(stamp ${BDIR}/stamp.h.in)
-            # to run every time
-            # do not change to command
-            add_custom_target(gen_stamp
-                COMMAND stamp_generator > ${stamp}
-            )
-            set_property(TARGET gen_stamp PROPERTY FOLDER gen)
-            set_source_files_properties(${stamp} PROPERTIES GENERATED True)
-            set(src ${src} ${stamp})
-
-            set(gen
-                ${SDIR}/src/inserts/cppan.h
-                ${SDIR}/src/inserts/build.cmake
-                ${SDIR}/src/inserts/functions.cmake
-                ${SDIR}/src/inserts/generate.cmake
-                ${SDIR}/src/inserts/exports.cmake
-                ${SDIR}/src/inserts/header.cmake
-                ${SDIR}/src/inserts/version.rc.in
-                ${SDIR}/src/inserts/branch.rc.in
-            )
-            add_custom_target(gen_inserts
-                COMMAND ${embedder} ${SDIR}/src/inserts/inserts.cpp.in ${BDIR}/inserts.cpp
-                # FIXME: not working on dll build
-                # it could not find deps dlls
-                WORKING_DIRECTORY ${SDIR}/src
-                DEPENDS ${embedder} ${gen}
-                SOURCES ${gen}
-            )
-            set_property(TARGET gen_inserts PROPERTY FOLDER gen)
-            set_source_files_properties(${BDIR}/inserts.cpp PROPERTIES GENERATED TRUE)
-            set(src ${src} ${BDIR}/inserts.cpp)
-
-            ########################################
-
-            find_package(BISON 3.0)
-            find_package(FLEX)
-
-            ########################################
-            # bazel_parser
-            ########################################
-
-            execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BDIR}/src/bazel)
-
-            if (FLEX_FOUND AND BISON_FOUND AND 0)
-                BISON_TARGET(grammar_b
-                    "${SDIR}/src/bazel/grammar.yy"
-                    "${BDIR}/src/bazel/grammar.cpp"
-                )
-                FLEX_TARGET(lexer_b
-                    "${SDIR}/src/bazel/lexer.ll"
-                    "${BDIR}/src/bazel/lexer.cpp"
-                    COMPILE_FLAGS --header-file=${BDIR}/src/bazel/lexer.h
-                )
-                ADD_FLEX_BISON_DEPENDENCY(lexer_b grammar_b)
-
-                set(parser_src
-                    ${BISON_grammar_b_OUTPUTS}
-                    ${FLEX_lexer_b_OUTPUTS}
-                    ${BDIR}/src/bazel/lexer.h
-                )
-                set_source_files_properties(${BDIR}/src/bazel/lexer.h PROPERTIES GENERATED TRUE)
-            endif()
-            set(src ${src} ${parser_src})
-
-            ########################################
-            # extract_comments
-            ########################################
-
-            execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BDIR}/src/comments)
-
-            if (FLEX_FOUND AND BISON_FOUND AND 0)
-                BISON_TARGET(grammar_c
-                    "${SDIR}/src/comments/grammar.yy"
-                    "${BDIR}/src/comments/grammar.cpp"
-                )
-                FLEX_TARGET(lexer_c
-                    "${SDIR}/src/comments/lexer.ll"
-                    "${BDIR}/src/comments/lexer.cpp"
-                    COMPILE_FLAGS --header-file=${BDIR}/src/comments/lexer.h
-                )
-                ADD_FLEX_BISON_DEPENDENCY(lexer_c grammar_c)
-
-                set(parser_src
-                    ${BISON_grammar_c_OUTPUTS}
-                    ${FLEX_lexer_c_OUTPUTS}
-                    ${BDIR}/src/comments/lexer.h
-                )
-                set_source_files_properties(${BDIR}/src/comments/lexer.h PROPERTIES GENERATED TRUE)
-            endif()
-            set(src ${src} ${parser_src})
-
-        post_target: |
-            target_include_directories(${this} PRIVATE ${BDIR}/src)
-            target_sources(${this} PUBLIC ${SDIR}/src/common/cppan.natvis)
-            add_dependencies(${this} gen_stamp gen_inserts)
-
-    cppan:
-        rc_enabled: false
-        files:
-            - src/client/.*
-
-        exclude_from_package:
-            - src/client/.*\.txt
+                            - /wd4250 # A inherits B via dominance
+                            - /wd4251 # needs to have dll-interface to be used by clients of
+                            #- /wd4275 # non dll-interface used as base for dll-interface
 
         dependencies:
-            - common
-            - pvt.cppan.demo.boost.program_options: 1
-            - pvt.cppan.demo.yhirose.cpp_linenoise: master
+            - support
+            - name: tools.sqlite2cpp
+              ref: sqlite2cpp
+            - pvt.egorpugin.primitives.yaml: master
+            - pvt.egorpugin.primitives.version: master
+            - pvt.egorpugin.primitives.date_time: master
+            - pvt.egorpugin.primitives.lock: master
+            - pvt.egorpugin.primitives.pack: master
+            - pvt.egorpugin.primitives.win32helpers: master
+            - pvt.egorpugin.primitives.db.sqlite3: master
+            - pvt.cppan.demo.rbock.sqlpp11_connector_sqlite3: 0
+            - pvt.cppan.demo.boost.variant: 1
+            - pvt.cppan.demo.apolukhin.stacktrace: master
+            - name: pvt.egorpugin.primitives.embedder
+              version: master
+              ref: embedder
+
+        post_sources: |
+            file(GLOB_RECURSE x "${SDIR}/*")
+            source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
+
+            set(gen_src
+                ${SDIR}/src/manager/inserts/inserts.cpp.in
+                ${SDIR}/src/manager/inserts/packages_db_schema.sql
+                ${SDIR}/src/manager/inserts/service_db_schema.sql
+            )
+            add_custom_command(OUTPUT ${BDIR}/inserts.manager.cpp
+                COMMAND ${embedder} ${SDIR}/src/manager/inserts/inserts.cpp.in ${BDIR}/inserts.manager.cpp
+                DEPENDS ${embedder} ${gen_src}
+                WORKING_DIRECTORY ${SDIR}/src/manager/inserts
+            )
+            set(src ${src} ${BDIR}/inserts.manager.cpp ${gen_src})
+
+            macro(gen_sql f out ns)
+                get_filename_component(d ${f} DIRECTORY)
+                add_custom_command(OUTPUT ${BDIR}/${out}
+                    COMMAND ${sqlite2cpp} ${f} ${BDIR}/${out} ${ns}
+                    DEPENDS ${sqlite2cpp} ${f}
+                )
+                set(src ${src} ${BDIR}/${out})
+            endmacro()
+
+            gen_sql(${SDIR}/src/manager/inserts/packages_db_schema.sql db_packages.h db::packages)
+            gen_sql(${SDIR}/src/manager/inserts/service_db_schema.sql db_service.h db::service)
+
+    support:
+        type: library
+        api_name:
+            - SW_SUPPORT_API
+
+        root_directory: src/support
+        files: .*
+
+        options:
+            any:
+                definitions:
+                    public:
+                        - UNICODE
+                compile_options:
+                    clang:
+                        public:
+                            - -Wno-assume
+                            - -Wno-unused-command-line-argument
+                            - -Wno-potentially-evaluated-expression
+                            - -Wno-delete-non-virtual-dtor
+                            - -Wno-unused-parameter
+                            - -Wno-multiple-move-vbase
+                            - -Wno-switch
+                            - -Wno-return-type
+                    gnu:
+                        public:
+                            - -w
+                            - -fpermissive
+                            #- -Wno-virtual-move-assign
+                    msvc:
+                        public:
+                            #- /wd4101 # unreferenced local variable
+                            - -D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+            shared:
+                link_options:
+                    msvc:
+                        public:
+                            - -FORCE:MULTIPLE
+                            - -ignore:4006
+
+        dependencies:
+            - pvt.egorpugin.primitives.filesystem: master
+            - pvt.egorpugin.primitives.hash: master
+            - pvt.egorpugin.primitives.http: master
+            - pvt.egorpugin.primitives.templates: master
+            - pvt.egorpugin.primitives.command: master
+            - pvt.cppan.demo.boost.property_tree: 1
+            - pvt.cppan.demo.nlohmann.json: "*"
+            - pvt.egorpugin.primitives.log: master
+            - pvt.egorpugin.primitives.executor: master
+            - pvt.cppan.demo.boost.dll: 1
+            - pvt.cppan.demo.boost.stacktrace: 1
+
+        post_sources: |
+            file(GLOB_RECURSE x "${SDIR}/*")
+            source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
+
+    test.unit.path:
+        copy_to_output_dir: false
+        api_name: SW_MANAGER_API
+        files:
+            - test/unit/path.cpp
+            - src/manager/package_path.cpp
+            - src/manager/package_path.h
+        include_directories:
+            - src/manager
+        dependencies:
+            - support
+            - pvt.cppan.demo.catchorg.catch2: 2
+
+    test.unit.api:
+        copy_to_output_dir: false
+        files: test/unit/api.cpp
+        dependencies:
+            - driver.cpp
+
+    test.unit.sources:
+        copy_to_output_dir: false
+        files: test/unit/sources.cpp
+        dependencies:
+            - driver.cpp
+            - pvt.cppan.demo.catchorg.catch2: 2
+
+    test.unit.property:
+        copy_to_output_dir: false
+        files:
+            - test/unit/property.cpp
+            - src/manager/property.cpp
+            - src/manager/property.h
+        include_directories:
+            - src/manager
+        dependencies:
+            - support
+            - pvt.cppan.demo.catchorg.catch2: 2

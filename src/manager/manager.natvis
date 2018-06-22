@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+    <Type Name="sw::UnresolvedPackage">
+        <DisplayString>{ppath}-{range}</DisplayString>
+    </Type>
+
+    <Type Name="sw::PackageId">
+        <DisplayString>{ppath}-{version}</DisplayString>
+    </Type>
+
+    <Type Name="sw::Package">
+        <DisplayString>{ppath}-{version}</DisplayString>
+    </Type>
+
+    <Type Name="sw::PackagePath">
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 0">
+            empty
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 1">
+            {_Mypair._Myval2._Myfirst[0],sb}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 2">
+            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 3">
+            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 4">
+            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 5">
+            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 6">
+            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}.{_Mypair._Myval2._Myfirst[5],sb}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 7">
+            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}.{_Mypair._Myval2._Myfirst[5],sb}.{_Mypair._Myval2._Myfirst[6],sb}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 8">
+            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}.{_Mypair._Myval2._Myfirst[5],sb}.{_Mypair._Myval2._Myfirst[6],sb}.{_Mypair._Myval2._Myfirst[7],sb}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 9">
+            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}.{_Mypair._Myval2._Myfirst[5],sb}.{_Mypair._Myval2._Myfirst[6],sb}.{_Mypair._Myval2._Myfirst[7],sb}.{_Mypair._Myval2._Myfirst[8],sb}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 10">
+            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}.{_Mypair._Myval2._Myfirst[5],sb}.{_Mypair._Myval2._Myfirst[6],sb}.{_Mypair._Myval2._Myfirst[7],sb}.{_Mypair._Myval2._Myfirst[8],sb}.{_Mypair._Myval2._Myfirst[9],sb}
+        </DisplayString>
+        <DisplayString>empty</DisplayString>
+    </Type>
+
+</AutoVisualizer>

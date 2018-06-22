@@ -1,1 +1,0 @@
-runas /savecred /user:Èìÿ "d:\dev\cppan_client\win32_test_spaces_and_unicode\test.bat"

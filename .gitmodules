@@ -1,9 +1,0 @@
-[submodule "dep/yaml-cpp"]
-	path = dep/yaml-cpp
-	url = https://github.com/jbeder/yaml-cpp.git
-[submodule "dep/libarchive"]
-	path = dep/libarchive
-	url = https://github.com/libarchive/libarchive.git
-[submodule "dep/curl"]
-	path = dep/curl
-	url = https://github.com/curl/curl.git
