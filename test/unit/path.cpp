@@ -8,6 +8,8 @@
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
 
+using namespace sw;
+
 TEST_CASE("Checking Paths", "[path]")
 {
     SECTION("Path")

@@ -74,55 +74,6 @@ common_settings:
 
 
 projects:
-    server.webapp:
-        root_directory: src/server/webapp
-        files: .*
-
-        dependencies:
-            - builder
-            - driver.cpp
-            - name: server.tools.pg_queries
-              ref: pg_queries
-            - pvt.cppan.demo.emweb.wt.http: 4
-            - pvt.cppan.demo.jtv.pqxx: "*"
-            - pvt.egorpugin.primitives.cron: master
-            - pvt.egorpugin.primitives.db.postgresql: master
-            - name: pvt.egorpugin.primitives.embedder
-              version: master
-              ref: embedder
-
-        post_sources: |
-            file(GLOB_RECURSE x "${SDIR}/*")
-            source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
-
-            set(gen_src
-                ${SDIR}/inserts/inserts.cpp.in
-                ${SDIR}/inserts/webapp_db_schema.sql
-            )
-            add_custom_command(OUTPUT ${BDIR}/inserts.webapp.cpp
-                COMMAND ${embedder} ${SDIR}/inserts/inserts.cpp.in ${BDIR}/inserts.webapp.cpp
-                DEPENDS ${embedder} ${gen_src}
-                WORKING_DIRECTORY ${SDIR}/inserts
-            )
-            set(src ${src} ${BDIR}/inserts.webapp.cpp ${gen_src})
-
-            set(gen_src
-                ${SDIR}/pg_queries.sql
-            )
-            add_custom_command(OUTPUT ${BDIR}/pg_queries.cpp ${BDIR}/pg_queries.h
-                COMMAND ${pg_queries} ${SDIR}/pg_queries.sql ${BDIR}/pg_queries.cpp ${BDIR}/pg_queries.h
-                DEPENDS ${pg_queries} ${gen_src}
-                WORKING_DIRECTORY ${SDIR}
-            )
-            set(src ${src} ${gen_src} ${BDIR}/pg_queries.h)
-
-    server.tools.pg_queries:
-        files:
-            - src/server/tools/pg_queries.cpp
-        dependencies:
-            - pvt.egorpugin.primitives.filesystem: master
-
-
     tools.client:
         root_directory: src/tools
         files: client.cpp

@@ -15,6 +15,8 @@
 #define make_name(s) make_name1(s, __LINE__)
 #define make_test_name() make_name("test")
 
+using namespace sw;
+
 auto make_name1(const String &s, int line)
 {
     std::ostringstream ss;
