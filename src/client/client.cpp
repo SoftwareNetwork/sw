@@ -75,7 +75,7 @@ void setup_log(const std::string &log_level);
 std::tuple<bool, std::string> parseCmd(int argc, char **argv);
 
 #ifdef _WIN32
-int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow)
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow)
 {
     const std::wstring s = GetCommandLine();
     bConsoleMode = s.find(L"uri sw:") == -1;

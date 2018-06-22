@@ -52,7 +52,7 @@ static void load(const path &fn, ConcurrentHashMap<path, FileRecord> &files, std
         size_t n;
         fread(&n, sizeof(n), 1, fp);
 
-        for (int i = 0; i < n; i++)
+        for (size_t i = 0; i < n; i++)
         {
             int64_t h2;
             fread(&h2, sizeof(h2), 1, fp);

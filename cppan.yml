@@ -6,7 +6,7 @@ local_settings:
     #use_cache: true
     builds:
         vs_release:
-            generator: Visual Studio 15 2017 Win64
+            generator: Visual Studio 15 2017 #Win64
 
         vs_preview:
             c_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.12.25805/bin/Hostx64/x64/cl.exe
