@@ -81,6 +81,7 @@ auto &addTarget(Solution &s, const PackagePath &p, const String &v)
     auto [d, v2] = getDirSrc(p.toString() + "-" + v);
     t.SourceDir = d;
     t.pkg.version = v2;
+    t.pkg.createNames();
     t.init();
     return t;
 }
@@ -1900,7 +1901,7 @@ true
         libcurl.Public += "HAVE_LIBZ"_d;
         libcurl.Public += "HAVE_SOCKET"_d;
         libcurl.Public += "HAVE_ZLIB_H"_d;
-        libcurl.Public += "USE_ARES"_d;
+        //libcurl.Public += "USE_ARES"_d;
         libcurl.Public += "USE_LIBSSH2"_d;
         libcurl.Public += "USE_NGHTTP2"_d;
         libcurl.Public += "USE_OPENSSL"_d;
@@ -1912,6 +1913,7 @@ true
         libcurl.Public += sw::Static, "CURL_STATICLIB"_d;
 
         libcurl.Public += c_ares, gss, libssh2, zlib, nghttp2;
+        //libcurl.Public += c_ares;
 
         if (s.Settings.TargetOS.Type == OSType::Windows)
             libcurl.Public += "Wldap32.lib"_l;
@@ -2302,27 +2304,26 @@ true
         winflexbison_bison.replaceInFileOnce("bison/src/main.c", "free(local_pkgdatadir);", "");
     }
 
-    auto setup_primitives = [](auto &t)
+    const path cppan2_base = path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path();
+#ifdef _WIN32
+    const path primitives_base = "d:/dev/primitives";
+#else
+    const path primitives_base = "/home/egor/dev/primitives";
+#endif
+
+    auto setup_primitives = [&primitives_base](auto &t)
     {
         auto n = t.getPackage().getPath().back();
-#ifdef _WIN32
-        t.SourceDir = "d:/dev/primitives/src/" + n;
-#else
-        t.SourceDir = "/home/egor/dev/primitives/src/" + n;
-#endif
+        t.SourceDir = primitives_base / ("src/" + n);
         t.ApiName = "PRIMITIVES_" + boost::to_upper_copy(n) + "_API";
         t.CPPVersion = CPPLanguageStandard::CPP17;
         t += ".*"_rr; // explicit!
     };
 
-    auto setup_primitives2 = [](auto &t, const path &subdir)
+    auto setup_primitives2 = [&primitives_base](auto &t, const path &subdir)
     {
         auto n = t.getPackage().getPath().back();
-#ifdef _WIN32
-        t.SourceDir = "d:/dev/primitives/src/" + subdir.u8string() + "/" + n;
-#else
-        t.SourceDir = "/home/egor/dev/primitives/src/" + subdir.u8string() + "/" + n;
-#endif
+        t.SourceDir = primitives_base / ("src/" + subdir.u8string() + "/" + n);
         t.ApiName = "PRIMITIVES_" + boost::to_upper_copy(subdir.u8string() + "_" + n) + "_API";
         t.CPPVersion = CPPLanguageStandard::CPP17;
         t += ".*"_rr; // explicit!
@@ -2487,18 +2488,14 @@ true
         auto &support = s.addTarget<LibraryTarget>("support");
         support.CPPVersion = CPPLanguageStandard::CPP17;
         support.Public += p_http, p_hash, p_command, p_log, p_executor, *boost_targets["property_tree"], *boost_targets["stacktrace"], *boost_targets["dll"];
-#ifdef _WIN32
-        support.SourceDir = "d:/dev/cppan2/src/support";
-#else
-        support.SourceDir = "/home/egor/dev/cppan3/src/support";
-#endif
+        support.SourceDir = cppan2_base / "src/support";
         support += ".*"_rr;
         support.ApiName = "SW_SUPPORT_API";
         if (s.Settings.TargetOS.Type == OSType::Windows)
             support.Public += "UNICODE"_d;
 
         auto &tools_sqlite2cpp = s.addTarget<ExecutableTarget>("sqlite2cpp");
-        tools_sqlite2cpp.SourceDir = "d:/dev/cppan2";
+        tools_sqlite2cpp.SourceDir = cppan2_base;
         tools_sqlite2cpp += "src/tools/sqlite2cpp.cpp";
         tools_sqlite2cpp.CPPVersion = CPPLanguageStandard::CPP17;
         tools_sqlite2cpp += p_filesystem, p_context, sqlite3;
@@ -2521,11 +2518,7 @@ true
         manager.CPPVersion = CPPLanguageStandard::CPP17;
         manager.Public += support, p_yaml, p_date_time, p_lock, p_pack, json,
             *boost_targets["variant"], *boost_targets["dll"], p_db_sqlite3, sqlpp11_connector_sqlite3, stacktrace, p_version, p_win32helpers;
-#ifdef _WIN32
-        manager.SourceDir = "d:/dev/cppan2";
-#else
-        manager.SourceDir = "/home/egor/dev/cppan3";
-#endif
+        manager.SourceDir = cppan2_base;
         manager += "src/manager/.*"_rr, "include/manager/.*"_rr;
         manager.Public += "include"_idir, "src/manager"_idir;
         manager.Public += "VERSION_MAJOR=0"_d;
@@ -2549,11 +2542,7 @@ true
         //builder.ExportIfStatic = true;
         builder.CPPVersion = CPPLanguageStandard::CPP17;
         builder.Public += manager, junction;
-#ifdef _WIN32
-        builder.SourceDir = "d:/dev/cppan2";
-#else
-        builder.SourceDir = "/home/egor/dev/cppan3";
-#endif
+        builder.SourceDir = cppan2_base;
         builder += "src/builder/.*"_rr, "include/builder/.*"_rr;
         builder.Public += "include"_idir, "src/builder"_idir;
         builder -= "src/builder/db_sqlite.*"_rr;
@@ -2563,11 +2552,7 @@ true
         //cpp_driver.ExportIfStatic = true;
         cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
         cpp_driver.Public += builder, *boost_targets["assign"], *boost_targets["uuid"], p_context;
-#ifdef _WIN32
-        cpp_driver.SourceDir = "d:/dev/cppan2";
-#else
-        cpp_driver.SourceDir = "/home/egor/dev/cppan3";
-#endif
+        cpp_driver.SourceDir = cppan2_base;
         cpp_driver += "src/driver/cpp/.*"_rr, "include/driver/cpp/.*"_rr;
         cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
         {
@@ -2599,7 +2584,7 @@ true
         auto &client = s.addTarget<ExecutableTarget>("client");
         client.CPPVersion = CPPLanguageStandard::CPP17;
         client += builder, taywee_args;
-        client.SourceDir = "d:/dev/cppan2/src/client";
+        client.SourceDir = cppan2_base / "src/client";
         client += ".*"_rr;*/
 
         //s.TargetsToBuild.add(client);

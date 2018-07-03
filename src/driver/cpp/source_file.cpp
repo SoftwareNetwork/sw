@@ -323,7 +323,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
                     {
                         if (ignore_errors)
                             return false;
-                        throw std::runtime_error("Cannot find source file: " + p.string());
+                        throw std::runtime_error("Cannot find source file: " + (target->SourceDir / F).u8string());
                     }
                 }
             }
@@ -337,7 +337,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
                 {
                     if (ignore_errors)
                         return false;
-                    throw std::runtime_error("Cannot find source file: " + F.string());
+                    throw std::runtime_error("Cannot find source file: " + F.u8string());
                 }
             }
         }
