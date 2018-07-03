@@ -189,18 +189,6 @@ void Database::open(bool read_only)
 
 void Database::recreate()
 {
-    db.reset();
-    ScopedFileLock lock(fn);
-    fs::remove(fn);
-
-    sql::connection_config config;
-    config.path_to_database = normalize_path(fn);
-    config.flags = SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX;
-    config.flags |= SQLITE_OPEN_READWRITE;
-    //config.debug = true;
-    db = std::make_unique<sql::connection>(config);
-
-    created = true;
 }
 
 template <typename T>
@@ -669,7 +657,7 @@ void PackagesDatabase::load(bool drop)
     }
     if (sver > sver_old)
     {
-        recreate();
+        // recreate(); ?
         sdb.setPackagesDbSchemaVersion(sver);
     }
 
@@ -680,7 +668,7 @@ void PackagesDatabase::load(bool drop)
     // alternative: read csv filenames by mask and load all
     // but we don't do this
     Strings data_tables;
-    ::SqliteDatabase db2(db->native_handle());
+    ::SqliteDatabase db2(fn);
     db2.execute("select name from sqlite_master as tables where type='table' and name not like '\\_%' ESCAPE '\\';", [&data_tables](SQLITE_CALLBACK_ARGS)
     {
         data_tables.push_back(cols[0]);

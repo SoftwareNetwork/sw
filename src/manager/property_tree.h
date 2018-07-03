@@ -29,24 +29,29 @@ namespace detail
 template <class S, class V>
 using typed_iptree = pt::basic_ptree<S, V, pt::detail::less_nocase<S>>;
 
-}
-
-struct PropertyTree : private detail::typed_iptree<std::string, ::sw::PropertyValue>
+template <class T>
+struct PropertyTree : private typed_iptree<std::string, T>
 {
-    using base = typename detail::typed_iptree<std::string, ::sw::PropertyValue>;
+    using base = typename typed_iptree<std::string, T>;
 
     typename base::data_type &operator[](const typename base::key_type &k)
     {
         auto i = find(k);
-        if (i == not_found())
-            return add(k, data_type()).data();
+        if (i == base::not_found())
+            return add(k, base::data_type()).data();
         return i->second.data();
     }
 
     const typename base::data_type &operator[](const typename base::key_type &k) const
     {
-        return get_child(k).data();
+        return base::get_child(k).data();
     }
+};
+
+}
+
+struct PropertyTree : detail::PropertyTree<::sw::PropertyValue>
+{
 };
 
 }

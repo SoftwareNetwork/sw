@@ -34,7 +34,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
 #include <boost/dll.hpp>
-#include <boost/nowide/args.hpp>
+//#include <boost/nowide/args.hpp>
 #include <boost/regex.hpp>
 #include <primitives/executor.h>
 #include <primitives/minidump.h>
@@ -124,6 +124,63 @@ int main(int argc, char **argv)
 #endif
 }
 
+int main1(int argc, char **argv)
+{
+    int r = 0;
+    String error;
+    bool supress = false;
+    try
+    {
+        r = main_setup(argc, argv);
+    }
+    catch (SupressOutputException &)
+    {
+        supress = true;
+    }
+    catch (const std::exception &e)
+    {
+        error = e.what();
+        //if (auto st = boost::get_error_info<traced_exception>(e))
+        //    std::cerr << *st << '\n';
+    }
+    catch (...)
+    {
+        error = "Unhandled unknown exception\n";
+        //if (auto st = boost::get_error_info<traced_exception>(e))
+        //    std::cerr << *st << '\n';
+    }
+
+    stop();
+
+    if (!error.empty() || supress)
+    {
+        if (!supress)
+        {
+            LOG_ERROR(logger, error);
+#ifdef _WIN32
+            system("pause");
+#endif
+        }
+        r = 1;
+
+        if (!bConsoleMode)
+        {
+#ifdef _WIN32
+            if (bUseSystemPause)
+                system("pause");
+            else
+                message_box(error);
+#endif
+        }
+    }
+
+    LOG_FLUSH();
+
+    return r;
+}
+
+
+
 #include <property_tree.h>
 
 struct Clonable
@@ -163,8 +220,8 @@ std::string demangle(const char *name)
     /*int status = -4; // some arbitrary value to eliminate the compiler warning
 
     std::unique_ptr<char, void(*)(void *)> res{
-        abi::__cxa_demangle(name, NULL, NULL, &status)
-        , std::free };
+    abi::__cxa_demangle(name, NULL, NULL, &status)
+    , std::free };
 
     return (status == 0) ? res.get() : name;*/
 
@@ -210,13 +267,13 @@ struct Factory
 private:
     class Key
     {
-        Key(){}
+        Key() {}
 
         template <class T>
         friend struct Registrar;
     };
 
-    using FuncType = std::unique_ptr<Base> (*)(Args...);
+    using FuncType = std::unique_ptr<Base>(*)(Args...);
 
     Factory() = default;
 
@@ -296,8 +353,8 @@ struct pkg //_item? // creator?
 
     /*create() or get()
     {
-        this pkg
-        return typeid(type)::make(pkg.id, args...);
+    this pkg
+    return typeid(type)::make(pkg.id, args...);
     }*/
 
     // cast<real type>(pkg.get());
@@ -305,7 +362,11 @@ struct pkg //_item? // creator?
 
 #include <property.h>
 
-int main1(int argc, char **argv)
+#include <boost/property_tree/info_parser.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+
+int main_setup(int argc, char **argv)
 {
     //create_directories("xxx");
 
@@ -320,65 +381,27 @@ int main1(int argc, char **argv)
     return 0;*/
 
 
-    int r = 0;
-    String error;
-    bool supress = false;
-    try
     {
-        r = main_setup(argc, argv);
-    }
-    catch (SupressOutputException &)
-    {
-        supress = true;
-    }
-    catch (const std::exception &e)
-    {
-        error = e.what();
-        //if (auto st = boost::get_error_info<traced_exception>(e))
-        //    std::cerr << *st << '\n';
-    }
-    catch (...)
-    {
-        error = "Unhandled unknown exception\n";
-        //if (auto st = boost::get_error_info<traced_exception>(e))
-        //    std::cerr << *st << '\n';
-    }
+        ptree p;
+        p.put("a.b.c", 1);
+        p.put("a.b.c.d", 1);
+        p.add("a.b.c.d", 1.5);
+        p.add("a.b.c.d", 1.5f);
+        p.add("a.b.c.d", "x");
+        p.add("a.b.c.d", "5");
+        p.add("a.b.c.d", "5 55");
+        p.add("a.b.c.d", "a b");
+        p.add(pt::path("a|b.c|d", '|'), "a b");
 
-    stop();
-
-    if (!error.empty() || supress)
-    {
-        if (!supress)
         {
-            LOG_ERROR(logger, error);
-#ifdef _WIN32
-            system("pause");
-#endif
-        }
-        r = 1;
-
-        if (!bConsoleMode)
-        {
-#ifdef _WIN32
-            if (bUseSystemPause)
-                system("pause");
-            else
-                message_box(error);
-#endif
+            std::ofstream o("d:\\1.info");
+            boost::property_tree::write_info(o, p);
         }
     }
 
-    LOG_FLUSH();
-
-    return r;
-}
-
-int main_setup(int argc, char **argv)
-{
-    setup_utf8_filesystem();
 
     // fix arguments - make them UTF-8
-    boost::nowide::args wargs(argc, argv);
+    //boost::nowide::args wargs(argc, argv);
 
 #ifdef NDEBUG
     setup_log("INFO");

@@ -35,7 +35,11 @@ CREATE TABLE package_version (
     package_version_id INTEGER NOT NULL PRIMARY KEY,
     package_id INTEGER NOT NULL REFERENCES package ON UPDATE CASCADE ON DELETE CASCADE,
     version TEXT NOT NULL,
+    target_version_id INTEGER,
     flags INTEGER NOT NULL DEFAULT 0,
+
+    -- archive version shows how package is packed
+    archive_version INTEGER NOT NULL,
 
     -- packages have same group_number when they are came from the same build script
     group_number INTEGER NOT NULL,
