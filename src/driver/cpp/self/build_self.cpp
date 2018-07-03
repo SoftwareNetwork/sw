@@ -2305,11 +2305,9 @@ true
     }
 
     const path cppan2_base = path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path();
-#ifdef _WIN32
-    const path primitives_base = "d:/dev/primitives";
-#else
-    const path primitives_base = "/home/egor/dev/primitives";
-#endif
+    const path primitives_base = getDirectories().storage_dir_tmp / "primitives";
+    if (!fs::exists(primitives_base))
+        primitives::Command::execute({ "git", "clone", "https://github.com/egorpugin/primitives", primitives_base.u8string() });
 
     auto setup_primitives = [&primitives_base](auto &t)
     {
