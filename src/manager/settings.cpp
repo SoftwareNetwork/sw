@@ -228,7 +228,7 @@ Settings &Settings::get(SettingsType type)
         {
             auto fn = CONFIG_ROOT "default";
             if (!fs::exists(fn))
-                return;
+                break;
             s.load(fn, SettingsType::System);
         };
     }

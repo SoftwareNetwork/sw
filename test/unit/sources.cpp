@@ -76,8 +76,6 @@ TEST_CASE("Checking adding of source files", "[add]")
 
 int main(int argc, char **argv)
 {
-    setup_utf8_filesystem();
-
     Catch::Session().run(argc, argv);
 
     return 0;

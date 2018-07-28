@@ -10,6 +10,8 @@
 
 #include <sw/driver/cpp/sw.h>
 
+#include <primitives/context.h>
+
 #include <boost/algorithm/string.hpp>
 #include <directories.h>
 
@@ -375,8 +377,11 @@ void build_other(Solution &s)
             "lib/lz4opt.h",
             "lib/xxhash.c",
             "lib/xxhash.h";
-        lz4.Private << sw::Shared << "LZ4_DLL_IMPORT"_d;
-        lz4.Interface << sw::Shared << "LZ4_DLL_EXPORT"_d;
+        if (s.Settings.TargetOS.Type == OSType::Windows)
+        {
+            lz4.Private << sw::Shared << "LZ4_DLL_IMPORT"_d;
+            lz4.Interface << sw::Shared << "LZ4_DLL_EXPORT"_d;
+        }
     }
 
     auto &lzo = addTarget<LibraryTarget>(s, "pvt.cppan.demo.oberhumer.lzo.lzo", "2");
@@ -2305,8 +2310,10 @@ true
     }
 
     const path cppan2_base = path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path();
-    const path primitives_base = getDirectories().storage_dir_tmp / "primitives";
-    if (!fs::exists(primitives_base))
+    path primitives_base = getDirectories().storage_dir_tmp / "primitives";
+    if (fs::exists("d:/dev/primitives"))
+        primitives_base = "d:/dev/primitives";
+    else if (!fs::exists(primitives_base))
         primitives::Command::execute({ "git", "clone", "https://github.com/egorpugin/primitives", primitives_base.u8string() });
 
     auto setup_primitives = [&primitives_base](auto &t)
@@ -2429,7 +2436,8 @@ true
 
         rl(p_version, "src/version.rl");
 
-        auto flex_bison = [&winflexbison_bison, &winflexbison_flex](auto &t, const path &f, const path &b)
+        auto flex_bison = [&winflexbison_bison, &winflexbison_flex]
+        (auto &t, const path &f, const path &b, const Strings &flex_args = {}, const Strings &bison_args = {})
         {
             auto bdir = t.BinaryPrivateDir / "fb";
 
@@ -2449,13 +2457,13 @@ true
                 c->args.push_back("-o");
                 c->args.push_back(o.u8string());
                 c->args.push_back("--defines=" + oh.u8string());
+                c->args.insert(c->args.end(), bison_args.begin(), bison_args.end());
                 c->args.push_back((t.SourceDir / b).u8string());
                 c->addInput(t.SourceDir / b);
                 c->addOutput(o);
                 c->addOutput(oh);
                 t += o, oh;
             }
-
 
             {
                 auto d = f.parent_path();
@@ -2468,6 +2476,7 @@ true
                 c->working_directory = bdir / d;
                 c->args.push_back("-o");
                 c->args.push_back(o.u8string());
+                c->args.insert(c->args.end(), flex_args.begin(), flex_args.end());
                 c->args.push_back((t.SourceDir / f).u8string());
                 c->addInput(t.SourceDir / f);
                 c->addInput(oh);
@@ -2476,7 +2485,44 @@ true
             }
         };
 
-        flex_bison(p_version, "src/range.ll", "src/range.yy");
+        auto flex_bison_pair = [&flex_bison](auto &t, const String &type, const path &p)
+        {
+            auto name = p.filename().string();
+            auto name_upper = boost::to_upper_copy(name);
+            auto my_parser = name + "Parser";
+            my_parser[0] = toupper(my_parser[0]);
+
+            Context ctx;
+            ctx.addLine("#pragma once");
+            ctx.addLine();
+            ctx.addLine("#undef  THIS_PARSER_NAME");
+            ctx.addLine("#undef  THIS_PARSER_NAME_UP");
+            ctx.addLine("#undef  THIS_LEXER_NAME");
+            ctx.addLine("#undef  THIS_LEXER_NAME_UP");
+            ctx.addLine();
+            ctx.addLine("#define THIS_PARSER_NAME       " + name);
+            ctx.addLine("#define THIS_PARSER_NAME_UP    " + name_upper);
+            ctx.addLine("#define THIS_LEXER_NAME        THIS_PARSER_NAME");
+            ctx.addLine("#define THIS_LEXER_NAME_UP     THIS_PARSER_NAME_UP");
+            ctx.addLine();
+            ctx.addLine("#undef  MY_PARSER");
+            ctx.addLine("#define MY_PARSER              " + my_parser);
+            ctx.addLine();
+            ctx.addLine("#define " + type);
+            ctx.addLine("#include <primitives/helper/bison.h>");
+            ctx.addLine("#undef  " + type);
+            ctx.addLine();
+            ctx.addLine("#include <" + name + ".yy.hpp>");
+
+            t.writeFileOnce(t.BinaryPrivateDir / (name + "_parser.h"), ctx.getText());
+            t.Definitions["HAVE_BISON_" + name_upper + "_PARSER"];
+
+            auto f = p;
+            auto b = p;
+            flex_bison(t, f += ".ll", b += ".yy", { "--prefix=ll_" + name }, { "-Dapi.prefix={yy_" + name + "}" });
+        };
+
+        flex_bison_pair(p_version, "GLR_CPP_PARSER", "src/range");
     }
 
     // setting to local makes build files go to working dir

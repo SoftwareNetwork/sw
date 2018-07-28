@@ -32,7 +32,7 @@ using typed_iptree = pt::basic_ptree<S, V, pt::detail::less_nocase<S>>;
 template <class T>
 struct PropertyTree : private typed_iptree<std::string, T>
 {
-    using base = typename typed_iptree<std::string, T>;
+    using base = typed_iptree<std::string, T>;
 
     typename base::data_type &operator[](const typename base::key_type &k)
     {

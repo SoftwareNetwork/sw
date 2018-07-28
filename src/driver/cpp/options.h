@@ -38,6 +38,8 @@ struct DefinitionsType : std::map<DefinitionKey, VariableValue>
             base::operator[](k) = 1;
         return base::operator[](k);
     }
+
+    // add operator+= ?
 };
 
 struct VariablesType : std::map<DefinitionKey, VariableValue>
@@ -243,36 +245,87 @@ struct SW_DRIVER_CPP_API NativeOptions : NativeCompilerOptions,
     void merge(const NativeOptions &o, const GroupSettings &s = GroupSettings());
 };
 
+template <class T>
+struct InheritanceStorage : std::vector<T*>
+{
+    using base = std::vector<T*>;
+
+    InheritanceStorage(T *pvt)
+        : base(toIndex(InheritanceType::Max), nullptr)
+    {
+        base::operator[](1) = pvt;
+    }
+
+    ~InheritanceStorage()
+    {
+        // we do not own 0 and 1 elements
+        for (int i = toIndex(InheritanceType::Min) + 1; i < toIndex(InheritanceType::Max); i++)
+            delete base::operator[](i);
+    }
+
+    T &operator[](int i)
+    {
+        auto &e = base::operator[](i);
+        if (!e)
+            e = new T;
+        return *e;
+    }
+
+    const T &operator[](int i) const
+    {
+        return *base::operator[](i);
+    }
+
+    T &operator[](InheritanceType i)
+    {
+        return operator[](toIndex(i));
+    }
+
+    const T &operator[](InheritanceType i) const
+    {
+        return operator[](toIndex(i));
+    }
+};
+
 /**
 * \brief By default, group items considered as Private scope.
 */
 template <class T>
 struct InheritanceGroup : T
 {
-    /*struct ProtectedInterface : T
-    {
-        T Interface;
-    };*/
+private:
+    InheritanceStorage<T> data;
 
+public:
     /**
     * \brief visible only in current target
     */
-    T Private;
+    T &Private;
 
     /**
     * \brief visible only in target and current project
     */
-    T Protected;
+    T &Protected;
 
     /**
     * \brief visible both in target and its users
     */
-    T Public;
+    T &Public;
 
     /**
     * \brief visible in target's users
     */
-    T Interface;
+    T &Interface;
+
+    InheritanceGroup()
+        : T()
+        , data(this)
+        , Private(*this)
+        , Protected(data[InheritanceType::Protected])
+        , Public(data[InheritanceType::Public])
+        , Interface(data[InheritanceType::Interface])
+    {
+    }
 
     using T::operator=;
 
@@ -288,6 +341,8 @@ struct InheritanceGroup : T
             return Public;
         case InheritanceType::Interface:
             return Interface;
+        default:
+            return data[Type];
         }
         throw std::runtime_error("unreachable code");
     }
@@ -304,6 +359,8 @@ struct InheritanceGroup : T
             return Public;
         case InheritanceType::Interface:
             return Interface;
+        default:
+            return data[Type];
         }
         throw std::runtime_error("unreachable code");
     }
@@ -339,7 +396,7 @@ struct InheritanceGroup : T
         auto s2 = s;
 
         s2.Inheritance = InheritanceType::Private;
-        T::template iterate<F, Args...>(std::forward<F>(f), s);
+        //T::template iterate<F, Args...>(std::forward<F>(f), s);
         Private.template iterate<F, Args...>(std::forward<F>(f), s);
         s2.Inheritance = InheritanceType::Protected;
         Protected.template iterate<F, Args...>(std::forward<F>(f), s2);
@@ -355,7 +412,7 @@ struct InheritanceGroup : T
         auto s2 = s;
 
         s2.Inheritance = InheritanceType::Private;
-        T::template iterate<F, Args...>(std::forward<F>(f), s);
+        //T::template iterate<F, Args...>(std::forward<F>(f), s);
         Private.template iterate<F, Args...>(std::forward<F>(f), s);
         s2.Inheritance = InheritanceType::Protected;
         Protected.template iterate<F, Args...>(std::forward<F>(f), s2);

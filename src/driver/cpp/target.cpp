@@ -816,7 +816,7 @@ FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
             return false;
         }))
         {
-            LOG_ERROR(logger, "Cannot resolve library: " << l);
+            LOG_DEBUG(logger, "Cannot resolve library: " << l);
         }
     }
     return libs;

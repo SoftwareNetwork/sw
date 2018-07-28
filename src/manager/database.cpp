@@ -164,8 +164,8 @@ Database::Database(const String &name, const String &schema)
 
     // craete or update schema
     ::create_directories(getDbDirectory());
-    primitives::db::sqlite3::SqliteDatabase db(db->native_handle());
-    createOrUpdateSchema(db, schema, true);
+    primitives::db::sqlite3::SqliteDatabase db2(db->native_handle());
+    createOrUpdateSchema(db2, schema, true);
 }
 
 void Database::open(bool read_only)

@@ -53,8 +53,6 @@ TEST_CASE("Checking Paths", "[path]")
 
 int main(int argc, char **argv)
 {
-    setup_utf8_filesystem();
-
     Catch::Session().run(argc, argv);
 
     return 0;

@@ -45,6 +45,9 @@ local_settings:
             c_flags: -w
             cxx_flags: -w
 
+        # debug config is not working with ninja,
+        # so we set cache to false
+        # and use local build dir (this is optional)
         gcc8_debug:
             generator: Ninja
             c_compiler: gcc-8
@@ -55,6 +58,12 @@ local_settings:
             use_cache: false
             build_dir: build_ninja_gcc_debug
 
+        clang6:
+            generator: Ninja
+            c_compiler: clang-6.0
+            cxx_compiler: clang++-6.0
+            #build_dir: build_ninja_clang
+
         clang6_debug:
             generator: Ninja
             c_compiler: clang-6.0
@@ -62,6 +71,9 @@ local_settings:
             configuration: Debug
             use_cache: false
             build_dir: build_ninja_clang_debug
+
+add_directories:
+    - d:/dev/primitives
 
 common_settings:
     c++: 17
@@ -92,14 +104,22 @@ projects:
         files:
             - src/tools/sqlite2cpp.cpp
         dependencies:
-            - pvt.egorpugin.primitives.filesystem: master
-            - pvt.egorpugin.primitives.context: master
+            - name: pvt.egorpugin.primitives.filesystem
+              version: master
+              local: primitives.filesystem
+            - name: pvt.egorpugin.primitives.context
+              version: master
+              local: primitives.context
             - pvt.cppan.demo.sqlite3: 3
 
     client:
         root_directory: src/client
         executable_type: win32
-        files: .*
+        files:
+            - .*
+        exclude_from_build:
+            - .*rc$
+        rc_enabled: false
         #api_name:
         #    - CPPAN_BUILDER_API
         #    - CPPAN_MANAGER_API
@@ -107,7 +127,9 @@ projects:
             - builder
             - driver.cpp
             - pvt.cppan.demo.taywee.args: "*"
-            - pvt.egorpugin.primitives.minidump: master
+            - name: pvt.egorpugin.primitives.minidump
+              version: master
+              local: primitives.minidump
             - pvt.cppan.demo.giovannidicanio.winreg: master
 
         post_sources: |
@@ -143,11 +165,14 @@ projects:
                 - builder
                 - pvt.cppan.demo.boost.assign: 1
             private:
-                - pvt.egorpugin.primitives.context: master
+                - name: pvt.egorpugin.primitives.context
+                  version: master
+                  local: primitives.context
                 - pvt.cppan.demo.boost.uuid: 1
                 - name: pvt.egorpugin.primitives.embedder
                   version: master
                   ref: embedder
+                  local: primitives.embedder
                 - name: pvt.cppan.demo.lexxmark.winflexbison.flex
                   version: master
                   ref: flex
@@ -181,49 +206,7 @@ projects:
             set_source_files_properties(${gen_src} PROPERTIES HEADER_FILE_ONLY TRUE)
 
         post_target: |
-            macro(flex_bison lexer parser)
-                set(bdir ${BDIR_PRIVATE}/fb)
-
-                if (NOT WIN32)
-                    set(flex flex)
-                    set(bison bison)
-                endif()
-
-                get_filename_component(d ${parser} DIRECTORY)
-                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
-
-                add_custom_command(OUTPUT
-                        ${bdir}/${parser}.cpp
-                        ${bdir}/${parser}.hpp
-                    COMMAND ${bison} -o ${bdir}/${parser}.cpp --defines=${bdir}/${parser}.hpp ${SDIR}/${parser}
-                    DEPENDS ${bison} ${SDIR}/${parser}
-                    WORKING_DIRECTORY ${bdir}/${d}
-                )
-                target_include_directories(${this} PRIVATE ${bdir}/${d})
-
-                get_filename_component(d ${lexer} DIRECTORY)
-                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
-
-                add_custom_command(OUTPUT
-                        ${bdir}/${lexer}.cpp
-                        #${bdir}/${lexer}.h
-                    #COMMAND ${flex} -o ${bdir}/${lexer}.cpp --header-file=${lexer}.h ${SDIR}/${lexer}
-                    COMMAND ${flex} -o ${bdir}/${lexer}.cpp ${SDIR}/${lexer}
-                    DEPENDS ${flex} ${SDIR}/${lexer} ${bdir}/${parser}.hpp
-                    WORKING_DIRECTORY ${bdir}
-                )
-                target_include_directories(${this} PRIVATE ${bdir}/${d})
-
-                target_sources(${this} PRIVATE
-                    ${bdir}/${parser}.cpp
-                    ${bdir}/${parser}.hpp
-                    ${bdir}/${lexer}.cpp
-                    #${bdir}/${lexer}.h
-                )
-            endmacro()
-
-            flex_bison(src/driver/cpp/bazel/lexer.ll src/driver/cpp/bazel/grammar.yy)
-
+            cppan_flex_bison_internal(src/driver/cpp/bazel/lexer.ll PARSERS src/driver/cpp/bazel/grammar.yy)
 
     driver.cppan:
         type: library
@@ -273,6 +256,7 @@ projects:
                 - name: pvt.egorpugin.primitives.embedder
                   version: master
                   ref: embedder
+                  local: primitives.embedder
 
         post_sources: |
             file(GLOB_RECURSE x "${SDIR}/*")
@@ -311,19 +295,34 @@ projects:
             - support
             - name: tools.sqlite2cpp
               ref: sqlite2cpp
-            - pvt.egorpugin.primitives.yaml: master
-            - pvt.egorpugin.primitives.version: master
-            - pvt.egorpugin.primitives.date_time: master
-            - pvt.egorpugin.primitives.lock: master
-            - pvt.egorpugin.primitives.pack: master
-            - pvt.egorpugin.primitives.win32helpers: master
-            - pvt.egorpugin.primitives.db.sqlite3: master
+            - name: pvt.egorpugin.primitives.yaml
+              version: master
+              local: primitives.yaml
+            - name: pvt.egorpugin.primitives.version
+              version: master
+              local: primitives.version
+            - name: pvt.egorpugin.primitives.date_time
+              version: master
+              local: primitives.date_time
+            - name: pvt.egorpugin.primitives.lock
+              version: master
+              local: primitives.lock
+            - name: pvt.egorpugin.primitives.pack
+              version: master
+              local: primitives.pack
+            - name: pvt.egorpugin.primitives.win32helpers
+              version: master
+              local: primitives.win32helpers
+            - name: pvt.egorpugin.primitives.db.sqlite3
+              version: master
+              local: primitives.db.sqlite3
             - pvt.cppan.demo.rbock.sqlpp11_connector_sqlite3: 0
             - pvt.cppan.demo.boost.variant: 1
             - pvt.cppan.demo.apolukhin.stacktrace: master
             - name: pvt.egorpugin.primitives.embedder
               version: master
               ref: embedder
+              local: primitives.embedder
 
         post_sources: |
             file(GLOB_RECURSE x "${SDIR}/*")
@@ -394,15 +393,29 @@ projects:
                             - -ignore:4006
 
         dependencies:
-            - pvt.egorpugin.primitives.filesystem: master
-            - pvt.egorpugin.primitives.hash: master
-            - pvt.egorpugin.primitives.http: master
-            - pvt.egorpugin.primitives.templates: master
-            - pvt.egorpugin.primitives.command: master
+            - name: pvt.egorpugin.primitives.filesystem
+              version: master
+              local: primitives.filesystem
+            - name: pvt.egorpugin.primitives.hash
+              version: master
+              local: primitives.hash
+            - name: pvt.egorpugin.primitives.http
+              version: master
+              local: primitives.http
+            - name: pvt.egorpugin.primitives.templates
+              version: master
+              local: primitives.templates
+            - name: pvt.egorpugin.primitives.command
+              version: master
+              local: primitives.command
             - pvt.cppan.demo.boost.property_tree: 1
             - pvt.cppan.demo.nlohmann.json: "*"
-            - pvt.egorpugin.primitives.log: master
-            - pvt.egorpugin.primitives.executor: master
+            - name: pvt.egorpugin.primitives.log
+              version: master
+              local: primitives.log
+            - name: pvt.egorpugin.primitives.executor
+              version: master
+              local: primitives.executor
             - pvt.cppan.demo.boost.dll: 1
             - pvt.cppan.demo.boost.stacktrace: 1
 

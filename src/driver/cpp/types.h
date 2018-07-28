@@ -46,17 +46,58 @@ enum class LinkerType
     LD = GNU,
 };
 
+struct InheritanceScope
+{
+    enum
+    {
+        Package = 1 << 0,
+        Project = 1 << 1, // consists of packages
+        Other   = 1 << 2, // consists of projects and packages
+
+        Private = Package,
+        Group = Project,
+        World = Other,
+    };
+};
+
 enum class InheritanceType
 {
-    Unspecified,
+    // 8 types
+    // - 000 type (invalid)
+    // = 7 types
 
-    Private,
-    Protected,
-    //ProtectedInterface,
-    Public,
-    Interface,
+    // 001 - usual private options
+    Private = InheritanceScope::Package,
+
+    // 011 - private and project
+    Protected = InheritanceScope::Package | InheritanceScope::Project,
+
+    // 111 - everyone
+    Public = InheritanceScope::Package | InheritanceScope::Project | InheritanceScope::World,
+
+    // 110 - project and others
+    Interface = InheritanceScope::Project | InheritanceScope::World,
+
+    // rare used
+
+    // 100 - only others
+    // TODO: set new name?
+    ProjectInterface = InheritanceScope::World,
+    // or ProtectedInterface?
+
+    // 010 - Project?
+    // TODO: set new name
+    ProjectOnly = InheritanceScope::Project,
+
+    // 101 - package and others
+    // TODO: set new name
+    NotProject = InheritanceScope::Package | InheritanceScope::World,
+
+    // alternate names
 
     Default = Private,
+    Min = Private,
+    Max = Public + 1,
 };
 
 //InheritanceType inherit(InheritanceType InType, InheritanceType ChildObject, bool SameProject = false);
