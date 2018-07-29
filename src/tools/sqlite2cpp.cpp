@@ -17,6 +17,8 @@
 #include <boost/algorithm/string.hpp>
 #include <primitives/context.h>
 #include <primitives/filesystem.h>
+#include <primitives/sw/main.h>
+#include <primitives/sw/settings.h>
 #include <sqlite3.h>
 
 #include <functional>
@@ -32,7 +34,7 @@ sqlite3 *db;
 String INCLUDE = "sqlpp11";
 String NAMESPACE = "sqlpp";
 
-StringMap types{
+StringMap<String> types{
     {
         "integer",
         "integer",
@@ -131,15 +133,11 @@ auto escape_if_reserved(const String &name)
 
 int main(int argc, char **argv)
 {
-    if (argc != 4)
-    {
-        std::cerr << "sqlite2cpp sql_script output_file namespace";
-        return 1;
-    }
+    cl::opt<path> ddl(cl::Positional, cl::desc("<input sql script>"), cl::Required);
+    cl::opt<path> target(cl::Positional, cl::desc("<output .cpp file>"), cl::Required);
+    cl::opt<std::string> ns(cl::Positional, cl::desc("<namespace>"), cl::Required);
 
-    String ddl = argv[1];
-    String target = argv[2];
-    String ns = argv[3];
+    cl::parseCommandLineOptions(argc, argv);
 
     sqlite3_open(":memory:", &db);
     execute(read_file(ddl).c_str());

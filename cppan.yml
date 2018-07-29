@@ -110,6 +110,9 @@ projects:
             - name: pvt.egorpugin.primitives.context
               version: master
               local: primitives.context
+            - name: pvt.egorpugin.primitives.sw.main
+              version: master
+              local: primitives.sw.main
             - pvt.cppan.demo.sqlite3: 3
 
     client:
