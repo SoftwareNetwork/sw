@@ -100,21 +100,6 @@ projects:
             - pvt.cppan.demo.boost.dll: 1
             - pvt.cppan.demo.boost.filesystem: 1
 
-    tools.sqlite2cpp:
-        files:
-            - src/tools/sqlite2cpp.cpp
-        dependencies:
-            - name: pvt.egorpugin.primitives.filesystem
-              version: master
-              local: primitives.filesystem
-            - name: pvt.egorpugin.primitives.context
-              version: master
-              local: primitives.context
-            - name: pvt.egorpugin.primitives.sw.main
-              version: master
-              local: primitives.sw.main
-            - pvt.cppan.demo.sqlite3: 3
-
     client:
         root_directory: src/client
         executable_type: win32
@@ -172,10 +157,10 @@ projects:
                   version: master
                   local: primitives.context
                 - pvt.cppan.demo.boost.uuid: 1
-                - name: pvt.egorpugin.primitives.embedder
+                - name: pvt.egorpugin.primitives.tools.embedder
                   version: master
                   ref: embedder
-                  local: primitives.embedder
+                  local: primitives.tools.embedder
                 - name: pvt.cppan.demo.lexxmark.winflexbison.flex
                   version: master
                   ref: flex
@@ -195,18 +180,8 @@ projects:
             file(GLOB_RECURSE x "${SDIR}/*")
             source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
 
-            set(gen_src
-                ${SDIR}/src/driver/cpp/inserts/inserts.cpp.in
-                ${SDIR}/src/driver/cpp/inserts/cppan.cpp
-            )
-
-            add_custom_command(OUTPUT ${BDIR}/inserts.driver.cpp.cpp
-                COMMAND ${embedder} ${SDIR}/src/driver/cpp/inserts/inserts.cpp.in ${BDIR}/inserts.driver.cpp.cpp
-                DEPENDS ${embedder} ${gen_src}
-                WORKING_DIRECTORY ${SDIR}/src/driver/cpp/inserts
-            )
-            set(src ${src} ${BDIR}/inserts.driver.cpp.cpp ${gen_src})
-            set_source_files_properties(${gen_src} PROPERTIES HEADER_FILE_ONLY TRUE)
+            embed(${SDIR}/src/driver/cpp/inserts/inserts.cpp.in ${SDIR}/src/driver/cpp/inserts/cppan.cpp)
+            set_source_files_properties(${SDIR}/src/driver/cpp/inserts/cppan.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
 
         post_target: |
             cppan_flex_bison_internal(src/driver/cpp/bazel/lexer.ll PARSERS src/driver/cpp/bazel/grammar.yy)
@@ -255,11 +230,6 @@ projects:
             public:
                 - manager
                 - pvt.cppan.demo.preshing.junction: master
-            private:
-                - name: pvt.egorpugin.primitives.embedder
-                  version: master
-                  ref: embedder
-                  local: primitives.embedder
 
         post_sources: |
             file(GLOB_RECURSE x "${SDIR}/*")
@@ -296,7 +266,9 @@ projects:
 
         dependencies:
             - support
-            - name: tools.sqlite2cpp
+            - name: pvt.egorpugin.primitives.tools.sqlpp11.sqlite2cpp
+              version: master
+              local: primitives.tools.sqlpp11.sqlite2cpp
               ref: sqlite2cpp
             - name: pvt.egorpugin.primitives.yaml
               version: master
@@ -322,38 +294,22 @@ projects:
             - pvt.cppan.demo.rbock.sqlpp11_connector_sqlite3: 0
             - pvt.cppan.demo.boost.variant: 1
             - pvt.cppan.demo.apolukhin.stacktrace: master
-            - name: pvt.egorpugin.primitives.embedder
+            - name: pvt.egorpugin.primitives.tools.embedder
               version: master
               ref: embedder
-              local: primitives.embedder
+              local: primitives.tools.embedder
 
         post_sources: |
             file(GLOB_RECURSE x "${SDIR}/*")
             source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
 
-            set(gen_src
-                ${SDIR}/src/manager/inserts/inserts.cpp.in
+            embed(${SDIR}/src/manager/inserts/inserts.cpp.in
                 ${SDIR}/src/manager/inserts/packages_db_schema.sql
                 ${SDIR}/src/manager/inserts/service_db_schema.sql
             )
-            add_custom_command(OUTPUT ${BDIR}/inserts.manager.cpp
-                COMMAND ${embedder} ${SDIR}/src/manager/inserts/inserts.cpp.in ${BDIR}/inserts.manager.cpp
-                DEPENDS ${embedder} ${gen_src}
-                WORKING_DIRECTORY ${SDIR}/src/manager/inserts
-            )
-            set(src ${src} ${BDIR}/inserts.manager.cpp ${gen_src})
 
-            macro(gen_sql f out ns)
-                get_filename_component(d ${f} DIRECTORY)
-                add_custom_command(OUTPUT ${BDIR}/${out}
-                    COMMAND ${sqlite2cpp} ${f} ${BDIR}/${out} ${ns}
-                    DEPENDS ${sqlite2cpp} ${f}
-                )
-                set(src ${src} ${BDIR}/${out})
-            endmacro()
-
-            gen_sql(${SDIR}/src/manager/inserts/packages_db_schema.sql db_packages.h db::packages)
-            gen_sql(${SDIR}/src/manager/inserts/service_db_schema.sql db_service.h db::service)
+            sqlite2cpp_gen_sql(${SDIR}/src/manager/inserts/packages_db_schema.sql db_packages.h db::packages)
+            sqlite2cpp_gen_sql(${SDIR}/src/manager/inserts/service_db_schema.sql db_service.h db::service)
 
     support:
         type: library
