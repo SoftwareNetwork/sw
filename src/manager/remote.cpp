@@ -10,7 +10,9 @@
 
 #include <hash.h>
 #include <http.h>
+
 #include <primitives/templates.h>
+#include <grpcpp/grpcpp.h>
 
 //#include "logger.h"
 //DECLARE_STATIC_LOGGER(logger, "remote");
@@ -96,6 +98,30 @@ String Remote::cppan2_source_provider(const Package &d) const
 String Remote::github_source_provider(const Package &d) const
 {
     return "https://github.com/cppan-packages/" + d.getHash() + "/raw/master/" + make_archive_name();
+}
+
+std::shared_ptr<grpc::Channel> Remote::getGrpcChannel()
+{
+    if (!channel)
+    {
+        auto p = url.find("://");
+        auto host = url.substr(p == url.npos ? 0 : p + 3);
+        host = host.substr(0, host.find('/'));
+
+        auto creds = grpc::InsecureChannelCredentials();
+        if (host.find("localhost") != 0)
+        {
+            grpc::SslCredentialsOptions ssl_options;
+            ssl_options.pem_root_certs = read_file("server.crt");
+
+            creds = grpc::SslCredentials(ssl_options);
+        }
+        else
+            host = "https://localhost/";
+
+        channel = grpc::CreateChannel(host, creds);
+    }
+    return channel;
 }
 
 }

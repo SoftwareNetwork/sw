@@ -7,7 +7,12 @@
 #pragma once
 
 #include "cppan_version.h"
+#include "dependency.h"
 #include "enums.h"
+#include "package.h"
+
+#undef ERROR
+#include "api.grpc.pb.h"
 
 namespace sw
 {
@@ -17,15 +22,24 @@ struct Remote;
 
 struct Api
 {
-    void add_project(const Remote &r, PackagePath p);
-    void remove_project(const Remote &r, PackagePath p);
-    void add_version(const Remote &r, PackagePath p, const String &cppan);
-    void add_version(const Remote &r, PackagePath p, const Version &vnew);
-    void add_version(const Remote &r, PackagePath p, const Version &vnew, const String &vold);
-    void update_version(const Remote &r, PackagePath p, const Version &v);
-    void remove_version(const Remote &r, PackagePath p, const Version &v);
-    void get_notifications(const Remote &r, int n = 10);
-    void clear_notifications(const Remote &r);
+    Api(const Remote &r);
+
+    void addDownloads(const std::set<int64_t> &);
+    void addClientCall();
+    IdDependencies resolvePackages(const UnresolvedPackages &);
+
+    void addVersion(const String &cppan);
+    void addVersion(PackagePath p, const Version &vnew, const optional<Version> &vold = {});
+    void updateVersion(PackagePath p, const Version &v);
+    void removeVersion(PackagePath p, const Version &v);
+
+    void getNotifications(int n = 10);
+    void clearNotifications();
+
+private:
+    const Remote &r;
+    std::unique_ptr<api::ApiService::Stub> api_;
+    std::unique_ptr<api::UserService::Stub> user_;
 };
 
 }

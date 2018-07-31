@@ -1,0 +1,94 @@
+// Copyright (C) 2018 Egor Pugin <egor.pugin@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+syntax = "proto3";
+
+option cc_enable_arenas = true;
+
+package sw.api;
+
+import "google/protobuf/empty.proto";
+
+message PackageId {
+    string path = 1;
+    string version = 2;
+}
+
+message UnresolvedPackages {
+    message UnresolvedPackage {
+        string path = 1;
+        string range = 2;
+    }
+    repeated UnresolvedPackage packages = 1;
+}
+
+message ResolvedPackages {
+    message ResolvedPackage {
+        int64 id = 1;
+        PackageId package = 2;
+        int64 flags = 3;
+        string hash = 4;
+        repeated int64 dependencies = 5;
+        int64 group_number = 16;
+        // int32 archive_type;
+    }
+    repeated ResolvedPackage packages = 1;
+}
+
+message PackageIds {
+    repeated int64 ids = 1;
+}
+
+message NotificationsRequest {
+    int32 n = 1;
+}
+
+message Notifications {
+    message Notification {
+        enum Type {
+            NONE = 0;
+            MESSAGE = 1;
+            SUCCESS = 2;
+            WARNING = 3;
+            ERROR = 4;
+        }
+        Type type = 1;
+        string text = 2;
+        int64 timestamp = 3;
+    }
+    repeated Notification notifications = 1;
+}
+
+message NewPackage {
+    message NewVersion {
+        PackageId package = 1;
+        string old_version = 2;
+    }
+    oneof package {
+        string script = 1;
+        NewVersion version = 2;
+    }
+}
+
+// unauthorized
+service ApiService {
+    // tbr, check downloads on s3
+    rpc AddDownloads (PackageIds) returns (google.protobuf.Empty);
+    // also deprecate later
+    rpc AddClientCall (google.protobuf.Empty) returns (google.protobuf.Empty);
+
+    rpc ResolvePackages (UnresolvedPackages) returns (ResolvedPackages);
+    // get_version_hash
+}
+
+service UserService {
+    rpc AddPackage (NewPackage) returns (google.protobuf.Empty);
+    rpc UpdatePackage (PackageId) returns (google.protobuf.Empty);
+    rpc RemovePackage (PackageId) returns (google.protobuf.Empty);
+
+    rpc GetNotifications (NotificationsRequest) returns (Notifications);
+    rpc ClearNotification (google.protobuf.Empty) returns (google.protobuf.Empty);
+}

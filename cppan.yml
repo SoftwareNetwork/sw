@@ -235,6 +235,20 @@ projects:
             file(GLOB_RECURSE x "${SDIR}/*")
             source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
 
+    api_proto:
+        type: lib
+        static_only: true
+        custom: true
+        root_directory: src/manager
+        files: api.proto
+        dependencies:
+            - pvt.cppan.demo.google.protobuf.protoc: "*"
+            - pvt.cppan.demo.google.protobuf.protobuf: "*"
+            - pvt.cppan.demo.google.grpc.grpcpp: 1
+            - pvt.cppan.demo.google.grpc.grpc_cpp_plugin: 1
+        post_sources: |
+            gen_grpc(${SDIR}/api.proto)
+
     manager:
         type: library
         #static_only: true
@@ -265,6 +279,7 @@ projects:
                             #- /wd4275 # non dll-interface used as base for dll-interface
 
         dependencies:
+            - api_proto
             - support
             - name: pvt.egorpugin.primitives.tools.sqlpp11.sqlite2cpp
               version: master
