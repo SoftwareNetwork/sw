@@ -27,11 +27,19 @@ message UnresolvedPackages {
 
 message ResolvedPackages {
     message ResolvedPackage {
+        message Dependency {
+            int64 id = 1;
+            // if package is deployed on a private server
+            // string path?
+            // flags?
+        }
+        // base fields
         int64 id = 1;
         PackageId package = 2;
         int64 flags = 3;
         string hash = 4;
-        repeated int64 dependencies = 5;
+        repeated Dependency dependencies = 5;
+        // other
         int64 group_number = 16;
         // int32 archive_type;
     }
@@ -84,11 +92,12 @@ service ApiService {
     // get_version_hash
 }
 
+// id: 1
 service UserService {
-    rpc AddPackage (NewPackage) returns (google.protobuf.Empty);
-    rpc UpdatePackage (PackageId) returns (google.protobuf.Empty);
-    rpc RemovePackage (PackageId) returns (google.protobuf.Empty);
+    rpc AddPackage (NewPackage) returns (google.protobuf.Empty); // id: 1
+    rpc UpdatePackage (PackageId) returns (google.protobuf.Empty); // id: 2
+    rpc RemovePackage (PackageId) returns (google.protobuf.Empty); // id: 3
 
-    rpc GetNotifications (NotificationsRequest) returns (Notifications);
-    rpc ClearNotification (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc GetNotifications (NotificationsRequest) returns (Notifications); // id: 4
+    rpc ClearNotification (google.protobuf.Empty) returns (google.protobuf.Empty); // id: 5
 }

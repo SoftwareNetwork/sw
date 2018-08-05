@@ -57,7 +57,7 @@ bool bUseSystemPause = false;
 int main(int argc, char **argv);
 int main1(int argc, char **argv);
 int main_setup(int argc, char **argv);
-int cppan_main(int argc, char **argv);
+int sw_main(int argc, char **argv);
 void stop();
 void setup_log(const std::string &log_level);
 std::tuple<bool, std::string> parseCmd(int argc, char **argv);
@@ -167,6 +167,8 @@ int main1(int argc, char **argv)
     return r;
 }
 
+#include <api.h>
+
 int main_setup(int argc, char **argv)
 {
 #ifdef NDEBUG
@@ -177,10 +179,10 @@ int main_setup(int argc, char **argv)
 
     getServiceDatabase();
 
-    return cppan_main(argc, argv);
+    return sw_main(argc, argv);
 }
 
-int cppan_main(int argc, char **argv)
+int sw_main(int argc, char **argv)
 {
     if (auto r = parseCmd(argc, argv); !std::get<0>(r))
     {

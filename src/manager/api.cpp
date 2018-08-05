@@ -10,6 +10,8 @@
 #include "remote.h"
 #include "settings.h"
 
+#include <grpc_helpers.h>
+
 #include <grpcpp/grpcpp.h>
 
 #include <primitives/log.h>
@@ -30,16 +32,18 @@ void apply_auth(const Remote &r, grpc::ClientContext &context)
     context.AddMetadata("auth.token", r.token);
 }
 
-void check_status(grpc::Status status)
+auto getContext()
 {
-    if (!status.ok())
-        LOG_ERROR(logger, "RPC failed: " << status.error_code() << ": " << status.error_message());
+    auto ctx = std::make_unique<grpc::ClientContext>();
+    ctx->AddMetadata("client.version", "0.3.0");
+    return ctx;
 }
 
-void check_status_and_throw(grpc::Status status)
+auto getContextWithAuth(const Remote &r)
 {
-    if (!status.ok())
-        throw std::runtime_error("RPC failed: " + std::to_string(status.error_code()) + ": " + status.error_message());
+    auto ctx = getContext();
+    apply_auth(r, *ctx);
+    return ctx;
 }
 
 Api::Api(const Remote &r)
@@ -54,15 +58,15 @@ void Api::addDownloads(const std::set<int64_t> &pkgs)
     api::PackageIds request;
     for (auto &id : pkgs)
         request.mutable_ids()->Add(id);
-    grpc::ClientContext context;
-    check_status(api_->AddDownloads(&context, request, nullptr));
+    auto context = getContext();
+    GRPC_CALL(api_, AddDownloads, google::protobuf::Empty);
 }
 
 void Api::addClientCall()
 {
     google::protobuf::Empty request;
-    grpc::ClientContext context;
-    check_status(api_->AddClientCall(&context, request, nullptr));
+    auto context = getContext();
+    GRPC_CALL(api_, AddClientCall, google::protobuf::Empty);
 }
 
 IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
@@ -74,12 +78,11 @@ IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
         pb_pkg->set_path(pkg.ppath);
         pb_pkg->set_range(pkg.range.toString());
     }
-    api::ResolvedPackages resolved;
-    grpc::ClientContext context;
-    check_status_and_throw(api_->ResolvePackages(&context, request, &resolved));
+    auto context = getContext();
+    GRPC_CALL_THROWS(api_, ResolvePackages, api::ResolvedPackages);
 
     IdDependencies id_deps;
-    for (auto &pkg : resolved.packages())
+    for (auto &pkg : response.packages())
     {
         DownloadDependency d;
         d.ppath = pkg.package().path();
@@ -90,7 +93,7 @@ IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
 
         std::unordered_set<db::PackageVersionId> idx;
         for (auto &tree_dep : pkg.dependencies())
-            idx.insert(tree_dep);
+            idx.insert(tree_dep.id());
         d.setDependencyIds(idx);
     }
     return id_deps;
@@ -100,11 +103,8 @@ void Api::addVersion(const String &cppan)
 {
     api::NewPackage request;
     request.set_script(cppan);
-
-    grpc::ClientContext context;
-    apply_auth(r, context);
-
-    check_status(user_->AddPackage(&context, request, nullptr));
+    auto context = getContextWithAuth(r);
+    GRPC_CALL(user_, AddPackage, google::protobuf::Empty);
 }
 
 void Api::addVersion(PackagePath p, const Version &vnew, const optional<Version> &vold)
@@ -117,10 +117,8 @@ void Api::addVersion(PackagePath p, const Version &vnew, const optional<Version>
     if (vold)
         request.mutable_version()->set_old_version(vold.value().toString());
 
-    grpc::ClientContext context;
-    apply_auth(r, context);
-
-    check_status(user_->AddPackage(&context, request, nullptr));
+    auto context = getContextWithAuth(r);
+    GRPC_CALL(user_, AddPackage, google::protobuf::Empty);
 }
 
 void Api::updateVersion(PackagePath p, const Version &v)
@@ -134,10 +132,8 @@ void Api::updateVersion(PackagePath p, const Version &v)
     request.set_path(p.toString());
     request.set_version(v.toString());
 
-    grpc::ClientContext context;
-    apply_auth(r, context);
-
-    check_status(user_->UpdatePackage(&context, request, nullptr));
+    auto context = getContextWithAuth(r);
+    GRPC_CALL(user_, UpdatePackage, google::protobuf::Empty);
 }
 
 void Api::removeVersion(PackagePath p, const Version &v)
@@ -148,10 +144,8 @@ void Api::removeVersion(PackagePath p, const Version &v)
     request.set_path(p.toString());
     request.set_version(v.toString());
 
-    grpc::ClientContext context;
-    apply_auth(r, context);
-
-    check_status(user_->UpdatePackage(&context, request, nullptr));
+    auto context = getContextWithAuth(r);
+    GRPC_CALL(user_, RemovePackage, google::protobuf::Empty);
 }
 
 void Api::getNotifications(int n)
@@ -162,15 +156,12 @@ void Api::getNotifications(int n)
     api::NotificationsRequest request;
     request.set_n(n);
 
-    api::Notifications notifications;
+    auto context = getContextWithAuth(r);
+    GRPC_CALL_THROWS(user_, GetNotifications, api::Notifications);
 
-    grpc::ClientContext context;
-    apply_auth(r, context);
-
-    check_status_and_throw(user_->GetNotifications(&context, request, &notifications));
-
+    // move out; return as result
     int i = 1;
-    for (auto &n : notifications.notifications())
+    for (auto &n : response.notifications())
     {
         auto nt = (NotificationType)n.type();
         std::ostringstream ss;
@@ -197,8 +188,8 @@ void Api::getNotifications(int n)
 void Api::clearNotifications()
 {
     google::protobuf::Empty request;
-    grpc::ClientContext context;
-    check_status(user_->ClearNotification(&context, request, nullptr));
+    auto context = getContextWithAuth(r);
+    GRPC_CALL(user_, ClearNotification, google::protobuf::Empty);
 }
 
 }

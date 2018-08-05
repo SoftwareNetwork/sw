@@ -12,7 +12,7 @@
 #include "package.h"
 
 #undef ERROR
-#include "api.grpc.pb.h"
+#include <api.grpc.pb.h>
 
 namespace sw
 {
