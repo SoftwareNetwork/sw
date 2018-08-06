@@ -34,7 +34,7 @@ CallResult check_result(
     if (ec)
     {
         auto message = get_metadata_variable(context.GetServerTrailingMetadata(), "message");
-        auto err = "Method '" + method + "' returned error: ec = " + result + ", message:" + message;
+        auto err = "Method '" + method + "' returned error: ec = " + result + ", message: " + message;
         if (throws)
             throw std::runtime_error(err);
         else
@@ -51,7 +51,7 @@ std::string get_metadata_variable(const std::multimap<grpc::string_ref, grpc::st
     auto i = m.find(key);
     if (i == m.end())
         return {};
-    return i->second.data();
+    return std::string(std::string_view(i->second.data(), i->second.size()));
 }
 
 }

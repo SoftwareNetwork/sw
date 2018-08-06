@@ -3,6 +3,8 @@
 #include <grpcpp/impl/codegen/client_context.h>
 #include <grpcpp/impl/codegen/status.h>
 
+#include <system_error>
+
 #define GRPC_CALL_INTERNAL(svc, m, resptype, t) \
     resptype response;                          \
     check_result(svc->m(context.get(), request, &response), *context, #m, t)
@@ -16,6 +18,8 @@ struct CallResult
 {
     std::error_code ec;
     std::string message;
+
+    operator bool() const { return !!ec; }
 };
 
 CallResult check_result(

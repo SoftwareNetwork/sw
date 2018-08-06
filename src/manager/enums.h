@@ -7,6 +7,7 @@
 #pragma once
 
 #include <primitives/string.h>
+#include <primitives/enums.h>
 
 #include <bitset>
 
@@ -65,11 +66,5 @@ enum class SettingsType
 };
 
 using SomeFlags = std::bitset<sizeof(uint64_t) * 8>;
-
-template <typename E>
-constexpr std::underlying_type_t<E> toIndex(E e)
-{
-    return static_cast<std::underlying_type_t<E>>(e);
-}
 
 String toString(SettingsType e);
