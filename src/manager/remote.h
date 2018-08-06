@@ -45,6 +45,8 @@ struct Remote
     SourceUrlProvider default_source{ &Remote::default_source_provider };
     std::vector<SourceUrlProvider> additional_sources;
 
+    mutable std::shared_ptr<grpc::Channel> channel;
+
     std::shared_ptr<grpc::Channel> getGrpcChannel() const;
     bool downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first = false) const;
 
@@ -52,9 +54,6 @@ public:
     String default_source_provider(const Package &) const;
     String cppan2_source_provider(const Package &) const;
     String github_source_provider(const Package &) const;
-
-private:
-    mutable std::shared_ptr<grpc::Channel> channel;
 };
 
 using Remotes = std::vector<Remote>;

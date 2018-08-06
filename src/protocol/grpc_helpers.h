@@ -19,7 +19,7 @@ struct CallResult
     std::error_code ec;
     std::string message;
 
-    operator bool() const { return !!ec; }
+    operator bool() const { return !ec; }
 };
 
 CallResult check_result(

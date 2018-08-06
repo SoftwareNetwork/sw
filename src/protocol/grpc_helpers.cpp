@@ -30,6 +30,16 @@ CallResult check_result(
     }
 
     auto result = get_metadata_variable(context.GetServerTrailingMetadata(), "ec");
+    if (result.empty())
+    {
+        auto err = "Method '" + method + "': missing error code";
+        if (throws)
+            throw std::runtime_error(err);
+        else
+            LOG_DEBUG(logger, err);
+        r.ec = std::make_error_code((std::errc)1);
+        return r;
+    }
     auto ec = std::stoi(result.data());
     if (ec)
     {
@@ -38,7 +48,7 @@ CallResult check_result(
         if (throws)
             throw std::runtime_error(err);
         else
-            LOG_ERROR(logger, err);
+            LOG_DEBUG(logger, err);
         r.ec = std::make_error_code((std::errc)ec);
         r.message = message;
     }
