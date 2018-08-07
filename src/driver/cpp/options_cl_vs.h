@@ -64,6 +64,18 @@ enum class DebugInformationFormatType
     ZI = ProgramDatabaseEditAndContinue,
 };
 
+enum class Subsystem
+{
+    Console,
+    Windows,
+    Native,
+    EFI_Application,
+    EFI_BootServiceDriver,
+    EFI_ROM,
+    EFI_RuntimeDriver,
+    Posix
+};
+
 struct PrecompiledHeaderVs
 {
     bool ignore = false;
@@ -107,6 +119,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::ExceptionHandlingVector);
 DECLARE_OPTION_SPECIALIZATION(vs::MachineType);
 DECLARE_OPTION_SPECIALIZATION(vs::RuntimeLibraryType);
 DECLARE_OPTION_SPECIALIZATION(vs::DebugInformationFormatType);
+DECLARE_OPTION_SPECIALIZATION(vs::Subsystem);
 DECLARE_OPTION_SPECIALIZATION(vs::PrecompiledHeaderVs);
 DECLARE_OPTION_SPECIALIZATION(vs::ForceType);
 DECLARE_OPTION_SPECIALIZATION(vs::Warnings);
@@ -353,6 +366,11 @@ struct SW_DRIVER_CPP_API VisualStudioLinkerOptions
     COMMAND_LINE_OPTION(NoEntry, bool)
     {
         cl::CommandFlag{ "NOENTRY" }
+    };
+
+    COMMAND_LINE_OPTION(Subsystem, vs::Subsystem)
+    {
+        cl::CommandFlag{ "SUBSYSTEM:" }
     };
 };
 DECLARE_OPTION_SPECIALIZATION(VisualStudioLinkerOptions);

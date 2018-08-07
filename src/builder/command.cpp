@@ -15,6 +15,7 @@
 //#include "target.h"
 
 #include <hash.h>
+#include <directories.h>
 #include <filesystem.h>
 #include <primitives/executor.h>
 #include <primitives/templates.h>
@@ -347,7 +348,10 @@ void Command::execute1(std::error_code *ec)
     auto args_saved = args;
     if (use_response_files && needsResponseFile())
     {
-        rsp_file = get_temp_filename() / "rsp";
+        auto t = get_temp_filename();
+        auto fn = t.filename();
+        t = t.parent_path();
+        rsp_file = t / "rsp" / fn;
         rsp_file += ".rsp";
         String rsp;
         for (auto &a : args)
@@ -382,14 +386,31 @@ void Command::execute1(std::error_code *ec)
         s += "\n";
         s += e;
         boost::trim(s);
-        if (!rsp_file.empty())
+        //if (!rsp_file.empty())
         {
+            if (rsp_file.empty())
+            {
+                auto t = get_temp_filename();
+                auto fn = t.filename();
+                t = t.parent_path();
+                rsp_file = t / "rsp" / fn;
+                rsp_file += ".rsp";
+            }
             s += "\n";
-            s += "full command:\n";
-            s += "\"" + program.u8string() + "\" ";
+            auto p = getDirectories().storage_dir_tmp / "rsp" / (rsp_file.filename().u8string() + ".bat");
+            s += "command is copied to " + p.u8string() + "\n";
+            String t;
+            t += "@\"" + program.u8string() + "\" ^\n";
             for (auto &a : args_saved)
-                s += "\"" + escape_cmd_arg(a) + "\" ";
-            s.resize(s.size() - 1);
+            {
+                if (a == "-showIncludes")
+                    continue;
+                t += "\t\"" + escape_cmd_arg(a) + "\" ^\n";
+            }
+            t.resize(t.size() - 3);
+            t += "\n";
+            write_file(p, t);
+
             //s += "working directory:\n";
             //s += "\"" + working_directory.u8string() + "\"";
         }

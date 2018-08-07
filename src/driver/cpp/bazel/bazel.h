@@ -8,6 +8,7 @@
 
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace bazel
@@ -40,9 +41,10 @@ using Functions = std::vector<Function>;
 struct File
 {
     Functions functions;
+    std::unordered_map<Name, Parameter> parameters;
 
     void trimQuotes();
-    Values getFiles(const Name &name);
+    Values getFiles(const Name &name, const std::string &bazel_target_function = std::string());
 };
 
 File parse(const std::string &s);

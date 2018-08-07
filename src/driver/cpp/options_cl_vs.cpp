@@ -153,6 +153,25 @@ DECLARE_OPTION_SPECIALIZATION(vs::DebugInformationFormatType)
     return { s };
 }
 
+DECLARE_OPTION_SPECIALIZATION(vs::Subsystem)
+{
+    using namespace vs;
+
+    auto s = getCommandLineFlag();
+    switch (value())
+    {
+    case Subsystem::Console:
+        s += "CONSOLE";
+        break;
+    case Subsystem::Windows:
+        s += "WINDOWS";
+        break;
+    default:
+        throw std::runtime_error("unreachable code");
+    }
+    return { s };
+}
+
 DECLARE_OPTION_SPECIALIZATION(vs::ForceType)
 {
     using namespace vs;

@@ -6,9 +6,14 @@
 
 #include "bazel.h"
 
-#include <algorithm>
-
 #include "driver.h"
+
+#include <boost/algorithm/string.hpp>
+#include <primitives/filesystem.h>
+#include <pystring.h>
+
+#include <algorithm>
+#include <regex>
 
 namespace {
 
@@ -31,6 +36,7 @@ std::string prepare_project_name(const std::string &s)
 {
     std::string t = s;
     std::replace(t.begin(), t.end(), '-', '_');
+    std::replace(t.begin(), t.end(), '+', 'p');
     return t;
 }
 
@@ -65,28 +71,44 @@ void File::trimQuotes()
         f.trimQuotes();
 }
 
-Values File::getFiles(const Name &name)
+Values File::getFiles(const Name &name, const std::string &bazel_target_function)
 {
     Values values;
     for (auto &f : functions)
     {
-        if (!(f.name == "cc_library" || f.name == "cc_binary"))
+        if (!(
+            pystring::endswith(f.name, "cc_library") ||
+            pystring::endswith(f.name, "cc_binary") ||
+            pystring::endswith(f.name, bazel_target_function)
+            ))
             continue;
 
         auto i = std::find_if(f.parameters.begin(), f.parameters.end(), [](const auto &p)
         {
             return "name" == p.name;
         });
-        if (i == f.parameters.end() || i->values.empty() || prepare_project_name(*i->values.begin()) != name)
+        if (i == f.parameters.end() || i->values.empty() ||
+            (prepare_project_name(*i->values.begin()) != name && *i->values.begin() != name))
             continue;
 
-        i = std::find_if(f.parameters.begin(), f.parameters.end(), [](const auto &p)
+        for (auto &n : { "hdrs", "public_hdrs" })
         {
-            return "hdrs" == p.name;
-        });
-        if (i != f.parameters.end())
-        {
-            values.insert(i->values.begin(), i->values.end());
+            i = std::find_if(f.parameters.begin(), f.parameters.end(), [&n](const auto &p)
+            {
+                return p.name == n;
+            });
+            if (i != f.parameters.end())
+            {
+                // check if we has a variable
+                for (auto &v : i->values)
+                {
+                    auto p = parameters.find(v);
+                    if (p != parameters.end())
+                        values.insert(p->second.values.begin(), p->second.values.end());
+                    else
+                        values.insert(i->values.begin(), i->values.end());
+                }
+            }
         }
 
         i = std::find_if(f.parameters.begin(), f.parameters.end(), [](const auto &p)
@@ -95,7 +117,15 @@ Values File::getFiles(const Name &name)
         });
         if (i != f.parameters.end())
         {
-            values.insert(i->values.begin(), i->values.end());
+            // check if we has a variable
+            for (auto &v : i->values)
+            {
+                auto p = parameters.find(v);
+                if (p != parameters.end())
+                    values.insert(p->second.values.begin(), p->second.values.end());
+                else
+                    values.insert(i->values.begin(), i->values.end());
+            }
         }
     }
     return values;

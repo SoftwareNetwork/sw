@@ -674,6 +674,10 @@ void NativeExecutedTarget::addPackageDefinitions()
         a["PACKAGE_VENDOR"] = q + pkg.ppath.getOwner() + q;
         a["PACKAGE_COPYRIGHT_YEAR"] = std::to_string(1900 + t.tm_year);
 
+        a["PACKAGE_ROOT_DIR"] = q + normalize_path(pkg.ppath.is_loc() ? RootDirectory : pkg.getDirSrc()) + q;
+        a["PACKAGE_NAME_WITHOUT_OWNER"] = q/* + pkg.ppath.slice(2).toString()*/ + q;
+        a["PACKAGE_NAME_CLEAN"] = q + (pkg.ppath.is_loc() ? pkg.ppath.slice(2).toString() : pkg.ppath.toString()) + q;
+
         //"@PACKAGE_CHANGE_DATE@"
             //"@PACKAGE_RELEASE_DATE@"
 
@@ -2059,6 +2063,9 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
             {
                 Public.Definitions[api + "="];
             }
+
+            Definitions[api + "_EXTERN="];
+            Interface.Definitions[api + "_EXTERN"] = "extern";
         };
 
         // default macro
@@ -2079,6 +2086,11 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
             Definitions["SW_IMPORT="];
         }
 #endif
+
+        if (Type == LibraryType::Shared)
+            Definitions["CPPAN_SHARED_BUILD"];
+        else if (Type == LibraryType::Static)
+            Definitions["CPPAN_STATIC_BUILD"];
 
         set_api(ApiName);
         for (auto &a : ApiNames)
@@ -2278,9 +2290,17 @@ bool ExecutableTarget::prepare()
         Definitions["SW_IMPORT"] = "__declspec(dllimport)";
 #endif
 
+        Definitions["CPPAN_EXECUTABLE"];
+
         set_api(ApiName);
         for (auto &a : ApiNames)
             set_api(a);
+
+        if (Linker->Type == LinkerType::MSVC)
+        {
+            auto L = Linker->as<VisualStudioLinker>();
+            L->Subsystem = vs::Subsystem::Console;
+        }
     }
     break;
     }
