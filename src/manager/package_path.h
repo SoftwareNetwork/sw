@@ -92,6 +92,7 @@ struct PathBase : protected std::vector<PathElement>
     using Base::empty;
     using Base::size;
     using Base::back;
+    using Base::clear;
 
     bool operator==(const ThisType &rhs) const
     {

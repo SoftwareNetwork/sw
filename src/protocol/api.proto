@@ -41,6 +41,7 @@ message ResolvedPackages {
         repeated Dependency dependencies = 5;
         // other
         int64 group_number = 16;
+        int32 prefix = 17;
         // int32 archive_type;
     }
     repeated ResolvedPackage packages = 1;

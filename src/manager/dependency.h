@@ -18,6 +18,7 @@ struct ExtendedPackageData : Package
     db::PackageVersionId id = 0;
     String hash;
     PackageVersionGroupNumber group_number = 0;
+    int prefix = 2;
     const Remote *remote = nullptr;
 };
 

@@ -100,6 +100,18 @@ projects:
             - pvt.cppan.demo.boost.dll: 1
             - pvt.cppan.demo.boost.filesystem: 1
 
+    tools.self_builder:
+        root_directory: src/tools
+        files: self_builder.cpp
+        dependencies:
+            - manager
+            - name: pvt.egorpugin.primitives.sw.main
+              version: master
+              local: primitives.sw.main
+            - name: pvt.egorpugin.primitives.context
+              version: master
+              local: primitives.context
+
     client:
         root_directory: src/client
         executable_type: win32
@@ -153,6 +165,8 @@ projects:
                 - builder
                 - pvt.cppan.demo.boost.assign: 1
             private:
+                - name: tools.self_builder
+                  ref: self_builder
                 - name: pvt.egorpugin.primitives.context
                   version: master
                   local: primitives.context
@@ -182,6 +196,13 @@ projects:
 
             embed(${SDIR}/src/driver/cpp/inserts/inserts.cpp.in ${SDIR}/src/driver/cpp/inserts/cppan.cpp)
             set_source_files_properties(${SDIR}/src/driver/cpp/inserts/cppan.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
+
+            set(f ${BDIR}/build_self.generated.h)
+            add_custom_command(OUTPUT ${f}
+                COMMAND ${self_builder} ${f}
+                DEPENDS ${self_builder}
+            )
+            set(src ${src} ${f})
 
         post_target: |
             cppan_flex_bison_internal(src/driver/cpp/bazel/lexer.ll PARSERS src/driver/cpp/bazel/grammar.yy)
@@ -310,7 +331,6 @@ projects:
               local: primitives.db.sqlite3
             - pvt.cppan.demo.rbock.sqlpp11_connector_sqlite3: 0
             - pvt.cppan.demo.boost.variant: 1
-            - pvt.cppan.demo.apolukhin.stacktrace: master
             - name: pvt.egorpugin.primitives.tools.embedder
               version: master
               ref: embedder

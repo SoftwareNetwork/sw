@@ -160,7 +160,7 @@ static auto fetch1(const Driver *driver, const path &file_or_dir)
                 {
                     LOG_INFO(logger, "Downloading source:\n" << print_source(src));
                     fs::create_directories(d);
-                    ScopedCurrentPath scp(d);
+                    ScopedCurrentPath scp(d, CurrentPathScope::Thread);
                     download(src);
                 }
                 d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
@@ -194,7 +194,7 @@ PackageScriptPtr Driver::fetch_and_load(const path &file_or_dir) const
             applyVersionToUrl(s2, pkg.version);
             auto i = srcs.find(s2);
             path rd = i->second / t->RootDirectory;
-            ScopedCurrentPath scp(rd);
+            ScopedCurrentPath scp(rd, CurrentPathScope::Thread);
 
             t->SourceDir = rd;
             t->prepare();

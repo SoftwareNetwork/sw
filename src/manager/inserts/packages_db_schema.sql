@@ -43,6 +43,7 @@ CREATE TABLE package_version (
 
     -- packages have same group_number when they are came from the same build script
     group_number INTEGER NOT NULL,
+    prefix INTEGER NOT NULL DEFAULT 2,
     updated TEXT NOT NULL,
     hash TEXT NOT NULL
 );
@@ -70,6 +71,14 @@ CREATE TABLE package_version_dependency (
 --
 --
 --------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+alter table package_version
+add column
+prefix int NOT NULL DEFAULT 2;
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available

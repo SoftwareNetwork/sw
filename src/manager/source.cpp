@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+// TODO: Remove all ScopedCurrentPath
+
 #include "source.h"
 
 #include "hash.h"
@@ -256,7 +258,8 @@ void Git::download() const
         {
             // go to usual git download
             LOG_WARN(logger, e.what());
-            fs::remove(fn);
+            if (fs::exists(fn))
+                fs::remove(fn);
         }
     }
 

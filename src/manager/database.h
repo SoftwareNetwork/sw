@@ -102,7 +102,7 @@ struct SW_MANAGER_API ServiceDatabase : public Database
     void addInstalledPackage(const PackageId &p, PackageVersionGroupNumber group_number) const;
     void removeInstalledPackage(const PackageId &p) const;
     String getInstalledPackageHash(const PackageId &p) const;
-    int getInstalledPackageId(const PackageId &p) const;
+    int64_t getInstalledPackageId(const PackageId &p) const;
     int getInstalledPackageConfigId(const PackageId &p, const String &config) const;
     SomeFlags getInstalledPackageFlags(const PackageId &p, const String &config) const;
     void setInstalledPackageFlags(const PackageId &p, const String &config, const SomeFlags &f) const;
@@ -144,7 +144,7 @@ private:
 
     bool isCurrentDbOld() const;
 
-    db::PackageVersionId getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn) const;
+    db::PackageVersionId getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn, int &prefix) const;
     Dependencies getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm) const;
 };
 

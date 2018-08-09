@@ -2,7 +2,7 @@
 #pragma warning(disable: 4005)
 #include <string>
 
-#include "bazel/grammar.hpp"
+#include "grammar.yy.hpp"
 
 #define YY_USER_ACTION loc.columns(yyleng);
 

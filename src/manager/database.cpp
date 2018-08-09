@@ -469,7 +469,7 @@ String ServiceDatabase::getInstalledPackageHash(const PackageId &p) const
     return q.front().hash.value();
 }
 
-int ServiceDatabase::getInstalledPackageId(const PackageId &p) const
+int64_t ServiceDatabase::getInstalledPackageId(const PackageId &p) const
 {
     const auto ipkgs = db::service::InstalledPackage{};
     auto q = (*db)(select(ipkgs.installedPackageId).from(ipkgs).where(ipkgs.path == p.ppath.toString() and ipkgs.version == p.version.toString()));
@@ -480,7 +480,7 @@ int ServiceDatabase::getInstalledPackageId(const PackageId &p) const
 
 int ServiceDatabase::getInstalledPackageConfigId(const PackageId &p, const String &config) const
 {
-    int pid = getInstalledPackageId(p);
+    auto pid = getInstalledPackageId(p);
     if (pid == 0)
     {
         LOG_DEBUG(logger, "PackageId is not installed: " + p.target_name);
@@ -804,11 +804,10 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
 
         project.id = q.front().packageId.value();
 
+        project.id = getExactProjectVersionId(project, project.version, project.flags, project.hash, project.group_number, project.prefix);
         project.flags.set(pfDirectDependency);
-        project.id = getExactProjectVersionId(project, project.version, project.flags, project.hash, project.group_number);
         all_deps[project] = project; // assign first, deps assign second
         all_deps[project].db_dependencies = getProjectDependencies(project.id, all_deps);
-
     }
 
     // make id deps
@@ -839,7 +838,7 @@ void check_version_age(const std::string &created)
         throw std::runtime_error("One of the queried packages is 'young'. Young packages must be retrieved from server.");
 }
 
-db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn) const
+db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn, int &prefix) const
 {
     auto err = [](const auto &p, const auto &r)
     {
@@ -866,7 +865,7 @@ db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDe
 
     id = version_ids[v.value()];
     auto q = (*db)(
-        select(pkg_ver.hash, pkg_ver.flags, pkg_ver.updated, pkg_ver.groupNumber)
+        select(pkg_ver.hash, pkg_ver.flags, pkg_ver.updated, pkg_ver.groupNumber, pkg_ver.prefix)
         .from(pkg_ver)
         .where(pkg_ver.packageVersionId == id));
     auto &row = q.front();
@@ -875,6 +874,7 @@ db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDe
     flags = row.flags.value();
     check_version_age(row.updated.value());
     gn = row.groupNumber.value();
+    prefix = row.prefix.value();
 
     return id;
 }
@@ -896,7 +896,7 @@ PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(db::Pack
         dependency.id = row.packageId.value();
         dependency.ppath = row.path.value();
         dependency.range = row.versionRange.value();
-        dependency.id = getExactProjectVersionId(dependency, dependency.version, dependency.flags, dependency.hash, dependency.group_number);
+        dependency.id = getExactProjectVersionId(dependency, dependency.version, dependency.flags, dependency.hash, dependency.group_number, dependency.prefix);
         auto i = dm.find(dependency);
         if (i == dm.end())
         {
@@ -940,7 +940,8 @@ Version PackagesDatabase::getExactVersionForPackage(const PackageId &p) const
     SomeFlags f;
     String h;
     PackageVersionGroupNumber gn;
-    getExactProjectVersionId(d, v, f, h, gn);
+    int prefix;
+    getExactProjectVersionId(d, v, f, h, gn, prefix);
     return v;
 }
 

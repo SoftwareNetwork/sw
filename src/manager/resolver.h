@@ -11,7 +11,7 @@
 namespace sw
 {
 
-using ResolverPackagesMap = std::unordered_map<UnresolvedPackage, Package>;
+using ResolvedPackagesMap = std::unordered_map<UnresolvedPackage, Package>;
 
 class SW_MANAGER_API PackageStore
 {
@@ -49,7 +49,7 @@ public:
 private:
     PackageConfigs packages;
 
-    ResolverPackagesMap resolved_packages;
+    ResolvedPackagesMap resolved_packages;
     std::map<PackagePath, path> local_packages;
 
     bool processing = false;
@@ -64,7 +64,7 @@ public:
     using Dependencies = DownloadDependency::Dependencies;
 
 public:
-    ResolverPackagesMap resolved_packages;
+    ResolvedPackagesMap resolved_packages;
 
     Resolver() = default;
     Resolver(const Resolver &) = delete;
@@ -93,7 +93,7 @@ SW_MANAGER_API
 Packages resolve_dependency(const String &d);
 
 SW_MANAGER_API
-ResolverPackagesMap resolve_dependencies(const UnresolvedPackages &deps);
+ResolvedPackagesMap resolve_dependencies(const UnresolvedPackages &deps);
 
 SW_MANAGER_API
 Packages resolveAllDependencies(const UnresolvedPackages &deps);

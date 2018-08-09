@@ -372,7 +372,7 @@ void TargetBase::fetch()
         if (!fs::exists(d))
         {
             fs::create_directories(d);
-            ScopedCurrentPath scp(d);
+            ScopedCurrentPath scp(d, CurrentPathScope::Thread);
             applyVersionToUrl(source, pkg.version);
             download(source);
         }

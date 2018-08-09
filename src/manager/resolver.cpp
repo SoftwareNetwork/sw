@@ -75,7 +75,7 @@ path PackageStore::get_local_package_dir(const PackagePath &ppath) const
     return path();
 }
 
-ResolverPackagesMap resolve_dependencies(const UnresolvedPackages &deps)
+ResolvedPackagesMap resolve_dependencies(const UnresolvedPackages &deps)
 {
     Resolver r;
     r.resolve_dependencies(deps);
@@ -558,6 +558,7 @@ Resolver::Dependencies getDependenciesFromRemote(const UnresolvedPackages &deps,
         if (d.hash == "empty_hash")
             d.hash = v.second.get<String>("hash", "empty_hash");
         d.group_number = v.second.get<PackageVersionGroupNumber>("gn", 0);
+        d.prefix = v.second.get<int>("prefix", 0);
 
         if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
         {
@@ -623,7 +624,7 @@ Packages resolve_dependency(const String &target_name)
 
     auto p = extractFromString(target);
     Packages pkgs;
-    ResolverPackagesMap pkgs2;
+    ResolvedPackagesMap pkgs2;
     try
     {
         pkgs2 = resolve_dependencies({ p });

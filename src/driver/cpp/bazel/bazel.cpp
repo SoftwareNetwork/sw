@@ -128,7 +128,14 @@ Values File::getFiles(const Name &name, const std::string &bazel_target_function
             }
         }
     }
-    return values;
+    Values vls;
+    for (auto &v : values)
+    {
+        auto s = v;
+        ::trimQuotes(s);
+        vls.insert(s);
+    }
+    return vls;
 }
 
 File parse(const std::string &s)

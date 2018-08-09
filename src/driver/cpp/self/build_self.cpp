@@ -303,61 +303,17 @@ void build_boost(Solution &s)
     post_sources();
 }
 
+#include <build_self.generated.h>
+
 void build_other(Solution &s)
 {
-    auto &zlib = addTarget<LibraryTarget>(s, "pvt.cppan.demo.madler.zlib", "1");
-    zlib += ".*\\.[hc]"_rr;
-    zlib += sw::Shared, "ZLIB_DLL"_d;
-    //auto zlib = "pub.cppan2.demo.madler.zlib"_dep;
+    build_self_generated(s);
 
-    auto &bzip2 = addTarget<LibraryTarget>(s, "pvt.cppan.demo.bzip2", "1");
-    {
-        bzip2 +=
-            "blocksort.c",
-            "bzlib.[hc]"_r,
-            "bzlib_private.h",
-            "compress.c",
-            "crctable.c",
-            "decompress.c",
-            "huffman.c",
-            "randtable.c"
-            ;
-        bzip2.Public += sw::Shared, "BZ_SHARED"_d;
-        bzip2.Interface += sw::Shared, "BZ_IMPORT"_d;
-
-        bzip2.replaceInFileOnce("bzlib.h",
-            "#ifdef _WIN32",
-            R"(
-#ifdef _WIN32
-#include <windows.h>
-#ifdef small
-#undef small
-#endif
-#endif
-#if defined(_WIN32) && defined(BZ_SHARED)
-)"
-);
-        bzip2.replaceInFileOnce("bzlib.h",
-            "#   define BZ_API(func) WINAPI func\n#   define BZ_EXTERN extern",
-            "#   define BZ_API(func) func\n#   define BZ_EXTERN __declspec(dllexport)"
-        );
-        bzip2.replaceInFileOnce("bzlib.h",
-            "#   define BZ_API(func) (WINAPI * func)\n#   define BZ_EXTERN",
-            "#   define BZ_API(func) func\n#   define BZ_EXTERN __declspec(dllimport)"
-        );
-    }
+    auto &zlib = s.getTarget<LibraryTarget>("org.sw.demo.madler.zlib");
+    auto &bzip2 = s.getTarget<LibraryTarget>("org.sw.demo.bzip2");
+    auto &sqlite3 = s.getTarget<LibraryTarget>("org.sw.demo.sqlite3");
 
     *boost_targets["iostreams"] += bzip2, zlib;
-
-    //
-    auto &sqlite3 = addTarget<LibraryTarget>(s, "pvt.cppan.demo.sqlite3", "3");
-    sqlite3.ApiName = "SQLITE_API";
-
-    /*auto &nowide = addTarget<LibraryTarget>(s, "pvt.cppan.demo.artyom_beilis.nowide", "master");
-    addPrivateDefinitions(nowide, "NOWIDE");
-    addStaticDefinitions(nowide, "NOWIDE");
-    addSharedDefinitions(nowide, "NOWIDE");
-    nowide.Public += *boost_targets["locale"], *boost_targets["config"];*/
 
     auto &yaml_cpp = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.jbeder.yaml_cpp", "master");
     yaml_cpp.Private << sw::Shared << "yaml_cpp_EXPORTS"_d;
