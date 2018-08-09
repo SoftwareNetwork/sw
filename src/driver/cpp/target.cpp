@@ -283,6 +283,12 @@ void TargetBase::setSource(const Source &s)
     source = s;
 }
 
+TargetBase &TargetBase::operator+=(const Source &s)
+{
+    setSource(s);
+    return *this;
+}
+
 void TargetBase::operator=(const Source &s)
 {
     setSource(s);

@@ -79,6 +79,7 @@ message NewPackage {
         string script = 1;
         NewVersion version = 2;
     }
+    string prefix_path = 3;
 }
 
 // unauthorized

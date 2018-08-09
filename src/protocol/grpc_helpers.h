@@ -11,6 +11,10 @@
 #define GRPC_CALL(svc, m, resptype) GRPC_CALL_INTERNAL(svc, m, resptype, false)
 #define GRPC_CALL_THROWS(svc, m, resptype) GRPC_CALL_INTERNAL(svc, m, resptype, true)
 
+#define SW_GRPC_METADATA_AUTH_USER "auth.user"
+#define SW_GRPC_METADATA_AUTH_TOKEN "auth.token"
+#define SW_GRPC_METADATA_CLIENT_VERSION "client.version"
+
 namespace sw
 {
 

@@ -353,11 +353,11 @@ void build_other(Solution &s)
     auto &sqlite3 = addTarget<LibraryTarget>(s, "pvt.cppan.demo.sqlite3", "3");
     sqlite3.ApiName = "SQLITE_API";
 
-    auto &nowide = addTarget<LibraryTarget>(s, "pvt.cppan.demo.artyom_beilis.nowide", "master");
+    /*auto &nowide = addTarget<LibraryTarget>(s, "pvt.cppan.demo.artyom_beilis.nowide", "master");
     addPrivateDefinitions(nowide, "NOWIDE");
     addStaticDefinitions(nowide, "NOWIDE");
     addSharedDefinitions(nowide, "NOWIDE");
-    nowide.Public += *boost_targets["locale"], *boost_targets["config"];
+    nowide.Public += *boost_targets["locale"], *boost_targets["config"];*/
 
     auto &yaml_cpp = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.jbeder.yaml_cpp", "master");
     yaml_cpp.Private << sw::Shared << "yaml_cpp_EXPORTS"_d;
@@ -2827,7 +2827,7 @@ true
     setup_primitives(p_string);
 
     auto &p_filesystem = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.filesystem", "master");
-    p_filesystem.Public += p_string, *boost_targets["filesystem"], nowide, flags, uv;
+    p_filesystem.Public += p_string, *boost_targets["filesystem"], *boost_targets["thread"], flags, uv;
     setup_primitives(p_filesystem);
 
     auto &p_templates = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.templates", "master");

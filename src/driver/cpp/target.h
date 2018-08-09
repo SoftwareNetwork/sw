@@ -263,6 +263,8 @@ public:
     void setRootDirectory(const path &);
     void setSource(const Source &);
 
+    TargetBase &operator+=(const Source &);
+
     /// experimental
     void operator=(const Source &);
 

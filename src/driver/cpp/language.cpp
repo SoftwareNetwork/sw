@@ -60,9 +60,11 @@ const LanguageMap &getLanguages()
     return languages;
 }
 
-static String getObjectFilename(const path &p)
+static String getObjectFilename(const Target *t, const path &p)
 {
-    return sha256(p.string()).substr(0, 8) + "." + p.filename().string();
+    // target may push its files to outer packages,
+    // so files must be concatenated with its target name
+    return sha256(t->pkg.target_name + p.u8string()).substr(0, 8) + "." + p.filename().u8string();
 }
 
 LanguageStorage::~LanguageStorage()
@@ -120,7 +122,7 @@ std::shared_ptr<SourceFile> ASMLanguage::createSourceFile(const path &input, con
     auto nt = (NativeExecutedTarget*)t;
     compiler->merge(*nt);
 
-    auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(input) + compiler->getObjectExtension());
+    auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
     return std::make_shared<ASMSourceFile>(input, o, compiler.get());
 }
@@ -135,7 +137,7 @@ std::shared_ptr<SourceFile> CLanguage::createSourceFile(const path &input, const
     auto nt = (NativeExecutedTarget*)t;
     compiler->merge(*nt);
 
-    auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(input) + compiler->getObjectExtension());
+    auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
     return std::make_shared<CSourceFile>(input, o, compiler.get());
 }
@@ -150,7 +152,7 @@ std::shared_ptr<SourceFile> CPPLanguage::createSourceFile(const path &input, con
     auto nt = (NativeExecutedTarget*)t;
     compiler->merge(*nt);
 
-    auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(input) + compiler->getObjectExtension());
+    auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
     return std::make_shared<CPPSourceFile>(input, o, compiler.get());
 }

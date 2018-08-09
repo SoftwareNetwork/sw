@@ -154,15 +154,15 @@ static auto fetch1(const Driver *driver, const path &file_or_dir)
         Futures<void> fs;
         for (auto &src : srcs)
         {
-            error_code ec;
-            if (fs::exists(src.second, ec))
-                continue;
             fs.push_back(e.push([src = src.first, &d = src.second]
             {
-                LOG_INFO(logger, "Downloading source:\n" << print_source(src));
-                fs::create_directories(d);
-                ScopedCurrentPath scp(d);
-                download(src);
+                if (!fs::exists(d))
+                {
+                    LOG_INFO(logger, "Downloading source:\n" << print_source(src));
+                    fs::create_directories(d);
+                    ScopedCurrentPath scp(d);
+                    download(src);
+                }
                 d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
             }));
         }
