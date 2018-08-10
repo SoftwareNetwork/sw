@@ -75,6 +75,14 @@ path PackageStore::get_local_package_dir(const PackagePath &ppath) const
     return path();
 }
 
+optional<ExtendedPackageData> PackageStore::isPackageResolved(const UnresolvedPackage &p)
+{
+    auto i = resolved_packages.find(p);
+    if (i == resolved_packages.end())
+        return {};
+    return i->second;
+}
+
 ResolvedPackagesMap resolve_dependencies(const UnresolvedPackages &deps)
 {
     Resolver r;

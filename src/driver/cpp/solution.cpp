@@ -750,9 +750,33 @@ void Solution::prepare()
 UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
 {
     UnresolvedDependenciesType deps;
+
     for (const auto &p : getChildren())
     {
         auto c = p.second->gatherUnresolvedDependencies();
+        std::unordered_set<UnresolvedPackage> rm;
+        for (auto &[up, dptr] : c)
+        {
+            if (auto r = getPackageStore().isPackageResolved(up); r)
+            {
+                dptr->target = &const_cast<Solution*>(this)->getTarget<NativeTarget>(PackageId(r.value()));
+                rm.insert(up);
+            }
+            else
+            {
+                for (const auto &[p,t] : getChildren())
+                {
+                    if (up.canBe(p))
+                    {
+                        dptr->target = (NativeTarget*)t.get();
+                        rm.insert(up);
+                        break;
+                    }
+                }
+            }
+        }
+        for (auto &r : rm)
+            c.erase(r);
         deps.insert(c.begin(), c.end());
     }
     return deps;
@@ -1044,7 +1068,7 @@ FilesMap Build::build_configs(const Files &files)
         lib += solution.getTarget<NativeTarget>("manager");
         auto d = lib + solution.getTarget<NativeTarget>("driver.cpp");
         d->IncludeDirectoriesOnly = true;
-        lib += solution.getTarget<NativeTarget>("pvt.cppan.demo.boost.filesystem");
+        //lib += solution.getTarget<NativeTarget>("pvt.cppan.demo.boost.filesystem");
         lib += solution.getTarget<NativeTarget>("pvt.egorpugin.primitives.command");
         lib += solution.getTarget<NativeTarget>("pvt.egorpugin.primitives.hash");
         lib += solution.getTarget<NativeTarget>("pvt.egorpugin.primitives.http");

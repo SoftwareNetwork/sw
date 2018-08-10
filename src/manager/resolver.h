@@ -8,10 +8,12 @@
 
 #include "dependency.h"
 
+#include <primitives/stdcompat/optional.h>
+
 namespace sw
 {
 
-using ResolvedPackagesMap = std::unordered_map<UnresolvedPackage, Package>;
+using ResolvedPackagesMap = std::unordered_map<UnresolvedPackage, ExtendedPackageData>;
 
 class SW_MANAGER_API PackageStore
 {
@@ -45,6 +47,8 @@ public:
 
     bool empty() const { return packages.empty(); }
     size_t size() const { return packages.size(); }
+
+    optional<ExtendedPackageData> isPackageResolved(const UnresolvedPackage &);
 
 private:
     PackageConfigs packages;

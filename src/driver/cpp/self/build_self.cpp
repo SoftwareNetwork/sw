@@ -15,8 +15,6 @@
 #include <boost/algorithm/string.hpp>
 #include <directories.h>
 
-std::unordered_map<String, NativeExecutedTarget*> boost_targets;
-
 UnresolvedPackages pkgs;
 
 struct pkg_map
@@ -76,11 +74,13 @@ static void resolve()
     resolveAllDependencies(pkgs);
 }
 
+#include <build_self.generated.h>
+
 template <class T>
 auto &addTarget(Solution &s, const PackagePath &p, const String &v)
 {
     auto &t = s.TargetBase::addTarget<T>(p, v);
-    auto [d, v2] = getDirSrc(p.toString() + "-" + v);
+    auto[d, v2] = getDirSrc(p.toString() + "-" + v);
     t.SourceDir = d;
     t.pkg.version = v2;
     t.pkg.createNames();
@@ -88,237 +88,37 @@ auto &addTarget(Solution &s, const PackagePath &p, const String &v)
     return t;
 }
 
-template <class T>
-auto &addBoostTarget(Solution &s, const String &name)
-{
-    static PackagePath b = "pvt.cppan.demo.boost";
-    return addTarget<T>(s, b / name, "1.67.0");
-}
-
-void addPrivateDefinitions(TargetOptionsGroup &t, const String &N)
-{
-    DefinitionsType defs;
-    defs["BOOST_" + N + "_BUILDING_THE_LIB"];
-    defs["BOOST_" + N + "_SOURCE"];
-    t.Private += defs;
-}
-
-void addStaticDefinitions(TargetOptionsGroup &t, const String &N)
-{
-    DefinitionsType defs;
-    defs["BOOST_" + N + "_BUILD_LIB"];
-    defs["BOOST_" + N + "_STATIC_LINK"];
-    t.Public << sw::Static << defs;
-}
-
-void addSharedDefinitions(TargetOptionsGroup &t, const String &N)
-{
-    DefinitionsType defs2;
-    defs2["BOOST_" + N + "_BUILD_DLL"];
-    t.Private << sw::Shared << defs2;
-
-    DefinitionsType defs;
-    defs["BOOST_" + N + "_DYN_LINK"];
-    defs["BOOST_" + N + "_USE_DLL"];
-    t.Public << sw::Shared << defs;
-}
-
-auto &addCompiledBoostTarget(Solution &s, const String &name)
-{
-    auto &t = addBoostTarget<LibraryTarget>(s, name);
-    auto N = boost::to_upper_copy(name);
-    addPrivateDefinitions(t, N);
-    addSharedDefinitions(t, N);
-    addStaticDefinitions(t, N);
-    return t;
-}
-
-auto &addStaticOnlyCompiledBoostTarget(Solution &s, const String &name)
-{
-    auto &t = addBoostTarget<StaticLibraryTarget>(s, name);
-    auto N = boost::to_upper_copy(name);
-    addPrivateDefinitions(t, N);
-    addStaticDefinitions(t, N);
-    return t;
-}
-
-#include "boost_deps.h"
-
-void post_sources()
-{
-    boost_targets["config"]->fileWriteOnce("include/boost/config/auto_link.hpp",
-        R"(
-#ifdef BOOST_LIB_PREFIX
-#  undef BOOST_LIB_PREFIX
-#endif
-#if defined(BOOST_LIB_NAME)
-#  undef BOOST_LIB_NAME
-#endif
-#if defined(BOOST_LIB_THREAD_OPT)
-#  undef BOOST_LIB_THREAD_OPT
-#endif
-#if defined(BOOST_LIB_RT_OPT)
-#  undef BOOST_LIB_RT_OPT
-#endif
-#if defined(BOOST_LIB_LINK_OPT)
-#  undef BOOST_LIB_LINK_OPT
-#endif
-#if defined(BOOST_LIB_DEBUG_OPT)
-#  undef BOOST_LIB_DEBUG_OPT
-#endif
-#if defined(BOOST_DYN_LINK)
-#  undef BOOST_DYN_LINK
-#endif
-)"
-);
-
-    boost_targets["config"]->replaceInFileOnce("include/boost/config/compiler/visualc.hpp",
-        "#if (_MSC_VER > 1910)",
-        "#if (_MSC_VER > 1911)");
-}
-
-void build_boost(Solution &s)
-{
-    auto header_only_target_names = { "accumulators","algorithm","align","any","array","asio","assert","assign","beast","bimap","bind","callable_traits","circular_buffer","compatibility","compute","concept_check","config","container_hash","conversion","convert","core","coroutine2","crc","detail","disjoint_sets","dll","dynamic_bitset","endian","flyweight","foreach","format","function","function_types","functional","fusion","geometry","gil","hana","heap","hof","icl","integer","interprocess","intrusive","io","iterator","lambda","lexical_cast","local_function","lockfree","logic","metaparse","move","mp11","mpl","msm","multi_array","multi_index","multiprecision","numeric","interval","odeint","ublas","optional","parameter","phoenix","poly_collection","polygon","pool","predef","preprocessor","process","property_map","property_tree","proto","ptr_container","qvm","range","ratio","rational","scope_exit","signals2","smart_ptr","sort","spirit","statechart","static_assert","throw_exception","tokenizer","tti","tuple","type_index","type_traits","typeof","units","unordered","utility","uuid","variant","vmd","winapi","xpressive", };
-    for (auto &t : header_only_target_names)
-    {
-        auto &tgt = addBoostTarget<LibraryTarget>(s, t);
-        tgt.HeaderOnly = true;
-        boost_targets[t] = &tgt;
-    }
-
-    // some settings
-    *boost_targets["function"] += "include/.*\\.hpp"_rr;
-    *boost_targets["pool"] += "include/.*\\.[ih]pp"_rr;
-    *boost_targets["spirit"] += "include/.*\\.[cih]pp"_rr;
-
-    // compiled
-    auto compiled_target_names = { "atomic","chrono","container","date_time","filesystem","graph",
-        "iostreams","locale","log","math","program_options","random","regex","serialization","signals",
-        "stacktrace","system","thread","timer","type_erasure","wave", };
-    // "mpi","python","graph_parallel",
-    // "coroutine","fiber","context",
-    // "test",
-    for (auto &t : compiled_target_names)
-        boost_targets[t] = &addCompiledBoostTarget(s, t);
-    boost_targets["exception"] = &addStaticOnlyCompiledBoostTarget(s, "exception");
-
-    // some settings
-    *boost_targets["container"] -= "src/dlmalloc.*\\.c"_rr;
-    *boost_targets["iostreams"] -= "src/lzma.cpp";
-    boost_targets["stacktrace"]->HeaderOnly = true;
-    if (s.Settings.TargetOS.Type == OSType::Windows)
-        boost_targets["random"]->LinkLibraries.insert("Advapi32.lib");
-
-    if (s.Settings.TargetOS.Type == OSType::Windows)
-        boost_targets["uuid"]->Public.LinkLibraries.insert("Bcrypt.lib");
-
-    boost_targets["math"]->Private.IncludeDirectories.insert(boost_targets["math"]->SourceDir / "src/tr1");
-    boost_targets["math"]->Private.IncludeDirectories.insert(boost_targets["math"]->SourceDir / "src");
-    boost_targets["math"]->Public.IncludeDirectories.insert(boost_targets["math"]->SourceDir / "include");
-    ((LibraryTarget*)boost_targets["math"])->Public << sw::Shared << "BOOST_MATH_TR1_DYN_LINK"_d;
-
-    if (s.Settings.TargetOS.Type == OSType::Windows)
-    {
-        *boost_targets["locale"] -= "src/icu/.*"_rr;
-        *boost_targets["locale"] -= "src/posix/.*"_rr;
-        boost_targets["locale"]->Public.Definitions["BOOST_LOCALE_NO_POSIX_BACKEND"];
-    }
-    else
-    {
-        *boost_targets["locale"] -= "src/win32/.*"_rr;
-        boost_targets["locale"]->Public.Definitions["BOOST_LOCALE_NO_WINAPI_BACKEND"];
-        boost_targets["locale"]->Public.Definitions["BOOST_LOCALE_WITH_ICONV"];
-    }
-
-    *boost_targets["log"] +=
-        "include/.*"_rr,
-        "src/.*\\.mc"_rr,
-        "src/.*\\.hpp"_rr,
-        "src/attribute_name.cpp",
-        "src/attribute_set.cpp",
-        "src/attribute_value_set.cpp",
-        "src/code_conversion.cpp",
-        "src/core.cpp",
-        "src/date_time_format_parser.cpp",
-        //"src/debug_output_backend.cpp",
-        "src/default_attribute_names.cpp",
-        "src/default_sink.cpp",
-        "src/dump.cpp",
-        "src/event.cpp",
-        "src/exceptions.cpp",
-        "src/format_parser.cpp",
-        "src/global_logger_storage.cpp",
-        //"src/light_rw_mutex.cpp",
-        "src/named_scope.cpp",
-        "src/named_scope_format_parser.cpp",
-        "src/once_block.cpp",
-        "src/process_id.cpp",
-        "src/process_name.cpp",
-        "src/record_ostream.cpp",
-        "src/severity_level.cpp",
-        "src/spirit_encoding.cpp",
-        "src/syslog_backend.cpp",
-        "src/text_file_backend.cpp",
-        "src/text_multifile_backend.cpp",
-        "src/text_ostream_backend.cpp",
-        "src/thread_id.cpp",
-        "src/threadsafe_queue.cpp",
-        "src/thread_specific.cpp",
-        "src/timer.cpp",
-        "src/timestamp.cpp",
-        "src/trivial.cpp",
-        "src/unhandled_exception_count.cpp"
-        ;
-    boost_targets["log"]->Public.Definitions["BOOST_LOG_WITHOUT_EVENT_LOG"];
-    boost_targets["log"]->Private += sw::Shared, "BOOST_LOG_DLL"_d;
-    if (s.Settings.TargetOS.Type == OSType::Windows)
-    {
-        boost_targets["log"]->Public.Definitions["WIN32_LEAN_AND_MEAN"];
-        boost_targets["log"]->Public.Definitions["BOOST_USE_WINDOWS_H"];
-        boost_targets["log"]->Public.Definitions["NOMINMAX"];
-    }
-    else
-        *boost_targets["log"] -= "src/debug_output_backend.cpp", "src/light_rw_mutex.cpp";
-
-    //((LibraryTarget*)boost_targets["fiber"])->Shared.Private.Definitions["BOOST_FIBERS_SOURCE"];
-    //boost_targets["fiber"]->Private.Definitions["BOOST_FIBERS_DYN_LINK"];
-
-    *boost_targets["signals"] += "include/.*\\.[ih]pp"_rr;
-
-    //*boost_targets["python"] += "pvt.cppan.demo.python.libcompat";
-
-    *((LibraryTarget*)boost_targets["thread"]) -= "src/pthread/once_atomic.cpp";
-    if (s.Settings.TargetOS.Type == OSType::Windows)
-    {
-        *((LibraryTarget*)boost_targets["thread"]) -= "src/pthread/.*"_rr;
-        *((LibraryTarget*)boost_targets["thread"]) >> sw::Shared >> "src/win32/tss_pe.cpp";
-        *((LibraryTarget*)boost_targets["thread"]) >> sw::Static >> "src/win32/tss_dll.cpp";
-    }
-    else
-        *((LibraryTarget*)boost_targets["thread"]) -= "src/win32/.*"_rr;
-    //*boost_targets["thread"] += *boost_targets["date_time"];
-
-    boost_deps();
-    post_sources();
-}
-
-#include <build_self.generated.h>
-
 void build_other(Solution &s)
 {
     build_self_generated(s);
 
     auto &zlib = s.getTarget<LibraryTarget>("org.sw.demo.madler.zlib");
-    auto &bzip2 = s.getTarget<LibraryTarget>("org.sw.demo.bzip2");
+    //auto &bzip2 = s.getTarget<LibraryTarget>("org.sw.demo.bzip2");
+    auto bzip2 = "org.sw.demo.bzip2-1"_dep;
     auto &sqlite3 = s.getTarget<LibraryTarget>("org.sw.demo.sqlite3");
 
-    *boost_targets["iostreams"] += bzip2, zlib;
+    auto &boost_smart_ptr = s.getTarget<LibraryTarget>("org.sw.demo.boost.smart_ptr");
+    auto &boost_iterator = s.getTarget<LibraryTarget>("org.sw.demo.boost.iterator");
+    auto &boost_algorithm = s.getTarget<LibraryTarget>("org.sw.demo.boost.algorithm");
+    auto &boost_filesystem = s.getTarget<LibraryTarget>("org.sw.demo.boost.filesystem");
+    auto &boost_thread = s.getTarget<LibraryTarget>("org.sw.demo.boost.thread");
+    auto &boost_asio = s.getTarget<LibraryTarget>("org.sw.demo.boost.asio");
+    auto &boost_system = s.getTarget<LibraryTarget>("org.sw.demo.boost.system");
+    auto &boost_process = s.getTarget<LibraryTarget>("org.sw.demo.boost.process");
+    auto &boost_date_time = s.getTarget<LibraryTarget>("org.sw.demo.boost.date_time");
+    auto &boost_interprocess = s.getTarget<LibraryTarget>("org.sw.demo.boost.interprocess");
+    auto &boost_log = s.getTarget<LibraryTarget>("org.sw.demo.boost.log");
+    auto &boost_dll = s.getTarget<LibraryTarget>("org.sw.demo.boost.dll");
+    auto &boost_property_tree = s.getTarget<LibraryTarget>("org.sw.demo.boost.property_tree");
+    auto &boost_stacktrace = s.getTarget<LibraryTarget>("org.sw.demo.boost.stacktrace");
+    auto &boost_variant = s.getTarget<LibraryTarget>("org.sw.demo.boost.variant");
+    auto &boost_assign = s.getTarget<LibraryTarget>("org.sw.demo.boost.assign");
+    auto &boost_uuid = s.getTarget<LibraryTarget>("org.sw.demo.boost.uuid");
 
     auto &yaml_cpp = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.jbeder.yaml_cpp", "master");
     yaml_cpp.Private << sw::Shared << "yaml_cpp_EXPORTS"_d;
     yaml_cpp.Public << sw::Shared << "YAML_CPP_DLL"_d;
-    yaml_cpp.Public += *boost_targets["smart_ptr"], *boost_targets["iterator"];
+    yaml_cpp.Public += boost_smart_ptr, boost_iterator;
 
     //
     auto &lz4 = addTarget<LibraryTarget>(s, "pvt.cppan.demo.lz4", "1");
@@ -1960,79 +1760,6 @@ true
             "librhash"_id;
     }
 
-    auto &stacktrace = addTarget<LibraryTarget>(s, "pvt.cppan.demo.apolukhin.stacktrace", "master");
-    {
-        stacktrace +=
-            "include/.*"_rr;
-
-        stacktrace.Public +=
-            "include"_id;
-
-        stacktrace.Public +=
-            *boost_targets["algorithm"],
-            *boost_targets["align"],
-            *boost_targets["array"],
-            *boost_targets["assert"],
-            *boost_targets["atomic"],
-            *boost_targets["bind"],
-            *boost_targets["chrono"],
-            *boost_targets["concept_check"],
-            *boost_targets["config"],
-            *boost_targets["container"],
-            *boost_targets["conversion"],
-            *boost_targets["core"],
-            *boost_targets["date_time"],
-            *boost_targets["detail"],
-            *boost_targets["endian"],
-            *boost_targets["exception"],
-            *boost_targets["filesystem"],
-            *boost_targets["foreach"],
-            *boost_targets["function"],
-            *boost_targets["function_types"],
-            *boost_targets["functional"],
-            *boost_targets["fusion"],
-            *boost_targets["integer"],
-            *boost_targets["intrusive"],
-            *boost_targets["io"],
-            *boost_targets["iostreams"],
-            *boost_targets["iterator"],
-            *boost_targets["lambda"],
-            *boost_targets["lexical_cast"],
-            *boost_targets["locale"],
-            *boost_targets["math"],
-            *boost_targets["move"],
-            *boost_targets["mpl"],
-            *boost_targets["numeric"],
-            *boost_targets["optional"],
-            *boost_targets["phoenix"],
-            *boost_targets["pool"],
-            *boost_targets["predef"],
-            *boost_targets["preprocessor"],
-            *boost_targets["proto"],
-            *boost_targets["random"],
-            *boost_targets["range"],
-            *boost_targets["ratio"],
-            *boost_targets["rational"],
-            *boost_targets["regex"],
-            *boost_targets["serialization"],
-            *boost_targets["smart_ptr"],
-            *boost_targets["spirit"],
-            *boost_targets["static_assert"],
-            *boost_targets["system"],
-            *boost_targets["thread"],
-            *boost_targets["throw_exception"],
-            *boost_targets["tokenizer"],
-            *boost_targets["tti"],
-            *boost_targets["tuple"],
-            *boost_targets["type_index"],
-            *boost_targets["type_traits"],
-            *boost_targets["typeof"],
-            *boost_targets["unordered"],
-            *boost_targets["utility"],
-            *boost_targets["variant"],
-            *boost_targets["winapi"];
-    }
-
     auto &date = addTarget<LibraryTarget>(s, "pvt.cppan.demo.howardhinnant.date.date", "2");
     /*{
         date +=
@@ -2779,11 +2506,11 @@ true
 
     // primitives
     auto &p_string = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.string", "master");
-    p_string.Public += *boost_targets["algorithm"];
+    p_string.Public += boost_algorithm;
     setup_primitives(p_string);
 
     auto &p_filesystem = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.filesystem", "master");
-    p_filesystem.Public += p_string, *boost_targets["filesystem"], *boost_targets["thread"], flags, uv;
+    p_filesystem.Public += p_string, boost_filesystem, boost_thread, flags, uv;
     setup_primitives(p_filesystem);
 
     auto &p_templates = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.templates", "master");
@@ -2798,25 +2525,25 @@ true
         p_minidump.Public += "dbghelp.lib"_lib;
 
     auto &p_executor = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.executor", "master");
-    p_executor.Public += *boost_targets["asio"], *boost_targets["system"], p_templates, p_minidump;
+    p_executor.Public += boost_asio, boost_system, p_templates, p_minidump;
     setup_primitives(p_executor);
 
     auto &p_command = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.command", "master");
-    p_command.Public += p_filesystem, p_templates, *boost_targets["process"], uv;
+    p_command.Public += p_filesystem, p_templates, boost_process, uv;
     setup_primitives(p_command);
     if (s.Settings.TargetOS.Type == OSType::Windows)
         p_command.Public += "Shell32.lib"_l;
 
     auto &p_date_time = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.date_time", "master");
-    p_date_time.Public += p_string, *boost_targets["date_time"];
+    p_date_time.Public += p_string, boost_date_time;
     setup_primitives(p_date_time);
 
     auto &p_lock = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.lock", "master");
-    p_lock.Public += p_filesystem, *boost_targets["interprocess"];
+    p_lock.Public += p_filesystem, boost_interprocess;
     setup_primitives(p_lock);
 
     auto &p_log = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.log", "master");
-    p_log.Public += *boost_targets["log"];
+    p_log.Public += boost_log;
     setup_primitives(p_log);
 
     auto &p_yaml = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.yaml", "master");
@@ -2838,7 +2565,7 @@ true
     setup_primitives(p_hash);
 
     auto &p_win32helpers = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.win32helpers", "master");
-    p_win32helpers.Public += p_filesystem, *boost_targets["dll"], *boost_targets["algorithm"];
+    p_win32helpers.Public += p_filesystem, boost_dll, boost_algorithm;
     setup_primitives(p_win32helpers);
     if (s.Settings.TargetOS.Type == OSType::Windows)
         p_win32helpers.Public += "UNICODE"_d;
@@ -2911,7 +2638,7 @@ true
     {
         auto &support = s.addTarget<LibraryTarget>("support");
         support.CPPVersion = CPPLanguageStandard::CPP17;
-        support.Public += p_http, p_hash, p_command, p_log, p_executor, *boost_targets["property_tree"], *boost_targets["stacktrace"], *boost_targets["dll"];
+        support.Public += p_http, p_hash, p_command, p_log, p_executor, boost_property_tree, boost_stacktrace, boost_dll;
         support.SourceDir = cppan2_base / "src/support";
         support += ".*"_rr;
         support.ApiName = "SW_SUPPORT_API";
@@ -2930,7 +2657,7 @@ true
         //manager.ExportIfStatic = true;
         manager.CPPVersion = CPPLanguageStandard::CPP17;
         manager.Public += support, protos, p_yaml, p_date_time, p_lock, p_pack, json,
-            *boost_targets["variant"], *boost_targets["dll"], p_db_sqlite3, sqlpp11_connector_sqlite3, stacktrace, p_version, p_win32helpers;
+            boost_variant, boost_dll, p_db_sqlite3, sqlpp11_connector_sqlite3, p_version, p_win32helpers;
         manager.SourceDir = cppan2_base;
         manager += "src/manager/.*"_rr, "include/manager/.*"_rr;
         manager.Public += "include"_idir, "src/manager"_idir;
@@ -2964,7 +2691,7 @@ true
         cpp_driver.ApiName = "SW_DRIVER_CPP_API";
         //cpp_driver.ExportIfStatic = true;
         cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
-        cpp_driver.Public += builder, *boost_targets["assign"], *boost_targets["uuid"], p_context;
+        cpp_driver.Public += builder, boost_assign, boost_uuid, p_context;
         cpp_driver.SourceDir = cppan2_base;
         cpp_driver += "src/driver/cpp/.*"_rr, "include/driver/cpp/.*"_rr;
         cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
@@ -4385,7 +4112,6 @@ void build_self(Solution &s)
     auto o = s.Local;
     s.Local = false;
 
-    build_boost(s);
     build_other(s);
 
     s.Local = o;
