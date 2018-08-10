@@ -395,7 +395,10 @@ path Target::getPatchDir(bool binary_dir) const
 
 void Target::fileWriteOnce(const path &fn, bool binary_dir) const
 {
-    fileWriteOnce((binary_dir ? BinaryDir : SourceDir) / fn, String());
+    if (fn.is_absolute())
+        fileWriteOnce(fn, "", binary_dir);
+    else
+        fileWriteOnce((binary_dir ? BinaryDir : SourceDir) / fn, String());
 }
 
 void Target::fileWriteOnce(const path &fn, const char *content, bool binary_dir) const

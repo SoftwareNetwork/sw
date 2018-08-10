@@ -1276,7 +1276,8 @@ void Build::load(const path &dll)
     if (solutions.empty())
         addSolution();
 
-    if (perform_checks)
+    // some packages want checks in their build body
+    //if (perform_checks)
     {
         // make parallel?
         for (auto &s : solutions)

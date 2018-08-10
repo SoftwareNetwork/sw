@@ -348,7 +348,12 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
 void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s)
 {
     for (auto &s : v)
-        this->SourceFileMapThis::operator[](s.first) = s.second->clone();
+    {
+        auto f = this->SourceFileMapThis::operator[](s.first);
+        if (!f)
+            add(s.first);
+    }
+    //this->SourceFileMapThis::operator[](s.first) = s.second->clone();
 }
 
 SourceFile::SourceFile(const path &input)
