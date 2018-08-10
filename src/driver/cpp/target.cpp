@@ -862,11 +862,11 @@ Files NativeExecutedTarget::gatherIncludeDirectories() const
 
 NativeExecutedTarget::SourceFilesSet NativeExecutedTarget::gatherSourceFiles() const
 {
-    if (pkg.toString().find("gss") != -1)
+    /*if (pkg.toString().find("gss") != -1)
     {
         volatile int a = 5;
         a++;
-    }
+    }*/
 
     // maybe cache result?
     SourceFilesSet files;
@@ -1063,21 +1063,11 @@ Commands NativeExecutedTarget::getCommands() const
     if (already_built)
         return cmds;
 
-    if (pkg.ppath.toString().find("SystemZ") != -1)
+    /*if (pkg.ppath.toString().find("SystemZ") != -1)
     {
         volatile int a = 5;
         a++;
-    }
-    if (pkg.toString().find("gss") != -1)
-    {
-        volatile int a = 5;
-        a++;
-    }
-    if (pkg.toString().find("libcurl") != -1)
-    {
-        volatile int a = 5;
-        a++;
-    }
+    }*/
 
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
@@ -1639,11 +1629,11 @@ bool NativeExecutedTarget::prepare()
     case 3:
     // inheritance
     {
-        if (pkg.ppath.toString().find("ilmimf") != -1)
+        /*if (pkg.ppath.toString().find("ilmimf") != -1)
         {
             volatile int a = 5;
             a++;
-        }
+        }*/
 
         /*struct H
         {
@@ -1940,11 +1930,11 @@ bool NativeExecutedTarget::prepare()
     RETURN_PREPARE_PASS;
     case 6:
     {
-        if (pkg.ppath.toString().find("ilmimf") != -1)
+        /*if (pkg.ppath.toString().find("ilmimf") != -1)
         {
             volatile int a = 5;
             a++;
-        }
+        }*/
 
         // add link libraries from deps
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
@@ -2001,11 +1991,11 @@ bool NativeExecutedTarget::prepare()
     RETURN_PREPARE_PASS;
     case 7:
     {
-        if (pkg.ppath.toString().find("ilmimf") != -1)
+        /*if (pkg.ppath.toString().find("ilmimf") != -1)
         {
             volatile int a = 5;
             a++;
-        }
+        }*/
 
         // linker setup
 #ifndef _WIN32

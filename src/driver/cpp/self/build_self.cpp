@@ -92,491 +92,17 @@ void build_other(Solution &s)
 {
     build_self_generated(s);
 
-    auto &zlib = s.getTarget<LibraryTarget>("org.sw.demo.madler.zlib");
-    auto &sqlite3 = s.getTarget<LibraryTarget>("org.sw.demo.sqlite3");
-
-    auto &boost_algorithm = s.getTarget<LibraryTarget>("org.sw.demo.boost.algorithm");
-    auto &boost_filesystem = s.getTarget<LibraryTarget>("org.sw.demo.boost.filesystem");
-    auto &boost_thread = s.getTarget<LibraryTarget>("org.sw.demo.boost.thread");
-    auto &boost_asio = s.getTarget<LibraryTarget>("org.sw.demo.boost.asio");
-    auto &boost_system = s.getTarget<LibraryTarget>("org.sw.demo.boost.system");
-    auto &boost_process = s.getTarget<LibraryTarget>("org.sw.demo.boost.process");
-    auto &boost_date_time = s.getTarget<LibraryTarget>("org.sw.demo.boost.date_time");
-    auto &boost_interprocess = s.getTarget<LibraryTarget>("org.sw.demo.boost.interprocess");
-    auto &boost_log = s.getTarget<LibraryTarget>("org.sw.demo.boost.log");
-    auto &boost_dll = s.getTarget<LibraryTarget>("org.sw.demo.boost.dll");
-    auto &boost_property_tree = s.getTarget<LibraryTarget>("org.sw.demo.boost.property_tree");
-    auto &boost_stacktrace = s.getTarget<LibraryTarget>("org.sw.demo.boost.stacktrace");
-    auto &boost_variant = s.getTarget<LibraryTarget>("org.sw.demo.boost.variant");
-    auto &boost_assign = s.getTarget<LibraryTarget>("org.sw.demo.boost.assign");
-    auto &boost_uuid = s.getTarget<LibraryTarget>("org.sw.demo.boost.uuid");
-
-    auto yaml_cpp = "org.sw.demo.jbeder.yaml_cpp-master"_dep;
-    auto libarchive = "org.sw.demo.libarchive.libarchive-3"_dep;
-    auto crypto = "org.sw.demo.openssl.crypto-1.*.*.*"_dep;
-    auto ssl = "org.sw.demo.openssl.ssl-1.*.*.*"_dep;
-    auto c_ares = "org.sw.demo.c_ares-1"_dep;
-    auto libcurl = "org.sw.demo.badger.curl.libcurl-7"_dep;
-
-
-    auto &rhash = addTarget<LibraryTarget>(s, "pvt.cppan.demo.aleksey14.rhash", "1");
-    {
-        rhash.ApiName = "RHASH_API";
-        rhash +=
-            "librhash/.*\\.c"_rr,
-            "librhash/.*\\.h"_rr,
-            "win32/.*\\.h"_rr;
-
-        rhash.Public +=
-            "."_id,
-            "librhash"_id;
-    }
-
-    auto &date = addTarget<LibraryTarget>(s, "pvt.cppan.demo.howardhinnant.date.date", "2");
-    /*{
-    date +=
-    "date.h";
-
-    date.Public +=
-    "."_id;
-    }*/
-
-    auto &sqlpp11 = addTarget<LibraryTarget>(s, "pvt.cppan.demo.rbock.sqlpp11", "0");
-    {
-        sqlpp11 +=
-            "include/.*"_rr;
-
-        sqlpp11.Public +=
-            "include"_id;
-
-        sqlpp11.Public += date;
-    }
-
-    auto &sqlpp11_connector_sqlite3 = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.rbock.sqlpp11_connector_sqlite3", "0");
-    {
-        sqlpp11_connector_sqlite3 +=
-            "include/.*"_rr,
-            "src/.*"_rr;
-
-        sqlpp11_connector_sqlite3.Private +=
-            "src"_id;
-
-        sqlpp11_connector_sqlite3.Public +=
-            "include"_id;
-
-        sqlpp11_connector_sqlite3.Public += sqlpp11, sqlite3, date;
-    }
-
-    auto &turf = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.preshing.turf", "master");
-    {
-        turf +=
-            "cmake/Macros.cmake",
-            "cmake/turf_config.h.in",
-            "turf/.*"_rr;
-
-        turf.Public +=
-            "."_id;
-
-        turf.Variables["TURF_USERCONFIG"];
-        turf.Variables["TURF_ENABLE_CPP11"] = "1";
-        turf.Variables["TURF_WITH_BOOST"] = "FALSE";
-        turf.Variables["TURF_WITH_EXCEPTIONS"] = "FALSE";
-        if (s.Settings.Native.CompilerType == CompilerType::MSVC)
-            turf.Variables["TURF_WITH_SECURE_COMPILER"] = "FALSE";
-        turf.Variables["TURF_REPLACE_OPERATOR_NEW"] = "FALSE";
-
-        turf.Variables["TURF_HAS_LONG_LONG"] = "1";
-        turf.Variables["TURF_HAS_STDINT"] = "1";
-        turf.Variables["TURF_HAS_NOEXCEPT"] = "1";
-        turf.Variables["TURF_HAS_CONSTEXPR"] = "1";
-        turf.Variables["TURF_HAS_OVERRIDE"] = "1";
-        turf.Variables["TURF_HAS_STATIC_ASSERT"] = "1";
-        turf.Variables["TURF_HAS_MOVE"] = "1";
-
-        turf.configureFile("cmake/turf_config.h.in", "turf_config.h");
-        turf.fileWriteOnce("turf_userconfig.h", "", true);
-    }
-
-    auto &junction = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.preshing.junction", "master");
-    {
-        junction +=
-            "cmake/junction_config.h.in",
-            "junction/.*"_rr;
-
-        junction.Public +=
-            "."_id;
-
-        junction.Public += turf;
-
-        junction.Variables["JUNCTION_TRACK_GRAMPA_STATS"] = "FALSE";
-        junction.Variables["JUNCTION_USE_STRIPING"] = "TRUE";
-
-        junction.configureFile("cmake/junction_config.h.in", "junction_config.h");
-        junction.fileWriteOnce("junction_userconfig.h", "", true);
-    }
-
-    auto &argagg = addTarget<LibraryTarget>(s, "pvt.cppan.demo.vietjtnguyen.argagg", "0.4.6");
-    {
-        argagg.setChecks("argagg");
-        argagg +=
-            "include/.*"_rr;
-
-        argagg.Public +=
-            "include"_id;
-    }
-
-    auto &taywee_args = addTarget<LibraryTarget>(s, "pvt.cppan.demo.taywee.args", "6");
-    {
-        taywee_args += "args.hxx";
-    }
-
-    auto &fmt = addTarget<LibraryTarget>(s, "pvt.cppan.demo.fmt", "4");
-    {
-        fmt.setChecks("fmt");
-        fmt +=
-            "fmt/format.*"_rr,
-            "fmt/ostream.*"_rr;
-
-        fmt.Public +=
-            "fmt"_id,
-            "."_id;
-
-        fmt.Private += sw::Shared, "FMT_EXPORT"_d;
-        fmt.Public += sw::Shared, "FMT_SHARED"_d;
-    }
-
-    auto &flags = addTarget<LibraryTarget>(s, "pvt.cppan.demo.grisumbras.enum_flags", "master");
-
-    auto &json = addTarget<LibraryTarget>(s, "pvt.cppan.demo.nlohmann.json", "3");
-
-    auto &uv = addTarget<LibraryTarget>(s, "pvt.cppan.demo.libuv", "1");
-    {
-        uv.Private << sw::Shared << "BUILDING_UV_SHARED"_d;
-        uv.Interface << sw::Shared << "USING_UV_SHARED"_d;
-        uv += "src/.*"_r;
-        if (s.Settings.TargetOS.Type == OSType::Windows)
-        {
-            uv += "src/win/.*"_rr;
-            uv.Public += "iphlpapi.lib"_lib, "psapi.lib"_lib, "userenv.lib"_lib;
-        }
-        else
-        {
-            uv +=
-                "src/unix/async.c",
-                "src/unix/atomic-ops.h",
-                "src/unix/core.c",
-                "src/unix/dl.c",
-                "src/unix/fs.c",
-                "src/unix/getaddrinfo.c",
-                "src/unix/getnameinfo.c",
-                "src/unix/internal.h",
-                "src/unix/loop-watcher.c",
-                "src/unix/loop.c",
-                "src/unix/pipe.c",
-                "src/unix/poll.c",
-                "src/unix/process.c",
-                "src/unix/signal.c",
-                "src/unix/spinlock.h",
-                "src/unix/stream.c",
-                "src/unix/tcp.c",
-                "src/unix/thread.c",
-                "src/unix/timer.c",
-                "src/unix/tty.c",
-                "src/unix/udp.c";
-
-            switch (s.Settings.TargetOS.Type)
-            {
-            case OSType::AIX:
-                break;
-            case OSType::Android:
-                break;
-            case OSType::Macos:
-                uv +=
-                    "src/unix/darwin.c",
-                    "src/unix/darwin-proctitle.c",
-                    "src/unix/fsevents.c",
-                    "src/unix/kqueue.c",
-                    "src/unix/proctitle.c";
-                break;
-            case OSType::FreeBSD:
-                break;
-            case OSType::NetBSD:
-                break;
-            case OSType::OpenBSD:
-                break;
-            case OSType::SunOS:
-                break;
-            case OSType::Linux:
-                uv +=
-                    "src/unix/linux-core.c",
-                    "src/unix/linux-inotify.c",
-                    "src/unix/linux-syscalls.c",
-                    "src/unix/linux-syscalls.h",
-                    "src/unix/proctitle.c";
-                break;
-            }
-        }
-    }
-
-    auto &pystring = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.imageworks.pystring", "1");
-    pystring += "pystring.*"_rr;
-
-    auto &ragel = addTarget<ExecutableTarget>(s, "pvt.cppan.demo.ragel", "6");
-    {
-        ragel += "aapl/.*"_rr;
-        ragel += "ragel/.*\\.cpp"_rr;
-        ragel += "ragel/.*\\.h"_rr;
-        ragel += "aapl"_idir;
-        ragel.writeFileOnce(ragel.BinaryPrivateDir / "config.h");
-        if (s.Settings.TargetOS.Type == OSType::Windows)
-            ragel.writeFileOnce(ragel.BinaryPrivateDir / "unistd.h");
-    }
-
-    auto rl = [&ragel](auto &t, const path &in)
-    {
-        auto o = t.BinaryDir / (in.filename().u8string() + ".cpp");
-
-        auto c = std::make_shared<Command>();
-        c->program = ragel.getOutputFile();
-        c->args.push_back((t.SourceDir / in).u8string());
-        c->args.push_back("-o");
-        c->args.push_back(o.u8string());
-        c->addInput(t.SourceDir / in);
-        c->addOutput(o);
-        t += o;
-    };
-
-    auto &winflexbison_common = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.lexxmark.winflexbison.common", "master");
-    {
-        winflexbison_common += "common/.*"_rr;
-        winflexbison_common -= "common/m4/lib/regcomp.c";
-        winflexbison_common -= "common/m4/lib/regexec.c";
-        winflexbison_common -= ".*\\.def"_rr;
-        winflexbison_common.Public += "common/m4/lib"_idir;
-        winflexbison_common.Public += "common/misc"_idir;
-    }
-
-    auto &winflexbison_flex = addTarget<ExecutableTarget>(s, "pvt.cppan.demo.lexxmark.winflexbison.flex", "master");
-    {
-        winflexbison_flex += "flex/.*"_rr;
-        winflexbison_flex -= "flex/src/libmain.c";
-        winflexbison_flex -= "flex/src/libyywrap.c";
-        winflexbison_flex += winflexbison_common;
-    }
-
-    auto &winflexbison_bison = addTarget<ExecutableTarget>(s, "pvt.cppan.demo.lexxmark.winflexbison.bison", "master");
-    {
-        //winflexbison_bison += "bison/data/[^/]*"_r;
-        winflexbison_bison += "bison/data/m4sugar/.*"_rr;
-        winflexbison_bison += "bison/src/.*"_rr;
-        winflexbison_bison.Public += "bison/src"_idir;
-        winflexbison_bison += winflexbison_common;
-        winflexbison_bison.replaceInFileOnce("bison/src/config.h", "data", normalize_path(winflexbison_bison.SourceDir / "bison/data/"));
-        winflexbison_bison.replaceInFileOnce("bison/src/main.c", "if (!last_divider)", "");
-        winflexbison_bison.replaceInFileOnce("bison/src/main.c", "free(local_pkgdatadir);", "");
-    }
-
-    auto flex_bison = [&winflexbison_bison, &winflexbison_flex](auto &t, const path &f, const path &b, const Strings &flex_args = {}, const Strings &bison_args = {})
-    {
-        auto d = b.filename();
-        auto bdir = t.BinaryPrivateDir / "fb" / d;
-
-        auto o = bdir / (b.filename().u8string() + ".cpp");
-        auto oh = bdir / (b.filename().u8string() + ".hpp");
-        t += IncludeDirectory(oh.parent_path());
-
-        fs::create_directories(bdir);
-
-        {
-            auto c = std::make_shared<Command>();
-            c->program = winflexbison_bison.getOutputFile();
-            c->working_directory = bdir;
-            c->args.push_back("-o");
-            c->args.push_back(o.u8string());
-            c->args.push_back("--defines=" + oh.u8string());
-            c->args.insert(c->args.end(), bison_args.begin(), bison_args.end());
-            c->args.push_back((t.SourceDir / b).u8string());
-            c->addInput(t.SourceDir / b);
-            c->addOutput(o);
-            c->addOutput(oh);
-            t += o, oh;
-        }
-
-        {
-            auto o = bdir / (f.filename().u8string() + ".cpp");
-
-            auto c = std::make_shared<Command>();
-            c->program = winflexbison_flex.getOutputFile();
-            c->working_directory = bdir;
-            c->args.push_back("-o");
-            c->args.push_back(o.u8string());
-            c->args.insert(c->args.end(), flex_args.begin(), flex_args.end());
-            c->args.push_back((t.SourceDir / f).u8string());
-            c->addInput(t.SourceDir / f);
-            c->addInput(oh);
-            c->addOutput(o);
-            t += o;
-        }
-    };
-
-    auto flex_bison_pair = [&flex_bison](auto &t, const String &type, const path &p)
-    {
-        auto name = p.filename().string();
-        auto name_upper = boost::to_upper_copy(name);
-        auto my_parser = name + "Parser";
-        my_parser[0] = toupper(my_parser[0]);
-
-        t.Definitions["HAVE_BISON_" + name_upper + "_PARSER"];
-
-        Context ctx;
-        ctx.addLine("#pragma once");
-        ctx.addLine();
-        ctx.addLine("#undef  THIS_PARSER_NAME");
-        ctx.addLine("#undef  THIS_PARSER_NAME_UP");
-        ctx.addLine("#undef  THIS_LEXER_NAME");
-        ctx.addLine("#undef  THIS_LEXER_NAME_UP");
-        ctx.addLine();
-        ctx.addLine("#define THIS_PARSER_NAME       " + name);
-        ctx.addLine("#define THIS_PARSER_NAME_UP    " + name_upper);
-        ctx.addLine("#define THIS_LEXER_NAME        THIS_PARSER_NAME");
-        ctx.addLine("#define THIS_LEXER_NAME_UP     THIS_PARSER_NAME_UP");
-        ctx.addLine();
-        ctx.addLine("#undef  MY_PARSER");
-        ctx.addLine("#define MY_PARSER              " + my_parser);
-        ctx.addLine();
-        ctx.addLine("#define " + type);
-        ctx.addLine("#include <primitives/helper/bison.h>");
-        ctx.addLine("#undef  " + type);
-        ctx.addLine();
-        ctx.addLine("#include <" + name + ".yy.hpp>");
-
-        t.writeFileOnce(t.BinaryPrivateDir / (name + "_parser.h"), ctx.getText());
-        t.Definitions["HAVE_BISON_" + name_upper + "_PARSER"] = 1;
-
-        auto f = p;
-        auto b = p;
-        flex_bison(t, f += ".ll", b += ".yy", { "--prefix=ll_" + name }, { "-Dapi.prefix={yy_" + name + "}" });
-    };
-
-    /// llvm
-
-    auto &llvm_demangle = addTarget<StaticLibraryTarget>(s, "pvt.egorpugin.llvm.demangle", "master");
-    {
-        llvm_demangle +=
-            "include/llvm/Demangle/.*"_rr,
-            "lib/Demangle/.*\\.cpp"_rr,
-            "lib/Demangle/.*\\.h"_rr;
-    }
-
-    auto &llvm_support_lite = addTarget<StaticLibraryTarget>(s, "pvt.egorpugin.llvm.support_lite", "master");
-    {
-        llvm_support_lite.setChecks("support_lite");
-        llvm_support_lite +=
-            "include/llvm-c/.*Types\\.h"_rr,
-            "include/llvm-c/ErrorHandling.h",
-            "include/llvm-c/Support.h",
-            "include/llvm/ADT/.*\\.h"_rr,
-            "include/llvm/Config/.*\\.cmake"_rr,
-            "include/llvm/Support/.*"_rr,
-            "lib/Support/.*\\.c"_rr,
-            "lib/Support/.*\\.cpp"_rr,
-            "lib/Support/.*\\.h"_rr,
-            "lib/Support/.*\\.inc"_rr;
-        llvm_support_lite -=
-            "include/llvm/Support/.*def"_rr;
-        llvm_support_lite.Private +=
-            "lib"_id;
-        llvm_support_lite.Public +=
-            "include"_id;
-        if (s.Settings.TargetOS.Type != OSType::Windows)
-            llvm_support_lite.Private += "HAVE_PTHREAD_GETSPECIFIC"_d;
-        llvm_support_lite.Public += llvm_demangle;
-
-        llvm_support_lite += "LLVM_ENABLE_THREADS=1"_v;
-        llvm_support_lite += "LLVM_HAS_ATOMICS=1"_v;
-        if (s.Settings.TargetOS.Type == OSType::Windows)
-            llvm_support_lite += "LLVM_HOST_TRIPLE=\"unknown-unknown-windows\""_v;
-        else
-        {
-            llvm_support_lite += "LLVM_HOST_TRIPLE=\"unknown-unknown-unknown\""_v;
-            llvm_support_lite += "LLVM_ON_UNIX=1"_v;
-        }
-        llvm_support_lite += "RETSIGTYPE=void"_v;
-
-        llvm_support_lite += "LLVM_VERSION_MAJOR=0"_v;
-        llvm_support_lite += "LLVM_VERSION_MINOR=0"_v;
-        llvm_support_lite += "LLVM_VERSION_PATCH=1"_v;
-
-        llvm_support_lite.configureFile("include/llvm/Config/config.h.cmake", "llvm/Config/config.h");
-        llvm_support_lite.configureFile("include/llvm/Config/llvm-config.h.cmake", "llvm/Config/llvm-config.h");
-        llvm_support_lite.configureFile("include/llvm/Config/abi-breaking.h.cmake", "llvm/Config/abi-breaking.h");
-    }
-
-    /// protobuf
-
-    auto import_from_bazel = [](auto &t)
-    {
-        t.ImportFromBazel = true;
-    };
-
-    auto &protobuf_lite = addTarget<LibraryTarget>(s, "pvt.cppan.demo.google.protobuf.protobuf_lite", "3");
-    import_from_bazel(protobuf_lite);
-    protobuf_lite += "src/google/protobuf/.*\\.h"_rr;
-    //protobuf_lite.Public += "src"_idir;
-    protobuf_lite += sw::Shared, "LIBPROTOBUF_EXPORTS";
-    protobuf_lite.Public += sw::Shared, "PROTOBUF_USE_DLLS";
-
-    auto &protobuf = addTarget<LibraryTarget>(s, "pvt.cppan.demo.google.protobuf.protobuf", "3");
-    import_from_bazel(protobuf);
-    protobuf += ".*"_rr;
-    protobuf += FileRegex(protobuf_lite.SourceDir, std::regex(".*"), true);
-    protobuf.Public += protobuf_lite, zlib;
-    //protobuf.Public += "src"_idir;
-    protobuf += sw::Shared, "LIBPROTOBUF_EXPORTS";
-    protobuf.Public += sw::Shared, "PROTOBUF_USE_DLLS";
-
-    auto &protoc_lib = addTarget<LibraryTarget>(s, "pvt.cppan.demo.google.protobuf.protoc_lib", "3");
-    import_from_bazel(protoc_lib);
-    protoc_lib.Public += protobuf;
-    protoc_lib += sw::Shared, "LIBPROTOC_EXPORTS";
-    protoc_lib.Public += sw::Shared, "PROTOBUF_USE_DLLS";
-
-    auto &protoc = addTarget<ExecutableTarget>(s, "pvt.cppan.demo.google.protobuf.protoc", "3");
-    import_from_bazel(protoc);
-    protoc.Public += protoc_lib;
-
-    auto gen_pb = [&protoc](auto &t, const path &f)
-    {
-        auto n = f.filename().stem().u8string();
-        auto d = f.parent_path();
-        auto bdir = t.BinaryDir;
-
-        auto o = bdir / n;
-        auto ocpp = o;
-        ocpp += ".pb.cc";
-        auto oh = o;
-        oh += ".pb.h";
-
-        auto c = std::make_shared<Command>();
-        c->program = protoc.getOutputFile();
-        c->working_directory = bdir;
-        c->args.push_back(f.u8string());
-        c->args.push_back("--cpp_out=" + bdir.u8string());
-        c->args.push_back("-I");
-        c->args.push_back(d.u8string());
-        c->args.push_back("-I");
-        c->args.push_back((protoc.SourceDir / "src").u8string());
-        c->addInput(f);
-        c->addOutput(ocpp);
-        c->addOutput(oh);
-        t += ocpp, oh;
-    };
+    auto sqlite3 = "org.sw.demo.sqlite3"_dep;
+    auto boost_algorithm = "org.sw.demo.boost.algorithm-1"_dep;
+    auto boost_dll = "org.sw.demo.boost.dll-1"_dep;
+    auto uv = "org.sw.demo.libuv-1"_dep;
+    auto pystring = "org.sw.demo.imageworks.pystring-1"_dep;
 
     /// grpc
 
-    auto setup_grpc = [&import_from_bazel](auto &t)
+    auto setup_grpc = [](auto &t)
     {
-        import_from_bazel(t);
+        t.ImportFromBazel = true;
         t += ".*"_rr;
         t.Public.IncludeDirectories.insert(t.SourceDir);
         t.Public.IncludeDirectories.insert(t.SourceDir / "include");
@@ -587,15 +113,23 @@ void build_other(Solution &s)
 
     auto &grpc_plugin_support = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.google.grpc.grpc_plugin_support", "1");
     setup_grpc(grpc_plugin_support);
-    grpc_plugin_support.Public += grpcpp_config_proto, protoc_lib;
+    grpc_plugin_support.Public += grpcpp_config_proto, "org.sw.demo.google.protobuf.protoc_lib-3"_dep;
 
     auto &grpc_cpp_plugin = addTarget<ExecutableTarget>(s, "pvt.cppan.demo.google.grpc.grpc_cpp_plugin", "1");
     setup_grpc(grpc_cpp_plugin);
     grpc_cpp_plugin.Public += grpc_plugin_support;
 
-    auto gen_grpc = [&gen_pb, &grpc_cpp_plugin, &protoc](auto &t, const path &f)
+    auto gen_grpc = [&grpc_cpp_plugin](auto &t, const path &f, bool public_protobuf = false)
     {
-        gen_pb(t, f);
+        auto protoc = "org.sw.demo.google.protobuf.protoc-3"_dep;
+        {
+            auto d = t + protoc;
+            d->Dummy = true;
+        }
+
+        gen_protobuf(t, f, public_protobuf);
+
+        PackageId protoc_pkg("org.sw.demo.google.protobuf.protoc", "3.6.1");
 
         auto n = f.filename().stem().u8string();
         auto d = f.parent_path();
@@ -608,7 +142,7 @@ void build_other(Solution &s)
         oh += ".grpc.pb.h";
 
         auto c = std::make_shared<Command>();
-        c->program = protoc.getOutputFile();
+        c->setProgram(protoc);
         c->working_directory = bdir;
         c->args.push_back(f.u8string());
         c->args.push_back("--grpc_out=" + bdir.u8string());
@@ -616,7 +150,7 @@ void build_other(Solution &s)
         c->args.push_back("-I");
         c->args.push_back(d.u8string());
         c->args.push_back("-I");
-        c->args.push_back((protoc.SourceDir / "src").u8string());
+        c->args.push_back((protoc_pkg.getDirSrc2() / "src").u8string());
         c->addInput(f);
         c->addInput(grpc_cpp_plugin.getOutputFile());
         c->addOutput(ocpp);
@@ -678,7 +212,7 @@ void build_other(Solution &s)
 
     auto &grpc_base_c = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.google.grpc.grpc_base_c", "1");
     setup_grpc(grpc_base_c);
-    grpc_base_c.Public += gpr_base, grpc_trace, inlined_vector, orphanable, ref_counted, zlib;
+    grpc_base_c.Public += gpr_base, grpc_trace, inlined_vector, orphanable, ref_counted, "org.sw.demo.madler.zlib-1"_dep;
 
     auto &grpc_base = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.google.grpc.grpc_base", "1");
     setup_grpc(grpc_base);
@@ -723,7 +257,7 @@ void build_other(Solution &s)
 
     auto &grpc_resolver_dns_ares = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.google.grpc.grpc_resolver_dns_ares", "1");
     setup_grpc(grpc_resolver_dns_ares);
-    grpc_resolver_dns_ares.Public += grpc_base, grpc_client_channel, c_ares;
+    grpc_resolver_dns_ares.Public += grpc_base, grpc_client_channel, "org.sw.demo.c_ares-1"_dep;
 
     auto &grpc_resolver_dns_native = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.google.grpc.grpc_resolver_dns_native", "1");
     setup_grpc(grpc_resolver_dns_native);
@@ -802,7 +336,7 @@ void build_other(Solution &s)
 
     auto &alts_frame_protector = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.google.grpc.alts_frame_protector", "1");
     setup_grpc(alts_frame_protector);
-    alts_frame_protector.Public += gpr, grpc_base, tsi_interface, ssl;
+    alts_frame_protector.Public += gpr, grpc_base, tsi_interface, "org.sw.demo.openssl.ssl-1.*.*.*"_dep;
 
     auto &tsi = addTarget<StaticLibraryTarget>(s, "pvt.cppan.demo.google.grpc.tsi", "1");
     setup_grpc(tsi);
@@ -882,7 +416,7 @@ void build_other(Solution &s)
     setup_primitives(p_string);
 
     auto &p_filesystem = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.filesystem", "master");
-    p_filesystem.Public += p_string, boost_filesystem, boost_thread, flags, uv;
+    p_filesystem.Public += p_string, "org.sw.demo.boost.filesystem-1"_dep, "org.sw.demo.boost.thread-1"_dep, "org.sw.demo.grisumbras.enum_flags-master"_dep, uv;
     setup_primitives(p_filesystem);
 
     auto &p_templates = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.templates", "master");
@@ -897,43 +431,43 @@ void build_other(Solution &s)
         p_minidump.Public += "dbghelp.lib"_lib;
 
     auto &p_executor = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.executor", "master");
-    p_executor.Public += boost_asio, boost_system, p_templates, p_minidump;
+    p_executor.Public += "org.sw.demo.boost.asio-1"_dep, "org.sw.demo.boost.system-1"_dep, p_templates, p_minidump;
     setup_primitives(p_executor);
 
     auto &p_command = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.command", "master");
-    p_command.Public += p_filesystem, p_templates, boost_process, uv;
+    p_command.Public += p_filesystem, p_templates, "org.sw.demo.boost.process-1"_dep, uv;
     setup_primitives(p_command);
     if (s.Settings.TargetOS.Type == OSType::Windows)
         p_command.Public += "Shell32.lib"_l;
 
     auto &p_date_time = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.date_time", "master");
-    p_date_time.Public += p_string, boost_date_time;
+    p_date_time.Public += p_string, "org.sw.demo.boost.date_time-1"_dep;
     setup_primitives(p_date_time);
 
     auto &p_lock = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.lock", "master");
-    p_lock.Public += p_filesystem, boost_interprocess;
+    p_lock.Public += p_filesystem, "org.sw.demo.boost.interprocess-1"_dep;
     setup_primitives(p_lock);
 
     auto &p_log = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.log", "master");
-    p_log.Public += boost_log;
+    p_log.Public += "org.sw.demo.boost.log-1"_dep;
     setup_primitives(p_log);
 
     auto &p_yaml = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.yaml", "master");
-    p_yaml.Public += p_string, yaml_cpp;
+    p_yaml.Public += p_string, "org.sw.demo.jbeder.yaml_cpp-master"_dep;
     setup_primitives(p_yaml);
 
     auto &p_pack = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.pack", "master");
-    p_pack.Public += p_filesystem, p_templates, libarchive;
+    p_pack.Public += p_filesystem, p_templates, "org.sw.demo.libarchive.libarchive-3"_dep;
     setup_primitives(p_pack);
 
     auto &p_http = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.http", "master");
-    p_http.Public += p_filesystem, p_templates, libcurl;
+    p_http.Public += p_filesystem, p_templates, "org.sw.demo.badger.curl.libcurl-7"_dep;
     setup_primitives(p_http);
     if (s.Settings.TargetOS.Type == OSType::Windows)
         p_http.Public += "Winhttp.lib"_l;
 
     auto &p_hash = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.hash", "master");
-    p_hash.Public += p_filesystem, rhash, crypto;
+    p_hash.Public += p_filesystem, "org.sw.demo.aleksey14.rhash-1"_dep, "org.sw.demo.openssl.crypto-1.*.*.*"_dep;
     setup_primitives(p_hash);
 
     auto &p_win32helpers = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.win32helpers", "master");
@@ -958,10 +492,10 @@ void build_other(Solution &s)
     setup_primitives(p_main);
 
     auto &p_settings = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.settings", "master");
-    p_settings.Public += p_yaml, p_filesystem, p_templates, llvm_support_lite;
+    p_settings.Public += p_yaml, p_filesystem, p_templates, "pub.egorpugin.llvm_project.llvm.support_lite-master"_dep;
     setup_primitives(p_settings);
-    flex_bison_pair(p_settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
-    flex_bison_pair(p_settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
+    gen_flex_bison_pair(p_settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
+    gen_flex_bison_pair(p_settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
 
     auto &p_sw_settings = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.sw.settings", "master");
     p_sw_settings.Public += p_settings;
@@ -997,10 +531,10 @@ void build_other(Solution &s)
     };
 
     auto &p_version = addTarget<LibraryTarget>(s, "pvt.egorpugin.primitives.version", "master");
-    p_version.Public += p_hash, p_templates, fmt, pystring;
+    p_version.Public += p_hash, p_templates, "org.sw.demo.fmt-5"_dep, pystring;
     setup_primitives(p_version);
-    rl(p_version, "src/version.rl");
-    flex_bison_pair(p_version, "GLR_CPP_PARSER", "src/range");
+    gen_ragel(p_version, "src/version.rl");
+    gen_flex_bison_pair(p_version, "GLR_CPP_PARSER", "src/range");
 
     /// self
 
@@ -1010,7 +544,9 @@ void build_other(Solution &s)
     {
         auto &support = s.addTarget<LibraryTarget>("support");
         support.CPPVersion = CPPLanguageStandard::CPP17;
-        support.Public += p_http, p_hash, p_command, p_log, p_executor, boost_property_tree, boost_stacktrace, boost_dll;
+        support.Public += p_http, p_hash, p_command, p_log, p_executor,
+            "org.sw.demo.boost.property_tree-1"_dep,
+            "org.sw.demo.boost.stacktrace-1"_dep, boost_dll;
         support.SourceDir = cppan2_base / "src/support";
         support += ".*"_rr;
         support.ApiName = "SW_SUPPORT_API";
@@ -1021,15 +557,15 @@ void build_other(Solution &s)
         protos.CPPVersion = CPPLanguageStandard::CPP17;
         protos.SourceDir = cppan2_base / "src" / "protocol";
         protos += ".*"_rr;
-        protos.Public += protobuf, grpcpp, p_log;
-        gen_grpc(protos, protos.SourceDir / "api.proto");
+        protos.Public += grpcpp, p_log;
+        gen_grpc(protos, protos.SourceDir / "api.proto", true);
 
         auto &manager = s.addTarget<LibraryTarget>("manager");
         manager.ApiName = "SW_MANAGER_API";
         //manager.ExportIfStatic = true;
         manager.CPPVersion = CPPLanguageStandard::CPP17;
-        manager.Public += support, protos, p_yaml, p_date_time, p_lock, p_pack, json,
-            boost_variant, boost_dll, p_db_sqlite3, sqlpp11_connector_sqlite3, p_version, p_win32helpers;
+        manager.Public += support, protos, p_yaml, p_date_time, p_lock, p_pack, "org.sw.demo.nlohmann.json-3"_dep,
+            "org.sw.demo.boost.variant-1"_dep, boost_dll, p_db_sqlite3, "org.sw.demo.rbock.sqlpp11_connector_sqlite3-0"_dep, p_version, p_win32helpers;
         manager.SourceDir = cppan2_base;
         manager += "src/manager/.*"_rr, "include/manager/.*"_rr;
         manager.Public += "include"_idir, "src/manager"_idir;
@@ -1053,7 +589,7 @@ void build_other(Solution &s)
         builder.ApiName = "SW_BUILDER_API";
         //builder.ExportIfStatic = true;
         builder.CPPVersion = CPPLanguageStandard::CPP17;
-        builder.Public += manager, junction;
+        builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep;
         builder.SourceDir = cppan2_base;
         builder += "src/builder/.*"_rr, "include/builder/.*"_rr;
         builder.Public += "include"_idir, "src/builder"_idir;
@@ -1063,7 +599,7 @@ void build_other(Solution &s)
         cpp_driver.ApiName = "SW_DRIVER_CPP_API";
         //cpp_driver.ExportIfStatic = true;
         cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
-        cpp_driver.Public += builder, boost_assign, boost_uuid, p_context;
+        cpp_driver.Public += builder, "org.sw.demo.boost.assign-1"_dep, "org.sw.demo.boost.uuid-1"_dep, p_context;
         cpp_driver.SourceDir = cppan2_base;
         cpp_driver += "src/driver/cpp/.*"_rr, "include/driver/cpp/.*"_rr;
         cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
@@ -1093,6 +629,11 @@ void build_other(Solution &s)
         builder += out;
         }
 
+    auto &taywee_args = addTarget<LibraryTarget>(s, "pvt.cppan.demo.taywee.args", "6");
+    {
+        taywee_args += "args.hxx";
+    }
+
         auto &client = s.addTarget<ExecutableTarget>("client");
         client.CPPVersion = CPPLanguageStandard::CPP17;
         client += builder, taywee_args;
@@ -1106,204 +647,6 @@ void build_other(Solution &s)
 void check_self(Checker &c)
 {
     check_self_generated(c);
-
-    {
-        auto &s = c.addSet("support_lite");
-        s.checkFunctionExists("_alloca");
-        s.checkFunctionExists("__alloca");
-        s.checkFunctionExists("__ashldi3");
-        s.checkFunctionExists("__ashrdi3");
-        s.checkFunctionExists("__chkstk");
-        s.checkFunctionExists("__chkstk_ms");
-        s.checkFunctionExists("__cmpdi2");
-        s.checkFunctionExists("__divdi3");
-        s.checkFunctionExists("__fixdfdi");
-        s.checkFunctionExists("__fixsfdi");
-        s.checkFunctionExists("__floatdidf");
-        s.checkFunctionExists("__lshrdi3");
-        s.checkFunctionExists("__main");
-        s.checkFunctionExists("__moddi3");
-        s.checkFunctionExists("__udivdi3");
-        s.checkFunctionExists("__umoddi3");
-        s.checkFunctionExists("___chkstk");
-        s.checkFunctionExists("___chkstk_ms");
-        s.checkIncludeExists("CrashReporterClient.h");
-        s.checkIncludeExists("dirent.h");
-        s.checkIncludeExists("dlfcn.h");
-        s.checkIncludeExists("errno.h");
-        s.checkIncludeExists("fcntl.h");
-        s.checkIncludeExists("fenv.h");
-        s.checkIncludeExists("histedit.h");
-        s.checkIncludeExists("inttypes.h");
-        s.checkIncludeExists("link.h");
-        s.checkIncludeExists("linux/magic.h");
-        s.checkIncludeExists("linux/nfs_fs.h");
-        s.checkIncludeExists("linux/smb.h");
-        s.checkIncludeExists("mach/mach.h");
-        s.checkIncludeExists("malloc.h");
-        s.checkIncludeExists("malloc/malloc.h");
-        s.checkIncludeExists("ndir.h");
-        s.checkIncludeExists("pthread.h");
-        s.checkIncludeExists("signal.h");
-        s.checkIncludeExists("stdint.h");
-        s.checkIncludeExists("sys/dir.h");
-        s.checkIncludeExists("sys/ioctl.h");
-        s.checkIncludeExists("sys/mman.h");
-        s.checkIncludeExists("sys/ndir.h");
-        s.checkIncludeExists("sys/param.h");
-        s.checkIncludeExists("sys/resource.h");
-        s.checkIncludeExists("sys/stat.h");
-        s.checkIncludeExists("sys/time.h");
-        s.checkIncludeExists("sys/types.h");
-        s.checkIncludeExists("sys/uio.h");
-        s.checkIncludeExists("termios.h");
-        s.checkIncludeExists("unistd.h");
-        s.checkIncludeExists("unwind.h");
-        s.checkIncludeExists("valgrind/valgrind.h");
-        s.checkTypeSize("int64_t");
-        s.checkTypeSize("size_t");
-        s.checkTypeSize("uint64_t");
-        s.checkTypeSize("u_int64_t");
-        s.checkTypeSize("void *");
-        {
-            auto &c = s.checkSymbolExists("dladdr");
-            c.Parameters.Includes.push_back("dlfcn.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("dlopen");
-            c.Parameters.Includes.push_back("dlfcn.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("futimens");
-            c.Parameters.Includes.push_back("sys/stat.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("futimes");
-            c.Parameters.Includes.push_back("sys/time.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("getcwd");
-            c.Parameters.Includes.push_back("unistd.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("getpagesize");
-            c.Parameters.Includes.push_back("unistd.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("getrlimit");
-            c.Parameters.Includes.push_back("sys/types.h");
-            c.Parameters.Includes.push_back("sys/time.h");
-            c.Parameters.Includes.push_back("sys/resource.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("getrusage");
-            c.Parameters.Includes.push_back("sys/resource.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("gettimeofday");
-            c.Parameters.Includes.push_back("sys/time.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("isatty");
-            c.Parameters.Includes.push_back("unistd.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("lseek64");
-            c.Parameters.Includes.push_back("sys/types.h");
-            c.Parameters.Includes.push_back("unistd.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("mallctl");
-            c.Parameters.Includes.push_back("malloc_np.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("mallinfo");
-            c.Parameters.Includes.push_back("malloc.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("malloc_zone_statistics");
-            c.Parameters.Includes.push_back("malloc/malloc.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("mkdtemp");
-            c.Parameters.Includes.push_back("stdlib.h");
-            c.Parameters.Includes.push_back("unistd.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("mkstemp");
-            c.Parameters.Includes.push_back("stdlib.h");
-            c.Parameters.Includes.push_back("unistd.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("mktemp");
-            c.Parameters.Includes.push_back("stdlib.h");
-            c.Parameters.Includes.push_back("unistd.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("posix_fallocate");
-            c.Parameters.Includes.push_back("fcntl.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("posix_spawn");
-            c.Parameters.Includes.push_back("spawn.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("pread");
-            c.Parameters.Includes.push_back("unistd.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("realpath");
-            c.Parameters.Includes.push_back("stdlib.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("sbrk");
-            c.Parameters.Includes.push_back("unistd.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("setenv");
-            c.Parameters.Includes.push_back("stdlib.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("setrlimit");
-            c.Parameters.Includes.push_back("sys/resource.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("sigaltstack");
-            c.Parameters.Includes.push_back("signal.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("strerror");
-            c.Parameters.Includes.push_back("string.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("strerror_r");
-            c.Parameters.Includes.push_back("string.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("strtoll");
-            c.Parameters.Includes.push_back("stdlib.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("sysconf");
-            c.Parameters.Includes.push_back("unistd.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("writev");
-            c.Parameters.Includes.push_back("sys/uio.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("_chsize_s");
-            c.Parameters.Includes.push_back("io.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("_Unwind_Backtrace");
-            c.Parameters.Includes.push_back("unwind.h");
-        }
-        {
-            auto &c = s.checkSymbolExists("__GLIBC__");
-            c.Parameters.Includes.push_back("stdio.h");
-        }
-    }
 }
 
 void build_self(Solution &s)

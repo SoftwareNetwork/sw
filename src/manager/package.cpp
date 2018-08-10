@@ -105,7 +105,7 @@ String PackageId::getHash() const
 {
     static const auto delim = "-";
     //if (hash.empty())
-        return blake2b_512(ppath.toString() + delim + version.toString());
+        return blake2b_512(ppath.toStringLower() + delim + version.toString());
     //return hash;
 }
 
@@ -130,7 +130,7 @@ path PackageId::getHashPath() const
 path PackageId::getHashPathSha256() const
 {
     static const auto delim = "/";
-    auto h = sha256(ppath.toString() + delim + version.toString());
+    auto h = sha256(ppath.toStringLower() + delim + version.toString());
     return getHashPathFromHash(shorten_hash(h));
 }
 

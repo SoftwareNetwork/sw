@@ -25,7 +25,7 @@ path Command::getProgram() const
     else if (dependency)
     {
         if (!dependency->target)
-            throw std::runtime_error("Command dependency target was not resolved");
+            throw std::runtime_error("Command dependency target was not resolved: " + dependency->getPackage().toString());
         p = dependency->target->getOutputFile();
         if (p.empty())
             throw std::runtime_error("Empty program from package: " + dependency->target->getPackage().target_name);

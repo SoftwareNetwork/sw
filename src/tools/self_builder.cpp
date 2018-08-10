@@ -16,7 +16,12 @@ int main(int argc, char **argv)
         bool has_checks = false;
     };
 
-    std::unordered_map<UnresolvedPackage, pkg_data> pkgs{
+    // We must keep the whole list of dependencies here
+    // otherwise, driver will try to build downloaded configs
+    // and enter infinite loop.
+
+    std::unordered_map<UnresolvedPackage, pkg_data> pkgs
+    {
 
         {{"org.sw.demo.madler.zlib", "1"}, {}},
         {{"org.sw.demo.bzip2", "1"}, {}},
@@ -62,6 +67,37 @@ int main(int argc, char **argv)
         {{"org.sw.demo.c_ares", "1"}, {true}},
         {{"org.sw.demo.badger.curl.libcurl", "7"}, {true}},
 
+        {{"org.sw.demo.aleksey14.rhash", "1"}, {}},
+        {{"org.sw.demo.howardhinnant.date.date", "2"}, {}},
+        {{"org.sw.demo.rbock.sqlpp11", "0"}, {}},
+        {{"org.sw.demo.rbock.sqlpp11_connector_sqlite3", "0"}, {}},
+
+        {{"org.sw.demo.preshing.turf", "master"}, {}},
+        {{"org.sw.demo.preshing.junction", "master"}, {}},
+        {{"org.sw.demo.fmt", "5"}, {}},
+
+        /// no sources were kept behind this wall
+        /// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+        {{"org.sw.demo.grisumbras.enum_flags", "master"}, {}},
+        {{"org.sw.demo.nlohmann.json", "3"}, {}},
+        {{"org.sw.demo.libuv", "1"}, {}},
+        {{"org.sw.demo.imageworks.pystring", "1"}, {}},
+
+        {{"org.sw.demo.ragel", "6"}, {}},
+
+        {{"org.sw.demo.lexxmark.winflexbison.common", "master"}, {}},
+        {{"org.sw.demo.lexxmark.winflexbison.flex", "master"}, {}},
+        {{"org.sw.demo.lexxmark.winflexbison.bison", "master"}, {}},
+
+        {{"org.sw.demo.google.protobuf.protobuf_lite", "3"}, {}},
+        {{"org.sw.demo.google.protobuf.protobuf", "3"}, {}},
+        {{"org.sw.demo.google.protobuf.protoc_lib", "3"}, {}},
+        {{"org.sw.demo.google.protobuf.protoc", "3"}, {}},
+
+        {{"pub.egorpugin.llvm_project.llvm.demangle", "master"}, {true}},
+        {{"pub.egorpugin.llvm_project.llvm.support_lite", "master"}, {true}},
+
     };
 
     UnresolvedPackages deps;
@@ -71,6 +107,9 @@ int main(int argc, char **argv)
     auto m = resolve_dependencies(deps);
 
     Context ctx;
+    ctx.addLine("#define SW_PRAGMA_HEADER 1");
+    ctx.addLine();
+
     Context build;
     build.beginFunction("void build_self_generated(Solution &s)");
     build.addLine("auto sdir_old = s.SourceDir;");
@@ -81,20 +120,26 @@ int main(int argc, char **argv)
 
     std::set<PackageVersionGroupNumber> used_gns;
 
-    String s;
     for (auto &[u, r] : m)
     {
         if (used_gns.find(r.group_number) != used_gns.end())
             continue;
         used_gns.insert(r.group_number);
 
+        ctx.addLine("#define THIS_PREFIX \"" + r.ppath.slice(0, r.prefix).toString() + "\"");
+        ctx.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + r.ppath.slice(r.prefix).toString() + "\"");
+        ctx.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
+        ctx.addLine("#define THIS_VERSION \"" + r.version.toString() + "\"");
+        ctx.addLine("#define THIS_VERSION_DEPENDENCY \"" + r.version.toString() + "\"_dep");
+        ctx.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
+        ctx.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
         ctx.addLine("#define build build_" + r.getVariableName());
         if (pkgs[u].has_checks)
             ctx.addLine("#define check check_" + r.getVariableName());
         ctx.addLine("#include \"" + (r.getDirSrc2() / "sw.cpp").u8string() + "\"");
         ctx.addLine();
 
-        build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, 3).toString() + "\";");
+        build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, r.prefix).toString() + "\";");
         build.addLine("build_" + r.getVariableName() + "(s);");
         build.addLine();
 
@@ -109,10 +154,21 @@ int main(int argc, char **argv)
     build.endFunction();
     check.endFunction();
 
-    s += "#undef build\n";
-    s += "#undef check\n";
+    ctx += build;
+    ctx += check;
 
-    write_file(p, ctx.getText() + build.getText() + check.getText());
+    ctx.addLine("#undef build");
+    ctx.addLine("#undef check");
+    ctx.addLine("#undef SW_PRAGMA_HEADER");
+    ctx.addLine("#undef THIS_PREFIX");
+    ctx.addLine("#undef THIS_RELATIVE_PACKAGE_PATH");
+    ctx.addLine("#undef THIS_PACKAGE_PATH");
+    ctx.addLine("#undef THIS_VERSION");
+    ctx.addLine("#undef THIS_VERSION_DEPENDENCY");
+    ctx.addLine("#undef THIS_PACKAGE");
+    ctx.addLine("#undef THIS_PACKAGE_DEPENDENCY");
+
+    write_file(p, ctx.getText());
 
     return 0;
 }
