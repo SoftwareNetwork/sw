@@ -14,14 +14,14 @@ int main(int argc, char **argv)
     struct pkg_data
     {
         bool has_checks = false;
+        path local_dir;
     };
 
     // We must keep the whole list of dependencies here
     // otherwise, driver will try to build downloaded configs
     // and enter infinite loop.
 
-    std::unordered_map<UnresolvedPackage, pkg_data> pkgs
-    {
+    std::vector<std::pair<UnresolvedPackage, pkg_data>> pkgs{
 
         {{"org.sw.demo.madler.zlib", "1"}, {}},
         {{"org.sw.demo.bzip2", "1"}, {}},
@@ -98,11 +98,98 @@ int main(int argc, char **argv)
         {{"pub.egorpugin.llvm_project.llvm.demangle", "master"}, {true}},
         {{"pub.egorpugin.llvm_project.llvm.support_lite", "master"}, {true}},
 
+        {{"org.sw.demo.nanopb", "0"}, {}},
+        {{"org.sw.demo.google.grpc.third_party.nanopb", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpcpp_config_proto", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_plugin_support", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_cpp_plugin", "1"}, {}},
+        {{"org.sw.demo.google.grpc.gpr_codegen", "1"}, {}},
+        {{"org.sw.demo.google.grpc.gpr_base", "1"}, {}},
+        {{"org.sw.demo.google.grpc.gpr", "1"}, {}},
+        {{"org.sw.demo.google.grpc.atomic", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_codegen", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_trace", "1"}, {}},
+        {{"org.sw.demo.google.grpc.inlined_vector", "1"}, {}},
+        {{"org.sw.demo.google.grpc.debug_location", "1"}, {}},
+        {{"org.sw.demo.google.grpc.ref_counted_ptr", "1"}, {}},
+        {{"org.sw.demo.google.grpc.ref_counted", "1"}, {}},
+        {{"org.sw.demo.google.grpc.orphanable", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_base_c", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_base", "1"}, {}},
+        {{"org.sw.demo.google.grpc.census", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_client_authority_filter", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_deadline_filter", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_client_channel", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_lb_subchannel_list", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_lb_policy_pick_first", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_lb_policy_round_robin", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_max_age_filter", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_message_size_filter", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_resolver_dns_ares", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_resolver_dns_native", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_resolver_fake", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_resolver_sockaddr", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_server_backward_compatibility", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_http_filters", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_transport_chttp2_alpn", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_transport_chttp2", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_transport_chttp2_client_connector", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_transport_chttp2_client_insecure", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_transport_chttp2_server", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_transport_chttp2_server_insecure", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_transport_inproc", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_workaround_cronet_compression_filter", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_common", "1"}, {}},
+        {{"org.sw.demo.google.grpc.alts_proto", "1"}, {}},
+        {{"org.sw.demo.google.grpc.alts_util", "1"}, {}},
+        {{"org.sw.demo.google.grpc.tsi_interface", "1"}, {}},
+        {{"org.sw.demo.google.grpc.alts_frame_protector", "1"}, {}},
+        {{"org.sw.demo.google.grpc.tsi", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_secure", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_lb_policy_grpclb_secure", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_transport_chttp2_client_secure", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc_transport_chttp2_server_secure", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpc", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpcpp_codegen_base", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpcpp_base", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpcpp_codegen_base_src", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpcpp_codegen_proto", "1"}, {}},
+        {{"org.sw.demo.google.grpc.grpcpp", "1"}, {}},
+
+        {{"pub.egorpugin.primitives.string", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.filesystem", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.templates", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.context", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.minidump", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.executor", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.command", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.date_time", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.lock", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.log", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.yaml", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.pack", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.http", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.hash", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.win32helpers", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.db.common", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.db.sqlite3", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.error_handling", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.main", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.settings", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.sw.settings", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.sw.main", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.tools.embedder", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.primitives.version", "master"}, {false, "d:\\dev\\primitives"}},
+
     };
 
     UnresolvedPackages deps;
-    for (auto &[p,d] : pkgs)
-        deps.insert(p);
+    for (auto &[p, d] : pkgs)
+    {
+        if (d.local_dir.empty() || !fs::exists(d.local_dir))
+            deps.insert(p);
+    }
 
     auto m = resolve_dependencies(deps);
 
@@ -119,9 +206,36 @@ int main(int argc, char **argv)
     check.beginFunction("void check_self_generated(Checker &c)");
 
     std::set<PackageVersionGroupNumber> used_gns;
+    Files used_local_dirs;
 
-    for (auto &[u, r] : m)
+    for (auto &[u, data] : pkgs)
     {
+        if (!data.local_dir.empty() && fs::exists(data.local_dir))
+        {
+            if (used_local_dirs.find(data.local_dir) != used_local_dirs.end())
+                continue;
+
+            auto h = sha256_short(data.local_dir.u8string());
+            ctx.addLine("#define THIS_PREFIX \"pub.egorpugin\"");
+            ctx.addLine("#define THIS_VERSION_DEPENDENCY \"master\"_dep");
+            ctx.addLine("#define build build_" + h);
+            ctx.addLine("#include \"" + (data.local_dir / "sw.cpp").u8string() + "\"");
+            ctx.addLine();
+
+            build.beginBlock();
+            build.addLine("s.NamePrefix = \"pub.egorpugin\";");
+            build.addLine("SwapAndRestore sr(s.Local, true);");
+            build.addLine("SwapAndRestore sr2(s.SourceDir, path(\"" + normalize_path(data.local_dir) + "\"));");
+            build.addLine("build_" + h + "(s);");
+            build.endBlock();
+            build.addLine();
+
+            used_local_dirs.insert(data.local_dir);
+
+            continue;
+        }
+
+        auto &r = m[u];
         if (used_gns.find(r.group_number) != used_gns.end())
             continue;
         used_gns.insert(r.group_number);
@@ -134,7 +248,7 @@ int main(int argc, char **argv)
         ctx.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
         ctx.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
         ctx.addLine("#define build build_" + r.getVariableName());
-        if (pkgs[u].has_checks)
+        if (data.has_checks)
             ctx.addLine("#define check check_" + r.getVariableName());
         ctx.addLine("#include \"" + (r.getDirSrc2() / "sw.cpp").u8string() + "\"");
         ctx.addLine();
@@ -143,7 +257,7 @@ int main(int argc, char **argv)
         build.addLine("build_" + r.getVariableName() + "(s);");
         build.addLine();
 
-        if (pkgs[u].has_checks)
+        if (data.has_checks)
         {
             check.addLine("check_" + r.getVariableName() + "(c);");
             check.addLine();

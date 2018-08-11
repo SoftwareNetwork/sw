@@ -10,20 +10,29 @@
 
 #include "options.h"
 
+#include <functional>
+
 namespace sw::driver::cpp
 {
 
 struct SW_BUILDER_API Command : ::sw::builder::Command
 {
     using Base = ::sw::builder::Command;
+    using LazyCallback = std::function<String(void)>;
 
     std::shared_ptr<Dependency> dependency;
 
     path getProgram() const override;
+    void prepare() override;
 
     using Base::setProgram;
     void setProgram(const std::shared_ptr<Dependency> &d);
     void setProgram(const NativeTarget &t);
+
+    void pushLazyArg(LazyCallback f);
+
+private:
+    std::map<int, LazyCallback> callbacks;
 };
 
 }

@@ -1315,7 +1315,7 @@ void NativeExecutedTarget::findSources()
             project_name = pkg.ppath.back();
         auto add_files = [this, &f](const auto &n)
         {
-            auto files = f.getFiles(n);
+            auto files = f.getFiles(BazelTargetName.empty() ? n : BazelTargetName, BazelTargetFunction);
             for (auto &f : files)
             {
                 path p = f;

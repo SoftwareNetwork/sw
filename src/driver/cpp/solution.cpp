@@ -1068,10 +1068,10 @@ FilesMap Build::build_configs(const Files &files)
         lib += solution.getTarget<NativeTarget>("manager");
         auto d = lib + solution.getTarget<NativeTarget>("driver.cpp");
         d->IncludeDirectoriesOnly = true;
-        //lib += solution.getTarget<NativeTarget>("pvt.cppan.demo.boost.filesystem");
-        lib += solution.getTarget<NativeTarget>("pvt.egorpugin.primitives.command");
-        lib += solution.getTarget<NativeTarget>("pvt.egorpugin.primitives.hash");
-        lib += solution.getTarget<NativeTarget>("pvt.egorpugin.primitives.http");
+        //lib += solution.getTarget<NativeTarget>("org.sw.demo.boost.filesystem");
+        lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.command");
+        lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.hash");
+        lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.http");
 
         auto i = solution.children.find(lib.pkg);
         solution.TargetsToBuild[i->first] = i->second;

@@ -58,6 +58,7 @@ struct PathBase : protected std::vector<PathElement>
     {
     }
 
+    //String toString(char delim = '.') const { return toString(String() += delim); }
     String toString(const String &delim = ".") const
     {
         String p;
@@ -92,6 +93,7 @@ struct PathBase : protected std::vector<PathElement>
     using Base::empty;
     using Base::size;
     using Base::back;
+    using Base::front;
     using Base::clear;
 
     bool operator==(const ThisType &rhs) const
@@ -222,6 +224,7 @@ struct SW_MANAGER_API PackagePath : PathBase<PackagePath>
     Base::value_type getName() const;
 
     using Base::back;
+    using Base::front;
     PackagePath back(const PackagePath &root) const;
 
     PackagePath operator[](ElementType e) const;

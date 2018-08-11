@@ -155,7 +155,10 @@ int main1(int argc, char **argv)
         {
 #ifdef _WIN32
             if (bUseSystemPause)
-                system("pause");
+            {
+                if (IsDebuggerPresent())
+                    system("pause");
+            }
             else
                 message_box(error);
 #endif

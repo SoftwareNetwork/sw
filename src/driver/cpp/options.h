@@ -146,6 +146,7 @@ struct SW_DRIVER_CPP_API Dependency
     //NativeTarget *operator->() const;
     operator bool() const { return target != nullptr; }
     UnresolvedPackage getPackage() const;
+    PackageId getResolvedPackage() const;
 };
 
 using DependencyPtr = std::shared_ptr<Dependency>;

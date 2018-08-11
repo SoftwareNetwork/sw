@@ -640,9 +640,12 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     std::shared_ptr<NativeLinker> Librarian;
     bool ExportAllSymbols = false;
     bool ExportIfStatic = false;
+    path InstallDirectory;
+
     bool ImportFromBazel = false;
     StringSet BazelNames;
-    path InstallDirectory;
+    String BazelTargetFunction;
+    String BazelTargetName;
 
     CLanguageStandard CVersion = CLanguageStandard::Unspecified;
     bool CExtensions = false;

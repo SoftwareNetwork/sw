@@ -133,6 +133,13 @@ UnresolvedPackage Dependency::getPackage() const
     return package;
 }
 
+PackageId Dependency::getResolvedPackage() const
+{
+    if (target)
+        return { target->pkg.ppath, target->pkg.version };
+    throw std::runtime_error("Package is unresolved: " + getPackage().toString());
+}
+
 void NativeCompilerOptionsData::add(const Definition &d)
 {
     auto p = d.d.find('=');

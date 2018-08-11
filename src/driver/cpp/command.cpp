@@ -13,6 +13,18 @@ DECLARE_STATIC_LOGGER(logger, "command");
 namespace sw::driver::cpp
 {
 
+void Command::prepare()
+{
+    // evaluate lazy args
+    for (auto &[pos, f] : callbacks)
+        args[pos] = f();
+
+    // early cleanup
+    callbacks.clear();
+
+    Base::prepare();
+}
+
 path Command::getProgram() const
 {
     path p;
@@ -47,6 +59,12 @@ void Command::setProgram(const std::shared_ptr<Dependency> &d)
 void Command::setProgram(const NativeTarget &t)
 {
     setProgram(t.getOutputFile());
+}
+
+void Command::pushLazyArg(LazyCallback f)
+{
+    callbacks[(int)args.size()] = f;
+    args.push_back("");
 }
 
 }

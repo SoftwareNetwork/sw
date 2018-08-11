@@ -874,7 +874,7 @@ db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDe
     flags = row.flags.value();
     check_version_age(row.updated.value());
     gn = row.groupNumber.value();
-    prefix = row.prefix.value();
+    prefix = (int)row.prefix.value();
 
     return id;
 }
