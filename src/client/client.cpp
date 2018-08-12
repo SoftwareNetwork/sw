@@ -146,7 +146,8 @@ int main1(int argc, char **argv)
         {
             LOG_ERROR(logger, error);
 #ifdef _WIN32
-            system("pause");
+            if (IsDebuggerPresent())
+                system("pause");
 #endif
         }
         r = 1;
@@ -156,8 +157,7 @@ int main1(int argc, char **argv)
 #ifdef _WIN32
             if (bUseSystemPause)
             {
-                if (IsDebuggerPresent())
-                    system("pause");
+                system("pause");
             }
             else
                 message_box(error);

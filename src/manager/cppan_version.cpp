@@ -6,6 +6,8 @@
 
 #include "cppan_version.h"
 
+//#include "resolver.h"
+
 #include <iomanip>
 #include <regex>
 #include <sstream>

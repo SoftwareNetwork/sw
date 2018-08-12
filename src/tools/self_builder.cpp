@@ -225,7 +225,7 @@ int main(int argc, char **argv)
             build.beginBlock();
             build.addLine("s.NamePrefix = \"pub.egorpugin\";");
             build.addLine("SwapAndRestore sr(s.Local, true);");
-            build.addLine("SwapAndRestore sr2(s.SourceDir, path(\"" + normalize_path(data.local_dir) + "\"));");
+            build.addLine("SwapAndRestore sr2(s.SourceDir, \"" + normalize_path(data.local_dir) + "\");");
             build.addLine("build_" + h + "(s);");
             build.endBlock();
             build.addLine();

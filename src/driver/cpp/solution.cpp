@@ -18,6 +18,7 @@
 #include <hash.h>
 #include <settings.h>
 
+#include <primitives/context.h>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
 #include <primitives/pack.h>
@@ -112,6 +113,63 @@ path getImportDefinitionsFile()
 path getImportPchFile()
 {
     return getImportFilePrefix() += ".cpp";
+}
+
+path getPackageHeader(const ExtendedPackageData &p)
+{
+    auto h = p.getDirSrc() / "gen" / "pkg_header.h";
+    //if (fs::exists(h))
+        //return h;
+    auto cfg = p.getDirSrc2() / "sw.cpp";
+    auto f = read_file(cfg);
+    static const std::regex r_header("#pragma sw header on(.*)#pragma sw header off");
+    std::smatch m;
+    // replace with while?
+    const char on[] = "#pragma sw header on";
+    auto pos = f.find(on);
+    if (pos == f.npos)
+        throw std::runtime_error("No header for package: " + p.toString());
+    f = f.substr(pos + sizeof(on));
+    pos = f.find("#pragma sw header off");
+    if (pos == f.npos)
+        throw std::runtime_error("No end in header for package: " + p.toString());
+    f = f.substr(0, pos);
+    //if (std::regex_search(f, m, r_header))
+    {
+        Context ctx;
+        ctx.addLine("#pragma once");
+        ctx.addLine();
+
+        ctx.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");
+        ctx.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + p.ppath.slice(p.prefix).toString() + "\"");
+        ctx.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
+        ctx.addLine("#define THIS_VERSION \"" + p.version.toString() + "\"");
+        ctx.addLine("#define THIS_VERSION_DEPENDENCY \"" + p.version.toString() + "\"_dep");
+        ctx.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
+        ctx.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
+        ctx.addLine();
+
+        ctx.addLine(f);
+        ctx.addLine();
+
+        ctx.addLine("#undef THIS_PREFIX");
+        ctx.addLine("#undef THIS_RELATIVE_PACKAGE_PATH");
+        ctx.addLine("#undef THIS_PACKAGE_PATH");
+        ctx.addLine("#undef THIS_VERSION");
+        ctx.addLine("#undef THIS_VERSION_DEPENDENCY");
+        ctx.addLine("#undef THIS_PACKAGE");
+        ctx.addLine("#undef THIS_PACKAGE_DEPENDENCY");
+        ctx.addLine();
+
+        write_file_if_different(h, ctx.getText());
+    }
+    return h;
+}
+
+UnresolvedPackages getFileDependencies(const path &p)
+{
+    UnresolvedPackages deps;
+    return deps;
 }
 
 ModuleStorage &getModuleStorage()
@@ -981,7 +1039,8 @@ FilesMap Build::build_configs(const Files &files)
 #if defined(CPPAN_OS_WINDOWS)
             &implib,
 #endif
-            &solution](const auto &fn)
+            &solution
+    ](const auto &fn, const auto &deps)
     {
         auto &lib = createTarget(fn);
 #if defined(CPPAN_OS_WINDOWS)
@@ -1006,6 +1065,26 @@ FilesMap Build::build_configs(const Files &files)
                 path of = getImportPchFile();
                 of += ".obj";
                 //C->setOutputFile(of);
+            }
+        }
+
+        if (auto s = lib[fn].template as<CPPSourceFile>())
+        {
+            if (auto c = sf->compiler->as<VisualStudioCompiler>())
+            {
+                c->ForcedIncludeFiles().push_back(p.header);
+            }
+            else if (auto c = sf->compiler->as<ClangClCompiler>())
+            {
+                c->ForcedIncludeFiles().push_back(p.header);
+            }
+            else if (auto c = sf->compiler->as<ClangCompiler>())
+            {
+                c->ForcedIncludeFiles().push_back(p.header);
+            }
+            else if (auto c = sf->compiler->as<GNUCompiler>())
+            {
+                c->ForcedIncludeFiles().push_back(p.header);
             }
         }
 
@@ -1065,13 +1144,15 @@ FilesMap Build::build_configs(const Files &files)
             //#endif
         }
 
-        lib += solution.getTarget<NativeTarget>("manager");
-        auto d = lib + solution.getTarget<NativeTarget>("driver.cpp");
+        lib += solution.getTarget<NativeTarget>("sw.manager");
+        auto d = lib + solution.getTarget<NativeTarget>("sw.driver.cpp");
         d->IncludeDirectoriesOnly = true;
         //lib += solution.getTarget<NativeTarget>("org.sw.demo.boost.filesystem");
         lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.command");
         lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.hash");
         lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.http");
+        for (auto &d : deps)
+            lib += std::make_shared<Dependency>(d);
 
         auto i = solution.children.find(lib.pkg);
         solution.TargetsToBuild[i->first] = i->second;
@@ -1081,7 +1162,45 @@ FilesMap Build::build_configs(const Files &files)
 
     FilesMap r;
     for (auto &fn : files)
-        r[fn] = prepare_config(fn);
+    {
+        UnresolvedPackages udeps = getFileDependencies(fn);
+
+        auto f = read_file(fn);
+        auto abs = fs::absolute(fn);
+        auto o = getDirectories().storage_dir_tmp / "cfg" / sha256_short(abs.u8string());
+        write_file_if_different(o += fn.extension(), f);
+
+
+
+        static const std::regex r_pragma("^#pragma\\s+sw\\s+require\\s+(\\S+)(\\s+(\\S+))?");
+        std::smatch m;
+        String s;
+        int line = 1;
+        while (std::regex_search(f, m, r_pragma))
+        {
+            auto m1 = m[1].str();
+            if (m1 == "header")
+            {
+                auto pref = m.prefix().str();
+                line += std::count(pref.begin(), pref.end(), '\n');
+                auto pkg = extractFromString(m1).resolve();
+                auto h = getPackageHeader(pkg);
+                auto deps = getFileDependencies(h);
+                udeps.insert(deps.begin(), deps.end());
+                s += pref +
+                    "#line " + std::to_string(line) + " \"" + normalize_path(abs) + "\"\n" +
+                    "#include \"" + normalize_path(h) + "\"";
+                f = m.suffix().str();
+            }
+            else
+                udeps.insert(extractFromString(m[3].str()));
+        }
+        s += f;
+        auto o = getDirectories().storage_dir_tmp / "cfg" / sha256_short(abs.u8string());
+        write_file(o += fn.extension(), s);
+
+        r[abs] = prepare_config(o, udeps);
+    }
 
     Solution::execute();
 

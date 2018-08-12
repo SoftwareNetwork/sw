@@ -41,3 +41,9 @@ using namespace sw::driver::cpp;
 
 // user code will use
 // using namespace sw::vN; // where N - version of sw api
+
+// disable custom pragma warnings
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4068)
+#endif

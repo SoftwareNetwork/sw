@@ -10,6 +10,7 @@
 #include "directories.h"
 #include "hash.h"
 #include "lock.h"
+#include "resolver.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -34,11 +35,13 @@ bool UnresolvedPackage::canBe(const PackageId &id) const
     return ppath == id.ppath && range.hasVersion(id.version);
 }
 
-PackageId UnresolvedPackage::resolve()
+ExtendedPackageData UnresolvedPackage::resolve()
 {
-    if (auto v = range.getMaxSatisfyingVersion(); v)
+    return resolve_dependencies({*this})[*this];
+
+    /*if (auto v = range.getMaxSatisfyingVersion(); v)
         return { ppath, v.value() };
-    throw std::runtime_error("Cannot resolve package: " + toString());
+    throw std::runtime_error("Cannot resolve package: " + toString());*/
 }
 
 PackageId::PackageId(const String &target)
