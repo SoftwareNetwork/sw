@@ -85,6 +85,7 @@ TargetBase::TargetBase(const TargetBase &rhs)
     , pkg(rhs.pkg)
     , source(rhs.source)
     , Local(rhs.Local)
+    , UseStorageBinaryDir(rhs.UseStorageBinaryDir)
     , PostponeFileResolving(rhs.PostponeFileResolving)
     , NamePrefix(rhs.NamePrefix)
     , solution(rhs.solution)
@@ -227,6 +228,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->Local = Local;
     t->source = source;
     t->PostponeFileResolving = PostponeFileResolving;
+    t->UseStorageBinaryDir = UseStorageBinaryDir;
     t->IsConfig = IsConfig;
     //auto p = getSolution()->getKnownTarget(t->pkg.ppath);
     //if (!p.target_name.empty())
@@ -560,7 +562,7 @@ NativeExecutedTarget::NativeExecutedTarget(LanguageType L)
 
 void NativeExecutedTarget::init()
 {
-    if (Local)
+    if (Local && !UseStorageBinaryDir)
     {
         BinaryDir = getTargetsDir() / pkg.ppath.toString();
     }
@@ -733,7 +735,7 @@ void NativeExecutedTarget::setOutputFile()
 path NativeExecutedTarget::getOutputFileName(const path &root) const
 {
     path p;
-    if (Local)
+    if (Local && !UseStorageBinaryDir)
     {
         if (IsConfig)
             p = getTargetsDir() / pkg.ppath.toString() / "out" / pkg.ppath.toString();
@@ -1063,6 +1065,12 @@ Commands NativeExecutedTarget::getCommands() const
     if (already_built)
         return cmds;
 
+    if (pkg.ppath.toString().find("sqlite2cpp") != -1)
+    {
+        volatile int a = 5;
+        a++;
+    }
+
     /*if (pkg.ppath.toString().find("SystemZ") != -1)
     {
         volatile int a = 5;
@@ -1207,6 +1215,7 @@ Commands NativeExecutedTarget::getCommands() const
                             copy_cmd->addInput(dt->getOutputFile());
                             copy_cmd->addOutput(o);
                             copy_cmd->dependencies.insert(c);
+                            copy_cmd->name = "copy command: " + normalize_path(o);
                             cmds.insert(copy_cmd);
                         }
                 }
@@ -1536,6 +1545,12 @@ void NativeExecutedTarget::detectLicenseFile()
 bool NativeExecutedTarget::prepare()
 {
     //CHECK_PREPARED_TARGET;
+
+    if (pkg.ppath.toString().find("sqlite2cpp") != -1)
+    {
+        volatile int a = 5;
+        a++;
+    }
 
     switch (prepare_pass)
     {
@@ -1945,6 +1960,8 @@ bool NativeExecutedTarget::prepare()
                 if (d->target == this)
                     continue;
                 if (d->Dummy)
+                    continue;
+                if (d->IncludeDirectoriesOnly)
                     continue;
 
                 auto dt = ((NativeExecutedTarget*)d->target);

@@ -33,5 +33,6 @@ void build_self(Solution &s)
     }
     SwapAndRestore sr(s.Local, true);
     SwapAndRestore sr2(s.SourceDir, "d:/dev/cppan2/client");
+    SwapAndRestore sr3(s.UseStorageBinaryDir, true);
     build_self2(s);
 }

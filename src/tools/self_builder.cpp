@@ -226,6 +226,7 @@ int main(int argc, char **argv)
             build.addLine("s.NamePrefix = \"pub.egorpugin\";");
             build.addLine("SwapAndRestore sr(s.Local, true);");
             build.addLine("SwapAndRestore sr2(s.SourceDir, \"" + normalize_path(data.local_dir) + "\");");
+            build.addLine("SwapAndRestore sr3(s.UseStorageBinaryDir, true);");
             build.addLine("build_" + h + "(s);");
             build.endBlock();
             build.addLine();
@@ -247,6 +248,7 @@ int main(int argc, char **argv)
         ctx.addLine("#define THIS_VERSION_DEPENDENCY \"" + r.version.toString() + "\"_dep");
         ctx.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
         ctx.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
+        ctx.addLine("#define configure configure_" + r.getVariableName());
         ctx.addLine("#define build build_" + r.getVariableName());
         if (data.has_checks)
             ctx.addLine("#define check check_" + r.getVariableName());
@@ -273,6 +275,7 @@ int main(int argc, char **argv)
 
     ctx.addLine("#undef build");
     ctx.addLine("#undef check");
+    ctx.addLine("#undef configure");
     ctx.addLine("#undef SW_PRAGMA_HEADER");
     ctx.addLine("#undef THIS_PREFIX");
     ctx.addLine("#undef THIS_RELATIVE_PACKAGE_PATH");

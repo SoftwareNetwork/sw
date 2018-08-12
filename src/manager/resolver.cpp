@@ -6,6 +6,7 @@
 
 #include "resolver.h"
 
+#include "api.h"
 #include "database.h"
 #include "directories.h"
 #include "exceptions.h"
@@ -26,9 +27,6 @@
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "resolver");
-
-#define CURRENT_API_LEVEL 1
-#define DEPENDENCIES_NODE "dependencies"
 
 TYPED_EXCEPTION(LocalDbHashException);
 TYPED_EXCEPTION(DependencyNotResolved);
@@ -90,7 +88,7 @@ ResolvedPackagesMap resolve_dependencies(const UnresolvedPackages &deps)
     return r.resolved_packages;
 }
 
-Packages resolveAllDependencies(const UnresolvedPackages &deps)
+std::unordered_set<ExtendedPackageData> resolveAllDependencies(const UnresolvedPackages &deps)
 {
     Resolver r;
     r.resolve_dependencies(deps);
@@ -103,11 +101,11 @@ void resolve_and_download(const UnresolvedPackage &p, const path &fn)
     r.resolve_and_download(p, fn);
 }
 
-Packages Resolver::getDownloadDependencies() const
+std::unordered_set<ExtendedPackageData> Resolver::getDownloadDependencies() const
 {
-    Packages s;
+    std::unordered_set<ExtendedPackageData> s;
     for (auto &dl : download_dependencies_)
-        s.insert(dl.first);
+        s.insert(dl.second);
     return s;
 }
 
@@ -122,6 +120,7 @@ std::unordered_map<Package, PackageVersionGroupNumber> Resolver::getDownloadDepe
 void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies)
 {
     UnresolvedPackages deps;
+    UnresolvedPackages known_deps;
 
     // remove some packages
     for (auto &d : dependencies)
@@ -135,6 +134,7 @@ void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies)
         if (i != getPackageStore().resolved_packages.end())
         {
             resolved_packages[d] = i->second;
+            known_deps.insert(d);
             continue;
         }
 
@@ -145,6 +145,10 @@ void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies)
         return;
 
     resolve(deps, [this] { download_and_unpack(); });
+
+    // add back known_deps
+    for (auto &d : known_deps)
+        download_dependencies_[resolved_packages[d]] = resolved_packages[d];
 
     // mark packages as resolved
     for (auto &d : deps)
@@ -403,7 +407,7 @@ void Resolver::download_and_unpack()
         // also because this download count can be easily abused
         e.push([this]()
         {
-            if (!current_remote)
+            /*if (!current_remote)
                 return;
 
             ptree request;
@@ -426,7 +430,7 @@ void Resolver::download_and_unpack()
             }
             catch (...)
             {
-            }
+            }*/
         });
     }
 
@@ -435,7 +439,7 @@ void Resolver::download_and_unpack()
     {
         e.push([this]
         {
-            try
+            /*try
             {
                 HttpRequest req = httpSettings;
                 req.type = HttpRequest::Post;
@@ -445,7 +449,7 @@ void Resolver::download_and_unpack()
             }
             catch (...)
             {
-            }
+            }*/
         });
     };
 
@@ -454,15 +458,9 @@ void Resolver::download_and_unpack()
 
 Resolver::Dependencies getDependenciesFromRemote(const UnresolvedPackages &deps, const Remote *current_remote)
 {
-    // prepare request
-    ptree request;
-    ptree dependency_tree;
-    for (auto &d : deps)
-    {
-        ptree version;
-        version.put("version", d.ppath.is_pvt() ? d.range.toStringV1() : d.range.toString());
-        request.add_child(ptree::path_type(d.ppath.toString(), '|'), version);
-    }
+    Api api(*current_remote);
+
+    IdDependencies id_deps;
 
     LOG_INFO(logger, "Requesting dependency list... ");
     {
@@ -471,76 +469,18 @@ Resolver::Dependencies getDependenciesFromRemote(const UnresolvedPackages &deps,
         int n_tries = 3;
         while (1)
         {
-            HttpResponse resp;
             try
             {
-                HttpRequest req = httpSettings;
-                req.connect_timeout = ct;
-                req.timeout = t;
-                req.type = HttpRequest::Post;
-                req.url = current_remote->url;
-                if (req.url.back() != '/')
-                    req.url += '/';
-                req.url += "api/find_dependencies";
-                req.content_type = "application/json";
-                req.data = ptree2string(request);
-                resp = url_request(req);
-                if (resp.http_code != 200)
-                    throw std::runtime_error("Cannot get deps");
-                dependency_tree = string2ptree(resp.response);
+                id_deps = api.resolvePackages(deps);
                 break;
             }
             catch (...)
             {
-                if (--n_tries == 0)
-                {
-                    switch (resp.http_code)
-                    {
-                    case 200:
-                    {
-                        dependency_tree = string2ptree(resp.response);
-                        auto e = dependency_tree.find("error");
-                        LOG_WARN(logger, e->second.get_value<String>());
-                    }
-                    break;
-                    case 0:
-                        LOG_WARN(logger, "Could not connect to server");
-                        break;
-                    default:
-                        LOG_WARN(logger, "Error code: " + std::to_string(resp.http_code));
-                        break;
-                    }
-                    throw;
-                }
-                else if (resp.http_code == 0)
-                {
-                    ct /= 2;
-                    t /= 2;
-                }
+                throw;
                 LOG_INFO(logger, "Retrying... ");
             }
         }
     }
-
-    // read deps urls, download them, unpack
-    int api = 0;
-    if (dependency_tree.find("api") != dependency_tree.not_found())
-        api = dependency_tree.get<int>("api");
-
-    auto e = dependency_tree.find("error");
-    if (e != dependency_tree.not_found())
-        throw std::runtime_error(e->second.get_value<String>());
-
-    auto info = dependency_tree.find("info");
-    if (info != dependency_tree.not_found())
-        LOG_INFO(logger, info->second.get_value<String>());
-
-    if (api == 0)
-        throw std::runtime_error("API version is missing in the response");
-    if (api > CURRENT_API_LEVEL)
-        throw std::runtime_error("Server uses more new API version. Please, upgrade the cppan client from site or via --self-upgrade");
-    if (api < CURRENT_API_LEVEL - 1)
-        throw std::runtime_error("Your client's API is newer than server's. Please, wait for server upgrade");
 
     // dependencies were received without error
 
@@ -550,36 +490,11 @@ Resolver::Dependencies getDependenciesFromRemote(const UnresolvedPackages &deps,
         dups[d.ppath]++;
 
     // set id dependencies
-    IdDependencies id_deps;
     int unresolved = (int)deps.size();
-    auto &remote_packages = dependency_tree.get_child("packages");
-    for (auto &v : remote_packages)
+    for (auto &v : id_deps)
     {
-        auto id = v.second.get<db::PackageVersionId>("id");
-
-        DownloadDependency d;
-        d.ppath = v.first;
-        d.version = v.second.get<String>("version");
-        d.flags = decltype(d.flags)(v.second.get<uint64_t>("flags"));
-        // TODO: remove later sha256 field
-        d.hash = v.second.get<String>("sha256", "empty_hash");
-        if (d.hash == "empty_hash")
-            d.hash = v.second.get<String>("hash", "empty_hash");
-        d.group_number = v.second.get<PackageVersionGroupNumber>("gn", 0);
-        d.prefix = v.second.get<int>("prefix", 0);
-
-        if (v.second.find(DEPENDENCIES_NODE) != v.second.not_found())
-        {
-            std::unordered_set<db::PackageVersionId> idx;
-            for (auto &tree_dep : v.second.get_child(DEPENDENCIES_NODE))
-                idx.insert(tree_dep.second.get_value<db::PackageVersionId>());
-            d.setDependencyIds(idx);
-        }
-
-        id_deps[id] = d;
-
-        unresolved -= dups[d.ppath];
-        dups[d.ppath] = 0;
+        unresolved -= dups[v.second.ppath];
+        dups[v.second.ppath] = 0;
     }
 
     if (unresolved > 0)

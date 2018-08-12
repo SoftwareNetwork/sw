@@ -76,7 +76,7 @@ public:
     void resolve_dependencies(const UnresolvedPackages &deps);
     void resolve_and_download(const UnresolvedPackage &p, const path &fn);
 
-    Packages getDownloadDependencies() const;
+    std::unordered_set<ExtendedPackageData> getDownloadDependencies() const;
     std::unordered_map<Package, PackageVersionGroupNumber> getDownloadDependenciesWithGroupNumbers() const;
 
 private:
@@ -100,7 +100,7 @@ SW_MANAGER_API
 ResolvedPackagesMap resolve_dependencies(const UnresolvedPackages &deps);
 
 SW_MANAGER_API
-Packages resolveAllDependencies(const UnresolvedPackages &deps);
+std::unordered_set<ExtendedPackageData> resolveAllDependencies(const UnresolvedPackages &deps);
 
 SW_MANAGER_API
 PackageStore &getPackageStore();

@@ -463,7 +463,12 @@ void ServiceDatabase::removeInstalledPackage(const PackageId &p) const
 String ServiceDatabase::getInstalledPackageHash(const PackageId &p) const
 {
     const auto ipkgs = db::service::InstalledPackage{};
-    auto q = (*db)(select(ipkgs.hash).from(ipkgs).where(ipkgs.path == p.ppath.toString() and ipkgs.version == p.version.toString()));
+    auto q = (*db)(
+        custom_query(sqlpp::verbatim("SELECT hash FROM installed_package WHERE path = '" +
+            p.ppath.toString() + "'  COLLATE NOCASE AND version = '" + p.version.toString() + "'"))
+        .with_result_type_of(select(ipkgs.hash).from(ipkgs))
+        );
+    //auto q = (*db)(select(ipkgs.hash).from(ipkgs).where(ipkgs.path == p.ppath.toString() and ipkgs.version == p.version.toString()));
     if (q.empty())
         return {};
     return q.front().hash.value();
@@ -472,7 +477,12 @@ String ServiceDatabase::getInstalledPackageHash(const PackageId &p) const
 int64_t ServiceDatabase::getInstalledPackageId(const PackageId &p) const
 {
     const auto ipkgs = db::service::InstalledPackage{};
-    auto q = (*db)(select(ipkgs.installedPackageId).from(ipkgs).where(ipkgs.path == p.ppath.toString() and ipkgs.version == p.version.toString()));
+    auto q = (*db)(
+        custom_query(sqlpp::verbatim("SELECT installed_package_id FROM installed_package WHERE path = '" +
+            p.ppath.toString() + "' COLLATE NOCASE AND version = '" + p.version.toString() + "'"))
+        .with_result_type_of(select(ipkgs.installedPackageId).from(ipkgs))
+        );
+    //auto q = (*db)(select(ipkgs.installedPackageId).from(ipkgs).where(ipkgs.path == p.ppath.toString() and ipkgs.version == p.version.toString()));
     if (q.empty())
         return 0;
     return q.front().installedPackageId.value();
@@ -797,7 +807,11 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
         DownloadDependency project;
         project.ppath = dep.ppath;
         project.range = dep.range;
-        auto q = (*db)(select(pkgs.packageId).from(pkgs).where(pkgs.path == dep.ppath.toString()));
+        auto q = (*db)(
+            custom_query(sqlpp::verbatim("SELECT package_id FROM package WHERE path = '" + dep.ppath.toString() + "' COLLATE NOCASE"))
+            .with_result_type_of(select(pkgs.packageId).from(pkgs))
+            );
+        //auto q = (*db)(select(pkgs.packageId).from(pkgs).where(pkgs.path == dep.ppath.toString()));
         if (q.empty())
             // TODO: replace later with typed exception, so client will try to fetch same package from server
             throw std::runtime_error("PackageId '" + project.ppath.toString() + "' not found.");
@@ -889,8 +903,8 @@ PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(db::Pack
 
     for (const auto &row : (*db)(
         select(pkgs.packageId, pkgs.path, pkgdeps.versionRange)
-        .from(pkgdeps.join(pkgs).on(pkgdeps.packageVersionId == project_version_id))
-        .unconditionally()))
+        .from(pkgdeps.join(pkgs).on(pkgdeps.packageId == pkgs.packageId))
+        .where(pkgdeps.packageVersionId == project_version_id)))
     {
         DownloadDependency dependency;
         dependency.id = row.packageId.value();

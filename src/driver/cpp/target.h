@@ -165,6 +165,7 @@ struct SW_DRIVER_CPP_API TargetBase : virtual Node, LanguageStorage, ProjectDire
     // flags
     /// local projects, not fetched
     bool Local = true;
+    bool UseStorageBinaryDir = false;
     bool PostponeFileResolving = false;
     bool IsConfig = false;
 

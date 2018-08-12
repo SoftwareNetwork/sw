@@ -65,3 +65,16 @@ private:
 using IdDependencies = DownloadDependency::IdDependencies;
 
 }
+
+namespace std
+{
+
+template<> struct hash<sw::ExtendedPackageData>
+{
+    size_t operator()(const sw::ExtendedPackageData &p) const
+    {
+        return std::hash<sw::PackageId>()(p);
+    }
+};
+
+}

@@ -5,11 +5,24 @@
 
 #include <system_error>
 
+#define GRPC_CALL_PREPARE(resptype)                                                    \
+    context->set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(5)); \
+    resptype response
+
 #define GRPC_CALL_INTERNAL(svc, m, resptype, t) \
-    resptype response;                          \
     check_result(svc->m(context.get(), request, &response), *context, #m, t)
-#define GRPC_CALL(svc, m, resptype) GRPC_CALL_INTERNAL(svc, m, resptype, false)
-#define GRPC_CALL_THROWS(svc, m, resptype) GRPC_CALL_INTERNAL(svc, m, resptype, true)
+
+#define GRPC_CALL(svc, m, resptype) \
+    GRPC_CALL_PREPARE(resptype);    \
+    GRPC_CALL_INTERNAL(svc, m, resptype, false)
+
+#define GRPC_CALL_THROWS(svc, m, resptype) \
+    GRPC_CALL_PREPARE(resptype);           \
+    GRPC_CALL_INTERNAL(svc, m, resptype, true)
+
+#define IF_GRPC_CALL(svc, m, resptype) \
+    GRPC_CALL_PREPARE(resptype);       \
+    if (GRPC_CALL_INTERNAL(svc, m, resptype, false))
 
 #define SW_GRPC_METADATA_AUTH_USER "auth-user"
 #define SW_GRPC_METADATA_AUTH_TOKEN "auth-token"

@@ -166,10 +166,32 @@ path getPackageHeader(const ExtendedPackageData &p)
     return h;
 }
 
-UnresolvedPackages getFileDependencies(const path &p)
+std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const path &p)
 {
-    UnresolvedPackages deps;
-    return deps;
+    UnresolvedPackages udeps;
+    FilesOrdered headers;
+
+    auto f = read_file(p);
+    static const std::regex r_pragma("^#pragma\\s+sw\\s+require\\s+(\\S+)(\\s+(\\S+))?");
+    std::smatch m;
+    while (std::regex_search(f, m, r_pragma))
+    {
+        auto m1 = m[1].str();
+        if (m1 == "header")
+        {
+            auto pkg = extractFromString(m[3].str()).resolve();
+            auto h = getPackageHeader(pkg);
+            auto [headers2,udeps2] = getFileDependencies(h);
+            headers.insert(headers.end(), headers2.begin(), headers2.end());
+            udeps.insert(udeps2.begin(), udeps2.end());
+            headers.push_back(h);
+        }
+        else
+            udeps.insert(extractFromString(m1));
+        f = m.suffix().str();
+    }
+
+    return { headers, udeps };
 }
 
 ModuleStorage &getModuleStorage()
@@ -183,7 +205,7 @@ Solution::Solution()
 {
     Checks.solution = this;
 
-    SourceDir = current_thread_path();
+    SourceDir = fs::current_path();
     BinaryDir = SourceDir / ".sw";
 }
 
@@ -684,7 +706,7 @@ void Solution::prepare()
                 continue;
             auto dll = dlls[f];
 
-            NamePrefix = p.ppath.slice(0, 2);
+            NamePrefix = p.ppath.slice(0, p.prefix);
             getModuleStorage(base_ptr).get(dll).check(Checks);
 
             /*auto &c = b2.solutions[0].getChildren();
@@ -707,7 +729,7 @@ void Solution::prepare()
                 continue;
             auto dll = dlls[f];
 
-            NamePrefix = p.ppath.slice(0, 2);
+            NamePrefix = p.ppath.slice(0, p.prefix);
             //ScopedValue<decltype(children)> c(children);
             getModuleStorage(base_ptr).get(dll).build(*this);
 
@@ -741,7 +763,7 @@ void Solution::prepare()
             //b.silent = true;
             b2.Local = false;
             //b2.knownTargets = knownTargets;
-            b2.NamePrefix = p.ppath.slice(0, 2);
+            b2.NamePrefix = p.ppath.slice(0, p.prefix);
             //b2.load(dll);
 
             auto &c = b2.solutions[0].getChildren();
@@ -817,19 +839,21 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
         {
             if (auto r = getPackageStore().isPackageResolved(up); r)
             {
-                dptr->target = &const_cast<Solution*>(this)->getTarget<NativeTarget>(PackageId(r.value()));
-                rm.insert(up);
-            }
-            else
-            {
-                for (const auto &[p,t] : getChildren())
+                auto i = children.find(r.value());
+                if (i != children.end())
                 {
-                    if (up.canBe(p))
-                    {
-                        dptr->target = (NativeTarget*)t.get();
-                        rm.insert(up);
-                        break;
-                    }
+                    dptr->target = (NativeTarget*)i->second.get();
+                    rm.insert(up);
+                    continue;
+                }
+            }
+            for (const auto &[p,t] : getChildren())
+            {
+                if (up.canBe(p))
+                {
+                    dptr->target = (NativeTarget*)t.get();
+                    rm.insert(up);
+                    break;
                 }
             }
         }
@@ -1040,7 +1064,7 @@ FilesMap Build::build_configs(const Files &files)
             &implib,
 #endif
             &solution
-    ](const auto &fn, const auto &deps)
+    ](const auto &fn)
     {
         auto &lib = createTarget(fn);
 #if defined(CPPAN_OS_WINDOWS)
@@ -1068,23 +1092,28 @@ FilesMap Build::build_configs(const Files &files)
             }
         }
 
-        if (auto s = lib[fn].template as<CPPSourceFile>())
+        auto [headers, udeps] = getFileDependencies(fn);
+
+        for (auto &h : headers)
         {
-            if (auto c = sf->compiler->as<VisualStudioCompiler>())
+            if (auto sf = lib[fn].template as<CPPSourceFile>())
             {
-                c->ForcedIncludeFiles().push_back(p.header);
-            }
-            else if (auto c = sf->compiler->as<ClangClCompiler>())
-            {
-                c->ForcedIncludeFiles().push_back(p.header);
-            }
-            else if (auto c = sf->compiler->as<ClangCompiler>())
-            {
-                c->ForcedIncludeFiles().push_back(p.header);
-            }
-            else if (auto c = sf->compiler->as<GNUCompiler>())
-            {
-                c->ForcedIncludeFiles().push_back(p.header);
+                if (auto c = sf->compiler->as<VisualStudioCompiler>())
+                {
+                    c->ForcedIncludeFiles().push_back(h);
+                }
+                else if (auto c = sf->compiler->as<ClangClCompiler>())
+                {
+                    c->ForcedIncludeFiles().push_back(h);
+                }
+                else if (auto c = sf->compiler->as<ClangCompiler>())
+                {
+                    c->ForcedIncludeFiles().push_back(h);
+                }
+                else if (auto c = sf->compiler->as<GNUCompiler>())
+                {
+                    c->ForcedIncludeFiles().push_back(h);
+                }
             }
         }
 
@@ -1151,7 +1180,7 @@ FilesMap Build::build_configs(const Files &files)
         lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.command");
         lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.hash");
         lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.http");
-        for (auto &d : deps)
+        for (auto &d : udeps)
             lib += std::make_shared<Dependency>(d);
 
         auto i = solution.children.find(lib.pkg);
@@ -1162,45 +1191,7 @@ FilesMap Build::build_configs(const Files &files)
 
     FilesMap r;
     for (auto &fn : files)
-    {
-        UnresolvedPackages udeps = getFileDependencies(fn);
-
-        auto f = read_file(fn);
-        auto abs = fs::absolute(fn);
-        auto o = getDirectories().storage_dir_tmp / "cfg" / sha256_short(abs.u8string());
-        write_file_if_different(o += fn.extension(), f);
-
-
-
-        static const std::regex r_pragma("^#pragma\\s+sw\\s+require\\s+(\\S+)(\\s+(\\S+))?");
-        std::smatch m;
-        String s;
-        int line = 1;
-        while (std::regex_search(f, m, r_pragma))
-        {
-            auto m1 = m[1].str();
-            if (m1 == "header")
-            {
-                auto pref = m.prefix().str();
-                line += std::count(pref.begin(), pref.end(), '\n');
-                auto pkg = extractFromString(m1).resolve();
-                auto h = getPackageHeader(pkg);
-                auto deps = getFileDependencies(h);
-                udeps.insert(deps.begin(), deps.end());
-                s += pref +
-                    "#line " + std::to_string(line) + " \"" + normalize_path(abs) + "\"\n" +
-                    "#include \"" + normalize_path(h) + "\"";
-                f = m.suffix().str();
-            }
-            else
-                udeps.insert(extractFromString(m[3].str()));
-        }
-        s += f;
-        auto o = getDirectories().storage_dir_tmp / "cfg" / sha256_short(abs.u8string());
-        write_file(o += fn.extension(), s);
-
-        r[abs] = prepare_config(o, udeps);
-    }
+        r[fn] = prepare_config(fn);
 
     Solution::execute();
 
@@ -1326,7 +1317,7 @@ void Build::build_package(const String &s)
                 continue;
             auto dll = dlls[f];
 
-            s.NamePrefix = p.ppath.slice(0, 2);
+            s.NamePrefix = p.ppath.slice(0, p.prefix);
             getModuleStorage(base_ptr).get(dll).check(s.Checks);
         }
     }
@@ -1343,7 +1334,7 @@ void Build::build_package(const String &s)
                 continue;
             auto dll = dlls[f];
 
-            s.NamePrefix = p.ppath.slice(0, 2);
+            s.NamePrefix = p.ppath.slice(0, p.prefix);
             //ScopedValue<decltype(s.children)> c(s.children);
             getModuleStorage(base_ptr).get(dll).build(s);
         }
@@ -1486,6 +1477,7 @@ const Module &ModuleStorage::get(const path &dll)
 }
 
 Module::Module(const path &dll)
+try
     : module(dll.wstring())
 {
     if (module.has("build"))
@@ -1494,6 +1486,11 @@ Module::Module(const path &dll)
         check = module.get<void(Checker&)>("check");
     if (module.has("configure"))
         configure = module.get<void(Solution&)>("configure");
+}
+catch (...)
+{
+    LOG_ERROR(logger, "Module " + normalize_path(dll) + " is in bad shape. Will rebuild on the next run.");
+    fs::remove(dll);
 }
 
 void Module::build(Solution &s) const

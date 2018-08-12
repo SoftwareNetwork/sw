@@ -72,9 +72,9 @@ bool CommandStorage::isOutdated(const sw::builder::Command &c)
     // always check program and all deps are known
     changed = File(c.program).isChanged();
     for (auto &i : c.inputs)
-        changed = File(i).isChanged();
+        changed |= File(i).isChanged();
     for (auto &i : c.outputs)
-        changed = File(i).isChanged();
+        changed |= File(i).isChanged();
 
     auto k = std::hash<sw::builder::Command>()(c);
     auto r = commands.insert_ptr(k, 0);
@@ -138,7 +138,8 @@ size_t Command::getHash() const
     auto h = std::hash<path>()(program);
     for (auto &a : args)
         h ^= std::hash<String>()(a);
-    //hash_combine(h, std::hash<String>()(a));
+        //hash_combine(h, std::hash<String>()(a));
+    // add wdir, env?
     return hash = h;
 }
 
@@ -493,6 +494,18 @@ bool Command::needsResponseFile() const
 
 String Command::getName(bool short_name) const
 {
+    if (short_name)
+    {
+        if (name_short.empty())
+        {
+            if (!outputs.empty())
+            {
+                return "\"" + normalize_path(*outputs.begin()) + "\"";
+            }
+            return std::to_string((uint64_t)this);
+        }
+        return "\"" + name_short + "\"";
+    }
     if (name.empty())
     {
         if (!outputs.empty())
@@ -506,7 +519,7 @@ String Command::getName(bool short_name) const
         return std::to_string((uint64_t)this);
     }
     //return "Building: \"" + (short_name ? name_short : name) + "\"";
-    return "\"" + (short_name ? name_short : name) + "\"";
+    return "\"" + name + "\"";
 }
 
 void Command::printLog() const

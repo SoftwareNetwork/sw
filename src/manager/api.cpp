@@ -85,16 +85,19 @@ IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
     for (auto &pkg : response.packages())
     {
         DownloadDependency d;
+        d.id = pkg.id();
         d.ppath = pkg.package().path();
         d.version = pkg.package().version();
         d.flags = pkg.flags();
         d.hash = pkg.hash();
         d.group_number = pkg.group_number();
+        d.prefix = pkg.prefix();
 
         std::unordered_set<db::PackageVersionId> idx;
         for (auto &tree_dep : pkg.dependencies())
             idx.insert(tree_dep.id());
         d.setDependencyIds(idx);
+        id_deps[d.id] = d;
     }
     return id_deps;
 }

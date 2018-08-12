@@ -27,9 +27,9 @@ Remotes get_default_remotes()
     {
         Remote r;
         r.name = DEFAULT_REMOTE_NAME;
-        r.url = "https://cppan.org/";
-        r.data_dir = "data";
-        r.primary_sources.push_back(&Remote::github_source_provider);
+        r.url = "http://localhost:55555/";
+        r.data_dir = "data/v2";
+        r.primary_sources.push_back(&Remote::cppan2_source_provider);
         rms.push_back(r);
     };
     return rms;
@@ -107,9 +107,10 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
         auto p = url.find("://");
         auto host = url.substr(p == url.npos ? 0 : p + 3);
         host = host.substr(0, host.find('/'));
+        host = host.substr(0, host.find(':'));
 
         grpc::SslCredentialsOptions ssl_options;
-        ssl_options.pem_root_certs = read_file("server.crt");
+        ssl_options.pem_root_certs = read_file("d:\\dev\\cppan2\\bin\\server.crt");
 
         auto creds = grpc::SslCredentials(ssl_options);
         channel = grpc::CreateChannel(host, creds);
