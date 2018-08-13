@@ -315,10 +315,10 @@ void ServiceDatabase::checkForUpdates() const
     {
         // if there are updates, set next check (and notification) in 20 mins
         // to issue a message every run
-        if (Settings::get_user_settings().checkForUpdates())
+        /*if (Settings::get_user_settings().checkForUpdates())
             setLastClientUpdateCheck(last_check + 20min);
         else
-            setLastClientUpdateCheck();
+            setLastClientUpdateCheck();*/
     }
     catch (...)
     {

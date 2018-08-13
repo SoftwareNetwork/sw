@@ -97,17 +97,17 @@ int main(int argc, char **argv)
     primitives::minidump::v_major = VERSION_MAJOR;
     primitives::minidump::v_minor = VERSION_MINOR;
     primitives::minidump::v_patch = VERSION_PATCH;
-    primitives::executor::bExecutorUseSEH = true;
+    //primitives::executor::bExecutorUseSEH = true;
 
-    __try
-    {
+    /*__try
+    {*/
         auto r = main1(argc, __argv);
         return r;
-    }
+    /*}
     __except (PRIMITIVES_GENERATE_DUMP)
     {
         return 1;
-    }
+    }*/
 #endif
 }
 
@@ -366,7 +366,7 @@ SUBCOMMAND_DECL(init)
 
 SUBCOMMAND_DECL_URI(sdir)
 {
-    /*args::ArgumentParser parser("");
+    args::ArgumentParser parser("");
     parser.helpParams.showTerminator = false;
     args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
     args::Positional<std::string> package(parser, "package", "Opens package source dir");
@@ -374,7 +374,7 @@ SUBCOMMAND_DECL_URI(sdir)
     auto next = parser.ParseArgs(beginargs, endargs);
     if (package)
     {
-        auto p = extractFromString(package.Get());
+        auto p = extractFromString(package.Get()).resolve();
 
         auto &sdb = getServiceDatabase();
 #ifdef _WIN32
@@ -392,7 +392,7 @@ SUBCOMMAND_DECL_URI(sdir)
             message_box("Package '" + p.target_name + "' not installed");
         }
 #endif
-    }*/
+    }
 }
 
 SUBCOMMAND_DECL_URI(install)

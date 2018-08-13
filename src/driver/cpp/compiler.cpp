@@ -849,7 +849,7 @@ std::shared_ptr<builder::Command> VisualStudioASMCompiler::getCommand() const
         return nullptr;
 
     //c->out.capture = true;
-    c->base = this;
+    c->base = clone();
 
     getCommandLineOptions<VisualStudioAssemblerOptions>(c.get(), *this);
     iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
@@ -857,7 +857,7 @@ std::shared_ptr<builder::Command> VisualStudioASMCompiler::getCommand() const
     return cmd = c;
 }
 
-std::shared_ptr<NativeCompiler> VisualStudioASMCompiler::clone() const
+std::shared_ptr<Program> VisualStudioASMCompiler::clone() const
 {
     return std::make_shared<VisualStudioASMCompiler>(*this);
 }
@@ -944,7 +944,7 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
         return nullptr;
 
     //c->out.capture = true;
-    c->base = this;
+    c->base = clone();
 
     getCommandLineOptions<VisualStudioCompilerOptions>(c.get(), *this);
     iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
@@ -970,7 +970,7 @@ Files VisualStudioCompiler::getGeneratedDirs() const
     return f;
 }
 
-std::shared_ptr<NativeCompiler> VisualStudioCCompiler::clone() const
+std::shared_ptr<Program> VisualStudioCCompiler::clone() const
 {
     return std::make_shared<VisualStudioCCompiler>(*this);
 }
@@ -981,7 +981,7 @@ void VisualStudioCCompiler::setSourceFile(const path &input_file, path &output_f
     VisualStudioCompiler::setOutputFile(output_file);
 }
 
-std::shared_ptr<NativeCompiler> VisualStudioCPPCompiler::clone() const
+std::shared_ptr<Program> VisualStudioCPPCompiler::clone() const
 {
     return std::make_shared<VisualStudioCPPCompiler>(*this);
 }
@@ -1060,7 +1060,7 @@ std::shared_ptr<builder::Command> ClangCompiler::getCommand() const
         return nullptr;
 
     //c->out.capture = true;
-    c->base = this;
+    c->base = clone();
 
     getCommandLineOptions<ClangOptions>(c.get(), *this);
     iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
@@ -1080,7 +1080,7 @@ Files ClangCompiler::getGeneratedDirs() const
     return f;
 }
 
-std::shared_ptr<NativeCompiler> ClangCCompiler::clone() const
+std::shared_ptr<Program> ClangCCompiler::clone() const
 {
     return std::make_shared<ClangCCompiler>(*this);
 }
@@ -1091,7 +1091,7 @@ void ClangCCompiler::setSourceFile(const path &input_file, path &output_file)
     ClangCompiler::setOutputFile(output_file);
 }
 
-std::shared_ptr<NativeCompiler> ClangCPPCompiler::clone() const
+std::shared_ptr<Program> ClangCPPCompiler::clone() const
 {
     return std::make_shared<ClangCPPCompiler>(*this);
 }
@@ -1165,7 +1165,7 @@ std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
         return nullptr;
 
     //c->out.capture = true;
-    c->base = this;
+    c->base = clone();
 
     getCommandLineOptions<VisualStudioCompilerOptions>(c.get(), *this);
     getCommandLineOptions<ClangClOptions>(c.get(), *this, "-Xclang");
@@ -1186,12 +1186,12 @@ Files ClangClCompiler::getGeneratedDirs() const
     return f;
 }
 
-std::shared_ptr<NativeCompiler> ClangClCCompiler::clone() const
+std::shared_ptr<Program> ClangClCCompiler::clone() const
 {
     return std::make_shared<ClangClCCompiler>(*this);
 }
 
-std::shared_ptr<NativeCompiler> ClangClCPPCompiler::clone() const
+std::shared_ptr<Program> ClangClCPPCompiler::clone() const
 {
     return std::make_shared<ClangClCPPCompiler>(*this);
 }
@@ -1280,7 +1280,7 @@ std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
         return nullptr;
 
     //c->out.capture = true;
-    c->base = this;
+    c->base = clone();
 
     getCommandLineOptions<GNUOptions>(c.get(), *this);
     iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
@@ -1301,7 +1301,7 @@ Files GNUCompiler::getGeneratedDirs() const
     return f;
 }
 
-std::shared_ptr<NativeCompiler> GNUCCompiler::clone() const
+std::shared_ptr<Program> GNUCCompiler::clone() const
 {
     return std::make_shared<GNUCCompiler>(*this);
 }
@@ -1312,7 +1312,7 @@ void GNUCCompiler::setSourceFile(const path &input_file, path &output_file)
     GNUCompiler::setOutputFile(output_file);
 }
 
-std::shared_ptr<NativeCompiler> GNUCPPCompiler::clone() const
+std::shared_ptr<Program> GNUCPPCompiler::clone() const
 {
     return std::make_shared<GNUCPPCompiler>(*this);
 }
@@ -1406,7 +1406,7 @@ std::shared_ptr<builder::Command> VisualStudioLibraryTool::getCommand() const
 
     auto c = std::make_shared<driver::cpp::Command>();
     //c->out.capture = true;
-    c->base = this;
+    c->base = clone();
     c->working_directory = Output().parent_path();
 
     c->name = normalize_path(Output());
@@ -1431,7 +1431,7 @@ VisualStudioLinker::VisualStudioLinker()
     Extension = ".exe";
 }
 
-std::shared_ptr<NativeLinker> VisualStudioLinker::clone() const
+std::shared_ptr<Program> VisualStudioLinker::clone() const
 {
     return std::make_shared<VisualStudioLinker>(*this);
 }
@@ -1446,7 +1446,7 @@ VisualStudioLibrarian::VisualStudioLibrarian()
     Extension = ".lib";
 }
 
-std::shared_ptr<NativeLinker> VisualStudioLibrarian::clone() const
+std::shared_ptr<Program> VisualStudioLibrarian::clone() const
 {
     return std::make_shared<VisualStudioLibrarian>(*this);
 }
@@ -1461,7 +1461,7 @@ GNULinker::GNULinker()
     //Extension = ".exe";
 }
 
-std::shared_ptr<NativeLinker> GNULinker::clone() const
+std::shared_ptr<Program> GNULinker::clone() const
 {
     return std::make_shared<GNULinker>(*this);
 }
@@ -1526,7 +1526,7 @@ std::shared_ptr<builder::Command> GNULinker::getCommand() const
 
     auto c = std::make_shared<driver::cpp::Command>();
     //c->out.capture = true;
-    c->base = this;
+    c->base = clone();
     c->working_directory = Output().parent_path();
 
     c->name = normalize_path(Output());
@@ -1551,7 +1551,7 @@ GNULibrarian::GNULibrarian()
     Extension = ".a";
 }
 
-std::shared_ptr<NativeLinker> GNULibrarian::clone() const
+std::shared_ptr<Program> GNULibrarian::clone() const
 {
     return std::make_shared<GNULibrarian>(*this);
 }
@@ -1610,7 +1610,7 @@ std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
 
     auto c = std::make_shared<driver::cpp::Command>();
     //c->out.capture = true;
-    c->base = this;
+    c->base = clone();
     c->working_directory = Output().parent_path();
 
     c->name = normalize_path(Output());

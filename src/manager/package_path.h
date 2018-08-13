@@ -153,7 +153,7 @@ struct PathBase : protected std::vector<PathElement>
 
     ThisType &operator/=(const String &e)
     {
-        return *this = *this / e;
+        return operator/=(ThisType(e));
     }
 
     ThisType &operator/=(const ThisType &e)

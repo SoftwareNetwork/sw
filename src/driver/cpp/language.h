@@ -141,9 +141,9 @@ struct SW_DRIVER_CPP_API NativeLanguage : Language,
         if (rhs.compiler)
             this->compiler = std::dynamic_pointer_cast<Compiler>(rhs.compiler->clone());
         if (rhs.librarian)
-            this->librarian = rhs.librarian->clone();
+            this->librarian = std::static_pointer_cast<NativeLinker>(rhs.librarian->clone());
         if (rhs.linker)
-            this->linker = rhs.linker->clone();
+            this->linker = std::static_pointer_cast<NativeLinker>(rhs.linker->clone());
     }
     virtual ~NativeLanguage() = default;
 };

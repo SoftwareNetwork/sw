@@ -89,8 +89,7 @@ public:
     virtual ExecutionPlan<builder::Command> getExecutionPlan() const;
     ExecutionPlan<builder::Command> getExecutionPlan(Commands &cmds) const;
 
-    static inline const path config_filename = "sw.cpp";
-    static path getConfigFilename() { return config_filename; }
+    static path getConfigFilename() { return "sw.cpp"; }
 
 protected:
     Solution & base_ptr;

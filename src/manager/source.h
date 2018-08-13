@@ -18,6 +18,33 @@ using yaml = YAML::Node;
 namespace sw
 {
 
+struct EmptySource
+{
+    EmptySource() = default;
+    EmptySource(const yaml &root, const String &name = EmptySource::getString()) {}
+
+    bool empty() const { return true; }
+    bool isValid(const String &name, String *error = nullptr) const { return true; }
+    bool isValidUrl() const { return true; }
+
+    bool load(const ptree &p) { return true; }
+    bool save(ptree &p) const { return true; }
+    bool load(const nlohmann::json &p) { return true; }
+    bool save(nlohmann::json &p) const { return true; }
+    void save(yaml &root, const String &name = EmptySource::getString()) const {}
+
+    String print() const { return ""; }
+    void applyVersion(const Version &v) {}
+    void download() const {}
+
+    static String getString() { return "empty"; }
+
+    bool operator==(const EmptySource &rhs) const
+    {
+        return true;
+    }
+};
+
 struct SW_MANAGER_API SourceUrl
 {
     String url;
@@ -240,6 +267,7 @@ struct SW_MANAGER_API RemoteFiles
 // TODO: add: svn, cvs, darcs, p4
 // do not add local files
 #define SOURCE_TYPES(f,d) \
+    f(EmptySource) d \
     f(Git) d \
     f(Hg) d \
     f(Bzr) d \

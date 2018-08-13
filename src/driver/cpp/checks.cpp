@@ -326,10 +326,10 @@ int main()
 }
 )";
 
-    auto c = (!CPP ?
+    auto c = std::static_pointer_cast<NativeCompiler>((!CPP ?
         (NativeCompiler*)checker->solution->Settings.Native.CCompiler.get() :
         (NativeCompiler*)checker->solution->Settings.Native.CPPCompiler.get())
-        ->clone();
+        ->clone());
 
     auto d = checker->solution->getChecksDir();
     d /= unique_path();
@@ -813,10 +813,10 @@ SourceCompiles::SourceCompiles(const String &def, const String &source)
 
 void SourceCompiles::run() const
 {
-    auto c = (!CPP ?
+    auto c = std::static_pointer_cast<NativeCompiler>((!CPP ?
         (NativeCompiler*)checker->solution->Settings.Native.CCompiler.get() :
         (NativeCompiler*)checker->solution->Settings.Native.CPPCompiler.get())
-        ->clone();
+        ->clone());
 
     auto d = checker->solution->getChecksDir();
     d /= unique_path();
@@ -850,10 +850,10 @@ SourceLinks::SourceLinks(const String &def, const String &source)
 
 void SourceLinks::run() const
 {
-    auto c = (!CPP ?
+    auto c = std::static_pointer_cast<NativeCompiler>((!CPP ?
         (NativeCompiler*)checker->solution->Settings.Native.CCompiler.get() :
         (NativeCompiler*)checker->solution->Settings.Native.CPPCompiler.get())
-        ->clone();
+        ->clone());
 
     auto d = checker->solution->getChecksDir();
     auto up = unique_path();
@@ -896,10 +896,10 @@ SourceRuns::SourceRuns(const String &def, const String &source)
 
 void SourceRuns::run() const
 {
-    auto c = (!CPP ?
+    auto c = std::static_pointer_cast<NativeCompiler>((!CPP ?
         (NativeCompiler*)checker->solution->Settings.Native.CCompiler.get() :
         (NativeCompiler*)checker->solution->Settings.Native.CPPCompiler.get())
-        ->clone();
+        ->clone());
 
     auto d = checker->solution->getChecksDir();
     auto up = unique_path();

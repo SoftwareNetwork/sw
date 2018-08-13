@@ -252,7 +252,9 @@ struct ExecutionPlan
         // simple "0 0 0 0 1 2 3 6 7 8 9 11" is not enough
         std::sort(ep.commands.begin(), ep.commands.end(), [](const auto &c1, const auto &c2)
         {
-            return c1->dependencies.size() < c2->dependencies.size();
+            if (c1->dependencies.size() != c2->dependencies.size())
+                return c1->dependencies.size() < c2->dependencies.size();
+            return c1->dependendent_commands.size() > c2->dependendent_commands.size();
         });
 
         return ep;// std::move(ep);

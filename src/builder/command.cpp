@@ -542,9 +542,10 @@ void Command::setProgram(const path &p)
     program = p;
 }
 
-void Command::setProgram(const Program &p)
+void Command::setProgram(std::shared_ptr<Program> p)
 {
-    base = &p;
+    base = p;
+    //base = &p;
 }
 
 }

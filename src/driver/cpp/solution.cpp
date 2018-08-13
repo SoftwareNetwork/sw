@@ -194,6 +194,12 @@ std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const path &p)
             udeps.insert(udeps2.begin(), udeps2.end());
             headers.push_back(h);
         }
+        else if (m1 == "local")
+        {
+            auto [headers2, udeps2] = getFileDependencies(m[3].str());
+            headers.insert(headers.end(), headers2.begin(), headers2.end());
+            udeps.insert(udeps2.begin(), udeps2.end());
+        }
         else
             udeps.insert(extractFromString(m1));
         f = m.suffix().str();
@@ -213,7 +219,7 @@ Solution::Solution()
 {
     Checks.solution = this;
 
-    SourceDir = fs::current_path();
+    SourceDir = fs::absolute(fs::current_path());
     BinaryDir = SourceDir / ".sw";
 }
 
@@ -1043,6 +1049,10 @@ path Build::get_module_name(const path &fn)
 
 FilesMap Build::build_configs(const Files &files)
 {
+    FilesMap r;
+    if (files.empty())
+        return r;
+
     /*SCOPE_EXIT
     {
         getFileStorage().reset();
@@ -1181,8 +1191,8 @@ FilesMap Build::build_configs(const Files &files)
             //#endif
         }
 
-        lib += solution.getTarget<NativeTarget>("sw.manager");
-        auto d = lib + solution.getTarget<NativeTarget>("sw.driver.cpp");
+        lib += solution.getTarget<NativeTarget>("sw.client.manager");
+        auto d = lib + solution.getTarget<NativeTarget>("sw.client.driver.cpp");
         d->IncludeDirectoriesOnly = true;
         //lib += solution.getTarget<NativeTarget>("org.sw.demo.boost.filesystem");
         lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.command");
@@ -1197,7 +1207,6 @@ FilesMap Build::build_configs(const Files &files)
         return lib.getOutputFile();
     };
 
-    FilesMap r;
     for (auto &fn : files)
         r[fn] = prepare_config(fn);
 
@@ -1435,8 +1444,12 @@ PackageDescriptionMap Build::getPackages() const
                     continue;
                 files.insert(f);
             }
-            if (files.empty())
+
+            if (files.empty() && !nt->Empty)
                 throw std::runtime_error("No files found");
+            if (!files.empty() && nt->Empty)
+                throw std::runtime_error("Files were found, but target is marked as empty");
+
             // we put files under SW_SDIR_NAME to keep space near it
             // e.g. for patch dir or other dirs (server provided files)
             // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc

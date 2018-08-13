@@ -17,6 +17,8 @@ struct SW_BUILDER_API Program : File, Executable
 {
     virtual ~Program() = default;
 
+    virtual std::shared_ptr<Program> clone() const = 0;
+
     virtual Version getVersion() const
     {
         if (!version)

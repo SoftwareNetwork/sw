@@ -12,10 +12,63 @@
 
 #include <functional>
 
-namespace sw::driver::cpp
+namespace sw
 {
 
-struct SW_BUILDER_API Command : ::sw::builder::Command
+struct NativeExecutedTarget;
+
+namespace cmd
+{
+
+namespace detail
+{
+
+struct tag_path
+{
+    path p;
+};
+
+} // namespace detail
+
+template <class T>
+struct tag_prog { T *p; };
+struct tag_wdir : detail::tag_path {};
+struct tag_in : detail::tag_path { std::vector<NativeExecutedTarget*> targets; };
+struct tag_out : detail::tag_path { std::vector<NativeExecutedTarget*> targets; };
+
+template <class T>
+tag_prog<T> prog(const T &t)
+{
+    return { (T*)&t };
+}
+
+inline tag_wdir wdir(const path &file)
+{
+    return { file };
+}
+
+template <class ... Args>
+tag_in in(const path &file, Args && ... args)
+{
+    std::vector<NativeExecutedTarget*> targets;
+    (targets.push_back(&args), ...);
+    return { file, targets };
+}
+
+template <class ... Args>
+tag_out out(const path &file, Args && ... args)
+{
+    std::vector<NativeExecutedTarget*> targets;
+    (targets.push_back(&args), ...);
+    return { file, targets };
+}
+
+} // namespace cmd
+
+namespace driver::cpp
+{
+
+struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 {
     using Base = ::sw::builder::Command;
     using LazyCallback = std::function<String(void)>;
@@ -35,4 +88,57 @@ private:
     std::map<int, LazyCallback> callbacks;
 };
 
+struct CommandBuilder
+{
+    std::shared_ptr<Command> c;
+    std::vector<NativeExecutedTarget*> targets;
+};
+
+#define DECLARE_STREAM_OP(t) \
+    SW_DRIVER_CPP_API        \
+    CommandBuilder &operator<<(CommandBuilder &, const t &)
+
+DECLARE_STREAM_OP(NativeExecutedTarget);
+DECLARE_STREAM_OP(::sw::cmd::tag_in);
+DECLARE_STREAM_OP(::sw::cmd::tag_out);
+DECLARE_STREAM_OP(::sw::cmd::tag_wdir);
+DECLARE_STREAM_OP(Command::LazyCallback);
+
+template <class T>
+CommandBuilder operator<<(std::shared_ptr<Command> &c, const T &t)
+{
+    CommandBuilder cb;
+    cb.c = c;
+    cb << t;
+    return cb;
 }
+
+template <class T>
+CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
+{
+    cb.c->setProgram(*t.p);
+    return cb;
+}
+
+template <class T>
+CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
+{
+    if constexpr (std::is_same_v<T, path>)
+        cb.c->args.push_back(t.u8string());
+    else if constexpr (std::is_same_v<T, String>)
+        cb.c->args.push_back(t);
+    else if constexpr (std::is_arithmetic_v<T>)
+        cb.c->args.push_back(std::to_string(t));
+    else if constexpr (std::is_base_of_v<NativeExecutedTarget, T>)
+        return cb << (const NativeExecutedTarget&)t;
+    else
+        // add static assert?
+        cb.c->args.push_back(t);
+    return cb;
+}
+
+#undef DECLARE_STREAM_OP
+
+} // namespace driver::cpp
+
+} // namespace sw

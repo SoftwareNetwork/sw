@@ -537,24 +537,24 @@ public:
     // source files
     //ASSIGN_TYPES(String)
     ASSIGN_TYPES(path)
-        ASSIGN_TYPES(Files)
-        ASSIGN_TYPES(FileRegex)
+    ASSIGN_TYPES(Files)
+    ASSIGN_TYPES(FileRegex)
 
-        // compiler options
-        ASSIGN_TYPES(Definition)
-        ASSIGN_TYPES(DefinitionsType)
-        ASSIGN_TYPES(IncludeDirectory)
+    // compiler options
+    ASSIGN_TYPES(Definition)
+    ASSIGN_TYPES(DefinitionsType)
+    ASSIGN_TYPES(IncludeDirectory)
 
-        // linker options
-        ASSIGN_TYPES(NativeTarget)
-        ASSIGN_TYPES(LinkLibrary)
+    // linker options
+    ASSIGN_TYPES(NativeTarget)
+    ASSIGN_TYPES(LinkLibrary)
 
-        //
-        ASSIGN_TYPES(DependencyPtr)
+    //
+    ASSIGN_TYPES(DependencyPtr)
 
-        //
-        ASSIGN_TYPES(sw::tag_static_t)
-        ASSIGN_TYPES(sw::tag_shared_t)
+    //
+    ASSIGN_TYPES(sw::tag_static_t)
+    ASSIGN_TYPES(sw::tag_shared_t)
 };
 
 struct Events_
@@ -637,6 +637,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     StringSet ApiNames;
     std::optional<bool> HeaderOnly;
     std::optional<bool> AutoDetectOptions;
+    bool Empty = false;
     std::shared_ptr<NativeLinker> Linker;
     std::shared_ptr<NativeLinker> Librarian;
     bool ExportAllSymbols = false;

@@ -88,7 +88,7 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     Files outputs;
     bool use_response_files = true;
     bool remove_outputs_before_execution = true;
-    const Program *base = nullptr; // TODO: hide
+    std::shared_ptr<Program> base; // TODO: hide
     //std::shared_ptr<Dependency> dependency; // TODO: hide
     bool silent = false;
     bool always = false;
@@ -112,7 +112,7 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
 
     void setProgram(const path &p);
     //void setProgram(const std::shared_ptr<Dependency> &d);
-    void setProgram(const Program &p);
+    void setProgram(std::shared_ptr<Program> p);
     //void setProgram(const NativeTarget &t);
     void addInput(const path &p);
     void addInput(const Files &p);

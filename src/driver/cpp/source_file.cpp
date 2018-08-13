@@ -362,7 +362,7 @@ SourceFile::SourceFile(const path &input)
 }
 
 NativeSourceFile::NativeSourceFile(const path &input, const path &o, NativeCompiler *c)
-    : SourceFile(input), compiler(c ? c->clone() : nullptr)
+    : SourceFile(input), compiler(c ? std::static_pointer_cast<NativeCompiler>(c->clone()) : nullptr)
 {
     output.file = o;
 }
@@ -371,7 +371,7 @@ NativeSourceFile::NativeSourceFile(const NativeSourceFile &rhs)
     : SourceFile(rhs)
 {
     output = rhs.output;
-    compiler = rhs.compiler->clone();
+    compiler = std::static_pointer_cast<NativeCompiler>(rhs.compiler->clone());
 }
 
 NativeSourceFile::~NativeSourceFile()

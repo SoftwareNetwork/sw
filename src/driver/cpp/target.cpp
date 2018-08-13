@@ -597,7 +597,7 @@ void NativeExecutedTarget::init()
                 if (!L->linker)
                     throw std::runtime_error("Linker is not set");
                 if (!Linker)
-                    Linker = L->linker->clone();
+                    Linker = std::static_pointer_cast<NativeLinker>(L->linker->clone());
                 else if (Linker != L->linker)
                 {
                     break;
@@ -610,7 +610,7 @@ void NativeExecutedTarget::init()
                 if (!L->librarian)
                     throw std::runtime_error("Librarian is not set");
                 if (!Librarian)
-                    Librarian = L->librarian->clone();
+                    Librarian = std::static_pointer_cast<NativeLinker>(L->librarian->clone());
                 else if (Librarian != L->librarian)
                 {
                     break;
@@ -636,7 +636,6 @@ void NativeExecutedTarget::init2()
         auto f = sdb.getInstalledPackageFlags(pkg, getConfig());
         if (f[pfHeaderOnly] || fs::exists(o) && f[pfBuilt])
         {
-            PostponeFileResolving = true;
             already_built = true;
         }*/
     }
@@ -2000,7 +1999,7 @@ bool NativeExecutedTarget::prepare()
 
                 if (!CircularDependencies.empty())
                 {
-                    CircularLinker = getSelectedTool()->clone();
+                    CircularLinker = std::static_pointer_cast<NativeLinker>(getSelectedTool()->clone());
 
                     // set to temp paths
                     auto o = IsConfig;

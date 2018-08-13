@@ -67,4 +67,62 @@ void Command::pushLazyArg(LazyCallback f)
     args.push_back("");
 }
 
+///
+
+CommandBuilder &operator<<(CommandBuilder &cb, const NativeExecutedTarget &t)
+{
+    cb.targets.push_back((NativeExecutedTarget*)&t);
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_wdir &t)
+{
+    auto p = t.p;
+    if (p.is_relative() && !cb.targets.empty())
+        p = cb.targets[0]->SourceDir / p;
+
+    cb.c->working_directory = p;
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
+{
+    decltype(cb.targets) all;
+    all.insert(all.end(), cb.targets.begin(), cb.targets.end());
+    all.insert(all.end(), t.targets.begin(), t.targets.end());
+
+    auto p = t.p;
+    if (p.is_relative() && !all.empty())
+        p = all[0]->SourceDir / p;
+
+    cb.c->args.push_back(p.u8string());
+    cb.c->addInput(p);
+    for (auto tgt : all)
+        *tgt += p;
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
+{
+    decltype(cb.targets) all;
+    all.insert(all.end(), cb.targets.begin(), cb.targets.end());
+    all.insert(all.end(), t.targets.begin(), t.targets.end());
+
+    auto p = t.p;
+    if (p.is_relative() && !all.empty())
+        p = all[0]->BinaryDir / p;
+
+    cb.c->args.push_back(p.u8string());
+    cb.c->addOutput(p);
+    for (auto tgt : all)
+        *tgt += p;
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const Command::LazyCallback &t)
+{
+    cb.c->pushLazyArg(t);
+    return cb;
+}
+
 }

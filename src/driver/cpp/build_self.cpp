@@ -12,9 +12,9 @@
 #include <boost/algorithm/string.hpp>
 #include <primitives/context.h>
 
+#define SW_SELF_BUILD
 #include <build_self.generated.h>
 
-#define SW_SELF_BUILD
 #define build build_self2
 #include <../sw.cpp>
 
