@@ -32,25 +32,26 @@ void apply_auth(const Remote &r, grpc::ClientContext &context)
     context.AddMetadata(SW_GRPC_METADATA_AUTH_TOKEN, r.token);
 }
 
-auto getContext()
-{
-    auto ctx = std::make_unique<grpc::ClientContext>();
-    ctx->AddMetadata(SW_GRPC_METADATA_CLIENT_VERSION, "0.3.0");
-    return ctx;
-}
-
-auto getContextWithAuth(const Remote &r)
-{
-    auto ctx = getContext();
-    apply_auth(r, *ctx);
-    return ctx;
-}
-
 Api::Api(const Remote &r)
     : r(r)
     , api_(api::ApiService::NewStub(r.getGrpcChannel()))
     , user_(api::UserService::NewStub(r.getGrpcChannel()))
 {
+}
+
+std::unique_ptr<grpc::ClientContext> Api::getContext()
+{
+    auto context = std::make_unique<grpc::ClientContext>();
+    GRPC_SET_DEADLINE(deadline_secs);
+    context->AddMetadata(SW_GRPC_METADATA_CLIENT_VERSION, "0.3.0");
+    return context;
+}
+
+std::unique_ptr<grpc::ClientContext> Api::getContextWithAuth()
+{
+    auto ctx = getContext();
+    apply_auth(r, *ctx);
+    return ctx;
 }
 
 void Api::addDownloads(const std::set<int64_t> &pkgs)
@@ -107,7 +108,8 @@ void Api::addVersion(const PackagePath &prefix, const String &cppan)
     api::NewPackage request;
     request.set_script(cppan);
     request.set_prefix_path(prefix.toString());
-    auto context = getContextWithAuth(r);
+    auto context = getContextWithAuth();
+    GRPC_SET_DEADLINE(300);
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
 }
 
@@ -121,7 +123,8 @@ void Api::addVersion(PackagePath p, const Version &vnew, const optional<Version>
     if (vold)
         request.mutable_version()->set_old_version(vold.value().toString());
 
-    auto context = getContextWithAuth(r);
+    auto context = getContextWithAuth();
+    GRPC_SET_DEADLINE(300);
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
 }
 
@@ -136,7 +139,8 @@ void Api::updateVersion(PackagePath p, const Version &v)
     request.set_path(p.toString());
     request.set_version(v.toString());
 
-    auto context = getContextWithAuth(r);
+    auto context = getContextWithAuth();
+    GRPC_SET_DEADLINE(300);
     GRPC_CALL_THROWS(user_, UpdatePackage, google::protobuf::Empty);
 }
 
@@ -148,7 +152,7 @@ void Api::removeVersion(PackagePath p, const Version &v)
     request.set_path(p.toString());
     request.set_version(v.toString());
 
-    auto context = getContextWithAuth(r);
+    auto context = getContextWithAuth();
     GRPC_CALL_THROWS(user_, RemovePackage, google::protobuf::Empty);
 }
 
@@ -160,7 +164,7 @@ void Api::getNotifications(int n)
     api::NotificationsRequest request;
     request.set_n(n);
 
-    auto context = getContextWithAuth(r);
+    auto context = getContextWithAuth();
     GRPC_CALL_THROWS(user_, GetNotifications, api::Notifications);
 
     // move out; return as result
@@ -192,7 +196,7 @@ void Api::getNotifications(int n)
 void Api::clearNotifications()
 {
     google::protobuf::Empty request;
-    auto context = getContextWithAuth(r);
+    auto context = getContextWithAuth();
     GRPC_CALL_THROWS(user_, ClearNotification, google::protobuf::Empty);
 }
 

@@ -717,6 +717,7 @@ private:
 
     void autoDetectOptions();
     path getOutputFileName(const path &root) const;
+    Commands getGeneratedCommands() const;
 };
 
 /**

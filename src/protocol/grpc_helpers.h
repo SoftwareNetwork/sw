@@ -5,8 +5,10 @@
 
 #include <system_error>
 
+#define GRPC_SET_DEADLINE(s) \
+    context->set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(s))
+
 #define GRPC_CALL_PREPARE(resptype)                                                    \
-    context->set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(5)); \
     resptype response
 
 #define GRPC_CALL_INTERNAL(svc, m, resptype, t) \

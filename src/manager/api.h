@@ -22,6 +22,8 @@ struct Remote;
 
 struct Api
 {
+    int deadline_secs = 5;
+
     Api(const Remote &r);
 
     void addDownloads(const std::set<int64_t> &);
@@ -40,6 +42,9 @@ private:
     const Remote &r;
     std::unique_ptr<api::ApiService::Stub> api_;
     std::unique_ptr<api::UserService::Stub> user_;
+
+    std::unique_ptr<grpc::ClientContext> getContext();
+    std::unique_ptr<grpc::ClientContext> getContextWithAuth();
 };
 
 }

@@ -248,8 +248,12 @@ struct ExecutionPlan
                 d->dependendent_commands.insert(c);
         }
 
-        std::sort(ep.commands.begin(), ep.commands.end(),
-            [](const auto &c1, const auto &c2) { return c1->dependencies.size() < c2->dependencies.size(); });
+        // improve sorting! it's too stupid
+        // simple "0 0 0 0 1 2 3 6 7 8 9 11" is not enough
+        std::sort(ep.commands.begin(), ep.commands.end(), [](const auto &c1, const auto &c2)
+        {
+            return c1->dependencies.size() < c2->dependencies.size();
+        });
 
         return ep;// std::move(ep);
     }

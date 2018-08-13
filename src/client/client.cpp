@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <command.h>
-#include <config.h>
 #include <database.h>
 #include <directories.h>
 #include <exceptions.h>

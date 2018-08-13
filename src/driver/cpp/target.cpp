@@ -1059,9 +1059,30 @@ std::shared_ptr<builder::Command> NativeExecutedTarget::getCommand() const
     return getSelectedTool()->getCommand();
 }
 
+Commands NativeExecutedTarget::getGeneratedCommands() const
+{
+    Commands generated;
+
+    const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
+
+    // add generated files
+    for (auto &f : *this)
+    {
+        File p(f.first);
+        if (!p.isGenerated())
+            continue;
+        if (f.first == def)
+            continue;
+        auto c = p.getFileRecord().generator;
+        generated.insert(c);
+    }
+
+    return generated;
+}
+
 Commands NativeExecutedTarget::getCommands() const
 {
-    Commands cmds, generated;
+    Commands cmds;
     if (already_built)
         return cmds;
 
@@ -1080,16 +1101,7 @@ Commands NativeExecutedTarget::getCommands() const
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
     // add generated files
-    for (auto &f : *this)
-    {
-        File p(f.first);
-        if (!p.isGenerated())
-            continue;
-        if (f.first == def)
-            continue;
-        auto c = p.getFileRecord().generator;
-        generated.insert(c);
-    }
+    auto generated = getGeneratedCommands();
 
     // also from deps???
     // remove?
@@ -1184,6 +1196,16 @@ Commands NativeExecutedTarget::getCommands() const
             cmds.insert(g);
         }
 
+        // add dependencies on generated commands from dependent targets
+        for (auto &l : gatherDependenciesTargets())
+        {
+            for (auto &c2 : ((NativeExecutedTarget*)l)->getGeneratedCommands())
+            {
+                for (auto &c : cmds)
+                    c->dependencies.insert(c2);
+            }
+        }
+
         // link deps
         if (getSelectedTool() != Librarian.get())
         {
@@ -1215,7 +1237,7 @@ Commands NativeExecutedTarget::getCommands() const
                             copy_cmd->addInput(dt->getOutputFile());
                             copy_cmd->addOutput(o);
                             copy_cmd->dependencies.insert(c);
-                            copy_cmd->name = "copy command: " + normalize_path(o);
+                            copy_cmd->name = "copy: " + normalize_path(o);
                             cmds.insert(copy_cmd);
                         }
                 }

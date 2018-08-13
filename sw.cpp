@@ -1,3 +1,7 @@
+#pragma sw require header pub.egorpugin.primitives.tools.embedder-master
+#pragma sw require header org.sw.demo.google.grpc.grpc_cpp_plugin-1
+#pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
+
 void configure(Solution &s)
 {
     s.Settings.Native.LibrariesType = LibraryType::Static;
@@ -61,7 +65,7 @@ void build(Solution &s)
 
     auto &builder = p.addTarget<LibraryTarget>("builder");
     builder.ApiName = "SW_BUILDER_API";
-    //builder.ExportIfStatic = true;
+    builder.ExportIfStatic = true;
     builder.CPPVersion = CPPLanguageStandard::CPP17;
     builder += "src/builder/.*"_rr, "include/builder/.*"_rr;
     builder.Public += "include"_idir, "src/builder"_idir;
@@ -70,7 +74,7 @@ void build(Solution &s)
 
     auto &cpp_driver = p.addTarget<LibraryTarget>("driver.cpp");
     cpp_driver.ApiName = "SW_DRIVER_CPP_API";
-    //cpp_driver.ExportIfStatic = true;
+    cpp_driver.ExportIfStatic = true;
     cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
     cpp_driver.Public += builder,
         "org.sw.demo.boost.assign-1"_dep,
@@ -79,8 +83,25 @@ void build(Solution &s)
     cpp_driver += "src/driver/cpp/.*"_rr, "include/driver/cpp/.*"_rr;
     cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
     embed(cpp_driver, cpp_driver.SourceDir / "src/driver/cpp/inserts/inserts.cpp.in");
+    gen_flex_bison(cpp_driver, "src/driver/cpp/bazel/lexer.ll", "src/driver/cpp/bazel/grammar.yy");
 
 #ifndef SW_SELF_BUILD
+    auto &tools = p.addDirectory("tools");
+    auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
+    self_builder.CPPVersion = CPPLanguageStandard::CPP17;
+    self_builder += "src/tools/self_builder.cpp";
+    self_builder +=
+        manager,
+        "pub.egorpugin.primitives.context-master"_dep,
+        "pub.egorpugin.primitives.sw.main-master"_dep;
+    {
+        auto c = std::make_shared<Command>();
+        c->setProgram(self_builder);
+        c->args.push_back((cpp_driver.BinaryDir / "build_self.generated.h").u8string());
+        c->addOutput(cpp_driver.BinaryDir / "build_self.generated.h");
+        cpp_driver += cpp_driver.BinaryDir / "build_self.generated.h";
+    }
+
     auto &client = p.addTarget<ExecutableTarget>("client");
     client.setRootDirectory("src/client");
     client += ".*"_rr;
@@ -90,10 +111,9 @@ void build(Solution &s)
         "org.sw.demo.giovannidicanio.winreg-master"_dep,
         "pub.egorpugin.primitives.minidump-master"_dep;
 
-    auto &t = p.addDirectory("tools");
     if (s.Settings.TargetOS.Type == OSType::Windows)
     {
-        auto &client = t.addTarget<ExecutableTarget>("client");
+        auto &client = tools.addTarget<ExecutableTarget>("client");
         client += "src/tools/client.cpp";
         client +=
             "org.sw.demo.boost.dll-1"_dep,

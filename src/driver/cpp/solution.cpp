@@ -18,6 +18,7 @@
 #include <hash.h>
 #include <settings.h>
 
+#include <boost/algorithm/string.hpp>
 #include <primitives/context.h>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
@@ -140,14 +141,21 @@ path getPackageHeader(const ExtendedPackageData &p)
         ctx.addLine("#pragma once");
         ctx.addLine();
 
-        ctx.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");
-        ctx.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + p.ppath.slice(p.prefix).toString() + "\"");
-        ctx.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
-        ctx.addLine("#define THIS_VERSION \"" + p.version.toString() + "\"");
-        ctx.addLine("#define THIS_VERSION_DEPENDENCY \"" + p.version.toString() + "\"_dep");
-        ctx.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
-        ctx.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
-        ctx.addLine();
+        Context prefix;
+        prefix.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");
+        prefix.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + p.ppath.slice(p.prefix).toString() + "\"");
+        prefix.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
+        prefix.addLine("#define THIS_VERSION \"" + p.version.toString() + "\"");
+        prefix.addLine("#define THIS_VERSION_DEPENDENCY \"" + p.version.toString() + "\"_dep");
+        prefix.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
+        prefix.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
+        prefix.addLine();
+
+        auto ins_pre = "#pragma sw header insert prefix";
+        if (f.find(ins_pre) != f.npos)
+            boost::replace_all(f, ins_pre, prefix.getText());
+        else
+            ctx += prefix;
 
         ctx.addLine(f);
         ctx.addLine();

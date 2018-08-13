@@ -35,22 +35,14 @@ PackageScriptPtr Driver::load(const path &file_or_dir) const
         f /= getConfigFilename();
     }
 
-    // find "#pragma sw driver driver.package-id"
-    // build and load that driver, pass control
-
-    // else build with current
-
     current_thread_path(f.parent_path());
 
     auto b = std::make_unique<Build>();
     b->Local = true;
-    //b->configure = true;
-    b->perform_checks = false;
-    //b->PostponeFileResolving = true;
+    b->configure = true;
     b->build_and_load(f);
-    //b->build_and_run(f);
 
-    // in order to discover files, deps
+    // in order to discover files, deps?
     //b->prepare();
 
     /*single_process_job(".sw/build", [&f]()
@@ -68,49 +60,9 @@ PackageScriptPtr Driver::load(const path &file_or_dir) const
 
 bool Driver::execute(const path &file_or_dir) const
 {
-    auto f = file_or_dir;
-    if (fs::is_directory(f))
-    {
-        if (!hasConfig(f))
-            return false;
-        f /= getConfigFilename();
-    }
-
-    current_thread_path(f.parent_path());
-
-    auto b = std::make_unique<Build>();
-    b->Local = true;
-    //b->configure = true;
-    //b->perform_checks = false;
-    //b->PostponeFileResolving = true;
-    b->build_and_load(f);
-    b->execute();
-
-    /*{
-    Build b;
-    auto &s = b.addSolution();
-    s.SourceDir = "d:\\dev\\cppan2\\test\\build\\cpp\\exe2";
-    auto &t = s.addTarget<ExecutableTarget>("exe");
-    t += ".*"_rr;
-    b.execute();
-    return;
-    }*/
-
-    //ScopedTime t;
-
-
-    /*if (p.filename() != "sw.cpp")
-    {
-    Build b;
-    b.Local = true;
-    auto &t = b.addTarget<ExecutableTarget>(p.filename().stem().string());
-    t += p;
-    b.execute();
-    return;
-    }*/
-
-
-    return true;
+    if (auto b = load(file_or_dir); b)
+        return b->execute();
+    return false;
 }
 
 static auto fetch1(const Driver *driver, const path &file_or_dir)
