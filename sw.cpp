@@ -14,9 +14,9 @@ void build(Solution &s)
     p += Git("https://github.com/SoftwareNetwork/sw", "", "master");
 
     auto &support = p.addTarget<StaticLibraryTarget>("support");
-    support.setRootDirectory("src/support");
     support.CPPVersion = CPPLanguageStandard::CPP17;
-    support += ".*"_rr;
+    support += "src/support/.*"_rr;
+    support.Public += "src/support"_idir;
     support.Public +=
         "pub.egorpugin.primitives.http-master"_dep,
         "pub.egorpugin.primitives.hash-master"_dep,
@@ -32,12 +32,12 @@ void build(Solution &s)
 
     auto &protos = p.addTarget<StaticLibraryTarget>("protos");
     protos.CPPVersion = CPPLanguageStandard::CPP17;
-    protos.setRootDirectory("src/protocol");
-    protos += ".*"_rr;
+    protos += "src/protocol/.*"_rr;
+    protos.Public += "src/protocol"_idir;
     protos.Public +=
         "org.sw.demo.google.grpc.grpcpp-1"_dep,
         "pub.egorpugin.primitives.log-master"_dep;
-    gen_grpc(protos, protos.SourceDir / "api.proto", true);
+    gen_grpc(protos, protos.SourceDir / "src/protocol/api.proto", true);
 
     auto &manager = p.addTarget<LibraryTarget>("manager");
     manager.ApiName = "SW_MANAGER_API";
@@ -104,8 +104,8 @@ void build(Solution &s)
     }
 
     auto &client = p.addTarget<ExecutableTarget>("client");
-    client.setRootDirectory("src/client");
-    client += ".*"_rr;
+    client += "src/client/.*"_rr;
+    client += "src/client"_idir;
     client.CPPVersion = CPPLanguageStandard::CPP17;
     client += cpp_driver,
         "org.sw.demo.taywee.args"_dep,

@@ -1210,9 +1210,9 @@ FilesMap Build::build_configs(const Files &files)
         auto d = lib + solution.getTarget<NativeTarget>("sw.client.driver.cpp");
         d->IncludeDirectoriesOnly = true;
         //lib += solution.getTarget<NativeTarget>("org.sw.demo.boost.filesystem");
-        lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.command");
-        lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.hash");
-        lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.http");
+        //lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.command");
+        //lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.hash");
+        //lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.http");
         for (auto &d : udeps)
             lib += std::make_shared<Dependency>(d);
 
