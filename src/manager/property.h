@@ -44,7 +44,7 @@ struct PropertyVariant : std::variant<std::monostate, Types...>
         return std::get<T>(*this);
     }*/
 
-    operator std::string() const
+    String toString() const
     {
         if (auto v = std::get_if<std::string>(this))
             return *v;
@@ -64,9 +64,14 @@ struct PropertyVariant : std::variant<std::monostate, Types...>
         IF_OP(uint16_t);
         IF_OP(uint64_t);
 #undef IF_OP
-        else if (auto v = std::get_if<std::monostate>(this))
-            return "";
+else if (auto v = std::get_if<std::monostate>(this))
+return "";
         throw std::bad_variant_access();
+    }
+
+    operator std::string() const
+    {
+        return toString();
     }
 
     operator bool() const

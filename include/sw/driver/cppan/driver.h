@@ -11,7 +11,7 @@
 namespace sw::driver
 {
 
-struct SW_DRIVER_CPP_API CppanDriver : ::sw::Driver
+struct SW_DRIVER_CPPAN_API CppanDriver : ::sw::Driver
 {
     static inline const path filename = "cppan.yml";
 

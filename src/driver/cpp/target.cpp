@@ -84,6 +84,7 @@ TargetBase::TargetBase(const TargetBase &rhs)
     , Settings(rhs.Settings)
     , pkg(rhs.pkg)
     , source(rhs.source)
+    , Scope(rhs.Scope)
     , Local(rhs.Local)
     , UseStorageBinaryDir(rhs.UseStorageBinaryDir)
     , PostponeFileResolving(rhs.PostponeFileResolving)
@@ -230,6 +231,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->PostponeFileResolving = PostponeFileResolving;
     t->UseStorageBinaryDir = UseStorageBinaryDir;
     t->IsConfig = IsConfig;
+    t->Scope = Scope;
     //auto p = getSolution()->getKnownTarget(t->pkg.ppath);
     //if (!p.target_name.empty())
 }
@@ -620,7 +622,7 @@ void NativeExecutedTarget::init()
         }
     }
 
-    if (!IsConfig)
+    if (!IsConfig/* && PackageDefinitions*/)
         addPackageDefinitions();
 }
 
@@ -706,8 +708,9 @@ void NativeExecutedTarget::addPackageDefinitions()
         a["PACKAGE_VERSION_PATCH_NUM2"] = n2hex(pkg.version.getPatch(), 4);
         a["PACKAGE_VERSION_TWEAK_NUM2"] = n2hex(pkg.version.getTweak(), 4);
     };
-    set_pkg_info(Definitions, true);
-    set_pkg_info(Variables, true);
+    // https://www.gnu.org/software/autoconf/manual/autoconf-2.67/html_node/Initializing-configure.html
+    set_pkg_info(Definitions, true); // false?
+    set_pkg_info(Variables, true); // false?
 }
 
 path NativeExecutedTarget::getOutputDir() const
@@ -1085,7 +1088,7 @@ Commands NativeExecutedTarget::getCommands() const
     if (already_built)
         return cmds;
 
-    if (pkg.ppath.toString().find("sqlite2cpp") != -1)
+    if (pkg.ppath.toString().find("freetype") != -1)
     {
         volatile int a = 5;
         a++;
@@ -1567,7 +1570,7 @@ bool NativeExecutedTarget::prepare()
 {
     //CHECK_PREPARED_TARGET;
 
-    if (pkg.ppath.toString().find("sqlite2cpp") != -1)
+    if (pkg.ppath.toString().find("fribidi") != -1)
     {
         volatile int a = 5;
         a++;
@@ -1719,8 +1722,10 @@ bool NativeExecutedTarget::prepare()
                 (*(NativeExecutedTarget*)d->target).TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
                     [this, &new_dependency, &deps, &d, &deps_ordered](auto &v, auto &s)
                 {
+                    // nothing to do with private inheritance
                     if (s.Inheritance == InheritanceType::Private)
                         return;
+
                     for (auto &d2 : v.Dependencies)
                     {
                         if (d2->target == this)
@@ -1793,6 +1798,28 @@ bool NativeExecutedTarget::prepare()
                 break;
             }
         }
+
+        // Here we check if some deps are not included in solution target set (children).
+        // They could be in dummy children, because of different target scope, not listed on software network,
+        // but still in use.
+        // We add them back to children.
+        // Example: helpers, small tools, code generators.
+        {
+            auto &c = getSolution()->children;
+            auto &dc = getSolution()->dummy_children;
+            for (auto &d2 : Dependencies)
+            {
+                if (d2->target && c.find(d2->target->pkg) == c.end() && dc.find(d2->target->pkg) != dc.end())
+                {
+                    c[d2->target->pkg] = dc[d2->target->pkg];
+
+                    // such packages are not completely independent
+                    // they share same source dir (but not binary?) with parent etc.
+                    d2->target->SourceDir = SourceDir;
+                }
+            }
+        }
+
     }
     RETURN_PREPARE_PASS;
     case 4:
@@ -2199,6 +2226,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
 {
     static const std::regex cmDefineRegex(R"xxx(#cmakedefine[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
     static const std::regex cmDefine01Regex(R"xxx(#cmakedefine01[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
+    static const std::regex mesonDefine(R"xxx(#mesondefine[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
     static const std::regex cmAtVarRegex("@([A-Za-z_0-9/.+-]+)@");
     static const std::regex cmNamedCurly("\\$\\{([A-Za-z0-9/_.+-]+)\\}");
 
@@ -2236,7 +2264,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     }
 
     // #cmakedefine
-    while (std::regex_search(s, m, cmDefineRegex))
+    while (std::regex_search(s, m, cmDefineRegex) || std::regex_search(s, m, mesonDefine))
     {
         auto repl = find_repl(m[1].str());
         if (offValues.find(boost::to_upper_copy(repl)) != offValues.end())

@@ -166,9 +166,9 @@ void Command::updateFilesHash() const
 void Command::clean() const
 {
     error_code ec;
-    for (auto &o : outputs)
-        fs::remove(o, ec);
     for (auto &o : intermediate)
+        fs::remove(o, ec);
+    for (auto &o : outputs)
         fs::remove(o, ec);
 }
 
@@ -510,7 +510,7 @@ String Command::getName(bool short_name) const
     {
         if (!outputs.empty())
         {
-            String s = "Generating: ";
+            String s = "generate: ";
             for (auto &o : outputs)
                 s += "\"" + normalize_path(o) + "\", ";
             s.resize(s.size() - 2);

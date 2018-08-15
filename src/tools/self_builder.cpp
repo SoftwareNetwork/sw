@@ -219,6 +219,8 @@ int main(int argc, char **argv)
             ctx.addLine("#define THIS_PREFIX \"pub.egorpugin\"");
             ctx.addLine("#define THIS_VERSION_DEPENDENCY \"master\"_dep");
             ctx.addLine("#define build build_" + h);
+            ctx.addLine("#define configure configure_" + h);
+            //ctx.addLine("#define check check_" + h);
             ctx.addLine("#include \"" + (data.local_dir / "sw.cpp").u8string() + "\"");
             ctx.addLine();
 

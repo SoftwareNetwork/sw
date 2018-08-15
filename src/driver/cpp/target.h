@@ -85,8 +85,9 @@ enum class TargetScope
     Build,
     Coverage,
     Documentation,
-    Format,
     Example,
+    Format,
+    Helper, // same as tool?
     Profile,
     Sanitize,
     Tool,
@@ -161,6 +162,11 @@ struct SW_DRIVER_CPP_API TargetBase : virtual Node, LanguageStorage, ProjectDire
     * \brief Data storage for objects that must be alive with the target.
     */
     std::vector<std::any> Storage;
+
+    /**
+    * \brief Target scope.
+    */
+    TargetScope Scope = TargetScope::Build;
 
     // flags
     /// local projects, not fetched
@@ -282,6 +288,9 @@ protected:
 
     bool hasSameParent(const TargetBase *t) const;
 
+    Solution *getSolution();
+    const Solution *getSolution() const;
+
 private:
     template <typename T, typename ... Args>
     T &addTarget1(const PackagePath &Name, const Version &V, Args && ... args)
@@ -311,11 +320,8 @@ private:
     PackagePath constructTargetName(const PackagePath &Name) const;
 
     void addChild(const TargetBaseTypePtr &t);
-    void setupTarget(TargetBaseType *t) const;
+    virtual void setupTarget(TargetBaseType *t) const;
     void applyRootDirectory();
-
-    Solution *getSolution();
-    const Solution *getSolution() const;
 
     // impl, unreachable
     virtual bool exists(const PackageId &p) const;
@@ -351,11 +357,6 @@ struct SW_DRIVER_CPP_API Target : TargetBase//, std::enable_shared_from_this<Tar
     StringSet tags; // lowercase only!
                     // changes-file
                     // description-file (or readme file)
-
-    /**
-    * \brief Target scope.
-    */
-    TargetScope Scope = TargetScope::Build;
 
     using TargetBase::TargetBase;
     virtual ~Target() = default;
@@ -637,6 +638,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     StringSet ApiNames;
     std::optional<bool> HeaderOnly;
     std::optional<bool> AutoDetectOptions;
+    //bool PackageDefinitions = true;
     bool Empty = false;
     std::shared_ptr<NativeLinker> Linker;
     std::shared_ptr<NativeLinker> Librarian;

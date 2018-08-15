@@ -210,7 +210,7 @@ projects:
     driver.cppan:
         type: library
         #static_only: true
-        api_name: SW_DRIVER_CPP_API
+        api_name: SW_DRIVER_CPPAN_API
         #export_if_static: true
 
         files:

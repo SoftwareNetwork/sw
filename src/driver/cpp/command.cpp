@@ -91,11 +91,15 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
+    if (!all.empty() && all[0]->PostponeFileResolving)
+        return cb;
+
     auto p = t.p;
     if (p.is_relative() && !all.empty())
         p = all[0]->SourceDir / p;
 
-    cb.c->args.push_back(p.u8string());
+    if (!cb.stopped)
+        cb.c->args.push_back(p.u8string());
     cb.c->addInput(p);
     for (auto tgt : all)
         *tgt += p;
@@ -112,16 +116,56 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
     if (p.is_relative() && !all.empty())
         p = all[0]->BinaryDir / p;
 
-    cb.c->args.push_back(p.u8string());
+    if (!cb.stopped)
+        cb.c->args.push_back(p.u8string());
     cb.c->addOutput(p);
     for (auto tgt : all)
         *tgt += p;
     return cb;
 }
 
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
+{
+    decltype(cb.targets) all;
+    all.insert(all.end(), cb.targets.begin(), cb.targets.end());
+    all.insert(all.end(), t.targets.begin(), t.targets.end());
+
+    auto p = t.p;
+    if (p.is_relative() && !all.empty())
+        p = all[0]->BinaryDir / p;
+
+    cb.c->redirectStdout(p);
+    for (auto tgt : all)
+        *tgt += p;
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
+{
+    decltype(cb.targets) all;
+    all.insert(all.end(), cb.targets.begin(), cb.targets.end());
+    all.insert(all.end(), t.targets.begin(), t.targets.end());
+
+    auto p = t.p;
+    if (p.is_relative() && !all.empty())
+        p = all[0]->BinaryDir / p;
+
+    cb.c->redirectStderr(p);
+    for (auto tgt : all)
+        *tgt += p;
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_end &t)
+{
+    cb.stopped = true;
+    return cb;
+}
+
 CommandBuilder &operator<<(CommandBuilder &cb, const Command::LazyCallback &t)
 {
-    cb.c->pushLazyArg(t);
+    if (!cb.stopped)
+        cb.c->pushLazyArg(t);
     return cb;
 }
 

@@ -35,6 +35,9 @@ struct tag_prog { T *p; };
 struct tag_wdir : detail::tag_path {};
 struct tag_in : detail::tag_path { std::vector<NativeExecutedTarget*> targets; };
 struct tag_out : detail::tag_path { std::vector<NativeExecutedTarget*> targets; };
+struct tag_stdout : detail::tag_path { std::vector<NativeExecutedTarget*> targets; };
+struct tag_stderr : detail::tag_path { std::vector<NativeExecutedTarget*> targets; };
+struct tag_end {};
 
 template <class T>
 tag_prog<T> prog(const T &t)
@@ -47,6 +50,11 @@ inline tag_wdir wdir(const path &file)
     return { file };
 }
 
+inline tag_end end()
+{
+    return {};
+}
+
 template <class ... Args>
 tag_in in(const path &file, Args && ... args)
 {
@@ -57,6 +65,22 @@ tag_in in(const path &file, Args && ... args)
 
 template <class ... Args>
 tag_out out(const path &file, Args && ... args)
+{
+    std::vector<NativeExecutedTarget*> targets;
+    (targets.push_back(&args), ...);
+    return { file, targets };
+}
+
+template <class ... Args>
+tag_stdout std_out(const path &file, Args && ... args)
+{
+    std::vector<NativeExecutedTarget*> targets;
+    (targets.push_back(&args), ...);
+    return { file, targets };
+}
+
+template <class ... Args>
+tag_stderr std_err(const path &file, Args && ... args)
 {
     std::vector<NativeExecutedTarget*> targets;
     (targets.push_back(&args), ...);
@@ -92,6 +116,7 @@ struct CommandBuilder
 {
     std::shared_ptr<Command> c;
     std::vector<NativeExecutedTarget*> targets;
+    bool stopped = false;
 };
 
 #define DECLARE_STREAM_OP(t) \
@@ -101,7 +126,10 @@ struct CommandBuilder
 DECLARE_STREAM_OP(NativeExecutedTarget);
 DECLARE_STREAM_OP(::sw::cmd::tag_in);
 DECLARE_STREAM_OP(::sw::cmd::tag_out);
+DECLARE_STREAM_OP(::sw::cmd::tag_stdout);
+DECLARE_STREAM_OP(::sw::cmd::tag_stderr);
 DECLARE_STREAM_OP(::sw::cmd::tag_wdir);
+DECLARE_STREAM_OP(::sw::cmd::tag_end);
 DECLARE_STREAM_OP(Command::LazyCallback);
 
 template <class T>
@@ -116,6 +144,11 @@ CommandBuilder operator<<(std::shared_ptr<Command> &c, const T &t)
 template <class T>
 CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
 {
+    for (auto tgt : cb.targets)
+    {
+        auto d = *tgt + *t.p;
+        d->Dummy = true;
+    }
     cb.c->setProgram(*t.p);
     return cb;
 }
@@ -124,21 +157,45 @@ template <class T>
 CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
 {
     if constexpr (std::is_same_v<T, path>)
-        cb.c->args.push_back(t.u8string());
+    {
+        if (!cb.stopped)
+            cb.c->args.push_back(t.u8string());
+    }
     else if constexpr (std::is_same_v<T, String>)
-        cb.c->args.push_back(t);
+    {
+        if (!cb.stopped)
+            cb.c->args.push_back(t);
+    }
     else if constexpr (std::is_arithmetic_v<T>)
-        cb.c->args.push_back(std::to_string(t));
+    {
+        if (!cb.stopped)
+            cb.c->args.push_back(std::to_string(t));
+    }
     else if constexpr (std::is_base_of_v<NativeExecutedTarget, T>)
+    {
         return cb << (const NativeExecutedTarget&)t;
+    }
     else
+    {
         // add static assert?
-        cb.c->args.push_back(t);
+        if (!cb.stopped)
+            cb.c->args.push_back(t);
+    }
     return cb;
 }
 
 #undef DECLARE_STREAM_OP
 
 } // namespace driver::cpp
+
+namespace cmd
+{
+
+inline std::shared_ptr<::sw::driver::cpp::Command> command()
+{
+    return std::make_shared<::sw::driver::cpp::Command>();
+}
+
+} // namespace cmd
 
 } // namespace sw

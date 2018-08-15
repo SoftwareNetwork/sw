@@ -795,8 +795,20 @@ void Solution::prepare()
             //c.second->solution = this;*/
 
             //std::unordered_map<Package, Build> build_configs;
+
+        int retries = 0;
         while (!ud.empty())
         {
+            if (retries++ > 10)
+            {
+                String s = "Too many attempts on resolving packages, probably something wrong. Unresolved dependencies (" +
+                    std::to_string(ud.size()) + ") are: ";
+                for (auto &p : ud)
+                    s += p.first.toString() + ", ";
+                s.resize(s.size() - 2);
+                throw std::logic_error(s);
+            }
+
             auto rd = r.resolved_packages;
             for (auto &[porig, p] : rd)
             {
@@ -818,6 +830,9 @@ void Solution::prepare()
         }
     }
 
+    // multipass prepare()
+    // if we add targets inside this loop,
+    // it will automatically handle this situation
     auto &e = getExecutor();
     for (std::atomic_bool next_pass = true; next_pass;)
     {
@@ -1426,6 +1441,9 @@ PackageDescriptionMap Build::getPackages() const
     {
         for (auto &[pkg, t] : solutions.begin()->children)
         {
+            if (t->Scope != TargetScope::Build)
+                continue;
+
             auto nt = (NativeExecutedTarget*)t.get();
 
             nlohmann::json j;
@@ -1470,6 +1488,9 @@ PackageDescriptionMap Build::getPackages() const
             });
             for (auto &d : deps)
             {
+                if (d->target && d->target->Scope != TargetScope::Build)
+                    continue;
+
                 nlohmann::json jd;
                 jd["path"] = d->getPackage().ppath.toString();
                 jd["versions"] = d->getPackage().range.toString();
