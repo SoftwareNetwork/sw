@@ -40,7 +40,7 @@ primitives::filesystem::FileMonitor &get_file_monitor()
 
 void explainMessage(const String &subject, bool outdated, const String &reason, const String &name)
 {
-    if (!Settings::get_local_settings().explain_outdated)
+    if (!Settings::get_local_settings().explain_outdated/* && 0*/)
         return;
     static Executor e(1);
     static std::ofstream o(CPPAN_FILES_EXPLAIN_FILE.string());

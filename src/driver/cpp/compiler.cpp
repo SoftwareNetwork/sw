@@ -951,7 +951,7 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
 
     if (PreprocessToFile)
     {
-        c->addOutput(c->file.file.parent_path() / (c->file.file.filename().stem().string() + ".i"));
+        //c->addOutput(c->file.file.parent_path() / (c->file.file.filename().stem().string() + ".i"));
         // TODO: remove old object file, it's now incorrect
     }
 

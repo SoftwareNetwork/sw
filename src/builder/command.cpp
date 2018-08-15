@@ -12,7 +12,6 @@
 #include "command_storage.h"
 #include "db.h"
 #include "program.h"
-//#include "target.h"
 
 #include <hash.h>
 #include <directories.h>
@@ -136,9 +135,10 @@ size_t Command::getHash() const
         return hash;
 
     auto h = std::hash<path>()(program);
-    for (auto &a : args)
-        h ^= std::hash<String>()(a);
-        //hash_combine(h, std::hash<String>()(a));
+    // must sort args first
+    std::set<String> args_sorted(args.begin(), args.end());
+    for (auto &a : args_sorted)
+        hash_combine(h, std::hash<String>()(a));
     // add wdir, env?
     return hash = h;
 }

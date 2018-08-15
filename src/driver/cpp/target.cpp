@@ -1088,7 +1088,7 @@ Commands NativeExecutedTarget::getCommands() const
     if (already_built)
         return cmds;
 
-    if (pkg.ppath.toString().find("freetype") != -1)
+    if (pkg.ppath.toString().find("pangoft2") != -1)
     {
         volatile int a = 5;
         a++;

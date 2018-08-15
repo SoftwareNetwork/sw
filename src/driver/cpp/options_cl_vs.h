@@ -320,7 +320,13 @@ struct SW_DRIVER_CPP_API VisualStudioLibraryToolOptions : VisualStudioCommonOpti
     COMMAND_LINE_OPTION(ImportLibrary, path)
     {
         cl::CommandFlag{ "IMPLIB:" },
-            cl::IntermediateFile{},
+
+        // why? implib must present for dlls
+        // some dlls might be generated without implibs for dynamic loading only
+        cl::IntermediateFile{},
+
+            // but if implib present, it must be an output?
+            //cl::OutputDependency{},
     };
 
     COMMAND_LINE_OPTION(Output, path)
