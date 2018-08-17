@@ -9,6 +9,8 @@
 #include <command.h>
 #include <exceptions.h>
 
+#include <primitives/debug.h>
+
 template <class T>
 struct ExecutionPlan
 {

@@ -87,12 +87,11 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     Files intermediate;
     Files outputs;
     bool use_response_files = true;
-    bool remove_outputs_before_execution = true;
+    bool remove_outputs_before_execution = false; // was true
     std::shared_ptr<Program> base; // TODO: hide
     //std::shared_ptr<Dependency> dependency; // TODO: hide
     bool silent = false;
     bool always = false;
-    bool executed = false;
 
     virtual ~Command() = default;
 
@@ -101,6 +100,7 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     void execute(std::error_code &ec) override { execute1(&ec); }
     virtual void postProcess(bool ok = true) {}
     void clean() const;
+    bool isExecuted() const { return pid != -1 || executed_; }
 
     String getName(bool short_name = false) const;
     void printLog() const;
@@ -129,6 +129,7 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
 
 protected:
     bool prepared = false;
+    bool executed_ = false;
 
     void addInputOutputDeps();
 

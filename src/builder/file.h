@@ -74,7 +74,6 @@ struct SW_BUILDER_API FileRecord
     int64_t size = -1;
     String hash;
     SomeFlags flags;
-    std::shared_ptr<builder::Command> generator;
 
     // make sets?
     std::unordered_map<path, FileRecord *> explicit_dependencies;
@@ -89,7 +88,9 @@ struct SW_BUILDER_API FileRecord
     void destroy() { delete this; }
     void reset();
     size_t getHash() const;
-    bool isGenerated() const { return generator != nullptr; }
+    bool isGenerated() const;
+    void setGenerator(const std::shared_ptr<builder::Command> &);
+    std::shared_ptr<builder::Command> getGenerator() const;
 
     bool operator<(const FileRecord &r) const;
 
@@ -102,6 +103,9 @@ struct SW_BUILDER_API FileRecord
 
     /// returns true if file was changed
     bool refresh();
+
+private:
+    std::weak_ptr<builder::Command> generator;
 };
 
 SW_BUILDER_API

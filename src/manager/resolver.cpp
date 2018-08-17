@@ -109,9 +109,9 @@ std::unordered_set<ExtendedPackageData> Resolver::getDownloadDependencies() cons
     return s;
 }
 
-std::unordered_map<Package, PackageVersionGroupNumber> Resolver::getDownloadDependenciesWithGroupNumbers() const
+std::unordered_map<ExtendedPackageData, PackageVersionGroupNumber> Resolver::getDownloadDependenciesWithGroupNumbers() const
 {
-    std::unordered_map<Package, PackageVersionGroupNumber> s;
+    std::unordered_map<ExtendedPackageData, PackageVersionGroupNumber> s;
     for (auto &dl : download_dependencies_)
         s[dl.first] = dl.second.group_number;
     return s;

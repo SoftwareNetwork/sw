@@ -26,6 +26,14 @@ DECLARE_OPTION_SPECIALIZATION(String)
     return { getCommandLineFlag() + value() };
 }
 
+DECLARE_OPTION_SPECIALIZATION(StringMap<String>)
+{
+    Strings cmds;
+    for (auto &[k,v] : value())
+        cmds.push_back(getCommandLineFlag() + k + "=" + v);
+    return cmds;
+}
+
 DECLARE_OPTION_SPECIALIZATION(path)
 {
     if (input_dependency)

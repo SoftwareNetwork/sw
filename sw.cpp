@@ -55,7 +55,7 @@ void build(Solution &s)
         "org.sw.demo.rbock.sqlpp11_connector_sqlite3-0"_dep,
         "pub.egorpugin.primitives.version-master"_dep,
         "pub.egorpugin.primitives.win32helpers-master"_dep;
-    manager += "src/manager/.*"_rr, "include/manager/.*"_rr;
+    manager += "src/manager/.*"_rr, "include/sw/manager/.*"_rr;
     manager.Public += "include"_idir, "src/manager"_idir;
     manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().version.getMajor());
     manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().version.getMinor());
@@ -68,7 +68,7 @@ void build(Solution &s)
     builder.ApiName = "SW_BUILDER_API";
     builder.ExportIfStatic = true;
     builder.CPPVersion = CPPLanguageStandard::CPP17;
-    builder += "src/builder/.*"_rr, "include/builder/.*"_rr;
+    builder += "src/builder/.*"_rr, "include/sw/builder/.*"_rr;
     builder.Public += "include"_idir, "src/builder"_idir;
     builder -= "src/builder/db_sqlite.*"_rr;
     builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep;
@@ -81,7 +81,7 @@ void build(Solution &s)
         "org.sw.demo.boost.assign-1"_dep,
         "org.sw.demo.boost.uuid-1"_dep,
         "pub.egorpugin.primitives.context-master"_dep;
-    cpp_driver += "src/driver/cpp/.*"_rr, "include/driver/cpp/.*"_rr;
+    cpp_driver += "src/driver/cpp/.*"_rr, "include/sw/driver/cpp/.*"_rr;
     cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
     embed(cpp_driver, cpp_driver.SourceDir / "src/driver/cpp/inserts/inserts.cpp.in");
     gen_flex_bison(cpp_driver, "src/driver/cpp/bazel/lexer.ll", "src/driver/cpp/bazel/grammar.yy");

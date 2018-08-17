@@ -125,7 +125,7 @@ struct SW_DRIVER_CPP_API FileRegex
 
 struct SW_DRIVER_CPP_API Dependency
 {
-    NativeTarget *target = nullptr;
+    std::weak_ptr<NativeTarget> target;
     UnresolvedPackage package;
     bool IncludeDirectoriesOnly = false;
     bool Dummy = false; // bool Runtime = false; ?
@@ -138,13 +138,13 @@ struct SW_DRIVER_CPP_API Dependency
 
     Dependency &operator=(const NativeTarget *t);
     //Dependency &operator=(const Package *p);
-    bool operator==(const Dependency &t) const { return std::tie(package, target) == std::tie(t.package, t.target); }
-    bool operator< (const Dependency &t) const { return std::tie(package, target) < std::tie(t.package, t.target); }
+    bool operator==(const Dependency &t) const;
+    bool operator< (const Dependency &t) const;
 
     //NativeTarget *get() const;
     //operator NativeTarget*() const;
     //NativeTarget *operator->() const;
-    operator bool() const { return target != nullptr; }
+    operator bool() const { return !!target.lock(); }
     UnresolvedPackage getPackage() const;
     PackageId getResolvedPackage() const;
 };
@@ -457,7 +457,7 @@ template<> struct hash<sw::Dependency>
 {
     size_t operator()(const sw::Dependency& p) const
     {
-        return (size_t)p.target;// ^ (size_t)p.package;
+        return (size_t)p.target.lock().get();// ^ (size_t)p.package;
     }
 };
 

@@ -334,7 +334,7 @@ private:
 /**
 * \brief Single project target.
 */
-struct SW_DRIVER_CPP_API Target : TargetBase//, std::enable_shared_from_this<Target>
+struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Target>
     //,protected SourceFileStorage
     //, Executable // impl, must not be visible to users
 {
@@ -698,7 +698,7 @@ protected:
 
     once_mutex_t once;
     mutable NativeLinker *SelectedTool = nullptr;
-    DependenciesType CircularDependencies;
+    UniqueVector<Dependency*> CircularDependencies;
     std::shared_ptr<NativeLinker> CircularLinker;
 
     Files gatherObjectFiles() const;

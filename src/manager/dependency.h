@@ -22,11 +22,29 @@ struct ExtendedPackageData : Package
     const Remote *remote = nullptr;
 };
 
+} // namespace sw
+
+namespace std
+{
+
+template<> struct hash<sw::ExtendedPackageData>
+{
+    size_t operator()(const sw::ExtendedPackageData &p) const
+    {
+        return std::hash<sw::PackageId>()(p);
+    }
+};
+
+} // namespace std
+
+namespace sw
+{
+
 struct DownloadDependency : public ExtendedPackageData
 {
     using IdDependencies = std::unordered_map<db::PackageVersionId, DownloadDependency>;
     using DbDependencies = std::unordered_map<String, ExtendedPackageData>;
-    using Dependencies = std::unordered_map<Package, ExtendedPackageData>;
+    using Dependencies = std::unordered_map<ExtendedPackageData, ExtendedPackageData>;
 
     // own data (private)
     VersionRange range;
@@ -63,18 +81,5 @@ private:
 };
 
 using IdDependencies = DownloadDependency::IdDependencies;
-
-}
-
-namespace std
-{
-
-template<> struct hash<sw::ExtendedPackageData>
-{
-    size_t operator()(const sw::ExtendedPackageData &p) const
-    {
-        return std::hash<sw::PackageId>()(p);
-    }
-};
 
 }

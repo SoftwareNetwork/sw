@@ -114,17 +114,14 @@ void FileDb::save(ConcurrentHashMap<path, FileRecord> &files) const
     // lock and write
     ScopedFileLock lk(f);
 
-    FILE *fp = fopen(f.c_str(), "wb");
-    if (!fp)
-        throw std::runtime_error("Cannot open file: " + fn.string() + ".files");
+    ScopedFile fp(f, "wb");
     std::vector<uint8_t> v;
     for (auto i = files.getIterator(); i.isValid(); i.next())
     {
         auto &f = *i.getValue();
         write(v, f);
-        fwrite(&v[0], v.size(), 1, fp);
+        fwrite(&v[0], v.size(), 1, fp.getHandle());
     }
-    fclose(fp);
 }
 
 template <class T>
@@ -184,17 +181,14 @@ void FileDb::load(ConcurrentCommandStorage &commands) const
 
 void FileDb::save(ConcurrentCommandStorage &commands) const
 {
-    FILE *fp = fopen((fn.string() + ".commands").c_str(), "wb");
-    if (!fp)
-        throw std::runtime_error("Cannot open file: " + fn.string() + ".commands");
+    ScopedFile fp(path(fn) += ".commands", "wb");
     for (auto i = commands.getIterator(); i.isValid(); i.next())
     {
         int64_t k = (int64_t)i.getKey();
-        fwrite(&k, sizeof(k), 1, fp);
+        fwrite(&k, sizeof(k), 1, fp.getHandle());
         auto &h = *i.getValue();
-        fwrite(&h, sizeof(h), 1, fp);
+        fwrite(&h, sizeof(h), 1, fp.getHandle());
     }
-    fclose(fp);
 }
 
 }

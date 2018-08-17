@@ -19,6 +19,7 @@
 #include <primitives/file_monitor.h>
 #include <primitives/hash.h>
 #include <primitives/templates.h>
+#include <primitives/debug.h>
 
 #include <sstream>
 
@@ -40,14 +41,16 @@ primitives::filesystem::FileMonitor &get_file_monitor()
 
 void explainMessage(const String &subject, bool outdated, const String &reason, const String &name)
 {
-    if (!Settings::get_local_settings().explain_outdated/* && 0*/)
+    if (!Settings::get_local_settings().explain_outdated && 0)
         return;
     static Executor e(1);
     static std::ofstream o(CPPAN_FILES_EXPLAIN_FILE.string());
     e.push([=]
     {
+        if (!outdated)
+            return;
         o << subject << ": " << name << "\n";
-        o << "outdated = " << (outdated ? "1" : "0") << "\n";
+        o << "outdated\n";
         o << "reason = " << reason << "\n\n";
     });
 }
@@ -161,13 +164,13 @@ std::unordered_set<std::shared_ptr<sw::builder::Command>> File::gatherDependentG
     std::unordered_set<std::shared_ptr<sw::builder::Command>> deps;
     for (auto &[f, d] : r->explicit_dependencies)
     {
-        if (d->generator)
-            deps.insert(d->generator);
+        if (d->isGenerated())
+            deps.insert(d->getGenerator());
     }
     for (auto &[f, d] : r->implicit_dependencies)
     {
-        if (d->generator)
-            deps.insert(d->generator);
+        if (d->isGenerated())
+            deps.insert(d->getGenerator());
     }
     return deps;
 }
@@ -289,7 +292,7 @@ size_t FileRecord::getHash() const
 
 void FileRecord::reset()
 {
-    if (generator && generator->executed)
+    //if (generator && generator->executed())
     {
         // do we need to reset changed in this case or not?
         generator.reset();
@@ -413,6 +416,10 @@ bool FileRecord::refresh()
     auto t = fs::last_write_time(file);
     if (t > last_write_time)
     {
+        if (last_write_time.time_since_epoch().count() == 0)
+            EXPLAIN_OUTDATED("file", true, "last_write_time changed", file.string());
+        else
+            EXPLAIN_OUTDATED("file", true, "empty last_write_time", file.string());
         last_write_time = t;
         return true;
     }
@@ -436,6 +443,26 @@ bool FileRecord::isChanged()
     auto c = refresh();
     c |= is_changed();
     return c;
+}
+
+void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
+{
+    //DEBUG_BREAK_IF_PATH_HAS(file, "program_options-1.68.0.lib");
+
+    auto gold = generator.lock();
+    if (gold && (gold != g && !gold->isExecuted()))
+        throw std::runtime_error("Setting generator twice on file: " + file.u8string());
+    generator = g;
+}
+
+std::shared_ptr<builder::Command> FileRecord::getGenerator() const
+{
+    return generator.lock();
+}
+
+bool FileRecord::isGenerated() const
+{
+    return !!generator.lock();
 }
 
 fs::file_time_type FileRecord::getMaxTime() const

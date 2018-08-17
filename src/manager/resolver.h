@@ -77,7 +77,7 @@ public:
     void resolve_and_download(const UnresolvedPackage &p, const path &fn);
 
     std::unordered_set<ExtendedPackageData> getDownloadDependencies() const;
-    std::unordered_map<Package, PackageVersionGroupNumber> getDownloadDependenciesWithGroupNumbers() const;
+    std::unordered_map<ExtendedPackageData, PackageVersionGroupNumber> getDownloadDependenciesWithGroupNumbers() const;
 
 private:
     Dependencies download_dependencies_;

@@ -87,7 +87,7 @@ void unique_merge_containers(C &c1, const C &c2)
 
 Dependency::Dependency(const NativeTarget *t)
 {
-    target = (NativeTarget *)t;
+    target = std::static_pointer_cast<NativeTarget>(((NativeTarget *)t)->shared_from_this());
     //package = t->getPackage();
 }
 
@@ -98,9 +98,23 @@ Dependency::Dependency(const UnresolvedPackage &p)
 
 Dependency &Dependency::operator=(const NativeTarget *t)
 {
-    target = (NativeTarget *)t;
+    target = std::static_pointer_cast<NativeTarget>(((NativeTarget *)t)->shared_from_this());
     //package = t->getPackage();
     return *this;
+}
+
+bool Dependency::operator==(const Dependency &t) const
+{
+    auto t1 = target.lock();
+    auto t2 = t.target.lock();
+    return std::tie(package, t1) == std::tie(t.package, t2);
+}
+
+bool Dependency::operator<(const Dependency &t) const
+{
+    auto t1 = target.lock();
+    auto t2 = t.target.lock();
+    return std::tie(package, t1) < std::tie(t.package, t2);
 }
 
 /*Dependency &Dependency::operator=(const Package *p)
@@ -128,15 +142,17 @@ NativeTarget *Dependency::operator->() const
 
 UnresolvedPackage Dependency::getPackage() const
 {
-    if (target)
-        return { target->pkg.ppath, target->pkg.version };
+    auto t = target.lock();
+    if (t)
+        return { t->pkg.ppath, t->pkg.version };
     return package;
 }
 
 PackageId Dependency::getResolvedPackage() const
 {
-    if (target)
-        return { target->pkg.ppath, target->pkg.version };
+    auto t = target.lock();
+    if (t)
+        return { t->pkg.ppath, t->pkg.version };
     throw std::runtime_error("Package is unresolved: " + getPackage().toString());
 }
 

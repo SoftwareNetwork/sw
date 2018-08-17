@@ -259,11 +259,6 @@ struct SW_DRIVER_CPP_API VisualStudioCompilerOptions : VisualStudioCommonCompile
         vs::RuntimeLibraryType::MultiThreadedDLL
     };
 
-    COMMAND_LINE_OPTION(SerializedPDBWrites, bool)
-    {
-        cl::CommandFlag{ "FS" },
-    };
-
     COMMAND_LINE_OPTION(ShowIncludes, bool)
     {
         cl::CommandFlag{ "showIncludes" },

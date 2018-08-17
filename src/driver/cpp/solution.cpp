@@ -19,6 +19,7 @@
 #include <settings.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/thread/lock_types.hpp>
 #include <primitives/context.h>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
@@ -37,37 +38,6 @@ void check_self(sw::Checker &c);
 
 namespace sw
 {
-
-/*template <class T>
-struct ScopedValue
-{
-    T &old_ref;
-    T old;
-
-    ScopedValue(T &v)
-        : old_ref(v), old(std::move(v))
-    {
-        v = T();
-    }
-
-    ScopedValue(T &v, const T &nv)
-        : old_ref(v), old(std::move(v))
-    {
-        v = nv;
-    }
-
-    ScopedValue(T &v, T &&nv)
-        : old_ref(v), old(std::move(v))
-    {
-        v = std::move(nv);
-    }
-
-    ~ScopedValue()
-    {
-        //old_ref = std::move(old);
-        old_ref.insert(old.begin(), old.end());
-    }
-};*/
 
 #ifdef _WIN32
 static HMODULE GetCurrentModule()
@@ -233,16 +203,7 @@ Solution::Solution(const Solution &rhs)
     , source_dirs_by_source(rhs.source_dirs_by_source)
 {
     Checks.solution = this;
-    //if (!Version.isValid())
-        //Version = Local ? "local" : "master";
 }
-
-/*Solution &Solution::operator=(const Solution &rhs)
-{
-    Solution tmp(rhs);
-    std::swap(*this, tmp);
-    return *this;
-}*/
 
 Solution::~Solution()
 {
@@ -454,7 +415,9 @@ Commands Solution::getCommands() const
 
     // calling this in any case to set proper command dependencies
     for (auto &p : children)
+    {
         p.second->getCommands();
+    }
 
     Commands cmds;
     auto &chldr = TargetsToBuild.empty() ? children : TargetsToBuild;
@@ -497,7 +460,7 @@ void Solution::printGraph(const path &p) const
         for (auto &d : nt->Dependencies)
         {
             if (!d->IncludeDirectoriesOnly)
-                s += "\"" + p.target_name + "\"->\"" + d->target->pkg.target_name + "\";\n";
+                s += "\"" + p.target_name + "\"->\"" + d->target.lock()->pkg.target_name + "\";\n";
         }
     }
     s += "}";
@@ -614,6 +577,59 @@ void Solution::execute() const
         write_file(p, s);
     };
 
+    auto print_commands_raw = [](const auto &ep, const path &p)
+    {
+        String s;
+
+        // gather programs
+        std::unordered_map<path, size_t> programs;
+        for (auto &c : ep.commands)
+        {
+            s += c->program.u8string() + " ";
+            for (auto &a : c->args)
+                s += a + " ";
+            s.resize(s.size() - 1);
+            s += "\n";
+        }
+
+        write_file(p, s);
+    };
+
+    auto print_numbers = [](const auto &ep, const path &p)
+    {
+        String s;
+
+        // gather programs
+        int i = 1;
+        StringHashMap<int> strings;
+
+        auto insert = [&strings, &i](const auto &s)
+        {
+            auto &v = strings[s];
+            if (v)
+                return;
+            v = i++;
+        };
+
+        for (auto &c : ep.commands)
+        {
+            insert(c->program.u8string());
+            for (auto &a : c->args)
+                insert(a);
+        }
+
+        for (auto &c : ep.commands)
+        {
+            s += std::to_string(strings[c->program.u8string()]) + " ";
+            for (auto &a : c->args)
+                s += std::to_string(strings[a]) + " ";
+            s.resize(s.size() - 1);
+            s += "\n";
+        }
+
+        write_file(p, s);
+    };
+
     auto p = getExecutionPlan();
 
     for (auto &c : p.commands)
@@ -635,7 +651,7 @@ void Solution::execute() const
 
     // execute early to prevent commands expansion into response files
     // print misc
-    if (::sw::Settings::get_local_settings().print_commands && !silent) // && !b console mode
+    if (::sw::Settings::get_local_settings().print_commands && !silent || 1) // && !b console mode
     {
         auto d = getServiceDir();
 
@@ -643,21 +659,11 @@ void Solution::execute() const
         print_graph(p, d / "build.dot");
         printGraph(d / "solution.dot");
         print_commands(p, d / "commands.bat");
+        print_commands_raw(p, d / "commands_raw.bat");
+        print_numbers(p, d / "numbers.txt");
     }
 
     ScopedTime t;
-
-    /*std::sort(p.commands.begin(), p.commands.end(),
-        [](const auto &c1, const auto &c2)
-    {
-        if (c1->dependencies.size() < c2->dependencies.size())
-            return true;
-        else if (c1->dependencies.size() > c2->dependencies.size())
-            return false;
-        return c1->getName() < c2->getName();
-    });*/
-    //Executor e(1);
-    //p.execute(e);
 
     //Executor e(1);
     auto &e = getExecutor();
@@ -691,8 +697,8 @@ void Solution::prepare()
         for (auto &p : dd)
             knownTargets.insert(p);
 
-        // always try to take first path
-        std::unordered_map<PackageVersionGroupNumber, std::set<path>> cfgs2;
+        // old way with 1 dll per file
+        /*std::unordered_map<PackageVersionGroupNumber, std::set<path>> cfgs2;
         for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
             cfgs2[gn].insert(p.getDirSrc2() / getConfigFilename());
 
@@ -703,11 +709,6 @@ void Solution::prepare()
         Build b;
         b.Local = false;
         auto dlls = b.build_configs(cfgs);
-
-        // make parallel
-
-        Local = false;
-        //s.knownTargets = knownTargets;
 
         // on the first step we load configure information
         for (auto &p : dd)
@@ -720,81 +721,28 @@ void Solution::prepare()
                 continue;
             auto dll = dlls[f];
 
+            // call function
             NamePrefix = p.ppath.slice(0, p.prefix);
             getModuleStorage(base_ptr).get(dll).check(Checks);
+        }*/
 
-            /*auto &c = b2.solutions[0].getChildren();
-            for (auto &[pp, t] : c)
-            t->solution = &solutions[0];
-            solutions[0].children.insert(c.begin(), c.end());
-            solutions[0].copyChecksFrom(b2.solutions[0]);
-            b2.solutions[0].children.clear();*/
-        }
+        // gather packages
+        std::unordered_map<PackageVersionGroupNumber, ExtendedPackageData> cfgs2;
+        for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
+            cfgs2[gn] = p;
+        std::unordered_set<ExtendedPackageData> cfgs;
+        for (auto &[gn, s] : cfgs2)
+            cfgs.insert(s);
 
+        Build b;
+        b.Local = false;
+        auto dll = b.build_configs(cfgs);
+
+        Local = false;
+
+        getModuleStorage(base_ptr).get(dll).check(Checks);
         performChecks();
-
-        for (auto &p : dd)
-        {
-            if (children.find(p) != children.end())
-                continue;
-
-            auto f = p.getDirSrc2() / getConfigFilename();
-            if (cfgs.find(f) == cfgs.end())
-                continue;
-            auto dll = dlls[f];
-
-            NamePrefix = p.ppath.slice(0, p.prefix);
-            //ScopedValue<decltype(children)> c(children);
-            getModuleStorage(base_ptr).get(dll).build(*this);
-
-            /*auto &c = b2.solutions[0].getChildren();
-            for (auto &[pp, t] : c)
-            t->solution = &solutions[0];
-            solutions[0].children.insert(c.begin(), c.end());
-            solutions[0].copyChecksFrom(b2.solutions[0]);
-            b2.solutions[0].children.clear();*/
-        }
-
-        // make parallel
-        /*for (auto &p : dd)
-        {
-            auto f = p.getDirSrc2() / getConfigFilename();
-            auto dll = dlls[f];
-
-            //Build b;
-            //b.silent = true;
-            //b.Local = false;
-            //if (File(f).isChanged() || File(boost::dll::program_location()).isChanged())
-            //dll = b.build_configs({ f }).begin()->second;
-            /*else
-            {
-                dll = b.get_module_name(f);
-                if (!fs::exists(dll))
-                    dll = b.build(f);
-            }*/
-
-            /*Build b2;
-            //b.silent = true;
-            b2.Local = false;
-            //b2.knownTargets = knownTargets;
-            b2.NamePrefix = p.ppath.slice(0, p.prefix);
-            //b2.load(dll);
-
-            auto &c = b2.solutions[0].getChildren();
-            for (auto &[pp, t] : c)
-                t->solution = this;
-            children.insert(c.begin(), c.end());
-            copyChecksFrom(b2.solutions[0]);
-            b2.solutions[0].children.clear();
-            //}));
-        }
-        //waitAndGet(fs);
-
-        // fix solution ptr
-        //for (auto &c : children)
-            //c.second->solution = this;*/
-
-            //std::unordered_map<Package, Build> build_configs;
+        getModuleStorage(base_ptr).get(dll).build(*this);
 
         int retries = 0;
         while (!ud.empty())
@@ -816,7 +764,7 @@ void Solution::prepare()
                 {
                     if (p == t->pkg && ud[porig])
                     {
-                        ud[porig]->target = (NativeTarget *)t.get();
+                        ud[porig]->target = std::static_pointer_cast<NativeTarget>(t);
                         //t->SourceDir = p.getDirSrc2();
                     }
                 }
@@ -871,7 +819,7 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
                 auto i = children.find(r.value());
                 if (i != children.end())
                 {
-                    dptr->target = (NativeTarget*)i->second.get();
+                    dptr->target = std::static_pointer_cast<NativeTarget>(i->second);
                     rm.insert(up);
                     continue;
                 }
@@ -880,7 +828,7 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
             {
                 if (up.canBe(p))
                 {
-                    dptr->target = (NativeTarget*)t.get();
+                    dptr->target = std::static_pointer_cast<NativeTarget>(t);
                     rm.insert(up);
                     break;
                 }
@@ -1022,11 +970,16 @@ void Build::prepare()
     //performChecks();
     ScopedTime t;
 
-    auto &e = getExecutor();
-    std::vector<Future<void>> fs;
-    for (auto &s : solutions)
-        fs.push_back(e.push([&s] { s.prepare(); }));
-    waitAndGet(fs);
+    if (solutions.size() == 1)
+        solutions[0].prepare();
+    else
+    {
+        auto &e = getExecutor();
+        std::vector<Future<void>> fs;
+        for (auto &s : solutions)
+            fs.push_back(e.push([&s] { s.prepare(); }));
+        waitAndGet(fs);
+    }
 
     if (!silent)
         LOG_INFO(logger, "Prepare time: " << t.getTimeFloat() << " s.");
@@ -1037,48 +990,42 @@ Solution &Build::addSolution()
     return solutions.emplace_back(*this);
 }
 
-PackagePath Build::getSelfTargetName(const path &fn)
+static auto getFilesHash(const Files &files)
 {
-    return "loc.sw.self." + sha256_short(fn.string()) + "." + fn.stem().string();
+    String h;
+    for (auto &fn : files)
+        h += fn.u8string();
+    return sha256_short(h);
 }
 
-SharedLibraryTarget &Build::createTarget(const path &fn)
+PackagePath Build::getSelfTargetName(const Files &files)
+{
+    return "loc.sw.self." + getFilesHash(files);
+}
+
+SharedLibraryTarget &Build::createTarget(const Files &files)
 {
     auto &solution = solutions[0];
     solution.IsConfig = true;
-    auto &lib = solution.addTarget<SharedLibraryTarget>(getSelfTargetName(fn), "local");
-    /*if (!lib.Local)
-    {
-        lib.BinaryDir = pkg.getDirObj() / "build" / getConfig(true) / "cfg";
-        lib.init2(); // re-set output dirs
-    }*/
+    auto &lib = solution.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
     solution.IsConfig = false;
     return lib;
 }
 
-path Build::get_module_name(const path &fn)
-{
-    auto &lib = createTarget(fn);
-    return lib.getOutputFile();
-}
-
-FilesMap Build::build_configs(const Files &files)
+FilesMap Build::build_configs_separate(const Files &files)
 {
     FilesMap r;
     if (files.empty())
         return r;
 
-    /*SCOPE_EXIT
-    {
-        getFileStorage().reset();
-    };*/
+    // reset before start adding targets
+    getFileStorage().reset();
 
     if (solutions.empty())
         addSolution();
 
     auto &solution = solutions[0];
 
-    //solution.Local = true;
     solution.Settings.Native.LibrariesType = LibraryType::Static;
 #ifndef NDEBUG
     solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
@@ -1099,7 +1046,7 @@ FilesMap Build::build_configs(const Files &files)
             &solution
     ](const auto &fn)
     {
-        auto &lib = createTarget(fn);
+        auto &lib = createTarget({ fn });
 #if defined(CPPAN_OS_WINDOWS)
         lib += implib;
 #endif
@@ -1112,6 +1059,7 @@ FilesMap Build::build_configs(const Files &files)
                 //C->RuntimeLibrary() = RuntimeLibraryType::MultiThreadedDLL;
             }
         }
+
         lib += fn;
         write_file_if_different(getImportPchFile(), cppan_cpp);
         lib.addPrecompiledHeader("sw/driver/cpp/sw.h", getImportPchFile());
@@ -1209,10 +1157,6 @@ FilesMap Build::build_configs(const Files &files)
         lib += solution.getTarget<NativeTarget>("sw.client.manager");
         auto d = lib + solution.getTarget<NativeTarget>("sw.client.driver.cpp");
         d->IncludeDirectoriesOnly = true;
-        //lib += solution.getTarget<NativeTarget>("org.sw.demo.boost.filesystem");
-        //lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.command");
-        //lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.hash");
-        //lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.http");
         for (auto &d : udeps)
             lib += std::make_shared<Dependency>(d);
 
@@ -1230,25 +1174,239 @@ FilesMap Build::build_configs(const Files &files)
     return r;
 }
 
+path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
+{
+    if (pkgs.empty())
+        return {};
+
+    // reset before start adding targets
+    //getFileStorage().reset();
+
+    if (solutions.empty())
+        addSolution();
+
+    auto &solution = solutions[0];
+
+    solution.Settings.Native.LibrariesType = LibraryType::Static;
+#ifndef NDEBUG
+    solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
+#endif
+
+#if defined(CPPAN_OS_WINDOWS)
+    auto &implib = solution.getImportLibrary();
+#endif
+
+    check_self(solution.Checks);
+    solution.performChecks();
+    build_self(solution);
+
+    Files files;
+    for (auto &pkg : pkgs)
+        files.insert(pkg.getDirSrc2() / getConfigFilename());
+    bool many_files = files.size() > 1;
+    auto h = getFilesHash(files);
+
+    auto &lib = createTarget(files);
+#if defined(CPPAN_OS_WINDOWS)
+    lib += implib;
+#endif
+    lib.AutoDetectOptions = false;
+    lib.CPPVersion = CPPLanguageStandard::CPP17;
+    if (auto L = lib.languages[LanguageType::CPP]->template as<CPPLanguage>())
+    {
+        if (auto C = L->compiler->template as<VisualStudioCompiler>())
+        {
+            //C->RuntimeLibrary() = RuntimeLibraryType::MultiThreadedDLL;
+        }
+    }
+
+    // separate loop
+    for (auto &fn : files)
+        lib += fn;
+
+    // generate main source file
+    if (many_files)
+    {
+        Context ctx;
+
+        Context build;
+        build.beginFunction("void build(Solution &s)");
+
+        Context check;
+        check.beginFunction("void check(Checker &c)");
+
+        for (auto &r : pkgs)
+        {
+            auto fn = r.getDirSrc2() / getConfigFilename();
+            auto h = getFilesHash({ fn });
+            ctx.addLine("// " + r.toString());
+            ctx.addLine("void build_" + h + "(Solution &);");
+            ctx.addLine("void check_" + h + "(Checker &);");
+            ctx.addLine();
+
+            build.addLine("// " + r.toString());
+            build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, r.prefix).toString() + "\";");
+            build.addLine("build_" + h + "(s);");
+            build.addLine();
+
+            auto cfg = read_file(fn);
+            if (cfg.find("void check(") != cfg.npos)
+            {
+                check.addLine("// " + r.toString());
+                check.addLine("check_" + h + "(c);");
+                check.addLine();
+            }
+        }
+
+        build.addLine("s.NamePrefix.clear();");
+        build.endFunction();
+        check.endFunction();
+
+        ctx += build;
+        ctx += check;
+
+        auto p = getDirectories().storage_dir_tmp / "self" / ("sw." + h + ".cpp");
+        write_file_if_different(p, ctx.getText());
+        lib += p;
+    }
+
+    // after files
+    write_file_if_different(getImportPchFile(), cppan_cpp);
+    lib.addPrecompiledHeader("sw/driver/cpp/sw.h", getImportPchFile());
+    if (auto s = lib[getImportPchFile()].template as<CPPSourceFile>())
+    {
+        if (auto C = s->compiler->template as<VisualStudioCompiler>())
+        {
+            path of = getImportPchFile();
+            of += ".obj";
+            //C->setOutputFile(of);
+        }
+    }
+
+    for (auto &fn : files)
+    {
+        auto[headers, udeps] = getFileDependencies(fn);
+        if (auto sf = lib[fn].template as<CPPSourceFile>())
+        {
+            if (many_files)
+            {
+                if (auto c = sf->compiler->as<NativeCompiler>())
+                {
+                    auto h = getFilesHash({ fn });
+                    c->Definitions["configure"] = "configure_" + h;
+                    c->Definitions["build"] = "build_" + h;
+                    c->Definitions["check"] = "check_" + h;
+                }
+            }
+
+            if (auto c = sf->compiler->as<VisualStudioCompiler>())
+            {
+                for (auto &h : headers)
+                    c->ForcedIncludeFiles().push_back(h);
+            }
+            else if (auto c = sf->compiler->as<ClangClCompiler>())
+            {
+                for (auto &h : headers)
+                    c->ForcedIncludeFiles().push_back(h);
+            }
+            else if (auto c = sf->compiler->as<ClangCompiler>())
+            {
+                for (auto &h : headers)
+                    c->ForcedIncludeFiles().push_back(h);
+            }
+            else if (auto c = sf->compiler->as<GNUCompiler>())
+            {
+                for (auto &h : headers)
+                    c->ForcedIncludeFiles().push_back(h);
+            }
+        }
+        for (auto &d : udeps)
+            lib += std::make_shared<Dependency>(d);
+    }
+
+    for (auto &[k, v] : lib)
+    {
+        if (!v)
+            continue;
+        if (auto s = v->template as<CPPSourceFile>())
+        {
+#ifdef CPPAN_DEBUG
+            if (auto C = s->compiler->template as<VisualStudioCompiler>())
+            {
+                C->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
+            }
+            else if (auto C = s->compiler->template as<GNUCompiler>())
+            {
+                C->GenerateDebugInfo = true;
+            }
+#endif
+        }
+    }
+
+#if defined(CPPAN_OS_WINDOWS)
+    lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
+    lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
+    lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
+    lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
+    // do not use api name because we use C linkage
+    lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __declspec(dllexport)";
+#else
+    lib.Definitions["SW_SUPPORT_API="];
+    lib.Definitions["SW_MANAGER_API="];
+    lib.Definitions["SW_BUILDER_API="];
+    lib.Definitions["SW_DRIVER_CPP_API="];
+    // do not use api name because we use C linkage
+    lib.Definitions["SW_PACKAGE_API"] = "extern \"C\"";
+#endif
+
+#if defined(CPPAN_OS_WINDOWS)
+    lib.LinkLibraries.insert("Delayimp.lib");
+#else
+    primitives::Command c;
+    char buf[1024] = { 0 };
+    pid_t pid = getpid();
+    snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
+    c.args = { "readlink", "-f", buf };
+    c.execute();
+    //lib.LinkLibraries.insert(c.out.text);
+#endif
+
+    if (auto L = lib.Linker->template as<VisualStudioLinker>())
+    {
+        L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
+        //#ifdef CPPAN_DEBUG
+        L->GenerateDebugInfo = true;
+        L->Force = vs::ForceType::Multiple;
+        //#endif
+    }
+
+    lib += solution.getTarget<NativeTarget>("sw.client.manager");
+    auto d = lib + solution.getTarget<NativeTarget>("sw.client.driver.cpp");
+    d->IncludeDirectoriesOnly = true;
+
+    auto i = solution.children.find(lib.pkg);
+    solution.TargetsToBuild[i->first] = i->second;
+
+    Solution::execute();
+
+    return lib.getOutputFile();
+}
+
 path Build::build(const path &fn)
 {
-    // build in separate solution
-    Build b;// (*this);
-    //b.configure = configure;
-    //b.Local = Local;
-    return b.build_configs({ fn }).begin()->second;
+    // separate build
+    Build b;
+    return b.build_configs_separate({ fn }).begin()->second;
 }
 
 void Build::build_and_load(const path &fn)
 {
     auto dll = build(fn);
-    load(dll);
 
-    // why separate build? not this object
-    /*Build b;
-    b.configure = configure;
-    b.Local = Local;
-    b.load(dll);*/
+    // reset before start adding targets
+    getFileStorage().reset();
+
+    load(dll);
 }
 
 bool Build::execute()
@@ -1265,21 +1423,12 @@ bool Build::execute()
 
 void Build::build_and_run(const path &fn)
 {
-    auto dll = build(fn);
-    //if (!fn.parent_path().empty())
-        //fs::current_path(fn.parent_path());
-
-    // why separate build? not this object
-    /*Build b;
-    b.configure = configure;
-    b.Local = Local;
-    b.load(dll);*/
-    load(dll);
+    build_and_load(fn);
 
     if (!::sw::Settings::get_user_settings().generator.empty())
     {
-        /*b.*/prepare();
-        /*b.*/getCommands();
+        prepare();
+        getCommands();
 
         Generator g;
         g.file = fn.filename();
@@ -1288,14 +1437,8 @@ void Build::build_and_run(const path &fn)
         return;
     }
 
-    /*b.*/Solution::execute();
+    Solution::execute();
 }
-
-/*void Build::run(const path &dll)
-{
-    load(dll);
-    execute();
-}*/
 
 void Build::build_package(const String &s)
 {
@@ -1317,76 +1460,36 @@ void Build::build_package(const String &s)
     if (solutions.empty())
         addSolution();
 
-    // always try to take first path
-    std::unordered_map<PackageVersionGroupNumber, std::set<path>> cfgs2;
+    // gather packages
+    std::unordered_map<PackageVersionGroupNumber, ExtendedPackageData> cfgs2;
     for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
-        cfgs2[gn].insert(p.getDirSrc2() / getConfigFilename());
-
-    Files cfgs;
+        cfgs2[gn] = p;
+    std::unordered_set<ExtendedPackageData> cfgs;
     for (auto &[gn, s] : cfgs2)
-        cfgs.insert(*s.begin());
+        cfgs.insert(s);
 
     Build b;
     b.Local = false;
-    auto dlls = b.build_configs(cfgs);
+    auto dll = b.build_configs(cfgs);
 
     getFileStorage().reset();
 
-    // make parallel
-
-    // gather checks
+    // make parallel?
     for (auto &s : solutions)
     {
         s.Local = false;
-        //s.PostponeFileResolving = true;
         s.knownTargets = knownTargets;
-
-        // on the first step we load configure information
-        for (auto &p : dd)
-        {
-            auto f = p.getDirSrc2() / getConfigFilename();
-            if (cfgs.find(f) == cfgs.end())
-                continue;
-            auto dll = dlls[f];
-
-            s.NamePrefix = p.ppath.slice(0, p.prefix);
-            getModuleStorage(base_ptr).get(dll).check(s.Checks);
-        }
     }
+
+    // gather checks
+    for (auto &s : solutions)
+        getModuleStorage(base_ptr).get(dll).check(s.Checks);
 
     performChecks();
 
     // load build configs
     for (auto &s : solutions)
-    {
-        for (auto &p : dd)
-        {
-            auto f = p.getDirSrc2() / getConfigFilename();
-            if (cfgs.find(f) == cfgs.end())
-                continue;
-            auto dll = dlls[f];
-
-            s.NamePrefix = p.ppath.slice(0, p.prefix);
-            //ScopedValue<decltype(s.children)> c(s.children);
-            getModuleStorage(base_ptr).get(dll).build(s);
-        }
-    }
-
-    // fix dependencies to selected children
-    /*for (auto &s : solutions)
-    {
-        for (auto &[pkg, t] : s.children)
-        {
-            auto nt = (NativeExecutedTarget*)t.get();
-            nt->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>([&s](auto &v, auto &gs)
-            {
-                for (auto &d : v.Dependencies)
-                {
-                    if ()
-                }
-            });
-        }
-    }*/
+        getModuleStorage(base_ptr).get(dll).build(s);
 
     // set what packages we build
     for (auto &s : solutions)
@@ -1412,24 +1515,29 @@ void Build::build_package(const String &s)
 
 void Build::load(const path &dll)
 {
+    // reset before start adding targets
+    //getFileStorage().reset();
+
     if (configure)
         getModuleStorage(base_ptr).get(dll).configure(*this);
 
     if (solutions.empty())
         addSolution();
 
-    // some packages want checks in their build body
-    //if (perform_checks)
+    // check
     {
+        // some packages want checks in their build body
+        // because they use variables from checks
+
         // make parallel?
         for (auto &s : solutions)
             getModuleStorage(base_ptr).get(dll).check(s.Checks);
         performChecks();
     }
 
+    // build
     for (auto &s : solutions)
     {
-        //ScopedValue<decltype(s.children)> c(s.children);
         getModuleStorage(base_ptr).get(dll).build(s);
     }
 }
@@ -1488,7 +1596,7 @@ PackageDescriptionMap Build::getPackages() const
             });
             for (auto &d : deps)
             {
-                if (d->target && d->target->Scope != TargetScope::Build)
+                if (d->target.lock() && d->target.lock()->Scope != TargetScope::Build)
                     continue;
 
                 nlohmann::json jd;
@@ -1506,16 +1614,12 @@ PackageDescriptionMap Build::getPackages() const
 
 const Module &ModuleStorage::get(const path &dll)
 {
-    {
-        std::shared_lock<std::shared_mutex> lk(m);
-        auto i = modules.find(dll);
-        if (i != modules.end())
-            return i->second;
-    }
-    {
-        std::unique_lock<std::shared_mutex> lk(m);
-        return modules.emplace(dll, dll).first->second;
-    }
+    boost::upgrade_lock lk(m);
+    auto i = modules.find(dll);
+    if (i != modules.end())
+        return i->second;
+    boost::upgrade_to_unique_lock lk2(lk);
+    return modules.emplace(dll, dll).first->second;
 }
 
 Module::Module(const path &dll)
@@ -1537,15 +1641,15 @@ catch (...)
 
 void Module::build(Solution &s) const
 {
-    Solution s2(s);
+    //Solution s2(s);
     //build_(s2);
     build_(s);
-    for (auto &[p, t] : s2.children)
+    /*for (auto &[p, t] : s2.children)
     {
         if (s.knownTargets.find(p) == s.knownTargets.end())
             continue;
         s.add(t);
-    }
+    }*/
 }
 
 ModuleStorage &getModuleStorage(Solution &owner)

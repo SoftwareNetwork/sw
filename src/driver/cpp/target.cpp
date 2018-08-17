@@ -23,15 +23,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target");
 
-// with double check
-#define CHECK_PREPARED_TARGET                              \
-    if (prepared)                                          \
-        return;                                            \
-    CheckPreparedTarget __check_prepared_target(prepared); \
-    std::unique_lock<once_mutex_t> __lk(once);             \
-    if (prepared)                                          \
-        return
-
 #define RETURN_PREPARE_PASS \
     do {prepare_pass++; return true;} while (0)
 
@@ -762,14 +753,14 @@ NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherDependenciesTargets
     TargetsSet deps;
     for (auto &d : Dependencies)
     {
-        if (d->target == this)
+        if (d->target.lock().get() == this)
             continue;
         if (d->Dummy)
             continue;
 
         if (d->IncludeDirectoriesOnly)
             continue;
-        deps.insert(d->target);
+        deps.insert(d->target.lock().get());
     }
     return deps;
 }
@@ -804,7 +795,7 @@ UnresolvedDependenciesType NativeExecutedTarget::gatherUnresolvedDependencies() 
     {
         for (auto &d : v.Dependencies)
         {
-            if (!d->target)
+            if (!d->target.lock())
                 deps.insert({ d->package, d });
         }
     });
@@ -866,12 +857,6 @@ Files NativeExecutedTarget::gatherIncludeDirectories() const
 
 NativeExecutedTarget::SourceFilesSet NativeExecutedTarget::gatherSourceFiles() const
 {
-    /*if (pkg.toString().find("gss") != -1)
-    {
-        volatile int a = 5;
-        a++;
-    }*/
-
     // maybe cache result?
     SourceFilesSet files;
     for (auto &f : *this)
@@ -986,6 +971,8 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
                 c->PrecompiledHeaderFilename.input_dependency = true;
                 c->PrecompiledHeader().use = p.header;
                 c->PDBFilename = pdb_fn;
+                c->PDBFilename.intermediate_file = false;
+                c->PDBFilename.input_dependency = true;
             }
             else if (auto c = sf->compiler->as<ClangClCompiler>())
             {
@@ -1023,6 +1010,8 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
             c->PrecompiledHeaderFilename.output_dependency = true;
             c->PrecompiledHeader().create = p.header;
             c->PDBFilename = pdb_fn;
+            c->PDBFilename.intermediate_file = false;
+            c->PDBFilename.output_dependency = true;
         }
         else if (auto c = sf->compiler->as<ClangClCompiler>())
         {
@@ -1075,7 +1064,7 @@ Commands NativeExecutedTarget::getGeneratedCommands() const
             continue;
         if (f.first == def)
             continue;
-        auto c = p.getFileRecord().generator;
+        auto c = p.getFileRecord().getGenerator();
         generated.insert(c);
     }
 
@@ -1087,18 +1076,6 @@ Commands NativeExecutedTarget::getCommands() const
     Commands cmds;
     if (already_built)
         return cmds;
-
-    if (pkg.ppath.toString().find("pangoft2") != -1)
-    {
-        volatile int a = 5;
-        a++;
-    }
-
-    /*if (pkg.ppath.toString().find("SystemZ") != -1)
-    {
-        volatile int a = 5;
-        a++;
-    }*/
 
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
@@ -1122,7 +1099,7 @@ Commands NativeExecutedTarget::getCommands() const
                 continue;
             if (f.first.string().find(".symbols.def") != -1)
                 continue;
-            auto c = p.getFileRecord().generator;
+            auto c = p.getFileRecord().getGenerator();
             generated.insert(c);
         }
     }*/
@@ -1191,7 +1168,7 @@ Commands NativeExecutedTarget::getCommands() const
         File d(def);
         if (d.isGenerated())
         {
-            auto &g = d.getFileRecord().generator;
+            auto g = d.getFileRecord().getGenerator();
             c->dependencies.insert(g);
             for (auto &c1 : cmds)
                 g->dependencies.insert(c1);
@@ -1248,7 +1225,7 @@ Commands NativeExecutedTarget::getCommands() const
             // check circular, resolve if possible
             for (auto &d : CircularDependencies)
             {
-                auto dt = ((NativeExecutedTarget*)d->target);
+                auto dt = ((NativeExecutedTarget*)d->target.lock().get());
                 auto non_circ_cmd = dt->getSelectedTool()->getCommand();
 
                 // one command must be executed after the second to free implib files from any compiler locks
@@ -1289,10 +1266,12 @@ Commands NativeExecutedTarget::getCommands() const
         cmds.insert(cdb);*/
     }
 
-    auto evs = Events.getCommands();
-    for (auto &c : cmds)
-        c->dependencies.insert(evs.begin(), evs.end());
-    cmds.insert(evs.begin(), evs.end());
+    if (auto evs = Events.getCommands(); !evs.empty())
+    {
+        for (auto &c : cmds)
+            c->dependencies.insert(evs.begin(), evs.end());
+        cmds.insert(evs.begin(), evs.end());
+    }
 
     return cmds;
 }
@@ -1568,14 +1547,6 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
-    //CHECK_PREPARED_TARGET;
-
-    if (pkg.ppath.toString().find("fribidi") != -1)
-    {
-        volatile int a = 5;
-        a++;
-    }
-
     switch (prepare_pass)
     {
     case 1:
@@ -1655,11 +1626,11 @@ bool NativeExecutedTarget::prepare()
                 {
                     if (d->getPackage().canBe(t->getPackage()))
                     {
-                        d->target = (NativeTarget *)t.get();
+                        d->target = std::static_pointer_cast<NativeTarget>(t);
                         break;
                     }
                 }
-                if (d->target == nullptr)
+                if (!d->target.lock())
                     throw std::logic_error("Unresolved package on stage 1: " + d->getPackage().toString());
             }
         });
@@ -1668,12 +1639,6 @@ bool NativeExecutedTarget::prepare()
     case 3:
     // inheritance
     {
-        /*if (pkg.ppath.toString().find("ilmimf") != -1)
-        {
-            volatile int a = 5;
-            a++;
-        }*/
-
         /*struct H
         {
             size_t operator()(const DependencyPtr &p) const
@@ -1699,7 +1664,7 @@ bool NativeExecutedTarget::prepare()
         {
             for (auto &d : v.Dependencies)
             {
-                if (d->target == this)
+                if (d->target.lock().get() == this)
                     continue;
                 if (d->Dummy)
                     continue;
@@ -1715,11 +1680,11 @@ bool NativeExecutedTarget::prepare()
             auto deps2 = deps;
             for (auto &[d, _] : deps2)
             {
-                if (d->target == nullptr)
+                if (d->target.lock() == nullptr)
                     throw std::logic_error("Unresolved package on stage 2: " + d->package.toString());
 
                 // iterate over child deps
-                (*(NativeExecutedTarget*)d->target).TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+                (*(NativeExecutedTarget*)d->target.lock().get()).TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
                     [this, &new_dependency, &deps, &d, &deps_ordered](auto &v, auto &s)
                 {
                     // nothing to do with private inheritance
@@ -1728,12 +1693,12 @@ bool NativeExecutedTarget::prepare()
 
                     for (auto &d2 : v.Dependencies)
                     {
-                        if (d2->target == this)
+                        if (d2->target.lock().get() == this)
                             continue;
                         if (d2->Dummy)
                             continue;
 
-                        if (s.Inheritance == InheritanceType::Protected && !hasSameParent(d2->target))
+                        if (s.Inheritance == InheritanceType::Protected && !hasSameParent(d2->target.lock().get()))
                             continue;
 
                         auto copy = std::make_shared<Dependency>(*d2);
@@ -1809,13 +1774,13 @@ bool NativeExecutedTarget::prepare()
             auto &dc = getSolution()->dummy_children;
             for (auto &d2 : Dependencies)
             {
-                if (d2->target && c.find(d2->target->pkg) == c.end() && dc.find(d2->target->pkg) != dc.end())
+                if (d2->target.lock() && c.find(d2->target.lock()->pkg) == c.end() && dc.find(d2->target.lock()->pkg) != dc.end())
                 {
-                    c[d2->target->pkg] = dc[d2->target->pkg];
+                    c[d2->target.lock()->pkg] = dc[d2->target.lock()->pkg];
 
                     // such packages are not completely independent
                     // they share same source dir (but not binary?) with parent etc.
-                    d2->target->SourceDir = SourceDir;
+                    d2->target.lock()->SourceDir = SourceDir;
                 }
             }
         }
@@ -1835,7 +1800,7 @@ bool NativeExecutedTarget::prepare()
 
             GroupSettings s;
             //s.merge_to_self = false;
-            merge(*(NativeExecutedTarget*)d->target, s);
+            merge(*(NativeExecutedTarget*)d->target.lock().get(), s);
         }
     }
     RETURN_PREPARE_PASS;
@@ -1993,35 +1958,29 @@ bool NativeExecutedTarget::prepare()
     RETURN_PREPARE_PASS;
     case 6:
     {
-        /*if (pkg.ppath.toString().find("ilmimf") != -1)
-        {
-            volatile int a = 5;
-            a++;
-        }*/
-
         // add link libraries from deps
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
         {
             String s;
             for (auto &d : Dependencies)
             {
-                if (d->target == this)
+                if (d->target.lock().get() == this)
                     continue;
                 if (d->Dummy)
                     continue;
                 if (d->IncludeDirectoriesOnly)
                     continue;
 
-                auto dt = ((NativeExecutedTarget*)d->target);
+                auto dt = ((NativeExecutedTarget*)d->target.lock().get());
 
                 for (auto &d2 : dt->Dependencies)
                 {
-                    if (d2->target != this)
+                    if (d2->target.lock().get() != this)
                         continue;
                     if (d2->IncludeDirectoriesOnly)
                         continue;
 
-                    CircularDependencies.insert(d);
+                    CircularDependencies.insert(d.get());
                 }
 
                 if (!CircularDependencies.empty())
@@ -2042,9 +2001,9 @@ bool NativeExecutedTarget::prepare()
                 }
 
                 if (!dt->HeaderOnly.value() && !d->IncludeDirectoriesOnly)
-                    LinkLibraries.insert(d.get()->target->getImportLibrary());
+                    LinkLibraries.insert(d.get()->target.lock()->getImportLibrary());
 
-                s += d.get()->target->pkg.ppath.toString();
+                s += d.get()->target.lock()->pkg.ppath.toString();
                 if (d->IncludeDirectoriesOnly)
                     s += ": i";
                 s += "\n";
@@ -2056,12 +2015,6 @@ bool NativeExecutedTarget::prepare()
     RETURN_PREPARE_PASS;
     case 7:
     {
-        /*if (pkg.ppath.toString().find("ilmimf") != -1)
-        {
-            volatile int a = 5;
-            a++;
-        }*/
-
         // linker setup
 #ifndef _WIN32
         /*if (Linker)
@@ -2076,7 +2029,7 @@ bool NativeExecutedTarget::prepare()
         {
             // O1 -= Li
             for (auto &d : CircularDependencies)
-                O1.erase(d.get()->target->getImportLibrary());
+                O1.erase(d->target.lock()->getImportLibrary());
 
             // CL1 = O1
             CircularLinker->setObjectFiles(O1);
@@ -2084,8 +2037,8 @@ bool NativeExecutedTarget::prepare()
             // O1 += CLi
             for (auto &d : CircularDependencies)
             {
-                if (d->target && ((NativeExecutedTarget*)d->target)->CircularLinker)
-                    O1.insert(((NativeExecutedTarget*)d->target)->CircularLinker->getImportLibrary());
+                if (d->target.lock() && ((NativeExecutedTarget*)d->target.lock().get())->CircularLinker)
+                    O1.insert(((NativeExecutedTarget*)d->target.lock().get())->CircularLinker->getImportLibrary());
             }
 
             // prepare command here to prevent races
@@ -2102,8 +2055,6 @@ bool NativeExecutedTarget::prepare()
 
 bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
 {
-    //CHECK_PREPARED_TARGET;
-
     switch (prepare_pass)
     {
     case 1:
@@ -2331,8 +2282,6 @@ void NativeExecutedTarget::setChecks(const String &name)
 
 bool ExecutableTarget::prepare()
 {
-    //CHECK_PREPARED_TARGET;
-
     switch (prepare_pass)
     {
     case 1:
@@ -2385,8 +2334,6 @@ LibraryTarget::LibraryTarget(LanguageType L)
 
 bool LibraryTarget::prepare()
 {
-    //CHECK_PREPARED_TARGET;
-
     return prepareLibrary(Settings.Native.LibrariesType);
 }
 

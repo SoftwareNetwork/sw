@@ -14,6 +14,7 @@
 #include <sw/builder/driver.h>
 
 #include <boost/dll/shared_library.hpp>
+#include <boost/thread/shared_mutex.hpp>
 
 #include <type_traits>
 #include <unordered_map>
@@ -122,14 +123,13 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
 
     TargetType getType() const override { return TargetType::Build; }
 
-    FilesMap build_configs(const Files &files);
-    path get_module_name(const path &fn);
+    path build_configs(const std::unordered_set<ExtendedPackageData> &pkgs);
+    FilesMap build_configs_separate(const Files &files);
 
     path build(const path &fn);
     void build_and_load(const path &fn);
     void build_and_run(const path &fn);
     void build_package(const String &pkg);
-    //void run(const path &dll);
     void load(const path &dll);
     bool execute() override;
 
@@ -145,10 +145,10 @@ protected:
 
 private:
     void findCompiler();
-    SharedLibraryTarget &createTarget(const path &fn);
+    SharedLibraryTarget &createTarget(const Files &files);
 
 public:
-    static PackagePath getSelfTargetName(const path &fn);
+    static PackagePath getSelfTargetName(const Files &files);
 };
 
 struct SW_DRIVER_CPP_API Module
@@ -191,7 +191,7 @@ private:
 struct SW_DRIVER_CPP_API ModuleStorage
 {
     std::unordered_map<path, Module> modules;
-    std::shared_mutex m;
+    boost::upgrade_mutex m;
 
     ModuleStorage() = default;
     ModuleStorage(const ModuleStorage &) = delete;

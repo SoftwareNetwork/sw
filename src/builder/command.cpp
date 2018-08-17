@@ -17,6 +17,7 @@
 #include <directories.h>
 #include <filesystem.h>
 #include <primitives/executor.h>
+#include <primitives/debug.h>
 #include <primitives/templates.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/thread/thread_pool.hpp>
@@ -207,16 +208,14 @@ void Command::addIntermediate(const path &p)
 {
     intermediate.insert(p);
     auto &r = File(p).getFileRecord();
-    if (!r.generator || r.generator->executed) // || hash = hash new
-        r.generator = shared_from_this();
+    r.setGenerator(shared_from_this());
 }
 
 void Command::addOutput(const path &p)
 {
     outputs.insert(p);
     auto &r = File(p).getFileRecord();
-    if (!r.generator || r.generator->executed) // || hash = hash new
-        r.generator = shared_from_this();
+    r.setGenerator(shared_from_this());
 }
 
 void Command::addInput(const Files &files)
@@ -257,7 +256,7 @@ void Command::addInputOutputDeps()
     {
         File f(p);
         if (f.isGenerated())
-            dependencies.insert(f.getFileRecord().generator);
+            dependencies.insert(f.getFileRecord().getGenerator());
         else
         {
             // do we really need this?
@@ -289,7 +288,7 @@ void Command::prepare()
 
     // add more deps
     if (File(program).isGenerated())
-        dependencies.insert(File(program).getFileRecord().generator);
+        dependencies.insert(File(program).getFileRecord().getGenerator());
     addInputOutputDeps();
 
     prepared = true;
@@ -299,17 +298,18 @@ void Command::execute1(std::error_code *ec)
 {
     prepare();
 
-    if (getName().find("warnless.c") != -1)
-    {
-        int a = 5;
-        a++;
-    }
+    //DEBUG_BREAK_IF_STRING_HAS(name, "program_options-1.68.0.lib");
 
     if (!isOutdated())
+    {
+        executed_ = true;
         return;
+    }
 
-    if (executed)
+    if (isExecuted())
         throw std::logic_error("Trying to execute command twice: " + getName());
+
+    executed_ = true;
 
     printLog();
 
@@ -345,17 +345,11 @@ void Command::execute1(std::error_code *ec)
         return a;
     };
 
-    path rsp_file;
     auto args_saved = args;
-    if (use_response_files && needsResponseFile())
+    auto make_rsp_file = [this, &escape_cmd_arg, &args_saved](const auto &rsp_file)
     {
-        auto t = get_temp_filename();
-        auto fn = t.filename();
-        t = t.parent_path();
-        rsp_file = t / "rsp" / fn;
-        rsp_file += ".rsp";
         String rsp;
-        for (auto &a : args)
+        for (auto &a : args_saved)
 #ifdef _WIN32
             rsp += "\"" + escape_cmd_arg(a) + "\"\n";
 #else
@@ -364,6 +358,18 @@ void Command::execute1(std::error_code *ec)
         args.clear();
         args.push_back("@" + rsp_file.string());
         write_file(rsp_file, rsp);
+    };
+
+    path rsp_file;
+    bool use_rsp = use_response_files && needsResponseFile();
+    if (use_rsp)
+    {
+        auto t = get_temp_filename();
+        auto fn = t.filename();
+        t = t.parent_path();
+        rsp_file = t / "rsp" / fn;
+        rsp_file += ".rsp";
+        make_rsp_file(rsp_file);
     }
 
     SCOPE_EXIT
@@ -374,9 +380,8 @@ void Command::execute1(std::error_code *ec)
         fs::remove(rsp_file, ec);
     };
 
-    auto make_error_string = [this, &rsp_file, &args_saved, &escape_cmd_arg](const String &e)
+    auto make_error_string = [this, &rsp_file, &escape_cmd_arg, &make_rsp_file](const String &e)
     {
-        executed = true;
         postProcess(false);
 
         String s = "When building: " + getName();
@@ -391,26 +396,21 @@ void Command::execute1(std::error_code *ec)
         {
             if (rsp_file.empty())
             {
-                auto t = get_temp_filename();
-                auto fn = t.filename();
-                t = t.parent_path();
-                rsp_file = t / "rsp" / fn;
+                rsp_file = unique_path();
                 rsp_file += ".rsp";
             }
+            else
+                rsp_file = rsp_file.filename();
             s += "\n";
-            auto p = getDirectories().storage_dir_tmp / "rsp" / (rsp_file.filename().u8string() + ".bat");
+            auto p = getDirectories().storage_dir_tmp / "rsp" / rsp_file;
+            auto pbat = p;
+            pbat += ".bat";
+            make_rsp_file(p);
+            s += "pid = " + std::to_string(pid) + "\n";
             s += "command is copied to " + p.u8string() + "\n";
             String t;
-            t += "@\"" + program.u8string() + "\" ^\n";
-            for (auto &a : args_saved)
-            {
-                if (a == "-showIncludes")
-                    continue;
-                t += "\t\"" + escape_cmd_arg(a) + "\" ^\n";
-            }
-            t.resize(t.size() - 3);
-            t += "\n";
-            write_file(p, t);
+            t += "@\"" + program.u8string() + "\" @" + p.filename().string();
+            write_file(pbat, t);
 
             //s += "working directory:\n";
             //s += "\"" + working_directory.u8string() + "\"";
@@ -436,7 +436,6 @@ void Command::execute1(std::error_code *ec)
         else
             Base::execute();
 
-        executed = true;
         postProcess(); // process deps
 
         // force outputs update
