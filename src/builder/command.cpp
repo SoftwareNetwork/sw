@@ -88,7 +88,7 @@ bool CommandStorage::isOutdated(const sw::builder::Command &c)
 
     if (c.always)
     {
-        //EXPLAIN_OUTDATED("command", true, "always build", c.getName());
+        EXPLAIN_OUTDATED("command", true, "always build", c.getName());
         changed = true;
     }
 
@@ -300,7 +300,7 @@ void Command::execute1(std::error_code *ec)
 {
     prepare();
 
-    //DEBUG_BREAK_IF_STRING_HAS(name, "program_options-1.68.0.lib");
+    DEBUG_BREAK_IF_STRING_HAS(name, "sw.cpp");
 
     if (!isOutdated())
     {

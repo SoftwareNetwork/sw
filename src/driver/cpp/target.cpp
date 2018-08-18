@@ -978,7 +978,6 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
                 c->PrecompiledHeader().use = p.header;
                 c->PDBFilename = pdb_fn;
                 c->PDBFilename.intermediate_file = false;
-                c->PDBFilename.input_dependency = true;
             }
             else if (auto c = sf->compiler->as<ClangClCompiler>())
             {
@@ -1557,6 +1556,8 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
+    DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
+
     switch (prepare_pass)
     {
     case 1:
@@ -1672,6 +1673,8 @@ bool NativeExecutedTarget::prepare()
         TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
             [this, &deps, &deps_ordered](auto &v, auto &s)
         {
+            DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
+
             for (auto &d : v.Dependencies)
             {
                 if (d->target.lock().get() == this)

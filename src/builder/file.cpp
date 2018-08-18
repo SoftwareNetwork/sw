@@ -51,7 +51,7 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
             return;
         o << subject << ": " << name << "\n";
         o << "outdated\n";
-        o << "reason = " << reason << "\n\n";
+        o << "reason = " << reason << "\n" << std::endl;
     });
 }
 
