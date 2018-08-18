@@ -93,6 +93,14 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     bool silent = false;
     bool always = false;
 
+    enum
+    {
+        MU_FALSE    = 0,
+        MU_TRUE     = 1,
+        MU_ALWAYS   = 2,
+    };
+    int maybe_unused = 0;
+
     virtual ~Command() = default;
 
     void prepare() override;
@@ -123,19 +131,18 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     path redirectStdout(const path &p);
     path redirectStderr(const path &p);
     virtual bool isHashable() const { return true; }
-    size_t getHash() const;
+    virtual size_t getHash() const;
     size_t calculateFilesHash() const;
     void updateFilesHash() const;
 
 protected:
     bool prepared = false;
     bool executed_ = false;
+    mutable size_t hash = 0;
 
     void addInputOutputDeps();
 
 private:
-    mutable size_t hash = 0;
-
     void execute1(std::error_code *ec = nullptr);
 };
 
@@ -153,13 +160,20 @@ struct ExecuteCommand : builder::Command
 {
     using F = std::function<void(void)>;
 
+    const char *file = nullptr;
+    int line = 0;
     F f;
     bool always = false;
+
+    ExecuteCommand(const char *file, int line) : file(file), line(line) {}
+
+    //template <class F2>
+    //ExecuteCommand(const char *file, int line, F2 &&f) : ExecuteCommand(file, line), f(f) {}
 
     template <class F2>
     ExecuteCommand(F2 &&f) : f(f) {}
 
-    template <class F2>
+    /*template <class F2>
     ExecuteCommand(bool always, F2 &&f) : f(f), always(true) {}
 
     template <class F2>
@@ -173,7 +187,7 @@ struct ExecuteCommand : builder::Command
     {
         for (auto &p : fs)
             addOutput(p);
-    }
+    }*/
 
     SW_BUILDER_API
     virtual ~ExecuteCommand() = default;
@@ -188,11 +202,13 @@ struct ExecuteCommand : builder::Command
     void prepare() override;
 
     SW_BUILDER_API
-    bool isHashable() const override { return false; }
+    size_t getHash() const override;
 
     SW_BUILDER_API
     path getProgram() const override { return "ExecuteCommand"; };
 };
+
+#define MAKE_EXECUTE_COMMAND() std::make_shared<ExecuteCommand>(__FILE__, __LINE__)
 
 }
 

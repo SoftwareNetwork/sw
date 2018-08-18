@@ -27,6 +27,7 @@ void Command::prepare()
 
 path Command::getProgram() const
 {
+    auto d = dependency.lock();
     path p;
     if (base)
     {
@@ -34,13 +35,13 @@ path Command::getProgram() const
         if (p.empty())
             throw std::runtime_error("Empty program from base program");
     }
-    else if (dependency)
+    else if (d)
     {
-        if (!dependency->target.lock())
-            throw std::runtime_error("Command dependency target was not resolved: " + dependency->getPackage().toString());
-        p = dependency->target.lock()->getOutputFile();
+        if (!d->target.lock())
+            throw std::runtime_error("Command dependency target was not resolved: " + d->getPackage().toString());
+        p = d->target.lock()->getOutputFile();
         if (p.empty())
-            throw std::runtime_error("Empty program from package: " + dependency->target.lock()->getPackage().target_name);
+            throw std::runtime_error("Empty program from package: " + d->target.lock()->getPackage().target_name);
     }
     else
     {
@@ -71,7 +72,9 @@ void Command::pushLazyArg(LazyCallback f)
 
 CommandBuilder &operator<<(CommandBuilder &cb, const NativeExecutedTarget &t)
 {
-    cb.targets.push_back((NativeExecutedTarget*)&t);
+    auto nt = (NativeExecutedTarget*)&t;
+    cb.targets.push_back(nt);
+    nt->Storage.push_back(cb.c);
     return cb;
 }
 
@@ -101,8 +104,13 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
     if (!cb.stopped)
         cb.c->args.push_back(p.u8string());
     cb.c->addInput(p);
-    for (auto tgt : all)
-        *tgt += p;
+    if (t.add_to_targets)
+    {
+        for (auto tgt : all)
+            *tgt += p;
+    }
+    for (auto tgt : t.targets)
+        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
@@ -119,8 +127,13 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
     if (!cb.stopped)
         cb.c->args.push_back(p.u8string());
     cb.c->addOutput(p);
-    for (auto tgt : all)
-        *tgt += p;
+    if (t.add_to_targets)
+    {
+        for (auto tgt : all)
+            *tgt += p;
+    }
+    for (auto tgt : t.targets)
+        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
@@ -135,8 +148,13 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
         p = all[0]->BinaryDir / p;
 
     cb.c->redirectStdout(p);
-    for (auto tgt : all)
-        *tgt += p;
+    if (t.add_to_targets)
+    {
+        for (auto tgt : all)
+            *tgt += p;
+    }
+    for (auto tgt : t.targets)
+        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
@@ -151,14 +169,37 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
         p = all[0]->BinaryDir / p;
 
     cb.c->redirectStderr(p);
-    for (auto tgt : all)
-        *tgt += p;
+    if (t.add_to_targets)
+    {
+        for (auto tgt : all)
+            *tgt += p;
+    }
+    for (auto tgt : t.targets)
+        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
 CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_end &t)
 {
     cb.stopped = true;
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_dep &t)
+{
+    for (auto tgt : cb.targets)
+    {
+        for (auto &t : t.targets)
+        {
+            auto d = *tgt + *t;
+            d->Dummy = true;
+        }
+        for (auto &t : t.target_ptrs)
+        {
+            auto d = *tgt + t;
+            d->Dummy = true;
+        }
+    }
     return cb;
 }
 

@@ -101,6 +101,9 @@ void build(Solution &s)
         c->args.push_back((cpp_driver.BinaryDir / "build_self.generated.h").u8string());
         c->addOutput(cpp_driver.BinaryDir / "build_self.generated.h");
         cpp_driver += cpp_driver.BinaryDir / "build_self.generated.h";
+        cpp_driver.Storage.push_back(c);
+        auto d = cpp_driver + self_builder;
+        d->Dummy = true;
     }
 
     auto &client = p.addTarget<ExecutableTarget>("client");

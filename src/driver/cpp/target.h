@@ -77,6 +77,13 @@ namespace sw
 
 struct Solution;
 
+namespace driver::cpp
+{
+
+struct CommandBuilder;
+
+}
+
 // ? (re)move?
 enum class TargetScope
 {
@@ -678,6 +685,8 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     Files gatherAllFiles() const;
     Files gatherIncludeDirectories() const;
     NativeLinker *getSelectedTool() const;
+
+    driver::cpp::CommandBuilder addCommand();
 
     void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) override;
 

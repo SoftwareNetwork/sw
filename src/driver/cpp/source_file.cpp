@@ -319,7 +319,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
                 p = target->BinaryDir / F;
                 if (!fs::exists(p))
                 {
-                    if (!File(p).isGenerated())
+                    if (!File(p).isGeneratedAtAll())
                     {
                         if (ignore_errors)
                             return false;
@@ -333,7 +333,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
         {
             if (!fs::exists(F))
             {
-                if (!File(F).isGenerated())
+                if (!File(F).isGeneratedAtAll())
                 {
                     if (ignore_errors)
                         return false;

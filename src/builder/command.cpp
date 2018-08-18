@@ -280,6 +280,8 @@ void Command::prepare()
     program = getProgram();
     getHash();
 
+    //DEBUG_BREAK_IF_PATH_HAS(program, "org.sw.sw.client.tools.self_builder-0.3.0.exe");
+
     // add redirected generated files
     if (!out.file.empty())
         addOutput(out.file);
@@ -544,9 +546,23 @@ void Command::setProgram(const path &p)
 void Command::setProgram(std::shared_ptr<Program> p)
 {
     base = p;
-    //base = &p;
 }
 
+}
+
+size_t ExecuteCommand::getHash() const
+{
+    if (hash != 0)
+        return hash;
+
+    auto h = std::hash<path>()(getProgram());
+    hash_combine(h, std::hash<String>()(file ? file : ""));
+    hash_combine(h, std::hash<int>()(line));
+    for (auto &i : inputs)
+        hash_combine(h, File(i).getFileRecord().getHash());
+    for (auto &i : outputs)
+        hash_combine(h, File(i).getFileRecord().getHash());
+    return hash = h;
 }
 
 void ExecuteCommand::prepare()

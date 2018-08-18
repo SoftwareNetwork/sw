@@ -248,6 +248,12 @@ bool File::isGenerated() const
     return r->isGenerated();
 }
 
+bool File::isGeneratedAtAll() const
+{
+    registerSelf();
+    return r->isGeneratedAtAll();
+}
+
 /*bool File::operator==(const File &rhs) const
 {
     if (r == nullptr && r == rhs.r)
@@ -295,7 +301,8 @@ void FileRecord::reset()
     //if (generator && generator->executed())
     {
         // do we need to reset changed in this case or not?
-        generator.reset();
+        if (!generator.expired())
+            generator.reset();
     }
 }
 
@@ -447,12 +454,18 @@ bool FileRecord::isChanged()
 
 void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
 {
-    //DEBUG_BREAK_IF_PATH_HAS(file, "program_options-1.68.0.lib");
+    //DEBUG_BREAK_IF_PATH_HAS(file, "settings.yy.cpp");
+
+    if (!g)
+        return;
 
     auto gold = generator.lock();
-    if (gold && (gold != g && !gold->isExecuted()))
+    if (gold && (gold != g && !gold->isExecuted() && !gold->maybe_unused
+        /* && gold->getHash() != g->getHash()*/
+        ))
         throw std::runtime_error("Setting generator twice on file: " + file.u8string());
     generator = g;
+    generated_ = true;
 }
 
 std::shared_ptr<builder::Command> FileRecord::getGenerator() const

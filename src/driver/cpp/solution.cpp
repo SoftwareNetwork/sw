@@ -246,7 +246,7 @@ optional<path> Solution::getSourceDir(const Source &s, const Version &v) const
 
 StaticLibraryTarget &Solution::getImportLibrary()
 {
-    //auto c = n\ew ExecuteCommand(IMPORT_DEFINITIONS_FILE, []
+    //auto c = new ExecuteCommand(IMPORT_DEFINITIONS_FILE, []
     //{
 #if defined(CPPAN_OS_WINDOWS)
     HMODULE lib = GetCurrentModule();
@@ -416,7 +416,8 @@ Commands Solution::getCommands() const
     // calling this in any case to set proper command dependencies
     for (auto &p : children)
     {
-        p.second->getCommands();
+        for (auto &c : p.second->getCommands())
+            c->maybe_unused = builder::Command::MU_TRUE;
     }
 
     Commands cmds;
@@ -424,6 +425,8 @@ Commands Solution::getCommands() const
     for (auto &p : chldr)
     {
         auto c = p.second->getCommands();
+        for (auto &c2 : c)
+            c2->maybe_unused &= ~builder::Command::MU_TRUE;
         cmds.insert(c.begin(), c.end());
     }
 
@@ -589,7 +592,7 @@ void Solution::execute() const
             for (auto &a : c->args)
                 s += a + " ";
             s.resize(s.size() - 1);
-            s += "\n";
+            s += "\n\n";
         }
 
         write_file(p, s);
@@ -1566,7 +1569,7 @@ PackageDescriptionMap Build::getPackages() const
             Files files;
             for (auto &f : nt->gatherAllFiles())
             {
-                if (File(f).isGenerated())
+                if (File(f).isGeneratedAtAll())
                     continue;
                 files.insert(f);
             }

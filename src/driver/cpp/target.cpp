@@ -634,6 +634,12 @@ void NativeExecutedTarget::init2()
     }
 }
 
+driver::cpp::CommandBuilder NativeExecutedTarget::addCommand()
+{
+    driver::cpp::CommandBuilder cb;
+    return cb << *this;
+}
+
 void NativeExecutedTarget::addPackageDefinitions()
 {
     tm t;
@@ -1160,6 +1166,8 @@ Commands NativeExecutedTarget::getCommands() const
     //LOG_DEBUG(logger, "Building target: " + pkg.ppath.toString());
     //move this somewhere
 
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "self_builder");
+
     // this library, check if nothing to link
     if (auto c = getCommand())
     {
@@ -1205,18 +1213,20 @@ Commands NativeExecutedTarget::getCommands() const
                         {
                             auto in = dt->getOutputFile();
                             auto o = getOutputFile().parent_path() / in.filename();
-                            auto copy_cmd = std::make_shared<ExecuteCommand>([in, out = o]
+                            auto copy_cmd = MAKE_EXECUTE_COMMAND();
+                            copy_cmd->f = [in, out = o]
                             {
                                 //if (File(in).isChanged() || File(o).isChanged())
                                 {
                                     error_code ec;
                                     fs::copy_file(in, out, fs::copy_options::overwrite_existing, ec);
                                 }
-                            });
+                            };
                             copy_cmd->addInput(dt->getOutputFile());
                             copy_cmd->addOutput(o);
                             copy_cmd->dependencies.insert(c);
                             copy_cmd->name = "copy: " + normalize_path(o);
+                            copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
                             cmds.insert(copy_cmd);
                         }
                 }

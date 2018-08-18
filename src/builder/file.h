@@ -53,6 +53,7 @@ struct SW_BUILDER_API File : Data
     bool empty() const { return file.empty(); }
     bool isChanged() const;
     bool isGenerated() const;
+    bool isGeneratedAtAll() const;
 
 private:
     mutable FileRecord *r = nullptr;
@@ -89,6 +90,7 @@ struct SW_BUILDER_API FileRecord
     void reset();
     size_t getHash() const;
     bool isGenerated() const;
+    bool isGeneratedAtAll() const { return generated_; }
     void setGenerator(const std::shared_ptr<builder::Command> &);
     std::shared_ptr<builder::Command> getGenerator() const;
 
@@ -106,6 +108,7 @@ struct SW_BUILDER_API FileRecord
 
 private:
     std::weak_ptr<builder::Command> generator;
+    bool generated_ = false;
 };
 
 SW_BUILDER_API
