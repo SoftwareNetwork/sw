@@ -32,8 +32,12 @@ int wmain(int argc, wchar_t *argv[])
     cmd.replace(cmd.find(argv[0]) - o, wcslen(argv[0]) + o + o, L"\"" + prog + L"\"");
 
     STARTUPINFO si = { 0 };
+    si.dwFlags |= STARTF_USESTDHANDLES;
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
     PROCESS_INFORMATION pi = { 0 };
-    if (!CreateProcess(prog.c_str(), (LPWSTR)cmd.c_str(), 0, 0, 0, 0, 0, 0, &si, &pi))
+    if (!CreateProcess(prog.c_str(), (LPWSTR)cmd.c_str(), 0, 0, 1, 0, 0, 0, &si, &pi))
     {
         auto e = GetLastError();
         WCHAR lpszBuffer[8192] = { 0 };

@@ -1207,27 +1207,29 @@ Commands NativeExecutedTarget::getCommands() const
                 for (auto &l : gatherAllRelatedDependencies())
                 {
                     auto dt = ((NativeExecutedTarget*)l);
-                    if (!dt->HeaderOnly.value())
-                        if (Settings.Native.LibrariesType == LibraryType::Shared || dt->isSharedOnly())
+                    if (dt->Local)
+                        continue;
+                    if (dt->HeaderOnly.value())
+                        continue;
+                    if (Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
+                        continue;
+                    auto in = dt->getOutputFile();
+                    auto o = getOutputFile().parent_path() / in.filename();
+                    auto copy_cmd = MAKE_EXECUTE_COMMAND();
+                    copy_cmd->f = [in, out = o]
+                    {
+                        //if (File(in).isChanged() || File(o).isChanged())
                         {
-                            auto in = dt->getOutputFile();
-                            auto o = getOutputFile().parent_path() / in.filename();
-                            auto copy_cmd = MAKE_EXECUTE_COMMAND();
-                            copy_cmd->f = [in, out = o]
-                            {
-                                //if (File(in).isChanged() || File(o).isChanged())
-                                {
-                                    error_code ec;
-                                    fs::copy_file(in, out, fs::copy_options::overwrite_existing, ec);
-                                }
-                            };
-                            copy_cmd->addInput(dt->getOutputFile());
-                            copy_cmd->addOutput(o);
-                            copy_cmd->dependencies.insert(c);
-                            copy_cmd->name = "copy: " + normalize_path(o);
-                            copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
-                            cmds.insert(copy_cmd);
+                            error_code ec;
+                            fs::copy_file(in, out, fs::copy_options::overwrite_existing, ec);
                         }
+                    };
+                    copy_cmd->addInput(dt->getOutputFile());
+                    copy_cmd->addOutput(o);
+                    copy_cmd->dependencies.insert(c);
+                    copy_cmd->name = "copy: " + normalize_path(o);
+                    copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
+                    cmds.insert(copy_cmd);
                 }
             }
 
@@ -1952,6 +1954,7 @@ bool NativeExecutedTarget::prepare()
             });
             c->addInput(objs);
             c->addOutput(def);
+            Storage.push_back(c);
             add(def);
         }
 

@@ -19,25 +19,10 @@ upgrade - upgrade installed pkgs
 self-upgrade - upgrade the client. implement via upgrade?
 */
 
-/**
- * 'build' file/dir.
- */
-SUBCOMMAND(build) COMMA
-
-/**
-* 'ide' command is used to invoke sw application to do IDE tasks: generate project files, clean, rebuild etc.
-*/
-SUBCOMMAND(ide) COMMA
-
-/**
-* 'init' command is used to do some system setup which may require administrator access.
-*/
-SUBCOMMAND(init) COMMA
-
-/**
- * 'uri' command is used to invoke sw application from the website.
- */
-SUBCOMMAND(uri) COMMA
+SUBCOMMAND(build, "Build files, dirs or packages") COMMA
+SUBCOMMAND(ide, "Used to invoke sw application to do IDE tasks: generate project files, clean, rebuild etc.") COMMA
+SUBCOMMAND(init, "Used to do some system setup which may require administrator access.") COMMA
+SUBCOMMAND(uri, "Used to invoke sw application from the website.") COMMA
 
 #ifdef SW_COMMA_SELF
 #undef COMMA

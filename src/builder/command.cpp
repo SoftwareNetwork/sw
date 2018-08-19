@@ -141,7 +141,12 @@ size_t Command::getHash() const
     for (auto &a : args_sorted)
         hash_combine(h, std::hash<String>()(a));
     // add wdir, env?
-    return hash = h;
+    return h;
+}
+
+size_t Command::getHashAndSave() const
+{
+    return hash = getHash();
 }
 
 size_t Command::calculateFilesHash() const
@@ -278,7 +283,7 @@ void Command::prepare()
         return;
 
     program = getProgram();
-    getHash();
+    getHashAndSave();
 
     //DEBUG_BREAK_IF_PATH_HAS(program, "org.sw.sw.client.tools.self_builder-0.3.0.exe");
 
@@ -300,7 +305,7 @@ void Command::execute1(std::error_code *ec)
 {
     prepare();
 
-    DEBUG_BREAK_IF_STRING_HAS(name, "sw.cpp");
+    //DEBUG_BREAK_IF_STRING_HAS(name, "sw.cpp");
 
     if (!isOutdated())
     {

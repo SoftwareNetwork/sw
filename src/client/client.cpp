@@ -17,14 +17,15 @@
 #include <sw/builder/driver.h>
 #include <sw/driver/cpp/driver.h>
 
-#include <args.hxx>
+//#include <args.hxx>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
 #include <boost/dll.hpp>
 //#include <boost/nowide/args.hpp>
 #include <boost/regex.hpp>
 #include <primitives/executor.h>
-#include <primitives/minidump.h>
+#include <primitives/sw/main.h>
+#include <primitives/sw/settings.h>
 #include <primitives/win32helpers.h>
 
 #include <iostream>
@@ -53,13 +54,15 @@ bool bUseSystemPause = false;
 // 2. if no args, no sw.cpp, *.sw files in cwd - gui
 */
 
+#pragma push_macro("main")
+#undef main
 int main(int argc, char **argv);
-int main1(int argc, char **argv);
+#pragma pop_macro("main")
+
 int main_setup(int argc, char **argv);
 int sw_main(int argc, char **argv);
 void stop();
 void setup_log(const std::string &log_level);
-std::tuple<bool, std::string> parseCmd(int argc, char **argv);
 
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow)
@@ -75,7 +78,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
         CoInitialize(0);
     }
 
+#pragma push_macro("main")
+#undef main
     return main(__argc, __argv);
+#pragma pop_macro("main")
 }
 #endif
 
@@ -88,30 +94,6 @@ SW_REGISTER_PACKAGE_DRIVER(Driver);
 }
 
 int main(int argc, char **argv)
-{
-#ifndef _WIN32
-    auto r = main1(argc, argv);
-    return r;
-#else
-    primitives::minidump::dir = L"cppan2\\dump";
-    primitives::minidump::v_major = VERSION_MAJOR;
-    primitives::minidump::v_minor = VERSION_MINOR;
-    primitives::minidump::v_patch = VERSION_PATCH;
-    //primitives::executor::bExecutorUseSEH = true;
-
-    /*__try
-    {*/
-        auto r = main1(argc, __argv);
-        return r;
-    /*}
-    __except (PRIMITIVES_GENERATE_DUMP)
-    {
-        return 1;
-    }*/
-#endif
-}
-
-int main1(int argc, char **argv)
 {
     int r = 0;
     String error;
@@ -127,14 +109,6 @@ int main1(int argc, char **argv)
     catch (const std::exception &e)
     {
         error = e.what();
-        //if (auto st = boost::get_error_info<traced_exception>(e))
-        //    std::cerr << *st << '\n';
-    }
-    catch (...)
-    {
-        error = "Unhandled unknown exception\n";
-        //if (auto st = boost::get_error_info<traced_exception>(e))
-        //    std::cerr << *st << '\n';
     }
 
     stop();
@@ -184,13 +158,62 @@ int main_setup(int argc, char **argv)
     return sw_main(argc, argv);
 }
 
+#define SUBCOMMAND_DECL(n) void cli_##n()
+#define SUBCOMMAND(n, d) SUBCOMMAND_DECL(n);
+#include <commands.inl>
+#undef SUBCOMMAND
+
 int sw_main(int argc, char **argv)
 {
-    if (auto r = parseCmd(argc, argv); !std::get<0>(r))
+    cl::opt<path> working_directory("d", cl::desc("Working directory"));
+    cl::opt<bool> verbose("verbose", cl::desc("Verbose output"));
+    cl::opt<bool> trace("trace", cl::desc("Trace output"));
+
+    //args::ValueFlag<int> configuration(parser, "configuration", "Configuration to build", { 'c' });
+    //args::ValueFlag<std::string> generator(parser, "generator", "Generator", { 'G' });
+
+    std::map<String, cl::SubCommand> subcommands{
+#define SUBCOMMAND(n, d) {#n,{#n, d}},
+#include <commands.inl>
+#undef SUBCOMMAND
+    };
+
+    String overview = "SW: Software Network Client\n\n"
+        "  SW is a multipurpose and multilanguage Package Manager and Build System...\n";
+    if (auto &driver = getDrivers(); !driver.empty())
     {
-        if (!sw::build(current_thread_path()))
-            LOG_INFO(logger, std::get<1>(r));
+        overview += "\n  Available drivers:\n";
+        for (auto &d : driver)
+            overview += "    - " + d->getName() + "\n";
     }
+
+    const std::vector<std::string> args0(argv + 1, argv + argc);
+    std::vector<std::string> args;
+    args.push_back(argv[0]);
+    for (auto &a : args0)
+    {
+        std::vector<std::string> t;
+        boost::split_regex(t, a, boost::regex("%20"));
+        args.insert(args.end(), t.begin(), t.end());
+    }
+
+    //
+    cl::ParseCommandLineOptions(args, overview);
+    //
+
+    if (!working_directory.empty())
+        fs::current_path(working_directory);
+
+    if (verbose)
+        setup_log("DEBUG");
+    if (trace)
+        setup_log("TRACE");
+
+    if (0);
+#define SUBCOMMAND(n, d) else if (subcommands[#n]) cli_##n();
+#include <commands.inl>
+#undef SUBCOMMAND
+
     return 0;
 }
 
@@ -214,92 +237,23 @@ void setup_log(const std::string &log_level)
     LOG_TRACE(logger, "Starting cppan...");
 }
 
-#define SUBCOMMAND_DECL(x) \
-    void cli_##x(const std::string &progname, std::vector<std::string>::const_iterator beginargs, std::vector<std::string>::const_iterator endargs)
-
-#define SUBCOMMAND(x) SUBCOMMAND_DECL(x);
-#include <commands.inl>
-#undef SUBCOMMAND
-
-using command_type = std::function<void(const std::string &, std::vector<std::string>::const_iterator, std::vector<std::string>::const_iterator)>;
-
 #define SUBCOMMAND_DECL_URI(c) SUBCOMMAND_DECL(uri_ ## c)
-
-std::tuple<bool, String> parseCmd(int argc, char **argv)
-{
-    const std::unordered_map<std::string, command_type> map{
-#define SUBCOMMAND(x) { #x, cli_##x },
-#include <commands.inl>
-#undef SUBCOMMAND
-    };
-    String command_to_execute;
-    for (auto &[k, v] : map)
-        command_to_execute += k + ", ";
-    command_to_execute.resize(command_to_execute.size() - 2);
-
-    args::ArgumentParser parser("cppan client v2 (0.3.0)");
-    parser.helpParams.showTerminator = false;
-    args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
-    args::Flag force_server_query(parser, "server", "Force server check", { 's' });
-    args::ValueFlag<std::string> working_directory(parser, "working_directory", "Working directory", { 'd' });
-    args::ValueFlag<int> configuration(parser, "configuration", "Configuration to build", { 'c' });
-    //args::ValueFlag<std::string> generator(parser, "generator", "Generator", { 'G' });
-    args::Flag explain_outdated(parser, "explain_outdated", "Explain outdated files", { "explain" });
-    args::Flag print_commands(parser, "print_commands", "Print file with build commands", { "commands" });
-    args::Flag verbose(parser, "verbose", "Verbose output", { 'v', "verbose" });
-    args::Flag trace(parser, "trace", "Trace output", { "trace" });
-    parser.Prog(argv[0]);
-    args::MapPositional<std::string, command_type> command(parser, "command", "Command to execute: {" + command_to_execute + "}", map);
-    command.KickOut(true);
-
-    const std::vector<std::string> args0(argv + 1, argv + argc);
-    std::vector<std::string> args;
-    for (auto &a : args0)
-    {
-        std::vector<std::string> t;
-        boost::split_regex(t, a, boost::regex("%20"));
-        args.insert(args.end(), t.begin(), t.end());
-    }
-    auto next = parser.ParseArgs(args);
-
-    if (verbose)
-        setup_log("DEBUG");
-    if (trace)
-        setup_log("TRACE");
-    if (force_server_query)
-        Settings::get_user_settings().force_server_query = true;
-    if (working_directory)
-        fs::current_path(working_directory.Get());
-    if (explain_outdated)
-        Settings::get_user_settings().explain_outdated = true;
-    if (print_commands)
-        Settings::get_user_settings().print_commands = true;
-    if (configuration)
-        Settings::get_user_settings().configuration = configuration.Get();
-
-    if (command)
-    {
-        args::get(command)(argv[0], next, std::end(args));
-        return { true, "" };
-    }
-    return { false, parser.Help() };
-}
 
 SUBCOMMAND_DECL(build)
 {
-    args::ArgumentParser parser("");
+    /*args::ArgumentParser parser("");
     parser.helpParams.showTerminator = false;
     args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
     args::Positional<std::string> fn(parser, "name", "File or directory to build", ".");
 
     parser.ParseArgs(beginargs, endargs);
     if (fn)
-        sw::build(fn.Get());
+        sw::build(fn.Get());*/
 }
 
 SUBCOMMAND_DECL(ide)
 {
-    args::ArgumentParser parser("");
+    /*args::ArgumentParser parser("");
     parser.helpParams.showTerminator = false;
     args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
     args::ValueFlag<std::string> generator(parser, "generator", "Generator", { 'g', 'G' });
@@ -320,7 +274,7 @@ SUBCOMMAND_DECL(ide)
     else
     {
         LOG_INFO(logger, parser);
-    }
+    }*/
 }
 
 SUBCOMMAND_DECL(init)
@@ -366,7 +320,7 @@ SUBCOMMAND_DECL(init)
 
 SUBCOMMAND_DECL_URI(sdir)
 {
-    args::ArgumentParser parser("");
+    /*args::ArgumentParser parser("");
     parser.helpParams.showTerminator = false;
     args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
     args::Positional<std::string> package(parser, "package", "Opens package source dir");
@@ -392,12 +346,12 @@ SUBCOMMAND_DECL_URI(sdir)
             message_box("Package '" + p.target_name + "' not installed");
         }
 #endif
-    }
+    }*/
 }
 
 SUBCOMMAND_DECL_URI(install)
 {
-    args::ArgumentParser parser("");
+    /*args::ArgumentParser parser("");
     parser.helpParams.showTerminator = false;
     args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
     args::Positional<std::string> package(parser, "package", "Install package");
@@ -422,12 +376,12 @@ SUBCOMMAND_DECL_URI(install)
             message_box("Package '" + p_real.target_name + "' is already installed");
         }
 #endif
-    }
+    }*/
 }
 
 SUBCOMMAND_DECL_URI(remove)
 {
-    args::ArgumentParser parser("");
+    /*args::ArgumentParser parser("");
     parser.helpParams.showTerminator = false;
     args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
     args::Positional<std::string> package(parser, "package", "Remove package");
@@ -439,12 +393,12 @@ SUBCOMMAND_DECL_URI(remove)
         auto &sdb = getServiceDatabase();
         sdb.removeInstalledPackage(p);
         fs::remove_all(p.getDir());
-    }
+    }*/
 }
 
 SUBCOMMAND_DECL_URI(build)
 {
-    args::ArgumentParser parser("");
+    /*args::ArgumentParser parser("");
     parser.helpParams.showTerminator = false;
     args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
     args::Positional<std::string> package(parser, "package", "Install package");
@@ -465,15 +419,15 @@ SUBCOMMAND_DECL_URI(build)
         Resolver r;
         r.resolve_dependencies({ p });
 
-        /*Build b;
-        b.Local = true;
-        b.build_package(package.Get());*/
-    }
+        //Build b;
+        //b.Local = true;
+        //b.build_package(package.Get());
+    }*/
 }
 
 SUBCOMMAND_DECL(uri)
 {
-    const std::unordered_map<std::string, command_type> map{
+    /*const std::unordered_map<std::string, command_type> map{
 #define ADD_COMMAND(c) { "sw:" #c, cli_uri_ ## c }
         ADD_COMMAND(sdir),
         ADD_COMMAND(install),
@@ -495,5 +449,5 @@ SUBCOMMAND_DECL(uri)
     if (command)
     {
         args::get(command)(progname, next, endargs);
-    }
+    }*/
 }

@@ -24,12 +24,16 @@
 #include <primitives/pack.h>
 #include <primitives/templates.h>
 #include <primitives/win32helpers.h>
+#include <primitives/sw/settings.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "resolver");
 
 TYPED_EXCEPTION(LocalDbHashException);
 TYPED_EXCEPTION(DependencyNotResolved);
+
+static cl::opt<bool> force_server_query("s", cl::desc("Force server check"));
+// also "server"
 
 namespace sw
 {
@@ -223,7 +227,7 @@ void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> res
         }
     };
 
-    query_local_db = !us.force_server_query;
+    query_local_db = !force_server_query;
     // do 2 attempts: 1) local db, 2) remote db
     int n_attempts = query_local_db ? 2 : 1;
     while (n_attempts--)

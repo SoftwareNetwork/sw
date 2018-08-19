@@ -114,7 +114,7 @@ projects:
 
     client:
         root_directory: src/client
-        executable_type: win32
+        #executable_type: win32
         files:
             - .*
         exclude_from_build:
@@ -126,11 +126,10 @@ projects:
         dependencies:
             - builder
             - driver.cpp
-            - pvt.cppan.demo.taywee.args: "*"
-            - name: pvt.egorpugin.primitives.minidump
-              version: master
-              local: primitives.minidump
             - pvt.cppan.demo.giovannidicanio.winreg: master
+            - name: pvt.egorpugin.primitives.sw.main
+              version: master
+              local: primitives.sw.main
 
         post_sources: |
             file(GLOB_RECURSE x "${SDIR}/*")
@@ -335,6 +334,9 @@ projects:
               version: master
               ref: embedder
               local: primitives.tools.embedder
+            - name: pvt.egorpugin.primitives.sw.settings
+              version: master
+              local: primitives.sw.settings
 
         post_sources: |
             file(GLOB_RECURSE x "${SDIR}/*")

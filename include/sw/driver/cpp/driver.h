@@ -21,6 +21,7 @@ struct SW_DRIVER_CPP_API Driver : ::sw::Driver
     PackageScriptPtr fetch_and_load(const path &file_or_dir) const override;
     PackageScriptPtr load(const path &file_or_dir) const override;
     bool execute(const path &file_or_dir) const override;
+    String getName() const override { return "cpp"; }
 };
 
 } // namespace sw::driver

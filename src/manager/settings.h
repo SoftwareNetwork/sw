@@ -37,9 +37,9 @@ struct SW_MANAGER_API Settings
     path output_dir = "bin";
 
     // cppan2 used flags
-    bool force_server_query = false;
-    bool explain_outdated = false;
-    bool print_commands = false;
+    //bool force_server_query = false;
+    //bool explain_outdated = false;
+    //bool print_commands = false;
     String generator;
     int configuration = -1;
 

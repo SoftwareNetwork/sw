@@ -15,6 +15,7 @@ int main(int argc, char **argv)
     {
         bool has_checks = false;
         path local_dir;
+        int prefix = 2;
     };
 
     // We must keep the whole list of dependencies here
@@ -95,9 +96,6 @@ int main(int argc, char **argv)
         {{"org.sw.demo.google.protobuf.protoc_lib", "3"}, {}},
         {{"org.sw.demo.google.protobuf.protoc", "3"}, {}},
 
-        {{"pub.egorpugin.llvm_project.llvm.demangle", "master"}, {true}},
-        {{"pub.egorpugin.llvm_project.llvm.support_lite", "master"}, {true}},
-
         {{"org.sw.demo.nanopb", "0"}, {}},
         {{"org.sw.demo.google.grpc.third_party.nanopb", "1"}, {}},
         {{"org.sw.demo.google.grpc.grpcpp_config_proto", "1"}, {}},
@@ -156,31 +154,38 @@ int main(int argc, char **argv)
         {{"org.sw.demo.google.grpc.grpcpp_codegen_proto", "1"}, {}},
         {{"org.sw.demo.google.grpc.grpcpp", "1"}, {}},
 
-        {{"pub.egorpugin.primitives.string", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.filesystem", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.templates", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.context", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.minidump", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.executor", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.command", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.date_time", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.lock", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.log", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.yaml", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.pack", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.http", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.hash", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.win32helpers", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.db.common", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.db.sqlite3", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.error_handling", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.main", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.settings", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.sw.settings", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.sw.main", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.tools.embedder", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp", "master"}, {false, "d:\\dev\\primitives"}},
-        {{"pub.egorpugin.primitives.version", "master"}, {false, "d:\\dev\\primitives"}},
+        {{"pub.egorpugin.llvm_project.llvm.demangle", "master"}, {true}},
+        {{"pub.egorpugin.llvm_project.llvm.support_lite", "master"}, {true}},
+
+        {{"org.sw.demo.google.breakpad.common.windows", "master"}, {true}},
+        {{"org.sw.demo.google.breakpad.client.windows.crash_generation.client", "master"}, {true}},
+        {{"org.sw.demo.google.breakpad.client.windows.crash_generation.server", "master"}, {true}},
+        {{"org.sw.demo.google.breakpad.client.windows.handler", "master"}, {true}},
+
+        {{"pub.egorpugin.primitives.string", "master"}, {}},
+        {{"pub.egorpugin.primitives.filesystem", "master"}, {}},
+        {{"pub.egorpugin.primitives.templates", "master"}, {}},
+        {{"pub.egorpugin.primitives.context", "master"}, {}},
+        {{"pub.egorpugin.primitives.executor", "master"}, {}},
+        {{"pub.egorpugin.primitives.command", "master"}, {}},
+        {{"pub.egorpugin.primitives.date_time", "master"}, {}},
+        {{"pub.egorpugin.primitives.lock", "master"}, {}},
+        {{"pub.egorpugin.primitives.log", "master"}, {}},
+        {{"pub.egorpugin.primitives.yaml", "master"}, {}},
+        {{"pub.egorpugin.primitives.pack", "master"}, {}},
+        {{"pub.egorpugin.primitives.http", "master"}, {}},
+        {{"pub.egorpugin.primitives.hash", "master"}, {}},
+        {{"pub.egorpugin.primitives.win32helpers", "master"}, {}},
+        {{"pub.egorpugin.primitives.db.common", "master"}, {}},
+        {{"pub.egorpugin.primitives.db.sqlite3", "master"}, {}},
+        {{"pub.egorpugin.primitives.error_handling", "master"}, {}},
+        {{"pub.egorpugin.primitives.main", "master"}, {}},
+        {{"pub.egorpugin.primitives.settings", "master"}, {}},
+        {{"pub.egorpugin.primitives.sw.settings", "master"}, {}},
+        {{"pub.egorpugin.primitives.sw.main", "master"}, {}},
+        {{"pub.egorpugin.primitives.tools.embedder", "master"}, {}},
+        {{"pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp", "master"}, {}},
+        {{"pub.egorpugin.primitives.version", "master"}, {}},
 
     };
 
@@ -216,22 +221,29 @@ int main(int argc, char **argv)
                 continue;
 
             auto h = sha256_short(data.local_dir.u8string());
-            ctx.addLine("#define THIS_PREFIX \"pub.egorpugin\"");
+            ctx.addLine("#define THIS_PREFIX \"" + u.ppath.slice(0, data.prefix).toString() + "\"");
             ctx.addLine("#define THIS_VERSION_DEPENDENCY \"master\"_dep");
             ctx.addLine("#define build build_" + h);
             ctx.addLine("#define configure configure_" + h);
-            //ctx.addLine("#define check check_" + h);
+            if (data.has_checks)
+                ctx.addLine("#define check check_" + h);
             ctx.addLine("#include \"" + (data.local_dir / "sw.cpp").u8string() + "\"");
             ctx.addLine();
 
             build.beginBlock();
-            build.addLine("s.NamePrefix = \"pub.egorpugin\";");
+            build.addLine("s.NamePrefix = \"" + u.ppath.slice(0, data.prefix).toString() + "\";");
             build.addLine("SwapAndRestore sr(s.Local, true);");
             build.addLine("SwapAndRestore sr2(s.SourceDir, \"" + normalize_path(data.local_dir) + "\");");
             build.addLine("SwapAndRestore sr3(s.UseStorageBinaryDir, true);");
             build.addLine("build_" + h + "(s);");
             build.endBlock();
             build.addLine();
+
+            if (data.has_checks)
+            {
+                check.addLine("check_" + h + "(c);");
+                check.addLine();
+            }
 
             used_local_dirs.insert(data.local_dir);
 

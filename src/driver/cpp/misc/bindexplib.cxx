@@ -373,5 +373,5 @@ void createDefFile(const path &def, const Files &obj_files)
     for (auto &s : symbols)
         str += "\t" + s + "\n";
 
-    write_file(def, str);
+    write_file_if_different(def, str);
 }

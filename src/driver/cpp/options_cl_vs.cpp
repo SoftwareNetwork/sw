@@ -235,10 +235,13 @@ DECLARE_OPTION_SPECIALIZATION(vs::Optimizations)
     auto &o = value();
 
     Strings s;
-    if (o.Level == 1 || o.SmallCode)
-        s.push_back("-O1");
-    else if (o.Level == 2 || o.FastCode)
-        s.push_back("-O2");
+    if (!o.Disable)
+    {
+        if (o.Level == 1 || o.SmallCode)
+            s.push_back("-O1");
+        else if (o.Level == 2 || o.FastCode)
+            s.push_back("-O2");
+    }
     if (o.Disable)
         s.push_back("-Od");
 

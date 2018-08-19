@@ -120,6 +120,10 @@ struct SW_BUILDER_API Driver
     virtual bool execute(const path &file_or_dir) const;
 
     //virtual bool build_package(const PackageId &pkg) const = 0;
+
+    // maybe inherit from target with all these properties?
+    virtual String getName() const = 0;
+    // getDesc()?
 };
 
 using DriverPtr = std::unique_ptr<Driver>;

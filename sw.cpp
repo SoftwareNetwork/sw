@@ -54,6 +54,7 @@ void build(Solution &s)
         "pub.egorpugin.primitives.db.sqlite3-master"_dep,
         "org.sw.demo.rbock.sqlpp11_connector_sqlite3-0"_dep,
         "pub.egorpugin.primitives.version-master"_dep,
+        "pub.egorpugin.primitives.sw.settings-master"_dep,
         "pub.egorpugin.primitives.win32helpers-master"_dep;
     manager += "src/manager/.*"_rr, "include/sw/manager/.*"_rr;
     manager.Public += "include"_idir, "src/manager"_idir;
@@ -111,9 +112,8 @@ void build(Solution &s)
     client += "src/client"_idir;
     client.CPPVersion = CPPLanguageStandard::CPP17;
     client += cpp_driver,
-        "org.sw.demo.taywee.args"_dep,
-        "org.sw.demo.giovannidicanio.winreg-master"_dep,
-        "pub.egorpugin.primitives.minidump-master"_dep;
+        "pub.egorpugin.primitives.sw.main-master"_dep,
+        "org.sw.demo.giovannidicanio.winreg-master"_dep;
 
     if (s.Settings.TargetOS.Type == OSType::Windows)
     {

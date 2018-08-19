@@ -132,6 +132,7 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     path redirectStderr(const path &p);
     virtual bool isHashable() const { return true; }
     virtual size_t getHash() const;
+    size_t getHashAndSave() const;
     size_t calculateFilesHash() const;
     void updateFilesHash() const;
 

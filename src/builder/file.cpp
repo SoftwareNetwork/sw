@@ -20,6 +20,7 @@
 #include <primitives/hash.h>
 #include <primitives/templates.h>
 #include <primitives/debug.h>
+#include <primitives/sw/settings.h>
 
 #include <sstream>
 
@@ -27,6 +28,8 @@
 DECLARE_STATIC_LOGGER(logger, "file");
 
 #define CPPAN_FILES_EXPLAIN_FILE (getUserDirectories().storage_dir_tmp / "explain.txt")
+
+static cl::opt<bool> explain_outdated("explain-outdated", cl::desc("Explain outdated files"));
 
 namespace sw
 {
@@ -41,7 +44,7 @@ primitives::filesystem::FileMonitor &get_file_monitor()
 
 void explainMessage(const String &subject, bool outdated, const String &reason, const String &name)
 {
-    if (!Settings::get_local_settings().explain_outdated && 0)
+    if (!explain_outdated)
         return;
     static Executor e(1);
     static std::ofstream o(CPPAN_FILES_EXPLAIN_FILE.string());
@@ -454,15 +457,16 @@ bool FileRecord::isChanged()
 
 void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
 {
-    //DEBUG_BREAK_IF_PATH_HAS(file, "settings.yy.cpp");
+    DEBUG_BREAK_IF_PATH_HAS(file, "/primitives.filesystem-master.dll");
 
     if (!g)
         return;
 
     auto gold = generator.lock();
-    if (gold && (gold != g && !gold->isExecuted() && !gold->maybe_unused
-        /* && gold->getHash() != g->getHash()*/
-        ))
+    if (gold && (gold != g &&
+                 !gold->isExecuted() &&
+                 !gold->maybe_unused &&
+                 gold->getHash() != g->getHash()))
         throw std::runtime_error("Setting generator twice on file: " + file.u8string());
     generator = g;
     generated_ = true;

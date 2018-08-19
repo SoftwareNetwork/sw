@@ -26,6 +26,7 @@
 #include <primitives/pack.h>
 #include <primitives/templates.h>
 #include <primitives/win32helpers.h>
+#include <primitives/sw/settings.h>
 
 #include <boost/dll.hpp>
 #include <nlohmann/json.hpp>
@@ -35,6 +36,8 @@ DECLARE_STATIC_LOGGER(logger, "target");
 
 void build_self(sw::Solution &s);
 void check_self(sw::Checker &c);
+
+static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with build commands"));
 
 namespace sw
 {
@@ -654,7 +657,7 @@ void Solution::execute() const
 
     // execute early to prevent commands expansion into response files
     // print misc
-    if (::sw::Settings::get_local_settings().print_commands && !silent || 1) // && !b console mode
+    if (::print_commands && !silent || 1) // && !b console mode
     {
         auto d = getServiceDir();
 
@@ -696,6 +699,8 @@ void Solution::prepare()
         Resolver r;
         r.resolve_dependencies(pkgs);
         auto dd = r.getDownloadDependencies();
+        if (dd.empty())
+            throw std::runtime_error("Empty download dependencies");
 
         for (auto &p : dd)
             knownTargets.insert(p);
@@ -1617,6 +1622,9 @@ PackageDescriptionMap Build::getPackages() const
 
 const Module &ModuleStorage::get(const path &dll)
 {
+    if (dll.empty())
+        throw std::runtime_error("Empty module");
+
     boost::upgrade_lock lk(m);
     auto i = modules.find(dll);
     if (i != modules.end())
