@@ -613,7 +613,7 @@ void NativeExecutedTarget::init()
         }
     }
 
-    if (!IsConfig/* && PackageDefinitions*/)
+    //if (!IsConfig/* && PackageDefinitions*/)
         addPackageDefinitions();
 }
 

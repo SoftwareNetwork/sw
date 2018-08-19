@@ -27,8 +27,8 @@ void fileWriteOnce(const path &fn, const String &content, const path &lock_dir)
     if (!fs::exists(once) || h != read_file(once) || !fs::exists(fn))
     {
         ScopedFileLock fl(lock);
-        write_file(fn, content);
-        write_file(once, h);
+        write_file_if_different(fn, content);
+        write_file_if_different(once, h);
 
         File f(fn);
         f.getFileRecord().load();
@@ -41,7 +41,7 @@ void fileWriteSafe(const path &fn, const String &content, const path &lock_dir)
     const auto lock = lock_dir / hf;
 
     ScopedFileLock fl(lock);
-    write_file(fn, content);
+    write_file_if_different(fn, content);
 
     File f(fn);
     f.getFileRecord().load();
@@ -67,8 +67,8 @@ void replaceInFileOnce(const path &fn, const String &from, const String &to, con
 
     auto s = read_file(fn);
     boost::replace_all(s, from, to);
-    write_file(fn, s); // if different?
-    write_file(hfn, "");
+    write_file_if_different(fn, s); // if different?
+    write_file_if_different(hfn, "");
 
     File f(fn);
     f.getFileRecord().load();
@@ -100,8 +100,8 @@ void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_di
 
     auto s = read_file(fn);
     s = text + "\n" + s;
-    write_file(fn, s);
-    write_file(hfn, "");
+    write_file_if_different(fn, s);
+    write_file_if_different(hfn, "");
 
     File f(fn);
     f.getFileRecord().load();
@@ -133,8 +133,8 @@ void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir
 
     auto s = read_file(fn);
     s = s + "\n" + text;
-    write_file(fn, s);
-    write_file(hfn, "");
+    write_file_if_different(fn, s);
+    write_file_if_different(hfn, "");
 
     File f(fn);
     f.getFileRecord().load();

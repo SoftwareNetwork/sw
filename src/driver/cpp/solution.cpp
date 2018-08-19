@@ -38,6 +38,7 @@ void build_self(sw::Solution &s);
 void check_self(sw::Checker &c);
 
 static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with build commands"));
+static cl::opt<String> generator("G", cl::desc("Generator"));
 
 namespace sw
 {
@@ -1419,6 +1420,18 @@ void Build::build_and_load(const path &fn)
 
 bool Build::execute()
 {
+    if (!generator.empty())
+    {
+        prepare();
+        getCommands();
+
+        Generator g;
+        //g.file = fn.filename();
+        //g.dir = fs::current_path();
+        g.generate(*this);
+        return true;
+    }
+
     try
     {
         Solution::execute();
@@ -1433,7 +1446,7 @@ void Build::build_and_run(const path &fn)
 {
     build_and_load(fn);
 
-    if (!::sw::Settings::get_user_settings().generator.empty())
+    if (!generator.empty())
     {
         prepare();
         getCommands();
@@ -1506,7 +1519,7 @@ void Build::build_package(const String &s)
         s.TargetsToBuild[p] = s.getTargetPtr(p);
     }
 
-    if (!::sw::Settings::get_user_settings().generator.empty())
+    if (!generator.empty())
     {
         prepare();
         getCommands();

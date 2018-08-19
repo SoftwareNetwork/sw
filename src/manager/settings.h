@@ -40,7 +40,7 @@ struct SW_MANAGER_API Settings
     //bool force_server_query = false;
     //bool explain_outdated = false;
     //bool print_commands = false;
-    String generator;
+    //String generator;
     int configuration = -1;
 
     // do not check for new cppan version

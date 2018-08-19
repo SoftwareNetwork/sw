@@ -136,10 +136,18 @@ size_t Command::getHash() const
         return hash;
 
     auto h = std::hash<path>()(program);
+
     // must sort args first
     std::set<String> args_sorted(args.begin(), args.end());
     for (auto &a : args_sorted)
         hash_combine(h, std::hash<String>()(a));
+
+    // redirections are also considered as args
+    if (!out.file.empty())
+        hash_combine(h, std::hash<path>()(out.file));
+    if (!err.file.empty())
+        hash_combine(h, std::hash<path>()(out.file));
+
     // add wdir, env?
     return h;
 }

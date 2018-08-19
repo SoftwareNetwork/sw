@@ -69,6 +69,47 @@ path getFilesLogFileName()
     return p;
 }
 
+void async_file_log(const FileRecord *r)
+{
+    struct file_holder
+    {
+        ScopedFile f;
+        path fn;
+        file_holder(const path &fn) : f(fn, "ab")
+        {
+            // goes first
+            // but maybe remove?
+            if (setvbuf(f.getHandle(), NULL, _IONBF, 0) != 0)
+                throw std::runtime_error("Cannot disable log buffering");
+
+            // Opening a file in append mode doesn't set the file pointer to the file's
+            // end on Windows. Do that explicitly.
+            fseek(f.getHandle(), 0, SEEK_END);
+        }
+        ~file_holder()
+        {
+            error_code ec;
+            fs::remove(fn, ec);
+        }
+    };
+
+    // async write to log
+    {
+        static Executor e(1);
+        static auto fn = getFilesLogFileName();
+        static file_holder f(fn);
+        static std::vector<uint8_t> v;
+        e.push([r]
+        {
+            getDb().write(v, *r);
+
+            //fseek(f.f, 0, SEEK_END);
+            fwrite(&v[0], v.size(), 1, f.f.getHandle());
+            fflush(f.f.getHandle());
+        });
+    }
+}
+
 FileStorage &getFileStorage()
 {
     static FileStorage fs;
@@ -339,48 +380,7 @@ void FileRecord::load(const path &p)
             d->load();
     }
 
-    struct file_holder
-    {
-        FILE *f = nullptr;
-        path fn;
-        file_holder(const path &fn) : fn(fn)
-        {
-            f = primitives::filesystem::fopen(fn, "ab");
-
-            if (!f)
-                throw std::runtime_error("Cannot open file log for writing");
-
-            // goes first
-            if (setvbuf(f, NULL, _IONBF, 0) != 0)
-                throw std::runtime_error("Cannot disable log buffering");
-
-            // Opening a file in append mode doesn't set the file pointer to the file's
-            // end on Windows. Do that explicitly.
-            fseek(f, 0, SEEK_END);
-        }
-        ~file_holder()
-        {
-            fclose(f);
-            error_code ec;
-            fs::remove(fn, ec);
-        }
-    };
-
-    // async write to log
-    {
-        static Executor e(1);
-        static auto fn = getFilesLogFileName();
-        static file_holder f(fn);
-        static std::vector<uint8_t> v;
-        e.push([this]
-        {
-            getDb().write(v, *this);
-
-            fseek(f.f, 0, SEEK_END);
-            fwrite(&v[0], v.size(), 1, f.f);
-            fflush(f.f);
-        });
-    }
+    //async_file_log(this);
 }
 
 bool FileRecord::refresh()
@@ -423,6 +423,8 @@ bool FileRecord::refresh()
         });
     }
 
+    bool result = false;
+
     auto t = fs::last_write_time(file);
     if (t > last_write_time)
     {
@@ -431,10 +433,12 @@ bool FileRecord::refresh()
         else
             EXPLAIN_OUTDATED("file", true, "empty last_write_time", file.string());
         last_write_time = t;
-        return true;
+        result = true;
     }
 
-    return false;
+    //async_file_log(this);
+
+    return result;
 }
 
 bool FileRecord::isChanged()

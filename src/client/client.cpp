@@ -24,8 +24,8 @@
 //#include <boost/nowide/args.hpp>
 #include <boost/regex.hpp>
 #include <primitives/executor.h>
-#include <primitives/sw/main.h>
 #include <primitives/sw/settings.h>
+#include <primitives/sw/main.h>
 #include <primitives/win32helpers.h>
 
 #include <iostream>
@@ -163,6 +163,13 @@ int main_setup(int argc, char **argv)
 #include <commands.inl>
 #undef SUBCOMMAND
 
+#define SUBCOMMAND(n, d) cl::SubCommand subcommand_##n(#n, d);
+#include <commands.inl>
+#undef SUBCOMMAND
+
+// build commands
+static cl::opt<path> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
+
 int sw_main(int argc, char **argv)
 {
     cl::opt<path> working_directory("d", cl::desc("Working directory"));
@@ -170,13 +177,6 @@ int sw_main(int argc, char **argv)
     cl::opt<bool> trace("trace", cl::desc("Trace output"));
 
     //args::ValueFlag<int> configuration(parser, "configuration", "Configuration to build", { 'c' });
-    //args::ValueFlag<std::string> generator(parser, "generator", "Generator", { 'G' });
-
-    std::map<String, cl::SubCommand> subcommands{
-#define SUBCOMMAND(n, d) {#n,{#n, d}},
-#include <commands.inl>
-#undef SUBCOMMAND
-    };
 
     String overview = "SW: Software Network Client\n\n"
         "  SW is a multipurpose and multilanguage Package Manager and Build System...\n";
@@ -210,7 +210,7 @@ int sw_main(int argc, char **argv)
         setup_log("TRACE");
 
     if (0);
-#define SUBCOMMAND(n, d) else if (subcommands[#n]) cli_##n();
+#define SUBCOMMAND(n, d) else if (subcommand_##n) cli_##n();
 #include <commands.inl>
 #undef SUBCOMMAND
 
@@ -241,14 +241,7 @@ void setup_log(const std::string &log_level)
 
 SUBCOMMAND_DECL(build)
 {
-    /*args::ArgumentParser parser("");
-    parser.helpParams.showTerminator = false;
-    args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
-    args::Positional<std::string> fn(parser, "name", "File or directory to build", ".");
-
-    parser.ParseArgs(beginargs, endargs);
-    if (fn)
-        sw::build(fn.Get());*/
+    sw::build(build_arg);
 }
 
 SUBCOMMAND_DECL(ide)
