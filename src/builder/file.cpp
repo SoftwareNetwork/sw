@@ -58,9 +58,11 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
     });
 }
 
+String GetCurrentModuleNameHash();
+
 path getFilesLogFileName()
 {
-    const path bp = getUserDirectories().storage_dir_tmp / "files.log";
+    const path bp = getUserDirectories().storage_dir_tmp / ("files_" + GetCurrentModuleNameHash() + ".log");
     auto p = bp.parent_path() / bp.filename().stem();
     std::ostringstream ss;
     //ss << "." << sha256_short(boost::dll::program_location().string());
@@ -380,7 +382,7 @@ void FileRecord::load(const path &p)
             d->load();
     }
 
-    //async_file_log(this);
+    async_file_log(this);
 }
 
 bool FileRecord::refresh()
@@ -461,7 +463,7 @@ bool FileRecord::isChanged()
 
 void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
 {
-    DEBUG_BREAK_IF_PATH_HAS(file, "/primitives.filesystem-master.dll");
+    //DEBUG_BREAK_IF_PATH_HAS(file, "/primitives.filesystem-master.dll");
 
     if (!g)
         return;

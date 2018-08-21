@@ -39,6 +39,7 @@ void check_self(sw::Checker &c);
 
 static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with build commands"));
 static cl::opt<String> generator("G", cl::desc("Generator"));
+static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 
 namespace sw
 {
@@ -70,7 +71,7 @@ static String GetCurrentModuleName()
 }
 #endif
 
-static String GetCurrentModuleNameHash()
+String GetCurrentModuleNameHash()
 {
     return shorten_hash(blake2b_512(GetCurrentModuleName()));
 }
@@ -658,7 +659,7 @@ void Solution::execute() const
 
     // execute early to prevent commands expansion into response files
     // print misc
-    if (::print_commands && !silent || 1) // && !b console mode
+    if (::print_commands && !silent) // && !b console mode
     {
         auto d = getServiceDir();
 
@@ -1178,7 +1179,8 @@ FilesMap Build::build_configs_separate(const Files &files)
     for (auto &fn : files)
         r[fn] = prepare_config(fn);
 
-    Solution::execute();
+    if (!do_not_rebuild_config)
+        Solution::execute();
 
     return r;
 }
@@ -1396,7 +1398,8 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     auto i = solution.children.find(lib.pkg);
     solution.TargetsToBuild[i->first] = i->second;
 
-    Solution::execute();
+    if (!do_not_rebuild_config)
+        Solution::execute();
 
     return lib.getOutputFile();
 }
@@ -1434,6 +1437,19 @@ bool Build::execute()
 
     try
     {
+        prepare();
+
+        for (auto &[n, _] : TargetsToBuild)
+        {
+            for (auto &s : solutions)
+            {
+                auto &t = s.children[n];
+                if (!t)
+                    throw std::runtime_error("Empty target");
+                s.TargetsToBuild[n] = t;
+            }
+        }
+
         Solution::execute();
         return true;
     }

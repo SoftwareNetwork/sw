@@ -120,6 +120,9 @@ using PackagesIdSet = std::unordered_set<PackageId>;
 SW_MANAGER_API
 UnresolvedPackage extractFromString(const String &target);
 
+SW_MANAGER_API
+PackageId extractFromStringPackageId(const String &target);
+
 struct SW_MANAGER_API Package : PackageId
 {
     SomeFlags flags;

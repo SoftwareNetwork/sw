@@ -214,6 +214,21 @@ String PackageId::toString() const
     return ppath.toString() + "-" + version.toString();
 }
 
+PackageId extractFromStringPackageId(const String &target)
+{
+    auto pos = target.find('-');
+
+    PackageId p;
+    if (pos == target.npos)
+        throw std::runtime_error("Bad target");
+    else
+    {
+        p.ppath = target.substr(0, pos);
+        p.version = target.substr(pos + 1);
+    }
+    return p;
+}
+
 UnresolvedPackage extractFromString(const String &target)
 {
     auto pos = target.find('-');

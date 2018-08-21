@@ -22,23 +22,24 @@ struct PathBase : protected std::vector<PathElement>
     using element_type = typename PathElement::value_type;
     using const_iterator = typename Base::const_iterator;
 
+    using CheckSymbol = bool(*)(int);
     using Replacements = std::unordered_map<element_type, element_type>;
 
     PathBase() = default;
     ~PathBase() = default;
 
-    PathBase(const char *s, const Replacements &repl = Replacements())
-        : PathBase(String(s), repl)
+    PathBase(const char *s, CheckSymbol check_symbol = nullptr, const Replacements &repl = Replacements())
+        : PathBase(String(s), check_symbol, repl)
     {
     }
 
-    PathBase(String s, const Replacements &repl = Replacements())
+    PathBase(String s, CheckSymbol check_symbol = nullptr, const Replacements &repl = Replacements())
     {
         auto prev = s.begin();
         for (auto i = s.begin(); i != s.end(); ++i)
         {
             auto &c = *i;
-            if (!is_valid_path_symbol(c))
+            if (check_symbol && !check_symbol(c))
                 throw std::runtime_error("Bad symbol '"s + c + "' in path: '" + s + "'");
             auto it = repl.find(c);
             if (it != repl.end())
@@ -135,25 +136,11 @@ struct PathBase : protected std::vector<PathElement>
         return (ThisType &)*this;
     }
 
-    ThisType operator/(const String &e) const
-    {
-        if (e.empty())
-            return ThisType((ThisType&)*this);
-        ThisType tmp = (ThisType&)*this;
-        tmp.push_back(e);
-        return tmp;
-    }
-
     ThisType operator/(const ThisType &e) const
     {
         ThisType tmp = (ThisType&)*this;
         tmp.insert(tmp.end(), e.begin(), e.end());
         return tmp;
-    }
-
-    ThisType &operator/=(const String &e)
-    {
-        return operator/=(ThisType(e));
     }
 
     ThisType &operator/=(const ThisType &e)
@@ -184,18 +171,68 @@ struct PathBase : protected std::vector<PathElement>
 protected:
     using Base::Base;
     using Base::operator[];
+    using Base::push_back;
 };
 
-struct SW_MANAGER_API Path : PathBase<Path>
+// able to split input on addition operations
+template <class ThisType>
+struct InsecureSplitablePath : PathBase<ThisType>
 {
-    using Base = PathBase<Path>;
+    using Base = PathBase<ThisType>;
+    using Base::Base;
+
+    ThisType operator/(const String &e) const
+    {
+        if (e.empty())
+            return ThisType((ThisType&)*this);
+        ThisType tmp = (ThisType&)*this;
+        tmp.push_back(e);
+        return tmp;
+    }
+
+    ThisType &operator/=(const String &e)
+    {
+        if (!e.empty())
+            Base::push_back(e);
+        return *this;
+    }
+};
+
+struct SW_MANAGER_API InsecurePath : InsecureSplitablePath<InsecurePath>
+{
+    using Base = InsecureSplitablePath<InsecurePath>;
+    using Base::Base;
+};
+template struct PathBase<InsecurePath>;
+
+// able to split input on addition operations
+template <class ThisType>
+struct SecureSplitablePath : PathBase<ThisType>
+{
+    using Base = PathBase<ThisType>;
+    using Base::Base;
+
+    ThisType operator/(const String &e) const
+    {
+        return Base::operator/(ThisType(e));
+    }
+
+    ThisType &operator/=(const String &e)
+    {
+        return Base::operator/=(ThisType(e));
+    }
+};
+
+struct SW_MANAGER_API Path : SecureSplitablePath<Path>
+{
+    using Base = SecureSplitablePath<Path>;
     using Base::Base;
 };
 template struct PathBase<Path>;
 
-struct SW_MANAGER_API PackagePath : PathBase<PackagePath>
+struct SW_MANAGER_API PackagePath : SecureSplitablePath<PackagePath>
 {
-    using Base = PathBase<PackagePath>;
+    using Base = SecureSplitablePath<PackagePath>;
 
     enum class ElementType
     {

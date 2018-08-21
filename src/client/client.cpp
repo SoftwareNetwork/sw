@@ -168,7 +168,12 @@ int main_setup(int argc, char **argv)
 #undef SUBCOMMAND
 
 // build commands
-static cl::opt<path> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
+static cl::opt<String> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
+
+// ide commands
+static cl::opt<String> ide_build("build", cl::desc("Target to build"), cl::sub(subcommand_ide));
+static cl::opt<String> ide_rebuild("rebuild", cl::desc("Rebuild target"), cl::sub(subcommand_ide));
+static cl::opt<String> ide_clean("clean", cl::desc("Clean target"), cl::sub(subcommand_ide));
 
 int sw_main(int argc, char **argv)
 {
@@ -244,30 +249,18 @@ SUBCOMMAND_DECL(build)
     sw::build(build_arg);
 }
 
+#include <solution.h>
+
 SUBCOMMAND_DECL(ide)
 {
-    /*args::ArgumentParser parser("");
-    parser.helpParams.showTerminator = false;
-    args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
-    args::ValueFlag<std::string> generator(parser, "generator", "Generator", { 'g', 'G' });
-    args::Flag clean(parser, "clean", "Clean", { "clean" });
-    args::Flag rebuild(parser, "rebuild", "Rebuild", { "rebuild" });
-    args::Positional<std::string> name(parser, "name", "File or directory to build", ".");
-
-    parser.ParseArgs(beginargs, endargs);
-
-    if (generator || (!clean && !rebuild && !name))
-        Settings::get_user_settings().generator = generator.Get();
-
-    //build(args::get(name));
-    if (fs::exists("sw.cpp"))
+    if (!ide_build.empty())
     {
-        sw::build("sw.cpp"s);
+        auto s = sw::load("sw.cpp");
+        auto &b = *((sw::Build*)s.get());
+        auto pkg = sw::extractFromStringPackageId(ide_build);
+        b.TargetsToBuild[pkg] = b.children[pkg];
+        s->execute();
     }
-    else
-    {
-        LOG_INFO(logger, parser);
-    }*/
 }
 
 SUBCOMMAND_DECL(init)
