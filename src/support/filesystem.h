@@ -12,7 +12,6 @@
 
 #define STAMPS_DIR "stamps"
 #define STORAGE_DIR "storage"
-#define CPPAN_FILENAME "cppan.yml"
 
 using Stamps = std::unordered_map<path, time_t>;
 using SourceGroups = std::map<String, std::set<String>>;

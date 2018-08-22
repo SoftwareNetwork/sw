@@ -19,8 +19,18 @@ void checkPath(const path &p, const String &msg)
     for (auto &c : s)
     {
         if (isspace(c))
-            throw std::runtime_error("You have spaces in the " + msg + " path. CPPAN could not work in this directory: '" + s + "'");
+            throw std::runtime_error("You have spaces in the " + msg + " path. SW could not work in this directory: '" + s + "'");
     }
+}
+
+String getDataDir()
+{
+    return "data";
+}
+
+String getDataDirPrivate(const String &base)
+{
+    return (base.empty() ? getDataDir() : base) + "_private";
 }
 
 void Directories::set_storage_dir(const path &p)

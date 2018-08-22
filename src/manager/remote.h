@@ -22,38 +22,32 @@ namespace sw
 {
 
 struct Package;
+struct PackageId;
 
-String default_source_provider(const Package &);
+struct DataProvider
+{
+    String raw_url;
+
+    String getUrl(const PackageId &pkg) const;
+
+    bool downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first = false) const;
+};
+
+using DataProviders = std::vector<DataProvider>;
 
 struct Remote
 {
     using Url = String;
     using SourcesUrls = std::vector<Url>;
-    using SourceUrlProvider = std::function<String(const Remote &, const Package &)>;
 
     String name;
-
     Url url;
-    String data_dir;
-
     String user;
     String token;
-
-    // own data
-    // sources
-    std::vector<SourceUrlProvider> primary_sources;
-    SourceUrlProvider default_source{ &Remote::default_source_provider };
-    std::vector<SourceUrlProvider> additional_sources;
 
     mutable std::shared_ptr<grpc::Channel> channel;
 
     std::shared_ptr<grpc::Channel> getGrpcChannel() const;
-    bool downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first = false) const;
-
-public:
-    String default_source_provider(const Package &) const;
-    String cppan2_source_provider(const Package &) const;
-    String github_source_provider(const Package &) const;
 };
 
 using Remotes = std::vector<Remote>;

@@ -22,8 +22,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "settings");
 
-#define CPPAN_LOCAL_BUILD_PREFIX "cppan-build-"
-#define CONFIG_ROOT "/etc/cppan/"
+#define CPPAN_LOCAL_BUILD_PREFIX "sw-build-"
+#define CONFIG_ROOT "/etc/sw/"
 
 namespace sw
 {
@@ -50,8 +50,8 @@ void Settings::load(const yaml &root, const SettingsType type)
     {
         switch (type)
         {
-        case SettingsType::Local:
-            return cppan_dir / STORAGE_DIR;
+        /*case SettingsType::Local:
+            return cppan_dir / STORAGE_DIR;*/
         case SettingsType::User:
             return Settings::get_user_settings().storage_dir;
         case SettingsType::System:
@@ -109,12 +109,12 @@ void Settings::load_main(const yaml &root, const SettingsType type)
         prm->name = n;
         String provider;
         YAML_EXTRACT_VAR(kv.second, prm->url, "url", String);
-        YAML_EXTRACT_VAR(kv.second, prm->data_dir, "data_dir", String);
+        //YAML_EXTRACT_VAR(kv.second, prm->data_dir, "data_dir", String);
         YAML_EXTRACT_VAR(kv.second, provider, "provider", String);
         if (!provider.empty())
         {
-            if (provider == "cppan2")
-                prm->default_source = &Remote::cppan2_source_provider;
+            /*if (provider == "sw")
+                prm->default_source = &Remote::sw_source_provider;*/
         }
         YAML_EXTRACT_VAR(kv.second, prm->user, "user", String);
         YAML_EXTRACT_VAR(kv.second, prm->token, "token", String);
@@ -125,7 +125,6 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     YAML_EXTRACT_AUTO(disable_update_checks);
     YAML_EXTRACT(storage_dir, String);
     YAML_EXTRACT(build_dir, String);
-    YAML_EXTRACT(cppan_dir, String);
     YAML_EXTRACT(output_dir, String);
 
     auto &p = root["proxy"];

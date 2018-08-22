@@ -12,6 +12,9 @@
 namespace sw
 {
 
+String getDataDir();
+String getDataDirPrivate(const String &base = {});
+
 struct Directories
 {
     path storage_dir;

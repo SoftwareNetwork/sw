@@ -8,14 +8,18 @@
 
 #include "solution.h"
 
+#include <primitives/context.h>
+#include <primitives/sw/settings.h>
+
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include <primitives/context.h>
-
 #include <sstream>
 #include <stack>
+
+//extern cl::SubCommand subcommand_ide;
+static cl::opt<bool> print_dependencies("print-dependencies"/*, cl::sub(subcommand_ide)*/);
 
 namespace sw
 {
@@ -368,7 +372,7 @@ void Generator::generate(const Build &b)
         has_deps |= !t->Local;
         (t->Local ? local_tree : tree).add(p.ppath);
     }
-    if (has_deps)
+    if (has_deps && print_dependencies)
         ctx.addDirectory(deps_subdir, deps_subdir);
 
     auto add_dirs = [&ctx](auto &t, auto &prnts, const String &root = {})
@@ -381,11 +385,15 @@ void Generator::generate(const Build &b)
             ctx.addDirectory(InsecurePath() / p.toString(), p.slice(pp.size()), pp.empty() ? root : pp.toString());
         }
     };
-    add_dirs(tree, parents, deps_subdir.toString());
+    if (print_dependencies)
+        add_dirs(tree, parents, deps_subdir.toString());
     add_dirs(local_tree, local_parents);
 
     for (auto &[p, t] : b.solutions[0].children)
     {
+        if (!print_dependencies && !t->Local)
+            continue;
+
         auto pp = p.ppath.parent();
         auto &prnts = t->Local ? local_parents : parents;
         while (prnts.find(pp) == prnts.end())
@@ -396,6 +404,9 @@ void Generator::generate(const Build &b)
     // gen projects
     for (auto &[p, t] : b.solutions[0].children)
     {
+        if (!print_dependencies && !t->Local)
+            continue;
+
         auto nt = t->as<NativeExecutedTarget>();
 
         ProjectContext pctx;

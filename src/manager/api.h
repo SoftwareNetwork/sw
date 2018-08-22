@@ -10,15 +10,13 @@
 #include "dependency.h"
 #include "enums.h"
 #include "package.h"
+#include "remote.h"
 
 #undef ERROR
 #include <api.grpc.pb.h>
 
 namespace sw
 {
-
-struct PackagePath;
-struct Remote;
 
 struct Api
 {
@@ -29,6 +27,8 @@ struct Api
     void addDownloads(const std::set<int64_t> &);
     void addClientCall();
     IdDependencies resolvePackages(const UnresolvedPackages &);
+
+    DataProviders getDataProviders();
 
     void addVersion(const PackagePath &prefix, const String &cppan);
     void addVersion(PackagePath p, const Version &vnew, const optional<Version> &vold = {});

@@ -83,15 +83,26 @@ message NewPackage {
     string prefix_path = 3;
 }
 
+message DataProviders {
+    message DataProvider {
+        string url = 1;
+        // bool private?
+    }
+    repeated DataProvider providers = 1;
+}
+
 // unauthorized
 service ApiService {
+    rpc GetDataProviders (google.protobuf.Empty) returns (DataProviders);
+    rpc ResolvePackages (UnresolvedPackages) returns (ResolvedPackages);
+
+    //
+    // following are subtle calls, probably to be removed
+
     // tbr, check downloads on s3
     rpc AddDownloads (PackageIds) returns (google.protobuf.Empty);
     // also deprecate later
     rpc AddClientCall (google.protobuf.Empty) returns (google.protobuf.Empty);
-
-    rpc ResolvePackages (UnresolvedPackages) returns (ResolvedPackages);
-    // get_version_hash
 }
 
 // id: 1

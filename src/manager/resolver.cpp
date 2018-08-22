@@ -268,7 +268,10 @@ void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> res
 
 void Resolver::download(const ExtendedPackageData &d, const path &fn)
 {
-    if (!d.remote->downloadPackage(d, d.hash, fn, query_local_db))
+    Api api(*current_remote);
+    auto provs = api.getDataProviders();
+
+    if (!provs[0].downloadPackage(d, d.hash, fn, query_local_db))
     {
         // if we get hashes from local db
         // they can be stalled within server refresh time (15 mins)
@@ -375,7 +378,7 @@ void Resolver::download_and_unpack()
             fs::create_directories(ud);
             for (auto &f : boost::make_iterator_range(fs::directory_iterator(version_dir), {}))
             {
-                if (f == ud || f.path().filename() == CPPAN_FILENAME)
+                if (f == ud/* || f.path().filename() == CPPAN_FILENAME*/)
                     continue;
                 if (fs::is_directory(f))
                 {

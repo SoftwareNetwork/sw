@@ -257,6 +257,8 @@ struct SW_MANAGER_API PackagePath : SecureSplitablePath<PackagePath>
     bool isRootOf(const PackagePath &rhs) const;
     bool hasSameParent(const PackagePath &rhs) const;
 
+    String getHash() const;
+
     Base::value_type getOwner() const;
     Base::value_type getName() const;
 

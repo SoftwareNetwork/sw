@@ -9,21 +9,21 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/lock_types.hpp>
 
-#define CPPAN_NAME "cppan2"
+#define SW_NAME "sw"
 
 path get_config_filename()
 {
-    return get_root_directory() / CPPAN_FILENAME;
+    return get_root_directory() / "sw.yml";
 }
 
 path get_root_directory()
 {
-    return get_home_directory() / "." CPPAN_NAME;
+    return get_home_directory() / "." SW_NAME;
 }
 
 path temp_directory_path(const path &subdir)
 {
-    auto p = fs::temp_directory_path() / CPPAN_NAME / subdir;
+    auto p = fs::temp_directory_path() / SW_NAME / subdir;
     fs::create_directories(p);
     return p;
 }
@@ -42,7 +42,7 @@ String make_archive_name(const String &fn)
 {
     if (!fn.empty())
         return fn + ".tar.gz";
-    return CPPAN_NAME ".tar.gz";
+    return SW_NAME ".tar.gz";
 }
 
 void findRootDirectory1(const path &p, path &root, int depth = 0)

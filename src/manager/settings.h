@@ -33,7 +33,6 @@ struct SW_MANAGER_API Settings
     path storage_dir;
     SettingsType build_dir_type{ SettingsType::Local };
     path build_dir;
-    path cppan_dir = ".cppan";
     path output_dir = "bin";
 
     // cppan2 used flags

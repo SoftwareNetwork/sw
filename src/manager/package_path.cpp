@@ -199,4 +199,9 @@ PackagePath PackagePath::back(const PackagePath &root) const
     return p;
 }
 
+String PackagePath::getHash() const
+{
+    return blake2b_512(toStringLower());
+}
+
 }

@@ -105,6 +105,9 @@ struct SW_MANAGER_API PackageId
     Package toPackage() const;
     String toString() const;
 
+    bool isPublic() const { return !isPrivate(); }
+    bool isPrivate() const { return ppath.is_pvt() || ppath.is_com(); }
+
 private:
     // cached vars
     String hash;

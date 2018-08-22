@@ -103,6 +103,19 @@ IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
     return id_deps;
 }
 
+DataProviders Api::getDataProviders()
+{
+    google::protobuf::Empty request;
+    auto context = getContext();
+    GRPC_SET_DEADLINE(5);
+    GRPC_CALL_THROWS(api_, GetDataProviders, api::DataProviders);
+
+    DataProviders provs;
+    for (auto &p : response.providers())
+        provs.push_back({ p.url() });
+    return provs;
+}
+
 void Api::addVersion(const PackagePath &prefix, const String &cppan)
 {
     api::NewPackage request;
