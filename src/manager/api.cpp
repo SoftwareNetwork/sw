@@ -103,15 +103,15 @@ IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
     return id_deps;
 }
 
-DataProviders Api::getDataProviders()
+DataSources Api::getDataSources()
 {
     google::protobuf::Empty request;
     auto context = getContext();
     GRPC_SET_DEADLINE(5);
-    GRPC_CALL_THROWS(api_, GetDataProviders, api::DataProviders);
+    GRPC_CALL_THROWS(api_, GetDataSources, api::DataSources);
 
-    DataProviders provs;
-    for (auto &p : response.providers())
+    DataSources provs;
+    for (auto &p : response.sources())
         provs.push_back({ p.url() });
     return provs;
 }

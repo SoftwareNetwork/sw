@@ -91,6 +91,7 @@ String toString(ArchType e)
 
     switch (e)
     {
+        CASE(x86);
         CASE(x86_64);
     default:
         throw std::logic_error("TODO: implement target arch");

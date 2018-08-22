@@ -93,6 +93,11 @@ struct SW_BUILDER_API Driver
 
     virtual path getConfigFilename() const = 0;
 
+    /// only build script file, without loading
+    ///
+    /// assuming all sources are fetched and script is in the source dir
+    virtual PackageScriptPtr build(const path &file_or_dir) const = 0;
+
     /// only load script file
     ///
     /// assuming all sources are fetched and script is in the source dir

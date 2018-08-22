@@ -29,6 +29,9 @@ SW_BUILDER_API
 bool build(const String &file_or_dir_or_packagename);
 
 SW_BUILDER_API
+PackageScriptPtr build_only(const path &file_or_dir);
+
+SW_BUILDER_API
 PackageScriptPtr load(const path &file_or_dir);
 
 SW_BUILDER_API

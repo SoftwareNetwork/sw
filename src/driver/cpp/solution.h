@@ -144,6 +144,9 @@ protected:
     PackageDescriptionMap getPackages() const;
 
 private:
+    path dll;
+
+    void setSettings();
     void findCompiler();
     SharedLibraryTarget &createTarget(const Files &files);
 

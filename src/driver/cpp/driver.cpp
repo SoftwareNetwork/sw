@@ -25,6 +25,25 @@ path Driver::getConfigFilename() const
     return Build::getConfigFilename();
 }
 
+PackageScriptPtr Driver::build(const path &file_or_dir) const
+{
+    auto f = file_or_dir;
+    if (fs::is_directory(f))
+    {
+        if (!hasConfig(f))
+            return {};
+        f /= getConfigFilename();
+    }
+
+    current_thread_path(f.parent_path());
+
+    auto b = std::make_unique<Build>();
+    b->Local = true;
+    b->configure = true;
+    b->build(f);
+    return b;
+}
+
 PackageScriptPtr Driver::load(const path &file_or_dir) const
 {
     auto f = file_or_dir;

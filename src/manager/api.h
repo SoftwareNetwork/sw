@@ -28,7 +28,7 @@ struct Api
     void addClientCall();
     IdDependencies resolvePackages(const UnresolvedPackages &);
 
-    DataProviders getDataProviders();
+    DataSources getDataSources();
 
     void addVersion(const PackagePath &prefix, const String &cppan);
     void addVersion(PackagePath p, const Version &vnew, const optional<Version> &vold = {});

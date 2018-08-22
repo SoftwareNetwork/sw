@@ -46,7 +46,7 @@ DECLARE_STATIC_LOGGER(logger, "db");
 #define PACKAGES_DB_VERSION_FILE "db.version"
 #define PACKAGES_DB_DOWNLOAD_TIME_FILE "packages.time"
 
-const String db_repo_name = "cppan/database2";
+const String db_repo_name = "SoftwareNetwork/database";
 const String db_repo_url = "https://github.com/" + db_repo_name;
 const String db_master_url = db_repo_url + "/archive/master.zip";
 const String db_version_url = "https://raw.githubusercontent.com/" + db_repo_name + "/master/" PACKAGES_DB_VERSION_FILE;

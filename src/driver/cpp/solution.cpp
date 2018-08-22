@@ -41,6 +41,11 @@ static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with 
 static cl::opt<String> generator("G", cl::desc("Generator"));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 
+static cl::opt<String> configuration("configuration", cl::desc("Set build configuration")/*, cl::sub(subcommand_ide)*/);
+static cl::opt<String> platform("platform", cl::desc("Set build platform")/*, cl::sub(subcommand_ide)*/);
+//static cl::opt<String> arch("arch", cl::desc("Set arch")/*, cl::sub(subcommand_ide)*/);
+static cl::opt<bool> static_build("static-build", cl::desc("Set static build")/*, cl::sub(subcommand_ide)*/);
+
 namespace sw
 {
 
@@ -900,12 +905,6 @@ Build::Build()
 
     languages = getLanguages();
     findCompiler();
-
-    Settings.Native.ASMCompiler = ((ASMLanguage*)languages[LanguageType::ASM].get())->compiler;
-    Settings.Native.CCompiler = ((CLanguage*)languages[LanguageType::C].get())->compiler;
-    Settings.Native.CPPCompiler = ((CPPLanguage*)languages[LanguageType::CPP].get())->compiler;
-
-    Settings.Native.CompilerType = Settings.Native.CPPCompiler->Type;
 }
 
 Build::~Build()
@@ -917,6 +916,15 @@ Build::~Build()
     // or are they solution-specific?
 
     getModuleStorage(base_ptr).modules.clear();
+}
+
+void Build::setSettings()
+{
+    Settings.Native.ASMCompiler = ((ASMLanguage*)languages[LanguageType::ASM].get())->compiler;
+    Settings.Native.CCompiler = ((CLanguage*)languages[LanguageType::C].get())->compiler;
+    Settings.Native.CPPCompiler = ((CPPLanguage*)languages[LanguageType::CPP].get())->compiler;
+
+    Settings.Native.CompilerType = Settings.Native.CPPCompiler->Type;
 }
 
 void Build::findCompiler()
@@ -948,6 +956,8 @@ void Build::findCompiler()
         //if (FileTransforms.IsEmpty())
         break;
     }
+
+    setSettings();
 }
 
 ExecutionPlan<builder::Command> Build::getExecutionPlan() const
@@ -1190,9 +1200,6 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     if (pkgs.empty())
         return {};
 
-    // reset before start adding targets
-    //getFileStorage().reset();
-
     if (solutions.empty())
         addSolution();
 
@@ -1408,15 +1415,15 @@ path Build::build(const path &fn)
 {
     // separate build
     Build b;
-    return b.build_configs_separate({ fn }).begin()->second;
+    return dll = b.build_configs_separate({ fn }).begin()->second;
 }
 
 void Build::build_and_load(const path &fn)
 {
-    auto dll = build(fn);
+    build(fn);
 
     // reset before start adding targets
-    getFileStorage().reset();
+    //getFileStorage().reset();
 
     load(dll);
 }
@@ -1552,11 +1559,38 @@ void Build::build_package(const String &s)
 
 void Build::load(const path &dll)
 {
-    // reset before start adding targets
-    //getFileStorage().reset();
-
     if (configure)
+    {
         getModuleStorage(base_ptr).get(dll).configure(*this);
+
+        if (!configuration.empty())
+        {
+            if (configuration == "Debug")
+                Settings.Native.ConfigurationType = ConfigurationType::Debug;
+            else if (configuration == "Release")
+                Settings.Native.ConfigurationType = ConfigurationType::Release;
+            else if (configuration == "MinSizeRel")
+                Settings.Native.ConfigurationType = ConfigurationType::MinimalSizeRelease;
+            else if (configuration == "RelWithDebInfo")
+                Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
+        }
+        //if (!platform.empty())
+            //;
+
+        if (static_build)
+            Settings.Native.LibrariesType = LibraryType::Static;
+
+        if (platform == "Win32")
+        {
+            Settings.TargetOS.Arch = ArchType::x86;
+        }
+
+        //s.Settings.Native.LibrariesType = LibraryType::Static;
+        //Settings.Native.ConfigurationType = ConfigurationType::Debug;
+    }
+
+    // apply config settings
+    findCompiler();
 
     if (solutions.empty())
         addSolution();

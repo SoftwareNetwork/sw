@@ -84,6 +84,17 @@ bool build(const String &s)
     return true;
 }
 
+PackageScriptPtr build_only(const path &file_or_dir)
+{
+    auto &drivers = getDrivers();
+    for (auto &d : drivers)
+    {
+        if (auto s = d->build(file_or_dir); s)
+            return s;
+    }
+    throw std::runtime_error("Unknown package driver");
+}
+
 PackageScriptPtr load(const path &file_or_dir)
 {
     auto &drivers = getDrivers();

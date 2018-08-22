@@ -181,20 +181,37 @@ bool VisualStudio::findToolchain(Solution &s) const
 
     struct DirSuffix
     {
-        std::string include;
-        std::string lib;
+        std::string host;
+        std::string target;
     } dir_suffix;
 
     // get suffix
     switch (s.HostOS.Arch)
     {
     case ArchType::x86_64:
-        dir_suffix.include = "x64";
-        dir_suffix.lib = "x64";
+        dir_suffix.host = "x64";
         break;
     case ArchType::x86:
-        dir_suffix.include = "x86";
-        dir_suffix.lib = "x86";
+        dir_suffix.host = "x86";
+        break;
+        // arm
+        //dir_suffix.include = "arm";
+        //dir_suffix.lib = "arm";
+        // arm64 !
+        //dir_suffix.include = "arm";
+        //dir_suffix.lib = "arm64";
+    default:
+        assert(false && "Unknown arch");
+    }
+
+    switch (s.Settings.TargetOS.Arch)
+    {
+    case ArchType::x86_64:
+        dir_suffix.target = "x64";
+        break;
+    case ArchType::x86:
+        dir_suffix.host = "x86";
+        dir_suffix.target = "x86";
         break;
         // arm
         //dir_suffix.include = "arm";
@@ -212,9 +229,9 @@ bool VisualStudio::findToolchain(Solution &s) const
     if (VSVersion == VisualStudioVersion::VS15)
     {
         // always use host tools and host arch for building config files
-        compiler /= "Host" + dir_suffix.lib + "\\" + dir_suffix.lib + "\\cl.exe";
-        LOpts.System.LinkDirectories.insert(root / ("lib\\" + dir_suffix.lib));
-        LOpts.System.LinkDirectories.insert(root / ("ATLMFC\\lib\\" + dir_suffix.lib)); // also add
+        compiler /= "Host" + dir_suffix.host + "\\" + dir_suffix.target + "\\cl.exe";
+        LOpts.System.LinkDirectories.insert(root / ("lib\\" + dir_suffix.target));
+        LOpts.System.LinkDirectories.insert(root / ("ATLMFC\\lib\\" + dir_suffix.target)); // also add
     }
     else
     {
@@ -232,7 +249,7 @@ bool VisualStudio::findToolchain(Solution &s) const
     for (auto &i : fs::directory_iterator(getWindowsKit10Dir(s, windows_kit_dir / "lib")))
     {
         if (fs::is_directory(i))
-            LOpts.System.LinkDirectories.insert(i / path(dir_suffix.lib));
+            LOpts.System.LinkDirectories.insert(i / path(dir_suffix.target));
     }
 
     // create programs
@@ -241,12 +258,16 @@ bool VisualStudio::findToolchain(Solution &s) const
     Linker->Type = LinkerType::MSVC;
     Linker->file = compiler.parent_path() / "link.exe";
     Linker->vs_version = VSVersion;
+    if (s.Settings.TargetOS.Arch == ArchType::x86)
+        Linker->Machine = vs::MachineType::X86;
     *Linker = LOpts;
 
     auto Librarian = std::make_shared<VisualStudioLibrarian>();
     Librarian->Type = LinkerType::MSVC;
     Librarian->file = compiler.parent_path() / "lib.exe";
     Librarian->vs_version = VSVersion;
+    if (s.Settings.TargetOS.Arch == ArchType::x86)
+        Librarian->Machine = vs::MachineType::X86;
     *Librarian = LOpts;
 
     // ASM

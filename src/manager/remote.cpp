@@ -35,7 +35,7 @@ Remotes get_default_remotes()
     return rms;
 }
 
-String DataProvider::getUrl(const PackageId &pkg) const
+String DataSource::getUrl(const PackageId &pkg) const
 {
     // {DD} = base data dir
     // {PHPF} = package hash path full
@@ -49,7 +49,7 @@ String DataProvider::getUrl(const PackageId &pkg) const
     );
 }
 
-bool DataProvider::downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first) const
+bool DataSource::downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first) const
 {
     auto download_from_source = [&](const auto &url)
     {

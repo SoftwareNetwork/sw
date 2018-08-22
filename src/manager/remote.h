@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "enums.h"
 #include "filesystem.h"
 #include "http.h"
 
@@ -15,7 +16,9 @@
 
 namespace grpc
 {
+
 class Channel;
+
 }
 
 namespace sw
@@ -24,16 +27,24 @@ namespace sw
 struct Package;
 struct PackageId;
 
-struct DataProvider
+struct DataSource
 {
+    enum Flags
+    {
+        fHasPrivatePackages     =   0,
+        fHasPrebuiltPackages    =   1,
+    };
+
     String raw_url;
+    SomeFlags flags;
+    String location; // other type?
 
     String getUrl(const PackageId &pkg) const;
 
     bool downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first = false) const;
 };
 
-using DataProviders = std::vector<DataProvider>;
+using DataSources = std::vector<DataSource>;
 
 struct Remote
 {

@@ -269,7 +269,7 @@ void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> res
 void Resolver::download(const ExtendedPackageData &d, const path &fn)
 {
     Api api(*current_remote);
-    auto provs = api.getDataProviders();
+    auto provs = api.getDataSources();
 
     if (!provs[0].downloadPackage(d, d.hash, fn, query_local_db))
     {

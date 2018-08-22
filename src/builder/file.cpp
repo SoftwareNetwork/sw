@@ -347,8 +347,8 @@ void FileRecord::reset()
     //if (generator && generator->executed())
     {
         // do we need to reset changed in this case or not?
-        if (!generator.expired())
-            generator.reset();
+        //if (!generator.expired())
+            //generator.reset();
     }
 }
 
@@ -474,6 +474,7 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
                  !gold->maybe_unused &&
                  gold->getHash() != g->getHash()))
         throw std::runtime_error("Setting generator twice on file: " + file.u8string());
+    //generator.reset();
     generator = g;
     generated_ = true;
 }

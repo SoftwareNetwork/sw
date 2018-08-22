@@ -55,31 +55,28 @@ String make_backslashes(String s)
 
 static const Strings configs{
     "Debug",
-    /*"Release",
+    "Release",
     "MinSizeRel",
-    "RelWithDebInfo",*/
+    "RelWithDebInfo",
 };
 
 static const Strings platforms{
     "Win32",
-    //"x64",
+    "x64",
 };
 
-/*enum class Platform
+static const Strings shared_static{
+    "static",
+    "dll",
+};
+
+void iterate_over_configs(std::function<void(const String &, const String &, const String &)> f)
 {
-    x86,
-    x64,
-};
-
-static const Platform platforms{
-    Platform::x86,
-    //"x64",
-};
-
-String to_string(Platform p)
-{
-    return p == Platform::x86 ? "Win32" : "x64";
-}*/
+    for (auto &c : configs)
+        for (auto &p : platforms)
+            for (auto &dll : shared_static)
+                f(c, p, dll);
+}
 
 // VS
 struct SolutionContext : Context
@@ -155,25 +152,21 @@ struct SolutionContext : Context
     void setSolutionConfigurationPlatforms()
     {
         beginGlobalSection("SolutionConfigurationPlatforms", "preSolution");
-        for (auto &c : configs)
+        iterate_over_configs([this](const String &c, const String &p, const String &dll)
         {
-            for (auto &p : platforms)
-                addLine(c + "|" + p + " = " + c + "|" + p);
-        }
+            addLine(c + " " + dll + "|" + p + " = " + c + " " + dll + "|" + p);
+        });
         endGlobalSection();
     }
 
     void addProjectConfigurationPlatforms(const String &prj, bool build = false)
     {
-        for (auto &c : configs)
+        iterate_over_configs([this, &prj, build](const String &c, const String &p, const String &dll)
         {
-            for (auto &p : platforms)
-            {
-                addKeyValue(getStringUuid(prj) + "." + c + "|" + p + ".ActiveCfg", c + "|" + p);
-                if (build)
-                    addKeyValue(getStringUuid(prj) + "." + c + "|" + p + ".Build.0", c + "|" + p);
-            }
-        }
+            addKeyValue(getStringUuid(prj) + "." + c + " " + dll + "|" + p + ".ActiveCfg", c + " " + dll + "|" + p);
+            if (build)
+                addKeyValue(getStringUuid(prj) + "." + c + " " + dll + "|" + p + ".Build.0", c + " " + dll + "|" + p);
+        });
     }
 
     void addKeyValue(const String &k, const String &v)
@@ -270,47 +263,38 @@ struct ProjectContext : XmlContext
     void addProjectConfigurations()
     {
         beginBlock("ItemGroup", { {"Label","ProjectConfigurations"} });
-        for (auto &c : configs)
+        iterate_over_configs([this](const String &c, const String &p, const String &dll)
         {
-            for (auto &p : platforms)
-            {
-                beginBlock("ProjectConfiguration", { {"Include", c + "|" + p } });
-                addBlock("Configuration", c);
-                addBlock("Platform", p);
-                endBlock();
-            }
-        }
+            beginBlock("ProjectConfiguration", { {"Include", c + " " + dll + "|" + p } });
+            addBlock("Configuration", c + " " + dll);
+            addBlock("Platform", p);
+            endBlock();
+        });
         endBlock();
     }
 
     void addPropertyGroupConfigurationTypes()
     {
-        for (auto &c : configs)
+        iterate_over_configs([this](const String &c, const String &p, const String &dll)
         {
-            for (auto &p : platforms)
-            {
-                beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + "|" + p + "'" },{ "Label","Configuration" } });
+            beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + " " + dll + "|" + p + "'" },{ "Label","Configuration" } });
 
-                addBlock("ConfigurationType", "Makefile");
-                //addBlock("UseDebugLibraries", c);
-                addBlock("PlatformToolset", "v141");
+            addBlock("ConfigurationType", "Makefile");
+            //addBlock("UseDebugLibraries", c);
+            addBlock("PlatformToolset", "v141");
 
-                endBlock();
-            }
-        }
+            endBlock();
+        });
     }
 
     void addPropertySheets()
     {
-        for (auto &c : configs)
+        iterate_over_configs([this](const String &c, const String &p, const String &dll)
         {
-            for (auto &p : platforms)
-            {
-                beginBlock("ImportGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + "|" + p + "'" },{ "Label","PropertySheets" } });
-                addBlock("Import", "", { {"Project","$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props" },{ "Condition","exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')" },{ "Label","LocalAppDataPlatform" }, });
-                endBlock();
-            }
-        }
+            beginBlock("ImportGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + " " + dll + "|" + p + "'" },{ "Label","PropertySheets" } });
+            addBlock("Import", "", { {"Project","$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props" },{ "Condition","exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')" },{ "Label","LocalAppDataPlatform" }, });
+            endBlock();
+        });
     }
 };
 
@@ -452,33 +436,34 @@ void Generator::generate(const Build &b)
 
         pctx.addPropertySheets();
 
-        for (auto &c : configs)
+        iterate_over_configs([&pctx, &nt, &cwd, &p](const String &c, const String &pl, const String &dll)
         {
-            for (auto &pl : platforms)
-            {
-                using namespace sw;
+            using namespace sw;
 
-                pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + "|" + pl + "'" } });
+            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + " " + dll + "|" + pl + "'" } });
 
-                pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " --do-not-rebuild-config ide --build " + p.target_name);
-                pctx.addBlock("NMakeOutput", nt->getOutputFile().string());
-                pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " ide --clean");
-                pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + cwd + " ide --rebuild");
-                String defs;
-                for (auto &[k, v] : nt->Definitions)
-                    defs += k + "=" + v + ";";
-                pctx.addBlock("NMakePreprocessorDefinitions", defs);
-                String idirs;
-                for (auto &i : nt->gatherIncludeDirectories())
-                    idirs += i.string() + ";";
-                pctx.addBlock("NMakeIncludeSearchPath", idirs);
-                //pctx.addBlock("NMakeForcedIncludes", "Makefile");
-                //pctx.addBlock("NMakeAssemblySearchPath", "Makefile");
-                //pctx.addBlock("NMakeForcedUsingAssemblies", "Makefile");
+            String cfg = "--configuration " + c + " --platform " + pl;
+            if (dll != "dll")
+                cfg += " --static-build";
 
-                pctx.endBlock();
-            }
-        }
+            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " --do-not-rebuild-config ide --build " + p.target_name);
+            pctx.addBlock("NMakeOutput", nt->getOutputFile().string());
+            pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " " + cfg + " ide --clean");
+            pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + cwd + " " + cfg + " ide --rebuild");
+            String defs;
+            for (auto &[k, v] : nt->Definitions)
+                defs += k + "=" + v + ";";
+            pctx.addBlock("NMakePreprocessorDefinitions", defs);
+            String idirs;
+            for (auto &i : nt->gatherIncludeDirectories())
+                idirs += i.string() + ";";
+            pctx.addBlock("NMakeIncludeSearchPath", idirs);
+            //pctx.addBlock("NMakeForcedIncludes", "Makefile");
+            //pctx.addBlock("NMakeAssemblySearchPath", "Makefile");
+            //pctx.addBlock("NMakeForcedUsingAssemblies", "Makefile");
+
+            pctx.endBlock();
+        });
 
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets" } });
 
@@ -544,7 +529,11 @@ void Generator::generate(const Build &b)
     ctx.setSolutionConfigurationPlatforms();
     ctx.beginGlobalSection("ProjectConfigurationPlatforms", "postSolution");
     for (auto &[p, t] : b.solutions[0].children)
+    {
+        if (!print_dependencies && !t->Local)
+            continue;
         ctx.addProjectConfigurationPlatforms(p.target_name, true);
+    }
     ctx.endGlobalSection();
     ctx.endGlobal();
 
