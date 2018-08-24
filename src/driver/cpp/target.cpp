@@ -215,6 +215,12 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     if (getSolution()->exists(t->pkg))
         throw std::runtime_error("Target already exists: " + t->pkg.target_name);
 
+    // find automatic way of copying data?
+
+    // lang storage
+    //t->languages = languages;
+    //t->extensions = extensions;
+
     t->Settings = Settings;
     t->solution = getSolution();
     t->Local = Local;
@@ -542,9 +548,6 @@ void TargetOptionsGroup::remove(const Variable &v)
 NativeExecutedTarget::NativeExecutedTarget()
     : NativeTarget()
 {
-    addLanguage(LanguageType::ASM);
-    addLanguage(LanguageType::C);
-    addLanguage(LanguageType::CPP);
 }
 
 NativeExecutedTarget::NativeExecutedTarget(LanguageType L)
@@ -580,6 +583,10 @@ void NativeExecutedTarget::init()
     {
         v.target = this;
     });
+
+    addLanguage(LanguageType::ASM);
+    addLanguage(LanguageType::C);
+    addLanguage(LanguageType::CPP);
 
     for (auto &l : languages)
     {

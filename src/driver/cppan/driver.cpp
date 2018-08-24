@@ -6,8 +6,10 @@
 
 #include <sw/driver/cppan/driver.h>
 
-namespace sw::driver
+namespace sw::driver::cppan
 {
+
+//SW_REGISTER_PACKAGE_DRIVER(CppanDriver);
 
 path CppanDriver::getConfigFilename() const
 {

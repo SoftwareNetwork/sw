@@ -50,9 +50,15 @@ bool build(const Files &files_or_dirs)
 
 bool build(const PackageId &p)
 {
-    //ScopedTime t;
-    build(p.getDirSrc2());
-    //LOG_INFO(logger, "Total time: " << t.getTimeFloat());
+    auto &drivers = sw::getDrivers();
+    for (auto &d : drivers)
+    {
+        if (d->buildPackage(p))
+        {
+            return true;
+        }
+    }
+
     return true;
 }
 
@@ -79,9 +85,7 @@ bool build(const String &s)
 
     auto id = extractFromString(s);
     auto pkgs = resolve_dependency(s);
-    build(*pkgs.begin());
-
-    return true;
+    return build(*pkgs.begin());
 }
 
 PackageScriptPtr build_only(const path &file_or_dir)

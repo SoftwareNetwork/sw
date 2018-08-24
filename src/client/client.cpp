@@ -16,6 +16,7 @@
 #include <sw/builder/build.h>
 #include <sw/builder/driver.h>
 #include <sw/driver/cpp/driver.h>
+#include <sw/driver/cppan/driver.h>
 
 //#include <args.hxx>
 #include <boost/algorithm/string.hpp>
@@ -46,6 +47,9 @@ using namespace sw;
 
 bool bConsoleMode = true;
 bool bUseSystemPause = false;
+
+namespace sw::driver::cpp { SW_REGISTER_PACKAGE_DRIVER(CppDriver); }
+namespace sw::driver::cppan { SW_REGISTER_PACKAGE_DRIVER(CppanDriver); }
 
 /*
 // check args here to see if we want gui or not!
@@ -84,14 +88,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 #pragma pop_macro("main")
 }
 #endif
-
-#include <sw/driver/cpp/driver.h>
-namespace sw::driver::cpp
-{
-
-SW_REGISTER_PACKAGE_DRIVER(Driver);
-
-}
 
 int main(int argc, char **argv)
 {
@@ -143,8 +139,6 @@ int main(int argc, char **argv)
     return r;
 }
 
-#include <api.h>
-
 int main_setup(int argc, char **argv)
 {
 #ifdef NDEBUG
@@ -180,6 +174,7 @@ int sw_main(int argc, char **argv)
     cl::opt<path> working_directory("d", cl::desc("Working directory"));
     cl::opt<bool> verbose("verbose", cl::desc("Verbose output"));
     cl::opt<bool> trace("trace", cl::desc("Trace output"));
+    cl::opt<int> jobs("j", cl::desc("Number of jobs"), cl::init(-1));
 
     //args::ValueFlag<int> configuration(parser, "configuration", "Configuration to build", { 'c' });
 
@@ -208,6 +203,9 @@ int sw_main(int argc, char **argv)
 
     if (!working_directory.empty())
         fs::current_path(working_directory);
+
+    if (jobs > 0)
+        getExecutor(jobs);
 
     if (verbose)
         setup_log("DEBUG");

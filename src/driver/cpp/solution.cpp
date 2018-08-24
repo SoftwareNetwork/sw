@@ -40,6 +40,7 @@ void check_self(sw::Checker &c);
 static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with build commands"));
 static cl::opt<String> generator("G", cl::desc("Generator"));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
+static cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 
 static cl::opt<String> configuration("configuration", cl::desc("Set build configuration")/*, cl::sub(subcommand_ide)*/);
 static cl::opt<String> platform("platform", cl::desc("Set build platform")/*, cl::sub(subcommand_ide)*/);
@@ -545,11 +546,9 @@ void Solution::execute() const
         std::unordered_map<path, size_t> programs;
         for (auto &c : ep.commands)
         {
-            {
-                auto n = programs.size() + 1;
-                if (programs.find(c->getProgram()) == programs.end())
-                    programs[c->getProgram()] = n;
-            }
+            auto n = programs.size() + 1;
+            if (programs.find(c->getProgram()) == programs.end())
+                programs[c->getProgram()] = n;
         }
 
         // print programs
@@ -627,20 +626,38 @@ void Solution::execute() const
         for (auto &c : ep.commands)
         {
             insert(c->program.u8string());
+            insert(c->working_directory.u8string());
             for (auto &a : c->args)
                 insert(a);
         }
 
+        Strings explain;
+        explain.resize(strings.size());
+
+        auto print_string = [&strings, &explain, &s](const String &in)
+        {
+            auto n = strings[in];
+            s += std::to_string(n) + " ";
+            explain[n - 1] = in;
+        };
+
         for (auto &c : ep.commands)
         {
-            s += std::to_string(strings[c->program.u8string()]) + " ";
+            print_string(c->program.u8string());
+            print_string(c->working_directory.u8string());
             for (auto &a : c->args)
-                s += std::to_string(strings[a]) + " ";
+                print_string(a);
             s.resize(s.size() - 1);
             s += "\n";
         }
 
-        write_file(p, s);
+        String t;
+        for (auto &e : explain)
+            t += e + "\n";
+        if (!s.empty())
+            t += "\n";
+
+        write_file(p, t + s);
     };
 
     auto p = getExecutionPlan();
@@ -681,9 +698,12 @@ void Solution::execute() const
     //Executor e(1);
     auto &e = getExecutor();
 
-    p.execute(e);
-    if (!silent)
-        LOG_INFO(logger, "Build time: " << t.getTimeFloat() << " s.");
+    if (!dry_run)
+    {
+        p.execute(e);
+        if (!silent)
+            LOG_INFO(logger, "Build time: " << t.getTimeFloat() << " s.");
+    }
 }
 
 void Solution::prepare()
@@ -1020,7 +1040,7 @@ static auto getFilesHash(const Files &files)
 
 PackagePath Build::getSelfTargetName(const Files &files)
 {
-    return "loc.sw.self." + getFilesHash(files);
+    return "loc.sw.self"/* + getFilesHash(files)*/;
 }
 
 SharedLibraryTarget &Build::createTarget(const Files &files)
@@ -1430,17 +1450,10 @@ void Build::build_and_load(const path &fn)
 
 bool Build::execute()
 {
-    if (!generator.empty())
-    {
-        prepare();
-        getCommands();
+    dry_run = ::dry_run;
 
-        Generator g;
-        //g.file = fn.filename();
-        //g.dir = fs::current_path();
-        g.generate(*this);
+    if (generateBuildSystem())
         return true;
-    }
 
     try
     {
@@ -1468,26 +1481,34 @@ bool Build::execute()
 void Build::build_and_run(const path &fn)
 {
     build_and_load(fn);
-
-    if (!generator.empty())
-    {
-        prepare();
-        getCommands();
-
-        Generator g;
-        g.file = fn.filename();
-        //g.dir = fs::current_path();
-        g.generate(*this);
+    if (generateBuildSystem())
         return;
-    }
-
     Solution::execute();
+}
+
+bool Build::generateBuildSystem()
+{
+    if (generator.empty())
+        return false;
+
+    prepare();
+    getCommands();
+
+    auto g = Generator::create(generator);
+    //g.file = fn.filename();
+    //g.dir = fs::current_path();
+    g->generate(*this);
+    return true;
 }
 
 void Build::build_package(const String &s)
 {
     //auto [pkg,pkgs] = resolve_dependency(s);
     auto pkg = extractFromString(s);
+
+    Local = false;
+    build_and_run(pkg.resolve().getDirSrc2() / "sw.cpp");
+    return;
 
     // resolve only deps needed
     Resolver r;
@@ -1542,17 +1563,8 @@ void Build::build_package(const String &s)
         s.TargetsToBuild[p] = s.getTargetPtr(p);
     }
 
-    if (!generator.empty())
-    {
-        prepare();
-        getCommands();
-
-        Generator g;
-        g.file = s;
-        //g.dir = fs::current_path();
-        g.generate(*this);
+    if (generateBuildSystem())
         return;
-    }
 
     execute();
 }

@@ -1086,4 +1086,20 @@ Packages PackagesDatabase::getTransitiveDependentPackages(const Packages &pkgs)
     return r;
 }
 
+DataSources PackagesDatabase::getDataSources()
+{
+    const auto ds = db::packages::DataSource{};
+
+    DataSources dss;
+    for (const auto &row : (*db)(select(ds.url, ds.flags).from(ds).unconditionally()))
+    {
+        DataSource s;
+        s.raw_url = row.url;
+        s.flags = row.flags.value();
+        if (!s.flags[DataSource::fDisabled])
+            dss.push_back(s);
+    }
+    return dss;
+}
+
 }

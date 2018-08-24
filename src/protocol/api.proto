@@ -83,17 +83,8 @@ message NewPackage {
     string prefix_path = 3;
 }
 
-message DataSources {
-    message DataSource {
-        string url = 1;
-        // bool private?
-    }
-    repeated DataSource sources = 1;
-}
-
 // unauthorized
 service ApiService {
-    rpc GetDataSources (google.protobuf.Empty) returns (DataSources);
     rpc ResolvePackages (UnresolvedPackages) returns (ResolvedPackages);
 
     //

@@ -94,6 +94,7 @@ public:
 
 protected:
     Solution & base_ptr;
+    bool dry_run = false;
 
     Solution();
 
@@ -136,11 +137,13 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     void performChecks() override;
     void prepare() override;
 
+    bool generateBuildSystem();
+    ExecutionPlan<builder::Command> getExecutionPlan() const override;
+
     // helper
     Solution &addSolution() override;
 
 protected:
-    ExecutionPlan<builder::Command> getExecutionPlan() const override;
     PackageDescriptionMap getPackages() const;
 
 private:

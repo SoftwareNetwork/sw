@@ -103,19 +103,6 @@ IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
     return id_deps;
 }
 
-DataSources Api::getDataSources()
-{
-    google::protobuf::Empty request;
-    auto context = getContext();
-    GRPC_SET_DEADLINE(5);
-    GRPC_CALL_THROWS(api_, GetDataSources, api::DataSources);
-
-    DataSources provs;
-    for (auto &p : response.sources())
-        provs.push_back({ p.url() });
-    return provs;
-}
-
 void Api::addVersion(const PackagePath &prefix, const String &cppan)
 {
     api::NewPackage request;

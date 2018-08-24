@@ -54,10 +54,9 @@ static LanguageMap getLanguagesImpl()
     return languages;
 }
 
-const LanguageMap &getLanguages()
+LanguageMap getLanguages()
 {
-    static const LanguageMap languages = getLanguagesImpl();
-    return languages;
+    return getLanguagesImpl();
 }
 
 static String getObjectFilename(const Target *t, const path &p)
@@ -75,7 +74,7 @@ LanguageStorage::~LanguageStorage()
 
 void LanguageStorage::addLanguage(LanguageType L)
 {
-    auto &lang = languages[L] = getLanguages().find(L)->second->clone();
+    auto &lang = languages[L] = languages.find(L)->second->clone();
     for (auto &l : lang->CompiledExtensions)
         extensions[l] = lang;
 }
@@ -101,7 +100,7 @@ void LanguageStorage::setLanguage(const std::vector<LanguageType> &L)
 
 void LanguageStorage::removeLanguage(LanguageType L)
 {
-    for (auto &l : getLanguages().find(L)->second->CompiledExtensions)
+    for (auto &l : languages.find(L)->second->CompiledExtensions)
         extensions.erase(l);
     languages.erase(L);
 }

@@ -87,8 +87,12 @@ SourceFileStorage::~SourceFileStorage()
 {
 }
 
-void SourceFileStorage::add_unchecked(const path &file, bool skip)
+void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 {
+    auto file = file_in;
+    if (!check_absolute(file, skip))
+        return;
+
     auto f = this->SourceFileMapThis::operator[](file);
 
     auto ext = file.extension().string();
@@ -121,9 +125,7 @@ void SourceFileStorage::add(const path &file)
         return;
     }
 
-    auto f = file;
-    check_absolute(f);
-    add_unchecked(f);
+    add_unchecked(file);
 }
 
 void SourceFileStorage::add(const Files &Files)
@@ -166,9 +168,7 @@ void SourceFileStorage::remove(const path &file)
         return;
     }
 
-    auto f = file;
-    if (check_absolute(f, true))
-        add_unchecked(f, true);
+    add_unchecked(file, true);
 }
 
 void SourceFileStorage::remove(const Files &Files)
@@ -304,6 +304,10 @@ void SourceFileStorage::startAssignOperation()
 
 bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
 {
+    // deny absolute paths to prevent adding /etc/passwd?
+    //if (F.is_absolute())
+        //throw std::runtime_error();
+
     if (fs::exists(F))
     {
         if (!F.is_absolute())

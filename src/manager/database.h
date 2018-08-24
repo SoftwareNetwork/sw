@@ -8,6 +8,7 @@
 
 #include "dependency.h"
 #include "filesystem.h"
+#include "remote.h"
 
 #include <primitives/date_time.h>
 #include <primitives/stdcompat/optional.h>
@@ -132,6 +133,8 @@ public:
     Packages getTransitiveDependentPackages(const Packages &pkgs);
 
     db::PackageId getPackageId(const PackagePath &ppath) const;
+
+    DataSources getDataSources();
 
 private:
     path db_repo_dir;

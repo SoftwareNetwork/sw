@@ -11,18 +11,22 @@
 namespace sw::driver::cpp
 {
 
-struct SW_DRIVER_CPP_API Driver : ::sw::Driver
+struct SW_DRIVER_CPP_API CppDriver : ::sw::Driver
 {
-    virtual ~Driver() = default;
+    virtual ~CppDriver() = default;
 
     path getConfigFilename() const override;
 
     void fetch(const path &file_or_dir) const override;
     PackageScriptPtr fetch_and_load(const path &file_or_dir) const override;
     PackageScriptPtr build(const path &file_or_dir) const override;
+    bool buildPackage(const PackageId &pkg) const override;
     PackageScriptPtr load(const path &file_or_dir) const override;
     bool execute(const path &file_or_dir) const override;
     String getName() const override { return "cpp"; }
+
+private:
+    optional<path> resolveConfig(const path &file_or_dir) const;
 };
 
 } // namespace sw::driver

@@ -8,7 +8,7 @@
 
 #include <sw/builder/driver.h>
 
-namespace sw::driver
+namespace sw::driver::cppan
 {
 
 struct SW_DRIVER_CPPAN_API CppanDriver : ::sw::Driver
@@ -18,8 +18,16 @@ struct SW_DRIVER_CPPAN_API CppanDriver : ::sw::Driver
     virtual ~CppanDriver() = default;
 
     path getConfigFilename() const override;
+
     PackageScriptPtr load(const path &file_or_dir) const override;
     bool execute(const path &file_or_dir) const override;
+
+    // not implemented yet
+    void fetch(const path &file_or_dir) const override {}
+    PackageScriptPtr fetch_and_load(const path &file_or_dir) const override { return {}; }
+    PackageScriptPtr build(const path &file_or_dir) const override { return {}; }
+    String getName() const override { return "cppan"; }
+    bool buildPackage(const PackageId &pkg) const override { return false; }
 };
 
 } // namespace sw::driver

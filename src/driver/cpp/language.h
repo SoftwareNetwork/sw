@@ -66,7 +66,7 @@ struct Language;
 using LanguageMap = std::unordered_map<LanguageType, std::shared_ptr<Language>>;
 
 SW_DRIVER_CPP_API
-const LanguageMap &getLanguages();
+LanguageMap getLanguages();
 
 struct SW_DRIVER_CPP_API LanguageStorage
 {

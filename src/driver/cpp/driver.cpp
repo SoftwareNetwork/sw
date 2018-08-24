@@ -18,14 +18,14 @@ DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 namespace sw::driver::cpp
 {
 
-//SW_REGISTER_PACKAGE_DRIVER(Driver);
+//SW_REGISTER_PACKAGE_DRIVER(CppDriver);
 
-path Driver::getConfigFilename() const
+path CppDriver::getConfigFilename() const
 {
     return Build::getConfigFilename();
 }
 
-PackageScriptPtr Driver::build(const path &file_or_dir) const
+optional<path> CppDriver::resolveConfig(const path &file_or_dir) const
 {
     auto f = file_or_dir;
     if (fs::is_directory(f))
@@ -34,32 +34,34 @@ PackageScriptPtr Driver::build(const path &file_or_dir) const
             return {};
         f /= getConfigFilename();
     }
+    return f;
+}
 
-    current_thread_path(f.parent_path());
+PackageScriptPtr CppDriver::build(const path &file_or_dir) const
+{
+    auto f = resolveConfig(file_or_dir);
+    if (!f)
+        return {};
+    current_thread_path(f.value().parent_path());
 
     auto b = std::make_unique<Build>();
     b->Local = true;
     b->configure = true;
-    b->build(f);
+    b->build(f.value());
     return b;
 }
 
-PackageScriptPtr Driver::load(const path &file_or_dir) const
+PackageScriptPtr CppDriver::load(const path &file_or_dir) const
 {
-    auto f = file_or_dir;
-    if (fs::is_directory(f))
-    {
-        if (!hasConfig(f))
-            return {};
-        f /= getConfigFilename();
-    }
-
-    current_thread_path(f.parent_path());
+    auto f = resolveConfig(file_or_dir);
+    if (!f)
+        return {};
+    current_thread_path(f.value().parent_path());
 
     auto b = std::make_unique<Build>();
     b->Local = true;
     b->configure = true;
-    b->build_and_load(f);
+    b->build_and_load(f.value());
 
     // in order to discover files, deps?
     //b->prepare();
@@ -77,14 +79,19 @@ PackageScriptPtr Driver::load(const path &file_or_dir) const
     return b;
 }
 
-bool Driver::execute(const path &file_or_dir) const
+bool CppDriver::execute(const path &file_or_dir) const
 {
-    if (auto b = load(file_or_dir); b)
-        return b->execute();
+    auto f = resolveConfig(file_or_dir);
+    if (!f)
+        return {};
+    current_thread_path(f.value().parent_path());
+
+    if (auto s = load(f.value()); s)
+        return s->execute();
     return false;
 }
 
-static auto fetch1(const Driver *driver, const path &file_or_dir)
+static auto fetch1(const CppDriver *driver, const path &file_or_dir)
 {
     auto f = file_or_dir;
     if (fs::is_directory(f))
@@ -143,12 +150,12 @@ static auto fetch1(const Driver *driver, const path &file_or_dir)
     }
 }
 
-void Driver::fetch(const path &file_or_dir) const
+void CppDriver::fetch(const path &file_or_dir) const
 {
     fetch1(this, file_or_dir);
 }
 
-PackageScriptPtr Driver::fetch_and_load(const path &file_or_dir) const
+PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir) const
 {
     auto [b, srcs] = fetch1(this, file_or_dir);
 
@@ -174,6 +181,13 @@ PackageScriptPtr Driver::fetch_and_load(const path &file_or_dir) const
     waitAndGet(fs);
 
     return std::move(b);
+}
+
+bool CppDriver::buildPackage(const PackageId &pkg) const
+{
+    auto b = std::make_unique<Build>();
+    b->build_package(pkg.toString());
+    return true;
 }
 
 } // namespace sw::driver

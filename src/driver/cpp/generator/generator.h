@@ -28,8 +28,22 @@ struct Generator
     //path dir;
     path file;
 
-    void generate(const struct Build &b);
+    virtual ~Generator() = default;
+
+    virtual void generate(const struct Build &b) = 0;
     void generate(const path &file, const struct Build &b);
+
+    static std::unique_ptr<Generator> create(const String &s);
+};
+
+struct VSGenerator : Generator
+{
+    void generate(const struct Build &b) override;
+};
+
+struct NinjaGenerator : Generator
+{
+    void generate(const struct Build &b) override;
 };
 
 String toString(GeneratorType Type);

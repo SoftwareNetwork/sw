@@ -126,6 +126,7 @@ projects:
         dependencies:
             - builder
             - driver.cpp
+            - driver.cppan
             - pvt.cppan.demo.giovannidicanio.winreg: master
             - name: pvt.egorpugin.primitives.sw.main
               version: master

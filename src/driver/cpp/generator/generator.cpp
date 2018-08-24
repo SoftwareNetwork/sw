@@ -11,6 +11,7 @@
 #include <primitives/context.h>
 #include <primitives/sw/settings.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -31,7 +32,26 @@ String toString(GeneratorType Type)
 
 GeneratorType fromString(const String &s)
 {
-    throw std::logic_error("not implemented");
+    // make icasecmp
+    if (boost::iequals(s, "VS"))
+        return GeneratorType::VisualStudio;
+    else if (boost::iequals(s, "Ninja"))
+        return GeneratorType::Ninja;
+    return GeneratorType::UnspecifiedGenerator;
+}
+
+std::unique_ptr<Generator> Generator::create(const String &s)
+{
+    auto t = fromString(s);
+    switch (t)
+    {
+    case GeneratorType::VisualStudio:
+        return std::make_unique<VSGenerator>();
+    case GeneratorType::Ninja:
+        return std::make_unique<NinjaGenerator>();
+    default:
+        throw std::logic_error("not implemented");
+    }
 }
 
 void Generator::generate(const path &f, const Build &b)
@@ -339,7 +359,7 @@ struct PackagePathTree
     }
 };
 
-void Generator::generate(const Build &b)
+void VSGenerator::generate(const Build &b)
 {
     const auto cwd = "\"" + current_thread_path().string() + "\"";
     const auto dir = path(".sw") / "sln";
@@ -537,7 +557,69 @@ void Generator::generate(const Build &b)
     ctx.endGlobalSection();
     ctx.endGlobal();
 
-    write_file(dir / "sw.sln", ctx.getText());
+    String fn = "sw_";
+    fn += boost::to_lower_copy(toString(b.Settings.Native.CompilerType));
+    fn += ".sln";
+    write_file(dir / fn, ctx.getText());
+}
+
+struct NinjaContext : Context
+{
+    void addRule(const String &name, const String &command)
+    {
+        addLine("rule " + name);
+        increaseIndent();
+        addLine("command = " + command);
+        decreaseIndent();
+        addLine();
+    }
+
+    void addBuild(const Files &outputs, const String &command, const Strings &args)
+    {
+        addLine("build ");
+        for (auto &o : outputs)
+            addText(prepareString(o.filename().u8string()) + " ");
+        addText(": " + command + " ");
+        for (auto &a : args)
+            addText(prepareString(a) + " ");
+        addLine();
+    }
+
+private:
+    String prepareString(const String &s)
+    {
+        auto s2 = s;
+        boost::replace_all(s2, ":", "$:");
+        return s2;
+    }
+};
+
+void NinjaGenerator::generate(const Build &b)
+{
+    const auto dir = path(".sw") / "ninja";
+
+    NinjaContext ctx;
+
+    auto ep = b.getExecutionPlan();
+
+    // gather programs
+    std::unordered_map<path, size_t> programs;
+    for (auto &c : ep.commands)
+    {
+        auto n = programs.size() + 1;
+        if (programs.find(c->getProgram()) == programs.end())
+            programs[c->getProgram()] = n;
+    }
+
+    for (auto &[p, n] : programs)
+        ctx.addRule("c" + std::to_string(n), p.u8string());
+
+    for (auto &c : ep.commands)
+    {
+        ctx.addBuild(c->outputs, "c" + std::to_string(programs[c->getProgram()]), c->args);
+    }
+
+    write_file(dir / "build.ninja", ctx.getText());
 }
 
 }

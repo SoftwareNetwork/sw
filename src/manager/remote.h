@@ -31,8 +31,9 @@ struct DataSource
 {
     enum Flags
     {
-        fHasPrivatePackages     =   0,
-        fHasPrebuiltPackages    =   1,
+        fDisabled               =   0,
+        fHasPrivatePackages     =   1,
+        fHasPrebuiltPackages    =   2,
     };
 
     String raw_url;
