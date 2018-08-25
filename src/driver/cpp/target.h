@@ -144,6 +144,8 @@ struct SW_DRIVER_CPP_API TargetBase : virtual Node, LanguageStorage, ProjectDire
 
     struct Settings
     {
+        OS HostOS;
+        //OS BuildOS; // for distributed compilation
         OS TargetOS;
         NativeToolchain Native;
 

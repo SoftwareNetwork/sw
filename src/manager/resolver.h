@@ -31,6 +31,7 @@ public:
 public:
     bool has_local_package(const PackagePath &ppath) const;
     path get_local_package_dir(const PackagePath &ppath) const;
+    void clear();
 
 public:
     PackageConfig & operator[](const Package &p);

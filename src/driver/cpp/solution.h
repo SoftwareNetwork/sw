@@ -29,10 +29,6 @@ using FilesMap = std::unordered_map<path, path>;
 */
 struct SW_DRIVER_CPP_API Solution : TargetBase
 {
-    // settings
-    OS HostOS;
-    //OS BuildOS; // for distributed compilation
-
     // solution (config) specific data
     TargetMap TargetsToBuild;
     Checker Checks;

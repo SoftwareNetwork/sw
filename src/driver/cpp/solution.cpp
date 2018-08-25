@@ -42,6 +42,8 @@ static cl::opt<String> generator("G", cl::desc("Generator"));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 static cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 
+static cl::opt<String> target_os("target-os");
+static cl::opt<String> compiler("compiler", cl::desc("Set compiler")/*, cl::sub(subcommand_ide)*/);
 static cl::opt<String> configuration("configuration", cl::desc("Set build configuration")/*, cl::sub(subcommand_ide)*/);
 static cl::opt<String> platform("platform", cl::desc("Set build platform")/*, cl::sub(subcommand_ide)*/);
 //static cl::opt<String> arch("arch", cl::desc("Set arch")/*, cl::sub(subcommand_ide)*/);
@@ -206,7 +208,6 @@ Solution::Solution()
 
 Solution::Solution(const Solution &rhs)
     : TargetBase(rhs)
-    , HostOS(rhs.HostOS)
     //, checksStorage(rhs.checksStorage)
     , silent(rhs.silent)
     , base_ptr(rhs.base_ptr)
@@ -828,7 +829,7 @@ void Solution::prepare()
                 auto np = t->prepare();
                 if (!next_pass)
                     next_pass = np;
-            }));
+            }, getChildren().size()));
         }
         waitAndGet(fs);
     }
@@ -920,8 +921,8 @@ Build::Build()
 {
     /*static */const auto host_os = detectOS();
 
-    HostOS = host_os;
-    Settings.TargetOS = HostOS; // temp
+    Settings.HostOS = host_os;
+    Settings.TargetOS = Settings.HostOS; // temp
 
     languages = getLanguages();
     findCompiler();
@@ -935,7 +936,9 @@ Build::~Build()
     // maybe also clear checks?
     // or are they solution-specific?
 
-    getModuleStorage(base_ptr).modules.clear();
+    // do not clear modules on exception, because it may come from there
+    if (!std::uncaught_exceptions())
+        getModuleStorage(base_ptr).modules.clear();
 }
 
 void Build::setSettings()
@@ -949,32 +952,58 @@ void Build::setSettings()
 
 void Build::findCompiler()
 {
-    switch (HostOS.Type)
+    if (Settings.Native.CompilerType == CompilerType::Clang)
     {
-    case OSType::Windows:
-        if (
-            !VisualStudio().findToolchain(*this) &&
-            //!ClangCl::findToolchain(*this) &&
-            //!Clang::findToolchain(*this) &&
-            1
-            )
+        Clang().findToolchain(*this);
+    }
+    if (Settings.Native.CompilerType == CompilerType::ClangCl)
+    {
+        ClangCl().findToolchain(*this);
+    }
+    if (Settings.Native.CompilerType == CompilerType::GNU)
+    {
+        GNU().findToolchain(*this);
+    }
+
+    if (Settings.Native.CompilerType == CompilerType::UnspecifiedCompiler)
+    {
+        switch (Settings.HostOS.Type)
         {
-            throw std::runtime_error("Try to add more compilers");
+        case OSType::Windows:
+            if (
+                !VisualStudio().findToolchain(*this) &&
+                !ClangCl().findToolchain(*this) &&
+                !Clang().findToolchain(*this) &&
+                1
+                )
+            {
+                throw std::runtime_error("Try to add more compilers");
+            }
+            //if (FileTransforms.IsEmpty())
+            break;
+        case OSType::Linux:
+            if (
+                !GNU().findToolchain(*this) &&
+                !Clang().findToolchain(*this) &&
+                1
+                )
+            {
+                throw std::runtime_error("Try to add more compilers");
+            }
+            //if (FileTransforms.IsEmpty())
+            break;
+        case OSType::Macos:
+            if (
+                !GNU().findToolchain(*this) &&
+                !Clang().findToolchain(*this) && // does not support fs at the moment
+                1
+                )
+            {
+                throw std::runtime_error("Try to add more compilers");
+            }
+            //if (FileTransforms.IsEmpty())
+            break;
         }
-        //if (FileTransforms.IsEmpty())
-        break;
-    case OSType::Linux:
-        if (
-            !GNU().findToolchain(*this) &&
-            //!ClangCl::findToolchain(*this) &&
-            //!Clang::findToolchain(*this) &&
-            1
-            )
-        {
-            throw std::runtime_error("Try to add more compilers");
-        }
-        //if (FileTransforms.IsEmpty())
-        break;
     }
 
     setSettings();
@@ -998,7 +1027,7 @@ void Build::performChecks()
     auto &e = getExecutor();
     std::vector<Future<void>> fs;
     for (auto &s : solutions)
-        fs.push_back(e.push([&s] { s.performChecks(); }));
+        fs.push_back(e.push([&s] { s.performChecks(); }, solutions.size()));
     waitAndGet(fs);
 
     if (!silent)
@@ -1010,16 +1039,11 @@ void Build::prepare()
     //performChecks();
     ScopedTime t;
 
-    if (solutions.size() == 1)
-        solutions[0].prepare();
-    else
-    {
-        auto &e = getExecutor();
-        std::vector<Future<void>> fs;
-        for (auto &s : solutions)
-            fs.push_back(e.push([&s] { s.prepare(); }));
-        waitAndGet(fs);
-    }
+    auto &e = getExecutor();
+    std::vector<Future<void>> fs;
+    for (auto &s : solutions)
+        fs.push_back(e.push([&s] { s.prepare(); }, solutions.size()));
+    waitAndGet(fs);
 
     if (!silent)
         LOG_INFO(logger, "Prepare time: " << t.getTimeFloat() << " s.");
@@ -1040,7 +1064,7 @@ static auto getFilesHash(const Files &files)
 
 PackagePath Build::getSelfTargetName(const Files &files)
 {
-    return "loc.sw.self"/* + getFilesHash(files)*/;
+    return "loc.sw.self" + getFilesHash(files);
 }
 
 SharedLibraryTarget &Build::createTarget(const Files &files)
@@ -1575,27 +1599,36 @@ void Build::load(const path &dll)
     {
         getModuleStorage(base_ptr).get(dll).configure(*this);
 
-        if (!configuration.empty())
-        {
-            if (configuration == "Debug")
-                Settings.Native.ConfigurationType = ConfigurationType::Debug;
-            else if (configuration == "Release")
-                Settings.Native.ConfigurationType = ConfigurationType::Release;
-            else if (configuration == "MinSizeRel")
-                Settings.Native.ConfigurationType = ConfigurationType::MinimalSizeRelease;
-            else if (configuration == "RelWithDebInfo")
-                Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
-        }
+        if (boost::iequals(configuration, "Debug"))
+            Settings.Native.ConfigurationType = ConfigurationType::Debug;
+        else if (boost::iequals(configuration, "Release"))
+            Settings.Native.ConfigurationType = ConfigurationType::Release;
+        else if (boost::iequals(configuration, "MinSizeRel"))
+            Settings.Native.ConfigurationType = ConfigurationType::MinimalSizeRelease;
+        else if (boost::iequals(configuration, "RelWithDebInfo"))
+            Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
         //if (!platform.empty())
             //;
 
         if (static_build)
             Settings.Native.LibrariesType = LibraryType::Static;
 
-        if (platform == "Win32")
+        if (boost::iequals(platform, "Win32"))
         {
             Settings.TargetOS.Arch = ArchType::x86;
         }
+
+        if (boost::iequals(compiler, "clang"))
+            Settings.Native.CompilerType = CompilerType::Clang;
+        if (boost::iequals(compiler, "clang-cl"))
+            Settings.Native.CompilerType = CompilerType::ClangCl;
+        if (boost::iequals(compiler, "gnu"))
+            Settings.Native.CompilerType = CompilerType::GNU;
+
+        if (boost::iequals(target_os, "linux"))
+            Settings.TargetOS.Type = OSType::Linux;
+        if (boost::iequals(target_os, "macos"))
+            Settings.TargetOS.Type = OSType::Macos;
 
         //s.Settings.Native.LibrariesType = LibraryType::Static;
         //Settings.Native.ConfigurationType = ConfigurationType::Debug;
@@ -1623,6 +1656,10 @@ void Build::load(const path &dll)
     {
         getModuleStorage(base_ptr).get(dll).build(s);
     }
+
+    // we build only targets from this package
+    for (auto &s : solutions)
+        s.TargetsToBuild = s.children;
 }
 
 PackageDescriptionMap Build::getPackages() const

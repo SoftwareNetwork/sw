@@ -78,6 +78,7 @@ String toString(CompilerType Type)
         return #x \
 
         CASE(Clang);
+        CASE(ClangCl);
         CASE(GNU);
         CASE(MSVC);
     default:

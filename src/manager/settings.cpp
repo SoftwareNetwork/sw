@@ -137,16 +137,16 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     }
 
     storage_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "storage_dir_type", "user"), "storage_dir_type");
-    if (root["storage_dir"].IsDefined())
-        storage_dir_type = SettingsType::None;
+    /*if (root["storage_dir"].IsDefined())
+        storage_dir_type = SettingsType::None;*/
     build_dir_type = packages_dir_type_from_string(get_scalar<String>(root, "build_dir_type", "system"), "build_dir_type");
-    if (root["build_dir"].IsDefined())
-        build_dir_type = SettingsType::None;
+    /*if (root["build_dir"].IsDefined())
+        build_dir_type = SettingsType::None;*/
 }
 
 bool Settings::is_custom_build_dir() const
 {
-    return build_dir_type == SettingsType::Local || build_dir_type == SettingsType::None;
+    return build_dir_type == SettingsType::Local/* || build_dir_type == SettingsType::None*/;
 }
 
 bool Settings::checkForUpdates() const

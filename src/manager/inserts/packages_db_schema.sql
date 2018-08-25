@@ -94,17 +94,5 @@ add column
 prefix int NOT NULL DEFAULT 2;
 
 --------------------------------------------------------------------------------
--- %split
---------------------------------------------------------------------------------
-
-CREATE TABLE data_source (
-    data_source_id INTEGER NOT NULL PRIMARY KEY,
-    data_source_name TEXT(255) NOT NULL,
-    url TEXT(4096) NOT NULL,
-    flags INTEGER NOT NULL,
-    location TEXT(255),
-    created TEXT NOT NULL
-);
---------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available
 --------------------------------------------------------------------------------

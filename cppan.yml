@@ -197,7 +197,7 @@ projects:
             embed(${SDIR}/src/driver/cpp/inserts/inserts.cpp.in ${SDIR}/src/driver/cpp/inserts/cppan.cpp)
             set_source_files_properties(${SDIR}/src/driver/cpp/inserts/cppan.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
 
-            set(f ${BDIR}/build_self.generated.h)
+            set(f ${BDIR}/build_self.generated.h ${BDIR}/build_self.packages.generated.h)
             add_custom_command(OUTPUT ${f}
                 COMMAND ${self_builder} ${f}
                 DEPENDS ${self_builder}

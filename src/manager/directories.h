@@ -9,6 +9,8 @@
 #include "enums.h"
 #include "filesystem.h"
 
+#include <primitives/sw/settings.h>
+
 namespace sw
 {
 
@@ -27,7 +29,7 @@ struct Directories
 #ifdef _WIN32
     ADD_DIR(lnk);
 #endif
-    //ADD_DIR(obj);
+    ADD_DIR(obj);
     ADD_DIR(pkg);
     //ADD_DIR(src);
     ADD_DIR(tmp);

@@ -425,6 +425,7 @@ void Command::execute1(std::error_code *ec)
             s += "command is copied to " + p.u8string() + "\n";
             String t;
             t += "@\"" + program.u8string() + "\" @" + p.filename().string();
+            t += " %*";
             write_file(pbat, t);
 
             //s += "working directory:\n";

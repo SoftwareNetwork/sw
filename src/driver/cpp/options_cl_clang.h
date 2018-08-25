@@ -149,6 +149,13 @@ struct SW_DRIVER_CPP_API GNUOptions
             cl::OutputDependency{},
     };
 
+    // Dependency file generation
+    COMMAND_LINE_OPTION(WriteDependenciesNearOutputWithoutSystemFiles, bool)
+    {
+        cl::CommandFlag{ "MMD" },
+            true
+    };
+
     COMMAND_LINE_OPTION(Permissive, bool)
     {
         cl::CommandFlag{ "fpermissive" }, true,

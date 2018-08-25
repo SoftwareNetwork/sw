@@ -16,6 +16,8 @@
 
 #include <http.h>
 
+#include <primitives/sw/settings.h>
+
 namespace sw
 {
 

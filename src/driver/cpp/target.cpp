@@ -719,11 +719,10 @@ void NativeExecutedTarget::addPackageDefinitions()
 
 path NativeExecutedTarget::getOutputDir() const
 {
-#if defined(CPPAN_OS_WINDOWS)
-    return getUserDirectories().storage_dir_bin;
-#else
-    return getUserDirectories().storage_dir_lib;
-#endif
+    if (Settings.TargetOS.Type == OSType::Windows)
+        return getUserDirectories().storage_dir_bin;
+    else
+        return getUserDirectories().storage_dir_lib;
 }
 
 void NativeExecutedTarget::setOutputFile()
@@ -1225,11 +1224,8 @@ Commands NativeExecutedTarget::getCommands() const
                     auto copy_cmd = MAKE_EXECUTE_COMMAND();
                     copy_cmd->f = [in, out = o]
                     {
-                        //if (File(in).isChanged() || File(o).isChanged())
-                        {
-                            error_code ec;
-                            fs::copy_file(in, out, fs::copy_options::overwrite_existing, ec);
-                        }
+                        error_code ec;
+                        fs::copy_file(in, out, fs::copy_options::overwrite_existing, ec);
                     };
                     copy_cmd->addInput(dt->getOutputFile());
                     copy_cmd->addOutput(o);
@@ -1947,6 +1943,14 @@ bool NativeExecutedTarget::prepare()
                 f += ".pdb";
                 c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (pkg.ppath.toString() + ".pdb");
             }
+
+            if (Linker->Type == LinkerType::LLD)
+            {
+                if (c->GenerateDebugInfo)
+                    c->InputFiles().insert("msvcrtd.lib");
+                else
+                    c->InputFiles().insert("msvcrt.lib");
+            }
         }
 
         // export all symbols
@@ -2086,18 +2090,24 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
         {
             if (api.empty())
                 return;
-#ifdef _WIN32
-            if (Type == LibraryType::Shared)
+
+            if (Settings.TargetOS.Type == OSType::Windows)
             {
-                Private.Definitions[api] = "__declspec(dllexport)";
-                Interface.Definitions[api] = "__declspec(dllimport)";
-            }
-            else if (ExportIfStatic)
-            {
-                Public.Definitions[api] = "__declspec(dllexport)";
+                if (Type == LibraryType::Shared)
+                {
+                    Private.Definitions[api] = "__declspec(dllexport)";
+                    Interface.Definitions[api] = "__declspec(dllimport)";
+                }
+                else if (ExportIfStatic)
+                {
+                    Public.Definitions[api] = "__declspec(dllexport)";
+                }
+                else
+                {
+                    Public.Definitions[api + "="];
+                }
             }
             else
-#endif
             {
                 Public.Definitions[api + "="];
             }
@@ -2107,23 +2117,29 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
         };
 
         // default macro
-#ifdef _WIN32
-        if (Type == LibraryType::Shared)
+        if (Settings.TargetOS.Type == OSType::Windows)
         {
-            Definitions["SW_EXPORT"] = "__declspec(dllexport)";
-            Definitions["SW_IMPORT"] = "__declspec(dllimport)";
-        }
-        else if (ExportIfStatic)
-        {
-            Definitions["SW_EXPORT"] = "__declspec(dllexport)";
-            Definitions["SW_IMPORT="];
+            if (Type == LibraryType::Shared)
+            {
+                Definitions["SW_EXPORT"] = "__declspec(dllexport)";
+                Definitions["SW_IMPORT"] = "__declspec(dllimport)";
+            }
+            else if (ExportIfStatic)
+            {
+                Definitions["SW_EXPORT"] = "__declspec(dllexport)";
+                Definitions["SW_IMPORT="];
+            }
+            else
+            {
+                Definitions["SW_EXPORT="];
+                Definitions["SW_IMPORT="];
+            }
         }
         else
         {
             Definitions["SW_EXPORT="];
             Definitions["SW_IMPORT="];
         }
-#endif
 
         if (Type == LibraryType::Shared)
             Definitions["CPPAN_SHARED_BUILD"];
@@ -2313,19 +2329,23 @@ bool ExecutableTarget::prepare()
         {
             if (api.empty())
                 return;
-#ifdef _WIN32
-            Private.Definitions[api] = "__declspec(dllexport)";
-            Interface.Definitions[api] = "__declspec(dllimport)";
-#else
-            Public.Definitions[api + "="];
-#endif
+            if (Settings.TargetOS.Type == OSType::Windows)
+            {
+                Private.Definitions[api] = "__declspec(dllexport)";
+                Interface.Definitions[api] = "__declspec(dllimport)";
+            }
+            else
+            {
+                Public.Definitions[api + "="];
+            }
         };
 
         // default macro
-#ifdef _WIN32
-        Definitions["SW_EXPORT"] = "__declspec(dllexport)";
-        Definitions["SW_IMPORT"] = "__declspec(dllimport)";
-#endif
+        if (Settings.TargetOS.Type == OSType::Windows)
+        {
+            Definitions["SW_EXPORT"] = "__declspec(dllexport)";
+            Definitions["SW_IMPORT"] = "__declspec(dllimport)";
+        }
 
         Definitions["CPPAN_EXECUTABLE"];
 

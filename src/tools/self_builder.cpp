@@ -8,6 +8,7 @@ using namespace sw;
 int main(int argc, char **argv)
 {
     cl::opt<path> p(cl::Positional, cl::Required);
+    cl::opt<path> packages(cl::Positional, cl::Required);
 
     cl::ParseCommandLineOptions(argc, argv);
 
@@ -189,12 +190,20 @@ int main(int argc, char **argv)
 
     };
 
+    Context ctx_packages;
+    ctx_packages.beginBlock("static UnresolvedPackages required_packages");
+
     UnresolvedPackages deps;
     for (auto &[p, d] : pkgs)
     {
         if (d.local_dir.empty() || !fs::exists(d.local_dir))
             deps.insert(p);
+
+        ctx_packages.addLine("\"" + p.toString() + "\"s,");
     }
+
+    ctx_packages.endBlock(true);
+    write_file_if_different(packages, ctx_packages.getText());
 
     auto m = resolve_dependencies(deps);
 

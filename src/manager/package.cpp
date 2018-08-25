@@ -12,6 +12,8 @@
 #include "lock.h"
 #include "resolver.h"
 
+#include <primitives/sw/settings.h>
+
 #include <boost/algorithm/string.hpp>
 
 #include <fstream>
@@ -22,8 +24,21 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "package");
 
+static cl::opt<bool> separate_bdir("separate-bdir");
+
 namespace sw
 {
+
+UnresolvedPackage::UnresolvedPackage(const String &s)
+{
+    *this = extractFromString(s);
+}
+
+UnresolvedPackage::UnresolvedPackage(const PackagePath &p, const VersionRange &r)
+{
+    ppath = p;
+    range = r;
+}
 
 String UnresolvedPackage::toString() const
 {
@@ -83,7 +98,9 @@ path PackageId::getDirSrc2() const
 
 path PackageId::getDirObj() const
 {
-    return getDir(getUserDirectories().storage_dir_pkg) / "obj";
+    if (!separate_bdir)
+        return getDir(getUserDirectories().storage_dir_pkg) / "obj";
+    return getDir(getUserDirectories().storage_dir_obj) / "obj";
 }
 
 path PackageId::getStampFilename() const

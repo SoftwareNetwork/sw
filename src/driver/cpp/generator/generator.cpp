@@ -8,6 +8,8 @@
 
 #include "solution.h"
 
+#include <filesystem.h>
+
 #include <primitives/context.h>
 #include <primitives/sw/settings.h>
 
@@ -565,61 +567,130 @@ void VSGenerator::generate(const Build &b)
 
 struct NinjaContext : Context
 {
-    void addRule(const String &name, const String &command)
+    void addCommand(const Build &b, const path &dir, builder::Command *c)
     {
-        addLine("rule " + name);
+        String command;
+
+        auto prog = c->getProgram().u8string();
+        if (prog == "ExecuteCommand")
+            return;
+
+        bool rsp = c->needsResponseFile();
+        path rsp_dir = dir / "rsp";
+        path rsp_file = fs::absolute(rsp_dir / ("rsp" + std::to_string(c->getHash()) + ".rsp"));
+        if (rsp)
+            fs::create_directories(rsp_dir);
+
+        auto has_mmd = false;
+
+        addLine("rule c" + std::to_string(c->getHash()));
         increaseIndent();
-        addLine("command = " + command);
+        // add cmd /C ""
+        addLine("command = ");
+        if (b.Settings.TargetOS.Type == OSType::Windows)
+        {
+            addText("cmd /S /C ");
+            addText("\"");
+        }
+        //else
+            //addText("bash -c ");
+        if (!c->working_directory.empty())
+        {
+            addText("cd ");
+            if (b.Settings.TargetOS.Type == OSType::Windows)
+                addText("/D ");
+            addText(prepareString(b, getShortName(c->working_directory), true) + " && ");
+        }
+        addText(prepareString(b, getShortName(prog), true) + " ");
+        if (!rsp)
+        {
+            for (auto &a : c->args)
+            {
+                addText(prepareString(b, a, true) + " ");
+                has_mmd |= "-MMD" == a;
+            }
+        }
+        else
+        {
+            addText("@" + rsp_file.u8string() + " ");
+        }
+        if (!c->out.file.empty())
+            addText("> " + prepareString(b, getShortName(c->out.file), true) + " ");
+        if (!c->err.file.empty())
+            addText("2> " + prepareString(b, getShortName(c->err.file), true) + " ");
+        if (b.Settings.TargetOS.Type == OSType::Windows)
+            addText("\"");
+        if (prog.find("cl.exe") != prog.npos)
+            addLine("deps = msvc");
+        if (b.Settings.Native.CompilerType == CompilerType::GCC && has_mmd)
+            addLine("depfile = " + (c->outputs.begin()->parent_path() / (c->outputs.begin()->stem().string() + ".d")).u8string());
+        if (rsp)
+        {
+            addLine("rspfile = " + rsp_file.u8string());
+            addLine("rspfile_content = ");
+            for (auto &a : c->args)
+                addText(prepareString(b, a, true) + " ");
+        }
         decreaseIndent();
         addLine();
-    }
 
-    void addBuild(const Files &outputs, const String &command, const Strings &args)
-    {
         addLine("build ");
-        for (auto &o : outputs)
-            addText(prepareString(o.filename().u8string()) + " ");
-        addText(": " + command + " ");
-        for (auto &a : args)
-            addText(prepareString(a) + " ");
+        for (auto &o : c->outputs)
+            addText(prepareString(b, getShortName(o)) + " ");
+        for (auto &o : c->intermediate)
+            addText(prepareString(b, getShortName(o)) + " ");
+        addText(": c" + std::to_string(c->getHash()) + " ");
+        for (auto &i : c->inputs)
+            addText(prepareString(b, getShortName(i)) + " ");
         addLine();
     }
 
 private:
-    String prepareString(const String &s)
+    String getShortName(const path &p)
     {
+#ifdef _WIN32
+        std::wstring buf(4096, 0);
+        path p2 = normalize_path_windows(p);
+        if (!GetShortPathName(p2.wstring().c_str(), buf.data(), buf.size()))
+            //throw std::runtime_error("GetShortPathName failed for path: " + p.u8string());
+            return p.u8string();
+        return to_string(buf);
+#else
+        return p.u8string();
+#endif
+    }
+
+    String prepareString(const Build &b, const String &s, bool quotes = false)
+    {
+        if (b.Settings.TargetOS.Type != OSType::Windows)
+            quotes = false;
+
         auto s2 = s;
         boost::replace_all(s2, ":", "$:");
+        boost::replace_all(s2, "\"", "\\\"");
+        if (quotes)
+            return "\"" + s2 + "\"";
         return s2;
     }
 };
 
 void NinjaGenerator::generate(const Build &b)
 {
-    const auto dir = path(".sw") / "ninja";
+    // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
+
+    const auto dir = path(".sw") / "ninja" / b.getConfig();
 
     NinjaContext ctx;
 
     auto ep = b.getExecutionPlan();
-
-    // gather programs
-    std::unordered_map<path, size_t> programs;
     for (auto &c : ep.commands)
-    {
-        auto n = programs.size() + 1;
-        if (programs.find(c->getProgram()) == programs.end())
-            programs[c->getProgram()] = n;
-    }
+        ctx.addCommand(b, dir, c.get());
 
-    for (auto &[p, n] : programs)
-        ctx.addRule("c" + std::to_string(n), p.u8string());
+    auto t = ctx.getText();
+    //if (b.Settings.TargetOS.Type != OSType::Windows)
+        //std::replace(t.begin(), t.end(), '\\', '/');
 
-    for (auto &c : ep.commands)
-    {
-        ctx.addBuild(c->outputs, "c" + std::to_string(programs[c->getProgram()]), c->args);
-    }
-
-    write_file(dir / "build.ninja", ctx.getText());
+    write_file(dir / "build.ninja", t);
 }
 
 }

@@ -63,7 +63,6 @@ namespace sw::driver::cppan { SW_REGISTER_PACKAGE_DRIVER(CppanDriver); }
 int main(int argc, char **argv);
 #pragma pop_macro("main")
 
-int main_setup(int argc, char **argv);
 int sw_main(int argc, char **argv);
 void stop();
 void setup_log(const std::string &log_level);
@@ -96,7 +95,7 @@ int main(int argc, char **argv)
     bool supress = false;
     try
     {
-        r = main_setup(argc, argv);
+        r = sw_main(argc, argv);
     }
     catch (SupressOutputException &)
     {
@@ -137,19 +136,6 @@ int main(int argc, char **argv)
     LOG_FLUSH();
 
     return r;
-}
-
-int main_setup(int argc, char **argv)
-{
-#ifdef NDEBUG
-    setup_log("INFO");
-#else
-    setup_log("DEBUG");
-#endif
-
-    getServiceDatabase();
-
-    return sw_main(argc, argv);
 }
 
 #define SUBCOMMAND_DECL(n) void cli_##n()
@@ -207,10 +193,18 @@ int sw_main(int argc, char **argv)
     if (jobs > 0)
         getExecutor(jobs);
 
+#ifdef NDEBUG
+    setup_log("INFO");
+#else
+    setup_log("DEBUG");
+#endif
+
     if (verbose)
         setup_log("DEBUG");
     if (trace)
         setup_log("TRACE");
+
+    getServiceDatabase();
 
     if (0);
 #define SUBCOMMAND(n, d) else if (subcommand_##n) cli_##n();

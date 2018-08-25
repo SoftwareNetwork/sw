@@ -48,8 +48,10 @@ PackageStore &getPackageStore()
     return rd;
 }
 
-// legacy varname rd - was: response data
-PackageStore rd;
+void PackageStore::clear()
+{
+    *this = PackageStore();
+}
 
 PackageStore::PackageConfig &PackageStore::operator[](const Package &p)
 {
@@ -269,6 +271,8 @@ void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> res
 void Resolver::download(const ExtendedPackageData &d, const path &fn)
 {
     auto provs = getPackagesDatabase().getDataSources();
+    if (provs.empty())
+        throw std::runtime_error("No data sources available");
 
     if (!provs[0].downloadPackage(d, d.hash, fn, query_local_db))
     {

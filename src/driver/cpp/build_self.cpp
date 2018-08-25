@@ -25,6 +25,13 @@ void check_self(Checker &c)
 
 void build_self(Solution &s)
 {
+#include <build_self.packages.generated.h>
+    // this provides initial download of driver dependencies
+    resolve_dependencies(required_packages);
+
+    // then we must clean everything about them to prevent further resolve issues
+    getPackageStore().clear();
+
     s.Settings.Native.LibrariesType = LibraryType::Static;
 
     {

@@ -8,6 +8,8 @@
 
 #include <solution.h>
 
+#include <primitives/sw/settings.h>
+
 #ifdef _WIN32
 #include <misc/cmVSSetupHelper.h>
 #endif
@@ -19,6 +21,8 @@
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler");
+
+static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
 
 namespace sw
 {
@@ -84,7 +88,7 @@ path getWindowsKitDir()
 path getWindowsKit10Dir(Solution &s, const path &d)
 {
     // take current or the latest version
-    path last_dir = d / s.HostOS.Version.toString(true);
+    path last_dir = d / s.Settings.HostOS.Version.toString(true);
     if (fs::exists(last_dir))
         return last_dir;
     last_dir.clear();
@@ -186,7 +190,7 @@ bool VisualStudio::findToolchain(Solution &s) const
     } dir_suffix;
 
     // get suffix
-    switch (s.HostOS.Arch)
+    switch (s.Settings.HostOS.Arch)
     {
     case ArchType::x86_64:
         dir_suffix.host = "x64";
@@ -275,7 +279,7 @@ bool VisualStudio::findToolchain(Solution &s) const
         auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
         auto C = std::make_shared<VisualStudioASMCompiler>();
         C->Type = CompilerType::MSVC;
-        C->file = s.HostOS.Arch == ArchType::x86_64 ?
+        C->file = s.Settings.HostOS.Arch == ArchType::x86_64 ?
             (compiler.parent_path() / "ml64.exe") :
             (compiler.parent_path() / "ml.exe");
         C->vs_version = VSVersion;
@@ -397,7 +401,7 @@ bool Clang::findToolchain(struct Solution &s) const
     } dir_suffix;
 
     // get suffix
-    switch (s.HostOS.Arch)
+    switch (s.Settings.HostOS.Arch)
     {
     case ArchType::x86_64:
         dir_suffix.include = "x64";
@@ -452,7 +456,7 @@ bool Clang::findToolchain(struct Solution &s) const
 
     auto Linker = std::make_shared<VisualStudioLinker>();
     Linker->Type = LinkerType::LLD;
-    Linker->file = base_llvm_path / "lld.exe";
+    Linker->file = base_llvm_path / "lld-link.exe";
     Linker->vs_version = VSVersion;
     *Linker = LOpts;
 
@@ -572,7 +576,7 @@ bool ClangCl::findToolchain(struct Solution &s) const
     } dir_suffix;
 
     // get suffix
-    switch (s.HostOS.Arch)
+    switch (s.Settings.HostOS.Arch)
     {
     case ArchType::x86_64:
         dir_suffix.include = "x64";
@@ -677,7 +681,14 @@ bool GNU::findToolchain(struct Solution &s) const
     LOpts.System.LinkLibraries.insert("pthread");
     LOpts.System.LinkLibraries.insert("dl");
 
-    p = primitives::resolve_executable("ar");
+    auto resolve = [](const path &p)
+    {
+        if (do_not_resolve_compiler)
+            return p;
+        return primitives::resolve_executable(p);
+    };
+
+    p = resolve("ar");
     if (p.empty())
         throw std::runtime_error("cannot find ar");
 
@@ -686,10 +697,10 @@ bool GNU::findToolchain(struct Solution &s) const
     Librarian->file = p;
     *Librarian = LOpts;
 
-    //p = primitives::resolve_executable("ld.gold");
-    p = primitives::resolve_executable("gcc-8");
+    //p = resolve("ld.gold");
+    p = resolve("gcc-8");
     if (p.empty())
-        throw std::runtime_error("cannot find ld");
+        throw std::runtime_error("cannot find gcc");
 
     auto Linker = std::make_shared<GNULinker>();
     Linker->Type = LinkerType::GNU;
@@ -700,7 +711,7 @@ bool GNU::findToolchain(struct Solution &s) const
     //COpts.System.IncludeDirectories.insert("/usr/include");
     //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
 
-    p = primitives::resolve_executable("gcc-8");
+    p = resolve("gcc-8");
     if (!p.empty())
     {
         // C
@@ -716,7 +727,7 @@ bool GNU::findToolchain(struct Solution &s) const
         }
     }
 
-    p = primitives::resolve_executable("g++-8");
+    p = resolve("g++-8");
     if (!p.empty())
     {
         // CPP
@@ -1518,8 +1529,9 @@ path GNULinker::getImportLibrary() const
 {
     //if (ImportLibrary)
         //return ImportLibrary();
-    path p = Output;
-    return p.parent_path() / (p.filename().stem() += ".a");
+    //path p = Output;
+    //return p.parent_path() / (p.filename().stem() += ".a");
+    return Output;
 }
 
 void GNULinker::getAdditionalOptions(driver::cpp::Command *c) const

@@ -24,6 +24,7 @@ enum class CompilerType
     UnspecifiedCompiler,
 
     Clang,
+    ClangCl,
     GNU,
     //Intel,
     MSVC,

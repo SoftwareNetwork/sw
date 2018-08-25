@@ -679,7 +679,7 @@ void PackagesDatabase::load(bool drop)
     // but we don't do this
     Strings data_tables;
     ::SqliteDatabase db2(fn);
-    db2.execute("select name from sqlite_master as tables where type='table' and name not like '\\_%' ESCAPE '\\';", [&data_tables](SQLITE_CALLBACK_ARGS)
+    db2.execute("select name from sqlite_master as tables where type='table' and name not like '/_%' ESCAPE '/';", [&data_tables](SQLITE_CALLBACK_ARGS)
     {
         data_tables.push_back(cols[0]);
         return 0;

@@ -56,15 +56,4 @@ enum class NotificationType
     Error,
 };
 
-enum class SettingsType
-{
-    None,   // use default (user)
-    Local,  // in current project, dir: cppan
-    User,   // in user package store
-    System, // in system package store
-    Max,
-};
-
 using SomeFlags = std::bitset<sizeof(uint64_t) * 8>;
-
-String toString(SettingsType e);

@@ -10,6 +10,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+static cl::opt<path> storage_dir_override("storage-dir");
+
 namespace sw
 {
 
@@ -35,7 +37,11 @@ String getDataDirPrivate(const String &base)
 
 void Directories::set_storage_dir(const path &p)
 {
-    auto ap = fs::absolute(p);
+    path ap;
+    if (storage_dir_override.empty())
+        ap = fs::absolute(p);
+    else
+        ap = fs::absolute(storage_dir_override);
     checkPath(ap, "storage directory");
 
 #ifdef _WIN32
@@ -56,7 +62,7 @@ void Directories::set_storage_dir(const path &p)
 #ifdef _WIN32
     SET(lnk);
 #endif
-    //SET(obj);
+    SET(obj);
     SET(pkg);
     //SET(src);
     SET(tmp);

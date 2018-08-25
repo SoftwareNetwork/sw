@@ -29,7 +29,11 @@ Remotes get_default_remotes()
     {
         Remote r;
         r.name = DEFAULT_REMOTE_NAME;
+#ifdef _WIN32
         r.url = "http://localhost:55555/";
+#else
+        r.url = "http://192.168.191.1:55555/";
+#endif
         rms.push_back(r);
     };
     return rms;
@@ -79,7 +83,12 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
         host = host.substr(0, host.find(':'));
 
         grpc::SslCredentialsOptions ssl_options;
+#ifdef _WIN32
         ssl_options.pem_root_certs = read_file("d:\\dev\\cppan2\\bin\\server.crt");
+#else
+        ssl_options.pem_root_certs = read_file("/home/egor/dev/sw_server.crt");
+        host = "192.168.191.1";
+#endif
 
         auto creds = grpc::SslCredentials(ssl_options);
         channel = grpc::CreateChannel(host, creds);
