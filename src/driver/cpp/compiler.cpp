@@ -711,6 +711,19 @@ bool GNU::findToolchain(struct Solution &s) const
     //COpts.System.IncludeDirectories.insert("/usr/include");
     //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
 
+    // ASM
+    {
+        p = resolve("as");
+        auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
+        auto C = std::make_shared<GNUASMCompiler>();
+        C->Type = CompilerType::GNU;
+        C->file = p;
+        *C = COpts;
+        L->compiler = C;
+        L->librarian = Librarian;
+        L->linker = Linker;
+    }
+
     p = resolve("gcc-8");
     if (!p.empty())
     {
@@ -1257,6 +1270,92 @@ Version GNU::gatherVersion(const path &program) const
     }
     return v;
 }
+
+std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
+{
+    struct GNUAsmCommand : driver::cpp::Command
+    {
+        File file;
+        path deps_file;
+
+        virtual void postProcess(bool ok)
+        {
+            if (!ok || deps_file.empty())
+                return;
+
+            static const std::regex space_r("[^\\\\] ");
+
+            error_code ec;
+            if (!fs::exists(deps_file))
+                return;
+
+            auto lines = read_lines(deps_file);
+            file.clearImplicitDependencies();
+            for (auto i = lines.begin() + 1; i != lines.end(); i++)
+            {
+                auto &s = *i;
+                s.resize(s.size() - 1);
+                boost::trim(s);
+                s = std::regex_replace(s, space_r, "\n");
+                boost::replace_all(s, "\\ ", " ");
+                Strings files;
+                boost::split(files, s, boost::is_any_of("\n"));
+                //boost::replace_all(s, "\\\"", "\""); // probably no quotes
+                for (auto &f : files)
+                    file.addImplicitDependency(f);
+            }
+        }
+    };
+
+    if (cmd)
+        return cmd;
+
+    auto c = std::make_shared<GNUAsmCommand>();
+
+    if (InputFile)
+    {
+        c->name = normalize_path(InputFile());
+        c->name_short = InputFile().filename().string();
+        c->file = InputFile;
+    }
+    if (OutputFile)
+        c->working_directory = OutputFile().parent_path();
+
+    if (c->file.empty())
+        return nullptr;
+
+    //c->out.capture = true;
+    c->base = clone();
+
+    getCommandLineOptions<GNUAssemblerOptions>(c.get(), *this);
+    iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
+
+    return cmd = c;
+}
+
+std::shared_ptr<Program> GNUASMCompiler::clone() const
+{
+    return std::make_shared<GNUASMCompiler>(*this);
+}
+
+void GNUASMCompiler::setOutputFile(const path &output_file)
+{
+    OutputFile = output_file;
+}
+
+Files GNUASMCompiler::getGeneratedDirs() const
+{
+    Files f;
+    f.insert(OutputFile().parent_path());
+    return f;
+}
+
+void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
+{
+    InputFile = input_file.string();
+    setOutputFile(output_file);
+}
+
 
 std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
 {

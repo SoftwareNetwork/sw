@@ -55,7 +55,7 @@ local_settings:
             c_flags: -w
             cxx_flags: -w
             configuration: Debug
-            use_cache: false
+            #use_cache: false
             build_dir: build_ninja_gcc_debug
 
         clang6:

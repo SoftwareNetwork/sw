@@ -273,6 +273,24 @@ protected:
     Version gatherVersion(const path &program) const override;
 };
 
+struct SW_DRIVER_CPP_API GNUASMCompiler : ASMCompiler, GNU,
+    CommandLineOptions<GNUAssemblerOptions>
+{
+    virtual ~GNUASMCompiler() = default;
+
+    using NativeCompilerOptions::operator=;
+
+    std::shared_ptr<Program> clone() const override;
+    std::shared_ptr<builder::Command> getCommand() const override;
+    void setSourceFile(const path &input_file, path &output_file) override;
+    void setOutputFile(const path &output_file);
+    String getObjectExtension() const override { return ".o"; }
+    Files getGeneratedDirs() const override;
+
+protected:
+    Version gatherVersion() const override { return GNU::gatherVersion(file); }
+};
+
 struct SW_DRIVER_CPP_API GNUCompiler : GNU, virtual NativeCompiler,
     CommandLineOptions<GNUOptions>
 {

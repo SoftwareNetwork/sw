@@ -28,3 +28,9 @@ bin
 ddl2cpp
 doc/build
 cppan-build*
+
+sw.config
+sw.creator
+sw.files
+sw.includes
+
