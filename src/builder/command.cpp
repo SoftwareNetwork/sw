@@ -19,6 +19,7 @@
 #include <primitives/executor.h>
 #include <primitives/debug.h>
 #include <primitives/templates.h>
+#include <primitives/sw/settings.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/thread/thread_pool.hpp>
 
@@ -26,6 +27,8 @@
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "command");
+
+static cl::opt<bool> save_failed_commands("save-failed-commands");
 
 namespace sw
 {
@@ -407,7 +410,7 @@ void Command::execute1(std::error_code *ec)
         s += "\n";
         s += e;
         boost::trim(s);
-        //if (!rsp_file.empty())
+        if (save_failed_commands)
         {
             if (rsp_file.empty())
             {

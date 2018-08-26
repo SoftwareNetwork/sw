@@ -676,10 +676,11 @@ bool GNU::findToolchain(struct Solution &s) const
     NativeLinkerOptions LOpts;
     LOpts.System.LinkDirectories.insert("/lib");
     LOpts.System.LinkDirectories.insert("/lib/x86_64-linux-gnu");
-    LOpts.System.LinkLibraries.insert("stdc++");
-    LOpts.System.LinkLibraries.insert("stdc++fs");
-    LOpts.System.LinkLibraries.insert("pthread");
-    LOpts.System.LinkLibraries.insert("dl");
+    LOpts.System.LinkLibraries.push_back("stdc++");
+    LOpts.System.LinkLibraries.push_back("stdc++fs");
+    LOpts.System.LinkLibraries.push_back("pthread");
+    LOpts.System.LinkLibraries.push_back("dl");
+    LOpts.System.LinkLibraries.push_back("m");
 
     auto resolve = [](const path &p)
     {
@@ -1572,6 +1573,12 @@ void VisualStudioLinker::getAdditionalOptions(driver::cpp::Command *c) const
     getCommandLineOptions<VisualStudioLinkerOptions>(c, *this);
 }
 
+void VisualStudioLinker::setInputLibraryDependencies(const FilesOrdered &files)
+{
+    if (!files.empty())
+        InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
+}
+
 VisualStudioLibrarian::VisualStudioLibrarian()
 {
     Extension = ".lib";
@@ -1616,7 +1623,13 @@ void GNULinker::setImportLibrary(const path &out)
 void GNULinker::setLinkLibraries(const FilesOrdered &in)
 {
     for (auto &lib : in)
-        NativeLinker::LinkLibraries.insert(lib);
+        NativeLinker::LinkLibraries.push_back(lib);
+}
+
+void GNULinker::setInputLibraryDependencies(const FilesOrdered &files)
+{
+    if (!files.empty())
+        InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
 }
 
 path GNULinker::getOutputFile() const

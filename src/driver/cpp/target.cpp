@@ -1670,6 +1670,8 @@ bool NativeExecutedTarget::prepare()
             }
         };
 
+        //DEBUG_BREAK_IF_STRING_HAS(pkg.toString(), "protoc-");
+
         //std::unordered_map<DependencyPtr, InheritanceType, H> deps;
         std::map<DependencyPtr, InheritanceType, L> deps;
         std::vector<DependencyPtr> deps_ordered;
@@ -2028,7 +2030,7 @@ bool NativeExecutedTarget::prepare()
                 }
 
                 if (!dt->HeaderOnly.value() && !d->IncludeDirectoriesOnly)
-                    LinkLibraries.insert(d.get()->target.lock()->getImportLibrary());
+                    LinkLibraries.push_back(d.get()->target.lock()->getImportLibrary());
 
                 s += d.get()->target.lock()->pkg.ppath.toString();
                 if (d->IncludeDirectoriesOnly)
@@ -2050,29 +2052,31 @@ bool NativeExecutedTarget::prepare()
             Linker->setLinkLibraries(libs);
         }*/
 #endif
-        auto O1 = gatherObjectFiles();
+        auto obj = gatherObjectFilesWithoutLibraries();
+        auto O1 = gatherLinkLibraries();
 
         if (CircularLinker)
         {
             // O1 -= Li
             for (auto &d : CircularDependencies)
-                O1.erase(d->target.lock()->getImportLibrary());
+                O1.erase(std::remove(O1.begin(), O1.end(), d->target.lock()->getImportLibrary()), O1.end());
 
             // CL1 = O1
-            CircularLinker->setObjectFiles(O1);
+            CircularLinker->setInputLibraryDependencies(O1);
 
             // O1 += CLi
             for (auto &d : CircularDependencies)
             {
                 if (d->target.lock() && ((NativeExecutedTarget*)d->target.lock().get())->CircularLinker)
-                    O1.insert(((NativeExecutedTarget*)d->target.lock().get())->CircularLinker->getImportLibrary());
+                    O1.push_back(((NativeExecutedTarget*)d->target.lock().get())->CircularLinker->getImportLibrary());
             }
 
             // prepare command here to prevent races
             CircularLinker->getCommand();
         }
 
-        getSelectedTool()->setObjectFiles(O1);
+        getSelectedTool()->setObjectFiles(obj);
+        getSelectedTool()->setInputLibraryDependencies(O1);
     }
     break;
     }

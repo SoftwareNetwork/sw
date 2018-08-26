@@ -173,19 +173,20 @@ struct SW_DRIVER_CPP_API NativeCompilerOptionsData
 struct SW_DRIVER_CPP_API NativeLinkerOptionsData
 {
     PathOptionsType Frameworks; // macOS
-    PathOptionsType LinkLibraries;
+    // it is possible to have repeated link libraries on the command line
+    FilesOrdered LinkLibraries;
     //PathOptionsType LinkLibraries2; // so on linux
     PathOptionsType PreLinkDirectories;
     PathOptionsType LinkDirectories;
     PathOptionsType PostLinkDirectories;
 
     PathOptionsType gatherLinkDirectories() const;
-    PathOptionsType gatherLinkLibraries() const;
+    FilesOrdered gatherLinkLibraries() const;
     bool IsLinkDirectoriesEmpty() const;
     void merge(const NativeLinkerOptionsData &o, const GroupSettings &s = GroupSettings());
 
-    void add(const LinkLibrary &l) { LinkLibraries.insert(l.l); }
-    void remove(const LinkLibrary &l) { LinkLibraries.erase(l.l); }
+    void add(const LinkLibrary &l);
+    void remove(const LinkLibrary &l);
 };
 
 struct SW_DRIVER_CPP_API NativeCompilerOptions : IterableOptions<NativeCompilerOptions>,

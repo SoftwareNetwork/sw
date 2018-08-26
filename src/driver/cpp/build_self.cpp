@@ -39,7 +39,7 @@ void build_self(Solution &s)
         build_self_generated(s);
     }
     SwapAndRestore sr(s.Local, true);
-    SwapAndRestore sr2(s.SourceDir, "d:/dev/cppan2/client");
+    SwapAndRestore sr2(s.SourceDir, path(__FILE__).parent_path().parent_path().parent_path().parent_path());
     SwapAndRestore sr3(s.UseStorageBinaryDir, true);
     build_self2(s);
 }

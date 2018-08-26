@@ -200,6 +200,11 @@ struct SW_DRIVER_CPP_API GNULinkerOptions
         cl::InputDependency{},
     };
 
+    COMMAND_LINE_OPTION(InputLibraryDependencies, FilesOrdered)
+    {
+        cl::InputDependency{},
+    };
+
     // these are ordered
     COMMAND_LINE_OPTION(LinkDirectories, FilesOrdered)
     {

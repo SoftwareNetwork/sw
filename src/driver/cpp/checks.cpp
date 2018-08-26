@@ -784,7 +784,7 @@ int main(int ac, char* av[])
     auto &e = s.addTarget<ExecutableTarget>(up.string());
     e += f;
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data;
-    e.LinkLibraries.insert(library);
+    e.LinkLibraries.push_back(library);
     s.prepare();
     try
     {

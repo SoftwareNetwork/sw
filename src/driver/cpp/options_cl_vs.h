@@ -335,6 +335,11 @@ struct SW_DRIVER_CPP_API VisualStudioLibraryToolOptions : VisualStudioCommonOpti
 // https://docs.microsoft.com/en-us/cpp/build/reference/linker-options
 struct SW_DRIVER_CPP_API VisualStudioLinkerOptions
 {
+    COMMAND_LINE_OPTION(InputLibraryDependencies, FilesOrdered)
+    {
+        cl::InputDependency{},
+    };
+
     COMMAND_LINE_OPTION(Dll, bool)
     {
         cl::CommandFlag{ "DLL" },

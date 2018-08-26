@@ -75,9 +75,9 @@ FileRegex::FileRegex(const path &dir, const std::regex &r, bool recursive)
 }
 
 template <class C>
-void unique_merge_containers(C &c1, const C &c2)
+void unique_merge_containers(C &to, const C &from)
 {
-    c1.insert(c2.begin(), c2.end());
+    to.insert(from.begin(), from.end());
     /*for (auto &e : c2)
     {
         if (std::find(c1.begin(), c1.end(), e) == c1.end())
@@ -247,6 +247,16 @@ void NativeCompilerOptions::merge(const NativeCompilerOptions &o, const GroupSet
     }*/
 }
 
+void NativeLinkerOptionsData::add(const LinkLibrary &l)
+{
+     LinkLibraries.push_back(l.l);
+}
+
+void NativeLinkerOptionsData::remove(const LinkLibrary &l)
+{
+    LinkLibraries.erase(std::remove(LinkLibraries.begin(), LinkLibraries.end(), l.l), LinkLibraries.end());
+}
+
 PathOptionsType NativeLinkerOptionsData::gatherLinkDirectories() const
 {
     PathOptionsType d;
@@ -256,10 +266,10 @@ PathOptionsType NativeLinkerOptionsData::gatherLinkDirectories() const
     return d;
 }
 
-PathOptionsType NativeLinkerOptionsData::gatherLinkLibraries() const
+FilesOrdered NativeLinkerOptionsData::gatherLinkLibraries() const
 {
-    PathOptionsType d;
-    d.insert(LinkLibraries.begin(), LinkLibraries.end());
+    FilesOrdered d;
+    d.insert(d.end(), LinkLibraries.begin(), LinkLibraries.end());
     return d;
 }
 
@@ -275,7 +285,7 @@ void NativeLinkerOptionsData::merge(const NativeLinkerOptionsData &o, const Grou
     // report conflicts?
 
     unique_merge_containers(Frameworks, o.Frameworks);
-    unique_merge_containers(LinkLibraries, o.LinkLibraries);
+    LinkLibraries.insert(LinkLibraries.end(), o.LinkLibraries.begin(), o.LinkLibraries.end());
     unique_merge_containers(PreLinkDirectories, o.PreLinkDirectories);
     unique_merge_containers(LinkDirectories, o.LinkDirectories);
     unique_merge_containers(PostLinkDirectories, o.PostLinkDirectories);
