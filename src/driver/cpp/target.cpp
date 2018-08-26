@@ -1561,7 +1561,7 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
-    DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
 
     switch (prepare_pass)
     {
@@ -1678,7 +1678,7 @@ bool NativeExecutedTarget::prepare()
         TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
             [this, &deps, &deps_ordered](auto &v, auto &s)
         {
-            DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
+            //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
 
             for (auto &d : v.Dependencies)
             {

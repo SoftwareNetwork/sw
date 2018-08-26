@@ -165,7 +165,7 @@ int sw_main(int argc, char **argv)
     //args::ValueFlag<int> configuration(parser, "configuration", "Configuration to build", { 'c' });
 
     String overview = "SW: Software Network Client\n\n"
-        "  SW is a multipurpose and multilanguage Package Manager and Build System...\n";
+        "  SW is a Universal Package Manager and Build System...\n";
     if (auto &driver = getDrivers(); !driver.empty())
     {
         overview += "\n  Available drivers:\n";
