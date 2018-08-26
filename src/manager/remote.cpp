@@ -85,12 +85,13 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
         grpc::SslCredentialsOptions ssl_options;
 #ifdef _WIN32
         ssl_options.pem_root_certs = read_file("d:\\dev\\cppan2\\bin\\server.crt");
+        auto creds = grpc::SslCredentials(ssl_options);
 #else
         ssl_options.pem_root_certs = read_file("/home/egor/dev/sw_server.crt");
-        host = "192.168.191.1";
+        host = "192.168.191.1:1245";
+        auto creds = grpc::InsecureChannelCredentials();
 #endif
 
-        auto creds = grpc::SslCredentials(ssl_options);
         channel = grpc::CreateChannel(host, creds);
     }
     return channel;

@@ -83,6 +83,7 @@ struct SW_DRIVER_CPP_API ClangOptions : ClangCommonOptions
     COMMAND_LINE_OPTION(OutputFile, path)
     {
         cl::CommandFlag{ "o" },
+        cl::OutputDependency{},
     };
 };
 DECLARE_OPTION_SPECIALIZATION(ClangOptions);
@@ -167,6 +168,22 @@ struct SW_DRIVER_CPP_API GNUOptions
     };
 };
 DECLARE_OPTION_SPECIALIZATION(GNUOptions);
+
+struct SW_DRIVER_CPP_API GNUAssemblerOptions
+{
+    // goes last
+    COMMAND_LINE_OPTION(InputFile, path)
+    {
+        cl::InputDependency{},
+    };
+    
+    COMMAND_LINE_OPTION(OutputFile, path)
+    {
+        cl::CommandFlag{ "o" },
+        cl::OutputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(GNUAssemblerOptions);
 
 // common for ld and ar
 // https://linux.die.net/man/1/ld

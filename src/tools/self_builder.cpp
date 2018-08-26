@@ -124,6 +124,7 @@ int main(int argc, char **argv)
         {{"org.sw.demo.google.grpc.grpc_lb_policy_round_robin", "1"}, {}},
         {{"org.sw.demo.google.grpc.grpc_max_age_filter", "1"}, {}},
         {{"org.sw.demo.google.grpc.grpc_message_size_filter", "1"}, {}},
+        {{"org.sw.demo.google.grpc.third_party.address_sorting", "1"}, {}},
         {{"org.sw.demo.google.grpc.grpc_resolver_dns_ares", "1"}, {}},
         {{"org.sw.demo.google.grpc.grpc_resolver_dns_native", "1"}, {}},
         {{"org.sw.demo.google.grpc.grpc_resolver_fake", "1"}, {}},

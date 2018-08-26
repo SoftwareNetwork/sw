@@ -419,14 +419,28 @@ void Command::execute1(std::error_code *ec)
             s += "\n";
             auto p = getDirectories().storage_dir_tmp / "rsp" / rsp_file;
             auto pbat = p;
+#ifdef _WIN32
             pbat += ".bat";
+#else
+            pbat += ".sh";
+#endif
             make_rsp_file(p);
             s += "pid = " + std::to_string(pid) + "\n";
             s += "command is copied to " + p.u8string() + "\n";
             String t;
-            t += "@\"" + program.u8string() + "\" @" + p.filename().string();
-            t += " %*";
+#ifdef _WIN32
+            t += "@";
+#endif
+            t += "\"" + program.u8string() + "\" @" + p.filename().string() + " ";
+#ifdef _WIN32
+            t += "%*";
+#else
+            t += "$*";
+#endif
             write_file(pbat, t);
+            fs::permissions(pbat,
+                            fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
+                            fs::perm_options::add);
 
             //s += "working directory:\n";
             //s += "\"" + working_directory.u8string() + "\"";
