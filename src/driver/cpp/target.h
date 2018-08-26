@@ -60,17 +60,15 @@
         return x;                                             \
     }
 
-#define ASSIGN_TYPES(t)                  \
-    ASSIGN_OP(+=, add, t)                \
-    ASSIGN_OP(-=, remove, t)             \
-    ASSIGN_OP_ACTION(=, add, t, clear()) \
-    ASSIGN_OP(<<, add, t)                \
-    ASSIGN_OP(>>, remove, t)
-
 #define ASSIGN_TYPES_NO_REMOVE(t)        \
     ASSIGN_OP(+=, add, t)                \
     ASSIGN_OP_ACTION(=, add, t, clear()) \
     ASSIGN_OP(<<, add, t)
+
+#define ASSIGN_TYPES(t)       \
+    ASSIGN_TYPES_NO_REMOVE(t) \
+    ASSIGN_OP(-=, remove, t)  \
+    ASSIGN_OP(>>, remove, t)
 
 namespace sw
 {
@@ -481,9 +479,6 @@ struct SW_DRIVER_CPP_API InterfaceTarget : NativeTarget {};
 // but why? we already compare commands
 //struct SW_DRIVER_CPP_API ObjectTarget : NativeTarget {};
 
-template <class T>
-using TargetOptionsBase = InheritanceGroup<T>;
-
 struct WithSourceFileStorage {};
 struct WithoutSourceFileStorage {};
 struct WithNativeOptions {};
@@ -582,7 +577,7 @@ struct Events_
 };
 
 struct SW_DRIVER_CPP_API TargetOptionsGroup :
-    TargetOptionsBase<TargetOptions>
+    InheritanceGroup<TargetOptions>
 {
 private:
     ASSIGN_WRAPPER(add, TargetOptionsGroup);
@@ -600,29 +595,29 @@ public:
     Events_ Events;
     ASSIGN_TYPES_NO_REMOVE(std::function<void(void)>)
 
-        void add(const std::function<void(void)> &f);
+    void add(const std::function<void(void)> &f);
 
     VariablesType Variables;
     ASSIGN_TYPES(Variable)
 
-        void add(const Variable &v);
+    void add(const Variable &v);
     void remove(const Variable &v);
 
     void inheritance(const TargetOptionsGroup &g, const GroupSettings &s = GroupSettings())
     {
-        TargetOptionsBase<TargetOptions>::inheritance(g, s);
+        InheritanceGroup<TargetOptions>::inheritance(g, s);
     }
 
     template <class SFS, class NO, class F>
     void iterate(F &&f, const GroupSettings &s = GroupSettings())
     {
-        TargetOptionsBase<TargetOptions>::iterate<F, SFS, NO>(std::forward<F>(f), s);
+        InheritanceGroup<TargetOptions>::iterate<F, SFS, NO>(std::forward<F>(f), s);
     }
 
     // self merge
     void merge(const GroupSettings &s = GroupSettings())
     {
-        TargetOptionsBase<TargetOptions>::merge(s); // goes last
+        InheritanceGroup<TargetOptions>::merge(s); // goes last
     }
 
     // merge to others
@@ -631,7 +626,7 @@ public:
         auto s2 = s;
         s2.merge_to_self = false;
 
-        TargetOptionsBase<TargetOptions>::merge(g, s2);
+        InheritanceGroup<TargetOptions>::merge(g, s2);
     }
 };
 
@@ -700,8 +695,14 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     virtual bool isSharedOnly() const { return false; }
 
     using TargetBase::operator=;
+    using TargetBase::operator+=;
+    using TargetOptionsGroup::operator+=;
+    using TargetOptionsGroup::operator-=;
     using TargetOptionsGroup::operator=;
+    using TargetOptionsGroup::operator<<;
+    using TargetOptionsGroup::operator>>;
     using TargetOptionsGroup::add;
+    using TargetOptionsGroup::remove;
 
 protected:
     using TargetsSet = std::unordered_set<NativeTarget*>;
@@ -743,11 +744,6 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeExecutedTarget
     LibraryTarget(LanguageType L);
 
     using NativeExecutedTarget::operator=;
-
-    /*using NativeExecutedTarget::operator+=;
-    using NativeExecutedTarget::operator-=;
-    using NativeExecutedTarget::operator<<;
-    using NativeExecutedTarget::operator>>;*/
 
     void init() override;
 

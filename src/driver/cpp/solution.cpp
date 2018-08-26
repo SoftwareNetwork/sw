@@ -1143,19 +1143,19 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             if (auto sf = lib[fn].template as<CPPSourceFile>())
             {
-                if (auto c = sf->compiler->as<VisualStudioCompiler>())
+                if (auto c = sf->compiler->template as<VisualStudioCompiler>())
                 {
                     c->ForcedIncludeFiles().push_back(h);
                 }
-                else if (auto c = sf->compiler->as<ClangClCompiler>())
+                else if (auto c = sf->compiler->template as<ClangClCompiler>())
                 {
                     c->ForcedIncludeFiles().push_back(h);
                 }
-                else if (auto c = sf->compiler->as<ClangCompiler>())
+                else if (auto c = sf->compiler->template as<ClangCompiler>())
                 {
                     c->ForcedIncludeFiles().push_back(h);
                 }
-                else if (auto c = sf->compiler->as<GNUCompiler>())
+                else if (auto c = sf->compiler->template as<GNUCompiler>())
                 {
                     c->ForcedIncludeFiles().push_back(h);
                 }

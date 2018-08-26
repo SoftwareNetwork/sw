@@ -51,7 +51,7 @@ public:
     using SourceFileMapThis::size;
 
 public:
-    Target * target = nullptr;
+    Target *target = nullptr;
 
     SourceFileStorage();
     virtual ~SourceFileStorage();
