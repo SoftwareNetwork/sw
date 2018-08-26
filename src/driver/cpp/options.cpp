@@ -254,7 +254,7 @@ void NativeLinkerOptionsData::add(const LinkLibrary &l)
 
 void NativeLinkerOptionsData::remove(const LinkLibrary &l)
 {
-    LinkLibraries.erase(std::remove(LinkLibraries.begin(), LinkLibraries.end(), l.l), LinkLibraries.end());
+    LinkLibraries.erase(l.l);
 }
 
 PathOptionsType NativeLinkerOptionsData::gatherLinkDirectories() const
@@ -266,9 +266,9 @@ PathOptionsType NativeLinkerOptionsData::gatherLinkDirectories() const
     return d;
 }
 
-FilesOrdered NativeLinkerOptionsData::gatherLinkLibraries() const
+LinkLibrariesType NativeLinkerOptionsData::gatherLinkLibraries() const
 {
-    FilesOrdered d;
+    LinkLibrariesType d;
     d.insert(d.end(), LinkLibraries.begin(), LinkLibraries.end());
     return d;
 }

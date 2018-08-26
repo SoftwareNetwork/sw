@@ -86,6 +86,25 @@ private:
     unique_type u;
 };
 
+struct FancyFilesOrdered : FilesOrdered
+{
+    using base = FilesOrdered;
+
+    using base::insert;
+    using base::erase;
+
+    // fix return type
+    void insert(const path &p)
+    {
+        push_back(p);
+    }
+
+    void erase(const path &p)
+    {
+        base::erase(std::remove(begin(), end(), p), end());
+    }
+};
+
 //using PathOptionsType = FilesSorted;
 using PathOptionsType = UniqueVector<path>;
 
@@ -170,18 +189,20 @@ struct SW_DRIVER_CPP_API NativeCompilerOptionsData
     void remove(const DefinitionsType &defs);
 };
 
+using LinkLibrariesType = FancyFilesOrdered;
+
 struct SW_DRIVER_CPP_API NativeLinkerOptionsData
 {
     PathOptionsType Frameworks; // macOS
     // it is possible to have repeated link libraries on the command line
-    FilesOrdered LinkLibraries;
+    LinkLibrariesType LinkLibraries;
     //PathOptionsType LinkLibraries2; // so on linux
     PathOptionsType PreLinkDirectories;
     PathOptionsType LinkDirectories;
     PathOptionsType PostLinkDirectories;
 
     PathOptionsType gatherLinkDirectories() const;
-    FilesOrdered gatherLinkLibraries() const;
+    LinkLibrariesType gatherLinkLibraries() const;
     bool IsLinkDirectoriesEmpty() const;
     void merge(const NativeLinkerOptionsData &o, const GroupSettings &s = GroupSettings());
 

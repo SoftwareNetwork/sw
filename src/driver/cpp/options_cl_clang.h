@@ -176,7 +176,7 @@ struct SW_DRIVER_CPP_API GNUAssemblerOptions
     {
         cl::InputDependency{},
     };
-    
+
     COMMAND_LINE_OPTION(OutputFile, path)
     {
         cl::CommandFlag{ "o" },
