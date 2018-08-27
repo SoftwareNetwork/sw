@@ -176,10 +176,11 @@ struct SW_DRIVER_CPP_API Module
         }
     };
 
-    boost::dll::shared_library module;
+    boost::dll::shared_library *module = nullptr;
 
     Module(const path &dll);
     Module(const Module &) = delete;
+    ~Module();
 
     // api
     LibraryCall<void(Checker &)> check;

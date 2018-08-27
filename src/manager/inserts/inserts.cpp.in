@@ -7,7 +7,7 @@
 #include <string>
 
 #define DECLARE_TEXT_VAR_BEGIN(x) const char _##x[] = {
-#define DECLARE_TEXT_VAR_END(x) }; extern const std::string x; const std::string x = _##x;
+#define DECLARE_TEXT_VAR_END(x) }; static const std::string x = _##x;
 
 DECLARE_TEXT_VAR_BEGIN(service_db_schema)
 EMBED<service_db_schema.sql>

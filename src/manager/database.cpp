@@ -60,8 +60,7 @@ namespace sql = sqlpp::sqlite3;
 
 TYPED_EXCEPTION(NoSuchVersion);
 
-extern const std::string service_db_schema;
-extern const std::string packages_db_schema;
+#include <inserts.cpp>
 
 namespace sw
 {

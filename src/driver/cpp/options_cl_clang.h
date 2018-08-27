@@ -157,6 +157,12 @@ struct SW_DRIVER_CPP_API GNUOptions
             true
     };
 
+    COMMAND_LINE_OPTION(Visibility, bool)
+    {
+        cl::CommandFlag{ "fvisibility=hidden" },
+        true
+    };
+
     COMMAND_LINE_OPTION(Permissive, bool)
     {
         cl::CommandFlag{ "fpermissive" }, true,

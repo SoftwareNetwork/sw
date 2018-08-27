@@ -1892,6 +1892,18 @@ bool NativeExecutedTarget::prepare()
             }
             else if (auto c = f->compiler->as<GNUCompiler>())
             {
+                switch (Settings.Native.ConfigurationType)
+                {
+                case ConfigurationType::Debug:
+                    c->GenerateDebugInfo = true;
+                    break;
+                case ConfigurationType::Release:
+                    break;
+                case ConfigurationType::ReleaseWithDebugInformation:
+                    break;
+                case ConfigurationType::MinimalSizeRelease:
+                    break;
+                }
                 c->CPPStandard = CPPVersion;
             }
         }
@@ -2113,7 +2125,14 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
             }
             else
             {
-                Public.Definitions[api + "="];
+                if (Type == LibraryType::Shared || ExportIfStatic)
+                {
+                    Public.Definitions[api] = "__attribute__ ((visibility (\"default\")))";
+                }
+                else
+                {
+                    Public.Definitions[api + "="];
+                }
             }
 
             Definitions[api + "_EXTERN="];
@@ -2141,8 +2160,16 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
         }
         else
         {
-            Definitions["SW_EXPORT="];
-            Definitions["SW_IMPORT="];
+            if (Type == LibraryType::Shared || ExportIfStatic)
+            {
+                Public.Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
+                Public.Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
+            }
+            else
+            {
+                Definitions["SW_EXPORT="];
+                Definitions["SW_IMPORT="];
+            }
         }
 
         if (Type == LibraryType::Shared)
@@ -2340,7 +2367,7 @@ bool ExecutableTarget::prepare()
             }
             else
             {
-                Public.Definitions[api + "="];
+                Public.Definitions[api] = "__attribute__ ((visibility (\"default\")))";
             }
         };
 
@@ -2349,6 +2376,11 @@ bool ExecutableTarget::prepare()
         {
             Definitions["SW_EXPORT"] = "__declspec(dllexport)";
             Definitions["SW_IMPORT"] = "__declspec(dllimport)";
+        }
+        else
+        {
+            Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
+            Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
         }
 
         Definitions["CPPAN_EXECUTABLE"];

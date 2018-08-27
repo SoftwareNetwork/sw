@@ -163,7 +163,11 @@ std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const path &p)
     FilesOrdered headers;
 
     auto f = read_file(p);
+#ifdef _WIN32
     static const std::regex r_pragma("^#pragma\\s+sw\\s+require\\s+(\\S+)(\\s+(\\S+))?");
+#else
+    static const std::regex r_pragma("#pragma\\s+sw\\s+require\\s+(\\S+)(\\s+(\\S+))?");
+#endif
     std::smatch m;
     while (std::regex_search(f, m, r_pragma))
     {
@@ -1064,7 +1068,7 @@ static auto getFilesHash(const Files &files)
 
 PackagePath Build::getSelfTargetName(const Files &files)
 {
-    return "loc.sw.self" + getFilesHash(files);
+    return "loc.sw.self" "." + getFilesHash(files);
 }
 
 SharedLibraryTarget &Build::createTarget(const Files &files)
@@ -1194,7 +1198,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         lib.Definitions["SW_BUILDER_API="];
         lib.Definitions["SW_DRIVER_CPP_API="];
         // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "extern \"C\"";
+        lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __attribute__ ((visibility (\"default\")))";
 #endif
 
 #if defined(CPPAN_OS_WINDOWS)
@@ -1302,7 +1306,11 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             auto fn = r.getDirSrc2() / getConfigFilename();
             auto h = getFilesHash({ fn });
             ctx.addLine("// " + r.toString());
+            if (Settings.HostOS.Type != OSType::Windows)
+                ctx.addLine("extern \"C\"");
             ctx.addLine("void build_" + h + "(Solution &);");
+            if (Settings.HostOS.Type != OSType::Windows)
+                ctx.addLine("extern \"C\"");
             ctx.addLine("void check_" + h + "(Checker &);");
             ctx.addLine();
 
@@ -1418,7 +1426,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     lib.Definitions["SW_BUILDER_API="];
     lib.Definitions["SW_DRIVER_CPP_API="];
     // do not use api name because we use C linkage
-    lib.Definitions["SW_PACKAGE_API"] = "extern \"C\"";
+    lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __attribute__ ((visibility (\"default\")))";
 #endif
 
 #if defined(CPPAN_OS_WINDOWS)
@@ -1747,19 +1755,26 @@ const Module &ModuleStorage::get(const path &dll)
 
 Module::Module(const path &dll)
 try
-    : module(dll.wstring())
+    : module(new boost::dll::shared_library(dll.wstring()))
 {
-    if (module.has("build"))
-        build_ = module.get<void(Solution&)>("build");
-    if (module.has("check"))
-        check = module.get<void(Checker&)>("check");
-    if (module.has("configure"))
-        configure = module.get<void(Solution&)>("configure");
+    if (module->has("build"))
+        build_ = module->get<void(Solution&)>("build");
+    if (module->has("check"))
+        check = module->get<void(Checker&)>("check");
+    if (module->has("configure"))
+        configure = module->get<void(Solution&)>("configure");
 }
 catch (...)
 {
     LOG_ERROR(logger, "Module " + normalize_path(dll) + " is in bad shape. Will rebuild on the next run.");
     fs::remove(dll);
+}
+
+Module::~Module()
+{
+//#ifdef _WIN32
+    delete module;
+//#endif
 }
 
 void Module::build(Solution &s) const
