@@ -115,6 +115,12 @@ FileStorage::~FileStorage()
 void FileStorage::load()
 {
     getDb().load(config, files);
+
+    for (auto i = files.getIterator(); i.isValid(); i.next())
+    {
+        auto &f = *i.getValue();
+        f.fs = this;
+    }
 }
 
 void FileStorage::save()

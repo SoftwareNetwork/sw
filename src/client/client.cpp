@@ -25,6 +25,7 @@
 //#include <boost/nowide/args.hpp>
 #include <boost/regex.hpp>
 #include <primitives/executor.h>
+#include <primitives/lock.h>
 #include <primitives/sw/settings.h>
 #include <primitives/sw/main.h>
 #include <primitives/win32helpers.h>
@@ -250,11 +251,14 @@ SUBCOMMAND_DECL(ide)
 {
     if (!ide_build.empty())
     {
-        auto s = sw::load("sw.cpp");
-        auto &b = *((sw::Build*)s.get());
-        auto pkg = sw::extractFromStringPackageId(ide_build);
-        b.TargetsToBuild[pkg] = b.children[pkg];
-        s->execute();
+        single_process_job(fs::current_path(), []()
+        {
+            auto s = sw::load("sw.cpp");
+            auto &b = *((sw::Build*)s.get());
+            auto pkg = sw::extractFromStringPackageId(ide_build);
+            b.TargetsToBuild[pkg] = b.children[pkg];
+            s->execute();
+        });
     }
 }
 

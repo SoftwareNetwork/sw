@@ -365,7 +365,9 @@ bool FileRecord::refresh()
 
     if (useFileMonitor)
     {
-        get_file_monitor().addFile(data->file, [this](const path &f)
+        if (!fs)
+            throw std::runtime_error("Empty file storage");
+        get_file_monitor().addFile(data->file, [fs = fs](const path &f)
         {
             auto &r = File(f, *fs).getFileRecord();
             error_code ec;
@@ -408,7 +410,15 @@ bool FileRecord::isChanged()
     };
 
     auto c = refresh();
+    if (c)
+    {
+        EXPLAIN_OUTDATED("file", true, "changed after refresh", data->file.u8string());
+    }
     c |= is_changed();
+    if (c)
+    {
+        EXPLAIN_OUTDATED("file", true, "changed after checking max time", data->file.u8string());
+    }
     return c;
 }
 
@@ -447,13 +457,23 @@ fs::file_time_type FileRecord::getMaxTime() const
     {
         if (d == this)
             continue;
-        m = std::max(m, d->getMaxTime());
+        auto dm = d->getMaxTime();
+        if (dm > m)
+        {
+            m = dm;
+            EXPLAIN_OUTDATED("file", true, "explicit " + f.u8string() + " lwt is greater", data->file.u8string());
+        }
     }
     for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this)
             continue;
-        m = std::max(m, d->getMaxTime());
+        auto dm = d->getMaxTime();
+        if (dm > m)
+        {
+            m = dm;
+            EXPLAIN_OUTDATED("file", true, "implicit " + f.u8string() + " lwt is greater", data->file.u8string());
+        }
     }
     return m;
 }

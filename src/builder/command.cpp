@@ -322,7 +322,7 @@ void Command::execute1(std::error_code *ec)
 {
     prepare();
 
-    //DEBUG_BREAK_IF_STRING_HAS(name, "sw.cpp");
+    //DEBUG_BREAK_IF_STRING_HAS(name, "CommandLine.cpp");
 
     if (!isOutdated())
     {

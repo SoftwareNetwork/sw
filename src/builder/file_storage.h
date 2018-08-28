@@ -17,8 +17,8 @@ struct SW_BUILDER_API FileDataStorage
     ConcurrentHashMap<path, FileData> files;
 
     FileDataStorage();
-    FileDataStorage(const FileStorage &) = delete;
-    FileDataStorage &operator=(const FileStorage &) = delete;
+    FileDataStorage(const FileDataStorage &) = delete;
+    FileDataStorage &operator=(const FileDataStorage &) = delete;
     ~FileDataStorage();
 
     void load();
