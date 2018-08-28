@@ -106,6 +106,7 @@ void build(Solution &s)
         "pub.egorpugin.primitives.sw.main-master"_dep;
     {
         auto c = std::make_shared<Command>();
+        c->fs = s.getSolution()->fs;
         c->setProgram(self_builder);
         c->args.push_back((cpp_driver.BinaryDir / "build_self.generated.h").u8string());
         c->addOutput(cpp_driver.BinaryDir / "build_self.generated.h");

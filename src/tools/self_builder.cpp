@@ -1,12 +1,44 @@
+// Copyright (C) 2017-2018 Egor Pugin <egor.pugin@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+#include <database.h>
+#include <resolver.h>
+
 #include <primitives/context.h>
 #include <primitives/sw/main.h>
 #include <primitives/sw/settings.h>
-#include <resolver.h>
+
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "self_builder");
 
 using namespace sw;
 
+void setup_log(const std::string &log_level)
+{
+    LoggerSettings log_settings;
+    log_settings.log_level = log_level;
+    log_settings.simple_logger = true;
+    log_settings.print_trace = true;
+    initLogger(log_settings);
+
+    // first trace message
+    LOG_TRACE(logger, "----------------------------------------");
+    LOG_TRACE(logger, "Starting cppan...");
+}
+
 int main(int argc, char **argv)
 {
+#ifdef NDEBUG
+    setup_log("INFO");
+#else
+    setup_log("DEBUG");
+#endif
+
+    getServiceDatabase();
+
     cl::opt<path> p(cl::Positional, cl::Required);
     cl::opt<path> packages(cl::Positional, cl::Required);
 

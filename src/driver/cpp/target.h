@@ -284,6 +284,9 @@ public:
 
     void fetch();
 
+    Solution *getSolution();
+    const Solution *getSolution() const;
+
     // ???? why can't access protected in build
     path RootDirectory;
 protected:
@@ -294,9 +297,6 @@ protected:
     //TargetBase &operator=(const TargetBase &);
 
     bool hasSameParent(const TargetBase *t) const;
-
-    Solution *getSolution();
-    const Solution *getSolution() const;
 
 private:
     template <typename T, typename ... Args>

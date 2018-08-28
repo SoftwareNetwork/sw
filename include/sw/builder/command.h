@@ -15,6 +15,7 @@
 namespace sw
 {
 
+struct FileStorage;
 struct Program;
 
 template <class T>
@@ -81,6 +82,7 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
 #pragma warning(pop)
     using Base = primitives::Command;
 
+    FileStorage *fs = nullptr;
     String name;
     String name_short;
     Files inputs;
@@ -101,6 +103,8 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     };
     int maybe_unused = 0;
 
+    Command() = default;
+    Command(::sw::FileStorage &fs);
     virtual ~Command() = default;
 
     void prepare() override;
@@ -166,13 +170,13 @@ struct ExecuteCommand : builder::Command
     F f;
     bool always = false;
 
-    ExecuteCommand(const char *file, int line) : file(file), line(line) {}
+    ExecuteCommand(FileStorage &fs, const char *file, int line) : Command(fs), file(file), line(line) {}
 
     //template <class F2>
     //ExecuteCommand(const char *file, int line, F2 &&f) : ExecuteCommand(file, line), f(f) {}
 
     template <class F2>
-    ExecuteCommand(F2 &&f) : f(f) {}
+    ExecuteCommand(FileStorage &fs, F2 &&f) : Command(fs), f(f) {}
 
     /*template <class F2>
     ExecuteCommand(bool always, F2 &&f) : f(f), always(true) {}
@@ -209,7 +213,7 @@ struct ExecuteCommand : builder::Command
     path getProgram() const override { return "ExecuteCommand"; };
 };
 
-#define MAKE_EXECUTE_COMMAND() std::make_shared<ExecuteCommand>(__FILE__, __LINE__)
+#define MAKE_EXECUTE_COMMAND(fs) std::make_shared<ExecuteCommand>(fs, __FILE__, __LINE__)
 
 }
 

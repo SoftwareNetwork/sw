@@ -217,6 +217,7 @@ Solution::Solution(const Solution &rhs)
     , base_ptr(rhs.base_ptr)
     //, knownTargets(rhs.knownTargets)
     , source_dirs_by_source(rhs.source_dirs_by_source)
+    , fs(rhs.fs)
 {
     Checks.solution = this;
 }
@@ -262,8 +263,6 @@ optional<path> Solution::getSourceDir(const Source &s, const Version &v) const
 
 StaticLibraryTarget &Solution::getImportLibrary()
 {
-    //auto c = new ExecuteCommand(IMPORT_DEFINITIONS_FILE, []
-    //{
 #if defined(CPPAN_OS_WINDOWS)
     HMODULE lib = GetCurrentModule();
     PIMAGE_NT_HEADERS header = (PIMAGE_NT_HEADERS)((BYTE *)lib + ((PIMAGE_DOS_HEADER)lib)->e_lfanew);
@@ -281,11 +280,7 @@ StaticLibraryTarget &Solution::getImportLibrary()
     }
     write_file_if_different(getImportDefinitionsFile(), defs);
 #endif
-    //});
-    //File(IMPORT_DEFINITIONS_FILE).getFileRecord().generator = c;
 
-    //auto o = BinaryDir;
-    //BinaryDir = getUserDirectories().storage_dir_tmp;
     auto o = Local;
     Local = false; // this prevents us from putting compiled configs into user bdirs
     IsConfig = true;
@@ -294,8 +289,6 @@ StaticLibraryTarget &Solution::getImportLibrary()
     IsConfig = false;
     Local = o;
     t.AutoDetectOptions = false;
-    //fs::create_directories(t.BinaryDir);
-    //BinaryDir = o;
     t += getImportDefinitionsFile();
     return t;
 }
@@ -952,6 +945,24 @@ void Build::setSettings()
     Settings.Native.CPPCompiler = ((CPPLanguage*)languages[LanguageType::CPP].get())->compiler;
 
     Settings.Native.CompilerType = Settings.Native.CPPCompiler->Type;
+
+    fs = &getFileStorage(getConfig());
+
+    Settings.Native.ASMCompiler->fs = fs;
+    Settings.Native.CCompiler->fs = fs;
+    Settings.Native.CPPCompiler->fs = fs;
+    if (Settings.Native.Librarian)
+        Settings.Native.Librarian->fs = fs;
+    if (Settings.Native.Linker)
+        Settings.Native.Linker->fs = fs;
+
+#define SET_FS(type)                                                             \
+    ((type##Language *)languages[LanguageType::type].get())->librarian->fs = fs; \
+    ((type##Language *)languages[LanguageType::type].get())->linker->fs = fs
+
+    SET_FS(ASM);
+    SET_FS(C);
+    SET_FS(CPP);
 }
 
 void Build::findCompiler()
@@ -1087,7 +1098,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         return r;
 
     // reset before start adding targets
-    getFileStorage().reset();
+    //getFileStorage().reset();
 
     if (solutions.empty())
         addSolution();
@@ -1473,10 +1484,6 @@ path Build::build(const path &fn)
 void Build::build_and_load(const path &fn)
 {
     build(fn);
-
-    // reset before start adding targets
-    //getFileStorage().reset();
-
     load(dll);
 }
 
@@ -1569,7 +1576,8 @@ void Build::build_package(const String &s)
     b.Local = false;
     auto dll = b.build_configs(cfgs);
 
-    getFileStorage().reset();
+    // reset before start adding targets
+    //getFileStorage().reset();
 
     // make parallel?
     for (auto &s : solutions)
@@ -1694,7 +1702,7 @@ PackageDescriptionMap Build::getPackages() const
             Files files;
             for (auto &f : nt->gatherAllFiles())
             {
-                if (File(f).isGeneratedAtAll())
+                if (File(f, *fs).isGeneratedAtAll())
                     continue;
                 files.insert(f);
             }

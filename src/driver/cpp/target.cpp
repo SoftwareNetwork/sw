@@ -412,21 +412,14 @@ void Target::fileWriteOnce(const path &fn, const String &content, bool binary_di
     if (PostponeFileResolving)
         return;
 
+    path p;
     if (fn.is_absolute())
-        ::sw::fileWriteOnce(fn, content, getPatchDir(binary_dir));
+        ::sw::fileWriteOnce(p = fn, content, getPatchDir(binary_dir));
     else
-        ::sw::fileWriteOnce((binary_dir ? BinaryDir : SourceDir) / fn, content, getPatchDir(binary_dir));
-}
+        ::sw::fileWriteOnce(p = (binary_dir ? BinaryDir : SourceDir) / fn, content, getPatchDir(binary_dir));
 
-void Target::fileWriteSafe(const path &fn, const String &content, bool binary_dir) const
-{
-    if (PostponeFileResolving)
-        return;
-
-    if (fn.is_absolute())
-        ::sw::fileWriteSafe(fn, content, getPatchDir(binary_dir));
-    else
-        ::sw::fileWriteSafe((binary_dir ? BinaryDir : SourceDir) / fn, content, getPatchDir(binary_dir));
+    File f(fn, *getSolution()->fs);
+    f.getFileRecord().load();
 }
 
 void Target::writeFileOnce(const path &fn, bool binary_dir) const
@@ -444,6 +437,21 @@ void Target::writeFileOnce(const path &fn, const char *content, bool binary_dir)
     fileWriteOnce(fn, content, binary_dir);
 }
 
+void Target::fileWriteSafe(const path &fn, const String &content, bool binary_dir) const
+{
+    if (PostponeFileResolving)
+        return;
+
+    path p;
+    if (fn.is_absolute())
+        ::sw::fileWriteSafe(p = fn, content, getPatchDir(binary_dir));
+    else
+        ::sw::fileWriteSafe(p = (binary_dir ? BinaryDir : SourceDir) / fn, content, getPatchDir(binary_dir));
+
+    File f(fn, *getSolution()->fs);
+    f.getFileRecord().load();
+}
+
 void Target::writeFileSafe(const path &fn, const String &content, bool binary_dir) const
 {
     fileWriteSafe(fn, content, binary_dir);
@@ -454,10 +462,14 @@ void Target::replaceInFileOnce(const path &fn, const String &from, const String 
     if (PostponeFileResolving)
         return;
 
+    path p;
     if (fn.is_absolute())
-        ::sw::replaceInFileOnce(fn, from, to, getPatchDir(binary_dir));
+        ::sw::replaceInFileOnce(p = fn, from, to, getPatchDir(binary_dir));
     else
-        ::sw::replaceInFileOnce((binary_dir ? BinaryDir : SourceDir) / fn, from, to, getPatchDir(binary_dir));
+        ::sw::replaceInFileOnce(p = (binary_dir ? BinaryDir : SourceDir) / fn, from, to, getPatchDir(binary_dir));
+
+    File f(p, *getSolution()->fs);
+    f.getFileRecord().load();
 }
 
 void Target::deleteInFileOnce(const path &fn, const String &from, bool binary_dir) const
@@ -470,7 +482,11 @@ void Target::pushFrontToFileOnce(const path &fn, const String &text, bool binary
     if (PostponeFileResolving)
         return;
 
-    ::sw::pushFrontToFileOnce((binary_dir ? BinaryDir : SourceDir) / fn, text, getPatchDir(binary_dir));
+    auto p = (binary_dir ? BinaryDir : SourceDir) / fn;
+    ::sw::pushFrontToFileOnce(p, text, getPatchDir(binary_dir));
+
+    File f(p, *getSolution()->fs);
+    f.getFileRecord().load();
 }
 
 void Target::pushBackToFileOnce(const path &fn, const String &text, bool binary_dir) const
@@ -478,14 +494,18 @@ void Target::pushBackToFileOnce(const path &fn, const String &text, bool binary_
     if (PostponeFileResolving)
         return;
 
-    ::sw::pushBackToFileOnce((binary_dir ? BinaryDir : SourceDir) / fn, text, getPatchDir(binary_dir));
+    auto p = (binary_dir ? BinaryDir : SourceDir) / fn;
+    ::sw::pushBackToFileOnce(p, text, getPatchDir(binary_dir));
+
+    File f(p, *getSolution()->fs);
+    f.getFileRecord().load();
 }
 
 Commands Events_::getCommands() const
 {
     Commands cmds;
-    for (auto &e : PreBuild)
-        cmds.insert(std::make_shared<ExecuteCommand>([e] {e(); }));
+    /*for (auto &e : PreBuild)
+        cmds.insert(std::make_shared<ExecuteCommand>(*getSolution()->fs, [e] {e(); }));*/
     return cmds;
 }
 
@@ -643,7 +663,7 @@ void NativeExecutedTarget::init2()
 
 driver::cpp::CommandBuilder NativeExecutedTarget::addCommand()
 {
-    driver::cpp::CommandBuilder cb;
+    driver::cpp::CommandBuilder cb(*getSolution()->fs);
     return cb << *this;
 }
 
@@ -1070,7 +1090,7 @@ Commands NativeExecutedTarget::getGeneratedCommands() const
     // add generated files
     for (auto &f : *this)
     {
-        File p(f.first);
+        File p(f.first, *getSolution()->fs);
         if (!p.isGenerated())
             continue;
         if (f.first == def)
@@ -1122,7 +1142,6 @@ Commands NativeExecutedTarget::getCommands() const
     }
 
     // this source files
-    //Commands generated2;
     {
         auto sd = normalize_path(SourceDir);
         auto bd = normalize_path(BinaryDir);
@@ -1156,9 +1175,6 @@ Commands NativeExecutedTarget::getCommands() const
                     c->name = prefix + "[" + pkg.target_name + "]" + n;
                 }
             }
-            //if (File(f->file).isGenerated())
-                //generated2.insert(c);
-            //else
             cmds.insert(c);
         }
     }
@@ -1178,7 +1194,7 @@ Commands NativeExecutedTarget::getCommands() const
     {
         c->dependencies.insert(cmds.begin(), cmds.end());
 
-        File d(def);
+        File d(def, *getSolution()->fs);
         if (d.isGenerated())
         {
             auto g = d.getFileRecord().getGenerator();
@@ -1221,7 +1237,7 @@ Commands NativeExecutedTarget::getCommands() const
                         continue;
                     auto in = dt->getOutputFile();
                     auto o = getOutputFile().parent_path() / in.filename();
-                    auto copy_cmd = MAKE_EXECUTE_COMMAND();
+                    auto copy_cmd = MAKE_EXECUTE_COMMAND(*getSolution()->fs);
                     copy_cmd->f = [in, out = o]
                     {
                         error_code ec;
@@ -1835,7 +1851,7 @@ bool NativeExecutedTarget::prepare()
             fs::create_directories(d);
             for (auto &[p, fp] : *this)
             {
-                File f(p);
+                File f(p, *getSolution()->fs);
                 if (f.isGenerated())
                     continue;
                 // is_header_ext()
@@ -1974,7 +1990,7 @@ bool NativeExecutedTarget::prepare()
             Files objs;
             for (auto &f : files)
                 objs.insert(f->output.file);
-            auto c = std::make_shared<ExecuteCommand>([def, objs] {
+            auto c = std::make_shared<ExecuteCommand>(*getSolution()->fs, [def, objs] {
                 createDefFile(def, objs);
             });
             c->addInput(objs);

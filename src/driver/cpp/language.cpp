@@ -7,6 +7,7 @@
 #include <language.h>
 
 #include <source_file.h>
+#include <solution.h>
 #include <target.h>
 
 #include <primitives/hash.h>
@@ -123,7 +124,7 @@ std::shared_ptr<SourceFile> ASMLanguage::createSourceFile(const path &input, con
 
     auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
-    return std::make_shared<ASMSourceFile>(input, o, compiler.get());
+    return std::make_shared<ASMSourceFile>(input, *t->getSolution()->fs, o, compiler.get());
 }
 
 std::shared_ptr<Language> CLanguage::clone() const
@@ -138,7 +139,7 @@ std::shared_ptr<SourceFile> CLanguage::createSourceFile(const path &input, const
 
     auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
-    return std::make_shared<CSourceFile>(input, o, compiler.get());
+    return std::make_shared<CSourceFile>(input, *t->getSolution()->fs, o, compiler.get());
 }
 
 std::shared_ptr<Language> CPPLanguage::clone() const
@@ -153,7 +154,7 @@ std::shared_ptr<SourceFile> CPPLanguage::createSourceFile(const path &input, con
 
     auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
-    return std::make_shared<CPPSourceFile>(input, o, compiler.get());
+    return std::make_shared<CPPSourceFile>(input, *t->getSolution()->fs, o, compiler.get());
 }
 
 }

@@ -8,6 +8,7 @@
 
 #include "checks_storage.h"
 
+#include <file_storage.h>
 #include <execution_plan.h>
 #include <target.h>
 
@@ -33,6 +34,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     TargetMap TargetsToBuild;
     Checker Checks;
     ChecksStorage checksStorage;
+    FileStorage *fs = nullptr;
 
     // other data
     bool silent = false;

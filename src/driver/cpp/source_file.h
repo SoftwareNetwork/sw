@@ -109,7 +109,7 @@ struct SW_DRIVER_CPP_API SourceFile : File
     bool created = true;
     bool skip = false;
 
-    SourceFile(const path &input);
+    SourceFile(const path &input, FileStorage &fs);
     SourceFile(const SourceFile &) = default;
     virtual ~SourceFile() = default;
 
@@ -133,19 +133,19 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     std::unordered_set<SourceFile*> dependencies;
     BuildAsType BuildAs = BuildAsType::BasedOnExtension;
 
-    NativeSourceFile(const path &input, const path &output, NativeCompiler *c);
+    NativeSourceFile(const path &input, FileStorage &fs, const path &output, NativeCompiler *c);
     NativeSourceFile(const NativeSourceFile &rhs);
     virtual ~NativeSourceFile();
 
     virtual std::shared_ptr<builder::Command> getCommand() const override;
     virtual Files getGeneratedDirs() const override;
-    void setSourceFile(const path &input, const path &output);
+    //void setSourceFile(const path &input, const path &output);
     void setOutputFile(const path &output);
 };
 
 struct SW_DRIVER_CPP_API ASMSourceFile : NativeSourceFile
 {
-    ASMSourceFile(const path &input, const path &output, ASMCompiler *c);
+    ASMSourceFile(const path &input, FileStorage &fs, const path &output, ASMCompiler *c);
 
     virtual ~ASMSourceFile() = default;
 
@@ -154,7 +154,7 @@ struct SW_DRIVER_CPP_API ASMSourceFile : NativeSourceFile
 
 struct SW_DRIVER_CPP_API CSourceFile : NativeSourceFile
 {
-    CSourceFile(const path &input, const path &output, CCompiler *c);
+    CSourceFile(const path &input, FileStorage &fs, const path &output, CCompiler *c);
 
     virtual ~CSourceFile() = default;
 
@@ -163,7 +163,7 @@ struct SW_DRIVER_CPP_API CSourceFile : NativeSourceFile
 
 struct SW_DRIVER_CPP_API CPPSourceFile : NativeSourceFile
 {
-    CPPSourceFile(const path &input, const path &output, CPPCompiler *c);
+    CPPSourceFile(const path &input, FileStorage &fs, const path &output, CPPCompiler *c);
 
     virtual ~CPPSourceFile() = default;
 

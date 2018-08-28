@@ -7,6 +7,7 @@
 #include "source_file.h"
 
 #include "command.h"
+#include "solution.h"
 
 #include <language.h>
 #include <target.h>
@@ -100,7 +101,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     if (e == target->extensions.end() ||
         (((NativeExecutedTarget*)target)->HeaderOnly && ((NativeExecutedTarget*)target)->HeaderOnly.value()))
     {
-        f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file);
+        f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file, *target->getSolution()->fs);
         f->created = false;
     }
     else
@@ -243,7 +244,7 @@ size_t SourceFileStorage::sizeSkipped() const
 
 SourceFile &SourceFileStorage::operator[](path F)
 {
-    static SourceFile sf("static_source_file");
+    static SourceFile sf("static_source_file", *target->getSolution()->fs);
     if (target->PostponeFileResolving)
         return sf;
     check_absolute(F);
@@ -323,7 +324,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
                 p = target->BinaryDir / F;
                 if (!fs::exists(p))
                 {
-                    if (!File(p).isGeneratedAtAll())
+                    if (!File(p, *target->getSolution()->fs).isGeneratedAtAll())
                     {
                         if (ignore_errors)
                             return false;
@@ -337,7 +338,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
         {
             if (!fs::exists(F))
             {
-                if (!File(F).isGeneratedAtAll())
+                if (!File(F, *target->getSolution()->fs).isGeneratedAtAll())
                 {
                     if (ignore_errors)
                         return false;
@@ -360,15 +361,16 @@ void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s
     //this->SourceFileMapThis::operator[](s.first) = s.second->clone();
 }
 
-SourceFile::SourceFile(const path &input)
-    : File(input)
+SourceFile::SourceFile(const path &input, FileStorage &fs)
+    : File(input, fs)
 {
 }
 
-NativeSourceFile::NativeSourceFile(const path &input, const path &o, NativeCompiler *c)
-    : SourceFile(input), compiler(c ? std::static_pointer_cast<NativeCompiler>(c->clone()) : nullptr)
+NativeSourceFile::NativeSourceFile(const path &input, FileStorage &fs, const path &o, NativeCompiler *c)
+    : SourceFile(input, fs)
+    , compiler(c ? std::static_pointer_cast<NativeCompiler>(c->clone()) : nullptr)
+    , output(o, fs)
 {
-    output.file = o;
 }
 
 NativeSourceFile::NativeSourceFile(const NativeSourceFile &rhs)
@@ -382,11 +384,11 @@ NativeSourceFile::~NativeSourceFile()
 {
 }
 
-void NativeSourceFile::setSourceFile(const path &input, const path &o)
+/*void NativeSourceFile::setSourceFile(const path &input, const path &o)
 {
     file = input;
     setOutputFile(o);
-}
+}*/
 
 void NativeSourceFile::setOutputFile(const path &o)
 {
@@ -407,8 +409,8 @@ Files NativeSourceFile::getGeneratedDirs() const
     return compiler->getGeneratedDirs();
 }
 
-ASMSourceFile::ASMSourceFile(const path &input, const path &o, ASMCompiler *c)
-    : NativeSourceFile(input, o, c)
+ASMSourceFile::ASMSourceFile(const path &input, FileStorage &fs, const path &o, ASMCompiler *c)
+    : NativeSourceFile(input, fs, o, c)
 {
     compiler->setSourceFile(file, output.file);
 }
@@ -418,8 +420,8 @@ std::shared_ptr<SourceFile> ASMSourceFile::clone() const
     return std::make_shared<ASMSourceFile>(*this);
 }
 
-CSourceFile::CSourceFile(const path &input, const path &o, CCompiler *c)
-    : NativeSourceFile(input, o, c)
+CSourceFile::CSourceFile(const path &input, FileStorage &fs, const path &o, CCompiler *c)
+    : NativeSourceFile(input, fs, o, c)
 {
     compiler->setSourceFile(file, output.file);
 }
@@ -429,8 +431,8 @@ std::shared_ptr<SourceFile> CSourceFile::clone() const
     return std::make_shared<CSourceFile>(*this);
 }
 
-CPPSourceFile::CPPSourceFile(const path &input, const path &o, CPPCompiler *c)
-    : NativeSourceFile(input, o, c)
+CPPSourceFile::CPPSourceFile(const path &input, FileStorage &fs, const path &o, CPPCompiler *c)
+    : NativeSourceFile(input, fs, o, c)
 {
     compiler->setSourceFile(file, output.file);
 }

@@ -12,11 +12,28 @@
 namespace sw
 {
 
+struct SW_BUILDER_API FileDataStorage
+{
+    ConcurrentHashMap<path, FileData> files;
+
+    FileDataStorage();
+    FileDataStorage(const FileStorage &) = delete;
+    FileDataStorage &operator=(const FileStorage &) = delete;
+    ~FileDataStorage();
+
+    void load();
+    void save();
+
+    FileData *registerFile(const File &f);
+    FileData *registerFile(const path &f);
+};
+
 struct SW_BUILDER_API FileStorage
 {
+    String config;
     ConcurrentHashMap<path, FileRecord> files;
 
-    FileStorage();
+    FileStorage(const String &config);
     FileStorage(const FileStorage &) = delete;
     FileStorage &operator=(const FileStorage &) = delete;
     ~FileStorage();
@@ -25,7 +42,14 @@ struct SW_BUILDER_API FileStorage
     void save();
     void reset();
 
-    void registerFile(const File &f);
+    FileRecord *registerFile(const File &f);
+    FileRecord *registerFile(const path &f);
 };
+
+SW_BUILDER_API
+FileDataStorage &getFileDataStorage();
+
+SW_BUILDER_API
+FileStorage &getFileStorage(const String &config);
 
 }

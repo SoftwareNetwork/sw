@@ -192,12 +192,18 @@ struct OS
     OSType Type = OSType::UnknownOS;
     ArchType Arch = ArchType::UnknownArch;
     SubArchType SubArch = SubArchType::NoSubArch;
-    EnvironmentType EnvironmentType = EnvironmentType::UnknownEnvironment;
-    ObjectFormatType ObjectFormatType = ObjectFormatType::UnknownObjectFormat;
+    EnvironmentType EnvironmentType1 = EnvironmentType::UnknownEnvironment;
+    ObjectFormatType ObjectFormatType1 = ObjectFormatType::UnknownObjectFormat;
     Version Version;
 
     // TODO:
     bool support_dynamic_loading = true;
+
+    bool is(OSType t) const { return Type == t; }
+    bool is(ArchType t) const { return Arch == t; }
+    bool is(SubArchType t) const { return SubArch == t; }
+    bool is(EnvironmentType t) const { return EnvironmentType1 == t; }
+    bool is(ObjectFormatType t) const { return ObjectFormatType1 == t; }
 };
 
 SW_BUILDER_API

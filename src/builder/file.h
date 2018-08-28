@@ -30,10 +30,12 @@ struct FileStorage;
 
 struct SW_BUILDER_API File : Data
 {
+    FileStorage *fs = nullptr;
     path file;
 
     File() = default;
-    File(const path &p);
+    File(FileStorage &s);
+    File(const path &p, FileStorage &s);
     virtual ~File() = default;
 
     File &operator=(const path &rhs);
@@ -60,6 +62,7 @@ private:
 
     void registerSelf() const;
 
+    friend struct FileDataStorage;
     friend struct FileStorage;
 };
 
@@ -68,13 +71,26 @@ enum FileFlags
     //ffNotExists     = 0,
 };
 
-struct SW_BUILDER_API FileRecord
+// file specific
+struct SW_BUILDER_API FileData
 {
     path file;
     fs::file_time_type last_write_time;
     int64_t size = -1;
     String hash;
     SomeFlags flags;
+
+    bool load(const path &p = path());
+    size_t getHash() const;
+
+    bool operator<(const FileData &r) const;
+};
+
+// config specific
+struct SW_BUILDER_API FileRecord
+{
+    FileStorage *fs = nullptr;
+    FileData *data = nullptr;
 
     // make sets?
     std::unordered_map<path, FileRecord *> explicit_dependencies;
@@ -111,10 +127,7 @@ private:
     bool generated_ = false;
 };
 
-SW_BUILDER_API
-FileStorage &getFileStorage();
-
-path getFilesLogFileName();
+path getFilesLogFileName(const String &config = {});
 
 #define EXPLAIN_OUTDATED(subject, outdated, reason, name) \
     explainMessage(subject, outdated, reason, name)

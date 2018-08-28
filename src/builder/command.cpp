@@ -13,6 +13,7 @@
 #include "db.h"
 #include "program.h"
 
+#include <file_storage.h>
 #include <hash.h>
 #include <directories.h>
 #include <filesystem.h>
@@ -35,8 +36,8 @@ namespace sw
 
 CommandStorage &getCommandStorage()
 {
-    static CommandStorage fs;
-    return fs;
+    static CommandStorage cs;
+    return cs;
 }
 
 CommandStorage::CommandStorage()
@@ -73,11 +74,11 @@ bool CommandStorage::isOutdated(const sw::builder::Command &c)
     bool changed = false;
 
     // always check program and all deps are known
-    changed = File(c.program).isChanged();
+    changed = File(c.program, *c.fs).isChanged();
     for (auto &i : c.inputs)
-        changed |= File(i).isChanged();
+        changed |= File(i, *c.fs).isChanged();
     for (auto &i : c.outputs)
-        changed |= File(i).isChanged();
+        changed |= File(i, *c.fs).isChanged();
 
     auto k = std::hash<sw::builder::Command>()(c);
     auto r = commands.insert_ptr(k, 0);
@@ -128,6 +129,11 @@ bool CommandStorage::isOutdated(const sw::builder::Command &c)
 namespace builder
 {
 
+Command::Command(::sw::FileStorage &fs)
+    : fs(&fs)
+{
+}
+
 bool Command::isOutdated() const
 {
     return getCommandStorage().isOutdated(*this);
@@ -163,11 +169,11 @@ size_t Command::getHashAndSave() const
 size_t Command::calculateFilesHash() const
 {
     auto h = getHash();
-    hash_combine(h, File(program).getFileRecord().getHash());
+    hash_combine(h, File(program, *fs).getFileRecord().getHash());
     for (auto &i : inputs)
-        hash_combine(h, File(i).getFileRecord().getHash());
+        hash_combine(h, File(i, *fs).getFileRecord().getHash());
     for (auto &i : outputs)
-        hash_combine(h, File(i).getFileRecord().getHash());
+        hash_combine(h, File(i, *fs).getFileRecord().getHash());
     return h;
 }
 
@@ -223,14 +229,14 @@ void Command::addInput(const path &p)
 void Command::addIntermediate(const path &p)
 {
     intermediate.insert(p);
-    auto &r = File(p).getFileRecord();
+    auto &r = File(p, *fs).getFileRecord();
     r.setGenerator(shared_from_this());
 }
 
 void Command::addOutput(const path &p)
 {
     outputs.insert(p);
-    auto &r = File(p).getFileRecord();
+    auto &r = File(p, *fs).getFileRecord();
     r.setGenerator(shared_from_this());
 }
 
@@ -270,7 +276,7 @@ void Command::addInputOutputDeps()
 {
     for (auto &p : inputs)
     {
-        File f(p);
+        File f(p, *fs);
         if (f.isGenerated())
             dependencies.insert(f.getFileRecord().getGenerator());
         else
@@ -283,7 +289,7 @@ void Command::addInputOutputDeps()
     // do we really need this?
     for (auto &p : outputs)
     {
-        File f(p);
+        File f(p, *fs);
         f.addExplicitDependency(inputs);
     }
 }
@@ -305,8 +311,8 @@ void Command::prepare()
         addOutput(err.file);
 
     // add more deps
-    if (File(program).isGenerated())
-        dependencies.insert(File(program).getFileRecord().getGenerator());
+    if (File(program, *fs).isGenerated())
+        dependencies.insert(File(program, *fs).getFileRecord().getGenerator());
     addInputOutputDeps();
 
     prepared = true;
@@ -480,7 +486,7 @@ void Command::execute1(std::error_code *ec)
         }*/
         for (auto &i : intermediate)
         {
-            File f(i);
+            File f(i, *fs);
             /*if (!fs::exists(i))
                 f.getFileRecord().flags.set(ffNotExists);
             else*/
@@ -491,7 +497,7 @@ void Command::execute1(std::error_code *ec)
         }
         for (auto &i : outputs)
         {
-            File f(i);
+            File f(i, *fs);
             /*if (!fs::exists(i))
                 f.getFileRecord().flags.set(ffNotExists);
             else*/
@@ -590,9 +596,9 @@ size_t ExecuteCommand::getHash() const
     hash_combine(h, std::hash<String>()(file ? file : ""));
     hash_combine(h, std::hash<int>()(line));
     for (auto &i : inputs)
-        hash_combine(h, File(i).getFileRecord().getHash());
+        hash_combine(h, File(i, *fs).getFileRecord().getHash());
     for (auto &i : outputs)
-        hash_combine(h, File(i).getFileRecord().getHash());
+        hash_combine(h, File(i, *fs).getFileRecord().getHash());
     return hash = h;
 }
 
@@ -607,9 +613,9 @@ void ExecuteCommand::prepare()
 bool ExecuteCommand::isOutdated() const
 {
     if (std::none_of(inputs.begin(), inputs.end(),
-        [](auto &d) { return File(d).isChanged(); }) &&
+        [this](auto &d) { return File(d, *fs).isChanged(); }) &&
         std::none_of(outputs.begin(), outputs.end(),
-            [](auto &d) { return File(d).isChanged(); }))
+            [this](auto &d) { return File(d, *fs).isChanged(); }))
         return false;
     return true;
 }
@@ -631,7 +637,7 @@ void ExecuteCommand::execute()
 
     // force outputs update
     for (auto &o : outputs)
-        File(o).getFileRecord().load();
+        File(o, *fs).getFileRecord().load();
 }
 
 }

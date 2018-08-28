@@ -139,6 +139,10 @@ ServiceDatabase &getServiceDatabaseReadOnly()
 
 PackagesDatabase &getPackagesDatabase()
 {
+    // this holder will init on-disk sdb once
+    // later thread local calls will just open it
+    static PackagesDatabase run_once_db;
+
     thread_local PackagesDatabase db;
     return db;
 }

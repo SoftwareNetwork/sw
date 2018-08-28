@@ -6,7 +6,6 @@
 
 #pragma once
 
-//#include "checks_storage.h"
 #include "command_storage.h"
 #include "file_storage.h"
 
@@ -17,8 +16,11 @@ struct Db
 {
     Db(const path &fn) : fn(fn) {}
 
-    virtual void load(ConcurrentHashMap<path, FileRecord> &files) const = 0;
-    virtual void save(ConcurrentHashMap<path, FileRecord> &files) const = 0;
+    virtual void load(ConcurrentHashMap<path, FileData> &files) const = 0;
+    virtual void save(ConcurrentHashMap<path, FileData> &files) const = 0;
+    virtual void load(const String &config, ConcurrentHashMap<path, FileRecord> &files) const = 0;
+    virtual void save(const String &config, ConcurrentHashMap<path, FileRecord> &files) const = 0;
+    virtual void write(std::vector<uint8_t> &v, const FileData &r) const {}
     virtual void write(std::vector<uint8_t> &v, const FileRecord &r) const {}
 
     virtual void load(ConcurrentCommandStorage &commands) const = 0;

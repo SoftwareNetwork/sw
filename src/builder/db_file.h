@@ -15,8 +15,11 @@ struct FileDb : Db
 {
     FileDb(const path &fn);
 
-    void load(ConcurrentHashMap<path, FileRecord> &files) const override;
-    void save(ConcurrentHashMap<path, FileRecord> &files) const override;
+    void load(ConcurrentHashMap<path, FileData> &files) const override;
+    void save(ConcurrentHashMap<path, FileData> &files) const override;
+    void load(const String &config, ConcurrentHashMap<path, FileRecord> &files) const override;
+    void save(const String &config, ConcurrentHashMap<path, FileRecord> &files) const override;
+    void write(std::vector<uint8_t> &v, const FileData &r) const override;
     void write(std::vector<uint8_t> &v, const FileRecord &r) const override;
 
     void load(ConcurrentCommandStorage &commands) const override;

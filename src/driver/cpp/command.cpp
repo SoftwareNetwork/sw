@@ -13,6 +13,12 @@ DECLARE_STATIC_LOGGER(logger, "command");
 namespace sw::driver::cpp
 {
 
+Command::Command(::sw::FileStorage &fs)
+    : Base::Command(fs)
+{
+
+}
+
 void Command::prepare()
 {
     // evaluate lazy args

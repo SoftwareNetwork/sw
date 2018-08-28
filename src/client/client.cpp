@@ -227,14 +227,14 @@ void setup_log(const std::string &log_level)
     LoggerSettings log_settings;
     log_settings.log_level = log_level;
     if (bConsoleMode)
-        log_settings.log_file = (get_root_directory() / "cppan").string();
+        log_settings.log_file = (get_root_directory() / "sw").string();
     log_settings.simple_logger = true;
     log_settings.print_trace = true;
     initLogger(log_settings);
 
     // first trace message
     LOG_TRACE(logger, "----------------------------------------");
-    LOG_TRACE(logger, "Starting cppan...");
+    LOG_TRACE(logger, "Starting sw...");
 }
 
 #define SUBCOMMAND_DECL_URI(c) SUBCOMMAND_DECL(uri_ ## c)

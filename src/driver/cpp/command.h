@@ -41,7 +41,7 @@ struct tag_io_file : tag_path, tag_targets
 } // namespace detail
 
 template <class T>
-struct tag_prog { T *p; };
+struct tag_prog { T *t; };
 struct tag_wdir : detail::tag_path {};
 struct tag_in : detail::tag_io_file {};
 struct tag_out : detail::tag_io_file {};
@@ -171,6 +171,9 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 
     std::weak_ptr<Dependency> dependency;
 
+    Command() = default;
+    Command(::sw::FileStorage &fs);
+
     path getProgram() const override;
     void prepare() override;
 
@@ -193,6 +196,11 @@ struct CommandBuilder
     CommandBuilder()
     {
         c = std::make_shared<Command>();
+    }
+    CommandBuilder(::sw::FileStorage &fs)
+        : CommandBuilder()
+    {
+        c->fs = &fs;
     }
 };
 
@@ -224,10 +232,10 @@ CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
 {
     for (auto tgt : cb.targets)
     {
-        auto d = *tgt + *t.p;
+        auto d = *tgt + *t.t;
         d->Dummy = true;
     }
-    cb.c->setProgram(*t.p);
+    cb.c->setProgram(*t.t);
     return cb;
 }
 

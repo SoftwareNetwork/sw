@@ -29,9 +29,6 @@ void fileWriteOnce(const path &fn, const String &content, const path &lock_dir)
         ScopedFileLock fl(lock);
         write_file_if_different(fn, content);
         write_file_if_different(once, h);
-
-        File f(fn);
-        f.getFileRecord().load();
     }
 }
 
@@ -42,9 +39,6 @@ void fileWriteSafe(const path &fn, const String &content, const path &lock_dir)
 
     ScopedFileLock fl(lock);
     write_file_if_different(fn, content);
-
-    File f(fn);
-    f.getFileRecord().load();
 }
 
 void replaceInFileOnce(const path &fn, const String &from, const String &to, const path &lock_dir)
@@ -69,9 +63,6 @@ void replaceInFileOnce(const path &fn, const String &from, const String &to, con
     boost::replace_all(s, from, to);
     write_file_if_different(fn, s); // if different?
     write_file_if_different(hfn, "");
-
-    File f(fn);
-    f.getFileRecord().load();
 }
 
 void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_dir)
@@ -102,9 +93,6 @@ void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_di
     s = text + "\n" + s;
     write_file_if_different(fn, s);
     write_file_if_different(hfn, "");
-
-    File f(fn);
-    f.getFileRecord().load();
 }
 
 void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir)
@@ -135,9 +123,6 @@ void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir
     s = s + "\n" + text;
     write_file_if_different(fn, s);
     write_file_if_different(hfn, "");
-
-    File f(fn);
-    f.getFileRecord().load();
 }
 
 }
