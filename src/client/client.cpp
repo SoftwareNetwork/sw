@@ -251,7 +251,7 @@ SUBCOMMAND_DECL(ide)
 {
     if (!ide_build.empty())
     {
-        single_process_job(fs::current_path(), []()
+        try_single_process_job(fs::current_path(), []()
         {
             auto s = sw::load("sw.cpp");
             auto &b = *((sw::Build*)s.get());

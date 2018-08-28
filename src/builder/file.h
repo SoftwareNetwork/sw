@@ -71,26 +71,16 @@ enum FileFlags
     //ffNotExists     = 0,
 };
 
-// file specific
-struct SW_BUILDER_API FileData
+// config specific
+struct SW_BUILDER_API FileRecord
 {
+    FileStorage *fs = nullptr;
+
     path file;
     fs::file_time_type last_write_time;
     int64_t size = -1;
     String hash;
     SomeFlags flags;
-
-    bool load(const path &p = path());
-    size_t getHash() const;
-
-    bool operator<(const FileData &r) const;
-};
-
-// config specific
-struct SW_BUILDER_API FileRecord
-{
-    FileStorage *fs = nullptr;
-    FileData *data = nullptr;
 
     // make sets?
     std::unordered_map<path, FileRecord *> explicit_dependencies;
@@ -100,7 +90,7 @@ struct SW_BUILDER_API FileRecord
     FileRecord(const FileRecord &);
     FileRecord &operator=(const FileRecord &);
 
-    bool isChanged();
+    bool isChanged(bool use_file_monitor = true);
     void load(const path &p = path());
     void destroy() { delete this; }
     void reset();
@@ -115,12 +105,13 @@ struct SW_BUILDER_API FileRecord
     //private:
         // if file info is updated during this run
     std::atomic_bool refreshed{ false };
+    std::atomic_bool saved{ false };
 
     /// get last write time of this file and all deps
     fs::file_time_type getMaxTime() const;
 
     /// returns true if file was changed
-    bool refresh();
+    bool refresh(bool use_file_monitor = true);
 
 private:
     std::weak_ptr<builder::Command> generator;

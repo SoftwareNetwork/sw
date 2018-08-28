@@ -8,23 +8,44 @@
 
 #include "db.h"
 
+#include <primitives/file_monitor.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "file_storage");
 
 namespace sw
 {
 
-FileDataStorage &getFileDataStorage()
+int useFileMonitor = 1;
+static Executor async_executor("async log writer", 1);
+
+primitives::filesystem::FileMonitor &get_file_monitor()
 {
-    static FileDataStorage fs;
-    return fs;
+    static primitives::filesystem::FileMonitor fm;
+    return fm;
+}
+
+FileStorage::file_holder::file_holder(const path &fn)
+    : f(fn, "ab")
+{
+    // goes first
+    // but maybe remove?
+    //if (setvbuf(f.getHandle(), NULL, _IONBF, 0) != 0)
+        //throw std::runtime_error("Cannot disable log buffering");
+
+    // Opening a file in append mode doesn't set the file pointer to the file's
+    // end on Windows. Do that explicitly.
+    fseek(f.getHandle(), 0, SEEK_END);
+}
+
+FileStorage::file_holder::~file_holder()
+{
+    error_code ec;
+    fs::remove(fn, ec);
 }
 
 FileStorage &getFileStorage(const String &config)
 {
-    // create first
-    getFileDataStorage();
-
     static std::mutex m;
     static std::map<String, FileStorage> fs;
     std::unique_lock lk(m);
@@ -34,82 +55,44 @@ FileStorage &getFileStorage(const String &config)
     return i->second;
 }
 
-FileDataStorage::FileDataStorage()
-{
-    load();
-}
-
-FileDataStorage::~FileDataStorage()
-{
-    try
-    {
-        save();
-    }
-    catch (...)
-    {
-        LOG_ERROR(logger, "Error during file db save");
-    }
-}
-
-void FileDataStorage::load()
-{
-    getDb().load(files);
-}
-
-void FileDataStorage::save()
-{
-    getDb().save(files);
-}
-
-FileData *FileDataStorage::registerFile(const File &in_f)
-{
-    // fs path hash on windows differs for lower and upper cases
-#ifdef CPPAN_OS_WINDOWS
-    // very slow
-    //((File*)&in_f)->file = boost::to_lower_copy(normalize_path(in_f.file));
-    ((File*)&in_f)->file = normalize_path(in_f.file);
-#endif
-
-    auto r = files.insert(in_f.file);
-    if (r.second)
-    {
-        //r.first->load(in_f.file);
-        if (!in_f.file.empty())
-            r.first->file = in_f.file;
-    }
-    //else
-        //r.first->isChanged();
-    in_f.r->data = r.first;
-    return r.first;
-}
-
-FileData *FileDataStorage::registerFile(const path &in_f)
-{
-    auto r = files.insert(in_f);
-    if (r.second)
-    {
-        if (!in_f.empty())
-            r.first->file = in_f;
-    }
-    return r.first;
-}
-
 FileStorage::FileStorage(const String &config)
     : config(config)
 {
     load();
 }
 
+FileStorage::file_holder *FileStorage::getLog()
+{
+    if (!async_log)
+        async_log = std::make_unique<file_holder>(getFilesLogFileName(config));
+    return async_log.get();
+}
+
 FileStorage::~FileStorage()
 {
     try
     {
+        async_log.reset();
         save();
     }
     catch (...)
     {
         LOG_ERROR(logger, "Error during file db save");
     }
+}
+
+void FileStorage::async_file_log(const FileRecord *r)
+{
+    static std::vector<uint8_t> v;
+    async_executor.push([this, r]
+    {
+        getDb().write(v, *r);
+
+        //fseek(f.f, 0, SEEK_END);
+        auto l = getLog();
+        fwrite(&v[0], v.size(), 1, l->f.getHandle());
+        fflush(l->f.getHandle());
+    });
 }
 
 void FileStorage::load()
@@ -161,6 +144,19 @@ FileRecord *FileStorage::registerFile(const File &in_f)
     //else
         //r.first->isChanged();
     in_f.r = r.first;
+
+    if (useFileMonitor)
+    {
+        get_file_monitor().addFile(in_f.file, [this](const path &f)
+        {
+            auto &r = File(f, *this).getFileRecord();
+            error_code ec;
+            if (fs::exists(r.file, ec))
+                r.last_write_time = fs::last_write_time(f);
+            else
+                r.refreshed = false;
+        });
+    }
 
     r.first->fs = this;
     return r.first;

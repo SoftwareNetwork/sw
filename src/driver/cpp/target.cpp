@@ -1579,6 +1579,24 @@ bool NativeExecutedTarget::prepare()
 {
     //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
 
+    /*{
+        auto is_changed = [this](const path &p)
+        {
+            if (p.empty())
+                return false;
+            return !(fs::exists(p) && File(p, *getSolution()->fs).isChanged());
+        };
+
+        auto i = getImportLibrary();
+        auto o = getOutputFile();
+
+        if (!is_changed(i) && !is_changed(o))
+        {
+            std::cout << "skipping prepare for: " << pkg.toString() << "\n";
+            return false;
+        }
+    }*/
+
     switch (prepare_pass)
     {
     case 1:
@@ -1671,13 +1689,13 @@ bool NativeExecutedTarget::prepare()
     case 3:
     // inheritance
     {
-        /*struct H
+        struct H
         {
             size_t operator()(const DependencyPtr &p) const
             {
                 return std::hash<Dependency>()(*p);
             }
-        };*/
+        };
         struct L
         {
             size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
@@ -1688,8 +1706,10 @@ bool NativeExecutedTarget::prepare()
 
         //DEBUG_BREAK_IF_STRING_HAS(pkg.toString(), "protoc-");
 
+        // why such sorting (L)?
         //std::unordered_map<DependencyPtr, InheritanceType, H> deps;
         std::map<DependencyPtr, InheritanceType, L> deps;
+        //std::map<DependencyPtr, InheritanceType> deps;
         std::vector<DependencyPtr> deps_ordered;
 
         // set our initial deps

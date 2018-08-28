@@ -322,7 +322,7 @@ void Command::execute1(std::error_code *ec)
 {
     prepare();
 
-    //DEBUG_BREAK_IF_STRING_HAS(name, "CommandLine.cpp");
+    //DEBUG_BREAK_IF_STRING_HAS(name, "gettext-runtime/intl/vasnprintf.c");
 
     if (!isOutdated())
     {

@@ -17,7 +17,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/dll.hpp>
 #include <primitives/executor.h>
-#include <primitives/file_monitor.h>
 #include <primitives/hash.h>
 #include <primitives/templates.h>
 #include <primitives/debug.h>
@@ -35,21 +34,14 @@ static cl::opt<bool> explain_outdated("explain-outdated", cl::desc("Explain outd
 namespace sw
 {
 
-bool useFileMonitor = true;
-
-primitives::filesystem::FileMonitor &get_file_monitor()
-{
-    static primitives::filesystem::FileMonitor fm;
-    return fm;
-}
+static Executor explain_executor("explain executor", 1);
 
 void explainMessage(const String &subject, bool outdated, const String &reason, const String &name)
 {
     if (!explain_outdated)
         return;
-    static Executor e(1);
     static std::ofstream o(CPPAN_FILES_EXPLAIN_FILE.string());
-    e.push([=]
+    explain_executor.push([=]
     {
         if (!outdated)
             return;
@@ -73,47 +65,6 @@ path getFilesLogFileName(const String &config)
     return p;
 }
 
-void async_file_log(const FileRecord *r)
-{
-    struct file_holder
-    {
-        ScopedFile f;
-        path fn;
-        file_holder(const path &fn) : f(fn, "ab")
-        {
-            // goes first
-            // but maybe remove?
-            if (setvbuf(f.getHandle(), NULL, _IONBF, 0) != 0)
-                throw std::runtime_error("Cannot disable log buffering");
-
-            // Opening a file in append mode doesn't set the file pointer to the file's
-            // end on Windows. Do that explicitly.
-            fseek(f.getHandle(), 0, SEEK_END);
-        }
-        ~file_holder()
-        {
-            error_code ec;
-            fs::remove(fn, ec);
-        }
-    };
-
-    // async write to log
-    {
-        static Executor e(1);
-        static auto fn = getFilesLogFileName(r->fs->config);
-        static file_holder f(fn);
-        static std::vector<uint8_t> v;
-        e.push([r]
-        {
-            getDb().write(v, *r);
-
-            //fseek(f.f, 0, SEEK_END);
-            fwrite(&v[0], v.size(), 1, f.f.getHandle());
-            fflush(f.f.getHandle());
-        });
-    }
-}
-
 File::File(FileStorage &s)
     : fs(&s)
 {
@@ -127,8 +78,8 @@ File::File(const path &p, FileStorage &s)
     if (!fs)
         throw std::runtime_error("Empty file storage");
     registerSelf();
-    if (r->data->file.empty())
-        r->data->file = file;
+    if (r->file.empty())
+        r->file = file;
 }
 
 File &File::operator=(const path &rhs)
@@ -143,7 +94,6 @@ void File::registerSelf() const
     if (r)
         return;
     fs->registerFile(*this);
-    getFileDataStorage().registerFile(*this);
 }
 
 std::unordered_set<std::shared_ptr<sw::builder::Command>> File::gatherDependentGenerators() const
@@ -257,7 +207,15 @@ FileRecord::FileRecord(const FileRecord &rhs)
 
 FileRecord &FileRecord::operator=(const FileRecord &rhs)
 {
-    data = rhs.data;
+    if (rhs.fs)
+        fs = rhs.fs;
+
+    file = rhs.file;
+    last_write_time = rhs.last_write_time;
+    size = rhs.size;
+    hash = rhs.hash;
+    flags = rhs.flags;
+
     generator = rhs.generator;
 
     explicit_dependencies = rhs.explicit_dependencies;
@@ -268,21 +226,15 @@ FileRecord &FileRecord::operator=(const FileRecord &rhs)
     return *this;
 }
 
-size_t FileData::getHash() const
+size_t FileRecord::getHash() const
 {
     auto k = std::hash<path>()(file);
     hash_combine(k, last_write_time.time_since_epoch().count());
     //hash_combine(k, size);
-    return k;
-}
-
-size_t FileRecord::getHash() const
-{
-    auto k = data->getHash();
     for (auto &[f, d] : explicit_dependencies)
-        hash_combine(k, d->data->last_write_time.time_since_epoch().count());
+        hash_combine(k, d->last_write_time.time_since_epoch().count());
     for (auto &[f, d] : implicit_dependencies)
-        hash_combine(k, d->data->last_write_time.time_since_epoch().count());
+        hash_combine(k, d->last_write_time.time_since_epoch().count());
     return k;
 }
 
@@ -296,26 +248,21 @@ void FileRecord::reset()
     }
 }
 
-bool FileData::load(const path &p)
+void FileRecord::load(const path &p)
 {
     if (!p.empty())
         file = p;
     if (file.empty())
-        return false;
+        return;
     if (!fs::exists(file))
-        return false;
-    last_write_time = fs::last_write_time(file);
+        return;
+    auto lwt = fs::last_write_time(file);
+    if (lwt < last_write_time)
+        return;
     //size = fs::file_size(file);
     // do not calc hashes on the first run
     // we do this on the first mismatch
     //hash = sha256(file);
-    return true;
-}
-
-void FileRecord::load(const path &p)
-{
-    if (!data->load(p))
-        return;
 
     // also update deps
     for (auto &[f, d] : explicit_dependencies)
@@ -333,10 +280,10 @@ void FileRecord::load(const path &p)
             d->load();
     }
 
-    async_file_log(this);
+    fs->async_file_log(this);
 }
 
-bool FileRecord::refresh()
+bool FileRecord::refresh(bool use_file_monitor)
 {
     bool r = false;
     if (!refreshed.compare_exchange_strong(r, true))
@@ -348,77 +295,71 @@ bool FileRecord::refresh()
     {
         if (d == this)
             continue;
-        d->refresh();
+        d->refresh(use_file_monitor);
     }
     for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this)
             continue;
-        d->refresh();
+        d->refresh(use_file_monitor);
     }
 
-    if (!fs::exists(data->file))
+    if (!fs::exists(file))
     {
-        EXPLAIN_OUTDATED("file", true, "not found", data->file.u8string());
+        EXPLAIN_OUTDATED("file", true, "not found", file.u8string());
         return true;
-    }
-
-    if (useFileMonitor)
-    {
-        if (!fs)
-            throw std::runtime_error("Empty file storage");
-        get_file_monitor().addFile(data->file, [fs = fs](const path &f)
-        {
-            auto &r = File(f, *fs).getFileRecord();
-            error_code ec;
-            if (fs::exists(r.data->file, ec))
-                r.data->last_write_time = fs::last_write_time(f);
-            else
-                r.refreshed = false;
-        });
     }
 
     bool result = false;
 
-    auto t = fs::last_write_time(data->file);
-    if (t > data->last_write_time)
+    auto t = fs::last_write_time(file);
+    if (t > last_write_time)
     {
-        if (data->last_write_time.time_since_epoch().count() == 0)
-            EXPLAIN_OUTDATED("file", true, "last_write_time changed", data->file.u8string());
+        if (last_write_time.time_since_epoch().count() == 0)
+            EXPLAIN_OUTDATED("file", true, "last_write_time changed", file.u8string());
         else
-            EXPLAIN_OUTDATED("file", true, "empty last_write_time", data->file.u8string());
-        data->last_write_time = t;
+            EXPLAIN_OUTDATED("file", true, "empty last_write_time", file.u8string());
+        last_write_time = t;
         result = true;
     }
 
-    //async_file_log(this);
+    //if (use_file_monitor)
+        //fs->async_file_log(this);
 
     return result;
 }
 
-bool FileRecord::isChanged()
+bool FileRecord::isChanged(bool use_file_monitor)
 {
     auto is_changed = [this]()
     {
         auto t = getMaxTime();
-        if (t > data->last_write_time)
+        if (t > last_write_time)
         {
-            data->last_write_time = t;
+            last_write_time = t;
             return true;
         }
         return false;
     };
 
-    auto c = refresh();
+    auto c = refresh(use_file_monitor);
     if (c)
     {
-        EXPLAIN_OUTDATED("file", true, "changed after refresh", data->file.u8string());
+        EXPLAIN_OUTDATED("file", true, "changed after refresh", file.u8string());
     }
     c |= is_changed();
     if (c)
     {
-        EXPLAIN_OUTDATED("file", true, "changed after checking max time", data->file.u8string());
+        EXPLAIN_OUTDATED("file", true, "changed after checking max time", file.u8string());
     }
+
+    if (use_file_monitor && c)
+        fs->async_file_log(this);
+
+    /*bool r = false;
+    if (use_file_monitor && saved.compare_exchange_strong(r, true))
+        fs->async_file_log(this);*/
+
     return c;
 }
 
@@ -434,7 +375,7 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
                  !gold->isExecuted() &&
                  !gold->maybe_unused &&
                  gold->getHash() != g->getHash()))
-        throw std::runtime_error("Setting generator twice on file: " + data->file.u8string());
+        throw std::runtime_error("Setting generator twice on file: " + file.u8string());
     //generator.reset();
     generator = g;
     generated_ = true;
@@ -452,7 +393,7 @@ bool FileRecord::isGenerated() const
 
 fs::file_time_type FileRecord::getMaxTime() const
 {
-    auto m = data->last_write_time;
+    auto m = last_write_time;
     for (auto &[f, d] : explicit_dependencies)
     {
         if (d == this)
@@ -461,7 +402,7 @@ fs::file_time_type FileRecord::getMaxTime() const
         if (dm > m)
         {
             m = dm;
-            EXPLAIN_OUTDATED("file", true, "explicit " + f.u8string() + " lwt is greater", data->file.u8string());
+            EXPLAIN_OUTDATED("file", true, "explicit " + f.u8string() + " is newer", file.u8string());
         }
     }
     for (auto &[f, d] : implicit_dependencies)
@@ -472,20 +413,15 @@ fs::file_time_type FileRecord::getMaxTime() const
         if (dm > m)
         {
             m = dm;
-            EXPLAIN_OUTDATED("file", true, "implicit " + f.u8string() + " lwt is greater", data->file.u8string());
+            EXPLAIN_OUTDATED("file", true, "implicit " + f.u8string() + " is newer", file.u8string());
         }
     }
     return m;
 }
 
-bool FileData::operator<(const FileData &r) const
-{
-    return last_write_time < r.last_write_time;
-}
-
 bool FileRecord::operator<(const FileRecord &r) const
 {
-    return *data < *r.data;
+    return last_write_time < r.last_write_time;
 }
 
 }

@@ -1484,6 +1484,7 @@ path Build::build(const path &fn)
 void Build::build_and_load(const path &fn)
 {
     build(fn);
+    fs->save(); // remove?
     load(dll);
 }
 
