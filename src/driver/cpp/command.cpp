@@ -13,10 +13,18 @@ DECLARE_STATIC_LOGGER(logger, "command");
 namespace sw::driver::cpp
 {
 
+Command::Command()
+{
+}
+
 Command::Command(::sw::FileStorage &fs)
     : Base::Command(fs)
 {
 
+}
+
+Command::~Command()
+{
 }
 
 void Command::prepare()
@@ -24,9 +32,12 @@ void Command::prepare()
     // evaluate lazy args
     for (auto &[pos, f] : callbacks)
         args[pos] = f();
+    for (auto &f : actions)
+        f();
 
     // early cleanup
     callbacks.clear();
+    actions.clear();
 
     Base::prepare();
 }
@@ -36,11 +47,7 @@ path Command::getProgram() const
     auto d = dependency.lock();
     path p;
     if (base)
-    {
-        p = base->file;
-        if (p.empty())
-            throw std::runtime_error("Empty program from base program");
-    }
+        p = Base::getProgram();
     else if (d)
     {
         if (!d->target.lock())
@@ -50,11 +57,7 @@ path Command::getProgram() const
             throw std::runtime_error("Empty program from package: " + d->target.lock()->getPackage().target_name);
     }
     else
-    {
-        p = program;
-        if (p.empty())
-            throw std::runtime_error("Empty program: was not set");
-    }
+        p = Base::getProgram();
     return p;
 }
 
@@ -72,6 +75,11 @@ void Command::pushLazyArg(LazyCallback f)
 {
     callbacks[(int)args.size()] = f;
     args.push_back("");
+}
+
+void Command::addLazyAction(LazyAction f)
+{
+    actions.push_back(f);
 }
 
 ///
@@ -103,17 +111,19 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
     if (!all.empty() && all[0]->PostponeFileResolving)
         return cb;
 
-    auto p = t.p;
-    if (p.is_relative() && !all.empty())
-        p = all[0]->SourceDir / p;
-
-    if (!cb.stopped)
-        cb.c->args.push_back(p.u8string());
-    cb.c->addInput(p);
-    if (t.add_to_targets)
+    for (auto p : t.files)
     {
-        for (auto tgt : all)
-            *tgt += p;
+        if (p.is_relative() && !all.empty())
+            p = all[0]->SourceDir / p;
+
+        if (!cb.stopped)
+            cb.c->args.push_back(t.prefix + p.u8string());
+        cb.c->addInput(p);
+        if (t.add_to_targets)
+        {
+            for (auto tgt : all)
+                *tgt += p;
+        }
     }
     for (auto tgt : t.targets)
         tgt->Storage.push_back(cb.c);
@@ -126,13 +136,36 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
+    for (auto p : t.files)
+    {
+        if (p.is_relative() && !all.empty())
+            p = all[0]->BinaryDir / p;
+
+        if (!cb.stopped)
+            cb.c->args.push_back(t.prefix + p.u8string());
+        cb.c->addOutput(p);
+        if (t.add_to_targets)
+        {
+            for (auto tgt : all)
+                *tgt += p;
+        }
+    }
+    for (auto tgt : t.targets)
+        tgt->Storage.push_back(cb.c);
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
+{
+    decltype(cb.targets) all;
+    all.insert(all.end(), cb.targets.begin(), cb.targets.end());
+    all.insert(all.end(), t.targets.begin(), t.targets.end());
+
     auto p = t.p;
     if (p.is_relative() && !all.empty())
-        p = all[0]->BinaryDir / p;
+        p = all[0]->SourceDir / p;
 
-    if (!cb.stopped)
-        cb.c->args.push_back(p.u8string());
-    cb.c->addOutput(p);
+    cb.c->redirectStdin(p);
     if (t.add_to_targets)
     {
         for (auto tgt : all)
@@ -206,6 +239,12 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_dep &t)
             d->Dummy = true;
         }
     }
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_env &t)
+{
+    cb.c->environment[t.k] = t.v;
     return cb;
 }
 

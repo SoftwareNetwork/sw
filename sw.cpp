@@ -41,7 +41,7 @@ void build(Solution &s)
 
     auto &manager = p.addTarget<LibraryTarget>("manager");
     manager.ApiName = "SW_MANAGER_API";
-    //manager.ExportIfStatic = true;
+    manager.ExportIfStatic = true;
     manager.CPPVersion = CPPLanguageStandard::CPP17;
     manager.Public += support, protos,
         "pub.egorpugin.primitives.yaml-master"_dep,

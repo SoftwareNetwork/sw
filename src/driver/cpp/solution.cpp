@@ -773,9 +773,15 @@ void Solution::prepare()
 
         Local = false;
 
+        SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->prefix));
+        if (cfgs.size() != 1)
+            sr.restoreNow(true);
+
         getModuleStorage(base_ptr).get(dll).check(Checks);
         performChecks();
         getModuleStorage(base_ptr).get(dll).build(*this);
+
+        sr.restoreNow(true);
 
         int retries = 0;
         while (!ud.empty())
@@ -1091,6 +1097,15 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
     return lib;
 }
 
+static void addDeps(NativeExecutedTarget &lib, Solution &solution)
+{
+    lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.version");
+    lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.filesystem");
+
+    auto d = lib + solution.getTarget<NativeTarget>("sw.client.driver.cpp");
+    d->IncludeDirectoriesOnly = true;
+}
+
 FilesMap Build::build_configs_separate(const Files &files)
 {
     FilesMap r;
@@ -1233,9 +1248,7 @@ FilesMap Build::build_configs_separate(const Files &files)
             //#endif
         }
 
-        lib += solution.getTarget<NativeTarget>("sw.client.manager");
-        auto d = lib + solution.getTarget<NativeTarget>("sw.client.driver.cpp");
-        d->IncludeDirectoriesOnly = true;
+        addDeps(lib, solution);
         for (auto &d : udeps)
             lib += std::make_shared<Dependency>(d);
 
@@ -1461,9 +1474,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         //#endif
     }
 
-    lib += solution.getTarget<NativeTarget>("sw.client.manager");
-    auto d = lib + solution.getTarget<NativeTarget>("sw.client.driver.cpp");
-    d->IncludeDirectoriesOnly = true;
+    addDeps(lib, solution);
 
     auto i = solution.children.find(lib.pkg);
     solution.TargetsToBuild[i->first] = i->second;
@@ -1484,7 +1495,8 @@ path Build::build(const path &fn)
 void Build::build_and_load(const path &fn)
 {
     build(fn);
-    fs->save(); // remove?
+    //fs->save(); // remove?
+    //fs->reset();
     load(dll);
 }
 

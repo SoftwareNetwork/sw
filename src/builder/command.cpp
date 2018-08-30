@@ -129,8 +129,16 @@ bool CommandStorage::isOutdated(const sw::builder::Command &c)
 namespace builder
 {
 
+Command::Command()
+{
+}
+
 Command::Command(::sw::FileStorage &fs)
     : fs(&fs)
+{
+}
+
+Command::~Command()
 {
 }
 
@@ -204,20 +212,10 @@ path Command::getProgram() const
         if (p.empty())
             throw std::runtime_error("Empty program from base program");
     }
-    /*else if (dependency)
-    {
-        if (!dependency->target)
-            throw std::runtime_error("Command dependency target was not resolved");
-        p = dependency->target->getOutputFile();
-        if (p.empty())
-            throw std::runtime_error("Empty program from package: " + dependency->target->getPackage().target_name);
-    }*/
-    else
-    {
+    else if (!program.empty())
         p = program;
-        if (p.empty())
-            throw std::runtime_error("Empty program: was not set");
-    }
+    else
+        p = Base::getProgram();
     return p;
 }
 
@@ -258,6 +256,13 @@ void Command::addOutput(const Files &files)
         addOutput(f);
 }
 
+path Command::redirectStdin(const path &p)
+{
+    in.file = p;
+    addInput(p);
+    return p;
+}
+
 path Command::redirectStdout(const path &p)
 {
     out.file = p;
@@ -291,6 +296,7 @@ void Command::addInputOutputDeps()
     {
         File f(p, *fs);
         f.addExplicitDependency(inputs);
+        //f.addImplicitDependency(inputs);
     }
 }
 
@@ -322,7 +328,7 @@ void Command::execute1(std::error_code *ec)
 {
     prepare();
 
-    //DEBUG_BREAK_IF_STRING_HAS(name, "gettext-runtime/intl/vasnprintf.c");
+    //DEBUG_BREAK_IF_STRING_HAS(name, "tcl");
 
     if (!isOutdated())
     {
@@ -391,7 +397,7 @@ void Command::execute1(std::error_code *ec)
         auto t = get_temp_filename();
         auto fn = t.filename();
         t = t.parent_path();
-        rsp_file = t / "rsp" / fn;
+        rsp_file = t / getProgramName() / "rsp" / fn;
         rsp_file += ".rsp";
         make_rsp_file(rsp_file);
     }
@@ -404,7 +410,7 @@ void Command::execute1(std::error_code *ec)
         fs::remove(rsp_file, ec);
     };
 
-    auto make_error_string = [this, &rsp_file, &escape_cmd_arg, &make_rsp_file](const String &e)
+    auto make_error_string = [this, &rsp_file, &escape_cmd_arg, &make_rsp_file, &args_saved](const String &e)
     {
         postProcess(false);
 
@@ -428,31 +434,67 @@ void Command::execute1(std::error_code *ec)
             s += "\n";
             auto p = getDirectories().storage_dir_tmp / "rsp" / rsp_file;
             auto pbat = p;
+            String t;
+
 #ifdef _WIN32
             pbat += ".bat";
 #else
             pbat += ".sh";
 #endif
-            make_rsp_file(p);
+
             s += "pid = " + std::to_string(pid) + "\n";
             s += "command is copied to " + p.u8string() + "\n";
-            String t;
+
 #ifdef _WIN32
-            t += "@";
-#endif
-            t += "\"" + program.u8string() + "\" @" + p.filename().string() + " ";
-#ifdef _WIN32
-            t += "%*";
+            t += "@echo off\n";
+            t += "setlocal";
 #else
-            t += "$*";
+            t += "#!/bin/sh";
 #endif
+            t += "\n";
+
+            for (auto &[k, v] : environment)
+            {
+#ifdef _WIN32
+                t += "set";
+#endif
+                t += " " + k + "=" + v + "\n";
+            }
+
+            if (!working_directory.empty())
+                t += "cd " + working_directory.u8string() + "\n";
+
+            t += "\"" + program.u8string() + "\" ";
+            if (needsResponseFile())
+            {
+                make_rsp_file(p);
+                t += "@" + p.filename().string() + " ";
+            }
+            else
+            {
+                for (auto &a : args_saved)
+                    t += "\"" + escape_cmd_arg(a) + "\" ";
+            }
+#ifdef _WIN32
+            t += "%";
+#else
+            t += "$";
+#endif
+            t += "* ";
+
+            if (!in.file.empty())
+                t += "< " + in.file.u8string() + " ";
+            if (!out.file.empty())
+                t += "> " + out.file.u8string() + " ";
+            if (!err.file.empty())
+                t += "2> " + err.file.u8string() + " ";
+
+            t += "\n";
+
             write_file(pbat, t);
             fs::permissions(pbat,
-                            fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
-                            fs::perm_options::add);
-
-            //s += "working directory:\n";
-            //s += "\"" + working_directory.u8string() + "\"";
+                fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
+                fs::perm_options::add);
         }
         return s;
     };
@@ -492,7 +534,7 @@ void Command::execute1(std::error_code *ec)
             else*/
             //f.getFileRecord().load();
             auto &fr = f.getFileRecord();
-            fr.refreshed = false;
+            fr.data->refreshed = false;
             fr.isChanged();
         }
         for (auto &i : outputs)
@@ -503,7 +545,7 @@ void Command::execute1(std::error_code *ec)
             else*/
             //f.getFileRecord().load();
             auto &fr = f.getFileRecord();
-            fr.refreshed = false;
+            fr.data->refreshed = false;
             fr.isChanged();
         }
 
@@ -585,6 +627,20 @@ void Command::setProgram(std::shared_ptr<Program> p)
     base = p;
 }
 
+Files Command::getGeneratedDirs() const
+{
+    Files dirs;
+    for (auto &d : intermediate)
+        dirs.insert(d.parent_path());
+    for (auto &d : outputs)
+        dirs.insert(d.parent_path());
+    return dirs;
+}
+
+}
+
+ExecuteCommand::~ExecuteCommand()
+{
 }
 
 size_t ExecuteCommand::getHash() const

@@ -71,16 +71,28 @@ enum FileFlags
     //ffNotExists     = 0,
 };
 
+struct FileData
+{
+    fs::file_time_type last_write_time;
+    int64_t size = -1;
+    String hash;
+    SomeFlags flags;
+
+    // if file info is updated during this run
+    std::atomic_bool refreshed{ false };
+
+    FileData() = default;
+    FileData(const FileData &);
+    FileData &operator=(const FileData &rhs);
+};
+
 // config specific
 struct SW_BUILDER_API FileRecord
 {
     FileStorage *fs = nullptr;
 
     path file;
-    fs::file_time_type last_write_time;
-    int64_t size = -1;
-    String hash;
-    SomeFlags flags;
+    FileData *data = nullptr;
 
     // make sets?
     std::unordered_map<path, FileRecord *> explicit_dependencies;
@@ -98,13 +110,12 @@ struct SW_BUILDER_API FileRecord
     bool isGenerated() const;
     bool isGeneratedAtAll() const { return generated_; }
     void setGenerator(const std::shared_ptr<builder::Command> &);
+    void setGenerated(bool g = true) { generated_ = g; }
     std::shared_ptr<builder::Command> getGenerator() const;
 
     bool operator<(const FileRecord &r) const;
 
     //private:
-        // if file info is updated during this run
-    std::atomic_bool refreshed{ false };
     std::atomic_bool saved{ false };
 
     /// get last write time of this file and all deps

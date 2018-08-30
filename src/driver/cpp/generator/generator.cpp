@@ -402,7 +402,7 @@ void VSGenerator::generate(const Build &b)
 
         auto pp = p.ppath.parent();
         auto &prnts = t->Local ? local_parents : parents;
-        while (prnts.find(pp) == prnts.end())
+        while (!pp.empty() && prnts.find(pp) == prnts.end())
             pp = pp.parent();
         ctx.addProject(p.target_name, projects_dir, pp);
     }
@@ -430,7 +430,7 @@ void VSGenerator::generate(const Build &b)
         // project name helper
         auto pp = p.ppath.parent();
         auto &prnts = t->Local ? local_parents : parents;
-        while (prnts.find(pp) == prnts.end())
+        while (!pp.empty() && prnts.find(pp) == prnts.end())
             pp = pp.parent();
 
         pctx.beginBlock("PropertyGroup", { {"Label", "Globals"} });

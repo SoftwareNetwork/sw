@@ -40,7 +40,7 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
 {
     if (!explain_outdated)
         return;
-    static std::ofstream o(CPPAN_FILES_EXPLAIN_FILE.string());
+    static std::ofstream o(CPPAN_FILES_EXPLAIN_FILE.string()); // goes first
     explain_executor.push([=]
     {
         if (!outdated)
@@ -200,6 +200,23 @@ bool File::isGeneratedAtAll() const
         return false;
 }*/
 
+FileData::FileData(const FileData &rhs)
+{
+    *this = rhs;
+}
+
+FileData &FileData::operator=(const FileData &rhs)
+{
+    last_write_time = rhs.last_write_time;
+    size = rhs.size;
+    hash = rhs.hash;
+    flags = rhs.flags;
+
+    refreshed = rhs.refreshed.load();
+
+    return *this;
+}
+
 FileRecord::FileRecord(const FileRecord &rhs)
 {
     *this = rhs;
@@ -211,17 +228,12 @@ FileRecord &FileRecord::operator=(const FileRecord &rhs)
         fs = rhs.fs;
 
     file = rhs.file;
-    last_write_time = rhs.last_write_time;
-    size = rhs.size;
-    hash = rhs.hash;
-    flags = rhs.flags;
+    data = rhs.data;
 
     generator = rhs.generator;
 
     explicit_dependencies = rhs.explicit_dependencies;
     implicit_dependencies = rhs.implicit_dependencies;
-
-    refreshed = rhs.refreshed.load();
 
     return *this;
 }
@@ -229,12 +241,12 @@ FileRecord &FileRecord::operator=(const FileRecord &rhs)
 size_t FileRecord::getHash() const
 {
     auto k = std::hash<path>()(file);
-    hash_combine(k, last_write_time.time_since_epoch().count());
+    hash_combine(k, data->last_write_time.time_since_epoch().count());
     //hash_combine(k, size);
     for (auto &[f, d] : explicit_dependencies)
-        hash_combine(k, d->last_write_time.time_since_epoch().count());
+        hash_combine(k, d->data->last_write_time.time_since_epoch().count());
     for (auto &[f, d] : implicit_dependencies)
-        hash_combine(k, d->last_write_time.time_since_epoch().count());
+        hash_combine(k, d->data->last_write_time.time_since_epoch().count());
     return k;
 }
 
@@ -246,6 +258,8 @@ void FileRecord::reset()
         //if (!generator.expired())
             //generator.reset();
     }
+
+    data->refreshed = false;
 }
 
 void FileRecord::load(const path &p)
@@ -257,7 +271,7 @@ void FileRecord::load(const path &p)
     if (!fs::exists(file))
         return;
     auto lwt = fs::last_write_time(file);
-    if (lwt < last_write_time)
+    if (lwt < data->last_write_time)
         return;
     //size = fs::file_size(file);
     // do not calc hashes on the first run
@@ -286,8 +300,10 @@ void FileRecord::load(const path &p)
 bool FileRecord::refresh(bool use_file_monitor)
 {
     bool r = false;
-    if (!refreshed.compare_exchange_strong(r, true))
+    if (!data->refreshed.compare_exchange_strong(r, true))
         return false;
+
+    //DEBUG_BREAK_IF_PATH_HAS(file, "tclOOStubLib.c.45b4313d.obj");
 
     // in any case refresh *all* deps
     // do it first, because we might exit early
@@ -313,13 +329,13 @@ bool FileRecord::refresh(bool use_file_monitor)
     bool result = false;
 
     auto t = fs::last_write_time(file);
-    if (t > last_write_time)
+    if (t > data->last_write_time)
     {
-        if (last_write_time.time_since_epoch().count() == 0)
+        if (data->last_write_time.time_since_epoch().count() == 0)
             EXPLAIN_OUTDATED("file", true, "last_write_time changed", file.u8string());
         else
             EXPLAIN_OUTDATED("file", true, "empty last_write_time", file.u8string());
-        last_write_time = t;
+        data->last_write_time = t;
         result = true;
     }
 
@@ -334,9 +350,9 @@ bool FileRecord::isChanged(bool use_file_monitor)
     auto is_changed = [this]()
     {
         auto t = getMaxTime();
-        if (t > last_write_time)
+        if (t > data->last_write_time)
         {
-            last_write_time = t;
+            data->last_write_time = t;
             return true;
         }
         return false;
@@ -372,10 +388,11 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
 
     auto gold = generator.lock();
     if (gold && (gold != g &&
-                 !gold->isExecuted() &&
-                 !gold->maybe_unused &&
-                 gold->getHash() != g->getHash()))
-        throw std::runtime_error("Setting generator twice on file: " + file.u8string());
+        !gold->isExecuted() &&
+        !gold->maybe_unused &&
+        gold->getHash() != g->getHash()))
+        ;
+        //throw std::runtime_error("Setting generator twice on file: " + file.u8string());
     //generator.reset();
     generator = g;
     generated_ = true;
@@ -393,7 +410,7 @@ bool FileRecord::isGenerated() const
 
 fs::file_time_type FileRecord::getMaxTime() const
 {
-    auto m = last_write_time;
+    auto m = data->last_write_time;
     for (auto &[f, d] : explicit_dependencies)
     {
         if (d == this)
@@ -421,7 +438,7 @@ fs::file_time_type FileRecord::getMaxTime() const
 
 bool FileRecord::operator<(const FileRecord &r) const
 {
-    return last_write_time < r.last_write_time;
+    return data->last_write_time < r.data->last_write_time;
 }
 
 }

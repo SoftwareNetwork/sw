@@ -108,6 +108,7 @@ struct SW_DRIVER_CPP_API SourceFile : File
 {
     bool created = true;
     bool skip = false;
+    Strings args;
 
     SourceFile(const path &input, FileStorage &fs);
     SourceFile(const SourceFile &) = default;

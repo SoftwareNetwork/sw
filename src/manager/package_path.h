@@ -80,6 +80,8 @@ struct PathBase : protected std::vector<PathElement>
 
     ThisType parent() const
     {
+        if (empty())
+            return {};
         return { begin(), end() - 1 };
     }
 
@@ -194,7 +196,7 @@ struct InsecureSplitablePath : PathBase<ThisType>
     {
         if (!e.empty())
             Base::push_back(e);
-        return *this;
+        return (ThisType &)*this;
     }
 };
 

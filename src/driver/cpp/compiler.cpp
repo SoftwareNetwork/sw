@@ -22,6 +22,14 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler");
 
+#define MAKE_COMMAND(t)             \
+    auto c = std::make_shared<t>(); \
+    c->fs = fs
+
+#define MAKE_COMMAND_WITH_FILE(t) \
+    MAKE_COMMAND(t);              \
+    c->file.fs = fs
+
 static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
 
 namespace sw
@@ -814,6 +822,9 @@ static void printDefsAndIdirs(driver::cpp::Command *c, V &v, const GS &gs)
                "-I"
            #endif
                );
+
+    print_idir(v.System.CompileOptions, "");
+    print_idir(v.CompileOptions, "");
 }
 
 Version VisualStudio::gatherVersion(const path &program) const
@@ -846,11 +857,6 @@ std::shared_ptr<builder::Command> VisualStudioASMCompiler::getCommand() const
     {
         File file;
 
-        VSAsmCommand(FileStorage &fs)
-            : Command(fs), file(fs)
-        {
-        }
-
         virtual void postProcess(bool)
         {
             // filter out includes and file name
@@ -882,7 +888,7 @@ std::shared_ptr<builder::Command> VisualStudioASMCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    auto c = std::make_shared<VSAsmCommand>(*fs);
+    MAKE_COMMAND_WITH_FILE(VSAsmCommand);
 
     if (file.filename() == "ml64.exe")
         ((VisualStudioASMCompiler*)this)->SafeSEH = false;
@@ -937,11 +943,6 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
     {
         File file;
 
-        VSCompilerCommand(FileStorage &fs)
-            : Command(fs), file(fs)
-        {
-        }
-
         virtual void postProcess(bool)
         {
             // filter out includes and file name
@@ -973,7 +974,7 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    auto c = std::make_shared<VSCompilerCommand>(*fs);
+    MAKE_COMMAND_WITH_FILE(VSCompilerCommand);
 
     if (InputFile)
     {
@@ -1073,11 +1074,6 @@ std::shared_ptr<builder::Command> ClangCompiler::getCommand() const
         File file;
         path deps_file;
 
-        ClangCompilerCommand(FileStorage &fs)
-            : Command(fs), file(fs)
-        {
-        }
-
         virtual void postProcess(bool ok)
         {
             if (!ok || deps_file.empty())
@@ -1106,7 +1102,7 @@ std::shared_ptr<builder::Command> ClangCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    auto c = std::make_shared<ClangCompilerCommand>(*fs);
+    MAKE_COMMAND_WITH_FILE(ClangCompilerCommand);
 
     if (InputFile)
     {
@@ -1170,11 +1166,6 @@ std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
     {
         File file;
 
-        VSCompilerCommand(FileStorage &fs)
-            : Command(fs), file(fs)
-        {
-        }
-
         virtual void postProcess(bool)
         {
             // filter out includes and file name
@@ -1206,7 +1197,7 @@ std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    auto c = std::make_shared<VSCompilerCommand>(*fs);
+    MAKE_COMMAND_WITH_FILE(VSCompilerCommand);
 
     if (InputFile)
     {
@@ -1301,11 +1292,6 @@ std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
         File file;
         path deps_file;
 
-        GNUAsmCommand(FileStorage &fs)
-            : Command(fs), file(fs)
-        {
-        }
-
         virtual void postProcess(bool ok)
         {
             if (!ok || deps_file.empty())
@@ -1338,7 +1324,7 @@ std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    auto c = std::make_shared<GNUAsmCommand>(*fs);
+    MAKE_COMMAND_WITH_FILE(GNUAsmCommand);
 
     if (InputFile)
     {
@@ -1392,11 +1378,6 @@ std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
         File file;
         path deps_file;
 
-        GNUCompilerCommand(FileStorage &fs)
-            : Command(fs), file(fs)
-        {
-        }
-
         virtual void postProcess(bool ok)
         {
             if (!ok || deps_file.empty())
@@ -1429,7 +1410,7 @@ std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    auto c = std::make_shared<GNUCompilerCommand>(*fs);
+    MAKE_COMMAND_WITH_FILE(GNUCompilerCommand);
 
     if (InputFile)
     {
@@ -1569,7 +1550,7 @@ std::shared_ptr<builder::Command> VisualStudioLibraryTool::getCommand() const
     //LinkDirectories() = gatherLinkDirectories();
     //LinkLibraries() = gatherLinkLibraries();
 
-    auto c = std::make_shared<driver::cpp::Command>(*fs);
+    MAKE_COMMAND(driver::cpp::Command);
 
     //c->out.capture = true;
     c->base = clone();
@@ -1703,7 +1684,7 @@ std::shared_ptr<builder::Command> GNULinker::getCommand() const
     //LinkDirectories() = gatherLinkDirectories();
     ((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
 
-    auto c = std::make_shared<driver::cpp::Command>(*fs);
+    MAKE_COMMAND(driver::cpp::Command);
 
     //c->out.capture = true;
     c->base = clone();
@@ -1788,7 +1769,7 @@ std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
     //LinkDirectories() = gatherLinkDirectories();
     //LinkLibraries() = gatherLinkLibraries();
 
-    auto c = std::make_shared<driver::cpp::Command>(*fs);
+    MAKE_COMMAND(driver::cpp::Command);
 
     //c->out.capture = true;
     c->base = clone();

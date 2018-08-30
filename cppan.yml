@@ -277,7 +277,7 @@ projects:
         #static_only: true
         api_name:
             - SW_MANAGER_API
-        #export_if_static: true
+        export_if_static: true
 
         files:
             - include/sw/manager/.*

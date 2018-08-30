@@ -27,8 +27,12 @@ namespace sw
 
 using primitives::version::Version;
 
+#pragma warning(push)
+#pragma warning(disable:4275) // warning C4275: non dll-interface struct 'primitives::Command' used as base for dll-interface struct 'sw::builder::Command'
+
 struct SW_MANAGER_API VersionRange : primitives::version::VersionRange
 {
+#pragma warning(pop)
     using base = primitives::version::VersionRange;
 
     using base::base;

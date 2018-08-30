@@ -29,7 +29,7 @@ struct CommandData
     size_t *current_command = nullptr;
     size_t total_commands = 0;
 
-    virtual ~CommandData() = default;
+    virtual ~CommandData() {}
 
     virtual void execute() = 0;
     virtual void prepare() = 0;
@@ -77,7 +77,7 @@ namespace builder
 #pragma warning(disable:4275) // warning C4275: non dll-interface struct 'primitives::Command' used as base for dll-interface struct 'sw::builder::Command'
 
 struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
-    CommandData<Command>, primitives::Command // hide?
+    CommandData<::sw::builder::Command>, primitives::Command // hide?
 {
 #pragma warning(pop)
     using Base = primitives::Command;
@@ -103,9 +103,9 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     };
     int maybe_unused = 0;
 
-    Command() = default;
+    Command();
     Command(::sw::FileStorage &fs);
-    virtual ~Command() = default;
+    virtual ~Command();
 
     void prepare() override;
     void execute() override { execute1(); }
@@ -116,7 +116,7 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
 
     String getName(bool short_name = false) const;
     void printLog() const;
-    virtual path getProgram() const;
+    path getProgram() const override;
     virtual ResourcePool *getResourcePool() { return nullptr; }
 
     virtual bool isOutdated() const;
@@ -132,6 +132,7 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     void addIntermediate(const Files &p);
     void addOutput(const path &p);
     void addOutput(const Files &p);
+    path redirectStdin(const path &p);
     path redirectStdout(const path &p);
     path redirectStderr(const path &p);
     virtual bool isHashable() const { return true; }
@@ -139,6 +140,7 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     size_t getHashAndSave() const;
     size_t calculateFilesHash() const;
     void updateFilesHash() const;
+    Files getGeneratedDirs() const;
 
 protected:
     bool prepared = false;
@@ -161,7 +163,7 @@ template struct SW_BUILDER_API CommandData<builder::Command>;
     void execute() override {}
 };*/
 
-struct ExecuteCommand : builder::Command
+struct SW_BUILDER_API ExecuteCommand : builder::Command
 {
     using F = std::function<void(void)>;
 
@@ -170,10 +172,14 @@ struct ExecuteCommand : builder::Command
     F f;
     bool always = false;
 
+    ExecuteCommand(const char *file, int line) : file(file), line(line) {}
     ExecuteCommand(FileStorage &fs, const char *file, int line) : Command(fs), file(file), line(line) {}
 
     //template <class F2>
     //ExecuteCommand(const char *file, int line, F2 &&f) : ExecuteCommand(file, line), f(f) {}
+
+    template <class F2>
+    ExecuteCommand(F2 &&f) : f(f) {}
 
     template <class F2>
     ExecuteCommand(FileStorage &fs, F2 &&f) : Command(fs), f(f) {}
@@ -194,27 +200,33 @@ struct ExecuteCommand : builder::Command
             addOutput(p);
     }*/
 
-    SW_BUILDER_API
-    virtual ~ExecuteCommand() = default;
+    virtual ~ExecuteCommand();
 
-    SW_BUILDER_API
     bool isOutdated() const override;
-
-    SW_BUILDER_API
     void execute() override;
-
-    SW_BUILDER_API
     void prepare() override;
-
-    SW_BUILDER_API
     size_t getHash() const override;
-
-    SW_BUILDER_API
     path getProgram() const override { return "ExecuteCommand"; };
 };
 
-#define MAKE_EXECUTE_COMMAND(fs) std::make_shared<ExecuteCommand>(fs, __FILE__, __LINE__)
+#define SW_INTERNAL_INIT_COMMAND(name, target) \
+    name->fs = (target).getSolution()->fs
 
+#define SW_MAKE_COMMAND(name, target)        \
+    auto name = std::make_shared<Command>(); \
+    SW_INTERNAL_INIT_COMMAND(name, target)
+
+#define SW_MAKE_COMMAND_AND_ADD(name, target) \
+    SW_MAKE_COMMAND(name, target);            \
+    target.Storage.push_back(name)
+
+#define SW_MAKE_EXECUTE_COMMAND(name, target)                         \
+    auto name = std::make_shared<ExecuteCommand>(__FILE__, __LINE__); \
+    SW_INTERNAL_INIT_COMMAND(name, target)
+
+#define SW_MAKE_EXECUTE_COMMAND_AND_ADD(name, target) \
+    SW_MAKE_EXECUTE_COMMAND(name, target);            \
+    (target).Storage.push_back(name)
 }
 
 namespace std

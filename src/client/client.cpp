@@ -221,6 +221,7 @@ int sw_main(int argc, char **argv)
 void stop()
 {
     getExecutor().join();
+    getFileStorages().clear();
 }
 
 void setup_log(const std::string &log_level)

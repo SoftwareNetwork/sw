@@ -9,8 +9,17 @@
 #include <directories.h>
 //#include <target.h>
 
+#include <sqlite_database.h>
+#include <sqlite3.h>
+
+void save_from_memory_to_file(const path &fn, sqlite3 *db);
+
+#include <primitives/date_time.h>
 #include <primitives/debug.h>
 #include <primitives/lock.h>
+
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "db_file");
 
 namespace sw
 {
@@ -20,7 +29,7 @@ static path getDir()
     return getUserDirectories().storage_dir_tmp / "db";
 }
 
-static void load(const path &fn, ConcurrentHashMap<path, FileRecord> &files, std::unordered_map<int64_t, std::unordered_set<int64_t>> &deps)
+static void load(FileStorage &fs, const path &fn, ConcurrentHashMap<path, FileRecord> &files, std::unordered_map<int64_t, std::unordered_set<int64_t>> &deps)
 {
     ScopedShareableFileLock lk(fn);
 
@@ -47,22 +56,23 @@ static void load(const path &fn, ConcurrentHashMap<path, FileRecord> &files, std
 
         auto kv = files.insert(h);
         kv.first->file = p;
+        kv.first->data = fs.registerFile(p)->data;
 
-        decltype(kv.first->last_write_time) lwt;
-        fread(&lwt, sizeof(kv.first->last_write_time), 1, fp);
+        decltype(kv.first->data->last_write_time) lwt;
+        fread(&lwt, sizeof(kv.first->data->last_write_time), 1, fp);
 
         sz = 0;
-        fread(&sz, sizeof(kv.first->size), 1, fp);
-
-        if (kv.first->last_write_time < lwt)
-        {
-            kv.first->last_write_time = lwt;
-            kv.first->size = sz;
-        }
+        fread(&sz, sizeof(kv.first->data->size), 1, fp);
 
         uint64_t flags;
         fread(&flags, sizeof(flags), 1, fp);
-        kv.first->flags = flags;
+
+        if (kv.first->data->last_write_time < lwt)
+        {
+            kv.first->data->last_write_time = lwt;
+            kv.first->data->size = sz;
+            kv.first->data->flags = flags;
+        }
 
         size_t n;
         fread(&n, sizeof(n), 1, fp);
@@ -84,14 +94,14 @@ Db &getDb()
     return *db;
 }
 
-void FileDb::load(const String &config, ConcurrentHashMap<path, FileRecord> &files) const
+void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const
 {
     std::unordered_map<int64_t, std::unordered_set<int64_t>> deps;
 
-    sw::load(getDir() += "." + config + ".files", files, deps);
-    sw::load(getFilesLogFileName(config), files, deps);
+    sw::load(fs, getDir() += "." + fs.config + ".files", files, deps);
+    sw::load(fs, getFilesLogFileName(fs.config), files, deps);
     error_code ec;
-    fs::remove(getFilesLogFileName(config), ec);
+    fs::remove(getFilesLogFileName(fs.config), ec);
 
     for (auto &[k, v] : deps)
     {
@@ -106,38 +116,130 @@ void FileDb::load(const String &config, ConcurrentHashMap<path, FileRecord> &fil
     }
 }
 
-void FileDb::save(const String &config, ConcurrentHashMap<path, FileRecord> &files) const
+void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const
 {
-    const auto f = getDir() += "." + config + ".files";
+    auto f = getDir() += "." + fs.config + ".files";
 
     // first, we load current copy of files
     ConcurrentHashMap<path, FileRecord> old;
-    load(config, old);
+    load(fs, old);
 
     // compare and renew our (actually any) copy
     for (auto i = old.getIterator(); i.isValid(); i.next())
     {
         auto &f = *i.getValue();
         auto[ptr, inserted] = files.insert(f.file, f);
-        if (!inserted && *ptr < f)
+        if (!inserted && f.data && *ptr < f)
             *ptr = f;
     }
 
-    // lock and write
-    ScopedFileLock lk(f);
-
-    ScopedFile fp(f, "wb");
-    std::vector<uint8_t> v;
-    for (auto i = files.getIterator(); i.isValid(); i.next())
+    ScopedTime t;
     {
-        auto &f = *i.getValue();
+        // lock and write
+        ScopedFileLock lk(f);
+        ScopedFile fp(f, "wb");
+        std::vector<uint8_t> v;
+        for (auto i = files.getIterator(); i.isValid(); i.next())
+        {
+            auto &f = *i.getValue();
+            if (!f.data)
+                continue;
 
-        //DEBUG_BREAK_IF_PATH_HAS(f.file, "gettext-runtime/intl/vasnprintf.c");
+            //DEBUG_BREAK_IF_PATH_HAS(f.file, "gettext-runtime/intl/vasnprintf.c");
 
-        f.isChanged(false); // update file info
-        write(v, f);
-        fwrite(&v[0], v.size(), 1, fp.getHandle());
+            //f.isChanged(false); // update file info
+            write(v, f);
+            fwrite(&v[0], v.size(), 1, fp.getHandle());
+        }
     }
+    LOG_INFO(logger, "save to file db time: " << t.getTimeFloat() << " s.");
+
+    ScopedTime t2;
+    {
+        int r;
+
+#define CHECK_RC(rc, ec) if (r != ec) return
+
+        sqlite3 *db;
+        r = sqlite3_open(":memory:", &db);
+        CHECK_RC(r, SQLITE_OK);
+
+        //r = sqlite3_db_config(db, SQLITE_CONFIG_SINGLETHREAD, 1);
+        //CHECK_RC(r, SQLITE_OK);
+
+        r = sqlite3_exec(db, R"xxx(
+CREATE TABLE "file" (
+    "file_id" INTEGER NOT NULL,
+    "path" TEXT,
+    "last_write_time" INTEGER,
+    "size" INTEGER,
+    "hash" INTEGER,
+    "flags" INTEGER,
+    PRIMARY KEY ("file_id")
+);
+
+CREATE TABLE "file_dependency" (
+    "file_id" INTEGER NOT NULL,
+    "dependency_file_id" INTEGER NOT NULL,
+    PRIMARY KEY ("file_id", "dependency_file_id"),
+    FOREIGN KEY ("file_id") REFERENCES "file" ("file_id") ON DELETE CASCADE ON UPDATE CASCADE
+    --, FOREIGN KEY ("dependency_file_id") REFERENCES "file" ("file_id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+)xxx", 0, 0, 0);
+        CHECK_RC(r, SQLITE_OK);
+
+        sqlite3_stmt *sf;
+        r = sqlite3_prepare_v2(db, "INSERT INTO file (path, last_write_time, size, hash) VALUES (?,?,?,?)", -1, &sf, 0);
+        CHECK_RC(r, SQLITE_OK);
+
+        sqlite3_stmt *sd;
+        r = sqlite3_prepare_v2(db, "INSERT INTO file_dependency VALUES (?,?)", -1, &sd, 0);
+        CHECK_RC(r, SQLITE_OK);
+
+        for (auto i = files.getIterator(); i.isValid(); i.next())
+        {
+            auto &f = *i.getValue();
+            if (!f.data)
+                continue;
+
+            sqlite3_bind_text(sf, 1, normalize_path(f.file).c_str(), -1, 0);
+            sqlite3_bind_int64(sf, 2, f.data->last_write_time.time_since_epoch().count());
+            sqlite3_bind_int64(sf, 3, f.data->size);
+            sqlite3_bind_int64(sf, 4, std::hash<path>()(f.file));
+
+            r = sqlite3_step(sf);
+            CHECK_RC(r, SQLITE_DONE);
+
+            r = sqlite3_reset(sf);
+            CHECK_RC(r, SQLITE_OK);
+
+            auto rowid = sqlite3_last_insert_rowid(db);
+
+            for (auto &[f, d] : f.implicit_dependencies)
+            {
+                sqlite3_bind_int64(sd, 1, rowid);
+                sqlite3_bind_int64(sd, 2, std::hash<path>()(d->file));
+
+                r = sqlite3_step(sd);
+                CHECK_RC(r, SQLITE_DONE);
+
+                r = sqlite3_reset(sd);
+                CHECK_RC(r, SQLITE_OK);
+            }
+        }
+
+        r = sqlite3_finalize(sf);
+        CHECK_RC(r, SQLITE_OK);
+
+        r = sqlite3_finalize(sd);
+        CHECK_RC(r, SQLITE_OK);
+
+        save_from_memory_to_file(f += ".sqlite", db);
+
+        r = sqlite3_close_v2(db);
+        CHECK_RC(r, SQLITE_OK);
+    }
+    LOG_INFO(logger, "save to sqlite db time: " << t2.getTimeFloat() << " s.");
 }
 
 template <class T>
@@ -163,9 +265,9 @@ void FileDb::write(std::vector<uint8_t> &v, const FileRecord &f) const
 
     write_int(v, std::hash<path>()(f.file));
     write_str(v, normalize_path(f.file));
-    write_int(v, f.last_write_time);
-    write_int(v, f.size);
-    write_int(v, f.flags.to_ullong());
+    write_int(v, f.data->last_write_time);
+    write_int(v, f.data->size);
+    write_int(v, f.data->flags.to_ullong());
 
     auto n = f.implicit_dependencies.size();
     write_int(v, n);

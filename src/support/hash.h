@@ -7,6 +7,7 @@
 #pragma once
 
 #include <primitives/hash.h>
+#include <primitives/hash_combine.h>
 
 SW_SUPPORT_API
 String shorten_hash(const String &data);

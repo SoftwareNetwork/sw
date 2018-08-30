@@ -220,6 +220,7 @@ void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const 
     // report conflicts?
 
     Definitions.insert(o.Definitions.begin(), o.Definitions.end());
+    CompileOptions.insert(CompileOptions.end(), o.CompileOptions.begin(), o.CompileOptions.end());
     if (s.merge_to_self)
     {
         unique_merge_containers(PreIncludeDirectories, o.PreIncludeDirectories);

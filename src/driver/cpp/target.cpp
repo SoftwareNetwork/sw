@@ -409,16 +409,20 @@ void Target::fileWriteOnce(const path &fn, const char *content, bool binary_dir)
 
 void Target::fileWriteOnce(const path &fn, const String &content, bool binary_dir) const
 {
+    path p;
+    if (fn.is_absolute())
+        p = fn;
+    else
+        p = (binary_dir ? BinaryDir : SourceDir) / fn;
+
+    // before resolving
+    File f(p, *getSolution()->fs);
+    f.getFileRecord().setGenerated();
+
     if (PostponeFileResolving)
         return;
 
-    path p;
-    if (fn.is_absolute())
-        ::sw::fileWriteOnce(p = fn, content, getPatchDir(binary_dir));
-    else
-        ::sw::fileWriteOnce(p = (binary_dir ? BinaryDir : SourceDir) / fn, content, getPatchDir(binary_dir));
-
-    File f(fn, *getSolution()->fs);
+    ::sw::fileWriteOnce(p, content, getPatchDir(binary_dir));
     f.getFileRecord().load();
 }
 
@@ -1149,6 +1153,7 @@ Commands NativeExecutedTarget::getCommands() const
         for (auto &f : gatherSourceFiles())
         {
             auto c = f->getCommand();
+            c->args.insert(c->args.end(), f->args.begin(), f->args.end());
 
             // set fancy name
             if (!Local && !IsConfig)
@@ -1237,7 +1242,7 @@ Commands NativeExecutedTarget::getCommands() const
                         continue;
                     auto in = dt->getOutputFile();
                     auto o = getOutputFile().parent_path() / in.filename();
-                    auto copy_cmd = MAKE_EXECUTE_COMMAND(*getSolution()->fs);
+                    SW_MAKE_EXECUTE_COMMAND(copy_cmd, *this);
                     copy_cmd->f = [in, out = o]
                     {
                         error_code ec;
@@ -1313,6 +1318,12 @@ Files NativeExecutedTarget::getGeneratedDirs() const
     dirs.insert(BinaryPrivateDir);
     for (auto &f : *this)
     {
+        File p(f.first, *getSolution()->fs);
+        if (p.isGenerated())
+        {
+            auto d = p.getFileRecord().getGenerator()->getGeneratedDirs();
+            dirs.insert(d.begin(), d.end());
+        }
         if (!f.second)
             continue;
         auto d = f.second->getGeneratedDirs();
@@ -1886,6 +1897,9 @@ bool NativeExecutedTarget::prepare()
         {
             f->compiler->merge(*this);
 
+            if (Settings.Native.ConfigurationType != ConfigurationType::Debug)
+                *this += "NDEBUG"_d;
+
             if (auto c = f->compiler->as<VisualStudioCompiler>())
             {
                 switch (Settings.Native.ConfigurationType)
@@ -2252,6 +2266,11 @@ void NativeExecutedTarget::initLibrary(LibraryType Type)
 
 void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags)
 {
+    // before resolving
+    if (!to.is_absolute())
+        to = BinaryDir / to;
+    File(to, *getSolution()->fs).getFileRecord().setGenerated();
+
     if (PostponeFileResolving)
         return;
 
@@ -2264,8 +2283,6 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
         else
             throw std::runtime_error("Package: " + pkg.target_name + ", file not found: " + from.string());
     }
-    if (!to.is_absolute())
-        to = BinaryDir / to;
 
     // we really need ExecuteCommand here!!!
     //auto c = std::make_shared<DummyCommand>();// ([this, from, to, flags]()

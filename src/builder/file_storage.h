@@ -49,4 +49,7 @@ private:
 SW_BUILDER_API
 FileStorage &getFileStorage(const String &config);
 
+SW_BUILDER_API
+std::map<String, FileStorage> &getFileStorages();
+
 }

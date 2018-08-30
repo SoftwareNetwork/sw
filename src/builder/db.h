@@ -14,8 +14,8 @@ namespace sw
 
 struct Db
 {
-    virtual void load(const String &config, ConcurrentHashMap<path, FileRecord> &files) const = 0;
-    virtual void save(const String &config, ConcurrentHashMap<path, FileRecord> &files) const = 0;
+    virtual void load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const = 0;
+    virtual void save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const = 0;
     virtual void write(std::vector<uint8_t> &v, const FileRecord &r) const {}
 
     virtual void load(ConcurrentCommandStorage &commands) const = 0;

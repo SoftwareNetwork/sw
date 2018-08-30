@@ -248,7 +248,10 @@ SourceFile &SourceFileStorage::operator[](path F)
     if (target->PostponeFileResolving)
         return sf;
     check_absolute(F);
-    return *this->SourceFileMapThis::operator[](F);
+    auto f = this->SourceFileMapThis::operator[](F);
+    if (!f)
+        throw std::runtime_error("Empty source file: " + F.u8string());
+    return *f;
 }
 
 void SourceFileStorage::resolve()

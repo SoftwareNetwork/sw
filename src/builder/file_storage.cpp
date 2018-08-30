@@ -44,10 +44,24 @@ FileStorage::file_holder::~file_holder()
     fs::remove(fn, ec);
 }
 
+ConcurrentHashMap<path, FileData> &getFileData()
+{
+    static ConcurrentHashMap<path, FileData> file_data;
+    return file_data;
+}
+
+std::map<String, FileStorage> &getFileStorages()
+{
+    getFileData();
+
+    static std::map<String, FileStorage> fs;
+    return fs;
+}
+
 FileStorage &getFileStorage(const String &config)
 {
     static std::mutex m;
-    static std::map<String, FileStorage> fs;
+    auto &fs = getFileStorages();
     std::unique_lock lk(m);
     auto i = fs.find(config);
     if (i == fs.end())
@@ -97,7 +111,7 @@ void FileStorage::async_file_log(const FileRecord *r)
 
 void FileStorage::load()
 {
-    getDb().load(config, files);
+    getDb().load(*this, files);
 
     for (auto i = files.getIterator(); i.isValid(); i.next())
     {
@@ -108,7 +122,7 @@ void FileStorage::load()
 
 void FileStorage::save()
 {
-    getDb().save(config, files);
+    getDb().save(*this, files);
 }
 
 void FileStorage::reset()
@@ -134,6 +148,7 @@ FileRecord *FileStorage::registerFile(const File &in_f)
     ((File*)&in_f)->file = normalize_path(in_f.file);
 #endif
 
+    auto d = getFileData().insert(in_f.file);
     auto r = files.insert(in_f.file);
     if (r.second)
     {
@@ -144,6 +159,7 @@ FileRecord *FileStorage::registerFile(const File &in_f)
     //else
         //r.first->isChanged();
     in_f.r = r.first;
+    r.first->data = d.first;
 
     if (useFileMonitor)
     {
@@ -152,9 +168,9 @@ FileRecord *FileStorage::registerFile(const File &in_f)
             auto &r = File(f, *this).getFileRecord();
             error_code ec;
             if (fs::exists(r.file, ec))
-                r.last_write_time = fs::last_write_time(f);
+                r.data->last_write_time = fs::last_write_time(f);
             else
-                r.refreshed = false;
+                r.data->refreshed = false;
         });
     }
 
@@ -164,8 +180,13 @@ FileRecord *FileStorage::registerFile(const File &in_f)
 
 FileRecord *FileStorage::registerFile(const path &in_f)
 {
-    auto r = files.insert(in_f);
+    auto p = normalize_path(in_f);
+    auto r = files.insert(p);
     r.first->fs = this;
+    auto d = getFileData().insert(p);
+    r.first->data = d.first;
+    //if (!d.first)
+        //throw std::runtime_error("Cannot create file data for file: " + in_f.u8string());
     return r.first;
 }
 
