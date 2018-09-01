@@ -542,6 +542,37 @@ void ServiceDatabase::setInstalledPackageFlags(const PackageId &p, const String 
                 "' where id = '" + std::to_string(getInstalledPackageConfigId(p, config)) + "'");*/
 }
 
+const ServiceDatabase::OverriddenPackages &ServiceDatabase::getOverriddenPackages() const
+{
+    // maybe move them to packages db?
+    if (override_remote_packages)
+        return override_remote_packages.value();
+
+    OverriddenPackages pkgs;
+    const auto orp = db::service::OverrideRemotePackage{};
+    for (const auto &row : (*db)(select(orp.path, orp.sdir).from(orp).unconditionally()))
+        pkgs.emplace(row.path.value(), row.sdir.value());
+    override_remote_packages = pkgs;
+    return override_remote_packages.value();
+}
+
+void ServiceDatabase::overridePackage(const PackageId &pkg, const path &sdir) const
+{
+    getOverriddenPackages(); // init if needed
+
+    override_remote_packages.value().erase(pkg);
+    override_remote_packages.value().emplace(pkg, sdir);
+
+    const auto orp = db::service::OverrideRemotePackage{};
+    (*db)(remove_from(orp).where(
+        orp.path == pkg.toString()
+    ));
+    (*db)(insert_into(orp).set(
+        orp.path = pkg.toString(),
+        orp.sdir = sdir.u8string()
+    ));
+}
+
 Packages ServiceDatabase::getInstalledPackages() const
 {
     const auto ipkgs = db::service::InstalledPackage{};
@@ -826,6 +857,12 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
         all_deps[project] = project; // assign first, deps assign second
         all_deps[project].db_dependencies = getProjectDependencies(project.id, all_deps);
     }
+
+    // mark local deps
+    const auto &overridden = getServiceDatabase().getOverriddenPackages();
+    if (!overridden.empty())
+        for (auto &[pkg, d] : all_deps)
+            d.local_override = overridden.find(pkg) != overridden.end();
 
     // make id deps
     IdDependencies dds;

@@ -93,7 +93,11 @@ path PackageId::getDirSrc() const
 
 path PackageId::getDirSrc2() const
 {
-    return getDirSrc() / SW_SDIR_NAME;
+    auto &pkgs = getServiceDatabase().getOverriddenPackages();
+    auto i = pkgs.find(*this);
+    if (i == pkgs.end())
+        return getDirSrc() / SW_SDIR_NAME;
+    return i->second;
 }
 
 path PackageId::getDirObj() const

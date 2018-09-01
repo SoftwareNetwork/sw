@@ -74,6 +74,8 @@ protected:
 
 struct SW_MANAGER_API ServiceDatabase : public Database
 {
+    using OverriddenPackages = std::unordered_map<PackageId, path>;
+
     ServiceDatabase();
 
     void init();
@@ -109,6 +111,12 @@ struct SW_MANAGER_API ServiceDatabase : public Database
     void setInstalledPackageFlags(const PackageId &p, const String &config, const SomeFlags &f) const;
     bool isPackageInstalled(const PackageId &p) const { return getInstalledPackageId(p) != 0; }
     Packages getInstalledPackages() const;
+
+    const OverriddenPackages &getOverriddenPackages() const;
+    void overridePackage(const PackageId &pkg, const path &sdir) const;
+
+private:
+    mutable optional<OverriddenPackages> override_remote_packages;
 };
 
 class SW_MANAGER_API PackagesDatabase : public Database

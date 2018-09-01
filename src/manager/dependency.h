@@ -20,6 +20,7 @@ struct ExtendedPackageData : Package
     PackageVersionGroupNumber group_number = 0;
     int prefix = 2;
     const Remote *remote = nullptr;
+    bool local_override = false;
 };
 
 } // namespace sw

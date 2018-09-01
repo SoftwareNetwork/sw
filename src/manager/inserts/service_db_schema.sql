@@ -59,6 +59,16 @@ CREATE TABLE startup_action (
 --
 --------------------------------------------------------------------------------
 
+CREATE TABLE override_remote_package (
+    override_remote_package_id INTEGER PRIMARY KEY,
+    path TEXT NOT NULL UNIQUE,
+    sdir TEXT NOT NULL
+);
+
+--------------------------------------------------------------------------------
+--
+--------------------------------------------------------------------------------
+
 --------------------------------------------------------------------------------
 --
 --
@@ -66,6 +76,16 @@ CREATE TABLE startup_action (
 --
 --
 --------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+CREATE TABLE override_remote_package (
+    override_remote_package_id INTEGER PRIMARY KEY,
+    path TEXT NOT NULL UNIQUE,
+    sdir TEXT NOT NULL
+);
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available

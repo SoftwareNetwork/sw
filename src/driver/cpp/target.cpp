@@ -140,7 +140,8 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     // try to guess, very naive
     if (!IsConfig)
     {
-        if (Local)
+        // do not create projects under storage yourself!
+        //if (Local)
             t->Local = !is_under_root(t->SourceDir, getDirectories().storage_dir_pkg);
 
         // try to set again

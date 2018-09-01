@@ -64,7 +64,7 @@ namespace sw::driver::cppan { SW_REGISTER_PACKAGE_DRIVER(CppanDriver); }
 int main(int argc, char **argv);
 #pragma pop_macro("main")
 
-int sw_main(int argc, char **argv);
+int sw_main();
 void stop();
 void setup_log(const std::string &log_level);
 
@@ -89,6 +89,67 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 }
 #endif
 
+static cl::opt<path> working_directory("d", cl::desc("Working directory"));
+static cl::opt<bool> verbose("verbose", cl::desc("Verbose output"));
+static cl::opt<bool> trace("trace", cl::desc("Trace output"));
+static cl::opt<int> jobs("j", cl::desc("Number of jobs"), cl::init(-1));
+
+int setup_main()
+{
+    // some init stuff
+
+    if (!working_directory.empty())
+        fs::current_path(working_directory);
+
+    if (jobs > 0)
+        getExecutor(jobs);
+
+#ifdef NDEBUG
+    setup_log("INFO");
+#else
+    setup_log("DEBUG");
+#endif
+
+    if (verbose)
+        setup_log("DEBUG");
+    if (trace)
+        setup_log("TRACE");
+
+    getServiceDatabase();
+
+    // actual execution
+    return sw_main();
+}
+
+int parse_main(int argc, char **argv)
+{
+    //args::ValueFlag<int> configuration(parser, "configuration", "Configuration to build", { 'c' });
+
+    String overview = "SW: Software Network Client\n\n"
+        "  SW is a Universal Package Manager and Build System...\n";
+    if (auto &driver = getDrivers(); !driver.empty())
+    {
+        overview += "\n  Available drivers:\n";
+        for (auto &d : driver)
+            overview += "    - " + d->getName() + "\n";
+    }
+
+    const std::vector<std::string> args0(argv + 1, argv + argc);
+    std::vector<std::string> args;
+    args.push_back(argv[0]);
+    for (auto &a : args0)
+    {
+        std::vector<std::string> t;
+        boost::split_regex(t, a, boost::regex("%20"));
+        args.insert(args.end(), t.begin(), t.end());
+    }
+
+    //
+    cl::ParseCommandLineOptions(args, overview);
+
+    return setup_main();
+}
+
 int main(int argc, char **argv)
 {
     int r = 0;
@@ -96,7 +157,7 @@ int main(int argc, char **argv)
     bool supress = false;
     try
     {
-        r = sw_main(argc, argv);
+        r = parse_main(argc, argv);
     }
     catch (SupressOutputException &)
     {
@@ -159,56 +220,19 @@ static cl::opt<String> ide_build("build", cl::desc("Target to build"), cl::sub(s
 static cl::opt<String> ide_rebuild("rebuild", cl::desc("Rebuild target"), cl::sub(subcommand_ide));
 static cl::opt<String> ide_clean("clean", cl::desc("Clean target"), cl::sub(subcommand_ide));
 
-int sw_main(int argc, char **argv)
+static cl::list<String> override_package("override-package", cl::value_desc("prefix sdir"), cl::desc("Provide a local copy of remote package"), cl::multi_val(2));
+
+int sw_main()
 {
-    cl::opt<path> working_directory("d", cl::desc("Working directory"));
-    cl::opt<bool> verbose("verbose", cl::desc("Verbose output"));
-    cl::opt<bool> trace("trace", cl::desc("Trace output"));
-    cl::opt<int> jobs("j", cl::desc("Number of jobs"), cl::init(-1));
-
-    //args::ValueFlag<int> configuration(parser, "configuration", "Configuration to build", { 'c' });
-
-    String overview = "SW: Software Network Client\n\n"
-        "  SW is a Universal Package Manager and Build System...\n";
-    if (auto &driver = getDrivers(); !driver.empty())
+    if (!override_package.empty())
     {
-        overview += "\n  Available drivers:\n";
-        for (auto &d : driver)
-            overview += "    - " + d->getName() + "\n";
+        auto s = sw::load(override_package[1]);
+        for (auto &[pkg, _] : s->getPackages())
+            getServiceDatabase().overridePackage(
+                { sw::PackagePath(override_package[0]) / pkg.ppath, pkg.version },
+                fs::absolute(override_package[1]));
+        return 0;
     }
-
-    const std::vector<std::string> args0(argv + 1, argv + argc);
-    std::vector<std::string> args;
-    args.push_back(argv[0]);
-    for (auto &a : args0)
-    {
-        std::vector<std::string> t;
-        boost::split_regex(t, a, boost::regex("%20"));
-        args.insert(args.end(), t.begin(), t.end());
-    }
-
-    //
-    cl::ParseCommandLineOptions(args, overview);
-    //
-
-    if (!working_directory.empty())
-        fs::current_path(working_directory);
-
-    if (jobs > 0)
-        getExecutor(jobs);
-
-#ifdef NDEBUG
-    setup_log("INFO");
-#else
-    setup_log("DEBUG");
-#endif
-
-    if (verbose)
-        setup_log("DEBUG");
-    if (trace)
-        setup_log("TRACE");
-
-    getServiceDatabase();
 
     if (0);
 #define SUBCOMMAND(n, d) else if (subcommand_##n) cli_##n();
@@ -224,11 +248,13 @@ void stop()
     getFileStorages().clear();
 }
 
+static cl::opt<bool> write_log_to_file("log-to-file");
+
 void setup_log(const std::string &log_level)
 {
     LoggerSettings log_settings;
     log_settings.log_level = log_level;
-    if (bConsoleMode)
+    if (write_log_to_file && bConsoleMode)
         log_settings.log_file = (get_root_directory() / "sw").string();
     log_settings.simple_logger = true;
     log_settings.print_trace = true;
