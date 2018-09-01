@@ -1892,13 +1892,15 @@ bool NativeExecutedTarget::prepare()
             }
         }
 
+        // before merge
+        if (Settings.Native.ConfigurationType != ConfigurationType::Debug)
+            *this += "NDEBUG"_d;
+
         // merge file compiler options with target compiler options
         for (auto &f : files)
         {
+            // set everything before merge!
             f->compiler->merge(*this);
-
-            if (Settings.Native.ConfigurationType != ConfigurationType::Debug)
-                *this += "NDEBUG"_d;
 
             if (auto c = f->compiler->as<VisualStudioCompiler>())
             {

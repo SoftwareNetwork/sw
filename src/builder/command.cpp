@@ -536,6 +536,7 @@ void Command::execute1(std::error_code *ec)
             auto &fr = f.getFileRecord();
             fr.data->refreshed = false;
             fr.isChanged();
+            fr.updateLwt();
         }
         for (auto &i : outputs)
         {
@@ -547,6 +548,7 @@ void Command::execute1(std::error_code *ec)
             auto &fr = f.getFileRecord();
             fr.data->refreshed = false;
             fr.isChanged();
+            fr.updateLwt();
         }
 
         updateFilesHash();

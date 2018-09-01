@@ -273,6 +273,7 @@ void FileRecord::load(const path &p)
     auto lwt = fs::last_write_time(file);
     if (lwt < data->last_write_time)
         return;
+    data->last_write_time = lwt;
     //size = fs::file_size(file);
     // do not calc hashes on the first run
     // we do this on the first mismatch
@@ -328,11 +329,15 @@ bool FileRecord::refresh(bool use_file_monitor)
 
     bool result = false;
 
+    //DEBUG_BREAK_IF_PATH_HAS(file, "basename-lgpl.c");
+
     auto t = fs::last_write_time(file);
     if (t > data->last_write_time)
     {
-        if (data->last_write_time.time_since_epoch().count() == 0)
-            EXPLAIN_OUTDATED("file", true, "last_write_time changed", file.u8string());
+        if (data->last_write_time.time_since_epoch().count() != 0)
+            EXPLAIN_OUTDATED("file", true, "last_write_time changed on disk from " +
+                std::to_string(data->last_write_time.time_since_epoch().count()) + " to " +
+                std::to_string(t.time_since_epoch().count()), file.u8string());
         else
             EXPLAIN_OUTDATED("file", true, "empty last_write_time", file.u8string());
         data->last_write_time = t;
@@ -347,26 +352,20 @@ bool FileRecord::refresh(bool use_file_monitor)
 
 bool FileRecord::isChanged(bool use_file_monitor)
 {
-    auto is_changed = [this]()
-    {
-        auto t = getMaxTime();
-        if (t > data->last_write_time)
-        {
-            data->last_write_time = t;
-            return true;
-        }
-        return false;
-    };
-
     auto c = refresh(use_file_monitor);
     if (c)
     {
-        EXPLAIN_OUTDATED("file", true, "changed after refresh", file.u8string());
+        //EXPLAIN_OUTDATED("file", true, "changed after refresh", file.u8string());
     }
-    c |= is_changed();
-    if (c)
+
+    auto t = getMaxTime();
+    if (t > data->last_write_time)
     {
-        EXPLAIN_OUTDATED("file", true, "changed after checking max time", file.u8string());
+        EXPLAIN_OUTDATED("file", true, "changed after checking deps max time from " +
+            std::to_string(data->last_write_time.time_since_epoch().count()) + " to " +
+            std::to_string(t.time_since_epoch().count()), file.u8string());
+        data->last_write_time = t;
+        c = true;
     }
 
     if (use_file_monitor && c)
@@ -431,6 +430,31 @@ fs::file_time_type FileRecord::getMaxTime() const
             EXPLAIN_OUTDATED("file", true, "implicit " + f.u8string() + " is newer", file.u8string());
         }
     }
+    return m;
+}
+
+fs::file_time_type FileRecord::updateLwt()
+{
+    if (data->last_write_time.time_since_epoch().count() == 0)
+        const_cast<FileRecord*>(this)->load(file);
+    auto m = data->last_write_time;
+    for (auto &[f, d] : explicit_dependencies)
+    {
+        if (d == this)
+            continue;
+        auto dm = d->updateLwt();
+        if (dm > m)
+            m = dm;
+    }
+    for (auto &[f, d] : implicit_dependencies)
+    {
+        if (d == this)
+            continue;
+        auto dm = d->updateLwt();
+        if (dm > m)
+            m = dm;
+    }
+    data->last_write_time = m;
     return m;
 }
 

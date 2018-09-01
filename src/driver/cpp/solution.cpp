@@ -1658,9 +1658,6 @@ void Build::load(const path &dll)
             Settings.TargetOS.Type = OSType::Linux;
         if (boost::iequals(target_os, "macos"))
             Settings.TargetOS.Type = OSType::Macos;
-
-        //s.Settings.Native.LibrariesType = LibraryType::Static;
-        //Settings.Native.ConfigurationType = ConfigurationType::Debug;
     }
 
     // apply config settings

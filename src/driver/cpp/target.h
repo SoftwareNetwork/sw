@@ -136,6 +136,16 @@ struct Directory;
 using TargetBaseType = Target;
 using TargetBaseTypePtr = std::shared_ptr<TargetBaseType>;
 
+struct ExecutableTarget;
+struct LibraryTarget;
+struct StaticLibraryTarget;
+struct SharedLibraryTarget;
+
+using Executable = ExecutableTarget;
+using Library = LibraryTarget;
+using StaticLibrary = StaticLibraryTarget;
+using SharedLibrary = SharedLibraryTarget;
+
 struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
 {
     using TargetMap = std::unordered_map<PackageId, TargetBaseTypePtr>;
@@ -235,6 +245,20 @@ public:
             [&Name](const auto &e) { return e.first.ppath == Name; });
         return getTarget<T>(i, Name.toString());
     }
+
+#define ADD_TARGET(t)                               \
+    template <typename... Args>                     \
+    t &add##t(Args &&... args)                      \
+    {                                               \
+        return add<t>(std::forward<Args>(args)...); \
+    }
+
+    ADD_TARGET(Executable)
+    ADD_TARGET(Library)
+    ADD_TARGET(StaticLibrary)
+    ADD_TARGET(SharedLibrary)
+
+#undef Executable
 
     template <typename T = Target>
     T &getTarget(const PackageId &p)

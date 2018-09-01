@@ -956,6 +956,8 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
 
             file.clearImplicitDependencies();
 
+            //DEBUG_BREAK_IF_PATH_HAS(file.file, "basename-lgpl.c");
+
             for (auto &line : lines)
             {
                 auto p = line.find(pattern);
@@ -966,6 +968,7 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
                 }
                 auto include = line.substr(pattern.size());
                 boost::trim(include);
+
                 file.addImplicitDependency(include);
             }
         }
@@ -1369,7 +1372,6 @@ void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
     InputFile = input_file.string();
     setOutputFile(output_file);
 }
-
 
 std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
 {

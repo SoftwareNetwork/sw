@@ -62,17 +62,17 @@ static void load(FileStorage &fs, const path &fn, ConcurrentHashMap<path, FileRe
         decltype(kv.first->data->last_write_time) lwt;
         fread(&lwt, sizeof(kv.first->data->last_write_time), 1, fp);
 
-        sz = 0;
+        /*sz = 0;
         fread(&sz, sizeof(kv.first->data->size), 1, fp);
 
         uint64_t flags;
-        fread(&flags, sizeof(flags), 1, fp);
+        fread(&flags, sizeof(flags), 1, fp);*/
 
         if (kv.first->data->last_write_time < lwt)
         {
             kv.first->data->last_write_time = lwt;
-            kv.first->data->size = sz;
-            kv.first->data->flags = flags;
+            //kv.first->data->size = sz;
+            //kv.first->data->flags = flags;
         }
 
         size_t n;
@@ -153,7 +153,7 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
             fwrite(&v[0], v.size(), 1, fp.getHandle());
         }
     }
-    LOG_INFO(logger, "save to file db time: " << t.getTimeFloat() << " s.");
+    /*LOG_INFO(logger, "save to file db time: " << t.getTimeFloat() << " s.");
 
     ScopedTime t2;
     {
@@ -240,7 +240,7 @@ CREATE TABLE "file_dependency" (
     }
     LOG_INFO(logger, "save to sqlite db time: " << t2.getTimeFloat() << " s.");
 
-    ScopedTime t3;
+    /*ScopedTime t3;
     {
         BinaryContext b(10'000'000);
         for (auto i = files.getIterator(); i.isValid(); i.next())
@@ -261,7 +261,7 @@ CREATE TABLE "file_dependency" (
         }
         b.save(f += ".2");
     }
-    LOG_INFO(logger, "save to file2 time: " << t3.getTimeFloat() << " s.");
+    LOG_INFO(logger, "save to file2 time: " << t3.getTimeFloat() << " s.");*/
 }
 
 template <class T>

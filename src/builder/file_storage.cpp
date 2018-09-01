@@ -8,6 +8,7 @@
 
 #include "db.h"
 
+#include <primitives/debug.h>
 #include <primitives/file_monitor.h>
 
 #include <primitives/log.h>
@@ -160,6 +161,15 @@ FileRecord *FileStorage::registerFile(const File &in_f)
         //r.first->isChanged();
     in_f.r = r.first;
     r.first->data = d.first;
+    r.first->fs = this;
+    //if (d.second || d.first->last_write_time.time_since_epoch().count() == 0)
+        //r.first->load(in_f.file);
+
+    /*if (d.second)
+    {
+        DEBUG_BREAK_IF_PATH_HAS(in_f.file, "sdir/bison/src/system.h");
+        r.first->load(in_f.file);
+    }*/
 
     if (useFileMonitor)
     {
@@ -174,7 +184,6 @@ FileRecord *FileStorage::registerFile(const File &in_f)
         });
     }
 
-    r.first->fs = this;
     return r.first;
 }
 
