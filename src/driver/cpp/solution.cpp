@@ -1317,12 +1317,12 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     // generate main source file
     if (many_files)
     {
-        Context ctx;
+        CppContext ctx;
 
-        Context build;
+        CppContext build;
         build.beginFunction("void build(Solution &s)");
 
-        Context check;
+        CppContext check;
         check.beginFunction("void check(Checker &c)");
 
         for (auto &r : pkgs)

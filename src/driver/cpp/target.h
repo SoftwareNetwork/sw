@@ -136,7 +136,7 @@ struct Directory;
 using TargetBaseType = Target;
 using TargetBaseTypePtr = std::shared_ptr<TargetBaseType>;
 
-struct SW_DRIVER_CPP_API TargetBase : virtual Node, LanguageStorage, ProjectDirectories
+struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
 {
     using TargetMap = std::unordered_map<PackageId, TargetBaseTypePtr>;
 
@@ -751,6 +751,8 @@ protected:
     bool prepare() override;
 };
 
+using Library = LibraryTarget;
+
 /**
 * \brief Executable target.
 */
@@ -770,6 +772,8 @@ protected:
     bool prepare() override;
     path getOutputDir() const override;
 };
+
+using Executable = ExecutableTarget;
 
 struct SW_DRIVER_CPP_API LibraryTargetBase : NativeExecutedTarget
 {
@@ -798,6 +802,8 @@ protected:
     }
 };
 
+using StaticLibrary = StaticLibraryTarget;
+
 /**
 * \brief Shared only target.
 */
@@ -819,6 +825,8 @@ protected:
         return prepareLibrary(LibraryType::Shared);
     }
 };
+
+using SharedLibrary = SharedLibraryTarget;
 
 /**
 * \brief Module only target.

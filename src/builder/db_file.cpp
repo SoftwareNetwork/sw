@@ -14,6 +14,7 @@
 
 void save_from_memory_to_file(const path &fn, sqlite3 *db);
 
+#include <primitives/context.h>
 #include <primitives/date_time.h>
 #include <primitives/debug.h>
 #include <primitives/lock.h>
@@ -164,32 +165,27 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
         r = sqlite3_open(":memory:", &db);
         CHECK_RC(r, SQLITE_OK);
 
-        //r = sqlite3_db_config(db, SQLITE_CONFIG_SINGLETHREAD, 1);
-        //CHECK_RC(r, SQLITE_OK);
-
         r = sqlite3_exec(db, R"xxx(
 CREATE TABLE "file" (
-    "file_id" INTEGER NOT NULL,
+    "hash" INTEGER,
     "path" TEXT,
     "last_write_time" INTEGER,
     "size" INTEGER,
-    "hash" INTEGER,
-    "flags" INTEGER,
-    PRIMARY KEY ("file_id")
+    "flags" INTEGER
 );
 
 CREATE TABLE "file_dependency" (
-    "file_id" INTEGER NOT NULL,
-    "dependency_file_id" INTEGER NOT NULL,
-    PRIMARY KEY ("file_id", "dependency_file_id"),
-    FOREIGN KEY ("file_id") REFERENCES "file" ("file_id") ON DELETE CASCADE ON UPDATE CASCADE
-    --, FOREIGN KEY ("dependency_file_id") REFERENCES "file" ("file_id") ON DELETE CASCADE ON UPDATE CASCADE
+    "hash" INTEGER,
+    "dependency_hash" INTEGER
 );
 )xxx", 0, 0, 0);
         CHECK_RC(r, SQLITE_OK);
 
+        r = sqlite3_exec(db, "BEGIN", 0, 0, 0);
+        CHECK_RC(r, SQLITE_OK);
+
         sqlite3_stmt *sf;
-        r = sqlite3_prepare_v2(db, "INSERT INTO file (path, last_write_time, size, hash) VALUES (?,?,?,?)", -1, &sf, 0);
+        r = sqlite3_prepare_v2(db, "INSERT INTO file (path, last_write_time, hash) VALUES (?,?,?)", -1, &sf, 0);
         CHECK_RC(r, SQLITE_OK);
 
         sqlite3_stmt *sd;
@@ -202,10 +198,12 @@ CREATE TABLE "file_dependency" (
             if (!f.data)
                 continue;
 
-            sqlite3_bind_text(sf, 1, normalize_path(f.file).c_str(), -1, 0);
+            auto h1 = std::hash<path>()(f.file);
+            auto s = normalize_path(f.file);
+            sqlite3_bind_text(sf, 1, s.c_str(), s.size() + 1, 0);
             sqlite3_bind_int64(sf, 2, f.data->last_write_time.time_since_epoch().count());
-            sqlite3_bind_int64(sf, 3, f.data->size);
-            sqlite3_bind_int64(sf, 4, std::hash<path>()(f.file));
+            //sqlite3_bind_int64(sf, 3, f.data->size);
+            sqlite3_bind_int64(sf, 3, h1);
 
             r = sqlite3_step(sf);
             CHECK_RC(r, SQLITE_DONE);
@@ -213,11 +211,9 @@ CREATE TABLE "file_dependency" (
             r = sqlite3_reset(sf);
             CHECK_RC(r, SQLITE_OK);
 
-            auto rowid = sqlite3_last_insert_rowid(db);
-
             for (auto &[f, d] : f.implicit_dependencies)
             {
-                sqlite3_bind_int64(sd, 1, rowid);
+                sqlite3_bind_int64(sd, 1, h1);
                 sqlite3_bind_int64(sd, 2, std::hash<path>()(d->file));
 
                 r = sqlite3_step(sd);
@@ -234,12 +230,38 @@ CREATE TABLE "file_dependency" (
         r = sqlite3_finalize(sd);
         CHECK_RC(r, SQLITE_OK);
 
+        r = sqlite3_exec(db, "COMMIT", 0, 0, 0);
+        CHECK_RC(r, SQLITE_OK);
+
         save_from_memory_to_file(f += ".sqlite", db);
 
         r = sqlite3_close_v2(db);
         CHECK_RC(r, SQLITE_OK);
     }
     LOG_INFO(logger, "save to sqlite db time: " << t2.getTimeFloat() << " s.");
+
+    ScopedTime t3;
+    {
+        BinaryContext b(10'000'000);
+        for (auto i = files.getIterator(); i.isValid(); i.next())
+        {
+            auto &f = *i.getValue();
+            if (!f.data)
+                continue;
+
+            auto h1 = std::hash<path>()(f.file);
+            b.write(h1);
+            b.write(normalize_path(f.file));
+            b.write(f.data->last_write_time.time_since_epoch().count());
+            //b.write(f.data->size);
+            b.write(f.implicit_dependencies.size());
+
+            for (auto &[f, d] : f.implicit_dependencies)
+                b.write(std::hash<path>()(d->file));
+        }
+        b.save(f += ".2");
+    }
+    LOG_INFO(logger, "save to file2 time: " << t3.getTimeFloat() << " s.");
 }
 
 template <class T>
@@ -266,8 +288,8 @@ void FileDb::write(std::vector<uint8_t> &v, const FileRecord &f) const
     write_int(v, std::hash<path>()(f.file));
     write_str(v, normalize_path(f.file));
     write_int(v, f.data->last_write_time);
-    write_int(v, f.data->size);
-    write_int(v, f.data->flags.to_ullong());
+    //write_int(v, f.data->size);
+    //write_int(v, f.data->flags.to_ullong());
 
     auto n = f.implicit_dependencies.size();
     write_int(v, n);

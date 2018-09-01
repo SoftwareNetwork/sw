@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "node.h"
 #include <enums.h>
+#include <node.h>
 
 #include <primitives/filesystem.h>
 
@@ -28,7 +28,7 @@ struct Command;
 struct FileRecord;
 struct FileStorage;
 
-struct SW_BUILDER_API File : Data
+struct SW_BUILDER_API File : Node
 {
     FileStorage *fs = nullptr;
     path file;

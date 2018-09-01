@@ -167,9 +167,6 @@ projects:
             private:
                 - name: tools.self_builder
                   ref: self_builder
-                - name: pvt.egorpugin.primitives.context
-                  version: master
-                  local: primitives.context
                 - pvt.cppan.demo.boost.uuid: 1
                 - name: pvt.egorpugin.primitives.tools.embedder
                   version: master
@@ -251,6 +248,9 @@ projects:
             public:
                 - manager
                 - pvt.cppan.demo.preshing.junction: master
+                - name: pvt.egorpugin.primitives.context
+                  version: master
+                  local: primitives.context
 
         post_sources: |
             file(GLOB_RECURSE x "${SDIR}/*")

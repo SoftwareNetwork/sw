@@ -11,7 +11,7 @@
 namespace sw
 {
 
-void Executable::execute() const
+void detail::Executable::execute() const
 {
     if (auto c = getCommand())
         return c->execute();

@@ -7,13 +7,14 @@
 #pragma once
 
 #include "file.h"
+#include "node.h"
 
 #include <optional>
 
 namespace sw
 {
 
-struct SW_BUILDER_API Program : File, Executable
+struct SW_BUILDER_API Program : File, detail::Executable
 {
     virtual ~Program() = default;
 

@@ -223,7 +223,7 @@ int main(int argc, char **argv)
 
     };
 
-    Context ctx_packages;
+    CppContext ctx_packages;
     ctx_packages.beginBlock("static UnresolvedPackages required_packages");
 
     UnresolvedPackages deps;
@@ -240,16 +240,16 @@ int main(int argc, char **argv)
 
     auto m = resolve_dependencies(deps);
 
-    Context ctx;
+    CppContext ctx;
     ctx.addLine("#define SW_PRAGMA_HEADER 1");
     ctx.addLine();
 
-    Context build;
+    CppContext build;
     build.beginFunction("void build_self_generated(Solution &s)");
     build.addLine("auto sdir_old = s.SourceDir;");
     build.addLine();
 
-    Context check;
+    CppContext check;
     check.beginFunction("void check_self_generated(Checker &c)");
 
     std::set<PackageVersionGroupNumber> used_gns;

@@ -26,20 +26,22 @@ struct SW_BUILDER_API Node
     virtual ~Node() = default;
 
     template <class T>
-    T *as() { return dynamic_cast<T*>(this); }
+    T *as()
+    {
+        return dynamic_cast<T *>(this);
+    }
 
     template <class T>
-    T *as() const { return dynamic_cast<T*>(this); }
-
-    //Cppan *root = nullptr;
+    T *as() const
+    {
+        return dynamic_cast<T *>(this);
+    }
 };
 
-struct SW_BUILDER_API Data : virtual Node
+namespace detail
 {
-    virtual ~Data() = default;
-};
 
-struct SW_BUILDER_API Executable : virtual Node
+struct SW_BUILDER_API Executable : Node
 {
     virtual ~Executable() = default;
 
@@ -47,14 +49,6 @@ struct SW_BUILDER_API Executable : virtual Node
     virtual void execute() const;
 };
 
-struct SW_BUILDER_API Transform : Node
-{
-    virtual ~Transform() = default;
-};
-
-struct SW_BUILDER_API Function : Node
-{
-    virtual ~Function() = default;
-};
+}
 
 }
