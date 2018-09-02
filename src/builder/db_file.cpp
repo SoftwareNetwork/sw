@@ -22,6 +22,9 @@ void save_from_memory_to_file(const path &fn, sqlite3 *db);
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "db_file");
 
+#define FILE_DB_FORMAT_VERSION 1
+#define COMMAND_DB_FORMAT_VERSION 1
+
 namespace sw
 {
 
@@ -30,7 +33,72 @@ static path getDir()
     return getUserDirectories().storage_dir_tmp / "db";
 }
 
+static path getFilesDbFilename(const String &config)
+{
+    auto p = getDir();
+    p += ".";
+    p += std::to_string(FILE_DB_FORMAT_VERSION);
+    p += "." + config + ".files";
+    return p;
+}
+
+static path getCommandsDbFilename()
+{
+    auto p = getDir();
+    p += ".";
+    p += std::to_string(COMMAND_DB_FORMAT_VERSION);
+    p += ".commands";
+    return p;
+}
+
 static void load(FileStorage &fs, const path &fn, ConcurrentHashMap<path, FileRecord> &files, std::unordered_map<int64_t, std::unordered_set<int64_t>> &deps)
+{
+    ScopedShareableFileLock lk(fn);
+
+    BinaryContext b;
+    try
+    {
+        b.load(fn);
+    }
+    catch (std::exception &)
+    {
+        if (fs::exists(fn))
+            throw;
+        return;
+    }
+    while (!b.eof())
+    {
+        size_t h;
+        b.read(h);
+
+        String p;
+        b.read(p);
+
+        auto kv = files.insert(h);
+        kv.first->file = p;
+        kv.first->data = fs.registerFile(p)->data;
+
+        decltype(kv.first->data->last_write_time) lwt;
+        b.read(lwt);
+
+        if (kv.first->data->last_write_time < lwt)
+        {
+            kv.first->data->last_write_time = lwt;
+        }
+
+        size_t n;
+        b.read(n);
+
+        for (int i = 0; i < n; i++)
+        {
+            size_t h2;
+            b.read(h2);
+            deps[h].insert(h2);
+        }
+    }
+}
+
+static void load_log(FileStorage &fs, const path &fn, ConcurrentHashMap<path, FileRecord> &files, std::unordered_map<int64_t, std::unordered_set<int64_t>> &deps)
 {
     ScopedShareableFileLock lk(fn);
 
@@ -99,8 +167,8 @@ void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
 {
     std::unordered_map<int64_t, std::unordered_set<int64_t>> deps;
 
-    sw::load(fs, getDir() += "." + fs.config + ".files", files, deps);
-    sw::load(fs, getFilesLogFileName(fs.config), files, deps);
+    sw::load(fs, getFilesDbFilename(fs.config), files, deps);
+    sw::load_log(fs, getFilesLogFileName(fs.config), files, deps);
     error_code ec;
     fs::remove(getFilesLogFileName(fs.config), ec);
 
@@ -119,7 +187,7 @@ void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
 
 void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const
 {
-    auto f = getDir() += "." + fs.config + ".files";
+    const auto f = getFilesDbFilename(fs.config);
 
     // first, we load current copy of files
     ConcurrentHashMap<path, FileRecord> old;
@@ -134,134 +202,24 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
             *ptr = f;
     }
 
-    ScopedTime t;
+    BinaryContext b(10'000'000); // reserve amount
+    for (auto i = files.getIterator(); i.isValid(); i.next())
     {
-        // lock and write
-        ScopedFileLock lk(f);
-        ScopedFile fp(f, "wb");
-        std::vector<uint8_t> v;
-        for (auto i = files.getIterator(); i.isValid(); i.next())
-        {
-            auto &f = *i.getValue();
-            if (!f.data)
-                continue;
+        auto &f = *i.getValue();
+        if (!f.data)
+            continue;
 
-            //DEBUG_BREAK_IF_PATH_HAS(f.file, "gettext-runtime/intl/vasnprintf.c");
+        auto h1 = std::hash<path>()(f.file);
+        b.write(h1);
+        b.write(normalize_path(f.file));
+        b.write(f.data->last_write_time.time_since_epoch().count());
+        //b.write(f.data->size);
+        b.write(f.implicit_dependencies.size());
 
-            //f.isChanged(false); // update file info
-            write(v, f);
-            fwrite(&v[0], v.size(), 1, fp.getHandle());
-        }
+        for (auto &[f, d] : f.implicit_dependencies)
+            b.write(std::hash<path>()(d->file));
     }
-    /*LOG_INFO(logger, "save to file db time: " << t.getTimeFloat() << " s.");
-
-    ScopedTime t2;
-    {
-        int r;
-
-#define CHECK_RC(rc, ec) if (r != ec) return
-
-        sqlite3 *db;
-        r = sqlite3_open(":memory:", &db);
-        CHECK_RC(r, SQLITE_OK);
-
-        r = sqlite3_exec(db, R"xxx(
-CREATE TABLE "file" (
-    "hash" INTEGER,
-    "path" TEXT,
-    "last_write_time" INTEGER,
-    "size" INTEGER,
-    "flags" INTEGER
-);
-
-CREATE TABLE "file_dependency" (
-    "hash" INTEGER,
-    "dependency_hash" INTEGER
-);
-)xxx", 0, 0, 0);
-        CHECK_RC(r, SQLITE_OK);
-
-        r = sqlite3_exec(db, "BEGIN", 0, 0, 0);
-        CHECK_RC(r, SQLITE_OK);
-
-        sqlite3_stmt *sf;
-        r = sqlite3_prepare_v2(db, "INSERT INTO file (path, last_write_time, hash) VALUES (?,?,?)", -1, &sf, 0);
-        CHECK_RC(r, SQLITE_OK);
-
-        sqlite3_stmt *sd;
-        r = sqlite3_prepare_v2(db, "INSERT INTO file_dependency VALUES (?,?)", -1, &sd, 0);
-        CHECK_RC(r, SQLITE_OK);
-
-        for (auto i = files.getIterator(); i.isValid(); i.next())
-        {
-            auto &f = *i.getValue();
-            if (!f.data)
-                continue;
-
-            auto h1 = std::hash<path>()(f.file);
-            auto s = normalize_path(f.file);
-            sqlite3_bind_text(sf, 1, s.c_str(), s.size() + 1, 0);
-            sqlite3_bind_int64(sf, 2, f.data->last_write_time.time_since_epoch().count());
-            //sqlite3_bind_int64(sf, 3, f.data->size);
-            sqlite3_bind_int64(sf, 3, h1);
-
-            r = sqlite3_step(sf);
-            CHECK_RC(r, SQLITE_DONE);
-
-            r = sqlite3_reset(sf);
-            CHECK_RC(r, SQLITE_OK);
-
-            for (auto &[f, d] : f.implicit_dependencies)
-            {
-                sqlite3_bind_int64(sd, 1, h1);
-                sqlite3_bind_int64(sd, 2, std::hash<path>()(d->file));
-
-                r = sqlite3_step(sd);
-                CHECK_RC(r, SQLITE_DONE);
-
-                r = sqlite3_reset(sd);
-                CHECK_RC(r, SQLITE_OK);
-            }
-        }
-
-        r = sqlite3_finalize(sf);
-        CHECK_RC(r, SQLITE_OK);
-
-        r = sqlite3_finalize(sd);
-        CHECK_RC(r, SQLITE_OK);
-
-        r = sqlite3_exec(db, "COMMIT", 0, 0, 0);
-        CHECK_RC(r, SQLITE_OK);
-
-        save_from_memory_to_file(f += ".sqlite", db);
-
-        r = sqlite3_close_v2(db);
-        CHECK_RC(r, SQLITE_OK);
-    }
-    LOG_INFO(logger, "save to sqlite db time: " << t2.getTimeFloat() << " s.");
-
-    /*ScopedTime t3;
-    {
-        BinaryContext b(10'000'000);
-        for (auto i = files.getIterator(); i.isValid(); i.next())
-        {
-            auto &f = *i.getValue();
-            if (!f.data)
-                continue;
-
-            auto h1 = std::hash<path>()(f.file);
-            b.write(h1);
-            b.write(normalize_path(f.file));
-            b.write(f.data->last_write_time.time_since_epoch().count());
-            //b.write(f.data->size);
-            b.write(f.implicit_dependencies.size());
-
-            for (auto &[f, d] : f.implicit_dependencies)
-                b.write(std::hash<path>()(d->file));
-        }
-        b.save(f += ".2");
-    }
-    LOG_INFO(logger, "save to file2 time: " << t3.getTimeFloat() << " s.");*/
+    b.save(f);
 }
 
 template <class T>
@@ -300,35 +258,37 @@ void FileDb::write(std::vector<uint8_t> &v, const FileRecord &f) const
 
 void FileDb::load(ConcurrentCommandStorage &commands) const
 {
-    auto f = getDir() += ".commands";
-    FILE *fp = primitives::filesystem::fopen(f, "rb");
-    if (!fp)
+    const auto fn = getCommandsDbFilename();
+    BinaryContext b;
+    try
     {
-        if (fs::exists(f))
-            throw std::runtime_error("Cannot open file: " + f.u8string());
+        b.load(fn);
+    }
+    catch (std::exception &)
+    {
+        if (fs::exists(fn))
+            throw;
         return;
     }
-    while (!feof(fp))
+    while (!b.eof())
     {
-        int64_t k;
-        fread(&k, sizeof(k), 1, fp);
+        size_t k;
+        b.read(k);
         size_t h;
-        fread(&h, sizeof(h), 1, fp);
+        b.read(h);
         commands.insert_ptr(k, h);
     }
-    fclose(fp);
 }
 
 void FileDb::save(ConcurrentCommandStorage &commands) const
 {
-    ScopedFile fp(getDir() += ".commands", "wb");
+    BinaryContext b(10'000'000); // reserve amount
     for (auto i = commands.getIterator(); i.isValid(); i.next())
     {
-        int64_t k = (int64_t)i.getKey();
-        fwrite(&k, sizeof(k), 1, fp.getHandle());
-        auto &h = *i.getValue();
-        fwrite(&h, sizeof(h), 1, fp.getHandle());
+        b.write(i.getKey());
+        b.write(*i.getValue());
     }
+    b.save(getCommandsDbFilename());
 }
 
 }
