@@ -15,9 +15,6 @@
 #define SW_SELF_BUILD
 #include <build_self.generated.h>
 
-#define build build_self2
-#include <../sw.cpp>
-
 void check_self(Checker &c)
 {
     check_self_generated(c);
@@ -34,12 +31,6 @@ void build_self(Solution &s)
 
     s.Settings.Native.LibrariesType = LibraryType::Static;
 
-    {
-        SwapAndRestore sr(s.Local, false);
-        build_self_generated(s);
-    }
-    SwapAndRestore sr(s.Local, true);
-    SwapAndRestore sr2(s.SourceDir, path(__FILE__).parent_path().parent_path().parent_path().parent_path());
-    SwapAndRestore sr3(s.UseStorageBinaryDir, true);
-    build_self2(s);
+    SwapAndRestore sr(s.Local, false);
+    build_self_generated(s);
 }

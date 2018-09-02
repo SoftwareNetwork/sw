@@ -47,8 +47,6 @@ int main(int argc, char **argv)
     struct pkg_data
     {
         bool has_checks = false;
-        path local_dir;
-        int prefix = 2;
     };
 
     // We must keep the whole list of dependencies here
@@ -221,6 +219,12 @@ int main(int argc, char **argv)
         {{"pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp", "master"}, {}},
         {{"pub.egorpugin.primitives.version", "master"}, {}},
 
+        {{"org.sw.sw.client.support", "0"}, {}},
+        {{"org.sw.sw.client.protos", "0"}, {}},
+        {{"org.sw.sw.client.manager", "0"}, {}},
+        {{"org.sw.sw.client.tools.self_builder", "0"}, {}},
+        {{"org.sw.sw.client.builder", "0"}, {}},
+        {{"org.sw.sw.client.driver.cpp", "0"}, {}},
     };
 
     CppContext ctx_packages;
@@ -229,9 +233,7 @@ int main(int argc, char **argv)
     UnresolvedPackages deps;
     for (auto &[p, d] : pkgs)
     {
-        if (d.local_dir.empty() || !fs::exists(d.local_dir))
-            deps.insert(p);
-
+        deps.insert(p);
         ctx_packages.addLine("\"" + p.toString() + "\"s,");
     }
 
@@ -253,45 +255,8 @@ int main(int argc, char **argv)
     check.beginFunction("void check_self_generated(Checker &c)");
 
     std::set<PackageVersionGroupNumber> used_gns;
-    Files used_local_dirs;
-
     for (auto &[u, data] : pkgs)
     {
-        if (!data.local_dir.empty() && fs::exists(data.local_dir))
-        {
-            if (used_local_dirs.find(data.local_dir) != used_local_dirs.end())
-                continue;
-
-            auto h = sha256_short(data.local_dir.u8string());
-            ctx.addLine("#define THIS_PREFIX \"" + u.ppath.slice(0, data.prefix).toString() + "\"");
-            ctx.addLine("#define THIS_VERSION_DEPENDENCY \"master\"_dep");
-            ctx.addLine("#define build build_" + h);
-            ctx.addLine("#define configure configure_" + h);
-            if (data.has_checks)
-                ctx.addLine("#define check check_" + h);
-            ctx.addLine("#include \"" + (data.local_dir / "sw.cpp").u8string() + "\"");
-            ctx.addLine();
-
-            build.beginBlock();
-            build.addLine("s.NamePrefix = \"" + u.ppath.slice(0, data.prefix).toString() + "\";");
-            build.addLine("SwapAndRestore sr(s.Local, true);");
-            build.addLine("SwapAndRestore sr2(s.SourceDir, \"" + normalize_path(data.local_dir) + "\");");
-            build.addLine("SwapAndRestore sr3(s.UseStorageBinaryDir, true);");
-            build.addLine("build_" + h + "(s);");
-            build.endBlock();
-            build.addLine();
-
-            if (data.has_checks)
-            {
-                check.addLine("check_" + h + "(c);");
-                check.addLine();
-            }
-
-            used_local_dirs.insert(data.local_dir);
-
-            continue;
-        }
-
         auto &r = m[u];
         if (used_gns.find(r.group_number) != used_gns.end())
             continue;

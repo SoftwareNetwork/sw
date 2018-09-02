@@ -220,7 +220,7 @@ static cl::opt<String> ide_build("build", cl::desc("Target to build"), cl::sub(s
 static cl::opt<String> ide_rebuild("rebuild", cl::desc("Rebuild target"), cl::sub(subcommand_ide));
 static cl::opt<String> ide_clean("clean", cl::desc("Clean target"), cl::sub(subcommand_ide));
 
-static cl::list<String> override_package("override-package", cl::value_desc("prefix sdir"), cl::desc("Provide a local copy of remote package"), cl::multi_val(2));
+static cl::list<String> override_package("override-remote-package", cl::value_desc("prefix sdir"), cl::desc("Provide a local copy of remote package"), cl::multi_val(2));
 
 int sw_main()
 {
@@ -228,9 +228,12 @@ int sw_main()
     {
         auto s = sw::load(override_package[1]);
         for (auto &[pkg, _] : s->getPackages())
-            getServiceDatabase().overridePackage(
-                { sw::PackagePath(override_package[0]) / pkg.ppath, pkg.version },
-                fs::absolute(override_package[1]));
+        {
+            sw::PackageId pkg2{ sw::PackagePath(override_package[0]) / pkg.ppath, pkg.version };
+            auto dir = fs::absolute(override_package[1]);
+            LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
+            getServiceDatabase().overridePackage(pkg2, dir);
+        }
         return 0;
     }
 
