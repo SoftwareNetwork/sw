@@ -285,6 +285,7 @@ SUBCOMMAND_DECL(ide)
         {
             auto s = sw::load("sw.cpp");
             auto &b = *((sw::Build*)s.get());
+            b.ide = true;
             auto pkg = sw::extractFromStringPackageId(ide_build);
             b.TargetsToBuild[pkg] = b.children[pkg];
             s->execute();

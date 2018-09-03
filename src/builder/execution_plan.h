@@ -108,6 +108,45 @@ struct ExecutionPlan
             throw ExceptionVector(eptrs);
     }
 
+    StringHashMap<int> gatherStrings() const
+    {
+        StringHashMap<int> strings;
+        int i = 1;
+
+        auto insert = [&strings, &i](const auto &s)
+        {
+            auto &v = strings[s];
+            if (v)
+                return;
+            v = i++;
+        };
+
+        for (auto &c : commands)
+        {
+            insert(c->getName());
+            insert(c->program.u8string());
+            insert(c->working_directory.u8string());
+            for (auto &a : c->args)
+                insert(a);
+            insert(c->in.file.u8string());
+            insert(c->out.file.u8string());
+            insert(c->err.file.u8string());
+            for (auto &[k, v] : c->environment)
+            {
+                insert(k);
+                insert(v);
+            }
+            for (auto &f : c->inputs)
+                insert(f.u8string());
+            for (auto &f : c->intermediate)
+                insert(f.u8string());
+            for (auto &f : c->outputs)
+                insert(f.u8string());
+        }
+
+        return strings;
+    }
+
     static ExecutionPlan createExecutionPlan(USet &cmds)
     {
         prepare(cmds);

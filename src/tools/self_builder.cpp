@@ -196,6 +196,7 @@ int main(int argc, char **argv)
 
         {{"pub.egorpugin.primitives.string", "master"}, {}},
         {{"pub.egorpugin.primitives.filesystem", "master"}, {}},
+        {{"pub.egorpugin.primitives.file_monitor", "master"}, {}},
         {{"pub.egorpugin.primitives.templates", "master"}, {}},
         {{"pub.egorpugin.primitives.context", "master"}, {}},
         {{"pub.egorpugin.primitives.executor", "master"}, {}},

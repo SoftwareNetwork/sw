@@ -6,11 +6,15 @@
 
 #pragma once
 
+#include <node.h>
+
 #include <primitives/command.h>
 #include <primitives/executor.h>
 
 #include <condition_variable>
 #include <mutex>
+
+struct BinaryContext;
 
 namespace sw
 {
@@ -76,7 +80,7 @@ namespace builder
 #pragma warning(push)
 #pragma warning(disable:4275) // warning C4275: non dll-interface struct 'primitives::Command' used as base for dll-interface struct 'sw::builder::Command'
 
-struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
+struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     CommandData<::sw::builder::Command>, primitives::Command // hide?
 {
 #pragma warning(pop)
@@ -141,6 +145,9 @@ struct SW_BUILDER_API Command : std::enable_shared_from_this<Command>,
     size_t calculateFilesHash() const;
     void updateFilesHash() const;
     Files getGeneratedDirs() const;
+
+    //void load(BinaryContext &bctx);
+    //void save(BinaryContext &bctx);
 
 protected:
     bool prepared = false;

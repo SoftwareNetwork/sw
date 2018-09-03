@@ -10,6 +10,8 @@
 
 #include "options.h"
 
+#include <file.h>
+
 #include <functional>
 
 namespace sw
@@ -286,6 +288,21 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 private:
     std::map<int, LazyCallback> callbacks;
     std::vector<LazyAction> actions;
+};
+
+struct VSCommand : Command
+{
+    File file;
+
+    void postProcess(bool ok) override;
+};
+
+struct GNUCommand : Command
+{
+    File file;
+    path deps_file;
+
+    void postProcess(bool ok) override;
 };
 
 struct CommandBuilder

@@ -261,6 +261,22 @@ optional<path> Solution::getSourceDir(const Source &s, const Version &v) const
     return i->second;
 }
 
+path Solution::getIdeDir() const
+{
+    const auto compiler_name = boost::to_lower_copy(toString(Settings.Native.CompilerType));
+    return BinaryDir / "sln" / compiler_name;
+}
+
+path Solution::getExecutionPlansDir() const
+{
+    return getIdeDir() / "explans";
+}
+
+path Solution::getExecutionPlanFilename() const
+{
+    return getExecutionPlansDir() / (getConfig() + ".explan");
+}
+
 StaticLibraryTarget &Solution::getImportLibrary()
 {
 #if defined(CPPAN_OS_WINDOWS)
@@ -494,6 +510,12 @@ void Solution::execute()
 
 void Solution::execute() const
 {
+    auto p = getExecutionPlan();
+    execute(p);
+}
+
+void Solution::execute(ExecutionPlan<builder::Command> &p) const
+{
     auto print_graph = [](const auto &ep, const path &p, bool short_names = false)
     {
         String s;
@@ -609,26 +631,7 @@ void Solution::execute() const
     {
         String s;
 
-        // gather programs
-        int i = 1;
-        StringHashMap<int> strings;
-
-        auto insert = [&strings, &i](const auto &s)
-        {
-            auto &v = strings[s];
-            if (v)
-                return;
-            v = i++;
-        };
-
-        for (auto &c : ep.commands)
-        {
-            insert(c->program.u8string());
-            insert(c->working_directory.u8string());
-            for (auto &a : c->args)
-                insert(a);
-        }
-
+        auto strings = ep.gatherStrings();
         Strings explain;
         explain.resize(strings.size());
 
@@ -657,8 +660,6 @@ void Solution::execute() const
 
         write_file(p, t + s);
     };
-
-    auto p = getExecutionPlan();
 
     for (auto &c : p.commands)
         c->silent = silent;
@@ -922,6 +923,8 @@ ExecutionPlan<builder::Command> Solution::getExecutionPlan(Commands &cmds) const
 
 Build::Build()
 {
+    //silent |= ide;
+
     /*static */const auto host_os = detectOS();
 
     Settings.HostOS = host_os;
@@ -1129,9 +1132,12 @@ FilesMap Build::build_configs_separate(const Files &files)
     auto &implib = solution.getImportLibrary();
 #endif
 
-    check_self(solution.Checks);
-    solution.performChecks();
-    build_self(solution);
+    if (!do_not_rebuild_config)
+    {
+        check_self(solution.Checks);
+        solution.performChecks();
+        build_self(solution);
+    }
 
     auto prepare_config = [this,
 #if defined(CPPAN_OS_WINDOWS)
@@ -1141,6 +1147,8 @@ FilesMap Build::build_configs_separate(const Files &files)
     ](const auto &fn)
     {
         auto &lib = createTarget({ fn });
+        if (do_not_rebuild_config)
+            return lib.getOutputFile();
 #if defined(CPPAN_OS_WINDOWS)
         lib += implib;
 #endif
@@ -1286,9 +1294,12 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     auto &implib = solution.getImportLibrary();
 #endif
 
-    check_self(solution.Checks);
-    solution.performChecks();
-    build_self(solution);
+    if (!do_not_rebuild_config)
+    {
+        check_self(solution.Checks);
+        solution.performChecks();
+        build_self(solution);
+    }
 
     Files files;
     for (auto &pkg : pkgs)
@@ -1297,6 +1308,8 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     auto h = getFilesHash(files);
 
     auto &lib = createTarget(files);
+    if (do_not_rebuild_config)
+        return lib.getOutputFile();
 #if defined(CPPAN_OS_WINDOWS)
     lib += implib;
 #endif
@@ -1489,7 +1502,14 @@ path Build::build(const path &fn)
 {
     // separate build
     Build b;
-    return dll = b.build_configs_separate({ fn }).begin()->second;
+    auto r = b.build_configs_separate({ fn });
+    dll = r.begin()->second;
+    if (File(dll, *b.solutions[0].fs).isChanged())
+    {
+        do_not_rebuild_config = false;
+        return build(fn);
+    }
+    return dll;
 }
 
 void Build::build_and_load(const path &fn)
@@ -1500,12 +1520,248 @@ void Build::build_and_load(const path &fn)
     load(dll);
 }
 
+ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
+{
+    BinaryContext ctx;
+    ctx.load(fn);
+
+    size_t sz;
+    ctx.read(sz);
+
+    size_t n_strings;
+    ctx.read(n_strings);
+
+    Strings strings(1);
+    while (n_strings--)
+    {
+        String s;
+        ctx.read(s);
+        strings.push_back(s);
+    }
+
+    auto read_string = [&strings, &ctx, &sz]() -> String
+    {
+        int n = 0;
+        ctx._read(&n, sz);
+        return strings[n];
+    };
+
+    std::map<size_t, std::shared_ptr<builder::Command>> commands;
+
+    auto add_command = [&commands, &s, &read_string](size_t id, uint8_t type)
+    {
+        auto it = commands.find(id);
+        if (it == commands.end())
+        {
+            std::shared_ptr<builder::Command> c;
+            switch (type)
+            {
+            case 1:
+            {
+                auto c2 = std::make_shared<driver::cpp::VSCommand>();
+                c2->file.fs = s.fs;
+                c = c2;
+                c2->file.file = read_string();
+            }
+                break;
+            case 2:
+            {
+                auto c2 = std::make_shared<driver::cpp::GNUCommand>();
+                c2->file.fs = s.fs;
+                c = c2;
+                c2->file.file = read_string();
+                c2->deps_file = read_string();
+            }
+                break;
+            default:
+                c = std::make_shared<builder::Command>();
+                break;
+            }
+            commands[id] = c;
+            c->fs = s.fs;
+            return c;
+        }
+        return it->second;
+    };
+
+    std::unordered_map<builder::Command *, std::vector<size_t>> deps;
+    while (!ctx.eof())
+    {
+        size_t id;
+        ctx.read(id);
+
+        uint8_t type = 0;
+        ctx.read(type);
+
+        auto c = add_command(id, type);
+
+        c->name = read_string();
+
+        c->program = read_string();
+        c->working_directory = read_string();
+
+        size_t n;
+        ctx.read(n);
+        while (n--)
+            c->args.push_back(read_string());
+
+        c->in.file = read_string();
+        c->out.file = read_string();
+        c->err.file = read_string();
+
+        ctx.read(n);
+        while (n--)
+        {
+            auto k = read_string();
+            c->environment[k] = read_string();
+        }
+
+        ctx.read(n);
+        while (n--)
+        {
+            ctx.read(id);
+            deps[c.get()].push_back(id);
+        }
+
+        ctx.read(n);
+        while (n--)
+            c->inputs.insert(read_string());
+
+        ctx.read(n);
+        while (n--)
+            c->intermediate.insert(read_string());
+
+        ctx.read(n);
+        while (n--)
+            c->outputs.insert(read_string());
+    }
+
+    for (auto &[c, dep] : deps)
+    {
+        for (auto &d : dep)
+            c->dependencies.insert(commands[d]);
+    }
+
+    Commands commands2;
+    for (auto &[_, c] : commands)
+        commands2.insert(c);
+    return ExecutionPlan<builder::Command>::createExecutionPlan(commands2);
+}
+
+void save(const path &fn, const ExecutionPlan<builder::Command> &p)
+{
+    BinaryContext ctx;
+
+    auto strings = p.gatherStrings();
+
+    size_t sz;
+    if (strings.size() & 0xff000000)
+        sz = 4;
+    else if (strings.size() & 0xff0000)
+        sz = 3;
+    else if (strings.size() & 0xff00)
+        sz = 2;
+    else if (strings.size() & 0xff)
+        sz = 1;
+
+    ctx.write(sz);
+
+    ctx.write(strings.size());
+    std::map<int, String> strings2;
+    for (auto &[s, n] : strings)
+        strings2[n] = s;
+    for (auto &[_, s] : strings2)
+        ctx.write(s);
+
+    auto print_string = [&strings, &ctx, &sz](const String &in)
+    {
+        auto n = strings[in];
+        ctx._write(&n, sz);
+    };
+
+    for (auto &c : p.commands)
+    {
+        ctx.write(c.get());
+
+        uint8_t type = 0;
+        if (auto c2 = c->as<driver::cpp::VSCommand>(); c2)
+        {
+            type = 1;
+            ctx.write(type);
+            print_string(c2->file.file.u8string());
+        }
+        else if (auto c2 = c->as<driver::cpp::GNUCommand>(); c2)
+        {
+            type = 2;
+            ctx.write(type);
+            print_string(c2->file.file.u8string());
+            print_string(c2->deps_file.u8string());
+        }
+        else
+            ctx.write(type);
+
+        print_string(c->getName());
+
+        print_string(c->program.u8string());
+        print_string(c->working_directory.u8string());
+
+        ctx.write(c->args.size());
+        for (auto &a : c->args)
+            print_string(a);
+
+        print_string(c->in.file.u8string());
+        print_string(c->out.file.u8string());
+        print_string(c->err.file.u8string());
+
+        ctx.write(c->environment.size());
+        for (auto &[k, v] : c->environment)
+        {
+            print_string(k);
+            print_string(v);
+        }
+
+        ctx.write(c->dependencies.size());
+        for (auto &d : c->dependencies)
+            ctx.write(d.get());
+
+        ctx.write(c->inputs.size());
+        for (auto &f : c->inputs)
+            print_string(f.u8string());
+
+        ctx.write(c->intermediate.size());
+        for (auto &f : c->intermediate)
+            print_string(f.u8string());
+
+        ctx.write(c->outputs.size());
+        for (auto &f : c->outputs)
+            print_string(f.u8string());
+    }
+
+    fs::create_directories(fn.parent_path());
+    ctx.save(fn);
+}
+
 bool Build::execute()
 {
     dry_run = ::dry_run;
 
     if (generateBuildSystem())
         return true;
+
+    // read ex plan
+    if (ide)
+    {
+        for (auto &s : solutions)
+        {
+            auto fn = s.getExecutionPlanFilename();
+            if (fs::exists(fn))
+            {
+                auto p = ::sw::load(fn, s);
+                s.execute(p);
+                return true;
+            }
+        }
+    }
 
     try
     {
@@ -1519,6 +1775,18 @@ bool Build::execute()
                 if (!t)
                     throw std::runtime_error("Empty target");
                 s.TargetsToBuild[n] = t;
+            }
+        }
+
+        if (ide)
+        {
+            // write execution plans
+            for (auto &s : solutions)
+            {
+                auto p = s.getExecutionPlan();
+                auto fn = s.getExecutionPlanFilename();
+                //if (!fs::exists(fn))
+                    //save(fn, p);
             }
         }
 
@@ -1649,14 +1917,14 @@ void Build::load(const path &dll)
 
         if (boost::iequals(compiler, "clang"))
             Settings.Native.CompilerType = CompilerType::Clang;
-        if (boost::iequals(compiler, "clang-cl"))
+        else if (boost::iequals(compiler, "clang-cl"))
             Settings.Native.CompilerType = CompilerType::ClangCl;
-        if (boost::iequals(compiler, "gnu"))
+        else if (boost::iequals(compiler, "gnu"))
             Settings.Native.CompilerType = CompilerType::GNU;
 
         if (boost::iequals(target_os, "linux"))
             Settings.TargetOS.Type = OSType::Linux;
-        if (boost::iequals(target_os, "macos"))
+        else if (boost::iequals(target_os, "macos"))
             Settings.TargetOS.Type = OSType::Macos;
     }
 

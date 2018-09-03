@@ -7,6 +7,8 @@
 #include "target.h"
 #include "command.h"
 
+#include <boost/algorithm/string.hpp>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "command");
 
@@ -80,6 +82,59 @@ void Command::pushLazyArg(LazyCallback f)
 void Command::addLazyAction(LazyAction f)
 {
     actions.push_back(f);
+}
+
+void VSCommand::postProcess(bool)
+{
+    // filter out includes and file name
+    static const auto pattern = "Note: including file:"s;
+
+    std::deque<String> lines;
+    boost::split(lines, out.text, boost::is_any_of("\n"));
+    out.text.clear();
+    // remove filename
+    lines.pop_front();
+
+    file.clearImplicitDependencies();
+
+    for (auto &line : lines)
+    {
+        auto p = line.find(pattern);
+        if (p != 0)
+        {
+            out.text += line + "\n";
+            continue;
+        }
+        auto include = line.substr(pattern.size());
+        boost::trim(include);
+        file.addImplicitDependency(include);
+    }
+}
+
+void GNUCommand::postProcess(bool ok)
+{
+    if (!ok || deps_file.empty())
+        return;
+    if (!fs::exists(deps_file))
+        return;
+
+    static const std::regex space_r("[^\\\\] ");
+
+    auto lines = read_lines(deps_file);
+    file.clearImplicitDependencies();
+    for (auto i = lines.begin() + 1; i != lines.end(); i++)
+    {
+        auto &s = *i;
+        s.resize(s.size() - 1);
+        boost::trim(s);
+        s = std::regex_replace(s, space_r, "\n");
+        boost::replace_all(s, "\\ ", " ");
+        Strings files;
+        boost::split(files, s, boost::is_any_of("\n"));
+        //boost::replace_all(s, "\\\"", "\""); // probably no quotes
+        for (auto &f : files)
+            file.addImplicitDependency(f);
+    }
 }
 
 ///

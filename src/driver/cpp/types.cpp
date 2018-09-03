@@ -56,9 +56,9 @@ String toString(ConfigurationType Type)
 {
     switch (Type)
     {
-#define CASE(x) \
+#define CASE(x)                \
     case ConfigurationType::x: \
-        return #x \
+        return #x
 
         CASE(Debug);
         CASE(MinimalSizeRelease);
@@ -73,9 +73,9 @@ String toString(CompilerType Type)
 {
     switch (Type)
     {
-#define CASE(x) \
+#define CASE(x)           \
     case CompilerType::x: \
-        return #x \
+        return #x
 
         CASE(Clang);
         CASE(ClangCl);
@@ -90,9 +90,9 @@ String toString(LinkerType Type)
 {
     switch (Type)
     {
-#define CASE(x) \
+#define CASE(x)         \
     case LinkerType::x: \
-        return #x \
+        return #x
 
         CASE(LLD);
         CASE(MSVC);
@@ -105,9 +105,9 @@ String toString(InheritanceType Type)
 {
     switch (Type)
     {
-#define CASE(x) \
+#define CASE(x)              \
     case InheritanceType::x: \
-        return #x \
+        return #x
 
         CASE(Private);
         CASE(Protected);
@@ -122,9 +122,9 @@ String toString(LibraryType Type)
 {
     switch (Type)
     {
-#define CASE(x) \
+#define CASE(x)          \
     case LibraryType::x: \
-        return #x \
+        return #x
 
         CASE(Static);
         CASE(Shared);
@@ -133,4 +133,4 @@ String toString(LibraryType Type)
     }
 }
 
-}
+} // namespace sw

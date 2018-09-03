@@ -27,7 +27,7 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
     c->fs = fs
 
 #define MAKE_COMMAND_WITH_FILE(t) \
-    MAKE_COMMAND(t);              \
+    MAKE_COMMAND(driver::cpp::t); \
     c->file.fs = fs
 
 static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
@@ -653,7 +653,7 @@ bool ClangCl::findToolchain(struct Solution &s) const
     {
         auto L = (CLanguage*)s.languages[LanguageType::C].get();
         auto C = std::make_shared<ClangClCCompiler>();
-        C->Type = CompilerType::Clang;
+        C->Type = CompilerType::ClangCl;
         C->file = base_llvm_path / "clang-cl.exe";
         *C = COpts;
         L->compiler = C;
@@ -665,7 +665,7 @@ bool ClangCl::findToolchain(struct Solution &s) const
     {
         auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
         auto C = std::make_shared<ClangClCPPCompiler>();
-        C->Type = CompilerType::Clang;
+        C->Type = CompilerType::ClangCl;
         C->file = base_llvm_path / "clang-cl.exe";
         *C = COpts;
         L->compiler = C;
@@ -853,42 +853,10 @@ Version VisualStudio::gatherVersion(const path &program) const
 
 std::shared_ptr<builder::Command> VisualStudioASMCompiler::getCommand() const
 {
-    struct VSAsmCommand : driver::cpp::Command
-    {
-        File file;
-
-        virtual void postProcess(bool)
-        {
-            // filter out includes and file name
-            static const auto pattern = "Note: including file:"s;
-
-            std::deque<String> lines;
-            boost::split(lines, out.text, boost::is_any_of("\n"));
-            out.text.clear();
-            // remove filename
-            lines.pop_front();
-
-            file.clearImplicitDependencies();
-
-            for (auto &line : lines)
-            {
-                auto p = line.find(pattern);
-                if (p != 0)
-                {
-                    out.text += line + "\n";
-                    continue;
-                }
-                auto include = line.substr(pattern.size());
-                boost::trim(include);
-                file.addImplicitDependency(include);
-            }
-        }
-    };
-
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(VSAsmCommand);
+    MAKE_COMMAND_WITH_FILE(VSCommand);
 
     if (file.filename() == "ml64.exe")
         ((VisualStudioASMCompiler*)this)->SafeSEH = false;
@@ -939,45 +907,10 @@ void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output
 
 std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
 {
-    struct VSCompilerCommand : driver::cpp::Command
-    {
-        File file;
-
-        virtual void postProcess(bool)
-        {
-            // filter out includes and file name
-            static const auto pattern = "Note: including file:"s;
-
-            std::deque<String> lines;
-            boost::split(lines, out.text, boost::is_any_of("\n"));
-            out.text.clear();
-            // remove filename
-            lines.pop_front();
-
-            file.clearImplicitDependencies();
-
-            //DEBUG_BREAK_IF_PATH_HAS(file.file, "basename-lgpl.c");
-
-            for (auto &line : lines)
-            {
-                auto p = line.find(pattern);
-                if (p != 0)
-                {
-                    out.text += line + "\n";
-                    continue;
-                }
-                auto include = line.substr(pattern.size());
-                boost::trim(include);
-
-                file.addImplicitDependency(include);
-            }
-        }
-    };
-
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(VSCompilerCommand);
+    MAKE_COMMAND_WITH_FILE(VSCommand);
 
     if (InputFile)
     {
@@ -1072,40 +1005,10 @@ Version Clang::gatherVersion(const path &program) const
 
 std::shared_ptr<builder::Command> ClangCompiler::getCommand() const
 {
-    struct ClangCompilerCommand : driver::cpp::Command
-    {
-        File file;
-        path deps_file;
-
-        virtual void postProcess(bool ok)
-        {
-            if (!ok || deps_file.empty())
-                return;
-
-            static const std::regex space_r("[^\\\\] ");
-
-            auto lines = read_lines(deps_file);
-            file.clearImplicitDependencies();
-            for (auto i = lines.begin() + 1; i != lines.end(); i++)
-            {
-                auto &s = *i;
-                s.resize(s.size() - 1);
-                boost::trim(s);
-                s = std::regex_replace(s, space_r, "\n");
-                boost::replace_all(s, "\\ ", " ");
-                Strings files;
-                boost::split(files, s, boost::is_any_of("\n"));
-                //boost::replace_all(s, "\\\"", "\""); // probably no quotes
-                for (auto &f : files)
-                    file.addImplicitDependency(f);
-            }
-        }
-    };
-
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(ClangCompilerCommand);
+    MAKE_COMMAND_WITH_FILE(GNUCommand);
 
     if (InputFile)
     {
@@ -1165,42 +1068,10 @@ void ClangCPPCompiler::setSourceFile(const path &input_file, path &output_file)
 
 std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
 {
-    struct VSCompilerCommand : driver::cpp::Command
-    {
-        File file;
-
-        virtual void postProcess(bool)
-        {
-            // filter out includes and file name
-            static const auto pattern = "Note: including file:"s;
-
-            std::deque<String> lines;
-            boost::split(lines, out.text, boost::is_any_of("\n"));
-            out.text.clear();
-            // remove filename
-            lines.pop_front();
-
-            file.clearImplicitDependencies();
-
-            for (auto &line : lines)
-            {
-                auto p = line.find(pattern);
-                if (p != 0)
-                {
-                    out.text += line + "\n";
-                    continue;
-                }
-                auto include = line.substr(pattern.size());
-                boost::trim(include);
-                file.addImplicitDependency(include);
-            }
-        }
-    };
-
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(VSCompilerCommand);
+    MAKE_COMMAND_WITH_FILE(VSCommand);
 
     if (InputFile)
     {
@@ -1290,44 +1161,10 @@ Version GNU::gatherVersion(const path &program) const
 
 std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
 {
-    struct GNUAsmCommand : driver::cpp::Command
-    {
-        File file;
-        path deps_file;
-
-        virtual void postProcess(bool ok)
-        {
-            if (!ok || deps_file.empty())
-                return;
-
-            static const std::regex space_r("[^\\\\] ");
-
-            error_code ec;
-            if (!fs::exists(deps_file))
-                return;
-
-            auto lines = read_lines(deps_file);
-            file.clearImplicitDependencies();
-            for (auto i = lines.begin() + 1; i != lines.end(); i++)
-            {
-                auto &s = *i;
-                s.resize(s.size() - 1);
-                boost::trim(s);
-                s = std::regex_replace(s, space_r, "\n");
-                boost::replace_all(s, "\\ ", " ");
-                Strings files;
-                boost::split(files, s, boost::is_any_of("\n"));
-                //boost::replace_all(s, "\\\"", "\""); // probably no quotes
-                for (auto &f : files)
-                    file.addImplicitDependency(f);
-            }
-        }
-    };
-
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(GNUAsmCommand);
+    MAKE_COMMAND_WITH_FILE(GNUCommand);
 
     if (InputFile)
     {
@@ -1375,44 +1212,10 @@ void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
 
 std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
 {
-    struct GNUCompilerCommand : driver::cpp::Command
-    {
-        File file;
-        path deps_file;
-
-        virtual void postProcess(bool ok)
-        {
-            if (!ok || deps_file.empty())
-                return;
-
-            static const std::regex space_r("[^\\\\] ");
-
-            error_code ec;
-            if (!fs::exists(deps_file))
-                return;
-
-            auto lines = read_lines(deps_file);
-            file.clearImplicitDependencies();
-            for (auto i = lines.begin() + 1; i != lines.end(); i++)
-            {
-                auto &s = *i;
-                s.resize(s.size() - 1);
-                boost::trim(s);
-                s = std::regex_replace(s, space_r, "\n");
-                boost::replace_all(s, "\\ ", " ");
-                Strings files;
-                boost::split(files, s, boost::is_any_of("\n"));
-                //boost::replace_all(s, "\\\"", "\""); // probably no quotes
-                for (auto &f : files)
-                    file.addImplicitDependency(f);
-            }
-        }
-    };
-
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(GNUCompilerCommand);
+    MAKE_COMMAND_WITH_FILE(GNUCommand);
 
     if (InputFile)
     {

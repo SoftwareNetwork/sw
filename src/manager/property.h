@@ -131,6 +131,17 @@ return "";
         *this = (std::string)*this + v;
         return *this;
     }
+
+    bool operator==(const PropertyVariant &rhs)
+    {
+        // FIXME:
+        return toString() == rhs.toString();
+    }
+
+    bool operator!=(const PropertyVariant &rhs)
+    {
+        return !operator==(rhs);
+    }
 };
 
 } // namespace detail

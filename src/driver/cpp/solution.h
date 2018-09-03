@@ -57,6 +57,7 @@ public:
     // impl
     void execute();
     void execute() const;
+    void execute(ExecutionPlan<builder::Command> &p) const;
     virtual void prepare();
     virtual void performChecks();
     void copyChecksFrom(const Solution &s);
@@ -81,6 +82,9 @@ public:
     // get solution dir for package
     path getSourceDir(const PackageId &p) const;
     optional<path> getSourceDir(const Source &s, const Version &v) const;
+    path getIdeDir() const;
+    path getExecutionPlansDir() const;
+    path getExecutionPlanFilename() const;
 
     //protected:
     PackagesIdSet knownTargets;
@@ -116,6 +120,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     std::vector<Solution> solutions;
     bool configure = false;
     bool perform_checks = true;
+    bool ide = false;
 
     Build();
     ~Build();

@@ -17,8 +17,9 @@
 #include <hash.h>
 #include <directories.h>
 #include <filesystem.h>
-#include <primitives/executor.h>
+#include <primitives/context.h>
 #include <primitives/debug.h>
+#include <primitives/executor.h>
 #include <primitives/templates.h>
 #include <primitives/sw/settings.h>
 #include <boost/algorithm/string.hpp>
@@ -306,6 +307,8 @@ void Command::prepare()
         return;
 
     program = getProgram();
+    //if (!program.is_absolute())
+        //program = ::primitives::resolve_executable(program);
     getHashAndSave();
 
     //DEBUG_BREAK_IF_PATH_HAS(program, "org.sw.sw.client.tools.self_builder-0.3.0.exe");
@@ -416,9 +419,15 @@ void Command::execute1(std::error_code *ec)
 
         String s = "When building: " + getName();
         if (!out.text.empty())
+        {
+            boost::replace_all(out.text, "\r", "");
             s += "\n" + boost::trim_copy(out.text);
+        }
         if (!err.text.empty())
+        {
+            boost::replace_all(err.text, "\r", "");
             s += "\n" + boost::trim_copy(err.text);
+        }
         s += "\n";
         s += e;
         boost::trim(s);
@@ -600,6 +609,8 @@ String Command::getName(bool short_name) const
         }
         return std::to_string((uint64_t)this);
     }
+    if (name[0] == '\"' && name.back() == '\"')
+        return name;
     //return "Building: \"" + (short_name ? name_short : name) + "\"";
     return "\"" + name + "\"";
 }
@@ -638,6 +649,16 @@ Files Command::getGeneratedDirs() const
         dirs.insert(d.parent_path());
     return dirs;
 }
+
+/*void Command::load(BinaryContext &bctx)
+{
+
+}
+
+void Command::save(BinaryContext &bctx)
+{
+
+}*/
 
 }
 

@@ -364,7 +364,7 @@ struct PackagePathTree
 void VSGenerator::generate(const Build &b)
 {
     const auto cwd = "\"" + current_thread_path().string() + "\"";
-    const auto dir = path(".sw") / "sln";
+    const auto dir = b.getIdeDir();
     const path projects_dir = "projects";
     const InsecurePath deps_subdir = "Dependencies";
     PackagePathTree tree, local_tree;
@@ -458,7 +458,7 @@ void VSGenerator::generate(const Build &b)
 
         pctx.addPropertySheets();
 
-        iterate_over_configs([&pctx, &nt, &cwd, &p](const String &c, const String &pl, const String &dll)
+        iterate_over_configs([&pctx, &nt, &cwd, &p, &b](const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
 
@@ -468,10 +468,18 @@ void VSGenerator::generate(const Build &b)
             if (dll != "dll")
                 cfg += " --static-build";
 
-            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " --do-not-rebuild-config ide --build " + p.target_name);
+            String compiler;
+            if (b.Settings.Native.CompilerType == CompilerType::Clang)
+                compiler = "--compiler clang";
+            else if (b.Settings.Native.CompilerType == CompilerType::ClangCl)
+                compiler = "--compiler clang-cl";
+            else if (b.Settings.Native.CompilerType == CompilerType::GNU)
+                compiler = "--compiler gnu";
+
+            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config ide --build " + p.target_name);
             pctx.addBlock("NMakeOutput", nt->getOutputFile().string());
             pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " " + cfg + " ide --clean");
-            pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + cwd + " " + cfg + " ide --rebuild");
+            pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " ide --rebuild");
             String defs;
             for (auto &[k, v] : nt->Definitions)
                 defs += k + "=" + v + ";";
@@ -516,7 +524,10 @@ void VSGenerator::generate(const Build &b)
                     p = sd.size();
                 else if (p2 != -1)
                     p = bd.size();
-                path r = fd.substr(p + 1);
+                auto ss = fd.substr(p);
+                if (ss[0] == '/')
+                    ss = ss.substr(1);
+                path r = ss;
                 do
                 {
                     r = r.parent_path();
@@ -559,8 +570,9 @@ void VSGenerator::generate(const Build &b)
     ctx.endGlobalSection();
     ctx.endGlobal();
 
+    const auto compiler_name = boost::to_lower_copy(toString(b.Settings.Native.CompilerType));
     String fn = "sw_";
-    fn += boost::to_lower_copy(toString(b.Settings.Native.CompilerType));
+    fn += compiler_name;
     fn += ".sln";
     write_file(dir / fn, ctx.getText());
 }
