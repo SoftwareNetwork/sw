@@ -74,7 +74,7 @@ public:
     Resolver() = default;
     Resolver(const Resolver &) = delete;
 
-    void resolve_dependencies(const UnresolvedPackages &deps);
+    void resolve_dependencies(const UnresolvedPackages &deps, bool clean_resolve = false);
     void resolve_and_download(const UnresolvedPackage &p, const path &fn);
 
     std::unordered_set<ExtendedPackageData> getDownloadDependencies() const;

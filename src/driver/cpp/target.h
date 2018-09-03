@@ -408,18 +408,18 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
 #endif
 
     SW_DEPRECATED
-        void fileWriteOnce(const path &fn, bool binary_dir = false) const;
+    void fileWriteOnce(const path &fn, bool binary_dir = true) const;
     SW_DEPRECATED
-        void fileWriteOnce(const path &fn, const char *content, bool binary_dir = false) const;
+    void fileWriteOnce(const path &fn, const char *content, bool binary_dir = true) const;
     SW_DEPRECATED
-        void fileWriteOnce(const path &fn, const String &content, bool binary_dir = false) const;
+    void fileWriteOnce(const path &fn, const String &content, bool binary_dir = true) const;
     SW_DEPRECATED
-        void fileWriteSafe(const path &fn, const String &content, bool binary_dir = false) const;
+    void fileWriteSafe(const path &fn, const String &content, bool binary_dir = true) const;
 
-    void writeFileOnce(const path &fn, bool binary_dir = false) const;
-    void writeFileOnce(const path &fn, const char *content, bool binary_dir = false) const;
-    void writeFileOnce(const path &fn, const String &content, bool binary_dir = false) const;
-    void writeFileSafe(const path &fn, const String &content, bool binary_dir = false) const;
+    void writeFileOnce(const path &fn, bool binary_dir = true) const;
+    void writeFileOnce(const path &fn, const char *content, bool binary_dir = true) const;
+    void writeFileOnce(const path &fn, const String &content, bool binary_dir = true) const;
+    void writeFileSafe(const path &fn, const String &content, bool binary_dir = true) const;
     void replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir = false) const;
     void deleteInFileOnce(const path &fn, const String &from, bool binary_dir = false) const;
     void pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;

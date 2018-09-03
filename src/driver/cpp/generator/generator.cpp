@@ -482,7 +482,12 @@ void VSGenerator::generate(const Build &b)
             pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " ide --rebuild");
             String defs;
             for (auto &[k, v] : nt->Definitions)
-                defs += k + "=" + v + ";";
+            {
+                if (v.empty())
+                    defs += k + ";";
+                else
+                    defs += k + "=" + v + ";";
+            }
             pctx.addBlock("NMakePreprocessorDefinitions", defs);
             String idirs;
             for (auto &i : nt->gatherIncludeDirectories())

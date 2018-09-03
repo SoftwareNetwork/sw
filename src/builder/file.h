@@ -124,7 +124,7 @@ struct SW_BUILDER_API FileRecord
     /// returns true if file was changed
     bool refresh(bool use_file_monitor = true);
 
-    fs::file_time_type updateLwt();
+    fs::file_time_type updateLwt(bool recursive = true);
 
 private:
     std::weak_ptr<builder::Command> generator;

@@ -723,7 +723,7 @@ void Solution::prepare()
 
         // resolve only deps needed
         Resolver r;
-        r.resolve_dependencies(pkgs);
+        r.resolve_dependencies(pkgs, true);
         auto dd = r.getDownloadDependencies();
         if (dd.empty())
             throw std::runtime_error("Empty download dependencies");

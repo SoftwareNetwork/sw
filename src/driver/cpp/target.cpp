@@ -1659,6 +1659,19 @@ bool NativeExecutedTarget::prepare()
             }*/
         }
 
+        // default macros
+        if (Settings.TargetOS.Type == OSType::Windows)
+        {
+            Definitions["SW_EXPORT"] = "__declspec(dllexport)";
+            Definitions["SW_IMPORT"] = "__declspec(dllimport)";
+        }
+        else
+        {
+            Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
+            Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
+        }
+        Definitions["SW_STATIC"];
+
         //if (HeaderOnly && !HeaderOnly.value())
         //LOG_INFO(logger, "compiling target: " + pkg.ppath.toString());
     }
@@ -1749,7 +1762,12 @@ bool NativeExecutedTarget::prepare()
             for (auto &[d, _] : deps2)
             {
                 if (d->target.lock() == nullptr)
+                {
                     throw std::logic_error("Unresolved package on stage 2: " + d->package.toString());
+                    /*LOG_ERROR(logger, "Unresolved package on stage 2: " + d->package.toString() + ". Resolving inplace");
+                    auto id = d->package.resolve();
+                    d->target = std::static_pointer_cast<NativeTarget>(getSolution()->getTargetPtr(id));*/
+                }
 
                 // iterate over child deps
                 (*(NativeExecutedTarget*)d->target.lock().get()).TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
@@ -2164,12 +2182,12 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
             {
                 if (Type == LibraryType::Shared)
                 {
-                    Private.Definitions[api] = "__declspec(dllexport)";
-                    Interface.Definitions[api] = "__declspec(dllimport)";
+                    Private.Definitions[api] = "SW_EXPORT";
+                    Interface.Definitions[api] = "SW_IMPORT";
                 }
                 else if (ExportIfStatic)
                 {
-                    Public.Definitions[api] = "__declspec(dllexport)";
+                    Public.Definitions[api] = "SW_EXPORT";
                 }
                 else
                 {
@@ -2180,7 +2198,7 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
             {
                 if (Type == LibraryType::Shared || ExportIfStatic)
                 {
-                    Public.Definitions[api] = "__attribute__ ((visibility (\"default\")))";
+                    Public.Definitions[api] = "SW_EXPORT";
                 }
                 else
                 {
@@ -2191,39 +2209,6 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
             Definitions[api + "_EXTERN="];
             Interface.Definitions[api + "_EXTERN"] = "extern";
         };
-
-        // default macro
-        if (Settings.TargetOS.Type == OSType::Windows)
-        {
-            if (Type == LibraryType::Shared)
-            {
-                Definitions["SW_EXPORT"] = "__declspec(dllexport)";
-                Definitions["SW_IMPORT"] = "__declspec(dllimport)";
-            }
-            else if (ExportIfStatic)
-            {
-                Definitions["SW_EXPORT"] = "__declspec(dllexport)";
-                Definitions["SW_IMPORT="];
-            }
-            else
-            {
-                Definitions["SW_EXPORT="];
-                Definitions["SW_IMPORT="];
-            }
-        }
-        else
-        {
-            if (Type == LibraryType::Shared || ExportIfStatic)
-            {
-                Public.Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
-                Public.Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
-            }
-            else
-            {
-                Definitions["SW_EXPORT="];
-                Definitions["SW_IMPORT="];
-            }
-        }
 
         if (Type == LibraryType::Shared)
             Definitions["CPPAN_SHARED_BUILD"];
@@ -2418,26 +2403,14 @@ bool ExecutableTarget::prepare()
                 return;
             if (Settings.TargetOS.Type == OSType::Windows)
             {
-                Private.Definitions[api] = "__declspec(dllexport)";
-                Interface.Definitions[api] = "__declspec(dllimport)";
+                Private.Definitions[api] = "SW_EXPORT";
+                Interface.Definitions[api] = "SW_IMPORT";
             }
             else
             {
-                Public.Definitions[api] = "__attribute__ ((visibility (\"default\")))";
+                Public.Definitions[api] = "SW_EXPORT";
             }
         };
-
-        // default macro
-        if (Settings.TargetOS.Type == OSType::Windows)
-        {
-            Definitions["SW_EXPORT"] = "__declspec(dllexport)";
-            Definitions["SW_IMPORT"] = "__declspec(dllimport)";
-        }
-        else
-        {
-            Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
-            Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
-        }
 
         Definitions["CPPAN_EXECUTABLE"];
 

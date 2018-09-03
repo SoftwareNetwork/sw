@@ -31,6 +31,8 @@
 DECLARE_STATIC_LOGGER(logger, "command");
 
 static cl::opt<bool> save_failed_commands("save-failed-commands");
+static cl::opt<bool> save_all_commands("save-all-commands");
+static cl::opt<bool> save_executed_commands("save-executed-commands");
 
 namespace sw
 {
@@ -413,7 +415,82 @@ void Command::execute1(std::error_code *ec)
         fs::remove(rsp_file, ec);
     };
 
-    auto make_error_string = [this, &rsp_file, &escape_cmd_arg, &make_rsp_file, &args_saved](const String &e)
+    auto save_command = [this, &rsp_file, &escape_cmd_arg, &make_rsp_file, &args_saved](String &s)
+    {
+        if (rsp_file.empty())
+        {
+            rsp_file = unique_path();
+            rsp_file += ".rsp";
+        }
+        else
+            rsp_file = rsp_file.filename();
+        s += "\n";
+        auto p = getDirectories().storage_dir_tmp / "rsp" / rsp_file;
+        auto pbat = p;
+        String t;
+
+#ifdef _WIN32
+        pbat += ".bat";
+#else
+        pbat += ".sh";
+#endif
+
+        s += "pid = " + std::to_string(pid) + "\n";
+        s += "command is copied to " + p.u8string() + "\n";
+
+#ifdef _WIN32
+        t += "@echo off\n";
+        t += "setlocal";
+#else
+        t += "#!/bin/sh";
+#endif
+        t += "\n";
+
+        for (auto &[k, v] : environment)
+        {
+#ifdef _WIN32
+            t += "set";
+#endif
+            t += " " + k + "=" + v + "\n";
+        }
+
+        if (!working_directory.empty())
+            t += "cd " + working_directory.u8string() + "\n";
+
+        t += "\"" + program.u8string() + "\" ";
+        if (needsResponseFile())
+        {
+            make_rsp_file(p);
+            t += "@" + p.filename().string() + " ";
+        }
+        else
+        {
+            for (auto &a : args_saved)
+                t += "\"" + escape_cmd_arg(a) + "\" ";
+        }
+#ifdef _WIN32
+        t += "%";
+#else
+        t += "$";
+#endif
+        t += "* ";
+
+        if (!in.file.empty())
+            t += "< " + in.file.u8string() + " ";
+        if (!out.file.empty())
+            t += "> " + out.file.u8string() + " ";
+        if (!err.file.empty())
+            t += "2> " + err.file.u8string() + " ";
+
+        t += "\n";
+
+        write_file(pbat, t);
+        fs::permissions(pbat,
+            fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
+            fs::perm_options::add);
+    };
+
+    auto make_error_string = [this, &save_command](const String &e)
     {
         postProcess(false);
 
@@ -431,80 +508,8 @@ void Command::execute1(std::error_code *ec)
         s += "\n";
         s += e;
         boost::trim(s);
-        if (save_failed_commands)
-        {
-            if (rsp_file.empty())
-            {
-                rsp_file = unique_path();
-                rsp_file += ".rsp";
-            }
-            else
-                rsp_file = rsp_file.filename();
-            s += "\n";
-            auto p = getDirectories().storage_dir_tmp / "rsp" / rsp_file;
-            auto pbat = p;
-            String t;
-
-#ifdef _WIN32
-            pbat += ".bat";
-#else
-            pbat += ".sh";
-#endif
-
-            s += "pid = " + std::to_string(pid) + "\n";
-            s += "command is copied to " + p.u8string() + "\n";
-
-#ifdef _WIN32
-            t += "@echo off\n";
-            t += "setlocal";
-#else
-            t += "#!/bin/sh";
-#endif
-            t += "\n";
-
-            for (auto &[k, v] : environment)
-            {
-#ifdef _WIN32
-                t += "set";
-#endif
-                t += " " + k + "=" + v + "\n";
-            }
-
-            if (!working_directory.empty())
-                t += "cd " + working_directory.u8string() + "\n";
-
-            t += "\"" + program.u8string() + "\" ";
-            if (needsResponseFile())
-            {
-                make_rsp_file(p);
-                t += "@" + p.filename().string() + " ";
-            }
-            else
-            {
-                for (auto &a : args_saved)
-                    t += "\"" + escape_cmd_arg(a) + "\" ";
-            }
-#ifdef _WIN32
-            t += "%";
-#else
-            t += "$";
-#endif
-            t += "* ";
-
-            if (!in.file.empty())
-                t += "< " + in.file.u8string() + " ";
-            if (!out.file.empty())
-                t += "> " + out.file.u8string() + " ";
-            if (!err.file.empty())
-                t += "2> " + err.file.u8string() + " ";
-
-            t += "\n";
-
-            write_file(pbat, t);
-            fs::permissions(pbat,
-                fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
-                fs::perm_options::add);
-        }
+        if (save_failed_commands || save_all_commands)
+            save_command(s);
         return s;
     };
 
@@ -525,6 +530,12 @@ void Command::execute1(std::error_code *ec)
         }
         else
             Base::execute();
+
+        if (save_executed_commands || save_all_commands)
+        {
+            String s;
+            save_command(s);
+        }
 
         postProcess(); // process deps
 

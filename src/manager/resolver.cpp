@@ -123,7 +123,7 @@ std::unordered_map<ExtendedPackageData, PackageVersionGroupNumber> Resolver::get
     return s;
 }
 
-void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies)
+void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies, bool clean_resolve)
 {
     UnresolvedPackages deps;
     UnresolvedPackages known_deps;
@@ -135,13 +135,16 @@ void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies)
         if (d.ppath.is_loc())
             continue;
 
-        // remove already downloaded packages
-        auto i = getPackageStore().resolved_packages.find(d);
-        if (i != getPackageStore().resolved_packages.end())
+        if (!clean_resolve)
         {
-            resolved_packages[d] = i->second;
-            known_deps.insert(d);
-            continue;
+            // remove already downloaded packages
+            auto i = getPackageStore().resolved_packages.find(d);
+            if (i != getPackageStore().resolved_packages.end())
+            {
+                resolved_packages[d] = i->second;
+                known_deps.insert(d);
+                continue;
+            }
         }
 
         deps.insert(d);

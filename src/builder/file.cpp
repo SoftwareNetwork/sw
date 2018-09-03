@@ -412,6 +412,7 @@ fs::file_time_type FileRecord::getMaxTime() const
     {
         if (d == this)
             continue;
+        //auto dm = d->data->last_write_time;
         auto dm = d->getMaxTime();
         if (dm > m)
         {
@@ -423,6 +424,7 @@ fs::file_time_type FileRecord::getMaxTime() const
     {
         if (d == this)
             continue;
+        //auto dm = d->data->last_write_time;
         auto dm = d->getMaxTime();
         if (dm > m)
         {
@@ -433,11 +435,13 @@ fs::file_time_type FileRecord::getMaxTime() const
     return m;
 }
 
-fs::file_time_type FileRecord::updateLwt()
+fs::file_time_type FileRecord::updateLwt(bool recursive)
 {
     if (data->last_write_time.time_since_epoch().count() == 0)
         const_cast<FileRecord*>(this)->load(file);
     auto m = data->last_write_time;
+    if (!recursive)
+        return m;
     for (auto &[f, d] : explicit_dependencies)
     {
         if (d == this)
