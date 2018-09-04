@@ -407,13 +407,22 @@ bool FileRecord::isGenerated() const
 
 fs::file_time_type FileRecord::getMaxTime() const
 {
+    std::unordered_set<FileData*> files;
+    return getMaxTime1(files);
+}
+
+fs::file_time_type FileRecord::getMaxTime1(std::unordered_set<FileData*> &files) const
+{
     auto m = data->last_write_time;
     for (auto &[f, d] : explicit_dependencies)
     {
         if (d == this)
             continue;
+        if (files.find(d->data) != files.end())
+            continue;
+        files.insert(d->data);
         //auto dm = d->data->last_write_time;
-        auto dm = d->getMaxTime();
+        auto dm = d->getMaxTime1(files);
         if (dm > m)
         {
             m = dm;
@@ -424,8 +433,11 @@ fs::file_time_type FileRecord::getMaxTime() const
     {
         if (d == this)
             continue;
+        if (files.find(d->data) != files.end())
+            continue;
+        files.insert(d->data);
         //auto dm = d->data->last_write_time;
-        auto dm = d->getMaxTime();
+        auto dm = d->getMaxTime1(files);
         if (dm > m)
         {
             m = dm;
@@ -435,18 +447,25 @@ fs::file_time_type FileRecord::getMaxTime() const
     return m;
 }
 
-fs::file_time_type FileRecord::updateLwt(bool recursive)
+fs::file_time_type FileRecord::updateLwt()
+{
+    std::unordered_set<FileData*> files;
+    return updateLwt1(files);
+}
+
+fs::file_time_type FileRecord::updateLwt1(std::unordered_set<FileData*> &files)
 {
     if (data->last_write_time.time_since_epoch().count() == 0)
         const_cast<FileRecord*>(this)->load(file);
     auto m = data->last_write_time;
-    if (!recursive)
-        return m;
     for (auto &[f, d] : explicit_dependencies)
     {
         if (d == this)
             continue;
-        auto dm = d->updateLwt();
+        if (files.find(d->data) != files.end())
+            continue;
+        files.insert(d->data);
+        auto dm = d->updateLwt1(files);
         if (dm > m)
             m = dm;
     }
@@ -454,7 +473,10 @@ fs::file_time_type FileRecord::updateLwt(bool recursive)
     {
         if (d == this)
             continue;
-        auto dm = d->updateLwt();
+        if (files.find(d->data) != files.end())
+            continue;
+        files.insert(d->data);
+        auto dm = d->updateLwt1(files);
         if (dm > m)
             m = dm;
     }

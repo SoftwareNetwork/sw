@@ -381,15 +381,15 @@ void Command::execute1(std::error_code *ec)
     };
 
     auto args_saved = args;
-    auto make_rsp_file = [this, &escape_cmd_arg, &args_saved](const auto &rsp_file)
+    auto make_rsp_file = [this, &escape_cmd_arg, &args_saved](const auto &rsp_file, bool show_includes = true)
     {
         String rsp;
         for (auto &a : args_saved)
-#ifdef _WIN32
+        {
+            if (!show_includes && a == "-showIncludes")
+                continue;
             rsp += "\"" + escape_cmd_arg(a) + "\"\n";
-#else
-            rsp += "\"" + escape_cmd_arg(a) + "\"\n";
-#endif
+        }
         args.clear();
         args.push_back("@" + rsp_file.string());
         write_file(rsp_file, rsp);
@@ -460,13 +460,17 @@ void Command::execute1(std::error_code *ec)
         t += "\"" + program.u8string() + "\" ";
         if (needsResponseFile())
         {
-            make_rsp_file(p);
+            make_rsp_file(p, false);
             t += "@" + p.filename().string() + " ";
         }
         else
         {
             for (auto &a : args_saved)
+            {
+                if (a == "-showIncludes")
+                    continue;
                 t += "\"" + escape_cmd_arg(a) + "\" ";
+            }
         }
 #ifdef _WIN32
         t += "%";
@@ -508,7 +512,7 @@ void Command::execute1(std::error_code *ec)
         s += "\n";
         s += e;
         boost::trim(s);
-        if (save_failed_commands || save_all_commands)
+        if (save_failed_commands || save_executed_commands || save_all_commands)
             save_command(s);
         return s;
     };
