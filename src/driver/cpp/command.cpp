@@ -95,7 +95,12 @@ void VSCommand::postProcess(bool)
     // remove filename
     lines.pop_front();
 
-    file.clearImplicitDependencies();
+    //file.clearImplicitDependencies();
+
+    /*for (auto &f : outputs)
+        File(f, *fs).clearImplicitDependencies();
+    for (auto &f : outputs)
+        File(f, *fs).clearImplicitDependencies();*/
 
     for (auto &line : lines)
     {
@@ -107,7 +112,11 @@ void VSCommand::postProcess(bool)
         }
         auto include = line.substr(pattern.size());
         boost::trim(include);
-        file.addImplicitDependency(include);
+        //file.addImplicitDependency(include);
+        for (auto &f : intermediate)
+            File(f, *fs).addImplicitDependency(include);
+        for (auto &f : outputs)
+            File(f, *fs).addImplicitDependency(include);
     }
 }
 
@@ -121,7 +130,7 @@ void GNUCommand::postProcess(bool ok)
     static const std::regex space_r("[^\\\\] ");
 
     auto lines = read_lines(deps_file);
-    file.clearImplicitDependencies();
+    //file.clearImplicitDependencies();
     for (auto i = lines.begin() + 1; i != lines.end(); i++)
     {
         auto &s = *i;
@@ -132,8 +141,16 @@ void GNUCommand::postProcess(bool ok)
         Strings files;
         boost::split(files, s, boost::is_any_of("\n"));
         //boost::replace_all(s, "\\\"", "\""); // probably no quotes
-        for (auto &f : files)
-            file.addImplicitDependency(f);
+        //for (auto &f : files)
+            //file.addImplicitDependency(f);
+
+        for (auto &f2 : files)
+        {
+            for (auto &f : intermediate)
+                File(f, *fs).addImplicitDependency(f2);
+            for (auto &f : outputs)
+                File(f, *fs).addImplicitDependency(f2);
+        }
     }
 }
 

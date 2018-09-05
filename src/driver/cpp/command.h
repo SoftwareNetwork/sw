@@ -292,14 +292,14 @@ private:
 
 struct VSCommand : Command
 {
-    File file;
+    //File file;
 
     void postProcess(bool ok) override;
 };
 
 struct GNUCommand : Command
 {
-    File file;
+    //File file;
     path deps_file;
 
     void postProcess(bool ok) override;

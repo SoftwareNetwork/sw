@@ -388,15 +388,21 @@ void Command::execute1(std::error_code *ec)
         {
             if (!show_includes && a == "-showIncludes")
                 continue;
-            rsp += "\"" + escape_cmd_arg(a) + "\"\n";
+            if (protect_args_with_quotes)
+                rsp += "\"" + escape_cmd_arg(a) + "\"";
+            else
+                rsp += escape_cmd_arg(a);
+            rsp += "\n";
         }
+        if (!rsp.empty())
+            rsp.resize(rsp.size() - 1);
         args.clear();
-        args.push_back("@" + rsp_file.string());
+        args.push_back("@" + rsp_file.u8string());
         write_file(rsp_file, rsp);
     };
 
     path rsp_file;
-    bool use_rsp = use_response_files && needsResponseFile();
+    bool use_rsp = use_response_files || needsResponseFile();
     if (use_rsp)
     {
         auto t = get_temp_filename();
@@ -415,7 +421,7 @@ void Command::execute1(std::error_code *ec)
         fs::remove(rsp_file, ec);
     };
 
-    auto save_command = [this, &rsp_file, &escape_cmd_arg, &make_rsp_file, &args_saved](String &s)
+    auto save_command = [this, &rsp_file, &escape_cmd_arg, &make_rsp_file, &args_saved, &use_rsp](String &s)
     {
         if (rsp_file.empty())
         {
@@ -458,10 +464,10 @@ void Command::execute1(std::error_code *ec)
             t += "cd " + working_directory.u8string() + "\n";
 
         t += "\"" + program.u8string() + "\" ";
-        if (needsResponseFile())
+        if (use_rsp)
         {
             make_rsp_file(p, false);
-            t += "@" + p.filename().string() + " ";
+            t += "@" + p.u8string() + " ";
         }
         else
         {

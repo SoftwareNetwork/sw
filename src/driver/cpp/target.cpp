@@ -1672,6 +1672,8 @@ bool NativeExecutedTarget::prepare()
         }
         Definitions["SW_STATIC"];
 
+        clearGlobCache();
+
         //if (HeaderOnly && !HeaderOnly.value())
         //LOG_INFO(logger, "compiling target: " + pkg.ppath.toString());
     }

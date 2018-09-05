@@ -179,7 +179,7 @@ void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
             if (!h2)
                 continue;
             auto k2 = &files[h2];
-            if (k2)
+            if (k2 && !k2->file.empty())
                 files[k].implicit_dependencies.insert({ k2->file, k2 });
         }
     }

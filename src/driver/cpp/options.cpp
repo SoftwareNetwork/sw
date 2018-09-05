@@ -35,7 +35,7 @@ FileRegex::FileRegex(const String &fn, bool recursive)
     do
     {
         auto p0 = p;
-        p = fn.find_first_of("/*?+", p);
+        p = fn.find_first_of("/*?+[.\\", p);
         if (p == -1 || fn[p] != '/')
         {
             r = fn.substr(p0);
@@ -246,6 +246,48 @@ void NativeCompilerOptions::merge(const NativeCompilerOptions &o, const GroupSet
         unique_merge_containers(System.IncludeDirectories, o.IncludeDirectories);
         unique_merge_containers(System.IncludeDirectories, o.PostIncludeDirectories);
     }*/
+}
+
+void NativeCompilerOptions::addDefinitionsAndIncludeDirectories(builder::Command &c) const
+{
+    auto print_def = [&c](auto &a)
+    {
+        for (auto &d : a)
+        {
+            using namespace sw;
+
+            if (d.second.empty())
+                c.args.push_back("-D" + d.first);
+            else
+                c.args.push_back("-D" + d.first + "=" + d.second);
+        }
+    };
+
+    print_def(System.Definitions);
+    print_def(Definitions);
+
+    auto print_idir = [&c](const auto &a, auto &flag)
+    {
+        for (auto &d : a)
+            c.args.push_back(flag + normalize_path(d));
+    };
+
+    print_idir(gatherIncludeDirectories(), "-I");
+    print_idir(System.gatherIncludeDirectories(), "-I");
+}
+
+void NativeCompilerOptions::addEverything(builder::Command &c) const
+{
+    addDefinitionsAndIncludeDirectories(c);
+
+    auto print_idir = [&c](const auto &a, auto &flag)
+    {
+        for (auto &d : a)
+            c.args.push_back(flag + normalize_path(d));
+    };
+
+    print_idir(System.CompileOptions, "");
+    print_idir(CompileOptions, "");
 }
 
 void NativeLinkerOptionsData::add(const LinkLibrary &l)

@@ -27,8 +27,7 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
     c->fs = fs
 
 #define MAKE_COMMAND_WITH_FILE(t) \
-    MAKE_COMMAND(driver::cpp::t); \
-    c->file.fs = fs
+    MAKE_COMMAND(driver::cpp::t)
 
 static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
 
@@ -108,6 +107,25 @@ path getWindowsKit10Dir(Solution &s, const path &d)
     if (last_dir.empty())
         throw std::runtime_error("No Windows Kits 10.0 available");
     return last_dir;
+}
+
+template <class T>
+static void getCommandLineOptions(driver::cpp::Command *c, const CommandLineOptions<T> &t, const String prefix = "", bool end_options = false)
+{
+    for (auto &o : t)
+    {
+        if (o.manual_handling)
+            continue;
+        if (end_options != o.place_at_the_end)
+            continue;
+        auto cmd = o.getCommandLine(c);
+        for (auto &c2 : cmd)
+        {
+            if (!prefix.empty())
+                c->args.push_back(prefix);
+            c->args.push_back(c2);
+        }
+    }
 }
 
 ToolBase::~ToolBase()
@@ -769,64 +787,6 @@ bool GNU::findToolchain(struct Solution &s) const
     return true;
 }
 
-template <class T>
-static void getCommandLineOptions(driver::cpp::Command *c, const CommandLineOptions<T> &t, const String prefix = "", bool end_options = false)
-{
-    for (auto &o : t)
-    {
-        if (o.manual_handling)
-            continue;
-        if (end_options != o.place_at_the_end)
-            continue;
-        auto cmd = o.getCommandLine(c);
-        for (auto &c2 : cmd)
-        {
-            if (!prefix.empty())
-                c->args.push_back(prefix);
-            c->args.push_back(c2);
-        }
-    }
-}
-
-template <class V, class GS>
-static void printDefsAndIdirs(driver::cpp::Command *c, V &v, const GS &gs)
-{
-    auto print_def = [&c](auto &a)
-    {
-        for (auto &d : a)
-        {
-            using namespace sw;
-
-            if (d.second.empty()/* || d.first.find("=") != -1*/)
-                c->args.push_back("-D" + d.first);
-            else
-                c->args.push_back("-D" + d.first + "=" + d.second);
-        }
-    };
-
-    print_def(v.System.Definitions);
-    print_def(v.Definitions);
-
-    auto print_idir = [&c](const auto &a, auto &flag)
-    {
-        for (auto &d : a)
-            c->args.push_back(flag + normalize_path(d));
-    };
-
-    print_idir(v.gatherIncludeDirectories(), "-I");
-    print_idir(v.System.gatherIncludeDirectories(),
-           #ifdef _WIN32
-               "-I"
-           #else
-               //"-isystem"
-               "-I"
-           #endif
-               );
-
-    print_idir(v.System.CompileOptions, "");
-    print_idir(v.CompileOptions, "");
-}
-
 Version VisualStudio::gatherVersion(const path &program) const
 {
     Version V;
@@ -865,19 +825,19 @@ std::shared_ptr<builder::Command> VisualStudioASMCompiler::getCommand() const
     {
         c->name = normalize_path(InputFile());
         c->name_short = InputFile().filename().string();
-        c->file = InputFile;
+        //c->file = InputFile;
     }
     if (ObjectFile)
         c->working_directory = ObjectFile().parent_path();
 
-    if (c->file.empty())
-        return nullptr;
+    //if (c->file.empty())
+        //return nullptr;
 
     //c->out.capture = true;
     c->base = clone();
 
     getCommandLineOptions<VisualStudioAssemblerOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
+    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
 
     return cmd = c;
 }
@@ -916,31 +876,31 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
     {
         c->name = normalize_path(InputFile());
         c->name_short = InputFile().filename().string();
-        c->file = InputFile;
+        //c->file = InputFile;
     }
     if (CSourceFile)
     {
         c->name = normalize_path(CSourceFile());
         c->name_short = CSourceFile().filename().string();
-        c->file = CSourceFile;
+        //c->file = CSourceFile;
     }
     if (CPPSourceFile)
     {
         c->name = normalize_path(CPPSourceFile());
         c->name_short = CPPSourceFile().filename().string();
-        c->file = CPPSourceFile;
+        //c->file = CPPSourceFile;
     }
     if (ObjectFile)
         c->working_directory = ObjectFile().parent_path();
 
-    if (c->file.empty())
-        return nullptr;
+    //if (c->file.empty())
+        //return nullptr;
 
     //c->out.capture = true;
     c->base = clone();
 
     getCommandLineOptions<VisualStudioCompilerOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
+    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
 
     if (PreprocessToFile)
     {
@@ -1014,20 +974,20 @@ std::shared_ptr<builder::Command> ClangCompiler::getCommand() const
     {
         c->name = normalize_path(InputFile());
         c->name_short = InputFile().filename().string();
-        c->file = InputFile;
+        //c->file = InputFile;
     }
     if (OutputFile)
         c->deps_file = OutputFile().parent_path() / (OutputFile().stem().string() + ".d");
     c->working_directory = OutputFile().parent_path();
 
-    if (c->file.empty())
-        return nullptr;
+    //if (c->file.empty())
+        //return nullptr;
 
     //c->out.capture = true;
     c->base = clone();
 
     getCommandLineOptions<ClangOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
+    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
 
     return cmd = c;
 }
@@ -1077,32 +1037,32 @@ std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
     {
         c->name = normalize_path(InputFile());
         c->name_short = InputFile().filename().string();
-        c->file = InputFile;
+        //c->file = InputFile;
     }
     if (CSourceFile)
     {
         c->name = normalize_path(CSourceFile());
         c->name_short = CSourceFile().filename().string();
-        c->file = CSourceFile;
+        //c->file = CSourceFile;
     }
     if (CPPSourceFile)
     {
         c->name = normalize_path(CPPSourceFile());
         c->name_short = CPPSourceFile().filename().string();
-        c->file = CPPSourceFile;
+        //c->file = CPPSourceFile;
     }
     if (ObjectFile)
         c->working_directory = ObjectFile().parent_path();
 
-    if (c->file.empty())
-        return nullptr;
+    //if (c->file.empty())
+        //return nullptr;
 
     //c->out.capture = true;
     c->base = clone();
 
     getCommandLineOptions<VisualStudioCompilerOptions>(c.get(), *this);
     getCommandLineOptions<ClangClOptions>(c.get(), *this, "-Xclang");
-    iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
+    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
 
     return cmd = c;
 }
@@ -1170,19 +1130,19 @@ std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
     {
         c->name = normalize_path(InputFile());
         c->name_short = InputFile().filename().string();
-        c->file = InputFile;
+        //c->file = InputFile;
     }
     if (OutputFile)
         c->working_directory = OutputFile().parent_path();
 
-    if (c->file.empty())
-        return nullptr;
+    //if (c->file.empty())
+        //return nullptr;
 
     //c->out.capture = true;
     c->base = clone();
 
     getCommandLineOptions<GNUAssemblerOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
+    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
 
     return cmd = c;
 }
@@ -1221,20 +1181,20 @@ std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
     {
         c->name = normalize_path(InputFile());
         c->name_short = InputFile().filename().string();
-        c->file = InputFile;
+        //c->file = InputFile;
     }
     if (OutputFile)
         c->deps_file = OutputFile().parent_path() / (OutputFile().stem().string() + ".d");
     c->working_directory = OutputFile().parent_path();
 
-    if (c->file.empty())
-        return nullptr;
+    //if (c->file.empty())
+        //return nullptr;
 
     //c->out.capture = true;
     c->base = clone();
 
     getCommandLineOptions<GNUOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { printDefsAndIdirs(c.get(), v, gs); });
+    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
     getCommandLineOptions<GNUOptions>(c.get(), *this, "", true);
 
     return cmd = c;

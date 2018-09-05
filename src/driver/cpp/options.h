@@ -20,6 +20,11 @@
 namespace sw
 {
 
+namespace builder
+{
+struct Command;
+}
+
 struct NativeOptions;
 struct NativeTarget;
 struct Package;
@@ -221,6 +226,9 @@ struct SW_DRIVER_CPP_API NativeCompilerOptions : IterableOptions<NativeCompilerO
 
     void merge(const NativeCompilerOptions &o, const GroupSettings &s = GroupSettings());
     //void unique();
+
+    void addDefinitionsAndIncludeDirectories(builder::Command &c) const;
+    void addEverything(builder::Command &c) const;
 };
 
 struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptions>,

@@ -41,6 +41,7 @@ static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with 
 static cl::opt<String> generator("G", cl::desc("Generator"));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 static cl::opt<bool> dry_run("n", cl::desc("Dry run"));
+static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 
 static cl::opt<String> target_os("target-os");
 static cl::opt<String> compiler("compiler", cl::desc("Set compiler")/*, cl::sub(subcommand_ide)*/);
@@ -1124,9 +1125,8 @@ FilesMap Build::build_configs_separate(const Files &files)
     auto &solution = solutions[0];
 
     solution.Settings.Native.LibrariesType = LibraryType::Static;
-#ifndef NDEBUG
-    solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
-#endif
+    if (debug_configs)
+        solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
 
 #if defined(CPPAN_OS_WINDOWS)
     auto &implib = solution.getImportLibrary();
@@ -1286,9 +1286,8 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     auto &solution = solutions[0];
 
     solution.Settings.Native.LibrariesType = LibraryType::Static;
-#ifndef NDEBUG
-    solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
-#endif
+    if (debug_configs)
+        solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
 
 #if defined(CPPAN_OS_WINDOWS)
     auto &implib = solution.getImportLibrary();
@@ -1559,17 +1558,17 @@ ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
             case 1:
             {
                 auto c2 = std::make_shared<driver::cpp::VSCommand>();
-                c2->file.fs = s.fs;
+                //c2->file.fs = s.fs;
                 c = c2;
-                c2->file.file = read_string();
+                //c2->file.file = read_string();
             }
                 break;
             case 2:
             {
                 auto c2 = std::make_shared<driver::cpp::GNUCommand>();
-                c2->file.fs = s.fs;
+                //c2->file.fs = s.fs;
                 c = c2;
-                c2->file.file = read_string();
+                //c2->file.file = read_string();
                 c2->deps_file = read_string();
             }
                 break;
@@ -1688,13 +1687,13 @@ void save(const path &fn, const ExecutionPlan<builder::Command> &p)
         {
             type = 1;
             ctx.write(type);
-            print_string(c2->file.file.u8string());
+            //print_string(c2->file.file.u8string());
         }
         else if (auto c2 = c->as<driver::cpp::GNUCommand>(); c2)
         {
             type = 2;
             ctx.write(type);
-            print_string(c2->file.file.u8string());
+            //print_string(c2->file.file.u8string());
             print_string(c2->deps_file.u8string());
         }
         else

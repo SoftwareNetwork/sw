@@ -120,6 +120,8 @@ path File::getPath() const
 
 void File::addExplicitDependency(const path &p)
 {
+    if (p.empty())
+        return;
     registerSelf();
     File f(p, *fs);
     // FIXME:
@@ -136,6 +138,8 @@ void File::addExplicitDependency(const Files &files)
 
 void File::addImplicitDependency(const path &p)
 {
+    if (p.empty())
+        return;
     registerSelf();
     File f(p, *fs);
     // FIXME:
@@ -266,7 +270,7 @@ void FileRecord::load(const path &p)
 {
     if (!p.empty())
         file = p;
-    if (file.empty())
+    if (file.empty() || !data)
         return;
     if (!fs::exists(file))
         return;
@@ -301,7 +305,7 @@ void FileRecord::load(const path &p)
 bool FileRecord::refresh(bool use_file_monitor)
 {
     bool r = false;
-    if (!data->refreshed.compare_exchange_strong(r, true))
+    if (!data || !data->refreshed.compare_exchange_strong(r, true))
         return false;
 
     //DEBUG_BREAK_IF_PATH_HAS(file, "tclOOStubLib.c.45b4313d.obj");
@@ -418,7 +422,7 @@ fs::file_time_type FileRecord::getMaxTime1(std::unordered_set<FileData*> &files)
     {
         if (d == this)
             continue;
-        if (files.find(d->data) != files.end())
+        if (files.find(d->data) != files.end() || !d->data)
             continue;
         files.insert(d->data);
         //auto dm = d->data->last_write_time;
@@ -433,7 +437,7 @@ fs::file_time_type FileRecord::getMaxTime1(std::unordered_set<FileData*> &files)
     {
         if (d == this)
             continue;
-        if (files.find(d->data) != files.end())
+        if (files.find(d->data) != files.end() || !d->data)
             continue;
         files.insert(d->data);
         //auto dm = d->data->last_write_time;
@@ -462,7 +466,7 @@ fs::file_time_type FileRecord::updateLwt1(std::unordered_set<FileData*> &files)
     {
         if (d == this)
             continue;
-        if (files.find(d->data) != files.end())
+        if (files.find(d->data) != files.end() || !d->data)
             continue;
         files.insert(d->data);
         auto dm = d->updateLwt1(files);
@@ -473,7 +477,7 @@ fs::file_time_type FileRecord::updateLwt1(std::unordered_set<FileData*> &files)
     {
         if (d == this)
             continue;
-        if (files.find(d->data) != files.end())
+        if (files.find(d->data) != files.end() || !d->data)
             continue;
         files.insert(d->data);
         auto dm = d->updateLwt1(files);

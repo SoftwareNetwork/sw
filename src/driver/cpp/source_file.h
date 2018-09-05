@@ -85,6 +85,8 @@ public:
 protected:
     bool autodetect = false;
 
+    void clearGlobCache() { glob_cache.clear(); }
+
 private:
     struct FileOperation
     {
@@ -94,6 +96,7 @@ private:
     using Op = void (SourceFileStorage::*)(const path &);
 
     std::vector<FileOperation> file_ops;
+    std::unordered_map<path, std::map<bool /* recursive */, Files>> glob_cache;
 
     void add_unchecked(const path &f, bool skip = false);
     void add1(const FileRegex &r);

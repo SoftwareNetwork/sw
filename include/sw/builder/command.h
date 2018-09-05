@@ -92,8 +92,9 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     Files inputs;
     Files intermediate;
     Files outputs;
-    bool use_response_files = true;
+    bool use_response_files = false;
     bool remove_outputs_before_execution = false; // was true
+    bool protect_args_with_quotes = true;
     std::shared_ptr<Program> base; // TODO: hide
     //std::shared_ptr<Dependency> dependency; // TODO: hide
     bool silent = false;
@@ -219,21 +220,23 @@ struct SW_BUILDER_API ExecuteCommand : builder::Command
 #define SW_INTERNAL_INIT_COMMAND(name, target) \
     name->fs = (target).getSolution()->fs
 
-#define SW_MAKE_COMMAND(name, target)        \
-    auto name = std::make_shared<Command>(); \
+#define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
+    auto name = std::make_shared<type>(__VA_ARGS__);    \
     SW_INTERNAL_INIT_COMMAND(name, target)
 
-#define SW_MAKE_COMMAND_AND_ADD(name, target) \
-    SW_MAKE_COMMAND(name, target);            \
-    target.Storage.push_back(name)
-
-#define SW_MAKE_EXECUTE_COMMAND(name, target)                         \
-    auto name = std::make_shared<ExecuteCommand>(__FILE__, __LINE__); \
-    SW_INTERNAL_INIT_COMMAND(name, target)
-
-#define SW_MAKE_EXECUTE_COMMAND_AND_ADD(name, target) \
-    SW_MAKE_EXECUTE_COMMAND(name, target);            \
+#define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
+    SW_MAKE_CUSTOM_COMMAND(type, name, target, __VA_ARGS__);    \
     (target).Storage.push_back(name)
+
+#define SW_MAKE_COMMAND(name, target) \
+    SW_MAKE_CUSTOM_COMMAND(Command, name, target)
+#define SW_MAKE_COMMAND_AND_ADD(name, target) \
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(Command, name, target)
+
+#define SW_MAKE_EXECUTE_COMMAND(name, target) \
+    SW_MAKE_CUSTOM_COMMAND(ExecuteCommand, name, target, __FILE__, __LINE__)
+#define SW_MAKE_EXECUTE_COMMAND_AND_ADD(name, target) \
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(ExecuteCommand, name, target, __FILE__, __LINE__)
 }
 
 namespace std

@@ -222,7 +222,10 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
     auto root_s = normalize_path(dir);
     if (root_s.back() == '/')
         root_s.resize(root_s.size() - 1);
-    for (auto &f : enumerate_files_fast(dir, r.recursive))
+    auto &files = glob_cache[dir][r.recursive];
+    if (files.empty())
+        files = enumerate_files_fast(dir, r.recursive);
+    for (auto &f : files)
     {
         auto s = normalize_path(f);
         s = s.substr(root_s.size() + 1); // + 1 to skip first slash
