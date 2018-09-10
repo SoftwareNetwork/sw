@@ -219,6 +219,7 @@ Solution::Solution(const Solution &rhs)
     //, knownTargets(rhs.knownTargets)
     , source_dirs_by_source(rhs.source_dirs_by_source)
     , fs(rhs.fs)
+    , fetch_dir(rhs.fetch_dir)
 {
     Checks.solution = this;
 }

@@ -238,14 +238,6 @@ public:
         return add<T>(std::forward<Args>(args)...);
     }
 
-    template <typename T = Target>
-    T &getTarget(const PackagePath &Name)
-    {
-        auto i = std::find_if(getChildren().begin(), getChildren().end(),
-            [&Name](const auto &e) { return e.first.ppath == Name; });
-        return getTarget<T>(i, Name.toString());
-    }
-
 #define ADD_TARGET(t)                               \
     template <typename... Args>                     \
     t &add##t(Args &&... args)                      \
@@ -258,7 +250,21 @@ public:
     ADD_TARGET(StaticLibrary)
     ADD_TARGET(SharedLibrary)
 
-#undef Executable
+#undef ADD_TARGET
+
+    template <typename T = Target>
+    T &getTarget(const PackagePath &Name)
+    {
+        auto i = std::find_if(getChildren().begin(), getChildren().end(),
+            [&Name](const auto &e) { return e.first.ppath == Name; });
+        if (i == getChildren().end())
+        {
+            auto n2 = pkg.ppath / Name;
+            i = std::find_if(getChildren().begin(), getChildren().end(),
+                [&Name, &n2](const auto &e) { return e.first.ppath == n2; });
+        }
+        return getTarget<T>(i, Name.toString());
+    }
 
     template <typename T = Target>
     T &getTarget(const PackageId &p)
@@ -295,6 +301,7 @@ public:
     path getBaseDir() const;
     path getServiceDir() const;
     path getTargetsDir() const;
+    path getTargetDirShort() const;
     path getChecksDir() const;
     path getTempDir() const;
 
@@ -425,6 +432,7 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     void pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
     void pushBackToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
     virtual void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) = 0;
+    void removeFile(const path &fn);
 
 protected:
     int prepare_pass = 1;
@@ -478,9 +486,14 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
 
     virtual ~NativeTarget() = default;
 
+    DependencyPtr getDependency() const;
+
     virtual std::shared_ptr<builder::Command> getCommand() const = 0;
     virtual path getOutputFile() const = 0;
     virtual path getImportLibrary() const = 0;
+
+    //
+    virtual void setupCommand(builder::Command &c) const {}
 };
 
 // <SHARED | STATIC | MODULE | UNKNOWN>
@@ -706,6 +719,9 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     Files gatherAllFiles() const;
     Files gatherIncludeDirectories() const;
     NativeLinker *getSelectedTool() const;
+    void setOutputDir(const path &dir);
+    virtual path getOutputDir() const;
+    void removeFile(const path &fn);
 
     driver::cpp::CommandBuilder addCommand();
 
@@ -746,12 +762,12 @@ protected:
     FilesOrdered gatherLinkLibraries() const;
     bool prepareLibrary(LibraryType Type);
     void setOutputFile();
-    virtual path getOutputDir() const;
     void initLibrary(LibraryType Type);
     void configureFile1(const path &from, const path &to, ConfigureFlags flags) const;
     void detectLicenseFile();
 
 private:
+    path OutputDir;
     bool already_built = false;
 
     void autoDetectOptions();

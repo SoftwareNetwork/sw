@@ -247,12 +247,12 @@ bool TargetBase::exists(const PackageId &p) const
 
 TargetBase::TargetMap &TargetBase::getChildren()
 {
-    throw std::logic_error("unreachable code");
+    return getSolution()->getChildren();
 }
 
 const TargetBase::TargetMap &TargetBase::getChildren() const
 {
-    throw std::logic_error("unreachable code");
+    return getSolution()->getChildren();
 }
 
 PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
@@ -283,6 +283,10 @@ void TargetBase::setRootDirectory(const path &p)
 void TargetBase::setSource(const Source &s)
 {
     source = s;
+    auto d = getSolution()->fetch_dir;
+    if (d.empty())
+        return;
+
 }
 
 TargetBase &TargetBase::operator+=(const Source &s)
@@ -347,7 +351,18 @@ path TargetBase::getServiceDir() const
 
 path TargetBase::getTargetsDir() const
 {
-    return getBaseDir() / "targets";
+    return getSolution()->BinaryDir / getConfig() / "targets";
+}
+
+path TargetBase::getTargetDirShort() const
+{
+    // was
+    //return getTargetsDir() / pkg.ppath.toString();
+#ifdef _WIN32
+    return getSolution()->BinaryDir / getConfig(true) / sha256_short(pkg.toString());
+#else
+    return getTargetsDir();
+#endif
 }
 
 path TargetBase::getChecksDir() const
@@ -506,6 +521,18 @@ void Target::pushBackToFileOnce(const path &fn, const String &text, bool binary_
     f.getFileRecord().load();
 }
 
+void Target::removeFile(const path &fn)
+{
+    error_code ec;
+    fs::remove(fn);
+}
+
+DependencyPtr NativeTarget::getDependency() const
+{
+    auto d = std::make_shared<Dependency>(this);
+    return d;
+}
+
 Commands Events_::getCommands() const
 {
     Commands cmds;
@@ -585,7 +612,7 @@ void NativeExecutedTarget::init()
 {
     if (Local && !UseStorageBinaryDir)
     {
-        BinaryDir = getTargetsDir() / pkg.ppath.toString();
+        BinaryDir = getTargetDirShort();
     }
     else
     {
@@ -669,7 +696,9 @@ void NativeExecutedTarget::init2()
 driver::cpp::CommandBuilder NativeExecutedTarget::addCommand()
 {
     driver::cpp::CommandBuilder cb(*getSolution()->fs);
-    return cb << *this;
+    cb.c->addPathDirectory(getOutputDir() / getConfig());
+    cb << *this;
+    return cb;
 }
 
 void NativeExecutedTarget::addPackageDefinitions()
@@ -750,6 +779,14 @@ path NativeExecutedTarget::getOutputDir() const
         return getUserDirectories().storage_dir_lib;
 }
 
+void NativeExecutedTarget::setOutputDir(const path &dir)
+{
+    auto d = getOutputFile().parent_path();
+    OutputDir = dir;
+    setOutputFile();
+    OutputDir = d;
+}
+
 void NativeExecutedTarget::setOutputFile()
 {
     auto st = getSelectedTool();
@@ -770,7 +807,7 @@ path NativeExecutedTarget::getOutputFileName(const path &root) const
         if (IsConfig)
             p = getTargetsDir() / pkg.ppath.toString() / "out" / pkg.ppath.toString();
         else
-            p = getTargetsDir().parent_path() / pkg.ppath.toString();
+            p = getTargetsDir().parent_path() / OutputDir / pkg.ppath.toString();
     }
     else
     {
@@ -778,7 +815,7 @@ path NativeExecutedTarget::getOutputFileName(const path &root) const
             p = pkg.getDir() / "out" / getConfig() / pkg.ppath.toString();
         //p = BinaryDir / "out";
         else
-            p = root / getConfig() / pkg.ppath.toString();
+            p = root / getConfig() / OutputDir / pkg.ppath.toString();
     }
     //if (pkg.version.isValid() /* && add version*/)
         p += "-" + pkg.version.toString();
@@ -1242,7 +1279,7 @@ Commands NativeExecutedTarget::getCommands() const
                     if (Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
                         continue;
                     auto in = dt->getOutputFile();
-                    auto o = getOutputFile().parent_path() / in.filename();
+                    auto o = (OutputDir.empty() ? getOutputFile().parent_path() : OutputDir) / in.filename();
                     SW_MAKE_EXECUTE_COMMAND(copy_cmd, *this);
                     copy_cmd->f = [in, out = o]
                     {
@@ -1670,7 +1707,7 @@ bool NativeExecutedTarget::prepare()
             Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
             Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
         }
-        Definitions["SW_STATIC"];
+        Definitions["SW_STATIC="];
 
         clearGlobCache();
 
@@ -1916,6 +1953,9 @@ bool NativeExecutedTarget::prepare()
         // before merge
         if (Settings.Native.ConfigurationType != ConfigurationType::Debug)
             *this += "NDEBUG"_d;
+        // allow to other compilers?
+        else if (Settings.Native.CompilerType == CompilerType::MSVC)
+            *this += "_DEBUG"_d;
 
         // merge file compiler options with target compiler options
         for (auto &f : files)
@@ -2355,6 +2395,14 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     //s = std::regex_replace(s, r, "");
 
     fileWriteOnce(to, s);
+}
+
+void NativeExecutedTarget::removeFile(const path &fn)
+{
+    path p = fn;
+    check_absolute(p, true);
+    operator-=(fn);
+    Target::removeFile(p);
 }
 
 void NativeExecutedTarget::setChecks(const String &name)

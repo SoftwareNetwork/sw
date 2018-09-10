@@ -216,11 +216,13 @@ int main(int argc, char **argv)
 static cl::opt<String> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
 
 // ide commands
-static cl::opt<String> ide_build("build", cl::desc("Target to build"), cl::sub(subcommand_ide));
+static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl::sub(subcommand_ide)*/);
 static cl::opt<String> ide_rebuild("rebuild", cl::desc("Rebuild target"), cl::sub(subcommand_ide));
 static cl::opt<String> ide_clean("clean", cl::desc("Clean target"), cl::sub(subcommand_ide));
 
 static cl::list<String> override_package("override-remote-package", cl::value_desc("prefix sdir"), cl::desc("Provide a local copy of remote package"), cl::multi_val(2));
+static cl::opt<String> delete_overridden_package("delete-overridden-remote-package", cl::value_desc("package"), cl::desc("Delete overridden package from index"));
+static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", cl::value_desc("sdir"), cl::desc("Delete overridden dir packages"));
 
 int sw_main()
 {
@@ -234,6 +236,21 @@ int sw_main()
             LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
             getServiceDatabase().overridePackage(pkg2, dir);
         }
+        return 0;
+    }
+
+    if (!delete_overridden_package.empty())
+    {
+        sw::PackageId pkg{ delete_overridden_package };
+        LOG_INFO(logger, "Delete override for " + pkg.toString());
+        getServiceDatabase().deleteOverriddenPackage(pkg);
+        return 0;
+    }
+
+    if (!delete_overridden_package_dir.empty())
+    {
+        LOG_INFO(logger, "Delete override for sdir " + delete_overridden_package_dir.u8string());
+        getServiceDatabase().deleteOverriddenPackageDir(delete_overridden_package_dir);
         return 0;
     }
 
@@ -279,14 +296,14 @@ SUBCOMMAND_DECL(build)
 
 SUBCOMMAND_DECL(ide)
 {
-    if (!ide_build.empty())
+    if (!target_build.empty())
     {
         try_single_process_job(fs::current_path(), []()
         {
             auto s = sw::load("sw.cpp");
             auto &b = *((sw::Build*)s.get());
             b.ide = true;
-            auto pkg = sw::extractFromStringPackageId(ide_build);
+            auto pkg = sw::extractFromStringPackageId(target_build);
             b.TargetsToBuild[pkg] = b.children[pkg];
             s->execute();
         });

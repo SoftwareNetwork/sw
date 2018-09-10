@@ -564,12 +564,26 @@ void ServiceDatabase::overridePackage(const PackageId &pkg, const path &sdir) co
     override_remote_packages.value().emplace(pkg, sdir);
 
     const auto orp = db::service::OverrideRemotePackage{};
+    deleteOverriddenPackage(pkg);
+    (*db)(insert_into(orp).set(
+        orp.path = pkg.toString(),
+        orp.sdir = fs::canonical(fs::absolute(sdir)).u8string()
+    ));
+}
+
+void ServiceDatabase::deleteOverriddenPackage(const PackageId &pkg) const
+{
+    const auto orp = db::service::OverrideRemotePackage{};
     (*db)(remove_from(orp).where(
         orp.path == pkg.toString()
     ));
-    (*db)(insert_into(orp).set(
-        orp.path = pkg.toString(),
-        orp.sdir = sdir.u8string()
+}
+
+void ServiceDatabase::deleteOverriddenPackageDir(const path &sdir) const
+{
+    const auto orp = db::service::OverrideRemotePackage{};
+    (*db)(remove_from(orp).where(
+        orp.sdir == fs::canonical(fs::absolute(sdir)).u8string()
     ));
 }
 

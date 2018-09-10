@@ -295,7 +295,9 @@ struct ExecutionPlan
         {
             if (c1->dependencies.size() != c2->dependencies.size())
                 return c1->dependencies.size() < c2->dependencies.size();
-            return c1->dependendent_commands.size() > c2->dependendent_commands.size();
+            //if (c1->dependendent_commands.size() != c2->dependendent_commands.size())
+                return c1->dependendent_commands.size() > c2->dependendent_commands.size();
+            //return c1->getName() < c2->getName();
         });
 
         return ep;// std::move(ep);

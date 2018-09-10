@@ -88,6 +88,7 @@ void unique_merge_containers(C &to, const C &from)
 Dependency::Dependency(const NativeTarget *t)
 {
     target = std::static_pointer_cast<NativeTarget>(((NativeTarget *)t)->shared_from_this());
+    // why commented?
     //package = t->getPackage();
 }
 

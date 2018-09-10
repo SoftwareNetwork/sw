@@ -41,6 +41,13 @@ void Command::prepare()
     callbacks.clear();
     actions.clear();
 
+    auto d = dependency.lock();
+    if (d)
+    {
+        auto t = d->target.lock();
+        t->setupCommand(*this);
+    }
+
     Base::prepare();
 }
 
@@ -52,11 +59,12 @@ path Command::getProgram() const
         p = Base::getProgram();
     else if (d)
     {
-        if (!d->target.lock())
+        auto t = d->target.lock();
+        if (!t)
             throw std::runtime_error("Command dependency target was not resolved: " + d->getPackage().toString());
-        p = d->target.lock()->getOutputFile();
+        p = t->getOutputFile();
         if (p.empty())
-            throw std::runtime_error("Empty program from package: " + d->target.lock()->getPackage().target_name);
+            throw std::runtime_error("Empty program from package: " + t->getPackage().target_name);
     }
     else
         p = Base::getProgram();
@@ -66,11 +74,15 @@ path Command::getProgram() const
 void Command::setProgram(const std::shared_ptr<Dependency> &d)
 {
     dependency = d;
+    auto l = d->target.lock();
+    if (l)
+        setProgram(*l);
 }
 
 void Command::setProgram(const NativeTarget &t)
 {
     setProgram(t.getOutputFile());
+    t.setupCommand(*this);
 }
 
 void Command::pushLazyArg(LazyCallback f)

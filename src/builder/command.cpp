@@ -289,7 +289,9 @@ void Command::addInputOutputDeps()
             dependencies.insert(f.getFileRecord().getGenerator());
         else
         {
-            // do we really need this?
+            // do we really need this? yes!
+            // if input's dep is generated, we add a dependency
+            // no? cyclic deps become real
             //auto deps = f.gatherDependentGenerators();
             //dependencies.insert(deps.begin(), deps.end());
         }
@@ -333,8 +335,6 @@ void Command::execute1(std::error_code *ec)
 {
     prepare();
 
-    //DEBUG_BREAK_IF_STRING_HAS(name, "tcl");
-
     if (!isOutdated())
     {
         executed_ = true;
@@ -343,6 +343,8 @@ void Command::execute1(std::error_code *ec)
 
     if (isExecuted())
         throw std::logic_error("Trying to execute command twice: " + getName());
+
+    //DEBUG_BREAK_IF_PATH_HAS(program, "rcc.exe");
 
     executed_ = true;
 
@@ -669,6 +671,23 @@ Files Command::getGeneratedDirs() const
     for (auto &d : outputs)
         dirs.insert(d.parent_path());
     return dirs;
+}
+
+void Command::addPathDirectory(const path &p)
+{
+    size_t len;
+    getenv_s(&len, nullptr, 0, "PATH");
+    String s(len, 0);
+    getenv_s(&len, s.data(), len, "PATH");
+    s.resize(s.size() - 1); // remove trailing zero
+
+    environment["PATH"] = s +
+#ifdef _WIN32
+        ";" + normalize_path_windows(p)
+#else
+        ":" + p.u8string()
+#endif
+        ;
 }
 
 /*void Command::load(BinaryContext &bctx)

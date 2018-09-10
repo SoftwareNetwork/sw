@@ -476,7 +476,7 @@ void VSGenerator::generate(const Build &b)
             else if (b.Settings.Native.CompilerType == CompilerType::GNU)
                 compiler = "--compiler gnu";
 
-            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config ide --build " + p.target_name);
+            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config --target " + p.target_name + " ide");
             pctx.addBlock("NMakeOutput", nt->getOutputFile().string());
             pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " " + cfg + " ide --clean");
             pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " ide --rebuild");

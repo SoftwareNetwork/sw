@@ -35,6 +35,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     Checker Checks;
     ChecksStorage checksStorage;
     FileStorage *fs = nullptr;
+    path fetch_dir;
 
     // other data
     bool silent = false;
@@ -95,7 +96,7 @@ public:
     static path getConfigFilename() { return "sw.cpp"; }
 
 protected:
-    Solution & base_ptr;
+    Solution &base_ptr;
     bool dry_run = false;
 
     Solution();

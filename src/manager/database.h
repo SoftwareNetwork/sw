@@ -114,6 +114,8 @@ struct SW_MANAGER_API ServiceDatabase : public Database
 
     const OverriddenPackages &getOverriddenPackages() const;
     void overridePackage(const PackageId &pkg, const path &sdir) const;
+    void deleteOverriddenPackage(const PackageId &pkg) const;
+    void deleteOverriddenPackageDir(const path &sdir) const;
 
 private:
     mutable optional<OverriddenPackages> override_remote_packages;

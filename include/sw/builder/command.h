@@ -37,6 +37,7 @@ struct CommandData
 
     virtual void execute() = 0;
     virtual void prepare() = 0;
+    //virtual String getName() const = 0;
 };
 
 namespace builder
@@ -119,6 +120,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     void clean() const;
     bool isExecuted() const { return pid != -1 || executed_; }
 
+    //String getName() const override { return getName(false); }
     String getName(bool short_name = false) const;
     void printLog() const;
     path getProgram() const override;
@@ -146,6 +148,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     size_t calculateFilesHash() const;
     void updateFilesHash() const;
     Files getGeneratedDirs() const;
+    void addPathDirectory(const path &p);
 
     //void load(BinaryContext &bctx);
     //void save(BinaryContext &bctx);
@@ -218,7 +221,8 @@ struct SW_BUILDER_API ExecuteCommand : builder::Command
 };
 
 #define SW_INTERNAL_INIT_COMMAND(name, target) \
-    name->fs = (target).getSolution()->fs
+    name->fs = (target).getSolution()->fs; \
+    name->addPathDirectory((target).getOutputDir() / (target).getConfig())
 
 #define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
     auto name = std::make_shared<type>(__VA_ARGS__);    \
