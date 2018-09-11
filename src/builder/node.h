@@ -32,16 +32,16 @@ struct SW_BUILDER_API Node
     }
 
     template <class T>
-    T *as() const
+    const T *as() const
     {
-        return dynamic_cast<T *>(this);
+        return dynamic_cast<const T *>(this);
     }
 };
 
 namespace detail
 {
 
-struct SW_BUILDER_API Executable : Node
+struct SW_BUILDER_API Executable : virtual Node
 {
     virtual ~Executable() = default;
 

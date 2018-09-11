@@ -1397,7 +1397,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         {
             if (many_files)
             {
-                if (auto c = sf->compiler->as<NativeCompiler>())
+                if (auto c = sf->compiler->template as<NativeCompiler>())
                 {
                     auto h = getFilesHash({ fn });
                     c->Definitions["configure"] = "configure_" + h;
@@ -1406,22 +1406,22 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
                 }
             }
 
-            if (auto c = sf->compiler->as<VisualStudioCompiler>())
+            if (auto c = sf->compiler->template as<VisualStudioCompiler>())
             {
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
             }
-            else if (auto c = sf->compiler->as<ClangClCompiler>())
+            else if (auto c = sf->compiler->template as<ClangClCompiler>())
             {
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
             }
-            else if (auto c = sf->compiler->as<ClangCompiler>())
+            else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
             }
-            else if (auto c = sf->compiler->as<GNUCompiler>())
+            else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);

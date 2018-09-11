@@ -675,12 +675,7 @@ Files Command::getGeneratedDirs() const
 
 void Command::addPathDirectory(const path &p)
 {
-    size_t len;
-    getenv_s(&len, nullptr, 0, "PATH");
-    String s(len, 0);
-    getenv_s(&len, s.data(), len, "PATH");
-    s.resize(s.size() - 1); // remove trailing zero
-
+    String s = getenv("PATH");
     environment["PATH"] = s +
 #ifdef _WIN32
         ";" + normalize_path_windows(p)
