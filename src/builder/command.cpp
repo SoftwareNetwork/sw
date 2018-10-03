@@ -224,11 +224,15 @@ path Command::getProgram() const
 
 void Command::addInput(const path &p)
 {
+    if (p.empty())
+        return;
     inputs.insert(p);
 }
 
 void Command::addIntermediate(const path &p)
 {
+    if (p.empty())
+        return;
     intermediate.insert(p);
     auto &r = File(p, *fs).getFileRecord();
     r.setGenerator(shared_from_this());
@@ -236,6 +240,8 @@ void Command::addIntermediate(const path &p)
 
 void Command::addOutput(const path &p)
 {
+    if (p.empty())
+        return;
     outputs.insert(p);
     auto &r = File(p, *fs).getFileRecord();
     r.setGenerator(shared_from_this());
@@ -702,11 +708,11 @@ void Command::save(BinaryContext &bctx)
 
 }
 
-ExecuteCommand::~ExecuteCommand()
+_ExecuteCommand::~_ExecuteCommand()
 {
 }
 
-size_t ExecuteCommand::getHash() const
+size_t _ExecuteCommand::getHash() const
 {
     if (hash != 0)
         return hash;
@@ -721,7 +727,7 @@ size_t ExecuteCommand::getHash() const
     return hash = h;
 }
 
-void ExecuteCommand::prepare()
+void _ExecuteCommand::prepare()
 {
     if (prepared)
         return;
@@ -729,7 +735,7 @@ void ExecuteCommand::prepare()
     prepared = true;
 }
 
-bool ExecuteCommand::isOutdated() const
+bool _ExecuteCommand::isOutdated() const
 {
     if (std::none_of(inputs.begin(), inputs.end(),
         [this](auto &d) { return File(d, *fs).isChanged(); }) &&
@@ -739,7 +745,7 @@ bool ExecuteCommand::isOutdated() const
     return true;
 }
 
-void ExecuteCommand::execute()
+void _ExecuteCommand::execute()
 {
     if (always)
     {

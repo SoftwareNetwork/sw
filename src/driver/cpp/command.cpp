@@ -7,7 +7,11 @@
 #include "target.h"
 #include "command.h"
 
+#include "jumppad.h"
+#include "solution.h"
+
 #include <boost/algorithm/string.hpp>
+#include <boost/dll.hpp>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "command");
@@ -173,6 +177,8 @@ CommandBuilder &operator<<(CommandBuilder &cb, const NativeExecutedTarget &t)
     auto nt = (NativeExecutedTarget*)&t;
     cb.targets.push_back(nt);
     nt->Storage.push_back(cb.c);
+    if (!cb.c->fs)
+        cb.c->fs = nt->getSolution()->fs;
     return cb;
 }
 
@@ -337,6 +343,44 @@ CommandBuilder &operator<<(CommandBuilder &cb, const Command::LazyCallback &t)
     if (!cb.stopped)
         cb.c->pushLazyArg(t);
     return cb;
+}
+
+ExecuteBuiltinCommand::ExecuteBuiltinCommand()
+{
+    program = boost::dll::program_location().string();
+}
+
+ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name)
+    : ExecuteBuiltinCommand()
+{
+    args.push_back(cmd_name);
+}
+
+void ExecuteBuiltinCommand::push_back(const Files &files)
+{
+    args.push_back(std::to_string(files.size()));
+    for (auto &o : files)
+        args.push_back(o.u8string());
+}
+
+void ExecuteBuiltinCommand::execute()
+{
+    if (always)
+    {
+        jumppad_call(args);
+        return;
+    }
+
+    if (!isOutdated())
+        return;
+
+    printLog();
+
+    jumppad_call(args);
+
+    // force outputs update
+    for (auto &o : outputs)
+        File(o, *fs).getFileRecord().load();
 }
 
 }

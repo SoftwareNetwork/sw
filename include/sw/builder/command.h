@@ -174,7 +174,7 @@ template struct SW_BUILDER_API CommandData<builder::Command>;
     void execute() override {}
 };*/
 
-struct SW_BUILDER_API ExecuteCommand : builder::Command
+struct SW_BUILDER_API _ExecuteCommand : builder::Command
 {
     using F = std::function<void(void)>;
 
@@ -183,17 +183,17 @@ struct SW_BUILDER_API ExecuteCommand : builder::Command
     F f;
     bool always = false;
 
-    ExecuteCommand(const char *file, int line) : file(file), line(line) {}
-    ExecuteCommand(FileStorage &fs, const char *file, int line) : Command(fs), file(file), line(line) {}
+    _ExecuteCommand(const char *file, int line) : file(file), line(line) {}
+    _ExecuteCommand(FileStorage &fs, const char *file, int line) : Command(fs), file(file), line(line) {}
 
     //template <class F2>
     //ExecuteCommand(const char *file, int line, F2 &&f) : ExecuteCommand(file, line), f(f) {}
 
     template <class F2>
-    ExecuteCommand(F2 &&f) : f(f) {}
+    _ExecuteCommand(F2 &&f) : f(f) {}
 
     template <class F2>
-    ExecuteCommand(FileStorage &fs, F2 &&f) : Command(fs), f(f) {}
+    _ExecuteCommand(FileStorage &fs, F2 &&f) : Command(fs), f(f) {}
 
     /*template <class F2>
     ExecuteCommand(bool always, F2 &&f) : f(f), always(true) {}
@@ -211,7 +211,7 @@ struct SW_BUILDER_API ExecuteCommand : builder::Command
             addOutput(p);
     }*/
 
-    virtual ~ExecuteCommand();
+    virtual ~_ExecuteCommand();
 
     bool isOutdated() const override;
     void execute() override;
@@ -221,7 +221,7 @@ struct SW_BUILDER_API ExecuteCommand : builder::Command
 };
 
 #define SW_INTERNAL_INIT_COMMAND(name, target) \
-    name->fs = (target).getSolution()->fs; \
+    name->fs = (target).getSolution()->fs;     \
     name->addPathDirectory((target).getOutputDir() / (target).getConfig())
 
 #define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
@@ -237,9 +237,9 @@ struct SW_BUILDER_API ExecuteCommand : builder::Command
 #define SW_MAKE_COMMAND_AND_ADD(name, target) \
     SW_MAKE_CUSTOM_COMMAND_AND_ADD(Command, name, target)
 
-#define SW_MAKE_EXECUTE_COMMAND(name, target) \
+#define _SW_MAKE_EXECUTE_COMMAND(name, target) \
     SW_MAKE_CUSTOM_COMMAND(ExecuteCommand, name, target, __FILE__, __LINE__)
-#define SW_MAKE_EXECUTE_COMMAND_AND_ADD(name, target) \
+#define _SW_MAKE_EXECUTE_COMMAND_AND_ADD(name, target) \
     SW_MAKE_CUSTOM_COMMAND_AND_ADD(ExecuteCommand, name, target, __FILE__, __LINE__)
 }
 

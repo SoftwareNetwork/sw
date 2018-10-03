@@ -106,48 +106,19 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir)
         d = d.parent_path();
     d = d / ".sw" / "src";
 
-    Solution::SourceDirMapBySource srcs_old;
-    while (1)
-    {
-        auto b = std::make_unique<Build>();
-        //b->Local = true;
-        b->perform_checks = false;
-        b->PostponeFileResolving = true;
-        b->source_dirs_by_source = srcs_old;
-        b->build_and_load(f);
+    auto b = std::make_unique<Build>();
+    b->Local = false;
+    b->perform_checks = false;
+    //b->PostponeFileResolving = true;
+    b->fetch_dir = d;
+    b->build_and_load(f);
 
-        Solution::SourceDirMapBySource srcs;
-        for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
-        {
-            auto s = t->source; // make a copy!
-            checkSourceAndVersion(s, pkg.getVersion());
-            srcs[s] = d / get_source_hash(s);
-        }
+    // reset
+    b->fetch_dir.clear();
+    for (auto &s : b->solutions)
+        s.fetch_dir.clear();
 
-        // src_old has correct root dirs
-        if (srcs.size() == srcs_old.size())
-            return std::tuple{ std::move(b), srcs_old };
-
-        auto &e = getExecutor();
-        Futures<void> fs;
-        for (auto &src : srcs)
-        {
-            fs.push_back(e.push([src = src.first, &d = src.second]
-            {
-                if (!fs::exists(d))
-                {
-                    LOG_INFO(logger, "Downloading source:\n" << print_source(src));
-                    fs::create_directories(d);
-                    ScopedCurrentPath scp(d, CurrentPathScope::Thread);
-                    download(src);
-                }
-                d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
-            }));
-        }
-        waitAndGet(fs);
-
-        srcs_old = srcs;
-    }
+    return std::move(b);
 }
 
 void CppDriver::fetch(const path &file_or_dir) const
@@ -157,24 +128,15 @@ void CppDriver::fetch(const path &file_or_dir) const
 
 PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir) const
 {
-    auto [b, srcs] = fetch1(this, file_or_dir);
+    auto b = fetch1(this, file_or_dir);
 
-    // sources are fetched, root dirs are known
-    // now we reload with passing that info to driver
-
+    // do not use b->prepare(); !
+    // prepare only packages in solution
     auto &e = getExecutor();
     Futures<void> fs;
     for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
     {
-        fs.push_back(e.push([t, &srcs, &pkg]
-        {
-            auto s2 = t->source;
-            applyVersionToUrl(s2, pkg.version);
-            auto i = srcs.find(s2);
-            path rd = i->second / t->RootDirectory;
-            ScopedCurrentPath scp(rd, CurrentPathScope::Thread);
-
-            t->SourceDir = rd;
+        fs.push_back(e.push([t] {
             t->prepare();
         }));
     }

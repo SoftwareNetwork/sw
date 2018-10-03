@@ -1572,6 +1572,11 @@ ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
                 //c2->file.file = read_string();
                 c2->deps_file = read_string();
             }
+            case 3:
+            {
+                auto c2 = std::make_shared<driver::cpp::ExecuteBuiltinCommand>();
+                c = c2;
+            }
                 break;
             default:
                 c = std::make_shared<builder::Command>();
@@ -1605,9 +1610,9 @@ ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
         while (n--)
             c->args.push_back(read_string());
 
-        c->in.file = read_string();
-        c->out.file = read_string();
-        c->err.file = read_string();
+        c->redirectStdin(read_string());
+        c->redirectStdout(read_string());
+        c->redirectStderr(read_string());
 
         ctx.read(n);
         while (n--)
@@ -1625,15 +1630,15 @@ ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
 
         ctx.read(n);
         while (n--)
-            c->inputs.insert(read_string());
+            c->addInput(read_string());
 
         ctx.read(n);
         while (n--)
-            c->intermediate.insert(read_string());
+            c->addIntermediate(read_string());
 
         ctx.read(n);
         while (n--)
-            c->outputs.insert(read_string());
+            c->addOutput(read_string());
     }
 
     for (auto &[c, dep] : deps)
@@ -1696,6 +1701,11 @@ void save(const path &fn, const ExecutionPlan<builder::Command> &p)
             ctx.write(type);
             //print_string(c2->file.file.u8string());
             print_string(c2->deps_file.u8string());
+        }
+        else if (auto c2 = c->as<driver::cpp::ExecuteBuiltinCommand>(); c2)
+        {
+            type = 3;
+            ctx.write(type);
         }
         else
             ctx.write(type);
@@ -1785,8 +1795,8 @@ bool Build::execute()
             {
                 auto p = s.getExecutionPlan();
                 auto fn = s.getExecutionPlanFilename();
-                //if (!fs::exists(fn))
-                    //save(fn, p);
+                if (!fs::exists(fn))
+                    save(fn, p);
             }
         }
 

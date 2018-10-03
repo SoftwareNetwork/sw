@@ -17,6 +17,7 @@
 #include <sw/builder/driver.h>
 #include <sw/driver/cpp/driver.h>
 #include <sw/driver/cppan/driver.h>
+#include <jumppad.h>
 
 //#include <args.hxx>
 #include <boost/algorithm/string.hpp>
@@ -64,7 +65,7 @@ namespace sw::driver::cppan { SW_REGISTER_PACKAGE_DRIVER(CppanDriver); }
 int main(int argc, char **argv);
 #pragma pop_macro("main")
 
-int sw_main();
+int sw_main(const Strings &args);
 void stop();
 void setup_log(const std::string &log_level);
 
@@ -94,9 +95,9 @@ static cl::opt<bool> verbose("verbose", cl::desc("Verbose output"));
 static cl::opt<bool> trace("trace", cl::desc("Trace output"));
 static cl::opt<int> jobs("j", cl::desc("Number of jobs"), cl::init(-1));
 
-int setup_main()
+int setup_main(const Strings &args)
 {
-    // some init stuff
+    // some initial stuff
 
     if (!working_directory.empty())
         fs::current_path(working_directory);
@@ -118,7 +119,7 @@ int setup_main()
     getServiceDatabase();
 
     // actual execution
-    return sw_main();
+    return sw_main(args);
 }
 
 int parse_main(int argc, char **argv)
@@ -135,7 +136,7 @@ int parse_main(int argc, char **argv)
     }
 
     const std::vector<std::string> args0(argv + 1, argv + argc);
-    std::vector<std::string> args;
+    Strings args;
     args.push_back(argv[0]);
     for (auto &a : args0)
     {
@@ -144,10 +145,15 @@ int parse_main(int argc, char **argv)
         args.insert(args.end(), t.begin(), t.end());
     }
 
+    if (args.size() > 1 && args[1] == "internal-call-builtin-function")
+    {
+        return jumppad_call(args);
+    }
+
     //
     cl::ParseCommandLineOptions(args, overview);
 
-    return setup_main();
+    return setup_main(args);
 }
 
 int main(int argc, char **argv)
@@ -224,7 +230,9 @@ static cl::list<String> override_package("override-remote-package", cl::value_de
 static cl::opt<String> delete_overridden_package("delete-overridden-remote-package", cl::value_desc("package"), cl::desc("Delete overridden package from index"));
 static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", cl::value_desc("sdir"), cl::desc("Delete overridden dir packages"));
 
-int sw_main()
+//static cl::list<String> builtin_function("internal-call-builtin-function", cl::desc("Call built-in function"), cl::Hidden);
+
+int sw_main(const Strings &args)
 {
     if (!override_package.empty())
     {

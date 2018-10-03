@@ -255,9 +255,12 @@ struct SW_DRIVER_CPP_API Assigner
 
 struct SW_DRIVER_CPP_API ProjectDirectories
 {
-    path SourceDir;
+    //path SourceDirBase; // "root" real source dir
+    path SourceDir; // "current" source dir
     path BinaryDir;
     path BinaryPrivateDir;
+
+    //void restoreSourceDir() { SourceDir = SourceDirBase; }
 };
 
 String toString(CompilerType Type);

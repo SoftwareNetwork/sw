@@ -164,6 +164,7 @@ projects:
             public:
                 - builder
                 - pvt.cppan.demo.boost.assign: 1
+                - pvt.cppan.demo.microsoft.gsl: "*"
             private:
                 - name: tools.self_builder
                   ref: self_builder

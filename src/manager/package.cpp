@@ -24,7 +24,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "package");
 
-static cl::opt<bool> separate_bdir("separate-bdir");
+static cl::opt<bool> separate_bdir("separate-bdir", cl::init(true));
 
 namespace sw
 {

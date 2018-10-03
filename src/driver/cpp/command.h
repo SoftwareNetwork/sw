@@ -290,6 +290,28 @@ private:
     std::vector<LazyAction> actions;
 };
 
+struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
+{
+    using F = std::function<void(void)>;
+
+    ExecuteBuiltinCommand();
+    ExecuteBuiltinCommand(const String &cmd_name);
+    virtual ~ExecuteBuiltinCommand() = default;
+
+    void execute() override;
+    path getProgram() const override { return "ExecuteBuiltinCommand"; };
+
+    //template <class T>
+    //auto push_back(T &&v) { args.push_back(v); }
+
+    void push_back(const Files &files);
+};
+
+#define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name) \
+    SW_MAKE_CUSTOM_COMMAND(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name)
+#define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name) \
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name)
+
 struct VSCommand : Command
 {
     //File file;

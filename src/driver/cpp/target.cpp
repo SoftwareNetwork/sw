@@ -8,6 +8,7 @@
 
 #include "bazel/bazel.h"
 #include "command.h"
+#include "jumppad.h"
 #include <database.h>
 #include <functions.h>
 #include <hash.h>
@@ -15,6 +16,7 @@
 #include <suffix.h>
 
 #include <directories.h>
+#include <package_data.h>
 
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
@@ -36,6 +38,24 @@ void createDefFile(const path &def, const Files &obj_files)
 #else
 {}
 #endif
+
+static int create_def_file(path def, Files obj_files)
+{
+    createDefFile(def, obj_files);
+    return 0;
+}
+
+SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(create_def_file, sw_create_def_file)
+
+static int copy_file(path in, path out)
+{
+    error_code ec;
+    fs::create_directories(out.parent_path());
+    fs::copy_file(in, out, fs::copy_options::overwrite_existing, ec);
+    return 0;
+}
+
+SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(copy_file, sw_copy_file)
 
 namespace sw
 {
@@ -186,6 +206,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     }
 
     t->applyRootDirectory();
+    //t->SourceDirBase = t->SourceDir;
 
     t->init();
     t->init2();
@@ -287,6 +308,20 @@ void TargetBase::setSource(const Source &s)
     if (d.empty())
         return;
 
+    auto s2 = source; // make a copy!
+    checkSourceAndVersion(s2, pkg.getVersion());
+    d /= get_source_hash(s2);
+
+    if (fs::exists(d))
+        return;
+
+    LOG_INFO(logger, "Downloading source:\n" << print_source(s2));
+    fs::create_directories(d);
+    ScopedCurrentPath scp(d, CurrentPathScope::Thread);
+    download(s2);
+    d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
+    getSolution()->source_dirs_by_source[s2] = d;
+    /*getSolution()->SourceDir = */SourceDir = d;
 }
 
 TargetBase &TargetBase::operator+=(const Source &s)
@@ -1194,7 +1229,7 @@ Commands NativeExecutedTarget::getCommands() const
             c->args.insert(c->args.end(), f->args.begin(), f->args.end());
 
             // set fancy name
-            if (!Local && !IsConfig)
+            if (/*!Local && */!IsConfig)
             {
                 auto p = normalize_path(f->file);
                 if (bdp.size() < p.size() && p.find(bdp) == 0)
@@ -1280,12 +1315,9 @@ Commands NativeExecutedTarget::getCommands() const
                         continue;
                     auto in = dt->getOutputFile();
                     auto o = (OutputDir.empty() ? getOutputFile().parent_path() : OutputDir) / in.filename();
-                    SW_MAKE_EXECUTE_COMMAND(copy_cmd, *this);
-                    copy_cmd->f = [in, out = o]
-                    {
-                        error_code ec;
-                        fs::copy_file(in, out, fs::copy_options::overwrite_existing, ec);
-                    };
+                    SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file");
+                    copy_cmd->args.push_back(in.u8string());
+                    copy_cmd->args.push_back(o.u8string());
                     copy_cmd->addInput(dt->getOutputFile());
                     copy_cmd->addOutput(o);
                     copy_cmd->dependencies.insert(c);
@@ -1648,6 +1680,9 @@ bool NativeExecutedTarget::prepare()
 
     switch (prepare_pass)
     {
+    case 0:
+        //restoreSourceDir();
+        RETURN_PREPARE_PASS;
     case 1:
     {
         LOG_TRACE(logger, "Preparing target: " + pkg.ppath.toString());
@@ -2087,12 +2122,11 @@ bool NativeExecutedTarget::prepare()
             Files objs;
             for (auto &f : files)
                 objs.insert(f->output.file);
-            auto c = std::make_shared<ExecuteCommand>(*getSolution()->fs, [def, objs] {
-                createDefFile(def, objs);
-            });
+            SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_create_def_file");
+            c->args.push_back(def.u8string());
+            c->push_back(objs);
             c->addInput(objs);
             c->addOutput(def);
-            Storage.push_back(c);
             add(def);
         }
 
