@@ -28,7 +28,7 @@ struct Command;
 struct FileRecord;
 struct FileStorage;
 
-struct SW_BUILDER_API File : Node
+struct SW_BUILDER_API File : virtual Node
 {
     FileStorage *fs = nullptr;
     path file;

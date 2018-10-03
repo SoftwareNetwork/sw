@@ -16,8 +16,8 @@
 #include <primitives/templates.h>
 #include <grpcpp/grpcpp.h>
 
-//#include "logger.h"
-//DECLARE_STATIC_LOGGER(logger, "remote");
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "remote");
 
 namespace sw
 {
@@ -59,6 +59,7 @@ bool DataSource::downloadPackage(const Package &d, const String &hash, const pat
     {
         try
         {
+            LOG_TRACE(logger, "Downloading file: " << url);
             download_file(url, fn);
         }
         catch (const std::exception&)
