@@ -824,7 +824,7 @@ std::shared_ptr<builder::Command> VisualStudioASMCompiler::getCommand() const
     if (InputFile)
     {
         c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().string();
+        c->name_short = InputFile().filename().u8string();
         //c->file = InputFile;
     }
     if (ObjectFile)
@@ -861,7 +861,7 @@ Files VisualStudioASMCompiler::getGeneratedDirs() const
 
 void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    InputFile = input_file.string();
+    InputFile = input_file.u8string();
     setOutputFile(output_file);
 }
 
@@ -875,19 +875,19 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
     if (InputFile)
     {
         c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().string();
+        c->name_short = InputFile().filename().u8string();
         //c->file = InputFile;
     }
     if (CSourceFile)
     {
         c->name = normalize_path(CSourceFile());
-        c->name_short = CSourceFile().filename().string();
+        c->name_short = CSourceFile().filename().u8string();
         //c->file = CSourceFile;
     }
     if (CPPSourceFile)
     {
         c->name = normalize_path(CPPSourceFile());
-        c->name_short = CPPSourceFile().filename().string();
+        c->name_short = CPPSourceFile().filename().u8string();
         //c->file = CPPSourceFile;
     }
     if (ObjectFile)
@@ -904,7 +904,7 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
 
     if (PreprocessToFile)
     {
-        //c->addOutput(c->file.file.parent_path() / (c->file.file.filename().stem().string() + ".i"));
+        //c->addOutput(c->file.file.parent_path() / (c->file.file.filename().stem().u8string() + ".i"));
         // TODO: remove old object file, it's now incorrect
     }
 
@@ -930,7 +930,7 @@ std::shared_ptr<Program> VisualStudioCCompiler::clone() const
 
 void VisualStudioCCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    CSourceFile = input_file.string();
+    CSourceFile = input_file.u8string();
     VisualStudioCompiler::setOutputFile(output_file);
 }
 
@@ -941,7 +941,7 @@ std::shared_ptr<Program> VisualStudioCPPCompiler::clone() const
 
 void VisualStudioCPPCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    CPPSourceFile = input_file.string();
+    CPPSourceFile = input_file.u8string();
     VisualStudioCompiler::setOutputFile(output_file);
 }
 
@@ -973,11 +973,11 @@ std::shared_ptr<builder::Command> ClangCompiler::getCommand() const
     if (InputFile)
     {
         c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().string();
+        c->name_short = InputFile().filename().u8string();
         //c->file = InputFile;
     }
     if (OutputFile)
-        c->deps_file = OutputFile().parent_path() / (OutputFile().stem().string() + ".d");
+        c->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
     c->working_directory = OutputFile().parent_path();
 
     //if (c->file.empty())
@@ -1036,19 +1036,19 @@ std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
     if (InputFile)
     {
         c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().string();
+        c->name_short = InputFile().filename().u8string();
         //c->file = InputFile;
     }
     if (CSourceFile)
     {
         c->name = normalize_path(CSourceFile());
-        c->name_short = CSourceFile().filename().string();
+        c->name_short = CSourceFile().filename().u8string();
         //c->file = CSourceFile;
     }
     if (CPPSourceFile)
     {
         c->name = normalize_path(CPPSourceFile());
-        c->name_short = CPPSourceFile().filename().string();
+        c->name_short = CPPSourceFile().filename().u8string();
         //c->file = CPPSourceFile;
     }
     if (ObjectFile)
@@ -1091,13 +1091,13 @@ std::shared_ptr<Program> ClangClCPPCompiler::clone() const
 
 void ClangClCCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    CSourceFile = input_file.string();
+    CSourceFile = input_file.u8string();
     setOutputFile(output_file);
 }
 
 void ClangClCPPCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    CPPSourceFile = input_file.string();
+    CPPSourceFile = input_file.u8string();
     setOutputFile(output_file);
 }
 
@@ -1129,7 +1129,7 @@ std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
     if (InputFile)
     {
         c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().string();
+        c->name_short = InputFile().filename().u8string();
         //c->file = InputFile;
     }
     if (OutputFile)
@@ -1166,7 +1166,7 @@ Files GNUASMCompiler::getGeneratedDirs() const
 
 void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    InputFile = input_file.string();
+    InputFile = input_file.u8string();
     setOutputFile(output_file);
 }
 
@@ -1180,11 +1180,11 @@ std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
     if (InputFile)
     {
         c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().string();
+        c->name_short = InputFile().filename().u8string();
         //c->file = InputFile;
     }
     if (OutputFile)
-        c->deps_file = OutputFile().parent_path() / (OutputFile().stem().string() + ".d");
+        c->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
     c->working_directory = OutputFile().parent_path();
 
     //if (c->file.empty())
@@ -1276,12 +1276,12 @@ void VisualStudioLibraryTool::setObjectFiles(const Files &files)
 
 void VisualStudioLibraryTool::setOutputFile(const path &out)
 {
-    Output = out.string() + Extension;
+    Output = out.u8string() + Extension;
 }
 
 void VisualStudioLibraryTool::setImportLibrary(const path &out)
 {
-    ImportLibrary = out.string() + ".lib";
+    ImportLibrary = out.u8string() + ".lib";
 }
 
 path VisualStudioLibraryTool::getOutputFile() const
@@ -1322,7 +1322,7 @@ std::shared_ptr<builder::Command> VisualStudioLibraryTool::getCommand() const
     c->working_directory = Output().parent_path();
 
     c->name = normalize_path(Output());
-    c->name_short = Output().filename().string();
+    c->name_short = Output().filename().u8string();
 
     /*if (c->name.find("eccdata.exe") != -1)
     {
@@ -1392,12 +1392,12 @@ void GNULinker::setObjectFiles(const Files &files)
 
 void GNULinker::setOutputFile(const path &out)
 {
-    Output = out.string() + Extension;
+    Output = out.u8string() + Extension;
 }
 
 void GNULinker::setImportLibrary(const path &out)
 {
-    //ImportLibrary = out.string();// + ".lib";
+    //ImportLibrary = out.u8string();// + ".lib";
 }
 
 void GNULinker::setLinkLibraries(const FilesOrdered &in)
@@ -1456,7 +1456,7 @@ std::shared_ptr<builder::Command> GNULinker::getCommand() const
     c->working_directory = Output().parent_path();
 
     c->name = normalize_path(Output());
-    c->name_short = Output().filename().string();
+    c->name_short = Output().filename().u8string();
 
     /*if (c->name.find("eccdata.exe") != -1)
     {
@@ -1490,12 +1490,12 @@ void GNULibrarian::setObjectFiles(const Files &files)
 
 void GNULibrarian::setOutputFile(const path &out)
 {
-    Output = out.string() + Extension;
+    Output = out.u8string() + Extension;
 }
 
 void GNULibrarian::setImportLibrary(const path &out)
 {
-    //ImportLibrary = out.string();// + ".lib";
+    //ImportLibrary = out.u8string();// + ".lib";
 }
 
 path GNULibrarian::getOutputFile() const
@@ -1541,7 +1541,7 @@ std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
     c->working_directory = Output().parent_path();
 
     c->name = normalize_path(Output());
-    c->name_short = Output().filename().string();
+    c->name_short = Output().filename().u8string();
 
     /*if (c->name.find("eccdata.exe") != -1)
     {

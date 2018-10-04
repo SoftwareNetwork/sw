@@ -12,7 +12,6 @@
 #include <boost/algorithm/string.hpp>
 #include <primitives/context.h>
 
-#define SW_SELF_BUILD
 #include <build_self.generated.h>
 
 void check_self(Checker &c)
@@ -24,7 +23,11 @@ void build_self(Solution &s)
 {
 #include <build_self.packages.generated.h>
     // this provides initial download of driver dependencies
-    resolve_dependencies(required_packages);
+    Resolver r;
+    r.resolve_dependencies(required_packages);
+    //auto pkgs = resolve_dependencies(required_packages);
+    for (auto &p : r.getDownloadDependencies())
+        s.knownTargets.insert(p);
 
     // then we must clean everything about them to prevent further resolve issues
     getPackageStore().clear();

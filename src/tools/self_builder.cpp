@@ -76,6 +76,8 @@ int main(int argc, char **argv)
         {{"org.sw.demo.boost.variant", "1"}, {}},
         {{"org.sw.demo.boost.assign", "1"}, {}},
         {{"org.sw.demo.boost.uuid", "1"}, {}},
+        {{"org.sw.demo.boost.container_hash", "1"}, {}},
+        //{{"org.sw.demo.boost.utility", "1"}, {}},
 
         {{"org.sw.demo.jbeder.yaml_cpp", "master"}, {}},
         {{"org.sw.demo.lz4", "1"}, {}},

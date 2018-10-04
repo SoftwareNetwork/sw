@@ -230,7 +230,9 @@ Solution::~Solution()
 
 bool Solution::isKnownTarget(const PackageId &p) const
 {
-    return knownTargets.empty() || knownTargets.find(p) != knownTargets.end();
+    return knownTargets.empty() ||
+        p.ppath.is_loc() ||
+        knownTargets.find(p) != knownTargets.end();
 }
 
 Target::TargetMap &Solution::getChildren()
@@ -1099,6 +1101,7 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
     solution.IsConfig = true;
     auto &lib = solution.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
     solution.IsConfig = false;
+    //lib.PostponeFileResolving = false;
     return lib;
 }
 
@@ -1155,13 +1158,6 @@ FilesMap Build::build_configs_separate(const Files &files)
 #endif
         lib.AutoDetectOptions = false;
         lib.CPPVersion = CPPLanguageStandard::CPP17;
-        if (auto L = lib.languages[LanguageType::CPP]->template as<CPPLanguage>())
-        {
-            if (auto C = L->compiler->template as<VisualStudioCompiler>())
-            {
-                //C->RuntimeLibrary() = RuntimeLibraryType::MultiThreadedDLL;
-            }
-        }
 
         lib += fn;
         write_file_if_different(getImportPchFile(), cppan_cpp);
@@ -1198,25 +1194,6 @@ FilesMap Build::build_configs_separate(const Files &files)
                 {
                     c->ForcedIncludeFiles().push_back(h);
                 }
-            }
-        }
-
-        for (auto &[k, v] : lib)
-        {
-            if (!v)
-                continue;
-            if (auto s = v->template as<CPPSourceFile>())
-            {
-#ifdef CPPAN_DEBUG
-                if (auto C = s->compiler->template as<VisualStudioCompiler>())
-                {
-                    C->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-                }
-                else if (auto C = s->compiler->template as<GNUCompiler>())
-                {
-                    C->GenerateDebugInfo = true;
-                }
-#endif
             }
         }
 
@@ -1262,6 +1239,8 @@ FilesMap Build::build_configs_separate(const Files &files)
             lib += std::make_shared<Dependency>(d);
 
         auto i = solution.children.find(lib.pkg);
+        if (i == solution.children.end())
+            throw std::logic_error("config target not found");
         solution.TargetsToBuild[i->first] = i->second;
 
         return lib.getOutputFile();
@@ -1315,13 +1294,6 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 #endif
     lib.AutoDetectOptions = false;
     lib.CPPVersion = CPPLanguageStandard::CPP17;
-    if (auto L = lib.languages[LanguageType::CPP]->template as<CPPLanguage>())
-    {
-        if (auto C = L->compiler->template as<VisualStudioCompiler>())
-        {
-            //C->RuntimeLibrary() = RuntimeLibraryType::MultiThreadedDLL;
-        }
-    }
 
     // separate loop
     for (auto &fn : files)
@@ -1431,25 +1403,6 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             lib += std::make_shared<Dependency>(d);
     }
 
-    for (auto &[k, v] : lib)
-    {
-        if (!v)
-            continue;
-        if (auto s = v->template as<CPPSourceFile>())
-        {
-#ifdef CPPAN_DEBUG
-            if (auto C = s->compiler->template as<VisualStudioCompiler>())
-            {
-                C->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-            }
-            else if (auto C = s->compiler->template as<GNUCompiler>())
-            {
-                C->GenerateDebugInfo = true;
-            }
-#endif
-        }
-    }
-
 #if defined(CPPAN_OS_WINDOWS)
     lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
     lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
@@ -1490,6 +1443,8 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     addDeps(lib, solution);
 
     auto i = solution.children.find(lib.pkg);
+    if (i == solution.children.end())
+        throw std::logic_error("config target not found");
     solution.TargetsToBuild[i->first] = i->second;
 
     if (!do_not_rebuild_config)

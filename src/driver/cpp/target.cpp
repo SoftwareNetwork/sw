@@ -218,7 +218,7 @@ void TargetBase::addChild(const TargetBaseTypePtr &t)
 {
     bool bad_type = t->getType() <= TargetType::Directory;
     // we do not activate targets that are not for current builds
-    bool unknown_tgt = !Local && !getSolution()->isKnownTarget(t->pkg);
+    bool unknown_tgt = /*!IsConfig && */!Local && !getSolution()->isKnownTarget(t->pkg);
     if (bad_type || unknown_tgt)
     {
         // also disable resolving for such targets
@@ -829,7 +829,8 @@ void NativeExecutedTarget::setOutputFile()
         getSelectedTool()->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_lib));
     else
     {
-        getSelectedTool()->setOutputFile(getOutputFileName(getOutputDir()));
+        auto p = getOutputFileName(getOutputDir());
+        getSelectedTool()->setOutputFile(p);
         getSelectedTool()->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
     }
 }
