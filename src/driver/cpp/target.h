@@ -397,6 +397,7 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
                     // description-file (or readme file)
 
     using TargetBase::TargetBase;
+    Target() = default;
     virtual ~Target() = default;
 
     virtual void init() = 0;
@@ -484,6 +485,7 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
 {
     using Target::Target;
 
+    NativeTarget() = default;
     virtual ~NativeTarget() = default;
 
     DependencyPtr getDependency() const;

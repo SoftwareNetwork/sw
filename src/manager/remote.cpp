@@ -15,6 +15,7 @@
 #include <fmt/ostream.h>
 #include <primitives/templates.h>
 #include <grpcpp/grpcpp.h>
+#include <boost/dll.hpp>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "remote");
@@ -85,7 +86,11 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
 
         grpc::SslCredentialsOptions ssl_options;
 #ifdef _WIN32
-        ssl_options.pem_root_certs = read_file("d:\\dev\\cppan2\\bin\\server.crt");
+        auto crt = path(boost::dll::program_location().parent_path().string()) / "server.crt";
+        if (fs::exists(crt))
+            ssl_options.pem_root_certs = read_file(crt);
+        else
+            ssl_options.pem_root_certs = read_file("d:\\dev\\cppan2\\bin\\server.crt");
         auto creds = grpc::SslCredentials(ssl_options);
 #else
         ssl_options.pem_root_certs = read_file("/home/egor/dev/sw_server.crt");

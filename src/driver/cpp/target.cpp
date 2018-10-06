@@ -829,8 +829,7 @@ void NativeExecutedTarget::setOutputFile()
         getSelectedTool()->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_lib));
     else
     {
-        auto p = getOutputFileName(getOutputDir());
-        getSelectedTool()->setOutputFile(p);
+        getSelectedTool()->setOutputFile(getOutputFileName(getOutputDir()));
         getSelectedTool()->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
     }
 }
