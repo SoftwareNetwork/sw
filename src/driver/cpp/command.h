@@ -307,10 +307,17 @@ struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
     void push_back(const Files &files);
 };
 
+#ifdef _MSC_VER
 #define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
     SW_MAKE_CUSTOM_COMMAND(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
 #define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
     SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
+#else
+#define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
+    SW_MAKE_CUSTOM_COMMAND(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
+#define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
+#endif
 
 struct VSCommand : Command
 {
