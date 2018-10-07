@@ -51,11 +51,11 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
     });
 }
 
-String GetCurrentModuleNameHash();
+String getCurrentModuleNameHash();
 
 path getFilesLogFileName(const String &config)
 {
-    auto cfg = sha256_short(GetCurrentModuleNameHash() + "_" + config);
+    auto cfg = sha256_short(getCurrentModuleNameHash() + "_" + config);
     const path bp = getUserDirectories().storage_dir_tmp / ("files_" + cfg + ".log");
     auto p = bp.parent_path() / bp.filename().stem();
     std::ostringstream ss;

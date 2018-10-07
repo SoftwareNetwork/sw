@@ -31,6 +31,11 @@
 #include <boost/dll.hpp>
 #include <nlohmann/json.hpp>
 
+#ifndef _WIN32
+#define _GNU_SOURCE // for dladdr
+#include <dlfcn.h>
+#endif
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target");
 
@@ -53,41 +58,53 @@ static cl::opt<bool> static_build("static-build", cl::desc("Set static build")/*
 namespace sw
 {
 
-#ifdef _WIN32
-static HMODULE GetCurrentModule()
+void *getModuleForSymbol(void *f)
 {
+#ifdef _WIN32
     HMODULE hModule = NULL;
     // hModule is NULL if GetModuleHandleEx fails.
     GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
         | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        (LPCTSTR)GetCurrentModule, &hModule);
+        (LPCTSTR)(f ? f : getCurrentModuleSymbol()), &hModule);
     return hModule;
+#else
+    Dl_info i;
+    if (dladdr(f ? f : getCurrentModuleSymbol(), &i))
+        return i.dli_fbase;
+    return nullptr;
+#endif
 }
 
-static String GetCurrentModuleName()
+path getModuleNameForSymbol(void *f)
 {
-    auto lib = GetCurrentModule();
+#ifdef _WIN32
+    auto lib = getModuleForSymbol(f);
     const auto sz = 1 << 16;
     WCHAR n[sz] = { 0 };
-    GetModuleFileNameW(lib, n, sz);
+    GetModuleFileNameW((HMODULE)lib, n, sz);
     path m = n;
-    return m.filename().u8string();
-}
+    return m;// .filename();
 #else
-static String GetCurrentModuleName()
-{
+    Dl_info i;
+    if (dladdr(f ? f : getCurrentModuleSymbol(), &i))
+        return i.dli_fname;
     return {};
-}
 #endif
+}
 
-String GetCurrentModuleNameHash()
+static path getCurrentModuleName()
 {
-    return shorten_hash(blake2b_512(GetCurrentModuleName()));
+    return getModuleNameForSymbol();
+}
+
+String getCurrentModuleNameHash()
+{
+    return shorten_hash(blake2b_512(getCurrentModuleName().u8string()));
 }
 
 path getImportFilePrefix()
 {
-    return getUserDirectories().storage_dir_tmp / ("cppan_" + GetCurrentModuleNameHash());
+    return getUserDirectories().storage_dir_tmp / ("cppan_" + getCurrentModuleNameHash());
 }
 
 path getImportDefinitionsFile()
@@ -284,7 +301,7 @@ path Solution::getExecutionPlanFilename() const
 StaticLibraryTarget &Solution::getImportLibrary()
 {
 #if defined(CPPAN_OS_WINDOWS)
-    HMODULE lib = GetCurrentModule();
+    HMODULE lib = (HMODULE)getModuleForSymbol();
     PIMAGE_NT_HEADERS header = (PIMAGE_NT_HEADERS)((BYTE *)lib + ((PIMAGE_DOS_HEADER)lib)->e_lfanew);
     PIMAGE_EXPORT_DIRECTORY exports = (PIMAGE_EXPORT_DIRECTORY)((BYTE *)lib + header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
     assert(exports->AddressOfNames && "No exports found");
@@ -304,7 +321,7 @@ StaticLibraryTarget &Solution::getImportLibrary()
     auto o = Local;
     Local = false; // this prevents us from putting compiled configs into user bdirs
     IsConfig = true;
-    auto &t = addTarget<StaticLibraryTarget>("cppan_implib_" + GetCurrentModuleNameHash(), "local");
+    auto &t = addTarget<StaticLibraryTarget>("cppan_implib_" + getCurrentModuleNameHash(), "local");
     //t.init2();
     IsConfig = false;
     Local = o;

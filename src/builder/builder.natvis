@@ -7,4 +7,10 @@
         </DisplayString>
     </Type>
 
+    <Type Name="sw::File">
+        <DisplayString>
+            {file}
+        </DisplayString>
+    </Type>
+
 </AutoVisualizer>

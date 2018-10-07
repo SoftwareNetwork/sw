@@ -212,4 +212,7 @@ struct SW_DRIVER_CPP_API ModuleStorage
 
 ModuleStorage &getModuleStorage(Solution &owner);
 
+void *getModuleForSymbol(void *f = nullptr);
+path getModuleNameForSymbol(void *f = nullptr);
+
 }

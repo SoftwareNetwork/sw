@@ -295,7 +295,7 @@ struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
     using F = std::function<void(void)>;
 
     ExecuteBuiltinCommand();
-    ExecuteBuiltinCommand(const String &cmd_name);
+    ExecuteBuiltinCommand(const String &cmd_name, void *f = nullptr);
     virtual ~ExecuteBuiltinCommand() = default;
 
     void execute() override;
@@ -307,10 +307,10 @@ struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
     void push_back(const Files &files);
 };
 
-#define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name) \
-    SW_MAKE_CUSTOM_COMMAND(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name)
-#define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name) \
-    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name)
+#define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
+    SW_MAKE_CUSTOM_COMMAND(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
+#define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
 
 struct VSCommand : Command
 {

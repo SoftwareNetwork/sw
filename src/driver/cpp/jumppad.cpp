@@ -11,18 +11,18 @@
 namespace sw
 {
 
-int jumppad_call(String name, const Strings &s)
+int jumppad_call(const path &module, const String &name, const Strings &s)
 {
-    name = "_sw_fn_jumppad_" + name;
-    boost::dll::shared_library lib(boost::dll::program_location());
-    return lib.get<int(const Strings &)>(name.c_str())(s);
+    auto n = "_sw_fn_jumppad_" + name;
+    boost::dll::shared_library lib(module.u8string());
+    return lib.get<int(const Strings &)>(n.c_str())(s);
 }
 
 int jumppad_call(const Strings &s)
 {
     if (s.empty())
         throw std::runtime_error("No function name was provided");
-    return jumppad_call(s[0], Strings{s.begin() + 1, s.end()});
+    return jumppad_call(s[0], s[1], Strings{s.begin() + 2, s.end()});
 }
 
 }

@@ -1187,6 +1187,8 @@ Commands NativeExecutedTarget::getCommands() const
 
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "amazon.aws.sdk.core");
+
     // add generated files
     auto generated = getGeneratedCommands();
 
@@ -1660,7 +1662,7 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "amazon.aws.sdk.core");
 
     /*{
         auto is_changed = [this](const path &p)

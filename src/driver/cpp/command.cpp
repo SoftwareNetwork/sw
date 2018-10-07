@@ -350,9 +350,10 @@ ExecuteBuiltinCommand::ExecuteBuiltinCommand()
     program = boost::dll::program_location().string();
 }
 
-ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name)
+ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name, void *f)
     : ExecuteBuiltinCommand()
 {
+    args.push_back(getModuleNameForSymbol(f).u8string());
     args.push_back(cmd_name);
 }
 
