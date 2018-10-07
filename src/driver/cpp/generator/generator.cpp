@@ -37,6 +37,8 @@ GeneratorType fromString(const String &s)
     // make icasecmp
     if (boost::iequals(s, "VS"))
         return GeneratorType::VisualStudio;
+    else if (boost::iequals(s, "VS_NMake"))
+        return GeneratorType::VisualStudioNMake;
     else if (boost::iequals(s, "Ninja"))
         return GeneratorType::Ninja;
     return GeneratorType::UnspecifiedGenerator;
@@ -49,6 +51,8 @@ std::unique_ptr<Generator> Generator::create(const String &s)
     {
     case GeneratorType::VisualStudio:
         return std::make_unique<VSGenerator>();
+    case GeneratorType::VisualStudioNMake:
+        return std::make_unique<VSGeneratorNMake>();
     case GeneratorType::Ninja:
         return std::make_unique<NinjaGenerator>();
     default:
@@ -363,8 +367,13 @@ struct PackagePathTree
 
 void VSGenerator::generate(const Build &b)
 {
+
+}
+
+void VSGeneratorNMake::generate(const Build &b)
+{
     const auto cwd = "\"" + current_thread_path().string() + "\"";
-    const auto dir = b.getIdeDir();
+    const auto dir = b.getIdeDir() / "vs_nmake";
     const path projects_dir = "projects";
     const InsecurePath deps_subdir = "Dependencies";
     PackagePathTree tree, local_tree;

@@ -9,6 +9,7 @@
 // builder stuff
 #include <solution.h>
 #include <suffix.h>
+#include <jumppad.h>
 
 // manager stuff
 #include <resolver.h>

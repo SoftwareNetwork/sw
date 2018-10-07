@@ -1250,6 +1250,8 @@ Commands NativeExecutedTarget::getCommands() const
                     else if (f->compiler == Settings.Native.CPPCompiler)
                         prefix = "Building CXX object ";
                     auto n = p.substr(sd.size());
+                    if (!n.empty() && n[0] != '/')
+                        n = "/" + n;
                     c->name = prefix + "[" + pkg.target_name + "]" + n;
                 }
             }

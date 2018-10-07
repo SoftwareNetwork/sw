@@ -22,15 +22,17 @@ void check_self(Checker &c)
 void build_self(Solution &s)
 {
 #include <build_self.packages.generated.h>
-    // this provides initial download of driver dependencies
-    Resolver r;
-    r.resolve_dependencies(required_packages);
-    //auto pkgs = resolve_dependencies(required_packages);
-    for (auto &p : r.getDownloadDependencies())
-        s.knownTargets.insert(p);
 
-    // then we must clean everything about them to prevent further resolve issues
-    getPackageStore().clear();
+    {
+        SwapAndRestore store(getPackageStore(), PackageStore());
+
+        // this provides initial download of driver dependencies
+        Resolver r;
+        r.resolve_dependencies(required_packages);
+        //auto pkgs = resolve_dependencies(required_packages);
+        for (auto &p : r.getDownloadDependencies())
+            s.knownTargets.insert(p);
+    }
 
     s.Settings.Native.LibrariesType = LibraryType::Static;
 

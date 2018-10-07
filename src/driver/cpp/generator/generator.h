@@ -20,6 +20,7 @@ enum class GeneratorType
     Qmake,
     UnixMakefiles,
     VisualStudio,
+    VisualStudioNMake,
 };
 
 struct Generator
@@ -37,6 +38,11 @@ struct Generator
 };
 
 struct VSGenerator : Generator
+{
+    void generate(const struct Build &b) override;
+};
+
+struct VSGeneratorNMake : Generator
 {
     void generate(const struct Build &b) override;
 };

@@ -11,11 +11,17 @@
 
 #include <functional>
 
-#define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(f, n)                          \
-    extern "C" SW_DRIVER_CPP_API int _sw_fn_jumppad_##n(const Strings &s) \
-    {                                                                     \
-        ::sw::VisibleFunctionJumppad j(&f, #n);                           \
-        return j.call(s);                                                 \
+#ifdef SW_PACKAGE_API
+#define SW_JUMPPAD_API SW_PACKAGE_API
+#else
+#define SW_JUMPPAD_API SW_DRIVER_CPP_API
+#endif
+
+#define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(f, n)                       \
+    extern "C" SW_JUMPPAD_API int _sw_fn_jumppad_##n(const Strings &s) \
+    {                                                                  \
+        ::sw::VisibleFunctionJumppad j(&f, #n);                        \
+        return j.call(s);                                              \
     }
 
 #define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD2(x) SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(x, x)

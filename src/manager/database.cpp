@@ -902,6 +902,7 @@ void check_version_age(const std::string &created)
     auto mins = std::chrono::duration_cast<std::chrono::minutes>(d).count();
     // multiple by 2 because first time interval goes for uploading db
     // and during the second one, the packet is really young
+    //LOG_INFO(logger, "mins " << mins);
     if (mins < PACKAGES_DB_REFRESH_TIME_MINUTES * 2)
         throw std::runtime_error("One of the queried packages is 'young'. Young packages must be retrieved from server.");
 }

@@ -80,12 +80,16 @@ void build(Solution &s)
     cpp_driver.ExportIfStatic = true;
     cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
     cpp_driver.Public += builder,
+        "org.sw.demo.microsoft.gsl-*"_dep,
         "org.sw.demo.boost.assign-1"_dep,
         "org.sw.demo.boost.uuid-1"_dep;
     cpp_driver += "src/driver/cpp/.*"_rr, "include/sw/driver/cpp/.*"_rr;
     cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
     embed(cpp_driver, cpp_driver.SourceDir / "src/driver/cpp/inserts/inserts.cpp.in");
     gen_flex_bison(cpp_driver, "src/driver/cpp/bazel/lexer.ll", "src/driver/cpp/bazel/grammar.yy");
+    if (auto sf = cpp_driver["src/driver/cpp/solution.cpp"].template as<CPPSourceFile>())
+        if (auto c = sf->compiler->template as<VisualStudioCompiler>())
+            c->BigObj = true;
 
     auto &cppan_driver = p.addTarget<LibraryTarget>("driver.cppan");
     cppan_driver.ApiName = "SW_DRIVER_CPPAN_API";
@@ -95,7 +99,6 @@ void build(Solution &s)
     cppan_driver += "src/driver/cppan/.*"_rr, "include/sw/driver/cppan/.*"_rr;
     cppan_driver.Public += "include"_idir, "src/driver/cppan"_idir;
 
-#ifndef SW_SELF_BUILD
     auto &tools = p.addDirectory("tools");
     auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
     self_builder.CPPVersion = CPPLanguageStandard::CPP17;
@@ -138,5 +141,4 @@ void build(Solution &s)
         if (s.Settings.TargetOS.Type == OSType::Windows)
             client.Public += "UNICODE"_d;
     }
-#endif
 }
