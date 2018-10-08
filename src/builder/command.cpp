@@ -54,9 +54,9 @@ CommandStorage::~CommandStorage()
     {
         save();
     }
-    catch (...)
+    catch (std::exception &e)
     {
-        LOG_ERROR(logger, "Error during file db save");
+        LOG_ERROR(logger, "Error during command db save: " << e.what());
     }
 }
 

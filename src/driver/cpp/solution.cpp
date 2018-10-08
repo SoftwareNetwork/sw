@@ -85,9 +85,11 @@ path getModuleNameForSymbol(void *f)
     path m = n;
     return m;// .filename();
 #else
+    if (!f)
+        return boost::dll::program_location().string();
     Dl_info i;
     if (dladdr(f ? f : getCurrentModuleSymbol(), &i))
-        return i.dli_fname;
+        return fs::absolute(i.dli_fname);
     return {};
 #endif
 }

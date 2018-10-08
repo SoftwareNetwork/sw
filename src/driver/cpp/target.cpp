@@ -396,7 +396,7 @@ path TargetBase::getTargetDirShort() const
 #ifdef _WIN32
     return getSolution()->BinaryDir / getConfig(true) / sha256_short(pkg.toString());
 #else
-    return getTargetsDir();
+    return getTargetsDir() / pkg.ppath.toString();
 #endif
 }
 

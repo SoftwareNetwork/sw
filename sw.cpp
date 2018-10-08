@@ -87,9 +87,11 @@ void build(Solution &s)
     cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
     embed(cpp_driver, cpp_driver.SourceDir / "src/driver/cpp/inserts/inserts.cpp.in");
     gen_flex_bison(cpp_driver, "src/driver/cpp/bazel/lexer.ll", "src/driver/cpp/bazel/grammar.yy");
+#ifdef _MSC_VER
     if (auto sf = cpp_driver["src/driver/cpp/solution.cpp"].template as<CPPSourceFile>())
         if (auto c = sf->compiler->template as<VisualStudioCompiler>())
             c->BigObj = true;
+#endif
 
     auto &cppan_driver = p.addTarget<LibraryTarget>("driver.cppan");
     cppan_driver.ApiName = "SW_DRIVER_CPPAN_API";

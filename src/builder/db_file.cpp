@@ -197,6 +197,8 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
     for (auto i = old.getIterator(); i.isValid(); i.next())
     {
         auto &f = *i.getValue();
+        if (f.file.empty())
+            continue;
         auto[ptr, inserted] = files.insert(f.file, f);
         if (!inserted && f.data && *ptr < f)
             *ptr = f;

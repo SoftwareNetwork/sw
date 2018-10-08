@@ -90,9 +90,9 @@ FileStorage::~FileStorage()
         async_log.reset();
         save();
     }
-    catch (...)
+    catch (std::exception &e)
     {
-        LOG_ERROR(logger, "Error during file db save");
+        LOG_ERROR(logger, "Error during file db save: " << e.what());
     }
 }
 
