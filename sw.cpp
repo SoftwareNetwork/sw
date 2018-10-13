@@ -84,6 +84,8 @@ void build(Solution &s)
         "org.sw.demo.boost.assign-1"_dep,
         "org.sw.demo.boost.uuid-1"_dep;
     cpp_driver += "src/driver/cpp/.*"_rr, "include/sw/driver/cpp/.*"_rr;
+    if (s.Settings.TargetOS.Type != OSType::Windows)
+        cpp_driver -= "src/driver/cpp/misc/.*"_rr;
     cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
     embed(cpp_driver, cpp_driver.SourceDir / "src/driver/cpp/inserts/inserts.cpp.in");
     gen_flex_bison(cpp_driver, "src/driver/cpp/bazel/lexer.ll", "src/driver/cpp/bazel/grammar.yy");

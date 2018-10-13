@@ -945,7 +945,7 @@ FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
         }
 
 #ifndef _WIN32
-        libs.push_back(l);
+        libs.push_back("-l" + l.u8string());
 #endif
     }
     return libs;
@@ -2126,7 +2126,7 @@ bool NativeExecutedTarget::prepare()
         //setOutputFile();
 
         // legit?
-        getSelectedTool()->merge(*this);
+        //getSelectedTool()->merge(*this);
 
         // pdb
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
