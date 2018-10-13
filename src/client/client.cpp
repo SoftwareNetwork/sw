@@ -316,6 +316,16 @@ SUBCOMMAND_DECL(ide)
             s->execute();
         });
     }
+    else
+    {
+        single_process_job(fs::current_path(), []()
+        {
+            auto s = sw::load("sw.cpp");
+            auto &b = *((sw::Build*)s.get());
+            b.ide = true;
+            s->execute();
+        });
+    }
 }
 
 SUBCOMMAND_DECL(init)

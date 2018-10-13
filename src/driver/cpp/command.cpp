@@ -360,7 +360,7 @@ ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name, void *f)
 void ExecuteBuiltinCommand::push_back(const Files &files)
 {
     args.push_back(std::to_string(files.size()));
-    for (auto &o : files)
+    for (auto &o : FilesSorted{ files.begin(), files.end() })
         args.push_back(o.u8string());
 }
 

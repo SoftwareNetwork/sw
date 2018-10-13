@@ -330,6 +330,7 @@ void NativeLinkerOptionsData::merge(const NativeLinkerOptionsData &o, const Grou
 
     unique_merge_containers(Frameworks, o.Frameworks);
     LinkLibraries.insert(LinkLibraries.end(), o.LinkLibraries.begin(), o.LinkLibraries.end());
+    LinkOptions.insert(LinkOptions.end(), o.LinkOptions.begin(), o.LinkOptions.end());
     unique_merge_containers(PreLinkDirectories, o.PreLinkDirectories);
     unique_merge_containers(LinkDirectories, o.LinkDirectories);
     unique_merge_containers(PostLinkDirectories, o.PostLinkDirectories);
@@ -339,6 +340,18 @@ void NativeLinkerOptions::merge(const NativeLinkerOptions &o, const GroupSetting
 {
     NativeLinkerOptionsData::merge(o, s);
     System.merge(o.System, s);
+}
+
+void NativeLinkerOptions::addEverything(builder::Command &c) const
+{
+    auto print_idir = [&c](const auto &a, auto &flag)
+    {
+        for (auto &d : a)
+            c.args.push_back(flag + normalize_path(d));
+    };
+
+    print_idir(System.LinkOptions, "");
+    print_idir(LinkOptions, "");
 }
 
 /*

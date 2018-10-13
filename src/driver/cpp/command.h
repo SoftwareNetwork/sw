@@ -299,7 +299,7 @@ struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
     virtual ~ExecuteBuiltinCommand() = default;
 
     void execute() override;
-    path getProgram() const override { return "ExecuteBuiltinCommand"; };
+    //path getProgram() const override { return "ExecuteBuiltinCommand"; };
 
     //template <class T>
     //auto push_back(T &&v) { args.push_back(v); }

@@ -260,10 +260,11 @@ void FileRecord::reset()
     {
         // do we need to reset changed in this case or not?
         //if (!generator.expired())
-            //generator.reset();
+            generator.reset();
     }
 
-    data->refreshed = false;
+    if (data)
+        data->refreshed = false;
 }
 
 void FileRecord::load(const path &p)

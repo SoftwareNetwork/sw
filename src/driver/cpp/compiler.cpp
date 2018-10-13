@@ -1333,6 +1333,7 @@ std::shared_ptr<builder::Command> VisualStudioLibraryTool::getCommand() const
     ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<VisualStudioLibraryToolOptions>(c.get(), *this);
+    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
     getAdditionalOptions(c.get());
 
     return cmd = c;
@@ -1467,6 +1468,7 @@ std::shared_ptr<builder::Command> GNULinker::getCommand() const
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<GNULinkerOptions>(c.get(), *this);
+    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
     //getAdditionalOptions(c.get());
 
     return cmd = c;
@@ -1552,6 +1554,7 @@ std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<GNULibrarianOptions>(c.get(), *this);
+    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
     //getAdditionalOptions(c.get());
 
     return cmd = c;

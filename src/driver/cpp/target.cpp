@@ -21,6 +21,7 @@
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/constants.h>
+#include <primitives/sw/settings.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target");
@@ -31,6 +32,8 @@ DECLARE_STATIC_LOGGER(logger, "target");
 #define CPPAN_FILE_PREFIX ".sw"
 #define NATIVE_TARGET_DEF_SYMBOLS_FILE \
     (BinaryDir / CPPAN_FILE_PREFIX ".symbols.def")
+
+static cl::opt<bool> do_not_mangle_object_names("do-not-mangle-object-names");
 
 void createDefFile(const path &def, const Files &obj_files)
 #if defined(CPPAN_OS_WINDOWS)
@@ -87,6 +90,38 @@ String toString(TargetType T)
 #undef CASE
     }
     throw std::logic_error("unreachable code");
+}
+
+String TargetBase::SettingsX::getConfig(bool use_short_config) const
+{
+    auto remove_last_dash = [](auto &c)
+    {
+        if (c.size() && c.back() == '-')
+            c.resize(c.size() - 1);
+    };
+
+    String c;
+
+    addConfigElement(c, toString(TargetOS.Type));
+    addConfigElement(c, toString(TargetOS.Arch));
+    boost::to_lower(c);
+    addConfigElement(c, Native.getConfig());
+
+    remove_last_dash(c);
+
+    auto h = hash_config(c);
+    if (!use_short_config && c.size() + h.size() < 255/* && !use_short_hash*/) // max path part in many FSes
+    {
+        // hash
+        addConfigElement(c, h);
+        remove_last_dash(c);
+        return c;
+    }
+    else
+    {
+        h = shorten_hash(h);
+    }
+    return h;
 }
 
 TargetBase::TargetBase(const TargetBase &rhs)
@@ -344,34 +379,7 @@ void TargetBase::applyRootDirectory()
 
 String TargetBase::getConfig(bool use_short_config) const
 {
-    auto remove_last_dash = [](auto &c)
-    {
-        if (c.size() && c.back() == '-')
-            c.resize(c.size() - 1);
-    };
-
-    String c;
-
-    addConfigElement(c, toString(Settings.TargetOS.Type));
-    addConfigElement(c, toString(Settings.TargetOS.Arch));
-    boost::to_lower(c);
-    addConfigElement(c, Settings.Native.getConfig());
-
-    remove_last_dash(c);
-
-    auto h = hash_config(c);
-    if (!use_short_config && c.size() + h.size() < 255/* && !use_short_hash*/) // max path part in many FSes
-    {
-        // hash
-        addConfigElement(c, h);
-        remove_last_dash(c);
-        return c;
-    }
-    else
-    {
-        h = shorten_hash(h);
-    }
-    return h;
+    return Settings.getConfig(use_short_config);
 }
 
 path TargetBase::getBaseDir() const
@@ -935,6 +943,10 @@ FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
         {
             LOG_TRACE(logger, "Cannot resolve library: " << l);
         }
+
+#ifndef _WIN32
+        libs.push_back(l);
+#endif
     }
     return libs;
 }
@@ -1187,7 +1199,7 @@ Commands NativeExecutedTarget::getCommands() const
 
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "amazon.aws.sdk.core");
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "google.tensorflow.gen_proto_text_functions");
 
     // add generated files
     auto generated = getGeneratedCommands();
@@ -1231,7 +1243,7 @@ Commands NativeExecutedTarget::getCommands() const
             c->args.insert(c->args.end(), f->args.begin(), f->args.end());
 
             // set fancy name
-            if (/*!Local && */!IsConfig)
+            if (/*!Local && */!IsConfig && !do_not_mangle_object_names)
             {
                 auto p = normalize_path(f->file);
                 if (bdp.size() < p.size() && p.find(bdp) == 0)
@@ -1286,8 +1298,25 @@ Commands NativeExecutedTarget::getCommands() const
             cmds.insert(g);
         }
 
+        auto get_tgts = [this]()
+        {
+            TargetsSet deps;
+            for (auto &d : Dependencies)
+            {
+                if (d->target.lock().get() == this)
+                    continue;
+                if (d->Dummy)
+                    continue;
+
+                if (d->IncludeDirectoriesOnly && !d->GenerateCommandsBefore)
+                    continue;
+                deps.insert(d->target.lock().get());
+            }
+            return deps;
+        };
+
         // add dependencies on generated commands from dependent targets
-        for (auto &l : gatherDependenciesTargets())
+        for (auto &l : get_tgts())
         {
             for (auto &c2 : ((NativeExecutedTarget*)l)->getGeneratedCommands())
             {
@@ -2095,6 +2124,9 @@ bool NativeExecutedTarget::prepare()
 
         // linker setup - already set up
         //setOutputFile();
+
+        // legit?
+        getSelectedTool()->merge(*this);
 
         // pdb
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())

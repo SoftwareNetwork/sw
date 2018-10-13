@@ -151,8 +151,13 @@ struct SW_DRIVER_CPP_API Dependency
 {
     std::weak_ptr<NativeTarget> target;
     UnresolvedPackage package;
-    bool IncludeDirectoriesOnly = false;
+    bool GenerateCommandsBefore = false; // do not make true by default
     bool Dummy = false; // bool Runtime = false; ?
+
+    // cpp (native) options
+    bool IncludeDirectoriesOnly = false;
+    bool WholeArchive = false;
+
     // optional callback
     // choose default value
     std::function<void(NativeTarget &)> optional;
@@ -203,6 +208,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptionsData
     // it is possible to have repeated link libraries on the command line
     LinkLibrariesType LinkLibraries;
     //PathOptionsType LinkLibraries2; // so on linux
+    Strings LinkOptions;
     PathOptionsType PreLinkDirectories;
     PathOptionsType LinkDirectories;
     PathOptionsType PostLinkDirectories;
@@ -250,6 +256,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
     void remove(const DependencyPtr &t);
 
     void merge(const NativeLinkerOptions &o, const GroupSettings &s = GroupSettings());
+    void addEverything(builder::Command &c) const;
 
     //
     //NativeLinkerOptions &operator+=(const NativeTarget &t);

@@ -70,7 +70,7 @@ String uuid2string(const boost::uuids::uuid &u)
 {
     std::ostringstream ss;
     ss << u;
-    return ss.str();
+    return boost::to_upper_copy(ss.str());
 }
 
 String make_backslashes(String s)
@@ -79,21 +79,40 @@ String make_backslashes(String s)
     return s;
 }
 
-static const Strings configs{
-    "Debug",
-    "Release",
-    "MinSizeRel",
-    "RelWithDebInfo",
+static const std::map<ConfigurationType, String> configs{
+    {ConfigurationType::Debug,"Debug",},
+    {ConfigurationType::Release,"Release",},
+    {ConfigurationType::MinimalSizeRelease,"MinSizeRel",},
+    {ConfigurationType::ReleaseWithDebugInformation,"RelWithDebInfo",},
 };
 
-static const Strings platforms{
-    "Win32",
-    "x64",
+static const std::map<ArchType, String> platforms{
+    {ArchType::x86,"Win32",},
+    {ArchType::x86_64,"x64",},
 };
 
-static const Strings shared_static{
-    "static",
-    "dll",
+static const std::map<LibraryType, String> shared_static{
+    {LibraryType::Static,"static",},
+    {LibraryType::Shared,"dll",},
+};
+
+enum class VSProjectType
+{
+    Directory,
+    Makefile,
+    Application,
+    DynamicLibrary,
+    StaticLibrary,
+    Utility,
+};
+
+static std::map<VSProjectType, String> project_type_uuids{
+    {VSProjectType::Directory,"{2150E333-8FDC-42A3-9474-1A3956D46DE8}",},
+    {VSProjectType::Makefile,"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}",},
+    {VSProjectType::Application,"unk",},
+    {VSProjectType::DynamicLibrary,"unk",},
+    {VSProjectType::StaticLibrary,"unk",},
+    {VSProjectType::Utility,"unk",},
 };
 
 void iterate_over_configs(std::function<void(const String &, const String &, const String &)> f)
@@ -101,7 +120,24 @@ void iterate_over_configs(std::function<void(const String &, const String &, con
     for (auto &c : configs)
         for (auto &p : platforms)
             for (auto &dll : shared_static)
-                f(c, p, dll);
+                f(c.second, p.second, dll.second);
+}
+
+void iterate_over_configs(TargetBase::SettingsX s, std::function<void(const TargetBase::SettingsX &, const String &, const String &, const String &)> f)
+{
+    for (auto &c : configs)
+    {
+        s.Native.ConfigurationType = c.first;
+        for (auto &p : platforms)
+        {
+            s.TargetOS.Arch = p.first;
+            for (auto &dll : shared_static)
+            {
+                s.Native.LibrariesType = dll.first;
+                f(s, c.second, p.second, dll.second);
+            }
+        }
+    }
 }
 
 // VS
@@ -114,6 +150,13 @@ struct SolutionContext : Context
     {
         addLine("Microsoft Visual Studio Solution File, Format Version 12.00");
         addLine("# Visual Studio 15");
+        addLine("VisualStudioVersion = 15.0.28010.2046");
+        addLine("MinimumVisualStudioVersion = 10.0.40219.1");
+    }
+
+    void addDirectory(const String &display_name, const String &solution_dir = {})
+    {
+        addDirectory(display_name, display_name, solution_dir);
     }
 
     void addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir = {})
@@ -121,7 +164,7 @@ struct SolutionContext : Context
         auto up = boost::uuids::random_generator()();
         uuids[n.toString()] = uuid2string(up);
 
-        addLine("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"" +
+        addLine("Project(\"" + project_type_uuids[VSProjectType::Directory] + "\") = \"" +
             display_name + "\", \"" + n.toString("\\") + "\", \"{" + uuids[n] + "}\"");
         addLine("EndProject");
 
@@ -129,12 +172,13 @@ struct SolutionContext : Context
             nested_projects[n.toString()] = solution_dir;
     }
 
-    void addProject(const String &n, const path &dir, const String &solution_dir)
+    void addProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir)
     {
         auto up = boost::uuids::random_generator()();
         uuids[n] = uuid2string(up);
 
-        addLine("Project(\"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}\") = \"" + n + "\", \"" + (dir / (n + ".vcxproj")).u8string() + "\", \"{" + uuids[n] + "}\"");
+        addLine("Project(\"" + project_type_uuids[type] + "\") = \"" +
+            n + "\", \"" + (dir / (n + ".vcxproj")).u8string() + "\", \"{" + uuids[n] + "}\"");
         addLine("EndProject");
 
         if (!solution_dir.empty())
@@ -376,9 +420,64 @@ void VSGeneratorNMake::generate(const Build &b)
     const auto dir = b.getIdeDir() / "vs_nmake";
     const path projects_dir = "projects";
     const InsecurePath deps_subdir = "Dependencies";
+    const auto predefined_targets_dir = "SWPredefinedTargets"s;
+    const auto all_build_name = "ALL_BUILD"s;
     PackagePathTree tree, local_tree;
     PackagePathTree::Directories parents, local_parents;
     SolutionContext ctx;
+
+    // add ALL_BUILD target
+    {
+        ctx.addDirectory(predefined_targets_dir);
+        ctx.addProject(VSProjectType::Makefile, all_build_name, projects_dir, predefined_targets_dir);
+
+        ProjectContext pctx;
+        pctx.beginProject();
+
+        pctx.addProjectConfigurations();
+
+        pctx.beginBlock("PropertyGroup", { {"Label", "Globals"} });
+        pctx.addBlock("VCProjectVersion", "15.0");
+        pctx.addBlock("ProjectGuid", "{" + ctx.uuids[all_build_name] + "}");
+        pctx.addBlock("Keyword", "Win32Proj");
+        pctx.addBlock("ProjectName", all_build_name);
+        pctx.endBlock();
+
+        pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
+        pctx.addPropertyGroupConfigurationTypes();
+        pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
+        pctx.addPropertySheets();
+
+        iterate_over_configs(b.Settings, [&pctx, &cwd, &b, &all_build_name](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        {
+            using namespace sw;
+
+            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + " " + dll + "|" + pl + "'" } });
+
+            String cfg = "--configuration " + c + " --platform " + pl;
+            if (dll != "dll")
+                cfg += " --static-build";
+
+            String compiler;
+            if (b.Settings.Native.CompilerType == CompilerType::Clang)
+                compiler = "--compiler clang";
+            else if (b.Settings.Native.CompilerType == CompilerType::ClangCl)
+                compiler = "--compiler clang-cl";
+            else if (b.Settings.Native.CompilerType == CompilerType::GNU)
+                compiler = "--compiler gnu";
+
+            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config ide");
+            pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " " + cfg + " ide --clean");
+            pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " ide --rebuild");
+
+            pctx.endBlock();
+        });
+
+        pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets" } });
+
+        pctx.endProject();
+        write_file(dir / projects_dir / (all_build_name + ".vcxproj"), pctx.getText());
+    }
 
     // gather parents
     bool has_deps = false;
@@ -388,7 +487,7 @@ void VSGeneratorNMake::generate(const Build &b)
         (t->Local ? local_tree : tree).add(p.ppath);
     }
     if (has_deps && print_dependencies)
-        ctx.addDirectory(deps_subdir, deps_subdir);
+        ctx.addDirectory(deps_subdir);
 
     auto add_dirs = [&ctx](auto &t, auto &prnts, const String &root = {})
     {
@@ -413,7 +512,7 @@ void VSGeneratorNMake::generate(const Build &b)
         auto &prnts = t->Local ? local_parents : parents;
         while (!pp.empty() && prnts.find(pp) == prnts.end())
             pp = pp.parent();
-        ctx.addProject(p.target_name, projects_dir, pp);
+        ctx.addProject(VSProjectType::Makefile, p.target_name, projects_dir, pp);
     }
 
     // gen projects
@@ -460,14 +559,11 @@ void VSGeneratorNMake::generate(const Build &b)
         pctx.endBlock();
 
         pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
-
         pctx.addPropertyGroupConfigurationTypes();
-
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
-
         pctx.addPropertySheets();
 
-        iterate_over_configs([&pctx, &nt, &cwd, &p, &b](const String &c, const String &pl, const String &dll)
+        iterate_over_configs(nt->Settings, [&pctx, &nt, &cwd, &p, &b](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
 
@@ -485,8 +581,10 @@ void VSGeneratorNMake::generate(const Build &b)
             else if (b.Settings.Native.CompilerType == CompilerType::GNU)
                 compiler = "--compiler gnu";
 
+            auto o = nt->getOutputFile();
+            o = o.parent_path().parent_path() / s.getConfig() / o.filename();
             pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config --target " + p.target_name + " ide");
-            pctx.addBlock("NMakeOutput", nt->getOutputFile().string());
+            pctx.addBlock("NMakeOutput", o.u8string());
             pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " " + cfg + " ide --clean");
             pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " ide --rebuild");
             String defs;
@@ -579,8 +677,9 @@ void VSGeneratorNMake::generate(const Build &b)
     {
         if (!print_dependencies && !t->Local)
             continue;
-        ctx.addProjectConfigurationPlatforms(p.target_name, true);
+        ctx.addProjectConfigurationPlatforms(p.target_name);
     }
+    ctx.addProjectConfigurationPlatforms(all_build_name, true);
     ctx.endGlobalSection();
     ctx.endGlobal();
 

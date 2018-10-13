@@ -150,7 +150,7 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
 {
     using TargetMap = std::unordered_map<PackageId, TargetBaseTypePtr>;
 
-    struct Settings
+    struct SettingsX
     {
         OS HostOS;
         //OS BuildOS; // for distributed compilation
@@ -160,8 +160,9 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
         // other langs?
         // make polymorphic?
 
+        String getConfig(bool use_short_config = false) const;
     };
-    Settings Settings; // current configuration
+    SettingsX Settings; // current configuration
 
     PackageId pkg;
 

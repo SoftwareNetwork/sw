@@ -184,9 +184,9 @@ std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const path &p)
 
     auto f = read_file(p);
 #ifdef _WIN32
-    static const std::regex r_pragma("^#pragma\\s+sw\\s+require\\s+(\\S+)(\\s+(\\S+))?");
+    static const std::regex r_pragma("^#pragma +sw +require +(\\S+)( +(\\S+))?");
 #else
-    static const std::regex r_pragma("#pragma\\s+sw\\s+require\\s+(\\S+)(\\s+(\\S+))?");
+    static const std::regex r_pragma("#pragma +sw +require +(\\S+)( +(\\S+))?");
 #endif
     std::smatch m;
     while (std::regex_search(f, m, r_pragma))
@@ -297,7 +297,10 @@ path Solution::getExecutionPlansDir() const
 
 path Solution::getExecutionPlanFilename() const
 {
-    return getExecutionPlansDir() / (getConfig() + ".explan");
+    String n;
+    for (auto &[pkg, _] : TargetsToBuild)
+        n += pkg.toString();
+    return getExecutionPlansDir() / (getConfig() + "_" + sha1(n).substr(0, 8) + ".explan");
 }
 
 StaticLibraryTarget &Solution::getImportLibrary()
@@ -1740,6 +1743,9 @@ bool Build::execute()
             auto fn = s.getExecutionPlanFilename();
             if (fs::exists(fn))
             {
+                // prevent double assign generators
+                fs->reset();
+
                 auto p = ::sw::load(fn, s);
                 s.execute(p);
                 return true;

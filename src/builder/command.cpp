@@ -321,7 +321,7 @@ void Command::prepare()
         //program = ::primitives::resolve_executable(program);
     getHashAndSave();
 
-    //DEBUG_BREAK_IF_PATH_HAS(program, "org.sw.sw.client.tools.self_builder-0.3.0.exe");
+    //DEBUG_BREAK_IF_PATH_HAS(program, "google.tensorflow.gen_proto_text_functions-1.10.1.exe");
 
     // add redirected generated files
     if (!out.file.empty())
@@ -662,6 +662,7 @@ void Command::printLog() const
 void Command::setProgram(const path &p)
 {
     program = p;
+    //addInput(p);
 }
 
 void Command::setProgram(std::shared_ptr<Program> p)
