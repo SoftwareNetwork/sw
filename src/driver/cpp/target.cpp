@@ -2125,8 +2125,11 @@ bool NativeExecutedTarget::prepare()
         // linker setup - already set up
         //setOutputFile();
 
-        // legit?
+        // legit? actually no
+        // merge here only compiler options
+        // TODO: find more generalized way
         //getSelectedTool()->merge(*this);
+        getSelectedTool()->LinkOptions.insert(getSelectedTool()->LinkOptions.end(), LinkOptions.begin(), LinkOptions.end());
 
         // pdb
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
