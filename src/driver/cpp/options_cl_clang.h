@@ -201,6 +201,12 @@ struct SW_DRIVER_CPP_API GNULibraryToolOptions
 // https://docs.microsoft.com/en-us/cpp/build/reference/linker-options
 struct SW_DRIVER_CPP_API GNULinkerOptions
 {
+    COMMAND_LINE_OPTION(rdynamic, bool)
+    {
+        cl::CommandFlag{ "rdynamic" },
+        true
+    };
+
     COMMAND_LINE_OPTION(InputFiles, Files)
     {
         cl::InputDependency{},

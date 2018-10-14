@@ -2317,7 +2317,8 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
                 }
                 else
                 {
-                    Public.Definitions[api + "="];
+                    //Public.Definitions[api + "="];
+                    Public.Definitions[api] = "SW_EXPORT";
                 }
             }
 
