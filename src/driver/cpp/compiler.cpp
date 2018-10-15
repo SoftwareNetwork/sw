@@ -345,6 +345,7 @@ bool VisualStudio::findToolchain(Solution &s) const
 #endif
 }
 
+#if defined(CPPAN_OS_WINDOWS)
 bool Clang::findToolchain(struct Solution &s) const
 {
     // implemented for windows only now
@@ -368,9 +369,6 @@ bool Clang::findToolchain(struct Solution &s) const
         return false;
     };
 
-#if !defined(CPPAN_OS_WINDOWS)
-    return false;
-#else
     cmVSSetupAPIHelper h;
     if (h.IsVS2017Installed())
     {
@@ -517,8 +515,100 @@ bool Clang::findToolchain(struct Solution &s) const
     }
 
     return true;
-#endif
 }
+#else
+bool Clang::findToolchain(struct Solution &s) const
+{
+    path p;
+
+    NativeLinkerOptions LOpts;
+    LOpts.System.LinkDirectories.insert("/lib");
+    LOpts.System.LinkDirectories.insert("/lib/x86_64-linux-gnu");
+    LOpts.System.LinkLibraries.push_back("stdc++");
+    LOpts.System.LinkLibraries.push_back("stdc++fs");
+    LOpts.System.LinkLibraries.push_back("pthread");
+    LOpts.System.LinkLibraries.push_back("dl");
+    LOpts.System.LinkLibraries.push_back("m");
+
+    auto resolve = [](const path &p)
+    {
+        if (do_not_resolve_compiler)
+            return p;
+        return primitives::resolve_executable(p);
+    };
+
+    p = resolve("ar");
+    if (p.empty())
+        throw std::runtime_error("cannot find ar");
+
+    auto Librarian = std::make_shared<GNULibrarian>();
+    Librarian->Type = LinkerType::GNU;
+    Librarian->file = p;
+    *Librarian = LOpts;
+
+    //p = resolve("ld.gold");
+    p = resolve("clang-7");
+    if (p.empty())
+        throw std::runtime_error("cannot find clang");
+
+    auto Linker = std::make_shared<GNULinker>();
+    Linker->Type = LinkerType::GNU;
+    Linker->file = p;
+    *Linker = LOpts;
+
+    NativeCompilerOptions COpts;
+    //COpts.System.IncludeDirectories.insert("/usr/include");
+    //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
+
+    // ASM
+    {
+        p = resolve("as");
+        auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
+        auto C = std::make_shared<GNUASMCompiler>();
+        C->Type = CompilerType::GNU;
+        C->file = p;
+        *C = COpts;
+        L->compiler = C;
+        L->librarian = Librarian;
+        L->linker = Linker;
+    }
+
+    p = resolve("clang-7");
+    if (!p.empty())
+    {
+        // C
+        {
+            auto L = (CLanguage*)s.languages[LanguageType::C].get();
+            auto C = std::make_shared<GNUCCompiler>();
+            C->Type = CompilerType::GNU;
+            C->file = p;
+            *C = COpts;
+            L->compiler = C;
+            L->librarian = Librarian;
+            L->linker = Linker;
+        }
+    }
+
+    p = resolve("clang++-7");
+    if (!p.empty())
+    {
+        // CPP
+        {
+            auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
+            auto C = std::make_shared<GNUCPPCompiler>();
+            C->Type = CompilerType::GNU;
+            C->file = p;
+            *C = COpts;
+            L->compiler = C;
+            L->librarian = Librarian;
+            L->linker = Linker;
+        }
+    }
+
+    // check gcc-N, N=4..8
+    return true;
+}
+#endif
 
 bool ClangCl::findToolchain(struct Solution &s) const
 {
