@@ -2031,7 +2031,8 @@ const Module &ModuleStorage::get(const path &dll)
 
 Module::Module(const path &dll)
 try
-    : module(new boost::dll::shared_library(dll.wstring()))
+    : module(new boost::dll::shared_library(dll.wstring(),
+        boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global))
 {
     if (module->has("build"))
         build_ = module->get<void(Solution&)>("build");

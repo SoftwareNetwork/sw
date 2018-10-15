@@ -84,16 +84,24 @@ size_t get_n_arg(gsl::span<const String> &s)
 template <>
 inline size_t get_n_arg<Files>(gsl::span<const String> &s)
 {
-    if (s.empty())
-        throw std::runtime_error("Empty argument");
-    auto n = std::stoi(*s.begin());
-    s = s.subspan(n + 1);
+    try
+    {
+        auto n = std::stoi(*s.begin());
+        s = s.subspan(n + 1);
+    }
+    catch (...)
+    {
+        // on invalid number, we consider this as zero
+        return 0;
+    }
     return 1;
 }
 
 template <class T, class ... ArgTypes>
 size_t get_n_args2(gsl::span<const String> &s)
 {
+    if (s.empty())
+        return 0;
     auto n = get_n_arg<T>(s);
     if constexpr (sizeof...(ArgTypes) > 0)
         n += get_n_args2<ArgTypes...>(s);
