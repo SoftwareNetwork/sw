@@ -107,7 +107,7 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir)
     d = d / ".sw" / "src";
 
     auto b = std::make_unique<Build>();
-    b->Local = false;
+    //b->Local = false;
     b->perform_checks = false;
     //b->PostponeFileResolving = true;
     b->fetch_dir = d;

@@ -20,9 +20,11 @@ int jumppad_call(const path &module, const String &name, const Strings &s)
 
 int jumppad_call(const Strings &s)
 {
-    if (s.empty())
+    if (s.size() < 3)
+        throw std::runtime_error("No module name was provided");
+    if (s.size() < 4)
         throw std::runtime_error("No function name was provided");
-    return jumppad_call(s[0], s[1], Strings{s.begin() + 2, s.end()});
+    return jumppad_call(s[2], s[3], Strings{s.begin() + 4, s.end()});
 }
 
 }

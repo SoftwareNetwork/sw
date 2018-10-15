@@ -353,6 +353,7 @@ ExecuteBuiltinCommand::ExecuteBuiltinCommand()
 ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name, void *f)
     : ExecuteBuiltinCommand()
 {
+    args.push_back("internal-call-builtin-function");
     args.push_back(getModuleNameForSymbol(f).u8string());
     args.push_back(cmd_name);
 }
@@ -366,9 +367,14 @@ void ExecuteBuiltinCommand::push_back(const Files &files)
 
 void ExecuteBuiltinCommand::execute()
 {
+    auto call = [this]()
+    {
+        return jumppad_call(args[1], args[2], Strings{ args.begin() + 3, args.end() });
+    };
+
     if (always)
     {
-        jumppad_call(args);
+        call();
         return;
     }
 
@@ -377,7 +383,7 @@ void ExecuteBuiltinCommand::execute()
 
     printLog();
 
-    jumppad_call(args);
+    call();
 
     // force outputs update
     for (auto &o : outputs)
