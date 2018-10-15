@@ -2049,7 +2049,8 @@ bool NativeExecutedTarget::prepare()
                     c->Optimizations().SmallCode = true;
                     break;
                 }
-                c->CPPStandard = CPPVersion;
+                if (auto c = f->compiler->as<VisualStudioCPPCompiler>())
+                    c->CPPStandard = CPPVersion;
 
                 if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
                 {
@@ -2062,7 +2063,8 @@ bool NativeExecutedTarget::prepare()
             {
                 if (Settings.Native.ConfigurationType == ConfigurationType::Debug)
                     c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-                c->CPPStandard = CPPVersion;
+                if (auto c = f->compiler->as<ClangClCPPCompiler>())
+                    c->CPPStandard = CPPVersion;
 
                 if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
                 {
@@ -2085,7 +2087,8 @@ bool NativeExecutedTarget::prepare()
                 case ConfigurationType::MinimalSizeRelease:
                     break;
                 }
-                c->CPPStandard = CPPVersion;
+                if (auto c = f->compiler->as<GNUCPPCompiler>())
+                    c->CPPStandard = CPPVersion;
             }
         }
 
