@@ -1004,15 +1004,18 @@ void Build::findCompiler()
 {
     if (Settings.Native.CompilerType == CompilerType::Clang)
     {
-        Clang().findToolchain(*this);
+        if (!Clang().findToolchain(*this))
+            throw std::runtime_error("Cannot find clang toolchain");
     }
     if (Settings.Native.CompilerType == CompilerType::ClangCl)
     {
-        ClangCl().findToolchain(*this);
+        if (!ClangCl().findToolchain(*this))
+            throw std::runtime_error("Cannot find clang-cl toolchain");
     }
     if (Settings.Native.CompilerType == CompilerType::GNU)
     {
-        GNU().findToolchain(*this);
+        if (!GNU().findToolchain(*this))
+            throw std::runtime_error("Cannot find gnu toolchain");
     }
 
     if (Settings.Native.CompilerType == CompilerType::UnspecifiedCompiler)
