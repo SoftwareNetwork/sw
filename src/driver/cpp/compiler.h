@@ -291,6 +291,11 @@ protected:
     Version gatherVersion() const override { return GNU::gatherVersion(file); }
 };
 
+struct SW_DRIVER_CPP_API ClangASMCompiler : GNUASMCompiler
+{
+    std::shared_ptr<Program> clone() const override;
+};
+
 struct SW_DRIVER_CPP_API GNUCompiler : GNU, virtual NativeCompiler,
     CommandLineOptions<GNUOptions>
 {

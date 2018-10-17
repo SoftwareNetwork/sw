@@ -1260,6 +1260,11 @@ void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
     setOutputFile(output_file);
 }
 
+std::shared_ptr<Program> ClangASMCompiler::clone() const
+{
+    return std::make_shared<ClangASMCompiler>(*this);
+}
+
 std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
 {
     if (cmd)
