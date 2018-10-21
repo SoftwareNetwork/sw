@@ -44,6 +44,7 @@ local_settings:
             cxx_compiler: g++-8
             c_flags: -w
             cxx_flags: -w
+            build_dir: build_ninja_gcc
 
         # debug config is not working with ninja,
         # so we set cache to false
