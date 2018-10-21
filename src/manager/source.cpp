@@ -48,6 +48,14 @@ DECLARE_STATIC_LOGGER(logger, "source");
 #define YAML_SET_NOT_EMPTY(x) if (!x.empty()) YAML_SET(x, #x)
 #define YAML_SET_NOT_MINUS_ONE(x) if (x != -1) YAML_SET(x, #x)
 
+#define KV_ADD_IF_NOT_EMPTY(k, v) \
+    if (!v.empty())               \
+    m.push_back({k, v})
+
+#define KV_ADD_IF_NOT_EMPTY_NUMBER(k, v) \
+    if (v != -1)                         \
+    m.push_back({k, std::to_string(v)})
+
 using primitives::Command;
 
 namespace sw
@@ -359,6 +367,18 @@ String Git::print() const
     return r;
 }
 
+SourceKvMap Git::printKv() const
+{
+    SourceKvMap m{ {"Source", getString()} };
+
+    KV_ADD_IF_NOT_EMPTY("Url", url);
+    KV_ADD_IF_NOT_EMPTY("Tag", tag);
+    KV_ADD_IF_NOT_EMPTY("Branch", branch);
+    KV_ADD_IF_NOT_EMPTY("Commit", commit);
+
+    return m;
+}
+
 void Git::applyVersion(const Version &v)
 {
     SourceUrl::applyVersion(v);
@@ -444,6 +464,19 @@ String Hg::print() const
     return r;
 }
 
+SourceKvMap Hg::printKv() const
+{
+    SourceKvMap m{ {"Source", getString()} };
+
+    KV_ADD_IF_NOT_EMPTY("Url", url);
+    KV_ADD_IF_NOT_EMPTY("Tag", tag);
+    KV_ADD_IF_NOT_EMPTY("Branch", branch);
+    KV_ADD_IF_NOT_EMPTY("Commit", commit);
+    KV_ADD_IF_NOT_EMPTY_NUMBER("Revision", revision);
+
+    return m;
+}
+
 Bzr::Bzr(const yaml &root, const String &name)
     : SourceUrl(root, name)
 {
@@ -525,6 +558,17 @@ String Bzr::print() const
     return r;
 }
 
+SourceKvMap Bzr::printKv() const
+{
+    SourceKvMap m{ {"Source", getString()} };
+
+    KV_ADD_IF_NOT_EMPTY("Url", url);
+    KV_ADD_IF_NOT_EMPTY("Tag", tag);
+    KV_ADD_IF_NOT_EMPTY_NUMBER("Revision", revision);
+
+    return m;
+}
+
 Fossil::Fossil(const yaml &root, const String &name)
     : Git(root, name)
 {
@@ -553,6 +597,18 @@ void Fossil::download() const
 void Fossil::save(yaml &root, const String &name) const
 {
     Git::save(root, name);
+}
+
+SourceKvMap Fossil::printKv() const
+{
+    SourceKvMap m{ {"Source", getString()} };
+
+    KV_ADD_IF_NOT_EMPTY("Url", url);
+    KV_ADD_IF_NOT_EMPTY("Tag", tag);
+    KV_ADD_IF_NOT_EMPTY("Branch", branch);
+    KV_ADD_IF_NOT_EMPTY("Commit", commit);
+
+    return m;
 }
 
 Cvs::Cvs(const yaml &root, const String &name)
@@ -659,6 +715,19 @@ String Cvs::print() const
     return r;
 }
 
+SourceKvMap Cvs::printKv() const
+{
+    SourceKvMap m{ {"Source", getString()} };
+
+    KV_ADD_IF_NOT_EMPTY("Url", url);
+    KV_ADD_IF_NOT_EMPTY("Tag", tag);
+    KV_ADD_IF_NOT_EMPTY("Branch", branch);
+    KV_ADD_IF_NOT_EMPTY("Revision", revision);
+    KV_ADD_IF_NOT_EMPTY("Module", module);
+
+    return m;
+}
+
 String Cvs::printCpp() const
 {
     return String();
@@ -751,6 +820,18 @@ String Svn::print() const
     return r;
 }
 
+SourceKvMap Svn::printKv() const
+{
+    SourceKvMap m{ {"Source", getString()} };
+
+    KV_ADD_IF_NOT_EMPTY("Url", url);
+    KV_ADD_IF_NOT_EMPTY("Tag", tag);
+    KV_ADD_IF_NOT_EMPTY("Branch", branch);
+    KV_ADD_IF_NOT_EMPTY_NUMBER("Revision", revision);
+
+    return m;
+}
+
 String Svn::printCpp() const
 {
     return String();
@@ -781,6 +862,15 @@ void RemoteFile::save(yaml &root, const String &name) const
 void RemoteFile::applyVersion(const Version &v)
 {
     v.format(url);
+}
+
+SourceKvMap RemoteFile::printKv() const
+{
+    SourceKvMap m{ {"Source", getString()} };
+
+    KV_ADD_IF_NOT_EMPTY("Url", url);
+
+    return m;
 }
 
 RemoteFiles::RemoteFiles(const yaml &root, const String &name)
@@ -852,6 +942,16 @@ String RemoteFiles::print() const
     for (auto &rf : urls)
         STRING_PRINT_VALUE(url, rf);
     return r;
+}
+
+SourceKvMap RemoteFiles::printKv() const
+{
+    SourceKvMap m{ {"Source", getString()} };
+
+    for (auto &url : urls)
+        KV_ADD_IF_NOT_EMPTY("Url", url);
+
+    return m;
 }
 
 void RemoteFiles::applyVersion(const Version &v)
@@ -963,6 +1063,11 @@ void save_source(nlohmann::json &j, const Source &source)
 String print_source(const Source &source)
 {
     return visit([](auto &v) { return v.getString() + ":\n" + v.print(); }, source);
+}
+
+SourceKvMap print_source_kv(const Source &source)
+{
+    return visit([](auto &v) { return v.printKv(); }, source);
 }
 
 void applyVersionToUrl(Source &source, const Version &v)

@@ -77,29 +77,32 @@ bool DataSource::downloadPackage(const Package &d, const String &hash, const pat
 
 std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
 {
-    if (!channel)
-    {
-        auto p = url.find("://");
-        auto host = url.substr(p == url.npos ? 0 : p + 3);
-        host = host.substr(0, host.find('/'));
-        host = host.substr(0, host.find(':'));
+    if (channel)
+        return channel;
 
-        grpc::SslCredentialsOptions ssl_options;
+    static std::mutex m;
+    std::unique_lock lk(m);
+
+    auto p = url.find("://");
+    auto host = url.substr(p == url.npos ? 0 : p + 3);
+    host = host.substr(0, host.find('/'));
+    host = host.substr(0, host.find(':'));
+
+    grpc::SslCredentialsOptions ssl_options;
 #ifdef _WIN32
-        auto crt = path(boost::dll::program_location().parent_path().string()) / "server.crt";
-        if (fs::exists(crt))
-            ssl_options.pem_root_certs = read_file(crt);
-        else
-            ssl_options.pem_root_certs = read_file("d:\\dev\\cppan2\\bin\\server.crt");
-        auto creds = grpc::SslCredentials(ssl_options);
+    auto crt = path(boost::dll::program_location().parent_path().string()) / "server.crt";
+    if (fs::exists(crt))
+        ssl_options.pem_root_certs = read_file(crt);
+    else
+        ssl_options.pem_root_certs = read_file("d:\\dev\\cppan2\\bin\\server.crt");
+    auto creds = grpc::SslCredentials(ssl_options);
 #else
-        ssl_options.pem_root_certs = read_file("/home/egor/dev/sw_server.crt");
-        host = "192.168.191.1:1245";
-        auto creds = grpc::InsecureChannelCredentials();
+    ssl_options.pem_root_certs = read_file("/home/egor/dev/sw_server.crt");
+    host = "192.168.191.1:1245";
+    auto creds = grpc::InsecureChannelCredentials();
 #endif
 
-        channel = grpc::CreateChannel(host, creds);
-    }
+    channel = grpc::CreateChannel(host, creds);
     return channel;
 }
 

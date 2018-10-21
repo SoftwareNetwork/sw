@@ -28,6 +28,7 @@ struct SW_DRIVER_CPPAN_API CppanDriver : ::sw::Driver
     PackageScriptPtr build(const path &file_or_dir) const override { return {}; }
     String getName() const override { return "cppan"; }
     bool buildPackage(const PackageId &pkg) const override { return false; }
+    bool run(const PackageId &pkg) const override { return false; }
 };
 
 } // namespace sw::driver

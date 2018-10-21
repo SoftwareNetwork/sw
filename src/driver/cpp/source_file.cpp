@@ -204,6 +204,13 @@ void SourceFileStorage::remove(const path &root, const FileRegex &r)
     remove1(r2);
 }
 
+void SourceFileStorage::remove_full(const path &file)
+{
+    auto F = file;
+    if (check_absolute(F, true))
+        erase(F);
+}
+
 void SourceFileStorage::add1(const FileRegex &r)
 {
     op(r, &SourceFileStorage::add);

@@ -300,6 +300,110 @@ SUBCOMMAND_DECL(build)
     sw::build(build_arg);
 }
 
+static cl::list<String> uri_args(cl::Positional, cl::desc("sw uri arguments"), cl::sub(subcommand_uri));
+//static cl::opt<String> uri_sdir("sw:sdir", cl::desc("Open source dir in file browser"), cl::sub(subcommand_uri));
+
+SUBCOMMAND_DECL(uri)
+{
+    if (uri_args.empty())
+        return;
+    if (uri_args.size() == 1)
+        return;
+
+    try
+    {
+        auto p = extractFromStringPackageId(uri_args[1]);
+        auto &sdb = getServiceDatabase();
+
+        if (uri_args[0] == "sw:sdir" || uri_args[0] == "sw:bdir")
+        {
+#ifdef _WIN32
+            if (sdb.isPackageInstalled(p))
+            {
+                auto pidl = uri_args[0] == "sw:sdir" ?
+                    ILCreateFromPath(p.getDirSrc2().wstring().c_str()) :
+                    ILCreateFromPath(p.getDirObj().wstring().c_str())
+                    ;
+                if (pidl)
+                {
+                    CoInitialize(0);
+                    auto r = SHOpenFolderAndSelectItems(pidl, 0, 0, 0);
+                    if (FAILED(r))
+                    {
+                        message_box("Error in SHOpenFolderAndSelectItems");
+                    }
+                    ILFree(pidl);
+                }
+            }
+            else
+            {
+                message_box("Package '" + p.target_name + "' not installed");
+            }
+#endif
+        }
+
+        if (uri_args[0] == "sw:install")
+        {
+#ifdef _WIN32
+            if (!sdb.isPackageInstalled(p))
+            {
+                SetupConsole();
+                bUseSystemPause = true;
+                Resolver r;
+                r.resolve_dependencies({ {p.ppath, p.version} });
+            }
+            else
+            {
+                message_box("Package '" + p.target_name + "' is already installed");
+            }
+#endif
+        }
+
+        if (uri_args[0] == "sw:remove")
+        {
+            sdb.removeInstalledPackage(p);
+            error_code ec;
+            fs::remove_all(p.getDir(), ec);
+        }
+
+        if (uri_args[0] == "sw:build")
+        {
+#ifdef _WIN32
+            SetupConsole();
+            bUseSystemPause = true;
+#endif
+            auto d = getUserDirectories().storage_dir_tmp / "build";// / fs::unique_path();
+            fs::create_directories(d);
+            ScopedCurrentPath scp(d, CurrentPathScope::All);
+            sw::build(p);
+        }
+
+        if (uri_args[0] == "sw:run")
+        {
+#ifdef _WIN32
+            SetupConsole();
+            bUseSystemPause = true;
+#endif
+            auto d = getUserDirectories().storage_dir_tmp / "build";// / fs::unique_path();
+            fs::create_directories(d);
+            ScopedCurrentPath scp(d, CurrentPathScope::All);
+            sw::run(p);
+        }
+    }
+    catch (std::exception &e)
+    {
+#ifdef _WIN32
+        message_box(e.what());
+#endif
+    }
+    catch (...)
+    {
+#ifdef _WIN32
+        message_box("Unknown exception");
+#endif
+    }
+}
+
 #include <solution.h>
 
 SUBCOMMAND_DECL(ide)
@@ -367,138 +471,4 @@ SUBCOMMAND_DECL(init)
         p.SetStringValue(L"", prog + L" build %1");
     }
 #endif
-}
-
-SUBCOMMAND_DECL_URI(sdir)
-{
-    /*args::ArgumentParser parser("");
-    parser.helpParams.showTerminator = false;
-    args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
-    args::Positional<std::string> package(parser, "package", "Opens package source dir");
-
-    auto next = parser.ParseArgs(beginargs, endargs);
-    if (package)
-    {
-        auto p = extractFromString(package.Get()).resolve();
-
-        auto &sdb = getServiceDatabase();
-#ifdef _WIN32
-        if (sdb.isPackageInstalled(p))
-        {
-            auto pidl = ILCreateFromPath(p.getDirSrc2().wstring().c_str());
-            if (pidl)
-            {
-                SHOpenFolderAndSelectItems(pidl, 0, 0, 0);
-                ILFree(pidl);
-            }
-        }
-        else
-        {
-            message_box("Package '" + p.target_name + "' not installed");
-        }
-#endif
-    }*/
-}
-
-SUBCOMMAND_DECL_URI(install)
-{
-    /*args::ArgumentParser parser("");
-    parser.helpParams.showTerminator = false;
-    args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
-    args::Positional<std::string> package(parser, "package", "Install package");
-
-    auto next = parser.ParseArgs(beginargs, endargs);
-    if (package)
-    {
-        auto p = extractFromString(package.Get());
-        auto p_real = p.resolve();
-
-        auto &sdb = getServiceDatabase();
-#ifdef _WIN32
-        if (!sdb.isPackageInstalled(p_real))
-        {
-            SetupConsole();
-            bUseSystemPause = true;
-            Resolver r;
-            r.resolve_dependencies({ p });
-        }
-        else
-        {
-            message_box("Package '" + p_real.target_name + "' is already installed");
-        }
-#endif
-    }*/
-}
-
-SUBCOMMAND_DECL_URI(remove)
-{
-    /*args::ArgumentParser parser("");
-    parser.helpParams.showTerminator = false;
-    args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
-    args::Positional<std::string> package(parser, "package", "Remove package");
-
-    auto next = parser.ParseArgs(beginargs, endargs);
-    if (package)
-    {
-        auto p = extractFromString(package.Get()).resolve();
-        auto &sdb = getServiceDatabase();
-        sdb.removeInstalledPackage(p);
-        fs::remove_all(p.getDir());
-    }*/
-}
-
-SUBCOMMAND_DECL_URI(build)
-{
-    /*args::ArgumentParser parser("");
-    parser.helpParams.showTerminator = false;
-    args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
-    args::Positional<std::string> package(parser, "package", "Install package");
-
-    auto next = parser.ParseArgs(beginargs, endargs);
-    if (package)
-    {
-        auto p = extractFromString(package.Get());
-
-#ifdef _WIN32
-        SetupConsole();
-        bUseSystemPause = true;
-#endif
-        auto d = getUserDirectories().storage_dir_tmp / "build";// / fs::unique_path();
-        fs::create_directories(d);
-        current_thread_path(d);
-
-        Resolver r;
-        r.resolve_dependencies({ p });
-
-        //Build b;
-        //b.Local = true;
-        //b.build_package(package.Get());
-    }*/
-}
-
-SUBCOMMAND_DECL(uri)
-{
-    /*const std::unordered_map<std::string, command_type> map{
-#define ADD_COMMAND(c) { "sw:" #c, cli_uri_ ## c }
-        ADD_COMMAND(sdir),
-        ADD_COMMAND(install),
-        ADD_COMMAND(remove),
-        ADD_COMMAND(build),
-    };
-    String command_to_execute;
-    for (auto &[k, v] : map)
-        command_to_execute += k + ", ";
-    command_to_execute.resize(command_to_execute.size() - 2);
-
-    args::ArgumentParser parser("");
-    parser.helpParams.showTerminator = false;
-    args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
-    args::MapPositional<std::string, command_type> command(parser, "command", "Command to execute: {" + command_to_execute + "}", map);
-    command.KickOut(true);
-
-    auto next = parser.ParseArgs(beginargs, endargs);
-    if (command)
-    {
-        args::get(command)(progname, next, endargs);
-    }*/
 }

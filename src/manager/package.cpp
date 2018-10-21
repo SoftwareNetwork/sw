@@ -107,6 +107,11 @@ path PackageId::getDirObj() const
     return getDir(getUserDirectories().storage_dir_obj) / "obj";
 }
 
+path PackageId::getDirObjWdir(/* version level, project level (app or project) */) const
+{
+    return getDir(getUserDirectories().storage_dir_dat) / "wdir";
+}
+
 path PackageId::getStampFilename() const
 {
     auto b = getUserDirectories().storage_dir_etc / STAMPS_DIR / "packages" / getHashPath();

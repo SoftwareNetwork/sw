@@ -20,21 +20,9 @@ String getDataDirPrivate(const String &base = {});
 struct Directories
 {
     path storage_dir;
-#define ADD_DIR(x) path storage_dir_##x
-    ADD_DIR(bin);
-    ADD_DIR(cfg);
-    ADD_DIR(etc);
-    //ADD_DIR(exp);
-    ADD_DIR(lib);
-#ifdef _WIN32
-    ADD_DIR(lnk);
-#endif
-    ADD_DIR(obj);
-    ADD_DIR(pkg);
-    //ADD_DIR(src);
-    ADD_DIR(tmp);
-    //ADD_DIR(usr);
-#undef ADD_DIR
+#define DIR(x) path storage_dir_##x;
+#include "directories.inl"
+#undef DIR
     path build_dir;
 
     SettingsType storage_dir_type;

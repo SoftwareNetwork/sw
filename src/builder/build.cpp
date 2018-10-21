@@ -132,4 +132,15 @@ DriverPtr loadDriver(const path &file_or_dir)
     return nullptr;
 }
 
+bool run(const PackageId &package)
+{
+    auto &drivers = getDrivers();
+    for (auto &d : drivers)
+    {
+        if (auto s = d->run(package); s)
+            return s;
+    }
+    throw std::runtime_error("Unknown package driver");
+}
+
 }

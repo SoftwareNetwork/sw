@@ -18,6 +18,8 @@ using yaml = YAML::Node;
 namespace sw
 {
 
+using SourceKvMap = std::vector<std::pair<String, String>>;
+
 struct EmptySource
 {
     EmptySource() = default;
@@ -34,6 +36,7 @@ struct EmptySource
     void save(yaml &root, const String &name = EmptySource::getString()) const {}
 
     String print() const { return ""; }
+    SourceKvMap printKv() const { return { {"Source", getString()} }; }
     void applyVersion(const Version &v) {}
     void download() const {}
 
@@ -87,6 +90,7 @@ struct SW_MANAGER_API Git : SourceUrl
     bool save(nlohmann::json &p) const;
     void save(yaml &root, const String &name = Git::getString()) const;
     String print() const;
+    SourceKvMap printKv() const;
     void applyVersion(const Version &v);
 
     bool operator==(const Git &rhs) const
@@ -112,6 +116,7 @@ struct SW_MANAGER_API Hg : Git
     bool save(nlohmann::json &p) const;
     void save(yaml &root, const String &name = Hg::getString()) const;
     String print() const;
+    SourceKvMap printKv() const;
 
     bool operator==(const Hg &rhs) const
     {
@@ -137,6 +142,7 @@ struct SW_MANAGER_API Bzr : SourceUrl
     bool save(nlohmann::json &p) const;
     void save(yaml &root, const String &name = Bzr::getString()) const;
     String print() const;
+    SourceKvMap printKv() const;
 
     bool operator==(const Bzr &rhs) const
     {
@@ -154,6 +160,7 @@ struct SW_MANAGER_API Fossil : Git
     void download() const;
     using Git::save;
     void save(yaml &root, const String &name = Fossil::getString()) const;
+    SourceKvMap printKv() const;
 
     bool operator==(const Fossil &rhs) const
     {
@@ -182,6 +189,7 @@ struct SW_MANAGER_API Cvs : SourceUrl
     bool save(nlohmann::json &p) const;
     void save(yaml &root, const String &name = Cvs::getString()) const;
     String print() const;
+    SourceKvMap printKv() const;
     String printCpp() const;
 
     bool operator==(const Cvs &rhs) const
@@ -209,6 +217,7 @@ struct Svn : SourceUrl
     bool save(nlohmann::json &p) const;
     void save(yaml &root, const String &name = Svn::getString()) const;
     String print() const;
+    SourceKvMap printKv() const;
     String printCpp() const;
 
     bool operator==(const Svn &rhs) const
@@ -229,6 +238,7 @@ struct SW_MANAGER_API RemoteFile : SourceUrl
     using SourceUrl::save;
     void save(yaml &root, const String &name = RemoteFile::getString()) const;
     void applyVersion(const Version &v);
+    SourceKvMap printKv() const;
 
     bool operator==(const RemoteFile &rhs) const
     {
@@ -254,6 +264,7 @@ struct SW_MANAGER_API RemoteFiles
     bool save(nlohmann::json &p) const;
     void save(yaml &root, const String &name = RemoteFiles::getString()) const;
     String print() const;
+    SourceKvMap printKv() const;
     void applyVersion(const Version &v);
 
     bool operator==(const RemoteFiles &rhs) const
@@ -312,6 +323,9 @@ void save_source(yaml &root, const Source &source);
 
 SW_MANAGER_API
 String print_source(const Source &source);
+
+SW_MANAGER_API
+SourceKvMap print_source_kv(const Source &source);
 
 SW_MANAGER_API
 String get_source_hash(const Source &source);

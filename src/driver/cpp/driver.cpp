@@ -152,4 +152,11 @@ bool CppDriver::buildPackage(const PackageId &pkg) const
     return true;
 }
 
+bool CppDriver::run(const PackageId &pkg) const
+{
+    auto b = std::make_unique<Build>();
+    b->run_package(pkg.toString());
+    return true;
+}
+
 } // namespace sw::driver

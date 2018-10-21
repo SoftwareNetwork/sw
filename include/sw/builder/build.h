@@ -40,4 +40,7 @@ PackageScriptPtr fetch_and_load(const path &file_or_dir);
 SW_BUILDER_API
 DriverPtr loadDriver(const path &file_or_dir);
 
+SW_BUILDER_API
+bool run(const PackageId &package);
+
 }

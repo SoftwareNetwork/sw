@@ -86,6 +86,7 @@ protected:
     bool autodetect = false;
 
     void clearGlobCache() { glob_cache.clear(); }
+    void remove_full(const path &file);
 
 private:
     struct FileOperation

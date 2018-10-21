@@ -420,30 +420,21 @@ void Resolver::download_and_unpack()
         // also because this download count can be easily abused
         e.push([this]()
         {
-            /*if (!current_remote)
+            if (!current_remote)
                 return;
 
-            ptree request;
-            ptree children;
+            std::set<int64_t> ids;
             for (auto &d : download_dependencies_)
-            {
-                ptree c;
-                c.put("", d.second.id);
-                children.push_back(std::make_pair("", c));
-            }
-            request.add_child("vids", children);
+                ids.insert(d.second.id);
 
             try
             {
-                HttpRequest req = httpSettings;
-                req.type = HttpRequest::Post;
-                req.url = current_remote->url + "/api/add_downloads";
-                req.data = ptree2string(request);
-                auto resp = url_request(req);
+                Api api(*current_remote);
+                api.addDownloads(ids);
             }
             catch (...)
             {
-            }*/
+            }
         });
     }
 
@@ -452,17 +443,16 @@ void Resolver::download_and_unpack()
     {
         e.push([this]
         {
-            /*try
+            if (!current_remote)
+                return;
+            try
             {
-                HttpRequest req = httpSettings;
-                req.type = HttpRequest::Post;
-                req.url = current_remote->url + "/api/add_client_call";
-                req.data = "{}"; // empty json
-                auto resp = url_request(req);
+                Api api(*current_remote);
+                api.addClientCall();
             }
             catch (...)
             {
-            }*/
+            }
         });
     };
 

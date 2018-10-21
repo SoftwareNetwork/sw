@@ -131,6 +131,8 @@ struct SW_BUILDER_API Driver
     // maybe inherit from target with all these properties?
     virtual String getName() const = 0;
     // getDesc()?
+
+    virtual bool run(const PackageId &pkg) const = 0;
 };
 
 using DriverPtr = std::unique_ptr<Driver>;

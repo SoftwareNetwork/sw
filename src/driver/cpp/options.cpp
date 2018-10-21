@@ -396,22 +396,48 @@ DependencyPtr NativeLinkerOptions::operator+(const DependencyPtr &d)
 
 void NativeLinkerOptions::add(const NativeTarget &t)
 {
-    Dependencies.insert(std::make_shared<Dependency>((NativeTarget*)&t));
+    add(std::make_shared<Dependency>((NativeTarget*)&t));
 }
 
 void NativeLinkerOptions::remove(const NativeTarget &t)
 {
-    Dependencies.erase(std::make_shared<Dependency>((NativeTarget*)&t));
+    remove(std::make_shared<Dependency>((NativeTarget*)&t));
 }
 
 void NativeLinkerOptions::add(const DependencyPtr &t)
 {
-    Dependencies.insert(t);
+    auto i = std::find_if(Dependencies.begin(), Dependencies.end(), [t](const auto &d)
+    {
+        return d->getPackage() == t->getPackage();
+    });
+    if (i == Dependencies.end())
+    {
+        auto t2 = t;
+        t->Disabled = false;
+        Dependencies.insert(t);
+    }
+    else
+    {
+        (*i)->Disabled = false;
+    }
 }
 
 void NativeLinkerOptions::remove(const DependencyPtr &t)
 {
-    Dependencies.erase(t);
+    auto i = std::find_if(Dependencies.begin(), Dependencies.end(), [t](const auto &d)
+    {
+        return d->getPackage() == t->getPackage();
+    });
+    if (i == Dependencies.end())
+    {
+        auto t2 = t;
+        t->Disabled = true;
+        Dependencies.insert(t);
+    }
+    else
+    {
+        (*i)->Disabled = true;
+    }
 }
 
 void NativeOptions::merge(const NativeOptions &o, const GroupSettings &s)

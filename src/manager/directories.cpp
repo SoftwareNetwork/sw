@@ -50,23 +50,10 @@ void Directories::set_storage_dir(const path &p)
     storage_dir = ap.string();
 #endif
 
-#define SET(x)                          \
+#define DIR(x)                          \
     storage_dir_##x = storage_dir / #x; \
-    fs::create_directories(storage_dir_##x)
-
-    SET(bin);
-    SET(cfg);
-    SET(etc);
-    //SET(exp);
-    SET(lib);
-#ifdef _WIN32
-    SET(lnk);
-#endif
-    SET(obj);
-    SET(pkg);
-    //SET(src);
-    SET(tmp);
-    //SET(usr);
+    fs::create_directories(storage_dir_##x);
+#include "directories.inl"
 #undef SET
 }
 

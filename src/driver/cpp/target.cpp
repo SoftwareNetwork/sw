@@ -564,10 +564,19 @@ void Target::pushBackToFileOnce(const path &fn, const String &text, bool binary_
     f.getFileRecord().load();
 }
 
-void Target::removeFile(const path &fn)
+void Target::removeFile(const path &fn, bool binary_dir)
 {
+    auto p = fn;
+    if (!p.is_absolute())
+    {
+        if (!binary_dir && fs::exists(SourceDir / p))
+            p = SourceDir / p;
+        else if (fs::exists(BinaryDir / p))
+            p = BinaryDir / p;
+    }
+
     error_code ec;
-    fs::remove(fn);
+    fs::remove(p, ec);
 }
 
 DependencyPtr NativeTarget::getDependency() const
@@ -715,8 +724,7 @@ void NativeExecutedTarget::init()
         }
     }
 
-    //if (!IsConfig/* && PackageDefinitions*/)
-        addPackageDefinitions();
+    addPackageDefinitions();
 }
 
 void NativeExecutedTarget::init2()
@@ -744,7 +752,7 @@ driver::cpp::CommandBuilder NativeExecutedTarget::addCommand()
     return cb;
 }
 
-void NativeExecutedTarget::addPackageDefinitions()
+void NativeExecutedTarget::addPackageDefinitions(bool defs)
 {
     tm t;
     auto tim = time(0);
@@ -810,8 +818,14 @@ void NativeExecutedTarget::addPackageDefinitions()
         a["PACKAGE_VERSION_TWEAK_NUM2"] = n2hex(pkg.version.getTweak(), 4);
     };
     // https://www.gnu.org/software/autoconf/manual/autoconf-2.67/html_node/Initializing-configure.html
-    set_pkg_info(Definitions, true); // false?
-    set_pkg_info(Variables, true); // false?
+    if (defs)
+    {
+        set_pkg_info(Definitions, true); // false?
+        PackageDefinitions = false;
+    }
+    else
+        set_pkg_info(Variables, false); // false?
+
 }
 
 path NativeExecutedTarget::getOutputDir() const
@@ -872,7 +886,7 @@ NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherDependenciesTargets
     {
         if (d->target.lock().get() == this)
             continue;
-        if (d->Dummy)
+        if (d->isDummy())
             continue;
 
         if (d->IncludeDirectoriesOnly)
@@ -1199,7 +1213,7 @@ Commands NativeExecutedTarget::getCommands() const
 
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "google.tensorflow.gen_proto_text_functions");
+    DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "grep.gnulib");
 
     // add generated files
     auto generated = getGeneratedCommands();
@@ -1211,7 +1225,7 @@ Commands NativeExecutedTarget::getCommands() const
     {
         if (d->target == this)
             continue;
-        if (d->Dummy)
+        if (d->isDummy())
             continue;
 
         for (auto &f : *(NativeExecutedTarget*)d->target)
@@ -1305,7 +1319,7 @@ Commands NativeExecutedTarget::getCommands() const
             {
                 if (d->target.lock().get() == this)
                     continue;
-                if (d->Dummy)
+                if (d->isDummy())
                     continue;
 
                 if (d->IncludeDirectoriesOnly && !d->GenerateCommandsBefore)
@@ -1691,7 +1705,7 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "amazon.aws.sdk.core");
+    DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "grep.gnulib");
 
     /*{
         auto is_changed = [this](const path &p)
@@ -1714,6 +1728,10 @@ bool NativeExecutedTarget::prepare()
     switch (prepare_pass)
     {
     case 0:
+        //if (!IsConfig/* && PackageDefinitions*/)
+        if (PackageDefinitions)
+            addPackageDefinitions(true);
+
         //restoreSourceDir();
         RETURN_PREPARE_PASS;
     case 1:
@@ -1854,7 +1872,7 @@ bool NativeExecutedTarget::prepare()
             {
                 if (d->target.lock().get() == this)
                     continue;
-                if (d->Dummy)
+                if (d->isDummy())
                     continue;
 
                 deps.emplace(d, s.Inheritance);
@@ -1888,7 +1906,7 @@ bool NativeExecutedTarget::prepare()
                     {
                         if (d2->target.lock().get() == this)
                             continue;
-                        if (d2->Dummy)
+                        if (d2->isDummy())
                             continue;
 
                         if (s.Inheritance == InheritanceType::Protected && !hasSameParent(d2->target.lock().get()))
@@ -1988,7 +2006,7 @@ bool NativeExecutedTarget::prepare()
         // merge deps' stuff
         for (auto &d : Dependencies)
         {
-            if (d->Dummy)
+            if (d->isDummy())
                 continue;
 
             GroupSettings s;
@@ -2196,7 +2214,7 @@ bool NativeExecutedTarget::prepare()
             {
                 if (d->target.lock().get() == this)
                     continue;
-                if (d->Dummy)
+                if (d->isDummy())
                     continue;
                 if (d->IncludeDirectoriesOnly)
                     continue;
@@ -2371,6 +2389,12 @@ void NativeExecutedTarget::initLibrary(LibraryType Type)
     }
 }
 
+void NativeExecutedTarget::removeFile(const path &fn, bool binary_dir)
+{
+    remove_full(fn);
+    Target::removeFile(fn, binary_dir);
+}
+
 void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags)
 {
     // before resolving
@@ -2472,14 +2496,6 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     //s = std::regex_replace(s, r, "");
 
     fileWriteOnce(to, s);
-}
-
-void NativeExecutedTarget::removeFile(const path &fn)
-{
-    path p = fn;
-    check_absolute(p, true);
-    operator-=(fn);
-    Target::removeFile(p);
 }
 
 void NativeExecutedTarget::setChecks(const String &name)

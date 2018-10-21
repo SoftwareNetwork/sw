@@ -23,6 +23,7 @@ struct SW_DRIVER_CPP_API CppDriver : ::sw::Driver
     bool buildPackage(const PackageId &pkg) const override;
     PackageScriptPtr load(const path &file_or_dir) const override;
     bool execute(const path &file_or_dir) const override;
+    bool run(const PackageId &pkg) const override;
     String getName() const override { return "cpp"; }
 
 private:

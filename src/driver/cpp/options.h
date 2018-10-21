@@ -151,6 +151,7 @@ struct SW_DRIVER_CPP_API Dependency
 {
     std::weak_ptr<NativeTarget> target;
     UnresolvedPackage package;
+    bool Disabled = false;
     bool GenerateCommandsBefore = false; // do not make true by default
     bool Dummy = false; // bool Runtime = false; ?
 
@@ -169,6 +170,8 @@ struct SW_DRIVER_CPP_API Dependency
     //Dependency &operator=(const Package *p);
     bool operator==(const Dependency &t) const;
     bool operator< (const Dependency &t) const;
+
+    bool isDummy() const { return Disabled || Dummy; }
 
     //NativeTarget *get() const;
     //operator NativeTarget*() const;

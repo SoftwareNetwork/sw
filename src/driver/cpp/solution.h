@@ -135,6 +135,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     void build_and_load(const path &fn);
     void build_and_run(const path &fn);
     void build_package(const String &pkg);
+    void run_package(const String &pkg);
     void load(const path &dll);
     bool execute() override;
 

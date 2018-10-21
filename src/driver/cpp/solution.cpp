@@ -13,6 +13,7 @@
 #include "inserts.h"
 #include "program.h"
 #include "resolver.h"
+#include "run.h"
 
 #include <directories.h>
 #include <hash.h>
@@ -1818,69 +1819,29 @@ void Build::build_package(const String &s)
 {
     //auto [pkg,pkgs] = resolve_dependency(s);
     auto pkg = extractFromString(s);
+    auto r = pkg.resolve();
 
     Local = false;
-    build_and_run(pkg.resolve().getDirSrc2() / "sw.cpp");
-    return;
+    NamePrefix = pkg.ppath.slice(0, r.prefix);
+    build_and_run(r.getDirSrc2() / "sw.cpp");
+}
 
-    // resolve only deps needed
-    Resolver r;
-    r.resolve_dependencies({ pkg });
-    auto dd = r.getDownloadDependencies();
+void Build::run_package(const String &s)
+{
+    auto pkg = extractFromString(s);
+    auto r = pkg.resolve();
 
-    // if we met unknown package we'll fail
-    // probably fix this
-    // otherwise we will be downloading and building much more packages
-    // TODO: choose behavior
-    for (auto &p : dd)
-        knownTargets.insert(p);
+    build_package(s);
+    auto p = (NativeExecutedTarget*)solutions[0].getTargetPtr(r).get();
+    if (p->getType() != TargetType::NativeExecutable)
+        throw std::runtime_error("Unsupported package type");
 
-    if (solutions.empty())
-        addSolution();
-
-    // gather packages
-    std::unordered_map<PackageVersionGroupNumber, ExtendedPackageData> cfgs2;
-    for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
-        cfgs2[gn] = p;
-    std::unordered_set<ExtendedPackageData> cfgs;
-    for (auto &[gn, s] : cfgs2)
-        cfgs.insert(s);
-
-    Build b;
-    b.Local = false;
-    auto dll = b.build_configs(cfgs);
-
-    // reset before start adding targets
-    //getFileStorage().reset();
-
-    // make parallel?
-    for (auto &s : solutions)
-    {
-        s.Local = false;
-        s.knownTargets = knownTargets;
-    }
-
-    // gather checks
-    for (auto &s : solutions)
-        getModuleStorage(base_ptr).get(dll).check(s.Checks);
-
-    performChecks();
-
-    // load build configs
-    for (auto &s : solutions)
-        getModuleStorage(base_ptr).get(dll).build(s);
-
-    // set what packages we build
-    for (auto &s : solutions)
-    {
-        auto p = r.resolved_packages[pkg];
-        s.TargetsToBuild[p] = s.getTargetPtr(p);
-    }
-
-    if (generateBuildSystem())
-        return;
-
-    execute();
+    RunArgs a;
+    a.pkg = r;
+    a.exe_path = p->getOutputFile();
+    //p->addCommand().c;
+    a.in_container = false;
+    run(a);
 }
 
 void Build::load(const path &dll)

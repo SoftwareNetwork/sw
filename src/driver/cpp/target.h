@@ -433,8 +433,8 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     void deleteInFileOnce(const path &fn, const String &from, bool binary_dir = false) const;
     void pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
     void pushBackToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
+    virtual void removeFile(const path &fn, bool binary_dir = false);
     virtual void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) = 0;
-    void removeFile(const path &fn);
 
 protected:
     int prepare_pass = 1;
@@ -689,6 +689,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     bool ExportAllSymbols = false;
     bool ExportIfStatic = false;
     path InstallDirectory;
+    bool PackageDefinitions = false;
 
     bool ImportFromBazel = false;
     StringSet BazelNames;
@@ -709,7 +710,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
 
     void init() override;
     void init2() override;
-    void addPackageDefinitions();
+    void addPackageDefinitions(bool defs = false);
     std::shared_ptr<builder::Command> getCommand() const override;
     Commands getCommands() const override;
     Files getGeneratedDirs() const override;
@@ -724,7 +725,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     NativeLinker *getSelectedTool() const;
     void setOutputDir(const path &dir);
     virtual path getOutputDir() const;
-    void removeFile(const path &fn);
+    void removeFile(const path &fn, bool binary_dir = false) override;
 
     driver::cpp::CommandBuilder addCommand();
 
