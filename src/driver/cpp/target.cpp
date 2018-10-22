@@ -169,6 +169,8 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     // set some general settings, then init, then register
     setupTarget(t.get());
 
+    //DEBUG_BREAK_IF_STRING_HAS(t->pkg.ppath.toString(), "primitives.version");
+
     auto set_sdir = [&t, this]()
     {
         if (!t->Local && !t->pkg.target_name.empty()/* && t->pkg.ppath.is_pvt()*/)
@@ -202,6 +204,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
         // try to set again
         if (!t->Local)
         {
+            // TODO: reconsider and remove
             if (t->pkg.ppath.is_pvt() || t->pkg.ppath[PackagePath::ElementType::Namespace] != "demo")
             {
                 set_sdir();
@@ -660,9 +663,11 @@ NativeExecutedTarget::NativeExecutedTarget(LanguageType L)
     addLanguage(L);
 }
 
+#define SW_IS_LOCAL_BINARY_DIR Local && !UseStorageBinaryDir && !pkg.getOverriddenDir()
+
 void NativeExecutedTarget::init()
 {
-    if (Local && !UseStorageBinaryDir)
+    if (SW_IS_LOCAL_BINARY_DIR)
     {
         BinaryDir = getTargetDirShort();
     }
@@ -859,7 +864,7 @@ void NativeExecutedTarget::setOutputFile()
 path NativeExecutedTarget::getOutputFileName(const path &root) const
 {
     path p;
-    if (Local && !UseStorageBinaryDir)
+    if (SW_IS_LOCAL_BINARY_DIR)
     {
         if (IsConfig)
             p = getTargetsDir() / pkg.ppath.toString() / "out" / pkg.ppath.toString();
@@ -1213,7 +1218,7 @@ Commands NativeExecutedTarget::getCommands() const
 
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
-    DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "grep.gnulib");
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "grep.gnulib");
 
     // add generated files
     auto generated = getGeneratedCommands();
@@ -1705,7 +1710,7 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
-    DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "grep.gnulib");
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "grep.gnulib");
 
     /*{
         auto is_changed = [this](const path &p)
@@ -1729,8 +1734,6 @@ bool NativeExecutedTarget::prepare()
     {
     case 0:
         //if (!IsConfig/* && PackageDefinitions*/)
-        if (PackageDefinitions)
-            addPackageDefinitions(true);
 
         //restoreSourceDir();
         RETURN_PREPARE_PASS;
@@ -1751,6 +1754,9 @@ bool NativeExecutedTarget::prepare()
         Public.IncludeDirectories.insert(BinaryDir);
 
         HeaderOnly = gatherObjectFilesWithoutLibraries().empty();
+
+        if (PackageDefinitions)
+            addPackageDefinitions(true);
 
         for (auto &f : *this)
         {

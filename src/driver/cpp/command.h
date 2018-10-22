@@ -379,6 +379,12 @@ CommandBuilder operator<<(std::shared_ptr<Command> &c, const T &t)
 template <class T>
 CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
 {
+    if constexpr (std::is_same_v<T, path>)
+    {
+        cb.c->setProgram(*t.t);
+        return cb;
+    }
+
     for (auto tgt : cb.targets)
     {
         auto d = *tgt + *t.t;

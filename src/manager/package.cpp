@@ -76,6 +76,15 @@ PackageId::PackageId(const PackagePath &p, const Version &v)
 {
 }
 
+optional<path> PackageId::getOverriddenDir() const
+{
+    auto &pkgs = getServiceDatabase().getOverriddenPackages();
+    auto i = pkgs.find(*this);
+    if (i == pkgs.end())
+        return {};
+    return i->second;
+}
+
 path PackageId::getDir() const
 {
     return getDir(getUserDirectories().storage_dir_pkg);
@@ -93,11 +102,9 @@ path PackageId::getDirSrc() const
 
 path PackageId::getDirSrc2() const
 {
-    auto &pkgs = getServiceDatabase().getOverriddenPackages();
-    auto i = pkgs.find(*this);
-    if (i == pkgs.end())
-        return getDirSrc() / SW_SDIR_NAME;
-    return i->second;
+    if (auto d = getOverriddenDir(); d)
+        return d.value();
+    return getDirSrc() / SW_SDIR_NAME;
 }
 
 path PackageId::getDirObj() const

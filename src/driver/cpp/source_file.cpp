@@ -322,12 +322,12 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
     //if (F.is_absolute())
         //throw std::runtime_error();
 
-    if (fs::exists(F))
+    /*if (fs::exists(F))
     {
         if (!F.is_absolute())
             F = fs::absolute(F);
     }
-    else
+    else*/
     {
         if (!F.is_absolute())
         {
