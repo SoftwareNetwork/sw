@@ -6,6 +6,7 @@ void configure(Solution &s)
 {
     s.Settings.Native.LibrariesType = LibraryType::Static;
     //s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
+    //s.Settings.Native.CompilerType = CompilerType::ClangCl;
 }
 
 void build(Solution &s)

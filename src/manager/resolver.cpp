@@ -277,7 +277,8 @@ void Resolver::download(const ExtendedPackageData &d, const path &fn)
     if (provs.empty())
         throw std::runtime_error("No data sources available");
 
-    if (!provs[0].downloadPackage(d, d.hash, fn, query_local_db))
+    if (std::none_of(provs.begin(), provs.end(),
+        [&](auto &prov) {return prov.downloadPackage(d, d.hash, fn, query_local_db);}))
     {
         // if we get hashes from local db
         // they can be stalled within server refresh time (15 mins)

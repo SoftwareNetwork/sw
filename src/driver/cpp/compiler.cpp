@@ -475,18 +475,18 @@ bool Clang::findToolchain(struct Solution &s) const
     }
 
     // create programs
-
-    const path base_llvm_path = "c:\\Program Files\\LLVM\\bin";
+    const path base_llvm_path = "c:\\Program Files\\LLVM";
+    const path bin_llvm_path = base_llvm_path / "bin";
 
     auto Linker = std::make_shared<VisualStudioLinker>();
     Linker->Type = LinkerType::LLD;
-    Linker->file = base_llvm_path / "lld-link.exe";
+    Linker->file = bin_llvm_path / "lld-link.exe";
     Linker->vs_version = VSVersion;
     *Linker = LOpts;
 
     auto Librarian = std::make_shared<VisualStudioLibrarian>();
     Librarian->Type = LinkerType::LLD;
-    Librarian->file = base_llvm_path / "llvm-ar.exe"; // ?
+    Librarian->file = bin_llvm_path / "llvm-ar.exe"; // ?
     Librarian->vs_version = VSVersion;
     *Librarian = LOpts;
 
@@ -495,7 +495,9 @@ bool Clang::findToolchain(struct Solution &s) const
         auto L = (CLanguage*)s.languages[LanguageType::C].get();
         auto C = std::make_shared<ClangCCompiler>();
         C->Type = CompilerType::Clang;
-        C->file = base_llvm_path / "clang.exe";
+        C->file = bin_llvm_path / "clang.exe";
+        COpts.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        COpts.System.CompileOptions.push_back("-Wno-everything");
         *C = COpts;
         L->compiler = C;
         L->librarian = Librarian;
@@ -507,7 +509,7 @@ bool Clang::findToolchain(struct Solution &s) const
         auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
         auto C = std::make_shared<ClangCPPCompiler>();
         C->Type = CompilerType::Clang;
-        C->file = base_llvm_path / "clang++.exe";
+        C->file = bin_llvm_path / "clang++.exe";
         *C = COpts;
         L->compiler = C;
         L->librarian = Librarian;
@@ -755,14 +757,18 @@ bool ClangCl::findToolchain(struct Solution &s) const
     Librarian->vs_version = VSVersion;
     *Librarian = LOpts;
 
-    const path base_llvm_path = "c:\\Program Files\\LLVM\\bin";
+    // create programs
+    const path base_llvm_path = "c:\\Program Files\\LLVM";
+    const path bin_llvm_path = base_llvm_path / "bin";
 
     // C
     {
         auto L = (CLanguage*)s.languages[LanguageType::C].get();
         auto C = std::make_shared<ClangClCCompiler>();
         C->Type = CompilerType::ClangCl;
-        C->file = base_llvm_path / "clang-cl.exe";
+        C->file = bin_llvm_path / "clang-cl.exe";
+        COpts.System.IncludeDirectories.insert(bin_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        COpts.System.CompileOptions.push_back("-Wno-everything");
         *C = COpts;
         L->compiler = C;
         L->librarian = Librarian;
@@ -774,7 +780,7 @@ bool ClangCl::findToolchain(struct Solution &s) const
         auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
         auto C = std::make_shared<ClangClCPPCompiler>();
         C->Type = CompilerType::ClangCl;
-        C->file = base_llvm_path / "clang-cl.exe";
+        C->file = bin_llvm_path / "clang-cl.exe";
         *C = COpts;
         L->compiler = C;
         L->librarian = Librarian;
