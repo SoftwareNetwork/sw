@@ -249,7 +249,7 @@ BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_name, SE_O
     return success;
 }
 #else
-void run(const PackageId &id, const path &p, const Strings &args)
+void run(const RunArgs &args)
 {
     throw std::runtime_error("not implemented");
 }
