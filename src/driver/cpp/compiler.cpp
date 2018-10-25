@@ -458,7 +458,8 @@ bool Clang::findToolchain(struct Solution &s) const
     else
     {
         // but we won't detect host&arch stuff on older versions
-        compiler /= "cl.exe";
+        //compiler /= "cl.exe";
+        throw std::runtime_error("compiler.cpp not implemented");
     }
 
     // add kits include dirs
@@ -478,7 +479,7 @@ bool Clang::findToolchain(struct Solution &s) const
     const path base_llvm_path = "c:\\Program Files\\LLVM";
     const path bin_llvm_path = base_llvm_path / "bin";
 
-    auto Linker = std::make_shared<VisualStudioLinker>();
+    /*auto Linker = std::make_shared<VisualStudioLinker>();
     Linker->Type = LinkerType::LLD;
     Linker->file = bin_llvm_path / "lld-link.exe";
     Linker->vs_version = VSVersion;
@@ -488,6 +489,22 @@ bool Clang::findToolchain(struct Solution &s) const
     Librarian->Type = LinkerType::LLD;
     Librarian->file = bin_llvm_path / "llvm-ar.exe"; // ?
     Librarian->vs_version = VSVersion;
+    *Librarian = LOpts;*/
+
+    auto Linker = std::make_shared<VisualStudioLinker>();
+    Linker->Type = LinkerType::MSVC;
+    Linker->file = compiler.parent_path() / "link.exe";
+    Linker->vs_version = VSVersion;
+    if (s.Settings.TargetOS.Arch == ArchType::x86)
+        Linker->Machine = vs::MachineType::X86;
+    *Linker = LOpts;
+
+    auto Librarian = std::make_shared<VisualStudioLibrarian>();
+    Librarian->Type = LinkerType::MSVC;
+    Librarian->file = compiler.parent_path() / "lib.exe";
+    Librarian->vs_version = VSVersion;
+    if (s.Settings.TargetOS.Arch == ArchType::x86)
+        Librarian->Machine = vs::MachineType::X86;
     *Librarian = LOpts;
 
     // C

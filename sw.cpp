@@ -7,6 +7,7 @@ void configure(Solution &s)
     s.Settings.Native.LibrariesType = LibraryType::Static;
     //s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
     //s.Settings.Native.CompilerType = CompilerType::ClangCl;
+    //s.Settings.Native.CompilerType = CompilerType::Clang;
 }
 
 void build(Solution &s)
@@ -106,6 +107,7 @@ void build(Solution &s)
 
     auto &tools = p.addDirectory("tools");
     auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
+    self_builder.PackageDefinitions = true;
     self_builder.CPPVersion = CPPLanguageStandard::CPP17;
     self_builder += "src/tools/self_builder.cpp";
     self_builder +=
@@ -128,6 +130,7 @@ void build(Solution &s)
     }
 
     auto &client = p.addTarget<ExecutableTarget>("client");
+    client.PackageDefinitions = true;
     client += "src/client/.*"_rr;
     client += "src/client"_idir;
     client.CPPVersion = CPPLanguageStandard::CPP17;

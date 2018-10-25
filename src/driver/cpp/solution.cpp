@@ -293,7 +293,7 @@ path Solution::getIdeDir() const
 
 path Solution::getExecutionPlansDir() const
 {
-    return getIdeDir() / "explans";
+    return getIdeDir().parent_path() / "explans";
 }
 
 path Solution::getExecutionPlanFilename() const
@@ -1003,20 +1003,37 @@ void Build::setSettings()
 
 void Build::findCompiler()
 {
-    if (Settings.Native.CompilerType == CompilerType::Clang)
+    switch (Settings.Native.CompilerType)
+    {
+    case CompilerType::MSVC:
+    {
+        if (!VisualStudio().findToolchain(*this))
+            throw std::runtime_error("Cannot find msvc toolchain");
+        break;
+    }
+    case CompilerType::Clang:
     {
         if (!Clang().findToolchain(*this))
             throw std::runtime_error("Cannot find clang toolchain");
+        break;
     }
-    if (Settings.Native.CompilerType == CompilerType::ClangCl)
+    case CompilerType::ClangCl:
     {
         if (!ClangCl().findToolchain(*this))
             throw std::runtime_error("Cannot find clang-cl toolchain");
+        break;
     }
-    if (Settings.Native.CompilerType == CompilerType::GNU)
+    case CompilerType::GNU:
     {
         if (!GNU().findToolchain(*this))
             throw std::runtime_error("Cannot find gnu toolchain");
+        break;
+    }
+    case CompilerType::UnspecifiedCompiler:
+        break;
+    default:
+        throw std::runtime_error("solution.cpp: not implemented");
+
     }
 
     if (Settings.Native.CompilerType == CompilerType::UnspecifiedCompiler)
@@ -1553,6 +1570,7 @@ ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
                 //c2->file.file = read_string();
                 c2->deps_file = read_string();
             }
+                break;
             case 3:
             {
                 auto c2 = std::make_shared<driver::cpp::ExecuteBuiltinCommand>();

@@ -682,7 +682,6 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     StringSet ApiNames;
     std::optional<bool> HeaderOnly;
     std::optional<bool> AutoDetectOptions;
-    //bool PackageDefinitions = true;
     bool Empty = false;
     std::shared_ptr<NativeLinker> Linker;
     std::shared_ptr<NativeLinker> Librarian;

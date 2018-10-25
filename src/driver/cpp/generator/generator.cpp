@@ -36,7 +36,7 @@ GeneratorType fromString(const String &s)
 {
     // make icasecmp
     if (boost::iequals(s, "VS"))
-        return GeneratorType::VisualStudio;
+        return GeneratorType::VisualStudioNMake;// GeneratorType::VisualStudio;
     else if (boost::iequals(s, "VS_NMake"))
         return GeneratorType::VisualStudioNMake;
     else if (boost::iequals(s, "Ninja"))
@@ -420,7 +420,7 @@ void VSGeneratorNMake::generate(const Build &b)
     const auto dir = b.getIdeDir() / "vs_nmake";
     const path projects_dir = "projects";
     const InsecurePath deps_subdir = "Dependencies";
-    const auto predefined_targets_dir = "SWPredefinedTargets"s;
+    const auto predefined_targets_dir = ". SW Predefined Targets"s;
     const auto all_build_name = "ALL_BUILD"s;
     PackagePathTree tree, local_tree;
     PackagePathTree::Directories parents, local_parents;

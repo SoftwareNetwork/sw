@@ -218,8 +218,11 @@ int main(int argc, char **argv)
 #include <commands.inl>
 #undef SUBCOMMAND
 
+//
+//static cl::list<path> build_arg0(cl::Positional, cl::desc("Files or directoris to build"));
+
 // build commands
-static cl::opt<String> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
+static cl::opt<path> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
 
 // ide commands
 static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl::sub(subcommand_ide)*/);
@@ -261,6 +264,12 @@ int sw_main(const Strings &args)
         getServiceDatabase().deleteOverriddenPackageDir(delete_overridden_package_dir);
         return 0;
     }
+
+    /*if (!build_arg0.empty())
+    {
+        sw::build(Files{ build_arg0.begin(), build_arg0.end() });
+        return 0;
+    }*/
 
     if (0);
 #define SUBCOMMAND(n, d) else if (subcommand_##n) cli_##n();

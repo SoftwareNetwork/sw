@@ -2083,6 +2083,11 @@ bool NativeExecutedTarget::prepare()
                     c->IncludeDirectories.erase(BinaryPrivateDir);
                 }
             }
+            else if (auto c = f->compiler->as<ClangCompiler>())
+            {
+                if (auto c = f->compiler->as<ClangCPPCompiler>())
+                    c->CPPStandard = CPPVersion;
+            }
             else if (auto c = f->compiler->as<ClangClCompiler>())
             {
                 if (Settings.Native.ConfigurationType == ConfigurationType::Debug)
@@ -2435,7 +2440,7 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
 
 void NativeExecutedTarget::configureFile1(const path &from, const path &to, ConfigureFlags flags) const
 {
-    static const std::regex cmDefineRegex(R"xxx(#cmakedefine[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
+    static const std::regex cmDefineRegex(R"xxx(#cmakedefine[ \t]+([A-Za-z_0-9]*)([^\r\n]*?)[\r\n])xxx");
     static const std::regex cmDefine01Regex(R"xxx(#cmakedefine01[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
     static const std::regex mesonDefine(R"xxx(#mesondefine[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
     static const std::regex cmAtVarRegex("@([A-Za-z_0-9/.+-]+)@");
@@ -2474,14 +2479,24 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         s = m.prefix().str() + repl + m.suffix().str();
     }
 
-    // #cmakedefine
-    while (std::regex_search(s, m, cmDefineRegex) || std::regex_search(s, m, mesonDefine))
+    // #mesondefine
+    while (std::regex_search(s, m, mesonDefine))
     {
         auto repl = find_repl(m[1].str());
         if (offValues.find(boost::to_upper_copy(repl)) != offValues.end())
             s = m.prefix().str() + "/* #undef " + m[1].str() + " */" + "\n" + m.suffix().str();
         else
             s = m.prefix().str() + "#define " + m[1].str() + " " + repl + "\n" + m.suffix().str();
+    }
+
+    // #cmakedefine
+    while (std::regex_search(s, m, cmDefineRegex))
+    {
+        auto repl = find_repl(m[1].str());
+        if (offValues.find(boost::to_upper_copy(repl)) != offValues.end())
+            s = m.prefix().str() + "/* #undef " + m[1].str() + m[2].str() + " */\n" + m.suffix().str();
+        else
+            s = m.prefix().str() + "#define " + m[1].str() + m[2].str() + "\n" + m.suffix().str();
     }
 
     // #cmakedefine01
