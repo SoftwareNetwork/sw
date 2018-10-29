@@ -23,8 +23,8 @@ struct SW_DRIVER_CPPAN_API CppanDriver : ::sw::Driver
     bool execute(const path &file_or_dir) const override;
 
     // not implemented yet
-    void fetch(const path &file_or_dir) const override {}
-    PackageScriptPtr fetch_and_load(const path &file_or_dir) const override { return {}; }
+    void fetch(const path &file_or_dir, bool parallel = true) const override {}
+    PackageScriptPtr fetch_and_load(const path &file_or_dir, bool parallel = true) const override { return {}; }
     PackageScriptPtr build(const path &file_or_dir) const override { return {}; }
     String getName() const override { return "cppan"; }
     bool buildPackage(const PackageId &pkg) const override { return false; }

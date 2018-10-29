@@ -332,9 +332,6 @@ void Resolver::download_and_unpack()
         // remove existing version dir
         //cleanPackages(d.target_name);
 
-        //rd.downloads++;
-        write_file(hash_file, d.hash);
-
         // remove all old possible created files, not more needed files etc.
         fs::remove_all(d.getDir());
 
@@ -343,6 +340,9 @@ void Resolver::download_and_unpack()
         try
         {
             files = unpack_file(fn, version_dir);
+
+            // write hash file after unpack
+            write_file(hash_file, d.hash);
         }
         catch (...)
         {
@@ -365,40 +365,6 @@ void Resolver::download_and_unpack()
         create_link(d.getDirSrc().parent_path(), getUserDirectories().storage_dir_lnk / "src" / (d.target_name + ".lnk"));
         //create_link(d.getDirObj(), directories.storage_dir_lnk / "obj" / (cc.first.target_name + ".lnk"));
 #endif
-
-        // cppan2 case
-        if (auto files = enumerate_files(version_dir, false); files.size() == 1 && files.begin()->filename().string() == "sw.cpp")
-            return;
-        // another workaround
-        error_code ec;
-        if (fs::exists(version_dir / SW_SDIR_NAME / "sw.cpp", ec))
-            return;
-
-        // re-read in any case
-        auto root = YAML::LoadFile((version_dir / "cppan.yml").string());
-        if (root["unpack_directory"].IsDefined())
-        {
-            path ud = root["unpack_directory"].template as<String>();
-            ud = version_dir / ud;
-            if (fs::exists(ud))
-                throw std::runtime_error("Cannot create unpack_directory '" + ud.string() + "' because fs object with the same name alreasy exists");
-            fs::create_directories(ud);
-            for (auto &f : boost::make_iterator_range(fs::directory_iterator(version_dir), {}))
-            {
-                if (f == ud/* || f.path().filename() == CPPAN_FILENAME*/)
-                    continue;
-                if (fs::is_directory(f))
-                {
-                    copy_dir(f, ud / f.path().filename());
-                    fs::remove_all(f);
-                }
-                else if (fs::is_regular_file(f))
-                {
-                    fs::copy_file(f, ud / f.path().filename());
-                    fs::remove(f);
-                }
-            }
-        }
     };
 
     //Executor e(1);

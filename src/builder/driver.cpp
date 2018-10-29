@@ -39,9 +39,9 @@ bool Driver::hasConfig(const path &dir) const
     return fs::exists(dir / getConfigFilename());
 }
 
-PackageScriptPtr Driver::fetch_and_load(const path &file_or_dir) const
+PackageScriptPtr Driver::fetch_and_load(const path &file_or_dir, bool parallel) const
 {
-    fetch(file_or_dir);
+    fetch(file_or_dir, parallel);
     return load(file_or_dir);
 }
 

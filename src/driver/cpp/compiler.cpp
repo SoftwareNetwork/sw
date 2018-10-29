@@ -701,8 +701,9 @@ bool ClangCl::findToolchain(struct Solution &s) const
     auto ToolSet = getVsToolset(VSVersion);
     auto compiler = root / "bin";
     NativeCompilerOptions COpts;
-    COpts.System.IncludeDirectories.insert(root / "include");
-    COpts.System.IncludeDirectories.insert(root / "ATLMFC/include"); // also add
+    // do not add on clang-cl!
+    //COpts.System.IncludeDirectories.insert(root / "include");
+    //COpts.System.IncludeDirectories.insert(root / "ATLMFC/include"); // also add
 
     struct DirSuffix
     {

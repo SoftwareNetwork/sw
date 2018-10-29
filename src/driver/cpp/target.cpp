@@ -289,6 +289,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->UseStorageBinaryDir = UseStorageBinaryDir;
     t->IsConfig = IsConfig;
     t->Scope = Scope;
+    t->ParallelSourceDownload = ParallelSourceDownload;
     //auto p = getSolution()->getKnownTarget(t->pkg.ppath);
     //if (!p.target_name.empty())
 }
@@ -343,7 +344,7 @@ void TargetBase::setSource(const Source &s)
 {
     source = s;
     auto d = getSolution()->fetch_dir;
-    if (d.empty())
+    if (d.empty() || !ParallelSourceDownload)
         return;
 
     auto s2 = source; // make a copy!
@@ -1367,6 +1368,8 @@ Commands NativeExecutedTarget::getCommands() const
                         continue;
                     auto in = dt->getOutputFile();
                     auto o = (OutputDir.empty() ? getOutputFile().parent_path() : OutputDir) / in.filename();
+                    if (in == o)
+                        continue;
                     SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file");
                     copy_cmd->args.push_back(in.u8string());
                     copy_cmd->args.push_back(o.u8string());

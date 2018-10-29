@@ -465,6 +465,8 @@ void VSGeneratorNMake::generate(const Build &b)
                 compiler = "--compiler clang-cl";
             else if (b.Settings.Native.CompilerType == CompilerType::GNU)
                 compiler = "--compiler gnu";
+            else if (b.Settings.Native.CompilerType == CompilerType::MSVC)
+                compiler = "--compiler msvc";
 
             pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config ide");
             pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " " + cfg + " ide --clean");

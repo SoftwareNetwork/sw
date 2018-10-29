@@ -116,12 +116,12 @@ struct SW_BUILDER_API Driver
     3. Load script.
     4. If there are new targets with new sources go to p.2., else stop.
     */
-    virtual void fetch(const path &file_or_dir) const = 0;
+    virtual void fetch(const path &file_or_dir, bool parallel = true) const = 0;
 
     /// load script, fetch all sources using fetch(), then load it again
     ///
     /// source dirs will point to downloaded sources into subdirs
-    virtual PackageScriptPtr fetch_and_load(const path &file_or_dir) const;
+    virtual PackageScriptPtr fetch_and_load(const path &file_or_dir, bool parallel = true) const;
 
     /// full build process, void?
     virtual bool execute(const path &file_or_dir) const;

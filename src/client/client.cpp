@@ -222,7 +222,8 @@ int main(int argc, char **argv)
 //static cl::list<path> build_arg0(cl::Positional, cl::desc("Files or directoris to build"));
 
 // build commands
-static cl::opt<path> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
+// must be opt<String>!
+static cl::opt<String> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
 
 // ide commands
 static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl::sub(subcommand_ide)*/);

@@ -737,6 +737,18 @@ void Solution::prepare()
     if (prepared)
         return;
 
+    static int recursion_count = 0;
+    recursion_count++;
+    SCOPE_EXIT
+    {
+        recursion_count--;
+    };
+
+    if (recursion_count > 10)
+        LOG_ERROR(logger, "recursion detected: " << recursion_count);
+    if (recursion_count > 15)
+        throw std::logic_error("stopping recursion");
+
     // all targets are set stay unchanged from user
     // so, we're ready to some preparation passes
 
@@ -1829,6 +1841,7 @@ bool Build::generateBuildSystem()
     auto g = Generator::create(generator);
     //g.file = fn.filename();
     //g.dir = fs::current_path();
+    fs::remove_all(getExecutionPlansDir());
     g->generate(*this);
     return true;
 }
@@ -1866,6 +1879,7 @@ void Build::load(const path &dll)
 {
     if (configure)
     {
+        // configure may change defaults, so we must care below
         getModuleStorage(base_ptr).get(dll).configure(*this);
 
         if (boost::iequals(configuration, "Debug"))
@@ -1876,16 +1890,26 @@ void Build::load(const path &dll)
             Settings.Native.ConfigurationType = ConfigurationType::MinimalSizeRelease;
         else if (boost::iequals(configuration, "RelWithDebInfo"))
             Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
+        else // explicit else!
+            Settings.Native.ConfigurationType = ConfigurationType::Release;
         //if (!platform.empty())
             //;
 
         if (static_build)
             Settings.Native.LibrariesType = LibraryType::Static;
+        else // explicit else!
+            Settings.Native.LibrariesType = LibraryType::Shared;
 
         if (boost::iequals(platform, "Win32"))
-        {
             Settings.TargetOS.Arch = ArchType::x86;
-        }
+        else if (boost::iequals(platform, "Win64"))
+            Settings.TargetOS.Arch = ArchType::x86_64;
+        else if (boost::iequals(platform, "arm32"))
+            Settings.TargetOS.Arch = ArchType::arm;
+        else if (boost::iequals(platform, "arm64"))
+            Settings.TargetOS.Arch = ArchType::aarch64; // ?
+        else // explicit else!
+            Settings.TargetOS.Arch = ArchType::x86_64;
 
         if (boost::iequals(compiler, "clang"))
             Settings.Native.CompilerType = CompilerType::Clang;
@@ -1893,11 +1917,29 @@ void Build::load(const path &dll)
             Settings.Native.CompilerType = CompilerType::ClangCl;
         else if (boost::iequals(compiler, "gnu"))
             Settings.Native.CompilerType = CompilerType::GNU;
+        else if (boost::iequals(compiler, "msvc"))
+            Settings.Native.CompilerType = CompilerType::MSVC;
+        else // explicit else!
+#ifdef _WIN32
+            Settings.Native.CompilerType = CompilerType::MSVC;
+#else
+            Settings.Native.CompilerType = CompilerType::GNU;
+#endif
 
         if (boost::iequals(target_os, "linux"))
             Settings.TargetOS.Type = OSType::Linux;
         else if (boost::iequals(target_os, "macos"))
             Settings.TargetOS.Type = OSType::Macos;
+        else if (boost::iequals(target_os, "windows") || boost::iequals(target_os, "win"))
+            Settings.TargetOS.Type = OSType::Windows;
+        else // explicit else!
+#ifdef _WIN32
+            Settings.TargetOS.Type = OSType::Windows;
+#elif __APPLE__
+            Settings.TargetOS.Type = OSType::Macos;
+#else
+            Settings.TargetOS.Type = OSType::Linux;
+#endif
     }
 
     // apply config settings
@@ -1931,69 +1973,70 @@ void Build::load(const path &dll)
 PackageDescriptionMap Build::getPackages() const
 {
     PackageDescriptionMap m;
-    if (!solutions.empty())
+    if (solutions.empty())
+        return m;
+    for (auto &[pkg, t] : solutions.begin()->children)
     {
-        for (auto &[pkg, t] : solutions.begin()->children)
+        if (t->Scope != TargetScope::Build)
+            continue;
+
+        auto nt = (NativeExecutedTarget*)t.get();
+
+        nlohmann::json j;
+
+        // source, version, path
+        save_source(j["source"], t->source);
+        j["version"] = pkg.getVersion().toString();
+        j["path"] = pkg.ppath.toString();
+
+        j["root_dir"] = t->SourceDir.u8string();
+
+        // files
+        // we do not use nt->gatherSourceFiles(); as it removes deleted files
+        Files files;
+        for (auto &f : nt->gatherAllFiles())
         {
-            if (t->Scope != TargetScope::Build)
+            if (File(f, *fs).isGeneratedAtAll())
+                continue;
+            files.insert(f);
+        }
+
+        if (files.empty() && !nt->Empty)
+            throw std::runtime_error("No files found");
+        if (!files.empty() && nt->Empty)
+            throw std::runtime_error("Files were found, but target is marked as empty");
+
+        // we put files under SW_SDIR_NAME to keep space near it
+        // e.g. for patch dir or other dirs (server provided files)
+        // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
+        auto files_map = primitives::pack::prepare_files(files, t->SourceDir, SW_SDIR_NAME);
+        for (auto &[f,t] : files_map)
+        {
+            nlohmann::json jf;
+            jf["from"] = f.u8string();
+            jf["to"] = t.u8string();
+            j["files"].push_back(jf);
+        }
+
+        // deps
+        DependenciesType deps;
+        nt->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>([&deps](auto &v, auto &gs)
+        {
+            deps.insert(v.Dependencies.begin(), v.Dependencies.end());
+        });
+        for (auto &d : deps)
+        {
+            if (d->target.lock() && d->target.lock()->Scope != TargetScope::Build)
                 continue;
 
-            auto nt = (NativeExecutedTarget*)t.get();
-
-            nlohmann::json j;
-
-            // source, version, path
-            save_source(j["source"], t->source);
-            j["version"] = pkg.getVersion().toString();
-            j["path"] = pkg.ppath.toString();
-
-            // files
-            // we do not use nt->gatherSourceFiles(); as it removes deleted files
-            Files files;
-            for (auto &f : nt->gatherAllFiles())
-            {
-                if (File(f, *fs).isGeneratedAtAll())
-                    continue;
-                files.insert(f);
-            }
-
-            if (files.empty() && !nt->Empty)
-                throw std::runtime_error("No files found");
-            if (!files.empty() && nt->Empty)
-                throw std::runtime_error("Files were found, but target is marked as empty");
-
-            // we put files under SW_SDIR_NAME to keep space near it
-            // e.g. for patch dir or other dirs (server provided files)
-            // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
-            auto files_map = primitives::pack::prepare_files(files, t->SourceDir, SW_SDIR_NAME);
-            for (auto &[f,t] : files_map)
-            {
-                nlohmann::json jf;
-                jf["from"] = f.u8string();
-                jf["to"] = t.u8string();
-                j["files"].push_back(jf);
-            }
-
-            // deps
-            DependenciesType deps;
-            nt->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>([&deps](auto &v, auto &gs)
-            {
-                deps.insert(v.Dependencies.begin(), v.Dependencies.end());
-            });
-            for (auto &d : deps)
-            {
-                if (d->target.lock() && d->target.lock()->Scope != TargetScope::Build)
-                    continue;
-
-                nlohmann::json jd;
-                jd["path"] = d->getPackage().ppath.toString();
-                jd["versions"] = d->getPackage().range.toString();
-                j["dependencies"].push_back(jd);
-            }
-
-            auto s = j.dump();
-            m[pkg] = std::make_unique<JsonPackageDescription>(s);
+            nlohmann::json jd;
+            jd["path"] = d->getPackage().ppath.toString();
+            jd["versions"] = d->getPackage().range.toString();
+            j["dependencies"].push_back(jd);
         }
+
+        auto s = j.dump();
+        m[pkg] = std::make_unique<JsonPackageDescription>(s);
     }
     return m;
 }

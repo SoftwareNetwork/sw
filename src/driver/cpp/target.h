@@ -192,6 +192,7 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
     bool UseStorageBinaryDir = false;
     bool PostponeFileResolving = false;
     bool IsConfig = false;
+    bool ParallelSourceDownload = true;
 
     PackagePath NamePrefix;
     const Solution *solution = nullptr;

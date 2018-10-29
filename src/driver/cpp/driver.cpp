@@ -91,7 +91,7 @@ bool CppDriver::execute(const path &file_or_dir) const
     return false;
 }
 
-static auto fetch1(const CppDriver *driver, const path &file_or_dir)
+static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parallel)
 {
     auto f = file_or_dir;
     if (fs::is_directory(f))
@@ -106,29 +106,74 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir)
         d = d.parent_path();
     d = d / ".sw" / "src";
 
-    auto b = std::make_unique<Build>();
-    //b->Local = false;
-    b->perform_checks = false;
-    //b->PostponeFileResolving = true;
-    b->fetch_dir = d;
-    b->build_and_load(f);
+    Solution::SourceDirMapBySource srcs_old;
+    if (parallel)
+    {
+        while (1)
+        {
+            auto b = std::make_unique<Build>();
+            b->perform_checks = false;
+            b->PostponeFileResolving = true; // postpone!
+            b->source_dirs_by_source = srcs_old;
+            b->build_and_load(f);
 
-    // reset
-    b->fetch_dir.clear();
-    for (auto &s : b->solutions)
-        s.fetch_dir.clear();
+            Solution::SourceDirMapBySource srcs;
+            for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
+            {
+                auto s = t->source; // make a copy!
+                checkSourceAndVersion(s, pkg.getVersion());
+                srcs[s] = d / get_source_hash(s);
+            }
 
-    return std::move(b);
+            // src_old has correct root dirs
+            if (srcs.size() == srcs_old.size())
+                return std::tuple{ std::move(b), srcs_old };
+
+            auto &e = getExecutor();
+            Futures<void> fs;
+            for (auto &src : srcs)
+            {
+                fs.push_back(e.push([src = src.first, &d = src.second]
+                    {
+                        if (!fs::exists(d))
+                        {
+                            LOG_INFO(logger, "Downloading source:\n" << print_source(src));
+                            fs::create_directories(d);
+                            ScopedCurrentPath scp(d, CurrentPathScope::Thread);
+                            download(src);
+                        }
+                        d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
+                    }));
+            }
+            waitAndGet(fs);
+
+            srcs_old = srcs;
+        }
+    }
+    else
+    {
+        auto b = std::make_unique<Build>();
+        b->perform_checks = false;
+        b->fetch_dir = d;
+        b->build_and_load(f);
+
+        // reset
+        b->fetch_dir.clear();
+        for (auto &s : b->solutions)
+            s.fetch_dir.clear();
+
+        return std::tuple{ std::move(b), srcs_old };
+    }
 }
 
-void CppDriver::fetch(const path &file_or_dir) const
+void CppDriver::fetch(const path &file_or_dir, bool parallel) const
 {
-    fetch1(this, file_or_dir);
+    fetch1(this, file_or_dir, parallel);
 }
 
-PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir) const
+PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, bool parallel) const
 {
-    auto b = fetch1(this, file_or_dir);
+    auto [b, srcs] = fetch1(this, file_or_dir, parallel);
 
     // do not use b->prepare(); !
     // prepare only packages in solution
@@ -136,7 +181,16 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir) const
     Futures<void> fs;
     for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
     {
-        fs.push_back(e.push([t] {
+        fs.push_back(e.push([t, &srcs, &pkg, parallel]
+        {
+            if (parallel)
+            {
+                auto s2 = t->source;
+                applyVersionToUrl(s2, pkg.version);
+                auto i = srcs.find(s2);
+                path rd = i->second / t->RootDirectory;
+                t->SourceDir = rd;
+            }
             t->prepare();
         }));
     }

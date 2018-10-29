@@ -29,9 +29,6 @@ SW_SUPPORT_API
 path get_temp_filename(const path &subdir = path());
 
 SW_SUPPORT_API
-String get_stamp_filename(const String &prefix);
-
-SW_SUPPORT_API
 String make_archive_name(const String &fn = String());
 
 SW_SUPPORT_API

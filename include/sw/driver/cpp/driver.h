@@ -17,8 +17,8 @@ struct SW_DRIVER_CPP_API CppDriver : ::sw::Driver
 
     path getConfigFilename() const override;
 
-    void fetch(const path &file_or_dir) const override;
-    PackageScriptPtr fetch_and_load(const path &file_or_dir) const override;
+    void fetch(const path &file_or_dir, bool parallel = true) const override;
+    PackageScriptPtr fetch_and_load(const path &file_or_dir, bool parallel = true) const override;
     PackageScriptPtr build(const path &file_or_dir) const override;
     bool buildPackage(const PackageId &pkg) const override;
     PackageScriptPtr load(const path &file_or_dir) const override;
