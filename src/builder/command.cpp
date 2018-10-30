@@ -682,14 +682,13 @@ Files Command::getGeneratedDirs() const
 
 void Command::addPathDirectory(const path &p)
 {
-    String s = getenv("PATH");
-    environment["PATH"] = s +
 #ifdef _WIN32
-        ";" + normalize_path_windows(p)
+    String s = getenv("Path");
+    environment["Path"] = s + ";" + normalize_path_windows(p);
 #else
-        ":" + p.u8string()
+    String s = getenv("PATH");
+    environment["PATH"] = s + ":" + p.u8string();
 #endif
-        ;
 }
 
 /*void Command::load(BinaryContext &bctx)

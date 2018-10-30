@@ -109,12 +109,15 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
     Solution::SourceDirMapBySource srcs_old;
     if (parallel)
     {
+        bool pp = true; // postpone once!
         while (1)
         {
             auto b = std::make_unique<Build>();
             b->perform_checks = false;
-            b->PostponeFileResolving = true; // postpone!
+            b->PostponeFileResolving = pp;
             b->source_dirs_by_source = srcs_old;
+            if (!pp)
+                b->fetch_dir = d;
             b->build_and_load(f);
 
             Solution::SourceDirMapBySource srcs;
@@ -127,7 +130,20 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
 
             // src_old has correct root dirs
             if (srcs.size() == srcs_old.size())
+            {
+                // reset
+                b->fetch_dir.clear();
+                for (auto &s : b->solutions)
+                    s.fetch_dir.clear();
+
                 return std::tuple{ std::move(b), srcs_old };
+            }
+
+            // with this, we only have two iterations
+            // This is a limitation, but on the other hand handling of this
+            // become too complex for now.
+            // For other cases uses non-parallel mode.
+            pp = false;
 
             auto &e = getExecutor();
             Futures<void> fs;

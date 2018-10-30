@@ -344,20 +344,20 @@ void TargetBase::setSource(const Source &s)
 {
     source = s;
     auto d = getSolution()->fetch_dir;
-    if (d.empty() || !ParallelSourceDownload)
+    if (d.empty()/* || !ParallelSourceDownload*/)
         return;
 
     auto s2 = source; // make a copy!
     checkSourceAndVersion(s2, pkg.getVersion());
     d /= get_source_hash(s2);
 
-    if (fs::exists(d))
-        return;
-
-    LOG_INFO(logger, "Downloading source:\n" << print_source(s2));
-    fs::create_directories(d);
-    ScopedCurrentPath scp(d, CurrentPathScope::Thread);
-    download(s2);
+    if (!fs::exists(d))
+    {
+        LOG_INFO(logger, "Downloading source:\n" << print_source(s2));
+        fs::create_directories(d);
+        ScopedCurrentPath scp(d, CurrentPathScope::Thread);
+        download(s2);
+    }
     d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
     getSolution()->source_dirs_by_source[s2] = d;
     /*getSolution()->SourceDir = */SourceDir = d;
@@ -1713,7 +1713,7 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "grep.gnulib");
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "codegen.emoji");
 
     /*{
         auto is_changed = [this](const path &p)

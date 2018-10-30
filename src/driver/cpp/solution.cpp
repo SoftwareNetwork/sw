@@ -744,9 +744,9 @@ void Solution::prepare()
         recursion_count--;
     };
 
-    if (recursion_count > 10)
+    if (recursion_count > 30)
         LOG_ERROR(logger, "recursion detected: " << recursion_count);
-    if (recursion_count > 15)
+    if (recursion_count > 45)
         throw std::logic_error("stopping recursion");
 
     // all targets are set stay unchanged from user
