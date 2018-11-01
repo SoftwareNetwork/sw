@@ -10,12 +10,14 @@
 #include <solution.h>
 #include <target.h>
 
+#include <dependency.h>
+
 #include <primitives/hash.h>
 
 namespace sw
 {
 
-static LanguageMap getLanguagesImpl()
+/*static LanguageMap getLanguagesImpl()
 {
     LanguageMap languages;
 
@@ -58,26 +60,111 @@ static LanguageMap getLanguagesImpl()
 LanguageMap getLanguages()
 {
     return getLanguagesImpl();
-}
-
-static String getObjectFilename(const Target *t, const path &p)
-{
-    // target may push its files to outer packages,
-    // so files must be concatenated with its target name
-    return p.filename().u8string() + "." + sha256(t->pkg.target_name + p.u8string()).substr(0, 8);
-}
+}*/
 
 LanguageStorage::~LanguageStorage()
 {
-    //for (auto &[t, l] : languages)
-        //delete l;
 }
 
-void LanguageStorage::addLanguage(LanguageType L)
+void LanguageStorage::registerProgramAndLanguage(const PackagePath &pp, const std::shared_ptr<Program> &p, const LanguagePtr &L)
 {
-    auto &lang = languages[L] = languages.find(L)->second->clone();
+    registerProgram(pp, p);
+    registerLanguage({ pp, p->getVersion() }, L);
+}
+
+void LanguageStorage::registerProgram(const PackagePath &pp, const std::shared_ptr<Program> &p)
+{
+    registered_programs[pp][p->getVersion()] = p;
+}
+
+/*void LanguageStorage::registerLanguage(const LanguagePtr &L)
+{
+    // phantom pkg
+    // hash of exts? probably no
+    registerLanguage("loc.sw.lang" + std::to_string((size_t)L.get()), L);
+}*/
+
+void LanguageStorage::registerLanguage(const PackageId &pkg, const LanguagePtr &L)
+{
+    /*for (auto &e : L->CompiledExtensions)
+        extensions[e] = pkg;*/
+    user_defined_languages[pkg.ppath][pkg.version] = L;
+}
+
+void LanguageStorage::registerLanguage(const TargetBase &t, const LanguagePtr &L)
+{
+    registerLanguage(t.pkg, L);
+}
+
+void LanguageStorage::setExtensionLanguage(const String &ext, const UnresolvedPackage &p)
+{
+    // late resolve version
+    extensions[ext] = p.resolve();
+}
+
+void LanguageStorage::setExtensionLanguage(const String &ext, const LanguagePtr &L)
+{
+    auto &pkg = extensions[ext];
+    if (pkg.empty())
+    {
+        // add phantom pkg instead?
+        //throw std::runtime_error("No packages for this language");
+
+        pkg = "loc.sw.lang" + std::to_string((size_t)L.get());
+    }
+    user_defined_languages[pkg.ppath][pkg.version] = L;
+}
+
+void LanguageStorage::setExtensionLanguage(const String &ext, const DependencyPtr &d)
+{
+    extensions[ext] = d->getResolvedPackage();
+}
+
+bool LanguageStorage::activateLanguage(const PackagePath &pp)
+{
+    auto v = user_defined_languages[pp];
+    if (v.empty())
+        return false;
+    return activateLanguage({ pp, v.rbegin()->first });
+}
+
+bool LanguageStorage::activateLanguage(const PackageId &pkg)
+{
+    auto v = user_defined_languages[pkg.ppath];
+    if (v.empty())
+        return false;
+    auto L = v[pkg.version];
+    if (!L)
+        return false;
+    for (auto &l : L->CompiledExtensions)
+        extensions[l] = pkg;
+    return true;
+}
+
+LanguagePtr LanguageStorage::getLanguage(const PackagePath &pp) const
+{
+    auto v = user_defined_languages.find(pp);
+    if (v == user_defined_languages.end() || v->second.empty())
+        return {};
+    return getLanguage({ pp, v->second.rbegin()->first });
+}
+
+LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg) const
+{
+    auto v = user_defined_languages.find(pkg.ppath);
+    if (v == user_defined_languages.end() || v->second.empty())
+        return {};
+    auto v2 = v->second.find(pkg.version);
+    if (v2 == v->second.end())
+        return {};
+    return v2->second;
+}
+
+/*void LanguageStorage::addLanguage(LanguageType L)
+{
+    /*auto &lang = languages[L] = languages.find(L)->second->clone();
     for (auto &l : lang->CompiledExtensions)
-        extensions[l] = lang;
+        extensions[l] = user_defined_languages[lang];
 }
 
 void LanguageStorage::addLanguage(const std::vector<LanguageType> &L)
@@ -88,13 +175,13 @@ void LanguageStorage::addLanguage(const std::vector<LanguageType> &L)
 
 void LanguageStorage::setLanguage(LanguageType L)
 {
-    languages.clear();
+    //languages.clear();
     addLanguage(L);
 }
 
 void LanguageStorage::setLanguage(const std::vector<LanguageType> &L)
 {
-    languages.clear();
+    //languages.clear();
     for (auto &l : L)
         addLanguage(l);
 }
@@ -110,7 +197,7 @@ void LanguageStorage::removeLanguage(const std::vector<LanguageType> &L)
 {
     for (auto &l : L)
         removeLanguage(l);
-}
+}*/
 
 std::shared_ptr<Language> ASMLanguage::clone() const
 {
@@ -120,9 +207,9 @@ std::shared_ptr<Language> ASMLanguage::clone() const
 std::shared_ptr<SourceFile> ASMLanguage::createSourceFile(const path &input, const Target *t) const
 {
     auto nt = (NativeExecutedTarget*)t;
-    compiler->merge(*nt);
+    //compiler->merge(*nt); // why here? we merge in Target after everything resolved
 
-    auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(t, input) + compiler->getObjectExtension());
+    auto o = t->BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(*t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
     return std::make_shared<ASMSourceFile>(input, *t->getSolution()->fs, o, compiler.get());
 }
@@ -135,9 +222,9 @@ std::shared_ptr<Language> CLanguage::clone() const
 std::shared_ptr<SourceFile> CLanguage::createSourceFile(const path &input, const Target *t) const
 {
     auto nt = (NativeExecutedTarget*)t;
-    compiler->merge(*nt);
+    //compiler->merge(*nt);
 
-    auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(t, input) + compiler->getObjectExtension());
+    auto o = t->BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(*t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
     return std::make_shared<CSourceFile>(input, *t->getSolution()->fs, o, compiler.get());
 }
@@ -150,9 +237,9 @@ std::shared_ptr<Language> CPPLanguage::clone() const
 std::shared_ptr<SourceFile> CPPLanguage::createSourceFile(const path &input, const Target *t) const
 {
     auto nt = (NativeExecutedTarget*)t;
-    compiler->merge(*nt);
+    //compiler->merge(*nt);
 
-    auto o = t->BinaryDir.parent_path() / "obj" / (getObjectFilename(t, input) + compiler->getObjectExtension());
+    auto o = t->BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(*t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
     return std::make_shared<CPPSourceFile>(input, *t->getSolution()->fs, o, compiler.get());
 }

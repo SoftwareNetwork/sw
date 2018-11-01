@@ -204,7 +204,8 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
     for (auto p : t.files)
     {
         if (p.is_relative() && !all.empty())
-            p = all[0]->SourceDir / p;
+            if (!all[0]->check_absolute(p, true))
+                p = all[0]->SourceDir / p;
 
         if (!cb.stopped)
             cb.c->args.push_back(t.prefix + p.u8string());
@@ -229,7 +230,8 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
     for (auto p : t.files)
     {
         if (p.is_relative() && !all.empty())
-            p = all[0]->BinaryDir / p;
+            if (!all[0]->check_absolute(p, true))
+                p = all[0]->BinaryDir / p;
 
         if (!cb.stopped)
             cb.c->args.push_back(t.prefix + p.u8string());
@@ -253,7 +255,8 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
 
     auto p = t.p;
     if (p.is_relative() && !all.empty())
-        p = all[0]->SourceDir / p;
+        if (!all[0]->check_absolute(p, true))
+            p = all[0]->SourceDir / p;
 
     cb.c->redirectStdin(p);
     if (t.add_to_targets)
@@ -274,7 +277,8 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
 
     auto p = t.p;
     if (p.is_relative() && !all.empty())
-        p = all[0]->BinaryDir / p;
+        if (!all[0]->check_absolute(p, true))
+            p = all[0]->BinaryDir / p;
 
     cb.c->redirectStdout(p);
     if (t.add_to_targets)
@@ -295,7 +299,8 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
 
     auto p = t.p;
     if (p.is_relative() && !all.empty())
-        p = all[0]->BinaryDir / p;
+        if (!all[0]->check_absolute(p, true))
+            p = all[0]->BinaryDir / p;
 
     cb.c->redirectStderr(p);
     if (t.add_to_targets)

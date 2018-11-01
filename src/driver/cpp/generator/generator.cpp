@@ -565,7 +565,7 @@ void VSGeneratorNMake::generate(const Build &b)
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
         pctx.addPropertySheets();
 
-        iterate_over_configs(nt->Settings, [&pctx, &nt, &cwd, &p, &b](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        iterate_over_configs(nt->Settings, [&pctx, &nt, &cwd, &p, &b, &t](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
 
@@ -584,7 +584,7 @@ void VSGeneratorNMake::generate(const Build &b)
                 compiler = "--compiler gnu";
 
             auto o = nt->getOutputFile();
-            o = o.parent_path().parent_path() / s.getConfig() / o.filename();
+            o = o.parent_path().parent_path() / s.getConfig(t.get()) / o.filename();
             pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config --target " + p.target_name + " ide");
             pctx.addBlock("NMakeOutput", o.u8string());
             pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " " + cfg + " ide --clean");

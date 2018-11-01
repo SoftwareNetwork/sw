@@ -770,35 +770,6 @@ void Solution::prepare()
         for (auto &p : dd)
             knownTargets.insert(p);
 
-        // old way with 1 dll per file
-        /*std::unordered_map<PackageVersionGroupNumber, std::set<path>> cfgs2;
-        for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
-            cfgs2[gn].insert(p.getDirSrc2() / getConfigFilename());
-
-        Files cfgs;
-        for (auto &[gn, s] : cfgs2)
-            cfgs.insert(*s.begin());
-
-        Build b;
-        b.Local = false;
-        auto dlls = b.build_configs(cfgs);
-
-        // on the first step we load configure information
-        for (auto &p : dd)
-        {
-            if (children.find(p) != children.end())
-                continue;
-
-            auto f = p.getDirSrc2() / getConfigFilename();
-            if (cfgs.find(f) == cfgs.end())
-                continue;
-            auto dll = dlls[f];
-
-            // call function
-            NamePrefix = p.ppath.slice(0, p.prefix);
-            getModuleStorage(base_ptr).get(dll).check(Checks);
-        }*/
-
         // gather packages
         std::unordered_map<PackageVersionGroupNumber, ExtendedPackageData> cfgs2;
         for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
@@ -969,7 +940,7 @@ Build::Build()
     Settings.HostOS = host_os;
     Settings.TargetOS = Settings.HostOS; // temp
 
-    languages = getLanguages();
+    //languages = getLanguages();
     findCompiler();
 }
 
@@ -988,56 +959,81 @@ Build::~Build()
 
 void Build::setSettings()
 {
-    Settings.Native.ASMCompiler = ((ASMLanguage*)languages[LanguageType::ASM].get())->compiler;
+    /*Settings.Native.ASMCompiler = ((ASMLanguage*)languages[LanguageType::ASM].get())->compiler;
     Settings.Native.CCompiler = ((CLanguage*)languages[LanguageType::C].get())->compiler;
-    Settings.Native.CPPCompiler = ((CPPLanguage*)languages[LanguageType::CPP].get())->compiler;
+    Settings.Native.CPPCompiler = ((CPPLanguage*)languages[LanguageType::CPP].get())->compiler;*/
 
-    Settings.Native.CompilerType = Settings.Native.CPPCompiler->Type;
+    //Settings.Native.CompilerType = ((CPPLanguage*)languages[LanguageType::CPP].get())->compiler->Type;
+
+    //throw std::runtime_error("todo");
+    //Settings.Native.CompilerType = ((CPPLanguage*)user_defined_languages[extensions[".cpp"]].get())->compiler->Type;
 
     fs = &getFileStorage(getConfig());
 
-    Settings.Native.ASMCompiler->fs = fs;
+    /*Settings.Native.ASMCompiler->fs = fs;
     Settings.Native.CCompiler->fs = fs;
-    Settings.Native.CPPCompiler->fs = fs;
-    if (Settings.Native.Librarian)
+    Settings.Native.CPPCompiler->fs = fs;*/
+    /*if (Settings.Native.Librarian)
         Settings.Native.Librarian->fs = fs;
     if (Settings.Native.Linker)
-        Settings.Native.Linker->fs = fs;
+        Settings.Native.Linker->fs = fs;*/
 
-#define SET_FS(type)                                                             \
+/*#define SET_FS(type)                                                             \
+    ((type##Language *)languages[LanguageType::type].get())->compiler->fs = fs;  \
     ((type##Language *)languages[LanguageType::type].get())->librarian->fs = fs; \
     ((type##Language *)languages[LanguageType::type].get())->linker->fs = fs
 
     SET_FS(ASM);
     SET_FS(C);
-    SET_FS(CPP);
+    SET_FS(CPP);*/
+
+    /*for (auto &lang : getLanguages())
+        for (auto &l : lang->CompiledExtensions)
+            extensions[l] = user_defined_languages[lang];
+    setExtensionLanguage()*/
+
+    for (auto &[pp, m] : registered_programs)
+        for (auto &[v,p] : m)
+        p->fs = fs;
 }
 
 void Build::findCompiler()
 {
+    detectNativeCompilers(*this);
+
+    auto activate_or_throw = [this](const std::vector<PackagePath> &a, const auto &e)
+    {
+        if (!std::any_of(a.begin(), a.end(), [this](const auto &v)
+        {
+            return activateLanguage(v);
+        }))
+            throw std::runtime_error(e);
+    };
+
     switch (Settings.Native.CompilerType)
     {
     case CompilerType::MSVC:
     {
-        if (!VisualStudio().findToolchain(*this))
-            throw std::runtime_error("Cannot find msvc toolchain");
+        activate_or_throw(
+            { "com.Microsoft.VisualStudio.VC.cl" },
+            "Cannot find msvc toolchain");
         break;
     }
     case CompilerType::Clang:
     {
-        if (!Clang().findToolchain(*this))
+        //if (!Clang().findToolchain(*this))
             throw std::runtime_error("Cannot find clang toolchain");
         break;
     }
     case CompilerType::ClangCl:
     {
-        if (!ClangCl().findToolchain(*this))
+        //if (!ClangCl().findToolchain(*this))
             throw std::runtime_error("Cannot find clang-cl toolchain");
         break;
     }
     case CompilerType::GNU:
     {
-        if (!GNU().findToolchain(*this))
+        //if (!GNU().findToolchain(*this))
             throw std::runtime_error("Cannot find gnu toolchain");
         break;
     }
@@ -1053,34 +1049,29 @@ void Build::findCompiler()
         switch (Settings.HostOS.Type)
         {
         case OSType::Windows:
-            if (
-                !VisualStudio().findToolchain(*this) &&
-                !ClangCl().findToolchain(*this) &&
-                !Clang().findToolchain(*this) &&
-                1
-                )
-            {
-                throw std::runtime_error("Try to add more compilers");
-            }
-            //if (FileTransforms.IsEmpty())
+            activate_or_throw({
+                "com.Microsoft.VisualStudio.VC.cl",
+                "org.LLVM.clang",
+                "org.LLVM.clangcl",
+                }, "Try to add more compilers");
             break;
         case OSType::Linux:
-            if (
+            /*if (
                 !GNU().findToolchain(*this) &&
                 !Clang().findToolchain(*this) &&
                 1
-                )
+                )*/
             {
                 throw std::runtime_error("Try to add more compilers");
             }
             //if (FileTransforms.IsEmpty())
             break;
         case OSType::Macos:
-            if (
+            /*if (
                 !GNU().findToolchain(*this) &&
                 !Clang().findToolchain(*this) && // does not support fs at the moment
                 1
-                )
+                )*/
             {
                 throw std::runtime_error("Try to add more compilers");
             }
@@ -1336,8 +1327,13 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     }
 
     Files files;
+    std::unordered_map<path, PackageId> output_names;
     for (auto &pkg : pkgs)
-        files.insert(pkg.getDirSrc2() / getConfigFilename());
+    {
+        auto p = pkg.getDirSrc2() / getConfigFilename();
+        files.insert(p);
+        output_names[p] = pkg;
+    }
     bool many_files = files.size() > 1;
     auto h = getFilesHash(files);
 
@@ -1352,7 +1348,10 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
     // separate loop
     for (auto &fn : files)
+    {
         lib += fn;
+        lib[fn].fancy_name = "building config [" + output_names[fn].toString() + "]/sw.cpp (" + normalize_path(fn) + ")";
+    }
 
     // generate main source file
     if (many_files)

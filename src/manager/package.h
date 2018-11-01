@@ -38,7 +38,7 @@ struct SW_MANAGER_API UnresolvedPackage
     bool canBe(const PackageId &id) const;
 
     /// return max satisfying package id
-    ExtendedPackageData resolve();
+    ExtendedPackageData resolve() const;
 
     bool operator<(const UnresolvedPackage &rhs) const { return std::tie(ppath, range) < std::tie(rhs.ppath, rhs.range); }
     bool operator==(const UnresolvedPackage &rhs) const { return std::tie(ppath, range) == std::tie(rhs.ppath, rhs.range); }

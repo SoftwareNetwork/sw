@@ -108,8 +108,22 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     {
         if (!f)
         {
-            auto L = e->second->clone(); // clone compiler here
-            f = this->SourceFileMapThis::operator[](file) = L->createSourceFile(file, target);
+            auto &program = e->second;
+            auto i = target->getLanguage(program);
+            if (!i)
+            {
+                f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file, *target->getSolution()->fs);
+                f->postponed = true;
+            }
+            else
+            {
+                auto L = i->clone(); // clone program here
+                f = this->SourceFileMapThis::operator[](file) = L->createSourceFile(file, target);
+            }
+
+            // but maybe we create dummy file?
+            //auto L = e->second->clone(); // clone program here
+            //f = this->SourceFileMapThis::operator[](file) = L->createSourceFile(file, target);
         }
     }
     if (autodetect)
@@ -260,7 +274,10 @@ SourceFile &SourceFileStorage::operator[](path F)
     check_absolute(F);
     auto f = this->SourceFileMapThis::operator[](F);
     if (!f)
+    {
+        // here we may let other fibers progress until language is registered
         throw std::runtime_error("Empty source file: " + F.u8string());
+    }
     return *f;
 }
 
@@ -377,6 +394,13 @@ void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s
 SourceFile::SourceFile(const path &input, FileStorage &fs)
     : File(input, fs)
 {
+}
+
+String SourceFile::getObjectFilename(const TargetBase &t, const path &p)
+{
+    // target may push its files to outer packages,
+    // so files must be concatenated with its target name
+    return p.filename().u8string() + "." + sha256(t.pkg.target_name + p.u8string()).substr(0, 8);
 }
 
 NativeSourceFile::NativeSourceFile(const path &input, FileStorage &fs, const path &o, NativeCompiler *c)

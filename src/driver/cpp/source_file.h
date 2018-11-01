@@ -112,7 +112,11 @@ struct SW_DRIVER_CPP_API SourceFile : File
 {
     bool created = true;
     bool skip = false;
-    Strings args;
+    bool postponed = false; // remove later?
+
+    Strings args; // additional args to job, move to native?
+
+    String fancy_name; // for output
 
     SourceFile(const path &input, FileStorage &fs);
     SourceFile(const SourceFile &) = default;
@@ -121,6 +125,8 @@ struct SW_DRIVER_CPP_API SourceFile : File
     virtual std::shared_ptr<builder::Command> getCommand() const { return nullptr; }
     virtual Files getGeneratedDirs() const { return Files(); }
     virtual std::shared_ptr<SourceFile> clone() const { return std::make_shared<SourceFile>(*this); }
+
+    static String getObjectFilename(const TargetBase &t, const path &p);
 };
 
 struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile

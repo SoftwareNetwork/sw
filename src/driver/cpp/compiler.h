@@ -46,6 +46,9 @@ enum VisualStudioVersion
     VS15 = 150,
 };
 
+SW_DRIVER_CPP_API
+void detectNativeCompilers(struct Solution &s);
+
 struct SW_DRIVER_CPP_API ToolBase
 {
     ~ToolBase();
@@ -59,7 +62,7 @@ struct SW_DRIVER_CPP_API CompilerToolBase : ToolBase
     virtual ~CompilerToolBase() = default;
 
     // consider as static
-    virtual bool findToolchain(struct Solution &s) const = 0;
+    //virtual bool findToolchain(struct Solution &s) const = 0;
 
 protected:
     virtual Version gatherVersion(const path &program) const = 0;
@@ -113,7 +116,7 @@ struct SW_DRIVER_CPP_API VisualStudio : CompilerToolBase
 
     virtual ~VisualStudio() = default;
 
-    bool findToolchain(struct Solution &s) const override;
+    //bool findToolchain(struct Solution &s) const override;
 
 protected:
     Version gatherVersion(const path &program) const override;
@@ -182,7 +185,7 @@ struct SW_DRIVER_CPP_API VisualStudioCPPCompiler : CPPCompiler, VisualStudioComp
 
 struct SW_DRIVER_CPP_API Clang : CompilerToolBase
 {
-    bool findToolchain(struct Solution &s) const override;
+    //bool findToolchain(struct Solution &s) const override;
 
 protected:
     Version gatherVersion(const path &program) const override;
@@ -226,7 +229,7 @@ struct SW_DRIVER_CPP_API ClangCPPCompiler : ClangCompiler,
 
 struct SW_DRIVER_CPP_API ClangCl : Clang
 {
-    bool findToolchain(struct Solution &s) const override;
+    //bool findToolchain(struct Solution &s) const override;
 };
 
 struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
@@ -267,7 +270,7 @@ struct SW_DRIVER_CPP_API ClangClCPPCompiler : CPPCompiler, ClangClCompiler
 
 struct SW_DRIVER_CPP_API GNU : CompilerToolBase
 {
-    bool findToolchain(struct Solution &s) const override;
+    //bool findToolchain(struct Solution &s) const override;
 
 protected:
     Version gatherVersion(const path &program) const override;
@@ -465,9 +468,9 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
 
 struct SW_DRIVER_CPP_API NativeToolchain
 {
-    std::shared_ptr<ASMCompiler> ASMCompiler;
+    /*std::shared_ptr<ASMCompiler> ASMCompiler;
     std::shared_ptr<CCompiler> CCompiler;
-    std::shared_ptr<CPPCompiler> CPPCompiler;
+    std::shared_ptr<CPPCompiler> CPPCompiler;*/
     std::shared_ptr<NativeLinker> Librarian;
     std::shared_ptr<NativeLinker> Linker;
 
@@ -489,7 +492,7 @@ struct SW_DRIVER_CPP_API NativeToolchain
     bool AssignAll = false;
 
     // members
-    String getConfig() const;
+    //String getConfig() const;
 };
 
 }

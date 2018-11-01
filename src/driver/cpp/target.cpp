@@ -92,7 +92,7 @@ String toString(TargetType T)
     throw std::logic_error("unreachable code");
 }
 
-String TargetBase::SettingsX::getConfig(bool use_short_config) const
+String TargetBase::SettingsX::getConfig(const TargetBase *t, bool use_short_config) const
 {
     auto remove_last_dash = [](auto &c)
     {
@@ -105,7 +105,14 @@ String TargetBase::SettingsX::getConfig(bool use_short_config) const
     addConfigElement(c, toString(TargetOS.Type));
     addConfigElement(c, toString(TargetOS.Arch));
     boost::to_lower(c);
-    addConfigElement(c, Native.getConfig());
+
+    //addConfigElement(c, Native.getConfig());
+    addConfigElement(c, toString(Native.CompilerType));
+    throw std::logic_error("todo");
+    //addConfigElement(c, ((CPPLanguage*)t->getSolution()->languages.find(LanguageType::CPP)->second.get())->compiler->getVersion().toString(2));
+    addConfigElement(c, toString(Native.LibrariesType));
+    boost::to_lower(c);
+    addConfigElement(c, toString(Native.ConfigurationType));
 
     remove_last_dash(c);
 
@@ -383,7 +390,7 @@ void TargetBase::applyRootDirectory()
 
 String TargetBase::getConfig(bool use_short_config) const
 {
-    return Settings.getConfig(use_short_config);
+    return Settings.getConfig(this, use_short_config);
 }
 
 path TargetBase::getBaseDir() const
@@ -661,7 +668,7 @@ NativeExecutedTarget::NativeExecutedTarget()
 NativeExecutedTarget::NativeExecutedTarget(LanguageType L)
     : NativeTarget()
 {
-    addLanguage(L);
+    //addLanguage(L);
 }
 
 #define SW_IS_LOCAL_BINARY_DIR Local && !UseStorageBinaryDir && !pkg.getOverriddenDir()
@@ -683,7 +690,7 @@ void NativeExecutedTarget::init()
     fs::create_directories(BinaryDir);
     fs::create_directories(BinaryPrivateDir);
 
-    languages = solution->languages;
+    //languages = solution->languages;
 
     //fs::rename();
     //if (UnpackDirectory.empty())
@@ -694,11 +701,13 @@ void NativeExecutedTarget::init()
         v.target = this;
     });
 
-    addLanguage(LanguageType::ASM);
-    addLanguage(LanguageType::C);
-    addLanguage(LanguageType::CPP);
+    throw std::logic_error("todo");
 
-    for (auto &l : languages)
+    //addLanguage(LanguageType::ASM);
+    //addLanguage(LanguageType::C);
+    //addLanguage(LanguageType::CPP);
+
+    /*for (auto &l : languages)
     {
         if (l.first == LanguageType::C || l.first == LanguageType::CPP)
         {
@@ -728,7 +737,7 @@ void NativeExecutedTarget::init()
                 }
             }
         }
-    }
+    }*/
 
     addPackageDefinitions();
 }
@@ -1279,16 +1288,18 @@ Commands NativeExecutedTarget::getCommands() const
                 if (sd.size() < p.size() && p.find(sd) == 0)
                 {
                     String prefix;
-                    if (f->compiler == Settings.Native.CCompiler)
+                    /*if (f->compiler == Settings.Native.CCompiler)
                         prefix = "Building C object ";
                     else if (f->compiler == Settings.Native.CPPCompiler)
-                        prefix = "Building CXX object ";
+                        prefix = "Building CXX object ";*/
                     auto n = p.substr(sd.size());
                     if (!n.empty() && n[0] != '/')
                         n = "/" + n;
                     c->name = prefix + "[" + pkg.target_name + "]" + n;
                 }
             }
+            if (!do_not_mangle_object_names && !f->fancy_name.empty())
+                c->name = f->fancy_name;
             cmds.insert(c);
         }
     }
@@ -1768,7 +1779,8 @@ bool NativeExecutedTarget::prepare()
                 auto ba = ((NativeSourceFile*)f.second.get())->BuildAs;
                 if (ba != NativeSourceFile::BasedOnExtension)
                 {
-                    f.second = languages[(LanguageType)ba]->clone()->createSourceFile(f.first, this);
+                    throw std::logic_error("todo");
+                    //f.second = languages[(LanguageType)ba]->clone()->createSourceFile(f.first, this);
                 }
             }
         }
@@ -2026,6 +2038,26 @@ bool NativeExecutedTarget::prepare()
     RETURN_PREPARE_PASS;
     case 5:
     {
+        // check postponed files first
+        for (auto &[p, f] : *this)
+        {
+            if (!f->postponed)
+                continue;
+
+            auto ext = p.extension().string();
+            auto e = target->extensions.find(ext);
+            if (e == target->extensions.end())
+                throw std::logic_error("Bad extension - someone removed it?");
+
+            auto &program = e->second;
+            auto i = target->getLanguage(program);
+            if (!i)
+                throw std::logic_error("User defined program not registered");
+
+            auto L = i->clone(); // clone program here
+            f = this->SourceFileMapThis::operator[](p) = L->createSourceFile(p, this);
+        }
+
         auto files = gatherSourceFiles();
 
         // copy headers to install dir

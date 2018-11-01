@@ -50,7 +50,7 @@ bool UnresolvedPackage::canBe(const PackageId &id) const
     return ppath == id.ppath && range.hasVersion(id.version);
 }
 
-ExtendedPackageData UnresolvedPackage::resolve()
+ExtendedPackageData UnresolvedPackage::resolve() const
 {
     return resolve_dependencies({*this})[*this];
 

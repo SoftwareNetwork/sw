@@ -93,7 +93,7 @@ struct ExecutionPlan
                 i++;
                 f.wait();
             }
-            if (stopped)
+            if (stopped || fs2.empty())
                 break;
         }
 
@@ -106,6 +106,9 @@ struct ExecutionPlan
 
         if (!eptrs.empty())
             throw ExceptionVector(eptrs);
+
+        if (i != sz)
+            throw std::runtime_error("Executor did not perform all steps");
     }
 
     StringHashMap<int> gatherStrings() const

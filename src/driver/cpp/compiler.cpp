@@ -7,6 +7,7 @@
 #include <compiler.h>
 
 #include <solution.h>
+#include <compiler_helpers.h>
 
 #include <primitives/sw/settings.h>
 
@@ -22,14 +23,16 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler");
 
-#define MAKE_COMMAND(t)             \
+#define SW_MAKE_COMPILER_COMMAND(t)             \
     auto c = std::make_shared<t>(); \
     c->fs = fs
 
-#define MAKE_COMMAND_WITH_FILE(t) \
-    MAKE_COMMAND(driver::cpp::t)
+#define SW_MAKE_COMPILER_COMMAND_WITH_FILE(t) \
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::t)
 
 static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
+
+#define CPP_EXTS ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
 
 namespace sw
 {
@@ -109,32 +112,7 @@ path getWindowsKit10Dir(Solution &s, const path &d)
     return last_dir;
 }
 
-template <class T>
-static void getCommandLineOptions(driver::cpp::Command *c, const CommandLineOptions<T> &t, const String prefix = "", bool end_options = false)
-{
-    for (auto &o : t)
-    {
-        if (o.manual_handling)
-            continue;
-        if (end_options != o.place_at_the_end)
-            continue;
-        auto cmd = o.getCommandLine(c);
-        for (auto &c2 : cmd)
-        {
-            if (!prefix.empty())
-                c->args.push_back(prefix);
-            c->args.push_back(c2);
-        }
-    }
-}
-
-ToolBase::~ToolBase()
-{
-    //delete cmd;
-}
-
-// try to find ALL VS instances on the system
-bool VisualStudio::findToolchain(Solution &s) const
+void detectNativeCompilers(struct Solution &s)
 {
     //TODO: find preview versions also
 
@@ -157,9 +135,7 @@ bool VisualStudio::findToolchain(Solution &s) const
         return false;
     };
 
-#if !defined(CPPAN_OS_WINDOWS)
-    return false;
-#else
+#if defined(_WIN32)
     cmVSSetupAPIHelper h;
     if (h.IsVS2017Installed())
     {
@@ -198,7 +174,7 @@ bool VisualStudio::findToolchain(Solution &s) const
 
     // we do not look for older compilers like vc7.1 and vc98
     if (VSVersion == VisualStudioVersion::Unspecified)
-        return false;
+        return;
 
     if (VSVersion == VisualStudioVersion::VS15)
         root = root / "Tools\\MSVC" / boost::trim_copy(read_file(root / "Auxiliary\\Build\\Microsoft.VCToolsVersion.default.txt"));
@@ -284,25 +260,34 @@ bool VisualStudio::findToolchain(Solution &s) const
 
     // create programs
 
-    auto Linker = std::make_shared<VisualStudioLinker>();
-    Linker->Type = LinkerType::MSVC;
-    Linker->file = compiler.parent_path() / "link.exe";
-    Linker->vs_version = VSVersion;
-    if (s.Settings.TargetOS.Arch == ArchType::x86)
-        Linker->Machine = vs::MachineType::X86;
-    *Linker = LOpts;
+    {
+        auto Linker = std::make_shared<VisualStudioLinker>();
+        Linker->Type = LinkerType::MSVC;
+        Linker->file = compiler.parent_path() / "link.exe";
+        Linker->vs_version = VSVersion;
+        if (s.Settings.TargetOS.Arch == ArchType::x86)
+            Linker->Machine = vs::MachineType::X86;
+        *Linker = LOpts;
+        s.registerProgram("com.Microsoft.VisualStudio.VC.link", Linker);
 
-    auto Librarian = std::make_shared<VisualStudioLibrarian>();
-    Librarian->Type = LinkerType::MSVC;
-    Librarian->file = compiler.parent_path() / "lib.exe";
-    Librarian->vs_version = VSVersion;
-    if (s.Settings.TargetOS.Arch == ArchType::x86)
-        Librarian->Machine = vs::MachineType::X86;
-    *Librarian = LOpts;
+        auto Librarian = std::make_shared<VisualStudioLibrarian>();
+        Librarian->Type = LinkerType::MSVC;
+        Librarian->file = compiler.parent_path() / "lib.exe";
+        Librarian->vs_version = VSVersion;
+        if (s.Settings.TargetOS.Arch == ArchType::x86)
+            Librarian->Machine = vs::MachineType::X86;
+        *Librarian = LOpts;
+        s.registerProgram("com.Microsoft.VisualStudio.VC.lib", Linker);
+    }
 
     // ASM
     {
-        auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
+        auto L = std::make_shared<ASMLanguage>();
+        //L->Type = LanguageType::ASM;
+        L->CompiledExtensions = { ".asm" };
+        //s.registerLanguage(L);
+
+        //auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
         auto C = std::make_shared<VisualStudioASMCompiler>();
         C->Type = CompilerType::MSVC;
         C->file = s.Settings.HostOS.Arch == ArchType::x86_64 ?
@@ -311,169 +296,43 @@ bool VisualStudio::findToolchain(Solution &s) const
         C->vs_version = VSVersion;
         *C = COpts;
         L->compiler = C;
-        L->librarian = Librarian;
-        L->linker = Linker;
+        s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.ml", C, L);
     }
 
     // C
     {
-        auto L = (CLanguage*)s.languages[LanguageType::C].get();
+        auto L = std::make_shared<CLanguage>();
+        //L->Type = LanguageType::C;
+        L->CompiledExtensions = { ".c" };
+        //s.registerLanguage(L);
+
+        //auto L = (CLanguage*)s.languages[LanguageType::C].get();
         auto C = std::make_shared<VisualStudioCCompiler>();
         C->Type = CompilerType::MSVC;
         C->file = compiler;
         C->vs_version = VSVersion;
         *C = COpts;
         L->compiler = C;
-        L->librarian = Librarian;
-        L->linker = Linker;
+        s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.cl", C, L);
     }
 
     // CPP
     {
-        auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
+        auto L = std::make_shared<CPPLanguage>();
+        //L->Type = LanguageType::C;
+        L->CompiledExtensions = { CPP_EXTS };
+        //s.registerLanguage(L);
+
+        //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
         auto C = std::make_shared<VisualStudioCPPCompiler>();
         C->Type = CompilerType::MSVC;
         C->file = compiler;
         C->vs_version = VSVersion;
         *C = COpts;
         L->compiler = C;
-        L->librarian = Librarian;
-        L->linker = Linker;
     }
 
-    return true;
-#endif
-}
-
-#if defined(CPPAN_OS_WINDOWS)
-bool Clang::findToolchain(struct Solution &s) const
-{
-    // implemented for windows only now
-
-    path root;
-    Version V;
-    auto VSVersion = VisualStudioVersion::Unspecified;
-
-    auto find_comn_tools = [&root, &VSVersion](auto v)
-    {
-        auto n = std::to_string(v);
-        auto ver = "VS"s + n + "COMNTOOLS";
-        auto e = getenv(ver.c_str());
-        if (e)
-        {
-            root = e;
-            root /= "../../VC/";
-            VSVersion = v;
-            return true;
-        }
-        return false;
-    };
-
-    cmVSSetupAPIHelper h;
-    if (h.IsVS2017Installed())
-    {
-        root = h.chosenInstanceInfo.VSInstallLocation;
-        root /= "VC";
-        VSVersion = VisualStudioVersion::VS15;
-
-        // can be split by points
-        static std::wregex r(L"(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
-        std::wsmatch m;
-        if (!std::regex_match(h.chosenInstanceInfo.Version, m, r))
-            throw std::runtime_error("Cannot match vs version regex");
-        if (m[5].matched)
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
-        else
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
-    }
-    else if (!find_comn_tools(VisualStudioVersion::VS15) && !findDefaultVS2017(root, VSVersion))
-    {
-        // find older versions
-        static const auto vers =
-        {
-            VisualStudioVersion::VS14,
-            VisualStudioVersion::VS12,
-            VisualStudioVersion::VS11,
-            VisualStudioVersion::VS10,
-            VisualStudioVersion::VS9,
-            VisualStudioVersion::VS8,
-        };
-        for (auto n : vers)
-        {
-            if (find_comn_tools(n))
-                break;
-        }
-    }
-
-    // we do not look for older compilers like vc7.1 and vc98
-    if (VSVersion == VisualStudioVersion::Unspecified)
-        return false;
-
-    if (VSVersion == VisualStudioVersion::VS15)
-        root = root / "Tools/MSVC" / boost::trim_copy(read_file(root / "Auxiliary/Build/Microsoft.VCToolsVersion.default.txt"));
-
-    auto ToolSet = getVsToolset(VSVersion);
-    auto compiler = root / "bin";
-    NativeCompilerOptions COpts;
-    COpts.System.IncludeDirectories.insert(root / "include");
-    COpts.System.IncludeDirectories.insert(root / "ATLMFC/include"); // also add
-
-    struct DirSuffix
-    {
-        std::string include;
-        std::string lib;
-    } dir_suffix;
-
-    // get suffix
-    switch (s.Settings.HostOS.Arch)
-    {
-    case ArchType::x86_64:
-        dir_suffix.include = "x64";
-        dir_suffix.lib = "x64";
-        break;
-    case ArchType::x86:
-        dir_suffix.include = "x86";
-        dir_suffix.lib = "x86";
-        break;
-        // arm
-        //dir_suffix.include = "arm";
-        //dir_suffix.lib = "arm";
-        // arm64 !
-        //dir_suffix.include = "arm";
-        //dir_suffix.lib = "arm64";
-    default:
-        assert(false && "Unknown arch");
-    }
-
-    NativeLinkerOptions LOpts;
-
-    // continue
-    if (VSVersion == VisualStudioVersion::VS15)
-    {
-        // always use host tools and host arch for building config files
-        compiler /= "Host" + dir_suffix.lib + "/" + dir_suffix.lib + "/cl.exe";
-        LOpts.System.LinkDirectories.insert(root / ("lib/" + dir_suffix.lib));
-        LOpts.System.LinkDirectories.insert(root / ("ATLMFC/lib/" + dir_suffix.lib)); // also add
-    }
-    else
-    {
-        // but we won't detect host&arch stuff on older versions
-        //compiler /= "cl.exe";
-        throw std::runtime_error("compiler.cpp not implemented");
-    }
-
-    // add kits include dirs
-    auto windows_kit_dir = getWindowsKitDir();
-    for (auto &i : fs::directory_iterator(getWindowsKit10Dir(s, windows_kit_dir / "include")))
-    {
-        if (fs::is_directory(i))
-            COpts.System.IncludeDirectories.insert(i);
-    }
-    for (auto &i : fs::directory_iterator(getWindowsKit10Dir(s, windows_kit_dir / "lib")))
-    {
-        if (fs::is_directory(i))
-            LOpts.System.LinkDirectories.insert(i / path(dir_suffix.lib));
-    }
+    // clang
 
     // create programs
     const path base_llvm_path = "c:\\Program Files\\LLVM";
@@ -491,326 +350,92 @@ bool Clang::findToolchain(struct Solution &s) const
     Librarian->vs_version = VSVersion;
     *Librarian = LOpts;*/
 
-    auto Linker = std::make_shared<VisualStudioLinker>();
-    Linker->Type = LinkerType::MSVC;
-    Linker->file = compiler.parent_path() / "link.exe";
-    Linker->vs_version = VSVersion;
-    if (s.Settings.TargetOS.Arch == ArchType::x86)
-        Linker->Machine = vs::MachineType::X86;
-    *Linker = LOpts;
-
-    auto Librarian = std::make_shared<VisualStudioLibrarian>();
-    Librarian->Type = LinkerType::MSVC;
-    Librarian->file = compiler.parent_path() / "lib.exe";
-    Librarian->vs_version = VSVersion;
-    if (s.Settings.TargetOS.Arch == ArchType::x86)
-        Librarian->Machine = vs::MachineType::X86;
-    *Librarian = LOpts;
-
     // C
     {
-        auto L = (CLanguage*)s.languages[LanguageType::C].get();
+        auto L = std::make_shared<CLanguage>();
+        //L->Type = LanguageType::C;
+        L->CompiledExtensions = { ".c" };
+        //s.registerLanguage(L);
+
+        //auto L = (CLanguage*)s.languages[LanguageType::C].get();
         auto C = std::make_shared<ClangCCompiler>();
         C->Type = CompilerType::Clang;
         C->file = bin_llvm_path / "clang.exe";
-        COpts.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
-        COpts.System.CompileOptions.push_back("-Wno-everything");
-        *C = COpts;
+        auto COpts2 = COpts;
+        COpts2.System.IncludeDirectories.erase(root / "include");
+        COpts2.System.IncludeDirectories.erase(root / "ATLMFC\\include"); // also add
+        COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        COpts2.System.CompileOptions.push_back("-Wno-everything");
+        *C = COpts2;
         L->compiler = C;
-        L->librarian = Librarian;
-        L->linker = Linker;
+        s.registerProgramAndLanguage("org.LLVM.clang", C, L);
     }
 
     // CPP
     {
-        auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
+        auto L = std::make_shared<CPPLanguage>();
+        //L->Type = LanguageType::C;
+        L->CompiledExtensions = { CPP_EXTS };
+        //s.registerLanguage(L);
+
+        //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
         auto C = std::make_shared<ClangCPPCompiler>();
         C->Type = CompilerType::Clang;
         C->file = bin_llvm_path / "clang++.exe";
-        *C = COpts;
+        auto COpts2 = COpts;
+        COpts2.System.IncludeDirectories.erase(root / "include");
+        COpts2.System.IncludeDirectories.erase(root / "ATLMFC\\include"); // also add
+        *C = COpts2;
         L->compiler = C;
-        L->librarian = Librarian;
-        L->linker = Linker;
+        s.registerProgramAndLanguage("org.LLVM.clangpp", C, L);
     }
 
-    return true;
-}
-#else
-bool Clang::findToolchain(struct Solution &s) const
-{
-    path p;
-
-    NativeLinkerOptions LOpts;
-    LOpts.System.LinkDirectories.insert("/lib");
-    LOpts.System.LinkDirectories.insert("/lib/x86_64-linux-gnu");
-    LOpts.System.LinkLibraries.push_back("stdc++");
-    LOpts.System.LinkLibraries.push_back("stdc++fs");
-    LOpts.System.LinkLibraries.push_back("pthread");
-    LOpts.System.LinkLibraries.push_back("dl");
-    LOpts.System.LinkLibraries.push_back("m");
-
-    auto resolve = [](const path &p)
-    {
-        if (do_not_resolve_compiler)
-            return p;
-        return primitives::resolve_executable(p);
-    };
-
-    p = resolve("ar");
-    if (p.empty())
-        throw std::runtime_error("cannot find ar");
-
-    auto Librarian = std::make_shared<GNULibrarian>();
-    Librarian->Type = LinkerType::GNU;
-    Librarian->file = p;
-    *Librarian = LOpts;
-
-    //p = resolve("ld.gold");
-    p = resolve("clang-7");
-    if (p.empty())
-        throw std::runtime_error("cannot find clang");
-
-    auto Linker = std::make_shared<GNULinker>();
-    Linker->Type = LinkerType::GNU;
-    Linker->file = p;
-    *Linker = LOpts;
-
-    NativeCompilerOptions COpts;
-    //COpts.System.IncludeDirectories.insert("/usr/include");
-    //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
-
-    // ASM
-    {
-        p = resolve("as");
-        auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
-        auto C = std::make_shared<GNUASMCompiler>();
-        C->Type = CompilerType::GNU;
-        C->file = p;
-        *C = COpts;
-        L->compiler = C;
-        L->librarian = Librarian;
-        L->linker = Linker;
-    }
-
-    p = resolve("clang-7");
-    if (!p.empty())
-    {
-        // C
-        {
-            auto L = (CLanguage*)s.languages[LanguageType::C].get();
-            auto C = std::make_shared<GNUCCompiler>();
-            C->Type = CompilerType::GNU;
-            C->file = p;
-            *C = COpts;
-            L->compiler = C;
-            L->librarian = Librarian;
-            L->linker = Linker;
-        }
-    }
-
-    p = resolve("clang++-7");
-    if (!p.empty())
-    {
-        // CPP
-        {
-            auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
-            auto C = std::make_shared<GNUCPPCompiler>();
-            C->Type = CompilerType::GNU;
-            C->file = p;
-            *C = COpts;
-            L->compiler = C;
-            L->librarian = Librarian;
-            L->linker = Linker;
-        }
-    }
-
-    // check gcc-N, N=4..8
-    return true;
-}
-#endif
-
-bool ClangCl::findToolchain(struct Solution &s) const
-{
-    // implemented for windows only now
-
-    path root;
-    Version V;
-    auto VSVersion = VisualStudioVersion::Unspecified;
-
-    auto find_comn_tools = [&root, &VSVersion](auto v)
-    {
-        auto n = std::to_string(v);
-        auto ver = "VS"s + n + "COMNTOOLS";
-        auto e = getenv(ver.c_str());
-        if (e)
-        {
-            root = e;
-            root /= "../../VC/";
-            VSVersion = v;
-            return true;
-        }
-        return false;
-    };
-
-#if !defined(CPPAN_OS_WINDOWS)
-    return false;
-#else
-    cmVSSetupAPIHelper h;
-    if (h.IsVS2017Installed())
-    {
-        root = h.chosenInstanceInfo.VSInstallLocation;
-        root /= "VC";
-        VSVersion = VisualStudioVersion::VS15;
-
-        // can be split by points
-        static std::wregex r(L"(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
-        std::wsmatch m;
-        if (!std::regex_match(h.chosenInstanceInfo.Version, m, r))
-            throw std::runtime_error("Cannot match vs version regex");
-        if (m[5].matched)
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
-        else
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
-    }
-    else if (!find_comn_tools(VisualStudioVersion::VS15) && !findDefaultVS2017(root, VSVersion))
-    {
-        // find older versions
-        static const auto vers =
-        {
-            VisualStudioVersion::VS14,
-            VisualStudioVersion::VS12,
-            VisualStudioVersion::VS11,
-            VisualStudioVersion::VS10,
-            VisualStudioVersion::VS9,
-            VisualStudioVersion::VS8,
-        };
-        for (auto n : vers)
-        {
-            if (find_comn_tools(n))
-                break;
-        }
-    }
-
-    // we do not look for older compilers like vc7.1 and vc98
-    if (VSVersion == VisualStudioVersion::Unspecified)
-        return false;
-
-    if (VSVersion == VisualStudioVersion::VS15)
-        root = root / "Tools/MSVC" / boost::trim_copy(read_file(root / "Auxiliary/Build/Microsoft.VCToolsVersion.default.txt"));
-
-    auto ToolSet = getVsToolset(VSVersion);
-    auto compiler = root / "bin";
-    NativeCompilerOptions COpts;
-    // do not add on clang-cl!
-    //COpts.System.IncludeDirectories.insert(root / "include");
-    //COpts.System.IncludeDirectories.insert(root / "ATLMFC/include"); // also add
-
-    struct DirSuffix
-    {
-        std::string include;
-        std::string lib;
-    } dir_suffix;
-
-    // get suffix
-    switch (s.Settings.HostOS.Arch)
-    {
-    case ArchType::x86_64:
-        dir_suffix.include = "x64";
-        dir_suffix.lib = "x64";
-        break;
-    case ArchType::x86:
-        dir_suffix.include = "x86";
-        dir_suffix.lib = "x86";
-        break;
-        // arm
-        //dir_suffix.include = "arm";
-        //dir_suffix.lib = "arm";
-        // arm64 !
-        //dir_suffix.include = "arm";
-        //dir_suffix.lib = "arm64";
-    default:
-        assert(false && "Unknown arch");
-    }
-
-    NativeLinkerOptions LOpts;
-
-    // continue
-    if (VSVersion == VisualStudioVersion::VS15)
-    {
-        // always use host tools and host arch for building config files
-        compiler /= "Host" + dir_suffix.lib + "/" + dir_suffix.lib + "/cl.exe";
-        LOpts.System.LinkDirectories.insert(root / ("lib/" + dir_suffix.lib));
-        LOpts.System.LinkDirectories.insert(root / ("ATLMFC/lib/" + dir_suffix.lib)); // also add
-    }
-    else
-    {
-        // but we won't detect host&arch stuff on older versions
-        compiler /= "cl.exe";
-    }
-
-    // add kits include dirs
-    auto windows_kit_dir = getWindowsKitDir();
-    for (auto &i : fs::directory_iterator(getWindowsKit10Dir(s, windows_kit_dir / "include")))
-    {
-        if (fs::is_directory(i))
-            COpts.System.IncludeDirectories.insert(i);
-    }
-    for (auto &i : fs::directory_iterator(getWindowsKit10Dir(s, windows_kit_dir / "lib")))
-    {
-        if (fs::is_directory(i))
-            LOpts.System.LinkDirectories.insert(i / path(dir_suffix.lib));
-    }
-
-    // create programs
-
-    auto Linker = std::make_shared<VisualStudioLinker>();
-    Linker->Type = LinkerType::MSVC;
-    Linker->file = compiler.parent_path() / "link.exe";
-    Linker->vs_version = VSVersion;
-    *Linker = LOpts;
-
-    auto Librarian = std::make_shared<VisualStudioLibrarian>();
-    Librarian->Type = LinkerType::MSVC;
-    Librarian->file = compiler.parent_path() / "lib.exe";
-    Librarian->vs_version = VSVersion;
-    *Librarian = LOpts;
-
-    // create programs
-    const path base_llvm_path = "c:\\Program Files\\LLVM";
-    const path bin_llvm_path = base_llvm_path / "bin";
+    // clang-cl
 
     // C
     {
-        auto L = (CLanguage*)s.languages[LanguageType::C].get();
+        auto L = std::make_shared<CLanguage>();
+        //L->Type = LanguageType::C;
+        L->CompiledExtensions = { ".c" };
+        //s.registerLanguage(L);
+
+        //auto L = (CLanguage*)s.languages[LanguageType::C].get();
         auto C = std::make_shared<ClangClCCompiler>();
         C->Type = CompilerType::ClangCl;
         C->file = bin_llvm_path / "clang-cl.exe";
-        COpts.System.IncludeDirectories.insert(bin_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
-        COpts.System.CompileOptions.push_back("-Wno-everything");
-        *C = COpts;
+        auto COpts2 = COpts;
+        COpts2.System.IncludeDirectories.erase(root / "include");
+        COpts2.System.IncludeDirectories.erase(root / "ATLMFC\\include"); // also add
+        COpts2.System.IncludeDirectories.insert(bin_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        COpts2.System.CompileOptions.push_back("-Wno-everything");
+        *C = COpts2;
         L->compiler = C;
-        L->librarian = Librarian;
-        L->linker = Linker;
+        s.registerProgramAndLanguage("org.LLVM.clang_cl", C, L);
     }
 
     // CPP
     {
-        auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
+        auto L = std::make_shared<CPPLanguage>();
+        //L->Type = LanguageType::C;
+        L->CompiledExtensions = { CPP_EXTS };
+        //s.registerLanguage(L);
+
+        //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
         auto C = std::make_shared<ClangClCPPCompiler>();
         C->Type = CompilerType::ClangCl;
         C->file = bin_llvm_path / "clang-cl.exe";
-        *C = COpts;
+        auto COpts2 = COpts;
+        COpts2.System.IncludeDirectories.erase(root / "include");
+        COpts2.System.IncludeDirectories.erase(root / "ATLMFC\\include"); // also add
+        COpts2.System.IncludeDirectories.insert(bin_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        COpts2.System.CompileOptions.push_back("-Wno-everything");
+        *C = COpts2;
         L->compiler = C;
-        L->librarian = Librarian;
-        L->linker = Linker;
+        s.registerProgramAndLanguage("org.LLVM.clang_clpp", C, L);
     }
+#else
+    // gnu
 
-    return true;
-#endif
-}
-
-bool GNU::findToolchain(struct Solution &s) const
-{
     path p;
 
     NativeLinkerOptions LOpts;
@@ -837,6 +462,7 @@ bool GNU::findToolchain(struct Solution &s) const
     Librarian->Type = LinkerType::GNU;
     Librarian->file = p;
     *Librarian = LOpts;
+    s.registerProgram("org.gnu.binutils.ar", Librarian);
 
     //p = resolve("ld.gold");
     p = resolve("gcc-8");
@@ -844,9 +470,11 @@ bool GNU::findToolchain(struct Solution &s) const
         throw std::runtime_error("cannot find gcc");
 
     auto Linker = std::make_shared<GNULinker>();
+
     Linker->Type = LinkerType::GNU;
     Linker->file = p;
     *Linker = LOpts;
+    s.registerProgram("org.gnu.gcc.ld", Linker);
 
     NativeCompilerOptions COpts;
     //COpts.System.IncludeDirectories.insert("/usr/include");
@@ -855,14 +483,19 @@ bool GNU::findToolchain(struct Solution &s) const
     // ASM
     {
         p = resolve("as");
-        auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
+
+        auto L = std::make_shared<ASMLanguage>();
+        //L->Type = LanguageType::ASM;
+        L->CompiledExtensions = { ".s", ".S" };
+        //s.registerLanguage(L);
+
+        //auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
         auto C = std::make_shared<GNUASMCompiler>();
         C->Type = CompilerType::GNU;
         C->file = p;
         *C = COpts;
         L->compiler = C;
-        L->librarian = Librarian;
-        L->linker = Linker;
+        s.registerProgram("org.gnu.gcc.as", C);
     }
 
     p = resolve("gcc-8");
@@ -870,14 +503,18 @@ bool GNU::findToolchain(struct Solution &s) const
     {
         // C
         {
-            auto L = (CLanguage*)s.languages[LanguageType::C].get();
+            auto L = std::make_shared<CLanguage>();
+            //L->Type = LanguageType::C;
+            L->CompiledExtensions = { ".c" };
+            //s.registerLanguage(L);
+
+            //auto L = (CLanguage*)s.languages[LanguageType::C].get();
             auto C = std::make_shared<GNUCCompiler>();
             C->Type = CompilerType::GNU;
             C->file = p;
             *C = COpts;
             L->compiler = C;
-            L->librarian = Librarian;
-            L->linker = Linker;
+            s.registerProgram("org.gnu.gcc.gcc", C);
         }
     }
 
@@ -886,19 +523,85 @@ bool GNU::findToolchain(struct Solution &s) const
     {
         // CPP
         {
-            auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
+            auto L = std::make_shared<CPPLanguage>();
+            //L->Type = LanguageType::C;
+            L->CompiledExtensions = { CPP_EXTS };
+            //s.registerLanguage(L);
+
+            //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
             auto C = std::make_shared<GNUCPPCompiler>();
             C->Type = CompilerType::GNU;
             C->file = p;
             *C = COpts;
             L->compiler = C;
-            L->librarian = Librarian;
-            L->linker = Linker;
+            s.registerProgram("org.gnu.gcc.gpp", C);
         }
     }
 
-    // check gcc-N, N=4..8
-    return true;
+    // clang
+    {
+        //p = resolve("ld.gold");
+        p = resolve("clang-7");
+        if (p.empty())
+            throw std::runtime_error("cannot find clang");
+
+        auto Linker = std::make_shared<GNULinker>();
+
+        Linker->Type = LinkerType::GNU;
+        Linker->file = p;
+        *Linker = LOpts;
+        s.registerProgram("org.LLVM.clang.ld", C);
+
+        NativeCompilerOptions COpts;
+        //COpts.System.IncludeDirectories.insert("/usr/include");
+        //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
+
+        p = resolve("clang-7");
+        if (!p.empty())
+        {
+            // C
+            {
+                auto L = std::make_shared<CLanguage>();
+                //L->Type = LanguageType::C;
+                L->CompiledExtensions = { ".c" };
+                //s.registerLanguage(L);
+
+                //auto L = (CLanguage*)s.languages[LanguageType::C].get();
+                auto C = std::make_shared<GNUCCompiler>();
+                C->Type = CompilerType::GNU;
+                C->file = p;
+                *C = COpts;
+                L->compiler = C;
+                s.registerProgram("org.LLVM.clang", C);
+            }
+        }
+
+        p = resolve("clang++-7");
+        if (!p.empty())
+        {
+            // CPP
+            {
+                auto L = std::make_shared<CPPLanguage>();
+                //L->Type = LanguageType::C;
+                L->CompiledExtensions = { CPP_EXTS };
+                //s.registerLanguage(L);
+
+                //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
+                auto C = std::make_shared<GNUCPPCompiler>();
+                C->Type = CompilerType::GNU;
+                C->file = p;
+                *C = COpts;
+                L->compiler = C;
+                s.registerProgram("org.LLVM.clangpp", C);
+            }
+        }
+    }
+#endif
+}
+
+ToolBase::~ToolBase()
+{
+    //delete cmd;
 }
 
 Version VisualStudio::gatherVersion(const path &program) const
@@ -914,7 +617,7 @@ Version VisualStudio::gatherVersion(const path &program) const
     {
         static std::regex r("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
         std::smatch m;
-        if (std::regex_search(c.err.text, m, r))
+        if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
         {
             if (m[5].matched)
                 V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
@@ -930,7 +633,7 @@ std::shared_ptr<builder::Command> VisualStudioASMCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(VSCommand);
+    SW_MAKE_COMPILER_COMMAND_WITH_FILE(VSCommand);
 
     if (file.filename() == "ml64.exe")
         ((VisualStudioASMCompiler*)this)->SafeSEH = false;
@@ -984,7 +687,7 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(VSCommand);
+    SW_MAKE_COMPILER_COMMAND_WITH_FILE(VSCommand);
 
     if (InputFile)
     {
@@ -1082,7 +785,7 @@ std::shared_ptr<builder::Command> ClangCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(GNUCommand);
+    SW_MAKE_COMPILER_COMMAND_WITH_FILE(GNUCommand);
 
     if (InputFile)
     {
@@ -1145,7 +848,7 @@ std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(VSCommand);
+    SW_MAKE_COMPILER_COMMAND_WITH_FILE(VSCommand);
 
     if (InputFile)
     {
@@ -1238,7 +941,7 @@ std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(GNUCommand);
+    SW_MAKE_COMPILER_COMMAND_WITH_FILE(GNUCommand);
 
     if (InputFile)
     {
@@ -1294,7 +997,7 @@ std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
     if (cmd)
         return cmd;
 
-    MAKE_COMMAND_WITH_FILE(GNUCommand);
+    SW_MAKE_COMPILER_COMMAND_WITH_FILE(GNUCommand);
 
     if (InputFile)
     {
@@ -1434,7 +1137,7 @@ std::shared_ptr<builder::Command> VisualStudioLibraryTool::getCommand() const
     //LinkDirectories() = gatherLinkDirectories();
     //LinkLibraries() = gatherLinkLibraries();
 
-    MAKE_COMMAND(driver::cpp::Command);
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
 
     //c->out.capture = true;
     c->base = clone();
@@ -1574,7 +1277,7 @@ std::shared_ptr<builder::Command> GNULinker::getCommand() const
     //LinkDirectories() = gatherLinkDirectories();
     ((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
 
-    MAKE_COMMAND(driver::cpp::Command);
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
 
     //c->out.capture = true;
     c->base = clone();
@@ -1660,7 +1363,7 @@ std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
     //LinkDirectories() = gatherLinkDirectories();
     //LinkLibraries() = gatherLinkLibraries();
 
-    MAKE_COMMAND(driver::cpp::Command);
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
 
     //c->out.capture = true;
     c->base = clone();
@@ -1684,7 +1387,7 @@ std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
     return cmd = c;
 }
 
-String NativeToolchain::getConfig() const
+/*String NativeToolchain::getConfig() const
 {
     String c;
 
@@ -1695,6 +1398,6 @@ String NativeToolchain::getConfig() const
     addConfigElement(c, toString(ConfigurationType));
 
     return c;
-}
+}*/
 
 }

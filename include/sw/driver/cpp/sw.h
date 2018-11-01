@@ -10,6 +10,7 @@
 #include <solution.h>
 #include <suffix.h>
 #include <jumppad.h>
+#include <compiler_helpers.h>
 
 // manager stuff
 #include <resolver.h>

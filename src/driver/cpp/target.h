@@ -160,7 +160,7 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
         // other langs?
         // make polymorphic?
 
-        String getConfig(bool use_short_config = false) const;
+        String getConfig(const TargetBase *t, bool use_short_config = false) const;
     };
     SettingsX Settings; // current configuration
 
