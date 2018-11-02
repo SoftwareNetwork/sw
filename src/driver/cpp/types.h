@@ -30,6 +30,8 @@ enum class CompilerType
     MSVC,
     // more
 
+    Other, // custom compilers
+
     // aliases
     GCC = GNU,
 };

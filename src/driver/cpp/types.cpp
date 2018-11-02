@@ -81,6 +81,7 @@ String toString(CompilerType Type)
         CASE(ClangCl);
         CASE(GNU);
         CASE(MSVC);
+        CASE(Other);
     default:
         throw std::logic_error("todo: implement compiler type");
     }

@@ -108,8 +108,10 @@ String TargetBase::SettingsX::getConfig(const TargetBase *t, bool use_short_conf
 
     //addConfigElement(c, Native.getConfig());
     addConfigElement(c, toString(Native.CompilerType));
-    throw std::logic_error("todo");
-    //addConfigElement(c, ((CPPLanguage*)t->getSolution()->languages.find(LanguageType::CPP)->second.get())->compiler->getVersion().toString(2));
+    auto i = t->getSolution()->extensions.find(".cpp");
+    if (i == t->getSolution()->extensions.end())
+        throw std::logic_error("no cpp compiler");
+    addConfigElement(c, i->second.version.toString(2));
     addConfigElement(c, toString(Native.LibrariesType));
     boost::to_lower(c);
     addConfigElement(c, toString(Native.ConfigurationType));
@@ -700,12 +702,16 @@ void NativeExecutedTarget::init()
     {
         v.target = this;
     });
+    //LanguageStorage::target = this;
 
-    throw std::logic_error("todo");
+    //throw std::logic_error("todo");
 
     //addLanguage(LanguageType::ASM);
     //addLanguage(LanguageType::C);
     //addLanguage(LanguageType::CPP);
+
+    Librarian = std::dynamic_pointer_cast<NativeLinker>(Settings.Native.Librarian->clone());
+    Linker = std::dynamic_pointer_cast<NativeLinker>(Settings.Native.Linker->clone());
 
     /*for (auto &l : languages)
     {
@@ -1011,8 +1017,10 @@ NativeExecutedTarget::SourceFilesSet NativeExecutedTarget::gatherSourceFiles() c
     SourceFilesSet files;
     for (auto &f : *this)
     {
-        if (f.second->created && !f.second->skip/* && !isRemoved(f.first)*/)
+        if (f.second->isActive())
+        {
             files.insert((NativeSourceFile*)f.second.get());
+        }
     }
     return files;
 }
@@ -1037,6 +1045,45 @@ Files NativeExecutedTarget::gatherObjectFilesWithoutLibraries() const
 #endif
     }
     return obj;
+}
+
+bool NativeExecutedTarget::hasSourceFiles() const
+{
+    return std::any_of(this->begin(), this->end(), [](const auto &f)
+    {
+        return f.second->isActive();
+    }) || std::any_of(this->begin(), this->end(), [](const auto &f)
+    {
+        return f.first.extension() == ".obj";
+    });
+}
+
+void NativeExecutedTarget::resolvePostponedSourceFiles()
+{
+    // gather exts
+    StringSet exts;
+    for (auto &[f, sf] : *this)
+    {
+        if (!sf->isActive() || !sf->postponed)
+            continue;
+        //exts.insert(sf->file.extension().string());
+
+        *this += sf->file;
+    }
+
+    // activate langs
+    for (auto &e : exts)
+    {
+    }
+
+    // apply langs
+    /*for (auto &[f, sf] : *this)
+    {
+        if (!sf->isActive() || !sf->postponed)
+            continue;
+        sf->file.extension();
+        solution->getTarget();
+    }*/
 }
 
 Files NativeExecutedTarget::gatherObjectFiles() const
@@ -1112,7 +1159,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
     // before added 'create' pch
     for (auto &f : gatherSourceFiles())
     {
-        if (auto sf = f->as<CPPSourceFile>())
+        if (auto sf = f->as<NativeSourceFile>())
         {
             if (auto c = sf->compiler->as<VisualStudioCompiler>())
             {
@@ -1149,7 +1196,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
 
     *this += pch;
 
-    if (auto sf = ((*this)[pch]).as<CPPSourceFile>())
+    if (auto sf = ((*this)[pch]).as<NativeSourceFile>())
     {
         sf->setOutputFile(obj_fn);
         if (auto c = sf->compiler->as<VisualStudioCompiler>())
@@ -1724,7 +1771,7 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "codegen.emoji");
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "avutil");
 
     /*{
         auto is_changed = [this](const path &p)
@@ -1767,14 +1814,15 @@ bool NativeExecutedTarget::prepare()
         // always add bdir to include dirs
         Public.IncludeDirectories.insert(BinaryDir);
 
-        HeaderOnly = gatherObjectFilesWithoutLibraries().empty();
+        resolvePostponedSourceFiles();
+        HeaderOnly = !hasSourceFiles();
 
         if (PackageDefinitions)
             addPackageDefinitions(true);
 
         for (auto &f : *this)
         {
-            if (f.second->created && !f.second->skip/* && !isRemoved(f.first)*/)
+            if (f.second->isActive())
             {
                 auto ba = ((NativeSourceFile*)f.second.get())->BuildAs;
                 if (ba != NativeSourceFile::BasedOnExtension)
@@ -2108,7 +2156,7 @@ bool NativeExecutedTarget::prepare()
                     c->Optimizations().SmallCode = true;
                     break;
                 }
-                if (auto c = f->compiler->as<VisualStudioCPPCompiler>())
+                if (auto c = f->compiler->as<VisualStudioCompiler>())
                     c->CPPStandard = CPPVersion;
 
                 if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
@@ -2120,14 +2168,14 @@ bool NativeExecutedTarget::prepare()
             }
             else if (auto c = f->compiler->as<ClangCompiler>())
             {
-                if (auto c = f->compiler->as<ClangCPPCompiler>())
+                //if (auto c = f->compiler->as<ClangCPPCompiler>())
                     c->CPPStandard = CPPVersion;
             }
             else if (auto c = f->compiler->as<ClangClCompiler>())
             {
                 if (Settings.Native.ConfigurationType == ConfigurationType::Debug)
                     c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-                if (auto c = f->compiler->as<ClangClCPPCompiler>())
+                //if (auto c = f->compiler->as<ClangClCPPCompiler>())
                     c->CPPStandard = CPPVersion;
 
                 if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
@@ -2151,7 +2199,7 @@ bool NativeExecutedTarget::prepare()
                 case ConfigurationType::MinimalSizeRelease:
                     break;
                 }
-                if (auto c = f->compiler->as<GNUCPPCompiler>())
+                //if (auto c = f->compiler->as<GNUCPPCompiler>())
                     c->CPPStandard = CPPVersion;
             }
         }

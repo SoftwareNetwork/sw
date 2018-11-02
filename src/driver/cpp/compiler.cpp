@@ -277,12 +277,12 @@ void detectNativeCompilers(struct Solution &s)
         if (s.Settings.TargetOS.Arch == ArchType::x86)
             Librarian->Machine = vs::MachineType::X86;
         *Librarian = LOpts;
-        s.registerProgram("com.Microsoft.VisualStudio.VC.lib", Linker);
+        s.registerProgram("com.Microsoft.VisualStudio.VC.lib", Librarian);
     }
 
     // ASM
     {
-        auto L = std::make_shared<ASMLanguage>();
+        auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::ASM;
         L->CompiledExtensions = { ".asm" };
         //s.registerLanguage(L);
@@ -301,35 +301,19 @@ void detectNativeCompilers(struct Solution &s)
 
     // C
     {
-        auto L = std::make_shared<CLanguage>();
+        auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
-        L->CompiledExtensions = { ".c" };
+        L->CompiledExtensions = { ".c", CPP_EXTS };
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
-        auto C = std::make_shared<VisualStudioCCompiler>();
+        auto C = std::make_shared<VisualStudioCompiler>();
         C->Type = CompilerType::MSVC;
         C->file = compiler;
         C->vs_version = VSVersion;
         *C = COpts;
         L->compiler = C;
         s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.cl", C, L);
-    }
-
-    // CPP
-    {
-        auto L = std::make_shared<CPPLanguage>();
-        //L->Type = LanguageType::C;
-        L->CompiledExtensions = { CPP_EXTS };
-        //s.registerLanguage(L);
-
-        //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
-        auto C = std::make_shared<VisualStudioCPPCompiler>();
-        C->Type = CompilerType::MSVC;
-        C->file = compiler;
-        C->vs_version = VSVersion;
-        *C = COpts;
-        L->compiler = C;
     }
 
     // clang
@@ -352,13 +336,13 @@ void detectNativeCompilers(struct Solution &s)
 
     // C
     {
-        auto L = std::make_shared<CLanguage>();
+        auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
         L->CompiledExtensions = { ".c" };
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
-        auto C = std::make_shared<ClangCCompiler>();
+        auto C = std::make_shared<ClangCompiler>();
         C->Type = CompilerType::Clang;
         C->file = bin_llvm_path / "clang.exe";
         auto COpts2 = COpts;
@@ -371,36 +355,17 @@ void detectNativeCompilers(struct Solution &s)
         s.registerProgramAndLanguage("org.LLVM.clang", C, L);
     }
 
-    // CPP
-    {
-        auto L = std::make_shared<CPPLanguage>();
-        //L->Type = LanguageType::C;
-        L->CompiledExtensions = { CPP_EXTS };
-        //s.registerLanguage(L);
-
-        //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
-        auto C = std::make_shared<ClangCPPCompiler>();
-        C->Type = CompilerType::Clang;
-        C->file = bin_llvm_path / "clang++.exe";
-        auto COpts2 = COpts;
-        COpts2.System.IncludeDirectories.erase(root / "include");
-        COpts2.System.IncludeDirectories.erase(root / "ATLMFC\\include"); // also add
-        *C = COpts2;
-        L->compiler = C;
-        s.registerProgramAndLanguage("org.LLVM.clangpp", C, L);
-    }
-
     // clang-cl
 
     // C
     {
-        auto L = std::make_shared<CLanguage>();
+        auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
         L->CompiledExtensions = { ".c" };
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
-        auto C = std::make_shared<ClangClCCompiler>();
+        auto C = std::make_shared<ClangClCompiler>();
         C->Type = CompilerType::ClangCl;
         C->file = bin_llvm_path / "clang-cl.exe";
         auto COpts2 = COpts;
@@ -411,27 +376,6 @@ void detectNativeCompilers(struct Solution &s)
         *C = COpts2;
         L->compiler = C;
         s.registerProgramAndLanguage("org.LLVM.clang_cl", C, L);
-    }
-
-    // CPP
-    {
-        auto L = std::make_shared<CPPLanguage>();
-        //L->Type = LanguageType::C;
-        L->CompiledExtensions = { CPP_EXTS };
-        //s.registerLanguage(L);
-
-        //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
-        auto C = std::make_shared<ClangClCPPCompiler>();
-        C->Type = CompilerType::ClangCl;
-        C->file = bin_llvm_path / "clang-cl.exe";
-        auto COpts2 = COpts;
-        COpts2.System.IncludeDirectories.erase(root / "include");
-        COpts2.System.IncludeDirectories.erase(root / "ATLMFC\\include"); // also add
-        COpts2.System.IncludeDirectories.insert(bin_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
-        COpts2.System.CompileOptions.push_back("-Wno-everything");
-        *C = COpts2;
-        L->compiler = C;
-        s.registerProgramAndLanguage("org.LLVM.clang_clpp", C, L);
     }
 #else
     // gnu
@@ -740,7 +684,18 @@ Files VisualStudioCompiler::getGeneratedDirs() const
     return f;
 }
 
-std::shared_ptr<Program> VisualStudioCCompiler::clone() const
+std::shared_ptr<Program> VisualStudioCompiler::clone() const
+{
+    return std::make_shared<VisualStudioCompiler>(*this);
+}
+
+void VisualStudioCompiler::setSourceFile(const path &input_file, path &output_file)
+{
+    InputFile = input_file.u8string();
+    VisualStudioCompiler::setOutputFile(output_file);
+}
+
+/*std::shared_ptr<Program> VisualStudioCCompiler::clone() const
 {
     return std::make_shared<VisualStudioCCompiler>(*this);
 }
@@ -760,7 +715,7 @@ void VisualStudioCPPCompiler::setSourceFile(const path &input_file, path &output
 {
     CPPSourceFile = input_file.u8string();
     VisualStudioCompiler::setOutputFile(output_file);
-}
+}*/
 
 Version Clang::gatherVersion(const path &program) const
 {
@@ -821,7 +776,18 @@ Files ClangCompiler::getGeneratedDirs() const
     return f;
 }
 
-std::shared_ptr<Program> ClangCCompiler::clone() const
+std::shared_ptr<Program> ClangCompiler::clone() const
+{
+    return std::make_shared<ClangCompiler>(*this);
+}
+
+void ClangCompiler::setSourceFile(const path &input_file, path &output_file)
+{
+    InputFile = input_file.u8string();
+    setOutputFile(output_file);
+}
+
+/*std::shared_ptr<Program> ClangCCompiler::clone() const
 {
     return std::make_shared<ClangCCompiler>(*this);
 }
@@ -841,7 +807,7 @@ void ClangCPPCompiler::setSourceFile(const path &input_file, path &output_file)
 {
     InputFile = input_file;
     ClangCompiler::setOutputFile(output_file);
-}
+}*/
 
 std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
 {
@@ -896,7 +862,18 @@ Files ClangClCompiler::getGeneratedDirs() const
     return f;
 }
 
-std::shared_ptr<Program> ClangClCCompiler::clone() const
+std::shared_ptr<Program> ClangClCompiler::clone() const
+{
+    return std::make_shared<ClangClCompiler>(*this);
+}
+
+void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
+{
+    InputFile = input_file.u8string();
+    setOutputFile(output_file);
+}
+
+/*std::shared_ptr<Program> ClangClCCompiler::clone() const
 {
     return std::make_shared<ClangClCCompiler>(*this);
 }
@@ -916,7 +893,7 @@ void ClangClCPPCompiler::setSourceFile(const path &input_file, path &output_file
 {
     CPPSourceFile = input_file.u8string();
     setOutputFile(output_file);
-}
+}*/
 
 Version GNU::gatherVersion(const path &program) const
 {
@@ -936,7 +913,7 @@ Version GNU::gatherVersion(const path &program) const
     return v;
 }
 
-std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
+/*std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
 {
     if (cmd)
         return cmd;
@@ -990,7 +967,7 @@ void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
 std::shared_ptr<Program> ClangASMCompiler::clone() const
 {
     return std::make_shared<ClangASMCompiler>(*this);
-}
+}*/
 
 std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
 {
@@ -1034,7 +1011,7 @@ Files GNUCompiler::getGeneratedDirs() const
     return f;
 }
 
-std::shared_ptr<Program> GNUCCompiler::clone() const
+/*std::shared_ptr<Program> GNUCCompiler::clone() const
 {
     return std::make_shared<GNUCCompiler>(*this);
 }
@@ -1054,7 +1031,7 @@ void GNUCPPCompiler::setSourceFile(const path &input_file, path &output_file)
 {
     InputFile = input_file;
     GNUCompiler::setOutputFile(output_file);
-}
+}*/
 
 FilesOrdered NativeLinker::gatherLinkDirectories() const
 {

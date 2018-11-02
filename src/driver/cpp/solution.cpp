@@ -973,10 +973,6 @@ void Build::setSettings()
     /*Settings.Native.ASMCompiler->fs = fs;
     Settings.Native.CCompiler->fs = fs;
     Settings.Native.CPPCompiler->fs = fs;*/
-    /*if (Settings.Native.Librarian)
-        Settings.Native.Librarian->fs = fs;
-    if (Settings.Native.Linker)
-        Settings.Native.Linker->fs = fs;*/
 
 /*#define SET_FS(type)                                                             \
     ((type##Language *)languages[LanguageType::type].get())->compiler->fs = fs;  \
@@ -994,18 +990,44 @@ void Build::setSettings()
 
     for (auto &[pp, m] : registered_programs)
         for (auto &[v,p] : m)
-        p->fs = fs;
+            p->fs = fs;
+
+    if (Settings.Native.Librarian)
+        Settings.Native.Librarian->fs = fs;
+    if (Settings.Native.Linker)
+        Settings.Native.Linker->fs = fs;
 }
 
 void Build::findCompiler()
 {
     detectNativeCompilers(*this);
 
-    auto activate_or_throw = [this](const std::vector<PackagePath> &a, const auto &e)
+    auto activate_or_throw = [this](const std::vector<std::pair<PackagePath, CompilerType>> &a, const auto &e)
     {
         if (!std::any_of(a.begin(), a.end(), [this](const auto &v)
         {
-            return activateLanguage(v);
+            auto r = activateLanguage(v.first);
+            if (r)
+                this->Settings.Native.CompilerType = v.second;
+            return r;
+        }))
+            throw std::runtime_error(e);
+    };
+
+    auto activate_linker_or_throw = [this](const std::vector<std::tuple<PackagePath /* lib */, PackagePath /* link */, LinkerType>> &a, const auto &e)
+    {
+        if (!std::any_of(a.begin(), a.end(), [this](const auto &v)
+        {
+            auto lib = getProgram(std::get<0>(v));
+            auto link = getProgram(std::get<1>(v));
+            auto r = lib && link;
+            if (r)
+            {
+                this->Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(lib->clone());
+                this->Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(link->clone());
+                this->Settings.Native.LinkerType = std::get<2>(v);
+            }
+            return r;
         }))
             throw std::runtime_error(e);
     };
@@ -1015,7 +1037,7 @@ void Build::findCompiler()
     case CompilerType::MSVC:
     {
         activate_or_throw(
-            { "com.Microsoft.VisualStudio.VC.cl" },
+            { { "com.Microsoft.VisualStudio.VC.cl",CompilerType::MSVC } },
             "Cannot find msvc toolchain");
         break;
     }
@@ -1050,9 +1072,9 @@ void Build::findCompiler()
         {
         case OSType::Windows:
             activate_or_throw({
-                "com.Microsoft.VisualStudio.VC.cl",
-                "org.LLVM.clang",
-                "org.LLVM.clangcl",
+                {"com.Microsoft.VisualStudio.VC.cl",CompilerType::MSVC},
+                {"org.LLVM.clang",CompilerType::Clang},
+                {"org.LLVM.clangcl",CompilerType::ClangCl},
                 }, "Try to add more compilers");
             break;
         case OSType::Linux:
@@ -1079,6 +1101,11 @@ void Build::findCompiler()
             break;
         }
     }
+
+    activate_linker_or_throw({
+        {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
+        {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
+        }, "Try to add more linkers");
 
     setSettings();
 }
@@ -1208,7 +1235,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         lib += fn;
         write_file_if_different(getImportPchFile(), cppan_cpp);
         lib.addPrecompiledHeader("sw/driver/cpp/sw.h", getImportPchFile());
-        if (auto s = lib[getImportPchFile()].template as<CPPSourceFile>())
+        if (auto s = lib[getImportPchFile()].template as<NativeSourceFile>())
         {
             if (auto C = s->compiler->template as<VisualStudioCompiler>())
             {
@@ -1222,7 +1249,7 @@ FilesMap Build::build_configs_separate(const Files &files)
 
         for (auto &h : headers)
         {
-            if (auto sf = lib[fn].template as<CPPSourceFile>())
+            if (auto sf = lib[fn].template as<NativeSourceFile>())
             {
                 if (auto c = sf->compiler->template as<VisualStudioCompiler>())
                 {
@@ -1406,7 +1433,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     // after files
     write_file_if_different(getImportPchFile(), cppan_cpp);
     lib.addPrecompiledHeader("sw/driver/cpp/sw.h", getImportPchFile());
-    if (auto s = lib[getImportPchFile()].template as<CPPSourceFile>())
+    if (auto s = lib[getImportPchFile()].template as<NativeSourceFile>())
     {
         if (auto C = s->compiler->template as<VisualStudioCompiler>())
         {
@@ -1419,7 +1446,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     for (auto &fn : files)
     {
         auto[headers, udeps] = getFileDependencies(fn);
-        if (auto sf = lib[fn].template as<CPPSourceFile>())
+        if (auto sf = lib[fn].template as<NativeSourceFile>())
         {
             if (many_files)
             {

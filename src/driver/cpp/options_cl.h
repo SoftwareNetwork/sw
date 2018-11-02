@@ -13,6 +13,7 @@
 
 #define DECLARE_OPTION_SPECIALIZATION(t) \
     template <>                          \
+    SW_DRIVER_CPP_API                    \
     Strings CommandLineOption<t>::getCommandLineImpl(builder::Command *c) const
 
 #define DEFINE_OPTION_SPECIALIZATION_DUMMY(t) \
@@ -37,7 +38,7 @@ struct CommandLineOption;
 template <class T>
 using CommandLineFunctionType = Strings(*)(const CommandLineOption<T> &, builder::Command *);
 
-struct SW_DRIVER_CPP_API CommandLineOptionBase
+struct CommandLineOptionBase
 {
     virtual ~CommandLineOptionBase() = default;
 
@@ -151,7 +152,7 @@ struct CommandLineFunction : CommandLineOptionBaseValue
 // make sure we have same size on all CommandLineOption objects
 // to be able to iterate over them, so keep T types under pointers
 template <class T>
-struct SW_DRIVER_CPP_API CommandLineOption1 : CommandLineOptionBase
+struct CommandLineOption1 : CommandLineOptionBase
 {
     String name;
 protected:
@@ -338,7 +339,7 @@ private:
 };
 
 template <class T>
-struct SW_DRIVER_CPP_API CommandLineOption : CommandLineOption1<T>
+struct CommandLineOption : CommandLineOption1<T>
 {
     using CommandLineOption1<T>::CommandLineOption1;
     using CommandLineOption1<T>::operator=;
@@ -367,19 +368,19 @@ private:
     virtual Strings getCommandLineImpl(builder::Command *c = nullptr) const override;
 };
 
-struct SW_DRIVER_CPP_API CommandLineOptionsBegin
+struct CommandLineOptionsBegin
 {
     CommandLineOption1<bool> __compiler_options_begin;
 };
 
-struct SW_DRIVER_CPP_API CommandLineOptionsEnd
+struct CommandLineOptionsEnd
 {
     CommandLineOption1<bool> __compiler_options_end;
 };
 
 #pragma warning(disable: 4584)
 template <class ... Types>
-struct SW_DRIVER_CPP_API CommandLineOptions : private CommandLineOptionsBegin,
+struct CommandLineOptions : private CommandLineOptionsBegin,
     Types...,
     private CommandLineOptionsEnd
 {

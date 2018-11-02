@@ -384,13 +384,20 @@ NativeLinkerOptions &NativeLinkerOptions::operator+=(const Package &t)
 DependencyPtr NativeLinkerOptions::operator+(const NativeTarget &t)
 {
     auto d = std::make_shared<Dependency>(&t);
-    Dependencies.insert(d);
+    add(d);
     return d;
 }
 
 DependencyPtr NativeLinkerOptions::operator+(const DependencyPtr &d)
 {
-    Dependencies.insert(d);
+    add(d);
+    return d;
+}
+
+DependencyPtr NativeLinkerOptions::operator+(const PackageId &pkg)
+{
+    auto d = std::make_shared<Dependency>(pkg);
+    add(d);
     return d;
 }
 
@@ -438,6 +445,16 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
     {
         (*i)->Disabled = true;
     }
+}
+
+void NativeLinkerOptions::add(const PackageId &p)
+{
+    add(std::make_shared<Dependency>(p));
+}
+
+void NativeLinkerOptions::remove(const PackageId &p)
+{
+    remove(std::make_shared<Dependency>(p));
 }
 
 void NativeOptions::merge(const NativeOptions &o, const GroupSettings &s)

@@ -288,6 +288,7 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 private:
     std::map<int, LazyCallback> callbacks;
     std::vector<LazyAction> actions;
+    bool dependency_set = false;
 };
 
 struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command

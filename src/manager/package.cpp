@@ -40,6 +40,11 @@ UnresolvedPackage::UnresolvedPackage(const PackagePath &p, const VersionRange &r
     range = r;
 }
 
+UnresolvedPackage::UnresolvedPackage(const PackageId &pkg)
+    : UnresolvedPackage(pkg.ppath, pkg.version)
+{
+}
+
 String UnresolvedPackage::toString() const
 {
     return ppath.toString() + "-" + range.toString();

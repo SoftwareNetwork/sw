@@ -70,6 +70,10 @@
     ASSIGN_OP(-=, remove, t)  \
     ASSIGN_OP(>>, remove, t)
 
+#define ASSIGN_TYPES_AND_EXCLUDE(t) \
+    ASSIGN_TYPES(t)                 \
+    ASSIGN_OP(^=, remove_exclude, t)
+
 namespace sw
 {
 
@@ -578,13 +582,14 @@ struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
 private:
     ASSIGN_WRAPPER(add, TargetOptions);
     ASSIGN_WRAPPER(remove, TargetOptions);
+    ASSIGN_WRAPPER(remove_exclude, TargetOptions);
 
 public:
     // source files
     //ASSIGN_TYPES(String)
-    ASSIGN_TYPES(path)
-    ASSIGN_TYPES(Files)
-    ASSIGN_TYPES(FileRegex)
+    ASSIGN_TYPES_AND_EXCLUDE(path)
+    ASSIGN_TYPES_AND_EXCLUDE(Files)
+    ASSIGN_TYPES_AND_EXCLUDE(FileRegex)
 
     // compiler options
     ASSIGN_TYPES(Definition)
@@ -596,6 +601,7 @@ public:
     ASSIGN_TYPES(LinkLibrary)
 
     //
+    ASSIGN_TYPES(PackageId)
     ASSIGN_TYPES(DependencyPtr)
 
     //
@@ -720,6 +726,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void setChecks(const String &name);
     void findSources() override;
     SourceFilesSet gatherSourceFiles() const;
+    bool hasSourceFiles() const;
     Files gatherAllFiles() const;
     Files gatherIncludeDirectories() const;
     NativeLinker *getSelectedTool() const;
@@ -777,6 +784,7 @@ private:
     void autoDetectOptions();
     path getOutputFileName(const path &root) const;
     Commands getGeneratedCommands() const;
+    void resolvePostponedSourceFiles();
 };
 
 /**

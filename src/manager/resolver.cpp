@@ -330,10 +330,11 @@ void Resolver::download_and_unpack()
         //    verify(d, fn);
 
         // remove existing version dir
-        //cleanPackages(d.target_name);
+        // cleanPackages(d.target_name);
 
         // remove all old possible created files, not more needed files etc.
         fs::remove_all(d.getDir());
+        fs::remove_all(d.getDirObj()); // manually delete obj dir
 
         LOG_INFO(logger, "Unpacking  : " << d.target_name << "...");
         Files files;

@@ -92,7 +92,7 @@ void build(Solution &s)
     embed(cpp_driver, cpp_driver.SourceDir / "src/driver/cpp/inserts/inserts.cpp.in");
     gen_flex_bison(cpp_driver, "src/driver/cpp/bazel/lexer.ll", "src/driver/cpp/bazel/grammar.yy");
 #ifdef _MSC_VER
-    if (auto sf = cpp_driver["src/driver/cpp/solution.cpp"].template as<CPPSourceFile>())
+    if (auto sf = cpp_driver["src/driver/cpp/solution.cpp"].template as<NativeSourceFile>())
         if (auto c = sf->compiler->template as<VisualStudioCompiler>())
             c->BigObj = true;
 #endif

@@ -258,6 +258,9 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
     void add(const DependencyPtr &t);
     void remove(const DependencyPtr &t);
 
+    void add(const PackageId &t);
+    void remove(const PackageId &t);
+
     void merge(const NativeLinkerOptions &o, const GroupSettings &s = GroupSettings());
     void addEverything(builder::Command &c) const;
 
@@ -269,6 +272,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
 
     DependencyPtr operator+(const NativeTarget &t);
     DependencyPtr operator+(const DependencyPtr &d);
+    DependencyPtr operator+(const PackageId &d);
 };
 
 using UnresolvedDependenciesType = std::unordered_map<UnresolvedPackage, DependencyPtr>;

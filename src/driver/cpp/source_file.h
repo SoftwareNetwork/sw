@@ -68,6 +68,12 @@ public:
     void remove(const FileRegex &r);
     void remove(const path &root, const FileRegex &r);
 
+    //void remove_exclude(const String &file) { remove(path(file)); }
+    void remove_exclude(const path &file);
+    void remove_exclude(const Files &files);
+    void remove_exclude(const FileRegex &r);
+    void remove_exclude(const path &root, const FileRegex &r);
+
     size_t sizeKnown() const;
     size_t sizeSkipped() const;
 
@@ -76,6 +82,7 @@ public:
     void startAssignOperation();
 
     SourceFile &operator[](path F);
+    SourceFileMap<SourceFile> operator[](const FileRegex &r) const;
 
     // for option groups
     void merge(const SourceFileStorage &v, const GroupSettings &s = GroupSettings());
@@ -102,7 +109,14 @@ private:
     void add_unchecked(const path &f, bool skip = false);
     void add1(const FileRegex &r);
     void remove1(const FileRegex &r);
+    void remove_full1(const FileRegex &r);
     void op(const FileRegex &r, Op f);
+
+    SourceFileMap<SourceFile> enumerate_files(const FileRegex &r) const;
+
+    Program *findProgramByExtension(const String &e) const;
+    optional<PackageId> findPackageIdByExtension(const String &e) const;
+    Language *findLanguageByPackageId(const PackageId &) const;
 };
 
 // other files can be source files, but not compiled files
@@ -125,6 +139,8 @@ struct SW_DRIVER_CPP_API SourceFile : File
     virtual std::shared_ptr<builder::Command> getCommand() const { return nullptr; }
     virtual Files getGeneratedDirs() const { return Files(); }
     virtual std::shared_ptr<SourceFile> clone() const { return std::make_shared<SourceFile>(*this); }
+
+    bool isActive() const;
 
     static String getObjectFilename(const TargetBase &t, const path &p);
 };
@@ -154,7 +170,7 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     void setOutputFile(const path &output);
 };
 
-struct SW_DRIVER_CPP_API ASMSourceFile : NativeSourceFile
+/*struct SW_DRIVER_CPP_API ASMSourceFile : NativeSourceFile
 {
     ASMSourceFile(const path &input, FileStorage &fs, const path &output, ASMCompiler *c);
 
@@ -179,7 +195,7 @@ struct SW_DRIVER_CPP_API CPPSourceFile : NativeSourceFile
     virtual ~CPPSourceFile() = default;
 
     virtual std::shared_ptr<SourceFile> clone() const override;
-};
+};*/
 
 struct PrecompiledHeader
 {

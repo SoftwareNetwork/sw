@@ -88,6 +88,49 @@ SourceFileStorage::~SourceFileStorage()
 {
 }
 
+Program *SourceFileStorage::findProgramByExtension(const String &ext) const
+{
+    auto pi = findPackageIdByExtension(ext);
+    if (!pi)
+        return nullptr;
+    auto &pkg = pi.value();
+    auto p = target->registered_programs.find(pkg.ppath);
+    if (p == target->registered_programs.end())
+    {
+        p = target->getSolution()->registered_programs.find(ext);
+        if (p == target->getSolution()->registered_programs.end())
+            return nullptr;
+    }
+    auto v = p->second.find(pkg.version);
+    if (v == p->second.end())
+        return nullptr;
+    return v->second.get();
+}
+
+optional<PackageId> SourceFileStorage::findPackageIdByExtension(const String &ext) const
+{
+    auto e = target->findPackageIdByExtension(ext);
+    if (!e)
+    {
+        e = target->getSolution()->findPackageIdByExtension(ext);
+        if (!e)
+            return {};
+    }
+    return e;
+}
+
+Language *SourceFileStorage::findLanguageByPackageId(const PackageId &p) const
+{
+    auto i = target->getLanguage(p);
+    if (!i)
+    {
+        i = target->getSolution()->getLanguage(p);
+        if (!i)
+            return nullptr;
+    }
+    return i.get();
+}
+
 void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 {
     auto file = file_in;
@@ -97,8 +140,8 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     auto f = this->SourceFileMapThis::operator[](file);
 
     auto ext = file.extension().string();
-    auto e = target->extensions.find(ext);
-    if (e == target->extensions.end() ||
+    auto p = findPackageIdByExtension(ext);
+    if (!p ||
         (((NativeExecutedTarget*)target)->HeaderOnly && ((NativeExecutedTarget*)target)->HeaderOnly.value()))
     {
         f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file, *target->getSolution()->fs);
@@ -106,10 +149,10 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     }
     else
     {
-        if (!f)
+        if (!f || f->postponed)
         {
-            auto &program = e->second;
-            auto i = target->getLanguage(program);
+            auto program = p.value();
+            auto i = findLanguageByPackageId(program);
             if (!i)
             {
                 f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file, *target->getSolution()->fs);
@@ -186,9 +229,9 @@ void SourceFileStorage::remove(const path &file)
     add_unchecked(file, true);
 }
 
-void SourceFileStorage::remove(const Files &Files)
+void SourceFileStorage::remove(const Files &files)
 {
-    for (auto &f : Files)
+    for (auto &f : files)
         remove(f);
 }
 
@@ -218,6 +261,29 @@ void SourceFileStorage::remove(const path &root, const FileRegex &r)
     remove1(r2);
 }
 
+void SourceFileStorage::remove_exclude(const path &file)
+{
+    remove_full(file);
+}
+
+void SourceFileStorage::remove_exclude(const Files &files)
+{
+    for (auto &f : files)
+        remove_full(f);
+}
+
+void SourceFileStorage::remove_exclude(const FileRegex &r)
+{
+    remove_exclude(target->SourceDir, r);
+}
+
+void SourceFileStorage::remove_exclude(const path &root, const FileRegex &r)
+{
+    auto r2 = r;
+    r2.dir = root / r2.dir;
+    remove_full1(r2);
+}
+
 void SourceFileStorage::remove_full(const path &file)
 {
     auto F = file;
@@ -233,6 +299,11 @@ void SourceFileStorage::add1(const FileRegex &r)
 void SourceFileStorage::remove1(const FileRegex &r)
 {
     op(r, &SourceFileStorage::remove);
+}
+
+void SourceFileStorage::remove_full1(const FileRegex &r)
+{
+    op(r, &SourceFileStorage::remove_full);
 }
 
 void SourceFileStorage::op(const FileRegex &r, Op func)
@@ -279,6 +350,11 @@ SourceFile &SourceFileStorage::operator[](path F)
         throw std::runtime_error("Empty source file: " + F.u8string());
     }
     return *f;
+}
+
+SourceFileMap<SourceFile> SourceFileStorage::operator[](const FileRegex &r) const
+{
+    return enumerate_files(r);
 }
 
 void SourceFileStorage::resolve()
@@ -391,6 +467,27 @@ void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s
     //this->SourceFileMapThis::operator[](s.first) = s.second->clone();
 }
 
+SourceFileMap<SourceFile>
+SourceFileStorage::enumerate_files(const FileRegex &r) const
+{
+    auto dir = r.dir;
+    if (!dir.is_absolute())
+        dir = target->SourceDir / dir;
+    auto root_s = normalize_path(dir);
+    if (root_s.back() == '/')
+        root_s.resize(root_s.size() - 1);
+
+    std::unordered_map<path, std::shared_ptr<SourceFile>> files;
+    for (auto &[p, f] : *this)
+    {
+        auto s = normalize_path(p);
+        s = s.substr(root_s.size() + 1); // + 1 to skip first slash
+        if (std::regex_match(s, r.r))
+            files[p] = f;
+    }
+    return files;
+}
+
 SourceFile::SourceFile(const path &input, FileStorage &fs)
     : File(input, fs)
 {
@@ -403,11 +500,17 @@ String SourceFile::getObjectFilename(const TargetBase &t, const path &p)
     return p.filename().u8string() + "." + sha256(t.pkg.target_name + p.u8string()).substr(0, 8);
 }
 
+bool SourceFile::isActive() const
+{
+    return created && !skip /* && !isRemoved(f.first)*/;
+}
+
 NativeSourceFile::NativeSourceFile(const path &input, FileStorage &fs, const path &o, NativeCompiler *c)
     : SourceFile(input, fs)
     , compiler(c ? std::static_pointer_cast<NativeCompiler>(c->clone()) : nullptr)
     , output(o, fs)
 {
+    compiler->setSourceFile(input, output.file);
 }
 
 NativeSourceFile::NativeSourceFile(const NativeSourceFile &rhs)
@@ -446,7 +549,7 @@ Files NativeSourceFile::getGeneratedDirs() const
     return compiler->getGeneratedDirs();
 }
 
-ASMSourceFile::ASMSourceFile(const path &input, FileStorage &fs, const path &o, ASMCompiler *c)
+/*ASMSourceFile::ASMSourceFile(const path &input, FileStorage &fs, const path &o, ASMCompiler *c)
     : NativeSourceFile(input, fs, o, c)
 {
     compiler->setSourceFile(file, output.file);
@@ -477,6 +580,6 @@ CPPSourceFile::CPPSourceFile(const path &input, FileStorage &fs, const path &o, 
 std::shared_ptr<SourceFile> CPPSourceFile::clone() const
 {
     return std::make_shared<CPPSourceFile>(*this);
-}
+}*/
 
 }

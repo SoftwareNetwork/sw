@@ -33,6 +33,7 @@ struct SW_MANAGER_API UnresolvedPackage
     UnresolvedPackage() = default;
     UnresolvedPackage(const PackagePath &p, const VersionRange &r);
     UnresolvedPackage(const String &s);
+    UnresolvedPackage(const PackageId &);
 
     String toString() const;
     bool canBe(const PackageId &id) const;

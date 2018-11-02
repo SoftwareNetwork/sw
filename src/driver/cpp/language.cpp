@@ -68,13 +68,35 @@ LanguageStorage::~LanguageStorage()
 
 void LanguageStorage::registerProgramAndLanguage(const PackagePath &pp, const std::shared_ptr<Program> &p, const LanguagePtr &L)
 {
-    registerProgram(pp, p);
-    registerLanguage({ pp, p->getVersion() }, L);
+    registerProgramAndLanguage({ pp, p->getVersion() }, p, L);
+}
+
+void LanguageStorage::registerProgramAndLanguage(const PackageId &pkg, const std::shared_ptr<Program> &p, const LanguagePtr &L)
+{
+    registerProgram(pkg, p);
+    registerLanguage(pkg, L);
+}
+
+void LanguageStorage::registerProgramAndLanguage(const TargetBase &t, const std::shared_ptr<Program> &p, const LanguagePtr &L)
+{
+    registerProgramAndLanguage(t.pkg, p, L);
 }
 
 void LanguageStorage::registerProgram(const PackagePath &pp, const std::shared_ptr<Program> &p)
 {
-    registered_programs[pp][p->getVersion()] = p;
+    registerProgram({ pp,p->getVersion() }, p);
+}
+
+void LanguageStorage::registerProgram(const PackageId &pp, const std::shared_ptr<Program> &p)
+{
+    auto &p2 = registered_programs[pp.ppath][pp.version] = p;
+    if (auto t = dynamic_cast<TargetBase*>(this); t)
+        p2->fs = t->getSolution()->fs;
+}
+
+void LanguageStorage::registerProgram(const TargetBase &t, const std::shared_ptr<Program> &p)
+{
+    registerProgram(t.pkg, p);
 }
 
 /*void LanguageStorage::registerLanguage(const LanguagePtr &L)
@@ -100,6 +122,10 @@ void LanguageStorage::setExtensionLanguage(const String &ext, const UnresolvedPa
 {
     // late resolve version
     extensions[ext] = p.resolve();
+
+    // add a dependency to current target
+    if (auto t = dynamic_cast<NativeExecutedTarget*>(this); t)
+        (*t + extensions[ext])->Dummy = true;
 }
 
 void LanguageStorage::setExtensionLanguage(const String &ext, const LanguagePtr &L)
@@ -113,11 +139,19 @@ void LanguageStorage::setExtensionLanguage(const String &ext, const LanguagePtr 
         pkg = "loc.sw.lang" + std::to_string((size_t)L.get());
     }
     user_defined_languages[pkg.ppath][pkg.version] = L;
+
+    // add a dependency to current target
+    if (auto t = dynamic_cast<NativeExecutedTarget*>(this); t)
+        (*t + extensions[ext])->Dummy = true;
 }
 
 void LanguageStorage::setExtensionLanguage(const String &ext, const DependencyPtr &d)
 {
     extensions[ext] = d->getResolvedPackage();
+
+    // add a dependency to current target
+    if (auto t = dynamic_cast<NativeExecutedTarget*>(this); t)
+        (*t + extensions[ext])->Dummy = true;
 }
 
 bool LanguageStorage::activateLanguage(const PackagePath &pp)
@@ -160,6 +194,41 @@ LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg) const
     return v2->second;
 }
 
+std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) const
+{
+    auto v = registered_programs.find(pp);
+    if (v == registered_programs.end() || v->second.empty())
+        return {};
+    return getProgram({ pp, v->second.rbegin()->first });
+}
+
+std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg) const
+{
+    auto v = registered_programs.find(pkg.ppath);
+    if (v == registered_programs.end() || v->second.empty())
+        return {};
+    auto v2 = v->second.find(pkg.version);
+    if (v2 == v->second.end())
+        return {};
+    return v2->second;
+}
+
+Program *LanguageStorage::findProgramByExtension(const String &ext) const
+{
+    auto pi = findPackageIdByExtension(ext);
+    if (!pi)
+        return nullptr;
+    return getProgram(pi.value()).get();
+}
+
+optional<PackageId> LanguageStorage::findPackageIdByExtension(const String &ext) const
+{
+    auto e = extensions.find(ext);
+    if (e == extensions.end())
+        return {};
+    return e->second;
+}
+
 /*void LanguageStorage::addLanguage(LanguageType L)
 {
     /*auto &lang = languages[L] = languages.find(L)->second->clone();
@@ -199,7 +268,22 @@ void LanguageStorage::removeLanguage(const std::vector<LanguageType> &L)
         removeLanguage(l);
 }*/
 
-std::shared_ptr<Language> ASMLanguage::clone() const
+std::shared_ptr<Language> NativeLanguage::clone() const
+{
+    return std::make_shared<NativeLanguage>(*this);
+}
+
+std::shared_ptr<SourceFile> NativeLanguage::createSourceFile(const path &input, const Target *t) const
+{
+    auto nt = (NativeExecutedTarget*)t;
+    //compiler->merge(*nt);
+
+    auto o = t->BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(*t, input) + compiler->getObjectExtension());
+    o = fs::absolute(o);
+    return std::make_shared<NativeSourceFile>(input, *t->getSolution()->fs, o, (NativeCompiler*)compiler.get());
+}
+
+/*std::shared_ptr<Language> ASMLanguage::clone() const
 {
     return std::make_shared<ASMLanguage>(*this);
 }
@@ -242,6 +326,6 @@ std::shared_ptr<SourceFile> CPPLanguage::createSourceFile(const path &input, con
     auto o = t->BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(*t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
     return std::make_shared<CPPSourceFile>(input, *t->getSolution()->fs, o, compiler.get());
-}
+}*/
 
 }

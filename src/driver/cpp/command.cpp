@@ -70,6 +70,10 @@ path Command::getProgram() const
         if (p.empty())
             throw std::runtime_error("Empty program from package: " + t->getPackage().target_name);
     }
+    else if (dependency_set)
+    {
+        throw std::runtime_error("Command dependency was not resolved: ???UNKNOWN_PROGRAM??? " + print());
+    }
     else
         p = Base::getProgram();
     return p;
@@ -78,6 +82,7 @@ path Command::getProgram() const
 void Command::setProgram(const std::shared_ptr<Dependency> &d)
 {
     dependency = d;
+    dependency_set = true;
     auto l = d->target.lock();
     if (l)
         setProgram(*l);

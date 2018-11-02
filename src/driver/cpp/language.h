@@ -76,10 +76,15 @@ struct SW_DRIVER_CPP_API LanguageStorage
     std::unordered_map<PackagePath, std::map<Version, LanguagePtr>> user_defined_languages; // main languages!!! (UDL)
     std::unordered_map<PackagePath, std::map<Version, std::shared_ptr<Program>>> registered_programs; // main program storage
 
-    ~LanguageStorage();
+    virtual ~LanguageStorage();
 
     void registerProgramAndLanguage(const PackagePath &pp, const std::shared_ptr<Program> &, const LanguagePtr &L);
+    void registerProgramAndLanguage(const PackageId &t, const std::shared_ptr<Program> &, const LanguagePtr &L);
+    void registerProgramAndLanguage(const TargetBase &t, const std::shared_ptr<Program> &, const LanguagePtr &L);
+
     void registerProgram(const PackagePath &pp, const std::shared_ptr<Program> &);
+    void registerProgram(const PackageId &pp, const std::shared_ptr<Program> &);
+    void registerProgram(const TargetBase &t, const std::shared_ptr<Program> &);
 
     //void registerLanguage(const LanguagePtr &L); // allow unnamed UDLs?
     void registerLanguage(const PackageId &pkg, const LanguagePtr &L);
@@ -94,6 +99,12 @@ struct SW_DRIVER_CPP_API LanguageStorage
 
     LanguagePtr getLanguage(const PackagePath &pp) const; // latest ver
     LanguagePtr getLanguage(const PackageId &pkg) const;
+
+    std::shared_ptr<Program> getProgram(const PackagePath &pp) const; // latest ver
+    std::shared_ptr<Program> getProgram(const PackageId &pkg) const;
+
+    Program *findProgramByExtension(const String &ext) const;
+    optional<PackageId> findPackageIdByExtension(const String &ext) const;
 
     // languages
 /*#define LANG_FUNC(f)                     \
@@ -150,13 +161,13 @@ struct LinkedLanguage
 };*/
 
 template <class Compiler>
-struct SW_DRIVER_CPP_API NativeLanguage : Language,
+struct SW_DRIVER_CPP_API NativeLanguage1 : Language,
     CompiledLanguage<Compiler>//,
     //LibrarianLanguage<NativeLinker>,
     //LinkedLanguage<NativeLinker>
 {
-    NativeLanguage() = default;
-    NativeLanguage(const NativeLanguage &rhs)
+    NativeLanguage1() = default;
+    NativeLanguage1(const NativeLanguage1 &rhs)
         : Language(rhs)
     {
         if (rhs.compiler)
@@ -166,28 +177,35 @@ struct SW_DRIVER_CPP_API NativeLanguage : Language,
         if (rhs.linker)
             this->linker = std::static_pointer_cast<NativeLinker>(rhs.linker->clone());*/
     }
-    virtual ~NativeLanguage() = default;
+    virtual ~NativeLanguage1() = default;
 };
 
-struct ASMLanguage : NativeLanguage<ASMCompiler>
+struct SW_DRIVER_CPP_API NativeLanguage : NativeLanguage1<Compiler>
+{
+    virtual ~NativeLanguage() = default;
+    LanguagePtr clone() const override;
+    std::shared_ptr<SourceFile> createSourceFile(const path &input, const Target *t) const override;
+};
+
+/*struct ASMLanguage : NativeLanguage1<ASMCompiler>
 {
     virtual ~ASMLanguage() = default;
     LanguagePtr clone() const override;
     std::shared_ptr<SourceFile> createSourceFile(const path &input, const Target *t) const override;
 };
 
-struct CLanguage : NativeLanguage<CCompiler>
+struct CLanguage : NativeLanguage1<CCompiler>
 {
     virtual ~CLanguage() = default;
     LanguagePtr clone() const override;
     std::shared_ptr<SourceFile> createSourceFile(const path &input, const Target *t) const override;
 };
 
-struct CPPLanguage : NativeLanguage<CPPCompiler>
+struct CPPLanguage : NativeLanguage1<CPPCompiler>
 {
     virtual ~CPPLanguage() = default;
     LanguagePtr clone() const override;
     std::shared_ptr<SourceFile> createSourceFile(const path &input, const Target *t) const override;
-};
+};*/
 
 }

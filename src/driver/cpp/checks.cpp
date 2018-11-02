@@ -326,13 +326,6 @@ int main()
 }
 )";
 
-    throw std::logic_error("todo");
-
-    /*auto c = std::static_pointer_cast<NativeCompiler>((!CPP ?
-        (NativeCompiler*)((CLanguage*)checker->solution->languages.find(LanguageType::C)->second.get())->compiler.get() :
-        (NativeCompiler*)((CPPLanguage*)checker->solution->languages.find(LanguageType::CPP)->second.get())->compiler.get())
-        ->clone());
-
     auto d = checker->solution->getChecksDir();
     d /= unique_path();
     ::create_directories(d);
@@ -342,6 +335,7 @@ int main()
     else
         f /= "x.cpp";
     write_file(f, src);
+    auto c = std::dynamic_pointer_cast<NativeCompiler>(checker->solution->findProgramByExtension(f.extension().string())->clone());
     auto o = f;
     c->setSourceFile(f, o += ".obj");
 
@@ -351,7 +345,7 @@ int main()
     if (cmd && cmd->exit_code)
         Value = cmd->exit_code.value() == 0 ? 1 : 0;
     else
-        Value = 0;*/
+        Value = 0;
 }
 
 TypeSize::TypeSize(const String &t, const String &def)
@@ -815,12 +809,6 @@ SourceCompiles::SourceCompiles(const String &def, const String &source)
 
 void SourceCompiles::run() const
 {
-    throw std::logic_error("todo");
-    /*auto c = std::static_pointer_cast<NativeCompiler>((!CPP ?
-        (NativeCompiler*)((CLanguage*)checker->solution->languages.find(LanguageType::C)->second.get())->compiler.get() :
-        (NativeCompiler*)((CPPLanguage*)checker->solution->languages.find(LanguageType::CPP)->second.get())->compiler.get())
-        ->clone());
-
     auto d = checker->solution->getChecksDir();
     d /= unique_path();
     ::create_directories(d);
@@ -830,6 +818,7 @@ void SourceCompiles::run() const
     else
         f /= "x.cpp";
     write_file(f, data);
+    auto c = std::dynamic_pointer_cast<NativeCompiler>(checker->solution->findProgramByExtension(f.extension().string())->clone());
     auto o = f;
     c->setSourceFile(f, o += ".obj");
 
@@ -839,7 +828,7 @@ void SourceCompiles::run() const
     if (cmd && cmd->exit_code)
         Value = cmd->exit_code.value() == 0 ? 1 : 0;
     else
-        Value = 0;*/
+        Value = 0;
 }
 
 SourceLinks::SourceLinks(const String &def, const String &source)
@@ -853,12 +842,6 @@ SourceLinks::SourceLinks(const String &def, const String &source)
 
 void SourceLinks::run() const
 {
-    throw std::logic_error("todo");
-    /*auto c = std::static_pointer_cast<NativeCompiler>((!CPP ?
-        (NativeCompiler*)((CLanguage*)checker->solution->languages.find(LanguageType::C)->second.get())->compiler.get() :
-        (NativeCompiler*)((CPPLanguage*)checker->solution->languages.find(LanguageType::CPP)->second.get())->compiler.get())
-        ->clone());
-
     auto d = checker->solution->getChecksDir();
     auto up = unique_path();
     d /= up;
@@ -869,6 +852,7 @@ void SourceLinks::run() const
     else
         f /= "x.cpp";
     write_file(f, data);
+    auto c = std::dynamic_pointer_cast<NativeCompiler>(checker->solution->findProgramByExtension(f.extension().string())->clone());
 
     auto s = *checker->solution;
     s.silent = bSilentChecks;
@@ -886,7 +870,7 @@ void SourceLinks::run() const
     catch (...)
     {
         Value = 0;
-    }*/
+    }
 }
 
 SourceRuns::SourceRuns(const String &def, const String &source)
@@ -900,12 +884,6 @@ SourceRuns::SourceRuns(const String &def, const String &source)
 
 void SourceRuns::run() const
 {
-    throw std::logic_error("todo");
-    /*auto c = std::static_pointer_cast<NativeCompiler>((!CPP ?
-        (NativeCompiler*)((CLanguage*)checker->solution->languages.find(LanguageType::C)->second.get())->compiler.get() :
-        (NativeCompiler*)((CPPLanguage*)checker->solution->languages.find(LanguageType::CPP)->second.get())->compiler.get())
-        ->clone());
-
     auto d = checker->solution->getChecksDir();
     auto up = unique_path();
     d /= up;
@@ -916,6 +894,7 @@ void SourceRuns::run() const
     else
         f /= "x.cpp";
     write_file(f, data);
+    auto c = std::dynamic_pointer_cast<NativeCompiler>(checker->solution->findProgramByExtension(f.extension().string())->clone());
 
     auto s = *checker->solution;
     s.silent = bSilentChecks;
@@ -947,7 +926,7 @@ void SourceRuns::run() const
     catch (...)
     {
         Value = 0;
-    }*/
+    }
 }
 
 FunctionExists &CheckSet::checkFunctionExists(const String &function, LanguageType L)
