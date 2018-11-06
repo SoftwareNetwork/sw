@@ -95,6 +95,11 @@ protected:
     void clearGlobCache() { glob_cache.clear(); }
     void remove_full(const path &file);
 
+    optional<PackageId> findPackageIdByExtension(const String &e) const;
+    Program *findProgramByExtension(const String &e) const;
+    Language *findLanguageByPackageId(const PackageId &) const;
+    Language *findLanguageByExtension(const String &e) const;
+
 private:
     struct FileOperation
     {
@@ -113,10 +118,6 @@ private:
     void op(const FileRegex &r, Op f);
 
     SourceFileMap<SourceFile> enumerate_files(const FileRegex &r) const;
-
-    Program *findProgramByExtension(const String &e) const;
-    optional<PackageId> findPackageIdByExtension(const String &e) const;
-    Language *findLanguageByPackageId(const PackageId &) const;
 };
 
 // other files can be source files, but not compiled files

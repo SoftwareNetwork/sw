@@ -104,6 +104,7 @@ struct SW_DRIVER_CPP_API LanguageStorage
     std::shared_ptr<Program> getProgram(const PackageId &pkg) const;
 
     Program *findProgramByExtension(const String &ext) const;
+    Language *findLanguageByExtension(const String &ext) const;
     optional<PackageId> findPackageIdByExtension(const String &ext) const;
 
     // languages
@@ -124,6 +125,7 @@ struct SW_DRIVER_CPP_API LanguageStorage
 };
 
 // factory?
+// actually language is something like rules
 struct SW_DRIVER_CPP_API Language : Node
 {
     //LanguageType Type = LanguageType::UnspecifiedLanguage;

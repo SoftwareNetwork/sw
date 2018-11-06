@@ -231,7 +231,7 @@ int main(int argc, char **argv)
         {{"org.sw.sw.client.driver.cpp", "0"}, {}},
     };
 
-    CppContext ctx_packages;
+    primitives::CppContext ctx_packages;
     ctx_packages.beginBlock("static UnresolvedPackages required_packages");
 
     UnresolvedPackages deps;
@@ -246,16 +246,16 @@ int main(int argc, char **argv)
 
     auto m = resolve_dependencies(deps);
 
-    CppContext ctx;
+    primitives::CppContext ctx;
     ctx.addLine("#define SW_PRAGMA_HEADER 1");
     ctx.addLine();
 
-    CppContext build;
+    primitives::CppContext build;
     build.beginFunction("void build_self_generated(Solution &s)");
     build.addLine("auto sdir_old = s.SourceDir;");
     build.addLine();
 
-    CppContext check;
+    primitives::CppContext check;
     check.beginFunction("void check_self_generated(Checker &c)");
 
     std::set<PackageVersionGroupNumber> used_gns;

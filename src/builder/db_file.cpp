@@ -55,7 +55,7 @@ static void load(FileStorage &fs, const path &fn, ConcurrentHashMap<path, FileRe
 {
     ScopedShareableFileLock lk(fn);
 
-    BinaryContext b;
+    primitives::BinaryContext b;
     try
     {
         b.load(fn);
@@ -204,7 +204,7 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
             *ptr = f;
     }
 
-    BinaryContext b(10'000'000); // reserve amount
+    primitives::BinaryContext b(10'000'000); // reserve amount
     for (auto i = files.getIterator(); i.isValid(); i.next())
     {
         auto &f = *i.getValue();
@@ -261,7 +261,7 @@ void FileDb::write(std::vector<uint8_t> &v, const FileRecord &f) const
 void FileDb::load(ConcurrentCommandStorage &commands) const
 {
     const auto fn = getCommandsDbFilename();
-    BinaryContext b;
+    primitives::BinaryContext b;
     try
     {
         b.load(fn);
@@ -284,7 +284,7 @@ void FileDb::load(ConcurrentCommandStorage &commands) const
 
 void FileDb::save(ConcurrentCommandStorage &commands) const
 {
-    BinaryContext b(10'000'000); // reserve amount
+    primitives::BinaryContext b(10'000'000); // reserve amount
     for (auto i = commands.getIterator(); i.isValid(); i.next())
     {
         b.write(i.getKey());

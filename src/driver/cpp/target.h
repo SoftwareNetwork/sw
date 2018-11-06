@@ -415,37 +415,10 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     virtual void findSources() = 0;
     virtual UnresolvedDependenciesType gatherUnresolvedDependencies() const = 0;
 
-#ifdef _MSC_VER
-#define SW_DEPRECATED __declspec(deprecated)
-#else
-#define SW_DEPRECATED
-#endif
-
-    SW_DEPRECATED
-    void fileWriteOnce(const path &fn, bool binary_dir = true) const;
-    SW_DEPRECATED
-    void fileWriteOnce(const path &fn, const char *content, bool binary_dir = true) const;
-    SW_DEPRECATED
-    void fileWriteOnce(const path &fn, const String &content, bool binary_dir = true) const;
-    SW_DEPRECATED
-    void fileWriteSafe(const path &fn, const String &content, bool binary_dir = true) const;
-
-    void writeFileOnce(const path &fn, bool binary_dir = true) const;
-    void writeFileOnce(const path &fn, const char *content, bool binary_dir = true) const;
-    void writeFileOnce(const path &fn, const String &content, bool binary_dir = true) const;
-    void writeFileSafe(const path &fn, const String &content, bool binary_dir = true) const;
-    void replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir = false) const;
-    void deleteInFileOnce(const path &fn, const String &from, bool binary_dir = false) const;
-    void pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
-    void pushBackToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
     virtual void removeFile(const path &fn, bool binary_dir = false);
-    virtual void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) = 0;
 
 protected:
     int prepare_pass = 1;
-
-private:
-    path getPatchDir(bool binary_dir) const;
 };
 
 struct SW_DRIVER_CPP_API ProjDirBase : Target
@@ -464,7 +437,7 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     //virtual void clear() override {}
     void findSources() override {}
     UnresolvedDependenciesType gatherUnresolvedDependencies() const override { return UnresolvedDependenciesType{}; }
-    void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) override {}
+    //void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) override {}
 };
 
 struct SW_DRIVER_CPP_API Directory : ProjDirBase
@@ -736,7 +709,30 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
 
     driver::cpp::CommandBuilder addCommand();
 
-    void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) override;
+    void writeFileOnce(const path &fn, bool binary_dir = true) const;
+    void writeFileOnce(const path &fn, const char *content, bool binary_dir = true) const;
+    void writeFileOnce(const path &fn, const String &content, bool binary_dir = true) const;
+    void writeFileSafe(const path &fn, const String &content, bool binary_dir = true) const;
+    void replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir = false) const;
+    void deleteInFileOnce(const path &fn, const String &from, bool binary_dir = false) const;
+    void pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
+    void pushBackToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
+    void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) const;
+
+    /*#ifdef _MSC_VER
+    #define SW_DEPRECATED __declspec(deprecated)
+    #else
+    #define SW_DEPRECATED
+    #endif*/
+
+    //SW_DEPRECATED
+    void fileWriteOnce(const path &fn, bool binary_dir = true) const;
+    //SW_DEPRECATED
+    void fileWriteOnce(const path &fn, const char *content, bool binary_dir = true) const;
+    //SW_DEPRECATED
+    void fileWriteOnce(const path &fn, const String &content, bool binary_dir = true) const;
+    //SW_DEPRECATED
+    void fileWriteSafe(const path &fn, const String &content, bool binary_dir = true) const;
 
     void addPrecompiledHeader(const path &h, const path &cpp = path());
     void addPrecompiledHeader(const PrecompiledHeader &pch);
@@ -785,6 +781,8 @@ private:
     path getOutputFileName(const path &root) const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
+
+    path getPatchDir(bool binary_dir) const;
 };
 
 /**

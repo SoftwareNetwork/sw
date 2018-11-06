@@ -166,15 +166,19 @@ public:
 private:
     CommandLineFunctionType<T> function = nullptr;
 public:
-    bool config_variable = false;
-    bool cmd_flag_before_each_value = false;
-    bool input_dependency = false;
-    bool intermediate_file = false;
-    bool output_dependency = false;
-    bool manual_handling = false;
-    bool place_at_the_end = false;
+    unsigned config_variable : 1;
+    unsigned cmd_flag_before_each_value : 1;
+    unsigned input_dependency : 1;
+    unsigned intermediate_file : 1;
+    unsigned output_dependency : 1;
+    unsigned manual_handling : 1;
+    unsigned place_at_the_end : 1;
+    unsigned : 1;
 
-    CommandLineOption1() = default;
+    CommandLineOption1()
+    {
+        init_fields();
+    }
 
     template <class U, class ... Args>
     explicit CommandLineOption1(U &&u, Args && ... args)
@@ -189,11 +193,13 @@ public:
 
     explicit CommandLineOption1(const T &v)
     {
+        init_fields();
         assign_value(v);
     }
 
     explicit CommandLineOption1(const CommandLineOption1 &v)
     {
+        init_fields();
         assign(v);
     }
 
@@ -297,6 +303,17 @@ private:
     void init(const cl::PlaceAtTheEnd &) { place_at_the_end = true; }
     void init(const T &v) { assign_value(v); }
     void init(const CommandLineOption1 &v) { assign(v); }
+
+    void init_fields()
+    {
+        config_variable = false;
+        cmd_flag_before_each_value = false;
+        input_dependency = false;
+        intermediate_file = false;
+        output_dependency = false;
+        manual_handling = false;
+        place_at_the_end = false;
+    }
 
     void assign(const CommandLineOption1 &v)
     {

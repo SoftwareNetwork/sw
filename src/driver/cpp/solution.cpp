@@ -141,11 +141,11 @@ path getPackageHeader(const ExtendedPackageData &p)
     f = f.substr(0, pos);
     //if (std::regex_search(f, m, r_header))
     {
-        Context ctx;
+        primitives::Context ctx;
         ctx.addLine("#pragma once");
         ctx.addLine();
 
-        Context prefix;
+        primitives::Context prefix;
         prefix.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");
         prefix.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + p.ppath.slice(p.prefix).toString() + "\"");
         prefix.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
@@ -732,12 +732,105 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
     }
 }
 
+void Solution::build_and_resolve()
+{
+    auto ud = gatherUnresolvedDependencies();
+    if (ud.empty())
+        return;
+
+    // first round
+    UnresolvedPackages pkgs;
+    for (auto &[pkg, d] : ud)
+        pkgs.insert(pkg);
+
+    // resolve only deps needed
+    Resolver r;
+    r.resolve_dependencies(pkgs, true);
+    auto dd = r.getDownloadDependencies();
+    if (dd.empty())
+        throw std::runtime_error("Empty download dependencies");
+
+    for (auto &p : dd)
+        knownTargets.insert(p);
+
+    // gather packages
+    std::unordered_map<PackageVersionGroupNumber, ExtendedPackageData> cfgs2;
+    for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
+        cfgs2[gn] = p;
+    std::unordered_set<ExtendedPackageData> cfgs;
+    for (auto &[gn, s] : cfgs2)
+    {
+        if (known_cfgs.find(s) == known_cfgs.end() &&
+            children.find(s) == children.end())
+            cfgs.insert(s);
+    }
+    known_cfgs.insert(cfgs.begin(), cfgs.end());
+
+    Build b;
+    b.Local = false;
+    auto dll = b.build_configs(cfgs);
+
+    Local = false;
+
+    SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->prefix));
+    if (cfgs.size() != 1)
+        sr.restoreNow(true);
+
+    getModuleStorage(base_ptr).get(dll).check(Checks);
+    performChecks();
+    getModuleStorage(base_ptr).get(dll).build(*this);
+
+    sr.restoreNow(true);
+
+    int retries = 0;
+    if (retries++ > 10)
+    {
+        String s = "Too many attempts on resolving packages, probably something wrong. Unresolved dependencies (" +
+            std::to_string(ud.size()) + ") are: ";
+        for (auto &p : ud)
+            s += p.first.toString() + ", ";
+        s.resize(s.size() - 2);
+        throw std::logic_error(s);
+    }
+
+    auto rd = r.resolved_packages;
+    for (auto &[porig, p] : rd)
+    {
+        for (auto &[n, t] : getChildren())
+        {
+            if (p == t->pkg && ud[porig])
+            {
+                ud[porig]->target = std::static_pointer_cast<NativeTarget>(t);
+                //t->SourceDir = p.getDirSrc2();
+            }
+        }
+    }
+
+    {
+        ud = gatherUnresolvedDependencies();
+        UnresolvedPackages pkgs;
+        for (auto &[pkg, d] : ud)
+            pkgs.insert(pkg);
+        r.resolve_dependencies(pkgs);
+
+        if (ud.empty())
+            return;
+    }
+
+    // we have unloaded deps, load them
+    // they are runtime deps either due to local overridden packages
+    // or to unregistered deps in sw - probably something wrong or
+    // malicious
+
+    build_and_resolve();
+}
+
 void Solution::prepare()
 {
     if (prepared)
         return;
 
-    static int recursion_count = 0;
+    /*static int recursion_count = 0;
     recursion_count++;
     SCOPE_EXIT
     {
@@ -747,86 +840,13 @@ void Solution::prepare()
     if (recursion_count > 30)
         LOG_ERROR(logger, "recursion detected: " << recursion_count);
     if (recursion_count > 45)
-        throw std::logic_error("stopping recursion");
+        throw std::logic_error("stopping recursion");*/
 
     // all targets are set stay unchanged from user
     // so, we're ready to some preparation passes
 
     // resolve all deps first
-    if (auto ud = gatherUnresolvedDependencies(); !ud.empty())
-    {
-        // first round
-        UnresolvedPackages pkgs;
-        for (auto &[pkg, d] : ud)
-            pkgs.insert(pkg);
-
-        // resolve only deps needed
-        Resolver r;
-        r.resolve_dependencies(pkgs, true);
-        auto dd = r.getDownloadDependencies();
-        if (dd.empty())
-            throw std::runtime_error("Empty download dependencies");
-
-        for (auto &p : dd)
-            knownTargets.insert(p);
-
-        // gather packages
-        std::unordered_map<PackageVersionGroupNumber, ExtendedPackageData> cfgs2;
-        for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
-            cfgs2[gn] = p;
-        std::unordered_set<ExtendedPackageData> cfgs;
-        for (auto &[gn, s] : cfgs2)
-            cfgs.insert(s);
-
-        Build b;
-        b.Local = false;
-        auto dll = b.build_configs(cfgs);
-
-        Local = false;
-
-        SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->prefix));
-        if (cfgs.size() != 1)
-            sr.restoreNow(true);
-
-        getModuleStorage(base_ptr).get(dll).check(Checks);
-        performChecks();
-        getModuleStorage(base_ptr).get(dll).build(*this);
-
-        sr.restoreNow(true);
-
-        int retries = 0;
-        while (!ud.empty())
-        {
-            if (retries++ > 10)
-            {
-                String s = "Too many attempts on resolving packages, probably something wrong. Unresolved dependencies (" +
-                    std::to_string(ud.size()) + ") are: ";
-                for (auto &p : ud)
-                    s += p.first.toString() + ", ";
-                s.resize(s.size() - 2);
-                throw std::logic_error(s);
-            }
-
-            auto rd = r.resolved_packages;
-            for (auto &[porig, p] : rd)
-            {
-                for (auto &[n, t] : getChildren())
-                {
-                    if (p == t->pkg && ud[porig])
-                    {
-                        ud[porig]->target = std::static_pointer_cast<NativeTarget>(t);
-                        //t->SourceDir = p.getDirSrc2();
-                    }
-                }
-            }
-
-            ud = gatherUnresolvedDependencies();
-            UnresolvedPackages pkgs;
-            for (auto &[pkg, d] : ud)
-                pkgs.insert(pkg);
-            r.resolve_dependencies(pkgs);
-        }
-    }
+    build_and_resolve();
 
     // multipass prepare()
     // if we add targets inside this loop,
@@ -1377,18 +1397,18 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     for (auto &fn : files)
     {
         lib += fn;
-        lib[fn].fancy_name = "building config [" + output_names[fn].toString() + "]/sw.cpp (" + normalize_path(fn) + ")";
+        lib[fn].fancy_name = "[" + output_names[fn].toString() + "]/[config] (" + normalize_path(fn) + ")";
     }
 
     // generate main source file
     if (many_files)
     {
-        CppContext ctx;
+        primitives::CppContext ctx;
 
-        CppContext build;
+        primitives::CppContext build;
         build.beginFunction("void build(Solution &s)");
 
-        CppContext check;
+        primitives::CppContext check;
         check.beginFunction("void check(Checker &c)");
 
         for (auto &r : pkgs)
@@ -1558,7 +1578,7 @@ void Build::build_and_load(const path &fn)
 
 ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
 {
-    BinaryContext ctx;
+    primitives::BinaryContext ctx;
     ctx.load(fn);
 
     size_t sz;
@@ -1692,7 +1712,7 @@ ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
 
 void save(const path &fn, const ExecutionPlan<builder::Command> &p)
 {
-    BinaryContext ctx;
+    primitives::BinaryContext ctx;
 
     auto strings = p.gatherStrings();
 

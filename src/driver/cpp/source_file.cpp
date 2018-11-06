@@ -131,6 +131,18 @@ Language *SourceFileStorage::findLanguageByPackageId(const PackageId &p) const
     return i.get();
 }
 
+Language *SourceFileStorage::findLanguageByExtension(const String &ext) const
+{
+    auto e = target->findLanguageByExtension(ext);
+    if (!e)
+    {
+        e = target->getSolution()->findLanguageByExtension(ext);
+        if (!e)
+            return {};
+    }
+    return e;
+}
+
 void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 {
     auto file = file_in;
@@ -155,13 +167,22 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
             auto i = findLanguageByPackageId(program);
             if (!i)
             {
+                //if (f && f->postponed)
+                    //throw std::runtime_error("Postponing postponed file");
                 f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file, *target->getSolution()->fs);
                 f->postponed = true;
             }
             else
             {
+                auto f2 = f;
                 auto L = i->clone(); // clone program here
                 f = this->SourceFileMapThis::operator[](file) = L->createSourceFile(file, target);
+                if (f2 && f2->postponed)
+                {
+                    // retain some data
+                    f->args = f2->args;
+                    f->skip = f2->skip;
+                }
             }
 
             // but maybe we create dummy file?

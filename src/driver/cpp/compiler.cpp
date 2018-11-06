@@ -83,6 +83,52 @@ bool findDefaultVS2017(path &root, VisualStudioVersion &VSVersion)
     return false;
 }
 
+StringSet listMajorWindowsKits()
+{
+    StringSet kits;
+    auto program_files_x86 = getProgramFilesX86();
+    for (auto &k : { "10", "8.1", "8.0", "7.1A", "7.0A", "6.0A" })
+    {
+        auto d = program_files_x86 / "Windows Kits" / k;
+        if (fs::exists(d))
+            kits.insert(k);
+    }
+    return kits;
+}
+
+StringSet listWindows10Kits()
+{
+    StringSet kits;
+    auto program_files_x86 = getProgramFilesX86();
+    auto dir = program_files_x86 / "Windows Kits" / "10" / "Include";
+    for (auto &i : fs::directory_iterator(dir))
+    {
+        if (fs::is_directory(i))
+            kits.insert(i.path().filename().string());
+    }
+    return kits;
+}
+
+StringSet listWindowsKits()
+{
+    auto allkits = listMajorWindowsKits();
+    auto i = allkits.find("10");
+    if (i == allkits.end())
+        return allkits;
+    auto kits2 = listWindows10Kits();
+    allkits.insert(kits2.begin(), kits2.end());
+    return allkits;
+}
+
+String getLatestWindowsKit()
+{
+    auto allkits = listMajorWindowsKits();
+    auto i = allkits.find("10");
+    if (i == allkits.end())
+        return *allkits.rbegin();
+    return *listWindows10Kits().rbegin();
+}
+
 path getWindowsKitDir()
 {
     auto program_files_x86 = getProgramFilesX86();

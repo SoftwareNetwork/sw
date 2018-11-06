@@ -10,7 +10,7 @@
 #include <iostream>
 
 #define CATCH_CONFIG_RUNNER
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #define make_name(s) make_name1(s, __LINE__)
 #define make_test_name() make_name("test")

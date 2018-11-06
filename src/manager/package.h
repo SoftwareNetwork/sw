@@ -11,6 +11,7 @@
 #include "cppan_version.h"
 #include "source.h"
 
+#include <type_traits>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -174,29 +175,29 @@ void cleanPackages(const Packages &pkgs, int flags);
 namespace std
 {
 
-template<> struct hash<sw::PackageId>
+template<> struct hash<::sw::PackageId>
 {
-    size_t operator()(const sw::PackageId &p) const
+    size_t operator()(const ::sw::PackageId &p) const
     {
-        auto h = std::hash<sw::PackagePath>()(p.ppath);
-        return hash_combine(h, std::hash<sw::Version>()(p.version));
+        auto h = std::hash<::sw::PackagePath>()(p.ppath);
+        return hash_combine(h, std::hash<::sw::Version>()(p.version));
     }
 };
 
-template<> struct hash<sw::Package>
+template<> struct hash<::sw::Package>
 {
-    size_t operator()(const sw::Package &p) const
+    size_t operator()(const ::sw::Package &p) const
     {
-        return std::hash<sw::PackageId>()(p);
+        return std::hash<::sw::PackageId>()(p);
     }
 };
 
-template<> struct hash<sw::UnresolvedPackage>
+template<> struct hash<::sw::UnresolvedPackage>
 {
-    size_t operator()(const sw::UnresolvedPackage &p) const
+    size_t operator()(const ::sw::UnresolvedPackage &p) const
     {
-        auto h = std::hash<sw::PackagePath>()(p.ppath);
-        return hash_combine(h, std::hash<sw::VersionRange>()(p.range));
+        auto h = std::hash<::sw::PackagePath>()(p.ppath);
+        return hash_combine(h, std::hash<::sw::VersionRange>()(p.range));
     }
 };
 

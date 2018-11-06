@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include <package_path.h>
+
+#include <primitives/context.h>
 #include <primitives/filesystem.h>
 
 namespace sw
@@ -17,7 +20,7 @@ enum class GeneratorType
 
     CMake,
     Ninja,
-    Qmake,
+    QMake,
     UnixMakefiles,
     VisualStudio,
     VisualStudioNMake,
@@ -39,10 +42,19 @@ struct Generator
 
 struct VSGenerator : Generator
 {
+    String cwd;
+    path dir;
+    const path projects_dir = "projects";
+    const InsecurePath deps_subdir = "Dependencies";
+    const String predefined_targets_dir = ". SW Predefined Targets"s;
+    const String all_build_name = "ALL_BUILD"s;
+
+    VSGenerator();
+
     void generate(const struct Build &b) override;
 };
 
-struct VSGeneratorNMake : Generator
+struct VSGeneratorNMake : VSGenerator
 {
     void generate(const struct Build &b) override;
 };
@@ -53,6 +65,7 @@ struct NinjaGenerator : Generator
 };
 
 String toString(GeneratorType Type);
+String toPathString(GeneratorType Type);
 GeneratorType fromString(const String &ss);
 
 }

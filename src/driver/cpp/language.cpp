@@ -6,11 +6,10 @@
 
 #include <language.h>
 
+#include <dependency.h>
 #include <source_file.h>
 #include <solution.h>
 #include <target.h>
-
-#include <dependency.h>
 
 #include <primitives/hash.h>
 
@@ -108,8 +107,8 @@ void LanguageStorage::registerProgram(const TargetBase &t, const std::shared_ptr
 
 void LanguageStorage::registerLanguage(const PackageId &pkg, const LanguagePtr &L)
 {
-    /*for (auto &e : L->CompiledExtensions)
-        extensions[e] = pkg;*/
+    for (auto &e : L->CompiledExtensions)
+        extensions[e] = pkg;
     user_defined_languages[pkg.ppath][pkg.version] = L;
 }
 
@@ -211,6 +210,14 @@ std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg) const
     if (v2 == v->second.end())
         return {};
     return v2->second;
+}
+
+Language *LanguageStorage::findLanguageByExtension(const String &ext) const
+{
+    auto pi = findPackageIdByExtension(ext);
+    if (!pi)
+        return nullptr;
+    return getLanguage(pi.value()).get();
 }
 
 Program *LanguageStorage::findProgramByExtension(const String &ext) const

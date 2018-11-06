@@ -10,8 +10,8 @@
 
 #include <filesystem.h>
 
-#include <primitives/context.h>
 #include <primitives/sw/settings.h>
+#include <primitives/win32helpers.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -27,7 +27,22 @@ static cl::opt<bool> print_dependencies("print-dependencies"/*, cl::sub(subcomma
 namespace sw
 {
 
-String toString(GeneratorType Type)
+String toPathString(GeneratorType t)
+{
+    switch (t)
+    {
+    case GeneratorType::VisualStudio:
+        return "vs";
+    case GeneratorType::VisualStudioNMake:
+        return "vs_nmake";
+    case GeneratorType::Ninja:
+        return "ninja";
+    default:
+        throw std::logic_error("not implemented");
+    }
+}
+
+String toString(GeneratorType t)
 {
     throw std::logic_error("not implemented");
 }
@@ -36,28 +51,36 @@ GeneratorType fromString(const String &s)
 {
     // make icasecmp
     if (boost::iequals(s, "VS"))
-        return GeneratorType::VisualStudioNMake;// GeneratorType::VisualStudio;
+        return GeneratorType::VisualStudio;
     else if (boost::iequals(s, "VS_NMake"))
         return GeneratorType::VisualStudioNMake;
     else if (boost::iequals(s, "Ninja"))
         return GeneratorType::Ninja;
+    //else if (boost::iequals(s, "qtc"))
+        //return GeneratorType::qtc;
     return GeneratorType::UnspecifiedGenerator;
 }
 
 std::unique_ptr<Generator> Generator::create(const String &s)
 {
     auto t = fromString(s);
+    std::unique_ptr<Generator> g;
     switch (t)
     {
     case GeneratorType::VisualStudio:
-        return std::make_unique<VSGenerator>();
+        g = std::make_unique<VSGenerator>();
+        break;
     case GeneratorType::VisualStudioNMake:
-        return std::make_unique<VSGeneratorNMake>();
+        g = std::make_unique<VSGeneratorNMake>();
+        break;
     case GeneratorType::Ninja:
-        return std::make_unique<NinjaGenerator>();
+        g = std::make_unique<NinjaGenerator>();
+        break;
     default:
         throw std::logic_error("not implemented");
     }
+    g->type = t;
+    return g;
 }
 
 void Generator::generate(const path &f, const Build &b)
@@ -82,8 +105,8 @@ String make_backslashes(String s)
 static const std::map<ConfigurationType, String> configs{
     {ConfigurationType::Debug,"Debug",},
     {ConfigurationType::Release,"Release",},
-    {ConfigurationType::MinimalSizeRelease,"MinSizeRel",},
-    {ConfigurationType::ReleaseWithDebugInformation,"RelWithDebInfo",},
+    //{ConfigurationType::MinimalSizeRelease,"MinSizeRel",},
+    //{ConfigurationType::ReleaseWithDebugInformation,"RelWithDebInfo",},
 };
 
 static const std::map<ArchType, String> platforms{
@@ -92,8 +115,8 @@ static const std::map<ArchType, String> platforms{
 };
 
 static const std::map<LibraryType, String> shared_static{
-    {LibraryType::Static,"static",},
-    {LibraryType::Shared,"dll",},
+    //{LibraryType::Static,"static",},
+    //{LibraryType::Shared,"dll",},
 };
 
 enum class VSProjectType
@@ -108,29 +131,44 @@ enum class VSProjectType
 
 static std::map<VSProjectType, String> project_type_uuids{
     {VSProjectType::Directory,"{2150E333-8FDC-42A3-9474-1A3956D46DE8}",},
+
+    // other?
     {VSProjectType::Makefile,"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}",},
-    {VSProjectType::Application,"unk",},
-    {VSProjectType::DynamicLibrary,"unk",},
-    {VSProjectType::StaticLibrary,"unk",},
-    {VSProjectType::Utility,"unk",},
+    {VSProjectType::Application,"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}",},
+    {VSProjectType::DynamicLibrary,"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}",},
+    {VSProjectType::StaticLibrary,"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}",},
+    {VSProjectType::Utility,"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}",},
 };
+
+String add_space_if_not_empty(const String &s)
+{
+    if (s.empty())
+        return {};
+    return " " + s;
+}
 
 void iterate_over_configs(std::function<void(const String &, const String &, const String &)> f)
 {
-    for (auto &c : configs)
-        for (auto &p : platforms)
+    for (auto &p : platforms)
+        for (auto &c : configs)
+            if (shared_static.empty())
+                f(c.second, p.second, {});
+            else
             for (auto &dll : shared_static)
                 f(c.second, p.second, dll.second);
 }
 
 void iterate_over_configs(TargetBase::SettingsX s, std::function<void(const TargetBase::SettingsX &, const String &, const String &, const String &)> f)
 {
-    for (auto &c : configs)
+    for (auto &p : platforms)
     {
-        s.Native.ConfigurationType = c.first;
-        for (auto &p : platforms)
+        s.TargetOS.Arch = p.first;
+        for (auto &c : configs)
         {
-            s.TargetOS.Arch = p.first;
+            s.Native.ConfigurationType = c.first;
+            if (shared_static.empty())
+                f(s, c.second, p.second, {});
+            else
             for (auto &dll : shared_static)
             {
                 s.Native.LibrariesType = dll.first;
@@ -141,13 +179,34 @@ void iterate_over_configs(TargetBase::SettingsX s, std::function<void(const Targ
 }
 
 // VS
-struct SolutionContext : Context
+struct SolutionContext : primitives::Context
 {
-    std::unordered_map<String, String> uuids;
+    struct Project
+    {
+        std::unique_ptr<SolutionContext> ctx;
+        std::set<String> deps;
 
-    SolutionContext()
+        Project()
+        {
+            ctx = std::make_unique<SolutionContext>(false);
+        }
+    };
+
+    using Base = primitives::Context;
+
+    mutable std::unordered_map<String, String> uuids;
+    std::map<String, Project> projects;
+
+    SolutionContext(bool print_version = true)
         : Context("\t")
     {
+        if (print_version)
+            printVersion();
+    }
+
+    void printVersion()
+    {
+        addLine();
         addLine("Microsoft Visual Studio Solution File, Format Version 12.00");
         addLine("# Visual Studio 15");
         addLine("VisualStudioVersion = 15.0.28010.2046");
@@ -174,15 +233,27 @@ struct SolutionContext : Context
 
     void addProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir)
     {
+        beginProject(type, n, dir, solution_dir);
+        endProject();
+    }
+
+    void beginProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir)
+    {
         auto up = boost::uuids::random_generator()();
         uuids[n] = uuid2string(up);
 
-        addLine("Project(\"" + project_type_uuids[type] + "\") = \"" +
+        beginBlock("Project(\"" + project_type_uuids[type] + "\") = \"" +
             n + "\", \"" + (dir / (n + ".vcxproj")).u8string() + "\", \"{" + uuids[n] + "}\"");
-        addLine("EndProject");
+
+        addLine(*projects[n].ctx);
 
         if (!solution_dir.empty())
             nested_projects[n] = solution_dir;
+    }
+
+    void endProject()
+    {
+        endBlock("EndProject");
     }
 
     void beginBlock(const String &s)
@@ -224,7 +295,7 @@ struct SolutionContext : Context
         beginGlobalSection("SolutionConfigurationPlatforms", "preSolution");
         iterate_over_configs([this](const String &c, const String &p, const String &dll)
         {
-            addLine(c + " " + dll + "|" + p + " = " + c + " " + dll + "|" + p);
+            addLine(c + add_space_if_not_empty(dll) + "|" + p + " = " + c + add_space_if_not_empty(dll) + "|" + p);
         });
         endGlobalSection();
     }
@@ -233,10 +304,20 @@ struct SolutionContext : Context
     {
         iterate_over_configs([this, &prj, build](const String &c, const String &p, const String &dll)
         {
-            addKeyValue(getStringUuid(prj) + "." + c + " " + dll + "|" + p + ".ActiveCfg", c + " " + dll + "|" + p);
+            addKeyValue(getStringUuid(prj) + "." + c + add_space_if_not_empty(dll) + "|" + p + ".ActiveCfg", c + add_space_if_not_empty(dll) + "|" + p);
             if (build)
-                addKeyValue(getStringUuid(prj) + "." + c + " " + dll + "|" + p + ".Build.0", c + " " + dll + "|" + p);
+                addKeyValue(getStringUuid(prj) + "." + c + add_space_if_not_empty(dll) + "|" + p + ".Build.0", c + add_space_if_not_empty(dll) + "|" + p);
         });
+    }
+
+    void beginProjectSection(const String &n, const String &disposition)
+    {
+        beginBlock("ProjectSection(" + n + ") = " + disposition);
+    }
+
+    void endProjectSection()
+    {
+        endBlock("EndProjectSection");
     }
 
     void addKeyValue(const String &k, const String &v)
@@ -244,9 +325,23 @@ struct SolutionContext : Context
         addLine(k + " = " + v);
     }
 
-    String getStringUuid(const String &k)
+    String getStringUuid(const String &k) const
     {
         return "{" + uuids[k] + "}";
+    }
+
+    Text getText() const override
+    {
+        for (auto &[n, p] : projects)
+        {
+            if (p.deps.empty())
+                continue;
+            p.ctx->beginProjectSection("ProjectDependencies", "postProject");
+            for (auto &d : p.deps)
+                p.ctx->addLine(getStringUuid(d) + " = " + getStringUuid(d));
+            p.ctx->endProjectSection();
+        }
+        return Base::getText();
     }
 
 private:
@@ -261,7 +356,7 @@ private:
     }
 };
 
-struct XmlContext : Context
+struct XmlContext : primitives::Context
 {
     std::stack<String> blocks;
 
@@ -335,8 +430,8 @@ struct ProjectContext : XmlContext
         beginBlock("ItemGroup", { {"Label","ProjectConfigurations"} });
         iterate_over_configs([this](const String &c, const String &p, const String &dll)
         {
-            beginBlock("ProjectConfiguration", { {"Include", c + " " + dll + "|" + p } });
-            addBlock("Configuration", c + " " + dll);
+            beginBlock("ProjectConfiguration", { {"Include", c + add_space_if_not_empty(dll) + "|" + p } });
+            addBlock("Configuration", c + add_space_if_not_empty(dll));
             addBlock("Platform", p);
             endBlock();
         });
@@ -347,7 +442,7 @@ struct ProjectContext : XmlContext
     {
         iterate_over_configs([this](const String &c, const String &p, const String &dll)
         {
-            beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + " " + dll + "|" + p + "'" },{ "Label","Configuration" } });
+            beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + p + "'" },{ "Label","Configuration" } });
 
             addBlock("ConfigurationType", "Makefile");
             //addBlock("UseDebugLibraries", c);
@@ -361,7 +456,7 @@ struct ProjectContext : XmlContext
     {
         iterate_over_configs([this](const String &c, const String &p, const String &dll)
         {
-            beginBlock("ImportGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + " " + dll + "|" + p + "'" },{ "Label","PropertySheets" } });
+            beginBlock("ImportGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + p + "'" },{ "Label","PropertySheets" } });
             addBlock("Import", "", { {"Project","$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props" },{ "Condition","exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')" },{ "Label","LocalAppDataPlatform" }, });
             endBlock();
         });
@@ -409,19 +504,351 @@ struct PackagePathTree
     }
 };
 
+VSGenerator::VSGenerator()
+{
+    cwd = "\"" + current_thread_path().string() + "\"";
+}
+
+String getLatestWindowsKit();
+
 void VSGenerator::generate(const Build &b)
 {
+    dir = b.getIdeDir() / toPathString(type);
+    PackagePathTree tree, local_tree;
+    PackagePathTree::Directories parents, local_parents;
+    SolutionContext ctx;
 
+    // add ALL_BUILD target
+    {
+        ctx.addDirectory(predefined_targets_dir);
+        ctx.addProject(VSProjectType::Utility, all_build_name, projects_dir, predefined_targets_dir);
+
+        ProjectContext pctx;
+        pctx.beginProject();
+
+        pctx.addProjectConfigurations();
+
+        pctx.beginBlock("PropertyGroup", { {"Label", "Globals"} });
+        pctx.addBlock("VCProjectVersion", "15.0");
+        pctx.addBlock("ProjectGuid", "{" + ctx.uuids[all_build_name] + "}");
+        pctx.addBlock("RootNamespace", all_build_name);
+        pctx.addBlock("WindowsTargetPlatformVersion", getLatestWindowsKit());
+        pctx.endBlock();
+
+        pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
+        //pctx.addPropertyGroupConfigurationTypes();
+
+        iterate_over_configs(b.Settings, [this, &pctx, &b](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        {
+            using namespace sw;
+
+            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+
+            String toolset = "v141";
+            auto p = b.solutions[0].findProgramByExtension(".cpp");
+            if (!p)
+                p = b.solutions[0].findProgramByExtension(".c");
+            if (!p)
+                p = b.solutions[0].findProgramByExtension(".asm");
+            if (!p)
+                throw std::runtime_error("Unknown lang");
+            //if (auto p2 = p->as<VisualStudioCompiler>(); p2)
+                //toolset = p2->toolset;
+            //if (auto p2 = p->as<ClangClCompiler>(); p2)
+                //;
+            pctx.addBlock("ConfigurationType", "Utillity");
+            pctx.addBlock("PlatformToolset", toolset);
+            pctx.endBlock();
+        });
+
+        pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
+        pctx.addPropertySheets();
+
+        pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets" } });
+
+        pctx.endProject();
+        write_file(dir / projects_dir / (all_build_name + ".vcxproj"), pctx.getText());
+    }
+
+    // gather parents
+    bool has_deps = false;
+    for (auto &[p, t] : b.solutions[0].children)
+    {
+        has_deps |= !t->Local;
+        (t->Local ? local_tree : tree).add(p.ppath);
+    }
+    if (has_deps && print_dependencies)
+        ctx.addDirectory(deps_subdir);
+
+    auto add_dirs = [&ctx](auto &t, auto &prnts, const String &root = {})
+    {
+        for (auto &p : prnts = t.getDirectories())
+        {
+            auto pp = p.parent();
+            while (!pp.empty() && prnts.find(pp) == prnts.end())
+                pp = pp.parent();
+            ctx.addDirectory(InsecurePath() / p.toString(), p.slice(pp.size()), pp.empty() ? root : pp.toString());
+        }
+    };
+    if (print_dependencies)
+        add_dirs(tree, parents, deps_subdir.toString());
+    add_dirs(local_tree, local_parents);
+
+    for (auto &[p, t] : b.solutions[0].children)
+    {
+        if (!print_dependencies && !t->Local)
+            continue;
+
+        auto pp = p.ppath.parent();
+        auto &prnts = t->Local ? local_parents : parents;
+        while (!pp.empty() && prnts.find(pp) == prnts.end())
+            pp = pp.parent();
+        ctx.addProject(VSProjectType::Makefile, p.target_name, projects_dir, pp);
+    }
+
+    // gen projects
+    for (auto &[p, t] : b.solutions[0].children)
+    {
+        if (!print_dependencies && !t->Local)
+            continue;
+
+        auto nt = t->as<NativeExecutedTarget>();
+
+        ProjectContext pctx;
+        pctx.beginProject();
+
+        pctx.addProjectConfigurations();
+
+        // project name helper
+        auto pp = p.ppath.parent();
+        auto &prnts = t->Local ? local_parents : parents;
+        while (!pp.empty() && prnts.find(pp) == prnts.end())
+            pp = pp.parent();
+
+        ctx.projects[all_build_name].deps.insert(p.target_name);
+
+        pctx.beginBlock("PropertyGroup", { {"Label", "Globals"} });
+        pctx.addBlock("VCProjectVersion", "15.0");
+        pctx.addBlock("ProjectGuid", "{" + ctx.uuids[p.target_name] + "}");
+        pctx.addBlock("RootNamespace", p.target_name);
+        pctx.addBlock("WindowsTargetPlatformVersion", getLatestWindowsKit());
+        //pctx.addBlock("Keyword", "Win32Proj");
+        //pctx.addBlock("ProjectName", PackageId(p.ppath.slice(pp.size()), p.version).toString());
+        pctx.endBlock();
+
+        pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
+
+        iterate_over_configs(nt->Settings,
+            [this, &pctx, &nt, &p, &b, &t]
+            (const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        {
+            using namespace sw;
+
+            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+            String ext = ".exe";
+            String type = "Application";
+            switch (t->getType())
+            {
+            case TargetType::NativeLibrary:
+                if (dll != "dll")
+                {
+                    type = "StaticLibrary";
+                    ext = ".lib";
+                }
+                else
+                {
+                    type = "SharedLibrary";
+                    ext = ".dll";
+                }
+                break;
+            case TargetType::NativeStaticLibrary:
+                type = "StaticLibrary";
+                ext = ".lib";
+                break;
+            case TargetType::NativeSharedLibrary:
+                type = "SharedLibrary";
+                ext = ".dll";
+                break;
+            default:
+                break;
+            }
+            pctx.addBlock("ConfigurationType", type);
+
+            bool unicode = nt->Definitions.find("UNICODE") != nt->Definitions.end();
+            pctx.addBlock("CharacterSet", unicode ? "MultiByte" : "Unicode");
+
+            String toolset = "v141";
+            auto p = b.solutions[0].findProgramByExtension(".cpp");
+            if (!p)
+                p = b.solutions[0].findProgramByExtension(".c");
+            if (!p)
+                p = b.solutions[0].findProgramByExtension(".asm");
+            if (!p)
+                throw std::runtime_error("Unknown lang");
+            //if (auto p2 = p->as<VisualStudioCompiler>(); p2)
+                //toolset = p2->toolset;
+            //if (auto p2 = p->as<ClangClCompiler>(); p2)
+                //;
+            pctx.addBlock("PlatformToolset", toolset);
+            pctx.endBlock();
+        });
+
+        //pctx.addPropertyGroupConfigurationTypes();
+        pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
+        pctx.addPropertySheets();
+
+        iterate_over_configs(nt->Settings,
+            [this, &pctx, &nt, &p, &b, &t]
+        (const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        {
+            using namespace sw;
+
+            String ext = ".exe";
+            String type = "Application";
+            switch (t->getType())
+            {
+            case TargetType::NativeLibrary:
+                if (dll != "dll")
+                {
+                    type = "StaticLibrary";
+                    ext = ".lib";
+                }
+                else
+                {
+                    type = "SharedLibrary";
+                    ext = ".dll";
+                }
+                break;
+            case TargetType::NativeStaticLibrary:
+                type = "StaticLibrary";
+                ext = ".lib";
+                break;
+            case TargetType::NativeSharedLibrary:
+                type = "SharedLibrary";
+                ext = ".dll";
+                break;
+            default:
+                break;
+            }
+
+            pctx.beginBlock("PropertyGroup");
+            {
+                pctx.addBlock("OutDir", normalize_path_windows(current_thread_path() / "bin\\"),
+                    { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+                pctx.addBlock("IntDir", normalize_path_windows(dir / projects_dir / sha256_short(nt->pkg.target_name)) + "\\",
+                    { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+                pctx.addBlock("TargetName", nt->pkg.toString(), { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+                pctx.addBlock("TargetExt", ext, { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+            }
+            pctx.endBlock();
+
+            /*pctx.beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+            pctx.beginBlock("ClCompile");
+            pctx.endBlock();
+            pctx.beginBlock("Link");
+            pctx.endBlock();
+            pctx.endBlock();*/
+        });
+
+        pctx.beginBlock("ItemGroup");
+        for (auto &[p, sf] : *nt)
+        {
+            if (sf->skip)
+                continue;
+            pctx.beginBlock("ClCompile", { { "Include", p.string() } });
+            pctx.endBlock();
+        }
+        pctx.endBlock();
+
+        pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets" } });
+
+        pctx.endProject();
+        write_file(dir / projects_dir / (p.target_name + ".vcxproj"), pctx.getText());
+
+        FiltersContext fctx;
+        fctx.beginProject();
+        fctx.beginBlock("ItemGroup");
+
+        auto sd = normalize_path(nt->SourceDir);
+        auto bd = normalize_path(nt->BinaryDir);
+        StringSet filters;
+        for (auto &[f, sf] : *nt)
+        {
+            if (sf->skip)
+                continue;
+            auto fd = normalize_path(f);
+            auto p1 = fd.find(sd);
+            auto p2 = fd.find(bd);
+            size_t p = -1;
+            path filter;
+            if (p1 != -1 || p2 != -1)
+            {
+                if (p1 != -1 && p2 != -1)
+                    p = std::max(sd.size(), bd.size());
+                else if (p1 != -1)
+                    p = sd.size();
+                else if (p2 != -1)
+                    p = bd.size();
+                auto ss = fd.substr(p);
+                if (ss[0] == '/')
+                    ss = ss.substr(1);
+                path r = ss;
+                do
+                {
+                    r = r.parent_path();
+                    if (filter.empty())
+                        filter = r;
+                    filters.insert(r.string());
+                } while (!r.empty());
+            }
+
+            fctx.beginBlock("ClCompile", { {"Include",f.string()} });
+            if (!filter.empty())
+                fctx.addBlock("Filter", make_backslashes(/*"Source Files\\" + */filter.string()));
+            fctx.endBlock();
+        }
+        filters.erase("");
+        fctx.endBlock();
+
+        fctx.beginBlock("ItemGroup");
+        for (auto &f : filters)
+        {
+            fctx.beginBlock("Filter", { { "Include", make_backslashes(/*"Source Files\\" + */f) } });
+            fctx.addBlock("UniqueIdentifier", "{" + uuid2string(boost::uuids::random_generator()()) + "}");
+            fctx.endBlock();
+        }
+        fctx.endBlock();
+
+        fctx.endProject();
+        write_file(dir / projects_dir / (p.target_name + ".vcxproj.filters"), fctx.getText());
+    }
+
+    ctx.beginGlobal();
+    ctx.setSolutionConfigurationPlatforms();
+    ctx.beginGlobalSection("ProjectConfigurationPlatforms", "postSolution");
+    for (auto &[p, t] : b.solutions[0].children)
+    {
+        if (!print_dependencies && !t->Local)
+            continue;
+        ctx.addProjectConfigurationPlatforms(p.target_name);
+    }
+    ctx.addProjectConfigurationPlatforms(all_build_name, true);
+    ctx.endGlobalSection();
+    ctx.endGlobal();
+
+    const auto compiler_name = boost::to_lower_copy(toString(b.Settings.Native.CompilerType));
+    String fn = "sw_";
+    fn += compiler_name + "_" + toPathString(type);
+    fn += ".sln";
+    write_file(dir / fn, ctx.getText());
+    auto lnk = current_thread_path() / fn;
+    lnk += ".lnk";
+    ::create_link(dir / fn, lnk, "SW link");
 }
 
 void VSGeneratorNMake::generate(const Build &b)
 {
-    const auto cwd = "\"" + current_thread_path().string() + "\"";
-    const auto dir = b.getIdeDir() / "vs_nmake";
-    const path projects_dir = "projects";
-    const InsecurePath deps_subdir = "Dependencies";
-    const auto predefined_targets_dir = ". SW Predefined Targets"s;
-    const auto all_build_name = "ALL_BUILD"s;
+    dir = b.getIdeDir() / toPathString(type);
     PackagePathTree tree, local_tree;
     PackagePathTree::Directories parents, local_parents;
     SolutionContext ctx;
@@ -448,11 +875,11 @@ void VSGeneratorNMake::generate(const Build &b)
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
         pctx.addPropertySheets();
 
-        iterate_over_configs(b.Settings, [&pctx, &cwd, &b, &all_build_name](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        iterate_over_configs(b.Settings, [this, &pctx, &b](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
 
-            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + " " + dll + "|" + pl + "'" } });
+            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
 
             String cfg = "--configuration " + c + " --platform " + pl;
             if (dll != "dll")
@@ -550,26 +977,16 @@ void VSGeneratorNMake::generate(const Build &b)
         pctx.addBlock("ProjectName", PackageId(p.ppath.slice(pp.size()), p.version).toString());
         pctx.endBlock();
 
-        pctx.beginBlock("ItemGroup");
-        for (auto &[p, sf] : *nt)
-        {
-            if (sf->skip)
-                continue;
-            pctx.beginBlock("ClCompile", { { "Include", p.string() } });
-            pctx.endBlock();
-        }
-        pctx.endBlock();
-
         pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
         pctx.addPropertyGroupConfigurationTypes();
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
         pctx.addPropertySheets();
 
-        iterate_over_configs(nt->Settings, [&pctx, &nt, &cwd, &p, &b, &t](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        iterate_over_configs(nt->Settings, [this, &pctx, &nt, &p, &b, &t](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
 
-            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + " " + dll + "|" + pl + "'" } });
+            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
 
             String cfg = "--configuration " + c + " --platform " + pl;
             if (dll != "dll")
@@ -608,6 +1025,16 @@ void VSGeneratorNMake::generate(const Build &b)
 
             pctx.endBlock();
         });
+
+        pctx.beginBlock("ItemGroup");
+        for (auto &[p, sf] : *nt)
+        {
+            if (sf->skip)
+                continue;
+            pctx.beginBlock("ClCompile", { { "Include", p.string() } });
+            pctx.endBlock();
+        }
+        pctx.endBlock();
 
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets" } });
 
@@ -687,12 +1114,15 @@ void VSGeneratorNMake::generate(const Build &b)
 
     const auto compiler_name = boost::to_lower_copy(toString(b.Settings.Native.CompilerType));
     String fn = "sw_";
-    fn += compiler_name;
+    fn += compiler_name + "_" + toPathString(type);
     fn += ".sln";
     write_file(dir / fn, ctx.getText());
+    auto lnk = current_thread_path() / fn;
+    lnk += ".lnk";
+    ::create_link(dir / fn, lnk, "SW link");
 }
 
-struct NinjaContext : Context
+struct NinjaContext : primitives::Context
 {
     void addCommand(const Build &b, const path &dir, builder::Command *c)
     {
@@ -805,7 +1235,7 @@ void NinjaGenerator::generate(const Build &b)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    const auto dir = path(".sw") / "ninja" / b.getConfig();
+    const auto dir = path(".sw") / toPathString(type) / b.getConfig();
 
     NinjaContext ctx;
 

@@ -99,7 +99,7 @@ Dependency::Dependency(const UnresolvedPackage &p)
 
 Dependency &Dependency::operator=(const NativeTarget *t)
 {
-    target = std::static_pointer_cast<NativeTarget>(((NativeTarget *)t)->shared_from_this());
+    setTarget(std::static_pointer_cast<NativeTarget>(((NativeTarget *)t)->shared_from_this()));
     //package = t->getPackage();
     return *this;
 }
@@ -155,6 +155,18 @@ PackageId Dependency::getResolvedPackage() const
     if (t)
         return { t->pkg.ppath, t->pkg.version };
     throw std::runtime_error("Package is unresolved: " + getPackage().toString());
+}
+
+void Dependency::setTarget(const std::shared_ptr<NativeTarget> &t)
+{
+    target = t;
+    propagateTargetToChain();
+}
+
+void Dependency::propagateTargetToChain()
+{
+    for (auto &c : chain)
+        c->target = target;
 }
 
 void NativeCompilerOptionsData::add(const Definition &d)
@@ -419,13 +431,16 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
     });
     if (i == Dependencies.end())
     {
-        auto t2 = t;
         t->Disabled = false;
         Dependencies.insert(t);
     }
     else
     {
         (*i)->Disabled = false;
+        (*i)->chain.push_back(t);
+        auto d = (*i)->target.lock();
+        if (d)
+            t->target = d;
     }
 }
 
@@ -437,13 +452,16 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
     });
     if (i == Dependencies.end())
     {
-        auto t2 = t;
         t->Disabled = true;
         Dependencies.insert(t);
     }
     else
     {
         (*i)->Disabled = true;
+        (*i)->chain.push_back(t);
+        auto d = (*i)->target.lock();
+        if (d)
+            t->target = d;
     }
 }
 

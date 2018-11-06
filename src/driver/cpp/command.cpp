@@ -49,6 +49,8 @@ void Command::prepare()
     if (d)
     {
         auto t = d->target.lock();
+        if (!t)
+            throw std::runtime_error("Command dependency target was not resolved: " + d->getPackage().toString());
         t->setupCommand(*this);
     }
 
@@ -81,6 +83,8 @@ path Command::getProgram() const
 
 void Command::setProgram(const std::shared_ptr<Dependency> &d)
 {
+    if (dependency_set)
+        throw std::runtime_error("Setting program twice"); // probably throw, but who knows...
     dependency = d;
     dependency_set = true;
     auto l = d->target.lock();

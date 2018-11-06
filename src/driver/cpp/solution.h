@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <dependency.h>
 #include "checks_storage.h"
 
 #include <file_storage.h>
@@ -16,9 +17,6 @@
 
 #include <boost/dll/shared_library.hpp>
 #include <boost/thread/shared_mutex.hpp>
-
-#include <type_traits>
-#include <unordered_map>
 
 namespace sw
 {
@@ -102,10 +100,13 @@ protected:
     Solution();
 
 private:
+    std::unordered_set<ExtendedPackageData> known_cfgs;
+
     void checkPrepared() const;
     Files getGeneratedDirs() const;
     void createGeneratedDirs() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
+    void build_and_resolve();
 
     path getChecksFilename() const;
     void loadChecks();

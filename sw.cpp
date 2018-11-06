@@ -63,7 +63,7 @@ void build(Solution &s)
     manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().version.getMajor());
     manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().version.getMinor());
     manager.Public.Definitions["VERSION_PATCH"] += std::to_string(manager.getPackage().version.getPatch());
-    embed(manager, manager.SourceDir / "src/manager/inserts/inserts.cpp.in");
+    embed(manager, "src/manager/inserts/inserts.cpp.in");
     gen_sqlite2cpp(manager, manager.SourceDir / "src/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
     gen_sqlite2cpp(manager, manager.SourceDir / "src/manager/inserts/service_db_schema.sql", "db_service.h", "db::service");
 
@@ -89,7 +89,7 @@ void build(Solution &s)
     if (s.Settings.TargetOS.Type != OSType::Windows)
         cpp_driver -= "src/driver/cpp/misc/.*"_rr;
     cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
-    embed(cpp_driver, cpp_driver.SourceDir / "src/driver/cpp/inserts/inserts.cpp.in");
+    embed(cpp_driver, "src/driver/cpp/inserts/inserts.cpp.in");
     gen_flex_bison(cpp_driver, "src/driver/cpp/bazel/lexer.ll", "src/driver/cpp/bazel/grammar.yy");
 #ifdef _MSC_VER
     if (auto sf = cpp_driver["src/driver/cpp/solution.cpp"].template as<NativeSourceFile>())

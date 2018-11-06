@@ -20,7 +20,7 @@ void fileWriteOnce(const path &fn, const String &content, const path &lock_dir)
 {
     auto h = sha1(content);
 
-    auto hf = sha1(fn.string());
+    auto hf = sha1(normalize_path(fn));
     const auto once = lock_dir / (hf + ".once");
     const auto lock = lock_dir / hf;
 
@@ -34,7 +34,7 @@ void fileWriteOnce(const path &fn, const String &content, const path &lock_dir)
 
 void fileWriteSafe(const path &fn, const String &content, const path &lock_dir)
 {
-    auto hf = sha1(fn.string());
+    auto hf = sha1(normalize_path(fn));
     const auto lock = lock_dir / hf;
 
     ScopedFileLock fl(lock);
@@ -43,9 +43,9 @@ void fileWriteSafe(const path &fn, const String &content, const path &lock_dir)
 
 void replaceInFileOnce(const path &fn, const String &from, const String &to, const path &lock_dir)
 {
-    auto hf = sha1(fn.string());
+    auto hf = sha1(normalize_path(fn));
 
-    auto uniq = fn.string() + from + to;
+    auto uniq = normalize_path(fn) + from + to;
     auto h = sha1(uniq).substr(0, 5);
     auto hfn = lock_dir / (hf + "." + h);
 
@@ -67,9 +67,9 @@ void replaceInFileOnce(const path &fn, const String &from, const String &to, con
 
 void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_dir)
 {
-    auto hf = sha1(fn.string());
+    auto hf = sha1(normalize_path(fn));
 
-    auto uniq = fn.string() + text;
+    auto uniq = normalize_path(fn) + text;
     auto h = sha1(uniq).substr(0, 5);
     auto hfn = lock_dir / (hf + "." + h);
 
@@ -97,9 +97,9 @@ void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_di
 
 void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir)
 {
-    auto hf = sha1(fn.string());
+    auto hf = sha1(normalize_path(fn));
 
-    auto uniq = fn.string() + text;
+    auto uniq = normalize_path(fn) + text;
     auto h = sha1(uniq).substr(0, 5);
     auto hfn = lock_dir / (hf + "." + h);
 

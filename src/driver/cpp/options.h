@@ -151,6 +151,8 @@ struct SW_DRIVER_CPP_API Dependency
 {
     std::weak_ptr<NativeTarget> target;
     UnresolvedPackage package;
+    std::vector<std::shared_ptr<Dependency>> chain;
+
     bool Disabled = false;
     bool GenerateCommandsBefore = false; // do not make true by default
     bool Dummy = false; // bool Runtime = false; ?
@@ -179,6 +181,9 @@ struct SW_DRIVER_CPP_API Dependency
     operator bool() const { return !!target.lock(); }
     UnresolvedPackage getPackage() const;
     PackageId getResolvedPackage() const;
+
+    void setTarget(const std::shared_ptr<NativeTarget> &t);
+    void propagateTargetToChain();
 };
 
 using DependencyPtr = std::shared_ptr<Dependency>;

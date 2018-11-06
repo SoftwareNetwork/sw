@@ -460,123 +460,6 @@ void TargetBase::fetch()
     }
 }
 
-path Target::getPatchDir(bool binary_dir) const
-{
-    auto base = (binary_dir || Local) ? BinaryDir : SourceDir;
-    return base.parent_path() / "patch";
-}
-
-void Target::fileWriteOnce(const path &fn, bool binary_dir) const
-{
-    if (fn.is_absolute())
-        fileWriteOnce(fn, "", binary_dir);
-    else
-        fileWriteOnce((binary_dir ? BinaryDir : SourceDir) / fn, String());
-}
-
-void Target::fileWriteOnce(const path &fn, const char *content, bool binary_dir) const
-{
-    fileWriteOnce(fn, String(content), binary_dir);
-}
-
-void Target::fileWriteOnce(const path &fn, const String &content, bool binary_dir) const
-{
-    path p;
-    if (fn.is_absolute())
-        p = fn;
-    else
-        p = (binary_dir ? BinaryDir : SourceDir) / fn;
-
-    // before resolving
-    File f(p, *getSolution()->fs);
-    f.getFileRecord().setGenerated();
-
-    if (PostponeFileResolving)
-        return;
-
-    ::sw::fileWriteOnce(p, content, getPatchDir(binary_dir));
-    f.getFileRecord().load();
-}
-
-void Target::writeFileOnce(const path &fn, bool binary_dir) const
-{
-    fileWriteOnce(fn, binary_dir);
-}
-
-void Target::writeFileOnce(const path &fn, const String &content, bool binary_dir) const
-{
-    fileWriteOnce(fn, content, binary_dir);
-}
-
-void Target::writeFileOnce(const path &fn, const char *content, bool binary_dir) const
-{
-    fileWriteOnce(fn, content, binary_dir);
-}
-
-void Target::fileWriteSafe(const path &fn, const String &content, bool binary_dir) const
-{
-    if (PostponeFileResolving)
-        return;
-
-    path p;
-    if (fn.is_absolute())
-        ::sw::fileWriteSafe(p = fn, content, getPatchDir(binary_dir));
-    else
-        ::sw::fileWriteSafe(p = (binary_dir ? BinaryDir : SourceDir) / fn, content, getPatchDir(binary_dir));
-
-    File f(fn, *getSolution()->fs);
-    f.getFileRecord().load();
-}
-
-void Target::writeFileSafe(const path &fn, const String &content, bool binary_dir) const
-{
-    fileWriteSafe(fn, content, binary_dir);
-}
-
-void Target::replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir) const
-{
-    if (PostponeFileResolving)
-        return;
-
-    path p;
-    if (fn.is_absolute())
-        ::sw::replaceInFileOnce(p = fn, from, to, getPatchDir(binary_dir));
-    else
-        ::sw::replaceInFileOnce(p = (binary_dir ? BinaryDir : SourceDir) / fn, from, to, getPatchDir(binary_dir));
-
-    File f(p, *getSolution()->fs);
-    f.getFileRecord().load();
-}
-
-void Target::deleteInFileOnce(const path &fn, const String &from, bool binary_dir) const
-{
-    replaceInFileOnce(fn, from, "", binary_dir);
-}
-
-void Target::pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir) const
-{
-    if (PostponeFileResolving)
-        return;
-
-    auto p = (binary_dir ? BinaryDir : SourceDir) / fn;
-    ::sw::pushFrontToFileOnce(p, text, getPatchDir(binary_dir));
-
-    File f(p, *getSolution()->fs);
-    f.getFileRecord().load();
-}
-
-void Target::pushBackToFileOnce(const path &fn, const String &text, bool binary_dir) const
-{
-    if (PostponeFileResolving)
-        return;
-
-    auto p = (binary_dir ? BinaryDir : SourceDir) / fn;
-    ::sw::pushBackToFileOnce(p, text, getPatchDir(binary_dir));
-
-    File f(p, *getSolution()->fs);
-    f.getFileRecord().load();
-}
-
 void Target::removeFile(const path &fn, bool binary_dir)
 {
     auto p = fn;
@@ -680,6 +563,15 @@ void NativeExecutedTarget::init()
     if (SW_IS_LOCAL_BINARY_DIR)
     {
         BinaryDir = getTargetDirShort();
+    }
+    else if (auto d = pkg.getOverriddenDir(); d)
+    {
+        BinaryDir = d.value() / ".sw";
+#ifdef _WIN32
+        BinaryDir /= path(getConfig(true)) / sha256_short(pkg.toString());
+#else
+        BinaryDir /= getConfig() / "targets" / pkg.ppath.toString();
+#endif
     }
     else
     {
@@ -1771,7 +1663,7 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "avutil");
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "primitives.settings");
 
     /*{
         auto is_changed = [this](const path &p)
@@ -1822,13 +1714,34 @@ bool NativeExecutedTarget::prepare()
 
         for (auto &f : *this)
         {
-            if (f.second->isActive())
+            if (f.second->isActive() && !f.second->postponed)
             {
+                // TODO: do not rely on native source file, do a dynamic check instead
                 auto ba = ((NativeSourceFile*)f.second.get())->BuildAs;
-                if (ba != NativeSourceFile::BasedOnExtension)
+                switch (ba)
                 {
-                    throw std::logic_error("todo");
-                    //f.second = languages[(LanguageType)ba]->clone()->createSourceFile(f.first, this);
+                case NativeSourceFile::BasedOnExtension:
+                    break;
+                case NativeSourceFile::C:
+                    if (auto L = SourceFileStorage::findLanguageByExtension(".c"); L)
+                        L->clone()->createSourceFile(f.first, this);
+                    else
+                        throw std::logic_error("no C language found");
+                    break;
+                case NativeSourceFile::CPP:
+                    if (auto L = SourceFileStorage::findLanguageByExtension(".cpp"); L)
+                        L->clone()->createSourceFile(f.first, this);
+                    else
+                        throw std::logic_error("no CPP language found");
+                    break;
+                case NativeSourceFile::ASM:
+                    if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
+                        L->clone()->createSourceFile(f.first, this);
+                    else
+                        throw std::logic_error("no ASM language found");
+                    break;
+                default:
+                    throw std::logic_error("not implemented");
                 }
             }
         }
@@ -1895,7 +1808,7 @@ bool NativeExecutedTarget::prepare()
                 {
                     if (d->getPackage().canBe(t->getPackage()))
                     {
-                        d->target = std::static_pointer_cast<NativeTarget>(t);
+                        d->setTarget(std::static_pointer_cast<NativeTarget>(t));
                         break;
                     }
                 }
@@ -2039,6 +1952,7 @@ bool NativeExecutedTarget::prepare()
             if (!new_dependency)
             {
                 for (auto &d : deps_ordered)
+                    //add(deps.find(d)->first);
                     Dependencies.insert(deps.find(d)->first);
                 break;
             }
@@ -2075,6 +1989,9 @@ bool NativeExecutedTarget::prepare()
         // merge deps' stuff
         for (auto &d : Dependencies)
         {
+            // we also apply targets to deps chains as we finished with deps
+            d->propagateTargetToChain();
+
             if (d->isDummy())
                 continue;
 
@@ -2489,7 +2406,7 @@ void NativeExecutedTarget::removeFile(const path &fn, bool binary_dir)
     Target::removeFile(fn, binary_dir);
 }
 
-void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags)
+void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags) const
 {
     // before resolving
     if (!to.is_absolute())
@@ -2636,6 +2553,138 @@ void NativeExecutedTarget::setChecks(const String &name)
                 Variables[p + d2] = v;
         }
     }
+}
+
+path NativeExecutedTarget::getPatchDir(bool binary_dir) const
+{
+    path base;
+    if (auto d = pkg.getOverriddenDir(); d)
+        base = d.value() / ".sw";
+    else if (!Local)
+        base = pkg.getDirSrc();
+    else
+        base = getSolution()->BinaryDir;
+    return base / "patch";
+
+    //auto base = ((binary_dir || Local) ? BinaryDir : SourceDir;
+    //return base.parent_path() / "patch";
+
+    /*path base;
+    if (Local && !pkg.getOverriddenDir())
+        base = "";
+    auto base = Local ? getSolution()->bi : SourceDir;
+    return base / "patch";*/
+}
+
+void NativeExecutedTarget::fileWriteOnce(const path &fn, bool binary_dir) const
+{
+    if (fn.is_absolute())
+        fileWriteOnce(fn, "", binary_dir);
+    else
+        fileWriteOnce((binary_dir ? BinaryDir : SourceDir) / fn, String());
+}
+
+void NativeExecutedTarget::fileWriteOnce(const path &fn, const char *content, bool binary_dir) const
+{
+    fileWriteOnce(fn, String(content), binary_dir);
+}
+
+void NativeExecutedTarget::fileWriteOnce(const path &fn, const String &content, bool binary_dir) const
+{
+    path p;
+    if (fn.is_absolute())
+        p = fn;
+    else
+        p = (binary_dir ? BinaryDir : SourceDir) / fn;
+
+    // before resolving
+    File f(p, *getSolution()->fs);
+    f.getFileRecord().setGenerated();
+
+    if (PostponeFileResolving)
+        return;
+
+    ::sw::fileWriteOnce(p, content, getPatchDir(binary_dir));
+    f.getFileRecord().load();
+}
+
+void NativeExecutedTarget::writeFileOnce(const path &fn, bool binary_dir) const
+{
+    fileWriteOnce(fn, binary_dir);
+}
+
+void NativeExecutedTarget::writeFileOnce(const path &fn, const String &content, bool binary_dir) const
+{
+    fileWriteOnce(fn, content, binary_dir);
+}
+
+void NativeExecutedTarget::writeFileOnce(const path &fn, const char *content, bool binary_dir) const
+{
+    fileWriteOnce(fn, content, binary_dir);
+}
+
+void NativeExecutedTarget::fileWriteSafe(const path &fn, const String &content, bool binary_dir) const
+{
+    if (PostponeFileResolving)
+        return;
+
+    path p;
+    if (fn.is_absolute())
+        ::sw::fileWriteSafe(p = fn, content, getPatchDir(binary_dir));
+    else
+        ::sw::fileWriteSafe(p = (binary_dir ? BinaryDir : SourceDir) / fn, content, getPatchDir(binary_dir));
+
+    File f(fn, *getSolution()->fs);
+    f.getFileRecord().load();
+}
+
+void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content, bool binary_dir) const
+{
+    fileWriteSafe(fn, content, binary_dir);
+}
+
+void NativeExecutedTarget::replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir) const
+{
+    if (PostponeFileResolving)
+        return;
+
+    path p;
+    if (fn.is_absolute())
+        ::sw::replaceInFileOnce(p = fn, from, to, getPatchDir(binary_dir));
+    else
+        ::sw::replaceInFileOnce(p = (binary_dir ? BinaryDir : SourceDir) / fn, from, to, getPatchDir(binary_dir));
+
+    File f(p, *getSolution()->fs);
+    f.getFileRecord().load();
+}
+
+void NativeExecutedTarget::deleteInFileOnce(const path &fn, const String &from, bool binary_dir) const
+{
+    replaceInFileOnce(fn, from, "", binary_dir);
+}
+
+void NativeExecutedTarget::pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir) const
+{
+    if (PostponeFileResolving)
+        return;
+
+    auto p = (binary_dir ? BinaryDir : SourceDir) / fn;
+    ::sw::pushFrontToFileOnce(p, text, getPatchDir(binary_dir));
+
+    File f(p, *getSolution()->fs);
+    f.getFileRecord().load();
+}
+
+void NativeExecutedTarget::pushBackToFileOnce(const path &fn, const String &text, bool binary_dir) const
+{
+    if (PostponeFileResolving)
+        return;
+
+    auto p = (binary_dir ? BinaryDir : SourceDir) / fn;
+    ::sw::pushBackToFileOnce(p, text, getPatchDir(binary_dir));
+
+    File f(p, *getSolution()->fs);
+    f.getFileRecord().load();
 }
 
 bool ExecutableTarget::prepare()
