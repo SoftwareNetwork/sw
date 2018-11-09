@@ -236,15 +236,16 @@ int main(int argc, char **argv)
 
     UnresolvedPackages deps;
     for (auto &[p, d] : pkgs)
-    {
         deps.insert(p);
-        ctx_packages.addLine("\"" + p.toString() + "\"s,");
-    }
+
+    auto m = resolve_dependencies(deps);
+
+    // write resolved deps!
+    for (auto &[p, d] : pkgs)
+        ctx_packages.addLine("\"" + p.resolve().toString() + "\"s,");
 
     ctx_packages.endBlock(true);
     write_file_if_different(packages, ctx_packages.getText());
-
-    auto m = resolve_dependencies(deps);
 
     primitives::CppContext ctx;
     ctx.addLine("#define SW_PRAGMA_HEADER 1");

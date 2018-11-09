@@ -10,14 +10,16 @@
 
 #include <primitives/debug.h>
 #include <primitives/file_monitor.h>
+#include <primitives/sw/settings.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "file_storage");
 
+static cl::opt<bool> useFileMonitor("use-file-monitor", cl::init(true));
+
 namespace sw
 {
 
-int useFileMonitor = 1;
 static Executor async_executor("async log writer", 1);
 
 primitives::filesystem::FileMonitor &get_file_monitor()
