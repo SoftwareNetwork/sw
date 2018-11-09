@@ -570,7 +570,7 @@ void NativeExecutedTarget::init()
 #ifdef _WIN32
         BinaryDir /= path(getConfig(true)) / sha256_short(pkg.toString());
 #else
-        BinaryDir /= getConfig() / "targets" / pkg.ppath.toString();
+        BinaryDir /= path(getConfig()) / "targets" / pkg.ppath.toString();
 #endif
     }
     else

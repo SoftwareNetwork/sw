@@ -474,7 +474,7 @@ void detectNativeCompilers(struct Solution &s)
     {
         p = resolve("as");
 
-        auto L = std::make_shared<ASMLanguage>();
+        auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::ASM;
         L->CompiledExtensions = { ".s", ".S" };
         //s.registerLanguage(L);
@@ -493,13 +493,13 @@ void detectNativeCompilers(struct Solution &s)
     {
         // C
         {
-            auto L = std::make_shared<CLanguage>();
+            auto L = std::make_shared<NativeLanguage>();
             //L->Type = LanguageType::C;
             L->CompiledExtensions = { ".c" };
             //s.registerLanguage(L);
 
             //auto L = (CLanguage*)s.languages[LanguageType::C].get();
-            auto C = std::make_shared<GNUCCompiler>();
+            auto C = std::make_shared<GNUCompiler>();
             C->Type = CompilerType::GNU;
             C->file = p;
             *C = COpts;
@@ -513,13 +513,13 @@ void detectNativeCompilers(struct Solution &s)
     {
         // CPP
         {
-            auto L = std::make_shared<CPPLanguage>();
+            auto L = std::make_shared<NativeLanguage>();
             //L->Type = LanguageType::C;
-            L->CompiledExtensions = { CPP_EXTS };
+            L->CompiledExtensions = { ".c", CPP_EXTS };
             //s.registerLanguage(L);
 
             //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
-            auto C = std::make_shared<GNUCPPCompiler>();
+            auto C = std::make_shared<GNUCompiler>();
             C->Type = CompilerType::GNU;
             C->file = p;
             *C = COpts;
@@ -540,7 +540,7 @@ void detectNativeCompilers(struct Solution &s)
         Linker->Type = LinkerType::GNU;
         Linker->file = p;
         *Linker = LOpts;
-        s.registerProgram("org.LLVM.clang.ld", C);
+        s.registerProgram("org.LLVM.clang.ld", Linker);
 
         NativeCompilerOptions COpts;
         //COpts.System.IncludeDirectories.insert("/usr/include");
@@ -551,13 +551,13 @@ void detectNativeCompilers(struct Solution &s)
         {
             // C
             {
-                auto L = std::make_shared<CLanguage>();
+                auto L = std::make_shared<NativeLanguage>();
                 //L->Type = LanguageType::C;
                 L->CompiledExtensions = { ".c" };
                 //s.registerLanguage(L);
 
                 //auto L = (CLanguage*)s.languages[LanguageType::C].get();
-                auto C = std::make_shared<GNUCCompiler>();
+                auto C = std::make_shared<GNUCompiler>();
                 C->Type = CompilerType::GNU;
                 C->file = p;
                 *C = COpts;
@@ -571,13 +571,13 @@ void detectNativeCompilers(struct Solution &s)
         {
             // CPP
             {
-                auto L = std::make_shared<CPPLanguage>();
+                auto L = std::make_shared<NativeLanguage>();
                 //L->Type = LanguageType::C;
                 L->CompiledExtensions = { CPP_EXTS };
                 //s.registerLanguage(L);
 
                 //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
-                auto C = std::make_shared<GNUCPPCompiler>();
+                auto C = std::make_shared<GNUCompiler>();
                 C->Type = CompilerType::GNU;
                 C->file = p;
                 *C = COpts;
@@ -959,7 +959,7 @@ Version GNU::gatherVersion(const path &program) const
     return v;
 }
 
-/*std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
+std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
 {
     if (cmd)
         return cmd;
@@ -1013,7 +1013,7 @@ void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
 std::shared_ptr<Program> ClangASMCompiler::clone() const
 {
     return std::make_shared<ClangASMCompiler>(*this);
-}*/
+}
 
 std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
 {
@@ -1055,6 +1055,17 @@ Files GNUCompiler::getGeneratedDirs() const
     Files f;
     f.insert(OutputFile().parent_path());
     return f;
+}
+
+std::shared_ptr<Program> GNUCompiler::clone() const
+{
+    return std::make_shared<GNUCompiler>(*this);
+}
+
+void GNUCompiler::setSourceFile(const path &input_file, path &output_file)
+{
+    InputFile = input_file.u8string();
+    setOutputFile(output_file);
 }
 
 /*std::shared_ptr<Program> GNUCCompiler::clone() const
