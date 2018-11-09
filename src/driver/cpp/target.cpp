@@ -2087,6 +2087,9 @@ bool NativeExecutedTarget::prepare()
             {
                 //if (auto c = f->compiler->as<ClangCPPCompiler>())
                     c->CPPStandard = CPPVersion;
+
+                if (ExportAllSymbols)
+                    c->VisibilityHidden = false;
             }
             else if (auto c = f->compiler->as<ClangClCompiler>())
             {
@@ -2118,6 +2121,9 @@ bool NativeExecutedTarget::prepare()
                 }
                 //if (auto c = f->compiler->as<GNUCPPCompiler>())
                     c->CPPStandard = CPPVersion;
+
+                if (ExportAllSymbols)
+                    c->VisibilityHidden = false;
             }
         }
 

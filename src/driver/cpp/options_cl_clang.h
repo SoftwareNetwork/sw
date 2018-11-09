@@ -85,6 +85,12 @@ struct SW_DRIVER_CPP_API ClangOptions : ClangCommonOptions
         cl::CommandFlag{ "o" },
         cl::OutputDependency{},
     };
+
+    COMMAND_LINE_OPTION(VisibilityHidden, bool)
+    {
+        cl::CommandFlag{ "fvisibility=hidden" },
+            true
+    };
 };
 DECLARE_OPTION_SPECIALIZATION(ClangOptions);
 
@@ -157,7 +163,7 @@ struct SW_DRIVER_CPP_API GNUOptions
             true
     };
 
-    COMMAND_LINE_OPTION(Visibility, bool)
+    COMMAND_LINE_OPTION(VisibilityHidden, bool)
     {
         cl::CommandFlag{ "fvisibility=hidden" },
         true
