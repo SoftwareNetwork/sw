@@ -1063,20 +1063,29 @@ void Build::findCompiler()
     }
     case CompilerType::Clang:
     {
-        //if (!Clang().findToolchain(*this))
-            throw std::runtime_error("Cannot find clang toolchain");
+        activate_or_throw(
+            {
+                { "org.LLVM.clangpp",CompilerType::Clang },
+                { "org.LLVM.clang",CompilerType::Clang }
+            },
+            "Cannot find clang toolchain");
         break;
     }
     case CompilerType::ClangCl:
     {
-        //if (!ClangCl().findToolchain(*this))
-            throw std::runtime_error("Cannot find clang-cl toolchain");
+        activate_or_throw(
+            { { "org.LLVM.clangcl",CompilerType::ClangCl } },
+            "Cannot find clang-cl toolchain");
         break;
     }
     case CompilerType::GNU:
     {
-        //if (!GNU().findToolchain(*this))
-            throw std::runtime_error("Cannot find gnu toolchain");
+        activate_or_throw(
+            {
+                { "org.gnu.gcc.gpp",CompilerType::GNU },
+                { "org.gnu.gcc.gcc",CompilerType::GNU }
+            },
+            "Cannot find gnu toolchain");
         break;
     }
     case CompilerType::UnspecifiedCompiler:
@@ -1098,26 +1107,13 @@ void Build::findCompiler()
                 }, "Try to add more compilers");
             break;
         case OSType::Linux:
-            /*if (
-                !GNU().findToolchain(*this) &&
-                !Clang().findToolchain(*this) &&
-                1
-                )*/
-            {
-                throw std::runtime_error("Try to add more compilers");
-            }
-            //if (FileTransforms.IsEmpty())
-            break;
         case OSType::Macos:
-            /*if (
-                !GNU().findToolchain(*this) &&
-                !Clang().findToolchain(*this) && // does not support fs at the moment
-                1
-                )*/
-            {
-                throw std::runtime_error("Try to add more compilers");
-            }
-            //if (FileTransforms.IsEmpty())
+            activate_or_throw({
+                {"org.gnu.gcc.gpp",CompilerType::GNU},
+                {"org.gnu.gcc.gcc",CompilerType::GNU},
+                {"org.LLVM.clangpp",CompilerType::Clang},
+                {"org.LLVM.clang",CompilerType::Clang},
+                }, "Try to add more compilers");
             break;
         }
     }

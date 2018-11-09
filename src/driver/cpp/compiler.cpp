@@ -485,7 +485,7 @@ void detectNativeCompilers(struct Solution &s)
         C->file = p;
         *C = COpts;
         L->compiler = C;
-        s.registerProgram("org.gnu.gcc.as", C);
+        s.registerProgramAndLanguage("org.gnu.gcc.as", C, L);
     }
 
     p = resolve("gcc-8");
@@ -504,7 +504,7 @@ void detectNativeCompilers(struct Solution &s)
             C->file = p;
             *C = COpts;
             L->compiler = C;
-            s.registerProgram("org.gnu.gcc.gcc", C);
+            s.registerProgramAndLanguage("org.gnu.gcc.gcc", C, L);
         }
     }
 
@@ -524,7 +524,7 @@ void detectNativeCompilers(struct Solution &s)
             C->file = p;
             *C = COpts;
             L->compiler = C;
-            s.registerProgram("org.gnu.gcc.gpp", C);
+            s.registerProgramAndLanguage("org.gnu.gcc.gpp", C, L);
         }
     }
 
@@ -562,7 +562,7 @@ void detectNativeCompilers(struct Solution &s)
                 C->file = p;
                 *C = COpts;
                 L->compiler = C;
-                s.registerProgram("org.LLVM.clang", C);
+                s.registerProgramAndLanguage("org.LLVM.clang", C, L);
             }
         }
 
@@ -582,7 +582,7 @@ void detectNativeCompilers(struct Solution &s)
                 C->file = p;
                 *C = COpts;
                 L->compiler = C;
-                s.registerProgram("org.LLVM.clangpp", C);
+                s.registerProgramAndLanguage("org.LLVM.clangpp", C, L);
             }
         }
     }
