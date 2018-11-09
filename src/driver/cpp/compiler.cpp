@@ -401,13 +401,34 @@ void detectNativeCompilers(struct Solution &s)
         s.registerProgramAndLanguage("org.LLVM.clang", C, L);
     }
 
+    // C++
+    {
+        auto L = std::make_shared<NativeLanguage>();
+        //L->Type = LanguageType::C;
+        L->CompiledExtensions = { CPP_EXTS };
+        //s.registerLanguage(L);
+
+        //auto L = (CLanguage*)s.languages[LanguageType::C].get();
+        auto C = std::make_shared<ClangCompiler>();
+        C->Type = CompilerType::Clang;
+        C->file = bin_llvm_path / "clang++.exe";
+        auto COpts2 = COpts;
+        COpts2.System.IncludeDirectories.erase(root / "include");
+        COpts2.System.IncludeDirectories.erase(root / "ATLMFC\\include"); // also add
+        COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        COpts2.System.CompileOptions.push_back("-Wno-everything");
+        *C = COpts2;
+        L->compiler = C;
+        s.registerProgramAndLanguage("org.LLVM.clangpp", C, L);
+    }
+
     // clang-cl
 
     // C
     {
         auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
-        L->CompiledExtensions = { ".c" };
+        L->CompiledExtensions = { ".c", CPP_EXTS };
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
@@ -515,7 +536,7 @@ void detectNativeCompilers(struct Solution &s)
         {
             auto L = std::make_shared<NativeLanguage>();
             //L->Type = LanguageType::C;
-            L->CompiledExtensions = { ".c", CPP_EXTS };
+            L->CompiledExtensions = { CPP_EXTS };
             //s.registerLanguage(L);
 
             //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
