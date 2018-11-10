@@ -114,6 +114,7 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
         {
             auto b = std::make_unique<Build>();
             b->perform_checks = false;
+            b->DryRun = true;
             b->PostponeFileResolving = pp;
             b->source_dirs_by_source = srcs_old;
             if (!pp)
@@ -170,6 +171,7 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
     {
         auto b = std::make_unique<Build>();
         b->perform_checks = false;
+        b->DryRun = true;
         b->fetch_dir = d;
         b->build_and_load(f);
 

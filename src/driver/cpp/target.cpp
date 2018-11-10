@@ -577,6 +577,14 @@ void NativeExecutedTarget::init()
     {
         BinaryDir = pkg.getDirObj() / "build" / getConfig(true);
     }
+    if (DryRun)
+    {
+        // we doing some download on server or whatever
+        // so, we do not want to touch real existing bdirs
+        BinaryDir = getDirectories().storage_dir_tmp / "dry" / sha256_short(BinaryDir.u8string());
+        fs::remove_all(BinaryDir);
+        fs::create_directories(BinaryDir);
+    }
     BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
     BinaryDir /= SW_BDIR_NAME;
 
@@ -604,6 +612,13 @@ void NativeExecutedTarget::init()
 
     Librarian = std::dynamic_pointer_cast<NativeLinker>(Settings.Native.Librarian->clone());
     Linker = std::dynamic_pointer_cast<NativeLinker>(Settings.Native.Linker->clone());
+
+    /*if (getType() == TargetType::NativeExecutable || getType() == TargetType::NativeSharedLibrary)
+        SelectedTool = Linker.get();
+    else if (getType() == TargetType::NativeStaticLibrary || Settings.Native.LibrariesType == LibraryType::Static)
+        SelectedTool = Librarian.get();
+    else
+        SelectedTool = Linker.get();*/
 
     /*for (auto &l : languages)
     {

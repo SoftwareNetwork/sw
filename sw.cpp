@@ -27,8 +27,7 @@ void build(Solution &s)
         "pub.egorpugin.primitives.executor-master"_dep,
         "pub.egorpugin.primitives.symbol-master"_dep,
         "org.sw.demo.boost.property_tree-1"_dep,
-        "org.sw.demo.boost.stacktrace-1"_dep,
-        "org.sw.demo.boost.dll-1"_dep;
+        "org.sw.demo.boost.stacktrace-1"_dep;
     support.ApiName = "SW_SUPPORT_API";
     if (s.Settings.TargetOS.Type == OSType::Windows)
         support.Public += "UNICODE"_d;

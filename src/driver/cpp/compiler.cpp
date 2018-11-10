@@ -349,7 +349,7 @@ void detectNativeCompilers(struct Solution &s)
     {
         auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
-        L->CompiledExtensions = { ".c", CPP_EXTS };
+        L->CompiledExtensions = { ".c" };
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
@@ -360,6 +360,24 @@ void detectNativeCompilers(struct Solution &s)
         *C = COpts;
         L->compiler = C;
         s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.cl", C, L);
+    }
+
+    // C++
+    {
+        auto L = std::make_shared<NativeLanguage>();
+        //L->Type = LanguageType::C;
+        L->CompiledExtensions = { CPP_EXTS };
+        //s.registerLanguage(L);
+
+        //auto L = (CLanguage*)s.languages[LanguageType::C].get();
+        auto C = std::make_shared<VisualStudioCompiler>();
+        C->Type = CompilerType::MSVC;
+        C->file = compiler;
+        C->vs_version = VSVersion;
+        *C = COpts;
+        L->compiler = C;
+        C->CompileAsCPP = true;
+        s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.clpp", C, L);
     }
 
     // clang
