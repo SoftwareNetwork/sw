@@ -150,7 +150,10 @@ struct VisibleFunctionJumppad<R(ArgTypes...)>
 template <class R, class ... ArgTypes>
 VisibleFunctionJumppad(R(*)(ArgTypes...), const String &)->VisibleFunctionJumppad<R(ArgTypes...)>;
 
+SW_DRIVER_CPP_API
 int jumppad_call(const path &module, const String &name, const Strings &s = {});
+
+SW_DRIVER_CPP_API
 int jumppad_call(const Strings &s);
 
 }

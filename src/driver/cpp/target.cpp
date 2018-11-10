@@ -1316,6 +1316,8 @@ Commands NativeExecutedTarget::getCommands() const
                         continue;
                     if (Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
                         continue;
+                    if (dt->getSelectedTool() == dt->Librarian.get())
+                        continue;
                     auto in = dt->getOutputFile();
                     auto o = (OutputDir.empty() ? getOutputFile().parent_path() : OutputDir) / in.filename();
                     if (in == o)

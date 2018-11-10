@@ -579,7 +579,7 @@ void detectNativeCompilers(struct Solution &s)
 
                 //auto L = (CLanguage*)s.languages[LanguageType::C].get();
                 auto C = std::make_shared<GNUCompiler>();
-                C->Type = CompilerType::GNU;
+                C->Type = CompilerType::Clang;
                 C->file = p;
                 *C = COpts;
                 L->compiler = C;
@@ -599,7 +599,7 @@ void detectNativeCompilers(struct Solution &s)
 
                 //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
                 auto C = std::make_shared<GNUCompiler>();
-                C->Type = CompilerType::GNU;
+                C->Type = CompilerType::Clang;
                 C->file = p;
                 *C = COpts;
                 L->compiler = C;

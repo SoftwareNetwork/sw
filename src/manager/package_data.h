@@ -93,6 +93,7 @@ struct PackageData
     void checkSourceAndVersion();
 };
 
+SW_MANAGER_API
 void checkSourceAndVersion(Source &s, const Version &v);
 
 }

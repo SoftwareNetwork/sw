@@ -715,6 +715,8 @@ void Solution::build_and_resolve()
             cfgs.insert(s);
     }
     known_cfgs.insert(cfgs.begin(), cfgs.end());
+    if (cfgs.empty())
+        return;
 
     Build b;
     b.Local = false;
