@@ -51,6 +51,7 @@ static cl::opt<String> configuration("configuration", cl::desc("Set build config
 static cl::opt<String> platform("platform", cl::desc("Set build platform")/*, cl::sub(subcommand_ide)*/);
 //static cl::opt<String> arch("arch", cl::desc("Set arch")/*, cl::sub(subcommand_ide)*/);
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build")/*, cl::sub(subcommand_ide)*/);
+static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build")/*, cl::sub(subcommand_ide)*/);
 
 namespace sw
 {
@@ -972,15 +973,47 @@ void Build::findCompiler()
 {
     detectNativeCompilers(*this);
 
-    auto activate_or_throw = [this](const std::vector<std::pair<PackagePath, CompilerType>> &a, const auto &e)
+    using CompilerVector = std::vector<std::pair<PackagePath, CompilerType>>;
+
+    auto activate = [this](const CompilerVector &a)
     {
-        if (!std::any_of(a.begin(), a.end(), [this](const auto &v)
+        return std::any_of(a.begin(), a.end(), [this](const auto &v)
         {
             auto r = activateLanguage(v.first);
             if (r)
                 this->Settings.Native.CompilerType = v.second;
             return r;
-        }))
+        });
+    };
+
+    auto activate_all = [this](const CompilerVector &a)
+    {
+        return std::all_of(a.begin(), a.end(), [this](const auto &v)
+        {
+            auto r = activateLanguage(v.first);
+            if (r)
+                this->Settings.Native.CompilerType = v.second;
+            return r;
+        });
+    };
+
+    auto activate_array = [&activate_all](const std::vector<CompilerVector> &a)
+    {
+        return std::any_of(a.begin(), a.end(), [&activate_all](const auto &v)
+        {
+            return activate_all(v);
+        });
+    };
+
+    auto activate_or_throw = [&activate](const CompilerVector &a, const auto &e)
+    {
+        if (!activate(a))
+            throw std::runtime_error(e);
+    };
+
+    auto activate_array_or_throw = [&activate_array](const std::vector<CompilerVector> &a, const auto &e)
+    {
+        if (!activate_array(a))
             throw std::runtime_error(e);
     };
 
@@ -1002,42 +1035,45 @@ void Build::findCompiler()
             throw std::runtime_error(e);
     };
 
+    const CompilerVector msvc =
+    {
+        {"com.Microsoft.VisualStudio.VC.clpp", CompilerType::MSVC},
+        {"com.Microsoft.VisualStudio.VC.cl", CompilerType::MSVC},
+        {"com.Microsoft.VisualStudio.VC.ml", CompilerType::MSVC},
+    };
+
+    const CompilerVector gnu =
+    {
+        {"org.gnu.gcc.gpp", CompilerType::GNU},
+        {"org.gnu.gcc.gcc", CompilerType::GNU},
+        {"org.gnu.gcc.as", CompilerType::GNU}
+    };
+
+    const CompilerVector clang =
+    {
+        { "org.LLVM.clangpp", CompilerType::Clang },
+        { "org.LLVM.clang", CompilerType::Clang},
+    };
+
+    const CompilerVector clangcl =
+    {
+        { "org.LLVM.clangcl",CompilerType::ClangCl }
+    };
+
     switch (Settings.Native.CompilerType)
     {
     case CompilerType::MSVC:
-    {
-        activate_or_throw(
-            { { "com.Microsoft.VisualStudio.VC.cl",CompilerType::MSVC } },
-            "Cannot find msvc toolchain");
+        activate_or_throw(msvc, "Cannot find msvc toolchain");
         break;
-    }
     case CompilerType::Clang:
-    {
-        activate_or_throw(
-            {
-                { "org.LLVM.clangpp",CompilerType::Clang },
-                { "org.LLVM.clang",CompilerType::Clang }
-            },
-            "Cannot find clang toolchain");
+        activate_or_throw(clang, "Cannot find clang toolchain");
         break;
-    }
     case CompilerType::ClangCl:
-    {
-        activate_or_throw(
-            { { "org.LLVM.clangcl",CompilerType::ClangCl } },
-            "Cannot find clang-cl toolchain");
+        activate_or_throw(clangcl, "Cannot find clang-cl toolchain");
         break;
-    }
     case CompilerType::GNU:
-    {
-        activate_or_throw(
-            {
-                { "org.gnu.gcc.gpp",CompilerType::GNU },
-                { "org.gnu.gcc.gcc",CompilerType::GNU }
-            },
-            "Cannot find gnu toolchain");
+        activate_or_throw(gnu, "Cannot find gnu toolchain");
         break;
-    }
     case CompilerType::UnspecifiedCompiler:
         break;
     default:
@@ -1050,20 +1086,11 @@ void Build::findCompiler()
         switch (Settings.HostOS.Type)
         {
         case OSType::Windows:
-            activate_or_throw({
-                {"com.Microsoft.VisualStudio.VC.cl",CompilerType::MSVC},
-                {"org.LLVM.clang",CompilerType::Clang},
-                {"org.LLVM.clangcl",CompilerType::ClangCl},
-                }, "Try to add more compilers");
+            activate_array_or_throw({ msvc, clang, clangcl, }, "Try to add more compilers");
             break;
         case OSType::Linux:
         case OSType::Macos:
-            activate_or_throw({
-                {"org.gnu.gcc.gpp",CompilerType::GNU},
-                {"org.gnu.gcc.gcc",CompilerType::GNU},
-                {"org.LLVM.clangpp",CompilerType::Clang},
-                {"org.LLVM.clang",CompilerType::Clang},
-                }, "Try to add more compilers");
+            activate_array_or_throw({ gnu, clang, }, "Try to add more compilers");
             break;
         }
     }
@@ -1871,6 +1898,23 @@ void Build::load(const path &dll)
 {
     if (configure)
     {
+        // explicit presets
+        Settings.Native.LibrariesType = LibraryType::Shared;
+        Settings.Native.ConfigurationType = ConfigurationType::Release;
+        Settings.TargetOS.Arch = ArchType::x86_64;
+#ifdef _WIN32
+        Settings.Native.CompilerType = CompilerType::MSVC;
+#else
+        Settings.Native.CompilerType = CompilerType::GNU;
+#endif
+#ifdef _WIN32
+        Settings.TargetOS.Type = OSType::Windows;
+#elif __APPLE__
+        Settings.TargetOS.Type = OSType::Macos;
+#else
+        Settings.TargetOS.Type = OSType::Linux;
+#endif
+
         // configure may change defaults, so we must care below
         getModuleStorage(base_ptr).get(dll).configure(*this);
 
@@ -1882,14 +1926,10 @@ void Build::load(const path &dll)
             Settings.Native.ConfigurationType = ConfigurationType::MinimalSizeRelease;
         else if (boost::iequals(configuration, "RelWithDebInfo"))
             Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
-        else // explicit else!
-            Settings.Native.ConfigurationType = ConfigurationType::Release;
-        //if (!platform.empty())
-            //;
 
         if (static_build)
             Settings.Native.LibrariesType = LibraryType::Static;
-        else // explicit else!
+        if (shared_build)
             Settings.Native.LibrariesType = LibraryType::Shared;
 
         if (boost::iequals(platform, "Win32"))
@@ -1900,8 +1940,6 @@ void Build::load(const path &dll)
             Settings.TargetOS.Arch = ArchType::arm;
         else if (boost::iequals(platform, "arm64"))
             Settings.TargetOS.Arch = ArchType::aarch64; // ?
-        else // explicit else!
-            Settings.TargetOS.Arch = ArchType::x86_64;
 
         if (boost::iequals(compiler, "clang"))
             Settings.Native.CompilerType = CompilerType::Clang;
@@ -1911,12 +1949,6 @@ void Build::load(const path &dll)
             Settings.Native.CompilerType = CompilerType::GNU;
         else if (boost::iequals(compiler, "msvc"))
             Settings.Native.CompilerType = CompilerType::MSVC;
-        else // explicit else!
-#ifdef _WIN32
-            Settings.Native.CompilerType = CompilerType::MSVC;
-#else
-            Settings.Native.CompilerType = CompilerType::GNU;
-#endif
 
         if (boost::iequals(target_os, "linux"))
             Settings.TargetOS.Type = OSType::Linux;
@@ -1924,14 +1956,6 @@ void Build::load(const path &dll)
             Settings.TargetOS.Type = OSType::Macos;
         else if (boost::iequals(target_os, "windows") || boost::iequals(target_os, "win"))
             Settings.TargetOS.Type = OSType::Windows;
-        else // explicit else!
-#ifdef _WIN32
-            Settings.TargetOS.Type = OSType::Windows;
-#elif __APPLE__
-            Settings.TargetOS.Type = OSType::Macos;
-#else
-            Settings.TargetOS.Type = OSType::Linux;
-#endif
     }
 
     // apply config settings

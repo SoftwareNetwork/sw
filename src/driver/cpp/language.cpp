@@ -107,8 +107,8 @@ void LanguageStorage::registerProgram(const TargetBase &t, const std::shared_ptr
 
 void LanguageStorage::registerLanguage(const PackageId &pkg, const LanguagePtr &L)
 {
-    for (auto &e : L->CompiledExtensions)
-        extensions[e] = pkg;
+    //for (auto &e : L->CompiledExtensions)
+        //extensions[e] = pkg;
     user_defined_languages[pkg.ppath][pkg.version] = L;
 }
 
