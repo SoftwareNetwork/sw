@@ -252,7 +252,8 @@ public:
     const T &value() const
     {
         if (!value_)
-            throw std::logic_error("Calling const object without allocated value");
+            const_cast<CommandLineOption1*>(this)->init_value();
+            //throw std::logic_error("Calling const object without allocated value");
         return *value_;
     }
 

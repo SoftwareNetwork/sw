@@ -269,6 +269,8 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
     using LazyCallback = std::function<String(void)>;
     using LazyAction = std::function<void(void)>;
 
+    bool program_set = false;
+
     Command();
     Command(::sw::FileStorage &fs);
     virtual ~Command();
@@ -382,6 +384,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
     if constexpr (std::is_same_v<T, path>)
     {
         cb.c->setProgram(*t.t);
+        cb.c->program_set = true;
         return cb;
     }
 
@@ -391,26 +394,40 @@ CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
         d->Dummy = true;
     }
     cb.c->setProgram(*t.t);
+    cb.c->program_set = true;
     return cb;
 }
 
 template <class T>
 CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
 {
+    auto add_arg = [&cb](const String &s)
+    {
+        if (cb.stopped)
+            return;
+        if (cb.c->args.empty() && !cb.c->program_set)
+        {
+            cb.c->program = s;
+            cb.c->program_set = true;
+        }
+        else
+            cb.c->args.push_back(s);
+    };
+
     if constexpr (std::is_same_v<T, path>)
     {
         if (!cb.stopped)
-            cb.c->args.push_back(t.u8string());
+            add_arg(t.u8string());
     }
     else if constexpr (std::is_same_v<T, String>)
     {
         if (!cb.stopped)
-            cb.c->args.push_back(t);
+            add_arg(t);
     }
     else if constexpr (std::is_arithmetic_v<T>)
     {
         if (!cb.stopped)
-            cb.c->args.push_back(std::to_string(t));
+            add_arg(std::to_string(t));
     }
     else if constexpr (std::is_base_of_v<NativeExecutedTarget, T>)
     {
@@ -420,7 +437,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
     {
         // add static assert?
         if (!cb.stopped)
-            cb.c->args.push_back(t);
+            add_arg(t);
     }
     return cb;
 }
