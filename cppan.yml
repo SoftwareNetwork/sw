@@ -397,6 +397,9 @@ projects:
             - name: pvt.egorpugin.primitives.filesystem
               version: master
               local: primitives.filesystem
+            - name: pvt.egorpugin.primitives.symbol
+              version: master
+              local: primitives.symbol
             - name: pvt.egorpugin.primitives.hash
               version: master
               local: primitives.hash

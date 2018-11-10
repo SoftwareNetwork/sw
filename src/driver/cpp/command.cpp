@@ -10,6 +10,8 @@
 #include "jumppad.h"
 #include "solution.h"
 
+#include <primitives/symbol.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/dll.hpp>
 

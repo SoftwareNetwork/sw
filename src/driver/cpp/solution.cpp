@@ -33,11 +33,6 @@
 #include <boost/dll.hpp>
 #include <nlohmann/json.hpp>
 
-#ifndef _WIN32
-#define _GNU_SOURCE // for dladdr
-#include <dlfcn.h>
-#endif
-
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target");
 

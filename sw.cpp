@@ -25,6 +25,7 @@ void build(Solution &s)
         "pub.egorpugin.primitives.command-master"_dep,
         "pub.egorpugin.primitives.log-master"_dep,
         "pub.egorpugin.primitives.executor-master"_dep,
+        "pub.egorpugin.primitives.symbol-master"_dep,
         "org.sw.demo.boost.property_tree-1"_dep,
         "org.sw.demo.boost.stacktrace-1"_dep,
         "org.sw.demo.boost.dll-1"_dep;
