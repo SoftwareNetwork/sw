@@ -25,6 +25,7 @@
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
 #include <primitives/pack.h>
+#include <primitives/symbol.h>
 #include <primitives/templates.h>
 #include <primitives/win32helpers.h>
 #include <primitives/sw/settings.h>
@@ -58,52 +59,6 @@ static cl::opt<bool> static_build("static-build", cl::desc("Set static build")/*
 
 namespace sw
 {
-
-void *getModuleForSymbol(void *f)
-{
-#ifdef _WIN32
-    HMODULE hModule = NULL;
-    // hModule is NULL if GetModuleHandleEx fails.
-    GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
-        | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        (LPCTSTR)(f ? f : getCurrentModuleSymbol()), &hModule);
-    return hModule;
-#else
-    Dl_info i;
-    if (dladdr(f ? f : getCurrentModuleSymbol(), &i))
-        return i.dli_fbase;
-    return nullptr;
-#endif
-}
-
-path getModuleNameForSymbol(void *f)
-{
-#ifdef _WIN32
-    auto lib = getModuleForSymbol(f);
-    const auto sz = 1 << 16;
-    WCHAR n[sz] = { 0 };
-    GetModuleFileNameW((HMODULE)lib, n, sz);
-    path m = n;
-    return m;// .filename();
-#else
-    if (!f)
-        return boost::dll::program_location().string();
-    Dl_info i;
-    if (dladdr(f ? f : getCurrentModuleSymbol(), &i))
-        return fs::absolute(i.dli_fname);
-    return {};
-#endif
-}
-
-static path getCurrentModuleName()
-{
-    return getModuleNameForSymbol();
-}
-
-String getCurrentModuleNameHash()
-{
-    return shorten_hash(blake2b_512(getCurrentModuleName().u8string()));
-}
 
 path getImportFilePrefix()
 {
@@ -307,7 +262,7 @@ path Solution::getExecutionPlanFilename() const
 StaticLibraryTarget &Solution::getImportLibrary()
 {
 #if defined(CPPAN_OS_WINDOWS)
-    HMODULE lib = (HMODULE)getModuleForSymbol();
+    HMODULE lib = (HMODULE)primitives::getModuleForSymbol();
     PIMAGE_NT_HEADERS header = (PIMAGE_NT_HEADERS)((BYTE *)lib + ((PIMAGE_DOS_HEADER)lib)->e_lfanew);
     PIMAGE_EXPORT_DIRECTORY exports = (PIMAGE_EXPORT_DIRECTORY)((BYTE *)lib + header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
     assert(exports->AddressOfNames && "No exports found");

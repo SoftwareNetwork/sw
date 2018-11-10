@@ -51,8 +51,6 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
     });
 }
 
-String getCurrentModuleNameHash();
-
 path getFilesLogFileName(const String &config)
 {
     auto cfg = sha256_short(getCurrentModuleNameHash() + "_" + config);

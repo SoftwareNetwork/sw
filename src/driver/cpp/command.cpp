@@ -368,7 +368,7 @@ ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name, void *f)
     : ExecuteBuiltinCommand()
 {
     args.push_back("internal-call-builtin-function");
-    args.push_back(getModuleNameForSymbol(f).u8string());
+    args.push_back(primitives::getModuleNameForSymbol(f).u8string());
     args.push_back(cmd_name);
 }
 

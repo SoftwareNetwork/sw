@@ -6,6 +6,8 @@
 
 #include "hash.h"
 
+#include <primitives/symbol.h>
+
 #define CPPAN_CONFIG_HASH_SHORT_LENGTH 12
 
 String shorten_hash(const String &data)
@@ -26,4 +28,14 @@ String hash_config(const String &c)
 bool check_file_hash(const path &fn, const String &hash)
 {
     return hash == strong_file_hash(fn);
+}
+
+static path getCurrentModuleName()
+{
+    return primitives::getModuleNameForSymbol(primitives::getCurrentModuleSymbol());
+}
+
+String getCurrentModuleNameHash()
+{
+    return shorten_hash(blake2b_512(getCurrentModuleName().u8string()));
 }
