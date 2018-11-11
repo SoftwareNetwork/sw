@@ -834,8 +834,10 @@ std::shared_ptr<builder::Command> ClangCompiler::getCommand() const
         //c->file = InputFile;
     }
     if (OutputFile)
+    {
         c->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
-    c->working_directory = OutputFile().parent_path();
+        c->working_directory = OutputFile().parent_path();
+    }
 
     //if (c->file.empty())
         //return nullptr;
@@ -1068,8 +1070,10 @@ std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
         //c->file = InputFile;
     }
     if (OutputFile)
+    {
         c->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
-    c->working_directory = OutputFile().parent_path();
+        c->working_directory = OutputFile().parent_path();
+    }
 
     //if (c->file.empty())
         //return nullptr;
@@ -1214,10 +1218,12 @@ std::shared_ptr<builder::Command> VisualStudioLibraryTool::getCommand() const
 
     //c->out.capture = true;
     c->base = clone();
-    c->working_directory = Output().parent_path();
-
-    c->name = normalize_path(Output());
-    c->name_short = Output().filename().u8string();
+    if (Output)
+    {
+        c->working_directory = Output().parent_path();
+        c->name = normalize_path(Output());
+        c->name_short = Output().filename().u8string();
+    }
 
     /*if (c->name.find("eccdata.exe") != -1)
     {
@@ -1354,10 +1360,12 @@ std::shared_ptr<builder::Command> GNULinker::getCommand() const
 
     //c->out.capture = true;
     c->base = clone();
-    c->working_directory = Output().parent_path();
-
-    c->name = normalize_path(Output());
-    c->name_short = Output().filename().u8string();
+    if (Output)
+    {
+        c->working_directory = Output().parent_path();
+        c->name = normalize_path(Output());
+        c->name_short = Output().filename().u8string();
+    }
 
     /*if (c->name.find("eccdata.exe") != -1)
     {
@@ -1440,10 +1448,12 @@ std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
 
     //c->out.capture = true;
     c->base = clone();
-    c->working_directory = Output().parent_path();
-
-    c->name = normalize_path(Output());
-    c->name_short = Output().filename().u8string();
+    if (Output)
+    {
+        c->working_directory = Output().parent_path();
+        c->name = normalize_path(Output());
+        c->name_short = Output().filename().u8string();
+    }
 
     /*if (c->name.find("eccdata.exe") != -1)
     {
