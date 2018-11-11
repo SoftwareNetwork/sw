@@ -484,26 +484,26 @@ void detectNativeCompilers(struct Solution &s)
     };
 
     p = resolve("ar");
-    if (p.empty())
-        throw std::runtime_error("cannot find ar");
-
-    auto Librarian = std::make_shared<GNULibrarian>();
-    Librarian->Type = LinkerType::GNU;
-    Librarian->file = p;
-    *Librarian = LOpts;
-    s.registerProgram("org.gnu.binutils.ar", Librarian);
+    if (!p.empty())
+    {
+        auto Librarian = std::make_shared<GNULibrarian>();
+        Librarian->Type = LinkerType::GNU;
+        Librarian->file = p;
+        *Librarian = LOpts;
+        s.registerProgram("org.gnu.binutils.ar", Librarian);
+    }
 
     //p = resolve("ld.gold");
     p = resolve("gcc-8");
-    if (p.empty())
-        throw std::runtime_error("cannot find gcc");
+    if (!p.empty())
+    {
+        auto Linker = std::make_shared<GNULinker>();
 
-    auto Linker = std::make_shared<GNULinker>();
-
-    Linker->Type = LinkerType::GNU;
-    Linker->file = p;
-    *Linker = LOpts;
-    s.registerProgram("org.gnu.gcc.ld", Linker);
+        Linker->Type = LinkerType::GNU;
+        Linker->file = p;
+        *Linker = LOpts;
+        s.registerProgram("org.gnu.gcc.ld", Linker);
+    }
 
     NativeCompilerOptions COpts;
     //COpts.System.IncludeDirectories.insert("/usr/include");
@@ -571,23 +571,19 @@ void detectNativeCompilers(struct Solution &s)
     {
         //p = resolve("ld.gold");
         p = resolve("clang-7");
-        if (p.empty())
-            throw std::runtime_error("cannot find clang");
-
-        auto Linker = std::make_shared<GNULinker>();
-
-        Linker->Type = LinkerType::GNU;
-        Linker->file = p;
-        *Linker = LOpts;
-        s.registerProgram("org.LLVM.clang.ld", Linker);
-
-        NativeCompilerOptions COpts;
-        //COpts.System.IncludeDirectories.insert("/usr/include");
-        //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
-
-        p = resolve("clang-7");
         if (!p.empty())
         {
+            auto Linker = std::make_shared<GNULinker>();
+
+            Linker->Type = LinkerType::GNU;
+            Linker->file = p;
+            *Linker = LOpts;
+            s.registerProgram("org.LLVM.clang.ld", Linker);
+
+            NativeCompilerOptions COpts;
+            //COpts.System.IncludeDirectories.insert("/usr/include");
+            //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
+
             // C
             {
                 auto L = std::make_shared<NativeLanguage>();

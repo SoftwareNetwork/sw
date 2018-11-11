@@ -231,6 +231,7 @@ static cl::opt<String> ide_rebuild("rebuild", cl::desc("Rebuild target"), cl::su
 static cl::opt<String> ide_clean("clean", cl::desc("Clean target"), cl::sub(subcommand_ide));
 
 static cl::list<String> override_package("override-remote-package", cl::value_desc("prefix sdir"), cl::desc("Provide a local copy of remote package"), cl::multi_val(2));
+static cl::opt<bool> list_overridden_packages("list-overridden-remote-packages", cl::desc("List overridden packages"));
 static cl::opt<String> delete_overridden_package("delete-overridden-remote-package", cl::value_desc("package"), cl::desc("Delete overridden package from index"));
 static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", cl::value_desc("sdir"), cl::desc("Delete overridden dir packages"));
 
@@ -238,6 +239,16 @@ static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-pac
 
 int sw_main(const Strings &args)
 {
+    if (list_overridden_packages)
+    {
+        std::map<sw::PackageId, path> pkgs;
+        for (auto &[n, p] : getServiceDatabase().getOverriddenPackages())
+            pkgs[n] = p;
+        for (auto &[n, p] : pkgs)
+            std::cout << n.toString() << " " << p << "\n";
+        return 0;
+    }
+
     if (!override_package.empty())
     {
         auto s = sw::load(override_package[1]);
