@@ -148,10 +148,25 @@ path getWindowsKit10Dir(Solution &s, const path &d)
     if (fs::exists(last_dir))
         return last_dir;
     last_dir.clear();
+    Version p;
     for (auto &i : fs::directory_iterator(d))
     {
-        if (fs::is_directory(i))
-            last_dir = i;
+        if (!fs::is_directory(i))
+            continue;
+        try
+        {
+            Version v(i.path().filename().u8string());
+            if (v.isBranch())
+                continue;
+            if (v > p)
+            {
+                p = v;
+                last_dir = i;
+            }
+        }
+        catch (...)
+        {
+        }
     }
     if (last_dir.empty())
         throw std::runtime_error("No Windows Kits 10.0 available");

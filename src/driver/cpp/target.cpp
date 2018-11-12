@@ -433,7 +433,7 @@ path TargetBase::getTempDir() const
 
 void TargetBase::fetch()
 {
-    if (PostponeFileResolving)
+    if (PostponeFileResolving || DryRun)
         return;
 
     static std::unordered_map<Source, path> fetched_dirs;
@@ -592,11 +592,6 @@ void NativeExecutedTarget::init()
     fs::create_directories(BinaryDir);
     fs::create_directories(BinaryPrivateDir);
 
-    //languages = solution->languages;
-
-    //fs::rename();
-    //if (UnpackDirectory.empty())
-
     // propagate this pointer to all
     TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
     {
@@ -604,53 +599,8 @@ void NativeExecutedTarget::init()
     });
     //LanguageStorage::target = this;
 
-    //throw std::logic_error("todo");
-
-    //addLanguage(LanguageType::ASM);
-    //addLanguage(LanguageType::C);
-    //addLanguage(LanguageType::CPP);
-
     Librarian = std::dynamic_pointer_cast<NativeLinker>(Settings.Native.Librarian->clone());
     Linker = std::dynamic_pointer_cast<NativeLinker>(Settings.Native.Linker->clone());
-
-    /*if (getType() == TargetType::NativeExecutable || getType() == TargetType::NativeSharedLibrary)
-        SelectedTool = Linker.get();
-    else if (getType() == TargetType::NativeStaticLibrary || Settings.Native.LibrariesType == LibraryType::Static)
-        SelectedTool = Librarian.get();
-    else
-        SelectedTool = Linker.get();*/
-
-    /*for (auto &l : languages)
-    {
-        if (l.first == LanguageType::C || l.first == LanguageType::CPP)
-        {
-            {
-                auto L = dynamic_cast<LinkedLanguage<NativeLinker>*>(l.second.get());
-                if (!L->linker)
-                    throw std::runtime_error("Linker is not set");
-                if (!Linker)
-                    Linker = std::static_pointer_cast<NativeLinker>(L->linker->clone());
-                else if (Linker != L->linker)
-                {
-                    break;
-                    //throw std::runtime_error("Different linkers are set");
-                }
-            }
-
-            {
-                auto L = dynamic_cast<LibrarianLanguage<NativeLinker>*>(l.second.get());
-                if (!L->librarian)
-                    throw std::runtime_error("Librarian is not set");
-                if (!Librarian)
-                    Librarian = std::static_pointer_cast<NativeLinker>(L->librarian->clone());
-                else if (Librarian != L->librarian)
-                {
-                    break;
-                    //throw std::runtime_error("Different linkers are set");
-                }
-            }
-        }
-    }*/
 
     addPackageDefinitions();
 }
@@ -2436,7 +2386,7 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
         to = BinaryDir / to;
     File(to, *getSolution()->fs).getFileRecord().setGenerated();
 
-    if (PostponeFileResolving)
+    if (PostponeFileResolving || DryRun)
         return;
 
     if (!from.is_absolute())
@@ -2624,7 +2574,7 @@ void NativeExecutedTarget::fileWriteOnce(const path &fn, const String &content, 
     File f(p, *getSolution()->fs);
     f.getFileRecord().setGenerated();
 
-    if (PostponeFileResolving)
+    if (PostponeFileResolving || DryRun)
         return;
 
     ::sw::fileWriteOnce(p, content, getPatchDir(binary_dir));
@@ -2648,7 +2598,7 @@ void NativeExecutedTarget::writeFileOnce(const path &fn, const char *content, bo
 
 void NativeExecutedTarget::fileWriteSafe(const path &fn, const String &content, bool binary_dir) const
 {
-    if (PostponeFileResolving)
+    if (PostponeFileResolving || DryRun)
         return;
 
     path p;
@@ -2668,7 +2618,7 @@ void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content, 
 
 void NativeExecutedTarget::replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir) const
 {
-    if (PostponeFileResolving)
+    if (PostponeFileResolving || DryRun)
         return;
 
     path p;
@@ -2688,7 +2638,7 @@ void NativeExecutedTarget::deleteInFileOnce(const path &fn, const String &from, 
 
 void NativeExecutedTarget::pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir) const
 {
-    if (PostponeFileResolving)
+    if (PostponeFileResolving || DryRun)
         return;
 
     auto p = (binary_dir ? BinaryDir : SourceDir) / fn;
@@ -2700,7 +2650,7 @@ void NativeExecutedTarget::pushFrontToFileOnce(const path &fn, const String &tex
 
 void NativeExecutedTarget::pushBackToFileOnce(const path &fn, const String &text, bool binary_dir) const
 {
-    if (PostponeFileResolving)
+    if (PostponeFileResolving || DryRun)
         return;
 
     auto p = (binary_dir ? BinaryDir : SourceDir) / fn;
