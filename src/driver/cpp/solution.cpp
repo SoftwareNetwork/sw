@@ -642,8 +642,8 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
     for (auto &c : p.commands)
         c->silent = silent;
 
-    size_t current_command = 1;
-    size_t total_commands = 0;
+    std::atomic_size_t current_command = 1;
+    std::atomic_size_t total_commands = 0;
     for (auto &c : p.commands)
     {
         if (!c->outputs.empty())
@@ -652,7 +652,7 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
 
     for (auto &c : p.commands)
     {
-        c->total_commands = total_commands;
+        c->total_commands = &total_commands;
         c->current_command = &current_command;
     }
 

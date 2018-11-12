@@ -64,6 +64,14 @@ struct ExecutionPlan
             }
         };
 
+        // we cannot know exact number of commands to be executed,
+        // because some of them might use write_file_if_different idiom,
+        // so actual number is known only at runtime
+        // we can just skip some amount of numbers
+
+        // TODO: check non-outdated commands and lower total_commands
+        // total_commands -= non outdated;
+
         // run commands without deps
         {
             std::unique_lock<std::mutex> lk(m);

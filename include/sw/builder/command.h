@@ -30,8 +30,8 @@ struct CommandData
     std::atomic_size_t dependencies_left = 0;
     std::unordered_set<std::shared_ptr<T>> dependendent_commands;
 
-    size_t *current_command = nullptr;
-    size_t total_commands = 0;
+    std::atomic_size_t *current_command = nullptr;
+    std::atomic_size_t *total_commands = nullptr;
 
     virtual ~CommandData() {}
 

@@ -30,11 +30,12 @@ Remotes get_default_remotes()
     {
         Remote r;
         r.name = DEFAULT_REMOTE_NAME;
-#ifdef _WIN32
+/*#ifdef _WIN32
         r.url = "http://localhost:55555/";
 #else
         r.url = "http://192.168.191.1:55555/";
-#endif
+#endif*/
+        r.url = "https://software-network.org/";
         rms.push_back(r);
     };
     return rms;
@@ -87,9 +88,35 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
     auto host = url.substr(p == url.npos ? 0 : p + 3);
     host = host.substr(0, host.find('/'));
     host = host.substr(0, host.find(':'));
+    host = "api." + host;
+
+    //auto host = url;
+    //host += "api/";
+
+    static const path cert_dir = get_root_directory() / "certs";
+    path cert_file = cert_dir / "roots.pem";
 
     grpc::SslCredentialsOptions ssl_options;
+
 #ifdef _WIN32
+    if (!fs::exists(cert_file))
+        download_file("https://raw.githubusercontent.com/grpc/grpc/master/etc/roots.pem", cert_file);
+    ssl_options.pem_root_certs = read_file(cert_file);
+#else
+    cert_file = "/etc/ssl/certs/ca-certificates.crt";
+    if (!fs::exists(cert_file))
+        cert_file = "/etc/ssl/certs/ca-bundle.crt";
+    if (!fs::exists(cert_file))
+    {
+        cert_file = cert_dir / "roots.pem";
+        download_file("https://raw.githubusercontent.com/grpc/grpc/master/etc/roots.pem", cert_file);
+    }
+    ssl_options.pem_root_certs = read_file(cert_file);
+#endif
+
+    auto creds = grpc::SslCredentials(ssl_options);
+
+/*#ifdef _WIN32
     auto crt = path(boost::dll::program_location().parent_path().string()) / "server.crt";
     if (fs::exists(crt))
         ssl_options.pem_root_certs = read_file(crt);
@@ -100,7 +127,7 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
     ssl_options.pem_root_certs = read_file("/home/egor/dev/sw_server.crt");
     host = "192.168.191.1:1245";
     auto creds = grpc::InsecureChannelCredentials();
-#endif
+#endif*/
 
     channel = grpc::CreateChannel(host, creds);
     return channel;

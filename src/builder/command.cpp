@@ -344,6 +344,7 @@ void Command::execute1(std::error_code *ec)
     if (!isOutdated())
     {
         executed_ = true;
+        (*current_command)++;
         return;
     }
 
@@ -651,7 +652,7 @@ void Command::printLog() const
     static Executor eprinter(1);
     if (current_command)
     {
-        std::string msg = "[" + std::to_string((*current_command)++) + "/" + std::to_string(total_commands) + "] " + getName();
+        std::string msg = "[" + std::to_string((*current_command)++) + "/" + std::to_string(total_commands->load()) + "] " + getName();
         eprinter.push([msg]
         {
             LOG_INFO(logger, msg);
