@@ -411,66 +411,39 @@ void SourceFileStorage::resolve()
     }
 }
 
-/*void SourceFileStorage::resolveRemoved()
-{
-    for (auto &p : pp)
-    {
-        for (auto &f : p.to_remove.files)
-            remove(f);
-        for (auto &f : p.to_remove.files_regex)
-            remove(f);
-        for (auto &f : p.to_remove.files_regex_root)
-            remove(f.first, f.second);
-    }
-}*/
-
 void SourceFileStorage::startAssignOperation()
 {
-    //if (!pp.back().empty())
-        //pp.emplace_back();
 }
 
 bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
 {
-    // deny absolute paths to prevent adding /etc/passwd?
-    //if (F.is_absolute())
-        //throw std::runtime_error();
-
-    /*if (fs::exists(F))
+    if (!F.is_absolute())
     {
-        if (!F.is_absolute())
-            F = fs::absolute(F);
-    }
-    else*/
-    {
-        if (!F.is_absolute())
+        auto p = target->SourceDir / F;
+        if (!fs::exists(p))
         {
-            auto p = target->SourceDir / F;
+            p = target->BinaryDir / F;
             if (!fs::exists(p))
             {
-                p = target->BinaryDir / F;
-                if (!fs::exists(p))
-                {
-                    if (!File(p, *target->getSolution()->fs).isGeneratedAtAll())
-                    {
-                        if (ignore_errors)
-                            return false;
-                        throw std::runtime_error("Cannot find source file: " + (target->SourceDir / F).u8string());
-                    }
-                }
-            }
-            F = fs::absolute(p);
-        }
-        else
-        {
-            if (!fs::exists(F))
-            {
-                if (!File(F, *target->getSolution()->fs).isGeneratedAtAll())
+                if (!File(p, *target->getSolution()->fs).isGeneratedAtAll())
                 {
                     if (ignore_errors)
                         return false;
-                    throw std::runtime_error("Cannot find source file: " + F.u8string());
+                    throw std::runtime_error("Cannot find source file: " + (target->SourceDir / F).u8string());
                 }
+            }
+        }
+        F = fs::absolute(p);
+    }
+    else
+    {
+        if (!fs::exists(F))
+        {
+            if (!File(F, *target->getSolution()->fs).isGeneratedAtAll())
+            {
+                if (ignore_errors)
+                    return false;
+                throw std::runtime_error("Cannot find source file: " + F.u8string());
             }
         }
     }
@@ -545,12 +518,6 @@ NativeSourceFile::~NativeSourceFile()
 {
 }
 
-/*void NativeSourceFile::setSourceFile(const path &input, const path &o)
-{
-    file = input;
-    setOutputFile(o);
-}*/
-
 void NativeSourceFile::setOutputFile(const path &o)
 {
     output.file = o;
@@ -569,38 +536,5 @@ Files NativeSourceFile::getGeneratedDirs() const
 {
     return compiler->getGeneratedDirs();
 }
-
-/*ASMSourceFile::ASMSourceFile(const path &input, FileStorage &fs, const path &o, ASMCompiler *c)
-    : NativeSourceFile(input, fs, o, c)
-{
-    compiler->setSourceFile(file, output.file);
-}
-
-std::shared_ptr<SourceFile> ASMSourceFile::clone() const
-{
-    return std::make_shared<ASMSourceFile>(*this);
-}
-
-CSourceFile::CSourceFile(const path &input, FileStorage &fs, const path &o, CCompiler *c)
-    : NativeSourceFile(input, fs, o, c)
-{
-    compiler->setSourceFile(file, output.file);
-}
-
-std::shared_ptr<SourceFile> CSourceFile::clone() const
-{
-    return std::make_shared<CSourceFile>(*this);
-}
-
-CPPSourceFile::CPPSourceFile(const path &input, FileStorage &fs, const path &o, CPPCompiler *c)
-    : NativeSourceFile(input, fs, o, c)
-{
-    compiler->setSourceFile(file, output.file);
-}
-
-std::shared_ptr<SourceFile> CPPSourceFile::clone() const
-{
-    return std::make_shared<CPPSourceFile>(*this);
-}*/
 
 }

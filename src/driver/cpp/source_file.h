@@ -171,33 +171,6 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     void setOutputFile(const path &output);
 };
 
-/*struct SW_DRIVER_CPP_API ASMSourceFile : NativeSourceFile
-{
-    ASMSourceFile(const path &input, FileStorage &fs, const path &output, ASMCompiler *c);
-
-    virtual ~ASMSourceFile() = default;
-
-    virtual std::shared_ptr<SourceFile> clone() const override;
-};
-
-struct SW_DRIVER_CPP_API CSourceFile : NativeSourceFile
-{
-    CSourceFile(const path &input, FileStorage &fs, const path &output, CCompiler *c);
-
-    virtual ~CSourceFile() = default;
-
-    virtual std::shared_ptr<SourceFile> clone() const override;
-};
-
-struct SW_DRIVER_CPP_API CPPSourceFile : NativeSourceFile
-{
-    CPPSourceFile(const path &input, FileStorage &fs, const path &output, CPPCompiler *c);
-
-    virtual ~CPPSourceFile() = default;
-
-    virtual std::shared_ptr<SourceFile> clone() const override;
-};*/
-
 struct PrecompiledHeader
 {
     path header;

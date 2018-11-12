@@ -30,11 +30,6 @@ Remotes get_default_remotes()
     {
         Remote r;
         r.name = DEFAULT_REMOTE_NAME;
-/*#ifdef _WIN32
-        r.url = "http://localhost:55555/";
-#else
-        r.url = "http://192.168.191.1:55555/";
-#endif*/
         r.url = "https://software-network.org/";
         rms.push_back(r);
     };
@@ -90,9 +85,6 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
     host = host.substr(0, host.find(':'));
     host = "api." + host;
 
-    //auto host = url;
-    //host += "api/";
-
     static const path cert_dir = get_root_directory() / "certs";
     path cert_file = cert_dir / "roots.pem";
 
@@ -115,19 +107,6 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
 #endif
 
     auto creds = grpc::SslCredentials(ssl_options);
-
-/*#ifdef _WIN32
-    auto crt = path(boost::dll::program_location().parent_path().string()) / "server.crt";
-    if (fs::exists(crt))
-        ssl_options.pem_root_certs = read_file(crt);
-    else
-        ssl_options.pem_root_certs = read_file("d:\\dev\\cppan2\\bin\\server.crt");
-    auto creds = grpc::SslCredentials(ssl_options);
-#else
-    ssl_options.pem_root_certs = read_file("/home/egor/dev/sw_server.crt");
-    host = "192.168.191.1:1245";
-    auto creds = grpc::InsecureChannelCredentials();
-#endif*/
 
     channel = grpc::CreateChannel(host, creds);
     return channel;

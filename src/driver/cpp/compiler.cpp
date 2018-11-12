@@ -776,28 +776,6 @@ void VisualStudioCompiler::setSourceFile(const path &input_file, path &output_fi
     VisualStudioCompiler::setOutputFile(output_file);
 }
 
-/*std::shared_ptr<Program> VisualStudioCCompiler::clone() const
-{
-    return std::make_shared<VisualStudioCCompiler>(*this);
-}
-
-void VisualStudioCCompiler::setSourceFile(const path &input_file, path &output_file)
-{
-    CSourceFile = input_file.u8string();
-    VisualStudioCompiler::setOutputFile(output_file);
-}
-
-std::shared_ptr<Program> VisualStudioCPPCompiler::clone() const
-{
-    return std::make_shared<VisualStudioCPPCompiler>(*this);
-}
-
-void VisualStudioCPPCompiler::setSourceFile(const path &input_file, path &output_file)
-{
-    CPPSourceFile = input_file.u8string();
-    VisualStudioCompiler::setOutputFile(output_file);
-}*/
-
 Version Clang::gatherVersion(const path &program) const
 {
     Version v;
@@ -870,27 +848,6 @@ void ClangCompiler::setSourceFile(const path &input_file, path &output_file)
     setOutputFile(output_file);
 }
 
-/*std::shared_ptr<Program> ClangCCompiler::clone() const
-{
-    return std::make_shared<ClangCCompiler>(*this);
-}
-
-void ClangCCompiler::setSourceFile(const path &input_file, path &output_file)
-{
-    InputFile = input_file;
-    ClangCompiler::setOutputFile(output_file);
-}
-
-std::shared_ptr<Program> ClangCPPCompiler::clone() const
-{
-    return std::make_shared<ClangCPPCompiler>(*this);
-}
-
-void ClangCPPCompiler::setSourceFile(const path &input_file, path &output_file)
-{
-    InputFile = input_file;
-    ClangCompiler::setOutputFile(output_file);
-}*/
 
 std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
 {
@@ -955,28 +912,6 @@ void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
     InputFile = input_file.u8string();
     setOutputFile(output_file);
 }
-
-/*std::shared_ptr<Program> ClangClCCompiler::clone() const
-{
-    return std::make_shared<ClangClCCompiler>(*this);
-}
-
-std::shared_ptr<Program> ClangClCPPCompiler::clone() const
-{
-    return std::make_shared<ClangClCPPCompiler>(*this);
-}
-
-void ClangClCCompiler::setSourceFile(const path &input_file, path &output_file)
-{
-    CSourceFile = input_file.u8string();
-    setOutputFile(output_file);
-}
-
-void ClangClCPPCompiler::setSourceFile(const path &input_file, path &output_file)
-{
-    CPPSourceFile = input_file.u8string();
-    setOutputFile(output_file);
-}*/
 
 Version GNU::gatherVersion(const path &program) const
 {
@@ -1106,28 +1041,6 @@ void GNUCompiler::setSourceFile(const path &input_file, path &output_file)
     InputFile = input_file.u8string();
     setOutputFile(output_file);
 }
-
-/*std::shared_ptr<Program> GNUCCompiler::clone() const
-{
-    return std::make_shared<GNUCCompiler>(*this);
-}
-
-void GNUCCompiler::setSourceFile(const path &input_file, path &output_file)
-{
-    InputFile = input_file;
-    GNUCompiler::setOutputFile(output_file);
-}
-
-std::shared_ptr<Program> GNUCPPCompiler::clone() const
-{
-    return std::make_shared<GNUCPPCompiler>(*this);
-}
-
-void GNUCPPCompiler::setSourceFile(const path &input_file, path &output_file)
-{
-    InputFile = input_file;
-    GNUCompiler::setOutputFile(output_file);
-}*/
 
 FilesOrdered NativeLinker::gatherLinkDirectories() const
 {
@@ -1465,18 +1378,5 @@ std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
 
     return cmd = c;
 }
-
-/*String NativeToolchain::getConfig() const
-{
-    String c;
-
-    addConfigElement(c, toString(CompilerType));
-    addConfigElement(c, CPPCompiler->getVersion().toString(2));
-    addConfigElement(c, toString(LibrariesType));
-    boost::to_lower(c);
-    addConfigElement(c, toString(ConfigurationType));
-
-    return c;
-}*/
 
 }

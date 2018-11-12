@@ -16,51 +16,6 @@
 namespace sw
 {
 
-/*static LanguageMap getLanguagesImpl()
-{
-    LanguageMap languages;
-
-    // use base class aggregation when available in vs
-    {
-        auto L = std::make_shared<ASMLanguage>();
-        L->Type = LanguageType::ASM;
-        L->CompiledExtensions = {
-#ifdef CPPAN_OS_WINDOWS
-            ".asm"
-#else
-            ".s", ".S"
-#endif
-        };
-        L->NonCompiledExtensions = { ".i", ".h", ".H" };
-        languages[L->Type] = L;
-    }
-
-    {
-        auto L = std::make_shared<CLanguage>();
-        L->Type = LanguageType::C;
-        L->CompiledExtensions = { ".c" };
-        L->NonCompiledExtensions = { ".h", ".H" };
-        languages[L->Type] = L;
-    }
-
-    {
-        auto L = std::make_shared<CPPLanguage>();
-        L->Type = LanguageType::CPP;
-        L->CompiledExtensions = { ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC" };
-        L->NonCompiledExtensions = { ".hpp", ".hxx", ".h++", ".hh", ".HPP", ".H++", ".HXX", ".H",  ".HH", ".ixx", ".ipp", ".txx", ".ixx" };
-        languages[L->Type] = L;
-    }
-
-    // obj c - ".hm",
-
-    return languages;
-}
-
-LanguageMap getLanguages()
-{
-    return getLanguagesImpl();
-}*/
-
 LanguageStorage::~LanguageStorage()
 {
 }
@@ -98,17 +53,8 @@ void LanguageStorage::registerProgram(const TargetBase &t, const std::shared_ptr
     registerProgram(t.pkg, p);
 }
 
-/*void LanguageStorage::registerLanguage(const LanguagePtr &L)
-{
-    // phantom pkg
-    // hash of exts? probably no
-    registerLanguage("loc.sw.lang" + std::to_string((size_t)L.get()), L);
-}*/
-
 void LanguageStorage::registerLanguage(const PackageId &pkg, const LanguagePtr &L)
 {
-    //for (auto &e : L->CompiledExtensions)
-        //extensions[e] = pkg;
     user_defined_languages[pkg.ppath][pkg.version] = L;
 }
 
@@ -236,45 +182,6 @@ optional<PackageId> LanguageStorage::findPackageIdByExtension(const String &ext)
     return e->second;
 }
 
-/*void LanguageStorage::addLanguage(LanguageType L)
-{
-    /*auto &lang = languages[L] = languages.find(L)->second->clone();
-    for (auto &l : lang->CompiledExtensions)
-        extensions[l] = user_defined_languages[lang];
-}
-
-void LanguageStorage::addLanguage(const std::vector<LanguageType> &L)
-{
-    for (auto &l : L)
-        addLanguage(l);
-}
-
-void LanguageStorage::setLanguage(LanguageType L)
-{
-    //languages.clear();
-    addLanguage(L);
-}
-
-void LanguageStorage::setLanguage(const std::vector<LanguageType> &L)
-{
-    //languages.clear();
-    for (auto &l : L)
-        addLanguage(l);
-}
-
-void LanguageStorage::removeLanguage(LanguageType L)
-{
-    for (auto &l : languages.find(L)->second->CompiledExtensions)
-        extensions.erase(l);
-    languages.erase(L);
-}
-
-void LanguageStorage::removeLanguage(const std::vector<LanguageType> &L)
-{
-    for (auto &l : L)
-        removeLanguage(l);
-}*/
-
 std::shared_ptr<Language> NativeLanguage::clone() const
 {
     return std::make_shared<NativeLanguage>(*this);
@@ -289,50 +196,5 @@ std::shared_ptr<SourceFile> NativeLanguage::createSourceFile(const path &input, 
     o = fs::absolute(o);
     return std::make_shared<NativeSourceFile>(input, *t->getSolution()->fs, o, (NativeCompiler*)compiler.get());
 }
-
-/*std::shared_ptr<Language> ASMLanguage::clone() const
-{
-    return std::make_shared<ASMLanguage>(*this);
-}
-
-std::shared_ptr<SourceFile> ASMLanguage::createSourceFile(const path &input, const Target *t) const
-{
-    auto nt = (NativeExecutedTarget*)t;
-    //compiler->merge(*nt); // why here? we merge in Target after everything resolved
-
-    auto o = t->BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(*t, input) + compiler->getObjectExtension());
-    o = fs::absolute(o);
-    return std::make_shared<ASMSourceFile>(input, *t->getSolution()->fs, o, compiler.get());
-}
-
-std::shared_ptr<Language> CLanguage::clone() const
-{
-    return std::make_shared<CLanguage>(*this);
-}
-
-std::shared_ptr<SourceFile> CLanguage::createSourceFile(const path &input, const Target *t) const
-{
-    auto nt = (NativeExecutedTarget*)t;
-    //compiler->merge(*nt);
-
-    auto o = t->BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(*t, input) + compiler->getObjectExtension());
-    o = fs::absolute(o);
-    return std::make_shared<CSourceFile>(input, *t->getSolution()->fs, o, compiler.get());
-}
-
-std::shared_ptr<Language> CPPLanguage::clone() const
-{
-    return std::make_shared<CPPLanguage>(*this);
-}
-
-std::shared_ptr<SourceFile> CPPLanguage::createSourceFile(const path &input, const Target *t) const
-{
-    auto nt = (NativeExecutedTarget*)t;
-    //compiler->merge(*nt);
-
-    auto o = t->BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(*t, input) + compiler->getObjectExtension());
-    o = fs::absolute(o);
-    return std::make_shared<CPPSourceFile>(input, *t->getSolution()->fs, o, compiler.get());
-}*/
 
 }

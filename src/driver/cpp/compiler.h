@@ -90,35 +90,12 @@ protected:
     mutable Files dependencies;
 };
 
-/*struct SW_DRIVER_CPP_API ASMCompiler : virtual NativeCompiler
-{
-    using NativeCompilerOptions::operator=;
-
-    virtual ~ASMCompiler() = default;
-};
-
-struct SW_DRIVER_CPP_API CCompiler : virtual NativeCompiler
-{
-    using NativeCompilerOptions::operator=;
-
-    virtual ~CCompiler() = default;
-};
-
-struct SW_DRIVER_CPP_API CPPCompiler : virtual NativeCompiler
-{
-    using NativeCompilerOptions::operator=;
-
-    virtual ~CPPCompiler() = default;
-};*/
-
 struct SW_DRIVER_CPP_API VisualStudio : CompilerToolBase
 {
     VisualStudioVersion vs_version = VisualStudioVersion::Unspecified;
     String toolset;
 
     virtual ~VisualStudio() = default;
-
-    //bool findToolchain(struct Solution &s) const override;
 
 protected:
     Version gatherVersion(const path &program) const override;
@@ -161,34 +138,6 @@ protected:
     Version gatherVersion() const override { return VisualStudio::gatherVersion(file); }
 };
 
-// was  VisualStudioCompiler, CCompiler
-/*struct SW_DRIVER_CPP_API VisualStudioCCompiler : CCompiler, VisualStudioCompiler
-{
-    virtual ~VisualStudioCCompiler() = default;
-
-    using NativeCompilerOptions::operator=;
-
-    std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override { return VisualStudioCompiler::getCommand(); }
-    void setSourceFile(const path &input_file, path &output_file) override;
-    String getObjectExtension() const override { return VisualStudioCompiler::getObjectExtension(); }
-    Files getGeneratedDirs() const override { return VisualStudioCompiler::getGeneratedDirs(); }
-};
-
-// was  VisualStudioCompiler, CPPCompiler
-struct SW_DRIVER_CPP_API VisualStudioCPPCompiler : CPPCompiler, VisualStudioCompiler
-{
-    virtual ~VisualStudioCPPCompiler() = default;
-
-    using NativeCompilerOptions::operator=;
-
-    std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override { return VisualStudioCompiler::getCommand(); }
-    void setSourceFile(const path &input_file, path &output_file) override;
-    String getObjectExtension() const override { return VisualStudioCompiler::getObjectExtension(); }
-    Files getGeneratedDirs() const override { return VisualStudioCompiler::getGeneratedDirs(); }
-};*/
-
 struct SW_DRIVER_CPP_API Clang : CompilerToolBase
 {
     //bool findToolchain(struct Solution &s) const override;
@@ -213,33 +162,8 @@ protected:
     Version gatherVersion() const override { return Clang::gatherVersion(file); }
 };
 
-/*struct SW_DRIVER_CPP_API ClangCCompiler : ClangCompiler,
-    CCompiler
-{
-    using NativeCompilerOptions::operator=;
-
-    std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override { return ClangCompiler::getCommand(); }
-    void setSourceFile(const path &input_file, path &output_file) override;
-    String getObjectExtension() const override { return ClangCompiler::getObjectExtension(); }
-    Files getGeneratedDirs() const override { return ClangCompiler::getGeneratedDirs(); }
-};
-
-struct SW_DRIVER_CPP_API ClangCPPCompiler : ClangCompiler,
-    CPPCompiler
-{
-    using NativeCompilerOptions::operator=;
-
-    std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override { return ClangCompiler::getCommand(); }
-    void setSourceFile(const path &input_file, path &output_file) override;
-    String getObjectExtension() const override { return ClangCompiler::getObjectExtension(); }
-    Files getGeneratedDirs() const override { return ClangCompiler::getGeneratedDirs(); }
-};*/
-
 struct SW_DRIVER_CPP_API ClangCl : Clang
 {
-    //bool findToolchain(struct Solution &s) const override;
 };
 
 struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
@@ -260,32 +184,8 @@ protected:
     Version gatherVersion() const override { return Clang::gatherVersion(file); }
 };
 
-/*struct SW_DRIVER_CPP_API ClangClCCompiler : CCompiler, ClangClCompiler
-{
-    using NativeCompilerOptions::operator=;
-
-    std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override { return ClangClCompiler::getCommand(); }
-    void setSourceFile(const path &input_file, path &output_file) override;
-    String getObjectExtension() const override { return ClangClCompiler::getObjectExtension(); }
-    Files getGeneratedDirs() const override { return ClangClCompiler::getGeneratedDirs(); }
-};
-
-struct SW_DRIVER_CPP_API ClangClCPPCompiler : CPPCompiler, ClangClCompiler
-{
-    using NativeCompilerOptions::operator=;
-
-    std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override { return ClangClCompiler::getCommand(); }
-    void setSourceFile(const path &input_file, path &output_file) override;
-    String getObjectExtension() const override { return ClangClCompiler::getObjectExtension(); }
-    Files getGeneratedDirs() const override { return ClangClCompiler::getGeneratedDirs(); }
-};*/
-
 struct SW_DRIVER_CPP_API GNU : CompilerToolBase
 {
-    //bool findToolchain(struct Solution &s) const override;
-
 protected:
     Version gatherVersion(const path &program) const override;
 };
@@ -328,30 +228,6 @@ struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
 protected:
     Version gatherVersion() const override { return GNU::gatherVersion(file); }
 };
-
-/*struct SW_DRIVER_CPP_API GNUCCompiler : GNUCompiler,
-    CCompiler
-{
-    using NativeCompilerOptions::operator=;
-
-    std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override { return GNUCompiler::getCommand(); }
-    void setSourceFile(const path &input_file, path &output_file) override;
-    String getObjectExtension() const override { return GNUCompiler::getObjectExtension(); }
-    Files getGeneratedDirs() const override { return GNUCompiler::getGeneratedDirs(); }
-};
-
-struct SW_DRIVER_CPP_API GNUCPPCompiler : GNUCompiler,
-    CPPCompiler
-{
-    using NativeCompilerOptions::operator=;
-
-    std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override { return GNUCompiler::getCommand(); }
-    void setSourceFile(const path &input_file, path &output_file) override;
-    String getObjectExtension() const override { return GNUCompiler::getObjectExtension(); }
-    Files getGeneratedDirs() const override { return GNUCompiler::getGeneratedDirs(); }
-};*/
 
 struct SW_DRIVER_CPP_API Linker : Program
 {
@@ -486,9 +362,6 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
 
 struct SW_DRIVER_CPP_API NativeToolchain
 {
-    /*std::shared_ptr<ASMCompiler> ASMCompiler;
-    std::shared_ptr<CCompiler> CCompiler;
-    std::shared_ptr<CPPCompiler> CPPCompiler;*/
     std::shared_ptr<NativeLinker> Librarian;
     std::shared_ptr<NativeLinker> Linker;
 

@@ -106,22 +106,6 @@ struct SW_DRIVER_CPP_API LanguageStorage
     Program *findProgramByExtension(const String &ext) const;
     Language *findLanguageByExtension(const String &ext) const;
     optional<PackageId> findPackageIdByExtension(const String &ext) const;
-
-    // languages
-/*#define LANG_FUNC(f)                     \
-    template <class... Args>             \
-    void f(LanguageType L, Args... Ls)   \
-    {                                    \
-        f(L);                            \
-        if constexpr (sizeof...(Ls) > 0) \
-            f(Ls...);                    \
-    }                                    \
-    void f(LanguageType L);              \
-    void f(const std::vector<LanguageType> &L)
-    LANG_FUNC(addLanguage);
-    LANG_FUNC(setLanguage); // clear langs and set only specified langs
-    LANG_FUNC(removeLanguage); // do we need set and remove funcs?
-#undef LANG_FUNC*/
 };
 
 // factory?
@@ -150,18 +134,6 @@ struct CompiledLanguage
     std::shared_ptr<T> compiler;
 };
 
-/*template <class T>
-struct LibrarianLanguage
-{
-    std::shared_ptr<T> librarian;
-};
-
-template <class T>
-struct LinkedLanguage
-{
-    std::shared_ptr<T> linker;
-};*/
-
 template <class Compiler>
 struct SW_DRIVER_CPP_API NativeLanguage1 : Language,
     CompiledLanguage<Compiler>//,
@@ -188,26 +160,5 @@ struct SW_DRIVER_CPP_API NativeLanguage : NativeLanguage1<Compiler>
     LanguagePtr clone() const override;
     std::shared_ptr<SourceFile> createSourceFile(const path &input, const Target *t) const override;
 };
-
-/*struct ASMLanguage : NativeLanguage1<ASMCompiler>
-{
-    virtual ~ASMLanguage() = default;
-    LanguagePtr clone() const override;
-    std::shared_ptr<SourceFile> createSourceFile(const path &input, const Target *t) const override;
-};
-
-struct CLanguage : NativeLanguage1<CCompiler>
-{
-    virtual ~CLanguage() = default;
-    LanguagePtr clone() const override;
-    std::shared_ptr<SourceFile> createSourceFile(const path &input, const Target *t) const override;
-};
-
-struct CPPLanguage : NativeLanguage1<CPPCompiler>
-{
-    virtual ~CPPLanguage() = default;
-    LanguagePtr clone() const override;
-    std::shared_ptr<SourceFile> createSourceFile(const path &input, const Target *t) const override;
-};*/
 
 }
