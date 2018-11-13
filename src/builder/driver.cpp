@@ -62,7 +62,7 @@ PackageData JsonPackageDescription::getData() const
     for (auto &v : j["files"])
         d.files_map[fs::u8path(v["from"].get<std::string>())] = fs::u8path(v["to"].get<std::string>());
     for (auto &v : j["dependencies"])
-        d.dependencies.emplace(v["path"].get<std::string>(), v["versions"].get<std::string>());
+        d.dependencies.emplace(v["path"].get<std::string>(), v["range"].get<std::string>());
     return d;
 }
 

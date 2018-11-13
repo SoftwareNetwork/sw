@@ -2049,7 +2049,7 @@ PackageDescriptionMap Build::getPackages() const
 
             nlohmann::json jd;
             jd["path"] = d->getPackage().ppath.toString();
-            jd["versions"] = d->getPackage().range.toString();
+            jd["range"] = d->getPackage().range.toString();
             j["dependencies"].push_back(jd);
         }
 
