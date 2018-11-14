@@ -205,6 +205,8 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, bool paralle
             {
                 auto s2 = t->source;
                 applyVersionToUrl(s2, pkg.version);
+                if (!isValidSourceUrl(s2))
+                    throw std::runtime_error("Invalid source: " + print_source(s2));
                 auto i = srcs.find(s2);
                 path rd = i->second / t->RootDirectory;
                 t->SourceDir = rd;
