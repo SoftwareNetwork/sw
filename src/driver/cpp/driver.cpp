@@ -132,6 +132,9 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
             // src_old has correct root dirs
             if (srcs.size() == srcs_old.size())
             {
+                if (srcs.size() == 0)
+                    throw std::runtime_error("no sources found");
+
                 // reset
                 b->fetch_dir.clear();
                 for (auto &s : b->solutions)

@@ -31,7 +31,7 @@ struct PackageData
     Version version;
 
     /// all package files mapped to disk file
-    // from path, to path
+    // from path on disk, to path in archive
     // optional for stored package
     std::unordered_map<path, path> files_map;
 
