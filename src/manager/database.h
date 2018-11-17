@@ -149,13 +149,14 @@ public:
 private:
     path db_repo_dir;
 
-    void download();
-    void load(bool drop = false);
+    void download() const;
+    void load(bool drop = false) const;
 
     void writeDownloadTime() const;
     TimePoint readDownloadTime() const;
 
     bool isCurrentDbOld() const;
+    void updateDb() const;
 
     db::PackageVersionId getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn, int &prefix) const;
     Dependencies getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm) const;

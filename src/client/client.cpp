@@ -95,6 +95,8 @@ static cl::opt<bool> verbose("verbose", cl::desc("Verbose output"));
 static cl::opt<bool> trace("trace", cl::desc("Trace output"));
 static cl::opt<int> jobs("j", cl::desc("Number of jobs"), cl::init(-1));
 
+extern cl::opt<bool> useFileMonitor;
+
 int setup_main(const Strings &args)
 {
     // some initial stuff
@@ -149,6 +151,8 @@ int parse_main(int argc, char **argv)
     {
         return jumppad_call(args);
     }
+
+    //useFileMonitor = false;
 
     //
     cl::ParseCommandLineOptions(args, overview);

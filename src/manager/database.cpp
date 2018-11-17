@@ -62,6 +62,10 @@ TYPED_EXCEPTION(NoSuchVersion);
 
 #include <inserts.cpp>
 
+// save current time during main call
+// it is used for detecting young packages
+static TimePoint tstart;
+
 namespace sw
 {
 
@@ -613,33 +617,14 @@ PackagesDatabase::PackagesDatabase()
         download();
         load();
     }
-    else if (Settings::get_system_settings().can_update_packages_db && isCurrentDbOld())
-    {
-        LOG_DEBUG(logger, "Checking remote version");
-        int version_remote = 0;
-        try
-        {
-            version_remote = std::stoi(download_file(db_version_url));
-        }
-        catch (std::exception &e)
-        {
-            LOG_DEBUG(logger, "Couldn't download db version file: " << e.what());
-        }
-        if (version_remote > readPackagesDbVersion(db_repo_dir))
-        {
-            // multiprocess aware
-            single_process_job(get_lock("db_update"), [this] {
-                download();
-                load(true);
-            });
-        }
-    }
+    else
+        updateDb();
 
     // at the end we always reopen packages db as read only
     open(true);
 }
 
-void PackagesDatabase::download()
+void PackagesDatabase::download() const
 {
     LOG_INFO(logger, "Downloading database");
 
@@ -701,7 +686,7 @@ void PackagesDatabase::download()
     writeDownloadTime();
 }
 
-void PackagesDatabase::load(bool drop)
+void PackagesDatabase::load(bool drop) const
 {
     auto &sdb = getServiceDatabase();
     auto sver_old = sdb.getPackagesDbSchemaVersion();
@@ -818,6 +803,31 @@ void PackagesDatabase::load(bool drop)
     db->execute("PRAGMA foreign_keys = ON;");
 }
 
+void PackagesDatabase::updateDb() const
+{
+    if (!Settings::get_system_settings().can_update_packages_db || !isCurrentDbOld())
+        return;
+
+    LOG_DEBUG(logger, "Checking remote version");
+    int version_remote = 0;
+    try
+    {
+        version_remote = std::stoi(download_file(db_version_url));
+    }
+    catch (std::exception &e)
+    {
+        LOG_DEBUG(logger, "Couldn't download db version file: " << e.what());
+    }
+    if (version_remote > readPackagesDbVersion(db_repo_dir))
+    {
+        // multiprocess aware
+        single_process_job(get_lock("db_update"), [this] {
+            download();
+            load(true);
+        });
+    }
+}
+
 void PackagesDatabase::writeDownloadTime() const
 {
     auto tp = std::chrono::system_clock::now();
@@ -845,6 +855,12 @@ bool PackagesDatabase::isCurrentDbOld() const
 IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps) const
 {
     const auto pkgs = db::packages::Package{};
+
+    // !
+    updateDb();
+
+    // set current time
+    tstart = getUtc();
 
     DependenciesMap all_deps;
     for (auto &dep : deps)
@@ -894,10 +910,6 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
 
 void check_version_age(const std::string &created)
 {
-    // save current time during first call
-    // it is used for detecting young packages
-    static auto tstart = getUtc();
-
     auto d = tstart - string2timepoint(created);
     auto mins = std::chrono::duration_cast<std::chrono::minutes>(d).count();
     // multiple by 2 because first time interval goes for uploading db

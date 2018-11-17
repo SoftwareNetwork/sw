@@ -34,6 +34,7 @@ DECLARE_STATIC_LOGGER(logger, "target");
     (BinaryDir / CPPAN_FILE_PREFIX ".symbols.def")
 
 static cl::opt<bool> do_not_mangle_object_names("do-not-mangle-object-names");
+static cl::opt<bool> bull_build("full", cl::desc("Full build (check all conditions)"));
 
 void createDefFile(const path &def, const Files &obj_files)
 #if defined(CPPAN_OS_WINDOWS)
@@ -143,6 +144,7 @@ TargetBase::TargetBase(const TargetBase &rhs)
     , Local(rhs.Local)
     , UseStorageBinaryDir(rhs.UseStorageBinaryDir)
     , PostponeFileResolving(rhs.PostponeFileResolving)
+    , DryRun(rhs.DryRun)
     , NamePrefix(rhs.NamePrefix)
     , solution(rhs.solution)
     , RootDirectory(rhs.RootDirectory)
@@ -1349,6 +1351,12 @@ Commands NativeExecutedTarget::getCommands() const
             c->dependencies.insert(evs.begin(), evs.end());
         cmds.insert(evs.begin(), evs.end());
     }
+
+    /*if (!IsConfig && !Local)
+    {
+        if (!File(getOutputFile(), *getSolution()->fs).isChanged())
+            return {};
+    }*/
 
     return cmds;
 }

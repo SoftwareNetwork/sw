@@ -15,7 +15,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "file_storage");
 
-static cl::opt<bool> useFileMonitor("use-file-monitor", cl::init(true));
+cl::opt<bool> useFileMonitor("use-file-monitor", cl::init(true));
 
 namespace sw
 {
