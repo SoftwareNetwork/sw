@@ -297,6 +297,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->Local = Local;
     t->source = source;
     t->PostponeFileResolving = PostponeFileResolving;
+    t->DryRun = DryRun;
     t->UseStorageBinaryDir = UseStorageBinaryDir;
     t->IsConfig = IsConfig;
     t->Scope = Scope;
