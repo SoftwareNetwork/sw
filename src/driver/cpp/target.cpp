@@ -1706,7 +1706,11 @@ bool NativeExecutedTarget::prepare()
                     break;
                 case NativeSourceFile::CPP:
                     if (auto L = SourceFileStorage::findLanguageByExtension(".cpp"); L)
-                        L->clone()->createSourceFile(f.first, this);
+                    {
+                        auto sf = L->clone()->createSourceFile(f.first, this);
+                        if (auto c = sf->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
+                            c->CompileAsCPP = true;
+                    }
                     else
                         throw std::logic_error("no CPP language found");
                     break;

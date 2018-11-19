@@ -2020,9 +2020,9 @@ PackageDescriptionMap Build::getPackages() const
         }
 
         if (files.empty() && !nt->Empty)
-            throw std::runtime_error("No files found");
+            throw std::runtime_error(pkg.toString() + ": No files found");
         if (!files.empty() && nt->Empty)
-            throw std::runtime_error("Files were found, but target is marked as empty");
+            throw std::runtime_error(pkg.toString() + ": Files were found, but target is marked as empty");
 
         // we put files under SW_SDIR_NAME to keep space near it
         // e.g. for patch dir or other dirs (server provided files)
