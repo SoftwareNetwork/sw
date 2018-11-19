@@ -111,6 +111,7 @@ enum class ConfigureFlags
 
     AtOnly = 0x1, // @
     CopyOnly = 0x2,
+    EnableUndefReplacements = 0x4,
     //AddToBuild          = 0x4,
 
     Default = Empty,//AddToBuild,
