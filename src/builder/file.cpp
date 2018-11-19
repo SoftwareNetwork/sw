@@ -394,8 +394,18 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
         !gold->maybe_unused &&
         gold->getHash() != g->getHash()))
     {
-        throw std::runtime_error("Setting generator twice on file: " + file.u8string() + "\n" +
-            "first generator:\n " + gold->print() + "\n" + "second generator:\n " + g->print());
+        String err;
+        err += "Setting generator twice on file: " + file.u8string() + "\n";
+        if (gold)
+            err += "first generator:\n " + gold->print();
+        else
+            err += "first generator is empty";
+        err += "\n";
+        if (g)
+            err += "second generator:\n " + g->print();
+        else
+            err += "second generator is empty";
+        throw std::runtime_error(err);
     }
     generator = g;
     generated_ = true;
