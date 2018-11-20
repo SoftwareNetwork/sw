@@ -323,8 +323,15 @@ private:
         size_t sz = cmds.size();
         while (1)
         {
+            // initial prepare
             for (auto &c : cmds)
                 c->prepare();
+
+            // some commands get its i/o deps in wrong order,
+            // so we explicitly call this once more
+            for (auto &c : cmds)
+                c->addInputOutputDeps();
+
             // separate loop for additional deps tracking (programs, inputs, outputs etc.)
             auto cmds2 = cmds;
             for (auto &c : cmds)

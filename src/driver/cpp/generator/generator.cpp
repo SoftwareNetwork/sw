@@ -109,8 +109,8 @@ String make_backslashes(String s)
 static const std::map<ConfigurationType, String> configs{
     {ConfigurationType::Debug,"Debug",},
     {ConfigurationType::Release,"Release",},
-    //{ConfigurationType::MinimalSizeRelease,"MinSizeRel",},
-    //{ConfigurationType::ReleaseWithDebugInformation,"RelWithDebInfo",},
+    {ConfigurationType::MinimalSizeRelease,"MinSizeRel",},
+    {ConfigurationType::ReleaseWithDebugInformation,"RelWithDebInfo",},
 };
 
 static const std::map<ArchType, String> platforms{
@@ -119,8 +119,8 @@ static const std::map<ArchType, String> platforms{
 };
 
 static const std::map<LibraryType, String> shared_static{
-    //{LibraryType::Static,"static",},
-    //{LibraryType::Shared,"dll",},
+    {LibraryType::Static,"static",},
+    {LibraryType::Shared,"dll",},
 };
 
 enum class VSProjectType
@@ -171,7 +171,10 @@ void iterate_over_configs(TargetBase::SettingsX s, std::function<void(const Targ
         {
             s.Native.ConfigurationType = c.first;
             if (shared_static.empty())
+            {
+                s.Native.LibrariesType = LibraryType::Static;
                 f(s, c.second, p.second, {});
+            }
             else
             for (auto &dll : shared_static)
             {
@@ -1004,7 +1007,8 @@ void VSGeneratorNMake::generate(const Build &b)
             else if (b.Settings.Native.CompilerType == CompilerType::GNU)
                 compiler = "--compiler gnu";
 
-            auto o = nt->getOutputFile();
+            nt->Settings = b.Settings; // prepare for makeOutputFile()
+            auto o = nt->makeOutputFile();
             o = o.parent_path().parent_path() / s.getConfig(t.get()) / o.filename();
             pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config --target " + p.target_name + " ide");
             pctx.addBlock("NMakeOutput", o.u8string());

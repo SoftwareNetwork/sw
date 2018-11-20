@@ -288,6 +288,10 @@ path Command::redirectStderr(const path &p)
 
 void Command::addInputOutputDeps()
 {
+    if (File(program, *fs).isGenerated())
+    {
+        dependencies.insert(File(program, *fs).getFileRecord().getGenerator());
+    }
     for (auto &p : inputs)
     {
         File f(p, *fs);
@@ -330,8 +334,6 @@ void Command::prepare()
         addOutput(err.file);
 
     // add more deps
-    if (File(program, *fs).isGenerated())
-        dependencies.insert(File(program, *fs).getFileRecord().getGenerator());
     addInputOutputDeps();
 
     prepared = true;

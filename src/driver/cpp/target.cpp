@@ -117,8 +117,6 @@ String TargetBase::SettingsX::getConfig(const TargetBase *t, bool use_short_conf
     boost::to_lower(c);
     addConfigElement(c, toString(Native.ConfigurationType));
 
-    remove_last_dash(c);
-
     auto h = hash_config(c);
     if (!use_short_config && c.size() + h.size() < 255/* && !use_short_hash*/) // max path part in many FSes
     {
@@ -727,14 +725,21 @@ void NativeExecutedTarget::setOutputDir(const path &dir)
 
 void NativeExecutedTarget::setOutputFile()
 {
-    auto st = getSelectedTool();
-    if (st == Librarian.get())
+    if (getSelectedTool() == Librarian.get())
         getSelectedTool()->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_lib));
     else
     {
         getSelectedTool()->setOutputFile(getOutputFileName(getOutputDir()));
         getSelectedTool()->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
     }
+}
+
+path NativeExecutedTarget::makeOutputFile() const
+{
+    if (getSelectedTool() == Librarian.get())
+        return getOutputFileName(getUserDirectories().storage_dir_lib);
+    else
+        return getOutputFileName(getOutputDir());
 }
 
 path NativeExecutedTarget::getOutputFileName(const path &root) const
@@ -758,6 +763,16 @@ path NativeExecutedTarget::getOutputFileName(const path &root) const
     //if (pkg.version.isValid() /* && add version*/)
         p += "-" + pkg.version.toString();
     return p;
+}
+
+path NativeExecutedTarget::getOutputFile() const
+{
+    return getSelectedTool()->getOutputFile();
+}
+
+path NativeExecutedTarget::getImportLibrary() const
+{
+    return getSelectedTool()->getImportLibrary();
 }
 
 NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherDependenciesTargets() const
@@ -981,16 +996,6 @@ NativeLinker *NativeExecutedTarget::getSelectedTool() const
     if (Librarian)
         return Librarian.get();
     throw std::runtime_error("No tool selected");
-}
-
-path NativeExecutedTarget::getOutputFile() const
-{
-    return getSelectedTool()->getOutputFile();
-}
-
-path NativeExecutedTarget::getImportLibrary() const
-{
-    return getSelectedTool()->getImportLibrary();
 }
 
 void NativeExecutedTarget::addPrecompiledHeader(const path &h, const path &cpp)

@@ -697,6 +697,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     Files getGeneratedDirs() const override;
     bool prepare() override;
     path getOutputFile() const override;
+    path makeOutputFile() const;
     path getImportLibrary() const override;
     void setChecks(const String &name);
     void findSources() override;

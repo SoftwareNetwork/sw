@@ -91,6 +91,7 @@ struct SW_DRIVER_CPP_API Check : CommandData<Check>
     void updateDependencies();
     void execute() override;
     void prepare() override {}
+    void addInputOutputDeps() {} // compat with command
     std::optional<String> getDefinition() const;
     std::optional<String> getDefinition(const String &d) const;
 

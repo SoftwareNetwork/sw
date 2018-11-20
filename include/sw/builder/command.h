@@ -150,6 +150,8 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     Files getGeneratedDirs() const;
     void addPathDirectory(const path &p);
 
+    void addInputOutputDeps();
+
     //void load(BinaryContext &bctx);
     //void save(BinaryContext &bctx);
 
@@ -157,8 +159,6 @@ protected:
     bool prepared = false;
     bool executed_ = false;
     mutable size_t hash = 0;
-
-    void addInputOutputDeps();
 
 private:
     void execute1(std::error_code *ec = nullptr);
