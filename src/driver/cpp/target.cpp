@@ -1700,7 +1700,14 @@ bool NativeExecutedTarget::prepare()
                     break;
                 case NativeSourceFile::C:
                     if (auto L = SourceFileStorage::findLanguageByExtension(".c"); L)
-                        L->clone()->createSourceFile(f.first, this);
+                    {
+                        auto sf = L->clone()->createSourceFile(f.first, this);
+                        if (auto c = sf->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
+                        {
+                            //c->CompileAsC = true; // not working for some reason
+                            sf->args.push_back("-TC");
+                        }
+                    }
                     else
                         throw std::logic_error("no C language found");
                     break;
@@ -1709,7 +1716,10 @@ bool NativeExecutedTarget::prepare()
                     {
                         auto sf = L->clone()->createSourceFile(f.first, this);
                         if (auto c = sf->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
-                            c->CompileAsCPP = true;
+                        {
+                            //c->CompileAsCPP = true; // not working for some reason
+                            sf->args.push_back("-TP");
+                        }
                     }
                     else
                         throw std::logic_error("no CPP language found");
@@ -1758,12 +1768,10 @@ bool NativeExecutedTarget::prepare()
         Definitions["SW_STATIC="];
 
         clearGlobCache();
-
-        //if (HeaderOnly && !HeaderOnly.value())
-        //LOG_INFO(logger, "compiling target: " + pkg.ppath.toString());
     }
     RETURN_PREPARE_PASS;
     case 2:
+    // resolve
     {
         // resolve unresolved deps
         // not on the first stage!
@@ -1772,18 +1780,6 @@ bool NativeExecutedTarget::prepare()
         {
             for (auto &d : v.Dependencies)
             {
-
-                // we do this for every dependency no matter it has d->target set
-                // because importing from different dlls and selecting specific packages will result in
-                // incorrect d->target pointers
-                /*auto i = solution->getChildren().find(d->getPackage());
-                if (i == solution->getChildren().end())
-                    throw std::logic_error("Unresolved package on stage 1: " + d->getPackage().target_name);
-                d->target = (NativeTarget *)i->second.get();*/
-
-                /*if (d->target != nullptr)
-                    continue;*/
-
                 for (auto &[pp, t] : solution->getChildren())
                 {
                     if (d->getPackage().canBe(t->getPackage()))
@@ -1962,6 +1958,7 @@ bool NativeExecutedTarget::prepare()
     }
     RETURN_PREPARE_PASS;
     case 4:
+    // merge
     {
         // merge self
         merge();
@@ -1982,6 +1979,7 @@ bool NativeExecutedTarget::prepare()
     }
     RETURN_PREPARE_PASS;
     case 5:
+    // source files
     {
         // check postponed files first
         for (auto &[p, f] : *this)
@@ -2202,6 +2200,7 @@ bool NativeExecutedTarget::prepare()
     }
     RETURN_PREPARE_PASS;
     case 6:
+    // link librareis
     {
         // add link libraries from deps
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
@@ -2213,8 +2212,14 @@ bool NativeExecutedTarget::prepare()
                     continue;
                 if (d->isDummy())
                     continue;
+
+                s += d.get()->target.lock()->pkg.ppath.toString();
                 if (d->IncludeDirectoriesOnly)
+                {
+                    s += ": i";
                     continue;
+                }
+                s += "\n";
 
                 auto dt = ((NativeExecutedTarget*)d->target.lock().get());
 
@@ -2245,13 +2250,8 @@ bool NativeExecutedTarget::prepare()
                     }
                 }
 
-                if (!dt->HeaderOnly.value() && !d->IncludeDirectoriesOnly)
+                if (!dt->HeaderOnly.value())
                     LinkLibraries.push_back(d.get()->target.lock()->getImportLibrary());
-
-                s += d.get()->target.lock()->pkg.ppath.toString();
-                if (d->IncludeDirectoriesOnly)
-                    s += ": i";
-                s += "\n";
             }
             if (!s.empty())
                 write_file(BinaryDir.parent_path() / "deps.txt", s);
@@ -2259,15 +2259,18 @@ bool NativeExecutedTarget::prepare()
     }
     RETURN_PREPARE_PASS;
     case 7:
+    // linker
     {
-        // linker setup
-#ifndef _WIN32
-        /*if (Linker)
+        // add more link libraries from deps
+        if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
         {
-            auto libs = gatherLinkLibraries();
-            Linker->setLinkLibraries(libs);
-        }*/
-#endif
+            std::unordered_set<NativeExecutedTarget*> targets;
+            Files added;
+            added.insert(LinkLibraries.begin(), LinkLibraries.end());
+            gatherStaticLinkLibraries(LinkLibraries, added, targets);
+        }
+
+        // linker setup
         auto obj = gatherObjectFilesWithoutLibraries();
         auto O1 = gatherLinkLibraries();
 
@@ -2298,6 +2301,52 @@ bool NativeExecutedTarget::prepare()
     }
 
     return false;
+}
+
+void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets)
+{
+    if (!targets.insert(this).second)
+        return;
+    for (auto &d : Dependencies)
+    {
+        if (d->target.lock().get() == this)
+            continue;
+        if (d->isDummy())
+            continue;
+        if (d->IncludeDirectoriesOnly)
+            continue;
+
+        auto dt = ((NativeExecutedTarget*)d->target.lock().get());
+
+        // here we must gather all static (and header only?) lib deps in recursive manner
+        if (dt->getSelectedTool() == dt->Librarian.get() || dt->HeaderOnly.value())
+        {
+            if (!dt->HeaderOnly.value())
+            {
+                if (added.find(dt->getImportLibrary()) == added.end())
+                    ll.push_back(dt->getImportLibrary());
+            }
+
+            // if dep is a static library, we take all its deps link libraries too
+            for (auto &d2 : dt->Dependencies)
+            {
+                if (d2->target.lock().get() == d->target.lock().get())
+                    continue;
+                if (d2->isDummy())
+                    continue;
+                if (d2->IncludeDirectoriesOnly)
+                    continue;
+
+                auto dt2 = ((NativeExecutedTarget*)d2->target.lock().get());
+                if (!dt2->HeaderOnly.value())
+                {
+                    if (added.find(dt2->getImportLibrary()) == added.end())
+                        ll.push_back(dt2->getImportLibrary());
+                }
+                dt2->gatherStaticLinkLibraries(ll, added, targets);
+            }
+        }
+    }
 }
 
 bool NativeExecutedTarget::prepareLibrary(LibraryType Type)

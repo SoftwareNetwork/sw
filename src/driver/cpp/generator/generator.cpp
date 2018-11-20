@@ -32,7 +32,7 @@ String toPathString(GeneratorType t)
     switch (t)
     {
     case GeneratorType::VisualStudio:
-        return "vs";
+        return "vs_ide";
     case GeneratorType::VisualStudioNMake:
         return "vs_nmake";
     case GeneratorType::Ninja:
@@ -50,8 +50,12 @@ String toString(GeneratorType t)
 GeneratorType fromString(const String &s)
 {
     // make icasecmp
-    if (boost::iequals(s, "VS"))
+    if (0)
+        ;
+    else if (boost::iequals(s, "VS_IDE"))
         return GeneratorType::VisualStudio;
+    else if (boost::iequals(s, "VS"))
+        return GeneratorType::VisualStudioNMake;
     else if (boost::iequals(s, "VS_NMake"))
         return GeneratorType::VisualStudioNMake;
     else if (boost::iequals(s, "Ninja"))

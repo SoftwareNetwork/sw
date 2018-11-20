@@ -425,6 +425,29 @@ Commands Solution::getCommands() const
 
     Commands cmds;
     auto &chldr = TargetsToBuild.empty() ? children : TargetsToBuild;
+
+    // we also must take TargetsToBuild deps
+    while (1)
+    {
+        decltype(TargetsToBuild) deps;
+        auto sz = TargetsToBuild.size();
+        for (auto &[n, t] : TargetsToBuild)
+        {
+            auto nt = (NativeExecutedTarget*)t.get();
+            for (auto &d : nt->Dependencies)
+            {
+                if (d->IncludeDirectoriesOnly)
+                    continue;
+                auto l = d->target.lock();
+                if (l)
+                    deps.emplace(l->pkg, l);
+            }
+        }
+        TargetsToBuild.insert(deps.begin(), deps.end());
+        if (sz == TargetsToBuild.size())
+            break;
+    }
+
     for (auto &p : chldr)
     {
         auto c = p.second->getCommands();

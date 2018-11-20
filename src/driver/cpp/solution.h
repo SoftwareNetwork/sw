@@ -29,7 +29,7 @@ using FilesMap = std::unordered_map<path, path>;
 struct SW_DRIVER_CPP_API Solution : TargetBase
 {
     // solution (config) specific data
-    TargetMap TargetsToBuild;
+    mutable TargetMap TargetsToBuild;
     Checker Checks;
     ChecksStorage checksStorage;
     FileStorage *fs = nullptr;

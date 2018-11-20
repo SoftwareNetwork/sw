@@ -783,6 +783,7 @@ private:
     path getOutputFileName(const path &root) const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
+    void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets);
 
     path getPatchDir(bool binary_dir) const;
 };
