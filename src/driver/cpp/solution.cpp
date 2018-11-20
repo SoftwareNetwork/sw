@@ -1227,14 +1227,8 @@ FilesMap Build::build_configs_separate(const Files &files)
     auto &implib = solution.getImportLibrary();
 #endif
 
-    if (!do_not_rebuild_config)
-    {
-        check_self(solution.Checks);
-        solution.performChecks();
-        build_self(solution);
-    }
-
-    auto prepare_config = [this,
+    bool once = false;
+    auto prepare_config = [this, &once,
 #if defined(CPPAN_OS_WINDOWS)
             &implib,
 #endif
@@ -1242,8 +1236,20 @@ FilesMap Build::build_configs_separate(const Files &files)
     ](const auto &fn)
     {
         auto &lib = createTarget({ fn });
-        if (do_not_rebuild_config)
+
+        if (do_not_rebuild_config && fs::exists(lib.getOutputFile()))
             return lib.getOutputFile();
+
+        do_not_rebuild_config = false;
+
+        if (!once)
+        {
+            check_self(solution.Checks);
+            solution.performChecks();
+            build_self(solution);
+            once = true;
+        }
+
 #if defined(CPPAN_OS_WINDOWS)
         lib += implib;
 #endif
@@ -1364,13 +1370,6 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     auto &implib = solution.getImportLibrary();
 #endif
 
-    if (!do_not_rebuild_config)
-    {
-        check_self(solution.Checks);
-        solution.performChecks();
-        build_self(solution);
-    }
-
     Files files;
     std::unordered_map<path, PackageId> output_names;
     for (auto &pkg : pkgs)
@@ -1383,8 +1382,16 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     auto h = getFilesHash(files);
 
     auto &lib = createTarget(files);
-    if (do_not_rebuild_config)
+
+    if (do_not_rebuild_config && fs::exists(lib.getOutputFile()))
         return lib.getOutputFile();
+
+    do_not_rebuild_config = false;
+
+    check_self(solution.Checks);
+    solution.performChecks();
+    build_self(solution);
+
 #if defined(CPPAN_OS_WINDOWS)
     lib += implib;
 #endif
@@ -1546,8 +1553,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         throw std::logic_error("config target not found");
     solution.TargetsToBuild[i->first] = i->second;
 
-    if (!do_not_rebuild_config)
-        Solution::execute();
+    Solution::execute();
 
     return lib.getOutputFile();
 }
@@ -1968,12 +1974,14 @@ void Build::load(const path &dll)
 
         if (boost::iequals(compiler, "clang"))
             Settings.Native.CompilerType = CompilerType::Clang;
-        else if (boost::iequals(compiler, "clang-cl"))
+        else if (boost::iequals(compiler, "clangcl") || boost::iequals(compiler, "clang-cl"))
             Settings.Native.CompilerType = CompilerType::ClangCl;
         else if (boost::iequals(compiler, "gnu"))
             Settings.Native.CompilerType = CompilerType::GNU;
         else if (boost::iequals(compiler, "msvc"))
             Settings.Native.CompilerType = CompilerType::MSVC;
+        else if (!compiler.empty())
+            throw std::runtime_error("unknown compiler: " + compiler);
 
         if (boost::iequals(target_os, "linux"))
             Settings.TargetOS.Type = OSType::Linux;

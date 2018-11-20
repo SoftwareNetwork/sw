@@ -475,7 +475,7 @@ void detectNativeCompilers(struct Solution &s)
         COpts2.System.CompileOptions.push_back("-Wno-everything");
         *C = COpts2;
         L->compiler = C;
-        s.registerProgramAndLanguage("org.LLVM.clang_cl", C, L);
+        s.registerProgramAndLanguage("org.LLVM.clangcl", C, L);
     }
 #else
     // gnu
@@ -508,16 +508,34 @@ void detectNativeCompilers(struct Solution &s)
         s.registerProgram("org.gnu.binutils.ar", Librarian);
     }
 
-    //p = resolve("ld.gold");
-    p = resolve("gcc-8");
-    if (!p.empty())
+    Strings gcc_vers{ "gcc" };
+    Strings gccpp_vers{ "g++" };
+    for (int i = 4; i < 11; i++)
     {
-        auto Linker = std::make_shared<GNULinker>();
+        gcc_vers.push_back(gcc_vers[0] + "-" + std::to_string(i));
+        gccpp_vers.push_back(gccpp_vers[0] + "-" + std::to_string(i));
+    }
+    Strings clang_vers{ "clang" };
+    Strings clangpp_vers{ "clang++" };
+    for (int i = 3; i < 10; i++)
+    {
+        clang_vers.push_back(clang_vers[0] + "-" + std::to_string(i));
+        clangpp_vers.push_back(clangpp_vers[0] + "-" + std::to_string(i));
+    }
 
-        Linker->Type = LinkerType::GNU;
-        Linker->file = p;
-        *Linker = LOpts;
-        s.registerProgram("org.gnu.gcc.ld", Linker);
+    //p = resolve("ld.gold");
+    for (auto &v : gcc_vers)
+    {
+        p = resolve(v);
+        if (!p.empty())
+        {
+            auto Linker = std::make_shared<GNULinker>();
+
+            Linker->Type = LinkerType::GNU;
+            Linker->file = p;
+            *Linker = LOpts;
+            s.registerProgram("org.gnu.gcc.ld", Linker);
+        }
     }
 
     NativeCompilerOptions COpts;
@@ -542,63 +560,11 @@ void detectNativeCompilers(struct Solution &s)
         s.registerProgramAndLanguage("org.gnu.gcc.as", C, L);
     }
 
-    p = resolve("gcc-8");
-    if (!p.empty())
+    for (auto &v : gcc_vers)
     {
-        // C
-        {
-            auto L = std::make_shared<NativeLanguage>();
-            //L->Type = LanguageType::C;
-            L->CompiledExtensions = { ".c" };
-            //s.registerLanguage(L);
-
-            //auto L = (CLanguage*)s.languages[LanguageType::C].get();
-            auto C = std::make_shared<GNUCompiler>();
-            C->Type = CompilerType::GNU;
-            C->file = p;
-            *C = COpts;
-            L->compiler = C;
-            s.registerProgramAndLanguage("org.gnu.gcc.gcc", C, L);
-        }
-    }
-
-    p = resolve("g++-8");
-    if (!p.empty())
-    {
-        // CPP
-        {
-            auto L = std::make_shared<NativeLanguage>();
-            //L->Type = LanguageType::C;
-            L->CompiledExtensions = { CPP_EXTS };
-            //s.registerLanguage(L);
-
-            //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
-            auto C = std::make_shared<GNUCompiler>();
-            C->Type = CompilerType::GNU;
-            C->file = p;
-            *C = COpts;
-            L->compiler = C;
-            s.registerProgramAndLanguage("org.gnu.gcc.gpp", C, L);
-        }
-    }
-
-    // clang
-    {
-        //p = resolve("ld.gold");
-        p = resolve("clang-7");
+        p = resolve(v);
         if (!p.empty())
         {
-            auto Linker = std::make_shared<GNULinker>();
-
-            Linker->Type = LinkerType::GNU;
-            Linker->file = p;
-            *Linker = LOpts;
-            s.registerProgram("org.LLVM.clang.ld", Linker);
-
-            NativeCompilerOptions COpts;
-            //COpts.System.IncludeDirectories.insert("/usr/include");
-            //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
-
             // C
             {
                 auto L = std::make_shared<NativeLanguage>();
@@ -608,15 +574,18 @@ void detectNativeCompilers(struct Solution &s)
 
                 //auto L = (CLanguage*)s.languages[LanguageType::C].get();
                 auto C = std::make_shared<GNUCompiler>();
-                C->Type = CompilerType::Clang;
+                C->Type = CompilerType::GNU;
                 C->file = p;
                 *C = COpts;
                 L->compiler = C;
-                s.registerProgramAndLanguage("org.LLVM.clang", C, L);
+                s.registerProgramAndLanguage("org.gnu.gcc.gcc", C, L);
             }
         }
+    }
 
-        p = resolve("clang++-7");
+    for (auto &v : gccpp_vers)
+    {
+        p = resolve(v);
         if (!p.empty())
         {
             // CPP
@@ -628,11 +597,72 @@ void detectNativeCompilers(struct Solution &s)
 
                 //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
                 auto C = std::make_shared<GNUCompiler>();
-                C->Type = CompilerType::Clang;
+                C->Type = CompilerType::GNU;
                 C->file = p;
                 *C = COpts;
                 L->compiler = C;
-                s.registerProgramAndLanguage("org.LLVM.clangpp", C, L);
+                s.registerProgramAndLanguage("org.gnu.gcc.gpp", C, L);
+            }
+        }
+    }
+
+    // clang
+    {
+        //p = resolve("ld.gold");
+        for (auto &v : clang_vers)
+        {
+            p = resolve(v);
+            if (!p.empty())
+            {
+                auto Linker = std::make_shared<GNULinker>();
+
+                Linker->Type = LinkerType::GNU;
+                Linker->file = p;
+                *Linker = LOpts;
+                s.registerProgram("org.LLVM.clang.ld", Linker);
+
+                NativeCompilerOptions COpts;
+                //COpts.System.IncludeDirectories.insert("/usr/include");
+                //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
+
+                // C
+                {
+                    auto L = std::make_shared<NativeLanguage>();
+                    //L->Type = LanguageType::C;
+                    L->CompiledExtensions = { ".c" };
+                    //s.registerLanguage(L);
+
+                    //auto L = (CLanguage*)s.languages[LanguageType::C].get();
+                    auto C = std::make_shared<GNUCompiler>();
+                    C->Type = CompilerType::Clang;
+                    C->file = p;
+                    *C = COpts;
+                    L->compiler = C;
+                    s.registerProgramAndLanguage("org.LLVM.clang", C, L);
+                }
+            }
+        }
+
+        for (auto &v : clangpp_vers)
+        {
+            p = resolve(v);
+            if (!p.empty())
+            {
+                // CPP
+                {
+                    auto L = std::make_shared<NativeLanguage>();
+                    //L->Type = LanguageType::C;
+                    L->CompiledExtensions = { CPP_EXTS };
+                    //s.registerLanguage(L);
+
+                    //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
+                    auto C = std::make_shared<GNUCompiler>();
+                    C->Type = CompilerType::Clang;
+                    C->file = p;
+                    *C = COpts;
+                    L->compiler = C;
+                    s.registerProgramAndLanguage("org.LLVM.clangpp", C, L);
+                }
             }
         }
     }
