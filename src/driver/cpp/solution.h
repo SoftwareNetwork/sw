@@ -46,6 +46,9 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     using SourceDirMapBySource = std::unordered_map<Source, path>;
     SourceDirMapBySource source_dirs_by_source;
 
+    // for module calls
+    String current_module;
+
 public:
     Solution(const Solution &);
     //Solution &operator=(const Solution &);
@@ -168,6 +171,7 @@ struct SW_DRIVER_CPP_API Module
     template <class F, bool Required = false>
     struct LibraryCall
     {
+        Solution *s = nullptr;
         std::function<F> f;
 
         LibraryCall &operator=(std::function<F> f)
@@ -180,7 +184,28 @@ struct SW_DRIVER_CPP_API Module
         void operator()(Args && ... args) const
         {
             if (f)
-                f(std::forward<Args>(args)...);
+            {
+                try
+                {
+                    f(std::forward<Args>(args)...);
+                }
+                catch (const std::exception &e)
+                {
+                    String err = "error in module: ";
+                    if (s && !s->current_module.empty())
+                        err += s->current_module + ": ";
+                    err += e.what();
+                    throw std::runtime_error(err);
+                }
+                catch (...)
+                {
+                    String err = "error in module: ";
+                    if (s && !s->current_module.empty())
+                        err += s->current_module + ": ";
+                    err += "unknown error";
+                    throw std::runtime_error(err);
+                }
+            }
             else if (Required)
                 throw std::runtime_error("Required function is not present in the module");
         }
@@ -193,12 +218,14 @@ struct SW_DRIVER_CPP_API Module
     ~Module();
 
     // api
-    LibraryCall<void(Checker &)> check;
-    LibraryCall<void(Solution &)> configure;
+    void check(Solution &s, Checker &c) const;
+    void configure(Solution &s) const;
     void build(Solution &s) const;
 
 private:
-    LibraryCall<void(Solution &), true> build_;
+    mutable LibraryCall<void(Solution &), true> build_;
+    mutable LibraryCall<void(Solution &)> configure_;
+    mutable LibraryCall<void(Checker &)> check_;
 };
 
 struct SW_DRIVER_CPP_API ModuleStorage

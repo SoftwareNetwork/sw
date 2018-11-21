@@ -168,58 +168,6 @@ private:
 
 template struct SW_BUILDER_API CommandData<builder::Command>;
 
-/*struct SW_BUILDER_API DummyCommand : sw::builder::Command
-{
-    void prepare() override {}
-    void execute() override {}
-};*/
-
-struct SW_BUILDER_API _ExecuteCommand : builder::Command
-{
-    using F = std::function<void(void)>;
-
-    const char *file = nullptr;
-    int line = 0;
-    F f;
-    bool always = false;
-
-    _ExecuteCommand(const char *file, int line) : file(file), line(line) {}
-    _ExecuteCommand(FileStorage &fs, const char *file, int line) : Command(fs), file(file), line(line) {}
-
-    //template <class F2>
-    //ExecuteCommand(const char *file, int line, F2 &&f) : ExecuteCommand(file, line), f(f) {}
-
-    template <class F2>
-    _ExecuteCommand(F2 &&f) : f(f) {}
-
-    template <class F2>
-    _ExecuteCommand(FileStorage &fs, F2 &&f) : Command(fs), f(f) {}
-
-    /*template <class F2>
-    ExecuteCommand(bool always, F2 &&f) : f(f), always(true) {}
-
-    template <class F2>
-    ExecuteCommand(const path &p, F2 &&f) : f(f)
-    {
-        addOutput(p);
-    }
-
-    template <class F2>
-    ExecuteCommand(const Files &fs, F2 &&f) : f(f)
-    {
-        for (auto &p : fs)
-            addOutput(p);
-    }*/
-
-    virtual ~_ExecuteCommand();
-
-    bool isOutdated() const override;
-    void execute() override;
-    void prepare() override;
-    size_t getHash() const override;
-    path getProgram() const override { return "ExecuteCommand"; };
-};
-
 #define SW_INTERNAL_INIT_COMMAND(name, target) \
     name->fs = (target).getSolution()->fs;     \
     name->addPathDirectory((target).getOutputDir() / (target).getConfig())

@@ -282,6 +282,7 @@ int main(int argc, char **argv)
         ctx.addLine();
 
         build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, r.prefix).toString() + "\";");
+        build.addLine("s.current_module = \"" + r.toString() + "\";");
         build.addLine("build_" + r.getVariableName() + "(s);");
         build.addLine();
 

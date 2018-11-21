@@ -12,9 +12,20 @@
 namespace sw
 {
 
-namespace clang
+namespace clang_gnu
 {
+
+struct Optimizations
+{
+    bool Disable = false;
+    optional<int> Level;
+    bool SmallCode = false;
+    bool FastCode = false;
+};
+
 }
+
+DECLARE_OPTION_SPECIALIZATION(clang_gnu::Optimizations);
 
 Strings getCommandLineImplCPPLanguageStandardClang(const CommandLineOption<CPPLanguageStandard> &co, builder::Command *c);
 Strings getCommandLineImplCPPLanguageStandardGNU(const CommandLineOption<CPPLanguageStandard> &co, builder::Command *c);
@@ -178,6 +189,8 @@ struct SW_DRIVER_CPP_API GNUOptions
     {
         cl::CommandFlag{ "fPIC" }, true
     };
+
+    COMMAND_LINE_OPTION(Optimizations, clang_gnu::Optimizations);
 };
 DECLARE_OPTION_SPECIALIZATION(GNUOptions);
 

@@ -752,7 +752,7 @@ void Solution::build_and_resolve()
     if (cfgs.size() != 1)
         sr.restoreNow(true);
 
-    getModuleStorage(base_ptr).get(dll).check(Checks);
+    getModuleStorage(base_ptr).get(dll).check(*this, Checks);
     performChecks();
     getModuleStorage(base_ptr).get(dll).build(*this);
 
@@ -1431,6 +1431,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
             build.addLine("// " + r.toString());
             build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, r.prefix).toString() + "\";");
+            build.addLine("s.current_module = \"" + r.toString() + "\";");
             build.addLine("build_" + h + "(s);");
             build.addLine();
 
@@ -2004,7 +2005,7 @@ void Build::load(const path &dll)
 
         // make parallel?
         for (auto &s : solutions)
-            getModuleStorage(base_ptr).get(dll).check(s.Checks);
+            getModuleStorage(base_ptr).get(dll).check(s, s.Checks);
         performChecks();
     }
 
@@ -2111,9 +2112,9 @@ try
     if (module->has("build"))
         build_ = module->get<void(Solution&)>("build");
     if (module->has("check"))
-        check = module->get<void(Checker&)>("check");
+        check_ = module->get<void(Checker&)>("check");
     if (module->has("configure"))
-        configure = module->get<void(Solution&)>("configure");
+        configure_ = module->get<void(Solution&)>("configure");
 }
 catch (...)
 {
@@ -2132,6 +2133,7 @@ void Module::build(Solution &s) const
 {
     //Solution s2(s);
     //build_(s2);
+    build_.s = &s;
     build_(s);
     /*for (auto &[p, t] : s2.children)
     {
@@ -2139,6 +2141,18 @@ void Module::build(Solution &s) const
             continue;
         s.add(t);
     }*/
+}
+
+void Module::configure(Solution &s) const
+{
+    configure_.s = &s;
+    configure_(s);
+}
+
+void Module::check(Solution &s, Checker &c) const
+{
+    check_.s = &s;
+    check_(c);
 }
 
 ModuleStorage &getModuleStorage(Solution &owner)

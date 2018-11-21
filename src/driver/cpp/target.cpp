@@ -2066,20 +2066,12 @@ bool NativeExecutedTarget::prepare()
                     c->IncludeDirectories.erase(BinaryPrivateDir);
                 }
             }
-            else if (auto c = f->compiler->as<ClangCompiler>())
-            {
-                //if (auto c = f->compiler->as<ClangCPPCompiler>())
-                    c->CPPStandard = CPPVersion;
-
-                if (ExportAllSymbols)
-                    c->VisibilityHidden = false;
-            }
             else if (auto c = f->compiler->as<ClangClCompiler>())
             {
                 if (Settings.Native.ConfigurationType == ConfigurationType::Debug)
                     c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
                 //if (auto c = f->compiler->as<ClangClCPPCompiler>())
-                    c->CPPStandard = CPPVersion;
+                c->CPPStandard = CPPVersion;
 
                 if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
                 {
@@ -2088,18 +2080,33 @@ bool NativeExecutedTarget::prepare()
                     c->IncludeDirectories.erase(BinaryPrivateDir);
                 }
             }
+            // clang compiler is not working atm, gnu is created instead
+            else if (auto c = f->compiler->as<ClangCompiler>())
+            {
+                //if (auto c = f->compiler->as<ClangCPPCompiler>())
+                    c->CPPStandard = CPPVersion;
+
+                if (ExportAllSymbols)
+                    c->VisibilityHidden = false;
+            }
             else if (auto c = f->compiler->as<GNUCompiler>())
             {
                 switch (Settings.Native.ConfigurationType)
                 {
                 case ConfigurationType::Debug:
                     c->GenerateDebugInfo = true;
+                    //c->Optimizations().Level = 0; this is default
                     break;
                 case ConfigurationType::Release:
+                    c->Optimizations().Level = 3;
                     break;
                 case ConfigurationType::ReleaseWithDebugInformation:
+                    c->GenerateDebugInfo = true;
+                    c->Optimizations().Level = 2;
                     break;
                 case ConfigurationType::MinimalSizeRelease:
+                    c->Optimizations().SmallCode = true;
+                    c->Optimizations().Level = 2;
                     break;
                 }
                 //if (auto c = f->compiler->as<GNUCPPCompiler>())

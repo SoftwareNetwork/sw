@@ -21,8 +21,30 @@ DEFINE_OPTION_SPECIALIZATION_DUMMY(GNUAssemblerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(GNULinkerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(GNULibrarianOptions);
 
-namespace clang
+namespace clang_gnu
 {
+}
+
+DECLARE_OPTION_SPECIALIZATION(clang_gnu::Optimizations)
+{
+    using namespace vs;
+
+    auto &o = value();
+
+    Strings s;
+    if (!o.Disable)
+    {
+        if (o.Level)
+            s.push_back("-O" + std::to_string(o.Level.value()));
+        if (o.FastCode)
+            s.push_back("-Ofast");
+        if (o.SmallCode)
+            s.push_back("-Os");
+    }
+    //if (o.Disable)
+        //s.push_back("-Od");
+
+    return { s };
 }
 
 Strings getCommandLineImplCPPLanguageStandardClang(const CommandLineOption<CPPLanguageStandard> &co, builder::Command *c)
