@@ -32,11 +32,11 @@ _s?, _sf? - source file
 // _d or _def
 inline Definition operator "" _d(const char *s, size_t)
 {
-    return Definition{ s };
+    return Definition(String(s));
 }
 inline Definition operator "" _def(const char *s, size_t)
 {
-    return Definition{ s };
+    return Definition(String(s));
 }
 
 // dependency

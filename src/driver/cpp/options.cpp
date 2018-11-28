@@ -16,6 +16,11 @@
 namespace sw
 {
 
+Definition::Definition(const String &s)
+{
+    d = s;
+}
+
 LinkLibrary::LinkLibrary(const String &s)
 {
     l = s;

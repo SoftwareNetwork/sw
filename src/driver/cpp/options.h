@@ -116,6 +116,8 @@ using PathOptionsType = UniqueVector<path>;
 struct SW_DRIVER_CPP_API Definition
 {
     String d;
+
+    explicit Definition(const String &p);
 };
 
 struct SW_DRIVER_CPP_API Variable

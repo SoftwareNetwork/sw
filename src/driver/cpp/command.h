@@ -40,17 +40,15 @@ struct tag_targets
     std::vector<NativeExecutedTarget *> targets;
 };
 
-struct tag_io_file : tag_path, tag_targets
+struct tag_files_data
 {
     bool add_to_targets = true;
+    bool skip = false;
     String prefix;
 };
 
-struct tag_io_files : tag_files, tag_targets
-{
-    bool add_to_targets = true;
-    String prefix;
-};
+struct tag_io_file : tag_path, tag_files_data, tag_targets {};
+struct tag_io_files : tag_files, tag_files_data, tag_targets {};
 
 } // namespace detail
 
@@ -90,6 +88,11 @@ struct tag_dep : detail::tag_targets
         add_array(std::forward<Args>(args)...);
     }
 };
+
+// in/out tags
+struct DoNotAddToTargets {};
+struct Skip {};
+struct Prefix : String {};
 
 template <class T>
 tag_prog<T> prog(const T &t)

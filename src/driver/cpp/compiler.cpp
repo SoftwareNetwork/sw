@@ -510,14 +510,14 @@ void detectNativeCompilers(struct Solution &s)
 
     Strings gcc_vers{ "gcc" };
     Strings gccpp_vers{ "g++" };
-    for (int i = 4; i < 11; i++)
+    for (int i = 4; i < 12; i++)
     {
         gcc_vers.push_back(gcc_vers[0] + "-" + std::to_string(i));
         gccpp_vers.push_back(gccpp_vers[0] + "-" + std::to_string(i));
     }
     Strings clang_vers{ "clang" };
     Strings clangpp_vers{ "clang++" };
-    for (int i = 3; i < 10; i++)
+    for (int i = 3; i < 16; i++)
     {
         clang_vers.push_back(clang_vers[0] + "-" + std::to_string(i));
         clangpp_vers.push_back(clangpp_vers[0] + "-" + std::to_string(i));

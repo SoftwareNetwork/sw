@@ -224,7 +224,10 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
         if (t.add_to_targets)
         {
             for (auto tgt : all)
+            {
                 *tgt += p;
+                (*tgt)[p].skip = t.skip;
+            }
         }
     }
     for (auto tgt : t.targets)
@@ -250,7 +253,10 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
         if (t.add_to_targets)
         {
             for (auto tgt : all)
+            {
                 *tgt += p;
+                (*tgt)[p].skip = t.skip;
+            }
         }
     }
     for (auto tgt : t.targets)
@@ -273,7 +279,10 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
     if (t.add_to_targets)
     {
         for (auto tgt : all)
+        {
             *tgt += p;
+            (*tgt)[p].skip = t.skip;
+        }
     }
     for (auto tgt : t.targets)
         tgt->Storage.push_back(cb.c);
@@ -295,7 +304,10 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
     if (t.add_to_targets)
     {
         for (auto tgt : all)
+        {
             *tgt += p;
+            (*tgt)[p].skip = t.skip;
+        }
     }
     for (auto tgt : t.targets)
         tgt->Storage.push_back(cb.c);
@@ -317,7 +329,10 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
     if (t.add_to_targets)
     {
         for (auto tgt : all)
+        {
             *tgt += p;
+            (*tgt)[p].skip = t.skip;
+        }
     }
     for (auto tgt : t.targets)
         tgt->Storage.push_back(cb.c);

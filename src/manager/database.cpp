@@ -946,6 +946,7 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
                 project.flags.set(pfDirectDependency);
                 project.ppath = dep.ppath;
                 project.version = i->first;
+                project.prefix = i->second.prefix;
                 project.db_dependencies = getProjectDependencies(project.id, all_deps, i->second.deps);
                 all_deps[project] = project; // assign first, deps assign second
                 continue;
