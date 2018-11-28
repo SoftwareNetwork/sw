@@ -909,6 +909,11 @@ void VSGeneratorNMake::generate(const Build &b)
             pctx.endBlock();
         });
 
+        pctx.beginBlock("ItemGroup");
+        pctx.beginBlock("ClCompile", { { "Include", (b.SourceDir / b.getConfigFilename()).u8string() } });
+        pctx.endBlock();
+        pctx.endBlock();
+
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets" } });
 
         pctx.endProject();
@@ -1010,6 +1015,7 @@ void VSGeneratorNMake::generate(const Build &b)
             nt->Settings = b.Settings; // prepare for makeOutputFile()
             auto o = nt->makeOutputFile();
             o = o.parent_path().parent_path() / s.getConfig(t.get()) / o.filename();
+            o += nt->getOutputFile().extension();
             pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config --target " + p.target_name + " ide");
             pctx.addBlock("NMakeOutput", o.u8string());
             pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " " + cfg + " ide --clean");

@@ -129,6 +129,44 @@ private:
 //using PackagesIdMap = std::unordered_map<PackageId, PackageId>;
 using PackagesIdSet = std::unordered_set<PackageId>;
 
+template <
+    class T,
+    template <class K, class V> class PackagePathMap,
+    template <class K, class V> class VersionMap
+>
+struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<Version, T>>
+{
+    using Base = PackagePathMap<PackagePath, VersionMap<Version, T>>;
+
+    using Base::find;
+    using Base::erase;
+    using Base::end;
+
+    auto find(const PackageId &pkg) const
+    {
+        auto &v = ((PackageVersionMapBase*)this)->operator[](pkg.ppath);
+        return v.find(pkg.version);
+    }
+
+    auto erase(const PackageId &pkg)
+    {
+        auto &v = ((PackageVersionMapBase*)this)->operator[](pkg.ppath);
+        return v.erase(pkg.version);
+    }
+
+    auto end(const PackageId &pkg) const
+    {
+        auto &v = ((PackageVersionMapBase*)this)->operator[](pkg.ppath);
+        return v.end();
+    }
+
+    auto emplace(const PackageId &pkg, const T &val)
+    {
+        auto &v = ((PackageVersionMapBase*)this)->operator[](pkg.ppath);
+        return v.emplace(pkg.version, val);
+    }
+};
+
 SW_MANAGER_API
 UnresolvedPackage extractFromString(const String &target);
 

@@ -12,6 +12,8 @@
 
 #include <grpc_helpers.h>
 
+#include <primitives/templates.h>
+
 #include <grpcpp/grpcpp.h>
 
 #include <primitives/log.h>
@@ -168,12 +170,11 @@ void Api::getNotifications(int n)
     GRPC_CALL_THROWS(user_, GetNotifications, api::Notifications);
 
     // move out; return as result
-    int i = 1;
-    for (auto &n : response.notifications())
+    for (const auto &[i,n] : enumerate(response.notifications()))
     {
         auto nt = (NotificationType)n.type();
         std::ostringstream ss;
-        ss << i++ << " ";
+        ss << i + 1 << " ";
         switch (nt)
         {
         case NotificationType::Error:

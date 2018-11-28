@@ -175,6 +175,38 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     t->pkg.version = V;
     t->pkg.createNames();
 
+    // this relaxes our requirements, reconsider?
+    /*if (getSolution()->isKnownTarget(t->pkg))
+    {
+        auto i = getSolution()->dummy_children.find(t->pkg);
+        if (i != getSolution()->dummy_children.end())
+        {
+            // we are adding same target for the second time
+            // if it was in dummy_children, we remove and re-create it
+            //getSolution()->dummy_children.erase(i);
+
+            // we are adding same target for the second time
+            // if it was in dummy_children, we add it to children and simply return reference to it
+            addChild(i->second);
+            getSolution()->dummy_children.erase(i);
+            return *i->second;
+        }
+        else
+        {
+            auto i = getSolution()->children.find(t->pkg);
+            if (i != getSolution()->children.end())
+            {
+                // we are adding same target for the second time
+                // if it was in children, we lock it = set PostponeFileResolving
+                //i->second->PostponeFileResolving = true;
+
+                // we are adding same target for the second time
+                // if it was in children we simply return reference to it
+                return *i->second;
+            }
+        }
+    }*/
+
     // set some general settings, then init, then register
     setupTarget(t.get());
 
@@ -557,7 +589,7 @@ NativeExecutedTarget::NativeExecutedTarget(LanguageType L)
     //addLanguage(L);
 }
 
-#define SW_IS_LOCAL_BINARY_DIR Local && !UseStorageBinaryDir && !pkg.getOverriddenDir()
+#define SW_IS_LOCAL_BINARY_DIR isLocal() && !UseStorageBinaryDir
 
 void NativeExecutedTarget::init()
 {
@@ -1278,12 +1310,12 @@ Commands NativeExecutedTarget::getCommands() const
             }
 
             // copy output dlls
-            if (Local && Settings.Native.CopySharedLibraries)
+            if (isLocal() && Settings.Native.CopySharedLibraries)
             {
                 for (auto &l : gatherAllRelatedDependencies())
                 {
                     auto dt = ((NativeExecutedTarget*)l);
-                    if (dt->Local)
+                    if (dt->isLocal())
                         continue;
                     if (dt->HeaderOnly.value())
                         continue;
@@ -1644,7 +1676,7 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "primitives.settings");
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "mmo_extractor");
 
     /*{
         auto is_changed = [this](const path &p)
@@ -1794,7 +1826,25 @@ bool NativeExecutedTarget::prepare()
                     }
                 }
                 if (!d->target.lock())
-                    throw std::logic_error("Unresolved package on stage 1: " + d->getPackage().toString());
+                {
+                    /*bool added = false;
+                    for (auto &[pp, t] : solution->dummy_children)
+                    {
+                        if (d->getPackage().canBe(t->getPackage()))
+                        {
+                            d->setTarget(std::static_pointer_cast<NativeTarget>(t));
+                            added = true;
+                            static std::mutex m;
+                            std::unique_lock lk(m);
+                            getSolution()->children[t->pkg] = t;
+                            while (t->prepare_pass < prepare_pass)
+                                t->prepare();
+                            break;
+                        }
+                    }
+                    if (!added)*/
+                        throw std::logic_error("Unresolved package on stage 1: " + d->getPackage().toString());
+                }
             }
         });
     }
@@ -2629,7 +2679,7 @@ path NativeExecutedTarget::getPatchDir(bool binary_dir) const
     //return base.parent_path() / "patch";
 
     /*path base;
-    if (Local && !pkg.getOverriddenDir())
+    if (isLocal())
         base = "";
     auto base = Local ? getSolution()->bi : SourceDir;
     return base / "patch";*/

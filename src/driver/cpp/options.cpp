@@ -16,6 +16,16 @@
 namespace sw
 {
 
+LinkLibrary::LinkLibrary(const String &s)
+{
+    l = s;
+}
+
+LinkLibrary::LinkLibrary(const path &p)
+{
+    l = p.string();
+}
+
 IncludeDirectory::IncludeDirectory(const String &s)
 {
     i = s;

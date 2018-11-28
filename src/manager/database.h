@@ -74,7 +74,16 @@ protected:
 
 struct SW_MANAGER_API ServiceDatabase : public Database
 {
-    using OverriddenPackages = std::unordered_map<PackageId, path>;
+    struct OverriddenPackage
+    {
+        path sdir;
+        UnresolvedPackages deps;
+
+        // extended
+        db::PackageVersionId id = 0; // overridden id is less than 0
+        int prefix = 2;
+    };
+    using OverriddenPackages = PackageVersionMapBase<OverriddenPackage, std::unordered_map, std::map>;
 
     ServiceDatabase();
 
@@ -113,9 +122,10 @@ struct SW_MANAGER_API ServiceDatabase : public Database
     Packages getInstalledPackages() const;
 
     const OverriddenPackages &getOverriddenPackages() const;
-    void overridePackage(const PackageId &pkg, const path &sdir) const;
+    void overridePackage(const PackageId &pkg, const OverriddenPackage &opkg) const;
     void deleteOverriddenPackage(const PackageId &pkg) const;
     void deleteOverriddenPackageDir(const path &sdir) const;
+    UnresolvedPackages getOverriddenPackageVersionDependencies(db::PackageVersionId project_version_id);
 
 private:
     mutable optional<OverriddenPackages> override_remote_packages;
@@ -159,7 +169,7 @@ private:
     void updateDb() const;
 
     db::PackageVersionId getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn, int &prefix) const;
-    Dependencies getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm) const;
+    Dependencies getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm, const UnresolvedPackages &overridden_deps = {}) const;
 };
 
 SW_MANAGER_API

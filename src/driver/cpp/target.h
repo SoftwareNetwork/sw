@@ -213,32 +213,18 @@ public:
     void add(const TargetBaseTypePtr &t);
 
     template <typename T, typename ... Args>
-    std::enable_if_t<(sizeof...(Args) > 0), T&> add(const PackagePath &Name, Args && ... args)
+    T& add(const PackagePath &Name, Args && ... args)
     {
-        return add1<T>(Name, std::forward<Args>(args)...);
+        if constexpr (sizeof...(Args) > 0)
+        {
+            if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>)
+                return addTarget1<T>(Name, std::forward<Args>(args)...);
+            else
+                return addTarget1<T>(Name, pkg.version, std::forward<Args>(args)...);
+        }
+        else
+            return addTarget1<T>(Name, pkg.version, std::forward<Args>(args)...);
     }
-
-    template <typename T, typename ... Args>
-    std::enable_if_t<(sizeof...(Args) == 0), T&> add(const PackagePath &Name, Args && ... args)
-    {
-        return addTarget1<T>(Name, pkg.version, std::forward<Args>(args)...);
-    }
-
-    // msvc bug workaround
-private:
-    template <typename T, typename ... Args>
-    std::enable_if_t<std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>, T&>
-        add1(const PackagePath &Name, Args && ... args)
-    {
-        return addTarget1<T>(Name, std::forward<Args>(args)...);
-    }
-    template <typename T, typename ... Args>
-    std::enable_if_t<!std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>, T&>
-        add1(const PackagePath &Name, Args && ... args)
-    {
-        return addTarget1<T>(Name, pkg.version, std::forward<Args>(args)...);
-    }
-public:
 
     template <typename T, typename ... Args>
     T &addTarget(Args && ... args)
@@ -315,6 +301,10 @@ public:
 
     void setRootDirectory(const path &);
     void setSource(const Source &);
+
+    /// really local package
+    bool isLocal() const { return Local && !pkg.getOverriddenDir(); }
+    bool isLocalOrOverridden() const { return Local && pkg.getOverriddenDir(); }
 
     TargetBase &operator+=(const Source &);
 

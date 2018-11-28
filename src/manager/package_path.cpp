@@ -7,6 +7,7 @@
 #include "package_path.h"
 
 #include <boost/algorithm/string.hpp>
+#include <primitives/templates.h>
 
 namespace sw
 {
@@ -55,10 +56,9 @@ path PackagePath::toFileSystemPath() const
     path p;
     if (empty())
         return p;
-    int i = 0;
-    for (auto &e : *this)
+    for (const auto &[i, e] : enumerate(*this))
     {
-        if (i++ == int(ElementType::Owner))
+        if (i == int(ElementType::Owner))
         {
             p /= e.substr(0, 1);
             p /= e.substr(0, 2);

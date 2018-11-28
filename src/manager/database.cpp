@@ -554,41 +554,101 @@ const ServiceDatabase::OverriddenPackages &ServiceDatabase::getOverriddenPackage
 
     OverriddenPackages pkgs;
     const auto orp = db::service::OverrideRemotePackage{};
-    for (const auto &row : (*db)(select(orp.path, orp.sdir).from(orp).unconditionally()))
-        pkgs.emplace(row.path.value(), row.sdir.value());
+    const auto orpv = db::service::OverrideRemotePackageVersion{};
+    const auto orpvd = db::service::OverrideRemotePackageVersionDependency{};
+    for (const auto &row : (*db)(select(orp.overrideRemotePackageId, orp.path).from(orp).unconditionally()))
+    {
+        for (const auto &row2 : (*db)(select(orpv.overrideRemotePackageVersionId, orpv.version, orpv.sdir, orpv.prefix).from(orpv).where(orpv.overrideRemotePackageId == row.overrideRemotePackageId)))
+        {
+            auto &o = pkgs[row.path.value()][row2.version.value()];
+            o.id = -row2.overrideRemotePackageVersionId.value();
+            o.sdir = row2.sdir.value();
+            o.prefix = row2.prefix.value();
+            for (const auto &row3 : (*db)(select(orpvd.dependency).from(orpvd).where(orpvd.overrideRemotePackageVersionId == row2.overrideRemotePackageVersionId)))
+            {
+                o.deps.insert(row3.dependency.value());
+            }
+        }
+    }
     override_remote_packages = pkgs;
     return override_remote_packages.value();
 }
 
-void ServiceDatabase::overridePackage(const PackageId &pkg, const path &sdir) const
+void ServiceDatabase::overridePackage(const PackageId &pkg, const OverriddenPackage &opkg) const
 {
     getOverriddenPackages(); // init if needed
 
     override_remote_packages.value().erase(pkg);
-    override_remote_packages.value().emplace(pkg, sdir);
+    override_remote_packages.value().emplace(pkg, opkg);
 
     const auto orp = db::service::OverrideRemotePackage{};
+    const auto orpv = db::service::OverrideRemotePackageVersion{};
+    const auto orpvd = db::service::OverrideRemotePackageVersionDependency{};
+    db->start_transaction();
     deleteOverriddenPackage(pkg);
-    (*db)(insert_into(orp).set(
-        orp.path = pkg.toString(),
-        orp.sdir = fs::canonical(fs::absolute(sdir)).u8string()
+    auto q1 = (*db)(select(orp.overrideRemotePackageId).from(orp).where(
+        orp.path == pkg.ppath.toString()
     ));
+    if (q1.empty())
+    {
+        (*db)(insert_into(orp).set(
+            orp.path = pkg.ppath.toString()
+        ));
+    }
+    auto q = (*db)(select(orp.overrideRemotePackageId).from(orp).where(
+        orp.path == pkg.ppath.toString()
+    ));
+    (*db)(insert_into(orpv).set(
+        orpv.overrideRemotePackageId = q.front().overrideRemotePackageId.value(),
+        orpv.version = pkg.version.toString(),
+        orpv.sdir = fs::canonical(fs::absolute(opkg.sdir)).u8string(),
+        orpv.prefix = opkg.prefix
+    ));
+    auto q2 = (*db)(select(orpv.overrideRemotePackageVersionId).from(orpv).where(
+        orpv.overrideRemotePackageId == q.front().overrideRemotePackageId.value() &&
+        orpv.version == pkg.version.toString()
+    ));
+    for (auto &d : opkg.deps)
+    {
+        (*db)(insert_into(orpvd).set(
+            orpvd.overrideRemotePackageVersionId = q2.front().overrideRemotePackageVersionId.value(),
+            orpvd.dependency = d.toString()
+        ));
+    }
+    db->commit_transaction();
 }
 
 void ServiceDatabase::deleteOverriddenPackage(const PackageId &pkg) const
 {
     const auto orp = db::service::OverrideRemotePackage{};
-    (*db)(remove_from(orp).where(
-        orp.path == pkg.toString()
+    const auto orpv = db::service::OverrideRemotePackageVersion{};
+    auto q = (*db)(select(orp.overrideRemotePackageId).from(orp).where(
+        orp.path == pkg.ppath.toString()
+    ));
+    if (q.empty())
+        return;
+    (*db)(remove_from(orpv).where(
+        orpv.overrideRemotePackageId == q.front().overrideRemotePackageId.value() &&
+        orpv.version == pkg.version.toString()
     ));
 }
 
 void ServiceDatabase::deleteOverriddenPackageDir(const path &sdir) const
 {
-    const auto orp = db::service::OverrideRemotePackage{};
-    (*db)(remove_from(orp).where(
-        orp.sdir == fs::canonical(fs::absolute(sdir)).u8string()
+    const auto orpv = db::service::OverrideRemotePackageVersion{};
+    (*db)(remove_from(orpv).where(
+        orpv.sdir == fs::canonical(fs::absolute(sdir)).u8string()
     ));
+}
+
+UnresolvedPackages ServiceDatabase::getOverriddenPackageVersionDependencies(db::PackageVersionId project_version_id)
+{
+    //project_version_id = abs(project_version_id);
+    const auto orpvd = db::service::OverrideRemotePackageVersionDependency{};
+    UnresolvedPackages deps;
+    for (const auto &row3 : (*db)(select(orpvd.dependency).from(orpvd).where(orpvd.overrideRemotePackageVersionId == project_version_id)))
+        deps.insert(row3.dependency.value());
+    return deps;
 }
 
 Packages ServiceDatabase::getInstalledPackages() const
@@ -875,13 +935,27 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
             custom_query(sqlpp::verbatim("SELECT package_id FROM package WHERE path = '" + dep.ppath.toString() + "' COLLATE NOCASE"))
             .with_result_type_of(select(pkgs.packageId).from(pkgs))
             );
-        //auto q = (*db)(select(pkgs.packageId).from(pkgs).where(pkgs.path == dep.ppath.toString()));
         if (q.empty())
+        {
+            auto &pkgs = getServiceDatabase().getOverriddenPackages();
+            PackageId pkg{ dep.ppath, dep.range.toString() };
+            auto i = pkgs.find(pkg);
+            if (i != pkgs.end(pkg))
+            {
+                project.id = i->second.id;
+                project.flags.set(pfDirectDependency);
+                project.ppath = dep.ppath;
+                project.version = i->first;
+                project.db_dependencies = getProjectDependencies(project.id, all_deps, i->second.deps);
+                all_deps[project] = project; // assign first, deps assign second
+                continue;
+            }
+
             // TODO: replace later with typed exception, so client will try to fetch same package from server
             throw std::runtime_error("PackageId '" + project.ppath.toString() + "' not found.");
+        }
 
-        project.id = q.front().packageId.value();
-
+        project.id = q.front().packageId.value(); // set package id first, then it is replaced with pkg version id, do not remove
         project.id = getExactProjectVersionId(project, project.version, project.flags, project.hash, project.group_number, project.prefix);
         project.flags.set(pfDirectDependency);
         all_deps[project] = project; // assign first, deps assign second
@@ -891,8 +965,10 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
     // mark local deps
     const auto &overridden = getServiceDatabase().getOverriddenPackages();
     if (!overridden.empty())
+    {
         for (auto &[pkg, d] : all_deps)
-            d.local_override = overridden.find(pkg) != overridden.end();
+            d.local_override = overridden.find(pkg) != overridden.end(pkg);
+    }
 
     // make id deps
     IdDependencies dds;
@@ -942,7 +1018,26 @@ db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDe
 
     auto v = project.range.getMaxSatisfyingVersion(versions);
     if (!v)
-        throw err(project.ppath, project.range);
+    {
+        auto &o = getServiceDatabase().getOverriddenPackages();
+        auto i = o.find(project.ppath);
+        if (i != o.end())
+        {
+            for (auto &[v, d] : i->second)
+            {
+                versions.insert(v);
+                version_ids[v] = d.id;
+            }
+        }
+        v = project.range.getMaxSatisfyingVersion(versions);
+        if (!v)
+            throw err(project.ppath, project.range);
+
+        id = version_ids[v.value()];
+        version = v.value();
+        prefix = i->second.find(version)->second.prefix;
+        return id;
+    }
 
     id = version_ids[v.value()];
     auto q = (*db)(
@@ -960,7 +1055,7 @@ db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDe
     return id;
 }
 
-PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm) const
+PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm, const UnresolvedPackages &overridden_deps) const
 {
     const auto pkgs = db::packages::Package{};
     const auto pkgdeps = db::packages::PackageVersionDependency{};
@@ -968,23 +1063,55 @@ PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(db::Pack
     Dependencies dependencies;
     std::vector<DownloadDependency> deps;
 
-    for (const auto &row : (*db)(
-        select(pkgs.packageId, pkgs.path, pkgdeps.versionRange)
-        .from(pkgdeps.join(pkgs).on(pkgdeps.packageId == pkgs.packageId))
-        .where(pkgdeps.packageVersionId == project_version_id)))
+    if (project_version_id > 0)
     {
-        DownloadDependency dependency;
-        dependency.id = row.packageId.value();
-        dependency.ppath = row.path.value();
-        dependency.range = row.versionRange.value();
-        dependency.id = getExactProjectVersionId(dependency, dependency.version, dependency.flags, dependency.hash, dependency.group_number, dependency.prefix);
-        auto i = dm.find(dependency);
-        if (i == dm.end())
+        for (const auto &row : (*db)(
+            select(pkgs.packageId, pkgs.path, pkgdeps.versionRange)
+            .from(pkgdeps.join(pkgs).on(pkgdeps.packageId == pkgs.packageId))
+            .where(pkgdeps.packageVersionId == project_version_id)))
         {
-            dm[dependency] = dependency; // assign first, deps assign second
-            dm[dependency].db_dependencies = getProjectDependencies(dependency.id, dm);
+            DownloadDependency dependency;
+            dependency.id = row.packageId.value();
+            dependency.ppath = row.path.value();
+            dependency.range = row.versionRange.value();
+            dependency.id = getExactProjectVersionId(dependency, dependency.version, dependency.flags, dependency.hash, dependency.group_number, dependency.prefix);
+            auto i = dm.find(dependency);
+            if (i == dm.end())
+            {
+                dm[dependency] = dependency; // assign first, deps assign second
+                dm[dependency].db_dependencies = getProjectDependencies(dependency.id, dm);
+            }
+            dependencies[dependency.ppath.toString()] = dependency;
         }
-        dependencies[dependency.ppath.toString()] = dependency;
+    }
+    else if (project_version_id < 0) // overridden
+    {
+        for (const auto &d : overridden_deps)
+        {
+            DownloadDependency dependency;
+            dependency.id = -1;
+
+            // read pkg id
+            auto q = (*db)(
+                custom_query(sqlpp::verbatim("SELECT package_id FROM package WHERE path = '" + d.ppath.toString() + "' COLLATE NOCASE"))
+                .with_result_type_of(select(pkgs.packageId).from(pkgs))
+                );
+            if (!q.empty())
+                dependency.id = q.front().packageId.value();
+            //else // not registered yet, remote or local-overridden
+            // left as is
+
+            dependency.ppath = d.ppath;
+            dependency.range = d.range;
+            dependency.id = getExactProjectVersionId(dependency, dependency.version, dependency.flags, dependency.hash, dependency.group_number, dependency.prefix);
+            auto i = dm.find(dependency);
+            if (i == dm.end())
+            {
+                dm[dependency] = dependency; // assign first, deps assign second
+                dm[dependency].db_dependencies = getProjectDependencies(dependency.id, dm, getServiceDatabase().getOverriddenPackageVersionDependencies(-dependency.id));
+            }
+            dependencies[dependency.ppath.toString()] = dependency;
+        }
     }
     return dependencies;
 }

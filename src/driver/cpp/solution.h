@@ -89,6 +89,8 @@ public:
     path getExecutionPlanFilename() const;
 
     //protected:
+    // known targets are downloaded
+    // unknown targets have PostponeFileResolving set
     PackagesIdSet knownTargets;
 
     virtual ExecutionPlan<builder::Command> getExecutionPlan() const;
@@ -104,6 +106,7 @@ protected:
 
 private:
     std::unordered_set<ExtendedPackageData> known_cfgs;
+    //Files used_modules;
 
     void checkPrepared() const;
     Files getGeneratedDirs() const;

@@ -41,6 +41,7 @@ void check_self(sw::Checker &c);
 
 static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with build commands"));
 static cl::opt<String> generator("G", cl::desc("Generator"));
+cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(generator));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 static cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
@@ -427,7 +428,7 @@ Commands Solution::getCommands() const
     auto &chldr = TargetsToBuild.empty() ? children : TargetsToBuild;
 
     // we also must take TargetsToBuild deps
-    while (1)
+    /*while (1)
     {
         decltype(TargetsToBuild) deps;
         auto sz = TargetsToBuild.size();
@@ -446,7 +447,7 @@ Commands Solution::getCommands() const
         TargetsToBuild.insert(deps.begin(), deps.end());
         if (sz == TargetsToBuild.size())
             break;
-    }
+    }*/
 
     for (auto &p : chldr)
     {
@@ -745,6 +746,7 @@ void Solution::build_and_resolve()
     Build b;
     b.Local = false;
     auto dll = b.build_configs(cfgs);
+    //used_modules.insert(dll);
 
     Local = false;
 
@@ -754,6 +756,8 @@ void Solution::build_and_resolve()
 
     getModuleStorage(base_ptr).get(dll).check(*this, Checks);
     performChecks();
+    // we can use new (clone of this) solution, then copy known targets
+    // to allow multiple passes-builds
     getModuleStorage(base_ptr).get(dll).build(*this);
 
     sr.restoreNow(true);
@@ -823,6 +827,54 @@ void Solution::prepare()
 
     // resolve all deps first
     build_and_resolve();
+
+    /*while (1)
+    {
+        bool added = false;
+
+        // resolve unresolved deps that is present is dummy_children
+        for (auto &[p, t] : getChildren())
+        {
+            auto nt = (NativeExecutedTarget*)t.get();
+            nt->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+                [this, &added](auto &v, auto &s)
+            {
+                for (auto &d : v.Dependencies)
+                {
+                    for (auto &[pp, t2] : getChildren())
+                    {
+                        if (d->getPackage().canBe(t2->getPackage()))
+                        {
+                            d->setTarget(std::static_pointer_cast<NativeTarget>(t2));
+                            break;
+                        }
+                    }
+                    if (!d->target.lock())
+                    {
+                        for (auto &[pp, t2] : dummy_children)
+                        {
+                            if (d->getPackage().canBe(t2->getPackage()))
+                            {
+                                //d->setTarget(std::static_pointer_cast<NativeTarget>(t2));
+                                added = true;
+                                //children[t2->pkg] = t2;
+                                //dummy_children.erase(t2->pkg);
+                                break;
+                            }
+                        }
+                        //if (!added)
+                            //throw std::logic_error("Unresolved package before prepare: " + d->getPackage().toString());
+                    }
+                }
+            });
+        }
+
+        if (!added)
+            break;
+
+        for (auto &m : used_modules)
+            getModuleStorage(base_ptr).get(m).build(*this);
+    }*/
 
     // multipass prepare()
     // if we add targets inside this loop,
@@ -1451,7 +1503,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         ctx += build;
         ctx += check;
 
-        auto p = getDirectories().storage_dir_tmp / "self" / ("sw." + h + ".cpp");
+        auto p = BinaryDir / "self" / ("sw." + h + ".cpp");
         write_file_if_different(p, ctx.getText());
         lib += p;
     }

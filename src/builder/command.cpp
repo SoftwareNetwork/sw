@@ -442,7 +442,8 @@ void Command::execute1(std::error_code *ec)
         else
             rsp_file = rsp_file.filename();
         s += "\n";
-        auto p = getDirectories().storage_dir_tmp / "rsp" / rsp_file;
+        //auto p = getDirectories().storage_dir_tmp / "rsp" / rsp_file;
+        auto p = fs::current_path() / ".sw" / "rsp" / rsp_file;
         auto pbat = p;
         String t;
 

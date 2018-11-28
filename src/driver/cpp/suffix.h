@@ -76,11 +76,11 @@ inline IncludeDirectory operator "" _idir(const char *s, size_t)
 // _l or _lib
 inline LinkLibrary operator "" _l(const char *s, size_t)
 {
-    return LinkLibrary{ s };
+    return LinkLibrary(String(s));
 }
 inline LinkLibrary operator "" _lib(const char *s, size_t)
 {
-    return LinkLibrary{ s };
+    return LinkLibrary(String(s));
 }
 
 // precompiled header

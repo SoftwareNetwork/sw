@@ -85,9 +85,9 @@ optional<path> PackageId::getOverriddenDir() const
 {
     auto &pkgs = getServiceDatabase().getOverriddenPackages();
     auto i = pkgs.find(*this);
-    if (i == pkgs.end())
+    if (i == pkgs.end(*this))
         return {};
-    return i->second;
+    return i->second.sdir;
 }
 
 path PackageId::getDir() const

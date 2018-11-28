@@ -126,6 +126,9 @@ struct SW_DRIVER_CPP_API Variable
 struct SW_DRIVER_CPP_API LinkLibrary
 {
     String l;
+
+    explicit LinkLibrary(const String &p);
+    explicit LinkLibrary(const path &p);
 };
 
 struct SW_DRIVER_CPP_API IncludeDirectory

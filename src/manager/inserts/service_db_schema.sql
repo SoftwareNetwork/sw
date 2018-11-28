@@ -61,8 +61,28 @@ CREATE TABLE startup_action (
 
 CREATE TABLE override_remote_package (
     override_remote_package_id INTEGER PRIMARY KEY,
-    path TEXT NOT NULL UNIQUE,
+    path TEXT NOT NULL UNIQUE
+);
+
+--------------------------------------------------------------------------------
+--
+--------------------------------------------------------------------------------
+
+CREATE TABLE override_remote_package_version (
+    override_remote_package_version_id INTEGER PRIMARY KEY,
+    override_remote_package_id INTEGER NOT NULL REFERENCES override_remote_package (override_remote_package_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    version TEXT NOT NULL,
+    prefix INTEGER NOT NULL,
     sdir TEXT NOT NULL
+);
+
+--------------------------------------------------------------------------------
+--
+--------------------------------------------------------------------------------
+
+CREATE TABLE override_remote_package_version_dependency (
+    override_remote_package_version_id INTEGER NOT NULL REFERENCES override_remote_package_version (override_remote_package_version_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    dependency TEXT NOT NULL
 );
 
 --------------------------------------------------------------------------------
@@ -86,6 +106,61 @@ CREATE TABLE override_remote_package (
     path TEXT NOT NULL UNIQUE,
     sdir TEXT NOT NULL
 );
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+CREATE TABLE override_remote_package_version (
+    override_remote_package_version_id INTEGER PRIMARY KEY,
+    override_remote_package_id INTEGER NOT NULL REFERENCES override_remote_package (override_remote_package_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    version TEXT NOT NULL
+);
+
+CREATE TABLE override_remote_package_version_dependency (
+    override_remote_package_version_id INTEGER NOT NULL REFERENCES override_remote_package_version (override_remote_package_version_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    dependency TEXT NOT NULL
+);
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+ALTER TABLE override_remote_package
+RENAME COLUMN sdir TO _removed_sdir;
+ALTER TABLE override_remote_package_version
+ADD COLUMN sdir TEXT NOT NULL DEFAULT ':';
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+CREATE TEMPORARY TABLE t1_backup
+(
+    override_remote_package_id INTEGER PRIMARY KEY,
+    path TEXT NOT NULL UNIQUE
+);
+INSERT INTO t1_backup SELECT override_remote_package_id, path FROM override_remote_package;
+DROP TABLE override_remote_package;
+CREATE TABLE override_remote_package (
+    override_remote_package_id INTEGER PRIMARY KEY,
+    path TEXT NOT NULL UNIQUE
+);
+INSERT INTO override_remote_package SELECT override_remote_package_id, path FROM t1_backup;
+DROP TABLE t1_backup;
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+DELETE FROM override_remote_package;
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+ALTER TABLE override_remote_package_version
+ADD COLUMN prefix INTEGER NOT NULL DEFAULT 2;
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available

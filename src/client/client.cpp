@@ -10,6 +10,7 @@
 #include <exceptions.h>
 #include <file.h>
 #include <file_storage.h>
+#include <package_data.h>
 #include <resolver.h>
 #include <settings.h>
 
@@ -128,7 +129,8 @@ int parse_main(int argc, char **argv)
 {
     //args::ValueFlag<int> configuration(parser, "configuration", "Configuration to build", { 'c' });
 
-    String overview = "SW: Software Network Client\n\n"
+    String overview = "SW: Software Network Client\n"
+        "\n"
         "  SW is a Universal Package Manager and Build System...\n";
     if (auto &driver = getDrivers(); !driver.empty())
     {
@@ -234,7 +236,8 @@ static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl:
 static cl::opt<String> ide_rebuild("rebuild", cl::desc("Rebuild target"), cl::sub(subcommand_ide));
 static cl::opt<String> ide_clean("clean", cl::desc("Clean target"), cl::sub(subcommand_ide));
 
-static cl::list<String> override_package("override-remote-package", cl::value_desc("prefix sdir"), cl::desc("Provide a local copy of remote package"), cl::multi_val(2));
+//static cl::list<String> override_package("override-remote-package", cl::value_desc("prefix sdir"), cl::desc("Provide a local copy of remote package"), cl::multi_val(2));
+static cl::opt<String> override_package("override-remote-package", cl::value_desc("prefix"), cl::desc("Provide a local copy of remote package(s)"));
 static cl::opt<bool> list_overridden_packages("list-overridden-remote-packages", cl::desc("List overridden packages"));
 static cl::opt<String> delete_overridden_package("delete-overridden-remote-package", cl::value_desc("package"), cl::desc("Delete overridden package from index"));
 static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", cl::value_desc("sdir"), cl::desc("Delete overridden dir packages"));
@@ -246,8 +249,11 @@ int sw_main(const Strings &args)
     if (list_overridden_packages)
     {
         std::map<sw::PackageId, path> pkgs;
-        for (auto &[n, p] : getServiceDatabase().getOverriddenPackages())
-            pkgs[n] = p;
+        for (auto &[n, v] : getServiceDatabase().getOverriddenPackages())
+        {
+            for (auto &[v2, p] : v)
+                pkgs[{n,v2}] = p.sdir;
+        }
         for (auto &[n, p] : pkgs)
             std::cout << n.toString() << " " << p << "\n";
         return 0;
@@ -255,13 +261,25 @@ int sw_main(const Strings &args)
 
     if (!override_package.empty())
     {
-        auto s = sw::load(override_package[1]);
-        for (auto &[pkg, _] : s->getPackages())
+        auto s = sw::load(".");
+        //auto s = sw::load(override_package[1]);
+        for (auto &[pkg, desc] : s->getPackages())
         {
-            sw::PackageId pkg2{ sw::PackagePath(override_package[0]) / pkg.ppath, pkg.version };
-            auto dir = fs::absolute(override_package[1]);
+            sw::PackagePath prefix = override_package;
+            sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
+            auto dir = fs::absolute(".");
+            //auto dir = fs::absolute(override_package[1]);
             LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
-            getServiceDatabase().overridePackage(pkg2, dir);
+            // fix deps' prefix
+            sw::UnresolvedPackages deps;
+            for (auto &d : desc->getData().dependencies)
+            {
+                if (d.ppath.isAbsolute())
+                    deps.insert(d);
+                else
+                    deps.insert({ prefix / d.ppath, d.range });
+            }
+            getServiceDatabase().overridePackage(pkg2, { dir, deps, 0, (int)prefix.size() });
         }
         return 0;
     }
@@ -362,7 +380,7 @@ SUBCOMMAND_DECL(uri)
             }
             else
             {
-                message_box("Package '" + p.target_name + "' not installed");
+                message_box("Package '" + p.toString() + "' not installed");
             }
 #endif
         }
@@ -379,7 +397,7 @@ SUBCOMMAND_DECL(uri)
             }
             else
             {
-                message_box("Package '" + p.target_name + "' is already installed");
+                message_box("Package '" + p.toString() + "' is already installed");
             }
 #endif
         }
@@ -435,7 +453,7 @@ SUBCOMMAND_DECL(ide)
 {
     if (!target_build.empty())
     {
-        try_single_process_job(fs::current_path(), []()
+        try_single_process_job(fs::current_path() / ".sw" / "ide", []()
         {
             auto s = sw::load("sw.cpp");
             auto &b = *((sw::Build*)s.get());
@@ -447,7 +465,7 @@ SUBCOMMAND_DECL(ide)
     }
     else
     {
-        single_process_job(fs::current_path(), []()
+        single_process_job(fs::current_path() / ".sw" / "ide", []()
         {
             auto s = sw::load("sw.cpp");
             auto &b = *((sw::Build*)s.get());
@@ -496,4 +514,32 @@ SUBCOMMAND_DECL(init)
         p.SetStringValue(L"", prog + L" build %1");
     }
 #endif
+}
+
+SUBCOMMAND_DECL(pack)
+{
+
+}
+
+SUBCOMMAND_DECL(test)
+{
+
+}
+
+EXPORT_FROM_EXECUTABLE
+std::string getVersionString()
+{
+    std::string s;
+    s += ::sw::getProgramName();
+    s += " version ";
+    s += PACKAGE_VERSION;
+    s += "\n";
+    s += "assembled " __DATE__ " " __TIME__;
+    return s;
+}
+
+EXPORT_FROM_EXECUTABLE
+std::string getProgramName()
+{
+    return PACKAGE_NAME_CLEAN;
 }

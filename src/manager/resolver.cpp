@@ -173,7 +173,12 @@ void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies, bool
             }
             // if this is not exact match, assign to self
             // TODO: or make resolved_packages multimap
-            if (d.ppath.isRootOf(dl.second.ppath))
+
+            //if (d.ppath.isRootOf(dl.second.ppath))
+                //resolved_packages[d] = dl.second;
+
+            // we do not allow d.ppath.isRootOf() here as it was in cppan
+            if (d.ppath == dl.second.ppath)
                 resolved_packages[d] = dl.second;
         }
     }
@@ -304,6 +309,8 @@ void Resolver::download_and_unpack()
 
         auto &sdb = getServiceDatabase();
 
+        if (d.local_override)
+            return;
         if (fs::exists(version_dir) && !must_download && sdb.isPackageInstalled(d) != 0)
             return;
 
@@ -393,7 +400,11 @@ void Resolver::download_and_unpack()
 
             std::set<int64_t> ids;
             for (auto &d : download_dependencies_)
+            {
+                if (d.second.local_override)
+                    continue;
                 ids.insert(d.second.id);
+            }
 
             try
             {
