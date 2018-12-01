@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 
         {{"org.sw.demo.preshing.turf", "master"}, {}},
         {{"org.sw.demo.preshing.junction", "master"}, {}},
-        {{"org.sw.demo.fmt", "5"}, {}},
+        {{"org.sw.demo.fmt", "*"}, {}},
         {{"org.sw.demo.microsoft.gsl", "*"}, {}},
 
         /// no sources were kept behind this wall

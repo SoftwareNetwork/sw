@@ -307,7 +307,12 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
                 if (us.remotes.size() > 1)
                     LOG_INFO(logger, "Trying " + current_remote->name + " remote");
                 auto dd = getDependenciesFromRemote(deps, current_remote);
-                download_dependencies_.insert(dd.begin(), dd.end());
+                for (auto &d : dd)
+                {
+                    download_dependencies_.erase(d);
+                    download_dependencies_.insert(d);
+                }
+                //download_dependencies_.insert(dd.begin(), dd.end());
             }
             catch (const std::exception &e)
             {
@@ -335,7 +340,12 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
                 try
                 {
                     auto dd = getDependenciesFromDb(deps, current_remote);
-                    download_dependencies_.insert(dd.begin(), dd.end());
+                    for (auto &d : dd)
+                    {
+                        download_dependencies_.erase(d);
+                        download_dependencies_.insert(d);
+                    }
+                    //download_dependencies_.insert(dd.begin(), dd.end());
                 }
                 catch (std::exception &e)
                 {
