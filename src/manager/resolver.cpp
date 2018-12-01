@@ -262,16 +262,34 @@ void Resolver::add_dep(Dependencies &dd, const PackageId &d)
 
 void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> resolve_action)
 {
-    if (!resolve_action)
-        throw std::logic_error("Empty resolve action!");
-
     if (getPackageStore().use_lock_file)
     {
+        UnresolvedPackages deps2;
         for (auto &d : deps)
-            add_dep(download_dependencies_, getPackageStore().resolved_packages[d]);
+        {
+            auto &up = getPackageStore().resolved_packages;
+            auto i = up.find(d);
+            if (i == up.end())
+            {
+                deps2.insert(d);
+                LOG_INFO(logger, "new dependency detected: " + d.toString());
+                //throw std::runtime_error("unresolved package from lock file: " + d.toString());
+            }
+            add_dep(download_dependencies_, i->second);
+        }
+        if (!deps2.empty())
+            resolve1(deps2, resolve_action);
         resolve_action();
         return;
     }
+
+    resolve1(deps, resolve_action);
+}
+
+void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> resolve_action)
+{
+    if (!resolve_action)
+        throw std::logic_error("Empty resolve action!");
 
     // ref to not invalidate all ptrs
     auto &us = Settings::get_user_settings();
@@ -288,7 +306,8 @@ void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> res
             {
                 if (us.remotes.size() > 1)
                     LOG_INFO(logger, "Trying " + current_remote->name + " remote");
-                download_dependencies_ = getDependenciesFromRemote(deps, current_remote);
+                auto dd = getDependenciesFromRemote(deps, current_remote);
+                download_dependencies_.insert(dd.begin(), dd.end());
             }
             catch (const std::exception &e)
             {
@@ -315,7 +334,8 @@ void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> res
             {
                 try
                 {
-                    download_dependencies_ = getDependenciesFromDb(deps, current_remote);
+                    auto dd = getDependenciesFromDb(deps, current_remote);
+                    download_dependencies_.insert(dd.begin(), dd.end());
                 }
                 catch (std::exception &e)
                 {

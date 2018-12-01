@@ -17,7 +17,6 @@
 #include <sw/builder/build.h>
 #include <sw/builder/driver.h>
 #include <sw/driver/cpp/driver.h>
-#include <sw/driver/cppan/driver.h>
 #include <jumppad.h>
 
 //#include <args.hxx>
@@ -52,7 +51,6 @@ bool bConsoleMode = true;
 bool bUseSystemPause = false;
 
 namespace sw::driver::cpp { SW_REGISTER_PACKAGE_DRIVER(CppDriver); }
-namespace sw::driver::cppan { SW_REGISTER_PACKAGE_DRIVER(CppanDriver); }
 
 /*
 // check args here to see if we want gui or not!
@@ -553,6 +551,7 @@ SUBCOMMAND_DECL(test)
 extern ::cl::opt<bool> dry_run;
 SUBCOMMAND_DECL(update)
 {
+    getPackageStore() = sw::PackageStore();
     dry_run = true;
     build_arg = build_arg_update.getValue();
     cli_build();

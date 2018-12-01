@@ -97,14 +97,6 @@ void build(Solution &s)
             c->BigObj = true;
 #endif
 
-    auto &cppan_driver = p.addTarget<LibraryTarget>("driver.cppan");
-    cppan_driver.ApiName = "SW_DRIVER_CPPAN_API";
-    cppan_driver.ExportIfStatic = true;
-    cppan_driver.CPPVersion = CPPLanguageStandard::CPP17;
-    cppan_driver.Public += builder;
-    cppan_driver += "src/driver/cppan/.*"_rr, "include/sw/driver/cppan/.*"_rr;
-    cppan_driver.Public += "include"_idir, "src/driver/cppan"_idir;
-
     auto &tools = p.addDirectory("tools");
     auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
     self_builder.PackageDefinitions = true;
@@ -134,7 +126,7 @@ void build(Solution &s)
     client += "src/client/.*"_rr;
     client += "src/client"_idir;
     client.CPPVersion = CPPLanguageStandard::CPP17;
-    client += cpp_driver, cppan_driver,
+    client += cpp_driver,
         "pub.egorpugin.primitives.sw.main-master"_dep,
         "org.sw.demo.giovannidicanio.winreg-master"_dep;
 

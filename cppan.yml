@@ -127,7 +127,6 @@ projects:
         dependencies:
             - builder
             - driver.cpp
-            - driver.cppan
             - pvt.cppan.demo.giovannidicanio.winreg: master
             - name: pvt.egorpugin.primitives.sw.main
               version: master
@@ -206,21 +205,6 @@ projects:
         post_target: |
             cppan_flex_bison_internal(src/driver/cpp/bazel/lexer.ll PARSERS src/driver/cpp/bazel/grammar.yy)
 
-    driver.cppan:
-        type: library
-        #static_only: true
-        api_name: SW_DRIVER_CPPAN_API
-        #export_if_static: true
-
-        files:
-            - include/sw/driver/cppan/.*
-            - src/driver/cppan/.*
-
-        include_directories:
-            - include
-
-        dependencies:
-            - builder
 
     builder:
         type: library

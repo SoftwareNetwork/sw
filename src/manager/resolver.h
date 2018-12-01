@@ -62,6 +62,7 @@ private:
     void download_and_unpack();
 
     void resolve(const UnresolvedPackages &deps, std::function<void()> resolve_action);
+    void resolve1(const UnresolvedPackages &deps, std::function<void()> resolve_action);
     void download(const ExtendedPackageData &d, const path &fn);
     static void add_dep(Dependencies &dd, const PackageId &d);
 };
