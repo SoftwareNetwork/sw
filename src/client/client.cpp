@@ -106,11 +106,7 @@ int setup_main(const Strings &args)
     if (jobs > 0)
         getExecutor(jobs);
 
-#ifdef NDEBUG
     setup_log("INFO");
-#else
-    setup_log("DEBUG");
-#endif
 
     if (verbose)
         setup_log("DEBUG");
