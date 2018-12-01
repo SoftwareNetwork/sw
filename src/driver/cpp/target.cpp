@@ -210,6 +210,8 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     // set some general settings, then init, then register
     setupTarget(t.get());
 
+    getSolution()->call_event(*t, CallbackType::CreateTarget);
+
     //DEBUG_BREAK_IF_STRING_HAS(t->pkg.ppath.toString(), "primitives.version");
 
     auto set_sdir = [&t, this]()
@@ -290,6 +292,9 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     t->init();
     t->init2();
     addChild(t);
+
+    getSolution()->call_event(*t, CallbackType::CreateTargetInitialized);
+
     return *t;
 }
 
@@ -514,18 +519,18 @@ DependencyPtr NativeTarget::getDependency() const
     return d;
 }
 
-Commands Events_::getCommands() const
+/*Commands Events_::getCommands() const
 {
     Commands cmds;
-    /*for (auto &e : PreBuild)
-        cmds.insert(std::make_shared<ExecuteCommand>(*getSolution()->fs, [e] {e(); }));*/
+    //for (auto &e : PreBuild)
+        //cmds.insert(std::make_shared<ExecuteCommand>(*getSolution()->fs, [e] {e(); }));
     return cmds;
 }
 
 void Events_::clear()
 {
     PreBuild.clear();
-}
+}*/
 
 void TargetOptions::add(const IncludeDirectory &i)
 {
@@ -546,10 +551,10 @@ void TargetOptions::remove(const IncludeDirectory &i)
     IncludeDirectories.erase(idir);
 }
 
-void TargetOptionsGroup::add(const std::function<void(void)> &f)
+/*void TargetOptionsGroup::add(const std::function<void(void)> &f)
 {
     Events.PreBuild.push_back(f);
-}
+}*/
 
 void TargetOptionsGroup::add(const Variable &v)
 {
@@ -1383,12 +1388,12 @@ Commands NativeExecutedTarget::getCommands() const
         cmds.insert(cdb);*/
     }
 
-    if (auto evs = Events.getCommands(); !evs.empty())
+    /*if (auto evs = Events.getCommands(); !evs.empty())
     {
         for (auto &c : cmds)
             c->dependencies.insert(evs.begin(), evs.end());
         cmds.insert(evs.begin(), evs.end());
-    }
+    }*/
 
     /*if (!IsConfig && !Local)
     {
@@ -1399,7 +1404,7 @@ Commands NativeExecutedTarget::getCommands() const
     return cmds;
 }
 
-Files NativeExecutedTarget::getGeneratedDirs() const
+/*Files NativeExecutedTarget::getGeneratedDirs() const
 {
     Files dirs;
     dirs.insert(BinaryDir);
@@ -1425,7 +1430,7 @@ Files NativeExecutedTarget::getGeneratedDirs() const
         dirs.insert(CircularLinker->getImportLibrary().parent_path());
     }
     return dirs;
-}
+}*/
 
 void NativeExecutedTarget::findSources()
 {
@@ -1706,6 +1711,8 @@ bool NativeExecutedTarget::prepare()
     case 1:
     {
         LOG_TRACE(logger, "Preparing target: " + pkg.ppath.toString());
+
+        getSolution()->call_event(*this, CallbackType::BeginPrepare);
 
         findSources();
 
@@ -2358,6 +2365,8 @@ bool NativeExecutedTarget::prepare()
 
         getSelectedTool()->setObjectFiles(obj);
         getSelectedTool()->setInputLibraryDependencies(O1);
+
+        getSolution()->call_event(*this, CallbackType::EndPrepare);
     }
     break;
     }

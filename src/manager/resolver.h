@@ -13,49 +13,23 @@
 namespace sw
 {
 
-using ResolvedPackagesMap = std::unordered_map<UnresolvedPackage, ExtendedPackageData>;
+using ResolvedPackagesMap = std::unordered_map<UnresolvedPackage, DownloadDependency>;
 
-class SW_MANAGER_API PackageStore
+struct SW_MANAGER_API PackageStore
 {
-public:
-    struct PackageConfig
-    {
-        // resolved?
-        Packages dependencies;
-    };
-    using PackageConfigs = std::map<Package, PackageConfig>;
+    using Dependencies = std::unordered_set<DownloadDependency>;
 
-    using iterator = PackageConfigs::iterator;
-    using const_iterator = PackageConfigs::const_iterator;
-
-public:
-    bool has_local_package(const PackagePath &ppath) const;
-    path get_local_package_dir(const PackagePath &ppath) const;
     void clear();
-
-public:
-    PackageConfig & operator[](const Package &p);
-    const PackageConfig &operator[](const Package &p) const;
-
-    iterator begin();
-    iterator end();
-
-    const_iterator begin() const;
-    const_iterator end() const;
-
-    iterator find(const PackageConfigs::key_type &k) { return packages.find(k); }
-    const_iterator find(const PackageConfigs::key_type &k) const { return packages.find(k); }
-
-    bool empty() const { return packages.empty(); }
-    size_t size() const { return packages.size(); }
 
     optional<ExtendedPackageData> isPackageResolved(const UnresolvedPackage &);
 
-private:
-    PackageConfigs packages;
+    void loadLockFile(const path &fn);
+    void saveLockFile(const path &fn) const;
 
+private:
+    bool use_lock_file = false;
     ResolvedPackagesMap resolved_packages;
-    std::map<PackagePath, path> local_packages;
+    Dependencies download_dependencies_;
 
     bool processing = false;
     bool deps_changed = false;
@@ -66,7 +40,7 @@ private:
 class SW_MANAGER_API Resolver
 {
 public:
-    using Dependencies = DownloadDependency::Dependencies;
+    using Dependencies = std::unordered_set<DownloadDependency>;
 
 public:
     ResolvedPackagesMap resolved_packages;
@@ -89,6 +63,7 @@ private:
 
     void resolve(const UnresolvedPackages &deps, std::function<void()> resolve_action);
     void download(const ExtendedPackageData &d, const path &fn);
+    static void add_dep(Dependencies &dd, const PackageId &d);
 };
 
 SW_MANAGER_API

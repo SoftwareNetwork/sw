@@ -41,18 +41,25 @@ template<> struct hash<::sw::ExtendedPackageData>
 namespace sw
 {
 
-struct DownloadDependency : public ExtendedPackageData
+struct DownloadDependency1 : ExtendedPackageData
 {
-    using IdDependencies = std::unordered_map<db::PackageVersionId, DownloadDependency>;
-    using DbDependencies = std::unordered_map<String, ExtendedPackageData>;
-    using Dependencies = std::unordered_map<ExtendedPackageData, ExtendedPackageData>;
-
     // own data (private)
     VersionRange range;
+};
+
+struct DownloadDependency : DownloadDependency1
+{
+    using IdDependencies = std::unordered_map<db::PackageVersionId, DownloadDependency>;
+    using DbDependencies = std::unordered_map<String, DownloadDependency1>;
+    using IdDependenciesSet = std::unordered_set<db::PackageVersionId>;
+    using Dependencies = std::unordered_set<ExtendedPackageData>;
+
+    // this prevents us having deps on two different versions of some package
+    // TODO: reconsider
     DbDependencies db_dependencies;
 
 public:
-    void setDependencyIds(const std::unordered_set<db::PackageVersionId> &ids)
+    void setDependencyIds(const IdDependenciesSet &ids)
     {
         id_dependencies = ids;
     }
@@ -71,16 +78,29 @@ public:
                 throw std::runtime_error("cannot find dep by id");
             auto dep = i->second;
             dep.createNames();
-            dependencies[dep] = dep;
+            dependencies.insert(dep);
         }
         dependencies.erase(*this); // erase self
     }
 
 private:
-    std::unordered_set<db::PackageVersionId> id_dependencies;
+    IdDependenciesSet id_dependencies;
     Dependencies dependencies;
 };
 
 using IdDependencies = DownloadDependency::IdDependencies;
 
 }
+
+namespace std
+{
+
+template<> struct hash<::sw::DownloadDependency>
+{
+    size_t operator()(const ::sw::DownloadDependency &p) const
+    {
+        return std::hash<::sw::ExtendedPackageData>()(p);
+    }
+};
+
+} // namespace std

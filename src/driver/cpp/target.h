@@ -105,6 +105,20 @@ enum class TargetScope
     Valgrind,
 };
 
+enum class CallbackType
+{
+    CreateTarget,
+    CreateTargetInitialized,
+    BeginPrepare,
+    EndPrepare,
+
+//    std::vector<TargetEvent> PreBuild;
+// addCustomCommand()?
+// preBuild?
+// postBuild?
+// postLink?
+};
+
 enum class ConfigureFlags
 {
     Empty = 0x0,
@@ -401,7 +415,7 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     virtual void init() = 0;
     virtual void init2() = 0;
     virtual Commands getCommands() const = 0;
-    virtual Files getGeneratedDirs() const = 0;
+    //virtual Files getGeneratedDirs() const = 0;
     virtual bool prepare() = 0;
     //virtual void clear() = 0;
     virtual void findSources() = 0;
@@ -424,7 +438,7 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     void init() override {}
     void init2() override {}
     Commands getCommands() const override { return Commands{}; }
-    Files getGeneratedDirs() const override { return Files{}; }
+    //Files getGeneratedDirs() const override { return Files{}; }
     bool prepare() override { return false; }
     //virtual void clear() override {}
     void findSources() override {}
@@ -574,7 +588,7 @@ public:
     ASSIGN_TYPES(sw::tag_shared_t)
 };
 
-struct Events_
+/*struct Events_
 {
     using TargetEvent = std::function<void(void)>;
 
@@ -586,7 +600,7 @@ struct Events_
 
     Commands getCommands() const;
     void clear();
-};
+};*/
 
 struct SW_DRIVER_CPP_API TargetOptionsGroup :
     InheritanceGroup<TargetOptions>
@@ -604,8 +618,8 @@ public:
     using TargetOptions::add;
     using TargetOptions::remove;
 
-    Events_ Events;
-    ASSIGN_TYPES_NO_REMOVE(std::function<void(void)>)
+    //Events_ Events;
+    //ASSIGN_TYPES_NO_REMOVE(std::function<void(void)>)
 
     void add(const std::function<void(void)> &f);
 
@@ -684,7 +698,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void addPackageDefinitions(bool defs = false);
     std::shared_ptr<builder::Command> getCommand() const override;
     Commands getCommands() const override;
-    Files getGeneratedDirs() const override;
+    //Files getGeneratedDirs() const override;
     bool prepare() override;
     path getOutputFile() const override;
     path makeOutputFile() const;
@@ -695,6 +709,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     bool hasSourceFiles() const;
     Files gatherAllFiles() const;
     Files gatherIncludeDirectories() const;
+    FilesOrdered gatherLinkLibraries() const;
     NativeLinker *getSelectedTool() const;
     void setOutputDir(const path &dir);
     virtual path getOutputDir() const;
@@ -759,7 +774,6 @@ protected:
     TargetsSet gatherAllRelatedDependencies() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
     FilesOrdered gatherLinkDirectories() const;
-    FilesOrdered gatherLinkLibraries() const;
     bool prepareLibrary(LibraryType Type);
     void setOutputFile();
     void initLibrary(LibraryType Type);

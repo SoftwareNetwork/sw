@@ -12,6 +12,13 @@
 #include <language.h>
 #include <target.h>
 
+#include <primitives/sw/settings.h>
+
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "source_file");
+
+static cl::opt<bool> ignore_source_files_errors("ignore-source-files-errors", cl::desc("Useful for debugging"));
+
 namespace sw
 {
 
@@ -429,7 +436,13 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
                 {
                     if (ignore_errors)
                         return false;
-                    throw std::runtime_error("Cannot find source file: " + (target->SourceDir / F).u8string());
+                    String err = "Cannot find source file: " + (target->SourceDir / F).u8string();
+                    if (ignore_source_files_errors)
+                    {
+                        LOG_INFO(logger, err);
+                        return true;
+                    }
+                    throw std::runtime_error(err);
                 }
             }
         }
@@ -443,7 +456,13 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
             {
                 if (ignore_errors)
                     return false;
-                throw std::runtime_error("Cannot find source file: " + F.u8string());
+                String err = "Cannot find source file: " + F.u8string();
+                if (ignore_source_files_errors)
+                {
+                    LOG_INFO(logger, err);
+                    return true;
+                }
+                throw std::runtime_error(err);
             }
         }
     }

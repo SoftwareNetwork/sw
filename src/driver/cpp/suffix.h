@@ -19,8 +19,11 @@ _dep - dependency
 _f, _fr? - framework (macos)
 _id, _idir - include directory: system, after??, before
 _id_s, _idir_s - system include directory: system, after??, before
+// _s_id? s_idir?
 _ld, _ldir - link directory: system, after??, before
 _l, _ll, _lib - link library
+// _slib - system link library?
+// _lib_s?
 _pch - precompiled header
 _r - regex
 _rr - recursive regex

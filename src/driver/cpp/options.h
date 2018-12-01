@@ -117,6 +117,7 @@ struct SW_DRIVER_CPP_API Definition
 {
     String d;
 
+    Definition() = default;
     explicit Definition(const String &p);
 };
 
@@ -129,6 +130,7 @@ struct SW_DRIVER_CPP_API LinkLibrary
 {
     String l;
 
+    LinkLibrary() = default;
     explicit LinkLibrary(const String &p);
     explicit LinkLibrary(const path &p);
 };
@@ -137,6 +139,7 @@ struct SW_DRIVER_CPP_API IncludeDirectory
 {
     String i;
 
+    IncludeDirectory() = default;
     explicit IncludeDirectory(const String &p);
     explicit IncludeDirectory(const path &p);
 };
@@ -248,6 +251,7 @@ struct SW_DRIVER_CPP_API NativeCompilerOptions : IterableOptions<NativeCompilerO
 
     void addDefinitionsAndIncludeDirectories(builder::Command &c) const;
     void addEverything(builder::Command &c) const;
+    PathOptionsType gatherIncludeDirectories() const;
 };
 
 struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptions>,
@@ -273,6 +277,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
 
     void merge(const NativeLinkerOptions &o, const GroupSettings &s = GroupSettings());
     void addEverything(builder::Command &c) const;
+    FilesOrdered gatherLinkLibraries() const;
 
     //
     //NativeLinkerOptions &operator+=(const NativeTarget &t);

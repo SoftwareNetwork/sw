@@ -535,6 +535,10 @@ void Command::execute1(std::error_code *ec)
         return s;
     };
 
+    // create generated dirs
+    for (auto &d : getGeneratedDirs())
+        fs::create_directories(d);
+
     //LOG_INFO(logger, print());
     LOG_TRACE(logger, print());
 

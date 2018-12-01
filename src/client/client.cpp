@@ -188,8 +188,8 @@ int main(int argc, char **argv)
         {
             LOG_ERROR(logger, error);
 #ifdef _WIN32
-            if (IsDebuggerPresent())
-                system("pause");
+            //if (IsDebuggerPresent())
+                //system("pause");
 #else
             //std::cout << "Press any key to continue..." << std::endl;
             //getchar();
@@ -230,6 +230,8 @@ int main(int argc, char **argv)
 // build commands
 // must be opt<String>!
 static cl::opt<String> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
+static cl::opt<String> build_arg_generate(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_generate));
+static cl::opt<String> build_arg_update(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_update));
 
 // ide commands
 static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl::sub(subcommand_ide)*/);
@@ -241,6 +243,8 @@ static cl::opt<String> override_package("override-remote-package", cl::value_des
 static cl::opt<bool> list_overridden_packages("list-overridden-remote-packages", cl::desc("List overridden packages"));
 static cl::opt<String> delete_overridden_package("delete-overridden-remote-package", cl::value_desc("package"), cl::desc("Delete overridden package from index"));
 static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", cl::value_desc("sdir"), cl::desc("Delete overridden dir packages"));
+
+static cl::opt<bool> use_lock_file("l", cl::desc("Use lock file"));
 
 //static cl::list<String> builtin_function("internal-call-builtin-function", cl::desc("Call built-in function"), cl::Hidden);
 
@@ -299,6 +303,9 @@ int sw_main(const Strings &args)
         return 0;
     }
 
+    if (/*use_lock_file && */fs::exists(fs::current_path() / "sw.lock"))
+        getPackageStore().loadLockFile(fs::current_path() / "sw.lock");
+
     /*if (!build_arg0.empty())
     {
         sw::build(Files{ build_arg0.begin(), build_arg0.end() });
@@ -317,6 +324,9 @@ void stop()
 {
     getExecutor().join();
     getFileStorages().clear();
+    //if (use_lock_file)
+    // create always, use asap
+    getPackageStore().saveLockFile(fs::current_path() / "sw.lock");
 }
 
 static cl::opt<bool> write_log_to_file("log-to-file");
@@ -475,6 +485,20 @@ SUBCOMMAND_DECL(ide)
     }
 }
 
+extern ::cl::opt<String> generator;
+
+SUBCOMMAND_DECL(generate)
+{
+    if (generator.empty())
+    {
+#ifdef _WIN32
+        generator = "vs";
+#endif
+    }
+    build_arg = build_arg_generate.getValue();
+    cli_build();
+}
+
 SUBCOMMAND_DECL(init)
 {
     elevate();
@@ -524,6 +548,14 @@ SUBCOMMAND_DECL(pack)
 SUBCOMMAND_DECL(test)
 {
 
+}
+
+extern ::cl::opt<bool> dry_run;
+SUBCOMMAND_DECL(update)
+{
+    dry_run = true;
+    build_arg = build_arg_update.getValue();
+    cli_build();
 }
 
 EXPORT_FROM_EXECUTABLE

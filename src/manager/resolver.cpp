@@ -25,6 +25,7 @@
 #include <primitives/templates.h>
 #include <primitives/win32helpers.h>
 #include <primitives/sw/settings.h>
+#include <nlohmann/json.hpp>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "resolver");
@@ -33,7 +34,10 @@ TYPED_EXCEPTION(LocalDbHashException);
 TYPED_EXCEPTION(DependencyNotResolved);
 
 static cl::opt<bool> force_server_query("s", cl::desc("Force server check"));
+static cl::alias force_server_query2("server", cl::desc("Alias for -s"), cl::aliasopt(force_server_query));
 // also "server"
+
+#define SW_CURRENT_LOCK_FILE_VERSION 1
 
 namespace sw
 {
@@ -53,38 +57,82 @@ void PackageStore::clear()
     *this = PackageStore();
 }
 
-PackageStore::PackageConfig &PackageStore::operator[](const Package &p)
-{
-    return packages[p];
-}
-
-const PackageStore::PackageConfig &PackageStore::operator[](const Package &p) const
-{
-    auto i = packages.find(p);
-    if (i == packages.end())
-        throw std::runtime_error("Package not found: " + p.getTargetName());
-    return i->second;
-}
-
-bool PackageStore::has_local_package(const PackagePath &ppath) const
-{
-    return local_packages.find(ppath) != local_packages.end();
-}
-
-path PackageStore::get_local_package_dir(const PackagePath &ppath) const
-{
-    auto i = local_packages.find(ppath);
-    if (i != local_packages.end())
-        return i->second;
-    return path();
-}
-
 optional<ExtendedPackageData> PackageStore::isPackageResolved(const UnresolvedPackage &p)
 {
     auto i = resolved_packages.find(p);
     if (i == resolved_packages.end())
         return {};
     return i->second;
+}
+
+void PackageStore::loadLockFile(const path &fn)
+{
+    auto j = nlohmann::json::parse(read_file(fn));
+    if (j["version"] != SW_CURRENT_LOCK_FILE_VERSION)
+    {
+        throw std::runtime_error("Cannot use this lock file: bad version " + std::to_string((int)j["version"]) +
+            ", expected " + std::to_string(SW_CURRENT_LOCK_FILE_VERSION));
+    }
+
+    const auto &overridden = getServiceDatabase().getOverriddenPackages();
+
+    for (auto &v : j["packages"])
+    {
+        DownloadDependency d;
+        (PackageId&)d = extractFromStringPackageId(v["package"].get<std::string>());
+        d.prefix = v["prefix"];
+        d.hash = v["hash"];
+        d.group_number = v["group_number"];
+        d.local_override = overridden.find(d) != overridden.end(d);
+        for (auto &v2 : v["dependencies"])
+        {
+            auto p = extractFromStringPackageId(v2.get<std::string>());
+            DownloadDependency1 d2{ p };
+            d.db_dependencies[p.ppath.toString()] = d2;
+        }
+        download_dependencies_.insert(d);
+    }
+
+    for (auto &v : j["resolved_packages"].items())
+    {
+        auto p = extractFromString(v.key());
+        DownloadDependency d;
+        (PackageId&)d = extractFromStringPackageId(v.value()["package"].get<std::string>());
+        auto i = download_dependencies_.find(d);
+        if (i == download_dependencies_.end())
+            throw std::runtime_error("bad lock file");
+        resolved_packages[p] = *i;
+    }
+
+    use_lock_file = true;
+}
+
+void PackageStore::saveLockFile(const path &fn) const
+{
+    nlohmann::json j;
+    j["version"] = SW_CURRENT_LOCK_FILE_VERSION;
+
+    auto &jpkgs = j["packages"];
+    for (auto &r : download_dependencies_)
+    {
+        nlohmann::json jp;
+        jp["package"] = r.toString();
+        jp["prefix"] = r.prefix;
+        jp["hash"] = r.hash;
+        jp["group_number"] = r.group_number;
+        //jp["local_override"] = r.local_override;
+        for (auto &[_, d] : r.db_dependencies)
+            jp["dependencies"].push_back(d.toString());
+        jpkgs.push_back(jp);
+    }
+
+    auto &jp = j["resolved_packages"];
+    for (auto &[u, r] : resolved_packages)
+    {
+        jp[u.toString()]["package"] = r.toString();
+    }
+
+    write_file(fn, j.dump(2));
 }
 
 ResolvedPackagesMap resolve_dependencies(const UnresolvedPackages &deps)
@@ -111,7 +159,7 @@ std::unordered_set<ExtendedPackageData> Resolver::getDownloadDependencies() cons
 {
     std::unordered_set<ExtendedPackageData> s;
     for (auto &dl : download_dependencies_)
-        s.insert(dl.second);
+        s.insert(dl);
     return s;
 }
 
@@ -119,7 +167,7 @@ std::unordered_map<ExtendedPackageData, PackageVersionGroupNumber> Resolver::get
 {
     std::unordered_map<ExtendedPackageData, PackageVersionGroupNumber> s;
     for (auto &dl : download_dependencies_)
-        s[dl.first] = dl.second.group_number;
+        s[dl] = dl.group_number;
     return s;
 }
 
@@ -157,33 +205,31 @@ void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies, bool
 
     // add back known_deps
     for (auto &d : known_deps)
-        download_dependencies_[resolved_packages[d]] = resolved_packages[d];
+        download_dependencies_.insert(resolved_packages[d]);
 
     // mark packages as resolved
     for (auto &d : deps)
     {
         for (auto &dl : download_dependencies_)
         {
-            if (!dl.second.flags[pfDirectDependency])
-                continue;
-            if (d.ppath == dl.second.ppath)
+            /*if (!dl.flags[pfDirectDependency])
+                continue;*/
+            if (d.ppath == dl.ppath)
             {
-                resolved_packages[d] = dl.second;
+                resolved_packages[d] = dl;
                 continue;
             }
             // if this is not exact match, assign to self
             // TODO: or make resolved_packages multimap
 
+            // we do not allow d.ppath.isRootOf() here as it was in cppan
             //if (d.ppath.isRootOf(dl.second.ppath))
                 //resolved_packages[d] = dl.second;
-
-            // we do not allow d.ppath.isRootOf() here as it was in cppan
-            if (d.ppath == dl.second.ppath)
-                resolved_packages[d] = dl.second;
         }
     }
 
     getPackageStore().resolved_packages.insert(resolved_packages.begin(), resolved_packages.end());
+    getPackageStore().download_dependencies_.insert(download_dependencies_.begin(), download_dependencies_.end());
 }
 
 void Resolver::resolve_and_download(const UnresolvedPackage &p, const path &fn)
@@ -194,17 +240,38 @@ void Resolver::resolve_and_download(const UnresolvedPackage &p, const path &fn)
         {
             //if (dd.second == p)
             {
-                download(dd.second, fn);
+                download(dd, fn);
                 break;
             }
         }
     });
 }
 
+void Resolver::add_dep(Dependencies &dd, const PackageId &d)
+{
+    DownloadDependency d2;
+    (PackageId&)d2 = d;
+    auto i = getPackageStore().download_dependencies_.find(d2);
+    if (i == getPackageStore().download_dependencies_.end())
+        throw std::runtime_error("unresolved package from lock file: " + d.toString());
+    if (!dd.insert(*i).second)
+        return;
+    for (auto &d : i->db_dependencies)
+        add_dep(dd, d.second);
+}
+
 void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> resolve_action)
 {
     if (!resolve_action)
         throw std::logic_error("Empty resolve action!");
+
+    if (getPackageStore().use_lock_file)
+    {
+        for (auto &d : deps)
+            add_dep(download_dependencies_, getPackageStore().resolved_packages[d]);
+        resolve_action();
+        return;
+    }
 
     // ref to not invalidate all ptrs
     auto &us = Settings::get_user_settings();
@@ -302,7 +369,7 @@ void Resolver::download_and_unpack()
 
     auto download_dependency = [this](auto &dd)
     {
-        auto &d = dd.second;
+        auto &d = dd;
         auto version_dir = d.getDirSrc();
         auto hash_file = d.getStampFilename();
         bool must_download = d.getStampHash() != d.hash || d.hash.empty();
@@ -401,9 +468,9 @@ void Resolver::download_and_unpack()
             std::set<int64_t> ids;
             for (auto &d : download_dependencies_)
             {
-                if (d.second.local_override)
+                if (d.local_override)
                     continue;
-                ids.insert(d.second.id);
+                ids.insert(d.id);
             }
 
             try
@@ -481,16 +548,30 @@ Resolver::Dependencies getDependenciesFromRemote(const UnresolvedPackages &deps,
 
     if (unresolved > 0)
     {
-        String pkgs;
+        UnresolvedPackages pkgs;
         for (auto &[d, n] : dups)
         {
             if (n == 0)
                 continue;
-            pkgs += d.toString() + ", ";
+            for (auto &dep : deps)
+                if (dep.ppath == d)
+                    pkgs.insert(dep);
         }
-        if (!pkgs.empty())
-            pkgs.resize(pkgs.size() - 2);
-        throw std::runtime_error("Some packages (" + std::to_string(unresolved) + ") are unresolved: " + pkgs);
+
+        /*try
+        {
+            //getPackagesDatabase().findLocalDependencies(id_deps, pkgs);
+            throw;
+        }
+        catch (...)
+        {*/
+            String s;
+            for (auto &d : pkgs)
+                s += d.toString() + ", ";
+            if (!s.empty())
+                s.resize(s.size() - 2);
+            throw std::runtime_error("Some packages (" + std::to_string(unresolved) + ") are unresolved: " + s);
+        //}
     }
 
     return prepareIdDependencies(id_deps, current_remote);
@@ -498,9 +579,7 @@ Resolver::Dependencies getDependenciesFromRemote(const UnresolvedPackages &deps,
 
 Resolver::Dependencies getDependenciesFromDb(const UnresolvedPackages &deps, const Remote *current_remote)
 {
-    auto &db = getPackagesDatabase();
-    auto id_deps = db.findDependencies(deps);
-    return prepareIdDependencies(id_deps, current_remote);
+    return prepareIdDependencies(getPackagesDatabase().findDependencies(deps), current_remote);
 }
 
 Resolver::Dependencies prepareIdDependencies(const IdDependencies &id_deps, const Remote *current_remote)
@@ -512,7 +591,8 @@ Resolver::Dependencies prepareIdDependencies(const IdDependencies &id_deps, cons
         d.createNames();
         d.remote = current_remote;
         d.prepareDependencies(id_deps);
-        dependencies[d] = d;
+        d.db_dependencies = d.db_dependencies;
+        dependencies.insert(d);
     }
     return dependencies;
 }

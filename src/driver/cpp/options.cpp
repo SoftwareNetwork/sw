@@ -301,7 +301,6 @@ void NativeCompilerOptions::addDefinitionsAndIncludeDirectories(builder::Command
     };
 
     print_idir(gatherIncludeDirectories(), "-I");
-    print_idir(System.gatherIncludeDirectories(), "-I");
 }
 
 void NativeCompilerOptions::addEverything(builder::Command &c) const
@@ -316,6 +315,16 @@ void NativeCompilerOptions::addEverything(builder::Command &c) const
 
     print_idir(System.CompileOptions, "");
     print_idir(CompileOptions, "");
+}
+
+PathOptionsType NativeCompilerOptions::gatherIncludeDirectories() const
+{
+    PathOptionsType idirs;
+    auto i = NativeCompilerOptionsData::gatherIncludeDirectories();
+    idirs.insert(i.begin(), i.end());
+    i = System.gatherIncludeDirectories();
+    idirs.insert(i.begin(), i.end());
+    return idirs;
 }
 
 void NativeLinkerOptionsData::add(const LinkLibrary &l)
@@ -379,6 +388,16 @@ void NativeLinkerOptions::addEverything(builder::Command &c) const
 
     print_idir(System.LinkOptions, "");
     print_idir(LinkOptions, "");
+}
+
+FilesOrdered NativeLinkerOptions::gatherLinkLibraries() const
+{
+    FilesOrdered llib;
+    auto i = NativeLinkerOptionsData::gatherLinkLibraries();
+    llib.insert(llib.end(), i.begin(), i.end());
+    i = System.gatherLinkLibraries();
+    llib.insert(llib.end(), i.begin(), i.end());
+    return llib;
 }
 
 /*

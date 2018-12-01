@@ -912,15 +912,71 @@ bool PackagesDatabase::isCurrentDbOld() const
     return (tp - tp_old) > std::chrono::minutes(PACKAGES_DB_REFRESH_TIME_MINUTES);
 }
 
-IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps) const
+void PackagesDatabase::preInitFindDependencies() const
 {
-    const auto pkgs = db::packages::Package{};
-
     // !
     updateDb();
 
     // set current time
     tstart = getUtc();
+}
+
+void PackagesDatabase::findLocalDependencies(IdDependencies &id_deps, const UnresolvedPackages &deps) const
+{
+    preInitFindDependencies();
+
+    std::map<PackageId, DownloadDependency> all_deps;
+    for (auto &[id, dep] : id_deps)
+        all_deps.emplace(dep, dep);
+
+    for (auto &dep : deps)
+    {
+        auto &pkgs = getServiceDatabase().getOverriddenPackages();
+        PackageId pkg{ dep.ppath, dep.range.toString() };
+        auto i = pkgs.find(pkg);
+        if (i != pkgs.end(pkg))
+        {
+            DownloadDependency project;
+            project.id = i->second.id;
+            //project.flags.set(pfDirectDependency);
+            project.ppath = dep.ppath;
+            project.version = i->first;
+            project.prefix = i->second.prefix;
+            project.db_dependencies = getProjectDependencies(project.id, all_deps, i->second.deps);
+            //project.setDependencyIds(getProjectDependencies(project.id, all_deps, i->second.deps)); // see dependency.h note
+            all_deps[project] = project; // assign first, deps assign second
+            continue;
+        }
+
+        // TODO: replace later with typed exception, so client will try to fetch same package from server
+        throw std::runtime_error("PackageId '" + dep.ppath.toString() + "' not found.");
+    }
+
+    // mark local deps
+    const auto &overridden = getServiceDatabase().getOverriddenPackages();
+    if (!overridden.empty())
+    {
+        for (auto &[pkg, d] : all_deps)
+            d.local_override = overridden.find(pkg) != overridden.end(pkg);
+    }
+
+    // make id deps
+    for (auto &ad : all_deps)
+    {
+        auto &d = ad.second;
+        std::unordered_set<db::PackageVersionId> ids;
+        for (auto &dd2 : d.db_dependencies) // see dependency.h note
+            ids.insert(dd2.second.id);
+        d.setDependencyIds(ids);
+        id_deps[d.id] = d;
+    }
+}
+
+IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps) const
+{
+    const auto pkgs = db::packages::Package{};
+
+    preInitFindDependencies();
 
     DependenciesMap all_deps;
     for (auto &dep : deps)
@@ -943,11 +999,12 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
             if (i != pkgs.end(pkg))
             {
                 project.id = i->second.id;
-                project.flags.set(pfDirectDependency);
+                //project.flags.set(pfDirectDependency);
                 project.ppath = dep.ppath;
                 project.version = i->first;
                 project.prefix = i->second.prefix;
                 project.db_dependencies = getProjectDependencies(project.id, all_deps, i->second.deps);
+                //project.setDependencyIds(getProjectDependencies(project.id, all_deps, i->second.deps)); // see dependency.h note
                 all_deps[project] = project; // assign first, deps assign second
                 continue;
             }
@@ -958,9 +1015,10 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
 
         project.id = q.front().packageId.value(); // set package id first, then it is replaced with pkg version id, do not remove
         project.id = getExactProjectVersionId(project, project.version, project.flags, project.hash, project.group_number, project.prefix);
-        project.flags.set(pfDirectDependency);
+        //project.flags.set(pfDirectDependency);
         all_deps[project] = project; // assign first, deps assign second
         all_deps[project].db_dependencies = getProjectDependencies(project.id, all_deps);
+        //all_deps[project].setDependencyIds(getProjectDependencies(project.id, all_deps)); // see dependency.h note
     }
 
     // mark local deps
@@ -977,7 +1035,7 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
     {
         auto &d = ad.second;
         std::unordered_set<db::PackageVersionId> ids;
-        for (auto &dd2 : d.db_dependencies)
+        for (auto &dd2 : d.db_dependencies) // see dependency.h note
             ids.insert(dd2.second.id);
         d.setDependencyIds(ids);
         dds[d.id] = d;
@@ -1081,8 +1139,9 @@ PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(db::Pack
             {
                 dm[dependency] = dependency; // assign first, deps assign second
                 dm[dependency].db_dependencies = getProjectDependencies(dependency.id, dm);
+                //dm[dependency].setDependencyIds(getProjectDependencies(dependency.id, dm)); // see dependency.h note
             }
-            dependencies[dependency.ppath.toString()] = dependency;
+            dependencies[dependency.ppath.toString()] = dependency; // see dependency.h note
         }
     }
     else if (project_version_id < 0) // overridden
@@ -1110,8 +1169,9 @@ PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(db::Pack
             {
                 dm[dependency] = dependency; // assign first, deps assign second
                 dm[dependency].db_dependencies = getProjectDependencies(dependency.id, dm, getServiceDatabase().getOverriddenPackageVersionDependencies(-dependency.id));
+                //dm[dependency].setDependencyIds(getProjectDependencies(dependency.id, dm, getServiceDatabase().getOverriddenPackageVersionDependencies(-dependency.id))); // see dependency.h note
             }
-            dependencies[dependency.ppath.toString()] = dependency;
+            dependencies[dependency.ppath.toString()] = dependency; // see dependency.h note
         }
     }
     return dependencies;

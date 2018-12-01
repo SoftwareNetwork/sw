@@ -21,6 +21,48 @@
 namespace sw
 {
 
+namespace detail
+{
+
+struct EventCallback
+{
+    using BasicEventCallback = std::function<void(TargetBase &t, CallbackType e)>;
+    using TypedEventCallback = std::function<void(TargetBase &t)>;
+
+    PackagesIdSet pkgs;
+    std::set<CallbackType> types;
+    BasicEventCallback cb;
+    bool typed_cb = false;
+
+    void operator()(TargetBase &t, CallbackType e);
+
+    template <class F, class ... Args>
+    void add(const F &a, Args &&... args)
+    {
+        if constexpr (std::is_same_v<F, BasicEventCallback> ||
+            std::is_convertible_v<F, BasicEventCallback>)
+            cb = a;
+        else if constexpr (std::is_same_v<F, TypedEventCallback> ||
+            std::is_convertible_v<F, TypedEventCallback>)
+        {
+            typed_cb = true;
+            cb = [a](TargetBase &t, CallbackType)
+            {
+                a(t);
+            };
+        }
+        else if constexpr (std::is_same_v<F, CallbackType>)
+            types.insert(a);
+        else
+            pkgs.insert(String(a));
+
+        if constexpr (sizeof...(Args) > 0)
+            add(std::forward<Args>(args)...);
+    }
+};
+
+}
+
 using FilesMap = std::unordered_map<path, path>;
 
 /**
@@ -96,6 +138,19 @@ public:
     virtual ExecutionPlan<builder::Command> getExecutionPlan() const;
     ExecutionPlan<builder::Command> getExecutionPlan(Commands &cmds) const;
 
+    // events
+    template <class ... Args>
+    void registerCallback(Args &&... args)
+    {
+        static_assert(sizeof...(Args) != 0, "Missing callback");
+
+        detail::EventCallback c;
+        c.add(std::forward<Args>(args)...);
+        events.push_back(c);
+    }
+    void call_event(TargetBase &t, CallbackType et);
+    //
+
     static path getConfigFilename() { return "sw.cpp"; }
 
 protected:
@@ -103,14 +158,16 @@ protected:
     bool dry_run = false;
 
     Solution();
+    void clear();
 
 private:
     std::unordered_set<ExtendedPackageData> known_cfgs;
+    std::vector<detail::EventCallback> events;
     //Files used_modules;
 
     void checkPrepared() const;
-    Files getGeneratedDirs() const;
-    void createGeneratedDirs() const;
+    //Files getGeneratedDirs() const;
+    //void createGeneratedDirs() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     void build_and_resolve();
 
@@ -160,6 +217,7 @@ protected:
 
 private:
     path dll;
+    bool remove_ide_explans = false;
 
     void setSettings();
     void findCompiler();

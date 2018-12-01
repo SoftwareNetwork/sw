@@ -40,10 +40,10 @@ void build_self(sw::Solution &s);
 void check_self(sw::Checker &c);
 
 static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with build commands"));
-static cl::opt<String> generator("G", cl::desc("Generator"));
+cl::opt<String> generator("G", cl::desc("Generator"));
 cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(generator));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
-static cl::opt<bool> dry_run("n", cl::desc("Dry run"));
+cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 
 static cl::opt<String> target_os("target-os");
@@ -174,6 +174,24 @@ ModuleStorage &getModuleStorage()
     return modules;
 }
 
+namespace detail
+{
+
+void EventCallback::operator()(TargetBase &t, CallbackType e)
+{
+    if (!pkgs.empty() && pkgs.find(t.pkg) == pkgs.end())
+        return;
+    if (!types.empty() && types.find(e) == types.end())
+        return;
+    if (types.empty() && typed_cb)
+        throw std::logic_error("Typed callback passed, but no types provided");
+    if (!cb)
+        throw std::logic_error("No callback provided");
+    cb(t, e);
+}
+
+}
+
 Solution::Solution()
     : base_ptr(*this)
 {
@@ -192,12 +210,19 @@ Solution::Solution(const Solution &rhs)
     , source_dirs_by_source(rhs.source_dirs_by_source)
     , fs(rhs.fs)
     , fetch_dir(rhs.fetch_dir)
+    , events(rhs.events)
 {
     Checks.solution = this;
 }
 
 Solution::~Solution()
 {
+    clear();
+}
+
+void Solution::clear()
+{
+    events.clear();
 }
 
 bool Solution::isKnownTarget(const PackageId &p) const
@@ -460,7 +485,7 @@ Commands Solution::getCommands() const
     return cmds;
 }
 
-Files Solution::getGeneratedDirs() const
+/*Files Solution::getGeneratedDirs() const
 {
     Files f;
     for (auto &p : getChildren())
@@ -475,7 +500,7 @@ void Solution::createGeneratedDirs() const
 {
     for (auto &d : getGeneratedDirs())
         fs::create_directories(d);
-}
+}*/
 
 void Solution::printGraph(const path &p) const
 {
@@ -897,7 +922,7 @@ void Solution::prepare()
     }
 
     // move to prepare?
-    createGeneratedDirs();
+    //createGeneratedDirs();
 
     prepared = true;
 }
@@ -979,6 +1004,39 @@ ExecutionPlan<builder::Command> Solution::getExecutionPlan(Commands &cmds) const
     throw std::runtime_error("Cannot create execution plan because of cyclic dependencies");
 }
 
+/*void Solution::registerCallback(const detail::EventCallback::BasicEventCallback &cb)
+{
+    detail::EventCallback c;
+    c.cb = cb;
+    events.push_back(c);
+}
+
+void Solution::registerCallback(const TypedEventCallback &cb, CallbackType et)
+{
+    detail::EventCallback c;
+    c.cb = [cb](TargetBase &t, CallbackType et2)
+    {
+        cb(t);
+    };
+    c.types.insert(et);
+    events.push_back(c);
+}*/
+
+void Solution::call_event(TargetBase &t, CallbackType et)
+{
+    for (auto &e : events)
+    {
+        try
+        {
+            e(t, et);
+        }
+        catch (const std::bad_cast &e)
+        {
+            LOG_DEBUG(logger, "bad cast in callback: " << e.what());
+        }
+    }
+}
+
 Build::Build()
 {
     //silent |= ide;
@@ -996,6 +1054,10 @@ Build::~Build()
 {
     // first destroy children as they might have data references to modules
     solutions.clear();
+
+    // clear this solution before modules
+    // (events etc.)
+    clear();
 
     // maybe also clear checks?
     // or are they solution-specific?
@@ -1202,7 +1264,7 @@ void Build::performChecks()
     waitAndGet(fs);
 
     if (!silent)
-        LOG_INFO(logger, "Checks time: " << t.getTimeFloat() << " s.");
+        LOG_DEBUG(logger, "Checks time: " << t.getTimeFloat() << " s.");
 }
 
 void Build::prepare()
@@ -1617,8 +1679,11 @@ path Build::build(const path &fn)
     Build b;
     auto r = b.build_configs_separate({ fn });
     dll = r.begin()->second;
-    if (File(dll, *b.solutions[0].fs).isChanged())
+    if (do_not_rebuild_config &&
+        (File(fn, *b.solutions[0].fs).isChanged() ||
+        File(dll, *b.solutions[0].fs).isChanged()))
     {
+        remove_ide_explans = true;
         do_not_rebuild_config = false;
         return build(fn);
     }
@@ -1875,6 +1940,12 @@ bool Build::execute()
     // read ex plan
     if (ide)
     {
+        if (remove_ide_explans)
+        {
+            // remove execution plans
+            fs::remove_all(getExecutionPlansDir());
+        }
+
         for (auto &s : solutions)
         {
             auto fn = s.getExecutionPlanFilename();
@@ -1890,8 +1961,8 @@ bool Build::execute()
         }
     }
 
-    try
-    {
+    //try
+    //{
         prepare();
 
         for (auto &[n, _] : TargetsToBuild)
@@ -1919,9 +1990,9 @@ bool Build::execute()
 
         Solution::execute();
         return true;
-    }
-    catch (std::exception &e) { LOG_ERROR(logger, "error during build: " << e.what()); }
-    catch (...) {}
+    //}
+    //catch (std::exception &e) { LOG_ERROR(logger, "error during build: " << e.what()); }
+    //catch (...) {}
     return false;
 }
 

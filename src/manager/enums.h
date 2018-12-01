@@ -27,9 +27,9 @@ enum PackageFlag
     //pfExecutable                = 6,    // pf, replaced with project type
     //pfEmpty                     = 7,    // vf, unused, can be used to load & include cmake packages
     //pfPrivateDependency         = 8,    // df, private dependency
-    pfDirectDependency          = 9,    // vf, response only
+    //pfDirectDependency          = 9,    // vf, response only
     //pfIncludeDirectoriesOnly    = 10,   // df, take include dirs from this dep
-    pfLocalProject              = 11,   // vf, not from server, local bs project, remove?
+    //pfLocalProject              = 11,   // vf, not from server, local bs project, remove?
 
     //pfPreferBinary,   //pf, if binaries are available, do not build the project, use precompiled
 

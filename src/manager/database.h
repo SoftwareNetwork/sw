@@ -134,12 +134,14 @@ private:
 class SW_MANAGER_API PackagesDatabase : public Database
 {
     using Dependencies = DownloadDependency::DbDependencies;
+    //using Dependencies = DownloadDependency::IdDependenciesSet; // see dependency.h note
     using DependenciesMap = std::map<PackageId, DownloadDependency>;
 
 public:
     PackagesDatabase();
 
     IdDependencies findDependencies(const UnresolvedPackages &deps) const;
+    void findLocalDependencies(IdDependencies &id_deps, const UnresolvedPackages &deps) const;
 
     void listPackages(const String &name = String()) const;
 
@@ -168,6 +170,7 @@ private:
     bool isCurrentDbOld() const;
     void updateDb() const;
 
+    void preInitFindDependencies() const;
     db::PackageVersionId getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn, int &prefix) const;
     Dependencies getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm, const UnresolvedPackages &overridden_deps = {}) const;
 };
