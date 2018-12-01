@@ -80,10 +80,12 @@ void PackageStore::loadLockFile(const path &fn)
     {
         DownloadDependency d;
         (PackageId&)d = extractFromStringPackageId(v["package"].get<std::string>());
+        d.createNames();
         d.prefix = v["prefix"];
         d.hash = v["hash"];
         d.group_number = v["group_number"];
         d.local_override = overridden.find(d) != overridden.end(d);
+        d.from_lock_file = true;
         for (auto &v2 : v["dependencies"])
         {
             auto p = extractFromStringPackageId(v2.get<std::string>());
@@ -113,7 +115,7 @@ void PackageStore::saveLockFile(const path &fn) const
     j["version"] = SW_CURRENT_LOCK_FILE_VERSION;
 
     auto &jpkgs = j["packages"];
-    for (auto &r : download_dependencies_)
+    for (auto &r : std::set<DownloadDependency>(download_dependencies_.begin(), download_dependencies_.end()))
     {
         nlohmann::json jp;
         jp["package"] = r.toString();
@@ -121,16 +123,14 @@ void PackageStore::saveLockFile(const path &fn) const
         jp["hash"] = r.hash;
         jp["group_number"] = r.group_number;
         //jp["local_override"] = r.local_override;
-        for (auto &[_, d] : r.db_dependencies)
+        for (auto &[_, d] : std::map<String, DownloadDependency1>(r.db_dependencies.begin(), r.db_dependencies.end()))
             jp["dependencies"].push_back(d.toString());
         jpkgs.push_back(jp);
     }
 
     auto &jp = j["resolved_packages"];
-    for (auto &[u, r] : resolved_packages)
-    {
+    for (auto &[u, r] : std::map<UnresolvedPackage, DownloadDependency>(resolved_packages.begin(), resolved_packages.end()))
         jp[u.toString()]["package"] = r.toString();
-    }
 
     write_file(fn, j.dump(2));
 }
@@ -274,6 +274,7 @@ void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> res
                 deps2.insert(d);
                 LOG_INFO(logger, "new dependency detected: " + d.toString());
                 //throw std::runtime_error("unresolved package from lock file: " + d.toString());
+                continue;
             }
             add_dep(download_dependencies_, i->second);
         }
@@ -296,7 +297,17 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
     auto cr = us.remotes.begin();
     current_remote = &*cr++;
 
-    auto resolve_remote_deps = [this, &deps, &cr, &us]()
+    auto merge_dd = [this](auto &dd)
+    {
+        for (auto &d : dd)
+        {
+            download_dependencies_.erase(d);
+            download_dependencies_.insert(d);
+        }
+        //download_dependencies_.insert(dd.begin(), dd.end());
+    };
+
+    auto resolve_remote_deps = [this, &deps, &cr, &us, &merge_dd]()
     {
         bool again = true;
         while (again)
@@ -307,12 +318,7 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
                 if (us.remotes.size() > 1)
                     LOG_INFO(logger, "Trying " + current_remote->name + " remote");
                 auto dd = getDependenciesFromRemote(deps, current_remote);
-                for (auto &d : dd)
-                {
-                    download_dependencies_.erase(d);
-                    download_dependencies_.insert(d);
-                }
-                //download_dependencies_.insert(dd.begin(), dd.end());
+                merge_dd(dd);
             }
             catch (const std::exception &e)
             {
@@ -340,12 +346,7 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
                 try
                 {
                     auto dd = getDependenciesFromDb(deps, current_remote);
-                    for (auto &d : dd)
-                    {
-                        download_dependencies_.erase(d);
-                        download_dependencies_.insert(d);
-                    }
-                    //download_dependencies_.insert(dd.begin(), dd.end());
+                    merge_dd(dd);
                 }
                 catch (std::exception &e)
                 {
@@ -397,19 +398,28 @@ void Resolver::download_and_unpack()
     if (download_dependencies_.empty())
         return;
 
-    auto download_dependency = [this](auto &dd)
+    auto download_dependency = [this](auto &dd) mutable
     {
         auto &d = dd;
         auto version_dir = d.getDirSrc();
         auto hash_file = d.getStampFilename();
-        bool must_download = d.getStampHash() != d.hash || d.hash.empty();
+        auto stampfile_hash = d.getStampHash();
+        bool must_download = stampfile_hash != d.hash || d.hash.empty();
 
         auto &sdb = getServiceDatabase();
 
         if (d.local_override)
             return;
-        if (fs::exists(version_dir) && !must_download && sdb.isPackageInstalled(d) != 0)
-            return;
+        if (fs::exists(version_dir) && sdb.isPackageInstalled(d))
+        {
+            if (!must_download)
+                return;
+            if (d.from_lock_file)
+            {
+                ((DownloadDependency&)d).hash = stampfile_hash;
+                return;
+            }
+        }
 
         // lock, so only one cppan process at the time could download the project
         ScopedFileLock lck(hash_file, std::defer_lock);

@@ -9,6 +9,13 @@
 #include "concurrent_map.h"
 #include "file.h"
 
+namespace primitives::filesystem
+{
+
+class FileMonitor;
+
+}
+
 namespace sw
 {
 
@@ -51,5 +58,8 @@ FileStorage &getFileStorage(const String &config);
 
 SW_BUILDER_API
 std::map<String, FileStorage> &getFileStorages();
+
+SW_BUILDER_API
+primitives::filesystem::FileMonitor &getFileMonitor();
 
 }

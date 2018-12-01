@@ -21,6 +21,7 @@ struct ExtendedPackageData : Package
     int prefix = 2;
     const Remote *remote = nullptr;
     bool local_override = false;
+    bool from_lock_file = false;
 };
 
 } // namespace sw

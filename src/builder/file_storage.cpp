@@ -22,7 +22,7 @@ namespace sw
 
 static Executor async_executor("async log writer", 1);
 
-primitives::filesystem::FileMonitor &get_file_monitor()
+primitives::filesystem::FileMonitor &getFileMonitor()
 {
     static primitives::filesystem::FileMonitor fm;
     return fm;
@@ -175,7 +175,7 @@ FileRecord *FileStorage::registerFile(const File &in_f)
 
     if (useFileMonitor)
     {
-        get_file_monitor().addFile(in_f.file, [this](const path &f)
+        getFileMonitor().addFile(in_f.file, [this](const path &f)
         {
             auto &r = File(f, *this).getFileRecord();
             error_code ec;

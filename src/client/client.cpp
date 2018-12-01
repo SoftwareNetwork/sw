@@ -26,6 +26,7 @@
 //#include <boost/nowide/args.hpp>
 #include <boost/regex.hpp>
 #include <primitives/executor.h>
+#include <primitives/file_monitor.h>
 #include <primitives/lock.h>
 #include <primitives/sw/settings.h>
 #include <primitives/sw/main.h>
@@ -316,6 +317,7 @@ int sw_main(const Strings &args)
 
 void stop()
 {
+    getFileMonitor().stop();
     getExecutor().join();
     getFileStorages().clear();
     //if (use_lock_file)
