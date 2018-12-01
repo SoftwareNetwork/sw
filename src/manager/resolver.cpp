@@ -122,7 +122,6 @@ void PackageStore::saveLockFile(const path &fn) const
         jp["prefix"] = r.prefix;
         jp["hash"] = r.hash;
         jp["group_number"] = r.group_number;
-        //jp["local_override"] = r.local_override;
         for (auto &[_, d] : std::map<String, DownloadDependency1>(r.db_dependencies.begin(), r.db_dependencies.end()))
             jp["dependencies"].push_back(d.toString());
         jpkgs.push_back(jp);
