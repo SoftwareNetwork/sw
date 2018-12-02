@@ -36,9 +36,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target");
 
-void build_self(sw::Solution &s);
-void check_self(sw::Checker &c);
-
 static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with build commands"));
 cl::opt<String> generator("G", cl::desc("Generator"));
 cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(generator));
@@ -53,6 +50,11 @@ static cl::opt<String> platform("platform", cl::desc("Set build platform")/*, cl
 //static cl::opt<String> arch("arch", cl::desc("Set arch")/*, cl::sub(subcommand_ide)*/);
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build")/*, cl::sub(subcommand_ide)*/);
 static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build")/*, cl::sub(subcommand_ide)*/);
+
+extern bool gVerbose;
+
+void build_self(sw::Solution &s);
+void check_self(sw::Checker &c);
 
 namespace sw
 {
@@ -1516,7 +1518,9 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     for (auto &fn : files)
     {
         lib += fn;
-        lib[fn].fancy_name = "[" + output_names[fn].toString() + "]/[config] (" + normalize_path(fn) + ")";
+        lib[fn].fancy_name = "[" + output_names[fn].toString() + "]/[config]";
+        if (gVerbose)
+            lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
     }
 
     // generate main source file

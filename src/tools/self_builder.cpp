@@ -31,11 +31,7 @@ void setup_log(const std::string &log_level)
 
 int main(int argc, char **argv)
 {
-#ifdef NDEBUG
     setup_log("INFO");
-#else
-    setup_log("DEBUG");
-#endif
 
     getServiceDatabase();
 

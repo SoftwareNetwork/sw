@@ -1376,6 +1376,10 @@ Commands NativeExecutedTarget::getCommands() const
 
         cmds.insert(c);
 
+        // set fancy name
+        if (/*!Local && */!IsConfig && !do_not_mangle_object_names)
+            c->name = "[" + pkg.target_name + "]" + getOutputFile().extension().u8string();
+
         // copy deps
         /*auto cdb = std::make_shared<ExecuteCommand>(true, [p = pkg(), c = getConfig()]
         {

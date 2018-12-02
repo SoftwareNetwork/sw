@@ -1188,7 +1188,8 @@ void PackagesDatabase::listPackages(const String &name) const
 
     for (auto &pkg : pkgs)
     {
-        auto versions = getVersionsForPackage(pkg);
+        auto v1 = getVersionsForPackage(pkg);
+        std::set<Version> versions(v1.begin(), v1.end());
         String out = pkg.toString();
         out += " (";
         for (auto &v : versions)
@@ -1217,16 +1218,21 @@ Version PackagesDatabase::getExactVersionForPackage(const PackageId &p) const
 template <template <class...> class C>
 C<PackagePath> PackagesDatabase::getMatchingPackages(const String &name) const
 {
+    const auto tpkgs = db::packages::Package{};
+
     C<PackagePath> pkgs;
     String q;
-    /*if (name.empty())
-        q = "select path from package order by path";
+    if (name.empty())
+        q = "SELECT path FROM package ORDER BY path COLLATE NOCASE";
     else
-        q = "select path from package where path like '%" + name + "%' order by path";
-    db->execute(q, [&pkgs](SQLITE_CALLBACK_ARGS) {
-        pkgs.insert(String(cols[0]));
-        return 0;
-    });*/
+        q = "SELECT path FROM package WHERE path like '%" + name + "%' ORDER BY path COLLATE NOCASE";
+    for (const auto &row : (*db)(
+        custom_query(sqlpp::verbatim(q))
+        .with_result_type_of(select(tpkgs.path).from(tpkgs))
+        ))
+    {
+        pkgs.insert(row.path.value());
+    }
     return pkgs;
 }
 
@@ -1239,24 +1245,19 @@ PackagesDatabase::getMatchingPackages<std::set>(const String &) const;
 std::vector<Version> PackagesDatabase::getVersionsForPackage(const PackagePath &ppath) const
 {
     std::vector<Version> versions;
-    /*db->execute(
-        "select case when branch is not null then branch else major || '.' || minor || '.' || patch end as version "
-        "from package_version where project_id = '" +
-            std::to_string(getPackageId(ppath)) + "' order by branch, major, minor, patch",
-        [&versions](SQLITE_CALLBACK_ARGS) {
-            versions.push_back(String(cols[0]));
-            return 0;
-        });*/
+    const auto vpkgs = db::packages::PackageVersion{};
+    for (const auto &row : (*db)(select(vpkgs.version).from(vpkgs).where(vpkgs.packageId == getPackageId(ppath))))
+        versions.push_back(row.version.value());
     return versions;
 }
 
 db::PackageId PackagesDatabase::getPackageId(const PackagePath &ppath) const
 {
     db::PackageId id = 0;
-    /*db->execute("select id from package where path = '" + ppath.toString() + "'", [&id](SQLITE_CALLBACK_ARGS) {
-        id = std::stoi(cols[0]);
-        return 0;
-    });*/
+    const auto pkgs = db::packages::Package{};
+    auto q = (*db)(select(pkgs.packageId).from(pkgs).where(pkgs.path == ppath.toString()));
+    if (!q.empty())
+        id = q.front().packageId.value();
     return id;
 }
 
