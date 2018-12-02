@@ -312,3 +312,9 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+EXPORT_FROM_EXECUTABLE
+std::string getProgramName()
+{
+    return PACKAGE_NAME_CLEAN;
+}

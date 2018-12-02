@@ -712,10 +712,10 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     FilesOrdered gatherLinkLibraries() const;
     NativeLinker *getSelectedTool() const;
     void setOutputDir(const path &dir);
-    virtual path getOutputDir() const;
+    virtual path getOutputDir() const; // used in commands
     void removeFile(const path &fn, bool binary_dir = false) override;
 
-    driver::cpp::CommandBuilder addCommand();
+    driver::cpp::CommandBuilder addCommand() const;
 
     void writeFileOnce(const path &fn, bool binary_dir = true) const;
     void writeFileOnce(const path &fn, const char *content, bool binary_dir = true) const;
@@ -819,12 +819,6 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeExecutedTarget//, Program
     using NativeExecutedTarget::NativeExecutedTarget;
 
     TargetType getType() const override { return TargetType::NativeExecutable; }
-
-    /*ExecutableTarget &operator=(const DependenciesType &t)
-    {
-        NativeLinkerOptions::operator=(t);
-        return *this;
-    }*/
 
 protected:
     bool prepare() override;

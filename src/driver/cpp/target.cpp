@@ -64,15 +64,6 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(copy_file, sw_copy_file)
 namespace sw
 {
 
-class CheckPreparedTarget
-{
-    bool &prepared;
-
-public:
-    CheckPreparedTarget(bool &b) : prepared(b) {}
-    ~CheckPreparedTarget() { prepared = true; }
-};
-
 String toString(TargetType T)
 {
     switch (T)
@@ -452,11 +443,11 @@ path TargetBase::getTargetDirShort() const
 {
     // was
     //return getTargetsDir() / pkg.ppath.toString();
-#ifdef _WIN32
+//#ifdef _WIN32
     return getSolution()->BinaryDir / getConfig(true) / sha256_short(pkg.toString());
-#else
+/*#else
     return getTargetsDir() / pkg.ppath.toString();
-#endif
+#endif*/
 }
 
 path TargetBase::getChecksDir() const
@@ -605,11 +596,11 @@ void NativeExecutedTarget::init()
     else if (auto d = pkg.getOverriddenDir(); d)
     {
         BinaryDir = d.value() / ".sw";
-#ifdef _WIN32
+//#ifdef _WIN32
         BinaryDir /= path(getConfig(true)) / sha256_short(pkg.toString());
-#else
+/*#else
         BinaryDir /= path(getConfig()) / "targets" / pkg.ppath.toString();
-#endif
+#endif*/
     }
     else
     {
@@ -660,7 +651,7 @@ void NativeExecutedTarget::init2()
     }
 }
 
-driver::cpp::CommandBuilder NativeExecutedTarget::addCommand()
+driver::cpp::CommandBuilder NativeExecutedTarget::addCommand() const
 {
     driver::cpp::CommandBuilder cb(*getSolution()->fs);
     cb.c->addPathDirectory(getOutputDir() / getConfig());
@@ -1045,27 +1036,38 @@ void NativeExecutedTarget::addPrecompiledHeader(const path &h, const path &cpp)
 
 void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
 {
+    bool force_include_pch_header_to_pch_source = true;
+    bool force_include_pch_header_to_target_source_files = p.force_include_pch;
     auto pch = p.source;
+    path pch_dir = BinaryDir.parent_path() / "pch";
     if (!pch.empty())
     {
         if (!fs::exists(pch))
             write_file_if_different(pch, "");
+        pch_dir = pch.parent_path();
+        force_include_pch_header_to_pch_source = false;
     }
     else
-        pch = BinaryDir.parent_path() / "pch" / (p.header.stem().string() + ".cpp");
+        pch = pch_dir / (p.header.stem().string() + ".cpp");
 
     auto pch_fn = pch.parent_path() / (pch.stem().string() + ".pch");
     auto obj_fn = pch.parent_path() / (pch.stem().string() + ".obj");
     auto pdb_fn = pch.parent_path() / (pch.stem().string() + ".pdb");
 
-    // before added 'create' pch
+    // gch always uses header filename + .gch
+    auto gch_fn = pch.parent_path() / (p.header.filename().string() + ".gch");
+
+    // before adding pch source file to target
+    // on this step we setup compilers to USE our created pch
+    // MSVC does it explicitly, gnu does implicitly; check what about clang
     for (auto &f : gatherSourceFiles())
     {
         if (auto sf = f->as<NativeSourceFile>())
         {
             if (auto c = sf->compiler->as<VisualStudioCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(p.header);
+                if (force_include_pch_header_to_target_source_files)
+                    c->ForcedIncludeFiles().push_back(p.header);
                 c->PrecompiledHeaderFilename() = pch_fn;
                 c->PrecompiledHeaderFilename.input_dependency = true;
                 c->PrecompiledHeader().use = p.header;
@@ -1074,21 +1076,26 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
             }
             else if (auto c = sf->compiler->as<ClangClCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(p.header);
+                if (force_include_pch_header_to_target_source_files)
+                    c->ForcedIncludeFiles().push_back(p.header);
                 c->PrecompiledHeaderFilename() = pch_fn;
                 c->PrecompiledHeaderFilename.input_dependency = true;
                 c->PrecompiledHeader().use = p.header;
             }
             else if (auto c = sf->compiler->as<ClangCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(p.header);
+                throw std::runtime_error("pchs are not implemented for clang");
+
+                if (force_include_pch_header_to_target_source_files)
+                    c->ForcedIncludeFiles().push_back(p.header);
                 //c->PrecompiledHeaderFilename() = pch_fn;
                 //c->PrecompiledHeaderFilename.input_dependency = true;
                 //c->PrecompiledHeader().use = p.header;
             }
             else if (auto c = sf->compiler->as<GNUCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(p.header);
+                if (force_include_pch_header_to_target_source_files)
+                    c->ForcedIncludeFiles().push_back(p.header);
                 //c->PrecompiledHeaderFilename() = pch_fn;
                 //c->PrecompiledHeaderFilename.input_dependency = true;
                 //c->PrecompiledHeader().use = p.header;
@@ -1098,12 +1105,15 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
 
     *this += pch;
 
+    // on this step we setup compilers to CREATE our pch
     if (auto sf = ((*this)[pch]).as<NativeSourceFile>())
     {
-        sf->setOutputFile(obj_fn);
         if (auto c = sf->compiler->as<VisualStudioCompiler>())
         {
-            c->ForcedIncludeFiles().push_back(p.header);
+            sf->setOutputFile(obj_fn);
+
+            if (force_include_pch_header_to_pch_source)
+                c->ForcedIncludeFiles().push_back(p.header);
             c->PrecompiledHeaderFilename() = pch_fn;
             c->PrecompiledHeaderFilename.output_dependency = true;
             c->PrecompiledHeader().create = p.header;
@@ -1113,24 +1123,32 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
         }
         else if (auto c = sf->compiler->as<ClangClCompiler>())
         {
-            c->ForcedIncludeFiles().push_back(p.header);
+            sf->setOutputFile(obj_fn);
+
+            if (force_include_pch_header_to_pch_source)
+                c->ForcedIncludeFiles().push_back(p.header);
             c->PrecompiledHeaderFilename() = pch_fn;
             c->PrecompiledHeaderFilename.output_dependency = true;
             c->PrecompiledHeader().create = p.header;
         }
         else if (auto c = sf->compiler->as<ClangCompiler>())
         {
-            c->ForcedIncludeFiles().push_back(p.header);
-            //c->PrecompiledHeaderFilename() = pch_fn;
-            //c->PrecompiledHeaderFilename.input_dependency = true;
-            //c->PrecompiledHeader().create = p.header;
+            throw std::runtime_error("pchs are not implemented for clang");
+
+            sf->setOutputFile(gch_fn); // is it correct?
+            if (force_include_pch_header_to_pch_source)
+                c->ForcedIncludeFiles().push_back(p.header);
+
+            IncludeDirectories.insert(pch_dir);
         }
         else if (auto c = sf->compiler->as<GNUCompiler>())
         {
-            c->ForcedIncludeFiles().push_back(p.header);
-            //c->PrecompiledHeaderFilename() = pch_fn;
-            //c->PrecompiledHeaderFilename.input_dependency = true;
-            //c->PrecompiledHeader().use = p.header;
+            sf->setOutputFile(gch_fn);
+            c->Language = "c++-header";
+            if (force_include_pch_header_to_pch_source)
+                c->ForcedIncludeFiles().push_back(p.header);
+
+            IncludeDirectories.insert(pch_dir);
         }
     }
 }
@@ -1171,9 +1189,11 @@ Commands NativeExecutedTarget::getGeneratedCommands() const
 
 Commands NativeExecutedTarget::getCommands() const
 {
-    Commands cmds;
+    if (getSolution()->skipTarget(Scope))
+        return {};
+
     if (already_built)
-        return cmds;
+        return {};
 
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
@@ -1204,6 +1224,7 @@ Commands NativeExecutedTarget::getCommands() const
         }
     }*/
 
+    Commands cmds;
     if (HeaderOnly && HeaderOnly.value())
     {
         cmds.insert(generated.begin(), generated.end());
@@ -1685,6 +1706,9 @@ void NativeExecutedTarget::detectLicenseFile()
 
 bool NativeExecutedTarget::prepare()
 {
+    if (getSolution()->skipTarget(Scope))
+        return false;
+
     //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "mmo_extractor");
 
     /*{

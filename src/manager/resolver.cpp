@@ -134,7 +134,7 @@ void PackageStore::saveLockFile(const path &fn) const
     for (auto &[u, r] : std::map<UnresolvedPackage, DownloadDependency>(resolved_packages.begin(), resolved_packages.end()))
         jp[u.toString()]["package"] = r.toString();
 
-    write_file(fn, j.dump(2));
+    write_file_if_different(fn, j.dump(2));
 }
 
 ResolvedPackagesMap resolve_dependencies(const UnresolvedPackages &deps)

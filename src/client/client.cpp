@@ -227,6 +227,7 @@ int main(int argc, char **argv)
 static cl::opt<String> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
 static cl::opt<String> build_arg_generate(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_generate));
 static cl::opt<String> build_arg_update(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_update));
+static cl::opt<String> build_arg_test(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_test));
 static cl::opt<String> list_arg(cl::Positional, cl::desc("Package regex to list"), cl::init("."), cl::sub(subcommand_list));
 
 // ide commands
@@ -547,9 +548,13 @@ SUBCOMMAND_DECL(pack)
 
 }
 
+extern bool gWithTesting;
+
 SUBCOMMAND_DECL(test)
 {
-
+    gWithTesting = true;
+    build_arg = build_arg_test.getValue();
+    cli_build();
 }
 
 extern ::cl::opt<bool> dry_run;

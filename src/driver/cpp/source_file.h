@@ -176,6 +176,7 @@ struct PrecompiledHeader
     path header;
     path source;
     // path pch; // file itself
+    bool force_include_pch = false;
 };
 
 }

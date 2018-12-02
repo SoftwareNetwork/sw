@@ -76,6 +76,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     ChecksStorage checksStorage;
     FileStorage *fs = nullptr;
     path fetch_dir;
+    bool with_testing = false;
 
     // other data
     bool silent = false;
@@ -129,6 +130,16 @@ public:
     path getIdeDir() const;
     path getExecutionPlansDir() const;
     path getExecutionPlanFilename() const;
+
+    bool skipTarget(TargetScope Scope) const;
+
+    // tests
+    // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
+    Commands tests;
+    void addTest(const ExecutableTarget &t);
+    void addTest(const String &name, const ExecutableTarget &t);
+    driver::cpp::CommandBuilder addTest();
+    driver::cpp::CommandBuilder addTest(const String &name);
 
     //protected:
     // known targets are downloaded

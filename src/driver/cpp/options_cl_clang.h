@@ -156,10 +156,10 @@ struct SW_DRIVER_CPP_API GNUOptions
         cl::InputDependency{},
     };
 
-    /*COMMAND_LINE_OPTION(Language, bool)
+    COMMAND_LINE_OPTION(Language, String)
     {
         cl::CommandFlag{ "x" },
-    };*/
+    };
 
     COMMAND_LINE_OPTION(OutputFile, path)
     {

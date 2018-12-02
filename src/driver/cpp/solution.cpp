@@ -52,6 +52,7 @@ static cl::opt<bool> static_build("static-build", cl::desc("Set static build")/*
 static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build")/*, cl::sub(subcommand_ide)*/);
 
 extern bool gVerbose;
+bool gWithTesting;
 
 void build_self(sw::Solution &s);
 void check_self(sw::Checker &c);
@@ -212,6 +213,7 @@ Solution::Solution(const Solution &rhs)
     , source_dirs_by_source(rhs.source_dirs_by_source)
     , fs(rhs.fs)
     , fetch_dir(rhs.fetch_dir)
+    , with_testing(rhs.with_testing)
     , events(rhs.events)
 {
     Checks.solution = this;
@@ -281,6 +283,44 @@ path Solution::getExecutionPlanFilename() const
     for (auto &[pkg, _] : TargetsToBuild)
         n += pkg.toString();
     return getExecutionPlansDir() / (getConfig() + "_" + sha1(n).substr(0, 8) + ".explan");
+}
+
+bool Solution::skipTarget(TargetScope Scope) const
+{
+    if (Scope == TargetScope::Test ||
+        Scope == TargetScope::UnitTest
+        )
+        return !with_testing;
+    return false;
+}
+
+void Solution::addTest(const ExecutableTarget &t)
+{
+    addTest("test: [test." + std::to_string(tests.size() + 1) + "]", t);
+}
+
+void Solution::addTest(const String &name, const ExecutableTarget &t)
+{
+    auto c = t.addCommand();
+    c << cmd::prog(t);
+    c << cmd::wdir(t.getOutputFile().parent_path());
+    tests.insert(c.c);
+    c.c->name = name;
+    c.c->always = true;
+}
+
+driver::cpp::CommandBuilder Solution::addTest()
+{
+    return addTest("test: [test." + std::to_string(tests.size() + 1) + "]");
+}
+
+driver::cpp::CommandBuilder Solution::addTest(const String &name)
+{
+    driver::cpp::CommandBuilder c(*fs);
+    tests.insert(c.c);
+    c.c->name = name;
+    c.c->always = true;
+    return c;
 }
 
 StaticLibraryTarget &Solution::getImportLibrary()
@@ -1374,7 +1414,11 @@ FilesMap Build::build_configs_separate(const Files &files)
 
         lib += fn;
         write_file_if_different(getImportPchFile(), cppan_cpp);
-        lib.addPrecompiledHeader("sw/driver/cpp/sw.h", getImportPchFile());
+        PrecompiledHeader pch;
+        pch.header = "sw/driver/cpp/sw.h";
+        pch.source = getImportPchFile();
+        pch.force_include_pch = true;
+        lib.addPrecompiledHeader(pch);
         if (auto s = lib[getImportPchFile()].template as<NativeSourceFile>())
         {
             if (auto C = s->compiler->template as<VisualStudioCompiler>())
@@ -1539,6 +1583,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             auto fn = r.getDirSrc2() / getConfigFilename();
             auto h = getFilesHash({ fn });
             ctx.addLine("// " + r.toString());
+            ctx.addLine("// " + normalize_path(fn));
             if (Settings.HostOS.Type != OSType::Windows)
                 ctx.addLine("extern \"C\"");
             ctx.addLine("void build_" + h + "(Solution &);");
@@ -1548,6 +1593,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             ctx.addLine();
 
             build.addLine("// " + r.toString());
+            build.addLine("// " + normalize_path(fn));
             build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, r.prefix).toString() + "\";");
             build.addLine("s.current_module = \"" + r.toString() + "\";");
             build.addLine("build_" + h + "(s);");
@@ -1576,7 +1622,11 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
     // after files
     write_file_if_different(getImportPchFile(), cppan_cpp);
-    lib.addPrecompiledHeader("sw/driver/cpp/sw.h", getImportPchFile());
+    PrecompiledHeader pch;
+    pch.header = "sw/driver/cpp/sw.h";
+    pch.source = getImportPchFile();
+    pch.force_include_pch = true;
+    lib.addPrecompiledHeader(pch);
     if (auto s = lib[getImportPchFile()].template as<NativeSourceFile>())
     {
         if (auto C = s->compiler->template as<VisualStudioCompiler>())
@@ -1993,6 +2043,16 @@ bool Build::execute()
         }
 
         Solution::execute();
+
+        if (with_testing)
+        {
+            Commands cmds;
+            for (auto &s : solutions)
+                cmds.insert(s.tests.begin(), s.tests.end());
+            auto p = Solution::getExecutionPlan(cmds);
+            Solution::execute(p);
+        }
+
         return true;
     //}
     //catch (std::exception &e) { LOG_ERROR(logger, "error during build: " << e.what()); }
@@ -2055,6 +2115,9 @@ void Build::run_package(const String &s)
 
 void Build::load(const path &dll)
 {
+    if (gWithTesting)
+        with_testing = true;
+
     if (configure)
     {
         // explicit presets
