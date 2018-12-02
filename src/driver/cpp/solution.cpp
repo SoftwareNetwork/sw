@@ -2228,21 +2228,32 @@ const Module &ModuleStorage::get(const path &dll)
 }
 
 Module::Module(const path &dll)
-try
-    : module(new boost::dll::shared_library(dll.wstring(),
-        boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global))
 {
+    boost::system::error_code ec;
+    module = new boost::dll::shared_library(
+#ifdef _WIN32
+        dll.wstring()
+#else
+        dll.u8string()
+#endif
+        , boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global
+        //, ec
+        );
+    if (ec)
+    {
+        String err;
+        err = "Module " + normalize_path(dll) + " is in bad shape: " + ec.message();
+        err += " Will rebuild on the next run.";
+        //LOG_ERROR(logger, err);
+        fs::remove(dll);
+        throw std::runtime_error(err);
+    }
     if (module->has("build"))
         build_ = module->get<void(Solution&)>("build");
     if (module->has("check"))
         check_ = module->get<void(Checker&)>("check");
     if (module->has("configure"))
         configure_ = module->get<void(Solution&)>("configure");
-}
-catch (...)
-{
-    LOG_ERROR(logger, "Module " + normalize_path(dll) + " is in bad shape. Will rebuild on the next run.");
-    fs::remove(dll);
 }
 
 Module::~Module()
