@@ -35,7 +35,10 @@ TYPED_EXCEPTION(DependencyNotResolved);
 
 static cl::opt<bool> force_server_query("s", cl::desc("Force server check"));
 static cl::alias force_server_query2("server", cl::desc("Alias for -s"), cl::aliasopt(force_server_query));
-// also "server"
+
+bool gVerbose;
+static cl::opt<bool, true> verbose_opt("verbose", cl::desc("Verbose output"), cl::location(gVerbose));
+static cl::alias verbose_opt2("v", cl::desc("Alias for -verbose"), cl::aliasopt(verbose_opt));
 
 #define SW_CURRENT_LOCK_FILE_VERSION 1
 

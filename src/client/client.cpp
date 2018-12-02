@@ -91,7 +91,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 #endif
 
 static cl::opt<path> working_directory("d", cl::desc("Working directory"));
-static cl::opt<bool> verbose("verbose", cl::desc("Verbose output"));
+extern bool gVerbose;
 static cl::opt<bool> trace("trace", cl::desc("Trace output"));
 static cl::opt<int> jobs("j", cl::desc("Number of jobs"), cl::init(-1));
 
@@ -109,7 +109,7 @@ int setup_main(const Strings &args)
 
     setup_log("INFO");
 
-    if (verbose)
+    if (gVerbose)
         setup_log("DEBUG");
     if (trace)
         setup_log("TRACE");
@@ -227,6 +227,7 @@ int main(int argc, char **argv)
 static cl::opt<String> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
 static cl::opt<String> build_arg_generate(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_generate));
 static cl::opt<String> build_arg_update(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_update));
+static cl::opt<String> list_arg(cl::Positional, cl::desc("Package regex to list"), cl::init("."), cl::sub(subcommand_list));
 
 // ide commands
 static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl::sub(subcommand_ide)*/);
@@ -534,6 +535,11 @@ SUBCOMMAND_DECL(init)
         p.SetStringValue(L"", prog + L" build %1");
     }
 #endif
+}
+
+SUBCOMMAND_DECL(list)
+{
+    getPackagesDatabase().listPackages(list_arg);
 }
 
 SUBCOMMAND_DECL(pack)
