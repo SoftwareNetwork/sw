@@ -138,7 +138,7 @@ struct SW_DRIVER_CPP_API SourceFile : File
     virtual ~SourceFile() = default;
 
     virtual std::shared_ptr<builder::Command> getCommand() const { return nullptr; }
-    virtual Files getGeneratedDirs() const { return Files(); }
+    //virtual Files getGeneratedDirs() const { return Files(); }
     virtual std::shared_ptr<SourceFile> clone() const { return std::make_shared<SourceFile>(*this); }
 
     bool isActive() const;
@@ -166,7 +166,7 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     virtual ~NativeSourceFile();
 
     virtual std::shared_ptr<builder::Command> getCommand() const override;
-    virtual Files getGeneratedDirs() const override;
+    //virtual Files getGeneratedDirs() const override;
     //void setSourceFile(const path &input, const path &output);
     void setOutputFile(const path &output);
 };

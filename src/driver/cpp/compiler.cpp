@@ -739,12 +739,12 @@ void VisualStudioASMCompiler::setOutputFile(const path &output_file)
     ObjectFile = output_file;
 }
 
-Files VisualStudioASMCompiler::getGeneratedDirs() const
+/*Files VisualStudioASMCompiler::getGeneratedDirs() const
 {
     Files f;
     f.insert(ObjectFile().parent_path());
     return f;
-}
+}*/
 
 void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output_file)
 {
@@ -803,12 +803,12 @@ void VisualStudioCompiler::setOutputFile(const path &output_file)
     ObjectFile = output_file;
 }
 
-Files VisualStudioCompiler::getGeneratedDirs() const
+/*Files VisualStudioCompiler::getGeneratedDirs() const
 {
     Files f;
     f.insert(ObjectFile().parent_path());
     return f;
-}
+}*/
 
 std::shared_ptr<Program> VisualStudioCompiler::clone() const
 {
@@ -875,12 +875,12 @@ void ClangCompiler::setOutputFile(const path &output_file)
     OutputFile = output_file;
 }
 
-Files ClangCompiler::getGeneratedDirs() const
+/*Files ClangCompiler::getGeneratedDirs() const
 {
     Files f;
     f.insert(OutputFile().parent_path());
     return f;
-}
+}*/
 
 std::shared_ptr<Program> ClangCompiler::clone() const
 {
@@ -940,12 +940,12 @@ void ClangClCompiler::setOutputFile(const path &output_file)
     ObjectFile = output_file;
 }
 
-Files ClangClCompiler::getGeneratedDirs() const
+/*Files ClangClCompiler::getGeneratedDirs() const
 {
     Files f;
     f.insert(ObjectFile().parent_path());
     return f;
-}
+}*/
 
 std::shared_ptr<Program> ClangClCompiler::clone() const
 {
@@ -1014,12 +1014,12 @@ void GNUASMCompiler::setOutputFile(const path &output_file)
     OutputFile = output_file;
 }
 
-Files GNUASMCompiler::getGeneratedDirs() const
+/*Files GNUASMCompiler::getGeneratedDirs() const
 {
     Files f;
     f.insert(OutputFile().parent_path());
     return f;
-}
+}*/
 
 void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
 {
@@ -1069,12 +1069,12 @@ void GNUCompiler::setOutputFile(const path &output_file)
     OutputFile = output_file;
 }
 
-Files GNUCompiler::getGeneratedDirs() const
+/*Files GNUCompiler::getGeneratedDirs() const
 {
     Files f;
     f.insert(OutputFile().parent_path());
     return f;
-}
+}*/
 
 std::shared_ptr<Program> GNUCompiler::clone() const
 {

@@ -551,9 +551,9 @@ std::shared_ptr<builder::Command> NativeSourceFile::getCommand() const
     return cmd;
 }
 
-Files NativeSourceFile::getGeneratedDirs() const
+/*Files NativeSourceFile::getGeneratedDirs() const
 {
     return compiler->getGeneratedDirs();
-}
+}*/
 
 }
