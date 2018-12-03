@@ -20,23 +20,6 @@
 #include <primitives/http.h>
 #include <boost/algorithm/string.hpp>
 
-/// everything for building
-SW_PACKAGE_API
-void build(sw::Solution &s);
-
-/// checker
-SW_PACKAGE_API
-void check(sw::Checker &c);
-
-/// everything for configuring
-SW_PACKAGE_API
-void configure(sw::Solution &s);
-
-// void setup() - current config?
-// void fetch() - fetch sources
-// void self(); // for self build instructions? why?
-// void test(); // ?
-
 //namespace sw {}
 using namespace sw;
 using namespace sw::driver::cpp;
@@ -48,4 +31,8 @@ using namespace sw::driver::cpp;
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4068)
+#endif
+
+#ifdef _WIN32
+#include "sw1.h"
 #endif

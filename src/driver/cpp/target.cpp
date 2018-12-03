@@ -932,7 +932,10 @@ Files NativeExecutedTarget::gatherObjectFilesWithoutLibraries() const
 {
     Files obj;
     for (auto &f : gatherSourceFiles())
-        obj.insert(f->output.file);
+    {
+        if (f->output.file.extension() != ".gch")
+            obj.insert(f->output.file);
+    }
     for (auto &[f, sf] : *this)
     {
 #ifdef CPPAN_OS_WINDOWS
@@ -1056,6 +1059,10 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
 
     // gch always uses header filename + .gch
     auto gch_fn = pch.parent_path() / (p.header.filename().string() + ".gch");
+#ifndef _WIN32
+    pch_dir = getUserDirectories().storage_dir_tmp;
+    gch_fn = getUserDirectories().storage_dir_tmp / "sw/driver/cpp/sw.h.gch";
+#endif
 
     // before adding pch source file to target
     // on this step we setup compilers to USE our created pch
@@ -1094,6 +1101,11 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
             }
             else if (auto c = sf->compiler->as<GNUCompiler>())
             {
+                // !
+                // add generated file, so it will be executed before
+                File(gch_fn, *getSolution()->fs).getFileRecord().setGenerated(true);
+                *this += gch_fn;
+                
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
                 //c->PrecompiledHeaderFilename() = pch_fn;
@@ -1104,6 +1116,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
     }
 
     *this += pch;
+    break_gch_deps[pch] = gch_fn;
 
     // on this step we setup compilers to CREATE our pch
     if (auto sf = ((*this)[pch]).as<NativeSourceFile>())
@@ -1276,7 +1289,33 @@ Commands NativeExecutedTarget::getCommands() const
 
     // add generated files
     for (auto &cmd : cmds)
+    {
         cmd->dependencies.insert(generated.begin(), generated.end());
+        
+        for (auto &[k,v] : break_gch_deps)
+        {
+            auto input_pch = std::find_if(cmd->inputs.begin(), cmd->inputs.end(),
+            [&k](const auto &p)
+            {   
+                return p == k;
+            });
+            if (input_pch == cmd->inputs.end())
+                continue;
+                
+            for (auto &c : generated)
+            {
+                auto output_gch = std::find_if(c->outputs.begin(), c->outputs.end(),
+                [&v](const auto &p)
+                {   
+                    return p == v;
+                });
+                if (output_gch == c->outputs.end())
+                    continue;
+                
+                cmd->dependencies.erase(c);
+            }
+        }
+    }
     cmds.insert(generated.begin(), generated.end());
 
     //LOG_DEBUG(logger, "Building target: " + pkg.ppath.toString());

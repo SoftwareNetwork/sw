@@ -7,6 +7,8 @@
 // This is precompiled header for config files.
 // Also it contain some control routines for their work.
 
+#include <sw/driver/cpp/sw.h>
+
 #include <string>
 
 #ifdef CPPAN_OS_WINDOWS
@@ -59,7 +61,7 @@ BOOL WINAPI DllMain(HINSTANCE h, DWORD reason, LPVOID)
 }
 #endif
 
-std::string getVersionString()
+/*std::string getVersionString()
 {
     return "0.3.0";
-}
+}*/

@@ -1419,7 +1419,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         pch.source = getImportPchFile();
         pch.force_include_pch = true;
         lib.addPrecompiledHeader(pch);
-        if (auto s = lib[getImportPchFile()].template as<NativeSourceFile>())
+        /*if (auto s = lib[getImportPchFile()].template as<NativeSourceFile>())
         {
             if (auto C = s->compiler->template as<VisualStudioCompiler>())
             {
@@ -1427,7 +1427,7 @@ FilesMap Build::build_configs_separate(const Files &files)
                 of += ".obj";
                 //C->setOutputFile(of);
             }
-        }
+        }*/
 
         auto [headers, udeps] = getFileDependencies(fn);
 
@@ -1451,6 +1451,18 @@ FilesMap Build::build_configs_separate(const Files &files)
                 {
                     c->ForcedIncludeFiles().push_back(h);
                 }
+            }
+        }
+
+        if (auto sf = lib[fn].template as<NativeSourceFile>())
+        {
+            if (auto c = sf->compiler->template as<ClangCompiler>())
+            {
+                throw std::runtime_error("pchs are not implemented for clang");
+            }
+            else if (auto c = sf->compiler->template as<GNUCompiler>())
+            {
+                c->ForcedIncludeFiles().push_back("sw/driver/cpp/sw1.h");
             }
         }
 
@@ -1568,6 +1580,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     }
 
     // generate main source file
+    path many_files_fn;
     if (many_files)
     {
         primitives::CppContext ctx;
@@ -1615,7 +1628,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         ctx += build;
         ctx += check;
 
-        auto p = BinaryDir / "self" / ("sw." + h + ".cpp");
+        auto p = many_files_fn = BinaryDir / "self" / ("sw." + h + ".cpp");
         write_file_if_different(p, ctx.getText());
         lib += p;
     }
@@ -1627,7 +1640,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     pch.source = getImportPchFile();
     pch.force_include_pch = true;
     lib.addPrecompiledHeader(pch);
-    if (auto s = lib[getImportPchFile()].template as<NativeSourceFile>())
+    /*if (auto s = lib[getImportPchFile()].template as<NativeSourceFile>())
     {
         if (auto C = s->compiler->template as<VisualStudioCompiler>())
         {
@@ -1635,47 +1648,76 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             of += ".obj";
             //C->setOutputFile(of);
         }
-    }
+    }*/
 
     for (auto &fn : files)
     {
         auto[headers, udeps] = getFileDependencies(fn);
         if (auto sf = lib[fn].template as<NativeSourceFile>())
         {
-            if (many_files)
+            auto add_defs = [&many_files, &fn](auto &c)
             {
-                if (auto c = sf->compiler->template as<NativeCompiler>())
-                {
-                    auto h = getFilesHash({ fn });
-                    c->Definitions["configure"] = "configure_" + h;
-                    c->Definitions["build"] = "build_" + h;
-                    c->Definitions["check"] = "check_" + h;
-                }
-            }
+                if (!many_files)
+                    return;
+                auto h = getFilesHash({ fn });
+                c->Definitions["configure"] = "configure_" + h;
+                c->Definitions["build"] = "build_" + h;
+                c->Definitions["check"] = "check_" + h;
+            };
 
             if (auto c = sf->compiler->template as<VisualStudioCompiler>())
             {
+                add_defs(c);
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler>())
             {
+                add_defs(c);
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
             }
             else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
+                throw std::runtime_error("clang compiler is not implemented");
+
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
+                // we use pch, but cannot add more defs on CL
+                // so we create a file with them
+                path h = fn.parent_path().parent_path() / "aux" / "defs.h";
+                primitives::CppContext ctx;
+
+                auto hash = getFilesHash({ fn });
+                ctx.addLine("#define configure configure_" + hash);
+                ctx.addLine("#define build build_" + hash);
+                ctx.addLine("#define check check_" + hash);
+
+                write_file_if_different(h, ctx.getText());
+                c->ForcedIncludeFiles().push_back(h);
+                c->ForcedIncludeFiles().push_back("sw/driver/cpp/sw1.h");
+
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
             }
         }
         for (auto &d : udeps)
             lib += std::make_shared<Dependency>(d);
+    }
+
+    if (auto sf = lib[many_files_fn].template as<NativeSourceFile>())
+    {
+        if (auto c = sf->compiler->template as<ClangCompiler>())
+        {
+            throw std::runtime_error("pchs are not implemented for clang");
+        }
+        else if (auto c = sf->compiler->template as<GNUCompiler>())
+        {
+            c->ForcedIncludeFiles().push_back("sw/driver/cpp/sw1.h");
+        }
     }
 
 #if defined(CPPAN_OS_WINDOWS)

@@ -128,6 +128,11 @@ struct SW_DRIVER_CPP_API GNUOptions
         cl::CommandFlag{ "c" }, true,
     };
 
+    COMMAND_LINE_OPTION(Language, String)
+    {
+        cl::CommandFlag{ "x" },
+    };
+
     COMMAND_LINE_OPTION(CPPStandard, CPPLanguageStandard)
     {
         cl::CommandLineFunction<CPPLanguageStandard>{&getCommandLineImplCPPLanguageStandardGNU},
@@ -154,11 +159,6 @@ struct SW_DRIVER_CPP_API GNUOptions
     COMMAND_LINE_OPTION(InputFile, path)
     {
         cl::InputDependency{},
-    };
-
-    COMMAND_LINE_OPTION(Language, String)
-    {
-        cl::CommandFlag{ "x" },
     };
 
     COMMAND_LINE_OPTION(OutputFile, path)

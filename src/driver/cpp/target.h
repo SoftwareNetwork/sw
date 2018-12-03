@@ -783,6 +783,7 @@ protected:
 private:
     path OutputDir;
     bool already_built = false;
+    std::map<path, path> break_gch_deps;
 
     void autoDetectOptions();
     path getOutputFileName(const path &root) const;
