@@ -106,7 +106,10 @@ void PackageStore::loadLockFile(const path &fn)
         auto i = download_dependencies_.find(d);
         if (i == download_dependencies_.end())
             throw std::runtime_error("bad lock file");
-        resolved_packages[p] = *i;
+        d = *i;
+        if (v.value().find("installed") != v.value().end())
+            d.installed = v.value()["installed"];
+        resolved_packages[p] = d;
     }
 
     use_lock_file = true;
@@ -114,6 +117,9 @@ void PackageStore::loadLockFile(const path &fn)
 
 void PackageStore::saveLockFile(const path &fn) const
 {
+    if (download_dependencies_.empty() && resolved_packages.empty())
+        return;
+
     nlohmann::json j;
     j["version"] = SW_CURRENT_LOCK_FILE_VERSION;
 
@@ -132,7 +138,11 @@ void PackageStore::saveLockFile(const path &fn) const
 
     auto &jp = j["resolved_packages"];
     for (auto &[u, r] : std::map<UnresolvedPackage, DownloadDependency>(resolved_packages.begin(), resolved_packages.end()))
+    {
         jp[u.toString()]["package"] = r.toString();
+        if (r.installed)
+            jp[u.toString()]["installed"] = true;
+    }
 
     write_file_if_different(fn, j.dump(2));
 }

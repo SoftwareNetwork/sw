@@ -39,6 +39,8 @@ optional<path> CppDriver::resolveConfig(const path &file_or_dir) const
 
 PackageScriptPtr CppDriver::build(const path &file_or_dir) const
 {
+    throw std::runtime_error("function disabled");
+
     auto f = resolveConfig(file_or_dir);
     if (!f)
         return {};
@@ -54,8 +56,20 @@ PackageScriptPtr CppDriver::build(const path &file_or_dir) const
 PackageScriptPtr CppDriver::load(const path &file_or_dir) const
 {
     auto f = resolveConfig(file_or_dir);
-    if (!f)
-        return {};
+    if (!f || f.value().filename() != getConfigFilename())
+    {
+        path p = file_or_dir;
+        if (fs::is_directory(p))
+            current_thread_path(p);
+        else
+            current_thread_path(p = p.parent_path());
+
+        auto b = std::make_unique<Build>();
+        b->Local = true;
+        b->configure = true;
+        b->load_configless(file_or_dir);
+        return b;
+    }
     current_thread_path(f.value().parent_path());
 
     auto b = std::make_unique<Build>();
@@ -81,12 +95,7 @@ PackageScriptPtr CppDriver::load(const path &file_or_dir) const
 
 bool CppDriver::execute(const path &file_or_dir) const
 {
-    auto f = resolveConfig(file_or_dir);
-    if (!f)
-        return {};
-    current_thread_path(f.value().parent_path());
-
-    if (auto s = load(f.value()); s)
+    if (auto s = load(file_or_dir); s)
         return s->execute();
     return false;
 }

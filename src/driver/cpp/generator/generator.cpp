@@ -844,7 +844,7 @@ void VSGenerator::generate(const Build &b)
     ctx.endGlobal();
 
     const auto compiler_name = boost::to_lower_copy(toString(b.Settings.Native.CompilerType));
-    String fn = "sw_";
+    String fn = b.ide_solution_name + "_";
     fn += compiler_name + "_" + toPathString(type);
     fn += ".sln";
     write_file(dir / fn, ctx.getText());
@@ -902,9 +902,9 @@ void VSGeneratorNMake::generate(const Build &b)
             else if (b.Settings.Native.CompilerType == CompilerType::MSVC)
                 compiler = "--compiler msvc";
 
-            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config ide");
-            pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " " + cfg + " ide --clean");
-            pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " ide --rebuild");
+            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler + " --do-not-rebuild-config ide");
+            pctx.addBlock("NMakeCleanCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " ide --clean");
+            pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler + " ide --rebuild");
 
             pctx.endBlock();
         });
@@ -1016,10 +1016,10 @@ void VSGeneratorNMake::generate(const Build &b)
             auto o = nt->makeOutputFile();
             o = o.parent_path().parent_path() / s.getConfig(t.get()) / o.filename();
             o += nt->getOutputFile().extension();
-            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " --do-not-rebuild-config --target " + p.target_name + " ide");
+            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler + " --do-not-rebuild-config --target " + p.target_name + " ide");
             pctx.addBlock("NMakeOutput", o.u8string());
-            pctx.addBlock("NMakeCleanCommandLine", "sw -d " + cwd + " " + cfg + " ide --clean");
-            pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + cwd + " " + cfg + " " + compiler + " ide --rebuild");
+            pctx.addBlock("NMakeCleanCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " ide --clean");
+            pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler + " ide --rebuild");
             String defs;
             for (auto &[k, v] : nt->Definitions)
             {
@@ -1127,7 +1127,7 @@ void VSGeneratorNMake::generate(const Build &b)
     ctx.endGlobal();
 
     const auto compiler_name = boost::to_lower_copy(toString(b.Settings.Native.CompilerType));
-    String fn = "sw_";
+    String fn = b.ide_solution_name + "_";
     fn += compiler_name + "_" + toPathString(type);
     fn += ".sln";
     write_file(dir / fn, ctx.getText());

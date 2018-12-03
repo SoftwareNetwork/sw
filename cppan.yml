@@ -147,6 +147,7 @@ projects:
             - src/driver/cpp/.*
         exclude_from_build:
             - src/driver/cpp/misc/.*
+            - src/driver/cpp/inserts/cppan.cpp
 
         include_directories:
             - include

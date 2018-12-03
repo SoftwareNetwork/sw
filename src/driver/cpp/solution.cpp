@@ -214,6 +214,8 @@ Solution::Solution(const Solution &rhs)
     , fs(rhs.fs)
     , fetch_dir(rhs.fetch_dir)
     , with_testing(rhs.with_testing)
+    , ide_solution_name(rhs.ide_solution_name)
+    , config_file_or_dir(rhs.config_file_or_dir)
     , events(rhs.events)
 {
     Checks.solution = this;
@@ -269,7 +271,7 @@ optional<path> Solution::getSourceDir(const Source &s, const Version &v) const
 path Solution::getIdeDir() const
 {
     const auto compiler_name = boost::to_lower_copy(toString(Settings.Native.CompilerType));
-    return BinaryDir / "sln" / compiler_name;
+    return BinaryDir / "sln" / ide_solution_name / compiler_name;
 }
 
 path Solution::getExecutionPlansDir() const
@@ -526,23 +528,6 @@ Commands Solution::getCommands() const
 
     return cmds;
 }
-
-/*Files Solution::getGeneratedDirs() const
-{
-    Files f;
-    for (auto &p : getChildren())
-    {
-        auto c = p.second->getGeneratedDirs();
-        f.insert(c.begin(), c.end());
-    }
-    return f;
-}
-
-void Solution::createGeneratedDirs() const
-{
-    for (auto &d : getGeneratedDirs())
-        fs::create_directories(d);
-}*/
 
 void Solution::printGraph(const path &p) const
 {
@@ -877,71 +862,11 @@ void Solution::prepare()
     if (prepared)
         return;
 
-    /*static int recursion_count = 0;
-    recursion_count++;
-    SCOPE_EXIT
-    {
-        recursion_count--;
-    };
-
-    if (recursion_count > 30)
-        LOG_ERROR(logger, "recursion detected: " << recursion_count);
-    if (recursion_count > 45)
-        throw std::logic_error("stopping recursion");*/
-
     // all targets are set stay unchanged from user
     // so, we're ready to some preparation passes
 
     // resolve all deps first
     build_and_resolve();
-
-    /*while (1)
-    {
-        bool added = false;
-
-        // resolve unresolved deps that is present is dummy_children
-        for (auto &[p, t] : getChildren())
-        {
-            auto nt = (NativeExecutedTarget*)t.get();
-            nt->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-                [this, &added](auto &v, auto &s)
-            {
-                for (auto &d : v.Dependencies)
-                {
-                    for (auto &[pp, t2] : getChildren())
-                    {
-                        if (d->getPackage().canBe(t2->getPackage()))
-                        {
-                            d->setTarget(std::static_pointer_cast<NativeTarget>(t2));
-                            break;
-                        }
-                    }
-                    if (!d->target.lock())
-                    {
-                        for (auto &[pp, t2] : dummy_children)
-                        {
-                            if (d->getPackage().canBe(t2->getPackage()))
-                            {
-                                //d->setTarget(std::static_pointer_cast<NativeTarget>(t2));
-                                added = true;
-                                //children[t2->pkg] = t2;
-                                //dummy_children.erase(t2->pkg);
-                                break;
-                            }
-                        }
-                        //if (!added)
-                            //throw std::logic_error("Unresolved package before prepare: " + d->getPackage().toString());
-                    }
-                }
-            });
-        }
-
-        if (!added)
-            break;
-
-        for (auto &m : used_modules)
-            getModuleStorage(base_ptr).get(m).build(*this);
-    }*/
 
     // multipass prepare()
     // if we add targets inside this loop,
@@ -962,9 +887,6 @@ void Solution::prepare()
         }
         waitAndGet(fs);
     }
-
-    // move to prepare?
-    //createGeneratedDirs();
 
     prepared = true;
 }
@@ -1046,24 +968,6 @@ ExecutionPlan<builder::Command> Solution::getExecutionPlan(Commands &cmds) const
     throw std::runtime_error("Cannot create execution plan because of cyclic dependencies");
 }
 
-/*void Solution::registerCallback(const detail::EventCallback::BasicEventCallback &cb)
-{
-    detail::EventCallback c;
-    c.cb = cb;
-    events.push_back(c);
-}
-
-void Solution::registerCallback(const TypedEventCallback &cb, CallbackType et)
-{
-    detail::EventCallback c;
-    c.cb = [cb](TargetBase &t, CallbackType et2)
-    {
-        cb(t);
-    };
-    c.types.insert(et);
-    events.push_back(c);
-}*/
-
 void Solution::call_event(TargetBase &t, CallbackType et)
 {
     for (auto &e : events)
@@ -1111,34 +1015,7 @@ Build::~Build()
 
 void Build::setSettings()
 {
-    /*Settings.Native.ASMCompiler = ((ASMLanguage*)languages[LanguageType::ASM].get())->compiler;
-    Settings.Native.CCompiler = ((CLanguage*)languages[LanguageType::C].get())->compiler;
-    Settings.Native.CPPCompiler = ((CPPLanguage*)languages[LanguageType::CPP].get())->compiler;*/
-
-    //Settings.Native.CompilerType = ((CPPLanguage*)languages[LanguageType::CPP].get())->compiler->Type;
-
-    //throw std::runtime_error("todo");
-    //Settings.Native.CompilerType = ((CPPLanguage*)user_defined_languages[extensions[".cpp"]].get())->compiler->Type;
-
     fs = &getFileStorage(getConfig());
-
-    /*Settings.Native.ASMCompiler->fs = fs;
-    Settings.Native.CCompiler->fs = fs;
-    Settings.Native.CPPCompiler->fs = fs;*/
-
-/*#define SET_FS(type)                                                             \
-    ((type##Language *)languages[LanguageType::type].get())->compiler->fs = fs;  \
-    ((type##Language *)languages[LanguageType::type].get())->librarian->fs = fs; \
-    ((type##Language *)languages[LanguageType::type].get())->linker->fs = fs
-
-    SET_FS(ASM);
-    SET_FS(C);
-    SET_FS(CPP);*/
-
-    /*for (auto &lang : getLanguages())
-        for (auto &l : lang->CompiledExtensions)
-            extensions[l] = user_defined_languages[lang];
-    setExtensionLanguage()*/
 
     for (auto &[pp, m] : registered_programs)
         for (auto &[v,p] : m)
@@ -1419,15 +1296,6 @@ FilesMap Build::build_configs_separate(const Files &files)
         pch.source = getImportPchFile();
         pch.force_include_pch = true;
         lib.addPrecompiledHeader(pch);
-        /*if (auto s = lib[getImportPchFile()].template as<NativeSourceFile>())
-        {
-            if (auto C = s->compiler->template as<VisualStudioCompiler>())
-            {
-                path of = getImportPchFile();
-                of += ".obj";
-                //C->setOutputFile(of);
-            }
-        }*/
 
         auto [headers, udeps] = getFileDependencies(fn);
 
@@ -1640,15 +1508,6 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     pch.source = getImportPchFile();
     pch.force_include_pch = true;
     lib.addPrecompiledHeader(pch);
-    /*if (auto s = lib[getImportPchFile()].template as<NativeSourceFile>())
-    {
-        if (auto C = s->compiler->template as<VisualStudioCompiler>())
-        {
-            path of = getImportPchFile();
-            of += ".obj";
-            //C->setOutputFile(of);
-        }
-    }*/
 
     for (auto &fn : files)
     {
@@ -1790,8 +1649,21 @@ path Build::build(const path &fn)
     return dll;
 }
 
+void Build::setupSolutionName(const path &file_or_dir)
+{
+    config_file_or_dir = fs::canonical(file_or_dir);
+
+    bool dir = fs::is_directory(file_or_dir);
+    if (dir || file_or_dir.filename() == getConfigFilename())
+        ide_solution_name = fs::canonical(file_or_dir).filename().u8string();
+    else
+        ide_solution_name = file_or_dir.stem().u8string();
+}
+
 void Build::build_and_load(const path &fn)
 {
+    setupSolutionName(fn);
+
     build(fn);
     //fs->save(); // remove?
     //fs->reset();
@@ -2061,49 +1933,74 @@ bool Build::execute()
         }
     }
 
-    //try
-    //{
-        prepare();
+    prepare();
 
-        for (auto &[n, _] : TargetsToBuild)
+    for (auto &[n, _] : TargetsToBuild)
+    {
+        for (auto &s : solutions)
         {
-            for (auto &s : solutions)
-            {
-                auto &t = s.children[n];
-                if (!t)
-                    throw std::runtime_error("Empty target");
-                s.TargetsToBuild[n] = t;
-            }
+            auto &t = s.children[n];
+            if (!t)
+                throw std::runtime_error("Empty target");
+            s.TargetsToBuild[n] = t;
         }
+    }
 
-        if (ide)
+    if (ide)
+    {
+        // write execution plans
+        for (auto &s : solutions)
         {
-            // write execution plans
-            for (auto &s : solutions)
-            {
-                auto p = s.getExecutionPlan();
-                auto fn = s.getExecutionPlanFilename();
-                if (!fs::exists(fn))
-                    save(fn, p);
-            }
+            auto p = s.getExecutionPlan();
+            auto fn = s.getExecutionPlanFilename();
+            if (!fs::exists(fn))
+                save(fn, p);
         }
+    }
 
-        Solution::execute();
+    Solution::execute();
 
-        if (with_testing)
+    if (with_testing)
+    {
+        Commands cmds;
+        for (auto &s : solutions)
+            cmds.insert(s.tests.begin(), s.tests.end());
+        auto p = Solution::getExecutionPlan(cmds);
+        Solution::execute(p);
+    }
+
+    return true;
+}
+
+bool Build::load_configless(const path &file_or_dir)
+{
+    setupSolutionName(file_or_dir);
+
+    load({}, false);
+
+    bool dir = fs::is_directory(config_file_or_dir);
+
+    auto &s = solutions[0];
+    auto &exe = s.addExecutable(ide_solution_name);
+    bool read_deps_from_comments = false;
+    if (!dir)
+    {
+        exe += file_or_dir;
+
+        // read deps from comments
+        // read_deps_from_comments = true;
+    }
+
+    if (!read_deps_from_comments)
+    {
+        for (auto &[p, d] : getPackageStore().resolved_packages)
         {
-            Commands cmds;
-            for (auto &s : solutions)
-                cmds.insert(s.tests.begin(), s.tests.end());
-            auto p = Solution::getExecutionPlan(cmds);
-            Solution::execute(p);
+            if (d.installed)
+                exe += std::make_shared<Dependency>(p.toString());
         }
+    }
 
-        return true;
-    //}
-    //catch (std::exception &e) { LOG_ERROR(logger, "error during build: " << e.what()); }
-    //catch (...) {}
-    return false;
+    return true;
 }
 
 void Build::build_and_run(const path &fn)
@@ -2159,7 +2056,7 @@ void Build::run_package(const String &s)
     run(a);
 }
 
-void Build::load(const path &dll)
+void Build::load(const path &dll, bool usedll)
 {
     if (gWithTesting)
         with_testing = true;
@@ -2184,7 +2081,8 @@ void Build::load(const path &dll)
 #endif
 
         // configure may change defaults, so we must care below
-        getModuleStorage(base_ptr).get(dll).configure(*this);
+        if (usedll)
+            getModuleStorage(base_ptr).get(dll).configure(*this);
 
         if (boost::iequals(configuration, "Debug"))
             Settings.Native.ConfigurationType = ConfigurationType::Debug;
@@ -2240,15 +2138,19 @@ void Build::load(const path &dll)
         // because they use variables from checks
 
         // make parallel?
-        for (auto &s : solutions)
-            getModuleStorage(base_ptr).get(dll).check(s, s.Checks);
+        if (usedll)
+        {
+            for (auto &s : solutions)
+                getModuleStorage(base_ptr).get(dll).check(s, s.Checks);
+        }
         performChecks();
     }
 
     // build
-    for (auto &s : solutions)
+    if (usedll)
     {
-        getModuleStorage(base_ptr).get(dll).build(s);
+        for (auto &s : solutions)
+            getModuleStorage(base_ptr).get(dll).build(s);
     }
 
     // we build only targets from this package
@@ -2371,23 +2273,13 @@ Module::Module(const path &dll)
 
 Module::~Module()
 {
-//#ifdef _WIN32
     delete module;
-//#endif
 }
 
 void Module::build(Solution &s) const
 {
-    //Solution s2(s);
-    //build_(s2);
     build_.s = &s;
     build_(s);
-    /*for (auto &[p, t] : s2.children)
-    {
-        if (s.knownTargets.find(p) == s.knownTargets.end())
-            continue;
-        s.add(t);
-    }*/
 }
 
 void Module::configure(Solution &s) const

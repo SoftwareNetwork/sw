@@ -23,6 +23,7 @@ SUBCOMMAND(build, "Build files, dirs or packages") COMMA
 SUBCOMMAND(generate, "Generate IDE projects") COMMA
 SUBCOMMAND(ide, "Used to invoke sw application to do IDE tasks: generate project files, clean, rebuild etc.") COMMA
 SUBCOMMAND(init, "Used to do some system setup which may require administrator access.") COMMA
+SUBCOMMAND(install, "Add package to lock.") COMMA
 SUBCOMMAND(list, "List packages in database.") COMMA
 SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
 SUBCOMMAND(test, "Run tests.") COMMA

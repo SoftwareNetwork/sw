@@ -153,8 +153,10 @@ enum class CLanguageStandard
     C95,
     C98,
     C11,
+    C17,
+    C18 = C17,
 
-    CLatest = C11,
+    CLatest = C18,
 };
 
 enum class CPPLanguageStandard

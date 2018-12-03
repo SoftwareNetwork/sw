@@ -46,6 +46,7 @@ struct DownloadDependency1 : ExtendedPackageData
 {
     // own data (private)
     VersionRange range;
+    bool installed = false; // manually installed
 };
 
 struct DownloadDependency : DownloadDependency1

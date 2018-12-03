@@ -77,6 +77,8 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     FileStorage *fs = nullptr;
     path fetch_dir;
     bool with_testing = false;
+    String ide_solution_name;
+    path config_file_or_dir; // original file or dir
 
     // other data
     bool silent = false;
@@ -177,8 +179,6 @@ private:
     //Files used_modules;
 
     void checkPrepared() const;
-    //Files getGeneratedDirs() const;
-    //void createGeneratedDirs() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     void build_and_resolve();
 
@@ -211,8 +211,9 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     void build_and_run(const path &fn);
     void build_package(const String &pkg);
     void run_package(const String &pkg);
-    void load(const path &dll);
+    void load(const path &dll, bool usedll = true);
     bool execute() override;
+    bool load_configless(const path &file_or_dir);
 
     void performChecks() override;
     void prepare() override;
@@ -232,6 +233,7 @@ private:
 
     void setSettings();
     void findCompiler();
+    void setupSolutionName(const path &file_or_dir);
     SharedLibraryTarget &createTarget(const Files &files);
 
 public:

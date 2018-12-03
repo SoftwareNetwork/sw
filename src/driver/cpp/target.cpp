@@ -203,8 +203,6 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
     getSolution()->call_event(*t, CallbackType::CreateTarget);
 
-    //DEBUG_BREAK_IF_STRING_HAS(t->pkg.ppath.toString(), "primitives.version");
-
     auto set_sdir = [&t, this]()
     {
         if (!t->Local && !t->pkg.target_name.empty()/* && t->pkg.ppath.is_pvt()*/)
@@ -510,19 +508,6 @@ DependencyPtr NativeTarget::getDependency() const
     return d;
 }
 
-/*Commands Events_::getCommands() const
-{
-    Commands cmds;
-    //for (auto &e : PreBuild)
-        //cmds.insert(std::make_shared<ExecuteCommand>(*getSolution()->fs, [e] {e(); }));
-    return cmds;
-}
-
-void Events_::clear()
-{
-    PreBuild.clear();
-}*/
-
 void TargetOptions::add(const IncludeDirectory &i)
 {
     path idir = i.i;
@@ -541,11 +526,6 @@ void TargetOptions::remove(const IncludeDirectory &i)
         idir = target->SourceDir / idir;
     IncludeDirectories.erase(idir);
 }
-
-/*void TargetOptionsGroup::add(const std::function<void(void)> &f)
-{
-    Events.PreBuild.push_back(f);
-}*/
 
 void TargetOptionsGroup::add(const Variable &v)
 {
@@ -1105,7 +1085,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
                 // add generated file, so it will be executed before
                 File(gch_fn, *getSolution()->fs).getFileRecord().setGenerated(true);
                 *this += gch_fn;
-                
+
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
                 //c->PrecompiledHeaderFilename() = pch_fn;
@@ -1291,27 +1271,27 @@ Commands NativeExecutedTarget::getCommands() const
     for (auto &cmd : cmds)
     {
         cmd->dependencies.insert(generated.begin(), generated.end());
-        
+
         for (auto &[k,v] : break_gch_deps)
         {
             auto input_pch = std::find_if(cmd->inputs.begin(), cmd->inputs.end(),
             [&k](const auto &p)
-            {   
+            {
                 return p == k;
             });
             if (input_pch == cmd->inputs.end())
                 continue;
-                
+
             for (auto &c : generated)
             {
                 auto output_gch = std::find_if(c->outputs.begin(), c->outputs.end(),
                 [&v](const auto &p)
-                {   
+                {
                     return p == v;
                 });
                 if (output_gch == c->outputs.end())
                     continue;
-                
+
                 cmd->dependencies.erase(c);
             }
         }

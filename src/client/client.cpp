@@ -102,7 +102,12 @@ int setup_main(const Strings &args)
     // some initial stuff
 
     if (!working_directory.empty())
-        fs::current_path(working_directory);
+    {
+        if (fs::is_regular_file(working_directory))
+            fs::current_path(working_directory.parent_path());
+        else
+            fs::current_path(working_directory);
+    }
 
     if (jobs > 0)
         getExecutor(jobs);
@@ -229,6 +234,8 @@ static cl::opt<String> build_arg_generate(cl::Positional, cl::desc("File or dire
 static cl::opt<String> build_arg_update(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_update));
 static cl::opt<String> build_arg_test(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_test));
 static cl::opt<String> list_arg(cl::Positional, cl::desc("Package regex to list"), cl::init("."), cl::sub(subcommand_list));
+static cl::opt<String> install_arg(cl::Positional, cl::desc("Packages to add"), cl::sub(subcommand_install));
+static cl::list<String> install_args(cl::ConsumeAfter, cl::desc("Packages to add"), cl::sub(subcommand_install));
 
 // ide commands
 static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl::sub(subcommand_ide)*/);
@@ -463,7 +470,7 @@ SUBCOMMAND_DECL(ide)
     {
         try_single_process_job(fs::current_path() / ".sw" / "ide", []()
         {
-            auto s = sw::load("sw.cpp");
+            auto s = sw::load(working_directory);
             auto &b = *((sw::Build*)s.get());
             b.ide = true;
             auto pkg = sw::extractFromStringPackageId(target_build);
@@ -475,7 +482,7 @@ SUBCOMMAND_DECL(ide)
     {
         single_process_job(fs::current_path() / ".sw" / "ide", []()
         {
-            auto s = sw::load("sw.cpp");
+            auto s = sw::load(working_directory);
             auto &b = *((sw::Build*)s.get());
             b.ide = true;
             s->execute();
@@ -545,7 +552,7 @@ SUBCOMMAND_DECL(list)
 
 SUBCOMMAND_DECL(pack)
 {
-
+    // http://www.king-foo.com/2011/11/creating-debianubuntu-deb-packages/
 }
 
 extern bool gWithTesting;
@@ -555,6 +562,21 @@ SUBCOMMAND_DECL(test)
     gWithTesting = true;
     build_arg = build_arg_test.getValue();
     cli_build();
+}
+
+SUBCOMMAND_DECL(install)
+{
+    sw::UnresolvedPackages pkgs;
+    install_args.push_back(install_arg);
+    for (auto &p : install_args)
+        pkgs.insert(extractFromString(p));
+    resolveAllDependencies(pkgs);
+    for (auto &[p1, d] : getPackageStore().resolved_packages)
+    {
+        for (auto &p2 : install_args)
+            if (p1 == p2)
+                d.installed = true;
+    }
 }
 
 extern ::cl::opt<bool> dry_run;

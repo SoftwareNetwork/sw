@@ -16,8 +16,8 @@
 #include <resolver.h>
 
 // support stuff
-#include <primitives/hash.h>
-#include <primitives/http.h>
+//#include <primitives/hash.h>
+//#include <primitives/http.h>
 #include <boost/algorithm/string.hpp>
 
 //namespace sw {}
@@ -33,6 +33,6 @@ using namespace sw::driver::cpp;
 #pragma warning(disable : 4068)
 #endif
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include "sw1.h"
 #endif

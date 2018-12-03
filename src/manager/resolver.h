@@ -19,6 +19,8 @@ struct SW_MANAGER_API PackageStore
 {
     using Dependencies = std::unordered_set<DownloadDependency>;
 
+    ResolvedPackagesMap resolved_packages;
+
     void clear();
 
     optional<ExtendedPackageData> isPackageResolved(const UnresolvedPackage &);
@@ -28,7 +30,6 @@ struct SW_MANAGER_API PackageStore
 
 private:
     bool use_lock_file = false;
-    ResolvedPackagesMap resolved_packages;
     Dependencies download_dependencies_;
 
     bool processing = false;
