@@ -1688,10 +1688,14 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             {
                 // we use pch, but cannot add more defs on CL
                 // so we create a file with them
-                path h = fn.parent_path().parent_path() / "aux" / "defs.h";
+                auto hash = getFilesHash({ fn });
+                path h;
+                if (is_under_root(fn, getDirectories().storage_dir_pkg))
+                    h = fn.parent_path().parent_path() / "aux" / ("defs_" + hash + ".h");
+                else
+                    h = fn.parent_path() / ".sw" / "aux" / ("defs_" + hash + ".h");
                 primitives::CppContext ctx;
 
-                auto hash = getFilesHash({ fn });
                 ctx.addLine("#define configure configure_" + hash);
                 ctx.addLine("#define build build_" + hash);
                 ctx.addLine("#define check check_" + hash);
