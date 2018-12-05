@@ -37,6 +37,7 @@
 DECLARE_STATIC_LOGGER(logger, "target");
 
 static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with build commands"));
+static cl::opt<bool> print_comp_db("print-compilation-database", cl::desc("Print file with build commands in compilation db format"));
 cl::opt<String> generator("G", cl::desc("Generator"));
 cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(generator));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
@@ -715,6 +716,41 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
         write_file(p, t + s);
     };
 
+    auto print_comp_db = [this](const ExecutionPlan<builder::Command> &ep, const path &p)
+    {
+        auto b = dynamic_cast<const Build*>(this);
+        if (!b || b->solutions.empty())
+            return;
+        static std::set<String> exts{
+            ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
+        };
+        nlohmann::json j;
+        for (auto &[p, t] : b->solutions[0].children)
+        {
+            if (!t->isLocal())
+                continue;
+            for (auto &c : t->getCommands())
+            {
+                if (c->inputs.empty())
+                    continue;
+                if (c->working_directory.empty())
+                    continue;
+                if (c->inputs.size() > 1)
+                    continue;
+                if (exts.find(c->inputs.begin()->extension().string()) == exts.end())
+                    continue;
+                nlohmann::json j2;
+                j2["directory"] = normalize_path(c->working_directory);
+                j2["file"] = normalize_path(*c->inputs.begin());
+                j2["arguments"].push_back(normalize_path(c->program));
+                for (auto &a : c->args)
+                    j2["arguments"].push_back(a);
+                j.push_back(j2);
+            }
+        }
+        write_file(p, j.dump(2));
+    };
+
     for (auto &c : p.commands)
         c->silent = silent;
 
@@ -744,6 +780,12 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
         print_commands(p, d / "commands.bat");
         print_commands_raw(p, d / "commands_raw.bat");
         print_numbers(p, d / "numbers.txt");
+        print_comp_db(p, d/ "compile_commands.json");
+    }
+
+    if (::print_comp_db && !::print_commands && !silent)
+    {
+        print_comp_db(p, getServiceDir() / "compile_commands.json");
     }
 
     ScopedTime t;
