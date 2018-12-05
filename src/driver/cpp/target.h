@@ -686,6 +686,8 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     CPPLanguageStandard CPPVersion = CPPLanguageStandard::Unspecified;
     bool CPPExtensions = false;
 
+    bool UseModules = false;
+
     // probably solution can be passed in setupChild() in TargetBase
     NativeExecutedTarget();
     NativeExecutedTarget(LanguageType L);

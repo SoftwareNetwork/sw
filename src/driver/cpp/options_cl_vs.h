@@ -179,6 +179,25 @@ DECLARE_OPTION_SPECIALIZATION(VisualStudioAssemblerOptions);
 // https://docs.microsoft.com/en-us/cpp/build/reference/compiler-options-listed-alphabetically
 struct SW_DRIVER_CPP_API VisualStudioCompilerOptions : VisualStudioCommonCompilerOptions
 {
+    // some experimental modules flags
+
+    COMMAND_LINE_OPTION(UseModules, bool)
+    {
+        cl::CommandFlag{ "experimental:module" },
+    };
+
+    COMMAND_LINE_OPTION(stdIfcDir, path)
+    {
+        cl::CommandFlag{ "module:stdIfcDir" },
+    };
+
+    COMMAND_LINE_OPTION(ExportModule, bool)
+    {
+        cl::CommandFlag{ "module:export" },
+    };
+
+    //
+
     COMMAND_LINE_OPTION(BigObj, bool)
     {
         cl::CommandFlag{ "bigobj" },

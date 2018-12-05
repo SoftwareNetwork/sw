@@ -1761,6 +1761,13 @@ bool NativeExecutedTarget::prepare()
 
         getSolution()->call_event(*this, CallbackType::BeginPrepare);
 
+        if (UseModules)
+        {
+            if (Settings.Native.CompilerType != CompilerType::MSVC)
+                throw std::runtime_error("Currently modules are implemented for MSVC only");
+            CPPVersion = CPPLanguageStandard::CPP2a;
+        }
+
         findSources();
 
         // make sure we always use absolute paths
@@ -2144,6 +2151,20 @@ bool NativeExecutedTarget::prepare()
 
             if (auto c = f->compiler->as<VisualStudioCompiler>())
             {
+                if (UseModules)
+                {
+                    c->UseModules = UseModules;
+                    c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (Settings.TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+                    c->UTF8 = false; // utf8 is not used in std modules and produce a warning
+
+                    auto s = read_file(f->file);
+                    std::smatch m;
+                    static std::regex r("export module (\\w+)");
+                    if (std::regex_search(s, m, r))
+                    {
+                        c->ExportModule = true;
+                    }
+                }
                 switch (Settings.Native.ConfigurationType)
                 {
                 case ConfigurationType::Debug:
