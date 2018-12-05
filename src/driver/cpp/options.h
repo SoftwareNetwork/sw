@@ -40,7 +40,7 @@ struct DefinitionsType : std::map<DefinitionKey, VariableValue>
     base::mapped_type &operator[](const base::key_type &k)
     {
         if (!k.empty() && k.back() != '=')
-            base::operator[](k) = 1;
+            base::operator[](k);// = 1;
         return base::operator[](k);
     }
 

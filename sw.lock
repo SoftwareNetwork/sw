@@ -3267,6 +3267,39 @@
     },
     {
       "dependencies": [
+        "org.sw.demo.google.breakpad.common.windows-master"
+      ],
+      "group_number": 313,
+      "hash": "3_2$8bd451fb826b83a03c108d0bbeb9453bb58247de1e3544a6725f25d68fc04ed0f0349b321a6c644b11705294a2bacc64ed17cdfcfbd014aa02a2db344496fbc5",
+      "package": "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master",
+      "prefix": 3
+    },
+    {
+      "dependencies": [
+        "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master"
+      ],
+      "group_number": 313,
+      "hash": "3_2$0236ebf67f048864ac544da6cab133c004f040bc0b483040c7bdf436ef8cc311cde34e7b1f69b0ae7b4dac961eb01ff7ce3b2e9b98f9b69fa4fba3b8cb72dcec",
+      "package": "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master",
+      "prefix": 3
+    },
+    {
+      "dependencies": [
+        "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master"
+      ],
+      "group_number": 313,
+      "hash": "3_2$fcab1a000e328cc485f2ccce25b257a70f1ad131e5ddffea268bbc821391628b798772fb5363e2300e7b0b62d83e1326b42cb65e05a84bda3756bb07890ef101",
+      "package": "org.sw.demo.google.breakpad.client.windows.handler-master",
+      "prefix": 3
+    },
+    {
+      "group_number": 313,
+      "hash": "3_2$3629704d470fd756dd9ee83689029df2c1268f3a03de031b51269027e34be1f552fa3cfaec4a198f75c96df92e8fbb78c25521f9e4ca598c07abda853666c02f",
+      "package": "org.sw.demo.google.breakpad.common.windows-master",
+      "prefix": 3
+    },
+    {
+      "dependencies": [
         "org.sw.demo.google.grpc.gpr-1.16.0",
         "org.sw.demo.google.grpc.grpc_base-1.16.0",
         "org.sw.demo.google.grpc.grpc_shadow_boringssl-1.16.0",
@@ -3934,6 +3967,15 @@
     },
     {
       "dependencies": [
+        "org.sw.demo.lexxmark.winflexbison.common-master"
+      ],
+      "group_number": 714,
+      "hash": "3_2$e91f1188db5e7debac106eea7228873ad52cdc1e19ffb920c364e0155d8d87a7dba77e4bbec8dce982fc2d1623f0a82fba513865e9ef740295612b1e02b18632",
+      "package": "org.sw.demo.lexxmark.winflexbison.flex-master",
+      "prefix": 3
+    },
+    {
+      "dependencies": [
         "org.sw.demo.bzip2-1.0.6",
         "org.sw.demo.gnu.nettle.nettle-3.4.0",
         "org.sw.demo.libxml2-2.9.8",
@@ -4369,6 +4411,9 @@
     "org.sw.demo.boost.dll->=1.0.0 <2.0.0": {
       "package": "org.sw.demo.boost.dll-1.68.0"
     },
+    "org.sw.demo.boost.filesystem->=1.0.0 <2.0.0": {
+      "package": "org.sw.demo.boost.filesystem-1.68.0"
+    },
     "org.sw.demo.boost.property_tree->=1.0.0 <2.0.0": {
       "package": "org.sw.demo.boost.property_tree-1.68.0"
     },
@@ -4383,6 +4428,15 @@
     },
     "org.sw.demo.giovannidicanio.winreg-master": {
       "package": "org.sw.demo.giovannidicanio.winreg-master"
+    },
+    "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master": {
+      "package": "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master"
+    },
+    "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master": {
+      "package": "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master"
+    },
+    "org.sw.demo.google.breakpad.client.windows.handler-master": {
+      "package": "org.sw.demo.google.breakpad.client.windows.handler-master"
     },
     "org.sw.demo.google.grpc.grpc_cpp_plugin-1.16.0": {
       "package": "org.sw.demo.google.grpc.grpc_cpp_plugin-1.16.0"
@@ -4404,6 +4458,9 @@
     },
     "org.sw.demo.lexxmark.winflexbison.bison-master": {
       "package": "org.sw.demo.lexxmark.winflexbison.bison-master"
+    },
+    "org.sw.demo.lexxmark.winflexbison.flex-master": {
+      "package": "org.sw.demo.lexxmark.winflexbison.flex-master"
     },
     "org.sw.demo.microsoft.gsl-*": {
       "package": "org.sw.demo.microsoft.gsl-2.0.0"

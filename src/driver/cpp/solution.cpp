@@ -1613,6 +1613,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             lib += std::make_shared<Dependency>(d);
     }
 
+	if (many_files)
     if (auto sf = lib[many_files_fn].template as<NativeSourceFile>())
     {
         if (auto c = sf->compiler->template as<ClangCompiler>())

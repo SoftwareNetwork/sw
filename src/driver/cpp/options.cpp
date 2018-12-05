@@ -189,7 +189,7 @@ void NativeCompilerOptionsData::add(const Definition &d)
     auto p = d.d.find('=');
     if (p == d.d.npos)
     {
-        Definitions[d.d] = 1;
+        Definitions[d.d];// = 1;
         return;
     }
     auto f = d.d.substr(0, p);
