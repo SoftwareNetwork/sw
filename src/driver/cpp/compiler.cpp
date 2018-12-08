@@ -32,7 +32,38 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
 
 static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
 
-#define CPP_EXTS ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
+extern const StringSet cpp_source_file_extensions;
+extern const StringSet header_file_extensions;
+
+const StringSet cpp_source_file_extensions{
+	".cc",
+	".CC",
+	".cpp",
+	".cxx",
+	".ixx", // msvc modules
+	// cppm - clang?
+	// mxx, mpp - build2?
+	".c++",
+	".C++",
+	".CPP",
+    ".CXX",
+    ".C", // old ext (Wt)
+	// Objective-C
+	".m",
+	".mm",
+};
+
+const StringSet header_file_extensions{
+	".h",
+	".hh",
+	".hm",
+	".hpp",
+	".hxx",
+	".h++",
+	".H++",
+	".HPP",
+	".H",
+};
 
 namespace sw
 {
@@ -381,7 +412,7 @@ void detectNativeCompilers(struct Solution &s)
     {
         auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
-        L->CompiledExtensions = { CPP_EXTS };
+        L->CompiledExtensions = cpp_source_file_extensions;
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
@@ -438,7 +469,7 @@ void detectNativeCompilers(struct Solution &s)
     {
         auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
-        L->CompiledExtensions = { CPP_EXTS };
+        L->CompiledExtensions = cpp_source_file_extensions;
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
@@ -461,7 +492,8 @@ void detectNativeCompilers(struct Solution &s)
     {
         auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
-        L->CompiledExtensions = { ".c", CPP_EXTS };
+		L->CompiledExtensions = cpp_source_file_extensions;
+		L->CompiledExtensions.insert(".c");
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
@@ -592,7 +624,7 @@ void detectNativeCompilers(struct Solution &s)
             {
                 auto L = std::make_shared<NativeLanguage>();
                 //L->Type = LanguageType::C;
-                L->CompiledExtensions = { CPP_EXTS };
+				L->CompiledExtensions = cpp_source_file_extensions;
                 //s.registerLanguage(L);
 
                 //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
@@ -652,7 +684,7 @@ void detectNativeCompilers(struct Solution &s)
                 {
                     auto L = std::make_shared<NativeLanguage>();
                     //L->Type = LanguageType::C;
-                    L->CompiledExtensions = { CPP_EXTS };
+					L->CompiledExtensions = cpp_source_file_extensions;
                     //s.registerLanguage(L);
 
                     //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();

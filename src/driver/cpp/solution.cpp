@@ -1195,6 +1195,12 @@ void Build::findCompiler()
         }
     }
 
+    if (Settings.TargetOS.Type != OSType::Macos)
+    {
+        extensions.erase(".m");
+        extensions.erase(".mm");
+    }
+
     activate_linker_or_throw({
         {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
         {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},

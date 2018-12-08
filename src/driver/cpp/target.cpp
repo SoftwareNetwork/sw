@@ -36,6 +36,9 @@ DECLARE_STATIC_LOGGER(logger, "target");
 static cl::opt<bool> do_not_mangle_object_names("do-not-mangle-object-names");
 static cl::opt<bool> bull_build("full", cl::desc("Full build (check all conditions)"));
 
+extern const StringSet cpp_source_file_extensions;
+extern const StringSet header_file_extensions;
+
 void createDefFile(const path &def, const Files &obj_files)
 #if defined(CPPAN_OS_WINDOWS)
 ;
@@ -1626,39 +1629,20 @@ void NativeExecutedTarget::autoDetectOptions()
             // iterate over languages: ASM, C, CPP, ObjC, ObjCPP
             // check that all exts is in languages!
 
-            static const std::set<String> header_file_extensions{
-            ".h",
-            ".hh",
-            ".hm",
-            ".hpp",
-            ".hxx",
-            ".h++",
-            ".H++",
-            ".HPP",
-            ".H",
-            };
-
-            static const std::set<String> source_file_extensions{
-            ".c",
-            ".cc",
-            ".cpp",
-            ".cxx",
-            ".c++",
-            ".C++",
-            ".CPP",
-            // Objective-C
-            ".m",
-            ".mm",
-            ".C",
-            };
-
             static const std::set<String> other_source_file_extensions{
-            ".s",
-            ".S",
-            ".asm",
-            ".ipp",
-            ".inl",
+				".s",
+				".S",
+				".asm",
+				".ipp",
+				".inl",
             };
+
+			static auto source_file_extensions = []()
+			{
+				auto source_file_extensions = cpp_source_file_extensions;
+				source_file_extensions.insert(".c");
+				return source_file_extensions;
+			}();
 
             for (auto &v : header_file_extensions)
                 add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
@@ -2131,7 +2115,7 @@ bool NativeExecutedTarget::prepare()
                     continue;
                 // is_header_ext()
                 const auto e = f.file.extension();
-                if (e == ".h" || e == ".hpp" || e == ".hxx")
+				if (header_file_extensions.find(e.string()) != header_file_extensions.end())
                     fs::copy_file(f.file, d / f.file.filename());
             }
         }
