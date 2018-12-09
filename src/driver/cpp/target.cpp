@@ -715,7 +715,6 @@ void NativeExecutedTarget::addPackageDefinitions(bool defs)
     }
     else
         set_pkg_info(Variables, false); // false?
-
 }
 
 path NativeExecutedTarget::getOutputDir() const

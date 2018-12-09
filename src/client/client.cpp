@@ -19,17 +19,16 @@
 #include <sw/driver/cpp/driver.h>
 #include <jumppad.h>
 
-//#include <args.hxx>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
 #include <boost/dll.hpp>
-//#include <boost/nowide/args.hpp>
 #include <boost/regex.hpp>
 #include <primitives/executor.h>
 #include <primitives/file_monitor.h>
 #include <primitives/lock.h>
 #include <primitives/sw/settings.h>
 #include <primitives/sw/main.h>
+#include <primitives/thread.h>
 #include <primitives/win32helpers.h>
 
 #include <iostream>
@@ -120,6 +119,12 @@ int setup_main(const Strings &args)
         setup_log("TRACE");
 
     getServiceDatabase();
+
+    // run file monitor
+    {
+        auto t = make_thread([] { sw::getFileMonitor().run(); });
+        t.detach();
+    }
 
     // actual execution
     return sw_main(args);

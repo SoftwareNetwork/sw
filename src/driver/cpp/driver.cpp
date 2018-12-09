@@ -28,6 +28,8 @@ path CppDriver::getConfigFilename() const
 optional<path> CppDriver::resolveConfig(const path &file_or_dir) const
 {
     auto f = file_or_dir;
+    if (f.empty())
+        f = fs::current_path();
     if (fs::is_directory(f))
     {
         if (!hasConfig(f))

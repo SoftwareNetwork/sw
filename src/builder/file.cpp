@@ -27,7 +27,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "file");
 
-#define CPPAN_FILES_EXPLAIN_FILE (getUserDirectories().storage_dir_tmp / "explain.txt")
+#define CPPAN_FILES_EXPLAIN_FILE ".sw/misc/explain.txt"
 
 static cl::opt<bool> explain_outdated("explain-outdated", cl::desc("Explain outdated files"));
 
@@ -40,7 +40,7 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
 {
     if (!explain_outdated)
         return;
-    static std::ofstream o(CPPAN_FILES_EXPLAIN_FILE.string()); // goes first
+    static std::ofstream o(CPPAN_FILES_EXPLAIN_FILE); // goes first
     explain_executor.push([=]
     {
         if (!outdated)
