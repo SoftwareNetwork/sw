@@ -8,6 +8,7 @@
 #include <resolver.h>
 
 #include <primitives/context.h>
+#include <primitives/executor.h>
 #include <primitives/sw/main.h>
 #include <primitives/sw/settings.h>
 
@@ -33,12 +34,17 @@ int main(int argc, char **argv)
 {
     setup_log("INFO");
 
+    // init
     getServiceDatabase();
 
     cl::opt<path> p(cl::Positional, cl::Required);
     cl::opt<path> packages(cl::Positional, cl::Required);
 
     cl::ParseCommandLineOptions(argc, argv);
+
+    // init
+    Executor e(select_number_of_threads());
+    getExecutor(&e);
 
     struct pkg_data
     {

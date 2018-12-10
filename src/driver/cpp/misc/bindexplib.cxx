@@ -62,6 +62,7 @@
 *----------------------------------------------------------------------
 */
 
+#include <primitives/exceptions.h>
 #include <primitives/filesystem.h>
 
 #include <iostream>
@@ -363,7 +364,7 @@ void createDefFile(const path &def, const Files &obj_files)
     for (auto &o : obj_files)
     {
         if (!DumpFile(o, symbols, data_symbols))
-            throw std::runtime_error("Cannot dump obj file: " + o.string());
+            throw SW_RUNTIME_EXCEPTION("Cannot dump obj file: " + o.string());
     }
 
     String str;

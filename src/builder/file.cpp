@@ -72,9 +72,9 @@ File::File(const path &p, FileStorage &s)
     : fs(&s), file(p)
 {
     if (file.empty())
-        throw std::runtime_error("Empty file");
+        throw SW_RUNTIME_EXCEPTION("Empty file");
     if (!fs)
-        throw std::runtime_error("Empty file storage");
+        throw SW_RUNTIME_EXCEPTION("Empty file storage");
     registerSelf();
     if (r->file.empty())
         r->file = file;
@@ -405,7 +405,7 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
             err += "second generator:\n " + g->print();
         else
             err += "second generator is empty";
-        throw std::runtime_error(err);
+        throw SW_RUNTIME_EXCEPTION(err);
     }
     generator = g;
     generated_ = true;

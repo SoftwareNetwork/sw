@@ -73,7 +73,7 @@ void PackageStore::loadLockFile(const path &fn)
     auto j = nlohmann::json::parse(read_file(fn));
     if (j["version"] != SW_CURRENT_LOCK_FILE_VERSION)
     {
-        throw std::runtime_error("Cannot use this lock file: bad version " + std::to_string((int)j["version"]) +
+        throw SW_RUNTIME_EXCEPTION("Cannot use this lock file: bad version " + std::to_string((int)j["version"]) +
             ", expected " + std::to_string(SW_CURRENT_LOCK_FILE_VERSION));
     }
 
@@ -105,7 +105,7 @@ void PackageStore::loadLockFile(const path &fn)
         (PackageId&)d = extractFromStringPackageId(v.value()["package"].get<std::string>());
         auto i = download_dependencies_.find(d);
         if (i == download_dependencies_.end())
-            throw std::runtime_error("bad lock file");
+            throw SW_RUNTIME_EXCEPTION("bad lock file");
         d = *i;
         if (v.value().find("installed") != v.value().end())
             d.installed = v.value()["installed"];
@@ -265,7 +265,7 @@ void Resolver::add_dep(Dependencies &dd, const PackageId &d)
     (PackageId&)d2 = d;
     auto i = getPackageStore().download_dependencies_.find(d2);
     if (i == getPackageStore().download_dependencies_.end())
-        throw std::runtime_error("unresolved package from lock file: " + d.toString());
+        throw SW_RUNTIME_EXCEPTION("unresolved package from lock file: " + d.toString());
     if (!dd.insert(*i).second)
         return;
     for (auto &d : i->db_dependencies)
@@ -285,7 +285,7 @@ void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> res
             {
                 deps2.insert(d);
                 LOG_INFO(logger, "new dependency detected: " + d.toString());
-                //throw std::runtime_error("unresolved package from lock file: " + d.toString());
+                //throw SW_RUNTIME_EXCEPTION("unresolved package from lock file: " + d.toString());
                 continue;
             }
             add_dep(download_dependencies_, i->second);
@@ -390,7 +390,7 @@ void Resolver::download(const ExtendedPackageData &d, const path &fn)
 {
     auto provs = getPackagesDatabase().getDataSources();
     if (provs.empty())
-        throw std::runtime_error("No data sources available");
+        throw SW_RUNTIME_EXCEPTION("No data sources available");
 
     if (std::none_of(provs.begin(), provs.end(),
         [&](auto &prov) {return prov.downloadPackage(d, d.hash, fn, query_local_db);}))
@@ -401,7 +401,7 @@ void Resolver::download(const ExtendedPackageData &d, const path &fn)
         auto err = "Hashes do not match for package: " + d.target_name;
         if (query_local_db)
             throw LocalDbHashException(err);
-        throw std::runtime_error(err);
+        throw SW_RUNTIME_EXCEPTION(err);
     }
 }
 
@@ -622,7 +622,7 @@ Resolver::Dependencies getDependenciesFromRemote(const UnresolvedPackages &deps,
                 s += d.toString() + ", ";
             if (!s.empty())
                 s.resize(s.size() - 2);
-            throw std::runtime_error("Some packages (" + std::to_string(unresolved) + ") are unresolved: " + s);
+            throw SW_RUNTIME_EXCEPTION("Some packages (" + std::to_string(unresolved) + ") are unresolved: " + s);
         //}
     }
 
@@ -666,7 +666,7 @@ Packages resolve_dependency(const String &target_name)
     {
         pkgs2 = resolve_dependencies({ p });
     }
-    catch (const std::runtime_error &)
+    catch (const sw::RuntimeException &)
     {
         if (!added_suffix)
             throw;

@@ -80,7 +80,7 @@ bool build(const String &s)
     }
     catch (const std::exception &)
     {
-        throw std::runtime_error("File not found or package id is not recognized");
+        throw SW_RUNTIME_EXCEPTION("File not found or package id is not recognized");
     }
 
     auto id = extractFromString(s);
@@ -96,7 +96,7 @@ PackageScriptPtr build_only(const path &file_or_dir)
         if (auto s = d->build(file_or_dir); s)
             return s;
     }
-    throw std::runtime_error("Unknown package driver");
+    throw SW_RUNTIME_EXCEPTION("Unknown package driver");
 }
 
 PackageScriptPtr load(const path &file_or_dir)
@@ -107,7 +107,7 @@ PackageScriptPtr load(const path &file_or_dir)
         if (auto s = d->load(file_or_dir); s)
             return s;
     }
-    throw std::runtime_error("Unknown package driver");
+    throw SW_RUNTIME_EXCEPTION("Unknown package driver");
 }
 
 PackageScriptPtr fetch_and_load(const path &file_or_dir)
@@ -118,7 +118,7 @@ PackageScriptPtr fetch_and_load(const path &file_or_dir)
         if (auto s = d->fetch_and_load(file_or_dir); s)
             return s;
     }
-    throw std::runtime_error("Unknown package driver");
+    throw SW_RUNTIME_EXCEPTION("Unknown package driver");
 }
 
 DriverPtr loadDriver(const path &file_or_dir)
@@ -140,7 +140,7 @@ bool run(const PackageId &package)
         if (auto s = d->run(package); s)
             return s;
     }
-    throw std::runtime_error("Unknown package driver");
+    throw SW_RUNTIME_EXCEPTION("Unknown package driver");
 }
 
 }

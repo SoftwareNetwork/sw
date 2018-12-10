@@ -175,7 +175,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
             if (!i)
             {
                 //if (f && f->postponed)
-                    //throw std::runtime_error("Postponing postponed file");
+                    //throw SW_RUNTIME_EXCEPTION("Postponing postponed file");
                 f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file, *target->getSolution()->fs);
                 f->postponed = true;
             }
@@ -375,7 +375,7 @@ SourceFile &SourceFileStorage::operator[](path F)
     if (!f)
     {
         // here we may let other fibers progress until language is registered
-        throw std::runtime_error("Empty source file: " + F.u8string());
+        throw SW_RUNTIME_EXCEPTION("Empty source file: " + F.u8string());
     }
     return *f;
 }
@@ -442,7 +442,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
                         LOG_INFO(logger, err);
                         return true;
                     }
-                    throw std::runtime_error(err);
+                    throw SW_RUNTIME_EXCEPTION(err);
                 }
             }
         }
@@ -462,7 +462,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
                     LOG_INFO(logger, err);
                     return true;
                 }
-                throw std::runtime_error(err);
+                throw SW_RUNTIME_EXCEPTION(err);
             }
         }
     }

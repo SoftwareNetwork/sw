@@ -22,11 +22,9 @@ namespace sw
 
 static Executor async_executor("async log writer", 1);
 
-primitives::filesystem::FileMonitor &getFileMonitor()
-{
-    static primitives::filesystem::FileMonitor fm;
-    return fm;
-}
+SW_DEFINE_GLOBAL_STATIC_FUNCTION(primitives::filesystem::FileMonitor, getFileMonitor)
+SW_DEFINE_GLOBAL_STATIC_FUNCTION(FileStorages, getFileStorages)
+SW_DEFINE_GLOBAL_STATIC_FUNCTION(FileDataHashMap, getFileData)
 
 FileStorage::file_holder::file_holder(const path &fn)
     : f(fn, "ab")
@@ -34,7 +32,7 @@ FileStorage::file_holder::file_holder(const path &fn)
     // goes first
     // but maybe remove?
     //if (setvbuf(f.getHandle(), NULL, _IONBF, 0) != 0)
-        //throw std::runtime_error("Cannot disable log buffering");
+        //throw RUNTIME_EXCEPTION("Cannot disable log buffering");
 
     // Opening a file in append mode doesn't set the file pointer to the file's
     // end on Windows. Do that explicitly.
@@ -45,20 +43,6 @@ FileStorage::file_holder::~file_holder()
 {
     error_code ec;
     fs::remove(fn, ec);
-}
-
-ConcurrentHashMap<path, FileData> &getFileData()
-{
-    static ConcurrentHashMap<path, FileData> file_data;
-    return file_data;
-}
-
-std::map<String, FileStorage> &getFileStorages()
-{
-    getFileData();
-
-    static std::map<String, FileStorage> fs;
-    return fs;
 }
 
 FileStorage &getFileStorage(const String &config)
@@ -197,7 +181,7 @@ FileRecord *FileStorage::registerFile(const path &in_f)
     auto d = getFileData().insert(p);
     r.first->data = d.first;
     //if (!d.first)
-        //throw std::runtime_error("Cannot create file data for file: " + in_f.u8string());
+        //throw RUNTIME_EXCEPTION("Cannot create file data for file: " + in_f.u8string());
     return r.first;
 }
 

@@ -43,7 +43,7 @@ void checkSourceAndVersion(Source &s, const Version &v)
     applyVersionToUrl(s, v);
 
     if (!isValidSourceUrl(s))
-        throw std::runtime_error("Invalid source: " + print_source(s));
+        throw SW_RUNTIME_EXCEPTION("Invalid source: " + print_source(s));
 }
 
 }

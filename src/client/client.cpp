@@ -9,10 +9,15 @@
 #include <directories.h>
 #include <exceptions.h>
 #include <file.h>
-#include <file_storage.h>
 #include <package_data.h>
 #include <resolver.h>
 #include <settings.h>
+
+// globals
+#include <command_storage.h>
+#include <db.h>
+#include <db_file.h>
+#include <file_storage.h>
 
 #include <sw/builder/build.h>
 #include <sw/builder/driver.h>
@@ -108,8 +113,8 @@ int setup_main(const Strings &args)
             fs::current_path(working_directory);
     }
 
-    if (jobs > 0)
-        getExecutor(jobs);
+    Executor e(select_number_of_threads(jobs));
+    getExecutor(&e);
 
     setup_log("INFO");
 
@@ -118,13 +123,28 @@ int setup_main(const Strings &args)
     if (trace)
         setup_log("TRACE");
 
+    // init
     getServiceDatabase();
 
+    primitives::filesystem::FileMonitor fm;
+    sw::getFileMonitor(&fm);
+
+    // before CommandStorage and FileStorages
+    sw::FileDb db;
+    sw::getDb(&db);
+
+    sw::CommandStorage cs;
+    sw::getCommandStorage(&cs);
+
+    // before FileStorages
+    sw::FileDataHashMap fshm;
+    sw::getFileData(&fshm);
+
+    sw::FileStorages fs;
+    sw::getFileStorages(&fs);
+
     // run file monitor
-    {
-        auto t = make_thread([] { sw::getFileMonitor().run(); });
-        t.detach();
-    }
+    auto fmt = make_joining_thread([] { sw::getFileMonitor().run(); });
 
     // actual execution
     return sw_main(args);
@@ -331,9 +351,9 @@ int sw_main(const Strings &args)
 
 void stop()
 {
-    getFileMonitor().stop();
-    getExecutor().join();
-    getFileStorages().clear();
+    //getFileMonitor().stop();
+    //getExecutor().join();
+    //getFileStorages().clear();
     //if (use_lock_file)
     // create always, use asap
     getPackageStore().saveLockFile(fs::current_path() / "sw.lock");

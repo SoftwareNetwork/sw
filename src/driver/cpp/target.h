@@ -363,7 +363,7 @@ private:
     std::shared_ptr<T> getTargetPtr(const TargetMap::const_iterator &i, const String &n)
     {
         if (i == getChildren().end())
-            throw std::runtime_error("No such target: " + n);
+            throw SW_RUNTIME_EXCEPTION("No such target: " + n);
         return std::static_pointer_cast<T>(i->second);
     }
 

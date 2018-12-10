@@ -148,7 +148,7 @@ void run(const RunArgs &args)
         CloseHandle(file_handle);
 
     if (!success)
-        throw std::runtime_error(err.c_str()); // to strip nulls
+        throw SW_RUNTIME_EXCEPTION(err.c_str()); // to strip nulls
 }
 
 BOOL SetSecurityCapabilities(PSID container_sid, SECURITY_CAPABILITIES *capabilities, PDWORD num_capabilities)
@@ -251,7 +251,7 @@ BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_name, SE_O
 #else
 void run(const RunArgs &args)
 {
-    throw std::runtime_error("not implemented");
+    throw SW_RUNTIME_EXCEPTION("not implemented");
 }
 #endif
 

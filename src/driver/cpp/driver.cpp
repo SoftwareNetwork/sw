@@ -41,7 +41,7 @@ optional<path> CppDriver::resolveConfig(const path &file_or_dir) const
 
 PackageScriptPtr CppDriver::build(const path &file_or_dir) const
 {
-    throw std::runtime_error("function disabled");
+    throw SW_RUNTIME_EXCEPTION("function disabled");
 
     auto f = resolveConfig(file_or_dir);
     if (!f)
@@ -108,7 +108,7 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
     if (fs::is_directory(f))
     {
         if (!driver->hasConfig(f))
-            throw std::runtime_error("no config found");
+            throw SW_RUNTIME_EXCEPTION("no config found");
         f /= driver->getConfigFilename();
     }
 
@@ -144,7 +144,7 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
             if (srcs.size() == srcs_old.size())
             {
                 if (srcs.size() == 0)
-                    throw std::runtime_error("no sources found");
+                    throw SW_RUNTIME_EXCEPTION("no sources found");
 
                 // reset
                 b->fetch_dir.clear();
@@ -220,7 +220,7 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, bool paralle
                 auto s2 = t->source;
                 applyVersionToUrl(s2, pkg.version);
                 if (!isValidSourceUrl(s2))
-                    throw std::runtime_error("Invalid source: " + print_source(s2));
+                    throw SW_RUNTIME_EXCEPTION("Invalid source: " + print_source(s2));
                 auto i = srcs.find(s2);
                 path rd = i->second / t->RootDirectory;
                 t->SourceDir = rd;

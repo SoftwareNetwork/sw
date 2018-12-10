@@ -17,6 +17,7 @@ void save_from_memory_to_file(const path &fn, sqlite3 *db);
 #include <primitives/context.h>
 #include <primitives/date_time.h>
 #include <primitives/debug.h>
+#include <primitives/exceptions.h>
 #include <primitives/lock.h>
 
 #include <primitives/log.h>
@@ -106,7 +107,7 @@ static void load_log(FileStorage &fs, const path &fn, ConcurrentHashMap<path, Fi
     if (!fp)
     {
         if (fs::exists(fn))
-            throw std::runtime_error("Cannot open file: " + fn.u8string());
+            throw SW_RUNTIME_EXCEPTION("Cannot open file: " + fn.u8string());
         return;
     }
     while (!feof(fp))
@@ -157,11 +158,7 @@ static void load_log(FileStorage &fs, const path &fn, ConcurrentHashMap<path, Fi
     fclose(fp);
 }
 
-Db &getDb()
-{
-    static std::unique_ptr<Db> db = std::make_unique<FileDb>();
-    return *db;
-}
+SW_DEFINE_GLOBAL_STATIC_FUNCTION(Db, getDb);
 
 void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const
 {

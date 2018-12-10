@@ -169,7 +169,7 @@ PackageId Dependency::getResolvedPackage() const
     auto t = target.lock();
     if (t)
         return { t->pkg.ppath, t->pkg.version };
-    throw std::runtime_error("Package is unresolved: " + getPackage().toString());
+    throw SW_RUNTIME_EXCEPTION("Package is unresolved: " + getPackage().toString());
 }
 
 void Dependency::setTarget(const std::shared_ptr<NativeTarget> &t)

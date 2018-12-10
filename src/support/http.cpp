@@ -6,6 +6,8 @@
 
 #include "http.h"
 
+#include <primitives/exceptions.h>
+
 #include <algorithm>
 
 bool isValidSourceUrl(const String &url)
@@ -36,5 +38,5 @@ bool isValidSourceUrl(const String &url)
 void checkSourceUrl(const String &url)
 {
     if (!isValidSourceUrl(url))
-        throw std::runtime_error("Bad source url: " + url);
+        throw SW_RUNTIME_EXCEPTION("Bad source url: " + url);
 }

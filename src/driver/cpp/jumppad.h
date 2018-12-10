@@ -137,7 +137,7 @@ struct VisibleFunctionJumppad<R(ArgTypes...)>
         auto nargs = detail::get_n_args<ArgTypes...>(sp2);
         if (sizeof...(ArgTypes) != nargs)
         {
-            throw std::runtime_error("pf call: " + name + ": incorrect number of arguments " +
+            throw SW_RUNTIME_EXCEPTION("pf call: " + name + ": incorrect number of arguments " +
                 std::to_string(nargs) + ", expected " + std::to_string(sizeof...(ArgTypes)));
         }
 

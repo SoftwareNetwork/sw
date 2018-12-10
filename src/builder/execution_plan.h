@@ -116,7 +116,7 @@ struct ExecutionPlan
             throw ExceptionVector(eptrs);
 
         if (i != sz)
-            throw std::runtime_error("Executor did not perform all steps");
+            throw SW_RUNTIME_EXCEPTION("Executor did not perform all steps");
     }
 
     StringHashMap<int> gatherStrings() const

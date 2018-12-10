@@ -405,7 +405,7 @@ public:
         default:
             return data[Type];
         }
-        throw std::runtime_error("unreachable code");
+        throw SW_RUNTIME_EXCEPTION("unreachable code");
     }
 
     const T &get(InheritanceType Type) const
@@ -423,7 +423,7 @@ public:
         default:
             return data[Type];
         }
-        throw std::runtime_error("unreachable code");
+        throw SW_RUNTIME_EXCEPTION("unreachable code");
     }
 
     template <class U>

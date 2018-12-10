@@ -61,7 +61,7 @@ ExtendedPackageData UnresolvedPackage::resolve() const
 
     /*if (auto v = range.getMaxSatisfyingVersion(); v)
         return { ppath, v.value() };
-    throw std::runtime_error("Cannot resolve package: " + toString());*/
+    throw SW_RUNTIME_EXCEPTION("Cannot resolve package: " + toString());*/
 }
 
 PackageId::PackageId(const String &target)
@@ -259,7 +259,7 @@ PackageId extractFromStringPackageId(const String &target)
 
     PackageId p;
     if (pos == target.npos)
-        throw std::runtime_error("Bad target");
+        throw SW_RUNTIME_EXCEPTION("Bad target");
     else
     {
         p.ppath = target.substr(0, pos);

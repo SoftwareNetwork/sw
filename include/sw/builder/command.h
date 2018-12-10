@@ -195,7 +195,8 @@ template struct SW_BUILDER_API CommandData<builder::Command>;
     SW_MAKE_CUSTOM_COMMAND(ExecuteCommand, name, target, __FILE__, __LINE__)
 #define _SW_MAKE_EXECUTE_COMMAND_AND_ADD(name, target) \
     SW_MAKE_CUSTOM_COMMAND_AND_ADD(ExecuteCommand, name, target, __FILE__, __LINE__)
-}
+
+} // namespace sw
 
 namespace std
 {

@@ -9,6 +9,8 @@
 #include "concurrent_map.h"
 #include "file.h"
 
+#include <primitives/templates.h>
+
 namespace primitives::filesystem
 {
 
@@ -56,10 +58,17 @@ private:
 SW_BUILDER_API
 FileStorage &getFileStorage(const String &config);
 
-SW_BUILDER_API
-std::map<String, FileStorage> &getFileStorages();
+using FileStorages = std::map<String, FileStorage>;
 
 SW_BUILDER_API
-primitives::filesystem::FileMonitor &getFileMonitor();
+SW_DECLARE_GLOBAL_STATIC_FUNCTION(FileStorages, getFileStorages);
+
+SW_BUILDER_API
+SW_DECLARE_GLOBAL_STATIC_FUNCTION(primitives::filesystem::FileMonitor, getFileMonitor);
+
+using FileDataHashMap = ConcurrentHashMap<path, FileData>;
+
+SW_BUILDER_API
+SW_DECLARE_GLOBAL_STATIC_FUNCTION(FileDataHashMap, getFileData);
 
 }

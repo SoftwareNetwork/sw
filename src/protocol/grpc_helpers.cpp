@@ -1,5 +1,7 @@
 #include "grpc_helpers.h"
 
+#include <primitives/exceptions.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "protocol");
 
@@ -21,7 +23,7 @@ CallResult check_result(
     {
         auto err = "Method '" + method + "': RPC failed: " + std::to_string(status.error_code()) + ": " + status.error_message();
         if (throws)
-            throw std::runtime_error(err);
+            throw SW_RUNTIME_EXCEPTION(err);
         else
             LOG_ERROR(logger, err);
         r.ec = std::make_error_code((std::errc)status.error_code());
@@ -34,7 +36,7 @@ CallResult check_result(
     {
         auto err = "Method '" + method + "': missing error code";
         if (throws)
-            throw std::runtime_error(err);
+            throw SW_RUNTIME_EXCEPTION(err);
         else
             LOG_DEBUG(logger, err);
         r.ec = std::make_error_code((std::errc)1);
@@ -46,7 +48,7 @@ CallResult check_result(
         auto message = get_metadata_variable(context.GetServerTrailingMetadata(), "message");
         auto err = "Method '" + method + "' returned error: ec = " + result + ", message: " + message;
         if (throws)
-            throw std::runtime_error(err);
+            throw SW_RUNTIME_EXCEPTION(err);
         else
             LOG_DEBUG(logger, err);
         r.ec = std::make_error_code((std::errc)ec);

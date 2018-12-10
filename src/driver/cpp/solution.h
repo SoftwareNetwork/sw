@@ -269,7 +269,7 @@ struct SW_DRIVER_CPP_API Module
                     if (s && !s->current_module.empty())
                         err += s->current_module + ": ";
                     err += e.what();
-                    throw std::runtime_error(err);
+                    throw SW_RUNTIME_EXCEPTION(err);
                 }
                 catch (...)
                 {
@@ -277,11 +277,11 @@ struct SW_DRIVER_CPP_API Module
                     if (s && !s->current_module.empty())
                         err += s->current_module + ": ";
                     err += "unknown error";
-                    throw std::runtime_error(err);
+                    throw SW_RUNTIME_EXCEPTION(err);
                 }
             }
             else if (Required)
-                throw std::runtime_error("Required function is not present in the module");
+                throw SW_RUNTIME_EXCEPTION("Required function is not present in the module");
         }
     };
 

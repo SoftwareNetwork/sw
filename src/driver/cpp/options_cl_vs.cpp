@@ -99,7 +99,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::MachineType)
         s += "EBC";
         break;
     default:
-        throw std::runtime_error("unreachable code");
+        throw SW_RUNTIME_EXCEPTION("unreachable code");
     }
     return { s };
 }
@@ -124,7 +124,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::RuntimeLibraryType)
         s += "MDd";
         break;
     default:
-        throw std::runtime_error("unreachable code");
+        throw SW_RUNTIME_EXCEPTION("unreachable code");
     }
     return { s };
 }
@@ -148,7 +148,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::DebugInformationFormatType)
         s += "ZI";
         break;
     default:
-        throw std::runtime_error("unreachable code");
+        throw SW_RUNTIME_EXCEPTION("unreachable code");
     }
     return { s };
 }
@@ -167,7 +167,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::Subsystem)
         s += "WINDOWS";
         break;
     default:
-        throw std::runtime_error("unreachable code");
+        throw SW_RUNTIME_EXCEPTION("unreachable code");
     }
     return { s };
 }
@@ -186,7 +186,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::ForceType)
         s += "UNRESOLVED";
         break;
     default:
-        throw std::runtime_error("unreachable code");
+        throw SW_RUNTIME_EXCEPTION("unreachable code");
     }
     return { s };
 }

@@ -31,7 +31,7 @@ PackagePath::PackagePath(String s)
     : Base(s, is_valid_path_symbol, repls)
 {
     if (s.size() > 4096)
-        throw std::runtime_error("Too long project path (must be <= 4096)");
+        throw SW_RUNTIME_EXCEPTION("Too long project path (must be <= 4096)");
 }
 
 PackagePath::PackagePath(const PackagePath &p)

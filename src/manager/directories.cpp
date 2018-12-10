@@ -21,7 +21,7 @@ void checkPath(const path &p, const String &msg)
     for (auto &c : s)
     {
         if (isspace(c))
-            throw std::runtime_error("You have spaces in the " + msg + " path. SW could not work in this directory: '" + s + "'");
+            throw SW_RUNTIME_EXCEPTION("You have spaces in the " + msg + " path. SW could not work in this directory: '" + s + "'");
     }
 }
 

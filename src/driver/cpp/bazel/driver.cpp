@@ -6,6 +6,8 @@
 
 #include "driver.h"
 
+#include <primitives/exceptions.h>
+
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -52,7 +54,7 @@ void BazelParserDriver::error(const yy_bazel::location &l, const std::string &m)
     if (!can_throw)
         std::cerr << ss.str();
     else
-        throw std::runtime_error("Error during bazel parse: " + ss.str());
+        throw SW_RUNTIME_EXCEPTION("Error during bazel parse: " + ss.str());
 }
 
 void BazelParserDriver::error(const std::string& m)
@@ -62,5 +64,5 @@ void BazelParserDriver::error(const std::string& m)
     if (!can_throw)
         std::cerr << ss.str();
     else
-        throw std::runtime_error("Error during bazel parse: " + ss.str());
+        throw SW_RUNTIME_EXCEPTION("Error during bazel parse: " + ss.str());
 }

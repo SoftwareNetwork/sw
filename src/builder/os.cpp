@@ -59,7 +59,7 @@ OS detectOS()
     //int uname(struct utsname *buf);
 
     if (os.Type == OSType::UnknownOS)
-        throw std::runtime_error("Unknown OS");
+        throw SW_RUNTIME_EXCEPTION("Unknown OS");
 
     return os;
 }

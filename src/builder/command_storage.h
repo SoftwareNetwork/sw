@@ -8,6 +8,8 @@
 
 #include "concurrent_map.h"
 
+#include <primitives/templates.h>
+
 #include <sw/builder/command.h>
 
 namespace sw
@@ -15,7 +17,7 @@ namespace sw
 
 using ConcurrentCommandStorage = ConcurrentMapSimple<size_t>;
 
-struct CommandStorage
+struct SW_BUILDER_API CommandStorage
 {
     ConcurrentCommandStorage commands;
 
@@ -29,5 +31,8 @@ struct CommandStorage
 
     bool isOutdated(const builder::Command &c);
 };
+
+SW_BUILDER_API
+SW_DECLARE_GLOBAL_STATIC_FUNCTION(CommandStorage, getCommandStorage);
 
 }

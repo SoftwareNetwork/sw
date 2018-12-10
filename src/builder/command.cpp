@@ -37,11 +37,7 @@ static cl::opt<bool> save_executed_commands("save-executed-commands");
 namespace sw
 {
 
-CommandStorage &getCommandStorage()
-{
-    static CommandStorage cs;
-    return cs;
-}
+SW_DEFINE_GLOBAL_STATIC_FUNCTION(CommandStorage, getCommandStorage)
 
 CommandStorage::CommandStorage()
 {
@@ -213,7 +209,7 @@ path Command::getProgram() const
     {
         p = base->file;
         if (p.empty())
-            throw std::runtime_error("Empty program from base program");
+            throw SW_RUNTIME_EXCEPTION("Empty program from base program");
     }
     else if (!program.empty())
         p = program;
@@ -601,7 +597,7 @@ void Command::execute1(std::error_code *ec)
     }
     catch (std::exception &e)
     {
-        throw std::runtime_error(make_error_string(e.what()));
+        throw SW_RUNTIME_EXCEPTION(make_error_string(e.what()));
     }
 }
 

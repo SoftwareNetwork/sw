@@ -754,9 +754,9 @@ void PackagesDatabase::load(bool drop) const
     if (sver && sver != PACKAGES_DB_SCHEMA_VERSION)
     {
         if (sver > PACKAGES_DB_SCHEMA_VERSION)
-            throw std::runtime_error("Client's packages db schema version is older than remote one. Please, upgrade the cppan client from site or via --self-upgrade");
+            throw SW_RUNTIME_EXCEPTION("Client's packages db schema version is older than remote one. Please, upgrade the cppan client from site or via --self-upgrade");
         if (sver < PACKAGES_DB_SCHEMA_VERSION)
-            throw std::runtime_error("Client's packages db schema version is newer than remote one. Please, wait for server upgrade");
+            throw SW_RUNTIME_EXCEPTION("Client's packages db schema version is newer than remote one. Please, wait for server upgrade");
     }
     if (sver > sver_old)
     {
@@ -795,7 +795,7 @@ void PackagesDatabase::load(bool drop) const
         auto fn = db_repo_dir / (td + ".csv");
         std::ifstream ifile(fn);
         if (!ifile)
-            throw std::runtime_error("Cannot open file " + fn.string() + " for reading");
+            throw SW_RUNTIME_EXCEPTION("Cannot open file " + fn.string() + " for reading");
 
         String s;
         int rc;
@@ -830,7 +830,7 @@ void PackagesDatabase::load(bool drop) const
         query += ");";
 
         if (sqlite3_prepare_v2(mdb, query.c_str(), (int)query.size() + 1, &stmt, 0) != SQLITE_OK)
-            throw std::runtime_error(sqlite3_errmsg(mdb));
+            throw SW_RUNTIME_EXCEPTION(sqlite3_errmsg(mdb));
 
         while (std::getline(ifile, s))
         {
@@ -848,14 +848,14 @@ void PackagesDatabase::load(bool drop) const
 
             rc = sqlite3_step(stmt);
             if (rc != SQLITE_DONE)
-                throw std::runtime_error("sqlite3_step() failed: "s + sqlite3_errmsg(mdb));
+                throw SW_RUNTIME_EXCEPTION("sqlite3_step() failed: "s + sqlite3_errmsg(mdb));
             rc = sqlite3_reset(stmt);
             if (rc != SQLITE_OK)
-                throw std::runtime_error("sqlite3_reset() failed: "s + sqlite3_errmsg(mdb));
+                throw SW_RUNTIME_EXCEPTION("sqlite3_reset() failed: "s + sqlite3_errmsg(mdb));
         }
 
         if (sqlite3_finalize(stmt) != SQLITE_OK)
-            throw std::runtime_error("sqlite3_finalize() failed: "s + sqlite3_errmsg(mdb));
+            throw SW_RUNTIME_EXCEPTION("sqlite3_finalize() failed: "s + sqlite3_errmsg(mdb));
     }
 
     db->execute("COMMIT;");
@@ -949,7 +949,7 @@ void PackagesDatabase::findLocalDependencies(IdDependencies &id_deps, const Unre
         }
 
         // TODO: replace later with typed exception, so client will try to fetch same package from server
-        throw std::runtime_error("PackageId '" + dep.ppath.toString() + "' not found.");
+        throw SW_RUNTIME_EXCEPTION("PackageId '" + dep.ppath.toString() + "' not found.");
     }
 
     // mark local deps
@@ -1010,7 +1010,7 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
             }
 
             // TODO: replace later with typed exception, so client will try to fetch same package from server
-            throw std::runtime_error("PackageId '" + project.ppath.toString() + "' not found.");
+            throw SW_RUNTIME_EXCEPTION("PackageId '" + project.ppath.toString() + "' not found.");
         }
 
         project.id = q.front().packageId.value(); // set package id first, then it is replaced with pkg version id, do not remove
@@ -1051,7 +1051,7 @@ void check_version_age(const std::string &created)
     // and during the second one, the packet is really young
     //LOG_INFO(logger, "mins " << mins);
     if (mins < PACKAGES_DB_REFRESH_TIME_MINUTES * 2)
-        throw std::runtime_error("One of the queried packages is 'young'. Young packages must be retrieved from server.");
+        throw SW_RUNTIME_EXCEPTION("One of the queried packages is 'young'. Young packages must be retrieved from server.");
 }
 
 db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn, int &prefix) const

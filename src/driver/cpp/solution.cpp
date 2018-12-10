@@ -89,11 +89,11 @@ path getPackageHeader(const ExtendedPackageData &p)
     const char on[] = "#pragma sw header on";
     auto pos = f.find(on);
     if (pos == f.npos)
-        throw std::runtime_error("No header for package: " + p.toString());
+        throw SW_RUNTIME_EXCEPTION("No header for package: " + p.toString());
     f = f.substr(pos + sizeof(on));
     pos = f.find("#pragma sw header off");
     if (pos == f.npos)
-        throw std::runtime_error("No end in header for package: " + p.toString());
+        throw SW_RUNTIME_EXCEPTION("No end in header for package: " + p.toString());
     f = f.substr(0, pos);
     //if (std::regex_search(f, m, r_header))
     {
@@ -466,7 +466,7 @@ void Solution::performChecks()
     auto d = getServiceDir();
     write_file(d / "cyclic_deps_checks.dot", s);
 
-    throw std::runtime_error("Cannot create execution plan because of cyclic dependencies");
+    throw SW_RUNTIME_EXCEPTION("Cannot create execution plan because of cyclic dependencies");
 }
 
 void Solution::copyChecksFrom(const Solution &s)
@@ -817,7 +817,7 @@ void Solution::build_and_resolve()
     r.resolve_dependencies(pkgs, true);
     auto dd = r.getDownloadDependencies();
     if (dd.empty())
-        throw std::runtime_error("Empty download dependencies");
+        throw SW_RUNTIME_EXCEPTION("Empty download dependencies");
 
     for (auto &p : dd)
         knownTargets.insert(p);
@@ -973,7 +973,7 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
 void Solution::checkPrepared() const
 {
     if (!prepared)
-        throw std::runtime_error("Prepare solution before executing");
+        throw SW_RUNTIME_EXCEPTION("Prepare solution before executing");
 }
 
 ExecutionPlan<builder::Command> Solution::getExecutionPlan() const
@@ -1007,7 +1007,7 @@ ExecutionPlan<builder::Command> Solution::getExecutionPlan(Commands &cmds) const
     auto d = getServiceDir();
     write_file(d / "cyclic_deps.dot", s);
 
-    throw std::runtime_error("Cannot create execution plan because of cyclic dependencies");
+    throw SW_RUNTIME_EXCEPTION("Cannot create execution plan because of cyclic dependencies");
 }
 
 void Solution::call_event(TargetBase &t, CallbackType et)
@@ -1108,13 +1108,13 @@ void Build::findCompiler()
     auto activate_or_throw = [&activate](const CompilerVector &a, const auto &e)
     {
         if (!activate(a))
-            throw std::runtime_error(e);
+            throw SW_RUNTIME_EXCEPTION(e);
     };
 
     auto activate_array_or_throw = [&activate_array](const std::vector<CompilerVector> &a, const auto &e)
     {
         if (!activate_array(a))
-            throw std::runtime_error(e);
+            throw SW_RUNTIME_EXCEPTION(e);
     };
 
     auto activate_linker_or_throw = [this](const std::vector<std::tuple<PackagePath /* lib */, PackagePath /* link */, LinkerType>> &a, const auto &e)
@@ -1132,7 +1132,7 @@ void Build::findCompiler()
             }
             return r;
         }))
-            throw std::runtime_error(e);
+            throw SW_RUNTIME_EXCEPTION(e);
     };
 
     const CompilerVector msvc =
@@ -1177,7 +1177,7 @@ void Build::findCompiler()
     case CompilerType::UnspecifiedCompiler:
         break;
     default:
-        throw std::runtime_error("solution.cpp: not implemented");
+        throw SW_RUNTIME_EXCEPTION("solution.cpp: not implemented");
 
     }
 
@@ -1374,7 +1374,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             if (auto c = sf->compiler->template as<ClangCompiler>())
             {
-                throw std::runtime_error("pchs are not implemented for clang");
+                throw SW_RUNTIME_EXCEPTION("pchs are not implemented for clang");
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
@@ -1586,7 +1586,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             }
             else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
-                throw std::runtime_error("clang compiler is not implemented");
+                throw SW_RUNTIME_EXCEPTION("clang compiler is not implemented");
 
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
@@ -1624,7 +1624,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     {
         if (auto c = sf->compiler->template as<ClangCompiler>())
         {
-            throw std::runtime_error("pchs are not implemented for clang");
+            throw SW_RUNTIME_EXCEPTION("pchs are not implemented for clang");
         }
         else if (auto c = sf->compiler->template as<GNUCompiler>())
         {
@@ -1990,7 +1990,7 @@ bool Build::execute()
         {
             auto &t = s.children[n];
             if (!t)
-                throw std::runtime_error("Empty target");
+                throw SW_RUNTIME_EXCEPTION("Empty target");
             s.TargetsToBuild[n] = t;
         }
     }
@@ -2095,7 +2095,7 @@ void Build::run_package(const String &s)
     build_package(s);
     auto p = (NativeExecutedTarget*)solutions[0].getTargetPtr(r).get();
     if (p->getType() != TargetType::NativeExecutable)
-        throw std::runtime_error("Unsupported package type");
+        throw SW_RUNTIME_EXCEPTION("Unsupported package type");
 
     RunArgs a;
     a.pkg = r;
@@ -2165,7 +2165,7 @@ void Build::load(const path &dll, bool usedll)
         else if (boost::iequals(compiler, "msvc"))
             Settings.Native.CompilerType = CompilerType::MSVC;
         else if (!compiler.empty())
-            throw std::runtime_error("unknown compiler: " + compiler);
+            throw SW_RUNTIME_EXCEPTION("unknown compiler: " + compiler);
 
         if (boost::iequals(target_os, "linux"))
             Settings.TargetOS.Type = OSType::Linux;
@@ -2239,9 +2239,9 @@ PackageDescriptionMap Build::getPackages() const
         }
 
         if (files.empty() && !nt->Empty)
-            throw std::runtime_error(pkg.toString() + ": No files found");
+            throw SW_RUNTIME_EXCEPTION(pkg.toString() + ": No files found");
         if (!files.empty() && nt->Empty)
-            throw std::runtime_error(pkg.toString() + ": Files were found, but target is marked as empty");
+            throw SW_RUNTIME_EXCEPTION(pkg.toString() + ": Files were found, but target is marked as empty");
 
         // we put files under SW_SDIR_NAME to keep space near it
         // e.g. for patch dir or other dirs (server provided files)
@@ -2281,7 +2281,7 @@ PackageDescriptionMap Build::getPackages() const
 const Module &ModuleStorage::get(const path &dll)
 {
     if (dll.empty())
-        throw std::runtime_error("Empty module");
+        throw SW_RUNTIME_EXCEPTION("Empty module");
 
     boost::upgrade_lock lk(m);
     auto i = modules.find(dll);
@@ -2310,7 +2310,7 @@ Module::Module(const path &dll)
         err += " Will rebuild on the next run.";
         //LOG_ERROR(logger, err);
         fs::remove(dll);
-        throw std::runtime_error(err);
+        throw SW_RUNTIME_EXCEPTION(err);
     }
     if (module->has("build"))
         build_ = module->get<void(Solution&)>("build");

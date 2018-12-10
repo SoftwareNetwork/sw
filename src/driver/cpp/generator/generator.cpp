@@ -558,7 +558,7 @@ void VSGenerator::generate(const Build &b)
             if (!p)
                 p = b.solutions[0].findProgramByExtension(".asm");
             if (!p)
-                throw std::runtime_error("Unknown lang");
+                throw SW_RUNTIME_EXCEPTION("Unknown lang");
             //if (auto p2 = p->as<VisualStudioCompiler>(); p2)
                 //toolset = p2->toolset;
             //if (auto p2 = p->as<ClangClCompiler>(); p2)
@@ -691,7 +691,7 @@ void VSGenerator::generate(const Build &b)
             if (!p)
                 p = b.solutions[0].findProgramByExtension(".asm");
             if (!p)
-                throw std::runtime_error("Unknown lang");
+                throw SW_RUNTIME_EXCEPTION("Unknown lang");
             //if (auto p2 = p->as<VisualStudioCompiler>(); p2)
                 //toolset = p2->toolset;
             //if (auto p2 = p->as<ClangClCompiler>(); p2)
@@ -1223,7 +1223,7 @@ private:
         std::wstring buf(4096, 0);
         path p2 = normalize_path_windows(p);
         if (!GetShortPathName(p2.wstring().c_str(), buf.data(), buf.size()))
-            //throw std::runtime_error("GetShortPathName failed for path: " + p.u8string());
+            //throw SW_RUNTIME_EXCEPTION("GetShortPathName failed for path: " + p.u8string());
             return p.u8string();
         return to_string(buf);
 #else

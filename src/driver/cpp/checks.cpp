@@ -56,7 +56,7 @@ static void load(const path &fn, ChecksContainer &checks)
     if (!i)
     {
         if (fs::exists(fn))
-            throw std::runtime_error("Cannot open file: " + fn.string());
+            throw SW_RUNTIME_EXCEPTION("Cannot open file: " + fn.string());
         return;
     }
     while (i)
@@ -79,7 +79,7 @@ static void save(const path &fn, const ChecksContainer &c)
     //primitives::filesystem::create(fn);
     std::ofstream o(fn.string());
     if (!o)
-        throw std::runtime_error("Cannot open file: " + fn.string());
+        throw SW_RUNTIME_EXCEPTION("Cannot open file: " + fn.string());
     for (auto &[d, v] : checks)
         o << d << " " << v << "\n";
 }
@@ -165,7 +165,7 @@ String make_alignment_var(const String &i)
 void check_def(const String &d)
 {
     if (d.empty())
-        throw std::runtime_error("Empty check definition");
+        throw SW_RUNTIME_EXCEPTION("Empty check definition");
 }
 
 std::optional<String> Check::getDefinition() const
@@ -214,7 +214,7 @@ void Check::updateDependencies()
 FunctionExists::FunctionExists(const String &f, const String &def)
 {
     if (f.empty())
-        throw std::runtime_error("Empty function");
+        throw SW_RUNTIME_EXCEPTION("Empty function");
     data = f;
 
     if (def.empty())
@@ -290,7 +290,7 @@ int main(int ac, char* av[])
 IncludeExists::IncludeExists(const String &i, const String &def)
 {
     if (i.empty())
-        throw std::runtime_error("Empty include");
+        throw SW_RUNTIME_EXCEPTION("Empty include");
     data = i;
 
     if (def.empty())
@@ -351,7 +351,7 @@ int main()
 TypeSize::TypeSize(const String &t, const String &def)
 {
     if (t.empty())
-        throw std::runtime_error("Empty type");
+        throw SW_RUNTIME_EXCEPTION("Empty type");
     data = t;
 
     Definition = make_type_var(data);
@@ -431,7 +431,7 @@ void TypeSize::run() const
 TypeAlignment::TypeAlignment(const String &t, const String &def)
 {
     if (t.empty())
-        throw std::runtime_error("Empty type");
+        throw SW_RUNTIME_EXCEPTION("Empty type");
     data = t;
 
     if (def.empty())
@@ -515,7 +515,7 @@ int main()
 SymbolExists::SymbolExists(const String &s, const String &def)
 {
     if (s.empty())
-        throw std::runtime_error("Empty symbol");
+        throw SW_RUNTIME_EXCEPTION("Empty symbol");
     data = s;
 
     if (def.empty())
@@ -586,7 +586,7 @@ int main(int argc, char** argv)
 DeclarationExists::DeclarationExists(const String &d, const String &def)
 {
     if (d.empty())
-        throw std::runtime_error("Empty declaration");
+        throw SW_RUNTIME_EXCEPTION("Empty declaration");
     data = d;
 
     if (def.empty())
@@ -663,7 +663,7 @@ StructMemberExists::StructMemberExists(const String &s, const String &member, co
     : s(s), member(member)
 {
     if (s.empty() || member.empty())
-        throw std::runtime_error("Empty struct/member");
+        throw SW_RUNTIME_EXCEPTION("Empty struct/member");
     data = s + "." + member;
 
     if (def.empty())
@@ -724,7 +724,7 @@ LibraryFunctionExists::LibraryFunctionExists(const String &library, const String
     : library(library), function(function)
 {
     if (library.empty() || function.empty())
-        throw std::runtime_error("Empty library/function");
+        throw SW_RUNTIME_EXCEPTION("Empty library/function");
     data = library + "." + function;
 
     if (def.empty())
@@ -801,7 +801,7 @@ int main(int ac, char* av[])
 SourceCompiles::SourceCompiles(const String &def, const String &source)
 {
     if (def.empty() || source.empty())
-        throw std::runtime_error("Empty def/source");
+        throw SW_RUNTIME_EXCEPTION("Empty def/source");
     data = source;
     Definition = def;
     check_def(Definition);
@@ -834,7 +834,7 @@ void SourceCompiles::run() const
 SourceLinks::SourceLinks(const String &def, const String &source)
 {
     if (def.empty() || source.empty())
-        throw std::runtime_error("Empty def/source");
+        throw SW_RUNTIME_EXCEPTION("Empty def/source");
     data = source;
     Definition = def;
     check_def(Definition);
@@ -876,7 +876,7 @@ void SourceLinks::run() const
 SourceRuns::SourceRuns(const String &def, const String &source)
 {
     if (def.empty() || source.empty())
-        throw std::runtime_error("Empty def/source");
+        throw SW_RUNTIME_EXCEPTION("Empty def/source");
     data = source;
     Definition = def;
     check_def(Definition);

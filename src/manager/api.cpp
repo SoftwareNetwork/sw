@@ -133,7 +133,7 @@ void Api::addVersion(PackagePath p, const Version &vnew, const optional<Version>
 void Api::updateVersion(PackagePath p, const Version &v)
 {
     if (!v.isBranch())
-        throw std::runtime_error("Only branches can be updated");
+        throw SW_RUNTIME_EXCEPTION("Only branches can be updated");
 
     check_relative(r, p);
 

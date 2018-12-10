@@ -70,7 +70,7 @@ PackageData YamlPackageDescription::getData() const
 {
     //const auto &s = *this;
     PackageData d;
-    throw std::runtime_error("Not implemented");
+    throw SW_RUNTIME_EXCEPTION("Not implemented");
 }
 
 } // namespace sw

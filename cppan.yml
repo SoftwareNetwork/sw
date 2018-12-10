@@ -252,6 +252,9 @@ projects:
             - name: pvt.egorpugin.primitives.log
               version: master
               local: primitives.log
+            - name: pvt.egorpugin.primitives.templates
+              version: master
+              local: primitives.templates
             - pvt.cppan.demo.google.protobuf.protoc: "*"
             - pvt.cppan.demo.google.protobuf.protobuf: "*"
             - pvt.cppan.demo.google.grpc.grpcpp: 1

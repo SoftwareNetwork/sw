@@ -7,6 +7,7 @@
 #pragma once
 
 #include <junction/ConcurrentMap_Leapfrog.h>
+#include <primitives/exceptions.h>
 
 #include <memory>
 
@@ -36,7 +37,7 @@ struct ConcurrentMap
     insert_type insert(K k, const V &v, Deleter &&d)
     {
         if (k == 0)
-            throw std::runtime_error("ConcurrentMap: zero key");
+            throw SW_RUNTIME_EXCEPTION("ConcurrentMap: zero key");
         auto i = m->insertOrFind(k);
         auto value = i.getValue();
         if (!value)

@@ -256,7 +256,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
                 else
                 {
                     if (!fs::exists(jf))
-                        throw std::runtime_error("please, recreate package: " + t->pkg.toString());
+                        throw SW_RUNTIME_EXCEPTION("please, recreate package: " + t->pkg.toString());
 
                     auto j = nlohmann::json::parse(read_file(jf));
                     p = j["path"].get<std::string>();
@@ -267,7 +267,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
                 if (t->pkg.ppath == p.slice(2))
                 {
-                    throw std::runtime_error("unreachable code");
+                    throw SW_RUNTIME_EXCEPTION("unreachable code");
                     t->pkg.ppath = constructTargetName(Name);
                     t->pkg.createNames();
 
@@ -311,7 +311,7 @@ void TargetBase::addChild(const TargetBaseTypePtr &t)
 void TargetBase::setupTarget(TargetBaseType *t) const
 {
     if (getSolution()->exists(t->pkg))
-        throw std::runtime_error("Target already exists: " + t->pkg.target_name);
+        throw SW_RUNTIME_EXCEPTION("Target already exists: " + t->pkg.target_name);
 
     // find automatic way of copying data?
 
@@ -1008,7 +1008,7 @@ NativeLinker *NativeExecutedTarget::getSelectedTool() const
         return Linker.get();
     if (Librarian)
         return Librarian.get();
-    throw std::runtime_error("No tool selected");
+    throw SW_RUNTIME_EXCEPTION("No tool selected");
 }
 
 void NativeExecutedTarget::addPrecompiledHeader(const path &h, const path &cpp)
@@ -1073,7 +1073,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
             }
             else if (auto c = sf->compiler->as<ClangCompiler>())
             {
-                throw std::runtime_error("pchs are not implemented for clang");
+                throw SW_RUNTIME_EXCEPTION("pchs are not implemented for clang");
 
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
@@ -1128,7 +1128,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
         }
         else if (auto c = sf->compiler->as<ClangCompiler>())
         {
-            throw std::runtime_error("pchs are not implemented for clang");
+            throw SW_RUNTIME_EXCEPTION("pchs are not implemented for clang");
 
             sf->setOutputFile(gch_fn); // is it correct?
             if (force_include_pch_header_to_pch_source)
@@ -1498,7 +1498,7 @@ void NativeExecutedTarget::findSources()
             }
         }
         if (bfn.empty())
-            throw std::runtime_error("");
+            throw SW_RUNTIME_EXCEPTION("");
 
         auto b = read_file(bfn);
         auto f = bazel::parse(b);
@@ -1665,7 +1665,7 @@ void NativeExecutedTarget::detectLicenseFile()
                 *error = err;
                 return false;
             }
-            throw std::runtime_error(err);
+            throw SW_RUNTIME_EXCEPTION(err);
         };
         if (!name.is_absolute())
             name = SourceDir / name;
@@ -1747,7 +1747,7 @@ bool NativeExecutedTarget::prepare()
         if (UseModules)
         {
             if (Settings.Native.CompilerType != CompilerType::MSVC)
-                throw std::runtime_error("Currently modules are implemented for MSVC only");
+                throw SW_RUNTIME_EXCEPTION("Currently modules are implemented for MSVC only");
             CPPVersion = CPPLanguageStandard::CPP2a;
         }
 
@@ -2580,7 +2580,7 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
         else if (fs::exists(BinaryDir / from))
             from = BinaryDir / from;
         else
-            throw std::runtime_error("Package: " + pkg.target_name + ", file not found: " + from.string());
+            throw SW_RUNTIME_EXCEPTION("Package: " + pkg.target_name + ", file not found: " + from.string());
     }
 
     // we really need ExecuteCommand here!!!

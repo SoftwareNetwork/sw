@@ -6,8 +6,12 @@
 
 #pragma once
 
+// TODO: RENAME THIS FILE
+
 #include "command_storage.h"
 #include "file_storage.h"
+
+#include <primitives/templates.h>
 
 namespace sw
 {
@@ -25,6 +29,7 @@ struct Db
     //virtual void save(const path &fn, const ChecksContainer &checks) const = 0;
 };
 
-Db &getDb();
+SW_BUILDER_API
+SW_DECLARE_GLOBAL_STATIC_FUNCTION(Db, getDb);
 
 }

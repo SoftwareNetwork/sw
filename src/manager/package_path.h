@@ -40,7 +40,7 @@ struct PathBase : protected std::vector<PathElement>
         {
             auto &c = *i;
             if (check_symbol && !check_symbol(c))
-                throw std::runtime_error("Bad symbol '"s + c + "' in path: '" + s + "'");
+                throw SW_RUNTIME_EXCEPTION("Bad symbol '"s + c + "' in path: '" + s + "'");
             auto it = repl.find(c);
             if (it != repl.end())
                 c = it->second;
