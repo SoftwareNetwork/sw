@@ -56,6 +56,7 @@ struct Remote
     Url url;
     String user;
     String token;
+    bool secure = true;
 
     mutable std::shared_ptr<grpc::Channel> channel;
 

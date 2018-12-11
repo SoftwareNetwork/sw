@@ -109,6 +109,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
         prm->name = n;
         String provider;
         YAML_EXTRACT_VAR(kv.second, prm->url, "url", String);
+        YAML_EXTRACT_VAR(kv.second, prm->secure, "secure", bool);
         //YAML_EXTRACT_VAR(kv.second, prm->data_dir, "data_dir", String);
         YAML_EXTRACT_VAR(kv.second, provider, "provider", String);
         if (!provider.empty())
