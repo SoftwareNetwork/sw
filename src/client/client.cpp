@@ -101,6 +101,9 @@ static cl::opt<int> jobs("j", cl::desc("Number of jobs"), cl::init(-1));
 
 extern cl::opt<bool> useFileMonitor;
 
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/signal_set.hpp>
+
 int setup_main(const Strings &args)
 {
     // some initial stuff
@@ -128,6 +131,7 @@ int setup_main(const Strings &args)
 
     primitives::filesystem::FileMonitor fm;
     sw::getFileMonitor(&fm);
+    joining_thread_with_object_run_stop fmt(fm);
 
     // before CommandStorage and FileStorages
     sw::FileDb db;
@@ -143,8 +147,13 @@ int setup_main(const Strings &args)
     sw::FileStorages fs;
     sw::getFileStorages(&fs);
 
-    // run file monitor
-    auto fmt = make_joining_thread([] { sw::getFileMonitor().run(); });
+    /*boost::asio::io_context io_service;
+    boost::asio::signal_set signals(io_service, SIGINT);
+    signals.async_wait([&e]()
+    {
+        e.stop();
+    });
+    io_service.run();*/
 
     // actual execution
     return sw_main(args);

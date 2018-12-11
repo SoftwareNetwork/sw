@@ -79,11 +79,20 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
     static std::mutex m;
     std::unique_lock lk(m);
 
+    bool secure = true;
+
     auto p = url.find("://");
     auto host = url.substr(p == url.npos ? 0 : p + 3);
     host = host.substr(0, host.find('/'));
-    host = host.substr(0, host.find(':'));
-    host = "api." + host;
+    if (host.find(':') == host.npos)
+    {
+        //host = host.substr(0, host.find(':')); // remove port
+        host = "api." + host;
+    }
+    else
+    {
+        secure = host.substr(0, host.find(':')) != "127.0.0.1";
+    }
 
     static const path cert_dir = get_root_directory() / "certs";
     path cert_file = cert_dir / "roots.pem";
@@ -107,8 +116,7 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
 #endif
 
     auto creds = grpc::SslCredentials(ssl_options);
-
-    channel = grpc::CreateChannel(host, creds);
+    channel = grpc::CreateChannel(host, secure ? creds : grpc::InsecureChannelCredentials());
     return channel;
 }
 
