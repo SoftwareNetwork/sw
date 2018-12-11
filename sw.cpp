@@ -38,6 +38,7 @@ void build(Solution &s)
     protos.Public += "src/protocol"_idir;
     protos.Public +=
         "org.sw.demo.google.grpc.grpcpp-1"_dep,
+        "pub.egorpugin.primitives.templates-master"_dep,
         "pub.egorpugin.primitives.log-master"_dep;
     gen_grpc(protos, protos.SourceDir / "src/protocol/api.proto", true);
 
