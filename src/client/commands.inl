@@ -28,6 +28,7 @@ SUBCOMMAND(list, "List packages in database.") COMMA
 SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
 SUBCOMMAND(test, "Run tests.") COMMA
 SUBCOMMAND(update, "Update lock file.") COMMA
+SUBCOMMAND(upload, "Upload package.") COMMA
 SUBCOMMAND(uri, "Used to invoke sw application from the website.") COMMA
 
 #ifdef SW_COMMA_SELF

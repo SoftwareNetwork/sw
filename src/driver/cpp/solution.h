@@ -87,9 +87,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     TargetMap children;
     TargetMap dummy_children;
 
-    //
-    using SourceDirMapBySource = std::unordered_map<Source, path>;
-    SourceDirMapBySource source_dirs_by_source;
+    SourceDirMap source_dirs_by_source;
 
     // for module calls
     String current_module;
@@ -192,6 +190,8 @@ private:
 
 struct SW_DRIVER_CPP_API Build : Solution, PackageScript
 {
+    // current loaded dll
+    path dll;
     // child solutions
     std::vector<Solution> solutions;
     bool configure = false;
@@ -228,7 +228,6 @@ protected:
     PackageDescriptionMap getPackages() const;
 
 private:
-    path dll;
     bool remove_ide_explans = false;
 
     void setSettings();

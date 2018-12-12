@@ -41,10 +41,8 @@ optional<path> CppDriver::resolveConfig(const path &file_or_dir) const
 
 PackageScriptPtr CppDriver::build(const path &file_or_dir) const
 {
-    throw SW_RUNTIME_EXCEPTION("function disabled");
-
     auto f = resolveConfig(file_or_dir);
-    if (!f)
+    if (!f || f.value().filename() != getConfigFilename())
         return {};
     current_thread_path(f.value().parent_path());
 
@@ -117,7 +115,7 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
         d = d.parent_path();
     d = d / ".sw" / "src";
 
-    Solution::SourceDirMapBySource srcs_old;
+    SourceDirMap srcs_old;
     if (parallel)
     {
         bool pp = true; // postpone once!
@@ -132,7 +130,7 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
                 b->fetch_dir = d;
             b->build_and_load(f);
 
-            Solution::SourceDirMapBySource srcs;
+            SourceDirMap srcs;
             for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
             {
                 auto s = t->source; // make a copy!
@@ -160,24 +158,7 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
             // For other cases uses non-parallel mode.
             pp = false;
 
-            auto &e = getExecutor();
-            Futures<void> fs;
-            for (auto &src : srcs)
-            {
-                fs.push_back(e.push([src = src.first, &d = src.second]
-                    {
-                        if (!fs::exists(d))
-                        {
-                            LOG_INFO(logger, "Downloading source:\n" << print_source(src));
-                            fs::create_directories(d);
-                            ScopedCurrentPath scp(d, CurrentPathScope::Thread);
-                            download(src);
-                        }
-                        d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
-                    }));
-            }
-            waitAndGet(fs);
-
+            download(srcs, true);
             srcs_old = srcs;
         }
     }
@@ -225,6 +206,7 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, bool paralle
                 path rd = i->second / t->RootDirectory;
                 t->SourceDir = rd;
             }
+            // call first prepare stage with source resolving
             t->prepare();
         }));
     }

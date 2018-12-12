@@ -72,15 +72,34 @@ message Notifications {
 }
 
 message NewPackage {
+    message ScriptVersion {
+        string script = 1;
+        string prefix_path = 2;
+    }
+
     message NewVersion {
         PackageId package = 1;
         string old_version = 2;
     }
-    oneof package {
-        string script = 1;
-        NewVersion version = 2;
+
+    message SourcePackageDescription {
+        PackageId package = 1;
+        string source = 2; // json string
+        //string root_dir = 3; // we calculate root dir same way on both sides
+        repeated string files = 3;
+        UnresolvedPackages dependencies = 4;
     }
-    string prefix_path = 3;
+
+    message SourcePackagesDescription {
+        repeated SourcePackageDescription packages = 1;
+    }
+
+    //
+    oneof package {
+        ScriptVersion script = 1;
+        NewVersion version = 2; // add new ver for existing package
+        SourcePackagesDescription packages = 3;
+    }
 }
 
 // unauthorized
@@ -99,6 +118,7 @@ service ApiService {
 // id: 1
 service UserService {
     rpc AddPackage (NewPackage) returns (google.protobuf.Empty); // id: 1
+    // update version (e.g. branch versions)
     rpc UpdatePackage (PackageId) returns (google.protobuf.Empty); // id: 2
     rpc RemovePackage (PackageId) returns (google.protobuf.Empty); // id: 3
 

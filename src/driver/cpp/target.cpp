@@ -393,9 +393,7 @@ void TargetBase::setSource(const Source &s)
     if (!fs::exists(d))
     {
         LOG_INFO(logger, "Downloading source:\n" << print_source(s2));
-        fs::create_directories(d);
-        ScopedCurrentPath scp(d, CurrentPathScope::Thread);
-        download(s2);
+        download(s2, d);
     }
     d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
     getSolution()->source_dirs_by_source[s2] = d;
@@ -466,7 +464,7 @@ void TargetBase::fetch()
     if (PostponeFileResolving || DryRun)
         return;
 
-    static std::unordered_map<Source, path> fetched_dirs;
+    static SourceDirMap fetched_dirs;
     auto i = fetched_dirs.find(source);
     if (i == fetched_dirs.end())
     {
@@ -474,10 +472,8 @@ void TargetBase::fetch()
         d = BinaryDir / d;
         if (!fs::exists(d))
         {
-            fs::create_directories(d);
-            ScopedCurrentPath scp(d, CurrentPathScope::Thread);
             applyVersionToUrl(source, pkg.version);
-            download(source);
+            download(source, d);
         }
         d = d / findRootDirectory(d);
         SourceDir = d;

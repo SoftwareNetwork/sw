@@ -10,6 +10,7 @@
 #include "dependency.h"
 #include "enums.h"
 #include "package.h"
+#include "package_data.h"
 #include "remote.h"
 
 #undef ERROR
@@ -28,6 +29,7 @@ struct Api
     void addClientCall();
     IdDependencies resolvePackages(const UnresolvedPackages &);
 
+    void addVersion(const PackageDescriptionMap &pkgs);
     void addVersion(const PackagePath &prefix, const String &cppan);
     void addVersion(PackagePath p, const Version &vnew, const optional<Version> &vold = {});
     void updateVersion(PackagePath p, const Version &v);

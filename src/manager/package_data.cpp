@@ -6,6 +6,8 @@
 
 #include "package_data.h"
 
+#include <nlohmann/json.hpp>
+
 namespace sw
 {
 
@@ -36,6 +38,42 @@ void PackageData::applyPrefix(const PackagePath &prefix)
 void PackageData::checkSourceAndVersion()
 {
     ::sw::checkSourceAndVersion(source, version);
+}
+
+PackageDescription::PackageDescription(const std::string &s)
+    : base(s)
+{
+}
+
+JsonPackageDescription::JsonPackageDescription(const std::string &s)
+    : PackageDescription(s)
+{
+}
+
+PackageData JsonPackageDescription::getData() const
+{
+    auto j = nlohmann::json::parse(*this);
+    PackageData d;
+    d.source = load_source(j["source"]);
+    d.version = j["version"].get<std::string>();
+    d.ppath = j["path"].get<std::string>();
+    for (auto &v : j["files"])
+        d.files_map[fs::u8path(v["from"].get<std::string>())] = fs::u8path(v["to"].get<std::string>());
+    for (auto &v : j["dependencies"])
+        d.dependencies.emplace(v["path"].get<std::string>(), v["range"].get<std::string>());
+    return d;
+}
+
+YamlPackageDescription::YamlPackageDescription(const std::string &s)
+    : PackageDescription(s)
+{
+}
+
+PackageData YamlPackageDescription::getData() const
+{
+    //const auto &s = *this;
+    PackageData d;
+    throw SW_RUNTIME_EXCEPTION("Not implemented");
 }
 
 void checkSourceAndVersion(Source &s, const Version &v)

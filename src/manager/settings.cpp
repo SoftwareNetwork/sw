@@ -25,6 +25,8 @@ DECLARE_STATIC_LOGGER(logger, "settings");
 #define CPPAN_LOCAL_BUILD_PREFIX "sw-build-"
 #define CONFIG_ROOT "/etc/sw/"
 
+static cl::opt<String> default_remote("r", cl::desc("Select default remote"));
+
 namespace sw
 {
 
@@ -122,6 +124,17 @@ void Settings::load_main(const yaml &root, const SettingsType type)
         if (!o)
             remotes.push_back(*prm);
     });
+
+    if (!default_remote.empty())
+    {
+        auto i = std::find_if(remotes.begin(), remotes.end(), [](const auto &r)
+        {
+            return r.name == default_remote;
+        });
+        if (i == remotes.end())
+            throw SW_RUNTIME_EXCEPTION("Remote not found: " + default_remote);
+        std::swap(*i, *remotes.begin());
+    }
 
     YAML_EXTRACT_AUTO(disable_update_checks);
     YAML_EXTRACT(storage_dir, String);

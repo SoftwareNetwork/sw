@@ -13,6 +13,8 @@
 #include "yaml.h"
 
 #include <primitives/command.h>
+#include <primitives/exceptions.h>
+#include <primitives/executor.h>
 #include <primitives/filesystem.h>
 #include <primitives/overload.h>
 #include <primitives/pack.h>
@@ -96,6 +98,14 @@ static void downloadRepository(F &&f)
                 std::rethrow_exception(eptr);
         }
     }
+}
+
+static void execute_command_in_dir(const path &dir, const Strings &args)
+{
+    Command c;
+    c.working_directory = dir;
+    c.args = args;
+    c.execute();
 }
 
 static int isEmpty(int64_t i)
@@ -226,7 +236,7 @@ Git::Git(const String &url, const String &tag, const String &branch, const Strin
 {
 }
 
-void Git::download() const
+void Git::download(const path &dir) const
 {
     // try to speed up git downloads from github
     // add more sites below
@@ -244,17 +254,17 @@ void Git::download() const
         if (!tag.empty())
         {
             github_url += make_archive_name(tag);
-            fn = current_thread_path() / make_archive_name("1");
+            fn = dir / make_archive_name("1");
         }
         else if (!branch.empty())
         {
             github_url += branch + ".zip"; // but use .zip for branches!
-            fn = current_thread_path() / "1.zip";
+            fn = dir / "1.zip";
         }
         else if (!commit.empty())
         {
             github_url += commit + ".zip"; // but use .zip for branches!
-            fn = current_thread_path() / "1.zip";
+            fn = dir / "1.zip";
         }
 
         try
@@ -277,28 +287,24 @@ void Git::download() const
         return;
 #endif
 
-    downloadRepository([this]()
+    downloadRepository([this, dir]()
     {
-        String branchPath = url.substr(url.find_last_of("/") + 1);
-        auto p = current_thread_path() / branchPath;
-        fs::create_directories(p);
-
-        Command::execute({ "git", "-C", p.string(), "init" });
-        Command::execute({ "git", "-C", p.string(), "remote", "add", "origin", url });
+        execute_command_in_dir(dir, { "git", "init" });
+        execute_command_in_dir(dir, { "git", "remote", "add", "origin", url });
         if (!tag.empty())
         {
-            Command::execute({ "git", "-C", p.string(), "fetch", "--depth", "1", "origin", "refs/tags/" + tag });
-            Command::execute({ "git", "-C", p.string(), "reset", "--hard", "FETCH_HEAD" });
+            execute_command_in_dir(dir, { "git", "fetch", "--depth", "1", "origin", "refs/tags/" + tag });
+            execute_command_in_dir(dir, { "git", "reset", "--hard", "FETCH_HEAD" });
         }
         else if (!branch.empty())
         {
-            Command::execute({ "git", "-C", p.string(), "fetch", "--depth", "1", "origin", branch });
-            Command::execute({ "git", "-C", p.string(), "reset", "--hard", "FETCH_HEAD" });
+            execute_command_in_dir(dir, { "git", "fetch", "--depth", "1", "origin", branch });
+            execute_command_in_dir(dir, { "git", "reset", "--hard", "FETCH_HEAD" });
         }
         else if (!commit.empty())
         {
-            Command::execute({ "git", "-C", p.string(), "fetch" });
-            Command::execute({ "git", "-C", p.string(), "checkout", commit });
+            execute_command_in_dir(dir, { "git", "fetch" });
+            execute_command_in_dir(dir, { "git", "checkout", commit });
         }
     });
 }
@@ -392,23 +398,20 @@ Hg::Hg(const yaml &root, const String &name)
     YAML_EXTRACT_AUTO(revision);
 }
 
-void Hg::download() const
+void Hg::download(const path &dir) const
 {
-    downloadRepository([this]()
+    downloadRepository([this, dir]()
     {
-        Command::execute({ "hg", "clone", url });
-
-        String branchPath = url.substr(url.find_last_of("/") + 1);
-        ScopedCurrentPath scp(fs::current_path() / branchPath);
+        execute_command_in_dir(dir, { "hg", "clone", url });
 
         if (!tag.empty())
-            Command::execute({ "hg", "update", tag });
+            execute_command_in_dir(dir, { "hg", "update", tag });
         else if (!branch.empty())
-            Command::execute({ "hg", "update", branch });
+            execute_command_in_dir(dir, { "hg", "update", branch });
         else if (!commit.empty())
-            Command::execute({ "hg", "update", commit });
+            execute_command_in_dir(dir, { "hg", "update", commit });
         else if (revision != -1)
-            Command::execute({ "hg", "update", std::to_string(revision) });
+            execute_command_in_dir(dir, { "hg", "update", std::to_string(revision) });
     });
 }
 
@@ -484,19 +487,16 @@ Bzr::Bzr(const yaml &root, const String &name)
     YAML_EXTRACT_AUTO(revision);
 }
 
-void Bzr::download() const
+void Bzr::download(const path &dir) const
 {
-    downloadRepository([this]()
+    downloadRepository([this, dir]()
     {
-        Command::execute({ "bzr", "branch", url });
-
-        String branchPath = url.substr(url.find_last_of("/") + 1);
-        ScopedCurrentPath scp(fs::current_path() / branchPath);
+        execute_command_in_dir(dir, { "bzr", "branch", url });
 
         if (!tag.empty())
-            Command::execute({ "bzr", "update", "-r", "tag:" + tag });
+            execute_command_in_dir(dir, { "bzr", "update", "-r", "tag:" + tag });
         else if (revision != -1)
-            Command::execute({ "bzr", "update", "-r", std::to_string(revision) });
+            execute_command_in_dir(dir, { "bzr", "update", "-r", std::to_string(revision) });
     });
 }
 
@@ -574,23 +574,19 @@ Fossil::Fossil(const yaml &root, const String &name)
 {
 }
 
-void Fossil::download() const
+void Fossil::download(const path &dir) const
 {
-    downloadRepository([this]()
+    downloadRepository([this, dir]()
     {
-        Command::execute({ "fossil", "clone", url, "temp.fossil" });
-
-        fs::create_directories("temp");
-        ScopedCurrentPath scp(fs::current_path() / "temp");
-
-        Command::execute({ "fossil", "open", "../temp.fossil" });
+        execute_command_in_dir(dir, { "fossil", "clone", url, "temp.fossil" });
+        execute_command_in_dir(dir, { "fossil", "open", "temp.fossil" });
 
         if (!tag.empty())
-            Command::execute({ "fossil", "update", tag });
+            execute_command_in_dir(dir, { "fossil", "update", tag });
         else if (!branch.empty())
-            Command::execute({ "fossil", "update", branch });
+            execute_command_in_dir(dir, { "fossil", "update", branch });
         else if (!commit.empty())
-            Command::execute({ "fossil", "update", commit });
+            execute_command_in_dir(dir, { "fossil", "update", commit });
     });
 }
 
@@ -628,20 +624,18 @@ bool Cvs::isValidUrl() const
     return false;
 }
 
-void Cvs::download() const
+void Cvs::download(const path &dir) const
 {
-    downloadRepository([this]()
+    downloadRepository([this, dir]()
     {
-        Command::execute({ "cvs", url, "co", module });
-
-        ScopedCurrentPath scp(current_thread_path() / module, CurrentPathScope::All);
+        execute_command_in_dir(dir, { "cvs", url, "co", module });
 
         if (!tag.empty())
-            Command::execute({ "cvs", "update", "-r", tag });
+            execute_command_in_dir(dir, { "cvs", "update", "-r", tag });
         else if (!branch.empty())
-            Command::execute({ "cvs", "update", "-r", branch });
+            execute_command_in_dir(dir, { "cvs", "update", "-r", branch });
         else if (!revision.empty())
-            Command::execute({ "cvs", "update", "-r", revision });
+            execute_command_in_dir(dir, { "cvs", "update", "-r", revision });
     });
 }
 
@@ -741,18 +735,18 @@ Svn::Svn(const yaml &root, const String &name)
     YAML_EXTRACT_AUTO(revision);
 }
 
-void Svn::download() const
+void Svn::download(const path &dir) const
 {
-    downloadRepository([this]()
+    downloadRepository([this, dir]()
     {
         if (!tag.empty())
-            Command::execute({ "svn", "checkout", url + "/tags/" + tag }); //tag
+            execute_command_in_dir(dir, { "svn", "checkout", url + "/tags/" + tag }); //tag
         else if (!branch.empty())
-            Command::execute({ "svn", "checkout", url + "/branches/" + branch }); //branch
+            execute_command_in_dir(dir, { "svn", "checkout", url + "/branches/" + branch }); //branch
         else if (revision != -1)
-            Command::execute({ "svn", "checkout", "-r", std::to_string(revision), url });
+            execute_command_in_dir(dir, { "svn", "checkout", "-r", std::to_string(revision), url });
         else
-            Command::execute({ "svn", "checkout", url + "/trunk" });
+            execute_command_in_dir(dir, { "svn", "checkout", url + "/trunk" });
     });
 }
 
@@ -849,9 +843,9 @@ RemoteFile::RemoteFile(const yaml &root, const String &name)
         throw SW_RUNTIME_EXCEPTION("Remote url is missing");
 }
 
-void RemoteFile::download() const
+void RemoteFile::download(const path &dir) const
 {
-    download_and_unpack(url, path(url).filename());
+    download_and_unpack(url, dir / path(url).filename());
 }
 
 void RemoteFile::save(yaml &root, const String &name) const
@@ -880,10 +874,10 @@ RemoteFiles::RemoteFiles(const yaml &root, const String &name)
         throw SW_RUNTIME_EXCEPTION("Empty remote files");
 }
 
-void RemoteFiles::download() const
+void RemoteFiles::download(const path &dir) const
 {
     for (auto &rf : urls)
-        download_file_checked(rf, path(rf).filename());
+        download_file_checked(rf, dir / path(rf).filename());
 }
 
 bool RemoteFiles::isValidUrl() const
@@ -966,9 +960,43 @@ void RemoteFiles::applyVersion(const Version &v)
     urls = urls2;
 }
 
-void download(const Source &source, int64_t max_file_size)
+void download(const Source &source, const path &dir)
 {
-    visit([](auto &v) { v.download(); }, source);
+    fs::create_directories(dir);
+    visit([dir](auto &v) { v.download(dir); }, source);
+}
+
+void download(SourceDirMap &sources, bool ignore_existing_dirs, bool adjust_root_dir)
+{
+    auto &e = getExecutor();
+    Futures<void> fs;
+    for (auto &src : sources)
+    {
+        fs.push_back(e.push([src = src.first, &d = src.second, ignore_existing_dirs, adjust_root_dir]
+        {
+            if (!fs::exists(d))
+            {
+                LOG_INFO(logger, "Downloading source:\n" << print_source(src));
+                download(src, d);
+            }
+            else if (!ignore_existing_dirs)
+            {
+                throw SW_RUNTIME_EXCEPTION("Directory exists " + normalize_path(d) + " for source " + print_source(src));
+            }
+            if (adjust_root_dir)
+                d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
+        }));
+    }
+    waitAndGet(fs);
+}
+
+SourceDirMap download(SourceDirSet &sset, bool ignore_existing_dirs, bool adjust_root_dir)
+{
+    SourceDirMap sources;
+    for (auto &s : sset)
+        sources[s] = get_temp_filename("dl");
+    download(sources, ignore_existing_dirs, adjust_root_dir);
+    return sources;
 }
 
 bool isValidSourceUrl(const Source &source)

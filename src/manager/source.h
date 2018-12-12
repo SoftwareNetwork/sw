@@ -38,7 +38,7 @@ struct EmptySource
     String print() const { return ""; }
     SourceKvMap printKv() const { return { {"Source", getString()} }; }
     void applyVersion(const Version &v) {}
-    void download() const {}
+    void download(const path &dir) const {}
 
     static String getString() { return "empty"; }
 
@@ -82,7 +82,7 @@ struct SW_MANAGER_API Git : SourceUrl
     Git(const String &url, const String &tag = "", const String &branch = "", const String &commit = "");
     Git(const yaml &root, const String &name = Git::getString());
 
-    void download() const;
+    void download(const path &dir) const;
     bool isValid(String *error = nullptr) const;
     bool load(const ptree &p);
     bool save(ptree &p) const;
@@ -108,7 +108,7 @@ struct SW_MANAGER_API Hg : Git
     Hg() = default;
     Hg(const yaml &root, const String &name = Hg::getString());
 
-    void download() const;
+    void download(const path &dir) const;
     bool isValid(String *error = nullptr) const;
     bool load(const ptree &p);
     bool save(ptree &p) const;
@@ -134,7 +134,7 @@ struct SW_MANAGER_API Bzr : SourceUrl
     Bzr() = default;
     Bzr(const yaml &root, const String &name = Bzr::getString());
 
-    void download() const;
+    void download(const path &dir) const;
     bool isValid(String *error = nullptr) const;
     bool load(const ptree &p);
     bool save(ptree &p) const;
@@ -157,7 +157,7 @@ struct SW_MANAGER_API Fossil : Git
     Fossil() = default;
     Fossil(const yaml &root, const String &name = Fossil::getString());
 
-    void download() const;
+    void download(const path &dir) const;
     using Git::save;
     void save(yaml &root, const String &name = Fossil::getString()) const;
     SourceKvMap printKv() const;
@@ -180,7 +180,7 @@ struct SW_MANAGER_API Cvs : SourceUrl
     Cvs() = default;
     Cvs(const yaml &root, const String &name = Cvs::getString());
 
-    void download() const;
+    void download(const path &dir) const;
     bool isValid(String *error = nullptr) const;
     bool isValidUrl() const;
     bool load(const ptree &p);
@@ -209,7 +209,7 @@ struct Svn : SourceUrl
     Svn() = default;
     Svn(const yaml &root, const String &name = Svn::getString());
 
-    void download() const;
+    void download(const path &dir) const;
     bool isValid(String *error = nullptr) const;
     bool load(const ptree &p);
     bool save(ptree &p) const;
@@ -234,7 +234,7 @@ struct SW_MANAGER_API RemoteFile : SourceUrl
     RemoteFile(const String &url);
     RemoteFile(const yaml &root, const String &name = RemoteFile::getString());
 
-    void download() const;
+    void download(const path &dir) const;
     using SourceUrl::save;
     void save(yaml &root, const String &name = RemoteFile::getString()) const;
     void applyVersion(const Version &v);
@@ -255,7 +255,7 @@ struct SW_MANAGER_API RemoteFiles
     RemoteFiles() = default;
     RemoteFiles(const yaml &root, const String &name = RemoteFiles::getString());
 
-    void download() const;
+    void download(const path &dir) const;
     bool empty() const { return urls.empty(); }
     bool isValidUrl() const;
     bool load(const ptree &p);
@@ -294,8 +294,17 @@ struct SW_MANAGER_API RemoteFiles
 using Source = variant<SOURCE_TYPES(SOURCE_TYPES_EMPTY, DELIM_COMMA)>;
 #undef SOURCE_TYPES_EMPTY
 
+using SourceDirMap = std::unordered_map<Source, path>;
+using SourceDirSet = std::unordered_set<Source>;
+
 SW_MANAGER_API
-void download(const Source &source, int64_t max_file_size = 0);
+void download(const Source &source, const path &dir);
+
+SW_MANAGER_API
+void download(SourceDirMap &sources, bool ignore_existing_dirs = false, bool adjust_root_dir = true);
+
+SW_MANAGER_API
+SourceDirMap download(SourceDirSet &sources, bool ignore_existing_dirs = false, bool adjust_root_dir = true);
 
 /// load from global object with 'source' subobject
 SW_MANAGER_API

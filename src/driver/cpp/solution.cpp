@@ -1683,6 +1683,8 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
 path Build::build(const path &fn)
 {
+    setupSolutionName(fn);
+
     // separate build
     Build b;
     auto r = b.build_configs_separate({ fn });
@@ -1711,8 +1713,6 @@ void Build::setupSolutionName(const path &file_or_dir)
 
 void Build::build_and_load(const path &fn)
 {
-    setupSolutionName(fn);
-
     build(fn);
     //fs->save(); // remove?
     //fs->reset();
@@ -2246,7 +2246,7 @@ PackageDescriptionMap Build::getPackages() const
         // we put files under SW_SDIR_NAME to keep space near it
         // e.g. for patch dir or other dirs (server provided files)
         // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
-        auto files_map = primitives::pack::prepare_files(files, t->SourceDir, SW_SDIR_NAME);
+        auto files_map = primitives::pack::prepare_files(files, t->SourceDir);
         for (auto &[f,t] : files_map)
         {
             nlohmann::json jf;

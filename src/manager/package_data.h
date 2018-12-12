@@ -93,6 +93,39 @@ struct PackageData
     void checkSourceAndVersion();
 };
 
+/**
+* generic pkg desc
+*/
+struct SW_MANAGER_API PackageDescription : std::string
+{
+    using base = std::string;
+
+    PackageDescription(const std::string &);
+    virtual ~PackageDescription() = default;
+
+    /// convert to internal data
+    virtual PackageData getData() const = 0;
+};
+
+using PackageDescriptionPtr = std::unique_ptr<PackageDescription>;
+using PackageDescriptionMap = std::unordered_map<PackageId, PackageDescriptionPtr>;
+
+struct SW_MANAGER_API JsonPackageDescription : PackageDescription
+{
+    JsonPackageDescription(const std::string &);
+    virtual ~JsonPackageDescription() = default;
+
+    PackageData getData() const override;
+};
+
+struct SW_MANAGER_API YamlPackageDescription : PackageDescription
+{
+    YamlPackageDescription(const std::string &);
+    virtual ~YamlPackageDescription() = default;
+
+    PackageData getData() const override;
+};
+
 SW_MANAGER_API
 void checkSourceAndVersion(Source &s, const Version &v);
 

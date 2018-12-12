@@ -6,27 +6,8 @@
 
 #include <sw/builder/driver.h>
 
-#include <package_data.h>
-
-#include <nlohmann/json.hpp>
-
 namespace sw
 {
-
-PackageDescription::PackageDescription(const std::string &s)
-    : base(s)
-{
-}
-
-JsonPackageDescription::JsonPackageDescription(const std::string &s)
-    : PackageDescription(s)
-{
-}
-
-YamlPackageDescription::YamlPackageDescription(const std::string &s)
-    : PackageDescription(s)
-{
-}
 
 Drivers &getDrivers()
 {
@@ -50,27 +31,6 @@ bool Driver::execute(const path &file_or_dir) const
     if (auto s = load(file_or_dir); s)
         return s->execute();
     return false;
-}
-
-PackageData JsonPackageDescription::getData() const
-{
-    auto j = nlohmann::json::parse(*this);
-    PackageData d;
-    d.source = load_source(j["source"]);
-    d.version = j["version"].get<std::string>();
-    d.ppath = j["path"].get<std::string>();
-    for (auto &v : j["files"])
-        d.files_map[fs::u8path(v["from"].get<std::string>())] = fs::u8path(v["to"].get<std::string>());
-    for (auto &v : j["dependencies"])
-        d.dependencies.emplace(v["path"].get<std::string>(), v["range"].get<std::string>());
-    return d;
-}
-
-PackageData YamlPackageDescription::getData() const
-{
-    //const auto &s = *this;
-    PackageData d;
-    throw SW_RUNTIME_EXCEPTION("Not implemented");
 }
 
 } // namespace sw

@@ -8,48 +8,13 @@
 
 // replace with public
 #include <package.h>
+#include <package_data.h>
 
 #define SW_REGISTER_PACKAGE_DRIVER(d) \
     struct __sw ## d { __sw ## d(){ getDrivers().push_back(std::make_unique<d>()); } } ___sw ## d
 
 namespace sw
 {
-
-// not public
-struct PackageData;
-
-/**
-* generic pkg desc
-*/
-struct SW_BUILDER_API PackageDescription : std::string
-{
-    using base = std::string;
-
-    PackageDescription(const std::string &);
-    virtual ~PackageDescription() = default;
-
-    /// convert to internal data
-    virtual PackageData getData() const = 0;
-};
-
-using PackageDescriptionPtr = std::unique_ptr<PackageDescription>;
-using PackageDescriptionMap = std::unordered_map<PackageId, PackageDescriptionPtr>;
-
-struct SW_BUILDER_API JsonPackageDescription : PackageDescription
-{
-    JsonPackageDescription(const std::string &);
-    virtual ~JsonPackageDescription() = default;
-
-    PackageData getData() const override;
-};
-
-struct SW_BUILDER_API YamlPackageDescription : PackageDescription
-{
-    YamlPackageDescription(const std::string &);
-    virtual ~YamlPackageDescription() = default;
-
-    PackageData getData() const override;
-};
 
 // add more pkg descriptions here
 

@@ -15,6 +15,7 @@
 #include <primitives/templates.h>
 
 #include <grpcpp/grpcpp.h>
+#include <nlohmann/json.hpp>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "api");
@@ -24,6 +25,8 @@ namespace sw
 
 void check_relative(const Remote &r, PackagePath &p)
 {
+    throw SW_RUNTIME_EXCEPTION("not implemented");
+
     if (p.isRelative(r.user))
         p = "pvt." + r.user + "." + p.toString();
 }
@@ -105,13 +108,40 @@ IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
     return id_deps;
 }
 
+void Api::addVersion(const PackageDescriptionMap &pkgs)
+{
+    api::NewPackage request;
+    for (auto &[pkg, d] : pkgs)
+    {
+        auto data = d->getData();
+        auto p = request.mutable_packages()->mutable_packages()->Add();
+        p->mutable_package()->set_path(pkg.ppath.toString());
+        p->mutable_package()->set_version(pkg.version.toString());
+        nlohmann::json j;
+        save_source(j, data.source);
+        p->set_source(j.dump());
+        for (auto &[disk, archive] : data.files_map)
+            *p->mutable_files()->Add() = normalize_path(archive);
+        for (auto &dep : data.dependencies)
+        {
+            auto d = p->mutable_dependencies()->mutable_packages()->Add();
+            d->set_path(dep.ppath.toString());
+            d->set_range(dep.range.toString());
+        }
+        //p->set_root_dir(d->getData().);
+    }
+    auto context = getContextWithAuth();
+    GRPC_SET_DEADLINE(10);
+    GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
+}
+
 void Api::addVersion(const PackagePath &prefix, const String &cppan)
 {
     api::NewPackage request;
-    request.set_script(cppan);
-    request.set_prefix_path(prefix.toString());
+    request.mutable_script()->set_script(cppan);
+    request.mutable_script()->set_prefix_path(prefix.toString());
     auto context = getContextWithAuth();
-    GRPC_SET_DEADLINE(300);
+    GRPC_SET_DEADLINE(10);
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
 }
 
