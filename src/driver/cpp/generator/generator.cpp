@@ -910,7 +910,7 @@ void VSGeneratorNMake::generate(const Build &b)
         });
 
         pctx.beginBlock("ItemGroup");
-        pctx.beginBlock("ClCompile", { { "Include", (b.SourceDir / b.getConfigFilename()).u8string() } });
+        pctx.beginBlock("ClCompile", { { "Include", (b.SourceDir / "sw.cpp").u8string() } });
         pctx.endBlock();
         pctx.endBlock();
 

@@ -297,14 +297,21 @@ using Source = variant<SOURCE_TYPES(SOURCE_TYPES_EMPTY, DELIM_COMMA)>;
 using SourceDirMap = std::unordered_map<Source, path>;
 using SourceDirSet = std::unordered_set<Source>;
 
+struct SourceDownloadOptions
+{
+    path root_dir;
+    bool ignore_existing_dirs = false;
+    bool adjust_root_dir = true;
+};
+
 SW_MANAGER_API
 void download(const Source &source, const path &dir);
 
 SW_MANAGER_API
-void download(SourceDirMap &sources, bool ignore_existing_dirs = false, bool adjust_root_dir = true);
+void download(SourceDirMap &sources, const SourceDownloadOptions &opts = {});
 
 SW_MANAGER_API
-SourceDirMap download(SourceDirSet &sources, bool ignore_existing_dirs = false, bool adjust_root_dir = true);
+SourceDirMap download(SourceDirSet &sources, const SourceDownloadOptions &opts = {});
 
 /// load from global object with 'source' subobject
 SW_MANAGER_API

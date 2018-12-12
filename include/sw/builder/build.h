@@ -35,12 +35,15 @@ SW_BUILDER_API
 PackageScriptPtr load(const path &file_or_dir);
 
 SW_BUILDER_API
-PackageScriptPtr fetch_and_load(const path &file_or_dir);
+PackageScriptPtr fetch_and_load(const path &file_or_dir, const FetchOptions &opts = {});
 
 SW_BUILDER_API
 DriverPtr loadDriver(const path &file_or_dir);
 
 SW_BUILDER_API
 bool run(const PackageId &package);
+
+SW_BUILDER_API
+optional<String> read_config(const path &file_or_dir);
 
 }

@@ -2852,6 +2852,428 @@ void NativeExecutedTarget::pushBackToFileOnce(const path &fn, const String &text
     f.getFileRecord().load();
 }
 
+void load_source_and_version(const yaml &root, Source &source, Version &version)
+{
+    String ver;
+    YAML_EXTRACT_VAR(root, ver, "version", String);
+    if (!ver.empty())
+        version = Version(ver);
+    if (!load_source(root, source))
+        return;
+    //visit([&version](auto &v) { v.loadVersion(version); }, source);
+}
+
+void NativeExecutedTarget::cppan_load_project(const yaml &root)
+{
+    load_source_and_version(root, source, pkg.version);
+
+    YAML_EXTRACT_AUTO2(Empty, "empty");
+    YAML_EXTRACT_VAR(root, HeaderOnly, "header_only", bool);
+
+    YAML_EXTRACT_AUTO2(ImportFromBazel, "import_from_bazel");
+    YAML_EXTRACT_AUTO2(BazelTargetName, "bazel_target_name");
+    YAML_EXTRACT_AUTO2(BazelTargetFunction, "bazel_target_function");
+
+    YAML_EXTRACT_AUTO2(ExportAllSymbols, "export_all_symbols");
+    YAML_EXTRACT_AUTO2(ExportIfStatic, "export_if_static");
+
+    ApiNames = get_sequence_set<String>(root, "api_name");
+
+    auto read_dir = [&root](auto &p, const String &s)
+    {
+        get_scalar_f(root, s, [&p, &s](const auto &n)
+        {
+            auto cp = current_thread_path();
+            p = n.template as<String>();
+            if (!is_under_root(cp / p, cp))
+                throw std::runtime_error("'" + s + "' must not point outside the current dir: " + p.string() + ", " + cp.string());
+        });
+    };
+
+    read_dir(RootDirectory, "root_directory");
+    if (RootDirectory.empty())
+        read_dir(RootDirectory, "root_dir");
+
+    // sources
+    {
+        auto read_sources = [&root](auto &a, const String &key, bool required = true)
+        {
+            a.clear();
+            auto files = root[key];
+            if (!files.IsDefined())
+                return;
+            if (files.IsScalar())
+            {
+                a.insert(files.as<String>());
+            }
+            else if (files.IsSequence())
+            {
+                for (const auto &v : files)
+                    a.insert(v.as<String>());
+            }
+            else if (files.IsMap())
+            {
+                for (const auto &group : files)
+                {
+                    if (group.second.IsScalar())
+                        a.insert(group.second.as<String>());
+                    else if (group.second.IsSequence())
+                    {
+                        for (const auto &v : group.second)
+                            a.insert(v.as<String>());
+                    }
+                    else if (group.second.IsMap())
+                    {
+                        String root = get_scalar<String>(group.second, "root");
+                        auto v = get_sequence<String>(group.second, "files");
+                        for (auto &e : v)
+                            a.insert(root + "/" + e);
+                    }
+                }
+            }
+        };
+
+        StringSet sources;
+        read_sources(sources, "files");
+        for (auto &s : sources)
+            operator+=(FileRegex(SourceDir, std::regex(s), true));
+
+        StringSet exclude_from_build;
+        read_sources(exclude_from_build, "exclude_from_build");
+        for (auto &s : exclude_from_build)
+            operator-=(FileRegex(SourceDir, std::regex(s), true));
+
+        StringSet exclude_from_package;
+        read_sources(exclude_from_package, "exclude_from_package");
+        for (auto &s : exclude_from_package)
+            operator^=(FileRegex(SourceDir, std::regex(s), true));
+    }
+
+    // include_directories
+    {
+        get_variety(root, "include_directories",
+            [this](const auto &d)
+        {
+            Public.IncludeDirectories.insert(d.template as<String>());
+        },
+            [this](const auto &dall)
+        {
+            for (auto d : dall)
+                Public.IncludeDirectories.insert(d.template as<String>());
+        },
+            [this, &root](const auto &)
+        {
+            get_map_and_iterate(root, "include_directories", [this](const auto &n)
+            {
+                auto f = n.first.template as<String>();
+                auto s = get_sequence<String>(n.second);
+                if (f == "public")
+                    Public.IncludeDirectories.insert(s.begin(), s.end());
+                else if (f == "private")
+                    Private.IncludeDirectories.insert(s.begin(), s.end());
+                else if (f == "interface")
+                    Interface.IncludeDirectories.insert(s.begin(), s.end());
+                else if (f == "protected")
+                    Protected.IncludeDirectories.insert(s.begin(), s.end());
+                else
+                    throw std::runtime_error("include key must be only 'public' or 'private' or 'interface'");
+            });
+        });
+    }
+
+    // deps
+    {
+        auto read_version = [](auto &dependency, const String &v)
+        {
+            // some code was removed here
+            // check out original version (v1) if you encounter some errors
+            auto nppath = dependency.ppath / v;
+            dependency.ppath = nppath;
+            dependency.range = v;
+        };
+
+        auto relative_name_to_absolute = [](const String &in)
+        {
+            // TODO
+            throw SW_RUNTIME_EXCEPTION("not implemented");
+            return in;
+        };
+
+        auto read_single_dep = [this, &read_version, &relative_name_to_absolute](const auto &d, UnresolvedPackage dependency = {})
+        {
+            bool local_ok = false;
+            if (d.IsScalar())
+            {
+                auto p = extractFromString(d.template as<String>());
+                dependency.ppath = relative_name_to_absolute(p.ppath.toString());
+                dependency.range = p.range;
+            }
+            else if (d.IsMap())
+            {
+                // read only field related to ppath - name, local
+                if (d["name"].IsDefined())
+                    dependency.ppath = relative_name_to_absolute(d["name"].template as<String>());
+                if (d["package"].IsDefined())
+                    dependency.ppath = relative_name_to_absolute(d["package"].template as<String>());
+                if (dependency.ppath.empty() && d.size() == 1)
+                {
+                    dependency.ppath = relative_name_to_absolute(d.begin()->first.template as<String>());
+                    //if (dependency.ppath.is_loc())
+                        //dependency.flags.set(pfLocalProject);
+                    read_version(dependency, d.begin()->second.template as<String>());
+                }
+                if (d["local"].IsDefined()/* && allow_local_dependencies*/)
+                {
+                    auto p = d["local"].template as<String>();
+                    UnresolvedPackage pkg;
+                    pkg.ppath = p;
+                    //if (rd.known_local_packages.find(pkg) != rd.known_local_packages.end())
+                        //local_ok = true;
+                    if (local_ok)
+                        dependency.ppath = p;
+                }
+            }
+
+            if (dependency.ppath.is_loc())
+            {
+                //dependency.flags.set(pfLocalProject);
+
+                // version will be read for local project
+                // even 2nd arg is not valid
+                String v;
+                if (d.IsMap() && d["version"].IsDefined())
+                    v = d["version"].template as<String>();
+                read_version(dependency, v);
+            }
+
+            if (d.IsMap())
+            {
+                // read other map fields
+                if (d["version"].IsDefined())
+                {
+                    read_version(dependency, d["version"].template as<String>());
+                    if (local_ok)
+                        dependency.range = "*";
+                }
+                //if (d["ref"].IsDefined())
+                    //dependency.reference = d["ref"].template as<String>();
+                //if (d["reference"].IsDefined())
+                    //dependency.reference = d["reference"].template as<String>();
+                //if (d["include_directories_only"].IsDefined())
+                    //dependency.flags.set(pfIncludeDirectoriesOnly, d["include_directories_only"].template as<bool>());
+
+                // conditions
+                //dependency.conditions = get_sequence_set<String>(d, "condition");
+                //auto conds = get_sequence_set<String>(d, "conditions");
+                //dependency.conditions.insert(conds.begin(), conds.end());
+            }
+
+            //if (dependency.flags[pfLocalProject])
+                //dependency.createNames();
+
+            return dependency;
+        };
+
+        auto get_deps = [&](const auto &node)
+        {
+            get_variety(root, node,
+                [this, &read_single_dep](const auto &d)
+            {
+                auto dep = read_single_dep(d);
+                throw SW_RUNTIME_EXCEPTION("not implemented");
+                //dependencies[dep.ppath.toString()] = dep;
+            },
+                [this, &read_single_dep](const auto &dall)
+            {
+                for (auto d : dall)
+                {
+                    auto dep = read_single_dep(d);
+                    throw SW_RUNTIME_EXCEPTION("not implemented");
+                    //dependencies[dep.ppath.toString()] = dep;
+                }
+            },
+                [this, &read_single_dep, &read_version, &relative_name_to_absolute](const auto &dall)
+            {
+                auto get_dep = [this, &read_version, &read_single_dep, &relative_name_to_absolute](const auto &d)
+                {
+                    UnresolvedPackage dependency;
+
+                    dependency.ppath = relative_name_to_absolute(d.first.template as<String>());
+                    //if (dependency.ppath.is_loc())
+                        //dependency.flags.set(pfLocalProject);
+
+                    if (d.second.IsScalar())
+                        read_version(dependency, d.second.template as<String>());
+                    else if (d.second.IsMap())
+                        return read_single_dep(d.second, dependency);
+                    else
+                        throw std::runtime_error("Dependency should be a scalar or a map");
+
+                    //if (dependency.flags[pfLocalProject])
+                        //dependency.createNames();
+
+                    return dependency;
+                };
+
+                auto extract_deps = [&get_dep, &read_single_dep](const auto &dall, const auto &str)
+                {
+                    Packages deps;
+                    auto priv = dall[str];
+                    if (!priv.IsDefined())
+                        return deps;
+                    if (priv.IsMap())
+                    {
+                        get_map_and_iterate(dall, str,
+                            [&get_dep, &deps](const auto &d)
+                        {
+                            auto dep = get_dep(d);
+                            throw SW_RUNTIME_EXCEPTION("not implemented");
+                            //deps[dep.ppath.toString()] = dep;
+                        });
+                    }
+                    else if (priv.IsSequence())
+                    {
+                        for (auto d : priv)
+                        {
+                            auto dep = read_single_dep(d);
+                            throw SW_RUNTIME_EXCEPTION("not implemented");
+                            //deps[dep.ppath.toString()] = dep;
+                        }
+                    }
+                    return deps;
+                };
+
+                auto extract_deps_from_node = [&extract_deps, &get_dep](const auto &node)
+                {
+                    auto deps_private = extract_deps(node, "private");
+                    auto deps = extract_deps(node, "public");
+
+                    for (auto &d : deps_private)
+                    {
+                        throw SW_RUNTIME_EXCEPTION("not implemented");
+                        //d.second.flags.set(pfPrivateDependency);
+                        deps.insert(d);
+                    }
+
+                    if (deps.empty() && deps_private.empty())
+                    {
+                        for (auto d : node)
+                        {
+                            auto dep = get_dep(d);
+                            throw SW_RUNTIME_EXCEPTION("not implemented");
+                            //deps[dep.ppath.toString()] = dep;
+                        }
+                    }
+
+                    return deps;
+                };
+
+                auto ed = extract_deps_from_node(dall);
+                throw SW_RUNTIME_EXCEPTION("not implemented");
+                //dependencies.insert(ed.begin(), ed.end());
+
+                // conditional deps
+                /*for (auto n : dall)
+                {
+                    auto spec = n.first.as<String>();
+                    if (spec == "private" || spec == "public")
+                        continue;
+                    if (n.second.IsSequence())
+                    {
+                        for (auto d : n.second)
+                        {
+                            auto dep = read_single_dep(d);
+                            dep.condition = spec;
+                            dependencies[dep.ppath.toString()] = dep;
+                        }
+                    }
+                    else if (n.second.IsMap())
+                    {
+                        ed = extract_deps_from_node(n.second, spec);
+                        dependencies.insert(ed.begin(), ed.end());
+                    }
+                }
+
+                if (deps.empty() && deps_private.empty())
+                {
+                    for (auto d : node)
+                    {
+                        auto dep = get_dep(d);
+                        deps[dep.ppath.toString()] = dep;
+                    }
+                }*/
+            });
+        };
+
+        get_deps("dependencies");
+        get_deps("deps");
+    }
+
+#if 0
+    YAML_EXTRACT_AUTO(output_name);
+    YAML_EXTRACT_AUTO(condition);
+    YAML_EXTRACT_AUTO(include_script);
+
+    // standards
+    {
+        YAML_EXTRACT_AUTO(c_standard);
+        if (c_standard == 0)
+        {
+            YAML_EXTRACT_VAR(root, c_standard, "c", int);
+        }
+        YAML_EXTRACT_AUTO(c_extensions);
+
+        String cxx;
+        YAML_EXTRACT_VAR(root, cxx, "cxx_standard", String);
+        if (cxx.empty())
+            YAML_EXTRACT_VAR(root, cxx, "c++", String);
+        YAML_EXTRACT_AUTO(cxx_extensions);
+
+        if (!cxx.empty())
+        {
+            try
+            {
+                cxx_standard = std::stoi(cxx);
+            }
+            catch (const std::exception&)
+            {
+                if (cxx == "1z")
+                    cxx_standard = 17;
+                else if (cxx == "2x")
+                    cxx_standard = 20;
+            }
+        }
+    }
+
+    license = get_scalar<String>(root, "license");
+
+    read_dir(unpack_directory, "unpack_directory");
+    if (unpack_directory.empty())
+        read_dir(unpack_directory, "unpack_dir");
+
+    YAML_EXTRACT_AUTO(output_directory);
+    if (output_directory.empty())
+        YAML_EXTRACT_VAR(root, output_directory, "output_dir", String);
+
+    bs_insertions.load(root);
+    options = loadOptionsMap(root);
+
+    read_sources(public_headers, "public_headers");
+    include_hints = get_sequence_set<String>(root, "include_hints");
+
+    aliases = get_sequence_set<String>(root, "aliases");
+
+    checks.load(root);
+    checks_prefixes = get_sequence_set<String>(root, "checks_prefixes");
+    if (checks_prefixes.empty())
+        checks_prefixes = get_sequence_set<String>(root, "checks_prefix");
+
+    const auto &patch_node = root["patch"];
+    if (patch_node.IsDefined())
+        patch.load(patch_node);
+#endif
+}
+
 bool ExecutableTarget::prepare()
 {
     switch (prepare_pass)
@@ -2894,6 +3316,16 @@ bool ExecutableTarget::prepare()
 path ExecutableTarget::getOutputDir() const
 {
     return getUserDirectories().storage_dir_bin;
+}
+
+void ExecutableTarget::cppan_load_project(const yaml &root)
+{
+    /*String et;
+    YAML_EXTRACT_VAR(root, et, "executable_type", String);
+    if (et == "win32")
+        executable_type = ExecutableType::Win32;*/
+
+    NativeExecutedTarget::cppan_load_project(root);
 }
 
 LibraryTarget::LibraryTarget(LanguageType L)

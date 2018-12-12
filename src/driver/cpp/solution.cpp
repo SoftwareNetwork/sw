@@ -11,9 +11,11 @@
 #include "functions.h"
 #include "generator/generator.h"
 #include "inserts.h"
+#include "module.h"
 #include "program.h"
 #include "resolver.h"
 #include "run.h"
+#include "frontend/cppan/yaml.h"
 
 #include <directories.h>
 #include <hash.h>
@@ -34,7 +36,7 @@
 #include <nlohmann/json.hpp>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "target");
+DECLARE_STATIC_LOGGER(logger, "solution");
 
 static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with build commands"));
 static cl::opt<bool> print_comp_db("print-compilation-database", cl::desc("Print file with build commands in compilation db format"));
@@ -170,12 +172,6 @@ std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const path &p)
     }
 
     return { headers, udeps };
-}
-
-ModuleStorage &getModuleStorage()
-{
-    static ModuleStorage modules;
-    return modules;
 }
 
 namespace detail
@@ -1025,6 +1021,43 @@ void Solution::call_event(TargetBase &t, CallbackType et)
     }
 }
 
+const boost::bimap<FrontendType, path> &Solution::getAvailableFrontends()
+{
+    static boost::bimap<FrontendType, path> m = []
+    {
+        boost::bimap<FrontendType, path> m;
+        m.insert({ FrontendType::Sw, "sw.cpp" });
+        m.insert({ FrontendType::Cppan, "cppan.yml" });
+        return m;
+    }();
+    return m;
+}
+
+const FilesOrdered &Solution::getAvailableFrontendConfigFilenames()
+{
+    static FilesOrdered f = []
+    {
+        FilesOrdered f;
+        for (auto &[k, v] : getAvailableFrontends().left)
+            f.push_back(v);
+        return f;
+    }();
+    return f;
+}
+
+bool Solution::isFrontendConfigFilename(const path &fn)
+{
+    return !!selectFrontendByFilename(fn);
+}
+
+optional<FrontendType> Solution::selectFrontendByFilename(const path &fn)
+{
+    auto i = getAvailableFrontends().right.find(fn.filename());
+    if (i == getAvailableFrontends().right.end())
+        return {};
+    return i->get_left();
+}
+
 Build::Build()
 {
     //silent |= ide;
@@ -1462,7 +1495,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     std::unordered_map<path, PackageId> output_names;
     for (auto &pkg : pkgs)
     {
-        auto p = pkg.getDirSrc2() / getConfigFilename();
+        auto p = pkg.getDirSrc2() / "sw.cpp";
         files.insert(p);
         output_names[p] = pkg;
     }
@@ -1509,7 +1542,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
         for (auto &r : pkgs)
         {
-            auto fn = r.getDirSrc2() / getConfigFilename();
+            auto fn = r.getDirSrc2() / "sw.cpp";
             auto h = getFilesHash({ fn });
             ctx.addLine("// " + r.toString());
             ctx.addLine("// " + normalize_path(fn));
@@ -1683,21 +1716,39 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
 path Build::build(const path &fn)
 {
-    setupSolutionName(fn);
+    if (fs::is_directory(fn))
+        throw SW_RUNTIME_EXCEPTION("Filename expected");
 
-    // separate build
-    Build b;
-    auto r = b.build_configs_separate({ fn });
-    dll = r.begin()->second;
-    if (do_not_rebuild_config &&
-        (File(fn, *b.solutions[0].fs).isChanged() ||
-        File(dll, *b.solutions[0].fs).isChanged()))
+    auto fe = selectFrontendByFilename(fn);
+    if (!fe)
+        throw SW_RUNTIME_EXCEPTION("Unknown frontend config: " + fn.u8string());
+
+    setupSolutionName(fn);
+    config = fn;
+
+    switch (fe.value())
     {
-        remove_ide_explans = true;
-        do_not_rebuild_config = false;
-        return build(fn);
+    case FrontendType::Sw:
+    {
+        // separate build
+        Build b;
+        auto r = b.build_configs_separate({ fn });
+        dll = r.begin()->second;
+        if (do_not_rebuild_config &&
+            (File(fn, *b.solutions[0].fs).isChanged() ||
+                File(dll, *b.solutions[0].fs).isChanged()))
+        {
+            remove_ide_explans = true;
+            do_not_rebuild_config = false;
+            return build(fn);
+        }
+        return dll;
     }
-    return dll;
+    case FrontendType::Cppan:
+        // no need to build
+        break;
+    }
+    return {};
 }
 
 void Build::setupSolutionName(const path &file_or_dir)
@@ -1705,7 +1756,7 @@ void Build::setupSolutionName(const path &file_or_dir)
     config_file_or_dir = fs::canonical(file_or_dir);
 
     bool dir = fs::is_directory(file_or_dir);
-    if (dir || file_or_dir.filename() == getConfigFilename())
+    if (dir || isFrontendConfigFilename(file_or_dir))
         ide_solution_name = fs::canonical(file_or_dir).filename().u8string();
     else
         ide_solution_name = file_or_dir.stem().u8string();
@@ -1716,7 +1767,16 @@ void Build::build_and_load(const path &fn)
     build(fn);
     //fs->save(); // remove?
     //fs->reset();
-    load(dll);
+    auto fe = selectFrontendByFilename(fn);
+    switch (fe.value())
+    {
+    case FrontendType::Sw:
+        load(dll);
+        break;
+    case FrontendType::Cppan:
+        cppan_load();
+        break;
+    }
 }
 
 ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
@@ -2247,7 +2307,7 @@ PackageDescriptionMap Build::getPackages() const
         // e.g. for patch dir or other dirs (server provided files)
         // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
         auto files_map = primitives::pack::prepare_files(files, t->SourceDir);
-        for (auto &[f,t] : files_map)
+        for (auto &[f, t] : files_map)
         {
             nlohmann::json jf;
             jf["from"] = f.u8string();
@@ -2276,77 +2336,6 @@ PackageDescriptionMap Build::getPackages() const
         m[pkg] = std::make_unique<JsonPackageDescription>(s);
     }
     return m;
-}
-
-const Module &ModuleStorage::get(const path &dll)
-{
-    if (dll.empty())
-        throw SW_RUNTIME_EXCEPTION("Empty module");
-
-    boost::upgrade_lock lk(m);
-    auto i = modules.find(dll);
-    if (i != modules.end())
-        return i->second;
-    boost::upgrade_to_unique_lock lk2(lk);
-    return modules.emplace(dll, dll).first->second;
-}
-
-Module::Module(const path &dll)
-{
-    boost::system::error_code ec;
-    module = new boost::dll::shared_library(
-#ifdef _WIN32
-        dll.wstring()
-#else
-        dll.u8string()
-#endif
-        , boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global
-        //, ec
-        );
-    if (ec)
-    {
-        String err;
-        err = "Module " + normalize_path(dll) + " is in bad shape: " + ec.message();
-        err += " Will rebuild on the next run.";
-        //LOG_ERROR(logger, err);
-        fs::remove(dll);
-        throw SW_RUNTIME_EXCEPTION(err);
-    }
-    if (module->has("build"))
-        build_ = module->get<void(Solution&)>("build");
-    if (module->has("check"))
-        check_ = module->get<void(Checker&)>("check");
-    if (module->has("configure"))
-        configure_ = module->get<void(Solution&)>("configure");
-}
-
-Module::~Module()
-{
-    delete module;
-}
-
-void Module::build(Solution &s) const
-{
-    build_.s = &s;
-    build_(s);
-}
-
-void Module::configure(Solution &s) const
-{
-    configure_.s = &s;
-    configure_(s);
-}
-
-void Module::check(Solution &s, Checker &c) const
-{
-    check_.s = &s;
-    check_(c);
-}
-
-ModuleStorage &getModuleStorage(Solution &owner)
-{
-    static std::map<void*, ModuleStorage> s;
-    return s[&owner];
 }
 
 }

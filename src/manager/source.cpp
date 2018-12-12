@@ -966,36 +966,36 @@ void download(const Source &source, const path &dir)
     visit([dir](auto &v) { v.download(dir); }, source);
 }
 
-void download(SourceDirMap &sources, bool ignore_existing_dirs, bool adjust_root_dir)
+void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
 {
     auto &e = getExecutor();
     Futures<void> fs;
     for (auto &src : sources)
     {
-        fs.push_back(e.push([src = src.first, &d = src.second, ignore_existing_dirs, adjust_root_dir]
+        fs.push_back(e.push([src = src.first, &d = src.second, &opts]
         {
             if (!fs::exists(d))
             {
                 LOG_INFO(logger, "Downloading source:\n" << print_source(src));
                 download(src, d);
             }
-            else if (!ignore_existing_dirs)
+            else if (!opts.ignore_existing_dirs)
             {
                 throw SW_RUNTIME_EXCEPTION("Directory exists " + normalize_path(d) + " for source " + print_source(src));
             }
-            if (adjust_root_dir)
+            if (opts.adjust_root_dir)
                 d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
         }));
     }
     waitAndGet(fs);
 }
 
-SourceDirMap download(SourceDirSet &sset, bool ignore_existing_dirs, bool adjust_root_dir)
+SourceDirMap download(SourceDirSet &sset, const SourceDownloadOptions &opts)
 {
     SourceDirMap sources;
     for (auto &s : sset)
-        sources[s] = get_temp_filename("dl");
-    download(sources, ignore_existing_dirs, adjust_root_dir);
+        sources[s] = opts.root_dir.empty() ? get_temp_filename("dl") : (opts.root_dir / get_source_hash(s));
+    download(sources, opts);
     return sources;
 }
 

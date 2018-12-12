@@ -18,11 +18,9 @@ DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 namespace sw::driver::cpp
 {
 
-//SW_REGISTER_PACKAGE_DRIVER(CppDriver);
-
-path CppDriver::getConfigFilename() const
+FilesOrdered CppDriver::getAvailableFrontends() const
 {
-    return Build::getConfigFilename();
+    return Build::getAvailableFrontendConfigFilenames();
 }
 
 optional<path> CppDriver::resolveConfig(const path &file_or_dir) const
@@ -30,21 +28,20 @@ optional<path> CppDriver::resolveConfig(const path &file_or_dir) const
     auto f = file_or_dir;
     if (f.empty())
         f = fs::current_path();
+    if (!f.is_absolute())
+        f = fs::absolute(f);
     if (fs::is_directory(f))
-    {
-        if (!hasConfig(f))
-            return {};
-        f /= getConfigFilename();
-    }
+        return findConfig(f);
     return f;
 }
 
+// build means build config!!!
+// remove, it means nothing for user!
 PackageScriptPtr CppDriver::build(const path &file_or_dir) const
 {
     auto f = resolveConfig(file_or_dir);
-    if (!f || f.value().filename() != getConfigFilename())
+    if (!f || !Build::isFrontendConfigFilename(f.value()))
         return {};
-    current_thread_path(f.value().parent_path());
 
     auto b = std::make_unique<Build>();
     b->Local = true;
@@ -56,13 +53,16 @@ PackageScriptPtr CppDriver::build(const path &file_or_dir) const
 PackageScriptPtr CppDriver::load(const path &file_or_dir) const
 {
     auto f = resolveConfig(file_or_dir);
-    if (!f || f.value().filename() != getConfigFilename())
+    if (!f || !Build::isFrontendConfigFilename(f.value()))
     {
+        if (!Build::isFrontendConfigFilename(f.value()))
+            LOG_INFO(logger, "Unknown config, trying in configless mode. Default mode is native (ASM/C/C++)");
+
         path p = file_or_dir;
         if (fs::is_directory(p))
-            current_thread_path(p);
+            ;
         else
-            current_thread_path(p = p.parent_path());
+            p = p.parent_path();
 
         auto b = std::make_unique<Build>();
         b->Local = true;
@@ -70,25 +70,11 @@ PackageScriptPtr CppDriver::load(const path &file_or_dir) const
         b->load_configless(file_or_dir);
         return b;
     }
-    current_thread_path(f.value().parent_path());
 
     auto b = std::make_unique<Build>();
     b->Local = true;
     b->configure = true;
     b->build_and_load(f.value());
-
-    // in order to discover files, deps?
-    //b->prepare();
-
-    /*single_process_job(".sw/build", [&f]()
-    {
-        Build b;
-        b.Local = true;
-        b.configure = true;
-        b.build_and_run(f);
-
-        //LOG_INFO(logger, "Total time: " << t.getTimeFloat());
-    });*/
 
     return b;
 }
@@ -100,20 +86,9 @@ bool CppDriver::execute(const path &file_or_dir) const
     return false;
 }
 
-static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parallel)
+static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &opts, bool parallel)
 {
-    auto f = file_or_dir;
-    if (fs::is_directory(f))
-    {
-        if (!driver->hasConfig(f))
-            throw SW_RUNTIME_EXCEPTION("no config found");
-        f /= driver->getConfigFilename();
-    }
-
-    auto d = file_or_dir;
-    if (!fs::is_directory(d))
-        d = d.parent_path();
-    d = d / ".sw" / "src";
+    auto d = fn.parent_path() / ".sw" / "src";
 
     SourceDirMap srcs_old;
     if (parallel)
@@ -122,19 +97,22 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
         while (1)
         {
             auto b = std::make_unique<Build>();
+            b->NamePrefix = opts.name_prefix;
             b->perform_checks = false;
             b->DryRun = true;
             b->PostponeFileResolving = pp;
             b->source_dirs_by_source = srcs_old;
             if (!pp)
                 b->fetch_dir = d;
-            b->build_and_load(f);
+            b->build_and_load(fn);
 
             SourceDirMap srcs;
             for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
             {
                 auto s = t->source; // make a copy!
                 checkSourceAndVersion(s, pkg.getVersion());
+                if (!isValidSourceUrl(s))
+                    throw SW_RUNTIME_EXCEPTION("Invalid source: " + print_source(s));
                 srcs[s] = d / get_source_hash(s);
             }
 
@@ -158,17 +136,18 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
             // For other cases uses non-parallel mode.
             pp = false;
 
-            download(srcs, true);
+            download(srcs, opts);
             srcs_old = srcs;
         }
     }
     else
     {
         auto b = std::make_unique<Build>();
+        b->NamePrefix = opts.name_prefix;
         b->perform_checks = false;
         b->DryRun = true;
         b->fetch_dir = d;
-        b->build_and_load(f);
+        b->build_and_load(fn);
 
         // reset
         b->fetch_dir.clear();
@@ -179,14 +158,22 @@ static auto fetch1(const CppDriver *driver, const path &file_or_dir, bool parall
     }
 }
 
-void CppDriver::fetch(const path &file_or_dir, bool parallel) const
+void CppDriver::fetch(const path &file_or_dir, const FetchOptions &opts, bool parallel) const
 {
-    fetch1(this, file_or_dir, parallel);
+    auto f = resolveConfig(file_or_dir);
+    if (!f || !Build::isFrontendConfigFilename(f.value()))
+        throw SW_RUNTIME_EXCEPTION("no config found");
+
+    fetch1(this, f.value(), opts, parallel);
 }
 
-PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, bool parallel) const
+PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, const FetchOptions &opts, bool parallel) const
 {
-    auto [b, srcs] = fetch1(this, file_or_dir, parallel);
+    auto f = resolveConfig(file_or_dir);
+    if (!f || !Build::isFrontendConfigFilename(f.value()))
+        throw SW_RUNTIME_EXCEPTION("no config found");
+
+    auto [b, srcs] = fetch1(this, f.value(), opts, parallel);
 
     // do not use b->prepare(); !
     // prepare only packages in solution
@@ -194,15 +181,15 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, bool paralle
     Futures<void> fs;
     for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
     {
-        fs.push_back(e.push([t, &srcs, &pkg, parallel]
+        fs.push_back(e.push([t, &srcs, &pkg, parallel, &opts]
         {
             if (parallel)
             {
-                auto s2 = t->source;
-                applyVersionToUrl(s2, pkg.version);
-                if (!isValidSourceUrl(s2))
-                    throw SW_RUNTIME_EXCEPTION("Invalid source: " + print_source(s2));
-                auto i = srcs.find(s2);
+                auto s = t->source; // make a copy!
+                applyVersionToUrl(s, pkg.version);
+                if (opts.apply_version_to_source)
+                    applyVersionToUrl(t->source, pkg.version);
+                auto i = srcs.find(s);
                 path rd = i->second / t->RootDirectory;
                 t->SourceDir = rd;
             }

@@ -15,14 +15,25 @@ Drivers &getDrivers()
     return drivers;
 }
 
-bool Driver::hasConfig(const path &dir) const
+optional<path> Driver::findConfig(const path &dir) const
 {
-    return fs::exists(dir / getConfigFilename());
+    for (auto &fn : getAvailableFrontends())
+        if (fs::exists(dir / fn))
+            return dir / fn;
+    return {};
 }
 
-PackageScriptPtr Driver::fetch_and_load(const path &file_or_dir, bool parallel) const
+optional<String> Driver::readConfig(const path &file_or_dir) const
 {
-    fetch(file_or_dir, parallel);
+    auto f = findConfig(file_or_dir);
+    if (!f)
+        return {};
+    return read_file(f.value());
+}
+
+PackageScriptPtr Driver::fetch_and_load(const path &file_or_dir, const FetchOptions &opts, bool parallel) const
+{
+    fetch(file_or_dir, opts, parallel);
     return load(file_or_dir);
 }
 

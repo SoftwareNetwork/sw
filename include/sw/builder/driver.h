@@ -46,6 +46,12 @@ struct SW_BUILDER_API PackageScript
 
 using PackageScriptPtr = std::unique_ptr<PackageScript>;
 
+struct FetchOptions : SourceDownloadOptions
+{
+    String name_prefix;
+    bool apply_version_to_source = false;
+};
+
 /**
 * Driver loads script file.
 */
@@ -53,10 +59,13 @@ struct SW_BUILDER_API Driver
 {
     virtual ~Driver() = default;
 
-    /// check if this dir has driver config
-    virtual bool hasConfig(const path &dir) const;
+    virtual FilesOrdered getAvailableFrontends() const = 0;
 
-    virtual path getConfigFilename() const = 0;
+    /// try to find config in this dir or subdirs
+    optional<path> findConfig(const path &dir) const;
+
+    /// read config from dir
+    optional<String> readConfig(const path &file_or_dir) const;
 
     /// only build script file, without loading
     ///
@@ -81,12 +90,12 @@ struct SW_BUILDER_API Driver
     3. Load script.
     4. If there are new targets with new sources go to p.2., else stop.
     */
-    virtual void fetch(const path &file_or_dir, bool parallel = true) const = 0;
+    virtual void fetch(const path &file_or_dir, const FetchOptions &opts = {}, bool parallel = true) const = 0;
 
     /// load script, fetch all sources using fetch(), then load it again
     ///
     /// source dirs will point to downloaded sources into subdirs
-    virtual PackageScriptPtr fetch_and_load(const path &file_or_dir, bool parallel = true) const;
+    virtual PackageScriptPtr fetch_and_load(const path &file_or_dir, const FetchOptions &opts = {}, bool parallel = true) const;
 
     /// full build process, void?
     virtual bool execute(const path &file_or_dir) const;

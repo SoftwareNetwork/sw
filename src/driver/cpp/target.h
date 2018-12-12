@@ -751,6 +751,9 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     virtual bool isStaticOnly() const { return false; }
     virtual bool isSharedOnly() const { return false; }
 
+    //
+    virtual void cppan_load_project(const yaml &root);
+
     using TargetBase::operator=;
     using TargetBase::operator+=;
     using TargetOptionsGroup::operator+=;
@@ -822,6 +825,8 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeExecutedTarget//, Program
     using NativeExecutedTarget::NativeExecutedTarget;
 
     TargetType getType() const override { return TargetType::NativeExecutable; }
+
+    void cppan_load_project(const yaml &root) override;
 
 protected:
     bool prepare() override;

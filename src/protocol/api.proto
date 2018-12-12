@@ -92,6 +92,7 @@ message NewPackage {
 
     message SourcePackagesDescription {
         repeated SourcePackageDescription packages = 1;
+        string script = 2;
     }
 
     //

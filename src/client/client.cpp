@@ -274,7 +274,7 @@ static cl::list<String> install_args(cl::ConsumeAfter, cl::desc("Packages to add
 
 // upload
 static cl::opt<String> build_arg_upload(cl::Positional, cl::desc("File or directory with script to upload"), cl::init("."), cl::sub(subcommand_upload));
-static cl::opt<String> upload_prefix(cl::Positional, cl::desc("Prefix path"), cl::sub(subcommand_upload));
+static cl::opt<String> upload_prefix(cl::Positional, cl::desc("Prefix path"), cl::sub(subcommand_upload), cl::Required);
 
 // ide commands
 static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl::sub(subcommand_ide)*/);
@@ -629,37 +629,19 @@ SUBCOMMAND_DECL(update)
 
 SUBCOMMAND_DECL(upload)
 {
-    auto s = sw::build_only(build_arg_update.getValue());
-    auto &b = *((sw::Build*)s.get());
-    b.NamePrefix = upload_prefix;
-    b.DryRun = true;
-    b.load(b.dll);
-
-    // do not use b->prepare(); !
-    // prepare only packages in solution
-    auto &e = getExecutor();
-    Futures<void> fs;
-    for (const auto &[pkg, t] : b.solutions[0].getChildren())
-    {
-        fs.push_back(e.push([t, &pkg]
-        {
-            auto s2 = t->source;
-            applyVersionToUrl(s2, pkg.version);
-            if (!isValidSourceUrl(s2))
-                throw SW_RUNTIME_EXCEPTION("Invalid source: " + print_source(s2));
-
-            // call first prepare stage with source resolving
-            t->prepare();
-        }));
-    }
-    waitAndGet(fs);
+    sw::FetchOptions opts;
+    opts.name_prefix = upload_prefix;
+    opts.root_dir = fs::current_path() / ".sw";
+    opts.ignore_existing_dirs = true;
+    opts.apply_version_to_source = true;
+    auto s = sw::fetch_and_load(build_arg_update.getValue(), opts);
 
     auto &us = Settings::get_user_settings();
     auto cr = us.remotes.begin();
     auto current_remote = &*cr++;
 
     sw::Api api(*current_remote);
-    api.addVersion(s->getPackages());
+    api.addVersion(s->getPackages(), sw::read_config(build_arg_update.getValue()).value());
 }
 
 EXPORT_FROM_EXECUTABLE

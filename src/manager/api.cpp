@@ -108,9 +108,10 @@ IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
     return id_deps;
 }
 
-void Api::addVersion(const PackageDescriptionMap &pkgs)
+void Api::addVersion(const PackageDescriptionMap &pkgs, const String &script)
 {
     api::NewPackage request;
+    request.mutable_packages()->set_script(script);
     for (auto &[pkg, d] : pkgs)
     {
         auto data = d->getData();
@@ -135,10 +136,10 @@ void Api::addVersion(const PackageDescriptionMap &pkgs)
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
 }
 
-void Api::addVersion(const PackagePath &prefix, const String &cppan)
+void Api::addVersion(const PackagePath &prefix, const String &script)
 {
     api::NewPackage request;
-    request.mutable_script()->set_script(cppan);
+    request.mutable_script()->set_script(script);
     request.mutable_script()->set_prefix_path(prefix.toString());
     auto context = getContextWithAuth();
     GRPC_SET_DEADLINE(10);

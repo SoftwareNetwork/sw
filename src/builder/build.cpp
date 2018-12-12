@@ -110,12 +110,12 @@ PackageScriptPtr load(const path &file_or_dir)
     throw SW_RUNTIME_EXCEPTION("Unknown package driver");
 }
 
-PackageScriptPtr fetch_and_load(const path &file_or_dir)
+PackageScriptPtr fetch_and_load(const path &file_or_dir, const FetchOptions &opts)
 {
     auto &drivers = getDrivers();
     for (auto &d : drivers)
     {
-        if (auto s = d->fetch_and_load(file_or_dir); s)
+        if (auto s = d->fetch_and_load(file_or_dir, opts); s)
             return s;
     }
     throw SW_RUNTIME_EXCEPTION("Unknown package driver");
@@ -141,6 +141,17 @@ bool run(const PackageId &package)
             return s;
     }
     throw SW_RUNTIME_EXCEPTION("Unknown package driver");
+}
+
+optional<String> read_config(const path &file_or_dir)
+{
+    auto &drivers = getDrivers();
+    for (auto &d : drivers)
+    {
+        if (auto s = d->readConfig(file_or_dir); s)
+            return s;
+    }
+    return {};
 }
 
 }

@@ -15,6 +15,7 @@
 
 #include <sw/builder/driver.h>
 
+#include <boost/bimap.hpp>
 #include <boost/dll/shared_library.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
@@ -64,6 +65,13 @@ struct EventCallback
 }
 
 using FilesMap = std::unordered_map<path, path>;
+
+enum class FrontendType
+{
+    // priority!
+    Sw = 1,
+    Cppan = 2,
+};
 
 /**
 * \brief Single configuration solution.
@@ -162,7 +170,10 @@ public:
     void call_event(TargetBase &t, CallbackType et);
     //
 
-    static path getConfigFilename() { return "sw.cpp"; }
+    static const boost::bimap<FrontendType, path> &getAvailableFrontends();
+    static const FilesOrdered &getAvailableFrontendConfigFilenames();
+    static bool isFrontendConfigFilename(const path &fn);
+    static optional<FrontendType> selectFrontendByFilename(const path &fn);
 
 protected:
     Solution &base_ptr;
@@ -190,10 +201,11 @@ private:
 
 struct SW_DRIVER_CPP_API Build : Solution, PackageScript
 {
-    // current loaded dll
-    path dll;
+    optional<path> config; // current config or empty in configless mode
+    path dll; // current loaded dll
     // child solutions
     std::vector<Solution> solutions;
+    Solution *current_solution = nullptr;
     bool configure = false;
     bool perform_checks = true;
     bool ide = false;
@@ -224,6 +236,12 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     // helper
     Solution &addSolution() override;
 
+    // other frontends
+    void cppan_load();
+    void cppan_load(const path &fn);
+    void cppan_load(const yaml &root);
+    bool cppan_check_config_root(const yaml &root);
+
 protected:
     PackageDescriptionMap getPackages() const;
 
@@ -238,80 +256,5 @@ private:
 public:
     static PackagePath getSelfTargetName(const Files &files);
 };
-
-struct SW_DRIVER_CPP_API Module
-{
-    template <class F, bool Required = false>
-    struct LibraryCall
-    {
-        Solution *s = nullptr;
-        std::function<F> f;
-
-        LibraryCall &operator=(std::function<F> f)
-        {
-            this->f = f;
-            return *this;
-        }
-
-        template <class ... Args>
-        void operator()(Args && ... args) const
-        {
-            if (f)
-            {
-                try
-                {
-                    f(std::forward<Args>(args)...);
-                }
-                catch (const std::exception &e)
-                {
-                    String err = "error in module: ";
-                    if (s && !s->current_module.empty())
-                        err += s->current_module + ": ";
-                    err += e.what();
-                    throw SW_RUNTIME_EXCEPTION(err);
-                }
-                catch (...)
-                {
-                    String err = "error in module: ";
-                    if (s && !s->current_module.empty())
-                        err += s->current_module + ": ";
-                    err += "unknown error";
-                    throw SW_RUNTIME_EXCEPTION(err);
-                }
-            }
-            else if (Required)
-                throw SW_RUNTIME_EXCEPTION("Required function is not present in the module");
-        }
-    };
-
-    boost::dll::shared_library *module = nullptr;
-
-    Module(const path &dll);
-    Module(const Module &) = delete;
-    ~Module();
-
-    // api
-    void check(Solution &s, Checker &c) const;
-    void configure(Solution &s) const;
-    void build(Solution &s) const;
-
-private:
-    mutable LibraryCall<void(Solution &), true> build_;
-    mutable LibraryCall<void(Solution &)> configure_;
-    mutable LibraryCall<void(Checker &)> check_;
-};
-
-struct SW_DRIVER_CPP_API ModuleStorage
-{
-    std::unordered_map<path, Module> modules;
-    boost::upgrade_mutex m;
-
-    ModuleStorage() = default;
-    ModuleStorage(const ModuleStorage &) = delete;
-
-    const Module &get(const path &dll);
-};
-
-ModuleStorage &getModuleStorage(Solution &owner);
 
 }

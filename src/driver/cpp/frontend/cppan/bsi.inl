@@ -1,0 +1,6 @@
+BSI(pre_project)
+BSI(post_project)
+BSI(pre_sources)
+BSI(post_sources)
+BSI(post_target)
+BSI(post_alias)
