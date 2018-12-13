@@ -108,29 +108,15 @@ IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
     return id_deps;
 }
 
-void Api::addVersion(const PackageDescriptionMap &pkgs, const String &script)
+void Api::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script)
 {
     api::NewPackage request;
-    request.mutable_packages()->set_script(script);
+    request.mutable_package_data()->mutable_script()->set_script(script);
+    request.mutable_package_data()->mutable_script()->set_prefix_path(prefix.toString());
+    nlohmann::json jm;
     for (auto &[pkg, d] : pkgs)
-    {
-        auto data = d->getData();
-        auto p = request.mutable_packages()->mutable_packages()->Add();
-        p->mutable_package()->set_path(pkg.ppath.toString());
-        p->mutable_package()->set_version(pkg.version.toString());
-        nlohmann::json j;
-        save_source(j, data.source);
-        p->set_source(j.dump());
-        for (auto &[disk, archive] : data.files_map)
-            *p->mutable_files()->Add() = normalize_path(archive);
-        for (auto &dep : data.dependencies)
-        {
-            auto d = p->mutable_dependencies()->mutable_packages()->Add();
-            d->set_path(dep.ppath.toString());
-            d->set_range(dep.range.toString());
-        }
-        //p->set_root_dir(d->getData().);
-    }
+        jm["packages"][pkg.toString()] = nlohmann::json::parse(*d);
+    request.mutable_package_data()->set_data(jm.dump());
     auto context = getContextWithAuth();
     GRPC_SET_DEADLINE(10);
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);

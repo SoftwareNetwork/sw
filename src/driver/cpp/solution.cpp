@@ -1319,6 +1319,34 @@ static void addDeps(NativeExecutedTarget &lib, Solution &solution)
     d->IncludeDirectoriesOnly = true;
 }
 
+// add Dirs?
+static path getDriverIncludeDir(Solution &solution)
+{
+    return solution.getTarget<NativeTarget>("org.sw.sw.client.driver.cpp").SourceDir / "include";
+}
+
+static path getDriverIncludePath(Solution &solution, const path &fn)
+{
+    return getDriverIncludeDir(solution) / fn;
+}
+
+static String getDriverIncludePathString(Solution &solution, const path &fn)
+{
+    return normalize_path(getDriverIncludeDir(solution) / fn);
+}
+
+static path getMainPchFilename()
+{
+    return "sw/driver/cpp/sw.h";
+}
+
+static void write_pch(Solution &solution)
+{
+    write_file_if_different(getImportPchFile(),
+        "#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
+        cppan_cpp);
+}
+
 FilesMap Build::build_configs_separate(const Files &files)
 {
     FilesMap r;
@@ -1371,9 +1399,9 @@ FilesMap Build::build_configs_separate(const Files &files)
         lib.CPPVersion = CPPLanguageStandard::CPP17;
 
         lib += fn;
-        write_file_if_different(getImportPchFile(), cppan_cpp);
+        write_pch(solution);
         PrecompiledHeader pch;
-        pch.header = "sw/driver/cpp/sw.h";
+        pch.header = getDriverIncludePathString(solution, getMainPchFilename());
         pch.source = getImportPchFile();
         pch.force_include_pch = true;
         lib.addPrecompiledHeader(pch);
@@ -1411,7 +1439,7 @@ FilesMap Build::build_configs_separate(const Files &files)
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
-                c->ForcedIncludeFiles().push_back("sw/driver/cpp/sw1.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
             }
         }
 
@@ -1583,9 +1611,9 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     }
 
     // after files
-    write_file_if_different(getImportPchFile(), cppan_cpp);
+    write_pch(solution);
     PrecompiledHeader pch;
-    pch.header = "sw/driver/cpp/sw.h";
+    pch.header = getDriverIncludePathString(solution, getMainPchFilename());
     pch.source = getImportPchFile();
     pch.force_include_pch = true;
     lib.addPrecompiledHeader(pch);
@@ -1642,7 +1670,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
                 write_file_if_different(h, ctx.getText());
                 c->ForcedIncludeFiles().push_back(h);
-                c->ForcedIncludeFiles().push_back("sw/driver/cpp/sw1.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
 
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
@@ -1661,7 +1689,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         }
         else if (auto c = sf->compiler->template as<GNUCompiler>())
         {
-            c->ForcedIncludeFiles().push_back("sw/driver/cpp/sw1.h");
+            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
         }
     }
 

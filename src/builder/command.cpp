@@ -380,15 +380,19 @@ void Command::execute1(std::error_code *ec)
     // Try to construct command line first.
     // Some systems have limitation on its length.
 
-    auto escape_cmd_arg = [](auto &a)
+    bool escaped = false;
+    auto escape_cmd_arg = [&escaped](auto &a)
     {
-        boost::replace_all(a, "\\", "\\\\");
-        boost::replace_all(a, "\"", "\\\"");
+        if (!escaped)
+        {
+            boost::replace_all(a, "\\", "\\\\");
+            boost::replace_all(a, "\"", "\\\"");
+        }
         return a;
     };
 
     auto args_saved = args;
-    auto make_rsp_file = [this, &escape_cmd_arg, &args_saved](const auto &rsp_file, bool show_includes = true)
+    auto make_rsp_file = [this, &escape_cmd_arg, &args_saved, &escaped](const auto &rsp_file, bool show_includes = true)
     {
         String rsp;
         for (auto &a : args_saved)
@@ -406,6 +410,7 @@ void Command::execute1(std::error_code *ec)
         args.clear();
         args.push_back("@" + rsp_file.u8string());
         write_file(rsp_file, rsp);
+        escaped = true;
     };
 
     path rsp_file;

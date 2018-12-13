@@ -7,7 +7,8 @@
 // This is precompiled header for config files.
 // Also it contain some control routines for their work.
 
-#include <sw/driver/cpp/sw.h>
+// this is prepended manually in code
+//#include <sw/driver/cpp/sw.h>
 
 #include <string>
 

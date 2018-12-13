@@ -630,7 +630,7 @@ SUBCOMMAND_DECL(update)
 SUBCOMMAND_DECL(upload)
 {
     sw::FetchOptions opts;
-    opts.name_prefix = upload_prefix;
+    //opts.name_prefix = upload_prefix;
     opts.root_dir = fs::current_path() / ".sw";
     opts.ignore_existing_dirs = true;
     opts.apply_version_to_source = true;
@@ -641,7 +641,7 @@ SUBCOMMAND_DECL(upload)
     auto current_remote = &*cr++;
 
     sw::Api api(*current_remote);
-    api.addVersion(s->getPackages(), sw::read_config(build_arg_update.getValue()).value());
+    api.addVersion(upload_prefix, s->getPackages(), sw::read_config(build_arg_update.getValue()).value());
 }
 
 EXPORT_FROM_EXECUTABLE

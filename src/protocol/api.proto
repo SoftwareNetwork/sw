@@ -72,7 +72,7 @@ message Notifications {
 }
 
 message NewPackage {
-    message ScriptVersion {
+    message RawScript {
         string script = 1;
         string prefix_path = 2;
     }
@@ -82,24 +82,16 @@ message NewPackage {
         string old_version = 2;
     }
 
-    message SourcePackageDescription {
-        PackageId package = 1;
-        string source = 2; // json string
-        //string root_dir = 3; // we calculate root dir same way on both sides
-        repeated string files = 3;
-        UnresolvedPackages dependencies = 4;
-    }
-
-    message SourcePackagesDescription {
-        repeated SourcePackageDescription packages = 1;
-        string script = 2;
+    message PackageData {
+        string data = 1; // json string
+        RawScript script = 2;
     }
 
     //
     oneof package {
-        ScriptVersion script = 1;
+        RawScript script = 1;
         NewVersion version = 2; // add new ver for existing package
-        SourcePackagesDescription packages = 3;
+        PackageData package_data = 3;
     }
 }
 

@@ -69,12 +69,12 @@ static void download_file_checked(const String &url, const path &fn, int64_t max
     download_file(url, fn, max_file_size);
 }
 
-static void download_and_unpack(const String &url, path fn, int64_t max_file_size = 0)
+static void download_and_unpack(const String &url, path fn, const path &unpack_dir, int64_t max_file_size = 0)
 {
     if (!fn.is_absolute())
-        fn = current_thread_path() / fn;
+        fn = unpack_dir / fn;
     download_file_checked(url, fn, max_file_size);
-    unpack_file(fn, current_thread_path());
+    unpack_file(fn, unpack_dir);
     fs::remove(fn);
 }
 
@@ -269,7 +269,7 @@ void Git::download(const path &dir) const
 
         try
         {
-            download_and_unpack(github_url, fn);
+            download_and_unpack(github_url, fn, dir);
             return;
         }
         catch (std::exception &e)
@@ -845,7 +845,7 @@ RemoteFile::RemoteFile(const yaml &root, const String &name)
 
 void RemoteFile::download(const path &dir) const
 {
-    download_and_unpack(url, dir / path(url).filename());
+    download_and_unpack(url, dir / path(url).filename(), dir);
 }
 
 void RemoteFile::save(yaml &root, const String &name) const
