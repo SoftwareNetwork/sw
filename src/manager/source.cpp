@@ -105,6 +105,8 @@ static void execute_command_in_dir(const path &dir, const Strings &args)
     Command c;
     c.working_directory = dir;
     c.args = args;
+    c.out.inherit = true;
+    c.err.inherit = true;
     c.execute();
 }
 

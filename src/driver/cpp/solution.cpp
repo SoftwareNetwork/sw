@@ -2327,7 +2327,7 @@ PackageDescriptionMap Build::getPackages() const
                 throw SW_RUNTIME_EXCEPTION("no such source");
             rd = si->second;
         }
-        j["root_dir"] = rd.u8string();
+        j["root_dir"] = normalize_path(rd);
 
         // files
         // we do not use nt->gatherSourceFiles(); as it removes deleted files
@@ -2358,8 +2358,8 @@ PackageDescriptionMap Build::getPackages() const
             boost::tie(f1, f2) = tup;
 
             nlohmann::json jf;
-            jf["from"] = f1.first.u8string();
-            jf["to"] = f2.second.u8string();
+            jf["from"] = normalize_path(f1.first);
+            jf["to"] = normalize_path(f2.second);
             j["files"].push_back(jf);
         }
 
