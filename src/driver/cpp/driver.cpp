@@ -127,7 +127,9 @@ static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &
                 for (auto &s : b->solutions)
                     s.fetch_dir.clear();
 
-                return std::tuple{ std::move(b), srcs_old };
+                b->fetch_info.sources = srcs_old;
+
+                return b;
             }
 
             // with this, we only have two iterations
@@ -154,7 +156,9 @@ static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &
         for (auto &s : b->solutions)
             s.fetch_dir.clear();
 
-        return std::tuple{ std::move(b), srcs_old };
+        b->fetch_info.sources = srcs_old;
+
+        return b;
     }
 }
 
@@ -173,7 +177,7 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, const FetchO
     if (!f || !Build::isFrontendConfigFilename(f.value()))
         throw SW_RUNTIME_EXCEPTION("no config found");
 
-    auto [b, srcs] = fetch1(this, f.value(), opts, parallel);
+    auto b = fetch1(this, f.value(), opts, parallel);
 
     // do not use b->prepare(); !
     // prepare only packages in solution
@@ -181,7 +185,7 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, const FetchO
     Futures<void> fs;
     for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
     {
-        fs.push_back(e.push([t, &srcs, &pkg, parallel, &opts]
+        fs.push_back(e.push([t, &b, &pkg, parallel, &opts]
         {
             if (parallel)
             {
@@ -189,7 +193,7 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, const FetchO
                 applyVersionToUrl(s, pkg.version);
                 if (opts.apply_version_to_source)
                     applyVersionToUrl(t->source, pkg.version);
-                auto i = srcs.find(s);
+                auto i = b->fetch_info.sources.find(s);
                 path rd = i->second / t->RootDirectory;
                 t->SourceDir = rd;
             }

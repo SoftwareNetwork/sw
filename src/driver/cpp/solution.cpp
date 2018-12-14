@@ -22,6 +22,7 @@
 #include <settings.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/range/combine.hpp>
 #include <boost/thread/lock_types.hpp>
 #include <primitives/context.h>
 #include <primitives/date_time.h>
@@ -2300,7 +2301,9 @@ PackageDescriptionMap Build::getPackages() const
     PackageDescriptionMap m;
     if (solutions.empty())
         return m;
-    for (auto &[pkg, t] : solutions.begin()->children)
+
+    auto &s = *solutions.begin();
+    for (auto &[pkg, t] : s.children)
     {
         if (t->Scope != TargetScope::Build)
             continue;
@@ -2314,7 +2317,17 @@ PackageDescriptionMap Build::getPackages() const
         j["version"] = pkg.getVersion().toString();
         j["path"] = pkg.ppath.toString();
 
-        j["root_dir"] = t->SourceDir.u8string();
+        auto rd = s.SourceDir;
+        if (!fetch_info.sources.empty())
+        {
+            auto src = t->source; // copy
+            checkSourceAndVersion(src, t->pkg.version);
+            auto si = fetch_info.sources.find(src);
+            if (si == fetch_info.sources.end())
+                throw SW_RUNTIME_EXCEPTION("no such source");
+            rd = si->second;
+        }
+        j["root_dir"] = rd.u8string();
 
         // files
         // we do not use nt->gatherSourceFiles(); as it removes deleted files
@@ -2334,12 +2347,19 @@ PackageDescriptionMap Build::getPackages() const
         // we put files under SW_SDIR_NAME to keep space near it
         // e.g. for patch dir or other dirs (server provided files)
         // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
-        auto files_map = primitives::pack::prepare_files(files, t->SourceDir);
-        for (auto &[f, t] : files_map)
+        nlohmann::json jm;
+        // 'from' field is calculated relative to fetch/sln dir
+        auto files_map1 = primitives::pack::prepare_files(files, rd);
+        // but 'to' field is calculated based on target's own view
+        auto files_map2 = primitives::pack::prepare_files(files, t->SourceDir);
+        for (const auto &tup : boost::combine(files_map1, files_map2))
         {
+            std::pair<path, path> f1, f2;
+            boost::tie(f1, f2) = tup;
+
             nlohmann::json jf;
-            jf["from"] = f.u8string();
-            jf["to"] = t.u8string();
+            jf["from"] = f1.first.u8string();
+            jf["to"] = f2.second.u8string();
             j["files"].push_back(jf);
         }
 

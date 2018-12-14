@@ -201,6 +201,11 @@ private:
 
 struct SW_DRIVER_CPP_API Build : Solution, PackageScript
 {
+    struct FetchInfo
+    {
+        SourceDirMap sources;
+    } fetch_info;
+
     optional<path> config; // current config or empty in configless mode
     path dll; // current loaded dll
     // child solutions

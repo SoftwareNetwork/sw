@@ -633,7 +633,7 @@ SUBCOMMAND_DECL(upload)
     //opts.name_prefix = upload_prefix;
     opts.root_dir = fs::current_path() / ".sw";
     opts.ignore_existing_dirs = true;
-    opts.apply_version_to_source = true;
+    //opts.apply_version_to_source = true;
     auto s = sw::fetch_and_load(build_arg_update.getValue(), opts);
 
     auto &us = Settings::get_user_settings();

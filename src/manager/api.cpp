@@ -115,7 +115,16 @@ void Api::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, cons
     request.mutable_package_data()->mutable_script()->set_prefix_path(prefix.toString());
     nlohmann::json jm;
     for (auto &[pkg, d] : pkgs)
-        jm["packages"][pkg.toString()] = nlohmann::json::parse(*d);
+    {
+        auto j = nlohmann::json::parse(*d);
+        auto rd = j["root_dir"].get<String>();
+        auto sz = rd.size();
+        if (rd.back() != '\\' || rd.back() != '/')
+            sz++;
+        for (auto &f : j["files"])
+            f["from"] = f["from"].get<String>().substr(sz);
+        jm["packages"][pkg.toString()] = j;
+    }
     request.mutable_package_data()->set_data(jm.dump());
     auto context = getContextWithAuth();
     GRPC_SET_DEADLINE(10);
