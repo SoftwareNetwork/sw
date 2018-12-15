@@ -17,7 +17,7 @@
 #include "project.h"
 
 #include "bazel/bazel.h"
-#include "config.h"
+//#include "config.h"
 #include "http.h"
 #include "resolver.h"
 
