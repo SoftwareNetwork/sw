@@ -294,6 +294,21 @@ bool Solution::skipTarget(TargetScope Scope) const
     return false;
 }
 
+TargetBaseTypePtr Solution::resolveTarget(const UnresolvedPackage &pkg) const
+{
+    if (resolved_targets.find(pkg) == resolved_targets.end())
+    {
+        for (const auto &[p, t] : getChildren())
+        {
+            if (pkg.canBe(p))
+            {
+                resolved_targets[pkg] = t;
+            }
+        }
+    }
+    return resolved_targets[pkg];
+}
+
 void Solution::addTest(const ExecutableTarget &t)
 {
     addTest("test: [test." + std::to_string(tests.size() + 1) + "]", t);
@@ -798,7 +813,7 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
     }
 }
 
-void Solution::build_and_resolve()
+void Solution::build_and_resolve(int n_runs)
 {
     auto ud = gatherUnresolvedDependencies();
     if (ud.empty())
@@ -808,6 +823,9 @@ void Solution::build_and_resolve()
     UnresolvedPackages pkgs;
     for (auto &[pkg, d] : ud)
         pkgs.insert(pkg);
+
+    if (n_runs > 1)
+        LOG_ERROR(logger, "You are here for the third time. This is not intended. Failures are imminent.");
 
     // resolve only deps needed
     Resolver r;
@@ -834,6 +852,10 @@ void Solution::build_and_resolve()
     if (cfgs.empty())
         return;
 
+    // all deps must be resolved in the first run!
+    if (n_runs > 0)
+        LOG_ERROR(logger, "You are here for the second time. This is not intended. Expect failures.");
+
     Build b;
     b.Local = false;
     auto dll = b.build_configs(cfgs);
@@ -852,17 +874,6 @@ void Solution::build_and_resolve()
     getModuleStorage(base_ptr).get(dll).build(*this);
 
     sr.restoreNow(true);
-
-    int retries = 0;
-    if (retries++ > 10)
-    {
-        String s = "Too many attempts on resolving packages, probably something wrong. Unresolved dependencies (" +
-            std::to_string(ud.size()) + ") are: ";
-        for (auto &p : ud)
-            s += p.first.toString() + ", ";
-        s.resize(s.size() - 2);
-        throw std::logic_error(s);
-    }
 
     auto rd = r.resolved_packages;
     for (auto &[porig, p] : rd)
@@ -893,7 +904,7 @@ void Solution::build_and_resolve()
     // or to unregistered deps in sw - probably something wrong or
     // malicious
 
-    build_and_resolve();
+    build_and_resolve(n_runs + 1);
 }
 
 void Solution::prepare()
@@ -937,6 +948,8 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
     for (const auto &p : getChildren())
     {
         auto c = p.second->gatherUnresolvedDependencies();
+        if (c.empty())
+            continue;
         std::unordered_set<UnresolvedPackage> rm;
         for (auto &[up, dptr] : c)
         {
@@ -1390,6 +1403,7 @@ FilesMap Build::build_configs_separate(const Files &files)
             check_self(solution.Checks);
             solution.performChecks();
             build_self(solution);
+            addDeps(lib, solution);
             once = true;
         }
 
@@ -1481,7 +1495,6 @@ FilesMap Build::build_configs_separate(const Files &files)
             //#endif
         }
 
-        addDeps(lib, solution);
         for (auto &d : udeps)
             lib += std::make_shared<Dependency>(d);
 
@@ -1541,6 +1554,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     check_self(solution.Checks);
     solution.performChecks();
     build_self(solution);
+    addDeps(lib, solution);
 
 #if defined(CPPAN_OS_WINDOWS)
     lib += implib;
@@ -1730,8 +1744,6 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         L->Force = vs::ForceType::Multiple;
         //#endif
     }
-
-    addDeps(lib, solution);
 
     auto i = solution.children.find(lib.pkg);
     if (i == solution.children.end())

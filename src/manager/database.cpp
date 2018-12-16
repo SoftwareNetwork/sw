@@ -546,6 +546,15 @@ void ServiceDatabase::setInstalledPackageFlags(const PackageId &p, const String 
                 "' where id = '" + std::to_string(getInstalledPackageConfigId(p, config)) + "'");*/
 }
 
+optional<ServiceDatabase::OverriddenPackage> ServiceDatabase::getOverriddenPackage(const PackageId &pkg) const
+{
+    const auto &pkgs = getOverriddenPackages();
+    auto i = pkgs.find(pkg);
+    if (i == pkgs.end(pkg))
+        return {};
+    return i->second;
+}
+
 const ServiceDatabase::OverriddenPackages &ServiceDatabase::getOverriddenPackages() const
 {
     // maybe move them to packages db?
@@ -978,6 +987,8 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
 
     preInitFindDependencies();
 
+    const auto &overridden = getServiceDatabase().getOverriddenPackages();
+
     DependenciesMap all_deps;
     for (auto &dep : deps)
     {
@@ -993,7 +1004,7 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
             );
         if (q.empty())
         {
-            auto &pkgs = getServiceDatabase().getOverriddenPackages();
+            auto &pkgs = overridden;
             PackageId pkg{ dep.ppath, dep.range.toString() };
             auto i = pkgs.find(pkg);
             if (i != pkgs.end(pkg))
@@ -1017,12 +1028,11 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
         project.id = getExactProjectVersionId(project, project.version, project.flags, project.hash, project.group_number, project.prefix);
         //project.flags.set(pfDirectDependency);
         all_deps[project] = project; // assign first, deps assign second
-        all_deps[project].db_dependencies = getProjectDependencies(project.id, all_deps);
+        all_deps[project].db_dependencies = getProjectDependencies(project.id, all_deps, getServiceDatabase().getOverriddenPackageVersionDependencies(-project.id));
         //all_deps[project].setDependencyIds(getProjectDependencies(project.id, all_deps)); // see dependency.h note
     }
 
     // mark local deps
-    const auto &overridden = getServiceDatabase().getOverriddenPackages();
     if (!overridden.empty())
     {
         for (auto &[pkg, d] : all_deps)
@@ -1051,7 +1061,7 @@ void check_version_age(const std::string &created)
     // and during the second one, the packet is really young
     //LOG_INFO(logger, "mins " << mins);
     if (mins < PACKAGES_DB_REFRESH_TIME_MINUTES * 2)
-        throw SW_RUNTIME_EXCEPTION("One of the queried packages is 'young'. Young packages must be retrieved from server.");
+        throw std::runtime_error("One of the queried packages is 'young'. Young packages must be retrieved from server.");
 }
 
 db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn, int &prefix) const
@@ -1075,26 +1085,30 @@ db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDe
         version_ids[row.version.value()] = row.packageVersionId.value();
     }
 
+    // also check local db
+    auto &o = getServiceDatabase().getOverriddenPackages();
+    auto i = o.find(project.ppath);
+    if (i != o.end())
+    {
+        for (auto &[v, d] : i->second)
+        {
+            versions.insert(v);
+            version_ids[v] = d.id;
+        }
+    }
+
     auto v = project.range.getMaxSatisfyingVersion(versions);
     if (!v)
-    {
-        auto &o = getServiceDatabase().getOverriddenPackages();
-        auto i = o.find(project.ppath);
-        if (i != o.end())
-        {
-            for (auto &[v, d] : i->second)
-            {
-                versions.insert(v);
-                version_ids[v] = d.id;
-            }
-        }
-        v = project.range.getMaxSatisfyingVersion(versions);
-        if (!v)
-            throw err(project.ppath, project.range);
+        throw err(project.ppath, project.range);
 
+    PackageId pkg{ project.ppath, v.value() };
+    auto i2 = o.find(pkg);
+    if (i2 != o.end(pkg))
+    {
         id = version_ids[v.value()];
         version = v.value();
-        prefix = i->second.find(version)->second.prefix;
+        prefix = i2->second.prefix;
+        gn = i2->second.getGroupNumber();
         return id;
     }
 

@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     setup_log("INFO");
 
     // init
-    getServiceDatabase();
+    auto &sdb = getServiceDatabase();
 
     cl::opt<path> p(cl::Positional, cl::Required);
     cl::opt<path> packages(cl::Positional, cl::Required);
@@ -64,6 +64,7 @@ int main(int argc, char **argv)
         {{"org.sw.demo.boost.smart_ptr", "1"}, {}},
         {{"org.sw.demo.boost.iterator", "1"}, {}},
         {{"org.sw.demo.boost.algorithm", "1"}, {}},
+        {{"org.sw.demo.boost.bimap", "1"}, {}},
         {{"org.sw.demo.boost.filesystem", "1"}, {}},
         {{"org.sw.demo.boost.thread", "1"}, {}},
         {{"org.sw.demo.boost.asio", "1"}, {}},
@@ -79,7 +80,6 @@ int main(int argc, char **argv)
         {{"org.sw.demo.boost.assign", "1"}, {}},
         {{"org.sw.demo.boost.uuid", "1"}, {}},
         {{"org.sw.demo.boost.container_hash", "1"}, {}},
-        //{{"org.sw.demo.boost.utility", "1"}, {}},
 
         {{"org.sw.demo.jbeder.yaml_cpp", "master"}, {}},
         {{"org.sw.demo.lz4", "1"}, {}},
@@ -243,7 +243,10 @@ int main(int argc, char **argv)
     auto m = resolve_dependencies(deps);
 
     // write resolved deps!
+    std::map<UnresolvedPackage, pkg_data> pkgs_sorted;
     for (auto &[p, d] : pkgs)
+        pkgs_sorted.emplace(p, d);
+    for (auto &[p, d] : pkgs_sorted)
         ctx_packages.addLine("\"" + p.resolve().toString() + "\"s,");
 
     ctx_packages.endBlock(true);
@@ -262,6 +265,7 @@ int main(int argc, char **argv)
     check.beginFunction("void check_self_generated(Checker &c)");
 
     std::set<PackageVersionGroupNumber> used_gns;
+    Files used_dirs;
     for (auto &[u, data] : pkgs)
     {
         auto &r = m[u];

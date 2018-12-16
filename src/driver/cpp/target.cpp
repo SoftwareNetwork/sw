@@ -310,7 +310,8 @@ void TargetBase::addChild(const TargetBaseTypePtr &t)
 
 void TargetBase::setupTarget(TargetBaseType *t) const
 {
-    if (getSolution()->exists(t->pkg))
+    bool exists = getSolution()->exists(t->pkg);
+    if (exists)
         throw SW_RUNTIME_EXCEPTION("Target already exists: " + t->pkg.target_name);
 
     // find automatic way of copying data?
@@ -828,7 +829,7 @@ UnresolvedDependenciesType NativeExecutedTarget::gatherUnresolvedDependencies() 
     {
         for (auto &d : v.Dependencies)
         {
-            if (!d->target.lock())
+            if (!getSolution()->resolveTarget(d->package) && !d->target.lock())
                 deps.insert({ d->package, d });
         }
     });
@@ -1110,7 +1111,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
             c->PrecompiledHeader().create = p.header;
             c->PDBFilename = pdb_fn;
             c->PDBFilename.intermediate_file = false;
-            c->PDBFilename.output_dependency = true;
+            //c->PDBFilename.output_dependency = true;
         }
         else if (auto c = sf->compiler->as<ClangClCompiler>())
         {
@@ -1883,7 +1884,17 @@ bool NativeExecutedTarget::prepare()
                         }
                     }
                     if (!added)*/
-                        throw std::logic_error("Unresolved package on stage 1: " + d->getPackage().toString());
+
+                    auto err = "Package: " + pkg.toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
+                    if (auto d = pkg.getOverriddenDir(); d)
+                    {
+                        err += ".\nPackage: " + pkg.toString() + " is overridden locally. "
+                            "This means you have new dependency that is not in db.\n"
+                            "Run following command in attempt to fix this issue:"
+                            "'sw -d " + normalize_path(d.value()) + " -override-remote-package " +
+                            pkg.ppath.slice(0, getServiceDatabase().getOverriddenPackage(pkg).value().prefix).toString() + "'";
+                    }
+                    throw std::logic_error(err);
                 }
             }
         });
@@ -1941,8 +1952,8 @@ bool NativeExecutedTarget::prepare()
             {
                 if (d->target.lock() == nullptr)
                 {
-                    throw std::logic_error("Unresolved package on stage 2: " + d->package.toString());
-                    /*LOG_ERROR(logger, "Unresolved package on stage 2: " + d->package.toString() + ". Resolving inplace");
+                    throw std::logic_error("Package: " + pkg.toString() + ": Unresolved package on stage 2: " + d->package.toString());
+                    /*LOG_ERROR(logger, "Package: " + pkg.toString() + ": Unresolved package on stage 2: " + d->package.toString() + ". Resolving inplace");
                     auto id = d->package.resolve();
                     d->target = std::static_pointer_cast<NativeTarget>(getSolution()->getTargetPtr(id));*/
                 }
@@ -2034,6 +2045,7 @@ bool NativeExecutedTarget::prepare()
         // but still in use.
         // We add them back to children.
         // Example: helpers, small tools, code generators.
+        // TODO: maybe reconsider
         {
             auto &c = getSolution()->children;
             auto &dc = getSolution()->dummy_children;

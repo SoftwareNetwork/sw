@@ -287,7 +287,7 @@ static cl::opt<bool> list_overridden_packages("list-overridden-remote-packages",
 static cl::opt<String> delete_overridden_package("delete-overridden-remote-package", cl::value_desc("package"), cl::desc("Delete overridden package from index"));
 static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", cl::value_desc("sdir"), cl::desc("Delete overridden dir packages"));
 
-static cl::opt<bool> use_lock_file("l", cl::desc("Use lock file"));
+static cl::opt<bool> use_lock_file("l", cl::desc("Use lock file"), cl::init(true));
 
 //static cl::list<String> builtin_function("internal-call-builtin-function", cl::desc("Call built-in function"), cl::Hidden);
 
@@ -346,7 +346,7 @@ int sw_main(const Strings &args)
         return 0;
     }
 
-    if (/*use_lock_file && */fs::exists(fs::current_path() / "sw.lock"))
+    if (use_lock_file && fs::exists(fs::current_path() / "sw.lock"))
         getPackageStore().loadLockFile(fs::current_path() / "sw.lock");
 
     /*if (!build_arg0.empty())
@@ -368,9 +368,8 @@ void stop()
     //getFileMonitor().stop();
     //getExecutor().join();
     //getFileStorages().clear();
-    //if (use_lock_file)
-    // create always, use asap
-    getPackageStore().saveLockFile(fs::current_path() / "sw.lock");
+    if (use_lock_file)
+        getPackageStore().saveLockFile(fs::current_path() / "sw.lock");
 }
 
 static cl::opt<bool> write_log_to_file("log-to-file");

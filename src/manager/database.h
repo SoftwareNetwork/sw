@@ -82,6 +82,14 @@ struct SW_MANAGER_API ServiceDatabase : public Database
         // extended
         db::PackageVersionId id = 0; // overridden id is less than 0
         int prefix = 2;
+
+        int64_t getGroupNumber() const
+        {
+            auto gn = std::hash<path>()(sdir);
+            if (gn > 0)
+                gn = -gn;
+            return gn;
+        }
     };
     using OverriddenPackages = PackageVersionMapBase<OverriddenPackage, std::unordered_map, std::map>;
 
@@ -121,6 +129,7 @@ struct SW_MANAGER_API ServiceDatabase : public Database
     bool isPackageInstalled(const PackageId &p) const { return getInstalledPackageId(p) != 0; }
     Packages getInstalledPackages() const;
 
+    optional<OverriddenPackage> getOverriddenPackage(const PackageId &pkg) const;
     const OverriddenPackages &getOverriddenPackages() const;
     void overridePackage(const PackageId &pkg, const OverriddenPackage &opkg) const;
     void deleteOverriddenPackage(const PackageId &pkg) const;

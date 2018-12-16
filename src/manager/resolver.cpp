@@ -86,8 +86,11 @@ void PackageStore::loadLockFile(const path &fn)
         d.createNames();
         d.prefix = v["prefix"];
         d.hash = v["hash"];
-        d.group_number = v["group_number"];
-        d.local_override = overridden.find(d) != overridden.end(d);
+        d.group_number_from_lock_file = d.group_number = v["group_number"];
+        auto i = overridden.find(d);
+        d.local_override = i != overridden.end(d);
+        if (d.local_override)
+            d.group_number = i->second.getGroupNumber();
         d.from_lock_file = true;
         for (auto &v2 : v["dependencies"])
         {
@@ -130,7 +133,10 @@ void PackageStore::saveLockFile(const path &fn) const
         jp["package"] = r.toString();
         jp["prefix"] = r.prefix;
         jp["hash"] = r.hash;
-        jp["group_number"] = r.group_number;
+        if (r.group_number > 0)
+            jp["group_number"] = r.group_number;
+        else
+            jp["group_number"] = r.group_number_from_lock_file;
         for (auto &[_, d] : std::map<String, DownloadDependency1>(r.db_dependencies.begin(), r.db_dependencies.end()))
             jp["dependencies"].push_back(d.toString());
         jpkgs.push_back(jp);

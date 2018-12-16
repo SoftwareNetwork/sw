@@ -85,6 +85,7 @@ void build(Solution &s)
     cpp_driver.Public += builder,
         "org.sw.demo.microsoft.gsl-*"_dep,
         "org.sw.demo.boost.assign-1"_dep,
+        "org.sw.demo.boost.bimap-1"_dep,
         "org.sw.demo.boost.uuid-1"_dep;
     cpp_driver += "src/driver/cpp/.*"_rr, "include/sw/driver/cpp/.*"_rr;
     cpp_driver -= "src/driver/cpp/inserts/.*"_rr;

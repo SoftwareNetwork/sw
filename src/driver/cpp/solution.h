@@ -93,7 +93,8 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
 
     // target data
     TargetMap children;
-    TargetMap dummy_children;
+    TargetMap dummy_children; // contain dirs, projects,
+    TargetMap weak_children; // trash & garbage, used for storage internally, do not use
 
     SourceDirMap source_dirs_by_source;
 
@@ -141,6 +142,8 @@ public:
 
     bool skipTarget(TargetScope Scope) const;
 
+    TargetBaseTypePtr resolveTarget(const UnresolvedPackage &) const;
+
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
     Commands tests;
@@ -186,10 +189,11 @@ private:
     std::unordered_set<ExtendedPackageData> known_cfgs;
     std::vector<detail::EventCallback> events;
     //Files used_modules;
+    mutable std::unordered_map<UnresolvedPackage, TargetBaseTypePtr> resolved_targets;
 
     void checkPrepared() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
-    void build_and_resolve();
+    void build_and_resolve(int n_runs = 0);
 
     path getChecksFilename() const;
     void loadChecks();
