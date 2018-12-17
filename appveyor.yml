@@ -22,7 +22,6 @@ before_build:
 build_script:
   - sw -platform %platform% build
 
-artifacts:
-  - path: .sw/windows_*_msvc_*_static_Release_*/*.exe
-    name: sw-$(APPVEYOR_BUILD_VERSION)
-    
+after_build:
+  - ps: Get-ChildItem .sw/windows_*_msvc_*_static_Release_*/*.exe | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name -DeploymentName sw-$(APPVEYOR_BUILD_VERSION) }
+  
