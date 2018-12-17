@@ -15,12 +15,12 @@ install:
   - set PATH=C:\Program Files\Git\mingw64\bin;%PATH%
 
 before_build:
-  - curl -fsS -L -o cppan.zip https://github.com/SoftwareNetwork/binaries/raw/master/client.zip
-  - 7z x cppan.zip
+  - curl -fsS -L -o sw.zip https://github.com/SoftwareNetwork/binaries/raw/master/client_windows.zip
+  - 7z x sw.zip
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - client -platform %platform% build sw.cpp
+  - sw -platform %platform% build
 
 artifacts:
   - path: .sw/windows**
