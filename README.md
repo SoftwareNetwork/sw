@@ -1,5 +1,7 @@
 # Software Network (SW) #
 
+[![Build status](https://ci.appveyor.com/api/projects/status/3mf8eall4lf764sk/branch/master?svg=true)](https://ci.appveyor.com/project/egorpugin/sw/branch/master)
+
 ## Build
 
 1. Download CPPAN client from https://cppan.org/client/
