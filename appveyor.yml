@@ -23,6 +23,6 @@ build_script:
   - sw -platform %platform% build
 
 artifacts:
-  - path: .sw/windows*
+  - path: .sw/windows_*_msvc_*_static_Release_*/*.exe
     name: sw-$(APPVEYOR_BUILD_VERSION)
     
