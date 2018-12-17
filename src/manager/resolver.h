@@ -27,6 +27,7 @@ struct SW_MANAGER_API PackageStore
 
     void loadLockFile(const path &fn);
     void saveLockFile(const path &fn) const;
+    bool canUseLockFile() const;
 
 private:
     bool use_lock_file = false;

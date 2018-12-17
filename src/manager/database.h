@@ -181,7 +181,7 @@ private:
 
     void preInitFindDependencies() const;
     db::PackageVersionId getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn, int &prefix) const;
-    Dependencies getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm, const UnresolvedPackages &overridden_deps = {}) const;
+    Dependencies getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm) const;
 };
 
 SW_MANAGER_API

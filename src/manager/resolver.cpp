@@ -40,6 +40,9 @@ bool gVerbose;
 static cl::opt<bool, true> verbose_opt("verbose", cl::desc("Verbose output"), cl::location(gVerbose));
 static cl::alias verbose_opt2("v", cl::desc("Alias for -verbose"), cl::aliasopt(verbose_opt));
 
+bool gUseLockFile;
+static cl::opt<bool, true> use_lock_file("l", cl::desc("Use lock file"), cl::location(gUseLockFile));// , cl::init(true));
+
 #define SW_CURRENT_LOCK_FILE_VERSION 1
 
 namespace sw
@@ -151,6 +154,11 @@ void PackageStore::saveLockFile(const path &fn) const
     }
 
     write_file_if_different(fn, j.dump(2));
+}
+
+bool PackageStore::canUseLockFile() const
+{
+    return use_lock_file && !force_server_query && gUseLockFile;
 }
 
 ResolvedPackagesMap resolve_dependencies(const UnresolvedPackages &deps)
@@ -280,7 +288,7 @@ void Resolver::add_dep(Dependencies &dd, const PackageId &d)
 
 void Resolver::resolve(const UnresolvedPackages &deps, std::function<void()> resolve_action)
 {
-    if (getPackageStore().use_lock_file)
+    if (getPackageStore().canUseLockFile())
     {
         UnresolvedPackages deps2;
         for (auto &d : deps)

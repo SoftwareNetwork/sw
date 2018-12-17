@@ -119,7 +119,7 @@ void Api::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, cons
         auto j = nlohmann::json::parse(*d);
         auto rd = j["root_dir"].get<String>();
         auto sz = rd.size();
-        if (rd.back() != '\\' || rd.back() != '/')
+        if (rd.back() != '\\' && rd.back() != '/')
             sz++;
         for (auto &f : j["files"])
             f["from"] = f["from"].get<String>().substr(sz);

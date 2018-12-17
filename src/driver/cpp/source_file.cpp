@@ -345,13 +345,22 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
     auto &files = glob_cache[dir][r.recursive];
     if (files.empty())
         files = enumerate_files_fast(dir, r.recursive);
+    bool matches = false;
     for (auto &f : files)
     {
         auto s = normalize_path(f);
         s = s.substr(root_s.size() + 1); // + 1 to skip first slash
         if (std::regex_match(s, r.r))
+        {
             (this->*func)(f);
+            matches = true;
+        }
     }
+    // some libs may declare common regex for changing files in generic manner
+    // this check will fail for them
+    // reconsider
+    //if (!matches)
+        //throw SW_RUNTIME_EXCEPTION("No files matches regex");
 }
 
 size_t SourceFileStorage::sizeKnown() const
@@ -498,6 +507,8 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
         if (std::regex_match(s, r.r))
             files[p] = f;
     }
+    //if (files.empty())
+        //throw SW_RUNTIME_EXCEPTION("No files matches regex");
     return files;
 }
 

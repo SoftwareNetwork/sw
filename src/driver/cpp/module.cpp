@@ -55,10 +55,16 @@ Module::Module(const path &dll)
         fs::remove(dll);
         throw SW_RUNTIME_EXCEPTION(err);
     }
+
+    build_.name = "build";
     if (module->has("build"))
         build_ = module->get<void(Solution&)>("build");
+
+    check_.name = "check";
     if (module->has("check"))
         check_ = module->get<void(Checker&)>("check");
+
+    configure_.name = "configure";
     if (module->has("configure"))
         configure_ = module->get<void(Solution&)>("configure");
 }

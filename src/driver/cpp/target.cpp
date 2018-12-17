@@ -384,7 +384,7 @@ void TargetBase::setSource(const Source &s)
 {
     source = s;
     auto d = getSolution()->fetch_dir;
-    if (d.empty()/* || !ParallelSourceDownload*/)
+    if (d.empty()/* || !ParallelSourceDownload*/ || !isLocal())
         return;
 
     auto s2 = source; // make a copy!
@@ -829,7 +829,7 @@ UnresolvedDependenciesType NativeExecutedTarget::gatherUnresolvedDependencies() 
     {
         for (auto &d : v.Dependencies)
         {
-            if (!getSolution()->resolveTarget(d->package) && !d->target.lock())
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
                 deps.insert({ d->package, d });
         }
     });

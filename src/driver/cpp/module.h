@@ -19,6 +19,7 @@ struct SW_DRIVER_CPP_API Module
     template <class F, bool Required = false>
     struct LibraryCall
     {
+        String name;
         Solution *s = nullptr;
         std::function<F> f;
 
@@ -55,7 +56,15 @@ struct SW_DRIVER_CPP_API Module
                 }
             }
             else if (Required)
-                throw SW_RUNTIME_EXCEPTION("Required function is not present in the module");
+            {
+                String err = "Required function";
+                if (!name.empty())
+                    err += " '" + name + "'";
+                err += " is not present in the module";
+                if (s && !s->current_module.empty())
+                    err += " " + s->current_module;
+                throw SW_RUNTIME_EXCEPTION(err);
+            }
         }
     };
 

@@ -287,7 +287,7 @@ static cl::opt<bool> list_overridden_packages("list-overridden-remote-packages",
 static cl::opt<String> delete_overridden_package("delete-overridden-remote-package", cl::value_desc("package"), cl::desc("Delete overridden package from index"));
 static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", cl::value_desc("sdir"), cl::desc("Delete overridden dir packages"));
 
-static cl::opt<bool> use_lock_file("l", cl::desc("Use lock file"), cl::init(true));
+extern bool gUseLockFile;
 
 //static cl::list<String> builtin_function("internal-call-builtin-function", cl::desc("Call built-in function"), cl::Hidden);
 
@@ -346,7 +346,7 @@ int sw_main(const Strings &args)
         return 0;
     }
 
-    if (use_lock_file && fs::exists(fs::current_path() / "sw.lock"))
+    if (gUseLockFile && fs::exists(fs::current_path() / "sw.lock"))
         getPackageStore().loadLockFile(fs::current_path() / "sw.lock");
 
     /*if (!build_arg0.empty())
@@ -368,7 +368,7 @@ void stop()
     //getFileMonitor().stop();
     //getExecutor().join();
     //getFileStorages().clear();
-    if (use_lock_file)
+    if (gUseLockFile)
         getPackageStore().saveLockFile(fs::current_path() / "sw.lock");
 }
 
@@ -484,6 +484,34 @@ SUBCOMMAND_DECL(uri)
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
             sw::run(p);
+        }
+
+        if (uri_args[0] == "sw:upload")
+        {
+            if (uri_args.size() != 4)
+                return;
+
+            PackageId pkg(uri_args[1]);
+            Version new_version(uri_args[2]);
+
+            String url = "https://raw.githubusercontent.com/SoftwareNetwork/specifications/master/";
+            url += normalize_path(pkg.getHashPathFull() / "sw.cpp");
+            auto fn = get_temp_filename("uploads") / "sw.cpp";
+            auto spec_data = download_file(url);
+            boost::replace_all(spec_data, pkg.version.toString(), new_version.toString());
+            write_file(fn, spec_data);
+
+            primitives::Command c;
+            c.program = "sw";
+            c.working_directory = fn.parent_path();
+            c.args.push_back("upload");
+            c.args.push_back(".");
+            c.args.push_back(pkg.ppath.slice(0, std::stoi(uri_args[3])));
+            c.out.inherit = true;
+            c.err.inherit = true;
+            c.execute();
+
+            fs::remove_all(fn.parent_path());
         }
     }
     catch (std::exception &e)

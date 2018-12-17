@@ -55,7 +55,7 @@ PackageScriptPtr CppDriver::load(const path &file_or_dir) const
     auto f = resolveConfig(file_or_dir);
     if (!f || !Build::isFrontendConfigFilename(f.value()))
     {
-        if (!Build::isFrontendConfigFilename(f.value()))
+        if (f && !Build::isFrontendConfigFilename(f.value()))
             LOG_INFO(logger, "Unknown config, trying in configless mode. Default mode is native (ASM/C/C++)");
 
         path p = file_or_dir;

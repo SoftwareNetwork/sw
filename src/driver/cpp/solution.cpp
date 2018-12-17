@@ -46,6 +46,7 @@ cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(generator));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
+static cl::opt<bool> fetch_sources("fetch", cl::desc("Fetch files in process"));
 
 static cl::opt<String> target_os("target-os");
 static cl::opt<String> compiler("compiler", cl::desc("Set compiler")/*, cl::sub(subcommand_ide)*/);
@@ -1806,8 +1807,13 @@ void Build::setupSolutionName(const path &file_or_dir)
 void Build::build_and_load(const path &fn)
 {
     build(fn);
+
     //fs->save(); // remove?
     //fs->reset();
+
+    if (fetch_sources)
+        fetch_dir = BinaryDir / "src";
+
     auto fe = selectFrontendByFilename(fn);
     switch (fe.value())
     {
