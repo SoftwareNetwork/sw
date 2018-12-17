@@ -73,6 +73,16 @@ enum class FrontendType
     Cppan = 2,
 };
 
+struct SW_DRIVER_CPP_API Test : driver::cpp::CommandBuilder
+{
+    using driver::cpp::CommandBuilder::CommandBuilder;
+
+    Test() = default;
+    Test(const driver::cpp::CommandBuilder &cb)
+        : driver::cpp::CommandBuilder(cb)
+    {}
+};
+
 /**
 * \brief Single configuration solution.
 */
@@ -147,10 +157,11 @@ public:
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
     Commands tests;
-    void addTest(const ExecutableTarget &t);
-    void addTest(const String &name, const ExecutableTarget &t);
-    driver::cpp::CommandBuilder addTest();
-    driver::cpp::CommandBuilder addTest(const String &name);
+    Test addTest(const ExecutableTarget &t);
+    Test addTest(const String &name, const ExecutableTarget &t);
+    Test addTest();
+    Test addTest(const String &name);
+    path getTestDir() const;
 
     //protected:
     // known targets are downloaded
@@ -198,6 +209,8 @@ private:
     path getChecksFilename() const;
     void loadChecks();
     void saveChecks() const;
+
+    void addTest(Test &cb, const String &name);
 
 private:
     friend struct ToBuild;

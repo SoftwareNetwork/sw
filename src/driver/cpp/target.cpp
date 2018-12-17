@@ -732,12 +732,23 @@ void NativeExecutedTarget::setOutputDir(const path &dir)
 
 void NativeExecutedTarget::setOutputFile()
 {
-    if (getSelectedTool() == Librarian.get())
-        getSelectedTool()->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_lib));
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        if (getSelectedTool() == Librarian.get())
+            getSelectedTool()->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_lib));
+        else
+        {
+            getSelectedTool()->setOutputFile(getOutputFileName(getOutputDir()));
+            getSelectedTool()->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
+        }
+    }
     else
     {
-        getSelectedTool()->setOutputFile(getOutputFileName(getOutputDir()));
-        getSelectedTool()->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        getSelectedTool()->setOutputFile(base);
+        if (getSelectedTool() != Librarian.get())
+            getSelectedTool()->setImportLibrary(base);
     }
 }
 
@@ -749,26 +760,29 @@ path NativeExecutedTarget::makeOutputFile() const
         return getOutputFileName(getOutputDir());
 }
 
+path NativeExecutedTarget::getOutputFileName() const
+{
+    return pkg.toString();
+}
+
 path NativeExecutedTarget::getOutputFileName(const path &root) const
 {
     path p;
     if (SW_IS_LOCAL_BINARY_DIR)
     {
         if (IsConfig)
-            p = getTargetsDir() / pkg.ppath.toString() / "out" / pkg.ppath.toString();
+            p = getTargetsDir() / pkg.ppath.toString() / "out" / getOutputFileName();
         else
-            p = getTargetsDir().parent_path() / OutputDir / pkg.ppath.toString();
+            p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
     }
     else
     {
         if (IsConfig)
-            p = pkg.getDir() / "out" / getConfig() / pkg.ppath.toString();
+            p = pkg.getDir() / "out" / getConfig() / getOutputFileName();
         //p = BinaryDir / "out";
         else
-            p = root / getConfig() / OutputDir / pkg.ppath.toString();
+            p = root / getConfig() / OutputDir / getOutputFileName();
     }
-    //if (pkg.version.isValid() /* && add version*/)
-        p += "-" + pkg.version.toString();
     return p;
 }
 
@@ -1354,7 +1368,8 @@ Commands NativeExecutedTarget::getCommands() const
             }
 
             // copy output dlls
-            if (isLocal() && Settings.Native.CopySharedLibraries)
+            if (isLocal() && Settings.Native.CopySharedLibraries &&
+                Scope == TargetScope::Build)
             {
                 for (auto &l : gatherAllRelatedDependencies())
                 {
@@ -1779,12 +1794,8 @@ bool NativeExecutedTarget::prepare()
                 case NativeSourceFile::C:
                     if (auto L = SourceFileStorage::findLanguageByExtension(".c"); L)
                     {
-                        auto sf = L->clone()->createSourceFile(f.first, this);
-                        if (auto c = sf->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
-                        {
-                            //c->CompileAsC = true; // not working for some reason
-                            sf->args.push_back("-TC");
-                        }
+                        if (auto c = f.second->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
+                            c->CompileAsC = true;
                     }
                     else
                         throw std::logic_error("no C language found");
@@ -1792,21 +1803,17 @@ bool NativeExecutedTarget::prepare()
                 case NativeSourceFile::CPP:
                     if (auto L = SourceFileStorage::findLanguageByExtension(".cpp"); L)
                     {
-                        auto sf = L->clone()->createSourceFile(f.first, this);
-                        if (auto c = sf->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
-                        {
-                            //c->CompileAsCPP = true; // not working for some reason
-                            sf->args.push_back("-TP");
-                        }
+                        if (auto c = f.second->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
+                            c->CompileAsCPP = true;
                     }
                     else
                         throw std::logic_error("no CPP language found");
                     break;
                 case NativeSourceFile::ASM:
-                    if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
+                    /*if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
                         L->clone()->createSourceFile(f.first, this);
                     else
-                        throw std::logic_error("no ASM language found");
+                        throw std::logic_error("no ASM language found");*/
                     break;
                 default:
                     throw std::logic_error("not implemented");

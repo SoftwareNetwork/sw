@@ -359,6 +359,7 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
     // some libs may declare common regex for changing files in generic manner
     // this check will fail for them
     // reconsider
+    // apply EnforcementType::CheckRegexes
     //if (!matches)
         //throw SW_RUNTIME_EXCEPTION("No files matches regex");
 }
@@ -433,6 +434,7 @@ void SourceFileStorage::startAssignOperation()
 
 bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
 {
+    // apply EnforcementType::CheckFiles
     if (!F.is_absolute())
     {
         auto p = target->SourceDir / F;
@@ -507,6 +509,7 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
         if (std::regex_match(s, r.r))
             files[p] = f;
     }
+    // apply EnforcementType::CheckRegexes
     //if (files.empty())
         //throw SW_RUNTIME_EXCEPTION("No files matches regex");
     return files;

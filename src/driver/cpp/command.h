@@ -348,7 +348,7 @@ struct GNUCommand : Command
     void postProcess(bool ok) override;
 };
 
-struct CommandBuilder
+struct SW_DRIVER_CPP_API CommandBuilder
 {
     std::shared_ptr<Command> c;
     std::vector<NativeExecutedTarget*> targets;
@@ -363,6 +363,8 @@ struct CommandBuilder
     {
         c->fs = &fs;
     }
+    CommandBuilder(const CommandBuilder &) = default;
+    CommandBuilder &operator=(const CommandBuilder &) = default;
 };
 
 #define DECLARE_STREAM_OP(t) \

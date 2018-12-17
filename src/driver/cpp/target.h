@@ -144,6 +144,13 @@ enum class TargetType : uint32_t
     NativeSharedLibrary = 7,
 };
 
+// enforcement rules apply to target to say how many checks it should perform
+enum class EnforcementType
+{
+    ChechFiles,
+    CheckRegexes,
+};
+
 SW_DRIVER_CPP_API
 String toString(TargetType T);
 
@@ -714,6 +721,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     FilesOrdered gatherLinkLibraries() const;
     NativeLinker *getSelectedTool() const;
     void setOutputDir(const path &dir);
+    void setOutputFile();
     virtual path getOutputDir() const; // used in commands
     void removeFile(const path &fn, bool binary_dir = false) override;
 
@@ -780,7 +788,6 @@ protected:
     UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
     FilesOrdered gatherLinkDirectories() const;
     bool prepareLibrary(LibraryType Type);
-    void setOutputFile();
     void initLibrary(LibraryType Type);
     void configureFile1(const path &from, const path &to, ConfigureFlags flags) const;
     void detectLicenseFile();
@@ -791,6 +798,7 @@ private:
     std::map<path, path> break_gch_deps;
 
     void autoDetectOptions();
+    path getOutputFileName() const;
     path getOutputFileName(const path &root) const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();

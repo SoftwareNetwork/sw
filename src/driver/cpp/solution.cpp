@@ -310,33 +310,50 @@ TargetBaseTypePtr Solution::resolveTarget(const UnresolvedPackage &pkg) const
     return resolved_targets[pkg];
 }
 
-void Solution::addTest(const ExecutableTarget &t)
+path Solution::getTestDir() const
 {
-    addTest("test: [test." + std::to_string(tests.size() + 1) + "]", t);
+    return BinaryDir / "test" / getConfig();
 }
 
-void Solution::addTest(const String &name, const ExecutableTarget &t)
+void Solution::addTest(Test &cb, const String &name)
 {
-    auto c = t.addCommand();
-    c << cmd::prog(t);
-    c << cmd::wdir(t.getOutputFile().parent_path());
-    tests.insert(c.c);
-    c.c->name = name;
-    c.c->always = true;
+    auto dir = getTestDir() / name;
+    fs::remove_all(dir); // also makea condition here
+
+    auto &c = *cb.c;
+    c.name = "test: [" + name + "]";
+    c.always = true;
+    c.working_directory = dir;
+    c.addPathDirectory(BinaryDir / getConfig());
+    c.out.file = dir / "stdout.txt";
+    c.err.file = dir / "stderr.txt";
+    tests.insert(cb.c);
 }
 
-driver::cpp::CommandBuilder Solution::addTest()
+Test Solution::addTest(const ExecutableTarget &t)
 {
-    return addTest("test: [test." + std::to_string(tests.size() + 1) + "]");
+    return addTest("test." + std::to_string(tests.size() + 1), t);
 }
 
-driver::cpp::CommandBuilder Solution::addTest(const String &name)
+Test Solution::addTest(const String &name, const ExecutableTarget &tgt)
 {
-    driver::cpp::CommandBuilder c(*fs);
-    tests.insert(c.c);
-    c.c->name = name;
-    c.c->always = true;
-    return c;
+    auto c = tgt.addCommand();
+    c << cmd::prog(tgt);
+    Test t(c);
+    addTest(t, name);
+    return t;
+}
+
+Test Solution::addTest()
+{
+    return addTest("test." + std::to_string(tests.size() + 1));
+}
+
+Test Solution::addTest(const String &name)
+{
+    Test cb(*fs);
+    addTest(cb, name);
+    return cb;
 }
 
 StaticLibraryTarget &Solution::getImportLibrary()

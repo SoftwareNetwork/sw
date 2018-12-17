@@ -692,12 +692,23 @@ Files Command::getGeneratedDirs() const
 void Command::addPathDirectory(const path &p)
 {
 #ifdef _WIN32
-    String s = getenv("Path");
-    environment["Path"] = s + ";" + normalize_path_windows(p);
+    static const auto env = "Path";
+    static const auto delim = ";";
+    auto norm = [](const auto &p) { return normalize_path_windows(p); };
 #else
-    String s = getenv("PATH");
-    environment["PATH"] = s + ":" + p.u8string();
+    static const auto env = "PATH";
+    static const auto delim = ":";
+    auto norm = [](const auto &p) { return p.u8string() };
 #endif
+
+    if (environment[env].empty())
+    {
+        auto e = getenv(env);
+        if (!e)
+            throw SW_RUNTIME_EXCEPTION("getenv() failed");
+        environment[env] = e;
+    }
+    environment[env] += delim + norm(p);
 }
 
 /*void Command::load(BinaryContext &bctx)
