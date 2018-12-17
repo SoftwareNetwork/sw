@@ -1,0 +1,29 @@
+image: Visual Studio 2017
+
+platform:
+  #- Win32
+  - Win64
+
+cache:
+  - c:/Users/appveyor/.sw
+
+configuration:
+  - Release
+
+# for curl
+install:
+  - set PATH=C:\Program Files\Git\mingw64\bin;%PATH%
+
+before_build:
+  - curl -fsS -L -o cppan.zip https://github.com/SoftwareNetwork/binaries/raw/master/client.zip
+  - 7z x cppan.zip
+  - set PATH=%PATH%;%cd%
+
+build_script:
+  - client -platform %platform% build sw.cpp
+
+#artifacts:
+  #- path: bin
+  #- path: build
+    #name: primitives-$(APPVEYOR_BUILD_VERSION)
+    
