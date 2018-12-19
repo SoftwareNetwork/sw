@@ -73,18 +73,18 @@ struct SW_DRIVER_CPP_API LanguageStorage
 {
     //LanguageMap languages;
     std::map<String, PackageId> extensions;
-    std::unordered_map<PackagePath, std::map<Version, LanguagePtr>> user_defined_languages; // main languages!!! (UDL)
-    std::unordered_map<PackagePath, std::map<Version, std::shared_ptr<Program>>> registered_programs; // main program storage
+    PackageVersionMapBase<LanguagePtr, std::unordered_map, std::map> user_defined_languages; // main languages!!! (UDL)
+    PackageVersionMapBase<ProgramPtr, std::unordered_map, std::map> registered_programs; // main program storage
 
     virtual ~LanguageStorage();
 
-    void registerProgramAndLanguage(const PackagePath &pp, const std::shared_ptr<Program> &, const LanguagePtr &L);
-    void registerProgramAndLanguage(const PackageId &t, const std::shared_ptr<Program> &, const LanguagePtr &L);
-    void registerProgramAndLanguage(const TargetBase &t, const std::shared_ptr<Program> &, const LanguagePtr &L);
+    void registerProgramAndLanguage(const PackagePath &pp, const ProgramPtr &, const LanguagePtr &L);
+    void registerProgramAndLanguage(const PackageId &t, const ProgramPtr &, const LanguagePtr &L);
+    void registerProgramAndLanguage(const TargetBase &t, const ProgramPtr &, const LanguagePtr &L);
 
-    void registerProgram(const PackagePath &pp, const std::shared_ptr<Program> &);
-    void registerProgram(const PackageId &pp, const std::shared_ptr<Program> &);
-    void registerProgram(const TargetBase &t, const std::shared_ptr<Program> &);
+    void registerProgram(const PackagePath &pp, const ProgramPtr &);
+    void registerProgram(const PackageId &pp, const ProgramPtr &);
+    void registerProgram(const TargetBase &t, const ProgramPtr &);
 
     //void registerLanguage(const LanguagePtr &L); // allow unnamed UDLs?
     void registerLanguage(const PackageId &pkg, const LanguagePtr &L);
@@ -100,8 +100,8 @@ struct SW_DRIVER_CPP_API LanguageStorage
     LanguagePtr getLanguage(const PackagePath &pp) const; // latest ver
     LanguagePtr getLanguage(const PackageId &pkg) const;
 
-    std::shared_ptr<Program> getProgram(const PackagePath &pp) const; // latest ver
-    std::shared_ptr<Program> getProgram(const PackageId &pkg) const;
+    ProgramPtr getProgram(const PackagePath &pp) const; // latest ver
+    ProgramPtr getProgram(const PackageId &pkg) const;
 
     Program *findProgramByExtension(const String &ext) const;
     Language *findLanguageByExtension(const String &ext) const;

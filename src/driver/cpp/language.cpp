@@ -130,13 +130,10 @@ LanguagePtr LanguageStorage::getLanguage(const PackagePath &pp) const
 
 LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg) const
 {
-    auto v = user_defined_languages.find(pkg.ppath);
-    if (v == user_defined_languages.end() || v->second.empty())
+    auto v = user_defined_languages.find(pkg);
+    if (v == user_defined_languages.end(pkg))
         return {};
-    auto v2 = v->second.find(pkg.version);
-    if (v2 == v->second.end())
-        return {};
-    return v2->second;
+    return v->second;
 }
 
 std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) const
@@ -149,13 +146,10 @@ std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) cons
 
 std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg) const
 {
-    auto v = registered_programs.find(pkg.ppath);
-    if (v == registered_programs.end() || v->second.empty())
+    auto v = registered_programs.find(pkg);
+    if (v == registered_programs.end(pkg))
         return {};
-    auto v2 = v->second.find(pkg.version);
-    if (v2 == v->second.end())
-        return {};
-    return v2->second;
+    return v->second;
 }
 
 Language *LanguageStorage::findLanguageByExtension(const String &ext) const

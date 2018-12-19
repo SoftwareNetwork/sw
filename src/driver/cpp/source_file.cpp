@@ -101,28 +101,21 @@ Program *SourceFileStorage::findProgramByExtension(const String &ext) const
     if (!pi)
         return nullptr;
     auto &pkg = pi.value();
-    auto p = target->registered_programs.find(pkg.ppath);
-    if (p == target->registered_programs.end())
+    auto p = target->registered_programs.find(pkg);
+    if (p == target->registered_programs.end(pkg))
     {
-        p = target->getSolution()->registered_programs.find(ext);
-        if (p == target->getSolution()->registered_programs.end())
+        p = target->getSolution()->registered_programs.find(pkg);
+        if (p == target->getSolution()->registered_programs.end(pkg))
             return nullptr;
     }
-    auto v = p->second.find(pkg.version);
-    if (v == p->second.end())
-        return nullptr;
-    return v->second.get();
+    return p->second.get();
 }
 
 optional<PackageId> SourceFileStorage::findPackageIdByExtension(const String &ext) const
 {
     auto e = target->findPackageIdByExtension(ext);
     if (!e)
-    {
         e = target->getSolution()->findPackageIdByExtension(ext);
-        if (!e)
-            return {};
-    }
     return e;
 }
 
@@ -140,14 +133,10 @@ Language *SourceFileStorage::findLanguageByPackageId(const PackageId &p) const
 
 Language *SourceFileStorage::findLanguageByExtension(const String &ext) const
 {
-    auto e = target->findLanguageByExtension(ext);
+    auto e = findPackageIdByExtension(ext);
     if (!e)
-    {
-        e = target->getSolution()->findLanguageByExtension(ext);
-        if (!e)
-            return {};
-    }
-    return e;
+        return {};
+    return findLanguageByPackageId(e.value());
 }
 
 void SourceFileStorage::add_unchecked(const path &file_in, bool skip)

@@ -977,10 +977,14 @@ void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
     {
         fs.push_back(e.push([src = src.first, &d = src.second, &opts]
         {
-            auto dl = [&src, d]()
+            path t = d;
+            t += ".stamp";
+
+            auto dl = [&src, d, &t]()
             {
                 LOG_INFO(logger, "Downloading source:\n" << print_source(src));
                 download(src, d);
+                write_file(t, timepoint2string(getUtc()));
             };
 
             if (!fs::exists(d))
@@ -993,8 +997,6 @@ void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
             }
             else
             {
-                path t = d;
-                t += ".stamp";
                 bool e = fs::exists(t);
                 if (!e || getUtc() - string2timepoint(read_file(t)) > opts.existing_dirs_age)
                 {
@@ -1002,7 +1004,6 @@ void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
                         LOG_INFO(logger, "Download data is stale, re-downloading\n" << print_source(src));
                     fs::remove_all(d);
                     dl();
-                    write_file(t, timepoint2string(getUtc()));
                 }
             }
             if (opts.adjust_root_dir)

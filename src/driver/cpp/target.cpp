@@ -1655,6 +1655,11 @@ void NativeExecutedTarget::autoDetectOptions()
             for (auto &v : other_source_file_extensions)
                 add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
         }
+
+        // erase config file, add a condition to not perform this code
+        path f = "sw.cpp";
+        check_absolute(f, true);
+        operator^=(f);
     }
 }
 
@@ -2091,18 +2096,28 @@ bool NativeExecutedTarget::prepare()
         // check postponed files first
         for (auto &[p, f] : *this)
         {
-            if (!f->postponed)
+            if (!f->postponed || f->skip)
                 continue;
 
             auto ext = p.extension().string();
-            auto e = target->extensions.find(ext);
+            auto i = SourceFileStorage::findLanguageByExtension(ext);
+
+            if (!i)
+                throw std::logic_error("User defined program not registered");
+
+            /*auto e = target->extensions.find(ext);
             if (e == target->extensions.end())
                 throw std::logic_error("Bad extension - someone removed it?");
 
             auto &program = e->second;
             auto i = target->getLanguage(program);
             if (!i)
-                throw std::logic_error("User defined program not registered");
+            {
+                //auto i2 = getSolution()->children.find(program);
+                //if (i2 == getSolution()->children.end())
+                    throw std::logic_error("User defined program not registered");
+                //target->registerLanguage(*i2->second, );
+            }*/
 
             auto L = i->clone(); // clone program here
             f = this->SourceFileMapThis::operator[](p) = L->createSourceFile(p, this);

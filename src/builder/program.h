@@ -33,4 +33,6 @@ protected:
     virtual Version gatherVersion() const = 0;
 };
 
+using ProgramPtr = std::shared_ptr<Program>;
+
 }
