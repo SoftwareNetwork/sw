@@ -348,6 +348,10 @@ protected:
 
     bool hasSameParent(const TargetBase *t) const;
 
+    path getObjectDir() const;
+    path getObjectDir(const PackageId &pkg) const;
+    static path getObjectDir(const PackageId &pkg, const String &cfg);
+
 private:
     template <typename T, typename ... Args>
     T &addTarget1(const PackagePath &Name, const Version &V, Args && ... args)
@@ -714,6 +718,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     path getImportLibrary() const override;
     void setChecks(const String &name);
     void findSources() override;
+    void autoDetectOptions();
     SourceFilesSet gatherSourceFiles() const;
     bool hasSourceFiles() const;
     Files gatherAllFiles() const;
@@ -753,8 +758,8 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void fileWriteSafe(const path &fn, const String &content, bool binary_dir = true) const;
 
     void addPrecompiledHeader(const path &h, const path &cpp = path());
-    void addPrecompiledHeader(const PrecompiledHeader &pch);
-    NativeExecutedTarget &operator=(const PrecompiledHeader &pch);
+    void addPrecompiledHeader(PrecompiledHeader pch);
+    NativeExecutedTarget &operator=(PrecompiledHeader pch);
 
     virtual bool isStaticOnly() const { return false; }
     virtual bool isSharedOnly() const { return false; }
@@ -797,7 +802,6 @@ private:
     bool already_built = false;
     std::map<path, path> break_gch_deps;
 
-    void autoDetectOptions();
     path getOutputFileName() const;
     path getOutputFileName(const path &root) const;
     Commands getGeneratedCommands() const;
@@ -836,9 +840,10 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeExecutedTarget//, Program
 
     void cppan_load_project(const yaml &root) override;
 
+    path getOutputDir() const override;
+
 protected:
     bool prepare() override;
-    path getOutputDir() const override;
 };
 
 using Executable = ExecutableTarget;

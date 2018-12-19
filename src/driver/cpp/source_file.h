@@ -168,7 +168,9 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     virtual std::shared_ptr<builder::Command> getCommand() const override;
     //virtual Files getGeneratedDirs() const override;
     //void setSourceFile(const path &input, const path &output);
+    void setOutputFile(const TargetBase &t, const path &input, const path &output_dir); // bad name?
     void setOutputFile(const path &output);
+    String getObjectFilename(const TargetBase &t, const path &p);
 };
 
 struct PrecompiledHeader

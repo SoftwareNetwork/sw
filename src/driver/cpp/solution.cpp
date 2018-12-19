@@ -215,6 +215,7 @@ Solution::Solution(const Solution &rhs)
     , with_testing(rhs.with_testing)
     , ide_solution_name(rhs.ide_solution_name)
     , config_file_or_dir(rhs.config_file_or_dir)
+    , Variables(rhs.Variables)
     , events(rhs.events)
 {
     Checks.solution = this;
@@ -939,24 +940,30 @@ void Solution::prepare()
     // multipass prepare()
     // if we add targets inside this loop,
     // it will automatically handle this situation
-    auto &e = getExecutor();
-    for (std::atomic_bool next_pass = true; next_pass;)
-    {
-        next_pass = false;
-        std::vector<Future<void>> fs;
-        for (auto &[p, t] : getChildren())
-        {
-            fs.push_back(e.push([t = t, &next_pass]
-            {
-                auto np = t->prepare();
-                if (!next_pass)
-                    next_pass = np;
-            }, getChildren().size()));
-        }
-        waitAndGet(fs);
-    }
+    while (prepareStep())
+        ;
 
     prepared = true;
+}
+
+bool Solution::prepareStep()
+{
+    std::atomic_bool next_pass = false;
+
+    auto &e = getExecutor();
+    Futures<void> fs;
+    for (const auto &[pkg, t] : getChildren())
+    {
+        fs.push_back(e.push([t, &next_pass]
+        {
+            auto np = t->prepare();
+            if (!next_pass)
+                next_pass = np;
+        }));
+    }
+    waitAndGet(fs);
+
+    return next_pass;
 }
 
 UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
@@ -1581,10 +1588,13 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     lib.CPPVersion = CPPLanguageStandard::CPP17;
 
     // separate loop
-    for (auto &fn : files)
+    for (auto &[fn, pkg] : output_names)
     {
         lib += fn;
         lib[fn].fancy_name = "[" + output_names[fn].toString() + "]/[config]";
+        // configs depend on pch, and pch depends on getCurrentModuleNameHash(), so we add name to the file
+        // to make sure we have different config .objs for different pchs
+        lib[fn].as<NativeSourceFile>()->setOutputFile(lib, fn.u8string() + "." + getCurrentModuleNameHash(), getObjectDir(pkg) / "self");
         if (gVerbose)
             lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
     }
@@ -2371,7 +2381,7 @@ PackageDescriptionMap Build::getPackages() const
         {
             if (File(f, *fs).isGeneratedAtAll())
                 continue;
-            files.insert(f);
+            files.insert(f.lexically_normal());
         }
 
         if (files.empty() && !nt->Empty)
@@ -2384,9 +2394,31 @@ PackageDescriptionMap Build::getPackages() const
         // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
         nlohmann::json jm;
         // 'from' field is calculated relative to fetch/sln dir
-        auto files_map1 = primitives::pack::prepare_files(files, rd);
+        auto files_map1 = primitives::pack::prepare_files(files, rd.lexically_normal());
         // but 'to' field is calculated based on target's own view
-        auto files_map2 = primitives::pack::prepare_files(files, t->SourceDir);
+        auto files_map2 = primitives::pack::prepare_files(files, t->SourceDir.lexically_normal());
+        if (files_map1.size() != files_map2.size())
+        {
+            auto fm2 = files_map2;
+            for (auto &[f, _] : files_map1)
+                files_map2.erase(f);
+            for (auto &[f, _] : fm2)
+                files_map1.erase(f);
+            String s;
+            if (!files_map1.empty())
+            {
+                s += "from first map: ";
+                for (auto &[f, _] : files_map1)
+                    s += normalize_path(f) + ", ";
+            }
+            if (!files_map2.empty())
+            {
+                s += "from second map: ";
+                for (auto &[f, _] : files_map2)
+                    s += normalize_path(f) + ", ";
+            }
+            throw SW_RUNTIME_EXCEPTION("Target: " + pkg.toString() + " Maps are not the same: " + s);
+        }
         for (const auto &tup : boost::combine(files_map1, files_map2))
         {
             std::pair<path, path> f1, f2;

@@ -237,7 +237,7 @@ struct SW_DRIVER_CPP_API NativeLinker : Linker,
 
     virtual ~NativeLinker() = default;
 
-    virtual void setObjectFiles(const Files &files) = 0;
+    virtual void setObjectFiles(const Files &files) = 0; // actually this is addObjectFiles()
     virtual void setInputLibraryDependencies(const FilesOrdered &files) {}
     virtual void setOutputFile(const path &out) = 0;
     virtual void setImportLibrary(const path &out) = 0;
@@ -256,14 +256,14 @@ struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
 {
     virtual ~VisualStudioLibraryTool() = default;
 
-    virtual void setObjectFiles(const Files &files) override;
-    virtual void setOutputFile(const path &out) override;
-    virtual void setImportLibrary(const path &out) override;
+    void setObjectFiles(const Files &files) override;
+    void setOutputFile(const path &out) override;
+    void setImportLibrary(const path &out) override;
 
-    virtual path getOutputFile() const override;
-    virtual path getImportLibrary() const override;
+    path getOutputFile() const override;
+    path getImportLibrary() const override;
 
-    virtual std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> getCommand() const override;
 
 protected:
     virtual void getAdditionalOptions(driver::cpp::Command *c) const = 0;
@@ -376,6 +376,14 @@ struct SW_DRIVER_CPP_API NativeToolchain
 
     // members
     //String getConfig() const;
+};
+
+// other tools
+
+// win resources
+struct SW_DRIVER_CPP_API RcTool : Program
+{
+    virtual ~RcTool() = default;
 };
 
 }

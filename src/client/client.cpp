@@ -291,6 +291,8 @@ extern bool gUseLockFile;
 
 //static cl::list<String> builtin_function("internal-call-builtin-function", cl::desc("Call built-in function"), cl::Hidden);
 
+void override_package_perform();
+
 int sw_main(const Strings &args)
 {
     if (list_overridden_packages)
@@ -308,26 +310,7 @@ int sw_main(const Strings &args)
 
     if (!override_package.empty())
     {
-        auto s = sw::load(".");
-        //auto s = sw::load(override_package[1]);
-        for (auto &[pkg, desc] : s->getPackages())
-        {
-            sw::PackagePath prefix = override_package;
-            sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
-            auto dir = fs::absolute(".");
-            //auto dir = fs::absolute(override_package[1]);
-            LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
-            // fix deps' prefix
-            sw::UnresolvedPackages deps;
-            for (auto &d : desc->getData().dependencies)
-            {
-                if (d.ppath.isAbsolute())
-                    deps.insert(d);
-                else
-                    deps.insert({ prefix / d.ppath, d.range });
-            }
-            getServiceDatabase().overridePackage(pkg2, { dir, deps, 0, (int)prefix.size() });
-        }
+        override_package_perform();
         return 0;
     }
 
@@ -530,6 +513,33 @@ SUBCOMMAND_DECL(uri)
 
 #include <solution.h>
 
+void override_package_perform()
+{
+    auto s = sw::load(".");
+    auto &b = *((sw::Build*)s.get());
+    b.solutions.begin()->prepareStep();
+
+    //auto s = sw::load(override_package[1]);
+    for (auto &[pkg, desc] : s->getPackages())
+    {
+        sw::PackagePath prefix = override_package;
+        sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
+        auto dir = fs::absolute(".");
+        //auto dir = fs::absolute(override_package[1]);
+        LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
+        // fix deps' prefix
+        sw::UnresolvedPackages deps;
+        for (auto &d : desc->getData().dependencies)
+        {
+            if (d.ppath.isAbsolute())
+                deps.insert(d);
+            else
+                deps.insert({ prefix / d.ppath, d.range });
+        }
+        getServiceDatabase().overridePackage(pkg2, { dir, deps, 0, (int)prefix.size() });
+    }
+}
+
 SUBCOMMAND_DECL(ide)
 {
     if (!target_build.empty())
@@ -660,6 +670,7 @@ SUBCOMMAND_DECL(upload)
     //opts.name_prefix = upload_prefix;
     opts.root_dir = fs::current_path() / ".sw";
     opts.ignore_existing_dirs = true;
+    opts.existing_dirs_age = std::chrono::hours(8);
     //opts.apply_version_to_source = true;
     auto s = sw::fetch_and_load(build_arg_update.getValue(), opts);
 

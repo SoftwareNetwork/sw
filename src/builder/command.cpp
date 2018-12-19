@@ -458,23 +458,40 @@ void Command::execute1(std::error_code *ec)
         s += "command is copied to " + p.u8string() + "\n";
 
 #ifdef _WIN32
-        t += "@echo off\n";
+        t += "::";
+#else
+        t += "#";
+#endif
+        t += " command: " + name + "\n\n";
+
+        if (!name_short.empty())
+        {
+#ifdef _WIN32
+            t += "::";
+#else
+            t += "#";
+#endif
+            t += " short name: " + name_short + "\n\n";
+    }
+
+#ifdef _WIN32
+        t += "@echo off\n\n";
         t += "setlocal";
 #else
         t += "#!/bin/sh";
 #endif
-        t += "\n";
+        t += "\n\n";
 
         for (auto &[k, v] : environment)
         {
 #ifdef _WIN32
             t += "set";
 #endif
-            t += " " + k + "=" + v + "\n";
+            t += " " + k + "=" + v + "\n\n";
         }
 
         if (!working_directory.empty())
-            t += "cd " + working_directory.u8string() + "\n";
+            t += "cd " + working_directory.u8string() + "\n\n";
 
         t += "\"" + program.u8string() + "\" ";
         if (use_rsp)

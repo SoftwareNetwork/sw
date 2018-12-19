@@ -395,7 +395,7 @@ CommandBuilder operator<<(std::shared_ptr<Command> &c, const T &t)
 template <class T>
 CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
 {
-    if constexpr (std::is_same_v<T, path>)
+    if constexpr (std::is_same_v<T, path> || std::is_convertible_v<T, String>)
     {
         cb.c->setProgram(*t.t);
         cb.c->program_set = true;

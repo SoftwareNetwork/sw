@@ -557,6 +557,16 @@ void NativeSourceFile::setOutputFile(const path &o)
     compiler->setSourceFile(file, output.file);
 }
 
+void NativeSourceFile::setOutputFile(const TargetBase &t, const path &input, const path &output_dir)
+{
+    setOutputFile(output_dir / getObjectFilename(t, input));
+}
+
+String NativeSourceFile::getObjectFilename(const TargetBase &t, const path &p)
+{
+    return SourceFile::getObjectFilename(t, p) + compiler->getObjectExtension();
+}
+
 std::shared_ptr<builder::Command> NativeSourceFile::getCommand() const
 {
     auto cmd = compiler->getCommand();

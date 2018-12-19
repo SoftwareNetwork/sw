@@ -98,6 +98,8 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     String ide_solution_name;
     path config_file_or_dir; // original file or dir
 
+    VariablesType Variables;
+
     // other data
     bool silent = false;
 
@@ -123,6 +125,7 @@ public:
     void execute() const;
     void execute(ExecutionPlan<builder::Command> &p) const;
     virtual void prepare();
+    bool prepareStep();
     virtual void performChecks();
     void copyChecksFrom(const Solution &s);
     void clean() const;

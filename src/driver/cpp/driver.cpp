@@ -179,29 +179,19 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, const FetchO
 
     auto b = fetch1(this, f.value(), opts, parallel);
 
-    // do not use b->prepare(); !
-    // prepare only packages in solution
-    auto &e = getExecutor();
-    Futures<void> fs;
+    if (parallel)
     for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
     {
-        fs.push_back(e.push([t, &b, &pkg, parallel, &opts]
-        {
-            if (parallel)
-            {
-                auto s = t->source; // make a copy!
-                applyVersionToUrl(s, pkg.version);
-                if (opts.apply_version_to_source)
-                    applyVersionToUrl(t->source, pkg.version);
-                auto i = b->fetch_info.sources.find(s);
-                path rd = i->second / t->RootDirectory;
-                t->SourceDir = rd;
-            }
-            // call first prepare stage with source resolving
-            t->prepare();
-        }));
+        auto s = t->source; // make a copy!
+        applyVersionToUrl(s, pkg.version);
+        if (opts.apply_version_to_source)
+            applyVersionToUrl(t->source, pkg.version);
+        auto i = b->fetch_info.sources.find(s);
+        path rd = i->second / t->RootDirectory;
+        t->SourceDir = rd;
     }
-    waitAndGet(fs);
+
+    b->solutions.begin()->prepareStep();
 
     return std::move(b);
 }

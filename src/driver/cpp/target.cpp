@@ -161,6 +161,21 @@ bool TargetBase::hasSameParent(const TargetBase *t) const
     return pkg.ppath.hasSameParent(t->pkg.ppath);
 }
 
+path TargetBase::getObjectDir() const
+{
+    return getObjectDir(pkg, getConfig(true));
+}
+
+path TargetBase::getObjectDir(const PackageId &in) const
+{
+    return getObjectDir(in, getConfig(true));
+}
+
+path TargetBase::getObjectDir(const PackageId &pkg, const String &cfg)
+{
+    return pkg.getDirObj() / "build" / cfg;
+}
+
 TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V)
 {
     auto N = constructTargetName(Name);
@@ -724,10 +739,9 @@ path NativeExecutedTarget::getOutputDir() const
 
 void NativeExecutedTarget::setOutputDir(const path &dir)
 {
-    auto d = getOutputFile().parent_path();
+    //SwapAndRestore sr(OutputDir, dir);
     OutputDir = dir;
     setOutputFile();
-    OutputDir = d;
 }
 
 void NativeExecutedTarget::setOutputFile()
@@ -1030,8 +1044,12 @@ void NativeExecutedTarget::addPrecompiledHeader(const path &h, const path &cpp)
     addPrecompiledHeader(pch);
 }
 
-void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
+void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
 {
+    check_absolute(p.header);
+    if (!p.source.empty())
+        check_absolute(p.source);
+
     bool force_include_pch_header_to_pch_source = true;
     bool force_include_pch_header_to_target_source_files = p.force_include_pch;
     auto pch = p.source;
@@ -1044,7 +1062,10 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
         force_include_pch_header_to_pch_source = false;
     }
     else
+    {
         pch = pch_dir / (p.header.stem().string() + ".cpp");
+        write_file_if_different(pch, "");
+    }
 
     auto pch_fn = pch.parent_path() / (pch.stem().string() + ".pch");
     auto obj_fn = pch.parent_path() / (pch.stem().string() + ".obj");
@@ -1159,7 +1180,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
     }
 }
 
-NativeExecutedTarget &NativeExecutedTarget::operator=(const PrecompiledHeader &pch)
+NativeExecutedTarget &NativeExecutedTarget::operator=(PrecompiledHeader pch)
 {
     addPrecompiledHeader(pch);
     return *this;
@@ -1383,7 +1404,7 @@ Commands NativeExecutedTarget::getCommands() const
                     if (dt->getSelectedTool() == dt->Librarian.get())
                         continue;
                     auto in = dt->getOutputFile();
-                    auto o = (OutputDir.empty() ? getOutputFile().parent_path() : OutputDir) / in.filename();
+                    auto o = (OutputDir.empty() ? getOutputFile().parent_path() : OutputDir) / dt->OutputDir / in.filename();
                     if (in == o)
                         continue;
                     SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file");
@@ -1461,34 +1482,6 @@ Commands NativeExecutedTarget::getCommands() const
 
     return cmds;
 }
-
-/*Files NativeExecutedTarget::getGeneratedDirs() const
-{
-    Files dirs;
-    dirs.insert(BinaryDir);
-    dirs.insert(BinaryPrivateDir);
-    for (auto &f : *this)
-    {
-        File p(f.first, *getSolution()->fs);
-        if (p.isGenerated())
-        {
-            auto d = p.getFileRecord().getGenerator()->getGeneratedDirs();
-            dirs.insert(d.begin(), d.end());
-        }
-        if (!f.second)
-            continue;
-        auto d = f.second->getGeneratedDirs();
-        dirs.insert(d.begin(), d.end());
-    }
-    dirs.insert(getOutputFile().parent_path());
-    dirs.insert(getImportLibrary().parent_path());
-    if (CircularLinker)
-    {
-        dirs.insert(CircularLinker->getOutputFile().parent_path());
-        dirs.insert(CircularLinker->getImportLibrary().parent_path());
-    }
-    return dirs;
-}*/
 
 void NativeExecutedTarget::findSources()
 {
@@ -2335,7 +2328,7 @@ bool NativeExecutedTarget::prepare()
     }
     RETURN_PREPARE_PASS;
     case 6:
-    // link librareis
+    // link libraries
     {
         // add link libraries from deps
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
@@ -2431,6 +2424,15 @@ bool NativeExecutedTarget::prepare()
 
         getSelectedTool()->setObjectFiles(obj);
         getSelectedTool()->setInputLibraryDependencies(O1);
+
+        // add rc (.res) files
+        /*if (auto L = getSelectedTool()->as<VisualStudioLinker>(); L)
+        {
+            for (auto &[p, f] : *this)
+            {
+                p.extension() == ".res";
+            }
+        }*/
 
         getSolution()->call_event(*this, CallbackType::EndPrepare);
     }
@@ -2631,14 +2633,17 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         return;
     }
 
-    auto find_repl = [this](const auto &key) -> std::string
+    auto find_repl = [this, &from](const auto &key) -> std::string
     {
         auto v = Variables.find(key);
         if (v != Variables.end())
             return v->second;
+        // dangerous! should we really check defs?
         auto d = Definitions.find(key);
         if (d != Definitions.end())
             return d->second;
+        //if (isLocal()) // put under cl cond
+            //LOG_WARN(logger, "Unset variable '" + key + "' in file: " + normalize_path(from));
         return String();
     };
 
@@ -3323,7 +3328,8 @@ bool ExecutableTarget::prepare()
         if (Linker->Type == LinkerType::MSVC)
         {
             auto L = Linker->as<VisualStudioLinker>();
-            L->Subsystem = vs::Subsystem::Console;
+            if (L->Subsystem.empty())
+                L->Subsystem = vs::Subsystem::Console;
         }
     }
     break;
