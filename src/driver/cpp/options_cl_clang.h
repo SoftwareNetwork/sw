@@ -27,14 +27,10 @@ struct Optimizations
 
 DECLARE_OPTION_SPECIALIZATION(clang_gnu::Optimizations);
 
-Strings getCommandLineImplCPPLanguageStandardClang(const CommandLineOption<CPPLanguageStandard> &co, builder::Command *c);
-Strings getCommandLineImplCPPLanguageStandardGNU(const CommandLineOption<CPPLanguageStandard> &co, builder::Command *c);
-
 struct SW_DRIVER_CPP_API ClangCommonOptions
 {
     COMMAND_LINE_OPTION(CPPStandard, CPPLanguageStandard)
     {
-        cl::CommandLineFunction<CPPLanguageStandard>(&getCommandLineImplCPPLanguageStandardClang),
     };
 };
 
@@ -135,7 +131,6 @@ struct SW_DRIVER_CPP_API GNUOptions
 
     COMMAND_LINE_OPTION(CPPStandard, CPPLanguageStandard)
     {
-        cl::CommandLineFunction<CPPLanguageStandard>{&getCommandLineImplCPPLanguageStandardGNU},
     };
 
     COMMAND_LINE_OPTION(DisableWarnings, bool)

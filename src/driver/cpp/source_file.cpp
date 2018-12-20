@@ -152,7 +152,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     if (!p ||
         (((NativeExecutedTarget*)target)->HeaderOnly && ((NativeExecutedTarget*)target)->HeaderOnly.value()))
     {
-        f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file, *target->getSolution()->fs);
+        f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(*target, file);
         f->created = false;
     }
     else
@@ -165,14 +165,14 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
             {
                 //if (f && f->postponed)
                     //throw SW_RUNTIME_EXCEPTION("Postponing postponed file");
-                f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file, *target->getSolution()->fs);
+                f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(*target, file);
                 f->postponed = true;
             }
             else
             {
                 auto f2 = f;
                 auto L = i->clone(); // clone program here
-                f = this->SourceFileMapThis::operator[](file) = L->createSourceFile(file, target);
+                f = this->SourceFileMapThis::operator[](file) = L->createSourceFile(*target, file);
                 if (f2 && f2->postponed)
                 {
                     // retain some data
@@ -366,7 +366,7 @@ size_t SourceFileStorage::sizeSkipped() const
 
 SourceFile &SourceFileStorage::operator[](path F)
 {
-    static SourceFile sf("static_source_file", *target->getSolution()->fs);
+    static SourceFile sf(*target, "static_source_file");
     if (target->PostponeFileResolving)
         return sf;
     check_absolute(F);
@@ -504,8 +504,8 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
     return files;
 }
 
-SourceFile::SourceFile(const path &input, FileStorage &fs)
-    : File(input, fs)
+SourceFile::SourceFile(const Target &t, const path &input)
+    : File(input, *t.getSolution()->fs)
 {
 }
 
@@ -521,10 +521,10 @@ bool SourceFile::isActive() const
     return created && !skip /* && !isRemoved(f.first)*/;
 }
 
-NativeSourceFile::NativeSourceFile(const path &input, FileStorage &fs, const path &o, NativeCompiler *c)
-    : SourceFile(input, fs)
+NativeSourceFile::NativeSourceFile(const Target &t, NativeCompiler *c, const path &input, const path &o)
+    : SourceFile(t, input)
     , compiler(c ? std::static_pointer_cast<NativeCompiler>(c->clone()) : nullptr)
-    , output(o, fs)
+    , output(o, *t.getSolution()->fs)
 {
     compiler->setSourceFile(input, output.file);
 }
@@ -556,11 +556,11 @@ String NativeSourceFile::getObjectFilename(const TargetBase &t, const path &p)
     return SourceFile::getObjectFilename(t, p) + compiler->getObjectExtension();
 }
 
-std::shared_ptr<builder::Command> NativeSourceFile::getCommand() const
+std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const TargetBase &t) const
 {
-    auto cmd = compiler->getCommand();
+    auto cmd = compiler->getCommand(t);
     for (auto &d : dependencies)
-        cmd->dependencies.insert(d->getCommand());
+        cmd->dependencies.insert(d->getCommand(t));
     return cmd;
 }
 

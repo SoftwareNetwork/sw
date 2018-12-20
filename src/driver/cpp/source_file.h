@@ -7,7 +7,7 @@
 #pragma once
 
 #include <compiler.h>
-#include <language.h>
+#include <language_type.h>
 #include <node.h>
 #include <types.h>
 
@@ -17,9 +17,9 @@ namespace sw
 {
 
 struct Language;
-struct LanguageStorage;
 struct SourceFile;
 struct Target;
+struct TargetBase;
 
 template <class T>
 using SourceFileMap = std::unordered_map<path, std::shared_ptr<T>>;
@@ -133,11 +133,11 @@ struct SW_DRIVER_CPP_API SourceFile : File
 
     String fancy_name; // for output
 
-    SourceFile(const path &input, FileStorage &fs);
+    SourceFile(const Target &t, const path &input);
     SourceFile(const SourceFile &) = default;
     virtual ~SourceFile() = default;
 
-    virtual std::shared_ptr<builder::Command> getCommand() const { return nullptr; }
+    virtual std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const { return nullptr; }
     //virtual Files getGeneratedDirs() const { return Files(); }
     virtual std::shared_ptr<SourceFile> clone() const { return std::make_shared<SourceFile>(*this); }
 
@@ -161,11 +161,11 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     std::unordered_set<SourceFile*> dependencies;
     BuildAsType BuildAs = BuildAsType::BasedOnExtension;
 
-    NativeSourceFile(const path &input, FileStorage &fs, const path &output, NativeCompiler *c);
+    NativeSourceFile(const Target &t, NativeCompiler *c, const path &input, const path &output);
     NativeSourceFile(const NativeSourceFile &rhs);
     virtual ~NativeSourceFile();
 
-    virtual std::shared_ptr<builder::Command> getCommand() const override;
+    virtual std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const override;
     //virtual Files getGeneratedDirs() const override;
     //void setSourceFile(const path &input, const path &output);
     void setOutputFile(const TargetBase &t, const path &input, const path &output_dir); // bad name?

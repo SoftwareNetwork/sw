@@ -14,7 +14,14 @@
 #include "types.h"
 #include "cppan_version.h"
 
+#include <primitives/exceptions.h>
+
 #include <memory>
+
+#define SW_MAKE_COMPILER_COMMAND(t) \
+    auto c = std::make_shared<t>(); \
+    c->fs = fs;                     \
+    c->setProgram(file)
 
 namespace sw
 {
@@ -30,6 +37,7 @@ struct Command;
 }
 
 struct Solution;
+struct TargetBase;
 
 enum VisualStudioVersion
 {
@@ -49,25 +57,27 @@ enum VisualStudioVersion
 SW_DRIVER_CPP_API
 void detectNativeCompilers(struct Solution &s);
 
-struct SW_DRIVER_CPP_API ToolBase
-{
-    ~ToolBase();
-
-protected:
-    mutable std::shared_ptr<driver::cpp::Command> cmd;
-};
-
 // compilers
 
-struct SW_DRIVER_CPP_API CompilerToolBase : ToolBase
+struct SW_DRIVER_CPP_API CompilerToolBase
 {
     virtual ~CompilerToolBase() = default;
 
 protected:
-    virtual Version gatherVersion(const path &program) const = 0;
+    virtual Version gatherVersion(const path &program) const = 0; // maybe move to CompilerBaseProgram
 };
 
-struct SW_DRIVER_CPP_API Compiler : Program
+struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
+{
+    virtual std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) = 0;
+    std::shared_ptr<builder::Command> getCommand(const TargetBase &t);
+    std::shared_ptr<builder::Command> getCommand() const override;
+
+protected:
+    std::shared_ptr<driver::cpp::Command> cmd;
+};
+
+struct SW_DRIVER_CPP_API Compiler : CompilerBaseProgram
 {
     virtual ~Compiler() = default;
 
@@ -86,6 +96,9 @@ struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
 
 protected:
     mutable Files dependencies;
+
+    Strings getClangCppStdOption(CPPLanguageStandard s) const;
+    Strings getGNUCppStdOption(CPPLanguageStandard s) const;
 };
 
 struct SW_DRIVER_CPP_API VisualStudio : CompilerToolBase
@@ -108,7 +121,7 @@ struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
     using NativeCompilerOptions::operator=;
 
     std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
     void setSourceFile(const path &input_file, path &output_file) override;
@@ -125,7 +138,7 @@ struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
     using NativeCompilerOptions::operator=;
 
     std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setSourceFile(const path &input_file, path &output_file) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
@@ -146,7 +159,7 @@ struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
     using NativeCompilerOptions::operator=;
 
     std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
     void setSourceFile(const path &input_file, path &output_file) override;
@@ -167,7 +180,7 @@ struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
     using NativeCompilerOptions::operator=;
 
     std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
     void setSourceFile(const path &input_file, path &output_file) override;
@@ -190,7 +203,7 @@ struct SW_DRIVER_CPP_API GNUASMCompiler : GNU, NativeCompiler,
     using NativeCompilerOptions::operator=;
 
     std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setSourceFile(const path &input_file, path &output_file) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".o"; }
@@ -210,7 +223,7 @@ struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
     using NativeCompilerOptions::operator=;
 
     std::shared_ptr<Program> clone() const override;
-    std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".o"; }
     void setSourceFile(const path &input_file, path &output_file) override;
@@ -221,7 +234,7 @@ protected:
 
 // linkers
 
-struct SW_DRIVER_CPP_API Linker : Program
+struct SW_DRIVER_CPP_API Linker : CompilerBaseProgram
 {
     virtual ~Linker() = default;
 };
@@ -263,7 +276,7 @@ struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
     path getOutputFile() const override;
     path getImportLibrary() const override;
 
-    std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
 
 protected:
     virtual void getAdditionalOptions(driver::cpp::Command *c) const = 0;
@@ -328,7 +341,7 @@ struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
     path getOutputFile() const override;
     path getImportLibrary() const override;
 
-    std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
 };
 
 struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
@@ -349,7 +362,7 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
     virtual path getOutputFile() const override;
     virtual path getImportLibrary() const override;
 
-    std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
 };
 
 struct SW_DRIVER_CPP_API NativeToolchain

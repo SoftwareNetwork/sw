@@ -205,13 +205,13 @@ void Command::clean() const
 path Command::getProgram() const
 {
     path p;
-    if (base)
+    /*if (base)
     {
         p = base->file;
         if (p.empty())
             throw SW_RUNTIME_EXCEPTION("Empty program from base program");
     }
-    else if (!program.empty())
+    else */if (!program.empty())
         p = program;
     else
         p = Base::getProgram();
@@ -693,7 +693,9 @@ void Command::setProgram(const path &p)
 
 void Command::setProgram(std::shared_ptr<Program> p)
 {
-    base = p;
+    //base = p;
+    if (p)
+        setProgram(p->file);
 }
 
 Files Command::getGeneratedDirs() const

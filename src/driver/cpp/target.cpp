@@ -1190,7 +1190,7 @@ std::shared_ptr<builder::Command> NativeExecutedTarget::getCommand() const
 {
     if (HeaderOnly && HeaderOnly.value())
         return nullptr;
-    return getSelectedTool()->getCommand();
+    return getSelectedTool()->getCommand(*this);
 }
 
 Commands NativeExecutedTarget::getGeneratedCommands() const
@@ -1265,7 +1265,7 @@ Commands NativeExecutedTarget::getCommands() const
         auto bdp = normalize_path(BinaryPrivateDir);
         for (auto &f : gatherSourceFiles())
         {
-            auto c = f->getCommand();
+            auto c = f->getCommand(*this);
             c->args.insert(c->args.end(), f->args.begin(), f->args.end());
 
             // set fancy name
@@ -1423,7 +1423,7 @@ Commands NativeExecutedTarget::getCommands() const
             for (auto &d : CircularDependencies)
             {
                 auto dt = ((NativeExecutedTarget*)d->target.lock().get());
-                auto non_circ_cmd = dt->getSelectedTool()->getCommand();
+                auto non_circ_cmd = dt->getSelectedTool()->getCommand(*this);
 
                 // one command must be executed after the second to free implib files from any compiler locks
                 // we choose it based on ptr address
@@ -1432,7 +1432,7 @@ Commands NativeExecutedTarget::getCommands() const
 
                 if (dt->CircularLinker)
                 {
-                    auto cd = dt->CircularLinker->getCommand();
+                    auto cd = dt->CircularLinker->getCommand(*this);
                     c->dependencies.insert(cd);
                 }
                 //cmds.insert(cd);
@@ -1441,7 +1441,7 @@ Commands NativeExecutedTarget::getCommands() const
             if (CircularLinker)
             {
                 // execute this command after unresolved (circular) cmd
-                c->dependencies.insert(CircularLinker->getCommand());
+                c->dependencies.insert(CircularLinker->getCommand(*this));
 
                 // we reset generator of implib from usual build command (c = getCommand()) to circular linker generator to overcome
                 // automatic circular dependency generation in command.cpp
@@ -2120,7 +2120,7 @@ bool NativeExecutedTarget::prepare()
             }*/
 
             auto L = i->clone(); // clone program here
-            f = this->SourceFileMapThis::operator[](p) = L->createSourceFile(p, this);
+            f = this->SourceFileMapThis::operator[](p) = L->createSourceFile(*this, p);
         }
 
         auto files = gatherSourceFiles();
@@ -2434,7 +2434,7 @@ bool NativeExecutedTarget::prepare()
             }
 
             // prepare command here to prevent races
-            CircularLinker->getCommand();
+            CircularLinker->getCommand(*this);
         }
 
         getSelectedTool()->setObjectFiles(obj);
@@ -3339,13 +3339,6 @@ bool ExecutableTarget::prepare()
         set_api(ApiName);
         for (auto &a : ApiNames)
             set_api(a);
-
-        if (Linker->Type == LinkerType::MSVC)
-        {
-            auto L = Linker->as<VisualStudioLinker>();
-            if (L->Subsystem.empty())
-                L->Subsystem = vs::Subsystem::Console;
-        }
     }
     break;
     }

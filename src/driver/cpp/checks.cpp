@@ -340,7 +340,7 @@ int main()
     c->setSourceFile(f, o += ".obj");
 
     std::error_code ec;
-    auto cmd = c->getCommand();
+    auto cmd = c->getCommand(*checker->solution);
     cmd->execute(ec);
     if (cmd && cmd->exit_code)
         Value = cmd->exit_code.value() == 0 ? 1 : 0;
@@ -823,7 +823,7 @@ void SourceCompiles::run() const
     c->setSourceFile(f, o += ".obj");
 
     std::error_code ec;
-    auto cmd = c->getCommand();
+    auto cmd = c->getCommand(*checker->solution);
     cmd->execute(ec);
     if (cmd && cmd->exit_code)
         Value = cmd->exit_code.value() == 0 ? 1 : 0;

@@ -63,9 +63,9 @@ path Command::getProgram() const
 {
     auto d = dependency.lock();
     path p;
-    if (base)
+    /*if (base)
         p = Base::getProgram();
-    else if (d)
+    else */if (d)
     {
         auto t = d->target.lock();
         if (!t)

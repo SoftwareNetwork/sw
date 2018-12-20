@@ -5,11 +5,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <language.h>
+#include <language_storage.h>
 
 #include <dependency.h>
 #include <source_file.h>
 #include <solution.h>
-#include <target.h>
 
 #include <primitives/hash.h>
 
@@ -176,19 +176,11 @@ optional<PackageId> LanguageStorage::findPackageIdByExtension(const String &ext)
     return e->second;
 }
 
-std::shared_ptr<Language> NativeLanguage::clone() const
+path NativeLanguage2::getOutputFile(const path &input, const Target &t) const
 {
-    return std::make_shared<NativeLanguage>(*this);
-}
-
-std::shared_ptr<SourceFile> NativeLanguage::createSourceFile(const path &input, const Target *t) const
-{
-    auto nt = (NativeExecutedTarget*)t;
-    //compiler->merge(*nt);
-
-    auto o = t->BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(*t, input) + compiler->getObjectExtension());
+    auto o = t.BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(t, input) + compiler->getObjectExtension());
     o = fs::absolute(o);
-    return std::make_shared<NativeSourceFile>(input, *t->getSolution()->fs, o, (NativeCompiler*)compiler.get());
+    return o;
 }
 
 }

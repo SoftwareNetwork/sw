@@ -96,7 +96,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     bool use_response_files = false;
     bool remove_outputs_before_execution = false; // was true
     bool protect_args_with_quotes = true;
-    std::shared_ptr<Program> base; // TODO: hide
+    //std::shared_ptr<Program> base; // TODO: hide
     //std::shared_ptr<Dependency> dependency; // TODO: hide
     bool silent = false;
     bool always = false;

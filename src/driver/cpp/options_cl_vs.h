@@ -395,7 +395,8 @@ struct SW_DRIVER_CPP_API VisualStudioLinkerOptions
 
     COMMAND_LINE_OPTION(Subsystem, vs::Subsystem)
     {
-        cl::CommandFlag{ "SUBSYSTEM:" }
+        cl::CommandFlag{ "SUBSYSTEM:" },
+        vs::Subsystem::Console,
     };
 };
 DECLARE_OPTION_SPECIALIZATION(VisualStudioLinkerOptions);

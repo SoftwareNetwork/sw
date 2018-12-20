@@ -20,12 +20,7 @@ struct SW_BUILDER_API Program : File, detail::Executable
 
     virtual std::shared_ptr<Program> clone() const = 0;
 
-    virtual Version getVersion() const
-    {
-        if (!version)
-            version = gatherVersion();
-        return version.value();
-    }
+    virtual Version getVersion() const;
 
 protected:
     mutable std::optional<Version> version;

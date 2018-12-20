@@ -133,6 +133,11 @@ struct ManualHandling : CommandLineOptionBaseValue {};
 struct PlaceAtTheEnd : CommandLineOptionBaseValue {};
 
 /**
+* \brief Skip this option.
+*/
+struct Skip : CommandLineOptionBaseValue {};
+
+/**
 * \brief Adds this file parameter as an output dependency to command.
 */
 template <class T>
@@ -173,7 +178,7 @@ public:
     unsigned output_dependency : 1;
     unsigned manual_handling : 1;
     unsigned place_at_the_end : 1;
-    unsigned : 1;
+    unsigned skip : 1;
 
     CommandLineOption1()
     {
@@ -303,6 +308,7 @@ private:
     void init(const cl::OutputDependency &) { output_dependency = true; }
     void init(const cl::ManualHandling &) { manual_handling = true; }
     void init(const cl::PlaceAtTheEnd &) { place_at_the_end = true; }
+    void init(const cl::Skip &) { skip = true; }
     void init(const T &v) { assign_value(v); }
     void init(const CommandLineOption1 &v) { assign(v); }
 
@@ -315,6 +321,7 @@ private:
         output_dependency = false;
         manual_handling = false;
         place_at_the_end = false;
+        skip = false;
     }
 
     void assign(const CommandLineOption1 &v)
@@ -331,6 +338,7 @@ private:
         output_dependency = v.output_dependency;
         manual_handling = v.manual_handling;
         place_at_the_end = v.place_at_the_end;
+        skip = v.skip;
         function = v.function;
     }
 
