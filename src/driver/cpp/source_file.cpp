@@ -561,9 +561,4 @@ std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const TargetBase 
     return cmd;
 }
 
-CSharpSourceFile::CSharpSourceFile(const Target &t, const path &input)
-    : SourceFile(t, input)
-{
-}
-
 }

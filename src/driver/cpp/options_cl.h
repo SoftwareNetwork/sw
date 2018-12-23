@@ -138,6 +138,11 @@ struct PlaceAtTheEnd : CommandLineOptionBaseValue {};
 struct Skip : CommandLineOptionBaseValue {};
 
 /**
+* \brief Separate prefix from argument.
+*/
+struct SeparatePrefix : CommandLineOptionBaseValue {};
+
+/**
 * \brief Adds this file parameter as an output dependency to command.
 */
 template <class T>
@@ -179,6 +184,9 @@ public:
     unsigned manual_handling : 1;
     unsigned place_at_the_end : 1;
     unsigned skip : 1;
+
+    unsigned separate_prefix : 1;
+    unsigned : 7;
 
     CommandLineOption1()
     {
@@ -309,6 +317,7 @@ private:
     void init(const cl::ManualHandling &) { manual_handling = true; }
     void init(const cl::PlaceAtTheEnd &) { place_at_the_end = true; }
     void init(const cl::Skip &) { skip = true; }
+    void init(const cl::SeparatePrefix &) { separate_prefix = true; }
     void init(const T &v) { assign_value(v); }
     void init(const CommandLineOption1 &v) { assign(v); }
 
@@ -322,6 +331,7 @@ private:
         manual_handling = false;
         place_at_the_end = false;
         skip = false;
+        separate_prefix = false;
     }
 
     void assign(const CommandLineOption1 &v)
@@ -339,6 +349,7 @@ private:
         manual_handling = v.manual_handling;
         place_at_the_end = v.place_at_the_end;
         skip = v.skip;
+        separate_prefix = v.separate_prefix;
         function = v.function;
     }
 

@@ -1247,6 +1247,8 @@ void Build::findCompiler()
     const CompilerVector other =
     {
         {"com.Microsoft.VisualStudio.Roslyn.csc", CompilerType::MSVC},
+        {"org.rust.rustc", CompilerType::MSVC},
+        {"org.google.golang.go", CompilerType::MSVC},
     };
 
     switch (Settings.Native.CompilerType)
@@ -1295,7 +1297,7 @@ void Build::findCompiler()
         }, "Try to add more linkers");
 
     // more languages
-    activate(other);
+    activate_all(other);
 
     setSettings();
 }

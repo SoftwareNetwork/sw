@@ -193,4 +193,24 @@ std::shared_ptr<SourceFile> CSharpLanguage::createSourceFile(const Target &t, co
     return std::make_shared<CSharpSourceFile>(t, input);
 }
 
+std::shared_ptr<Language> RustLanguage::clone() const
+{
+    return std::make_shared<RustLanguage>(*this);
+}
+
+std::shared_ptr<SourceFile> RustLanguage::createSourceFile(const Target &t, const path &input) const
+{
+    return std::make_shared<RustSourceFile>(t, input);
+}
+
+std::shared_ptr<Language> GoLanguage::clone() const
+{
+    return std::make_shared<GoLanguage>(*this);
+}
+
+std::shared_ptr<SourceFile> GoLanguage::createSourceFile(const Target &t, const path &input) const
+{
+    return std::make_shared<GoSourceFile>(t, input);
+}
+
 }

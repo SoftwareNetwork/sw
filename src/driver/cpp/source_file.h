@@ -181,7 +181,17 @@ struct PrecompiledHeader
 
 struct SW_DRIVER_CPP_API CSharpSourceFile : SourceFile
 {
-    CSharpSourceFile(const Target &t, const path &input);
+    using SourceFile::SourceFile;
+};
+
+struct SW_DRIVER_CPP_API RustSourceFile : SourceFile
+{
+    using SourceFile::SourceFile;
+};
+
+struct SW_DRIVER_CPP_API GoSourceFile : SourceFile
+{
+    using SourceFile::SourceFile;
 };
 
 }

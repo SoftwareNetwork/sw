@@ -411,7 +411,7 @@ struct SW_DRIVER_CPP_API CSharpCompiler : Compiler
 // roslyn compiler?
 struct SW_DRIVER_CPP_API VisualStudioCSharpCompiler : MsProgram,
     CSharpCompiler,
-    CommandLineOptions<VisualStudioCsCompilerOptions>
+    CommandLineOptions<VisualStudioCSharpCompilerOptions>
 {
     std::shared_ptr<Program> clone() const override;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
@@ -421,6 +421,32 @@ struct SW_DRIVER_CPP_API VisualStudioCSharpCompiler : MsProgram,
 
 protected:
     Version gatherVersion() const override { return MsProgram::gatherVersion(file); }
+};
+
+struct SW_DRIVER_CPP_API RustCompiler : Compiler,
+    CommandLineOptions<RustCompilerOptions>
+{
+    std::shared_ptr<Program> clone() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+
+    void setOutputFile(const path &output_file);
+    void setSourceFile(const path &input_file);
+
+protected:
+    Version gatherVersion() const override;
+};
+
+struct SW_DRIVER_CPP_API GoCompiler : Compiler,
+    CommandLineOptions<GoCompilerOptions>
+{
+    std::shared_ptr<Program> clone() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+
+    void setOutputFile(const path &output_file);
+    void setSourceFile(const path &input_file);
+
+protected:
+    Version gatherVersion() const override;
 };
 
 }

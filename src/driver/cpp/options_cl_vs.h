@@ -424,7 +424,7 @@ struct SW_DRIVER_CPP_API VisualStudioLibrarianOptions
 {
 };
 
-struct SW_DRIVER_CPP_API VisualStudioCsCompilerOptions
+struct SW_DRIVER_CPP_API VisualStudioCSharpCompilerOptions
 {
     COMMAND_LINE_OPTION(Target, vs::cs::Target)
     {
@@ -443,6 +443,73 @@ struct SW_DRIVER_CPP_API VisualStudioCsCompilerOptions
             cl::OutputDependency{},
     };
 };
-DECLARE_OPTION_SPECIALIZATION(VisualStudioCsCompilerOptions);
+DECLARE_OPTION_SPECIALIZATION(VisualStudioCSharpCompilerOptions);
+
+namespace rust
+{
+
+enum class CrateType
+{
+    bin,
+    lib,
+    rlib,
+    dylib,
+    cdylib,
+    staticlib,
+    proc_macro
+};
+
+}
+
+DECLARE_OPTION_SPECIALIZATION(rust::CrateType);
+
+struct SW_DRIVER_CPP_API RustCompilerOptions
+{
+    COMMAND_LINE_OPTION(CrateType, rust::CrateType)
+    {
+        cl::CommandFlag{ "-crate-type" },
+            rust::CrateType::bin,
+            cl::SeparatePrefix{},
+    };
+
+    COMMAND_LINE_OPTION(InputFile, path)
+    {
+        cl::InputDependency{},
+    };
+
+    COMMAND_LINE_OPTION(Output, path)
+    {
+        cl::CommandFlag{ "o" },
+            cl::OutputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(RustCompilerOptions);
+
+struct SW_DRIVER_CPP_API GoCompilerOptions
+{
+    COMMAND_LINE_OPTION(Command, String)
+    {
+        "build"s,
+    };
+
+    COMMAND_LINE_OPTION(Output, path)
+    {
+        cl::CommandFlag{ "o" },
+            cl::OutputDependency{},
+            cl::SeparatePrefix{},
+    };
+
+    COMMAND_LINE_OPTION(BuildMode, String)
+    {
+        cl::CommandFlag{ "buildmode=" },
+            "default"s
+    };
+
+    COMMAND_LINE_OPTION(InputFiles, Files)
+    {
+        cl::InputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(GoCompilerOptions);
 
 }

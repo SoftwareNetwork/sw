@@ -139,22 +139,28 @@ enum class ConfigureFlags
     Default = Empty,//AddToBuild,
 };
 
-// append only!
+// passed (serialized) via strings
 enum class TargetType : int32_t
 {
-    Unspecified = 0,
+    Unspecified,
 
-    Build = 1,
-    Solution = 2,
-    Project = 3, // explicitly created
-    Directory = 4, // implicitly created?
-    NativeLibrary = 5,
-    NativeExecutable = 6,
-    NativeStaticLibrary = 7,
-    NativeSharedLibrary = 8,
+    Build,
+    Solution,
+    Project, // explicitly created
+    Directory, // implicitly created?
+    NativeLibrary,
+    NativeExecutable,
+    NativeStaticLibrary,
+    NativeSharedLibrary,
 
-    CSharpLibrary = 9,
-    CSharpExecutable = 10,
+    CSharpLibrary,
+    CSharpExecutable,
+
+    RustLibrary,
+    RustExecutable,
+
+    GoLibrary,
+    GoExecutable,
 };
 
 // enforcement rules apply to target to say how many checks it should perform
@@ -931,6 +937,66 @@ private:
 struct SW_DRIVER_CPP_API CSharpExecutable : CSharpTarget
 {
     TargetType getType() const override { return TargetType::CSharpExecutable; }
+};
+
+// Rust
+
+struct SW_DRIVER_CPP_API RustTarget : Target
+    , NativeTargetOptionsGroup
+{
+    USING_ASSIGN_OPS(NativeTargetOptionsGroup);
+
+    std::shared_ptr<RustCompiler> compiler;
+
+    TargetType getType() const override { return TargetType::RustLibrary; }
+
+    void init() override;
+    void init2() override;
+
+    void setOutputFile() override;
+    Commands getCommands(void) const override;
+    bool prepare() override;
+    void findSources() override;
+    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+
+private:
+    using Target::getOutputFileName;
+    path getOutputFileName(const path &root) const;
+};
+
+struct SW_DRIVER_CPP_API RustExecutable : RustTarget
+{
+    TargetType getType() const override { return TargetType::RustExecutable; }
+};
+
+// Go
+
+struct SW_DRIVER_CPP_API GoTarget : Target
+    , NativeTargetOptionsGroup
+{
+    USING_ASSIGN_OPS(NativeTargetOptionsGroup);
+
+    std::shared_ptr<GoCompiler> compiler;
+
+    TargetType getType() const override { return TargetType::GoLibrary; }
+
+    void init() override;
+    void init2() override;
+
+    void setOutputFile() override;
+    Commands getCommands(void) const override;
+    bool prepare() override;
+    void findSources() override;
+    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+
+private:
+    using Target::getOutputFileName;
+    path getOutputFileName(const path &root) const;
+};
+
+struct SW_DRIVER_CPP_API GoExecutable : GoTarget
+{
+    TargetType getType() const override { return TargetType::GoExecutable; }
 };
 
 #undef ASSIGN_TYPES

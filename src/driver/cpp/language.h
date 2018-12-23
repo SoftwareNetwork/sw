@@ -73,9 +73,23 @@ using NativeLanguage = SimpleNativeLanguageFactory<NativeSourceFile>;
 
 struct SW_DRIVER_CPP_API CSharpLanguage : Language
 {
-    virtual ~CSharpLanguage() = default;
-
     std::shared_ptr<CSharpCompiler> compiler;
+
+    std::shared_ptr<Language> clone() const override;
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
+};
+
+struct SW_DRIVER_CPP_API RustLanguage : Language
+{
+    std::shared_ptr<RustCompiler> compiler;
+
+    std::shared_ptr<Language> clone() const override;
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
+};
+
+struct SW_DRIVER_CPP_API GoLanguage : Language
+{
+    std::shared_ptr<GoCompiler> compiler;
 
     std::shared_ptr<Language> clone() const override;
     std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;

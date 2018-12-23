@@ -3575,4 +3575,168 @@ UnresolvedDependenciesType CSharpTarget::gatherUnresolvedDependencies() const
     return deps;
 }
 
+void RustTarget::init()
+{
+    Target::init();
+
+    // propagate this pointer to all
+    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    {
+        v.target = this;
+    });
+    //LanguageStorage::target = this;
+
+    compiler = std::dynamic_pointer_cast<RustCompiler>(SourceFileStorage::findProgramByExtension(".rs")->clone());
+}
+
+void RustTarget::init2()
+{
+    setOutputFile();
+}
+
+void RustTarget::setOutputFile()
+{
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+    }
+    else
+    {
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        compiler->setOutputFile(base);
+    }
+}
+
+path RustTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / getOutputFileName();
+    }
+    return p;
+}
+
+Commands RustTarget::getCommands() const
+{
+    for (auto f : gatherSourceFiles<RustSourceFile>(*this))
+        compiler->setSourceFile(f->file);
+
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    cmds.insert(c);
+    return cmds;
+}
+
+bool RustTarget::prepare()
+{
+    return false;
+}
+
+void RustTarget::findSources()
+{
+}
+
+UnresolvedDependenciesType RustTarget::gatherUnresolvedDependencies() const
+{
+    UnresolvedDependenciesType deps;
+    ((RustTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+        [this, &deps](auto &v, auto &s)
+    {
+        for (auto &d : v.Dependencies)
+        {
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+                deps.insert({ d->package, d });
+        }
+    });
+    return deps;
+}
+
+void GoTarget::init()
+{
+    Target::init();
+
+    // propagate this pointer to all
+    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    {
+        v.target = this;
+    });
+    //LanguageStorage::target = this;
+
+    compiler = std::dynamic_pointer_cast<GoCompiler>(SourceFileStorage::findProgramByExtension(".go")->clone());
+}
+
+void GoTarget::init2()
+{
+    setOutputFile();
+}
+
+void GoTarget::setOutputFile()
+{
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+    }
+    else
+    {
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        compiler->setOutputFile(base);
+    }
+}
+
+path GoTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / getOutputFileName();
+    }
+    return p;
+}
+
+Commands GoTarget::getCommands() const
+{
+    for (auto f : gatherSourceFiles<GoSourceFile>(*this))
+        compiler->setSourceFile(f->file);
+
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    cmds.insert(c);
+    return cmds;
+}
+
+bool GoTarget::prepare()
+{
+    return false;
+}
+
+void GoTarget::findSources()
+{
+}
+
+UnresolvedDependenciesType GoTarget::gatherUnresolvedDependencies() const
+{
+    UnresolvedDependenciesType deps;
+    ((GoTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+        [this, &deps](auto &v, auto &s)
+    {
+        for (auto &d : v.Dependencies)
+        {
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+                deps.insert({ d->package, d });
+        }
+    });
+    return deps;
+}
+
 }

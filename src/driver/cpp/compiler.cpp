@@ -67,6 +67,28 @@ namespace sw
 
 void detectNativeCompilers(struct Solution &s);
 void detectCSharpCompilers(struct Solution &s);
+void detectRustCompilers(struct Solution &s);
+void detectGoCompilers(struct Solution &s);
+
+static Version gatherVersion(const path &program, const String &arg)
+{
+    Version V;
+    primitives::Command c;
+    c.program = program;
+    c.args = { arg };
+    error_code ec;
+    c.execute(ec);
+    static std::regex r("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
+    std::smatch m;
+    if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
+    {
+        if (m[5].matched)
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
+        else
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
+    }
+    return V;
+}
 
 static void add_args(driver::cpp::Command &c, const Strings &args)
 {
@@ -214,6 +236,46 @@ void detectCompilers(struct Solution &s)
 {
     detectNativeCompilers(s);
     detectCSharpCompilers(s);
+    detectRustCompilers(s);
+    detectGoCompilers(s);
+}
+
+void detectGoCompilers(struct Solution &s)
+{
+#if defined(_WIN32)
+    auto compiler = path("go");
+    compiler = primitives::resolve_executable(compiler);
+    if (compiler.empty())
+        return;
+
+    auto L = std::make_shared<GoLanguage>();
+    L->CompiledExtensions = { ".go" };
+
+    auto C = std::make_shared<GoCompiler>();
+    C->file = compiler;
+    L->compiler = C;
+    s.registerProgramAndLanguage("org.google.golang.go", C, L);
+#else
+#endif
+}
+
+void detectRustCompilers(struct Solution &s)
+{
+#if defined(_WIN32)
+    auto compiler = get_home_directory() / ".cargo" / "bin" / "rustc";
+    compiler = primitives::resolve_executable(compiler);
+    if (compiler.empty())
+        return;
+
+    auto L = std::make_shared<RustLanguage>();
+    L->CompiledExtensions = { ".rs" };
+
+    auto C = std::make_shared<RustCompiler>();
+    C->file = compiler;
+    L->compiler = C;
+    s.registerProgramAndLanguage("org.rust.rustc", C, L);
+#else
+#endif
 }
 
 void detectCSharpCompilers(struct Solution &s)
@@ -804,22 +866,7 @@ Strings NativeCompiler::getGNUCppStdOption(CPPLanguageStandard std) const
 
 Version MsProgram::gatherVersion(const path &program) const
 {
-    Version V;
-    primitives::Command c;
-    c.program = program;
-    c.args = { "/?" };
-    error_code ec;
-    c.execute(ec);
-    static std::regex r("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
-    std::smatch m;
-    if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
-    {
-        if (m[5].matched)
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
-        else
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
-    }
-    return V;
+    return ::sw::gatherVersion(program, "/?");
 }
 
 std::shared_ptr<builder::Command> VisualStudioCompiler::prepareCommand(const TargetBase &t)
@@ -933,20 +980,7 @@ void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output
 
 Version Clang::gatherVersion(const path &program) const
 {
-    Version v;
-    primitives::Command c;
-    c.program = program;
-    c.args = {"-v"};
-    std::error_code ec;
-    c.execute(ec);
-    if (!ec)
-    {
-        static std::regex r("^clang version (\\d+).(\\d+).(\\d+)");
-        std::smatch m;
-        if (std::regex_search(c.err.text, m, r))
-            v = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
-    }
-    return v;
+    return ::sw::gatherVersion(program, "-v");
 }
 
 std::shared_ptr<builder::Command> ClangCompiler::prepareCommand(const TargetBase &t)
@@ -1061,20 +1095,7 @@ void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
 
 Version GNU::gatherVersion(const path &program) const
 {
-    Version v;
-    primitives::Command c;
-    c.program = program;
-    c.args = { "-v" };
-    std::error_code ec;
-    c.execute(ec);
-    if (!ec)
-    {
-        static std::regex r("(\\d+).(\\d+).(\\d+)");
-        std::smatch m;
-        if (std::regex_search(c.err.text, m, r))
-            v = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
-    }
-    return v;
+    return ::sw::gatherVersion(program, "-v");
 }
 
 std::shared_ptr<builder::Command> GNUASMCompiler::prepareCommand(const TargetBase &t)
@@ -1526,7 +1547,7 @@ std::shared_ptr<builder::Command> VisualStudioCSharpCompiler::prepareCommand(con
 
     SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
 
-    getCommandLineOptions<VisualStudioCsCompilerOptions>(c.get(), *this);
+    getCommandLineOptions<VisualStudioCSharpCompilerOptions>(c.get(), *this);
 
     return cmd = c;
 }
@@ -1540,6 +1561,72 @@ void VisualStudioCSharpCompiler::setOutputFile(const path &output_file)
 void VisualStudioCSharpCompiler::addSourceFile(const path &input_file)
 {
     InputFiles().insert(input_file);
+}
+
+std::shared_ptr<Program> RustCompiler::clone() const
+{
+    return std::make_shared<RustCompiler>(*this);
+}
+
+std::shared_ptr<builder::Command> RustCompiler::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    getCommandLineOptions<RustCompilerOptions>(c.get(), *this);
+
+    return cmd = c;
+}
+
+void RustCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += ".exe";
+}
+
+void RustCompiler::setSourceFile(const path &input_file)
+{
+    InputFile() = input_file;
+}
+
+Version RustCompiler::gatherVersion() const
+{
+    return ::sw::gatherVersion(file, "--version");
+}
+
+std::shared_ptr<Program> GoCompiler::clone() const
+{
+    return std::make_shared<GoCompiler>(*this);
+}
+
+std::shared_ptr<builder::Command> GoCompiler::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    getCommandLineOptions<GoCompilerOptions>(c.get(), *this);
+
+    return cmd = c;
+}
+
+void GoCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += ".exe";
+}
+
+void GoCompiler::setSourceFile(const path &input_file)
+{
+    InputFiles().insert(input_file);
+}
+
+Version GoCompiler::gatherVersion() const
+{
+    return ::sw::gatherVersion(file, "version");
 }
 
 }
