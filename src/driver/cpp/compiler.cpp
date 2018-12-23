@@ -65,6 +65,9 @@ const StringSet header_file_extensions{
 namespace sw
 {
 
+void detectNativeCompilers(struct Solution &s);
+void detectCSharpCompilers(struct Solution &s);
+
 static void add_args(driver::cpp::Command &c, const Strings &args)
 {
     for (auto &a : args)
@@ -205,6 +208,43 @@ path getWindowsKit10Dir(Solution &s, const path &d)
     if (last_dir.empty())
         throw SW_RUNTIME_EXCEPTION("No Windows Kits 10.0 available");
     return last_dir;
+}
+
+void detectCompilers(struct Solution &s)
+{
+    detectNativeCompilers(s);
+    //detectCSharpCompilers(s);
+}
+
+void detectCSharpCompilers(struct Solution &s)
+{
+    path root;
+    auto VSVersion = VisualStudioVersion::Unspecified;
+
+#if defined(_WIN32)
+    cmVSSetupAPIHelper h;
+    if (h.IsVS2017Installed())
+    {
+        root = h.chosenInstanceInfo.VSInstallLocation;
+        root = root / "MSBuild" / "15.0" / "Bin" / "Roslyn";
+        VSVersion = VisualStudioVersion::VS15;
+    }
+
+    // we do not look for older compilers like vc7.1 and vc98
+    if (VSVersion == VisualStudioVersion::Unspecified)
+        return;
+
+    auto compiler = root / "csc";
+
+    auto L = std::make_shared<NativeLanguage>();
+    L->CompiledExtensions = { ".cs" };
+
+    auto C = std::make_shared<VisualStudioCompiler>();
+    C->file = compiler;
+    C->vs_version = VSVersion;
+    L->compiler = C;
+    s.registerProgramAndLanguage("com.Microsoft.VisualStudio.Roslyn.csc", C, L);
+#endif
 }
 
 void detectNativeCompilers(struct Solution &s)

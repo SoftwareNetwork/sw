@@ -699,6 +699,9 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
 
     bool UseModules = false;
 
+    // unstable
+    bool add_d_on_debug = false;
+
     // probably solution can be passed in setupChild() in TargetBase
     NativeExecutedTarget();
     NativeExecutedTarget(LanguageType L);
@@ -726,8 +729,10 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     FilesOrdered gatherLinkLibraries() const;
     NativeLinker *getSelectedTool() const;
     void setOutputDir(const path &dir);
+    void setOutputFilename(const path &fn);
     void setOutputFile();
-    virtual path getOutputDir() const; // used in commands
+    virtual path getOutputBaseDir() const; // used in commands
+    path getOutputDir() const;
     void removeFile(const path &fn, bool binary_dir = false) override;
 
     driver::cpp::CommandBuilder addCommand() const;
@@ -736,7 +741,8 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void writeFileOnce(const path &fn, const char *content, bool binary_dir = true) const;
     void writeFileOnce(const path &fn, const String &content, bool binary_dir = true) const;
     void writeFileSafe(const path &fn, const String &content, bool binary_dir = true) const;
-    void replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir = false) const;
+    void replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir = false) const; // deprecate?
+    void patch(const path &fn, const String &from, const String &to, bool binary_dir = false) const;
     void deleteInFileOnce(const path &fn, const String &from, bool binary_dir = false) const;
     void pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
     void pushBackToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
@@ -799,8 +805,10 @@ protected:
 
 private:
     path OutputDir;
+    path OutputFilename;
     bool already_built = false;
     std::map<path, path> break_gch_deps;
+    mutable optional<Commands> generated_commands;
 
     path getOutputFileName() const;
     path getOutputFileName(const path &root) const;
@@ -840,7 +848,7 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeExecutedTarget//, Program
 
     void cppan_load_project(const yaml &root) override;
 
-    path getOutputDir() const override;
+    path getOutputBaseDir() const override;
 
 protected:
     bool prepare() override;

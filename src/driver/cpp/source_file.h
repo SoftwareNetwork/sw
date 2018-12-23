@@ -128,9 +128,8 @@ struct SW_DRIVER_CPP_API SourceFile : File
     bool created = true;
     bool skip = false;
     bool postponed = false; // remove later?
-
+    path install_dir;
     Strings args; // additional args to job, move to native?
-
     String fancy_name; // for output
 
     SourceFile(const Target &t, const path &input);

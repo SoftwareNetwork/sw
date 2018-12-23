@@ -261,6 +261,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
     // 2. move Dependencies out - ???
 
     DependenciesType Dependencies;
+    //Files FileDependencies; // this can be managed with existing source files
     NativeLinkerOptionsData System;
 
     using NativeLinkerOptionsData::add;

@@ -649,7 +649,7 @@ void NativeExecutedTarget::init2()
 driver::cpp::CommandBuilder NativeExecutedTarget::addCommand() const
 {
     driver::cpp::CommandBuilder cb(*getSolution()->fs);
-    cb.c->addPathDirectory(getOutputDir() / getConfig());
+    cb.c->addPathDirectory(getOutputBaseDir() / getConfig());
     cb << *this;
     return cb;
 }
@@ -729,7 +729,7 @@ void NativeExecutedTarget::addPackageDefinitions(bool defs)
         set_pkg_info(Variables, false); // false?
 }
 
-path NativeExecutedTarget::getOutputDir() const
+path NativeExecutedTarget::getOutputBaseDir() const
 {
     if (Settings.TargetOS.Type == OSType::Windows)
         return getUserDirectories().storage_dir_bin;
@@ -737,11 +737,23 @@ path NativeExecutedTarget::getOutputDir() const
         return getUserDirectories().storage_dir_lib;
 }
 
+path NativeExecutedTarget::getOutputDir() const
+{
+    if (OutputDir.empty())
+        return getOutputFile().parent_path();
+    return getTargetsDir().parent_path() / OutputDir;
+}
+
 void NativeExecutedTarget::setOutputDir(const path &dir)
 {
     //SwapAndRestore sr(OutputDir, dir);
     OutputDir = dir;
     setOutputFile();
+}
+
+void NativeExecutedTarget::setOutputFilename(const path &fn)
+{
+    //OutputFilename = fn;
 }
 
 void NativeExecutedTarget::setOutputFile()
@@ -753,7 +765,7 @@ void NativeExecutedTarget::setOutputFile()
             getSelectedTool()->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_lib));
         else
         {
-            getSelectedTool()->setOutputFile(getOutputFileName(getOutputDir()));
+            getSelectedTool()->setOutputFile(getOutputFileName(getOutputBaseDir()));
             getSelectedTool()->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
         }
     }
@@ -771,7 +783,7 @@ path NativeExecutedTarget::makeOutputFile() const
     if (getSelectedTool() == Librarian.get())
         return getOutputFileName(getUserDirectories().storage_dir_lib);
     else
-        return getOutputFileName(getOutputDir());
+        return getOutputFileName(getOutputBaseDir());
 }
 
 path NativeExecutedTarget::getOutputFileName() const
@@ -1195,22 +1207,64 @@ std::shared_ptr<builder::Command> NativeExecutedTarget::getCommand() const
 
 Commands NativeExecutedTarget::getGeneratedCommands() const
 {
+    if (generated_commands)
+        return generated_commands.value();
+    generated_commands.emplace();
+
     Commands generated;
 
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
-    // add generated files
-    for (auto &f : *this)
+    // still some generated commands must be run before others,
+    // (syncqt must be run before mocs when building qt)
+    // so we introduce this order
+    std::map<int, std::vector<std::shared_ptr<builder::Command>>> order;
+
+    // add generated commands
+    for (auto &[f, _] : *this)
     {
-        File p(f.first, *getSolution()->fs);
+        File p(f, *getSolution()->fs);
         if (!p.isGenerated())
             continue;
-        if (f.first == def)
+        if (f == def)
             continue;
         auto c = p.getFileRecord().getGenerator();
-        generated.insert(c);
+        if (c->strict_order > 0)
+            order[c->strict_order].push_back(c);
+        else
+            generated.insert(c);
     }
 
+    // respect ordering
+    for (auto i = order.rbegin(); i != order.rend(); i++)
+    {
+        auto &cmds = i->second;
+        for (auto &c : generated)
+            c->dependencies.insert(cmds.begin(), cmds.end());
+        generated.insert(cmds.begin(), cmds.end());
+    }
+
+    // also add deps to all deps' generated commands
+    Commands deps_commands;
+    /*for (auto &f : FileDependencies)
+    {
+        File p(f, *getSolution()->fs);
+        if (!p.isGenerated())
+            continue;
+        auto c = p.getFileRecord().getGenerator();
+        deps_commands.insert(c); // gather deps' commands
+    }*/
+
+    // make our commands to depend on gathered
+    //for (auto &c : generated)
+        //c->dependencies.insert(deps_commands.begin(), deps_commands.end());
+
+    // and now also insert deps' commands to list
+    // this is useful when our generated list is empty
+    //if (generated.empty())
+        generated.insert(deps_commands.begin(), deps_commands.end());
+
+    generated_commands = generated;
     return generated;
 }
 
@@ -1337,6 +1391,25 @@ Commands NativeExecutedTarget::getCommands() const
 
     //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "self_builder");
 
+    // add install commands
+    for (auto &[p, f] : *this)
+    {
+        if (f->install_dir.empty())
+            continue;
+
+        auto o = getOutputDir();
+        o /= f->install_dir / p.filename();
+
+        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file");
+        copy_cmd->args.push_back(p.u8string());
+        copy_cmd->args.push_back(o.u8string());
+        copy_cmd->addInput(p);
+        copy_cmd->addOutput(o);
+        copy_cmd->name = "copy: " + normalize_path(o);
+        copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
+        cmds.insert(copy_cmd);
+    }
+
     // this library, check if nothing to link
     if (auto c = getCommand())
     {
@@ -1390,7 +1463,7 @@ Commands NativeExecutedTarget::getCommands() const
 
             // copy output dlls
             if (isLocal() && Settings.Native.CopySharedLibraries &&
-                Scope == TargetScope::Build)
+                Scope == TargetScope::Build && OutputDir.empty())
             {
                 for (auto &l : gatherAllRelatedDependencies())
                 {
@@ -1404,7 +1477,16 @@ Commands NativeExecutedTarget::getCommands() const
                     if (dt->getSelectedTool() == dt->Librarian.get())
                         continue;
                     auto in = dt->getOutputFile();
-                    auto o = (OutputDir.empty() ? getOutputFile().parent_path() : OutputDir) / dt->OutputDir / in.filename();
+                    auto o = getOutputDir() / dt->OutputDir;
+                    if (OutputFilename.empty())
+                        o /= in.filename();
+                    else
+                    {
+                        o /= OutputFilename;
+                        if (add_d_on_debug && Settings.Native.ConfigurationType == ConfigurationType::Debug)
+                            o += "d";
+                        o += in.extension().u8string();
+                    }
                     if (in == o)
                         continue;
                     SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file");
@@ -2383,7 +2465,7 @@ bool NativeExecutedTarget::prepare()
                     // set to temp paths
                     auto o = IsConfig;
                     IsConfig = true;
-                    CircularLinker->setOutputFile(getOutputFileName(getOutputDir()));
+                    CircularLinker->setOutputFile(getOutputFileName(getOutputBaseDir()));
                     CircularLinker->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
                     IsConfig = o;
 
@@ -2848,6 +2930,11 @@ void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content, 
 }
 
 void NativeExecutedTarget::replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir) const
+{
+    patch(fn, from, to, binary_dir);
+}
+
+void NativeExecutedTarget::patch(const path &fn, const String &from, const String &to, bool binary_dir) const
 {
     if (PostponeFileResolving || DryRun)
         return;
@@ -3346,7 +3433,7 @@ bool ExecutableTarget::prepare()
     return NativeExecutedTarget::prepare();
 }
 
-path ExecutableTarget::getOutputDir() const
+path ExecutableTarget::getOutputBaseDir() const
 {
     return getUserDirectories().storage_dir_bin;
 }

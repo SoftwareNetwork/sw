@@ -33,11 +33,17 @@ struct CommandData
     std::atomic_size_t *current_command = nullptr;
     std::atomic_size_t *total_commands = nullptr;
 
-    virtual ~CommandData() {}
+    virtual ~CommandData() = default;
 
     virtual void execute() = 0;
     virtual void prepare() = 0;
     //virtual String getName() const = 0;
+
+    void clear()
+    {
+        dependendent_commands.clear();
+        dependencies.clear();
+    }
 };
 
 namespace builder
@@ -100,6 +106,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     //std::shared_ptr<Dependency> dependency; // TODO: hide
     bool silent = false;
     bool always = false;
+    int strict_order = 0; // used to execute this before other commands
 
     enum
     {

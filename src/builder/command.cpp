@@ -317,8 +317,12 @@ void Command::prepare()
         return;
 
     program = getProgram();
-    //if (!program.is_absolute())
-        //program = ::primitives::resolve_executable(program);
+
+    // user entered commands may be in form 'git'
+    // so, it is not empty, not generated and does not exist
+    if (!program.empty() && !File(program, *fs).isGeneratedAtAll() && !program.is_absolute() && !fs::exists(program))
+        program = primitives::resolve_executable(program);
+
     getHashAndSave();
 
     //DEBUG_BREAK_IF_PATH_HAS(program, "google.tensorflow.gen_proto_text_functions-1.10.1.exe");

@@ -11,28 +11,47 @@
 
 #include <primitives/debug.h>
 
+#include <boost/graph/graph_traits.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/strong_components.hpp>
+#include <boost/graph/transitive_reduction.hpp>
+#include <boost/graph/graph_utility.hpp> // dumping graphs
+#include <boost/graph/graphviz.hpp>      // generating pictures
+
+// DAG
 template <class T>
 struct ExecutionPlan
 {
     using PtrT = std::shared_ptr<T>;
     using USet = std::unordered_set<PtrT>;
+    using Vec = std::vector<PtrT>;
 
-    std::vector<PtrT> commands;
+    using VertexNode = size_t;
+    using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS,
+        PtrT, boost::property<boost::edge_index_t, int>>;
+    using GraphMapping = std::unordered_map<T*, VertexNode>;
+    using StrongComponents = std::vector<size_t>;
+
+    Vec commands;
+    Vec unprocessed_commands;
+    USet unprocessed_commands_set;
 
     ExecutionPlan() = default;
-    ExecutionPlan(const ExecutionPlan &) = delete;
+    ExecutionPlan(const ExecutionPlan &rhs) = delete;
     ExecutionPlan(ExecutionPlan &&) = default;
     ~ExecutionPlan()
     {
-        // break commands
-        for (auto &c : commands)
+        auto break_commands = [](auto &a)
         {
-            c->dependendent_commands.clear();
-            c->dependencies.clear();
-        }
+            for (auto &c : a)
+                c->clear();
+        };
+        break_commands(commands);
+        break_commands(unprocessed_commands);
+        break_commands(unprocessed_commands_set);
     }
 
-    void execute(Executor &e) const
+    void execute(Executor &e, std::atomic_int64_t skip_errors = 0) const
     {
         std::mutex m;
         std::vector<Future<void>> fs;
@@ -40,7 +59,7 @@ struct ExecutionPlan
         std::atomic_bool stopped = false;
 
         std::function<void(T*)> run;
-        run = [&e, &run, &fs, &all, &m, &stopped](T *c)
+        run = [&skip_errors, &e, &run, &fs, &all, &m, &stopped](T *c)
         {
             if (stopped)
                 return;
@@ -50,7 +69,8 @@ struct ExecutionPlan
             }
             catch (...)
             {
-                stopped = true;
+                if (--skip_errors < 1)
+                    stopped = true;
                 throw;
             }
             for (auto &d : c->dependendent_commands)
@@ -158,14 +178,83 @@ struct ExecutionPlan
         return strings;
     }
 
-    static ExecutionPlan createExecutionPlan(USet &cmds)
+    operator bool() const
     {
+        return unprocessed_commands.empty();
+    }
+
+    Graph getGraph()
+    {
+        return getGraph(commands);
+    }
+
+    Graph getGraphUnprocessed()
+    {
+        return getGraph(unprocessed_commands);
+    }
+
+    static Graph getGraph(const Vec &v)
+    {
+        auto gm = getGraphMapping(v);
+        return getGraph(v, gm);
+    }
+
+    static auto getStrongComponents(const Graph &g)
+    {
+        StrongComponents components(num_vertices(g));
+        auto num = boost::strong_components(g, boost::make_iterator_property_map(components.begin(), get(boost::vertex_index, g)));
+        return std::tuple{ g, num, components };
+    }
+
+    auto getStrongComponents()
+    {
+        auto g = getGraphUnprocessed();
+        return getStrongComponents(g);
+    }
+
+    void printGraph(path p) const
+    {
+        printGraph(getGraph(), p);
+    }
+
+    template <class G>
+    static void printGraph(const G &g, const path &base, const Vec &names = {}, bool mangle_names = false)
+    {
+        auto p = base;
+        p += ".dot";
+        std::ofstream o(p);
+        if (names.empty())
+            boost::write_graphviz(o, g);
+        else
+        {
+            write_graphviz(o, g, [&names, mangle_names](auto &o, auto v)
+            {
+                if (mangle_names)
+                    o << " [" << "label=\"" << std::to_string(v) << "\"]";
+                else
+                    o << " [" << "label=" << names[v]->getName(true) << "]";
+            });
+            if (mangle_names)
+            {
+                auto p = base;
+                p += ".txt";
+                std::ofstream o(p);
+                int i = 0;
+                for (auto &n : names)
+                    o << i++ << " = " << n->getName(true) << "\n";
+            }
+        }
+    }
+
+    static ExecutionPlan createExecutionPlan(const USet &in)
+    {
+        auto cmds = in;
         prepare(cmds);
 
         // detect and eliminate duplicate commands
         if constexpr (std::is_same_v<T, sw::builder::Command>)
         {
-            std::unordered_map<size_t, std::vector<PtrT>> dups;
+            std::unordered_map<size_t, Vec> dups;
             for (const auto &c : cmds)
             {
                 if (!c->isHashable())
@@ -212,88 +301,27 @@ struct ExecutionPlan
                 }
             }
 
-            // remove not outdated before execution
-            /*while (1)
-            {
-                USet erased;
-                for (auto &c : cmds)
-                {
-                    if (c->dependencies.empty() && !c->isOutdated())
-                        erased.insert(c);
-                }
-
-                // remove erased deps from the rest of commands deps
-                for (auto &c : erased)
-                    cmds.erase(c);
-                for (auto &c : cmds)
-                {
-                    for (auto &e : erased)
-                        c->dependencies.erase(e);
-                }
-
-                if (erased.empty())
-                    break;
-            }*/
+            // we cannot remove outdated before execution
+            // because outdated property is changed while executing other commands
         }
 
-        /*{
-            auto ep = create(cmds);
-            if (!cmds.empty())
-                return ep;
+        return create(cmds);
+    }
 
-            // here we are sure that DAG is possible
+private:
+    using Vertex = typename boost::graph_traits<Graph>::vertex_descriptor;
+    using VertexMap = std::unordered_map<Vertex, Vertex>;
 
-            // push all cmds back
-            cmds.insert(ep.commands.begin(), ep.commands.end());
-
-            // prevent destruction
-            ep.commands.clear();
-        }
-
-        // now we set dependencies between commands with same outputs
-        // to execute them sequentially, because they will break each other on producing same files
-        if constexpr (std::is_same_v<T, sw::builder::Command>)
-        {
-            std::unordered_map<path, std::vector<PtrT>> outputs;
-
-            // gather outputs
-            for (const auto &c : cmds)
-            {
-                for (auto &o : c->outputs)
-                    outputs[o].push_back(c);
-            }
-
-            std::multimap<size_t, path> mm;
-            for (auto &[f, v] : outputs)
-            {
-                if (v.size() < 2)
-                    continue;
-                mm.emplace(v.size(), f);
-                // sort, more deps commands go first
-                std::sort(v.begin(), v.end(),
-                    [](const auto &e1, const auto &e2)
-                {
-                    // also check existing relations, we respect them
-                    if (e1->dependencies.find(e2) != e1->dependencies.end())
-                        return false;
-                    if (e2->dependencies.find(e1) != e2->dependencies.end())
-                        return true;
-                    return e1->dependencies.size() > e2->dependencies.size();
-                });
-                // we set a chain of commands 1..n
-                // Cn -> Cn-1 -> ... -> C2 -> C1
-                for (auto i = std::next(v.begin()); i != v.end(); i++)
-                    (*i)->dependencies.insert(*(i - 1));
-            }
-            for (auto &[n, f] : mm)
-                std::cout << n << ": " << f.string() << std::endl;
-        }*/
-
-        // create again
-        auto ep = create(cmds);
+    void setup()
+    {
+        // potentially *should* speedup later execution
+        // TODO: measure and decide
+        // it reduses some memory usage, but influence on performance on execution stages
+        // is not very clear
+        transitiveReduction();
 
         // set number of deps and dependent commands
-        for (auto &c : ep.commands)
+        for (auto &c : commands)
         {
             c->dependencies_left = c->dependencies.size();
             for (auto &d : c->dependencies)
@@ -302,19 +330,68 @@ struct ExecutionPlan
 
         // improve sorting! it's too stupid
         // simple "0 0 0 0 1 2 3 6 7 8 9 11" is not enough
-        std::sort(ep.commands.begin(), ep.commands.end(), [](const auto &c1, const auto &c2)
+        std::sort(commands.begin(), commands.end(), [](const auto &c1, const auto &c2)
         {
             if (c1->dependencies.size() != c2->dependencies.size())
                 return c1->dependencies.size() < c2->dependencies.size();
-            //if (c1->dependendent_commands.size() != c2->dependendent_commands.size())
-                return c1->dependendent_commands.size() > c2->dependendent_commands.size();
-            //return c1->getName() < c2->getName();
+            return c1->dependendent_commands.size() > c2->dependendent_commands.size();
         });
-
-        return ep;// std::move(ep);
     }
 
-private:
+    static GraphMapping getGraphMapping(const Vec &v)
+    {
+        GraphMapping gm;
+        VertexNode i = 0;
+        for (auto &c : v)
+            gm[c.get()] = i++;
+        return gm;
+    }
+
+    static Graph getGraph(const Vec &v, GraphMapping &gm)
+    {
+        Graph g(v.size());
+        for (auto &c : v)
+        {
+            g.m_vertices[gm[c.get()]].m_property = c;
+            for (auto &d : c->dependencies)
+                boost::add_edge(gm[c.get()], gm[d.get()], g);
+        }
+        return g;
+    }
+
+    void transitiveReduction()
+    {
+        auto gm = getGraphMapping(commands);
+        auto g = getGraph(commands, gm);
+
+        auto [tr, vm] = transitiveReduction(g);
+
+        // copy props
+        for (auto &[from, to] : vm)
+            tr.m_vertices[to].m_property = g.m_vertices[from].m_property;
+
+        // make new edges (dependencies)
+        for (auto &[from, to] : vm)
+        {
+            auto c = commands[from];
+            c->dependencies.clear();
+            for (auto &e : tr.m_vertices[to].m_out_edges)
+                c->dependencies.insert(tr.m_vertices[e.m_target].m_property);
+        }
+    }
+
+    static std::tuple<Graph, VertexMap> transitiveReduction(const Graph &g)
+    {
+        Graph tr;
+        VertexMap vm;
+
+        std::vector<size_t> id_map(boost::num_vertices(g));
+        std::iota(id_map.begin(), id_map.end(), 0u);
+
+        boost::transitive_reduction(g, tr, boost::make_assoc_property_map(vm), id_map.data());
+        return { tr, vm };
+    }
+
     static void prepare(USet &cmds)
     {
         // prepare all commands
@@ -351,19 +428,22 @@ private:
         }
     }
 
-    static ExecutionPlan<T> create(USet &cmds)
+    void init(USet &cmds)
     {
-        ExecutionPlan<T> ep;
+        // remove self deps
+        for (auto &c : cmds)
+            c->dependencies.erase(c);
+
         while (!cmds.empty())
         {
             bool added = false;
             for (auto it = cmds.begin(); it != cmds.end();)
             {
                 if (std::all_of((*it)->dependencies.begin(), (*it)->dependencies.end(),
-                    [&cmds](auto &d) { return cmds.find(d) == cmds.end(); }))
+                    [this, &cmds](auto &d) { return cmds.find(d) == cmds.end(); }))
                 {
                     added = true;
-                    ep.commands.push_back(*it);
+                    commands.push_back(*it);
                     it = cmds.erase(it);
                 }
                 else
@@ -373,9 +453,18 @@ private:
             {
                 // We failed with stupid algorithm, now we must perform smarter.
                 // Shall we?
-                return ep;
+                unprocessed_commands.insert(unprocessed_commands.end(), cmds.begin(), cmds.end());
+                unprocessed_commands_set = cmds;
+                return;
             }
         }
+    }
+
+    static ExecutionPlan<T> create(USet &cmds)
+    {
+        ExecutionPlan<T> ep;
+        ep.init(cmds);
+        ep.setup();
         return ep;
     }
 };

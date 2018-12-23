@@ -113,6 +113,22 @@ struct Optimizations
     bool FastCode = false;
 };
 
+namespace cs
+{
+
+enum class Target
+{
+    Console,
+    Windows,
+    Native,
+    Library,
+    Module,
+    AppContainer,
+    Winmdobj,
+};
+
+}
+
 }
 
 DECLARE_OPTION_SPECIALIZATION(vs::ExceptionHandlingVector);
@@ -125,6 +141,8 @@ DECLARE_OPTION_SPECIALIZATION(vs::ForceType);
 DECLARE_OPTION_SPECIALIZATION(vs::Warnings);
 DECLARE_OPTION_SPECIALIZATION(vs::Optimizations);
 DECLARE_OPTION_SPECIALIZATION(CPPLanguageStandard);
+
+DECLARE_OPTION_SPECIALIZATION(vs::cs::Target);
 
 Strings getCommandLineImplCPPLanguageStandardVS(const CommandLineOption<CPPLanguageStandard> &co, ::sw::builder::Command *c);
 
@@ -405,5 +423,26 @@ DECLARE_OPTION_SPECIALIZATION(VisualStudioLinkerOptions);
 struct SW_DRIVER_CPP_API VisualStudioLibrarianOptions
 {
 };
+
+struct SW_DRIVER_CPP_API VisualStudioCsCompilerOptions
+{
+    COMMAND_LINE_OPTION(Target, vs::cs::Target)
+    {
+        cl::CommandFlag{ "target:" },
+            vs::cs::Target::Console,
+    };
+
+    COMMAND_LINE_OPTION(InputFiles, Files)
+    {
+        cl::InputDependency{},
+    };
+
+    COMMAND_LINE_OPTION(Output, path)
+    {
+        cl::CommandFlag{ "out:" },
+            cl::OutputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(VisualStudioCsCompilerOptions);
 
 }

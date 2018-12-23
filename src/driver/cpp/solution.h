@@ -172,7 +172,7 @@ public:
     PackagesIdSet knownTargets;
 
     virtual ExecutionPlan<builder::Command> getExecutionPlan() const;
-    ExecutionPlan<builder::Command> getExecutionPlan(Commands &cmds) const;
+    ExecutionPlan<builder::Command> getExecutionPlan(const Commands &cmds) const;
 
     // events
     template <class ... Args>

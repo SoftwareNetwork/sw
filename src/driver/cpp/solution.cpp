@@ -45,6 +45,7 @@ cl::opt<String> generator("G", cl::desc("Generator"));
 cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(generator));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 cl::opt<bool> dry_run("n", cl::desc("Dry run"));
+cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 static cl::opt<bool> fetch_sources("fetch", cl::desc("Fetch files in process"));
 
@@ -452,7 +453,7 @@ void Solution::performChecks()
     if (checks.empty())
         return;
     auto ep = ExecutionPlan<Check>::createExecutionPlan(checks);
-    if (checks.empty())
+    if (ep)
     {
         // we reset known targets to prevent wrong children creation as dummy targets
         //auto kt = std::move(knownTargets);
@@ -483,11 +484,11 @@ void Solution::performChecks()
     // print our deps graph
     String s;
     s += "digraph G {\n";
-    for (auto &c : checks)
+    for (auto &c : ep.unprocessed_commands_set)
     {
         for (auto &d : c->dependencies)
         {
-            if (checks.find(std::static_pointer_cast<Check>(d)) == checks.end())
+            if (ep.unprocessed_commands_set.find(std::static_pointer_cast<Check>(d)) == ep.unprocessed_commands_set.end())
                 continue;
             s += c->Definition + "->" + std::static_pointer_cast<Check>(d)->Definition + ";";
         }
@@ -495,7 +496,8 @@ void Solution::performChecks()
     s += "}";
 
     auto d = getServiceDir();
-    write_file(d / "cyclic_deps_checks.dot", s);
+    auto cyclic_path = d / "cyclic";
+    write_file(cyclic_path / "deps_checks.dot", s);
 
     throw SW_RUNTIME_EXCEPTION("Cannot create execution plan because of cyclic dependencies");
 }
@@ -826,7 +828,7 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
 
     if (!dry_run)
     {
-        p.execute(e);
+        p.execute(e, skip_errors.getValue());
         if (!silent)
             LOG_INFO(logger, "Build time: " << t.getTimeFloat() << " s.");
     }
@@ -1013,34 +1015,44 @@ void Solution::checkPrepared() const
 
 ExecutionPlan<builder::Command> Solution::getExecutionPlan() const
 {
-    auto cmds = getCommands();
-    return getExecutionPlan(cmds);
+    return getExecutionPlan(getCommands());
 }
 
-ExecutionPlan<builder::Command> Solution::getExecutionPlan(Commands &cmds) const
+ExecutionPlan<builder::Command> Solution::getExecutionPlan(const Commands &cmds) const
 {
     auto ep = ExecutionPlan<builder::Command>::createExecutionPlan(cmds);
-    if (cmds.empty())
+    if (ep)
         return ep;
 
     // error!
 
-    // print our deps graph
-    String s;
-    s += "digraph G {\n";
-    for (auto &c : cmds)
-    {
-        for (auto &d : c->dependencies)
-        {
-            if (cmds.find(d) == cmds.end())
-                continue;
-            s += c->getName(true) + "->" + d->getName(true) + ";";
-        }
-    }
-    s += "}";
-
     auto d = getServiceDir();
-    write_file(d / "cyclic_deps.dot", s);
+
+    auto [g, n, sc] = ep.getStrongComponents();
+
+    using Subgraph = boost::subgraph<ExecutionPlan<builder::Command>::Graph>;
+
+    // fill copy of g
+    Subgraph root(g.m_vertices.size());
+    for (auto &e : g.m_edges)
+        boost::add_edge(e.m_source, e.m_target, root);
+
+    std::vector<Subgraph*> subs(n);
+    for (decltype(n) i = 0; i < n; i++)
+        subs[i] = &root.create_subgraph();
+    for (int i = 0; i < sc.size(); i++)
+        boost::add_vertex(i, *subs[sc[i]]);
+
+    auto cyclic_path = d / "cyclic";
+    fs::create_directories(cyclic_path);
+    for (decltype(n) i = 0; i < n; i++)
+    {
+        if (subs[i]->m_graph.m_vertices.size() > 1)
+            ExecutionPlan<builder::Command>::printGraph(subs[i]->m_graph, cyclic_path / std::to_string(i));
+    }
+
+    ep.printGraph(ep.getGraph(), cyclic_path / "processed", ep.commands, true);
+    ep.printGraph(ep.getGraphUnprocessed(), cyclic_path / "unprocessed", ep.unprocessed_commands, true);
 
     throw SW_RUNTIME_EXCEPTION("Cannot create execution plan because of cyclic dependencies");
 }
@@ -1143,7 +1155,7 @@ void Build::setSettings()
 
 void Build::findCompiler()
 {
-    detectNativeCompilers(*this);
+    detectCompilers(*this);
 
     using CompilerVector = std::vector<std::pair<PackagePath, CompilerType>>;
 
@@ -1232,6 +1244,11 @@ void Build::findCompiler()
         { "org.LLVM.clangcl",CompilerType::ClangCl }
     };
 
+    const CompilerVector other =
+    {
+        {"com.Microsoft.VisualStudio.Roslyn.csc", CompilerType::MSVC},
+    };
+
     switch (Settings.Native.CompilerType)
     {
     case CompilerType::MSVC:
@@ -1250,8 +1267,9 @@ void Build::findCompiler()
         break;
     default:
         throw SW_RUNTIME_EXCEPTION("solution.cpp: not implemented");
-
     }
+
+    activate(other);
 
     if (Settings.Native.CompilerType == CompilerType::UnspecifiedCompiler)
     {

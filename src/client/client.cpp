@@ -326,6 +326,19 @@ int sw_main(const Strings &args)
     if (!delete_overridden_package_dir.empty())
     {
         LOG_INFO(logger, "Delete override for sdir " + delete_overridden_package_dir.u8string());
+
+        auto d = fs::canonical(fs::absolute(delete_overridden_package_dir));
+
+        std::map<sw::PackageId, path> pkgs;
+        for (auto &[n, v] : getServiceDatabase().getOverriddenPackages())
+        {
+            for (auto &[v2, p] : v)
+                if (p.sdir == d)
+                    pkgs[{n, v2}] = p.sdir;
+        }
+        for (auto &[n, p] : pkgs)
+            std::cout << "Deleting " << n.toString() << "\n";
+
         getServiceDatabase().deleteOverriddenPackageDir(delete_overridden_package_dir);
         return 0;
     }

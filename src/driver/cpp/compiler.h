@@ -55,7 +55,7 @@ enum VisualStudioVersion
 };
 
 SW_DRIVER_CPP_API
-void detectNativeCompilers(struct Solution &s);
+void detectCompilers(struct Solution &s);
 
 // compilers
 
@@ -398,5 +398,26 @@ struct SW_DRIVER_CPP_API RcTool : Program
 {
     virtual ~RcTool() = default;
 };
+
+// C#
+
+struct SW_DRIVER_CPP_API CsCompiler : CompilerBaseProgram
+{
+    virtual ~CsCompiler() = default;
+};
+
+/*struct SW_DRIVER_CPP_API VisualStudioCsCompiler : CsCompiler,
+    CommandLineOptions<VisualStudioCsCompilerOptions>
+{
+    virtual ~VisualStudioCsCompiler() = default;
+
+    std::shared_ptr<Program> clone() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    void setOutputFile(const path &output_file);
+    void setSourceFile(const path &input_file, path &output_file) override;
+
+protected:
+    Version gatherVersion() const override { return VisualStudio::gatherVersion(file); }
+};*/
 
 }

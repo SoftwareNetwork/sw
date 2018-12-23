@@ -16,6 +16,8 @@ DEFINE_OPTION_SPECIALIZATION_DUMMY(VisualStudioCompilerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(VisualStudioLinkerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(CPPLanguageStandard);
 
+DEFINE_OPTION_SPECIALIZATION_DUMMY(VisualStudioCsCompilerOptions);
+
 namespace vs
 {
 
@@ -264,6 +266,37 @@ Strings getCommandLineImplCPPLanguageStandardVS(const CommandLineOption<CPPLangu
         break;
     default:
         return {};
+    }
+    return { s };
+}
+
+DECLARE_OPTION_SPECIALIZATION(vs::cs::Target)
+{
+    using namespace vs;
+
+    auto s = getCommandLineFlag();
+    switch (value())
+    {
+    case vs::cs::Target::Console:
+        s += "exe";
+        break;
+    case vs::cs::Target::Windows:
+        s += "winexe";
+        break;
+    case vs::cs::Target::Library:
+        s += "library";
+        break;
+    case vs::cs::Target::Module:
+        s += "module";
+        break;
+    case vs::cs::Target::AppContainer:
+        s += "appcontainerexe";
+        break;
+    case vs::cs::Target::Winmdobj:
+        s += "winmdobj";
+        break;
+    default:
+        throw SW_RUNTIME_EXCEPTION("unreachable code");
     }
     return { s };
 }
