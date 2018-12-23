@@ -149,8 +149,9 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 
     auto ext = file.extension().string();
     auto p = findPackageIdByExtension(ext);
-    if (!p ||
-        (((NativeExecutedTarget*)target)->HeaderOnly && ((NativeExecutedTarget*)target)->HeaderOnly.value()))
+    auto nt = target->as<NativeExecutedTarget>();
+    auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
+    if (!p || ho)
     {
         f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(*target, file);
         f->created = false;
@@ -417,10 +418,6 @@ void SourceFileStorage::resolve()
     }
 }
 
-void SourceFileStorage::startAssignOperation()
-{
-}
-
 bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
 {
     // apply EnforcementType::CheckFiles
@@ -564,9 +561,9 @@ std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const TargetBase 
     return cmd;
 }
 
-/*Files NativeSourceFile::getGeneratedDirs() const
+CSharpSourceFile::CSharpSourceFile(const Target &t, const path &input)
+    : SourceFile(t, input)
 {
-    return compiler->getGeneratedDirs();
-}*/
+}
 
 }

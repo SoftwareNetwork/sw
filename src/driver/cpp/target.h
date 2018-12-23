@@ -29,7 +29,6 @@
                                       \
         f##_files(t &r) : r(r)        \
         {                             \
-            r.startAssignOperation(); \
         }                             \
                                       \
         using Assigner::operator();   \
@@ -73,6 +72,15 @@
 #define ASSIGN_TYPES_AND_EXCLUDE(t) \
     ASSIGN_TYPES(t)                 \
     ASSIGN_OP(^=, remove_exclude, t)
+
+#define USING_ASSIGN_OPS(t) \
+    using t::operator+=;    \
+    using t::operator-=;    \
+    using t::operator=;     \
+    using t::operator<<;    \
+    using t::operator>>;    \
+    using t::add;           \
+    using t::remove
 
 namespace sw
 {
@@ -132,16 +140,21 @@ enum class ConfigureFlags
 };
 
 // append only!
-enum class TargetType : uint32_t
+enum class TargetType : int32_t
 {
-    Build = 0,
-    Solution = 1,
-    Project = 2, // explicitly created
-    Directory = 3, // implicitly created?
-    NativeLibrary = 4,
-    NativeExecutable = 5,
-    NativeStaticLibrary = 6,
-    NativeSharedLibrary = 7,
+    Unspecified = 0,
+
+    Build = 1,
+    Solution = 2,
+    Project = 3, // explicitly created
+    Directory = 4, // implicitly created?
+    NativeLibrary = 5,
+    NativeExecutable = 6,
+    NativeStaticLibrary = 7,
+    NativeSharedLibrary = 8,
+
+    CSharpLibrary = 9,
+    CSharpExecutable = 10,
 };
 
 // enforcement rules apply to target to say how many checks it should perform
@@ -392,17 +405,11 @@ private:
     friend struct Assigner;
 };
 
-/**
-* \brief Single project target.
-*/
-struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Target>
-    //,protected SourceFileStorage
-    //, Executable // impl, must not be visible to users
+struct SW_DRIVER_CPP_API TargetDescription
 {
     LicenseType License = LicenseType::UnspecifiedOpenSource;
     path LicenseFilename;
 
-    // info
     std::string fullname;
     std::string description;
     std::string url;
@@ -418,15 +425,25 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     StringSet tags; // lowercase only!
                     // changes-file
                     // description-file (or readme file)
+};
+
+/**
+* \brief Single project target.
+*/
+struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Target>
+    //,protected SourceFileStorage
+    //, Executable // impl, must not be visible to users
+{
+    // rename to information?
+    TargetDescription Description; // or inherit?
 
     using TargetBase::TargetBase;
     Target() = default;
     virtual ~Target() = default;
 
-    virtual void init() = 0;
+    virtual void init();
     virtual void init2() = 0;
     virtual Commands getCommands() const = 0;
-    //virtual Files getGeneratedDirs() const = 0;
     virtual bool prepare() = 0;
     //virtual void clear() = 0;
     virtual void findSources() = 0;
@@ -434,8 +451,16 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
 
     virtual void removeFile(const path &fn, bool binary_dir = false);
 
+    //virtual Program *getSelectedTool() const = 0;
+
+    virtual void setOutputFile() = 0;
+    void setOutputDir(const path &dir);
+
 protected:
     int prepare_pass = 1;
+    path OutputDir;
+
+    path getOutputFileName() const;
 };
 
 struct SW_DRIVER_CPP_API ProjDirBase : Target
@@ -455,6 +480,7 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     void findSources() override {}
     UnresolvedDependenciesType gatherUnresolvedDependencies() const override { return UnresolvedDependenciesType{}; }
     //void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) override {}
+    void setOutputFile() override {}
 };
 
 struct SW_DRIVER_CPP_API Directory : ProjDirBase
@@ -519,6 +545,8 @@ struct WithoutSourceFileStorage {};
 struct WithNativeOptions {};
 struct WithoutNativeOptions {};
 
+//template <class ... Args>
+//struct SW_DRIVER_CPP_API TargetOptions : Args...
 struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
 {
     using SourceFileStorage::add;
@@ -548,25 +576,10 @@ struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
             NativeOptions::iterate(std::forward<F>(f), s);
     }
 
-    void merge(const SourceFileStorage &g, const GroupSettings &s = GroupSettings())
-    {
-        SourceFileStorage::merge(g, s);
-    }
-
-    void merge(const NativeOptions &g, const GroupSettings &s = GroupSettings())
-    {
-        NativeOptions::merge(g, s);
-    }
-
     void merge(const TargetOptions &g, const GroupSettings &s = GroupSettings())
     {
         SourceFileStorage::merge(g, s);
         NativeOptions::merge(g, s);
-    }
-
-    void startAssignOperation()
-    {
-        SourceFileStorage::startAssignOperation();
     }
 
 private:
@@ -599,46 +612,16 @@ public:
     ASSIGN_TYPES(sw::tag_shared_t)
 };
 
-/*struct Events_
-{
-    using TargetEvent = std::function<void(void)>;
-
-    std::vector<TargetEvent> PreBuild;
-    // addCustomCommand()?
-    // preBuild?
-    // postBuild?
-    // postLink?
-
-    Commands getCommands() const;
-    void clear();
-};*/
-
+template <class T>
 struct SW_DRIVER_CPP_API TargetOptionsGroup :
-    InheritanceGroup<TargetOptions>
+    InheritanceGroup<T>
 {
 private:
     ASSIGN_WRAPPER(add, TargetOptionsGroup);
     ASSIGN_WRAPPER(remove, TargetOptionsGroup);
 
 public:
-    using TargetOptions::operator+=;
-    using TargetOptions::operator-=;
-    using TargetOptions::operator=;
-    using TargetOptions::operator<<;
-    using TargetOptions::operator>>;
-    using TargetOptions::add;
-    using TargetOptions::remove;
-
-    //Events_ Events;
-    //ASSIGN_TYPES_NO_REMOVE(std::function<void(void)>)
-
-    void add(const std::function<void(void)> &f);
-
-    VariablesType Variables;
-    ASSIGN_TYPES(Variable)
-
-    void add(const Variable &v);
-    void remove(const Variable &v);
+    USING_ASSIGN_OPS(TargetOptions);
 
     void inheritance(const TargetOptionsGroup &g, const GroupSettings &s = GroupSettings())
     {
@@ -667,13 +650,29 @@ public:
     }
 };
 
+struct SW_DRIVER_CPP_API NativeTargetOptionsGroup : TargetOptionsGroup<TargetOptions>
+{
+    USING_ASSIGN_OPS(TargetOptionsGroup<TargetOptions>);
+
+private:
+    ASSIGN_WRAPPER(add, NativeTargetOptionsGroup);
+    ASSIGN_WRAPPER(remove, NativeTargetOptionsGroup);
+
+public:
+    VariablesType Variables;
+    ASSIGN_TYPES(Variable)
+
+    void add(const Variable &v);
+    void remove(const Variable &v);
+};
+
 /**
 * \brief Native Executed Target is a binary target that must be built.
 */
 struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
-    TargetOptionsGroup
+    NativeTargetOptionsGroup
 {
-    using SourceFilesSet = std::unordered_set<NativeSourceFile*>;
+    USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     String ApiName;
     StringSet ApiNames;
@@ -722,15 +721,13 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void setChecks(const String &name);
     void findSources() override;
     void autoDetectOptions();
-    SourceFilesSet gatherSourceFiles() const;
     bool hasSourceFiles() const;
     Files gatherAllFiles() const;
     Files gatherIncludeDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
-    NativeLinker *getSelectedTool() const;
-    void setOutputDir(const path &dir);
+    NativeLinker *getSelectedTool() const;// override;
     void setOutputFilename(const path &fn);
-    void setOutputFile();
+    void setOutputFile() override;
     virtual path getOutputBaseDir() const; // used in commands
     path getOutputDir() const;
     void removeFile(const path &fn, bool binary_dir = false) override;
@@ -775,13 +772,6 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
 
     using TargetBase::operator=;
     using TargetBase::operator+=;
-    using TargetOptionsGroup::operator+=;
-    using TargetOptionsGroup::operator-=;
-    using TargetOptionsGroup::operator=;
-    using TargetOptionsGroup::operator<<;
-    using TargetOptionsGroup::operator>>;
-    using TargetOptionsGroup::add;
-    using TargetOptionsGroup::remove;
 
 protected:
     using TargetsSet = std::unordered_set<NativeTarget*>;
@@ -804,13 +794,12 @@ protected:
     void detectLicenseFile();
 
 private:
-    path OutputDir;
     path OutputFilename;
     bool already_built = false;
     std::map<path, path> break_gch_deps;
     mutable optional<Commands> generated_commands;
 
-    path getOutputFileName() const;
+    using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
@@ -914,8 +903,39 @@ using SharedLibrary = SharedLibraryTarget;
 */
 struct SW_DRIVER_CPP_API ModuleLibraryTarget : LibraryTarget {};
 
+// C#
+
+struct SW_DRIVER_CPP_API CSharpTarget : Target
+    , NativeTargetOptionsGroup
+{
+    USING_ASSIGN_OPS(NativeTargetOptionsGroup);
+
+    std::shared_ptr<CSharpCompiler> compiler;
+
+    TargetType getType() const override { return TargetType::CSharpLibrary; }
+
+    void init() override;
+    void init2() override;
+
+    void setOutputFile() override;
+    Commands getCommands(void) const override;
+    bool prepare() override;
+    void findSources() override;
+    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+
+private:
+    using Target::getOutputFileName;
+    path getOutputFileName(const path &root) const;
+};
+
+struct SW_DRIVER_CPP_API CSharpExecutable : CSharpTarget
+{
+    TargetType getType() const override { return TargetType::CSharpExecutable; }
+};
+
 #undef ASSIGN_TYPES
 #undef ASSIGN_OP_ACTION
 #undef ASSIGN_OP
+#undef USING_ASSIGN_OPS
 
 }

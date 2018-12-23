@@ -183,4 +183,14 @@ path NativeLanguage2::getOutputFile(const path &input, const Target &t) const
     return o;
 }
 
+std::shared_ptr<Language> CSharpLanguage::clone() const
+{
+    return std::make_shared<CSharpLanguage>(*this);
+}
+
+std::shared_ptr<SourceFile> CSharpLanguage::createSourceFile(const Target &t, const path &input) const
+{
+    return std::make_shared<CSharpSourceFile>(t, input);
+}
+
 }

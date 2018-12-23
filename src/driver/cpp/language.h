@@ -50,7 +50,7 @@ struct NativeLanguage1 : Language,
     }
 };
 
-struct SW_DRIVER_CPP_API NativeLanguage2 : NativeLanguage1<Compiler>
+struct SW_DRIVER_CPP_API NativeLanguage2 : NativeLanguage1<NativeCompiler>
 {
     path getOutputFile(const path &input, const Target &t) const;
 };
@@ -70,5 +70,15 @@ struct SimpleNativeLanguageFactory : NativeLanguage2
 };
 
 using NativeLanguage = SimpleNativeLanguageFactory<NativeSourceFile>;
+
+struct SW_DRIVER_CPP_API CSharpLanguage : Language
+{
+    virtual ~CSharpLanguage() = default;
+
+    std::shared_ptr<CSharpCompiler> compiler;
+
+    std::shared_ptr<Language> clone() const override;
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
+};
 
 }

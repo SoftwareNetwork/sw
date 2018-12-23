@@ -213,7 +213,7 @@ path getWindowsKit10Dir(Solution &s, const path &d)
 void detectCompilers(struct Solution &s)
 {
     detectNativeCompilers(s);
-    //detectCSharpCompilers(s);
+    detectCSharpCompilers(s);
 }
 
 void detectCSharpCompilers(struct Solution &s)
@@ -236,12 +236,11 @@ void detectCSharpCompilers(struct Solution &s)
 
     auto compiler = root / "csc";
 
-    auto L = std::make_shared<NativeLanguage>();
+    auto L = std::make_shared<CSharpLanguage>();
     L->CompiledExtensions = { ".cs" };
 
-    auto C = std::make_shared<VisualStudioCompiler>();
+    auto C = std::make_shared<VisualStudioCSharpCompiler>();
     C->file = compiler;
-    C->vs_version = VSVersion;
     L->compiler = C;
     s.registerProgramAndLanguage("com.Microsoft.VisualStudio.Roslyn.csc", C, L);
 #endif
@@ -803,26 +802,22 @@ Strings NativeCompiler::getGNUCppStdOption(CPPLanguageStandard std) const
     return { s };
 }
 
-Version VisualStudio::gatherVersion(const path &program) const
+Version MsProgram::gatherVersion(const path &program) const
 {
     Version V;
     primitives::Command c;
     c.program = program;
-    c.args = { "--version" };
-    std::error_code ec;
+    c.args = { "/?" };
+    error_code ec;
     c.execute(ec);
-    // ms returns exit code = 2 on --version
-    if (ec)
+    static std::regex r("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
+    std::smatch m;
+    if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
     {
-        static std::regex r("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
-        std::smatch m;
-        if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
-        {
-            if (m[5].matched)
-                V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
-            else
-                V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
-        }
+        if (m[5].matched)
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
+        else
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
     }
     return V;
 }
@@ -1517,6 +1512,34 @@ std::shared_ptr<builder::Command> GNULibrarian::prepareCommand(const TargetBase 
     //getAdditionalOptions(c.get());
 
     return cmd = c;
+}
+
+std::shared_ptr<Program> VisualStudioCSharpCompiler::clone() const
+{
+    return std::make_shared<VisualStudioCSharpCompiler>(*this);
+}
+
+std::shared_ptr<builder::Command> VisualStudioCSharpCompiler::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    getCommandLineOptions<VisualStudioCsCompilerOptions>(c.get(), *this);
+
+    return cmd = c;
+}
+
+void VisualStudioCSharpCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += ".exe";
+}
+
+void VisualStudioCSharpCompiler::addSourceFile(const path &input_file)
+{
+    InputFiles().insert(input_file);
 }
 
 }

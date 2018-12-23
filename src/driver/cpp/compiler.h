@@ -80,8 +80,6 @@ protected:
 struct SW_DRIVER_CPP_API Compiler : CompilerBaseProgram
 {
     virtual ~Compiler() = default;
-
-    virtual String getObjectExtension() const = 0;
 };
 
 struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
@@ -101,15 +99,18 @@ protected:
     Strings getGNUCppStdOption(CPPLanguageStandard s) const;
 };
 
-struct SW_DRIVER_CPP_API VisualStudio : CompilerToolBase
+struct SW_DRIVER_CPP_API MsProgram : CompilerToolBase
+{
+protected:
+    Version gatherVersion(const path &program) const override;
+};
+
+struct SW_DRIVER_CPP_API VisualStudio : MsProgram
 {
     VisualStudioVersion vs_version = VisualStudioVersion::Unspecified;
     String toolset;
 
     virtual ~VisualStudio() = default;
-
-protected:
-    Version gatherVersion(const path &program) const override;
 };
 
 struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
@@ -401,23 +402,25 @@ struct SW_DRIVER_CPP_API RcTool : Program
 
 // C#
 
-struct SW_DRIVER_CPP_API CsCompiler : CompilerBaseProgram
+struct SW_DRIVER_CPP_API CSharpCompiler : Compiler
 {
-    virtual ~CsCompiler() = default;
+    virtual void setOutputFile(const path &output_file) = 0;
+    virtual void addSourceFile(const path &input_file) = 0;
 };
 
-/*struct SW_DRIVER_CPP_API VisualStudioCsCompiler : CsCompiler,
+// roslyn compiler?
+struct SW_DRIVER_CPP_API VisualStudioCSharpCompiler : MsProgram,
+    CSharpCompiler,
     CommandLineOptions<VisualStudioCsCompilerOptions>
 {
-    virtual ~VisualStudioCsCompiler() = default;
-
     std::shared_ptr<Program> clone() const override;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
-    void setOutputFile(const path &output_file);
-    void setSourceFile(const path &input_file, path &output_file) override;
+
+    void setOutputFile(const path &output_file) override;
+    void addSourceFile(const path &input_file) override;
 
 protected:
-    Version gatherVersion() const override { return VisualStudio::gatherVersion(file); }
-};*/
+    Version gatherVersion() const override { return MsProgram::gatherVersion(file); }
+};
 
 }

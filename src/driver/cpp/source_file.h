@@ -79,7 +79,6 @@ public:
 
     void resolve();
     //void resolveRemoved();
-    void startAssignOperation();
 
     SourceFile &operator[](path F);
     SourceFileMap<SourceFile> operator[](const FileRegex &r) const;
@@ -178,6 +177,11 @@ struct PrecompiledHeader
     path source;
     // path pch; // file itself
     bool force_include_pch = false;
+};
+
+struct SW_DRIVER_CPP_API CSharpSourceFile : SourceFile
+{
+    CSharpSourceFile(const Target &t, const path &input);
 };
 
 }

@@ -1269,8 +1269,6 @@ void Build::findCompiler()
         throw SW_RUNTIME_EXCEPTION("solution.cpp: not implemented");
     }
 
-    activate(other);
-
     if (Settings.Native.CompilerType == CompilerType::UnspecifiedCompiler)
     {
         switch (Settings.HostOS.Type)
@@ -1295,6 +1293,9 @@ void Build::findCompiler()
         {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
         {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
         }, "Try to add more linkers");
+
+    // more languages
+    activate(other);
 
     setSettings();
 }

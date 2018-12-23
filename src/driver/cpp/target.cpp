@@ -87,6 +87,22 @@ String toString(TargetType T)
     throw std::logic_error("unreachable code");
 }
 
+template <class SF>
+std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s)
+{
+    // maybe cache result?
+    std::unordered_set<SF*> files;
+    for (auto &[p, f] : s)
+    {
+        if (!f->isActive())
+            continue;
+        auto f2 = f->as<SF>();
+        if (f2)
+            files.insert(f2);
+    }
+    return files;
+}
+
 String TargetBase::SettingsX::getConfig(const TargetBase *t, bool use_short_config) const
 {
     auto remove_last_dash = [](auto &c)
@@ -517,6 +533,43 @@ void Target::removeFile(const path &fn, bool binary_dir)
     fs::remove(p, ec);
 }
 
+#define SW_IS_LOCAL_BINARY_DIR isLocal() && !UseStorageBinaryDir
+
+void Target::init()
+{
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        BinaryDir = getTargetDirShort();
+    }
+    else if (auto d = pkg.getOverriddenDir(); d)
+    {
+        BinaryDir = d.value() / ".sw";
+        //#ifdef _WIN32
+        BinaryDir /= path(getConfig(true)) / sha256_short(pkg.toString());
+        /*#else
+                BinaryDir /= path(getConfig()) / "targets" / pkg.ppath.toString();
+        #endif*/
+    }
+    else
+    {
+        BinaryDir = pkg.getDirObj() / "build" / getConfig(true);
+    }
+    if (DryRun)
+    {
+        // we doing some download on server or whatever
+        // so, we do not want to touch real existing bdirs
+        BinaryDir = getDirectories().storage_dir_tmp / "dry" / sha256_short(BinaryDir.u8string());
+        fs::remove_all(BinaryDir);
+        fs::create_directories(BinaryDir);
+    }
+    BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
+    BinaryDir /= SW_BDIR_NAME;
+
+    // we must create it because users probably want to write to it immediately
+    fs::create_directories(BinaryDir);
+    fs::create_directories(BinaryPrivateDir);
+}
+
 DependencyPtr NativeTarget::getDependency() const
 {
     auto d = std::make_shared<Dependency>(this);
@@ -542,7 +595,7 @@ void TargetOptions::remove(const IncludeDirectory &i)
     IncludeDirectories.erase(idir);
 }
 
-void TargetOptionsGroup::add(const Variable &v)
+void NativeTargetOptionsGroup::add(const Variable &v)
 {
     auto p = v.v.find_first_of(" =");
     if (p == v.v.npos)
@@ -558,7 +611,7 @@ void TargetOptionsGroup::add(const Variable &v)
         Variables[f] = s;
 }
 
-void TargetOptionsGroup::remove(const Variable &v)
+void NativeTargetOptionsGroup::remove(const Variable &v)
 {
     auto p = v.v.find_first_of(" =");
     if (p == v.v.npos)
@@ -580,41 +633,9 @@ NativeExecutedTarget::NativeExecutedTarget(LanguageType L)
     //addLanguage(L);
 }
 
-#define SW_IS_LOCAL_BINARY_DIR isLocal() && !UseStorageBinaryDir
-
 void NativeExecutedTarget::init()
 {
-    if (SW_IS_LOCAL_BINARY_DIR)
-    {
-        BinaryDir = getTargetDirShort();
-    }
-    else if (auto d = pkg.getOverriddenDir(); d)
-    {
-        BinaryDir = d.value() / ".sw";
-//#ifdef _WIN32
-        BinaryDir /= path(getConfig(true)) / sha256_short(pkg.toString());
-/*#else
-        BinaryDir /= path(getConfig()) / "targets" / pkg.ppath.toString();
-#endif*/
-    }
-    else
-    {
-        BinaryDir = pkg.getDirObj() / "build" / getConfig(true);
-    }
-    if (DryRun)
-    {
-        // we doing some download on server or whatever
-        // so, we do not want to touch real existing bdirs
-        BinaryDir = getDirectories().storage_dir_tmp / "dry" / sha256_short(BinaryDir.u8string());
-        fs::remove_all(BinaryDir);
-        fs::create_directories(BinaryDir);
-    }
-    BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
-    BinaryDir /= SW_BDIR_NAME;
-
-    // we must create it because users probably want to write to it immediately
-    fs::create_directories(BinaryDir);
-    fs::create_directories(BinaryPrivateDir);
+    Target::init();
 
     // propagate this pointer to all
     TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
@@ -744,7 +765,7 @@ path NativeExecutedTarget::getOutputDir() const
     return getTargetsDir().parent_path() / OutputDir;
 }
 
-void NativeExecutedTarget::setOutputDir(const path &dir)
+void Target::setOutputDir(const path &dir)
 {
     //SwapAndRestore sr(OutputDir, dir);
     OutputDir = dir;
@@ -786,7 +807,7 @@ path NativeExecutedTarget::makeOutputFile() const
         return getOutputFileName(getOutputBaseDir());
 }
 
-path NativeExecutedTarget::getOutputFileName() const
+path Target::getOutputFileName() const
 {
     return pkg.toString();
 }
@@ -933,24 +954,10 @@ Files NativeExecutedTarget::gatherIncludeDirectories() const
     return idirs;
 }
 
-NativeExecutedTarget::SourceFilesSet NativeExecutedTarget::gatherSourceFiles() const
-{
-    // maybe cache result?
-    SourceFilesSet files;
-    for (auto &f : *this)
-    {
-        if (f.second->isActive())
-        {
-            files.insert((NativeSourceFile*)f.second.get());
-        }
-    }
-    return files;
-}
-
 Files NativeExecutedTarget::gatherObjectFilesWithoutLibraries() const
 {
     Files obj;
-    for (auto &f : gatherSourceFiles())
+    for (auto &f : gatherSourceFiles<NativeSourceFile>(*this))
     {
         if (f->output.file.extension() != ".gch")
             obj.insert(f->output.file);
@@ -1093,7 +1100,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
     // before adding pch source file to target
     // on this step we setup compilers to USE our created pch
     // MSVC does it explicitly, gnu does implicitly; check what about clang
-    for (auto &f : gatherSourceFiles())
+    for (auto &f : gatherSourceFiles<NativeSourceFile>(*this))
     {
         if (auto sf = f->as<NativeSourceFile>())
         {
@@ -1317,7 +1324,7 @@ Commands NativeExecutedTarget::getCommands() const
         auto sd = normalize_path(SourceDir);
         auto bd = normalize_path(BinaryDir);
         auto bdp = normalize_path(BinaryPrivateDir);
-        for (auto &f : gatherSourceFiles())
+        for (auto &f : gatherSourceFiles<NativeSourceFile>(*this))
         {
             auto c = f->getCommand(*this);
             c->args.insert(c->args.end(), f->args.begin(), f->args.end());
@@ -1629,7 +1636,7 @@ void NativeExecutedTarget::autoDetectOptions()
     static const Strings source_dir_names = { "src", "source", "sources", "lib", "library" };
 
     // gather things to check
-    //bool sources_empty = gatherSourceFiles().empty();
+    //bool sources_empty = gatherSourceFiles<NativeSourceFile>(*this).empty();
     bool sources_empty = sizeKnown() == 0;
     bool idirs_empty = true;
 
@@ -1770,10 +1777,10 @@ void NativeExecutedTarget::detectLicenseFile()
 
     if (!Local)
     {
-        if (!LicenseFilename.empty())
+        if (!Description.LicenseFilename.empty())
         {
-            if (check_license(LicenseFilename))
-                add(LicenseFilename);
+            if (check_license(Description.LicenseFilename))
+                add(Description.LicenseFilename);
         }
         else
         {
@@ -2205,7 +2212,7 @@ bool NativeExecutedTarget::prepare()
             f = this->SourceFileMapThis::operator[](p) = L->createSourceFile(*this, p);
         }
 
-        auto files = gatherSourceFiles();
+        auto files = gatherSourceFiles<NativeSourceFile>(*this);
 
         // copy headers to install dir
         if (!InstallDirectory.empty() && !fs::exists(SourceDir / InstallDirectory))
@@ -3471,13 +3478,6 @@ StaticLibraryTarget::StaticLibraryTarget(LanguageType L)
 
 void StaticLibraryTarget::init()
 {
-    if (!Local)
-    {
-        // we re-use dirs only for non local projects
-        // local projects put all files into config folders
-        //Settings.Native.LibrariesType = LibraryType::Static;
-    }
-
     NativeExecutedTarget::init();
     initLibrary(LibraryType::Static);
 }
@@ -3489,14 +3489,90 @@ SharedLibraryTarget::SharedLibraryTarget(LanguageType L)
 
 void SharedLibraryTarget::init()
 {
-    if (!Local)
-    {
-        // we re-use dirs only for non local projects
-        // local projects put all files into config folders
-        //Settings.Native.LibrariesType = LibraryType::Shared;
-    }
     NativeExecutedTarget::init();
     initLibrary(LibraryType::Shared);
+}
+
+void CSharpTarget::init()
+{
+    Target::init();
+
+    // propagate this pointer to all
+    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    {
+        v.target = this;
+    });
+    //LanguageStorage::target = this;
+
+    compiler = std::dynamic_pointer_cast<CSharpCompiler>(SourceFileStorage::findProgramByExtension(".cs")->clone());
+}
+
+void CSharpTarget::init2()
+{
+    setOutputFile();
+}
+
+void CSharpTarget::setOutputFile()
+{
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+    }
+    else
+    {
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        compiler->setOutputFile(base);
+    }
+}
+
+path CSharpTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / getOutputFileName();
+    }
+    return p;
+}
+
+Commands CSharpTarget::getCommands() const
+{
+    for (auto f : gatherSourceFiles<CSharpSourceFile>(*this))
+        compiler->addSourceFile(f->file);
+
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    cmds.insert(c);
+    return cmds;
+}
+
+bool CSharpTarget::prepare()
+{
+    return false;
+}
+
+void CSharpTarget::findSources()
+{
+}
+
+UnresolvedDependenciesType CSharpTarget::gatherUnresolvedDependencies() const
+{
+    UnresolvedDependenciesType deps;
+    ((CSharpTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+        [this, &deps](auto &v, auto &s)
+    {
+        for (auto &d : v.Dependencies)
+        {
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+                deps.insert({ d->package, d });
+        }
+    });
+    return deps;
 }
 
 }
