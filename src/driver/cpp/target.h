@@ -16,6 +16,9 @@
 #include <source_file.h>
 #include <types.h>
 
+//#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
+
 #include <any>
 #include <mutex>
 #include <optional>
@@ -447,8 +450,7 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     Target() = default;
     virtual ~Target() = default;
 
-    virtual void init();
-    virtual void init2() = 0;
+    virtual void init(); // add multipass init if needed
     virtual Commands getCommands() const = 0;
     virtual bool prepare() = 0;
     //virtual void clear() = 0;
@@ -478,7 +480,6 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
 
     TargetType getType() const override { return TargetType::Directory; }
     void init() override {}
-    void init2() override {}
     Commands getCommands() const override { return Commands{}; }
     //Files getGeneratedDirs() const override { return Files{}; }
     bool prepare() override { return false; }
@@ -705,17 +706,13 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     bool UseModules = false;
 
     // unstable
-    bool add_d_on_debug = false;
+    //bool add_d_on_debug = false;
 
-    // probably solution can be passed in setupChild() in TargetBase
-    NativeExecutedTarget();
-    NativeExecutedTarget(LanguageType L);
-    virtual ~NativeExecutedTarget() = default;
+    virtual ~NativeExecutedTarget();
 
     TargetType getType() const override { return TargetType::NativeLibrary; }
 
     void init() override;
-    void init2() override;
     void addPackageDefinitions(bool defs = false);
     std::shared_ptr<builder::Command> getCommand() const override;
     Commands getCommands() const override;
@@ -727,18 +724,22 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void setChecks(const String &name);
     void findSources() override;
     void autoDetectOptions();
+    void autoDetectSources();
+    void autoDetectIncludeDirectories();
     bool hasSourceFiles() const;
     Files gatherAllFiles() const;
     Files gatherIncludeDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
     NativeLinker *getSelectedTool() const;// override;
-    void setOutputFilename(const path &fn);
+    //void setOutputFilename(const path &fn);
     void setOutputFile() override;
     virtual path getOutputBaseDir() const; // used in commands
     path getOutputDir() const;
     void removeFile(const path &fn, bool binary_dir = false) override;
+    std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
 
     driver::cpp::CommandBuilder addCommand() const;
+    // add executed command?
 
     void writeFileOnce(const path &fn, bool binary_dir = true) const;
     void writeFileOnce(const path &fn, const char *content, bool binary_dir = true) const;
@@ -800,7 +801,8 @@ protected:
     void detectLicenseFile();
 
 private:
-    path OutputFilename;
+    optional<nlohmann::json> precomputed_data;
+    //path OutputFilename;
     bool already_built = false;
     std::map<path, path> break_gch_deps;
     mutable optional<Commands> generated_commands;
@@ -811,6 +813,10 @@ private:
     void resolvePostponedSourceFiles();
     void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets);
 
+    void tryLoadPrecomputedData();
+    void applyPrecomputedData();
+    void savePrecomputedData();
+
     path getPatchDir(bool binary_dir) const;
 };
 
@@ -819,9 +825,6 @@ private:
 */
 struct SW_DRIVER_CPP_API LibraryTarget : NativeExecutedTarget
 {
-    LibraryTarget() = default;
-    LibraryTarget(LanguageType L);
-
     using NativeExecutedTarget::operator=;
 
     void init() override;
@@ -837,8 +840,6 @@ using Library = LibraryTarget;
 */
 struct SW_DRIVER_CPP_API ExecutableTarget : NativeExecutedTarget//, Program
 {
-    using NativeExecutedTarget::NativeExecutedTarget;
-
     TargetType getType() const override { return TargetType::NativeExecutable; }
 
     void cppan_load_project(const yaml &root) override;
@@ -861,10 +862,6 @@ struct SW_DRIVER_CPP_API LibraryTargetBase : NativeExecutedTarget
 */
 struct SW_DRIVER_CPP_API StaticLibraryTarget : LibraryTargetBase
 {
-    //using LibraryTargetBase::LibraryTargetBase;
-    StaticLibraryTarget() = default;
-    StaticLibraryTarget(LanguageType L);
-
     bool isStaticOnly() const override { return true; }
 
     void init() override;
@@ -885,10 +882,6 @@ using StaticLibrary = StaticLibraryTarget;
 */
 struct SW_DRIVER_CPP_API SharedLibraryTarget : LibraryTargetBase
 {
-    //using LibraryTargetBase::LibraryTargetBase;
-    SharedLibraryTarget() = default;
-    SharedLibraryTarget(LanguageType L);
-
     bool isSharedOnly() const override { return true; }
 
     void init() override;
@@ -921,7 +914,6 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
     TargetType getType() const override { return TargetType::CSharpLibrary; }
 
     void init() override;
-    void init2() override;
 
     void setOutputFile() override;
     Commands getCommands(void) const override;
@@ -951,7 +943,6 @@ struct SW_DRIVER_CPP_API RustTarget : Target
     TargetType getType() const override { return TargetType::RustLibrary; }
 
     void init() override;
-    void init2() override;
 
     void setOutputFile() override;
     Commands getCommands(void) const override;
@@ -981,7 +972,6 @@ struct SW_DRIVER_CPP_API GoTarget : Target
     TargetType getType() const override { return TargetType::GoLibrary; }
 
     void init() override;
-    void init2() override;
 
     void setOutputFile() override;
     Commands getCommands(void) const override;

@@ -24,6 +24,8 @@ enum class GeneratorType
     UnixMakefiles,
     VisualStudio,
     VisualStudioNMake,
+    VisualStudioUtility,
+    VisualStudioNMakeAndUtility,
 };
 
 struct Generator

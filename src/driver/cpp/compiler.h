@@ -449,4 +449,13 @@ protected:
     Version gatherVersion() const override;
 };
 
+// TODO: compiled
+// java, VB, VB.NET, D, Obj-C (check work), Pascal (+Delphi?), Swift, dart, cobol, fortran, lisp, ada, kotlin, haskill, F#, erlang
+
+// TODO: interpreted
+// python, js, php, R, ruby, matlab, perl, lua,
+
+// TODO (other):
+// Groovy, scala, prolog, apex, julia, clojure, bash
+
 }

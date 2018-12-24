@@ -397,9 +397,14 @@ private:
         // prepare all commands
         // extract all deps commands
 
-        size_t sz = cmds.size();
+        // try to lower number of rehashes
+        if (cmds.size() < 10000)
+            cmds.reserve(10000);
+
         while (1)
         {
+            size_t sz = cmds.size();
+
             // initial prepare
             for (auto &c : cmds)
                 c->prepare();
@@ -413,18 +418,14 @@ private:
             auto cmds2 = cmds;
             for (auto &c : cmds)
             {
+                cmds2.insert(c->dependencies.begin(), c->dependencies.end());
                 for (auto &d : c->dependencies)
-                {
-                    cmds2.insert(d);
-                    for (auto &d2 : d->dependencies)
-                        cmds2.insert(d2);
-                }
+                    cmds2.insert(d->dependencies.begin(), d->dependencies.end());
             }
-            cmds = cmds2;
+            cmds = std::move(cmds2);
 
             if (cmds.size() == sz)
                 break;
-            sz = cmds.size();
         }
     }
 
