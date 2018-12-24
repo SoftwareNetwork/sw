@@ -60,7 +60,9 @@ GeneratorType fromString(const String &s)
     else if (boost::iequals(s, "VS_IDE"))
         return GeneratorType::VisualStudio;
     else if (boost::iequals(s, "VS"))
-        return GeneratorType::VisualStudioNMakeAndUtility;
+        return GeneratorType::VisualStudioUtility;
+        //return GeneratorType::VisualStudioNMakeAndUtility;
+        //return GeneratorType::VisualStudioNMake;
     else if (boost::iequals(s, "VS_NMake"))
         return GeneratorType::VisualStudioNMake;
     else if (boost::iequals(s, "VS_Utility") || boost::iequals(s, "VS_Util"))
@@ -346,7 +348,8 @@ void ProjectContext::printProject(
     addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
     addPropertySheets();
 
-    iterate_over_configs(nt.Settings, [this, &g, &nt, &p, &b, &t](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+    iterate_over_configs(nt.Settings, [this, &g, &nt, &p, &b, &t, &dir, &projects_dir]
+    (const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
     {
         using namespace sw;
 
@@ -401,6 +404,10 @@ void ProjectContext::printProject(
         if (g.type == GeneratorType::VisualStudioNMake)
             return;
 
+        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+        addBlock("TargetName", normalize_path_windows(o.lexically_relative(dir / projects_dir)));
+        endBlock();
+
         // pre build event for utility
         beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
         beginBlock("PreBuildEvent");
@@ -413,6 +420,15 @@ void ProjectContext::printProject(
         beginBlock("ClCompile");
         addBlock("AdditionalIncludeDirectories", idirs);
         addBlock("PreprocessorDefinitions", defs);
+        switch (nt.CPPVersion)
+        {
+        case CPPLanguageStandard::CPP17:
+            addBlock("LanguageStandard", "stdcpp17");
+            break;
+        case CPPLanguageStandard::CPP20:
+            addBlock("LanguageStandard", "stdcpplatest");
+            break;
+        }
         endBlock();
         endBlock();
     });

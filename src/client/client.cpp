@@ -556,6 +556,8 @@ void override_package_perform()
 
 SUBCOMMAND_DECL(ide)
 {
+    //useFileMonitor = false;
+
     if (!target_build.empty())
     {
         try_single_process_job(fs::current_path() / ".sw" / "ide", []()

@@ -11,6 +11,7 @@
 
 #include <primitives/debug.h>
 
+#include <iso646.h> // for #include <boost/graph/transitive_reduction.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/strong_components.hpp>
