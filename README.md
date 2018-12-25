@@ -1,4 +1,4 @@
-# [Software Network (SW)](https://cppan.org/)
+# [Software Network (SW)](https://software-network.org/)
 
 [![Build status](https://ci.appveyor.com/api/projects/status/3mf8eall4lf764sk/branch/master?svg=true)](https://ci.appveyor.com/project/egorpugin/sw/branch/master)
 
