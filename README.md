@@ -22,7 +22,8 @@ git clone https://github.com/SoftwareNetwork/sw
 cd sw
 sw build
 ```
-4. Run `sw generate` to generate VS solution.
+
+(optional) Run `sw generate` to generate VS solution.
 
 ### Using CPPAN
 
