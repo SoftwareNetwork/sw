@@ -1,14 +1,14 @@
-# Software Network (SW) #
+# [Software Network (SW)](https://cppan.org/)
 
 [![Build status](https://ci.appveyor.com/api/projects/status/3mf8eall4lf764sk/branch/master?svg=true)](https://ci.appveyor.com/project/egorpugin/sw/branch/master)
 
 ## Resources
 
-Homepage: https://software-network.org/
-Docs: https://github.com/SoftwareNetwork/sw/tree/master/doc/
-Download: https://github.com/SoftwareNetwork/binaries
-Issue tracking: https://github.com/SoftwareNetwork/sw/issues
-Forum: https://groups.google.com/forum/#!forum/software-network
+- Homepage: https://software-network.org/
+- Docs: https://github.com/SoftwareNetwork/sw/tree/master/doc/
+- Download: https://github.com/SoftwareNetwork/binaries
+- Issue tracking: https://github.com/SoftwareNetwork/sw/issues
+- Forum: https://groups.google.com/forum/#!forum/software-network
 
 ## Build
 
