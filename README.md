@@ -12,7 +12,7 @@
 
 ## Build
 
-### Using SW (selfbuild)
+### Using SW (self build)
 
 1. Download client from https://github.com/SoftwareNetwork/binaries
 2. Unpack, add to PATH
