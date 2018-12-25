@@ -211,6 +211,16 @@ void Check::updateDependencies()
         dependencies.insert(checker->add<IncludeExists>(d));
 }
 
+bool Check::lessDuringExecution(const Check &rhs) const
+{
+    // improve sorting! it's too stupid
+    // simple "0 0 0 0 1 2 3 6 7 8 9 11" is not enough
+
+    if (dependencies.size() != rhs.dependencies.size())
+        return dependencies.size() < rhs.dependencies.size();
+    return dependendent_commands.size() > dependendent_commands.size();
+}
+
 FunctionExists::FunctionExists(const String &f, const String &def)
 {
     if (f.empty())

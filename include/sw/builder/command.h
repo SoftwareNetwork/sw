@@ -159,6 +159,8 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
 
     void addInputOutputDeps();
 
+    bool lessDuringExecution(const Command &rhs) const;
+
     //void load(BinaryContext &bctx);
     //void save(BinaryContext &bctx);
 

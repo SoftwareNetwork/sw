@@ -2,7 +2,29 @@
 
 [![Build status](https://ci.appveyor.com/api/projects/status/3mf8eall4lf764sk/branch/master?svg=true)](https://ci.appveyor.com/project/egorpugin/sw/branch/master)
 
+## Resources
+
+Homepage: https://software-network.org/
+Docs: https://github.com/SoftwareNetwork/sw/tree/master/doc/
+Download: https://github.com/SoftwareNetwork/binaries
+Issue tracking: https://github.com/SoftwareNetwork/sw/issues
+Forum: https://groups.google.com/forum/#!forum/software-network
+
 ## Build
+
+### Using SW
+
+1. Download client from https://github.com/SoftwareNetwork/binaries
+2. Unpack, add to PATH
+3. Run
+```
+git clone https://github.com/SoftwareNetwork/sw
+cd sw
+sw build
+```
+4. Run `sw generate` to generate VS solution.
+
+### Using CPPAN
 
 1. Download CPPAN client from https://cppan.org/client/
 2. Run 

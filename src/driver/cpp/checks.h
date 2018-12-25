@@ -95,6 +95,8 @@ struct SW_DRIVER_CPP_API Check : CommandData<Check>
     std::optional<String> getDefinition() const;
     std::optional<String> getDefinition(const String &d) const;
 
+    bool lessDuringExecution(const Check &rhs) const;
+
 protected:
     virtual void run() const {}
 };

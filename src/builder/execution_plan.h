@@ -329,13 +329,9 @@ private:
                 d->dependendent_commands.insert(c);
         }
 
-        // improve sorting! it's too stupid
-        // simple "0 0 0 0 1 2 3 6 7 8 9 11" is not enough
         std::sort(commands.begin(), commands.end(), [](const auto &c1, const auto &c2)
         {
-            if (c1->dependencies.size() != c2->dependencies.size())
-                return c1->dependencies.size() < c2->dependencies.size();
-            return c1->dependendent_commands.size() > c2->dependendent_commands.size();
+            return c1->lessDuringExecution(*c2);
         });
     }
 

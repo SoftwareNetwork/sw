@@ -734,6 +734,22 @@ void Command::addPathDirectory(const path &p)
     environment[env] += delim + norm(p);
 }
 
+bool Command::lessDuringExecution(const Command &rhs) const
+{
+    // improve sorting! it's too stupid
+    // simple "0 0 0 0 1 2 3 6 7 8 9 11" is not enough
+
+    if (dependencies.size() != rhs.dependencies.size())
+        return dependencies.size() < rhs.dependencies.size();
+    if (strict_order && rhs.strict_order)
+        return strict_order < rhs.strict_order;
+    else if (strict_order)
+        return true;
+    else if (rhs.strict_order)
+        return false;
+    return dependendent_commands.size() > dependendent_commands.size();
+}
+
 /*void Command::load(BinaryContext &bctx)
 {
 
