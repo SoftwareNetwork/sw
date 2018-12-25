@@ -39,3 +39,7 @@ cppan --generate .
 For other build types or OSs, run cppan with config option `cppan --generate . --config gcc8_debug`.
 
 Check out config options at https://github.com/SoftwareNetwork/sw/blob/master/cppan.yml#L7
+
+### Support SW
+
+More info about supporting Software Network can be found [here](https://github.com/SoftwareNetwork/sw/blob/master/doc/support.md).
