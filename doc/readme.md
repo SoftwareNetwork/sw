@@ -3,30 +3,8 @@
 ## Quick Start
 
 1. Download the latest client application, unpack and put it to PATH.
-1. (!) Run once `cppan` from any directory without any arguments to perform initial configuration.
-1. In your `CMakeLists.txt` write:
-```
-find_package(CPPAN REQUIRED)
-cppan_add_package(
-    pvt.cppan.demo.sqlite3
-    pvt.cppan.demo.fmt-4
-    pvt.cppan.demo.madler.zlib-*
-    pvt.cppan.demo.boost.asio-1.66
-    ...
-    libs you want to add
-)
-cppan_execute()
-
-# near your target
-add_executable(myexe ...)
-target_link_libraries(myexe
-  pvt.cppan.demo.sqlite3
-  pvt.cppan.demo.madler.zlib
-  pvt.cppan.demo.boost.asio
-  ...
-)
-```
-4. Perform other usual CMake steps.
+1. (optional) Run once `sw init` from any directory to perform extended configuration. Requires administartor rights.
+1. Create project config or build script named `sw.cpp`.
 
 Report if anything goes wrong with this workflow!
 
@@ -34,27 +12,14 @@ Report if anything goes wrong with this workflow!
 
 ### Windows
 
-Make sure you are running the latest Visual Studio (2017), CMake.
+Make sure you are running the latest Visual Studio (2017/2019).
 
-1. VS2017 - many setups.
-1. VS2017 + CMake + Ninja.
+1. VS2017.
 2. Clang-cl (6.0+).
-3. Clang-cl + Ninja.
-
-Cygwin poorly tested, slow builds.
-Mingw is not tested.
-Both in general should work fine.
-WSL works fine.
 
 ### *nix
 
-On Linux (Ubuntu and Centos) use ninja.
 Both of clang/gcc works fine.
-Make works only with single job.
-
-Macos tested with different setups also gcc/clang/AppleClang/Xcode.
-Xcode and ninja uses multiple jobs.
-Make works only with single job.
 
 ## More links
 
