@@ -24,7 +24,7 @@ void save_from_memory_to_file(const path &fn, sqlite3 *db);
 DECLARE_STATIC_LOGGER(logger, "db_file");
 
 #define FILE_DB_FORMAT_VERSION 1
-#define COMMAND_DB_FORMAT_VERSION 1
+#define COMMAND_DB_FORMAT_VERSION 2
 
 namespace sw
 {

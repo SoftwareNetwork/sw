@@ -44,7 +44,7 @@ struct File
     std::unordered_map<Name, Parameter> parameters;
 
     void trimQuotes();
-    Values getFiles(const Name &name, const std::string &bazel_target_function = std::string());
+    Values getFiles(const Name &name, const std::string &bazel_target_function = std::string()) const;
 };
 
 File parse(const std::string &s);

@@ -182,6 +182,12 @@ bool File::isChanged() const
     return r->isChanged();
 }
 
+bool File::isChanged(const fs::file_time_type &t)
+{
+    getFileRecord().refresh();
+    return getFileRecord().getMaxTime() > t;
+}
+
 bool File::isGenerated() const
 {
     registerSelf();
@@ -379,6 +385,21 @@ bool FileRecord::isChanged(bool use_file_monitor)
         fs->async_file_log(this);*/
 
     return c;
+}
+
+bool FileRecord::isChanged(const fs::file_time_type &in)
+{
+    refresh();
+
+    auto t = getMaxTime();
+    if (t > in)
+    {
+        EXPLAIN_OUTDATED("file", true, "changed after checking deps max time from " +
+            std::to_string(in.time_since_epoch().count()) + " to " +
+            std::to_string(t.time_since_epoch().count()), file.u8string());
+        return true;
+    }
+    return false;
 }
 
 void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)

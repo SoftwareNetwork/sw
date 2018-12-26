@@ -1594,6 +1594,21 @@ void NativeExecutedTarget::findSources()
 
         auto b = read_file(bfn);
         auto f = bazel::parse(b);
+
+        /*static std::mutex m;
+        static std::unordered_map<String, bazel::File> files;
+        auto h = sha1(b);
+        auto i = files.find(h);
+        bazel::File *f = nullptr;
+        if (i == files.end())
+        {
+            std::unique_lock lk(m);
+            files[h] = bazel::parse(b);
+            f = &files[h];
+        }
+        else
+            f = &i->second;*/
+
         String project_name;
         if (!pkg.ppath.empty())
             project_name = pkg.ppath.back();

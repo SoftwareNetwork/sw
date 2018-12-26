@@ -99,6 +99,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     Files inputs;
     Files intermediate;
     Files outputs;
+    fs::file_time_type mtime;
     bool use_response_files = false;
     bool remove_outputs_before_execution = false; // was true
     bool protect_args_with_quotes = true;
@@ -121,8 +122,8 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     virtual ~Command();
 
     void prepare() override;
-    void execute() override { execute1(); }
-    void execute(std::error_code &ec) override { execute1(&ec); }
+    void execute() override;
+    void execute(std::error_code &ec) override;
     virtual void postProcess(bool ok = true) {}
     void clean() const;
     bool isExecuted() const { return pid != -1 || executed_; }
@@ -152,8 +153,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     virtual bool isHashable() const { return true; }
     virtual size_t getHash() const;
     size_t getHashAndSave() const;
-    size_t calculateFilesHash() const;
-    void updateFilesHash() const;
+    void updateCommandTime() const;
     Files getGeneratedDirs() const;
     void addPathDirectory(const path &p);
 
@@ -170,7 +170,10 @@ protected:
     mutable size_t hash = 0;
 
 private:
-    void execute1(std::error_code *ec = nullptr);
+    virtual void execute1(std::error_code *ec = nullptr);
+
+    bool beforeCommand();
+    void afterCommand();
 };
 
 }

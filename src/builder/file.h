@@ -54,6 +54,7 @@ struct SW_BUILDER_API File : virtual Node
 
     bool empty() const { return file.empty(); }
     bool isChanged() const;
+    bool isChanged(const fs::file_time_type &t);
     bool isGenerated() const;
     bool isGeneratedAtAll() const;
 
@@ -103,6 +104,7 @@ struct SW_BUILDER_API FileRecord
     FileRecord &operator=(const FileRecord &);
 
     bool isChanged(bool use_file_monitor = true);
+    bool isChanged(const fs::file_time_type &t);
     void load(const path &p = path());
     void destroy() { delete this; }
     void reset();

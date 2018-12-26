@@ -312,13 +312,16 @@ struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
     ExecuteBuiltinCommand(const String &cmd_name, void *f = nullptr);
     virtual ~ExecuteBuiltinCommand() = default;
 
-    void execute() override;
     //path getProgram() const override { return "ExecuteBuiltinCommand"; };
 
     //template <class T>
     //auto push_back(T &&v) { args.push_back(v); }
 
     void push_back(const Files &files);
+
+private:
+    void execute1(std::error_code *ec = nullptr) override;
+    void prepare() override {}
 };
 
 #ifdef _MSC_VER

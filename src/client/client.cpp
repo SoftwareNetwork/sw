@@ -51,6 +51,16 @@ DECLARE_STATIC_LOGGER(logger, "main");
 #include <WinReg.hpp>
 #endif
 
+#if _MSC_VER
+#if defined(SW_USE_TBBMALLOC)
+#include "tbb/include/tbb/tbbmalloc_proxy.h"
+#elif defined(SW_USE_TCMALLOC)
+//"libtcmalloc_minimal.lib"
+#pragma comment(linker, "/include:__tcmalloc")
+#else
+#endif
+#endif
+
 using namespace sw;
 
 bool bConsoleMode = true;
@@ -717,3 +727,11 @@ std::string getProgramName()
 {
     return PACKAGE_NAME_CLEAN;
 }
+
+#if _MSC_VER
+#if defined(SW_USE_JEMALLOC)
+#define JEMALLOC_NO_PRIVATE_NAMESPACE
+#include <jemalloc-5.1.0/include/jemalloc/jemalloc.h>
+//#include <jemalloc-5.1.0/src/jemalloc_cpp.cpp>
+#endif
+#endif
