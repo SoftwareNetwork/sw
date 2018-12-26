@@ -1,6 +1,6 @@
-# Support C++ Archive Network
+# Support Software Network
 
-Currently CPPAN server exists on my own funds almost for two years already and development goes only in my spare time.
+Currently SW server exists on my own funds almost for three years already and development goes only in my spare time.
 
 Feel free to support the project and its development if you like it.
 
@@ -21,5 +21,3 @@ https://www.patreon.com/egorpugin
 ## Crypto
 
 - Bitcoin: 1GUsPwLfsjnE6mb1UVXtXkJ5HHkRp9GY2k
-
-

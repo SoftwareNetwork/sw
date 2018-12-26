@@ -1,4 +1,4 @@
-# [Software Network (SW)](https://cppan.org/)
+# [Software Network (SW)](https://software-network.org/)
 
 [![Build status](https://ci.appveyor.com/api/projects/status/3mf8eall4lf764sk/branch/master?svg=true)](https://ci.appveyor.com/project/egorpugin/sw/branch/master)
 
@@ -12,7 +12,7 @@
 
 ## Build
 
-### Using SW (selfbuild)
+### Using SW (self build)
 
 1. Download client from https://github.com/SoftwareNetwork/binaries
 2. Unpack, add to PATH
@@ -39,3 +39,7 @@ cppan --generate .
 For other build types or OSs, run cppan with config option `cppan --generate . --config gcc8_debug`.
 
 Check out config options at https://github.com/SoftwareNetwork/sw/blob/master/cppan.yml#L7
+
+### Support SW
+
+More info about supporting Software Network can be found [here](https://github.com/SoftwareNetwork/sw/blob/master/doc/support.md).
