@@ -405,7 +405,7 @@ void ProjectContext::printProject(
             return;
 
         beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
-        addBlock("TargetName", normalize_path_windows(o.lexically_relative(dir / projects_dir)));
+        addBlock("TargetName", normalize_path_windows(o.lexically_relative(dir / projects_dir/* / "somedir"*/)));
         endBlock();
 
         // pre build event for utility

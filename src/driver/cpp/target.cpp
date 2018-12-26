@@ -2781,7 +2781,7 @@ void NativeExecutedTarget::removeFile(const path &fn, bool binary_dir)
     Target::removeFile(fn, binary_dir);
 }
 
-void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags) const
+void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags)
 {
     // before resolving
     if (!to.is_absolute())
@@ -2801,7 +2801,7 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
             throw SW_RUNTIME_EXCEPTION("Package: " + pkg.target_name + ", file not found: " + from.string());
     }
 
-    // we really need ExecuteCommand here!!!
+    // we really need ExecuteCommand here!!! or not?
     //auto c = std::make_shared<DummyCommand>();// ([this, from, to, flags]()
     {
         configureFile1(from, to, flags);
@@ -2809,11 +2809,11 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
     //c->addInput(from);
     //c->addOutput(to);
 
-    //if ((int)flags & (int)ConfigureFlags::AddToBuild)
-        //Public.add(to);
+    if ((int)flags & (int)ConfigureFlags::AddToBuild)
+        operator+=(to);
 }
 
-void NativeExecutedTarget::configureFile1(const path &from, const path &to, ConfigureFlags flags) const
+void NativeExecutedTarget::configureFile1(const path &from, const path &to, ConfigureFlags flags)
 {
     static const std::regex cmDefineRegex(R"xxx(#cmakedefine[ \t]+([A-Za-z_0-9]*)([^\r\n]*?)[\r\n])xxx");
     static const std::regex cmDefine01Regex(R"xxx(#cmakedefine01[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
@@ -2834,7 +2834,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         return;
     }
 
-    auto find_repl = [this, &from](const auto &key) -> std::string
+    auto find_repl = [this, &from, flags](const auto &key) -> std::string
     {
         auto v = Variables.find(key);
         if (v != Variables.end())
@@ -2845,6 +2845,8 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
             return d->second;
         //if (isLocal()) // put under cl cond
             //LOG_WARN(logger, "Unset variable '" + key + "' in file: " + normalize_path(from));
+        if ((int)flags & (int)ConfigureFlags::ReplaceUndefinedVariablesWithZeros)
+            return "0";
         return String();
     };
 

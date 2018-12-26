@@ -137,9 +137,10 @@ enum class ConfigureFlags
     AtOnly = 0x1, // @
     CopyOnly = 0x2,
     EnableUndefReplacements = 0x4,
-    //AddToBuild          = 0x4,
+    AddToBuild = 0x8,
+    ReplaceUndefinedVariablesWithZeros = 0x10,
 
-    Default = Empty,//AddToBuild,
+    Default = Empty, //AddToBuild,
 };
 
 // passed (serialized) via strings
@@ -486,7 +487,6 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     //virtual void clear() override {}
     void findSources() override {}
     UnresolvedDependenciesType gatherUnresolvedDependencies() const override { return UnresolvedDependenciesType{}; }
-    //void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) override {}
     void setOutputFile() override {}
 };
 
@@ -507,7 +507,7 @@ struct SW_DRIVER_CPP_API Project : ProjDirBase
 struct SW_DRIVER_CPP_API CustomTarget : Target {};
 
 /**
-* \brief Native Target is a binary target that can or cannot be built.
+* \brief Native Target is a binary target that produces binary files (probably executables).
 */
 struct SW_DRIVER_CPP_API NativeTarget : Target
     //,protected NativeOptions
@@ -750,7 +750,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void deleteInFileOnce(const path &fn, const String &from, bool binary_dir = false) const;
     void pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
     void pushBackToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
-    void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default) const;
+    void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default);
 
     /*#ifdef _MSC_VER
     #define SW_DEPRECATED __declspec(deprecated)
@@ -797,7 +797,7 @@ protected:
     FilesOrdered gatherLinkDirectories() const;
     bool prepareLibrary(LibraryType Type);
     void initLibrary(LibraryType Type);
-    void configureFile1(const path &from, const path &to, ConfigureFlags flags) const;
+    void configureFile1(const path &from, const path &to, ConfigureFlags flags);
     void detectLicenseFile();
 
 private:
