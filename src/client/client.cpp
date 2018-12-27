@@ -56,7 +56,7 @@ DECLARE_STATIC_LOGGER(logger, "main");
 #include "tbb/include/tbb/tbbmalloc_proxy.h"
 #elif defined(SW_USE_TCMALLOC)
 //"libtcmalloc_minimal.lib"
-#pragma comment(linker, "/include:__tcmalloc")
+//#pragma comment(linker, "/include:__tcmalloc")
 #else
 #endif
 #endif

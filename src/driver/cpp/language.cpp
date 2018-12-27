@@ -176,12 +176,16 @@ optional<PackageId> LanguageStorage::findPackageIdByExtension(const String &ext)
     return e->second;
 }
 
-path NativeLanguage2::getOutputFile(const path &input, const Target &t) const
+template <class SF, class C>
+path NativeLanguageBase<SF, C>::getOutputFile(const path &input, const Target &t) const
 {
-    auto o = t.BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(t, input) + compiler->getObjectExtension());
+    auto o = t.BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(t, input) + this->compiler->getObjectExtension());
     o = fs::absolute(o);
     return o;
 }
+
+template struct NativeLanguageBase<NativeSourceFile, NativeCompiler>;
+template struct NativeLanguageBase<RcToolSourceFile, RcTool>;
 
 std::shared_ptr<Language> CSharpLanguage::clone() const
 {

@@ -395,9 +395,19 @@ struct SW_DRIVER_CPP_API NativeToolchain
 // other tools
 
 // win resources
-struct SW_DRIVER_CPP_API RcTool : Program
+struct SW_DRIVER_CPP_API RcTool : MsProgram,
+    CompilerBaseProgram,
+    CommandLineOptions<RcToolOptions>
 {
-    virtual ~RcTool() = default;
+    std::shared_ptr<Program> clone() const override;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+
+    void setOutputFile(const path &output_file);
+    void setSourceFile(const path &input_file);
+    String getObjectExtension() const { return ".res"; }
+
+protected:
+    Version gatherVersion() const override { return MsProgram::gatherVersion(file); }
 };
 
 // C#

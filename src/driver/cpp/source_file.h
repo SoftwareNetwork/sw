@@ -127,6 +127,7 @@ struct SW_DRIVER_CPP_API SourceFile : File
     bool created = true;
     bool skip = false;
     bool postponed = false; // remove later?
+    bool show_in_ide = true;
     path install_dir;
     Strings args; // additional args to job, move to native?
     String fancy_name; // for output
@@ -140,6 +141,9 @@ struct SW_DRIVER_CPP_API SourceFile : File
     virtual std::shared_ptr<SourceFile> clone() const { return std::make_shared<SourceFile>(*this); }
 
     bool isActive() const;
+
+    void showInIde(bool s) { show_in_ide = s; }
+    bool showInIde() { return show_in_ide; }
 
     static String getObjectFilename(const TargetBase &t, const path &p);
 };
@@ -163,7 +167,7 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     NativeSourceFile(const NativeSourceFile &rhs);
     virtual ~NativeSourceFile();
 
-    virtual std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const override;
+    std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const override;
     //virtual Files getGeneratedDirs() const override;
     //void setSourceFile(const path &input, const path &output);
     void setOutputFile(const TargetBase &t, const path &input, const path &output_dir); // bad name?
@@ -177,6 +181,16 @@ struct PrecompiledHeader
     path source;
     // path pch; // file itself
     bool force_include_pch = false;
+};
+
+struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
+{
+    File output;
+    std::shared_ptr<RcTool> compiler;
+
+    RcToolSourceFile(const Target &t, RcTool *c, const path &input, const path &output);
+
+    std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const override;
 };
 
 struct SW_DRIVER_CPP_API CSharpSourceFile : SourceFile

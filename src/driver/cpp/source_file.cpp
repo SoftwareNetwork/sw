@@ -561,4 +561,19 @@ std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const TargetBase 
     return cmd;
 }
 
+RcToolSourceFile::RcToolSourceFile(const Target &t, RcTool *c, const path &input, const path &o)
+    : SourceFile(t, input)
+    , compiler(c ? std::static_pointer_cast<RcTool>(c->clone()) : nullptr)
+    , output(o, *t.getSolution()->fs)
+{
+    compiler->setSourceFile(input);
+    compiler->setOutputFile(output.file);
+}
+
+std::shared_ptr<builder::Command> RcToolSourceFile::getCommand(const TargetBase &t) const
+{
+    auto cmd = compiler->getCommand(t);
+    return cmd;
+}
+
 }

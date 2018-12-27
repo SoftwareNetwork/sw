@@ -68,7 +68,7 @@ namespace sw
 
 path getImportFilePrefix()
 {
-    return getUserDirectories().storage_dir_tmp / ("cppan_" + getCurrentModuleNameHash());
+    return getUserDirectories().storage_dir_tmp / ("cppan_" + getCurrentModuleHash());
 }
 
 path getImportDefinitionsFile()
@@ -381,7 +381,7 @@ StaticLibraryTarget &Solution::getImportLibrary()
     auto o = Local;
     Local = false; // this prevents us from putting compiled configs into user bdirs
     IsConfig = true;
-    auto &t = addTarget<StaticLibraryTarget>("cppan_implib_" + getCurrentModuleNameHash(), "local");
+    auto &t = addTarget<StaticLibraryTarget>("cppan_implib_" + getCurrentModuleHash(), "local");
     //t.init2();
     IsConfig = false;
     Local = o;
@@ -1224,6 +1224,7 @@ void Build::findCompiler()
         {"com.Microsoft.VisualStudio.VC.clpp", CompilerType::MSVC},
         {"com.Microsoft.VisualStudio.VC.cl", CompilerType::MSVC},
         {"com.Microsoft.VisualStudio.VC.ml", CompilerType::MSVC},
+        {"com.Microsoft.VisualStudio.VC.rc", CompilerType::MSVC},
     };
 
     const CompilerVector gnu =
@@ -1613,9 +1614,9 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     {
         lib += fn;
         lib[fn].fancy_name = "[" + output_names[fn].toString() + "]/[config]";
-        // configs depend on pch, and pch depends on getCurrentModuleNameHash(), so we add name to the file
+        // configs depend on pch, and pch depends on getCurrentModuleHash(), so we add name to the file
         // to make sure we have different config .objs for different pchs
-        lib[fn].as<NativeSourceFile>()->setOutputFile(lib, fn.u8string() + "." + getCurrentModuleNameHash(), getObjectDir(pkg) / "self");
+        lib[fn].as<NativeSourceFile>()->setOutputFile(lib, fn.u8string() + "." + getCurrentModuleHash(), getObjectDir(pkg) / "self");
         if (gVerbose)
             lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
     }

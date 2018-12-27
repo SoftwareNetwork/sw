@@ -8,6 +8,8 @@
 
 #include <primitives/symbol.h>
 
+#include <mutex>
+
 #define CPPAN_CONFIG_HASH_SHORT_LENGTH 12
 
 String shorten_hash(const String &data)
@@ -38,4 +40,18 @@ static path getCurrentModuleName()
 String getCurrentModuleNameHash()
 {
     return shorten_hash(blake2b_512(getCurrentModuleName().u8string()));
+}
+
+String getCurrentModuleHash()
+{
+    static std::mutex m;
+    static std::unordered_map<path, String> h;
+
+    auto p = getCurrentModuleName();
+
+    std::unique_lock lk(m);
+    if (h[p].empty())
+        h[p] = blake2b_512(read_file(p));
+
+    return shorten_hash(h[p]);
 }

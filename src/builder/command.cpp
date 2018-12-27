@@ -277,12 +277,12 @@ void Command::addInputOutputDeps()
         }
     }
     // do we really need this?
-    for (auto &p : outputs)
+    /*for (auto &p : outputs)
     {
         File f(p, *fs);
         f.addExplicitDependency(inputs);
         //f.addImplicitDependency(inputs);
-    }
+    }*/
 }
 
 void Command::prepare()

@@ -98,11 +98,6 @@ std::unordered_set<std::shared_ptr<sw::builder::Command>> File::gatherDependentG
 {
     registerSelf();
     std::unordered_set<std::shared_ptr<sw::builder::Command>> deps;
-    for (auto &[f, d] : r->explicit_dependencies)
-    {
-        if (d->isGenerated())
-            deps.insert(d->getGenerator());
-    }
     for (auto &[f, d] : r->implicit_dependencies)
     {
         if (d->isGenerated())
@@ -114,24 +109,6 @@ std::unordered_set<std::shared_ptr<sw::builder::Command>> File::gatherDependentG
 path File::getPath() const
 {
     return file;
-}
-
-void File::addExplicitDependency(const path &p)
-{
-    if (p.empty())
-        return;
-    registerSelf();
-    File f(p, *fs);
-    // FIXME:
-    static std::mutex m;
-    std::unique_lock<std::mutex> lk(m);
-    r->explicit_dependencies.emplace(p, f.r);
-}
-
-void File::addExplicitDependency(const Files &files)
-{
-    for (auto &p : files)
-        addExplicitDependency(p);
 }
 
 void File::addImplicitDependency(const path &p)
@@ -155,7 +132,6 @@ void File::addImplicitDependency(const Files &files)
 void File::clearDependencies()
 {
     registerSelf();
-    r->explicit_dependencies.clear();
     r->implicit_dependencies.clear();
 }
 
@@ -184,8 +160,7 @@ bool File::isChanged() const
 
 bool File::isChanged(const fs::file_time_type &t)
 {
-    getFileRecord().refresh();
-    return getFileRecord().getMaxTime() > t;
+    return getFileRecord().isChanged() || getFileRecord().getMaxTime() > t;
 }
 
 bool File::isGenerated() const
@@ -240,7 +215,6 @@ FileRecord &FileRecord::operator=(const FileRecord &rhs)
 
     generator = rhs.generator;
 
-    explicit_dependencies = rhs.explicit_dependencies;
     implicit_dependencies = rhs.implicit_dependencies;
 
     return *this;
@@ -251,8 +225,6 @@ size_t FileRecord::getHash() const
     auto k = std::hash<path>()(file);
     hash_combine(k, data->last_write_time.time_since_epoch().count());
     //hash_combine(k, size);
-    for (auto &[f, d] : explicit_dependencies)
-        hash_combine(k, d->data->last_write_time.time_since_epoch().count());
     for (auto &[f, d] : implicit_dependencies)
         hash_combine(k, d->data->last_write_time.time_since_epoch().count());
     return k;
@@ -289,13 +261,6 @@ void FileRecord::load(const path &p)
     //hash = sha256(file);
 
     // also update deps
-    for (auto &[f, d] : explicit_dependencies)
-    {
-        if (d == this || !d)
-            continue;
-        if (d->isChanged())
-            d->load();
-    }
     for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this || !d)
@@ -317,12 +282,6 @@ bool FileRecord::refresh(bool use_file_monitor)
 
     // in any case refresh *all* deps
     // do it first, because we might exit early
-    for (auto &[f, d] : explicit_dependencies)
-    {
-        if (d == this)
-            continue;
-        d->refresh(use_file_monitor);
-    }
     for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this)
@@ -451,21 +410,6 @@ fs::file_time_type FileRecord::getMaxTime() const
 fs::file_time_type FileRecord::getMaxTime1(std::unordered_set<FileData*> &files) const
 {
     auto m = data->last_write_time;
-    for (auto &[f, d] : explicit_dependencies)
-    {
-        if (d == this)
-            continue;
-        if (files.find(d->data) != files.end() || !d->data)
-            continue;
-        files.insert(d->data);
-        //auto dm = d->data->last_write_time;
-        auto dm = d->getMaxTime1(files);
-        if (dm > m)
-        {
-            m = dm;
-            EXPLAIN_OUTDATED("file", true, "explicit " + f.u8string() + " is newer", file.u8string());
-        }
-    }
     for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this)
@@ -473,8 +417,8 @@ fs::file_time_type FileRecord::getMaxTime1(std::unordered_set<FileData*> &files)
         if (files.find(d->data) != files.end() || !d->data)
             continue;
         files.insert(d->data);
-        //auto dm = d->data->last_write_time;
-        auto dm = d->getMaxTime1(files);
+        auto dm = d->data->last_write_time;
+        //auto dm = d->getMaxTime1(files);
         if (dm > m)
         {
             m = dm;
@@ -495,7 +439,7 @@ fs::file_time_type FileRecord::updateLwt1(std::unordered_set<FileData*> &files)
     if (data->last_write_time.time_since_epoch().count() == 0)
         const_cast<FileRecord*>(this)->load(file);
     auto m = data->last_write_time;
-    for (auto &[f, d] : explicit_dependencies)
+    /*for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this)
             continue;
@@ -505,18 +449,7 @@ fs::file_time_type FileRecord::updateLwt1(std::unordered_set<FileData*> &files)
         auto dm = d->updateLwt1(files);
         if (dm > m)
             m = dm;
-    }
-    for (auto &[f, d] : implicit_dependencies)
-    {
-        if (d == this)
-            continue;
-        if (files.find(d->data) != files.end() || !d->data)
-            continue;
-        files.insert(d->data);
-        auto dm = d->updateLwt1(files);
-        if (dm > m)
-            m = dm;
-    }
+    }*/
     data->last_write_time = m;
     return m;
 }

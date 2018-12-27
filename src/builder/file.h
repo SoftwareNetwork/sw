@@ -41,8 +41,6 @@ struct SW_BUILDER_API File : virtual Node
     File &operator=(const path &rhs);
 
     path getPath() const;
-    void addExplicitDependency(const path &f);
-    void addExplicitDependency(const Files &f);
     void addImplicitDependency(const path &f);
     void addImplicitDependency(const Files &f);
     void clearDependencies();
@@ -96,7 +94,6 @@ struct SW_BUILDER_API FileRecord
     FileData *data = nullptr;
 
     // make sets?
-    std::unordered_map<path, FileRecord *> explicit_dependencies;
     std::unordered_map<path, FileRecord *> implicit_dependencies;
 
     FileRecord() = default;

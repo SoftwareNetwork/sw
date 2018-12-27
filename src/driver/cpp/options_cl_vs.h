@@ -314,7 +314,7 @@ struct SW_DRIVER_CPP_API VisualStudioCompilerOptions : VisualStudioCommonCompile
     COMMAND_LINE_OPTION(InputFile, path)
     {
         cl::InputDependency{},
-    }; // for TC/TP
+    };
 };
 DECLARE_OPTION_SPECIALIZATION(VisualStudioCompilerOptions);
 
@@ -423,6 +423,23 @@ DECLARE_OPTION_SPECIALIZATION(VisualStudioLinkerOptions);
 struct SW_DRIVER_CPP_API VisualStudioLibrarianOptions
 {
 };
+
+// https://docs.microsoft.com/en-us/windows/desktop/menurc/using-rc-the-rc-command-line-
+struct SW_DRIVER_CPP_API RcToolOptions : VisualStudioCommonOptions
+{
+    COMMAND_LINE_OPTION(OutputFile, path)
+    {
+        cl::CommandFlag{ "Fo" },
+            cl::OutputDependency{},
+    };
+
+    // goes last
+    COMMAND_LINE_OPTION(InputFile, path)
+    {
+        cl::InputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(RcToolOptions);
 
 struct SW_DRIVER_CPP_API VisualStudioCSharpCompilerOptions
 {

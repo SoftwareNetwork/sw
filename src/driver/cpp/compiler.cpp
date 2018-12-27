@@ -530,6 +530,17 @@ void detectNativeCompilers(struct Solution &s)
         s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.clpp", C, L);
     }
 
+    // .rc
+    {
+        auto L = std::make_shared<RcToolLanguage>();
+        L->CompiledExtensions = { ".rc" };
+
+        auto C = std::make_shared<RcTool>();
+        C->file = getWindowsKit10Dir(s, windows_kit_dir / "bin") / dir_suffix.host / "rc.exe";
+        L->compiler = C;
+        s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.rc", C, L);
+    }
+
     // clang
 
     // create programs
@@ -1533,6 +1544,68 @@ std::shared_ptr<builder::Command> GNULibrarian::prepareCommand(const TargetBase 
     //getAdditionalOptions(c.get());
 
     return cmd = c;
+}
+
+std::shared_ptr<Program> RcTool::clone() const
+{
+    return std::make_shared<RcTool>(*this);
+}
+
+std::shared_ptr<builder::Command> RcTool::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    c->protect_args_with_quotes = false;
+
+    if (InputFile)
+    {
+        c->name = normalize_path(InputFile());
+        c->name_short = InputFile().filename().u8string();
+    }
+
+    dynamic_cast<const NativeExecutedTarget &>(t).NativeCompilerOptions::addEverything(*c);
+
+    // fix spaces around defs value:
+    // from: -DSW_PACKAGE_API=extern \"C\" __declspec(dllexport)
+    // to:   -DSW_PACKAGE_API="extern \"C\" __declspec(dllexport)"
+
+    // find better way - protect things in addEverything?
+
+    for (auto &a : c->args)
+    {
+        if (a.find("-D") == 0)
+        {
+            auto ep = a.find("=");
+            if (ep == a.npos || a.find(" ") == a.npos)
+                continue;
+            if (a.size() == ep || a[ep + 1] == '\"')
+                continue;
+            a = a.substr(0, ep) + "=\"" + a.substr(ep + 1) + "\"";
+        }
+        if (a.find("-I") == 0)
+        {
+            if (a.find(" ") == a.npos)
+                continue;
+            a = "-I\"" + a.substr(2) + "\"";
+        }
+    }
+
+    getCommandLineOptions<RcToolOptions>(c.get(), *this);
+
+    return cmd = c;
+}
+
+void RcTool::setOutputFile(const path &output_file)
+{
+    OutputFile = output_file;
+}
+
+void RcTool::setSourceFile(const path &input_file)
+{
+    InputFile = input_file;
 }
 
 std::shared_ptr<Program> VisualStudioCSharpCompiler::clone() const

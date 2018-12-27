@@ -17,6 +17,29 @@ void addConfigElement(String &c, const String &e)
     c += e + "-";
 }
 
+String hashConfig(String &c, bool use_short_config)
+{
+    auto remove_last_dash = [](auto &c)
+    {
+        if (c.size() && c.back() == '-')
+            c.resize(c.size() - 1);
+    };
+
+    auto h = hash_config(c);
+    if (!use_short_config && c.size() + h.size() < 255/* && !use_short_hash*/) // max path part in many FSes
+    {
+        // hash
+        addConfigElement(c, h);
+        remove_last_dash(c);
+        return c;
+    }
+    else
+    {
+        h = shorten_hash(h);
+    }
+    return h;
+}
+
 ConfigurationBase ConfigurationBase::operator|(const ConfigurationBase &rhs) const
 {
     auto tmp = *this;

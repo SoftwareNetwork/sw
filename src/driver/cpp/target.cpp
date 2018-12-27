@@ -17,10 +17,12 @@
 
 #include <directories.h>
 #include <package_data.h>
+#include <resolver.h>
 
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/constants.h>
+#include <primitives/context.h>
 #include <primitives/sw/settings.h>
 
 #include <primitives/log.h>
@@ -105,12 +107,6 @@ static std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s)
 
 String TargetBase::SettingsX::getConfig(const TargetBase *t, bool use_short_config) const
 {
-    auto remove_last_dash = [](auto &c)
-    {
-        if (c.size() && c.back() == '-')
-            c.resize(c.size() - 1);
-    };
-
     String c;
 
     addConfigElement(c, toString(TargetOS.Type));
@@ -127,19 +123,7 @@ String TargetBase::SettingsX::getConfig(const TargetBase *t, bool use_short_conf
     boost::to_lower(c);
     addConfigElement(c, toString(Native.ConfigurationType));
 
-    auto h = hash_config(c);
-    if (!use_short_config && c.size() + h.size() < 255/* && !use_short_hash*/) // max path part in many FSes
-    {
-        // hash
-        addConfigElement(c, h);
-        remove_last_dash(c);
-        return c;
-    }
-    else
-    {
-        h = shorten_hash(h);
-    }
-    return h;
+    return hashConfig(c, use_short_config);
 }
 
 TargetBase::TargetBase(const TargetBase &rhs)
@@ -472,13 +456,7 @@ path TargetBase::getTargetsDir() const
 
 path TargetBase::getTargetDirShort() const
 {
-    // was
-    //return getTargetsDir() / pkg.ppath.toString();
-//#ifdef _WIN32
     return getSolution()->BinaryDir / getConfig(true) / sha256_short(pkg.toString());
-/*#else
-    return getTargetsDir() / pkg.ppath.toString();
-#endif*/
 }
 
 path TargetBase::getChecksDir() const
@@ -537,6 +515,29 @@ void Target::removeFile(const path &fn, bool binary_dir)
 
 void Target::init()
 {
+    auto get_config_with_deps = [this]()
+    {
+        StringSet ss;
+        for (const auto &[unr, res] : getPackageStore().resolved_packages)
+        {
+            if (res == pkg)
+            {
+                for (const auto &[ppath, dep] : res.db_dependencies)
+                    ss.insert(dep.toString());
+                break;
+            }
+        }
+        String s;
+        for (auto &v : ss)
+            s += v + "\n";
+        bool short_config = true;
+        auto c = getConfig(short_config);
+        //if (!s.empty())
+            //addConfigElement(c, s);
+        c = hashConfig(c, short_config);
+        return c;
+    };
+
     if (SW_IS_LOCAL_BINARY_DIR)
     {
         BinaryDir = getTargetDirShort();
@@ -544,15 +545,12 @@ void Target::init()
     else if (auto d = pkg.getOverriddenDir(); d)
     {
         BinaryDir = d.value() / ".sw";
-        //#ifdef _WIN32
-        BinaryDir /= path(getConfig(true)) / sha256_short(pkg.toString());
-        /*#else
-                BinaryDir /= path(getConfig()) / "targets" / pkg.ppath.toString();
-        #endif*/
+        BinaryDir /= sha256_short(pkg.toString()); // pkg first
+        BinaryDir /= path(getConfig(true));
     }
-    else
+    else /* package from network */
     {
-        BinaryDir = pkg.getDirObj() / "build" / getConfig(true);
+        BinaryDir = getObjectDir(pkg, get_config_with_deps()); // remove 'build' part?
     }
     if (DryRun)
     {
@@ -568,6 +566,10 @@ void Target::init()
     // we must create it because users probably want to write to it immediately
     fs::create_directories(BinaryDir);
     fs::create_directories(BinaryPrivateDir);
+
+    // make sure we always use absolute paths
+    BinaryDir = fs::absolute(BinaryDir);
+    BinaryPrivateDir = fs::absolute(BinaryPrivateDir);
 }
 
 DependencyPtr NativeTarget::getDependency() const
@@ -1322,9 +1324,9 @@ Commands NativeExecutedTarget::getCommands() const
         auto sd = normalize_path(SourceDir);
         auto bd = normalize_path(BinaryDir);
         auto bdp = normalize_path(BinaryPrivateDir);
-        for (auto &f : gatherSourceFiles())
+
+        auto prepare_command = [this, &cmds, &sd, &bd, &bdp](auto f, auto c)
         {
-            auto c = f->getCommand(*this);
             c->args.insert(c->args.end(), f->args.begin(), f->args.end());
 
             // set fancy name
@@ -1357,6 +1359,18 @@ Commands NativeExecutedTarget::getCommands() const
             if (!do_not_mangle_object_names && !f->fancy_name.empty())
                 c->name = f->fancy_name;
             cmds.insert(c);
+        };
+
+        for (auto &f : gatherSourceFiles())
+        {
+            auto c = f->getCommand(*this);
+            prepare_command(f, c);
+        }
+
+        for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
+        {
+            auto c = f->getCommand(*this);
+            prepare_command(f, c);
         }
     }
 
@@ -1930,10 +1944,6 @@ bool NativeExecutedTarget::prepare()
 
         findSources();
 
-        // make sure we always use absolute paths
-        BinaryDir = fs::absolute(BinaryDir);
-        BinaryPrivateDir = fs::absolute(BinaryPrivateDir);
-
         // add pvt binary dir
         IncludeDirectories.insert(BinaryPrivateDir);
 
@@ -2446,6 +2456,93 @@ bool NativeExecutedTarget::prepare()
             }
         }
 
+        //
+        if (::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty())
+        {
+            struct RcContext : primitives::Context
+            {
+                using Base = primitives::Context;
+
+                RcContext(Version file_ver, Version product_ver)
+                {
+                    if (file_ver.isBranch())
+                        file_ver = Version();
+                    if (product_ver.isBranch())
+                        product_ver = Version();
+
+                    file_ver = Version(file_ver.getMajor(), file_ver.getMinor(), file_ver.getPatch(), file_ver.getTweak());
+                    product_ver = Version(product_ver.getMajor(), product_ver.getMinor(), product_ver.getPatch(), product_ver.getTweak());
+
+                    addLine("1 VERSIONINFO");
+                    addLine("  FILEVERSION " + file_ver.toString(","s));
+                    addLine("  PRODUCTVERSION " + product_ver.toString(","s));
+                }
+
+                void beginBlock(const String &name)
+                {
+                    addLine("BLOCK \"" + name + "\"");
+                    begin();
+                }
+
+                void endBlock()
+                {
+                    end();
+                }
+
+                void addValue(const String &name, const Strings &vals)
+                {
+                    addLine("VALUE \"" + name + "\", ");
+                    for (auto &v : vals)
+                        addText(v + ", ");
+                    trimEnd(2);
+                }
+
+                void addValueQuoted(const String &name, const Strings &vals)
+                {
+                    Strings vals2;
+                    for (auto &v : vals)
+                        vals2.push_back("\"" + v + "\"");
+                    addValue(name, vals2);
+                }
+
+                void begin()
+                {
+                    increaseIndent("BEGIN");
+                }
+
+                void end()
+                {
+                    decreaseIndent("END");
+                }
+            };
+
+            RcContext ctx(pkg.version, pkg.version);
+            ctx.begin();
+
+            ctx.beginBlock("StringFileInfo");
+            ctx.beginBlock("040904b0");
+            //VALUE "CompanyName", "TODO: <Company name>"
+            ctx.addValueQuoted("FileDescription", { pkg.ppath.back() + " - " + getConfig() });
+            ctx.addValueQuoted("FileVersion", { pkg.version.toString() });
+            //VALUE "InternalName", "@PACKAGE@"
+            ctx.addValueQuoted("LegalCopyright", { "Powered by Software Network" });
+            ctx.addValueQuoted("OriginalFilename", { pkg.toString() });
+            ctx.addValueQuoted("ProductName", { pkg.ppath.toString() });
+            ctx.addValueQuoted("ProductVersion", { pkg.version.toString() });
+            ctx.endBlock();
+            ctx.endBlock();
+
+            ctx.beginBlock("VarFileInfo");
+            ctx.addValue("Translation", {"0x409","1200"});
+            ctx.endBlock();
+
+            ctx.end();
+
+            path p = BinaryPrivateDir / "sw.rc";
+            write_file_if_different(p, ctx.getText());
+            operator+=(p);
+        }
+
         // setup pch deps
         {
             // gather pch
@@ -2635,17 +2732,14 @@ bool NativeExecutedTarget::prepare()
             CircularLinker->getCommand(*this);
         }
 
+        if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
+        {
+            for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
+                obj.insert(f->output.file);
+        }
+
         getSelectedTool()->setObjectFiles(obj);
         getSelectedTool()->setInputLibraryDependencies(O1);
-
-        // add rc (.res) files
-        /*if (auto L = getSelectedTool()->as<VisualStudioLinker>(); L)
-        {
-            for (auto &[p, f] : *this)
-            {
-                p.extension() == ".res";
-            }
-        }*/
 
         getSolution()->call_event(*this, CallbackType::EndPrepare);
     }
