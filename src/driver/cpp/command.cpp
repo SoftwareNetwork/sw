@@ -63,9 +63,9 @@ path Command::getProgram() const
 {
     auto d = dependency.lock();
     path p;
-    if (base)
+    /*if (base)
         p = Base::getProgram();
-    else if (d)
+    else */if (d)
     {
         auto t = d->target.lock();
         if (!t)
@@ -396,29 +396,13 @@ void ExecuteBuiltinCommand::push_back(const Files &files)
         args.push_back(o.u8string());
 }
 
-void ExecuteBuiltinCommand::execute()
+void ExecuteBuiltinCommand::execute1(std::error_code *ec)
 {
-    auto call = [this]()
-    {
-        return jumppad_call(args[1], args[2], Strings{ args.begin() + 3, args.end() });
-    };
-
-    if (always)
-    {
-        call();
-        return;
-    }
-
-    if (!isOutdated())
-        return;
-
-    printLog();
-
-    call();
+    jumppad_call(args[1], args[2], Strings{ args.begin() + 3, args.end() });
 
     // force outputs update
-    for (auto &o : outputs)
-        File(o, *fs).getFileRecord().load();
+    //for (auto &o : outputs)
+        //File(o, *fs).getFileRecord().load();
 }
 
 }

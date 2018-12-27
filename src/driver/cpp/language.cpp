@@ -5,11 +5,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <language.h>
+#include <language_storage.h>
 
 #include <dependency.h>
 #include <source_file.h>
 #include <solution.h>
-#include <target.h>
 
 #include <primitives/hash.h>
 
@@ -130,13 +130,10 @@ LanguagePtr LanguageStorage::getLanguage(const PackagePath &pp) const
 
 LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg) const
 {
-    auto v = user_defined_languages.find(pkg.ppath);
-    if (v == user_defined_languages.end() || v->second.empty())
+    auto v = user_defined_languages.find(pkg);
+    if (v == user_defined_languages.end(pkg))
         return {};
-    auto v2 = v->second.find(pkg.version);
-    if (v2 == v->second.end())
-        return {};
-    return v2->second;
+    return v->second;
 }
 
 std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) const
@@ -149,13 +146,10 @@ std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) cons
 
 std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg) const
 {
-    auto v = registered_programs.find(pkg.ppath);
-    if (v == registered_programs.end() || v->second.empty())
+    auto v = registered_programs.find(pkg);
+    if (v == registered_programs.end(pkg))
         return {};
-    auto v2 = v->second.find(pkg.version);
-    if (v2 == v->second.end())
-        return {};
-    return v2->second;
+    return v->second;
 }
 
 Language *LanguageStorage::findLanguageByExtension(const String &ext) const
@@ -182,19 +176,41 @@ optional<PackageId> LanguageStorage::findPackageIdByExtension(const String &ext)
     return e->second;
 }
 
-std::shared_ptr<Language> NativeLanguage::clone() const
+path NativeLanguage2::getOutputFile(const path &input, const Target &t) const
 {
-    return std::make_shared<NativeLanguage>(*this);
+    auto o = t.BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(t, input) + compiler->getObjectExtension());
+    o = fs::absolute(o);
+    return o;
 }
 
-std::shared_ptr<SourceFile> NativeLanguage::createSourceFile(const path &input, const Target *t) const
+std::shared_ptr<Language> CSharpLanguage::clone() const
 {
-    auto nt = (NativeExecutedTarget*)t;
-    //compiler->merge(*nt);
+    return std::make_shared<CSharpLanguage>(*this);
+}
 
-    auto o = t->BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(*t, input) + compiler->getObjectExtension());
-    o = fs::absolute(o);
-    return std::make_shared<NativeSourceFile>(input, *t->getSolution()->fs, o, (NativeCompiler*)compiler.get());
+std::shared_ptr<SourceFile> CSharpLanguage::createSourceFile(const Target &t, const path &input) const
+{
+    return std::make_shared<CSharpSourceFile>(t, input);
+}
+
+std::shared_ptr<Language> RustLanguage::clone() const
+{
+    return std::make_shared<RustLanguage>(*this);
+}
+
+std::shared_ptr<SourceFile> RustLanguage::createSourceFile(const Target &t, const path &input) const
+{
+    return std::make_shared<RustSourceFile>(t, input);
+}
+
+std::shared_ptr<Language> GoLanguage::clone() const
+{
+    return std::make_shared<GoLanguage>(*this);
+}
+
+std::shared_ptr<SourceFile> GoLanguage::createSourceFile(const Target &t, const path &input) const
+{
+    return std::make_shared<GoSourceFile>(t, input);
 }
 
 }

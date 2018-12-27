@@ -312,13 +312,16 @@ struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
     ExecuteBuiltinCommand(const String &cmd_name, void *f = nullptr);
     virtual ~ExecuteBuiltinCommand() = default;
 
-    void execute() override;
     //path getProgram() const override { return "ExecuteBuiltinCommand"; };
 
     //template <class T>
     //auto push_back(T &&v) { args.push_back(v); }
 
     void push_back(const Files &files);
+
+private:
+    void execute1(std::error_code *ec = nullptr) override;
+    void prepare() override {}
 };
 
 #ifdef _MSC_VER
@@ -348,7 +351,7 @@ struct GNUCommand : Command
     void postProcess(bool ok) override;
 };
 
-struct CommandBuilder
+struct SW_DRIVER_CPP_API CommandBuilder
 {
     std::shared_ptr<Command> c;
     std::vector<NativeExecutedTarget*> targets;
@@ -363,6 +366,8 @@ struct CommandBuilder
     {
         c->fs = &fs;
     }
+    CommandBuilder(const CommandBuilder &) = default;
+    CommandBuilder &operator=(const CommandBuilder &) = default;
 };
 
 #define DECLARE_STREAM_OP(t) \
@@ -393,7 +398,7 @@ CommandBuilder operator<<(std::shared_ptr<Command> &c, const T &t)
 template <class T>
 CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
 {
-    if constexpr (std::is_same_v<T, path>)
+    if constexpr (std::is_same_v<T, path> || std::is_convertible_v<T, String>)
     {
         cb.c->setProgram(*t.t);
         cb.c->program_set = true;

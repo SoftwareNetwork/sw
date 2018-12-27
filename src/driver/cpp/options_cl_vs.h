@@ -113,6 +113,22 @@ struct Optimizations
     bool FastCode = false;
 };
 
+namespace cs
+{
+
+enum class Target
+{
+    Console,
+    Windows,
+    Native,
+    Library,
+    Module,
+    AppContainer,
+    Winmdobj,
+};
+
+}
+
 }
 
 DECLARE_OPTION_SPECIALIZATION(vs::ExceptionHandlingVector);
@@ -125,6 +141,8 @@ DECLARE_OPTION_SPECIALIZATION(vs::ForceType);
 DECLARE_OPTION_SPECIALIZATION(vs::Warnings);
 DECLARE_OPTION_SPECIALIZATION(vs::Optimizations);
 DECLARE_OPTION_SPECIALIZATION(CPPLanguageStandard);
+
+DECLARE_OPTION_SPECIALIZATION(vs::cs::Target);
 
 Strings getCommandLineImplCPPLanguageStandardVS(const CommandLineOption<CPPLanguageStandard> &co, ::sw::builder::Command *c);
 
@@ -395,7 +413,8 @@ struct SW_DRIVER_CPP_API VisualStudioLinkerOptions
 
     COMMAND_LINE_OPTION(Subsystem, vs::Subsystem)
     {
-        cl::CommandFlag{ "SUBSYSTEM:" }
+        cl::CommandFlag{ "SUBSYSTEM:" },
+        vs::Subsystem::Console,
     };
 };
 DECLARE_OPTION_SPECIALIZATION(VisualStudioLinkerOptions);
@@ -404,5 +423,93 @@ DECLARE_OPTION_SPECIALIZATION(VisualStudioLinkerOptions);
 struct SW_DRIVER_CPP_API VisualStudioLibrarianOptions
 {
 };
+
+struct SW_DRIVER_CPP_API VisualStudioCSharpCompilerOptions
+{
+    COMMAND_LINE_OPTION(Target, vs::cs::Target)
+    {
+        cl::CommandFlag{ "target:" },
+            vs::cs::Target::Console,
+    };
+
+    COMMAND_LINE_OPTION(InputFiles, Files)
+    {
+        cl::InputDependency{},
+    };
+
+    COMMAND_LINE_OPTION(Output, path)
+    {
+        cl::CommandFlag{ "out:" },
+            cl::OutputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(VisualStudioCSharpCompilerOptions);
+
+namespace rust
+{
+
+enum class CrateType
+{
+    bin,
+    lib,
+    rlib,
+    dylib,
+    cdylib,
+    staticlib,
+    proc_macro
+};
+
+}
+
+DECLARE_OPTION_SPECIALIZATION(rust::CrateType);
+
+struct SW_DRIVER_CPP_API RustCompilerOptions
+{
+    COMMAND_LINE_OPTION(CrateType, rust::CrateType)
+    {
+        cl::CommandFlag{ "-crate-type" },
+            rust::CrateType::bin,
+            cl::SeparatePrefix{},
+    };
+
+    COMMAND_LINE_OPTION(InputFile, path)
+    {
+        cl::InputDependency{},
+    };
+
+    COMMAND_LINE_OPTION(Output, path)
+    {
+        cl::CommandFlag{ "o" },
+            cl::OutputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(RustCompilerOptions);
+
+struct SW_DRIVER_CPP_API GoCompilerOptions
+{
+    COMMAND_LINE_OPTION(Command, String)
+    {
+        "build"s,
+    };
+
+    COMMAND_LINE_OPTION(Output, path)
+    {
+        cl::CommandFlag{ "o" },
+            cl::OutputDependency{},
+            cl::SeparatePrefix{},
+    };
+
+    COMMAND_LINE_OPTION(BuildMode, String)
+    {
+        cl::CommandFlag{ "buildmode=" },
+            "default"s
+    };
+
+    COMMAND_LINE_OPTION(InputFiles, Files)
+    {
+        cl::InputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(GoCompilerOptions);
 
 }

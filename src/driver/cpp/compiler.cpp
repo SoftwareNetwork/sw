@@ -6,6 +6,7 @@
 
 #include <compiler.h>
 
+#include <language.h>
 #include <solution.h>
 #include <compiler_helpers.h>
 
@@ -22,10 +23,6 @@
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler");
-
-#define SW_MAKE_COMPILER_COMMAND(t)             \
-    auto c = std::make_shared<t>(); \
-    c->fs = fs
 
 #define SW_MAKE_COMPILER_COMMAND_WITH_FILE(t) \
     SW_MAKE_COMPILER_COMMAND(driver::cpp::t)
@@ -67,6 +64,37 @@ const StringSet header_file_extensions{
 
 namespace sw
 {
+
+void detectNativeCompilers(struct Solution &s);
+void detectCSharpCompilers(struct Solution &s);
+void detectRustCompilers(struct Solution &s);
+void detectGoCompilers(struct Solution &s);
+
+static Version gatherVersion(const path &program, const String &arg)
+{
+    Version V;
+    primitives::Command c;
+    c.program = program;
+    c.args = { arg };
+    error_code ec;
+    c.execute(ec);
+    static std::regex r("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
+    std::smatch m;
+    if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
+    {
+        if (m[5].matched)
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
+        else
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
+    }
+    return V;
+}
+
+static void add_args(driver::cpp::Command &c, const Strings &args)
+{
+    for (auto &a : args)
+        c.args.push_back(a);
+}
 
 std::string getVsToolset(VisualStudioVersion v)
 {
@@ -202,6 +230,82 @@ path getWindowsKit10Dir(Solution &s, const path &d)
     if (last_dir.empty())
         throw SW_RUNTIME_EXCEPTION("No Windows Kits 10.0 available");
     return last_dir;
+}
+
+void detectCompilers(struct Solution &s)
+{
+    detectNativeCompilers(s);
+    detectCSharpCompilers(s);
+    detectRustCompilers(s);
+    detectGoCompilers(s);
+}
+
+void detectGoCompilers(struct Solution &s)
+{
+#if defined(_WIN32)
+    auto compiler = path("go");
+    compiler = primitives::resolve_executable(compiler);
+    if (compiler.empty())
+        return;
+
+    auto L = std::make_shared<GoLanguage>();
+    L->CompiledExtensions = { ".go" };
+
+    auto C = std::make_shared<GoCompiler>();
+    C->file = compiler;
+    L->compiler = C;
+    s.registerProgramAndLanguage("org.google.golang.go", C, L);
+#else
+#endif
+}
+
+void detectRustCompilers(struct Solution &s)
+{
+#if defined(_WIN32)
+    auto compiler = get_home_directory() / ".cargo" / "bin" / "rustc";
+    compiler = primitives::resolve_executable(compiler);
+    if (compiler.empty())
+        return;
+
+    auto L = std::make_shared<RustLanguage>();
+    L->CompiledExtensions = { ".rs" };
+
+    auto C = std::make_shared<RustCompiler>();
+    C->file = compiler;
+    L->compiler = C;
+    s.registerProgramAndLanguage("org.rust.rustc", C, L);
+#else
+#endif
+}
+
+void detectCSharpCompilers(struct Solution &s)
+{
+    path root;
+    auto VSVersion = VisualStudioVersion::Unspecified;
+
+#if defined(_WIN32)
+    cmVSSetupAPIHelper h;
+    if (h.IsVS2017Installed())
+    {
+        root = h.chosenInstanceInfo.VSInstallLocation;
+        root = root / "MSBuild" / "15.0" / "Bin" / "Roslyn";
+        VSVersion = VisualStudioVersion::VS15;
+    }
+
+    // we do not look for older compilers like vc7.1 and vc98
+    if (VSVersion == VisualStudioVersion::Unspecified)
+        return;
+
+    auto compiler = root / "csc";
+
+    auto L = std::make_shared<CSharpLanguage>();
+    L->CompiledExtensions = { ".cs" };
+
+    auto C = std::make_shared<VisualStudioCSharpCompiler>();
+    C->file = compiler;
+    L->compiler = C;
+    s.registerProgramAndLanguage("com.Microsoft.VisualStudio.Roslyn.csc", C, L);
+#endif
 }
 
 void detectNativeCompilers(struct Solution &s)
@@ -701,83 +805,71 @@ void detectNativeCompilers(struct Solution &s)
 #endif
 }
 
-ToolBase::~ToolBase()
+std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand() const
 {
-    //delete cmd;
+    if (!cmd)
+        throw SW_RUNTIME_EXCEPTION("Command is not prepared");
+    return cmd;
 }
 
-Version VisualStudio::gatherVersion(const path &program) const
+std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const TargetBase &t)
 {
-    Version V;
-    primitives::Command c;
-    c.program = program;
-    c.args = { "--version" };
-    std::error_code ec;
-    c.execute(ec);
-    // ms returns exit code = 2 on --version
-    if (ec)
+    prepareCommand(t);
+    return getCommand();
+}
+
+Strings NativeCompiler::getClangCppStdOption(CPPLanguageStandard std) const
+{
+    String s = "-std=c++";
+    switch (std)
     {
-        static std::regex r("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
-        std::smatch m;
-        if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
-        {
-            if (m[5].matched)
-                V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
-            else
-                V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
-        }
+    case CPPLanguageStandard::CPP11:
+        s += "11";
+        break;
+    case CPPLanguageStandard::CPP14:
+        s += "14";
+        break;
+    case CPPLanguageStandard::CPP17:
+        s += getVersion() > 5 ? "17" : "1z";
+        break;
+    case CPPLanguageStandard::CPPLatest:
+        s += "2a";
+        break;
+    default:
+        return {};
     }
-    return V;
+    return { s };
 }
 
-std::shared_ptr<builder::Command> VisualStudioASMCompiler::getCommand() const
+Strings NativeCompiler::getGNUCppStdOption(CPPLanguageStandard std) const
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND_WITH_FILE(VSCommand);
-
-    if (file.filename() == "ml64.exe")
-        ((VisualStudioASMCompiler*)this)->SafeSEH = false;
-
-    if (InputFile)
+    String s = "-std=c++";
+    switch (std)
     {
-        c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().u8string();
-        //c->file = InputFile;
+    case CPPLanguageStandard::CPP11:
+        s += "11";
+        break;
+    case CPPLanguageStandard::CPP14:
+        s += "14";
+        break;
+    case CPPLanguageStandard::CPP17:
+        s += getVersion() > 6 ? "17" : "1z";
+        break;
+    case CPPLanguageStandard::CPPLatest:
+        s += "2a";
+        break;
+    default:
+        return {};
     }
-    if (ObjectFile)
-        c->working_directory = ObjectFile().parent_path();
-
-    //if (c->file.empty())
-        //return nullptr;
-
-    //c->out.capture = true;
-    c->base = clone();
-
-    getCommandLineOptions<VisualStudioAssemblerOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
-
-    return cmd = c;
+    return { s };
 }
 
-std::shared_ptr<Program> VisualStudioASMCompiler::clone() const
+Version MsProgram::gatherVersion(const path &program) const
 {
-    return std::make_shared<VisualStudioASMCompiler>(*this);
+    return ::sw::gatherVersion(program, "/?");
 }
 
-void VisualStudioASMCompiler::setOutputFile(const path &output_file)
-{
-    ObjectFile = output_file;
-}
-
-void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output_file)
-{
-    InputFile = input_file.u8string();
-    setOutputFile(output_file);
-}
-
-std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
+std::shared_ptr<builder::Command> VisualStudioCompiler::prepareCommand(const TargetBase &t)
 {
     if (cmd)
         return cmd;
@@ -809,7 +901,7 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::getCommand() const
         //return nullptr;
 
     //c->out.capture = true;
-    c->base = clone();
+    //c->base = clone();
 
     getCommandLineOptions<VisualStudioCompilerOptions>(c.get(), *this);
     iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
@@ -839,25 +931,59 @@ void VisualStudioCompiler::setSourceFile(const path &input_file, path &output_fi
     VisualStudioCompiler::setOutputFile(output_file);
 }
 
-Version Clang::gatherVersion(const path &program) const
+std::shared_ptr<builder::Command> VisualStudioASMCompiler::prepareCommand(const TargetBase &t)
 {
-    Version v;
-    primitives::Command c;
-    c.program = program;
-    c.args = {"-v"};
-    std::error_code ec;
-    c.execute(ec);
-    if (!ec)
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND_WITH_FILE(VSCommand);
+
+    if (file.filename() == "ml64.exe")
+        ((VisualStudioASMCompiler*)this)->SafeSEH = false;
+
+    if (InputFile)
     {
-        static std::regex r("^clang version (\\d+).(\\d+).(\\d+)");
-        std::smatch m;
-        if (std::regex_search(c.err.text, m, r))
-            v = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
+        c->name = normalize_path(InputFile());
+        c->name_short = InputFile().filename().u8string();
+        //c->file = InputFile;
     }
-    return v;
+    if (ObjectFile)
+        c->working_directory = ObjectFile().parent_path();
+
+    //if (c->file.empty())
+        //return nullptr;
+
+    //c->out.capture = true;
+    //c->base = clone();
+
+    getCommandLineOptions<VisualStudioAssemblerOptions>(c.get(), *this);
+    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
+
+    return cmd = c;
 }
 
-std::shared_ptr<builder::Command> ClangCompiler::getCommand() const
+std::shared_ptr<Program> VisualStudioASMCompiler::clone() const
+{
+    return std::make_shared<VisualStudioASMCompiler>(*this);
+}
+
+void VisualStudioASMCompiler::setOutputFile(const path &output_file)
+{
+    ObjectFile = output_file;
+}
+
+void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output_file)
+{
+    InputFile = input_file.u8string();
+    setOutputFile(output_file);
+}
+
+Version Clang::gatherVersion(const path &program) const
+{
+    return ::sw::gatherVersion(program, "-v");
+}
+
+std::shared_ptr<builder::Command> ClangCompiler::prepareCommand(const TargetBase &t)
 {
     if (cmd)
         return cmd;
@@ -880,7 +1006,10 @@ std::shared_ptr<builder::Command> ClangCompiler::getCommand() const
         //return nullptr;
 
     //c->out.capture = true;
-    c->base = clone();
+    //c->base = clone();
+
+    add_args(*c, getClangCppStdOption(CPPStandard()));
+    CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(c.get(), *this);
     iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
@@ -904,8 +1033,7 @@ void ClangCompiler::setSourceFile(const path &input_file, path &output_file)
     setOutputFile(output_file);
 }
 
-
-std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
+std::shared_ptr<builder::Command> ClangClCompiler::prepareCommand(const TargetBase &t)
 {
     if (cmd)
         return cmd;
@@ -937,7 +1065,10 @@ std::shared_ptr<builder::Command> ClangClCompiler::getCommand() const
         //return nullptr;
 
     //c->out.capture = true;
-    c->base = clone();
+    //c->base = clone();
+
+    add_args(*c, getClangCppStdOption(CPPStandard()));
+    CPPStandard.skip = true;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(c.get(), *this);
     getCommandLineOptions<ClangClOptions>(c.get(), *this, "-Xclang");
@@ -964,23 +1095,10 @@ void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
 
 Version GNU::gatherVersion(const path &program) const
 {
-    Version v;
-    primitives::Command c;
-    c.program = program;
-    c.args = { "-v" };
-    std::error_code ec;
-    c.execute(ec);
-    if (!ec)
-    {
-        static std::regex r("(\\d+).(\\d+).(\\d+)");
-        std::smatch m;
-        if (std::regex_search(c.err.text, m, r))
-            v = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
-    }
-    return v;
+    return ::sw::gatherVersion(program, "-v");
 }
 
-std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
+std::shared_ptr<builder::Command> GNUASMCompiler::prepareCommand(const TargetBase &t)
 {
     if (cmd)
         return cmd;
@@ -1000,7 +1118,7 @@ std::shared_ptr<builder::Command> GNUASMCompiler::getCommand() const
         //return nullptr;
 
     //c->out.capture = true;
-    c->base = clone();
+    //c->base = clone();
 
     getCommandLineOptions<GNUAssemblerOptions>(c.get(), *this);
     iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
@@ -1029,7 +1147,7 @@ std::shared_ptr<Program> ClangASMCompiler::clone() const
     return std::make_shared<ClangASMCompiler>(*this);
 }
 
-std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
+std::shared_ptr<builder::Command> GNUCompiler::prepareCommand(const TargetBase &t)
 {
     if (cmd)
         return cmd;
@@ -1052,7 +1170,10 @@ std::shared_ptr<builder::Command> GNUCompiler::getCommand() const
         //return nullptr;
 
     //c->out.capture = true;
-    c->base = clone();
+    //c->base = clone();
+
+    add_args(*c, getGNUCppStdOption(CPPStandard()));
+    CPPStandard.skip = true;
 
     getCommandLineOptions<GNUOptions>(c.get(), *this);
     iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
@@ -1140,7 +1261,7 @@ path VisualStudioLibraryTool::getImportLibrary() const
     return p.parent_path() / (p.filename().stem() += ".lib");
 }
 
-std::shared_ptr<builder::Command> VisualStudioLibraryTool::getCommand() const
+std::shared_ptr<builder::Command> VisualStudioLibraryTool::prepareCommand(const TargetBase &t)
 {
     if (cmd)
         return cmd;
@@ -1161,7 +1282,7 @@ std::shared_ptr<builder::Command> VisualStudioLibraryTool::getCommand() const
     SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
 
     //c->out.capture = true;
-    c->base = clone();
+    //c->base = clone();
     if (Output)
     {
         c->working_directory = Output().parent_path();
@@ -1282,7 +1403,7 @@ void GNULinker::getAdditionalOptions(driver::cpp::Command *c) const
     getCommandLineOptions<GNULinkerOptions>(c, *this);
 }
 
-std::shared_ptr<builder::Command> GNULinker::getCommand() const
+std::shared_ptr<builder::Command> GNULinker::prepareCommand(const TargetBase &t)
 {
     if (cmd)
         return cmd;
@@ -1303,7 +1424,7 @@ std::shared_ptr<builder::Command> GNULinker::getCommand() const
     SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
 
     //c->out.capture = true;
-    c->base = clone();
+    //c->base = clone();
     if (Output)
     {
         c->working_directory = Output().parent_path();
@@ -1370,7 +1491,7 @@ void GNULibrarian::getAdditionalOptions(driver::cpp::Command *c) const
     getCommandLineOptions<GNULibrarianOptions>(c, *this);
 }
 
-std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
+std::shared_ptr<builder::Command> GNULibrarian::prepareCommand(const TargetBase &t)
 {
     if (cmd)
         return cmd;
@@ -1391,7 +1512,7 @@ std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
     SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
 
     //c->out.capture = true;
-    c->base = clone();
+    //c->base = clone();
     if (Output)
     {
         c->working_directory = Output().parent_path();
@@ -1412,6 +1533,100 @@ std::shared_ptr<builder::Command> GNULibrarian::getCommand() const
     //getAdditionalOptions(c.get());
 
     return cmd = c;
+}
+
+std::shared_ptr<Program> VisualStudioCSharpCompiler::clone() const
+{
+    return std::make_shared<VisualStudioCSharpCompiler>(*this);
+}
+
+std::shared_ptr<builder::Command> VisualStudioCSharpCompiler::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    getCommandLineOptions<VisualStudioCSharpCompilerOptions>(c.get(), *this);
+
+    return cmd = c;
+}
+
+void VisualStudioCSharpCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += ".exe";
+}
+
+void VisualStudioCSharpCompiler::addSourceFile(const path &input_file)
+{
+    InputFiles().insert(input_file);
+}
+
+std::shared_ptr<Program> RustCompiler::clone() const
+{
+    return std::make_shared<RustCompiler>(*this);
+}
+
+std::shared_ptr<builder::Command> RustCompiler::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    getCommandLineOptions<RustCompilerOptions>(c.get(), *this);
+
+    return cmd = c;
+}
+
+void RustCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += ".exe";
+}
+
+void RustCompiler::setSourceFile(const path &input_file)
+{
+    InputFile() = input_file;
+}
+
+Version RustCompiler::gatherVersion() const
+{
+    return ::sw::gatherVersion(file, "--version");
+}
+
+std::shared_ptr<Program> GoCompiler::clone() const
+{
+    return std::make_shared<GoCompiler>(*this);
+}
+
+std::shared_ptr<builder::Command> GoCompiler::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    getCommandLineOptions<GoCompilerOptions>(c.get(), *this);
+
+    return cmd = c;
+}
+
+void GoCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += ".exe";
+}
+
+void GoCompiler::setSourceFile(const path &input_file)
+{
+    InputFiles().insert(input_file);
+}
+
+Version GoCompiler::gatherVersion() const
+{
+    return ::sw::gatherVersion(file, "version");
 }
 
 }

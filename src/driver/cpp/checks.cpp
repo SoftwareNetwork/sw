@@ -211,6 +211,16 @@ void Check::updateDependencies()
         dependencies.insert(checker->add<IncludeExists>(d));
 }
 
+bool Check::lessDuringExecution(const Check &rhs) const
+{
+    // improve sorting! it's too stupid
+    // simple "0 0 0 0 1 2 3 6 7 8 9 11" is not enough
+
+    if (dependencies.size() != rhs.dependencies.size())
+        return dependencies.size() < rhs.dependencies.size();
+    return dependendent_commands.size() > dependendent_commands.size();
+}
+
 FunctionExists::FunctionExists(const String &f, const String &def)
 {
     if (f.empty())
@@ -340,7 +350,7 @@ int main()
     c->setSourceFile(f, o += ".obj");
 
     std::error_code ec;
-    auto cmd = c->getCommand();
+    auto cmd = c->getCommand(*checker->solution);
     cmd->execute(ec);
     if (cmd && cmd->exit_code)
         Value = cmd->exit_code.value() == 0 ? 1 : 0;
@@ -823,7 +833,7 @@ void SourceCompiles::run() const
     c->setSourceFile(f, o += ".obj");
 
     std::error_code ec;
-    auto cmd = c->getCommand();
+    auto cmd = c->getCommand(*checker->solution);
     cmd->execute(ec);
     if (cmd && cmd->exit_code)
         Value = cmd->exit_code.value() == 0 ? 1 : 0;

@@ -35,6 +35,7 @@ void build_self(Solution &s)
     }
 
     s.Settings.Native.LibrariesType = LibraryType::Static;
+    s.Variables["SW_SELF_BUILD"] = 1;
 
     SwapAndRestore sr(s.Local, false);
     build_self_generated(s);

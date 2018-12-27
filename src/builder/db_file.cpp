@@ -24,7 +24,7 @@ void save_from_memory_to_file(const path &fn, sqlite3 *db);
 DECLARE_STATIC_LOGGER(logger, "db_file");
 
 #define FILE_DB_FORMAT_VERSION 1
-#define COMMAND_DB_FORMAT_VERSION 1
+#define COMMAND_DB_FORMAT_VERSION 2
 
 namespace sw
 {
@@ -187,18 +187,22 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
     const auto f = getFilesDbFilename(fs.config);
 
     // first, we load current copy of files
-    ConcurrentHashMap<path, FileRecord> old;
-    load(fs, old);
-
-    // compare and renew our (actually any) copy
-    for (auto i = old.getIterator(); i.isValid(); i.next())
+    // disable for now
+    if (0)
     {
-        auto &f = *i.getValue();
-        if (f.file.empty())
-            continue;
-        auto[ptr, inserted] = files.insert(f.file, f);
-        if (!inserted && f.data && *ptr < f)
-            *ptr = f;
+        ConcurrentHashMap<path, FileRecord> old;
+        load(fs, old);
+
+        // compare and renew our (actually any) copy
+        for (auto i = old.getIterator(); i.isValid(); i.next())
+        {
+            auto &f = *i.getValue();
+            if (f.file.empty())
+                continue;
+            auto[ptr, inserted] = files.insert(f.file, f);
+            if (!inserted && f.data && *ptr < f)
+                *ptr = f;
+        }
     }
 
     primitives::BinaryContext b(10'000'000); // reserve amount

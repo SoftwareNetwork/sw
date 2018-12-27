@@ -68,16 +68,7 @@ void CommandStorage::save()
 
 bool CommandStorage::isOutdated(const sw::builder::Command &c)
 {
-    // TODO: rewrite explain if needed
-
     bool changed = false;
-
-    // always check program and all deps are known
-    changed = File(c.program, *c.fs).isChanged();
-    for (auto &i : c.inputs)
-        changed |= File(i, *c.fs).isChanged();
-    for (auto &i : c.outputs)
-        changed |= File(i, *c.fs).isChanged();
 
     auto k = std::hash<sw::builder::Command>()(c);
     auto r = commands.insert_ptr(k, 0);
@@ -88,6 +79,17 @@ bool CommandStorage::isOutdated(const sw::builder::Command &c)
         EXPLAIN_OUTDATED("command", true, "new command: " + c.print(), c.getName());
         changed = true;
     }
+    else
+    {
+        *((int64_t*)&c.mtime) = *r.first;
+
+        // always check program and all deps are known
+        changed = File(c.program, *c.fs).isChanged(c.mtime);
+        for (auto &i : c.inputs)
+            changed |= File(i, *c.fs).isChanged(c.mtime);
+        for (auto &i : c.outputs)
+            changed |= File(i, *c.fs).isChanged(c.mtime);
+    }
 
     if (c.always)
     {
@@ -95,34 +97,7 @@ bool CommandStorage::isOutdated(const sw::builder::Command &c)
         changed = true;
     }
 
-    //auto h = c.calculateFilesHash();
-    //return *r.first != h;
-
-    // we have this command, now check if it outdated
-    /*if (changed)
-    {
-        EXPLAIN_OUTDATED("command", true, "program changed", c.getName());
-    }*/
-
-    /*if (std::any_of(c.inputs.begin(), c.inputs.end(),
-                    [](auto &d) { return File(d).isChanged(); }) ||
-        std::any_of(c.outputs.begin(), c.outputs.end(),
-                    [](auto &d) { return File(d).isChanged(); }))
-    {
-        EXPLAIN_OUTDATED("command", true, "i/o file is changed", c.getName());
-        changed = true;
-    }*/
-
-    //EXPLAIN_OUTDATED("command", false, "ok", c.getName());
-
-    // comment to turn on command hashes feature
     return changed;
-
-    // we don't see changes, now check command hash
-    if (!r.second)
-        return *r.first != c.calculateFilesHash();
-
-    return false;
 }
 
 namespace builder
@@ -153,18 +128,28 @@ size_t Command::getHash() const
 
     auto h = std::hash<path>()(program);
 
-    // must sort args first
+    // must sort args first, why?
     std::set<String> args_sorted(args.begin(), args.end());
     for (auto &a : args_sorted)
         hash_combine(h, std::hash<String>()(a));
 
     // redirections are also considered as args
+    if (!in.file.empty())
+        hash_combine(h, std::hash<path>()(in.file));
     if (!out.file.empty())
         hash_combine(h, std::hash<path>()(out.file));
     if (!err.file.empty())
-        hash_combine(h, std::hash<path>()(out.file));
+        hash_combine(h, std::hash<path>()(err.file));
 
-    // add wdir, env?
+    hash_combine(h, std::hash<path>()(working_directory));
+
+    // read other env vars? some of them may have influence
+    for (auto &[k, v] : environment)
+    {
+        hash_combine(h, std::hash<String>()(k));
+        hash_combine(h, std::hash<String>()(v));
+    }
+
     return h;
 }
 
@@ -173,24 +158,13 @@ size_t Command::getHashAndSave() const
     return hash = getHash();
 }
 
-size_t Command::calculateFilesHash() const
+void Command::updateCommandTime() const
 {
-    auto h = getHash();
-    hash_combine(h, File(program, *fs).getFileRecord().getHash());
-    for (auto &i : inputs)
-        hash_combine(h, File(i, *fs).getFileRecord().getHash());
-    for (auto &i : outputs)
-        hash_combine(h, File(i, *fs).getFileRecord().getHash());
-    return h;
-}
-
-void Command::updateFilesHash() const
-{
-    auto h = calculateFilesHash();
-    auto k = std::hash<Command>()(*this);
-    auto r = getCommandStorage().commands.insert_ptr(k, h);
+    auto k = getHash();
+    auto c = mtime.time_since_epoch().count();
+    auto r = getCommandStorage().commands.insert_ptr(k, c);
     if (!r.second)
-        *r.first = h;
+        *r.first = c;
 }
 
 void Command::clean() const
@@ -205,13 +179,13 @@ void Command::clean() const
 path Command::getProgram() const
 {
     path p;
-    if (base)
+    /*if (base)
     {
         p = base->file;
         if (p.empty())
             throw SW_RUNTIME_EXCEPTION("Empty program from base program");
     }
-    else if (!program.empty())
+    else */if (!program.empty())
         p = program;
     else
         p = Base::getProgram();
@@ -285,9 +259,9 @@ path Command::redirectStderr(const path &p)
 void Command::addInputOutputDeps()
 {
     if (File(program, *fs).isGenerated())
-    {
         dependencies.insert(File(program, *fs).getFileRecord().getGenerator());
-    }
+    //inputs.insert(program);
+
     for (auto &p : inputs)
     {
         File f(p, *fs);
@@ -317,8 +291,12 @@ void Command::prepare()
         return;
 
     program = getProgram();
-    //if (!program.is_absolute())
-        //program = ::primitives::resolve_executable(program);
+
+    // user entered commands may be in form 'git'
+    // so, it is not empty, not generated and does not exist
+    if (!program.empty() && !File(program, *fs).isGeneratedAtAll() && !program.is_absolute() && !fs::exists(program))
+        program = primitives::resolve_executable(program);
+
     getHashAndSave();
 
     //DEBUG_BREAK_IF_PATH_HAS(program, "google.tensorflow.gen_proto_text_functions-1.10.1.exe");
@@ -335,7 +313,25 @@ void Command::prepare()
     prepared = true;
 }
 
-void Command::execute1(std::error_code *ec)
+void Command::execute()
+{
+    if (!beforeCommand())
+        return;
+    execute1(); // main thing
+    afterCommand();
+}
+
+void Command::execute(std::error_code &ec)
+{
+    if (!beforeCommand())
+        return;
+    execute1(&ec); // main thing
+    if (ec)
+        return;
+    afterCommand();
+}
+
+bool Command::beforeCommand()
 {
     prepare();
 
@@ -343,7 +339,7 @@ void Command::execute1(std::error_code *ec)
     {
         executed_ = true;
         (*current_command)++;
-        return;
+        return false;
     }
 
     if (isExecuted())
@@ -354,7 +350,54 @@ void Command::execute1(std::error_code *ec)
     executed_ = true;
 
     printLog();
+    return true;
+}
 
+void Command::afterCommand()
+{
+    // update things
+
+    // also update program (execute command case)
+    mtime = std::max(mtime, File(program, *fs).getFileRecord().getMaxTime());
+
+    /*for (auto &i : inputs)
+    {
+        auto &fr = f.getFileRecord();
+        fr.refreshed = false;
+        fr.isChanged();
+    }*/
+    for (auto &i : intermediate)
+    {
+        File f(i, *fs);
+        /*if (!fs::exists(i))
+            f.getFileRecord().flags.set(ffNotExists);
+        else*/
+        //f.getFileRecord().load();
+        auto &fr = f.getFileRecord();
+        fr.data->refreshed = false;
+        fr.isChanged();
+        fr.updateLwt();
+        //mtime = std::max(mtime, fr.getMaxTime()); // should we consider these files? (pdb)
+    }
+    for (auto &i : outputs)
+    {
+        File f(i, *fs);
+        /*if (!fs::exists(i))
+            f.getFileRecord().flags.set(ffNotExists);
+        else*/
+        //f.getFileRecord().load();
+        auto &fr = f.getFileRecord();
+        fr.data->refreshed = false;
+        fr.isChanged();
+        fr.updateLwt();
+        mtime = std::max(mtime, fr.getMaxTime());
+    }
+
+    updateCommandTime();
+}
+
+void Command::execute1(std::error_code *ec)
+{
     if (remove_outputs_before_execution)
     {
         // Some programs won't update their binaries even in case of updated sources/deps.
@@ -458,23 +501,40 @@ void Command::execute1(std::error_code *ec)
         s += "command is copied to " + p.u8string() + "\n";
 
 #ifdef _WIN32
-        t += "@echo off\n";
+        t += "::";
+#else
+        t += "#";
+#endif
+        t += " command: " + name + "\n\n";
+
+        if (!name_short.empty())
+        {
+#ifdef _WIN32
+            t += "::";
+#else
+            t += "#";
+#endif
+            t += " short name: " + name_short + "\n\n";
+    }
+
+#ifdef _WIN32
+        t += "@echo off\n\n";
         t += "setlocal";
 #else
         t += "#!/bin/sh";
 #endif
-        t += "\n";
+        t += "\n\n";
 
         for (auto &[k, v] : environment)
         {
 #ifdef _WIN32
             t += "set";
 #endif
-            t += " " + k + "=" + v + "\n";
+            t += " " + k + "=" + v + "\n\n";
         }
 
         if (!working_directory.empty())
-            t += "cd " + working_directory.u8string() + "\n";
+            t += "cd " + working_directory.u8string() + "\n\n";
 
         t += "\"" + program.u8string() + "\" ";
         if (use_rsp)
@@ -565,40 +625,6 @@ void Command::execute1(std::error_code *ec)
         }
 
         postProcess(); // process deps
-
-        // force outputs update
-        /*for (auto &i : inputs)
-        {
-            auto &fr = f.getFileRecord();
-            fr.refreshed = false;
-            fr.isChanged();
-        }*/
-        for (auto &i : intermediate)
-        {
-            File f(i, *fs);
-            /*if (!fs::exists(i))
-                f.getFileRecord().flags.set(ffNotExists);
-            else*/
-            //f.getFileRecord().load();
-            auto &fr = f.getFileRecord();
-            fr.data->refreshed = false;
-            fr.isChanged();
-            fr.updateLwt();
-        }
-        for (auto &i : outputs)
-        {
-            File f(i, *fs);
-            /*if (!fs::exists(i))
-                f.getFileRecord().flags.set(ffNotExists);
-            else*/
-            //f.getFileRecord().load();
-            auto &fr = f.getFileRecord();
-            fr.data->refreshed = false;
-            fr.isChanged();
-            fr.updateLwt();
-        }
-
-        updateFilesHash();
     }
     catch (std::exception &e)
     {
@@ -676,7 +702,9 @@ void Command::setProgram(const path &p)
 
 void Command::setProgram(std::shared_ptr<Program> p)
 {
-    base = p;
+    //base = p;
+    if (p)
+        setProgram(p->file);
 }
 
 Files Command::getGeneratedDirs() const
@@ -692,12 +720,39 @@ Files Command::getGeneratedDirs() const
 void Command::addPathDirectory(const path &p)
 {
 #ifdef _WIN32
-    String s = getenv("Path");
-    environment["Path"] = s + ";" + normalize_path_windows(p);
+    static const auto env = "Path";
+    static const auto delim = ";";
+    auto norm = [](const auto &p) { return normalize_path_windows(p); };
 #else
-    String s = getenv("PATH");
-    environment["PATH"] = s + ":" + p.u8string();
+    static const auto env = "PATH";
+    static const auto delim = ":";
+    auto norm = [](const auto &p) { return p.u8string() };
 #endif
+
+    if (environment[env].empty())
+    {
+        auto e = getenv(env);
+        if (!e)
+            throw SW_RUNTIME_EXCEPTION("getenv() failed");
+        environment[env] = e;
+    }
+    environment[env] += delim + norm(p);
+}
+
+bool Command::lessDuringExecution(const Command &rhs) const
+{
+    // improve sorting! it's too stupid
+    // simple "0 0 0 0 1 2 3 6 7 8 9 11" is not enough
+
+    if (dependencies.size() != rhs.dependencies.size())
+        return dependencies.size() < rhs.dependencies.size();
+    if (strict_order && rhs.strict_order)
+        return strict_order < rhs.strict_order;
+    else if (strict_order)
+        return true;
+    else if (rhs.strict_order)
+        return false;
+    return dependendent_commands.size() > dependendent_commands.size();
 }
 
 /*void Command::load(BinaryContext &bctx)

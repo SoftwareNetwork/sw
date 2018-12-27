@@ -71,10 +71,10 @@ void File::trimQuotes()
         f.trimQuotes();
 }
 
-Values File::getFiles(const Name &name, const std::string &bazel_target_function)
+Values File::getFiles(const Name &name, const std::string &bazel_target_function) const
 {
     Values values;
-    for (auto &f : functions)
+    for (const auto &f : functions)
     {
         if (!(
             pystring::endswith(f.name, "cc_library") ||
@@ -118,7 +118,7 @@ Values File::getFiles(const Name &name, const std::string &bazel_target_function
         if (i != f.parameters.end())
         {
             // check if we has a variable
-            for (auto &v : i->values)
+            for (const auto &v : i->values)
             {
                 auto p = parameters.find(v);
                 if (p != parameters.end())
@@ -129,7 +129,7 @@ Values File::getFiles(const Name &name, const std::string &bazel_target_function
         }
     }
     Values vls;
-    for (auto &v : values)
+    for (const auto &v : values)
     {
         auto s = v;
         ::trimQuotes(s);

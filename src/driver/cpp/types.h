@@ -81,7 +81,7 @@ enum class InheritanceType
     // 110 - project and others
     Interface = InheritanceScope::Project | InheritanceScope::World,
 
-    // rare used
+    // rarely used
 
     // 100 - only others
     // TODO: set new name?
@@ -96,7 +96,7 @@ enum class InheritanceType
     // TODO: set new name
     NotProject = InheritanceScope::Package | InheritanceScope::World,
 
-    // alternate names
+    // alternative names
 
     Default = Private,
     Min = Private,

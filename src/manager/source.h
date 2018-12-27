@@ -301,6 +301,7 @@ struct SourceDownloadOptions
 {
     path root_dir;
     bool ignore_existing_dirs = false;
+    std::chrono::seconds existing_dirs_age{ 0 };
     bool adjust_root_dir = true;
 };
 

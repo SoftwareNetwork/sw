@@ -67,6 +67,13 @@ void build(Solution &s)
     embed(manager, "src/manager/inserts/inserts.cpp.in");
     gen_sqlite2cpp(manager, manager.SourceDir / "src/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
     gen_sqlite2cpp(manager, manager.SourceDir / "src/manager/inserts/service_db_schema.sql", "db_service.h", "db::service");
+    if (!s.Variables["SW_SELF_BUILD"])
+    {
+        PrecompiledHeader pch;
+        pch.header = "src/manager/pch.h";
+        pch.force_include_pch = true;
+        manager.addPrecompiledHeader(pch);
+    }
 
     auto &builder = p.addTarget<LibraryTarget>("builder");
     builder.ApiName = "SW_BUILDER_API";

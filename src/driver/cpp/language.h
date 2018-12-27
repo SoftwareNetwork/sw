@@ -7,106 +7,16 @@
 #pragma once
 
 #include <compiler.h>
+#include <language_type.h>
+#include <source_file.h>
 
 #include <primitives/filesystem.h>
 
 namespace sw
 {
 
-struct TargetBase;
 struct Target;
-struct NativeTarget;
 struct SourceFile;
-struct Dependency;
-using DependencyPtr = std::shared_ptr<Dependency>;
-
-enum class LanguageType
-{
-    UnspecifiedLanguage,
-
-    Ada,
-    ASM,
-    Basic,
-    C,
-    COBOL,
-    CPP,
-    CSharp,
-    CUDA,
-    D,
-    Dart,
-    Erlang,
-    FSharp,
-    Fortran,
-    Go,
-    Haskell,
-    Java,
-    JavaScript,
-    Kotlin,
-    Lisp,
-    Lua,
-    Matlab,
-    ObjectiveC,
-    ObjectiveCPP,
-    OCaml,
-    OpenCL,
-    Pascal,
-    Perl,
-    PHP,
-    Prolog,
-    Python,
-    R,
-    Ruby,
-    Rust,
-    Scala,
-    Scheme,
-    Swift,
-};
-
-struct Language;
-using LanguagePtr = std::shared_ptr<Language>;
-//using LanguageMap = std::unordered_map<LanguageType, LanguagePtr>;
-
-//SW_DRIVER_CPP_API
-//LanguageMap getLanguages();
-
-struct SW_DRIVER_CPP_API LanguageStorage
-{
-    //LanguageMap languages;
-    std::map<String, PackageId> extensions;
-    std::unordered_map<PackagePath, std::map<Version, LanguagePtr>> user_defined_languages; // main languages!!! (UDL)
-    std::unordered_map<PackagePath, std::map<Version, std::shared_ptr<Program>>> registered_programs; // main program storage
-
-    virtual ~LanguageStorage();
-
-    void registerProgramAndLanguage(const PackagePath &pp, const std::shared_ptr<Program> &, const LanguagePtr &L);
-    void registerProgramAndLanguage(const PackageId &t, const std::shared_ptr<Program> &, const LanguagePtr &L);
-    void registerProgramAndLanguage(const TargetBase &t, const std::shared_ptr<Program> &, const LanguagePtr &L);
-
-    void registerProgram(const PackagePath &pp, const std::shared_ptr<Program> &);
-    void registerProgram(const PackageId &pp, const std::shared_ptr<Program> &);
-    void registerProgram(const TargetBase &t, const std::shared_ptr<Program> &);
-
-    //void registerLanguage(const LanguagePtr &L); // allow unnamed UDLs?
-    void registerLanguage(const PackageId &pkg, const LanguagePtr &L);
-    void registerLanguage(const TargetBase &t, const LanguagePtr &L);
-
-    void setExtensionLanguage(const String &ext, const UnresolvedPackage &p); // main
-    void setExtensionLanguage(const String &ext, const LanguagePtr &p); // wrappers
-    void setExtensionLanguage(const String &ext, const DependencyPtr &p); // wrappers
-
-    bool activateLanguage(const PackagePath &pp); // latest ver
-    bool activateLanguage(const PackageId &pkg);
-
-    LanguagePtr getLanguage(const PackagePath &pp) const; // latest ver
-    LanguagePtr getLanguage(const PackageId &pkg) const;
-
-    std::shared_ptr<Program> getProgram(const PackagePath &pp) const; // latest ver
-    std::shared_ptr<Program> getProgram(const PackageId &pkg) const;
-
-    Program *findProgramByExtension(const String &ext) const;
-    Language *findLanguageByExtension(const String &ext) const;
-    optional<PackageId> findPackageIdByExtension(const String &ext) const;
-};
 
 // factory?
 // actually language is something like rules
@@ -114,18 +24,11 @@ struct SW_DRIVER_CPP_API Language : Node
 {
     //LanguageType Type = LanguageType::UnspecifiedLanguage;
     StringSet CompiledExtensions;
-    //StringSet NonCompiledExtensions; // remove?
-    bool IsCompiled = true; // move to native?
-    bool IsLinked = true; // move to native?
 
     virtual ~Language() = default;
 
-    virtual LanguagePtr clone() const = 0;
-    virtual std::shared_ptr<SourceFile> createSourceFile(const path &input, const Target *t) const = 0;
-
-    //bool operator<(const Language &Rhs) const { return Type < Rhs.Type; }
-    //bool operator==(const Language &Rhs) const { return Type == Rhs.Type; }
-    //bool operator==(const LanguageType &Rhs) const { return Type == Rhs; }
+    virtual std::shared_ptr<Language> clone() const = 0;
+    virtual std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const = 0;
 };
 
 template <class T>
@@ -135,10 +38,8 @@ struct CompiledLanguage
 };
 
 template <class Compiler>
-struct SW_DRIVER_CPP_API NativeLanguage1 : Language,
-    CompiledLanguage<Compiler>//,
-    //LibrarianLanguage<NativeLinker>,
-    //LinkedLanguage<NativeLinker>
+struct NativeLanguage1 : Language,
+    CompiledLanguage<Compiler>
 {
     NativeLanguage1() = default;
     NativeLanguage1(const NativeLanguage1 &rhs)
@@ -146,19 +47,52 @@ struct SW_DRIVER_CPP_API NativeLanguage1 : Language,
     {
         if (rhs.compiler)
             this->compiler = std::dynamic_pointer_cast<Compiler>(rhs.compiler->clone());
-        /*if (rhs.librarian)
-            this->librarian = std::static_pointer_cast<NativeLinker>(rhs.librarian->clone());
-        if (rhs.linker)
-            this->linker = std::static_pointer_cast<NativeLinker>(rhs.linker->clone());*/
     }
-    virtual ~NativeLanguage1() = default;
 };
 
-struct SW_DRIVER_CPP_API NativeLanguage : NativeLanguage1<Compiler>
+struct SW_DRIVER_CPP_API NativeLanguage2 : NativeLanguage1<NativeCompiler>
 {
-    virtual ~NativeLanguage() = default;
-    LanguagePtr clone() const override;
-    std::shared_ptr<SourceFile> createSourceFile(const path &input, const Target *t) const override;
+    path getOutputFile(const path &input, const Target &t) const;
+};
+
+template <class T>
+struct SimpleNativeLanguageFactory : NativeLanguage2
+{
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override
+    {
+        return std::make_shared<T>(t, (NativeCompiler*)compiler.get(), input, getOutputFile(input, t));
+    }
+
+    std::shared_ptr<Language> clone() const override
+    {
+        return std::make_shared<SimpleNativeLanguageFactory<T>>(*this);
+    }
+};
+
+using NativeLanguage = SimpleNativeLanguageFactory<NativeSourceFile>;
+
+struct SW_DRIVER_CPP_API CSharpLanguage : Language
+{
+    std::shared_ptr<CSharpCompiler> compiler;
+
+    std::shared_ptr<Language> clone() const override;
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
+};
+
+struct SW_DRIVER_CPP_API RustLanguage : Language
+{
+    std::shared_ptr<RustCompiler> compiler;
+
+    std::shared_ptr<Language> clone() const override;
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
+};
+
+struct SW_DRIVER_CPP_API GoLanguage : Language
+{
+    std::shared_ptr<GoCompiler> compiler;
+
+    std::shared_ptr<Language> clone() const override;
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
 };
 
 }

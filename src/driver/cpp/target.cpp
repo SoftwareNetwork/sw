@@ -87,6 +87,22 @@ String toString(TargetType T)
     throw std::logic_error("unreachable code");
 }
 
+template <class SF>
+static std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s)
+{
+    // maybe cache result?
+    std::unordered_set<SF*> files;
+    for (auto &[p, f] : s)
+    {
+        if (!f->isActive())
+            continue;
+        auto f2 = f->as<SF>();
+        if (f2)
+            files.insert(f2);
+    }
+    return files;
+}
+
 String TargetBase::SettingsX::getConfig(const TargetBase *t, bool use_short_config) const
 {
     auto remove_last_dash = [](auto &c)
@@ -159,6 +175,21 @@ bool TargetBase::hasSameParent(const TargetBase *t) const
     if (this == t)
         return true;
     return pkg.ppath.hasSameParent(t->pkg.ppath);
+}
+
+path TargetBase::getObjectDir() const
+{
+    return getObjectDir(pkg, getConfig(true));
+}
+
+path TargetBase::getObjectDir(const PackageId &in) const
+{
+    return getObjectDir(in, getConfig(true));
+}
+
+path TargetBase::getObjectDir(const PackageId &pkg, const String &cfg)
+{
+    return pkg.getDirObj() / "build" / cfg;
 }
 
 TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V)
@@ -282,7 +313,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     //t->SourceDirBase = t->SourceDir;
 
     t->init();
-    t->init2();
+    t->setOutputFile(); // after init, not inside init
     addChild(t);
 
     getSolution()->call_event(*t, CallbackType::CreateTargetInitialized);
@@ -502,6 +533,43 @@ void Target::removeFile(const path &fn, bool binary_dir)
     fs::remove(p, ec);
 }
 
+#define SW_IS_LOCAL_BINARY_DIR isLocal() && !UseStorageBinaryDir
+
+void Target::init()
+{
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        BinaryDir = getTargetDirShort();
+    }
+    else if (auto d = pkg.getOverriddenDir(); d)
+    {
+        BinaryDir = d.value() / ".sw";
+        //#ifdef _WIN32
+        BinaryDir /= path(getConfig(true)) / sha256_short(pkg.toString());
+        /*#else
+                BinaryDir /= path(getConfig()) / "targets" / pkg.ppath.toString();
+        #endif*/
+    }
+    else
+    {
+        BinaryDir = pkg.getDirObj() / "build" / getConfig(true);
+    }
+    if (DryRun)
+    {
+        // we doing some download on server or whatever
+        // so, we do not want to touch real existing bdirs
+        BinaryDir = getDirectories().storage_dir_tmp / "dry" / sha256_short(BinaryDir.u8string());
+        fs::remove_all(BinaryDir);
+        fs::create_directories(BinaryDir);
+    }
+    BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
+    BinaryDir /= SW_BDIR_NAME;
+
+    // we must create it because users probably want to write to it immediately
+    fs::create_directories(BinaryDir);
+    fs::create_directories(BinaryPrivateDir);
+}
+
 DependencyPtr NativeTarget::getDependency() const
 {
     auto d = std::make_shared<Dependency>(this);
@@ -527,7 +595,7 @@ void TargetOptions::remove(const IncludeDirectory &i)
     IncludeDirectories.erase(idir);
 }
 
-void TargetOptionsGroup::add(const Variable &v)
+void NativeTargetOptionsGroup::add(const Variable &v)
 {
     auto p = v.v.find_first_of(" =");
     if (p == v.v.npos)
@@ -543,7 +611,7 @@ void TargetOptionsGroup::add(const Variable &v)
         Variables[f] = s;
 }
 
-void TargetOptionsGroup::remove(const Variable &v)
+void NativeTargetOptionsGroup::remove(const Variable &v)
 {
     auto p = v.v.find_first_of(" =");
     if (p == v.v.npos)
@@ -554,52 +622,15 @@ void TargetOptionsGroup::remove(const Variable &v)
     Variables.erase(v.v.substr(0, p));
 }
 
-NativeExecutedTarget::NativeExecutedTarget()
-    : NativeTarget()
+NativeExecutedTarget::~NativeExecutedTarget()
 {
+    // incomplete type cannot be in default dtor
+    // in our case it is nlohmann::json member
 }
-
-NativeExecutedTarget::NativeExecutedTarget(LanguageType L)
-    : NativeTarget()
-{
-    //addLanguage(L);
-}
-
-#define SW_IS_LOCAL_BINARY_DIR isLocal() && !UseStorageBinaryDir
 
 void NativeExecutedTarget::init()
 {
-    if (SW_IS_LOCAL_BINARY_DIR)
-    {
-        BinaryDir = getTargetDirShort();
-    }
-    else if (auto d = pkg.getOverriddenDir(); d)
-    {
-        BinaryDir = d.value() / ".sw";
-//#ifdef _WIN32
-        BinaryDir /= path(getConfig(true)) / sha256_short(pkg.toString());
-/*#else
-        BinaryDir /= path(getConfig()) / "targets" / pkg.ppath.toString();
-#endif*/
-    }
-    else
-    {
-        BinaryDir = pkg.getDirObj() / "build" / getConfig(true);
-    }
-    if (DryRun)
-    {
-        // we doing some download on server or whatever
-        // so, we do not want to touch real existing bdirs
-        BinaryDir = getDirectories().storage_dir_tmp / "dry" / sha256_short(BinaryDir.u8string());
-        fs::remove_all(BinaryDir);
-        fs::create_directories(BinaryDir);
-    }
-    BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
-    BinaryDir /= SW_BDIR_NAME;
-
-    // we must create it because users probably want to write to it immediately
-    fs::create_directories(BinaryDir);
-    fs::create_directories(BinaryPrivateDir);
+    Target::init();
 
     // propagate this pointer to all
     TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
@@ -614,10 +645,8 @@ void NativeExecutedTarget::init()
     addPackageDefinitions();
 }
 
-void NativeExecutedTarget::init2()
+/*void NativeExecutedTarget::init2()
 {
-    setOutputFile();
-
     if (!Local)
     {
         // activate later?
@@ -627,14 +656,14 @@ void NativeExecutedTarget::init2()
         if (f[pfHeaderOnly] || fs::exists(o) && f[pfBuilt])
         {
             already_built = true;
-        }*/
+        }
     }
-}
+}*/
 
 driver::cpp::CommandBuilder NativeExecutedTarget::addCommand() const
 {
     driver::cpp::CommandBuilder cb(*getSolution()->fs);
-    cb.c->addPathDirectory(getOutputDir() / getConfig());
+    cb.c->addPathDirectory(getOutputBaseDir() / getConfig());
     cb << *this;
     return cb;
 }
@@ -714,7 +743,7 @@ void NativeExecutedTarget::addPackageDefinitions(bool defs)
         set_pkg_info(Variables, false); // false?
 }
 
-path NativeExecutedTarget::getOutputDir() const
+path NativeExecutedTarget::getOutputBaseDir() const
 {
     if (Settings.TargetOS.Type == OSType::Windows)
         return getUserDirectories().storage_dir_bin;
@@ -722,22 +751,44 @@ path NativeExecutedTarget::getOutputDir() const
         return getUserDirectories().storage_dir_lib;
 }
 
-void NativeExecutedTarget::setOutputDir(const path &dir)
+path NativeExecutedTarget::getOutputDir() const
 {
-    auto d = getOutputFile().parent_path();
+    if (OutputDir.empty())
+        return getOutputFile().parent_path();
+    return getTargetsDir().parent_path() / OutputDir;
+}
+
+void Target::setOutputDir(const path &dir)
+{
+    //SwapAndRestore sr(OutputDir, dir);
     OutputDir = dir;
     setOutputFile();
-    OutputDir = d;
 }
+
+/*void NativeExecutedTarget::setOutputFilename(const path &fn)
+{
+    //OutputFilename = fn;
+}*/
 
 void NativeExecutedTarget::setOutputFile()
 {
-    if (getSelectedTool() == Librarian.get())
-        getSelectedTool()->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_lib));
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        if (getSelectedTool() == Librarian.get())
+            getSelectedTool()->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_lib));
+        else
+        {
+            getSelectedTool()->setOutputFile(getOutputFileName(getOutputBaseDir()));
+            getSelectedTool()->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
+        }
+    }
     else
     {
-        getSelectedTool()->setOutputFile(getOutputFileName(getOutputDir()));
-        getSelectedTool()->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        getSelectedTool()->setOutputFile(base);
+        if (getSelectedTool() != Librarian.get())
+            getSelectedTool()->setImportLibrary(base);
     }
 }
 
@@ -746,7 +797,12 @@ path NativeExecutedTarget::makeOutputFile() const
     if (getSelectedTool() == Librarian.get())
         return getOutputFileName(getUserDirectories().storage_dir_lib);
     else
-        return getOutputFileName(getOutputDir());
+        return getOutputFileName(getOutputBaseDir());
+}
+
+path Target::getOutputFileName() const
+{
+    return pkg.toString();
 }
 
 path NativeExecutedTarget::getOutputFileName(const path &root) const
@@ -755,20 +811,18 @@ path NativeExecutedTarget::getOutputFileName(const path &root) const
     if (SW_IS_LOCAL_BINARY_DIR)
     {
         if (IsConfig)
-            p = getTargetsDir() / pkg.ppath.toString() / "out" / pkg.ppath.toString();
+            p = getTargetsDir() / pkg.ppath.toString() / "out" / getOutputFileName();
         else
-            p = getTargetsDir().parent_path() / OutputDir / pkg.ppath.toString();
+            p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
     }
     else
     {
         if (IsConfig)
-            p = pkg.getDir() / "out" / getConfig() / pkg.ppath.toString();
+            p = pkg.getDir() / "out" / getConfig() / getOutputFileName();
         //p = BinaryDir / "out";
         else
-            p = root / getConfig() / OutputDir / pkg.ppath.toString();
+            p = root / getConfig() / OutputDir / getOutputFileName();
     }
-    //if (pkg.version.isValid() /* && add version*/)
-        p += "-" + pkg.version.toString();
     return p;
 }
 
@@ -880,6 +934,11 @@ Files NativeExecutedTarget::gatherAllFiles() const
     return files;
 }
 
+std::unordered_set<NativeSourceFile*> NativeExecutedTarget::gatherSourceFiles() const
+{
+    return ::sw::gatherSourceFiles<NativeSourceFile>(*this);
+}
+
 Files NativeExecutedTarget::gatherIncludeDirectories() const
 {
     Files idirs;
@@ -891,20 +950,6 @@ Files NativeExecutedTarget::gatherIncludeDirectories() const
             idirs.insert(i2);
     });
     return idirs;
-}
-
-NativeExecutedTarget::SourceFilesSet NativeExecutedTarget::gatherSourceFiles() const
-{
-    // maybe cache result?
-    SourceFilesSet files;
-    for (auto &f : *this)
-    {
-        if (f.second->isActive())
-        {
-            files.insert((NativeSourceFile*)f.second.get());
-        }
-    }
-    return files;
 }
 
 Files NativeExecutedTarget::gatherObjectFilesWithoutLibraries() const
@@ -1016,8 +1061,12 @@ void NativeExecutedTarget::addPrecompiledHeader(const path &h, const path &cpp)
     addPrecompiledHeader(pch);
 }
 
-void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
+void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
 {
+    check_absolute(p.header);
+    if (!p.source.empty())
+        check_absolute(p.source);
+
     bool force_include_pch_header_to_pch_source = true;
     bool force_include_pch_header_to_target_source_files = p.force_include_pch;
     auto pch = p.source;
@@ -1030,7 +1079,10 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
         force_include_pch_header_to_pch_source = false;
     }
     else
+    {
         pch = pch_dir / (p.header.stem().string() + ".cpp");
+        write_file_if_different(pch, "");
+    }
 
     auto pch_fn = pch.parent_path() / (pch.stem().string() + ".pch");
     auto obj_fn = pch.parent_path() / (pch.stem().string() + ".obj");
@@ -1145,7 +1197,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const PrecompiledHeader &p)
     }
 }
 
-NativeExecutedTarget &NativeExecutedTarget::operator=(const PrecompiledHeader &pch)
+NativeExecutedTarget &NativeExecutedTarget::operator=(PrecompiledHeader pch)
 {
     addPrecompiledHeader(pch);
     return *this;
@@ -1155,27 +1207,69 @@ std::shared_ptr<builder::Command> NativeExecutedTarget::getCommand() const
 {
     if (HeaderOnly && HeaderOnly.value())
         return nullptr;
-    return getSelectedTool()->getCommand();
+    return getSelectedTool()->getCommand(*this);
 }
 
 Commands NativeExecutedTarget::getGeneratedCommands() const
 {
+    if (generated_commands)
+        return generated_commands.value();
+    generated_commands.emplace();
+
     Commands generated;
 
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
-    // add generated files
-    for (auto &f : *this)
+    // still some generated commands must be run before others,
+    // (syncqt must be run before mocs when building qt)
+    // so we introduce this order
+    std::map<int, std::vector<std::shared_ptr<builder::Command>>> order;
+
+    // add generated commands
+    for (auto &[f, _] : *this)
     {
-        File p(f.first, *getSolution()->fs);
+        File p(f, *getSolution()->fs);
         if (!p.isGenerated())
             continue;
-        if (f.first == def)
+        if (f == def)
             continue;
         auto c = p.getFileRecord().getGenerator();
-        generated.insert(c);
+        if (c->strict_order > 0)
+            order[c->strict_order].push_back(c);
+        else
+            generated.insert(c);
     }
 
+    // respect ordering
+    for (auto i = order.rbegin(); i != order.rend(); i++)
+    {
+        auto &cmds = i->second;
+        for (auto &c : generated)
+            c->dependencies.insert(cmds.begin(), cmds.end());
+        generated.insert(cmds.begin(), cmds.end());
+    }
+
+    // also add deps to all deps' generated commands
+    Commands deps_commands;
+    /*for (auto &f : FileDependencies)
+    {
+        File p(f, *getSolution()->fs);
+        if (!p.isGenerated())
+            continue;
+        auto c = p.getFileRecord().getGenerator();
+        deps_commands.insert(c); // gather deps' commands
+    }*/
+
+    // make our commands to depend on gathered
+    //for (auto &c : generated)
+        //c->dependencies.insert(deps_commands.begin(), deps_commands.end());
+
+    // and now also insert deps' commands to list
+    // this is useful when our generated list is empty
+    //if (generated.empty())
+        generated.insert(deps_commands.begin(), deps_commands.end());
+
+    generated_commands = generated;
     return generated;
 }
 
@@ -1230,7 +1324,7 @@ Commands NativeExecutedTarget::getCommands() const
         auto bdp = normalize_path(BinaryPrivateDir);
         for (auto &f : gatherSourceFiles())
         {
-            auto c = f->getCommand();
+            auto c = f->getCommand(*this);
             c->args.insert(c->args.end(), f->args.begin(), f->args.end());
 
             // set fancy name
@@ -1302,6 +1396,25 @@ Commands NativeExecutedTarget::getCommands() const
 
     //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "self_builder");
 
+    // add install commands
+    for (auto &[p, f] : *this)
+    {
+        if (f->install_dir.empty())
+            continue;
+
+        auto o = getOutputDir();
+        o /= f->install_dir / p.filename();
+
+        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file");
+        copy_cmd->args.push_back(p.u8string());
+        copy_cmd->args.push_back(o.u8string());
+        copy_cmd->addInput(p);
+        copy_cmd->addOutput(o);
+        copy_cmd->name = "copy: " + normalize_path(o);
+        copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
+        cmds.insert(copy_cmd);
+    }
+
     // this library, check if nothing to link
     if (auto c = getCommand())
     {
@@ -1354,7 +1467,8 @@ Commands NativeExecutedTarget::getCommands() const
             }
 
             // copy output dlls
-            if (isLocal() && Settings.Native.CopySharedLibraries)
+            if (isLocal() && Settings.Native.CopySharedLibraries &&
+                Scope == TargetScope::Build && OutputDir.empty())
             {
                 for (auto &l : gatherAllRelatedDependencies())
                 {
@@ -1368,7 +1482,16 @@ Commands NativeExecutedTarget::getCommands() const
                     if (dt->getSelectedTool() == dt->Librarian.get())
                         continue;
                     auto in = dt->getOutputFile();
-                    auto o = (OutputDir.empty() ? getOutputFile().parent_path() : OutputDir) / in.filename();
+                    auto o = getOutputDir() / dt->OutputDir;
+                    //if (OutputFilename.empty())
+                        o /= in.filename();
+                    //else
+                    {
+                        //o /= OutputFilename;
+                        //if (add_d_on_debug && Settings.Native.ConfigurationType == ConfigurationType::Debug)
+                            //o += "d";
+                        //o += in.extension().u8string();
+                    }
                     if (in == o)
                         continue;
                     SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file");
@@ -1387,7 +1510,7 @@ Commands NativeExecutedTarget::getCommands() const
             for (auto &d : CircularDependencies)
             {
                 auto dt = ((NativeExecutedTarget*)d->target.lock().get());
-                auto non_circ_cmd = dt->getSelectedTool()->getCommand();
+                auto non_circ_cmd = dt->getSelectedTool()->getCommand(*this);
 
                 // one command must be executed after the second to free implib files from any compiler locks
                 // we choose it based on ptr address
@@ -1396,7 +1519,7 @@ Commands NativeExecutedTarget::getCommands() const
 
                 if (dt->CircularLinker)
                 {
-                    auto cd = dt->CircularLinker->getCommand();
+                    auto cd = dt->CircularLinker->getCommand(*this);
                     c->dependencies.insert(cd);
                 }
                 //cmds.insert(cd);
@@ -1405,7 +1528,7 @@ Commands NativeExecutedTarget::getCommands() const
             if (CircularLinker)
             {
                 // execute this command after unresolved (circular) cmd
-                c->dependencies.insert(CircularLinker->getCommand());
+                c->dependencies.insert(CircularLinker->getCommand(*this));
 
                 // we reset generator of implib from usual build command (c = getCommand()) to circular linker generator to overcome
                 // automatic circular dependency generation in command.cpp
@@ -1447,34 +1570,6 @@ Commands NativeExecutedTarget::getCommands() const
     return cmds;
 }
 
-/*Files NativeExecutedTarget::getGeneratedDirs() const
-{
-    Files dirs;
-    dirs.insert(BinaryDir);
-    dirs.insert(BinaryPrivateDir);
-    for (auto &f : *this)
-    {
-        File p(f.first, *getSolution()->fs);
-        if (p.isGenerated())
-        {
-            auto d = p.getFileRecord().getGenerator()->getGeneratedDirs();
-            dirs.insert(d.begin(), d.end());
-        }
-        if (!f.second)
-            continue;
-        auto d = f.second->getGeneratedDirs();
-        dirs.insert(d.begin(), d.end());
-    }
-    dirs.insert(getOutputFile().parent_path());
-    dirs.insert(getImportLibrary().parent_path());
-    if (CircularLinker)
-    {
-        dirs.insert(CircularLinker->getOutputFile().parent_path());
-        dirs.insert(CircularLinker->getImportLibrary().parent_path());
-    }
-    return dirs;
-}*/
-
 void NativeExecutedTarget::findSources()
 {
     // We add root dir if we postponed resolving and iif it's a local package.
@@ -1499,6 +1594,21 @@ void NativeExecutedTarget::findSources()
 
         auto b = read_file(bfn);
         auto f = bazel::parse(b);
+
+        /*static std::mutex m;
+        static std::unordered_map<String, bazel::File> files;
+        auto h = sha1(b);
+        auto i = files.find(h);
+        bazel::File *f = nullptr;
+        if (i == files.end())
+        {
+            std::unique_lock lk(m);
+            files[h] = bazel::parse(b);
+            f = &files[h];
+        }
+        else
+            f = &i->second;*/
+
         String project_name;
         if (!pkg.ppath.empty())
             project_name = pkg.ppath.back();
@@ -1528,6 +1638,8 @@ void NativeExecutedTarget::findSources()
     detectLicenseFile();
 }
 
+static const Strings source_dir_names = { "src", "source", "sources", "lib", "library" };
+
 void NativeExecutedTarget::autoDetectOptions()
 {
     // TODO: add dirs with first capital letter:
@@ -1535,57 +1647,15 @@ void NativeExecutedTarget::autoDetectOptions()
 
     autodetect = true;
 
-    // with stop string at the end
-    static const Strings source_dir_names = { "src", "source", "sources", "lib", "library" };
+    autoDetectIncludeDirectories();
+    autoDetectSources();
+}
 
+void NativeExecutedTarget::autoDetectSources()
+{
     // gather things to check
     //bool sources_empty = gatherSourceFiles().empty();
     bool sources_empty = sizeKnown() == 0;
-    bool idirs_empty = true;
-
-    // idirs
-    if (idirs_empty)
-    {
-        LOG_TRACE(logger, getPackage().target_name +  ": Autodetecting include dirs");
-
-        if (fs::exists(SourceDir / "include"))
-            Public.IncludeDirectories.insert(SourceDir / "include");
-        else if (fs::exists(SourceDir / "includes"))
-            Public.IncludeDirectories.insert(SourceDir / "includes");
-        else if (!SourceDir.empty())
-            Public.IncludeDirectories.insert(SourceDir);
-
-        std::function<void(const Strings &)> autodetect_source_dir;
-        autodetect_source_dir = [this, &autodetect_source_dir](const Strings &dirs)
-        {
-            const auto &current = dirs[0];
-            const auto &next = dirs[1];
-            if (fs::exists(SourceDir / current))
-            {
-                if (fs::exists(SourceDir / "include"))
-                    Private.IncludeDirectories.insert(SourceDir / current);
-                else if (fs::exists(SourceDir / "includes"))
-                    Private.IncludeDirectories.insert(SourceDir / current);
-                else
-                    Public.IncludeDirectories.insert(SourceDir / current);
-            }
-            else
-            {
-                // now check next dir
-                if (!next.empty())
-                    autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
-            }
-        };
-        static Strings dirs = []
-        {
-            Strings dirs(source_dir_names.begin(), source_dir_names.end());
-            // keep the empty entry at the end for autodetect_source_dir()
-            if (dirs.back() != "")
-                dirs.push_back("");
-            return dirs;
-        }();
-        autodetect_source_dir(dirs);
-    }
 
     // files
     if (sources_empty && !already_built)
@@ -1626,19 +1696,19 @@ void NativeExecutedTarget::autoDetectOptions()
             // check that all exts is in languages!
 
             static const std::set<String> other_source_file_extensions{
-				".s",
-				".S",
-				".asm",
-				".ipp",
-				".inl",
+                ".s",
+                ".S",
+                ".asm",
+                ".ipp",
+                ".inl",
             };
 
-			static auto source_file_extensions = []()
-			{
-				auto source_file_extensions = cpp_source_file_extensions;
-				source_file_extensions.insert(".c");
-				return source_file_extensions;
-			}();
+            static auto source_file_extensions = []()
+            {
+                auto source_file_extensions = cpp_source_file_extensions;
+                source_file_extensions.insert(".c");
+                return source_file_extensions;
+            }();
 
             for (auto &v : header_file_extensions)
                 add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
@@ -1647,6 +1717,60 @@ void NativeExecutedTarget::autoDetectOptions()
             for (auto &v : other_source_file_extensions)
                 add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
         }
+
+        // erase config file, add a condition to not perform this code
+        path f = "sw.cpp";
+        check_absolute(f, true);
+        operator^=(f);
+    }
+}
+
+void NativeExecutedTarget::autoDetectIncludeDirectories()
+{
+    bool idirs_empty = true;
+
+    // idirs
+    if (idirs_empty)
+    {
+        LOG_TRACE(logger, getPackage().target_name + ": Autodetecting include dirs");
+
+        if (fs::exists(SourceDir / "include"))
+            Public.IncludeDirectories.insert(SourceDir / "include");
+        else if (fs::exists(SourceDir / "includes"))
+            Public.IncludeDirectories.insert(SourceDir / "includes");
+        else if (!SourceDir.empty())
+            Public.IncludeDirectories.insert(SourceDir);
+
+        std::function<void(const Strings &)> autodetect_source_dir;
+        autodetect_source_dir = [this, &autodetect_source_dir](const Strings &dirs)
+        {
+            const auto &current = dirs[0];
+            const auto &next = dirs[1];
+            if (fs::exists(SourceDir / current))
+            {
+                if (fs::exists(SourceDir / "include"))
+                    Private.IncludeDirectories.insert(SourceDir / current);
+                else if (fs::exists(SourceDir / "includes"))
+                    Private.IncludeDirectories.insert(SourceDir / current);
+                else
+                    Public.IncludeDirectories.insert(SourceDir / current);
+            }
+            else
+            {
+                // now check next dir
+                if (!next.empty())
+                    autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
+            }
+        };
+        static Strings dirs = []
+        {
+            Strings dirs(source_dir_names.begin(), source_dir_names.end());
+            // keep the empty entry at the end for autodetect_source_dir()
+            if (dirs.back() != "")
+                dirs.push_back("");
+            return dirs;
+        }();
+        autodetect_source_dir(dirs);
     }
 }
 
@@ -1675,10 +1799,10 @@ void NativeExecutedTarget::detectLicenseFile()
 
     if (!Local)
     {
-        if (!LicenseFilename.empty())
+        if (!Description.LicenseFilename.empty())
         {
-            if (check_license(LicenseFilename))
-                add(LicenseFilename);
+            if (check_license(Description.LicenseFilename))
+                add(Description.LicenseFilename);
         }
         else
         {
@@ -1701,6 +1825,60 @@ void NativeExecutedTarget::detectLicenseFile()
                 (void)error;
         }
     }
+}
+
+static path getPrecomputedDataFilename(const PackageId &pkg)
+{
+    // with version
+    return pkg.getDirInfo() / "precomputed.4.json";
+}
+
+void NativeExecutedTarget::tryLoadPrecomputedData()
+{
+    if (isLocalOrOverridden())
+        return;
+
+    auto fn = getPrecomputedDataFilename(pkg);
+    if (!fs::exists(fn))
+        return;
+
+    // TODO: detect frontend
+    if (File(pkg.getDirSrc2() / "sw.cpp", *getSolution()->fs).isChanged())
+        return;
+
+    //precomputed_data = nlohmann::json::parse(read_file(fn));
+}
+
+void NativeExecutedTarget::applyPrecomputedData()
+{
+}
+
+void NativeExecutedTarget::savePrecomputedData()
+{
+    if (isLocalOrOverridden())
+        return;
+
+    nlohmann::json j;
+
+    for (int i = toIndex(InheritanceType::Min) + 1; i < toIndex(InheritanceType::Max); i++)
+    {
+        auto s = getInheritanceStorage().raw()[i];
+        if (!s)
+            continue;
+        auto si = std::to_string(i);
+        for (auto &[p, _] : *s)
+        {
+            j[si]["source_files"].push_back(normalize_path(p));
+        }
+        for (auto &d : s->Dependencies)
+        {
+            auto &jd = j[si]["dependencies"][d->getResolvedPackage().toString()];
+            jd["idir"] = d->IncludeDirectoriesOnly;
+            jd["dummy"] = d->Dummy;
+        }
+    }
+
+    write_file(getPrecomputedDataFilename(pkg), j.dump(2));
 }
 
 bool NativeExecutedTarget::prepare()
@@ -1738,6 +1916,8 @@ bool NativeExecutedTarget::prepare()
     case 1:
     {
         LOG_TRACE(logger, "Preparing target: " + pkg.ppath.toString());
+
+        tryLoadPrecomputedData();
 
         getSolution()->call_event(*this, CallbackType::BeginPrepare);
 
@@ -1779,12 +1959,8 @@ bool NativeExecutedTarget::prepare()
                 case NativeSourceFile::C:
                     if (auto L = SourceFileStorage::findLanguageByExtension(".c"); L)
                     {
-                        auto sf = L->clone()->createSourceFile(f.first, this);
-                        if (auto c = sf->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
-                        {
-                            //c->CompileAsC = true; // not working for some reason
-                            sf->args.push_back("-TC");
-                        }
+                        if (auto c = f.second->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
+                            c->CompileAsC = true;
                     }
                     else
                         throw std::logic_error("no C language found");
@@ -1792,21 +1968,17 @@ bool NativeExecutedTarget::prepare()
                 case NativeSourceFile::CPP:
                     if (auto L = SourceFileStorage::findLanguageByExtension(".cpp"); L)
                     {
-                        auto sf = L->clone()->createSourceFile(f.first, this);
-                        if (auto c = sf->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
-                        {
-                            //c->CompileAsCPP = true; // not working for some reason
-                            sf->args.push_back("-TP");
-                        }
+                        if (auto c = f.second->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
+                            c->CompileAsCPP = true;
                     }
                     else
                         throw std::logic_error("no CPP language found");
                     break;
                 case NativeSourceFile::ASM:
-                    if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
+                    /*if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
                         L->clone()->createSourceFile(f.first, this);
                     else
-                        throw std::logic_error("no ASM language found");
+                        throw std::logic_error("no ASM language found");*/
                     break;
                 default:
                     throw std::logic_error("not implemented");
@@ -1851,192 +2023,224 @@ bool NativeExecutedTarget::prepare()
     case 2:
     // resolve
     {
-        // resolve unresolved deps
-        // not on the first stage!
-        TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-            [this](auto &v, auto &s)
+        if (precomputed_data)
         {
-            for (auto &d : v.Dependencies)
+            TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+                [this](auto &v, auto &s)
             {
-                for (auto &[pp, t] : solution->getChildren())
+                v.Dependencies.clear();
+            });
+
+            auto &j = precomputed_data.value();
+            for (auto ijs = j.begin(); ijs != j.end(); ++ijs)
+            {
+                auto i = std::stoi(ijs.key());
+                auto &s = getInheritanceStorage()[i];
+
+                for (auto it = j["dependencies"].begin(); it != j["dependencies"].end(); ++it)
                 {
-                    if (d->getPackage().canBe(t->getPackage()))
-                    {
-                        d->setTarget(std::static_pointer_cast<NativeTarget>(t));
-                        break;
-                    }
+                    auto d = std::make_shared<Dependency>(it.key());
+                    s += d;
+                    d->IncludeDirectoriesOnly = it.value()["idir"];
+                    d->Dummy = it.value()["dummy"];
                 }
-                if (!d->target.lock())
+            }
+        }
+        //else
+        {
+            // resolve unresolved deps
+            // not on the first stage!
+            TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+                [this](auto &v, auto &s)
+            {
+                for (auto &d : v.Dependencies)
                 {
-                    /*bool added = false;
-                    for (auto &[pp, t] : solution->dummy_children)
+                    for (auto &[pp, t] : solution->getChildren())
                     {
                         if (d->getPackage().canBe(t->getPackage()))
                         {
                             d->setTarget(std::static_pointer_cast<NativeTarget>(t));
-                            added = true;
-                            static std::mutex m;
-                            std::unique_lock lk(m);
-                            getSolution()->children[t->pkg] = t;
-                            while (t->prepare_pass < prepare_pass)
-                                t->prepare();
                             break;
                         }
                     }
-                    if (!added)*/
-
-                    auto err = "Package: " + pkg.toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
-                    if (auto d = pkg.getOverriddenDir(); d)
+                    if (!d->target.lock())
                     {
-                        err += ".\nPackage: " + pkg.toString() + " is overridden locally. "
-                            "This means you have new dependency that is not in db.\n"
-                            "Run following command in attempt to fix this issue:"
-                            "'sw -d " + normalize_path(d.value()) + " -override-remote-package " +
-                            pkg.ppath.slice(0, getServiceDatabase().getOverriddenPackage(pkg).value().prefix).toString() + "'";
+                        /*bool added = false;
+                        for (auto &[pp, t] : solution->dummy_children)
+                        {
+                            if (d->getPackage().canBe(t->getPackage()))
+                            {
+                                d->setTarget(std::static_pointer_cast<NativeTarget>(t));
+                                added = true;
+                                static std::mutex m;
+                                std::unique_lock lk(m);
+                                getSolution()->children[t->pkg] = t;
+                                while (t->prepare_pass < prepare_pass)
+                                    t->prepare();
+                                break;
+                            }
+                        }
+                        if (!added)*/
+
+                        auto err = "Package: " + pkg.toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
+                        if (auto d = pkg.getOverriddenDir(); d)
+                        {
+                            err += ".\nPackage: " + pkg.toString() + " is overridden locally. "
+                                "This means you have new dependency that is not in db.\n"
+                                "Run following command in attempt to fix this issue:"
+                                "'sw -d " + normalize_path(d.value()) + " -override-remote-package " +
+                                pkg.ppath.slice(0, getServiceDatabase().getOverriddenPackage(pkg).value().prefix).toString() + "'";
+                        }
+                        throw std::logic_error(err);
                     }
-                    throw std::logic_error(err);
                 }
-            }
-        });
+            });
+        }
     }
     RETURN_PREPARE_PASS;
     case 3:
     // inheritance
     {
-        struct H
+        if (precomputed_data)
         {
-            size_t operator()(const DependencyPtr &p) const
-            {
-                return std::hash<Dependency>()(*p);
-            }
-        };
-        struct L
+        }
+        else
         {
-            size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
+            struct H
             {
-                return (*p1) < (*p2);
-            }
-        };
-
-        //DEBUG_BREAK_IF_STRING_HAS(pkg.toString(), "protoc-");
-
-        // why such sorting (L)?
-        //std::unordered_map<DependencyPtr, InheritanceType, H> deps;
-        std::map<DependencyPtr, InheritanceType, L> deps;
-        //std::map<DependencyPtr, InheritanceType> deps;
-        std::vector<DependencyPtr> deps_ordered;
-
-        // set our initial deps
-        TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-            [this, &deps, &deps_ordered](auto &v, auto &s)
-        {
-            //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
-
-            for (auto &d : v.Dependencies)
-            {
-                if (d->target.lock().get() == this)
-                    continue;
-                if (d->isDummy())
-                    continue;
-
-                deps.emplace(d, s.Inheritance);
-                deps_ordered.push_back(d);
-            }
-        });
-
-        while (1)
-        {
-            bool new_dependency = false;
-            auto deps2 = deps;
-            for (auto &[d, _] : deps2)
-            {
-                if (d->target.lock() == nullptr)
+                size_t operator()(const DependencyPtr &p) const
                 {
-                    throw std::logic_error("Package: " + pkg.toString() + ": Unresolved package on stage 2: " + d->package.toString());
-                    /*LOG_ERROR(logger, "Package: " + pkg.toString() + ": Unresolved package on stage 2: " + d->package.toString() + ". Resolving inplace");
-                    auto id = d->package.resolve();
-                    d->target = std::static_pointer_cast<NativeTarget>(getSolution()->getTargetPtr(id));*/
+                    return std::hash<Dependency>()(*p);
                 }
-
-                // iterate over child deps
-                (*(NativeExecutedTarget*)d->target.lock().get()).TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-                    [this, &new_dependency, &deps, &d, &deps_ordered](auto &v, auto &s)
+            };
+            struct L
+            {
+                size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
                 {
-                    // nothing to do with private inheritance
-                    if (s.Inheritance == InheritanceType::Private)
-                        return;
+                    return (*p1) < (*p2);
+                }
+            };
 
-                    for (auto &d2 : v.Dependencies)
+            //DEBUG_BREAK_IF_STRING_HAS(pkg.toString(), "protoc-");
+
+            // why such sorting (L)?
+            //std::unordered_map<DependencyPtr, InheritanceType, H> deps;
+            std::map<DependencyPtr, InheritanceType, L> deps;
+            //std::map<DependencyPtr, InheritanceType> deps;
+            std::vector<DependencyPtr> deps_ordered;
+
+            // set our initial deps
+            TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+                [this, &deps, &deps_ordered](auto &v, auto &s)
+            {
+                //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
+
+                for (auto &d : v.Dependencies)
+                {
+                    if (d->target.lock().get() == this)
+                        continue;
+                    if (d->isDummy())
+                        continue;
+
+                    deps.emplace(d, s.Inheritance);
+                    deps_ordered.push_back(d);
+                }
+            });
+
+            while (1)
+            {
+                bool new_dependency = false;
+                auto deps2 = deps;
+                for (auto &[d, _] : deps2)
+                {
+                    if (d->target.lock() == nullptr)
                     {
-                        if (d2->target.lock().get() == this)
-                            continue;
-                        if (d2->isDummy())
-                            continue;
+                        throw std::logic_error("Package: " + pkg.toString() + ": Unresolved package on stage 2: " + d->package.toString());
+                        /*LOG_ERROR(logger, "Package: " + pkg.toString() + ": Unresolved package on stage 2: " + d->package.toString() + ". Resolving inplace");
+                        auto id = d->package.resolve();
+                        d->target = std::static_pointer_cast<NativeTarget>(getSolution()->getTargetPtr(id));*/
+                    }
 
-                        if (s.Inheritance == InheritanceType::Protected && !hasSameParent(d2->target.lock().get()))
-                            continue;
+                    // iterate over child deps
+                    (*(NativeExecutedTarget*)d->target.lock().get()).TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+                        [this, &new_dependency, &deps, &d, &deps_ordered](auto &v, auto &s)
+                    {
+                        // nothing to do with private inheritance
+                        if (s.Inheritance == InheritanceType::Private)
+                            return;
 
-                        auto copy = std::make_shared<Dependency>(*d2);
-                        auto[i, inserted] = deps.emplace(copy,
-                            s.Inheritance == InheritanceType::Interface ?
-                            InheritanceType::Public : s.Inheritance
-                        );
-                        if (inserted)
-                            deps_ordered.push_back(copy);
-
-                        // include directories only handling
-                        auto di = i->first;
-                        if (inserted)
+                        for (auto &d2 : v.Dependencies)
                         {
-                            // new dep is added
-                            if (d->IncludeDirectoriesOnly)
+                            if (d2->target.lock().get() == this)
+                                continue;
+                            if (d2->isDummy())
+                                continue;
+
+                            if (s.Inheritance == InheritanceType::Protected && !hasSameParent(d2->target.lock().get()))
+                                continue;
+
+                            auto copy = std::make_shared<Dependency>(*d2);
+                            auto[i, inserted] = deps.emplace(copy,
+                                s.Inheritance == InheritanceType::Interface ?
+                                InheritanceType::Public : s.Inheritance
+                            );
+                            if (inserted)
+                                deps_ordered.push_back(copy);
+
+                            // include directories only handling
+                            auto di = i->first;
+                            if (inserted)
                             {
-                                // if we inserted 3rd party dep (d2=di) of idir_only dep (d),
-                                // we mark it always as idir_only
-                                di->IncludeDirectoriesOnly = true;
-                            }
-                            else
-                            {
-                                // otherwise we keep idir_only flag as is
-                            }
-                            new_dependency = true;
-                        }
-                        else
-                        {
-                            // we already have this dep
-                            if (d->IncludeDirectoriesOnly)
-                            {
-                                // left as is if parent (d) idir_only
-                            }
-                            else
-                            {
-                                // if parent dep is not idir_only, then we choose whether to build dep
-                                if (d2->IncludeDirectoriesOnly)
+                                // new dep is added
+                                if (d->IncludeDirectoriesOnly)
                                 {
-                                    // left as is if d2 idir_only
+                                    // if we inserted 3rd party dep (d2=di) of idir_only dep (d),
+                                    // we mark it always as idir_only
+                                    di->IncludeDirectoriesOnly = true;
                                 }
                                 else
                                 {
-                                    if (di->IncludeDirectoriesOnly)
+                                    // otherwise we keep idir_only flag as is
+                                }
+                                new_dependency = true;
+                            }
+                            else
+                            {
+                                // we already have this dep
+                                if (d->IncludeDirectoriesOnly)
+                                {
+                                    // left as is if parent (d) idir_only
+                                }
+                                else
+                                {
+                                    // if parent dep is not idir_only, then we choose whether to build dep
+                                    if (d2->IncludeDirectoriesOnly)
                                     {
-                                        // also mark as new dependency (!) if processing changed for it
-                                        new_dependency = true;
+                                        // left as is if d2 idir_only
                                     }
-                                    // if d2 is not idir_only, we set so for di
-                                    di->IncludeDirectoriesOnly = false;
+                                    else
+                                    {
+                                        if (di->IncludeDirectoriesOnly)
+                                        {
+                                            // also mark as new dependency (!) if processing changed for it
+                                            new_dependency = true;
+                                        }
+                                        // if d2 is not idir_only, we set so for di
+                                        di->IncludeDirectoriesOnly = false;
+                                    }
                                 }
                             }
                         }
-                    }
-                });
-            }
+                    });
+                }
 
-            if (!new_dependency)
-            {
-                for (auto &d : deps_ordered)
-                    //add(deps.find(d)->first);
-                    Dependencies.insert(deps.find(d)->first);
-                break;
+                if (!new_dependency)
+                {
+                    for (auto &d : deps_ordered)
+                        //add(deps.find(d)->first);
+                        Dependencies.insert(deps.find(d)->first);
+                    break;
+                }
             }
         }
 
@@ -2061,7 +2265,6 @@ bool NativeExecutedTarget::prepare()
                 }
             }
         }
-
     }
     RETURN_PREPARE_PASS;
     case 4:
@@ -2091,21 +2294,31 @@ bool NativeExecutedTarget::prepare()
         // check postponed files first
         for (auto &[p, f] : *this)
         {
-            if (!f->postponed)
+            if (!f->postponed || f->skip)
                 continue;
 
             auto ext = p.extension().string();
-            auto e = target->extensions.find(ext);
+            auto i = SourceFileStorage::findLanguageByExtension(ext);
+
+            if (!i)
+                throw std::logic_error("User defined program not registered");
+
+            /*auto e = target->extensions.find(ext);
             if (e == target->extensions.end())
                 throw std::logic_error("Bad extension - someone removed it?");
 
             auto &program = e->second;
             auto i = target->getLanguage(program);
             if (!i)
-                throw std::logic_error("User defined program not registered");
+            {
+                //auto i2 = getSolution()->children.find(program);
+                //if (i2 == getSolution()->children.end())
+                    throw std::logic_error("User defined program not registered");
+                //target->registerLanguage(*i2->second, );
+            }*/
 
             auto L = i->clone(); // clone program here
-            f = this->SourceFileMapThis::operator[](p) = L->createSourceFile(p, this);
+            f = this->SourceFileMapThis::operator[](p) = L->createSourceFile(*this, p);
         }
 
         auto files = gatherSourceFiles();
@@ -2328,7 +2541,7 @@ bool NativeExecutedTarget::prepare()
     }
     RETURN_PREPARE_PASS;
     case 6:
-    // link librareis
+    // link libraries
     {
         // add link libraries from deps
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
@@ -2368,7 +2581,7 @@ bool NativeExecutedTarget::prepare()
                     // set to temp paths
                     auto o = IsConfig;
                     IsConfig = true;
-                    CircularLinker->setOutputFile(getOutputFileName(getOutputDir()));
+                    CircularLinker->setOutputFile(getOutputFileName(getOutputBaseDir()));
                     CircularLinker->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
                     IsConfig = o;
 
@@ -2419,15 +2632,27 @@ bool NativeExecutedTarget::prepare()
             }
 
             // prepare command here to prevent races
-            CircularLinker->getCommand();
+            CircularLinker->getCommand(*this);
         }
 
         getSelectedTool()->setObjectFiles(obj);
         getSelectedTool()->setInputLibraryDependencies(O1);
 
+        // add rc (.res) files
+        /*if (auto L = getSelectedTool()->as<VisualStudioLinker>(); L)
+        {
+            for (auto &[p, f] : *this)
+            {
+                p.extension() == ".res";
+            }
+        }*/
+
         getSolution()->call_event(*this, CallbackType::EndPrepare);
     }
-    break;
+    RETURN_PREPARE_PASS;
+    case 8:
+        savePrecomputedData();
+        break;
     }
 
     return false;
@@ -2571,7 +2796,7 @@ void NativeExecutedTarget::removeFile(const path &fn, bool binary_dir)
     Target::removeFile(fn, binary_dir);
 }
 
-void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags) const
+void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags)
 {
     // before resolving
     if (!to.is_absolute())
@@ -2591,7 +2816,7 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
             throw SW_RUNTIME_EXCEPTION("Package: " + pkg.target_name + ", file not found: " + from.string());
     }
 
-    // we really need ExecuteCommand here!!!
+    // we really need ExecuteCommand here!!! or not?
     //auto c = std::make_shared<DummyCommand>();// ([this, from, to, flags]()
     {
         configureFile1(from, to, flags);
@@ -2599,11 +2824,11 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
     //c->addInput(from);
     //c->addOutput(to);
 
-    //if ((int)flags & (int)ConfigureFlags::AddToBuild)
-        //Public.add(to);
+    if ((int)flags & (int)ConfigureFlags::AddToBuild)
+        operator+=(to);
 }
 
-void NativeExecutedTarget::configureFile1(const path &from, const path &to, ConfigureFlags flags) const
+void NativeExecutedTarget::configureFile1(const path &from, const path &to, ConfigureFlags flags)
 {
     static const std::regex cmDefineRegex(R"xxx(#cmakedefine[ \t]+([A-Za-z_0-9]*)([^\r\n]*?)[\r\n])xxx");
     static const std::regex cmDefine01Regex(R"xxx(#cmakedefine01[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
@@ -2624,14 +2849,19 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         return;
     }
 
-    auto find_repl = [this](const auto &key) -> std::string
+    auto find_repl = [this, &from, flags](const auto &key) -> std::string
     {
         auto v = Variables.find(key);
         if (v != Variables.end())
             return v->second;
+        // dangerous! should we really check defs?
         auto d = Definitions.find(key);
         if (d != Definitions.end())
             return d->second;
+        //if (isLocal()) // put under cl cond
+            //LOG_WARN(logger, "Unset variable '" + key + "' in file: " + normalize_path(from));
+        if ((int)flags & (int)ConfigureFlags::ReplaceUndefinedVariablesWithZeros)
+            return "0";
         return String();
     };
 
@@ -2821,6 +3051,11 @@ void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content, 
 }
 
 void NativeExecutedTarget::replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir) const
+{
+    patch(fn, from, to, binary_dir);
+}
+
+void NativeExecutedTarget::patch(const path &fn, const String &from, const String &to, bool binary_dir) const
 {
     if (PostponeFileResolving || DryRun)
         return;
@@ -3312,12 +3547,6 @@ bool ExecutableTarget::prepare()
         set_api(ApiName);
         for (auto &a : ApiNames)
             set_api(a);
-
-        if (Linker->Type == LinkerType::MSVC)
-        {
-            auto L = Linker->as<VisualStudioLinker>();
-            L->Subsystem = vs::Subsystem::Console;
-        }
     }
     break;
     }
@@ -3325,7 +3554,7 @@ bool ExecutableTarget::prepare()
     return NativeExecutedTarget::prepare();
 }
 
-path ExecutableTarget::getOutputDir() const
+path ExecutableTarget::getOutputBaseDir() const
 {
     return getUserDirectories().storage_dir_bin;
 }
@@ -3340,11 +3569,6 @@ void ExecutableTarget::cppan_load_project(const yaml &root)
     NativeExecutedTarget::cppan_load_project(root);
 }
 
-LibraryTarget::LibraryTarget(LanguageType L)
-    : NativeExecutedTarget(L)
-{
-}
-
 bool LibraryTarget::prepare()
 {
     return prepareLibrary(Settings.Native.LibrariesType);
@@ -3356,39 +3580,256 @@ void LibraryTarget::init()
     initLibrary(Settings.Native.LibrariesType);
 }
 
-StaticLibraryTarget::StaticLibraryTarget(LanguageType L)
-    : LibraryTargetBase(L)
-{
-}
-
 void StaticLibraryTarget::init()
 {
-    if (!Local)
-    {
-        // we re-use dirs only for non local projects
-        // local projects put all files into config folders
-        //Settings.Native.LibrariesType = LibraryType::Static;
-    }
-
     NativeExecutedTarget::init();
     initLibrary(LibraryType::Static);
 }
 
-SharedLibraryTarget::SharedLibraryTarget(LanguageType L)
-    : LibraryTargetBase(L)
+void SharedLibraryTarget::init()
+{
+    NativeExecutedTarget::init();
+    initLibrary(LibraryType::Shared);
+}
+
+void CSharpTarget::init()
+{
+    Target::init();
+
+    // propagate this pointer to all
+    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    {
+        v.target = this;
+    });
+    //LanguageStorage::target = this;
+
+    if (auto p = SourceFileStorage::findProgramByExtension(".cs"); p)
+        compiler = std::dynamic_pointer_cast<CSharpCompiler>(p->clone());
+    else
+        throw SW_RUNTIME_EXCEPTION("No C# compiler found");
+}
+
+void CSharpTarget::setOutputFile()
+{
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+    }
+    else
+    {
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        compiler->setOutputFile(base);
+    }
+}
+
+path CSharpTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / getOutputFileName();
+    }
+    return p;
+}
+
+Commands CSharpTarget::getCommands() const
+{
+    for (auto f : gatherSourceFiles<CSharpSourceFile>(*this))
+        compiler->addSourceFile(f->file);
+
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    cmds.insert(c);
+    return cmds;
+}
+
+bool CSharpTarget::prepare()
+{
+    return false;
+}
+
+void CSharpTarget::findSources()
 {
 }
 
-void SharedLibraryTarget::init()
+UnresolvedDependenciesType CSharpTarget::gatherUnresolvedDependencies() const
 {
-    if (!Local)
+    UnresolvedDependenciesType deps;
+    ((CSharpTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+        [this, &deps](auto &v, auto &s)
     {
-        // we re-use dirs only for non local projects
-        // local projects put all files into config folders
-        //Settings.Native.LibrariesType = LibraryType::Shared;
+        for (auto &d : v.Dependencies)
+        {
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+                deps.insert({ d->package, d });
+        }
+    });
+    return deps;
+}
+
+void RustTarget::init()
+{
+    Target::init();
+
+    // propagate this pointer to all
+    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    {
+        v.target = this;
+    });
+    //LanguageStorage::target = this;
+
+    if (auto p = SourceFileStorage::findProgramByExtension(".rs"); p)
+        compiler = std::dynamic_pointer_cast<RustCompiler>(p->clone());
+    else
+        throw SW_RUNTIME_EXCEPTION("No Rust compiler found");
+}
+
+void RustTarget::setOutputFile()
+{
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
     }
-    NativeExecutedTarget::init();
-    initLibrary(LibraryType::Shared);
+    else
+    {
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        compiler->setOutputFile(base);
+    }
+}
+
+path RustTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / getOutputFileName();
+    }
+    return p;
+}
+
+Commands RustTarget::getCommands() const
+{
+    for (auto f : gatherSourceFiles<RustSourceFile>(*this))
+        compiler->setSourceFile(f->file);
+
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    cmds.insert(c);
+    return cmds;
+}
+
+bool RustTarget::prepare()
+{
+    return false;
+}
+
+void RustTarget::findSources()
+{
+}
+
+UnresolvedDependenciesType RustTarget::gatherUnresolvedDependencies() const
+{
+    UnresolvedDependenciesType deps;
+    ((RustTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+        [this, &deps](auto &v, auto &s)
+    {
+        for (auto &d : v.Dependencies)
+        {
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+                deps.insert({ d->package, d });
+        }
+    });
+    return deps;
+}
+
+void GoTarget::init()
+{
+    Target::init();
+
+    // propagate this pointer to all
+    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    {
+        v.target = this;
+    });
+    //LanguageStorage::target = this;
+
+    if (auto p = SourceFileStorage::findProgramByExtension(".go"); p)
+        compiler = std::dynamic_pointer_cast<GoCompiler>(p->clone());
+    else
+        throw SW_RUNTIME_EXCEPTION("No Gu compiler found");
+}
+
+void GoTarget::setOutputFile()
+{
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+    }
+    else
+    {
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        compiler->setOutputFile(base);
+    }
+}
+
+path GoTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / getOutputFileName();
+    }
+    return p;
+}
+
+Commands GoTarget::getCommands() const
+{
+    for (auto f : gatherSourceFiles<GoSourceFile>(*this))
+        compiler->setSourceFile(f->file);
+
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    cmds.insert(c);
+    return cmds;
+}
+
+bool GoTarget::prepare()
+{
+    return false;
+}
+
+void GoTarget::findSources()
+{
+}
+
+UnresolvedDependenciesType GoTarget::gatherUnresolvedDependencies() const
+{
+    UnresolvedDependenciesType deps;
+    ((GoTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+        [this, &deps](auto &v, auto &s)
+    {
+        for (auto &d : v.Dependencies)
+        {
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+                deps.insert({ d->package, d });
+        }
+    });
+    return deps;
 }
 
 }

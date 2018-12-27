@@ -16,6 +16,10 @@ DEFINE_OPTION_SPECIALIZATION_DUMMY(VisualStudioCompilerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(VisualStudioLinkerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(CPPLanguageStandard);
 
+DEFINE_OPTION_SPECIALIZATION_DUMMY(VisualStudioCSharpCompilerOptions);
+DEFINE_OPTION_SPECIALIZATION_DUMMY(RustCompilerOptions);
+DEFINE_OPTION_SPECIALIZATION_DUMMY(GoCompilerOptions);
+
 namespace vs
 {
 
@@ -266,6 +270,63 @@ Strings getCommandLineImplCPPLanguageStandardVS(const CommandLineOption<CPPLangu
         return {};
     }
     return { s };
+}
+
+DECLARE_OPTION_SPECIALIZATION(vs::cs::Target)
+{
+    auto s = getCommandLineFlag();
+    switch (value())
+    {
+    case vs::cs::Target::Console:
+        s += "exe";
+        break;
+    case vs::cs::Target::Windows:
+        s += "winexe";
+        break;
+    case vs::cs::Target::Library:
+        s += "library";
+        break;
+    case vs::cs::Target::Module:
+        s += "module";
+        break;
+    case vs::cs::Target::AppContainer:
+        s += "appcontainerexe";
+        break;
+    case vs::cs::Target::Winmdobj:
+        s += "winmdobj";
+        break;
+    default:
+        throw SW_RUNTIME_EXCEPTION("unreachable code");
+    }
+    return { s };
+}
+
+DECLARE_OPTION_SPECIALIZATION(rust::CrateType)
+{
+    String s;
+    switch (value())
+    {
+#define CASE(x)              \
+    case rust::CrateType::x: \
+        s += #x;             \
+        break
+
+        CASE(bin);
+        CASE(lib);
+        CASE(rlib);
+        CASE(dylib);
+        CASE(cdylib);
+        CASE(staticlib);
+
+#undef CASE
+
+    case rust::CrateType::proc_macro:
+        s += "proc-macro";
+        break;
+    default:
+        throw SW_RUNTIME_EXCEPTION("unreachable code");
+    }
+    return { getCommandLineFlag(), s };
 }
 
 }

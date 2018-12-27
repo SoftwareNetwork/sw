@@ -13,6 +13,7 @@
 #include "yaml.h"
 
 #include <primitives/command.h>
+#include <primitives/date_time.h>
 #include <primitives/exceptions.h>
 #include <primitives/executor.h>
 #include <primitives/filesystem.h>
@@ -976,14 +977,34 @@ void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
     {
         fs.push_back(e.push([src = src.first, &d = src.second, &opts]
         {
-            if (!fs::exists(d))
+            path t = d;
+            t += ".stamp";
+
+            auto dl = [&src, d, &t]()
             {
                 LOG_INFO(logger, "Downloading source:\n" << print_source(src));
                 download(src, d);
+                write_file(t, timepoint2string(getUtc()));
+            };
+
+            if (!fs::exists(d))
+            {
+                dl();
             }
             else if (!opts.ignore_existing_dirs)
             {
                 throw SW_RUNTIME_EXCEPTION("Directory exists " + normalize_path(d) + " for source " + print_source(src));
+            }
+            else
+            {
+                bool e = fs::exists(t);
+                if (!e || getUtc() - string2timepoint(read_file(t)) > opts.existing_dirs_age)
+                {
+                    if (e)
+                        LOG_INFO(logger, "Download data is stale, re-downloading\n");
+                    fs::remove_all(d);
+                    dl();
+                }
             }
             if (opts.adjust_root_dir)
                 d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup

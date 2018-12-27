@@ -1,0 +1,32 @@
+image: Visual Studio 2017
+
+platform:
+  - Win32
+  - Win64
+
+cache:
+  - c:/Users/appveyor/.sw
+
+configuration:
+  - Release
+
+# for curl
+install:
+  - set PATH=C:\Program Files\Git\mingw64\bin;%PATH%
+
+before_build:
+  - curl -fsS -L -o dl.zip https://github.com/SoftwareNetwork/binaries/raw/master/client_windows.zip
+  - 7z x dl.zip
+  - set PATH=%PATH%;%cd%
+
+build_script:
+  - sw -platform %platform% build
+
+artifacts:
+  - path: sw.zip
+    name: sw-$(APPVEYOR_BUILD_VERSION)
+
+after_build:
+  - 7z a sw.zip %APPVEYOR_BUILD_FOLDER%\.sw\windows_*_msvc_*_static_Release_*\*.exe
+#  - ps: Get-ChildItem .sw/windows_*_msvc_*_static_Release_*/*.exe | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name -DeploymentName sw-$(APPVEYOR_BUILD_VERSION) }
+  

@@ -45,6 +45,7 @@ cl::opt<String> generator("G", cl::desc("Generator"));
 cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(generator));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 cl::opt<bool> dry_run("n", cl::desc("Dry run"));
+cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 static cl::opt<bool> fetch_sources("fetch", cl::desc("Fetch files in process"));
 
@@ -215,6 +216,7 @@ Solution::Solution(const Solution &rhs)
     , with_testing(rhs.with_testing)
     , ide_solution_name(rhs.ide_solution_name)
     , config_file_or_dir(rhs.config_file_or_dir)
+    , Variables(rhs.Variables)
     , events(rhs.events)
 {
     Checks.solution = this;
@@ -310,33 +312,50 @@ TargetBaseTypePtr Solution::resolveTarget(const UnresolvedPackage &pkg) const
     return resolved_targets[pkg];
 }
 
-void Solution::addTest(const ExecutableTarget &t)
+path Solution::getTestDir() const
 {
-    addTest("test: [test." + std::to_string(tests.size() + 1) + "]", t);
+    return BinaryDir / "test" / getConfig();
 }
 
-void Solution::addTest(const String &name, const ExecutableTarget &t)
+void Solution::addTest(Test &cb, const String &name)
 {
-    auto c = t.addCommand();
-    c << cmd::prog(t);
-    c << cmd::wdir(t.getOutputFile().parent_path());
-    tests.insert(c.c);
-    c.c->name = name;
-    c.c->always = true;
+    auto dir = getTestDir() / name;
+    fs::remove_all(dir); // also makea condition here
+
+    auto &c = *cb.c;
+    c.name = "test: [" + name + "]";
+    c.always = true;
+    c.working_directory = dir;
+    c.addPathDirectory(BinaryDir / getConfig());
+    c.out.file = dir / "stdout.txt";
+    c.err.file = dir / "stderr.txt";
+    tests.insert(cb.c);
 }
 
-driver::cpp::CommandBuilder Solution::addTest()
+Test Solution::addTest(const ExecutableTarget &t)
 {
-    return addTest("test: [test." + std::to_string(tests.size() + 1) + "]");
+    return addTest("test." + std::to_string(tests.size() + 1), t);
 }
 
-driver::cpp::CommandBuilder Solution::addTest(const String &name)
+Test Solution::addTest(const String &name, const ExecutableTarget &tgt)
 {
-    driver::cpp::CommandBuilder c(*fs);
-    tests.insert(c.c);
-    c.c->name = name;
-    c.c->always = true;
-    return c;
+    auto c = tgt.addCommand();
+    c << cmd::prog(tgt);
+    Test t(c);
+    addTest(t, name);
+    return t;
+}
+
+Test Solution::addTest()
+{
+    return addTest("test." + std::to_string(tests.size() + 1));
+}
+
+Test Solution::addTest(const String &name)
+{
+    Test cb(*fs);
+    addTest(cb, name);
+    return cb;
 }
 
 StaticLibraryTarget &Solution::getImportLibrary()
@@ -434,7 +453,7 @@ void Solution::performChecks()
     if (checks.empty())
         return;
     auto ep = ExecutionPlan<Check>::createExecutionPlan(checks);
-    if (checks.empty())
+    if (ep)
     {
         // we reset known targets to prevent wrong children creation as dummy targets
         //auto kt = std::move(knownTargets);
@@ -465,11 +484,11 @@ void Solution::performChecks()
     // print our deps graph
     String s;
     s += "digraph G {\n";
-    for (auto &c : checks)
+    for (auto &c : ep.unprocessed_commands_set)
     {
         for (auto &d : c->dependencies)
         {
-            if (checks.find(std::static_pointer_cast<Check>(d)) == checks.end())
+            if (ep.unprocessed_commands_set.find(std::static_pointer_cast<Check>(d)) == ep.unprocessed_commands_set.end())
                 continue;
             s += c->Definition + "->" + std::static_pointer_cast<Check>(d)->Definition + ";";
         }
@@ -477,7 +496,8 @@ void Solution::performChecks()
     s += "}";
 
     auto d = getServiceDir();
-    write_file(d / "cyclic_deps_checks.dot", s);
+    auto cyclic_path = d / "cyclic";
+    write_file(cyclic_path / "deps_checks.dot", s);
 
     throw SW_RUNTIME_EXCEPTION("Cannot create execution plan because of cyclic dependencies");
 }
@@ -808,7 +828,7 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
 
     if (!dry_run)
     {
-        p.execute(e);
+        p.execute(e, skip_errors.getValue());
         if (!silent)
             LOG_INFO(logger, "Build time: " << t.getTimeFloat() << " s.");
     }
@@ -922,24 +942,30 @@ void Solution::prepare()
     // multipass prepare()
     // if we add targets inside this loop,
     // it will automatically handle this situation
-    auto &e = getExecutor();
-    for (std::atomic_bool next_pass = true; next_pass;)
-    {
-        next_pass = false;
-        std::vector<Future<void>> fs;
-        for (auto &[p, t] : getChildren())
-        {
-            fs.push_back(e.push([t = t, &next_pass]
-            {
-                auto np = t->prepare();
-                if (!next_pass)
-                    next_pass = np;
-            }, getChildren().size()));
-        }
-        waitAndGet(fs);
-    }
+    while (prepareStep())
+        ;
 
     prepared = true;
+}
+
+bool Solution::prepareStep()
+{
+    std::atomic_bool next_pass = false;
+
+    auto &e = getExecutor();
+    Futures<void> fs;
+    for (const auto &[pkg, t] : getChildren())
+    {
+        fs.push_back(e.push([t, &next_pass]
+        {
+            auto np = t->prepare();
+            if (!next_pass)
+                next_pass = np;
+        }));
+    }
+    waitAndGet(fs);
+
+    return next_pass;
 }
 
 UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
@@ -989,34 +1015,44 @@ void Solution::checkPrepared() const
 
 ExecutionPlan<builder::Command> Solution::getExecutionPlan() const
 {
-    auto cmds = getCommands();
-    return getExecutionPlan(cmds);
+    return getExecutionPlan(getCommands());
 }
 
-ExecutionPlan<builder::Command> Solution::getExecutionPlan(Commands &cmds) const
+ExecutionPlan<builder::Command> Solution::getExecutionPlan(const Commands &cmds) const
 {
     auto ep = ExecutionPlan<builder::Command>::createExecutionPlan(cmds);
-    if (cmds.empty())
+    if (ep)
         return ep;
 
     // error!
 
-    // print our deps graph
-    String s;
-    s += "digraph G {\n";
-    for (auto &c : cmds)
-    {
-        for (auto &d : c->dependencies)
-        {
-            if (cmds.find(d) == cmds.end())
-                continue;
-            s += c->getName(true) + "->" + d->getName(true) + ";";
-        }
-    }
-    s += "}";
-
     auto d = getServiceDir();
-    write_file(d / "cyclic_deps.dot", s);
+
+    auto [g, n, sc] = ep.getStrongComponents();
+
+    using Subgraph = boost::subgraph<ExecutionPlan<builder::Command>::Graph>;
+
+    // fill copy of g
+    Subgraph root(g.m_vertices.size());
+    for (auto &e : g.m_edges)
+        boost::add_edge(e.m_source, e.m_target, root);
+
+    std::vector<Subgraph*> subs(n);
+    for (decltype(n) i = 0; i < n; i++)
+        subs[i] = &root.create_subgraph();
+    for (int i = 0; i < sc.size(); i++)
+        boost::add_vertex(i, *subs[sc[i]]);
+
+    auto cyclic_path = d / "cyclic";
+    fs::create_directories(cyclic_path);
+    for (decltype(n) i = 0; i < n; i++)
+    {
+        if (subs[i]->m_graph.m_vertices.size() > 1)
+            ExecutionPlan<builder::Command>::printGraph(subs[i]->m_graph, cyclic_path / std::to_string(i));
+    }
+
+    ep.printGraph(ep.getGraph(), cyclic_path / "processed", ep.commands, true);
+    ep.printGraph(ep.getGraphUnprocessed(), cyclic_path / "unprocessed", ep.unprocessed_commands, true);
 
     throw SW_RUNTIME_EXCEPTION("Cannot create execution plan because of cyclic dependencies");
 }
@@ -1119,7 +1155,7 @@ void Build::setSettings()
 
 void Build::findCompiler()
 {
-    detectNativeCompilers(*this);
+    detectCompilers(*this);
 
     using CompilerVector = std::vector<std::pair<PackagePath, CompilerType>>;
 
@@ -1208,6 +1244,13 @@ void Build::findCompiler()
         { "org.LLVM.clangcl",CompilerType::ClangCl }
     };
 
+    const CompilerVector other =
+    {
+        {"com.Microsoft.VisualStudio.Roslyn.csc", CompilerType::MSVC},
+        {"org.rust.rustc", CompilerType::MSVC},
+        {"org.google.golang.go", CompilerType::MSVC},
+    };
+
     switch (Settings.Native.CompilerType)
     {
     case CompilerType::MSVC:
@@ -1226,7 +1269,6 @@ void Build::findCompiler()
         break;
     default:
         throw SW_RUNTIME_EXCEPTION("solution.cpp: not implemented");
-
     }
 
     if (Settings.Native.CompilerType == CompilerType::UnspecifiedCompiler)
@@ -1253,6 +1295,9 @@ void Build::findCompiler()
         {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
         {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
         }, "Try to add more linkers");
+
+    // more languages
+    activate_all(other);
 
     setSettings();
 }
@@ -1564,10 +1609,13 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     lib.CPPVersion = CPPLanguageStandard::CPP17;
 
     // separate loop
-    for (auto &fn : files)
+    for (auto &[fn, pkg] : output_names)
     {
         lib += fn;
         lib[fn].fancy_name = "[" + output_names[fn].toString() + "]/[config]";
+        // configs depend on pch, and pch depends on getCurrentModuleNameHash(), so we add name to the file
+        // to make sure we have different config .objs for different pchs
+        lib[fn].as<NativeSourceFile>()->setOutputFile(lib, fn.u8string() + "." + getCurrentModuleNameHash(), getObjectDir(pkg) / "self");
         if (gVerbose)
             lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
     }
@@ -2354,7 +2402,7 @@ PackageDescriptionMap Build::getPackages() const
         {
             if (File(f, *fs).isGeneratedAtAll())
                 continue;
-            files.insert(f);
+            files.insert(f.lexically_normal());
         }
 
         if (files.empty() && !nt->Empty)
@@ -2367,9 +2415,31 @@ PackageDescriptionMap Build::getPackages() const
         // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
         nlohmann::json jm;
         // 'from' field is calculated relative to fetch/sln dir
-        auto files_map1 = primitives::pack::prepare_files(files, rd);
+        auto files_map1 = primitives::pack::prepare_files(files, rd.lexically_normal());
         // but 'to' field is calculated based on target's own view
-        auto files_map2 = primitives::pack::prepare_files(files, t->SourceDir);
+        auto files_map2 = primitives::pack::prepare_files(files, t->SourceDir.lexically_normal());
+        if (files_map1.size() != files_map2.size())
+        {
+            auto fm2 = files_map2;
+            for (auto &[f, _] : files_map1)
+                files_map2.erase(f);
+            for (auto &[f, _] : fm2)
+                files_map1.erase(f);
+            String s;
+            if (!files_map1.empty())
+            {
+                s += "from first map: ";
+                for (auto &[f, _] : files_map1)
+                    s += normalize_path(f) + ", ";
+            }
+            if (!files_map2.empty())
+            {
+                s += "from second map: ";
+                for (auto &[f, _] : files_map2)
+                    s += normalize_path(f) + ", ";
+            }
+            throw SW_RUNTIME_EXCEPTION("Target: " + pkg.toString() + " Maps are not the same: " + s);
+        }
         for (const auto &tup : boost::combine(files_map1, files_map2))
         {
             std::pair<path, path> f1, f2;

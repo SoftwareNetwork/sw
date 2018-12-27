@@ -261,6 +261,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
     // 2. move Dependencies out - ???
 
     DependenciesType Dependencies;
+    //Files FileDependencies; // this can be managed with existing source files
     NativeLinkerOptionsData System;
 
     using NativeLinkerOptionsData::add;
@@ -346,6 +347,9 @@ struct InheritanceStorage : std::vector<T*>
     {
         return operator[](toIndex(i));
     }
+
+    base &raw() { return *this; }
+    const base &raw() const { return *this; }
 };
 
 /**
@@ -506,6 +510,9 @@ public:
         Public.merge(g.Public);
         Interface.merge(g.Interface);*/
     }
+
+    InheritanceStorage<T> &getInheritanceStorage() { return data; }
+    const InheritanceStorage<T> &getInheritanceStorage() const { return data; }
 };
 
 }

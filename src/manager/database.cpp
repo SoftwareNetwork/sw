@@ -755,6 +755,14 @@ void PackagesDatabase::download() const
     writeDownloadTime();
 }
 
+static std::istream &safe_getline(std::istream &i, String &s)
+{
+    std::getline(i, s);
+    if (!s.empty() && s.back() == '\r')
+        s.resize(s.size() - 1);
+    return i;
+}
+
 void PackagesDatabase::load(bool drop) const
 {
     auto &sdb = getServiceDatabase();
@@ -810,7 +818,7 @@ void PackagesDatabase::load(bool drop) const
         int rc;
 
         // read first line
-        std::getline(ifile, s);
+        safe_getline(ifile, s);
         split_csv_line(s);
 
         // read fields
@@ -841,7 +849,7 @@ void PackagesDatabase::load(bool drop) const
         if (sqlite3_prepare_v2(mdb, query.c_str(), (int)query.size() + 1, &stmt, 0) != SQLITE_OK)
             throw SW_RUNTIME_EXCEPTION(sqlite3_errmsg(mdb));
 
-        while (std::getline(ifile, s))
+        while (safe_getline(ifile, s))
         {
             auto b = s.c_str();
             split_csv_line(s);

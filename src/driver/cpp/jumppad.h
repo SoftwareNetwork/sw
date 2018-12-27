@@ -17,6 +17,7 @@
 #define SW_JUMPPAD_API SW_DRIVER_CPP_API
 #endif
 
+// add versions to functions?
 #define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(f, n)                       \
     extern "C" SW_JUMPPAD_API int _sw_fn_jumppad_##n(const Strings &s) \
     {                                                                  \

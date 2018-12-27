@@ -190,6 +190,9 @@ int main(int argc, char **argv)
         {{"org.sw.demo.google.grpc.grpcpp_codegen_base_src", "1"}, {}},
         {{"org.sw.demo.google.grpc.grpcpp_codegen_proto", "1"}, {}},
         {{"org.sw.demo.google.grpc.grpcpp", "1"}, {}},
+        { {"org.sw.demo.google.grpc.health_proto", "1"}, {} },
+        { {"org.sw.demo.google.grpc.grpc_lb_policy_xds_secure", "1"}, {} },
+        { {"org.sw.demo.google.grpc.grpclb_proto", "1"}, {} },
 
         {{"pub.egorpugin.llvm_project.llvm.demangle", "master"}, {true}},
         {{"pub.egorpugin.llvm_project.llvm.support_lite", "master"}, {true}},

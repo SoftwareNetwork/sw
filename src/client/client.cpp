@@ -51,6 +51,16 @@ DECLARE_STATIC_LOGGER(logger, "main");
 #include <WinReg.hpp>
 #endif
 
+#if _MSC_VER
+#if defined(SW_USE_TBBMALLOC)
+#include "tbb/include/tbb/tbbmalloc_proxy.h"
+#elif defined(SW_USE_TCMALLOC)
+//"libtcmalloc_minimal.lib"
+#pragma comment(linker, "/include:__tcmalloc")
+#else
+#endif
+#endif
+
 using namespace sw;
 
 bool bConsoleMode = true;
@@ -275,6 +285,7 @@ static cl::list<String> install_args(cl::ConsumeAfter, cl::desc("Packages to add
 // upload
 static cl::opt<String> build_arg_upload(cl::Positional, cl::desc("File or directory with script to upload"), cl::init("."), cl::sub(subcommand_upload));
 static cl::opt<String> upload_prefix(cl::Positional, cl::desc("Prefix path"), cl::sub(subcommand_upload), cl::Required);
+static cl::opt<bool> build_before_upload("build", cl::desc("Build before upload"), cl::sub(subcommand_upload));
 
 // ide commands
 static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl::sub(subcommand_ide)*/);
@@ -290,6 +301,8 @@ static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-pac
 extern bool gUseLockFile;
 
 //static cl::list<String> builtin_function("internal-call-builtin-function", cl::desc("Call built-in function"), cl::Hidden);
+
+void override_package_perform();
 
 int sw_main(const Strings &args)
 {
@@ -308,26 +321,7 @@ int sw_main(const Strings &args)
 
     if (!override_package.empty())
     {
-        auto s = sw::load(".");
-        //auto s = sw::load(override_package[1]);
-        for (auto &[pkg, desc] : s->getPackages())
-        {
-            sw::PackagePath prefix = override_package;
-            sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
-            auto dir = fs::absolute(".");
-            //auto dir = fs::absolute(override_package[1]);
-            LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
-            // fix deps' prefix
-            sw::UnresolvedPackages deps;
-            for (auto &d : desc->getData().dependencies)
-            {
-                if (d.ppath.isAbsolute())
-                    deps.insert(d);
-                else
-                    deps.insert({ prefix / d.ppath, d.range });
-            }
-            getServiceDatabase().overridePackage(pkg2, { dir, deps, 0, (int)prefix.size() });
-        }
+        override_package_perform();
         return 0;
     }
 
@@ -342,6 +336,19 @@ int sw_main(const Strings &args)
     if (!delete_overridden_package_dir.empty())
     {
         LOG_INFO(logger, "Delete override for sdir " + delete_overridden_package_dir.u8string());
+
+        auto d = fs::canonical(fs::absolute(delete_overridden_package_dir));
+
+        std::map<sw::PackageId, path> pkgs;
+        for (auto &[n, v] : getServiceDatabase().getOverriddenPackages())
+        {
+            for (auto &[v2, p] : v)
+                if (p.sdir == d)
+                    pkgs[{n, v2}] = p.sdir;
+        }
+        for (auto &[n, p] : pkgs)
+            std::cout << "Deleting " << n.toString() << "\n";
+
         getServiceDatabase().deleteOverriddenPackageDir(delete_overridden_package_dir);
         return 0;
     }
@@ -530,8 +537,37 @@ SUBCOMMAND_DECL(uri)
 
 #include <solution.h>
 
+void override_package_perform()
+{
+    auto s = sw::load(".");
+    auto &b = *((sw::Build*)s.get());
+    b.solutions.begin()->prepareStep();
+
+    //auto s = sw::load(override_package[1]);
+    for (auto &[pkg, desc] : s->getPackages())
+    {
+        sw::PackagePath prefix = override_package;
+        sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
+        auto dir = fs::absolute(".");
+        //auto dir = fs::absolute(override_package[1]);
+        LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
+        // fix deps' prefix
+        sw::UnresolvedPackages deps;
+        for (auto &d : desc->getData().dependencies)
+        {
+            if (d.ppath.isAbsolute())
+                deps.insert(d);
+            else
+                deps.insert({ prefix / d.ppath, d.range });
+        }
+        getServiceDatabase().overridePackage(pkg2, { dir, deps, 0, (int)prefix.size() });
+    }
+}
+
 SUBCOMMAND_DECL(ide)
 {
+    //useFileMonitor = false;
+
     if (!target_build.empty())
     {
         try_single_process_job(fs::current_path() / ".sw" / "ide", []()
@@ -660,8 +696,11 @@ SUBCOMMAND_DECL(upload)
     //opts.name_prefix = upload_prefix;
     opts.root_dir = fs::current_path() / ".sw";
     opts.ignore_existing_dirs = true;
+    opts.existing_dirs_age = std::chrono::hours(8);
     //opts.apply_version_to_source = true;
     auto s = sw::fetch_and_load(build_arg_update.getValue(), opts);
+    if (build_before_upload)
+        s->execute();
 
     auto &us = Settings::get_user_settings();
     auto cr = us.remotes.begin();
@@ -688,3 +727,11 @@ std::string getProgramName()
 {
     return PACKAGE_NAME_CLEAN;
 }
+
+#if _MSC_VER
+#if defined(SW_USE_JEMALLOC)
+#define JEMALLOC_NO_PRIVATE_NAMESPACE
+#include <jemalloc-5.1.0/include/jemalloc/jemalloc.h>
+//#include <jemalloc-5.1.0/src/jemalloc_cpp.cpp>
+#endif
+#endif

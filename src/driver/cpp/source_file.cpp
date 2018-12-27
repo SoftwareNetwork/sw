@@ -101,28 +101,21 @@ Program *SourceFileStorage::findProgramByExtension(const String &ext) const
     if (!pi)
         return nullptr;
     auto &pkg = pi.value();
-    auto p = target->registered_programs.find(pkg.ppath);
-    if (p == target->registered_programs.end())
+    auto p = target->registered_programs.find(pkg);
+    if (p == target->registered_programs.end(pkg))
     {
-        p = target->getSolution()->registered_programs.find(ext);
-        if (p == target->getSolution()->registered_programs.end())
+        p = target->getSolution()->registered_programs.find(pkg);
+        if (p == target->getSolution()->registered_programs.end(pkg))
             return nullptr;
     }
-    auto v = p->second.find(pkg.version);
-    if (v == p->second.end())
-        return nullptr;
-    return v->second.get();
+    return p->second.get();
 }
 
 optional<PackageId> SourceFileStorage::findPackageIdByExtension(const String &ext) const
 {
     auto e = target->findPackageIdByExtension(ext);
     if (!e)
-    {
         e = target->getSolution()->findPackageIdByExtension(ext);
-        if (!e)
-            return {};
-    }
     return e;
 }
 
@@ -140,14 +133,10 @@ Language *SourceFileStorage::findLanguageByPackageId(const PackageId &p) const
 
 Language *SourceFileStorage::findLanguageByExtension(const String &ext) const
 {
-    auto e = target->findLanguageByExtension(ext);
+    auto e = findPackageIdByExtension(ext);
     if (!e)
-    {
-        e = target->getSolution()->findLanguageByExtension(ext);
-        if (!e)
-            return {};
-    }
-    return e;
+        return {};
+    return findLanguageByPackageId(e.value());
 }
 
 void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
@@ -160,10 +149,11 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 
     auto ext = file.extension().string();
     auto p = findPackageIdByExtension(ext);
-    if (!p ||
-        (((NativeExecutedTarget*)target)->HeaderOnly && ((NativeExecutedTarget*)target)->HeaderOnly.value()))
+    auto nt = target->as<NativeExecutedTarget>();
+    auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
+    if (!p || ho)
     {
-        f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file, *target->getSolution()->fs);
+        f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(*target, file);
         f->created = false;
     }
     else
@@ -176,14 +166,14 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
             {
                 //if (f && f->postponed)
                     //throw SW_RUNTIME_EXCEPTION("Postponing postponed file");
-                f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file, *target->getSolution()->fs);
+                f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(*target, file);
                 f->postponed = true;
             }
             else
             {
                 auto f2 = f;
                 auto L = i->clone(); // clone program here
-                f = this->SourceFileMapThis::operator[](file) = L->createSourceFile(file, target);
+                f = this->SourceFileMapThis::operator[](file) = L->createSourceFile(*target, file);
                 if (f2 && f2->postponed)
                 {
                     // retain some data
@@ -359,6 +349,7 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
     // some libs may declare common regex for changing files in generic manner
     // this check will fail for them
     // reconsider
+    // apply EnforcementType::CheckRegexes
     //if (!matches)
         //throw SW_RUNTIME_EXCEPTION("No files matches regex");
 }
@@ -376,7 +367,7 @@ size_t SourceFileStorage::sizeSkipped() const
 
 SourceFile &SourceFileStorage::operator[](path F)
 {
-    static SourceFile sf("static_source_file", *target->getSolution()->fs);
+    static SourceFile sf(*target, "static_source_file");
     if (target->PostponeFileResolving)
         return sf;
     check_absolute(F);
@@ -427,12 +418,9 @@ void SourceFileStorage::resolve()
     }
 }
 
-void SourceFileStorage::startAssignOperation()
-{
-}
-
 bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
 {
+    // apply EnforcementType::CheckFiles
     if (!F.is_absolute())
     {
         auto p = target->SourceDir / F;
@@ -507,13 +495,14 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
         if (std::regex_match(s, r.r))
             files[p] = f;
     }
+    // apply EnforcementType::CheckRegexes
     //if (files.empty())
         //throw SW_RUNTIME_EXCEPTION("No files matches regex");
     return files;
 }
 
-SourceFile::SourceFile(const path &input, FileStorage &fs)
-    : File(input, fs)
+SourceFile::SourceFile(const Target &t, const path &input)
+    : File(input, *t.getSolution()->fs)
 {
 }
 
@@ -529,10 +518,10 @@ bool SourceFile::isActive() const
     return created && !skip /* && !isRemoved(f.first)*/;
 }
 
-NativeSourceFile::NativeSourceFile(const path &input, FileStorage &fs, const path &o, NativeCompiler *c)
-    : SourceFile(input, fs)
+NativeSourceFile::NativeSourceFile(const Target &t, NativeCompiler *c, const path &input, const path &o)
+    : SourceFile(t, input)
     , compiler(c ? std::static_pointer_cast<NativeCompiler>(c->clone()) : nullptr)
-    , output(o, fs)
+    , output(o, *t.getSolution()->fs)
 {
     compiler->setSourceFile(input, output.file);
 }
@@ -554,17 +543,22 @@ void NativeSourceFile::setOutputFile(const path &o)
     compiler->setSourceFile(file, output.file);
 }
 
-std::shared_ptr<builder::Command> NativeSourceFile::getCommand() const
+void NativeSourceFile::setOutputFile(const TargetBase &t, const path &input, const path &output_dir)
 {
-    auto cmd = compiler->getCommand();
-    for (auto &d : dependencies)
-        cmd->dependencies.insert(d->getCommand());
-    return cmd;
+    setOutputFile(output_dir / getObjectFilename(t, input));
 }
 
-/*Files NativeSourceFile::getGeneratedDirs() const
+String NativeSourceFile::getObjectFilename(const TargetBase &t, const path &p)
 {
-    return compiler->getGeneratedDirs();
-}*/
+    return SourceFile::getObjectFilename(t, p) + compiler->getObjectExtension();
+}
+
+std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const TargetBase &t) const
+{
+    auto cmd = compiler->getCommand(t);
+    for (auto &d : dependencies)
+        cmd->dependencies.insert(d->getCommand(t));
+    return cmd;
+}
 
 }

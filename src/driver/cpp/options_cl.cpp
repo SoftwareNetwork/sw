@@ -23,6 +23,8 @@ DECLARE_OPTION_SPECIALIZATION(bool)
 
 DECLARE_OPTION_SPECIALIZATION(String)
 {
+    if (separate_prefix)
+        return { getCommandLineFlag(), value() };
     return { getCommandLineFlag() + value() };
 }
 
@@ -42,6 +44,8 @@ DECLARE_OPTION_SPECIALIZATION(path)
         c->addIntermediate(value());
     if (output_dependency)
         c->addOutput(value());
+    if (separate_prefix)
+        return { getCommandLineFlag(), normalize_path(value()) };
     return { getCommandLineFlag() + normalize_path(value()) };
 }
 
@@ -57,7 +61,15 @@ DECLARE_OPTION_SPECIALIZATION(FilesOrdered)
         if (output_dependency)
             c->addOutput(v);
         if (cmd_flag_before_each_value)
-            cmds.push_back(getCommandLineFlag() + v.string());
+        {
+            if (separate_prefix)
+            {
+                cmds.push_back(getCommandLineFlag());
+                cmds.push_back(v.string());
+            }
+            else
+                cmds.push_back(getCommandLineFlag() + v.string());
+        }
         else
             cmds.push_back(v.string());
     }
@@ -76,7 +88,15 @@ DECLARE_OPTION_SPECIALIZATION(Files)
         if (output_dependency)
             c->addOutput(v);
         if (cmd_flag_before_each_value)
-            cmds.push_back(getCommandLineFlag() + v.string());
+        {
+            if (separate_prefix)
+            {
+                cmds.push_back(getCommandLineFlag());
+                cmds.push_back(v.string());
+            }
+            else
+                cmds.push_back(getCommandLineFlag() + v.string());
+        }
         else
             cmds.push_back(v.string());
     }
