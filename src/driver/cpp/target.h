@@ -36,8 +36,8 @@
                                       \
         using Assigner::operator();   \
                                       \
-        template <class T>            \
-        void operator()(const T &v)   \
+        template <class U>            \
+        void operator()(const U &v)   \
         {                             \
             if (!canProceed(r))       \
                 return;               \

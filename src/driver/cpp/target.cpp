@@ -98,7 +98,7 @@ static std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s)
     {
         if (!f->isActive())
             continue;
-        auto f2 = f->as<SF>();
+        auto f2 = f->template as<SF>();
         if (f2)
             files.insert(f2);
     }

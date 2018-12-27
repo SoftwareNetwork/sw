@@ -726,7 +726,7 @@ void Command::addPathDirectory(const path &p)
 #else
     static const auto env = "PATH";
     static const auto delim = ":";
-    auto norm = [](const auto &p) { return p.u8string() };
+    auto norm = [](const auto &p) { return p.u8string(); };
 #endif
 
     if (environment[env].empty())

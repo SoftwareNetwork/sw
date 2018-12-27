@@ -138,6 +138,11 @@ void build(Solution &s)
     client += cpp_driver,
         "pub.egorpugin.primitives.sw.main-master"_dep,
         "org.sw.demo.giovannidicanio.winreg-master"_dep;
+    if (s.Settings.TargetOS.Type == OSType::Linux)
+    {
+        //client.getSelectedTool()->LinkOptions.push_back("-static-libstdc++");
+        //client.getSelectedTool()->LinkOptions.push_back("-static-libgcc");
+    }
 
     if (s.Settings.TargetOS.Type == OSType::Windows)
     {
@@ -150,4 +155,5 @@ void build(Solution &s)
         if (s.Settings.TargetOS.Type == OSType::Windows)
             client.Public += "UNICODE"_d;
     }
+    
 }

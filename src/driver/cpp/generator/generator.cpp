@@ -1131,14 +1131,14 @@ void VSGeneratorNMake::generate(const Build &b)
         auto &prnts = t->Local ? local_parents : parents;
         while (!pp.empty() && prnts.find(pp) == prnts.end())
             pp = pp.parent();
-        auto t = VSProjectType::Makefile;
+        auto t2 = VSProjectType::Makefile;
         if (type != GeneratorType::VisualStudioNMake)
         {
             if (type == GeneratorType::VisualStudioNMakeAndUtility)
-                ctx.addProject(t, p.target_name + "-build", projects_dir, pp);
-            t = VSProjectType::Utility;
+                ctx.addProject(t2, p.target_name + "-build", projects_dir, pp);
+            t2 = VSProjectType::Utility;
         }
-        ctx.addProject(t, p.target_name, projects_dir, pp);
+        ctx.addProject(t2, p.target_name, projects_dir, pp);
     }
 
     // gen projects
