@@ -529,4 +529,19 @@ struct SW_DRIVER_CPP_API GoCompilerOptions
 };
 DECLARE_OPTION_SPECIALIZATION(GoCompilerOptions);
 
+struct SW_DRIVER_CPP_API FortranCompilerOptions
+{
+    COMMAND_LINE_OPTION(Output, path)
+    {
+        cl::CommandFlag{ "o" },
+            cl::OutputDependency{},
+    };
+
+    COMMAND_LINE_OPTION(InputFiles, Files)
+    {
+        cl::InputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(FortranCompilerOptions);
+
 }

@@ -11,6 +11,21 @@
 
 #include <optional>
 
+#define SW_DECLARE_PROGRAM_CLONE \
+    std::shared_ptr<Program> clone() const override
+
+#define SW_DEFINE_PROGRAM_CLONE(t)            \
+    std::shared_ptr<Program> t::clone() const \
+    {                                         \
+        return std::make_shared<t>(*this);    \
+    }
+
+#define SW_DEFINE_PROGRAM_CLONE_INLINE(t)           \
+    std::shared_ptr<Program> clone() const override \
+    {                                               \
+        return std::make_shared<t>(*this);          \
+    }
+
 namespace sw
 {
 

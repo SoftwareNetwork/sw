@@ -208,4 +208,9 @@ struct SW_DRIVER_CPP_API GoSourceFile : SourceFile
     using SourceFile::SourceFile;
 };
 
+struct SW_DRIVER_CPP_API FortranSourceFile : SourceFile
+{
+    using SourceFile::SourceFile;
+};
+
 }

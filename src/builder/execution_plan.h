@@ -210,6 +210,11 @@ struct ExecutionPlan
     /// returns true if removed something
     static Graph getGraphSkeleton(const Graph &in)
     {
+        //
+        throw SW_RUNTIME_EXCEPTION("not implemented");
+
+        // make an algorithm here
+
         auto g = in;
         while (1)
         {

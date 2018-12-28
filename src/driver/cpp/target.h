@@ -165,6 +165,9 @@ enum class TargetType : int32_t
 
     GoLibrary,
     GoExecutable,
+
+    FortranLibrary,
+    FortranExecutable,
 };
 
 // enforcement rules apply to target to say how many checks it should perform
@@ -987,6 +990,35 @@ private:
 struct SW_DRIVER_CPP_API GoExecutable : GoTarget
 {
     TargetType getType() const override { return TargetType::GoExecutable; }
+};
+
+// Fortran
+
+struct SW_DRIVER_CPP_API FortranTarget : Target
+    , NativeTargetOptionsGroup
+{
+    USING_ASSIGN_OPS(NativeTargetOptionsGroup);
+
+    std::shared_ptr<FortranCompiler> compiler;
+
+    TargetType getType() const override { return TargetType::FortranLibrary; }
+
+    void init() override;
+
+    void setOutputFile() override;
+    Commands getCommands(void) const override;
+    bool prepare() override;
+    void findSources() override;
+    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+
+private:
+    using Target::getOutputFileName;
+    path getOutputFileName(const path &root) const;
+};
+
+struct SW_DRIVER_CPP_API FortranExecutable : FortranTarget
+{
+    TargetType getType() const override { return TargetType::FortranExecutable; }
 };
 
 #undef ASSIGN_TYPES

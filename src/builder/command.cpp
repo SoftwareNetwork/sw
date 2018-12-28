@@ -302,8 +302,6 @@ void Command::prepare()
 
     getHashAndSave();
 
-    //DEBUG_BREAK_IF_PATH_HAS(program, "google.tensorflow.gen_proto_text_functions-1.10.1.exe");
-
     // add redirected generated files
     if (!out.file.empty())
         addOutput(out.file);
@@ -347,8 +345,6 @@ bool Command::beforeCommand()
 
     if (isExecuted())
         throw std::logic_error("Trying to execute command twice: " + getName());
-
-    //DEBUG_BREAK_IF_PATH_HAS(program, "rcc.exe");
 
     executed_ = true;
 

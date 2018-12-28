@@ -121,7 +121,7 @@ struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
 
     using NativeCompilerOptions::operator=;
 
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
@@ -138,7 +138,7 @@ struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
 
     using NativeCompilerOptions::operator=;
 
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setSourceFile(const path &input_file, path &output_file) override;
     void setOutputFile(const path &output_file);
@@ -159,7 +159,7 @@ struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
 {
     using NativeCompilerOptions::operator=;
 
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
@@ -180,7 +180,7 @@ struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
 {
     using NativeCompilerOptions::operator=;
 
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
@@ -203,7 +203,7 @@ struct SW_DRIVER_CPP_API GNUASMCompiler : GNU, NativeCompiler,
 
     using NativeCompilerOptions::operator=;
 
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setSourceFile(const path &input_file, path &output_file) override;
     void setOutputFile(const path &output_file);
@@ -215,7 +215,7 @@ protected:
 
 struct SW_DRIVER_CPP_API ClangASMCompiler : GNUASMCompiler
 {
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
 };
 
 struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
@@ -223,7 +223,7 @@ struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
 {
     using NativeCompilerOptions::operator=;
 
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".o"; }
@@ -293,7 +293,7 @@ struct SW_DRIVER_CPP_API VisualStudioLinker : VisualStudioLibraryTool,
     VisualStudioLinker();
     virtual ~VisualStudioLinker() = default;
 
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::cpp::Command *c) const override;
     void setInputLibraryDependencies(const FilesOrdered &files) override;
 };
@@ -306,7 +306,7 @@ struct SW_DRIVER_CPP_API VisualStudioLibrarian : VisualStudioLibraryTool,
     VisualStudioLibrarian();
     virtual ~VisualStudioLibrarian() = default;
 
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::cpp::Command *c) const override;
 };
 
@@ -330,7 +330,7 @@ struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
     GNULinker();
     virtual ~GNULinker() = default;
 
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::cpp::Command *c) const override;
 
     void setInputLibraryDependencies(const FilesOrdered &files) override;
@@ -353,7 +353,7 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
     GNULibrarian();
     virtual ~GNULibrarian() = default;
 
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::cpp::Command *c) const override;
 
     void setObjectFiles(const Files &files) override;
@@ -399,7 +399,7 @@ struct SW_DRIVER_CPP_API RcTool : MsProgram,
     CompilerBaseProgram,
     CommandLineOptions<RcToolOptions>
 {
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
 
     void setOutputFile(const path &output_file);
@@ -423,7 +423,7 @@ struct SW_DRIVER_CPP_API VisualStudioCSharpCompiler : MsProgram,
     CSharpCompiler,
     CommandLineOptions<VisualStudioCSharpCompilerOptions>
 {
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
 
     void setOutputFile(const path &output_file) override;
@@ -436,7 +436,7 @@ protected:
 struct SW_DRIVER_CPP_API RustCompiler : Compiler,
     CommandLineOptions<RustCompilerOptions>
 {
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
 
     void setOutputFile(const path &output_file);
@@ -449,7 +449,20 @@ protected:
 struct SW_DRIVER_CPP_API GoCompiler : Compiler,
     CommandLineOptions<GoCompilerOptions>
 {
-    std::shared_ptr<Program> clone() const override;
+    SW_DECLARE_PROGRAM_CLONE;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+
+    void setOutputFile(const path &output_file);
+    void setSourceFile(const path &input_file);
+
+protected:
+    Version gatherVersion() const override;
+};
+
+struct SW_DRIVER_CPP_API FortranCompiler : Compiler,
+    CommandLineOptions<FortranCompilerOptions>
+{
+    SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
 
     void setOutputFile(const path &output_file);
@@ -460,7 +473,7 @@ protected:
 };
 
 // TODO: compiled
-// java, VB, VB.NET, D, Obj-C (check work), Pascal (+Delphi?), Swift, dart, cobol, fortran, lisp, ada, kotlin, haskill, F#, erlang
+// java D, VB, VB.NET, Obj-C (check work), Pascal (+Delphi?), swift, dart, cobol, lisp, ada, kotlin, haskell, F#, erlang
 
 // TODO: interpreted
 // python, js, php, R, ruby, matlab, perl, lua,

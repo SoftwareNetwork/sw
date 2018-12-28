@@ -1266,6 +1266,7 @@ void Build::findCompiler()
         {"com.Microsoft.VisualStudio.Roslyn.csc", CompilerType::MSVC},
         {"org.rust.rustc", CompilerType::MSVC},
         {"org.google.golang.go", CompilerType::MSVC},
+        {"org.gnu.gcc.fortran", CompilerType::MSVC},
     };
 
     switch (Settings.Native.CompilerType)

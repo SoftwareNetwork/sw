@@ -10,6 +10,9 @@ void build(Solution &s)
     auto &go = s.addTarget<GoExecutable>("main.go");
     go += ".*\\.go"_r;
 
-    auto &cpp = s.addExecutable("main.cpp");
+    auto &cpp = s.addTarget<Executable>("main.cpp");
     cpp += "main.cpp";
+
+    auto &f = s.addTarget<FortranExecutable>("main.fortran");
+    f += "main.f";
 }

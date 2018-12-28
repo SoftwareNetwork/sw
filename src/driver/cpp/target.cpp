@@ -542,7 +542,7 @@ void Target::init()
     {
         BinaryDir = getTargetDirShort();
     }
-    else if (auto d = pkg.getOverriddenDir(); d)
+    else if (auto d = pkg.getOverriddenDir(); d && 0)
     {
         BinaryDir = d.value() / ".sw";
         BinaryDir /= sha256_short(pkg.toString()); // pkg first
@@ -2459,7 +2459,10 @@ bool NativeExecutedTarget::prepare()
         }
 
         //
-        if (::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty())
+        if (::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
+            && getSelectedTool() == Linker.get()
+            && !HeaderOnly.value()
+            )
         {
             struct RcContext : primitives::Context
             {
@@ -3862,7 +3865,7 @@ void GoTarget::init()
     if (auto p = SourceFileStorage::findProgramByExtension(".go"); p)
         compiler = std::dynamic_pointer_cast<GoCompiler>(p->clone());
     else
-        throw SW_RUNTIME_EXCEPTION("No Gu compiler found");
+        throw SW_RUNTIME_EXCEPTION("No Go compiler found");
 }
 
 void GoTarget::setOutputFile()
@@ -3927,5 +3930,86 @@ UnresolvedDependenciesType GoTarget::gatherUnresolvedDependencies() const
     });
     return deps;
 }
+
+void FortranTarget::init()
+{
+    Target::init();
+
+    // propagate this pointer to all
+    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    {
+        v.target = this;
+    });
+    //LanguageStorage::target = this;
+
+    if (auto p = SourceFileStorage::findProgramByExtension(".f"); p)
+        compiler = std::dynamic_pointer_cast<FortranCompiler>(p->clone());
+    else
+        throw SW_RUNTIME_EXCEPTION("No Fortran compiler found");
+}
+
+void FortranTarget::setOutputFile()
+{
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+    }
+    else
+    {
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        compiler->setOutputFile(base);
+    }
+}
+
+path FortranTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / getOutputFileName();
+    }
+    return p;
+}
+
+Commands FortranTarget::getCommands() const
+{
+    for (auto f : gatherSourceFiles<FortranSourceFile>(*this))
+        compiler->setSourceFile(f->file);
+
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    cmds.insert(c);
+    return cmds;
+}
+
+bool FortranTarget::prepare()
+{
+    return false;
+}
+
+void FortranTarget::findSources()
+{
+}
+
+UnresolvedDependenciesType FortranTarget::gatherUnresolvedDependencies() const
+{
+    UnresolvedDependenciesType deps;
+    ((FortranTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+        [this, &deps](auto &v, auto &s)
+    {
+        for (auto &d : v.Dependencies)
+        {
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+                deps.insert({ d->package, d });
+        }
+    });
+    return deps;
+}
+
 
 }

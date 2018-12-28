@@ -217,4 +217,14 @@ std::shared_ptr<SourceFile> GoLanguage::createSourceFile(const Target &t, const 
     return std::make_shared<GoSourceFile>(t, input);
 }
 
+std::shared_ptr<Language> FortranLanguage::clone() const
+{
+    return std::make_shared<FortranLanguage>(*this);
+}
+
+std::shared_ptr<SourceFile> FortranLanguage::createSourceFile(const Target &t, const path &input) const
+{
+    return std::make_shared<FortranSourceFile>(t, input);
+}
+
 }

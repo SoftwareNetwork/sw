@@ -348,7 +348,7 @@ void ProjectContext::printProject(
     addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
     addPropertySheets();
 
-    iterate_over_configs(nt.Settings, [this, &g, &nt, &p, &b, &t, &dir, &projects_dir]
+    iterate_over_configs(b.Settings, [this, &g, &nt, &p, &b, &t, &dir, &projects_dir]
     (const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
     {
         using namespace sw;
@@ -360,14 +360,14 @@ void ProjectContext::printProject(
             cfg += " --static-build";
 
         String compiler;
-        if (b.Settings.Native.CompilerType == CompilerType::Clang)
+        if (s.Native.CompilerType == CompilerType::Clang)
             compiler = "--compiler clang";
-        else if (b.Settings.Native.CompilerType == CompilerType::ClangCl)
+        else if (s.Native.CompilerType == CompilerType::ClangCl)
             compiler = "--compiler clang-cl";
-        else if (b.Settings.Native.CompilerType == CompilerType::GNU)
+        else if (s.Native.CompilerType == CompilerType::GNU)
             compiler = "--compiler gnu";
 
-        nt.Settings = b.Settings; // prepare for makeOutputFile()
+        nt.Settings = s; // prepare for makeOutputFile()
         auto o = nt.makeOutputFile();
         o = o.parent_path().parent_path() / s.getConfig(&t) / o.filename();
         o += nt.getOutputFile().extension();
@@ -405,7 +405,10 @@ void ProjectContext::printProject(
             return;
 
         beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
-        addBlock("TargetName", normalize_path_windows(o.lexically_relative(dir / projects_dir/* / "somedir"*/)));
+        if (s.TargetOS.is(ArchType::x86_64))
+            addBlock("TargetName", normalize_path_windows(o.lexically_relative(dir / projects_dir / "x64")));
+        else
+            addBlock("TargetName", normalize_path_windows(o.lexically_relative(dir / projects_dir)));
         endBlock();
 
         // pre build event for utility
@@ -1060,7 +1063,8 @@ void VSGeneratorNMake::generate(const Build &b)
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
         pctx.addPropertySheets();
 
-        iterate_over_configs(b.Settings, [this, &pctx, &b](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        iterate_over_configs(b.Settings, [this, &pctx, &b]
+        (const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
 
@@ -1071,13 +1075,13 @@ void VSGeneratorNMake::generate(const Build &b)
                 cfg += " --static-build";
 
             String compiler;
-            if (b.Settings.Native.CompilerType == CompilerType::Clang)
+            if (s.Native.CompilerType == CompilerType::Clang)
                 compiler = "--compiler clang";
-            else if (b.Settings.Native.CompilerType == CompilerType::ClangCl)
+            else if (s.Native.CompilerType == CompilerType::ClangCl)
                 compiler = "--compiler clang-cl";
-            else if (b.Settings.Native.CompilerType == CompilerType::GNU)
+            else if (s.Native.CompilerType == CompilerType::GNU)
                 compiler = "--compiler gnu";
-            else if (b.Settings.Native.CompilerType == CompilerType::MSVC)
+            else if (s.Native.CompilerType == CompilerType::MSVC)
                 compiler = "--compiler msvc";
 
             pctx.addBlock("NMakeBuildCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler + " --do-not-rebuild-config ide");

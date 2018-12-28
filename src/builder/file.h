@@ -128,9 +128,6 @@ struct SW_BUILDER_API FileRecord
 private:
     std::weak_ptr<builder::Command> generator;
     bool generated_ = false;
-
-    fs::file_time_type getMaxTime1(std::unordered_set<FileData*> &files) const;
-    fs::file_time_type updateLwt1(std::unordered_set<FileData*> &files);
 };
 
 path getFilesLogFileName(const String &config = {});

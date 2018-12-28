@@ -69,8 +69,9 @@ void detectNativeCompilers(struct Solution &s);
 void detectCSharpCompilers(struct Solution &s);
 void detectRustCompilers(struct Solution &s);
 void detectGoCompilers(struct Solution &s);
+void detectFortranCompilers(struct Solution &s);
 
-static Version gatherVersion(const path &program, const String &arg)
+static Version gatherVersion(const path &program, const String &arg = "--version")
 {
     Version V;
     primitives::Command c;
@@ -238,6 +239,45 @@ void detectCompilers(struct Solution &s)
     detectCSharpCompilers(s);
     detectRustCompilers(s);
     detectGoCompilers(s);
+    detectFortranCompilers(s);
+}
+
+void detectFortranCompilers(struct Solution &s)
+{
+    path compiler;
+    compiler = primitives::resolve_executable("gfortran");
+    if (compiler.empty())
+    {
+        compiler = primitives::resolve_executable("f95");
+        if (compiler.empty())
+        {
+            compiler = primitives::resolve_executable("g95");
+            if (compiler.empty())
+            {
+                return;
+            }
+        }
+    }
+
+    auto L = std::make_shared<FortranLanguage>();
+    L->CompiledExtensions = {
+        ".f",
+        ".FOR",
+        ".for",
+        ".f77",
+        ".f90",
+        ".f95",
+
+        // support Preprocessing
+        ".F",
+        ".fpp",
+        ".FPP",
+    };
+
+    auto C = std::make_shared<FortranCompiler>();
+    C->file = compiler;
+    L->compiler = C;
+    s.registerProgramAndLanguage("org.gnu.gcc.fortran", C, L);
 }
 
 void detectGoCompilers(struct Solution &s)
@@ -912,7 +952,6 @@ std::shared_ptr<builder::Command> VisualStudioCompiler::prepareCommand(const Tar
         //return nullptr;
 
     //c->out.capture = true;
-    //c->base = clone();
 
     getCommandLineOptions<VisualStudioCompilerOptions>(c.get(), *this);
     iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
@@ -931,10 +970,7 @@ void VisualStudioCompiler::setOutputFile(const path &output_file)
     ObjectFile = output_file;
 }
 
-std::shared_ptr<Program> VisualStudioCompiler::clone() const
-{
-    return std::make_shared<VisualStudioCompiler>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(VisualStudioCompiler)
 
 void VisualStudioCompiler::setSourceFile(const path &input_file, path &output_file)
 {
@@ -973,10 +1009,7 @@ std::shared_ptr<builder::Command> VisualStudioASMCompiler::prepareCommand(const 
     return cmd = c;
 }
 
-std::shared_ptr<Program> VisualStudioASMCompiler::clone() const
-{
-    return std::make_shared<VisualStudioASMCompiler>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(VisualStudioASMCompiler)
 
 void VisualStudioASMCompiler::setOutputFile(const path &output_file)
 {
@@ -1033,10 +1066,7 @@ void ClangCompiler::setOutputFile(const path &output_file)
     OutputFile = output_file;
 }
 
-std::shared_ptr<Program> ClangCompiler::clone() const
-{
-    return std::make_shared<ClangCompiler>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(ClangCompiler)
 
 void ClangCompiler::setSourceFile(const path &input_file, path &output_file)
 {
@@ -1093,10 +1123,7 @@ void ClangClCompiler::setOutputFile(const path &output_file)
     ObjectFile = output_file;
 }
 
-std::shared_ptr<Program> ClangClCompiler::clone() const
-{
-    return std::make_shared<ClangClCompiler>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(ClangClCompiler)
 
 void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
 {
@@ -1129,7 +1156,6 @@ std::shared_ptr<builder::Command> GNUASMCompiler::prepareCommand(const TargetBas
         //return nullptr;
 
     //c->out.capture = true;
-    //c->base = clone();
 
     getCommandLineOptions<GNUAssemblerOptions>(c.get(), *this);
     iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
@@ -1137,10 +1163,7 @@ std::shared_ptr<builder::Command> GNUASMCompiler::prepareCommand(const TargetBas
     return cmd = c;
 }
 
-std::shared_ptr<Program> GNUASMCompiler::clone() const
-{
-    return std::make_shared<GNUASMCompiler>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(GNUASMCompiler)
 
 void GNUASMCompiler::setOutputFile(const path &output_file)
 {
@@ -1153,10 +1176,7 @@ void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
     setOutputFile(output_file);
 }
 
-std::shared_ptr<Program> ClangASMCompiler::clone() const
-{
-    return std::make_shared<ClangASMCompiler>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(ClangASMCompiler)
 
 std::shared_ptr<builder::Command> GNUCompiler::prepareCommand(const TargetBase &t)
 {
@@ -1181,7 +1201,6 @@ std::shared_ptr<builder::Command> GNUCompiler::prepareCommand(const TargetBase &
         //return nullptr;
 
     //c->out.capture = true;
-    //c->base = clone();
 
     add_args(*c, getGNUCppStdOption(CPPStandard()));
     CPPStandard.skip = true;
@@ -1198,10 +1217,7 @@ void GNUCompiler::setOutputFile(const path &output_file)
     OutputFile = output_file;
 }
 
-std::shared_ptr<Program> GNUCompiler::clone() const
-{
-    return std::make_shared<GNUCompiler>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(GNUCompiler)
 
 void GNUCompiler::setSourceFile(const path &input_file, path &output_file)
 {
@@ -1321,10 +1337,7 @@ VisualStudioLinker::VisualStudioLinker()
     Extension = ".exe";
 }
 
-std::shared_ptr<Program> VisualStudioLinker::clone() const
-{
-    return std::make_shared<VisualStudioLinker>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(VisualStudioLinker)
 
 void VisualStudioLinker::getAdditionalOptions(driver::cpp::Command *c) const
 {
@@ -1342,10 +1355,7 @@ VisualStudioLibrarian::VisualStudioLibrarian()
     Extension = ".lib";
 }
 
-std::shared_ptr<Program> VisualStudioLibrarian::clone() const
-{
-    return std::make_shared<VisualStudioLibrarian>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(VisualStudioLibrarian)
 
 void VisualStudioLibrarian::getAdditionalOptions(driver::cpp::Command *c) const
 {
@@ -1357,10 +1367,7 @@ GNULinker::GNULinker()
     //Extension = ".exe";
 }
 
-std::shared_ptr<Program> GNULinker::clone() const
-{
-    return std::make_shared<GNULinker>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(GNULinker)
 
 void GNULinker::setObjectFiles(const Files &files)
 {
@@ -1463,10 +1470,7 @@ GNULibrarian::GNULibrarian()
     Extension = ".a";
 }
 
-std::shared_ptr<Program> GNULibrarian::clone() const
-{
-    return std::make_shared<GNULibrarian>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(GNULibrarian)
 
 void GNULibrarian::setObjectFiles(const Files &files)
 {
@@ -1546,10 +1550,7 @@ std::shared_ptr<builder::Command> GNULibrarian::prepareCommand(const TargetBase 
     return cmd = c;
 }
 
-std::shared_ptr<Program> RcTool::clone() const
-{
-    return std::make_shared<RcTool>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(RcTool)
 
 std::shared_ptr<builder::Command> RcTool::prepareCommand(const TargetBase &t)
 {
@@ -1608,10 +1609,7 @@ void RcTool::setSourceFile(const path &input_file)
     InputFile = input_file;
 }
 
-std::shared_ptr<Program> VisualStudioCSharpCompiler::clone() const
-{
-    return std::make_shared<VisualStudioCSharpCompiler>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(VisualStudioCSharpCompiler)
 
 std::shared_ptr<builder::Command> VisualStudioCSharpCompiler::prepareCommand(const TargetBase &t)
 {
@@ -1636,10 +1634,7 @@ void VisualStudioCSharpCompiler::addSourceFile(const path &input_file)
     InputFiles().insert(input_file);
 }
 
-std::shared_ptr<Program> RustCompiler::clone() const
-{
-    return std::make_shared<RustCompiler>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(RustCompiler)
 
 std::shared_ptr<builder::Command> RustCompiler::prepareCommand(const TargetBase &t)
 {
@@ -1666,13 +1661,10 @@ void RustCompiler::setSourceFile(const path &input_file)
 
 Version RustCompiler::gatherVersion() const
 {
-    return ::sw::gatherVersion(file, "--version");
+    return ::sw::gatherVersion(file);
 }
 
-std::shared_ptr<Program> GoCompiler::clone() const
-{
-    return std::make_shared<GoCompiler>(*this);
-}
+SW_DEFINE_PROGRAM_CLONE(GoCompiler)
 
 std::shared_ptr<builder::Command> GoCompiler::prepareCommand(const TargetBase &t)
 {
@@ -1700,6 +1692,36 @@ void GoCompiler::setSourceFile(const path &input_file)
 Version GoCompiler::gatherVersion() const
 {
     return ::sw::gatherVersion(file, "version");
+}
+
+SW_DEFINE_PROGRAM_CLONE(FortranCompiler)
+
+std::shared_ptr<builder::Command> FortranCompiler::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    getCommandLineOptions<FortranCompilerOptions>(c.get(), *this);
+
+    return cmd = c;
+}
+
+void FortranCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += ".exe";
+}
+
+void FortranCompiler::setSourceFile(const path &input_file)
+{
+    InputFiles().insert(input_file);
+}
+
+Version FortranCompiler::gatherVersion() const
+{
+    return ::sw::gatherVersion(file);
 }
 
 }
