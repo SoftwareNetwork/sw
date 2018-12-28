@@ -36,6 +36,18 @@ struct SW_BUILDER_API Node
     {
         return dynamic_cast<const T *>(this);
     }
+
+    template <class T>
+    T &asRef()
+    {
+        return dynamic_cast<T &>(*this);
+    }
+
+    template <class T>
+    const T &asRef() const
+    {
+        return dynamic_cast<const T &>(*this);
+    }
 };
 
 namespace detail

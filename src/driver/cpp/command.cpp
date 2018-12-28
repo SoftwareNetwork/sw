@@ -399,10 +399,18 @@ void ExecuteBuiltinCommand::push_back(const Files &files)
 void ExecuteBuiltinCommand::execute1(std::error_code *ec)
 {
     jumppad_call(args[1], args[2], Strings{ args.begin() + 3, args.end() });
+}
 
-    // force outputs update
-    //for (auto &o : outputs)
-        //File(o, *fs).getFileRecord().load();
+bool ExecuteBuiltinCommand::isTimeChanged() const
+{
+    bool changed = false;
+
+    for (auto &i : inputs)
+        changed |= File(i, *fs).isChanged(mtime);
+    for (auto &i : outputs)
+        changed |= File(i, *fs).isChanged(mtime);
+
+    return changed;
 }
 
 }

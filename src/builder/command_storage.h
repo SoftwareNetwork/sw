@@ -28,8 +28,6 @@ struct SW_BUILDER_API CommandStorage
 
     void load();
     void save();
-
-    bool isOutdated(const builder::Command &c);
 };
 
 SW_BUILDER_API

@@ -319,6 +319,8 @@ struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
 
     void push_back(const Files &files);
 
+    bool isTimeChanged() const override;
+
 private:
     void execute1(std::error_code *ec = nullptr) override;
     void prepare() override {}

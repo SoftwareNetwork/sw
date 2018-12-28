@@ -135,6 +135,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     virtual ResourcePool *getResourcePool() { return nullptr; }
 
     virtual bool isOutdated() const;
+    virtual bool isTimeChanged() const;
     bool needsResponseFile() const;
 
     void setProgram(const path &p);

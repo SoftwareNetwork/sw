@@ -279,9 +279,9 @@ int main(int argc, char **argv)
         ctx.addLine("#define THIS_PREFIX \"" + r.ppath.slice(0, r.prefix).toString() + "\"");
         ctx.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + r.ppath.slice(r.prefix).toString() + "\"");
         ctx.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
-        ctx.addLine("#define THIS_VERSION \"" + r.version.toString() + "\"");
-        ctx.addLine("#define THIS_VERSION_DEPENDENCY \"" + r.version.toString() + "\"_dep");
-        ctx.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
+        //ctx.addLine("#define THIS_VERSION \"" + r.version.toString() + "\"");
+        ctx.addLine("#define THIS_VERSION_DEPENDENCY \"" + r.version.toString() + "\"_dep"); // here we use version! our packages must know exact current version
+        //ctx.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
         ctx.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
         ctx.addLine("#define configure configure_" + r.getVariableName());
         ctx.addLine("#define build build_" + r.getVariableName());

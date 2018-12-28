@@ -1956,12 +1956,14 @@ bool NativeExecutedTarget::prepare()
         if (PackageDefinitions)
             addPackageDefinitions(true);
 
-        for (auto &f : *this)
+        for (auto &[p, f] : *this)
         {
-            if (f.second->isActive() && !f.second->postponed)
+            if (f->isActive() && !f->postponed)
             {
-                // TODO: do not rely on native source file, do a dynamic check instead
-                auto ba = ((NativeSourceFile*)f.second.get())->BuildAs;
+                auto f2 = f->as<NativeSourceFile>();
+                if (!f2)
+                    continue;
+                auto ba = f2->BuildAs;
                 switch (ba)
                 {
                 case NativeSourceFile::BasedOnExtension:
@@ -1969,7 +1971,7 @@ bool NativeExecutedTarget::prepare()
                 case NativeSourceFile::C:
                     if (auto L = SourceFileStorage::findLanguageByExtension(".c"); L)
                     {
-                        if (auto c = f.second->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
+                        if (auto c = f2->compiler->as<VisualStudioCompiler>(); c)
                             c->CompileAsC = true;
                     }
                     else
@@ -1978,7 +1980,7 @@ bool NativeExecutedTarget::prepare()
                 case NativeSourceFile::CPP:
                     if (auto L = SourceFileStorage::findLanguageByExtension(".cpp"); L)
                     {
-                        if (auto c = f.second->as<NativeSourceFile>()->compiler->as<VisualStudioCompiler>(); c)
+                        if (auto c = f2->compiler->as<VisualStudioCompiler>(); c)
                             c->CompileAsCPP = true;
                     }
                     else

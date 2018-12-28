@@ -1566,7 +1566,7 @@ std::shared_ptr<builder::Command> RcTool::prepareCommand(const TargetBase &t)
         c->name_short = InputFile().filename().u8string();
     }
 
-    dynamic_cast<const NativeExecutedTarget &>(t).NativeCompilerOptions::addEverything(*c);
+    t.template asRef<NativeExecutedTarget>().NativeCompilerOptions::addDefinitionsAndIncludeDirectories(*c);
 
     // fix spaces around defs value:
     // from: -DSW_PACKAGE_API=extern \"C\" __declspec(dllexport)

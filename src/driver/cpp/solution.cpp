@@ -66,9 +66,14 @@ void check_self(sw::Checker &c);
 namespace sw
 {
 
+String getCurrentModuleId()
+{
+    return shorten_hash(sha1(getProgramName()));
+}
+
 path getImportFilePrefix()
 {
-    return getUserDirectories().storage_dir_tmp / ("cppan_" + getCurrentModuleHash());
+    return getUserDirectories().storage_dir_tmp / ("sw_" + getCurrentModuleId());
 }
 
 path getImportDefinitionsFile()
@@ -81,9 +86,11 @@ path getImportPchFile()
     return getImportFilePrefix() += ".cpp";
 }
 
-path getPackageHeader(const ExtendedPackageData &p)
+path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, const UnresolvedPackage &up)
 {
-    auto h = p.getDirSrc() / "gen" / "pkg_header.h";
+    // depends on upkg, not on pkg!
+    // because p is constant, but up might differ
+    auto h = p.getDirSrc() / "gen" / ("pkg_header_" + shorten_hash(sha1(up.toString())) + ".h");
     //if (fs::exists(h))
         //return h;
     auto cfg = p.getDirSrc2() / "sw.cpp";
@@ -110,9 +117,10 @@ path getPackageHeader(const ExtendedPackageData &p)
         prefix.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");
         prefix.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + p.ppath.slice(p.prefix).toString() + "\"");
         prefix.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
-        prefix.addLine("#define THIS_VERSION \"" + p.version.toString() + "\"");
-        prefix.addLine("#define THIS_VERSION_DEPENDENCY \"" + p.version.toString() + "\"_dep");
-        prefix.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
+        //prefix.addLine("#define THIS_VERSION \"" + p.version.toString() + "\"");
+        //prefix.addLine("#define THIS_VERSION_DEPENDENCY \"" + p.version.toString() + "\"_dep");
+        prefix.addLine("#define THIS_VERSION_DEPENDENCY \"" + up.range.toString() + "\"_dep"); // here we use range! our packages must depend on exactly specified range
+        //prefix.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
         prefix.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
         prefix.addLine();
 
@@ -156,8 +164,9 @@ std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const path &p)
         auto m1 = m[1].str();
         if (m1 == "header")
         {
-            auto pkg = extractFromString(m[3].str()).resolve();
-            auto h = getPackageHeader(pkg);
+            auto upkg = extractFromString(m[3].str());
+            auto pkg = upkg.resolve();
+            auto h = getPackageHeader(pkg, upkg);
             auto [headers2,udeps2] = getFileDependencies(h);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
@@ -381,7 +390,7 @@ StaticLibraryTarget &Solution::getImportLibrary()
     auto o = Local;
     Local = false; // this prevents us from putting compiled configs into user bdirs
     IsConfig = true;
-    auto &t = addTarget<StaticLibraryTarget>("cppan_implib_" + getCurrentModuleHash(), "local");
+    auto &t = addTarget<StaticLibraryTarget>("sw_implib_" + getCurrentModuleId(), "local");
     //t.init2();
     IsConfig = false;
     Local = o;
@@ -645,7 +654,7 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
 
         auto program_name = [](auto n)
         {
-            return "CPPAN_PROGRAM_" + std::to_string(n);
+            return "SW_PROGRAM_" + std::to_string(n);
         };
 
         String s;
@@ -808,8 +817,15 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
         auto d = getServiceDir();
 
         //message_box(d.string());
-        print_graph(p, d / "build.dot");
+
+        // new graphs
+        //p.printGraph(p.getGraphSkeleton(), d / "build_skeleton");
+        p.printGraph(p.getGraph(), d / "build");
+
+        // old graphs
+        print_graph(p, d / "build_old.dot");
         printGraph(d / "solution.dot");
+
         print_commands(p, d / "commands.bat");
         print_commands_raw(p, d / "commands_raw.bat");
         print_numbers(p, d / "numbers.txt");
@@ -1614,9 +1630,9 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     {
         lib += fn;
         lib[fn].fancy_name = "[" + output_names[fn].toString() + "]/[config]";
-        // configs depend on pch, and pch depends on getCurrentModuleHash(), so we add name to the file
+        // configs depend on pch, and pch depends on getCurrentModuleId(), so we add name to the file
         // to make sure we have different config .objs for different pchs
-        lib[fn].as<NativeSourceFile>()->setOutputFile(lib, fn.u8string() + "." + getCurrentModuleHash(), getObjectDir(pkg) / "self");
+        lib[fn].as<NativeSourceFile>()->setOutputFile(lib, fn.u8string() + "." + getCurrentModuleId(), getObjectDir(pkg) / "self");
         if (gVerbose)
             lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
     }

@@ -66,40 +66,6 @@ void CommandStorage::save()
     getDb().save(commands);
 }
 
-bool CommandStorage::isOutdated(const sw::builder::Command &c)
-{
-    bool changed = false;
-
-    auto k = std::hash<sw::builder::Command>()(c);
-    auto r = commands.insert_ptr(k, 0);
-    if (r.second)
-    {
-        // we have insertion, no previous value available
-        // so outdated
-        EXPLAIN_OUTDATED("command", true, "new command: " + c.print(), c.getName());
-        changed = true;
-    }
-    else
-    {
-        *((int64_t*)&c.mtime) = *r.first;
-
-        // always check program and all deps are known
-        changed = File(c.program, *c.fs).isChanged(c.mtime);
-        for (auto &i : c.inputs)
-            changed |= File(i, *c.fs).isChanged(c.mtime);
-        for (auto &i : c.outputs)
-            changed |= File(i, *c.fs).isChanged(c.mtime);
-    }
-
-    if (c.always)
-    {
-        EXPLAIN_OUTDATED("command", true, "always build", c.getName());
-        changed = true;
-    }
-
-    return changed;
-}
-
 namespace builder
 {
 
@@ -118,7 +84,44 @@ Command::~Command()
 
 bool Command::isOutdated() const
 {
-    return getCommandStorage().isOutdated(*this);
+    bool changed = false;
+
+    auto k = std::hash<sw::builder::Command>()(*this);
+    auto r = getCommandStorage().commands.insert_ptr(k, 0);
+    if (r.second)
+    {
+        // we have insertion, no previous value available
+        // so outdated
+        EXPLAIN_OUTDATED("command", true, "new command: " + print(), getName());
+        changed = true;
+    }
+    else
+    {
+        *((int64_t*)&mtime) = *r.first;
+        changed |= isTimeChanged();
+    }
+
+    if (always)
+    {
+        EXPLAIN_OUTDATED("command", true, "always build", getName());
+        changed = true;
+    }
+
+    return changed;
+}
+
+bool Command::isTimeChanged() const
+{
+    bool changed = false;
+
+    // always check program and all deps are known
+    changed |= File(program, *fs).isChanged(mtime);
+    for (auto &i : inputs)
+        changed |= File(i, *fs).isChanged(mtime);
+    for (auto &i : outputs)
+        changed |= File(i, *fs).isChanged(mtime);
+
+    return changed;
 }
 
 size_t Command::getHash() const
@@ -358,6 +361,7 @@ void Command::afterCommand()
     // update things
 
     // also update program (execute command case)
+    // when program changed, executed commands
     mtime = std::max(mtime, File(program, *fs).getFileRecord().getMaxTime());
 
     /*for (auto &i : inputs)

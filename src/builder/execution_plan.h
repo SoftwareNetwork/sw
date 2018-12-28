@@ -207,6 +207,35 @@ struct ExecutionPlan
         return std::tuple{ g, num, components };
     }
 
+    /// returns true if removed something
+    static Graph getGraphSkeleton(const Graph &in)
+    {
+        auto g = in;
+        while (1)
+        {
+            bool removed = false;
+
+            typename boost::graph_traits<Graph>::vertex_iterator vi, vi_end, next;
+            boost::tie(vi, vi_end) = boost::vertices(g);
+            for (next = vi; vi != vi_end; vi = next)
+            {
+                ++next;
+                if (g.m_vertices[(*vi)].m_in_edges.size() == 1 && g.m_vertices[(*vi)].m_out_edges.empty())
+                {
+                    boost::remove_vertex(*vi, g);
+                    removed = true;
+                    break; // iterators were invalidated, as we use vecS and not listS
+                }
+            }
+        }
+        return g;
+    }
+
+    Graph getGraphSkeleton()
+    {
+        return getGraphSkeleton(getGraph());
+    }
+
     auto getStrongComponents()
     {
         auto g = getGraphUnprocessed();
