@@ -168,6 +168,14 @@ enum class TargetType : int32_t
 
     FortranLibrary,
     FortranExecutable,
+
+    // add/replace with java jar?
+    JavaLibrary,
+    JavaExecutable,
+
+    // add/replace with java jar?
+    KotlinLibrary,
+    KotlinExecutable,
 };
 
 // enforcement rules apply to target to say how many checks it should perform
@@ -1034,6 +1042,64 @@ private:
 struct SW_DRIVER_CPP_API FortranExecutable : FortranTarget
 {
     TargetType getType() const override { return TargetType::FortranExecutable; }
+};
+
+// Java
+
+struct SW_DRIVER_CPP_API JavaTarget : Target
+    , NativeTargetOptionsGroup
+{
+    USING_ASSIGN_OPS(NativeTargetOptionsGroup);
+
+    std::shared_ptr<JavaCompiler> compiler;
+
+    TargetType getType() const override { return TargetType::JavaLibrary; }
+
+    void init() override;
+
+    void setOutputFile() override;
+    Commands getCommands(void) const override;
+    bool prepare() override;
+    void findSources() override;
+    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+
+private:
+    using Target::getOutputFileName;
+    path getOutputFileName(const path &root) const;
+};
+
+struct SW_DRIVER_CPP_API JavaExecutable : JavaTarget
+{
+    TargetType getType() const override { return TargetType::JavaExecutable; }
+};
+
+// Kotlin
+
+struct SW_DRIVER_CPP_API KotlinTarget : Target
+    , NativeTargetOptionsGroup
+{
+    USING_ASSIGN_OPS(NativeTargetOptionsGroup);
+
+    std::shared_ptr<KotlinCompiler> compiler;
+
+    TargetType getType() const override { return TargetType::KotlinLibrary; }
+
+    void init() override;
+
+    void setOutputFile() override;
+    Commands getCommands(void) const override;
+    bool prepare() override;
+    void findSources() override;
+    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+
+private:
+    using Target::getOutputFileName;
+    path getOutputFileName(const path &root) const;
+};
+
+struct SW_DRIVER_CPP_API KotlinExecutable : KotlinTarget
+{
+    TargetType getType() const override { return TargetType::KotlinExecutable; }
 };
 
 #undef ASSIGN_TYPES

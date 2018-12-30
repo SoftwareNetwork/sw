@@ -544,4 +544,41 @@ struct SW_DRIVER_CPP_API FortranCompilerOptions
 };
 DECLARE_OPTION_SPECIALIZATION(FortranCompilerOptions);
 
+struct SW_DRIVER_CPP_API JavaCompilerOptions
+{
+    COMMAND_LINE_OPTION(OutputDir, path)
+    {
+        cl::CommandFlag{ "d" },
+            cl::SeparatePrefix{},
+    };
+
+    COMMAND_LINE_OPTION(InputFiles, Files)
+    {
+        cl::InputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(JavaCompilerOptions);
+
+struct SW_DRIVER_CPP_API KotlinCompilerOptions
+{
+    COMMAND_LINE_OPTION(InputFiles, Files)
+    {
+        cl::InputDependency{},
+    };
+
+    COMMAND_LINE_OPTION(IncludeRuntime, bool)
+    {
+        cl::CommandFlag{ "include-runtime" },
+            true
+    };
+
+    COMMAND_LINE_OPTION(Output, path)
+    {
+        cl::CommandFlag{ "d" },
+            cl::OutputDependency{},
+            cl::SeparatePrefix{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(KotlinCompilerOptions);
+
 }

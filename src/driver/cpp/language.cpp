@@ -227,4 +227,24 @@ std::shared_ptr<SourceFile> FortranLanguage::createSourceFile(const Target &t, c
     return std::make_shared<FortranSourceFile>(t, input);
 }
 
+std::shared_ptr<Language> JavaLanguage::clone() const
+{
+    return std::make_shared<JavaLanguage>(*this);
+}
+
+std::shared_ptr<SourceFile> JavaLanguage::createSourceFile(const Target &t, const path &input) const
+{
+    return std::make_shared<JavaSourceFile>(t, input);
+}
+
+std::shared_ptr<Language> KotlinLanguage::clone() const
+{
+    return std::make_shared<KotlinLanguage>(*this);
+}
+
+std::shared_ptr<SourceFile> KotlinLanguage::createSourceFile(const Target &t, const path &input) const
+{
+    return std::make_shared<KotlinSourceFile>(t, input);
+}
+
 }

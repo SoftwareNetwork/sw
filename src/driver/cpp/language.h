@@ -132,4 +132,20 @@ struct SW_DRIVER_CPP_API FortranLanguage : Language
     std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
 };
 
+struct SW_DRIVER_CPP_API JavaLanguage : Language
+{
+    std::shared_ptr<JavaCompiler> compiler;
+
+    std::shared_ptr<Language> clone() const override;
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
+};
+
+struct SW_DRIVER_CPP_API KotlinLanguage : Language
+{
+    std::shared_ptr<KotlinCompiler> compiler;
+
+    std::shared_ptr<Language> clone() const override;
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
+};
+
 }

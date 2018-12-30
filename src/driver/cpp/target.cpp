@@ -2470,6 +2470,7 @@ bool NativeExecutedTarget::prepare()
         if (::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
             && getSelectedTool() == Linker.get()
             && !HeaderOnly.value()
+            && !IsConfig
             )
         {
             struct RcContext : primitives::Context
@@ -4034,5 +4035,167 @@ UnresolvedDependenciesType FortranTarget::gatherUnresolvedDependencies() const
     return deps;
 }
 
+void JavaTarget::init()
+{
+    Target::init();
+
+    // propagate this pointer to all
+    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    {
+        v.target = this;
+    });
+    //LanguageStorage::target = this;
+
+    if (auto p = SourceFileStorage::findProgramByExtension(".java"); p)
+        compiler = std::dynamic_pointer_cast<JavaCompiler>(p->clone());
+    else
+        throw SW_RUNTIME_EXCEPTION("No Java compiler found");
+}
+
+void JavaTarget::setOutputFile()
+{
+    /* || add a considiton so user could change nont build output dir*/
+    /*if (Scope == TargetScope::Build)
+    {
+        //compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+    }
+    else
+    {*/
+        auto base = BinaryDir.parent_path() / "out";
+        compiler->setOutputDir(base);
+    //}
+}
+
+path JavaTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / getOutputFileName();
+    }
+    return p;
+}
+
+Commands JavaTarget::getCommands() const
+{
+    Commands cmds;
+    for (auto f : gatherSourceFiles<JavaSourceFile>(*this))
+    {
+        compiler->setSourceFile(f->file);
+        cmds.insert(compiler->prepareCommand(*this));
+    }
+
+    //auto c = compiler->getCommand(*this);
+    //cmds.insert(c);
+    return cmds;
+}
+
+bool JavaTarget::prepare()
+{
+    return false;
+}
+
+void JavaTarget::findSources()
+{
+}
+
+UnresolvedDependenciesType JavaTarget::gatherUnresolvedDependencies() const
+{
+    UnresolvedDependenciesType deps;
+    ((JavaTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+        [this, &deps](auto &v, auto &s)
+    {
+        for (auto &d : v.Dependencies)
+        {
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+                deps.insert({ d->package, d });
+        }
+    });
+    return deps;
+}
+
+void KotlinTarget::init()
+{
+    Target::init();
+
+    // propagate this pointer to all
+    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    {
+        v.target = this;
+    });
+    //LanguageStorage::target = this;
+
+    if (auto p = SourceFileStorage::findProgramByExtension(".kt"); p)
+        compiler = std::dynamic_pointer_cast<KotlinCompiler>(p->clone());
+    else
+        throw SW_RUNTIME_EXCEPTION("No Kotlin compiler found");
+}
+
+void KotlinTarget::setOutputFile()
+{
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+    }
+    else
+    {
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        compiler->setOutputFile(base);
+    }
+}
+
+path KotlinTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / getOutputFileName();
+    }
+    return p;
+}
+
+Commands KotlinTarget::getCommands() const
+{
+    for (auto f : gatherSourceFiles<KotlinSourceFile>(*this))
+        compiler->setSourceFile(f->file);
+
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    cmds.insert(c);
+    return cmds;
+}
+
+bool KotlinTarget::prepare()
+{
+    return false;
+}
+
+void KotlinTarget::findSources()
+{
+}
+
+UnresolvedDependenciesType KotlinTarget::gatherUnresolvedDependencies() const
+{
+    UnresolvedDependenciesType deps;
+    ((KotlinTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+        [this, &deps](auto &v, auto &s)
+    {
+        for (auto &d : v.Dependencies)
+        {
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+                deps.insert({ d->package, d });
+        }
+    });
+    return deps;
+}
 
 }

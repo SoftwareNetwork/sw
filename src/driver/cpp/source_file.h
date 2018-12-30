@@ -213,4 +213,14 @@ struct SW_DRIVER_CPP_API FortranSourceFile : SourceFile
     using SourceFile::SourceFile;
 };
 
+struct SW_DRIVER_CPP_API JavaSourceFile : SourceFile
+{
+    using SourceFile::SourceFile;
+};
+
+struct SW_DRIVER_CPP_API KotlinSourceFile : SourceFile
+{
+    using SourceFile::SourceFile;
+};
+
 }

@@ -28,6 +28,7 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
     SW_MAKE_COMPILER_COMMAND(driver::cpp::t)
 
 static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
+static cl::opt<bool> use_other_langs("use-other-languages");
 
 extern const StringSet cpp_source_file_extensions;
 extern const StringSet header_file_extensions;
@@ -70,16 +71,25 @@ void detectCSharpCompilers(struct Solution &s);
 void detectRustCompilers(struct Solution &s);
 void detectGoCompilers(struct Solution &s);
 void detectFortranCompilers(struct Solution &s);
+void detectJavaCompilers(struct Solution &s);
+void detectKotlinCompilers(struct Solution &s);
 
-static Version gatherVersion(const path &program, const String &arg = "--version")
+static Version gatherVersion(const path &program, const String &arg = "--version", const String &in_regex = {})
 {
+    static std::regex r_default("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
+
+    std::regex r_in;
+    if (!in_regex.empty())
+        r_in.assign(in_regex);
+
+    auto &r = in_regex.empty() ? r_default : r_in;
+
     Version V;
     primitives::Command c;
     c.program = program;
     c.args = { arg };
     error_code ec;
     c.execute(ec);
-    static std::regex r("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
     std::smatch m;
     if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
     {
@@ -236,10 +246,50 @@ path getWindowsKit10Dir(Solution &s, const path &d)
 void detectCompilers(struct Solution &s)
 {
     detectNativeCompilers(s);
-    detectCSharpCompilers(s);
-    detectRustCompilers(s);
-    detectGoCompilers(s);
-    detectFortranCompilers(s);
+
+    // make lazy loading
+    if (use_other_langs)
+    {
+        detectCSharpCompilers(s);
+        detectRustCompilers(s);
+        detectGoCompilers(s);
+        detectFortranCompilers(s);
+        detectJavaCompilers(s);
+        detectKotlinCompilers(s);
+    }
+}
+
+void detectKotlinCompilers(struct Solution &s)
+{
+    path compiler;
+    compiler = primitives::resolve_executable("kotlinc");
+    if (compiler.empty())
+        return;
+
+    auto L = std::make_shared<KotlinLanguage>();
+    L->CompiledExtensions = { ".kt", ".kts" };
+
+    auto C = std::make_shared<KotlinCompiler>();
+    C->file = compiler;
+    L->compiler = C;
+    s.registerProgramAndLanguage("com.JetBrains.kotlin.kotlinc", C, L);
+}
+
+void detectJavaCompilers(struct Solution &s)
+{
+    path compiler;
+    compiler = primitives::resolve_executable("javac");
+    if (compiler.empty())
+        return;
+    //compiler = primitives::resolve_executable("jar"); // later
+
+    auto L = std::make_shared<JavaLanguage>();
+    L->CompiledExtensions = { ".java", };
+
+    auto C = std::make_shared<JavaCompiler>();
+    C->file = compiler;
+    L->compiler = C;
+    s.registerProgramAndLanguage("com.oracle.java.javac", C, L);
 }
 
 void detectFortranCompilers(struct Solution &s)
@@ -1722,6 +1772,72 @@ void FortranCompiler::setSourceFile(const path &input_file)
 Version FortranCompiler::gatherVersion() const
 {
     return ::sw::gatherVersion(file);
+}
+
+SW_DEFINE_PROGRAM_CLONE(JavaCompiler)
+
+std::shared_ptr<builder::Command> JavaCompiler::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    getCommandLineOptions<JavaCompilerOptions>(c.get(), *this);
+
+    for (auto &f : InputFiles())
+    {
+        auto o = OutputDir() / (f.filename().stem() += ".class");
+        File(o, *fs).addImplicitDependency(f);
+        c->addOutput(o);
+    }
+
+    return cmd = c;
+}
+
+void JavaCompiler::setOutputDir(const path &output_dir)
+{
+    OutputDir = output_dir;
+}
+
+void JavaCompiler::setSourceFile(const path &input_file)
+{
+    InputFiles().insert(input_file);
+}
+
+Version JavaCompiler::gatherVersion() const
+{
+    return ::sw::gatherVersion(file, "-version", "(\\d+)\\.(\\d+)\\.(\\d+)(_(\\d+))?");
+}
+
+SW_DEFINE_PROGRAM_CLONE(KotlinCompiler)
+
+std::shared_ptr<builder::Command> KotlinCompiler::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    getCommandLineOptions<KotlinCompilerOptions>(c.get(), *this);
+
+    return cmd = c;
+}
+
+void KotlinCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += ".jar";
+}
+
+void KotlinCompiler::setSourceFile(const path &input_file)
+{
+    InputFiles().insert(input_file);
+}
+
+Version KotlinCompiler::gatherVersion() const
+{
+    return ::sw::gatherVersion(file, "-version");
 }
 
 }

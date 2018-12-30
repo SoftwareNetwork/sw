@@ -1265,7 +1265,7 @@ void Build::findCompiler()
     {
         {"org.gnu.gcc.gpp", CompilerType::GNU},
         {"org.gnu.gcc.gcc", CompilerType::GNU},
-        {"org.gnu.gcc.as", CompilerType::GNU}
+        {"org.gnu.gcc.as", CompilerType::GNU},
     };
 
     const CompilerVector clang =
@@ -1285,6 +1285,8 @@ void Build::findCompiler()
         {"org.rust.rustc", CompilerType::MSVC},
         {"org.google.golang.go", CompilerType::MSVC},
         {"org.gnu.gcc.fortran", CompilerType::MSVC},
+        {"com.oracle.java.javac", CompilerType::MSVC},
+        {"com.JetBrains.kotlin.kotlinc", CompilerType::MSVC},
     };
 
     switch (Settings.Native.CompilerType)
@@ -1333,7 +1335,8 @@ void Build::findCompiler()
         }, "Try to add more linkers");
 
     // more languages
-    activate_all(other);
+    for (auto &[a, _] : other)
+        activateLanguage(a);
 
     setSettings();
 }

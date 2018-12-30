@@ -373,7 +373,7 @@ struct SW_DRIVER_CPP_API NativeToolchain
 
     // rc (resource compiler)
     // ar, more tools...
-    // more native compilers (fortran, cuda etc.)
+    // more native compilers (cuda etc.)
     CompilerType CompilerType = CompilerType::UnspecifiedCompiler;
     LinkerType LinkerType; // rename
     BuildLibrariesAs LibrariesType = LibraryType::Shared;
@@ -472,8 +472,34 @@ protected:
     Version gatherVersion() const override;
 };
 
+struct SW_DRIVER_CPP_API JavaCompiler : Compiler,
+    CommandLineOptions<JavaCompilerOptions>
+{
+    SW_DECLARE_PROGRAM_CLONE;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+
+    void setOutputDir(const path &output_dir);
+    void setSourceFile(const path &input_file);
+
+protected:
+    Version gatherVersion() const override;
+};
+
+struct SW_DRIVER_CPP_API KotlinCompiler : Compiler,
+    CommandLineOptions<KotlinCompilerOptions>
+{
+    SW_DECLARE_PROGRAM_CLONE;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+
+    void setOutputFile(const path &output_file);
+    void setSourceFile(const path &input_file);
+
+protected:
+    Version gatherVersion() const override;
+};
+
 // TODO: compiled
-// java D, VB, VB.NET, Obj-C (check work), Pascal (+Delphi?), swift, dart, cobol, lisp, ada, kotlin, haskell, F#, erlang
+// D, VB, VB.NET, Obj-C (check work), Pascal (+Delphi?), swift, dart, cobol, lisp, ada, haskell, F#, erlang
 
 // TODO: interpreted
 // python, js, php, R, ruby, matlab, perl, lua,
