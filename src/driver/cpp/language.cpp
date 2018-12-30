@@ -123,7 +123,7 @@ bool LanguageStorage::activateLanguage(const PackageId &pkg)
 LanguagePtr LanguageStorage::getLanguage(const PackagePath &pp) const
 {
     auto v = user_defined_languages.find(pp);
-    if (v == user_defined_languages.end() || v->second.empty())
+    if (v == user_defined_languages.end(pp) || v->second.empty())
         return {};
     return getLanguage({ pp, v->second.rbegin()->first });
 }
@@ -139,7 +139,7 @@ LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg) const
 std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) const
 {
     auto v = registered_programs.find(pp);
-    if (v == registered_programs.end() || v->second.empty())
+    if (v == registered_programs.end(pp) || v->second.empty())
         return {};
     return getProgram({ pp, v->second.rbegin()->first });
 }

@@ -54,7 +54,7 @@ static int create_def_file(path def, Files obj_files)
     return 0;
 }
 
-SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(create_def_file, sw_create_def_file)
+SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD("sw_create_def_file", create_def_file)
 
 static int copy_file(path in, path out)
 {
@@ -64,7 +64,7 @@ static int copy_file(path in, path out)
     return 0;
 }
 
-SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(copy_file, sw_copy_file)
+SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD("sw_copy_file", copy_file)
 
 namespace sw
 {
@@ -981,13 +981,14 @@ Files NativeExecutedTarget::gatherObjectFilesWithoutLibraries() const
 
 bool NativeExecutedTarget::hasSourceFiles() const
 {
-    return std::any_of(this->begin(), this->end(), [](const auto &f)
-    {
-        return f.second->isActive();
-    }) || std::any_of(this->begin(), this->end(), [](const auto &f)
-    {
-        return f.first.extension() == ".obj";
-    });
+    return std::any_of(this->begin(), this->end(), [](const auto &f) {
+               return f.second->isActive();
+           }) ||
+           std::any_of(this->begin(), this->end(), [](const auto &f) {
+               return f.first.extension() == ".obj"
+                   //|| f.first.extension() == ".def"
+                   ;
+           });
 }
 
 void NativeExecutedTarget::resolvePostponedSourceFiles()
@@ -2067,14 +2068,19 @@ bool NativeExecutedTarget::prepare()
             {
                 for (auto &d : v.Dependencies)
                 {
-                    for (auto &[pp, t] : solution->getChildren())
+                    auto i = solution->getChildren().find(d->getPackage());
+                    if (i != solution->getChildren().end())
+                        d->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
+
+                    /*for (auto &[pp, t] : solution->getChildren())
                     {
                         if (d->getPackage().canBe(t->getPackage()))
                         {
                             d->setTarget(std::static_pointer_cast<NativeTarget>(t));
                             break;
                         }
-                    }
+                    }*/
+
                     if (!d->target.lock())
                     {
                         /*bool added = false;
@@ -2267,7 +2273,9 @@ bool NativeExecutedTarget::prepare()
             auto &dc = getSolution()->dummy_children;
             for (auto &d2 : Dependencies)
             {
-                if (d2->target.lock() && c.find(d2->target.lock()->pkg) == c.end() && dc.find(d2->target.lock()->pkg) != dc.end())
+                if (d2->target.lock() &&
+                    c.find(d2->target.lock()->pkg) == c.end(d2->target.lock()->pkg) &&
+                    dc.find(d2->target.lock()->pkg) != dc.end(d2->target.lock()->pkg))
                 {
                     c[d2->target.lock()->pkg] = dc[d2->target.lock()->pkg];
 
@@ -2629,6 +2637,7 @@ bool NativeExecutedTarget::prepare()
         }
 
         // add def file to linker
+        if (getSelectedTool() == Linker.get())
         if (auto VSL = getSelectedTool()->as<VisualStudioLibraryTool>())
         {
             for (auto &[p, f] : *this)
@@ -2694,7 +2703,15 @@ bool NativeExecutedTarget::prepare()
                 }
 
                 if (!dt->HeaderOnly.value())
-                    LinkLibraries.push_back(d.get()->target.lock()->getImportLibrary());
+                {
+                    path o;
+                    if (dt->getSelectedTool() == dt->Librarian.get())
+                        o = d.get()->target.lock()->getOutputFile();
+                    else
+                        o = d.get()->target.lock()->getImportLibrary();
+                    if (!o.empty())
+                        LinkLibraries.push_back(o);
+                }
             }
             if (!s.empty())
                 write_file(BinaryDir.parent_path() / "deps.txt", s);
@@ -2777,8 +2794,11 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
         {
             if (!dt->HeaderOnly.value())
             {
-                if (added.find(dt->getImportLibrary()) == added.end())
-                    ll.push_back(dt->getImportLibrary());
+                if (added.find(dt->getOutputFile()) == added.end())
+                {
+                    ll.push_back(dt->getOutputFile());
+                    ll.insert(ll.end(), dt->LinkLibraries.begin(), dt->LinkLibraries.end()); // also link libs
+                }
             }
 
             // if dep is a static library, we take all its deps link libraries too
@@ -2795,7 +2815,10 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
                 if (!dt2->HeaderOnly.value())
                 {
                     if (added.find(dt2->getImportLibrary()) == added.end())
+                    {
                         ll.push_back(dt2->getImportLibrary());
+                        ll.insert(ll.end(), dt2->LinkLibraries.begin(), dt2->LinkLibraries.end()); // also link libs
+                    }
                 }
                 dt2->gatherStaticLinkLibraries(ll, added, targets);
             }

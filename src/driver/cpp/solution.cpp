@@ -66,27 +66,32 @@ void check_self(sw::Checker &c);
 namespace sw
 {
 
-String getCurrentModuleId()
+static String getCurrentModuleId()
 {
     return shorten_hash(sha1(getProgramName()));
 }
 
-path getImportFilePrefix()
+static path getImportFilePrefix()
 {
     return getUserDirectories().storage_dir_tmp / ("sw_" + getCurrentModuleId());
 }
 
-path getImportDefinitionsFile()
+static path getImportDefinitionsFile()
 {
     return getImportFilePrefix() += ".def";
 }
 
-path getImportPchFile()
+static path getImportLibraryFile()
+{
+    return getImportFilePrefix() += ".lib";
+}
+
+static path getImportPchFile()
 {
     return getImportFilePrefix() += ".cpp";
 }
 
-path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, const UnresolvedPackage &up)
+static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, const UnresolvedPackage &up)
 {
     // depends on upkg, not on pkg!
     // because p is constant, but up might differ
@@ -147,7 +152,7 @@ path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, const Unr
     return h;
 }
 
-std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const path &p)
+static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const path &p)
 {
     UnresolvedPackages udeps;
     FilesOrdered headers;
@@ -308,7 +313,9 @@ bool Solution::skipTarget(TargetScope Scope) const
 
 TargetBaseTypePtr Solution::resolveTarget(const UnresolvedPackage &pkg) const
 {
-    if (resolved_targets.find(pkg) == resolved_targets.end())
+    throw SW_RUNTIME_EXCEPTION("disabled");
+
+    /*if (resolved_targets.find(pkg) == resolved_targets.end())
     {
         for (const auto &[p, t] : getChildren())
         {
@@ -318,7 +325,7 @@ TargetBaseTypePtr Solution::resolveTarget(const UnresolvedPackage &pkg) const
             }
         }
     }
-    return resolved_targets[pkg];
+    return resolved_targets[pkg];*/
 }
 
 path Solution::getTestDir() const
@@ -367,7 +374,7 @@ Test Solution::addTest(const String &name)
     return cb;
 }
 
-StaticLibraryTarget &Solution::getImportLibrary()
+static void addImportLibrary(NativeExecutedTarget &t)
 {
 #if defined(CPPAN_OS_WINDOWS)
     HMODULE lib = (HMODULE)primitives::getModuleForSymbol();
@@ -377,7 +384,6 @@ StaticLibraryTarget &Solution::getImportLibrary()
     int* names = (int*)((uint64_t)lib + exports->AddressOfNames);
     String defs;
     defs += "LIBRARY " IMPORT_LIBRARY "\n";
-    //defs += "LIBRARY " + GetCurrentModuleName() + "\n";
     defs += "EXPORTS\n";
     for (DWORD i = 0; i < exports->NumberOfNames; i++)
     {
@@ -385,18 +391,23 @@ StaticLibraryTarget &Solution::getImportLibrary()
         defs += "    "s + n + "\n";
     }
     write_file_if_different(getImportDefinitionsFile(), defs);
+
+    auto c = t.addCommand();
+    c << t.Librarian->file
+        << cmd::in(getImportDefinitionsFile(), cmd::Prefix{ "-DEF:" })
+        << cmd::out(getImportLibraryFile(), cmd::Prefix{ "-OUT:" })
+        ;
+    t.LinkLibraries.push_back(getImportLibraryFile());
 #endif
 
-    auto o = Local;
+    /*auto o = Local;
     Local = false; // this prevents us from putting compiled configs into user bdirs
     IsConfig = true;
     auto &t = addTarget<StaticLibraryTarget>("sw_implib_" + getCurrentModuleId(), "local");
-    //t.init2();
     IsConfig = false;
     Local = o;
     t.AutoDetectOptions = false;
-    t += getImportDefinitionsFile();
-    return t;
+    t += getImportDefinitionsFile();*/
 }
 
 path Solution::getChecksFilename() const
@@ -1006,7 +1017,15 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
                     continue;
                 }
             }
-            for (const auto &[p,t] : getChildren())
+
+            auto i = getChildren().find(up);
+            if (i != getChildren().end())
+            {
+                dptr->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
+                rm.insert(up);
+            }
+
+            /*for (const auto &[p,t] : getChildren())
             {
                 if (up.canBe(p))
                 {
@@ -1014,7 +1033,7 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
                     rm.insert(up);
                     break;
                 }
-            }
+            }*/
         }
         for (auto &r : rm)
             c.erase(r);
@@ -1159,9 +1178,8 @@ void Build::setSettings()
 {
     fs = &getFileStorage(getConfig());
 
-    for (auto &[pp, m] : registered_programs)
-        for (auto &[v,p] : m)
-            p->fs = fs;
+    for (auto &[_, p] : registered_programs)
+        p->fs = fs;
 
     if (Settings.Native.Librarian)
         Settings.Native.Librarian->fs = fs;
@@ -1375,7 +1393,7 @@ static auto getFilesHash(const Files &files)
 
 PackagePath Build::getSelfTargetName(const Files &files)
 {
-    return "loc.sw.self" "." + getFilesHash(files);
+    return "loc.sw.self." + getFilesHash(files);
 }
 
 SharedLibraryTarget &Build::createTarget(const Files &files)
@@ -1384,7 +1402,6 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
     solution.IsConfig = true;
     auto &lib = solution.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
     solution.IsConfig = false;
-    //lib.PostponeFileResolving = false;
     return lib;
 }
 
@@ -1443,17 +1460,8 @@ FilesMap Build::build_configs_separate(const Files &files)
     if (debug_configs)
         solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
 
-#if defined(CPPAN_OS_WINDOWS)
-    auto &implib = solution.getImportLibrary();
-#endif
-
     bool once = false;
-    auto prepare_config = [this, &once,
-#if defined(CPPAN_OS_WINDOWS)
-            &implib,
-#endif
-            &solution
-    ](const auto &fn)
+    auto prepare_config = [this, &once, &solution](const auto &fn)
     {
         auto &lib = createTarget({ fn });
 
@@ -1471,9 +1479,7 @@ FilesMap Build::build_configs_separate(const Files &files)
             once = true;
         }
 
-#if defined(CPPAN_OS_WINDOWS)
-        lib += implib;
-#endif
+        addImportLibrary(lib);
         lib.AutoDetectOptions = false;
         lib.CPPVersion = CPPLanguageStandard::CPP17;
 
@@ -1593,10 +1599,6 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     if (debug_configs)
         solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
 
-#if defined(CPPAN_OS_WINDOWS)
-    auto &implib = solution.getImportLibrary();
-#endif
-
     Files files;
     std::unordered_map<path, PackageId> output_names;
     for (auto &pkg : pkgs)
@@ -1620,9 +1622,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     build_self(solution);
     addDeps(lib, solution);
 
-#if defined(CPPAN_OS_WINDOWS)
-    lib += implib;
-#endif
+    addImportLibrary(lib);
     lib.AutoDetectOptions = false;
     lib.CPPVersion = CPPLanguageStandard::CPP17;
 

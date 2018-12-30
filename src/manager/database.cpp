@@ -957,7 +957,7 @@ void PackagesDatabase::findLocalDependencies(IdDependencies &id_deps, const Unre
             project.id = i->second.id;
             //project.flags.set(pfDirectDependency);
             project.ppath = dep.ppath;
-            project.version = i->first;
+            project.version = i->first.version;
             project.prefix = i->second.prefix;
             project.db_dependencies = getProjectDependencies(project.id, all_deps);
             //project.setDependencyIds(getProjectDependencies(project.id, all_deps, i->second.deps)); // see dependency.h note
@@ -1014,7 +1014,7 @@ IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps
         {
             auto &pkgs = overridden;
             auto i = pkgs.find(dep.ppath);
-            if (i != pkgs.end())
+            if (i != pkgs.end(dep.ppath))
             {
                 //throw SW_RUNTIME_EXCEPTION("Not imlpemented");
                 //project.id = i->second.id;
@@ -1094,7 +1094,7 @@ db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDe
     // also check local db
     auto &o = getServiceDatabase().getOverriddenPackages();
     auto i = o.find(project.ppath);
-    if (i != o.end())
+    if (i != o.end(project.ppath))
     {
         for (auto &[v, d] : i->second)
         {

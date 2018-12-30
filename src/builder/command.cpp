@@ -86,7 +86,7 @@ bool Command::isOutdated() const
 {
     bool changed = false;
 
-    auto k = std::hash<sw::builder::Command>()(*this);
+    auto k = getHash();
     auto r = getCommandStorage().commands.insert_ptr(k, 0);
     if (r.second)
     {
@@ -128,8 +128,13 @@ size_t Command::getHash() const
 {
     if (hash != 0)
         return hash;
+    return getHash1();
+}
 
-    auto h = std::hash<path>()(program);
+size_t Command::getHash1() const
+{
+    size_t h = 0;
+    hash_combine(h, std::hash<path>()(program));
 
     // must sort args first, why?
     std::set<String> args_sorted(args.begin(), args.end());

@@ -381,12 +381,13 @@ ExecuteBuiltinCommand::ExecuteBuiltinCommand()
     program = boost::dll::program_location().string();
 }
 
-ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name, void *f)
+ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name, void *f, int version)
     : ExecuteBuiltinCommand()
 {
     args.push_back("internal-call-builtin-function");
-    args.push_back(primitives::getModuleNameForSymbol(f).u8string());
+    args.push_back(primitives::getModuleNameForSymbol(f).u8string()); // add dependency on this? or on function (command) version
     args.push_back(cmd_name);
+    args.push_back(std::to_string(version));
 }
 
 void ExecuteBuiltinCommand::push_back(const Files &files)
@@ -398,19 +399,36 @@ void ExecuteBuiltinCommand::push_back(const Files &files)
 
 void ExecuteBuiltinCommand::execute1(std::error_code *ec)
 {
-    jumppad_call(args[1], args[2], Strings{ args.begin() + 3, args.end() });
+    jumppad_call(args[1], args[2], std::stoi(args[3]), Strings{ args.begin() + 4, args.end() });
 }
 
 bool ExecuteBuiltinCommand::isTimeChanged() const
 {
     bool changed = false;
 
+    // ignore program!
     for (auto &i : inputs)
         changed |= File(i, *fs).isChanged(mtime);
     for (auto &i : outputs)
         changed |= File(i, *fs).isChanged(mtime);
 
     return changed;
+}
+
+size_t ExecuteBuiltinCommand::getHash1() const
+{
+    size_t h = 0;
+    // ignore program!
+
+    hash_combine(h, std::hash<String>()(args[2])); // include function name
+    hash_combine(h, std::hash<String>()(args[3])); // include version
+
+    // must sort args first, why?
+    std::set<String> args_sorted(args.begin() + 4, args.end());
+    for (auto &a : args_sorted)
+        hash_combine(h, std::hash<String>()(a));
+
+    return h;
 }
 
 }

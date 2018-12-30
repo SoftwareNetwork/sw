@@ -23,7 +23,7 @@
 #include <mutex>
 #include <optional>
 
-#define IMPORT_LIBRARY "cppan.dll"
+#define IMPORT_LIBRARY "sw.dll"
 
 #define ASSIGN_WRAPPER(f, t)          \
     struct f##_files : Assigner       \
@@ -200,7 +200,7 @@ using SharedLibrary = SharedLibraryTarget;
 
 struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
 {
-    using TargetMap = std::unordered_map<PackageId, TargetBaseTypePtr>;
+    using TargetMap = PackageVersionMapBase<TargetBaseTypePtr, std::unordered_map, std::map>;
 
     struct SettingsX
     {
@@ -296,15 +296,16 @@ public:
     template <typename T = Target>
     T &getTarget(const PackagePath &Name)
     {
-        auto i = std::find_if(getChildren().begin(), getChildren().end(),
-            [&Name](const auto &e) { return e.first.ppath == Name; });
-        if (i == getChildren().end())
+        auto i = getChildren().find(Name);
+        if (i == getChildren().end(Name))
         {
-            auto n2 = pkg.ppath / Name;
-            i = std::find_if(getChildren().begin(), getChildren().end(),
-                [&Name, &n2](const auto &e) { return e.first.ppath == n2; });
+            i = getChildren().find(pkg.ppath / Name);
+            if (i == getChildren().end(Name))
+                throw SW_RUNTIME_EXCEPTION("No such target: " + Name.toString() + " or " + (pkg.ppath / Name).toString());
         }
-        return getTarget<T>(i, Name.toString());
+        if (i->second.size() > 1)
+            throw SW_RUNTIME_EXCEPTION("Target: " + i->first.toString() + " has more than one version");
+        return (T&)*i->second.begin()->second;
     }
 
     template <typename T = Target>
@@ -391,13 +392,27 @@ private:
     TargetBase &addTarget2(const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V);
 
     template <typename T = Target>
-    T &getTarget(const TargetMap::const_iterator &i, const String &n)
+    T &getTarget(const TargetMap::iterator &i, const String &n)
     {
         return (T &)*getTargetPtr(i, n);
     }
 
     template <typename T = Target>
-    std::shared_ptr<T> getTargetPtr(const TargetMap::const_iterator &i, const String &n)
+    T &getTarget(const TargetMap::const_iterator &i, const String &n) const
+    {
+        return (T &)*getTargetPtr(i, n);
+    }
+
+    template <typename T = Target>
+    std::shared_ptr<T> getTargetPtr(const TargetMap::iterator &i, const String &n)
+    {
+        if (i == getChildren().end())
+            throw SW_RUNTIME_EXCEPTION("No such target: " + n);
+        return std::static_pointer_cast<T>(i->second);
+    }
+
+    template <typename T = Target>
+    std::shared_ptr<T> getTargetPtr(const TargetMap::const_iterator &i, const String &n) const
     {
         if (i == getChildren().end())
             throw SW_RUNTIME_EXCEPTION("No such target: " + n);

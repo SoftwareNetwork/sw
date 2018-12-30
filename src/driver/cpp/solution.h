@@ -131,7 +131,6 @@ public:
     void clean() const;
 
     Commands getCommands() const;
-    StaticLibraryTarget &getImportLibrary();
 
     void printGraph(const path &p) const;
 

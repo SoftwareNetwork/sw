@@ -4,7 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//#include <primitives/convert.h>
+#pragma once
+
 #include <primitives/filesystem.h>
 
 #include <gsl/span>
@@ -17,15 +18,16 @@
 #define SW_JUMPPAD_API SW_DRIVER_CPP_API
 #endif
 
-// add versions to functions?
-#define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(f, n)                       \
-    extern "C" SW_JUMPPAD_API int _sw_fn_jumppad_##n(const Strings &s) \
-    {                                                                  \
-        ::sw::VisibleFunctionJumppad j(&f, #n);                        \
-        return j.call(s);                                              \
-    }
+#define SW_JUMPPAD_PREFIX _sw_fn_jumppad_
+#define SW_JUMPPAD_DEFAULT_FUNCTION_VERSION 0
 
-#define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD2(x) SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(x, x)
+// strict macro
+#define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, f, ...)                               \
+    extern "C" SW_JUMPPAD_API int CONCATENATE(_sw_fn_jumppad_, f)(const Strings &s) \
+    {                                                                               \
+        ::sw::VisibleFunctionJumppad j(&f, n, __VA_ARGS__);                         \
+        return j.call(s);                                                           \
+    }
 
 namespace sw
 {
@@ -34,7 +36,7 @@ namespace detail
 {
 
 template <class T>
-T from_string(gsl::span<const String> &s)
+inline T from_string(gsl::span<const String> &s)
 {
     auto v = s[0];
     s = s.subspan(1);
@@ -70,13 +72,13 @@ inline Files from_string(gsl::span<const String> &s)
 }
 
 template <typename Tuple, std::size_t... I>
-auto strings2tuple(gsl::span<const String> &s, std::index_sequence<I...>)
+inline auto strings2tuple(gsl::span<const String> &s, std::index_sequence<I...>)
 {
     return std::tuple{ from_string<std::tuple_element_t<I, Tuple>>(s)... };
 }
 
 template <class T>
-size_t get_n_arg(gsl::span<const String> &s)
+inline size_t get_n_arg(gsl::span<const String> &s)
 {
     s = s.subspan(1);
     return 1;
@@ -99,7 +101,7 @@ inline size_t get_n_arg<Files>(gsl::span<const String> &s)
 }
 
 template <class T, class ... ArgTypes>
-size_t get_n_args2(gsl::span<const String> &s)
+inline size_t get_n_args2(gsl::span<const String> &s)
 {
     if (s.empty())
         return 0;
@@ -110,7 +112,7 @@ size_t get_n_args2(gsl::span<const String> &s)
 }
 
 template <class ... ArgTypes>
-size_t get_n_args(gsl::span<const String> &s)
+inline size_t get_n_args(gsl::span<const String> &s)
 {
     if constexpr (sizeof...(ArgTypes) == 0)
         return 0;
@@ -128,8 +130,11 @@ struct VisibleFunctionJumppad<R(ArgTypes...)>
 {
     std::function<R(ArgTypes...)> f;
     String name;
+    int version;
 
-    VisibleFunctionJumppad(std::function<R(ArgTypes...)> f, const String &n) : f(f), name(n) {}
+    VisibleFunctionJumppad(std::function<R(ArgTypes...)> f, const String &n, int v = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION)
+        : f(f), name(n), version(v)
+    {}
 
     R call(const Strings &s = {})
     {
@@ -138,7 +143,7 @@ struct VisibleFunctionJumppad<R(ArgTypes...)>
         auto nargs = detail::get_n_args<ArgTypes...>(sp2);
         if (sizeof...(ArgTypes) != nargs)
         {
-            throw SW_RUNTIME_EXCEPTION("pf call: " + name + ": incorrect number of arguments " +
+            throw SW_RUNTIME_EXCEPTION("pf call: " + name + ", version: " + std::to_string(version) + ": incorrect number of arguments " +
                 std::to_string(nargs) + ", expected " + std::to_string(sizeof...(ArgTypes)));
         }
 
@@ -149,10 +154,10 @@ struct VisibleFunctionJumppad<R(ArgTypes...)>
 };
 
 template <class R, class ... ArgTypes>
-VisibleFunctionJumppad(R(*)(ArgTypes...), const String &)->VisibleFunctionJumppad<R(ArgTypes...)>;
+VisibleFunctionJumppad(R(*)(ArgTypes...), const String &, int = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION)->VisibleFunctionJumppad<R(ArgTypes...)>;
 
 SW_DRIVER_CPP_API
-int jumppad_call(const path &module, const String &name, const Strings &s = {});
+int jumppad_call(const path &module, const String &name, int version, const Strings &s = {});
 
 SW_DRIVER_CPP_API
 int jumppad_call(const Strings &s);

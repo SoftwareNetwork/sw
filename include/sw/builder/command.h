@@ -152,7 +152,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     path redirectStdout(const path &p);
     path redirectStderr(const path &p);
     virtual bool isHashable() const { return true; }
-    virtual size_t getHash() const;
+    size_t getHash() const;
     size_t getHashAndSave() const;
     void updateCommandTime() const;
     Files getGeneratedDirs() const;
@@ -168,10 +168,12 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
 protected:
     bool prepared = false;
     bool executed_ = false;
-    mutable size_t hash = 0;
 
 private:
+    mutable size_t hash = 0;
+
     virtual void execute1(std::error_code *ec = nullptr);
+    virtual size_t getHash1() const;
 
     bool beforeCommand();
     void afterCommand();

@@ -309,11 +309,8 @@ int sw_main(const Strings &args)
     if (list_overridden_packages)
     {
         std::map<sw::PackageId, path> pkgs;
-        for (auto &[n, v] : getServiceDatabase().getOverriddenPackages())
-        {
-            for (auto &[v2, p] : v)
-                pkgs[{n,v2}] = p.sdir;
-        }
+        for (auto &[pkg, p] : getServiceDatabase().getOverriddenPackages())
+            pkgs[pkg] = p.sdir;
         for (auto &[n, p] : pkgs)
             std::cout << n.toString() << " " << p << "\n";
         return 0;
@@ -340,11 +337,10 @@ int sw_main(const Strings &args)
         auto d = fs::canonical(fs::absolute(delete_overridden_package_dir));
 
         std::map<sw::PackageId, path> pkgs;
-        for (auto &[n, v] : getServiceDatabase().getOverriddenPackages())
+        for (auto &[pkg, p] : getServiceDatabase().getOverriddenPackages())
         {
-            for (auto &[v2, p] : v)
-                if (p.sdir == d)
-                    pkgs[{n, v2}] = p.sdir;
+            if (p.sdir == d)
+                pkgs[pkg] = p.sdir;
         }
         for (auto &[n, p] : pkgs)
             std::cout << "Deleting " << n.toString() << "\n";

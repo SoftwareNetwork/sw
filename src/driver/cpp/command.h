@@ -8,6 +8,7 @@
 
 #include <sw/builder/command.h>
 
+#include "jumppad.h"
 #include "options.h"
 
 #include <file.h>
@@ -309,7 +310,7 @@ struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
     using F = std::function<void(void)>;
 
     ExecuteBuiltinCommand();
-    ExecuteBuiltinCommand(const String &cmd_name, void *f = nullptr);
+    ExecuteBuiltinCommand(const String &cmd_name, void *f = nullptr, int version = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION);
     virtual ~ExecuteBuiltinCommand() = default;
 
     //path getProgram() const override { return "ExecuteBuiltinCommand"; };
@@ -323,6 +324,7 @@ struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
 
 private:
     void execute1(std::error_code *ec = nullptr) override;
+    size_t getHash1() const override;
     void prepare() override {}
 };
 
