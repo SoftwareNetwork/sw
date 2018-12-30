@@ -191,7 +191,7 @@ path PackageId::getHashPathFromHash(const String &h)
     return p;
 }
 
-void PackageId::createNames()
+/*void PackageId::createNames()
 {
     auto v = version.toString();
 
@@ -221,7 +221,7 @@ String PackageId::getTargetName() const
         return ppath.toString() + (v == "*" ? "" : ("-" + v));
     }
     return target_name;
-}
+}*/
 
 String PackageId::getVariableName() const
 {
@@ -283,7 +283,7 @@ UnresolvedPackage extractFromString(const String &target)
     return p;
 }
 
-void cleanPackages(const String &s, int flags)
+/*void cleanPackages(const String &s, int flags)
 {
     // on source flag remove all
     if (flags & CleanTarget::Src)
@@ -456,6 +456,6 @@ std::unordered_map<String, int> CleanTarget::getStrings()
     for (auto &s : m)
         m2[s.second] = s.first;
     return m2;
-}
+}*/
 
 }

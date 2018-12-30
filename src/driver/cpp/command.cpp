@@ -72,7 +72,7 @@ path Command::getProgram() const
             throw SW_RUNTIME_EXCEPTION("Command dependency target was not resolved: " + d->getPackage().toString());
         p = t->getOutputFile();
         if (p.empty())
-            throw SW_RUNTIME_EXCEPTION("Empty program from package: " + t->getPackage().target_name);
+            throw SW_RUNTIME_EXCEPTION("Empty program from package: " + t->getPackage().toString());
     }
     else if (dependency_set)
     {

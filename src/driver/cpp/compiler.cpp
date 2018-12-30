@@ -627,6 +627,9 @@ void detectNativeCompilers(struct Solution &s)
 
         auto C = std::make_shared<RcTool>();
         C->file = getWindowsKit10Dir(s, windows_kit_dir / "bin") / dir_suffix.host / "rc.exe";
+        for (auto &idir : COpts.System.IncludeDirectories)
+            C->system_idirs.push_back(idir);
+
         L->compiler = C;
         s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.rc", C, L);
     }
@@ -1618,6 +1621,16 @@ std::shared_ptr<builder::Command> RcTool::prepareCommand(const TargetBase &t)
     }
 
     t.template asRef<NativeExecutedTarget>().NativeCompilerOptions::addDefinitionsAndIncludeDirectories(*c);
+
+    // ms bug: https://developercommunity.visualstudio.com/content/problem/417189/rcexe-incorrect-behavior-with.html
+    //for (auto &i : system_idirs)
+        //c->args.push_back("-I" + normalize_path(i));
+
+    // use env
+    String s;
+    for (auto &i : system_idirs)
+        s += normalize_path(i) + ";";
+    c->environment["INCLUDE"] = s;
 
     // fix spaces around defs value:
     // from: -DSW_PACKAGE_API=extern \"C\" __declspec(dllexport)

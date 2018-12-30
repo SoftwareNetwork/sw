@@ -510,7 +510,7 @@ String SourceFile::getObjectFilename(const TargetBase &t, const path &p)
 {
     // target may push its files to outer packages,
     // so files must be concatenated with its target name
-    return p.filename().u8string() + "." + sha256(t.pkg.target_name + p.u8string()).substr(0, 8);
+    return p.filename().u8string() + "." + sha256(t.pkg.toString() + p.u8string()).substr(0, 8);
 }
 
 bool SourceFile::isActive() const

@@ -102,13 +102,12 @@ struct SW_MANAGER_API PackageId
     bool operator!=(const PackageId &rhs) const { return !operator==(rhs); }
 
     // misc data
-    String target_name;
+    /*String target_name;
     String target_name_hash;
-    String variable_name;
-    String variable_no_version_name;
+    String variable_no_version_name;*/
 
-    void createNames();
-    String getTargetName() const;
+    //void createNames();
+    //String getTargetName() const;
     String getVariableName() const;
 
     Package toPackage() const;
@@ -119,7 +118,8 @@ struct SW_MANAGER_API PackageId
 
 private:
     // cached vars
-    String hash;
+    //String hash;
+    mutable String variable_name;
 
     path getDir(const path &p) const;
     static path getHashPathFromHash(const String &h);
@@ -388,7 +388,7 @@ struct SW_MANAGER_API Package : PackageId
 
 using Packages = std::unordered_set<Package>;
 
-struct CleanTarget
+/*struct CleanTarget
 {
     enum Type
     {
@@ -410,7 +410,7 @@ struct CleanTarget
 };
 
 void cleanPackages(const String &s, int flags = CleanTarget::All);
-void cleanPackages(const Packages &pkgs, int flags);
+void cleanPackages(const Packages &pkgs, int flags);*/
 
 }
 

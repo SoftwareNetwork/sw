@@ -22,11 +22,12 @@
 #define SW_JUMPPAD_DEFAULT_FUNCTION_VERSION 0
 
 // strict macro
-#define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, f, ...)                               \
-    extern "C" SW_JUMPPAD_API int CONCATENATE(_sw_fn_jumppad_, f)(const Strings &s) \
-    {                                                                               \
-        ::sw::VisibleFunctionJumppad j(&f, n, __VA_ARGS__);                         \
-        return j.call(s);                                                           \
+// M(visible name, function name in code, ...)
+#define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, f, ...)                                 \
+    extern "C" SW_JUMPPAD_API int CONCATENATE(SW_JUMPPAD_PREFIX, n)(const Strings &s) \
+    {                                                                                 \
+        ::sw::VisibleFunctionJumppad j(&f, #n, __VA_ARGS__);                          \
+        return j.call(s);                                                             \
     }
 
 namespace sw

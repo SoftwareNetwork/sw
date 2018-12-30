@@ -371,7 +371,7 @@ void ProjectContext::printProject(
         auto o = nt.makeOutputFile();
         o = o.parent_path().parent_path() / s.getConfig(&t) / o.filename();
         o += nt.getOutputFile().extension();
-        auto build_cmd = "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler + " --do-not-rebuild-config --target " + p.target_name + " ide";
+        auto build_cmd = "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler + " --do-not-rebuild-config --target " + p.toString() + " ide";
 
         String defs;
         for (auto &[k, v] : nt.Definitions)
@@ -792,7 +792,7 @@ void VSGenerator::generate(const Build &b)
         auto &prnts = t->Local ? local_parents : parents;
         while (!pp.empty() && prnts.find(pp) == prnts.end())
             pp = pp.parent();
-        ctx.addProject(VSProjectType::Makefile, p.target_name, projects_dir, pp);
+        ctx.addProject(VSProjectType::Makefile, p.toString(), projects_dir, pp);
     }
 
     // gen projects
@@ -814,12 +814,12 @@ void VSGenerator::generate(const Build &b)
         while (!pp.empty() && prnts.find(pp) == prnts.end())
             pp = pp.parent();
 
-        ctx.projects[all_build_name].deps.insert(p.target_name);
+        ctx.projects[all_build_name].deps.insert(p.toString());
 
         pctx.beginBlock("PropertyGroup", { {"Label", "Globals"} });
         pctx.addBlock("VCProjectVersion", "15.0");
-        pctx.addBlock("ProjectGuid", "{" + ctx.uuids[p.target_name] + "}");
-        pctx.addBlock("RootNamespace", p.target_name);
+        pctx.addBlock("ProjectGuid", "{" + ctx.uuids[p.toString()] + "}");
+        pctx.addBlock("RootNamespace", p.toString());
         pctx.addBlock("WindowsTargetPlatformVersion", getLatestWindowsKit());
         //pctx.addBlock("Keyword", "Win32Proj");
         //pctx.addBlock("ProjectName", PackageId(p.ppath.slice(pp.size()), p.version).toString());
@@ -924,7 +924,7 @@ void VSGenerator::generate(const Build &b)
             {
                 pctx.addBlock("OutDir", normalize_path_windows(current_thread_path() / "bin\\"),
                     { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
-                pctx.addBlock("IntDir", normalize_path_windows(dir / projects_dir / sha256_short(nt->pkg.target_name)) + "\\",
+                pctx.addBlock("IntDir", normalize_path_windows(dir / projects_dir / sha256_short(nt->pkg.toString())) + "\\",
                     { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
                 pctx.addBlock("TargetName", nt->pkg.toString(), { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
                 pctx.addBlock("TargetExt", ext, { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
@@ -952,7 +952,7 @@ void VSGenerator::generate(const Build &b)
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets" } });
 
         pctx.endProject();
-        write_file(dir / projects_dir / (p.target_name + ".vcxproj"), pctx.getText());
+        write_file(dir / projects_dir / (p.toString() + ".vcxproj"), pctx.getText());
 
         FiltersContext fctx;
         fctx.beginProject();
@@ -1009,7 +1009,7 @@ void VSGenerator::generate(const Build &b)
         fctx.endBlock();
 
         fctx.endProject();
-        write_file(dir / projects_dir / (p.target_name + ".vcxproj.filters"), fctx.getText());
+        write_file(dir / projects_dir / (p.toString() + ".vcxproj.filters"), fctx.getText());
     }
 
     ctx.beginGlobal();
@@ -1019,7 +1019,7 @@ void VSGenerator::generate(const Build &b)
     {
         if (!print_dependencies && !t->Local)
             continue;
-        ctx.addProjectConfigurationPlatforms(p.target_name);
+        ctx.addProjectConfigurationPlatforms(p.toString());
     }
     ctx.addProjectConfigurationPlatforms(all_build_name, true);
     ctx.endGlobalSection();
@@ -1139,10 +1139,10 @@ void VSGeneratorNMake::generate(const Build &b)
         if (type != GeneratorType::VisualStudioNMake)
         {
             if (type == GeneratorType::VisualStudioNMakeAndUtility)
-                ctx.addProject(t2, p.target_name + "-build", projects_dir, pp);
+                ctx.addProject(t2, p.toString() + "-build", projects_dir, pp);
             t2 = VSProjectType::Utility;
         }
-        ctx.addProject(t2, p.target_name, projects_dir, pp);
+        ctx.addProject(t2, p.toString(), projects_dir, pp);
     }
 
     // gen projects
@@ -1155,9 +1155,9 @@ void VSGeneratorNMake::generate(const Build &b)
         if (!nt)
             continue;
 
-        Strings names = { p.target_name };
+        Strings names = { p.toString() };
         if (type != GeneratorType::VisualStudioNMake && type == GeneratorType::VisualStudioNMakeAndUtility)
-            names.push_back(p.target_name + "-build");
+            names.push_back(p.toString() + "-build");
         for (auto &tn : names)
             ctx.projects[tn].pctx.printProject(tn, *nt, b, ctx, *this,
                 parents, local_parents,
@@ -1171,8 +1171,8 @@ void VSGeneratorNMake::generate(const Build &b)
     {
         if (!print_dependencies && !t->Local)
             continue;
-        ctx.addProjectConfigurationPlatforms(p.target_name);
-        ctx.addProjectConfigurationPlatforms(p.target_name + "-build");
+        ctx.addProjectConfigurationPlatforms(p.toString());
+        ctx.addProjectConfigurationPlatforms(p.toString() + "-build");
     }
     ctx.addProjectConfigurationPlatforms(all_build_name, true);
     ctx.endGlobalSection();

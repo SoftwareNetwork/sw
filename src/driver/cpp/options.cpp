@@ -301,6 +301,7 @@ void NativeCompilerOptions::addDefinitionsAndIncludeDirectories(builder::Command
     };
 
     print_idir(gatherIncludeDirectories(), "-I");
+    print_idir(System.gatherIncludeDirectories(), "-I");
 }
 
 void NativeCompilerOptions::addEverything(builder::Command &c) const

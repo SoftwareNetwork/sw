@@ -399,6 +399,8 @@ struct SW_DRIVER_CPP_API RcTool : MsProgram,
     CompilerBaseProgram,
     CommandLineOptions<RcToolOptions>
 {
+    FilesOrdered system_idirs;
+
     SW_DECLARE_PROGRAM_CLONE;
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
 

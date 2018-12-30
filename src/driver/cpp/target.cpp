@@ -54,7 +54,7 @@ static int create_def_file(path def, Files obj_files)
     return 0;
 }
 
-SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD("sw_create_def_file", create_def_file)
+SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_create_def_file, create_def_file)
 
 static int copy_file(path in, path out)
 {
@@ -64,7 +64,7 @@ static int copy_file(path in, path out)
     return 0;
 }
 
-SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD("sw_copy_file", copy_file)
+SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_copy_file, copy_file)
 
 namespace sw
 {
@@ -182,7 +182,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
     t->pkg.ppath = N;
     t->pkg.version = V;
-    t->pkg.createNames();
+    //t->pkg.createNames();
 
     // this relaxes our requirements, reconsider?
     /*if (getSolution()->isKnownTarget(t->pkg))
@@ -223,7 +223,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
     auto set_sdir = [&t, this]()
     {
-        if (!t->Local && !t->pkg.target_name.empty()/* && t->pkg.ppath.is_pvt()*/)
+        if (!t->Local && !t->pkg.toString().empty()/* && t->pkg.ppath.is_pvt()*/)
         {
             t->SourceDir = getSolution()->getSourceDir(t->pkg);
         }
@@ -284,7 +284,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
                 {
                     throw SW_RUNTIME_EXCEPTION("unreachable code");
                     t->pkg.ppath = constructTargetName(Name);
-                    t->pkg.createNames();
+                    //t->pkg.createNames();
 
                     //set_sdir();
                     t->SourceDir = getSolution()->getSourceDir(t->pkg);
@@ -327,7 +327,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
 {
     bool exists = getSolution()->exists(t->pkg);
     if (exists)
-        throw SW_RUNTIME_EXCEPTION("Target already exists: " + t->pkg.target_name);
+        throw SW_RUNTIME_EXCEPTION("Target already exists: " + t->pkg.toString());
 
     // find automatic way of copying data?
 
@@ -346,7 +346,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->Scope = Scope;
     t->ParallelSourceDownload = ParallelSourceDownload;
     //auto p = getSolution()->getKnownTarget(t->pkg.ppath);
-    //if (!p.target_name.empty())
+    //if (!p.toString().empty())
 }
 
 void TargetBase::add(const TargetBaseTypePtr &t)
@@ -705,7 +705,7 @@ void NativeExecutedTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_NAME"] = q + pkg.ppath.toString() + q;
         a["PACKAGE_NAME_LAST"] = q + pkg.ppath.back() + q;
         a["PACKAGE_VERSION"] = q + pkg.version.toString() + q;
-        a["PACKAGE_STRING"] = q + pkg.target_name + q;
+        a["PACKAGE_STRING"] = q + pkg.toString() + q;
         a["PACKAGE_BUILD_CONFIG"] = q + getConfig() + q;
         a["PACKAGE_BUGREPORT"] = q + q;
         a["PACKAGE_URL"] = q + q;
@@ -1337,12 +1337,12 @@ Commands NativeExecutedTarget::getCommands() const
                 if (bdp.size() < p.size() && p.find(bdp) == 0)
                 {
                     auto n = p.substr(bdp.size());
-                    c->name = "[" + pkg.target_name + "]/[bdir_pvt]" + n;
+                    c->name = "[" + pkg.toString() + "]/[bdir_pvt]" + n;
                 }
                 else if (bd.size() < p.size() && p.find(bd) == 0)
                 {
                     auto n = p.substr(bd.size());
-                    c->name = "[" + pkg.target_name + "]/[bdir]" + n;
+                    c->name = "[" + pkg.toString() + "]/[bdir]" + n;
                 }
                 if (sd.size() < p.size() && p.find(sd) == 0)
                 {
@@ -1354,7 +1354,7 @@ Commands NativeExecutedTarget::getCommands() const
                     auto n = p.substr(sd.size());
                     if (!n.empty() && n[0] != '/')
                         n = "/" + n;
-                    c->name = prefix + "[" + pkg.target_name + "]" + n;
+                    c->name = prefix + "[" + pkg.toString() + "]" + n;
                 }
             }
             if (!do_not_mangle_object_names && !f->fancy_name.empty())
@@ -1555,7 +1555,7 @@ Commands NativeExecutedTarget::getCommands() const
 
         // set fancy name
         if (/*!Local && */!IsConfig && !do_not_mangle_object_names)
-            c->name = "[" + pkg.target_name + "]" + getOutputFile().extension().u8string();
+            c->name = "[" + pkg.toString() + "]" + getOutputFile().extension().u8string();
 
         // copy deps
         /*auto cdb = std::make_shared<ExecuteCommand>(true, [p = pkg(), c = getConfig()]
@@ -1675,7 +1675,7 @@ void NativeExecutedTarget::autoDetectSources()
     // files
     if (sources_empty && !already_built)
     {
-        LOG_TRACE(logger, getPackage().target_name + ": Autodetecting sources");
+        LOG_TRACE(logger, getPackage().toString() + ": Autodetecting sources");
 
         bool added = false;
         if (fs::exists(SourceDir / "include"))
@@ -1747,7 +1747,7 @@ void NativeExecutedTarget::autoDetectIncludeDirectories()
     // idirs
     if (idirs_empty)
     {
-        LOG_TRACE(logger, getPackage().target_name + ": Autodetecting include dirs");
+        LOG_TRACE(logger, getPackage().toString() + ": Autodetecting include dirs");
 
         if (fs::exists(SourceDir / "include"))
             Public.IncludeDirectories.insert(SourceDir / "include");
@@ -2936,7 +2936,7 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
         else if (fs::exists(BinaryDir / from))
             from = BinaryDir / from;
         else
-            throw SW_RUNTIME_EXCEPTION("Package: " + pkg.target_name + ", file not found: " + from.string());
+            throw SW_RUNTIME_EXCEPTION("Package: " + pkg.toString() + ", file not found: " + from.string());
     }
 
     // we really need ExecuteCommand here!!! or not?

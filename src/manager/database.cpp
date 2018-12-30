@@ -430,13 +430,13 @@ int ServiceDatabase::getConfig(const String &config) const
 
 void ServiceDatabase::setPackageDependenciesHash(const PackageId &p, const String &hash) const
 {
-    //db->execute("replace into PackageDependenciesHashes values ('" + p.target_name + "', '" + hash + "')");
+    //db->execute("replace into PackageDependenciesHashes values ('" + p.toString() + "', '" + hash + "')");
 }
 
 bool ServiceDatabase::hasPackageDependenciesHash(const PackageId &p, const String &hash) const
 {
     bool has = false;
-    /*db->execute("select * from PackageDependenciesHashes where package = '" + p.target_name + "' "
+    /*db->execute("select * from PackageDependenciesHashes where package = '" + p.toString() + "' "
                                                                                               "and dependencies = '" +
                     hash + "'",
                 [&has](SQLITE_CALLBACK_ARGS) {
@@ -500,7 +500,7 @@ int ServiceDatabase::getInstalledPackageConfigId(const PackageId &p, const Strin
     auto pid = getInstalledPackageId(p);
     if (pid == 0)
     {
-        LOG_DEBUG(logger, "PackageId is not installed: " + p.target_name);
+        LOG_DEBUG(logger, "PackageId is not installed: " + p.toString());
         return 0;
     }
     int cid = getConfig(config);
@@ -669,7 +669,7 @@ Packages ServiceDatabase::getInstalledPackages() const
         Package pkg;
         pkg.ppath = row.path.value();
         pkg.version = row.version.value();
-        pkg.createNames();
+        //pkg.createNames();
         pkgs.insert(pkg);
     }
     return pkgs;
@@ -1308,7 +1308,7 @@ Packages PackagesDatabase::getDependentPackages(const PackageId &pkg)
         Package pkg;
         pkg.ppath = p.first;
         pkg.version = p.second;
-        pkg.createNames();
+        //pkg.createNames();
         r.insert(pkg);
     }
 

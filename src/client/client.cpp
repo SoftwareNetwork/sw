@@ -294,6 +294,7 @@ static cl::opt<String> ide_clean("clean", cl::desc("Clean target"), cl::sub(subc
 
 //static cl::list<String> override_package("override-remote-package", cl::value_desc("prefix sdir"), cl::desc("Provide a local copy of remote package"), cl::multi_val(2));
 static cl::opt<String> override_package("override-remote-package", cl::value_desc("prefix"), cl::desc("Provide a local copy of remote package(s)"));
+static cl::alias override_package2("override", cl::desc("Alias for -override-remote-package"), cl::aliasopt(override_package));
 static cl::opt<bool> list_overridden_packages("list-overridden-remote-packages", cl::desc("List overridden packages"));
 static cl::opt<String> delete_overridden_package("delete-overridden-remote-package", cl::value_desc("package"), cl::desc("Delete overridden package from index"));
 static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", cl::value_desc("sdir"), cl::desc("Delete overridden dir packages"));

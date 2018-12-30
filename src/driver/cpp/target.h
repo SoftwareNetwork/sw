@@ -320,7 +320,7 @@ public:
     T &getTarget(const PackageId &p)
     {
         auto i = getChildren().find(p);
-        return getTarget<T>(i, p.target_name);
+        return getTarget<T>(i, p.toString());
     }
 
     template <typename T = Target>
@@ -335,7 +335,7 @@ public:
     std::shared_ptr<T> getTargetPtr(const PackageId &p)
     {
         auto i = getChildren().find(p);
-        return getTargetPtr<T>(i, p.target_name);
+        return getTargetPtr<T>(i, p.toString());
     }
 
     template <typename ... Args>

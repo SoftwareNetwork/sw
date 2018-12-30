@@ -86,7 +86,7 @@ void PackageStore::loadLockFile(const path &fn)
     {
         DownloadDependency d;
         (PackageId&)d = extractFromStringPackageId(v["package"].get<std::string>());
-        d.createNames();
+        //d.createNames();
         d.prefix = v["prefix"];
         d.hash = v["hash"];
         d.group_number_from_lock_file = d.group_number = v["group_number"];
@@ -412,7 +412,7 @@ void Resolver::download(const ExtendedPackageData &d, const path &fn)
         // if we get hashes from local db
         // they can be stalled within server refresh time (15 mins)
         // in this case we should do request to server
-        auto err = "Hashes do not match for package: " + d.target_name;
+        auto err = "Hashes do not match for package: " + d.toString();
         if (query_local_db)
             throw LocalDbHashException(err);
         throw SW_RUNTIME_EXCEPTION(err);
@@ -459,10 +459,10 @@ void Resolver::download_and_unpack()
         // Do this before we clean previous package version!
         // This is useful when we have network issues during download,
         // so we won't lost existing package.
-        LOG_INFO(logger, "Downloading: " << d.target_name << "...");
+        LOG_INFO(logger, "Downloading: " << d.toString() << "...");
 
         // maybe d.target_name instead of version_dir.string()?
-        path fn = make_archive_name((temp_directory_path("dl") / d.target_name).string());
+        path fn = make_archive_name((temp_directory_path("dl") / d.toString()).string());
         download(d, fn);
 
         // verify before cleaning old pkg
@@ -476,7 +476,7 @@ void Resolver::download_and_unpack()
         fs::remove_all(d.getDir());
         fs::remove_all(d.getDirObj()); // manually delete obj dir
 
-        LOG_INFO(logger, "Unpacking  : " << d.target_name << "...");
+        LOG_INFO(logger, "Unpacking  : " << d.toString() << "...");
         Files files;
         try
         {
@@ -503,7 +503,7 @@ void Resolver::download_and_unpack()
         };
 
 #ifdef _WIN32
-        create_link(d.getDirSrc().parent_path(), getUserDirectories().storage_dir_lnk / "src" / (d.target_name + ".lnk"));
+        create_link(d.getDirSrc().parent_path(), getUserDirectories().storage_dir_lnk / "src" / (d.toString() + ".lnk"));
         //create_link(d.getDirObj(), directories.storage_dir_lnk / "obj" / (cc.first.target_name + ".lnk"));
 #endif
     };
@@ -620,8 +620,10 @@ Resolver::Dependencies getDependenciesFromRemote(const UnresolvedPackages &deps,
             if (n == 0)
                 continue;
             for (auto &dep : deps)
+            {
                 if (dep.ppath == d)
                     pkgs.insert(dep);
+            }
         }
 
         /*try
@@ -654,7 +656,7 @@ Resolver::Dependencies prepareIdDependencies(const IdDependencies &id_deps, cons
     for (auto &v : id_deps)
     {
         auto d = v.second;
-        d.createNames();
+        //d.createNames();
         d.remote = current_remote;
         d.prepareDependencies(id_deps);
         d.db_dependencies = d.db_dependencies;

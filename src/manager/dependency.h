@@ -80,7 +80,7 @@ public:
             if (i == dd.end())
                 throw SW_RUNTIME_EXCEPTION("cannot find dep by id");
             auto dep = i->second;
-            dep.createNames();
+            //dep.createNames();
             dependencies.insert(dep);
         }
         dependencies.erase(*this); // erase self

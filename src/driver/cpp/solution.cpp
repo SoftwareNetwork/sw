@@ -596,7 +596,7 @@ void Solution::printGraph(const path &p) const
         for (auto &d : nt->Dependencies)
         {
             if (!d->IncludeDirectoriesOnly)
-                s += "\"" + p.target_name + "\"->\"" + d->target.lock()->pkg.target_name + "\";\n";
+                s += "\"" + p.toString() + "\"->\"" + d->target.lock()->pkg.toString() + "\";\n";
         }
     }
     s += "}";
@@ -998,13 +998,20 @@ bool Solution::prepareStep()
 UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
 {
     UnresolvedDependenciesType deps;
+    std::unordered_set<UnresolvedPackage> known;
 
     for (const auto &p : getChildren())
     {
         auto c = p.second->gatherUnresolvedDependencies();
         if (c.empty())
             continue;
-        std::unordered_set<UnresolvedPackage> rm;
+
+        for (auto &r : known)
+            c.erase(r);
+        if (c.empty())
+            continue;
+
+        std::unordered_set<UnresolvedPackage> known2;
         for (auto &[up, dptr] : c)
         {
             if (auto r = getPackageStore().isPackageResolved(up); r)
@@ -1013,7 +1020,7 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
                 if (i != children.end())
                 {
                     dptr->target = std::static_pointer_cast<NativeTarget>(i->second);
-                    rm.insert(up);
+                    known2.insert(up);
                     continue;
                 }
             }
@@ -1022,21 +1029,14 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
             if (i != getChildren().end())
             {
                 dptr->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
-                rm.insert(up);
+                known2.insert(up);
             }
-
-            /*for (const auto &[p,t] : getChildren())
-            {
-                if (up.canBe(p))
-                {
-                    dptr->target = std::static_pointer_cast<NativeTarget>(t);
-                    rm.insert(up);
-                    break;
-                }
-            }*/
         }
-        for (auto &r : rm)
+
+        for (auto &r : known2)
             c.erase(r);
+        known.insert(known2.begin(), known2.end());
+
         deps.insert(c.begin(), c.end());
     }
     return deps;
