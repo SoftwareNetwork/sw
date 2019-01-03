@@ -292,8 +292,6 @@ struct ExecutionPlan
             std::unordered_map<size_t, Vec> dups;
             for (const auto &c : cmds)
             {
-                if (!c->isHashable())
-                    continue;
                 auto k = std::hash<T>()(*c);
                 dups[k].push_back(c);
             }

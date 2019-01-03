@@ -8,8 +8,14 @@
 
 #include <junction/ConcurrentMap_Leapfrog.h>
 #include <primitives/exceptions.h>
+#include <primitives/templates.h>
 
 #include <memory>
+
+namespace sw
+{
+
+using ConcurrentContext = junction::QSBR::Context;
 
 template <class K, class V>
 struct ConcurrentMap
@@ -59,9 +65,9 @@ struct ConcurrentMap
     {
         if constexpr (std::is_pointer_v<V>)
             return insert(k, v, [](auto *v)
-            {
-                junction::DefaultQSBR.enqueue(&V::destroy, v);
-            });
+        {
+            junction::DefaultQSBR.enqueue(&V::destroy, v);
+        });
         else
             return insert(k, v, [](auto *v) {});
     }
@@ -126,3 +132,17 @@ struct ConcurrentHashMap : ConcurrentMapSimple<V>
         return *insert(k).first;
     }
 };
+
+SW_BUILDER_API
+SW_DECLARE_GLOBAL_STATIC_FUNCTION(ConcurrentContext, getConcurrentContext);
+
+SW_BUILDER_API
+ConcurrentContext createConcurrentContext();
+
+SW_BUILDER_API
+void destroyConcurrentContext(ConcurrentContext ctx);
+
+SW_BUILDER_API
+void updateConcurrentContext();
+
+}

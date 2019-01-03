@@ -27,7 +27,7 @@ SW_DEFINE_GLOBAL_STATIC_FUNCTION(FileStorages, getFileStorages)
 SW_DEFINE_GLOBAL_STATIC_FUNCTION(FileDataHashMap, getFileData)
 
 FileStorage::file_holder::file_holder(const path &fn)
-    : f(fn, "ab")
+    : f(fn, "ab"), fn(fn)
 {
     // goes first
     // but maybe remove?
@@ -41,7 +41,9 @@ FileStorage::file_holder::file_holder(const path &fn)
 
 FileStorage::file_holder::~file_holder()
 {
-    error_code ec;
+    f.close();
+
+    error_code ec; // remove ec? but multiple processes may be writing into this log? or not?
     fs::remove(fn, ec);
 }
 

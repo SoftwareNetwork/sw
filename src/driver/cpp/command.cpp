@@ -16,7 +16,7 @@
 #include <boost/dll.hpp>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "command");
+DECLARE_STATIC_LOGGER(logger, "cpp.command");
 
 namespace sw::driver::cpp
 {
@@ -111,7 +111,7 @@ void Command::addLazyAction(LazyAction f)
     actions.push_back(f);
 }
 
-void VSCommand::postProcess(bool)
+void VSCommand::postProcess1(bool)
 {
     // filter out includes and file name
     static const auto pattern = "Note: including file:"s;
@@ -121,13 +121,6 @@ void VSCommand::postProcess(bool)
     out.text.clear();
     // remove filename
     lines.pop_front();
-
-    //file.clearImplicitDependencies();
-
-    /*for (auto &f : outputs)
-        File(f, *fs).clearImplicitDependencies();
-    for (auto &f : outputs)
-        File(f, *fs).clearImplicitDependencies();*/
 
     for (auto &line : lines)
     {
@@ -139,25 +132,26 @@ void VSCommand::postProcess(bool)
         }
         auto include = line.substr(pattern.size());
         boost::trim(include);
-        //file.addImplicitDependency(include);
-        for (auto &f : intermediate)
-            File(f, *fs).addImplicitDependency(include);
+        //for (auto &f : intermediate)
+            //File(f, *fs).addImplicitDependency(include);
         for (auto &f : outputs)
             File(f, *fs).addImplicitDependency(include);
     }
 }
 
-void GNUCommand::postProcess(bool ok)
+void GNUCommand::postProcess1(bool)
 {
-    if (!ok || deps_file.empty())
+    if (deps_file.empty())
         return;
     if (!fs::exists(deps_file))
+    {
+        LOG_WARN(logger, "Missing deps file: " + normalize_path(deps_file));
         return;
+    }
 
     static const std::regex space_r("[^\\\\] ");
 
     auto lines = read_lines(deps_file);
-    //file.clearImplicitDependencies();
     for (auto i = lines.begin() + 1; i != lines.end(); i++)
     {
         auto &s = *i;
@@ -173,8 +167,8 @@ void GNUCommand::postProcess(bool ok)
 
         for (auto &f2 : files)
         {
-            for (auto &f : intermediate)
-                File(f, *fs).addImplicitDependency(f2);
+            //for (auto &f : intermediate)
+                //File(f, *fs).addImplicitDependency(f2);
             for (auto &f : outputs)
                 File(f, *fs).addImplicitDependency(f2);
         }

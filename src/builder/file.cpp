@@ -118,8 +118,8 @@ void File::addImplicitDependency(const path &p)
     registerSelf();
     File f(p, *fs);
     // FIXME:
-    static std::mutex m;
-    std::unique_lock<std::mutex> lk(m);
+    //static std::mutex m; // move to file record? remove completely?
+    //std::unique_lock<std::mutex> lk(m);
     r->implicit_dependencies.emplace(p, f.r);
 }
 
@@ -127,12 +127,6 @@ void File::addImplicitDependency(const Files &files)
 {
     for (auto &p : files)
         addImplicitDependency(p);
-}
-
-void File::clearDependencies()
-{
-    registerSelf();
-    r->implicit_dependencies.clear();
 }
 
 void File::clearImplicitDependencies()
@@ -160,7 +154,8 @@ bool File::isChanged() const
 
 bool File::isChanged(const fs::file_time_type &t)
 {
-    return getFileRecord().isChanged() || getFileRecord().getMaxTime() > t;
+    getFileRecord().isChanged(); // perform initialization and load lwt
+    return getFileRecord().getMaxTime() > t;
 }
 
 bool File::isGenerated() const
@@ -212,15 +207,16 @@ FileRecord &FileRecord::operator=(const FileRecord &rhs)
     return *this;
 }
 
-size_t FileRecord::getHash() const
+/*size_t FileRecord::getHash() const
 {
     auto k = std::hash<path>()(file);
     hash_combine(k, data->last_write_time.time_since_epoch().count());
     //hash_combine(k, size);
+    if (!isGeneratedAtAll())
     for (auto &[f, d] : implicit_dependencies)
         hash_combine(k, d->data->last_write_time.time_since_epoch().count());
     return k;
-}
+}*/
 
 void FileRecord::reset()
 {
@@ -235,6 +231,35 @@ void FileRecord::reset()
         data->refreshed = false;
 }
 
+static auto get_lwt(const path &file)
+{
+    auto m = fs::last_write_time(file);
+    return m;
+
+    // C++20 does not have this issue
+#if defined(_MSC_VER) && _MSVC_LANG <= 201703
+    static const decltype(m) now = []
+    {
+        auto p = get_temp_filename();
+        write_file(p, "");
+        auto m = fs::last_write_time(p);
+        fs::remove(p);
+        return m;
+    }();
+#else
+    static const auto now = decltype(m)::clock::now();
+#endif
+    if (m > now)
+    {
+        // file is changed during program execution
+        // TODO: handle this case - use non static now()
+        //auto d = std::chrono::duration_cast<std::chrono::milliseconds>(m - now).count();
+        //LOG_WARN(logger, "File " + normalize_path(file) + " is from future, diff = +" + std::to_string(d) + " ms.");
+    }
+
+    return m;
+}
+
 void FileRecord::load(const path &p)
 {
     if (!p.empty())
@@ -243,7 +268,7 @@ void FileRecord::load(const path &p)
         return;
     if (!fs::exists(file))
         return;
-    auto lwt = fs::last_write_time(file);
+    auto lwt = get_lwt(file);
     if (lwt < data->last_write_time)
         return;
     data->last_write_time = lwt;
@@ -274,6 +299,7 @@ bool FileRecord::refresh(bool use_file_monitor)
 
     // in any case refresh *all* deps
     // do it first, because we might exit early
+    //if (!isGeneratedAtAll()) uncomment?
     for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this)
@@ -291,7 +317,7 @@ bool FileRecord::refresh(bool use_file_monitor)
 
     //DEBUG_BREAK_IF_PATH_HAS(file, "basename-lgpl.c");
 
-    auto t = fs::last_write_time(file);
+    auto t = get_lwt(file);
     if (t > data->last_write_time)
     {
         if (data->last_write_time.time_since_epoch().count() != 0)
@@ -396,6 +422,9 @@ bool FileRecord::isGenerated() const
 fs::file_time_type FileRecord::getMaxTime() const
 {
     auto m = data->last_write_time;
+    // we check deps ONLY in case if current file is generated
+    // otherwise, time will be adjusted during AST execution
+    if (isGeneratedAtAll())
     for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this)

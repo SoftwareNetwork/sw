@@ -46,15 +46,6 @@ struct CommandData
     }
 };
 
-namespace builder
-{
-
-struct Command;
-
-}
-
-using Commands = std::unordered_set<std::shared_ptr<builder::Command>>;
-
 struct SW_BUILDER_API ResourcePool
 {
     int n = -1; // unlimited
@@ -65,7 +56,7 @@ struct SW_BUILDER_API ResourcePool
     {
         if (n == -1)
             return;
-        std::unique_lock<std::mutex> lk(m);
+        std::unique_lock lk(m);
         cv.wait(lk, [this] { return n > 0; });
         --n;
     }
@@ -74,7 +65,7 @@ struct SW_BUILDER_API ResourcePool
     {
         if (n == -1)
             return;
-        std::unique_lock<std::mutex> lk(m);
+        std::unique_lock lk(m);
         ++n;
         lk.unlock();
         cv.notify_one();
@@ -91,23 +82,37 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     CommandData<::sw::builder::Command>, primitives::Command // hide?
 {
 #pragma warning(pop)
+
     using Base = primitives::Command;
+    using Clock = std::chrono::high_resolution_clock;
 
     FileStorage *fs = nullptr;
+
     String name;
     String name_short;
+
     Files inputs;
+    // byproducts
+    // used only to clean files and pre-create dirs
     Files intermediate;
+    // if some commands accept pairs of args, and specific outputs depend on specific inputs
+    // C I1 O1 I2 O2
+    // then split that command!
     Files outputs;
+
     fs::file_time_type mtime;
     bool use_response_files = false;
     bool remove_outputs_before_execution = false; // was true
     bool protect_args_with_quotes = true;
-    //std::shared_ptr<Program> base; // TODO: hide
-    //std::shared_ptr<Dependency> dependency; // TODO: hide
     bool silent = false;
     bool always = false;
+    // used when command may not update outputs based on some factors
+    bool record_inputs_mtime = false;
     int strict_order = 0; // used to execute this before other commands
+    ResourcePool *pool = nullptr;
+
+    Clock::time_point t_begin;
+    Clock::time_point t_end;
 
     enum
     {
@@ -124,24 +129,18 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     void prepare() override;
     void execute() override;
     void execute(std::error_code &ec) override;
-    virtual void postProcess(bool ok = true) {}
     void clean() const;
     bool isExecuted() const { return pid != -1 || executed_; }
 
     //String getName() const override { return getName(false); }
     String getName(bool short_name = false) const;
-    void printLog() const;
     path getProgram() const override;
-    virtual ResourcePool *getResourcePool() { return nullptr; }
 
     virtual bool isOutdated() const;
-    virtual bool isTimeChanged() const;
     bool needsResponseFile() const;
 
     void setProgram(const path &p);
-    //void setProgram(const std::shared_ptr<Dependency> &d);
     void setProgram(std::shared_ptr<Program> p);
-    //void setProgram(const NativeTarget &t);
     void addInput(const path &p);
     void addInput(const Files &p);
     void addIntermediate(const path &p);
@@ -151,12 +150,10 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     path redirectStdin(const path &p);
     path redirectStdout(const path &p);
     path redirectStderr(const path &p);
-    virtual bool isHashable() const { return true; }
     size_t getHash() const;
-    size_t getHashAndSave() const;
     void updateCommandTime() const;
-    Files getGeneratedDirs() const;
     void addPathDirectory(const path &p);
+    Files getGeneratedDirs() const; // used by generators
 
     void addInputOutputDeps();
 
@@ -164,6 +161,9 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
 
     //void load(BinaryContext &bctx);
     //void save(BinaryContext &bctx);
+
+    void onBeforeRun() override;
+    void onEnd() override;
 
 protected:
     bool prepared = false;
@@ -175,11 +175,19 @@ private:
     virtual void execute1(std::error_code *ec = nullptr);
     virtual size_t getHash1() const;
 
+    void postProcess(bool ok = true);
+    virtual void postProcess1(bool ok) {}
+
     bool beforeCommand();
     void afterCommand();
+    virtual bool isTimeChanged() const;
+    void printLog() const;
+    size_t getHashAndSave() const;
 };
 
-}
+} // namespace bulder
+
+using Commands = std::unordered_set<std::shared_ptr<builder::Command>>;
 
 template struct SW_BUILDER_API CommandData<builder::Command>;
 

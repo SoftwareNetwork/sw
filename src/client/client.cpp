@@ -144,6 +144,17 @@ int setup_main(const Strings &args)
     sw::getFileMonitor(&fm);
     joining_thread_with_object_run_stop fmt(fm);
 
+    // before storages
+    // Create QSBR context for the main thread.
+    auto context = createConcurrentContext();
+    getConcurrentContext(&context);
+
+    SCOPE_EXIT
+    {
+        // Destroy the QSBR context for the main thread.
+        destroyConcurrentContext(context);
+    };
+
     // before CommandStorage and FileStorages
     sw::FileDb db;
     sw::getDb(&db);
@@ -360,9 +371,11 @@ int sw_main(const Strings &args)
     }*/
 
     if (0);
-#define SUBCOMMAND(n, d) else if (subcommand_##n) cli_##n();
+#define SUBCOMMAND(n, d) else if (subcommand_##n) { cli_##n(); return 0; }
 #include <commands.inl>
 #undef SUBCOMMAND
+
+    LOG_WARN(logger, "No command was issued");
 
     return 0;
 }

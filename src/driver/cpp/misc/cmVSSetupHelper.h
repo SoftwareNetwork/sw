@@ -124,10 +124,10 @@ public:
   cmVSSetupAPIHelper();
   ~cmVSSetupAPIHelper();
 
-  bool IsVS2017Installed();
-  bool GetVSInstanceInfo(std::string& vsInstallLocation);
-  bool IsWin10SDKInstalled();
-  bool IsWin81SDKInstalled();
+  bool IsVSInstalled(int version);
+  //bool GetVSInstanceInfo(std::string& vsInstallLocation);
+  bool IsWin10SDKInstalled(int version);
+  bool IsWin81SDKInstalled(int version);
 
   // current best instance of VS selected
   VSInstanceInfo chosenInstanceInfo;
@@ -139,8 +139,8 @@ private:
   bool CheckInstalledComponent(SmartCOMPtr<ISetupPackageReference> package,
                                bool& bVCToolset, bool& bWin10SDK,
                                bool& bWin81SDK);
-  int ChooseVSInstance(const std::vector<VSInstanceInfo>& vecVSInstances);
-  bool EnumerateAndChooseVSInstance();
+  int ChooseVSInstance(const std::vector<VSInstanceInfo>& vecVSInstances, int version);
+  bool EnumerateAndChooseVSInstance(int version);
 
   // COM ptrs to query about VS instances
   SmartCOMPtr<ISetupConfiguration> setupConfig;

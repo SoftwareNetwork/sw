@@ -43,7 +43,6 @@ struct SW_BUILDER_API File : virtual Node
     path getPath() const;
     void addImplicitDependency(const path &f);
     void addImplicitDependency(const Files &f);
-    void clearDependencies();
     void clearImplicitDependencies();
     std::unordered_set<std::shared_ptr<builder::Command>> gatherDependentGenerators() const;
 
@@ -103,9 +102,9 @@ struct SW_BUILDER_API FileRecord
     bool isChanged(bool use_file_monitor = true);
     bool isChanged(const fs::file_time_type &t);
     void load(const path &p = path());
-    void destroy() { delete this; }
+    //void destroy() { delete this; }
     void reset();
-    size_t getHash() const;
+    //size_t getHash() const;
     bool isGenerated() const;
     bool isGeneratedAtAll() const { return generated_; }
     void setGenerator(const std::shared_ptr<builder::Command> &);
@@ -115,7 +114,7 @@ struct SW_BUILDER_API FileRecord
     bool operator<(const FileRecord &r) const;
 
     //private:
-    std::atomic_bool saved{ false };
+    //std::atomic_bool saved{ false };
 
     /// get last write time of this file and all deps
     fs::file_time_type getMaxTime() const;

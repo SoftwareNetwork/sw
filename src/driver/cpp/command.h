@@ -342,17 +342,16 @@ private:
 
 struct VSCommand : Command
 {
-    //File file;
-
-    void postProcess(bool ok) override;
+private:
+    void postProcess1(bool ok) override;
 };
 
 struct GNUCommand : Command
 {
-    //File file;
     path deps_file;
 
-    void postProcess(bool ok) override;
+private:
+    void postProcess1(bool ok) override;
 };
 
 struct SW_DRIVER_CPP_API CommandBuilder

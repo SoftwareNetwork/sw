@@ -1001,7 +1001,7 @@ void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
                 if (!e || getUtc() - string2timepoint(read_file(t)) > opts.existing_dirs_age)
                 {
                     if (e)
-                        LOG_INFO(logger, "Download data is stale, re-downloading\n");
+                        LOG_INFO(logger, "Download data is stale, re-downloading");
                     fs::remove_all(d);
                     dl();
                 }

@@ -39,8 +39,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "solution");
 
-static cl::opt<bool> print_commands("print-commands", cl::desc("Print file with build commands"));
-static cl::opt<bool> print_comp_db("print-compilation-database", cl::desc("Print file with build commands in compilation db format"));
+static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
 cl::opt<String> generator("G", cl::desc("Generator"));
 cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(generator));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
@@ -654,156 +653,6 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
         write_file(p, s);
     };
 
-    auto print_commands = [](const auto &ep, const path &p)
-    {
-        auto should_print = [](auto &o)
-        {
-            if (o.find("showIncludes") != o.npos)
-                return false;
-            return true;
-        };
-
-        auto program_name = [](auto n)
-        {
-            return "SW_PROGRAM_" + std::to_string(n);
-        };
-
-        String s;
-
-        // gather programs
-        std::unordered_map<path, size_t> programs;
-        for (auto &c : ep.commands)
-        {
-            auto n = programs.size() + 1;
-            if (programs.find(c->getProgram()) == programs.end())
-                programs[c->getProgram()] = n;
-        }
-
-        // print programs
-        for (auto &[k, v] : programs)
-            s += "set " + program_name(v) + "=\"" + normalize_path(k) + "\"\n";
-        s += "\n";
-
-        // print commands
-        for (auto &c : ep.commands)
-        {
-            std::stringstream stream;
-            stream << std::hex << c->getHash();
-            std::string result(stream.str());
-
-            s += "@rem " + c->getName() + ", hash = 0x" + result + "\n";
-            if (!c->needsResponseFile())
-            {
-                s += "%" + program_name(programs[c->getProgram()]) + "% ";
-                for (auto &a : c->args)
-                {
-                    if (should_print(a))
-                        s += "\"" + a + "\" ";
-                }
-                s.resize(s.size() - 1);
-            }
-            else
-            {
-                s += "@echo. 2> response.rsp\n";
-                for (auto &a : c->args)
-                {
-                    if (should_print(a))
-                        s += "@echo \"" + a + "\" >> response.rsp\n";
-                }
-                s += "%" + program_name(programs[c->getProgram()]) + "% @response.rsp";
-            }
-            s += "\n\n";
-        }
-        write_file(p, s);
-    };
-
-    auto print_commands_raw = [](const auto &ep, const path &p)
-    {
-        String s;
-
-        // gather programs
-        std::unordered_map<path, size_t> programs;
-        for (auto &c : ep.commands)
-        {
-            s += c->program.u8string() + " ";
-            for (auto &a : c->args)
-                s += a + " ";
-            s.resize(s.size() - 1);
-            s += "\n\n";
-        }
-
-        write_file(p, s);
-    };
-
-    auto print_numbers = [](const auto &ep, const path &p)
-    {
-        String s;
-
-        auto strings = ep.gatherStrings();
-        Strings explain;
-        explain.resize(strings.size());
-
-        auto print_string = [&strings, &explain, &s](const String &in)
-        {
-            auto n = strings[in];
-            s += std::to_string(n) + " ";
-            explain[n - 1] = in;
-        };
-
-        for (auto &c : ep.commands)
-        {
-            print_string(c->program.u8string());
-            print_string(c->working_directory.u8string());
-            for (auto &a : c->args)
-                print_string(a);
-            s.resize(s.size() - 1);
-            s += "\n";
-        }
-
-        String t;
-        for (auto &e : explain)
-            t += e + "\n";
-        if (!s.empty())
-            t += "\n";
-
-        write_file(p, t + s);
-    };
-
-    auto print_comp_db = [this](const ExecutionPlan<builder::Command> &ep, const path &p)
-    {
-        auto b = dynamic_cast<const Build*>(this);
-        if (!b || b->solutions.empty())
-            return;
-        static std::set<String> exts{
-            ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
-        };
-        nlohmann::json j;
-        for (auto &[p, t] : b->solutions[0].children)
-        {
-            if (!t->isLocal())
-                continue;
-            for (auto &c : t->getCommands())
-            {
-                if (c->inputs.empty())
-                    continue;
-                if (c->working_directory.empty())
-                    continue;
-                if (c->inputs.size() > 1)
-                    continue;
-                if (exts.find(c->inputs.begin()->extension().string()) == exts.end())
-                    continue;
-                nlohmann::json j2;
-                j2["directory"] = normalize_path(c->working_directory);
-                j2["file"] = normalize_path(*c->inputs.begin());
-                j2["arguments"].push_back(normalize_path(c->program));
-                for (auto &a : c->args)
-                    j2["arguments"].push_back(a);
-                j.push_back(j2);
-            }
-        }
-        write_file(p, j.dump(2));
-    };
-
     for (auto &c : p.commands)
         c->silent = silent;
 
@@ -823,7 +672,7 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
 
     // execute early to prevent commands expansion into response files
     // print misc
-    if (::print_commands && !silent) // && !b console mode
+    if (::print_graph && !silent) // && !b console mode
     {
         auto d = getServiceDir();
 
@@ -836,29 +685,27 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
         // old graphs
         print_graph(p, d / "build_old.dot");
         printGraph(d / "solution.dot");
-
-        print_commands(p, d / "commands.bat");
-        print_commands_raw(p, d / "commands_raw.bat");
-        print_numbers(p, d / "numbers.txt");
-        print_comp_db(p, d/ "compile_commands.json");
     }
 
-    if (::print_comp_db && !::print_commands && !silent)
-    {
-        print_comp_db(p, getServiceDir() / "compile_commands.json");
-    }
+    if (dry_run)
+        return;
 
     ScopedTime t;
-
-    //Executor e(1);
     auto &e = getExecutor();
 
-    if (!dry_run)
-    {
-        p.execute(e, skip_errors.getValue());
-        if (!silent)
-            LOG_INFO(logger, "Build time: " << t.getTimeFloat() << " s.");
-    }
+    // prevent memory leaks (high mem usage)
+    /*updateConcurrentContext();
+    for (int i = 0; i < 1000; i++)
+        e.push([] {updateConcurrentContext(); });*/
+
+    p.execute(e, skip_errors.getValue());
+    if (!silent)
+        LOG_INFO(logger, "Build time: " << t.getTimeFloat() << " s.");
+
+    // prevent memory leaks (high mem usage)
+    /*updateConcurrentContext();
+    for (int i = 0; i < 1000; i++)
+        e.push([] {updateConcurrentContext(); });*/
 }
 
 void Solution::build_and_resolve(int n_runs)
@@ -973,6 +820,9 @@ void Solution::prepare()
         ;
 
     prepared = true;
+
+    // prevent memory leaks (high mem usage)
+    updateConcurrentContext();
 }
 
 bool Solution::prepareStep()
@@ -2131,9 +1981,6 @@ bool Build::execute()
 {
     dry_run = ::dry_run;
 
-    if (generateBuildSystem())
-        return true;
-
     // read ex plan
     if (ide)
     {
@@ -2182,6 +2029,9 @@ bool Build::execute()
                 save(fn, p);
         }
     }
+
+    if (generateBuildSystem())
+        return true;
 
     Solution::execute();
 

@@ -556,7 +556,7 @@ void Target::init()
     {
         // we doing some download on server or whatever
         // so, we do not want to touch real existing bdirs
-        BinaryDir = getDirectories().storage_dir_tmp / "dry" / sha256_short(BinaryDir.u8string());
+        BinaryDir = getSolution()->BinaryDir / "dry" / sha256_short(BinaryDir.u8string());
         fs::remove_all(BinaryDir);
         fs::create_directories(BinaryDir);
     }
@@ -2630,6 +2630,7 @@ bool NativeExecutedTarget::prepare()
             for (auto &f : files)
                 objs.insert(f->output.file);
             SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_create_def_file");
+            c->record_inputs_mtime = true;
             c->args.push_back(def.u8string());
             c->push_back(objs);
             c->addInput(objs);

@@ -18,9 +18,13 @@ enum class GeneratorType
 {
     UnspecifiedGenerator,
 
+    Batch,
     CMake,
+    CompilationDatabase,
+    Make,
     Ninja,
     QMake,
+    Shell,
     UnixMakefiles,
     VisualStudio,
     VisualStudioNMake,
@@ -62,6 +66,26 @@ struct VSGeneratorNMake : VSGenerator
 };
 
 struct NinjaGenerator : Generator
+{
+    void generate(const struct Build &b) override;
+};
+
+struct MakeGenerator : Generator
+{
+    void generate(const struct Build &b) override;
+};
+
+struct ShellGenerator : Generator
+{
+    void generate(const struct Build &b) override;
+};
+
+struct BatchGenerator : Generator
+{
+    void generate(const struct Build &b) override;
+};
+
+struct CompilationDatabaseGenerator : Generator
 {
     void generate(const struct Build &b) override;
 };

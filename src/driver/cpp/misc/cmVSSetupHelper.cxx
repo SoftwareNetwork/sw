@@ -71,20 +71,20 @@ cmVSSetupAPIHelper::~cmVSSetupAPIHelper()
     CoUninitialize();
 }
 
-bool cmVSSetupAPIHelper::IsVS2017Installed()
+bool cmVSSetupAPIHelper::IsVSInstalled(int version)
 {
-  return this->EnumerateAndChooseVSInstance();
+  return this->EnumerateAndChooseVSInstance(version);
 }
 
-bool cmVSSetupAPIHelper::IsWin10SDKInstalled()
+bool cmVSSetupAPIHelper::IsWin10SDKInstalled(int version)
 {
-  return (this->EnumerateAndChooseVSInstance() &&
+  return (this->EnumerateAndChooseVSInstance(version) &&
           chosenInstanceInfo.IsWin10SDKInstalled);
 }
 
-bool cmVSSetupAPIHelper::IsWin81SDKInstalled()
+bool cmVSSetupAPIHelper::IsWin81SDKInstalled(int version)
 {
-  return (this->EnumerateAndChooseVSInstance() &&
+  return (this->EnumerateAndChooseVSInstance(version) &&
           chosenInstanceInfo.IsWin81SDKInstalled);
 }
 
@@ -215,7 +215,7 @@ bool cmVSSetupAPIHelper::GetVSInstanceInfo(
   return isVCToolSetInstalled;
 }
 
-bool cmVSSetupAPIHelper::GetVSInstanceInfo(std::string& vsInstallLocation)
+/*bool cmVSSetupAPIHelper::GetVSInstanceInfo(std::string& vsInstallLocation)
 {
   vsInstallLocation = "";
   bool isInstalled = this->EnumerateAndChooseVSInstance();
@@ -227,9 +227,9 @@ bool cmVSSetupAPIHelper::GetVSInstanceInfo(std::string& vsInstallLocation)
   }
 
   return isInstalled;
-}
+}*/
 
-bool cmVSSetupAPIHelper::EnumerateAndChooseVSInstance()
+bool cmVSSetupAPIHelper::EnumerateAndChooseVSInstance(int version)
 {
   bool isVSInstanceExists = false;
   if (chosenInstanceInfo.VSInstallLocation.compare(L"") != 0) {
@@ -269,7 +269,7 @@ bool cmVSSetupAPIHelper::EnumerateAndChooseVSInstance()
 
   if (vecVSInstances.size() > 0) {
     isVSInstanceExists = true;
-    int index = ChooseVSInstance(vecVSInstances);
+    int index = ChooseVSInstance(vecVSInstances, version);
     chosenInstanceInfo = vecVSInstances[index];
   }
 
@@ -277,7 +277,7 @@ bool cmVSSetupAPIHelper::EnumerateAndChooseVSInstance()
 }
 
 int cmVSSetupAPIHelper::ChooseVSInstance(
-  const std::vector<VSInstanceInfo>& vecVSInstances)
+  const std::vector<VSInstanceInfo>& vecVSInstances, int version)
 {
   if (vecVSInstances.size() == 0)
     return -1;
@@ -286,7 +286,16 @@ int cmVSSetupAPIHelper::ChooseVSInstance(
     return 0;
 
   unsigned int chosenIndex = 0;
-  for (unsigned int i = 1; i < vecVSInstances.size(); i++) {
+  for (unsigned int i = 0; i < vecVSInstances.size(); i++) {
+      std::wstring v = std::to_wstring(version);
+
+      // VS version comes in format AA.B.C.D.
+      // We check at least first two characters.
+      if (vecVSInstances[i].Version.size() < 2 || v.size() < 2 ||
+          wcsncmp(vecVSInstances[i].Version.c_str(), v.c_str(), 2) != 0) {
+          continue;
+      }
+
     // If the current has Win10 SDK but not the chosen one, then choose the
     // current VS instance
     if (//!vecVSInstances[chosenIndex].IsWin10SDKInstalled &&

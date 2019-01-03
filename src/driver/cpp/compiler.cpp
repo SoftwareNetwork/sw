@@ -137,17 +137,22 @@ path getProgramFilesX86()
     return e;
 }
 
-bool findDefaultVS2017(path &root, VisualStudioVersion &VSVersion)
+bool findDefaultVS(path &root, VisualStudioVersion &VSVersion)
 {
     auto program_files_x86 = getProgramFilesX86();
     for (auto &edition : { "Enterprise", "Professional", "Community" })
     {
-        path p = program_files_x86 / ("Microsoft Visual Studio/2017/"s + edition + "/VC/Auxiliary/Build/vcvarsall.bat");
-        if (fs::exists(p))
+        for (const auto &[y, v] :
+            std::vector<std::pair<String, VisualStudioVersion>>{ {"2017", VisualStudioVersion::VS15},
+            {"2019", VisualStudioVersion::VS16} })
         {
-            root = p.parent_path().parent_path().parent_path();
-            VSVersion = VisualStudioVersion::VS15;
-            return true;
+            path p = program_files_x86 / ("Microsoft Visual Studio/"s + y + "/"s + edition + "/VC/Auxiliary/Build/vcvarsall.bat");
+            if (fs::exists(p))
+            {
+                root = p.parent_path().parent_path().parent_path();
+                VSVersion = v;
+                return true;
+            }
         }
     }
     return false;
@@ -375,11 +380,17 @@ void detectCSharpCompilers(struct Solution &s)
 
 #if defined(_WIN32)
     cmVSSetupAPIHelper h;
-    if (h.IsVS2017Installed())
+    if (h.IsVSInstalled(15))
     {
         root = h.chosenInstanceInfo.VSInstallLocation;
         root = root / "MSBuild" / "15.0" / "Bin" / "Roslyn";
         VSVersion = VisualStudioVersion::VS15;
+    }
+    else if (h.IsVSInstalled(16))
+    {
+        root = h.chosenInstanceInfo.VSInstallLocation;
+        root = root / "MSBuild" / "Current" / "Bin" / "Roslyn";
+        VSVersion = VisualStudioVersion::VS16;
     }
 
     // we do not look for older compilers like vc7.1 and vc98
@@ -423,11 +434,13 @@ void detectNativeCompilers(struct Solution &s)
 
 #if defined(_WIN32)
     cmVSSetupAPIHelper h;
-    if (h.IsVS2017Installed())
+    auto vs15 = h.IsVSInstalled(15);
+    auto vs16 = h.IsVSInstalled(16);
+    if (vs15 || vs16)
     {
         root = h.chosenInstanceInfo.VSInstallLocation;
         root /= "VC";
-        VSVersion = VisualStudioVersion::VS15;
+        VSVersion = vs15 ? VisualStudioVersion::VS15 : VisualStudioVersion::VS16;
 
         // can be split by points
         static std::wregex r(L"(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
@@ -439,7 +452,10 @@ void detectNativeCompilers(struct Solution &s)
         else
             V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
     }
-    else if (!find_comn_tools(VisualStudioVersion::VS15) && !findDefaultVS2017(root, VSVersion))
+    else if (
+        !find_comn_tools(VisualStudioVersion::VS16) &&
+        !find_comn_tools(VisualStudioVersion::VS15) &&
+        !findDefaultVS(root, VSVersion))
     {
         // find older versions
         static const auto vers =
@@ -462,7 +478,7 @@ void detectNativeCompilers(struct Solution &s)
     if (VSVersion == VisualStudioVersion::Unspecified)
         return;
 
-    if (VSVersion == VisualStudioVersion::VS15)
+    if (VSVersion >= VisualStudioVersion::VS15)
         root = root / "Tools\\MSVC" / boost::trim_copy(read_file(root / "Auxiliary\\Build\\Microsoft.VCToolsVersion.default.txt"));
 
     auto ToolSet = getVsToolset(VSVersion);
@@ -518,7 +534,7 @@ void detectNativeCompilers(struct Solution &s)
     NativeLinkerOptions LOpts;
 
     // continue
-    if (VSVersion == VisualStudioVersion::VS15)
+    if (VSVersion >= VisualStudioVersion::VS15)
     {
         // always use host tools and host arch for building config files
         compiler /= "Host" + dir_suffix.host + "\\" + dir_suffix.target + "\\cl.exe";

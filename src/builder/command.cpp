@@ -34,6 +34,68 @@ static cl::opt<bool> save_failed_commands("save-failed-commands");
 static cl::opt<bool> save_all_commands("save-all-commands");
 static cl::opt<bool> save_executed_commands("save-executed-commands");
 
+#ifdef _WIN32
+#include <RestartManager.h>
+
+#pragma comment(lib, "Rstrtmgr.lib")
+
+// caller must close handles
+static std::vector<HANDLE> getFileUsers(const path &fn)
+{
+    DWORD dwSession;
+    WCHAR szSessionKey[CCH_RM_SESSION_KEY + 1] = { 0 };
+    DWORD dwError = RmStartSession(&dwSession, 0, szSessionKey);
+    if (dwError)
+    {
+        LOG_WARN(logger, "RmStartSession returned " << dwError);
+        return {};
+    }
+
+    std::vector<HANDLE> handles;
+    auto f = fn.wstring();
+    PCWSTR pszFile = f.c_str();
+    dwError = RmRegisterResources(dwSession, 1, &pszFile, 0, NULL, 0, NULL);
+    if (dwError == ERROR_SUCCESS)
+    {
+        DWORD dwReason;
+        UINT i;
+        UINT nProcInfoNeeded;
+        UINT nProcInfo = 10;
+        std::vector<RM_PROCESS_INFO> rgpi(nProcInfo);
+        dwError = RmGetList(dwSession, &nProcInfoNeeded, &nProcInfo, rgpi.data(), &dwReason);
+        if (dwError == ERROR_MORE_DATA)
+        {
+            rgpi.resize(nProcInfoNeeded);
+            dwError = RmGetList(dwSession, &nProcInfoNeeded, &nProcInfo, rgpi.data(), &dwReason);
+        }
+        if (dwError == ERROR_SUCCESS)
+        {
+            //LOG_WARN(logger, "RmGetList returned " << nProcInfo << " infos (" << nProcInfoNeeded << " needed)");
+            for (i = 0; i < nProcInfo; i++)
+            {
+                //LOG_WARN(logger, i << ".ApplicationType = " << rgpi[i].ApplicationType);
+                //LOG_WARN(logger, i << ".strAppName = " << rgpi[i].strAppName);
+                //LOG_WARN(logger, i << ".Process.dwProcessId = " << rgpi[i].Process.dwProcessId);
+                HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, rgpi[i].Process.dwProcessId);
+                if (hProcess)
+                    handles.push_back(hProcess);
+            }
+        }
+        else
+        {
+            LOG_WARN(logger, "RmGetList returned " << dwError);
+        }
+    }
+    else
+    {
+        LOG_WARN(logger, "RmRegisterResources(" << pszFile << ") returned " << dwError);
+    }
+    RmEndSession(dwSession);
+
+    return handles;
+}
+#endif
+
 namespace sw
 {
 
@@ -113,6 +175,8 @@ bool Command::isOutdated() const
 bool Command::isTimeChanged() const
 {
     bool changed = false;
+
+    //DEBUG_BREAK_IF_STRING_HAS(name, "main.cpp");
 
     // always check program and all deps are known
     changed |= File(program, *fs).isChanged(mtime);
@@ -207,13 +271,18 @@ void Command::addInput(const path &p)
     inputs.insert(p);
 }
 
+/*void Command::addPreciseInputOutputDependency(const path &in, const path &out)
+{
+    precise_input_output_deps[out].insert(in);
+}*/
+
 void Command::addIntermediate(const path &p)
 {
     if (p.empty())
         return;
     intermediate.insert(p);
-    auto &r = File(p, *fs).getFileRecord();
-    r.setGenerator(shared_from_this());
+    //auto &r = File(p, *fs).getFileRecord();
+    //r.setGenerator(shared_from_this());
 }
 
 void Command::addOutput(const path &p)
@@ -361,42 +430,27 @@ void Command::afterCommand()
 {
     // update things
 
-    // also update program (execute command case)
-    // when program changed, executed commands
-    mtime = std::max(mtime, File(program, *fs).getFileRecord().getMaxTime());
-
-    /*for (auto &i : inputs)
-    {
-        auto &fr = f.getFileRecord();
-        fr.refreshed = false;
-        fr.isChanged();
-    }*/
-    for (auto &i : intermediate)
+    auto update_time = [this](const auto &i)
     {
         File f(i, *fs);
-        /*if (!fs::exists(i))
-            f.getFileRecord().flags.set(ffNotExists);
-        else*/
-        //f.getFileRecord().load();
-        auto &fr = f.getFileRecord();
-        fr.data->refreshed = false;
-        fr.isChanged();
-        fr.updateLwt();
-        //mtime = std::max(mtime, fr.getMaxTime()); // should we consider these files? (pdb)
-    }
-    for (auto &i : outputs)
-    {
-        File f(i, *fs);
-        /*if (!fs::exists(i))
-            f.getFileRecord().flags.set(ffNotExists);
-        else*/
-        //f.getFileRecord().load();
         auto &fr = f.getFileRecord();
         fr.data->refreshed = false;
         fr.isChanged();
         fr.updateLwt();
         mtime = std::max(mtime, fr.getMaxTime());
+    };
+
+    if (record_inputs_mtime)
+    {
+        mtime = std::max(mtime, File(program, *fs).getFileRecord().getMaxTime());
+        for (auto &i : inputs)
+            update_time(i);
     }
+    if (0)
+    for (auto &i : intermediate)
+        update_time(i);
+    for (auto &i : outputs)
+        update_time(i);
 
     updateCommandTime();
 }
@@ -416,13 +470,12 @@ void Command::execute1(std::error_code *ec)
     //LOG_INFO(logger, "command #" << ++n << " is outdated: " + getName());
 
     // check our resources
-    auto rp = getResourcePool();
-    if (rp)
-        rp->lock();
+    if (pool)
+        pool->lock();
     SCOPE_EXIT
     {
-        if (rp)
-            rp->unlock();
+        if (pool)
+            pool->unlock();
     };
 
     // Try to construct command line first.
@@ -465,7 +518,9 @@ void Command::execute1(std::error_code *ec)
     bool use_rsp = use_response_files || needsResponseFile();
     if (use_rsp)
     {
-        auto t = get_temp_filename();
+        //auto t = get_temp_filename(); // isn't unique enough?
+        auto t = temp_directory_path() / std::to_string(getHash());
+
         auto fn = t.filename();
         t = t.parent_path();
         rsp_file = t / getProgramName() / "rsp" / fn;
@@ -477,8 +532,42 @@ void Command::execute1(std::error_code *ec)
     {
         if (rsp_file.empty())
             return;
-        error_code ec;
-        fs::remove(rsp_file, ec);
+#ifdef _WIN32
+    // sometimes rsp file is used by children of cl.exe, for example
+    // fs::remove() fails in this case
+
+    error_code ec;
+    fs::remove(rsp_file, ec);
+    if (ec)
+    {
+        auto processes = getFileUsers(rsp_file);
+        if (!processes.empty())
+        {
+            if (WaitForMultipleObjects(processes.size(), processes.data(), TRUE, INFINITE) != WAIT_OBJECT_0)
+                LOG_WARN(logger, "Cannot remove rsp file: " << normalize_path(rsp_file) << " for pid = " << pid << ", WaitForMultipleObjects() failed: " << GetLastError());
+
+            /*FILETIME ftCreate, ftExit, ftKernel, ftUser;
+            if (GetProcessTimes(hProcess, &ftCreate, &ftExit, &ftKernel, &ftUser) &&
+                CompareFileTime(&rgpi[i].Process.ProcessStartTime, &ftCreate) == 0)
+            {
+                WCHAR sz[MAX_PATH];
+                DWORD cch = MAX_PATH;
+                if (QueryFullProcessImageNameW(hProcess, 0, sz, &cch) && cch <= MAX_PATH)
+                {
+                    LOG_WARN(logger, i << ".Process.image = " << sz);
+                }
+            }*/
+            for (auto h : processes)
+                CloseHandle(h);
+
+            //_wunlink(rsp_file.wstring().c_str());
+
+            fs::remove(rsp_file);
+        }
+    }
+#else
+    fs::remove(rsp_file);
+#endif
     };
 
     auto save_command = [this, &rsp_file, &escape_cmd_arg, &make_rsp_file, &args_saved, &use_rsp](String &s)
@@ -637,6 +726,19 @@ void Command::execute1(std::error_code *ec)
     }
 }
 
+void Command::postProcess(bool ok)
+{
+    // clear deps, otherwise they will stack up
+    for (auto &f : outputs)
+    {
+        File f2(f, *fs);
+        f2.clearImplicitDependencies();
+        f2.addImplicitDependency(inputs);
+    }
+
+    postProcess1(ok);
+}
+
 bool Command::needsResponseFile() const
 {
     // 3 = 1 + 2 = space + quotes
@@ -758,6 +860,16 @@ bool Command::lessDuringExecution(const Command &rhs) const
     else if (rhs.strict_order)
         return false;
     return dependendent_commands.size() > dependendent_commands.size();
+}
+
+void Command::onBeforeRun()
+{
+    t_begin = Clock::now();
+}
+
+void Command::onEnd()
+{
+    t_end = Clock::now();
 }
 
 /*void Command::load(BinaryContext &bctx)
