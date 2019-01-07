@@ -843,7 +843,7 @@ RemoteFile::RemoteFile(const yaml &root, const String &name)
     : SourceUrl(root, name)
 {
     if (url.empty())
-        throw SW_RUNTIME_EXCEPTION("Remote url is missing");
+        throw SW_RUNTIME_ERROR("Remote url is missing");
 }
 
 void RemoteFile::download(const path &dir) const
@@ -874,7 +874,7 @@ RemoteFiles::RemoteFiles(const yaml &root, const String &name)
 {
     urls = get_sequence_set<String>(root, name);
     if (urls.empty())
-        throw SW_RUNTIME_EXCEPTION("Empty remote files");
+        throw SW_RUNTIME_ERROR("Empty remote files");
 }
 
 void RemoteFiles::download(const path &dir) const
@@ -993,7 +993,7 @@ void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
             }
             else if (!opts.ignore_existing_dirs)
             {
-                throw SW_RUNTIME_EXCEPTION("Directory exists " + normalize_path(d) + " for source " + print_source(src));
+                throw SW_RUNTIME_ERROR("Directory exists " + normalize_path(d) + " for source " + print_source(src));
             }
             else
             {
@@ -1059,7 +1059,7 @@ bool load_source(const yaml &root, Source &source)
 #define IF_SOURCE(x) else if (s == x::getString()) source = x(src)
     SOURCE_TYPES(IF_SOURCE, DELIM_SEMICOLON);
 else
-throw SW_RUNTIME_EXCEPTION("Empty source");
+throw SW_RUNTIME_ERROR("Empty source");
     return true;
 }
 
@@ -1080,7 +1080,7 @@ Source load_source(const ptree &p)
         return x##_;                                        \
     }
     SOURCE_TYPES(TRY_TO_LOAD_SOURCE, DELIM_SEMICOLON);
-    throw SW_RUNTIME_EXCEPTION("Bad source");
+    throw SW_RUNTIME_ERROR("Bad source");
 }
 
 void save_source(ptree &p, const Source &source)
@@ -1103,7 +1103,7 @@ Source load_source(const nlohmann::json &j)
         return x##_;                       \
     }
     SOURCE_TYPES(TRY_TO_LOAD_SOURCE, DELIM_SEMICOLON);
-    throw SW_RUNTIME_EXCEPTION("Bad source");
+    throw SW_RUNTIME_ERROR("Bad source");
 }
 
 void save_source(nlohmann::json &j, const Source &source)

@@ -44,7 +44,7 @@ struct SW_DRIVER_CPP_API Module
                     if (s && !s->current_module.empty())
                         err += s->current_module + ": ";
                     err += e.what();
-                    throw SW_RUNTIME_EXCEPTION(err);
+                    throw SW_RUNTIME_ERROR(err);
                 }
                 catch (...)
                 {
@@ -52,7 +52,7 @@ struct SW_DRIVER_CPP_API Module
                     if (s && !s->current_module.empty())
                         err += s->current_module + ": ";
                     err += "unknown error";
-                    throw SW_RUNTIME_EXCEPTION(err);
+                    throw SW_RUNTIME_ERROR(err);
                 }
             }
             else if (Required)
@@ -63,7 +63,7 @@ struct SW_DRIVER_CPP_API Module
                 err += " is not present in the module";
                 if (s && !s->current_module.empty())
                     err += " " + s->current_module;
-                throw SW_RUNTIME_EXCEPTION(err);
+                throw SW_RUNTIME_ERROR(err);
             }
         }
     };

@@ -43,7 +43,7 @@ struct ConcurrentMap
     insert_type insert(K k, const V &v, Deleter &&d)
     {
         if (k == 0)
-            throw SW_RUNTIME_EXCEPTION("ConcurrentMap: zero key");
+            throw SW_RUNTIME_ERROR("ConcurrentMap: zero key");
         auto i = m->insertOrFind(k);
         auto value = i.getValue();
         if (!value)

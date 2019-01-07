@@ -100,7 +100,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
             return SettingsType::User;
         if (s == "system")
             return SettingsType::System;
-        throw SW_RUNTIME_EXCEPTION("Unknown '" + key + "'. Should be one of [local, user, system]");
+        throw SW_RUNTIME_ERROR("Unknown '" + key + "'. Should be one of [local, user, system]");
     };
 
     get_map_and_iterate(root, "remotes", [this](auto &kv) {
@@ -132,7 +132,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
             return r.name == default_remote;
         });
         if (i == remotes.end())
-            throw SW_RUNTIME_EXCEPTION("Remote not found: " + default_remote);
+            throw SW_RUNTIME_ERROR("Remote not found: " + default_remote);
         std::swap(*i, *remotes.begin());
     }
 
@@ -145,7 +145,7 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     if (p.IsDefined())
     {
         if (!p.IsMap())
-            throw SW_RUNTIME_EXCEPTION("'proxy' should be a map");
+            throw SW_RUNTIME_ERROR("'proxy' should be a map");
         YAML_EXTRACT_VAR(p, proxy.host, "host", String);
         YAML_EXTRACT_VAR(p, proxy.user, "user", String);
     }
@@ -227,7 +227,7 @@ Settings &Settings::get(SettingsType type)
                 error_code ec;
                 fs::create_directories(fn.parent_path(), ec);
                 if (ec)
-                    throw SW_RUNTIME_EXCEPTION(ec.message());
+                    throw SW_RUNTIME_ERROR(ec.message());
                 auto ss = get(SettingsType::System);
                 ss.save(fn);
             }
@@ -274,7 +274,7 @@ void Settings::save(const path &p) const
 {
     std::ofstream o(p);
     if (!o)
-        throw SW_RUNTIME_EXCEPTION("Cannot open file: " + p.string());
+        throw SW_RUNTIME_ERROR("Cannot open file: " + p.string());
     yaml root;
     root["remotes"][DEFAULT_REMOTE_NAME]["url"] = remotes[0].url;
     root["storage_dir"] = storage_dir.string();

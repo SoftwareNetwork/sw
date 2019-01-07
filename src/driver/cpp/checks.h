@@ -225,7 +225,7 @@ struct SW_DRIVER_CPP_API CheckSet
         auto t = std::make_shared<T>(std::forward<Args>(args)...);
         auto i = checks.find(t->getHash());
         if (i == checks.end())
-            throw SW_RUNTIME_EXCEPTION("Missing check: " + *t->Definitions.begin());
+            throw SW_RUNTIME_ERROR("Missing check: " + *t->Definitions.begin());
         return std::static_pointer_cast<T>(i->second);
     }
 

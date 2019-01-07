@@ -255,7 +255,7 @@ path Command::getProgram() const
     {
         p = base->file;
         if (p.empty())
-            throw SW_RUNTIME_EXCEPTION("Empty program from base program");
+            throw SW_RUNTIME_ERROR("Empty program from base program");
     }
     else */if (!program.empty())
         p = program;
@@ -719,7 +719,7 @@ void Command::execute1(std::error_code *ec)
     }
     catch (std::exception &e)
     {
-        throw SW_RUNTIME_EXCEPTION(make_error_string(e.what()));
+        throw SW_RUNTIME_ERROR(make_error_string(e.what()));
     }
 }
 
@@ -839,7 +839,7 @@ void Command::addPathDirectory(const path &p)
     {
         auto e = getenv(env);
         if (!e)
-            throw SW_RUNTIME_EXCEPTION("getenv() failed");
+            throw SW_RUNTIME_ERROR("getenv() failed");
         environment[env] = e;
     }
     environment[env] += delim + norm(p);

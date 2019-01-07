@@ -27,11 +27,11 @@ int jumppad_call(const Strings &s)
 {
     int i = 3;
     if (s.size() < i++)
-        throw SW_RUNTIME_EXCEPTION("No module name was provided");
+        throw SW_RUNTIME_ERROR("No module name was provided");
     if (s.size() < i++)
-        throw SW_RUNTIME_EXCEPTION("No function name was provided");
+        throw SW_RUNTIME_ERROR("No function name was provided");
     if (s.size() < i++)
-        throw SW_RUNTIME_EXCEPTION("No function version was provided");
+        throw SW_RUNTIME_ERROR("No function version was provided");
     // converting version to int is doubtful, but might help in removing leading zeroes (0002)
     return jumppad_call(s[2], s[3], std::stoi(s[4]), Strings{s.begin() + 5, s.end()});
 }

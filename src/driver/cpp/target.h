@@ -314,10 +314,10 @@ public:
         {
             i = getChildren().find(pkg.ppath / Name);
             if (i == getChildren().end(Name))
-                throw SW_RUNTIME_EXCEPTION("No such target: " + Name.toString() + " or " + (pkg.ppath / Name).toString());
+                throw SW_RUNTIME_ERROR("No such target: " + Name.toString() + " or " + (pkg.ppath / Name).toString());
         }
         if (i->second.size() > 1)
-            throw SW_RUNTIME_EXCEPTION("Target: " + i->first.toString() + " has more than one version");
+            throw SW_RUNTIME_ERROR("Target: " + i->first.toString() + " has more than one version");
         return (T&)*i->second.begin()->second;
     }
 
@@ -419,7 +419,7 @@ private:
     std::shared_ptr<T> getTargetPtr(const TargetMap::iterator &i, const String &n)
     {
         if (i == getChildren().end())
-            throw SW_RUNTIME_EXCEPTION("No such target: " + n);
+            throw SW_RUNTIME_ERROR("No such target: " + n);
         return std::static_pointer_cast<T>(i->second);
     }
 
@@ -427,7 +427,7 @@ private:
     std::shared_ptr<T> getTargetPtr(const TargetMap::const_iterator &i, const String &n) const
     {
         if (i == getChildren().end())
-            throw SW_RUNTIME_EXCEPTION("No such target: " + n);
+            throw SW_RUNTIME_ERROR("No such target: " + n);
         return std::static_pointer_cast<T>(i->second);
     }
 

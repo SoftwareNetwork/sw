@@ -197,7 +197,7 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<Version, T
         bool operator==(const Iterator &rhs) const
         {
             if (t != rhs.t)
-                throw SW_RUNTIME_EXCEPTION("Iterators refer to different maps");
+                throw SW_RUNTIME_ERROR("Iterators refer to different maps");
             return p == rhs.p && (p == t->Base::end() || v == rhs.v);
         }
 

@@ -112,7 +112,7 @@ static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &
                 auto s = t->source; // make a copy!
                 checkSourceAndVersion(s, pkg.getVersion());
                 if (!isValidSourceUrl(s))
-                    throw SW_RUNTIME_EXCEPTION("Invalid source: " + print_source(s));
+                    throw SW_RUNTIME_ERROR("Invalid source: " + print_source(s));
                 srcs[s] = d / get_source_hash(s);
             }
 
@@ -120,7 +120,7 @@ static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &
             if (srcs.size() == srcs_old.size())
             {
                 if (srcs.size() == 0)
-                    throw SW_RUNTIME_EXCEPTION("no sources found");
+                    throw SW_RUNTIME_ERROR("no sources found");
 
                 // reset
                 b->fetch_dir.clear();
@@ -166,7 +166,7 @@ void CppDriver::fetch(const path &file_or_dir, const FetchOptions &opts, bool pa
 {
     auto f = resolveConfig(file_or_dir);
     if (!f || !Build::isFrontendConfigFilename(f.value()))
-        throw SW_RUNTIME_EXCEPTION("no config found");
+        throw SW_RUNTIME_ERROR("no config found");
 
     fetch1(this, f.value(), opts, parallel);
 }
@@ -175,7 +175,7 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, const FetchO
 {
     auto f = resolveConfig(file_or_dir);
     if (!f || !Build::isFrontendConfigFilename(f.value()))
-        throw SW_RUNTIME_EXCEPTION("no config found");
+        throw SW_RUNTIME_ERROR("no config found");
 
     auto b = fetch1(this, f.value(), opts, parallel);
 

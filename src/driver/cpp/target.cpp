@@ -271,7 +271,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
                 else
                 {
                     if (!fs::exists(jf))
-                        throw SW_RUNTIME_EXCEPTION("please, recreate package: " + t->pkg.toString());
+                        throw SW_RUNTIME_ERROR("please, recreate package: " + t->pkg.toString());
 
                     auto j = nlohmann::json::parse(read_file(jf));
                     p = j["path"].get<std::string>();
@@ -282,7 +282,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
                 if (t->pkg.ppath == p.slice(2))
                 {
-                    throw SW_RUNTIME_EXCEPTION("unreachable code");
+                    throw SW_RUNTIME_ERROR("unreachable code");
                     t->pkg.ppath = constructTargetName(Name);
                     //t->pkg.createNames();
 
@@ -327,7 +327,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
 {
     bool exists = getSolution()->exists(t->pkg);
     if (exists)
-        throw SW_RUNTIME_EXCEPTION("Target already exists: " + t->pkg.toString());
+        throw SW_RUNTIME_ERROR("Target already exists: " + t->pkg.toString());
 
     // find automatic way of copying data?
 
@@ -1049,7 +1049,7 @@ NativeLinker *NativeExecutedTarget::getSelectedTool() const
         return Linker.get();
     if (Librarian)
         return Librarian.get();
-    throw SW_RUNTIME_EXCEPTION("No tool selected");
+    throw SW_RUNTIME_ERROR("No tool selected");
 }
 
 void NativeExecutedTarget::addPrecompiledHeader(const path &h, const path &cpp)
@@ -1121,7 +1121,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
             }
             else if (auto c = sf->compiler->as<ClangCompiler>())
             {
-                throw SW_RUNTIME_EXCEPTION("pchs are not implemented for clang");
+                throw SW_RUNTIME_ERROR("pchs are not implemented for clang");
 
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
@@ -1176,7 +1176,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
         }
         else if (auto c = sf->compiler->as<ClangCompiler>())
         {
-            throw SW_RUNTIME_EXCEPTION("pchs are not implemented for clang");
+            throw SW_RUNTIME_ERROR("pchs are not implemented for clang");
 
             sf->setOutputFile(gch_fn); // is it correct?
             if (force_include_pch_header_to_pch_source)
@@ -1601,7 +1601,7 @@ void NativeExecutedTarget::findSources()
             }
         }
         if (bfn.empty())
-            throw SW_RUNTIME_EXCEPTION("");
+            throw SW_RUNTIME_ERROR("");
 
         auto b = read_file(bfn);
         auto f = bazel::parse(b);
@@ -1797,7 +1797,7 @@ void NativeExecutedTarget::detectLicenseFile()
                 *error = err;
                 return false;
             }
-            throw SW_RUNTIME_EXCEPTION(err);
+            throw SW_RUNTIME_ERROR(err);
         };
         if (!name.is_absolute())
             name = SourceDir / name;
@@ -1935,7 +1935,7 @@ bool NativeExecutedTarget::prepare()
         if (UseModules)
         {
             if (Settings.Native.CompilerType != CompilerType::MSVC)
-                throw SW_RUNTIME_EXCEPTION("Currently modules are implemented for MSVC only");
+                throw SW_RUNTIME_ERROR("Currently modules are implemented for MSVC only");
             CPPVersion = CPPLanguageStandard::CPP2a;
         }
 
@@ -2934,7 +2934,7 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
         else if (fs::exists(BinaryDir / from))
             from = BinaryDir / from;
         else
-            throw SW_RUNTIME_EXCEPTION("Package: " + pkg.toString() + ", file not found: " + from.string());
+            throw SW_RUNTIME_ERROR("Package: " + pkg.toString() + ", file not found: " + from.string());
     }
 
     // we really need ExecuteCommand here!!! or not?
@@ -3366,7 +3366,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
         auto relative_name_to_absolute = [](const String &in)
         {
             // TODO
-            throw SW_RUNTIME_EXCEPTION("not implemented");
+            throw SW_RUNTIME_ERROR("not implemented");
             return in;
         };
 
@@ -3451,7 +3451,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                 [this, &read_single_dep](const auto &d)
             {
                 auto dep = read_single_dep(d);
-                throw SW_RUNTIME_EXCEPTION("not implemented");
+                throw SW_RUNTIME_ERROR("not implemented");
                 //dependencies[dep.ppath.toString()] = dep;
             },
                 [this, &read_single_dep](const auto &dall)
@@ -3459,7 +3459,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                 for (auto d : dall)
                 {
                     auto dep = read_single_dep(d);
-                    throw SW_RUNTIME_EXCEPTION("not implemented");
+                    throw SW_RUNTIME_ERROR("not implemented");
                     //dependencies[dep.ppath.toString()] = dep;
                 }
             },
@@ -3498,7 +3498,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                             [&get_dep, &deps](const auto &d)
                         {
                             auto dep = get_dep(d);
-                            throw SW_RUNTIME_EXCEPTION("not implemented");
+                            throw SW_RUNTIME_ERROR("not implemented");
                             //deps[dep.ppath.toString()] = dep;
                         });
                     }
@@ -3507,7 +3507,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                         for (auto d : priv)
                         {
                             auto dep = read_single_dep(d);
-                            throw SW_RUNTIME_EXCEPTION("not implemented");
+                            throw SW_RUNTIME_ERROR("not implemented");
                             //deps[dep.ppath.toString()] = dep;
                         }
                     }
@@ -3521,7 +3521,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
 
                     for (auto &d : deps_private)
                     {
-                        throw SW_RUNTIME_EXCEPTION("not implemented");
+                        throw SW_RUNTIME_ERROR("not implemented");
                         //d.second.flags.set(pfPrivateDependency);
                         deps.insert(d);
                     }
@@ -3531,7 +3531,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                         for (auto d : node)
                         {
                             auto dep = get_dep(d);
-                            throw SW_RUNTIME_EXCEPTION("not implemented");
+                            throw SW_RUNTIME_ERROR("not implemented");
                             //deps[dep.ppath.toString()] = dep;
                         }
                     }
@@ -3540,7 +3540,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                 };
 
                 auto ed = extract_deps_from_node(dall);
-                throw SW_RUNTIME_EXCEPTION("not implemented");
+                throw SW_RUNTIME_ERROR("not implemented");
                 //dependencies.insert(ed.begin(), ed.end());
 
                 // conditional deps
@@ -3730,7 +3730,7 @@ void CSharpTarget::init()
     if (auto p = SourceFileStorage::findProgramByExtension(".cs"); p)
         compiler = std::dynamic_pointer_cast<CSharpCompiler>(p->clone());
     else
-        throw SW_RUNTIME_EXCEPTION("No C# compiler found");
+        throw SW_RUNTIME_ERROR("No C# compiler found");
 }
 
 void CSharpTarget::setOutputFile()
@@ -3810,7 +3810,7 @@ void RustTarget::init()
     if (auto p = SourceFileStorage::findProgramByExtension(".rs"); p)
         compiler = std::dynamic_pointer_cast<RustCompiler>(p->clone());
     else
-        throw SW_RUNTIME_EXCEPTION("No Rust compiler found");
+        throw SW_RUNTIME_ERROR("No Rust compiler found");
 }
 
 void RustTarget::setOutputFile()
@@ -3890,7 +3890,7 @@ void GoTarget::init()
     if (auto p = SourceFileStorage::findProgramByExtension(".go"); p)
         compiler = std::dynamic_pointer_cast<GoCompiler>(p->clone());
     else
-        throw SW_RUNTIME_EXCEPTION("No Go compiler found");
+        throw SW_RUNTIME_ERROR("No Go compiler found");
 }
 
 void GoTarget::setOutputFile()
@@ -3970,7 +3970,7 @@ void FortranTarget::init()
     if (auto p = SourceFileStorage::findProgramByExtension(".f"); p)
         compiler = std::dynamic_pointer_cast<FortranCompiler>(p->clone());
     else
-        throw SW_RUNTIME_EXCEPTION("No Fortran compiler found");
+        throw SW_RUNTIME_ERROR("No Fortran compiler found");
 }
 
 void FortranTarget::setOutputFile()
@@ -4050,7 +4050,7 @@ void JavaTarget::init()
     if (auto p = SourceFileStorage::findProgramByExtension(".java"); p)
         compiler = std::dynamic_pointer_cast<JavaCompiler>(p->clone());
     else
-        throw SW_RUNTIME_EXCEPTION("No Java compiler found");
+        throw SW_RUNTIME_ERROR("No Java compiler found");
 }
 
 void JavaTarget::setOutputFile()
@@ -4133,7 +4133,7 @@ void KotlinTarget::init()
     if (auto p = SourceFileStorage::findProgramByExtension(".kt"); p)
         compiler = std::dynamic_pointer_cast<KotlinCompiler>(p->clone());
     else
-        throw SW_RUNTIME_EXCEPTION("No Kotlin compiler found");
+        throw SW_RUNTIME_ERROR("No Kotlin compiler found");
 }
 
 void KotlinTarget::setOutputFile()

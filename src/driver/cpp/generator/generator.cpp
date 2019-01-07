@@ -316,7 +316,7 @@ void ProjectContext::addPropertyGroupConfigurationTypes()
             addBlock("ConfigurationType", "Utility");
             break;
         default:
-            throw SW_RUNTIME_EXCEPTION("Not implemented");
+            throw SW_RUNTIME_ERROR("Not implemented");
         }
         //addBlock("UseDebugLibraries", c);
         addBlock("PlatformToolset", "v141");
@@ -768,7 +768,7 @@ void VSGenerator::generate(const Build &b)
             if (!p)
                 p = b.solutions[0].findProgramByExtension(".asm");
             if (!p)
-                throw SW_RUNTIME_EXCEPTION("Unknown lang");
+                throw SW_RUNTIME_ERROR("Unknown lang");
             //if (auto p2 = p->as<VisualStudioCompiler>(); p2)
                 //toolset = p2->toolset;
             //if (auto p2 = p->as<ClangClCompiler>(); p2)
@@ -901,7 +901,7 @@ void VSGenerator::generate(const Build &b)
             if (!p)
                 p = b.solutions[0].findProgramByExtension(".asm");
             if (!p)
-                throw SW_RUNTIME_EXCEPTION("Unknown lang");
+                throw SW_RUNTIME_ERROR("Unknown lang");
             //if (auto p2 = p->as<VisualStudioCompiler>(); p2)
                 //toolset = p2->toolset;
             //if (auto p2 = p->as<ClangClCompiler>(); p2)
@@ -1303,7 +1303,7 @@ private:
         std::wstring buf(4096, 0);
         path p2 = normalize_path_windows(p);
         if (!GetShortPathName(p2.wstring().c_str(), buf.data(), buf.size()))
-            //throw SW_RUNTIME_EXCEPTION("GetShortPathName failed for path: " + p.u8string());
+            //throw SW_RUNTIME_ERROR("GetShortPathName failed for path: " + p.u8string());
             return p.u8string();
         return to_string(buf);
 #else
@@ -1779,7 +1779,7 @@ void CompilationDatabaseGenerator::generate(const Build &b)
 
 void ShellGenerator::generate(const Build &b)
 {
-    throw SW_RUNTIME_EXCEPTION("not implemented");
+    throw SW_RUNTIME_ERROR("not implemented");
 }
 
 }

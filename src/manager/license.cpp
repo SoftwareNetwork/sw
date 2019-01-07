@@ -255,7 +255,7 @@ const License *License::get(LicenseType Type)
 
     auto i = Licenses.find({ Type });
     if (i == Licenses.end())
-        throw SW_RUNTIME_EXCEPTION("No such license");
+        throw SW_RUNTIME_ERROR("No such license");
     return &*i;
 }
 

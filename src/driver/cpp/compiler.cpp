@@ -126,14 +126,14 @@ std::string getVsToolset(VisualStudioVersion v)
     case VisualStudioVersion::VS8:
         return "vc8";
     }
-    throw SW_RUNTIME_EXCEPTION("Unknown VS version");
+    throw SW_RUNTIME_ERROR("Unknown VS version");
 }
 
 path getProgramFilesX86()
 {
     auto e = getenv("programfiles(x86)");
     if (!e)
-        throw SW_RUNTIME_EXCEPTION("Cannot get 'programfiles(x86)' env. var.");
+        throw SW_RUNTIME_ERROR("Cannot get 'programfiles(x86)' env. var.");
     return e;
 }
 
@@ -213,7 +213,7 @@ path getWindowsKitDir()
         if (fs::exists(d))
             return d;
     }
-    throw SW_RUNTIME_EXCEPTION("No Windows Kits available");
+    throw SW_RUNTIME_ERROR("No Windows Kits available");
 }
 
 path getWindowsKit10Dir(Solution &s, const path &d)
@@ -244,7 +244,7 @@ path getWindowsKit10Dir(Solution &s, const path &d)
         }
     }
     if (last_dir.empty())
-        throw SW_RUNTIME_EXCEPTION("No Windows Kits 10.0 available");
+        throw SW_RUNTIME_ERROR("No Windows Kits 10.0 available");
     return last_dir;
 }
 
@@ -446,7 +446,7 @@ void detectNativeCompilers(struct Solution &s)
         static std::wregex r(L"(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
         std::wsmatch m;
         if (!std::regex_match(h.chosenInstanceInfo.Version, m, r))
-            throw SW_RUNTIME_EXCEPTION("Cannot match vs version regex");
+            throw SW_RUNTIME_ERROR("Cannot match vs version regex");
         if (m[5].matched)
             V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
         else
@@ -928,7 +928,7 @@ void detectNativeCompilers(struct Solution &s)
 std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand() const
 {
     if (!cmd)
-        throw SW_RUNTIME_EXCEPTION("Command is not prepared");
+        throw SW_RUNTIME_ERROR("Command is not prepared");
     return cmd;
 }
 
@@ -1366,7 +1366,7 @@ std::shared_ptr<builder::Command> VisualStudioLibraryTool::prepareCommand(const 
         return nullptr;
 
     if (Output.empty())
-        throw SW_RUNTIME_EXCEPTION("Output file is not set");
+        throw SW_RUNTIME_ERROR("Output file is not set");
 
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
@@ -1499,7 +1499,7 @@ std::shared_ptr<builder::Command> GNULinker::prepareCommand(const TargetBase &t)
         return nullptr;
 
     if (Output.empty())
-        throw SW_RUNTIME_EXCEPTION("Output file is not set");
+        throw SW_RUNTIME_ERROR("Output file is not set");
 
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
@@ -1584,7 +1584,7 @@ std::shared_ptr<builder::Command> GNULibrarian::prepareCommand(const TargetBase 
         return nullptr;
 
     if (Output.empty())
-        throw SW_RUNTIME_EXCEPTION("Output file is not set");
+        throw SW_RUNTIME_ERROR("Output file is not set");
 
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())

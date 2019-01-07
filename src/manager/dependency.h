@@ -78,7 +78,7 @@ public:
         {
             auto i = dd.find(d);
             if (i == dd.end())
-                throw SW_RUNTIME_EXCEPTION("cannot find dep by id");
+                throw SW_RUNTIME_ERROR("cannot find dep by id");
             auto dep = i->second;
             //dep.createNames();
             dependencies.insert(dep);

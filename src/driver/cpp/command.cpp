@@ -52,7 +52,7 @@ void Command::prepare()
     {
         auto t = d->target.lock();
         if (!t)
-            throw SW_RUNTIME_EXCEPTION("Command dependency target was not resolved: " + d->getPackage().toString());
+            throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
         t->setupCommand(*this);
     }
 
@@ -69,14 +69,14 @@ path Command::getProgram() const
     {
         auto t = d->target.lock();
         if (!t)
-            throw SW_RUNTIME_EXCEPTION("Command dependency target was not resolved: " + d->getPackage().toString());
+            throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
         p = t->getOutputFile();
         if (p.empty())
-            throw SW_RUNTIME_EXCEPTION("Empty program from package: " + t->getPackage().toString());
+            throw SW_RUNTIME_ERROR("Empty program from package: " + t->getPackage().toString());
     }
     else if (dependency_set)
     {
-        throw SW_RUNTIME_EXCEPTION("Command dependency was not resolved: ???UNKNOWN_PROGRAM??? " + print());
+        throw SW_RUNTIME_ERROR("Command dependency was not resolved: ???UNKNOWN_PROGRAM??? " + print());
     }
     else
         p = Base::getProgram();
@@ -86,7 +86,7 @@ path Command::getProgram() const
 void Command::setProgram(const std::shared_ptr<Dependency> &d)
 {
     if (dependency_set)
-        throw SW_RUNTIME_EXCEPTION("Setting program twice"); // probably throw, but who knows...
+        throw SW_RUNTIME_ERROR("Setting program twice"); // probably throw, but who knows...
     dependency = d;
     dependency_set = true;
     auto l = d->target.lock();

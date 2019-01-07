@@ -24,7 +24,7 @@ ModuleStorage &getModuleStorage()
 const Module &ModuleStorage::get(const path &dll)
 {
     if (dll.empty())
-        throw SW_RUNTIME_EXCEPTION("Empty module");
+        throw SW_RUNTIME_ERROR("Empty module");
 
     boost::upgrade_lock lk(m);
     auto i = modules.find(dll);
@@ -53,7 +53,7 @@ Module::Module(const path &dll)
         err += " Will rebuild on the next run.";
         //LOG_ERROR(logger, err);
         fs::remove(dll);
-        throw SW_RUNTIME_EXCEPTION(err);
+        throw SW_RUNTIME_ERROR(err);
     }
 
     build_.name = "build";

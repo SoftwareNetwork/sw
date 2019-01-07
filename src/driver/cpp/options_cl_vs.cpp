@@ -108,7 +108,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::MachineType)
         s += "EBC";
         break;
     default:
-        throw SW_RUNTIME_EXCEPTION("unreachable code");
+        throw SW_RUNTIME_ERROR("unreachable code");
     }
     return { s };
 }
@@ -133,7 +133,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::RuntimeLibraryType)
         s += "MDd";
         break;
     default:
-        throw SW_RUNTIME_EXCEPTION("unreachable code");
+        throw SW_RUNTIME_ERROR("unreachable code");
     }
     return { s };
 }
@@ -157,7 +157,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::DebugInformationFormatType)
         s += "ZI";
         break;
     default:
-        throw SW_RUNTIME_EXCEPTION("unreachable code");
+        throw SW_RUNTIME_ERROR("unreachable code");
     }
     return { s };
 }
@@ -176,7 +176,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::Subsystem)
         s += "WINDOWS";
         break;
     default:
-        throw SW_RUNTIME_EXCEPTION("unreachable code");
+        throw SW_RUNTIME_ERROR("unreachable code");
     }
     return { s };
 }
@@ -195,7 +195,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::ForceType)
         s += "UNRESOLVED";
         break;
     default:
-        throw SW_RUNTIME_EXCEPTION("unreachable code");
+        throw SW_RUNTIME_ERROR("unreachable code");
     }
     return { s };
 }
@@ -301,7 +301,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::cs::Target)
         s += "winmdobj";
         break;
     default:
-        throw SW_RUNTIME_EXCEPTION("unreachable code");
+        throw SW_RUNTIME_ERROR("unreachable code");
     }
     return { s };
 }
@@ -329,7 +329,7 @@ DECLARE_OPTION_SPECIALIZATION(rust::CrateType)
         s += "proc-macro";
         break;
     default:
-        throw SW_RUNTIME_EXCEPTION("unreachable code");
+        throw SW_RUNTIME_ERROR("unreachable code");
     }
     return { getCommandLineFlag(), s };
 }

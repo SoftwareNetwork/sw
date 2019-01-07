@@ -79,7 +79,7 @@ void LanguageStorage::setExtensionLanguage(const String &ext, const LanguagePtr 
     if (pkg.empty())
     {
         // add phantom pkg instead?
-        //throw SW_RUNTIME_EXCEPTION("No packages for this language");
+        //throw SW_RUNTIME_ERROR("No packages for this language");
 
         pkg = "loc.sw.lang" + std::to_string((size_t)L.get());
     }

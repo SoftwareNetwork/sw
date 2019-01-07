@@ -141,7 +141,7 @@ struct ExecutionPlan
             throw ExceptionVector(eptrs);
 
         if (i != sz/* && !stopped*/)
-            throw SW_RUNTIME_EXCEPTION("Executor did not perform all steps");
+            throw SW_RUNTIME_ERROR("Executor did not perform all steps");
     }
 
     StringHashMap<int> gatherStrings() const
@@ -215,7 +215,7 @@ struct ExecutionPlan
     static Graph getGraphSkeleton(const Graph &in)
     {
         //
-        throw SW_RUNTIME_EXCEPTION("not implemented");
+        throw SW_RUNTIME_ERROR("not implemented");
 
         // make an algorithm here
 

@@ -165,7 +165,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
             if (!i)
             {
                 //if (f && f->postponed)
-                    //throw SW_RUNTIME_EXCEPTION("Postponing postponed file");
+                    //throw SW_RUNTIME_ERROR("Postponing postponed file");
                 f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(*target, file);
                 f->postponed = true;
             }
@@ -351,7 +351,7 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
     // reconsider
     // apply EnforcementType::CheckRegexes
     //if (!matches)
-        //throw SW_RUNTIME_EXCEPTION("No files matches regex");
+        //throw SW_RUNTIME_ERROR("No files matches regex");
 }
 
 size_t SourceFileStorage::sizeKnown() const
@@ -375,7 +375,7 @@ SourceFile &SourceFileStorage::operator[](path F)
     if (!f)
     {
         // here we may let other fibers progress until language is registered
-        throw SW_RUNTIME_EXCEPTION("Empty source file: " + F.u8string());
+        throw SW_RUNTIME_ERROR("Empty source file: " + F.u8string());
     }
     return *f;
 }
@@ -439,7 +439,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
                         LOG_INFO(logger, err);
                         return true;
                     }
-                    throw SW_RUNTIME_EXCEPTION(err);
+                    throw SW_RUNTIME_ERROR(err);
                 }
             }
         }
@@ -459,7 +459,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
                     LOG_INFO(logger, err);
                     return true;
                 }
-                throw SW_RUNTIME_EXCEPTION(err);
+                throw SW_RUNTIME_ERROR(err);
             }
         }
     }
@@ -497,7 +497,7 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
     }
     // apply EnforcementType::CheckRegexes
     //if (files.empty())
-        //throw SW_RUNTIME_EXCEPTION("No files matches regex");
+        //throw SW_RUNTIME_ERROR("No files matches regex");
     return files;
 }
 

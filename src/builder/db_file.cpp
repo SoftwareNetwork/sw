@@ -107,7 +107,7 @@ static void load_log(FileStorage &fs, const path &fn, ConcurrentHashMap<path, Fi
     if (!fp)
     {
         if (fs::exists(fn))
-            throw SW_RUNTIME_EXCEPTION("Cannot open file: " + fn.u8string());
+            throw SW_RUNTIME_ERROR("Cannot open file: " + fn.u8string());
         return;
     }
     while (!feof(fp))

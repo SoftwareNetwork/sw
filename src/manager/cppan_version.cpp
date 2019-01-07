@@ -18,7 +18,7 @@
         return 0;
 
     if (digits != 2 && digits != 4)
-        throw SW_RUNTIME_EXCEPTION("digits must be 2 or 4");
+        throw SW_RUNTIME_ERROR("digits must be 2 or 4");
 
     auto shift = 4 * digits;
 

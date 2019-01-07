@@ -60,7 +60,7 @@ OS detectOS()
     //int uname(struct utsname *buf);
 
     if (os.Type == OSType::UnknownOS)
-        throw SW_RUNTIME_EXCEPTION("Unknown OS");
+        throw SW_RUNTIME_ERROR("Unknown OS");
 
     return os;
 }

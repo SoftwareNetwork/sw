@@ -25,7 +25,7 @@ namespace sw
 
 void check_relative(const Remote &r, PackagePath &p)
 {
-    throw SW_RUNTIME_EXCEPTION("not implemented");
+    throw SW_RUNTIME_ERROR("not implemented");
 
     if (p.isRelative(r.user))
         p = "pvt." + r.user + "." + p.toString();
@@ -159,7 +159,7 @@ void Api::addVersion(PackagePath p, const Version &vnew, const optional<Version>
 void Api::updateVersion(PackagePath p, const Version &v)
 {
     if (!v.isBranch())
-        throw SW_RUNTIME_EXCEPTION("Only branches can be updated");
+        throw SW_RUNTIME_ERROR("Only branches can be updated");
 
     check_relative(r, p);
 

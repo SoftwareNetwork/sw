@@ -160,7 +160,7 @@ void Build::cppan_load(const yaml &root)
         else if (pt.empty() || pt == "e" || pt == "exe" || pt == "executable")
             return current_solution->addExecutable(name).cppan_load_project(root);
         else
-            throw SW_RUNTIME_EXCEPTION("Unknown project type");
+            throw SW_RUNTIME_ERROR("Unknown project type");
 
         bool shared_only = false;
         bool static_only = false;
@@ -177,7 +177,7 @@ void Build::cppan_load(const yaml &root)
         else if (lt == "shared" || lt == "dll" || shared_only)
             return current_solution->addSharedLibrary(name).cppan_load_project(root);
         else
-            throw SW_RUNTIME_EXCEPTION("Unknown library type");
+            throw SW_RUNTIME_ERROR("Unknown library type");
 
         //if (project.name.empty())
             //project.name = name;

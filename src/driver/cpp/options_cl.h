@@ -398,7 +398,7 @@ struct CommandLineOption : CommandLineOption1<T>
     operator typename std::enable_if_t<!std::is_same_v<U, bool>, U>() const
     {
         if (!this->value_)
-            throw SW_RUNTIME_EXCEPTION("Option value is not set");
+            throw SW_RUNTIME_ERROR("Option value is not set");
         return *this->value_;
     }
 

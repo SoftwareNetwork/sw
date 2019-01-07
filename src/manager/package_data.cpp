@@ -73,7 +73,7 @@ PackageData YamlPackageDescription::getData() const
 {
     //const auto &s = *this;
     PackageData d;
-    throw SW_RUNTIME_EXCEPTION("Not implemented");
+    throw SW_RUNTIME_ERROR("Not implemented");
 }
 
 void checkSourceAndVersion(Source &s, const Version &v)
@@ -81,7 +81,7 @@ void checkSourceAndVersion(Source &s, const Version &v)
     applyVersionToUrl(s, v);
 
     if (!isValidSourceUrl(s))
-        throw SW_RUNTIME_EXCEPTION("Invalid source: " + print_source(s));
+        throw SW_RUNTIME_ERROR("Invalid source: " + print_source(s));
 }
 
 }

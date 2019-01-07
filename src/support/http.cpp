@@ -38,5 +38,5 @@ bool isValidSourceUrl(const String &url)
 void checkSourceUrl(const String &url)
 {
     if (!isValidSourceUrl(url))
-        throw SW_RUNTIME_EXCEPTION("Bad source url: " + url);
+        throw SW_RUNTIME_ERROR("Bad source url: " + url);
 }
