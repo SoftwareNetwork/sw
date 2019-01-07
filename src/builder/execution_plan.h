@@ -36,6 +36,8 @@ struct ExecutionPlan
     Vec commands;
     Vec unprocessed_commands;
     USet unprocessed_commands_set;
+    int64_t skip_errors = 0;
+    bool throw_on_errors = true;
 
     ExecutionPlan() = default;
     ExecutionPlan(const ExecutionPlan &rhs) = delete;
@@ -52,15 +54,16 @@ struct ExecutionPlan
         break_commands(unprocessed_commands_set);
     }
 
-    void execute(Executor &e, std::atomic_int64_t skip_errors = 0) const
+    void execute(Executor &e) const
     {
         std::mutex m;
         std::vector<Future<void>> fs;
         std::vector<Future<void>> all;
         std::atomic_bool stopped = false;
+        std::atomic_int64_t askip_errors = skip_errors;
 
         std::function<void(T*)> run;
-        run = [&skip_errors, &e, &run, &fs, &all, &m, &stopped](T *c)
+        run = [this, &askip_errors, &e, &run, &fs, &all, &m, &stopped](T *c)
         {
             if (stopped)
                 return;
@@ -70,9 +73,10 @@ struct ExecutionPlan
             }
             catch (...)
             {
-                if (--skip_errors < 1)
+                if (--askip_errors < 1)
                     stopped = true;
-                throw;
+                if (throw_on_errors)
+                    throw;
             }
             for (auto &d : c->dependendent_commands)
             {
@@ -99,7 +103,7 @@ struct ExecutionPlan
             for (auto &c : commands)
             {
                 if (!c->dependencies.empty())
-                    break;
+                    continue;
                 fs.push_back(e.push([&run, c] {run(c.get()); }));
                 all.push_back(fs.back());
             }
@@ -133,10 +137,10 @@ struct ExecutionPlan
                 eptrs.push_back(f.state->eptr);
         }
 
-        if (!eptrs.empty())
+        if (!eptrs.empty() && throw_on_errors)
             throw ExceptionVector(eptrs);
 
-        if (i != sz)
+        if (i != sz/* && !stopped*/)
             throw SW_RUNTIME_EXCEPTION("Executor did not perform all steps");
     }
 

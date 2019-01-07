@@ -165,12 +165,20 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     void onBeforeRun() override;
     void onEnd() override;
 
+    String getResponseFilename() const;
+    virtual String getResponseFileContents(bool showIncludes = false) const;
+
+    Strings &getArgs() override;
+
 protected:
     bool prepared = false;
     bool executed_ = false;
 
+    static String escape_cmd_arg(String);
+
 private:
     mutable size_t hash = 0;
+    Strings rsp_args;
 
     virtual void execute1(std::error_code *ec = nullptr);
     virtual size_t getHash1() const;

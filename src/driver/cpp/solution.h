@@ -88,10 +88,10 @@ struct SW_DRIVER_CPP_API Test : driver::cpp::CommandBuilder
 */
 struct SW_DRIVER_CPP_API Solution : TargetBase
 {
+    using CommandExecutionPlan = ExecutionPlan<builder::Command>;
+
     // solution (config) specific data
     mutable TargetMap TargetsToBuild;
-    Checker Checks;
-    ChecksStorage checksStorage;
     FileStorage *fs = nullptr;
     path fetch_dir;
     bool with_testing = false;
@@ -112,6 +112,11 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
 
     // for module calls
     String current_module;
+    // for checks
+    PackageVersionGroupNumber current_gn = 0;
+
+    // for builder
+    Checker checker;
 
 public:
     Solution(const Solution &);
@@ -123,11 +128,11 @@ public:
     // impl
     void execute();
     void execute() const;
-    void execute(ExecutionPlan<builder::Command> &p) const;
+    void execute(CommandExecutionPlan &p) const;
     virtual void prepare();
     bool prepareStep();
     virtual void performChecks();
-    void copyChecksFrom(const Solution &s);
+    //void copyChecksFrom(const Solution &s);
     void clean() const;
 
     Commands getCommands() const;
@@ -151,6 +156,7 @@ public:
     path getIdeDir() const;
     path getExecutionPlansDir() const;
     path getExecutionPlanFilename() const;
+    path getChecksDir() const;
 
     bool skipTarget(TargetScope Scope) const;
 
@@ -170,8 +176,8 @@ public:
     // unknown targets have PostponeFileResolving set
     PackagesIdSet knownTargets;
 
-    virtual ExecutionPlan<builder::Command> getExecutionPlan() const;
-    ExecutionPlan<builder::Command> getExecutionPlan(const Commands &cmds) const;
+    virtual CommandExecutionPlan getExecutionPlan() const;
+    CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
 
     // events
     template <class ... Args>
@@ -204,13 +210,11 @@ private:
     //Files used_modules;
     mutable std::unordered_map<UnresolvedPackage, TargetBaseTypePtr> resolved_targets;
 
-    void checkPrepared() const;
+    //void checkPrepared() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     void build_and_resolve(int n_runs = 0);
 
     path getChecksFilename() const;
-    void loadChecks();
-    void saveChecks() const;
 
     void addTest(Test &cb, const String &name);
 
@@ -255,7 +259,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     void prepare() override;
 
     bool generateBuildSystem();
-    ExecutionPlan<builder::Command> getExecutionPlan() const override;
+    CommandExecutionPlan getExecutionPlan() const override;
 
     // helper
     Solution &addSolution() override;

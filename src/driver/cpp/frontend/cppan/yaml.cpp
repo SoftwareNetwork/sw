@@ -16,7 +16,6 @@
 
 #include "yaml.h"
 
-#include "checks.h"
 #include "project.h"
 
 #include <boost/algorithm/string.hpp>

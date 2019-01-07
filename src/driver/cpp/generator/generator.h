@@ -22,6 +22,7 @@ enum class GeneratorType
     CMake,
     CompilationDatabase,
     Make,
+    // windows nmake?
     Ninja,
     QMake,
     Shell,

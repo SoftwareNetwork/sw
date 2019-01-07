@@ -10,6 +10,11 @@
 
 #define LOCAL_BRANCH_NAME "local"
 
+#include <primitives/version.h>
+
+namespace sw
+{
+
 namespace db
 {
 
@@ -19,11 +24,6 @@ using PackageVersionId = int64_t;
 }
 
 using PackageVersionGroupNumber = int64_t;
-
-#include <primitives/version.h>
-
-namespace sw
-{
 
 using primitives::version::Version;
 

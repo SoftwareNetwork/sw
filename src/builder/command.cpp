@@ -455,6 +455,44 @@ void Command::afterCommand()
     updateCommandTime();
 }
 
+String Command::getResponseFilename() const
+{
+    //auto t = get_temp_filename(); // isn't unique enough?
+    return std::to_string(getHash()) + ".rsp";
+}
+
+String Command::getResponseFileContents(bool showIncludes) const
+{
+    String rsp;
+    for (auto &a : args)
+    {
+        if (!showIncludes && a == "-showIncludes")
+            continue;
+        if (protect_args_with_quotes)
+            rsp += "\"" + escape_cmd_arg(a) + "\"";
+        else
+            rsp += escape_cmd_arg(a);
+        rsp += "\n";
+    }
+    if (!rsp.empty())
+        rsp.resize(rsp.size() - 1);
+    return rsp;
+}
+
+String Command::escape_cmd_arg(String s)
+{
+    boost::replace_all(s, "\\", "\\\\");
+    boost::replace_all(s, "\"", "\\\"");
+    return s;
+}
+
+Strings &Command::getArgs()
+{
+    if (rsp_args.empty())
+        return Base::getArgs();
+    return rsp_args;
+}
+
 void Command::execute1(std::error_code *ec)
 {
     if (remove_outputs_before_execution)
@@ -465,9 +503,6 @@ void Command::execute1(std::error_code *ec)
         for (auto &o : outputs)
             fs::remove(o, ec);
     }
-
-    //static std::atomic_int n = 0;
-    //LOG_INFO(logger, "command #" << ++n << " is outdated: " + getName());
 
     // check our resources
     if (pool)
@@ -481,175 +516,138 @@ void Command::execute1(std::error_code *ec)
     // Try to construct command line first.
     // Some systems have limitation on its length.
 
-    bool escaped = false;
-    auto escape_cmd_arg = [&escaped](auto &a)
+    auto make_rsp_file = [this](const auto &rsp_file, bool show_includes = true)
     {
-        if (!escaped)
-        {
-            boost::replace_all(a, "\\", "\\\\");
-            boost::replace_all(a, "\"", "\\\"");
-        }
-        return a;
-    };
-
-    auto args_saved = args;
-    auto make_rsp_file = [this, &escape_cmd_arg, &args_saved, &escaped](const auto &rsp_file, bool show_includes = true)
-    {
-        String rsp;
-        for (auto &a : args_saved)
-        {
-            if (!show_includes && a == "-showIncludes")
-                continue;
-            if (protect_args_with_quotes)
-                rsp += "\"" + escape_cmd_arg(a) + "\"";
-            else
-                rsp += escape_cmd_arg(a);
-            rsp += "\n";
-        }
-        if (!rsp.empty())
-            rsp.resize(rsp.size() - 1);
-        args.clear();
-        args.push_back("@" + rsp_file.u8string());
-        write_file(rsp_file, rsp);
-        escaped = true;
+        write_file(rsp_file, getResponseFileContents(show_includes));
     };
 
     path rsp_file;
-    bool use_rsp = use_response_files || needsResponseFile();
-    if (use_rsp)
+    if (needsResponseFile())
     {
-        //auto t = get_temp_filename(); // isn't unique enough?
-        auto t = temp_directory_path() / std::to_string(getHash());
-
+        auto t = temp_directory_path() / getResponseFilename();
         auto fn = t.filename();
         t = t.parent_path();
         rsp_file = t / getProgramName() / "rsp" / fn;
-        rsp_file += ".rsp";
         make_rsp_file(rsp_file);
+        rsp_args.push_back("@" + rsp_file.u8string());
     }
 
     SCOPE_EXIT
     {
         if (rsp_file.empty())
             return;
+
 #ifdef _WIN32
-    // sometimes rsp file is used by children of cl.exe, for example
-    // fs::remove() fails in this case
+        // sometimes rsp file is used by children of cl.exe, for example
+        // fs::remove() fails in this case
 
-    error_code ec;
-    fs::remove(rsp_file, ec);
-    if (ec)
-    {
-        auto processes = getFileUsers(rsp_file);
-        if (!processes.empty())
+        error_code ec;
+        fs::remove(rsp_file, ec);
+        if (ec)
         {
-            if (WaitForMultipleObjects(processes.size(), processes.data(), TRUE, INFINITE) != WAIT_OBJECT_0)
-                LOG_WARN(logger, "Cannot remove rsp file: " << normalize_path(rsp_file) << " for pid = " << pid << ", WaitForMultipleObjects() failed: " << GetLastError());
-
-            /*FILETIME ftCreate, ftExit, ftKernel, ftUser;
-            if (GetProcessTimes(hProcess, &ftCreate, &ftExit, &ftKernel, &ftUser) &&
-                CompareFileTime(&rgpi[i].Process.ProcessStartTime, &ftCreate) == 0)
+            auto processes = getFileUsers(rsp_file);
+            if (!processes.empty())
             {
-                WCHAR sz[MAX_PATH];
-                DWORD cch = MAX_PATH;
-                if (QueryFullProcessImageNameW(hProcess, 0, sz, &cch) && cch <= MAX_PATH)
+                if (WaitForMultipleObjects(processes.size(), processes.data(), TRUE, INFINITE) != WAIT_OBJECT_0)
+                    LOG_WARN(logger, "Cannot remove rsp file: " << normalize_path(rsp_file) << " for pid = " << pid << ", WaitForMultipleObjects() failed: " << GetLastError());
+
+                /*FILETIME ftCreate, ftExit, ftKernel, ftUser;
+                if (GetProcessTimes(hProcess, &ftCreate, &ftExit, &ftKernel, &ftUser) &&
+                    CompareFileTime(&rgpi[i].Process.ProcessStartTime, &ftCreate) == 0)
                 {
-                    LOG_WARN(logger, i << ".Process.image = " << sz);
-                }
-            }*/
-            for (auto h : processes)
-                CloseHandle(h);
+                    WCHAR sz[MAX_PATH];
+                    DWORD cch = MAX_PATH;
+                    if (QueryFullProcessImageNameW(hProcess, 0, sz, &cch) && cch <= MAX_PATH)
+                    {
+                        LOG_WARN(logger, i << ".Process.image = " << sz);
+                    }
+                }*/
+                for (auto h : processes)
+                    CloseHandle(h);
 
-            //_wunlink(rsp_file.wstring().c_str());
-
-            fs::remove(rsp_file);
+                fs::remove(rsp_file);
+            }
         }
-    }
 #else
-    fs::remove(rsp_file);
+        fs::remove(rsp_file);
 #endif
     };
 
-    auto save_command = [this, &rsp_file, &escape_cmd_arg, &make_rsp_file, &args_saved, &use_rsp](String &s)
+    auto save_command = [this, &make_rsp_file]()
     {
-        if (rsp_file.empty())
-        {
-            rsp_file = unique_path();
-            rsp_file += ".rsp";
-        }
-        else
-            rsp_file = rsp_file.filename();
+        String s;
         s += "\n";
-        //auto p = getDirectories().storage_dir_tmp / "rsp" / rsp_file;
-        auto p = fs::current_path() / ".sw" / "rsp" / rsp_file;
+        auto p = fs::current_path() / ".sw" / "rsp" / getResponseFilename();
         auto pbat = p;
         String t;
 
+        bool bat = false;
 #ifdef _WIN32
-        pbat += ".bat";
-#else
-        pbat += ".sh";
+        bat = true;
 #endif
+
+        if (bat)
+            pbat += ".bat";
+        else
+            pbat += ".sh";
 
         s += "pid = " + std::to_string(pid) + "\n";
         s += "command is copied to " + p.u8string() + "\n";
 
-#ifdef _WIN32
-        t += "::";
-#else
-        t += "#";
-#endif
+        if (bat)
+            t += "::";
+        else
+            t += "#";
         t += " command: " + name + "\n\n";
 
         if (!name_short.empty())
         {
-#ifdef _WIN32
-            t += "::";
-#else
-            t += "#";
-#endif
+            if (bat)
+                t += "::";
+            else
+                t += "#";
             t += " short name: " + name_short + "\n\n";
-    }
+        }
 
-#ifdef _WIN32
-        t += "@echo off\n\n";
-        t += "setlocal";
-#else
-        t += "#!/bin/sh";
-#endif
+        if (bat)
+        {
+            t += "@echo off\n\n";
+            t += "setlocal";
+        }
+        else
+            t += "#!/bin/sh";
         t += "\n\n";
 
         for (auto &[k, v] : environment)
         {
-#ifdef _WIN32
-            t += "set";
-#endif
-            t += " " + k + "=" + v + "\n\n";
+            if (bat)
+                t += "set";
+            else
+                t += " " + k + "=" + v + "\n\n";
         }
 
         if (!working_directory.empty())
             t += "cd " + working_directory.u8string() + "\n\n";
 
         t += "\"" + program.u8string() + "\" ";
-        if (use_rsp)
+        if (!rsp_args.empty())
         {
             make_rsp_file(p, false);
             t += "@" + p.u8string() + " ";
         }
         else
         {
-            for (auto &a : args_saved)
+            for (auto &a : args)
             {
                 if (a == "-showIncludes")
                     continue;
                 t += "\"" + escape_cmd_arg(a) + "\" ";
             }
         }
-#ifdef _WIN32
-        t += "%";
-#else
-        t += "$";
-#endif
+        if (bat)
+            t += "%";
+        else
+            t += "$";
         t += "* ";
 
         if (!in.file.empty())
@@ -665,6 +663,8 @@ void Command::execute1(std::error_code *ec)
         fs::permissions(pbat,
             fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
             fs::perm_options::add);
+
+        return s;
     };
 
     auto make_error_string = [this, &save_command](const String &e)
@@ -686,7 +686,7 @@ void Command::execute1(std::error_code *ec)
         s += e;
         boost::trim(s);
         if (save_failed_commands || save_executed_commands || save_all_commands)
-            save_command(s);
+            s += save_command();
         return s;
     };
 
@@ -713,10 +713,7 @@ void Command::execute1(std::error_code *ec)
             Base::execute();
 
         if (save_executed_commands || save_all_commands)
-        {
-            String s;
-            save_command(s);
-        }
+            save_command();
 
         postProcess(); // process deps
     }
@@ -741,6 +738,8 @@ void Command::postProcess(bool ok)
 
 bool Command::needsResponseFile() const
 {
+    if (use_response_files)
+        return true;
     // 3 = 1 + 2 = space + quotes
     size_t sz = program.u8string().size() + 3;
     for (auto &a : args)

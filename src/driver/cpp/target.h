@@ -210,10 +210,15 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
 {
     using TargetMap = PackageVersionMapBase<TargetBaseTypePtr, std::unordered_map, std::map>;
 
+    // move to solution?
     struct SettingsX
     {
+        // move host os to solution?
         OS HostOS;
-        //OS BuildOS; // for distributed compilation
+
+        // for distributed compilation???
+        // we are on host anyway, we don't need this probably
+        //OS BuildOS;
         OS TargetOS;
         NativeToolchain Native;
 
@@ -352,7 +357,6 @@ public:
     path getServiceDir() const;
     path getTargetsDir() const;
     path getTargetDirShort() const;
-    path getChecksDir() const;
     path getTempDir() const;
 
     void setRootDirectory(const path &);
@@ -730,6 +734,8 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     bool CPPExtensions = false;
 
     bool UseModules = false;
+
+    // add properies - values
 
     // unstable
     //bool add_d_on_debug = false;

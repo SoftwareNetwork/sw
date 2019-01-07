@@ -14,9 +14,12 @@
 #include <hash.h>
 
 #include <boost/algorithm/string.hpp>
+#include <primitives/sw/settings.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "checks");
+
+static cl::opt<bool> print_checks("print-checks", cl::desc("Save extended checks info to file"));
 
 namespace
 {
@@ -28,99 +31,38 @@ bool bSilentChecks = true;
 namespace sw
 {
 
-ChecksStorage::ChecksStorage()
-{
-    //load();
-}
-
-ChecksStorage::ChecksStorage(const ChecksStorage &rhs)
-    : checks(rhs.checks)
-{
-}
-
-ChecksStorage::~ChecksStorage()
-{
-    try
-    {
-        //save();
-    }
-    catch (...)
-    {
-        LOG_ERROR(logger, "Error during scripts db save");
-    }
-}
-
-static void load(const path &fn, ChecksContainer &checks)
-{
-    std::ifstream i(fn.string());
-    if (!i)
-    {
-        if (fs::exists(fn))
-            throw SW_RUNTIME_EXCEPTION("Cannot open file: " + fn.string());
-        return;
-    }
-    while (i)
-    {
-        String d;
-        int v;
-        i >> d;
-        if (!i)
-            return;
-        i >> v;
-        checks[d] = v;
-    }
-}
-
-static void save(const path &fn, const ChecksContainer &c)
-{
-    const std::map<String, int> checks(c.begin(), c.end());
-
-    fs::create_directories(fn.parent_path());
-    //primitives::filesystem::create(fn);
-    std::ofstream o(fn.string());
-    if (!o)
-        throw SW_RUNTIME_EXCEPTION("Cannot open file: " + fn.string());
-    for (auto &[d, v] : checks)
-        o << d << " " << v << "\n";
-}
-
 void ChecksStorage::load(const path &fn)
 {
     if (loaded)
         return;
-    ::sw::load(fn, checks);
+    std::ifstream i(fn);
+    if (!i)
+        return;
+    while (i)
+    {
+        size_t h;
+        i >> h;
+        if (!i)
+            break;
+        i >> all_checks[h];
+    }
     loaded = true;
 }
 
 void ChecksStorage::save(const path &fn) const
 {
-    ::sw::save(fn, checks);
+    fs::create_directories(fn.parent_path());
+    std::ofstream o(fn);
+    if (!o)
+        throw SW_RUNTIME_EXCEPTION("Cannot open file: " + fn.string());
+    for (auto &[h, v] : all_checks)
+        o << h << " " << v << "\n";
 }
 
-bool ChecksStorage::isChecked(const String &d) const
+void ChecksStorage::add(const Check &c)
 {
-    std::shared_lock<std::shared_mutex> lk(m);
-    return checks.find(d) != checks.end();
-}
-
-bool ChecksStorage::isChecked(const String &d, int &v) const
-{
-    std::shared_lock<std::shared_mutex> lk(m);
-    auto i = checks.find(d);
-    if (i != checks.end())
-    {
-        v = i->second;
-        return true;
-    }
-    return false;
-}
-
-void ChecksStorage::add(const String &d, int v)
-{
-    if (isChecked(d, v))
-        return;
-    std::unique_lock<std::shared_mutex> lk(m);
-    checks[d] = v;
+    auto h = c.getHash();
+    all_checks[h] = c.Value.value();
 }
 
 String make_function_var(const String &d, const String &prefix = "HAVE_")
@@ -168,47 +110,233 @@ void check_def(const String &d)
         throw SW_RUNTIME_EXCEPTION("Empty check definition");
 }
 
+CheckSet::CheckSet(Checker &checker)
+    : checker(checker)
+{
+}
+
+Checker::Checker()
+{
+    checksStorage = std::make_unique<ChecksStorage>();
+}
+
+CheckSet &Checker::addSet(const String &name)
+{
+    auto p = sets[current_gn].emplace(name, CheckSet(*this));
+    return p.first->second;
+}
+
+void Checker::performChecks(const path &fn)
+{
+    // load
+    checksStorage->load(fn);
+
+    // add common checks
+    for (auto &[gn, s2] : sets)
+    {
+        for (auto &s : s2)
+        {
+            s.second.checkSourceRuns("WORDS_BIGENDIAN", R"(
+int IsBigEndian()
+{
+    volatile int i=1;
+    return ! *((char *)&i);
+}
+int main() { return IsBigEndian(); }
+)");
+        }
+    }
+
+    // prepare loaded checks
+    for (auto &[gn, s2] : sets)
+    {
+        for (auto &[n, s] : s2)
+        {
+            for (auto &c : s.all)
+            {
+                auto h = c->getHash();
+                auto ic = checks.find(h);
+                if (ic != checks.end())
+                {
+                    s.checks[h] = ic->second;
+                    ic->second->Definitions.insert(c->Definitions.begin(), c->Definitions.end());
+                    ic->second->Prefixes.insert(c->Prefixes.begin(), c->Prefixes.end());
+                    continue;
+                }
+                checks[h] = c;
+                s.checks[h] = c;
+
+                auto i = checksStorage->all_checks.find(h);
+                if (i != checksStorage->all_checks.end())
+                    c->Value = i->second;
+
+                auto deps = c->gatherDependencies();
+                for (auto &d : deps)
+                {
+                    auto h = d->getHash();
+                    auto ic = checks.find(h);
+                    if (ic != checks.end())
+                    {
+                        s.checks[h] = ic->second;
+                        ic->second->Definitions.insert(d->Definitions.begin(), d->Definitions.end());
+                        ic->second->Prefixes.insert(d->Prefixes.begin(), d->Prefixes.end());
+                        c->dependencies.insert(ic->second);
+                        continue;
+                    }
+                    checks[h] = d;
+                    s.checks[h] = d;
+                    c->dependencies.insert(d);
+
+                    auto i = checksStorage->all_checks.find(h);
+                    if (i != checksStorage->all_checks.end())
+                        d->Value = i->second;
+                }
+            }
+            s.all.clear();
+        }
+    }
+
+    // perform
+    std::unordered_set<CheckPtr> unchecked;
+    for (auto &[h, c] : checks)
+    {
+        if (!c->isChecked())
+            unchecked.insert(c);
+    }
+
+    SCOPE_EXIT
+    {
+        for (auto &[gn, s2] : sets)
+        {
+            for (auto &[n, set] : s2)
+            {
+                set.prepareChecksForUse();
+                if (print_checks)
+                {
+                    std::ofstream o(fn.parent_path() / (std::to_string(gn) + "." + n +  + ".checks.txt"));
+                    if (!o)
+                        continue;
+                    std::map<String, CheckPtr> check_values(set.check_values.begin(), set.check_values.end());
+                    for (auto &[d, c] : check_values)
+                        o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
+                }
+            }
+        }
+    };
+
+    if (unchecked.empty())
+        return;
+
+    auto ep = ExecutionPlan<Check>::createExecutionPlan(unchecked);
+    if (ep)
+    {
+        auto &e = getExecutor();
+        //Executor e;
+        ep.throw_on_errors = false;
+        ep.skip_errors = ep.commands.size();
+        ep.execute(e);
+
+        // remove tmp dir
+        error_code ec;
+        fs::remove_all(solution->getChecksDir(), ec);
+
+        for (auto &[gn, s2] : sets)
+        {
+            for (auto &[d, set] : s2)
+            {
+                for (auto &[h, c] : set.checks)
+                {
+                    checksStorage->add(*c);
+                }
+            }
+        }
+
+        // save
+        checksStorage->save(fn);
+
+        return;
+    }
+
+    // error!
+
+    // print our deps graph
+    String s;
+    s += "digraph G {\n";
+    for (auto &c : ep.unprocessed_commands_set)
+    {
+        for (auto &d : c->dependencies)
+        {
+            if (ep.unprocessed_commands_set.find(std::static_pointer_cast<Check>(d)) == ep.unprocessed_commands_set.end())
+                continue;
+            s += *c->Definitions.begin() + "->" + *std::static_pointer_cast<Check>(d)->Definitions.begin() + ";";
+        }
+    }
+    s += "}";
+
+    auto d = solution->getServiceDir();
+    auto cyclic_path = d / "cyclic";
+    write_file(cyclic_path / "deps_checks.dot", s);
+
+    throw SW_RUNTIME_EXCEPTION("Cannot create execution plan because of cyclic dependencies");
+}
+
 std::optional<String> Check::getDefinition() const
 {
-    return getDefinition(Definition);
+    return getDefinition(*Definitions.begin());
 }
 
 std::optional<String> Check::getDefinition(const String &d) const
 {
-    if (Value == 0)
-    {
-        if (DefineIfZero)
-            return d + "=0";
-        else
-            return std::nullopt;
-    }
-    return d + "=" + std::to_string(Value);
+    if (Value.value() != 0 || DefineIfZero)
+        return d + "=" + std::to_string(Value.value());
+    return std::nullopt;
 }
 
 bool Check::isChecked() const
 {
-    return checker->solution->checksStorage.isChecked(Definition, Value) &&
-        std::all_of(Definitions.begin(), Definitions.end(),
-            [this](const auto &d) {
-        return checker->solution->checksStorage.isChecked(d, Value) &&
-            std::all_of(Prefixes.begin(), Prefixes.end(),
-                [this, &d](const auto &p) {
-            return checker->solution->checksStorage.isChecked(p + d, Value);
-        });
-    });
+    return !!Value;
+}
+
+size_t CheckParameters::getHash() const
+{
+    size_t h = 0;
+    hash_combine(h, cpp);
+    for (auto &d : Definitions)
+        hash_combine(h, d);
+    for (auto &d : Includes)
+        hash_combine(h, d);
+    for (auto &d : IncludeDirectories)
+        hash_combine(h, d);
+    for (auto &d : Libraries)
+        hash_combine(h, d);
+    for (auto &d : Options)
+        hash_combine(h, d);
+    return h;
+}
+
+size_t Check::getHash() const
+{
+    size_t h = 0;
+    hash_combine(h, data);
+    hash_combine(h, Parameters.getHash());
+    hash_combine(h, CPP);
+    return h;
 }
 
 void Check::execute()
 {
     if (isChecked())
         return;
+    Value = 0; // mark as checked
     run();
 }
 
-void Check::updateDependencies()
+std::vector<CheckPtr> Check::gatherDependencies()
 {
+    std::vector<CheckPtr> deps;
     for (auto &d : Parameters.Includes)
-        dependencies.insert(checker->add<IncludeExists>(d));
+        deps.push_back(check_set->add<IncludeExists>(d));
+    return deps;
 }
 
 bool Check::lessDuringExecution(const Check &rhs) const
@@ -228,11 +356,11 @@ FunctionExists::FunctionExists(const String &f, const String &def)
     data = f;
 
     if (def.empty())
-        Definition = make_function_var(data);
+        Definitions.insert(make_function_var(data));
     else
-        Definition = def;
+        Definitions.insert(def);
 
-    check_def(Definition);
+    check_def(*Definitions.begin());
 }
 
 void FunctionExists::run() const
@@ -261,7 +389,7 @@ int main(int ac, char* av[])
 )"
     };
 
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     auto up = unique_path();
     d /= up;
     ::create_directories(d);
@@ -272,7 +400,7 @@ int main(int ac, char* av[])
         f /= "x.cpp";
     write_file(f, src);
 
-    auto s = *checker->solution;
+    auto s = *check_set->checker.solution;
     s.silent = bSilentChecks;
     //s.throw_exceptions = false;
     s.BinaryDir = d;
@@ -281,20 +409,13 @@ int main(int ac, char* av[])
     e += f;
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data;
     s.prepare();
-    try
-    {
-        s.execute();
+    s.execute();
 
-        auto cmd = e.getCommand();
-        if (cmd && cmd->exit_code)
-            Value = cmd->exit_code.value() == 0 ? 1 : 0;
-        else
-            Value = 0;
-    }
-    catch (...)
-    {
-        Value = 0;
-    }
+    auto cmd = e.getCommand();
+    if (!cmd)
+        return;
+    if (cmd->exit_code)
+        Value = cmd->exit_code.value() == 0 ? 1 : 0;
 }
 
 IncludeExists::IncludeExists(const String &i, const String &def)
@@ -304,11 +425,11 @@ IncludeExists::IncludeExists(const String &i, const String &def)
     data = i;
 
     if (def.empty())
-        Definition = make_include_var(data);
+        Definitions.insert(make_include_var(data));
     else
-        Definition = def;
+        Definitions.insert(def);
 
-    check_def(Definition);
+    check_def(*Definitions.begin());
 }
 
 void IncludeExists::run() const
@@ -336,7 +457,7 @@ int main()
 }
 )";
 
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     d /= unique_path();
     ::create_directories(d);
     auto f = d;
@@ -345,17 +466,16 @@ int main()
     else
         f /= "x.cpp";
     write_file(f, src);
-    auto c = std::dynamic_pointer_cast<NativeCompiler>(checker->solution->findProgramByExtension(f.extension().string())->clone());
+    auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
     auto o = f;
     c->setSourceFile(f, o += ".obj");
 
-    std::error_code ec;
-    auto cmd = c->getCommand(*checker->solution);
+    auto cmd = c->getCommand(*check_set->checker.solution);
+    if (!cmd)
+        return;
+    error_code ec;
     cmd->execute(ec);
-    if (cmd && cmd->exit_code)
-        Value = cmd->exit_code.value() == 0 ? 1 : 0;
-    else
-        Value = 0;
+    Value = cmd->exit_code.value() == 0 ? 1 : 0;
 }
 
 TypeSize::TypeSize(const String &t, const String &def)
@@ -364,7 +484,7 @@ TypeSize::TypeSize(const String &t, const String &def)
         throw SW_RUNTIME_EXCEPTION("Empty type");
     data = t;
 
-    Definition = make_type_var(data);
+    Definitions.insert(make_type_var(data));
     Definitions.insert(make_type_var(data, "SIZEOF_"));
     Definitions.insert(make_type_var(data, "SIZE_OF_"));
     // some libs want these
@@ -372,13 +492,10 @@ TypeSize::TypeSize(const String &t, const String &def)
     Definitions.insert(make_type_var(data, "HAVE_SIZE_OF_"));
 
     if (!def.empty())
-        Definition = def;
+        Definitions.insert(def);
 
-    check_def(Definition);
-}
+    check_def(*Definitions.begin());
 
-void TypeSize::init()
-{
     for (auto &h : { "sys/types.h", "stdint.h", "stddef.h", "inttypes.h" })
         Parameters.Includes.push_back(h);
 }
@@ -388,13 +505,13 @@ void TypeSize::run() const
     String src;
     for (auto &d : Parameters.Includes)
     {
-        auto c = checker->add<IncludeExists>(d);
-        if (c->Value)
+        auto c = check_set->get<IncludeExists>(d);
+        if (c->Value && c->Value.value())
             src += "#include <" + d + ">\n";
     }
     src += "int main() { return sizeof(" + data + "); }";
 
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     auto up = unique_path();
     d /= up;
     ::create_directories(d);
@@ -405,7 +522,7 @@ void TypeSize::run() const
         f /= "x.cpp";
     write_file(f, src);
 
-    auto s = *checker->solution;
+    auto s = *check_set->checker.solution;
     s.silent = bSilentChecks;
     //s.throw_exceptions = false;
     s.BinaryDir = d;
@@ -413,29 +530,16 @@ void TypeSize::run() const
     auto &e = s.addTarget<ExecutableTarget>(up.string());
     e += f;
     s.prepare();
-    try
-    {
-        s.execute();
+    s.execute();
 
-        auto cmd = e.getCommand();
-        if (cmd)
-        {
-            std::error_code ec;
-            primitives::Command c;
-            c.program = e.getOutputFile();
-            c.execute(ec);
-            if (c.exit_code)
-                Value = c.exit_code.value();
-            else
-                Value = 0;
-        }
-        else
-            Value = 0;
-    }
-    catch (...)
-    {
-        Value = 0;
-    }
+    auto cmd = e.getCommand();
+    if (!cmd)
+        return;
+    primitives::Command c;
+    c.program = e.getOutputFile();
+    error_code ec;
+    c.execute(ec);
+    Value = c.exit_code.value();
 }
 
 TypeAlignment::TypeAlignment(const String &t, const String &def)
@@ -445,15 +549,12 @@ TypeAlignment::TypeAlignment(const String &t, const String &def)
     data = t;
 
     if (def.empty())
-        Definition = make_alignment_var(data);
+        Definitions.insert(make_alignment_var(data));
     else
-        Definition = def;
+        Definitions.insert(def);
 
-    check_def(Definition);
-}
+    check_def(*Definitions.begin());
 
-void TypeAlignment::init()
-{
     for (auto &h : { "sys/types.h", "stdint.h", "stddef.h", "stdio.h", "stdlib.h", "inttypes.h" })
         Parameters.Includes.push_back(h);
 }
@@ -463,8 +564,8 @@ void TypeAlignment::run() const
     String src;
     for (auto &d : Parameters.Includes)
     {
-        auto c = checker->add<IncludeExists>(d);
-        if (c->Value)
+        auto c = check_set->get<IncludeExists>(d);
+        if (c->Value && c->Value.value())
             src += "#include <" + d + ">\n";
     }
     src += R"(
@@ -478,7 +579,7 @@ int main()
 }
 )";
 
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     auto up = unique_path();
     d /= up;
     ::create_directories(d);
@@ -489,7 +590,7 @@ int main()
         f /= "x.cpp";
     write_file(f, src);
 
-    auto s = *checker->solution;
+    auto s = *check_set->checker.solution;
     s.silent = bSilentChecks;
     //s.throw_exceptions = false;
     s.BinaryDir = d;
@@ -497,29 +598,16 @@ int main()
     auto &e = s.addTarget<ExecutableTarget>(up.string());
     e += f;
     s.prepare();
-    try
-    {
-        s.execute();
+    s.execute();
 
-        auto cmd = e.getCommand();
-        if (cmd)
-        {
-            std::error_code ec;
-            primitives::Command c;
-            c.program = e.getOutputFile();
-            c.execute(ec);
-            if (c.exit_code)
-                Value = c.exit_code.value();
-            else
-                Value = 0;
-        }
-        else
-            Value = 0;
-    }
-    catch (...)
-    {
-        Value = 0;
-    }
+    auto cmd = e.getCommand();
+    if (!cmd)
+        return;
+    primitives::Command c;
+    c.program = e.getOutputFile();
+    error_code ec;
+    c.execute(ec);
+    Value = c.exit_code.value();
 }
 
 SymbolExists::SymbolExists(const String &s, const String &def)
@@ -529,11 +617,11 @@ SymbolExists::SymbolExists(const String &s, const String &def)
     data = s;
 
     if (def.empty())
-        Definition = make_function_var(data);
+        Definitions.insert(make_function_var(data));
     else
-        Definition = def;
+        Definitions.insert(def);
 
-    check_def(Definition);
+    check_def(*Definitions.begin());
 }
 
 void SymbolExists::run() const
@@ -541,8 +629,8 @@ void SymbolExists::run() const
     String src;
     for (auto &d : Parameters.Includes)
     {
-        auto c = checker->add<IncludeExists>(d);
-        if (c->Value)
+        auto c = check_set->get<IncludeExists>(d);
+        if (c->Value && c->Value.value())
             src += "#include <" + d + ">\n";
     }
     src += R"(
@@ -558,7 +646,7 @@ int main(int argc, char** argv)
 }
 )";
 
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     auto up = unique_path();
     d /= up;
     ::create_directories(d);
@@ -569,7 +657,7 @@ int main(int argc, char** argv)
         f /= "x.cpp";
     write_file(f, src);
 
-    auto s = *checker->solution;
+    auto s = *check_set->checker.solution;
     s.silent = bSilentChecks;
     //s.throw_exceptions = false;
     s.BinaryDir = d;
@@ -577,20 +665,13 @@ int main(int argc, char** argv)
     auto &e = s.addTarget<ExecutableTarget>(up.string());
     e += f;
     s.prepare();
-    try
-    {
-        s.execute();
+    s.execute();
 
-        /*auto cmd = e.getCommand();
-        if (cmd && cmd->exit_code)
-            Value = cmd->exit_code.value() == 0 ? 1 : 0;
-        else*/
-        Value = 1;
-    }
-    catch (...)
-    {
-        Value = 0;
-    }
+    /*auto cmd = e.getCommand();
+    if (cmd && cmd->exit_code)
+        Value = cmd->exit_code.value() == 0 ? 1 : 0;
+    else*/
+    Value = 1;
 }
 
 DeclarationExists::DeclarationExists(const String &d, const String &def)
@@ -600,15 +681,12 @@ DeclarationExists::DeclarationExists(const String &d, const String &def)
     data = d;
 
     if (def.empty())
-        Definition = make_function_var(data, "HAVE_DECL_");
+        Definitions.insert(make_function_var(data, "HAVE_DECL_"));
     else
-        Definition = def;
+        Definitions.insert(def);
 
-    check_def(Definition);
-}
+    check_def(*Definitions.begin());
 
-void DeclarationExists::init()
-{
     for (auto &h : { "sys/types.h",
                     "stdint.h",
                     "stddef.h",
@@ -628,13 +706,13 @@ void DeclarationExists::run() const
     String src;
     for (auto &d : Parameters.Includes)
     {
-        auto c = checker->add<IncludeExists>(d);
-        if (c->Value)
+        auto c = check_set->get<IncludeExists>(d);
+        if (c->Value && c->Value.value())
             src += "#include <" + d + ">\n";
     }
     src += "int main() { (void)" + data + "; return 0; }";
 
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     auto up = unique_path();
     d /= up;
     ::create_directories(d);
@@ -645,7 +723,7 @@ void DeclarationExists::run() const
         f /= "x.cpp";
     write_file(f, src);
 
-    auto s = *checker->solution;
+    auto s = *check_set->checker.solution;
     s.silent = bSilentChecks;
     //s.throw_exceptions = false;
     s.BinaryDir = d;
@@ -653,35 +731,36 @@ void DeclarationExists::run() const
     auto &e = s.addTarget<ExecutableTarget>(up.string());
     e += f;
     s.prepare();
-    try
-    {
-        s.execute();
+    s.execute();
 
-        auto cmd = e.getCommand();
-        if (cmd && cmd->exit_code)
-            Value = cmd->exit_code.value() == 0 ? 1 : 0;
-        else
-            Value = 0;
-    }
-    catch (...)
-    {
-        Value = 0;
-    }
+    auto cmd = e.getCommand();
+    if (!cmd)
+        return;
+    if (cmd->exit_code)
+        Value = cmd->exit_code.value() == 0 ? 1 : 0;
 }
 
-StructMemberExists::StructMemberExists(const String &s, const String &member, const String &def)
-    : s(s), member(member)
+StructMemberExists::StructMemberExists(const String &struct_, const String &member, const String &def)
+    : struct_(struct_), member(member)
 {
-    if (s.empty() || member.empty())
+    if (struct_.empty() || member.empty())
         throw SW_RUNTIME_EXCEPTION("Empty struct/member");
-    data = s + "." + member;
+    data = struct_ + "." + member;
 
     if (def.empty())
-        Definition = make_struct_member_var(s, member);
+        Definitions.insert(make_struct_member_var(struct_, member));
     else
-        Definition = def;
+        Definitions.insert(def);
 
-    check_def(Definition);
+    check_def(*Definitions.begin());
+}
+
+size_t StructMemberExists::getHash() const
+{
+    auto h = Check::getHash();
+    hash_combine(h, struct_);
+    hash_combine(h, member);
+    return h;
 }
 
 void StructMemberExists::run() const
@@ -689,13 +768,13 @@ void StructMemberExists::run() const
     String src;
     for (auto &d : Parameters.Includes)
     {
-        auto c = checker->add<IncludeExists>(d);
-        if (c->Value)
+        auto c = check_set->get<IncludeExists>(d);
+        if (c->Value && c->Value.value())
             src += "#include <" + d + ">\n";
     }
-    src += "int main() { sizeof(((" + s + " *)0)->" + member + "); return 0; }";
+    src += "int main() { sizeof(((" + struct_ + " *)0)->" + member + "); return 0; }";
 
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     auto up = unique_path();
     d /= up;
     ::create_directories(d);
@@ -706,7 +785,7 @@ void StructMemberExists::run() const
         f /= "x.cpp";
     write_file(f, src);
 
-    auto s = *checker->solution;
+    auto s = *check_set->checker.solution;
     s.silent = bSilentChecks;
     //s.throw_exceptions = false;
     s.BinaryDir = d;
@@ -714,20 +793,13 @@ void StructMemberExists::run() const
     auto &e = s.addTarget<ExecutableTarget>(up.string());
     e += f;
     s.prepare();
-    try
-    {
-        s.execute();
+    s.execute();
 
-        auto cmd = e.getCommand();
-        if (cmd && cmd->exit_code)
-            Value = cmd->exit_code.value() == 0 ? 1 : 0;
-        else
-            Value = 0;
-    }
-    catch (...)
-    {
-        Value = 0;
-    }
+    auto cmd = e.getCommand();
+    if (!cmd)
+        return;
+    if (cmd->exit_code)
+        Value = cmd->exit_code.value() == 0 ? 1 : 0;
 }
 
 LibraryFunctionExists::LibraryFunctionExists(const String &library, const String &function, const String &def)
@@ -738,11 +810,19 @@ LibraryFunctionExists::LibraryFunctionExists(const String &library, const String
     data = library + "." + function;
 
     if (def.empty())
-        Definition = make_function_var(function);
+        Definitions.insert(make_function_var(function));
     else
-        Definition = def;
+        Definitions.insert(def);
 
-    check_def(Definition);
+    check_def(*Definitions.begin());
+}
+
+size_t LibraryFunctionExists::getHash() const
+{
+    auto h = Check::getHash();
+    hash_combine(h, library);
+    hash_combine(h, function);
+    return h;
 }
 
 void LibraryFunctionExists::run() const
@@ -771,7 +851,7 @@ int main(int ac, char* av[])
 )"
     };
 
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     auto up = unique_path();
     d /= up;
     ::create_directories(d);
@@ -782,7 +862,7 @@ int main(int ac, char* av[])
         f /= "x.cpp";
     write_file(f, src);
 
-    auto s = *checker->solution;
+    auto s = *check_set->checker.solution;
     s.silent = bSilentChecks;
     //s.throw_exceptions = false;
     s.BinaryDir = d;
@@ -792,20 +872,13 @@ int main(int ac, char* av[])
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data;
     e.LinkLibraries.push_back(library);
     s.prepare();
-    try
-    {
-        s.execute();
+    s.execute();
 
-        auto cmd = e.getCommand();
-        if (cmd && cmd->exit_code)
-            Value = cmd->exit_code.value() == 0 ? 1 : 0;
-        else
-            Value = 0;
-    }
-    catch (...)
-    {
-        Value = 0;
-    }
+    auto cmd = e.getCommand();
+    if (!cmd)
+        return;
+    if (cmd->exit_code)
+        Value = cmd->exit_code.value() == 0 ? 1 : 0;
 }
 
 SourceCompiles::SourceCompiles(const String &def, const String &source)
@@ -813,13 +886,13 @@ SourceCompiles::SourceCompiles(const String &def, const String &source)
     if (def.empty() || source.empty())
         throw SW_RUNTIME_EXCEPTION("Empty def/source");
     data = source;
-    Definition = def;
-    check_def(Definition);
+    Definitions.insert(def);
+    check_def(*Definitions.begin());
 }
 
 void SourceCompiles::run() const
 {
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     d /= unique_path();
     ::create_directories(d);
     auto f = d;
@@ -828,17 +901,16 @@ void SourceCompiles::run() const
     else
         f /= "x.cpp";
     write_file(f, data);
-    auto c = std::dynamic_pointer_cast<NativeCompiler>(checker->solution->findProgramByExtension(f.extension().string())->clone());
+    auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
     auto o = f;
     c->setSourceFile(f, o += ".obj");
 
-    std::error_code ec;
-    auto cmd = c->getCommand(*checker->solution);
+    auto cmd = c->getCommand(*check_set->checker.solution);
+    if (!cmd)
+        return;
+    error_code ec;
     cmd->execute(ec);
-    if (cmd && cmd->exit_code)
-        Value = cmd->exit_code.value() == 0 ? 1 : 0;
-    else
-        Value = 0;
+    Value = cmd->exit_code.value() == 0 ? 1 : 0;
 }
 
 SourceLinks::SourceLinks(const String &def, const String &source)
@@ -846,13 +918,13 @@ SourceLinks::SourceLinks(const String &def, const String &source)
     if (def.empty() || source.empty())
         throw SW_RUNTIME_EXCEPTION("Empty def/source");
     data = source;
-    Definition = def;
-    check_def(Definition);
+    Definitions.insert(def);
+    check_def(*Definitions.begin());
 }
 
 void SourceLinks::run() const
 {
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     auto up = unique_path();
     d /= up;
     ::create_directories(d);
@@ -862,9 +934,9 @@ void SourceLinks::run() const
     else
         f /= "x.cpp";
     write_file(f, data);
-    auto c = std::dynamic_pointer_cast<NativeCompiler>(checker->solution->findProgramByExtension(f.extension().string())->clone());
+    auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
 
-    auto s = *checker->solution;
+    auto s = *check_set->checker.solution;
     s.silent = bSilentChecks;
     //s.throw_exceptions = false;
     s.BinaryDir = d;
@@ -872,15 +944,8 @@ void SourceLinks::run() const
     auto &e = s.addTarget<ExecutableTarget>(up.string());
     e += f;
     s.prepare();
-    try
-    {
-        s.execute();
-        Value = 1;
-    }
-    catch (...)
-    {
-        Value = 0;
-    }
+    s.execute();
+    Value = 1;
 }
 
 SourceRuns::SourceRuns(const String &def, const String &source)
@@ -888,13 +953,13 @@ SourceRuns::SourceRuns(const String &def, const String &source)
     if (def.empty() || source.empty())
         throw SW_RUNTIME_EXCEPTION("Empty def/source");
     data = source;
-    Definition = def;
-    check_def(Definition);
+    Definitions.insert(def);
+    check_def(*Definitions.begin());
 }
 
 void SourceRuns::run() const
 {
-    auto d = checker->solution->getChecksDir();
+    auto d = check_set->checker.solution->getChecksDir();
     auto up = unique_path();
     d /= up;
     ::create_directories(d);
@@ -904,9 +969,8 @@ void SourceRuns::run() const
     else
         f /= "x.cpp";
     write_file(f, data);
-    auto c = std::dynamic_pointer_cast<NativeCompiler>(checker->solution->findProgramByExtension(f.extension().string())->clone());
 
-    auto s = *checker->solution;
+    auto s = *check_set->checker.solution;
     s.silent = bSilentChecks;
     //s.throw_exceptions = false;
     s.BinaryDir = d;
@@ -914,29 +978,16 @@ void SourceRuns::run() const
     auto &e = s.addTarget<ExecutableTarget>(up.string());
     e += f;
     s.prepare();
-    try
-    {
-        s.execute();
+    s.execute();
 
-        auto cmd = e.getCommand();
-        if (cmd)
-        {
-            std::error_code ec;
-            primitives::Command c;
-            c.program = e.getOutputFile();
-            c.execute(ec);
-            if (c.exit_code)
-                Value = c.exit_code.value();
-            else
-                Value = 0;
-        }
-        else
-            Value = 0;
-    }
-    catch (...)
-    {
-        Value = 0;
-    }
+    auto cmd = e.getCommand();
+    if (!cmd)
+        return;
+    primitives::Command c;
+    c.program = e.getOutputFile();
+    error_code ec;
+    c.execute(ec);
+    Value = c.exit_code.value();
 }
 
 FunctionExists &CheckSet::checkFunctionExists(const String &function, LanguageType L)
@@ -1080,6 +1131,19 @@ Check &CheckSet::checkSourceRuns(const String &def, const String &src, LanguageT
     auto c = add<SourceRuns>(def, src);
     c->CPP = L == LanguageType::CPP;
     return *c;
+}
+
+void CheckSet::prepareChecksForUse()
+{
+    for (auto &[h, c] : checks)
+    {
+        for (auto &d : c->Definitions)
+        {
+            check_values[d] = c;
+            for (auto &p : c->Prefixes)
+                check_values[p + d] = c;
+        }
+    }
 }
 
 }

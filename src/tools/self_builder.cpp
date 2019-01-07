@@ -292,18 +292,23 @@ int main(int argc, char **argv)
 
         build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, r.prefix).toString() + "\";");
         build.addLine("s.current_module = \"" + r.toString() + "\";");
+        build.addLine("s.current_gn = " + std::to_string(r.group_number) + ";");
         build.addLine("build_" + r.getVariableName() + "(s);");
         build.addLine();
 
         if (data.has_checks)
         {
+            check.addLine("c.current_gn = " + std::to_string(r.group_number) + ";");
             check.addLine("check_" + r.getVariableName() + "(c);");
             check.addLine();
         }
     }
 
     build.addLine("s.NamePrefix.clear();");
+    build.addLine("s.current_module.clear();");
+    build.addLine("s.current_gn = 0;");
     build.endFunction();
+    check.addLine("c.current_gn = 0;");
     check.endFunction();
 
     ctx += build;

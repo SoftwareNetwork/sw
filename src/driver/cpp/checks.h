@@ -9,6 +9,9 @@
 #include "language.h"
 #include "types.h"
 
+#include <package.h>
+
+#include <list>
 #include <unordered_map>
 
 // native
@@ -17,6 +20,8 @@ namespace sw
 {
 
 struct Checker;
+struct CheckSet;
+struct ChecksStorage;
 
 enum class CheckType
 {
@@ -45,15 +50,23 @@ struct SW_DRIVER_CPP_API CheckParameters
     PathOptionsType Libraries;
     StringSet Options;
     bool cpp = false;
+
+    size_t getHash() const;
 };
+
+// setting this to int64 make errors on variable operations
+//           int64_t * int = error no property conversion
+// t.Variables["SIZEOF_UNSIGNED_LONG"] * 8;
+//
+// to solve this add property conversions
+//using CheckValue = int64_t;
+using CheckValue = int;
 
 struct SW_DRIVER_CPP_API Check : CommandData<Check>
 {
     // every check has its definition to be added to compilation process
     // e.g. HAVE_STDINT_H
-    String Definition;
-
-    // Additional definitions (for types etc.)
+    // also with definitions (for types etc.)
     StringSet Definitions;
 
     // Additional prefixes (for types etc.)
@@ -70,9 +83,9 @@ struct SW_DRIVER_CPP_API Check : CommandData<Check>
     CheckParameters Parameters;
 
     // result value
-    mutable int Value = 0;
+    mutable optional<CheckValue> Value;
 
-    Checker *checker = nullptr;
+    CheckSet *check_set = nullptr;
 
     // symbol name (function, include, c/cxx source etc.)
     // or source code
@@ -84,11 +97,11 @@ struct SW_DRIVER_CPP_API Check : CommandData<Check>
     Check &operator=(const Check &) = delete;
     virtual ~Check() = default;
 
-    virtual void init() {}
     // for comparison
-    virtual size_t getHash() const { return 0; }
+    virtual size_t getHash() const;
+
     bool isChecked() const;
-    void updateDependencies();
+    std::vector<std::shared_ptr<Check>> gatherDependencies();
     void execute() override;
     void prepare() override {}
     void addInputOutputDeps() {} // compat with command
@@ -101,7 +114,7 @@ protected:
     virtual void run() const {}
 };
 
-using Checks = std::unordered_map<String, std::shared_ptr<Check>>;
+using CheckPtr = std::shared_ptr<Check>;
 
 struct SW_DRIVER_CPP_API FunctionExists : Check
 {
@@ -121,7 +134,6 @@ struct SW_DRIVER_CPP_API TypeSize : Check
 {
     TypeSize(const String &t, const String &def = "");
 
-    void init() override;
     void run() const override;
 };
 
@@ -129,7 +141,6 @@ struct SW_DRIVER_CPP_API TypeAlignment : Check
 {
     TypeAlignment(const String &t, const String &def = "");
 
-    void init() override;
     void run() const override;
 };
 
@@ -146,18 +157,18 @@ struct SW_DRIVER_CPP_API DeclarationExists : Check
 {
     DeclarationExists(const String &d, const String &def = "");
 
-    void init() override;
     void run() const override;
 };
 
 struct SW_DRIVER_CPP_API StructMemberExists : Check
 {
-    String s;
+    String struct_;
     String member;
 
-    StructMemberExists(const String &s, const String &member, const String &def = "");
+    StructMemberExists(const String &struct_, const String &member, const String &def = "");
 
     void run() const override;
+    size_t getHash() const override;
 };
 
 struct SW_DRIVER_CPP_API LibraryFunctionExists : Check
@@ -168,6 +179,7 @@ struct SW_DRIVER_CPP_API LibraryFunctionExists : Check
     LibraryFunctionExists(const String &library, const String &function, const String &def = "");
 
     void run() const override;
+    size_t getHash() const override;
 };
 
 struct SW_DRIVER_CPP_API SourceCompiles : Check
@@ -193,11 +205,31 @@ struct SW_DRIVER_CPP_API SourceRuns : Check
 
 struct SW_DRIVER_CPP_API CheckSet
 {
-    Checker *checker = nullptr;
-    Checks checks;
+    Checker &checker;
+    std::unordered_map<String, CheckPtr> check_values;
+
+    CheckSet(Checker &checker);
 
     template <class T, class ... Args>
-    std::shared_ptr<T> add(Args && ... args);
+    std::shared_ptr<T> add(Args && ... args)
+    {
+        auto t = std::make_shared<T>(std::forward<Args>(args)...);
+        t->check_set = this;
+        all.push_back(t);
+        return t;
+    }
+
+    template <class T, class ... Args>
+    std::shared_ptr<T> get(Args && ... args)
+    {
+        auto t = std::make_shared<T>(std::forward<Args>(args)...);
+        auto i = checks.find(t->getHash());
+        if (i == checks.end())
+            throw SW_RUNTIME_EXCEPTION("Missing check: " + *t->Definitions.begin());
+        return std::static_pointer_cast<T>(i->second);
+    }
+
+    void prepareChecksForUse();
 
     FunctionExists &checkFunctionExists(const String &function, LanguageType L = LanguageType::C);
     FunctionExists &checkFunctionExists(const String &function, const String &def, LanguageType L = LanguageType::C);
@@ -230,64 +262,38 @@ struct SW_DRIVER_CPP_API CheckSet
     Check &checkSourceLinks(const String &def, const String &src, LanguageType L = LanguageType::C);
     Check &checkSourceRuns(const String &def, const String &src, LanguageType L = LanguageType::C);
 
-    // custom check
+private:
+    // we store all checks first, because they are allowed to have post setup
+    // so we cant calculate hash after ctor
+    // list is to keep iterators alive
+    std::list<CheckPtr> all;
 
-protected:
-    bool is_checker = false;
+    // set's checks
+    std::unordered_map<size_t /* hash */, CheckPtr> checks;
+
+    friend struct Checker;
 };
 
-struct SW_DRIVER_CPP_API Checker : CheckSet
+struct SW_DRIVER_CPP_API Checker
 {
     const struct Solution *solution = nullptr;
-    std::unordered_map<String, CheckSet> sets;
 
-    Checker()
-    {
-        is_checker = true;
-        checker = this;
-    }
+    /// child sets
+    std::unordered_map<PackageVersionGroupNumber, std::unordered_map<String /* set name */, CheckSet>> sets;
 
-    CheckSet &addSet(const String &name)
-    {
-        auto p = sets.emplace(name, CheckSet());
-        p.first->second.checker = this;
-        return p.first->second;
-    }
+    /// some unique identification of current module
+    PackageVersionGroupNumber current_gn = 0;
+
+    Checker();
+
+    CheckSet &addSet(const String &name);
+    void performChecks(const path &fn);
+
+private:
+    // all checks are stored here
+    std::unordered_map<size_t /* hash */, CheckPtr> checks;
+
+    std::unique_ptr<ChecksStorage> checksStorage;
 };
-
-template <class T, class ... Args>
-std::shared_ptr<T> CheckSet::add(Args && ... args)
-{
-    auto t = std::make_shared<T>(std::forward<Args>(args)...);
-    if (checker)
-    {
-        auto i = checker->checks.find(t->Definition);
-        if (i != checker->checks.end())
-        {
-            if (!is_checker)
-            {
-                auto i2 = checks.find(i->second->Definition);
-                if (i2 == checks.end())
-                    checks.emplace(i->second->Definition, i->second);
-                // check before emplace?
-                for (auto &d : i->second->Definitions)
-                    checks.emplace(d, i->second);
-            }
-            return std::static_pointer_cast<T>(i->second);
-        }
-    }
-    t->checker = checker;
-    t->init();
-    if (!is_checker)
-    {
-        checks.emplace(t->Definition, t);
-        for (auto &d : t->Definitions)
-            checks.emplace(d, t);
-    }
-    checker->checks.emplace(t->Definition, t);
-    for (auto &d : t->Definitions)
-        checker->checks.emplace(d, t);
-    return t;
-}
 
 }

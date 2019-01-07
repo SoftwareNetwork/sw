@@ -1346,9 +1346,40 @@ void NinjaGenerator::generate(const Build &b)
 
 struct MakeContext : primitives::Context
 {
+    std::unordered_map<path, size_t> programs;
+    std::unordered_map<path, size_t> generated_programs;
+
     MakeContext()
         : Context("\t")
     {}
+
+    void gatherPrograms(const Solution::CommandExecutionPlan::Vec &commands)
+    {
+        // gather programs
+        for (auto &c : commands)
+        {
+            auto prog = c->getProgram();
+            auto &progs = File(prog, *c->fs).isGeneratedAtAll() ? generated_programs : programs;
+
+            auto n = progs.size() + 1;
+            if (progs.find(prog) == progs.end())
+                progs[prog] = n;
+        }
+
+        auto print_progs = [this](auto &a, bool gen = false)
+        {
+            std::map<int, path> r;
+            for (auto &[k, v] : a)
+                r[v] = k;
+            for (auto &[v, k] : r)
+                addKeyValue(program_name(v, gen), k);
+        };
+
+        // print programs
+        print_progs(programs);
+        addLine();
+        print_progs(generated_programs, true);
+    }
 
     void addKeyValue(const String &key, const String &value)
     {
@@ -1365,37 +1396,127 @@ struct MakeContext : primitives::Context
         addLine("include " + normalize_path(fn));
     }
 
-    void addCommands(const Strings &commands = {})
+    void addComment(const String &s)
+    {
+        addLine("# " + s);
+    }
+
+    void addCommand(const String &command)
     {
         increaseIndent();
-        for (auto &c : commands)
-            addLine(c);
+        addLine(command);
         decreaseIndent();
+    }
+
+    void addCommands(const String &name, const Strings &commands)
+    {
+        addCommand("@echo " + name);
+        addCommands(commands);
+    }
+
+    void addCommands(const Strings &commands = {})
+    {
+        for (auto &c : commands)
+            addCommand(c);
     }
 
     void addTarget(const String &name, const Files &inputs, const Strings &commands = {})
     {
         addLine(name + " : ");
-        addText(addFiles(inputs));
-        addCommands(commands);
+        addText(printFiles(inputs));
+        addCommands(/* name, */ commands);
+        addLine();
     }
 
-    void addTarget(const Strings &outputs, const Strings &inputs, const Strings &commands)
+    void addCommand(const builder::Command &c, const path &d)
     {
+        std::stringstream stream;
+        stream << std::hex << c.getHash();
+        std::string result(stream.str());
 
+        auto rsp = d / "rsp" / c.getResponseFilename();
+
+        addComment(c.getName() + ", hash = 0x" + result);
+
+        addLine(printFiles(c.outputs));
+        addText(" : ");
+        //addText(printFiles(c.inputs));
+        for (auto &i : c.inputs)
+        {
+            if (File(i, *c.fs).isGeneratedAtAll())
+            {
+                addText(printFile(i));
+                addText(" ");
+            }
+        }
+        /*if (c.needsResponseFile())
+        {
+            addText(" ");
+            addText(printFile(rsp));
+        }*/
+
+        Strings commands;
+        commands.push_back(mkdir(c.getGeneratedDirs(), true));
+
+        String s;
+        s += "@";
+        if (!c.working_directory.empty())
+            s += "cd \"" + normalize_path(c.working_directory) + "\" && ";
+
+        for (auto &[k,v] : c.environment)
+            s += k + "=" + v + " \\";
+
+        auto prog = c.getProgram();
+        bool gen = File(prog, *c.fs).isGeneratedAtAll();
+        auto &progs = gen ? generated_programs : programs;
+        s += "$(" + program_name(progs[prog], gen) + ") ";
+
+        if (!c.needsResponseFile())
+        {
+            for (auto &a : c.args)
+            {
+                if (should_print(a))
+                    s +=
+                    "\"" +
+                    a
+                    + "\""
+                    + " "
+                    ;
+            }
+            s.resize(s.size() - 1);
+        }
+        else
+            s += "@" + normalize_path(rsp);
+        commands.push_back(s);
+
+        addCommands(c.getName(), commands);
+        addLine();
+
+        if (c.needsResponseFile())
+        {
+            write_file_if_different(rsp, c.getResponseFileContents(false));
+
+            /*commands.clear();
+
+            auto rsps = normalize_path(rsp);
+            commands.push_back(mkdir({ rsp.parent_path() }, true));
+            commands.push_back("@echo > " + rsps);
+            for (auto &a : c.args)
+            {
+                if (should_print(a))
+                    commands.push_back("@echo \"\\\"" + a + "\\\"\" >> " + rsps);
+            }
+
+            addTarget(normalize_path(rsp), {}, commands);*/
+        }
     }
 
-    void addCommand(const builder::Command &c)
-    {
-
-    }
-
-    static String addFiles(const Files &inputs, bool quotes = false)
+    static String printFiles(const Files &inputs, bool quotes = false)
     {
         String s;
         for (auto &f : inputs)
         {
-            s += addFile(f, quotes);
+            s += printFile(f, quotes);
             s += " ";
         }
         if (!s.empty())
@@ -1403,15 +1524,35 @@ struct MakeContext : primitives::Context
         return s;
     }
 
-    static String addFile(const path &p, bool quotes = false)
+    static String printFile(const path &p, bool quotes = false)
     {
         String s;
         if (quotes)
             s += "\"";
         s += normalize_path(p);
+        if (!quotes)
+            boost::replace_all(s, " ", "\\\\ ");
         if (quotes)
             s += "\"";
         return s;
+    }
+
+    static bool should_print(const String &o)
+    {
+        return o.find("showIncludes") == o.npos;
+    };
+
+    static String program_name(int n, bool generated = false)
+    {
+        String s = "SW_PROGRAM_";
+        if (generated)
+            s += "GENERATED_";
+        return s + std::to_string(n);
+    }
+
+    static String mkdir(const Files &p, bool gen = false)
+    {
+        return "@-mkdir -p " + printFiles(p, gen);
     }
 };
 
@@ -1419,40 +1560,17 @@ void MakeGenerator::generate(const Build &b)
 {
     // https://www.gnu.org/software/make/manual/html_node/index.html
 
-    const auto d = path(".sw") / toPathString(type) / b.getConfig();
-
-    auto should_print = [](auto &o)
-    {
-        if (o.find("showIncludes") != o.npos)
-            return false;
-        return true;
-    };
-
-    auto program_name = [](auto n)
-    {
-        return "SW_PROGRAM_" + std::to_string(n);
-    };
+    const auto d = fs::absolute(path(".sw") / toPathString(type) / b.getConfig());
 
     auto ep = b.solutions[0].getExecutionPlan();
 
-    // gather programs
-    std::unordered_map<path, size_t> programs;
-    for (auto &c : ep.commands)
-    {
-        auto n = programs.size() + 1;
-        if (programs.find(c->getProgram()) == programs.end())
-            programs[c->getProgram()] = n;
-    }
+    MakeContext ctx;
+    ctx.gatherPrograms(ep.commands);
 
     String commands_fn = "commands.mk";
+    write_file(d / commands_fn, ctx.getText());
+    ctx.clear();
 
-    // print programs
-    MakeContext progs_ctx;
-    for (auto &[k, v] : programs)
-        progs_ctx.addKeyValue(program_name(v), k);
-    write_file(d / commands_fn, progs_ctx.getText());
-
-    MakeContext ctx;
     ctx.include(commands_fn);
     ctx.addLine();
 
@@ -1475,66 +1593,16 @@ void MakeGenerator::generate(const Build &b)
         }
     }
     ctx.addTarget("all", outputs);
-    ctx.addLine();
 
     // print commands
-    //for (auto it = ep.commands.rbegin(); it != ep.commands.rend(); ++it)
-    /*for (auto &c : ep.commands)
-    {
-        //auto &c = *it;
-
-        std::stringstream stream;
-        stream << std::hex << c->getHash();
-        std::string result(stream.str());
-
-        s += "# " + c->getName() + ", hash = 0x" + result + "\n";
-
-        print_io(c->outputs);
-        s += " : ";
-        print_io(c->inputs);
-        s += "\n\t";
-
-        s += "@echo " + c->getName() + "";
-        s += "\n\t@-mkdir -p ";
-        print_io(c->getGeneratedDirs(), true);
-        s += "\n\t";
-
-        s += "@";
-        if (!c->working_directory.empty())
-            s += "cd \"" + normalize_path(c->working_directory) + "\" && ";
-        //if (!c->needsResponseFile())
-        {
-            s += "$(" + program_name(programs[c->getProgram()]) + ") ";
-            for (auto &a : c->args)
-            {
-                if (should_print(a))
-                    s +=
-                    "\"" +
-                    a
-                    + "\""
-                    + " "
-                    ;
-            }
-            s.resize(s.size() - 1);
-        }
-        //else
-        {
-            s += "@echo. 2> response.rsp\n";
-            for (auto &a : c->args)
-            {
-                if (should_print(a))
-                    s += "@echo \"" + a + "\" >> response.rsp\n";
-            }
-            s += "%" + program_name(programs[c->getProgram()]) + "% @response.rsp";
-        }
-        s += "\n\n";
-    }*/
+    for (auto &c : ep.commands)
+        ctx.addCommand(*c, d);
 
     // clean
     outputs.clear();
     for (auto &c : ep.commands)
         outputs.insert(c->outputs.begin(), c->outputs.end());
-    ctx.addTarget("clean", {}, { "@rm -f " + MakeContext::addFiles(outputs, true) });
+    ctx.addTarget("clean", {}, { "@rm -f " + MakeContext::printFiles(outputs, true) });
 
     write_file(d / "Makefile", ctx.getText());
 }

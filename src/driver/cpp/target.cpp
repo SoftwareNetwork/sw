@@ -456,12 +456,8 @@ path TargetBase::getTargetsDir() const
 
 path TargetBase::getTargetDirShort() const
 {
-    return getSolution()->BinaryDir / getConfig(true) / sha256_short(pkg.toString());
-}
-
-path TargetBase::getChecksDir() const
-{
-    return getServiceDir() / "checks";
+    // make t subdir or tgt? or tgts?
+    return getSolution()->BinaryDir / "t" / getConfig(true) / sha256_short(pkg.toString());
 }
 
 path TargetBase::getTempDir() const
@@ -2471,6 +2467,7 @@ bool NativeExecutedTarget::prepare()
             && getSelectedTool() == Linker.get()
             && !HeaderOnly.value()
             && !IsConfig
+            && Settings.TargetOS.is(OSType::Windows)
             )
         {
             struct RcContext : primitives::Context
@@ -2977,11 +2974,11 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     {
         auto v = Variables.find(key);
         if (v != Variables.end())
-            return v->second;
+            return v->second.toString();
         // dangerous! should we really check defs?
         auto d = Definitions.find(key);
         if (d != Definitions.end())
-            return d->second;
+            return d->second.toString();
         //if (isLocal()) // put under cl cond
             //LOG_WARN(logger, "Unset variable '" + key + "' in file: " + normalize_path(from));
         if ((int)flags & (int)ConfigureFlags::ReplaceUndefinedVariablesWithZeros)
@@ -3052,13 +3049,16 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
 
 void NativeExecutedTarget::setChecks(const String &name)
 {
-    auto i = solution->Checks.sets.find(name);
-    if (i == solution->Checks.sets.end())
+    auto i0 = solution->checker.sets.find(getSolution()->current_gn);
+    if (i0 == solution->checker.sets.end())
         return;
-    for (auto &[k, c] : i->second.checks)
+    auto i = i0->second.find(name);
+    if (i == i0->second.end())
+        return;
+    for (auto &[k, c] : i->second.check_values)
     {
         auto d = c->getDefinition(k);
-        const auto v = c->Value;
+        const auto v = c->Value.value();
         // make private?
         // remove completely?
         if (d)

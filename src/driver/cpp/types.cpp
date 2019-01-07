@@ -35,8 +35,8 @@ bool Assigner::canProceed(TargetOptions &r) const
 {
     if (allow)
         return allow.value();
-    if (r.target->solution->Settings.Native.AssignAll)
-        return true;
+    //if (r.target->solution->Settings.Native.AssignAll)
+        //return true;
     if (LT == LibraryType::Unspecified)
         return true;
     auto t = r.target->getType();

@@ -45,6 +45,7 @@ OS detectOS()
     check_env_var(a2);
 #endif
 
+    // TODO: uname -a
 #ifdef CPPAN_OS_CYGWIN
     os.type = OsType::Cygwin;
 #endif

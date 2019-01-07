@@ -13,24 +13,15 @@
 namespace sw
 {
 
-using ChecksContainer = std::unordered_map<String, int>;
-
 struct ChecksStorage
 {
-    ChecksContainer checks;
-    mutable std::shared_mutex m;
+    std::unordered_map<size_t /* hash */, CheckValue> all_checks;
     bool loaded = false;
-
-    ChecksStorage();
-    ChecksStorage(const ChecksStorage &rhs);
-    ~ChecksStorage();
 
     void load(const path &fn);
     void save(const path &fn) const;
 
-    bool isChecked(const String &d) const;
-    bool isChecked(const String &d, int &v) const;
-    void add(const String &d, int v);
+    void add(const Check &c);
 };
 
 }

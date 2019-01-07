@@ -211,7 +211,7 @@ void EventCallback::operator()(TargetBase &t, CallbackType e)
 Solution::Solution()
     : base_ptr(*this)
 {
-    Checks.solution = this;
+    checker.solution = this;
 
     SourceDir = fs::absolute(fs::current_path());
     BinaryDir = SourceDir / ".sw";
@@ -219,7 +219,6 @@ Solution::Solution()
 
 Solution::Solution(const Solution &rhs)
     : TargetBase(rhs)
-    //, checksStorage(rhs.checksStorage)
     , silent(rhs.silent)
     , base_ptr(rhs.base_ptr)
     //, knownTargets(rhs.knownTargets)
@@ -232,7 +231,7 @@ Solution::Solution(const Solution &rhs)
     , Variables(rhs.Variables)
     , events(rhs.events)
 {
-    Checks.solution = this;
+    checker.solution = this;
 }
 
 Solution::~Solution()
@@ -414,114 +413,17 @@ path Solution::getChecksFilename() const
     return getUserDirectories().storage_dir_cfg / getConfig() / "checks.txt";
 }
 
-void Solution::loadChecks()
+path Solution::getChecksDir() const
 {
-    checksStorage.load(getChecksFilename());
-
-    // add common checks
-    for (auto &s : Checks.sets)
-    {
-        s.second.checkSourceRuns("WORDS_BIGENDIAN", R"(
-int IsBigEndian()
-{
-    volatile int i=1;
-    return ! *((char *)&i);
-}
-int main()
-{
-    return IsBigEndian();
-}
-)");
-    }
-}
-
-void Solution::saveChecks() const
-{
-    checksStorage.save(getChecksFilename());
+    return getServiceDir() / "checks";
 }
 
 void Solution::performChecks()
 {
-    loadChecks();
-
-    auto set_alternatives = [this](auto &c)
-    {
-        for (auto &p : c->Prefixes)
-            checksStorage.checks[p + c->Definition] = c->Value;
-        for (auto &d : c->Definitions)
-        {
-            checksStorage.checks[d] = c->Value;
-            for (auto &p : c->Prefixes)
-                checksStorage.checks[p + d] = c->Value;
-        }
-    };
-
-    std::unordered_set<std::shared_ptr<Check>> checks;
-    // prepare
-    // TODO: pass current solution to test in different configs
-    for (auto &[d, c] : Checks.checks)
-    {
-        if (c->isChecked())
-        {
-            //set_alternatives(c);
-            continue;
-        }
-        c->updateDependencies();
-        checks.insert(c);
-    }
-    if (checks.empty())
-        return;
-    auto ep = ExecutionPlan<Check>::createExecutionPlan(checks);
-    if (ep)
-    {
-        // we reset known targets to prevent wrong children creation as dummy targets
-        //auto kt = std::move(knownTargets);
-
-        //Executor e(1);
-        auto &e = getExecutor();
-        ep.execute(e);
-
-        //knownTargets = std::move(kt);
-
-        // remove tmp dir
-        error_code ec;
-        fs::remove_all(getChecksDir(), ec);
-
-        for (auto &[d, c] : Checks.checks)
-        {
-            checksStorage.checks[c->Definition] = c->Value;
-            set_alternatives(c);
-        }
-
-        saveChecks();
-
-        return;
-    }
-
-    // error!
-
-    // print our deps graph
-    String s;
-    s += "digraph G {\n";
-    for (auto &c : ep.unprocessed_commands_set)
-    {
-        for (auto &d : c->dependencies)
-        {
-            if (ep.unprocessed_commands_set.find(std::static_pointer_cast<Check>(d)) == ep.unprocessed_commands_set.end())
-                continue;
-            s += c->Definition + "->" + std::static_pointer_cast<Check>(d)->Definition + ";";
-        }
-    }
-    s += "}";
-
-    auto d = getServiceDir();
-    auto cyclic_path = d / "cyclic";
-    write_file(cyclic_path / "deps_checks.dot", s);
-
-    throw SW_RUNTIME_EXCEPTION("Cannot create execution plan because of cyclic dependencies");
+    checker.performChecks(getChecksFilename());
 }
 
-void Solution::copyChecksFrom(const Solution &s)
+/*void Solution::copyChecksFrom(const Solution &s)
 {
     Checks = s.Checks;
     Checks.solution = this;
@@ -533,7 +435,7 @@ void Solution::copyChecksFrom(const Solution &s)
     }
     for (auto &[d, c] : Checks.checks)
         c->checker = &Checks;
-}
+}*/
 
 Commands Solution::getCommands() const
 {
@@ -698,7 +600,8 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
     for (int i = 0; i < 1000; i++)
         e.push([] {updateConcurrentContext(); });*/
 
-    p.execute(e, skip_errors.getValue());
+    p.skip_errors = skip_errors.getValue();
+    p.execute(e);
     if (!silent)
         LOG_INFO(logger, "Build time: " << t.getTimeFloat() << " s.");
 
@@ -762,7 +665,7 @@ void Solution::build_and_resolve(int n_runs)
     if (cfgs.size() != 1)
         sr.restoreNow(true);
 
-    getModuleStorage(base_ptr).get(dll).check(*this, Checks);
+    getModuleStorage(base_ptr).get(dll).check(*this, checker);
     performChecks();
     // we can use new (clone of this) solution, then copy known targets
     // to allow multiple passes-builds
@@ -892,11 +795,11 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
     return deps;
 }
 
-void Solution::checkPrepared() const
+/*void Solution::checkPrepared() const
 {
     if (!prepared)
         throw SW_RUNTIME_EXCEPTION("Prepare solution before executing");
-}
+}*/
 
 ExecutionPlan<builder::Command> Solution::getExecutionPlan() const
 {
@@ -1096,7 +999,7 @@ void Build::findCompiler()
             {
                 this->Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(lib->clone());
                 this->Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(link->clone());
-                this->Settings.Native.LinkerType = std::get<2>(v);
+                //this->Settings.Native.LinkerType = std::get<2>(v);
             }
             return r;
         }))
@@ -1325,7 +1228,7 @@ FilesMap Build::build_configs_separate(const Files &files)
 
         if (!once)
         {
-            check_self(solution.Checks);
+            check_self(solution.checker);
             solution.performChecks();
             build_self(solution);
             addDeps(lib, solution);
@@ -1470,7 +1373,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
     do_not_rebuild_config = false;
 
-    check_self(solution.Checks);
+    check_self(solution.checker);
     solution.performChecks();
     build_self(solution);
     addDeps(lib, solution);
@@ -1521,6 +1424,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             build.addLine("// " + normalize_path(fn));
             build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, r.prefix).toString() + "\";");
             build.addLine("s.current_module = \"" + r.toString() + "\";");
+            build.addLine("s.current_gn = " + std::to_string(r.group_number) + ";");
             build.addLine("build_" + h + "(s);");
             build.addLine();
 
@@ -1528,13 +1432,17 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             if (cfg.find("void check(") != cfg.npos)
             {
                 check.addLine("// " + r.toString());
+                check.addLine("c.current_gn = " + std::to_string(r.group_number) + ";");
                 check.addLine("check_" + h + "(c);");
                 check.addLine();
             }
         }
 
         build.addLine("s.NamePrefix.clear();");
+        build.addLine("s.current_module.clear();");
+        build.addLine("s.current_gn = 0;");
         build.endFunction();
+        check.addLine("c.current_gn = 0;");
         check.endFunction();
 
         ctx += build;
@@ -2216,7 +2124,7 @@ void Build::load(const path &dll, bool usedll)
         if (usedll)
         {
             for (auto &s : solutions)
-                getModuleStorage(base_ptr).get(dll).check(s, s.Checks);
+                getModuleStorage(base_ptr).get(dll).check(s, s.checker);
         }
         performChecks();
     }

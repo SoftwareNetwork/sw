@@ -344,7 +344,7 @@ void ServiceDatabase::setLastClientUpdateCheck(const TimePoint &p) const
 
 bool ServiceDatabase::isActionPerformed(const StartupAction &action) const
 {
-    const auto actions = db::service::StartupAction{};
+    const auto actions = ::db::service::StartupAction{};
     auto c = ((*db)(
         select(count(actions.startupActionId))
         .from(actions)
@@ -355,7 +355,7 @@ bool ServiceDatabase::isActionPerformed(const StartupAction &action) const
 
 void ServiceDatabase::setActionPerformed(const StartupAction &action) const
 {
-    const auto actions = db::service::StartupAction{};
+    const auto actions = ::db::service::StartupAction{};
     (*db)(insert_into(actions).set(
         actions.startupActionId = action.id,
         actions.action = action.action
@@ -452,7 +452,7 @@ void ServiceDatabase::addInstalledPackage(const PackageId &p, PackageVersionGrou
     if (getInstalledPackageHash(p) == h)
         return;
 
-    const auto ipkgs = db::service::InstalledPackage{};
+    const auto ipkgs = ::db::service::InstalledPackage{};
     (*db)(sqlpp::sqlite3::insert_or_replace_into(ipkgs).set(
         ipkgs.path = p.ppath.toString(),
         ipkgs.version = p.version.toString(),
@@ -463,13 +463,13 @@ void ServiceDatabase::addInstalledPackage(const PackageId &p, PackageVersionGrou
 
 void ServiceDatabase::removeInstalledPackage(const PackageId &p) const
 {
-    const auto ipkgs = db::service::InstalledPackage{};
+    const auto ipkgs = ::db::service::InstalledPackage{};
     (*db)(remove_from(ipkgs).where(ipkgs.path == p.ppath.toString() and ipkgs.version == p.version.toString()));
 }
 
 String ServiceDatabase::getInstalledPackageHash(const PackageId &p) const
 {
-    const auto ipkgs = db::service::InstalledPackage{};
+    const auto ipkgs = ::db::service::InstalledPackage{};
     auto q = (*db)(
         custom_query(sqlpp::verbatim("SELECT hash FROM installed_package WHERE path = '" +
             p.ppath.toString() + "'  COLLATE NOCASE AND version = '" + p.version.toString() + "'"))
@@ -483,7 +483,7 @@ String ServiceDatabase::getInstalledPackageHash(const PackageId &p) const
 
 int64_t ServiceDatabase::getInstalledPackageId(const PackageId &p) const
 {
-    const auto ipkgs = db::service::InstalledPackage{};
+    const auto ipkgs = ::db::service::InstalledPackage{};
     auto q = (*db)(
         custom_query(sqlpp::verbatim("SELECT installed_package_id FROM installed_package WHERE path = '" +
             p.ppath.toString() + "' COLLATE NOCASE AND version = '" + p.version.toString() + "'"))
@@ -562,9 +562,9 @@ const ServiceDatabase::OverriddenPackages &ServiceDatabase::getOverriddenPackage
         return override_remote_packages.value();
 
     OverriddenPackages pkgs;
-    const auto orp = db::service::OverrideRemotePackage{};
-    const auto orpv = db::service::OverrideRemotePackageVersion{};
-    const auto orpvd = db::service::OverrideRemotePackageVersionDependency{};
+    const auto orp = ::db::service::OverrideRemotePackage{};
+    const auto orpv = ::db::service::OverrideRemotePackageVersion{};
+    const auto orpvd = ::db::service::OverrideRemotePackageVersionDependency{};
     for (const auto &row : (*db)(select(orp.overrideRemotePackageId, orp.path).from(orp).unconditionally()))
     {
         for (const auto &row2 : (*db)(select(orpv.overrideRemotePackageVersionId, orpv.version, orpv.sdir, orpv.prefix).from(orpv).where(orpv.overrideRemotePackageId == row.overrideRemotePackageId)))
@@ -590,9 +590,9 @@ void ServiceDatabase::overridePackage(const PackageId &pkg, const OverriddenPack
     override_remote_packages.value().erase(pkg);
     override_remote_packages.value().emplace(pkg, opkg);
 
-    const auto orp = db::service::OverrideRemotePackage{};
-    const auto orpv = db::service::OverrideRemotePackageVersion{};
-    const auto orpvd = db::service::OverrideRemotePackageVersionDependency{};
+    const auto orp = ::db::service::OverrideRemotePackage{};
+    const auto orpv = ::db::service::OverrideRemotePackageVersion{};
+    const auto orpvd = ::db::service::OverrideRemotePackageVersionDependency{};
     db->start_transaction();
     deleteOverriddenPackage(pkg);
     auto q1 = (*db)(select(orp.overrideRemotePackageId).from(orp).where(
@@ -629,8 +629,8 @@ void ServiceDatabase::overridePackage(const PackageId &pkg, const OverriddenPack
 
 void ServiceDatabase::deleteOverriddenPackage(const PackageId &pkg) const
 {
-    const auto orp = db::service::OverrideRemotePackage{};
-    const auto orpv = db::service::OverrideRemotePackageVersion{};
+    const auto orp = ::db::service::OverrideRemotePackage{};
+    const auto orpv = ::db::service::OverrideRemotePackageVersion{};
     auto q = (*db)(select(orp.overrideRemotePackageId).from(orp).where(
         orp.path == pkg.ppath.toString()
     ));
@@ -644,7 +644,7 @@ void ServiceDatabase::deleteOverriddenPackage(const PackageId &pkg) const
 
 void ServiceDatabase::deleteOverriddenPackageDir(const path &sdir) const
 {
-    const auto orpv = db::service::OverrideRemotePackageVersion{};
+    const auto orpv = ::db::service::OverrideRemotePackageVersion{};
     (*db)(remove_from(orpv).where(
         orpv.sdir == fs::canonical(fs::absolute(sdir)).u8string()
     ));
@@ -653,7 +653,7 @@ void ServiceDatabase::deleteOverriddenPackageDir(const path &sdir) const
 UnresolvedPackages ServiceDatabase::getOverriddenPackageVersionDependencies(db::PackageVersionId project_version_id)
 {
     //project_version_id = abs(project_version_id);
-    const auto orpvd = db::service::OverrideRemotePackageVersionDependency{};
+    const auto orpvd = ::db::service::OverrideRemotePackageVersionDependency{};
     UnresolvedPackages deps;
     for (const auto &row3 : (*db)(select(orpvd.dependency).from(orpvd).where(orpvd.overrideRemotePackageVersionId == project_version_id)))
         deps.insert(row3.dependency.value());
@@ -662,7 +662,7 @@ UnresolvedPackages ServiceDatabase::getOverriddenPackageVersionDependencies(db::
 
 Packages ServiceDatabase::getInstalledPackages() const
 {
-    const auto ipkgs = db::service::InstalledPackage{};
+    const auto ipkgs = ::db::service::InstalledPackage{};
     Packages pkgs;
     for (const auto &row : (*db)(select(ipkgs.path, ipkgs.version).from(ipkgs).unconditionally()))
     {
@@ -991,7 +991,7 @@ void PackagesDatabase::findLocalDependencies(IdDependencies &id_deps, const Unre
 
 IdDependencies PackagesDatabase::findDependencies(const UnresolvedPackages &deps) const
 {
-    const auto pkgs = db::packages::Package{};
+    const auto pkgs = ::db::packages::Package{};
 
     preInitFindDependencies();
 
@@ -1081,7 +1081,7 @@ db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDe
     std::set<Version> versions;
     std::unordered_map<Version, db::PackageVersionId> version_ids;
 
-    const auto pkg_ver = db::packages::PackageVersion{};
+    const auto pkg_ver = ::db::packages::PackageVersion{};
     for (const auto &row : (*db)(
         select(pkg_ver.packageVersionId, pkg_ver.version)
         .from(pkg_ver)
@@ -1136,8 +1136,8 @@ db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDe
 
 PackagesDatabase::Dependencies PackagesDatabase::getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm) const
 {
-    const auto pkgs = db::packages::Package{};
-    const auto pkgdeps = db::packages::PackageVersionDependency{};
+    const auto pkgs = ::db::packages::Package{};
+    const auto pkgdeps = ::db::packages::PackageVersionDependency{};
 
     Dependencies dependencies;
     std::vector<DownloadDependency> deps;
@@ -1239,7 +1239,7 @@ Version PackagesDatabase::getExactVersionForPackage(const PackageId &p) const
 template <template <class...> class C>
 C<PackagePath> PackagesDatabase::getMatchingPackages(const String &name) const
 {
-    const auto tpkgs = db::packages::Package{};
+    const auto tpkgs = ::db::packages::Package{};
 
     C<PackagePath> pkgs;
     String q;
@@ -1266,7 +1266,7 @@ PackagesDatabase::getMatchingPackages<std::set>(const String &) const;
 std::vector<Version> PackagesDatabase::getVersionsForPackage(const PackagePath &ppath) const
 {
     std::vector<Version> versions;
-    const auto vpkgs = db::packages::PackageVersion{};
+    const auto vpkgs = ::db::packages::PackageVersion{};
     for (const auto &row : (*db)(select(vpkgs.version).from(vpkgs).where(vpkgs.packageId == getPackageId(ppath))))
         versions.push_back(row.version.value());
     return versions;
@@ -1275,7 +1275,7 @@ std::vector<Version> PackagesDatabase::getVersionsForPackage(const PackagePath &
 db::PackageId PackagesDatabase::getPackageId(const PackagePath &ppath) const
 {
     db::PackageId id = 0;
-    const auto pkgs = db::packages::Package{};
+    const auto pkgs = ::db::packages::Package{};
     auto q = (*db)(select(pkgs.packageId).from(pkgs).where(pkgs.path == ppath.toString()));
     if (!q.empty())
         id = q.front().packageId.value();
@@ -1365,7 +1365,7 @@ Packages PackagesDatabase::getTransitiveDependentPackages(const Packages &pkgs)
 
 DataSources PackagesDatabase::getDataSources()
 {
-    const auto ds = db::packages::DataSource{};
+    const auto ds = ::db::packages::DataSource{};
 
     DataSources dss;
     for (const auto &row : (*db)(select(ds.url, ds.flags).from(ds).unconditionally()))

@@ -376,7 +376,7 @@ struct SW_DRIVER_CPP_API NativeToolchain
     // ar, more tools...
     // more native compilers (cuda etc.)
     CompilerType CompilerType = CompilerType::UnspecifiedCompiler;
-    LinkerType LinkerType; // rename
+    //LinkerType LinkerType; // rename - use type from selected tool
     BuildLibrariesAs LibrariesType = LibraryType::Shared;
     ConfigurationType ConfigurationType = ConfigurationType::Release;
     // more settings
@@ -387,7 +387,7 @@ struct SW_DRIVER_CPP_API NativeToolchain
     // service
 
     /// set on server to eat everything
-    bool AssignAll = false;
+    //bool AssignAll = false;
 
     // members
     //String getConfig() const;
