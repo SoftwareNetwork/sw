@@ -105,31 +105,9 @@ static std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s)
     return files;
 }
 
-String TargetBase::SettingsX::getConfig(const TargetBase *t, bool use_short_config) const
-{
-    String c;
-
-    addConfigElement(c, toString(TargetOS.Type));
-    addConfigElement(c, toString(TargetOS.Arch));
-    boost::to_lower(c);
-
-    //addConfigElement(c, Native.getConfig());
-    addConfigElement(c, toString(Native.CompilerType));
-    auto i = t->getSolution()->extensions.find(".cpp");
-    if (i == t->getSolution()->extensions.end())
-        throw std::logic_error("no cpp compiler");
-    addConfigElement(c, i->second.version.toString(2));
-    addConfigElement(c, toString(Native.LibrariesType));
-    boost::to_lower(c);
-    addConfigElement(c, toString(Native.ConfigurationType));
-
-    return hashConfig(c, use_short_config);
-}
-
 TargetBase::TargetBase(const TargetBase &rhs)
     : LanguageStorage(rhs)
     , ProjectDirectories(rhs)
-    , Settings(rhs.Settings)
     , pkg(rhs.pkg)
     , source(rhs.source)
     , Scope(rhs.Scope)
@@ -335,7 +313,6 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     //t->languages = languages;
     //t->extensions = extensions;
 
-    t->Settings = Settings;
     t->solution = getSolution();
     t->Local = Local;
     t->source = source;
@@ -436,7 +413,7 @@ void TargetBase::applyRootDirectory()
 
 String TargetBase::getConfig(bool use_short_config) const
 {
-    return Settings.getConfig(this, use_short_config);
+    return getSolution()->Settings.getConfig(this, use_short_config);
 }
 
 path TargetBase::getBaseDir() const
@@ -637,8 +614,8 @@ void NativeExecutedTarget::init()
     });
     //LanguageStorage::target = this;
 
-    Librarian = std::dynamic_pointer_cast<NativeLinker>(Settings.Native.Librarian->clone());
-    Linker = std::dynamic_pointer_cast<NativeLinker>(Settings.Native.Linker->clone());
+    Librarian = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Librarian->clone());
+    Linker = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Linker->clone());
 
     addPackageDefinitions();
 }
@@ -743,7 +720,7 @@ void NativeExecutedTarget::addPackageDefinitions(bool defs)
 
 path NativeExecutedTarget::getOutputBaseDir() const
 {
-    if (Settings.TargetOS.Type == OSType::Windows)
+    if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
         return getUserDirectories().storage_dir_bin;
     else
         return getUserDirectories().storage_dir_lib;
@@ -1343,9 +1320,9 @@ Commands NativeExecutedTarget::getCommands() const
                 if (sd.size() < p.size() && p.find(sd) == 0)
                 {
                     String prefix;
-                    /*if (f->compiler == Settings.Native.CCompiler)
+                    /*if (f->compiler == getSolution()->Settings.Native.CCompiler)
                         prefix = "Building C object ";
-                    else if (f->compiler == Settings.Native.CPPCompiler)
+                    else if (f->compiler == getSolution()->Settings.Native.CPPCompiler)
                         prefix = "Building CXX object ";*/
                     auto n = p.substr(sd.size());
                     if (!n.empty() && n[0] != '/')
@@ -1478,7 +1455,7 @@ Commands NativeExecutedTarget::getCommands() const
             }
 
             // copy output dlls
-            if (isLocal() && Settings.Native.CopySharedLibraries &&
+            if (isLocal() && getSolution()->Settings.Native.CopySharedLibraries &&
                 Scope == TargetScope::Build && OutputDir.empty())
             {
                 for (auto &l : gatherAllRelatedDependencies())
@@ -1488,7 +1465,7 @@ Commands NativeExecutedTarget::getCommands() const
                         continue;
                     if (dt->HeaderOnly.value())
                         continue;
-                    if (Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
+                    if (getSolution()->Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
                         continue;
                     if (dt->getSelectedTool() == dt->Librarian.get())
                         continue;
@@ -1499,7 +1476,7 @@ Commands NativeExecutedTarget::getCommands() const
                     //else
                     {
                         //o /= OutputFilename;
-                        //if (add_d_on_debug && Settings.Native.ConfigurationType == ConfigurationType::Debug)
+                        //if (add_d_on_debug && getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug)
                             //o += "d";
                         //o += in.extension().u8string();
                     }
@@ -1934,7 +1911,7 @@ bool NativeExecutedTarget::prepare()
 
         if (UseModules)
         {
-            if (Settings.Native.CompilerType != CompilerType::MSVC)
+            if (getSolution()->Settings.Native.CompilerType != CompilerType::MSVC)
                 throw SW_RUNTIME_ERROR("Currently modules are implemented for MSVC only");
             CPPVersion = CPPLanguageStandard::CPP2a;
         }
@@ -2014,7 +1991,7 @@ bool NativeExecutedTarget::prepare()
         }
 
         // default macros
-        if (Settings.TargetOS.Type == OSType::Windows)
+        if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
         {
             Definitions["SW_EXPORT"] = "__declspec(dllexport)";
             Definitions["SW_IMPORT"] = "__declspec(dllimport)";
@@ -2357,10 +2334,10 @@ bool NativeExecutedTarget::prepare()
         }
 
         // before merge
-        if (Settings.Native.ConfigurationType != ConfigurationType::Debug)
+        if (getSolution()->Settings.Native.ConfigurationType != ConfigurationType::Debug)
             *this += "NDEBUG"_d;
         // allow to other compilers?
-        else if (Settings.Native.CompilerType == CompilerType::MSVC)
+        else if (getSolution()->Settings.Native.CompilerType == CompilerType::MSVC)
             *this += "_DEBUG"_d;
 
         // merge file compiler options with target compiler options
@@ -2374,7 +2351,7 @@ bool NativeExecutedTarget::prepare()
                 if (UseModules)
                 {
                     c->UseModules = UseModules;
-                    c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (Settings.TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+                    c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getSolution()->Settings.TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
                     c->UTF8 = false; // utf8 is not used in std modules and produce a warning
 
                     auto s = read_file(f->file);
@@ -2385,7 +2362,7 @@ bool NativeExecutedTarget::prepare()
                         c->ExportModule = true;
                     }
                 }
-                switch (Settings.Native.ConfigurationType)
+                switch (getSolution()->Settings.Native.ConfigurationType)
                 {
                 case ConfigurationType::Debug:
                     c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
@@ -2413,7 +2390,7 @@ bool NativeExecutedTarget::prepare()
             }
             else if (auto c = f->compiler->as<ClangClCompiler>())
             {
-                if (Settings.Native.ConfigurationType == ConfigurationType::Debug)
+                if (getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug)
                     c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
                 //if (auto c = f->compiler->as<ClangClCPPCompiler>())
                 c->CPPStandard = CPPVersion;
@@ -2436,7 +2413,7 @@ bool NativeExecutedTarget::prepare()
             }
             else if (auto c = f->compiler->as<GNUCompiler>())
             {
-                switch (Settings.Native.ConfigurationType)
+                switch (getSolution()->Settings.Native.ConfigurationType)
                 {
                 case ConfigurationType::Debug:
                     c->GenerateDebugInfo = true;
@@ -2467,7 +2444,7 @@ bool NativeExecutedTarget::prepare()
             && getSelectedTool() == Linker.get()
             && !HeaderOnly.value()
             && !IsConfig
-            && Settings.TargetOS.is(OSType::Windows)
+            && getSolution()->Settings.TargetOS.is(OSType::Windows)
             )
         {
             struct RcContext : primitives::Context
@@ -2600,8 +2577,8 @@ bool NativeExecutedTarget::prepare()
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
         {
             c->GenerateDebugInfo = c->GenerateDebugInfo() ||
-                Settings.Native.ConfigurationType == ConfigurationType::Debug ||
-                Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation;
+                getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug ||
+                getSolution()->Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation;
             if (c->GenerateDebugInfo() && c->PDBFilename.empty())
             {
                 auto f = getOutputFile();
@@ -2620,7 +2597,7 @@ bool NativeExecutedTarget::prepare()
         }
 
         // export all symbols
-        if (ExportAllSymbols && Settings.TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
+        if (ExportAllSymbols && getSolution()->Settings.TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
         {
             const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
             Files objs;
@@ -2836,7 +2813,7 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
             if (api.empty())
                 return;
 
-            if (Settings.TargetOS.Type == OSType::Windows)
+            if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
             {
                 if (Type == LibraryType::Shared)
                 {
@@ -2902,7 +2879,7 @@ void NativeExecutedTarget::initLibrary(LibraryType Type)
             L->Extension = ".so";
             L->SharedObject = true;
         }
-        if (Settings.TargetOS.Type == OSType::Windows)
+        if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
             Definitions["_WINDLL"];
     }
     else
@@ -3655,7 +3632,7 @@ bool ExecutableTarget::prepare()
         {
             if (api.empty())
                 return;
-            if (Settings.TargetOS.Type == OSType::Windows)
+            if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
             {
                 Private.Definitions[api] = "SW_EXPORT";
                 Interface.Definitions[api] = "SW_IMPORT";
@@ -3695,13 +3672,13 @@ void ExecutableTarget::cppan_load_project(const yaml &root)
 
 bool LibraryTarget::prepare()
 {
-    return prepareLibrary(Settings.Native.LibrariesType);
+    return prepareLibrary(getSolution()->Settings.Native.LibrariesType);
 }
 
 void LibraryTarget::init()
 {
     NativeExecutedTarget::init();
-    initLibrary(Settings.Native.LibrariesType);
+    initLibrary(getSolution()->Settings.Native.LibrariesType);
 }
 
 void StaticLibraryTarget::init()

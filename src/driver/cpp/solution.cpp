@@ -208,6 +208,27 @@ void EventCallback::operator()(TargetBase &t, CallbackType e)
 
 }
 
+String Solution::SettingsX::getConfig(const TargetBase *t, bool use_short_config) const
+{
+    String c;
+
+    addConfigElement(c, toString(TargetOS.Type));
+    addConfigElement(c, toString(TargetOS.Arch));
+    boost::to_lower(c);
+
+    //addConfigElement(c, Native.getConfig());
+    addConfigElement(c, toString(Native.CompilerType));
+    auto i = t->getSolution()->extensions.find(".cpp");
+    if (i == t->getSolution()->extensions.end())
+        throw std::logic_error("no cpp compiler");
+    addConfigElement(c, i->second.version.toString(2));
+    addConfigElement(c, toString(Native.LibrariesType));
+    boost::to_lower(c);
+    addConfigElement(c, toString(Native.ConfigurationType));
+
+    return hashConfig(c, use_short_config);
+}
+
 Solution::Solution()
     : base_ptr(*this)
 {
@@ -219,6 +240,8 @@ Solution::Solution()
 
 Solution::Solution(const Solution &rhs)
     : TargetBase(rhs)
+    , HostOS(rhs.HostOS)
+    , Settings(rhs.Settings)
     , silent(rhs.silent)
     , base_ptr(rhs.base_ptr)
     //, knownTargets(rhs.knownTargets)
@@ -903,8 +926,8 @@ Build::Build()
 
     /*static */const auto host_os = detectOS();
 
-    Settings.HostOS = host_os;
-    Settings.TargetOS = Settings.HostOS; // temp
+    HostOS = host_os;
+    Settings.TargetOS = HostOS; // temp
 
     //languages = getLanguages();
     findCompiler();
@@ -1064,7 +1087,7 @@ void Build::findCompiler()
 
     if (Settings.Native.CompilerType == CompilerType::UnspecifiedCompiler)
     {
-        switch (Settings.HostOS.Type)
+        switch (HostOS.Type)
         {
         case OSType::Windows:
             activate_array_or_throw({ msvc, clang, clangcl, }, "Try to add more compilers");
@@ -1317,8 +1340,10 @@ FilesMap Build::build_configs_separate(const Files &files)
             L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
             //#ifdef CPPAN_DEBUG
             L->GenerateDebugInfo = true;
-            L->Force = vs::ForceType::Multiple;
             //#endif
+            L->Force = vs::ForceType::Multiple;
+            L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
+            L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
         }
 
         for (auto &d : udeps)
@@ -1412,10 +1437,10 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             auto h = getFilesHash({ fn });
             ctx.addLine("// " + r.toString());
             ctx.addLine("// " + normalize_path(fn));
-            if (Settings.HostOS.Type != OSType::Windows)
+            if (HostOS.Type != OSType::Windows)
                 ctx.addLine("extern \"C\"");
             ctx.addLine("void build_" + h + "(Solution &);");
-            if (Settings.HostOS.Type != OSType::Windows)
+            if (HostOS.Type != OSType::Windows)
                 ctx.addLine("extern \"C\"");
             ctx.addLine("void check_" + h + "(Checker &);");
             ctx.addLine();
@@ -1569,8 +1594,10 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
         //#ifdef CPPAN_DEBUG
         L->GenerateDebugInfo = true;
-        L->Force = vs::ForceType::Multiple;
         //#endif
+        L->Force = vs::ForceType::Multiple;
+        L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
+        L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
     }
 
     auto i = solution.children.find(lib.pkg);

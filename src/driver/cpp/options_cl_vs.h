@@ -416,6 +416,12 @@ struct SW_DRIVER_CPP_API VisualStudioLinkerOptions
         cl::CommandFlag{ "SUBSYSTEM:" },
         vs::Subsystem::Console,
     };
+
+    COMMAND_LINE_OPTION(IgnoreWarnings, std::set<int>)
+    {
+        cl::CommandFlag{ "IGNORE:" },
+        cl::CommandFlagBeforeEachValue{},
+    };
 };
 DECLARE_OPTION_SPECIALIZATION(VisualStudioLinkerOptions);
 

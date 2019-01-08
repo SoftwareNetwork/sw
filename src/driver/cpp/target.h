@@ -210,30 +210,13 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
 {
     using TargetMap = PackageVersionMapBase<TargetBaseTypePtr, std::unordered_map, std::map>;
 
-    // move to solution?
-    struct SettingsX
-    {
-        // move host os to solution?
-        OS HostOS;
-
-        // for distributed compilation???
-        // we are on host anyway, we don't need this probably
-        //OS BuildOS;
-        OS TargetOS;
-        NativeToolchain Native;
-
-        // other langs?
-        // make polymorphic?
-
-        String getConfig(const TargetBase *t, bool use_short_config = false) const;
-    };
-    SettingsX Settings; // current configuration
-
+    // rename? or keep available via api
     PackageId pkg;
 
     /**
     * \brief Target Source.
     */
+    // hide?
     Source source;
 
     /**

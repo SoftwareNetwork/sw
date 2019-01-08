@@ -219,7 +219,7 @@ path getWindowsKitDir()
 path getWindowsKit10Dir(Solution &s, const path &d)
 {
     // take current or the latest version
-    path last_dir = d / s.Settings.HostOS.Version.toString(true);
+    path last_dir = d / s.HostOS.Version.toString(true);
     if (fs::exists(last_dir))
         return last_dir;
     last_dir.clear();
@@ -494,7 +494,7 @@ void detectNativeCompilers(struct Solution &s)
     } dir_suffix;
 
     // get suffix
-    switch (s.Settings.HostOS.Arch)
+    switch (s.HostOS.Arch)
     {
     case ArchType::x86_64:
         dir_suffix.host = "x64";
@@ -592,7 +592,7 @@ void detectNativeCompilers(struct Solution &s)
         //auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
         auto C = std::make_shared<VisualStudioASMCompiler>();
         C->Type = CompilerType::MSVC;
-        C->file = s.Settings.HostOS.Arch == ArchType::x86_64 ?
+        C->file = s.HostOS.Arch == ArchType::x86_64 ?
             (compiler.parent_path() / "ml64.exe") :
             (compiler.parent_path() / "ml.exe");
         C->vs_version = VSVersion;

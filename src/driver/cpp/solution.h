@@ -90,6 +90,25 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
 {
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
+    // move host os to solution?
+    OS HostOS;
+
+    // for distributed compilation???
+    // we are on host anyway, we don't need this probably
+    //OS BuildOS;
+
+    struct SettingsX
+    {
+        OS TargetOS;
+        NativeToolchain Native;
+
+        // other langs?
+        // make polymorphic?
+
+        String getConfig(const TargetBase *t, bool use_short_config = false) const;
+    };
+    SettingsX Settings; // current configuration
+
     // solution (config) specific data
     mutable TargetMap TargetsToBuild;
     FileStorage *fs = nullptr;

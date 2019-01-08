@@ -103,4 +103,25 @@ DECLARE_OPTION_SPECIALIZATION(Files)
     return cmds;
 }
 
+DECLARE_OPTION_SPECIALIZATION(std::set<int>)
+{
+    Strings cmds;
+    for (auto v : value())
+    {
+        if (cmd_flag_before_each_value)
+        {
+            if (separate_prefix)
+            {
+                cmds.push_back(getCommandLineFlag());
+                cmds.push_back(std::to_string(v));
+            }
+            else
+                cmds.push_back(getCommandLineFlag() + std::to_string(v));
+        }
+        else
+            cmds.push_back(std::to_string(v));
+    }
+    return cmds;
+}
+
 }

@@ -193,7 +193,7 @@ void iterate_over_configs(std::function<void(const String &, const String &, con
                 f(c.second, p.second, dll.second);
 }
 
-void iterate_over_configs(TargetBase::SettingsX s, std::function<void(const TargetBase::SettingsX &, const String &, const String &, const String &)> f)
+void iterate_over_configs(Solution::SettingsX s, std::function<void(const Solution::SettingsX &, const String &, const String &, const String &)> f)
 {
     for (auto &p : platforms)
     {
@@ -376,8 +376,8 @@ void ProjectContext::printProject(
     addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
     addPropertySheets();
 
-    iterate_over_configs(b.Settings, [this, &g, &nt, &p, &b, &t, &dir, &projects_dir]
-    (const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+    iterate_over_configs(b.solutions[0].Settings, [this, &g, &nt, &p, &b, &t, &dir, &projects_dir]
+    (const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
     {
         using namespace sw;
 
@@ -395,7 +395,7 @@ void ProjectContext::printProject(
         else if (s.Native.CompilerType == CompilerType::GNU)
             compiler = "--compiler gnu";
 
-        nt.Settings = s; // prepare for makeOutputFile()
+        ((Build &)b).solutions[0].Settings = s; // prepare for makeOutputFile()
         auto o = nt.makeOutputFile();
         o = o.parent_path().parent_path() / s.getConfig(&t) / o.filename();
         o += nt.getOutputFile().extension();
@@ -755,7 +755,7 @@ void VSGenerator::generate(const Build &b)
         pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
         //pctx.addPropertyGroupConfigurationTypes();
 
-        iterate_over_configs(b.Settings, [this, &pctx, &b](const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        iterate_over_configs(b.Settings, [this, &pctx, &b](const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
 
@@ -855,9 +855,9 @@ void VSGenerator::generate(const Build &b)
 
         pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
 
-        iterate_over_configs(nt->Settings,
+        iterate_over_configs(b.Settings,
             [this, &pctx, &nt, &p, &b, &t]
-            (const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+            (const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
 
@@ -914,9 +914,9 @@ void VSGenerator::generate(const Build &b)
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
         pctx.addPropertySheets();
 
-        iterate_over_configs(nt->Settings,
+        iterate_over_configs(b.solutions[0].Settings,
             [this, &pctx, &nt, &p, &b, &t]
-        (const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        (const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
 
@@ -1092,7 +1092,7 @@ void VSGeneratorNMake::generate(const Build &b)
         pctx.addPropertySheets();
 
         iterate_over_configs(b.Settings, [this, &pctx, &b]
-        (const TargetBase::SettingsX &s, const String &c, const String &pl, const String &dll)
+        (const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
 
