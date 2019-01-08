@@ -145,7 +145,7 @@ void GNUCommand::postProcess1(bool)
         return;
     if (!fs::exists(deps_file))
     {
-        LOG_WARN(logger, "Missing deps file: " + normalize_path(deps_file));
+        LOG_DEBUG(logger, "Missing deps file: " + normalize_path(deps_file));
         return;
     }
 

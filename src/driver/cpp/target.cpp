@@ -2009,7 +2009,7 @@ bool NativeExecutedTarget::prepare()
     case 2:
     // resolve
     {
-        if (precomputed_data)
+        /*if (precomputed_data)
         {
             TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
                 [this](auto &v, auto &s)
@@ -2031,7 +2031,7 @@ bool NativeExecutedTarget::prepare()
                     d->Dummy = it.value()["dummy"];
                 }
             }
-        }
+        }*/
         //else
         {
             // resolve unresolved deps
@@ -2144,6 +2144,7 @@ bool NativeExecutedTarget::prepare()
                 auto deps2 = deps;
                 for (auto &[d, _] : deps2)
                 {
+                    // simple check
                     if (d->target.lock() == nullptr)
                     {
                         throw std::logic_error("Package: " + pkg.toString() + ": Unresolved package on stage 2: " + d->package.toString());
