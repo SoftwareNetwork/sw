@@ -23,12 +23,21 @@
 
 // strict macro
 // M(visible name, function name in code, ...)
+#ifdef _MSC_VER
 #define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, f, ...)                                 \
     extern "C" SW_JUMPPAD_API int CONCATENATE(SW_JUMPPAD_PREFIX, n)(const Strings &s) \
     {                                                                                 \
         ::sw::VisibleFunctionJumppad j(&f, #n, __VA_ARGS__);                          \
         return j.call(s);                                                             \
     }
+#else
+#define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, f, ...)                                 \
+    extern "C" SW_JUMPPAD_API int CONCATENATE(SW_JUMPPAD_PREFIX, n)(const Strings &s) \
+    {                                                                                 \
+        ::sw::VisibleFunctionJumppad j(&f, #n, ##__VA_ARGS__);                        \
+        return j.call(s);                                                             \
+    }
+#endif
 
 namespace sw
 {

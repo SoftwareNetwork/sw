@@ -569,7 +569,7 @@ const ServiceDatabase::OverriddenPackages &ServiceDatabase::getOverriddenPackage
     {
         for (const auto &row2 : (*db)(select(orpv.overrideRemotePackageVersionId, orpv.version, orpv.sdir, orpv.prefix).from(orpv).where(orpv.overrideRemotePackageId == row.overrideRemotePackageId)))
         {
-            auto &o = pkgs[row.path.value()][row2.version.value()];
+            auto &o = pkgs[PackagePath(row.path.value())][row2.version.value()];
             o.id = -row2.overrideRemotePackageVersionId.value();
             o.sdir = row2.sdir.value();
             o.prefix = row2.prefix.value();

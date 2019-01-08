@@ -143,11 +143,11 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<Version, T
     template <class U>
     struct Iterator
     {
-        template <class T, class F>
-        using cond_t = std::conditional_t<std::is_const_v<U>, T, F>;
+        template <class T2, class F>
+        using cond_t = std::conditional_t<std::is_const_v<U>, T2, F>;
 
-        template <class T, class F>
-        using cond_iterator_t = cond_t<typename T::const_iterator, typename F::iterator>;
+        template <class T2, class F>
+        using cond_iterator_t = cond_t<typename T2::const_iterator, typename F::iterator>;
 
         using reference = cond_t<const T&, T&>;
         using value_type = std::pair<const PackageId, reference>;
