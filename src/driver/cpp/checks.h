@@ -208,6 +208,14 @@ struct SW_DRIVER_CPP_API CheckSet
     Checker &checker;
     std::unordered_map<String, CheckPtr> check_values;
 
+    // we store all checks first, because they are allowed to have post setup
+    // so we cant calculate hash after ctor
+    // list is to keep iterators alive
+    // make public, so it is possible to batch add prefixes, for example
+    // for (auto &[s, check] : s.checks)
+    //   check->Prefixes.insert("U_");
+    std::list<CheckPtr> all;
+
     CheckSet(Checker &checker);
 
     template <class T, class ... Args>
@@ -263,11 +271,6 @@ struct SW_DRIVER_CPP_API CheckSet
     Check &checkSourceRuns(const String &def, const String &src, LanguageType L = LanguageType::C);
 
 private:
-    // we store all checks first, because they are allowed to have post setup
-    // so we cant calculate hash after ctor
-    // list is to keep iterators alive
-    std::list<CheckPtr> all;
-
     // set's checks
     std::unordered_map<size_t /* hash */, CheckPtr> checks;
 

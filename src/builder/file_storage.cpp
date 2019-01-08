@@ -61,6 +61,8 @@ FileStorage &getFileStorage(const String &config)
 FileStorage::FileStorage(const String &config)
     : config(config)
 {
+    //if (config.empty())
+        //throw SW_RUNTIME_ERROR("Empty config");
     load();
 }
 
@@ -107,6 +109,9 @@ void FileStorage::load()
         auto &f = *i.getValue();
         f.fs = this;
     }
+
+    //for (auto &[_, f] : files)
+        //f->fs = this;
 }
 
 void FileStorage::save()
@@ -121,11 +126,15 @@ void FileStorage::reset()
     // do not remove!
     files.clear();
     load();*/
+
     for (auto i = files.getIterator(); i.isValid(); i.next())
     {
         auto &f = *i.getValue();
         f.reset();
     }
+
+    //for (auto &[_, f] : files)
+        //f->reset();
 }
 
 FileRecord *FileStorage::registerFile(const File &in_f)

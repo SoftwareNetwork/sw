@@ -433,7 +433,8 @@ static void addImportLibrary(NativeExecutedTarget &t)
 
 path Solution::getChecksFilename() const
 {
-    return getUserDirectories().storage_dir_cfg / getConfig() / "checks.txt";
+    // with version
+    return getUserDirectories().storage_dir_cfg / getConfig() / "checks.2.txt";
 }
 
 path Solution::getChecksDir() const
@@ -748,7 +749,7 @@ void Solution::prepare()
     prepared = true;
 
     // prevent memory leaks (high mem usage)
-    updateConcurrentContext();
+    //updateConcurrentContext();
 }
 
 bool Solution::prepareStep()

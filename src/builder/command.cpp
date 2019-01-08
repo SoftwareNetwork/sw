@@ -176,7 +176,8 @@ bool Command::isTimeChanged() const
 {
     bool changed = false;
 
-    //DEBUG_BREAK_IF_STRING_HAS(name, "main.cpp");
+    //if (inputs.size() == 1)
+        //DEBUG_BREAK_IF_STRING_HAS(inputs.begin()->string(), "range.yy");
 
     // always check program and all deps are known
     changed |= File(program, *fs).isChanged(mtime);

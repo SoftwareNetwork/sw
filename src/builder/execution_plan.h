@@ -103,7 +103,8 @@ struct ExecutionPlan
             for (auto &c : commands)
             {
                 if (!c->dependencies.empty())
-                    continue;
+                    //continue;
+                    break;
                 fs.push_back(e.push([&run, c] {run(c.get()); }));
                 all.push_back(fs.back());
             }

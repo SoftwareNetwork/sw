@@ -127,9 +127,6 @@ int setup_main(const Strings &args)
             fs::current_path(working_directory);
     }
 
-    Executor e(select_number_of_threads(jobs));
-    getExecutor(&e);
-
     if (trace)
         setup_log("TRACE");
     else if (gVerbose)
@@ -146,13 +143,13 @@ int setup_main(const Strings &args)
 
     // before storages
     // Create QSBR context for the main thread.
-    auto context = createConcurrentContext();
-    getConcurrentContext(&context);
+    //auto context = createConcurrentContext();
+    //getConcurrentContext(&context);
 
     SCOPE_EXIT
     {
         // Destroy the QSBR context for the main thread.
-        destroyConcurrentContext(context);
+        //destroyConcurrentContext(context);
     };
 
     // before CommandStorage and FileStorages
@@ -168,6 +165,10 @@ int setup_main(const Strings &args)
 
     sw::FileStorages fs;
     sw::getFileStorages(&fs);
+
+    // after everything
+    Executor e(select_number_of_threads(jobs));
+    getExecutor(&e);
 
     /*boost::asio::io_context io_service;
     boost::asio::signal_set signals(io_service, SIGINT);

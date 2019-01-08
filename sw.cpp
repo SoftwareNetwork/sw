@@ -130,7 +130,7 @@ void build(Solution &s)
         d->Dummy = true;
     }
 
-    auto &client = p.addTarget<ExecutableTarget>("client");
+    auto &client = p.addTarget<ExecutableTarget>("sw");
     client.PackageDefinitions = true;
     client += "src/client/.*"_rr;
     client += "src/client"_idir;
@@ -155,5 +155,4 @@ void build(Solution &s)
         if (s.Settings.TargetOS.Type == OSType::Windows)
             client.Public += "UNICODE"_d;
     }
-    
 }

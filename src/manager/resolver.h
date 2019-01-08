@@ -59,7 +59,7 @@ public:
 private:
     Dependencies download_dependencies_;
     const Remote *current_remote = nullptr;
-    bool query_local_db = true;
+    //bool query_local_db = true;
 
     void download_and_unpack();
 

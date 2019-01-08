@@ -203,6 +203,15 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
             if (!inserted && f.data && *ptr < f)
                 *ptr = f;
         }
+
+        /*for (auto &[_, f] : old)
+        {
+            if (f->file.empty())
+                continue;
+            auto[ptr, inserted] = files.insert(f->file, *f);
+            if (!inserted && f->data && *ptr < *f)
+                *ptr = *f;
+        }*/
     }
 
     primitives::BinaryContext b(10'000'000); // reserve amount
@@ -222,6 +231,21 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
         for (auto &[f, d] : f.implicit_dependencies)
             b.write(std::hash<path>()(d->file));
     }
+    /*for (auto &[_, f] : files)
+    {
+        if (!f->data)
+            continue;
+
+        auto h1 = std::hash<path>()(f->file);
+        b.write(h1);
+        b.write(normalize_path(f->file));
+        b.write(f->data->last_write_time.time_since_epoch().count());
+        //b.write(f.data->size);
+        b.write(f->implicit_dependencies.size());
+
+        for (auto &[f, d] : f->implicit_dependencies)
+            b.write(std::hash<path>()(d->file));
+    }*/
     b.save(f);
 }
 
@@ -291,6 +315,11 @@ void FileDb::save(ConcurrentCommandStorage &commands) const
         b.write(i.getKey());
         b.write(*i.getValue());
     }
+    /*for (auto &[k, v] : commands)
+    {
+        b.write(k);
+        b.write(*v);
+    }*/
     b.save(getCommandsDbFilename());
 }
 

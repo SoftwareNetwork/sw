@@ -21,17 +21,18 @@ template <class K, class V>
 struct ConcurrentMap
 {
     using MapType = junction::ConcurrentMap_Leapfrog<K, V*>;
+    //using MapType = std::unordered_map<K, V*>;
     using value_type = std::pair<K, V>;
     using insert_type = std::pair<V*, bool>;
 
     ConcurrentMap()
     {
-        m = std::make_unique<MapType>();
+        clear();
     }
 
     void clear()
     {
-        m = std::make_unique<MapType>();
+        map = std::make_unique<MapType>();
     }
 
     insert_type insert(const value_type &v)
@@ -44,7 +45,27 @@ struct ConcurrentMap
     {
         if (k == 0)
             throw SW_RUNTIME_ERROR("ConcurrentMap: zero key");
-        auto i = m->insertOrFind(k);
+
+        //std::unique_lock lk(m);
+        return insert_no_lock(k, v, d);
+    }
+
+    template <class Deleter>
+    insert_type insert_no_lock(K k, const V &v, Deleter &&d)
+    {
+        if (k == 0)
+            throw SW_RUNTIME_ERROR("ConcurrentMap: zero key");
+
+        /*auto i = map->find(k);
+        if (i == map->end())
+        {
+            auto value = new V(v);
+            map->emplace(k, value);
+            return { value, true };
+        }
+        return { i->second, false };*/
+
+        auto i = map->insertOrFind(k);
         auto value = i.getValue();
         if (!value)
         {
@@ -92,11 +113,18 @@ struct ConcurrentMap
 
     auto getIterator()
     {
-        return typename MapType::Iterator(*m);
+        return typename MapType::Iterator(*map);
     }
 
+    auto begin() { return map->begin(); }
+    auto end() { return map->end(); }
+
+    auto begin() const { return map->begin(); }
+    auto end() const { return map->end(); }
+
 private:
-    std::unique_ptr<MapType> m;
+    std::unique_ptr<MapType> map;
+    //std::mutex m;
 };
 
 template <class V>

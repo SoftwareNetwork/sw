@@ -154,8 +154,14 @@ bool File::isChanged() const
 
 bool File::isChanged(const fs::file_time_type &t)
 {
-    getFileRecord().isChanged(); // perform initialization and load lwt
-    return getFileRecord().getMaxTime() > t;
+    // perform initialization and load lwt
+    auto &r = getFileRecord();
+    auto c = r.refresh(); // we need refresh result
+    getFileRecord().isChanged(); // also need this one
+
+    // here we need a way to check if file does not exist
+    // getFileRecord().isChanged() sets current file (even non existent) lwt to its deps lwt which is wrong
+    return c || getFileRecord().getMaxTime() > t;
 }
 
 bool File::isGenerated() const
@@ -329,6 +335,8 @@ bool FileRecord::refresh(bool use_file_monitor)
         data->last_write_time = t;
         result = true;
     }
+    //else
+        //data->last_write_time = t;
 
     //if (use_file_monitor)
         //fs->async_file_log(this);
@@ -366,7 +374,10 @@ bool FileRecord::isChanged(bool use_file_monitor)
 
 bool FileRecord::isChanged(const fs::file_time_type &in)
 {
-    refresh();
+    // consider refresh result? if file does not exist
+    auto c = refresh();
+    if (c)
+        return true; // file does not exist
 
     auto t = getMaxTime();
     if (t > in)

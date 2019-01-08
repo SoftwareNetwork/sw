@@ -360,14 +360,16 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
         }
     };
 
-    query_local_db = !force_server_query;
+    //query_local_db = !force_server_query;
     // do 2 attempts: 1) local db, 2) remote db
-    int n_attempts = query_local_db ? 2 : 1;
+    //int n_attempts = query_local_db ? 2 : 1;
+    int n_attempts = force_server_query ? 1 : 2;
     while (n_attempts--)
     {
         try
         {
-            if (query_local_db)
+            //if (query_local_db)
+            if (!force_server_query)
             {
                 try
                 {
@@ -378,7 +380,8 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
                 {
                     LOG_ERROR(logger, "Cannot get dependencies from local database: " << e.what());
 
-                    query_local_db = false;
+                    //query_local_db = false;
+                    force_server_query = true;
                     resolve_remote_deps();
                 }
             }
@@ -393,7 +396,8 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
         {
             LOG_WARN(logger, "Local db data caused issues, trying remote one");
 
-            query_local_db = false;
+            //query_local_db = false;
+            force_server_query = true;
             continue;
         }
         break;
@@ -407,13 +411,14 @@ void Resolver::download(const ExtendedPackageData &d, const path &fn)
         throw SW_RUNTIME_ERROR("No data sources available");
 
     if (std::none_of(provs.begin(), provs.end(),
-        [&](auto &prov) {return prov.downloadPackage(d, d.hash, fn, query_local_db);}))
+        [&](auto &prov) {return prov.downloadPackage(d, d.hash, fn, /*query_local_db*/ !force_server_query);}))
     {
         // if we get hashes from local db
         // they can be stalled within server refresh time (15 mins)
         // in this case we should do request to server
         auto err = "Hashes do not match for package: " + d.toString();
-        if (query_local_db)
+        //if (query_local_db)
+        if (!force_server_query)
             throw LocalDbHashException(err);
         throw SW_RUNTIME_ERROR(err);
     }
@@ -521,7 +526,8 @@ void Resolver::download_and_unpack()
     waitAndGet(fs);
 
     // two following blocks use executor to do parallel queries
-    if (query_local_db)
+    //if (query_local_db)
+    if (!force_server_query)
     {
         // send download list
         // remove this when cppan will be widely used
