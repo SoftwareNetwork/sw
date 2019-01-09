@@ -147,6 +147,29 @@ int main() { return IsBigEndian(); }
         }
     }
 
+    // returns true if inserted
+    auto add_dep = [this](auto &s, auto &c)
+    {
+        auto h = c->getHash();
+        auto ic = checks.find(h);
+        if (ic != checks.end())
+        {
+            //if (c->Value != ic->second->Value)
+                //throw SW_RUNTIME_ERROR("Different check values");
+            s.checks[h] = ic->second;
+            ic->second->Definitions.insert(c->Definitions.begin(), c->Definitions.end());
+            ic->second->Prefixes.insert(c->Prefixes.begin(), c->Prefixes.end());
+            return std::pair{ false, ic->second };
+        }
+        checks[h] = c;
+        s.checks[h] = c;
+
+        auto i = checksStorage->all_checks.find(h);
+        if (i != checksStorage->all_checks.end())
+            c->Value = i->second;
+        return std::pair{ true, c };
+    };
+
     // prepare loaded checks
     for (auto &[gn, s2] : sets)
     {
@@ -154,42 +177,12 @@ int main() { return IsBigEndian(); }
         {
             for (auto &c : s.all)
             {
-                auto h = c->getHash();
-                auto ic = checks.find(h);
-                if (ic != checks.end())
-                {
-                    s.checks[h] = ic->second;
-                    ic->second->Definitions.insert(c->Definitions.begin(), c->Definitions.end());
-                    ic->second->Prefixes.insert(c->Prefixes.begin(), c->Prefixes.end());
-                    continue;
-                }
-                checks[h] = c;
-                s.checks[h] = c;
-
-                auto i = checksStorage->all_checks.find(h);
-                if (i != checksStorage->all_checks.end())
-                    c->Value = i->second;
-
+                auto[inserted, dep] = add_dep(s, c);
                 auto deps = c->gatherDependencies();
                 for (auto &d : deps)
                 {
-                    auto h = d->getHash();
-                    auto ic = checks.find(h);
-                    if (ic != checks.end())
-                    {
-                        s.checks[h] = ic->second;
-                        ic->second->Definitions.insert(d->Definitions.begin(), d->Definitions.end());
-                        ic->second->Prefixes.insert(d->Prefixes.begin(), d->Prefixes.end());
-                        c->dependencies.insert(ic->second);
-                        continue;
-                    }
-                    checks[h] = d;
-                    s.checks[h] = d;
-                    c->dependencies.insert(d);
-
-                    auto i = checksStorage->all_checks.find(h);
-                    if (i != checksStorage->all_checks.end())
-                        d->Value = i->second;
+                    auto [inserted, dep2] = add_dep(s, d);
+                    dep->dependencies.insert(dep2);
                 }
             }
             s.all.clear();
@@ -232,8 +225,8 @@ int main() { return IsBigEndian(); }
     {
         //auto &e = getExecutor();
         Executor e(getExecutor().numberOfThreads()); // separate executor!
-        ep.throw_on_errors = false;
-        ep.skip_errors = ep.commands.size();
+        //ep.throw_on_errors = false;
+        //ep.skip_errors = ep.commands.size();
         ep.execute(e);
 
         // remove tmp dir
@@ -327,8 +320,18 @@ void Check::execute()
 {
     if (isChecked())
         return;
-    Value = 0; // mark as checked
+    //Value = 0; // mark as checked
+
+    //LOG_TRACE(logger, "Checking " << data);
+
+    // value must be set inside?
     run();
+
+    if (Definitions.empty())
+        throw SW_RUNTIME_ERROR("Check " + data + ": definition was not set");
+    if (!Value)
+        throw SW_RUNTIME_ERROR("Check " + *Definitions.begin() + ": value was not set");
+    LOG_DEBUG(logger, "Checking " << *Definitions.begin() << ": " << Value.value());
 }
 
 std::vector<CheckPtr> Check::gatherDependencies()
@@ -349,6 +352,34 @@ bool Check::lessDuringExecution(const Check &rhs) const
     return dependendent_commands.size() > dependendent_commands.size();
 }
 
+path Check::getOutputFilename() const
+{
+    auto d = check_set->checker.solution->getChecksDir();
+    auto up = unique_path();
+    d /= up;
+    ::create_directories(d);
+    auto f = d;
+    if (!CPP)
+        f /= "x.c";
+    else
+        f /= "x.cpp";
+    return f;
+}
+
+static path getUniquePath(const path &p)
+{
+    return p.parent_path().parent_path().filename();
+}
+
+Solution Check::setupSolution(const path &f) const
+{
+    auto s = *check_set->checker.solution;
+    s.silent = bSilentChecks;
+    //s.throw_exceptions = false;
+    s.BinaryDir = f.parent_path();
+    return s;
+}
+
 FunctionExists::FunctionExists(const String &f, const String &def)
 {
     if (f.empty())
@@ -363,7 +394,7 @@ FunctionExists::FunctionExists(const String &f, const String &def)
     check_def(*Definitions.begin());
 }
 
-void FunctionExists::run() const
+String FunctionExists::getSourceFileContents() const
 {
     static const String src{ R"(
 #ifdef __cplusplus
@@ -389,33 +420,25 @@ int main(int ac, char* av[])
 )"
     };
 
-    auto d = check_set->checker.solution->getChecksDir();
-    auto up = unique_path();
-    d /= up;
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, src);
+    return src;
+}
 
-    auto s = *check_set->checker.solution;
-    s.silent = bSilentChecks;
-    //s.throw_exceptions = false;
-    s.BinaryDir = d;
+void FunctionExists::run() const
+{
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
 
-    auto &e = s.addTarget<ExecutableTarget>(up.string());
+    auto s = setupSolution(f);
+
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data;
     s.prepare();
-    s.execute();
+    try { s.execute(); }
+    catch (...) { Value = 0; return; }
 
     auto cmd = e.getCommand();
-    if (!cmd)
-        return;
-    if (cmd->exit_code)
-        Value = cmd->exit_code.value() == 0 ? 1 : 0;
+    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
 IncludeExists::IncludeExists(const String &i, const String &def)
@@ -432,7 +455,7 @@ IncludeExists::IncludeExists(const String &i, const String &def)
     check_def(*Definitions.begin());
 }
 
-void IncludeExists::run() const
+String IncludeExists::getSourceFileContents() const
 {
     String src = "#include <" + data + ">";
     if (!CPP)
@@ -450,32 +473,34 @@ int main(void)
 #endif
 )";
     else
-        src = R"(
+        src += R"(
 int main()
 {
   return 0;
 }
 )";
 
-    auto d = check_set->checker.solution->getChecksDir();
-    d /= unique_path();
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, src);
+    return src;
+}
+
+void IncludeExists::run() const
+{
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
+
     auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
     auto o = f;
     c->setSourceFile(f, o += ".obj");
 
     auto cmd = c->getCommand(*check_set->checker.solution);
     if (!cmd)
+    {
+        Value = 0;
         return;
+    }
     error_code ec;
     cmd->execute(ec);
-    Value = cmd->exit_code.value() == 0 ? 1 : 0;
+    Value = (cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
 TypeSize::TypeSize(const String &t, const String &def)
@@ -500,7 +525,7 @@ TypeSize::TypeSize(const String &t, const String &def)
         Parameters.Includes.push_back(h);
 }
 
-void TypeSize::run() const
+String TypeSize::getSourceFileContents() const
 {
     String src;
     for (auto &d : Parameters.Includes)
@@ -511,35 +536,33 @@ void TypeSize::run() const
     }
     src += "int main() { return sizeof(" + data + "); }";
 
-    auto d = check_set->checker.solution->getChecksDir();
-    auto up = unique_path();
-    d /= up;
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, src);
+    return src;
+}
 
-    auto s = *check_set->checker.solution;
-    s.silent = bSilentChecks;
-    //s.throw_exceptions = false;
-    s.BinaryDir = d;
+void TypeSize::run() const
+{
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
 
-    auto &e = s.addTarget<ExecutableTarget>(up.string());
+    auto s = setupSolution(f);
+
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     s.prepare();
-    s.execute();
+    try { s.execute(); }
+    catch (...) { Value = 0; return; }
 
     auto cmd = e.getCommand();
     if (!cmd)
+    {
+        Value = 0;
         return;
+    }
     primitives::Command c;
     c.program = e.getOutputFile();
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code.value();
+    Value = c.exit_code;
 }
 
 TypeAlignment::TypeAlignment(const String &t, const String &def)
@@ -559,7 +582,7 @@ TypeAlignment::TypeAlignment(const String &t, const String &def)
         Parameters.Includes.push_back(h);
 }
 
-void TypeAlignment::run() const
+String TypeAlignment::getSourceFileContents() const
 {
     String src;
     for (auto &d : Parameters.Includes)
@@ -579,35 +602,33 @@ int main()
 }
 )";
 
-    auto d = check_set->checker.solution->getChecksDir();
-    auto up = unique_path();
-    d /= up;
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, src);
+    return src;
+}
 
-    auto s = *check_set->checker.solution;
-    s.silent = bSilentChecks;
-    //s.throw_exceptions = false;
-    s.BinaryDir = d;
+void TypeAlignment::run() const
+{
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
 
-    auto &e = s.addTarget<ExecutableTarget>(up.string());
+    auto s = setupSolution(f);
+
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     s.prepare();
-    s.execute();
+    try { s.execute(); }
+    catch (...) { Value = 0; return; }
 
     auto cmd = e.getCommand();
     if (!cmd)
+    {
+        Value = 0;
         return;
+    }
     primitives::Command c;
     c.program = e.getOutputFile();
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code.value();
+    Value = c.exit_code;
 }
 
 SymbolExists::SymbolExists(const String &s, const String &def)
@@ -624,7 +645,7 @@ SymbolExists::SymbolExists(const String &s, const String &def)
     check_def(*Definitions.begin());
 }
 
-void SymbolExists::run() const
+String SymbolExists::getSourceFileContents() const
 {
     String src;
     for (auto &d : Parameters.Includes)
@@ -646,31 +667,22 @@ int main(int argc, char** argv)
 }
 )";
 
-    auto d = check_set->checker.solution->getChecksDir();
-    auto up = unique_path();
-    d /= up;
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, src);
+    return src;
+}
 
-    auto s = *check_set->checker.solution;
-    s.silent = bSilentChecks;
-    //s.throw_exceptions = false;
-    s.BinaryDir = d;
+void SymbolExists::run() const
+{
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
 
-    auto &e = s.addTarget<ExecutableTarget>(up.string());
+    auto s = setupSolution(f);
+
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     s.prepare();
-    s.execute();
+    try { s.execute(); }
+    catch (...) { Value = 0; return; }
 
-    /*auto cmd = e.getCommand();
-    if (cmd && cmd->exit_code)
-        Value = cmd->exit_code.value() == 0 ? 1 : 0;
-    else*/
     Value = 1;
 }
 
@@ -701,7 +713,7 @@ DeclarationExists::DeclarationExists(const String &d, const String &def)
         Parameters.Includes.push_back(h);
 }
 
-void DeclarationExists::run() const
+String DeclarationExists::getSourceFileContents() const
 {
     String src;
     for (auto &d : Parameters.Includes)
@@ -712,32 +724,24 @@ void DeclarationExists::run() const
     }
     src += "int main() { (void)" + data + "; return 0; }";
 
-    auto d = check_set->checker.solution->getChecksDir();
-    auto up = unique_path();
-    d /= up;
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, src);
+    return src;
+}
 
-    auto s = *check_set->checker.solution;
-    s.silent = bSilentChecks;
-    //s.throw_exceptions = false;
-    s.BinaryDir = d;
+void DeclarationExists::run() const
+{
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
 
-    auto &e = s.addTarget<ExecutableTarget>(up.string());
+    auto s = setupSolution(f);
+
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     s.prepare();
-    s.execute();
+    try { s.execute(); }
+    catch (...) { Value = 0; return; }
 
     auto cmd = e.getCommand();
-    if (!cmd)
-        return;
-    if (cmd->exit_code)
-        Value = cmd->exit_code.value() == 0 ? 1 : 0;
+    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
 StructMemberExists::StructMemberExists(const String &struct_, const String &member, const String &def)
@@ -763,7 +767,7 @@ size_t StructMemberExists::getHash() const
     return h;
 }
 
-void StructMemberExists::run() const
+String StructMemberExists::getSourceFileContents() const
 {
     String src;
     for (auto &d : Parameters.Includes)
@@ -774,32 +778,24 @@ void StructMemberExists::run() const
     }
     src += "int main() { sizeof(((" + struct_ + " *)0)->" + member + "); return 0; }";
 
-    auto d = check_set->checker.solution->getChecksDir();
-    auto up = unique_path();
-    d /= up;
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, src);
+    return src;
+}
 
-    auto s = *check_set->checker.solution;
-    s.silent = bSilentChecks;
-    //s.throw_exceptions = false;
-    s.BinaryDir = d;
+void StructMemberExists::run() const
+{
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
 
-    auto &e = s.addTarget<ExecutableTarget>(up.string());
+    auto s = setupSolution(f);
+
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     s.prepare();
-    s.execute();
+    try { s.execute(); }
+    catch (...) { Value = 0; return; }
 
     auto cmd = e.getCommand();
-    if (!cmd)
-        return;
-    if (cmd->exit_code)
-        Value = cmd->exit_code.value() == 0 ? 1 : 0;
+    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
 LibraryFunctionExists::LibraryFunctionExists(const String &library, const String &function, const String &def)
@@ -825,7 +821,7 @@ size_t LibraryFunctionExists::getHash() const
     return h;
 }
 
-void LibraryFunctionExists::run() const
+String LibraryFunctionExists::getSourceFileContents() const
 {
     static const String src{ R"(
 #ifdef __cplusplus
@@ -851,34 +847,26 @@ int main(int ac, char* av[])
 )"
     };
 
-    auto d = check_set->checker.solution->getChecksDir();
-    auto up = unique_path();
-    d /= up;
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, src);
+    return src;
+}
 
-    auto s = *check_set->checker.solution;
-    s.silent = bSilentChecks;
-    //s.throw_exceptions = false;
-    s.BinaryDir = d;
+void LibraryFunctionExists::run() const
+{
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
 
-    auto &e = s.addTarget<ExecutableTarget>(up.string());
+    auto s = setupSolution(f);
+
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data;
     e.LinkLibraries.push_back(library);
     s.prepare();
-    s.execute();
+    try { s.execute(); }
+    catch (...) { Value = 0; return; }
 
     auto cmd = e.getCommand();
-    if (!cmd)
-        return;
-    if (cmd->exit_code)
-        Value = cmd->exit_code.value() == 0 ? 1 : 0;
+    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
 SourceCompiles::SourceCompiles(const String &def, const String &source)
@@ -890,27 +878,29 @@ SourceCompiles::SourceCompiles(const String &def, const String &source)
     check_def(*Definitions.begin());
 }
 
+String SourceCompiles::getSourceFileContents() const
+{
+    return data;
+}
+
 void SourceCompiles::run() const
 {
-    auto d = check_set->checker.solution->getChecksDir();
-    d /= unique_path();
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, data);
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
+
     auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
     auto o = f;
     c->setSourceFile(f, o += ".obj");
 
     auto cmd = c->getCommand(*check_set->checker.solution);
     if (!cmd)
+    {
+        Value = 0;
         return;
+    }
     error_code ec;
     cmd->execute(ec);
-    Value = cmd->exit_code.value() == 0 ? 1 : 0;
+    Value = (cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
 SourceLinks::SourceLinks(const String &def, const String &source)
@@ -922,29 +912,26 @@ SourceLinks::SourceLinks(const String &def, const String &source)
     check_def(*Definitions.begin());
 }
 
+String SourceLinks::getSourceFileContents() const
+{
+    return data;
+}
+
 void SourceLinks::run() const
 {
-    auto d = check_set->checker.solution->getChecksDir();
-    auto up = unique_path();
-    d /= up;
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, data);
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
+
     auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
 
-    auto s = *check_set->checker.solution;
-    s.silent = bSilentChecks;
-    //s.throw_exceptions = false;
-    s.BinaryDir = d;
+    auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(up.string());
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     s.prepare();
-    s.execute();
+    try { s.execute(); }
+    catch (...) { Value = 0; return; }
+
     Value = 1;
 }
 
@@ -957,37 +944,35 @@ SourceRuns::SourceRuns(const String &def, const String &source)
     check_def(*Definitions.begin());
 }
 
+String SourceRuns::getSourceFileContents() const
+{
+    return data;
+}
+
 void SourceRuns::run() const
 {
-    auto d = check_set->checker.solution->getChecksDir();
-    auto up = unique_path();
-    d /= up;
-    ::create_directories(d);
-    auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
-    write_file(f, data);
+    auto f = getOutputFilename();
+    write_file(f, getSourceFileContents());
 
-    auto s = *check_set->checker.solution;
-    s.silent = bSilentChecks;
-    //s.throw_exceptions = false;
-    s.BinaryDir = d;
+    auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(up.string());
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     s.prepare();
-    s.execute();
+    try { s.execute(); }
+    catch (...) { Value = 0; return; }
 
     auto cmd = e.getCommand();
     if (!cmd)
+    {
+        Value = 0;
         return;
+    }
     primitives::Command c;
     c.program = e.getOutputFile();
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code.value();
+    Value = c.exit_code;
 }
 
 FunctionExists &CheckSet::checkFunctionExists(const String &function, LanguageType L)

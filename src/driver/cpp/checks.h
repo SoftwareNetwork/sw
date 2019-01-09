@@ -107,11 +107,14 @@ struct SW_DRIVER_CPP_API Check : CommandData<Check>
     void addInputOutputDeps() {} // compat with command
     std::optional<String> getDefinition() const;
     std::optional<String> getDefinition(const String &d) const;
+    virtual String getSourceFileContents() const = 0;
 
     bool lessDuringExecution(const Check &rhs) const;
 
 protected:
     virtual void run() const {}
+    path getOutputFilename() const;
+    Solution setupSolution(const path &f) const;
 };
 
 using CheckPtr = std::shared_ptr<Check>;
@@ -121,6 +124,7 @@ struct SW_DRIVER_CPP_API FunctionExists : Check
     FunctionExists(const String &f, const String &def = "");
 
     void run() const override;
+    String getSourceFileContents() const override;
 };
 
 struct SW_DRIVER_CPP_API IncludeExists : Check
@@ -128,6 +132,7 @@ struct SW_DRIVER_CPP_API IncludeExists : Check
     IncludeExists(const String &i, const String &def = "");
 
     void run() const override;
+    String getSourceFileContents() const override;
 };
 
 struct SW_DRIVER_CPP_API TypeSize : Check
@@ -135,6 +140,7 @@ struct SW_DRIVER_CPP_API TypeSize : Check
     TypeSize(const String &t, const String &def = "");
 
     void run() const override;
+    String getSourceFileContents() const override;
 };
 
 struct SW_DRIVER_CPP_API TypeAlignment : Check
@@ -142,6 +148,7 @@ struct SW_DRIVER_CPP_API TypeAlignment : Check
     TypeAlignment(const String &t, const String &def = "");
 
     void run() const override;
+    String getSourceFileContents() const override;
 };
 
 // If the symbol is a type, enum value, or intrinsic it will not be recognized
@@ -151,6 +158,7 @@ struct SW_DRIVER_CPP_API SymbolExists : Check
     SymbolExists(const String &s, const String &def = "");
 
     void run() const override;
+    String getSourceFileContents() const override;
 };
 
 struct SW_DRIVER_CPP_API DeclarationExists : Check
@@ -158,6 +166,7 @@ struct SW_DRIVER_CPP_API DeclarationExists : Check
     DeclarationExists(const String &d, const String &def = "");
 
     void run() const override;
+    String getSourceFileContents() const override;
 };
 
 struct SW_DRIVER_CPP_API StructMemberExists : Check
@@ -169,6 +178,7 @@ struct SW_DRIVER_CPP_API StructMemberExists : Check
 
     void run() const override;
     size_t getHash() const override;
+    String getSourceFileContents() const override;
 };
 
 struct SW_DRIVER_CPP_API LibraryFunctionExists : Check
@@ -180,6 +190,7 @@ struct SW_DRIVER_CPP_API LibraryFunctionExists : Check
 
     void run() const override;
     size_t getHash() const override;
+    String getSourceFileContents() const override;
 };
 
 struct SW_DRIVER_CPP_API SourceCompiles : Check
@@ -187,6 +198,7 @@ struct SW_DRIVER_CPP_API SourceCompiles : Check
     SourceCompiles(const String &def, const String &source);
 
     void run() const override;
+    String getSourceFileContents() const override;
 };
 
 struct SW_DRIVER_CPP_API SourceLinks : Check
@@ -194,6 +206,7 @@ struct SW_DRIVER_CPP_API SourceLinks : Check
     SourceLinks(const String &def, const String &source);
 
     void run() const override;
+    String getSourceFileContents() const override;
 };
 
 struct SW_DRIVER_CPP_API SourceRuns : Check
@@ -201,6 +214,7 @@ struct SW_DRIVER_CPP_API SourceRuns : Check
     SourceRuns(const String &def, const String &source);
 
     void run() const override;
+    String getSourceFileContents() const override;
 };
 
 struct SW_DRIVER_CPP_API CheckSet
