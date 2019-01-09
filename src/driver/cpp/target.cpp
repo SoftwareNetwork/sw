@@ -4177,4 +4177,85 @@ UnresolvedDependenciesType KotlinTarget::gatherUnresolvedDependencies() const
     return deps;
 }
 
+void DTarget::init()
+{
+    Target::init();
+
+    // propagate this pointer to all
+    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    {
+        v.target = this;
+    });
+    //LanguageStorage::target = this;
+
+    if (auto p = SourceFileStorage::findProgramByExtension(".d"); p)
+        compiler = std::dynamic_pointer_cast<DCompiler>(p->clone());
+    else
+        throw SW_RUNTIME_ERROR("No D compiler found");
+}
+
+void DTarget::setOutputFile()
+{
+    /* || add a considiton so user could change nont build output dir*/
+    if (Scope == TargetScope::Build)
+    {
+        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+    }
+    else
+    {
+        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        compiler->setOutputFile(base);
+    }
+    compiler->setObjectDir(BinaryDir.parent_path() / "obj");
+}
+
+path DTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / getOutputFileName();
+    }
+    return p;
+}
+
+Commands DTarget::getCommands() const
+{
+    for (auto f : gatherSourceFiles<DSourceFile>(*this))
+        compiler->setSourceFile(f->file);
+
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    cmds.insert(c);
+    return cmds;
+}
+
+bool DTarget::prepare()
+{
+    return false;
+}
+
+void DTarget::findSources()
+{
+}
+
+UnresolvedDependenciesType DTarget::gatherUnresolvedDependencies() const
+{
+    UnresolvedDependenciesType deps;
+    ((DTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+        [this, &deps](auto &v, auto &s)
+    {
+        for (auto &d : v.Dependencies)
+        {
+            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+                deps.insert({ d->package, d });
+        }
+    });
+    return deps;
+}
+
 }

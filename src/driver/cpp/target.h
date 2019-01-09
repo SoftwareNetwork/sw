@@ -150,12 +150,14 @@ enum class TargetType : int32_t
 
     Build,
     Solution,
+
     Project, // explicitly created
     Directory, // implicitly created?
+
     NativeLibrary,
-    NativeExecutable,
     NativeStaticLibrary,
     NativeSharedLibrary,
+    NativeExecutable,
 
     CSharpLibrary,
     CSharpExecutable,
@@ -176,6 +178,11 @@ enum class TargetType : int32_t
     // add/replace with java jar?
     KotlinLibrary,
     KotlinExecutable,
+
+    DLibrary,
+    DStaticLibrary,
+    DSharedLibrary,
+    DExecutable,
 };
 
 // enforcement rules apply to target to say how many checks it should perform
@@ -1089,6 +1096,49 @@ private:
 struct SW_DRIVER_CPP_API KotlinExecutable : KotlinTarget
 {
     TargetType getType() const override { return TargetType::KotlinExecutable; }
+};
+
+// D
+
+struct SW_DRIVER_CPP_API DTarget : Target
+    , NativeTargetOptionsGroup
+{
+    USING_ASSIGN_OPS(NativeTargetOptionsGroup);
+
+    std::shared_ptr<DCompiler> compiler;
+
+    TargetType getType() const override { return TargetType::DLibrary; }
+
+    void init() override;
+
+    void setOutputFile() override;
+    Commands getCommands(void) const override;
+    bool prepare() override;
+    void findSources() override;
+    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+
+private:
+    using Target::getOutputFileName;
+    path getOutputFileName(const path &root) const;
+};
+
+struct SW_DRIVER_CPP_API DLibrary : DTarget
+{
+};
+
+struct SW_DRIVER_CPP_API DStaticLibrary : DLibrary
+{
+    TargetType getType() const override { return TargetType::DStaticLibrary; }
+};
+
+struct SW_DRIVER_CPP_API DSharedLibrary : DLibrary
+{
+    TargetType getType() const override { return TargetType::DSharedLibrary; }
+};
+
+struct SW_DRIVER_CPP_API DExecutable : DTarget
+{
+    TargetType getType() const override { return TargetType::DExecutable; }
 };
 
 #undef ASSIGN_TYPES

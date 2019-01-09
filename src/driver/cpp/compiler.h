@@ -501,13 +501,39 @@ protected:
     Version gatherVersion() const override;
 };
 
+struct SW_DRIVER_CPP_API DCompiler : Compiler,
+    CommandLineOptions<DCompilerOptions>
+{
+    SW_DECLARE_PROGRAM_CLONE;
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+
+    void setOutputFile(const path &output_file);
+    void setObjectDir(const path &dir);
+    void setSourceFile(const path &input_file);
+
+protected:
+    Version gatherVersion() const override;
+};
+
 // TODO: compiled
-// D, VB, VB.NET, Obj-C (check work), Pascal (+Delphi?), swift, dart, cobol, lisp, ada, haskell, F#, erlang
+// VB, VB.NET, Obj-C (check work), Pascal (+Delphi?), swift, dart, cobol, lisp, ada, haskell, F#, erlang
 
 // TODO: interpreted
 // python, js, php, R, ruby, matlab, perl, lua,
 
 // TODO (other):
 // Groovy, scala, prolog, apex, julia, clojure, bash
+
+/*
+How to add new lang:
+- Add compiler
+- Add 'void detectXCompilers(struct Solution &s);' function
+- Call it from 'detectCompilers()'
+- Add compiler options
+- Add targets
+- Add source file
+- Add language
+- Activate language (program) in solution
+*/
 
 }

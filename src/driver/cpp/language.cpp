@@ -247,4 +247,14 @@ std::shared_ptr<SourceFile> KotlinLanguage::createSourceFile(const Target &t, co
     return std::make_shared<KotlinSourceFile>(t, input);
 }
 
+std::shared_ptr<Language> DLanguage::clone() const
+{
+    return std::make_shared<DLanguage>(*this);
+}
+
+std::shared_ptr<SourceFile> DLanguage::createSourceFile(const Target &t, const path &input) const
+{
+    return std::make_shared<DSourceFile>(t, input);
+}
+
 }

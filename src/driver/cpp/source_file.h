@@ -223,4 +223,11 @@ struct SW_DRIVER_CPP_API KotlinSourceFile : SourceFile
     using SourceFile::SourceFile;
 };
 
+struct SW_DRIVER_CPP_API DSourceFile : SourceFile
+{
+    using SourceFile::SourceFile;
+};
+
+// TODO: maybe use virtual function with enum instead of different types for SFs?
+
 }

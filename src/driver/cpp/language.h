@@ -148,4 +148,12 @@ struct SW_DRIVER_CPP_API KotlinLanguage : Language
     std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
 };
 
+struct SW_DRIVER_CPP_API DLanguage : Language
+{
+    std::shared_ptr<DCompiler> compiler;
+
+    std::shared_ptr<Language> clone() const override;
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
+};
+
 }

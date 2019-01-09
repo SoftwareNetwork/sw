@@ -1044,6 +1044,7 @@ void Build::findCompiler()
         {"org.gnu.gcc.fortran", CompilerType::MSVC},
         {"com.oracle.java.javac", CompilerType::MSVC},
         {"com.JetBrains.kotlin.kotlinc", CompilerType::MSVC},
+        {"org.dlang.dmd.dmd", CompilerType::MSVC},
     };
 
     switch (Settings.Native.CompilerType)

@@ -587,4 +587,29 @@ struct SW_DRIVER_CPP_API KotlinCompilerOptions
 };
 DECLARE_OPTION_SPECIALIZATION(KotlinCompilerOptions);
 
+struct SW_DRIVER_CPP_API DCompilerOptions
+{
+    COMMAND_LINE_OPTION(InputFiles, Files)
+    {
+        cl::InputDependency{},
+    };
+
+    COMMAND_LINE_OPTION(DoNotWriteObjectFiles, bool)
+    {
+        cl::CommandFlag{ "o-" },
+    };
+
+    COMMAND_LINE_OPTION(ObjectDir, path)
+    {
+        cl::CommandFlag{ "od=" },
+    };
+
+    COMMAND_LINE_OPTION(Output, path)
+    {
+        cl::CommandFlag{ "of=" },
+            cl::OutputDependency{},
+    };
+};
+DECLARE_OPTION_SPECIALIZATION(DCompilerOptions);
+
 }

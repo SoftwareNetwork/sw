@@ -73,6 +73,7 @@ void detectGoCompilers(struct Solution &s);
 void detectFortranCompilers(struct Solution &s);
 void detectJavaCompilers(struct Solution &s);
 void detectKotlinCompilers(struct Solution &s);
+void detectDCompilers(struct Solution &s);
 
 static Version gatherVersion(const path &program, const String &arg = "--version", const String &in_regex = {})
 {
@@ -261,7 +262,24 @@ void detectCompilers(struct Solution &s)
         detectFortranCompilers(s);
         detectJavaCompilers(s);
         detectKotlinCompilers(s);
+        detectDCompilers(s);
     }
+}
+
+void detectDCompilers(struct Solution &s)
+{
+    path compiler;
+    compiler = primitives::resolve_executable("dmd");
+    if (compiler.empty())
+        return;
+
+    auto L = std::make_shared<DLanguage>();
+    L->CompiledExtensions = { ".d" };
+
+    auto C = std::make_shared<DCompiler>();
+    C->file = compiler;
+    L->compiler = C;
+    s.registerProgramAndLanguage("org.dlang.dmd.dmd", C, L);
 }
 
 void detectKotlinCompilers(struct Solution &s)
@@ -1867,6 +1885,41 @@ void KotlinCompiler::setSourceFile(const path &input_file)
 Version KotlinCompiler::gatherVersion() const
 {
     return ::sw::gatherVersion(file, "-version");
+}
+
+SW_DEFINE_PROGRAM_CLONE(DCompiler)
+
+std::shared_ptr<builder::Command> DCompiler::prepareCommand(const TargetBase &t)
+{
+    if (cmd)
+        return cmd;
+
+    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
+
+    getCommandLineOptions<DCompilerOptions>(c.get(), *this);
+
+    return cmd = c;
+}
+
+void DCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += ".exe";
+}
+
+void DCompiler::setObjectDir(const path &output_dir)
+{
+    ObjectDir = output_dir;
+}
+
+void DCompiler::setSourceFile(const path &input_file)
+{
+    InputFiles().insert(input_file);
+}
+
+Version DCompiler::gatherVersion() const
+{
+    return ::sw::gatherVersion(file);
 }
 
 }
