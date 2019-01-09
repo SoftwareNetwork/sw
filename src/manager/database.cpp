@@ -192,6 +192,9 @@ void Database::open(bool read_only)
     // hope 1 min is enough to wait for write operation
     // in multithreaded environment
     sqlite3_busy_timeout(db->native_handle(), 60000);
+
+    // explicit
+    db->execute("PRAGMA foreign_keys = ON");
 }
 
 void Database::recreate()

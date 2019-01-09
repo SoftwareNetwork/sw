@@ -441,20 +441,6 @@ void Solution::performChecks()
     checker.performChecks(getUserDirectories().storage_dir_cfg / getConfig());
 }
 
-/*void Solution::copyChecksFrom(const Solution &s)
-{
-    Checks = s.Checks;
-    Checks.solution = this;
-    for (auto &[s, cs] : Checks.sets)
-    {
-        cs.checker = &Checks;
-        for (auto &[d, c] : cs.checks)
-            c->checker = &Checks;
-    }
-    for (auto &[d, c] : Checks.checks)
-        c->checker = &Checks;
-}*/
-
 Commands Solution::getCommands() const
 {
     //checkPrepared();
