@@ -233,8 +233,6 @@ private:
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     void build_and_resolve(int n_runs = 0);
 
-    path getChecksFilename() const;
-
     void addTest(Test &cb, const String &name);
 
 private:

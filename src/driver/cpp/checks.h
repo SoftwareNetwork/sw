@@ -304,7 +304,7 @@ struct SW_DRIVER_CPP_API Checker
     Checker();
 
     CheckSet &addSet(const String &name);
-    void performChecks(const path &fn);
+    void performChecks(path checks_results_dir);
 
 private:
     // all checks are stored here

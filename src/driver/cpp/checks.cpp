@@ -126,8 +126,10 @@ CheckSet &Checker::addSet(const String &name)
     return p.first->second;
 }
 
-void Checker::performChecks(const path &fn)
+void Checker::performChecks(path fn)
 {
+    fn /= "checks.3.txt";
+
     // load
     checksStorage->load(fn);
 
@@ -368,7 +370,7 @@ path Check::getOutputFilename() const
 
 static path getUniquePath(const path &p)
 {
-    return p.parent_path().parent_path().filename();
+    return p.parent_path().filename();
 }
 
 Solution Check::setupSolution(const path &f) const

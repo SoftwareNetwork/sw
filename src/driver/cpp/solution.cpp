@@ -431,12 +431,6 @@ static void addImportLibrary(NativeExecutedTarget &t)
     t += getImportDefinitionsFile();*/
 }
 
-path Solution::getChecksFilename() const
-{
-    // with version
-    return getUserDirectories().storage_dir_cfg / getConfig() / "checks.2.txt";
-}
-
 path Solution::getChecksDir() const
 {
     return getServiceDir() / "checks";
@@ -444,7 +438,7 @@ path Solution::getChecksDir() const
 
 void Solution::performChecks()
 {
-    checker.performChecks(getChecksFilename());
+    checker.performChecks(getUserDirectories().storage_dir_cfg / getConfig());
 }
 
 /*void Solution::copyChecksFrom(const Solution &s)
