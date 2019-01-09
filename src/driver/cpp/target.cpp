@@ -2032,61 +2032,6 @@ bool NativeExecutedTarget::prepare()
                 }
             }
         }*/
-        //else
-        {
-            // resolve unresolved deps
-            // not on the first stage!
-            TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-                [this](auto &v, auto &s)
-            {
-                for (auto &d : v.Dependencies)
-                {
-                    auto i = solution->getChildren().find(d->getPackage());
-                    if (i != solution->getChildren().end())
-                        d->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
-
-                    /*for (auto &[pp, t] : solution->getChildren())
-                    {
-                        if (d->getPackage().canBe(t->getPackage()))
-                        {
-                            d->setTarget(std::static_pointer_cast<NativeTarget>(t));
-                            break;
-                        }
-                    }*/
-
-                    if (!d->target.lock())
-                    {
-                        /*bool added = false;
-                        for (auto &[pp, t] : solution->dummy_children)
-                        {
-                            if (d->getPackage().canBe(t->getPackage()))
-                            {
-                                d->setTarget(std::static_pointer_cast<NativeTarget>(t));
-                                added = true;
-                                static std::mutex m;
-                                std::unique_lock lk(m);
-                                getSolution()->children[t->pkg] = t;
-                                while (t->prepare_pass < prepare_pass)
-                                    t->prepare();
-                                break;
-                            }
-                        }
-                        if (!added)*/
-
-                        auto err = "Package: " + pkg.toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
-                        if (auto d = pkg.getOverriddenDir(); d)
-                        {
-                            err += ".\nPackage: " + pkg.toString() + " is overridden locally. "
-                                "This means you have new dependency that is not in db.\n"
-                                "Run following command in attempt to fix this issue:"
-                                "'sw -d " + normalize_path(d.value()) + " -override-remote-package " +
-                                pkg.ppath.slice(0, getServiceDatabase().getOverriddenPackage(pkg).value().prefix).toString() + "'";
-                        }
-                        throw std::logic_error(err);
-                    }
-                }
-            });
-        }
     }
     RETURN_PREPARE_PASS;
     case 3:

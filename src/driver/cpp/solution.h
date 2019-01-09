@@ -228,10 +228,14 @@ private:
     std::vector<detail::EventCallback> events;
     //Files used_modules;
     mutable std::unordered_map<UnresolvedPackage, TargetBaseTypePtr> resolved_targets;
+    bool resolve_pass = false;
 
     //void checkPrepared() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     void build_and_resolve(int n_runs = 0);
+
+    // cross-compilation lies here
+    void resolvePass(const Target &t, const UnresolvedDependenciesType &deps);
 
     void addTest(Test &cb, const String &name);
 

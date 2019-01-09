@@ -18,6 +18,7 @@
 #include "frontend/cppan/yaml.h"
 
 #include <directories.h>
+#include <database.h>
 #include <hash.h>
 #include <settings.h>
 
@@ -740,8 +741,11 @@ bool Solution::prepareStep()
     Futures<void> fs;
     for (const auto &[pkg, t] : getChildren())
     {
-        fs.push_back(e.push([t, &next_pass]
+        fs.push_back(e.push([this, t, &next_pass]
         {
+            if (!resolve_pass)
+                resolvePass(*t, t->gatherUnresolvedDependencies());
+
             auto np = t->prepare();
             if (!next_pass)
                 next_pass = np;
@@ -749,7 +753,34 @@ bool Solution::prepareStep()
     }
     waitAndGet(fs);
 
+    resolve_pass = true;
+
     return next_pass;
+}
+
+void Solution::resolvePass(const Target &t, const UnresolvedDependenciesType &deps)
+{
+    for (auto &[dep, d] : deps)
+    {
+        auto i = getChildren().find(d->getPackage());
+        if (i != getChildren().end())
+            d->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
+        // we fail in any case here, no matter if dependency were resolved previously
+        else
+        //if (!d->target.lock())
+        {
+            auto err = "Package: " + t.pkg.toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
+            if (auto d = t.pkg.getOverriddenDir(); d)
+            {
+                err += ".\nPackage: " + t.pkg.toString() + " is overridden locally. "
+                    "This means you have new dependency that is not in db.\n"
+                    "Run following command in attempt to fix this issue:"
+                    "'sw -d " + normalize_path(d.value()) + " -override-remote-package " +
+                    t.pkg.ppath.slice(0, getServiceDatabase().getOverriddenPackage(t.pkg).value().prefix).toString() + "'";
+            }
+            throw std::logic_error(err);
+        }
+    }
 }
 
 UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
