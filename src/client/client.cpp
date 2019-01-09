@@ -581,7 +581,7 @@ SUBCOMMAND_DECL(ide)
 
     if (!target_build.empty())
     {
-        try_single_process_job(fs::current_path() / ".sw" / "ide", []()
+        try_single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", []()
         {
             auto s = sw::load(working_directory);
             auto &b = *((sw::Build*)s.get());
@@ -593,7 +593,7 @@ SUBCOMMAND_DECL(ide)
     }
     else
     {
-        single_process_job(fs::current_path() / ".sw" / "ide", []()
+        single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", []()
         {
             auto s = sw::load(working_directory);
             auto &b = *((sw::Build*)s.get());
@@ -705,7 +705,7 @@ SUBCOMMAND_DECL(upload)
 {
     sw::FetchOptions opts;
     //opts.name_prefix = upload_prefix;
-    opts.root_dir = fs::current_path() / ".sw";
+    opts.root_dir = fs::current_path() / SW_BINARY_DIR;
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(8);
     //opts.apply_version_to_source = true;

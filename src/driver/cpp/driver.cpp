@@ -88,7 +88,7 @@ bool CppDriver::execute(const path &file_or_dir) const
 
 static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &opts, bool parallel)
 {
-    auto d = fn.parent_path() / ".sw" / "src";
+    auto d = fn.parent_path() / SW_BINARY_DIR / "src";
 
     SourceDirMap srcs_old;
     if (parallel)

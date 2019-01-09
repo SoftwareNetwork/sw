@@ -13,6 +13,10 @@
 #define STAMPS_DIR "stamps"
 #define STORAGE_DIR "storage"
 
+// replace with .swb? .sw.b? .swbin? .swbuild?
+// so we leave .sw for some misc but important files to include into repositories
+#define SW_BINARY_DIR ".sw"
+
 using Stamps = std::unordered_map<path, time_t>;
 using SourceGroups = std::map<String, std::set<String>>;
 

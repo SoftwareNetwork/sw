@@ -121,6 +121,9 @@ std::unique_ptr<Generator> Generator::create(const String &s)
     case GeneratorType::Shell:
         g = std::make_unique<ShellGenerator>();
         break;
+    case GeneratorType::CompilationDatabase:
+        g = std::make_unique<CompilationDatabaseGenerator>();
+        break;
     default:
         throw std::logic_error("not implemented");
     }
@@ -1329,7 +1332,7 @@ void NinjaGenerator::generate(const Build &b)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    const auto dir = path(".sw") / toPathString(type) / b.getConfig();
+    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.getConfig();
 
     NinjaContext ctx;
 
@@ -1560,7 +1563,7 @@ void MakeGenerator::generate(const Build &b)
 {
     // https://www.gnu.org/software/make/manual/html_node/index.html
 
-    const auto d = fs::absolute(path(".sw") / toPathString(type) / b.getConfig());
+    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.getConfig());
 
     auto ep = b.solutions[0].getExecutionPlan();
 
@@ -1724,7 +1727,7 @@ void BatchGenerator::generate(const Build &b)
         write_file(p, t + s);
     };
 
-    const auto d = path(".sw") / toPathString(type) / b.getConfig();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getConfig();
 
     auto p = b.solutions[0].getExecutionPlan();
 
@@ -1735,16 +1738,15 @@ void BatchGenerator::generate(const Build &b)
 
 void CompilationDatabaseGenerator::generate(const Build &b)
 {
-    auto print_comp_db = [this](const ExecutionPlan<builder::Command> &ep, const path &p)
+    auto print_comp_db = [&b](const ExecutionPlan<builder::Command> &ep, const path &p)
     {
-        auto b = dynamic_cast<const Build*>(this);
-        if (!b || b->solutions.empty())
+        if (b.solutions.empty())
             return;
         static std::set<String> exts{
             ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
         };
         nlohmann::json j;
-        for (auto &[p, t] : b->solutions[0].children)
+        for (auto &[p, t] : b.solutions[0].children)
         {
             if (!t->isLocal())
                 continue;
@@ -1770,7 +1772,7 @@ void CompilationDatabaseGenerator::generate(const Build &b)
         write_file(p, j.dump(2));
     };
 
-    const auto d = path(".sw") / toPathString(type) / b.getConfig();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getConfig();
 
     auto p = b.solutions[0].getExecutionPlan();
 

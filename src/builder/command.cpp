@@ -578,7 +578,7 @@ void Command::execute1(std::error_code *ec)
     {
         String s;
         s += "\n";
-        auto p = fs::current_path() / ".sw" / "rsp" / getResponseFilename();
+        auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / getResponseFilename();
         auto pbat = p;
         String t;
 

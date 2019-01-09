@@ -31,9 +31,8 @@ DECLARE_STATIC_LOGGER(logger, "target");
 #define RETURN_PREPARE_PASS \
     do {prepare_pass++; return true;} while (0)
 
-#define CPPAN_FILE_PREFIX ".sw"
 #define NATIVE_TARGET_DEF_SYMBOLS_FILE \
-    (BinaryDir / CPPAN_FILE_PREFIX ".symbols.def")
+    (BinaryDir / ".sw.symbols.def")
 
 static cl::opt<bool> do_not_mangle_object_names("do-not-mangle-object-names");
 static cl::opt<bool> bull_build("full", cl::desc("Full build (check all conditions)"));
@@ -517,7 +516,7 @@ void Target::init()
     }
     else if (auto d = pkg.getOverriddenDir(); d && 0)
     {
-        BinaryDir = d.value() / ".sw";
+        BinaryDir = d.value() / SW_BINARY_DIR;
         BinaryDir /= sha256_short(pkg.toString()); // pkg first
         BinaryDir /= path(getConfig(true));
     }
@@ -3013,7 +3012,7 @@ path NativeExecutedTarget::getPatchDir(bool binary_dir) const
 {
     path base;
     if (auto d = pkg.getOverriddenDir(); d)
-        base = d.value() / ".sw";
+        base = d.value() / SW_BINARY_DIR;
     else if (!Local)
         base = pkg.getDirSrc();
     else

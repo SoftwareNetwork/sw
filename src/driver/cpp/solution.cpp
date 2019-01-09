@@ -236,7 +236,7 @@ Solution::Solution()
     checker.solution = this;
 
     SourceDir = fs::absolute(fs::current_path());
-    BinaryDir = SourceDir / ".sw";
+    BinaryDir = SourceDir / SW_BINARY_DIR;
 }
 
 Solution::Solution(const Solution &rhs)
@@ -1542,7 +1542,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
                 if (is_under_root(fn, getDirectories().storage_dir_pkg))
                     h = fn.parent_path().parent_path() / "aux" / ("defs_" + hash + ".h");
                 else
-                    h = fn.parent_path() / ".sw" / "aux" / ("defs_" + hash + ".h");
+                    h = fn.parent_path() / SW_BINARY_DIR / "aux" / ("defs_" + hash + ".h");
                 primitives::CppContext ctx;
 
                 ctx.addLine("#define configure configure_" + hash);
