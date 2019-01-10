@@ -864,6 +864,7 @@ bool Command::lessDuringExecution(const Command &rhs) const
 
 void Command::onBeforeRun()
 {
+    tid = std::this_thread::get_id();
     t_begin = Clock::now();
 }
 

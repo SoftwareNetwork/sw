@@ -48,6 +48,7 @@ cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 static cl::opt<bool> fetch_sources("fetch", cl::desc("Fetch files in process"));
+static cl::opt<bool> chrome_trace("chrome-trace", cl::desc("Record chrome trace events"));
 
 static cl::opt<String> target_os("target-os");
 static cl::opt<String> compiler("compiler", cl::desc("Set compiler")/*, cl::sub(subcommand_ide)*/);
@@ -609,6 +610,51 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
     p.execute(e);
     if (!silent)
         LOG_INFO(logger, "Build time: " << t.getTimeFloat() << " s.");
+
+    // produce chrome tracing log
+    if (chrome_trace)
+    {
+        // calculate minimal time
+        auto min = decltype (builder::Command::t_begin)::clock::now();
+        for (auto &c : p.commands)
+        {
+            if (c->t_begin.time_since_epoch().count() == 0)
+                continue;
+            min = std::min(c->t_begin, min);
+        }
+
+        auto tid_to_ll = [](auto &id)
+        {
+            std::ostringstream ss;
+            ss << id;
+            return ss.str();
+        };
+
+        nlohmann::json trace;
+        nlohmann::json events;
+        for (auto &c : p.commands)
+        {
+            if (c->t_begin.time_since_epoch().count() == 0)
+                continue;
+
+            nlohmann::json b;
+            b["name"] = c->getName();
+            b["pid"] = 1;
+            b["tid"] = tid_to_ll(c->tid);
+            b["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c->t_begin - min).count();
+            b["ph"] = "B";
+            events.push_back(b);
+
+            nlohmann::json e;
+            e["pid"] = 1;
+            e["tid"] = tid_to_ll(c->tid);
+            e["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c->t_end - min).count();
+            e["ph"] = "E";
+            events.push_back(e);
+        }
+        trace["traceEvents"] = events;
+        write_file(getServiceDir() / "chrome_trace.json", trace.dump(2));
+    }
 
     // prevent memory leaks (high mem usage)
     /*updateConcurrentContext();

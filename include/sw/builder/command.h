@@ -111,6 +111,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     int strict_order = 0; // used to execute this before other commands
     ResourcePool *pool = nullptr;
 
+    std::thread::id tid;
     Clock::time_point t_begin;
     Clock::time_point t_end;
 
