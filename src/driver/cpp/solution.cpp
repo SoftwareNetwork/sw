@@ -639,6 +639,7 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
 
             nlohmann::json b;
             b["name"] = c->getName();
+            b["cat"] = "BUILD";
             b["pid"] = 1;
             b["tid"] = tid_to_ll(c->tid);
             b["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c->t_begin - min).count();
@@ -646,6 +647,8 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
             events.push_back(b);
 
             nlohmann::json e;
+            e["name"] = c->getName();
+            e["cat"] = "BUILD";
             e["pid"] = 1;
             e["tid"] = tid_to_ll(c->tid);
             e["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c->t_end - min).count();
