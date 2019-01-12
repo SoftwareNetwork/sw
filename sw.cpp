@@ -75,6 +75,16 @@ void build(Solution &s)
         manager.addPrecompiledHeader(pch);
     }
 
+    auto &tools = p.addDirectory("tools");
+    auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
+    self_builder.PackageDefinitions = true;
+    self_builder.CPPVersion = CPPLanguageStandard::CPP17;
+    self_builder += "src/tools/self_builder.cpp";
+    self_builder +=
+        manager,
+        "pub.egorpugin.primitives.context-master"_dep,
+        "pub.egorpugin.primitives.sw.main-master"_dep;
+
     auto &builder = p.addTarget<LibraryTarget>("builder");
     builder.ApiName = "SW_BUILDER_API";
     builder.ExportIfStatic = true;
@@ -105,29 +115,12 @@ void build(Solution &s)
         cpp_driver.CompileOptions.push_back("-bigobj");
     //else if (s.Settings.Native.CompilerType == CompilerType::GNU)
         //cpp_driver.CompileOptions.push_back("-Wa,-mbig-obj");
-
-    auto &tools = p.addDirectory("tools");
-    auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
-    self_builder.PackageDefinitions = true;
-    self_builder.CPPVersion = CPPLanguageStandard::CPP17;
-    self_builder += "src/tools/self_builder.cpp";
-    self_builder +=
-        manager,
-        "pub.egorpugin.primitives.context-master"_dep,
-        "pub.egorpugin.primitives.sw.main-master"_dep;
     {
-        auto c = std::make_shared<Command>();
-        c->fs = s.getSolution()->fs;
-        c->setProgram(self_builder);
-        c->args.push_back((cpp_driver.BinaryDir / "build_self.generated.h").u8string());
-        c->args.push_back((cpp_driver.BinaryDir / "build_self.packages.generated.h").u8string());
-        c->addOutput(cpp_driver.BinaryDir / "build_self.generated.h");
-        c->addOutput(cpp_driver.BinaryDir / "build_self.packages.generated.h");
-        cpp_driver += cpp_driver.BinaryDir / "build_self.generated.h";
-        cpp_driver += cpp_driver.BinaryDir / "build_self.packages.generated.h";
-        cpp_driver.Storage.push_back(c);
-        auto d = cpp_driver + self_builder;
-        d->Dummy = true;
+        auto c = cpp_driver.addCommand();
+        c << cmd::prog(self_builder)
+            << cmd::out("build_self.generated.h")
+            << cmd::out("build_self.packages.generated.h")
+            ;
     }
 
     auto &client = p.addTarget<ExecutableTarget>("sw");
