@@ -236,7 +236,7 @@ struct SW_MANAGER_API PackagePath : SecureSplitablePath<PackagePath>
 {
     using Base = SecureSplitablePath<PackagePath>;
 
-    enum class ElementType
+    enum class ElementType : uint8_t
     {
         Namespace,
         Owner,

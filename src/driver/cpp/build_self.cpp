@@ -28,6 +28,7 @@ void build_self(Solution &s)
 
         // this provides initial download of driver dependencies
         Resolver r;
+        r.add_downloads = false; // we hide our activity
         r.resolve_dependencies(required_packages);
         //auto pkgs = resolve_dependencies(required_packages);
         for (auto &p : r.getDownloadDependencies())

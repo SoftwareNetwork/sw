@@ -507,6 +507,28 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
     }
 }
 
+void NativeLinkerOptions::add(const UnresolvedPackage &t)
+{
+    add(std::make_shared<Dependency>(t));
+}
+
+void NativeLinkerOptions::remove(const UnresolvedPackage &t)
+{
+    remove(std::make_shared<Dependency>(t));
+}
+
+void NativeLinkerOptions::add(const UnresolvedPackages &t)
+{
+    for (auto &d : t)
+        add(d);
+}
+
+void NativeLinkerOptions::remove(const UnresolvedPackages &t)
+{
+    for (auto &d : t)
+        remove(d);
+}
+
 void NativeLinkerOptions::add(const PackageId &p)
 {
     add(std::make_shared<Dependency>(p));

@@ -120,6 +120,7 @@ int main(int argc, char **argv)
         {{"org.sw.demo.nlohmann.json", "3"}, {}},
         {{"org.sw.demo.libuv", "1"}, {}},
         {{"org.sw.demo.imageworks.pystring", "1"}, {}},
+        {{"org.sw.demo.facebook.zstd.zstd", "1"}, {}},
 
         {{"org.sw.demo.ragel", "6"}, {}},
 

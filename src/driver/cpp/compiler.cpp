@@ -34,33 +34,33 @@ extern const StringSet cpp_source_file_extensions;
 extern const StringSet header_file_extensions;
 
 const StringSet cpp_source_file_extensions{
-	".cc",
-	".CC",
-	".cpp",
-	".cxx",
-	".ixx", // msvc modules
-	// cppm - clang?
-	// mxx, mpp - build2?
-	".c++",
-	".C++",
-	".CPP",
+    ".cc",
+    ".CC",
+    ".cpp",
+    ".cxx",
+    ".ixx", // msvc modules
+    // cppm - clang?
+    // mxx, mpp - build2?
+    ".c++",
+    ".C++",
+    ".CPP",
     ".CXX",
     ".C", // old ext (Wt)
-	// Objective-C
-	".m",
-	".mm",
+    // Objective-C
+    ".m",
+    ".mm",
 };
 
 const StringSet header_file_extensions{
-	".h",
-	".hh",
-	".hm",
-	".hpp",
-	".hxx",
-	".h++",
-	".H++",
-	".HPP",
-	".H",
+    ".h",
+    ".hh",
+    ".hm",
+    ".hpp",
+    ".hxx",
+    ".h++",
+    ".H++",
+    ".HPP",
+    ".H",
 };
 
 namespace sw

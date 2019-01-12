@@ -170,7 +170,7 @@ Database::Database(const String &name, const String &schema)
         open();
 
     // craete or update schema
-    ::create_directories(getDbDirectory());
+    fs::create_directories(getDbDirectory());
     primitives::db::sqlite3::SqliteDatabase db2(db->native_handle());
     createOrUpdateSchema(db2, schema, true);
 }

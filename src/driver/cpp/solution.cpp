@@ -792,17 +792,20 @@ bool Solution::prepareStep()
     {
         fs.push_back(e.push([this, t, &next_pass]
         {
-            if (!resolve_pass)
+            // try to run as early as possible
+            if (t->mustResolveDeps())
                 resolvePass(*t, t->gatherUnresolvedDependencies());
 
             auto np = t->prepare();
             if (!next_pass)
                 next_pass = np;
+
+            // try to run as early as possible during first prepareStep()
+            //if (t->mustResolveDeps())
+                //resolvePass(*t, t->gatherUnresolvedDependencies());
         }));
     }
     waitAndGet(fs);
-
-    resolve_pass = true;
 
     return next_pass;
 }
@@ -819,11 +822,13 @@ void Solution::resolvePass(const Target &t, const UnresolvedDependenciesType &de
         //if (!d->target.lock())
         {
             auto err = "Package: " + t.pkg.toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
+            if (d->target.lock())
+                err += " (but target is set to " + d->target.lock()->getPackage().toString() + ")";
             if (auto d = t.pkg.getOverriddenDir(); d)
             {
                 err += ".\nPackage: " + t.pkg.toString() + " is overridden locally. "
                     "This means you have new dependency that is not in db.\n"
-                    "Run following command in attempt to fix this issue:"
+                    "Run following command in attempt to fix this issue: "
                     "'sw -d " + normalize_path(d.value()) + " -override-remote-package " +
                     t.pkg.ppath.slice(0, getServiceDatabase().getOverriddenPackage(t.pkg).value().prefix).toString() + "'";
             }
@@ -878,12 +883,6 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
     }
     return deps;
 }
-
-/*void Solution::checkPrepared() const
-{
-    if (!prepared)
-        throw SW_RUNTIME_ERROR("Prepare solution before executing");
-}*/
 
 ExecutionPlan<builder::Command> Solution::getExecutionPlan() const
 {

@@ -115,6 +115,9 @@ protected:
     virtual void run() const {}
     path getOutputFilename() const;
     Solution setupSolution(const path &f) const;
+
+    [[nodiscard]]
+    bool execute(Solution &s) const;
 };
 
 using CheckPtr = std::shared_ptr<Check>;

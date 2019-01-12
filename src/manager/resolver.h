@@ -46,6 +46,7 @@ public:
 
 public:
     ResolvedPackagesMap resolved_packages;
+    bool add_downloads = true;
 
     Resolver() = default;
     Resolver(const Resolver &) = delete;

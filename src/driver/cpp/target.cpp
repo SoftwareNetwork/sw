@@ -2776,15 +2776,7 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
             }
             else
             {
-                if (Type == LibraryType::Shared || ExportIfStatic)
-                {
-                    Public.Definitions[api] = "SW_EXPORT";
-                }
-                else
-                {
-                    //Public.Definitions[api + "="];
-                    Public.Definitions[api] = "SW_EXPORT";
-                }
+                Public.Definitions[api] = "SW_EXPORT";
             }
 
             Definitions[api + "_EXTERN="];
@@ -3288,8 +3280,11 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
         auto relative_name_to_absolute = [](const String &in)
         {
             // TODO
-            throw SW_RUNTIME_ERROR("not implemented");
-            return in;
+            PackagePath p(in);
+            //if (p.isAbsolute())
+                return p;
+            //throw SW_RUNTIME_ERROR("not implemented");
+            //return in;
         };
 
         auto read_single_dep = [this, &read_version, &relative_name_to_absolute](const auto &d, UnresolvedPackage dependency = {})
@@ -3373,7 +3368,8 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                 [this, &read_single_dep](const auto &d)
             {
                 auto dep = read_single_dep(d);
-                throw SW_RUNTIME_ERROR("not implemented");
+                Public += dep;
+                //throw SW_RUNTIME_ERROR("not implemented");
                 //dependencies[dep.ppath.toString()] = dep;
             },
                 [this, &read_single_dep](const auto &dall)
@@ -3381,7 +3377,8 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                 for (auto d : dall)
                 {
                     auto dep = read_single_dep(d);
-                    throw SW_RUNTIME_ERROR("not implemented");
+                    Public += dep;
+                    //throw SW_RUNTIME_ERROR("not implemented");
                     //dependencies[dep.ppath.toString()] = dep;
                 }
             },
@@ -3410,7 +3407,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
 
                 auto extract_deps = [&get_dep, &read_single_dep](const auto &dall, const auto &str)
                 {
-                    Packages deps;
+                    UnresolvedPackages deps;
                     auto priv = dall[str];
                     if (!priv.IsDefined())
                         return deps;
@@ -3420,7 +3417,8 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                             [&get_dep, &deps](const auto &d)
                         {
                             auto dep = get_dep(d);
-                            throw SW_RUNTIME_ERROR("not implemented");
+                            deps.insert(dep);
+                            //throw SW_RUNTIME_ERROR("not implemented");
                             //deps[dep.ppath.toString()] = dep;
                         });
                     }
@@ -3429,23 +3427,35 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                         for (auto d : priv)
                         {
                             auto dep = read_single_dep(d);
-                            throw SW_RUNTIME_ERROR("not implemented");
+                            deps.insert(dep);
+                            //throw SW_RUNTIME_ERROR("not implemented");
                             //deps[dep.ppath.toString()] = dep;
                         }
                     }
                     return deps;
                 };
 
-                auto extract_deps_from_node = [&extract_deps, &get_dep](const auto &node)
+                auto extract_deps_from_node = [this, &extract_deps, &get_dep](const auto &node)
                 {
                     auto deps_private = extract_deps(node, "private");
                     auto deps = extract_deps(node, "public");
 
+                    operator+=(deps_private);
                     for (auto &d : deps_private)
                     {
-                        throw SW_RUNTIME_ERROR("not implemented");
+                        //operator+=(d);
+                        //throw SW_RUNTIME_ERROR("not implemented");
                         //d.second.flags.set(pfPrivateDependency);
-                        deps.insert(d);
+                        //deps.insert(d);
+                    }
+
+                    Public += deps;
+                    for (auto &d : deps)
+                    {
+                        //Public += d;
+                        //throw SW_RUNTIME_ERROR("not implemented");
+                        //d.second.flags.set(pfPrivateDependency);
+                        //deps.insert(d);
                     }
 
                     if (deps.empty() && deps_private.empty())
@@ -3453,7 +3463,8 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                         for (auto d : node)
                         {
                             auto dep = get_dep(d);
-                            throw SW_RUNTIME_ERROR("not implemented");
+                            Public += dep;
+                            //throw SW_RUNTIME_ERROR("not implemented");
                             //deps[dep.ppath.toString()] = dep;
                         }
                     }
@@ -3462,7 +3473,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                 };
 
                 auto ed = extract_deps_from_node(dall);
-                throw SW_RUNTIME_ERROR("not implemented");
+                //throw SW_RUNTIME_ERROR("not implemented");
                 //dependencies.insert(ed.begin(), ed.end());
 
                 // conditional deps
@@ -3502,13 +3513,10 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
         get_deps("deps");
     }
 
-#if 0
-    YAML_EXTRACT_AUTO(output_name);
-    YAML_EXTRACT_AUTO(condition);
-    YAML_EXTRACT_AUTO(include_script);
-
     // standards
     {
+        int c_standard = 89;
+        bool c_extensions = false;
         YAML_EXTRACT_AUTO(c_standard);
         if (c_standard == 0)
         {
@@ -3516,6 +3524,8 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
         }
         YAML_EXTRACT_AUTO(c_extensions);
 
+        int cxx_standard = 14;
+        bool cxx_extensions = false;
         String cxx;
         YAML_EXTRACT_VAR(root, cxx, "cxx_standard", String);
         if (cxx.empty())
@@ -3536,8 +3546,32 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
                     cxx_standard = 20;
             }
         }
+
+        switch (cxx_standard)
+        {
+        case 98:
+            CPPVersion = CPPLanguageStandard::CPP98;
+            break;
+        case 11:
+            CPPVersion = CPPLanguageStandard::CPP11;
+            break;
+        case 14:
+            CPPVersion = CPPLanguageStandard::CPP14;
+            break;
+        case 17:
+            CPPVersion = CPPLanguageStandard::CPP17;
+            break;
+        case 20:
+            CPPVersion = CPPLanguageStandard::CPP20;
+            break;
+        }
     }
 
+
+#if 0
+    YAML_EXTRACT_AUTO(output_name);
+    YAML_EXTRACT_AUTO(condition);
+    YAML_EXTRACT_AUTO(include_script);
     license = get_scalar<String>(root, "license");
 
     read_dir(unpack_directory, "unpack_directory");

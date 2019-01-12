@@ -357,9 +357,11 @@ bool Check::lessDuringExecution(const Check &rhs) const
 path Check::getOutputFilename() const
 {
     auto d = check_set->checker.solution->getChecksDir();
-    auto up = unique_path();
+    static std::atomic_int64_t n = 0;
+    //auto up = unique_path();
+    auto up = std::to_string(++n);
     d /= up;
-    ::create_directories(d);
+    //::create_directories(d);
     auto f = d;
     if (!CPP)
         f /= "x.c";
@@ -380,6 +382,28 @@ Solution Check::setupSolution(const path &f) const
     //s.throw_exceptions = false;
     s.BinaryDir = f.parent_path();
     return s;
+}
+
+bool Check::execute(Solution &s) const
+{
+    s.prepare();
+    try
+    {
+        s.execute();
+    }
+    catch (std::exception &e)
+    {
+        Value = 0;
+        LOG_TRACE(logger, "Check " + data + ": check issue: " << e.what());
+        return false;
+    }
+    catch (...)
+    {
+        Value = 0;
+        LOG_TRACE(logger, "Check " + data + ": check unknown issue");
+        return false;
+    }
+    return true;
 }
 
 FunctionExists::FunctionExists(const String &f, const String &def)
@@ -435,9 +459,9 @@ void FunctionExists::run() const
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data;
-    s.prepare();
-    try { s.execute(); }
-    catch (...) { Value = 0; return; }
+
+    if (!execute(s))
+        return;
 
     auto cmd = e.getCommand();
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
@@ -550,9 +574,9 @@ void TypeSize::run() const
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
-    s.prepare();
-    try { s.execute(); }
-    catch (...) { Value = 0; return; }
+
+    if (!execute(s))
+        return;
 
     auto cmd = e.getCommand();
     if (!cmd)
@@ -616,9 +640,9 @@ void TypeAlignment::run() const
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
-    s.prepare();
-    try { s.execute(); }
-    catch (...) { Value = 0; return; }
+
+    if (!execute(s))
+        return;
 
     auto cmd = e.getCommand();
     if (!cmd)
@@ -681,9 +705,9 @@ void SymbolExists::run() const
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
-    s.prepare();
-    try { s.execute(); }
-    catch (...) { Value = 0; return; }
+
+    if (!execute(s))
+        return;
 
     Value = 1;
 }
@@ -738,9 +762,9 @@ void DeclarationExists::run() const
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
-    s.prepare();
-    try { s.execute(); }
-    catch (...) { Value = 0; return; }
+
+    if (!execute(s))
+        return;
 
     auto cmd = e.getCommand();
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
@@ -792,9 +816,9 @@ void StructMemberExists::run() const
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
-    s.prepare();
-    try { s.execute(); }
-    catch (...) { Value = 0; return; }
+
+    if (!execute(s))
+        return;
 
     auto cmd = e.getCommand();
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
@@ -863,9 +887,9 @@ void LibraryFunctionExists::run() const
     e += f;
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data;
     e.LinkLibraries.push_back(library);
-    s.prepare();
-    try { s.execute(); }
-    catch (...) { Value = 0; return; }
+
+    if (!execute(s))
+        return;
 
     auto cmd = e.getCommand();
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
@@ -930,9 +954,9 @@ void SourceLinks::run() const
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
-    s.prepare();
-    try { s.execute(); }
-    catch (...) { Value = 0; return; }
+
+    if (!execute(s))
+        return;
 
     Value = 1;
 }
@@ -960,9 +984,9 @@ void SourceRuns::run() const
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
-    s.prepare();
-    try { s.execute(); }
-    catch (...) { Value = 0; return; }
+
+    if (!execute(s))
+        return;
 
     auto cmd = e.getCommand();
     if (!cmd)

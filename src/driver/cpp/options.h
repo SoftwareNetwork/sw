@@ -273,6 +273,12 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
     void add(const DependencyPtr &t);
     void remove(const DependencyPtr &t);
 
+    void add(const UnresolvedPackage &t);
+    void remove(const UnresolvedPackage &t);
+
+    void add(const UnresolvedPackages &t);
+    void remove(const UnresolvedPackages &t);
+
     void add(const PackageId &t);
     void remove(const PackageId &t);
 

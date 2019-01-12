@@ -527,7 +527,7 @@ void Resolver::download_and_unpack()
 
     // two following blocks use executor to do parallel queries
     //if (query_local_db)
-    if (!force_server_query)
+    if (!force_server_query && add_downloads)
     {
         // send download list
         // remove this when cppan will be widely used
@@ -559,6 +559,7 @@ void Resolver::download_and_unpack()
     // send download action once
     RUN_ONCE
     {
+        if (add_downloads)
         e.push([this]
         {
             if (!current_remote)

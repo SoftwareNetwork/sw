@@ -485,8 +485,12 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     virtual void setOutputFile() = 0;
     void setOutputDir(const path &dir);
 
+    //auto getPreparePass() const { return prepare_pass; }
+    virtual bool mustResolveDeps() const { return deps_resolved ? false : (deps_resolved = true); }
+
 protected:
     int prepare_pass = 1;
+    mutable bool deps_resolved = false;
     path OutputDir;
 
     path getOutputFileName() const;
@@ -633,6 +637,8 @@ public:
     //
     ASSIGN_TYPES(PackageId)
     ASSIGN_TYPES(DependencyPtr)
+    ASSIGN_TYPES(UnresolvedPackage)
+    ASSIGN_TYPES(UnresolvedPackages)
 
     //
     ASSIGN_TYPES(sw::tag_static_t)
@@ -759,6 +765,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     path getOutputDir() const;
     void removeFile(const path &fn, bool binary_dir = false) override;
     std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
+    bool mustResolveDeps() const override { return prepare_pass == 2; }
 
     driver::cpp::CommandBuilder addCommand() const;
     // add executed command?
