@@ -6,6 +6,7 @@
 
 #include "filesystem.h"
 
+#include <boost/system/error_code.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/lock_types.hpp>
 
