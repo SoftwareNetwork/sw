@@ -75,6 +75,16 @@ void build(Solution &s)
         manager.addPrecompiledHeader(pch);
     }
 
+    auto &tools = p.addDirectory("tools");
+    auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
+    self_builder.PackageDefinitions = true;
+    self_builder.CPPVersion = CPPLanguageStandard::CPP17;
+    self_builder += "src/tools/self_builder.cpp";
+    self_builder +=
+        manager,
+        "pub.egorpugin.primitives.context-master"_dep,
+        "pub.egorpugin.primitives.sw.main-master"_dep;
+
     auto &builder = p.addTarget<LibraryTarget>("builder");
     builder.ApiName = "SW_BUILDER_API";
     builder.ExportIfStatic = true;
@@ -105,16 +115,6 @@ void build(Solution &s)
         cpp_driver.CompileOptions.push_back("-bigobj");
     //else if (s.Settings.Native.CompilerType == CompilerType::GNU)
         //cpp_driver.CompileOptions.push_back("-Wa,-mbig-obj");
-
-    auto &tools = p.addDirectory("tools");
-    auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
-    self_builder.PackageDefinitions = true;
-    self_builder.CPPVersion = CPPLanguageStandard::CPP17;
-    self_builder += "src/tools/self_builder.cpp";
-    self_builder +=
-        manager,
-        "pub.egorpugin.primitives.context-master"_dep,
-        "pub.egorpugin.primitives.sw.main-master"_dep;
     {
         auto c = cpp_driver.addCommand();
         c << cmd::prog(self_builder)
