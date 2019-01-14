@@ -167,6 +167,9 @@ projects:
                 - pvt.cppan.demo.boost.assign: 1
                 - pvt.cppan.demo.microsoft.gsl: "*"
             private:
+                - name: pvt.egorpugin.primitives.patch
+                  version: master
+                  local: primitives.patch
                 - name: tools.self_builder
                   ref: self_builder
                 - pvt.cppan.demo.boost.uuid: 1

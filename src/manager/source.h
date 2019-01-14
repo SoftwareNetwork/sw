@@ -10,7 +10,7 @@
 #include "property_tree.h"
 
 #include <nlohmann/json_fwd.hpp>
-#include <primitives/stdcompat/variant.h>
+#include <variant>
 
 namespace YAML { class Node; }
 using yaml = YAML::Node;
@@ -291,7 +291,7 @@ struct SW_MANAGER_API RemoteFiles
 #define DELIM_COMMA ,
 #define DELIM_SEMICOLON ;
 #define SOURCE_TYPES_EMPTY(x) x
-using Source = variant<SOURCE_TYPES(SOURCE_TYPES_EMPTY, DELIM_COMMA)>;
+using Source = std::variant<SOURCE_TYPES(SOURCE_TYPES_EMPTY, DELIM_COMMA)>;
 #undef SOURCE_TYPES_EMPTY
 
 using SourceDirMap = std::unordered_map<Source, path>;

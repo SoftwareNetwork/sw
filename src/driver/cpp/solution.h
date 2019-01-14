@@ -171,7 +171,7 @@ public:
 
     // get solution dir for package
     path getSourceDir(const PackageId &p) const;
-    optional<path> getSourceDir(const Source &s, const Version &v) const;
+    std::optional<path> getSourceDir(const Source &s, const Version &v) const;
     path getIdeDir() const;
     path getExecutionPlansDir() const;
     path getExecutionPlanFilename() const;
@@ -214,7 +214,7 @@ public:
     static const boost::bimap<FrontendType, path> &getAvailableFrontends();
     static const FilesOrdered &getAvailableFrontendConfigFilenames();
     static bool isFrontendConfigFilename(const path &fn);
-    static optional<FrontendType> selectFrontendByFilename(const path &fn);
+    static std::optional<FrontendType> selectFrontendByFilename(const path &fn);
 
 protected:
     Solution &base_ptr;
@@ -249,7 +249,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
         SourceDirMap sources;
     } fetch_info;
 
-    optional<path> config; // current config or empty in configless mode
+    std::optional<path> config; // current config or empty in configless mode
     path dll; // current loaded dll
     // child solutions
     std::vector<Solution> solutions;

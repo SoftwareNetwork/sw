@@ -296,7 +296,7 @@ path Solution::getSourceDir(const PackageId &p) const
     return p.getDirSrc2();
 }
 
-optional<path> Solution::getSourceDir(const Source &s, const Version &v) const
+std::optional<path> Solution::getSourceDir(const Source &s, const Version &v) const
 {
     auto s2 = s;
     applyVersionToUrl(s2, v);
@@ -972,7 +972,7 @@ bool Solution::isFrontendConfigFilename(const path &fn)
     return !!selectFrontendByFilename(fn);
 }
 
-optional<FrontendType> Solution::selectFrontendByFilename(const path &fn)
+std::optional<FrontendType> Solution::selectFrontendByFilename(const path &fn)
 {
     auto i = getAvailableFrontends().right.find(fn.filename());
     if (i == getAvailableFrontends().right.end())
@@ -2115,16 +2115,25 @@ void Build::run_package(const String &s)
     auto r = pkg.resolve();
 
     build_package(s);
-    auto p = (NativeExecutedTarget*)solutions[0].getTargetPtr(r).get();
-    if (p->getType() != TargetType::NativeExecutable)
+    auto p = solutions[0].getTargetPtr(r)->as<NativeExecutedTarget>();
+    if (!p || p->getType() != TargetType::NativeExecutable)
         throw SW_RUNTIME_ERROR("Unsupported package type");
 
-    RunArgs a;
-    a.pkg = r;
-    a.exe_path = p->getOutputFile();
-    //p->addCommand().c;
-    a.in_container = false;
-    run(a);
+    auto cb = p->addCommand();
+
+    cb.c->program = p->getOutputFile();
+    cb.c->working_directory = p->pkg.getDirObjWdir();
+    fs::create_directories(cb.c->working_directory);
+    p->setupCommandForRun(*cb.c);
+    /*if (cb.c->create_new_console)
+    {
+        cb.c->inherit = true;
+        cb.c->in.inherit = true;
+    }
+    else*/
+        cb.c->detached = true;
+
+    run(p->pkg, *cb.c);
 }
 
 void Build::load(const path &dll, bool usedll)
@@ -2163,6 +2172,8 @@ void Build::load(const path &dll, bool usedll)
             Settings.Native.ConfigurationType = ConfigurationType::MinimalSizeRelease;
         else if (boost::iequals(configuration, "RelWithDebInfo"))
             Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
+        else if (!configuration.empty())
+            throw SW_RUNTIME_ERROR("Unknown configuration: " + configuration);
 
         if (static_build)
             Settings.Native.LibrariesType = LibraryType::Static;
@@ -2177,6 +2188,8 @@ void Build::load(const path &dll, bool usedll)
             Settings.TargetOS.Arch = ArchType::arm;
         else if (boost::iequals(platform, "arm64"))
             Settings.TargetOS.Arch = ArchType::aarch64; // ?
+        else if (!platform.empty())
+            throw SW_RUNTIME_ERROR("Unknown platform: " + platform);
 
         if (boost::iequals(compiler, "clang"))
             Settings.Native.CompilerType = CompilerType::Clang;
@@ -2187,7 +2200,7 @@ void Build::load(const path &dll, bool usedll)
         else if (boost::iequals(compiler, "msvc"))
             Settings.Native.CompilerType = CompilerType::MSVC;
         else if (!compiler.empty())
-            throw SW_RUNTIME_ERROR("unknown compiler: " + compiler);
+            throw SW_RUNTIME_ERROR("Unknown compiler: " + compiler);
 
         if (boost::iequals(target_os, "linux"))
             Settings.TargetOS.Type = OSType::Linux;
@@ -2195,6 +2208,8 @@ void Build::load(const path &dll, bool usedll)
             Settings.TargetOS.Type = OSType::Macos;
         else if (boost::iequals(target_os, "windows") || boost::iequals(target_os, "win"))
             Settings.TargetOS.Type = OSType::Windows;
+        else if (!target_os.empty())
+            throw SW_RUNTIME_ERROR("Unknown target_os: " + target_os);
     }
 
     // apply config settings

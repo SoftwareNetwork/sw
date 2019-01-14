@@ -47,13 +47,13 @@ namespace sw
 {
 
 /// resolve from db
-optional<Version> VersionRange::getMinSatisfyingVersion() const
+std::optional<Version> VersionRange::getMinSatisfyingVersion() const
 {
     return {};
 }
 
 /// resolve from db
-optional<Version> VersionRange::getMaxSatisfyingVersion() const
+std::optional<Version> VersionRange::getMaxSatisfyingVersion() const
 {
     return {};
 }

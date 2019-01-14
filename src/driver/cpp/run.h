@@ -7,20 +7,13 @@
 #pragma once
 
 #include <primitives/filesystem.h>
+#include <primitives/command.h>
 
 #include <package.h>
 
 namespace sw
 {
 
-struct RunArgs
-{
-    PackageId pkg;
-    path exe_path;
-    Strings args;
-    bool in_container = true;
-};
-
-void run(const RunArgs &args);
+void run(const PackageId &pkg, primitives::Command &c);
 
 }

@@ -311,6 +311,10 @@ static cl::opt<bool> list_overridden_packages("list-overridden-remote-packages",
 static cl::opt<String> delete_overridden_package("delete-overridden-remote-package", cl::value_desc("package"), cl::desc("Delete overridden package from index"));
 static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", cl::value_desc("sdir"), cl::desc("Delete overridden dir packages"));
 
+// uri commands
+extern bool gRunAppInContainer;
+static cl::opt<bool, true> run_app_in_container("in-container", cl::desc("Print file with build graph"), cl::location(gRunAppInContainer), cl::sub(subcommand_uri));
+
 extern bool gUseLockFile;
 
 //static cl::list<String> builtin_function("internal-call-builtin-function", cl::desc("Call built-in function"), cl::Hidden);

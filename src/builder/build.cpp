@@ -143,7 +143,7 @@ bool run(const PackageId &package)
     throw SW_RUNTIME_ERROR("Unknown package driver");
 }
 
-optional<String> read_config(const path &file_or_dir)
+std::optional<String> read_config(const path &file_or_dir)
 {
     auto &drivers = getDrivers();
     for (auto &d : drivers)

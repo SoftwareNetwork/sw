@@ -56,6 +56,8 @@ const path db_repo_dir_name = "repository";
 const String packages_db_name = "packages.db";
 const String service_db_name = "service.db";
 
+extern bool gForceServerQuery;
+
 namespace sql = sqlpp::sqlite3;
 
 TYPED_EXCEPTION(NoSuchVersion);
@@ -202,7 +204,7 @@ void Database::recreate()
 }
 
 template <typename T>
-optional<T> Database::getValue(const String &key) const
+std::optional<T> Database::getValue(const String &key) const
 {
     return primitives::db::sqlite3::SqliteDatabase(db->native_handle()).getValue<T>(key);
 }
@@ -549,7 +551,7 @@ void ServiceDatabase::setInstalledPackageFlags(const PackageId &p, const String 
                 "' where id = '" + std::to_string(getInstalledPackageConfigId(p, config)) + "'");*/
 }
 
-optional<ServiceDatabase::OverriddenPackage> ServiceDatabase::getOverriddenPackage(const PackageId &pkg) const
+std::optional<ServiceDatabase::OverriddenPackage> ServiceDatabase::getOverriddenPackage(const PackageId &pkg) const
 {
     const auto &pkgs = getOverriddenPackages();
     auto i = pkgs.find(pkg);
@@ -885,6 +887,7 @@ void PackagesDatabase::load(bool drop) const
 
 void PackagesDatabase::updateDb() const
 {
+    if (!gForceServerQuery)
     if (!Settings::get_system_settings().can_update_packages_db || !isCurrentDbOld())
         return;
 

@@ -23,7 +23,7 @@
 #include "cppan_version.h"
 #include "yaml.h"
 
-#include <primitives/stdcompat/optional.h>
+#include <optional>
 
 #define DEPENDENCIES_NODE "dependencies"
 #define INCLUDE_DIRECTORIES_ONLY "include_directories_only"
@@ -296,7 +296,7 @@ public:
     // private data
 private:
     // no files to compile
-    optional<bool> header_only;
+    std::optional<bool> header_only;
 
 public:
     Project();

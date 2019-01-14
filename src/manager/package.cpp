@@ -81,7 +81,7 @@ PackageId::PackageId(const PackagePath &p, const Version &v)
 {
 }
 
-optional<path> PackageId::getOverriddenDir() const
+std::optional<path> PackageId::getOverriddenDir() const
 {
     auto &pkgs = getServiceDatabase().getOverriddenPackages();
     auto i = pkgs.find(*this);

@@ -168,7 +168,7 @@ Program *LanguageStorage::findProgramByExtension(const String &ext) const
     return getProgram(pi.value()).get();
 }
 
-optional<PackageId> LanguageStorage::findPackageIdByExtension(const String &ext) const
+std::optional<PackageId> LanguageStorage::findPackageIdByExtension(const String &ext) const
 {
     auto e = extensions.find(ext);
     if (e == extensions.end())

@@ -18,7 +18,7 @@ namespace clang_gnu
 struct Optimizations
 {
     bool Disable = false;
-    optional<int> Level;
+    std::optional<int> Level;
     bool SmallCode = false;
     bool FastCode = false;
 };

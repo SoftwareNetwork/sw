@@ -8,7 +8,7 @@
 
 #include "dependency.h"
 
-#include <primitives/stdcompat/optional.h>
+#include <optional>
 
 namespace sw
 {
@@ -23,7 +23,7 @@ struct SW_MANAGER_API PackageStore
 
     void clear();
 
-    optional<ExtendedPackageData> isPackageResolved(const UnresolvedPackage &);
+    std::optional<ExtendedPackageData> isPackageResolved(const UnresolvedPackage &);
 
     void loadLockFile(const path &fn);
     void saveLockFile(const path &fn) const;

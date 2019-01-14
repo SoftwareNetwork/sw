@@ -549,6 +549,7 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
 
     //
     virtual void setupCommand(builder::Command &c) const {}
+    virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
 };
 
 // <SHARED | STATIC | MODULE | UNKNOWN>
@@ -776,6 +777,8 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void writeFileSafe(const path &fn, const String &content, bool binary_dir = true) const;
     void replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir = false) const; // deprecate?
     void patch(const path &fn, const String &from, const String &to, bool binary_dir = false) const;
+    void patch(const path &fn, const String &patch_str, bool binary_dir = false) const;
+    //void patch(const path &fn, const path &patch_fn, bool binary_dir = false) const;
     void deleteInFileOnce(const path &fn, const String &from, bool binary_dir = false) const;
     void pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
     void pushBackToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
@@ -830,11 +833,11 @@ protected:
     void detectLicenseFile();
 
 private:
-    optional<nlohmann::json> precomputed_data;
+    std::optional<nlohmann::json> precomputed_data;
     //path OutputFilename;
     bool already_built = false;
     std::map<path, path> break_gch_deps;
-    mutable optional<Commands> generated_commands;
+    mutable std::optional<Commands> generated_commands;
 
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;

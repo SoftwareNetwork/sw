@@ -44,6 +44,6 @@ SW_BUILDER_API
 bool run(const PackageId &package);
 
 SW_BUILDER_API
-optional<String> read_config(const path &file_or_dir);
+std::optional<String> read_config(const path &file_or_dir);
 
 }

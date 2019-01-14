@@ -10,8 +10,12 @@
 
 #include <primitives/hash.h>
 #include <primitives/lock.h>
+#include <primitives/patch.h>
 
 #include <boost/algorithm/string.hpp>
+
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "functions");
 
 namespace sw
 {
@@ -125,6 +129,27 @@ void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir
     write_file_if_different(hfn, "");
 }
 
+bool patch(const path &fn, const String &patch, const path &lock_dir)
+{
+    auto t = read_file(fn);
+
+    auto fn_patch = fn;
+    fn_patch += ".orig." + sha1(normalize_path(fn)).substr(0, 8);
+
+    if (fs::exists(fn_patch))
+        return true;
+
+    auto r = primitives::patch::patch(t, patch);
+    if (!r)
+    {
+        LOG_ERROR(logger, "cannot apply patch to: " << fn);
+        return false;
+    }
+
+    write_file(fn, *r);
+    write_file(fn_patch, t); // save orig
+
+    return true;
 }
 
-void __cppan_dummy_x() {}
+}

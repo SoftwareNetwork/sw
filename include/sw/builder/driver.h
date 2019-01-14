@@ -62,10 +62,10 @@ struct SW_BUILDER_API Driver
     virtual FilesOrdered getAvailableFrontends() const = 0;
 
     /// try to find config in this dir or subdirs
-    optional<path> findConfig(const path &dir) const;
+    std::optional<path> findConfig(const path &dir) const;
 
     /// read config from dir
-    optional<String> readConfig(const path &file_or_dir) const;
+    std::optional<String> readConfig(const path &file_or_dir) const;
 
     /// only build script file, without loading
     ///

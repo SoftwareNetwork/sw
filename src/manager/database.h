@@ -11,7 +11,7 @@
 #include "remote.h"
 
 #include <primitives/date_time.h>
-#include <primitives/stdcompat/optional.h>
+#include <optional>
 #include <sqlpp11/sqlite3/connection.h>
 
 #include <chrono>
@@ -63,7 +63,7 @@ protected:
 
     //
     template <typename T>
-    optional<T> getValue(const String &key) const;
+    std::optional<T> getValue(const String &key) const;
 
     template <typename T>
     T getValue(const String &key, const T &default_) const;
@@ -129,7 +129,7 @@ struct SW_MANAGER_API ServiceDatabase : public Database
     bool isPackageInstalled(const PackageId &p) const { return getInstalledPackageId(p) != 0; }
     Packages getInstalledPackages() const;
 
-    optional<OverriddenPackage> getOverriddenPackage(const PackageId &pkg) const;
+    std::optional<OverriddenPackage> getOverriddenPackage(const PackageId &pkg) const;
     const OverriddenPackages &getOverriddenPackages() const;
     void overridePackage(const PackageId &pkg, const OverriddenPackage &opkg) const;
     void deleteOverriddenPackage(const PackageId &pkg) const;
@@ -137,7 +137,7 @@ struct SW_MANAGER_API ServiceDatabase : public Database
     UnresolvedPackages getOverriddenPackageVersionDependencies(db::PackageVersionId project_version_id);
 
 private:
-    mutable optional<OverriddenPackages> override_remote_packages;
+    mutable std::optional<OverriddenPackages> override_remote_packages;
 };
 
 class SW_MANAGER_API PackagesDatabase : public Database

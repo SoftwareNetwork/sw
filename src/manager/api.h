@@ -31,7 +31,7 @@ struct Api
 
     void addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script);
     void addVersion(const PackagePath &prefix, const String &script);
-    void addVersion(PackagePath p, const Version &vnew, const optional<Version> &vold = {});
+    void addVersion(PackagePath p, const Version &vnew, const std::optional<Version> &vold = {});
     void updateVersion(PackagePath p, const Version &v);
     void removeVersion(PackagePath p, const Version &v);
 

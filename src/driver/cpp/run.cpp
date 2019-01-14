@@ -25,6 +25,12 @@ TODO:
 
 #include "run.h"
 
+#include <directories.h>
+
+#include <primitives/command.h>
+
+bool gRunAppInContainer;
+
 #include <vector>
 
 namespace sw
@@ -41,22 +47,19 @@ std::vector<WELL_KNOWN_SID_TYPE> app_capabilities
 BOOL SetSecurityCapabilities(PSID container_sid, SECURITY_CAPABILITIES *capabilities, PDWORD num_capabilities);
 BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_name, SE_OBJECT_TYPE object_type, DWORD access_mask);
 
-void run(const RunArgs &args)
+void run(const PackageId &pkg, primitives::Command &c)
 {
     PSID sid = NULL;
     SECURITY_CAPABILITIES SecurityCapabilities = { 0 };
     DWORD num_capabilities = 0;
     SIZE_T attribute_size = 0;
-    STARTUPINFOEX startup_info = { 0 };
-    startup_info.StartupInfo.cb = sizeof(startup_info);
-    PROCESS_INFORMATION process_info = { 0 };
-    HANDLE file_handle = INVALID_HANDLE_VALUE;
     BOOL success = FALSE;
+    LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList = 0;
 
-    auto container_name_s = to_wstring("sw.app." + args.pkg.getHash().substr(0, 32));
+    auto container_name_s = to_wstring("sw.app." + pkg.getHash().substr(0, 32));
     auto container_name = container_name_s.c_str();
 
-    auto pkg_s = to_wstring(args.pkg.toString());
+    auto pkg_s = to_wstring(pkg.toString());
     auto container_desc_s = pkg_s;
     if (pkg_s.size() > 512)
         pkg_s = container_name_s;
@@ -69,11 +72,7 @@ void run(const RunArgs &args)
 
     do
     {
-        auto wdir = args.pkg.getDirObjWdir();
-        wdir = args.pkg.getDirSrc2() / "Lib";
-        fs::create_directories(wdir);
-
-        if (args.in_container)
+        if (gRunAppInContainer)
         {
             auto result = CreateAppContainerProfile(container_name, pkg_name, container_desc, NULL, 0, &sid);
             if (!SUCCEEDED(result))
@@ -101,42 +100,50 @@ void run(const RunArgs &args)
             }
 
             // set permissions
-            if (!GrantNamedObjectAccess(sid, wdir, SE_FILE_OBJECT, FILE_ALL_ACCESS & ~DELETE))
-            {
-                snprintf(err.data(), err.size(), "Failed to grant explicit access to %s\n", wdir.u8string().c_str());
+            auto paths = { c.working_directory, getDirectories().storage_dir_bin, pkg.getDirSrc2() };
+            if (!std::all_of(paths.begin(), paths.end(), [&sid, &err](auto &p)
+                {
+                    if (!GrantNamedObjectAccess(sid, p, SE_FILE_OBJECT, FILE_ALL_ACCESS & ~DELETE))
+                    {
+                        snprintf(err.data(), err.size(), "Failed to grant explicit access to %s\n", p.u8string().c_str());
+                        return false;
+                    }
+                    return true;
+                }))
                 break;
-            }
 
-            InitializeProcThreadAttributeList(NULL, 1, NULL, &attribute_size);
-            startup_info.lpAttributeList = (LPPROC_THREAD_ATTRIBUTE_LIST)malloc(attribute_size);
+            int n = 1 + 1; // +1 for uv std handles
+            InitializeProcThreadAttributeList(NULL, n, NULL, &attribute_size);
+            lpAttributeList = (LPPROC_THREAD_ATTRIBUTE_LIST)malloc(attribute_size);
 
-            if (!InitializeProcThreadAttributeList(startup_info.lpAttributeList, 1, NULL, &attribute_size))
+            if (!InitializeProcThreadAttributeList(lpAttributeList, n, NULL, &attribute_size))
             {
                 snprintf(err.data(), err.size(), "InitializeProcThreadAttributeList() failed, last error: %d", GetLastError());
                 break;
             }
 
-            if (!UpdateProcThreadAttribute(startup_info.lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES,
+            if (!UpdateProcThreadAttribute(lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES,
                 &SecurityCapabilities, sizeof(SecurityCapabilities), NULL, NULL))
             {
                 snprintf(err.data(), err.size(), "UpdateProcThreadAttribute() failed, last error: %d", GetLastError());
                 break;
             }
+
+            c.attribute_list = lpAttributeList;
+            c.detached = false;
         }
 
-        if (!CreateProcess(args.exe_path.wstring().c_str(), NULL, NULL, NULL, FALSE, CREATE_NEW_CONSOLE | EXTENDED_STARTUPINFO_PRESENT, NULL,
-            wdir.wstring().c_str(),
-            (LPSTARTUPINFO)&startup_info, &process_info))
-        {
-            snprintf(err.data(), err.size(), "Failed to create process %s, last error: %d\n", args.exe_path.u8string().c_str(), GetLastError());
-            break;
-        }
+        error_code ec;
+        c.execute(ec);
 
-        success = TRUE;
+        success = !ec;
     } while (0);
 
-    if (startup_info.lpAttributeList)
-        DeleteProcThreadAttributeList(startup_info.lpAttributeList);
+    if (lpAttributeList)
+    {
+        DeleteProcThreadAttributeList(lpAttributeList);
+        free(lpAttributeList);
+    }
 
     if (SecurityCapabilities.Capabilities)
         free(SecurityCapabilities.Capabilities);
@@ -144,11 +151,12 @@ void run(const RunArgs &args)
     if (sid)
         FreeSid(sid);
 
-    if (file_handle != INVALID_HANDLE_VALUE)
-        CloseHandle(file_handle);
-
     if (!success)
-        throw SW_RUNTIME_ERROR(err.c_str()); // to strip nulls
+    {
+        if (std::any_of(err.begin(), err.end(), [](auto e) {return e != 0;}))
+            throw SW_RUNTIME_ERROR(err.c_str()); // to strip nulls
+        throw SW_RUNTIME_ERROR(c.getError());
+    }
 }
 
 BOOL SetSecurityCapabilities(PSID container_sid, SECURITY_CAPABILITIES *capabilities, PDWORD num_capabilities)

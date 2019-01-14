@@ -41,10 +41,10 @@ struct SW_MANAGER_API VersionRange : primitives::version::VersionRange
     using base::getMaxSatisfyingVersion;
 
     /// resolve from db
-    optional<Version> getMinSatisfyingVersion() const;
+    std::optional<Version> getMinSatisfyingVersion() const;
 
     /// resolve from db
-    optional<Version> getMaxSatisfyingVersion() const;
+    std::optional<Version> getMaxSatisfyingVersion() const;
 };
 
 }

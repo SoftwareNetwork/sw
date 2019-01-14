@@ -28,7 +28,7 @@ struct SW_DRIVER_CPP_API CppDriver : ::sw::Driver
     String getName() const override { return "cpp"; }
 
 private:
-    optional<path> resolveConfig(const path &file_or_dir) const;
+    std::optional<path> resolveConfig(const path &file_or_dir) const;
 };
 
 } // namespace sw::driver

@@ -23,7 +23,7 @@ FilesOrdered CppDriver::getAvailableFrontends() const
     return Build::getAvailableFrontendConfigFilenames();
 }
 
-optional<path> CppDriver::resolveConfig(const path &file_or_dir) const
+std::optional<path> CppDriver::resolveConfig(const path &file_or_dir) const
 {
     auto f = file_or_dir;
     if (f.empty())

@@ -141,7 +141,7 @@ void Api::addVersion(const PackagePath &prefix, const String &script)
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
 }
 
-void Api::addVersion(PackagePath p, const Version &vnew, const optional<Version> &vold)
+void Api::addVersion(PackagePath p, const Version &vnew, const std::optional<Version> &vold)
 {
     check_relative(r, p);
 

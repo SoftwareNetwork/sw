@@ -54,7 +54,7 @@ struct SW_DRIVER_CPP_API LanguageStorage
 
     Program *findProgramByExtension(const String &ext) const;
     Language *findLanguageByExtension(const String &ext) const;
-    optional<PackageId> findPackageIdByExtension(const String &ext) const;
+    std::optional<PackageId> findPackageIdByExtension(const String &ext) const;
 };
 
 }

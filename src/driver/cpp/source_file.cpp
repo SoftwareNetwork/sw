@@ -111,7 +111,7 @@ Program *SourceFileStorage::findProgramByExtension(const String &ext) const
     return p->second.get();
 }
 
-optional<PackageId> SourceFileStorage::findPackageIdByExtension(const String &ext) const
+std::optional<PackageId> SourceFileStorage::findPackageIdByExtension(const String &ext) const
 {
     auto e = target->findPackageIdByExtension(ext);
     if (!e)

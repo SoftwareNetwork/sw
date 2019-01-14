@@ -33,8 +33,9 @@ DECLARE_STATIC_LOGGER(logger, "resolver");
 TYPED_EXCEPTION(LocalDbHashException);
 TYPED_EXCEPTION(DependencyNotResolved);
 
-static cl::opt<bool> force_server_query("s", cl::desc("Force server check"));
-static cl::alias force_server_query2("server", cl::desc("Alias for -s"), cl::aliasopt(force_server_query));
+bool gForceServerQuery;
+static cl::opt<bool, true> force_server_query1("s", cl::desc("Force server check"), cl::location(gForceServerQuery));
+static cl::alias force_server_query2("server", cl::desc("Alias for -s"), cl::aliasopt(force_server_query1));
 
 bool gVerbose;
 static cl::opt<bool, true> verbose_opt("verbose", cl::desc("Verbose output"), cl::location(gVerbose));
@@ -63,7 +64,7 @@ void PackageStore::clear()
     *this = PackageStore();
 }
 
-optional<ExtendedPackageData> PackageStore::isPackageResolved(const UnresolvedPackage &p)
+std::optional<ExtendedPackageData> PackageStore::isPackageResolved(const UnresolvedPackage &p)
 {
     auto i = resolved_packages.find(p);
     if (i == resolved_packages.end())
@@ -158,7 +159,7 @@ void PackageStore::saveLockFile(const path &fn) const
 
 bool PackageStore::canUseLockFile() const
 {
-    return use_lock_file && !force_server_query && gUseLockFile;
+    return use_lock_file && !gForceServerQuery && gUseLockFile;
 }
 
 ResolvedPackagesMap resolve_dependencies(const UnresolvedPackages &deps)
@@ -360,16 +361,16 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
         }
     };
 
-    //query_local_db = !force_server_query;
+    //query_local_db = !gForceServerQuery;
     // do 2 attempts: 1) local db, 2) remote db
     //int n_attempts = query_local_db ? 2 : 1;
-    int n_attempts = force_server_query ? 1 : 2;
+    int n_attempts = gForceServerQuery ? 1 : 2;
     while (n_attempts--)
     {
         try
         {
             //if (query_local_db)
-            if (!force_server_query)
+            if (!gForceServerQuery)
             {
                 try
                 {
@@ -381,7 +382,7 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
                     LOG_ERROR(logger, "Cannot get dependencies from local database: " << e.what());
 
                     //query_local_db = false;
-                    force_server_query = true;
+                    gForceServerQuery = true;
                     resolve_remote_deps();
                 }
             }
@@ -397,7 +398,7 @@ void Resolver::resolve1(const UnresolvedPackages &deps, std::function<void()> re
             LOG_WARN(logger, "Local db data caused issues, trying remote one");
 
             //query_local_db = false;
-            force_server_query = true;
+            gForceServerQuery = true;
             continue;
         }
         break;
@@ -411,14 +412,14 @@ void Resolver::download(const ExtendedPackageData &d, const path &fn)
         throw SW_RUNTIME_ERROR("No data sources available");
 
     if (std::none_of(provs.begin(), provs.end(),
-        [&](auto &prov) {return prov.downloadPackage(d, d.hash, fn, /*query_local_db*/ !force_server_query);}))
+        [&](auto &prov) {return prov.downloadPackage(d, d.hash, fn, /*query_local_db*/ !gForceServerQuery);}))
     {
         // if we get hashes from local db
         // they can be stalled within server refresh time (15 mins)
         // in this case we should do request to server
         auto err = "Hashes do not match for package: " + d.toString();
         //if (query_local_db)
-        if (!force_server_query)
+        if (!gForceServerQuery)
             throw LocalDbHashException(err);
         throw SW_RUNTIME_ERROR(err);
     }
@@ -527,7 +528,7 @@ void Resolver::download_and_unpack()
 
     // two following blocks use executor to do parallel queries
     //if (query_local_db)
-    if (!force_server_query && add_downloads)
+    if (!gForceServerQuery && add_downloads)
     {
         // send download list
         // remove this when cppan will be widely used

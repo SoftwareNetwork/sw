@@ -15,7 +15,7 @@ Drivers &getDrivers()
     return drivers;
 }
 
-optional<path> Driver::findConfig(const path &dir) const
+std::optional<path> Driver::findConfig(const path &dir) const
 {
     for (auto &fn : getAvailableFrontends())
         if (fs::exists(dir / fn))
@@ -23,7 +23,7 @@ optional<path> Driver::findConfig(const path &dir) const
     return {};
 }
 
-optional<String> Driver::readConfig(const path &file_or_dir) const
+std::optional<String> Driver::readConfig(const path &file_or_dir) const
 {
     auto f = findConfig(file_or_dir);
     if (!f)

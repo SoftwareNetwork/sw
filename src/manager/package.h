@@ -82,7 +82,7 @@ struct SW_MANAGER_API PackageId
     path getDirObj() const;
     path getDirObjWdir() const;
     path getDirInfo() const;
-    optional<path> getOverriddenDir() const;
+    std::optional<path> getOverriddenDir() const;
     String getHash() const;
     String getHashShort() const;
     String getFilesystemHash() const;

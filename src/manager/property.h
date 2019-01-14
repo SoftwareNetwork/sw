@@ -11,7 +11,7 @@
 //#include <boost/any.hpp>
 //#include <boost/variant.hpp>
 #include <primitives/filesystem.h>
-#include <primitives/stdcompat/variant.h>
+#include <variant>
 
 //#include <any>
 

@@ -94,7 +94,7 @@ protected:
     void clearGlobCache() { glob_cache.clear(); }
     void remove_full(const path &file);
 
-    optional<PackageId> findPackageIdByExtension(const String &e) const;
+    std::optional<PackageId> findPackageIdByExtension(const String &e) const;
     Program *findProgramByExtension(const String &e) const;
     Language *findLanguageByPackageId(const PackageId &) const;
     Language *findLanguageByExtension(const String &e) const;

@@ -438,6 +438,8 @@ void Command::afterCommand()
         fr.data->refreshed = false;
         fr.isChanged();
         fr.updateLwt();
+        if (!fs::exists(i))
+            throw SW_RUNTIME_ERROR("Output file was not created: " + normalize_path(i));
         mtime = std::max(mtime, fr.getMaxTime());
     };
 

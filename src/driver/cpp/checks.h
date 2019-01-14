@@ -83,7 +83,7 @@ struct SW_DRIVER_CPP_API Check : CommandData<Check>
     CheckParameters Parameters;
 
     // result value
-    mutable optional<CheckValue> Value;
+    mutable std::optional<CheckValue> Value;
 
     CheckSet *check_set = nullptr;
 
