@@ -100,6 +100,7 @@ void build(Solution &s)
     cpp_driver.ExportIfStatic = true;
     cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
     cpp_driver.Public += builder,
+        "pub.egorpugin.primitives.patch-master"_dep,
         "org.sw.demo.microsoft.gsl-*"_dep,
         "org.sw.demo.boost.assign-1"_dep,
         "org.sw.demo.boost.bimap-1"_dep,

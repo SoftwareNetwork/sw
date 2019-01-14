@@ -19,8 +19,8 @@
 #include <primitives/date_time.h>
 #include <primitives/log.h>
 #include <primitives/yaml.h>
-#include <primitives/stdcompat/variant.h>
-#include <primitives/stdcompat/optional.h>
+#include <variant>
+#include <optional>
 #include <sqlite3.h>
 
 #include <primitives/command.h>
@@ -65,7 +65,6 @@
 #include <bitset>
 
 #include <primitives/date_time.h>
-#include <primitives/stdcompat/optional.h>
 #include <sqlpp11/sqlite3/connection.h>
 
 #include <chrono>
