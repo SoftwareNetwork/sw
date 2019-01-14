@@ -390,7 +390,7 @@ bool FileRecord::isChanged(const fs::file_time_type &in)
     return false;
 }
 
-void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
+void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_errors)
 {
     //DEBUG_BREAK_IF_PATH_HAS(file, "/primitives.filesystem-master.dll");
 
@@ -398,7 +398,7 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
         return;
 
     auto gold = generator.lock();
-    if (gold && (gold != g &&
+    if (!ignore_errors && gold && (gold != g &&
         !gold->isExecuted() &&
         !gold->maybe_unused &&
         gold->getHash() != g->getHash()))
@@ -417,6 +417,8 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g)
         throw SW_RUNTIME_ERROR(err);
     }
     generator = g;
+    // record gen hash at this moment, so repeated commands that begins same way
+    //generator_hash = g->getHash();
     generated_ = true;
 }
 

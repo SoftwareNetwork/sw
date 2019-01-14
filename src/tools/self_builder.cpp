@@ -215,6 +215,7 @@ int main(int argc, char **argv)
         {{"pub.egorpugin.primitives.log", "master"}, {}},
         {{"pub.egorpugin.primitives.yaml", "master"}, {}},
         {{"pub.egorpugin.primitives.pack", "master"}, {}},
+        {{"pub.egorpugin.primitives.patch", "master"}, {}},
         {{"pub.egorpugin.primitives.http", "master"}, {}},
         {{"pub.egorpugin.primitives.hash", "master"}, {}},
         {{"pub.egorpugin.primitives.win32helpers", "master"}, {}},

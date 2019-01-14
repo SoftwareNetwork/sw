@@ -292,7 +292,8 @@ void Command::addOutput(const path &p)
         return;
     outputs.insert(p);
     auto &r = File(p, *fs).getFileRecord();
-    r.setGenerator(shared_from_this());
+    //r.setGenerated(true);
+    r.setGenerator(shared_from_this(), true);
 }
 
 void Command::addInput(const Files &files)
@@ -385,6 +386,13 @@ void Command::prepare()
 
     // add more deps
     addInputOutputDeps();
+
+    // late add real generator
+    for (auto &p : outputs)
+    {
+        auto &r = File(p, *fs).getFileRecord();
+        r.setGenerator(shared_from_this(), false);
+    }
 
     prepared = true;
 }

@@ -107,7 +107,7 @@ struct SW_BUILDER_API FileRecord
     //size_t getHash() const;
     bool isGenerated() const;
     bool isGeneratedAtAll() const { return generated_; }
-    void setGenerator(const std::shared_ptr<builder::Command> &);
+    void setGenerator(const std::shared_ptr<builder::Command> &, bool ignore_errors);
     void setGenerated(bool g = true) { generated_ = g; }
     std::shared_ptr<builder::Command> getGenerator() const;
 
@@ -126,6 +126,7 @@ struct SW_BUILDER_API FileRecord
 
 private:
     std::weak_ptr<builder::Command> generator;
+    //size_h generator_hash = 0;
     bool generated_ = false;
 };
 

@@ -777,7 +777,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void writeFileSafe(const path &fn, const String &content, bool binary_dir = true) const;
     void replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir = false) const; // deprecate?
     void patch(const path &fn, const String &from, const String &to, bool binary_dir = false) const;
-    void patch(const path &fn, const String &patch_str, bool binary_dir = false) const;
+    void patch(const path &fn, const String &patch_str) const;
     //void patch(const path &fn, const path &patch_fn, bool binary_dir = false) const;
     void deleteInFileOnce(const path &fn, const String &from, bool binary_dir = false) const;
     void pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;

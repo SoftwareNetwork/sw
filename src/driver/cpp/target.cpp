@@ -3108,15 +3108,14 @@ void NativeExecutedTarget::patch(const path &fn, const String &from, const Strin
     f.getFileRecord().load();
 }
 
-void NativeExecutedTarget::patch(const path &fn, const String &patch_str, bool binary_dir) const
+void NativeExecutedTarget::patch(const path &fn, const String &patch_str) const
 {
     if (PostponeFileResolving || DryRun)
         return;
 
-    if (fn.is_absolute())
-        ::sw::patch(fn, patch_str, getPatchDir(binary_dir));
-    else
-        ::sw::patch((binary_dir ? BinaryDir : SourceDir) / fn, patch_str, getPatchDir(binary_dir));
+    path p = fn;
+    check_absolute(p);
+    ::sw::patch(p, patch_str, getPatchDir(false));
 }
 
 void NativeExecutedTarget::deleteInFileOnce(const path &fn, const String &from, bool binary_dir) const
