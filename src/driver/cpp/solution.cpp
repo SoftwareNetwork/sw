@@ -496,8 +496,8 @@ void Solution::printGraph(const path &p) const
     s += "digraph G {\n";
     for (auto &[p, t] : getChildren())
     {
-        auto nt = (NativeExecutedTarget*)t.get();
-        if (nt->HeaderOnly && nt->HeaderOnly.value())
+        auto nt = t->as<NativeExecutedTarget>();
+        if (!nt || nt->HeaderOnly && nt->HeaderOnly.value())
             continue;
         //s += "\"" + pp.toString() + "\";\n";
         for (auto &d : nt->Dependencies)
@@ -2102,20 +2102,25 @@ void Build::build_package(const String &s)
 {
     //auto [pkg,pkgs] = resolve_dependency(s);
     auto pkg = extractFromString(s);
-    auto r = pkg.resolve();
 
-    Local = false;
-    NamePrefix = pkg.ppath.slice(0, r.prefix);
+    // add default sln
+    auto &sln = addSolution();
+
+    // add known pkgs before pkg.resolve(), because otherwise it does not give us dl deps
+    for (auto &p : resolveAllDependencies({ pkg }))
+        sln.knownTargets.insert(p);
+
+    auto r = pkg.resolve();
+    sln.Local = false;
+    sln.NamePrefix = pkg.ppath.slice(0, r.prefix);
     build_and_run(r.getDirSrc2() / "sw.cpp");
 }
 
 void Build::run_package(const String &s)
 {
-    auto pkg = extractFromString(s);
-    auto r = pkg.resolve();
-
     build_package(s);
-    auto p = solutions[0].getTargetPtr(r)->as<NativeExecutedTarget>();
+
+    auto p = solutions[0].getTargetPtr(extractFromString(s).resolve())->as<NativeExecutedTarget>();
     if (!p || p->getType() != TargetType::NativeExecutable)
         throw SW_RUNTIME_ERROR("Unsupported package type");
 
@@ -2256,7 +2261,9 @@ PackageDescriptionMap Build::getPackages() const
         if (t->Scope != TargetScope::Build)
             continue;
 
-        auto nt = (NativeExecutedTarget*)t.get();
+        auto nt = t->as<NativeExecutedTarget>();
+        if (!nt)
+            throw SW_RUNTIME_ERROR("not implemented");
 
         nlohmann::json j;
 
@@ -2287,6 +2294,7 @@ PackageDescriptionMap Build::getPackages() const
             files.insert(f.lexically_normal());
         }
 
+        // TODO: BUG: interface files are not gathered!
         if (files.empty() && !nt->Empty)
             throw SW_RUNTIME_ERROR(pkg.toString() + ": No files found");
         if (!files.empty() && nt->Empty)
@@ -2299,7 +2307,7 @@ PackageDescriptionMap Build::getPackages() const
         // 'from' field is calculated relative to fetch/sln dir
         auto files_map1 = primitives::pack::prepare_files(files, rd.lexically_normal());
         // but 'to' field is calculated based on target's own view
-        auto files_map2 = primitives::pack::prepare_files(files, t->SourceDir.lexically_normal());
+        /*auto files_map2 = primitives::pack::prepare_files(files, t->SourceDir.lexically_normal());
         if (files_map1.size() != files_map2.size())
         {
             auto fm2 = files_map2;
@@ -2330,6 +2338,13 @@ PackageDescriptionMap Build::getPackages() const
             nlohmann::json jf;
             jf["from"] = normalize_path(f1.first);
             jf["to"] = normalize_path(f2.second);
+            j["files"].push_back(jf);
+        }*/
+        for (const auto &[f1, f2] : files_map1)
+        {
+            nlohmann::json jf;
+            jf["from"] = normalize_path(f1);
+            jf["to"] = normalize_path(f2);
             j["files"].push_back(jf);
         }
 

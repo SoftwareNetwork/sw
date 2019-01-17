@@ -262,7 +262,7 @@ int main(int argc, char **argv)
                 system("pause");
             }
             else
-                message_box(error);
+                message_box(sw::getProgramName(), error);
 #endif
         }
     }
@@ -448,14 +448,14 @@ SUBCOMMAND_DECL(uri)
                     auto r = SHOpenFolderAndSelectItems(pidl, 0, 0, 0);
                     if (FAILED(r))
                     {
-                        message_box("Error in SHOpenFolderAndSelectItems");
+                        message_box(sw::getProgramName(), "Error in SHOpenFolderAndSelectItems");
                     }
                     ILFree(pidl);
                 }
             }
             else
             {
-                message_box("Package '" + p.toString() + "' not installed");
+                message_box(sw::getProgramName(), "Package '" + p.toString() + "' not installed");
             }
 #endif
         }
@@ -472,7 +472,7 @@ SUBCOMMAND_DECL(uri)
             }
             else
             {
-                message_box("Package '" + p.toString() + "' is already installed");
+                message_box(sw::getProgramName(), "Package '" + p.toString() + "' is already installed");
             }
 #endif
         }
@@ -539,13 +539,13 @@ SUBCOMMAND_DECL(uri)
     catch (std::exception &e)
     {
 #ifdef _WIN32
-        message_box(e.what());
+        message_box(sw::getProgramName(), e.what());
 #endif
     }
     catch (...)
     {
 #ifdef _WIN32
-        message_box("Unknown exception");
+        message_box(sw::getProgramName(), "Unknown exception");
 #endif
     }
 }

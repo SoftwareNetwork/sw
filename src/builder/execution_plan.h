@@ -76,7 +76,7 @@ struct ExecutionPlan
                 if (--askip_errors < 1)
                     stopped = true;
                 if (throw_on_errors)
-                    throw;
+                    throw; // don't go futher on DAG by default
             }
             for (auto &d : c->dependendent_commands)
             {

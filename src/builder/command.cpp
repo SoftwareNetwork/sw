@@ -176,8 +176,8 @@ bool Command::isTimeChanged() const
 {
     bool changed = false;
 
-    //if (inputs.size() == 1)
-        //DEBUG_BREAK_IF_STRING_HAS(inputs.begin()->string(), "range.yy");
+    //if (outputs.size() == 1)
+        //DEBUG_BREAK_IF_STRING_HAS(outputs.begin()->string(), "qrc_updater_translations.cpp");
 
     // always check program and all deps are known
     changed |= File(program, *fs).isChanged(mtime);
@@ -632,9 +632,8 @@ void Command::execute1(std::error_code *ec)
         for (auto &[k, v] : environment)
         {
             if (bat)
-                t += "set";
-            else
-                t += " " + k + "=" + v + "\n\n";
+                t += "set ";
+            t += k + "=" + v + "\n\n";
         }
 
         if (!working_directory.empty())

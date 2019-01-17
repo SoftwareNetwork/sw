@@ -212,7 +212,8 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
         // set source dir
         if (t->SourceDir.empty())
-            t->SourceDir = SourceDir.empty() ? getSolution()->SourceDir : SourceDir;
+            //t->SourceDir = SourceDir.empty() ? getSolution()->SourceDir : SourceDir;
+            t->SourceDir = getSolution()->SourceDir;
 
         // try to get solution provided source dir
         if (auto sd = getSolution()->getSourceDir(t->source, t->pkg.version); sd)
@@ -270,7 +271,8 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
         }
     }
 
-    t->applyRootDirectory();
+    t->setRootDirectory(RootDirectory); // keep root dir growing
+    //t->applyRootDirectory();
     //t->SourceDirBase = t->SourceDir;
 
     t->init();
@@ -406,7 +408,7 @@ void TargetBase::operator=(const Source &s)
 void TargetBase::applyRootDirectory()
 {
     // but append only in some cases
-    if (!PostponeFileResolving && Local)
+    if (!PostponeFileResolving/* && Local*/)
         SourceDir /= RootDirectory;
 }
 
@@ -430,10 +432,10 @@ path TargetBase::getTargetsDir() const
     return getSolution()->BinaryDir / getConfig() / "targets";
 }
 
-path TargetBase::getTargetDirShort() const
+path TargetBase::getTargetDirShort(const path &root) const
 {
     // make t subdir or tgt? or tgts?
-    return getSolution()->BinaryDir / "t" / getConfig(true) / sha256_short(pkg.toString());
+    return root / "t" / getConfig(true) / sha256_short(pkg.toString());
 }
 
 path TargetBase::getTempDir() const
@@ -512,18 +514,22 @@ void Target::init()
 
     if (SW_IS_LOCAL_BINARY_DIR)
     {
-        BinaryDir = getTargetDirShort();
+        BinaryDir = getTargetDirShort(getSolution()->BinaryDir);
     }
-    else if (auto d = pkg.getOverriddenDir(); d && 0)
+    else if (auto d = pkg.getOverriddenDir(); d)
     {
-        BinaryDir = d.value() / SW_BINARY_DIR;
-        BinaryDir /= sha256_short(pkg.toString()); // pkg first
-        BinaryDir /= path(getConfig(true));
+        // same as local for testing purposes?
+        BinaryDir = getTargetDirShort(d.value() / SW_BINARY_DIR);
+
+        //BinaryDir = d.value() / SW_BINARY_DIR;
+        //BinaryDir /= sha256_short(pkg.toString()); // pkg first
+        //BinaryDir /= path(getConfig(true));
     }
     else /* package from network */
     {
         BinaryDir = getObjectDir(pkg, get_config_with_deps()); // remove 'build' part?
     }
+
     if (DryRun)
     {
         // we doing some download on server or whatever
@@ -532,6 +538,7 @@ void Target::init()
         fs::remove_all(BinaryDir);
         fs::create_directories(BinaryDir);
     }
+
     BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
     BinaryDir /= SW_BDIR_NAME;
 
@@ -1873,7 +1880,7 @@ bool NativeExecutedTarget::prepare()
     if (getSolution()->skipTarget(Scope))
         return false;
 
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "mmo_extractor");
+    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "aspia.codec");
 
     /*{
         auto is_changed = [this](const path &p)

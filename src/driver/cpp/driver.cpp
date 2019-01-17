@@ -187,7 +187,7 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, const FetchO
         if (opts.apply_version_to_source)
             applyVersionToUrl(t->source, pkg.version);
         auto i = b->fetch_info.sources.find(s);
-        path rd = i->second / t->RootDirectory;
+        path rd = i->second/* / t->RootDirectory*/;
         t->SourceDir = rd;
     }
 

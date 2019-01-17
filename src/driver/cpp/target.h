@@ -346,7 +346,7 @@ public:
     path getBaseDir() const;
     path getServiceDir() const;
     path getTargetsDir() const;
-    path getTargetDirShort() const;
+    path getTargetDirShort(const path &root) const;
     path getTempDir() const;
 
     void setRootDirectory(const path &);
@@ -366,10 +366,9 @@ public:
     Solution *getSolution();
     const Solution *getSolution() const;
 
-    // ???? why can't access protected in build
-    path RootDirectory;
 protected:
     // impl
+    path RootDirectory;
     bool prepared = false;
 
     TargetBase(const TargetBase &);
@@ -784,19 +783,13 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void pushBackToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
     void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default);
 
-    /*#ifdef _MSC_VER
-    #define SW_DEPRECATED __declspec(deprecated)
-    #else
-    #define SW_DEPRECATED
-    #endif*/
-
-    //SW_DEPRECATED
+    [[deprecated("Use writeFileOnce instead")]]
     void fileWriteOnce(const path &fn, bool binary_dir = true) const;
-    //SW_DEPRECATED
+    [[deprecated("Use writeFileOnce instead")]]
     void fileWriteOnce(const path &fn, const char *content, bool binary_dir = true) const;
-    //SW_DEPRECATED
+    [[deprecated("Use writeFileOnce instead")]]
     void fileWriteOnce(const path &fn, const String &content, bool binary_dir = true) const;
-    //SW_DEPRECATED
+    [[deprecated("Use writeFileOnce instead")]]
     void fileWriteSafe(const path &fn, const String &content, bool binary_dir = true) const;
 
     void addPrecompiledHeader(const path &h, const path &cpp = path());
