@@ -176,8 +176,11 @@ bool Command::isTimeChanged() const
 {
     bool changed = false;
 
-    //if (outputs.size() == 1)
-        //DEBUG_BREAK_IF_STRING_HAS(outputs.begin()->string(), "qrc_updater_translations.cpp");
+    /*if (outputs.size())
+    {
+        DEBUG_BREAK_IF_STRING_HAS(outputs.begin()->string(), "range.yy.cpp");
+        DEBUG_BREAK_IF_STRING_HAS(outputs.begin()->string(), "range.yy.hpp");
+    }*/
 
     // always check program and all deps are known
     changed |= File(program, *fs).isChanged(mtime);

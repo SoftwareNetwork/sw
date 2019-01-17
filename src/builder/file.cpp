@@ -154,14 +154,7 @@ bool File::isChanged() const
 
 bool File::isChanged(const fs::file_time_type &t)
 {
-    // perform initialization and load lwt
-    auto &r = getFileRecord();
-    auto c = r.refresh(); // we need refresh result
-    getFileRecord().isChanged(); // also need this one
-
-    // here we need a way to check if file does not exist
-    // getFileRecord().isChanged() sets current file (even non existent) lwt to its deps lwt which is wrong
-    return c || getFileRecord().getMaxTime() > t;
+    return getFileRecord().isChanged(t);
 }
 
 bool File::isGenerated() const
@@ -316,6 +309,7 @@ bool FileRecord::refresh(bool use_file_monitor)
     if (!fs::exists(file))
     {
         EXPLAIN_OUTDATED("file", true, "not found", file.u8string());
+        data->last_write_time = decltype(data->last_write_time)();
         return true;
     }
 
@@ -374,10 +368,16 @@ bool FileRecord::isChanged(bool use_file_monitor)
 
 bool FileRecord::isChanged(const fs::file_time_type &in)
 {
-    // consider refresh result? if file does not exist
-    auto c = refresh();
-    if (c)
+    refresh();
+
+    if (data->last_write_time.time_since_epoch().count() == 0)
         return true; // file does not exist
+
+    for (auto &[f, d] : implicit_dependencies)
+    {
+        if (d->data->last_write_time.time_since_epoch().count() == 0)
+            return true;
+    }
 
     auto t = getMaxTime();
     if (t > in)
