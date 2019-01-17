@@ -215,6 +215,7 @@ protected:
     OS HostOS;
 
     Solution();
+
     void clear();
 
 private:
@@ -232,8 +233,12 @@ private:
 
     void addTest(Test &cb, const String &name);
 
+    void setSettings();
+    void findCompiler();
+
 private:
     friend struct ToBuild;
+    friend struct Build;
 };
 
 struct SW_DRIVER_CPP_API Build : Solution, PackageScript
@@ -248,7 +253,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     // child solutions
     std::vector<Solution> solutions;
     Solution *current_solution = nullptr;
-    bool configure = false;
+    //bool configure = false;
     bool perform_checks = true;
     bool ide = false;
 
@@ -290,8 +295,6 @@ protected:
 private:
     bool remove_ide_explans = false;
 
-    void setSettings();
-    void findCompiler();
     void setupSolutionName(const path &file_or_dir);
     SharedLibraryTarget &createTarget(const Files &files);
 

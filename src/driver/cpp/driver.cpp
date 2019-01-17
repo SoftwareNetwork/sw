@@ -45,7 +45,7 @@ PackageScriptPtr CppDriver::build(const path &file_or_dir) const
 
     auto b = std::make_unique<Build>();
     b->Local = true;
-    b->configure = true;
+    //b->configure = true;
     b->build(f.value());
     return b;
 }
@@ -66,14 +66,14 @@ PackageScriptPtr CppDriver::load(const path &file_or_dir) const
 
         auto b = std::make_unique<Build>();
         b->Local = true;
-        b->configure = true;
+        //b->configure = true;
         b->load_configless(file_or_dir);
         return b;
     }
 
     auto b = std::make_unique<Build>();
     b->Local = true;
-    b->configure = true;
+    //b->configure = true;
     b->build_and_load(f.value());
 
     return b;

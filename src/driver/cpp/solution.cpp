@@ -48,15 +48,15 @@ cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 static cl::opt<bool> fetch_sources("fetch", cl::desc("Fetch files in process"));
-static cl::opt<bool> chrome_trace("chrome-trace", cl::desc("Record chrome trace events"));
+static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace events"));
 
-static cl::opt<String> target_os("target-os");
-static cl::opt<String> compiler("compiler", cl::desc("Set compiler")/*, cl::sub(subcommand_ide)*/);
-static cl::opt<String> configuration("configuration", cl::desc("Set build configuration")/*, cl::sub(subcommand_ide)*/);
-static cl::opt<String> platform("platform", cl::desc("Set build platform")/*, cl::sub(subcommand_ide)*/);
+static cl::list<String> target_os("target-os", cl::CommaSeparated);
+static cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::CommaSeparated);
+static cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
+static cl::list<String> platform("platform", cl::desc("Set build platform"), cl::CommaSeparated);
 //static cl::opt<String> arch("arch", cl::desc("Set arch")/*, cl::sub(subcommand_ide)*/);
-static cl::opt<bool> static_build("static-build", cl::desc("Set static build")/*, cl::sub(subcommand_ide)*/);
-static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build")/*, cl::sub(subcommand_ide)*/);
+static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
+static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build"));
 
 extern bool gVerbose;
 bool gWithTesting;
@@ -612,7 +612,7 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
         LOG_INFO(logger, "Build time: " << t.getTimeFloat() << " s.");
 
     // produce chrome tracing log
-    if (chrome_trace)
+    if (time_trace)
     {
         // calculate minimal time
         auto min = decltype (builder::Command::t_begin)::clock::now();
@@ -656,7 +656,7 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
             events.push_back(e);
         }
         trace["traceEvents"] = events;
-        write_file(getServiceDir() / "chrome_trace.json", trace.dump(2));
+        write_file(getServiceDir() / "time_trace.json", trace.dump(2));
     }
 
     // prevent memory leaks (high mem usage)
@@ -980,37 +980,7 @@ std::optional<FrontendType> Solution::selectFrontendByFilename(const path &fn)
     return i->get_left();
 }
 
-Build::Build()
-{
-    //silent |= ide;
-
-    /*static */const auto host_os = detectOS();
-
-    HostOS = host_os;
-    Settings.TargetOS = HostOS; // temp
-
-    //languages = getLanguages();
-    findCompiler();
-}
-
-Build::~Build()
-{
-    // first destroy children as they might have data references to modules
-    solutions.clear();
-
-    // clear this solution before modules
-    // (events etc.)
-    clear();
-
-    // maybe also clear checks?
-    // or are they solution-specific?
-
-    // do not clear modules on exception, because it may come from there
-    if (!std::uncaught_exceptions())
-        getModuleStorage(base_ptr).modules.clear();
-}
-
-void Build::setSettings()
+void Solution::setSettings()
 {
     fs = &getFileStorage(getConfig());
 
@@ -1023,7 +993,7 @@ void Build::setSettings()
         Settings.Native.Linker->fs = fs;
 }
 
-void Build::findCompiler()
+void Solution::findCompiler()
 {
     detectCompilers(*this);
 
@@ -1176,6 +1146,36 @@ void Build::findCompiler()
         activateLanguage(a);
 
     setSettings();
+}
+
+Build::Build()
+{
+    //silent |= ide;
+
+    /*static */const auto host_os = detectOS();
+
+    HostOS = host_os;
+    Settings.TargetOS = HostOS; // temp
+
+    //languages = getLanguages();
+    findCompiler();
+}
+
+Build::~Build()
+{
+    // first destroy children as they might have data references to modules
+    solutions.clear();
+
+    // clear this solution before modules
+    // (events etc.)
+    clear();
+
+    // maybe also clear checks?
+    // or are they solution-specific?
+
+    // do not clear modules on exception, because it may come from there
+    if (!std::uncaught_exceptions())
+        getModuleStorage(base_ptr).modules.clear();
 }
 
 ExecutionPlan<builder::Command> Build::getExecutionPlan() const
@@ -2146,7 +2146,7 @@ void Build::load(const path &dll, bool usedll)
     if (gWithTesting)
         with_testing = true;
 
-    if (configure)
+    //if (configure)
     {
         // explicit presets
         Settings.Native.LibrariesType = LibraryType::Shared;
@@ -2169,59 +2169,141 @@ void Build::load(const path &dll, bool usedll)
         if (usedll)
             getModuleStorage(base_ptr).get(dll).configure(*this);
 
-        if (boost::iequals(configuration, "Debug"))
-            Settings.Native.ConfigurationType = ConfigurationType::Debug;
-        else if (boost::iequals(configuration, "Release"))
-            Settings.Native.ConfigurationType = ConfigurationType::Release;
-        else if (boost::iequals(configuration, "MinSizeRel"))
-            Settings.Native.ConfigurationType = ConfigurationType::MinimalSizeRelease;
-        else if (boost::iequals(configuration, "RelWithDebInfo"))
-            Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
-        else if (!configuration.empty())
-            throw SW_RUNTIME_ERROR("Unknown configuration: " + configuration);
+        if (solutions.empty())
+        {
+            // no solutions were configured, we use our slns
+            addSolution();
 
-        if (static_build)
-            Settings.Native.LibrariesType = LibraryType::Static;
-        if (shared_build)
-            Settings.Native.LibrariesType = LibraryType::Shared;
+            auto times = [this](int n)
+            {
+                if (n <= 1)
+                    return;
+                auto s2 = solutions;
+                for (int i = 1; i < n; i++)
+                {
+                    for (auto &s : s2)
+                        solutions.push_back(s);
+                }
+            };
 
-        if (boost::iequals(platform, "Win32"))
-            Settings.TargetOS.Arch = ArchType::x86;
-        else if (boost::iequals(platform, "Win64"))
-            Settings.TargetOS.Arch = ArchType::x86_64;
-        else if (boost::iequals(platform, "arm32"))
-            Settings.TargetOS.Arch = ArchType::arm;
-        else if (boost::iequals(platform, "arm64"))
-            Settings.TargetOS.Arch = ArchType::aarch64; // ?
-        else if (!platform.empty())
-            throw SW_RUNTIME_ERROR("Unknown platform: " + platform);
+            auto mult_and_action = [this, &times](int n, auto f)
+            {
+                times(n);
+                for (int i = 0; i < n; i++)
+                {
+                    int mult = solutions.size() / n;
+                    for (int j = i * mult; j < (i + 1) * mult; j++)
+                        f(solutions[j], i);
+                }
+            };
 
-        if (boost::iequals(compiler, "clang"))
-            Settings.Native.CompilerType = CompilerType::Clang;
-        else if (boost::iequals(compiler, "clangcl") || boost::iequals(compiler, "clang-cl"))
-            Settings.Native.CompilerType = CompilerType::ClangCl;
-        else if (boost::iequals(compiler, "gnu"))
-            Settings.Native.CompilerType = CompilerType::GNU;
-        else if (boost::iequals(compiler, "msvc"))
-            Settings.Native.CompilerType = CompilerType::MSVC;
-        else if (!compiler.empty())
-            throw SW_RUNTIME_ERROR("Unknown compiler: " + compiler);
+            // configuration
+            auto set_conf = [](auto &s, const String &configuration)
+            {
+                if (boost::iequals(configuration, "Debug"))
+                    s.Settings.Native.ConfigurationType = ConfigurationType::Debug;
+                else if (boost::iequals(configuration, "Release"))
+                    s.Settings.Native.ConfigurationType = ConfigurationType::Release;
+                else if (boost::iequals(configuration, "MinSizeRel"))
+                    s.Settings.Native.ConfigurationType = ConfigurationType::MinimalSizeRelease;
+                else if (boost::iequals(configuration, "RelWithDebInfo"))
+                    s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
+                else if (!configuration.empty())
+                    throw SW_RUNTIME_ERROR("Unknown configuration: " + configuration);
+            };
 
-        if (boost::iequals(target_os, "linux"))
-            Settings.TargetOS.Type = OSType::Linux;
-        else if (boost::iequals(target_os, "macos"))
-            Settings.TargetOS.Type = OSType::Macos;
-        else if (boost::iequals(target_os, "windows") || boost::iequals(target_os, "win"))
-            Settings.TargetOS.Type = OSType::Windows;
-        else if (!target_os.empty())
-            throw SW_RUNTIME_ERROR("Unknown target_os: " + target_os);
+            mult_and_action(configuration.size(), [&set_conf](auto &s, int i)
+            {
+                set_conf(s, configuration[i]);
+            });
+
+            // static/shared
+            if (static_build && shared_build)
+            {
+                mult_and_action(configuration.size(), [&set_conf](auto &s, int i)
+                {
+                    if (i == 0)
+                        s.Settings.Native.LibrariesType = LibraryType::Static;
+                    if (i == 1)
+                        s.Settings.Native.LibrariesType = LibraryType::Shared;
+                });
+            }
+            else
+            {
+                for (auto &s : solutions)
+                {
+                    if (static_build)
+                        s.Settings.Native.LibrariesType = LibraryType::Static;
+                    if (shared_build)
+                        s.Settings.Native.LibrariesType = LibraryType::Shared;
+                }
+            }
+
+            // platform
+            auto set_pl = [](auto &s, const String &platform)
+            {
+                if (boost::iequals(platform, "Win32"))
+                    s.Settings.TargetOS.Arch = ArchType::x86;
+                else if (boost::iequals(platform, "Win64"))
+                    s.Settings.TargetOS.Arch = ArchType::x86_64;
+                else if (boost::iequals(platform, "arm32"))
+                    s.Settings.TargetOS.Arch = ArchType::arm;
+                else if (boost::iequals(platform, "arm64"))
+                    s.Settings.TargetOS.Arch = ArchType::aarch64; // ?
+                else if (!platform.empty())
+                    throw SW_RUNTIME_ERROR("Unknown platform: " + platform);
+            };
+
+            mult_and_action(platform.size(), [&set_pl](auto &s, int i)
+            {
+                set_pl(s, platform[i]);
+            });
+
+            // compiler
+            auto set_cl = [](auto &s, const String &compiler)
+            {
+                if (boost::iequals(compiler, "clang"))
+                    s.Settings.Native.CompilerType = CompilerType::Clang;
+                else if (boost::iequals(compiler, "clangcl") || boost::iequals(compiler, "clang-cl"))
+                    s.Settings.Native.CompilerType = CompilerType::ClangCl;
+                else if (boost::iequals(compiler, "gnu"))
+                    s.Settings.Native.CompilerType = CompilerType::GNU;
+                else if (boost::iequals(compiler, "msvc"))
+                    s.Settings.Native.CompilerType = CompilerType::MSVC;
+                else if (!compiler.empty())
+                    throw SW_RUNTIME_ERROR("Unknown compiler: " + compiler);
+            };
+
+            mult_and_action(compiler.size(), [&set_cl](auto &s, int i)
+            {
+                set_cl(s, compiler[i]);
+            });
+
+            // target_os
+            auto set_tos = [](auto &s, const String &target_os)
+            {
+                if (boost::iequals(target_os, "linux"))
+                    s.Settings.TargetOS.Type = OSType::Linux;
+                else if (boost::iequals(target_os, "macos"))
+                    s.Settings.TargetOS.Type = OSType::Macos;
+                else if (boost::iequals(target_os, "windows") || boost::iequals(target_os, "win"))
+                    s.Settings.TargetOS.Type = OSType::Windows;
+                else if (!target_os.empty())
+                    throw SW_RUNTIME_ERROR("Unknown target_os: " + target_os);
+            };
+
+            mult_and_action(target_os.size(), [&set_tos](auto &s, int i)
+            {
+                set_tos(s, target_os[i]);
+            });
+        }
     }
 
-    // apply config settings
-    findCompiler();
+    // detect and eliminate solution clones
 
-    if (solutions.empty())
-        addSolution();
+    // apply config settings
+    for (auto &s : solutions)
+        s.findCompiler();
 
     // check
     {
