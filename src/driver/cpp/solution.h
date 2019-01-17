@@ -90,13 +90,6 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
 {
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
-    // move host os to solution?
-    OS HostOS;
-
-    // for distributed compilation???
-    // we are on host anyway, we don't need this probably
-    //OS BuildOS;
-
     struct SettingsX
     {
         OS TargetOS;
@@ -219,6 +212,7 @@ public:
 protected:
     Solution &base_ptr;
     bool dry_run = false;
+    OS HostOS;
 
     Solution();
     void clear();
