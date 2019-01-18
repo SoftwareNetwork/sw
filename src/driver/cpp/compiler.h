@@ -23,6 +23,10 @@
     c->fs = fs;                     \
     c->setProgram(file)
 
+#define SW_COMMON_COMPILER_API                          \
+    SW_DECLARE_PROGRAM_CLONE;                           \
+    void prepareCommand1(const TargetBase &t) override
+
 namespace sw
 {
 
@@ -70,12 +74,20 @@ protected:
 
 struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
 {
-    virtual std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) = 0;
+    CompilerBaseProgram() = default;
+    CompilerBaseProgram(const CompilerBaseProgram &);
+
+    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t);
     std::shared_ptr<builder::Command> getCommand(const TargetBase &t);
     std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> createCommand();
 
 protected:
     std::shared_ptr<driver::cpp::Command> cmd;
+    bool prepared = false;
+
+    virtual void prepareCommand1(const TargetBase &t) = 0;
+    virtual std::shared_ptr<driver::cpp::Command> createCommand1() const;
 };
 
 struct SW_DRIVER_CPP_API Compiler : CompilerBaseProgram
@@ -122,14 +134,15 @@ struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
 
     using NativeCompilerOptions::operator=;
 
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
+
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
     void setSourceFile(const path &input_file, path &output_file) override;
 
 protected:
     Version gatherVersion() const override { return VisualStudio::gatherVersion(file); }
+    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
 };
 
 struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
@@ -139,14 +152,15 @@ struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
 
     using NativeCompilerOptions::operator=;
 
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
+
     void setSourceFile(const path &input_file, path &output_file) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
 
 protected:
     Version gatherVersion() const override { return VisualStudio::gatherVersion(file); }
+    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
 };
 
 struct SW_DRIVER_CPP_API Clang : CompilerToolBase
@@ -160,14 +174,15 @@ struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
 {
     using NativeCompilerOptions::operator=;
 
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
+
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
     void setSourceFile(const path &input_file, path &output_file) override;
 
 protected:
     Version gatherVersion() const override { return Clang::gatherVersion(file); }
+    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
 };
 
 struct SW_DRIVER_CPP_API ClangCl : Clang
@@ -181,14 +196,15 @@ struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
 {
     using NativeCompilerOptions::operator=;
 
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
+
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
     void setSourceFile(const path &input_file, path &output_file) override;
 
 protected:
     Version gatherVersion() const override { return Clang::gatherVersion(file); }
+    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
 };
 
 struct SW_DRIVER_CPP_API GNU : CompilerToolBase
@@ -204,14 +220,15 @@ struct SW_DRIVER_CPP_API GNUASMCompiler : GNU, NativeCompiler,
 
     using NativeCompilerOptions::operator=;
 
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
+
     void setSourceFile(const path &input_file, path &output_file) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".o"; }
 
 protected:
     Version gatherVersion() const override { return GNU::gatherVersion(file); }
+    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
 };
 
 struct SW_DRIVER_CPP_API ClangASMCompiler : GNUASMCompiler
@@ -224,14 +241,15 @@ struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
 {
     using NativeCompilerOptions::operator=;
 
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
+
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".o"; }
     void setSourceFile(const path &input_file, path &output_file) override;
 
 protected:
     Version gatherVersion() const override { return GNU::gatherVersion(file); }
+    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
 };
 
 // linkers
@@ -278,11 +296,10 @@ struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
     path getOutputFile() const override;
     path getImportLibrary() const override;
 
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
-
 protected:
     virtual void getAdditionalOptions(driver::cpp::Command *c) const = 0;
 
+    void prepareCommand1(const TargetBase &t) override;
     Version gatherVersion() const override { return VisualStudio::gatherVersion(file); }
 };
 
@@ -331,7 +348,6 @@ struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
     GNULinker();
     virtual ~GNULinker() = default;
 
-    SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::cpp::Command *c) const override;
 
     void setInputLibraryDependencies(const FilesOrdered &files) override;
@@ -343,7 +359,7 @@ struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
     path getOutputFile() const override;
     path getImportLibrary() const override;
 
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
 };
 
 struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
@@ -354,7 +370,6 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
     GNULibrarian();
     virtual ~GNULibrarian() = default;
 
-    SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::cpp::Command *c) const override;
 
     void setObjectFiles(const Files &files) override;
@@ -364,7 +379,7 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
     virtual path getOutputFile() const override;
     virtual path getImportLibrary() const override;
 
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
 };
 
 struct SW_DRIVER_CPP_API NativeToolchain
@@ -402,8 +417,7 @@ struct SW_DRIVER_CPP_API RcTool : MsProgram,
 {
     FilesOrdered system_idirs;
 
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file);
@@ -426,8 +440,7 @@ struct SW_DRIVER_CPP_API VisualStudioCSharpCompiler : MsProgram,
     CSharpCompiler,
     CommandLineOptions<VisualStudioCSharpCompilerOptions>
 {
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file) override;
     void addSourceFile(const path &input_file) override;
@@ -439,8 +452,7 @@ protected:
 struct SW_DRIVER_CPP_API RustCompiler : Compiler,
     CommandLineOptions<RustCompilerOptions>
 {
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file);
@@ -452,8 +464,7 @@ protected:
 struct SW_DRIVER_CPP_API GoCompiler : Compiler,
     CommandLineOptions<GoCompilerOptions>
 {
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file);
@@ -465,8 +476,7 @@ protected:
 struct SW_DRIVER_CPP_API FortranCompiler : Compiler,
     CommandLineOptions<FortranCompilerOptions>
 {
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file);
@@ -478,8 +488,7 @@ protected:
 struct SW_DRIVER_CPP_API JavaCompiler : Compiler,
     CommandLineOptions<JavaCompilerOptions>
 {
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
 
     void setOutputDir(const path &output_dir);
     void setSourceFile(const path &input_file);
@@ -491,8 +500,7 @@ protected:
 struct SW_DRIVER_CPP_API KotlinCompiler : Compiler,
     CommandLineOptions<KotlinCompilerOptions>
 {
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file);
@@ -504,8 +512,7 @@ protected:
 struct SW_DRIVER_CPP_API DCompiler : Compiler,
     CommandLineOptions<DCompilerOptions>
 {
-    SW_DECLARE_PROGRAM_CLONE;
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t) override;
+    SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
     void setObjectDir(const path &dir);

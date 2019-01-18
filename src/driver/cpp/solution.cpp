@@ -608,8 +608,9 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
 
     p.skip_errors = skip_errors.getValue();
     p.execute(e);
-    if (!silent)
-        LOG_INFO(logger, "Build time: " << t.getTimeFloat() << " s.");
+    auto t2 = t.getTimeFloat();
+    if (!silent && t2 > 0.1)
+        LOG_INFO(logger, "Build time: " << t2 << " s.");
 
     // produce chrome tracing log
     if (time_trace)
@@ -1111,13 +1112,6 @@ void Solution::findCompiler()
         activate_or_throw(gnu, "Cannot find gnu toolchain");
         break;
     case CompilerType::UnspecifiedCompiler:
-        break;
-    default:
-        throw SW_RUNTIME_ERROR("solution.cpp: not implemented");
-    }
-
-    if (Settings.Native.CompilerType == CompilerType::UnspecifiedCompiler)
-    {
         switch (HostOS.Type)
         {
         case OSType::Windows:
@@ -1128,6 +1122,9 @@ void Solution::findCompiler()
             activate_array_or_throw({ gnu, clang, }, "Try to add more compilers");
             break;
         }
+        break;
+    default:
+        throw SW_RUNTIME_ERROR("solution.cpp: not implemented");
     }
 
     if (Settings.TargetOS.Type != OSType::Macos)
@@ -1215,7 +1212,7 @@ void Build::prepare()
     waitAndGet(fs);
 
     if (!silent)
-        LOG_INFO(logger, "Prepare time: " << t.getTimeFloat() << " s.");
+        LOG_DEBUG(logger, "Prepare time: " << t.getTimeFloat() << " s.");
 }
 
 Solution &Build::addSolution()
@@ -2149,21 +2146,22 @@ void Build::load(const path &dll, bool usedll)
     //if (configure)
     {
         // explicit presets
-        Settings.Native.LibrariesType = LibraryType::Shared;
-        Settings.Native.ConfigurationType = ConfigurationType::Release;
-        Settings.TargetOS.Arch = ArchType::x86_64;
+        //Settings.Native.LibrariesType = LibraryType::Shared;
+        //Settings.Native.ConfigurationType = ConfigurationType::Release;
+        //Settings.TargetOS.Arch = ArchType::x86_64; // use host arch
 #ifdef _WIN32
         Settings.Native.CompilerType = CompilerType::MSVC;
 #else
         Settings.Native.CompilerType = CompilerType::GNU;
 #endif
-#ifdef _WIN32
+        // use host os
+/*#ifdef _WIN32
         Settings.TargetOS.Type = OSType::Windows;
 #elif __APPLE__
         Settings.TargetOS.Type = OSType::Macos;
 #else
         Settings.TargetOS.Type = OSType::Linux;
-#endif
+#endif*/
 
         // configure may change defaults, so we must care below
         if (usedll)
@@ -2200,16 +2198,9 @@ void Build::load(const path &dll, bool usedll)
             // configuration
             auto set_conf = [](auto &s, const String &configuration)
             {
-                if (boost::iequals(configuration, "Debug"))
-                    s.Settings.Native.ConfigurationType = ConfigurationType::Debug;
-                else if (boost::iequals(configuration, "Release"))
-                    s.Settings.Native.ConfigurationType = ConfigurationType::Release;
-                else if (boost::iequals(configuration, "MinSizeRel"))
-                    s.Settings.Native.ConfigurationType = ConfigurationType::MinimalSizeRelease;
-                else if (boost::iequals(configuration, "RelWithDebInfo"))
-                    s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
-                else if (!configuration.empty())
-                    throw SW_RUNTIME_ERROR("Unknown configuration: " + configuration);
+                auto t = configurationTypeFromStringCaseI(configuration);
+                if (toIndex(t))
+                    s.Settings.Native.ConfigurationType = t;
             };
 
             mult_and_action(configuration.size(), [&set_conf](auto &s, int i)
@@ -2242,16 +2233,9 @@ void Build::load(const path &dll, bool usedll)
             // platform
             auto set_pl = [](auto &s, const String &platform)
             {
-                if (boost::iequals(platform, "Win32"))
-                    s.Settings.TargetOS.Arch = ArchType::x86;
-                else if (boost::iequals(platform, "Win64"))
-                    s.Settings.TargetOS.Arch = ArchType::x86_64;
-                else if (boost::iequals(platform, "arm32"))
-                    s.Settings.TargetOS.Arch = ArchType::arm;
-                else if (boost::iequals(platform, "arm64"))
-                    s.Settings.TargetOS.Arch = ArchType::aarch64; // ?
-                else if (!platform.empty())
-                    throw SW_RUNTIME_ERROR("Unknown platform: " + platform);
+                auto t = archTypeFromStringCaseI(platform);
+                if (toIndex(t))
+                    s.Settings.TargetOS.Arch = t;
             };
 
             mult_and_action(platform.size(), [&set_pl](auto &s, int i)
@@ -2262,16 +2246,9 @@ void Build::load(const path &dll, bool usedll)
             // compiler
             auto set_cl = [](auto &s, const String &compiler)
             {
-                if (boost::iequals(compiler, "clang"))
-                    s.Settings.Native.CompilerType = CompilerType::Clang;
-                else if (boost::iequals(compiler, "clangcl") || boost::iequals(compiler, "clang-cl"))
-                    s.Settings.Native.CompilerType = CompilerType::ClangCl;
-                else if (boost::iequals(compiler, "gnu"))
-                    s.Settings.Native.CompilerType = CompilerType::GNU;
-                else if (boost::iequals(compiler, "msvc"))
-                    s.Settings.Native.CompilerType = CompilerType::MSVC;
-                else if (!compiler.empty())
-                    throw SW_RUNTIME_ERROR("Unknown compiler: " + compiler);
+                auto t = compilerTypeFromStringCaseI(compiler);
+                if (toIndex(t))
+                    s.Settings.Native.CompilerType = t;
             };
 
             mult_and_action(compiler.size(), [&set_cl](auto &s, int i)
@@ -2282,14 +2259,9 @@ void Build::load(const path &dll, bool usedll)
             // target_os
             auto set_tos = [](auto &s, const String &target_os)
             {
-                if (boost::iequals(target_os, "linux"))
-                    s.Settings.TargetOS.Type = OSType::Linux;
-                else if (boost::iequals(target_os, "macos"))
-                    s.Settings.TargetOS.Type = OSType::Macos;
-                else if (boost::iequals(target_os, "windows") || boost::iequals(target_os, "win"))
-                    s.Settings.TargetOS.Type = OSType::Windows;
-                else if (!target_os.empty())
-                    throw SW_RUNTIME_ERROR("Unknown target_os: " + target_os);
+                auto t = OSTypeFromStringCaseI(target_os);
+                if (toIndex(t))
+                    s.Settings.TargetOS.Type = t;
             };
 
             mult_and_action(target_os.size(), [&set_tos](auto &s, int i)
@@ -2323,7 +2295,11 @@ void Build::load(const path &dll, bool usedll)
     if (usedll)
     {
         for (auto &s : solutions)
+        {
+            if (solutions.size() > 1)
+                LOG_DEBUG(logger, "Doing pass: " + s.getConfig());
             getModuleStorage(base_ptr).get(dll).build(s);
+        }
     }
 
     // we build only targets from this package

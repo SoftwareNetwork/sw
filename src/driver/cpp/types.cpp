@@ -9,6 +9,8 @@
 #include <solution.h>
 #include <target.h>
 
+#include <boost/algorithm/string.hpp>
+
 namespace sw
 {
 
@@ -132,6 +134,38 @@ String toString(LibraryType Type)
     default:
         throw std::logic_error("todo: implement inheritance type");
     }
+}
+
+CompilerType compilerTypeFromStringCaseI(const String &compiler)
+{
+    if (boost::iequals(compiler, "clang"))
+        return CompilerType::Clang;
+    else if (boost::iequals(compiler, "clangcl") || boost::iequals(compiler, "clang-cl"))
+        return CompilerType::ClangCl;
+    else if (boost::iequals(compiler, "gnu"))
+        return CompilerType::GNU;
+    else if (boost::iequals(compiler, "msvc"))
+        return CompilerType::MSVC;
+    else if (!compiler.empty())
+        throw SW_RUNTIME_ERROR("Unknown compiler: " + compiler);
+    return CompilerType::UnspecifiedCompiler;
+}
+
+ConfigurationType configurationTypeFromStringCaseI(const String &configuration)
+{
+    if (boost::iequals(configuration, "Debug"))
+        return ConfigurationType::Debug;
+    else if (boost::iequals(configuration, "Release"))
+        return ConfigurationType::Release;
+    else if (boost::iequals(configuration, "MinSizeRel") ||
+        boost::iequals(configuration, "MinimalSizeRelease"))
+        return ConfigurationType::MinimalSizeRelease;
+    else if (boost::iequals(configuration, "RelWithDebInfo") ||
+        boost::iequals(configuration, "ReleaseWithDebugInformation"))
+        return ConfigurationType::ReleaseWithDebugInformation;
+    else if (!configuration.empty())
+        throw SW_RUNTIME_ERROR("Unknown configuration: " + configuration);
+    return ConfigurationType::Unspecified;
 }
 
 } // namespace sw

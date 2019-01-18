@@ -187,6 +187,12 @@ String toString(EnvironmentType e);
 SW_BUILDER_API
 String toString(ObjectFormatType e);
 
+SW_BUILDER_API
+OSType OSTypeFromStringCaseI(const String &s);
+
+SW_BUILDER_API
+ArchType archTypeFromStringCaseI(const String &s);
+
 struct OS
 {
     OSType Type = OSType::UnknownOS;

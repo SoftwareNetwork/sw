@@ -25,7 +25,14 @@
 DECLARE_STATIC_LOGGER(logger, "compiler");
 
 #define SW_MAKE_COMPILER_COMMAND_WITH_FILE(t) \
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::t)
+    SW_MAKE_COMPILER_COMMAND(t)
+
+#define SW_CREATE_COMPILER_COMMAND(t, m, ct)                        \
+    std::shared_ptr<driver::cpp::Command> t::createCommand1() const \
+    {                                                               \
+        m(ct);                                                      \
+        return c;                                                   \
+    }
 
 static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
 static cl::opt<bool> use_other_langs("use-other-languages");
@@ -512,7 +519,7 @@ void detectNativeCompilers(struct Solution &s)
     } dir_suffix;
 
     // get suffix
-    switch (s.Settings.TargetOS.Arch)
+    switch (s.HostOS.Arch)
     {
     case ArchType::x86_64:
         dir_suffix.host = "x64";
@@ -527,7 +534,7 @@ void detectNativeCompilers(struct Solution &s)
         //dir_suffix.include = "arm";
         //dir_suffix.lib = "arm64";
     default:
-        assert(false && "Unknown arch");
+        throw SW_RUNTIME_ERROR("Unknown arch");
     }
 
     switch (s.Settings.TargetOS.Arch)
@@ -536,19 +543,20 @@ void detectNativeCompilers(struct Solution &s)
         dir_suffix.target = "x64";
         break;
     case ArchType::x86:
-        dir_suffix.host = "x86";
+        //dir_suffix.host = "x86";
         dir_suffix.target = "x86";
         break;
-        // arm
-        //dir_suffix.include = "arm";
-        //dir_suffix.lib = "arm";
-        // arm64 !
-        //dir_suffix.include = "arm";
-        //dir_suffix.lib = "arm64";
+    case ArchType::arm:
+        dir_suffix.target = "arm";
+        break;
+    case ArchType::aarch64:
+        dir_suffix.target = "arm64";
+        break;
     default:
-        assert(false && "Unknown arch");
+        throw SW_RUNTIME_ERROR("Unknown arch");
     }
 
+    auto host_root = compiler / ("Host" + dir_suffix.host) / dir_suffix.host;
     NativeLinkerOptions LOpts;
 
     // continue
@@ -585,19 +593,47 @@ void detectNativeCompilers(struct Solution &s)
         Linker->Type = LinkerType::MSVC;
         Linker->file = compiler.parent_path() / "link.exe";
         Linker->vs_version = VSVersion;
-        if (s.Settings.TargetOS.Arch == ArchType::x86)
-            Linker->Machine = vs::MachineType::X86;
         *Linker = LOpts;
         s.registerProgram("com.Microsoft.VisualStudio.VC.link", Linker);
+
+        if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
+        {
+            auto c = Linker->createCommand();
+            c->addPathDirectory(host_root);
+        }
 
         auto Librarian = std::make_shared<VisualStudioLibrarian>();
         Librarian->Type = LinkerType::MSVC;
         Librarian->file = compiler.parent_path() / "lib.exe";
         Librarian->vs_version = VSVersion;
-        if (s.Settings.TargetOS.Arch == ArchType::x86)
-            Librarian->Machine = vs::MachineType::X86;
         *Librarian = LOpts;
         s.registerProgram("com.Microsoft.VisualStudio.VC.lib", Librarian);
+
+        if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
+        {
+            auto c = Librarian->createCommand();
+            c->addPathDirectory(host_root);
+        }
+
+        switch (s.Settings.TargetOS.Arch)
+        {
+        case ArchType::x86_64:
+            Librarian->Machine = vs::MachineType::X64;
+            Linker->Machine = vs::MachineType::X64;
+            break;
+        case ArchType::x86:
+            Librarian->Machine = vs::MachineType::X86;
+            Linker->Machine = vs::MachineType::X86;
+            break;
+        case ArchType::arm:
+            Librarian->Machine = vs::MachineType::ARM;
+            Linker->Machine = vs::MachineType::ARM;
+            break;
+        case ArchType::aarch64:
+            Librarian->Machine = vs::MachineType::ARM64;
+            Linker->Machine = vs::MachineType::ARM64;
+            break;
+        }
     }
 
     // ASM
@@ -634,6 +670,12 @@ void detectNativeCompilers(struct Solution &s)
         *C = COpts;
         L->compiler = C;
         s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.cl", C, L);
+
+        if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
+        {
+            auto c = C->createCommand();
+            c->addPathDirectory(host_root);
+        }
     }
 
     // C++
@@ -652,6 +694,12 @@ void detectNativeCompilers(struct Solution &s)
         L->compiler = C;
         C->CompileAsCPP = true;
         s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.clpp", C, L);
+
+        if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
+        {
+            auto c = C->createCommand();
+            c->addPathDirectory(host_root);
+        }
     }
 
     // .rc
@@ -943,11 +991,25 @@ void detectNativeCompilers(struct Solution &s)
 #endif
 }
 
+CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
+    : Program(rhs)
+{
+    if (rhs.cmd)
+        cmd = std::make_shared<decltype(cmd)::element_type>(*rhs.cmd);
+}
+
 std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand() const
 {
-    if (!cmd)
+    if (!cmd || !prepared)
         throw SW_RUNTIME_ERROR("Command is not prepared");
     return cmd;
+}
+
+std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand()
+{
+    if (cmd)
+        return cmd;
+    return cmd = createCommand1();
 }
 
 std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const TargetBase &t)
@@ -955,6 +1017,19 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const TargetBa
     prepareCommand(t);
     return getCommand();
 }
+
+std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const TargetBase &t)
+{
+    if (prepared)
+        return cmd;
+    createCommand(); // do some init
+    cmd->fs = t.getSolution()->fs;
+    prepareCommand1(t);
+    prepared = true;
+    return cmd;
+}
+
+SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, SW_MAKE_COMPILER_COMMAND, driver::cpp::Command)
 
 Strings NativeCompiler::getClangCppStdOption(CPPLanguageStandard std) const
 {
@@ -1007,49 +1082,44 @@ Version MsProgram::gatherVersion(const path &program) const
     return ::sw::gatherVersion(program, "/?");
 }
 
-std::shared_ptr<builder::Command> VisualStudioCompiler::prepareCommand(const TargetBase &t)
+SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::VSCommand)
+
+void VisualStudioCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND_WITH_FILE(VSCommand);
-
     if (InputFile)
     {
-        c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().u8string();
-        //c->file = InputFile;
+        cmd->name = normalize_path(InputFile());
+        cmd->name_short = InputFile().filename().u8string();
+        //cmd->file = InputFile;
     }
     if (CSourceFile)
     {
-        c->name = normalize_path(CSourceFile());
-        c->name_short = CSourceFile().filename().u8string();
-        //c->file = CSourceFile;
+        cmd->name = normalize_path(CSourceFile());
+        cmd->name_short = CSourceFile().filename().u8string();
+        //cmd->file = CSourceFile;
     }
     if (CPPSourceFile)
     {
-        c->name = normalize_path(CPPSourceFile());
-        c->name_short = CPPSourceFile().filename().u8string();
-        //c->file = CPPSourceFile;
+        cmd->name = normalize_path(CPPSourceFile());
+        cmd->name_short = CPPSourceFile().filename().u8string();
+        //cmd->file = CPPSourceFile;
     }
     if (ObjectFile)
-        c->working_directory = ObjectFile().parent_path();
+        cmd->working_directory = ObjectFile().parent_path();
 
-    //if (c->file.empty())
+    //if (cmd->file.empty())
         //return nullptr;
 
-    //c->out.capture = true;
+    //cmd->out.capture = true;
 
-    getCommandLineOptions<VisualStudioCompilerOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
+    getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
+    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
 
     if (PreprocessToFile)
     {
-        //c->addOutput(c->file.file.parent_path() / (c->file.file.filename().stem().u8string() + ".i"));
+        //cmd->addOutput(cmd->file.file.parent_path() / (cmd->file.file.filename().stem().u8string() + ".i"));
         // TODO: remove old object file, it's now incorrect
     }
-
-    return cmd = c;
 }
 
 void VisualStudioCompiler::setOutputFile(const path &output_file)
@@ -1065,35 +1135,30 @@ void VisualStudioCompiler::setSourceFile(const path &input_file, path &output_fi
     VisualStudioCompiler::setOutputFile(output_file);
 }
 
-std::shared_ptr<builder::Command> VisualStudioASMCompiler::prepareCommand(const TargetBase &t)
+SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::VSCommand)
+
+void VisualStudioASMCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND_WITH_FILE(VSCommand);
-
     if (file.filename() == "ml64.exe")
         ((VisualStudioASMCompiler*)this)->SafeSEH = false;
 
     if (InputFile)
     {
-        c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().u8string();
-        //c->file = InputFile;
+        cmd->name = normalize_path(InputFile());
+        cmd->name_short = InputFile().filename().u8string();
+        //cmd->file = InputFile;
     }
     if (ObjectFile)
-        c->working_directory = ObjectFile().parent_path();
+        cmd->working_directory = ObjectFile().parent_path();
 
-    //if (c->file.empty())
+    //if (cmd->file.empty())
         //return nullptr;
 
-    //c->out.capture = true;
-    //c->base = clone();
+    //cmd->out.capture = true;
+    //cmd->base = clone();
 
-    getCommandLineOptions<VisualStudioAssemblerOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
-
-    return cmd = c;
+    getCommandLineOptions<VisualStudioAssemblerOptions>(cmd.get(), *this);
+    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
 }
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioASMCompiler)
@@ -1114,38 +1179,35 @@ Version Clang::gatherVersion(const path &program) const
     return ::sw::gatherVersion(program, "-v");
 }
 
-std::shared_ptr<builder::Command> ClangCompiler::prepareCommand(const TargetBase &t)
-{
-    if (cmd)
-        return cmd;
+SW_CREATE_COMPILER_COMMAND(ClangCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::GNUCommand)
 
-    SW_MAKE_COMPILER_COMMAND_WITH_FILE(GNUCommand);
+void ClangCompiler::prepareCommand1(const TargetBase &t)
+{
+    auto cmd = std::static_pointer_cast<driver::cpp::GNUCommand>(this->cmd);
 
     if (InputFile)
     {
-        c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().u8string();
-        //c->file = InputFile;
+        cmd->name = normalize_path(InputFile());
+        cmd->name_short = InputFile().filename().u8string();
+        //cmd->file = InputFile;
     }
     if (OutputFile)
     {
-        c->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
-        c->working_directory = OutputFile().parent_path();
+        cmd->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
+        cmd->working_directory = OutputFile().parent_path();
     }
 
-    //if (c->file.empty())
+    //if (cmd->file.empty())
         //return nullptr;
 
-    //c->out.capture = true;
-    //c->base = clone();
+    //cmd->out.capture = true;
+    //cmd->base = clone();
 
-    add_args(*c, getClangCppStdOption(CPPStandard()));
+    add_args(*cmd, getClangCppStdOption(CPPStandard()));
     CPPStandard.skip = true;
 
-    getCommandLineOptions<ClangOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
-
-    return cmd = c;
+    getCommandLineOptions<ClangOptions>(cmd.get(), *this);
+    iterate([this](auto &v, auto &gs) { v.addEverything(*this->cmd); });
 }
 
 void ClangCompiler::setOutputFile(const path &output_file)
@@ -1161,48 +1223,43 @@ void ClangCompiler::setSourceFile(const path &input_file, path &output_file)
     setOutputFile(output_file);
 }
 
-std::shared_ptr<builder::Command> ClangClCompiler::prepareCommand(const TargetBase &t)
+SW_CREATE_COMPILER_COMMAND(ClangClCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::VSCommand)
+
+void ClangClCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND_WITH_FILE(VSCommand);
-
     if (InputFile)
     {
-        c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().u8string();
-        //c->file = InputFile;
+        cmd->name = normalize_path(InputFile());
+        cmd->name_short = InputFile().filename().u8string();
+        //cmd->file = InputFile;
     }
     if (CSourceFile)
     {
-        c->name = normalize_path(CSourceFile());
-        c->name_short = CSourceFile().filename().u8string();
-        //c->file = CSourceFile;
+        cmd->name = normalize_path(CSourceFile());
+        cmd->name_short = CSourceFile().filename().u8string();
+        //cmd->file = CSourceFile;
     }
     if (CPPSourceFile)
     {
-        c->name = normalize_path(CPPSourceFile());
-        c->name_short = CPPSourceFile().filename().u8string();
-        //c->file = CPPSourceFile;
+        cmd->name = normalize_path(CPPSourceFile());
+        cmd->name_short = CPPSourceFile().filename().u8string();
+        //cmd->file = CPPSourceFile;
     }
     if (ObjectFile)
-        c->working_directory = ObjectFile().parent_path();
+        cmd->working_directory = ObjectFile().parent_path();
 
-    //if (c->file.empty())
+    //if (cmd->file.empty())
         //return nullptr;
 
-    //c->out.capture = true;
-    //c->base = clone();
+    //cmd->out.capture = true;
+    //cmd->base = clone();
 
-    add_args(*c, getClangCppStdOption(CPPStandard()));
+    add_args(*cmd, getClangCppStdOption(CPPStandard()));
     CPPStandard.skip = true;
 
-    getCommandLineOptions<VisualStudioCompilerOptions>(c.get(), *this);
-    getCommandLineOptions<ClangClOptions>(c.get(), *this, "-Xclang");
-    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
-
-    return cmd = c;
+    getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
+    getCommandLineOptions<ClangClOptions>(cmd.get(), *this, "-Xclang");
+    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
 }
 
 void ClangClCompiler::setOutputFile(const path &output_file)
@@ -1223,31 +1280,26 @@ Version GNU::gatherVersion(const path &program) const
     return ::sw::gatherVersion(program, "-v");
 }
 
-std::shared_ptr<builder::Command> GNUASMCompiler::prepareCommand(const TargetBase &t)
+SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::GNUCommand)
+
+void GNUASMCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND_WITH_FILE(GNUCommand);
-
     if (InputFile)
     {
-        c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().u8string();
-        //c->file = InputFile;
+        cmd->name = normalize_path(InputFile());
+        cmd->name_short = InputFile().filename().u8string();
+        //cmd->file = InputFile;
     }
     if (OutputFile)
-        c->working_directory = OutputFile().parent_path();
+        cmd->working_directory = OutputFile().parent_path();
 
-    //if (c->file.empty())
+    //if (cmd->file.empty())
         //return nullptr;
 
-    //c->out.capture = true;
+    //cmd->out.capture = true;
 
-    getCommandLineOptions<GNUAssemblerOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
-
-    return cmd = c;
+    getCommandLineOptions<GNUAssemblerOptions>(cmd.get(), *this);
+    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
 }
 
 SW_DEFINE_PROGRAM_CLONE(GNUASMCompiler)
@@ -1265,38 +1317,35 @@ void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
 
 SW_DEFINE_PROGRAM_CLONE(ClangASMCompiler)
 
-std::shared_ptr<builder::Command> GNUCompiler::prepareCommand(const TargetBase &t)
-{
-    if (cmd)
-        return cmd;
+SW_CREATE_COMPILER_COMMAND(GNUCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::GNUCommand)
 
-    SW_MAKE_COMPILER_COMMAND_WITH_FILE(GNUCommand);
+void GNUCompiler::prepareCommand1(const TargetBase &t)
+{
+    auto cmd = std::static_pointer_cast<driver::cpp::GNUCommand>(this->cmd);
 
     if (InputFile)
     {
-        c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().u8string();
-        //c->file = InputFile;
+        cmd->name = normalize_path(InputFile());
+        cmd->name_short = InputFile().filename().u8string();
+        //cmd->file = InputFile;
     }
     if (OutputFile)
     {
-        c->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
-        c->working_directory = OutputFile().parent_path();
+        cmd->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
+        cmd->working_directory = OutputFile().parent_path();
     }
 
-    //if (c->file.empty())
+    //if (cmd->file.empty())
         //return nullptr;
 
-    //c->out.capture = true;
+    //cmd->out.capture = true;
 
-    add_args(*c, getGNUCppStdOption(CPPStandard()));
+    add_args(*cmd, getGNUCppStdOption(CPPStandard()));
     CPPStandard.skip = true;
 
-    getCommandLineOptions<GNUOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
-    getCommandLineOptions<GNUOptions>(c.get(), *this, "", true);
-
-    return cmd = c;
+    getCommandLineOptions<GNUOptions>(cmd.get(), *this);
+    iterate([this](auto &v, auto &gs) { v.addEverything(*this->cmd); });
+    getCommandLineOptions<GNUOptions>(cmd.get(), *this, "", true);
 }
 
 void GNUCompiler::setOutputFile(const path &output_file)
@@ -1375,13 +1424,14 @@ path VisualStudioLibraryTool::getImportLibrary() const
     return p.parent_path() / (p.filename().stem() += ".lib");
 }
 
-std::shared_ptr<builder::Command> VisualStudioLibraryTool::prepareCommand(const TargetBase &t)
+void VisualStudioLibraryTool::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
     if (InputFiles.empty() && DefinitionFile.empty())
-        return nullptr;
+    {
+        // why? maybe throw?
+        cmd.reset();
+        return;
+    }
 
     if (Output.empty())
         throw SW_RUNTIME_ERROR("Output file is not set");
@@ -1393,18 +1443,16 @@ std::shared_ptr<builder::Command> VisualStudioLibraryTool::prepareCommand(const 
     //LinkDirectories() = gatherLinkDirectories();
     //LinkLibraries() = gatherLinkLibraries();
 
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    //c->out.capture = true;
-    //c->base = clone();
+    //cmd->out.capture = true;
+    //cmd->base = clone();
     if (Output)
     {
-        c->working_directory = Output().parent_path();
-        c->name = normalize_path(Output());
-        c->name_short = Output().filename().u8string();
+        cmd->working_directory = Output().parent_path();
+        cmd->name = normalize_path(Output());
+        cmd->name_short = Output().filename().u8string();
     }
 
-    /*if (c->name.find("eccdata.exe") != -1)
+    /*if (cmd->name.find("eccdata.exe") != -1)
     {
         int a = 5;
         a++;
@@ -1412,11 +1460,9 @@ std::shared_ptr<builder::Command> VisualStudioLibraryTool::prepareCommand(const 
 
     ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
-    getCommandLineOptions<VisualStudioLibraryToolOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
-    getAdditionalOptions(c.get());
-
-    return cmd = c;
+    getCommandLineOptions<VisualStudioLibraryToolOptions>(cmd.get(), *this);
+    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    getAdditionalOptions(cmd.get());
 }
 
 VisualStudioLinker::VisualStudioLinker()
@@ -1426,9 +1472,9 @@ VisualStudioLinker::VisualStudioLinker()
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioLinker)
 
-void VisualStudioLinker::getAdditionalOptions(driver::cpp::Command *c) const
+void VisualStudioLinker::getAdditionalOptions(driver::cpp::Command *cmd) const
 {
-    getCommandLineOptions<VisualStudioLinkerOptions>(c, *this);
+    getCommandLineOptions<VisualStudioLinkerOptions>(cmd, *this);
 }
 
 void VisualStudioLinker::setInputLibraryDependencies(const FilesOrdered &files)
@@ -1444,9 +1490,9 @@ VisualStudioLibrarian::VisualStudioLibrarian()
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioLibrarian)
 
-void VisualStudioLibrarian::getAdditionalOptions(driver::cpp::Command *c) const
+void VisualStudioLibrarian::getAdditionalOptions(driver::cpp::Command *cmd) const
 {
-    getCommandLineOptions<VisualStudioLibrarianOptions>(c, *this);
+    getCommandLineOptions<VisualStudioLibrarianOptions>(cmd, *this);
 }
 
 GNULinker::GNULinker()
@@ -1503,18 +1549,19 @@ path GNULinker::getImportLibrary() const
     return Output;
 }
 
-void GNULinker::getAdditionalOptions(driver::cpp::Command *c) const
+void GNULinker::getAdditionalOptions(driver::cpp::Command *cmd) const
 {
-    getCommandLineOptions<GNULinkerOptions>(c, *this);
+    getCommandLineOptions<GNULinkerOptions>(cmd, *this);
 }
 
-std::shared_ptr<builder::Command> GNULinker::prepareCommand(const TargetBase &t)
+void GNULinker::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
     if (InputFiles.empty()/* && DefinitionFile.empty()*/)
-        return nullptr;
+    {
+        // why? maybe throw?
+        cmd.reset();
+        return;
+    }
 
     if (Output.empty())
         throw SW_RUNTIME_ERROR("Output file is not set");
@@ -1526,18 +1573,16 @@ std::shared_ptr<builder::Command> GNULinker::prepareCommand(const TargetBase &t)
     //LinkDirectories() = gatherLinkDirectories();
     ((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
 
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    //c->out.capture = true;
-    //c->base = clone();
+    //cmd->out.capture = true;
+    //cmd->base = clone();
     if (Output)
     {
-        c->working_directory = Output().parent_path();
-        c->name = normalize_path(Output());
-        c->name_short = Output().filename().u8string();
+        cmd->working_directory = Output().parent_path();
+        cmd->name = normalize_path(Output());
+        cmd->name_short = Output().filename().u8string();
     }
 
-    /*if (c->name.find("eccdata.exe") != -1)
+    /*if (cmd->name.find("eccdata.exe") != -1)
     {
         int a = 5;
         a++;
@@ -1545,11 +1590,9 @@ std::shared_ptr<builder::Command> GNULinker::prepareCommand(const TargetBase &t)
 
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
-    getCommandLineOptions<GNULinkerOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
-    //getAdditionalOptions(c.get());
-
-    return cmd = c;
+    getCommandLineOptions<GNULinkerOptions>(cmd.get(), *this);
+    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    //getAdditionalOptions(cmd.get());
 }
 
 GNULibrarian::GNULibrarian()
@@ -1588,18 +1631,19 @@ path GNULibrarian::getImportLibrary() const
     return p.parent_path() / (p.filename().stem() += ".a");
 }
 
-void GNULibrarian::getAdditionalOptions(driver::cpp::Command *c) const
+void GNULibrarian::getAdditionalOptions(driver::cpp::Command *cmd) const
 {
-    getCommandLineOptions<GNULibrarianOptions>(c, *this);
+    getCommandLineOptions<GNULibrarianOptions>(cmd, *this);
 }
 
-std::shared_ptr<builder::Command> GNULibrarian::prepareCommand(const TargetBase &t)
+void GNULibrarian::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
     if (InputFiles.empty()/* && DefinitionFile.empty()*/)
-        return nullptr;
+    {
+        // why? maybe throw?
+        cmd.reset();
+        return;
+    }
 
     if (Output.empty())
         throw SW_RUNTIME_ERROR("Output file is not set");
@@ -1611,18 +1655,16 @@ std::shared_ptr<builder::Command> GNULibrarian::prepareCommand(const TargetBase 
     //LinkDirectories() = gatherLinkDirectories();
     //LinkLibraries() = gatherLinkLibraries();
 
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    //c->out.capture = true;
-    //c->base = clone();
+    //cmd->out.capture = true;
+    //cmd->base = clone();
     if (Output)
     {
-        c->working_directory = Output().parent_path();
-        c->name = normalize_path(Output());
-        c->name_short = Output().filename().u8string();
+        cmd->working_directory = Output().parent_path();
+        cmd->name = normalize_path(Output());
+        cmd->name_short = Output().filename().u8string();
     }
 
-    /*if (c->name.find("eccdata.exe") != -1)
+    /*if (cmd->name.find("eccdata.exe") != -1)
     {
         int a = 5;
         a++;
@@ -1630,41 +1672,34 @@ std::shared_ptr<builder::Command> GNULibrarian::prepareCommand(const TargetBase 
 
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
-    getCommandLineOptions<GNULibrarianOptions>(c.get(), *this);
-    iterate([c](auto &v, auto &gs) { v.addEverything(*c); });
-    //getAdditionalOptions(c.get());
-
-    return cmd = c;
+    getCommandLineOptions<GNULibrarianOptions>(cmd.get(), *this);
+    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    //getAdditionalOptions(cmd.get());
 }
 
 SW_DEFINE_PROGRAM_CLONE(RcTool)
 
-std::shared_ptr<builder::Command> RcTool::prepareCommand(const TargetBase &t)
+void RcTool::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    c->protect_args_with_quotes = false;
+    cmd->protect_args_with_quotes = false;
 
     if (InputFile)
     {
-        c->name = normalize_path(InputFile());
-        c->name_short = InputFile().filename().u8string();
+        cmd->name = normalize_path(InputFile());
+        cmd->name_short = InputFile().filename().u8string();
     }
 
-    t.template asRef<NativeExecutedTarget>().NativeCompilerOptions::addDefinitionsAndIncludeDirectories(*c);
+    t.template asRef<NativeExecutedTarget>().NativeCompilerOptions::addDefinitionsAndIncludeDirectories(*cmd);
 
     // ms bug: https://developercommunity.visualstudio.com/content/problem/417189/rcexe-incorrect-behavior-with.html
     //for (auto &i : system_idirs)
-        //c->args.push_back("-I" + normalize_path(i));
+        //cmd->args.push_back("-I" + normalize_path(i));
 
     // use env
     String s;
     for (auto &i : system_idirs)
         s += normalize_path(i) + ";";
-    c->environment["INCLUDE"] = s;
+    cmd->environment["INCLUDE"] = s;
 
     // fix spaces around defs value:
     // from: -DSW_PACKAGE_API=extern \"C\" __declspec(dllexport)
@@ -1672,7 +1707,7 @@ std::shared_ptr<builder::Command> RcTool::prepareCommand(const TargetBase &t)
 
     // find better way - protect things in addEverything?
 
-    for (auto &a : c->args)
+    for (auto &a : cmd->args)
     {
         if (a.find("-D") == 0)
         {
@@ -1691,9 +1726,7 @@ std::shared_ptr<builder::Command> RcTool::prepareCommand(const TargetBase &t)
         }
     }
 
-    getCommandLineOptions<RcToolOptions>(c.get(), *this);
-
-    return cmd = c;
+    getCommandLineOptions<RcToolOptions>(cmd.get(), *this);
 }
 
 void RcTool::setOutputFile(const path &output_file)
@@ -1708,16 +1741,9 @@ void RcTool::setSourceFile(const path &input_file)
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioCSharpCompiler)
 
-std::shared_ptr<builder::Command> VisualStudioCSharpCompiler::prepareCommand(const TargetBase &t)
+void VisualStudioCSharpCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    getCommandLineOptions<VisualStudioCSharpCompilerOptions>(c.get(), *this);
-
-    return cmd = c;
+    getCommandLineOptions<VisualStudioCSharpCompilerOptions>(cmd.get(), *this);
 }
 
 void VisualStudioCSharpCompiler::setOutputFile(const path &output_file)
@@ -1733,16 +1759,9 @@ void VisualStudioCSharpCompiler::addSourceFile(const path &input_file)
 
 SW_DEFINE_PROGRAM_CLONE(RustCompiler)
 
-std::shared_ptr<builder::Command> RustCompiler::prepareCommand(const TargetBase &t)
+void RustCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    getCommandLineOptions<RustCompilerOptions>(c.get(), *this);
-
-    return cmd = c;
+    getCommandLineOptions<RustCompilerOptions>(cmd.get(), *this);
 }
 
 void RustCompiler::setOutputFile(const path &output_file)
@@ -1763,16 +1782,9 @@ Version RustCompiler::gatherVersion() const
 
 SW_DEFINE_PROGRAM_CLONE(GoCompiler)
 
-std::shared_ptr<builder::Command> GoCompiler::prepareCommand(const TargetBase &t)
+void GoCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    getCommandLineOptions<GoCompilerOptions>(c.get(), *this);
-
-    return cmd = c;
+    getCommandLineOptions<GoCompilerOptions>(cmd.get(), *this);
 }
 
 void GoCompiler::setOutputFile(const path &output_file)
@@ -1793,16 +1805,9 @@ Version GoCompiler::gatherVersion() const
 
 SW_DEFINE_PROGRAM_CLONE(FortranCompiler)
 
-std::shared_ptr<builder::Command> FortranCompiler::prepareCommand(const TargetBase &t)
+void FortranCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    getCommandLineOptions<FortranCompilerOptions>(c.get(), *this);
-
-    return cmd = c;
+    getCommandLineOptions<FortranCompilerOptions>(cmd.get(), *this);
 }
 
 void FortranCompiler::setOutputFile(const path &output_file)
@@ -1823,23 +1828,16 @@ Version FortranCompiler::gatherVersion() const
 
 SW_DEFINE_PROGRAM_CLONE(JavaCompiler)
 
-std::shared_ptr<builder::Command> JavaCompiler::prepareCommand(const TargetBase &t)
+void JavaCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    getCommandLineOptions<JavaCompilerOptions>(c.get(), *this);
+    getCommandLineOptions<JavaCompilerOptions>(cmd.get(), *this);
 
     for (auto &f : InputFiles())
     {
         auto o = OutputDir() / (f.filename().stem() += ".class");
         File(o, *fs).addImplicitDependency(f);
-        c->addOutput(o);
+        cmd->addOutput(o);
     }
-
-    return cmd = c;
 }
 
 void JavaCompiler::setOutputDir(const path &output_dir)
@@ -1859,16 +1857,9 @@ Version JavaCompiler::gatherVersion() const
 
 SW_DEFINE_PROGRAM_CLONE(KotlinCompiler)
 
-std::shared_ptr<builder::Command> KotlinCompiler::prepareCommand(const TargetBase &t)
+void KotlinCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    getCommandLineOptions<KotlinCompilerOptions>(c.get(), *this);
-
-    return cmd = c;
+    getCommandLineOptions<KotlinCompilerOptions>(cmd.get(), *this);
 }
 
 void KotlinCompiler::setOutputFile(const path &output_file)
@@ -1889,16 +1880,9 @@ Version KotlinCompiler::gatherVersion() const
 
 SW_DEFINE_PROGRAM_CLONE(DCompiler)
 
-std::shared_ptr<builder::Command> DCompiler::prepareCommand(const TargetBase &t)
+void DCompiler::prepareCommand1(const TargetBase &t)
 {
-    if (cmd)
-        return cmd;
-
-    SW_MAKE_COMPILER_COMMAND(driver::cpp::Command);
-
-    getCommandLineOptions<DCompilerOptions>(c.get(), *this);
-
-    return cmd = c;
+    getCommandLineOptions<DCompilerOptions>(cmd.get(), *this);
 }
 
 void DCompiler::setOutputFile(const path &output_file)

@@ -93,21 +93,30 @@ DECLARE_OPTION_SPECIALIZATION(vs::MachineType)
     auto s = getCommandLineFlag();
     switch (value())
     {
-    case MachineType::X86:
-        s += "X86";
-        break;
-    case MachineType::X64:
-        s += "X64";
-        break;
-    case MachineType::ARM:
-        s += "ARM";
-        break;
-    case MachineType::ARM64:
-        s += "ARM64";
-        break;
-    case MachineType::EBC:
-        s += "EBC";
-        break;
+#define CASE(x)          \
+    case MachineType::x: \
+        s += #x;         \
+        break
+
+    CASE(X64);
+    CASE(X86);
+
+    CASE(ARM64);
+    CASE(ARM);
+
+    CASE(IA64);
+
+    CASE(MIPS);
+    CASE(MIPS16);
+    CASE(MIPSFPU);
+    CASE(MIPSFPU16);
+
+    CASE(SH4);
+    CASE(THUMB);
+    CASE(EBC);
+
+#undef CASE
+
     default:
         throw SW_RUNTIME_ERROR("unreachable code");
     }

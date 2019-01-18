@@ -35,6 +35,13 @@ enum class MachineType
     ARM,
     ARM64,
     EBC,
+    IA64,
+    MIPS,
+    MIPS16,
+    MIPSFPU,
+    MIPSFPU16,
+    SH4,
+    THUMB,
     X64,
     X86,
 };

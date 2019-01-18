@@ -90,6 +90,9 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
 {
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
+    // don't be so shy, don't hide in private
+    OS HostOS;
+
     struct SettingsX
     {
         OS TargetOS;
@@ -212,7 +215,6 @@ public:
 protected:
     Solution &base_ptr;
     bool dry_run = false;
-    OS HostOS;
 
     Solution();
 

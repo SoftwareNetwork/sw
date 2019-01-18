@@ -33,6 +33,8 @@ struct CommandData
     std::atomic_size_t *current_command = nullptr;
     std::atomic_size_t *total_commands = nullptr;
 
+    CommandData() = default;
+    CommandData(const CommandData & rhs) {}
     virtual ~CommandData() = default;
 
     virtual void execute() = 0;

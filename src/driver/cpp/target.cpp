@@ -2303,7 +2303,8 @@ bool NativeExecutedTarget::prepare()
                 if (UseModules)
                 {
                     c->UseModules = UseModules;
-                    c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getSolution()->Settings.TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+                    //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getSolution()->Settings.TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+                    c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
                     c->UTF8 = false; // utf8 is not used in std modules and produce a warning
 
                     auto s = read_file(f->file);
