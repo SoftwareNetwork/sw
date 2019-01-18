@@ -778,7 +778,7 @@ void detectNativeCompilers(struct Solution &s)
 
     // clang-cl
 
-    // C
+    // C, C++
     {
         auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
@@ -798,8 +798,23 @@ void detectNativeCompilers(struct Solution &s)
         *C = COpts2;
         L->compiler = C;
         s.registerProgramAndLanguage("org.LLVM.clangcl", C, L);
+
+        switch (s.Settings.TargetOS.Arch)
+        {
+        case ArchType::x86_64:
+            C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
+            break;
+        case ArchType::x86:
+            C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m32;
+            break;
+        default:
+            break;
+            //throw SW_RUNTIME_ERROR("Unknown arch");
+        }
     }
+
 #else
+
     // gnu
 
     path p;
@@ -1258,7 +1273,7 @@ void ClangClCompiler::prepareCommand1(const TargetBase &t)
     CPPStandard.skip = true;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
-    getCommandLineOptions<ClangClOptions>(cmd.get(), *this, "-Xclang");
+    getCommandLineOptions<ClangClOptions>(cmd.get(), *this/*, "-Xclang"*/);
     iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
 }
 

@@ -26,11 +26,13 @@ enum class CompilerType
     Clang,
     ClangCl,
     GNU,
-    //Intel,
+    Intel, // ICC
     MSVC,
     // more
 
     Other, // custom compilers
+    // zapcc - clang?
+    // cuda
 
     // aliases
     GCC = GNU,

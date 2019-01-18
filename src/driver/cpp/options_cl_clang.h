@@ -12,7 +12,16 @@
 namespace sw
 {
 
-namespace clang_gnu
+namespace clang
+{
+
+enum class ArchType
+{
+    m32,
+    m64,
+};
+
+namespace gnu
 {
 
 struct Optimizations
@@ -23,9 +32,12 @@ struct Optimizations
     bool FastCode = false;
 };
 
-}
+} // namespace gnu
 
-DECLARE_OPTION_SPECIALIZATION(clang_gnu::Optimizations);
+} // namespace clang
+
+DECLARE_OPTION_SPECIALIZATION(clang::ArchType);
+DECLARE_OPTION_SPECIALIZATION(clang::gnu::Optimizations);
 
 struct SW_DRIVER_CPP_API ClangCommonOptions
 {
@@ -112,6 +124,8 @@ struct SW_DRIVER_CPP_API ClangClOptions// : ClangCommonOptions
         cl::CommandFlagBeforeEachValue{}
     };*/
 
+    COMMAND_LINE_OPTION(Arch, clang::ArchType);
+
     //COMMAND_LINE_OPTION(MsCompatibility, bool){ cl::CommandFlag{ "fms-compatibility" }, true };
 };
 DECLARE_OPTION_SPECIALIZATION(ClangClOptions);
@@ -185,7 +199,7 @@ struct SW_DRIVER_CPP_API GNUOptions
         cl::CommandFlag{ "fPIC" }, true
     };
 
-    COMMAND_LINE_OPTION(Optimizations, clang_gnu::Optimizations);
+    COMMAND_LINE_OPTION(Optimizations, clang::gnu::Optimizations);
 };
 DECLARE_OPTION_SPECIALIZATION(GNUOptions);
 

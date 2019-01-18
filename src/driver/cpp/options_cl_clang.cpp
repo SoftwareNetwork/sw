@@ -21,14 +21,23 @@ DEFINE_OPTION_SPECIALIZATION_DUMMY(GNUAssemblerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(GNULinkerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(GNULibrarianOptions);
 
-namespace clang_gnu
+DECLARE_OPTION_SPECIALIZATION(clang::ArchType)
 {
+    Strings s;
+    switch (value())
+    {
+    case clang::ArchType::m32:
+        s.push_back("-m32");
+        break;
+    case clang::ArchType::m64:
+        s.push_back("-m64");
+        break;
+    }
+    return { s };
 }
 
-DECLARE_OPTION_SPECIALIZATION(clang_gnu::Optimizations)
+DECLARE_OPTION_SPECIALIZATION(clang::gnu::Optimizations)
 {
-    using namespace vs;
-
     auto &o = value();
 
     Strings s;

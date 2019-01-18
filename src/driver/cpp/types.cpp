@@ -161,7 +161,8 @@ ConfigurationType configurationTypeFromStringCaseI(const String &configuration)
         boost::iequals(configuration, "MinimalSizeRelease"))
         return ConfigurationType::MinimalSizeRelease;
     else if (boost::iequals(configuration, "RelWithDebInfo") ||
-        boost::iequals(configuration, "ReleaseWithDebugInformation"))
+        boost::iequals(configuration, "ReleaseWithDebugInformation") ||
+        boost::iequals(configuration, "ReleaseWithDebInfo"))
         return ConfigurationType::ReleaseWithDebugInformation;
     else if (!configuration.empty())
         throw SW_RUNTIME_ERROR("Unknown configuration: " + configuration);
