@@ -7,6 +7,9 @@
 #include "generator.h"
 #include "context.h"
 
+#include <command.h>
+#include "compiler.h"
+#include "compiler_helpers.h"
 #include "solution.h"
 
 #include <filesystem.h>
@@ -416,6 +419,21 @@ void ProjectContext::printProject(
         String idirs;
         for (auto &i : nt.gatherIncludeDirectories())
             idirs += i.string() + ";";
+        String add_opts;
+        if (auto sf = std::static_pointer_cast<NativeSourceFile>(nt.begin()->second); sf)
+        {
+            if (auto v = std::static_pointer_cast<VisualStudioCompiler>(sf->compiler); v)
+            {
+                for (auto &i : v->gatherIncludeDirectories())
+                    idirs += i.string() + ";";
+
+                auto cmd = std::make_shared<driver::cpp::Command>();
+                cmd->fs = nt.getSolution()->fs;
+                getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *v);
+                for (auto &a : cmd->args)
+                    add_opts += a + " ";
+            }
+        }
 
         if (ptype != VSProjectType::Utility)
         {
@@ -428,6 +446,8 @@ void ProjectContext::printProject(
             //addBlock("NMakeForcedIncludes", "Makefile");
             //addBlock("NMakeAssemblySearchPath", "Makefile");
             //addBlock("NMakeForcedUsingAssemblies", "Makefile");
+            if (!add_opts.empty())
+                addBlock("AdditionalOptions", add_opts);
         }
 
         endBlock();
