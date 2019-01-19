@@ -149,6 +149,8 @@ public:
     //void copyChecksFrom(const Solution &s);
     void clean() const;
 
+    bool canRunTargetExecutables() const;
+
     Commands getCommands() const;
 
     void printGraph(const path &p) const;

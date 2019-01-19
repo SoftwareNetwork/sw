@@ -288,6 +288,7 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
     Command(::sw::FileStorage &fs);
     virtual ~Command();
 
+    virtual std::shared_ptr<Command> clone() const;
     path getProgram() const override;
     void prepare() override;
 
@@ -342,6 +343,8 @@ private:
 
 struct VSCommand : Command
 {
+    std::shared_ptr<Command> clone() const override;
+
 private:
     void postProcess1(bool ok) override;
 };
@@ -349,6 +352,8 @@ private:
 struct GNUCommand : Command
 {
     path deps_file;
+
+    std::shared_ptr<Command> clone() const override;
 
 private:
     void postProcess1(bool ok) override;

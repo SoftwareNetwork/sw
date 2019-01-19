@@ -193,7 +193,7 @@ OSType OSTypeFromStringCaseI(const String &s);
 SW_BUILDER_API
 ArchType archTypeFromStringCaseI(const String &s);
 
-struct OS
+struct SW_BUILDER_API OS
 {
     OSType Type = OSType::UnknownOS;
     ArchType Arch = ArchType::UnknownArch;
@@ -210,6 +210,13 @@ struct OS
     bool is(SubArchType t) const { return SubArch == t; }
     bool is(EnvironmentType t) const { return EnvironmentType1 == t; }
     bool is(ObjectFormatType t) const { return ObjectFormatType1 == t; }
+
+    // rename?
+    bool canRunTargetExecutables(const OS &target_os) const;
+
+    String getExecutableExtension() const;
+    String getStaticLibraryExtension() const;
+    String getSharedLibraryExtension() const;
 };
 
 SW_BUILDER_API

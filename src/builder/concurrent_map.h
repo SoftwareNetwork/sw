@@ -30,6 +30,16 @@ struct ConcurrentMap
         clear();
     }
 
+    ~ConcurrentMap()
+    {
+        // causes crashes
+        /*if (!map)
+            return;
+        for (auto i = getIterator(); i.isValid(); i.next())
+            delete i.getValue();
+        map.reset();*/
+    }
+
     void clear()
     {
         map = std::make_unique<MapType>();

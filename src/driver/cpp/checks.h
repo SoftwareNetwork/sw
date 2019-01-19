@@ -86,6 +86,7 @@ struct SW_DRIVER_CPP_API Check : CommandData<Check>
     mutable std::optional<CheckValue> Value;
 
     CheckSet *check_set = nullptr;
+    mutable bool requires_manual_setup = false;
 
     // symbol name (function, include, c/cxx source etc.)
     // or source code

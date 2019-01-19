@@ -35,6 +35,11 @@ Command::~Command()
 {
 }
 
+std::shared_ptr<Command> Command::clone() const
+{
+    return std::make_shared<Command>(*this);
+}
+
 void Command::prepare()
 {
     // evaluate lazy args
@@ -113,6 +118,11 @@ void Command::addLazyAction(LazyAction f)
     actions.push_back(f);
 }
 
+std::shared_ptr<Command> VSCommand::clone() const
+{
+    return std::make_shared<VSCommand>(*this);
+}
+
 void VSCommand::postProcess1(bool)
 {
     // filter out includes and file name
@@ -139,6 +149,11 @@ void VSCommand::postProcess1(bool)
         for (auto &f : outputs)
             File(f, *fs).addImplicitDependency(include);
     }
+}
+
+std::shared_ptr<Command> GNUCommand::clone() const
+{
+    return std::make_shared<GNUCommand>(*this);
 }
 
 void GNUCommand::postProcess1(bool)

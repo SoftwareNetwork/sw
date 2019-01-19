@@ -469,10 +469,10 @@ void Command::afterCommand()
     updateCommandTime();
 }
 
-String Command::getResponseFilename() const
+path Command::getResponseFilename() const
 {
-    //auto t = get_temp_filename(); // isn't unique enough?
-    return std::to_string(getHash()) + ".rsp";
+    return unique_path() += ".rsp";
+    //return std::to_string(getHash()) + ".rsp";
 }
 
 String Command::getResponseFileContents(bool showIncludes) const

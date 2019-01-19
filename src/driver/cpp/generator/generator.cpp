@@ -885,7 +885,7 @@ void VSGenerator::generate(const Build &b)
             using namespace sw;
 
             pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
-            String ext = ".exe";
+            String ext = s.TargetOS.getExecutableExtension();
             String type = "Application";
             switch (t->getType())
             {
@@ -943,7 +943,7 @@ void VSGenerator::generate(const Build &b)
         {
             using namespace sw;
 
-            String ext = ".exe";
+            String ext = s.TargetOS.getExecutableExtension();
             String type = "Application";
             switch (t->getType())
             {

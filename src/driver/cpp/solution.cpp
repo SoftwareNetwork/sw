@@ -1165,6 +1165,11 @@ void Solution::findCompiler()
     setSettings();
 }
 
+bool Solution::canRunTargetExecutables() const
+{
+    return HostOS.canRunTargetExecutables(Settings.TargetOS);
+}
+
 Build::Build()
 {
     //silent |= ide;
@@ -1234,8 +1239,8 @@ void Build::prepare()
     // so, we're ready to some preparation passes
 
     // resolve all deps first
-    // all deps must be available in all configs, so we take only one
-    solutions.begin()->build_and_resolve();
+    for (auto &s : solutions)
+        s.build_and_resolve();
 
     // decide if we need cross compilation
 
@@ -2499,18 +2504,7 @@ const Solution *Build::getHostSolution()
 
     auto needs_cc = [](auto &s)
     {
-        if (s.HostOS.Type != s.Settings.TargetOS.Type)
-            return true;
-        if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
-        {
-            if (s.HostOS.Type == OSType::Windows &&
-                s.HostOS.Arch == ArchType::x86_64 && s.Settings.TargetOS.Arch == ArchType::x86
-                )
-                ;
-            else
-                return true;
-        }
-        return false;
+        return !s.HostOS.canRunTargetExecutables(s.Settings.TargetOS);
     };
 
     if (std::any_of(solutions.begin(), solutions.end(), needs_cc))

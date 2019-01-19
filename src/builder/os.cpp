@@ -67,6 +67,62 @@ OS detectOS()
     return os;
 }
 
+bool OS::canRunTargetExecutables(const OS &TargetOS) const
+{
+    auto cannotRunTargetExecutables = [this, &TargetOS]()
+    {
+        if (Type != TargetOS.Type)
+            return true;
+        if (Arch != TargetOS.Arch)
+        {
+            if (Type == OSType::Windows &&
+                Arch == ArchType::x86_64 && TargetOS.Arch == ArchType::x86
+                )
+                ; // win64 can run win32, but not vice versa
+            else
+                return true;
+        }
+        return false;
+    };
+    return !cannotRunTargetExecutables();
+}
+
+String OS::getExecutableExtension() const
+{
+    switch (Type)
+    {
+    case OSType::Windows:
+        return ".exe";
+    default:
+        return "";
+    }
+}
+
+String OS::getStaticLibraryExtension() const
+{
+    switch (Type)
+    {
+    case OSType::Windows:
+        return ".lib";
+    default:
+        return ".a";
+    }
+}
+
+String OS::getSharedLibraryExtension() const
+{
+    switch (Type)
+    {
+    case OSType::Windows:
+        return ".dll";
+    case OSType::Macos:
+    case OSType::IOS:
+        return ".dylib";
+    default:
+        return ".so";
+    }
+}
+
 String toString(OSType e)
 {
 #define ENUM OSType

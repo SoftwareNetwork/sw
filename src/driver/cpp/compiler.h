@@ -42,6 +42,7 @@ struct Command;
 
 struct Solution;
 struct TargetBase;
+struct Target;
 
 enum VisualStudioVersion
 {
@@ -74,6 +75,8 @@ protected:
 
 struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
 {
+    String Extension;
+
     CompilerBaseProgram() = default;
     CompilerBaseProgram(const CompilerBaseProgram &);
 
@@ -264,11 +267,8 @@ struct SW_DRIVER_CPP_API NativeLinker : Linker,
 {
     LinkerType Type = LinkerType::UnspecifiedLinker;
 
-    std::string Extension;
-    std::string Prefix;
-    std::string Suffix;
-
-    virtual ~NativeLinker() = default;
+    String Prefix;
+    String Suffix;
 
     virtual void setObjectFiles(const Files &files) = 0; // actually this is addObjectFiles()
     virtual void setInputLibraryDependencies(const FilesOrdered &files) {}
@@ -287,8 +287,6 @@ struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
     NativeLinker,
     CommandLineOptions<VisualStudioLibraryToolOptions>
 {
-    virtual ~VisualStudioLibraryTool() = default;
-
     void setObjectFiles(const Files &files) override;
     void setOutputFile(const path &out) override;
     void setImportLibrary(const path &out) override;
@@ -308,9 +306,6 @@ struct SW_DRIVER_CPP_API VisualStudioLinker : VisualStudioLibraryTool,
 {
     using NativeLinkerOptions::operator=;
 
-    VisualStudioLinker();
-    virtual ~VisualStudioLinker() = default;
-
     SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::cpp::Command *c) const override;
     void setInputLibraryDependencies(const FilesOrdered &files) override;
@@ -321,9 +316,6 @@ struct SW_DRIVER_CPP_API VisualStudioLibrarian : VisualStudioLibraryTool,
 {
     using NativeLinkerOptions::operator=;
 
-    VisualStudioLibrarian();
-    virtual ~VisualStudioLibrarian() = default;
-
     SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::cpp::Command *c) const override;
 };
@@ -332,8 +324,6 @@ struct SW_DRIVER_CPP_API GNULibraryTool : GNU,
     NativeLinker,
     CommandLineOptions<GNULibraryToolOptions>
 {
-    virtual ~GNULibraryTool() = default;
-
 protected:
     virtual void getAdditionalOptions(driver::cpp::Command *c) const = 0;
 
@@ -344,9 +334,6 @@ struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
     CommandLineOptions<GNULinkerOptions>
 {
     using NativeLinkerOptions::operator=;
-
-    GNULinker();
-    virtual ~GNULinker() = default;
 
     void getAdditionalOptions(driver::cpp::Command *c) const override;
 
@@ -366,9 +353,6 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
     CommandLineOptions<GNULibrarianOptions>
 {
     using NativeLinkerOptions::operator=;
-
-    GNULibrarian();
-    virtual ~GNULibrarian() = default;
 
     void getAdditionalOptions(driver::cpp::Command *c) const override;
 

@@ -803,7 +803,7 @@ path NativeExecutedTarget::getOutputFileName(const path &root) const
     if (SW_IS_LOCAL_BINARY_DIR)
     {
         if (IsConfig)
-            p = getTargetsDir() / pkg.ppath.toString() / "out" / getOutputFileName();
+            p = getSolution()->BinaryDir / "cfg" / pkg.ppath.toString() / getConfig() / "out" / getOutputFileName();
         else
             p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
     }
@@ -2818,18 +2818,17 @@ void NativeExecutedTarget::initLibrary(LibraryType Type)
 {
     if (Type == LibraryType::Shared)
     {
+        // probably setting dll must affect .dll extension automatically
+        Linker->Extension = getSolution()->Settings.TargetOS.getSharedLibraryExtension();
         if (Linker->Type == LinkerType::MSVC)
         {
             // set machine to target os arch
             auto L = Linker->as<VisualStudioLinker>();
             L->Dll = true;
-            // probably setting dll must affect .dll extension automatically
-            L->Extension = ".dll";
         }
         else if (Linker->Type == LinkerType::GNU)
         {
             auto L = Linker->as<GNULinker>();
-            L->Extension = ".so";
             L->SharedObject = true;
         }
         if (getSolution()->Settings.TargetOS.Type == OSType::Windows)

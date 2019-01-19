@@ -168,7 +168,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     void onBeforeRun() override;
     void onEnd() override;
 
-    String getResponseFilename() const;
+    path getResponseFilename() const;
     virtual String getResponseFileContents(bool showIncludes = false) const;
 
     Strings &getArgs() override;

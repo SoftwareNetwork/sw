@@ -285,6 +285,7 @@ void detectDCompilers(struct Solution &s)
 
     auto C = std::make_shared<DCompiler>();
     C->file = compiler;
+    C->Extension = s.Settings.TargetOS.getExecutableExtension();
     L->compiler = C;
     s.registerProgramAndLanguage("org.dlang.dmd.dmd", C, L);
 }
@@ -356,6 +357,7 @@ void detectFortranCompilers(struct Solution &s)
 
     auto C = std::make_shared<FortranCompiler>();
     C->file = compiler;
+    C->Extension = s.Settings.TargetOS.getExecutableExtension();
     L->compiler = C;
     s.registerProgramAndLanguage("org.gnu.gcc.fortran", C, L);
 }
@@ -373,6 +375,7 @@ void detectGoCompilers(struct Solution &s)
 
     auto C = std::make_shared<GoCompiler>();
     C->file = compiler;
+    C->Extension = s.Settings.TargetOS.getExecutableExtension();
     L->compiler = C;
     s.registerProgramAndLanguage("org.google.golang.go", C, L);
 #else
@@ -392,6 +395,7 @@ void detectRustCompilers(struct Solution &s)
 
     auto C = std::make_shared<RustCompiler>();
     C->file = compiler;
+    C->Extension = s.Settings.TargetOS.getExecutableExtension();
     L->compiler = C;
     s.registerProgramAndLanguage("org.rust.rustc", C, L);
 #else
@@ -429,6 +433,7 @@ void detectCSharpCompilers(struct Solution &s)
 
     auto C = std::make_shared<VisualStudioCSharpCompiler>();
     C->file = compiler;
+    C->Extension = s.Settings.TargetOS.getExecutableExtension();
     L->compiler = C;
     s.registerProgramAndLanguage("com.Microsoft.VisualStudio.Roslyn.csc", C, L);
 #endif
@@ -588,11 +593,13 @@ void detectNativeCompilers(struct Solution &s)
 
     // create programs
 
+    // lib, link
     {
         auto Linker = std::make_shared<VisualStudioLinker>();
         Linker->Type = LinkerType::MSVC;
         Linker->file = compiler.parent_path() / "link.exe";
         Linker->vs_version = VSVersion;
+        Linker->Extension = s.Settings.TargetOS.getExecutableExtension();
         *Linker = LOpts;
         s.registerProgram("com.Microsoft.VisualStudio.VC.link", Linker);
 
@@ -606,6 +613,7 @@ void detectNativeCompilers(struct Solution &s)
         Librarian->Type = LinkerType::MSVC;
         Librarian->file = compiler.parent_path() / "lib.exe";
         Librarian->vs_version = VSVersion;
+        Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
         *Librarian = LOpts;
         s.registerProgram("com.Microsoft.VisualStudio.VC.lib", Librarian);
 
@@ -841,6 +849,7 @@ void detectNativeCompilers(struct Solution &s)
         auto Librarian = std::make_shared<GNULibrarian>();
         Librarian->Type = LinkerType::GNU;
         Librarian->file = p;
+        Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
         *Librarian = LOpts;
         s.registerProgram("org.gnu.binutils.ar", Librarian);
     }
@@ -1009,8 +1018,9 @@ void detectNativeCompilers(struct Solution &s)
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
     : Program(rhs)
 {
+    Extension = rhs.Extension;
     if (rhs.cmd)
-        cmd = std::make_shared<decltype(cmd)::element_type>(*rhs.cmd);
+        cmd = rhs.cmd->clone();
 }
 
 std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand() const
@@ -1467,22 +1477,11 @@ void VisualStudioLibraryTool::prepareCommand1(const TargetBase &t)
         cmd->name_short = Output().filename().u8string();
     }
 
-    /*if (cmd->name.find("eccdata.exe") != -1)
-    {
-        int a = 5;
-        a++;
-    }*/
-
     ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<VisualStudioLibraryToolOptions>(cmd.get(), *this);
     iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
     getAdditionalOptions(cmd.get());
-}
-
-VisualStudioLinker::VisualStudioLinker()
-{
-    Extension = ".exe";
 }
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioLinker)
@@ -1498,21 +1497,11 @@ void VisualStudioLinker::setInputLibraryDependencies(const FilesOrdered &files)
         InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
 }
 
-VisualStudioLibrarian::VisualStudioLibrarian()
-{
-    Extension = ".lib";
-}
-
 SW_DEFINE_PROGRAM_CLONE(VisualStudioLibrarian)
 
 void VisualStudioLibrarian::getAdditionalOptions(driver::cpp::Command *cmd) const
 {
     getCommandLineOptions<VisualStudioLibrarianOptions>(cmd, *this);
-}
-
-GNULinker::GNULinker()
-{
-    //Extension = ".exe";
 }
 
 SW_DEFINE_PROGRAM_CLONE(GNULinker)
@@ -1597,22 +1586,11 @@ void GNULinker::prepareCommand1(const TargetBase &t)
         cmd->name_short = Output().filename().u8string();
     }
 
-    /*if (cmd->name.find("eccdata.exe") != -1)
-    {
-        int a = 5;
-        a++;
-    }*/
-
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<GNULinkerOptions>(cmd.get(), *this);
     iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
     //getAdditionalOptions(cmd.get());
-}
-
-GNULibrarian::GNULibrarian()
-{
-    Extension = ".a";
 }
 
 SW_DEFINE_PROGRAM_CLONE(GNULibrarian)
@@ -1678,12 +1656,6 @@ void GNULibrarian::prepareCommand1(const TargetBase &t)
         cmd->name = normalize_path(Output());
         cmd->name_short = Output().filename().u8string();
     }
-
-    /*if (cmd->name.find("eccdata.exe") != -1)
-    {
-        int a = 5;
-        a++;
-    }*/
 
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
@@ -1763,8 +1735,7 @@ void VisualStudioCSharpCompiler::prepareCommand1(const TargetBase &t)
 
 void VisualStudioCSharpCompiler::setOutputFile(const path &output_file)
 {
-    Output = output_file;
-    Output() += ".exe";
+    Output = output_file.u8string() + Extension;
 }
 
 void VisualStudioCSharpCompiler::addSourceFile(const path &input_file)
@@ -1781,8 +1752,7 @@ void RustCompiler::prepareCommand1(const TargetBase &t)
 
 void RustCompiler::setOutputFile(const path &output_file)
 {
-    Output = output_file;
-    Output() += ".exe";
+    Output = output_file.u8string() + Extension;
 }
 
 void RustCompiler::setSourceFile(const path &input_file)
@@ -1804,8 +1774,7 @@ void GoCompiler::prepareCommand1(const TargetBase &t)
 
 void GoCompiler::setOutputFile(const path &output_file)
 {
-    Output = output_file;
-    Output() += ".exe";
+    Output = output_file.u8string() + Extension;
 }
 
 void GoCompiler::setSourceFile(const path &input_file)
@@ -1827,8 +1796,7 @@ void FortranCompiler::prepareCommand1(const TargetBase &t)
 
 void FortranCompiler::setOutputFile(const path &output_file)
 {
-    Output = output_file;
-    Output() += ".exe";
+    Output = output_file.u8string() + Extension;
 }
 
 void FortranCompiler::setSourceFile(const path &input_file)
@@ -1902,8 +1870,7 @@ void DCompiler::prepareCommand1(const TargetBase &t)
 
 void DCompiler::setOutputFile(const path &output_file)
 {
-    Output = output_file;
-    Output() += ".exe";
+    Output = output_file.u8string() + Extension;
 }
 
 void DCompiler::setObjectDir(const path &output_dir)

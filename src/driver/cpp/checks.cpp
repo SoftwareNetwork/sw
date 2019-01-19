@@ -35,33 +35,76 @@ void ChecksStorage::load(const path &fn)
 {
     if (loaded)
         return;
-    std::ifstream i(fn);
-    if (!i)
-        return;
-    while (i)
+
     {
-        size_t h;
-        i >> h;
+        std::ifstream i(fn);
         if (!i)
-            break;
-        i >> all_checks[h];
+            return;
+        while (i)
+        {
+            size_t h;
+            i >> h;
+            if (!i)
+                break;
+            i >> all_checks[h];
+        }
     }
+
+#define MANUAL_CHECKS ".manual.txt"
+    auto mf = path(fn) += MANUAL_CHECKS;
+    if (fs::exists(mf))
+    for (auto &l : read_lines(mf))
+    {
+        if (l[0] == '#')
+            continue;
+        auto v = split_string(l, " ");
+        if (v.size() != 2)
+            continue;
+            //throw SW_RUNTIME_ERROR("bad manual checks line: " + l);
+        if (v[1] == "?")
+            continue;
+            //throw SW_RUNTIME_ERROR("unset manual check: " + l);
+        all_checks[std::stoull(v[0])] = std::stoi(v[1]);
+        new_manual_checks_loaded = true;
+    }
+
     loaded = true;
 }
 
 void ChecksStorage::save(const path &fn) const
 {
     fs::create_directories(fn.parent_path());
-    std::ofstream o(fn);
-    if (!o)
-        throw SW_RUNTIME_ERROR("Cannot open file: " + fn.string());
-    for (auto &[h, v] : all_checks)
-        o << h << " " << v << "\n";
+    {
+        String s;
+        for (auto &[h, v] : all_checks)
+            s += std::to_string(h) + " " + std::to_string(v) + "\n";
+        write_file(fn, s);
+    }
+
+    {
+        String s;
+        for (auto &[h, c] : manual_checks)
+        {
+            s += "# ";
+            for (auto &d : c->Definitions)
+                s += d + " ";
+            s.resize(s.size() - 1);
+            s += "\n";
+            s += std::to_string(h) + " ?\n\n";
+        }
+        write_file(path(fn) += MANUAL_CHECKS, s);
+    }
 }
 
 void ChecksStorage::add(const Check &c)
 {
     auto h = c.getHash();
+    if (c.requires_manual_setup && !c.Value)
+    {
+        // TODO: also copy check executables, create .bat/.sh script to run them on the target platform
+        manual_checks[h] = &c;
+        return;
+    }
     all_checks[h] = c.Value.value();
 }
 
@@ -213,14 +256,21 @@ int main() { return IsBigEndian(); }
                         continue;
                     std::map<String, CheckPtr> check_values(set.check_values.begin(), set.check_values.end());
                     for (auto &[d, c] : check_values)
-                        o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
+                    {
+                        if (c->Value)
+                            o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
+                    }
                 }
             }
         }
     };
 
     if (unchecked.empty())
+    {
+        if (checksStorage->new_manual_checks_loaded)
+            checksStorage->save(fn);
         return;
+    }
 
     auto ep = ExecutionPlan<Check>::createExecutionPlan(unchecked);
     if (ep)
@@ -248,6 +298,9 @@ int main() { return IsBigEndian(); }
 
         // save
         checksStorage->save(fn);
+
+        if (!checksStorage->manual_checks.empty())
+            throw SW_RUNTIME_ERROR("Some manual checks are missing, please set them in order to continue");
 
         return;
     }
@@ -332,7 +385,14 @@ void Check::execute()
     if (Definitions.empty())
         throw SW_RUNTIME_ERROR("Check " + data + ": definition was not set");
     if (!Value)
+    {
+        if (requires_manual_setup)
+        {
+            LOG_INFO(logger, "Check " << *Definitions.begin() << " requires to be set up manually");
+            return;
+        }
         throw SW_RUNTIME_ERROR("Check " + *Definitions.begin() + ": value was not set");
+    }
     LOG_DEBUG(logger, "Checking " << *Definitions.begin() << ": " << Value.value());
 }
 
@@ -357,9 +417,9 @@ bool Check::lessDuringExecution(const Check &rhs) const
 path Check::getOutputFilename() const
 {
     auto d = check_set->checker.solution->getChecksDir();
-    static std::atomic_int64_t n = 0;
-    //auto up = unique_path();
-    auto up = std::to_string(++n);
+    //static std::atomic_int64_t n = 0;
+    auto up = unique_path();
+    //auto up = std::to_string(++n);
     d /= up;
     //::create_directories(d);
     auto f = d;
@@ -389,7 +449,13 @@ bool Check::execute(Solution &s) const
     s.prepare();
     try
     {
-        s.execute();
+        auto p = s.getExecutionPlan();
+        /*SCOPE_EXIT
+        {
+            for (auto &c : p.commands)
+                c->clean();
+        };*/
+        s.execute(p);
     }
     catch (std::exception &e)
     {
@@ -584,6 +650,13 @@ void TypeSize::run() const
         Value = 0;
         return;
     }
+
+    if (!s.canRunTargetExecutables())
+    {
+        requires_manual_setup = true;
+        return;
+    }
+
     primitives::Command c;
     c.program = e.getOutputFile();
     error_code ec;
@@ -650,6 +723,13 @@ void TypeAlignment::run() const
         Value = 0;
         return;
     }
+
+    if (!s.canRunTargetExecutables())
+    {
+        requires_manual_setup = true;
+        return;
+    }
+
     primitives::Command c;
     c.program = e.getOutputFile();
     error_code ec;
@@ -994,6 +1074,13 @@ void SourceRuns::run() const
         Value = 0;
         return;
     }
+
+    if (!s.canRunTargetExecutables())
+    {
+        requires_manual_setup = true;
+        return;
+    }
+
     primitives::Command c;
     c.program = e.getOutputFile();
     error_code ec;
