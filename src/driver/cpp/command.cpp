@@ -89,13 +89,15 @@ void Command::setProgram(const std::shared_ptr<Dependency> &d)
         throw SW_RUNTIME_ERROR("Setting program twice"); // probably throw, but who knows...
     dependency = d;
     dependency_set = true;
-    auto l = d->target.lock();
+    // we use late resolving for cross compilation
+    /*auto l = d->target.lock();
     if (l)
-        setProgram(*l);
+        setProgram(*l);*/
 }
 
 void Command::setProgram(const NativeTarget &t)
 {
+    LOG_WARN(logger, "careful! sometimes you cannot cross compile with this");
     setProgram(t.getOutputFile());
     t.setupCommand(*this);
 }

@@ -199,8 +199,6 @@ FileRecord &FileRecord::operator=(const FileRecord &rhs)
     file = rhs.file;
     data = rhs.data;
 
-    generator = rhs.generator;
-
     implicit_dependencies = rhs.implicit_dependencies;
 
     return *this;
@@ -223,7 +221,7 @@ void FileRecord::reset()
     {
         // do we need to reset changed in this case or not?
         //if (!generator.expired())
-            generator.reset();
+            data->generator.reset();
     }
 
     if (data)
@@ -397,7 +395,7 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g, bool i
     if (!g)
         return;
 
-    auto gold = generator.lock();
+    auto gold = data->generator.lock();
     if (!ignore_errors && gold && (gold != g &&
         !gold->isExecuted() &&
         !gold->maybe_unused &&
@@ -416,7 +414,7 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g, bool i
             err += "second generator is empty";
         throw SW_RUNTIME_ERROR(err);
     }
-    generator = g;
+    data->generator = g;
     // record gen hash at this moment, so repeated commands that begins same way
     //generator_hash = g->getHash();
     generated_ = true;
@@ -424,12 +422,12 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g, bool i
 
 std::shared_ptr<builder::Command> FileRecord::getGenerator() const
 {
-    return generator.lock();
+    return data->generator.lock();
 }
 
 bool FileRecord::isGenerated() const
 {
-    return !!generator.lock();
+    return !!data->generator.lock();
 }
 
 fs::file_time_type FileRecord::getMaxTime() const

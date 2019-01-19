@@ -75,6 +75,7 @@ struct FileData
     int64_t size = -1;
     String hash;
     SomeFlags flags;
+    std::weak_ptr<builder::Command> generator;
 
     // if file info is updated during this run
     std::atomic_bool refreshed{ false };
@@ -125,7 +126,6 @@ struct SW_BUILDER_API FileRecord
     fs::file_time_type updateLwt();
 
 private:
-    std::weak_ptr<builder::Command> generator;
     //size_h generator_hash = 0;
     bool generated_ = false;
 };

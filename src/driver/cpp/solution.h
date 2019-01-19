@@ -144,8 +144,7 @@ public:
     void execute();
     void execute() const;
     void execute(CommandExecutionPlan &p) const;
-    virtual void prepare();
-    bool prepareStep();
+    virtual void prepare(); // only checks use this
     virtual void performChecks();
     //void copyChecksFrom(const Solution &s);
     void clean() const;
@@ -231,12 +230,16 @@ private:
     void build_and_resolve(int n_runs = 0);
 
     // cross-compilation lies here
-    void resolvePass(const Target &t, const UnresolvedDependenciesType &deps);
+    void resolvePass(const Target &t, const DependenciesType &deps, const Solution *host) const;
 
     void addTest(Test &cb, const String &name);
 
     void setSettings();
     void findCompiler();
+
+    virtual bool prepareStep();
+    void prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_pass, const Solution *host) const;
+    bool prepareStep(const TargetBaseTypePtr &t, const Solution *host) const;
 
 private:
     friend struct ToBuild;
@@ -278,6 +281,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
 
     void performChecks() override;
     void prepare() override;
+    bool prepareStep() override;
 
     bool generateBuildSystem();
     CommandExecutionPlan getExecutionPlan() const override;
@@ -296,9 +300,11 @@ protected:
 
 private:
     bool remove_ide_explans = false;
+    std::optional<const Solution *> host;
 
     void setupSolutionName(const path &file_or_dir);
     SharedLibraryTarget &createTarget(const Files &files);
+    const Solution *getHostSolution();
 
 public:
     static PackagePath getSelfTargetName(const Files &files);

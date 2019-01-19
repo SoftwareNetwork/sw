@@ -475,7 +475,8 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     virtual bool prepare() = 0;
     //virtual void clear() = 0;
     virtual void findSources() = 0;
-    virtual UnresolvedDependenciesType gatherUnresolvedDependencies() const = 0;
+    UnresolvedDependenciesType gatherUnresolvedDependencies() const;
+    virtual DependenciesType gatherDependencies() const = 0;
 
     virtual void removeFile(const path &fn, bool binary_dir = false);
 
@@ -509,7 +510,7 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     bool prepare() override { return false; }
     //virtual void clear() override {}
     void findSources() override {}
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const override { return UnresolvedDependenciesType{}; }
+    DependenciesType gatherDependencies() const override { return DependenciesType{}; }
     void setOutputFile() override {}
 };
 
@@ -818,7 +819,7 @@ protected:
     Files gatherObjectFilesWithoutLibraries() const;
     TargetsSet gatherDependenciesTargets() const;
     TargetsSet gatherAllRelatedDependencies() const;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+    DependenciesType gatherDependencies() const override;
     FilesOrdered gatherLinkDirectories() const;
     bool prepareLibrary(LibraryType Type);
     void initLibrary(LibraryType Type);
@@ -944,7 +945,7 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
     Commands getCommands(void) const override;
     bool prepare() override;
     void findSources() override;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+    DependenciesType gatherDependencies() const override;
 
 private:
     using Target::getOutputFileName;
@@ -973,7 +974,7 @@ struct SW_DRIVER_CPP_API RustTarget : Target
     Commands getCommands(void) const override;
     bool prepare() override;
     void findSources() override;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+    DependenciesType gatherDependencies() const override;
 
 private:
     using Target::getOutputFileName;
@@ -1002,7 +1003,7 @@ struct SW_DRIVER_CPP_API GoTarget : Target
     Commands getCommands(void) const override;
     bool prepare() override;
     void findSources() override;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+    DependenciesType gatherDependencies() const override;
 
 private:
     using Target::getOutputFileName;
@@ -1031,7 +1032,7 @@ struct SW_DRIVER_CPP_API FortranTarget : Target
     Commands getCommands(void) const override;
     bool prepare() override;
     void findSources() override;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+    DependenciesType gatherDependencies() const override;
 
 private:
     using Target::getOutputFileName;
@@ -1060,7 +1061,7 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
     Commands getCommands(void) const override;
     bool prepare() override;
     void findSources() override;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+    DependenciesType gatherDependencies() const override;
 
 private:
     using Target::getOutputFileName;
@@ -1089,7 +1090,7 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
     Commands getCommands(void) const override;
     bool prepare() override;
     void findSources() override;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+    DependenciesType gatherDependencies() const override;
 
 private:
     using Target::getOutputFileName;
@@ -1118,7 +1119,7 @@ struct SW_DRIVER_CPP_API DTarget : Target
     Commands getCommands(void) const override;
     bool prepare() override;
     void findSources() override;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const override;
+    DependenciesType gatherDependencies() const override;
 
 private:
     using Target::getOutputFileName;

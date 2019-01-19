@@ -574,7 +574,7 @@ void override_package_perform()
 {
     auto s = sw::load(".");
     auto &b = *((sw::Build*)s.get());
-    b.solutions.begin()->prepareStep();
+    b.prepareStep();
 
     //auto s = sw::load(override_package[1]);
     for (auto &[pkg, desc] : s->getPackages())

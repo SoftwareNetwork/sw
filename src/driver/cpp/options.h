@@ -186,7 +186,10 @@ struct SW_DRIVER_CPP_API Dependency
     //NativeTarget *get() const;
     //operator NativeTarget*() const;
     //NativeTarget *operator->() const;
+
     operator bool() const { return !!target.lock(); }
+    bool isResolved() const { return operator bool(); }
+
     UnresolvedPackage getPackage() const;
     PackageId getResolvedPackage() const;
 

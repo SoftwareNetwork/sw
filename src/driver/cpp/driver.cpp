@@ -191,7 +191,7 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, const FetchO
         t->SourceDir = rd;
     }
 
-    b->solutions.begin()->prepareStep();
+    b->prepareStep();
 
     return std::move(b);
 }

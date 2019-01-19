@@ -762,6 +762,9 @@ void Solution::build_and_resolve(int n_runs)
 
 void Solution::prepare()
 {
+    // checks use this
+    //throw SW_RUNTIME_ERROR("unreachable");
+
     if (prepared)
         return;
 
@@ -785,38 +788,55 @@ void Solution::prepare()
 
 bool Solution::prepareStep()
 {
+    // checks use this
+    //throw SW_RUNTIME_ERROR("unreachable");
+
     std::atomic_bool next_pass = false;
 
     auto &e = getExecutor();
     Futures<void> fs;
-    for (const auto &[pkg, t] : getChildren())
-    {
-        fs.push_back(e.push([this, t, &next_pass]
-        {
-            // try to run as early as possible
-            if (t->mustResolveDeps())
-                resolvePass(*t, t->gatherUnresolvedDependencies());
-
-            auto np = t->prepare();
-            if (!next_pass)
-                next_pass = np;
-
-            // try to run as early as possible during first prepareStep()
-            //if (t->mustResolveDeps())
-                //resolvePass(*t, t->gatherUnresolvedDependencies());
-        }));
-    }
+    prepareStep(e, fs, next_pass, nullptr);
     waitAndGet(fs);
 
     return next_pass;
 }
 
-void Solution::resolvePass(const Target &t, const UnresolvedDependenciesType &deps)
+void Solution::prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_pass, const Solution *host) const
 {
-    for (auto &[dep, d] : deps)
+    for (const auto &[pkg, t] : getChildren())
     {
-        auto i = getChildren().find(d->getPackage());
-        if (i != getChildren().end())
+        fs.push_back(e.push([this, t, &next_pass, host]
+        {
+            auto np = prepareStep(t, host);
+            if (!next_pass)
+                next_pass = np;
+        }));
+    }
+}
+
+bool Solution::prepareStep(const TargetBaseTypePtr &t, const Solution *host) const
+{
+    // try to run as early as possible
+    if (t->mustResolveDeps())
+        resolvePass(*t, t->gatherDependencies(), host);
+
+    return t->prepare();
+}
+
+void Solution::resolvePass(const Target &t, const DependenciesType &deps, const Solution *host) const
+{
+    if (!host)
+        host = this;
+    for (auto &d : deps)
+    {
+        auto h = this;
+        if (d->Dummy)
+            h = host;
+        else if (d->isResolved())
+            continue;
+
+        auto i = h->getChildren().find(d->getPackage());
+        if (i != h->getChildren().end())
             d->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
         // we fail in any case here, no matter if dependency were resolved previously
         else
@@ -1202,17 +1222,57 @@ void Build::performChecks()
 
 void Build::prepare()
 {
-    //performChecks();
+    if (prepared)
+        return;
+
+    if (solutions.empty())
+        throw SW_RUNTIME_ERROR("no solutions");
+
     ScopedTime t;
 
-    auto &e = getExecutor();
+    // all targets are set stay unchanged from user
+    // so, we're ready to some preparation passes
+
+    // resolve all deps first
+    // all deps must be available in all configs, so we take only one
+    solutions.begin()->build_and_resolve();
+
+    // decide if we need cross compilation
+
+    // multipass prepare()
+    // if we add targets inside this loop,
+    // it will automatically handle this situation
+    while (prepareStep())
+        ;
+
+    prepared = true;
+
+    // prevent memory leaks (high mem usage)
+    //updateConcurrentContext();
+
+    // previous
+    /*auto &e = getExecutor();
     std::vector<Future<void>> fs;
     for (auto &s : solutions)
         fs.push_back(e.push([&s] { s.prepare(); }, solutions.size()));
-    waitAndGet(fs);
+    waitAndGet(fs);*/
 
     if (!silent)
         LOG_DEBUG(logger, "Prepare time: " << t.getTimeFloat() << " s.");
+}
+
+// multi-solution, for crosscompilation
+bool Build::prepareStep()
+{
+    std::atomic_bool next_pass = false;
+
+    auto &e = getExecutor();
+    Futures<void> fs;
+    for (auto &s : solutions)
+        s.prepareStep(e, fs, next_pass, getHostSolution());
+    waitAndGet(fs);
+
+    return next_pass;
 }
 
 Solution &Build::addSolution()
@@ -2269,6 +2329,9 @@ void Build::load(const path &dll, bool usedll)
                 set_tos(s, target_os[i]);
             });
         }
+
+        // add cc if needed
+        getHostSolution();
     }
 
     // detect and eliminate solution clones
@@ -2427,6 +2490,53 @@ PackageDescriptionMap Build::getPackages() const
         m[pkg] = std::make_unique<JsonPackageDescription>(s);
     }
     return m;
+}
+
+const Solution *Build::getHostSolution()
+{
+    if (host)
+        return host.value();
+
+    auto needs_cc = [](auto &s)
+    {
+        if (s.HostOS.Type != s.Settings.TargetOS.Type)
+            return true;
+        if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
+        {
+            if (s.HostOS.Type == OSType::Windows &&
+                s.HostOS.Arch == ArchType::x86_64 && s.Settings.TargetOS.Arch == ArchType::x86
+                )
+                ;
+            else
+                return true;
+        }
+        return false;
+    };
+
+    if (std::any_of(solutions.begin(), solutions.end(), needs_cc))
+    {
+        LOG_DEBUG(logger, "Cross compilation is required");
+        for (auto &s : solutions)
+        {
+            if (!needs_cc(s))
+            {
+                LOG_DEBUG(logger, "CC solution was found");
+                host = &s;
+                break;
+            }
+        }
+        if (!host)
+        {
+            // add
+            LOG_DEBUG(logger, "CC solution was not found, creating a new one");
+            auto &s = addSolution();
+            host = &s;
+        }
+    }
+    else
+        host = nullptr;
+
+    return host.value();
 }
 
 }

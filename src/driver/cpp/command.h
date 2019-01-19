@@ -408,12 +408,19 @@ CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
         return cb;
     }
 
+    bool once = false;
     for (auto tgt : cb.targets)
     {
         auto d = *tgt + *t.t;
         d->Dummy = true;
+        if (!once)
+        {
+            cb.c->setProgram(d);
+            once = true;
+        }
     }
-    cb.c->setProgram(*t.t);
+    if (!once)
+        cb.c->setProgram(*t.t);
     cb.c->program_set = true;
     return cb;
 }

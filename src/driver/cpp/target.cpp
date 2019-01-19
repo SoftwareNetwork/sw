@@ -551,6 +551,17 @@ void Target::init()
     BinaryPrivateDir = fs::absolute(BinaryPrivateDir);
 }
 
+UnresolvedDependenciesType Target::gatherUnresolvedDependencies() const
+{
+    UnresolvedDependenciesType deps;
+    for (auto &d : gatherDependencies())
+    {
+        if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+            deps.insert({ d->package, d });
+    }
+    return deps;
+}
+
 DependencyPtr NativeTarget::getDependency() const
 {
     auto d = std::make_shared<Dependency>(this);
@@ -856,17 +867,14 @@ NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherAllRelatedDependenc
     return libs;
 }
 
-UnresolvedDependenciesType NativeExecutedTarget::gatherUnresolvedDependencies() const
+DependenciesType NativeExecutedTarget::gatherDependencies() const
 {
-    UnresolvedDependenciesType deps;
+    DependenciesType deps;
     ((NativeExecutedTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
         [this, &deps](auto &v, auto &s)
     {
         for (auto &d : v.Dependencies)
-        {
-            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
-                deps.insert({ d->package, d });
-        }
+            deps.insert(d);
     });
     return deps;
 }
@@ -3755,17 +3763,14 @@ void CSharpTarget::findSources()
 {
 }
 
-UnresolvedDependenciesType CSharpTarget::gatherUnresolvedDependencies() const
+DependenciesType CSharpTarget::gatherDependencies() const
 {
-    UnresolvedDependenciesType deps;
+    DependenciesType deps;
     ((CSharpTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
         [this, &deps](auto &v, auto &s)
     {
         for (auto &d : v.Dependencies)
-        {
-            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
-                deps.insert({ d->package, d });
-        }
+            deps.insert(d);
     });
     return deps;
 }
@@ -3835,17 +3840,14 @@ void RustTarget::findSources()
 {
 }
 
-UnresolvedDependenciesType RustTarget::gatherUnresolvedDependencies() const
+DependenciesType RustTarget::gatherDependencies() const
 {
-    UnresolvedDependenciesType deps;
+    DependenciesType deps;
     ((RustTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
         [this, &deps](auto &v, auto &s)
     {
         for (auto &d : v.Dependencies)
-        {
-            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
-                deps.insert({ d->package, d });
-        }
+            deps.insert(d);
     });
     return deps;
 }
@@ -3915,17 +3917,14 @@ void GoTarget::findSources()
 {
 }
 
-UnresolvedDependenciesType GoTarget::gatherUnresolvedDependencies() const
+DependenciesType GoTarget::gatherDependencies() const
 {
-    UnresolvedDependenciesType deps;
+    DependenciesType deps;
     ((GoTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
         [this, &deps](auto &v, auto &s)
     {
         for (auto &d : v.Dependencies)
-        {
-            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
-                deps.insert({ d->package, d });
-        }
+            deps.insert(d);
     });
     return deps;
 }
@@ -3995,17 +3994,14 @@ void FortranTarget::findSources()
 {
 }
 
-UnresolvedDependenciesType FortranTarget::gatherUnresolvedDependencies() const
+DependenciesType FortranTarget::gatherDependencies() const
 {
-    UnresolvedDependenciesType deps;
+    DependenciesType deps;
     ((FortranTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
         [this, &deps](auto &v, auto &s)
     {
         for (auto &d : v.Dependencies)
-        {
-            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
-                deps.insert({ d->package, d });
-        }
+            deps.insert(d);
     });
     return deps;
 }
@@ -4078,17 +4074,14 @@ void JavaTarget::findSources()
 {
 }
 
-UnresolvedDependenciesType JavaTarget::gatherUnresolvedDependencies() const
+DependenciesType JavaTarget::gatherDependencies() const
 {
-    UnresolvedDependenciesType deps;
+    DependenciesType deps;
     ((JavaTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
         [this, &deps](auto &v, auto &s)
     {
         for (auto &d : v.Dependencies)
-        {
-            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
-                deps.insert({ d->package, d });
-        }
+            deps.insert(d);
     });
     return deps;
 }
@@ -4158,17 +4151,14 @@ void KotlinTarget::findSources()
 {
 }
 
-UnresolvedDependenciesType KotlinTarget::gatherUnresolvedDependencies() const
+DependenciesType KotlinTarget::gatherDependencies() const
 {
-    UnresolvedDependenciesType deps;
+    DependenciesType deps;
     ((KotlinTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
         [this, &deps](auto &v, auto &s)
     {
         for (auto &d : v.Dependencies)
-        {
-            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
-                deps.insert({ d->package, d });
-        }
+            deps.insert(d);
     });
     return deps;
 }
@@ -4239,17 +4229,14 @@ void DTarget::findSources()
 {
 }
 
-UnresolvedDependenciesType DTarget::gatherUnresolvedDependencies() const
+DependenciesType DTarget::gatherDependencies() const
 {
-    UnresolvedDependenciesType deps;
+    DependenciesType deps;
     ((DTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
         [this, &deps](auto &v, auto &s)
     {
         for (auto &d : v.Dependencies)
-        {
-            if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
-                deps.insert({ d->package, d });
-        }
+            deps.insert(d);
     });
     return deps;
 }
