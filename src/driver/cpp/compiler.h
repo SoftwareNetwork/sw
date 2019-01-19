@@ -378,6 +378,11 @@ struct SW_DRIVER_CPP_API NativeToolchain
     //LinkerType LinkerType; // rename - use type from selected tool
     BuildLibrariesAs LibrariesType = LibraryType::Shared;
     ConfigurationType ConfigurationType = ConfigurationType::Release;
+
+    // win, vs
+    bool MT = false;
+    // toolset
+    // win sdk
     // more settings
 
     // misc

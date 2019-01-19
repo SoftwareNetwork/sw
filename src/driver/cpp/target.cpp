@@ -2306,6 +2306,40 @@ bool NativeExecutedTarget::prepare()
             // set everything before merge!
             f->compiler->merge(*this);
 
+            auto vs_setup = [this](auto *c)
+            {
+                if (getSolution()->Settings.Native.MT)
+                    c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
+
+                switch (getSolution()->Settings.Native.ConfigurationType)
+                {
+                case ConfigurationType::Debug:
+                    c->RuntimeLibrary =
+                        getSolution()->Settings.Native.MT ?
+                        vs::RuntimeLibraryType::MultiThreadedDebug :
+                        vs::RuntimeLibraryType::MultiThreadedDLLDebug;
+                    c->Optimizations().Disable = true;
+                    break;
+                case ConfigurationType::Release:
+                    c->Optimizations().FastCode = true;
+                    break;
+                case ConfigurationType::ReleaseWithDebugInformation:
+                    c->Optimizations().FastCode = true;
+                    break;
+                case ConfigurationType::MinimalSizeRelease:
+                    c->Optimizations().SmallCode = true;
+                    break;
+                }
+                c->CPPStandard = CPPVersion;
+
+                if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
+                {
+                    // why?
+                    c->IncludeDirectories.erase(BinaryDir);
+                    c->IncludeDirectories.erase(BinaryPrivateDir);
+                }
+            };
+
             if (auto c = f->compiler->as<VisualStudioCompiler>())
             {
                 if (UseModules)
@@ -2323,45 +2357,12 @@ bool NativeExecutedTarget::prepare()
                         c->ExportModule = true;
                     }
                 }
-                switch (getSolution()->Settings.Native.ConfigurationType)
-                {
-                case ConfigurationType::Debug:
-                    c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-                    c->Optimizations().Disable = true;
-                    break;
-                case ConfigurationType::Release:
-                    c->Optimizations().FastCode = true;
-                    break;
-                case ConfigurationType::ReleaseWithDebugInformation:
-                    c->Optimizations().FastCode = true;
-                    break;
-                case ConfigurationType::MinimalSizeRelease:
-                    c->Optimizations().SmallCode = true;
-                    break;
-                }
-                if (auto c = f->compiler->as<VisualStudioCompiler>())
-                    c->CPPStandard = CPPVersion;
 
-                if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
-                {
-                    // why?
-                    c->IncludeDirectories.erase(BinaryDir);
-                    c->IncludeDirectories.erase(BinaryPrivateDir);
-                }
+                vs_setup(c);
             }
             else if (auto c = f->compiler->as<ClangClCompiler>())
             {
-                if (getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug)
-                    c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-                //if (auto c = f->compiler->as<ClangClCPPCompiler>())
-                c->CPPStandard = CPPVersion;
-
-                if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
-                {
-                    // why?
-                    c->IncludeDirectories.erase(BinaryDir);
-                    c->IncludeDirectories.erase(BinaryPrivateDir);
-                }
+                vs_setup(c);
             }
             // clang compiler is not working atm, gnu is created instead
             else if (auto c = f->compiler->as<ClangCompiler>())

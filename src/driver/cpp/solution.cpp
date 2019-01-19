@@ -55,8 +55,18 @@ static cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::Comma
 static cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
 static cl::list<String> platform("platform", cl::desc("Set build platform"), cl::CommaSeparated);
 //static cl::opt<String> arch("arch", cl::desc("Set arch")/*, cl::sub(subcommand_ide)*/);
+
+// simple -static, -shared?
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
+cl::alias static_build2("static", cl::desc("Alias for -static-build"), cl::aliasopt(static_build));
 static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build"));
+cl::alias shared_build2("shared", cl::desc("Alias for -shared-build"), cl::aliasopt(shared_build));
+
+// simple -mt, -md?
+static cl::opt<bool> win_mt("win-mt", cl::desc("Set /MT build"));
+cl::alias win_mt2("mt", cl::desc("Alias for -win-mt"), cl::aliasopt(win_mt));
+static cl::opt<bool> win_md("win-md", cl::desc("Set /MD build"));
+cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_md));
 
 extern bool gVerbose;
 bool gWithTesting;
@@ -225,6 +235,8 @@ String Solution::SettingsX::getConfig(const TargetBase *t, bool use_short_config
         throw std::logic_error("no cpp compiler");
     addConfigElement(c, i->second.version.toString(2));
     addConfigElement(c, toString(Native.LibrariesType));
+    if (Native.MT)
+        addConfigElement(c, "mt");
     boost::to_lower(c);
     addConfigElement(c, toString(Native.ConfigurationType));
 
@@ -2276,7 +2288,7 @@ void Build::load(const path &dll, bool usedll)
             // static/shared
             if (static_build && shared_build)
             {
-                mult_and_action(configuration.size(), [&set_conf](auto &s, int i)
+                mult_and_action(2, [&set_conf](auto &s, int i)
                 {
                     if (i == 0)
                         s.Settings.Native.LibrariesType = LibraryType::Static;
@@ -2292,6 +2304,28 @@ void Build::load(const path &dll, bool usedll)
                         s.Settings.Native.LibrariesType = LibraryType::Static;
                     if (shared_build)
                         s.Settings.Native.LibrariesType = LibraryType::Shared;
+                }
+            }
+
+            // mt/md
+            if (win_mt && win_md)
+            {
+                mult_and_action(2, [&set_conf](auto &s, int i)
+                {
+                    if (i == 0)
+                        s.Settings.Native.MT = true;
+                    if (i == 1)
+                        s.Settings.Native.MT = false;
+                });
+            }
+            else
+            {
+                for (auto &s : solutions)
+                {
+                    if (win_mt)
+                        s.Settings.Native.MT = true;
+                    if (win_md)
+                        s.Settings.Native.MT = false;
                 }
             }
 
