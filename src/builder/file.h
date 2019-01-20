@@ -76,6 +76,7 @@ struct FileData
     String hash;
     SomeFlags flags;
     std::weak_ptr<builder::Command> generator;
+    bool generated = false;
 
     // if file info is updated during this run
     std::atomic_bool refreshed{ false };
@@ -107,9 +108,9 @@ struct SW_BUILDER_API FileRecord
     void reset();
     //size_t getHash() const;
     bool isGenerated() const;
-    bool isGeneratedAtAll() const { return generated_; }
+    bool isGeneratedAtAll() const { return data->generated; }
     void setGenerator(const std::shared_ptr<builder::Command> &, bool ignore_errors);
-    void setGenerated(bool g = true) { generated_ = g; }
+    void setGenerated(bool g = true) { data->generated = g; }
     std::shared_ptr<builder::Command> getGenerator() const;
 
     bool operator<(const FileRecord &r) const;
@@ -126,8 +127,6 @@ struct SW_BUILDER_API FileRecord
     fs::file_time_type updateLwt();
 
 private:
-    //size_h generator_hash = 0;
-    bool generated_ = false;
 };
 
 path getFilesLogFileName(const String &config = {});

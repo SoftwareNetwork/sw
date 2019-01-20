@@ -415,9 +415,7 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g, bool i
         throw SW_RUNTIME_ERROR(err);
     }
     data->generator = g;
-    // record gen hash at this moment, so repeated commands that begins same way
-    //generator_hash = g->getHash();
-    generated_ = true;
+    data->generated = true;
 }
 
 std::shared_ptr<builder::Command> FileRecord::getGenerator() const
