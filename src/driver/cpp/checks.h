@@ -23,6 +23,11 @@ struct Checker;
 struct CheckSet;
 struct ChecksStorage;
 
+namespace builder
+{
+struct Command;
+}
+
 enum class CheckType
 {
     Function,
@@ -85,18 +90,19 @@ struct SW_DRIVER_CPP_API Check : CommandData<Check>
     // result value
     mutable std::optional<CheckValue> Value;
 
-    CheckSet *check_set = nullptr;
-    mutable bool requires_manual_setup = false;
-
     // symbol name (function, include, c/cxx source etc.)
     // or source code
     // or whatever
     String data;
 
+    CheckSet *check_set = nullptr;
+    mutable bool requires_manual_setup = false;
+    mutable path executable; // for cc copying
+
     Check() = default;
     Check(const Check &) = delete;
     Check &operator=(const Check &) = delete;
-    virtual ~Check() = default;
+    virtual ~Check();
 
     // for comparison
     virtual size_t getHash() const;
@@ -109,6 +115,7 @@ struct SW_DRIVER_CPP_API Check : CommandData<Check>
     std::optional<String> getDefinition() const;
     std::optional<String> getDefinition(const String &d) const;
     virtual String getSourceFileContents() const = 0;
+    void clean() const;
 
     bool lessDuringExecution(const Check &rhs) const;
 
@@ -119,6 +126,9 @@ protected:
 
     [[nodiscard]]
     bool execute(Solution &s) const;
+
+private:
+    mutable std::vector<std::shared_ptr<builder::Command>> commands; // for cleanup
 };
 
 using CheckPtr = std::shared_ptr<Check>;

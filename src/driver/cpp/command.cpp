@@ -100,12 +100,12 @@ void Command::setProgram(const std::shared_ptr<Dependency> &d)
         setProgram(*l);*/
 }
 
-void Command::setProgram(const NativeTarget &t)
+/*void Command::setProgram(const NativeTarget &t)
 {
     LOG_WARN(logger, "careful! sometimes you cannot cross compile with this");
     setProgram(t.getOutputFile());
     t.setupCommand(*this);
-}
+}*/
 
 void Command::pushLazyArg(LazyCallback f)
 {

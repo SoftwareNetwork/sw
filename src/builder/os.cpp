@@ -87,6 +87,28 @@ bool OS::canRunTargetExecutables(const OS &TargetOS) const
     return !cannotRunTargetExecutables();
 }
 
+ShellType OS::getShellType() const
+{
+    switch (Type)
+    {
+    case OSType::Windows:
+        return ShellType::Batch;
+    default:
+        return ShellType::Shell;
+    }
+}
+
+String OS::getShellExtension() const
+{
+    switch (getShellType())
+    {
+    case ShellType::Batch:
+        return ".bat";
+    default:
+        return ".sh";
+    }
+}
+
 String OS::getExecutableExtension() const
 {
     switch (Type)
@@ -204,7 +226,8 @@ ArchType archTypeFromStringCaseI(const String &platform)
         boost::iequals(platform, "arm32") ||
         boost::iequals(platform, "arm"))
         return ArchType::arm;
-    else if (boost::iequals(platform, "arm64"))
+    else if (boost::iequals(platform, "arm64") ||
+        boost::iequals(platform, "aarch64"))
         return ArchType::aarch64; // ?
     else if (!platform.empty())
         throw SW_RUNTIME_ERROR("Unknown platform: " + platform);

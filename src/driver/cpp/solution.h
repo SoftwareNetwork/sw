@@ -133,6 +133,8 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     // for builder
     Checker checker;
 
+    int execute_jobs = 0;
+
 public:
     Solution(const Solution &);
     //Solution &operator=(const Solution &);

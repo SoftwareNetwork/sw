@@ -285,6 +285,10 @@ int main() { return IsBigEndian(); }
         error_code ec;
         fs::remove_all(solution->getChecksDir(), ec);
 
+        auto cc_dir = fn.parent_path() / "cc";
+        fs::remove_all(cc_dir);
+        fs::create_directories(cc_dir);
+
         for (auto &[gn, s2] : sets)
         {
             for (auto &[d, set] : s2)
@@ -292,6 +296,13 @@ int main() { return IsBigEndian(); }
                 for (auto &[h, c] : set.checks)
                 {
                     checksStorage->add(*c);
+                    if (c->requires_manual_setup)
+                    {
+                        auto dst = (cc_dir / std::to_string(c->getHash())) += solution->Settings.TargetOS.getExecutableExtension();
+                        if (!fs::exists(dst))
+                            fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
+                    }
+                    c->clean();
                 }
             }
         }
@@ -300,7 +311,32 @@ int main() { return IsBigEndian(); }
         checksStorage->save(fn);
 
         if (!checksStorage->manual_checks.empty())
-            throw SW_RUNTIME_ERROR("Some manual checks are missing, please set them in order to continue");
+        {
+            // save executables
+            auto &os = solution->Settings.TargetOS;
+            auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
+            String s;
+            s += "echo \"\" > " + mfn + "\n\n";
+            for (auto &[h, c] : checksStorage->manual_checks)
+            {
+                s += os.getShellType() == ShellType::Batch ? "::" : "#";
+                s += " ";
+                for (auto &d : c->Definitions)
+                    s += d + " ";
+                s.resize(s.size() - 1);
+                s += "\n";
+                s += std::to_string(c->getHash()) + solution->Settings.TargetOS.getExecutableExtension() +
+                    " >> " + mfn + "\n\n";
+            }
+            write_file((cc_dir / "run") += os.getShellExtension(), s);
+
+            throw SW_RUNTIME_ERROR("Some manual checks are missing, please set them in order to continue. "
+                "Manual checks file: " + (path(fn) += MANUAL_CHECKS).u8string() + ". "
+                "You also may copy produced binaries to target platform and run them there using prepared script. "
+                "Results will be gathered into required file. "
+                "Binaries directory: " + cc_dir.u8string()
+            );
+        }
 
         return;
     }
@@ -326,6 +362,18 @@ int main() { return IsBigEndian(); }
     write_file(cyclic_path / "deps_checks.dot", s);
 
     throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");
+}
+
+Check::~Check()
+{
+    clean();
+}
+
+void Check::clean() const
+{
+    for (auto &c : commands)
+        c->clean();
+    commands.clear();
 }
 
 std::optional<String> Check::getDefinition() const
@@ -450,11 +498,7 @@ bool Check::execute(Solution &s) const
     try
     {
         auto p = s.getExecutionPlan();
-        /*SCOPE_EXIT
-        {
-            for (auto &c : p.commands)
-                c->clean();
-        };*/
+        commands = p.commands;
         s.execute(p);
     }
     catch (std::exception &e)
@@ -654,6 +698,7 @@ void TypeSize::run() const
     if (!s.canRunTargetExecutables())
     {
         requires_manual_setup = true;
+        executable = e.getOutputFile();
         return;
     }
 
@@ -727,6 +772,7 @@ void TypeAlignment::run() const
     if (!s.canRunTargetExecutables())
     {
         requires_manual_setup = true;
+        executable = e.getOutputFile();
         return;
     }
 
@@ -1078,6 +1124,7 @@ void SourceRuns::run() const
     if (!s.canRunTargetExecutables())
     {
         requires_manual_setup = true;
+        executable = e.getOutputFile();
         return;
     }
 

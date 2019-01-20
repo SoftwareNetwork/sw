@@ -313,7 +313,6 @@ static cl::opt<String> install_arg(cl::Positional, cl::desc("Packages to add"), 
 static cl::list<String> install_args(cl::ConsumeAfter, cl::desc("Packages to add"), cl::sub(subcommand_install));
 
 // upload
-static cl::opt<String> build_arg_upload(cl::Positional, cl::desc("File or directory with script to upload"), cl::init("."), cl::sub(subcommand_upload));
 static cl::opt<String> upload_prefix(cl::Positional, cl::desc("Prefix path"), cl::sub(subcommand_upload), cl::Required);
 static cl::opt<bool> build_before_upload("build", cl::desc("Build before upload"), cl::sub(subcommand_upload));
 

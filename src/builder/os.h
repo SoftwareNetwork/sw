@@ -172,6 +172,16 @@ enum class ObjectFormatType
     Wasm,
 };
 
+enum class ShellType
+{
+    UnknownShell,
+
+    Batch,
+    Bat = Batch,
+    Shell,
+    Sh = Shell,
+};
+
 SW_BUILDER_API
 String toString(OSType e);
 
@@ -217,6 +227,9 @@ struct SW_BUILDER_API OS
     String getExecutableExtension() const;
     String getStaticLibraryExtension() const;
     String getSharedLibraryExtension() const;
+
+    String getShellExtension() const;
+    ShellType getShellType() const;
 };
 
 SW_BUILDER_API

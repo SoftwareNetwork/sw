@@ -294,7 +294,7 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 
     using Base::setProgram;
     void setProgram(const std::shared_ptr<Dependency> &d);
-    void setProgram(const NativeTarget &t);
+    //void setProgram(const NativeTarget &t);
 
     void pushLazyArg(LazyCallback f);
     void addLazyAction(LazyAction f);
@@ -424,8 +424,8 @@ CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
             once = true;
         }
     }
-    if (!once)
-        cb.c->setProgram(*t.t);
+    //if (!once)
+        //cb.c->setProgram(*t.t);
     cb.c->program_set = true;
     return cb;
 }

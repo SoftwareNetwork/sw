@@ -50,6 +50,8 @@ static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in d
 static cl::opt<bool> fetch_sources("fetch", cl::desc("Fetch files in process"));
 static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace events"));
 
+static cl::opt<int> config_jobs("jc", cl::desc("Number of config jobs"));
+
 static cl::list<String> target_os("target-os", cl::CommaSeparated);
 static cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::CommaSeparated);
 static cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
@@ -611,7 +613,10 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
         return;
 
     ScopedTime t;
-    auto &e = getExecutor();
+    std::unique_ptr<Executor> ex;
+    if (execute_jobs > 0)
+        ex = std::make_unique<Executor>(execute_jobs);
+    auto &e = execute_jobs > 0 ? *ex : getExecutor();
 
     // prevent memory leaks (high mem usage)
     /*updateConcurrentContext();
@@ -722,6 +727,7 @@ void Solution::build_and_resolve(int n_runs)
         LOG_ERROR(logger, "You are here for the second time. This is not intended. Expect failures.");
 
     Build b;
+    b.execute_jobs = config_jobs;
     b.Local = false;
     auto dll = b.build_configs(cfgs);
     //used_modules.insert(dll);
@@ -1763,6 +1769,7 @@ path Build::build(const path &fn)
     {
         // separate build
         Build b;
+        b.execute_jobs = config_jobs;
         auto r = b.build_configs_separate({ fn });
         dll = r.begin()->second;
         if (do_not_rebuild_config &&
