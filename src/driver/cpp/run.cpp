@@ -257,7 +257,7 @@ BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_name, SE_O
     return success;
 }
 #else
-void run(const RunArgs &args)
+void run(const PackageId &pkg, primitives::Command &c)
 {
     throw SW_RUNTIME_ERROR("not implemented");
 }

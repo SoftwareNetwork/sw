@@ -788,7 +788,7 @@ void self_upgrade()
     fs::remove(fn);
 
     // self update
-    auto program = boost::dll::program_location();
+    auto program = path(boost::dll::program_location().wstring());
 #ifdef _WIN32
     auto exe = (tmp_dir / "sw.exe").wstring();
     auto arg0 = L"\"" + exe + L"\"";
