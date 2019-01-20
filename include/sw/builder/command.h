@@ -14,7 +14,33 @@
 #include <condition_variable>
 #include <mutex>
 
-struct BinaryContext;
+#define SW_INTERNAL_INIT_COMMAND(name, target) \
+    name->fs = (target).getSolution()->fs;     \
+    name->addPathDirectory((target).getOutputDir() / (target).getConfig())
+
+#define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
+    auto name = std::make_shared<type>(__VA_ARGS__);    \
+    SW_INTERNAL_INIT_COMMAND(name, target)
+
+#ifdef _MSC_VER
+#define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
+    SW_MAKE_CUSTOM_COMMAND(type, name, target, __VA_ARGS__);    \
+    (target).Storage.push_back(name)
+#else
+#define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
+    SW_MAKE_CUSTOM_COMMAND(type, name, target, ##__VA_ARGS__);  \
+    (target).Storage.push_back(name)
+#endif
+
+#define SW_MAKE_COMMAND(name, target) \
+    SW_MAKE_CUSTOM_COMMAND(Command, name, target)
+#define SW_MAKE_COMMAND_AND_ADD(name, target) \
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(Command, name, target)
+
+#define _SW_MAKE_EXECUTE_COMMAND(name, target) \
+    SW_MAKE_CUSTOM_COMMAND(ExecuteCommand, name, target, __FILE__, __LINE__)
+#define _SW_MAKE_EXECUTE_COMMAND_AND_ADD(name, target) \
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(ExecuteCommand, name, target, __FILE__, __LINE__)
 
 namespace sw
 {
@@ -170,6 +196,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
 
     path getResponseFilename() const;
     virtual String getResponseFileContents(bool showIncludes = false) const;
+    path resolveProgram(const path &p) const override;
 
     Strings &getArgs() override;
 
@@ -202,33 +229,12 @@ using Commands = std::unordered_set<std::shared_ptr<builder::Command>>;
 
 template struct SW_BUILDER_API CommandData<builder::Command>;
 
-#define SW_INTERNAL_INIT_COMMAND(name, target) \
-    name->fs = (target).getSolution()->fs;     \
-    name->addPathDirectory((target).getOutputDir() / (target).getConfig())
+/// return input when file not found
+SW_BUILDER_API
+path resolveExecutable(const path &p);
 
-#define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
-    auto name = std::make_shared<type>(__VA_ARGS__);    \
-    SW_INTERNAL_INIT_COMMAND(name, target)
-
-#ifdef _MSC_VER
-#define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
-    SW_MAKE_CUSTOM_COMMAND(type, name, target, __VA_ARGS__);    \
-    (target).Storage.push_back(name)
-#else
-#define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
-    SW_MAKE_CUSTOM_COMMAND(type, name, target, ## __VA_ARGS__);    \
-    (target).Storage.push_back(name)
-#endif
-
-#define SW_MAKE_COMMAND(name, target) \
-    SW_MAKE_CUSTOM_COMMAND(Command, name, target)
-#define SW_MAKE_COMMAND_AND_ADD(name, target) \
-    SW_MAKE_CUSTOM_COMMAND_AND_ADD(Command, name, target)
-
-#define _SW_MAKE_EXECUTE_COMMAND(name, target) \
-    SW_MAKE_CUSTOM_COMMAND(ExecuteCommand, name, target, __FILE__, __LINE__)
-#define _SW_MAKE_EXECUTE_COMMAND_AND_ADD(name, target) \
-    SW_MAKE_CUSTOM_COMMAND_AND_ADD(ExecuteCommand, name, target, __FILE__, __LINE__)
+SW_BUILDER_API
+path resolveExecutable(const FilesOrdered &paths);
 
 } // namespace sw
 

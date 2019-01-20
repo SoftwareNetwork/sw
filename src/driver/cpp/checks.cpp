@@ -81,6 +81,7 @@ void ChecksStorage::save(const path &fn) const
         write_file(fn, s);
     }
 
+    if (!manual_checks.empty())
     {
         String s;
         for (auto &[h, c] : manual_checks)
@@ -285,10 +286,6 @@ int main() { return IsBigEndian(); }
         error_code ec;
         fs::remove_all(solution->getChecksDir(), ec);
 
-        auto cc_dir = fn.parent_path() / "cc";
-        fs::remove_all(cc_dir);
-        fs::create_directories(cc_dir);
-
         for (auto &[gn, s2] : sets)
         {
             for (auto &[d, set] : s2)
@@ -296,13 +293,32 @@ int main() { return IsBigEndian(); }
                 for (auto &[h, c] : set.checks)
                 {
                     checksStorage->add(*c);
-                    if (c->requires_manual_setup)
+                }
+            }
+        }
+
+        auto cc_dir = fn.parent_path() / "cc";
+
+        // separate loop
+        if (!checksStorage->manual_checks.empty())
+        {
+            fs::remove_all(cc_dir);
+            fs::create_directories(cc_dir);
+
+            for (auto &[gn, s2] : sets)
+            {
+                for (auto &[d, set] : s2)
+                {
+                    for (auto &[h, c] : set.checks)
                     {
-                        auto dst = (cc_dir / std::to_string(c->getHash())) += solution->Settings.TargetOS.getExecutableExtension();
-                        if (!fs::exists(dst))
-                            fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
+                        if (c->requires_manual_setup)
+                        {
+                            auto dst = (cc_dir / std::to_string(c->getHash())) += solution->Settings.TargetOS.getExecutableExtension();
+                            if (!fs::exists(dst))
+                                fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
+                        }
+                        c->clean();
                     }
-                    c->clean();
                 }
             }
         }

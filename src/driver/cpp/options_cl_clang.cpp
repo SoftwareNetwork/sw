@@ -36,7 +36,7 @@ DECLARE_OPTION_SPECIALIZATION(clang::ArchType)
     return { s };
 }
 
-DECLARE_OPTION_SPECIALIZATION(clang::gnu::Optimizations)
+DECLARE_OPTION_SPECIALIZATION(gnu::Optimizations)
 {
     auto &o = value();
 

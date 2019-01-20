@@ -34,13 +34,13 @@ struct SW_BUILDER_API Program : File, detail::Executable
     virtual ~Program() = default;
 
     virtual std::shared_ptr<Program> clone() const = 0;
-
     virtual Version getVersion() const;
 
 protected:
     mutable std::optional<Version> version;
 
-    virtual Version gatherVersion() const = 0;
+    virtual Version gatherVersion() const { return gatherVersion(file); }
+    virtual Version gatherVersion(const path &program, const String &arg = "--version", const String &in_regex = {}) const;
 };
 
 using ProgramPtr = std::shared_ptr<Program>;

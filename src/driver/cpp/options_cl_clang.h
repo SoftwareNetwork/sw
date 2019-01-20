@@ -12,15 +12,6 @@
 namespace sw
 {
 
-namespace clang
-{
-
-enum class ArchType
-{
-    m32,
-    m64,
-};
-
 namespace gnu
 {
 
@@ -34,21 +25,82 @@ struct Optimizations
 
 } // namespace gnu
 
+DECLARE_OPTION_SPECIALIZATION(gnu::Optimizations);
+
+namespace clang
+{
+
+enum class ArchType
+{
+    m32,
+    m64,
+};
+
 } // namespace clang
 
 DECLARE_OPTION_SPECIALIZATION(clang::ArchType);
-DECLARE_OPTION_SPECIALIZATION(clang::gnu::Optimizations);
 
-struct SW_DRIVER_CPP_API ClangCommonOptions
+struct SW_DRIVER_CPP_API GNUClangCommonOptions
 {
+    COMMAND_LINE_OPTION(Language, String)
+    {
+        cl::CommandFlag{ "x" },
+    };
+
     COMMAND_LINE_OPTION(CPPStandard, CPPLanguageStandard)
     {
+    };
+
+    COMMAND_LINE_OPTION(InputFile, path)
+    {
+        cl::InputDependency{},
+    };
+
+    COMMAND_LINE_OPTION(OutputFile, path)
+    {
+        cl::CommandFlag{ "o" },
+            cl::OutputDependency{},
+    };
+
+    COMMAND_LINE_OPTION(ForcedIncludeFiles, FilesOrdered)
+    {
+        cl::CommandFlag{ "include" },
+            cl::CommandFlagBeforeEachValue{},
+            cl::InputDependency{},
+    };
+
+    COMMAND_LINE_OPTION(VisibilityHidden, bool)
+    {
+        cl::CommandFlag{ "fvisibility=hidden" },
+            true
+    };
+
+    COMMAND_LINE_OPTION(Optimizations, gnu::Optimizations);
+
+    COMMAND_LINE_OPTION(PositionIndependentCode, bool)
+    {
+        cl::CommandFlag{ "fPIC" }, true
+    };
+
+    COMMAND_LINE_OPTION(GenerateDebugInfo, bool)
+    {
+        cl::CommandFlag{ "g" },
+    };
+
+    COMMAND_LINE_OPTION(CompileWithoutLinking, bool)
+    {
+        cl::CommandFlag{ "c" }, true,
+    };
+
+    COMMAND_LINE_OPTION(Permissive, bool)
+    {
+        cl::CommandFlag{ "fpermissive" }, true,
     };
 };
 
 // keep structure as in
 // https://clang.llvm.org/docs/ClangCommandLineReference.html
-struct SW_DRIVER_CPP_API ClangOptions : ClangCommonOptions
+struct SW_DRIVER_CPP_API ClangOptions : GNUClangCommonOptions
 {
     // Introduction
     COMMAND_LINE_OPTION(NoStdIncludesC, bool)
@@ -69,21 +121,7 @@ struct SW_DRIVER_CPP_API ClangOptions : ClangCommonOptions
         cl::CommandFlag{ "E" },
     };
 
-    COMMAND_LINE_OPTION(CompileWithoutLinking, bool)
-    {
-        cl::CommandFlag{ "c" },
-            true,
-    };
-
     // Preprocessor flags
-
-    // Include path management
-    COMMAND_LINE_OPTION(ForcedIncludeFiles, FilesOrdered)
-    {
-        cl::CommandFlag{ "include" },
-            cl::CommandFlagBeforeEachValue{},
-            cl::InputDependency{},
-    };
 
     // Dependency file generation
     COMMAND_LINE_OPTION(WriteDependencies, bool)
@@ -97,18 +135,14 @@ struct SW_DRIVER_CPP_API ClangOptions : ClangCommonOptions
         cl::CommandFlag{ "MF" }
     };
 
-    COMMAND_LINE_OPTION(InputFile, path);
-
-    COMMAND_LINE_OPTION(OutputFile, path)
+    COMMAND_LINE_OPTION(PrecompiledHeader, path)
     {
-        cl::CommandFlag{ "o" },
-        cl::OutputDependency{},
+        cl::CommandFlag{ "include-pch" }
     };
 
-    COMMAND_LINE_OPTION(VisibilityHidden, bool)
+    COMMAND_LINE_OPTION(EmitPCH, bool)
     {
-        cl::CommandFlag{ "fvisibility=hidden" },
-            true
+        cl::CommandFlag{ "Xclang -emit-pch" },
     };
 };
 DECLARE_OPTION_SPECIALIZATION(ClangOptions);
@@ -131,49 +165,11 @@ struct SW_DRIVER_CPP_API ClangClOptions// : ClangCommonOptions
 DECLARE_OPTION_SPECIALIZATION(ClangClOptions);
 
 // https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html
-struct SW_DRIVER_CPP_API GNUOptions
+struct SW_DRIVER_CPP_API GNUOptions : GNUClangCommonOptions
 {
-    COMMAND_LINE_OPTION(CompileWithoutLinking, bool)
-    {
-        cl::CommandFlag{ "c" }, true,
-    };
-
-    COMMAND_LINE_OPTION(Language, String)
-    {
-        cl::CommandFlag{ "x" },
-    };
-
-    COMMAND_LINE_OPTION(CPPStandard, CPPLanguageStandard)
-    {
-    };
-
     COMMAND_LINE_OPTION(DisableWarnings, bool)
     {
         cl::CommandFlag{ "w" }, true,
-    };
-
-    COMMAND_LINE_OPTION(GenerateDebugInfo, bool)
-    {
-        cl::CommandFlag{ "g" },
-    };
-
-    COMMAND_LINE_OPTION(ForcedIncludeFiles, FilesOrdered)
-    {
-        cl::CommandFlag{ "include" },
-            cl::CommandFlagBeforeEachValue{},
-            cl::InputDependency{},
-            //cl::PlaceAtTheEnd{},
-    };
-
-    COMMAND_LINE_OPTION(InputFile, path)
-    {
-        cl::InputDependency{},
-    };
-
-    COMMAND_LINE_OPTION(OutputFile, path)
-    {
-        cl::CommandFlag{ "o" },
-            cl::OutputDependency{},
     };
 
     // Dependency file generation
@@ -182,24 +178,6 @@ struct SW_DRIVER_CPP_API GNUOptions
         cl::CommandFlag{ "MMD" },
             true
     };
-
-    COMMAND_LINE_OPTION(VisibilityHidden, bool)
-    {
-        cl::CommandFlag{ "fvisibility=hidden" },
-        true
-    };
-
-    COMMAND_LINE_OPTION(Permissive, bool)
-    {
-        cl::CommandFlag{ "fpermissive" }, true,
-    };
-
-    COMMAND_LINE_OPTION(PositionIndependentCode, bool)
-    {
-        cl::CommandFlag{ "fPIC" }, true
-    };
-
-    COMMAND_LINE_OPTION(Optimizations, clang::gnu::Optimizations);
 };
 DECLARE_OPTION_SPECIALIZATION(GNUOptions);
 

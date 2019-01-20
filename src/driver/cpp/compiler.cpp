@@ -37,39 +37,6 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
 static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
 static cl::opt<bool> use_other_langs("use-other-languages");
 
-extern const StringSet cpp_source_file_extensions;
-extern const StringSet header_file_extensions;
-
-const StringSet cpp_source_file_extensions{
-    ".cc",
-    ".CC",
-    ".cpp",
-    ".cxx",
-    ".ixx", // msvc modules
-    // cppm - clang?
-    // mxx, mpp - build2?
-    ".c++",
-    ".C++",
-    ".CPP",
-    ".CXX",
-    ".C", // old ext (Wt)
-    // Objective-C
-    ".m",
-    ".mm",
-};
-
-const StringSet header_file_extensions{
-    ".h",
-    ".hh",
-    ".hm",
-    ".hpp",
-    ".hxx",
-    ".h++",
-    ".H++",
-    ".HPP",
-    ".H",
-};
-
 namespace sw
 {
 
@@ -82,31 +49,42 @@ void detectJavaCompilers(struct Solution &s);
 void detectKotlinCompilers(struct Solution &s);
 void detectDCompilers(struct Solution &s);
 
-static Version gatherVersion(const path &program, const String &arg = "--version", const String &in_regex = {})
+StringSet getCppHeaderFileExtensions()
 {
-    static std::regex r_default("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
+    const StringSet header_file_extensions{
+        ".h",
+        ".hh",
+        ".hm",
+        ".hpp",
+        ".hxx",
+        ".h++",
+        ".H++",
+        ".HPP",
+        ".H",
+    };
+    return header_file_extensions;
+}
 
-    std::regex r_in;
-    if (!in_regex.empty())
-        r_in.assign(in_regex);
-
-    auto &r = in_regex.empty() ? r_default : r_in;
-
-    Version V;
-    primitives::Command c;
-    c.program = program;
-    c.args = { arg };
-    error_code ec;
-    c.execute(ec);
-    std::smatch m;
-    if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
-    {
-        if (m[5].matched)
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
-        else
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
-    }
-    return V;
+StringSet getCppSourceFileExtensions()
+{
+    static const StringSet cpp_source_file_extensions{
+        ".cc",
+        ".CC",
+        ".cpp",
+        ".cxx",
+        ".ixx", // msvc modules
+        // cppm - clang?
+        // mxx, mpp - build2?
+        ".c++",
+        ".C++",
+        ".CPP",
+        ".CXX",
+        ".C", // old ext (Wt)
+        // Objective-C
+        ".m",
+        ".mm",
+    };
+    return cpp_source_file_extensions;
 }
 
 static void add_args(driver::cpp::Command &c, const Strings &args)
@@ -276,7 +254,7 @@ void detectCompilers(struct Solution &s)
 void detectDCompilers(struct Solution &s)
 {
     path compiler;
-    compiler = primitives::resolve_executable("dmd");
+    compiler = resolveExecutable("dmd");
     if (compiler.empty())
         return;
 
@@ -293,7 +271,7 @@ void detectDCompilers(struct Solution &s)
 void detectKotlinCompilers(struct Solution &s)
 {
     path compiler;
-    compiler = primitives::resolve_executable("kotlinc");
+    compiler = resolveExecutable("kotlinc");
     if (compiler.empty())
         return;
 
@@ -309,10 +287,10 @@ void detectKotlinCompilers(struct Solution &s)
 void detectJavaCompilers(struct Solution &s)
 {
     path compiler;
-    compiler = primitives::resolve_executable("javac");
+    compiler = resolveExecutable("javac");
     if (compiler.empty())
         return;
-    //compiler = primitives::resolve_executable("jar"); // later
+    //compiler = resolveExecutable("jar"); // later
 
     auto L = std::make_shared<JavaLanguage>();
     L->CompiledExtensions = { ".java", };
@@ -326,13 +304,13 @@ void detectJavaCompilers(struct Solution &s)
 void detectFortranCompilers(struct Solution &s)
 {
     path compiler;
-    compiler = primitives::resolve_executable("gfortran");
+    compiler = resolveExecutable("gfortran");
     if (compiler.empty())
     {
-        compiler = primitives::resolve_executable("f95");
+        compiler = resolveExecutable("f95");
         if (compiler.empty())
         {
-            compiler = primitives::resolve_executable("g95");
+            compiler = resolveExecutable("g95");
             if (compiler.empty())
             {
                 return;
@@ -366,7 +344,7 @@ void detectGoCompilers(struct Solution &s)
 {
 #if defined(_WIN32)
     auto compiler = path("go");
-    compiler = primitives::resolve_executable(compiler);
+    compiler = resolveExecutable(compiler);
     if (compiler.empty())
         return;
 
@@ -386,7 +364,7 @@ void detectRustCompilers(struct Solution &s)
 {
 #if defined(_WIN32)
     auto compiler = get_home_directory() / ".cargo" / "bin" / "rustc";
-    compiler = primitives::resolve_executable(compiler);
+    compiler = resolveExecutable(compiler);
     if (compiler.empty())
         return;
 
@@ -439,8 +417,13 @@ void detectCSharpCompilers(struct Solution &s)
 #endif
 }
 
-void detectNativeCompilers(struct Solution &s)
+void detectWindowsCompilers(struct Solution &s)
 {
+    // we need ifdef because of cmVSSetupAPIHelper
+    // but what if we're on Wine?
+    // reconsider later
+#ifdef _WIN32
+
     //TODO: find preview versions also
 
     path root;
@@ -462,7 +445,6 @@ void detectNativeCompilers(struct Solution &s)
         return false;
     };
 
-#if defined(_WIN32)
     cmVSSetupAPIHelper h;
     auto vs15 = h.IsVSInstalled(15);
     auto vs16 = h.IsVSInstalled(16);
@@ -690,7 +672,7 @@ void detectNativeCompilers(struct Solution &s)
     {
         auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
-        L->CompiledExtensions = cpp_source_file_extensions;
+        L->CompiledExtensions = getCppSourceFileExtensions();
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
@@ -767,7 +749,7 @@ void detectNativeCompilers(struct Solution &s)
     {
         auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
-        L->CompiledExtensions = cpp_source_file_extensions;
+        L->CompiledExtensions = getCppSourceFileExtensions();
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
@@ -790,8 +772,8 @@ void detectNativeCompilers(struct Solution &s)
     {
         auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::C;
-		L->CompiledExtensions = cpp_source_file_extensions;
-		L->CompiledExtensions.insert(".c");
+        L->CompiledExtensions = getCppSourceFileExtensions();
+        L->CompiledExtensions.insert(".c");
         //s.registerLanguage(L);
 
         //auto L = (CLanguage*)s.languages[LanguageType::C].get();
@@ -820,27 +802,27 @@ void detectNativeCompilers(struct Solution &s)
             //throw SW_RUNTIME_ERROR("Unknown arch");
         }
     }
+#endif
+}
 
-#else
-
-    // gnu
-
+void detectNonWindowsCompilers(struct Solution &s)
+{
     path p;
 
     NativeLinkerOptions LOpts;
-    LOpts.System.LinkDirectories.insert("/lib");
-    LOpts.System.LinkDirectories.insert("/lib/x86_64-linux-gnu");
-    LOpts.System.LinkLibraries.push_back("stdc++");
-    LOpts.System.LinkLibraries.push_back("stdc++fs");
-    LOpts.System.LinkLibraries.push_back("pthread");
-    LOpts.System.LinkLibraries.push_back("dl");
-    LOpts.System.LinkLibraries.push_back("m");
+    //LOpts.System.LinkDirectories.insert("/lib");
+    //LOpts.System.LinkDirectories.insert("/lib/x86_64-linux-gnu");
+    //LOpts.System.LinkLibraries.push_back("stdc++");
+    //LOpts.System.LinkLibraries.push_back("stdc++fs");
+    LOpts.System.LinkLibraries.push_back("pthread"); // remove and add to progs explicitly?
+    LOpts.System.LinkLibraries.push_back("dl"); // remove and add to progs explicitly?
+    LOpts.System.LinkLibraries.push_back("m"); // remove and add to progs explicitly?
 
     auto resolve = [](const path &p)
     {
         if (do_not_resolve_compiler)
             return p;
-        return primitives::resolve_executable(p);
+        return resolveExecutable(p);
     };
 
     p = resolve("ar");
@@ -877,6 +859,8 @@ void detectNativeCompilers(struct Solution &s)
         {
             auto Linker = std::make_shared<GNULinker>();
 
+            if (s.HostOS.is(OSType::Cygwin))
+                Linker->rdynamic = false;
             Linker->Type = LinkerType::GNU;
             Linker->file = p;
             *Linker = LOpts;
@@ -938,7 +922,7 @@ void detectNativeCompilers(struct Solution &s)
             {
                 auto L = std::make_shared<NativeLanguage>();
                 //L->Type = LanguageType::C;
-				L->CompiledExtensions = cpp_source_file_extensions;
+                L->CompiledExtensions = getCppSourceFileExtensions();
                 //s.registerLanguage(L);
 
                 //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
@@ -962,6 +946,8 @@ void detectNativeCompilers(struct Solution &s)
             {
                 auto Linker = std::make_shared<GNULinker>();
 
+                if (s.HostOS.is(OSType::Cygwin))
+                    Linker->rdynamic = false;
                 Linker->Type = LinkerType::GNU;
                 Linker->file = p;
                 *Linker = LOpts;
@@ -998,7 +984,7 @@ void detectNativeCompilers(struct Solution &s)
                 {
                     auto L = std::make_shared<NativeLanguage>();
                     //L->Type = LanguageType::C;
-					L->CompiledExtensions = cpp_source_file_extensions;
+                    L->CompiledExtensions = getCppSourceFileExtensions();
                     //s.registerLanguage(L);
 
                     //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
@@ -1012,7 +998,19 @@ void detectNativeCompilers(struct Solution &s)
             }
         }
     }
-#endif
+}
+
+void detectNativeCompilers(struct Solution &s)
+{
+    auto &os = s.HostOS;
+    if (os.is(OSType::Windows) || os.is(OSType::Cygwin))
+    {
+        if (os.is(OSType::Cygwin))
+            detectNonWindowsCompilers(s);
+        detectWindowsCompilers(s);
+    }
+    else
+        detectNonWindowsCompilers(s);
 }
 
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
@@ -1068,7 +1066,7 @@ Strings NativeCompiler::getClangCppStdOption(CPPLanguageStandard std) const
         s += "14";
         break;
     case CPPLanguageStandard::CPP17:
-        s += getVersion() > 5 ? "17" : "1z";
+        s += getVersion() > Version(5) ? "17" : "1z";
         break;
     case CPPLanguageStandard::CPPLatest:
         s += "2a";
@@ -1091,7 +1089,7 @@ Strings NativeCompiler::getGNUCppStdOption(CPPLanguageStandard std) const
         s += "14";
         break;
     case CPPLanguageStandard::CPP17:
-        s += getVersion() > 6 ? "17" : "1z";
+        s += getVersion() > Version(6) ? "17" : "1z";
         break;
     case CPPLanguageStandard::CPPLatest:
         s += "2a";
@@ -1100,11 +1098,6 @@ Strings NativeCompiler::getGNUCppStdOption(CPPLanguageStandard std) const
         return {};
     }
     return { s };
-}
-
-Version MsProgram::gatherVersion(const path &program) const
-{
-    return ::sw::gatherVersion(program, "/?");
 }
 
 SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::VSCommand)
@@ -1197,11 +1190,6 @@ void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output
 {
     InputFile = input_file.u8string();
     setOutputFile(output_file);
-}
-
-Version Clang::gatherVersion(const path &program) const
-{
-    return ::sw::gatherVersion(program, "-v");
 }
 
 SW_CREATE_COMPILER_COMMAND(ClangCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::GNUCommand)
@@ -1298,11 +1286,6 @@ void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
 {
     InputFile = input_file.u8string();
     setOutputFile(output_file);
-}
-
-Version GNU::gatherVersion(const path &program) const
-{
-    return ::sw::gatherVersion(program, "-v");
 }
 
 SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::GNUCommand)
@@ -1760,11 +1743,6 @@ void RustCompiler::setSourceFile(const path &input_file)
     InputFile() = input_file;
 }
 
-Version RustCompiler::gatherVersion() const
-{
-    return ::sw::gatherVersion(file);
-}
-
 SW_DEFINE_PROGRAM_CLONE(GoCompiler)
 
 void GoCompiler::prepareCommand1(const TargetBase &t)
@@ -1782,11 +1760,6 @@ void GoCompiler::setSourceFile(const path &input_file)
     InputFiles().insert(input_file);
 }
 
-Version GoCompiler::gatherVersion() const
-{
-    return ::sw::gatherVersion(file, "version");
-}
-
 SW_DEFINE_PROGRAM_CLONE(FortranCompiler)
 
 void FortranCompiler::prepareCommand1(const TargetBase &t)
@@ -1802,11 +1775,6 @@ void FortranCompiler::setOutputFile(const path &output_file)
 void FortranCompiler::setSourceFile(const path &input_file)
 {
     InputFiles().insert(input_file);
-}
-
-Version FortranCompiler::gatherVersion() const
-{
-    return ::sw::gatherVersion(file);
 }
 
 SW_DEFINE_PROGRAM_CLONE(JavaCompiler)
@@ -1833,11 +1801,6 @@ void JavaCompiler::setSourceFile(const path &input_file)
     InputFiles().insert(input_file);
 }
 
-Version JavaCompiler::gatherVersion() const
-{
-    return ::sw::gatherVersion(file, "-version", "(\\d+)\\.(\\d+)\\.(\\d+)(_(\\d+))?");
-}
-
 SW_DEFINE_PROGRAM_CLONE(KotlinCompiler)
 
 void KotlinCompiler::prepareCommand1(const TargetBase &t)
@@ -1854,11 +1817,6 @@ void KotlinCompiler::setOutputFile(const path &output_file)
 void KotlinCompiler::setSourceFile(const path &input_file)
 {
     InputFiles().insert(input_file);
-}
-
-Version KotlinCompiler::gatherVersion() const
-{
-    return ::sw::gatherVersion(file, "-version");
 }
 
 SW_DEFINE_PROGRAM_CLONE(DCompiler)
@@ -1881,11 +1839,6 @@ void DCompiler::setObjectDir(const path &output_dir)
 void DCompiler::setSourceFile(const path &input_file)
 {
     InputFiles().insert(input_file);
-}
-
-Version DCompiler::gatherVersion() const
-{
-    return ::sw::gatherVersion(file);
 }
 
 }

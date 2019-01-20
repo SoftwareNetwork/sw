@@ -1155,6 +1155,7 @@ void Solution::findCompiler()
         case OSType::Windows:
             activate_array_or_throw({ msvc, clang, clangcl, }, "Try to add more compilers");
             break;
+        case OSType::Cygwin:
         case OSType::Linux:
         case OSType::Macos:
             activate_array_or_throw({ gnu, clang, }, "Try to add more compilers");
@@ -1171,10 +1172,20 @@ void Solution::findCompiler()
         extensions.erase(".mm");
     }
 
-    activate_linker_or_throw({
-        {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
-        {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
-        }, "Try to add more linkers");
+    if (HostOS.is(OSType::Windows))
+    {
+        activate_linker_or_throw({
+            {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
+            {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
+            }, "Try to add more linkers");
+    }
+    else
+    {
+        activate_linker_or_throw({
+            {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU}, // base
+            {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC}, // cygwin alternative, remove?
+            }, "Try to add more linkers");
+    }
 
     // more languages
     for (auto &[a, _] : other)
@@ -1190,12 +1201,8 @@ bool Solution::canRunTargetExecutables() const
 
 Build::Build()
 {
-    //silent |= ide;
-
-    /*static */const auto host_os = detectOS();
-
-    HostOS = host_os;
-    Settings.TargetOS = HostOS; // temp
+    HostOS = getHostOS();
+    Settings.TargetOS = HostOS; // default
 
     //languages = getLanguages();
     findCompiler();
@@ -1440,7 +1447,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             if (auto c = sf->compiler->template as<ClangCompiler>())
             {
-                throw SW_RUNTIME_ERROR("pchs are not implemented for clang");
+                //throw SW_RUNTIME_ERROR("pchs are not implemented for clang");
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
@@ -1694,7 +1701,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     {
         if (auto c = sf->compiler->template as<ClangCompiler>())
         {
-            throw SW_RUNTIME_ERROR("pchs are not implemented for clang");
+            //throw SW_RUNTIME_ERROR("pchs are not implemented for clang");
         }
         else if (auto c = sf->compiler->template as<GNUCompiler>())
         {

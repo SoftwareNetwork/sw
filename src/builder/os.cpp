@@ -6,13 +6,17 @@
 
 #include <os.h>
 
+#include <primitives/command.h>
 #include <primitives/templates.h>
+#include <primitives/sw/settings.h>
 
 #include <boost/algorithm/string.hpp>
 
 #ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
 #include <windows.h>
 #endif
+
+static cl::opt<bool> allow_cygwin_hosts("host-cygwin", cl::desc("When on cygwin, allow it as host"));
 
 namespace sw
 {
@@ -23,6 +27,10 @@ OS detectOS()
 
 #if defined(CPPAN_OS_WINDOWS)
     os.Type = OSType::Windows;
+#endif
+
+#ifdef CPPAN_OS_CYGWIN
+    os.Type = OSType::Cygwin;
 #endif
 
 #ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
@@ -45,11 +53,20 @@ OS detectOS()
     };
     check_env_var(a1);
     check_env_var(a2);
-#endif
 
-    // TODO: uname -a
-#ifdef CPPAN_OS_CYGWIN
-    os.type = OsType::Cygwin;
+    if (allow_cygwin_hosts)
+    {
+        primitives::Command c;
+        c.args = { "uname", "-o" };
+        error_code ec;
+        c.execute(ec);
+        if (!ec)
+        {
+            boost::trim(c.out.text);
+            if (boost::iequals(c.out.text, "cygwin"))
+                os.Type = OSType::Cygwin;
+        }
+    }
 #endif
 
 #if defined(CPPAN_OS_LINUX)
@@ -64,6 +81,12 @@ OS detectOS()
     if (os.Type == OSType::UnknownOS)
         throw SW_RUNTIME_ERROR("Unknown OS");
 
+    return os;
+}
+
+const OS &getHostOS()
+{
+    static const auto os = detectOS();
     return os;
 }
 
@@ -113,6 +136,7 @@ String OS::getExecutableExtension() const
 {
     switch (Type)
     {
+    case OSType::Cygwin:
     case OSType::Windows:
         return ".exe";
     default:
@@ -135,6 +159,7 @@ String OS::getSharedLibraryExtension() const
 {
     switch (Type)
     {
+    case OSType::Cygwin:
     case OSType::Windows:
         return ".dll";
     case OSType::Macos:
@@ -156,6 +181,8 @@ String toString(OSType e)
     {
         CASE(Windows);
         CASE(Linux);
+        CASE(Macos);
+        CASE(Cygwin);
     default:
         throw std::logic_error("TODO: implement target os");
     }
@@ -204,8 +231,11 @@ OSType OSTypeFromStringCaseI(const String &target_os)
         return OSType::Linux;
     else if (boost::iequals(target_os, "macos"))
         return OSType::Macos;
-    else if (boost::iequals(target_os, "windows") || boost::iequals(target_os, "win"))
+    else if (boost::iequals(target_os, "windows") ||
+        boost::iequals(target_os, "win"))
         return OSType::Windows;
+    else if (boost::iequals(target_os, "cygwin"))
+        return OSType::Cygwin;
     else if (!target_os.empty())
         throw SW_RUNTIME_ERROR("Unknown target_os: " + target_os);
     return OSType::UnknownOS;

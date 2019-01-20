@@ -113,6 +113,8 @@ extern bool gVerbose;
 static cl::opt<bool> trace("trace", cl::desc("Trace output"));
 static cl::opt<int> jobs("j", cl::desc("Number of jobs"), cl::init(-1));
 
+static cl::opt<int> sleep_seconds("sleep", cl::desc("Sleep on startup"), cl::Hidden);
+
 static cl::opt<bool> cl_self_upgrade("self-upgrade", cl::desc("Upgrade client"));
 static cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", cl::desc("Upgrade client: copy file"), cl::ReallyHidden);
 
@@ -124,6 +126,9 @@ extern cl::opt<bool> useFileMonitor;
 int setup_main(const Strings &args)
 {
     // some initial stuff
+
+    if (sleep_seconds > 0)
+        std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
 
     if (!cl_self_upgrade_copy.empty())
     {

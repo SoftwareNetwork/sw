@@ -233,6 +233,6 @@ struct SW_BUILDER_API OS
 };
 
 SW_BUILDER_API
-OS detectOS();
+const OS &getHostOS();
 
 }

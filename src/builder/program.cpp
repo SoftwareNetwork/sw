@@ -6,8 +6,12 @@
 
 #include "program.h"
 
+#include <primitives/command.h>
+
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/lock_types.hpp>
+
+#include <regex>
 
 namespace sw
 {
@@ -41,6 +45,33 @@ Version Program::getVersion() const
 
     version = versions[file] = gatherVersion();
     return version.value();
+}
+
+Version Program::gatherVersion(const path &program, const String &arg, const String &in_regex) const
+{
+    static std::regex r_default("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
+
+    std::regex r_in;
+    if (!in_regex.empty())
+        r_in.assign(in_regex);
+
+    auto &r = in_regex.empty() ? r_default : r_in;
+
+    Version V;
+    primitives::Command c;
+    c.program = program;
+    c.args = { arg };
+    error_code ec;
+    c.execute(ec);
+    std::smatch m;
+    if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
+    {
+        if (m[5].matched)
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
+        else
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
+    }
+    return V;
 }
 
 }

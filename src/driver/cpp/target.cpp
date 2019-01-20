@@ -37,9 +37,6 @@ DECLARE_STATIC_LOGGER(logger, "target");
 static cl::opt<bool> do_not_mangle_object_names("do-not-mangle-object-names");
 static cl::opt<bool> bull_build("full", cl::desc("Full build (check all conditions)"));
 
-extern const StringSet cpp_source_file_extensions;
-extern const StringSet header_file_extensions;
-
 void createDefFile(const path &def, const Files &obj_files)
 #if defined(CPPAN_OS_WINDOWS)
 ;
@@ -1080,10 +1077,22 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
 
     // gch always uses header filename + .gch
     auto gch_fn = pch.parent_path() / (p.header.filename().string() + ".gch");
+    auto gch_fn_clang = pch.parent_path() / (p.header.filename().string() + ".pch");
 #ifndef _WIN32
     pch_dir = getUserDirectories().storage_dir_tmp;
     gch_fn = getUserDirectories().storage_dir_tmp / "sw/driver/cpp/sw.h.gch";
 #endif
+
+    auto setup_use_vc = [&force_include_pch_header_to_target_source_files, &p, &pch_fn, &pdb_fn](auto &c)
+    {
+        if (force_include_pch_header_to_target_source_files)
+            c->ForcedIncludeFiles().push_back(p.header);
+        c->PrecompiledHeaderFilename() = pch_fn;
+        c->PrecompiledHeaderFilename.input_dependency = true;
+        c->PrecompiledHeader().use = p.header;
+        c->PDBFilename = pdb_fn;
+        c->PDBFilename.intermediate_file = false;
+    };
 
     // before adding pch source file to target
     // on this step we setup compilers to USE our created pch
@@ -1094,34 +1103,34 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
         {
             if (auto c = sf->compiler->as<VisualStudioCompiler>())
             {
-                if (force_include_pch_header_to_target_source_files)
-                    c->ForcedIncludeFiles().push_back(p.header);
-                c->PrecompiledHeaderFilename() = pch_fn;
-                c->PrecompiledHeaderFilename.input_dependency = true;
-                c->PrecompiledHeader().use = p.header;
-                c->PDBFilename = pdb_fn;
-                c->PDBFilename.intermediate_file = false;
+                setup_use_vc(c);
             }
             else if (auto c = sf->compiler->as<ClangClCompiler>())
             {
-                if (force_include_pch_header_to_target_source_files)
-                    c->ForcedIncludeFiles().push_back(p.header);
-                c->PrecompiledHeaderFilename() = pch_fn;
-                c->PrecompiledHeaderFilename.input_dependency = true;
-                c->PrecompiledHeader().use = p.header;
+                setup_use_vc(c);
             }
             else if (auto c = sf->compiler->as<ClangCompiler>())
             {
-                throw SW_RUNTIME_ERROR("pchs are not implemented for clang");
+                break_gch_deps[pch] = gch_fn_clang;
+
+                // !
+                // add generated file, so it will be executed before
+                File(gch_fn_clang, *getSolution()->fs).getFileRecord().setGenerated(true);
+                *this += gch_fn_clang;
 
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
+
+                c->PrecompiledHeader = gch_fn_clang;
+
                 //c->PrecompiledHeaderFilename() = pch_fn;
                 //c->PrecompiledHeaderFilename.input_dependency = true;
                 //c->PrecompiledHeader().use = p.header;
             }
             else if (auto c = sf->compiler->as<GNUCompiler>())
             {
+                break_gch_deps[pch] = gch_fn;
+
                 // !
                 // add generated file, so it will be executed before
                 File(gch_fn, *getSolution()->fs).getFileRecord().setGenerated(true);
@@ -1129,6 +1138,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
 
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
+
                 //c->PrecompiledHeaderFilename() = pch_fn;
                 //c->PrecompiledHeaderFilename.input_dependency = true;
                 //c->PrecompiledHeader().use = p.header;
@@ -1137,12 +1147,11 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
     }
 
     *this += pch;
-    break_gch_deps[pch] = gch_fn;
 
     // on this step we setup compilers to CREATE our pch
     if (auto sf = ((*this)[pch]).as<NativeSourceFile>())
     {
-        if (auto c = sf->compiler->as<VisualStudioCompiler>())
+        auto setup_create_vc = [&sf, &force_include_pch_header_to_pch_source, &p, &pch_fn, &pdb_fn, &obj_fn](auto &c)
         {
             sf->setOutputFile(obj_fn);
 
@@ -1154,26 +1163,23 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
             c->PDBFilename = pdb_fn;
             c->PDBFilename.intermediate_file = false;
             //c->PDBFilename.output_dependency = true;
+        };
+
+        if (auto c = sf->compiler->as<VisualStudioCompiler>())
+        {
+            setup_create_vc(c);
         }
         else if (auto c = sf->compiler->as<ClangClCompiler>())
         {
-            sf->setOutputFile(obj_fn);
-
-            if (force_include_pch_header_to_pch_source)
-                c->ForcedIncludeFiles().push_back(p.header);
-            c->PrecompiledHeaderFilename() = pch_fn;
-            c->PrecompiledHeaderFilename.output_dependency = true;
-            c->PrecompiledHeader().create = p.header;
+            setup_create_vc(c);
         }
         else if (auto c = sf->compiler->as<ClangCompiler>())
         {
-            throw SW_RUNTIME_ERROR("pchs are not implemented for clang");
-
-            sf->setOutputFile(gch_fn); // is it correct?
+            sf->setOutputFile(gch_fn_clang);
+            c->Language = "c++-header";
             if (force_include_pch_header_to_pch_source)
                 c->ForcedIncludeFiles().push_back(p.header);
-
-            IncludeDirectories.insert(pch_dir);
+            c->EmitPCH = true;
         }
         else if (auto c = sf->compiler->as<GNUCompiler>())
         {
@@ -1707,12 +1713,12 @@ void NativeExecutedTarget::autoDetectSources()
 
             static auto source_file_extensions = []()
             {
-                auto source_file_extensions = cpp_source_file_extensions;
+                auto source_file_extensions = getCppSourceFileExtensions();
                 source_file_extensions.insert(".c");
                 return source_file_extensions;
             }();
 
-            for (auto &v : header_file_extensions)
+            for (auto &v : getCppHeaderFileExtensions())
                 add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
             for (auto &v : source_file_extensions)
                 add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
@@ -2288,7 +2294,7 @@ bool NativeExecutedTarget::prepare()
                     continue;
                 // is_header_ext()
                 const auto e = f.file.extension();
-				if (header_file_extensions.find(e.string()) != header_file_extensions.end())
+				if (getCppHeaderFileExtensions().find(e.string()) != getCppHeaderFileExtensions().end())
                     fs::copy_file(f.file, d / f.file.filename());
             }
         }
@@ -2300,45 +2306,72 @@ bool NativeExecutedTarget::prepare()
         else if (getSolution()->Settings.Native.CompilerType == CompilerType::MSVC)
             *this += "_DEBUG"_d;
 
+        auto vs_setup = [this](auto *c)
+        {
+            if (getSolution()->Settings.Native.MT)
+                c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
+
+            switch (getSolution()->Settings.Native.ConfigurationType)
+            {
+            case ConfigurationType::Debug:
+                c->RuntimeLibrary =
+                    getSolution()->Settings.Native.MT ?
+                    vs::RuntimeLibraryType::MultiThreadedDebug :
+                    vs::RuntimeLibraryType::MultiThreadedDLLDebug;
+                c->Optimizations().Disable = true;
+                break;
+            case ConfigurationType::Release:
+                c->Optimizations().FastCode = true;
+                break;
+            case ConfigurationType::ReleaseWithDebugInformation:
+                c->Optimizations().FastCode = true;
+                break;
+            case ConfigurationType::MinimalSizeRelease:
+                c->Optimizations().SmallCode = true;
+                break;
+            }
+            c->CPPStandard = CPPVersion;
+
+            if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
+            {
+                // why?
+                c->IncludeDirectories.erase(BinaryDir);
+                c->IncludeDirectories.erase(BinaryPrivateDir);
+            }
+        };
+
+        auto gnu_setup = [this](auto *c)
+        {
+            switch (getSolution()->Settings.Native.ConfigurationType)
+            {
+            case ConfigurationType::Debug:
+                c->GenerateDebugInfo = true;
+                //c->Optimizations().Level = 0; this is default
+                break;
+            case ConfigurationType::Release:
+                c->Optimizations().Level = 3;
+                break;
+            case ConfigurationType::ReleaseWithDebugInformation:
+                c->GenerateDebugInfo = true;
+                c->Optimizations().Level = 2;
+                break;
+            case ConfigurationType::MinimalSizeRelease:
+                c->Optimizations().SmallCode = true;
+                c->Optimizations().Level = 2;
+                break;
+            }
+            //if (auto c = f->compiler->as<GNUCPPCompiler>())
+            c->CPPStandard = CPPVersion;
+
+            if (ExportAllSymbols)
+                c->VisibilityHidden = false;
+        };
+
         // merge file compiler options with target compiler options
         for (auto &f : files)
         {
             // set everything before merge!
             f->compiler->merge(*this);
-
-            auto vs_setup = [this](auto *c)
-            {
-                if (getSolution()->Settings.Native.MT)
-                    c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
-
-                switch (getSolution()->Settings.Native.ConfigurationType)
-                {
-                case ConfigurationType::Debug:
-                    c->RuntimeLibrary =
-                        getSolution()->Settings.Native.MT ?
-                        vs::RuntimeLibraryType::MultiThreadedDebug :
-                        vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-                    c->Optimizations().Disable = true;
-                    break;
-                case ConfigurationType::Release:
-                    c->Optimizations().FastCode = true;
-                    break;
-                case ConfigurationType::ReleaseWithDebugInformation:
-                    c->Optimizations().FastCode = true;
-                    break;
-                case ConfigurationType::MinimalSizeRelease:
-                    c->Optimizations().SmallCode = true;
-                    break;
-                }
-                c->CPPStandard = CPPVersion;
-
-                if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
-                {
-                    // why?
-                    c->IncludeDirectories.erase(BinaryDir);
-                    c->IncludeDirectories.erase(BinaryPrivateDir);
-                }
-            };
 
             if (auto c = f->compiler->as<VisualStudioCompiler>())
             {
@@ -2367,37 +2400,11 @@ bool NativeExecutedTarget::prepare()
             // clang compiler is not working atm, gnu is created instead
             else if (auto c = f->compiler->as<ClangCompiler>())
             {
-                //if (auto c = f->compiler->as<ClangCPPCompiler>())
-                    c->CPPStandard = CPPVersion;
-
-                if (ExportAllSymbols)
-                    c->VisibilityHidden = false;
+                gnu_setup(c);
             }
             else if (auto c = f->compiler->as<GNUCompiler>())
             {
-                switch (getSolution()->Settings.Native.ConfigurationType)
-                {
-                case ConfigurationType::Debug:
-                    c->GenerateDebugInfo = true;
-                    //c->Optimizations().Level = 0; this is default
-                    break;
-                case ConfigurationType::Release:
-                    c->Optimizations().Level = 3;
-                    break;
-                case ConfigurationType::ReleaseWithDebugInformation:
-                    c->GenerateDebugInfo = true;
-                    c->Optimizations().Level = 2;
-                    break;
-                case ConfigurationType::MinimalSizeRelease:
-                    c->Optimizations().SmallCode = true;
-                    c->Optimizations().Level = 2;
-                    break;
-                }
-                //if (auto c = f->compiler->as<GNUCPPCompiler>())
-                    c->CPPStandard = CPPVersion;
-
-                if (ExportAllSymbols)
-                    c->VisibilityHidden = false;
+                gnu_setup(c);
             }
         }
 

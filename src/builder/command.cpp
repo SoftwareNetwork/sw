@@ -11,6 +11,7 @@
 
 #include "command_storage.h"
 #include "db.h"
+#include "os.h"
 #include "program.h"
 
 #include <file_storage.h>
@@ -367,6 +368,11 @@ void Command::addInputOutputDeps()
     }*/
 }
 
+path Command::resolveProgram(const path &in) const
+{
+    return resolveExecutable(in);
+}
+
 void Command::prepare()
 {
     if (prepared)
@@ -377,7 +383,7 @@ void Command::prepare()
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
     if (!program.empty() && !File(program, *fs).isGeneratedAtAll() && !program.is_absolute() && !fs::exists(program))
-        program = primitives::resolve_executable(program);
+        program = resolveExecutable(program);
 
     getHashAndSave();
 
@@ -589,24 +595,37 @@ void Command::execute1(std::error_code *ec)
 
     auto save_command = [this, &make_rsp_file]()
     {
-        String s;
-        s += "\n";
         auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / getResponseFilename();
         auto pbat = p;
         String t;
 
-        bool bat = false;
-#ifdef _WIN32
-        bat = true;
-#endif
+        String s;
+        s += "\n";
+        s += "pid = " + std::to_string(pid) + "\n";
+        s += "command is copied to " + p.u8string() + "\n";
+
+        bool bat = getHostOS().getShellType() == ShellType::Batch;
+
+        auto norm = [bat](const auto &s)
+        {
+            if (bat)
+                return normalize_path_windows(s);
+            return normalize_path(s);
+        };
 
         if (bat)
             pbat += ".bat";
         else
             pbat += ".sh";
 
-        s += "pid = " + std::to_string(pid) + "\n";
-        s += "command is copied to " + p.u8string() + "\n";
+        if (bat)
+        {
+            t += "@echo off\n\n";
+            t += "setlocal";
+        }
+        else
+            t += "#!/bin/sh";
+        t += "\n\n";
 
         if (bat)
             t += "::";
@@ -623,15 +642,6 @@ void Command::execute1(std::error_code *ec)
             t += " short name: " + name_short + "\n\n";
         }
 
-        if (bat)
-        {
-            t += "@echo off\n\n";
-            t += "setlocal";
-        }
-        else
-            t += "#!/bin/sh";
-        t += "\n\n";
-
         for (auto &[k, v] : environment)
         {
             if (bat)
@@ -640,9 +650,9 @@ void Command::execute1(std::error_code *ec)
         }
 
         if (!working_directory.empty())
-            t += "cd " + working_directory.u8string() + "\n\n";
+            t += "cd " + norm(working_directory) + "\n\n";
 
-        t += "\"" + program.u8string() + "\" ";
+        t += "\"" + norm(program) + "\" ";
         if (!rsp_args.empty())
         {
             make_rsp_file(p, false);
@@ -655,7 +665,11 @@ void Command::execute1(std::error_code *ec)
                 if (a == "-showIncludes")
                     continue;
                 t += "\"" + escape_cmd_arg(a) + "\" ";
+                if (!bat)
+                    t += "\\\n\t";
             }
+            if (!bat && !args.empty())
+                t.resize(t.size() - 3);
         }
         if (bat)
             t += "%";
@@ -664,11 +678,11 @@ void Command::execute1(std::error_code *ec)
         t += "* ";
 
         if (!in.file.empty())
-            t += "< " + in.file.u8string() + " ";
+            t += "< " + norm(in.file) + " ";
         if (!out.file.empty())
-            t += "> " + out.file.u8string() + " ";
+            t += "> " + norm(out.file) + " ";
         if (!err.file.empty())
-            t += "2> " + err.file.u8string() + " ";
+            t += "2> " + norm(err.file) + " ";
 
         t += "\n";
 
@@ -895,6 +909,73 @@ void Command::save(BinaryContext &bctx)
 
 }*/
 
+}
+
+// not used, consider removing these functions
+path resolveExecutable(const path &in)
+{
+    {
+        auto p = primitives::resolve_executable(in);
+        return p;
+    }
+
+    if (in.empty())
+        throw SW_RUNTIME_ERROR("empty input");
+
+    if (in.is_absolute())
+        return in;
+
+    // special cygwin resolving
+    bool cyg = getHostOS().Type == OSType::Cygwin;
+
+    // really absolute
+    if (cyg && in.u8string()[0] == '/')
+        return in;
+
+    if (cyg)
+    {
+        // try to use which/where
+
+        builder::Command c;
+        c.fs = &getFileStorage("service");
+        c.program = "/usr/bin/which";
+        c.args.push_back(normalize_path(in));
+        error_code ec;
+        c.execute(ec);
+        if (ec)
+        {
+            builder::Command c;
+            c.fs = &getFileStorage("service");
+            c.program = "where";
+            c.args.push_back(normalize_path_windows(in));
+            c.execute(ec);
+        }
+
+        if (!ec)
+        {
+            boost::trim(c.out.text);
+            return c.out.text;
+        }
+    }
+
+    auto p = primitives::resolve_executable(in);
+    return p;
+    // at the moment we also return empty string on error
+    // "/usr/bin/which" is the single thing required to be absolute in code
+    if (!p.empty())
+        return p;
+    return in;
+}
+
+path resolveExecutable(const FilesOrdered &paths)
+{
+    for (auto &p : paths)
+    {
+        auto e = resolveExecutable(p);
+        if (!e.empty())
+            return e;
+    }
+    return path();
 }
 
 }
