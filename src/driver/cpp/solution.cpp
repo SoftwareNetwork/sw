@@ -266,6 +266,7 @@ Solution::Solution(const Solution &rhs)
     , fetch_dir(rhs.fetch_dir)
     , with_testing(rhs.with_testing)
     , ide_solution_name(rhs.ide_solution_name)
+    , disable_compiler_lookup(rhs.disable_compiler_lookup)
     , config_file_or_dir(rhs.config_file_or_dir)
     , Variables(rhs.Variables)
     , events(rhs.events)
@@ -843,6 +844,7 @@ bool Solution::prepareStep(const TargetBaseTypePtr &t, const Solution *host) con
 
 void Solution::resolvePass(const Target &t, const DependenciesType &deps, const Solution *host) const
 {
+    bool select_targets = host;
     if (!host)
         host = this;
     for (auto &d : deps)
@@ -855,7 +857,13 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
 
         auto i = h->getChildren().find(d->getPackage());
         if (i != h->getChildren().end())
+        {
             d->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
+
+            // turn on only needed targets during cc
+            if (select_targets)
+                host->TargetsToBuild[i->second->pkg] = i->second;
+        }
         // we fail in any case here, no matter if dependency were resolved previously
         else
         //if (!d->target.lock())
@@ -1034,7 +1042,8 @@ void Solution::setSettings()
 
 void Solution::findCompiler()
 {
-    detectCompilers(*this);
+    if (!disable_compiler_lookup)
+        detectCompilers(*this);
 
     using CompilerVector = std::vector<std::pair<PackagePath, CompilerType>>;
 
@@ -1177,13 +1186,17 @@ void Solution::findCompiler()
         activate_linker_or_throw({
             {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
             {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
+            {"org.gnu.binutils.ar", "org.LLVM.clang.ld",LinkerType::GNU},
             }, "Try to add more linkers");
     }
     else
     {
         activate_linker_or_throw({
-            {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU}, // base
-            {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC}, // cygwin alternative, remove?
+            // base
+            {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
+            {"org.gnu.binutils.ar", "org.LLVM.clang.ld",LinkerType::GNU},
+            // cygwin alternative, remove?
+            {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
             }, "Try to add more linkers");
     }
 
@@ -1197,6 +1210,14 @@ void Solution::findCompiler()
 bool Solution::canRunTargetExecutables() const
 {
     return HostOS.canRunTargetExecutables(Settings.TargetOS);
+}
+
+void Solution::prepareForCustomToolchain()
+{
+    extensions.clear();
+    user_defined_languages.clear();
+    registered_programs.clear();
+    disable_compiler_lookup = true;
 }
 
 Build::Build()
@@ -2419,8 +2440,8 @@ void Build::load(const path &dll, bool usedll)
     }
 
     // we build only targets from this package
-    for (auto &s : solutions)
-        s.TargetsToBuild = s.children;
+    //for (auto &s : solutions)
+        //s.TargetsToBuild = s.children;
 }
 
 PackageDescriptionMap Build::getPackages() const

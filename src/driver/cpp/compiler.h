@@ -352,6 +352,9 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
     virtual path getImportLibrary() const override;
 
     SW_COMMON_COMPILER_API;
+
+protected:
+    Version gatherVersion() const override { return Program::gatherVersion(file, "-V"); }
 };
 
 struct SW_DRIVER_CPP_API NativeToolchain

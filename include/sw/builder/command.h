@@ -136,6 +136,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     bool always = false;
     // used when command may not update outputs based on some factors
     bool record_inputs_mtime = false;
+    bool do_not_save_command = false;
     int strict_order = 0; // used to execute this before other commands
     ResourcePool *pool = nullptr;
 

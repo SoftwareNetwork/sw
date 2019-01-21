@@ -16,6 +16,7 @@ void build(Solution &s)
     t2 += "src/main2.cpp";
 
     auto &t3 = s.addExecutable("test3");
+    t3.CPPVersion = CPPLanguageStandard::CPP11;
     t3 += "src/main3.cpp";
 
     auto &t4 = s.addExecutable("test4");

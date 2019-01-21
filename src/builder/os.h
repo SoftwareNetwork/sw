@@ -235,4 +235,13 @@ struct SW_BUILDER_API OS
 SW_BUILDER_API
 const OS &getHostOS();
 
+// hidden
+namespace detail
+{
+
+SW_BUILDER_API
+bool isHostCygwin();
+
+}
+
 }

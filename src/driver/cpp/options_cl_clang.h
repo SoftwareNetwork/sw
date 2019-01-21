@@ -247,6 +247,7 @@ struct SW_DRIVER_CPP_API GNULinkerOptions
     {
         cl::CommandFlag{ "o" },
             cl::OutputDependency{},
+            cl::SeparatePrefix{},
     };
 
     COMMAND_LINE_OPTION(PositionIndependentCode, bool)

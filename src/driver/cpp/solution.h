@@ -112,6 +112,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     bool with_testing = false;
     String ide_solution_name;
     path config_file_or_dir; // original file or dir
+    bool disable_compiler_lookup = false;
 
     VariablesType Variables;
 
@@ -152,6 +153,7 @@ public:
     void clean() const;
 
     bool canRunTargetExecutables() const;
+    void prepareForCustomToolchain();
 
     Commands getCommands() const;
 

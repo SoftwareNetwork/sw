@@ -21,6 +21,30 @@ static cl::opt<bool> allow_cygwin_hosts("host-cygwin", cl::desc("When on cygwin,
 namespace sw
 {
 
+namespace detail
+{
+
+bool isHostCygwin()
+{
+    static auto cyg = []()
+    {
+        primitives::Command c;
+        c.args = { "uname", "-o" };
+        error_code ec;
+        c.execute(ec);
+        if (!ec)
+        {
+            boost::trim(c.out.text);
+            if (boost::iequals(c.out.text, "cygwin"))
+                return true;
+        }
+        return false;
+    }();
+    return cyg;
+}
+
+} // namespace detail
+
 OS detectOS()
 {
     OS os;
@@ -56,16 +80,8 @@ OS detectOS()
 
     if (allow_cygwin_hosts)
     {
-        primitives::Command c;
-        c.args = { "uname", "-o" };
-        error_code ec;
-        c.execute(ec);
-        if (!ec)
-        {
-            boost::trim(c.out.text);
-            if (boost::iequals(c.out.text, "cygwin"))
-                os.Type = OSType::Cygwin;
-        }
+        if (detail::isHostCygwin())
+            os.Type = OSType::Cygwin;
     }
 #endif
 

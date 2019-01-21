@@ -595,6 +595,9 @@ void Command::execute1(std::error_code *ec)
 
     auto save_command = [this, &make_rsp_file]()
     {
+        if (do_not_save_command)
+            return String{};
+
         auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / getResponseFilename();
         auto pbat = p;
         String t;
@@ -604,7 +607,7 @@ void Command::execute1(std::error_code *ec)
         s += "pid = " + std::to_string(pid) + "\n";
         s += "command is copied to " + p.u8string() + "\n";
 
-        bool bat = getHostOS().getShellType() == ShellType::Batch;
+        bool bat = getHostOS().getShellType() == ShellType::Batch && !detail::isHostCygwin();
 
         auto norm = [bat](const auto &s)
         {
@@ -911,60 +914,73 @@ void Command::save(BinaryContext &bctx)
 
 }
 
-// not used, consider removing these functions
+// libuv cannot resolve /such/paths/on/cygwin, so we explicitly use which/where
 path resolveExecutable(const path &in)
 {
-    {
-        auto p = primitives::resolve_executable(in);
-        return p;
-    }
-
     if (in.empty())
         throw SW_RUNTIME_ERROR("empty input");
 
     if (in.is_absolute())
         return in;
 
-    // special cygwin resolving
-    bool cyg = getHostOS().Type == OSType::Cygwin;
+    if (auto p = primitives::resolve_executable(in); !p.empty())
+        return p;
 
-    // really absolute
-    if (cyg && in.u8string()[0] == '/')
-        return in;
+    static const auto p_which = primitives::resolve_executable("which");
+    static const auto p_where = primitives::resolve_executable("where");
 
-    if (cyg)
+    if (p_which.empty() && p_where.empty())
+        return {};
+
+    // special cygwin resolving - no, common resolving?
+    //if (getHostOS().Type == OSType::Cygwin)
     {
         // try to use which/where
 
-        builder::Command c;
-        c.fs = &getFileStorage("service");
-        c.program = "/usr/bin/which";
+        primitives::Command c;
+        c.program = p_which;
         c.args.push_back(normalize_path(in));
         error_code ec;
         c.execute(ec);
+        bool which = true;
         if (ec)
         {
-            builder::Command c;
-            c.fs = &getFileStorage("service");
-            c.program = "where";
+            primitives::Command c;
+            c.program = p_where;
             c.args.push_back(normalize_path_windows(in));
             c.execute(ec);
+            which = false;
         }
 
         if (!ec)
         {
             boost::trim(c.out.text);
-            return c.out.text;
+
+            // now run cygpath
+            if (which && detail::isHostCygwin())
+            {
+                primitives::Command c2;
+                //c.fs = &getFileStorage("service");
+                c2.program = "cygpath";
+                c2.args.push_back("-w");
+                c2.args.push_back(c.out.text);
+                c2.execute(ec);
+                if (!ec)
+                    return boost::trim_copy(c2.out.text);
+            }
+            else
+                return c.out.text;
         }
     }
 
-    auto p = primitives::resolve_executable(in);
-    return p;
+    return {};
+
+    // remove this vvv
     // at the moment we also return empty string on error
     // "/usr/bin/which" is the single thing required to be absolute in code
-    if (!p.empty())
+    /*if (!p.empty())
         return p;
-    return in;
+    return in;*/
 }
 
 path resolveExecutable(const FilesOrdered &paths)
