@@ -60,9 +60,7 @@ Version Program::gatherVersion(const path &program, const String &arg, const Str
     auto &r = in_regex.empty() ? r_default : r_in;
 
     Version V;
-    builder::Command c; // for nice program resolving
-    c.do_not_save_command = true;
-    c.fs = &getFileStorage("service");
+    builder::detail::ResolvableCommand c; // for nice program resolving
     c.program = program;
     c.args = { arg };
     error_code ec;

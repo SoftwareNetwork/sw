@@ -368,7 +368,7 @@ void Command::addInputOutputDeps()
     }*/
 }
 
-path Command::resolveProgram(const path &in) const
+path detail::ResolvableCommand::resolveProgram(const path &in) const
 {
     return resolveExecutable(in);
 }
@@ -607,7 +607,7 @@ void Command::execute1(std::error_code *ec)
         s += "pid = " + std::to_string(pid) + "\n";
         s += "command is copied to " + p.u8string() + "\n";
 
-        bool bat = getHostOS().getShellType() == ShellType::Batch && !detail::isHostCygwin();
+        bool bat = getHostOS().getShellType() == ShellType::Batch && !::sw::detail::isHostCygwin();
 
         auto norm = [bat](const auto &s)
         {
