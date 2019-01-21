@@ -868,18 +868,32 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
         else
         //if (!d->target.lock())
         {
-            auto err = "Package: " + t.pkg.toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
-            if (d->target.lock())
-                err += " (but target is set to " + d->target.lock()->getPackage().toString() + ")";
-            if (auto d = t.pkg.getOverriddenDir(); d)
+            // allow dummy scoped tools
+            auto i = h->dummy_children.find(d->getPackage());
+            if (i != h->dummy_children.end() &&
+                i->second->Scope == TargetScope::Tool)
             {
-                err += ".\nPackage: " + t.pkg.toString() + " is overridden locally. "
-                    "This means you have new dependency that is not in db.\n"
-                    "Run following command in attempt to fix this issue: "
-                    "'sw -d " + normalize_path(d.value()) + " -override-remote-package " +
-                    t.pkg.ppath.slice(0, getServiceDatabase().getOverriddenPackage(t.pkg).value().prefix).toString() + "'";
+                d->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
+
+                // turn on only needed targets during cc
+                if (select_targets)
+                    host->TargetsToBuild[i->second->pkg] = i->second;
             }
-            throw std::logic_error(err);
+            else
+            {
+                auto err = "Package: " + t.pkg.toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
+                if (d->target.lock())
+                    err += " (but target is set to " + d->target.lock()->getPackage().toString() + ")";
+                if (auto d = t.pkg.getOverriddenDir(); d)
+                {
+                    err += ".\nPackage: " + t.pkg.toString() + " is overridden locally. "
+                        "This means you have new dependency that is not in db.\n"
+                        "Run following command in attempt to fix this issue: "
+                        "'sw -d " + normalize_path(d.value()) + " -override-remote-package " +
+                        t.pkg.ppath.slice(0, getServiceDatabase().getOverriddenPackage(t.pkg).value().prefix).toString() + "'";
+                }
+                throw std::logic_error(err);
+            }
         }
     }
 }
@@ -2440,8 +2454,11 @@ void Build::load(const path &dll, bool usedll)
     }
 
     // we build only targets from this package
-    //for (auto &s : solutions)
-        //s.TargetsToBuild = s.children;
+    /*for (auto &s : solutions)
+    {
+        if (&s != getHostSolution())
+            s.TargetsToBuild = s.children;
+    }*/
 }
 
 PackageDescriptionMap Build::getPackages() const
