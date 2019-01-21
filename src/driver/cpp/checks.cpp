@@ -102,7 +102,6 @@ void ChecksStorage::add(const Check &c)
     auto h = c.getHash();
     if (c.requires_manual_setup && !c.Value)
     {
-        // TODO: also copy check executables, create .bat/.sh script to run them on the target platform
         manual_checks[h] = &c;
         return;
     }
@@ -331,18 +330,40 @@ int main() { return IsBigEndian(); }
             // save executables
             auto &os = solution->Settings.TargetOS;
             auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
+
+            auto bat = os.getShellType() == ShellType::Batch;
+
             String s;
+            if (!bat)
+                s += "#!/bin/sh\n\n";
             s += "echo \"\" > " + mfn + "\n\n";
             for (auto &[h, c] : checksStorage->manual_checks)
             {
-                s += os.getShellType() == ShellType::Batch ? "::" : "#";
-                s += " ";
+                String defs;
                 for (auto &d : c->Definitions)
-                    s += d + " ";
-                s.resize(s.size() - 1);
+                    defs += d + " ";
+                defs.resize(defs.size() - 1);
+
+                s += bat ? "::" : "#";
+                s += " " + defs + "\n";
+                s += "echo ";
+                //if (!bat)
+                    //s += "-n ";
+                s += "\"Checking: " + defs + "... \"\n";
+                s += "echo \"# " + defs + "\" >> " + mfn + "\n";
+                if (!bat)
+                    s += "./";
+                s += std::to_string(c->getHash()) + solution->Settings.TargetOS.getExecutableExtension() + "\n";
+                s += "echo " + std::to_string(c->getHash()) + " ";
+                if (!bat)
+                    s += "$? ";
+                else
+                    s += "%errorlevel% ";
+                s += ">> " + mfn + "\n";
+                if (!bat)
+                    s += "echo ok\n";
+                s += "echo \"\" >> " + mfn + "\n";
                 s += "\n";
-                s += std::to_string(c->getHash()) + solution->Settings.TargetOS.getExecutableExtension() +
-                    " >> " + mfn + "\n\n";
             }
             write_file((cc_dir / "run") += os.getShellExtension(), s);
 

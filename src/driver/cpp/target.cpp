@@ -2903,7 +2903,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
 
     if ((int)flags & (int)ConfigureFlags::CopyOnly)
     {
-        fileWriteOnce(to, s);
+        writeFileOnce(to, s);
         return;
     }
 
@@ -2981,7 +2981,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     // remove the rest of variables
     //s = std::regex_replace(s, r, "");
 
-    fileWriteOnce(to, s);
+    writeFileOnce(to, s);
 }
 
 void NativeExecutedTarget::setChecks(const String &name)
@@ -3044,88 +3044,64 @@ path NativeExecutedTarget::getPatchDir(bool binary_dir) const
     return base / "patch";*/
 }
 
-void NativeExecutedTarget::fileWriteOnce(const path &fn, bool binary_dir) const
+void NativeExecutedTarget::writeFileOnce(const path &fn, const String &content) const
 {
-    if (fn.is_absolute())
-        fileWriteOnce(fn, "", binary_dir);
-    else
-        fileWriteOnce((binary_dir ? BinaryDir : SourceDir) / fn, String());
-}
+    bool source_dir = false;
+    path p = fn;
+    if (!check_absolute(p, true, &source_dir))
+    {
+        // file does not exists
+        if (!p.is_absolute())
+        {
+            p = BinaryDir / p;
+            source_dir = false;
+        }
+    }
 
-void NativeExecutedTarget::fileWriteOnce(const path &fn, const char *content, bool binary_dir) const
-{
-    fileWriteOnce(fn, String(content), binary_dir);
-}
-
-void NativeExecutedTarget::fileWriteOnce(const path &fn, const String &content, bool binary_dir) const
-{
-    path p;
-    if (fn.is_absolute())
-        p = fn;
-    else
-        p = (binary_dir ? BinaryDir : SourceDir) / fn;
-
-    // before resolving
-    File f(p, *getSolution()->fs);
-    f.getFileRecord().setGenerated();
+    // before resolving, we must set file as generated, to skip it on server
+    // only in bdir case
+    if (!source_dir)
+    {
+        File f(p, *getSolution()->fs);
+        f.getFileRecord().setGenerated();
+    }
 
     if (PostponeFileResolving || DryRun)
         return;
 
-    ::sw::fileWriteOnce(p, content, getPatchDir(binary_dir));
+    ::sw::writeFileOnce(p, content, getPatchDir(!source_dir));
+    File f(p, *getSolution()->fs);
     f.getFileRecord().load();
 }
 
-void NativeExecutedTarget::writeFileOnce(const path &fn, bool binary_dir) const
-{
-    fileWriteOnce(fn, binary_dir);
-}
-
-void NativeExecutedTarget::writeFileOnce(const path &fn, const String &content, bool binary_dir) const
-{
-    fileWriteOnce(fn, content, binary_dir);
-}
-
-void NativeExecutedTarget::writeFileOnce(const path &fn, const char *content, bool binary_dir) const
-{
-    fileWriteOnce(fn, content, binary_dir);
-}
-
-void NativeExecutedTarget::fileWriteSafe(const path &fn, const String &content, bool binary_dir) const
+void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content) const
 {
     if (PostponeFileResolving || DryRun)
         return;
 
-    path p;
-    if (fn.is_absolute())
-        ::sw::fileWriteSafe(p = fn, content, getPatchDir(binary_dir));
-    else
-        ::sw::fileWriteSafe(p = (binary_dir ? BinaryDir : SourceDir) / fn, content, getPatchDir(binary_dir));
+    bool source_dir = false;
+    path p = fn;
+    check_absolute(p, false, &source_dir);
+    ::sw::writeFileSafe(p, content, getPatchDir(!source_dir));
 
     File f(fn, *getSolution()->fs);
     f.getFileRecord().load();
 }
 
-void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content, bool binary_dir) const
+void NativeExecutedTarget::replaceInFileOnce(const path &fn, const String &from, const String &to) const
 {
-    fileWriteSafe(fn, content, binary_dir);
+    patch(fn, from, to);
 }
 
-void NativeExecutedTarget::replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir) const
-{
-    patch(fn, from, to, binary_dir);
-}
-
-void NativeExecutedTarget::patch(const path &fn, const String &from, const String &to, bool binary_dir) const
+void NativeExecutedTarget::patch(const path &fn, const String &from, const String &to) const
 {
     if (PostponeFileResolving || DryRun)
         return;
 
-    path p;
-    if (fn.is_absolute())
-        ::sw::replaceInFileOnce(p = fn, from, to, getPatchDir(binary_dir));
-    else
-        ::sw::replaceInFileOnce(p = (binary_dir ? BinaryDir : SourceDir) / fn, from, to, getPatchDir(binary_dir));
+    bool source_dir = false;
+    path p = fn;
+    check_absolute(p, false, &source_dir);
+    ::sw::replaceInFileOnce(p, from, to, getPatchDir(!source_dir));
 
     File f(p, *getSolution()->fs);
     f.getFileRecord().load();
@@ -3136,35 +3112,40 @@ void NativeExecutedTarget::patch(const path &fn, const String &patch_str) const
     if (PostponeFileResolving || DryRun)
         return;
 
+    bool source_dir = false;
     path p = fn;
-    check_absolute(p);
-    ::sw::patch(p, patch_str, getPatchDir(false));
+    check_absolute(p, false, &source_dir);
+    ::sw::patch(p, patch_str, getPatchDir(!source_dir));
 }
 
-void NativeExecutedTarget::deleteInFileOnce(const path &fn, const String &from, bool binary_dir) const
+void NativeExecutedTarget::deleteInFileOnce(const path &fn, const String &from) const
 {
-    replaceInFileOnce(fn, from, "", binary_dir);
+    replaceInFileOnce(fn, from, "");
 }
 
-void NativeExecutedTarget::pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir) const
+void NativeExecutedTarget::pushFrontToFileOnce(const path &fn, const String &text) const
 {
     if (PostponeFileResolving || DryRun)
         return;
 
-    auto p = (binary_dir ? BinaryDir : SourceDir) / fn;
-    ::sw::pushFrontToFileOnce(p, text, getPatchDir(binary_dir));
+    bool source_dir = false;
+    path p = fn;
+    check_absolute(p, false, &source_dir);
+    ::sw::pushFrontToFileOnce(p, text, getPatchDir(!source_dir));
 
     File f(p, *getSolution()->fs);
     f.getFileRecord().load();
 }
 
-void NativeExecutedTarget::pushBackToFileOnce(const path &fn, const String &text, bool binary_dir) const
+void NativeExecutedTarget::pushBackToFileOnce(const path &fn, const String &text) const
 {
     if (PostponeFileResolving || DryRun)
         return;
 
-    auto p = (binary_dir ? BinaryDir : SourceDir) / fn;
-    ::sw::pushBackToFileOnce(p, text, getPatchDir(binary_dir));
+    bool source_dir = false;
+    path p = fn;
+    check_absolute(p, false, &source_dir);
+    ::sw::pushBackToFileOnce(p, text, getPatchDir(!source_dir));
 
     File f(p, *getSolution()->fs);
     f.getFileRecord().load();

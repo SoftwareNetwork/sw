@@ -771,27 +771,16 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     driver::cpp::CommandBuilder addCommand() const;
     // add executed command?
 
-    void writeFileOnce(const path &fn, bool binary_dir = true) const;
-    void writeFileOnce(const path &fn, const char *content, bool binary_dir = true) const;
-    void writeFileOnce(const path &fn, const String &content, bool binary_dir = true) const;
-    void writeFileSafe(const path &fn, const String &content, bool binary_dir = true) const;
-    void replaceInFileOnce(const path &fn, const String &from, const String &to, bool binary_dir = false) const; // deprecate?
-    void patch(const path &fn, const String &from, const String &to, bool binary_dir = false) const;
+    void writeFileOnce(const path &fn, const String &content = {}) const;
+    void writeFileSafe(const path &fn, const String &content) const;
+    void replaceInFileOnce(const path &fn, const String &from, const String &to) const; // deprecate?
+    void patch(const path &fn, const String &from, const String &to) const;
     void patch(const path &fn, const String &patch_str) const;
-    //void patch(const path &fn, const path &patch_fn, bool binary_dir = false) const;
-    void deleteInFileOnce(const path &fn, const String &from, bool binary_dir = false) const;
-    void pushFrontToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
-    void pushBackToFileOnce(const path &fn, const String &text, bool binary_dir = false) const;
+    //void patch(const path &fn, const path &patch_fn) const;
+    void deleteInFileOnce(const path &fn, const String &text) const;
+    void pushFrontToFileOnce(const path &fn, const String &text) const;
+    void pushBackToFileOnce(const path &fn, const String &text) const;
     void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default);
-
-    [[deprecated("Use writeFileOnce instead")]]
-    void fileWriteOnce(const path &fn, bool binary_dir = true) const;
-    [[deprecated("Use writeFileOnce instead")]]
-    void fileWriteOnce(const path &fn, const char *content, bool binary_dir = true) const;
-    [[deprecated("Use writeFileOnce instead")]]
-    void fileWriteOnce(const path &fn, const String &content, bool binary_dir = true) const;
-    [[deprecated("Use writeFileOnce instead")]]
-    void fileWriteSafe(const path &fn, const String &content, bool binary_dir = true) const;
 
     void addPrecompiledHeader(const path &h, const path &cpp = path());
     void addPrecompiledHeader(PrecompiledHeader pch);

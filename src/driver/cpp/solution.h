@@ -161,6 +161,8 @@ public:
 
     // helper
     virtual Solution &addSolution() { throw std::logic_error("invalid call"); }
+    virtual Solution &addCustomSolution() { throw std::logic_error("invalid call"); }
+    virtual bool isConfigSelected(const String &s) const { throw std::logic_error("invalid call"); }
 
     // child targets
     TargetMap &getChildren() override;
@@ -284,6 +286,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     void load(const path &dll, bool usedll = true);
     bool execute() override;
     bool load_configless(const path &file_or_dir);
+    bool isConfigSelected(const String &s) const override;
 
     void performChecks() override;
     void prepare() override;
@@ -294,6 +297,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
 
     // helper
     Solution &addSolution() override;
+    Solution &addCustomSolution() override;
 
     // other frontends
     void cppan_load();

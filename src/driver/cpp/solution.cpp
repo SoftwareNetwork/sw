@@ -55,6 +55,7 @@ static cl::opt<int> config_jobs("jc", cl::desc("Number of config jobs"));
 static cl::list<String> target_os("target-os", cl::CommaSeparated);
 static cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::CommaSeparated);
 static cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
+cl::alias configuration2("config", cl::desc("Alias for -configuration"), cl::aliasopt(configuration));
 static cl::list<String> platform("platform", cl::desc("Set build platform"), cl::CommaSeparated);
 //static cl::opt<String> arch("arch", cl::desc("Set arch")/*, cl::sub(subcommand_ide)*/);
 
@@ -104,6 +105,8 @@ static path getImportPchFile()
     return getImportFilePrefix() += ".cpp";
 }
 
+static const std::regex r_header("#pragma sw header on(.*)#pragma sw header off");
+
 static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, const UnresolvedPackage &up)
 {
     // depends on upkg, not on pkg!
@@ -113,7 +116,6 @@ static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, co
         //return h;
     auto cfg = p.getDirSrc2() / "sw.cpp";
     auto f = read_file(cfg);
-    static const std::regex r_header("#pragma sw header on(.*)#pragma sw header off");
     std::smatch m;
     // replace with while?
     const char on[] = "#pragma sw header on";
@@ -132,7 +134,7 @@ static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, co
         ctx.addLine();
 
         primitives::Context prefix;
-        prefix.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");
+        /*prefix.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");
         prefix.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + p.ppath.slice(p.prefix).toString() + "\"");
         prefix.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
         //prefix.addLine("#define THIS_VERSION \"" + p.version.toString() + "\"");
@@ -140,7 +142,7 @@ static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, co
         prefix.addLine("#define THIS_VERSION_DEPENDENCY \"" + up.range.toString() + "\"_dep"); // here we use range! our packages must depend on exactly specified range
         //prefix.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
         prefix.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
-        prefix.addLine();
+        prefix.addLine();*/
 
         auto ins_pre = "#pragma sw header insert prefix";
         if (f.find(ins_pre) != f.npos)
@@ -151,14 +153,14 @@ static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, co
         ctx.addLine(f);
         ctx.addLine();
 
-        ctx.addLine("#undef THIS_PREFIX");
+        /*ctx.addLine("#undef THIS_PREFIX");
         ctx.addLine("#undef THIS_RELATIVE_PACKAGE_PATH");
         ctx.addLine("#undef THIS_PACKAGE_PATH");
         ctx.addLine("#undef THIS_VERSION");
         ctx.addLine("#undef THIS_VERSION_DEPENDENCY");
         ctx.addLine("#undef THIS_PACKAGE");
         ctx.addLine("#undef THIS_PACKAGE_DEPENDENCY");
-        ctx.addLine();
+        ctx.addLine();*/
 
         write_file_if_different(h, ctx.getText());
     }
@@ -1161,16 +1163,16 @@ void Solution::findCompiler()
     switch (Settings.Native.CompilerType)
     {
     case CompilerType::MSVC:
-        activate_or_throw(msvc, "Cannot find msvc toolchain");
+        activate_array_or_throw({ msvc }, "Cannot find msvc toolchain");
         break;
     case CompilerType::Clang:
-        activate_or_throw(clang, "Cannot find clang toolchain");
+        activate_array_or_throw({ clang }, "Cannot find clang toolchain");
         break;
     case CompilerType::ClangCl:
-        activate_or_throw(clangcl, "Cannot find clang-cl toolchain");
+        activate_array_or_throw({ clangcl }, "Cannot find clang-cl toolchain");
         break;
     case CompilerType::GNU:
-        activate_or_throw(gnu, "Cannot find gnu toolchain");
+        activate_array_or_throw({ gnu }, "Cannot find gnu toolchain");
         break;
     case CompilerType::UnspecifiedCompiler:
         switch (HostOS.Type)
@@ -1343,6 +1345,13 @@ bool Build::prepareStep()
 Solution &Build::addSolution()
 {
     return solutions.emplace_back(*this);
+}
+
+Solution &Build::addCustomSolution()
+{
+    auto &s = addSolution();
+    s.prepareForCustomToolchain();
+    return s;
 }
 
 static auto getFilesHash(const Files &files)
@@ -2617,6 +2626,19 @@ const Solution *Build::getHostSolution()
         host = nullptr;
 
     return host.value();
+}
+
+bool Build::isConfigSelected(const String &s) const
+{
+    try
+    {
+        configurationTypeFromStringCaseI(s);
+        return false; // conf is known and reserved!
+    }
+    catch (...) {}
+
+    static const StringSet cfgs(configuration.begin(), configuration.end());
+    return cfgs.find(s) != cfgs.end();
 }
 
 }

@@ -60,19 +60,23 @@ struct ExecutionPlan
         std::vector<Future<void>> fs;
         std::vector<Future<void>> all;
         std::atomic_bool stopped = false;
+        std::atomic_int running = 0;
         std::atomic_int64_t askip_errors = skip_errors;
 
         std::function<void(T*)> run;
-        run = [this, &askip_errors, &e, &run, &fs, &all, &m, &stopped](T *c)
+        run = [this, &askip_errors, &e, &run, &fs, &all, &m, &stopped, &running](T *c)
         {
             if (stopped)
                 return;
             try
             {
+                running++;
                 c->execute();
+                running--;
             }
             catch (...)
             {
+                running--;
                 if (--askip_errors < 1)
                     stopped = true;
                 if (throw_on_errors)
@@ -131,6 +135,10 @@ struct ExecutionPlan
                 break;
         }
 
+        // wait other jobs to finish or it will crash
+        while (running)
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
         // gather exceptions
         for (auto &f : all)
         {
@@ -138,6 +146,7 @@ struct ExecutionPlan
                 eptrs.push_back(f.state->eptr);
         }
 
+        // ... or it will crash here in throw
         if (!eptrs.empty() && throw_on_errors)
             throw ExceptionVector(eptrs);
 

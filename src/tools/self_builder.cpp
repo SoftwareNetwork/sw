@@ -258,7 +258,7 @@ int main(int argc, char **argv)
     write_file_if_different(packages, ctx_packages.getText());
 
     primitives::CppContext ctx;
-    ctx.addLine("#define SW_PRAGMA_HEADER 1");
+    //ctx.addLine("#define SW_PRAGMA_HEADER 1");
     ctx.addLine();
 
     primitives::CppContext build;
@@ -278,13 +278,13 @@ int main(int argc, char **argv)
             continue;
         used_gns.insert(r.group_number);
 
-        ctx.addLine("#define THIS_PREFIX \"" + r.ppath.slice(0, r.prefix).toString() + "\"");
+        /*ctx.addLine("#define THIS_PREFIX \"" + r.ppath.slice(0, r.prefix).toString() + "\"");
         ctx.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + r.ppath.slice(r.prefix).toString() + "\"");
         ctx.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
         //ctx.addLine("#define THIS_VERSION \"" + r.version.toString() + "\"");
         ctx.addLine("#define THIS_VERSION_DEPENDENCY \"" + r.version.toString() + "\"_dep"); // here we use version! our packages must know exact current version
         //ctx.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
-        ctx.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
+        ctx.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");*/
         ctx.addLine("#define configure configure_" + r.getVariableName());
         ctx.addLine("#define build build_" + r.getVariableName());
         if (data.has_checks)
@@ -319,14 +319,14 @@ int main(int argc, char **argv)
     ctx.addLine("#undef build");
     ctx.addLine("#undef check");
     ctx.addLine("#undef configure");
-    ctx.addLine("#undef SW_PRAGMA_HEADER");
-    ctx.addLine("#undef THIS_PREFIX");
+    //ctx.addLine("#undef SW_PRAGMA_HEADER");
+    /*ctx.addLine("#undef THIS_PREFIX");
     ctx.addLine("#undef THIS_RELATIVE_PACKAGE_PATH");
     ctx.addLine("#undef THIS_PACKAGE_PATH");
     ctx.addLine("#undef THIS_VERSION");
     ctx.addLine("#undef THIS_VERSION_DEPENDENCY");
     ctx.addLine("#undef THIS_PACKAGE");
-    ctx.addLine("#undef THIS_PACKAGE_DEPENDENCY");
+    ctx.addLine("#undef THIS_PACKAGE_DEPENDENCY");*/
 
     write_file(p, ctx.getText());
 

@@ -40,7 +40,8 @@ void build(Solution &s)
         "org.sw.demo.google.grpc.grpcpp-1"_dep,
         "pub.egorpugin.primitives.templates-master"_dep,
         "pub.egorpugin.primitives.log-master"_dep;
-    gen_grpc(protos, protos.SourceDir / "src/protocol/api.proto", true);
+    gen_grpc("org.sw.demo.google.protobuf-3"_dep,
+        "org.sw.demo.google.grpc.grpc_cpp_plugin-1"_dep, protos, protos.SourceDir / "src/protocol/api.proto", true);
 
     auto &manager = p.addTarget<LibraryTarget>("manager");
     manager.ApiName = "SW_MANAGER_API";
@@ -64,9 +65,9 @@ void build(Solution &s)
     manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().version.getMajor());
     manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().version.getMinor());
     manager.Public.Definitions["VERSION_PATCH"] += std::to_string(manager.getPackage().version.getPatch());
-    embed(manager, "src/manager/inserts/inserts.cpp.in");
-    gen_sqlite2cpp(manager, manager.SourceDir / "src/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
-    gen_sqlite2cpp(manager, manager.SourceDir / "src/manager/inserts/service_db_schema.sql", "db_service.h", "db::service");
+    embed("pub.egorpugin.primitives.tools.embedder-master"_dep, manager, "src/manager/inserts/inserts.cpp.in");
+    gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep, manager, manager.SourceDir / "src/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
+    gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep, manager, manager.SourceDir / "src/manager/inserts/service_db_schema.sql", "db_service.h", "db::service");
     if (!s.Variables["SW_SELF_BUILD"])
     {
         PrecompiledHeader pch;
@@ -110,8 +111,8 @@ void build(Solution &s)
     if (s.Settings.TargetOS.Type != OSType::Windows)
         cpp_driver -= "src/driver/cpp/misc/.*"_rr;
     cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
-    embed(cpp_driver, "src/driver/cpp/inserts/inserts.cpp.in");
-    gen_flex_bison(cpp_driver, "src/driver/cpp/bazel/lexer.ll", "src/driver/cpp/bazel/grammar.yy");
+    embed("pub.egorpugin.primitives.tools.embedder-master"_dep, cpp_driver, "src/driver/cpp/inserts/inserts.cpp.in");
+    gen_flex_bison("org.sw.demo.lexxmark.winflexbison-master"_dep, cpp_driver, "src/driver/cpp/bazel/lexer.ll", "src/driver/cpp/bazel/grammar.yy");
     if (s.Settings.Native.CompilerType == CompilerType::MSVC)
         cpp_driver.CompileOptions.push_back("-bigobj");
     //else if (s.Settings.Native.CompilerType == CompilerType::GNU)

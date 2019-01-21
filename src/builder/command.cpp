@@ -926,11 +926,25 @@ path resolveExecutable(const path &in)
     if (auto p = primitives::resolve_executable(in); !p.empty())
         return p;
 
+    // this is expensive resolve, so we cache
+
+    static std::unordered_map<path, path> cache;
+    static std::mutex m;
+
+    {
+        std::unique_lock lk(m);
+        auto i = cache.find(in);
+        if (i != cache.end())
+            return i->second;
+    }
+
     static const auto p_which = primitives::resolve_executable("which");
     static const auto p_where = primitives::resolve_executable("where");
 
     if (p_which.empty() && p_where.empty())
         return {};
+
+    String result;
 
     // special cygwin resolving - no, common resolving?
     //if (getHostOS().Type == OSType::Cygwin)
@@ -966,14 +980,17 @@ path resolveExecutable(const path &in)
                 c2.args.push_back(c.out.text);
                 c2.execute(ec);
                 if (!ec)
-                    return boost::trim_copy(c2.out.text);
+                    result = boost::trim_copy(c2.out.text);
             }
             else
-                return c.out.text;
+                result = c.out.text;
         }
     }
 
-    return {};
+    std::unique_lock lk(m);
+    cache[in] = result;
+
+    return result;
 
     // remove this vvv
     // at the moment we also return empty string on error

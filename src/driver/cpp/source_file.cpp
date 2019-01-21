@@ -418,15 +418,19 @@ void SourceFileStorage::resolve()
     }
 }
 
-bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
+bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source_dir) const
 {
     // apply EnforcementType::CheckFiles
     if (!F.is_absolute())
     {
         auto p = target->SourceDir / F;
+        if (source_dir)
+            *source_dir = true;
         if (!fs::exists(p))
         {
             p = target->BinaryDir / F;
+            if (source_dir)
+                *source_dir = false;
             if (!fs::exists(p))
             {
                 if (!File(p, *target->getSolution()->fs).isGeneratedAtAll())
@@ -460,6 +464,19 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors) const
                     return true;
                 }
                 throw SW_RUNTIME_ERROR(err);
+            }
+        }
+        if (source_dir)
+        {
+            if (is_under_root(F, target->SourceDir))
+                *source_dir = true;
+            else if (is_under_root(F, target->BinaryDir) || is_under_root(F, target->BinaryPrivateDir))
+                *source_dir = false;
+            else
+            {
+                // other path
+                LOG_DEBUG(logger, F << " is not under src or bin dir");
+                *source_dir = true;
             }
         }
     }

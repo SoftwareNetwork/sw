@@ -20,7 +20,7 @@ DECLARE_STATIC_LOGGER(logger, "functions");
 namespace sw
 {
 
-void fileWriteOnce(const path &fn, const String &content, const path &lock_dir)
+void writeFileOnce(const path &fn, const String &content, const path &lock_dir)
 {
     auto h = sha1(content);
 
@@ -36,7 +36,7 @@ void fileWriteOnce(const path &fn, const String &content, const path &lock_dir)
     }
 }
 
-void fileWriteSafe(const path &fn, const String &content, const path &lock_dir)
+void writeFileSafe(const path &fn, const String &content, const path &lock_dir)
 {
     auto hf = sha1(normalize_path(fn));
     const auto lock = lock_dir / hf;

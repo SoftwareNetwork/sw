@@ -12,10 +12,10 @@ namespace sw
 {
 
 SW_DRIVER_CPP_API
-void fileWriteOnce(const path &fn, const String &content, const path &lock_dir);
+void writeFileOnce(const path &fn, const String &content, const path &lock_dir);
 
 SW_DRIVER_CPP_API
-void fileWriteSafe(const path &fn, const String &content, const path &lock_dir);
+void writeFileSafe(const path &fn, const String &content, const path &lock_dir);
 
 SW_DRIVER_CPP_API
 void replaceInFileOnce(const path &fn, const String &from, const String &to, const path &lock_dir);
