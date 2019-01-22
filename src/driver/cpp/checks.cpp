@@ -261,6 +261,11 @@ int main() { return IsBigEndian(); }
                             o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
                     }
                 }
+                // cleanup
+                for (auto &[h, c] : set.checks)
+                {
+                    c->clean();
+                }
             }
         }
     };
@@ -316,7 +321,6 @@ int main() { return IsBigEndian(); }
                             if (!fs::exists(dst))
                                 fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
                         }
-                        c->clean();
                     }
                 }
             }

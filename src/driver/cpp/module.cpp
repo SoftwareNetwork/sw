@@ -36,24 +36,33 @@ const Module &ModuleStorage::get(const path &dll)
 
 Module::Module(const path &dll)
 {
-    boost::system::error_code ec;
-    module = new boost::dll::shared_library(
-#ifdef _WIN32
-        dll.wstring()
-#else
-        dll.u8string()
-#endif
-        , boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global
-        //, ec
-        );
-    if (ec)
+    String err;
+    err = "Module " + normalize_path(dll) + " is in bad shape";
+    try
     {
-        String err;
-        err = "Module " + normalize_path(dll) + " is in bad shape: " + ec.message();
+        module = new boost::dll::shared_library(
+#ifdef _WIN32
+            dll.wstring()
+#else
+            dll.u8string()
+#endif
+            , boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global
+            //, ec
+        );
+    }
+    catch (std::exception &e)
+    {
+        err += ": "s + e.what();
         err += " Will rebuild on the next run.";
-        //LOG_ERROR(logger, err);
         fs::remove(dll);
         throw SW_RUNTIME_ERROR(err);
+    }
+    catch (...)
+    {
+        err += ". Will rebuild on the next run.";
+        LOG_ERROR(logger, err);
+        fs::remove(dll);
+        throw;
     }
 
     build_.name = "build";

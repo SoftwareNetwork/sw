@@ -320,6 +320,7 @@ static cl::list<String> install_args(cl::ConsumeAfter, cl::desc("Packages to add
 // upload
 static cl::opt<String> upload_prefix(cl::Positional, cl::desc("Prefix path"), cl::sub(subcommand_upload), cl::Required);
 static cl::opt<bool> build_before_upload("build", cl::desc("Build before upload"), cl::sub(subcommand_upload));
+static cl::opt<bool> build_after_fetch("build", cl::desc("Build after fetch"), cl::sub(subcommand_fetch));
 
 // ide commands
 static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl::sub(subcommand_ide)*/);
@@ -545,17 +546,25 @@ SUBCOMMAND_DECL(uri)
             boost::replace_all(spec_data, pkg.version.toString(), new_version.toString());
             write_file(fn, spec_data);
 
-            primitives::Command c;
+            // before scp
+            SCOPE_EXIT
+            {
+                fs::remove_all(fn.parent_path());
+            };
+
+            // run secure as below?
+            ScopedCurrentPath scp(fn.parent_path());
+            upload_prefix = pkg.ppath.slice(0, std::stoi(uri_args[3]));
+            cli_upload();
+
+            /*primitives::Command c;
             c.program = "sw";
             c.working_directory = fn.parent_path();
             c.args.push_back("upload");
-            c.args.push_back(".");
             c.args.push_back(pkg.ppath.slice(0, std::stoi(uri_args[3])));
             c.out.inherit = true;
             c.err.inherit = true;
-            c.execute();
-
-            fs::remove_all(fn.parent_path());
+            c.execute();*/
         }
     }
     catch (std::exception &e)
@@ -725,6 +734,19 @@ SUBCOMMAND_DECL(update)
     dry_run = true;
     build_arg = build_arg_update.getValue();
     cli_build();
+}
+
+SUBCOMMAND_DECL(fetch)
+{
+    sw::FetchOptions opts;
+    //opts.name_prefix = upload_prefix;
+    opts.root_dir = fs::current_path() / SW_BINARY_DIR;
+    opts.ignore_existing_dirs = true;
+    opts.existing_dirs_age = std::chrono::hours(1);
+    //opts.apply_version_to_source = true;
+    auto s = sw::fetch_and_load(".", opts);
+    if (build_after_fetch)
+        s->execute();
 }
 
 SUBCOMMAND_DECL(upload)

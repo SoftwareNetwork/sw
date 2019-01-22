@@ -2289,14 +2289,6 @@ void Build::load(const path &dll, bool usedll)
 #else
         Settings.Native.CompilerType = CompilerType::GNU;
 #endif
-        // use host os
-/*#ifdef _WIN32
-        Settings.TargetOS.Type = OSType::Windows;
-#elif __APPLE__
-        Settings.TargetOS.Type = OSType::Macos;
-#else
-        Settings.TargetOS.Type = OSType::Linux;
-#endif*/
 
         // configure may change defaults, so we must care below
         if (usedll)
@@ -2331,16 +2323,22 @@ void Build::load(const path &dll, bool usedll)
             };
 
             // configuration
-            auto set_conf = [](auto &s, const String &configuration)
+            auto set_conf = [this](auto &s, const String &configuration)
             {
                 auto t = configurationTypeFromStringCaseI(configuration);
                 if (toIndex(t))
                     s.Settings.Native.ConfigurationType = t;
             };
 
-            mult_and_action(configuration.size(), [&set_conf](auto &s, int i)
+            Strings configs;
+            for (auto &c : configuration)
             {
-                set_conf(s, configuration[i]);
+                if (!isConfigSelected(c))
+                    configs.push_back(c);
+            }
+            mult_and_action(configs.size(), [&set_conf, &configs](auto &s, int i)
+            {
+                set_conf(s, configs[i]);
             });
 
             // static/shared

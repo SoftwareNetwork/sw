@@ -2737,18 +2737,32 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
         // here we must gather all static (and header only?) lib deps in recursive manner
         if (dt->getSelectedTool() == dt->Librarian.get() || dt->HeaderOnly.value())
         {
-            if (!dt->HeaderOnly.value())
+            auto add = [&added, &ll](auto &dt, const path &base)
             {
-                if (added.find(dt->getOutputFile()) == added.end())
+                if (added.find(base) == added.end())
                 {
-                    ll.push_back(dt->getOutputFile());
+                    ll.push_back(base);
                     ll.insert(ll.end(), dt->LinkLibraries.begin(), dt->LinkLibraries.end()); // also link libs
                 }
-            }
+                else
+                {
+                    // we added output file but not its system libs
+                    for (auto &l : dt->LinkLibraries)
+                    {
+                        if (std::find(ll.begin(), ll.end(), l) == ll.end())
+                            ll.push_back(l);
+                    }
+                }
+            };
+
+            if (!dt->HeaderOnly.value())
+                add(dt, dt->getOutputFile());
 
             // if dep is a static library, we take all its deps link libraries too
             for (auto &d2 : dt->Dependencies)
             {
+                if (d2->target.lock().get() == this)
+                    continue;
                 if (d2->target.lock().get() == d->target.lock().get())
                     continue;
                 if (d2->isDummy())
@@ -2758,13 +2772,7 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
 
                 auto dt2 = ((NativeExecutedTarget*)d2->target.lock().get());
                 if (!dt2->HeaderOnly.value())
-                {
-                    if (added.find(dt2->getImportLibrary()) == added.end())
-                    {
-                        ll.push_back(dt2->getImportLibrary());
-                        ll.insert(ll.end(), dt2->LinkLibraries.begin(), dt2->LinkLibraries.end()); // also link libs
-                    }
-                }
+                    add(dt2, dt2->getImportLibrary());
                 dt2->gatherStaticLinkLibraries(ll, added, targets);
             }
         }
@@ -3747,10 +3755,6 @@ bool CSharpTarget::prepare()
     return false;
 }
 
-void CSharpTarget::findSources()
-{
-}
-
 DependenciesType CSharpTarget::gatherDependencies() const
 {
     DependenciesType deps;
@@ -3822,10 +3826,6 @@ Commands RustTarget::getCommands() const
 bool RustTarget::prepare()
 {
     return false;
-}
-
-void RustTarget::findSources()
-{
 }
 
 DependenciesType RustTarget::gatherDependencies() const
@@ -3901,10 +3901,6 @@ bool GoTarget::prepare()
     return false;
 }
 
-void GoTarget::findSources()
-{
-}
-
 DependenciesType GoTarget::gatherDependencies() const
 {
     DependenciesType deps;
@@ -3976,10 +3972,6 @@ Commands FortranTarget::getCommands() const
 bool FortranTarget::prepare()
 {
     return false;
-}
-
-void FortranTarget::findSources()
-{
 }
 
 DependenciesType FortranTarget::gatherDependencies() const
@@ -4058,10 +4050,6 @@ bool JavaTarget::prepare()
     return false;
 }
 
-void JavaTarget::findSources()
-{
-}
-
 DependenciesType JavaTarget::gatherDependencies() const
 {
     DependenciesType deps;
@@ -4133,10 +4121,6 @@ Commands KotlinTarget::getCommands() const
 bool KotlinTarget::prepare()
 {
     return false;
-}
-
-void KotlinTarget::findSources()
-{
 }
 
 DependenciesType KotlinTarget::gatherDependencies() const
@@ -4211,10 +4195,6 @@ Commands DTarget::getCommands() const
 bool DTarget::prepare()
 {
     return false;
-}
-
-void DTarget::findSources()
-{
 }
 
 DependenciesType DTarget::gatherDependencies() const

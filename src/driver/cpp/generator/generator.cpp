@@ -420,7 +420,8 @@ void ProjectContext::printProject(
         for (auto &i : nt.gatherIncludeDirectories())
             idirs += i.string() + ";";
         String add_opts;
-        if (auto sf = std::static_pointer_cast<NativeSourceFile>(nt.begin()->second); sf)
+        if (!nt.empty())
+        if (auto sf = std::dynamic_pointer_cast<NativeSourceFile>(nt.begin()->second); sf)
         {
             if (auto v = std::static_pointer_cast<VisualStudioCompiler>(sf->compiler); v)
             {
@@ -1124,6 +1125,8 @@ void VSGeneratorNMake::generate(const Build &b)
             String cfg = "--configuration " + c + " --platform " + pl;
             if (dll != "dll")
                 cfg += " --static-build";
+            if (s.Native.MT)
+                cfg += " --mt";
 
             String compiler;
             if (s.Native.CompilerType == CompilerType::Clang)

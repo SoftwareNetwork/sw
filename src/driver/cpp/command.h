@@ -54,13 +54,16 @@ struct tag_targets
 // in/out data tags
 struct tag_do_not_add_to_targets {};
 struct tag_skip {};
+struct tag_normalize_path {};
 
 struct tag_files_data
 {
     bool add_to_targets = true;
     String prefix;
     bool skip = false; // keep order for ADD macro
+    bool normalize = false;
 
+    void populate(tag_normalize_path) { normalize = true; }
     void populate(tag_do_not_add_to_targets) { add_to_targets = false; }
     void populate(tag_skip) { skip = true; }
     void populate(const Prefix &p) { prefix = p; }
@@ -103,6 +106,7 @@ T in_out(const String &name, Args &&... args)
 
 static detail::tag_do_not_add_to_targets DoNotAddToTargets;
 static detail::tag_skip Skip;
+static detail::tag_normalize_path NormalizePath;
 
 template <class T>
 struct tag_prog { T *t; };

@@ -230,7 +230,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
                 p = all[0]->SourceDir / p;
 
         if (!cb.stopped)
-            cb.c->args.push_back(t.prefix + p.u8string());
+            cb.c->args.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
         cb.c->addInput(p);
         if (t.add_to_targets)
         {
@@ -259,7 +259,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
                 p = all[0]->BinaryDir / p;
 
         if (!cb.stopped)
-            cb.c->args.push_back(t.prefix + p.u8string());
+            cb.c->args.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
         cb.c->addOutput(p);
         if (t.add_to_targets)
         {
@@ -396,7 +396,7 @@ ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name, void *f, in
     : ExecuteBuiltinCommand()
 {
     args.push_back("internal-call-builtin-function");
-    args.push_back(primitives::getModuleNameForSymbol(f).u8string()); // add dependency on this? or on function (command) version
+    args.push_back(normalize_path(primitives::getModuleNameForSymbol(f))); // add dependency on this? or on function (command) version
     args.push_back(cmd_name);
     args.push_back(std::to_string(version));
 }
@@ -405,7 +405,7 @@ void ExecuteBuiltinCommand::push_back(const Files &files)
 {
     args.push_back(std::to_string(files.size()));
     for (auto &o : FilesSorted{ files.begin(), files.end() })
-        args.push_back(o.u8string());
+        args.push_back(normalize_path(o));
 }
 
 void ExecuteBuiltinCommand::execute1(std::error_code *ec)
