@@ -516,28 +516,46 @@ void ProjectContext::printProject(
 
     auto sd = normalize_path(nt.SourceDir);
     auto bd = normalize_path(nt.BinaryDir);
+    auto bdp = normalize_path(nt.BinaryPrivateDir);
     StringSet filters;
     for (auto &[f, sf] : nt)
     {
         if (sf->skip)
             continue;
+
+        String *d = nullptr;
+        size_t p = 0;
         auto fd = normalize_path(f);
-        auto p1 = fd.find(sd);
-        auto p2 = fd.find(bd);
-        size_t p = -1;
-        path filter;
-        if (p1 != -1 || p2 != -1)
+
+        auto calc = [&fd, &p, &d](auto &s)
         {
-            if (p1 != -1 && p2 != -1)
-                p = std::max(sd.size(), bd.size());
-            else if (p1 != -1)
-                p = sd.size();
-            else if (p2 != -1)
-                p = bd.size();
+            auto p1 = fd.find(s);
+            if (p1 != 0)
+                return;
+            //if (p1 > p)
+            {
+                p = s.size();
+                d = &s;
+            }
+        };
+
+        calc(sd);
+        calc(bd);
+        calc(bdp);
+
+        path filter;
+        if (p != -1)
+        {
             auto ss = fd.substr(p);
             if (ss[0] == '/')
                 ss = ss.substr(1);
             path r = ss;
+            if (d == &sd)
+                r = "Source Files" / r;
+            if (d == &bd)
+                r = "Generated Files" / r;
+            if (d == &bdp)
+                r = "Generated Files (Private)" / r;
             do
             {
                 r = r.parent_path();
@@ -549,7 +567,7 @@ void ProjectContext::printProject(
 
         fctx.beginBlock("ClCompile", { {"Include",f.string()} });
         if (!filter.empty())
-            fctx.addBlock("Filter", make_backslashes(/*"Source Files\\" + */filter.string()));
+            fctx.addBlock("Filter", make_backslashes(filter.string()));
         fctx.endBlock();
     }
     filters.erase("");
@@ -558,7 +576,7 @@ void ProjectContext::printProject(
     fctx.beginBlock("ItemGroup");
     for (auto &f : filters)
     {
-        fctx.beginBlock("Filter", { { "Include", make_backslashes(/*"Source Files\\" + */f) } });
+        fctx.beginBlock("Filter", { { "Include", make_backslashes(f) } });
         fctx.addBlock("UniqueIdentifier", "{" + uuid2string(boost::uuids::random_generator()()) + "}");
         fctx.endBlock();
     }

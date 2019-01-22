@@ -852,7 +852,8 @@ void detectNonWindowsCompilers(struct Solution &s)
     }
 
     //p = resolve("ld.gold");
-    for (auto &v : gcc_vers)
+    //for (auto &v : gcc_vers)
+    for (auto &v : gccpp_vers) // this links correct c++ library
     {
         p = resolve(v);
         if (!p.empty())
@@ -939,7 +940,8 @@ void detectNonWindowsCompilers(struct Solution &s)
     // clang
     {
         //p = resolve("ld.gold");
-        for (auto &v : clang_vers)
+        //for (auto &v : clang_vers)
+        for (auto &v : clangpp_vers) // this links correct c++ library
         {
             p = resolve(v);
             if (!p.empty())

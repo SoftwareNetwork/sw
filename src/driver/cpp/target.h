@@ -712,6 +712,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     bool ExportIfStatic = false;
     path InstallDirectory;
     bool PackageDefinitions = false;
+    //bool StartupProject = false; // move to description? move to Generator.VS... struct?
 
     bool ImportFromBazel = false;
     StringSet BazelNames;

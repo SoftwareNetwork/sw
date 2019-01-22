@@ -5,7 +5,7 @@
 void configure(Solution &s)
 {
     s.Settings.Native.LibrariesType = LibraryType::Static;
-    //s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
+    s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
     //s.Settings.Native.CompilerType = CompilerType::ClangCl;
     //s.Settings.Native.CompilerType = CompilerType::Clang;
 }
@@ -95,6 +95,13 @@ void build(Solution &s)
     builder -= "src/builder/db_sqlite.*"_rr;
     builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep,
         "pub.egorpugin.primitives.context-master"_dep;
+    if (!s.Variables["SW_SELF_BUILD"])
+    {
+        PrecompiledHeader pch;
+        pch.header = "src/builder/pch.h";
+        pch.force_include_pch = true;
+        builder.addPrecompiledHeader(pch);
+    }
 
     auto &cpp_driver = p.addTarget<LibraryTarget>("driver.cpp");
     cpp_driver.ApiName = "SW_DRIVER_CPP_API";
@@ -124,9 +131,17 @@ void build(Solution &s)
             << cmd::out("build_self.packages.generated.h")
             ;
     }
+    if (!s.Variables["SW_SELF_BUILD"])
+    {
+        PrecompiledHeader pch;
+        pch.header = "src/driver/cpp/pch.h";
+        pch.force_include_pch = true;
+        cpp_driver.addPrecompiledHeader(pch);
+    }
 
     auto &client = p.addTarget<ExecutableTarget>("sw");
     client.PackageDefinitions = true;
+    //client.StartupProject = true;
     client += "src/client/.*"_rr;
     client += "src/client"_idir;
     client.CPPVersion = CPPLanguageStandard::CPP17;
