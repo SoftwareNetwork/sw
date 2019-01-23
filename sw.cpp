@@ -101,7 +101,7 @@ void build(Solution &s)
         /*PrecompiledHeader pch;
         pch.header = "src/builder/pch.h";
         pch.force_include_pch = true;*/
-        builder.addPrecompiledHeader(pch);
+        //builder.addPrecompiledHeader(pch);
     }
 
     auto &cpp_driver = p.addTarget<LibraryTarget>("driver.cpp");
@@ -137,7 +137,7 @@ void build(Solution &s)
         /*PrecompiledHeader pch;
         pch.header = "src/driver/cpp/pch.h";
         pch.force_include_pch = true;*/
-        cpp_driver.addPrecompiledHeader(pch);
+        //cpp_driver.addPrecompiledHeader(pch);
     }
 
     auto &client = p.addTarget<ExecutableTarget>("sw");
