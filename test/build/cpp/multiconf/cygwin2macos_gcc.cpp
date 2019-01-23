@@ -1,3 +1,4 @@
+
 void configure(Solution &b)
 {
     auto &s = b.addSolution();

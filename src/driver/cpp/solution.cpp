@@ -2462,11 +2462,14 @@ void Build::load(const path &dll, bool usedll)
     }
 
     // we build only targets from this package
-    /*for (auto &s : solutions)
+    // for example, on linux we do not build skipped windows projects
+    for (auto &s : solutions)
     {
-        if (&s != getHostSolution())
-            s.TargetsToBuild = s.children;
-    }*/
+        // only exception is cc host solution
+        if (&s == getHostSolution())
+            continue;
+        s.TargetsToBuild = s.children;
+    }
 }
 
 PackageDescriptionMap Build::getPackages() const
