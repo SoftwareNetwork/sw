@@ -472,7 +472,10 @@ Commands Solution::getCommands() const
     }
 
     Commands cmds;
+    // FIXME: drop children from here, always build only precisely picked TargetsToBuild
     auto &chldr = TargetsToBuild.empty() ? children : TargetsToBuild;
+    if (TargetsToBuild.empty())
+        LOG_WARN("logger", "empty TargetsToBuild");
 
     // we also must take TargetsToBuild deps
     /*while (1)
@@ -1267,6 +1270,10 @@ ExecutionPlan<builder::Command> Build::getExecutionPlan() const
     Commands cmds;
     for (auto &s : solutions)
     {
+        // if we added host solution, but did not select any targets from it, drop it
+        // otherwise getCommands() will select all targets
+        if (getHostSolution() == &s && s.TargetsToBuild.empty())
+            continue;
         auto c = s.getCommands();
         cmds.insert(c.begin(), c.end());
     }
@@ -2466,7 +2473,7 @@ void Build::load(const path &dll, bool usedll)
     for (auto &s : solutions)
     {
         // only exception is cc host solution
-        if (&s == getHostSolution())
+        if (getHostSolution() == &s)
             continue;
         s.TargetsToBuild = s.children;
     }
@@ -2592,6 +2599,13 @@ PackageDescriptionMap Build::getPackages() const
         m[pkg] = std::make_unique<JsonPackageDescription>(s);
     }
     return m;
+}
+
+const Solution *Build::getHostSolution() const
+{
+    if (host)
+        return host.value();
+    throw SW_RUNTIME_ERROR("no host solution selected");
 }
 
 const Solution *Build::getHostSolution()

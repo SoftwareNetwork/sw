@@ -315,6 +315,7 @@ private:
     void setupSolutionName(const path &file_or_dir);
     SharedLibraryTarget &createTarget(const Files &files);
     const Solution *getHostSolution();
+    const Solution *getHostSolution() const;
 
 public:
     static PackagePath getSelfTargetName(const Files &files);
