@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef _WIN32
+#define _WIN32_WINNT 0x0602
+#endif
+
 #include "cppan_version.h"
 #include "lock.h"
 #include "property_tree.h"

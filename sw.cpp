@@ -68,10 +68,11 @@ void build(Solution &s)
     embed("pub.egorpugin.primitives.tools.embedder-master"_dep, manager, "src/manager/inserts/inserts.cpp.in");
     gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep, manager, manager.SourceDir / "src/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
     gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep, manager, manager.SourceDir / "src/manager/inserts/service_db_schema.sql", "db_service.h", "db::service");
+
+    PrecompiledHeader pch;
     if (!s.Variables["SW_SELF_BUILD"])
     {
-        PrecompiledHeader pch;
-        pch.header = "src/manager/pch.h";
+        pch.header = manager.SourceDir / "src/manager/pch.h";
         pch.force_include_pch = true;
         manager.addPrecompiledHeader(pch);
     }
@@ -97,9 +98,9 @@ void build(Solution &s)
         "pub.egorpugin.primitives.context-master"_dep;
     if (!s.Variables["SW_SELF_BUILD"])
     {
-        PrecompiledHeader pch;
+        /*PrecompiledHeader pch;
         pch.header = "src/builder/pch.h";
-        pch.force_include_pch = true;
+        pch.force_include_pch = true;*/
         builder.addPrecompiledHeader(pch);
     }
 
@@ -133,15 +134,15 @@ void build(Solution &s)
     }
     if (!s.Variables["SW_SELF_BUILD"])
     {
-        PrecompiledHeader pch;
+        /*PrecompiledHeader pch;
         pch.header = "src/driver/cpp/pch.h";
-        pch.force_include_pch = true;
+        pch.force_include_pch = true;*/
         cpp_driver.addPrecompiledHeader(pch);
     }
 
     auto &client = p.addTarget<ExecutableTarget>("sw");
     client.PackageDefinitions = true;
-    //client.StartupProject = true;
+    client.StartupProject = true;
     client += "src/client/.*"_rr;
     client += "src/client"_idir;
     client.CPPVersion = CPPLanguageStandard::CPP17;

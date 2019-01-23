@@ -404,12 +404,18 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g, bool i
         String err;
         err += "Setting generator twice on file: " + file.u8string() + "\n";
         if (gold)
-            err += "first generator:\n " + gold->print();
+        {
+            err += "first generator:\n " + gold->print() + "\n";
+            err += "first generator hash:\n " + std::to_string(gold->getHash());
+        }
         else
             err += "first generator is empty";
         err += "\n";
         if (g)
-            err += "second generator:\n " + g->print();
+        {
+            err += "second generator:\n " + g->print() + "\n";
+            err += "second generator hash:\n " + std::to_string(g->getHash());
+        }
         else
             err += "second generator is empty";
         throw SW_RUNTIME_ERROR(err);

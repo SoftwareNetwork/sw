@@ -418,6 +418,8 @@ projects:
             file(GLOB_RECURSE x "${SDIR}/*")
             source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
 
+x:
+
     test.unit.path:
         copy_to_output_dir: false
         api_name: SW_MANAGER_API

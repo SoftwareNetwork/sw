@@ -181,6 +181,9 @@ struct PrecompiledHeader
     path source;
     // path pch; // file itself
     bool force_include_pch = false;
+
+    // internal
+    bool created = false;
 };
 
 struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile

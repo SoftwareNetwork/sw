@@ -712,7 +712,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     bool ExportIfStatic = false;
     path InstallDirectory;
     bool PackageDefinitions = false;
-    //bool StartupProject = false; // move to description? move to Generator.VS... struct?
+    bool StartupProject = false; // move to description? move to Generator.VS... struct? IDE struct?
 
     bool ImportFromBazel = false;
     StringSet BazelNames;
@@ -777,8 +777,8 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default);
 
     void addPrecompiledHeader(const path &h, const path &cpp = path());
-    void addPrecompiledHeader(PrecompiledHeader pch);
-    NativeExecutedTarget &operator=(PrecompiledHeader pch);
+    void addPrecompiledHeader(PrecompiledHeader &pch);
+    NativeExecutedTarget &operator=(PrecompiledHeader &pch);
 
     virtual bool isStaticOnly() const { return false; }
     virtual bool isSharedOnly() const { return false; }

@@ -1048,7 +1048,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const path &h, const path &cpp)
     addPrecompiledHeader(pch);
 }
 
-void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
+void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
 {
     check_absolute(p.header);
     if (!p.source.empty())
@@ -1056,7 +1056,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
 
     bool force_include_pch_header_to_pch_source = true;
     bool force_include_pch_header_to_target_source_files = p.force_include_pch;
-    auto pch = p.source;
+    auto &pch = p.source;
     path pch_dir = BinaryDir.parent_path() / "pch";
     if (!pch.empty())
     {
@@ -1097,20 +1097,24 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
     // before adding pch source file to target
     // on this step we setup compilers to USE our created pch
     // MSVC does it explicitly, gnu does implicitly; check what about clang
+    CompilerType cc = CompilerType::UnspecifiedCompiler;
     for (auto &f : gatherSourceFiles())
     {
         if (auto sf = f->as<NativeSourceFile>())
         {
             if (auto c = sf->compiler->as<VisualStudioCompiler>())
             {
+                cc = c->Type;
                 setup_use_vc(c);
             }
             else if (auto c = sf->compiler->as<ClangClCompiler>())
             {
+                cc = c->Type;
                 setup_use_vc(c);
             }
             else if (auto c = sf->compiler->as<ClangCompiler>())
             {
+                cc = c->Type;
                 break_gch_deps[pch] = gch_fn_clang;
 
                 // !
@@ -1129,6 +1133,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
             }
             else if (auto c = sf->compiler->as<GNUCompiler>())
             {
+                cc = c->Type;
                 break_gch_deps[pch] = gch_fn;
 
                 // !
@@ -1146,54 +1151,73 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader p)
         }
     }
 
-    *this += pch;
-
     // on this step we setup compilers to CREATE our pch
-    if (auto sf = ((*this)[pch]).as<NativeSourceFile>())
+    if (!p.created)
     {
-        auto setup_create_vc = [&sf, &force_include_pch_header_to_pch_source, &p, &pch_fn, &pdb_fn, &obj_fn](auto &c)
+        *this += pch;
+        if (auto sf = ((*this)[pch]).as<NativeSourceFile>(); sf)
         {
-            sf->setOutputFile(obj_fn);
+            auto setup_create_vc = [&sf, &force_include_pch_header_to_pch_source, &p, &pch_fn, &pdb_fn, &obj_fn](auto &c)
+            {
+                sf->setOutputFile(obj_fn);
 
-            if (force_include_pch_header_to_pch_source)
-                c->ForcedIncludeFiles().push_back(p.header);
-            c->PrecompiledHeaderFilename() = pch_fn;
-            c->PrecompiledHeaderFilename.output_dependency = true;
-            c->PrecompiledHeader().create = p.header;
-            c->PDBFilename = pdb_fn;
-            c->PDBFilename.intermediate_file = false;
-            //c->PDBFilename.output_dependency = true;
-        };
+                if (force_include_pch_header_to_pch_source)
+                    c->ForcedIncludeFiles().push_back(p.header);
+                c->PrecompiledHeaderFilename() = pch_fn;
+                c->PrecompiledHeaderFilename.output_dependency = true;
+                c->PrecompiledHeader().create = p.header;
+                c->PDBFilename = pdb_fn;
+                c->PDBFilename.intermediate_file = false;
+                //c->PDBFilename.output_dependency = true;
+            };
 
-        if (auto c = sf->compiler->as<VisualStudioCompiler>())
-        {
-            setup_create_vc(c);
-        }
-        else if (auto c = sf->compiler->as<ClangClCompiler>())
-        {
-            setup_create_vc(c);
-        }
-        else if (auto c = sf->compiler->as<ClangCompiler>())
-        {
-            sf->setOutputFile(gch_fn_clang);
-            c->Language = "c++-header";
-            if (force_include_pch_header_to_pch_source)
-                c->ForcedIncludeFiles().push_back(p.header);
-            c->EmitPCH = true;
-        }
-        else if (auto c = sf->compiler->as<GNUCompiler>())
-        {
-            sf->setOutputFile(gch_fn);
-            c->Language = "c++-header";
-            if (force_include_pch_header_to_pch_source)
-                c->ForcedIncludeFiles().push_back(p.header);
+            if (auto c = sf->compiler->as<VisualStudioCompiler>())
+            {
+                setup_create_vc(c);
+            }
+            else if (auto c = sf->compiler->as<ClangClCompiler>())
+            {
+                setup_create_vc(c);
+            }
+            else if (auto c = sf->compiler->as<ClangCompiler>())
+            {
+                sf->setOutputFile(gch_fn_clang);
+                c->Language = "c++-header";
+                if (force_include_pch_header_to_pch_source)
+                    c->ForcedIncludeFiles().push_back(p.header);
+                c->EmitPCH = true;
+            }
+            else if (auto c = sf->compiler->as<GNUCompiler>())
+            {
+                sf->setOutputFile(gch_fn);
+                c->Language = "c++-header";
+                if (force_include_pch_header_to_pch_source)
+                    c->ForcedIncludeFiles().push_back(p.header);
 
-            IncludeDirectories.insert(pch_dir);
+                IncludeDirectories.insert(pch_dir);
+            }
+            p.created = true;
+        }
+    }
+    else
+    {
+        switch (cc)
+        {
+        case CompilerType::MSVC:
+        case CompilerType::ClangCl:
+            *this += obj_fn;
+            break;
+        case CompilerType::Clang:
+            break;
+        case CompilerType::GNU:
+            break;
+        default:
+            throw SW_RUNTIME_ERROR("unknown compiler for pch");
         }
     }
 }
 
-NativeExecutedTarget &NativeExecutedTarget::operator=(PrecompiledHeader pch)
+NativeExecutedTarget &NativeExecutedTarget::operator=(PrecompiledHeader &pch)
 {
     addPrecompiledHeader(pch);
     return *this;

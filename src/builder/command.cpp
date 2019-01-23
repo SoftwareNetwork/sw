@@ -697,9 +697,23 @@ void Command::execute1(std::error_code *ec)
         return s;
     };
 
-    auto make_error_string = [this, &save_command](const String &e)
+    auto print_outputs = [this]()
+    {
+        /*boost::trim(out.text);
+        boost::trim(err.text);
+        String s;
+        if (!out.text.empty())
+            s += out.text + "\n";
+        if (!err.text.empty())
+            s += err.text + "\n";
+        if (!s.empty())
+            LOG_INFO(logger, s);*/
+    };
+
+    auto make_error_string = [this, &save_command, &print_outputs](const String &e)
     {
         postProcess(false);
+        print_outputs();
 
         String s = "When building: " + getName();
         if (!out.text.empty())
@@ -746,10 +760,12 @@ void Command::execute1(std::error_code *ec)
             save_command();
 
         postProcess(); // process deps
+        print_outputs();
     }
     catch (std::exception &e)
     {
-        throw SW_RUNTIME_ERROR(make_error_string(e.what()));
+        auto err = make_error_string(e.what());
+        throw SW_RUNTIME_ERROR(err);
     }
 }
 

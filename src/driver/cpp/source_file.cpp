@@ -574,7 +574,10 @@ std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const TargetBase 
 {
     auto cmd = compiler->getCommand(t);
     for (auto &d : dependencies)
-        cmd->dependencies.insert(d->getCommand(t));
+    {
+        if (d)
+            cmd->dependencies.insert(d->getCommand(t));
+    }
     return cmd;
 }
 
