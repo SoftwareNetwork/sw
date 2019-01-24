@@ -812,8 +812,10 @@ void detectNonWindowsCompilers(struct Solution &s)
     NativeLinkerOptions LOpts;
     //LOpts.System.LinkDirectories.insert("/lib");
     //LOpts.System.LinkDirectories.insert("/lib/x86_64-linux-gnu");
+
     LOpts.System.LinkLibraries.push_back("stdc++"); // remove and add to progs explicitly?
-    //LOpts.System.LinkLibraries.push_back("stdc++fs");
+    LOpts.System.LinkLibraries.push_back("stdc++fs"); // remove and add to progs explicitly?
+
     LOpts.System.LinkLibraries.push_back("pthread"); // remove and add to progs explicitly?
     LOpts.System.LinkLibraries.push_back("dl"); // remove and add to progs explicitly?
     LOpts.System.LinkLibraries.push_back("m"); // remove and add to progs explicitly?

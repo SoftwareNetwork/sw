@@ -309,11 +309,6 @@ void Command::addInput(const path &p)
     inputs.insert(p);
 }
 
-/*void Command::addPreciseInputOutputDependency(const path &in, const path &out)
-{
-    precise_input_output_deps[out].insert(in);
-}*/
-
 void Command::addIntermediate(const path &p)
 {
     if (p.empty())
@@ -705,7 +700,7 @@ void Command::execute1(std::error_code *ec)
         if (!rsp_args.empty())
         {
             make_rsp_file(p, false);
-            t += "@" + p.u8string() + " ";
+            t += "@" + normalize_path(p) + " ";
         }
         else
         {

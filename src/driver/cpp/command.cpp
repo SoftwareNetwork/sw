@@ -172,7 +172,10 @@ void GNUCommand::postProcess1(bool)
     for (auto i = lines.begin() + 1; i != lines.end(); i++)
     {
         auto &s = *i;
-        s.resize(s.size() - 1);
+        if (s.empty())
+            continue;
+        if (s.back() == '\\')
+            s.resize(s.size() - 1);
         boost::trim(s);
         s = std::regex_replace(s, space_r, "\n");
         boost::replace_all(s, "\\ ", " ");

@@ -65,7 +65,6 @@ struct CommandData
 
     virtual void execute() = 0;
     virtual void prepare() = 0;
-    //virtual String getName() const = 0;
 
     void clear()
     {
@@ -172,7 +171,6 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     void clean() const;
     bool isExecuted() const { return pid != -1 || executed_; }
 
-    //String getName() const override { return getName(false); }
     String getName(bool short_name = false) const;
     path getProgram() const override;
 
