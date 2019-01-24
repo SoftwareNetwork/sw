@@ -158,6 +158,7 @@ static String getCommandId(const Command &c)
     if (explain_outdated_full)
     {
         s += "\n";
+        s += normalize_path(c.program) + "\n";
         for (auto &a : c.args)
             s += a + "\n";
         s.resize(s.size() - 1);
@@ -981,7 +982,7 @@ path resolveExecutable(const path &in)
     if (in.empty())
         throw SW_RUNTIME_ERROR("empty input");
 
-    if (in.is_absolute())
+    if (in.is_absolute() && fs::exists(in))
         return in;
 
     if (auto p = primitives::resolve_executable(in); !p.empty())
