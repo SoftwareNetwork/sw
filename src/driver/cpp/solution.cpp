@@ -474,8 +474,8 @@ Commands Solution::getCommands() const
     Commands cmds;
     // FIXME: drop children from here, always build only precisely picked TargetsToBuild
     auto &chldr = TargetsToBuild.empty() ? children : TargetsToBuild;
-    if (TargetsToBuild.empty())
-        LOG_WARN("logger", "empty TargetsToBuild");
+    //if (TargetsToBuild.empty())
+        //LOG_WARN("logger", "empty TargetsToBuild");
 
     // we also must take TargetsToBuild deps
     /*while (1)

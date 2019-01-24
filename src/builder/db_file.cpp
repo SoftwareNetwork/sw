@@ -23,7 +23,7 @@ void save_from_memory_to_file(const path &fn, sqlite3 *db);
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "db_file");
 
-#define FILE_DB_FORMAT_VERSION 1
+#define FILE_DB_FORMAT_VERSION 2
 #define COMMAND_DB_FORMAT_VERSION 2
 
 namespace sw
@@ -36,23 +36,36 @@ static path getDir()
 
 static path getFilesDbFilename(const String &config)
 {
-    auto p = getDir();
-    p += ".";
-    p += std::to_string(FILE_DB_FORMAT_VERSION);
-    p += "." + config + ".files";
+    auto p = getDir() / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
+    fs::create_directories(p.parent_path());
+    return p;
+}
+
+path getFilesLogFileName(const String &config)
+{
+    auto cfg = sha256_short(getCurrentModuleNameHash() + "_" + config);
+    path p = getDir() / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
+    fs::create_directories(p.parent_path());
     return p;
 }
 
 static path getCommandsDbFilename()
 {
-    auto p = getDir();
-    p += ".";
-    p += std::to_string(COMMAND_DB_FORMAT_VERSION);
-    p += ".commands";
+    auto p = getDir() / std::to_string(COMMAND_DB_FORMAT_VERSION) / "commands.bin";
+    fs::create_directories(p.parent_path());
     return p;
 }
 
-static void load(FileStorage &fs, const path &fn, ConcurrentHashMap<path, FileRecord> &files, std::unordered_map<int64_t, std::unordered_set<int64_t>> &deps)
+path getCommandsLogFileName()
+{
+    auto cfg = sha256_short(getCurrentModuleNameHash());
+    path p = getDir() / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("log_" + cfg + ".bin");
+    fs::create_directories(p.parent_path());
+    return p;
+}
+
+static void load(FileStorage &fs, const path &fn,
+    ConcurrentHashMap<path, FileRecord> &files, std::unordered_map<int64_t, std::unordered_set<int64_t>> &deps)
 {
     ScopedShareableFileLock lk(fn);
 
@@ -69,6 +82,11 @@ static void load(FileStorage &fs, const path &fn, ConcurrentHashMap<path, FileRe
     }
     while (!b.eof())
     {
+        size_t sz; // record size
+        b.read(sz);
+        if (!b.has(sz))
+            break; // record is in bad shape
+
         size_t h;
         b.read(h);
 
@@ -90,72 +108,17 @@ static void load(FileStorage &fs, const path &fn, ConcurrentHashMap<path, FileRe
         size_t n;
         b.read(n);
 
+        //std::unordered_map<int64_t, std::unordered_set<int64_t>> deps2;
         for (int i = 0; i < n; i++)
         {
             size_t h2;
             b.read(h2);
             deps[h].insert(h2);
+            //deps2[h].insert(h2);
         }
+        // maybe also create local FileRecord & FileData to prevent curruption in main db?
+        //deps.insert(deps2.begin(), deps2.end());
     }
-}
-
-static void load_log(FileStorage &fs, const path &fn, ConcurrentHashMap<path, FileRecord> &files, std::unordered_map<int64_t, std::unordered_set<int64_t>> &deps)
-{
-    ScopedShareableFileLock lk(fn);
-
-    FILE *fp = primitives::filesystem::fopen(fn, "rb");
-    if (!fp)
-    {
-        if (fs::exists(fn))
-            throw SW_RUNTIME_ERROR("Cannot open file: " + fn.u8string());
-        return;
-    }
-    while (!feof(fp))
-    {
-        int64_t h;
-        fread(&h, sizeof(h), 1, fp);
-
-        if (feof(fp))
-            break;
-
-        size_t sz;
-        fread(&sz, sizeof(sz), 1, fp);
-
-        String p(sz, 0);
-        fread(&p[0], sz, 1, fp);
-
-        auto kv = files.insert(h);
-        kv.first->file = p;
-        kv.first->data = fs.registerFile(p)->data;
-
-        decltype(kv.first->data->last_write_time) lwt;
-        fread(&lwt, sizeof(kv.first->data->last_write_time), 1, fp);
-
-        /*sz = 0;
-        fread(&sz, sizeof(kv.first->data->size), 1, fp);
-
-        uint64_t flags;
-        fread(&flags, sizeof(flags), 1, fp);*/
-
-        if (kv.first->data->last_write_time < lwt)
-        {
-            kv.first->data->last_write_time = lwt;
-            //kv.first->data->size = sz;
-            //kv.first->data->flags = flags;
-        }
-
-        size_t n;
-        fread(&n, sizeof(n), 1, fp);
-
-        for (size_t i = 0; i < n; i++)
-        {
-            int64_t h2;
-            fread(&h2, sizeof(h2), 1, fp);
-
-            deps[h].insert(h2);
-        }
-    }
-    fclose(fp);
 }
 
 SW_DEFINE_GLOBAL_STATIC_FUNCTION(Db, getDb);
@@ -165,7 +128,9 @@ void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
     std::unordered_map<int64_t, std::unordered_set<int64_t>> deps;
 
     sw::load(fs, getFilesDbFilename(fs.config), files, deps);
-    sw::load_log(fs, getFilesLogFileName(fs.config), files, deps);
+    //try {
+        sw::load(fs, getFilesLogFileName(fs.config), files, deps);
+    //} catch (...) {}
     error_code ec;
     fs::remove(getFilesLogFileName(fs.config), ec);
 
@@ -215,21 +180,16 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
     }
 
     primitives::BinaryContext b(10'000'000); // reserve amount
+    std::vector<uint8_t> v;
     for (auto i = files.getIterator(); i.isValid(); i.next())
     {
         auto &f = *i.getValue();
         if (!f.data)
             continue;
 
-        auto h1 = std::hash<path>()(f.file);
-        b.write(h1);
-        b.write(normalize_path(f.file));
-        b.write(f.data->last_write_time.time_since_epoch().count());
-        //b.write(f.data->size);
-        b.write(f.implicit_dependencies.size());
-
-        for (auto &[f, d] : f.implicit_dependencies)
-            b.write(std::hash<path>()(d->file));
+        write(v, f);
+        b.write(v.size());
+        b.write(v.data(), v.size());
     }
     /*for (auto &[_, f] : files)
     {
@@ -259,8 +219,8 @@ static void write_int(std::vector<uint8_t> &vec, T val)
 
 static void write_str(std::vector<uint8_t> &vec, const String &val)
 {
-    auto sz = val.size();
-    write_int(vec, sz);
+    auto sz = val.size() + 1;
+    //write_int(vec, sz);
     auto vsz = vec.size();
     vec.resize(vsz + sz);
     memcpy(&vec[vsz], &val[0], sz);
@@ -272,7 +232,7 @@ void FileDb::write(std::vector<uint8_t> &v, const FileRecord &f) const
 
     write_int(v, std::hash<path>()(f.file));
     write_str(v, normalize_path(f.file));
-    write_int(v, f.data->last_write_time);
+    write_int(v, f.data->last_write_time.time_since_epoch().count());
     //write_int(v, f.data->size);
     //write_int(v, f.data->flags.to_ullong());
 
@@ -283,9 +243,8 @@ void FileDb::write(std::vector<uint8_t> &v, const FileRecord &f) const
         write_int(v, std::hash<path>()(d->file));
 }
 
-void FileDb::load(ConcurrentCommandStorage &commands) const
+static void load(const path &fn, ConcurrentCommandStorage &commands)
 {
-    const auto fn = getCommandsDbFilename();
     primitives::BinaryContext b;
     try
     {
@@ -303,8 +262,20 @@ void FileDb::load(ConcurrentCommandStorage &commands) const
         b.read(k);
         size_t h;
         b.read(h);
-        commands.insert_ptr(k, h);
+        auto r = commands.insert_ptr(k, h);
+        if (!r.second)
+            *r.first = h;
     }
+}
+
+void FileDb::load(ConcurrentCommandStorage &commands) const
+{
+    sw::load(getCommandsDbFilename(), commands);
+    try {
+        sw::load(getCommandsLogFileName(), commands);
+    } catch (...) {}
+    error_code ec;
+    fs::remove(getCommandsLogFileName(), ec);
 }
 
 void FileDb::save(ConcurrentCommandStorage &commands) const

@@ -29,8 +29,6 @@ DECLARE_STATIC_LOGGER(logger, "file");
 
 #define CPPAN_FILES_EXPLAIN_FILE ".sw/misc/explain.txt"
 
-static cl::opt<bool> explain_outdated("explain-outdated", cl::desc("Explain outdated files"));
-
 namespace sw
 {
 
@@ -38,9 +36,13 @@ static Executor explain_executor("explain executor", 1);
 
 void explainMessage(const String &subject, bool outdated, const String &reason, const String &name)
 {
-    if (!explain_outdated)
-        return;
-    static std::ofstream o(CPPAN_FILES_EXPLAIN_FILE); // goes first
+    //if (!explain_outdated)
+        //return;
+    static std::ofstream o([]()
+    {
+        fs::create_directories(path(CPPAN_FILES_EXPLAIN_FILE).parent_path());
+        return CPPAN_FILES_EXPLAIN_FILE;
+    }()); // goes first
     explain_executor.push([=]
     {
         if (!outdated)
@@ -49,23 +51,6 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
         o << "outdated\n";
         o << "reason = " << reason << "\n" << std::endl;
     });
-}
-
-path getFilesLogFileName(const String &config)
-{
-    auto cfg = sha256_short(getCurrentModuleNameHash() + "_" + config);
-    const path bp = getUserDirectories().storage_dir_tmp / ("files_" + cfg + ".log");
-    auto p = bp.parent_path() / bp.filename().stem();
-    std::ostringstream ss;
-    //ss << "." << sha256_short(boost::dll::program_location().string());
-    p += ss.str();
-    p += bp.extension();
-    return p;
-}
-
-File::File(FileStorage &s)
-    : fs(&s)
-{
 }
 
 File::File(const path &p, FileStorage &s)
@@ -117,9 +102,6 @@ void File::addImplicitDependency(const path &p)
         return;
     registerSelf();
     File f(p, *fs);
-    // FIXME:
-    //static std::mutex m; // move to file record? remove completely?
-    //std::unique_lock<std::mutex> lk(m);
     r->implicit_dependencies.emplace(p, f.r);
 }
 
@@ -152,7 +134,7 @@ bool File::isChanged() const
     return r->isChanged();
 }
 
-bool File::isChanged(const fs::file_time_type &t)
+std::optional<String> File::isChanged(const fs::file_time_type &t)
 {
     return getFileRecord().isChanged(t);
 }
@@ -177,9 +159,9 @@ FileData::FileData(const FileData &rhs)
 FileData &FileData::operator=(const FileData &rhs)
 {
     last_write_time = rhs.last_write_time;
-    size = rhs.size;
-    hash = rhs.hash;
-    flags = rhs.flags;
+    //size = rhs.size;
+    //hash = rhs.hash;
+    //flags = rhs.flags;
 
     refreshed = rhs.refreshed.load();
 
@@ -204,17 +186,6 @@ FileRecord &FileRecord::operator=(const FileRecord &rhs)
     return *this;
 }
 
-/*size_t FileRecord::getHash() const
-{
-    auto k = std::hash<path>()(file);
-    hash_combine(k, data->last_write_time.time_since_epoch().count());
-    //hash_combine(k, size);
-    if (!isGeneratedAtAll())
-    for (auto &[f, d] : implicit_dependencies)
-        hash_combine(k, d->data->last_write_time.time_since_epoch().count());
-    return k;
-}*/
-
 void FileRecord::reset()
 {
     //if (generator && generator->executed())
@@ -225,7 +196,7 @@ void FileRecord::reset()
     }
 
     if (data)
-        data->refreshed = false;
+        data->refreshed = FileData::RefreshType::Unrefreshed;
 }
 
 static auto get_lwt(const path &file)
@@ -257,10 +228,10 @@ static auto get_lwt(const path &file)
     return m;
 }
 
-void FileRecord::load(const path &p)
+/*void FileRecord::load()
 {
-    if (!p.empty())
-        file = p;
+    // this is load without refresh
+
     if (file.empty() || !data)
         return;
     if (!fs::exists(file))
@@ -284,114 +255,149 @@ void FileRecord::load(const path &p)
     }
 
     fs->async_file_log(this);
-}
+}*/
 
-bool FileRecord::refresh(bool use_file_monitor)
+void FileRecord::refresh()
 {
-    bool r = false;
-    if (!data || !data->refreshed.compare_exchange_strong(r, true))
-        return false;
-
-    //DEBUG_BREAK_IF_PATH_HAS(file, "tclOOStubLib.c.45b4313d.obj");
+    FileData::RefreshType r = FileData::RefreshType::Unrefreshed;
+    if (!data || !data->refreshed.compare_exchange_strong(r, FileData::RefreshType::InProcess))
+        return;
 
     // in any case refresh *all* deps
     // do it first, because we might exit early
     //if (!isGeneratedAtAll()) uncomment?
-    for (auto &[f, d] : implicit_dependencies)
+    /*for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this)
             continue;
-        d->refresh(use_file_monitor);
-    }
+        d->refresh();
+    }*/
 
+    bool changed = false;
     if (!fs::exists(file))
     {
-        EXPLAIN_OUTDATED("file", true, "not found", file.u8string());
+        //EXPLAIN_OUTDATED("file", true, "not found", file.u8string());
         data->last_write_time = decltype(data->last_write_time)();
-        return true;
+        changed = true;
     }
-
-    bool result = false;
-
-    //DEBUG_BREAK_IF_PATH_HAS(file, "basename-lgpl.c");
-
-    auto t = get_lwt(file);
-    if (t > data->last_write_time)
+    else
     {
-        if (data->last_write_time.time_since_epoch().count() != 0)
-            EXPLAIN_OUTDATED("file", true, "last_write_time changed on disk from " +
-                std::to_string(data->last_write_time.time_since_epoch().count()) + " to " +
-                std::to_string(t.time_since_epoch().count()), file.u8string());
-        else
-            EXPLAIN_OUTDATED("file", true, "empty last_write_time", file.u8string());
-        data->last_write_time = t;
-        result = true;
+        auto t = get_lwt(file);
+        if (t > data->last_write_time)
+        {
+            /*if (data->last_write_time.time_since_epoch().count() != 0)
+                EXPLAIN_OUTDATED("file", true, "last_write_time changed on disk from " +
+                    std::to_string(data->last_write_time.time_since_epoch().count()) + " to " +
+                    std::to_string(t.time_since_epoch().count()), file.u8string());
+            else
+                EXPLAIN_OUTDATED("file", true, "empty last_write_time", file.u8string());*/
+            data->last_write_time = t;
+            changed = true;
+        }
+        //else
+            //data->last_write_time = t;
     }
-    //else
-        //data->last_write_time = t;
 
-    //if (use_file_monitor)
         //fs->async_file_log(this);
 
-    return result;
+    data->refreshed = changed ? FileData::RefreshType::Changed : FileData::RefreshType::NotChanged;
 }
 
-bool FileRecord::isChanged(bool use_file_monitor)
+bool FileRecord::isChanged()
 {
-    auto c = refresh(use_file_monitor);
+    if (data->refreshed == FileData::RefreshType::Unrefreshed)
+        refresh();
+    else if (data->refreshed == FileData::RefreshType::InProcess)
+    {
+        // spinning
+        while (data->refreshed == FileData::RefreshType::InProcess)
+            ;
+    }
+    return data->refreshed == FileData::RefreshType::Changed;
+}
+
+bool FileRecord::isChangedWithDeps()
+{
+    // refresh all first
+    for (auto &[f, d] : implicit_dependencies)
+        d->isChanged();
+
+    // explain inside
+    if (isChanged())
+        return true;
+
+    FileRecord *cd = nullptr;
+    bool c = std::any_of(implicit_dependencies.begin(), implicit_dependencies.end(),
+        [&cd](const auto &p)
+    {
+        auto r = p.second->isChanged();
+        if (r)
+            cd = p.second;
+        return r;
+    });
     if (c)
     {
-        //EXPLAIN_OUTDATED("file", true, "changed after refresh", file.u8string());
+        /*EXPLAIN_OUTDATED("file", true, "changed because one of deps is changed: " +
+            cd->file.u8string(), file.u8string());*/
+        return true;
     }
 
     auto t = getMaxTime();
     if (t > data->last_write_time)
     {
-        EXPLAIN_OUTDATED("file", true, "changed after checking deps max time from " +
-            std::to_string(data->last_write_time.time_since_epoch().count()) + " to " +
-            std::to_string(t.time_since_epoch().count()), file.u8string());
-        data->last_write_time = t;
-        c = true;
+        /*EXPLAIN_OUTDATED("file", true, "changed after checking deps max time. this lwt = " +
+            std::to_string(data->last_write_time.time_since_epoch().count()) + ", dep lwt = " +
+            std::to_string(t.time_since_epoch().count()), file.u8string());*/
+        //data->last_write_time = t;
+        return true;
     }
 
-    if (use_file_monitor && c)
-        fs->async_file_log(this);
+    //auto c = data->isChanged();
+    //if (c)
+        //fs->async_file_log(this);
 
     /*bool r = false;
-    if (use_file_monitor && saved.compare_exchange_strong(r, true))
+    if (saved.compare_exchange_strong(r, true))
         fs->async_file_log(this);*/
 
-    return c;
+    return false;
 }
 
-bool FileRecord::isChanged(const fs::file_time_type &in)
+std::optional<String> FileRecord::isChanged(const fs::file_time_type &in)
 {
-    refresh();
+    // we call this as refresh of all deps
+    // explain inside
+    isChangedWithDeps();
 
     if (data->last_write_time.time_since_epoch().count() == 0)
-        return true; // file does not exist
+    {
+        return "file is missing";
+    }
 
     for (auto &[f, d] : implicit_dependencies)
     {
         if (d->data->last_write_time.time_since_epoch().count() == 0)
-            return true;
+            return "dependency " + normalize_path(d->file) + " is missing";
     }
 
-    auto t = getMaxTime();
-    if (t > in)
+    if (data->last_write_time > in)
     {
-        EXPLAIN_OUTDATED("file", true, "changed after checking deps max time from " +
-            std::to_string(in.time_since_epoch().count()) + " to " +
-            std::to_string(t.time_since_epoch().count()), file.u8string());
-        return true;
+        return "file is newer";
     }
-    return false;
+
+    for (auto &[f, d] : implicit_dependencies)
+    {
+        if (d->data->last_write_time > in)
+        {
+            return "dependency " + normalize_path(d->file) + " is newer";
+            //EXPLAIN_OUTDATED("file", true, "implicit " + f.u8string() + " is newer", file.u8string());
+        }
+    }
+    return {};
 }
 
 void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_errors)
 {
-    //DEBUG_BREAK_IF_PATH_HAS(file, "/primitives.filesystem-master.dll");
-
     if (!g)
         return;
 
@@ -439,7 +445,7 @@ fs::file_time_type FileRecord::getMaxTime() const
     auto m = data->last_write_time;
     // we check deps ONLY in case if current file is generated
     // otherwise, time will be adjusted during AST execution
-    if (isGeneratedAtAll())
+    //if (isGeneratedAtAll())
     for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this)
@@ -448,18 +454,23 @@ fs::file_time_type FileRecord::getMaxTime() const
         if (dm > m)
         {
             m = dm;
-            EXPLAIN_OUTDATED("file", true, "implicit " + f.u8string() + " is newer", file.u8string());
+            //EXPLAIN_OUTDATED("file", true, "implicit " + f.u8string() + " is newer", file.u8string());
         }
     }
     return m;
 }
 
-fs::file_time_type FileRecord::updateLwt()
+/*void FileRecord::writeToLog() const
+{
+    fs->async_file_log(this);
+}*/
+
+/*fs::file_time_type FileRecord::updateLwt()
 {
     if (data->last_write_time.time_since_epoch().count() == 0)
         const_cast<FileRecord*>(this)->load(file);
     return data->last_write_time;
-}
+}*/
 
 bool FileRecord::operator<(const FileRecord &r) const
 {

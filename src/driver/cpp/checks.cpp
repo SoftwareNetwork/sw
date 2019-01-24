@@ -229,6 +229,15 @@ int main() { return IsBigEndian(); }
                     auto [inserted, dep2] = add_dep(s, d);
                     dep->dependencies.insert(dep2);
                 }
+
+                // add to check_values only requested defs
+                // otherwise we'll get also defs from other sets (e.g. with prefixes from ICU 'U_')
+                for (auto &d : c->Definitions)
+                {
+                    s.check_values[d];
+                    for (auto &p : c->Prefixes)
+                        s.check_values[p + d];
+                }
             }
             s.all.clear();
         }
@@ -1325,9 +1334,13 @@ void CheckSet::prepareChecksForUse()
     {
         for (auto &d : c->Definitions)
         {
-            check_values[d] = c;
+            if (check_values.find(d) != check_values.end())
+                check_values[d] = c;
             for (auto &p : c->Prefixes)
-                check_values[p + d] = c;
+            {
+                if (check_values.find(p + d) != check_values.end())
+                    check_values[p + d] = c;
+            }
         }
     }
 }

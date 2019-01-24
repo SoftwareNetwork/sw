@@ -34,15 +34,14 @@ struct SW_BUILDER_API File : virtual Node
     path file;
 
     File() = default;
-    File(FileStorage &s);
     File(const path &p, FileStorage &s);
     virtual ~File() = default;
 
     File &operator=(const path &rhs);
 
     path getPath() const;
-    void addImplicitDependency(const path &f);
-    void addImplicitDependency(const Files &f);
+    void addImplicitDependency(const path &f); // not thread safe
+    void addImplicitDependency(const Files &f); // not thread safe
     void clearImplicitDependencies();
     std::unordered_set<std::shared_ptr<builder::Command>> gatherDependentGenerators() const;
 
@@ -51,7 +50,7 @@ struct SW_BUILDER_API File : virtual Node
 
     bool empty() const { return file.empty(); }
     bool isChanged() const;
-    bool isChanged(const fs::file_time_type &t);
+    std::optional<String> isChanged(const fs::file_time_type &t);
     bool isGenerated() const;
     bool isGeneratedAtAll() const;
 
@@ -64,22 +63,25 @@ private:
     friend struct FileStorage;
 };
 
-enum FileFlags
-{
-    //ffNotExists     = 0,
-};
-
 struct FileData
 {
+    enum class RefreshType : uint8_t
+    {
+        Unrefreshed,
+        InProcess,
+        NotChanged,
+        Changed,
+    };
+
     fs::file_time_type last_write_time;
-    int64_t size = -1;
-    String hash;
-    SomeFlags flags;
+    //int64_t size = -1;
+    //String hash;
+    //SomeFlags flags;
     std::weak_ptr<builder::Command> generator;
     bool generated = false;
 
     // if file info is updated during this run
-    std::atomic_bool refreshed{ false };
+    std::atomic<RefreshType> refreshed{ RefreshType::Unrefreshed };
 
     FileData() = default;
     FileData(const FileData &);
@@ -96,17 +98,23 @@ struct SW_BUILDER_API FileRecord
 
     // make sets?
     std::unordered_map<path, FileRecord *> implicit_dependencies;
+    // return back expl. deps?
 
     FileRecord() = default;
     FileRecord(const FileRecord &);
     FileRecord &operator=(const FileRecord &);
 
-    bool isChanged(bool use_file_monitor = true);
-    bool isChanged(const fs::file_time_type &t);
-    void load(const path &p = path());
-    //void destroy() { delete this; }
     void reset();
-    //size_t getHash() const;
+
+    // only lwt change since the last run
+    bool isChanged();
+
+    // check if file or any deps changed
+    bool isChangedWithDeps();
+
+    // check using lwt
+    std::optional<String> isChanged(const fs::file_time_type &t);
+
     bool isGenerated() const;
     bool isGeneratedAtAll() const { return data->generated; }
     void setGenerator(const std::shared_ptr<builder::Command> &, bool ignore_errors);
@@ -115,18 +123,19 @@ struct SW_BUILDER_API FileRecord
 
     bool operator<(const FileRecord &r) const;
 
-    //private:
-    //std::atomic_bool saved{ false };
-
     /// get last write time of this file and all deps
     fs::file_time_type getMaxTime() const;
 
     /// returns true if file was changed
-    bool refresh(bool use_file_monitor = true);
+    /// also loades information
+    void refresh();
 
-    fs::file_time_type updateLwt();
+    //void writeToLog() const;
 
-private:
+    //fs::file_time_type updateLwt();
+
+    // tricky
+    //void load();
 };
 
 path getFilesLogFileName(const String &config = {});

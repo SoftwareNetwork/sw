@@ -48,11 +48,14 @@ struct SW_BUILDER_API FileStorage
     FileRecord *registerFile(const path &f);
 
     void async_file_log(const FileRecord *r);
+    void async_command_log(size_t hash, size_t lwt);
 
 private:
-    std::unique_ptr<file_holder> async_log;
+    std::unique_ptr<file_holder> async_file_log_;
+    std::unique_ptr<file_holder> async_command_log_;
 
-    file_holder *getLog();
+    file_holder *getFileLog();
+    file_holder *getCommandLog();
 };
 
 SW_BUILDER_API

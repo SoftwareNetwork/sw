@@ -214,6 +214,8 @@ protected:
     bool prepared = false;
     bool executed_ = false;
 
+    virtual bool check_if_file_newer(const path &, const String &what = "file") const;
+
     static String escape_cmd_arg(String);
 
 private:

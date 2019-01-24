@@ -1949,7 +1949,7 @@ bool NativeExecutedTarget::prepare()
     {
         LOG_TRACE(logger, "Preparing target: " + pkg.ppath.toString());
 
-        tryLoadPrecomputedData();
+        //tryLoadPrecomputedData();
 
         getSolution()->call_event(*this, CallbackType::BeginPrepare);
 
@@ -2736,7 +2736,7 @@ bool NativeExecutedTarget::prepare()
     }
     RETURN_PREPARE_PASS;
     case 8:
-        savePrecomputedData();
+        //savePrecomputedData();
         break;
     }
 
@@ -3035,23 +3035,23 @@ void NativeExecutedTarget::setChecks(const String &name)
             //Public.Definitions[d.value()];
             add(Definition{ d.value() });
 
-            for (auto &p : c->Prefixes)
-                add(Definition{ p + d.value() });
-            for (auto &d2 : c->Definitions)
+            //for (auto &p : c->Prefixes)
+                //add(Definition{ p + d.value() });
+            /*for (auto &d2 : c->Definitions)
             {
                 for (auto &p : c->Prefixes)
                     Definitions[p + d2] = v;
-            }
+            }*/
         }
         Variables[k] = v;
 
-        for (auto &p : c->Prefixes)
-            Variables[p + k] = v;
-        for (auto &d2 : c->Definitions)
+        //for (auto &p : c->Prefixes)
+            //Variables[p + k] = v;
+        /*for (auto &d2 : c->Definitions)
         {
             for (auto &p : c->Prefixes)
                 Variables[p + d2] = v;
-        }
+        }*/
     }
 }
 
@@ -3102,8 +3102,9 @@ void NativeExecutedTarget::writeFileOnce(const path &fn, const String &content) 
         return;
 
     ::sw::writeFileOnce(p, content, getPatchDir(!source_dir));
-    File f(p, *getSolution()->fs);
-    f.getFileRecord().load();
+
+    //File f(p, *getSolution()->fs);
+    //f.getFileRecord().load();
 }
 
 void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content) const
@@ -3116,8 +3117,8 @@ void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content) 
     check_absolute(p, false, &source_dir);
     ::sw::writeFileSafe(p, content, getPatchDir(!source_dir));
 
-    File f(fn, *getSolution()->fs);
-    f.getFileRecord().load();
+    //File f(fn, *getSolution()->fs);
+    //f.getFileRecord().load();
 }
 
 void NativeExecutedTarget::replaceInFileOnce(const path &fn, const String &from, const String &to) const
@@ -3135,8 +3136,8 @@ void NativeExecutedTarget::patch(const path &fn, const String &from, const Strin
     check_absolute(p, false, &source_dir);
     ::sw::replaceInFileOnce(p, from, to, getPatchDir(!source_dir));
 
-    File f(p, *getSolution()->fs);
-    f.getFileRecord().load();
+    //File f(p, *getSolution()->fs);
+    //f.getFileRecord().load();
 }
 
 void NativeExecutedTarget::patch(const path &fn, const String &patch_str) const
@@ -3165,8 +3166,8 @@ void NativeExecutedTarget::pushFrontToFileOnce(const path &fn, const String &tex
     check_absolute(p, false, &source_dir);
     ::sw::pushFrontToFileOnce(p, text, getPatchDir(!source_dir));
 
-    File f(p, *getSolution()->fs);
-    f.getFileRecord().load();
+    //File f(p, *getSolution()->fs);
+    //f.getFileRecord().load();
 }
 
 void NativeExecutedTarget::pushBackToFileOnce(const path &fn, const String &text) const
@@ -3179,8 +3180,8 @@ void NativeExecutedTarget::pushBackToFileOnce(const path &fn, const String &text
     check_absolute(p, false, &source_dir);
     ::sw::pushBackToFileOnce(p, text, getPatchDir(!source_dir));
 
-    File f(p, *getSolution()->fs);
-    f.getFileRecord().load();
+    //File f(p, *getSolution()->fs);
+    //f.getFileRecord().load();
 }
 
 void load_source_and_version(const yaml &root, Source &source, Version &version)

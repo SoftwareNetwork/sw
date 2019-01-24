@@ -34,6 +34,8 @@ DECLARE_STATIC_LOGGER(logger, "command");
 static cl::opt<bool> save_failed_commands("save-failed-commands");
 static cl::opt<bool> save_all_commands("save-all-commands");
 static cl::opt<bool> save_executed_commands("save-executed-commands");
+static cl::opt<bool> explain_outdated("explain-outdated", cl::desc("Explain outdated commands"));
+static cl::opt<bool> explain_outdated_full("explain-outdated-full", cl::desc("Explain outdated commands with more info"));
 
 #ifdef _WIN32
 #include <RestartManager.h>
@@ -145,6 +147,32 @@ Command::~Command()
 {
 }
 
+static bool isExplainNeeded()
+{
+    return explain_outdated || explain_outdated_full;
+}
+
+static String getCommandId(const Command &c)
+{
+    String s = c.getName() + ", " + std::to_string(c.getHash()) + ", # of args " + std::to_string(c.args.size());
+    if (explain_outdated_full)
+    {
+        s += "\n";
+        for (auto &a : c.args)
+            s += a + "\n";
+        s.resize(s.size() - 1);
+    }
+    return s;
+}
+
+bool Command::check_if_file_newer(const path &p, const String &what) const
+{
+    auto s = File(p, *fs).isChanged(mtime);
+    if (s && isExplainNeeded())
+        EXPLAIN_OUTDATED("command", true, what + " changed " + normalize_path(p) + ": " + *s, getCommandId(*this));
+    return !!s;
+}
+
 bool Command::isOutdated() const
 {
     bool changed = false;
@@ -155,7 +183,8 @@ bool Command::isOutdated() const
     {
         // we have insertion, no previous value available
         // so outdated
-        EXPLAIN_OUTDATED("command", true, "new command: " + print(), getName());
+        if (isExplainNeeded())
+            EXPLAIN_OUTDATED("command", true, "new command: " + print(), getCommandId(*this));
         changed = true;
     }
     else
@@ -166,7 +195,8 @@ bool Command::isOutdated() const
 
     if (always)
     {
-        EXPLAIN_OUTDATED("command", true, "always build", getName());
+        if (isExplainNeeded())
+            EXPLAIN_OUTDATED("command", true, "always build", getCommandId(*this));
         changed = true;
     }
 
@@ -177,6 +207,8 @@ bool Command::isTimeChanged() const
 {
     bool changed = false;
 
+    //DEBUG_BREAK_IF_STRING_HAS(outputs.begin()->string(), "lzma_encoder_optimum_normal.c.a27c4553.obj");
+
     /*if (outputs.size())
     {
         DEBUG_BREAK_IF_STRING_HAS(outputs.begin()->string(), "range.yy.cpp");
@@ -184,11 +216,11 @@ bool Command::isTimeChanged() const
     }*/
 
     // always check program and all deps are known
-    changed |= File(program, *fs).isChanged(mtime);
+    changed |= check_if_file_newer(program, "program");
     for (auto &i : inputs)
-        changed |= File(i, *fs).isChanged(mtime);
+        changed |= check_if_file_newer(i, "input");
     for (auto &i : outputs)
-        changed |= File(i, *fs).isChanged(mtime);
+        changed |= check_if_file_newer(i, "output");
 
     return changed;
 }
@@ -452,9 +484,11 @@ void Command::afterCommand()
     {
         File f(i, *fs);
         auto &fr = f.getFileRecord();
-        fr.data->refreshed = false;
-        fr.isChanged();
-        fr.updateLwt();
+        fr.data->refreshed = FileData::RefreshType::Unrefreshed;
+        fr.isChangedWithDeps();
+        fs->async_file_log(&fr);
+        //fr.writeToLog();
+        //fr.updateLwt();
         if (!fs::exists(i))
             throw SW_RUNTIME_ERROR("Output file was not created: " + normalize_path(i));
         mtime = std::max(mtime, fr.getMaxTime());
@@ -473,6 +507,17 @@ void Command::afterCommand()
         update_time(i);
 
     updateCommandTime();
+
+    // probably below is wrong, async writes are queue to one thread (FIFO)
+    // so, deps are written first, only then command goes
+
+    // FIXME: rare race is possible here
+    // When command is written before all files above
+    // and those files failed (deps write failed).
+    // On the next run command times won't be compared with missing deps,
+    // so outdated command wil not be re-runned
+
+    fs->async_command_log(getHash(), mtime.time_since_epoch().count());
 }
 
 path Command::getResponseFilename() const

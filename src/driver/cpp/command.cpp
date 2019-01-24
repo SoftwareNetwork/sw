@@ -419,9 +419,9 @@ bool ExecuteBuiltinCommand::isTimeChanged() const
 
     // ignore program!
     for (auto &i : inputs)
-        changed |= File(i, *fs).isChanged(mtime);
+        changed |= check_if_file_newer(i, "input");
     for (auto &i : outputs)
-        changed |= File(i, *fs).isChanged(mtime);
+        changed |= check_if_file_newer(i, "output");
 
     return changed;
 }
