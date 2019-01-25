@@ -101,7 +101,11 @@ FileStorage::~FileStorage()
     }
 }
 
+#ifdef _WIN32
 #define USE_EXECUTOR 1
+#else
+#define USE_EXECUTOR 1
+#endif
 
 void FileStorage::async_file_log(const FileRecord *r)
 {
@@ -110,12 +114,12 @@ void FileStorage::async_file_log(const FileRecord *r)
     std::unique_lock lk(m);
 #endif
 
-#if USE_EXECUTOR
     static std::vector<uint8_t> v;
-    async_executor.push([this, r] {
+#if USE_EXECUTOR
+    async_executor.push([this, r = *r] {
 #endif
         // write record to vector v
-        getDb().write(v, *r);
+        getDb().write(v, r);
 
         //fseek(f.f, 0, SEEK_END);
         auto l = getFileLog();
