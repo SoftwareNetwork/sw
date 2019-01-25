@@ -1832,11 +1832,12 @@ const Module &Build::loadModule(const path &p) const
 
     Build b;
     b.execute_jobs = config_jobs;
-    //auto dll = b.getOutputModuleName(fn2);
+    path dll;
+    //dll = b.getOutputModuleName(fn2);
     //if (File(fn2, *b.solutions[0].fs).isChanged() || File(dll, *b.solutions[0].fs).isChanged())
     {
         auto r = b.build_configs_separate({ fn2 });
-        auto dll = r.begin()->second;
+        dll = r.begin()->second;
     }
     return getModuleStorage(base_ptr).get(dll);
 }

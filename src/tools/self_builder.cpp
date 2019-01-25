@@ -289,7 +289,7 @@ int main(int argc, char **argv)
         ctx.addLine("#define build build_" + r.getVariableName());
         if (data.has_checks)
             ctx.addLine("#define check check_" + r.getVariableName());
-        ctx.addLine("#include \"" + (r.getDirSrc2() / "sw.cpp").u8string() + "\"");
+        ctx.addLine("#include \"" + normalize_path(r.getDirSrc2() / "sw.cpp") + "\"");
         ctx.addLine();
 
         build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, r.prefix).toString() + "\";");
