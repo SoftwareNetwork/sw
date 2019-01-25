@@ -298,7 +298,8 @@ void FileRecord::refresh()
             //data->last_write_time = t;
     }
 
-        //fs->async_file_log(this);
+    // register!
+    writeToLog();
 
     data->refreshed = changed ? FileData::RefreshType::Changed : FileData::RefreshType::NotChanged;
 }
@@ -460,10 +461,10 @@ fs::file_time_type FileRecord::getMaxTime() const
     return m;
 }
 
-/*void FileRecord::writeToLog() const
+void FileRecord::writeToLog() const
 {
     fs->async_file_log(this);
-}*/
+}
 
 /*fs::file_time_type FileRecord::updateLwt()
 {

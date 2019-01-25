@@ -11,6 +11,7 @@
 #include <suffix.h>
 #include <jumppad.h>
 #include <compiler_helpers.h>
+#include <module.h>
 
 // manager stuff
 #include <resolver.h>

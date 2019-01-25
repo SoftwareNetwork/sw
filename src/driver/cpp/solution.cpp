@@ -1420,6 +1420,20 @@ static void write_pch(Solution &solution)
         cppan_cpp);
 }
 
+path Build::getOutputModuleName(const path &p)
+{
+    if (solutions.empty())
+        addSolution();
+
+    auto &solution = solutions[0];
+
+    solution.Settings.Native.LibrariesType = LibraryType::Static;
+    if (debug_configs)
+        solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
+    auto &lib = createTarget({ p });
+    return lib.getOutputFile();
+}
+
 FilesMap Build::build_configs_separate(const Files &files)
 {
     FilesMap r;
@@ -1808,6 +1822,23 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     Solution::execute();
 
     return lib.getOutputFile();
+}
+
+const Module &Build::loadModule(const path &p) const
+{
+    auto fn2 = p;
+    if (!fn2.is_absolute())
+        fn2 = SourceDir / fn2;
+
+    Build b;
+    b.execute_jobs = config_jobs;
+    //auto dll = b.getOutputModuleName(fn2);
+    //if (File(fn2, *b.solutions[0].fs).isChanged() || File(dll, *b.solutions[0].fs).isChanged())
+    {
+        auto r = b.build_configs_separate({ fn2 });
+        auto dll = r.begin()->second;
+    }
+    return getModuleStorage(base_ptr).get(dll);
 }
 
 path Build::build(const path &fn)

@@ -8,15 +8,51 @@
 
 #include "file_storage.h"
 
+#include <directories.h>
+
 #include <sw/builder/command.h>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/lock_types.hpp>
 
+#include <fstream>
 #include <regex>
 
 namespace sw
 {
+
+struct VersionStorage
+{
+    std::unordered_map<path, Version> versions;
+
+    VersionStorage()
+    {
+        path p;
+        String s;
+        std::ifstream ifile(get_fn());
+        while (ifile)
+        {
+            ifile >> p;
+            if (!ifile)
+                break;
+            ifile >> s;
+            if (!File(p, getServiceFileStorage()).isChanged())
+                versions[p] = s;
+        }
+    }
+
+    ~VersionStorage()
+    {
+        std::ofstream ofile(get_fn());
+        for (auto &[p, v] : versions)
+            ofile << p << " " << v.toString() << "\n";
+    }
+
+    static path get_fn()
+    {
+        return getDirectories().storage_dir_tmp / "db" / "program_versions.txt";
+    }
+};
 
 Version Program::getVersion() const
 {
@@ -29,12 +65,12 @@ Version Program::getVersion() const
         return version.value();
     }
 
-    static std::unordered_map<path, Version> versions;
+    static VersionStorage vs;
     static boost::upgrade_mutex m;
 
     boost::upgrade_lock lk(m);
-    auto i = versions.find(file);
-    if (i != versions.end())
+    auto i = vs.versions.find(file);
+    if (i != vs.versions.end())
     {
         version = i->second;
         return version.value();
@@ -45,7 +81,7 @@ Version Program::getVersion() const
     if (version) // double check
         return version.value();
 
-    version = versions[file] = gatherVersion();
+    version = vs.versions[file] = gatherVersion();
     return version.value();
 }
 

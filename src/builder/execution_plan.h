@@ -363,9 +363,9 @@ private:
     {
         // potentially *should* speedup later execution
         // TODO: measure and decide
-        // it reduses some memory usage, but influence on performance on execution stages
-        // is not very clear
-        transitiveReduction();
+        // it reduses some memory usage,
+        // but influence on performance on execution stages is not very clear
+        //transitiveReduction();
 
         // set number of deps and dependent commands
         for (auto &c : commands)

@@ -58,6 +58,11 @@ FileStorage &getFileStorage(const String &config)
     return i->second;
 }
 
+FileStorage &getServiceFileStorage()
+{
+    return getFileStorage("service");
+}
+
 FileStorage::FileStorage(const String &config)
     : config(config)
 {

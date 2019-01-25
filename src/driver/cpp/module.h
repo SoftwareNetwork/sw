@@ -79,6 +79,14 @@ struct SW_DRIVER_CPP_API Module
     void configure(Solution &s) const;
     void build(Solution &s) const;
 
+    template <class F, class ... Args>
+    auto call(const String &name, Args && ... args) const
+    {
+        if (!module)
+            throw SW_RUNTIME_ERROR("empty module");
+        return module->get<F>(name)(std::forward<Args>(args)...);
+    }
+
 private:
     mutable LibraryCall<void(Solution &), true> build_;
     mutable LibraryCall<void(Solution &)> configure_;

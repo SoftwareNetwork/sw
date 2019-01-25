@@ -130,12 +130,9 @@ struct SW_BUILDER_API FileRecord
     /// also loades information
     void refresh();
 
-    //void writeToLog() const;
+    void writeToLog() const;
 
     //fs::file_time_type updateLwt();
-
-    // tricky
-    //void load();
 };
 
 path getFilesLogFileName(const String &config = {});

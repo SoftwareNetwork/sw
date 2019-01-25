@@ -61,6 +61,9 @@ private:
 SW_BUILDER_API
 FileStorage &getFileStorage(const String &config);
 
+SW_BUILDER_API
+FileStorage &getServiceFileStorage();
+
 using FileStorages = std::map<String, FileStorage>;
 
 SW_BUILDER_API

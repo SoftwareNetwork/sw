@@ -9,6 +9,7 @@
 
 #include "jumppad.h"
 #include "solution.h"
+#include "platform.h"
 
 #include <primitives/symbol.h>
 
@@ -187,10 +188,20 @@ void GNUCommand::postProcess1(bool)
 
         for (auto &f2 : files)
         {
+            auto f3 = normalize_path(f2);
+#ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
+            static const String cyg = "/cygdrive/";
+            if (f3.find(cyg) == 0)
+            {
+                f3 = f3.substr(cyg.size());
+                f3 = f3[0] + ":" + f3.substr(1);
+            }
+#endif
+
             //for (auto &f : intermediate)
                 //File(f, *fs).addImplicitDependency(f2);
             for (auto &f : outputs)
-                File(f, *fs).addImplicitDependency(f2);
+                File(f, *fs).addImplicitDependency(f3);
         }
     }
 }

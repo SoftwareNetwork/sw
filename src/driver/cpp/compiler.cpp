@@ -34,8 +34,8 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
         return c;                                                   \
     }
 
-static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
-static cl::opt<bool> use_other_langs("use-other-languages");
+//static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
+//static cl::opt<bool> use_other_langs("use-other-languages");
 
 namespace sw
 {
@@ -239,7 +239,7 @@ void detectCompilers(struct Solution &s)
     detectNativeCompilers(s);
 
     // make lazy loading
-    if (use_other_langs)
+    //if (use_other_langs)
     {
         detectCSharpCompilers(s);
         detectRustCompilers(s);
@@ -822,8 +822,8 @@ void detectNonWindowsCompilers(struct Solution &s)
 
     auto resolve = [](const path &p)
     {
-        if (do_not_resolve_compiler)
-            return p;
+        //if (do_not_resolve_compiler)
+            //return p;
         return resolveExecutable(p);
     };
 
