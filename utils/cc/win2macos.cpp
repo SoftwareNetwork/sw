@@ -27,14 +27,10 @@ void configure(Solution &b)
             s.registerProgram("org.LLVM.clang.ld", Linker);
 
             auto cmd = Linker->createCommand();
-            //cmd->args.push_back("-flavor ld64.lld");
-            //cmd->args.push_back("-sdk_version 10.14");
             cmd->args.push_back("-target");
             cmd->args.push_back("x86_64-apple-macosx10.14.0");
             cmd->args.push_back("-isysroot");
             cmd->args.push_back("d:/dev/cygwin64/home/egorp/osxcross/target/SDK/MacOSX10.14.sdk");
-            //cmd->args.push_back("-cxx-isystem");
-            //cmd->args.push_back("d:/dev/cygwin64/home/egorp/osxcross/target/SDK/MacOSX10.14.sdk/usr/include/c++");
             cmd->args.push_back("-Wl,-sdk_version");
             cmd->args.push_back("-Wl,10.14");
             cmd->args.push_back("-fuse-ld=lld");

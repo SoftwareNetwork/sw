@@ -90,8 +90,8 @@ template struct SW_DRIVER_CPP_API NativeLanguageBase<NativeSourceFile, NativeCom
 template struct SW_DRIVER_CPP_API NativeLanguageBase<RcToolSourceFile, RcTool>;
 #elif defined(__APPLE__)
 #else
-template struct NativeLanguageBase<NativeSourceFile, NativeCompiler>;
-template struct NativeLanguageBase<RcToolSourceFile, RcTool>;
+template struct SW_DRIVER_CPP_API NativeLanguageBase<NativeSourceFile, NativeCompiler>;
+template struct SW_DRIVER_CPP_API NativeLanguageBase<RcToolSourceFile, RcTool>;
 #endif
 
 using NativeLanguage = NativeLanguageBase<NativeSourceFile, NativeCompiler>;

@@ -1401,7 +1401,7 @@ FilesOrdered NativeLinker::gatherLinkLibraries() const
                 dirs.push_back(d);
         };
 
-        get_ldir(v.System.gatherLinkLibraries());
+        //get_ldir(v.System.gatherLinkLibraries());
         get_ldir(v.gatherLinkLibraries());
     });
     return dirs;

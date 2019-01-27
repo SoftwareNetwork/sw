@@ -886,6 +886,9 @@ FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
     const auto dirs = gatherLinkDirectories();
     for (auto &l : LinkLibraries)
     {
+        // reconsider
+        // remove resolving?
+
         if (l.is_absolute())
         {
             libs.push_back(l);
@@ -905,9 +908,8 @@ FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
             LOG_TRACE(logger, "Cannot resolve library: " << l);
         }
 
-#ifndef _WIN32
-        libs.push_back("-l" + l.u8string());
-#endif
+        if (!getSolution()->Settings.TargetOS.is(OSType::Windows))
+            libs.push_back("-l" + l.u8string());
     }
     return libs;
 }

@@ -310,7 +310,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     bool cppan_check_config_root(const yaml &root);
 
 protected:
-    PackageDescriptionMap getPackages() const;
+    PackageDescriptionMap getPackages() const override;
 
 private:
     bool remove_ide_explans = false;

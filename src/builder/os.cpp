@@ -90,6 +90,11 @@ OS detectOS()
     os.Arch = ArchType::x86_64;
 #endif
 
+#if defined(CPPAN_OS_APPLE)
+    os.Type = OSType::Macos;
+    os.Arch = ArchType::x86_64;
+#endif
+
     // TODO: uname -a on *nix
     //#include <sys/utsname.h>
     //int uname(struct utsname *buf);
