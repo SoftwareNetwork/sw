@@ -833,19 +833,19 @@ void detectNonWindowsCompilers(struct Solution &s)
         s.registerProgram("org.gnu.binutils.ar", Librarian);
     }
 
-    Strings gcc_vers{ "gcc" };
-    Strings gccpp_vers{ "g++" };
+    FilesOrdered gcc_vers{ "gcc" };
+    FilesOrdered gccpp_vers{ "g++" };
     for (int i = 4; i < 12; i++)
     {
-        gcc_vers.push_back(gcc_vers[0] + "-" + std::to_string(i));
-        gccpp_vers.push_back(gccpp_vers[0] + "-" + std::to_string(i));
+        gcc_vers.push_back(path(gcc_vers[0]) += "-" + std::to_string(i));
+        gccpp_vers.push_back(path(gccpp_vers[0]) += "-" + std::to_string(i));
     }
-    Strings clang_vers{ "clang" };
-    Strings clangpp_vers{ "clang++" };
+    FilesOrdered clang_vers{ "clang" };
+    FilesOrdered clangpp_vers{ "clang++" };
     for (int i = 3; i < 16; i++)
     {
-        clang_vers.push_back(clang_vers[0] + "-" + std::to_string(i));
-        clangpp_vers.push_back(clangpp_vers[0] + "-" + std::to_string(i));
+        clang_vers.push_back(path(clang_vers[0]) += "-" + std::to_string(i));
+        clangpp_vers.push_back(path(clangpp_vers[0]) += "-" + std::to_string(i));
     }
     if (s.HostOS.is(OSType::Macos))
     {
