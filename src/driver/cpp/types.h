@@ -23,6 +23,7 @@ enum class CompilerType
 {
     UnspecifiedCompiler,
 
+    AppleClang,
     Clang,
     ClangCl,
     GNU,

@@ -73,6 +73,18 @@ local_settings:
             use_cache: false
             build_dir: build_ninja_clang_debug
 
+        macos:
+            generator: Ninja
+            c_compiler: /usr/local/Cellar/llvm/7.0.0/bin/clang
+            cxx_compiler: /usr/local/Cellar/llvm/7.0.0/bin/clang++
+            configuration: RelWithDebInfo
+
+        macos_debug:
+            generator: Ninja
+            c_compiler: /usr/local/Cellar/llvm/7.0.0/bin/clang
+            cxx_compiler: /usr/local/Cellar/llvm/7.0.0/bin/clang++
+            configuration: Debug
+
 add_directories:
     - d:/dev/primitives
 
