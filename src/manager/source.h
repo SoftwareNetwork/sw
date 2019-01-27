@@ -27,7 +27,7 @@ struct EmptySource
 
     bool empty() const { return true; }
     bool isValid(const String &name, String *error = nullptr) const { return true; }
-    bool isValidUrl() const { return true; }
+    bool isValidUrl() const { return false; }
 
     bool load(const ptree &p) { return true; }
     bool save(ptree &p) const { return true; }
