@@ -13,6 +13,9 @@
 
 #include <primitives/hash.h>
 
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "language");
+
 namespace sw
 {
 
@@ -43,6 +46,7 @@ void LanguageStorage::registerProgram(const PackagePath &pp, const std::shared_p
 
 void LanguageStorage::registerProgram(const PackageId &pp, const std::shared_ptr<Program> &p)
 {
+    LOG_DEBUG(logger, "registering program: " + pp.toString() + ", path: " + p->file.u8string());
     auto &p2 = registered_programs[pp.ppath][pp.version] = p;
     if (auto t = dynamic_cast<TargetBase*>(this); t)
         p2->fs = t->getSolution()->fs;

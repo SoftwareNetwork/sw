@@ -79,6 +79,7 @@ String toString(CompilerType Type)
     case CompilerType::x: \
         return #x
 
+        CASE(AppleClang);
         CASE(Clang);
         CASE(ClangCl);
         CASE(GNU);
@@ -140,6 +141,8 @@ CompilerType compilerTypeFromStringCaseI(const String &compiler)
 {
     if (boost::iequals(compiler, "clang"))
         return CompilerType::Clang;
+    else if (boost::iequals(compiler, "appleclang") || boost::iequals(compiler, "apple-clang"))
+        return CompilerType::AppleClang;
     else if (boost::iequals(compiler, "clangcl") || boost::iequals(compiler, "clang-cl"))
         return CompilerType::ClangCl;
     else if (boost::iequals(compiler, "gnu"))

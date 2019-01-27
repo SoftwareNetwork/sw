@@ -1185,8 +1185,10 @@ void Solution::findCompiler()
             break;
         case OSType::Cygwin:
         case OSType::Linux:
-        case OSType::Macos:
             activate_array_or_throw({ gnu, clang, }, "Try to add more compilers");
+            break;
+        case OSType::Macos:
+            activate_array_or_throw({ clang, gnu, }, "Try to add more compilers");
             break;
         }
         break;
@@ -1538,14 +1540,6 @@ FilesMap Build::build_configs_separate(const Files &files)
 
 #if defined(CPPAN_OS_WINDOWS)
         lib.LinkLibraries.insert("Delayimp.lib");
-#else
-        primitives::Command c;
-        char buf[1024] = {0};
-        pid_t pid = getpid();
-        snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
-        c.args = {"readlink", "-f", buf};
-        c.execute();
-        //lib.LinkLibraries.insert(c.out.text);
 #endif
 
         if (auto L = lib.Linker->template as<VisualStudioLinker>())
@@ -1793,14 +1787,6 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
 #if defined(CPPAN_OS_WINDOWS)
     lib.LinkLibraries.insert("Delayimp.lib");
-#else
-    primitives::Command c;
-    char buf[1024] = { 0 };
-    pid_t pid = getpid();
-    snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
-    c.args = { "readlink", "-f", buf };
-    c.execute();
-    //lib.LinkLibraries.insert(c.out.text);
 #endif
 
     if (auto L = lib.Linker->template as<VisualStudioLinker>())
@@ -2326,6 +2312,8 @@ void Build::load(const path &dll, bool usedll)
         //Settings.TargetOS.Arch = ArchType::x86_64; // use host arch
 #ifdef _WIN32
         Settings.Native.CompilerType = CompilerType::MSVC;
+#elif __APPLE__
+        Settings.Native.CompilerType = CompilerType::Clang;
 #else
         Settings.Native.CompilerType = CompilerType::GNU;
 #endif
