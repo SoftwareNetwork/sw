@@ -131,8 +131,8 @@ using PackagesIdSet = std::unordered_set<PackageId>;
 
 template <
     class T,
-    template <class K, class V> class PackagePathMap,
-    template <class K, class V> class VersionMap
+    template <class ...> class PackagePathMap,
+    template <class ...> class VersionMap
 >
 struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<Version, T>>
 {

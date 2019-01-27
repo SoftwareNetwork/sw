@@ -891,7 +891,7 @@ void PackagesDatabase::updateDb() const
     if (!Settings::get_system_settings().can_update_packages_db || !isCurrentDbOld())
         return;
 
-    LOG_DEBUG(logger, "Checking remote version");
+    LOG_TRACE(logger, "Checking remote version");
     int version_remote = 0;
     try
     {

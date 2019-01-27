@@ -473,13 +473,10 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     virtual void init(); // add multipass init if needed
     virtual Commands getCommands() const = 0;
     virtual bool prepare() = 0;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     virtual DependenciesType gatherDependencies() const = 0;
+    UnresolvedDependenciesType gatherUnresolvedDependencies() const;
 
     virtual void removeFile(const path &fn, bool binary_dir = false);
-
-    virtual void setOutputFile() = 0;
-    void setOutputDir(const path &dir);
 
     //auto getPreparePass() const { return prepare_pass; }
     virtual bool mustResolveDeps() const { return deps_resolved ? false : (deps_resolved = true); }
@@ -487,7 +484,6 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
 protected:
     int prepare_pass = 1;
     mutable bool deps_resolved = false;
-    path OutputDir;
 
     path getOutputFileName() const;
 };
@@ -504,7 +500,6 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     Commands getCommands() const override { return Commands{}; }
     bool prepare() override { return false; }
     DependenciesType gatherDependencies() const override { return DependenciesType{}; }
-    void setOutputFile() override {}
 };
 
 struct SW_DRIVER_CPP_API Directory : ProjDirBase
@@ -521,7 +516,7 @@ struct SW_DRIVER_CPP_API Project : ProjDirBase
     TargetType getType() const override { return TargetType::Project; }
 };
 
-struct SW_DRIVER_CPP_API CustomTarget : Target {};
+//struct SW_DRIVER_CPP_API CustomTarget : Target {};
 
 /**
 * \brief Native Target is a binary target that produces binary files (probably executables).
@@ -539,27 +534,33 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
     virtual std::shared_ptr<builder::Command> getCommand() const = 0;
     virtual path getOutputFile() const = 0;
     virtual path getImportLibrary() const = 0;
+    virtual void setOutputFile() = 0;
+    void setOutputDir(const path &dir);
 
     //
     virtual void setupCommand(builder::Command &c) const {}
+    // move to runnable target? since we might have data only targets
     virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
+
+protected:
+    path OutputDir;
 };
 
 // <SHARED | STATIC | MODULE | UNKNOWN>
-struct SW_DRIVER_CPP_API ImportedTarget : NativeTarget
+/*struct SW_DRIVER_CPP_API ImportedTarget : NativeTarget
 {
-    /*using NativeTarget::NativeTarget;
+    using NativeTarget::NativeTarget;
 
     virtual ~ImportedTarget() = default;
 
     std::shared_ptr<Command> getCommand() const override {}
     path getOutputFile() const override;
-    path getImportLibrary() const override;*/
-};
+    path getImportLibrary() const override;
+};*/
 
 // why?
 // to have header only targets
-struct SW_DRIVER_CPP_API InterfaceTarget : NativeTarget {};
+//struct SW_DRIVER_CPP_API InterfaceTarget : NativeTarget {};
 
 // same source files must be autodetected and compiled once!
 // but why? we already compare commands
@@ -923,8 +924,6 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
     TargetType getType() const override { return TargetType::CSharpLibrary; }
 
     void init() override;
-
-    void setOutputFile() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override;
@@ -951,8 +950,6 @@ struct SW_DRIVER_CPP_API RustTarget : Target
     TargetType getType() const override { return TargetType::RustLibrary; }
 
     void init() override;
-
-    void setOutputFile() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override;
@@ -979,8 +976,6 @@ struct SW_DRIVER_CPP_API GoTarget : Target
     TargetType getType() const override { return TargetType::GoLibrary; }
 
     void init() override;
-
-    void setOutputFile() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override;
@@ -1007,8 +1002,6 @@ struct SW_DRIVER_CPP_API FortranTarget : Target
     TargetType getType() const override { return TargetType::FortranLibrary; }
 
     void init() override;
-
-    void setOutputFile() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override;
@@ -1035,8 +1028,6 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
     TargetType getType() const override { return TargetType::JavaLibrary; }
 
     void init() override;
-
-    void setOutputFile() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override;
@@ -1063,8 +1054,6 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
     TargetType getType() const override { return TargetType::KotlinLibrary; }
 
     void init() override;
-
-    void setOutputFile() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override;
@@ -1091,8 +1080,6 @@ struct SW_DRIVER_CPP_API DTarget : Target
     TargetType getType() const override { return TargetType::DLibrary; }
 
     void init() override;
-
-    void setOutputFile() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override;

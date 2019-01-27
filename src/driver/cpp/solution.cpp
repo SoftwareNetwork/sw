@@ -829,7 +829,7 @@ void Solution::prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &nex
 {
     for (const auto &[pkg, t] : getChildren())
     {
-        fs.push_back(e.push([this, t, &next_pass, host]
+        fs.push_back(e.push([this, t = std::ref(t), &next_pass, host]
         {
             auto np = prepareStep(t, host);
             if (!next_pass)
@@ -2334,6 +2334,8 @@ void Build::load(const path &dll, bool usedll)
         if (usedll)
             getModuleStorage(base_ptr).get(dll).configure(*this);
 
+
+
         if (solutions.empty())
         {
             // no solutions were configured, we use our slns
@@ -2373,6 +2375,11 @@ void Build::load(const path &dll, bool usedll)
             Strings configs;
             for (auto &c : configuration)
             {
+                if (used_configs.find(c) == used_configs.end())
+                {
+                    if (isConfigSelected(c))
+                        LOG_WARN(logger, "config was not used: " + c);
+                }
                 if (!isConfigSelected(c))
                     configs.push_back(c);
             }
@@ -2665,7 +2672,7 @@ const Solution *Build::getHostSolution()
         if (!host)
         {
             // add
-            LOG_DEBUG(logger, "CC solution was not found, creating a new one");
+            LOG_DEBUG(logger, "Cross compilation solution was not found, creating a new one");
             auto &s = addSolution();
             host = &s;
         }
@@ -2684,6 +2691,8 @@ bool Build::isConfigSelected(const String &s) const
         return false; // conf is known and reserved!
     }
     catch (...) {}
+
+    used_configs.insert(s);
 
     static const StringSet cfgs(configuration.begin(), configuration.end());
     return cfgs.find(s) != cfgs.end();

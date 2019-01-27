@@ -315,6 +315,7 @@ protected:
 private:
     bool remove_ide_explans = false;
     std::optional<const Solution *> host;
+    mutable StringSet used_configs;
 
     void setupSolutionName(const path &file_or_dir);
     SharedLibraryTarget &createTarget(const Files &files);

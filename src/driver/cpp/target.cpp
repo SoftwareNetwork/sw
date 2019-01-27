@@ -273,7 +273,6 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     //t->SourceDirBase = t->SourceDir;
 
     t->init();
-    t->setOutputFile(); // after init, not inside init
     addChild(t);
 
     getSolution()->call_event(*t, CallbackType::CreateTargetInitialized);
@@ -565,6 +564,13 @@ DependencyPtr NativeTarget::getDependency() const
     return d;
 }
 
+void NativeTarget::setOutputDir(const path &dir)
+{
+    //SwapAndRestore sr(OutputDir, dir);
+    OutputDir = dir;
+    setOutputFile();
+}
+
 void TargetOptions::add(const IncludeDirectory &i)
 {
     path idir = i.i;
@@ -632,6 +638,11 @@ void NativeExecutedTarget::init()
     Linker = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Linker->clone());
 
     addPackageDefinitions();
+
+    // we set output file, but sometimes overridden call must set it later
+    // (libraries etc.)
+    // this one is used for executables
+    setOutputFile();
 }
 
 /*void NativeExecutedTarget::init2()
@@ -745,13 +756,6 @@ path NativeExecutedTarget::getOutputDir() const
     if (OutputDir.empty())
         return getOutputFile().parent_path();
     return getTargetsDir().parent_path() / OutputDir;
-}
-
-void Target::setOutputDir(const path &dir)
-{
-    //SwapAndRestore sr(OutputDir, dir);
-    OutputDir = dir;
-    setOutputFile();
 }
 
 /*void NativeExecutedTarget::setOutputFilename(const path &fn)
@@ -1400,7 +1404,7 @@ Commands NativeExecutedTarget::getCommands() const
         for (auto &[k,v] : break_gch_deps)
         {
             auto input_pch = std::find_if(cmd->inputs.begin(), cmd->inputs.end(),
-            [&k](const auto &p)
+            [k = std::ref(k)](const auto &p)
             {
                 return p == k;
             });
@@ -1410,7 +1414,7 @@ Commands NativeExecutedTarget::getCommands() const
             for (auto &c : generated)
             {
                 auto output_gch = std::find_if(c->outputs.begin(), c->outputs.end(),
-                [&v](const auto &p)
+                [v = std::ref(v)](const auto &p)
                 {
                     return p == v;
                 });
@@ -2144,7 +2148,7 @@ bool NativeExecutedTarget::prepare()
 
                     // iterate over child deps
                     (*(NativeExecutedTarget*)d->target.lock().get()).TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-                        [this, &new_dependency, &deps, &d, &deps_ordered](auto &v, auto &s)
+                        [this, &new_dependency, &deps, d = d.get(), &deps_ordered](auto &v, auto &s)
                     {
                         // nothing to do with private inheritance
                         if (s.Inheritance == InheritanceType::Private)
@@ -2330,7 +2334,7 @@ bool NativeExecutedTarget::prepare()
         else if (getSolution()->Settings.Native.CompilerType == CompilerType::MSVC)
             *this += "_DEBUG"_d;
 
-        auto vs_setup = [this](auto *c)
+        auto vs_setup = [this](auto *f, auto *c)
         {
             if (getSolution()->Settings.Native.MT)
                 c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
@@ -2354,7 +2358,8 @@ bool NativeExecutedTarget::prepare()
                 c->Optimizations().SmallCode = true;
                 break;
             }
-            c->CPPStandard = CPPVersion;
+            if (f->file.extension() != ".c")
+                c->CPPStandard = CPPVersion;
 
             if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
             {
@@ -2364,7 +2369,7 @@ bool NativeExecutedTarget::prepare()
             }
         };
 
-        auto gnu_setup = [this](auto *c)
+        auto gnu_setup = [this](auto *f, auto *c)
         {
             switch (getSolution()->Settings.Native.ConfigurationType)
             {
@@ -2384,8 +2389,8 @@ bool NativeExecutedTarget::prepare()
                 c->Optimizations().Level = 2;
                 break;
             }
-            //if (auto c = f->compiler->as<GNUCPPCompiler>())
-            c->CPPStandard = CPPVersion;
+            if (f->file.extension() != ".c")
+                c->CPPStandard = CPPVersion;
 
             if (ExportAllSymbols)
                 c->VisibilityHidden = false;
@@ -2415,20 +2420,20 @@ bool NativeExecutedTarget::prepare()
                     }
                 }
 
-                vs_setup(c);
+                vs_setup(f, c);
             }
             else if (auto c = f->compiler->as<ClangClCompiler>())
             {
-                vs_setup(c);
+                vs_setup(f, c);
             }
             // clang compiler is not working atm, gnu is created instead
             else if (auto c = f->compiler->as<ClangCompiler>())
             {
-                gnu_setup(c);
+                gnu_setup(f, c);
             }
             else if (auto c = f->compiler->as<GNUCompiler>())
             {
-                gnu_setup(c);
+                gnu_setup(f, c);
             }
         }
 
@@ -2840,9 +2845,15 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
         };
 
         if (Type == LibraryType::Shared)
+        {
             Definitions["CPPAN_SHARED_BUILD"];
+            //Definitions["SW_SHARED_BUILD"];
+        }
         else if (Type == LibraryType::Static)
+        {
             Definitions["CPPAN_STATIC_BUILD"];
+            //Definitions["SW_STATIC_BUILD"];
+        }
 
         set_api(ApiName);
         for (auto &a : ApiNames)
@@ -3670,6 +3681,7 @@ bool ExecutableTarget::prepare()
         };
 
         Definitions["CPPAN_EXECUTABLE"];
+        //Definitions["SW_EXECUTABLE"];
 
         set_api(ApiName);
         for (auto &a : ApiNames)
@@ -3705,18 +3717,21 @@ void LibraryTarget::init()
 {
     NativeExecutedTarget::init();
     initLibrary(getSolution()->Settings.Native.LibrariesType);
+    setOutputFile(); // after initLibrary
 }
 
 void StaticLibraryTarget::init()
 {
     NativeExecutedTarget::init();
     initLibrary(LibraryType::Static);
+    setOutputFile(); // after initLibrary
 }
 
 void SharedLibraryTarget::init()
 {
     NativeExecutedTarget::init();
     initLibrary(LibraryType::Shared);
+    setOutputFile(); // after initLibrary
 }
 
 void CSharpTarget::init()
@@ -3734,10 +3749,7 @@ void CSharpTarget::init()
         compiler = std::dynamic_pointer_cast<CSharpCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No C# compiler found");
-}
 
-void CSharpTarget::setOutputFile()
-{
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
@@ -3755,11 +3767,11 @@ path CSharpTarget::getOutputFileName(const path &root) const
     path p;
     if (SW_IS_LOCAL_BINARY_DIR)
     {
-        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+        p = getTargetsDir().parent_path() / getOutputFileName();
     }
     else
     {
-        p = root / getConfig() / OutputDir / getOutputFileName();
+        p = root / getConfig() / getOutputFileName();
     }
     return p;
 }
@@ -3807,10 +3819,7 @@ void RustTarget::init()
         compiler = std::dynamic_pointer_cast<RustCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No Rust compiler found");
-}
 
-void RustTarget::setOutputFile()
-{
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
@@ -3828,11 +3837,11 @@ path RustTarget::getOutputFileName(const path &root) const
     path p;
     if (SW_IS_LOCAL_BINARY_DIR)
     {
-        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+        p = getTargetsDir().parent_path() / getOutputFileName();
     }
     else
     {
-        p = root / getConfig() / OutputDir / getOutputFileName();
+        p = root / getConfig() / getOutputFileName();
     }
     return p;
 }
@@ -3880,10 +3889,7 @@ void GoTarget::init()
         compiler = std::dynamic_pointer_cast<GoCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No Go compiler found");
-}
 
-void GoTarget::setOutputFile()
-{
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
@@ -3901,11 +3907,11 @@ path GoTarget::getOutputFileName(const path &root) const
     path p;
     if (SW_IS_LOCAL_BINARY_DIR)
     {
-        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+        p = getTargetsDir().parent_path() / getOutputFileName();
     }
     else
     {
-        p = root / getConfig() / OutputDir / getOutputFileName();
+        p = root / getConfig() / getOutputFileName();
     }
     return p;
 }
@@ -3953,10 +3959,7 @@ void FortranTarget::init()
         compiler = std::dynamic_pointer_cast<FortranCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No Fortran compiler found");
-}
 
-void FortranTarget::setOutputFile()
-{
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
@@ -3974,11 +3977,11 @@ path FortranTarget::getOutputFileName(const path &root) const
     path p;
     if (SW_IS_LOCAL_BINARY_DIR)
     {
-        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+        p = getTargetsDir().parent_path() / getOutputFileName();
     }
     else
     {
-        p = root / getConfig() / OutputDir / getOutputFileName();
+        p = root / getConfig() / getOutputFileName();
     }
     return p;
 }
@@ -4026,10 +4029,7 @@ void JavaTarget::init()
         compiler = std::dynamic_pointer_cast<JavaCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No Java compiler found");
-}
 
-void JavaTarget::setOutputFile()
-{
     /* || add a considiton so user could change nont build output dir*/
     /*if (Scope == TargetScope::Build)
     {
@@ -4047,11 +4047,11 @@ path JavaTarget::getOutputFileName(const path &root) const
     path p;
     if (SW_IS_LOCAL_BINARY_DIR)
     {
-        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+        p = getTargetsDir().parent_path() / getOutputFileName();
     }
     else
     {
-        p = root / getConfig() / OutputDir / getOutputFileName();
+        p = root / getConfig() / getOutputFileName();
     }
     return p;
 }
@@ -4102,10 +4102,7 @@ void KotlinTarget::init()
         compiler = std::dynamic_pointer_cast<KotlinCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No Kotlin compiler found");
-}
 
-void KotlinTarget::setOutputFile()
-{
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
@@ -4123,11 +4120,11 @@ path KotlinTarget::getOutputFileName(const path &root) const
     path p;
     if (SW_IS_LOCAL_BINARY_DIR)
     {
-        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+        p = getTargetsDir().parent_path() / getOutputFileName();
     }
     else
     {
-        p = root / getConfig() / OutputDir / getOutputFileName();
+        p = root / getConfig() / getOutputFileName();
     }
     return p;
 }
@@ -4175,10 +4172,7 @@ void DTarget::init()
         compiler = std::dynamic_pointer_cast<DCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No D compiler found");
-}
 
-void DTarget::setOutputFile()
-{
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
@@ -4197,11 +4191,11 @@ path DTarget::getOutputFileName(const path &root) const
     path p;
     if (SW_IS_LOCAL_BINARY_DIR)
     {
-        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+        p = getTargetsDir().parent_path() / getOutputFileName();
     }
     else
     {
-        p = root / getConfig() / OutputDir / getOutputFileName();
+        p = root / getConfig() / getOutputFileName();
     }
     return p;
 }

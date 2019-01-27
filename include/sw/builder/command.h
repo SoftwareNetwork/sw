@@ -60,7 +60,7 @@ struct CommandData
     std::atomic_size_t *total_commands = nullptr;
 
     CommandData() = default;
-    CommandData(const CommandData & rhs) {}
+    CommandData(const CommandData &rhs) {}
     virtual ~CommandData() = default;
 
     virtual void execute() = 0;
@@ -237,7 +237,15 @@ private:
 
 using Commands = std::unordered_set<std::shared_ptr<builder::Command>>;
 
+#if defined(_WIN32)// || defined(__APPLE__)
+#if defined(__APPLE__)
+SW_BUILDER_API_EXTERN
+#endif
 template struct SW_BUILDER_API CommandData<builder::Command>;
+#elif defined(__APPLE__)
+#else
+template struct CommandData<builder::Command>;
+#endif
 
 /// return input when file not found
 SW_BUILDER_API

@@ -88,6 +88,7 @@ struct NativeLanguageBase : Language,
 template struct SW_DRIVER_CPP_API NativeLanguageBase<NativeSourceFile, NativeCompiler>;
 //SW_DRIVER_CPP_API_EXTERN
 template struct SW_DRIVER_CPP_API NativeLanguageBase<RcToolSourceFile, RcTool>;
+#elif defined(__APPLE__)
 #else
 template struct NativeLanguageBase<NativeSourceFile, NativeCompiler>;
 template struct NativeLanguageBase<RcToolSourceFile, RcTool>;

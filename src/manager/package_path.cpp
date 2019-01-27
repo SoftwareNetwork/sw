@@ -16,9 +16,11 @@ static const PackagePath::Replacements repls{
     { '-', '_' }
 };
 
-bool is_valid_path_symbol(int c)
+bool isValidPackagePathSymbol(int c)
 {
-    return c > 0 && c <= 127 &&
+    return
+        c > 0 && c <= 127 // this prevents isalnum() errors
+        &&
         (isalnum(c) || c == '.' || c == '_' || c == '-');
 }
 
@@ -28,14 +30,14 @@ PackagePath::PackagePath(const char *s)
 }
 
 PackagePath::PackagePath(String s)
-    : Base(s, is_valid_path_symbol, repls)
+    : Base(s, isValidPackagePathSymbol, repls)
 {
     if (s.size() > 4096)
         throw SW_RUNTIME_ERROR("Too long project path (must be <= 4096)");
 }
 
 PackagePath::PackagePath(const PackagePath &p)
-    : Base(p, is_valid_path_symbol)
+    : Base(p, isValidPackagePathSymbol)
 {
 }
 
@@ -203,5 +205,11 @@ String PackagePath::getHash() const
 {
     return blake2b_512(toStringLower());
 }
+
+#if defined(_WIN32) || defined(__APPLE__)
+template struct PathBase<InsecurePath>;
+template struct PathBase<Path>;
+template struct PathBase<PackagePath>;
+#endif
 
 }

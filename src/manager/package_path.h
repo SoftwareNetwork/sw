@@ -12,7 +12,7 @@ namespace sw
 {
 
 SW_MANAGER_API
-bool is_valid_path_symbol(int c);
+bool isValidPackagePathSymbol(int c);
 
 template <class ThisType, class PathElement = std::string, bool CaseSensitive = false>
 struct PathBase : protected std::vector<PathElement>
@@ -205,7 +205,16 @@ struct SW_MANAGER_API InsecurePath : InsecureSplitablePath<InsecurePath>
     using Base = InsecureSplitablePath<InsecurePath>;
     using Base::Base;
 };
+
+#if defined(_WIN32)// || defined(__APPLE__)
+#if defined(__APPLE__)
+SW_MANAGER_API_EXTERN
+#endif
+template struct SW_MANAGER_API PathBase<InsecurePath>;
+#elif defined(__APPLE__)
+#else
 template struct PathBase<InsecurePath>;
+#endif
 
 // able to split input on addition operations
 template <class ThisType>
@@ -230,7 +239,16 @@ struct SW_MANAGER_API Path : SecureSplitablePath<Path>
     using Base = SecureSplitablePath<Path>;
     using Base::Base;
 };
+
+#if defined(_WIN32)// || defined(__APPLE__)
+#if defined(__APPLE__)
+SW_MANAGER_API_EXTERN
+#endif
+template struct SW_MANAGER_API PathBase<Path>;
+#elif defined(__APPLE__)
+#else
 template struct PathBase<Path>;
+#endif
 
 struct SW_MANAGER_API PackagePath : SecureSplitablePath<PackagePath>
 {
@@ -288,7 +306,16 @@ struct SW_MANAGER_API PackagePath : SecureSplitablePath<PackagePath>
 private:
     using Base::operator[];
 };
+
+#if defined(_WIN32)// || defined(__APPLE__)
+#if defined(__APPLE__)
+SW_MANAGER_API_EXTERN
+#endif
+template struct SW_MANAGER_API PathBase<PackagePath>;
+#elif defined(__APPLE__)
+#else
 template struct PathBase<PackagePath>;
+#endif
 
 }
 

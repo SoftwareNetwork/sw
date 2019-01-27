@@ -7,8 +7,10 @@ void configure(Solution &s)
     s.Settings.Native.LibrariesType = LibraryType::Static;
     s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
 
-    if (s.isConfigSelected("cyg2mac"))
+    if (s.isConfigSelected("cygwin2macos"))
         s.loadModule("utils/cc/cygwin2macos.cpp").call<void(Solution&)>("configure", s);
+    else if (s.isConfigSelected("win2macos"))
+        s.loadModule("utils/cc/win2macos.cpp").call<void(Solution&)>("configure", s);
 
     //s.Settings.Native.CompilerType = CompilerType::ClangCl;
     //s.Settings.Native.CompilerType = CompilerType::Clang;

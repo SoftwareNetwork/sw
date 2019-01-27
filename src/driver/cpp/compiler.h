@@ -321,6 +321,8 @@ protected:
 struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
     CommandLineOptions<GNULinkerOptions>
 {
+    bool use_start_end_groups = true;
+
     using NativeLinkerOptions::operator=;
 
     void getAdditionalOptions(driver::cpp::Command *c) const override;

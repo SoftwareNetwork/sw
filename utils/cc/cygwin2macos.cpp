@@ -1,7 +1,6 @@
 void configure(Solution &b)
 {
-    auto &s = b.addSolution();
-    s.prepareForCustomToolchain();
+    auto &s = b.addCustomSolution();
 
     s.Settings.TargetOS.Type = OSType::Macos;
     s.Settings.Native.CompilerType = CompilerType::GNU;
@@ -18,10 +17,12 @@ void configure(Solution &b)
         {
             NativeLinkerOptions LOpts;
             LOpts.System.LinkLibraries.push_back("stdc++");
+            LOpts.System.LinkLibraries.push_back("stdc++fs");
 
             auto Linker = std::make_shared<GNULinker>();
             Linker->Type = LinkerType::GNU;
             Linker->file = "o64-gcc";
+            Linker->use_start_end_groups = false;
             *Linker = LOpts;
             s.registerProgram("org.gnu.gcc.ld", Linker);
         }
@@ -67,7 +68,4 @@ void configure(Solution &b)
             s.registerProgramAndLanguage("org.gnu.gcc.gpp", C, L);
         }
     }
-
-    //s.Settings.Native.CompilerType = CompilerType::ClangCl;
-    //s.Settings.Native.CompilerType = CompilerType::Clang;
 }

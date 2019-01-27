@@ -898,7 +898,7 @@ void VSGenerator::generate(const Build &b)
         pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
 
         iterate_over_configs(b.Settings,
-            [this, &pctx, &nt, &p, &b, &t]
+            [this, &pctx, &nt, &b, t = t.get()]
             (const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
@@ -957,7 +957,7 @@ void VSGenerator::generate(const Build &b)
         pctx.addPropertySheets();
 
         iterate_over_configs(b.solutions[0].Settings,
-            [this, &pctx, &nt, &p, &b, &t]
+            [this, &pctx, &nt, &b, t = t.get()]
         (const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
         {
             using namespace sw;
