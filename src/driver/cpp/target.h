@@ -471,8 +471,9 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     virtual ~Target() = default;
 
     virtual void init(); // add multipass init if needed
-    virtual Commands getCommands() const = 0;
     virtual bool prepare() = 0;
+    virtual Commands getCommands() const = 0;
+    virtual Files gatherAllFiles() const = 0;
     virtual DependenciesType gatherDependencies() const = 0;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
 
@@ -480,6 +481,8 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
 
     //auto getPreparePass() const { return prepare_pass; }
     virtual bool mustResolveDeps() const { return deps_resolved ? false : (deps_resolved = true); }
+
+    using TargetBase::operator+=;
 
 protected:
     int prepare_pass = 1;
@@ -499,6 +502,7 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     void init() override {}
     Commands getCommands() const override { return Commands{}; }
     bool prepare() override { return false; }
+    Files gatherAllFiles() const override { return {}; }
     DependenciesType gatherDependencies() const override { return DependenciesType{}; }
 };
 
@@ -692,6 +696,9 @@ public:
 
     void add(const Variable &v);
     void remove(const Variable &v);
+
+    Files gatherAllFiles() const;
+    DependenciesType gatherDependencies() const;
 };
 
 /**
@@ -737,11 +744,14 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     TargetType getType() const override { return TargetType::NativeLibrary; }
 
     void init() override;
+    bool prepare() override;
+    Commands getCommands() const override;
+    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
+    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+
     void addPackageDefinitions(bool defs = false);
     std::shared_ptr<builder::Command> getCommand() const override;
-    Commands getCommands() const override;
     //Files getGeneratedDirs() const override;
-    bool prepare() override;
     path getOutputFile() const override;
     path makeOutputFile() const;
     path getImportLibrary() const override;
@@ -751,7 +761,6 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void autoDetectSources();
     void autoDetectIncludeDirectories();
     bool hasSourceFiles() const;
-    Files gatherAllFiles() const;
     Files gatherIncludeDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
     NativeLinker *getSelectedTool() const;// override;
@@ -803,7 +812,6 @@ protected:
     Files gatherObjectFilesWithoutLibraries() const;
     TargetsSet gatherDependenciesTargets() const;
     TargetsSet gatherAllRelatedDependencies() const;
-    DependenciesType gatherDependencies() const override;
     FilesOrdered gatherLinkDirectories() const;
     bool prepareLibrary(LibraryType Type);
     void initLibrary(LibraryType Type);
@@ -926,7 +934,10 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
     void init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
-    DependenciesType gatherDependencies() const override;
+    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
+
+    using TargetBase::operator+=;
 
 private:
     using Target::getOutputFileName;
@@ -952,7 +963,10 @@ struct SW_DRIVER_CPP_API RustTarget : Target
     void init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
-    DependenciesType gatherDependencies() const override;
+    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
+
+    using TargetBase::operator+=;
 
 private:
     using Target::getOutputFileName;
@@ -978,7 +992,10 @@ struct SW_DRIVER_CPP_API GoTarget : Target
     void init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
-    DependenciesType gatherDependencies() const override;
+    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
+
+    using TargetBase::operator+=;
 
 private:
     using Target::getOutputFileName;
@@ -1004,7 +1021,10 @@ struct SW_DRIVER_CPP_API FortranTarget : Target
     void init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
-    DependenciesType gatherDependencies() const override;
+    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
+
+    using TargetBase::operator+=;
 
 private:
     using Target::getOutputFileName;
@@ -1030,7 +1050,10 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
     void init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
-    DependenciesType gatherDependencies() const override;
+    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
+
+    using TargetBase::operator+=;
 
 private:
     using Target::getOutputFileName;
@@ -1056,7 +1079,10 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
     void init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
-    DependenciesType gatherDependencies() const override;
+    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
+
+    using TargetBase::operator+=;
 
 private:
     using Target::getOutputFileName;
@@ -1082,7 +1108,10 @@ struct SW_DRIVER_CPP_API DTarget : Target
     void init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
-    DependenciesType gatherDependencies() const override;
+    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
+
+    using TargetBase::operator+=;
 
 private:
     using Target::getOutputFileName;

@@ -863,7 +863,11 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
         auto i = h->getChildren().find(d->getPackage());
         if (i != h->getChildren().end())
         {
-            d->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
+            auto t = std::static_pointer_cast<NativeTarget>(i->second);
+            if (t)
+                d->setTarget(t);
+            else
+                throw SW_RUNTIME_ERROR("bad target cast to NativeTarget during resolve");
 
             // turn on only needed targets during cc
             if (select_targets)
@@ -878,7 +882,11 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
             if (i != h->dummy_children.end() &&
                 i->second->Scope == TargetScope::Tool)
             {
-                d->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
+                auto t = std::static_pointer_cast<NativeTarget>(i->second);
+                if (t)
+                    d->setTarget(t);
+                else
+                    throw SW_RUNTIME_ERROR("bad target cast to NativeTarget during resolve");
 
                 // turn on only needed targets during cc
                 if (select_targets)
@@ -2518,10 +2526,6 @@ PackageDescriptionMap Build::getPackages() const
         if (t->Scope != TargetScope::Build)
             continue;
 
-        auto nt = t->as<NativeExecutedTarget>();
-        if (!nt)
-            throw SW_RUNTIME_ERROR("not implemented");
-
         nlohmann::json j;
 
         // source, version, path
@@ -2544,18 +2548,21 @@ PackageDescriptionMap Build::getPackages() const
         // files
         // we do not use nt->gatherSourceFiles(); as it removes deleted files
         Files files;
-        for (auto &f : nt->gatherAllFiles())
+        for (auto &f : t->gatherAllFiles())
         {
             if (File(f, *fs).isGeneratedAtAll())
                 continue;
             files.insert(f.lexically_normal());
         }
 
-        // TODO: BUG: interface files are not gathered!
-        if (files.empty() && !nt->Empty)
-            throw SW_RUNTIME_ERROR(pkg.toString() + ": No files found");
-        if (!files.empty() && nt->Empty)
-            throw SW_RUNTIME_ERROR(pkg.toString() + ": Files were found, but target is marked as empty");
+        if (auto nt = t->as<NativeExecutedTarget>())
+        {
+            // TODO: BUG: interface files are not gathered!
+            if (files.empty() && !nt->Empty)
+                throw SW_RUNTIME_ERROR(pkg.toString() + ": No files found");
+            if (!files.empty() && nt->Empty)
+                throw SW_RUNTIME_ERROR(pkg.toString() + ": Files were found, but target is marked as empty");
+        }
 
         // we put files under SW_SDIR_NAME to keep space near it
         // e.g. for patch dir or other dirs (server provided files)
@@ -2606,12 +2613,7 @@ PackageDescriptionMap Build::getPackages() const
         }
 
         // deps
-        DependenciesType deps;
-        nt->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>([&deps](auto &v, auto &gs)
-        {
-            deps.insert(v.Dependencies.begin(), v.Dependencies.end());
-        });
-        for (auto &d : deps)
+        for (auto &d : t->gatherDependencies())
         {
             if (d->target.lock() && d->target.lock()->Scope != TargetScope::Build)
                 continue;

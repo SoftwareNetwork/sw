@@ -179,6 +179,8 @@ PackageId Dependency::getResolvedPackage() const
 
 void Dependency::setTarget(const std::shared_ptr<NativeTarget> &t)
 {
+    if (!t)
+        return;
     target = t;
     propagateTargetToChain();
 }

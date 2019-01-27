@@ -617,6 +617,35 @@ void NativeTargetOptionsGroup::remove(const Variable &v)
     Variables.erase(v.v.substr(0, p));
 }
 
+Files NativeTargetOptionsGroup::gatherAllFiles() const
+{
+    // maybe cache result?
+    Files files;
+    for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
+    {
+        auto s = getInheritanceStorage().raw()[i];
+        if (!s)
+            continue;
+        for (auto &f : *s)
+            files.insert(f.first);
+    }
+    return files;
+}
+
+DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
+{
+    DependenciesType deps;
+    for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
+    {
+        auto s = getInheritanceStorage().raw()[i];
+        if (!s)
+            continue;
+        for (auto &d : s->Dependencies)
+            deps.insert(d);
+    }
+    return deps;
+}
+
 NativeExecutedTarget::~NativeExecutedTarget()
 {
     // incomplete type cannot be in default dtor
@@ -868,18 +897,6 @@ NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherAllRelatedDependenc
     return libs;
 }
 
-DependenciesType NativeExecutedTarget::gatherDependencies() const
-{
-    DependenciesType deps;
-    ((NativeExecutedTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-        [this, &deps](auto &v, auto &s)
-    {
-        for (auto &d : v.Dependencies)
-            deps.insert(d);
-    });
-    return deps;
-}
-
 FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
 {
     FilesOrdered libs;
@@ -912,18 +929,6 @@ FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
             libs.push_back("-l" + l.u8string());
     }
     return libs;
-}
-
-Files NativeExecutedTarget::gatherAllFiles() const
-{
-    // maybe cache result?
-    Files files;
-    for (auto &f : *this)
-    {
-        //if (!isRemoved(f.first))
-        files.insert(f.first);
-    }
-    return files;
 }
 
 std::unordered_set<NativeSourceFile*> NativeExecutedTarget::gatherSourceFiles() const
@@ -1898,7 +1903,7 @@ void NativeExecutedTarget::savePrecomputedData()
 
     nlohmann::json j;
 
-    for (int i = toIndex(InheritanceType::Min) + 1; i < toIndex(InheritanceType::Max); i++)
+    for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
     {
         auto s = getInheritanceStorage().raw()[i];
         if (!s)
@@ -3794,18 +3799,6 @@ bool CSharpTarget::prepare()
     return false;
 }
 
-DependenciesType CSharpTarget::gatherDependencies() const
-{
-    DependenciesType deps;
-    ((CSharpTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-        [this, &deps](auto &v, auto &s)
-    {
-        for (auto &d : v.Dependencies)
-            deps.insert(d);
-    });
-    return deps;
-}
-
 void RustTarget::init()
 {
     Target::init();
@@ -3862,18 +3855,6 @@ Commands RustTarget::getCommands() const
 bool RustTarget::prepare()
 {
     return false;
-}
-
-DependenciesType RustTarget::gatherDependencies() const
-{
-    DependenciesType deps;
-    ((RustTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-        [this, &deps](auto &v, auto &s)
-    {
-        for (auto &d : v.Dependencies)
-            deps.insert(d);
-    });
-    return deps;
 }
 
 void GoTarget::init()
@@ -3934,18 +3915,6 @@ bool GoTarget::prepare()
     return false;
 }
 
-DependenciesType GoTarget::gatherDependencies() const
-{
-    DependenciesType deps;
-    ((GoTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-        [this, &deps](auto &v, auto &s)
-    {
-        for (auto &d : v.Dependencies)
-            deps.insert(d);
-    });
-    return deps;
-}
-
 void FortranTarget::init()
 {
     Target::init();
@@ -4002,18 +3971,6 @@ Commands FortranTarget::getCommands() const
 bool FortranTarget::prepare()
 {
     return false;
-}
-
-DependenciesType FortranTarget::gatherDependencies() const
-{
-    DependenciesType deps;
-    ((FortranTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-        [this, &deps](auto &v, auto &s)
-    {
-        for (auto &d : v.Dependencies)
-            deps.insert(d);
-    });
-    return deps;
 }
 
 void JavaTarget::init()
@@ -4077,18 +4034,6 @@ bool JavaTarget::prepare()
     return false;
 }
 
-DependenciesType JavaTarget::gatherDependencies() const
-{
-    DependenciesType deps;
-    ((JavaTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-        [this, &deps](auto &v, auto &s)
-    {
-        for (auto &d : v.Dependencies)
-            deps.insert(d);
-    });
-    return deps;
-}
-
 void KotlinTarget::init()
 {
     Target::init();
@@ -4145,18 +4090,6 @@ Commands KotlinTarget::getCommands() const
 bool KotlinTarget::prepare()
 {
     return false;
-}
-
-DependenciesType KotlinTarget::gatherDependencies() const
-{
-    DependenciesType deps;
-    ((KotlinTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-        [this, &deps](auto &v, auto &s)
-    {
-        for (auto &d : v.Dependencies)
-            deps.insert(d);
-    });
-    return deps;
 }
 
 void DTarget::init()
@@ -4216,18 +4149,6 @@ Commands DTarget::getCommands() const
 bool DTarget::prepare()
 {
     return false;
-}
-
-DependenciesType DTarget::gatherDependencies() const
-{
-    DependenciesType deps;
-    ((DTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-        [this, &deps](auto &v, auto &s)
-    {
-        for (auto &d : v.Dependencies)
-            deps.insert(d);
-    });
-    return deps;
 }
 
 }
