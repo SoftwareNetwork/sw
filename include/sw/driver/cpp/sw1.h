@@ -4,13 +4,13 @@
 SW_PACKAGE_API
 void build(sw::Solution &s);
 
+/// everything for configuring
+SW_PACKAGE_API
+void configure(sw::Build &s);
+
 /// checker
 SW_PACKAGE_API
 void check(sw::Checker &c);
-
-/// everything for configuring
-SW_PACKAGE_API
-void configure(sw::Solution &s);
 
 // void setup() - current config?
 // void fetch() - fetch sources

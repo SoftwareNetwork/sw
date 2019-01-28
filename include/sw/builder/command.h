@@ -213,6 +213,7 @@ protected:
     bool executed_ = false;
 
     virtual bool check_if_file_newer(const path &, const String &what = "file") const;
+    void writeCommand(const path &basename) const;
 
     static String escape_cmd_arg(String);
 

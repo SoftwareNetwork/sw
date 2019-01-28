@@ -37,68 +37,6 @@ static cl::opt<bool> save_executed_commands("save-executed-commands");
 static cl::opt<bool> explain_outdated("explain-outdated", cl::desc("Explain outdated commands"));
 static cl::opt<bool> explain_outdated_full("explain-outdated-full", cl::desc("Explain outdated commands with more info"));
 
-#ifdef _WIN32
-#include <RestartManager.h>
-
-#pragma comment(lib, "Rstrtmgr.lib")
-
-// caller must close handles
-static std::vector<HANDLE> getFileUsers(const path &fn)
-{
-    DWORD dwSession;
-    WCHAR szSessionKey[CCH_RM_SESSION_KEY + 1] = { 0 };
-    DWORD dwError = RmStartSession(&dwSession, 0, szSessionKey);
-    if (dwError)
-    {
-        LOG_WARN(logger, "RmStartSession returned " << dwError);
-        return {};
-    }
-
-    std::vector<HANDLE> handles;
-    auto f = fn.wstring();
-    PCWSTR pszFile = f.c_str();
-    dwError = RmRegisterResources(dwSession, 1, &pszFile, 0, NULL, 0, NULL);
-    if (dwError == ERROR_SUCCESS)
-    {
-        DWORD dwReason;
-        UINT i;
-        UINT nProcInfoNeeded;
-        UINT nProcInfo = 10;
-        std::vector<RM_PROCESS_INFO> rgpi(nProcInfo);
-        dwError = RmGetList(dwSession, &nProcInfoNeeded, &nProcInfo, rgpi.data(), &dwReason);
-        if (dwError == ERROR_MORE_DATA)
-        {
-            rgpi.resize(nProcInfoNeeded);
-            dwError = RmGetList(dwSession, &nProcInfoNeeded, &nProcInfo, rgpi.data(), &dwReason);
-        }
-        if (dwError == ERROR_SUCCESS)
-        {
-            //LOG_WARN(logger, "RmGetList returned " << nProcInfo << " infos (" << nProcInfoNeeded << " needed)");
-            for (i = 0; i < nProcInfo; i++)
-            {
-                //LOG_WARN(logger, i << ".ApplicationType = " << rgpi[i].ApplicationType);
-                //LOG_WARN(logger, i << ".strAppName = " << rgpi[i].strAppName);
-                //LOG_WARN(logger, i << ".Process.dwProcessId = " << rgpi[i].Process.dwProcessId);
-                HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, rgpi[i].Process.dwProcessId);
-                if (hProcess)
-                    handles.push_back(hProcess);
-            }
-        }
-        else
-        {
-            LOG_WARN(logger, "RmGetList returned " << dwError);
-        }
-    }
-    else
-    {
-        LOG_WARN(logger, "RmRegisterResources(" << pszFile << ") returned " << dwError);
-    }
-    RmEndSession(dwSession);
-
-    return handles;
-}
-#endif
-
 namespace sw
 {
 
@@ -581,11 +519,6 @@ void Command::execute1(std::error_code *ec)
     // Try to construct command line first.
     // Some systems have limitation on its length.
 
-    auto make_rsp_file = [this](const auto &rsp_file, bool show_includes = true)
-    {
-        write_file(rsp_file, getResponseFileContents(show_includes));
-    };
-
     path rsp_file;
     if (needsResponseFile())
     {
@@ -593,151 +526,28 @@ void Command::execute1(std::error_code *ec)
         auto fn = t.filename();
         t = t.parent_path();
         rsp_file = t / getProgramName() / "rsp" / fn;
-        make_rsp_file(rsp_file);
+        write_file(rsp_file, getResponseFileContents(true));
         rsp_args.push_back("@" + rsp_file.u8string());
     }
 
     SCOPE_EXIT
     {
-        if (rsp_file.empty())
-            return;
-
-#ifdef _WIN32
-        // sometimes rsp file is used by children of cl.exe, for example
-        // fs::remove() fails in this case
-
-        error_code ec;
-        fs::remove(rsp_file, ec);
-        if (ec)
-        {
-            auto processes = getFileUsers(rsp_file);
-            if (!processes.empty())
-            {
-                if (WaitForMultipleObjects(processes.size(), processes.data(), TRUE, INFINITE) != WAIT_OBJECT_0)
-                    LOG_WARN(logger, "Cannot remove rsp file: " << normalize_path(rsp_file) << " for pid = " << pid << ", WaitForMultipleObjects() failed: " << GetLastError());
-
-                /*FILETIME ftCreate, ftExit, ftKernel, ftUser;
-                if (GetProcessTimes(hProcess, &ftCreate, &ftExit, &ftKernel, &ftUser) &&
-                    CompareFileTime(&rgpi[i].Process.ProcessStartTime, &ftCreate) == 0)
-                {
-                    WCHAR sz[MAX_PATH];
-                    DWORD cch = MAX_PATH;
-                    if (QueryFullProcessImageNameW(hProcess, 0, sz, &cch) && cch <= MAX_PATH)
-                    {
-                        LOG_WARN(logger, i << ".Process.image = " << sz);
-                    }
-                }*/
-                for (auto h : processes)
-                    CloseHandle(h);
-
-                fs::remove(rsp_file);
-            }
-        }
-#else
-        fs::remove(rsp_file);
-#endif
+        if (!rsp_file.empty())
+            fs::remove(rsp_file);
     };
 
-    auto save_command = [this, &make_rsp_file]()
+    auto save_command = [this]()
     {
         if (do_not_save_command)
             return String{};
 
         auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / getResponseFilename();
-        auto pbat = p;
-        String t;
+        writeCommand(p);
 
         String s;
         s += "\n";
         s += "pid = " + std::to_string(pid) + "\n";
         s += "command is copied to " + p.u8string() + "\n";
-
-        bool bat = getHostOS().getShellType() == ShellType::Batch && !::sw::detail::isHostCygwin();
-
-        auto norm = [bat](const auto &s)
-        {
-            if (bat)
-                return normalize_path_windows(s);
-            return normalize_path(s);
-        };
-
-        if (bat)
-            pbat += ".bat";
-        else
-            pbat += ".sh";
-
-        if (bat)
-        {
-            t += "@echo off\n\n";
-            t += "setlocal";
-        }
-        else
-            t += "#!/bin/sh";
-        t += "\n\n";
-
-        if (bat)
-            t += "::";
-        else
-            t += "#";
-        t += " command: " + name + "\n\n";
-
-        if (!name_short.empty())
-        {
-            if (bat)
-                t += "::";
-            else
-                t += "#";
-            t += " short name: " + name_short + "\n\n";
-        }
-
-        for (auto &[k, v] : environment)
-        {
-            if (bat)
-                t += "set ";
-            t += k + "=" + v + "\n\n";
-        }
-
-        if (!working_directory.empty())
-            t += "cd " + norm(working_directory) + "\n\n";
-
-        t += "\"" + norm(program) + "\" ";
-        if (!rsp_args.empty())
-        {
-            make_rsp_file(p, false);
-            t += "@" + normalize_path(p) + " ";
-        }
-        else
-        {
-            for (auto &a : args)
-            {
-                if (a == "-showIncludes")
-                    continue;
-                t += "\"" + escape_cmd_arg(a) + "\" ";
-                if (!bat)
-                    t += "\\\n\t";
-            }
-            if (!bat && !args.empty())
-                t.resize(t.size() - 3);
-        }
-        if (bat)
-            t += "%";
-        else
-            t += "$";
-        t += "* ";
-
-        if (!in.file.empty())
-            t += "< " + norm(in.file) + " ";
-        if (!out.file.empty())
-            t += "> " + norm(out.file) + " ";
-        if (!err.file.empty())
-            t += "2> " + norm(err.file) + " ";
-
-        t += "\n";
-
-        write_file(pbat, t);
-        fs::permissions(pbat,
-            fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
-            fs::perm_options::add);
 
         return s;
     };
@@ -775,7 +585,9 @@ void Command::execute1(std::error_code *ec)
         s += e;
         boost::trim(s);
         if (save_failed_commands || save_executed_commands || save_all_commands)
+        {
             s += save_command();
+        }
         return s;
     };
 
@@ -783,7 +595,6 @@ void Command::execute1(std::error_code *ec)
     for (auto &d : getGeneratedDirs())
         fs::create_directories(d);
 
-    //LOG_INFO(logger, print());
     LOG_TRACE(logger, print());
 
     try
@@ -802,7 +613,9 @@ void Command::execute1(std::error_code *ec)
             Base::execute();
 
         if (save_executed_commands || save_all_commands)
+        {
             save_command();
+        }
 
         postProcess(); // process deps
         print_outputs();
@@ -812,6 +625,104 @@ void Command::execute1(std::error_code *ec)
         auto err = make_error_string(e.what());
         throw SW_RUNTIME_ERROR(err);
     }
+}
+
+void Command::writeCommand(const path &p) const
+{
+    if (do_not_save_command)
+        return;
+
+    auto pbat = p;
+    String t;
+
+    bool bat = getHostOS().getShellType() == ShellType::Batch && !::sw::detail::isHostCygwin();
+
+    auto norm = [bat](const auto &s)
+    {
+        if (bat)
+            return normalize_path_windows(s);
+        return normalize_path(s);
+    };
+
+    if (bat)
+        pbat += ".bat";
+    else
+        pbat += ".sh";
+
+    if (bat)
+    {
+        t += "@echo off\n\n";
+        t += "setlocal";
+    }
+    else
+        t += "#!/bin/sh";
+    t += "\n\n";
+
+    if (bat)
+        t += "::";
+    else
+        t += "#";
+    t += " command: " + name + "\n\n";
+
+    if (!name_short.empty())
+    {
+        if (bat)
+            t += "::";
+        else
+            t += "#";
+        t += " short name: " + name_short + "\n\n";
+    }
+
+    t += "echo " + getName() + "\n\n";
+
+    for (auto &[k, v] : environment)
+    {
+        if (bat)
+            t += "set ";
+        t += k + "=" + v + "\n\n";
+    }
+
+    if (!working_directory.empty())
+        t += "cd " + norm(working_directory) + "\n\n";
+
+    t += "\"" + norm(program) + "\" ";
+    if (!rsp_args.empty())
+    {
+        write_file(p, getResponseFileContents());
+        t += "@" + normalize_path(p) + " ";
+    }
+    else
+    {
+        for (auto &a : args)
+        {
+            if (a == "-showIncludes")
+                continue;
+            t += "\"" + escape_cmd_arg(a) + "\" ";
+            if (!bat)
+                t += "\\\n\t";
+        }
+        if (!bat && !args.empty())
+            t.resize(t.size() - 3);
+    }
+    if (bat)
+        t += "%";
+    else
+        t += "$";
+    t += "* ";
+
+    if (!in.file.empty())
+        t += "< " + norm(in.file) + " ";
+    if (!out.file.empty())
+        t += "> " + norm(out.file) + " ";
+    if (!err.file.empty())
+        t += "2> " + norm(err.file) + " ";
+
+    t += "\n";
+
+    write_file(pbat, t);
+    fs::permissions(pbat,
+        fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
+        fs::perm_options::add);
 }
 
 void Command::postProcess(bool ok)

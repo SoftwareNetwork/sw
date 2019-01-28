@@ -171,6 +171,35 @@ static const std::map<LibraryType, String> shared_static{
     {LibraryType::Shared,"dll",},
 };
 
+namespace generator
+{
+
+static String toString(ConfigurationType t)
+{
+    auto i = configs.find(t);
+    if (i == configs.end())
+        throw SW_RUNTIME_ERROR("no such config");
+    return i->second;
+}
+
+static String toString(ArchType t)
+{
+    auto i = platforms.find(t);
+    if (i == platforms.end())
+        throw SW_RUNTIME_ERROR("no such platform");
+    return i->second;
+}
+
+static String toString(LibraryType t)
+{
+    auto i = shared_static.find(t);
+    if (i == shared_static.end())
+        throw SW_RUNTIME_ERROR("no such lib type");
+    return i->second;
+}
+
+}
+
 static std::map<VSProjectType, String> project_type_uuids{
     {VSProjectType::Directory,"{2150E333-8FDC-42A3-9474-1A3956D46DE8}",},
 
@@ -182,45 +211,11 @@ static std::map<VSProjectType, String> project_type_uuids{
     {VSProjectType::Utility,"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}",},
 };
 
-String add_space_if_not_empty(const String &s)
+static String add_space_if_not_empty(const String &s)
 {
     if (s.empty())
         return {};
     return " " + s;
-}
-
-void iterate_over_configs(std::function<void(const String &, const String &, const String &)> f)
-{
-    for (auto &p : platforms)
-        for (auto &c : configs)
-            if (shared_static.empty())
-                f(c.second, p.second, {});
-            else
-            for (auto &dll : shared_static)
-                f(c.second, p.second, dll.second);
-}
-
-void iterate_over_configs(Solution::SettingsX s, std::function<void(const Solution::SettingsX &, const String &, const String &, const String &)> f)
-{
-    for (auto &p : platforms)
-    {
-        s.TargetOS.Arch = p.first;
-        for (auto &c : configs)
-        {
-            s.Native.ConfigurationType = c.first;
-            if (shared_static.empty())
-            {
-                s.Native.LibrariesType = LibraryType::Static;
-                f(s, c.second, p.second, {});
-            }
-            else
-            for (auto &dll : shared_static)
-            {
-                s.Native.LibrariesType = dll.first;
-                f(s, c.second, p.second, dll.second);
-            }
-        }
-    }
 }
 
 XmlContext::XmlContext()
@@ -295,24 +290,27 @@ void ProjectContext::endProject()
     endBlock();
 }
 
-void ProjectContext::addProjectConfigurations()
+void ProjectContext::addProjectConfigurations(const Build &b)
 {
     beginBlock("ItemGroup", { {"Label","ProjectConfigurations"} });
-    iterate_over_configs([this](const String &c, const String &p, const String &dll)
+    for (auto &s : b.solutions)
     {
-        beginBlock("ProjectConfiguration", { {"Include", c + add_space_if_not_empty(dll) + "|" + p } });
-        addBlock("Configuration", c + add_space_if_not_empty(dll));
-        addBlock("Platform", p);
+        beginBlock("ProjectConfiguration", { {"Include", generator::toString(s.Settings.Native.ConfigurationType) +
+            add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) } });
+        addBlock("Configuration", generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)));
+        addBlock("Platform", generator::toString(s.Settings.TargetOS.Arch));
         endBlock();
-    });
+    }
     endBlock();
 }
 
-void ProjectContext::addPropertyGroupConfigurationTypes()
+void ProjectContext::addPropertyGroupConfigurationTypes(const Build &b)
 {
-    iterate_over_configs([this](const String &c, const String &p, const String &dll)
+    for (auto &s : b.solutions)
     {
-        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + p + "'" },{ "Label","Configuration" } });
+        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" +
+            generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" +
+            generator::toString(s.Settings.TargetOS.Arch) + "'" },{ "Label","Configuration" } });
 
         switch (ptype)
         {
@@ -325,21 +323,27 @@ void ProjectContext::addPropertyGroupConfigurationTypes()
         default:
             throw SW_RUNTIME_ERROR("Not implemented");
         }
-        //addBlock("UseDebugLibraries", c);
+        //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
         addBlock("PlatformToolset", "v141");
 
         endBlock();
-    });
+    }
 }
 
-void ProjectContext::addPropertySheets()
+void ProjectContext::addPropertySheets(const Build &b)
 {
-    iterate_over_configs([this](const String &c, const String &p, const String &dll)
+    for (auto &s : b.solutions)
     {
-        beginBlock("ImportGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + p + "'" },{ "Label","PropertySheets" } });
-        addBlock("Import", "", { {"Project","$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props" },{ "Condition","exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')" },{ "Label","LocalAppDataPlatform" }, });
+        beginBlock("ImportGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" +
+            generator::toString(s.Settings.Native.ConfigurationType) +
+            add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" +
+            generator::toString(s.Settings.TargetOS.Arch) + "'" },{ "Label","PropertySheets" } });
+        addBlock("Import", "", {
+            {"Project","$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props" },
+            { "Condition","exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')" },
+            { "Label","LocalAppDataPlatform" }, });
         endBlock();
-    });
+    }
 }
 
 void ProjectContext::printProject(
@@ -350,7 +354,7 @@ void ProjectContext::printProject(
 {
     beginProject();
 
-    addProjectConfigurations();
+    addProjectConfigurations(b);
 
     /*
         <PropertyGroup Label="Globals">
@@ -379,34 +383,32 @@ void ProjectContext::printProject(
     endBlock();
 
     addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
-    addPropertyGroupConfigurationTypes();
+    addPropertyGroupConfigurationTypes(b);
     addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
-    addPropertySheets();
+    addPropertySheets(b);
 
-    iterate_over_configs(b.solutions[0].Settings, [this, &g, &nt, &p, &b, &t, &dir, &projects_dir]
-    (const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
+    for (auto &s : b.solutions)
     {
-        using namespace sw;
+        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
 
-        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
-
-        String cfg = "--configuration " + c + " --platform " + pl;
-        if (dll != "dll")
+        String cfg = "--configuration " + toString(s.Settings.Native.ConfigurationType) + " --platform " + toString(s.Settings.TargetOS.Arch);
+        if (toString(s.Settings.Native.LibrariesType) != "dll")
             cfg += " --static-build";
 
         String compiler;
-        if (s.Native.CompilerType == CompilerType::Clang)
+        if (s.Settings.Native.CompilerType == CompilerType::Clang)
             compiler = "--compiler clang";
-        else if (s.Native.CompilerType == CompilerType::ClangCl)
+        else if (s.Settings.Native.CompilerType == CompilerType::ClangCl)
             compiler = "--compiler clang-cl";
-        else if (s.Native.CompilerType == CompilerType::GNU)
+        else if (s.Settings.Native.CompilerType == CompilerType::GNU)
             compiler = "--compiler gnu";
 
-        ((Build &)b).solutions[0].Settings = s; // prepare for makeOutputFile()
         auto o = nt.makeOutputFile();
         o = o.parent_path().parent_path() / s.getConfig(&t) / o.filename();
         o += nt.getOutputFile().extension();
-        auto build_cmd = "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler + " --do-not-rebuild-config --target " + p.toString() + " ide";
+        auto build_cmd = "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler +
+            " --do-not-rebuild-config" +
+            " --target " + p.toString() + " ide";
 
         String defs;
         for (auto &[k, v] : nt.Definitions)
@@ -457,22 +459,22 @@ void ProjectContext::printProject(
         if (g.type == GeneratorType::VisualStudioNMake)
             return;
 
-        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
-        if (s.TargetOS.is(ArchType::x86_64))
+        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
+        if (s.Settings.TargetOS.is(ArchType::x86_64))
             addBlock("TargetName", normalize_path_windows(o.lexically_relative(dir / projects_dir / "x64")));
         else
             addBlock("TargetName", normalize_path_windows(o.lexically_relative(dir / projects_dir)));
         endBlock();
 
         // pre build event for utility
-        beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+        beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
         beginBlock("PreBuildEvent");
         addBlock("Command", build_cmd);
         endBlock();
         endBlock();
 
         // cl properties, make them like in usual VS project
-        beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+        beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
         beginBlock("ClCompile");
         addBlock("AdditionalIncludeDirectories", idirs);
         addBlock("PreprocessorDefinitions", defs);
@@ -487,7 +489,7 @@ void ProjectContext::printProject(
         }
         endBlock();
         endBlock();
-    });
+    }
 
     bool add_sources = ptype == VSProjectType::Utility || g.type == GeneratorType::VisualStudioNMake;
     if (add_sources)
@@ -563,7 +565,7 @@ void ProjectContext::printProject(
                 if (filter.empty())
                     filter = r;
                 filters.insert(r.string());
-            } while (!r.empty());
+            } while (!r.empty() && r != r.root_path());
         }
 
         fctx.beginBlock("ClCompile", { {"Include",f.string()} });
@@ -683,24 +685,27 @@ void SolutionContext::endGlobalSection()
     endBlock("EndGlobalSection");
 }
 
-void SolutionContext::setSolutionConfigurationPlatforms()
+void SolutionContext::setSolutionConfigurationPlatforms(const Build &b)
 {
     beginGlobalSection("SolutionConfigurationPlatforms", "preSolution");
-    iterate_over_configs([this](const String &c, const String &p, const String &dll)
+    for (auto &s : b.solutions)
     {
-        addLine(c + add_space_if_not_empty(dll) + "|" + p + " = " + c + add_space_if_not_empty(dll) + "|" + p);
-    });
+        addLine(generator::toString(s.Settings.Native.ConfigurationType) +
+            add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" +
+            generator::toString(s.Settings.TargetOS.Arch) + " = " + generator::toString(s.Settings.Native.ConfigurationType) +
+            add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch));
+    }
     endGlobalSection();
 }
 
-void SolutionContext::addProjectConfigurationPlatforms(const String &prj, bool build)
+void SolutionContext::addProjectConfigurationPlatforms(const Build &b, const String &prj, bool build)
 {
-    iterate_over_configs([this, &prj, build](const String &c, const String &p, const String &dll)
+    for (auto &s : b.solutions)
     {
-        addKeyValue(getStringUuid(prj) + "." + c + add_space_if_not_empty(dll) + "|" + p + ".ActiveCfg", c + add_space_if_not_empty(dll) + "|" + p);
+        addKeyValue(getStringUuid(prj) + "." + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + ".ActiveCfg", generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch));
         if (build)
-            addKeyValue(getStringUuid(prj) + "." + c + add_space_if_not_empty(dll) + "|" + p + ".Build.0", c + add_space_if_not_empty(dll) + "|" + p);
-    });
+            addKeyValue(getStringUuid(prj) + "." + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + ".Build.0", generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch));
+    }
 }
 
 void SolutionContext::beginProjectSection(const String &n, const String &disposition)
@@ -772,9 +777,37 @@ VSGenerator::VSGenerator()
 
 String getLatestWindowsKit();
 
+void VSGenerator::createSolutions(Build &b) const
+{
+    for (auto p : {
+             ArchType::x86,
+             ArchType::x86_64,
+         })
+    {
+        b.Settings.TargetOS.Arch = p;
+        for (auto lt : {
+                 LibraryType::Static,
+                 LibraryType::Shared,
+             })
+        {
+            b.Settings.Native.LibrariesType = lt;
+            for (auto c : {
+                     ConfigurationType::Debug,
+                     ConfigurationType::Release,
+                     ConfigurationType::MinimalSizeRelease,
+                     ConfigurationType::ReleaseWithDebugInformation,
+                 })
+            {
+                b.Settings.Native.ConfigurationType = c;
+                b.addSolution();
+            }
+        }
+    }
+}
+
 void VSGenerator::generate(const Build &b)
 {
-    dir = b.getIdeDir() / toPathString(type);
+    /*dir = b.getIdeDir() / toPathString(type);
     PackagePathTree tree, local_tree;
     PackagePathTree::Directories parents, local_parents;
     SolutionContext ctx;
@@ -798,11 +831,11 @@ void VSGenerator::generate(const Build &b)
         pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
         //pctx.addPropertyGroupConfigurationTypes();
 
-        iterate_over_configs(b.Settings, [this, &pctx, &b](const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
+        iterate_over_configs(b.Settings, [this, &pctx, &b](const Solution::SettingsX &s, const String &c, const String &generator::toString(s.Settings.TargetOS.Arch), const String &generator::toString(s.Settings.Native.LibrariesType))
         {
             using namespace sw;
 
-            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
 
             String toolset = "v141";
             auto p = b.solutions[0].findProgramByExtension(".cpp");
@@ -900,17 +933,17 @@ void VSGenerator::generate(const Build &b)
 
         iterate_over_configs(b.Settings,
             [this, &pctx, &nt, &b, t = t.get()]
-            (const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
+            (const Solution::SettingsX &s, const String &generator::toString(s.Settings.Native.ConfigurationType), const String &generator::toString(s.Settings.TargetOS.Arch), const String &generator::toString(s.Settings.Native.LibrariesType))
         {
             using namespace sw;
 
-            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
             String ext = s.TargetOS.getExecutableExtension();
             String type = "Application";
             switch (t->getType())
             {
             case TargetType::NativeLibrary:
-                if (dll != "dll")
+                if (generator::toString(s.Settings.Native.LibrariesType) != "dll")
                 {
                     type = "StaticLibrary";
                     ext = ".lib";
@@ -959,7 +992,7 @@ void VSGenerator::generate(const Build &b)
 
         iterate_over_configs(b.solutions[0].Settings,
             [this, &pctx, &nt, &b, t = t.get()]
-        (const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
+        (const Solution::SettingsX &s, const String &generator::toString(s.Settings.Native.ConfigurationType), const String &generator::toString(s.Settings.TargetOS.Arch), const String &generator::toString(s.Settings.Native.LibrariesType))
         {
             using namespace sw;
 
@@ -968,7 +1001,7 @@ void VSGenerator::generate(const Build &b)
             switch (t->getType())
             {
             case TargetType::NativeLibrary:
-                if (dll != "dll")
+                if (generator::toString(s.Settings.Native.LibrariesType) != "dll")
                 {
                     type = "StaticLibrary";
                     ext = ".lib";
@@ -994,20 +1027,20 @@ void VSGenerator::generate(const Build &b)
             pctx.beginBlock("PropertyGroup");
             {
                 pctx.addBlock("OutDir", normalize_path_windows(current_thread_path() / "bin\\"),
-                    { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+                    { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
                 pctx.addBlock("IntDir", normalize_path_windows(dir / projects_dir / sha256_short(nt->pkg.toString())) + "\\",
-                    { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
-                pctx.addBlock("TargetName", nt->pkg.toString(), { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
-                pctx.addBlock("TargetExt", ext, { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+                    { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
+                pctx.addBlock("TargetName", nt->pkg.toString(), { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
+                pctx.addBlock("TargetExt", ext, { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
             }
             pctx.endBlock();
 
-            /*pctx.beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
-            pctx.beginBlock("ClCompile");
-            pctx.endBlock();
-            pctx.beginBlock("Link");
-            pctx.endBlock();
-            pctx.endBlock();*/
+            //pctx.beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
+            //pctx.beginBlock("ClCompile");
+            //pctx.endBlock();
+            //pctx.beginBlock("Link");
+            //pctx.endBlock();
+            //pctx.endBlock();
         });
 
         pctx.beginBlock("ItemGroup");
@@ -1059,12 +1092,12 @@ void VSGenerator::generate(const Build &b)
                     if (filter.empty())
                         filter = r;
                     filters.insert(r.string());
-                } while (!r.empty());
+                } while (!r.empty() && r != r.root_path());
             }
 
             fctx.beginBlock("ClCompile", { {"Include",f.string()} });
             if (!filter.empty())
-                fctx.addBlock("Filter", make_backslashes(/*"Source Files\\" + */filter.string()));
+                fctx.addBlock("Filter", make_backslashes(filter.string()));
             fctx.endBlock();
         }
         filters.erase("");
@@ -1073,7 +1106,7 @@ void VSGenerator::generate(const Build &b)
         fctx.beginBlock("ItemGroup");
         for (auto &f : filters)
         {
-            fctx.beginBlock("Filter", { { "Include", make_backslashes(/*"Source Files\\" + */f) } });
+            fctx.beginBlock("Filter", { { "Include", make_backslashes(f) } });
             fctx.addBlock("UniqueIdentifier", "{" + uuid2string(boost::uuids::random_generator()()) + "}");
             fctx.endBlock();
         }
@@ -1090,20 +1123,20 @@ void VSGenerator::generate(const Build &b)
     {
         if (!print_dependencies && !t->Local)
             continue;
-        ctx.addProjectConfigurationPlatforms(p.toString());
+        ctx.addProjectConfigurationPlatforms(b, p.toString());
     }
-    ctx.addProjectConfigurationPlatforms(all_build_name, true);
+    ctx.addProjectConfigurationPlatforms(b, all_build_name, true);
     ctx.endGlobalSection();
     ctx.endGlobal();
 
-    const auto compiler_name = boost::to_lower_copy(toString(b.Settings.Native.CompilerType));
+    const auto compiler_name = boost::to_lower_copy(generator::toString(b.Settings.Native.CompilerType));
     String fn = b.ide_solution_name + "_";
     fn += compiler_name + "_" + toPathString(type);
     fn += ".sln";
     write_file(dir / fn, ctx.getText());
     auto lnk = current_thread_path() / fn;
     lnk += ".lnk";
-    ::create_link(dir / fn, lnk, "SW link");
+    ::create_link(dir / fn, lnk, "SW link");*/
 }
 
 void VSGeneratorNMake::generate(const Build &b)
@@ -1120,7 +1153,7 @@ void VSGeneratorNMake::generate(const Build &b)
 
         pctx.beginProject();
 
-        pctx.addProjectConfigurations();
+        pctx.addProjectConfigurations(b);
 
         pctx.beginBlock("PropertyGroup", { {"Label", "Globals"} });
         pctx.addBlock("VCProjectVersion", "15.0");
@@ -1130,39 +1163,42 @@ void VSGeneratorNMake::generate(const Build &b)
         pctx.endBlock();
 
         pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
-        pctx.addPropertyGroupConfigurationTypes();
+        pctx.addPropertyGroupConfigurationTypes(b);
         pctx.addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
-        pctx.addPropertySheets();
+        pctx.addPropertySheets(b);
 
-        iterate_over_configs(b.Settings, [this, &pctx, &b]
-        (const Solution::SettingsX &s, const String &c, const String &pl, const String &dll)
+        for (auto &s : b.solutions)
         {
             using namespace sw;
 
-            pctx.beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + c + add_space_if_not_empty(dll) + "|" + pl + "'" } });
+            pctx.beginBlock("PropertyGroup", { {
+                    "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) +
+                    add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
 
-            String cfg = "--configuration " + c + " --platform " + pl;
-            if (dll != "dll")
+            String cfg = "--configuration " + generator::toString(s.Settings.Native.ConfigurationType) + " --platform " + generator::toString(s.Settings.TargetOS.Arch);
+            if (generator::toString(s.Settings.Native.LibrariesType) != "dll")
                 cfg += " --static-build";
-            if (s.Native.MT)
+            if (s.Settings.Native.MT)
                 cfg += " --mt";
 
             String compiler;
-            if (s.Native.CompilerType == CompilerType::Clang)
+            if (s.Settings.Native.CompilerType == CompilerType::Clang)
                 compiler = "--compiler clang";
-            else if (s.Native.CompilerType == CompilerType::ClangCl)
+            else if (s.Settings.Native.CompilerType == CompilerType::ClangCl)
                 compiler = "--compiler clang-cl";
-            else if (s.Native.CompilerType == CompilerType::GNU)
+            else if (s.Settings.Native.CompilerType == CompilerType::GNU)
                 compiler = "--compiler gnu";
-            else if (s.Native.CompilerType == CompilerType::MSVC)
+            else if (s.Settings.Native.CompilerType == CompilerType::MSVC)
                 compiler = "--compiler msvc";
 
-            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler + " --do-not-rebuild-config ide");
+            pctx.addBlock("NMakeBuildCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler +
+                " --do-not-rebuild-config" +
+                " ide");
             pctx.addBlock("NMakeCleanCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " ide --clean");
             pctx.addBlock("NMakeReBuildCommandLine", "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler + " ide --rebuild");
 
             pctx.endBlock();
-        });
+        }
 
         pctx.beginBlock("ItemGroup");
         pctx.beginBlock("ClCompile", { { "Include", (b.SourceDir / "sw.cpp").u8string() } });
@@ -1177,6 +1213,7 @@ void VSGeneratorNMake::generate(const Build &b)
 
     // gather parents
     bool has_deps = false;
+    // use only first
     for (auto &[p, t] : b.solutions[0].children)
     {
         has_deps |= !t->Local;
@@ -1199,6 +1236,7 @@ void VSGeneratorNMake::generate(const Build &b)
         add_dirs(tree, parents, deps_subdir.toString());
     add_dirs(local_tree, local_parents);
 
+    // use only first
     for (auto &[p, t] : b.solutions[0].children)
     {
         if (!print_dependencies && !t->Local)
@@ -1219,6 +1257,7 @@ void VSGeneratorNMake::generate(const Build &b)
     }
 
     // gen projects
+    // use only first
     for (auto &[p, t] : b.solutions[0].children)
     {
         if (!print_dependencies && !t->Local)
@@ -1238,16 +1277,16 @@ void VSGeneratorNMake::generate(const Build &b)
     }
 
     ctx.beginGlobal();
-    ctx.setSolutionConfigurationPlatforms();
+    ctx.setSolutionConfigurationPlatforms(b);
     ctx.beginGlobalSection("ProjectConfigurationPlatforms", "postSolution");
     for (auto &[p, t] : b.solutions[0].children)
     {
         if (!print_dependencies && !t->Local)
             continue;
-        ctx.addProjectConfigurationPlatforms(p.toString());
-        ctx.addProjectConfigurationPlatforms(p.toString() + "-build");
+        ctx.addProjectConfigurationPlatforms(b, p.toString());
+        ctx.addProjectConfigurationPlatforms(b, p.toString() + "-build");
     }
-    ctx.addProjectConfigurationPlatforms(all_build_name, true);
+    ctx.addProjectConfigurationPlatforms(b, all_build_name, true);
     ctx.endGlobalSection();
     ctx.endGlobal();
 

@@ -66,15 +66,13 @@ PackageScriptPtr CppDriver::load(const path &file_or_dir) const
 
         auto b = std::make_unique<Build>();
         b->Local = true;
-        //b->configure = true;
-        b->load_configless(file_or_dir);
+        b->load(file_or_dir, true);
         return b;
     }
 
     auto b = std::make_unique<Build>();
     b->Local = true;
-    //b->configure = true;
-    b->build_and_load(f.value());
+    b->load(f.value());
 
     return b;
 }
@@ -104,7 +102,7 @@ static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &
             b->source_dirs_by_source = srcs_old;
             if (!pp)
                 b->fetch_dir = d;
-            b->build_and_load(fn);
+            b->load(fn);
 
             SourceDirMap srcs;
             for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
@@ -149,7 +147,7 @@ static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &
         b->perform_checks = false;
         b->DryRun = true;
         b->fetch_dir = d;
-        b->build_and_load(fn);
+        b->load(fn);
 
         // reset
         b->fetch_dir.clear();

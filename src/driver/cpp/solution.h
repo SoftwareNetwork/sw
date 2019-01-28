@@ -22,6 +22,7 @@
 namespace sw
 {
 
+struct Generator;
 struct Module;
 
 namespace detail
@@ -124,7 +125,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     // target data
     TargetMap children;
     TargetMap dummy_children; // contain dirs, projects,
-    TargetMap weak_children; // trash & garbage, used for storage internally, do not use
+    //TargetMap weak_children; // trash & garbage, used for storage internally, do not use
 
     SourceDirMap source_dirs_by_source;
 
@@ -160,12 +161,6 @@ public:
     Commands getCommands() const;
 
     void printGraph(const path &p) const;
-
-    // helper
-    virtual Solution &addSolution() { throw std::logic_error("invalid call"); }
-    virtual Solution &addCustomSolution() { throw std::logic_error("invalid call"); }
-    virtual bool isConfigSelected(const String &s) const { throw std::logic_error("invalid call"); }
-    virtual const Module &loadModule(const path &fn) const { throw std::logic_error("invalid call"); }
 
     // child targets
     TargetMap &getChildren() override;
@@ -278,36 +273,30 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
 
     TargetType getType() const override { return TargetType::Build; }
 
-    path build_configs(const std::unordered_set<ExtendedPackageData> &pkgs);
-    FilesMap build_configs_separate(const Files &files);
-
     path build(const path &fn);
-    void build_and_load(const path &fn);
+    void load(const path &fn, bool configless = false);
     void build_and_run(const path &fn);
     void build_package(const String &pkg);
     void run_package(const String &pkg);
-    void load(const path &dll, bool usedll = true);
     bool execute() override;
-    bool load_configless(const path &file_or_dir);
-    bool isConfigSelected(const String &s) const override;
-    const Module &loadModule(const path &fn) const override;
 
-    void performChecks() override;
+    bool isConfigSelected(const String &s) const;
+    const Module &loadModule(const path &fn) const;
+
     void prepare() override;
     bool prepareStep() override;
 
-    bool generateBuildSystem();
+    Generator *getGenerator() { if (generator) return generator.get(); return nullptr; }
+    const Generator *getGenerator() const { if (generator) return generator.get(); return nullptr; }
+
     CommandExecutionPlan getExecutionPlan() const override;
 
     // helper
-    Solution &addSolution() override;
-    Solution &addCustomSolution() override;
+    Solution &addSolution();
+    Solution &addCustomSolution();
 
-    // other frontends
-    void cppan_load();
-    void cppan_load(const path &fn);
-    void cppan_load(const yaml &root);
-    bool cppan_check_config_root(const yaml &root);
+    // hide?
+    path build_configs(const std::unordered_set<ExtendedPackageData> &pkgs);
 
 protected:
     PackageDescriptionMap getPackages() const override;
@@ -316,12 +305,28 @@ private:
     bool remove_ide_explans = false;
     std::optional<const Solution *> host;
     mutable StringSet used_configs;
+    std::unique_ptr<Generator> generator;
 
     void setupSolutionName(const path &file_or_dir);
     SharedLibraryTarget &createTarget(const Files &files);
     path getOutputModuleName(const path &p);
     const Solution *getHostSolution();
     const Solution *getHostSolution() const;
+
+    void performChecks() override;
+    FilesMap build_configs_separate(const Files &files);
+
+    void generateBuildSystem();
+
+    // basic frontends
+    void load_dll(const path &dll, bool usedll = true);
+    void load_configless(const path &file_or_dir);
+
+    // other frontends
+    void cppan_load();
+    void cppan_load(const path &fn);
+    void cppan_load(const yaml &root);
+    bool cppan_check_config_root(const yaml &root);
 
 public:
     static PackagePath getSelfTargetName(const Files &files);

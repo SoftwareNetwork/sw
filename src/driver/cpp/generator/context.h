@@ -61,13 +61,13 @@ struct ProjectContext : XmlContext
     void beginProject();
     void endProject();
 
-    void addProjectConfigurations();
-    void addPropertyGroupConfigurationTypes();
+    void addProjectConfigurations(const Build &b);
+    void addPropertyGroupConfigurationTypes(const Build &b);
 
-    void addPropertySheets();
+    void addPropertySheets(const Build &b);
 
     void printProject(
-        const String &name, struct NativeExecutedTarget &nt, const struct Build &b, SolutionContext &ctx, Generator &g,
+        const String &name, struct NativeExecutedTarget &nt, const Build &b, SolutionContext &ctx, Generator &g,
         PackagePathTree::Directories &parents, PackagePathTree::Directories &local_parents,
         const path &dir, const path &projects_dir
     );
@@ -117,8 +117,8 @@ struct SolutionContext : primitives::Context
     void beginGlobalSection(const String &name, const String &post);
     void endGlobalSection();
 
-    void setSolutionConfigurationPlatforms();
-    void addProjectConfigurationPlatforms(const String &prj, bool build = false);
+    void setSolutionConfigurationPlatforms(const Build &b);
+    void addProjectConfigurationPlatforms(const Build &b, const String &prj, bool build = false);
 
     void beginProjectSection(const String &n, const String &disposition);
     void endProjectSection();

@@ -424,6 +424,7 @@ void ExecuteBuiltinCommand::push_back(const Files &files)
 
 void ExecuteBuiltinCommand::execute1(std::error_code *ec)
 {
+    // add try catch?
     jumppad_call(args[1], args[2], std::stoi(args[3]), Strings{ args.begin() + 4, args.end() });
 }
 

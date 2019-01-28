@@ -75,7 +75,7 @@ Module::Module(const path &dll)
 
     configure_.name = "configure";
     if (module->has("configure"))
-        configure_ = module->get<void(Solution&)>("configure");
+        configure_ = module->get<void(Build&)>("configure");
 }
 
 Module::~Module()
@@ -89,7 +89,7 @@ void Module::build(Solution &s) const
     build_(s);
 }
 
-void Module::configure(Solution &s) const
+void Module::configure(Build &s) const
 {
     configure_.s = &s;
     configure_(s);

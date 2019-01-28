@@ -14,6 +14,8 @@
 namespace sw
 {
 
+struct Build;
+
 enum class GeneratorType
 {
     UnspecifiedGenerator,
@@ -41,8 +43,9 @@ struct Generator
 
     virtual ~Generator() = default;
 
-    virtual void generate(const struct Build &b) = 0;
-    void generate(const path &file, const struct Build &b);
+    virtual void generate(const Build &b) = 0;
+    void generate(const path &file, const Build &b);
+    virtual void createSolutions(Build &b) const {}
 
     static std::unique_ptr<Generator> create(const String &s);
 };
@@ -58,37 +61,38 @@ struct VSGenerator : Generator
 
     VSGenerator();
 
-    void generate(const struct Build &b) override;
+    void generate(const Build &b) override;
+    void createSolutions(Build &b) const override;
 };
 
 struct VSGeneratorNMake : VSGenerator
 {
-    void generate(const struct Build &b) override;
+    void generate(const Build &b) override;
 };
 
 struct NinjaGenerator : Generator
 {
-    void generate(const struct Build &b) override;
+    void generate(const Build &b) override;
 };
 
 struct MakeGenerator : Generator
 {
-    void generate(const struct Build &b) override;
+    void generate(const Build &b) override;
 };
 
 struct ShellGenerator : Generator
 {
-    void generate(const struct Build &b) override;
+    void generate(const Build &b) override;
 };
 
 struct BatchGenerator : Generator
 {
-    void generate(const struct Build &b) override;
+    void generate(const Build &b) override;
 };
 
 struct CompilationDatabaseGenerator : Generator
 {
-    void generate(const struct Build &b) override;
+    void generate(const Build &b) override;
 };
 
 String toString(GeneratorType Type);

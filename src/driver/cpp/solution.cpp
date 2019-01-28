@@ -42,8 +42,8 @@
 DECLARE_STATIC_LOGGER(logger, "solution");
 
 static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
-cl::opt<String> generator("G", cl::desc("Generator"));
-cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(generator));
+cl::opt<String> cl_generator("G", cl::desc("Generator"));
+cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(cl_generator));
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
@@ -1294,6 +1294,8 @@ ExecutionPlan<builder::Command> Build::getExecutionPlan() const
 
 void Build::performChecks()
 {
+    LOG_DEBUG(logger, "Performing checks");
+
     ScopedTime t;
 
     auto &e = getExecutor();
@@ -1320,8 +1322,12 @@ void Build::prepare()
     // so, we're ready to some preparation passes
 
     // resolve all deps first
-    for (auto &s : solutions)
+    for (const auto &[i, s] : enumerate(solutions))
+    {
+        if (solutions.size() > 1)
+            LOG_INFO(logger, "[" << (i + 1) << "/" << solutions.size() << "] resolve deps pass " << s.getConfig());
         s.build_and_resolve();
+    }
 
     // decide if we need cross compilation
 
@@ -1335,13 +1341,6 @@ void Build::prepare()
 
     // prevent memory leaks (high mem usage)
     //updateConcurrentContext();
-
-    // previous
-    /*auto &e = getExecutor();
-    std::vector<Future<void>> fs;
-    for (auto &s : solutions)
-        fs.push_back(e.push([&s] { s.prepare(); }, solutions.size()));
-    waitAndGet(fs);*/
 
     if (!silent)
         LOG_DEBUG(logger, "Prepare time: " << t.getTimeFloat() << " s.");
@@ -1887,8 +1886,14 @@ void Build::setupSolutionName(const path &file_or_dir)
         ide_solution_name = file_or_dir.stem().u8string();
 }
 
-void Build::build_and_load(const path &fn)
+void Build::load(const path &fn, bool configless)
 {
+    if (!cl_generator.empty())
+        generator = Generator::create(cl_generator);
+
+    if (configless)
+        return load_configless(fn);
+
     build(fn);
 
     //fs->save(); // remove?
@@ -1901,7 +1906,7 @@ void Build::build_and_load(const path &fn)
     switch (fe.value())
     {
     case FrontendType::Sw:
-        load(dll);
+        load_dll(dll);
         break;
     case FrontendType::Cppan:
         cppan_load();
@@ -1909,7 +1914,7 @@ void Build::build_and_load(const path &fn)
     }
 }
 
-ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
+static ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
 {
     primitives::BinaryContext ctx;
     ctx.load(fn);
@@ -2194,8 +2199,11 @@ bool Build::execute()
         }
     }
 
-    if (generateBuildSystem())
+    if (getGenerator())
+    {
+        generateBuildSystem();
         return true;
+    }
 
     Solution::execute();
 
@@ -2211,11 +2219,11 @@ bool Build::execute()
     return true;
 }
 
-bool Build::load_configless(const path &file_or_dir)
+void Build::load_configless(const path &file_or_dir)
 {
     setupSolutionName(file_or_dir);
 
-    load({}, false);
+    load_dll({}, false);
 
     bool dir = fs::is_directory(config_file_or_dir);
 
@@ -2238,32 +2246,26 @@ bool Build::load_configless(const path &file_or_dir)
                 exe += std::make_shared<Dependency>(p.toString());
         }
     }
-
-    return true;
 }
 
 void Build::build_and_run(const path &fn)
 {
-    build_and_load(fn);
-    if (generateBuildSystem())
-        return;
+    load(fn);
+    if (getGenerator())
+        return generateBuildSystem();
     Solution::execute();
 }
 
-bool Build::generateBuildSystem()
+void Build::generateBuildSystem()
 {
-    if (generator.empty())
-        return false;
+    if (!getGenerator())
+        return;
 
     prepare();
     getCommands();
 
-    auto g = Generator::create(generator);
-    //g.file = fn.filename();
-    //g.dir = fs::current_path();
     fs::remove_all(getExecutionPlansDir());
-    g->generate(*this);
-    return true;
+    getGenerator()->generate(*this);
 }
 
 void Build::build_package(const String &s)
@@ -2309,34 +2311,43 @@ void Build::run_package(const String &s)
     run(p->pkg, *cb.c);
 }
 
-void Build::load(const path &dll, bool usedll)
+static bool hasUserProvidedInformation()
+{
+    return 0
+        || !configuration.empty()
+        || static_build
+        || shared_build
+        || win_mt
+        || win_md
+        || !platform.empty()
+        || !compiler.empty()
+        || !target_os.empty()
+        ;
+}
+
+void Build::load_dll(const path &dll, bool usedll)
 {
     if (gWithTesting)
         with_testing = true;
 
-    //if (configure)
-    {
-        // explicit presets
-        //Settings.Native.LibrariesType = LibraryType::Shared;
-        //Settings.Native.ConfigurationType = ConfigurationType::Release;
-        //Settings.TargetOS.Arch = ArchType::x86_64; // use host arch
+    // explicit presets
 #ifdef _WIN32
-        Settings.Native.CompilerType = CompilerType::MSVC;
+    Settings.Native.CompilerType = CompilerType::MSVC;
 #elif __APPLE__
-        Settings.Native.CompilerType = CompilerType::Clang;
+    Settings.Native.CompilerType = CompilerType::Clang; // switch to apple clang?
 #else
-        Settings.Native.CompilerType = CompilerType::GNU;
+    Settings.Native.CompilerType = CompilerType::GNU;
 #endif
 
-        // configure may change defaults, so we must care below
-        if (usedll)
-            getModuleStorage(base_ptr).get(dll).configure(*this);
+    // configure may change defaults, so we must care below
+    if (usedll)
+        getModuleStorage(base_ptr).get(dll).configure(*this);
 
-
-
-        if (solutions.empty())
+    if (solutions.empty())
+    {
+        if (hasUserProvidedInformation())
         {
-            // no solutions were configured, we use our slns
+            // add basic solution
             addSolution();
 
             auto times = [this](int n)
@@ -2469,10 +2480,18 @@ void Build::load(const path &dll, bool usedll)
                 set_tos(s, target_os[i]);
             });
         }
-
-        // add cc if needed
-        getHostSolution();
+        else if (auto g = getGenerator(); g)
+        {
+            g->createSolutions(*this);
+        }
     }
+
+    // one more time, if generator did not add solution or whatever
+    if (solutions.empty())
+        addSolution();
+
+    // add cc if needed
+    getHostSolution();
 
     // detect and eliminate solution clones
 
@@ -2497,10 +2516,10 @@ void Build::load(const path &dll, bool usedll)
     // build
     if (usedll)
     {
-        for (auto &s : solutions)
+        for (const auto &[i,s] : enumerate(solutions))
         {
             if (solutions.size() > 1)
-                LOG_DEBUG(logger, "Doing pass: " + s.getConfig());
+                LOG_INFO(logger, "[" << (i + 1) << "/" << solutions.size() << "] load pass " << s.getConfig());
             getModuleStorage(base_ptr).get(dll).build(s);
         }
     }

@@ -37,11 +37,19 @@ String getDataDirPrivate(const String &base)
 
 void Directories::set_storage_dir(const path &p)
 {
+    auto make_canonical = [](const path &p)
+    {
+        auto a = fs::absolute(p);
+        if (!fs::exists(a))
+            fs::create_directories(a);
+        return fs::canonical(a);
+    };
+
     path ap;
     if (storage_dir_override.empty())
-        ap = fs::canonical(p);
+        ap = make_canonical(p);
     else
-        ap = fs::canonical(storage_dir_override);
+        ap = make_canonical(storage_dir_override);
     checkPath(ap, "storage directory");
 
 #ifdef _WIN32

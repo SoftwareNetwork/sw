@@ -27,6 +27,7 @@ SUBCOMMAND(init, "Used to do some system setup which may require administrator a
 SUBCOMMAND(install, "Add package to lock.") COMMA
 SUBCOMMAND(list, "List packages in database.") COMMA
 SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
+SUBCOMMAND(remove, "Remove package.") COMMA
 SUBCOMMAND(test, "Run tests.") COMMA
 SUBCOMMAND(update, "Update lock file.") COMMA
 SUBCOMMAND(upload, "Upload package.") COMMA

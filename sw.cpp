@@ -2,7 +2,7 @@
 #pragma sw require header org.sw.demo.google.grpc.grpc_cpp_plugin-1
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
 
-void configure(Solution &s)
+void configure(Build &s)
 {
     s.Settings.Native.LibrariesType = LibraryType::Static;
     s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;

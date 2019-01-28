@@ -194,6 +194,7 @@ private:
     void tryLoadPrecomputedData();
     void applyPrecomputedData();
     void savePrecomputedData();
+    path getPrecomputedDataFilename();
 
     path getPatchDir(bool binary_dir) const;
 };

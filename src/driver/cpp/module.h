@@ -75,9 +75,9 @@ struct SW_DRIVER_CPP_API Module
     ~Module();
 
     // api
-    void check(Solution &s, Checker &c) const;
-    void configure(Solution &s) const;
     void build(Solution &s) const;
+    void configure(Build &s) const;
+    void check(Solution &s, Checker &c) const;
 
     template <class F, class ... Args>
     auto call(const String &name, Args && ... args) const
@@ -89,7 +89,7 @@ struct SW_DRIVER_CPP_API Module
 
 private:
     mutable LibraryCall<void(Solution &), true> build_;
-    mutable LibraryCall<void(Solution &)> configure_;
+    mutable LibraryCall<void(Build &)> configure_;
     mutable LibraryCall<void(Checker &)> check_;
 };
 

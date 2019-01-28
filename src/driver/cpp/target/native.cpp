@@ -1289,10 +1289,10 @@ void NativeExecutedTarget::detectLicenseFile()
     }
 }
 
-static path getPrecomputedDataFilename(const PackageId &pkg)
+path NativeExecutedTarget::getPrecomputedDataFilename()
 {
-    // with version
-    return pkg.getDirInfo() / "precomputed.4.json";
+    // binary dir!
+    return BinaryDir.parent_path() / "info" / "precomputed.5.json";
 }
 
 void NativeExecutedTarget::tryLoadPrecomputedData()
@@ -1300,12 +1300,12 @@ void NativeExecutedTarget::tryLoadPrecomputedData()
     if (isLocalOrOverridden())
         return;
 
-    auto fn = getPrecomputedDataFilename(pkg);
+    auto fn = getPrecomputedDataFilename();
     if (!fs::exists(fn))
         return;
 
     // TODO: detect frontend
-    if (File(pkg.getDirSrc2() / "sw.cpp", *getSolution()->fs).isChanged())
+    if (!File(pkg.getDirSrc2() / "sw.cpp", *getSolution()->fs).isChanged())
         return;
 
     //precomputed_data = nlohmann::json::parse(read_file(fn));
@@ -1330,7 +1330,7 @@ void NativeExecutedTarget::savePrecomputedData()
         auto si = std::to_string(i);
         for (auto &[p, _] : *s)
         {
-            j[si]["source_files"].push_back(normalize_path(p));
+            j[si]["source_files"].push_back(normalize_path(p)); // add flags: skip, postpone(?) etc.
         }
         for (auto &d : s->Dependencies)
         {
@@ -1340,7 +1340,7 @@ void NativeExecutedTarget::savePrecomputedData()
         }
     }
 
-    write_file(getPrecomputedDataFilename(pkg), j.dump(2));
+    write_file(getPrecomputedDataFilename(), j.dump(2));
 }
 
 bool NativeExecutedTarget::prepare()
@@ -2167,7 +2167,7 @@ bool NativeExecutedTarget::prepare()
     }
     RETURN_PREPARE_PASS;
     case 8:
-        //savePrecomputedData();
+        savePrecomputedData();
         break;
     }
 

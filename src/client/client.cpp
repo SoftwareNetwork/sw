@@ -441,6 +441,19 @@ SUBCOMMAND_DECL(build)
     sw::build(build_arg);
 }
 
+static cl::list<String> remove_arg(cl::Positional, cl::desc("package to remove"), cl::sub(subcommand_remove));
+
+SUBCOMMAND_DECL(remove)
+{
+    auto &sdb = getServiceDatabase();
+    for (auto &a : remove_arg)
+    {
+        auto p = sw::extractFromStringPackageId(a);
+        sdb.removeInstalledPackage(p);
+        fs::remove_all(p.getDir());
+    }
+}
+
 static cl::list<String> uri_args(cl::Positional, cl::desc("sw uri arguments"), cl::sub(subcommand_uri));
 //static cl::opt<String> uri_sdir("sw:sdir", cl::desc("Open source dir in file browser"), cl::sub(subcommand_uri));
 
@@ -638,14 +651,14 @@ SUBCOMMAND_DECL(ide)
     }
 }
 
-extern ::cl::opt<String> generator;
+extern ::cl::opt<String> cl_generator;
 
 SUBCOMMAND_DECL(generate)
 {
-    if (generator.empty())
+    if (cl_generator.empty())
     {
 #ifdef _WIN32
-        generator = "vs";
+        cl_generator = "vs";
 #endif
     }
     build_arg = build_arg_generate.getValue();
