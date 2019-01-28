@@ -2551,7 +2551,7 @@ void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content) 
 
     bool source_dir = false;
     path p = fn;
-    check_absolute(p, false, &source_dir);
+    check_absolute(p, true, &source_dir);
     ::sw::writeFileSafe(p, content, getPatchDir(!source_dir));
 
     //File f(fn, *getSolution()->fs);
