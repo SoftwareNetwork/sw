@@ -207,7 +207,8 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     //t->applyRootDirectory();
     //t->SourceDirBase = t->SourceDir;
 
-    t->init();
+    while (t->init())
+        ;
     addChild(t);
 
     getSolution()->call_event(*t, CallbackType::CreateTargetInitialized);
@@ -416,7 +417,7 @@ void Target::removeFile(const path &fn, bool binary_dir)
     fs::remove(p, ec);
 }
 
-void Target::init()
+bool Target::init()
 {
     auto get_config_with_deps = [this]()
     {
@@ -478,6 +479,8 @@ void Target::init()
     // make sure we always use absolute paths
     BinaryDir = fs::absolute(BinaryDir);
     BinaryPrivateDir = fs::absolute(BinaryPrivateDir);
+
+    SW_RETURN_MULTIPASS_END;
 }
 
 UnresolvedDependenciesType Target::gatherUnresolvedDependencies() const

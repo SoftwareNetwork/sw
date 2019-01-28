@@ -22,7 +22,7 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
 
     TargetType getType() const override { return TargetType::CSharpLibrary; }
 
-    void init() override;
+    bool init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
@@ -51,7 +51,7 @@ struct SW_DRIVER_CPP_API RustTarget : Target
 
     TargetType getType() const override { return TargetType::RustLibrary; }
 
-    void init() override;
+    bool init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
@@ -80,7 +80,7 @@ struct SW_DRIVER_CPP_API GoTarget : Target
 
     TargetType getType() const override { return TargetType::GoLibrary; }
 
-    void init() override;
+    bool init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
@@ -109,7 +109,7 @@ struct SW_DRIVER_CPP_API FortranTarget : Target
 
     TargetType getType() const override { return TargetType::FortranLibrary; }
 
-    void init() override;
+    bool init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
@@ -138,7 +138,7 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
 
     TargetType getType() const override { return TargetType::JavaLibrary; }
 
-    void init() override;
+    bool init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
@@ -167,7 +167,7 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
 
     TargetType getType() const override { return TargetType::KotlinLibrary; }
 
-    void init() override;
+    bool init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
@@ -196,7 +196,7 @@ struct SW_DRIVER_CPP_API DTarget : Target
 
     TargetType getType() const override { return TargetType::DLibrary; }
 
-    void init() override;
+    bool init() override;
     Commands getCommands(void) const override;
     bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }

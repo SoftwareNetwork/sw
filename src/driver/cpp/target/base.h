@@ -23,67 +23,7 @@
 #include <mutex>
 #include <optional>
 
-#define IMPORT_LIBRARY "sw.dll"
-
-#define ASSIGN_WRAPPER(f, t)          \
-    struct f##_files : Assigner       \
-    {                                 \
-        t &r;                         \
-                                      \
-        f##_files(t &r) : r(r)        \
-        {                             \
-        }                             \
-                                      \
-        using Assigner::operator();   \
-                                      \
-        template <class U>            \
-        void operator()(const U &v)   \
-        {                             \
-            if (!canProceed(r))       \
-                return;               \
-            r.f(v);                   \
-        }                             \
-    }
-
-#define ASSIGN_OP(op, f, t)                                   \
-    stream_list_inserter<f##_files> operator op(const t &v)   \
-    {                                                         \
-        auto x = make_stream_list_inserter(f##_files(*this)); \
-        x(v);                                                 \
-        return x;                                             \
-    }
-
-#define ASSIGN_OP_ACTION(op, f, t, a)                         \
-    stream_list_inserter<f##_files> operator op(const t &v)   \
-    {                                                         \
-        a;                                                    \
-        auto x = make_stream_list_inserter(f##_files(*this)); \
-        x(v);                                                 \
-        return x;                                             \
-    }
-
-#define ASSIGN_TYPES_NO_REMOVE(t)        \
-    ASSIGN_OP(+=, add, t)                \
-    ASSIGN_OP_ACTION(=, add, t, clear()) \
-    ASSIGN_OP(<<, add, t)
-
-#define ASSIGN_TYPES(t)       \
-    ASSIGN_TYPES_NO_REMOVE(t) \
-    ASSIGN_OP(-=, remove, t)  \
-    ASSIGN_OP(>>, remove, t)
-
-#define ASSIGN_TYPES_AND_EXCLUDE(t) \
-    ASSIGN_TYPES(t)                 \
-    ASSIGN_OP(^=, remove_exclude, t)
-
-#define SW_TARGET_USING_ASSIGN_OPS(t) \
-    using t::operator+=;              \
-    using t::operator-=;              \
-    using t::operator=;               \
-    using t::operator<<;              \
-    using t::operator>>;              \
-    using t::add;                     \
-    using t::remove
+#include "base_macro.h"
 
 namespace sw
 {
@@ -470,8 +410,8 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     Target() = default;
     virtual ~Target() = default;
 
-    virtual void init(); // add multipass init if needed
-    virtual bool prepare() = 0;
+    virtual bool init(); // multipass init,
+    virtual bool prepare() = 0; // multipass prepare,
     virtual Commands getCommands() const = 0;
     virtual Files gatherAllFiles() const = 0;
     virtual DependenciesType gatherDependencies() const = 0;
@@ -485,7 +425,8 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     using TargetBase::operator+=;
 
 protected:
-    int prepare_pass = 1;
+    SW_MULTIPASS_VARIABLE(prepare_pass);
+    SW_MULTIPASS_VARIABLE(init_pass);
     mutable bool deps_resolved = false;
 
     path getOutputFileName() const;
@@ -499,7 +440,7 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     virtual ~ProjDirBase() = default;
 
     TargetType getType() const override { return TargetType::Directory; }
-    void init() override {}
+    bool init() override { SW_RETURN_MULTIPASS_END; }
     Commands getCommands() const override { return Commands{}; }
     bool prepare() override { return false; }
     Files gatherAllFiles() const override { return {}; }

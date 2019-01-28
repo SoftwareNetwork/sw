@@ -103,7 +103,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
 
     TargetType getType() const override { return TargetType::NativeLibrary; }
 
-    void init() override;
+    bool init() override;
     bool prepare() override;
     Commands getCommands() const override;
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
@@ -206,7 +206,7 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeExecutedTarget
 {
     using NativeExecutedTarget::operator=;
 
-    void init() override;
+    bool init() override;
 
 protected:
     bool prepare() override;
@@ -243,7 +243,7 @@ struct SW_DRIVER_CPP_API StaticLibraryTarget : LibraryTargetBase
 {
     bool isStaticOnly() const override { return true; }
 
-    void init() override;
+    bool init() override;
 
     TargetType getType() const override { return TargetType::NativeStaticLibrary; }
 
@@ -263,7 +263,7 @@ struct SW_DRIVER_CPP_API SharedLibraryTarget : LibraryTargetBase
 {
     bool isSharedOnly() const override { return true; }
 
-    void init() override;
+    bool init() override;
 
     TargetType getType() const override { return TargetType::NativeSharedLibrary; }
 

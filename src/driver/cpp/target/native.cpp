@@ -18,8 +18,8 @@ DECLARE_STATIC_LOGGER(logger, "target.native");
 #define NATIVE_TARGET_DEF_SYMBOLS_FILE \
     (BinaryDir / ".sw.symbols.def")
 
-#define RETURN_PREPARE_PASS \
-    do {prepare_pass++; return true;} while (0)
+#define RETURN_PREPARE_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(prepare_pass)
+#define RETURN_INIT_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(init_pass)
 
 static cl::opt<bool> do_not_mangle_object_names("do-not-mangle-object-names");
 //static cl::opt<bool> full_build("full", cl::desc("Full build (check all conditions)"));
@@ -71,26 +71,41 @@ NativeExecutedTarget::~NativeExecutedTarget()
     // in our case it is nlohmann::json member
 }
 
-void NativeExecutedTarget::init()
+bool NativeExecutedTarget::init()
 {
-    Target::init();
-
-    // propagate this pointer to all
-    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    switch (init_pass)
     {
-        v.target = this;
-    });
-    //LanguageStorage::target = this;
+    case 1:
+    {
+        Target::init();
 
-    Librarian = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Librarian->clone());
-    Linker = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Linker->clone());
+        // propagate this pointer to all
+        TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+        {
+            v.target = this;
+        });
+        //LanguageStorage::target = this;
 
-    addPackageDefinitions();
+        Librarian = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Librarian->clone());
+        Linker = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Linker->clone());
 
-    // we set output file, but sometimes overridden call must set it later
-    // (libraries etc.)
-    // this one is used for executables
-    setOutputFile();
+        addPackageDefinitions();
+
+        // we set output file, but sometimes overridden call must set it later
+        // (libraries etc.)
+        // this one is used for executables
+        setOutputFile();
+    }
+    RETURN_INIT_MULTIPASS_NEXT_PASS;
+    case 2:
+    {
+        setOutputFile();
+
+        tryLoadPrecomputedData();
+    }
+    SW_RETURN_MULTIPASS_END;
+    }
+    SW_RETURN_MULTIPASS_END;
 }
 
 /*void NativeExecutedTarget::init2()
@@ -1370,16 +1385,9 @@ bool NativeExecutedTarget::prepare()
 
     switch (prepare_pass)
     {
-    case 0:
-        //if (!IsConfig/* && PackageDefinitions*/)
-
-        //restoreSourceDir();
-        RETURN_PREPARE_PASS;
     case 1:
     {
         LOG_TRACE(logger, "Preparing target: " + pkg.ppath.toString());
-
-        //tryLoadPrecomputedData();
 
         getSolution()->call_event(*this, CallbackType::BeginPrepare);
 
@@ -1479,7 +1487,7 @@ bool NativeExecutedTarget::prepare()
 
         clearGlobCache();
     }
-    RETURN_PREPARE_PASS;
+    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 2:
         // resolve
     {
@@ -1507,7 +1515,7 @@ bool NativeExecutedTarget::prepare()
             }
         }*/
     }
-    RETURN_PREPARE_PASS;
+    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 3:
         // inheritance
     {
@@ -1679,7 +1687,7 @@ bool NativeExecutedTarget::prepare()
             }
         }
     }
-    RETURN_PREPARE_PASS;
+    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 4:
         // merge
     {
@@ -1700,7 +1708,7 @@ bool NativeExecutedTarget::prepare()
             merge(*(NativeExecutedTarget*)d->target.lock().get(), s);
         }
     }
-    RETURN_PREPARE_PASS;
+    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 5:
         // source files
     {
@@ -2050,7 +2058,7 @@ bool NativeExecutedTarget::prepare()
                 }
             }
     }
-    RETURN_PREPARE_PASS;
+    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 6:
         // link libraries
     {
@@ -2117,7 +2125,7 @@ bool NativeExecutedTarget::prepare()
                 write_file(BinaryDir.parent_path() / "deps.txt", s);
         }
     }
-    RETURN_PREPARE_PASS;
+    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 7:
         // linker
     {
@@ -2165,13 +2173,13 @@ bool NativeExecutedTarget::prepare()
 
         getSolution()->call_event(*this, CallbackType::EndPrepare);
     }
-    RETURN_PREPARE_PASS;
+    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 8:
         savePrecomputedData();
         break;
     }
 
-    return false;
+    SW_RETURN_MULTIPASS_END;
 }
 
 void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets)
@@ -3139,25 +3147,25 @@ bool LibraryTarget::prepare()
     return prepareLibrary(getSolution()->Settings.Native.LibrariesType);
 }
 
-void LibraryTarget::init()
+bool LibraryTarget::init()
 {
-    NativeExecutedTarget::init();
+    auto r = NativeExecutedTarget::init();
     initLibrary(getSolution()->Settings.Native.LibrariesType);
-    setOutputFile(); // after initLibrary
+    return r;
 }
 
-void StaticLibraryTarget::init()
+bool StaticLibraryTarget::init()
 {
-    NativeExecutedTarget::init();
+    auto r = NativeExecutedTarget::init();
     initLibrary(LibraryType::Static);
-    setOutputFile(); // after initLibrary
+    return r;
 }
 
-void SharedLibraryTarget::init()
+bool SharedLibraryTarget::init()
 {
-    NativeExecutedTarget::init();
+    auto r = NativeExecutedTarget::init();
     initLibrary(LibraryType::Shared);
-    setOutputFile(); // after initLibrary
+    return r;
 }
 
 }

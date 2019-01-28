@@ -5,7 +5,7 @@
 namespace sw
 {
 
-void CSharpTarget::init()
+bool CSharpTarget::init()
 {
     Target::init();
 
@@ -31,6 +31,8 @@ void CSharpTarget::init()
         auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
         compiler->setOutputFile(base);
     }
+
+    SW_RETURN_MULTIPASS_END;
 }
 
 path CSharpTarget::getOutputFileName(const path &root) const
@@ -63,7 +65,7 @@ bool CSharpTarget::prepare()
     return false;
 }
 
-void RustTarget::init()
+bool RustTarget::init()
 {
     Target::init();
 
@@ -89,6 +91,8 @@ void RustTarget::init()
         auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
         compiler->setOutputFile(base);
     }
+
+    SW_RETURN_MULTIPASS_END;
 }
 
 path RustTarget::getOutputFileName(const path &root) const
@@ -121,7 +125,7 @@ bool RustTarget::prepare()
     return false;
 }
 
-void GoTarget::init()
+bool GoTarget::init()
 {
     Target::init();
 
@@ -147,6 +151,8 @@ void GoTarget::init()
         auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
         compiler->setOutputFile(base);
     }
+
+    SW_RETURN_MULTIPASS_END;
 }
 
 path GoTarget::getOutputFileName(const path &root) const
@@ -179,7 +185,7 @@ bool GoTarget::prepare()
     return false;
 }
 
-void FortranTarget::init()
+bool FortranTarget::init()
 {
     Target::init();
 
@@ -205,6 +211,8 @@ void FortranTarget::init()
         auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
         compiler->setOutputFile(base);
     }
+
+    SW_RETURN_MULTIPASS_END;
 }
 
 path FortranTarget::getOutputFileName(const path &root) const
@@ -237,7 +245,7 @@ bool FortranTarget::prepare()
     return false;
 }
 
-void JavaTarget::init()
+bool JavaTarget::init()
 {
     Target::init();
 
@@ -263,6 +271,8 @@ void JavaTarget::init()
     auto base = BinaryDir.parent_path() / "out";
     compiler->setOutputDir(base);
     //}
+
+    SW_RETURN_MULTIPASS_END;
 }
 
 path JavaTarget::getOutputFileName(const path &root) const
@@ -298,7 +308,7 @@ bool JavaTarget::prepare()
     return false;
 }
 
-void KotlinTarget::init()
+bool KotlinTarget::init()
 {
     Target::init();
 
@@ -324,6 +334,8 @@ void KotlinTarget::init()
         auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
         compiler->setOutputFile(base);
     }
+
+    SW_RETURN_MULTIPASS_END;
 }
 
 path KotlinTarget::getOutputFileName(const path &root) const
@@ -356,7 +368,7 @@ bool KotlinTarget::prepare()
     return false;
 }
 
-void DTarget::init()
+bool DTarget::init()
 {
     Target::init();
 
@@ -383,6 +395,8 @@ void DTarget::init()
         compiler->setOutputFile(base);
     }
     compiler->setObjectDir(BinaryDir.parent_path() / "obj");
+
+    SW_RETURN_MULTIPASS_END;
 }
 
 path DTarget::getOutputFileName(const path &root) const
