@@ -615,7 +615,7 @@ void ServiceDatabase::overridePackage(const PackageId &pkg, const OverriddenPack
     (*db)(insert_into(orpv).set(
         orpv.overrideRemotePackageId = q.front().overrideRemotePackageId.value(),
         orpv.version = pkg.version.toString(),
-        orpv.sdir = fs::canonical(fs::absolute(opkg.sdir)).u8string(),
+        orpv.sdir = fs::canonical(opkg.sdir).u8string(),
         orpv.prefix = opkg.prefix
     ));
     auto q2 = (*db)(select(orpv.overrideRemotePackageVersionId).from(orpv).where(
@@ -651,7 +651,7 @@ void ServiceDatabase::deleteOverriddenPackageDir(const path &sdir) const
 {
     const auto orpv = ::db::service::OverrideRemotePackageVersion{};
     (*db)(remove_from(orpv).where(
-        orpv.sdir == fs::canonical(fs::absolute(sdir)).u8string()
+        orpv.sdir == fs::canonical(sdir).u8string()
     ));
 }
 

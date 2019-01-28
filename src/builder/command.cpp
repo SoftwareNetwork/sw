@@ -158,6 +158,10 @@ static String getCommandId(const Command &c)
     if (explain_outdated_full)
     {
         s += "\n";
+        s += "bdir: " + normalize_path(c.working_directory) + "\n";
+        s += "env:\n";
+        for (auto &[k, v] : c.environment)
+            s += k + "\n" + v + "\n";
         s += normalize_path(c.program) + "\n";
         for (auto &a : c.args)
             s += a + "\n";
@@ -910,6 +914,29 @@ Files Command::getGeneratedDirs() const
     return dirs;
 }
 
+static String getSystemRoot()
+{
+    static const String sr = []()
+    {
+        auto e = getenv("SystemRoot");
+        if (!e)
+            throw SW_RUNTIME_ERROR("getenv() failed");
+        return e;
+    }();
+    return sr;
+}
+
+static String getSystemPath()
+{
+    // explicit! Path may be changed by IDE, other sources, so we keep it very small and very system
+    static const String sp = []()
+    {
+        auto r = getSystemRoot();
+        return r + "\\system32;" + r + ";" + r + "\\System32\\Wbem;" + r + "\\System32\\WindowsPowerShell\\v1.0\\";
+    }();
+    return sp;
+}
+
 void Command::addPathDirectory(const path &p)
 {
 #ifdef _WIN32
@@ -924,10 +951,14 @@ void Command::addPathDirectory(const path &p)
 
     if (environment[env].empty())
     {
+#ifdef _WIN32
+        environment[env] = getSystemPath();
+#else
         auto e = getenv(env);
         if (!e)
             throw SW_RUNTIME_ERROR("getenv() failed");
         environment[env] = e;
+#endif
     }
     environment[env] += delim + norm(p);
 }

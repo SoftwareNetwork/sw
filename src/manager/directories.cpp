@@ -39,9 +39,9 @@ void Directories::set_storage_dir(const path &p)
 {
     path ap;
     if (storage_dir_override.empty())
-        ap = fs::absolute(p);
+        ap = fs::canonical(p);
     else
-        ap = fs::absolute(storage_dir_override);
+        ap = fs::canonical(storage_dir_override);
     checkPath(ap, "storage directory");
 
 #ifdef _WIN32

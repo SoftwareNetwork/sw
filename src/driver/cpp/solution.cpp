@@ -252,7 +252,8 @@ Solution::Solution()
 {
     checker.solution = this;
 
-    SourceDir = fs::absolute(fs::current_path());
+    // canonical makes disk letter uppercase on windows
+    SourceDir = fs::canonical(fs::current_path());
     BinaryDir = SourceDir / SW_BINARY_DIR;
 }
 

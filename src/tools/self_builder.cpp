@@ -27,7 +27,7 @@ void setup_log(const std::string &log_level)
 
     // first trace message
     LOG_TRACE(logger, "----------------------------------------");
-    LOG_TRACE(logger, "Starting cppan...");
+    LOG_TRACE(logger, "Starting sw...");
 }
 
 int main(int argc, char **argv)

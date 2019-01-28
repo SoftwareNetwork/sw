@@ -142,6 +142,7 @@ bool patch(const path &fn, const String &patch, const path &lock_dir)
     auto r = primitives::patch::patch(t, patch);
     if (!r)
     {
+        //throw SW_RUNTIME_ERROR("cannot apply patch to: " + normalize_path(fn));
         LOG_ERROR(logger, "cannot apply patch to: " << fn);
         return false;
     }

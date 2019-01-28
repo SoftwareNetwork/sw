@@ -374,7 +374,7 @@ int sw_main(const Strings &args)
     {
         LOG_INFO(logger, "Delete override for sdir " + delete_overridden_package_dir.u8string());
 
-        auto d = fs::canonical(fs::absolute(delete_overridden_package_dir));
+        auto d = fs::canonical(delete_overridden_package_dir);
 
         std::map<sw::PackageId, path> pkgs;
         for (auto &[pkg, p] : getServiceDatabase().getOverriddenPackages())
