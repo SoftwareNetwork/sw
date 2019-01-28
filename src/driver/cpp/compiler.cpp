@@ -9,6 +9,7 @@
 #include <language.h>
 #include <solution.h>
 #include <compiler_helpers.h>
+#include <target/native.h>
 
 #include <primitives/sw/settings.h>
 

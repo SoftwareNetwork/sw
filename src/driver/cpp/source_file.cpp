@@ -10,7 +10,7 @@
 #include "solution.h"
 
 #include <language.h>
-#include <target.h>
+#include <target/native.h>
 
 #include <primitives/sw/settings.h>
 

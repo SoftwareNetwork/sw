@@ -9,6 +9,7 @@
 #include <checks_storage.h>
 #include <db.h>
 #include <solution.h>
+#include <target/native.h>
 
 #include <filesystem.h>
 #include <hash.h>

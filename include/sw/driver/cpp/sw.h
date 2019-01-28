@@ -12,6 +12,7 @@
 #include <jumppad.h>
 #include <compiler_helpers.h>
 #include <module.h>
+#include <target/all.h>
 
 // manager stuff
 #include <resolver.h>

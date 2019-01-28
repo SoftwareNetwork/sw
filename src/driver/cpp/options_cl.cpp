@@ -9,7 +9,6 @@
 #include "command.h"
 
 #include <package.h>
-#include <target.h>
 
 namespace sw
 {

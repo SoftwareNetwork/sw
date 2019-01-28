@@ -11,6 +11,7 @@
 #include "compiler.h"
 #include "compiler_helpers.h"
 #include "solution.h"
+#include <target/native.h>
 
 #include <filesystem.h>
 

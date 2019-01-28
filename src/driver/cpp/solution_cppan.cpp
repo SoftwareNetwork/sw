@@ -19,6 +19,7 @@
 #include <directories.h>
 #include <hash.h>
 #include <settings.h>
+#include <target/native.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/thread/lock_types.hpp>

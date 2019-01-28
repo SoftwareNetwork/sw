@@ -10,6 +10,7 @@
 #include <dependency.h>
 #include <source_file.h>
 #include <solution.h>
+#include <target/native.h>
 
 #include <primitives/hash.h>
 

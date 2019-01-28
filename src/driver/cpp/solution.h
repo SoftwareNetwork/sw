@@ -11,7 +11,7 @@
 
 #include <file_storage.h>
 #include <execution_plan.h>
-#include <target.h>
+#include <target/base.h>
 
 #include <sw/builder/driver.h>
 

@@ -16,6 +16,7 @@
 #include "resolver.h"
 #include "run.h"
 #include "frontend/cppan/yaml.h"
+#include <target/native.h>
 
 #include <directories.h>
 #include <database.h>

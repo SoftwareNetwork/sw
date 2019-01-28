@@ -7,7 +7,7 @@
 #include "types.h"
 
 #include <solution.h>
-#include <target.h>
+#include "target/base.h"
 
 #include <boost/algorithm/string.hpp>
 

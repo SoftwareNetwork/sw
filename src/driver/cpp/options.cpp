@@ -7,7 +7,7 @@
 #include "options.h"
 
 #include <package.h>
-#include <target.h>
+#include "target/native.h"
 
 #include <boost/algorithm/string.hpp>
 
