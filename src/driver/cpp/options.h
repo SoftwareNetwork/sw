@@ -533,7 +533,7 @@ template<> struct hash<sw::Dependency>
 {
     size_t operator()(const sw::Dependency& p) const
     {
-        return (size_t)p.target.lock().get();// ^ (size_t)p.package;
+        return std::hash<decltype(p.package)>()(p.package);
     }
 };
 

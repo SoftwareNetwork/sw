@@ -1307,7 +1307,7 @@ void NativeExecutedTarget::detectLicenseFile()
 path NativeExecutedTarget::getPrecomputedDataFilename()
 {
     // binary dir!
-    return BinaryDir.parent_path() / "info" / "precomputed.5.json";
+    return BinaryDir.parent_path() / "info" / "precomputed.8.json";
 }
 
 void NativeExecutedTarget::tryLoadPrecomputedData()
@@ -1320,10 +1320,34 @@ void NativeExecutedTarget::tryLoadPrecomputedData()
         return;
 
     // TODO: detect frontend
-    if (!File(pkg.getDirSrc2() / "sw.cpp", *getSolution()->fs).isChanged())
+    if (File(pkg.getDirSrc2() / "sw.cpp", *getSolution()->fs).isChanged())
+    {
+        fs::remove(fn);
         return;
+    }
 
     //precomputed_data = nlohmann::json::parse(read_file(fn));
+    auto j = nlohmann::json::parse(read_file(fn));
+
+    if (!j["gc"].is_null())
+    {
+        for (const auto &f : j["gc"].get<nlohmann::json::object_t>())
+        {
+            for (const auto &e : f.second.items())
+            {
+                for (const auto &f3 : e.value())
+                    glob_cache[f.first][e.key() == "1"].insert(f3.get<String>());
+            }
+        }
+    }
+
+    if (!j["fc"].is_null())
+    {
+        for (const auto &f : j["fc"].items())
+        {
+            files_cache[f.key()] = f.value().get<String>();
+        }
+    }
 }
 
 void NativeExecutedTarget::applyPrecomputedData()
@@ -1334,6 +1358,28 @@ void NativeExecutedTarget::savePrecomputedData()
 {
     if (isLocalOrOverridden())
         return;
+
+    auto fn = getPrecomputedDataFilename();
+    if (fs::exists(fn))
+        return;
+
+    nlohmann::json gc;
+    for (auto &[p, c] : glob_cache)
+    {
+        nlohmann::json jp;
+        for (auto &[b, files] : c)
+        {
+            for (auto &f : files)
+            {
+                jp[b ? "1" : "0"].push_back(f.u8string());
+            }
+        }
+        gc[p.u8string()] = jp;
+    }
+
+    nlohmann::json fc;
+    for (auto &[k, v] : files_cache)
+        fc[k.u8string()] = v.u8string();
 
     nlohmann::json j;
 
@@ -1355,7 +1401,12 @@ void NativeExecutedTarget::savePrecomputedData()
         }
     }
 
-    write_file(getPrecomputedDataFilename(), j.dump(2));
+    nlohmann::json s;
+    s["s"] = j;
+    s["gc"] = gc;
+    s["fc"] = fc;
+
+    write_file(getPrecomputedDataFilename(), s.dump(2));
 }
 
 bool NativeExecutedTarget::prepare()
@@ -1484,8 +1535,6 @@ bool NativeExecutedTarget::prepare()
             Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
         }
         Definitions["SW_STATIC="];
-
-        clearGlobCache();
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 2:
@@ -1519,16 +1568,23 @@ bool NativeExecutedTarget::prepare()
     case 3:
         // inheritance
     {
-        if (precomputed_data)
+        /*if (precomputed_data)
         {
         }
-        else
+        else*/
         {
             struct H
             {
                 size_t operator()(const DependencyPtr &p) const
                 {
-                    return std::hash<Dependency>()(*p);
+                    return std::hash<PackageId>()(p->target.lock()->pkg);
+                }
+            };
+            struct EQ
+            {
+                size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
+                {
+                    return p1->target.lock() == p2->target.lock();
                 }
             };
             struct L
@@ -1539,12 +1595,9 @@ bool NativeExecutedTarget::prepare()
                 }
             };
 
-            //DEBUG_BREAK_IF_STRING_HAS(pkg.toString(), "protoc-");
-
-            // why such sorting (L)?
-            //std::unordered_map<DependencyPtr, InheritanceType, H> deps;
+            // we have ptrs, so do custom sorting
+            //std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps;
             std::map<DependencyPtr, InheritanceType, L> deps;
-            //std::map<DependencyPtr, InheritanceType> deps;
             std::vector<DependencyPtr> deps_ordered;
 
             // set our initial deps
@@ -2176,6 +2229,7 @@ bool NativeExecutedTarget::prepare()
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 8:
         savePrecomputedData();
+        clearGlobCache();
         break;
     }
 

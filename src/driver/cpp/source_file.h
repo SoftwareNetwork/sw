@@ -90,8 +90,10 @@ public:
 
 protected:
     bool autodetect = false;
+    mutable std::unordered_map<path, std::map<bool /* recursive */, Files>> glob_cache;
+    mutable FilesMap files_cache;
 
-    void clearGlobCache() { glob_cache.clear(); }
+    void clearGlobCache();
     void remove_full(const path &file);
 
     std::optional<PackageId> findPackageIdByExtension(const String &e) const;
@@ -108,7 +110,6 @@ private:
     using Op = void (SourceFileStorage::*)(const path &);
 
     std::vector<FileOperation> file_ops;
-    mutable std::unordered_map<path, std::map<bool /* recursive */, Files>> glob_cache;
 
     void add_unchecked(const path &f, bool skip = false);
     void add1(const FileRegex &r);

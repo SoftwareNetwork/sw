@@ -420,6 +420,11 @@ void SourceFileStorage::resolve()
 
 bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source_dir) const
 {
+    auto i = files_cache.find(F);
+    bool found = i != files_cache.end();
+    if (found)
+        F = i->second;
+
     // apply EnforcementType::CheckFiles
     if (!F.is_absolute())
     {
@@ -447,11 +452,13 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
                 }
             }
         }
+        auto old = F;
         F = fs::absolute(p);
+        files_cache[old] = F;
     }
     else
     {
-        if (!fs::exists(F))
+        if (!found && !fs::exists(F))
         {
             if (!File(F, *target->getSolution()->fs).isGeneratedAtAll())
             {
@@ -479,6 +486,8 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
                 *source_dir = true;
             }
         }
+        if (!found)
+            files_cache[F] = F;
     }
     return true;
 }
@@ -516,6 +525,12 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
     //if (files.empty())
         //throw SW_RUNTIME_ERROR("No files matches regex");
     return files;
+}
+
+void SourceFileStorage::clearGlobCache()
+{
+    glob_cache.clear();
+    files_cache.clear();
 }
 
 SourceFile::SourceFile(const Target &t, const path &input)
