@@ -1255,6 +1255,11 @@ void VisualStudioCompiler::setSourceFile(const path &input_file, path &output_fi
     VisualStudioCompiler::setOutputFile(output_file);
 }
 
+path VisualStudioCompiler::getOutputFile() const
+{
+    return ObjectFile();
+}
+
 SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::VSCommand)
 
 void VisualStudioASMCompiler::prepareCommand1(const TargetBase &t)
@@ -1286,6 +1291,11 @@ SW_DEFINE_PROGRAM_CLONE(VisualStudioASMCompiler)
 void VisualStudioASMCompiler::setOutputFile(const path &output_file)
 {
     ObjectFile = output_file;
+}
+
+path VisualStudioASMCompiler::getOutputFile() const
+{
+    return ObjectFile();
 }
 
 void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output_file)
@@ -1328,6 +1338,11 @@ void ClangCompiler::prepareCommand1(const TargetBase &t)
 void ClangCompiler::setOutputFile(const path &output_file)
 {
     OutputFile = output_file;
+}
+
+path ClangCompiler::getOutputFile() const
+{
+    return OutputFile();
 }
 
 SW_DEFINE_PROGRAM_CLONE(ClangCompiler)
@@ -1382,6 +1397,11 @@ void ClangClCompiler::setOutputFile(const path &output_file)
     ObjectFile = output_file;
 }
 
+path ClangClCompiler::getOutputFile() const
+{
+    return ObjectFile();
+}
+
 SW_DEFINE_PROGRAM_CLONE(ClangClCompiler)
 
 void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
@@ -1417,6 +1437,11 @@ SW_DEFINE_PROGRAM_CLONE(GNUASMCompiler)
 void GNUASMCompiler::setOutputFile(const path &output_file)
 {
     OutputFile = output_file;
+}
+
+path GNUASMCompiler::getOutputFile() const
+{
+    return OutputFile();
 }
 
 void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
@@ -1461,6 +1486,11 @@ void GNUCompiler::prepareCommand1(const TargetBase &t)
 void GNUCompiler::setOutputFile(const path &output_file)
 {
     OutputFile = output_file;
+}
+
+path GNUCompiler::getOutputFile() const
+{
+    return OutputFile();
 }
 
 SW_DEFINE_PROGRAM_CLONE(GNUCompiler)

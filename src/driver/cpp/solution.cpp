@@ -525,7 +525,7 @@ void Solution::printGraph(const path &p) const
         for (auto &d : nt->Dependencies)
         {
             if (!d->IncludeDirectoriesOnly)
-                s += "\"" + p.toString() + "\"->\"" + d->target.lock()->pkg.toString() + "\";\n";
+                s += "\"" + p.toString() + "\"->\"" + d->target->pkg.toString() + "\";\n";
         }
     }
     s += "}";
@@ -551,7 +551,7 @@ void Solution::execute() const
     execute(p);
 }
 
-void Solution::execute(ExecutionPlan<builder::Command> &p) const
+void Solution::execute(CommandExecutionPlan &p) const
 {
     auto print_graph = [](const auto &ep, const path &p, bool short_names = false)
     {
@@ -634,7 +634,7 @@ void Solution::execute(ExecutionPlan<builder::Command> &p) const
     p.skip_errors = skip_errors.getValue();
     p.execute(e);
     auto t2 = t.getTimeFloat();
-    if (!silent && t2 > 0.1)
+    if (!silent && t2 > 0.15)
         LOG_INFO(logger, "Build time: " << t2 << " s.");
 
     // produce chrome tracing log
@@ -734,7 +734,8 @@ void Solution::build_and_resolve(int n_runs)
     if (n_runs > 0)
         LOG_ERROR(logger, "You are here for the second time. This is not intended. Expect failures.");
 
-    Build b;
+    //static
+    Build b; // cache?
     b.execute_jobs = config_jobs;
     b.Local = false;
     auto dll = b.build_configs(cfgs);
@@ -761,7 +762,7 @@ void Solution::build_and_resolve(int n_runs)
         {
             if (p == t->pkg && ud[porig])
             {
-                ud[porig]->target = std::static_pointer_cast<NativeTarget>(t);
+                ud[porig]->setTarget(*std::static_pointer_cast<NativeTarget>(t).get());
                 //t->SourceDir = p.getDirSrc2();
             }
         }
@@ -791,8 +792,8 @@ void Solution::prepare()
     // checks use this
     //throw SW_RUNTIME_ERROR("unreachable");
 
-    if (prepared)
-        return;
+    //if (prepared)
+        //return;
 
     // all targets are set stay unchanged from user
     // so, we're ready to some preparation passes
@@ -806,7 +807,7 @@ void Solution::prepare()
     while (prepareStep())
         ;
 
-    prepared = true;
+    //prepared = true;
 
     // prevent memory leaks (high mem usage)
     //updateConcurrentContext();
@@ -833,9 +834,8 @@ void Solution::prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &nex
     {
         fs.push_back(e.push([this, t = std::ref(t), &next_pass, host]
         {
-            auto np = prepareStep(t, host);
-            if (!next_pass)
-                next_pass = np;
+            if (prepareStep(t, host))
+                next_pass = true;
         }));
     }
 }
@@ -867,7 +867,7 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
         {
             auto t = std::static_pointer_cast<NativeTarget>(i->second);
             if (t)
-                d->setTarget(t);
+                d->setTarget(*t);
             else
                 throw SW_RUNTIME_ERROR("bad target cast to NativeTarget during resolve");
 
@@ -886,7 +886,7 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
             {
                 auto t = std::static_pointer_cast<NativeTarget>(i->second);
                 if (t)
-                    d->setTarget(t);
+                    d->setTarget(*t);
                 else
                     throw SW_RUNTIME_ERROR("bad target cast to NativeTarget during resolve");
 
@@ -897,8 +897,8 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
             else
             {
                 auto err = "Package: " + t.pkg.toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
-                if (d->target.lock())
-                    err += " (but target is set to " + d->target.lock()->getPackage().toString() + ")";
+                if (d->target)
+                    err += " (but target is set to " + d->target->getPackage().toString() + ")";
                 if (auto d = t.pkg.getOverriddenDir(); d)
                 {
                     err += ".\nPackage: " + t.pkg.toString() + " is overridden locally. "
@@ -937,7 +937,7 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
                 auto i = children.find(r.value());
                 if (i != children.end())
                 {
-                    dptr->target = std::static_pointer_cast<NativeTarget>(i->second);
+                    dptr->setTarget(*std::static_pointer_cast<NativeTarget>(i->second).get());
                     known2.insert(up);
                     continue;
                 }
@@ -946,7 +946,7 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
             auto i = getChildren().find(up);
             if (i != getChildren().end())
             {
-                dptr->setTarget(std::static_pointer_cast<NativeTarget>(i->second));
+                dptr->setTarget(*std::static_pointer_cast<NativeTarget>(i->second).get());
                 known2.insert(up);
             }
         }
@@ -960,14 +960,14 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
     return deps;
 }
 
-ExecutionPlan<builder::Command> Solution::getExecutionPlan() const
+Solution::CommandExecutionPlan Solution::getExecutionPlan() const
 {
     return getExecutionPlan(getCommands());
 }
 
-ExecutionPlan<builder::Command> Solution::getExecutionPlan(const Commands &cmds) const
+Solution::CommandExecutionPlan Solution::getExecutionPlan(const Commands &cmds) const
 {
-    auto ep = ExecutionPlan<builder::Command>::createExecutionPlan(cmds);
+    auto ep = CommandExecutionPlan::createExecutionPlan(cmds);
     if (ep)
         return ep;
 
@@ -977,7 +977,7 @@ ExecutionPlan<builder::Command> Solution::getExecutionPlan(const Commands &cmds)
 
     auto [g, n, sc] = ep.getStrongComponents();
 
-    using Subgraph = boost::subgraph<ExecutionPlan<builder::Command>::Graph>;
+    using Subgraph = boost::subgraph<CommandExecutionPlan::Graph>;
 
     // fill copy of g
     Subgraph root(g.m_vertices.size());
@@ -995,7 +995,7 @@ ExecutionPlan<builder::Command> Solution::getExecutionPlan(const Commands &cmds)
     for (decltype(n) i = 0; i < n; i++)
     {
         if (subs[i]->m_graph.m_vertices.size() > 1)
-            ExecutionPlan<builder::Command>::printGraph(subs[i]->m_graph, cyclic_path / std::to_string(i));
+            CommandExecutionPlan::printGraph(subs[i]->m_graph, cyclic_path / std::to_string(i));
     }
 
     ep.printGraph(ep.getGraph(), cyclic_path / "processed", ep.commands, true);
@@ -1277,7 +1277,7 @@ Build::~Build()
         getModuleStorage(base_ptr).modules.clear();
 }
 
-ExecutionPlan<builder::Command> Build::getExecutionPlan() const
+Solution::CommandExecutionPlan Build::getExecutionPlan() const
 {
     Commands cmds;
     for (auto &s : solutions)
@@ -1310,8 +1310,8 @@ void Build::performChecks()
 
 void Build::prepare()
 {
-    if (prepared)
-        return;
+    //if (prepared)
+        //return;
 
     if (solutions.empty())
         throw SW_RUNTIME_ERROR("no solutions");
@@ -1321,13 +1321,23 @@ void Build::prepare()
     // all targets are set stay unchanged from user
     // so, we're ready to some preparation passes
 
-    // resolve all deps first
     for (const auto &[i, s] : enumerate(solutions))
     {
         if (solutions.size() > 1)
             LOG_INFO(logger, "[" << (i + 1) << "/" << solutions.size() << "] resolve deps pass " << s.getConfig());
         s.build_and_resolve();
     }
+
+    // resolve all deps first
+    /*auto &e = getExecutor();
+    Futures<void> fs;
+    for (const auto &[i, s] : enumerate(solutions))
+    {
+        //if (solutions.size() > 1)
+            //LOG_INFO(logger, "[" << (i + 1) << "/" << solutions.size() << "] resolve deps pass " << s.getConfig());
+        fs.push_back(e.push([&s] {s.build_and_resolve(); }));
+    }
+    waitAndGet(fs);*/
 
     // decide if we need cross compilation
 
@@ -1337,7 +1347,7 @@ void Build::prepare()
     while (prepareStep())
         ;
 
-    prepared = true;
+    //prepared = true;
 
     // prevent memory leaks (high mem usage)
     //updateConcurrentContext();
@@ -1578,7 +1588,9 @@ FilesMap Build::build_configs_separate(const Files &files)
         r[fn] = prepare_config(fn);
 
     if (!do_not_rebuild_config)
+    {
         Solution::execute();
+    }
 
     return r;
 }
@@ -1588,14 +1600,21 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     if (pkgs.empty())
         return {};
 
+    bool init = false;
     if (solutions.empty())
+    {
         addSolution();
 
-    auto &solution = solutions[0];
+        auto &solution = solutions[0];
 
-    solution.Settings.Native.LibrariesType = LibraryType::Static;
-    if (debug_configs)
-        solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
+        solution.Settings.Native.LibrariesType = LibraryType::Static;
+        if (debug_configs)
+            solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
+
+        init = true;
+    }
+
+    auto &solution = solutions[0];
 
     Files files;
     std::unordered_map<path, PackageId> output_names;
@@ -1610,14 +1629,22 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
     auto &lib = createTarget(files);
 
+    SCOPE_EXIT
+    {
+        solution.children.erase(lib.pkg);
+    };
+
     if (do_not_rebuild_config && fs::exists(lib.getOutputFile()))
         return lib.getOutputFile();
 
     do_not_rebuild_config = false;
 
-    check_self(solution.checker);
-    solution.performChecks();
-    build_self(solution);
+    if (init)
+    {
+        check_self(solution.checker);
+        solution.performChecks();
+        build_self(solution);
+    }
     addDeps(lib, solution);
 
     addImportLibrary(lib);
@@ -1635,6 +1662,18 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         if (gVerbose)
             lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
     }
+
+    auto is_changed = [this, &lib](const path &p)
+    {
+        if (auto f = lib[p].as<NativeSourceFile>(); f)
+        {
+            return
+                File(p, *fs).isChanged() ||
+                File(f->compiler->getOutputFile(), *fs).isChanged()
+                ;
+        }
+        return true;
+    };
 
     // generate main source file
     path many_files_fn;
@@ -1693,7 +1732,17 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         auto p = many_files_fn = BinaryDir / "self" / ("sw." + h + ".cpp");
         write_file_if_different(p, ctx.getText());
         lib += p;
+
+        /*if (!(is_changed(p) ||
+              File(lib.getOutputFile(), *fs).isChanged() ||
+              std::any_of(files.begin(), files.end(), [&is_changed](const auto &p) {
+                  return is_changed(p);
+              })))
+            return lib.getOutputFile();*/
     }
+    /*else if (!(is_changed(*files.begin()) ||
+               File(lib.getOutputFile(), *fs).isChanged()))
+        return lib.getOutputFile();*/
 
     // after files
     write_pch(solution);
@@ -1914,7 +1963,7 @@ void Build::load(const path &fn, bool configless)
     }
 }
 
-static ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
+static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
 {
     primitives::BinaryContext ctx;
     ctx.load(fn);
@@ -2045,10 +2094,10 @@ static ExecutionPlan<builder::Command> load(const path &fn, const Solution &s)
     Commands commands2;
     for (auto &[_, c] : commands)
         commands2.insert(c);
-    return ExecutionPlan<builder::Command>::createExecutionPlan(commands2);
+    return Solution::CommandExecutionPlan::createExecutionPlan(commands2);
 }
 
-void save(const path &fn, const ExecutionPlan<builder::Command> &p)
+void save(const path &fn, const Solution::CommandExecutionPlan &p)
 {
     primitives::BinaryContext ctx;
 
@@ -2636,7 +2685,7 @@ PackageDescriptionMap Build::getPackages() const
         // deps
         for (auto &d : t->gatherDependencies())
         {
-            if (d->target.lock() && d->target.lock()->Scope != TargetScope::Build)
+            if (d->target && d->target->Scope != TargetScope::Build)
                 continue;
 
             nlohmann::json jd;

@@ -56,6 +56,7 @@ struct VSGenerator : Generator
     path dir;
     const path projects_dir = "projects";
     const InsecurePath deps_subdir = "Dependencies";
+    const InsecurePath overridden_deps_subdir = "Overridden Packages";
     const String predefined_targets_dir = ". SW Predefined Targets"s;
     const String all_build_name = "ALL_BUILD"s;
 

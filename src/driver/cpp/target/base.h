@@ -133,6 +133,9 @@ enum class EnforcementType
 };
 
 SW_DRIVER_CPP_API
+bool isExecutable(TargetType T);
+
+SW_DRIVER_CPP_API
 String toString(TargetType T);
 
 struct NativeExecutedTarget;
@@ -422,6 +425,8 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     //auto getPreparePass() const { return prepare_pass; }
     virtual bool mustResolveDeps() const { return deps_resolved ? false : (deps_resolved = true); }
 
+    DependencyPtr getDependency() const;
+
     using TargetBase::operator+=;
 
 protected:
@@ -512,27 +517,27 @@ public:
     // source files
     //ASSIGN_TYPES(String)
     ASSIGN_TYPES_AND_EXCLUDE(path)
-        ASSIGN_TYPES_AND_EXCLUDE(Files)
-        ASSIGN_TYPES_AND_EXCLUDE(FileRegex)
+    ASSIGN_TYPES_AND_EXCLUDE(Files)
+    ASSIGN_TYPES_AND_EXCLUDE(FileRegex)
 
-        // compiler options
-        ASSIGN_TYPES(Definition)
-        ASSIGN_TYPES(DefinitionsType)
-        ASSIGN_TYPES(IncludeDirectory)
+    // compiler options
+    ASSIGN_TYPES(Definition)
+    ASSIGN_TYPES(DefinitionsType)
+    ASSIGN_TYPES(IncludeDirectory)
 
-        // linker options
-        ASSIGN_TYPES(NativeTarget)
-        ASSIGN_TYPES(LinkLibrary)
+    // linker options
+    ASSIGN_TYPES(Target)
+    ASSIGN_TYPES(LinkLibrary)
 
-        //
-        ASSIGN_TYPES(PackageId)
-        ASSIGN_TYPES(DependencyPtr)
-        ASSIGN_TYPES(UnresolvedPackage)
-        ASSIGN_TYPES(UnresolvedPackages)
+    //
+    ASSIGN_TYPES(PackageId)
+    ASSIGN_TYPES(DependencyPtr)
+    ASSIGN_TYPES(UnresolvedPackage)
+    ASSIGN_TYPES(UnresolvedPackages)
 
-        //
-        ASSIGN_TYPES(sw::tag_static_t)
-        ASSIGN_TYPES(sw::tag_shared_t)
+    //
+    ASSIGN_TYPES(sw::tag_static_t)
+    ASSIGN_TYPES(sw::tag_shared_t)
 };
 
 template <class T>

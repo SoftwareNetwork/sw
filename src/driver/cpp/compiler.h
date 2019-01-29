@@ -103,6 +103,7 @@ struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
 
     virtual ~NativeCompiler() = default;
 
+    virtual path getOutputFile() const = 0;
     virtual void setSourceFile(const path &input_file, path &output_file) = 0;
     virtual String getObjectExtension() const { return ".o"; }
 
@@ -133,6 +134,7 @@ struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
 
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
+    path getOutputFile() const override;
     void setSourceFile(const path &input_file, path &output_file) override;
 
 protected:
@@ -151,6 +153,7 @@ struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
 
     SW_COMMON_COMPILER_API;
 
+    path getOutputFile() const override;
     void setSourceFile(const path &input_file, path &output_file) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
@@ -176,6 +179,7 @@ struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
     void setSourceFile(const path &input_file, path &output_file) override;
+    path getOutputFile() const override;
 
 protected:
     std::shared_ptr<driver::cpp::Command> createCommand1() const override;
@@ -197,6 +201,7 @@ struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".obj"; }
     void setSourceFile(const path &input_file, path &output_file) override;
+    path getOutputFile() const override;
 
 protected:
     std::shared_ptr<driver::cpp::Command> createCommand1() const override;
@@ -218,6 +223,7 @@ struct SW_DRIVER_CPP_API GNUASMCompiler : GNU, NativeCompiler,
     void setSourceFile(const path &input_file, path &output_file) override;
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".o"; }
+    path getOutputFile() const override;
 
 protected:
     std::shared_ptr<driver::cpp::Command> createCommand1() const override;
@@ -238,6 +244,7 @@ struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
     void setOutputFile(const path &output_file);
     String getObjectExtension() const override { return ".o"; }
     void setSourceFile(const path &input_file, path &output_file) override;
+    path getOutputFile() const override;
 
 protected:
     std::shared_ptr<driver::cpp::Command> createCommand1() const override;

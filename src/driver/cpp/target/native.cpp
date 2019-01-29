@@ -52,12 +52,6 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_copy_file, copy_file)
 namespace sw
 {
 
-DependencyPtr NativeTarget::getDependency() const
-{
-    auto d = std::make_shared<Dependency>(this);
-    return d;
-}
-
 void NativeTarget::setOutputDir(const path &dir)
 {
     //SwapAndRestore sr(OutputDir, dir);
@@ -297,14 +291,14 @@ NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherDependenciesTargets
     TargetsSet deps;
     for (auto &d : Dependencies)
     {
-        if (d->target.lock().get() == this)
+        if (d->target == this)
             continue;
         if (d->isDummy())
             continue;
 
         if (d->IncludeDirectoriesOnly)
             continue;
-        deps.insert(d->target.lock().get());
+        deps.insert(d->target);
     }
     return deps;
 }
@@ -912,14 +906,14 @@ Commands NativeExecutedTarget::getCommands() const
             TargetsSet deps;
             for (auto &d : Dependencies)
             {
-                if (d->target.lock().get() == this)
+                if (d->target == this)
                     continue;
                 if (d->isDummy())
                     continue;
 
                 if (d->IncludeDirectoriesOnly && !d->GenerateCommandsBefore)
                     continue;
-                deps.insert(d->target.lock().get());
+                deps.emplace(d->target);
             }
             return deps;
         };
@@ -939,7 +933,7 @@ Commands NativeExecutedTarget::getCommands() const
         {
             for (auto &l : gatherDependenciesTargets())
             {
-                if (auto c2 = l->getCommand())
+                if (auto c2 = ((NativeExecutedTarget*)l)->getCommand())
                     c->dependencies.insert(c2);
             }
 
@@ -986,7 +980,7 @@ Commands NativeExecutedTarget::getCommands() const
             // check circular, resolve if possible
             for (auto &d : CircularDependencies)
             {
-                auto dt = ((NativeExecutedTarget*)d->target.lock().get());
+                auto dt = ((NativeExecutedTarget*)d->target);
                 auto non_circ_cmd = dt->getSelectedTool()->getCommand(*this);
 
                 // one command must be executed after the second to free implib files from any compiler locks
@@ -1307,11 +1301,13 @@ void NativeExecutedTarget::detectLicenseFile()
 path NativeExecutedTarget::getPrecomputedDataFilename()
 {
     // binary dir!
-    return BinaryDir.parent_path() / "info" / "precomputed.8.json";
+    return BinaryDir.parent_path() / "info" / "precomputed.12.json";
 }
 
 void NativeExecutedTarget::tryLoadPrecomputedData()
 {
+    return;
+
     if (isLocalOrOverridden())
         return;
 
@@ -1327,25 +1323,31 @@ void NativeExecutedTarget::tryLoadPrecomputedData()
     }
 
     //precomputed_data = nlohmann::json::parse(read_file(fn));
-    auto j = nlohmann::json::parse(read_file(fn));
-
-    if (!j["gc"].is_null())
+    const auto &j = nlohmann::json::parse(read_file(fn));
+    for (const auto &kv : j["storage"].items())
     {
-        for (const auto &f : j["gc"].get<nlohmann::json::object_t>())
+        auto i = std::stoi(kv.key());
+        auto &s = getInheritanceStorage()[i];
+
+        if (!kv.value()["gc"].is_null())
         {
-            for (const auto &e : f.second.items())
+            for (const auto &f : kv.value()["gc"].get<nlohmann::json::object_t>())
             {
-                for (const auto &f3 : e.value())
-                    glob_cache[f.first][e.key() == "1"].insert(f3.get<String>());
+                auto &v = s.glob_cache[f.first];
+                for (const auto &e : f.second.items())
+                {
+                    for (const auto &f3 : e.value())
+                        v[e.key() == "1"].insert(f3.get<String>());
+                }
             }
         }
-    }
 
-    if (!j["fc"].is_null())
-    {
-        for (const auto &f : j["fc"].items())
+        if (!kv.value()["fc"].is_null())
         {
-            files_cache[f.key()] = f.value().get<String>();
+            for (const auto &f : kv.value()["fc"].items())
+            {
+                s.files_cache[f.key()] = f.value().get<String>();
+            }
         }
     }
 }
@@ -1356,6 +1358,8 @@ void NativeExecutedTarget::applyPrecomputedData()
 
 void NativeExecutedTarget::savePrecomputedData()
 {
+    return;
+
     if (isLocalOrOverridden())
         return;
 
@@ -1363,50 +1367,53 @@ void NativeExecutedTarget::savePrecomputedData()
     if (fs::exists(fn))
         return;
 
-    nlohmann::json gc;
-    for (auto &[p, c] : glob_cache)
-    {
-        nlohmann::json jp;
-        for (auto &[b, files] : c)
-        {
-            for (auto &f : files)
-            {
-                jp[b ? "1" : "0"].push_back(f.u8string());
-            }
-        }
-        gc[p.u8string()] = jp;
-    }
-
-    nlohmann::json fc;
-    for (auto &[k, v] : files_cache)
-        fc[k.u8string()] = v.u8string();
-
     nlohmann::json j;
-
     for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
     {
         auto s = getInheritanceStorage().raw()[i];
         if (!s)
             continue;
-        auto si = std::to_string(i);
+
+        nlohmann::json ji;
+
         for (auto &[p, _] : *s)
         {
-            j[si]["source_files"].push_back(normalize_path(p)); // add flags: skip, postpone(?) etc.
+            ji["source_files"].push_back(normalize_path(p)); // add flags: skip, postpone(?) etc.
         }
         for (auto &d : s->Dependencies)
         {
-            auto &jd = j[si]["dependencies"][d->getResolvedPackage().toString()];
+            auto &jd = ji["dependencies"][d->getResolvedPackage().toString()];
             jd["idir"] = d->IncludeDirectoriesOnly;
             jd["dummy"] = d->Dummy;
         }
+
+        nlohmann::json fc;
+        for (auto &[k, v] : files_cache)
+            fc[k.u8string()] = v.u8string();
+        ji["fc"] = fc;
+
+        nlohmann::json gc;
+        for (auto &[p, c] : glob_cache)
+        {
+            nlohmann::json jp;
+            for (auto &[b, files] : c)
+            {
+                for (auto &f : files)
+                {
+                    jp[b ? "1" : "0"].push_back(f.u8string());
+                }
+            }
+            gc[p.u8string()] = jp;
+        }
+        ji["gc"] = gc;
+
+        j[std::to_string(i)] = ji;
     }
 
     nlohmann::json s;
-    s["s"] = j;
-    s["gc"] = gc;
-    s["fc"] = fc;
+    s["storage"] = j; // inheritance storage
 
-    write_file(getPrecomputedDataFilename(), s.dump(2));
+    write_file(getPrecomputedDataFilename(), s.dump());
 }
 
 bool NativeExecutedTarget::prepare()
@@ -1539,172 +1546,138 @@ bool NativeExecutedTarget::prepare()
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 2:
         // resolve
-    {
-        /*if (precomputed_data)
-        {
-            TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-                [this](auto &v, auto &s)
-            {
-                v.Dependencies.clear();
-            });
-
-            auto &j = precomputed_data.value();
-            for (auto ijs = j.begin(); ijs != j.end(); ++ijs)
-            {
-                auto i = std::stoi(ijs.key());
-                auto &s = getInheritanceStorage()[i];
-
-                for (auto it = j["dependencies"].begin(); it != j["dependencies"].end(); ++it)
-                {
-                    auto d = std::make_shared<Dependency>(it.key());
-                    s += d;
-                    d->IncludeDirectoriesOnly = it.value()["idir"];
-                    d->Dummy = it.value()["dummy"];
-                }
-            }
-        }*/
-    }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 3:
         // inheritance
     {
-        /*if (precomputed_data)
+        struct H
         {
-        }
-        else*/
+            size_t operator()(const DependencyPtr &p) const
+            {
+                return std::hash<PackageId>()(p->target->pkg);
+            }
+        };
+        struct EQ
         {
-            struct H
+            size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
             {
-                size_t operator()(const DependencyPtr &p) const
+                return p1->target == p2->target;
+            }
+        };
+
+        // we have ptrs, so do custom sorting
+        std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps;
+        std::vector<DependencyPtr> deps_ordered;
+
+        // set our initial deps
+        TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+            [this, &deps, &deps_ordered](auto &v, auto &s)
+        {
+            //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
+
+            for (auto &d : v.Dependencies)
+            {
+                if (d->target == this)
+                    continue;
+                if (d->isDummy())
+                    continue;
+
+                deps.emplace(d, s.Inheritance);
+                deps_ordered.push_back(d);
+            }
+        });
+
+        while (1)
+        {
+            bool new_dependency = false;
+            auto deps2 = deps;
+            for (auto &[d, _] : deps2)
+            {
+                // simple check
+                if (d->target == nullptr)
                 {
-                    return std::hash<PackageId>()(p->target.lock()->pkg);
+                    throw std::logic_error("Package: " + pkg.toString() + ": Unresolved package on stage 2: " + d->package.toString());
                 }
-            };
-            struct EQ
-            {
-                size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
+
+                // iterate over child deps
+                (*(NativeExecutedTarget*)d->target).TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
+                    [this, &new_dependency, &deps, d = d.get(), &deps_ordered](auto &v, auto &s)
                 {
-                    return p1->target.lock() == p2->target.lock();
-                }
-            };
+                    // nothing to do with private inheritance
+                    if (s.Inheritance == InheritanceType::Private)
+                        return;
 
-            // we have ptrs, so do custom sorting
-            std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps;
-            std::vector<DependencyPtr> deps_ordered;
-
-            // set our initial deps
-            TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-                [this, &deps, &deps_ordered](auto &v, auto &s)
-            {
-                //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "sw.server.protos");
-
-                for (auto &d : v.Dependencies)
-                {
-                    if (d->target.lock().get() == this)
-                        continue;
-                    if (d->isDummy())
-                        continue;
-
-                    deps.emplace(d, s.Inheritance);
-                    deps_ordered.push_back(d);
-                }
-            });
-
-            while (1)
-            {
-                bool new_dependency = false;
-                auto deps2 = deps;
-                for (auto &[d, _] : deps2)
-                {
-                    // simple check
-                    if (d->target.lock() == nullptr)
+                    for (auto &d2 : v.Dependencies)
                     {
-                        throw std::logic_error("Package: " + pkg.toString() + ": Unresolved package on stage 2: " + d->package.toString());
-                        /*LOG_ERROR(logger, "Package: " + pkg.toString() + ": Unresolved package on stage 2: " + d->package.toString() + ". Resolving inplace");
-                        auto id = d->package.resolve();
-                        d->target = std::static_pointer_cast<NativeTarget>(getSolution()->getTargetPtr(id));*/
-                    }
+                        if (d2->target == this)
+                            continue;
+                        if (d2->isDummy())
+                            continue;
 
-                    // iterate over child deps
-                    (*(NativeExecutedTarget*)d->target.lock().get()).TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-                        [this, &new_dependency, &deps, d = d.get(), &deps_ordered](auto &v, auto &s)
-                    {
-                        // nothing to do with private inheritance
-                        if (s.Inheritance == InheritanceType::Private)
-                            return;
+                        if (s.Inheritance == InheritanceType::Protected && !hasSameParent(d2->target))
+                            continue;
 
-                        for (auto &d2 : v.Dependencies)
+                        auto copy = std::make_shared<Dependency>(*d2);
+                        auto[i, inserted] = deps.emplace(copy,
+                            s.Inheritance == InheritanceType::Interface ?
+                            InheritanceType::Public : s.Inheritance
+                        );
+                        if (inserted)
+                            deps_ordered.push_back(copy);
+
+                        // include directories only handling
+                        auto di = i->first;
+                        if (inserted)
                         {
-                            if (d2->target.lock().get() == this)
-                                continue;
-                            if (d2->isDummy())
-                                continue;
-
-                            if (s.Inheritance == InheritanceType::Protected && !hasSameParent(d2->target.lock().get()))
-                                continue;
-
-                            auto copy = std::make_shared<Dependency>(*d2);
-                            auto[i, inserted] = deps.emplace(copy,
-                                s.Inheritance == InheritanceType::Interface ?
-                                InheritanceType::Public : s.Inheritance
-                            );
-                            if (inserted)
-                                deps_ordered.push_back(copy);
-
-                            // include directories only handling
-                            auto di = i->first;
-                            if (inserted)
+                            // new dep is added
+                            if (d->IncludeDirectoriesOnly)
                             {
-                                // new dep is added
-                                if (d->IncludeDirectoriesOnly)
-                                {
-                                    // if we inserted 3rd party dep (d2=di) of idir_only dep (d),
-                                    // we mark it always as idir_only
-                                    di->IncludeDirectoriesOnly = true;
-                                }
-                                else
-                                {
-                                    // otherwise we keep idir_only flag as is
-                                }
-                                new_dependency = true;
+                                // if we inserted 3rd party dep (d2=di) of idir_only dep (d),
+                                // we mark it always as idir_only
+                                di->IncludeDirectoriesOnly = true;
                             }
                             else
                             {
-                                // we already have this dep
-                                if (d->IncludeDirectoriesOnly)
+                                // otherwise we keep idir_only flag as is
+                            }
+                            new_dependency = true;
+                        }
+                        else
+                        {
+                            // we already have this dep
+                            if (d->IncludeDirectoriesOnly)
+                            {
+                                // left as is if parent (d) idir_only
+                            }
+                            else
+                            {
+                                // if parent dep is not idir_only, then we choose whether to build dep
+                                if (d2->IncludeDirectoriesOnly)
                                 {
-                                    // left as is if parent (d) idir_only
+                                    // left as is if d2 idir_only
                                 }
                                 else
                                 {
-                                    // if parent dep is not idir_only, then we choose whether to build dep
-                                    if (d2->IncludeDirectoriesOnly)
+                                    if (di->IncludeDirectoriesOnly)
                                     {
-                                        // left as is if d2 idir_only
+                                        // also mark as new dependency (!) if processing changed for it
+                                        new_dependency = true;
                                     }
-                                    else
-                                    {
-                                        if (di->IncludeDirectoriesOnly)
-                                        {
-                                            // also mark as new dependency (!) if processing changed for it
-                                            new_dependency = true;
-                                        }
-                                        // if d2 is not idir_only, we set so for di
-                                        di->IncludeDirectoriesOnly = false;
-                                    }
+                                    // if d2 is not idir_only, we set so for di
+                                    di->IncludeDirectoriesOnly = false;
                                 }
                             }
                         }
-                    });
-                }
+                    }
+                });
+            }
 
-                if (!new_dependency)
-                {
-                    for (auto &d : deps_ordered)
-                        //add(deps.find(d)->first);
-                        Dependencies.insert(deps.find(d)->first);
-                    break;
-                }
+            if (!new_dependency)
+            {
+                for (auto &d : deps_ordered)
+                    //add(deps.find(d)->first);
+                    Dependencies.insert(deps.find(d)->first);
+                break;
             }
         }
 
@@ -1719,15 +1692,15 @@ bool NativeExecutedTarget::prepare()
             auto &dc = getSolution()->dummy_children;
             for (auto &d2 : Dependencies)
             {
-                if (d2->target.lock() &&
-                    c.find(d2->target.lock()->pkg) == c.end(d2->target.lock()->pkg) &&
-                    dc.find(d2->target.lock()->pkg) != dc.end(d2->target.lock()->pkg))
+                if (d2->target &&
+                    c.find(d2->target->pkg) == c.end(d2->target->pkg) &&
+                    dc.find(d2->target->pkg) != dc.end(d2->target->pkg))
                 {
-                    c[d2->target.lock()->pkg] = dc[d2->target.lock()->pkg];
+                    c[d2->target->pkg] = dc[d2->target->pkg];
 
                     // such packages are not completely independent
                     // they share same source dir (but not binary?) with parent etc.
-                    d2->target.lock()->SourceDir = SourceDir;
+                    d2->target->SourceDir = SourceDir;
                 }
             }
         }
@@ -1750,7 +1723,7 @@ bool NativeExecutedTarget::prepare()
 
             GroupSettings s;
             //s.merge_to_self = false;
-            merge(*(NativeExecutedTarget*)d->target.lock().get(), s);
+            merge(*(NativeExecutedTarget*)d->target, s);
         }
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
@@ -2113,12 +2086,12 @@ bool NativeExecutedTarget::prepare()
             String s;
             for (auto &d : Dependencies)
             {
-                if (d->target.lock().get() == this)
+                if (d->target == this)
                     continue;
                 if (d->isDummy())
                     continue;
 
-                s += d.get()->target.lock()->pkg.ppath.toString();
+                s += d.get()->target->pkg.ppath.toString();
                 if (d->IncludeDirectoriesOnly)
                 {
                     s += ": i";
@@ -2126,11 +2099,11 @@ bool NativeExecutedTarget::prepare()
                 }
                 s += "\n";
 
-                auto dt = ((NativeExecutedTarget*)d->target.lock().get());
+                auto dt = ((NativeExecutedTarget*)d->target);
 
                 for (auto &d2 : dt->Dependencies)
                 {
-                    if (d2->target.lock().get() != this)
+                    if (d2->target != this)
                         continue;
                     if (d2->IncludeDirectoriesOnly)
                         continue;
@@ -2159,9 +2132,9 @@ bool NativeExecutedTarget::prepare()
                 {
                     path o;
                     if (dt->getSelectedTool() == dt->Librarian.get())
-                        o = d.get()->target.lock()->getOutputFile();
+                        o = ((NativeTarget*)d.get()->target)->getOutputFile();
                     else
-                        o = d.get()->target.lock()->getImportLibrary();
+                        o = ((NativeTarget*)d.get()->target)->getImportLibrary();
                     if (!o.empty())
                         LinkLibraries.push_back(o);
                 }
@@ -2191,7 +2164,7 @@ bool NativeExecutedTarget::prepare()
         {
             // O1 -= Li
             for (auto &d : CircularDependencies)
-                O1.erase(std::remove(O1.begin(), O1.end(), d->target.lock()->getImportLibrary()), O1.end());
+                O1.erase(std::remove(O1.begin(), O1.end(), ((NativeTarget*)d->target)->getImportLibrary()), O1.end());
 
             // CL1 = O1
             CircularLinker->setInputLibraryDependencies(O1);
@@ -2199,8 +2172,8 @@ bool NativeExecutedTarget::prepare()
             // O1 += CLi
             for (auto &d : CircularDependencies)
             {
-                if (d->target.lock() && ((NativeExecutedTarget*)d->target.lock().get())->CircularLinker)
-                    O1.push_back(((NativeExecutedTarget*)d->target.lock().get())->CircularLinker->getImportLibrary());
+                if (d->target && ((NativeExecutedTarget*)d->target)->CircularLinker)
+                    O1.push_back(((NativeExecutedTarget*)d->target)->CircularLinker->getImportLibrary());
             }
 
             // prepare command here to prevent races
@@ -2234,14 +2207,14 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
         return;
     for (auto &d : Dependencies)
     {
-        if (d->target.lock().get() == this)
+        if (d->target == this)
             continue;
         if (d->isDummy())
             continue;
         if (d->IncludeDirectoriesOnly)
             continue;
 
-        auto dt = ((NativeExecutedTarget*)d->target.lock().get());
+        auto dt = ((NativeExecutedTarget*)d->target);
 
         // here we must gather all static (and header only?) lib deps in recursive manner
         if (dt->getSelectedTool() == dt->Librarian.get() || dt->HeaderOnly.value())
@@ -2270,16 +2243,16 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
             // if dep is a static library, we take all its deps link libraries too
             for (auto &d2 : dt->Dependencies)
             {
-                if (d2->target.lock().get() == this)
+                if (d2->target == this)
                     continue;
-                if (d2->target.lock().get() == d->target.lock().get())
+                if (d2->target == d->target)
                     continue;
                 if (d2->isDummy())
                     continue;
                 if (d2->IncludeDirectoriesOnly)
                     continue;
 
-                auto dt2 = ((NativeExecutedTarget*)d2->target.lock().get());
+                auto dt2 = ((NativeExecutedTarget*)d2->target);
                 if (!dt2->HeaderOnly.value())
                     add(dt2, dt2->getImportLibrary());
                 dt2->gatherStaticLinkLibraries(ll, added, targets);

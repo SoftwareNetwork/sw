@@ -43,6 +43,9 @@ std::shared_ptr<Command> Command::clone() const
 
 void Command::prepare()
 {
+    if (prepared)
+        return;
+
     // evaluate lazy args
     for (auto &[pos, f] : callbacks)
         args[pos] = f();
@@ -56,10 +59,10 @@ void Command::prepare()
     auto d = dependency.lock();
     if (d)
     {
-        auto t = d->target.lock();
+        auto t = d->target;
         if (!t)
             throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
-        t->setupCommand(*this);
+        ((NativeTarget*)t)->setupCommand(*this);
     }
 
     Base::prepare();
@@ -73,10 +76,10 @@ path Command::getProgram() const
         p = Base::getProgram();
     else */if (d)
     {
-        auto t = d->target.lock();
+        auto t = d->target;
         if (!t)
             throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
-        p = t->getOutputFile();
+        p = ((NativeTarget*)t)->getOutputFile();
         if (p.empty())
             throw SW_RUNTIME_ERROR("Empty program from package: " + t->getPackage().toString());
     }
@@ -95,18 +98,7 @@ void Command::setProgram(const std::shared_ptr<Dependency> &d)
         throw SW_RUNTIME_ERROR("Setting program twice"); // probably throw, but who knows...
     dependency = d;
     dependency_set = true;
-    // we use late resolving for cross compilation
-    /*auto l = d->target.lock();
-    if (l)
-        setProgram(*l);*/
 }
-
-/*void Command::setProgram(const NativeTarget &t)
-{
-    LOG_WARN(logger, "careful! sometimes you cannot cross compile with this");
-    setProgram(t.getOutputFile());
-    t.setupCommand(*this);
-}*/
 
 void Command::pushLazyArg(LazyCallback f)
 {

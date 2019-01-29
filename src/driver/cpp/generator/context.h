@@ -77,9 +77,11 @@ struct SolutionContext : primitives::Context
 {
     struct Project
     {
+        String name;
         std::unique_ptr<SolutionContext> ctx;
         std::set<String> deps;
         ProjectContext pctx;
+        String solution_dir;
 
         Project()
         {
@@ -94,8 +96,10 @@ struct SolutionContext : primitives::Context
 
     using Base = primitives::Context;
 
+    String all_build_name;
     mutable std::unordered_map<String, String> uuids;
     std::map<String, Project> projects;
+    const Project *first_project = nullptr;
 
     SolutionContext(bool print_version = true);
 
@@ -104,7 +108,7 @@ struct SolutionContext : primitives::Context
     void addDirectory(const String &display_name, const String &solution_dir = {});
     void addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir = {});
 
-    ProjectContext &addProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir);
+    Project &addProject(VSProjectType type, const String &n, const String &solution_dir);
     void beginProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir);
     void endProject();
 
@@ -126,6 +130,7 @@ struct SolutionContext : primitives::Context
     void addKeyValue(const String &k, const String &v);
     String getStringUuid(const String &k) const;
     Text getText() const override;
+    void materialize(const Build &b, const path &dir);
 
 private:
     std::map<String, String> nested_projects;

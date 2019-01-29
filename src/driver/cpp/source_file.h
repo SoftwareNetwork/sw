@@ -88,10 +88,12 @@ public:
 
     bool check_absolute(path &file, bool ignore_errors = false, bool *source_dir = nullptr) const;
 
-protected:
-    bool autodetect = false;
+    // internal
     mutable std::unordered_map<path, std::map<bool /* recursive */, Files>> glob_cache;
     mutable FilesMap files_cache;
+
+protected:
+    bool autodetect = false;
 
     void clearGlobCache();
     void remove_full(const path &file);

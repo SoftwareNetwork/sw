@@ -23,6 +23,21 @@ DECLARE_STATIC_LOGGER(logger, "target");
 namespace sw
 {
 
+bool isExecutable(TargetType t)
+{
+    return
+        0
+        || t == TargetType::NativeExecutable
+        || t == TargetType::CSharpExecutable
+        || t == TargetType::RustExecutable
+        || t == TargetType::GoExecutable
+        || t == TargetType::FortranExecutable
+        || t == TargetType::JavaExecutable
+        || t == TargetType::KotlinExecutable
+        || t == TargetType::DExecutable
+        ;
+}
+
 String toString(TargetType T)
 {
     switch (T)
@@ -488,10 +503,16 @@ UnresolvedDependenciesType Target::gatherUnresolvedDependencies() const
     UnresolvedDependenciesType deps;
     for (auto &d : gatherDependencies())
     {
-        if (/*!getSolution()->resolveTarget(d->package) && */!d->target.lock())
+        if (/*!getSolution()->resolveTarget(d->package) && */!d->target)
             deps.insert({ d->package, d });
     }
     return deps;
+}
+
+DependencyPtr Target::getDependency() const
+{
+    auto d = std::make_shared<Dependency>(*this);
+    return d;
 }
 
 void TargetOptions::add(const IncludeDirectory &i)

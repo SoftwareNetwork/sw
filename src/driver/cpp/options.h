@@ -26,7 +26,7 @@ struct Command;
 }
 
 struct NativeOptions;
-struct NativeTarget;
+struct Target;
 struct Package;
 
 using DefinitionKey = std::string;
@@ -157,7 +157,7 @@ struct SW_DRIVER_CPP_API FileRegex
 
 struct SW_DRIVER_CPP_API Dependency
 {
-    std::weak_ptr<NativeTarget> target;
+    Target *target = nullptr;
     UnresolvedPackage package;
     std::vector<std::shared_ptr<Dependency>> chain;
 
@@ -171,29 +171,25 @@ struct SW_DRIVER_CPP_API Dependency
 
     // optional callback
     // choose default value
-    std::function<void(NativeTarget &)> optional;
+    std::function<void(Target &)> optional;
 
-    Dependency(const NativeTarget *t);
+    Dependency(const Target &t);
     Dependency(const UnresolvedPackage &p);
 
-    Dependency &operator=(const NativeTarget *t);
+    Dependency &operator=(const Target &t);
     //Dependency &operator=(const Package *p);
     bool operator==(const Dependency &t) const;
     bool operator< (const Dependency &t) const;
 
     bool isDummy() const { return Disabled || Dummy; }
 
-    //NativeTarget *get() const;
-    //operator NativeTarget*() const;
-    //NativeTarget *operator->() const;
-
-    operator bool() const { return !!target.lock(); }
+    operator bool() const { return target; }
     bool isResolved() const { return operator bool(); }
 
     UnresolvedPackage getPackage() const;
     PackageId getResolvedPackage() const;
 
-    void setTarget(const std::shared_ptr<NativeTarget> &t);
+    void setTarget(const Target &t);
     void propagateTargetToChain();
 };
 
@@ -270,8 +266,8 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
     using NativeLinkerOptionsData::add;
     using NativeLinkerOptionsData::remove;
 
-    void add(const NativeTarget &t);
-    void remove(const NativeTarget &t);
+    void add(const Target &t);
+    void remove(const Target &t);
 
     void add(const DependencyPtr &t);
     void remove(const DependencyPtr &t);
@@ -289,13 +285,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
     void addEverything(builder::Command &c) const;
     FilesOrdered gatherLinkLibraries() const;
 
-    //
-    //NativeLinkerOptions &operator+=(const NativeTarget &t);
-    //NativeLinkerOptions &operator+=(const DependenciesType &t);
-    //NativeLinkerOptions &operator+=(const Package &t);
-    //NativeLinkerOptions &operator=(const DependenciesType &t);
-
-    DependencyPtr operator+(const NativeTarget &t);
+    DependencyPtr operator+(const Target &t);
     DependencyPtr operator+(const DependencyPtr &d);
     DependencyPtr operator+(const PackageId &d);
 };

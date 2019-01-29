@@ -24,8 +24,6 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
     NativeTarget() = default;
     virtual ~NativeTarget() = default;
 
-    DependencyPtr getDependency() const;
-
     virtual std::shared_ptr<builder::Command> getCommand() const = 0;
     virtual path getOutputFile() const = 0;
     virtual path getImportLibrary() const = 0;
@@ -160,7 +158,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     using TargetBase::operator+=;
 
 protected:
-    using TargetsSet = std::unordered_set<NativeTarget*>;
+    using TargetsSet = std::unordered_set<Target*>;
     using once_mutex_t = std::recursive_mutex;
 
     once_mutex_t once;

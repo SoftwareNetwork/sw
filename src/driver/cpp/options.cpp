@@ -100,11 +100,8 @@ void unique_merge_containers(C &to, const C &from)
     }*/
 }
 
-Dependency::Dependency(const NativeTarget *t)
+Dependency::Dependency(const Target &t)
 {
-    //target = std::static_pointer_cast<NativeTarget>(((NativeTarget *)t)->shared_from_this());
-    // why commented?
-    //package = t->getPackage();
     operator=(t);
 }
 
@@ -113,57 +110,29 @@ Dependency::Dependency(const UnresolvedPackage &p)
     package = p;
 }
 
-Dependency &Dependency::operator=(const NativeTarget *t)
+Dependency &Dependency::operator=(const Target &t)
 {
-    setTarget(std::static_pointer_cast<NativeTarget>(((NativeTarget *)t)->shared_from_this()));
-
-    // we must not assign prepared dependency
-    // resolving occurs later for cross-compilation purposes
-    //package = t->getPackage();
-
+    setTarget(t);
     return *this;
 }
 
 bool Dependency::operator==(const Dependency &t) const
 {
-    auto t1 = target.lock();
-    auto t2 = t.target.lock();
+    auto t1 = target;
+    auto t2 = t.target;
     return std::tie(package, t1) == std::tie(t.package, t2);
 }
 
 bool Dependency::operator<(const Dependency &t) const
 {
-    auto t1 = target.lock();
-    auto t2 = t.target.lock();
+    auto t1 = target;
+    auto t2 = t.target;
     return std::tie(package, t1) < std::tie(t.package, t2);
 }
 
-/*Dependency &Dependency::operator=(const Package *p)
-{
-    package = (Package *)p;
-    return *this;
-}*/
-
-/*NativeTarget *Dependency::get() const
-{
-    //if (target)
-        return target;
-    //return package->ResolvedTarget;
-}
-
-Dependency::operator NativeTarget*() const
-{
-    return get();
-}
-
-NativeTarget *Dependency::operator->() const
-{
-    return get();
-}*/
-
 UnresolvedPackage Dependency::getPackage() const
 {
-    auto t = target.lock();
+    auto t = target;
     if (t)
         return { t->pkg.ppath, t->pkg.version };
     return package;
@@ -171,24 +140,22 @@ UnresolvedPackage Dependency::getPackage() const
 
 PackageId Dependency::getResolvedPackage() const
 {
-    auto t = target.lock();
+    auto t = target;
     if (t)
         return { t->pkg.ppath, t->pkg.version };
     throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
 }
 
-void Dependency::setTarget(const std::shared_ptr<NativeTarget> &t)
+void Dependency::setTarget(const Target &t)
 {
-    if (!t)
-        return;
-    target = t;
+    target = (Target*)&t;
     propagateTargetToChain();
 }
 
 void Dependency::propagateTargetToChain()
 {
     for (auto &c : chain)
-        c->target = target;
+        c->setTarget(*target);
 }
 
 void NativeCompilerOptionsData::add(const Definition &d)
@@ -410,36 +377,9 @@ FilesOrdered NativeLinkerOptions::gatherLinkLibraries() const
     return llib;
 }
 
-/*
-NativeLinkerOptions &NativeLinkerOptions::operator+=(const NativeTarget &t)
+DependencyPtr NativeLinkerOptions::operator+(const Target &t)
 {
-    Dependencies.insert((NativeTarget*)&t);
-    return *this;
-}
-
-NativeLinkerOptions &NativeLinkerOptions::operator=(const DependenciesType &t)
-{
-    Dependencies = t;
-    return *this;
-}
-
-NativeLinkerOptions &NativeLinkerOptions::operator+=(const DependenciesType &t)
-{
-    for (auto &d : t)
-        Dependencies.insert(d);
-    return *this;
-}
-
-NativeLinkerOptions &NativeLinkerOptions::operator+=(const Package &t)
-{
-    Dependencies.insert(new Package(t));
-    return *this;
-}
-*/
-
-DependencyPtr NativeLinkerOptions::operator+(const NativeTarget &t)
-{
-    auto d = std::make_shared<Dependency>(&t);
+    auto d = std::make_shared<Dependency>(t);
     add(d);
     return d;
 }
@@ -457,14 +397,14 @@ DependencyPtr NativeLinkerOptions::operator+(const PackageId &pkg)
     return d;
 }
 
-void NativeLinkerOptions::add(const NativeTarget &t)
+void NativeLinkerOptions::add(const Target &t)
 {
-    add(std::make_shared<Dependency>((NativeTarget*)&t));
+    add(std::make_shared<Dependency>(t));
 }
 
-void NativeLinkerOptions::remove(const NativeTarget &t)
+void NativeLinkerOptions::remove(const Target &t)
 {
-    remove(std::make_shared<Dependency>((NativeTarget*)&t));
+    remove(std::make_shared<Dependency>(t));
 }
 
 void NativeLinkerOptions::add(const DependencyPtr &t)
@@ -482,9 +422,9 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
     {
         (*i)->Disabled = false;
         (*i)->chain.push_back(t);
-        auto d = (*i)->target.lock();
+        auto d = (*i)->target;
         if (d)
-            t->target = d;
+            t->setTarget(*d);
     }
 }
 
@@ -503,9 +443,9 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
     {
         (*i)->Disabled = true;
         (*i)->chain.push_back(t);
-        auto d = (*i)->target.lock();
+        auto d = (*i)->target;
         if (d)
-            t->target = d;
+            t->setTarget(*d);
     }
 }
 

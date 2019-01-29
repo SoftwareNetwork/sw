@@ -218,6 +218,17 @@ static String add_space_if_not_empty(const String &s)
     return " " + s;
 }
 
+static String get_configuration(const Solution::SettingsX &s)
+{
+    return generator::toString(s.Native.ConfigurationType) +
+        add_space_if_not_empty(generator::toString(s.Native.LibrariesType));
+}
+
+static String get_project_configuration(const Solution::SettingsX &s)
+{
+    return get_configuration(s) + "|" + generator::toString(s.TargetOS.Arch);
+}
+
 XmlContext::XmlContext()
     : Context("  ")
 {
@@ -295,9 +306,8 @@ void ProjectContext::addProjectConfigurations(const Build &b)
     beginBlock("ItemGroup", { {"Label","ProjectConfigurations"} });
     for (auto &s : b.solutions)
     {
-        beginBlock("ProjectConfiguration", { {"Include", generator::toString(s.Settings.Native.ConfigurationType) +
-            add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) } });
-        addBlock("Configuration", generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)));
+        beginBlock("ProjectConfiguration", { {"Include", get_project_configuration(s.Settings) } });
+        addBlock("Configuration", get_configuration(s.Settings));
         addBlock("Platform", generator::toString(s.Settings.TargetOS.Arch));
         endBlock();
     }
@@ -309,8 +319,7 @@ void ProjectContext::addPropertyGroupConfigurationTypes(const Build &b)
     for (auto &s : b.solutions)
     {
         beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" +
-            generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" +
-            generator::toString(s.Settings.TargetOS.Arch) + "'" },{ "Label","Configuration" } });
+            get_project_configuration(s.Settings) + "'" },{ "Label","Configuration" } });
 
         switch (ptype)
         {
@@ -335,9 +344,7 @@ void ProjectContext::addPropertySheets(const Build &b)
     for (auto &s : b.solutions)
     {
         beginBlock("ImportGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" +
-            generator::toString(s.Settings.Native.ConfigurationType) +
-            add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" +
-            generator::toString(s.Settings.TargetOS.Arch) + "'" },{ "Label","PropertySheets" } });
+            get_project_configuration(s.Settings) + "'" },{ "Label","PropertySheets" } });
         addBlock("Import", "", {
             {"Project","$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props" },
             { "Condition","exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')" },
@@ -389,7 +396,7 @@ void ProjectContext::printProject(
 
     for (auto &s : b.solutions)
     {
-        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
+        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
 
         String cfg = "--configuration " + toString(s.Settings.Native.ConfigurationType) + " --platform " + toString(s.Settings.TargetOS.Arch);
         if (toString(s.Settings.Native.LibrariesType) != "dll")
@@ -459,7 +466,7 @@ void ProjectContext::printProject(
         if (g.type == GeneratorType::VisualStudioNMake)
             return;
 
-        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
+        beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
         if (s.Settings.TargetOS.is(ArchType::x86_64))
             addBlock("TargetName", normalize_path_windows(o.lexically_relative(dir / projects_dir / "x64")));
         else
@@ -467,14 +474,14 @@ void ProjectContext::printProject(
         endBlock();
 
         // pre build event for utility
-        beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
+        beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
         beginBlock("PreBuildEvent");
         addBlock("Command", build_cmd);
         endBlock();
         endBlock();
 
         // cl properties, make them like in usual VS project
-        beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
+        beginBlock("ItemDefinitionGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
         beginBlock("ClCompile");
         addBlock("AdditionalIncludeDirectories", idirs);
         addBlock("PreprocessorDefinitions", defs);
@@ -623,20 +630,19 @@ void SolutionContext::addDirectory(const InsecurePath &n, const String &display_
         nested_projects[n.toString()] = solution_dir;
 }
 
-ProjectContext &SolutionContext::addProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir)
-{
-    beginProject(type, n, dir, solution_dir);
-    endProject();
-
-    projects[n].pctx.ptype = type;
-    return projects[n].pctx;
-}
-
-void SolutionContext::beginProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir)
+SolutionContext::Project &SolutionContext::addProject(VSProjectType type, const String &n, const String &solution_dir)
 {
     auto up = boost::uuids::random_generator()();
     uuids[n] = uuid2string(up);
 
+    projects[n].name = n;
+    projects[n].pctx.ptype = type;
+    projects[n].solution_dir = solution_dir;
+    return projects[n];
+}
+
+void SolutionContext::beginProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir)
+{
     beginBlock("Project(\"" + project_type_uuids[type] + "\") = \"" +
         n + "\", \"" + (dir / (n + ".vcxproj")).u8string() + "\", \"{" + uuids[n] + "}\"");
 
@@ -690,10 +696,7 @@ void SolutionContext::setSolutionConfigurationPlatforms(const Build &b)
     beginGlobalSection("SolutionConfigurationPlatforms", "preSolution");
     for (auto &s : b.solutions)
     {
-        addLine(generator::toString(s.Settings.Native.ConfigurationType) +
-            add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" +
-            generator::toString(s.Settings.TargetOS.Arch) + " = " + generator::toString(s.Settings.Native.ConfigurationType) +
-            add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch));
+        addLine(get_project_configuration(s.Settings) + " = " + get_project_configuration(s.Settings));
     }
     endGlobalSection();
 }
@@ -702,9 +705,9 @@ void SolutionContext::addProjectConfigurationPlatforms(const Build &b, const Str
 {
     for (auto &s : b.solutions)
     {
-        addKeyValue(getStringUuid(prj) + "." + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + ".ActiveCfg", generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch));
+        addKeyValue(getStringUuid(prj) + "." + get_project_configuration(s.Settings) + ".ActiveCfg", get_project_configuration(s.Settings));
         if (build)
-            addKeyValue(getStringUuid(prj) + "." + generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + ".Build.0", generator::toString(s.Settings.Native.ConfigurationType) + add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch));
+            addKeyValue(getStringUuid(prj) + "." + get_project_configuration(s.Settings) + ".Build.0", get_project_configuration(s.Settings));
     }
 }
 
@@ -726,6 +729,40 @@ void SolutionContext::addKeyValue(const String &k, const String &v)
 String SolutionContext::getStringUuid(const String &k) const
 {
     return "{" + uuids[k] + "}";
+}
+
+void SolutionContext::materialize(const Build &b, const path &dir)
+{
+    auto bp = [&](const auto &n, const auto &p)
+    {
+        beginProject(p.pctx.ptype, n, dir, p.solution_dir);
+        endProject();
+    };
+
+    if (first_project)
+        bp(first_project->name, *first_project);
+
+    for (auto &[n, p] : projects)
+    {
+        if (&p == first_project)
+            continue;
+        bp(n, p);
+    }
+
+    beginGlobal();
+    setSolutionConfigurationPlatforms(b);
+    beginGlobalSection("ProjectConfigurationPlatforms", "postSolution");
+    for (auto &[p, t] : b.solutions[0].children)
+    {
+        if (!print_dependencies && !t->Local)
+            continue;
+        addProjectConfigurationPlatforms(b, p.toString());
+        if (projects.find(p.toString() + "-build") != projects.end())
+            addProjectConfigurationPlatforms(b, p.toString() + "-build");
+    }
+    addProjectConfigurationPlatforms(b, all_build_name, true);
+    endGlobalSection();
+    endGlobal();
 }
 
 SolutionContext::Text SolutionContext::getText() const
@@ -780,13 +817,13 @@ String getLatestWindowsKit();
 void VSGenerator::createSolutions(Build &b) const
 {
     for (auto p : {
-             ArchType::x86,
+             //ArchType::x86,
              ArchType::x86_64,
          })
     {
         b.Settings.TargetOS.Arch = p;
         for (auto lt : {
-                 LibraryType::Static,
+                 //LibraryType::Static,
                  LibraryType::Shared,
              })
         {
@@ -794,7 +831,7 @@ void VSGenerator::createSolutions(Build &b) const
             for (auto c : {
                      ConfigurationType::Debug,
                      ConfigurationType::Release,
-                     ConfigurationType::MinimalSizeRelease,
+                     //ConfigurationType::MinimalSizeRelease,
                      ConfigurationType::ReleaseWithDebugInformation,
                  })
             {
@@ -1142,14 +1179,17 @@ void VSGenerator::generate(const Build &b)
 void VSGeneratorNMake::generate(const Build &b)
 {
     dir = b.getIdeDir() / toPathString(type);
-    PackagePathTree tree, local_tree;
+    PackagePathTree tree, local_tree, overridden_tree;
     PackagePathTree::Directories parents, local_parents;
     SolutionContext ctx;
+    ctx.all_build_name = all_build_name;
 
     // add ALL_BUILD target
     {
         ctx.addDirectory(predefined_targets_dir);
-        auto &pctx = ctx.addProject(VSProjectType::Makefile, all_build_name, projects_dir, predefined_targets_dir);
+        auto &proj = ctx.addProject(VSProjectType::Makefile, all_build_name, predefined_targets_dir);
+        ctx.first_project = &proj;
+        auto &pctx = proj.pctx;
 
         pctx.beginProject();
 
@@ -1172,8 +1212,7 @@ void VSGeneratorNMake::generate(const Build &b)
             using namespace sw;
 
             pctx.beginBlock("PropertyGroup", { {
-                    "Condition", "'$(Configuration)|$(Platform)'=='" + generator::toString(s.Settings.Native.ConfigurationType) +
-                    add_space_if_not_empty(generator::toString(s.Settings.Native.LibrariesType)) + "|" + generator::toString(s.Settings.TargetOS.Arch) + "'" } });
+                    "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
 
             String cfg = "--configuration " + generator::toString(s.Settings.Native.ConfigurationType) + " --platform " + generator::toString(s.Settings.TargetOS.Arch);
             if (generator::toString(s.Settings.Native.LibrariesType) != "dll")
@@ -1213,14 +1252,23 @@ void VSGeneratorNMake::generate(const Build &b)
 
     // gather parents
     bool has_deps = false;
+    bool has_overridden = false;
     // use only first
     for (auto &[p, t] : b.solutions[0].children)
     {
         has_deps |= !t->Local;
+        if (t->pkg.getOverriddenDir())
+        {
+            overridden_tree.add(p.ppath);
+            has_overridden = true;
+            //continue; // uncomment for overridden
+        }
         (t->Local ? local_tree : tree).add(p.ppath);
     }
     if (has_deps && print_dependencies)
         ctx.addDirectory(deps_subdir);
+    //if (has_overridden) // uncomment for overridden
+        //ctx.addDirectory(overridden_deps_subdir);
 
     auto add_dirs = [&ctx](auto &t, auto &prnts, const String &root = {})
     {
@@ -1234,9 +1282,21 @@ void VSGeneratorNMake::generate(const Build &b)
     };
     if (print_dependencies)
         add_dirs(tree, parents, deps_subdir.toString());
+    //if (has_overridden) // uncomment for overridden
+        //add_dirs(overridden_tree, parents, overridden_deps_subdir.toString());
     add_dirs(local_tree, local_parents);
 
+    int n_executable_tgts = 0;
+    for (auto &[p, t] : b.solutions[0].children)
+    {
+        if (!print_dependencies && !t->Local)
+            continue;
+        if (t->isLocal() && isExecutable(t->getType()))
+            n_executable_tgts++;
+    }
+
     // use only first
+    bool first_project_set = false;
     for (auto &[p, t] : b.solutions[0].children)
     {
         if (!print_dependencies && !t->Local)
@@ -1246,14 +1306,30 @@ void VSGeneratorNMake::generate(const Build &b)
         auto &prnts = t->Local ? local_parents : parents;
         while (!pp.empty() && prnts.find(pp) == prnts.end())
             pp = pp.parent();
+
+        auto pps = pp.toString();
+        /*if (t->pkg.getOverriddenDir()) // uncomment for overridden
+            pps = overridden_deps_subdir / pps;
+        else if (!t->Local)
+            pps = deps_subdir / pps;*/
+
         auto t2 = VSProjectType::Makefile;
         if (type != GeneratorType::VisualStudioNMake)
         {
             if (type == GeneratorType::VisualStudioNMakeAndUtility)
-                ctx.addProject(t2, p.toString() + "-build", projects_dir, pp);
+                ctx.addProject(t2, p.toString() + "-build", pps);
             t2 = VSProjectType::Utility;
         }
-        ctx.addProject(t2, p.toString(), projects_dir, pp);
+        auto &proj = ctx.addProject(t2, p.toString(), pps);
+        if (!first_project_set)
+        {
+            auto nt = t->as<NativeExecutedTarget>();
+            if ((nt && nt->StartupProject) || (t->isLocal() && isExecutable(t->getType()) && n_executable_tgts == 1))
+            {
+                ctx.first_project = &proj;
+                first_project_set = true;
+            }
+        }
     }
 
     // gen projects
@@ -1276,19 +1352,7 @@ void VSGeneratorNMake::generate(const Build &b)
                 dir, projects_dir);
     }
 
-    ctx.beginGlobal();
-    ctx.setSolutionConfigurationPlatforms(b);
-    ctx.beginGlobalSection("ProjectConfigurationPlatforms", "postSolution");
-    for (auto &[p, t] : b.solutions[0].children)
-    {
-        if (!print_dependencies && !t->Local)
-            continue;
-        ctx.addProjectConfigurationPlatforms(b, p.toString());
-        ctx.addProjectConfigurationPlatforms(b, p.toString() + "-build");
-    }
-    ctx.addProjectConfigurationPlatforms(b, all_build_name, true);
-    ctx.endGlobalSection();
-    ctx.endGlobal();
+    ctx.materialize(b, projects_dir);
 
     const auto compiler_name = boost::to_lower_copy(toString(b.Settings.Native.CompilerType));
     String fn = b.ide_solution_name + "_";
