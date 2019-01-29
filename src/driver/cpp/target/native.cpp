@@ -1587,17 +1587,9 @@ bool NativeExecutedTarget::prepare()
                     return p1->target.lock() == p2->target.lock();
                 }
             };
-            struct L
-            {
-                size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
-                {
-                    return (*p1) < (*p2);
-                }
-            };
 
             // we have ptrs, so do custom sorting
-            //std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps;
-            std::map<DependencyPtr, InheritanceType, L> deps;
+            std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps;
             std::vector<DependencyPtr> deps_ordered;
 
             // set our initial deps
