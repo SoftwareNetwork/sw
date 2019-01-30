@@ -125,6 +125,20 @@ projects:
               version: master
               local: primitives.context
 
+    tools.cl_generator:
+        root_directory: src/tools
+        files: cl_generator.cpp
+        dependencies:
+            - name: pvt.egorpugin.primitives.sw.main
+              version: master
+              local: primitives.sw.main
+            - name: pvt.egorpugin.primitives.context
+              version: master
+              local: primitives.context
+            - name: pvt.egorpugin.primitives.yaml
+              version: master
+              local: primitives.yaml
+
     client:
         root_directory: src/client
         #executable_type: win32
@@ -184,6 +198,8 @@ projects:
                   local: primitives.patch
                 - name: tools.self_builder
                   ref: self_builder
+                - name: tools.cl_generator
+                  ref: cl_generator
                 - pvt.cppan.demo.boost.uuid: 1
                 - name: pvt.egorpugin.primitives.tools.embedder
                   version: master
@@ -215,6 +231,13 @@ projects:
             add_custom_command(OUTPUT ${f}
                 COMMAND ${self_builder} ${f}
                 DEPENDS ${self_builder}
+            )
+            set(src ${src} ${f})
+
+            set(f ${BDIR}/options_cl.generated.h ${BDIR}/options_cl.generated.cpp)
+            add_custom_command(OUTPUT ${f}
+                COMMAND ${cl_generator} ${SDIR}/src/driver/cpp/options_cl.yml ${f}
+                DEPENDS ${cl_generator} ${SDIR}/src/driver/cpp/options_cl.yml
             )
             set(src ${src} ${f})
 
