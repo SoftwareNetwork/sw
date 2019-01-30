@@ -862,11 +862,6 @@ Commands NativeExecutedTarget::getCommands() const
     }
     cmds.insert(generated.begin(), generated.end());
 
-    //LOG_DEBUG(logger, "Building target: " + pkg.ppath.toString());
-    //move this somewhere
-
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.ppath.toString(), "self_builder");
-
     // add install commands
     for (auto &[p, f] : *this)
     {
@@ -921,10 +916,15 @@ Commands NativeExecutedTarget::getCommands() const
         // add dependencies on generated commands from dependent targets
         for (auto &l : get_tgts())
         {
-            for (auto &c2 : ((NativeExecutedTarget*)l)->getGeneratedCommands())
+            if (auto nt = l->as<NativeExecutedTarget>(); nt)
             {
+                auto cmds2 = nt->getGeneratedCommands();
                 for (auto &c : cmds)
-                    c->dependencies.insert(c2);
+                {
+                    if (auto c2 = c->as<driver::cpp::detail::Command>(); c2 && c2->ignore_deps_generated_commands)
+                        continue;
+                    c->dependencies.insert(cmds2.begin(), cmds2.end());
+                }
             }
         }
 

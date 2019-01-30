@@ -280,17 +280,32 @@ inline tag_env env(const String &k, const String &v)
 namespace driver::cpp
 {
 
+namespace detail
+{
+
 struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 {
     using Base = ::sw::builder::Command;
+
+    bool ignore_deps_generated_commands = false;
+
+    Command() = default;
+    Command(::sw::FileStorage &fs);
+};
+
+}
+
+struct SW_DRIVER_CPP_API Command : detail::Command
+{
+    using Base = detail::Command;
     using LazyCallback = std::function<String(void)>;
     using LazyAction = std::function<void(void)>;
 
     bool program_set = false;
 
-    Command();
+    Command() = default;
     Command(::sw::FileStorage &fs);
-    virtual ~Command();
+    virtual ~Command() = default;
 
     virtual std::shared_ptr<Command> clone() const;
     path getProgram() const override;
@@ -310,7 +325,7 @@ private:
     bool dependency_set = false;
 };
 
-struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : builder::Command
+struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : detail::Command
 {
     using F = std::function<void(void)>;
 

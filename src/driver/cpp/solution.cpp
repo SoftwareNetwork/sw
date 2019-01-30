@@ -1407,7 +1407,7 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
 static void addDeps(NativeExecutedTarget &lib, Solution &solution)
 {
     lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.version");
-    lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.filesystem");
+    //lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.filesystem");
 
     auto &drv = solution.getTarget<NativeTarget>("org.sw.sw.client.driver.cpp");
     auto d = lib + drv;

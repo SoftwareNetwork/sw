@@ -22,17 +22,18 @@ DECLARE_STATIC_LOGGER(logger, "cpp.command");
 namespace sw::driver::cpp
 {
 
-Command::Command()
+namespace detail
 {
-}
 
 Command::Command(::sw::FileStorage &fs)
     : Base::Command(fs)
 {
+}
 
 }
 
-Command::~Command()
+Command::Command(::sw::FileStorage &fs)
+    : Base::Command(fs)
 {
 }
 

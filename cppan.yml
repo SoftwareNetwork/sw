@@ -129,7 +129,7 @@ projects:
         root_directory: src/tools
         files: cl_generator.cpp
         dependencies:
-            - name: pvt.egorpugin.primitives.sw.main
+            - name: pvt.egorpugin.primitives.main
               version: master
               local: primitives.sw.main
             - name: pvt.egorpugin.primitives.context

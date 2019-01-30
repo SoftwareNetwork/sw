@@ -102,7 +102,7 @@ void build(Solution &s)
     cl_generator +=
         "pub.egorpugin.primitives.context-master"_dep,
         "pub.egorpugin.primitives.yaml-master"_dep,
-        "pub.egorpugin.primitives.sw.main-master"_dep;
+        "pub.egorpugin.primitives.main-master"_dep;
 
     auto &builder = p.addTarget<LibraryTarget>("builder");
     builder.ApiName = "SW_BUILDER_API";
@@ -156,6 +156,7 @@ void build(Solution &s)
             << cmd::out("options_cl.generated.h")
             << cmd::out("options_cl.generated.cpp", cmd::Skip)
             ;
+        c.c->ignore_deps_generated_commands = true;
     }
     if (!s.Variables["SW_SELF_BUILD"])
     {

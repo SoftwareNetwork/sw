@@ -1,7 +1,6 @@
 #include <primitives/context.h>
+#include <primitives/main.h>
 #include <primitives/yaml.h>
-#include <primitives/sw/main.h>
-#include <primitives/sw/settings.h>
 
 template <class ... Args>
 void both(primitives::CppContext &hctx, primitives::CppContext &cctx, Args && ... args)
@@ -176,14 +175,18 @@ void read_flags(const yaml &root, Flags &flags)
 
 int main(int argc, char **argv)
 {
-    cl::opt<path> in(cl::Positional, cl::Required);
-    cl::opt<path> out1(cl::Positional, cl::Required);
-    cl::opt<path> out2(cl::Positional, cl::Required);
+    if (argc != 4)
+    {
+        printf("usage: in.yml out.h out.cpp\n");
+        return 1;
+    }
 
-    cl::ParseCommandLineOptions(argc, argv);
+    path in = argv[1];
+    path out1 = argv[2];
+    path out2 = argv[3];
 
-    auto h = out1.getValue().extension() == ".h" ? out1.getValue() : out2.getValue();
-    auto cpp = out1.getValue().extension() == ".cpp" ? out1.getValue() : out2.getValue();
+    auto h = out1.extension() == ".h" ? out1 : out2;
+    auto cpp = out1.extension() == ".cpp" ? out1 : out2;
 
     auto root = YAML::Load(read_file(in));
 
