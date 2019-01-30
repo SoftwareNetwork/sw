@@ -16,6 +16,8 @@ struct Flag
     String flag;
     String type;
     String default_value;
+    String function;
+    String function_current;
     StringSet properties;
 };
 
@@ -37,10 +39,31 @@ struct Type
 
         auto print_flag_decl = [&](const auto &v)
         {
-            h.addLine(v.type + " " + v.name);
+            h.beginBlock("CommandLineOption<" + v.type + "> " + v.name);
+            if (!v.flag.empty())
+                h.addLine("cl::CommandFlag{ \"" + v.flag + "\" },");
             if (!v.default_value.empty())
-                h.addText("{ " + v.default_value + " }");
-            h.addText(";");
+                h.addLine(v.default_value + ",");
+            if (!v.function_current.empty())
+                h.addLine("cl::CommandLineFunction<CPPLanguageStandard>{&" + v.function_current + "},");
+            for (auto &p : v.properties)
+            {
+                if (0);
+                else if (p == "input_dependency")
+                    h.addLine("cl::InputDependency{},");
+                else if (p == "intermediate_file")
+                    h.addLine("cl::IntermediateFile{},");
+                else if (p == "output_dependency")
+                    h.addLine("cl::OutputDependency{},");
+                else if (p == "flag_before_each_value")
+                    h.addLine("cl::CommandFlagBeforeEachValue{},");
+                else if (p == "config_variable")
+                    h.addLine("cl::ConfigVariable{},");
+                else
+                    throw SW_RUNTIME_ERROR("unknown property: " + p);
+            }
+            h.endBlock(true);
+            h.emptyLines(1);
         };
 
         auto print_flag = [&](const auto &v)
@@ -62,7 +85,7 @@ struct Type
             }
         };
 
-        h.beginBlock("struct " + name + (parent.empty() ? "" : (" : " + parent)));
+        h.beginBlock("struct SW_DRIVER_CPP_API " + name + (parent.empty() ? "" : (" : " + parent)));
         for (auto &[k, v] : flags)
             print_flag_decl(v);
         for (auto &[k, v] : using_flags)
@@ -70,6 +93,8 @@ struct Type
         h.emptyLines(1);
 
         h.addLine("Strings getCommandLine(const ::sw::builder::Command &c);");
+        cpp.addLine("DEFINE_OPTION_SPECIALIZATION_DUMMY(" + name + ")");
+        cpp.addLine();
         cpp.beginBlock("Strings " + name + "::getCommandLine(const ::sw::builder::Command &c)");
         cpp.addLine("Strings s;");
         if (!parent.empty())
@@ -83,6 +108,7 @@ struct Type
         cpp.emptyLines(1);
 
         h.endBlock(true);
+        h.addLine("DECLARE_OPTION_SPECIALIZATION(" + name + ");");
         h.emptyLines(1);
 
         printed = true;
@@ -129,6 +155,10 @@ void read_flags(const yaml &root, Flags &flags)
             fl.type = kv.second["type"].template as<String>();
         if (kv.second["default"].IsDefined())
             fl.default_value = kv.second["default"].template as<String>();
+        if (kv.second["function"].IsDefined())
+            fl.function = kv.second["function"].template as<String>();
+        if (kv.second["function_current"].IsDefined())
+            fl.function_current = kv.second["function_current"].template as<String>();
         get_sequence_and_iterate(kv.second, "properties", [&fl](const auto &kv)
         {
             fl.properties.insert(kv.template as<String>());
@@ -202,14 +232,19 @@ int main(int argc, char **argv)
 
     hctx.addLine("#pragma once");
     hctx.addLine();
+    hctx.beginNamespace("sw");
 
     cctx.addLine("#include \"" + h.filename().u8string() + "\"");
     cctx.addLine();
+    cctx.beginNamespace("sw");
 
     f.print(hctx, cctx);
 
-    write_file(h, hctx.getText());
-    write_file(cpp, cctx.getText());
+    hctx.endNamespace();
+    cctx.endNamespace();
+
+    write_file_if_different(h, hctx.getText());
+    write_file_if_different(cpp, cctx.getText());
 
     return 0;
 }

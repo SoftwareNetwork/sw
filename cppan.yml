@@ -234,12 +234,12 @@ projects:
             )
             set(src ${src} ${f})
 
-            set(f ${BDIR}/options_cl.generated.h ${BDIR}/options_cl.generated.cpp)
+            set(f ${BDIR}/options_cl.generated.h)
             add_custom_command(OUTPUT ${f}
-                COMMAND ${cl_generator} ${SDIR}/src/driver/cpp/options_cl.yml ${f}
+                COMMAND ${cl_generator} ${SDIR}/src/driver/cpp/options_cl.yml ${f} ${BDIR}/options_cl.generated.cpp
                 DEPENDS ${cl_generator} ${SDIR}/src/driver/cpp/options_cl.yml
             )
-            set(src ${src} ${f})
+            set(src ${src} ${f} ${SDIR}/src/driver/cpp/options_cl.yml)
 
         post_target: |
             cppan_flex_bison_internal(src/driver/cpp/bazel/lexer.ll PARSERS src/driver/cpp/bazel/grammar.yy)

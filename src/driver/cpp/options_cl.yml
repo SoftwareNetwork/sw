@@ -105,6 +105,7 @@ types:
             cppstd:
                 name: CPPStandard
                 type: CPPLanguageStandard
+                function_current: getCommandLineImplCPPLanguageStandardVS
                 function: |
                     String s = "-std:c++";
                     switch (v)
@@ -190,7 +191,7 @@ types:
             exh:
                 name: ExceptionHandlingModel
                 type: vs::ExceptionHandlingVector
-                value: vs::ExceptionHandlingVector{ vs::ExceptionHandling{} }
+                default: vs::ExceptionHandlingVector{ vs::ExceptionHandling{} }
 
                 struct: |
                     struct ExceptionHandling
@@ -261,7 +262,7 @@ types:
                 flag: Fd
                 type: path
                 properties:
-                    - intermediate_dependency
+                    - intermediate_file
 
             pchfn:
                 name: PrecompiledHeaderFilename
@@ -400,9 +401,115 @@ types:
                     - csf
                     - cppsf
 
+    # common for lib.exe and link.exe
+    # https://docs.microsoft.com/en-us/cpp/build/reference/linker-options
+    vslt:
+        name: VisualStudioLibraryToolOptions
+        parent: VisualStudioCommonOptions
 
+        flags:
+            ifiles:
+                name: InputFiles
+                type: Files
+                properties:
+                    - input_dependency
 
+            lds:
+                name: LinkDirectories
+                type: FilesOrdered
+                flag: "LIBPATH:"
+                properties:
+                    - input_dependency
+                    - flag_before_each_value
 
+            mt:
+                name: Machine
+                type: vs::MachineType
+                flag: "MACHINE:"
+                default: vs::MachineType::X64
 
+            def:
+                name: DefinitionFile
+                type: path
+                flag: "DEF:"
+                properties:
+                    - input_dependency
 
+            implib:
+                name: ImportLibrary
+                type: path
+                flag: "IMPLIB:"
+                properties:
+                    # why? implib must present for dlls
+                    # some dlls might be generated without implibs for dynamic loading only
+                    - intermediate_file
 
+            out:
+                name: Output
+                type: path
+                flag: "OUT:"
+                properties:
+                    - output_dependency
+
+    vslib:
+        name: VisualStudioLibrarianOptions
+
+    # https://docs.microsoft.com/en-us/cpp/build/reference/linker-options
+    vslink:
+        name: VisualStudioLinkerOptions
+
+        flags:
+            ild:
+                name: InputLibraryDependencies
+                type: FilesOrdered
+                properties:
+                    - input_dependency
+
+            dll:
+                name: Dll
+                type: bool
+                flag: "DLL:"
+                properties:
+                    - config_variable
+
+            delay:
+                name: DelayLoadDlls
+                type: FilesOrdered
+                flag: "DELAYLOAD:"
+                properties:
+                    - flag_before_each_value
+
+            dbg:
+                name: GenerateDebugInfo
+                type: bool
+                flag: DEBUG
+
+            frc:
+                name: Force
+                type: vs::ForceType
+                flag: "FORCE:"
+
+            pdb:
+                name: PDBFilename
+                type: path
+                flag: "PDB:"
+                properties:
+                    - output_dependency
+
+            noentr:
+                name: NoEntry
+                type: bool
+                flag: NOENTRY
+
+            sub:
+                name: Subsystem
+                type: vs::Subsystem
+                flag: "SUBSYSTEM:"
+                default: vs::Subsystem::Console
+
+            ignw:
+                name: IgnoreWarnings
+                type: std::set<int>
+                flag: "IGNORE:"
+                properties:
+                    - flag_before_each_value
