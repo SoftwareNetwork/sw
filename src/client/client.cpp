@@ -29,6 +29,7 @@
 #include <boost/algorithm/string_regex.hpp>
 #include <boost/dll.hpp>
 #include <boost/regex.hpp>
+#include <primitives/context.h>
 #include <primitives/executor.h>
 #include <primitives/file_monitor.h>
 #include <primitives/lock.h>
@@ -454,6 +455,95 @@ SUBCOMMAND_DECL(remove)
     }
 }
 
+static cl::list<String> create_args(cl::Positional, cl::desc("sw create arguments"), cl::sub(subcommand_create));
+
+static cl::opt<String> create_template("template", cl::desc("Template project to create"), cl::sub(subcommand_create), cl::init("exe"));
+static cl::alias create_template2("t", cl::desc("Alias for -template"), cl::aliasopt(create_template));
+static cl::opt<String> create_language("language", cl::desc("Template project language to create"), cl::sub(subcommand_create), cl::init("cpp"));
+static cl::alias create_language2("l", cl::desc("Alias for -language"), cl::aliasopt(create_language));
+static cl::opt<bool> create_clear_dir("clear", cl::desc("Clear current directory"), cl::sub(subcommand_create));
+static cl::alias create_clear_dir2("c", cl::desc("Alias for -clear"), cl::aliasopt(create_clear_dir));
+static cl::opt<bool> create_overwrite_files("overwrite", cl::desc("Clear current directory"), cl::sub(subcommand_create));
+static cl::alias create_overwrite_files2("ow", cl::desc("Alias for -overwrite"), cl::aliasopt(create_overwrite_files));
+
+SUBCOMMAND_DECL(create)
+{
+    if (create_args.empty())
+    {
+        // cpp proj
+    }
+
+    if (create_clear_dir)
+    {
+        String s;
+        std::cin >> s;
+        if (boost::iequals(s, "yes") || boost::iequals(s, "Y"))
+        {
+            for (auto &p : fs::directory_iterator("."))
+                fs::remove_all(p);
+        }
+        else
+        {
+            if (fs::directory_iterator(".") != fs::directory_iterator())
+                return;
+        }
+    }
+
+    if (fs::directory_iterator(".") != fs::directory_iterator())
+        throw SW_RUNTIME_ERROR("directory is not empty");
+
+    if (create_template == "cpp")
+    {
+        String s = R"(
+)";
+        primitives::CppContext ctx;
+        ctx.addLine("#include <iostream>");
+        ctx.addLine();
+        ctx.beginFunction("int main()");
+        ctx.addLine("std::cout << \"Hello, World!\\n\";");
+        ctx.addLine("return 0;");
+        ctx.endFunction();
+        write_file("src/main.cpp", ctx.getText());
+
+        ctx = primitives::CppContext();
+        ctx.beginFunction("void build(Solution &s)");
+        ctx.addLine("auto &p = s.addProject(\"myproject\");");
+        ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
+        ctx.addLine();
+        ctx.addLine("auto &t = p.addTarget<Executable>(\"main\");");
+        ctx.addLine("t += \"src/main.cpp\";");
+        ctx.endFunction();
+        write_file("sw.cpp", ctx.getText());
+
+        cli_generate();
+    }
+    else if (create_template == "c")
+    {
+        primitives::CppContext ctx;
+        ctx.addLine("#include <stdio.h>");
+        ctx.addLine();
+        ctx.beginFunction("int main()");
+        ctx.addLine("printf(\"Hello, World!\\n\");");
+        ctx.addLine("return 0;");
+        ctx.endFunction();
+        write_file("src/main.c", ctx.getText());
+
+        ctx = primitives::CppContext();
+        ctx.beginFunction("void build(Solution &s)");
+        ctx.addLine("auto &p = s.addProject(\"myproject\");");
+        ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
+        ctx.addLine();
+        ctx.addLine("auto &t = p.addTarget<Executable>(\"main\");");
+        ctx.addLine("t += \"src/main.c\";");
+        ctx.endFunction();
+        write_file("sw.cpp", ctx.getText());
+
+        cli_generate();
+    }
+    else
+        throw SW_RUNTIME_ERROR("unknown template");
+}
+
 static cl::list<String> uri_args(cl::Positional, cl::desc("sw uri arguments"), cl::sub(subcommand_uri));
 //static cl::opt<String> uri_sdir("sw:sdir", cl::desc("Open source dir in file browser"), cl::sub(subcommand_uri));
 
@@ -665,7 +755,7 @@ SUBCOMMAND_DECL(generate)
     cli_build();
 }
 
-SUBCOMMAND_DECL(init)
+SUBCOMMAND_DECL(setup)
 {
     elevate();
 

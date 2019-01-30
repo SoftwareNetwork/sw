@@ -229,15 +229,10 @@ protected:
 
 using Executable = ExecutableTarget;
 
-struct SW_DRIVER_CPP_API LibraryTargetBase : NativeExecutedTarget
-{
-    using NativeExecutedTarget::NativeExecutedTarget;
-};
-
 /**
 * \brief Static only target.
 */
-struct SW_DRIVER_CPP_API StaticLibraryTarget : LibraryTargetBase
+struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeExecutedTarget
 {
     bool isStaticOnly() const override { return true; }
 
@@ -257,7 +252,7 @@ using StaticLibrary = StaticLibraryTarget;
 /**
 * \brief Shared only target.
 */
-struct SW_DRIVER_CPP_API SharedLibraryTarget : LibraryTargetBase
+struct SW_DRIVER_CPP_API SharedLibraryTarget : NativeExecutedTarget
 {
     bool isSharedOnly() const override { return true; }
 
@@ -278,6 +273,6 @@ using SharedLibrary = SharedLibraryTarget;
 /**
 * \brief Module only target.
 */
-struct SW_DRIVER_CPP_API ModuleLibraryTarget : LibraryTarget {};
+//struct SW_DRIVER_CPP_API ModuleLibraryTarget : LibraryTarget {};
 
 }

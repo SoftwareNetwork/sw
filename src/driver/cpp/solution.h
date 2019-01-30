@@ -252,6 +252,9 @@ private:
     friend struct Build;
 };
 
+/**
+* \brief Main build class, controls solutions.
+*/
 struct SW_DRIVER_CPP_API Build : Solution, PackageScript
 {
     struct FetchInfo

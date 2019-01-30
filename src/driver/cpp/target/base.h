@@ -156,6 +156,9 @@ using Library = LibraryTarget;
 using StaticLibrary = StaticLibraryTarget;
 using SharedLibrary = SharedLibraryTarget;
 
+/**
+* \brief TargetBase
+*/
 struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
 {
     using TargetMap = PackageVersionMapBase<TargetBaseTypePtr, std::unordered_map, std::map>;
@@ -163,20 +166,14 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
     // rename? or keep available via api
     PackageId pkg;
 
-    /**
-    * \brief Target Source.
-    */
     // hide?
+    // Target Source.
     Source source;
 
-    /**
-    * \brief New root directory after downloading and unpacking.
-    */
+    // New root directory after downloading and unpacking.
     path UnpackDirectory;
 
-    /**
-    * \brief Data storage for objects that must be alive with the target.
-    */
+    // Data storage for objects that must be alive with the target.
     std::vector<std::any> Storage;
 
     /**
@@ -185,7 +182,7 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
     TargetScope Scope = TargetScope::Build;
 
     // flags
-    /// local projects, not fetched
+    // local projects, not fetched
     bool Local = true;
     bool UseStorageBinaryDir = false;
     bool PostponeFileResolving = false;
@@ -200,11 +197,11 @@ public:
     TargetBase() = default;
     virtual ~TargetBase();
 
+    void add(const TargetBaseTypePtr &t);
+
     /**
     * \brief Add child target.
     */
-    void add(const TargetBaseTypePtr &t);
-
     template <typename T, typename ... Args>
     T& add(const PackagePath &Name, Args && ... args)
     {
@@ -219,6 +216,9 @@ public:
             return addTarget1<T>(Name, pkg.version, std::forward<Args>(args)...);
     }
 
+    /**
+    * \brief Add child target.
+    */
     template <typename T, typename ... Args>
     T &addTarget(Args && ... args)
     {
@@ -232,14 +232,15 @@ public:
         return add<t>(std::forward<Args>(args)...); \
     }
 
+    // remove?
     ADD_TARGET(Executable)
-        ADD_TARGET(Library)
-        ADD_TARGET(StaticLibrary)
-        ADD_TARGET(SharedLibrary)
+    ADD_TARGET(Library)
+    ADD_TARGET(StaticLibrary)
+    ADD_TARGET(SharedLibrary)
 
 #undef ADD_TARGET
 
-        template <typename T = Target>
+    template <typename T = Target>
     T &getTarget(const PackagePath &Name)
     {
         auto i = getChildren().find(Name);
@@ -295,13 +296,13 @@ public:
     void setRootDirectory(const path &);
     void setSource(const Source &);
 
-    /// really local package
+    // really local package
     bool isLocal() const { return Local && !pkg.getOverriddenDir(); }
     bool isLocalOrOverridden() const { return Local && pkg.getOverriddenDir(); }
 
     TargetBase &operator+=(const Source &);
 
-    /// experimental
+    // remove?
     void operator=(const Source &);
 
     void fetch();

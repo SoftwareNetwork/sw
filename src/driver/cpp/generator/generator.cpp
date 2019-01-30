@@ -66,7 +66,29 @@ String toPathString(GeneratorType t)
 
 String toString(GeneratorType t)
 {
-    throw std::logic_error("not implemented");
+    switch (t)
+    {
+    case GeneratorType::VisualStudio:
+        return "Visual Studio";
+    case GeneratorType::VisualStudioNMake:
+        return "Visual Studio NMake";
+    case GeneratorType::VisualStudioUtility:
+        return "Visual Studio Utility";
+    case GeneratorType::VisualStudioNMakeAndUtility:
+        return "Visual Studio NMake and Utility";
+    case GeneratorType::Ninja:
+        return "Ninja";
+    case GeneratorType::Batch:
+        return "Batch";
+    case GeneratorType::Make:
+        return "Make";
+    case GeneratorType::Shell:
+        return "Shell";
+    case GeneratorType::CompilationDatabase:
+        return "CompDB";
+    default:
+        throw std::logic_error("not implemented");
+    }
 }
 
 GeneratorType fromString(const String &s)

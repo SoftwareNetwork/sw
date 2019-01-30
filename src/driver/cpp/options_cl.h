@@ -45,9 +45,7 @@ struct CommandLineOptionBase
     virtual Strings getCommandLine(builder::Command *c = nullptr) const = 0;
 };
 
-/**
- * \brief Command Option tag initializers.
- */
+// Command Option tag initializers.
 namespace cl
 {
 

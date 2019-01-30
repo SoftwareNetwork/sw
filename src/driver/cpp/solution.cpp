@@ -1407,7 +1407,6 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
 static void addDeps(NativeExecutedTarget &lib, Solution &solution)
 {
     lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.version");
-    //lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.filesystem");
 
     auto &drv = solution.getTarget<NativeTarget>("org.sw.sw.client.driver.cpp");
     auto d = lib + drv;
@@ -2542,6 +2541,13 @@ void Build::load_dll(const path &dll, bool usedll)
     // one more time, if generator did not add solution or whatever
     if (solutions.empty())
         addSolution();
+
+    if (auto g = getGenerator(); g)
+    {
+        LOG_INFO(logger, "Generating " << toString(g->type) << " project with " << solutions.size() << " configurations:");
+        for (auto &s : solutions)
+            LOG_INFO(logger, s.getConfig());
+    }
 
     // add cc if needed
     getHostSolution();
