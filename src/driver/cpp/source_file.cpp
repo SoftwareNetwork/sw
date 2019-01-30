@@ -19,6 +19,11 @@ DECLARE_STATIC_LOGGER(logger, "source_file");
 
 static cl::opt<bool> ignore_source_files_errors("ignore-source-files-errors", cl::desc("Useful for debugging"));
 
+// we can do global cache:
+// [sourcedir][f] = files
+// file_cache
+// glob_cache
+
 namespace sw
 {
 

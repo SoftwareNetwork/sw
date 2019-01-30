@@ -35,6 +35,8 @@ static cl::opt<bool> print_dependencies("print-dependencies"/*, cl::sub(subcomma
 namespace sw
 {
 
+String getLatestWindowsKit();
+
 String toPathString(GeneratorType t)
 {
     switch (t)
@@ -375,13 +377,6 @@ void ProjectContext::printProject(
 
     addProjectConfigurations(b);
 
-    /*
-        <PropertyGroup Label="Globals">
-        <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
-        <Platform>Win32</Platform>
-        </PropertyGroup>
-    */
-
     auto &t = nt;
     auto &p = t.pkg;
 
@@ -395,6 +390,7 @@ void ProjectContext::printProject(
     addBlock("VCProjectVersion", "15.0");
     addBlock("ProjectGuid", "{" + ctx.uuids[name] + "}");
     addBlock("Keyword", "Win32Proj");
+    addBlock("WindowsTargetPlatformVersion", getLatestWindowsKit());
     if (g.type == GeneratorType::VisualStudioNMakeAndUtility && ptype == VSProjectType::Makefile)
         addBlock("ProjectName", PackageId(p.ppath.slice(pp.size()), p.version).toString() + "-build");
     else
@@ -823,8 +819,6 @@ VSGenerator::VSGenerator()
 {
     cwd = "\"" + current_thread_path().string() + "\"";
 }
-
-String getLatestWindowsKit();
 
 void VSGenerator::createSolutions(Build &b) const
 {
