@@ -100,7 +100,6 @@ void build(Solution &s)
     cl_generator.CPPVersion = CPPLanguageStandard::CPP17;
     cl_generator += "src/tools/cl_generator.cpp";
     cl_generator +=
-        manager,
         "pub.egorpugin.primitives.context-master"_dep,
         "pub.egorpugin.primitives.yaml-master"_dep,
         "pub.egorpugin.primitives.sw.main-master"_dep;
