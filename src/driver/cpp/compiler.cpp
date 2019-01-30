@@ -1224,8 +1224,8 @@ void VisualStudioCompiler::prepareCommand1(const TargetBase &t)
         cmd->name_short = CPPSourceFile().filename().u8string();
         //cmd->file = CPPSourceFile;
     }
-    if (ObjectFile)
-        cmd->working_directory = ObjectFile().parent_path();
+    if (Output)
+        cmd->working_directory = Output().parent_path();
 
     //if (cmd->file.empty())
         //return nullptr;
@@ -1244,7 +1244,7 @@ void VisualStudioCompiler::prepareCommand1(const TargetBase &t)
 
 void VisualStudioCompiler::setOutputFile(const path &output_file)
 {
-    ObjectFile = output_file;
+    Output = output_file;
 }
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioCompiler)
@@ -1257,7 +1257,7 @@ void VisualStudioCompiler::setSourceFile(const path &input_file, path &output_fi
 
 path VisualStudioCompiler::getOutputFile() const
 {
-    return ObjectFile();
+    return Output();
 }
 
 SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::VSCommand)
@@ -1273,8 +1273,8 @@ void VisualStudioASMCompiler::prepareCommand1(const TargetBase &t)
         cmd->name_short = InputFile().filename().u8string();
         //cmd->file = InputFile;
     }
-    if (ObjectFile)
-        cmd->working_directory = ObjectFile().parent_path();
+    if (Output)
+        cmd->working_directory = Output().parent_path();
 
     //if (cmd->file.empty())
         //return nullptr;
@@ -1290,12 +1290,12 @@ SW_DEFINE_PROGRAM_CLONE(VisualStudioASMCompiler)
 
 void VisualStudioASMCompiler::setOutputFile(const path &output_file)
 {
-    ObjectFile = output_file;
+    Output = output_file;
 }
 
 path VisualStudioASMCompiler::getOutputFile() const
 {
-    return ObjectFile();
+    return Output();
 }
 
 void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output_file)
@@ -1375,8 +1375,8 @@ void ClangClCompiler::prepareCommand1(const TargetBase &t)
         cmd->name_short = CPPSourceFile().filename().u8string();
         //cmd->file = CPPSourceFile;
     }
-    if (ObjectFile)
-        cmd->working_directory = ObjectFile().parent_path();
+    if (Output)
+        cmd->working_directory = Output().parent_path();
 
     //if (cmd->file.empty())
         //return nullptr;
@@ -1394,12 +1394,12 @@ void ClangClCompiler::prepareCommand1(const TargetBase &t)
 
 void ClangClCompiler::setOutputFile(const path &output_file)
 {
-    ObjectFile = output_file;
+    Output = output_file;
 }
 
 path ClangClCompiler::getOutputFile() const
 {
-    return ObjectFile();
+    return Output();
 }
 
 SW_DEFINE_PROGRAM_CLONE(ClangClCompiler)
