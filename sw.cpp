@@ -95,6 +95,16 @@ void build(Solution &s)
         "pub.egorpugin.primitives.context-master"_dep,
         "pub.egorpugin.primitives.sw.main-master"_dep;
 
+    auto &cl_generator = tools.addTarget<ExecutableTarget>("cl_generator");
+    cl_generator.PackageDefinitions = true;
+    cl_generator.CPPVersion = CPPLanguageStandard::CPP17;
+    cl_generator += "src/tools/cl_generator.cpp";
+    cl_generator +=
+        manager,
+        "pub.egorpugin.primitives.context-master"_dep,
+        "pub.egorpugin.primitives.yaml-master"_dep,
+        "pub.egorpugin.primitives.sw.main-master"_dep;
+
     auto &builder = p.addTarget<LibraryTarget>("builder");
     builder.ApiName = "SW_BUILDER_API";
     builder.ExportIfStatic = true;
@@ -138,6 +148,14 @@ void build(Solution &s)
         c << cmd::prog(self_builder)
             << cmd::out("build_self.generated.h")
             << cmd::out("build_self.packages.generated.h")
+            ;
+    }
+    {
+        auto c = cpp_driver.addCommand();
+        c << cmd::prog(cl_generator)
+            << cmd::in("src/driver/cpp/options_cl.yml")
+            << cmd::out("options_cl.generated.h")
+            << cmd::out("options_cl.generated.cpp", cmd::Skip)
             ;
     }
     if (!s.Variables["SW_SELF_BUILD"])
