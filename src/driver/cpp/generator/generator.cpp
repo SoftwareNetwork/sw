@@ -418,9 +418,7 @@ void ProjectContext::printProject(
         else if (s.Settings.Native.CompilerType == CompilerType::GNU)
             compiler = "--compiler gnu";
 
-        auto o = nt.makeOutputFile();
-        o = o.parent_path().parent_path() / s.getConfig(&t) / o.filename();
-        o += nt.getOutputFile().extension();
+        auto o = nt.getOutputFile();
         auto build_cmd = "sw -d " + normalize_path(b.config_file_or_dir) + " " + cfg + " " + compiler +
             " --do-not-rebuild-config" +
             " --target " + p.toString() + " ide";

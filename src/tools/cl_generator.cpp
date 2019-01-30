@@ -249,8 +249,8 @@ int main(int argc, char **argv)
     hctx.endNamespace();
     cctx.endNamespace();
 
-    write_file_if_different(h, hctx.getText());
-    write_file_if_different(cpp, cctx.getText());
+    write_file/*_if_different*/(h, hctx.getText());
+    write_file/*_if_different*/(cpp, cctx.getText());
 
     return 0;
 }
