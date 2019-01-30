@@ -164,6 +164,8 @@ static const std::map<ConfigurationType, String> configs{
 static const std::map<ArchType, String> platforms{
     {ArchType::x86,"Win32",},
     {ArchType::x86_64,"x64",},
+    {ArchType::arm,"ARM",},
+    {ArchType::aarch64,"ARM64",},
 };
 
 static const std::map<LibraryType, String> shared_static{
@@ -171,6 +173,7 @@ static const std::map<LibraryType, String> shared_static{
     {LibraryType::Shared,"dll",},
 };
 
+// vsgen
 namespace generator
 {
 
@@ -186,7 +189,8 @@ static String toString(ArchType t)
 {
     auto i = platforms.find(t);
     if (i == platforms.end())
-        throw SW_RUNTIME_ERROR("no such platform");
+        return generator::toString(ArchType::x86); // return dummy default
+        //throw SW_RUNTIME_ERROR("no such platform");
     return i->second;
 }
 
@@ -220,13 +224,21 @@ static String add_space_if_not_empty(const String &s)
 
 static String get_configuration(const Solution::SettingsX &s)
 {
-    return generator::toString(s.Native.ConfigurationType) +
+    String c = generator::toString(s.Native.ConfigurationType) +
         add_space_if_not_empty(generator::toString(s.Native.LibrariesType));
+    if (s.Native.MT)
+        c += " mt";
+    return c;
 }
 
 static String get_project_configuration(const Solution::SettingsX &s)
 {
-    return get_configuration(s) + "|" + generator::toString(s.TargetOS.Arch);
+    String c;
+    c += get_configuration(s);
+    if (platforms.find(s.TargetOS.Arch) == platforms.end())
+        c += " - " + toString(s.TargetOS.Arch);
+    c += "|" + generator::toString(s.TargetOS.Arch);
+    return c;
 }
 
 XmlContext::XmlContext()

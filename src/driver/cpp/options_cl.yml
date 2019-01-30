@@ -23,6 +23,19 @@ flags:
         properties:
             - input_dependency
 
+    ifiles:
+        name: InputFiles
+        type: Files
+        properties:
+            - input_dependency
+
+    vsoutput:
+        name: Output
+        flag: Fo
+        type: path
+        properties:
+            - output_dependency
+
 types:
     # internal name
     vscomn:
@@ -34,17 +47,10 @@ types:
         name: VisualStudioCommonCompilerOptions
         parent: VisualStudioCommonOptions
 
-        flags:
-            output:
-                name: Output
-                flag: Fo
-                type: path
-                properties:
-                    - output_dependency
-
         using:
             - compile
             - pp_to_stdout
+            - vsoutput
 
     vsasm:
         name: VisualStudioAssemblerOptions
@@ -407,13 +413,10 @@ types:
         name: VisualStudioLibraryToolOptions
         parent: VisualStudioCommonOptions
 
-        flags:
-            ifiles:
-                name: InputFiles
-                type: Files
-                properties:
-                    - input_dependency
+        using:
+            - ifiles
 
+        flags:
             lds:
                 name: LinkDirectories
                 type: FilesOrdered
@@ -468,7 +471,8 @@ types:
             dll:
                 name: Dll
                 type: bool
-                flag: "DLL:"
+                flag: DLL
+                default: false
                 properties:
                     - config_variable
 
@@ -513,3 +517,34 @@ types:
                 flag: "IGNORE:"
                 properties:
                     - flag_before_each_value
+
+    # https://docs.microsoft.com/en-us/windows/desktop/menurc/using-rc-the-rc-command-line-
+    rctool:
+        name: RcToolOptions
+        parent: VisualStudioCommonOptions
+
+        using:
+            - vsoutput
+            - input:
+                order: 100
+
+    csharp:
+        name: VisualStudioCSharpCompilerOptions
+
+        flags:
+            tgt:
+                name: Target
+                type: vs::cs::Target
+                flag: "target:"
+                default: vs::cs::Target::Console
+
+            out:
+                name: Output
+                type: path
+                flag: "out:"
+                properties:
+                    - output_dependency
+
+        using:
+            - ifiles
+

@@ -38,6 +38,9 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
 //static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
 //static cl::opt<bool> use_other_langs("use-other-languages");
 
+// add manual provided options: rust compiler, go compiler, d compiler etc.
+// c/cc toolchain probably complex: ar(opt?)+ld(opt)+c+cc(opt)
+
 namespace sw
 {
 
@@ -1835,7 +1838,7 @@ void RcTool::prepareCommand1(const TargetBase &t)
 
 void RcTool::setOutputFile(const path &output_file)
 {
-    OutputFile = output_file;
+    Output = output_file;
 }
 
 void RcTool::setSourceFile(const path &input_file)

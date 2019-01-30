@@ -153,51 +153,6 @@ DECLARE_OPTION_SPECIALIZATION(vs::cs::Target);
 
 Strings getCommandLineImplCPPLanguageStandardVS(const CommandLineOption<CPPLanguageStandard> &co, ::sw::builder::Command *c);
 
-}
-
-#include "options_cl.generated.h"
-
-namespace sw
-{
-
-// https://docs.microsoft.com/en-us/windows/desktop/menurc/using-rc-the-rc-command-line-
-struct SW_DRIVER_CPP_API RcToolOptions : VisualStudioCommonOptions
-{
-    COMMAND_LINE_OPTION(OutputFile, path)
-    {
-        cl::CommandFlag{ "Fo" },
-            cl::OutputDependency{},
-    };
-
-    // goes last
-    COMMAND_LINE_OPTION(InputFile, path)
-    {
-        cl::InputDependency{},
-    };
-};
-DECLARE_OPTION_SPECIALIZATION(RcToolOptions);
-
-struct SW_DRIVER_CPP_API VisualStudioCSharpCompilerOptions
-{
-    COMMAND_LINE_OPTION(Target, vs::cs::Target)
-    {
-        cl::CommandFlag{ "target:" },
-            vs::cs::Target::Console,
-    };
-
-    COMMAND_LINE_OPTION(InputFiles, Files)
-    {
-        cl::InputDependency{},
-    };
-
-    COMMAND_LINE_OPTION(Output, path)
-    {
-        cl::CommandFlag{ "out:" },
-            cl::OutputDependency{},
-    };
-};
-DECLARE_OPTION_SPECIALIZATION(VisualStudioCSharpCompilerOptions);
-
 namespace rust
 {
 
@@ -215,6 +170,13 @@ enum class CrateType
 }
 
 DECLARE_OPTION_SPECIALIZATION(rust::CrateType);
+
+}
+
+#include "options_cl.generated.h"
+
+namespace sw
+{
 
 struct SW_DRIVER_CPP_API RustCompilerOptions
 {

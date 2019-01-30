@@ -1409,8 +1409,12 @@ static void addDeps(NativeExecutedTarget &lib, Solution &solution)
     lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.version");
     lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.filesystem");
 
-    auto d = lib + solution.getTarget<NativeTarget>("org.sw.sw.client.driver.cpp");
+    auto &drv = solution.getTarget<NativeTarget>("org.sw.sw.client.driver.cpp");
+    auto d = lib + drv;
     d->IncludeDirectoriesOnly = true;
+
+    // generated file
+    lib += drv.BinaryDir / "options_cl.generated.h";
 }
 
 // add Dirs?
@@ -2300,6 +2304,7 @@ void Build::load_configless(const path &file_or_dir)
 void Build::build_and_run(const path &fn)
 {
     load(fn);
+    prepare();
     if (getGenerator())
         return generateBuildSystem();
     Solution::execute();
@@ -2310,7 +2315,6 @@ void Build::generateBuildSystem()
     if (!getGenerator())
         return;
 
-    prepare();
     getCommands();
 
     fs::remove_all(getExecutionPlansDir());

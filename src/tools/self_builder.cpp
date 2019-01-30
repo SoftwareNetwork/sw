@@ -234,6 +234,7 @@ int main(int argc, char **argv)
         {{"org.sw.sw.client.protos", "0"}, {}},
         {{"org.sw.sw.client.manager", "0"}, {}},
         {{"org.sw.sw.client.tools.self_builder", "0"}, {}},
+        {{"org.sw.sw.client.tools.cl_generator", "0"}, {}},
         {{"org.sw.sw.client.builder", "0"}, {}},
         {{"org.sw.sw.client.driver.cpp", "0"}, {}},
     };

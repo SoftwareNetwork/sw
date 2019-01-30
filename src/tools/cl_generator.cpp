@@ -19,6 +19,7 @@ struct Flag
     String function;
     String function_current;
     StringSet properties;
+    int order = 0;
 };
 
 using Flags = std::map<String, Flag>;
@@ -28,7 +29,6 @@ struct Type
     String name;
     String parent;
     Flags flags;
-    std::map<String, Flag> using_flags;
 
     mutable bool printed = false;
 
@@ -36,6 +36,14 @@ struct Type
     {
         if (printed)
             return;
+
+        std::vector<const Flag*> flags2;
+        for (auto &[k, v] : flags)
+            flags2.push_back(&v);
+        std::sort(flags2.begin(), flags2.end(), [](const auto &f1, const auto &f2)
+        {
+            return f1->order < f2->order;
+        });
 
         auto print_flag_decl = [&](const auto &v)
         {
@@ -86,10 +94,8 @@ struct Type
         };
 
         h.beginBlock("struct SW_DRIVER_CPP_API " + name + (parent.empty() ? "" : (" : " + parent)));
-        for (auto &[k, v] : flags)
-            print_flag_decl(v);
-        for (auto &[k, v] : using_flags)
-            print_flag_decl(v);
+        for (auto &v : flags2)
+            print_flag_decl(*v);
         h.emptyLines(1);
 
         h.addLine("Strings getCommandLine(const ::sw::builder::Command &c);");
@@ -99,10 +105,8 @@ struct Type
         cpp.addLine("Strings s;");
         if (!parent.empty())
             cpp.addLine("s = " + parent + "::getCommandLine(c);");
-        for (auto &[k, v] : flags)
-            print_flag(v);
-        for (auto &[k, v] : using_flags)
-            print_flag(v);
+        for (auto &v : flags2)
+            print_flag(*v);
         cpp.addLine("return s;");
         cpp.endBlock();
         cpp.emptyLines(1);
@@ -204,7 +208,7 @@ int main(int argc, char **argv)
                 auto u = kv.template as<String>();
                 if (f.flags.find(u) == f.flags.end())
                     throw SW_RUNTIME_ERROR("flag '" + u + "' is missing");
-                t.using_flags[u] = f.flags[u];
+                t.flags[u] = f.flags[u];
             }
             else if (kv.IsMap())
             {
@@ -213,8 +217,10 @@ int main(int argc, char **argv)
                     auto u = kv2.first.template as<String>();
                     if (f.flags.find(u) == f.flags.end())
                         throw SW_RUNTIME_ERROR("flag '" + u + "' is missing");
-                    t.using_flags[u] = f.flags[u];
-                    // TODO: handle map
+                    auto &f2 = t.flags[u] = f.flags[u];
+
+                    if (kv2.second["order"].IsDefined())
+                        f2.order = kv2.second["order"].template as<int>();
                 }
             }
         });
