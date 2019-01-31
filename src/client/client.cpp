@@ -910,7 +910,7 @@ void self_upgrade()
 #elif __APPLE__
     path client = "/client/sw-master-macos-client.zip";
 #else
-    path client = "/client/.service/sw-master-linux-client.zip";
+    path client = "/client/sw-master-linux-client.zip";
 #endif
 
     auto &s = Settings::get_user_settings();
