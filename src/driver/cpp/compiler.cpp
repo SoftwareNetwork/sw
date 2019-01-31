@@ -1544,8 +1544,7 @@ FilesOrdered NativeLinker::gatherLinkLibraries() const
 
 void VisualStudioLibraryTool::setObjectFiles(const Files &files)
 {
-    if (!files.empty())
-        InputFiles().insert(files.begin(), files.end());
+    InputFiles().insert(files.begin(), files.end());
 }
 
 void VisualStudioLibraryTool::setOutputFile(const path &out)
@@ -1615,8 +1614,7 @@ void VisualStudioLinker::getAdditionalOptions(driver::cpp::Command *cmd) const
 
 void VisualStudioLinker::setInputLibraryDependencies(const FilesOrdered &files)
 {
-    if (!files.empty())
-        InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
+    InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
 }
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioLibrarian)
@@ -1630,8 +1628,7 @@ SW_DEFINE_PROGRAM_CLONE(GNULinker)
 
 void GNULinker::setObjectFiles(const Files &files)
 {
-    if (!files.empty())
-        InputFiles().insert(files.begin(), files.end());
+    InputFiles().insert(files.begin(), files.end());
 }
 
 void GNULinker::setOutputFile(const path &out)
@@ -1721,8 +1718,7 @@ SW_DEFINE_PROGRAM_CLONE(GNULibrarian)
 
 void GNULibrarian::setObjectFiles(const Files &files)
 {
-    if (!files.empty())
-        InputFiles().insert(files.begin(), files.end());
+    InputFiles().insert(files.begin(), files.end());
 }
 
 void GNULibrarian::setOutputFile(const path &out)

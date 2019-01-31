@@ -325,40 +325,6 @@ NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherAllRelatedDependenc
     return libs;
 }
 
-FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
-{
-    FilesOrdered libs;
-    const auto dirs = gatherLinkDirectories();
-    for (auto &l : LinkLibraries)
-    {
-        // reconsider
-        // remove resolving?
-
-        if (l.is_absolute())
-        {
-            libs.push_back(l);
-            continue;
-        }
-
-        if (!std::any_of(dirs.begin(), dirs.end(), [&l, &libs](auto &d)
-        {
-            if (fs::exists(d / l))
-            {
-                libs.push_back(d / l);
-                return true;
-            }
-            return false;
-        }))
-        {
-            LOG_TRACE(logger, "Cannot resolve library: " << l);
-        }
-
-        if (!getSolution()->Settings.TargetOS.is(OSType::Windows))
-            libs.push_back("-l" + l.u8string());
-    }
-    return libs;
-}
-
 std::unordered_set<NativeSourceFile*> NativeExecutedTarget::gatherSourceFiles() const
 {
     return ::sw::gatherSourceFiles<NativeSourceFile>(*this);
@@ -445,27 +411,9 @@ void NativeExecutedTarget::resolvePostponedSourceFiles()
 Files NativeExecutedTarget::gatherObjectFiles() const
 {
     auto obj = gatherObjectFilesWithoutLibraries();
-    auto ll = gatherLinkLibraries();
+    auto ll = LinkLibraries;
     obj.insert(ll.begin(), ll.end());
     return obj;
-}
-
-FilesOrdered NativeExecutedTarget::gatherLinkDirectories() const
-{
-    FilesOrdered dirs;
-    auto get_ldir = [&dirs](const auto &a)
-    {
-        for (auto &d : a)
-            dirs.push_back(d);
-    };
-
-    get_ldir(NativeLinkerOptions::System.gatherLinkDirectories());
-    get_ldir(NativeLinkerOptions::gatherLinkDirectories());
-
-    auto dirs2 = getSelectedTool()->gatherLinkDirectories();
-    // tool dirs + lib dirs, not vice versa
-    dirs2.insert(dirs2.end(), dirs.begin(), dirs.end());
-    return dirs2;
 }
 
 NativeLinker *NativeExecutedTarget::getSelectedTool() const
@@ -2158,7 +2106,7 @@ bool NativeExecutedTarget::prepare()
 
         // linker setup
         auto obj = gatherObjectFilesWithoutLibraries();
-        auto O1 = gatherLinkLibraries();
+        auto O1 = LinkLibraries;
 
         if (CircularLinker)
         {

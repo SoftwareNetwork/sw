@@ -22,7 +22,7 @@ _id_s, _idir_s - system include directory: system, after??, before
 // _s_id? s_idir?
 _ld, _ldir - link directory: system, after??, before
 _l, _ll, _lib - link library
-// _slib - system link library?
+_slib - system link library - slibs are not tracked as inputs
 // _lib_s?
 _pch - precompiled header
 _r - regex
@@ -75,7 +75,7 @@ inline IncludeDirectory operator "" _idir(const char *s, size_t)
 // link directory
 // _ld or _ldir
 
-// _link _library
+// link library
 // _l or _lib
 inline LinkLibrary operator "" _l(const char *s, size_t)
 {
@@ -84,6 +84,13 @@ inline LinkLibrary operator "" _l(const char *s, size_t)
 inline LinkLibrary operator "" _lib(const char *s, size_t)
 {
     return LinkLibrary(String(s));
+}
+
+// system link library
+// _slib
+inline SystemLinkLibrary operator "" _slib(const char *s, size_t)
+{
+    return SystemLinkLibrary(String(s));
 }
 
 // precompiled header

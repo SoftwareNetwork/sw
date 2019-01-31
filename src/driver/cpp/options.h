@@ -113,6 +113,11 @@ struct FancyFilesOrdered : FilesOrdered
 //using PathOptionsType = FilesSorted;
 using PathOptionsType = UniqueVector<path>;
 
+struct SW_DRIVER_CPP_API Variable
+{
+    String v;
+};
+
 struct SW_DRIVER_CPP_API Definition
 {
     String d;
@@ -121,9 +126,13 @@ struct SW_DRIVER_CPP_API Definition
     explicit Definition(const String &p);
 };
 
-struct SW_DRIVER_CPP_API Variable
+struct SW_DRIVER_CPP_API IncludeDirectory
 {
-    String v;
+    String i;
+
+    IncludeDirectory() = default;
+    explicit IncludeDirectory(const String &p);
+    explicit IncludeDirectory(const path &p);
 };
 
 struct SW_DRIVER_CPP_API LinkLibrary
@@ -135,13 +144,13 @@ struct SW_DRIVER_CPP_API LinkLibrary
     explicit LinkLibrary(const path &p);
 };
 
-struct SW_DRIVER_CPP_API IncludeDirectory
+struct SW_DRIVER_CPP_API SystemLinkLibrary
 {
-    String i;
+    String l;
 
-    IncludeDirectory() = default;
-    explicit IncludeDirectory(const String &p);
-    explicit IncludeDirectory(const path &p);
+    SystemLinkLibrary() = default;
+    explicit SystemLinkLibrary(const String &p);
+    explicit SystemLinkLibrary(const path &p);
 };
 
 struct SW_DRIVER_CPP_API FileRegex
@@ -280,6 +289,9 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
 
     void add(const PackageId &t);
     void remove(const PackageId &t);
+
+    void add(const SystemLinkLibrary &l);
+    void remove(const SystemLinkLibrary &l);
 
     void merge(const NativeLinkerOptions &o, const GroupSettings &s = GroupSettings());
     void addEverything(builder::Command &c) const;

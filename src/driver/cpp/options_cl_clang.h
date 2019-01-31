@@ -237,6 +237,12 @@ struct SW_DRIVER_CPP_API GNULinkerOptions
             cl::InputDependency{},
     };
 
+    COMMAND_LINE_OPTION(SystemLinkLibraries, FilesOrdered)
+    {
+        cl::CommandFlag{ "l" },
+            cl::CommandFlagBeforeEachValue{},
+    };
+
     /*COMMAND_LINE_OPTION(ImportLibrary, path)
     {
         cl::CommandFlag{ "IMPLIB:" },

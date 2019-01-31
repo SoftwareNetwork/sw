@@ -120,7 +120,6 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void autoDetectIncludeDirectories();
     bool hasSourceFiles() const;
     Files gatherIncludeDirectories() const;
-    FilesOrdered gatherLinkLibraries() const;
     NativeLinker *getSelectedTool() const;// override;
     //void setOutputFilename(const path &fn);
     void setOutputFile() override;
@@ -170,7 +169,6 @@ protected:
     Files gatherObjectFilesWithoutLibraries() const;
     TargetsSet gatherDependenciesTargets() const;
     TargetsSet gatherAllRelatedDependencies() const;
-    FilesOrdered gatherLinkDirectories() const;
     bool prepareLibrary(LibraryType Type);
     void initLibrary(LibraryType Type);
     void configureFile1(const path &from, const path &to, ConfigureFlags flags);

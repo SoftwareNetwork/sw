@@ -529,6 +529,7 @@ public:
     // linker options
     ASSIGN_TYPES(Target)
     ASSIGN_TYPES(LinkLibrary)
+    ASSIGN_TYPES(SystemLinkLibrary)
 
     //
     ASSIGN_TYPES(PackageId)

@@ -21,6 +21,16 @@ Definition::Definition(const String &s)
     d = s;
 }
 
+IncludeDirectory::IncludeDirectory(const String &s)
+{
+    i = s;
+}
+
+IncludeDirectory::IncludeDirectory(const path &p)
+{
+    i = p.string();
+}
+
 LinkLibrary::LinkLibrary(const String &s)
 {
     l = s;
@@ -31,14 +41,14 @@ LinkLibrary::LinkLibrary(const path &p)
     l = p.string();
 }
 
-IncludeDirectory::IncludeDirectory(const String &s)
+SystemLinkLibrary::SystemLinkLibrary(const String &s)
 {
-    i = s;
+    l = s;
 }
 
-IncludeDirectory::IncludeDirectory(const path &p)
+SystemLinkLibrary::SystemLinkLibrary(const path &p)
 {
-    i = p.string();
+    l = p.string();
 }
 
 FileRegex::FileRegex(const String &fn, bool recursive)
@@ -347,6 +357,16 @@ void NativeLinkerOptionsData::merge(const NativeLinkerOptionsData &o, const Grou
     unique_merge_containers(PostLinkDirectories, o.PostLinkDirectories);
 }
 
+void NativeLinkerOptions::add(const SystemLinkLibrary &l)
+{
+    System.LinkLibraries.erase(l.l);
+}
+
+void NativeLinkerOptions::remove(const SystemLinkLibrary &l)
+{
+    System.LinkLibraries.erase(l.l);
+}
+
 void NativeLinkerOptions::merge(const NativeLinkerOptions &o, const GroupSettings &s)
 {
     // deps are handled separately
@@ -372,8 +392,8 @@ FilesOrdered NativeLinkerOptions::gatherLinkLibraries() const
     FilesOrdered llib;
     auto i = NativeLinkerOptionsData::gatherLinkLibraries();
     llib.insert(llib.end(), i.begin(), i.end());
-    i = System.gatherLinkLibraries();
-    llib.insert(llib.end(), i.begin(), i.end());
+    //i = System.gatherLinkLibraries();
+    //llib.insert(llib.end(), i.begin(), i.end());
     return llib;
 }
 

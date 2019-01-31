@@ -370,11 +370,14 @@ std::optional<String> FileRecord::isChanged(const fs::file_time_type &in)
     // explain inside
     isChangedWithDeps();
 
+    // on missing direct file we fail immediately
     if (data->last_write_time.time_since_epoch().count() == 0)
     {
-        return "file is missing";
+        throw SW_RUNTIME_ERROR("input file " + normalize_path(file) + " is missing");
+        //return "file is missing";
     }
 
+    // on missing implicit depedency we run command anyways
     for (auto &[f, d] : implicit_dependencies)
     {
         if (d->data->last_write_time.time_since_epoch().count() == 0)
