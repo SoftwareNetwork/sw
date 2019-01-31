@@ -81,6 +81,19 @@ void check_self(sw::Checker &c);
 namespace sw
 {
 
+String toString(FrontendType t)
+{
+    switch (t)
+    {
+    case FrontendType::Sw:
+        return "sw";
+    case FrontendType::Cppan:
+        return "cppan";
+    default:
+        throw std::logic_error("not implemented");
+    }
+}
+
 static String getCurrentModuleId()
 {
     return shorten_hash(sha1(getProgramName()));
@@ -524,7 +537,7 @@ void Solution::printGraph(const path &p) const
         //s += "\"" + pp.toString() + "\";\n";
         for (auto &d : nt->Dependencies)
         {
-            if (!d->IncludeDirectoriesOnly)
+            if (d->target && !d->IncludeDirectoriesOnly)
                 s += "\"" + p.toString() + "\"->\"" + d->target->pkg.toString() + "\";\n";
         }
     }
@@ -614,7 +627,12 @@ void Solution::execute(CommandExecutionPlan &p) const
 
         // old graphs
         print_graph(p, d / "build_old.dot");
-        printGraph(d / "solution.dot");
+
+        if (auto b = this->template as<Build>(); b)
+        {
+            for (const auto &[i, s] : enumerate(b->solutions))
+                s.printGraph(d / ("solution." + std::to_string(i + 1) + ".dot"));
+        }
     }
 
     if (dry_run)

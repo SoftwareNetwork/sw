@@ -30,7 +30,7 @@
 DECLARE_STATIC_LOGGER(logger, "solution");
 
 //extern cl::SubCommand subcommand_ide;
-static cl::opt<bool> print_dependencies("print-dependencies"/*, cl::sub(subcommand_ide)*/);
+bool gPrintDependencies;
 
 namespace sw
 {
@@ -782,7 +782,7 @@ void SolutionContext::materialize(const Build &b, const path &dir)
     beginGlobalSection("ProjectConfigurationPlatforms", "postSolution");
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (!print_dependencies && !t->Local)
+        if (!gPrintDependencies && !t->Local)
             continue;
         addProjectConfigurationPlatforms(b, p.toString());
         if (projects.find(p.toString() + "-build") != projects.end())
@@ -933,7 +933,7 @@ void VSGenerator::generate(const Build &b)
         has_deps |= !t->Local;
         (t->Local ? local_tree : tree).add(p.ppath);
     }
-    if (has_deps && print_dependencies)
+    if (has_deps && gPrintDependencies)
         ctx.addDirectory(deps_subdir);
 
     auto add_dirs = [&ctx](auto &t, auto &prnts, const String &root = {})
@@ -946,13 +946,13 @@ void VSGenerator::generate(const Build &b)
             ctx.addDirectory(InsecurePath() / p.toString(), p.slice(pp.size()), pp.empty() ? root : pp.toString());
         }
     };
-    if (print_dependencies)
+    if (gPrintDependencies)
         add_dirs(tree, parents, deps_subdir.toString());
     add_dirs(local_tree, local_parents);
 
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (!print_dependencies && !t->Local)
+        if (!gPrintDependencies && !t->Local)
             continue;
 
         auto pp = p.ppath.parent();
@@ -965,7 +965,7 @@ void VSGenerator::generate(const Build &b)
     // gen projects
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (!print_dependencies && !t->Local)
+        if (!gPrintDependencies && !t->Local)
             continue;
 
         auto nt = t->as<NativeExecutedTarget>();
@@ -1184,7 +1184,7 @@ void VSGenerator::generate(const Build &b)
     ctx.beginGlobalSection("ProjectConfigurationPlatforms", "postSolution");
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (!print_dependencies && !t->Local)
+        if (!gPrintDependencies && !t->Local)
             continue;
         ctx.addProjectConfigurationPlatforms(b, p.toString());
     }
@@ -1291,7 +1291,7 @@ void VSGeneratorNMake::generate(const Build &b)
         }
         (t->Local ? local_tree : tree).add(p.ppath);
     }
-    if (has_deps && print_dependencies)
+    if (has_deps && gPrintDependencies)
         ctx.addDirectory(deps_subdir);
     //if (has_overridden) // uncomment for overridden
         //ctx.addDirectory(overridden_deps_subdir);
@@ -1306,7 +1306,7 @@ void VSGeneratorNMake::generate(const Build &b)
             ctx.addDirectory(InsecurePath() / p.toString(), p.slice(pp.size()), pp.empty() ? root : pp.toString());
         }
     };
-    if (print_dependencies)
+    if (gPrintDependencies)
         add_dirs(tree, parents, deps_subdir.toString());
     //if (has_overridden) // uncomment for overridden
         //add_dirs(overridden_tree, parents, overridden_deps_subdir.toString());
@@ -1315,7 +1315,7 @@ void VSGeneratorNMake::generate(const Build &b)
     int n_executable_tgts = 0;
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (!print_dependencies && !t->Local)
+        if (!gPrintDependencies && !t->Local)
             continue;
         if (t->isLocal() && isExecutable(t->getType()))
             n_executable_tgts++;
@@ -1325,7 +1325,7 @@ void VSGeneratorNMake::generate(const Build &b)
     bool first_project_set = false;
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (!print_dependencies && !t->Local)
+        if (!gPrintDependencies && !t->Local)
             continue;
 
         auto pp = p.ppath.parent();
@@ -1362,7 +1362,7 @@ void VSGeneratorNMake::generate(const Build &b)
     // use only first
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (!print_dependencies && !t->Local)
+        if (!gPrintDependencies && !t->Local)
             continue;
 
         auto nt = t->as<NativeExecutedTarget>();

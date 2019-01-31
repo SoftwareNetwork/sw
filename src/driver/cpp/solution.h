@@ -76,6 +76,9 @@ enum class FrontendType
     Cppan = 2,
 };
 
+SW_DRIVER_CPP_API
+String toString(FrontendType T);
+
 struct SW_DRIVER_CPP_API Test : driver::cpp::CommandBuilder
 {
     using driver::cpp::CommandBuilder::CommandBuilder;

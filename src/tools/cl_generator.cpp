@@ -2,6 +2,8 @@
 #include <primitives/main.h>
 #include <primitives/yaml.h>
 
+#include <algorithm>
+
 template <class ... Args>
 void both(primitives::CppContext &hctx, primitives::CppContext &cctx, Args && ... args)
 {

@@ -13,6 +13,7 @@
 #include <package_data.h>
 #include <resolver.h>
 #include <settings.h>
+#include <solution.h>
 
 // globals
 #include <command_storage.h>
@@ -109,17 +110,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 }
 #endif
 
-static cl::opt<path> working_directory("d", cl::desc("Working directory"));
+static ::cl::opt<path> working_directory("d", ::cl::desc("Working directory"));
 extern bool gVerbose;
-static cl::opt<bool> trace("trace", cl::desc("Trace output"));
-static cl::opt<int> jobs("j", cl::desc("Number of jobs"), cl::init(-1));
+static ::cl::opt<bool> trace("trace", ::cl::desc("Trace output"));
+static ::cl::opt<int> jobs("j", ::cl::desc("Number of jobs"), ::cl::init(-1));
 
-static cl::opt<int> sleep_seconds("sleep", cl::desc("Sleep on startup"), cl::Hidden);
+static ::cl::opt<int> sleep_seconds("sleep", ::cl::desc("Sleep on startup"), ::cl::Hidden);
 
-static cl::opt<bool> cl_self_upgrade("self-upgrade", cl::desc("Upgrade client"));
-static cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", cl::desc("Upgrade client: copy file"), cl::ReallyHidden);
+static ::cl::opt<bool> cl_self_upgrade("self-upgrade", ::cl::desc("Upgrade client"));
+static ::cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", ::cl::desc("Upgrade client: copy file"), ::cl::ReallyHidden);
 
-extern cl::opt<bool> useFileMonitor;
+extern ::cl::opt<bool> useFileMonitor;
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
@@ -215,9 +216,12 @@ int parse_main(int argc, char **argv)
         "  SW is a Universal Package Manager and Build System...\n";
     if (auto &driver = getDrivers(); !driver.empty())
     {
-        overview += "\n  Available drivers:\n";
-        for (auto &d : driver)
-            overview += "    - " + d->getName() + "\n";
+        //overview += "\n  Available drivers:\n";
+        //for (auto &d : driver)
+            //overview += "    - " + d->getName() + "\n";
+        overview += "\n  Available frontends:\n";
+        for (const auto &[k,v] : Solution::getAvailableFrontends().left)
+            overview += "    - " + toString(k) + "\n";
     }
 
     const std::vector<std::string> args0(argv + 1, argv + argc);
@@ -238,7 +242,7 @@ int parse_main(int argc, char **argv)
     //useFileMonitor = false;
 
     //
-    cl::ParseCommandLineOptions(args, overview);
+    ::cl::ParseCommandLineOptions(args, overview);
 
     return setup_main(args);
 }
@@ -301,47 +305,47 @@ int main(int argc, char **argv)
 #include <commands.inl>
 #undef SUBCOMMAND
 
-#define SUBCOMMAND(n, d) cl::SubCommand subcommand_##n(#n, d);
+#define SUBCOMMAND(n, d) ::cl::SubCommand subcommand_##n(#n, d);
 #include <commands.inl>
 #undef SUBCOMMAND
 
 //
-//static cl::list<path> build_arg0(cl::Positional, cl::desc("Files or directoris to build"));
+//static ::cl::list<path> build_arg0(::cl::Positional, ::cl::desc("Files or directoris to build"));
 
 // build commands
 // must be opt<String>!
-static cl::opt<String> build_arg(cl::Positional, cl::desc("File or directory to build"), cl::init("."), cl::sub(subcommand_build));
-static cl::opt<String> build_arg_generate(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_generate));
-static cl::opt<String> build_arg_update(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_update));
-static cl::opt<String> build_arg_test(cl::Positional, cl::desc("File or directory to use to generate projects"), cl::init("."), cl::sub(subcommand_test));
-static cl::opt<String> list_arg(cl::Positional, cl::desc("Package regex to list"), cl::init("."), cl::sub(subcommand_list));
-static cl::opt<String> install_arg(cl::Positional, cl::desc("Packages to add"), cl::sub(subcommand_install));
-static cl::list<String> install_args(cl::ConsumeAfter, cl::desc("Packages to add"), cl::sub(subcommand_install));
+static ::cl::opt<String> build_arg(::cl::Positional, ::cl::desc("File or directory to build"), ::cl::init("."), ::cl::sub(subcommand_build));
+static ::cl::opt<String> build_arg_generate(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_generate));
+static ::cl::opt<String> build_arg_update(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_update));
+static ::cl::opt<String> build_arg_test(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_test));
+static ::cl::opt<String> list_arg(::cl::Positional, ::cl::desc("Package regex to list"), ::cl::init("."), ::cl::sub(subcommand_list));
+static ::cl::opt<String> install_arg(::cl::Positional, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
+static ::cl::list<String> install_args(::cl::ConsumeAfter, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
 
 // upload
-static cl::opt<String> upload_prefix(cl::Positional, cl::desc("Prefix path"), cl::sub(subcommand_upload), cl::Required);
-static cl::opt<bool> build_before_upload("build", cl::desc("Build before upload"), cl::sub(subcommand_upload));
-static cl::opt<bool> build_after_fetch("build", cl::desc("Build after fetch"), cl::sub(subcommand_fetch));
+static ::cl::opt<String> upload_prefix(::cl::Positional, ::cl::desc("Prefix path"), ::cl::sub(subcommand_upload), ::cl::Required);
+static ::cl::opt<bool> build_before_upload("build", ::cl::desc("Build before upload"), ::cl::sub(subcommand_upload));
+static ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
 
 // ide commands
-static cl::opt<String> target_build("target", cl::desc("Target to build")/*, cl::sub(subcommand_ide)*/);
-static cl::opt<String> ide_rebuild("rebuild", cl::desc("Rebuild target"), cl::sub(subcommand_ide));
-static cl::opt<String> ide_clean("clean", cl::desc("Clean target"), cl::sub(subcommand_ide));
+static ::cl::opt<String> target_build("target", ::cl::desc("Target to build")/*, ::cl::sub(subcommand_ide)*/);
+static ::cl::opt<String> ide_rebuild("rebuild", ::cl::desc("Rebuild target"), ::cl::sub(subcommand_ide));
+static ::cl::opt<String> ide_clean("clean", ::cl::desc("Clean target"), ::cl::sub(subcommand_ide));
 
-//static cl::list<String> override_package("override-remote-package", cl::value_desc("prefix sdir"), cl::desc("Provide a local copy of remote package"), cl::multi_val(2));
-static cl::opt<String> override_package("override-remote-package", cl::value_desc("prefix"), cl::desc("Provide a local copy of remote package(s)"));
-static cl::alias override_package2("override", cl::desc("Alias for -override-remote-package"), cl::aliasopt(override_package));
-static cl::opt<bool> list_overridden_packages("list-overridden-remote-packages", cl::desc("List overridden packages"));
-static cl::opt<String> delete_overridden_package("delete-overridden-remote-package", cl::value_desc("package"), cl::desc("Delete overridden package from index"));
-static cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", cl::value_desc("sdir"), cl::desc("Delete overridden dir packages"));
+//static ::cl::list<String> override_package("override-remote-package", ::cl::value_desc("prefix sdir"), ::cl::desc("Provide a local copy of remote package"), ::cl::multi_val(2));
+static ::cl::opt<String> override_package("override-remote-package", ::cl::value_desc("prefix"), ::cl::desc("Provide a local copy of remote package(s)"));
+static ::cl::alias override_package2("override", ::cl::desc("Alias for -override-remote-package"), ::cl::aliasopt(override_package));
+static ::cl::opt<bool> list_overridden_packages("list-overridden-remote-packages", ::cl::desc("List overridden packages"));
+static ::cl::opt<String> delete_overridden_package("delete-overridden-remote-package", ::cl::value_desc("package"), ::cl::desc("Delete overridden package from index"));
+static ::cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", ::cl::value_desc("sdir"), ::cl::desc("Delete overridden dir packages"));
 
 // uri commands
 extern bool gRunAppInContainer;
-static cl::opt<bool, true> run_app_in_container("in-container", cl::desc("Print file with build graph"), cl::location(gRunAppInContainer), cl::sub(subcommand_uri));
+static ::cl::opt<bool, true> run_app_in_container("in-container", ::cl::desc("Print file with build graph"), ::cl::location(gRunAppInContainer), ::cl::sub(subcommand_uri));
 
 extern bool gUseLockFile;
 
-//static cl::list<String> builtin_function("internal-call-builtin-function", cl::desc("Call built-in function"), cl::Hidden);
+//static ::cl::list<String> builtin_function("internal-call-builtin-function", ::cl::desc("Call built-in function"), ::cl::Hidden);
 
 void override_package_perform();
 
@@ -411,14 +415,11 @@ int sw_main(const Strings &args)
 
 void stop()
 {
-    //getFileMonitor().stop();
-    //getExecutor().join();
-    //getFileStorages().clear();
     if (gUseLockFile)
         getPackageStore().saveLockFile(fs::current_path() / "sw.lock");
 }
 
-static cl::opt<bool> write_log_to_file("log-to-file");
+static ::cl::opt<bool> write_log_to_file("log-to-file");
 
 void setup_log(const std::string &log_level)
 {
@@ -442,7 +443,7 @@ SUBCOMMAND_DECL(build)
     sw::build(build_arg);
 }
 
-static cl::list<String> remove_arg(cl::Positional, cl::desc("package to remove"), cl::sub(subcommand_remove));
+static ::cl::list<String> remove_arg(::cl::Positional, ::cl::desc("package to remove"), ::cl::sub(subcommand_remove));
 
 SUBCOMMAND_DECL(remove)
 {
@@ -455,29 +456,32 @@ SUBCOMMAND_DECL(remove)
     }
 }
 
-static cl::list<String> create_args(cl::Positional, cl::desc("sw create arguments"), cl::sub(subcommand_create));
+static ::cl::opt<String> create_type(::cl::Positional, ::cl::desc("sw create arguments"), ::cl::sub(subcommand_create), ::cl::Required);
+static ::cl::opt<String> create_proj_name(::cl::Positional, ::cl::desc("sw create arguments"), ::cl::sub(subcommand_create));
 
-static cl::opt<String> create_template("template", cl::desc("Template project to create"), cl::sub(subcommand_create), cl::init("exe"));
-static cl::alias create_template2("t", cl::desc("Alias for -template"), cl::aliasopt(create_template));
-static cl::opt<String> create_language("language", cl::desc("Template project language to create"), cl::sub(subcommand_create), cl::init("cpp"));
-static cl::alias create_language2("l", cl::desc("Alias for -language"), cl::aliasopt(create_language));
-static cl::opt<bool> create_clear_dir("clear", cl::desc("Clear current directory"), cl::sub(subcommand_create));
-static cl::alias create_clear_dir2("c", cl::desc("Alias for -clear"), cl::aliasopt(create_clear_dir));
-static cl::opt<bool> create_overwrite_files("overwrite", cl::desc("Clear current directory"), cl::sub(subcommand_create));
-static cl::alias create_overwrite_files2("ow", cl::desc("Alias for -overwrite"), cl::aliasopt(create_overwrite_files));
+static ::cl::opt<String> create_template("template", ::cl::desc("Template project to create"), ::cl::sub(subcommand_create), ::cl::init("exe"));
+static ::cl::alias create_template2("t", ::cl::desc("Alias for -template"), ::cl::aliasopt(create_template));
+static ::cl::opt<String> create_language("language", ::cl::desc("Template project language to create"), ::cl::sub(subcommand_create), ::cl::init("cpp"));
+static ::cl::alias create_language2("l", ::cl::desc("Alias for -language"), ::cl::aliasopt(create_language));
+static ::cl::opt<bool> create_clear_dir("clear", ::cl::desc("Clear current directory"), ::cl::sub(subcommand_create));
+static ::cl::opt<bool> create_clear_dir_y("y", ::cl::desc("Answer yes"), ::cl::sub(subcommand_create));
+static ::cl::opt<bool> create_build("b", ::cl::desc("Build instead of generate"), ::cl::sub(subcommand_create));
+static ::cl::alias create_clear_dir2("c", ::cl::desc("Alias for -clear"), ::cl::aliasopt(create_clear_dir));
+static ::cl::opt<bool> create_overwrite_files("overwrite", ::cl::desc("Clear current directory"), ::cl::sub(subcommand_create));
+static ::cl::alias create_overwrite_files2("ow", ::cl::desc("Alias for -overwrite"), ::cl::aliasopt(create_overwrite_files));
 
 SUBCOMMAND_DECL(create)
 {
-    if (create_args.empty())
-    {
-        // cpp proj
-    }
+    if (create_type != "project")
+        throw SW_RUNTIME_ERROR("Unknown create type");
 
     if (create_clear_dir)
     {
+        std::cout << "Going to clear current directory. Are you sure? Yes/No\n";
         String s;
-        std::cin >> s;
-        if (boost::iequals(s, "yes") || boost::iequals(s, "Y"))
+        if (!create_clear_dir_y)
+            std::cin >> s;
+        if (create_clear_dir_y || boost::iequals(s, "yes") || boost::iequals(s, "Y"))
         {
             for (auto &p : fs::directory_iterator("."))
                 fs::remove_all(p);
@@ -489,63 +493,72 @@ SUBCOMMAND_DECL(create)
         }
     }
 
-    if (fs::directory_iterator(".") != fs::directory_iterator())
+    if (!create_overwrite_files && fs::directory_iterator(".") != fs::directory_iterator())
         throw SW_RUNTIME_ERROR("directory is not empty");
 
-    if (create_template == "cpp")
-    {
-        String s = R"(
-)";
-        primitives::CppContext ctx;
-        ctx.addLine("#include <iostream>");
-        ctx.addLine();
-        ctx.beginFunction("int main()");
-        ctx.addLine("std::cout << \"Hello, World!\\n\";");
-        ctx.addLine("return 0;");
-        ctx.endFunction();
-        write_file("src/main.cpp", ctx.getText());
+    String name = fs::current_path().filename().u8string();
+    if (!create_proj_name.empty())
+        name = create_proj_name;
 
-        ctx = primitives::CppContext();
-        ctx.beginFunction("void build(Solution &s)");
-        ctx.addLine("auto &p = s.addProject(\"myproject\");");
-        ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
-        ctx.addLine();
-        ctx.addLine("auto &t = p.addTarget<Executable>(\"main\");");
+    // TODO: add separate extended template with configure
+    // common sw.cpp
+    primitives::CppContext ctx;
+    ctx.beginFunction("void build(Solution &s)");
+    ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
+    ctx.addLine("// auto &p = s.addProject(\"myproject\");");
+    ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
+    ctx.addLine();
+    ctx.addLine("auto &t = s.addTarget<Executable>(\"" + name + "\");");
+
+    String s;
+    if (create_language == "cpp")
+    {
+        s = R"(#include <iostream>
+
+int main()
+{
+    std::cout << "Hello, World!\n";
+    return 0;
+}
+)";
+        write_file("src/main.cpp", s);
+
         ctx.addLine("t += \"src/main.cpp\";");
         ctx.endFunction();
         write_file("sw.cpp", ctx.getText());
 
-        cli_generate();
+        if (create_build)
+            cli_build();
+        else
+            cli_generate();
     }
-    else if (create_template == "c")
+    else if (create_language == "c")
     {
-        primitives::CppContext ctx;
-        ctx.addLine("#include <stdio.h>");
-        ctx.addLine();
-        ctx.beginFunction("int main()");
-        ctx.addLine("printf(\"Hello, World!\\n\");");
-        ctx.addLine("return 0;");
-        ctx.endFunction();
-        write_file("src/main.c", ctx.getText());
+        s = R"(#include <stdio.h>
 
-        ctx = primitives::CppContext();
-        ctx.beginFunction("void build(Solution &s)");
-        ctx.addLine("auto &p = s.addProject(\"myproject\");");
-        ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
-        ctx.addLine();
-        ctx.addLine("auto &t = p.addTarget<Executable>(\"main\");");
+int main()
+{
+    printf("Hello, World!\n");
+    return 0;
+}
+)";
+        write_file("src/main.c", s);
+
         ctx.addLine("t += \"src/main.c\";");
         ctx.endFunction();
         write_file("sw.cpp", ctx.getText());
 
-        cli_generate();
+        if (create_build)
+            cli_build();
+        else
+            cli_generate();
     }
     else
-        throw SW_RUNTIME_ERROR("unknown template");
+        throw SW_RUNTIME_ERROR("unknown language");
 }
 
-static cl::list<String> uri_args(cl::Positional, cl::desc("sw uri arguments"), cl::sub(subcommand_uri));
-//static cl::opt<String> uri_sdir("sw:sdir", cl::desc("Open source dir in file browser"), cl::sub(subcommand_uri));
+static ::cl::list<String> uri_args(::cl::Positional, ::cl::desc("sw uri arguments"), ::cl::sub(subcommand_uri));
+//static ::cl::opt<String> uri_sdir("sw:sdir", ::cl::desc("Open source dir in file browser"), ::cl::sub(subcommand_uri));
 
 SUBCOMMAND_DECL(uri)
 {
@@ -684,8 +697,6 @@ SUBCOMMAND_DECL(uri)
     }
 }
 
-#include <solution.h>
-
 void override_package_perform()
 {
     auto s = sw::load(".");
@@ -742,6 +753,8 @@ SUBCOMMAND_DECL(ide)
 }
 
 extern ::cl::opt<String> cl_generator;
+extern bool gPrintDependencies;
+static ::cl::opt<bool, true> print_dependencies("print-dependencies", ::cl::location(gRunAppInContainer), ::cl::sub(subcommand_generate));
 
 SUBCOMMAND_DECL(generate)
 {
