@@ -1734,7 +1734,8 @@ void GNULinker::prepareCommand1(const TargetBase &t)
         //return nullptr;
 
     //LinkDirectories() = gatherLinkDirectories();
-    ((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
+    //((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
+    ((GNULinker*)this)->GNULinkerOptions::SystemLinkLibraries = gatherLinkLibraries(true);
 
     //cmd->out.capture = true;
     //cmd->base = clone();
