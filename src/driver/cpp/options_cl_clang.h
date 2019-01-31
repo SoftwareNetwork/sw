@@ -218,6 +218,11 @@ struct SW_DRIVER_CPP_API GNULinkerOptions
         cl::InputDependency{},
     };
 
+    COMMAND_LINE_OPTION(StartGroup, bool)
+    {
+        cl::CommandFlag{ "-Wl,--start-group" },
+    };
+
     COMMAND_LINE_OPTION(InputLibraryDependencies, FilesOrdered)
     {
         cl::InputDependency{},
@@ -243,11 +248,10 @@ struct SW_DRIVER_CPP_API GNULinkerOptions
             cl::CommandFlagBeforeEachValue{},
     };
 
-    /*COMMAND_LINE_OPTION(ImportLibrary, path)
+    COMMAND_LINE_OPTION(EndGroup, bool)
     {
-        cl::CommandFlag{ "IMPLIB:" },
-        cl::IntermediateFile{},
-    };*/
+        cl::CommandFlag{ "-Wl,--end-group" },
+    };
 
     COMMAND_LINE_OPTION(Output, path)
     {

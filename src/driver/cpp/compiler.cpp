@@ -1692,10 +1692,10 @@ void GNULinker::setInputLibraryDependencies(const FilesOrdered &files)
     // TODO: fast fix for GNU
     // https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking
     if (use_start_end_groups)
-        InputLibraryDependencies().push_back("-Wl,--start-group");
+        StartGroup = true;
     InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
     if (use_start_end_groups)
-        InputLibraryDependencies().push_back("-Wl,--end-group");
+        EndGroup = true;
 }
 
 path GNULinker::getOutputFile() const
