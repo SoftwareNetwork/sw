@@ -253,7 +253,7 @@ String Solution::SettingsX::getConfig(const TargetBase *t, bool use_short_config
         throw std::logic_error("no cpp compiler");
     addConfigElement(c, i->second.version.toString(2));
     addConfigElement(c, toString(Native.LibrariesType));
-    if (Native.MT)
+    if (TargetOS.Type == OSType::Windows && Native.MT)
         addConfigElement(c, "mt");
     boost::to_lower(c);
     addConfigElement(c, toString(Native.ConfigurationType));
@@ -532,7 +532,7 @@ void Solution::printGraph(const path &p) const
     for (auto &[p, t] : getChildren())
     {
         auto nt = t->as<NativeExecutedTarget>();
-        if (!nt || nt->HeaderOnly && nt->HeaderOnly.value())
+        if (!nt/* || nt->HeaderOnly.value()*/)
             continue;
         //s += "\"" + pp.toString() + "\";\n";
         for (auto &d : nt->Dependencies)

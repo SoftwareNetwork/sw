@@ -1091,7 +1091,7 @@ void detectNonWindowsCompilers(struct Solution &s)
                     C->file = p;
                     *C = COpts;
                     L->compiler = C;
-                    s.registerProgramAndLanguage(appleclang ? "com.apple.LLVM.clang" : "org.LLVM.clang", C, L);
+                    s.registerProgramAndLanguage(appleclang ? "com.apple.LLVM.clangpp" : "org.LLVM.clangpp", C, L);
 
                     auto cmd = C->createCommand();
                     if (!macos_sdk_dir.empty())

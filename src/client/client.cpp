@@ -477,7 +477,7 @@ SUBCOMMAND_DECL(create)
 
     if (create_clear_dir)
     {
-        std::cout << "Going to clear current directory. Are you sure? Yes/No\n";
+        std::cout << "Going to clear current directory. Are you sure? [Yes/No]\n";
         String s;
         if (!create_clear_dir_y)
             std::cin >> s;
