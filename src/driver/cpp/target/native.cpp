@@ -408,10 +408,63 @@ void NativeExecutedTarget::resolvePostponedSourceFiles()
     }*/
 }
 
+FilesOrdered NativeExecutedTarget::gatherLinkDirectories() const
+{
+    FilesOrdered dirs;
+    auto get_ldir = [&dirs](const auto &a)
+    {
+        for (auto &d : a)
+            dirs.push_back(d);
+    };
+
+    get_ldir(NativeLinkerOptions::gatherLinkDirectories());
+    get_ldir(NativeLinkerOptions::System.gatherLinkDirectories());
+
+    auto dirs2 = getSelectedTool()->gatherLinkDirectories();
+    // tool dirs + lib dirs, not vice versa
+    dirs2.insert(dirs2.end(), dirs.begin(), dirs.end());
+    return dirs2;
+}
+
+FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
+{
+    FilesOrdered libs;
+    const auto dirs = gatherLinkDirectories();
+    for (auto &l : LinkLibraries)
+    {
+        // reconsider
+        // remove resolving?
+
+        if (l.is_absolute())
+        {
+            libs.push_back(l);
+            continue;
+        }
+
+        if (std::none_of(dirs.begin(), dirs.end(), [&l, &libs](auto &d)
+        {
+            if (fs::exists(d / l))
+            {
+                libs.push_back(d / l);
+                return true;
+            }
+            return false;
+        }))
+        {
+            //LOG_TRACE(logger, "Cannot resolve library: " << l);
+            throw SW_RUNTIME_ERROR("Cannot resolve library: " + normalize_path(l));
+        }
+
+        //if (!getSolution()->Settings.TargetOS.is(OSType::Windows))
+            //libs.push_back("-l" + l.u8string());
+    }
+    return libs;
+}
+
 Files NativeExecutedTarget::gatherObjectFiles() const
 {
     auto obj = gatherObjectFilesWithoutLibraries();
-    auto ll = LinkLibraries;
+    auto ll = gatherLinkLibraries();
     obj.insert(ll.begin(), ll.end());
     return obj;
 }
@@ -1968,8 +2021,8 @@ bool NativeExecutedTarget::prepare()
         // legit? actually no
         // merge here only compiler options
         // TODO: find more generalized way
-        //getSelectedTool()->merge(*this);
-        getSelectedTool()->LinkOptions.insert(getSelectedTool()->LinkOptions.end(), LinkOptions.begin(), LinkOptions.end());
+        getSelectedTool()->merge(*this);
+        //getSelectedTool()->LinkOptions.insert(getSelectedTool()->LinkOptions.end(), LinkOptions.begin(), LinkOptions.end());
 
         // pdb
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
@@ -2098,15 +2151,21 @@ bool NativeExecutedTarget::prepare()
         // add more link libraries from deps
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
         {
-            std::unordered_set<NativeExecutedTarget*> targets;
-            Files added;
-            added.insert(LinkLibraries.begin(), LinkLibraries.end());
-            gatherStaticLinkLibraries(LinkLibraries, added, targets);
+            auto ll = [this](auto &l, bool system)
+            {
+                std::unordered_set<NativeExecutedTarget*> targets;
+                Files added;
+                added.insert(l.begin(), l.end());
+                gatherStaticLinkLibraries(l, added, targets, system);
+            };
+
+            ll(LinkLibraries, false);
+            ll(NativeLinkerOptions::System.LinkLibraries, true);
         }
 
         // linker setup
         auto obj = gatherObjectFilesWithoutLibraries();
-        auto O1 = LinkLibraries;
+        auto O1 = gatherLinkLibraries();
 
         if (CircularLinker)
         {
@@ -2149,7 +2208,7 @@ bool NativeExecutedTarget::prepare()
     SW_RETURN_MULTIPASS_END;
 }
 
-void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets)
+void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets, bool system)
 {
     if (!targets.insert(this).second)
         return;
@@ -2167,17 +2226,18 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
         // here we must gather all static (and header only?) lib deps in recursive manner
         if (dt->getSelectedTool() == dt->Librarian.get() || dt->HeaderOnly.value())
         {
-            auto add = [&added, &ll](auto &dt, const path &base)
+            auto add = [&added, &ll](auto &dt, const path &base, bool system)
             {
+                auto &a = system ? dt->NativeLinkerOptions::System.LinkLibraries : dt->LinkLibraries;
                 if (added.find(base) == added.end())
                 {
                     ll.push_back(base);
-                    ll.insert(ll.end(), dt->LinkLibraries.begin(), dt->LinkLibraries.end()); // also link libs
+                    ll.insert(ll.end(), a.begin(), a.end()); // also link libs
                 }
                 else
                 {
                     // we added output file but not its system libs
-                    for (auto &l : dt->LinkLibraries)
+                    for (auto &l : a)
                     {
                         if (std::find(ll.begin(), ll.end(), l) == ll.end())
                             ll.push_back(l);
@@ -2186,7 +2246,7 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
             };
 
             if (!dt->HeaderOnly.value())
-                add(dt, dt->getOutputFile());
+                add(dt, dt->getOutputFile(), system);
 
             // if dep is a static library, we take all its deps link libraries too
             for (auto &d2 : dt->Dependencies)
@@ -2202,8 +2262,8 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
 
                 auto dt2 = ((NativeExecutedTarget*)d2->target);
                 if (!dt2->HeaderOnly.value())
-                    add(dt2, dt2->getImportLibrary());
-                dt2->gatherStaticLinkLibraries(ll, added, targets);
+                    add(dt2, dt2->getImportLibrary(), system);
+                dt2->gatherStaticLinkLibraries(ll, added, targets, system);
             }
         }
     }

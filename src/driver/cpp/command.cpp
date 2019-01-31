@@ -427,9 +427,9 @@ bool ExecuteBuiltinCommand::isTimeChanged() const
 
     // ignore program!
     for (auto &i : inputs)
-        changed |= check_if_file_newer(i, "input");
+        changed |= check_if_file_newer(i, "input", true);
     for (auto &i : outputs)
-        changed |= check_if_file_newer(i, "output");
+        changed |= check_if_file_newer(i, "output", false);
 
     return changed;
 }

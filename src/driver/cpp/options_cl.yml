@@ -468,6 +468,10 @@ types:
                 properties:
                     - input_dependency
 
+            sll:
+                name: SystemLinkLibraries
+                type: FilesOrdered
+
             dll:
                 name: Dll
                 type: bool

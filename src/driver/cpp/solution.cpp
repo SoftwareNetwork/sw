@@ -1605,7 +1605,7 @@ FilesMap Build::build_configs_separate(const Files &files)
 #endif
 
 #if defined(CPPAN_OS_WINDOWS)
-        lib.LinkLibraries.insert("Delayimp.lib");
+        lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
 #endif
 
         if (auto L = lib.Linker->template as<VisualStudioLinker>())
@@ -1891,7 +1891,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 #endif
 
 #if defined(CPPAN_OS_WINDOWS)
-    lib.LinkLibraries.insert("Delayimp.lib");
+    lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
 #endif
 
     if (auto L = lib.Linker->template as<VisualStudioLinker>())

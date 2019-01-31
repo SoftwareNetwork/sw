@@ -1519,16 +1519,16 @@ FilesOrdered NativeLinker::gatherLinkDirectories() const
                 dirs.push_back(d);
         };
 
-        get_ldir(v.System.gatherLinkDirectories());
         get_ldir(v.gatherLinkDirectories());
+        get_ldir(v.System.gatherLinkDirectories());
     });
     return dirs;
 }
 
-FilesOrdered NativeLinker::gatherLinkLibraries() const
+FilesOrdered NativeLinker::gatherLinkLibraries(bool system) const
 {
     FilesOrdered dirs;
-    iterate([&dirs](auto &v, auto &gs)
+    iterate([&dirs, &system](auto &v, auto &gs)
     {
         auto get_ldir = [&dirs](const auto &a)
         {
@@ -1536,8 +1536,10 @@ FilesOrdered NativeLinker::gatherLinkLibraries() const
                 dirs.push_back(d);
         };
 
-        //get_ldir(v.System.gatherLinkLibraries());
-        get_ldir(v.gatherLinkLibraries());
+        if (system)
+            get_ldir(v.System.gatherLinkLibraries());
+        else
+            get_ldir(v.gatherLinkLibraries());
     });
     return dirs;
 }
@@ -1615,6 +1617,42 @@ void VisualStudioLinker::getAdditionalOptions(driver::cpp::Command *cmd) const
 void VisualStudioLinker::setInputLibraryDependencies(const FilesOrdered &files)
 {
     InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
+}
+
+void VisualStudioLinker::prepareCommand1(const TargetBase &t)
+{
+    if (InputFiles.empty() && DefinitionFile.empty())
+    {
+        // why? maybe throw?
+        cmd.reset();
+        return;
+    }
+
+    if (Output.empty())
+        throw SW_RUNTIME_ERROR("Output file is not set");
+
+    // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
+    //if (InputFiles().empty())
+        //return nullptr;
+
+    //LinkDirectories() = gatherLinkDirectories();
+    //LinkLibraries() = gatherLinkLibraries();
+    ((VisualStudioLinker*)this)->VisualStudioLinkerOptions::SystemLinkLibraries = gatherLinkLibraries(true);
+
+    //cmd->out.capture = true;
+    //cmd->base = clone();
+    if (Output)
+    {
+        cmd->working_directory = Output().parent_path();
+        cmd->name = normalize_path(Output());
+        cmd->name_short = Output().filename().u8string();
+    }
+
+    ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
+
+    getCommandLineOptions<VisualStudioLibraryToolOptions>(cmd.get(), *this);
+    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    getAdditionalOptions(cmd.get());
 }
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioLibrarian)

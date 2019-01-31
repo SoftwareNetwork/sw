@@ -108,9 +108,9 @@ static String getCommandId(const Command &c)
     return s;
 }
 
-bool Command::check_if_file_newer(const path &p, const String &what) const
+bool Command::check_if_file_newer(const path &p, const String &what, bool throw_on_missing) const
 {
-    auto s = File(p, *fs).isChanged(mtime);
+    auto s = File(p, *fs).isChanged(mtime, throw_on_missing);
     if (s && isExplainNeeded())
         EXPLAIN_OUTDATED("command", true, what + " changed " + normalize_path(p) + ": " + *s, getCommandId(*this));
     return !!s;
@@ -159,11 +159,11 @@ bool Command::isTimeChanged() const
     }*/
 
     // always check program and all deps are known
-    changed |= check_if_file_newer(program, "program");
+    changed |= check_if_file_newer(program, "program", true);
     for (auto &i : inputs)
-        changed |= check_if_file_newer(i, "input");
+        changed |= check_if_file_newer(i, "input", true);
     for (auto &i : outputs)
-        changed |= check_if_file_newer(i, "output");
+        changed |= check_if_file_newer(i, "output", false);
 
     return changed;
 }

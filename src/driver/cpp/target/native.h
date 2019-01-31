@@ -185,7 +185,9 @@ private:
     path getOutputFileName(const path &root) const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
-    void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets);
+    void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets, bool system);
+    FilesOrdered gatherLinkDirectories() const;
+    FilesOrdered gatherLinkLibraries() const;
 
     void tryLoadPrecomputedData();
     void applyPrecomputedData();

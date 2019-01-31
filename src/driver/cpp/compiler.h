@@ -275,7 +275,7 @@ struct SW_DRIVER_CPP_API NativeLinker : Linker,
     virtual path getImportLibrary() const = 0;
 
     FilesOrdered gatherLinkDirectories() const;
-    FilesOrdered gatherLinkLibraries() const;
+    FilesOrdered gatherLinkLibraries(bool system = false) const;
 };
 
 struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
@@ -306,6 +306,9 @@ struct SW_DRIVER_CPP_API VisualStudioLinker : VisualStudioLibraryTool,
     SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::cpp::Command *c) const override;
     void setInputLibraryDependencies(const FilesOrdered &files) override;
+
+protected:
+    void prepareCommand1(const TargetBase &t) override;
 };
 
 struct SW_DRIVER_CPP_API VisualStudioLibrarian : VisualStudioLibraryTool,

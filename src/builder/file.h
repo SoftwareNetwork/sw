@@ -50,7 +50,7 @@ struct SW_BUILDER_API File : virtual Node
 
     bool empty() const { return file.empty(); }
     bool isChanged() const;
-    std::optional<String> isChanged(const fs::file_time_type &t);
+    std::optional<String> isChanged(const fs::file_time_type &t, bool throw_on_missing);
     bool isGenerated() const;
     bool isGeneratedAtAll() const;
 
@@ -113,7 +113,7 @@ struct SW_BUILDER_API FileRecord
     bool isChangedWithDeps();
 
     // check using lwt
-    std::optional<String> isChanged(const fs::file_time_type &t);
+    std::optional<String> isChanged(const fs::file_time_type &t, bool throw_on_missing);
 
     bool isGenerated() const;
     bool isGeneratedAtAll() const { return data->generated; }

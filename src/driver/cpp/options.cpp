@@ -359,7 +359,7 @@ void NativeLinkerOptionsData::merge(const NativeLinkerOptionsData &o, const Grou
 
 void NativeLinkerOptions::add(const SystemLinkLibrary &l)
 {
-    System.LinkLibraries.erase(l.l);
+    System.LinkLibraries.push_back(l.l);
 }
 
 void NativeLinkerOptions::remove(const SystemLinkLibrary &l)

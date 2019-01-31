@@ -134,9 +134,9 @@ bool File::isChanged() const
     return r->isChanged();
 }
 
-std::optional<String> File::isChanged(const fs::file_time_type &t)
+std::optional<String> File::isChanged(const fs::file_time_type &t, bool throw_on_missing)
 {
-    return getFileRecord().isChanged(t);
+    return getFileRecord().isChanged(t, throw_on_missing);
 }
 
 bool File::isGenerated() const
@@ -364,7 +364,7 @@ bool FileRecord::isChangedWithDeps()
     return false;
 }
 
-std::optional<String> FileRecord::isChanged(const fs::file_time_type &in)
+std::optional<String> FileRecord::isChanged(const fs::file_time_type &in, bool throw_on_missing)
 {
     // we call this as refresh of all deps
     // explain inside
@@ -373,8 +373,9 @@ std::optional<String> FileRecord::isChanged(const fs::file_time_type &in)
     // on missing direct file we fail immediately
     if (data->last_write_time.time_since_epoch().count() == 0)
     {
-        throw SW_RUNTIME_ERROR("input file " + normalize_path(file) + " is missing");
-        //return "file is missing";
+        if (throw_on_missing)
+            throw SW_RUNTIME_ERROR("file " + normalize_path(file) + " is missing");
+        return "file is missing";
     }
 
     // on missing implicit depedency we run command anyways
