@@ -894,8 +894,6 @@ void detectNonWindowsCompilers(struct Solution &s)
     }
 
     NativeCompilerOptions COpts;
-    //COpts.System.IncludeDirectories.insert("/usr/include");
-    //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
 
     path macos_sdk_dir;
     if (s.HostOS.is(OSType::Macos))
@@ -1017,6 +1015,8 @@ void detectNonWindowsCompilers(struct Solution &s)
             p = resolve(v);
             if (!p.empty())
             {
+                bool appleclang = is_apple_clang(p);
+
                 auto Linker = std::make_shared<GNULinker>();
 
                 if (s.HostOS.is(OSType::Cygwin))
@@ -1031,18 +1031,22 @@ void detectNonWindowsCompilers(struct Solution &s)
                 lopts2.System.LinkLibraries.push_back("c++fs"); // remove and add to progs explicitly?
 
                 *Linker = lopts2;
-                s.registerProgram("org.LLVM.clang.ld", Linker);
+                s.registerProgram(appleclang ? "com.apple.LLVM.clang.ld" : "org.LLVM.clang.ld", Linker);
 
                 auto cmd = Linker->createCommand();
                 if (s.HostOS.is(OSType::Macos))
                 {
                     cmd->args.push_back("-undefined");
                     cmd->args.push_back("dynamic_lookup");
+
+                    if (!appleclang)
+                    {
+                        cmd->args.push_back("-L");
+                        cmd->args.push_back(normalize_path(p.parent_path().parent_path() / "lib"));
+                    }
                 }
 
                 NativeCompilerOptions COpts;
-                //COpts.System.IncludeDirectories.insert("/usr/include");
-                //COpts.System.IncludeDirectories.insert("/usr/include/x86_64-linux-gnu");
 
                 // C
                 {
