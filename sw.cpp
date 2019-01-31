@@ -82,7 +82,7 @@ void build(Solution &s)
     {
         pch.header = manager.SourceDir / "src/manager/pch.h";
         pch.force_include_pch = true;
-        manager.addPrecompiledHeader(pch);
+        //manager.addPrecompiledHeader(pch);
     }
 
     auto &tools = p.addDirectory("tools");

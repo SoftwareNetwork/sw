@@ -1155,6 +1155,16 @@ void Solution::findCompiler()
                 this->Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(lib->clone());
                 this->Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(link->clone());
                 //this->Settings.Native.LinkerType = std::get<2>(v);
+                LOG_TRACE(logger, "activated " << std::get<0>(v).toString() << " and " << std::get<1>(v).toString() << " successfully");
+            }
+            else
+            {
+                if (lib)
+                    LOG_TRACE(logger, "activate " << std::get<1>(v).toString() << " failed");
+                else if (link)
+                    LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " failed");
+                else
+                    LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " and " << std::get<1>(v).toString() << " failed");
             }
             return r;
         }))
@@ -1237,12 +1247,21 @@ void Solution::findCompiler()
         extensions.erase(".mm");
     }
 
+    // linkers
     if (HostOS.is(OSType::Windows))
     {
         activate_linker_or_throw({
             {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
             {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
             {"org.gnu.binutils.ar", "org.LLVM.clang.ld",LinkerType::GNU},
+            }, "Try to add more linkers");
+    }
+    else if (HostOS.is(OSType::Macos))
+    {
+        activate_linker_or_throw({
+            // base
+            {"org.gnu.binutils.ar", "org.LLVM.clang.ld",LinkerType::GNU},
+            {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
             }, "Try to add more linkers");
     }
     else

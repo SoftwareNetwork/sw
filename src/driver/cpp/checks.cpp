@@ -290,6 +290,8 @@ int main() { return IsBigEndian(); }
     auto ep = ExecutionPlan<Check>::createExecutionPlan(unchecked);
     if (ep)
     {
+        LOG_INFO(logger, "Performing " << unchecked.size() << " checks");
+
         //auto &e = getExecutor();
         Executor e(getExecutor().numberOfThreads()); // separate executor!
         //ep.throw_on_errors = false;
