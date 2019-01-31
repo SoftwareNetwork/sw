@@ -1094,25 +1094,27 @@ void Solution::findCompiler()
 
     using CompilerVector = std::vector<std::pair<PackagePath, CompilerType>>;
 
-    auto activate = [this](const CompilerVector &a)
+    auto activate_one = [this](auto &v)
     {
-        return std::any_of(a.begin(), a.end(), [this](const auto &v)
+        auto r = activateLanguage(v.first);
+        if (r)
+            this->Settings.Native.CompilerType = v.second;
+        return r;
+    };
+
+    auto activate = [&activate_one](const CompilerVector &a)
+    {
+        return std::any_of(a.begin(), a.end(), [&activate_one](const auto &v)
         {
-            auto r = activateLanguage(v.first);
-            if (r)
-                this->Settings.Native.CompilerType = v.second;
-            return r;
+            return activate_one(v);
         });
     };
 
-    auto activate_all = [this](const CompilerVector &a)
+    auto activate_all = [&activate_one](const CompilerVector &a)
     {
-        return std::all_of(a.begin(), a.end(), [this](const auto &v)
+        return std::all_of(a.begin(), a.end(), [&activate_one](const auto &v)
         {
-            auto r = activateLanguage(v.first);
-            if (r)
-                this->Settings.Native.CompilerType = v.second;
-            return r;
+            return activate_one(v);
         });
     };
 
@@ -1120,7 +1122,12 @@ void Solution::findCompiler()
     {
         return std::any_of(a.begin(), a.end(), [&activate_all](const auto &v)
         {
-            return activate_all(v);
+            auto r = activate_all(v);
+            if (r)
+                LOG_TRACE(logger, "activated " << v.begin()->first.toString() << " successfully");
+            else
+                LOG_TRACE(logger, "activate " << v.begin()->first.toString() << " failed");
+            return r;
         });
     };
 
