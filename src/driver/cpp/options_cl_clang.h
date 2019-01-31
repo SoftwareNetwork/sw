@@ -220,7 +220,7 @@ struct SW_DRIVER_CPP_API GNULinkerOptions
 
     COMMAND_LINE_OPTION(StartGroup, bool)
     {
-        cl::CommandFlag{ "-Wl,--start-group" },
+        cl::CommandFlag{ "Wl,--start-group" },
     };
 
     COMMAND_LINE_OPTION(InputLibraryDependencies, FilesOrdered)
@@ -250,7 +250,7 @@ struct SW_DRIVER_CPP_API GNULinkerOptions
 
     COMMAND_LINE_OPTION(EndGroup, bool)
     {
-        cl::CommandFlag{ "-Wl,--end-group" },
+        cl::CommandFlag{ "Wl,--end-group" },
     };
 
     COMMAND_LINE_OPTION(Output, path)
