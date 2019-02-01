@@ -1786,7 +1786,15 @@ bool NativeExecutedTarget::prepare()
         else if (getSolution()->Settings.Native.CompilerType == CompilerType::MSVC)
             *this += "_DEBUG"_d;
 
-        auto vs_setup = [this](auto *f, auto *c)
+        auto remove_bdirs = [this](auto *c)
+        {
+            // if we won't remove this, bdirs will differ between different config compilations
+            // so our own config pch will be outdated on every call
+            c->IncludeDirectories.erase(BinaryDir);
+            c->IncludeDirectories.erase(BinaryPrivateDir);
+        };
+
+        auto vs_setup = [this, &remove_bdirs](auto *f, auto *c)
         {
             if (getSolution()->Settings.Native.MT)
                 c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
@@ -1815,9 +1823,7 @@ bool NativeExecutedTarget::prepare()
 
             if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
             {
-                // why?
-                c->IncludeDirectories.erase(BinaryDir);
-                c->IncludeDirectories.erase(BinaryPrivateDir);
+                remove_bdirs(c);
             }
         };
 
@@ -1882,10 +1888,20 @@ bool NativeExecutedTarget::prepare()
             else if (auto c = f->compiler->as<ClangCompiler>())
             {
                 gnu_setup(f, c);
+
+                if (IsConfig && c->EmitPCH)
+                {
+                    remove_bdirs(c);
+                }
             }
             else if (auto c = f->compiler->as<GNUCompiler>())
             {
                 gnu_setup(f, c);
+
+                if (IsConfig && c->Language() == "c++-header"s)
+                {
+                    remove_bdirs(c);
+                }
             }
         }
 

@@ -180,7 +180,7 @@ void GNUCommand::postProcess1(bool)
     // split with everything; only file names are left
     // we do not support spaces and quotes here at the moment
     // TODO: implement if needed
-    auto files = split_string(f, "\r\n\\ ");
+    auto files = split_string(f, "\r\n\\ "); // we also could add ':' here and skip first file (target)
     for (auto &f2 : files)
     {
         auto f3 = normalize_path(f2);
