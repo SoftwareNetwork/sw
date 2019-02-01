@@ -165,7 +165,10 @@ void Dependency::setTarget(const Target &t)
 void Dependency::propagateTargetToChain()
 {
     for (auto &c : chain)
-        c->setTarget(*target);
+    {
+        if (c.get() != this)
+            c->setTarget(*target);
+    }
 }
 
 void NativeCompilerOptionsData::add(const Definition &d)
