@@ -148,24 +148,13 @@ bool Command::isOutdated() const
 
 bool Command::isTimeChanged() const
 {
-    bool changed = false;
-
-    //DEBUG_BREAK_IF_STRING_HAS(outputs.begin()->string(), "lzma_encoder_optimum_normal.c.a27c4553.obj");
-
-    /*if (outputs.size())
-    {
-        DEBUG_BREAK_IF_STRING_HAS(outputs.begin()->string(), "range.yy.cpp");
-        DEBUG_BREAK_IF_STRING_HAS(outputs.begin()->string(), "range.yy.hpp");
-    }*/
-
-    // always check program and all deps are known
-    changed |= check_if_file_newer(program, "program", true);
-    for (auto &i : inputs)
-        changed |= check_if_file_newer(i, "input", true);
-    for (auto &i : outputs)
-        changed |= check_if_file_newer(i, "output", false);
-
-    return changed;
+    return check_if_file_newer(program, "program", true) ||
+           std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
+               return check_if_file_newer(i, "input", true);
+           }) ||
+           std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
+               return check_if_file_newer(i, "output", false);
+           });
 }
 
 size_t Command::getHash() const
