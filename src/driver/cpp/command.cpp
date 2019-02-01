@@ -162,40 +162,38 @@ void GNUCommand::postProcess1(bool)
 
     static const std::regex space_r("[^\\\\] ");
 
-    auto lines = read_lines(deps_file);
-    for (auto i = lines.begin() + 1; i != lines.end(); i++)
+    // deps file is a make in form
+    // target: dependencies
+    // deps are split by spaces on several lines with \ at the end of each line except the last one
+    //
+    // example:
+    //
+    // file.o: dep1.cpp dep2.cpp \
+    //  dep1.h dep2.h \
+    //  dep3.h \
+    //  dep4.h
+    //
+
+    auto f = read_file(deps_file);
+    f = f.substr(f.find(":") + 1); // skip target
+
+    // split with everything; only file names are left
+    // we do not support spaces and quotes here at the moment
+    // TODO: implement if needed
+    auto files = split_string(f, "\r\n\\ ");
+    for (auto &f2 : files)
     {
-        auto &s = *i;
-        if (s.empty())
-            continue;
-        if (s.back() == '\\')
-            s.resize(s.size() - 1);
-        boost::trim(s);
-        s = std::regex_replace(s, space_r, "\n");
-        boost::replace_all(s, "\\ ", " ");
-        Strings files;
-        boost::split(files, s, boost::is_any_of("\n"));
-        //boost::replace_all(s, "\\\"", "\""); // probably no quotes
-        //for (auto &f : files)
-            //file.addImplicitDependency(f);
-
-        for (auto &f2 : files)
-        {
-            auto f3 = normalize_path(f2);
+        auto f3 = normalize_path(f2);
 #ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
-            static const String cyg = "/cygdrive/";
-            if (f3.find(cyg) == 0)
-            {
-                f3 = f3.substr(cyg.size());
-                f3 = f3[0] + ":" + f3.substr(1);
-            }
-#endif
-
-            //for (auto &f : intermediate)
-                //File(f, *fs).addImplicitDependency(f2);
-            for (auto &f : outputs)
-                File(f, *fs).addImplicitDependency(f3);
+        static const String cyg = "/cygdrive/";
+        if (f3.find(cyg) == 0)
+        {
+            f3 = f3.substr(cyg.size());
+            f3 = f3[0] + ":" + f3.substr(1);
         }
+#endif
+        for (auto &f : outputs)
+            File(f, *fs).addImplicitDependency(f3);
     }
 }
 
