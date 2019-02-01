@@ -232,6 +232,8 @@ private:
     virtual bool isTimeChanged() const;
     void printLog() const;
     size_t getHashAndSave() const;
+    String makeErrorString(const String &e);
+    String saveCommand() const;
 };
 
 } // namespace bulder

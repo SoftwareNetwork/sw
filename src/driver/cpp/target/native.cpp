@@ -608,7 +608,6 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
                 c->PrecompiledHeader().create = p.header;
                 c->PDBFilename = pdb_fn;
                 c->PDBFilename.intermediate_file = false;
-                //c->PDBFilename.output_dependency = true;
             };
 
             if (auto c = sf->compiler->as<VisualStudioCompiler>())

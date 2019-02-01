@@ -428,7 +428,11 @@ void Command::afterCommand()
         //fr.writeToLog();
         //fr.updateLwt();
         if (!fs::exists(i))
-            throw SW_RUNTIME_ERROR("Output file was not created: " + normalize_path(i));
+        {
+            String e = "Output file was not created: " + normalize_path(i);
+            makeErrorString(e);
+            throw SW_RUNTIME_ERROR(e);
+        }
         mtime = std::max(mtime, fr.getMaxTime());
     };
 
@@ -536,22 +540,6 @@ void Command::execute1(std::error_code *ec)
             fs::remove(rsp_file);
     };
 
-    auto save_command = [this]()
-    {
-        if (do_not_save_command)
-            return String{};
-
-        auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / getResponseFilename();
-        writeCommand(p);
-
-        String s;
-        s += "\n";
-        s += "pid = " + std::to_string(pid) + "\n";
-        s += "command is copied to " + p.u8string() + "\n";
-
-        return s;
-    };
-
     auto print_outputs = [this]()
     {
         /*boost::trim(out.text);
@@ -565,30 +553,12 @@ void Command::execute1(std::error_code *ec)
             LOG_INFO(logger, s);*/
     };
 
-    auto make_error_string = [this, &save_command, &print_outputs](const String &e)
+    auto make_error_string = [this, &print_outputs](const String &e)
     {
         postProcess(false);
         print_outputs();
 
-        String s = "When building: " + getName();
-        if (!out.text.empty())
-        {
-            boost::replace_all(out.text, "\r", "");
-            s += "\n" + boost::trim_copy(out.text);
-        }
-        if (!err.text.empty())
-        {
-            boost::replace_all(err.text, "\r", "");
-            s += "\n" + boost::trim_copy(err.text);
-        }
-        s += "\n";
-        s += e;
-        boost::trim(s);
-        if (save_failed_commands || save_executed_commands || save_all_commands)
-        {
-            s += save_command();
-        }
-        return s;
+        return makeErrorString(e);
     };
 
     // create generated dirs
@@ -614,7 +584,7 @@ void Command::execute1(std::error_code *ec)
 
         if (save_executed_commands || save_all_commands)
         {
-            save_command();
+            saveCommand();
         }
 
         postProcess(); // process deps
@@ -625,6 +595,45 @@ void Command::execute1(std::error_code *ec)
         auto err = make_error_string(e.what());
         throw SW_RUNTIME_ERROR(err);
     }
+}
+
+String Command::makeErrorString(const String &e)
+{
+    String s = "When executing: " + getName();
+    if (!out.text.empty())
+    {
+        boost::replace_all(out.text, "\r", "");
+        s += "\n" + boost::trim_copy(out.text);
+    }
+    if (!err.text.empty())
+    {
+        boost::replace_all(err.text, "\r", "");
+        s += "\n" + boost::trim_copy(err.text);
+    }
+    s += "\n";
+    s += e;
+    boost::trim(s);
+    if (save_failed_commands || save_executed_commands || save_all_commands)
+    {
+        s += saveCommand();
+    }
+    return s;
+}
+
+String Command::saveCommand() const
+{
+    if (do_not_save_command)
+        return String{};
+
+    auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / getResponseFilename();
+    writeCommand(p);
+
+    String s;
+    s += "\n";
+    s += "pid = " + std::to_string(pid) + "\n";
+    s += "command is copied to " + p.u8string() + "\n";
+
+    return s;
 }
 
 void Command::writeCommand(const path &p) const

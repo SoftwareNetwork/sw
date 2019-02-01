@@ -20,6 +20,90 @@ namespace sw
 
 using SourceKvMap = std::vector<std::pair<String, String>>;
 
+// prepare for oop
+/*enum SourceType
+{
+    Undefined,
+
+    Empty, // sometimes we have everything in the config file
+    Git,
+    Mercurial,
+    Bazaar,
+    Fossil,
+    Cvs,
+    Svn,
+    RemoteFile,
+
+    //darcs,
+    //perforce aka p4
+
+    // do not add local files
+};
+
+struct SW_MANAGER_API Source
+{
+    virtual ~Source() = default;
+
+    virtual void download(const path &dir) = 0;
+
+    /// save to global object with 'source' subobject
+    virtual void save(ptree &p) = 0;
+
+    /// save to current (passed) object
+    virtual void save(nlohmann::json &j) = 0;
+
+    /// save to global object with 'source' subobject
+    virtual void save(yaml &root) = 0;
+
+    virtual String print() = 0;
+    virtual SourceKvMap printKv() = 0;
+    virtual String getHash() = 0;
+    virtual bool isValidSourceUrl(const Source &source) = 0;
+    virtual void applyVersionToUrl(const Version &v) = 0;
+
+    /// load from global object with 'source' subobject
+    static std::unique_ptr<Source> load(const ptree &p);
+
+    /// load from current (passed) object
+    static std::unique_ptr<Source> load(const nlohmann::json &j);
+
+    /// load from global object with 'source' subobject
+    static bool load(const yaml &root);
+
+private:
+    virtual Source load_source(const ptree &p) = 0;
+    virtual Source load_source(const nlohmann::json &j) = 0;
+    virtual bool load_source(const yaml &root) = 0;
+};*/
+
+struct UndefinedSource
+{
+    UndefinedSource() = default;
+    UndefinedSource(const yaml &root, const String &name = UndefinedSource::getString()) {}
+
+    bool empty() const { return true; }
+    bool isValid(const String &name, String *error = nullptr) const { return true; }
+    bool isValidUrl() const { return false; }
+
+    bool load(const ptree &p) { return true; }
+    bool save(ptree &p) const { return true; }
+    bool load(const nlohmann::json &p) { return true; }
+    bool save(nlohmann::json &p) const { return true; }
+    void save(yaml &root, const String &name = UndefinedSource::getString()) const {}
+
+    String print() const { return ""; }
+    SourceKvMap printKv() const { return { {"Source", getString()} }; }
+    void applyVersion(const Version &v) {}
+    void download(const path &dir) const {}
+
+    static String getString() { return "undefined"; }
+
+    bool operator==(const UndefinedSource &rhs) const
+    {
+        return true;
+    }
+};
+
 struct EmptySource
 {
     EmptySource() = default;
@@ -27,7 +111,7 @@ struct EmptySource
 
     bool empty() const { return true; }
     bool isValid(const String &name, String *error = nullptr) const { return true; }
-    bool isValidUrl() const { return false; }
+    bool isValidUrl() const { return true; }
 
     bool load(const ptree &p) { return true; }
     bool save(ptree &p) const { return true; }
@@ -278,6 +362,7 @@ struct SW_MANAGER_API RemoteFiles
 // TODO: add: svn, cvs, darcs, p4
 // do not add local files
 #define SOURCE_TYPES(f,d) \
+    f(UndefinedSource) d \
     f(EmptySource) d \
     f(Git) d \
     f(Hg) d \
