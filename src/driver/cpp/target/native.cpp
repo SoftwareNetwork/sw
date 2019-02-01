@@ -1898,7 +1898,7 @@ bool NativeExecutedTarget::prepare()
             {
                 gnu_setup(f, c);
 
-                if (IsConfig && c->Language() == "c++-header"s)
+                if (IsConfig && c->Language && c->Language() == "c++-header"s)
                 {
                     remove_bdirs(c);
                 }
