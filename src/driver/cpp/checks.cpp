@@ -1065,7 +1065,7 @@ void LibraryFunctionExists::run() const
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
     e += f;
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data;
-    e.LinkLibraries.push_back(library);
+    e.NativeLinkerOptions::System.LinkLibraries.push_back(library);
 
     if (!execute(s))
         return;
