@@ -430,8 +430,7 @@ void Command::afterCommand()
         if (!fs::exists(i))
         {
             String e = "Output file was not created: " + normalize_path(i);
-            makeErrorString(e);
-            throw SW_RUNTIME_ERROR(e);
+            throw SW_RUNTIME_ERROR(makeErrorString(e));
         }
         mtime = std::max(mtime, fr.getMaxTime());
     };
