@@ -171,137 +171,34 @@ enum class CrateType
 
 DECLARE_OPTION_SPECIALIZATION(rust::CrateType);
 
+namespace gnu
+{
+
+struct Optimizations
+{
+    bool Disable = false;
+    std::optional<int> Level;
+    bool SmallCode = false;
+    bool FastCode = false;
+};
+
+} // namespace gnu
+
+DECLARE_OPTION_SPECIALIZATION(gnu::Optimizations);
+
+namespace clang
+{
+
+enum class ArchType
+{
+    m32,
+    m64,
+};
+
+} // namespace clang
+
+DECLARE_OPTION_SPECIALIZATION(clang::ArchType);
+
 }
 
 #include "options_cl.generated.h"
-
-namespace sw
-{
-
-struct SW_DRIVER_CPP_API RustCompilerOptions
-{
-    COMMAND_LINE_OPTION(CrateType, rust::CrateType)
-    {
-        cl::CommandFlag{ "-crate-type" },
-            rust::CrateType::bin,
-            cl::SeparatePrefix{},
-    };
-
-    COMMAND_LINE_OPTION(InputFile, path)
-    {
-        cl::InputDependency{},
-    };
-
-    COMMAND_LINE_OPTION(Output, path)
-    {
-        cl::CommandFlag{ "o" },
-            cl::OutputDependency{},
-    };
-};
-DECLARE_OPTION_SPECIALIZATION(RustCompilerOptions);
-
-struct SW_DRIVER_CPP_API GoCompilerOptions
-{
-    COMMAND_LINE_OPTION(Command, String)
-    {
-        "build"s,
-    };
-
-    COMMAND_LINE_OPTION(Output, path)
-    {
-        cl::CommandFlag{ "o" },
-            cl::OutputDependency{},
-            cl::SeparatePrefix{},
-    };
-
-    COMMAND_LINE_OPTION(BuildMode, String)
-    {
-        cl::CommandFlag{ "buildmode=" },
-            "default"s
-    };
-
-    COMMAND_LINE_OPTION(InputFiles, Files)
-    {
-        cl::InputDependency{},
-    };
-};
-DECLARE_OPTION_SPECIALIZATION(GoCompilerOptions);
-
-struct SW_DRIVER_CPP_API FortranCompilerOptions
-{
-    COMMAND_LINE_OPTION(Output, path)
-    {
-        cl::CommandFlag{ "o" },
-            cl::OutputDependency{},
-    };
-
-    COMMAND_LINE_OPTION(InputFiles, Files)
-    {
-        cl::InputDependency{},
-    };
-};
-DECLARE_OPTION_SPECIALIZATION(FortranCompilerOptions);
-
-struct SW_DRIVER_CPP_API JavaCompilerOptions
-{
-    COMMAND_LINE_OPTION(OutputDir, path)
-    {
-        cl::CommandFlag{ "d" },
-            cl::SeparatePrefix{},
-    };
-
-    COMMAND_LINE_OPTION(InputFiles, Files)
-    {
-        cl::InputDependency{},
-    };
-};
-DECLARE_OPTION_SPECIALIZATION(JavaCompilerOptions);
-
-struct SW_DRIVER_CPP_API KotlinCompilerOptions
-{
-    COMMAND_LINE_OPTION(InputFiles, Files)
-    {
-        cl::InputDependency{},
-    };
-
-    COMMAND_LINE_OPTION(IncludeRuntime, bool)
-    {
-        cl::CommandFlag{ "include-runtime" },
-            true
-    };
-
-    COMMAND_LINE_OPTION(Output, path)
-    {
-        cl::CommandFlag{ "d" },
-            cl::OutputDependency{},
-            cl::SeparatePrefix{},
-    };
-};
-DECLARE_OPTION_SPECIALIZATION(KotlinCompilerOptions);
-
-struct SW_DRIVER_CPP_API DCompilerOptions
-{
-    COMMAND_LINE_OPTION(InputFiles, Files)
-    {
-        cl::InputDependency{},
-    };
-
-    COMMAND_LINE_OPTION(DoNotWriteObjectFiles, bool)
-    {
-        cl::CommandFlag{ "o-" },
-    };
-
-    COMMAND_LINE_OPTION(ObjectDir, path)
-    {
-        cl::CommandFlag{ "od=" },
-    };
-
-    COMMAND_LINE_OPTION(Output, path)
-    {
-        cl::CommandFlag{ "of=" },
-            cl::OutputDependency{},
-    };
-};
-DECLARE_OPTION_SPECIALIZATION(DCompilerOptions);
-
-}

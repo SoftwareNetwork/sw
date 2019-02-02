@@ -68,6 +68,8 @@ struct Type
                     h.addLine("cl::CommandFlagBeforeEachValue{},");
                 else if (p == "config_variable")
                     h.addLine("cl::ConfigVariable{},");
+                else if (p == "separate_prefix")
+                    h.addLine("cl::SeparatePrefix{},");
                 else
                     throw SW_RUNTIME_ERROR("unknown property: " + p);
             }
@@ -160,6 +162,8 @@ void read_flags(const yaml &root, Flags &flags)
             fl.type = kv.second["type"].template as<String>();
         if (kv.second["default"].IsDefined())
             fl.default_value = kv.second["default"].template as<String>();
+        if (kv.second["order"].IsDefined())
+            fl.order = kv.second["order"].template as<int>();
         if (kv.second["function"].IsDefined())
             fl.function = kv.second["function"].template as<String>();
         if (kv.second["function_current"].IsDefined())

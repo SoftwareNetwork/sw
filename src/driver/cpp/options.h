@@ -168,6 +168,7 @@ struct SW_DRIVER_CPP_API Dependency
 {
     Target *target = nullptr;
     UnresolvedPackage package;
+    // Solution *resolve_from = nullptr; // precise solution selection
     std::vector<std::shared_ptr<Dependency>> chain;
 
     bool Disabled = false;

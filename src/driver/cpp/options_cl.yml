@@ -36,6 +36,12 @@ flags:
         properties:
             - output_dependency
 
+    fpic:
+        name: PositionIndependentCode
+        flag: fPIC
+        type: bool
+        default: true
+
 types:
     # internal name
     vscomn:
@@ -551,4 +557,374 @@ types:
 
         using:
             - ifiles
+
+    rust:
+        name: RustCompilerOptions
+
+        using:
+            - input
+
+        flags:
+            cratetype:
+                name: CrateType
+                type: rust::CrateType
+                flag: -crate-type
+                default: rust::CrateType::bin
+                properties:
+                    - separate_prefix
+
+            output:
+                name: Output
+                flag: o
+                type: path
+                properties:
+                    - output_dependency
+
+    go:
+        name: GoCompilerOptions
+
+        using:
+            - ifiles:
+                order: 100
+
+        flags:
+            cmd:
+                name: Command
+                type: String
+                default: "\"build\"s"
+                order: -100
+
+            output:
+                name: Output
+                flag: o
+                type: path
+                properties:
+                    - output_dependency
+                    - separate_prefix
+
+            bldmode:
+                name: BuildMode
+                type: String
+                flag: buildmode=
+                default: "\"default\"s"
+
+    frtrn:
+        name: FortranCompilerOptions
+
+        using:
+            - ifiles
+
+        flags:
+            output:
+                name: Output
+                flag: o
+                type: path
+                properties:
+                    - output_dependency
+
+    java:
+        name: JavaCompilerOptions
+
+        using:
+            - ifiles
+
+        flags:
+            output:
+                name: OutputDir
+                flag: d
+                type: path
+                properties:
+                    - separate_prefix
+
+    kotlin:
+        name: KotlinCompilerOptions
+
+        using:
+            - ifiles
+
+        flags:
+            incl_rt:
+                name: IncludeRuntime
+                flag: include-runtime
+                type: bool
+                default: true
+
+            output:
+                name: Output
+                flag: d
+                type: path
+                properties:
+                    - output_dependency
+                    - separate_prefix
+
+    d:
+        name: DCompilerOptions
+
+        using:
+            - ifiles
+
+        flags:
+            dnwof:
+                name: DoNotWriteObjectFiles
+                flag: o-
+                type: bool
+
+            objdir:
+                name: ObjectDir
+                flag: od=
+                type: path
+
+            output:
+                name: Output
+                flag: of=
+                type: path
+                properties:
+                    - output_dependency
+
+    gnuclangcmn:
+        name: GNUClangCommonOptions
+
+        using:
+            - input
+            - compile
+            - fpic
+
+        flags:
+            lng:
+                name: Language
+                type: String
+                flag: x
+
+            cppstd:
+                name: CPPStandard
+                type: CPPLanguageStandard
+
+            output:
+                name: OutputFile
+                flag: o
+                type: path
+                properties:
+                    - output_dependency
+
+            forceincl:
+                name: ForcedIncludeFiles
+                flag: include
+                type: FilesOrdered
+                properties:
+                    - input_dependency
+                    - flag_before_each_value
+
+            vis:
+                name: VisibilityHidden
+                flag: fvisibility=hidden
+                type: bool
+                default: true
+
+            opt:
+                name: Optimizations
+                type: gnu::Optimizations
+
+
+            dbg:
+                name: GenerateDebugInfo
+                flag: g
+                type: bool
+
+            perm:
+                name: Permissive
+                flag: fpermissive
+                type: bool
+                default: true
+
+    # keep structure as in
+    # https://clang.llvm.org/docs/ClangCommandLineReference.html
+    clangopt:
+        name: ClangOptions
+        parent: GNUClangCommonOptions
+
+        flags:
+            # COMMAND_LINE_OPTION(NoStdIncludesCPP, bool){ cl::CommandFlag{ "nostdinc++" }, true };
+            nostdinc:
+                name: NoStdIncludesC
+                flag: nostdinc
+                type: bool
+                default: true
+
+            verb:
+                name: Verbose
+                flag: v
+                type: bool
+
+            pp:
+                name: PreprocessOnly
+                flag: E
+                type: bool
+
+            wrtdeps:
+                name: WriteDependencies
+                flag: MD
+                type: bool
+                default: true
+
+            wrtdepspth:
+                name: DependenciesFile
+                flag: MF
+                type: path
+
+            pch:
+                name: PrecompiledHeader
+                flag: include-pch
+                type: path
+
+            empch:
+                name: EmitPCH
+                flag: Xclang -emit-pch
+                type: bool
+
+    clangclopt:
+        name: ClangClOptions
+
+        flags:
+            arch:
+                name: Arch
+                type: clang::ArchType
+
+    # https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html
+    gnuopt:
+        name: GNUOptions
+        parent: GNUClangCommonOptions
+
+        flags:
+            disw:
+                name: DisableWarnings
+                flag: w
+                type: bool
+                default: true
+
+            wdno:
+                name: WriteDependenciesNearOutputWithoutSystemFiles
+                flag: MMD
+                type: bool
+                default: true
+
+    gnuas:
+        name: GNUAssemblerOptions
+
+        using:
+            - input
+
+        flags:
+            out:
+                name: OutputFile
+                flag: o
+                type: path
+                properties:
+                    - output_dependency
+
+    # common for ld and ar
+    # https://linux.die.net/man/1/ld
+    gnuarld:
+        name: GNULibraryToolOptions
+
+    # ld
+    # https://docs.microsoft.com/en-us/cpp/build/reference/linker-options
+    gnuld:
+        name: GNULinkerOptions
+
+        using:
+            - ifiles
+            - fpic
+
+        flags:
+            rdyn:
+                name: rdynamic
+                flag: rdynamic
+                type: bool
+                default: true
+
+            sg:
+                name: StartGroup
+                flag: Wl,--start-group
+                type: bool
+                order: 50
+
+            ild:
+                name: InputLibraryDependencies
+                type: FilesOrdered
+                order: 53
+                properties:
+                    - input_dependency
+
+            ld:
+                name: LinkDirectories
+                flag: L
+                type: FilesOrdered
+                order: 55
+                properties:
+                    - flag_before_each_value
+
+            ll:
+                name: LinkLibraries
+                flag: l
+                type: FilesOrdered
+                order: 57
+                properties:
+                    - input_dependency
+                    - flag_before_each_value
+
+            sll:
+                name: SystemLinkLibraries
+                flag: l
+                type: FilesOrdered
+                order: 59
+                properties:
+                    # it's not the input dep!
+                    - flag_before_each_value
+
+            eg:
+                name: EndGroup
+                flag: Wl,--end-group
+                type: bool
+                order: 70
+
+            o:
+                name: Output
+                flag: o
+                type: path
+                properties:
+                    - output_dependency
+                    - separate_prefix
+
+            sh:
+                name: SharedObject
+                flag: shared
+                type: bool
+
+    # ar
+    # https://linux.die.net/man/1/ar
+    gnuar:
+        name: GNULibrarianOptions
+
+        using:
+            - ifiles:
+                order: 100
+
+        flags:
+            out:
+                name: Output
+                type: path
+                order: 10
+                properties:
+                    - output_dependency
+
+            opts:
+                name: Options
+                flag: rcs
+                type: bool
+                default: true
+
+
+
+
+
 

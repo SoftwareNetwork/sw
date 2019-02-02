@@ -9,7 +9,6 @@
 #include "program.h"
 #include "options.h"
 #include "options_cl.h"
-#include "options_cl_clang.h"
 #include "options_cl_vs.h"
 #include "types.h"
 #include "cppan_version.h"

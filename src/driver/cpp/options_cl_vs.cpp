@@ -16,8 +16,10 @@ DEFINE_OPTION_SPECIALIZATION_DUMMY(VisualStudioCompilerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(VisualStudioLinkerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(CPPLanguageStandard);
 
+//
 DEFINE_OPTION_SPECIALIZATION_DUMMY(RcToolOptions);
 
+//
 DEFINE_OPTION_SPECIALIZATION_DUMMY(VisualStudioCSharpCompilerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(RustCompilerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(GoCompilerOptions);
@@ -25,6 +27,16 @@ DEFINE_OPTION_SPECIALIZATION_DUMMY(FortranCompilerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(JavaCompilerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(KotlinCompilerOptions);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(DCompilerOptions);
+
+//
+DEFINE_OPTION_SPECIALIZATION_DUMMY(ClangOptions);
+DEFINE_OPTION_SPECIALIZATION_DUMMY(ClangClOptions);
+
+//
+DEFINE_OPTION_SPECIALIZATION_DUMMY(GNUOptions);
+DEFINE_OPTION_SPECIALIZATION_DUMMY(GNUAssemblerOptions);
+DEFINE_OPTION_SPECIALIZATION_DUMMY(GNULinkerOptions);
+DEFINE_OPTION_SPECIALIZATION_DUMMY(GNULibrarianOptions);
 
 namespace vs
 {
@@ -342,6 +354,41 @@ DECLARE_OPTION_SPECIALIZATION(rust::CrateType)
         throw SW_RUNTIME_ERROR("unreachable code");
     }
     return { getCommandLineFlag(), s };
+}
+
+DECLARE_OPTION_SPECIALIZATION(clang::ArchType)
+{
+    Strings s;
+    switch (value())
+    {
+    case clang::ArchType::m32:
+        s.push_back("-m32");
+        break;
+    case clang::ArchType::m64:
+        s.push_back("-m64");
+        break;
+    }
+    return { s };
+}
+
+DECLARE_OPTION_SPECIALIZATION(gnu::Optimizations)
+{
+    auto &o = value();
+
+    Strings s;
+    if (!o.Disable)
+    {
+        if (o.Level)
+            s.push_back("-O" + std::to_string(o.Level.value()));
+        if (o.FastCode)
+            s.push_back("-Ofast");
+        if (o.SmallCode)
+            s.push_back("-Os");
+    }
+    //if (o.Disable)
+        //s.push_back("-Od");
+
+    return { s };
 }
 
 }
