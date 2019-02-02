@@ -737,15 +737,30 @@ void Command::postProcess(bool ok)
 
 bool Command::needsResponseFile() const
 {
-    if (use_response_files)
-        return true;
+    static constexpr auto win_sz = 8'100;
+    static constexpr auto apple_sz = 260'000;
+    //static constexpr auto nix_sz = 8100; // something near 2M
+
     // 3 = 1 + 2 = space + quotes
     size_t sz = program.u8string().size() + 3;
     for (auto &a : args)
         sz += a.size() + 3;
+
+    if (use_response_files)
+    {
+        if (!*use_response_files)
+        {
+            if (getHostOS().is(OSType::Windows) && sz > win_sz ||
+                getHostOS().is(OSType::Macos) && sz > apple_sz)
+                LOG_WARN(logger, "Very long command line = " << sz << " and rsp files are disabled. Expect errors.");
+        }
+        return *use_response_files;
+    }
     return sz >
 #ifdef _WIN32
         8100 // win have 8192 limit, we take a bit fewer symbols
+//#elif __APPLE__
+        // 260'000
 #else
         8100
 #endif

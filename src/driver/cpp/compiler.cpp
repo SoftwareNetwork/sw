@@ -835,6 +835,8 @@ void detectNonWindowsCompilers(struct Solution &s)
         Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
         *Librarian = LOpts;
         s.registerProgram("org.gnu.binutils.ar", Librarian);
+        if (s.HostOS.is(OSType::Macos))
+            Librarian->createCommand()->use_response_files = false;
     }
 
     FilesOrdered gcc_vers{ "gcc" };
