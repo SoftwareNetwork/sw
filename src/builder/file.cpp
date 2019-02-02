@@ -274,8 +274,10 @@ void FileRecord::refresh()
     }*/
 
     bool changed = false;
-    if (!fs::exists(file))
+    auto s = fs::status(file);
+    if (s.type() != fs::file_type::regular)
     {
+        // we skip non regular files at the moment
         //EXPLAIN_OUTDATED("file", true, "not found", file.u8string());
         data->last_write_time = decltype(data->last_write_time)();
         changed = true;

@@ -454,15 +454,6 @@ static void addImportLibrary(NativeExecutedTarget &t)
         ;
     t.LinkLibraries.push_back(getImportLibraryFile());
 #endif
-
-    /*auto o = Local;
-    Local = false; // this prevents us from putting compiled configs into user bdirs
-    IsConfig = true;
-    auto &t = addTarget<StaticLibraryTarget>("sw_implib_" + getCurrentModuleId(), "local");
-    IsConfig = false;
-    Local = o;
-    t.AutoDetectOptions = false;
-    t += getImportDefinitionsFile();*/
 }
 
 path Solution::getChecksDir() const
@@ -477,8 +468,6 @@ void Solution::performChecks()
 
 Commands Solution::getCommands() const
 {
-    //checkPrepared();
-
     // calling this in any case to set proper command dependencies
     for (auto &p : children)
     {

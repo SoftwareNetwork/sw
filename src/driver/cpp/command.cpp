@@ -73,9 +73,7 @@ path Command::getProgram() const
 {
     auto d = dependency.lock();
     path p;
-    /*if (base)
-        p = Base::getProgram();
-    else */if (d)
+    if (d)
     {
         auto t = d->target;
         if (!t)
@@ -138,8 +136,6 @@ void VSCommand::postProcess1(bool)
         }
         auto include = line.substr(pattern.size());
         boost::trim(include);
-        //for (auto &f : intermediate)
-            //File(f, *fs).addImplicitDependency(include);
         for (auto &f : outputs)
             File(f, *fs).addImplicitDependency(include);
     }
@@ -421,15 +417,12 @@ void ExecuteBuiltinCommand::execute1(std::error_code *ec)
 
 bool ExecuteBuiltinCommand::isTimeChanged() const
 {
-    bool changed = false;
-
-    // ignore program!
-    for (auto &i : inputs)
-        changed |= check_if_file_newer(i, "input", true);
-    for (auto &i : outputs)
-        changed |= check_if_file_newer(i, "output", false);
-
-    return changed;
+    return std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
+               return check_if_file_newer(i, "input", true);
+           }) ||
+           std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
+               return check_if_file_newer(i, "output", false);
+           });
 }
 
 size_t ExecuteBuiltinCommand::getHash1() const

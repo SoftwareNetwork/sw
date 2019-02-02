@@ -23,7 +23,7 @@ void save_from_memory_to_file(const path &fn, sqlite3 *db);
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "db_file");
 
-#define FILE_DB_FORMAT_VERSION 2
+#define FILE_DB_FORMAT_VERSION 3
 #define COMMAND_DB_FORMAT_VERSION 2
 
 namespace sw
@@ -34,9 +34,14 @@ static path getDir()
     return getUserDirectories().storage_dir_tmp / "db";
 }
 
+static path getFilesDir()
+{
+    return path(SW_BINARY_DIR) / "db";
+}
+
 static path getFilesDbFilename(const String &config)
 {
-    auto p = getDir() / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
+    auto p = getFilesDir() / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
     fs::create_directories(p.parent_path());
     return p;
 }
@@ -44,7 +49,7 @@ static path getFilesDbFilename(const String &config)
 path getFilesLogFileName(const String &config)
 {
     auto cfg = sha256_short(getCurrentModuleNameHash() + "_" + config);
-    path p = getDir() / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
+    path p = getFilesDir() / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
     fs::create_directories(p.parent_path());
     return p;
 }

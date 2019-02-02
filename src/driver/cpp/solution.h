@@ -142,6 +142,10 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
 
     int execute_jobs = 0;
 
+    // experimental
+    // this sln will try to resolve from selected, so deps configs are changed
+    //const Solution *resolve_from = nullptr;
+
 public:
     Solution(const Solution &);
     //Solution &operator=(const Solution &);

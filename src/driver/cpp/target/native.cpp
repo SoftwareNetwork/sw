@@ -742,8 +742,6 @@ Commands NativeExecutedTarget::getCommands() const
 
     const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
-    //DEBUG_BREAK_IF_STRING_HAS(pkg.toString(), "version-master");
-
     // add generated files
     auto generated = getGeneratedCommands();
 

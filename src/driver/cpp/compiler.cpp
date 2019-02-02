@@ -408,7 +408,7 @@ void detectCSharpCompilers(struct Solution &s)
     if (VSVersion == VisualStudioVersion::Unspecified)
         return;
 
-    auto compiler = root / "csc";
+    auto compiler = root / "csc.exe";
 
     auto L = std::make_shared<CSharpLanguage>();
     L->CompiledExtensions = { ".cs" };
