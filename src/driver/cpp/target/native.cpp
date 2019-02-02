@@ -107,7 +107,7 @@ bool NativeExecutedTarget::init()
     if (!Local)
     {
         // activate later?
-        /*auto &sdb = getServiceDatabase();
+        auto &sdb = getServiceDatabase();
         auto o = getOutputFile();
         auto f = sdb.getInstalledPackageFlags(pkg, getConfig());
         if (f[pfHeaderOnly] || fs::exists(o) && f[pfBuilt])

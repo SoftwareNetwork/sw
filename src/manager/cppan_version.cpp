@@ -28,7 +28,6 @@
     r |= (int64_t)Minor << shift;
     r |= (int64_t)Patch << shift;
 
-    /*
     // decimal
     int64_t m = 1;
     int64_t r = 0;
