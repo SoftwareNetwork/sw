@@ -724,7 +724,6 @@ types:
                 name: Optimizations
                 type: gnu::Optimizations
 
-
             dbg:
                 name: GenerateDebugInfo
                 flag: g
@@ -735,6 +734,16 @@ types:
                 flag: fpermissive
                 type: bool
                 default: true
+
+            isr:
+                name: IncludeSystemRoot
+                flag: isysroot
+                type: path
+
+            sr:
+                name: SystemRoot
+                flag: sysroot
+                type: path
 
     # keep structure as in
     # https://clang.llvm.org/docs/ClangCommandLineReference.html
@@ -899,6 +908,11 @@ types:
                 name: SharedObject
                 flag: shared
                 type: bool
+
+            undef:
+                name: Undefined
+                flag: undefined
+                type: String
 
     # ar
     # https://linux.die.net/man/1/ar

@@ -2080,6 +2080,7 @@ bool NativeExecutedTarget::prepare()
 
         // add def file to linker
         if (getSelectedTool() == Linker.get())
+        {
             if (auto VSL = getSelectedTool()->as<VisualStudioLibraryTool>())
             {
                 for (auto &[p, f] : *this)
@@ -2091,6 +2092,14 @@ bool NativeExecutedTarget::prepare()
                     }
                 }
             }
+        }
+
+        // on macos we explicitly say that dylib should resolve symbols on dlopen
+        if (IsConfig && getSolution()->HostOS.is(OSType::Macos))
+        {
+            if (auto c = getSelectedTool()->as<GNULinker>())
+                c->Undefined = "dynamic_lookup";
+        }
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 6:

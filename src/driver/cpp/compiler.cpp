@@ -885,13 +885,6 @@ void detectNonWindowsCompilers(struct Solution &s)
 
             *Linker = lopts2;
             s.registerProgram("org.gnu.gcc.ld", Linker);
-
-            auto cmd = Linker->createCommand();
-            if (s.HostOS.is(OSType::Macos))
-            {
-                cmd->args.push_back("-undefined");
-                cmd->args.push_back("dynamic_lookup");
-            }
         }
     }
 
@@ -968,12 +961,8 @@ void detectNonWindowsCompilers(struct Solution &s)
                 L->compiler = C;
                 s.registerProgramAndLanguage("org.gnu.gcc.gcc", C, L);
 
-                auto cmd = C->createCommand();
                 if (!macos_sdk_dir.empty())
-                {
-                    cmd->args.push_back("-isysroot");
-                    cmd->args.push_back(macos_sdk_dir.u8string());
-                }
+                    C->IncludeSystemRoot = macos_sdk_dir;
             }
         }
     }
@@ -998,12 +987,8 @@ void detectNonWindowsCompilers(struct Solution &s)
                 L->compiler = C;
                 s.registerProgramAndLanguage("org.gnu.gcc.gpp", C, L);
 
-                auto cmd = C->createCommand();
                 if (!macos_sdk_dir.empty())
-                {
-                    cmd->args.push_back("-isysroot");
-                    cmd->args.push_back(macos_sdk_dir.u8string());
-                }
+                    C->IncludeSystemRoot = macos_sdk_dir;
             }
         }
     }
@@ -1035,17 +1020,10 @@ void detectNonWindowsCompilers(struct Solution &s)
                 *Linker = lopts2;
                 s.registerProgram(appleclang ? "com.apple.LLVM.clang.ld" : "org.LLVM.clang.ld", Linker);
 
-                auto cmd = Linker->createCommand();
                 if (s.HostOS.is(OSType::Macos))
                 {
-                    cmd->args.push_back("-undefined");
-                    cmd->args.push_back("dynamic_lookup");
-
                     if (!appleclang)
-                    {
-                        cmd->args.push_back("-L");
-                        cmd->args.push_back(normalize_path(p.parent_path().parent_path() / "lib"));
-                    }
+                        Linker->GNULinkerOptions::LinkDirectories().push_back(p.parent_path().parent_path() / "lib");
                 }
 
                 NativeCompilerOptions COpts;
@@ -1067,12 +1045,8 @@ void detectNonWindowsCompilers(struct Solution &s)
                     L->compiler = C;
                     s.registerProgramAndLanguage(appleclang ? "com.apple.LLVM.clang" : "org.LLVM.clang", C, L);
 
-                    auto cmd = C->createCommand();
                     if (!macos_sdk_dir.empty())
-                    {
-                        cmd->args.push_back("-isysroot");
-                        cmd->args.push_back(macos_sdk_dir.u8string());
-                    }
+                        C->IncludeSystemRoot = macos_sdk_dir;
                 }
             }
         }
@@ -1099,12 +1073,8 @@ void detectNonWindowsCompilers(struct Solution &s)
                     L->compiler = C;
                     s.registerProgramAndLanguage(appleclang ? "com.apple.LLVM.clangpp" : "org.LLVM.clangpp", C, L);
 
-                    auto cmd = C->createCommand();
                     if (!macos_sdk_dir.empty())
-                    {
-                        cmd->args.push_back("-isysroot");
-                        cmd->args.push_back(macos_sdk_dir.u8string());
-                    }
+                        C->IncludeSystemRoot = macos_sdk_dir;
                 }
             }
         }
