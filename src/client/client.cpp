@@ -908,9 +908,9 @@ void self_upgrade()
 #ifdef _WIN32
     path client = "/client/sw-master-windows-client.zip";
 #elif __APPLE__
-    path client = "/client/sw-master-macos-client.zip";
+    path client = "/client/sw-master-macos-client.tar.gz";
 #else
-    path client = "/client/sw-master-linux-client.zip";
+    path client = "/client/sw-master-linux-client.tar.gz";
 #endif
 
     auto &s = Settings::get_user_settings();
