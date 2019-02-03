@@ -163,9 +163,9 @@ bool Command::isOutdated() const
 
 bool Command::isTimeChanged() const
 {
-    return check_if_file_newer(program, "program", true) ||
+    return check_if_file_newer(program, "program", !File(program, *fs).isGenerated()) ||
            std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
-               return check_if_file_newer(i, "input", true);
+               return check_if_file_newer(i, "input", !File(i, *fs).isGenerated());
            }) ||
            std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
                return check_if_file_newer(i, "output", false);
