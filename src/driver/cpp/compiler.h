@@ -176,7 +176,7 @@ struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
     SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
-    String getObjectExtension() const override { return ".obj"; }
+    String getObjectExtension() const override;
     void setSourceFile(const path &input_file, path &output_file) override;
     path getOutputFile() const override;
 

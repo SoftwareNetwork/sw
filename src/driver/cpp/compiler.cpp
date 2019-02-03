@@ -1309,6 +1309,15 @@ void ClangCompiler::prepareCommand1(const TargetBase &t)
     getCommandLineOptions<ClangOptions>(cmd.get(), *this, "", true);
 }
 
+String ClangCompiler::getObjectExtension() const
+{
+#ifdef _WIN32
+    return ".obj";
+#else
+    return ".o";
+#endif
+}
+
 void ClangCompiler::setOutputFile(const path &output_file)
 {
     OutputFile = output_file;
