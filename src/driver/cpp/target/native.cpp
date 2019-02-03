@@ -563,16 +563,6 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
         // add generated file, so it will be executed before
         File(gch_fn_clang, *getSolution()->fs).getFileRecord().setGenerated(true);
         *this += gch_fn_clang;*/
-
-        // we add manual dependency
-        for (auto &f : gatherSourceFiles())
-        {
-            if (auto sf = f->as<NativeSourceFile>())
-            if (auto c = sf->compiler->as<ClangCompiler>())
-            {
-                c->createCommand()->addInput(gch_fn_clang);
-            }
-        }
     }
     else if (cc == CompilerType::GNU)
     {
@@ -626,7 +616,8 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
             }
             else if (auto c = sf->compiler->as<ClangCompiler>())
             {
-                *this -= pch; // exclude from linker inputs
+                *this -= pch; // exclude from linker inputs .cpp
+                *this += gch_fn_clang; // but add .h.pch
                 sf->setOutputFile(gch_fn_clang);
                 c->Language = "c++-header";
                 if (force_include_pch_header_to_pch_source)
