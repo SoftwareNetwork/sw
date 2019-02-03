@@ -417,12 +417,21 @@ void ExecuteBuiltinCommand::execute1(std::error_code *ec)
 
 bool ExecuteBuiltinCommand::isTimeChanged() const
 {
-    return std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
-               return check_if_file_newer(i, "input", !File(i, *fs).isGenerated());
-           }) ||
-           std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
-               return check_if_file_newer(i, "output", false);
-           });
+    try
+    {
+        return std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
+                   return check_if_file_newer(i, "input", true);
+               }) ||
+               std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
+                   return check_if_file_newer(i, "output", false);
+               });
+    }
+    catch (std::exception &e)
+    {
+        String s = "Command: " + getName() + "\n";
+        s += e.what();
+        throw SW_RUNTIME_ERROR(s);
+    }
 }
 
 size_t ExecuteBuiltinCommand::getHash1() const

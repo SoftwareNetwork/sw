@@ -583,6 +583,16 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
         // add generated file, so it will be executed before
         File(gch_fn_clang, *getSolution()->fs).getFileRecord().setGenerated(true);
         *this += gch_fn_clang;*/
+
+        // we add manual dependency
+        for (auto &f : gatherSourceFiles())
+        {
+            if (auto sf = f->as<NativeSourceFile>())
+            if (auto c = sf->compiler->as<ClangCompiler>())
+            {
+                c->createCommand()->addInput(gch_fn_clang);
+            }
+        }
     }
     else if (cc == CompilerType::GNU)
     {
