@@ -174,10 +174,12 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
     path UnpackDirectory;
 
     // command storage, use driver::cpp::Commands?
-    std::vector<std::shared_ptr<builder::Command>> CommandStorage;
+    // not needed? actual commands may be hidden in programs that lie in common Storage below
+    //std::vector<std::shared_ptr<builder::Command>> CommandStorage;
 
     // Data storage for objects that must be alive with the target.
-    //std::vector<std::any> Storage;
+    // For example, program clones etc.
+    std::vector<std::any> Storage;
 
     /**
     * \brief Target scope.

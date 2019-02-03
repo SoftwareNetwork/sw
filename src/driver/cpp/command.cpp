@@ -199,7 +199,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const NativeExecutedTarget &t)
 {
     auto nt = (NativeExecutedTarget*)&t;
     cb.targets.push_back(nt);
-    nt->CommandStorage.push_back(cb.c);
+    nt->Storage.push_back(cb.c);
     if (!cb.c->fs)
         cb.c->fs = nt->getSolution()->fs;
     return cb;
@@ -243,7 +243,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
         }
     }
     for (auto tgt : t.targets)
-        tgt->CommandStorage.push_back(cb.c);
+        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
@@ -272,7 +272,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
         }
     }
     for (auto tgt : t.targets)
-        tgt->CommandStorage.push_back(cb.c);
+        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
@@ -297,7 +297,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
         }
     }
     for (auto tgt : t.targets)
-        tgt->CommandStorage.push_back(cb.c);
+        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
@@ -322,7 +322,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
         }
     }
     for (auto tgt : t.targets)
-        tgt->CommandStorage.push_back(cb.c);
+        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
@@ -347,7 +347,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
         }
     }
     for (auto tgt : t.targets)
-        tgt->CommandStorage.push_back(cb.c);
+        tgt->Storage.push_back(cb.c);
     return cb;
 }
 

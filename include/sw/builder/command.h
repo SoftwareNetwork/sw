@@ -25,11 +25,11 @@
 #ifdef _MSC_VER
 #define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
     SW_MAKE_CUSTOM_COMMAND(type, name, target, __VA_ARGS__);    \
-    (target).CommandStorage.push_back(name)
+    (target).Storage.push_back(name)
 #else
 #define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
     SW_MAKE_CUSTOM_COMMAND(type, name, target, ##__VA_ARGS__);  \
-    (target).CommandStorage.push_back(name)
+    (target).Storage.push_back(name)
 #endif
 
 #define SW_MAKE_COMMAND(name, target) \
