@@ -744,6 +744,18 @@ types:
                 flag: sysroot
                 type: path
 
+            disw:
+                name: DisableWarnings
+                flag: w
+                type: bool
+                default: true
+
+            wdno:
+                name: WriteDependenciesNearOutputWithoutSystemFiles
+                flag: MMD
+                type: bool
+                default: true
+
     # keep structure as in
     # https://clang.llvm.org/docs/ClangCommandLineReference.html
     clangopt:
@@ -772,7 +784,7 @@ types:
                 name: WriteDependencies
                 flag: MD
                 type: bool
-                default: true
+                #default: true
 
             wrtdepspth:
                 name: DependenciesFile
@@ -803,19 +815,6 @@ types:
     gnuopt:
         name: GNUOptions
         parent: GNUClangCommonOptions
-
-        flags:
-            disw:
-                name: DisableWarnings
-                flag: w
-                type: bool
-                default: true
-
-            wdno:
-                name: WriteDependenciesNearOutputWithoutSystemFiles
-                flag: MMD
-                type: bool
-                default: true
 
     gnuas:
         name: GNUAssemblerOptions

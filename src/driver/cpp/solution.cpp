@@ -1578,7 +1578,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             if (auto c = sf->compiler->template as<ClangCompiler>())
             {
-                //throw SW_RUNTIME_ERROR("pchs are not implemented for clang");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
@@ -1798,6 +1798,30 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     pch.force_include_pch = true;
     lib.addPrecompiledHeader(pch);
 
+    auto gnu_setup = [&solution](auto *c, const auto &headers, const path &fn)
+    {
+        // we use pch, but cannot add more defs on CL
+        // so we create a file with them
+        auto hash = getFilesHash({ fn });
+        path h;
+        if (is_under_root(fn, getDirectories().storage_dir_pkg))
+            h = fn.parent_path().parent_path() / "aux" / ("defs_" + hash + ".h");
+        else
+            h = fn.parent_path() / SW_BINARY_DIR / "aux" / ("defs_" + hash + ".h");
+        primitives::CppContext ctx;
+
+        ctx.addLine("#define configure configure_" + hash);
+        ctx.addLine("#define build build_" + hash);
+        ctx.addLine("#define check check_" + hash);
+
+        write_file_if_different(h, ctx.getText());
+        c->ForcedIncludeFiles().push_back(h);
+        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
+
+        for (auto &h : headers)
+            c->ForcedIncludeFiles().push_back(h);
+    };
+
     for (auto &fn : files)
     {
         auto[headers, udeps] = getFileDependencies(fn);
@@ -1827,33 +1851,11 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             }
             else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
-                throw SW_RUNTIME_ERROR("clang compiler is not implemented");
-
-                for (auto &h : headers)
-                    c->ForcedIncludeFiles().push_back(h);
+                gnu_setup(c, headers, fn);
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
-                // we use pch, but cannot add more defs on CL
-                // so we create a file with them
-                auto hash = getFilesHash({ fn });
-                path h;
-                if (is_under_root(fn, getDirectories().storage_dir_pkg))
-                    h = fn.parent_path().parent_path() / "aux" / ("defs_" + hash + ".h");
-                else
-                    h = fn.parent_path() / SW_BINARY_DIR / "aux" / ("defs_" + hash + ".h");
-                primitives::CppContext ctx;
-
-                ctx.addLine("#define configure configure_" + hash);
-                ctx.addLine("#define build build_" + hash);
-                ctx.addLine("#define check check_" + hash);
-
-                write_file_if_different(h, ctx.getText());
-                c->ForcedIncludeFiles().push_back(h);
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
-
-                for (auto &h : headers)
-                    c->ForcedIncludeFiles().push_back(h);
+                gnu_setup(c, headers, fn);
             }
         }
         for (auto &d : udeps)

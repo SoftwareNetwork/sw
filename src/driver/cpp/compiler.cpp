@@ -1038,7 +1038,7 @@ void detectNonWindowsCompilers(struct Solution &s)
                     bool appleclang = is_apple_clang(p);
 
                     //auto L = (CLanguage*)s.languages[LanguageType::C].get();
-                    auto C = std::make_shared<GNUCompiler>();
+                    auto C = std::make_shared<ClangCompiler>();
                     C->Type = appleclang ? CompilerType::AppleClang : CompilerType::Clang;
                     C->file = p;
                     *C = COpts;
@@ -1066,7 +1066,7 @@ void detectNonWindowsCompilers(struct Solution &s)
                     bool appleclang = is_apple_clang(p);
 
                     //auto L = (CLanguage*)s.languages[LanguageType::C].get();
-                    auto C = std::make_shared<GNUCompiler>();
+                    auto C = std::make_shared<ClangCompiler>();
                     C->Type = appleclang ? CompilerType::AppleClang : CompilerType::Clang;
                     C->file = p;
                     *C = COpts;
@@ -1301,17 +1301,12 @@ void ClangCompiler::prepareCommand1(const TargetBase &t)
         cmd->working_directory = OutputFile().parent_path();
     }
 
-    //if (cmd->file.empty())
-        //return nullptr;
-
-    //cmd->out.capture = true;
-    //cmd->base = clone();
-
     add_args(*cmd, getClangCppStdOption(CPPStandard()));
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
     iterate([this](auto &v, auto &gs) { v.addEverything(*this->cmd); });
+    getCommandLineOptions<ClangOptions>(cmd.get(), *this, "", true);
 }
 
 void ClangCompiler::setOutputFile(const path &output_file)
