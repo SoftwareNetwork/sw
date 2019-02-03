@@ -135,7 +135,7 @@ struct SW_BUILDER_API FileRecord
     //fs::file_time_type updateLwt();
 };
 
-path getFilesLogFileName(const String &config = {});
+path getFilesLogFileName(const String &config, bool local);
 
 #define EXPLAIN_OUTDATED(subject, outdated, reason, name) \
     explainMessage(subject, outdated, reason, name)

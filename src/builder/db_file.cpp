@@ -36,17 +36,17 @@ static path getDir(bool local)
     return getUserDirectories().storage_dir_tmp / "db";
 }
 
-static path getFilesDbFilename(const String &config)
+static path getFilesDbFilename(const String &config, bool local)
 {
-    auto p = getDir(true) / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
+    auto p = getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
     fs::create_directories(p.parent_path());
     return p;
 }
 
-path getFilesLogFileName(const String &config)
+path getFilesLogFileName(const String &config, bool local)
 {
     auto cfg = sha256_short(getCurrentModuleNameHash() + "_" + config);
-    path p = getDir(true) / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
+    path p = getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
     fs::create_directories(p.parent_path());
     return p;
 }
@@ -125,16 +125,16 @@ static void load(FileStorage &fs, const path &fn,
 
 SW_DEFINE_GLOBAL_STATIC_FUNCTION(Db, getDb);
 
-void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const
+void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const
 {
     std::unordered_map<int64_t, std::unordered_set<int64_t>> deps;
 
-    sw::load(fs, getFilesDbFilename(fs.config), files, deps);
+    sw::load(fs, getFilesDbFilename(fs.config, local), files, deps);
     //try {
-        sw::load(fs, getFilesLogFileName(fs.config), files, deps);
+        sw::load(fs, getFilesLogFileName(fs.config, local), files, deps);
     //} catch (...) {}
     error_code ec;
-    fs::remove(getFilesLogFileName(fs.config), ec);
+    fs::remove(getFilesLogFileName(fs.config, local), ec);
 
     for (auto &[k, v] : deps)
     {
@@ -149,16 +149,16 @@ void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) c
     }
 }
 
-void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const
+void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const
 {
-    const auto f = getFilesDbFilename(fs.config);
+    const auto f = getFilesDbFilename(fs.config, local);
 
     // first, we load current copy of files
     // disable for now
     if (0)
     {
         ConcurrentHashMap<path, FileRecord> old;
-        load(fs, old);
+        load(fs, old, local);
 
         // compare and renew our (actually any) copy
         for (auto i = old.getIterator(); i.isValid(); i.next())

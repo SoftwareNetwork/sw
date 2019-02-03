@@ -392,7 +392,7 @@ bool Command::beforeCommand()
 
     // check
     if (!always && !local_storage)
-        throw SW_RUNTIME_ERROR(makeErrorString("command storage is not selected"));
+        throw SW_RUNTIME_ERROR(makeErrorString("command storage is not selected, call t.registerCommand(cmd)"));
 
     if (!isOutdated())
     {
@@ -995,7 +995,6 @@ path resolveExecutable(const path &in)
             if (which && detail::isHostCygwin())
             {
                 primitives::Command c2;
-                //c.fs = &getFileStorage("service");
                 c2.program = "cygpath";
                 c2.args.push_back("-w");
                 c2.args.push_back(c.out.text);

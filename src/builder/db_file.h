@@ -13,8 +13,8 @@ namespace sw
 
 struct FileDb : Db
 {
-    void load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const override;
-    void save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const override;
+    void load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const override;
+    void save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const override;
     void write(std::vector<uint8_t> &v, const FileRecord &r) const override;
 
     void load(ConcurrentCommandStorage &commands, bool local) const override;

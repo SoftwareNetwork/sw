@@ -287,6 +287,7 @@ Solution::Solution(const Solution &rhs)
     , config_file_or_dir(rhs.config_file_or_dir)
     , Variables(rhs.Variables)
     , events(rhs.events)
+    , file_storage_local(rhs.file_storage_local)
 {
     checker.solution = this;
 }
@@ -745,6 +746,7 @@ void Solution::build_and_resolve(int n_runs)
     Build b; // cache?
     b.execute_jobs = config_jobs;
     b.Local = false;
+    b.file_storage_local = false;
     auto dll = b.build_configs(cfgs);
     //used_modules.insert(dll);
 
@@ -1065,7 +1067,7 @@ std::optional<FrontendType> Solution::selectFrontendByFilename(const path &fn)
 
 void Solution::setSettings()
 {
-    fs = &getFileStorage(getConfig());
+    fs = &getFileStorage(getConfig(), file_storage_local);
 
     for (auto &[_, p] : registered_programs)
         p->fs = fs;
@@ -1289,8 +1291,8 @@ Build::Build()
     HostOS = getHostOS();
     Settings.TargetOS = HostOS; // default
 
-    //languages = getLanguages();
-    findCompiler();
+    // load service local fs by default
+    fs = &getServiceFileStorage();
 }
 
 Build::~Build()
@@ -1403,14 +1405,21 @@ bool Build::prepareStep()
     return next_pass;
 }
 
-Solution &Build::addSolution()
+Solution &Build::addSolutionRaw()
 {
     return solutions.emplace_back(*this);
 }
 
+Solution &Build::addSolution()
+{
+    auto &s = addSolutionRaw();
+    s.findCompiler();
+    return s;
+}
+
 Solution &Build::addCustomSolution()
 {
-    auto &s = addSolution();
+    auto &s = addSolutionRaw();
     s.prepareForCustomToolchain();
     return s;
 }
@@ -1496,9 +1505,6 @@ FilesMap Build::build_configs_separate(const Files &files)
     FilesMap r;
     if (files.empty())
         return r;
-
-    // reset before start adding targets
-    //getFileStorage().reset();
 
     if (solutions.empty())
         addSolution();
@@ -1694,7 +1700,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         lib[fn].fancy_name = "[" + output_names[fn].toString() + "]/[config]";
         // configs depend on pch, and pch depends on getCurrentModuleId(), so we add name to the file
         // to make sure we have different config .objs for different pchs
-        lib[fn].as<NativeSourceFile>()->setOutputFile(lib, fn.u8string() + "." + getCurrentModuleId(), getObjectDir(pkg) / "self");
+        lib[fn].as<NativeSourceFile>()->setOutputFile(lib, fn.u8string() + "." + getCurrentModuleId(), solution.getObjectDir(pkg) / "self");
         if (gVerbose)
             lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
     }
@@ -1912,6 +1918,7 @@ const Module &Build::loadModule(const path &p) const
 
     Build b;
     b.execute_jobs = config_jobs;
+    b.file_storage_local = false;
     path dll;
     //dll = b.getOutputModuleName(fn2);
     //if (File(fn2, *b.solutions[0].fs).isChanged() || File(dll, *b.solutions[0].fs).isChanged())
@@ -1941,6 +1948,7 @@ path Build::build(const path &fn)
         // separate build
         Build b;
         b.execute_jobs = config_jobs;
+        b.file_storage_local = false;
         auto r = b.build_configs_separate({ fn });
         dll = r.begin()->second;
         if (do_not_rebuild_config &&

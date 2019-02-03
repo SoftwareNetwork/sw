@@ -57,7 +57,7 @@ File::File(const path &p, FileStorage &s)
     if (file.empty())
         throw SW_RUNTIME_ERROR("Empty file");
     if (!fs)
-        throw SW_RUNTIME_ERROR("Empty file storage");
+        throw SW_RUNTIME_ERROR("Empty file storage when loading file: " + normalize_path(file));
     registerSelf();
     if (r->file.empty())
         r->file = file;

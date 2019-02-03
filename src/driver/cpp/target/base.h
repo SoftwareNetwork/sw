@@ -424,6 +424,7 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     Commands getCommands() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     DependencyPtr getDependency() const; // returns current target as dependency
+    void registerCommand(builder::Command &cmd) const;
 
     // main apis
     virtual bool init(); // multipass init,
@@ -599,7 +600,7 @@ public:
     VariablesType Variables;
     ASSIGN_TYPES(Variable)
 
-        void add(const Variable &v);
+    void add(const Variable &v);
     void remove(const Variable &v);
 
     Files gatherAllFiles() const;

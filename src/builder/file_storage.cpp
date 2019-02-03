@@ -47,20 +47,24 @@ FileStorage::file_holder::~file_holder()
     fs::remove(fn, ec);
 }
 
-FileStorage &getFileStorage(const String &config)
+FileStorage &getFileStorage(const String &config, bool local)
 {
     static std::mutex m;
     auto &fs = getFileStorages();
     std::unique_lock lk(m);
-    auto i = fs.find(config);
+    auto i = fs.find({ local,config });
     if (i == fs.end())
-        i = fs.emplace(config, config).first;
+    {
+        i = fs.emplace(std::pair<bool, String>{ local,config }, config).first;
+        i->second.fs_local = local;
+        i->second.load();
+    }
     return i->second;
 }
 
 FileStorage &getServiceFileStorage()
 {
-    return getFileStorage("service");
+    return getFileStorage("service", true);
 }
 
 FileStorage::FileStorage(const String &config)
@@ -68,13 +72,13 @@ FileStorage::FileStorage(const String &config)
 {
     //if (config.empty())
         //throw SW_RUNTIME_ERROR("Empty config");
-    load();
+    //load();
 }
 
 FileStorage::file_holder *FileStorage::getFileLog()
 {
     if (!async_file_log_)
-        async_file_log_ = std::make_unique<file_holder>(getFilesLogFileName(config));
+        async_file_log_ = std::make_unique<file_holder>(getFilesLogFileName(config, fs_local));
     return async_file_log_.get();
 }
 
@@ -161,7 +165,7 @@ void FileStorage::async_command_log(size_t hash, size_t lwt, bool local)
 
 void FileStorage::load()
 {
-    getDb().load(*this, files);
+    getDb().load(*this, files, fs_local);
 
     for (auto i = files.getIterator(); i.isValid(); i.next())
     {
@@ -175,7 +179,7 @@ void FileStorage::load()
 
 void FileStorage::save()
 {
-    getDb().save(*this, files);
+    getDb().save(*this, files, fs_local);
 }
 
 void FileStorage::reset()

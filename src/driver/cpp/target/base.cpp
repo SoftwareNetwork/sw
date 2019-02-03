@@ -425,6 +425,11 @@ Commands Target::getCommands() const
     return cmds;
 }
 
+void Target::registerCommand(builder::Command &c) const
+{
+    c.local_storage = isLocal() && !IsConfig;
+}
+
 void Target::removeFile(const path &fn, bool binary_dir)
 {
     auto p = fn;

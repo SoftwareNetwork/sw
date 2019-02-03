@@ -146,6 +146,8 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     // this sln will try to resolve from selected, so deps configs are changed
     //const Solution *resolve_from = nullptr;
 
+    bool file_storage_local = true;
+
 public:
     Solution(const Solution &);
     //Solution &operator=(const Solution &);
@@ -302,6 +304,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     CommandExecutionPlan getExecutionPlan() const override;
 
     // helper
+    Solution &addSolutionRaw();
     Solution &addSolution();
     Solution &addCustomSolution();
 

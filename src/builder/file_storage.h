@@ -33,6 +33,7 @@ struct SW_BUILDER_API FileStorage
     };
 
     String config;
+    bool fs_local;
     ConcurrentHashMap<path, FileRecord> files;
 
     FileStorage(const String &config);
@@ -60,12 +61,12 @@ private:
 };
 
 SW_BUILDER_API
-FileStorage &getFileStorage(const String &config);
+FileStorage &getFileStorage(const String &config, bool local);
 
 SW_BUILDER_API
 FileStorage &getServiceFileStorage();
 
-using FileStorages = std::map<String, FileStorage>;
+using FileStorages = std::map<std::pair<bool, String>, FileStorage>;
 
 SW_BUILDER_API
 SW_DECLARE_GLOBAL_STATIC_FUNCTION(FileStorages, getFileStorages);
