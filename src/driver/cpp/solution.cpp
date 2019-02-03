@@ -1542,7 +1542,8 @@ FilesMap Build::build_configs_separate(const Files &files)
         lib += fn;
         write_pch(solution);
         PrecompiledHeader pch;
-        pch.header = getDriverIncludePathString(solution, getMainPchFilename());
+        //pch.header = getDriverIncludePathString(solution, getMainPchFilename());
+        pch.header = getMainPchFilename();
         pch.source = getImportPchFile();
         pch.force_include_pch = true;
         lib.addPrecompiledHeader(pch);
@@ -1790,7 +1791,8 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     // after files
     write_pch(solution);
     PrecompiledHeader pch;
-    pch.header = getDriverIncludePathString(solution, getMainPchFilename());
+    //pch.header = getDriverIncludePathString(solution, getMainPchFilename());
+    pch.header = getMainPchFilename();
     pch.source = getImportPchFile();
     pch.force_include_pch = true;
     lib.addPrecompiledHeader(pch);

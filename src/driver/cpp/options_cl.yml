@@ -693,6 +693,7 @@ types:
                 name: Language
                 type: String
                 flag: x
+                order: -10
 
             cppstd:
                 name: CPPStandard
@@ -710,7 +711,6 @@ types:
                 flag: include
                 type: FilesOrdered
                 properties:
-                    - input_dependency
                     - flag_before_each_value
 
             vis:
