@@ -210,7 +210,7 @@ struct SW_BUILDER_API OS
     SubArchType SubArch = SubArchType::NoSubArch;
     EnvironmentType EnvironmentType1 = EnvironmentType::UnknownEnvironment;
     ObjectFormatType ObjectFormatType1 = ObjectFormatType::UnknownObjectFormat;
-    Version Version;
+    ::primitives::version::Version Version;
 
     // TODO:
     bool support_dynamic_loading = true;

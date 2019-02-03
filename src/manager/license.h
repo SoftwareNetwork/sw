@@ -217,7 +217,7 @@ struct SW_MANAGER_API License
 
     LicenseType Type;
     std::string Name;
-    Version Version;
+    ::primitives::version::Version Version;
     std::string FullName;
     std::string Author;
     std::string PublicationDate;
