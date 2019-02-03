@@ -102,21 +102,6 @@ bool NativeExecutedTarget::init()
     SW_RETURN_MULTIPASS_END;
 }
 
-/*void NativeExecutedTarget::init2()
-{
-    if (!Local)
-    {
-        // activate later?
-        auto &sdb = getServiceDatabase();
-        auto o = getOutputFile();
-        auto f = sdb.getInstalledPackageFlags(pkg, getConfig());
-        if (f[pfHeaderOnly] || fs::exists(o) && f[pfBuilt])
-        {
-            already_built = true;
-        }
-    }
-}*/
-
 driver::cpp::CommandBuilder NativeExecutedTarget::addCommand() const
 {
     driver::cpp::CommandBuilder cb(*getSolution()->fs);
@@ -214,11 +199,6 @@ path NativeExecutedTarget::getOutputDir() const
         return getOutputFile().parent_path();
     return getTargetsDir().parent_path() / OutputDir;
 }
-
-/*void NativeExecutedTarget::setOutputFilename(const path &fn)
-{
-    //OutputFilename = fn;
-}*/
 
 void NativeExecutedTarget::setOutputFile()
 {
