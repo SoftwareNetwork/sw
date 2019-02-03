@@ -636,6 +636,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
             }
             else if (auto c = sf->compiler->as<ClangCompiler>())
             {
+                *this -= pch; // exclude from linker inputs
                 sf->setOutputFile(gch_fn_clang);
                 c->Language = "c++-header";
                 if (force_include_pch_header_to_pch_source)
@@ -1847,7 +1848,7 @@ bool NativeExecutedTarget::prepare()
             {
             case ConfigurationType::Debug:
                 c->GenerateDebugInfo = true;
-                //c->Optimizations().Level = 0; this is default
+                //c->Optimizations().Level = 0; this is the default
                 break;
             case ConfigurationType::Release:
                 c->Optimizations().Level = 3;
