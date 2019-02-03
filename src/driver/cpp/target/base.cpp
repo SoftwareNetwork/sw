@@ -55,7 +55,7 @@ String toString(TargetType T)
 
 #undef CASE
     }
-    throw std::logic_error("unreachable code");
+    throw SW_RUNTIME_ERROR("unreachable code");
 }
 
 TargetBase::TargetBase(const TargetBase &rhs)
@@ -282,7 +282,7 @@ void TargetBase::add(const TargetBaseTypePtr &t)
 
 bool TargetBase::exists(const PackageId &p) const
 {
-    throw std::logic_error("unreachable code");
+    throw SW_RUNTIME_ERROR("unreachable code");
 }
 
 TargetBase::TargetMap &TargetBase::getChildren()

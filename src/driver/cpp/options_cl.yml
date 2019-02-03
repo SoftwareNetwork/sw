@@ -783,6 +783,8 @@ types:
                 name: PrecompiledHeader
                 flag: include-pch
                 type: path
+                properties:
+                    - input_dependency
 
             empch:
                 name: EmitPCH
