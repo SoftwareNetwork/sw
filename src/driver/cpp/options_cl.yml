@@ -796,7 +796,6 @@ types:
                 flag: include-pch
                 type: path
                 properties:
-                    - input_dependency
                     - separate_prefix
 
             empch:
