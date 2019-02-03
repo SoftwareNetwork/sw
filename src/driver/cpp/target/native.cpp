@@ -732,7 +732,7 @@ Commands NativeExecutedTarget::getGeneratedCommands() const
     return generated;
 }
 
-Commands NativeExecutedTarget::getCommands() const
+Commands NativeExecutedTarget::getCommands1() const
 {
     if (getSolution()->skipTarget(Scope))
         return {};
@@ -1909,6 +1909,7 @@ bool NativeExecutedTarget::prepare()
             && !HeaderOnly.value()
             && !IsConfig
             && getSolution()->Settings.TargetOS.is(OSType::Windows)
+            && Scope == TargetScope::Build
             )
         {
             struct RcContext : primitives::Context

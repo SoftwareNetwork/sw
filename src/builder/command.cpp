@@ -61,12 +61,19 @@ CommandStorage::~CommandStorage()
 
 void CommandStorage::load()
 {
-    getDb().load(commands);
+    getDb().load(commands_local, true);
+    getDb().load(commands_global, false);
 }
 
 void CommandStorage::save()
 {
-    getDb().save(commands);
+    getDb().save(commands_local, true);
+    getDb().save(commands_global, false);
+}
+
+ConcurrentCommandStorage &CommandStorage::getStorage(bool local)
+{
+    return local ? commands_local : commands_global;
 }
 
 namespace builder
@@ -118,32 +125,28 @@ bool Command::check_if_file_newer(const path &p, const String &what, bool throw_
 
 bool Command::isOutdated() const
 {
-    bool changed = false;
+    if (always)
+    {
+        if (isExplainNeeded())
+            EXPLAIN_OUTDATED("command", true, "always build", getCommandId(*this));
+        return true;
+    }
 
     auto k = getHash();
-    auto r = getCommandStorage().commands.insert_ptr(k, 0);
+    auto r = getCommandStorage().getStorage(*local_storage).insert_ptr(k, 0);
     if (r.second)
     {
         // we have insertion, no previous value available
         // so outdated
         if (isExplainNeeded())
             EXPLAIN_OUTDATED("command", true, "new command: " + print(), getCommandId(*this));
-        changed = true;
+        return true;
     }
     else
     {
         *((int64_t*)&mtime) = *r.first;
-        changed |= isTimeChanged();
+        return isTimeChanged();
     }
-
-    if (always)
-    {
-        if (isExplainNeeded())
-            EXPLAIN_OUTDATED("command", true, "always build", getCommandId(*this));
-        changed = true;
-    }
-
-    return changed;
 }
 
 bool Command::isTimeChanged() const
@@ -203,7 +206,7 @@ void Command::updateCommandTime() const
 {
     auto k = getHash();
     auto c = mtime.time_since_epoch().count();
-    auto r = getCommandStorage().commands.insert_ptr(k, c);
+    auto r = getCommandStorage().getStorage(*local_storage).insert_ptr(k, c);
     if (!r.second)
         *r.first = c;
 }
@@ -387,6 +390,10 @@ bool Command::beforeCommand()
 {
     prepare();
 
+    // check
+    if (!always && !local_storage)
+        throw SW_RUNTIME_ERROR(makeErrorString("command storage is not selected"));
+
     if (!isOutdated())
     {
         executed_ = true;
@@ -405,6 +412,9 @@ bool Command::beforeCommand()
 
 void Command::afterCommand()
 {
+    if (always)
+        return;
+
     // update things
 
     auto update_time = [this](const auto &i)
@@ -447,7 +457,7 @@ void Command::afterCommand()
     // On the next run command times won't be compared with missing deps,
     // so outdated command wil not be re-runned
 
-    fs->async_command_log(getHash(), mtime.time_since_epoch().count());
+    fs->async_command_log(getHash(), mtime.time_since_epoch().count(), *local_storage);
 }
 
 path Command::getResponseFilename() const

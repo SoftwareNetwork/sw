@@ -25,11 +25,11 @@
 #ifdef _MSC_VER
 #define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
     SW_MAKE_CUSTOM_COMMAND(type, name, target, __VA_ARGS__);    \
-    (target).Storage.push_back(name)
+    (target).CommandStorage.push_back(name)
 #else
 #define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
     SW_MAKE_CUSTOM_COMMAND(type, name, target, ##__VA_ARGS__);  \
-    (target).Storage.push_back(name)
+    (target).CommandStorage.push_back(name)
 #endif
 
 #define SW_MAKE_COMMAND(name, target) \
@@ -148,6 +148,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     bool do_not_save_command = false;
     int strict_order = 0; // used to execute this before other commands
     ResourcePool *pool = nullptr;
+    std::optional<bool> local_storage;
 
     std::thread::id tid;
     Clock::time_point t_begin;

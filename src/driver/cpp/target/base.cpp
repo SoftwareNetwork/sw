@@ -417,6 +417,14 @@ void TargetBase::fetch()
     }
 }
 
+Commands Target::getCommands() const
+{
+    auto cmds = getCommands1();
+    for (auto &c : cmds)
+        c->local_storage = isLocal() && !IsConfig;
+    return cmds;
+}
+
 void Target::removeFile(const path &fn, bool binary_dir)
 {
     auto p = fn;

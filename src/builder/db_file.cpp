@@ -29,19 +29,16 @@ DECLARE_STATIC_LOGGER(logger, "db_file");
 namespace sw
 {
 
-static path getDir()
+static path getDir(bool local)
 {
+    if (local)
+        return path(SW_BINARY_DIR) / "db";
     return getUserDirectories().storage_dir_tmp / "db";
-}
-
-static path getFilesDir()
-{
-    return path(SW_BINARY_DIR) / "db";
 }
 
 static path getFilesDbFilename(const String &config)
 {
-    auto p = getFilesDir() / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
+    auto p = getDir(true) / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
     fs::create_directories(p.parent_path());
     return p;
 }
@@ -49,22 +46,22 @@ static path getFilesDbFilename(const String &config)
 path getFilesLogFileName(const String &config)
 {
     auto cfg = sha256_short(getCurrentModuleNameHash() + "_" + config);
-    path p = getFilesDir() / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
+    path p = getDir(true) / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
     fs::create_directories(p.parent_path());
     return p;
 }
 
-static path getCommandsDbFilename()
+static path getCommandsDbFilename(bool local)
 {
-    auto p = getDir() / std::to_string(COMMAND_DB_FORMAT_VERSION) / "commands.bin";
+    auto p = getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / "commands.bin";
     fs::create_directories(p.parent_path());
     return p;
 }
 
-path getCommandsLogFileName()
+path getCommandsLogFileName(bool local)
 {
     auto cfg = sha256_short(getCurrentModuleNameHash());
-    path p = getDir() / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("log_" + cfg + ".bin");
+    path p = getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("log_" + cfg + ".bin");
     fs::create_directories(p.parent_path());
     return p;
 }
@@ -273,17 +270,17 @@ static void load(const path &fn, ConcurrentCommandStorage &commands)
     }
 }
 
-void FileDb::load(ConcurrentCommandStorage &commands) const
+void FileDb::load(ConcurrentCommandStorage &commands, bool local) const
 {
-    sw::load(getCommandsDbFilename(), commands);
+    sw::load(getCommandsDbFilename(local), commands);
     try {
-        sw::load(getCommandsLogFileName(), commands);
+        sw::load(getCommandsLogFileName(local), commands);
     } catch (...) {}
     error_code ec;
-    fs::remove(getCommandsLogFileName(), ec);
+    fs::remove(getCommandsLogFileName(local), ec);
 }
 
-void FileDb::save(ConcurrentCommandStorage &commands) const
+void FileDb::save(ConcurrentCommandStorage &commands, bool local) const
 {
     primitives::BinaryContext b(10'000'000); // reserve amount
     for (auto i = commands.getIterator(); i.isValid(); i.next())
@@ -296,7 +293,7 @@ void FileDb::save(ConcurrentCommandStorage &commands) const
         b.write(k);
         b.write(*v);
     }*/
-    b.save(getCommandsDbFilename());
+    b.save(getCommandsDbFilename(local));
 }
 
 }

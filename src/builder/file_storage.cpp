@@ -78,12 +78,19 @@ FileStorage::file_holder *FileStorage::getFileLog()
     return async_file_log_.get();
 }
 
-path getCommandsLogFileName();
+path getCommandsLogFileName(bool local);
 
-FileStorage::file_holder *FileStorage::getCommandLog()
+FileStorage::file_holder *FileStorage::getCommandLog(bool local)
 {
+    if (local)
+    {
+        if (!async_command_log_local_)
+            async_command_log_local_ = std::make_unique<file_holder>(getCommandsLogFileName(local));
+        return async_command_log_local_.get();
+    }
+
     if (!async_command_log_)
-        async_command_log_ = std::make_unique<file_holder>(getCommandsLogFileName());
+        async_command_log_ = std::make_unique<file_holder>(getCommandsLogFileName(local));
     return async_command_log_.get();
 }
 
@@ -93,6 +100,7 @@ FileStorage::~FileStorage()
     {
         async_file_log_.reset();
         async_command_log_.reset();
+        async_command_log_local_.reset();
         save();
     }
     catch (std::exception &e)
@@ -132,7 +140,7 @@ void FileStorage::async_file_log(const FileRecord *r)
 #endif
 }
 
-void FileStorage::async_command_log(size_t hash, size_t lwt)
+void FileStorage::async_command_log(size_t hash, size_t lwt, bool local)
 {
 #if !USE_EXECUTOR
     static std::mutex m;
@@ -140,9 +148,9 @@ void FileStorage::async_command_log(size_t hash, size_t lwt)
 #endif
 
 #if USE_EXECUTOR
-    async_executor.push([this, hash, lwt] {
+    async_executor.push([this, hash, lwt, local] {
 #endif
-        auto l = getCommandLog();
+        auto l = getCommandLog(local);
         fwrite(&hash, sizeof(hash), 1, l->f.getHandle());
         fwrite(&lwt, sizeof(lwt), 1, l->f.getHandle());
         fflush(l->f.getHandle());

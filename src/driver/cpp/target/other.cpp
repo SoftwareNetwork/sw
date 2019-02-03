@@ -49,7 +49,7 @@ path CSharpTarget::getOutputFileName(const path &root) const
     return p;
 }
 
-Commands CSharpTarget::getCommands() const
+Commands CSharpTarget::getCommands1() const
 {
     for (auto f : gatherSourceFiles<CSharpSourceFile>(*this))
         compiler->addSourceFile(f->file);
@@ -58,11 +58,6 @@ Commands CSharpTarget::getCommands() const
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
     return cmds;
-}
-
-bool CSharpTarget::prepare()
-{
-    return false;
 }
 
 bool RustTarget::init()
@@ -109,7 +104,7 @@ path RustTarget::getOutputFileName(const path &root) const
     return p;
 }
 
-Commands RustTarget::getCommands() const
+Commands RustTarget::getCommands1() const
 {
     for (auto f : gatherSourceFiles<RustSourceFile>(*this))
         compiler->setSourceFile(f->file);
@@ -118,11 +113,6 @@ Commands RustTarget::getCommands() const
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
     return cmds;
-}
-
-bool RustTarget::prepare()
-{
-    return false;
 }
 
 bool GoTarget::init()
@@ -169,7 +159,7 @@ path GoTarget::getOutputFileName(const path &root) const
     return p;
 }
 
-Commands GoTarget::getCommands() const
+Commands GoTarget::getCommands1() const
 {
     for (auto f : gatherSourceFiles<GoSourceFile>(*this))
         compiler->setSourceFile(f->file);
@@ -178,11 +168,6 @@ Commands GoTarget::getCommands() const
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
     return cmds;
-}
-
-bool GoTarget::prepare()
-{
-    return false;
 }
 
 bool FortranTarget::init()
@@ -229,7 +214,7 @@ path FortranTarget::getOutputFileName(const path &root) const
     return p;
 }
 
-Commands FortranTarget::getCommands() const
+Commands FortranTarget::getCommands1() const
 {
     for (auto f : gatherSourceFiles<FortranSourceFile>(*this))
         compiler->setSourceFile(f->file);
@@ -238,11 +223,6 @@ Commands FortranTarget::getCommands() const
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
     return cmds;
-}
-
-bool FortranTarget::prepare()
-{
-    return false;
 }
 
 bool JavaTarget::init()
@@ -289,7 +269,7 @@ path JavaTarget::getOutputFileName(const path &root) const
     return p;
 }
 
-Commands JavaTarget::getCommands() const
+Commands JavaTarget::getCommands1() const
 {
     Commands cmds;
     for (auto f : gatherSourceFiles<JavaSourceFile>(*this))
@@ -301,11 +281,6 @@ Commands JavaTarget::getCommands() const
     //auto c = compiler->getCommand(*this);
     //cmds.insert(c);
     return cmds;
-}
-
-bool JavaTarget::prepare()
-{
-    return false;
 }
 
 bool KotlinTarget::init()
@@ -352,7 +327,7 @@ path KotlinTarget::getOutputFileName(const path &root) const
     return p;
 }
 
-Commands KotlinTarget::getCommands() const
+Commands KotlinTarget::getCommands1() const
 {
     for (auto f : gatherSourceFiles<KotlinSourceFile>(*this))
         compiler->setSourceFile(f->file);
@@ -361,11 +336,6 @@ Commands KotlinTarget::getCommands() const
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
     return cmds;
-}
-
-bool KotlinTarget::prepare()
-{
-    return false;
 }
 
 bool DTarget::init()
@@ -413,7 +383,7 @@ path DTarget::getOutputFileName(const path &root) const
     return p;
 }
 
-Commands DTarget::getCommands() const
+Commands DTarget::getCommands1() const
 {
     for (auto f : gatherSourceFiles<DSourceFile>(*this))
         compiler->setSourceFile(f->file);
@@ -422,11 +392,6 @@ Commands DTarget::getCommands() const
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
     return cmds;
-}
-
-bool DTarget::prepare()
-{
-    return false;
 }
 
 }

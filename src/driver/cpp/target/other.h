@@ -23,8 +23,6 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
     TargetType getType() const override { return TargetType::CSharpLibrary; }
 
     bool init() override;
-    Commands getCommands(void) const override;
-    bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -33,6 +31,7 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
+    Commands getCommands1() const override;
 };
 
 struct SW_DRIVER_CPP_API CSharpExecutable : CSharpTarget
@@ -52,8 +51,6 @@ struct SW_DRIVER_CPP_API RustTarget : Target
     TargetType getType() const override { return TargetType::RustLibrary; }
 
     bool init() override;
-    Commands getCommands(void) const override;
-    bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -62,6 +59,7 @@ struct SW_DRIVER_CPP_API RustTarget : Target
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
+    Commands getCommands1() const override;
 };
 
 struct SW_DRIVER_CPP_API RustExecutable : RustTarget
@@ -81,8 +79,6 @@ struct SW_DRIVER_CPP_API GoTarget : Target
     TargetType getType() const override { return TargetType::GoLibrary; }
 
     bool init() override;
-    Commands getCommands(void) const override;
-    bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -91,6 +87,7 @@ struct SW_DRIVER_CPP_API GoTarget : Target
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
+    Commands getCommands1() const override;
 };
 
 struct SW_DRIVER_CPP_API GoExecutable : GoTarget
@@ -110,8 +107,6 @@ struct SW_DRIVER_CPP_API FortranTarget : Target
     TargetType getType() const override { return TargetType::FortranLibrary; }
 
     bool init() override;
-    Commands getCommands(void) const override;
-    bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -120,6 +115,7 @@ struct SW_DRIVER_CPP_API FortranTarget : Target
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
+    Commands getCommands1() const override;
 };
 
 struct SW_DRIVER_CPP_API FortranExecutable : FortranTarget
@@ -139,8 +135,6 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
     TargetType getType() const override { return TargetType::JavaLibrary; }
 
     bool init() override;
-    Commands getCommands(void) const override;
-    bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -149,6 +143,7 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
+    Commands getCommands1() const override;
 };
 
 struct SW_DRIVER_CPP_API JavaExecutable : JavaTarget
@@ -168,8 +163,6 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
     TargetType getType() const override { return TargetType::KotlinLibrary; }
 
     bool init() override;
-    Commands getCommands(void) const override;
-    bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -178,6 +171,7 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
+    Commands getCommands1() const override;
 };
 
 struct SW_DRIVER_CPP_API KotlinExecutable : KotlinTarget
@@ -197,8 +191,6 @@ struct SW_DRIVER_CPP_API DTarget : Target
     TargetType getType() const override { return TargetType::DLibrary; }
 
     bool init() override;
-    Commands getCommands(void) const override;
-    bool prepare() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -207,6 +199,7 @@ struct SW_DRIVER_CPP_API DTarget : Target
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
+    Commands getCommands1() const override;
 };
 
 struct SW_DRIVER_CPP_API DLibrary : DTarget

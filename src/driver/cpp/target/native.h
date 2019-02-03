@@ -103,7 +103,6 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
 
     bool init() override;
     bool prepare() override;
-    Commands getCommands() const override;
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
 
@@ -180,6 +179,8 @@ private:
     bool already_built = false;
     std::map<path, path> break_gch_deps;
     mutable std::optional<Commands> generated_commands;
+
+    Commands getCommands1() const override;
 
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;

@@ -22,8 +22,8 @@ struct Db
     virtual void save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files) const = 0;
     virtual void write(std::vector<uint8_t> &v, const FileRecord &r) const {}
 
-    virtual void load(ConcurrentCommandStorage &commands) const = 0;
-    virtual void save(ConcurrentCommandStorage &commands) const = 0;
+    virtual void load(ConcurrentCommandStorage &commands, bool local) const = 0;
+    virtual void save(ConcurrentCommandStorage &commands, bool local) const = 0;
 
     //virtual void load(const path &fn, ChecksContainer &checks) const = 0;
     //virtual void save(const path &fn, const ChecksContainer &checks) const = 0;

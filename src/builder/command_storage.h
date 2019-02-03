@@ -19,7 +19,8 @@ using ConcurrentCommandStorage = ConcurrentMapSimple<size_t>;
 
 struct SW_BUILDER_API CommandStorage
 {
-    ConcurrentCommandStorage commands;
+    ConcurrentCommandStorage commands_local;
+    ConcurrentCommandStorage commands_global;
 
     CommandStorage();
     CommandStorage(const CommandStorage &) = delete;
@@ -28,6 +29,8 @@ struct SW_BUILDER_API CommandStorage
 
     void load();
     void save();
+
+    ConcurrentCommandStorage &getStorage(bool local);
 };
 
 SW_BUILDER_API

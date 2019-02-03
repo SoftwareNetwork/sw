@@ -173,8 +173,11 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
     // New root directory after downloading and unpacking.
     path UnpackDirectory;
 
+    // command storage, use driver::cpp::Commands?
+    std::vector<std::shared_ptr<builder::Command>> CommandStorage;
+
     // Data storage for objects that must be alive with the target.
-    std::vector<std::any> Storage;
+    //std::vector<std::any> Storage;
 
     /**
     * \brief Target scope.
@@ -283,7 +286,7 @@ public:
     Directory &addDirectory(const PackagePath &Name) { return addTarget<Directory>(Name); }
 
     virtual TargetType getType() const = 0;
-    virtual String getTypeName() const { return toString(getType()); }
+    String getTypeName() const { return toString(getType()); }
     const PackageId &getPackage() const { return pkg; }
 
     String getConfig(bool use_short_config = false) const;
@@ -295,6 +298,8 @@ public:
 
     void setRootDirectory(const path &);
     void setSource(const Source &);
+    Source &getSource() { return source; }
+    const Source &getSource() const { return source; }
 
     // really local package
     bool isLocal() const { return Local && !pkg.getOverriddenDir(); }
@@ -414,19 +419,21 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     Target() = default;
     virtual ~Target() = default;
 
-    virtual bool init(); // multipass init,
-    virtual bool prepare() = 0; // multipass prepare,
-    virtual Commands getCommands() const = 0;
-    virtual Files gatherAllFiles() const = 0;
-    virtual DependenciesType gatherDependencies() const = 0;
+    Commands getCommands() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
+    DependencyPtr getDependency() const; // returns current target as dependency
 
+    // main apis
+    virtual bool init(); // multipass init,
+    virtual bool prepare() { return false; } // multipass prepare,
+    virtual Files gatherAllFiles() const { return {}; }
+    virtual DependenciesType gatherDependencies() const { return DependenciesType{}; }
+
+    // other
     virtual void removeFile(const path &fn, bool binary_dir = false);
 
     //auto getPreparePass() const { return prepare_pass; }
     virtual bool mustResolveDeps() const { return deps_resolved ? false : (deps_resolved = true); }
-
-    DependencyPtr getDependency() const;
 
     using TargetBase::operator+=;
 
@@ -436,6 +443,9 @@ protected:
     mutable bool deps_resolved = false;
 
     path getOutputFileName() const;
+
+private:
+    virtual Commands getCommands1() const { return Commands{}; }
 };
 
 struct SW_DRIVER_CPP_API ProjDirBase : Target
@@ -446,11 +456,6 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     virtual ~ProjDirBase() = default;
 
     TargetType getType() const override { return TargetType::Directory; }
-    bool init() override { SW_RETURN_MULTIPASS_END; }
-    Commands getCommands() const override { return Commands{}; }
-    bool prepare() override { return false; }
-    Files gatherAllFiles() const override { return {}; }
-    DependenciesType gatherDependencies() const override { return DependenciesType{}; }
 };
 
 struct SW_DRIVER_CPP_API Directory : ProjDirBase
