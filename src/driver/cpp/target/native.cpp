@@ -490,9 +490,9 @@ void NativeExecutedTarget::addPrecompiledHeader(const path &h, const path &cpp)
 
 void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
 {
-    check_absolute(p.header);
+    /*check_absolute(p.header);
     if (!p.source.empty())
-        check_absolute(p.source);
+        check_absolute(p.source);*/
 
     bool force_include_pch_header_to_pch_source = true;
     bool force_include_pch_header_to_target_source_files = p.force_include_pch;
@@ -610,6 +610,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
     if (!p.created)
     {
         *this += pch;
+        (*this)[pch].fancy_name = "[pch] " + normalize_path(pch);
         if (auto sf = ((*this)[pch]).as<NativeSourceFile>(); sf)
         {
             auto setup_create_vc = [&sf, &force_include_pch_header_to_pch_source, &p, &pch_fn, &pdb_fn, &obj_fn](auto &c)

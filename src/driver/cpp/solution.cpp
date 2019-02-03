@@ -1483,7 +1483,8 @@ static path getMainPchFilename()
 static void write_pch(Solution &solution)
 {
     write_file_if_different(getImportPchFile(),
-        "#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
+        //"#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
+        "#include <" + normalize_path(getMainPchFilename()) + ">\n\n" +
         cppan_cpp);
 }
 
