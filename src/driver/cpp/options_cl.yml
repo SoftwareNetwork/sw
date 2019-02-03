@@ -768,7 +768,7 @@ types:
                 name: NoStdIncludesC
                 flag: nostdinc
                 type: bool
-                default: true
+                #default: true
 
             verb:
                 name: Verbose
