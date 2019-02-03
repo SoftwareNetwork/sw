@@ -147,6 +147,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     //const Solution *resolve_from = nullptr;
 
     bool file_storage_local = true;
+    int command_storage = 0;
 
 public:
     Solution(const Solution &);

@@ -42,6 +42,11 @@ namespace sw
 
 SW_DEFINE_GLOBAL_STATIC_FUNCTION(CommandStorage, getCommandStorage)
 
+static ConcurrentCommandStorage &getCommandStorage(bool local)
+{
+    return getCommandStorage().getStorage(local);
+}
+
 CommandStorage::CommandStorage()
 {
     load();
@@ -132,8 +137,15 @@ bool Command::isOutdated() const
         return true;
     }
 
+    if (command_storage == CS_DO_NOT_SAVE)
+    {
+        if (isExplainNeeded())
+            EXPLAIN_OUTDATED("command", true, "command storage is disabled", getCommandId(*this));
+        return true;
+    }
+
     auto k = getHash();
-    auto r = getCommandStorage().getStorage(*local_storage).insert_ptr(k, 0);
+    auto r = getCommandStorage(command_storage == CS_LOCAL).insert_ptr(k, 0);
     if (r.second)
     {
         // we have insertion, no previous value available
@@ -206,7 +218,7 @@ void Command::updateCommandTime() const
 {
     auto k = getHash();
     auto c = mtime.time_since_epoch().count();
-    auto r = getCommandStorage().getStorage(*local_storage).insert_ptr(k, c);
+    auto r = getCommandStorage(command_storage == CS_LOCAL).insert_ptr(k, c);
     if (!r.second)
         *r.first = c;
 }
@@ -391,7 +403,7 @@ bool Command::beforeCommand()
     prepare();
 
     // check
-    if (!always && !local_storage)
+    if (!always && command_storage == CS_UNDEFINED)
         throw SW_RUNTIME_ERROR(makeErrorString("command storage is not selected, call t.registerCommand(cmd)"));
 
     if (!isOutdated())
@@ -446,6 +458,9 @@ void Command::afterCommand()
     for (auto &i : outputs)
         update_time(i);
 
+    if (command_storage != CS_LOCAL && command_storage != CS_GLOBAL)
+        return;
+
     updateCommandTime();
 
     // probably below is wrong, async writes are queue to one thread (FIFO)
@@ -457,7 +472,7 @@ void Command::afterCommand()
     // On the next run command times won't be compared with missing deps,
     // so outdated command wil not be re-runned
 
-    fs->async_command_log(getHash(), mtime.time_since_epoch().count(), *local_storage);
+    fs->async_command_log(getHash(), mtime.time_since_epoch().count(), command_storage == CS_LOCAL);
 }
 
 path Command::getResponseFilename() const

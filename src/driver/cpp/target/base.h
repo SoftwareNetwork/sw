@@ -326,6 +326,7 @@ protected:
     //TargetBase &operator=(const TargetBase &);
 
     bool hasSameParent(const TargetBase *t) const;
+    int getCommandStorageType() const;
 
     path getObjectDir() const;
     path getObjectDir(const PackageId &pkg) const;

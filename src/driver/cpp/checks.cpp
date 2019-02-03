@@ -290,7 +290,7 @@ int main() { return IsBigEndian(); }
     auto ep = ExecutionPlan<Check>::createExecutionPlan(unchecked);
     if (ep)
     {
-        LOG_INFO(logger, "Performing " << unchecked.size() << " checks");
+        LOG_INFO(logger, "Performing " << unchecked.size() << " check(s)");
 
         //auto &e = getExecutor();
         Executor e(getExecutor().numberOfThreads()); // separate executor!
@@ -540,6 +540,7 @@ Solution Check::setupSolution(const path &f) const
 {
     auto s = *check_set->checker.solution;
     s.silent = bSilentChecks;
+    s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     //s.throw_exceptions = false;
     s.BinaryDir = f.parent_path();
     return s;
@@ -682,6 +683,7 @@ void IncludeExists::run() const
     c->setSourceFile(f, o += ".obj");
 
     auto cmd = c->getCommand(*check_set->checker.solution);
+    cmd->command_storage = builder::Command::CS_DO_NOT_SAVE;
     if (!cmd)
     {
         Value = 0;
@@ -1098,6 +1100,7 @@ void SourceCompiles::run() const
     c->setSourceFile(f, o += ".obj");
 
     auto cmd = c->getCommand(*check_set->checker.solution);
+    cmd->command_storage = builder::Command::CS_DO_NOT_SAVE;
     if (!cmd)
     {
         Value = 0;

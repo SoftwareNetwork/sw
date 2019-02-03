@@ -288,6 +288,7 @@ Solution::Solution(const Solution &rhs)
     , Variables(rhs.Variables)
     , events(rhs.events)
     , file_storage_local(rhs.file_storage_local)
+    , command_storage(rhs.command_storage)
 {
     checker.solution = this;
 }

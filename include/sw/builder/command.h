@@ -148,7 +148,6 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     bool do_not_save_command = false;
     int strict_order = 0; // used to execute this before other commands
     ResourcePool *pool = nullptr;
-    std::optional<bool> local_storage;
 
     std::thread::id tid;
     Clock::time_point t_begin;
@@ -161,6 +160,16 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
         MU_ALWAYS   = 2,
     };
     int maybe_unused = 0;
+
+    enum
+    {
+        CS_UNDEFINED,
+
+        CS_DO_NOT_SAVE,
+        CS_GLOBAL,
+        CS_LOCAL,
+    };
+    int command_storage = 0;
 
     Command();
     Command(::sw::FileStorage &fs);

@@ -417,17 +417,24 @@ void TargetBase::fetch()
     }
 }
 
+int TargetBase::getCommandStorageType() const
+{
+    if (getSolution()->command_storage == builder::Command::CS_DO_NOT_SAVE)
+        return builder::Command::CS_DO_NOT_SAVE;
+    return (isLocal() && !IsConfig) ? builder::Command::CS_LOCAL : builder::Command::CS_GLOBAL;
+}
+
 Commands Target::getCommands() const
 {
     auto cmds = getCommands1();
     for (auto &c : cmds)
-        c->local_storage = isLocal() && !IsConfig;
+        c->command_storage = getCommandStorageType();
     return cmds;
 }
 
 void Target::registerCommand(builder::Command &c) const
 {
-    c.local_storage = isLocal() && !IsConfig;
+    c.command_storage = getCommandStorageType();
 }
 
 void Target::removeFile(const path &fn, bool binary_dir)
