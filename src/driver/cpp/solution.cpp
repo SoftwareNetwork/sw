@@ -1586,25 +1586,27 @@ FilesMap Build::build_configs_separate(const Files &files)
             }
         }
 
-#if defined(CPPAN_OS_WINDOWS)
-        lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
-        // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __declspec(dllexport)";
-#else
-        lib.Definitions["SW_SUPPORT_API="];
-        lib.Definitions["SW_MANAGER_API="];
-        lib.Definitions["SW_BUILDER_API="];
-        lib.Definitions["SW_DRIVER_CPP_API="];
-        // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __attribute__ ((visibility (\"default\")))";
-#endif
+        if (solution.Settings.TargetOS.is(OSType::Windows))
+        {
+            lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
+            lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
+            lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
+            lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
+            // do not use api name because we use C linkage
+            lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __declspec(dllexport)";
+        }
+        else
+        {
+            lib.Definitions["SW_SUPPORT_API="];
+            lib.Definitions["SW_MANAGER_API="];
+            lib.Definitions["SW_BUILDER_API="];
+            lib.Definitions["SW_DRIVER_CPP_API="];
+            // do not use api name because we use C linkage
+            lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __attribute__ ((visibility (\"default\")))";
+        }
 
-#if defined(CPPAN_OS_WINDOWS)
-        lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
-#endif
+        if (solution.Settings.TargetOS.is(OSType::Windows))
+            lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
 
         if (auto L = lib.Linker->template as<VisualStudioLinker>())
         {
@@ -1867,7 +1869,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     {
         if (auto c = sf->compiler->template as<ClangCompiler>())
         {
-            //throw SW_RUNTIME_ERROR("pchs are not implemented for clang");
+            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
         }
         else if (auto c = sf->compiler->template as<GNUCompiler>())
         {
@@ -1875,25 +1877,27 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         }
     }
 
-#if defined(CPPAN_OS_WINDOWS)
-    lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
-    lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
-    lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
-    lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
-    // do not use api name because we use C linkage
-    lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __declspec(dllexport)";
-#else
-    lib.Definitions["SW_SUPPORT_API="];
-    lib.Definitions["SW_MANAGER_API="];
-    lib.Definitions["SW_BUILDER_API="];
-    lib.Definitions["SW_DRIVER_CPP_API="];
-    // do not use api name because we use C linkage
-    lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __attribute__ ((visibility (\"default\")))";
-#endif
+    if (solution.Settings.TargetOS.is(OSType::Windows))
+    {
+        lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
+        // do not use api name because we use C linkage
+        lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __declspec(dllexport)";
+    }
+    else
+    {
+        lib.Definitions["SW_SUPPORT_API="];
+        lib.Definitions["SW_MANAGER_API="];
+        lib.Definitions["SW_BUILDER_API="];
+        lib.Definitions["SW_DRIVER_CPP_API="];
+        // do not use api name because we use C linkage
+        lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __attribute__ ((visibility (\"default\")))";
+    }
 
-#if defined(CPPAN_OS_WINDOWS)
-    lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
-#endif
+    if (solution.Settings.TargetOS.is(OSType::Windows))
+        lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
 
     if (auto L = lib.Linker->template as<VisualStudioLinker>())
     {

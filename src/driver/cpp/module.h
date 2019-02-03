@@ -20,7 +20,8 @@ struct SW_DRIVER_CPP_API Module
     struct LibraryCall
     {
         String name;
-        Solution *s = nullptr;
+        const Solution *s = nullptr;
+        const Module *m = nullptr;
         std::function<F> f;
 
         LibraryCall &operator=(std::function<F> f)
@@ -40,7 +41,10 @@ struct SW_DRIVER_CPP_API Module
                 }
                 catch (const std::exception &e)
                 {
-                    String err = "error in module: ";
+                    String err = "error in module";
+                    if (m)
+                        err += " (" + normalize_path(m->dll) + ")";
+                    err += ": ";
                     if (s && !s->current_module.empty())
                         err += s->current_module + ": ";
                     err += e.what();
@@ -48,7 +52,10 @@ struct SW_DRIVER_CPP_API Module
                 }
                 catch (...)
                 {
-                    String err = "error in module: ";
+                    String err = "error in module";
+                    if (m)
+                        err += " (" + normalize_path(m->dll) + ")";
+                    err += ": ";
                     if (s && !s->current_module.empty())
                         err += s->current_module + ": ";
                     err += "unknown error";
@@ -61,13 +68,16 @@ struct SW_DRIVER_CPP_API Module
                 if (!name.empty())
                     err += " '" + name + "'";
                 err += " is not present in the module";
+                if (m)
+                    err += " (" + normalize_path(m->dll) + ")";
                 if (s && !s->current_module.empty())
-                    err += " " + s->current_module;
+                    err += ": " + s->current_module;
                 throw SW_RUNTIME_ERROR(err);
             }
         }
     };
 
+    path dll;
     boost::dll::shared_library *module = nullptr;
 
     Module(const path &dll);

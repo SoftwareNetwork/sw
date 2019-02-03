@@ -35,6 +35,7 @@ const Module &ModuleStorage::get(const path &dll)
 }
 
 Module::Module(const path &dll)
+    : dll(dll)
 {
     String err;
     err = "Module " + normalize_path(dll) + " is in bad shape";
@@ -66,14 +67,17 @@ Module::Module(const path &dll)
     }
 
     build_.name = "build";
+    build_.m = this;
     if (module->has("build"))
         build_ = module->get<void(Solution&)>("build");
 
     check_.name = "check";
+    check_.m = this;
     if (module->has("check"))
         check_ = module->get<void(Checker&)>("check");
 
     configure_.name = "configure";
+    configure_.m = this;
     if (module->has("configure"))
         configure_ = module->get<void(Build&)>("configure");
 }
