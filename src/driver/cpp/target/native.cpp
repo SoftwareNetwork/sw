@@ -328,7 +328,9 @@ Files NativeExecutedTarget::gatherObjectFilesWithoutLibraries() const
     Files obj;
     for (auto &f : gatherSourceFiles())
     {
-        if (f->output.file.extension() != ".gch")
+        if (f->output.file.extension() != ".gch" &&
+            f->output.file.extension() != ".pch"
+            )
             obj.insert(f->output.file);
     }
     for (auto &[f, sf] : *this)
@@ -540,6 +542,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
                     c->ForcedIncludeFiles().push_back(p.header);
 
                 c->PrecompiledHeader = gch_fn_clang;
+                c->createCommand()->addInput(gch_fn_clang);
             }
             else if (auto c = sf->compiler->as<GNUCompiler>())
             {
@@ -547,40 +550,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
 
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
-            }
-        }
-    }
 
-    // handle clang/gnu separately
-    if (cc == CompilerType::Clang)
-    {
-        // clang has direct dependency on pch file (PrecompiledHeader)
-        // so we do not use code below
-
-        /*break_gch_deps[pch] = gch_fn_clang;
-
-        // !
-        // add generated file, so it will be executed before
-        File(gch_fn_clang, *getSolution()->fs).getFileRecord().setGenerated(true);
-        *this += gch_fn_clang;*/
-    }
-    else if (cc == CompilerType::GNU)
-    {
-        // but gcc just looks at the include paths and tries to find .h.gch file
-
-        /*break_gch_deps[pch] = gch_fn;
-
-        // !
-        // add generated file, so it will be executed before
-        File(gch_fn, *getSolution()->fs).getFileRecord().setGenerated(true);
-        *this += gch_fn;*/
-
-        // so we add manual dependency
-        for (auto &f : gatherSourceFiles())
-        {
-            if (auto sf = f->as<NativeSourceFile>())
-            if (auto c = sf->compiler->as<GNUCompiler>())
-            {
                 c->createCommand()->addInput(gch_fn);
             }
         }
@@ -616,8 +586,6 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
             }
             else if (auto c = sf->compiler->as<ClangCompiler>())
             {
-                *this -= pch; // exclude from linker inputs .cpp
-                *this += gch_fn_clang; // but add .h.pch
                 sf->setOutputFile(gch_fn_clang);
                 c->Language = "c++-header";
                 if (force_include_pch_header_to_pch_source)
