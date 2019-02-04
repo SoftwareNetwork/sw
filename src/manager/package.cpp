@@ -45,9 +45,9 @@ UnresolvedPackage::UnresolvedPackage(const PackageId &pkg)
 {
 }
 
-String UnresolvedPackage::toString() const
+String UnresolvedPackage::toString(const String &delim) const
 {
-    return ppath.toString() + "-" + range.toString();
+    return ppath.toString() + delim + range.toString();
 }
 
 bool UnresolvedPackage::canBe(const PackageId &id) const
@@ -248,9 +248,9 @@ Package PackageId::toPackage() const
     return p;
 }
 
-String PackageId::toString() const
+String PackageId::toString(const String &delim) const
 {
-    return ppath.toString() + "-" + version.toString();
+    return ppath.toString() + delim + version.toString();
 }
 
 PackageId extractFromStringPackageId(const String &target)

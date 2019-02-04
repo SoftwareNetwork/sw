@@ -121,6 +121,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     String ide_solution_name;
     path config_file_or_dir; // original file or dir
     bool disable_compiler_lookup = false;
+    path prefix_source_dir; // used for fetches (additional root dir to config/sources)
 
     VariablesType Variables;
 

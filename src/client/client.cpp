@@ -323,8 +323,11 @@ static ::cl::opt<String> install_arg(::cl::Positional, ::cl::desc("Packages to a
 static ::cl::list<String> install_args(::cl::ConsumeAfter, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
 
 // upload
+static ::cl::opt<String> upload_remote(::cl::Positional, ::cl::desc("Remote name"), ::cl::sub(subcommand_upload));
 static ::cl::opt<String> upload_prefix(::cl::Positional, ::cl::desc("Prefix path"), ::cl::sub(subcommand_upload), ::cl::Required);
+static ::cl::opt<path> upload_path_to_root(::cl::Positional, ::cl::desc("Path to root"), ::cl::sub(subcommand_upload));
 static ::cl::opt<bool> build_before_upload("build", ::cl::desc("Build before upload"), ::cl::sub(subcommand_upload));
+
 static ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
 
 // ide commands
@@ -867,19 +870,35 @@ SUBCOMMAND_DECL(fetch)
 
 SUBCOMMAND_DECL(upload)
 {
+    // select remote first
+    auto &us = Settings::get_user_settings();
+    auto current_remote = &*us.remotes.begin();
+    if (!upload_remote.empty())
+    {
+        current_remote = nullptr;
+        for (auto &r : us.remotes)
+        {
+            if (r.name == upload_remote)
+            {
+                current_remote = &r;
+                break;
+            }
+        }
+        if (!current_remote)
+            throw SW_RUNTIME_ERROR("Remote not found: " + upload_remote);
+    }
+
     sw::FetchOptions opts;
     //opts.name_prefix = upload_prefix;
     opts.root_dir = fs::current_path() / SW_BINARY_DIR;
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(8);
     //opts.apply_version_to_source = true;
+    if (!upload_path_to_root.empty())
+        opts.source_dir = fs::relative(fs::current_path(), fs::current_path() / upload_path_to_root);
     auto s = sw::fetch_and_load(build_arg_update.getValue(), opts);
     if (build_before_upload)
         s->execute();
-
-    auto &us = Settings::get_user_settings();
-    auto cr = us.remotes.begin();
-    auto current_remote = &*cr++;
 
     sw::Api api(*current_remote);
     api.addVersion(upload_prefix, s->getPackages(), sw::read_config(build_arg_update.getValue()).value());

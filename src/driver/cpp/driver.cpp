@@ -100,6 +100,7 @@ static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &
             b->DryRun = true;
             b->PostponeFileResolving = pp;
             b->source_dirs_by_source = srcs_old;
+            b->prefix_source_dir = opts.source_dir;
             if (!pp)
                 b->fetch_dir = d;
             b->load(fn);
@@ -147,6 +148,7 @@ static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &
         b->perform_checks = false;
         b->DryRun = true;
         b->fetch_dir = d;
+        b->prefix_source_dir = opts.source_dir;
         b->load(fn);
 
         // reset

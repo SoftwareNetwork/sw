@@ -384,7 +384,8 @@ using SourceDirSet = std::unordered_set<Source>;
 
 struct SourceDownloadOptions
 {
-    path root_dir;
+    path source_dir;
+    path root_dir; // root to download
     bool ignore_existing_dirs = false;
     std::chrono::seconds existing_dirs_age{ 0 };
     bool adjust_root_dir = true;

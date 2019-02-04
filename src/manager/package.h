@@ -36,7 +36,7 @@ struct SW_MANAGER_API UnresolvedPackage
     UnresolvedPackage(const String &s);
     UnresolvedPackage(const PackageId &);
 
-    String toString() const;
+    String toString(const String &delim = "-") const;
     bool canBe(const PackageId &id) const;
 
     /// return max satisfying package id
@@ -111,7 +111,7 @@ struct SW_MANAGER_API PackageId
     String getVariableName() const;
 
     Package toPackage() const;
-    String toString() const;
+    String toString(const String &delim = "-") const;
 
     bool isPublic() const { return !isPrivate(); }
     bool isPrivate() const { return ppath.is_pvt() || ppath.is_com(); }

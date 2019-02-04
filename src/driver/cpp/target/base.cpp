@@ -337,6 +337,7 @@ void TargetBase::setSource(const Source &s)
         download(s2, d);
     }
     d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
+    d /= getSolution()->prefix_source_dir;
     getSolution()->source_dirs_by_source[s2] = d;
     /*getSolution()->SourceDir = */SourceDir = d;
 }

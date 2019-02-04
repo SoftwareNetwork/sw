@@ -332,19 +332,20 @@ void SolutionSettings::init()
     {
         if (Native.SDK.Root.empty())
         {
+            String sdktype = "macosx";
+            if (TargetOS.is(OSType::IOS))
+                sdktype = "iphoneos";
+
             primitives::Command c;
             c.program = "xcrun";
             c.args.push_back("--sdk");
-            if (TargetOS.is(OSType::IOS))
-                c.args.push_back("iphoneos");
-            else
-                c.args.push_back("macosx");
+            c.args.push_back(sdktype);
             c.args.push_back("--show-sdk-path");
             error_code ec;
             c.execute(ec);
             if (ec)
             {
-                LOG_DEBUG(logger, "cannot find macos sdk path using xcrun");
+                LOG_DEBUG(logger, "cannot find " + sdktype + " sdk path using xcrun");
             }
             else
             {
@@ -405,6 +406,7 @@ Solution::Solution(const Solution &rhs)
     , events(rhs.events)
     , file_storage_local(rhs.file_storage_local)
     , command_storage(rhs.command_storage)
+    , prefix_source_dir(rhs.prefix_source_dir)
 {
     checker.solution = this;
 }
@@ -2863,6 +2865,14 @@ PackageDescriptionMap Build::getPackages() const
             nlohmann::json jf;
             jf["from"] = normalize_path(f1);
             jf["to"] = normalize_path(f2);
+            if (!prefix_source_dir.empty() && f2.u8string().find(prefix_source_dir.u8string()) == 0)
+            {
+                auto t = normalize_path(f2);
+                t = t.substr(prefix_source_dir.u8string().size());
+                if (!t.empty() && t.front() == '/')
+                    t = t.substr(1);
+                jf["to"] = t;
+            }
             j["files"].push_back(jf);
         }
 
