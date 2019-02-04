@@ -238,7 +238,123 @@ void EventCallback::operator()(TargetBase &t, CallbackType e)
 
 }
 
-String Solution::SettingsX::getConfig(const TargetBase *t, bool use_short_config) const
+path getProgramFilesX86()
+{
+    auto e = getenv("programfiles(x86)");
+    if (!e)
+        throw SW_RUNTIME_ERROR("Cannot get 'programfiles(x86)' env. var.");
+    return e;
+}
+
+static path getWindowsKitRoot()
+{
+    auto p = getProgramFilesX86() / "Windows Kits";
+    if (fs::exists(p))
+        return p;
+    throw SW_RUNTIME_ERROR("No Windows Kits available");
+}
+
+String getWin10KitDirName()
+{
+    return "10";
+}
+
+static Strings listWindowsKits()
+{
+    Strings kits;
+    auto kr = getWindowsKitRoot();
+    for (auto &k : Strings{ getWin10KitDirName(), "8.1", "8.0", "7.1A", "7.0A", "6.0A" })
+    {
+        auto d = kr / k;
+        if (fs::exists(d))
+            kits.push_back(k);
+    }
+    return kits;
+}
+
+static path getLatestWindowsKit()
+{
+    auto allkits = listWindowsKits();
+    if (allkits.empty())
+        throw SW_RUNTIME_ERROR("No Windows Kits available");
+    return allkits[0];
+}
+
+static path getWin10KitInspectionDir()
+{
+    auto kr = getWindowsKitRoot();
+    auto dir = kr / getWin10KitDirName() / "Include";
+    return dir;
+}
+
+static std::set<path> listWindows10Kits()
+{
+    std::set<path> kits;
+    auto dir = getWin10KitInspectionDir();
+    for (auto &i : fs::directory_iterator(dir))
+    {
+        if (fs::is_directory(i))
+        {
+            auto d = i.path().filename().u8string();
+            Version v = d;
+            if (v.isVersion())
+                kits.insert(d);
+        }
+    }
+    if (kits.empty())
+        throw SW_RUNTIME_ERROR("No Windows 10 Kits available");
+    return kits;
+}
+
+void SolutionSettings::init()
+{
+    if (TargetOS.is(OSType::Windows))
+    {
+        if (Native.SDK.Root.empty())
+            Native.SDK.Root = getWindowsKitRoot();
+        if (Native.SDK.Version.empty())
+            Native.SDK.Version = getLatestWindowsKit();
+        if (Native.SDK.BuildNumber.empty())
+        {
+            if (TargetOS.Version >= Version(10) && Native.SDK.Version == getWin10KitDirName())
+            {
+                // take current or the latest version
+                auto dir = getWin10KitInspectionDir();
+                path curdir = dir / TargetOS.Version.toString(4);
+                if (fs::exists(curdir))
+                    Native.SDK.BuildNumber = curdir.filename();
+                else
+                    Native.SDK.BuildNumber = *listWindows10Kits().rbegin();
+            }
+        }
+    }
+    else if (TargetOS.is(OSType::Macos) || TargetOS.is(OSType::IOS))
+    {
+        if (Native.SDK.Root.empty())
+        {
+            primitives::Command c;
+            c.program = "xcrun";
+            c.args.push_back("--sdk");
+            if (TargetOS.is(OSType::IOS))
+                c.args.push_back("iphoneos");
+            else
+                c.args.push_back("macosx");
+            c.args.push_back("--show-sdk-path");
+            error_code ec;
+            c.execute(ec);
+            if (ec)
+            {
+                LOG_DEBUG(logger, "cannot find macos sdk path using xcrun");
+            }
+            else
+            {
+                Native.SDK.Root = boost::trim_copy(c.out.text);
+            }
+        }
+    }
+}
+
+String SolutionSettings::getConfig(const TargetBase *t, bool use_short_config) const
 {
     String c;
 
@@ -1083,6 +1199,8 @@ void Solution::setSettings()
 
 void Solution::findCompiler()
 {
+    Settings.init();
+
     if (!disable_compiler_lookup)
         detectCompilers(*this);
 

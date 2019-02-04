@@ -101,6 +101,8 @@ std::string getVsToolset(VisualStudioVersion v)
 {
     switch (v)
     {
+    case VisualStudioVersion::VS16:
+        return "vc142";
     case VisualStudioVersion::VS15:
         return "vc141";
     case VisualStudioVersion::VS14:
@@ -119,13 +121,7 @@ std::string getVsToolset(VisualStudioVersion v)
     throw SW_RUNTIME_ERROR("Unknown VS version");
 }
 
-path getProgramFilesX86()
-{
-    auto e = getenv("programfiles(x86)");
-    if (!e)
-        throw SW_RUNTIME_ERROR("Cannot get 'programfiles(x86)' env. var.");
-    return e;
-}
+path getProgramFilesX86();
 
 bool findDefaultVS(path &root, VisualStudioVersion &VSVersion)
 {
@@ -148,111 +144,18 @@ bool findDefaultVS(path &root, VisualStudioVersion &VSVersion)
     return false;
 }
 
-StringSet listMajorWindowsKits()
-{
-    StringSet kits;
-    auto program_files_x86 = getProgramFilesX86();
-    for (auto &k : { "10", "8.1", "8.0", "7.1A", "7.0A", "6.0A" })
-    {
-        auto d = program_files_x86 / "Windows Kits" / k;
-        if (fs::exists(d))
-            kits.insert(k);
-    }
-    return kits;
-}
-
-StringSet listWindows10Kits()
-{
-    StringSet kits;
-    auto program_files_x86 = getProgramFilesX86();
-    auto dir = program_files_x86 / "Windows Kits" / "10" / "Include";
-    for (auto &i : fs::directory_iterator(dir))
-    {
-        if (fs::is_directory(i))
-            kits.insert(i.path().filename().string());
-    }
-    return kits;
-}
-
-StringSet listWindowsKits()
-{
-    auto allkits = listMajorWindowsKits();
-    auto i = allkits.find("10");
-    if (i == allkits.end())
-        return allkits;
-    auto kits2 = listWindows10Kits();
-    allkits.insert(kits2.begin(), kits2.end());
-    return allkits;
-}
-
-String getLatestWindowsKit()
-{
-    auto allkits = listMajorWindowsKits();
-    auto i = allkits.find("10");
-    if (i == allkits.end())
-        return *allkits.rbegin();
-    return *listWindows10Kits().rbegin();
-}
-
-path getWindowsKitDir()
-{
-    auto program_files_x86 = getProgramFilesX86();
-    for (auto &k : { "10", "8.1", "8.0", "7.1A", "7.0A", "6.0A" })
-    {
-        auto d = program_files_x86 / "Windows Kits" / k;
-        if (fs::exists(d))
-            return d;
-    }
-    throw SW_RUNTIME_ERROR("No Windows Kits available");
-}
-
-path getWindowsKit10Dir(Solution &s, const path &d)
-{
-    // take current or the latest version
-    path last_dir = d / s.Settings.TargetOS.Version.toString(true);
-    if (fs::exists(last_dir))
-        return last_dir;
-    last_dir.clear();
-    Version p;
-    for (auto &i : fs::directory_iterator(d))
-    {
-        if (!fs::is_directory(i))
-            continue;
-        try
-        {
-            Version v(i.path().filename().u8string());
-            if (v.isBranch())
-                continue;
-            if (v > p)
-            {
-                p = v;
-                last_dir = i;
-            }
-        }
-        catch (...)
-        {
-        }
-    }
-    if (last_dir.empty())
-        throw SW_RUNTIME_ERROR("No Windows Kits 10.0 available");
-    return last_dir;
-}
-
 void detectCompilers(struct Solution &s)
 {
     detectNativeCompilers(s);
 
-    // make lazy loading
-    //if (use_other_langs)
-    {
-        detectCSharpCompilers(s);
-        detectRustCompilers(s);
-        detectGoCompilers(s);
-        detectFortranCompilers(s);
-        detectJavaCompilers(s);
-        detectKotlinCompilers(s);
-        detectDCompilers(s);
-    }
+    // others
+    detectCSharpCompilers(s);
+    detectRustCompilers(s);
+    detectGoCompilers(s);
+    detectFortranCompilers(s);
+    detectJavaCompilers(s);
+    detectKotlinCompilers(s);
+    detectDCompilers(s);
 }
 
 void detectDCompilers(struct Solution &s)
@@ -565,13 +468,12 @@ void detectWindowsCompilers(struct Solution &s)
     }
 
     // add kits include dirs
-    auto windows_kit_dir = getWindowsKitDir();
-    for (auto &i : fs::directory_iterator(getWindowsKit10Dir(s, windows_kit_dir / "include")))
+    for (auto &i : fs::directory_iterator(s.Settings.Native.SDK.getPath("Include")))
     {
         if (fs::is_directory(i))
             COpts.System.IncludeDirectories.insert(i);
     }
-    for (auto &i : fs::directory_iterator(getWindowsKit10Dir(s, windows_kit_dir / "lib")))
+    for (auto &i : fs::directory_iterator(s.Settings.Native.SDK.getPath("Lib")))
     {
         if (fs::is_directory(i))
             LOpts.System.LinkDirectories.insert(i / path(dir_suffix.target));
@@ -702,7 +604,7 @@ void detectWindowsCompilers(struct Solution &s)
         L->CompiledExtensions = { ".rc" };
 
         auto C = std::make_shared<RcTool>();
-        C->file = getWindowsKit10Dir(s, windows_kit_dir / "bin") / dir_suffix.host / "rc.exe";
+        C->file = s.Settings.Native.SDK.getPath("bin") / dir_suffix.host / "rc.exe";
         for (auto &idir : COpts.System.IncludeDirectories)
             C->system_idirs.push_back(idir);
 
@@ -891,22 +793,8 @@ void detectNonWindowsCompilers(struct Solution &s)
     NativeCompilerOptions COpts;
 
     path macos_sdk_dir;
-    if (s.HostOS.is(OSType::Macos))
-    {
-        primitives::Command c;
-        c.program = "xcrun";
-        c.args.push_back("--show-sdk-path");
-        error_code ec;
-        c.execute(ec);
-        if (ec)
-        {
-            LOG_DEBUG(logger, "cannot find macos sdk path using xcrun");
-        }
-        else
-        {
-            macos_sdk_dir = boost::trim_copy(c.out.text);
-        }
-    }
+    if (s.Settings.TargetOS.is(OSType::Macos) || s.Settings.TargetOS.is(OSType::IOS))
+        macos_sdk_dir = s.Settings.Native.SDK.getPath();
 
     auto is_apple_clang = [](const path &p)
     {
@@ -1092,6 +980,26 @@ void detectNativeCompilers(struct Solution &s)
     }
     else
         detectNonWindowsCompilers(s);
+}
+
+path NativeToolchain::SDK::getPath(const path &subdir) const
+{
+    if (Root.empty())
+        throw SW_RUNTIME_ERROR("empty sdk root");
+    if (Version.empty())
+        throw SW_RUNTIME_ERROR("empty sdk version");
+    if (subdir.empty())
+        return Root / Version;
+    return Root / Version / subdir / BuildNumber;
+}
+
+String getWin10KitDirName();
+
+String NativeToolchain::SDK::getWindowsTargetPlatformVersion() const
+{
+    if (Version != getWin10KitDirName())
+        return Version.u8string();
+    return BuildNumber.u8string();
 }
 
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)

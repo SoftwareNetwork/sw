@@ -35,8 +35,6 @@ bool gPrintDependencies;
 namespace sw
 {
 
-String getLatestWindowsKit();
-
 String toPathString(GeneratorType t)
 {
     switch (t)
@@ -246,7 +244,7 @@ static String add_space_if_not_empty(const String &s)
     return " " + s;
 }
 
-static String get_configuration(const Solution::SettingsX &s)
+static String get_configuration(const SolutionSettings &s)
 {
     String c = generator::toString(s.Native.ConfigurationType) +
         add_space_if_not_empty(generator::toString(s.Native.LibrariesType));
@@ -255,7 +253,7 @@ static String get_configuration(const Solution::SettingsX &s)
     return c;
 }
 
-static String get_project_configuration(const Solution::SettingsX &s)
+static String get_project_configuration(const SolutionSettings &s)
 {
     String c;
     c += get_configuration(s);
@@ -412,7 +410,7 @@ void ProjectContext::printProject(
     addBlock("VCProjectVersion", "15.0");
     addBlock("ProjectGuid", "{" + ctx.uuids[name] + "}");
     addBlock("Keyword", "Win32Proj");
-    addBlock("WindowsTargetPlatformVersion", getLatestWindowsKit());
+    addBlock("WindowsTargetPlatformVersion", nt.getSolution()->Settings.Native.SDK.getWindowsTargetPlatformVersion());
     if (g.type == GeneratorType::VisualStudioNMakeAndUtility && ptype == VSProjectType::Makefile)
         addBlock("ProjectName", PackageId(p.ppath.slice(pp.size()), p.version).toString() + "-build");
     else
@@ -894,7 +892,7 @@ void VSGenerator::generate(const Build &b)
         pctx.addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
         //pctx.addPropertyGroupConfigurationTypes();
 
-        iterate_over_configs(b.Settings, [this, &pctx, &b](const Solution::SettingsX &s, const String &c, const String &generator::toString(s.Settings.TargetOS.Arch), const String &generator::toString(s.Settings.Native.LibrariesType))
+        iterate_over_configs(b.Settings, [this, &pctx, &b](const SolutionSettings &s, const String &c, const String &generator::toString(s.Settings.TargetOS.Arch), const String &generator::toString(s.Settings.Native.LibrariesType))
         {
             using namespace sw;
 
@@ -996,7 +994,7 @@ void VSGenerator::generate(const Build &b)
 
         iterate_over_configs(b.Settings,
             [this, &pctx, &nt, &b, t = t.get()]
-            (const Solution::SettingsX &s, const String &generator::toString(s.Settings.Native.ConfigurationType), const String &generator::toString(s.Settings.TargetOS.Arch), const String &generator::toString(s.Settings.Native.LibrariesType))
+            (const SolutionSettings &s, const String &generator::toString(s.Settings.Native.ConfigurationType), const String &generator::toString(s.Settings.TargetOS.Arch), const String &generator::toString(s.Settings.Native.LibrariesType))
         {
             using namespace sw;
 
@@ -1055,7 +1053,7 @@ void VSGenerator::generate(const Build &b)
 
         iterate_over_configs(b.solutions[0].Settings,
             [this, &pctx, &nt, &b, t = t.get()]
-        (const Solution::SettingsX &s, const String &generator::toString(s.Settings.Native.ConfigurationType), const String &generator::toString(s.Settings.TargetOS.Arch), const String &generator::toString(s.Settings.Native.LibrariesType))
+        (const SolutionSettings &s, const String &generator::toString(s.Settings.Native.ConfigurationType), const String &generator::toString(s.Settings.TargetOS.Arch), const String &generator::toString(s.Settings.Native.LibrariesType))
         {
             using namespace sw;
 

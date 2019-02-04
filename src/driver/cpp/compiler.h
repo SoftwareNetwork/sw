@@ -42,6 +42,7 @@ struct Command;
 struct Solution;
 struct TargetBase;
 struct Target;
+struct NativeLinker;
 
 enum VisualStudioVersion
 {
@@ -67,6 +68,60 @@ StringSet getCppHeaderFileExtensions();
 
 SW_DRIVER_CPP_API
 StringSet getCppSourceFileExtensions();
+
+// toolchain
+
+struct SW_DRIVER_CPP_API NativeToolchain
+{
+    struct SDK
+    {
+        // root to sdks
+        //  example: c:\\Program Files (x86)\\Windows Kits
+        path Root;
+
+        // sdk dir in root
+        // win: 7.0 7.0A, 7.1, 7.1A, 8, 8.1, 10 ...
+        // osx: 10.12, 10.13, 10.14 ...
+        path Version; // make string?
+
+        // windows10:
+        // 10.0.10240.0, 10.0.17763.0 ...
+        path BuildNumber;
+
+        path getPath(const path &subdir = {}) const;
+        String getWindowsTargetPlatformVersion() const;
+    };
+
+    struct SDK SDK;
+
+    std::shared_ptr<NativeLinker> Librarian;
+    std::shared_ptr<NativeLinker> Linker;
+
+    // rc (resource compiler)
+    // ar, more tools...
+    // more native compilers (cuda etc.)
+    ::sw::CompilerType CompilerType = CompilerType::UnspecifiedCompiler;
+    //LinkerType LinkerType; // rename - use type from selected tool
+    BuildLibrariesAs LibrariesType = LibraryType::Shared;
+    ::sw::ConfigurationType ConfigurationType = ConfigurationType::Release;
+
+    // win, vs
+    bool MT = false;
+    // toolset
+    // win sdk
+    // more settings
+
+    // misc
+    bool CopySharedLibraries = true;
+
+    // service
+
+    /// set on server to eat everything
+    //bool AssignAll = false;
+
+    // members
+    //String getConfig() const;
+};
 
 // compilers
 
@@ -366,37 +421,6 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
 
 protected:
     Version gatherVersion() const override { return Program::gatherVersion(file, "-V"); }
-};
-
-struct SW_DRIVER_CPP_API NativeToolchain
-{
-    std::shared_ptr<NativeLinker> Librarian;
-    std::shared_ptr<NativeLinker> Linker;
-
-    // rc (resource compiler)
-    // ar, more tools...
-    // more native compilers (cuda etc.)
-    ::sw::CompilerType CompilerType = CompilerType::UnspecifiedCompiler;
-    //LinkerType LinkerType; // rename - use type from selected tool
-    BuildLibrariesAs LibrariesType = LibraryType::Shared;
-    ::sw::ConfigurationType ConfigurationType = ConfigurationType::Release;
-
-    // win, vs
-    bool MT = false;
-    // toolset
-    // win sdk
-    // more settings
-
-    // misc
-    bool CopySharedLibraries = true;
-
-    // service
-
-    /// set on server to eat everything
-    //bool AssignAll = false;
-
-    // members
-    //String getConfig() const;
 };
 
 // other tools

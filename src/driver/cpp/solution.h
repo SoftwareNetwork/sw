@@ -90,6 +90,18 @@ struct SW_DRIVER_CPP_API Test : driver::cpp::CommandBuilder
     {}
 };
 
+struct SW_DRIVER_CPP_API SolutionSettings
+{
+    OS TargetOS;
+    NativeToolchain Native;
+
+    // other langs?
+    // make polymorphic?
+
+    void init();
+    String getConfig(const TargetBase *t, bool use_short_config = false) const;
+};
+
 /**
 * \brief Single configuration solution.
 */
@@ -99,18 +111,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
 
     // don't be so shy, don't hide in private
     OS HostOS;
-
-    struct SettingsX
-    {
-        OS TargetOS;
-        NativeToolchain Native;
-
-        // other langs?
-        // make polymorphic?
-
-        String getConfig(const TargetBase *t, bool use_short_config = false) const;
-    };
-    SettingsX Settings; // current configuration
+    SolutionSettings Settings; // current configuration
 
     // solution (config) specific data
     mutable TargetMap TargetsToBuild;
