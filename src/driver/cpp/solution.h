@@ -16,6 +16,7 @@
 #include <sw/builder/driver.h>
 
 #include <boost/bimap.hpp>
+#include <boost/bimap/multiset_of.hpp>
 #include <boost/dll/shared_library.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
@@ -222,7 +223,8 @@ public:
     void call_event(TargetBase &t, CallbackType et);
     //
 
-    static const boost::bimap<FrontendType, path> &getAvailableFrontends();
+    using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
+    static const AvailableFrontends &getAvailableFrontends();
     static const FilesOrdered &getAvailableFrontendConfigFilenames();
     static bool isFrontendConfigFilename(const path &fn);
     static std::optional<FrontendType> selectFrontendByFilename(const path &fn);

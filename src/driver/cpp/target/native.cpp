@@ -21,6 +21,8 @@ DECLARE_STATIC_LOGGER(logger, "target.native");
 #define RETURN_PREPARE_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(prepare_pass)
 #define RETURN_INIT_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(init_pass)
 
+extern bool gVerbose;
+
 static cl::opt<bool> do_not_mangle_object_names("do-not-mangle-object-names");
 //static cl::opt<bool> full_build("full", cl::desc("Full build (check all conditions)"));
 
@@ -560,11 +562,14 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
     if (!p.created)
     {
         *this += pch;
-        (*this)[pch].fancy_name = "[pch] " + normalize_path(pch);
+        (*this)[pch].fancy_name = "[config pch]";
         if (auto sf = ((*this)[pch]).as<NativeSourceFile>(); sf)
         {
-            auto setup_create_vc = [&sf, &force_include_pch_header_to_pch_source, &p, &pch_fn, &pdb_fn, &obj_fn](auto &c)
+            auto setup_create_vc = [this, &pch, &sf, &force_include_pch_header_to_pch_source, &p, &pch_fn, &pdb_fn, &obj_fn](auto &c)
             {
+                if (gVerbose)
+                    (*this)[pch].fancy_name += " (" + normalize_path(pch) + ")";
+
                 sf->setOutputFile(obj_fn);
 
                 if (force_include_pch_header_to_pch_source)
@@ -586,6 +591,9 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
             }
             else if (auto c = sf->compiler->as<ClangCompiler>())
             {
+                if (gVerbose)
+                    (*this)[pch].fancy_name += " (" + normalize_path(gch_fn_clang) + ")";
+
                 sf->setOutputFile(gch_fn_clang);
                 c->Language = "c++-header";
                 if (force_include_pch_header_to_pch_source)
@@ -594,6 +602,9 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
             }
             else if (auto c = sf->compiler->as<GNUCompiler>())
             {
+                if (gVerbose)
+                    (*this)[pch].fancy_name += " (" + normalize_path(gch_fn) + ")";
+
                 sf->setOutputFile(gch_fn);
                 c->Language = "c++-header";
                 if (force_include_pch_header_to_pch_source)

@@ -1029,12 +1029,14 @@ void Solution::call_event(TargetBase &t, CallbackType et)
     }
 }
 
-const boost::bimap<FrontendType, path> &Solution::getAvailableFrontends()
+const Solution::AvailableFrontends &Solution::getAvailableFrontends()
 {
-    static boost::bimap<FrontendType, path> m = []
+    static AvailableFrontends m = []
     {
-        boost::bimap<FrontendType, path> m;
+        AvailableFrontends m;
         m.insert({ FrontendType::Sw, "sw.cpp" });
+        m.insert({ FrontendType::Sw, "sw.cc" });
+        m.insert({ FrontendType::Sw, "sw.cxx" });
         m.insert({ FrontendType::Cppan, "cppan.yml" });
         return m;
     }();
@@ -1779,6 +1781,9 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         auto p = many_files_fn = BinaryDir / "self" / ("sw." + h + ".cpp");
         write_file_if_different(p, ctx.getText());
         lib += p;
+        lib[p].fancy_name = "[multiconfig]";
+        if (gVerbose)
+            lib[p].fancy_name += " (" + normalize_path(p) + ")";
 
         /*if (!(is_changed(p) ||
               File(lib.getOutputFile(), *fs).isChanged() ||
