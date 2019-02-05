@@ -97,6 +97,12 @@ struct SW_MANAGER_API PackageId
     // delete?
     bool empty() const { return ppath.empty()/* || !version.isValid()*/; }
 
+    bool isPublic() const { return ppath.isPublic(); }
+    bool isPrivate() const { return ppath.isPrivate(); }
+
+    bool isUser() const { return ppath.isUser(); }
+    bool isOrganization() const { return ppath.isOrganization(); }
+
     bool operator<(const PackageId &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
     bool operator==(const PackageId &rhs) const { return std::tie(ppath, version) == std::tie(rhs.ppath, rhs.version); }
     bool operator!=(const PackageId &rhs) const { return !operator==(rhs); }
@@ -112,9 +118,6 @@ struct SW_MANAGER_API PackageId
 
     Package toPackage() const;
     String toString(const String &delim = "-") const;
-
-    bool isPublic() const { return !isPrivate(); }
-    bool isPrivate() const { return ppath.is_pvt() || ppath.is_com(); }
 
 private:
     // cached vars
