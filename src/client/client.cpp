@@ -812,6 +812,83 @@ SUBCOMMAND_DECL(setup)
 #endif
 }
 
+sw::Remote *find_remote(sw::Settings &s, const String &name)
+{
+    sw::Remote *current_remote = nullptr;
+    for (auto &r : s.remotes)
+    {
+        if (r.name == name)
+        {
+            current_remote = &r;
+            break;
+        }
+    }
+    if (!current_remote)
+        throw SW_RUNTIME_ERROR("Remote not found: " + name);
+    return current_remote;
+}
+
+static ::cl::opt<String> remote_subcommand(::cl::Positional, ::cl::desc("remote subcomand"), ::cl::sub(subcommand_remote), ::cl::Required);
+static ::cl::list<String> remote_rest(::cl::desc("other remote args"), ::cl::sub(subcommand_remote), ::cl::ConsumeAfter);
+
+SUBCOMMAND_DECL(remote)
+{
+    // subcommands: add, alter, rename, remove
+
+    // sw remote add origin url:port
+    // sw remote remove origin
+    // sw remote rename origin origin2
+    // sw remote alter origin add token TOKEN
+
+    if (remote_subcommand == "alter" || remote_subcommand == "change")
+    {
+        int i = 0;
+        if (remote_rest.size() > i + 1)
+        {
+            auto token = remote_rest[i];
+            auto &us = Settings::get_user_settings();
+            auto r = find_remote(us, remote_rest[i]);
+
+            i++;
+            if (remote_rest.size() > i + 1)
+            {
+                if (remote_rest[i] == "add")
+                {
+                    i++;
+                    if (remote_rest.size() > i + 1)
+                    {
+                        if (remote_rest[i] == "token")
+                        {
+                            i++;
+                            if (remote_rest.size() >= i + 2) // publisher + token
+                            {
+                                sw::Remote::Publisher p;
+                                p.name = remote_rest[i];
+                                p.token = remote_rest[i+1];
+                                r->publishers[p.name] = p;
+                                us.save(get_config_filename());
+                            }
+                            else
+                                throw SW_RUNTIME_ERROR("missing publisher or token");
+                        }
+                        else
+                            throw SW_RUNTIME_ERROR("unknown add object: " + remote_rest[i]);
+                    }
+                    else
+                        throw SW_RUNTIME_ERROR("missing add object");
+                }
+                else
+                    throw SW_RUNTIME_ERROR("unknown alter command: " + remote_rest[i]);
+            }
+            else
+                throw SW_RUNTIME_ERROR("missing alter command");
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing remote name");
+        return;
+    }
+}
+
 SUBCOMMAND_DECL(list)
 {
     getPackagesDatabase().listPackages(list_arg);
@@ -874,19 +951,7 @@ SUBCOMMAND_DECL(upload)
     auto &us = Settings::get_user_settings();
     auto current_remote = &*us.remotes.begin();
     if (!upload_remote.empty())
-    {
-        current_remote = nullptr;
-        for (auto &r : us.remotes)
-        {
-            if (r.name == upload_remote)
-            {
-                current_remote = &r;
-                break;
-            }
-        }
-        if (!current_remote)
-            throw SW_RUNTIME_ERROR("Remote not found: " + upload_remote);
-    }
+        current_remote = find_remote(us, upload_remote);
 
     sw::FetchOptions opts;
     //opts.name_prefix = upload_prefix;

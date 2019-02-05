@@ -279,6 +279,7 @@ struct SW_MANAGER_API PackagePath : SecureSplitablePath<PackagePath>
 
     String getHash() const;
 
+    Base::value_type getNamespace() const;
     Base::value_type getOwner() const;
     Base::value_type getName() const;
 

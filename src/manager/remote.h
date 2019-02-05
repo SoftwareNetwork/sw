@@ -49,13 +49,19 @@ using DataSources = std::vector<DataSource>;
 
 struct Remote
 {
+    struct Publisher
+    {
+        String name;
+        String token;
+    };
+
     using Url = String;
     using SourcesUrls = std::vector<Url>;
 
     String name;
     Url url;
-    String user;
-    String token;
+
+    std::map<String, Publisher> publishers;
     bool secure = true;
 
     mutable std::shared_ptr<grpc::Channel> channel;

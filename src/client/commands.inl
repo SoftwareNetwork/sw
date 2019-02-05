@@ -27,6 +27,7 @@ SUBCOMMAND(create, "Create different projects.") COMMA
 SUBCOMMAND(install, "Add package to lock.") COMMA
 SUBCOMMAND(list, "List packages in database.") COMMA
 SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
+SUBCOMMAND(remote, "Manage remotes.") COMMA
 SUBCOMMAND(remove, "Remove package.") COMMA
 SUBCOMMAND(setup, "Used to do some system setup which may require administrator access.") COMMA
 SUBCOMMAND(test, "Run tests.") COMMA

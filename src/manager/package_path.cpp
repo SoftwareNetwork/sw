@@ -109,6 +109,13 @@ bool PackagePath::hasNamespace() const
     return false;
 }
 
+PackagePath::Base::value_type PackagePath::getNamespace() const
+{
+    if (size() == 0)
+        return Base::value_type();
+    return (*this)[0];
+}
+
 PackagePath::Base::value_type PackagePath::getOwner() const
 {
     if (size() < 2)

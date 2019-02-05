@@ -119,8 +119,12 @@ void Settings::load_main(const yaml &root, const SettingsType type)
             /*if (provider == "sw")
                 prm->default_source = &Remote::sw_source_provider;*/
         }
-        YAML_EXTRACT_VAR(kv.second, prm->user, "user", String);
-        YAML_EXTRACT_VAR(kv.second, prm->token, "token", String);
+        get_map_and_iterate(kv.second, "publishers", [&prm](auto &kv) {
+            Remote::Publisher p;
+            YAML_EXTRACT_VAR(kv.second, p.name, "name", String);
+            YAML_EXTRACT_VAR(kv.second, p.token, "token", String);
+            prm->publishers[p.name] = p;
+        });
         if (!o)
             remotes.push_back(*prm);
     });
@@ -272,12 +276,23 @@ void Settings::clear_local_settings()
 
 void Settings::save(const path &p) const
 {
+    yaml root;
+    for (auto &r : remotes)
+    {
+        root["remotes"][r.name]["url"] = r.url;
+        if (!r.secure)
+            root["remotes"][r.name]["secure"] = r.secure;
+        for (auto &[n, p] : r.publishers)
+        {
+            root["remotes"][r.name]["publishers"][p.name]["name"] = p.name;
+            root["remotes"][r.name]["publishers"][p.name]["token"] = p.token;
+        }
+    }
+    root["storage_dir"] = storage_dir.string();
+
     std::ofstream o(p);
     if (!o)
         throw SW_RUNTIME_ERROR("Cannot open file: " + p.string());
-    yaml root;
-    root["remotes"][DEFAULT_REMOTE_NAME]["url"] = remotes[0].url;
-    root["storage_dir"] = storage_dir.string();
     o << dump_yaml_config(root);
 }
 

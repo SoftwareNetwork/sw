@@ -39,7 +39,6 @@ static path getDir(bool local)
 static path getFilesDbFilename(const String &config, bool local)
 {
     auto p = getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
-    fs::create_directories(p.parent_path());
     return p;
 }
 
@@ -47,14 +46,12 @@ path getFilesLogFileName(const String &config, bool local)
 {
     auto cfg = sha256_short(getCurrentModuleNameHash() + "_" + config);
     path p = getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
-    fs::create_directories(p.parent_path());
     return p;
 }
 
 static path getCommandsDbFilename(bool local)
 {
     auto p = getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / "commands.bin";
-    fs::create_directories(p.parent_path());
     return p;
 }
 
@@ -62,7 +59,6 @@ path getCommandsLogFileName(bool local)
 {
     auto cfg = sha256_short(getCurrentModuleNameHash());
     path p = getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("log_" + cfg + ".bin");
-    fs::create_directories(p.parent_path());
     return p;
 }
 

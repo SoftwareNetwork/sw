@@ -27,14 +27,16 @@ void check_relative(const Remote &r, PackagePath &p)
 {
     throw SW_RUNTIME_ERROR("not implemented");
 
-    if (p.isRelative(r.user))
-        p = "pvt." + r.user + "." + p.toString();
+    //if (p.isRelative(r.user))
+        //p = "pvt." + r.user + "." + p.toString();
 }
 
 void apply_auth(const Remote &r, grpc::ClientContext &context)
 {
-    context.AddMetadata(SW_GRPC_METADATA_AUTH_USER, r.user);
-    context.AddMetadata(SW_GRPC_METADATA_AUTH_TOKEN, r.token);
+    if (r.publishers.empty())
+        throw SW_RUNTIME_ERROR("Empty publishers");
+    context.AddMetadata(SW_GRPC_METADATA_AUTH_USER, r.publishers.begin()->second.name);
+    context.AddMetadata(SW_GRPC_METADATA_AUTH_TOKEN, r.publishers.begin()->second.token);
 }
 
 Api::Api(const Remote &r)
