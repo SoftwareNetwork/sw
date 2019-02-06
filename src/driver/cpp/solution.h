@@ -88,6 +88,11 @@ struct SW_DRIVER_CPP_API Test : driver::cpp::CommandBuilder
     Test(const driver::cpp::CommandBuilder &cb)
         : driver::cpp::CommandBuilder(cb)
     {}
+
+    void prepare(const Solution &s)
+    {
+        // todo?
+    }
 };
 
 struct SW_DRIVER_CPP_API SolutionSettings

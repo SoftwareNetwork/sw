@@ -306,7 +306,7 @@ static std::set<path> listWindows10Kits()
     return kits;
 }
 
-void SolutionSettings::init()
+void SolutionSettings::init(const OS &HostOS)
 {
     if (TargetOS.is(OSType::Windows))
     {
@@ -318,10 +318,17 @@ void SolutionSettings::init()
         {
             if (TargetOS.Version >= Version(10) && Native.SDK.Version == getWin10KitDirName())
             {
-                // take current or the latest version
+                // take current or the latest version!
+                // sometimes current does not work:
+                //  on appveyor we have win10.0.14393.0, but no sdk
+                //  but we have the latest sdk there: win10.0.17763.0
                 auto dir = getWin10KitInspectionDir();
-                path curdir = dir / TargetOS.Version.toString(4);
-                if (fs::exists(curdir))
+                path cursdk = TargetOS.Version.toString(4);
+                path curdir = dir / cursdk;
+                // also check for some executable inside our dir
+                if (fs::exists(curdir) &&
+                    (fs::exists(Native.SDK.getPath("bin") / cursdk / "x64" / "rc.exe") ||
+                    fs::exists(Native.SDK.getPath("bin") / cursdk / "x86" / "rc.exe")))
                     Native.SDK.BuildNumber = curdir.filename();
                 else
                     Native.SDK.BuildNumber = *listWindows10Kits().rbegin();
@@ -1504,6 +1511,16 @@ void Build::prepare()
     // it will automatically handle this situation
     while (prepareStep())
         ;
+
+    // prepare tests
+    if (with_testing)
+    {
+        for (auto &s : solutions)
+        {
+            for (auto &t : s.tests)
+                ;
+        }
+    }
 
     //prepared = true;
 
