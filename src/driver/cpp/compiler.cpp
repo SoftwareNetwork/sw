@@ -413,42 +413,8 @@ void detectWindowsCompilers(struct Solution &s)
     } dir_suffix;
 
     // get suffix
-    switch (s.HostOS.Arch)
-    {
-    case ArchType::x86_64:
-        dir_suffix.host = "x64";
-        break;
-    case ArchType::x86:
-        dir_suffix.host = "x86";
-        break;
-        // arm
-        //dir_suffix.include = "arm";
-        //dir_suffix.lib = "arm";
-        // arm64 !
-        //dir_suffix.include = "arm";
-        //dir_suffix.lib = "arm64";
-    default:
-        throw SW_RUNTIME_ERROR("Unknown arch");
-    }
-
-    switch (s.Settings.TargetOS.Arch)
-    {
-    case ArchType::x86_64:
-        dir_suffix.target = "x64";
-        break;
-    case ArchType::x86:
-        //dir_suffix.host = "x86";
-        dir_suffix.target = "x86";
-        break;
-    case ArchType::arm:
-        dir_suffix.target = "arm";
-        break;
-    case ArchType::aarch64:
-        dir_suffix.target = "arm64";
-        break;
-    default:
-        throw SW_RUNTIME_ERROR("Unknown arch");
-    }
+    dir_suffix.host = toStringWindows(s.HostOS.Arch);
+    dir_suffix.target = toStringWindows(s.Settings.TargetOS.Arch);
 
     auto host_root = compiler / ("Host" + dir_suffix.host) / dir_suffix.host;
     NativeLinkerOptions LOpts;

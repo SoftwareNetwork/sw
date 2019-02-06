@@ -487,7 +487,6 @@ void Command::afterCommand()
 path Command::getResponseFilename() const
 {
     return unique_path() += ".rsp";
-    //return std::to_string(getHash()) + ".rsp";
 }
 
 String Command::getResponseFileContents(bool showIncludes) const
@@ -647,7 +646,8 @@ String Command::saveCommand() const
     if (do_not_save_command)
         return String{};
 
-    auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / getResponseFilename();
+    // use "fancy" rsp name = command hash
+    auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / (std::to_string(getHash()) + ".rsp");
     writeCommand(p);
 
     String s;

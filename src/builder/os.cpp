@@ -231,6 +231,23 @@ String toString(ArchType e)
 #undef ENUM
 }
 
+String toStringWindows(ArchType e)
+{
+    switch (e)
+    {
+    case ArchType::x86_64:
+        return "x64";
+    case ArchType::x86:
+        return "x86";
+    case ArchType::arm:
+        return "arm";
+    case ArchType::aarch64:
+        return "arm64";
+    default:
+        throw SW_RUNTIME_ERROR("Unknown Windows arch");
+    }
+}
+
 String toString(SubArchType e)
 {
     return "";

@@ -89,13 +89,22 @@ FileRegex::FileRegex(const String &fn, bool recursive)
     } while (1);
 }
 
+FileRegex::FileRegex(const path &d, const String &fn, bool recursive)
+    : FileRegex(fn, recursive)
+{
+    if (dir.empty())
+        dir = d;
+    else if (!d.empty())
+        dir = d / dir;
+}
+
 FileRegex::FileRegex(const std::regex &r, bool recursive)
-    :r(r), recursive(recursive)
+    : r(r), recursive(recursive)
 {
 }
 
-FileRegex::FileRegex(const path &dir, const std::regex &r, bool recursive)
-    : dir(dir), r(r), recursive(recursive)
+FileRegex::FileRegex(const path &d, const std::regex &r, bool recursive)
+    : dir(d), r(r), recursive(recursive)
 {
 }
 

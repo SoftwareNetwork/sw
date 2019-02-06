@@ -189,6 +189,9 @@ SW_BUILDER_API
 String toString(ArchType e);
 
 SW_BUILDER_API
+String toStringWindows(ArchType e);
+
+SW_BUILDER_API
 String toString(SubArchType e);
 
 SW_BUILDER_API

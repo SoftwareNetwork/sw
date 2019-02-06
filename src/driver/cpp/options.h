@@ -159,9 +159,10 @@ struct SW_DRIVER_CPP_API FileRegex
     std::regex r;
     bool recursive;
 
-    FileRegex(const String &fn, bool recursive = false);
-    FileRegex(const std::regex &r, bool recursive = false);
-    FileRegex(const path &dir, const std::regex &r, bool recursive = false);
+    FileRegex(const String &r, bool recursive);
+    FileRegex(const std::regex &r, bool recursive);
+    FileRegex(const path &dir, const String &r, bool recursive);
+    FileRegex(const path &dir, const std::regex &r, bool recursive);
 };
 
 struct SW_DRIVER_CPP_API Dependency

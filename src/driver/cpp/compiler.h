@@ -73,7 +73,7 @@ StringSet getCppSourceFileExtensions();
 
 struct SW_DRIVER_CPP_API NativeToolchain
 {
-    struct SDK
+    struct SW_DRIVER_CPP_API SDK
     {
         // root to sdks
         //  example: c:\\Program Files (x86)\\Windows Kits

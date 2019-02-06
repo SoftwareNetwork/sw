@@ -23,6 +23,7 @@ message UnresolvedPackages {
         string range = 2;
     }
     repeated UnresolvedPackage packages = 1;
+    // optional user info (name, token), repeated
 }
 
 message ResolvedPackages {
@@ -43,6 +44,7 @@ message ResolvedPackages {
         int64 group_number = 16;
         int32 prefix = 17;
         // int32 archive_type;
+        // optional string download_url;
     }
     repeated ResolvedPackage packages = 1;
 }

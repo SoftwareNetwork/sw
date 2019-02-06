@@ -52,7 +52,7 @@ inline DependencyPtr operator "" _dep(const char *s, size_t)
 // regex
 inline FileRegex operator "" _r(const char *s, size_t)
 {
-    return FileRegex(s);
+    return FileRegex(s, false);
 }
 
 // recursive regex

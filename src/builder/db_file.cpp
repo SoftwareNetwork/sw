@@ -38,28 +38,24 @@ static path getDir(bool local)
 
 static path getFilesDbFilename(const String &config, bool local)
 {
-    auto p = getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
-    return p;
+    return getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
 }
 
 path getFilesLogFileName(const String &config, bool local)
 {
     auto cfg = sha256_short(getCurrentModuleNameHash() + "_" + config);
-    path p = getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
-    return p;
+    return getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
 }
 
 static path getCommandsDbFilename(bool local)
 {
-    auto p = getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / "commands.bin";
-    return p;
+    return getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / "commands.bin";
 }
 
 path getCommandsLogFileName(bool local)
 {
     auto cfg = sha256_short(getCurrentModuleNameHash());
-    path p = getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("log_" + cfg + ".bin");
-    return p;
+    return getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("log_" + cfg + ".bin");
 }
 
 static void load(FileStorage &fs, const path &fn,
@@ -204,6 +200,7 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, b
         for (auto &[f, d] : f->implicit_dependencies)
             b.write(std::hash<path>()(d->file));
     }*/
+    fs::create_directories(f.parent_path());
     b.save(f);
 }
 
@@ -289,7 +286,9 @@ void FileDb::save(ConcurrentCommandStorage &commands, bool local) const
         b.write(k);
         b.write(*v);
     }*/
-    b.save(getCommandsDbFilename(local));
+    auto p = getCommandsDbFilename(local);
+    fs::create_directories(p.parent_path());
+    b.save(p);
 }
 
 }
