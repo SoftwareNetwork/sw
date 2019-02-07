@@ -306,7 +306,7 @@ static std::set<path> listWindows10Kits()
     return kits;
 }
 
-void SolutionSettings::init(const OS &HostOS)
+void SolutionSettings::init()
 {
     if (TargetOS.is(OSType::Windows))
     {
