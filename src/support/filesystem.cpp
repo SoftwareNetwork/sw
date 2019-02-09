@@ -12,6 +12,9 @@
 
 #define SW_NAME "sw"
 
+namespace sw
+{
+
 path get_config_filename()
 {
     return get_root_directory() / "sw.yml";
@@ -93,4 +96,6 @@ void create_directories(const path &p)
     fs::create_directories(p);
     boost::upgrade_to_unique_lock lk2(lk);
     dirs.insert(p);
+}
+
 }

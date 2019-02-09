@@ -17,6 +17,9 @@
 // so we leave .sw for some misc but important files to include into repositories
 #define SW_BINARY_DIR ".sw"
 
+namespace sw
+{
+
 using Stamps = std::unordered_map<path, time_t>;
 using SourceGroups = std::map<String, std::set<String>>;
 
@@ -41,3 +44,5 @@ path findRootDirectory(const path &p);
 // cached version
 SW_SUPPORT_API
 void create_directories(const path &p);
+
+}
