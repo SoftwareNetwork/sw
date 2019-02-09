@@ -411,8 +411,11 @@ void Resolver::download(const ExtendedPackageData &d, const path &fn)
     if (provs.empty())
         throw SW_RUNTIME_ERROR("No data sources available");
 
+    Strings out_hashes;
     if (std::none_of(provs.begin(), provs.end(),
-        [&](auto &prov) {return prov.downloadPackage(d, d.hash, fn, /*query_local_db*/ !gForceServerQuery);}))
+                     [&](auto &prov) {
+                         return prov.downloadPackage(d, d.hash, fn, out_hashes.emplace_back());
+                     }))
     {
         // if we get hashes from local db
         // they can be stalled within server refresh time (15 mins)
@@ -469,7 +472,19 @@ void Resolver::download_and_unpack()
 
         // maybe d.target_name instead of version_dir.string()?
         path fn = make_archive_name((temp_directory_path("dl") / d.toString()).string());
-        download(d, fn);
+        try
+        {
+            download(d, fn);
+        }
+        catch (LocalDbHashException &)
+        {
+            throw;
+        }
+        catch (RuntimeError &)
+        {
+            LOG_TRACE(logger, "d.hash = " << d.hash << ", stampfile_hash = " << stampfile_hash);
+            throw;
+        }
 
         // verify before cleaning old pkg
         //if (Settings::get_local_settings().verify_all)

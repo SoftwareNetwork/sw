@@ -426,6 +426,8 @@ CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
 {
     if constexpr (std::is_same_v<T, path> || std::is_convertible_v<T, String>)
     {
+        throw SW_RUNTIME_ERROR("not implemented");
+
         cb.c->setProgram(*t.t);
         cb.c->program_set = true;
         return cb;

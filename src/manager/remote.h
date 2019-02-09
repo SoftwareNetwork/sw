@@ -11,6 +11,7 @@
 #include "http.h"
 
 #include <functional>
+#include <optional>
 
 #define DEFAULT_REMOTE_NAME "origin"
 
@@ -42,7 +43,8 @@ struct DataSource
 
     String getUrl(const PackageId &pkg) const;
 
-    bool downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first = false) const;
+    // returns hash
+    bool downloadPackage(const Package &d, const String &hash, const path &fn, String &dl_hash) const;
 };
 
 using DataSources = std::vector<DataSource>;

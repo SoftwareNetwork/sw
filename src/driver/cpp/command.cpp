@@ -78,9 +78,22 @@ path Command::getProgram() const
         auto t = d->target;
         if (!t)
             throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
-        p = ((NativeTarget*)t)->getOutputFile();
-        if (p.empty())
-            throw SW_RUNTIME_ERROR("Empty program from package: " + t->getPackage().toString());
+        if (auto nt = t->as<NativeTarget>())
+        {
+            p = nt->getOutputFile();
+            if (p.empty())
+                throw SW_RUNTIME_ERROR("Empty program from package: " + t->getPackage().toString());
+            if (!File(p, *fs).isGenerated())
+            {
+                if (auto nt = t->as<NativeExecutedTarget>(); nt && *nt->HeaderOnly)
+                    throw SW_RUNTIME_ERROR("Program is used from package: " + t->getPackage().toString() + " which is header only");
+                if (!File(p, *fs).isGeneratedAtAll())
+                    throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated at all: " + normalize_path(p));
+                throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated: " + normalize_path(p));
+            }
+        }
+        else
+            throw SW_RUNTIME_ERROR("Package: " + t->getPackage().toString() + " has unknown type");
     }
     else if (dependency_set)
     {

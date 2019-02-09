@@ -19,6 +19,9 @@ SW_SUPPORT_API
 String hash_config(const String &c);
 
 SW_SUPPORT_API
+String get_file_hash(const path &fn);
+
+SW_SUPPORT_API
 bool check_file_hash(const path &fn, const String &hash);
 
 SW_SUPPORT_API

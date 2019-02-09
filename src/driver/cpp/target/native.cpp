@@ -107,6 +107,10 @@ bool NativeExecutedTarget::init()
 driver::cpp::CommandBuilder NativeExecutedTarget::addCommand() const
 {
     driver::cpp::CommandBuilder cb(*getSolution()->fs);
+    // set as default
+    // source dir contains more files than bdir?
+    // sdir or bdir?
+    cb.c->working_directory = SourceDir;
     cb.c->addPathDirectory(getOutputBaseDir() / getConfig());
     cb << *this;
     return cb;
@@ -747,6 +751,7 @@ Commands NativeExecutedTarget::getCommands1() const
     Commands cmds;
     if (HeaderOnly && HeaderOnly.value())
     {
+        //LOG_TRACE(logger, "target " << pkg.toString() << " is header only");
         cmds.insert(generated.begin(), generated.end());
         return cmds;
     }
@@ -2202,7 +2207,7 @@ bool NativeExecutedTarget::prepare()
     case 8:
         savePrecomputedData();
         clearGlobCache();
-        break;
+    SW_RETURN_MULTIPASS_END;
     }
 
     SW_RETURN_MULTIPASS_END;

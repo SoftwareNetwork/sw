@@ -575,6 +575,7 @@ static void addImportLibrary(NativeExecutedTarget &t)
     write_file_if_different(getImportDefinitionsFile(), defs);
 
     auto c = t.addCommand();
+    c.c->working_directory = getImportDefinitionsFile().parent_path();
     c << t.Librarian->file
         << cmd::in(getImportDefinitionsFile(), cmd::Prefix{ "-DEF:" })
         << cmd::out(getImportLibraryFile(), cmd::Prefix{ "-OUT:" })
@@ -1136,7 +1137,10 @@ Solution::CommandExecutionPlan Solution::getExecutionPlan(const Commands &cmds) 
     ep.printGraph(ep.getGraph(), cyclic_path / "processed", ep.commands, true);
     ep.printGraph(ep.getGraphUnprocessed(), cyclic_path / "unprocessed", ep.unprocessed_commands, true);
 
-    throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");
+    //String error = "Cannot create execution plan because of cyclic dependencies: strong components = " + std::to_string(n);
+    String error = "Cannot create execution plan because of cyclic dependencies";
+
+    throw SW_RUNTIME_ERROR(error);
 }
 
 void Solution::call_event(TargetBase &t, CallbackType et)
@@ -2535,16 +2539,17 @@ void Build::run_package(const String &s)
 {
     build_package(s);
 
-    auto p = solutions[0].getTargetPtr(extractFromString(s).resolve())->as<NativeExecutedTarget>();
-    if (!p || p->getType() != TargetType::NativeExecutable)
+    auto nt = solutions[0].getTargetPtr(extractFromString(s).resolve())->as<NativeExecutedTarget>();
+    if (!nt || nt->getType() != TargetType::NativeExecutable)
         throw SW_RUNTIME_ERROR("Unsupported package type");
 
-    auto cb = p->addCommand();
+    auto cb = nt->addCommand();
 
-    cb.c->program = p->getOutputFile();
-    cb.c->working_directory = p->pkg.getDirObjWdir();
+    cb.c->always = true;
+    cb.c->program = nt->getOutputFile();
+    cb.c->working_directory = nt->pkg.getDirObjWdir();
     fs::create_directories(cb.c->working_directory);
-    p->setupCommandForRun(*cb.c);
+    nt->setupCommandForRun(*cb.c);
     /*if (cb.c->create_new_console)
     {
         cb.c->inherit = true;
@@ -2553,7 +2558,7 @@ void Build::run_package(const String &s)
     else*/
         cb.c->detached = true;
 
-    run(p->pkg, *cb.c);
+    run(nt->pkg, *cb.c);
 }
 
 static bool hasUserProvidedInformation()

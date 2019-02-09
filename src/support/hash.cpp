@@ -27,9 +27,14 @@ String hash_config(const String &c)
     return sha256_short(c);
 }
 
+String get_file_hash(const path &fn)
+{
+    return strong_file_hash(fn);
+}
+
 bool check_file_hash(const path &fn, const String &hash)
 {
-    return hash == strong_file_hash(fn);
+    return hash == get_file_hash(fn);
 }
 
 static path getCurrentModuleName()

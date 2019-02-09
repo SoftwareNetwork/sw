@@ -50,7 +50,7 @@ String DataSource::getUrl(const PackageId &pkg) const
     );
 }
 
-bool DataSource::downloadPackage(const Package &d, const String &hash, const path &fn, bool try_only_first) const
+bool DataSource::downloadPackage(const Package &d, const String &hash, const path &fn, String &dl_hash) const
 {
     auto download_from_source = [&](const auto &url)
     {
@@ -59,15 +59,31 @@ bool DataSource::downloadPackage(const Package &d, const String &hash, const pat
             LOG_TRACE(logger, "Downloading file: " << url);
             download_file(url, fn);
         }
-        catch (const std::exception&)
+        catch (std::exception &e)
         {
+            LOG_TRACE(logger, "Downloading file: " << url << ", error: " << e.what());
             return false;
         }
-        return check_strong_file_hash(fn, hash) || check_file_hash(fn, hash);
+        return true;
     };
 
-    if (download_from_source(getUrl(d)))
-        return true;
+    auto url = getUrl(d);
+    if (download_from_source(url))
+    {
+        auto sfh = get_strong_file_hash(fn, hash);
+        if (sfh == hash)
+        {
+            dl_hash = sfh;
+            return true;
+        }
+        auto fh = get_file_hash(fn);
+        if (fh == hash)
+        {
+            dl_hash = fh;
+            return true;
+        }
+        LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << sfh);
+    }
     return false;
 }
 

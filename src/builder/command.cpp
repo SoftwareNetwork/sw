@@ -36,6 +36,8 @@ static cl::opt<bool> save_all_commands("save-all-commands");
 static cl::opt<bool> save_executed_commands("save-executed-commands");
 static cl::opt<bool> explain_outdated("explain-outdated", cl::desc("Explain outdated commands"));
 static cl::opt<bool> explain_outdated_full("explain-outdated-full", cl::desc("Explain outdated commands with more info"));
+static cl::opt<bool> hide_output("hide-output");
+static cl::opt<bool> show_output("show-output");
 
 namespace sw
 {
@@ -563,15 +565,20 @@ void Command::execute1(std::error_code *ec)
 
     auto print_outputs = [this]()
     {
-        /*boost::trim(out.text);
+        if (hide_output)
+            return;
+        if (!show_output)
+            return;
+        boost::trim(out.text);
         boost::trim(err.text);
         String s;
         if (!out.text.empty())
             s += out.text + "\n";
         if (!err.text.empty())
             s += err.text + "\n";
+        boost::trim(s);
         if (!s.empty())
-            LOG_INFO(logger, s);*/
+            LOG_INFO(logger, s);
     };
 
     auto make_error_string = [this, &print_outputs](const String &e)
@@ -729,11 +736,18 @@ void Command::writeCommand(const path &p) const
             if (a == "-showIncludes")
                 continue;
             t += "\"" + escape_cmd_arg(a) + "\" ";
-            if (!bat)
+            if (bat)
+                t += "^\n    ";
+            else
                 t += "\\\n\t";
         }
-        if (!bat && !args.empty())
-            t.resize(t.size() - 3);
+        if (!args.empty())
+        {
+            if (bat)
+                t.resize(t.size() - 6);
+            else
+                t.resize(t.size() - 3);
+        }
     }
     if (bat)
         t += "%";
