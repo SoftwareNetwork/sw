@@ -8,9 +8,12 @@
 
 #include <boost/dll.hpp>
 #include <boost/thread/lock_types.hpp>
+#include <primitives/sw/settings.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "module");
+
+static cl::opt<bool> do_not_remove_bad_module("do-not-remove-bad-module");
 
 namespace sw
 {
@@ -55,14 +58,16 @@ Module::Module(const path &dll)
     {
         err += ": "s + e.what();
         err += " Will rebuild on the next run.";
-        fs::remove(dll);
+        if (!do_not_remove_bad_module)
+            fs::remove(dll);
         throw SW_RUNTIME_ERROR(err);
     }
     catch (...)
     {
         err += ". Will rebuild on the next run.";
         LOG_ERROR(logger, err);
-        fs::remove(dll);
+        if (!do_not_remove_bad_module)
+            fs::remove(dll);
         throw;
     }
 
