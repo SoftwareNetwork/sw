@@ -1650,6 +1650,10 @@ void GNULibrarian::prepareCommand1(const TargetBase &t)
     if (Output.empty())
         throw SW_RUNTIME_ERROR("Output file is not set");
 
+    // these's some issue with archives not recreated, but keeping old symbols
+    // TODO: investigate, fix and remove?
+    cmd->remove_outputs_before_execution = true;
+
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
         //return nullptr;
