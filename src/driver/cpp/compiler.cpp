@@ -952,8 +952,8 @@ path NativeToolchain::SDK::getPath(const path &subdir) const
 {
     if (Root.empty())
         throw SW_RUNTIME_ERROR("empty sdk root");
-    if (Version.empty())
-        throw SW_RUNTIME_ERROR("empty sdk version");
+    //if (Version.empty())
+        //throw SW_RUNTIME_ERROR("empty sdk version, root is: " + normalize_path(Root));
     if (subdir.empty())
         return Root / Version;
     return Root / Version / subdir / BuildNumber;
