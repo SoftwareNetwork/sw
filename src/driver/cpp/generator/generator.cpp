@@ -53,6 +53,8 @@ String toPathString(GeneratorType t)
         return "batch";
     case GeneratorType::Make:
         return "make";
+    case GeneratorType::NMake:
+        return "nmake";
     case GeneratorType::Shell:
         return "shell";
     case GeneratorType::CompilationDatabase:
@@ -80,6 +82,8 @@ String toString(GeneratorType t)
         return "Batch";
     case GeneratorType::Make:
         return "Make";
+    case GeneratorType::NMake:
+        return "NMake";
     case GeneratorType::Shell:
         return "Shell";
     case GeneratorType::CompilationDatabase:
@@ -98,8 +102,6 @@ GeneratorType fromString(const String &s)
         return GeneratorType::VisualStudio;
     else if (boost::iequals(s, "VS"))
         return GeneratorType::VisualStudioUtility;
-        //return GeneratorType::VisualStudioNMakeAndUtility;
-        //return GeneratorType::VisualStudioNMake;
     else if (boost::iequals(s, "VS_NMake"))
         return GeneratorType::VisualStudioNMake;
     else if (boost::iequals(s, "VS_Utility") || boost::iequals(s, "VS_Util"))
@@ -110,6 +112,8 @@ GeneratorType fromString(const String &s)
         return GeneratorType::Ninja;
     else if (boost::iequals(s, "Make") || boost::iequals(s, "Makefile"))
         return GeneratorType::Make;
+    else if (boost::iequals(s, "NMake"))
+        return GeneratorType::NMake;
     else if (boost::iequals(s, "Batch"))
         return GeneratorType::Batch;
     else if (boost::iequals(s, "Shell"))
@@ -138,6 +142,7 @@ std::unique_ptr<Generator> Generator::create(const String &s)
     case GeneratorType::Ninja:
         g = std::make_unique<NinjaGenerator>();
         break;
+    case GeneratorType::NMake:
     case GeneratorType::Make:
         g = std::make_unique<MakeGenerator>();
         break;
@@ -1400,7 +1405,7 @@ struct NinjaContext : primitives::Context
 
         bool rsp = c->needsResponseFile();
         path rsp_dir = dir / "rsp";
-        path rsp_file = fs::absolute(rsp_dir / ("rsp" + std::to_string(c->getHash()) + ".rsp"));
+        path rsp_file = fs::absolute(rsp_dir / (std::to_string(c->getHash()) + ".rsp"));
         if (rsp)
             fs::create_directories(rsp_dir);
 
@@ -1501,7 +1506,7 @@ void NinjaGenerator::generate(const Build &b)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.getConfig();
+    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
 
     NinjaContext ctx;
 
@@ -1518,6 +1523,7 @@ void NinjaGenerator::generate(const Build &b)
 
 struct MakeContext : primitives::Context
 {
+    bool nmake = false;
     std::unordered_map<path, size_t> programs;
     std::unordered_map<path, size_t> generated_programs;
 
@@ -1635,8 +1641,16 @@ struct MakeContext : primitives::Context
         if (!c.working_directory.empty())
             s += "cd \"" + normalize_path(c.working_directory) + "\" && ";
 
-        for (auto &[k,v] : c.environment)
-            s += k + "=" + v + " \\";
+        for (auto &[k, v] : c.environment)
+        {
+            if (nmake)
+                s += "set ";
+            s += k + "=" + v;
+            if (nmake)
+                s += "\n@";
+            else
+                s += " \\";
+        }
 
         auto prog = c.getProgram();
         bool gen = File(prog, *c.fs).isGeneratedAtAll();
@@ -1659,6 +1673,15 @@ struct MakeContext : primitives::Context
         }
         else
             s += "@" + normalize_path(rsp);
+
+        if (!c.in.file.empty())
+            s += " < " + normalize_path(c.in.file);
+        if (!c.out.file.empty())
+            s += " > " + normalize_path(c.out.file);
+        if (!c.err.file.empty())
+            s += " 2> " + normalize_path(c.err.file);
+
+        // end of command
         commands.push_back(s);
 
         addCommands(c.getName(), commands);
@@ -1722,8 +1745,10 @@ struct MakeContext : primitives::Context
         return s + std::to_string(n);
     }
 
-    static String mkdir(const Files &p, bool gen = false)
+    String mkdir(const Files &p, bool gen = false)
     {
+        if (nmake)
+            return "@-if not exist " + normalize_path_windows(printFiles(p, gen)) + " mkdir " + normalize_path_windows(printFiles(p, gen));
         return "@-mkdir -p " + printFiles(p, gen);
     }
 };
@@ -1732,11 +1757,12 @@ void MakeGenerator::generate(const Build &b)
 {
     // https://www.gnu.org/software/make/manual/html_node/index.html
 
-    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.getConfig());
+    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig());
 
     auto ep = b.solutions[0].getExecutionPlan();
 
     MakeContext ctx;
+    ctx.nmake = type == GeneratorType::NMake;
     ctx.gatherPrograms(ep.commands);
 
     String commands_fn = "commands.mk";
@@ -1774,7 +1800,10 @@ void MakeGenerator::generate(const Build &b)
     outputs.clear();
     for (auto &c : ep.commands)
         outputs.insert(c->outputs.begin(), c->outputs.end());
-    ctx.addTarget("clean", {}, { "@rm -f " + MakeContext::printFiles(outputs, true) });
+    if (ctx.nmake)
+        ctx.addTarget("clean", {}, { "@del " + normalize_path_windows(MakeContext::printFiles(outputs, true)) });
+    else
+        ctx.addTarget("clean", {}, { "@rm -f " + MakeContext::printFiles(outputs, true) });
 
     write_file(d / "Makefile", ctx.getText());
 }
@@ -1896,7 +1925,7 @@ void BatchGenerator::generate(const Build &b)
         write_file(p, t + s);
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getConfig();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
 
     auto p = b.solutions[0].getExecutionPlan();
 
@@ -1941,7 +1970,7 @@ void CompilationDatabaseGenerator::generate(const Build &b)
         write_file(p, j.dump(2));
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getConfig();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
 
     auto p = b.solutions[0].getExecutionPlan();
 
