@@ -724,6 +724,7 @@ void detectNonWindowsCompilers(struct Solution &s)
     if (s.HostOS.is(OSType::Macos))
     {
         // also detect brew
+        if (fs::exists("/usr/local/Cellar/llvm"))
         for (auto &d : fs::directory_iterator("/usr/local/Cellar/llvm"))
         {
             clang_vers.push_back(d.path() / "bin/clang");

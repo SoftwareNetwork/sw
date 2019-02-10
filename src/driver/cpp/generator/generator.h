@@ -28,7 +28,6 @@ enum class GeneratorType
     Ninja,
     QMake,
     Shell,
-    UnixMakefiles,
     VisualStudio,
     VisualStudioNMake,
     VisualStudioUtility,
