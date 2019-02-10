@@ -230,6 +230,7 @@ protected:
 private:
     mutable size_t hash = 0;
     Strings rsp_args;
+    mutable String log_string;
 
     virtual void execute1(std::error_code *ec = nullptr);
     virtual size_t getHash1() const;

@@ -578,7 +578,7 @@ void Command::execute1(std::error_code *ec)
             s += err.text + "\n";
         boost::trim(s);
         if (!s.empty())
-            LOG_INFO(logger, s);
+            LOG_INFO(logger, log_string + "\n" + s);
     };
 
     auto make_error_string = [this, &print_outputs](const String &e)
@@ -844,7 +844,6 @@ String Command::getName(bool short_name) const
     }
     if (name[0] == '\"' && name.back() == '\"')
         return name;
-    //return "Building: \"" + (short_name ? name_short : name) + "\"";
     return "\"" + name + "\"";
 }
 
@@ -855,10 +854,17 @@ void Command::printLog() const
     static Executor eprinter(1);
     if (current_command)
     {
-        std::string msg = "[" + std::to_string((*current_command)++) + "/" + std::to_string(total_commands->load()) + "] " + getName();
-        eprinter.push([msg]
+        eprinter.push([this]
         {
-            LOG_INFO(logger, msg);
+            log_string = "[" + std::to_string((*current_command)++) + "/" + std::to_string(total_commands->load()) + "] " + getName();
+
+            // we cannot use this one because we must sync with print_outputs() call, both must use the same logger or (synced)stdout
+            //std::cout << "\r" << log_string;
+
+            // use this when logger won't call endl (custom sink is required)
+            //LOG_INFO(logger, "\r" + log_string);
+
+            LOG_INFO(logger, log_string);
         });
     }
 }
