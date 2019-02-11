@@ -891,16 +891,19 @@ void PackagesDatabase::updateDb() const
     if (!Settings::get_system_settings().can_update_packages_db || !isCurrentDbOld())
         return;
 
-    LOG_TRACE(logger, "Checking remote version");
-    int version_remote = 0;
-    try
+    static int version_remote = []()
     {
-        version_remote = std::stoi(download_file(db_version_url));
-    }
-    catch (std::exception &e)
-    {
-        LOG_DEBUG(logger, "Couldn't download db version file: " << e.what());
-    }
+        LOG_TRACE(logger, "Checking remote version");
+        try
+        {
+            return std::stoi(download_file(db_version_url));
+        }
+        catch (std::exception &e)
+        {
+            LOG_DEBUG(logger, "Couldn't download db version file: " << e.what());
+        }
+        return 0;
+    }();
     if (version_remote > readPackagesDbVersion(db_repo_dir))
     {
         // multiprocess aware
