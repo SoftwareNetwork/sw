@@ -78,6 +78,8 @@ bool gWithTesting;
 void build_self(sw::Solution &s);
 void check_self(sw::Checker &c);
 
+// TODO: add '#pragma sw driver ...'
+
 namespace sw
 {
 
@@ -491,23 +493,6 @@ bool Solution::skipTarget(TargetScope Scope) const
         )
         return !with_testing;
     return false;
-}
-
-TargetBaseTypePtr Solution::resolveTarget(const UnresolvedPackage &pkg) const
-{
-    throw SW_RUNTIME_ERROR("disabled");
-
-    /*if (resolved_targets.find(pkg) == resolved_targets.end())
-    {
-        for (const auto &[p, t] : getChildren())
-        {
-            if (pkg.canBe(p))
-            {
-                resolved_targets[pkg] = t;
-            }
-        }
-    }
-    return resolved_targets[pkg];*/
 }
 
 path Solution::getTestDir() const
@@ -1806,11 +1791,31 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
     auto &solution = solutions[0];
 
+    auto &pkgdb = getPackagesDatabase();
+    // make parallel?
+    auto get_real_package = [&pkgdb](const auto &pkg) -> PackageId
+    {
+        if (pkg.group_number)
+            return pkg;
+        auto p = pkgdb.getGroupLeader(pkg.group_number);
+        if (fs::exists(p.getDirSrc2() / "sw.cpp"))
+            return p;
+        fs::create_directories(p.getDirSrc2());
+        fs::copy_file(pkg.getDirSrc2() / "sw.cpp", p.getDirSrc2() / "sw.cpp");
+        //resolve_dependencies({p}); // p might not be downloaded
+        return p;
+    };
+
+    auto get_real_package_config = [&get_real_package](const auto &pkg)
+    {
+        return get_real_package(pkg).getDirSrc2() / "sw.cpp";
+    };
+
     Files files;
     std::unordered_map<path, PackageId> output_names;
     for (auto &pkg : pkgs)
     {
-        auto p = pkg.getDirSrc2() / "sw.cpp";
+        auto p = get_real_package_config(pkg);
         files.insert(p);
         output_names[p] = pkg;
     }
@@ -1879,7 +1884,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
         for (auto &r : pkgs)
         {
-            auto fn = r.getDirSrc2() / "sw.cpp";
+            auto fn = get_real_package_config(r);
             auto h = getFilesHash({ fn });
             ctx.addLine("// " + r.toString());
             ctx.addLine("// " + normalize_path(fn));

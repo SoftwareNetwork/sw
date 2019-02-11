@@ -1801,7 +1801,7 @@ bool NativeExecutedTarget::prepare()
             if (f->file.extension() != ".c")
                 c->CPPStandard = CPPVersion;
 
-            if (IsConfig && c->PrecompiledHeader && c->PrecompiledHeader().create)
+            if (IsConfig/* || c->PrecompiledHeader && c->PrecompiledHeader().create*/)
             {
                 remove_bdirs(c);
             }
@@ -1869,7 +1869,7 @@ bool NativeExecutedTarget::prepare()
             {
                 gnu_setup(f, c);
 
-                if (IsConfig && c->EmitPCH)
+                if (IsConfig/* || c->EmitPCH*/)
                 {
                     remove_bdirs(c);
                 }
@@ -1878,7 +1878,7 @@ bool NativeExecutedTarget::prepare()
             {
                 gnu_setup(f, c);
 
-                if (IsConfig && c->Language && c->Language() == "c++-header"s)
+                if (IsConfig/* || c->Language && c->Language() == "c++-header"s*/)
                 {
                     remove_bdirs(c);
                 }

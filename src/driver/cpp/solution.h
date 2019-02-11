@@ -198,8 +198,6 @@ public:
 
     bool skipTarget(TargetScope Scope) const;
 
-    TargetBaseTypePtr resolveTarget(const UnresolvedPackage &) const;
-
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
     Commands tests;

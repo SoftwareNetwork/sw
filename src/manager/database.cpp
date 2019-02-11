@@ -1288,6 +1288,24 @@ db::PackageId PackagesDatabase::getPackageId(const PackagePath &ppath) const
     return id;
 }
 
+PackageId PackagesDatabase::getGroupLeader(PackageVersionGroupNumber n) const
+{
+    const auto pkgs = ::db::packages::Package{};
+    const auto vpkgs = ::db::packages::PackageVersion{};
+    for (const auto &row : (*db)(select(pkgs.path, vpkgs.version)
+        .from(vpkgs.join(pkgs).on(vpkgs.packageId == pkgs.packageId))
+        .where(vpkgs.groupNumber == n)
+        .order_by(vpkgs.groupNumber.asc()))
+        )
+    {
+        PackageId p;
+        p.ppath = row.path.value();
+        p.version = row.version.value();
+        return p;
+    }
+    throw SW_RUNTIME_ERROR("Group leader not found for group: " + std::to_string(n));
+}
+
 Packages PackagesDatabase::getDependentPackages(const PackageId &pkg)
 {
     Packages r;

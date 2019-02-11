@@ -164,6 +164,7 @@ public:
     Packages getTransitiveDependentPackages(const Packages &pkgs);
 
     db::PackageId getPackageId(const PackagePath &ppath) const;
+    PackageId getGroupLeader(PackageVersionGroupNumber) const;
 
     DataSources getDataSources();
 
