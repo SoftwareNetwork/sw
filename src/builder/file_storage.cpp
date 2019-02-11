@@ -102,15 +102,20 @@ FileStorage::~FileStorage()
 {
     try
     {
-        async_file_log_.reset();
-        async_command_log_.reset();
-        async_command_log_local_.reset();
+        closeLogs();
         save();
     }
     catch (std::exception &e)
     {
         LOG_ERROR(logger, "Error during file db save: " << e.what());
     }
+}
+
+void FileStorage::closeLogs()
+{
+    async_file_log_.reset();
+    async_command_log_.reset();
+    async_command_log_local_.reset();
 }
 
 #ifdef _WIN32

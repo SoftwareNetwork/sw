@@ -44,6 +44,7 @@ struct SW_BUILDER_API FileStorage
     void load();
     void save();
     void reset();
+    void closeLogs();
 
     FileRecord *registerFile(const File &f);
     FileRecord *registerFile(const path &f);

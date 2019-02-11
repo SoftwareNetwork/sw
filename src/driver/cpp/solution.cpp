@@ -422,6 +422,8 @@ Solution::Solution(const Solution &rhs)
 
 Solution::~Solution()
 {
+    if (fs)
+        fs->closeLogs();
     clear();
 }
 
