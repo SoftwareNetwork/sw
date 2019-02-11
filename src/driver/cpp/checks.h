@@ -67,7 +67,7 @@ struct SW_DRIVER_CPP_API CheckParameters
 //using CheckValue = int64_t;
 using CheckValue = int;
 
-struct SW_DRIVER_CPP_API Check : CommandData<Check>
+struct SW_DRIVER_CPP_API Check : std::enable_shared_from_this<Check>, CommandData<Check>
 {
     // every check has its definition to be added to compilation process
     // e.g. HAVE_STDINT_H

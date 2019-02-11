@@ -45,6 +45,7 @@ bool build(const path &p)
 bool build(const Files &files_or_dirs)
 {
     // proper multibuilds must get commands and create a single execution plan
+    throw SW_RUNTIME_ERROR("not implemented");
     return true;
 }
 

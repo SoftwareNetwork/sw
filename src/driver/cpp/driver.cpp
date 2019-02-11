@@ -66,12 +66,14 @@ PackageScriptPtr CppDriver::load(const path &file_or_dir) const
 
         auto b = std::make_unique<Build>();
         b->Local = true;
-        b->load(file_or_dir, true);
+        b->SourceDir = p;
+        b->load(p, true);
         return b;
     }
 
     auto b = std::make_unique<Build>();
     b->Local = true;
+    b->SourceDir = f.value().parent_path();
     b->load(f.value());
 
     return b;

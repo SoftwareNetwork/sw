@@ -13,6 +13,7 @@
 #include "solution.h"
 #include <target/native.h>
 
+#include <execution_plan.h>
 #include <filesystem.h>
 
 #include <primitives/sw/settings.h>

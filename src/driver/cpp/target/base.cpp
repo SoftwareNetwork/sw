@@ -20,6 +20,9 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target");
 
+#define SW_BDIR_NAME "bdir"
+#define SW_BDIR_PRIVATE_NAME "bdir_pvt"
+
 namespace sw
 {
 

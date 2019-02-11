@@ -11,6 +11,7 @@
 #include <solution.h>
 #include <target/native.h>
 
+#include <execution_plan.h>
 #include <filesystem.h>
 #include <hash.h>
 
@@ -403,7 +404,7 @@ int main() { return IsBigEndian(); }
     {
         for (auto &d : c->dependencies)
         {
-            if (ep.unprocessed_commands_set.find(std::static_pointer_cast<Check>(d)) == ep.unprocessed_commands_set.end())
+            if (ep.unprocessed_commands_set.find(static_cast<Check*>(d.get())) == ep.unprocessed_commands_set.end())
                 continue;
             s += *c->Definitions.begin() + "->" + *std::static_pointer_cast<Check>(d)->Definitions.begin() + ";";
         }
@@ -552,7 +553,8 @@ bool Check::execute(Solution &s) const
     try
     {
         auto p = s.getExecutionPlan();
-        commands = p.commands;
+        for (auto &c : p.commands)
+            commands.push_back(c->shared_from_this());
         s.execute(p);
     }
     catch (std::exception &e)

@@ -220,8 +220,8 @@ int parse_main(int argc, char **argv)
         //for (auto &d : driver)
             //overview += "    - " + d->getName() + "\n";
         overview += "\n  Available frontends:\n";
-        for (const auto &[k,v] : Solution::getAvailableFrontends().left)
-            overview += "    - " + toString(k) + "\n";
+        for (const auto &n : Solution::getAvailableFrontendNames())
+            overview += "    - " + n + "\n";
     }
 
     const std::vector<std::string> args0(argv + 1, argv + argc);
@@ -314,7 +314,6 @@ int main(int argc, char **argv)
 
 // build commands
 // must be opt<String>!
-static ::cl::opt<String> build_arg(::cl::Positional, ::cl::desc("File or directory to build"), ::cl::init("."), ::cl::sub(subcommand_build));
 static ::cl::opt<String> build_arg_generate(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_generate));
 static ::cl::opt<String> build_arg_update(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_update));
 static ::cl::opt<String> build_arg_test(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_test));
@@ -441,8 +440,21 @@ void setup_log(const std::string &log_level)
 
 #define SUBCOMMAND_DECL_URI(c) SUBCOMMAND_DECL(uri_ ## c)
 
+static ::cl::opt<String> build_arg(::cl::Positional, ::cl::desc("File or directory to build (path to config)"), ::cl::init("."), ::cl::sub(subcommand_build));
+static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
+static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
+
 SUBCOMMAND_DECL(build)
 {
+    // defaults or only one of build_arg and -S specified
+    //  -S == build_arg
+    //  -B == fs::current_path()
+
+    // if -S and build_arg specified:
+    //  source dir is taken as -S, config dir is taken as build_arg
+
+    // if -B specified, it is used as is
+
     sw::build(build_arg);
 }
 

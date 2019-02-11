@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include <dependency.h>
 #include "checks_storage.h"
+#include "command.h"
 
+#include <dependency.h>
 #include <file_storage.h>
-#include <execution_plan.h>
 #include <target/base.h>
 
 #include <sw/builder/driver.h>
@@ -25,6 +25,9 @@ namespace sw
 
 struct Generator;
 struct Module;
+
+template <class T>
+struct ExecutionPlan;
 
 namespace detail
 {
@@ -230,6 +233,8 @@ public:
 
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
     static const AvailableFrontends &getAvailableFrontends();
+    static const std::set<FrontendType> &getAvailableFrontendTypes();
+    static const StringSet &getAvailableFrontendNames();
     static const FilesOrdered &getAvailableFrontendConfigFilenames();
     static bool isFrontendConfigFilename(const path &fn);
     static std::optional<FrontendType> selectFrontendByFilename(const path &fn);

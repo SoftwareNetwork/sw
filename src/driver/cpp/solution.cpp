@@ -20,6 +20,7 @@
 
 #include <directories.h>
 #include <database.h>
+#include <execution_plan.h>
 #include <hash.h>
 #include <settings.h>
 
@@ -1145,6 +1146,30 @@ void Solution::call_event(TargetBase &t, CallbackType et)
     }
 }
 
+const StringSet &Solution::getAvailableFrontendNames()
+{
+    static StringSet s = []
+    {
+        StringSet s;
+        for (const auto &t : getAvailableFrontendTypes())
+            s.insert(toString(t));
+        return s;
+    }();
+    return s;
+}
+
+const std::set<FrontendType> &Solution::getAvailableFrontendTypes()
+{
+    static std::set<FrontendType> s = []
+    {
+        std::set<FrontendType> s;
+        for (const auto &[k, v] : getAvailableFrontends().left)
+            s.insert(k);
+        return s;
+    }();
+    return s;
+}
+
 const Solution::AvailableFrontends &Solution::getAvailableFrontends()
 {
     static AvailableFrontends m = []
@@ -2144,6 +2169,9 @@ void Build::setupSolutionName(const path &file_or_dir)
 
 void Build::load(const path &fn, bool configless)
 {
+    if (!fn.is_absolute())
+        throw SW_RUNTIME_ERROR("path must be absolute: " + normalize_path(fn));
+
     if (!cl_generator.empty())
         generator = Generator::create(cl_generator);
 
@@ -2337,7 +2365,7 @@ void save(const path &fn, const Solution::CommandExecutionPlan &p)
 
     for (auto &c : p.commands)
     {
-        ctx.write(c.get());
+        ctx.write(c);
 
         uint8_t type = 0;
         if (auto c2 = c->as<driver::cpp::VSCommand>(); c2)

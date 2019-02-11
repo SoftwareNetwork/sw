@@ -16,8 +16,6 @@
 #include <unordered_map>
 
 #define SW_SDIR_NAME "sdir"
-#define SW_BDIR_NAME "bdir"
-#define SW_BDIR_PRIVATE_NAME "bdir_pvt"
 
 namespace sw
 {

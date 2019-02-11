@@ -19,18 +19,22 @@
 #include <boost/graph/graph_utility.hpp> // dumping graphs
 #include <boost/graph/graphviz.hpp>      // generating pictures
 
+namespace sw {
+
 // DAG
 template <class T>
 struct ExecutionPlan
 {
-    using PtrT = std::shared_ptr<T>;
+    using PtrT = T*;
+    using SPtrT = std::shared_ptr<T>;
     using USet = std::unordered_set<PtrT>;
+    using USetSPtrT = std::unordered_set<SPtrT>;
     using Vec = std::vector<PtrT>;
 
     using VertexNode = size_t;
     using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS,
         PtrT, boost::property<boost::edge_index_t, int>>;
-    using GraphMapping = std::unordered_map<T*, VertexNode>;
+    using GraphMapping = std::unordered_map<PtrT, VertexNode>;
     using StrongComponents = std::vector<size_t>;
 
     Vec commands;
@@ -63,7 +67,7 @@ struct ExecutionPlan
         std::atomic_int running = 0;
         std::atomic_int64_t askip_errors = skip_errors;
 
-        std::function<void(T*)> run;
+        std::function<void(PtrT)> run;
         run = [this, &askip_errors, &e, &run, &fs, &all, &m, &stopped, &running](T *c)
         {
             if (stopped)
@@ -109,7 +113,7 @@ struct ExecutionPlan
                 if (!c->dependencies.empty())
                     //continue;
                     break;
-                fs.push_back(e.push([&run, c] {run(c.get()); }));
+                fs.push_back(e.push([&run, c] {run(c); }));
                 all.push_back(fs.back());
             }
         }
@@ -295,9 +299,13 @@ struct ExecutionPlan
         }
     }
 
-    static ExecutionPlan createExecutionPlan(const USet &in)
+    static ExecutionPlan createExecutionPlan(const USetSPtrT &in)
     {
-        auto cmds = in;
+        USet cmds;
+        cmds.reserve(in.size());
+        for (auto &c : in)
+            cmds.insert(c.get());
+
         prepare(cmds);
 
         // detect and eliminate duplicate commands
@@ -312,7 +320,7 @@ struct ExecutionPlan
 
             // create replacements
             std::unordered_map<PtrT /*dup*/, PtrT /*repl*/> repls;
-            for (auto &[h,v] : dups)
+            for (auto &[h, v] : dups)
             {
                 if (v.size() < 2)
                     continue;
@@ -335,16 +343,16 @@ struct ExecutionPlan
                     USet to_rm, to_add;
                     for (auto &d : c->dependencies)
                     {
-                        auto i = repls.find(d);
+                        auto i = repls.find(d.get());
                         if (i == repls.end())
                             continue;
-                        to_rm.insert(d);
+                        to_rm.insert(d.get());
                         to_add.insert(i->second);
                     }
                     for (auto &rm : to_rm)
-                        c->dependencies.erase(rm);
+                        c->dependencies.erase(rm->shared_from_this());
                     for (auto &add : to_add)
-                        c->dependencies.insert(add);
+                        c->dependencies.insert(add->shared_from_this());
                 }
             }
 
@@ -372,7 +380,7 @@ private:
         {
             c->dependencies_left = c->dependencies.size();
             for (auto &d : c->dependencies)
-                d->dependendent_commands.insert(c);
+                d->dependendent_commands.insert(c->shared_from_this());
         }
 
         std::sort(commands.begin(), commands.end(), [](const auto &c1, const auto &c2)
@@ -386,7 +394,7 @@ private:
         GraphMapping gm;
         VertexNode i = 0;
         for (auto &c : v)
-            gm[c.get()] = i++;
+            gm[c] = i++;
         return gm;
     }
 
@@ -395,9 +403,9 @@ private:
         Graph g(v.size());
         for (auto &c : v)
         {
-            g.m_vertices[gm[c.get()]].m_property = c;
+            g.m_vertices[gm[c]].m_property = c;
             for (auto &d : c->dependencies)
-                boost::add_edge(gm[c.get()], gm[d.get()], g);
+                boost::add_edge(gm[c], gm[d.get()], g);
         }
         return g;
     }
@@ -407,7 +415,7 @@ private:
         auto gm = getGraphMapping(commands);
         auto g = getGraph(commands, gm);
 
-        auto [tr, vm] = transitiveReduction(g);
+        auto[tr, vm] = transitiveReduction(g);
 
         // copy props
         for (auto &[from, to] : vm)
@@ -441,8 +449,11 @@ private:
         // extract all deps commands
 
         // try to lower number of rehashes
-        if (cmds.size() < 10000)
-            cmds.reserve(10000);
+        auto reserve = [](auto &a)
+        {
+            a.reserve((a.size() / 10000 + 1) * 20000);
+        };
+        reserve(cmds);
 
         while (1)
         {
@@ -459,11 +470,15 @@ private:
 
             // separate loop for additional deps tracking (programs, inputs, outputs etc.)
             auto cmds2 = cmds;
+            reserve(cmds2);
             for (auto &c : cmds)
             {
-                cmds2.insert(c->dependencies.begin(), c->dependencies.end());
                 for (auto &d : c->dependencies)
-                    cmds2.insert(d->dependencies.begin(), d->dependencies.end());
+                {
+                    cmds2.insert(d.get());
+                    for (auto &d2 : d->dependencies)
+                        cmds2.insert(d2.get());
+                }
             }
             cmds = std::move(cmds2);
 
@@ -476,7 +491,7 @@ private:
     {
         // remove self deps
         for (auto &c : cmds)
-            c->dependencies.erase(c);
+            c->dependencies.erase(c->shared_from_this());
 
         while (!cmds.empty())
         {
@@ -484,7 +499,7 @@ private:
             for (auto it = cmds.begin(); it != cmds.end();)
             {
                 if (std::all_of((*it)->dependencies.begin(), (*it)->dependencies.end(),
-                    [this, &cmds](auto &d) { return cmds.find(d) == cmds.end(); }))
+                    [this, &cmds](auto &d) { return cmds.find(d.get()) == cmds.end(); }))
                 {
                     added = true;
                     commands.push_back(*it);
@@ -512,3 +527,5 @@ private:
         return ep;
     }
 };
+
+}
