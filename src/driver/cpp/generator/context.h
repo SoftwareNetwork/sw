@@ -11,6 +11,8 @@
 namespace sw
 {
 
+struct PackageId;
+
 enum class VSProjectType
 {
     Directory,
@@ -38,7 +40,7 @@ struct XmlContext : primitives::Context
     XmlContext();
 
     void beginBlock(const String &n, const std::map<String, String> &params = {}, bool empty = false);
-    void endBlock();
+    void endBlock(bool text = false);
     void addBlock(const String &n, const String &v, const std::map<String, String> &params = {});
 
 protected:
@@ -56,6 +58,7 @@ struct SolutionContext;
 
 struct ProjectContext : XmlContext
 {
+    std::set<String> deps;
     VSProjectType ptype;
 
     void beginProject();
@@ -63,11 +66,14 @@ struct ProjectContext : XmlContext
 
     void addProjectConfigurations(const Build &b);
     void addPropertyGroupConfigurationTypes(const Build &b);
+    void addPropertyGroupConfigurationTypes(const Build &b, const PackageId &p);
+    void addPropertyGroupConfigurationTypes(const Build &b, VSProjectType t);
+    void addConfigurationType(VSProjectType t);
 
     void addPropertySheets(const Build &b);
 
     void printProject(
-        const String &name, struct NativeExecutedTarget &nt, const Build &b, SolutionContext &ctx, Generator &g,
+        const String &name, const PackageId &p, const Build &b, SolutionContext &ctx, Generator &g,
         PackagePathTree::Directories &parents, PackagePathTree::Directories &local_parents,
         const path &dir, const path &projects_dir
     );
@@ -79,7 +85,6 @@ struct SolutionContext : primitives::Context
     {
         String name;
         std::unique_ptr<SolutionContext> ctx;
-        std::set<String> deps;
         ProjectContext pctx;
         String solution_dir;
 
@@ -130,7 +135,7 @@ struct SolutionContext : primitives::Context
     void addKeyValue(const String &k, const String &v);
     String getStringUuid(const String &k) const;
     Text getText() const override;
-    void materialize(const Build &b, const path &dir);
+    void materialize(const Build &b, const path &dir, GeneratorType t);
 
 private:
     std::map<String, String> nested_projects;

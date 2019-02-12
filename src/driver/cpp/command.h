@@ -302,6 +302,7 @@ struct SW_DRIVER_CPP_API Command : detail::Command
     using LazyAction = std::function<void(void)>;
 
     bool program_set = false;
+    std::weak_ptr<Dependency> dependency;
 
     Command() = default;
     Command(::sw::FileStorage &fs);
@@ -320,7 +321,6 @@ struct SW_DRIVER_CPP_API Command : detail::Command
 private:
     std::map<int, LazyCallback> callbacks;
     std::vector<LazyAction> actions;
-    std::weak_ptr<Dependency> dependency;
     bool dependency_set = false;
 };
 

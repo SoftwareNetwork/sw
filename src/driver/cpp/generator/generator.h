@@ -65,11 +65,6 @@ struct VSGenerator : Generator
     void createSolutions(Build &b) const override;
 };
 
-struct VSGeneratorNMake : VSGenerator
-{
-    void generate(const Build &b) override;
-};
-
 struct NinjaGenerator : Generator
 {
     void generate(const Build &b) override;

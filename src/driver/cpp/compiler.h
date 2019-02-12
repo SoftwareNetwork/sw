@@ -64,10 +64,16 @@ SW_DRIVER_CPP_API
 void detectCompilers(struct Solution &s);
 
 SW_DRIVER_CPP_API
-StringSet getCppHeaderFileExtensions();
+const StringSet &getCppHeaderFileExtensions();
 
 SW_DRIVER_CPP_API
-StringSet getCppSourceFileExtensions();
+const StringSet &getCppSourceFileExtensions();
+
+SW_DRIVER_CPP_API
+bool isCppHeaderFileExtension(const String &);
+
+SW_DRIVER_CPP_API
+bool isCppSourceFileExtensions(const String &);
 
 // toolchain
 

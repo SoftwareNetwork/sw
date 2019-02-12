@@ -42,6 +42,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "solution");
 
+static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
 static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
 cl::opt<String> cl_generator("G", cl::desc("Generator"));
 cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(cl_generator));
@@ -2547,6 +2548,7 @@ void Build::generateBuildSystem()
         return;
 
     getCommands();
+    getExecutionPlan(); // also prepare commands
 
     fs::remove_all(getExecutionPlansDir());
     getGenerator()->generate(*this);
@@ -2632,8 +2634,22 @@ void Build::load_dll(const path &dll, bool usedll)
     {
         if (hasUserProvidedInformation())
         {
-            // add basic solution
-            addSolution();
+            if (append_configs)
+            {
+                if (auto g = getGenerator(); g)
+                {
+                    g->createSolutions(*this);
+                }
+
+                // one more time, if generator did not add solution or whatever
+                if (solutions.empty())
+                    addSolution();
+            }
+            else
+            {
+                // add basic solution
+                addSolution();
+            }
 
             auto times = [this](int n)
             {

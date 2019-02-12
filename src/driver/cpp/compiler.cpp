@@ -53,9 +53,9 @@ void detectJavaCompilers(struct Solution &s);
 void detectKotlinCompilers(struct Solution &s);
 void detectDCompilers(struct Solution &s);
 
-StringSet getCppHeaderFileExtensions()
+const StringSet &getCppHeaderFileExtensions()
 {
-    const StringSet header_file_extensions{
+    static const StringSet header_file_extensions{
         ".h",
         ".hh",
         ".hm",
@@ -69,7 +69,7 @@ StringSet getCppHeaderFileExtensions()
     return header_file_extensions;
 }
 
-StringSet getCppSourceFileExtensions()
+const StringSet &getCppSourceFileExtensions()
 {
     static const StringSet cpp_source_file_extensions{
         ".cc",
@@ -89,6 +89,18 @@ StringSet getCppSourceFileExtensions()
         ".mm",
     };
     return cpp_source_file_extensions;
+}
+
+bool isCppHeaderFileExtension(const String &e)
+{
+    auto &exts = getCppHeaderFileExtensions();
+    return exts.find(e) != exts.end();
+}
+
+bool isCppSourceFileExtensions(const String &e)
+{
+    auto &exts = getCppSourceFileExtensions();
+    return exts.find(e) != exts.end();
 }
 
 static void add_args(driver::cpp::Command &c, const Strings &args)
