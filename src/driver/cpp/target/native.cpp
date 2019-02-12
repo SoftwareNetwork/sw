@@ -1991,6 +1991,10 @@ bool NativeExecutedTarget::prepare()
 
             path p = BinaryPrivateDir / "sw.rc";
             write_file_if_different(p, ctx.getText());
+
+            // more info for generators
+            File(p, *getSolution()->fs).getFileRecord().setGenerated(true);
+
             operator+=(p);
         }
 

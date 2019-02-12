@@ -517,6 +517,13 @@ void ProjectContext::printProject(
     fctx.beginProject();
     fctx.beginBlock("ItemGroup");
 
+    bool add_sources =
+        ptype == VSProjectType::Utility ||
+        g.type == GeneratorType::VisualStudio ||
+        g.type == GeneratorType::VisualStudioNMake
+        ;
+
+    Files files_added;
     for (auto &s : b.solutions)
     {
         beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
@@ -671,40 +678,32 @@ void ProjectContext::printProject(
         }
 
         endBlock();
-    }
 
-    bool add_sources =
-        ptype == VSProjectType::Utility ||
-        g.type == GeneratorType::VisualStudio ||
-        g.type == GeneratorType::VisualStudioNMake
-        ;
-    if (add_sources)
-    {
-        std::unordered_set<void *> rules;
-        beginBlock("ItemGroup");
-        for (auto &[p, sf] : base_nt)
+        if (add_sources)
         {
-            if (sf->skip)
-                continue;
-            File ff(p, *base_nt.getSolution()->fs);
-            if (g.type == GeneratorType::VisualStudio && ff.isGenerated())
+            beginBlock("ItemGroup");
+
+            std::unordered_set<void *> rules;
+            for (auto &[p, sf] : nt)
             {
-                for (auto &s : b.solutions)
+                if (sf->skip)
+                    continue;
+                File ff(p, *s.fs);
+                if (g.type == GeneratorType::VisualStudio && ff.isGenerated())
                 {
-                    File ff(p, *s.fs);
                     auto gen = ff.getFileRecord().getGenerator();
                     if (rules.find(gen.get()) == rules.end())
                     {
                         rules.insert(gen.get());
 
-                        auto rule = get_int_dir(base_nt, s.Settings) / "rules" / (p.filename().string() + ".rule");
+                        auto rule = get_int_dir(nt, s.Settings) / "rules" / (p.filename().string() + ".rule");
                         if (!fs::exists(rule))
                             write_file(rule, "");
 
-                        beginBlock(get_vs_file_type_by_ext(rule), {{"Include", rule.string()}});
+                        beginBlock(get_vs_file_type_by_ext(rule), { {"Include", rule.string()} });
                         String cmd;
 
-                        beginBlock("AdditionalInputs", {{"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"}});
+                        beginBlock("AdditionalInputs", { {"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"} });
                         //addText(normalize_path_windows(gen->program) + ";");
                         if (auto dc = gen->as<driver::cpp::Command>())
                         {
@@ -730,7 +729,7 @@ void ProjectContext::printProject(
                         endBlock(true);
                         for (auto &o : gen->outputs)
                         {
-                            beginBlock("Outputs", {{"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"}});
+                            beginBlock("Outputs", { {"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"} });
                             addText(normalize_path_windows(o) + ";");
                             endBlock(true);
                         }
@@ -745,7 +744,7 @@ void ProjectContext::printProject(
                         if (!gen->err.file.empty())
                             cmd += " 2> \"" + normalize_path_windows(gen->err.file) + "\"";
 
-                        beginBlock("Command", {{"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"}});
+                        beginBlock("Command", { {"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"} });
                         addText(cmd);
                         endBlock(true);
 
@@ -758,23 +757,51 @@ void ProjectContext::printProject(
                         auto filter = ". SW Rules";
                         filters.insert(filter);
 
-                        fctx.beginBlock(get_vs_file_type_by_ext(rule), {{"Include", rule.string()}});
+                        fctx.beginBlock(get_vs_file_type_by_ext(rule), { {"Include", rule.string()} });
                         fctx.addBlock("Filter", make_backslashes(filter));
                         fctx.endBlock();
                     }
 
-                    beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() },
-                        {"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"} });
+                    beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() } });
+                    for (auto &s2 : b.solutions)
+                    {
+                        if (&s != &s2)
+                        {
+                            beginBlock("ExcludedFromBuild", { {"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s2.Settings) + "'"} });
+                            addText("true");
+                            endBlock(true);
+                        }
+                    }
                     endBlock();
                 }
+                else if (g.type == GeneratorType::VisualStudio && ff.isGeneratedAtAll())
+                {
+                    beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() } });
+                    for (auto &s2 : b.solutions)
+                    {
+                        if (&s != &s2)
+                        {
+                            beginBlock("ExcludedFromBuild", { {"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s2.Settings) + "'"} });
+                            addText("true");
+                            endBlock(true);
+                        }
+                    }
+                    endBlock();
+                }
+                else
+                {
+                    if (files_added.find(p) == files_added.end())
+                    {
+                        files_added.insert(p);
+
+                        beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() } });
+                        endBlock();
+                    }
+                }
             }
-            else
-            {
-                beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() } });
-                endBlock();
-            }
+
+            endBlock();
         }
-        endBlock();
     }
 
     addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets" } });
@@ -785,60 +812,76 @@ void ProjectContext::printProject(
     if (!add_sources)
         return;
 
-    auto sd = normalize_path(base_nt.SourceDir);
-    auto bd = normalize_path(base_nt.BinaryDir);
-    auto bdp = normalize_path(base_nt.BinaryPrivateDir);
-    for (auto &[f, sf] : base_nt)
+    for (auto &s : b.solutions)
     {
-        if (sf->skip)
-            continue;
+        auto &t = *s.children.find(p)->second;
+        auto &nt = *t.as<NativeExecutedTarget>();
 
-        String *d = nullptr;
-        size_t p = 0;
-        auto fd = normalize_path(f);
-
-        auto calc = [&fd, &p, &d](auto &s)
+        auto sd = normalize_path(nt.SourceDir);
+        auto bd = normalize_path(nt.BinaryDir);
+        auto bdp = normalize_path(nt.BinaryPrivateDir);
+        for (auto &[f, sf] : nt)
         {
-            auto p1 = fd.find(s);
-            if (p1 != 0)
-                return;
-            //if (p1 > p)
+            if (sf->skip)
+                continue;
+
+            String *d = nullptr;
+            size_t p = 0;
+            auto fd = normalize_path(f);
+
+            auto calc = [&fd, &p, &d](auto &s)
             {
-                p = s.size();
-                d = &s;
+                auto p1 = fd.find(s);
+                if (p1 != 0)
+                    return;
+                //if (p1 > p)
+                {
+                    p = s.size();
+                    d = &s;
+                }
+            };
+
+            calc(sd);
+            calc(bd);
+            calc(bdp);
+
+            path filter;
+            if (p != -1)
+            {
+                auto ss = fd.substr(p);
+                if (ss[0] == '/')
+                    ss = ss.substr(1);
+                path r = ss;
+                if (d == &sd)
+                    r = "Source Files" / r;
+                if (d == &bd)
+                {
+                    auto v = r;
+                    r = "Generated Files";
+                    r /= get_configuration(s.Settings);
+                    r /= "Public" / v;
+                }
+                if (d == &bdp)
+                {
+                    auto v = r;
+                    r = "Generated Files";
+                    r /= get_configuration(s.Settings);
+                    r /= "Private" / v;
+                }
+                do
+                {
+                    r = r.parent_path();
+                    if (filter.empty())
+                        filter = r;
+                    filters.insert(r.string());
+                } while (!r.empty() && r != r.root_path());
             }
-        };
 
-        calc(sd);
-        calc(bd);
-        calc(bdp);
-
-        path filter;
-        if (p != -1)
-        {
-            auto ss = fd.substr(p);
-            if (ss[0] == '/')
-                ss = ss.substr(1);
-            path r = ss;
-            if (d == &sd)
-                r = "Source Files" / r;
-            if (d == &bd)
-                r = "Generated Files" / r;
-            if (d == &bdp)
-                r = "Generated Files (Private)" / r;
-            do
-            {
-                r = r.parent_path();
-                if (filter.empty())
-                    filter = r;
-                filters.insert(r.string());
-            } while (!r.empty() && r != r.root_path());
+            fctx.beginBlock(get_vs_file_type_by_ext(f), { {"Include", f.string()} });
+            if (!filter.empty())
+                fctx.addBlock("Filter", make_backslashes(filter.string()));
+            fctx.endBlock();
         }
-
-        fctx.beginBlock(get_vs_file_type_by_ext(f), { {"Include", f.string()} });
-        if (!filter.empty())
-            fctx.addBlock("Filter", make_backslashes(filter.string()));
-        fctx.endBlock();
     }
     filters.erase("");
     fctx.endBlock();
