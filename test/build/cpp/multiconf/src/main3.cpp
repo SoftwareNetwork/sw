@@ -1,7 +1,11 @@
+#include "lib6.h"
+
 #include <iostream>
 
 int main()
 {
+    f();
+
     printf(R"(
 #include <iostream>
 

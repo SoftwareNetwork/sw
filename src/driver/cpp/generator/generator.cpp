@@ -267,14 +267,14 @@ static String get_project_configuration(const SolutionSettings &s)
 
 static String get_vs_file_type_by_ext(const path &p)
 {
-    String type = "ClCoNonempile";
+    String type = "None";
     if (p.extension() == ".rc")
         type = "ResourceCompile";
     else if (p.extension() == ".rule")
         type = "CustomBuild";
     else if (isCppHeaderFileExtension(p.extension().string()))
         type = "ClInclude";
-    else if (isCppSourceFileExtensions(p.extension().string()))
+    else if (isCppSourceFileExtensions(p.extension().string()) || p.extension() == ".c")
         type = "ClCompile";
     return type;
 }
@@ -504,6 +504,19 @@ void ProjectContext::printProject(
     addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
     addPropertySheets(b);
 
+    auto get_int_dir = [&dir, &projects_dir](auto &nt, auto &s)
+    {
+        auto tdir = dir / projects_dir;
+        if (s.TargetOS.is(ArchType::x86_64))
+            tdir /= "x64";
+        return tdir / sha256_short(nt.pkg.toString()) / sha256_short(get_project_configuration(s));
+    };
+
+    StringSet filters; // dirs
+    FiltersContext fctx;
+    fctx.beginProject();
+    fctx.beginBlock("ItemGroup");
+
     for (auto &s : b.solutions)
     {
         beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
@@ -582,12 +595,8 @@ void ProjectContext::printProject(
 
         beginBlock("PropertyGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
         {
-            auto tdir = dir / projects_dir;
-            if (s.Settings.TargetOS.is(ArchType::x86_64))
-                tdir /= "x64";
-
             //addBlock("OutDir", normalize_path_windows(current_thread_path() / "bin\\"));
-            addBlock("IntDir", normalize_path_windows(tdir / sha256_short(nt.pkg.toString())) + "\\");
+            addBlock("IntDir", normalize_path_windows(get_int_dir(nt, s.Settings)) + "\\");
             addBlock("TargetName", nt.pkg.toString());
             //addBlock("TargetExt", ext);
         }
@@ -623,20 +632,39 @@ void ProjectContext::printProject(
         {
             beginBlock("Link");
             beginBlock("AdditionalDependencies", { { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
-            for (auto &d : nt.Dependencies)
+            std::set<void*> visited;
+            std::function<void(NativeExecutedTarget&)> f;
+            f = [&f, this, &dir, &s, &visited](auto &nt)
             {
-                if (d->isDummy())
-                    continue;
+                if (visited.find(&nt) != visited.end())
+                    return;
+                visited.insert(&nt);
 
-                deps.insert(d->target->pkg.toString());
+                for (auto &d : nt.Dependencies)
+                {
+                    if (d->isDummy())
+                        continue;
 
-                auto tdir = dir;
-                if (s.Settings.TargetOS.is(ArchType::x86_64))
-                    tdir /= "x64";
-                tdir /= get_configuration(s.Settings);
-                tdir /= d->target->pkg.toString() + ".lib";
-                addText(normalize_path_windows(tdir) + ";");
-            }
+                    deps.insert(d->target->pkg.toString());
+
+                    auto tdir = dir;
+                    if (s.Settings.TargetOS.is(ArchType::x86_64))
+                        tdir /= "x64";
+                    tdir /= get_configuration(s.Settings);
+                    tdir /= d->target->pkg.toString() + ".lib";
+                    addText(normalize_path_windows(tdir) + ";");
+
+                    if (s.Settings.Native.LibrariesType == LibraryType::Static)
+                    if (d->target->getType() == TargetType::NativeLibrary || d->target->getType() == TargetType::NativeStaticLibrary)
+                    {
+                        if (auto nt3 = d->target->as<NativeExecutedTarget>())
+                        {
+                            f(*nt3);
+                        }
+                    }
+                }
+            };
+            f(nt);
             addText("%(AdditionalDependencies)");
             endBlock(true);
             endBlock();
@@ -644,11 +672,6 @@ void ProjectContext::printProject(
 
         endBlock();
     }
-
-    StringSet filters; // dirs
-    FiltersContext fctx;
-    fctx.beginProject();
-    fctx.beginBlock("ItemGroup");
 
     bool add_sources =
         ptype == VSProjectType::Utility ||
@@ -666,22 +689,22 @@ void ProjectContext::printProject(
             File ff(p, *base_nt.getSolution()->fs);
             if (g.type == GeneratorType::VisualStudio && ff.isGenerated())
             {
-                auto gen = ff.getFileRecord().getGenerator();
-                if (rules.find(gen.get()) == rules.end())
+                for (auto &s : b.solutions)
                 {
-                    rules.insert(gen.get());
-
-                    auto rule = dir / projects_dir / name / (p.filename().string() + ".rule");
-                    if (!fs::exists(rule))
-                        write_file(rule, "");
-
-                    beginBlock(get_vs_file_type_by_ext(rule), { { "Include", rule.string() } });
-                    for (auto &s : b.solutions)
+                    File ff(p, *s.fs);
+                    auto gen = ff.getFileRecord().getGenerator();
+                    if (rules.find(gen.get()) == rules.end())
                     {
+                        rules.insert(gen.get());
+
+                        auto rule = get_int_dir(base_nt, s.Settings) / "rules" / (p.filename().string() + ".rule");
+                        if (!fs::exists(rule))
+                            write_file(rule, "");
+
+                        beginBlock(get_vs_file_type_by_ext(rule), {{"Include", rule.string()}});
                         String cmd;
 
-                        beginBlock("AdditionalInputs", { {
-                                "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
+                        beginBlock("AdditionalInputs", {{"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"}});
                         //addText(normalize_path_windows(gen->program) + ";");
                         if (auto dc = gen->as<driver::cpp::Command>())
                         {
@@ -707,8 +730,7 @@ void ProjectContext::printProject(
                         endBlock(true);
                         for (auto &o : gen->outputs)
                         {
-                            beginBlock("Outputs", { {
-                                    "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
+                            beginBlock("Outputs", {{"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"}});
                             addText(normalize_path_windows(o) + ";");
                             endBlock(true);
                         }
@@ -723,28 +745,34 @@ void ProjectContext::printProject(
                         if (!gen->err.file.empty())
                             cmd += " 2> \"" + normalize_path_windows(gen->err.file) + "\"";
 
-                        beginBlock("Command", { {
-                                "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'" } });
+                        beginBlock("Command", {{"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"}});
                         addText(cmd);
                         endBlock(true);
+
+                        beginBlock("Message");
+                        addText(gen->getName());
+                        endBlock(true);
+
+                        endBlock();
+
+                        auto filter = ". SW Rules";
+                        filters.insert(filter);
+
+                        fctx.beginBlock(get_vs_file_type_by_ext(rule), {{"Include", rule.string()}});
+                        fctx.addBlock("Filter", make_backslashes(filter));
+                        fctx.endBlock();
                     }
 
-                    beginBlock("Message");
-                    addText(gen->getName());
-                    endBlock(true);
-
+                    beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() },
+                        {"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s.Settings) + "'"} });
                     endBlock();
-
-                    auto filter = ". SW Rules";
-                    filters.insert(filter);
-
-                    fctx.beginBlock(get_vs_file_type_by_ext(rule), { {"Include", rule.string()} });
-                    fctx.addBlock("Filter", make_backslashes(filter));
-                    fctx.endBlock();
                 }
             }
-            beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() } });
-            endBlock();
+            else
+            {
+                beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() } });
+                endBlock();
+            }
         }
         endBlock();
     }
@@ -869,6 +897,10 @@ SolutionContext::Project &SolutionContext::addProject(VSProjectType type, const 
     projects[n].name = n;
     projects[n].pctx.ptype = type;
     projects[n].solution_dir = solution_dir;
+
+    if (!solution_dir.empty())
+        nested_projects[n] = solution_dir;
+
     return projects[n];
 }
 
@@ -1218,8 +1250,8 @@ void VSGenerator::generate(const Build &b)
         auto pps = pp.toString();
         /*if (t->pkg.getOverriddenDir()) // uncomment for overridden
             pps = overridden_deps_subdir / pps;
-        else if (!t->Local)
-            pps = deps_subdir / pps;*/
+        else */if (!t->Local)
+            pps = deps_subdir / pps;
 
         auto t2 = VSProjectType::Makefile;
         if (type == GeneratorType::VisualStudio)

@@ -418,6 +418,7 @@ Solution::Solution(const Solution &rhs)
     , file_storage_local(rhs.file_storage_local)
     , command_storage(rhs.command_storage)
     , prefix_source_dir(rhs.prefix_source_dir)
+    , build(rhs.build)
 {
     checker.solution = this;
 }
@@ -1564,7 +1565,9 @@ bool Build::prepareStep()
 
 Solution &Build::addSolutionRaw()
 {
-    return solutions.emplace_back(*this);
+    auto &s = solutions.emplace_back(*this);
+    s.build = this;
+    return s;
 }
 
 Solution &Build::addSolution()

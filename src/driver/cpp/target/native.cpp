@@ -991,7 +991,23 @@ Commands NativeExecutedTarget::getCommands1() const
 
         // set fancy name
         if (/*!Local && */!IsConfig && !do_not_mangle_object_names)
-            c->name = "[" + pkg.toString() + "]" + getSelectedTool()->Extension;
+        {
+            c->name.clear();
+
+            if (getSolution()->build->solutions.size() > 1)
+            {
+                auto i = std::find_if(getSolution()->build->solutions.begin(), getSolution()->build->solutions.end(), [this](auto &s)
+                {
+                    return &s == getSolution();
+                });
+                if (i == getSolution()->build->solutions.end())
+                    throw SW_RUNTIME_ERROR("Wrong sln");
+
+                c->name += "sln [" + std::to_string(i - getSolution()->build->solutions.begin() + 1) +
+                    "/" + std::to_string(getSolution()->build->solutions.size()) + "] ";
+            }
+            c->name += "[" + pkg.toString() + "]" + getSelectedTool()->Extension;
+        }
 
         // copy deps
         /*auto cdb = std::make_shared<ExecuteCommand>(true, [p = pkg(), c = getConfig()]
@@ -1521,7 +1537,7 @@ bool NativeExecutedTarget::prepare()
             Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
             Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
         }
-        Definitions["SW_STATIC="];
+        //Definitions["SW_STATIC="];
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 2:

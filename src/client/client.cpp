@@ -769,7 +769,7 @@ SUBCOMMAND_DECL(ide)
 
 extern ::cl::opt<String> cl_generator;
 extern bool gPrintDependencies;
-static ::cl::opt<bool, true> print_dependencies("print-dependencies", ::cl::location(gRunAppInContainer), ::cl::sub(subcommand_generate));
+static ::cl::opt<bool, true> print_dependencies("print-dependencies", ::cl::location(gPrintDependencies), ::cl::sub(subcommand_generate));
 
 SUBCOMMAND_DECL(generate)
 {
