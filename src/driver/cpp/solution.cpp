@@ -816,19 +816,29 @@ void Solution::execute(CommandExecutionPlan &p) const
         e.push([] {updateConcurrentContext(); });*/
 }
 
+static path build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
+{
+    //static
+    Build b; // cache?
+    b.execute_jobs = config_jobs;
+    b.Local = false;
+    b.file_storage_local = false;
+    return b.build_configs(pkgs);
+}
+
 void Solution::build_and_resolve(int n_runs)
 {
     auto ud = gatherUnresolvedDependencies();
     if (ud.empty())
         return;
 
+    if (n_runs > 1)
+        LOG_ERROR(logger, "You are here for the third time. This is not intended. Failures are imminent.");
+
     // first round
     UnresolvedPackages pkgs;
     for (auto &[pkg, d] : ud)
         pkgs.insert(pkg);
-
-    if (n_runs > 1)
-        LOG_ERROR(logger, "You are here for the third time. This is not intended. Failures are imminent.");
 
     // resolve only deps needed
     Resolver r;
@@ -859,12 +869,7 @@ void Solution::build_and_resolve(int n_runs)
     if (n_runs > 0)
         LOG_ERROR(logger, "You are here for the second time. This is not intended. Expect failures.");
 
-    //static
-    Build b; // cache?
-    b.execute_jobs = config_jobs;
-    b.Local = false;
-    b.file_storage_local = false;
-    auto dll = b.build_configs(cfgs);
+    auto dll = ::sw::build_configs(cfgs);
     //used_modules.insert(dll);
 
     Local = false;
@@ -2536,15 +2541,6 @@ void Build::load_configless(const path &file_or_dir)
     }
 }
 
-void Build::build_and_run(const path &fn)
-{
-    load(fn);
-    prepare();
-    if (getGenerator())
-        return generateBuildSystem();
-    Solution::execute();
-}
-
 void Build::generateBuildSystem()
 {
     if (!getGenerator())
@@ -2557,22 +2553,33 @@ void Build::generateBuildSystem()
     getGenerator()->generate(*this);
 }
 
-void Build::build_package(const String &s)
+void Build::build_packages(const StringSet &pkgs)
 {
-    //auto [pkg,pkgs] = resolve_dependency(s);
-    auto pkg = extractFromString(s);
-
-    // add default sln
-    auto &sln = addSolution();
+    UnresolvedPackages upkgs;
+    for (auto &p : pkgs)
+        upkgs.insert(extractFromString(p));
 
     // add known pkgs before pkg.resolve(), because otherwise it does not give us dl deps
-    for (auto &p : resolveAllDependencies({ pkg }))
-        sln.knownTargets.insert(p);
+    for (auto &p : resolveAllDependencies(upkgs))
+        knownTargets.insert(p);
 
-    auto r = pkg.resolve();
-    sln.Local = false;
-    sln.NamePrefix = pkg.ppath.slice(0, r.prefix);
-    build_and_run(r.getDirSrc2() / "sw.cpp");
+    std::unordered_set<ExtendedPackageData> pkgs2;
+    for (auto &pkg : upkgs)
+        pkgs2.insert(pkg.resolve());
+
+    Local = false;
+    configure = false;
+    auto dll = ::sw::build_configs(pkgs2);
+    createSolutions(true);
+    for (auto &s : solutions)
+        s.knownTargets = knownTargets;
+    load_dll(dll);
+    execute();
+}
+
+void Build::build_package(const String &s)
+{
+    build_packages({ s });
 }
 
 void Build::run_package(const String &s)
@@ -2615,7 +2622,7 @@ static bool hasUserProvidedInformation()
         ;
 }
 
-void Build::load_dll(const path &dll, bool usedll)
+void Build::createSolutions(bool usedll)
 {
     if (gWithTesting)
         with_testing = true;
@@ -2630,7 +2637,7 @@ void Build::load_dll(const path &dll, bool usedll)
 #endif
 
     // configure may change defaults, so we must care below
-    if (usedll)
+    if (usedll && configure)
         getModuleStorage(base_ptr).get(dll).configure(*this);
 
     if (solutions.empty())
@@ -2793,6 +2800,11 @@ void Build::load_dll(const path &dll, bool usedll)
     // one more time, if generator did not add solution or whatever
     if (solutions.empty())
         addSolution();
+}
+
+void Build::load_dll(const path &dll, bool usedll)
+{
+    createSolutions(usedll);
 
     if (auto g = getGenerator(); g)
     {

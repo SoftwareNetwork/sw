@@ -72,7 +72,7 @@ struct SW_BUILDER_API Driver
     /// assuming all sources are fetched and script is in the source dir
     virtual PackageScriptPtr build(const path &file_or_dir) const = 0;
 
-    virtual bool buildPackage(const PackageId &pkg) const = 0;
+    virtual bool buildPackages(const StringSet &pkgs) const = 0;
 
     /// only load script file
     ///

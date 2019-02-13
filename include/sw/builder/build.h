@@ -20,13 +20,13 @@ SW_BUILDER_API
 bool build(const Files &files_or_dirs);
 
 SW_BUILDER_API
-bool build(const PackageId &package);
-
-SW_BUILDER_API
-bool build(const PackagesIdSet &package);
-
-SW_BUILDER_API
 bool build(const String &file_or_dir_or_packagename);
+
+SW_BUILDER_API
+bool build(const String &pkg);
+
+SW_BUILDER_API
+bool build(const Strings &packages);
 
 SW_BUILDER_API
 PackageScriptPtr build_only(const path &file_or_dir);

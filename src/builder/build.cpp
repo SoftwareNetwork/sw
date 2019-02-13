@@ -44,28 +44,39 @@ bool build(const path &p)
 
 bool build(const Files &files_or_dirs)
 {
+    if (files_or_dirs.size() == 1)
+        return build(*files_or_dirs.begin());
+
     // proper multibuilds must get commands and create a single execution plan
     throw SW_RUNTIME_ERROR("not implemented");
     return true;
 }
 
-bool build(const PackageId &p)
+bool build(const Strings &packages)
 {
+    if (std::all_of(packages.begin(), packages.end(), [](const auto &p)
+    {
+        return fs::exists(p);
+    }))
+    {
+        Files files;
+        for (auto &p : packages)
+            files.insert(p);
+        return build(files);
+    }
+
+    StringSet p2;
+    for (auto &p : packages)
+        p2.insert(p);
+
     auto &drivers = sw::getDrivers();
     for (auto &d : drivers)
     {
-        if (d->buildPackage(p))
+        if (d->buildPackages(p2))
         {
             return true;
         }
     }
-
-    return true;
-}
-
-bool build(const PackagesIdSet &package)
-{
-    // proper multibuilds must get commands and create a single execution plan
     return true;
 }
 
@@ -74,19 +85,7 @@ bool build(const String &s)
     // local file or dir is preferable rather than some remote pkg
     if (fs::exists(s))
         return build(path(s));
-
-    try
-    {
-        extractFromString(s);
-    }
-    catch (const std::exception &)
-    {
-        throw SW_RUNTIME_ERROR("File not found or package id is not recognized");
-    }
-
-    auto id = extractFromString(s);
-    auto pkgs = resolve_dependency(s);
-    return build(*pkgs.begin());
+    return build({ s });
 }
 
 PackageScriptPtr build_only(const path &file_or_dir)

@@ -854,9 +854,9 @@ void Command::printLog() const
     static Executor eprinter(1);
     if (current_command)
     {
-        eprinter.push([this]
+        eprinter.push([c = shared_from_this()]
         {
-            log_string = "[" + std::to_string((*current_command)++) + "/" + std::to_string(total_commands->load()) + "] " + getName();
+            c->log_string = "[" + std::to_string((*c->current_command)++) + "/" + std::to_string(c->total_commands->load()) + "] " + c->getName();
 
             // we cannot use this one because we must sync with print_outputs() call, both must use the same logger or (synced)stdout
             //std::cout << "\r" << log_string;
@@ -864,7 +864,7 @@ void Command::printLog() const
             // use this when logger won't call endl (custom sink is required)
             //LOG_INFO(logger, "\r" + log_string);
 
-            LOG_INFO(logger, log_string);
+            LOG_INFO(logger, c->log_string);
         });
     }
 }

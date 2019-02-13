@@ -198,10 +198,10 @@ PackageScriptPtr CppDriver::fetch_and_load(const path &file_or_dir, const FetchO
     return std::move(b);
 }
 
-bool CppDriver::buildPackage(const PackageId &pkg) const
+bool CppDriver::buildPackages(const StringSet &pkgs) const
 {
     auto b = std::make_unique<Build>();
-    b->build_package(pkg.toString());
+    b->build_packages(pkgs);
     return true;
 }
 

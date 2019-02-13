@@ -207,6 +207,13 @@ int setup_main(const Strings &args)
     return sw_main(args);
 }
 
+#define SUBCOMMAND(n, d) ::cl::SubCommand subcommand_##n(#n, d);
+#include <commands.inl>
+#undef SUBCOMMAND
+
+static ::cl::list<String> build_arg_test(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::sub(subcommand_test));
+static ::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
+
 int parse_main(int argc, char **argv)
 {
     //args::ValueFlag<int> configuration(parser, "configuration", "Configuration to build", { 'c' });
@@ -243,6 +250,11 @@ int parse_main(int argc, char **argv)
 
     //
     ::cl::ParseCommandLineOptions(args, overview);
+
+    if (build_arg.empty())
+        build_arg.push_back(".");
+    if (build_arg_test.empty())
+        build_arg_test.push_back(".");
 
     return setup_main(args);
 }
@@ -305,18 +317,13 @@ int main(int argc, char **argv)
 #include <commands.inl>
 #undef SUBCOMMAND
 
-#define SUBCOMMAND(n, d) ::cl::SubCommand subcommand_##n(#n, d);
-#include <commands.inl>
-#undef SUBCOMMAND
-
 //
 //static ::cl::list<path> build_arg0(::cl::Positional, ::cl::desc("Files or directoris to build"));
 
 // build commands
 // must be opt<String>!
 static ::cl::opt<String> build_arg_generate(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_generate));
-static ::cl::opt<String> build_arg_update(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_update));
-static ::cl::opt<String> build_arg_test(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_test));
+static ::cl::opt<String> build_arg_update(::cl::Positional, ::cl::desc("Update lock"), ::cl::init("."), ::cl::sub(subcommand_update));
 static ::cl::opt<String> list_arg(::cl::Positional, ::cl::desc("Package regex to list"), ::cl::init("."), ::cl::sub(subcommand_list));
 static ::cl::opt<String> install_arg(::cl::Positional, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
 static ::cl::list<String> install_args(::cl::ConsumeAfter, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
@@ -440,7 +447,6 @@ void setup_log(const std::string &log_level)
 
 #define SUBCOMMAND_DECL_URI(c) SUBCOMMAND_DECL(uri_ ## c)
 
-static ::cl::opt<String> build_arg(::cl::Positional, ::cl::desc("File or directory to build (path to config)"), ::cl::init("."), ::cl::sub(subcommand_build));
 static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
 static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
 
@@ -647,7 +653,7 @@ SUBCOMMAND_DECL(uri)
             auto d = getUserDirectories().storage_dir_tmp / "build";// / fs::unique_path();
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
-            sw::build(p);
+            sw::build(p.toString());
         }
 
         if (uri_args[0] == "sw:run")
@@ -770,6 +776,8 @@ SUBCOMMAND_DECL(ide)
 extern ::cl::opt<String> cl_generator;
 extern bool gPrintDependencies;
 static ::cl::opt<bool, true> print_dependencies("print-dependencies", ::cl::location(gPrintDependencies), ::cl::sub(subcommand_generate));
+extern bool gOutputNoConfigSubdir;
+static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", ::cl::location(gOutputNoConfigSubdir), ::cl::sub(subcommand_generate));
 
 SUBCOMMAND_DECL(generate)
 {
@@ -779,7 +787,8 @@ SUBCOMMAND_DECL(generate)
         cl_generator = "vs";
 #endif
     }
-    build_arg = build_arg_generate.getValue();
+    ((Strings&)build_arg).clear();
+    build_arg.push_back(build_arg_generate.getValue());
     cli_build();
 }
 
@@ -916,7 +925,7 @@ extern bool gWithTesting;
 SUBCOMMAND_DECL(test)
 {
     gWithTesting = true;
-    build_arg = build_arg_test.getValue();
+    (Strings&)build_arg = (Strings&)build_arg_test;
     cli_build();
 }
 
@@ -940,7 +949,8 @@ SUBCOMMAND_DECL(update)
 {
     getPackageStore() = sw::PackageStore();
     dry_run = true;
-    build_arg = build_arg_update.getValue();
+    ((Strings&)build_arg).clear();
+    build_arg.push_back(build_arg_update.getValue());
     cli_build();
 }
 

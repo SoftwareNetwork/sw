@@ -292,7 +292,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     // child solutions
     std::vector<Solution> solutions;
     Solution *current_solution = nullptr;
-    //bool configure = false;
+    bool configure = true;
     bool perform_checks = true;
     bool ide = false;
 
@@ -303,8 +303,8 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
 
     path build(const path &fn);
     void load(const path &fn, bool configless = false);
-    void build_and_run(const path &fn);
     void build_package(const String &pkg);
+    void build_packages(const StringSet &pkgs);
     void run_package(const String &pkg);
     bool execute() override;
 
@@ -350,6 +350,7 @@ private:
     // basic frontends
     void load_dll(const path &dll, bool usedll = true);
     void load_configless(const path &file_or_dir);
+    void createSolutions(bool usedll = true);
 
     // other frontends
     void cppan_load();

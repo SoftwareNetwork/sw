@@ -12,6 +12,7 @@ namespace sw
 {
 
 struct PackageId;
+struct SolutionSettings;
 
 enum class VSProjectType
 {
@@ -40,6 +41,7 @@ struct XmlContext : primitives::Context
     XmlContext();
 
     void beginBlock(const String &n, const std::map<String, String> &params = {}, bool empty = false);
+    void beginBlockWithConfiguration(const String &n, const SolutionSettings &s, std::map<String, String> params = {}, bool empty = false);
     void endBlock(bool text = false);
     void addBlock(const String &n, const String &v, const std::map<String, String> &params = {});
 
@@ -58,6 +60,7 @@ struct SolutionContext;
 
 struct ProjectContext : XmlContext
 {
+    SolutionContext *parent = nullptr;
     std::set<String> deps;
     VSProjectType ptype;
 
@@ -102,6 +105,7 @@ struct SolutionContext : primitives::Context
     using Base = primitives::Context;
 
     String all_build_name;
+    String build_dependencies_name;
     mutable std::unordered_map<String, String> uuids;
     std::map<String, Project> projects;
     const Project *first_project = nullptr;
