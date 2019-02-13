@@ -32,10 +32,9 @@ DECLARE_STATIC_LOGGER(logger, "file");
 namespace sw
 {
 
-static Executor explain_executor("explain executor", 1);
-
 void explainMessage(const String &subject, bool outdated, const String &reason, const String &name)
 {
+    static Executor explain_executor("explain executor", 1);
     static std::ofstream o([]()
     {
         fs::create_directories(path(CPPAN_FILES_EXPLAIN_FILE).parent_path());

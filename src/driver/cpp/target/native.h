@@ -206,6 +206,7 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeExecutedTarget
     using NativeExecutedTarget::operator=;
 
     bool init() override;
+    path getImportLibrary() const override;
 
 protected:
     bool prepare() override;
@@ -220,8 +221,8 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeExecutedTarget//, Program
 {
     TargetType getType() const override { return TargetType::NativeExecutable; }
 
+    bool init() override;
     void cppan_load_project(const yaml &root) override;
-
     path getOutputBaseDir() const override;
 
 protected:
@@ -240,6 +241,7 @@ struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeExecutedTarget
     bool init() override;
 
     TargetType getType() const override { return TargetType::NativeStaticLibrary; }
+    path getImportLibrary() const override { return getOutputFile(); }
 
 protected:
     bool prepare() override

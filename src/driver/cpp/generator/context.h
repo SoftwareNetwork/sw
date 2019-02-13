@@ -38,7 +38,7 @@ struct XmlContext : primitives::Context
 {
     std::stack<String> blocks;
 
-    XmlContext();
+    XmlContext(bool print_version = true);
 
     void beginBlock(const String &n, const std::map<String, String> &params = {}, bool empty = false);
     void beginBlockWithConfiguration(const String &n, const SolutionSettings &s, std::map<String, String> params = {}, bool empty = false);
@@ -106,6 +106,7 @@ struct SolutionContext : primitives::Context
 
     String all_build_name;
     String build_dependencies_name;
+    StringSet build_deps;
     mutable std::unordered_map<String, String> uuids;
     std::map<String, Project> projects;
     const Project *first_project = nullptr;

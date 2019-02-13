@@ -519,7 +519,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
         c->PrecompiledHeaderFilename.input_dependency = true;
         c->PrecompiledHeader().use = p.header;
         c->PDBFilename = pdb_fn;
-        c->PDBFilename.intermediate_file = false;
+        //c->PDBFilename.intermediate_file = false;
     };
 
     // before adding pch source file to target
@@ -582,7 +582,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
                 c->PrecompiledHeaderFilename.output_dependency = true;
                 c->PrecompiledHeader().create = p.header;
                 c->PDBFilename = pdb_fn;
-                c->PDBFilename.intermediate_file = false;
+                //c->PDBFilename.intermediate_file = false;
             };
 
             if (auto c = sf->compiler->as<VisualStudioCompiler>())
@@ -1304,8 +1304,8 @@ void NativeExecutedTarget::tryLoadPrecomputedData()
 {
     return;
 
-    if (isLocalOrOverridden())
-        return;
+    //if (isLocalOrOverridden())
+        //return;
 
     auto fn = getPrecomputedDataFilename();
     if (!fs::exists(fn))
@@ -1356,8 +1356,8 @@ void NativeExecutedTarget::savePrecomputedData()
 {
     return;
 
-    if (isLocalOrOverridden())
-        return;
+    //if (isLocalOrOverridden())
+        //return;
 
     auto fn = getPrecomputedDataFilename();
     if (fs::exists(fn))
@@ -3146,6 +3146,25 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
 #endif
 }
 
+bool ExecutableTarget::init()
+{
+    auto r = NativeExecutedTarget::init();
+
+    switch (init_pass)
+    {
+    case 2:
+    {
+        if (auto c = getSelectedTool()->as<VisualStudioLinker>())
+        {
+            c->ImportLibrary.output_dependency = false; // become optional
+        }
+    }
+    break;
+    }
+
+    return r;
+}
+
 bool ExecutableTarget::prepare()
 {
     switch (prepare_pass)
@@ -3205,6 +3224,13 @@ bool LibraryTarget::init()
     auto r = NativeExecutedTarget::init();
     initLibrary(getSolution()->Settings.Native.LibrariesType);
     return r;
+}
+
+path LibraryTarget::getImportLibrary() const
+{
+    if (getSelectedTool() == Librarian.get())
+        return getOutputFile();
+    return getSelectedTool()->getImportLibrary();
 }
 
 bool StaticLibraryTarget::init()

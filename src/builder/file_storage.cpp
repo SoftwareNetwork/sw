@@ -20,7 +20,7 @@ cl::opt<bool> useFileMonitor("use-file-monitor");// , cl::init(true));
 namespace sw
 {
 
-static Executor async_executor("async log writer", 1);
+SW_DEFINE_GLOBAL_STATIC_FUNCTION(Executor, getFileStorageExecutor)
 
 SW_DEFINE_GLOBAL_STATIC_FUNCTION(primitives::filesystem::FileMonitor, getFileMonitor)
 SW_DEFINE_GLOBAL_STATIC_FUNCTION(FileStorages, getFileStorages)
@@ -133,7 +133,7 @@ void FileStorage::async_file_log(const FileRecord *r)
 
     static std::vector<uint8_t> v;
 #if USE_EXECUTOR
-    async_executor.push([this, r = *r] {
+    getFileStorageExecutor().push([this, r = *r] {
 #endif
         // write record to vector v
         getDb().write(v, r);
@@ -157,7 +157,7 @@ void FileStorage::async_command_log(size_t hash, size_t lwt, bool local)
 #endif
 
 #if USE_EXECUTOR
-    async_executor.push([this, hash, lwt, local] {
+    getFileStorageExecutor().push([this, hash, lwt, local] {
 #endif
         auto l = getCommandLog(local);
         fwrite(&hash, sizeof(hash), 1, l->f.getHandle());

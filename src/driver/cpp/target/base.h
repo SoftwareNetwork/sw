@@ -305,7 +305,7 @@ public:
 
     // really local package
     bool isLocal() const { return Local && !pkg.getOverriddenDir(); }
-    bool isLocalOrOverridden() const { return Local && pkg.getOverriddenDir(); }
+    //bool isLocalOrOverridden() const { return Local && || ? pkg.getOverriddenDir(); }
 
     TargetBase &operator+=(const Source &);
 

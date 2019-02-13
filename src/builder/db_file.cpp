@@ -99,6 +99,8 @@ static void load(FileStorage &fs, const path &fn,
             kv.first->data->last_write_time = lwt;
         }
 
+        kv.first->data->refreshed = FileData::RefreshType::Unrefreshed;
+
         size_t n;
         b.read(n);
 

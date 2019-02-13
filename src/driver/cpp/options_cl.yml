@@ -273,8 +273,8 @@ types:
                 name: PDBFilename
                 flag: Fd
                 type: path
-                properties:
-                    - intermediate_file
+                #properties:
+                    #- intermediate_file
 
             pchfn:
                 name: PrecompiledHeaderFilename
@@ -450,7 +450,7 @@ types:
                 properties:
                     # why? implib must present for dlls
                     # some dlls might be generated without implibs for dynamic loading only
-                    - intermediate_file
+                    - output_dependency
 
             out:
                 name: Output

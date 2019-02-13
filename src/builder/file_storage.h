@@ -18,6 +18,8 @@ class FileMonitor;
 
 }
 
+class Executor;
+
 namespace sw
 {
 
@@ -79,5 +81,8 @@ using FileDataHashMap = ConcurrentHashMap<path, FileData>;
 
 SW_BUILDER_API
 SW_DECLARE_GLOBAL_STATIC_FUNCTION(FileDataHashMap, getFileData);
+
+SW_BUILDER_API
+SW_DECLARE_GLOBAL_STATIC_FUNCTION(Executor, getFileStorageExecutor);
 
 }

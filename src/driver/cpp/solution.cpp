@@ -76,6 +76,8 @@ cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_md));
 
 extern bool gVerbose;
 bool gWithTesting;
+path gIdeFastPath;
+int gNumberOfJobs = -1;
 
 void build_self(sw::Solution &s);
 void check_self(sw::Checker &c);
@@ -2555,26 +2557,88 @@ void Build::generateBuildSystem()
 
 void Build::build_packages(const StringSet &pkgs)
 {
+    if (pkgs.empty())
+        return;
+
+    static const auto ide_fs = "ide_vs";
+
+    // on fast path we do not create a lot of threads in main()
+    // we do it here
+    std::unique_ptr<Executor> e;
+
+    if (!gIdeFastPath.empty())
+    {
+        if (fs::exists(gIdeFastPath))
+        {
+            auto files = read_lines(gIdeFastPath);
+            if (std::none_of(files.begin(), files.end(), [](auto &f) {
+                return File(f, getFileStorage(ide_fs, true)).isChanged();
+            }))
+            {
+                return;
+            }
+            solutions.clear();
+        }
+        e = std::make_unique<Executor>(select_number_of_threads(gNumberOfJobs));
+        getExecutor(e.get());
+    }
+
     UnresolvedPackages upkgs;
     for (auto &p : pkgs)
         upkgs.insert(extractFromString(p));
 
-    // add known pkgs before pkg.resolve(), because otherwise it does not give us dl deps
-    for (auto &p : resolveAllDependencies(upkgs))
+    // resolve only deps needed
+    Resolver r;
+    r.resolve_dependencies(upkgs, true);
+    auto dd = r.getDownloadDependencies();
+    for (auto &p : dd)
         knownTargets.insert(p);
 
-    std::unordered_set<ExtendedPackageData> pkgs2;
-    for (auto &pkg : upkgs)
-        pkgs2.insert(pkg.resolve());
+    std::unordered_map<PackageVersionGroupNumber, ExtendedPackageData> cfgs2;
+    for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
+        cfgs2[gn] = p;
+    std::unordered_set<ExtendedPackageData> cfgs;
+    for (auto &[gn, s] : cfgs2)
+        cfgs.insert(s);
 
     Local = false;
     configure = false;
-    auto dll = ::sw::build_configs(pkgs2);
+
+    auto dll = ::sw::build_configs(cfgs);
+
+    SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->prefix));
+    if (cfgs.size() != 1)
+        sr.restoreNow(true);
+
     createSolutions(true);
     for (auto &s : solutions)
         s.knownTargets = knownTargets;
     load_dll(dll);
     execute();
+
+    //
+    if (!gIdeFastPath.empty())
+    {
+        Files files;
+        for (auto &p : pkgs)
+        {
+            auto i = solutions[0].children.find(PackageId(p));
+            if (i == solutions[0].children.end())
+                throw SW_RUNTIME_ERROR("No such target in fast path: " + p);
+            if (auto nt = i->second->as<NativeExecutedTarget>())
+            {
+                if (auto c = nt->getCommand())
+                    files.insert(c->outputs.begin(), c->outputs.end());
+            }
+        }
+        String s;
+        for (auto &f : files)
+        {
+            s += normalize_path(f) + "\n";
+            File(f, getFileStorage(ide_fs, true)).isChanged();
+        }
+        write_file(gIdeFastPath, s);
+    }
 }
 
 void Build::build_package(const String &s)
@@ -2653,7 +2717,9 @@ void Build::createSolutions(bool usedll)
 
                 // one more time, if generator did not add solution or whatever
                 if (solutions.empty())
+                {
                     addSolution();
+                }
             }
             else
             {

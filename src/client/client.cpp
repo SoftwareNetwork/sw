@@ -113,7 +113,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 static ::cl::opt<path> working_directory("d", ::cl::desc("Working directory"));
 extern bool gVerbose;
 static ::cl::opt<bool> trace("trace", ::cl::desc("Trace output"));
-static ::cl::opt<int> jobs("j", ::cl::desc("Number of jobs"), ::cl::init(-1));
+extern int gNumberOfJobs;
+static ::cl::opt<int, true> jobs("j", ::cl::desc("Number of jobs"), ::cl::location(gNumberOfJobs));
 
 static ::cl::opt<int> sleep_seconds("sleep", ::cl::desc("Sleep on startup"), ::cl::Hidden);
 
@@ -121,6 +122,15 @@ static ::cl::opt<bool> cl_self_upgrade("self-upgrade", ::cl::desc("Upgrade clien
 static ::cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", ::cl::desc("Upgrade client: copy file"), ::cl::ReallyHidden);
 
 extern ::cl::opt<bool> useFileMonitor;
+
+#define SUBCOMMAND(n, d) ::cl::SubCommand subcommand_##n(#n, d);
+#include <commands.inl>
+#undef SUBCOMMAND
+
+static ::cl::list<String> build_arg_test(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::sub(subcommand_test));
+static ::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
+extern path gIdeFastPath;
+static ::cl::opt<path, true> build_ide_fast_path("ide-fast-path", ::cl::sub(subcommand_build), ::cl::Hidden, ::cl::location(gIdeFastPath));
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
@@ -192,8 +202,16 @@ int setup_main(const Strings &args)
     sw::getFileStorages(&fs);
 
     // after everything
-    Executor e(select_number_of_threads(jobs));
-    getExecutor(&e);
+    Executor fse("async log writer", 1);
+    getFileStorageExecutor(&fse);
+
+    // after everything
+    std::unique_ptr<Executor> e;
+    if (gIdeFastPath.empty())
+    {
+        e = std::make_unique<Executor>(select_number_of_threads(jobs));
+        getExecutor(e.get());
+    }
 
     /*boost::asio::io_context io_service;
     boost::asio::signal_set signals(io_service, SIGINT);
@@ -206,13 +224,6 @@ int setup_main(const Strings &args)
     // actual execution
     return sw_main(args);
 }
-
-#define SUBCOMMAND(n, d) ::cl::SubCommand subcommand_##n(#n, d);
-#include <commands.inl>
-#undef SUBCOMMAND
-
-static ::cl::list<String> build_arg_test(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::sub(subcommand_test));
-static ::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
 
 int parse_main(int argc, char **argv)
 {
