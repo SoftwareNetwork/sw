@@ -721,7 +721,7 @@ void ProjectContext::printProject(
 
                     if (!gPrintDependencies && !d->target->Local)
                     {
-                        if (auto nt3 = d->target->as<NativeExecutedTarget>())
+                        if (auto nt3 = d->target->template as<NativeExecutedTarget>())
                         {
                             if (d->target->getType() == TargetType::NativeExecutable)
                             {
@@ -759,7 +759,7 @@ void ProjectContext::printProject(
                     if ((s.Settings.Native.LibrariesType == LibraryType::Static && d->target->getType() == TargetType::NativeLibrary) ||
                         d->target->getType() == TargetType::NativeStaticLibrary)
                     {
-                        if (auto nt3 = d->target->as<NativeExecutedTarget>())
+                        if (auto nt3 = d->target->template as<NativeExecutedTarget>())
                         {
                             f(*nt3);
                         }
