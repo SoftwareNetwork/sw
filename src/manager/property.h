@@ -101,11 +101,11 @@ return "";
     }
 
     // same as get
-    template <class T>
+    /*template <class T>
     T &value()
     {
         return get<T>(*this);
-    }
+    }*/
 
     // same as get
     template <class T>
@@ -115,13 +115,13 @@ return "";
     }
 
     // same as value
-    template <class T>
+    /*template <class T>
     T &get()
     {
         if (empty())
             *this = T();
         return std::get<T>(*this);
-    }
+    }*/
 
     // same as value
     template <class T>
@@ -142,19 +142,36 @@ return "";
         return *this;
     }
 
-    inline PropertyVariant &operator+=(const std::string &v)
+    //
+    PropertyVariant &operator+=(const std::string &v)
     {
         *this = (std::string)*this + v;
         return *this;
     }
 
-    bool operator==(const PropertyVariant &rhs)
+    // n/equ
+    bool operator==(const PropertyVariant &rhs) const
     {
         // FIXME:
         return toString() == rhs.toString();
     }
 
-    bool operator!=(const PropertyVariant &rhs)
+    bool operator!=(const PropertyVariant &rhs) const
+    {
+        return !operator==(rhs);
+    }
+
+    template <class U>
+    bool operator==(const U &rhs) const
+    {
+        auto v = std::get_if<U>(this);
+        if (v)
+            return *v == rhs;
+        return U() == rhs;
+    }
+
+    template <class U>
+    bool operator!=(const U &rhs) const
     {
         return !operator==(rhs);
     }
@@ -236,7 +253,7 @@ using PropertyValue = detail::PropertyVariant<
     ARITHM_BUNCH(T)
 
 // ops
-CMP_OPS_BUNCH_RAW(BOOL_OP_BOOL, bool)
+/*CMP_OPS_BUNCH_RAW(BOOL_OP_BOOL, bool)
 
 // arithmetic
 OPS_BUNCH(int8_t)
@@ -251,12 +268,23 @@ OPS_BUNCH(float)
 OPS_BUNCH(double)
 
 // string
-CMP_OPS_BUNCH(std::string)
+CMP_OPS_BUNCH(std::string)*/
 
 inline std::string operator+(const std::string &v1, const PropertyValue &v2)
 {
     return v1 + (std::string)v2;
 }
+
+/*inline bool operator==(const PropertyValue &lhs, const PropertyValue &rhs)
+{
+    // FIXME:
+    return lhs.operator==(rhs);
+}
+
+inline bool operator!=(const PropertyValue &lhs, const PropertyValue &rhs)
+{
+    return !operator==(lhs, rhs);
+}*/
 
 // undefs
 #undef OPS_BUNCH
