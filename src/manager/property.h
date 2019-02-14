@@ -102,9 +102,25 @@ return "";
 
     // same as get
     template <class T>
+    T &value()
+    {
+        return get<T>(*this);
+    }
+
+    // same as get
+    template <class T>
     const T &value() const
     {
         return get<T>(*this);
+    }
+
+    // same as value
+    template <class T>
+    T &get()
+    {
+        if (empty())
+            *this = T();
+        return std::get<T>(*this);
     }
 
     // same as value
@@ -178,7 +194,17 @@ using PropertyValue = detail::PropertyVariant<
         return G(v1, T) op v2;                                   \
     }                                                            \
                                                                  \
+    inline ret operator op(PropertyValue &v1, const T &v2)       \
+    {                                                            \
+        return G(v1, T) op v2;                                   \
+    }                                                            \
+                                                                 \
     inline ret operator op(const T &v1, const PropertyValue &v2) \
+    {                                                            \
+        return v1 op G(v2, T);                                   \
+    }                                                            \
+                                                                 \
+    inline ret operator op(const T &v1, PropertyValue &v2)       \
     {                                                            \
         return v1 op G(v2, T);                                   \
     }

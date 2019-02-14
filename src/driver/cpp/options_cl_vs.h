@@ -14,6 +14,8 @@
 namespace sw
 {
 
+struct ProjectContext;
+
 namespace vs
 {
 
@@ -69,18 +71,6 @@ enum class DebugInformationFormatType
     Z7 = ObjectFile,
     Zi = ProgramDatabase,
     ZI = ProgramDatabaseEditAndContinue,
-};
-
-enum class Subsystem
-{
-    Console,
-    Windows,
-    Native,
-    EFI_Application,
-    EFI_BootServiceDriver,
-    EFI_ROM,
-    EFI_RuntimeDriver,
-    Posix
 };
 
 struct PrecompiledHeaderVs
@@ -142,7 +132,6 @@ DECLARE_OPTION_SPECIALIZATION(vs::ExceptionHandlingVector);
 DECLARE_OPTION_SPECIALIZATION(vs::MachineType);
 DECLARE_OPTION_SPECIALIZATION(vs::RuntimeLibraryType);
 DECLARE_OPTION_SPECIALIZATION(vs::DebugInformationFormatType);
-DECLARE_OPTION_SPECIALIZATION(vs::Subsystem);
 DECLARE_OPTION_SPECIALIZATION(vs::PrecompiledHeaderVs);
 DECLARE_OPTION_SPECIALIZATION(vs::ForceType);
 DECLARE_OPTION_SPECIALIZATION(vs::Warnings);

@@ -233,7 +233,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptionsData
     PathOptionsType Frameworks; // macOS
     // it is possible to have repeated link libraries on the command line
     LinkLibrariesType LinkLibraries;
-    //PathOptionsType LinkLibraries2; // so on linux
+    LinkLibrariesType LinkLibraries2; // untouched link libs
     Strings LinkOptions;
     PathOptionsType PreLinkDirectories;
     PathOptionsType LinkDirectories;

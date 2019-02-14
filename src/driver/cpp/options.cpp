@@ -327,11 +327,13 @@ PathOptionsType NativeCompilerOptions::gatherIncludeDirectories() const
 void NativeLinkerOptionsData::add(const LinkLibrary &l)
 {
      LinkLibraries.push_back(l.l);
+     LinkLibraries2.push_back(l.l);
 }
 
 void NativeLinkerOptionsData::remove(const LinkLibrary &l)
 {
     LinkLibraries.erase(l.l);
+    LinkLibraries2.erase(l.l);
 }
 
 PathOptionsType NativeLinkerOptionsData::gatherLinkDirectories() const

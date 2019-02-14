@@ -181,6 +181,7 @@ void NativeExecutedTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_VERSION_PATCH_NUM2"] = n2hex(pkg.version.getPatch(), 4);
         a["PACKAGE_VERSION_TWEAK_NUM2"] = n2hex(pkg.version.getTweak(), 4);
     };
+
     // https://www.gnu.org/software/autoconf/manual/autoconf-2.67/html_node/Initializing-configure.html
     if (defs)
     {
@@ -2254,7 +2255,7 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
             auto add = [&added, &ll](auto &dt, const path &base, bool system)
             {
                 auto &a = system ? dt->NativeLinkerOptions::System.LinkLibraries : dt->LinkLibraries;
-                if (added.find(base) == added.end())
+                if (added.find(base) == added.end() && !system)
                 {
                     ll.push_back(base);
                     ll.insert(ll.end(), a.begin(), a.end()); // also link libs
@@ -2513,7 +2514,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     writeFileOnce(to, s);
 }
 
-void NativeExecutedTarget::setChecks(const String &name)
+void NativeExecutedTarget::setChecks(const String &name, bool check_definitions)
 {
     auto i0 = solution->checker.sets.find(getSolution()->current_gn);
     if (i0 == solution->checker.sets.end())
@@ -2527,10 +2528,11 @@ void NativeExecutedTarget::setChecks(const String &name)
         const auto v = c->Value.value();
         // make private?
         // remove completely?
-        if (d)
+        if (check_definitions && d)
         {
-            //Public.Definitions[d.value()];
             add(Definition{ d.value() });
+
+            //Public.Definitions[d.value()];
 
             //for (auto &p : c->Prefixes)
                 //add(Definition{ p + d.value() });

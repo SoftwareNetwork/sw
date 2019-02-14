@@ -683,17 +683,28 @@ void ProjectContext::printProject(
 
         if (g.type == GeneratorType::VisualStudio)
         {
+            beginBlockWithConfiguration("ItemDefinitionGroup", s.Settings);
+
+            beginBlock("ClCompile");
+            auto sf = nt.gatherSourceFiles();
+            if (!sf.empty())
+            {
+                if (auto L = (*sf.begin())->compiler->as<VisualStudioCompiler>())
+                {
+                    L->printIdeSettings(*this);
+                }
+            }
+            endBlock();
+
             // references does not work well with C++ projects
             // so link directly
-            beginBlockWithConfiguration("ItemDefinitionGroup", s.Settings);
             beginBlock("Link");
 
             Files ll;
-            PathOptionsType ld;
 
             std::set<void*> visited;
             std::function<void(NativeExecutedTarget&)> f;
-            f = [&f, &dir, &s, &visited, &get_out_dir, &t, &ll, &ld, this](auto &nt)
+            f = [&f, &dir, &s, &visited, &get_out_dir, &t, &ll, this](auto &nt)
             {
                 if (visited.find(&nt) != visited.end())
                     return;
@@ -701,8 +712,6 @@ void ProjectContext::printProject(
 
                 for (auto &d : nt.Dependencies)
                 {
-                    if (d->isDummy())
-                        continue;
                     if (d->IncludeDirectoriesOnly)
                         continue;
                     if (!d->target)
@@ -714,15 +723,21 @@ void ProjectContext::printProject(
                     {
                         if (auto nt3 = d->target->as<NativeExecutedTarget>())
                         {
-                            if (d->target->getType() != TargetType::NativeExecutable && !*nt3->HeaderOnly)
+                            if (d->target->getType() == TargetType::NativeExecutable)
                             {
-                                ll.insert(nt3->getImportLibrary());
                                 deps.insert(parent->build_dependencies_name);
                                 parent->build_deps.insert(d->target->pkg.toString());
-
-                                if (s.Settings.Native.LibrariesType == LibraryType::Static)
+                            }
+                            else if (!*nt3->HeaderOnly)
+                            {
+                                if (visited.find(nt3) == visited.end())
                                 {
-                                    if (d->target->getType() == TargetType::NativeLibrary || d->target->getType() == TargetType::NativeStaticLibrary)
+                                    ll.insert(nt3->getImportLibrary());
+                                    deps.insert(parent->build_dependencies_name);
+                                    parent->build_deps.insert(d->target->pkg.toString());
+
+                                    if ((s.Settings.Native.LibrariesType == LibraryType::Static && d->target->getType() == TargetType::NativeLibrary) ||
+                                        d->target->getType() == TargetType::NativeStaticLibrary)
                                     {
                                         f(*nt3);
                                     }
@@ -732,35 +747,32 @@ void ProjectContext::printProject(
                         continue;
                     }
 
+                    if (d->isDummy())
+                        continue;
+
                     deps.insert(d->target->pkg.toString());
 
                     auto tdir = get_out_dir(nt, s.Settings);
                     tdir /= d->target->pkg.toString() + ".lib";
                     ll.insert(tdir);
 
-                    if (s.Settings.Native.LibrariesType == LibraryType::Static)
+                    if ((s.Settings.Native.LibrariesType == LibraryType::Static && d->target->getType() == TargetType::NativeLibrary) ||
+                        d->target->getType() == TargetType::NativeStaticLibrary)
                     {
-                        if (d->target->getType() == TargetType::NativeLibrary || d->target->getType() == TargetType::NativeStaticLibrary)
+                        if (auto nt3 = d->target->as<NativeExecutedTarget>())
                         {
-                            if (auto nt3 = d->target->as<NativeExecutedTarget>())
-                            {
-                                f(*nt3);
-                            }
+                            f(*nt3);
                         }
                     }
                 }
-
-                //for (auto &l : nt.LinkLibraries)
-                    //ll.insert(l);
-                for (auto &l : nt.NativeLinkerOptions::System.LinkLibraries)
-                    ll.insert(l);
-
-                for (auto &l : nt.LinkDirectories)
-                    ld.insert(l);
-                for (auto &l : nt.NativeLinkerOptions::System.LinkDirectories)
-                    ld.insert(l);
             };
+
             f(nt);
+
+            for (auto &l : nt.LinkLibraries2)
+                ll.insert(l);
+            for (auto &l : nt.NativeLinkerOptions::System.LinkLibraries)
+                ll.insert(l);
 
             beginBlockWithConfiguration("AdditionalDependencies", s.Settings);
             for (auto &l : ll)
@@ -768,10 +780,24 @@ void ProjectContext::printProject(
             addText("%(AdditionalDependencies)");
             endBlock(true);
 
+            PathOptionsType ld;
+            for (auto &l : nt.LinkDirectories)
+                ld.insert(l);
+            for (auto &l : nt.NativeLinkerOptions::System.LinkDirectories)
+                ld.insert(l);
+
             beginBlockWithConfiguration("AdditionalLibraryDirectories", s.Settings);
             for (auto &l : ld)
                 addText(normalize_path_windows(l) + ";");
             endBlock(true);
+
+            if (auto c = nt.getSelectedTool())
+            {
+                if (auto L = c->as<VisualStudioLinker>())
+                {
+                    L->VisualStudioLinkerOptions::printIdeSettings(*this);
+                }
+            }
 
             endBlock();
             endBlock();
@@ -836,10 +862,11 @@ void ProjectContext::printProject(
                         for (auto &o : gen->inputs)
                             addText(normalize_path_windows(o) + ";");
                         endBlock(true);
-                        for (auto &o : gen->outputs)
+                        if (!gen->outputs.empty())
                         {
                             beginBlockWithConfiguration("Outputs", s.Settings);
-                            addText(normalize_path_windows(o) + ";");
+                            for (auto &o : gen->outputs)
+                                addText(normalize_path_windows(o) + ";");
                             endBlock(true);
                         }
 

@@ -232,6 +232,12 @@ types:
                 properties:
                     - flag_before_each_value
 
+            mp:
+                name: MultiProcessorCompilation
+                flag: MP
+                type: bool
+                default_ide: true
+
             sync_pdb:
                 name: ForceSynchronousPDBWrites
                 flag: FS
@@ -516,9 +522,21 @@ types:
 
             sub:
                 name: Subsystem
-                type: vs::Subsystem
+                namespace: vs
+                type: Subsystem
                 flag: "SUBSYSTEM:"
-                default: vs::Subsystem::Console
+                default: Console
+                enum:
+                    - Console
+                    - Windows
+                    - Native
+                    - EFI_Application
+                    - EFI_BootServiceDriver
+                    - EFI_ROM
+                    - EFI_RuntimeDriver
+                    - Posix
+                properties:
+                    - print_to_ide
 
             ignw:
                 name: IgnoreWarnings

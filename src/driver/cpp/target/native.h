@@ -67,16 +67,17 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
 {
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
-    String ApiName;
-    StringSet ApiNames;
     std::optional<bool> HeaderOnly;
     std::optional<bool> AutoDetectOptions;
-    bool Empty = false;
     std::shared_ptr<NativeLinker> Linker;
     std::shared_ptr<NativeLinker> Librarian;
+    path InstallDirectory;
+
+    String ApiName;
+    StringSet ApiNames;
+    bool Empty = false;
     bool ExportAllSymbols = false;
     bool ExportIfStatic = false;
-    path InstallDirectory;
     bool PackageDefinitions = false;
     bool StartupProject = false; // move to description? move to Generator.VS... struct? IDE struct?
 
@@ -112,7 +113,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     path getOutputFile() const override;
     path makeOutputFile() const;
     path getImportLibrary() const override;
-    void setChecks(const String &name);
+    void setChecks(const String &name, bool check_definitions = false);
     void findSources();
     void autoDetectOptions();
     void autoDetectSources();
