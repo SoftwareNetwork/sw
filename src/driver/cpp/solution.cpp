@@ -2067,6 +2067,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
         for (auto &h : headers)
             c->ForcedIncludeFiles().push_back(h);
+        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
     };
 
     for (auto &fn : files)
