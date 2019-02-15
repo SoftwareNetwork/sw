@@ -288,7 +288,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     } fetch_info;
 
     std::optional<path> config; // current config or empty in configless mode
-    path dll; // current loaded dll
+    //path current_dll; // current loaded dll
     // child solutions
     std::vector<Solution> solutions;
     Solution *current_solution = nullptr;
@@ -350,7 +350,7 @@ private:
     // basic frontends
     void load_dll(const path &dll, bool usedll = true);
     void load_configless(const path &file_or_dir);
-    void createSolutions(bool usedll = true);
+    void createSolutions(const path &dll, bool usedll = true);
 
     // other frontends
     void cppan_load();

@@ -21,7 +21,7 @@
 DECLARE_STATIC_LOGGER(logger, "target");
 
 #define SW_BDIR_NAME "bdir"
-#define SW_BDIR_PRIVATE_NAME "bdir_pvt"
+#define SW_BDIR_PRIVATE_NAME "bdirp"
 
 namespace sw
 {
@@ -386,7 +386,7 @@ path TargetBase::getTargetsDir() const
 path TargetBase::getTargetDirShort(const path &root) const
 {
     // make t subdir or tgt? or tgts?
-    return root / "t" / getConfig(true) / sha256_short(pkg.toString());
+    return root / "t" / getConfig(true) / shorten_hash(blake2b_512(pkg.toString()), 6);
 }
 
 path TargetBase::getTempDir() const
@@ -503,7 +503,7 @@ bool Target::init()
     {
         // we doing some download on server or whatever
         // so, we do not want to touch real existing bdirs
-        BinaryDir = getSolution()->BinaryDir / "dry" / sha256_short(BinaryDir.u8string());
+        BinaryDir = getSolution()->BinaryDir / "dry" / shorten_hash(blake2b_512(BinaryDir.u8string()), 6);
         fs::remove_all(BinaryDir);
         fs::create_directories(BinaryDir);
     }

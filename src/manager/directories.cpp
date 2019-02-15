@@ -53,7 +53,7 @@ void Directories::set_storage_dir(const path &p)
     checkPath(ap, "storage directory");
 
 #ifdef _WIN32
-    storage_dir = boost::replace_all_copy(ap.string(), "/", "\\");
+    storage_dir = normalize_path_windows(ap);
 #else
     storage_dir = ap.string();
 #endif

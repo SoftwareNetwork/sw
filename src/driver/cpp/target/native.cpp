@@ -104,6 +104,13 @@ bool NativeExecutedTarget::init()
     SW_RETURN_MULTIPASS_END;
 }
 
+void NativeExecutedTarget::setupCommand(builder::Command &c) const
+{
+    NativeTarget::setupCommand(c);
+
+    c.addPathDirectory(getOutputBaseDir() / getConfig());
+}
+
 driver::cpp::CommandBuilder NativeExecutedTarget::addCommand() const
 {
     driver::cpp::CommandBuilder cb(*getSolution()->fs);
@@ -111,7 +118,7 @@ driver::cpp::CommandBuilder NativeExecutedTarget::addCommand() const
     // source dir contains more files than bdir?
     // sdir or bdir?
     cb.c->working_directory = SourceDir;
-    cb.c->addPathDirectory(getOutputBaseDir() / getConfig());
+    setupCommand(*cb.c);
     cb << *this;
     return cb;
 }
@@ -1002,10 +1009,11 @@ Commands NativeExecutedTarget::getCommands1() const
                     return &s == getSolution();
                 });
                 if (i == getSolution()->build->solutions.end())
-                    throw SW_RUNTIME_ERROR("Wrong sln");
-
-                c->name += "sln [" + std::to_string(i - getSolution()->build->solutions.begin() + 1) +
-                    "/" + std::to_string(getSolution()->build->solutions.size()) + "] ";
+                    // add trace message?
+                    ;// throw SW_RUNTIME_ERROR("Wrong sln");
+                else
+                    c->name += "sln [" + std::to_string(i - getSolution()->build->solutions.begin() + 1) +
+                        "/" + std::to_string(getSolution()->build->solutions.size()) + "] ";
             }
             c->name += "[" + pkg.toString() + "]" + getSelectedTool()->Extension;
         }
@@ -1903,7 +1911,8 @@ bool NativeExecutedTarget::prepare()
         }
 
         //
-        if (::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
+        if (GenerateWindowsResource
+            && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
             && getSelectedTool() == Linker.get()
             && !HeaderOnly.value()
             && !IsConfig
@@ -2044,16 +2053,24 @@ bool NativeExecutedTarget::prepare()
         // pdb
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
         {
-            c->GenerateDebugInfo = c->GenerateDebugInfo() ||
-                getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug ||
-                getSolution()->Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation;
-            if (c->GenerateDebugInfo() && c->PDBFilename.empty())
+            if (!c->GenerateDebugInfo &&
+                (getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug ||
+                getSolution()->Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation))
+                c->GenerateDebugInfo = vs::link::Debug::FULL;
+
+            // TODO: set FASTLINK for debug builds for IDE (VS)!
+
+            //if ((!c->GenerateDebugInfo || c->GenerateDebugInfo() != vs::link::Debug::NONE) &&
+            if ((c->GenerateDebugInfo && c->GenerateDebugInfo() != vs::link::Debug::NONE) &&
+                c->PDBFilename.empty())
             {
                 auto f = getOutputFile();
                 f = f.parent_path() / f.filename().stem();
                 f += ".pdb";
                 c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (pkg.ppath.toString() + ".pdb");
             }
+            else
+                c->PDBFilename.output_dependency = false;
 
             if (Linker->Type == LinkerType::LLD)
             {
@@ -2459,7 +2476,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         if (!repl)
         {
             s = m.prefix().str() + m.suffix().str();
-            LOG_TRACE(logger, "configure @ or ${}" << m[1].str() << ": replacement not found");
+            LOG_TRACE(logger, "configure @ or ${} " << m[1].str() << ": replacement not found");
             continue;
         }
         s = m.prefix().str() + *repl + m.suffix().str();
@@ -2472,7 +2489,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         if (!repl)
         {
             s = m.prefix().str() + "/* #undef " + m[1].str() + " */" + "\n" + m.suffix().str();
-            LOG_TRACE(logger, "configure #mesondefine" << m[1].str() << ": replacement not found");
+            LOG_TRACE(logger, "configure #mesondefine " << m[1].str() << ": replacement not found");
             continue;
         }
         s = m.prefix().str() + "#define " + m[1].str() + " " + *repl + "\n" + m.suffix().str();
@@ -2487,7 +2504,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
             if (!repl)
             {
                 s = m.prefix().str() + m.suffix().str();
-                LOG_TRACE(logger, "configure #undef" << m[1].str() << ": replacement not found");
+                LOG_TRACE(logger, "configure #undef " << m[1].str() << ": replacement not found");
                 continue;
             }
             s = m.prefix().str() + "#define " + m[1].str() + " " + *repl + "\n" + m.suffix().str();
@@ -2500,7 +2517,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         auto repl = find_repl(m[1].str());
         if (!repl)
         {
-            LOG_TRACE(logger, "configure #cmakedefine" << m[1].str() << ": replacement not found");
+            LOG_TRACE(logger, "configure #cmakedefine " << m[1].str() << ": replacement not found");
             repl = {};
         }
         if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())
@@ -2515,7 +2532,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         auto repl = find_repl(m[1].str());
         if (!repl)
         {
-            LOG_TRACE(logger, "configure #cmakedefine01" << m[1].str() << ": replacement not found");
+            LOG_TRACE(logger, "configure #cmakedefine01 " << m[1].str() << ": replacement not found");
             repl = {};
         }
         if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())

@@ -80,6 +80,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     bool ExportIfStatic = false;
     bool PackageDefinitions = false;
     bool StartupProject = false; // move to description? move to Generator.VS... struct? IDE struct?
+    bool GenerateWindowsResource = true; // internal?
 
     bool ImportFromBazel = false;
     StringSet BazelNames;
@@ -149,6 +150,8 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void addPrecompiledHeader(const path &h, const path &cpp = path());
     void addPrecompiledHeader(PrecompiledHeader &pch);
     NativeExecutedTarget &operator=(PrecompiledHeader &pch);
+
+    void setupCommand(builder::Command &c) const override;
 
     virtual bool isStaticOnly() const { return false; }
     virtual bool isSharedOnly() const { return false; }

@@ -6,4 +6,4 @@
 
 #pragma once
 
-#define SW_MODULE_ABI_VERSION 1
+#define SW_MODULE_ABI_VERSION 5

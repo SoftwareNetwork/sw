@@ -16,7 +16,7 @@
 
 #define SW_INTERNAL_INIT_COMMAND(name, target) \
     name->fs = (target).getSolution()->fs;     \
-    name->addPathDirectory((target).getOutputDir() / (target).getConfig())
+    (target).setupCommand(*name)
 
 #define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
     auto name = std::make_shared<type>(__VA_ARGS__);    \
@@ -202,8 +202,8 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     void updateCommandTime() const;
     void addPathDirectory(const path &p);
     Files getGeneratedDirs() const; // used by generators
-
     void addInputOutputDeps();
+    path writeCommand(const path &basename) const;
 
     bool lessDuringExecution(const Command &rhs) const;
 
@@ -223,7 +223,6 @@ protected:
     bool executed_ = false;
 
     virtual bool check_if_file_newer(const path &, const String &what, bool throw_on_missing) const;
-    void writeCommand(const path &basename) const;
 
     static String escape_cmd_arg(String);
 

@@ -19,6 +19,7 @@ void save_from_memory_to_file(const path &fn, sqlite3 *db);
 #include <primitives/debug.h>
 #include <primitives/exceptions.h>
 #include <primitives/lock.h>
+#include <primitives/symbol.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "db_file");
@@ -28,6 +29,16 @@ DECLARE_STATIC_LOGGER(logger, "db_file");
 
 namespace sw
 {
+
+static path getCurrentModuleName()
+{
+    return primitives::getModuleNameForSymbol(primitives::getCurrentModuleSymbol());
+}
+
+static String getCurrentModuleNameHash()
+{
+    return shorten_hash(blake2b_512(getCurrentModuleName().u8string()), 12);
+}
 
 static path getDir(bool local)
 {
@@ -43,7 +54,7 @@ static path getFilesDbFilename(const String &config, bool local)
 
 path getFilesLogFileName(const String &config, bool local)
 {
-    auto cfg = sha256_short(getCurrentModuleNameHash() + "_" + config);
+    auto cfg = shorten_hash(blake2b_512(getCurrentModuleNameHash() + "_" + config), 12);
     return getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
 }
 
@@ -54,7 +65,7 @@ static path getCommandsDbFilename(bool local)
 
 path getCommandsLogFileName(bool local)
 {
-    auto cfg = sha256_short(getCurrentModuleNameHash());
+    auto cfg = shorten_hash(blake2b_512(getCurrentModuleNameHash()), 12);
     return getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("log_" + cfg + ".bin");
 }
 

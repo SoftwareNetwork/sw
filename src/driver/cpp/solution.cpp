@@ -104,7 +104,7 @@ String toString(FrontendType t)
 
 static String getCurrentModuleId()
 {
-    return shorten_hash(sha1(getProgramName()));
+    return shorten_hash(sha1(getProgramName()), 6);
 }
 
 static path getImportFilePrefix()
@@ -133,7 +133,7 @@ static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, co
 {
     // depends on upkg, not on pkg!
     // because p is constant, but up might differ
-    auto h = p.getDirSrc() / "gen" / ("pkg_header_" + shorten_hash(sha1(up.toString())) + ".h");
+    auto h = p.getDirSrc() / "gen" / ("pkg_header_" + shorten_hash(sha1(up.toString()), 6) + ".h");
     //if (fs::exists(h))
         //return h;
     auto cfg = p.getDirSrc2() / "sw.cpp";
@@ -1608,7 +1608,7 @@ static auto getFilesHash(const Files &files)
     String h;
     for (auto &fn : files)
         h += fn.u8string();
-    return sha256_short(h);
+    return shorten_hash(blake2b_512(h), 6);
 }
 
 PackagePath Build::getSelfTargetName(const Files &files)
@@ -1800,7 +1800,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
             //#ifdef CPPAN_DEBUG
-            L->GenerateDebugInfo = true;
+            L->GenerateDebugInfo = vs::link::Debug::FULL;
             //#endif
             L->Force = vs::ForceType::Multiple;
             L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
@@ -2155,7 +2155,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     {
         L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
         //#ifdef CPPAN_DEBUG
-        L->GenerateDebugInfo = true;
+        L->GenerateDebugInfo = vs::link::Debug::FULL;
         //#endif
         L->Force = vs::ForceType::Multiple;
         L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
@@ -2214,7 +2214,7 @@ path Build::build(const path &fn)
         b.execute_jobs = config_jobs;
         b.file_storage_local = false;
         auto r = b.build_configs_separate({ fn });
-        dll = r.begin()->second;
+        auto dll = r.begin()->second;
         if (do_not_rebuild_config &&
             (File(fn, *b.solutions[0].fs).isChanged() ||
                 File(dll, *b.solutions[0].fs).isChanged()))
@@ -2254,7 +2254,7 @@ void Build::load(const path &fn, bool configless)
     if (configless)
         return load_configless(fn);
 
-    build(fn);
+    auto dll = build(fn);
 
     //fs->save(); // remove?
     //fs->reset();
@@ -2675,10 +2675,21 @@ void Build::build_packages(const StringSet &pkgs)
     if (cfgs.size() != 1)
         sr.restoreNow(true);
 
-    createSolutions(true);
+    createSolutions(dll, true);
+    // set known targets to allow target loading
     for (auto &s : solutions)
         s.knownTargets = knownTargets;
     load_dll(dll);
+
+    // clear TargetsToBuild that is set inside load_dll()
+    for (auto &s : solutions)
+        s.TargetsToBuild.clear();
+
+    // now we set ours TargetsToBuild to this object
+    // execute() will propagate them to solutions
+    for (auto &[porig, p] : r.resolved_packages)
+        TargetsToBuild[p];
+
     execute();
 
     //
@@ -2751,7 +2762,7 @@ static bool hasUserProvidedInformation()
         ;
 }
 
-void Build::createSolutions(bool usedll)
+void Build::createSolutions(const path &dll, bool usedll)
 {
     if (gWithTesting)
         with_testing = true;
@@ -2938,7 +2949,7 @@ void Build::createSolutions(bool usedll)
 
 void Build::load_dll(const path &dll, bool usedll)
 {
-    createSolutions(usedll);
+    createSolutions(dll, usedll);
 
     if (auto g = getGenerator(); g)
     {

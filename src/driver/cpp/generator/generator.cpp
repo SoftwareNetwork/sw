@@ -274,18 +274,43 @@ static std::pair<String, String> get_project_configuration_pair(const SolutionSe
     return { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s) + "'" };
 }
 
-static String get_vs_file_type_by_ext(const path &p)
+enum class VSFileType
 {
-    String type = "None";
+    None,
+    ResourceCompile,
+    CustomBuild,
+    ClInclude,
+    ClCompile,
+};
+
+String toString(VSFileType t)
+{
+    switch (t)
+    {
+    case VSFileType::ClCompile:
+        return "ClCompile";
+    case VSFileType::ClInclude:
+        return "ClInclude";
+    case VSFileType::ResourceCompile:
+        return "ResourceCompile";
+    case VSFileType::CustomBuild:
+        return "CustomBuild";
+    default:
+        return "None";
+    }
+}
+
+static VSFileType get_vs_file_type_by_ext(const path &p)
+{
     if (p.extension() == ".rc")
-        type = "ResourceCompile";
+        return VSFileType::ResourceCompile;
     else if (p.extension() == ".rule")
-        type = "CustomBuild";
+        return VSFileType::CustomBuild;
     else if (isCppHeaderFileExtension(p.extension().string()))
-        type = "ClInclude";
+        return VSFileType::ClInclude;
     else if (isCppSourceFileExtensions(p.extension().string()) || p.extension() == ".c")
-        type = "ClCompile";
-    return type;
+        return VSFileType::ClCompile;
+    return VSFileType::None;
 }
 
 static VSProjectType get_vs_project_type(const SolutionSettings &s, TargetType t)
@@ -316,12 +341,12 @@ static VSProjectType get_vs_project_type(const SolutionSettings &s, TargetType t
 static path get_int_dir(const path &dir, const path &projects_dir, const String &name)
 {
     auto tdir = dir / projects_dir;
-    return tdir / sha256_short(name);
+    return tdir / shorten_hash(blake2b_512(name), 6);
 }
 
 static path get_int_dir(const path &dir, const path &projects_dir, const String &name, const SolutionSettings &s)
 {
-    return get_int_dir(dir, projects_dir, name) / sha256_short(get_project_configuration(s));
+    return get_int_dir(dir, projects_dir, name) / shorten_hash(blake2b_512(get_project_configuration(s)), 6);
 }
 
 XmlContext::XmlContext(bool print_version)
@@ -522,6 +547,7 @@ void ProjectContext::printProject(
         addBlock("ProjectName", PackageId(p.ppath.slice(pp.size()), p.version).toString() + "-build");
     else
         addBlock("ProjectName", PackageId(p.ppath.slice(pp.size()), p.version).toString());
+    addBlock("PreferredToolArchitecture", "x64"); // also x86
     endBlock();
 
     addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"} });
@@ -678,6 +704,12 @@ void ProjectContext::printProject(
             addBlock("LanguageStandard", "stdcpplatest");
             break;
         }
+
+        beginBlockWithConfiguration("AdditionalOptions", s.Settings);
+        for (auto &o : nt.CompileOptions)
+            addText(o + " ");
+        endBlock();
+
         endBlock();
         endBlock();
 
@@ -807,6 +839,23 @@ void ProjectContext::printProject(
         {
             beginBlock("ItemGroup");
 
+            Files filenames;
+            auto add_obj_file = [this, &s, &filenames](auto t, const path &p)
+            {
+                if (t != VSFileType::ClCompile)
+                    return;
+                // VS disables /MP when it sees object filename
+                // so we turn it on only for files with the same names
+                if (filenames.find(p.filename()) == filenames.end())
+                {
+                    filenames.insert(p.filename());
+                    return;
+                }
+                beginBlockWithConfiguration("ObjectFileName", s.Settings);
+                addText("$(IntDir)/" + p.filename().u8string() + "." + sha256(p.u8string()).substr(0, 8) + ".obj");
+                endBlock(true);
+            };
+
             std::unordered_set<void *> rules;
             for (auto &[p, sf] : nt)
             {
@@ -825,11 +874,10 @@ void ProjectContext::printProject(
 
                         // VS crash
                         // beginBlockWithConfiguration(get_vs_file_type_by_ext(rule), s.Settings, { {"Include", rule.string()} });
-                        beginBlock(get_vs_file_type_by_ext(rule), { {"Include", rule.string()} });
+                        beginBlock(toString(get_vs_file_type_by_ext(rule)), { {"Include", rule.string()} });
 
                         add_excluded_from_build(s);
 
-                        String cmd;
                         beginBlockWithConfiguration("AdditionalInputs", s.Settings);
                         //addText(normalize_path_windows(gen->program) + ";");
                         if (auto dc = gen->as<driver::cpp::Command>())
@@ -841,8 +889,6 @@ void ProjectContext::printProject(
                                 {
                                     if (!gPrintDependencies && !d->target->Local)
                                     {
-                                        cmd += "\"" + normalize_path_windows(gen->program) + "\"";
-
                                         deps.insert(parent->build_dependencies_name);
                                         parent->build_deps.insert(d->target->pkg.toString());
                                     }
@@ -852,7 +898,8 @@ void ProjectContext::printProject(
                                         tdir /= d->target->pkg.toString() + ".exe";
                                         addText(normalize_path_windows(tdir) + ";");
 
-                                        cmd += "\"" + normalize_path_windows(tdir) + "\"";
+                                        // fix program
+                                        gen->program = tdir;
 
                                         deps.insert(d->target->pkg.toString());
                                     }
@@ -870,22 +917,18 @@ void ProjectContext::printProject(
                             endBlock(true);
                         }
 
-                        for (auto &a : gen->args)
-                            cmd += " " + a;
-
-                        if (!gen->in.file.empty())
-                            cmd += " < \"" + normalize_path_windows(gen->in.file) + "\"";
-                        if (!gen->out.file.empty())
-                            cmd += " > \"" + normalize_path_windows(gen->out.file) + "\"";
-                        if (!gen->err.file.empty())
-                            cmd += " 2> \"" + normalize_path_windows(gen->err.file) + "\"";
+                        auto batch = get_int_dir(nt, s.Settings) / "commands" / std::to_string(gen->getHash());
+                        batch = gen->writeCommand(batch);
 
                         beginBlockWithConfiguration("Command", s.Settings);
-                        addText(cmd);
+                        // call batch files with 'call' command
+                        // otherwise it won't run multiple custom commands, only the first one
+                        // https://docs.microsoft.com/en-us/cpp/ide/specifying-custom-build-tools?view=vs-2017
+                        addText("call \"" + normalize_path_windows(batch) + "\"");
                         endBlock(true);
 
                         beginBlock("Message");
-                        addText(gen->getName());
+                        //addText(gen->getName());
                         endBlock(true);
 
                         endBlock();
@@ -893,19 +936,23 @@ void ProjectContext::printProject(
                         auto filter = ". SW Rules";
                         filters.insert(filter);
 
-                        fctx.beginBlock(get_vs_file_type_by_ext(rule), { {"Include", rule.string()} });
+                        fctx.beginBlock(toString(get_vs_file_type_by_ext(rule)), { {"Include", rule.string()} });
                         fctx.addBlock("Filter", make_backslashes(filter));
                         fctx.endBlock();
                     }
 
-                    beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() } });
+                    auto t = get_vs_file_type_by_ext(p);
+                    beginBlock(toString(t), { { "Include", p.string() } });
                     add_excluded_from_build(s);
+                    add_obj_file(t, p);
                     endBlock();
                 }
                 else if (g.type == GeneratorType::VisualStudio && ff.isGeneratedAtAll())
                 {
-                    beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() } });
+                    auto t = get_vs_file_type_by_ext(p);
+                    beginBlock(toString(t), { { "Include", p.string() } });
                     add_excluded_from_build(s);
+                    add_obj_file(t, p);
                     endBlock();
                 }
                 else
@@ -914,7 +961,9 @@ void ProjectContext::printProject(
                     {
                         files_added.insert(p);
 
-                        beginBlock(get_vs_file_type_by_ext(p), { { "Include", p.string() } });
+                        auto t = get_vs_file_type_by_ext(p);
+                        beginBlock(toString(t), { { "Include", p.string() } });
+                        add_obj_file(t, p);
                         endBlock();
                     }
                 }
@@ -997,7 +1046,7 @@ void ProjectContext::printProject(
                 } while (!r.empty() && r != r.root_path());
             }
 
-            fctx.beginBlock(get_vs_file_type_by_ext(f), { {"Include", f.string()} });
+            fctx.beginBlock(toString(get_vs_file_type_by_ext(f)), { {"Include", f.string()} });
             if (!filter.empty())
                 fctx.addBlock("Filter", make_backslashes(filter.string()));
             fctx.endBlock();
@@ -1358,7 +1407,7 @@ void VSGenerator::generate(const Build &b)
         }
 
         pctx.beginBlock("ItemGroup");
-        pctx.beginBlock(get_vs_file_type_by_ext(*b.config), { { "Include", b.config->u8string() } });
+        pctx.beginBlock(toString(get_vs_file_type_by_ext(*b.config)), { { "Include", b.config->u8string() } });
         pctx.endBlock();
         pctx.endBlock();
 
@@ -1568,7 +1617,7 @@ void VSGenerator::generate(const Build &b)
                 args.push_back(p);
             }
 
-            auto base = int_dir / sha256_short(deps);
+            auto base = int_dir / shorten_hash(blake2b_512(deps), 6);
 
             args.push_back("-ide-fast-path");
             args.push_back(normalize_path(path(base) += ".deps"));
@@ -1590,7 +1639,7 @@ void VSGenerator::generate(const Build &b)
         write_file_if_not_exists(rule, "");
 
         pctx.beginBlock("ItemGroup");
-        pctx.beginBlock(get_vs_file_type_by_ext(rule), { {"Include", rule.string()} });
+        pctx.beginBlock(toString(get_vs_file_type_by_ext(rule)), { {"Include", rule.string()} });
         pctx.beginBlock("Outputs");
         pctx.addText(normalize_path_windows(rule.parent_path() / "intentionally_missing.file"));
         pctx.endBlock(true);

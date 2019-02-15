@@ -78,7 +78,7 @@ void ChecksStorage::save(const path &fn) const
     fs::create_directories(fn.parent_path());
     {
         String s;
-        for (auto &[h, v] : all_checks)
+        for (auto &[h, v] : std::map<decltype(all_checks)::key_type, decltype(all_checks)::mapped_type>(all_checks.begin(), all_checks.end()))
             s += std::to_string(h) + " " + std::to_string(v) + "\n";
         write_file(fn, s);
     }
@@ -86,7 +86,7 @@ void ChecksStorage::save(const path &fn) const
     if (!manual_checks.empty())
     {
         String s;
-        for (auto &[h, c] : manual_checks)
+        for (auto &[h, c] : std::map<decltype(manual_checks)::key_type, decltype(manual_checks)::mapped_type>(manual_checks.begin(), manual_checks.end()))
         {
             s += "# ";
             for (auto &d : c->Definitions)
@@ -623,6 +623,9 @@ void FunctionExists::run() const
     auto s = setupSolution(f);
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    e.GenerateWindowsResource = false;
+    if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
+        L->DisableIncrementalLink = true;
     e += f;
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data;
 
@@ -740,6 +743,9 @@ void TypeSize::run() const
     auto s = setupSolution(f);
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    e.GenerateWindowsResource = false;
+    if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
+        L->DisableIncrementalLink = true;
     e += f;
 
     if (!execute(s))
@@ -814,6 +820,9 @@ void TypeAlignment::run() const
     auto s = setupSolution(f);
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    e.GenerateWindowsResource = false;
+    if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
+        L->DisableIncrementalLink = true;
     e += f;
 
     if (!execute(s))
@@ -887,6 +896,9 @@ void SymbolExists::run() const
     auto s = setupSolution(f);
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    e.GenerateWindowsResource = false;
+    if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
+        L->DisableIncrementalLink = true;
     e += f;
 
     if (!execute(s))
@@ -944,6 +956,9 @@ void DeclarationExists::run() const
     auto s = setupSolution(f);
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    e.GenerateWindowsResource = false;
+    if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
+        L->DisableIncrementalLink = true;
     e += f;
 
     if (!execute(s))
@@ -998,6 +1013,9 @@ void StructMemberExists::run() const
     auto s = setupSolution(f);
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    e.GenerateWindowsResource = false;
+    if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
+        L->DisableIncrementalLink = true;
     e += f;
 
     if (!execute(s))
@@ -1067,6 +1085,9 @@ void LibraryFunctionExists::run() const
     auto s = setupSolution(f);
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    e.GenerateWindowsResource = false;
+    if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
+        L->DisableIncrementalLink = true;
     e += f;
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data;
     e.NativeLinkerOptions::System.LinkLibraries.push_back(library);
@@ -1137,6 +1158,9 @@ void SourceLinks::run() const
     auto s = setupSolution(f);
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    e.GenerateWindowsResource = false;
+    if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
+        L->DisableIncrementalLink = true;
     e += f;
 
     if (!execute(s))
@@ -1167,6 +1191,9 @@ void SourceRuns::run() const
     auto s = setupSolution(f);
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    e.GenerateWindowsResource = false;
+    if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
+        L->DisableIncrementalLink = true;
     e += f;
 
     if (!execute(s))

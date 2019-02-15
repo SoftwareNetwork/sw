@@ -25,17 +25,13 @@ String hashConfig(String &c, bool use_short_config)
             c.resize(c.size() - 1);
     };
 
-    auto h = hash_config(c);
+    auto h = shorten_hash(blake2b_512(c), 6);
     if (!use_short_config && c.size() + h.size() < 255/* && !use_short_hash*/) // max path part in many FSes
     {
         // hash
         addConfigElement(c, h);
         remove_last_dash(c);
         return c;
-    }
-    else
-    {
-        h = shorten_hash(h);
     }
     return h;
 }

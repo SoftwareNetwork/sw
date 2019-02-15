@@ -1029,7 +1029,7 @@ bool isValidSourceUrl(const Source &source)
 
 String get_source_hash(const Source &source)
 {
-    return sha256_short(print_source(source));
+    return shorten_hash(blake2b_512(print_source(source)), 12);
 }
 
 bool load_source(const yaml &root, Source &source)
@@ -1080,6 +1080,7 @@ Source load_source(const ptree &p)
         return x##_;                                        \
     }
     SOURCE_TYPES(TRY_TO_LOAD_SOURCE, DELIM_SEMICOLON);
+#undef TRY_TO_LOAD_SOURCE
     throw SW_RUNTIME_ERROR("Bad source");
 }
 
@@ -1103,6 +1104,7 @@ Source load_source(const nlohmann::json &j)
         return x##_;                       \
     }
     SOURCE_TYPES(TRY_TO_LOAD_SOURCE, DELIM_SEMICOLON);
+#undef TRY_TO_LOAD_SOURCE
     throw SW_RUNTIME_ERROR("Bad source");
 }
 

@@ -26,7 +26,7 @@ using namespace sw::driver::cpp;
 // disable custom pragma warnings
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4068)
+#pragma warning(disable : 4068) // unknown #pragma
 #endif
 
 #ifdef _MSC_VER

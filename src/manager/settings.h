@@ -21,9 +21,6 @@
 namespace sw
 {
 
-void cleanConfig(const String &config);
-void cleanConfigs(const Strings &configs);
-
 struct SW_MANAGER_API Settings
 {
     // connection

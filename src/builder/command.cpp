@@ -665,11 +665,8 @@ String Command::saveCommand() const
     return s;
 }
 
-void Command::writeCommand(const path &p) const
+path Command::writeCommand(const path &p) const
 {
-    if (do_not_save_command)
-        return;
-
     auto pbat = p;
     String t;
 
@@ -753,14 +750,14 @@ void Command::writeCommand(const path &p) const
         t += "%";
     else
         t += "$";
-    t += "* ";
+    t += "*";
 
     if (!in.file.empty())
-        t += "< " + norm(in.file) + " ";
+        t += " < " + norm(in.file);
     if (!out.file.empty())
-        t += "> " + norm(out.file) + " ";
+        t += " > " + norm(out.file);
     if (!err.file.empty())
-        t += "2> " + norm(err.file) + " ";
+        t += " 2> " + norm(err.file);
 
     t += "\n";
 
@@ -768,6 +765,8 @@ void Command::writeCommand(const path &p) const
     fs::permissions(pbat,
         fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
         fs::perm_options::add);
+
+    return pbat;
 }
 
 void Command::postProcess(bool ok)

@@ -13,6 +13,12 @@
 #include <boost/algorithm/string.hpp>
 #include <primitives/context.h>
 
+// disable custom pragma warnings
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition
+#endif
+
 #include <build_self.generated.h>
 
 void check_self(Checker &c)

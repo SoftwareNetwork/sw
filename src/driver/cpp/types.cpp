@@ -69,6 +69,7 @@ String toString(ConfigurationType Type)
     default:
         throw std::logic_error("todo: implement config type");
     }
+#undef CASE
 }
 
 String toString(CompilerType Type)
@@ -88,6 +89,7 @@ String toString(CompilerType Type)
     default:
         throw std::logic_error("todo: implement compiler type");
     }
+#undef CASE
 }
 
 String toString(LinkerType Type)
@@ -103,6 +105,7 @@ String toString(LinkerType Type)
     default:
         throw std::logic_error("todo: implement linker type");
     }
+#undef CASE
 }
 
 String toString(InheritanceType Type)
@@ -120,6 +123,7 @@ String toString(InheritanceType Type)
     default:
         throw std::logic_error("todo: implement inheritance type");
     }
+#undef CASE
 }
 
 String toString(LibraryType Type)
@@ -135,6 +139,7 @@ String toString(LibraryType Type)
     default:
         throw std::logic_error("todo: implement inheritance type");
     }
+#undef CASE
 }
 
 CompilerType compilerTypeFromStringCaseI(const String &compiler)
@@ -156,15 +161,19 @@ CompilerType compilerTypeFromStringCaseI(const String &compiler)
 
 ConfigurationType configurationTypeFromStringCaseI(const String &configuration)
 {
-    if (boost::iequals(configuration, "Debug"))
+    if (boost::iequals(configuration, "Debug") ||
+        boost::iequals(configuration, "d"))
         return ConfigurationType::Debug;
-    else if (boost::iequals(configuration, "Release"))
+    else if (boost::iequals(configuration, "Release") ||
+        boost::iequals(configuration, "r"))
         return ConfigurationType::Release;
     else if (boost::iequals(configuration, "MinSizeRel") ||
+        boost::iequals(configuration, "msr") ||
         boost::iequals(configuration, "MinimalSizeRelease"))
         return ConfigurationType::MinimalSizeRelease;
     else if (boost::iequals(configuration, "RelWithDebInfo") ||
         boost::iequals(configuration, "ReleaseWithDebugInformation") ||
+        boost::iequals(configuration, "rwdi") ||
         boost::iequals(configuration, "ReleaseWithDebInfo"))
         return ConfigurationType::ReleaseWithDebugInformation;
     else if (!configuration.empty())

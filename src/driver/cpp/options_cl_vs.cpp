@@ -181,6 +181,24 @@ DECLARE_OPTION_SPECIALIZATION(vs::Subsystem)
     return { s };
 }
 
+DECLARE_OPTION_SPECIALIZATION(vs::link::Debug)
+{
+    Strings s;
+    switch (value())
+    {
+    case vs::link::Debug::NONE:
+        s.push_back(getCommandLineFlag() + "NONE");
+        break;
+    case vs::link::Debug::FASTLINK:
+        s.push_back(getCommandLineFlag() + "FASTLINK");
+        break;
+    case vs::link::Debug::FULL:
+        s.push_back(getCommandLineFlag() + "FULL");
+        break;
+    }
+    return { s };
+}
+
 DECLARE_OPTION_SPECIALIZATION(vs::ForceType)
 {
     using namespace vs;
