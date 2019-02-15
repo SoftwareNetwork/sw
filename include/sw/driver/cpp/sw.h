@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2018 Egor Pugin <egor.pugin@gmail.com>
+// Copyright (C) 2017-2019 Egor Pugin <egor.pugin@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -14,19 +14,13 @@
 #include <module.h>
 #include <target/all.h>
 
-// manager stuff
-#include <resolver.h>
-
 // support stuff
-//#include <primitives/hash.h>
-//#include <primitives/http.h>
 #include <boost/algorithm/string.hpp>
 
-//namespace sw {}
 using namespace sw;
 using namespace sw::driver::cpp;
 
-// user code will use
+// user code will use?
 // using namespace sw::vN; // where N - version of sw api
 
 // disable custom pragma warnings

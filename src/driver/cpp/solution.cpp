@@ -571,7 +571,7 @@ static void addImportLibrary(NativeExecutedTarget &t)
     auto c = t.addCommand();
     c.c->working_directory = getImportDefinitionsFile().parent_path();
     c << t.Librarian->file
-        << cmd::in(getImportDefinitionsFile(), cmd::Prefix{ "-DEF:" })
+        << cmd::in(getImportDefinitionsFile(), cmd::Prefix{ "-DEF:" }, cmd::Skip)
         << cmd::out(getImportLibraryFile(), cmd::Prefix{ "-OUT:" })
         ;
     t.LinkLibraries.push_back(getImportLibraryFile());
@@ -1805,7 +1805,8 @@ FilesMap Build::build_configs_separate(const Files &files)
             L->Force = vs::ForceType::Multiple;
             L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
             L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
-            L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
+            // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
+            //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
         }
 
         for (auto &d : udeps)
@@ -2159,7 +2160,8 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         L->Force = vs::ForceType::Multiple;
         L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
         L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
-        L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
+        // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
+        //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
     }
 
     auto i = solution.children.find(lib.pkg);

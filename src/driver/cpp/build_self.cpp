@@ -8,6 +8,7 @@
 #include <sw/driver/cpp/sw.h>
 
 #include <directories.h>
+#include <resolver.h>
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/context.h>
