@@ -19,10 +19,13 @@ struct SW_DRIVER_CPP_API Module
     template <class F, bool Required = false>
     struct LibraryCall
     {
+        using function_type = F;
+        using std_function_type = std::function<F>;
+
         String name;
         const Solution *s = nullptr;
         const Module *m = nullptr;
-        std::function<F> f;
+        std_function_type f;
 
         LibraryCall &operator=(std::function<F> f)
         {
@@ -31,13 +34,13 @@ struct SW_DRIVER_CPP_API Module
         }
 
         template <class ... Args>
-        void operator()(Args && ... args) const
+        typename std_function_type::result_type operator()(Args && ... args) const
         {
             if (f)
             {
                 try
                 {
-                    f(std::forward<Args>(args)...);
+                    return f(std::forward<Args>(args)...);
                 }
                 catch (const std::exception &e)
                 {
@@ -74,6 +77,7 @@ struct SW_DRIVER_CPP_API Module
                     err += ": " + s->current_module;
                 throw SW_RUNTIME_ERROR(err);
             }
+            return std_function_type::result_type();
         }
     };
 
@@ -88,6 +92,7 @@ struct SW_DRIVER_CPP_API Module
     void build(Solution &s) const;
     void configure(Build &s) const;
     void check(Solution &s, Checker &c) const;
+    int sw_get_module_abi_version() const;
 
     template <class F, class ... Args>
     auto call(const String &name, Args && ... args) const
@@ -101,6 +106,7 @@ private:
     mutable LibraryCall<void(Solution &), true> build_;
     mutable LibraryCall<void(Build &)> configure_;
     mutable LibraryCall<void(Checker &)> check_;
+    mutable LibraryCall<int(), true> sw_get_module_abi_version_;
 };
 
 struct SW_DRIVER_CPP_API ModuleStorage

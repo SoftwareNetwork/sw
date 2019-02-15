@@ -3172,7 +3172,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
 
 path NativeExecutedTarget::getFile(const DependencyPtr &dep, const path &fn)
 {
-    *this += dep;
+    (*this + dep)->Dummy = true;
     return dep->getPackage().resolve().getDirSrc2() / fn;
 }
 

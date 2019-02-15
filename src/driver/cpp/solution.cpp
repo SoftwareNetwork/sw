@@ -24,6 +24,8 @@
 #include <hash.h>
 #include <settings.h>
 
+#include <sw/driver/cpp/sw_abi_version.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/range/combine.hpp>
 #include <boost/thread/lock_types.hpp>
@@ -828,6 +830,14 @@ static path build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     return b.build_configs(pkgs);
 }
 
+static void sw_check_abi_version(int v)
+{
+    if (v > SW_MODULE_ABI_VERSION)
+        throw SW_RUNTIME_ERROR("Module ABI is greater than binary ABI. Update your sw binary.");
+    if (v < SW_MODULE_ABI_VERSION)
+        throw SW_RUNTIME_ERROR("Module ABI is less than binary ABI. Update sw driver headers (or ask driver maintainer).");
+}
+
 void Solution::build_and_resolve(int n_runs)
 {
     auto ud = gatherUnresolvedDependencies();
@@ -880,6 +890,7 @@ void Solution::build_and_resolve(int n_runs)
     if (cfgs.size() != 1)
         sr.restoreNow(true);
 
+    sw_check_abi_version(getModuleStorage(base_ptr).get(dll).sw_get_module_abi_version());
     getModuleStorage(base_ptr).get(dll).check(*this, checker);
     performChecks();
     // we can use new (clone of this) solution, then copy known targets
@@ -1742,13 +1753,23 @@ FilesMap Build::build_configs_separate(const Files &files)
 
         if (auto sf = lib[fn].template as<NativeSourceFile>())
         {
-            if (auto c = sf->compiler->template as<ClangCompiler>())
+            if (auto c = sf->compiler->template as<VisualStudioCompiler>())
+            {
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
+            }
+            else if (auto c = sf->compiler->template as<ClangClCompiler>())
+            {
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
+            }
+            else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
                 c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
                 c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
             }
         }
 
@@ -1920,6 +1941,27 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         primitives::CppContext check;
         check.beginFunction("void check(Checker &c)");
 
+        primitives::CppContext abi;
+        abi.addLine("SW_PACKAGE_API");
+        abi.beginFunction("int sw_get_module_abi_version()");
+        abi.addLine("int v = -1, t;");
+        abi.addLine("String current_module, prev_module;");
+        abi.addLine();
+
+        abi.beginBlock("auto check = [&t, &v, &current_module, &prev_module]()");
+        abi.addLine("if (v == -1)");
+        abi.increaseIndent();
+        abi.addLine("v = t;");
+        abi.decreaseIndent();
+        abi.addLine("if (t != v)");
+        abi.increaseIndent();
+        abi.addLine("throw SW_RUNTIME_ERROR(\"ABI mismatch in loaded modules: previous "
+            "(\" + std::to_string(v) + \", \" + prev_module + \") != current (\" + std::to_string(t) + \", \" + current_module + \")\");");
+        abi.decreaseIndent();
+        abi.addLine("prev_module = current_module;");
+        abi.endBlock(true);
+        abi.addLine();
+
         for (auto &r : pkgs)
         {
             auto fn = get_real_package_config(r);
@@ -1932,6 +1974,8 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             if (HostOS.Type != OSType::Windows)
                 ctx.addLine("extern \"C\"");
             ctx.addLine("void check_" + h + "(Checker &);");
+            ctx.addLine("SW_PACKAGE_API");
+            ctx.addLine("int sw_get_module_abi_version_" + h + "();");
             ctx.addLine();
 
             build.addLine("// " + r.toString());
@@ -1941,6 +1985,13 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             build.addLine("s.current_gn = " + std::to_string(r.group_number) + ";");
             build.addLine("build_" + h + "(s);");
             build.addLine();
+
+            abi.addLine("// " + r.toString());
+            abi.addLine("// " + normalize_path(fn));
+            abi.addLine("t = sw_get_module_abi_version_" + h + "();");
+            abi.addLine("current_module = \"" + r.toString() + "\";");
+            abi.addLine("check();");
+            abi.addLine();
 
             auto cfg = read_file(fn);
             if (cfg.find("void check(") != cfg.npos)
@@ -1958,9 +2009,12 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         build.endFunction();
         check.addLine("c.current_gn = 0;");
         check.endFunction();
+        abi.addLine("return v;");
+        abi.endFunction();
 
         ctx += build;
         ctx += check;
+        ctx += abi;
 
         auto p = many_files_fn = BinaryDir / "self" / ("sw." + h + ".cpp");
         write_file_if_different(p, ctx.getText());
@@ -2004,6 +2058,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         ctx.addLine("#define configure configure_" + hash);
         ctx.addLine("#define build build_" + hash);
         ctx.addLine("#define check check_" + hash);
+        ctx.addLine("#define sw_get_module_abi_version sw_get_module_abi_version_" + hash);
 
         write_file_if_different(h, ctx.getText());
         c->ForcedIncludeFiles().push_back(h);
@@ -2026,6 +2081,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
                 c->Definitions["configure"] = "configure_" + h;
                 c->Definitions["build"] = "build_" + h;
                 c->Definitions["check"] = "check_" + h;
+                c->Definitions["sw_get_module_abi_version"] = "sw_get_module_abi_version_" + h;
             };
 
             if (auto c = sf->compiler->template as<VisualStudioCompiler>())
@@ -2033,12 +2089,14 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
                 add_defs(c);
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler>())
             {
                 add_defs(c);
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
             }
             else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
@@ -2053,16 +2111,18 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             lib += std::make_shared<Dependency>(d);
     }
 
-	if (many_files)
-    if (auto sf = lib[many_files_fn].template as<NativeSourceFile>())
+    if (many_files)
     {
-        if (auto c = sf->compiler->template as<ClangCompiler>())
+        if (auto sf = lib[many_files_fn].template as<NativeSourceFile>())
         {
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
-        }
-        else if (auto c = sf->compiler->template as<GNUCompiler>())
-        {
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
+            if (auto c = sf->compiler->template as<ClangCompiler>())
+            {
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
+            }
+            else if (auto c = sf->compiler->template as<GNUCompiler>())
+            {
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
+            }
         }
     }
 
@@ -2097,6 +2157,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         L->Force = vs::ForceType::Multiple;
         L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
         L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
+        L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
     }
 
     auto i = solution.children.find(lib.pkg);
@@ -2699,6 +2760,9 @@ void Build::createSolutions(bool usedll)
 #else
     Settings.Native.CompilerType = CompilerType::GNU;
 #endif
+
+    if (usedll)
+        sw_check_abi_version(getModuleStorage(base_ptr).get(dll).sw_get_module_abi_version());
 
     // configure may change defaults, so we must care below
     if (usedll && configure)

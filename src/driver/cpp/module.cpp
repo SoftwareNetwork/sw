@@ -71,20 +71,24 @@ Module::Module(const path &dll)
         throw;
     }
 
-    build_.name = "build";
-    build_.m = this;
-    if (module->has("build"))
-        build_ = module->get<void(Solution&)>("build");
+#define LOAD_NAME(f, n)                                           \
+    do                                                            \
+    {                                                             \
+        f##_.name = #f;                                           \
+        f##_.m = this;                                            \
+        if (module->has(n))                                       \
+            f##_ = module->get<decltype(f##_)::function_type>(n); \
+    } while (0)
 
-    check_.name = "check";
-    check_.m = this;
-    if (module->has("check"))
-        check_ = module->get<void(Checker&)>("check");
+#define LOAD(f) LOAD_NAME(f, f##_.name)
 
-    configure_.name = "configure";
-    configure_.m = this;
-    if (module->has("configure"))
-        configure_ = module->get<void(Build&)>("configure");
+    LOAD(build);
+    LOAD(check);
+    LOAD(configure);
+    LOAD(sw_get_module_abi_version);
+
+#undef LOAD
+#undef LOAD_NAME
 }
 
 Module::~Module()
@@ -108,6 +112,11 @@ void Module::check(Solution &s, Checker &c) const
 {
     check_.s = &s;
     check_(c);
+}
+
+int Module::sw_get_module_abi_version() const
+{
+    return sw_get_module_abi_version_();
 }
 
 ModuleStorage &getModuleStorage(Solution &owner)
