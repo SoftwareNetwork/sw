@@ -384,6 +384,7 @@ public:
     * \brief visible only in target and current project
     */
     T &Protected;
+    // T &Project; ???
 
     /**
     * \brief visible both in target and its users

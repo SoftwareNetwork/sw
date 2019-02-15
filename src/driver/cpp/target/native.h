@@ -143,6 +143,9 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void pushBackToFileOnce(const path &fn, const String &text) const;
     void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default);
 
+    // from other target
+    path getFile(const DependencyPtr &dep, const path &fn);
+
     void addPrecompiledHeader(const path &h, const path &cpp = path());
     void addPrecompiledHeader(PrecompiledHeader &pch);
     NativeExecutedTarget &operator=(PrecompiledHeader &pch);

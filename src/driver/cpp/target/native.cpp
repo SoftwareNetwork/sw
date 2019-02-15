@@ -2425,8 +2425,8 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     static const std::regex cmAtVarRegex("@([A-Za-z_0-9/.+-]+)@");
     static const std::regex cmNamedCurly("\\$\\{([A-Za-z0-9/_.+-]+)\\}");
 
-    static const std::set<std::string> offValues{
-        "","OFF","0","NO","FALSE","N","IGNORE",
+    static const StringSet offValues{
+        "", "0", //"OFF", "NO", "FALSE", "N", "IGNORE",
     };
 
     auto s = read_file(from);
@@ -2437,20 +2437,25 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         return;
     }
 
-    auto find_repl = [this, &from, flags](const auto &key) -> std::string
+    auto find_repl = [this, &from, flags](const auto &key) -> std::optional<std::string>
     {
         auto v = Variables.find(key);
         if (v != Variables.end())
             return v->second.toString();
+
         // dangerous! should we really check defs?
-        auto d = Definitions.find(key);
+        /*auto d = Definitions.find(key);
         if (d != Definitions.end())
             return d->second.toString();
+        */
+
         //if (isLocal()) // put under cl cond
             //LOG_WARN(logger, "Unset variable '" + key + "' in file: " + normalize_path(from));
+
         if ((int)flags & (int)ConfigureFlags::ReplaceUndefinedVariablesWithZeros)
             return "0";
-        return String();
+
+        return {};
     };
 
     std::smatch m;
@@ -2460,35 +2465,54 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         std::regex_search(s, m, cmNamedCurly))
     {
         auto repl = find_repl(m[1].str());
-        s = m.prefix().str() + repl + m.suffix().str();
+        if (!repl)
+        {
+            s = m.prefix().str() + m.suffix().str();
+            LOG_TRACE(logger, "configure @ or ${}" << m[1].str() << ": replacement not found");
+            continue;
+        }
+        s = m.prefix().str() + *repl + m.suffix().str();
     }
 
     // #mesondefine
     while (std::regex_search(s, m, mesonDefine))
     {
         auto repl = find_repl(m[1].str());
-        if (offValues.find(boost::to_upper_copy(repl)) != offValues.end())
+        if (!repl)
+        {
             s = m.prefix().str() + "/* #undef " + m[1].str() + " */" + "\n" + m.suffix().str();
-        else
-            s = m.prefix().str() + "#define " + m[1].str() + " " + repl + "\n" + m.suffix().str();
+            LOG_TRACE(logger, "configure #mesondefine" << m[1].str() << ": replacement not found");
+            continue;
+        }
+        s = m.prefix().str() + "#define " + m[1].str() + " " + *repl + "\n" + m.suffix().str();
     }
 
     // #undef
     if ((int)flags & (int)ConfigureFlags::EnableUndefReplacements)
+    {
         while (std::regex_search(s, m, undefDefine))
         {
             auto repl = find_repl(m[1].str());
-            if (offValues.find(boost::to_upper_copy(repl)) != offValues.end())
+            if (!repl)
+            {
                 s = m.prefix().str() + m.suffix().str();
-            else
-                s = m.prefix().str() + "#define " + m[1].str() + " " + repl + "\n" + m.suffix().str();
+                LOG_TRACE(logger, "configure #undef" << m[1].str() << ": replacement not found");
+                continue;
+            }
+            s = m.prefix().str() + "#define " + m[1].str() + " " + *repl + "\n" + m.suffix().str();
         }
+    }
 
     // #cmakedefine
     while (std::regex_search(s, m, cmDefineRegex))
     {
         auto repl = find_repl(m[1].str());
-        if (offValues.find(boost::to_upper_copy(repl)) != offValues.end())
+        if (!repl)
+        {
+            LOG_TRACE(logger, "configure #cmakedefine" << m[1].str() << ": replacement not found");
+            repl = {};
+        }
+        if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())
             s = m.prefix().str() + "/* #undef " + m[1].str() + m[2].str() + " */\n" + m.suffix().str();
         else
             s = m.prefix().str() + "#define " + m[1].str() + m[2].str() + "\n" + m.suffix().str();
@@ -2498,18 +2522,16 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     while (std::regex_search(s, m, cmDefine01Regex))
     {
         auto repl = find_repl(m[1].str());
-        if (offValues.find(boost::to_upper_copy(repl)) != offValues.end())
+        if (!repl)
+        {
+            LOG_TRACE(logger, "configure #cmakedefine01" << m[1].str() << ": replacement not found");
+            repl = {};
+        }
+        if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())
             s = m.prefix().str() + "#define " + m[1].str() + " 0" + "\n" + m.suffix().str();
         else
             s = m.prefix().str() + "#define " + m[1].str() + " 1" + "\n" + m.suffix().str();
     }
-
-    //for (auto &[k, v] : Variables)
-    //boost::replace_all(s, "@" + k + "@", v);
-
-    // handle ${k} vars
-    // remove the rest of variables
-    //s = std::regex_replace(s, r, "");
 
     writeFileOnce(to, s);
 }
@@ -3146,6 +3168,12 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
     if (patch_node.IsDefined())
         patch.load(patch_node);
 #endif
+}
+
+path NativeExecutedTarget::getFile(const DependencyPtr &dep, const path &fn)
+{
+    *this += dep;
+    return dep->getPackage().resolve().getDirSrc2() / fn;
 }
 
 bool ExecutableTarget::init()
