@@ -77,7 +77,7 @@ struct SW_DRIVER_CPP_API Module
                     err += ": " + s->current_module;
                 throw SW_RUNTIME_ERROR(err);
             }
-            return std_function_type::result_type();
+            return typename std_function_type::result_type();
         }
     };
 
