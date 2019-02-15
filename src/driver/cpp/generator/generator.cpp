@@ -757,8 +757,11 @@ void ProjectContext::printProject(
                         {
                             if (d->target->getType() == TargetType::NativeExecutable)
                             {
-                                deps.insert(parent->build_dependencies_name);
-                                parent->build_deps.insert(d->target->pkg.toString());
+                                if (d->target->Scope == TargetScope::Build)
+                                {
+                                    deps.insert(parent->build_dependencies_name);
+                                    parent->build_deps.insert(d->target->pkg.toString());
+                                }
                             }
                             else if (!*nt3->HeaderOnly)
                             {
