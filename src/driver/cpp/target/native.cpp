@@ -2110,21 +2110,14 @@ bool NativeExecutedTarget::prepare()
         // add link libraries from deps
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
         {
-            String s;
             for (auto &d : Dependencies)
             {
                 if (d->target == this)
                     continue;
                 if (d->isDummy())
                     continue;
-
-                s += d.get()->target->pkg.ppath.toString();
                 if (d->IncludeDirectoriesOnly)
-                {
-                    s += ": i";
                     continue;
-                }
-                s += "\n";
 
                 auto dt = ((NativeExecutedTarget*)d->target);
 
@@ -2166,8 +2159,6 @@ bool NativeExecutedTarget::prepare()
                         LinkLibraries.push_back(o);
                 }
             }
-            if (!s.empty())
-                write_file(BinaryDir.parent_path() / "deps.txt", s);
         }
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;

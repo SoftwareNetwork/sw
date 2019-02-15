@@ -648,6 +648,7 @@ void Solution::printGraph(const path &p) const
         //s += "\"" + pp.toString() + "\";\n";
         for (auto &d : nt->Dependencies)
         {
+            // TODO: also print dummy and idir deps
             if (d->target && !d->IncludeDirectoriesOnly)
                 s += "\"" + p.toString() + "\"->\"" + d->target->pkg.toString() + "\";\n";
         }
