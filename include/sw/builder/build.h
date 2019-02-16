@@ -29,16 +29,10 @@ SW_BUILDER_API
 bool build(const Strings &packages);
 
 SW_BUILDER_API
-PackageScriptPtr build_only(const path &file_or_dir);
-
-SW_BUILDER_API
 PackageScriptPtr load(const path &file_or_dir);
 
 SW_BUILDER_API
 PackageScriptPtr fetch_and_load(const path &file_or_dir, const FetchOptions &opts = {});
-
-SW_BUILDER_API
-DriverPtr loadDriver(const path &file_or_dir);
 
 SW_BUILDER_API
 bool run(const PackageId &package);

@@ -64,7 +64,7 @@ void build(Solution &s)
         "org.sw.demo.boost.variant-1"_dep,
         "org.sw.demo.boost.dll-1"_dep,
         "pub.egorpugin.primitives.db.sqlite3-master"_dep,
-        "org.sw.demo.rbock.sqlpp11_connector_sqlite3-0"_dep,
+        "org.sw.demo.rbock.sqlpp11_connector_sqlite3-develop"_dep,
         "pub.egorpugin.primitives.version-master"_dep,
         "pub.egorpugin.primitives.sw.settings-master"_dep,
         "pub.egorpugin.primitives.win32helpers-master"_dep;

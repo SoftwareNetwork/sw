@@ -144,16 +144,20 @@ String toString(LibraryType Type)
 
 CompilerType compilerTypeFromStringCaseI(const String &compiler)
 {
-    if (boost::iequals(compiler, "clang"))
+    if (0);
+    // exact
+    else if (boost::iequals(compiler, "clang"))
         return CompilerType::Clang;
-    else if (boost::iequals(compiler, "appleclang") || boost::iequals(compiler, "apple-clang"))
-        return CompilerType::AppleClang;
     else if (boost::iequals(compiler, "clangcl") || boost::iequals(compiler, "clang-cl"))
         return CompilerType::ClangCl;
-    else if (boost::iequals(compiler, "gnu"))
+    // starts with
+    else if (boost::istarts_with(compiler, "appleclang") || boost::iequals(compiler, "apple-clang"))
+        return CompilerType::AppleClang;
+    else if (boost::istarts_with(compiler, "gnu") || boost::iequals(compiler, "gcc") || boost::iequals(compiler, "g++"))
         return CompilerType::GNU;
-    else if (boost::iequals(compiler, "msvc"))
+    else if (boost::istarts_with(compiler, "msvc") || boost::istarts_with(compiler, "vs"))
         return CompilerType::MSVC;
+    //
     else if (!compiler.empty())
         throw SW_RUNTIME_ERROR("Unknown compiler: " + compiler);
     return CompilerType::UnspecifiedCompiler;

@@ -131,6 +131,8 @@ static ::cl::list<String> build_arg_test(::cl::Positional, ::cl::desc("File or d
 static ::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
 extern path gIdeFastPath;
 static ::cl::opt<path, true> build_ide_fast_path("ide-fast-path", ::cl::sub(subcommand_build), ::cl::Hidden, ::cl::location(gIdeFastPath));
+extern path gIdeCopyToDir;
+static ::cl::opt<path, true> build_ide_copy_to_dir("ide-copy-to-dir", ::cl::sub(subcommand_build), ::cl::Hidden, ::cl::location(gIdeCopyToDir));
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>

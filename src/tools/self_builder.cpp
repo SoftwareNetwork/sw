@@ -105,8 +105,8 @@ int main(int argc, char **argv)
 
         {{"org.sw.demo.aleksey14.rhash", "1"}, {}},
         {{"org.sw.demo.howardhinnant.date.date", "2"}, {}},
-        {{"org.sw.demo.rbock.sqlpp11", "0"}, {}},
-        {{"org.sw.demo.rbock.sqlpp11_connector_sqlite3", "0"}, {}},
+        {{"org.sw.demo.rbock.sqlpp11", "develop"}, {}},
+        {{"org.sw.demo.rbock.sqlpp11_connector_sqlite3", "develop"}, {}},
 
         {{"org.sw.demo.preshing.turf", "master"}, {}},
         {{"org.sw.demo.preshing.junction", "master"}, {}},

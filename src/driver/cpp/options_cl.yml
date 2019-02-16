@@ -5,6 +5,7 @@ flags:
         flag: nologo
         type: bool
         default: true
+        order: -100
 
     compile:
         name: CompileWithoutLinking
@@ -279,8 +280,9 @@ types:
                 name: PDBFilename
                 flag: Fd
                 type: path
-                #properties:
-                    #- intermediate_file
+                properties:
+                    #- create_directory
+                    - intermediate_file # this will create output dir, maybe add separate flag
 
             pchfn:
                 name: PrecompiledHeaderFilename

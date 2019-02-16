@@ -109,18 +109,25 @@ bool LanguageStorage::activateLanguage(const PackagePath &pp)
     auto v = user_defined_languages[pp];
     if (v.empty())
         return false;
-    return activateLanguage({ pp, v.rbegin()->first });
+    return activateLanguage({ pp, v.rbegin()->first }, true);
 }
 
-bool LanguageStorage::activateLanguage(const PackageId &pkg)
+bool LanguageStorage::activateLanguage(const PackageId &pkg, bool exact_version)
 {
     auto v = user_defined_languages[pkg.ppath];
     if (v.empty())
         return false;
-    auto L = v[pkg.version];
-    if (!L)
-        return false;
-    for (auto &l : L->CompiledExtensions)
+    auto L = v.find(pkg.version);
+    if (L == v.end())
+    {
+        if (exact_version)
+            return false;
+        auto i = primitives::version::findBestMatch(v.rbegin(), v.rend(), pkg.version);
+        if (i == v.rend())
+            return false;
+        L = i.base();
+    }
+    for (auto &l : L->second->CompiledExtensions)
         extensions[l] = pkg;
     return true;
 }
@@ -133,7 +140,7 @@ LanguagePtr LanguageStorage::getLanguage(const PackagePath &pp) const
     return getLanguage({ pp, v->second.rbegin()->first });
 }
 
-LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg) const
+LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg/*, bool exact_version*/) const
 {
     auto v = user_defined_languages.find(pkg);
     if (v == user_defined_languages.end(pkg))
@@ -149,7 +156,7 @@ std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) cons
     return getProgram({ pp, v->second.rbegin()->first });
 }
 
-std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg) const
+std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg/*, bool exact_version*/) const
 {
     auto v = registered_programs.find(pkg);
     if (v == registered_programs.end(pkg))

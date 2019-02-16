@@ -71,23 +71,6 @@ cmVSSetupAPIHelper::~cmVSSetupAPIHelper()
     CoUninitialize();
 }
 
-bool cmVSSetupAPIHelper::IsVSInstalled(int version)
-{
-  return this->EnumerateAndChooseVSInstance(version);
-}
-
-bool cmVSSetupAPIHelper::IsWin10SDKInstalled(int version)
-{
-  return (this->EnumerateAndChooseVSInstance(version) &&
-          chosenInstanceInfo.IsWin10SDKInstalled);
-}
-
-bool cmVSSetupAPIHelper::IsWin81SDKInstalled(int version)
-{
-  return (this->EnumerateAndChooseVSInstance(version) &&
-          chosenInstanceInfo.IsWin81SDKInstalled);
-}
-
 bool cmVSSetupAPIHelper::CheckInstalledComponent(
   SmartCOMPtr<ISetupPackageReference> package, bool& bVCToolset,
   bool& bWin10SDK, bool& bWin81SDK)
@@ -215,32 +198,14 @@ bool cmVSSetupAPIHelper::GetVSInstanceInfo(
   return isVCToolSetInstalled;
 }
 
-/*bool cmVSSetupAPIHelper::GetVSInstanceInfo(std::string& vsInstallLocation)
-{
-  vsInstallLocation = "";
-  bool isInstalled = this->EnumerateAndChooseVSInstance();
-
-  if (isInstalled) {
-    std::string str(chosenInstanceInfo.VSInstallLocation.begin(),
-                    chosenInstanceInfo.VSInstallLocation.end());
-    vsInstallLocation = str;
-  }
-
-  return isInstalled;
-}*/
-
-bool cmVSSetupAPIHelper::EnumerateAndChooseVSInstance(int version)
+bool cmVSSetupAPIHelper::EnumerateVSInstances()
 {
   bool isVSInstanceExists = false;
-  if (chosenInstanceInfo.VSInstallLocation.compare(L"") != 0) {
-    return true;
-  }
 
   if (initializationFailure || setupConfig == NULL || setupConfig2 == NULL ||
       setupHelper == NULL)
     return false;
 
-  std::vector<VSInstanceInfo> vecVSInstances;
   SmartCOMPtr<IEnumSetupInstances> enumInstances = NULL;
   if (FAILED(
         setupConfig2->EnumInstances((IEnumSetupInstances**)&enumInstances)) ||
@@ -263,81 +228,15 @@ bool cmVSSetupAPIHelper::EnumerateAndChooseVSInstance(int version)
     instance = instance2 = NULL;
 
     if (isInstalled) {
-      vecVSInstances.push_back(instanceInfo);
+        instances.push_back(instanceInfo);
     }
   }
 
-  if (vecVSInstances.size() > 0) {
+  if (instances.size() > 0) {
     isVSInstanceExists = true;
-    int index = ChooseVSInstance(vecVSInstances, version);
-    chosenInstanceInfo = vecVSInstances[index];
   }
 
   return isVSInstanceExists;
-}
-
-int cmVSSetupAPIHelper::ChooseVSInstance(
-  const std::vector<VSInstanceInfo>& vecVSInstances, int version)
-{
-  if (vecVSInstances.size() == 0)
-    return -1;
-
-  if (vecVSInstances.size() == 1)
-    return 0;
-
-  unsigned int chosenIndex = 0;
-  for (unsigned int i = 0; i < vecVSInstances.size(); i++) {
-      std::wstring v = std::to_wstring(version);
-
-      // VS version comes in format AA.B.C.D.
-      // We check at least first two characters.
-      if (vecVSInstances[i].Version.size() < 2 || v.size() < 2 ||
-          wcsncmp(vecVSInstances[i].Version.c_str(), v.c_str(), 2) != 0) {
-          continue;
-      }
-
-    // If the current has Win10 SDK but not the chosen one, then choose the
-    // current VS instance
-    if (//!vecVSInstances[chosenIndex].IsWin10SDKInstalled &&
-        vecVSInstances[i].IsWin10SDKInstalled &&
-        vecVSInstances[i].VSInstallLocation.find(L"Preview") == -1
-        ) {
-      chosenIndex = i;
-      continue;
-    }
-
-    // If the chosen one has Win10 SDK but the current one is not, then look at
-    // the next VS instance even the current
-    // instance version may be higher
-    if (vecVSInstances[chosenIndex].IsWin10SDKInstalled &&
-        !vecVSInstances[i].IsWin10SDKInstalled) {
-      continue;
-    }
-
-    // If both chosen one and current one doesn't have Win10 SDK but the
-    // current one has Win8.1 SDK installed,
-    // then choose the current one
-    if (!vecVSInstances[chosenIndex].IsWin10SDKInstalled &&
-        !vecVSInstances[i].IsWin10SDKInstalled &&
-        !vecVSInstances[chosenIndex].IsWin81SDKInstalled &&
-        vecVSInstances[i].IsWin81SDKInstalled) {
-      chosenIndex = i;
-      continue;
-    }
-
-    // If there is no difference in WinSDKs then look for the highest version
-    // of installed VS
-    if ((vecVSInstances[chosenIndex].IsWin10SDKInstalled ==
-         vecVSInstances[i].IsWin10SDKInstalled) &&
-        (vecVSInstances[chosenIndex].IsWin81SDKInstalled ==
-         vecVSInstances[i].IsWin81SDKInstalled) &&
-        vecVSInstances[chosenIndex].Version < vecVSInstances[i].Version) {
-      chosenIndex = i;
-      continue;
-    }
-  }
-
-  return chosenIndex;
 }
 
 bool cmVSSetupAPIHelper::Initialize()

@@ -8,6 +8,8 @@
 
 #include "generator.h"
 
+#include <package.h>
+
 namespace sw
 {
 
@@ -93,7 +95,7 @@ struct SolutionContext : primitives::Context
 
         Project()
         {
-            ctx = std::make_unique<SolutionContext>(false);
+            ctx = std::make_unique<SolutionContext>();
         }
         ~Project()
         {
@@ -104,18 +106,20 @@ struct SolutionContext : primitives::Context
 
     using Base = primitives::Context;
 
+    Version version;
     String all_build_name;
     String build_dependencies_name;
-    StringSet build_deps;
+    PackagesIdSet build_deps;
+    PackagesIdSet copy_deps;
     mutable std::unordered_map<String, String> uuids;
     std::map<String, Project> projects;
     const Project *first_project = nullptr;
 
-    SolutionContext(bool print_version = true);
+    SolutionContext();
 
     void printVersion();
 
-    void addDirectory(const String &display_name, const String &solution_dir = {});
+    void addDirectory(const String &display_name);
     void addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir = {});
 
     Project &addProject(VSProjectType type, const String &n, const String &solution_dir);

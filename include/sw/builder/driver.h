@@ -59,18 +59,9 @@ struct SW_BUILDER_API Driver
 {
     virtual ~Driver() = default;
 
+    ////////////////////////////////////////////////////////////
+
     virtual FilesOrdered getAvailableFrontends() const = 0;
-
-    /// try to find config in this dir or subdirs
-    std::optional<path> findConfig(const path &dir) const;
-
-    /// read config from dir
-    std::optional<String> readConfig(const path &file_or_dir) const;
-
-    /// only build script file, without loading
-    ///
-    /// assuming all sources are fetched and script is in the source dir
-    virtual PackageScriptPtr build(const path &file_or_dir) const = 0;
 
     virtual bool buildPackages(const StringSet &pkgs) const = 0;
 
@@ -84,13 +75,21 @@ struct SW_BUILDER_API Driver
 
     General algorithm:
     1. Load script. In script there must be at least one target.
-    Do not use conditions on whole script. Rather your users will provide
-    conditions for you package.
+       Do not use conditions on whole script. Instead your users will provide
+       conditions for you package.
     2. Fetch all sources.
     3. Load script.
     4. If there are new targets with new sources go to p.2., else stop.
     */
     virtual void fetch(const path &file_or_dir, const FetchOptions &opts = {}, bool parallel = true) const = 0;
+
+    // maybe inherit from target with all these properties?
+    virtual String getName() const = 0;
+    // getDesc()?
+
+    virtual bool run(const PackageId &pkg) const = 0;
+
+    ////////////////////////////////////////////////////////////
 
     /// load script, fetch all sources using fetch(), then load it again
     ///
@@ -100,24 +99,20 @@ struct SW_BUILDER_API Driver
     /// full build process, void?
     virtual bool execute(const path &file_or_dir) const;
 
-    //virtual bool build_package(const PackageId &pkg) const = 0;
+    ////////////////////////////////////////////////////////////
 
-    // maybe inherit from target with all these properties?
-    virtual String getName() const = 0;
-    // getDesc()?
+    /// try to find config in this dir or subdirs
+    std::optional<path> findConfig(const path &dir) const;
 
-    virtual bool run(const PackageId &pkg) const = 0;
+    /// read config from dir
+    std::optional<String> readConfig(const path &file_or_dir) const;
 };
 
 using DriverPtr = std::unique_ptr<Driver>;
 using Drivers = std::vector<DriverPtr>;
 
-// really public? yes, we call it to add (register) more drivers
+// public? yes, we call it to add (register) more drivers
 SW_BUILDER_API
 Drivers &getDrivers();
-
-// common routine, maybe add to drivers?
-//SW_BUILDER_API
-//PackageId extractDriverId(const path &file_or_dir);
 
 } // namespace sw

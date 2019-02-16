@@ -20,8 +20,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target");
 
-#define SW_BDIR_NAME "bdir"
-#define SW_BDIR_PRIVATE_NAME "bdirp"
+#define SW_BDIR_NAME "bd" // build (binary) dir
+#define SW_BDIR_PRIVATE_NAME "bdp" // build (binary) private dir
 
 namespace sw
 {
@@ -100,7 +100,8 @@ path TargetBase::getObjectDir(const PackageId &in) const
 
 path TargetBase::getObjectDir(const PackageId &pkg, const String &cfg)
 {
-    return pkg.getDirObj() / "build" / cfg;
+    // bld was build
+    return pkg.getDirObj() / "bld" / cfg;
 }
 
 TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V)

@@ -34,6 +34,8 @@ DECLARE_STATIC_LOGGER(logger, "solution");
 bool gPrintDependencies;
 bool gOutputNoConfigSubdir;
 
+static cl::opt<String> toolset("toolset", cl::desc("Set VS generator toolset"));
+
 static String vs_project_ext = ".vcxproj";
 
 namespace sw
@@ -102,13 +104,13 @@ GeneratorType fromString(const String &s)
     // make icasecmp
     if (0)
         ;
-    else if (boost::iequals(s, "VS_IDE") || boost::iequals(s, "VS"))
+    else if (boost::istarts_with(s, "VS_IDE") || boost::istarts_with(s, "VS"))
         return GeneratorType::VisualStudio;
-    else if (boost::iequals(s, "VS_NMake"))
+    else if (boost::istarts_with(s, "VS_NMake"))
         return GeneratorType::VisualStudioNMake;
-    else if (boost::iequals(s, "VS_Utility") || boost::iequals(s, "VS_Util"))
+    else if (boost::istarts_with(s, "VS_Utility") || boost::istarts_with(s, "VS_Util"))
         return GeneratorType::VisualStudioUtility;
-    else if (boost::iequals(s, "VS_NMakeAndUtility") || boost::iequals(s, "VS_NMakeAndUtil") || boost::iequals(s, "VS_NMakeUtil"))
+    else if (boost::istarts_with(s, "VS_NMakeAndUtility") || boost::istarts_with(s, "VS_NMakeAndUtil") || boost::istarts_with(s, "VS_NMakeUtil"))
         return GeneratorType::VisualStudioNMakeAndUtility;
     else if (boost::iequals(s, "Ninja"))
         return GeneratorType::Ninja;
@@ -127,6 +129,68 @@ GeneratorType fromString(const String &s)
     return GeneratorType::UnspecifiedGenerator;
 }
 
+static int vsVersionFromString(const String &s)
+{
+	String t;
+	for (auto c : s)
+	{
+		if (isdigit(c))
+			t += c;
+	}
+	if (t.empty())
+		return 15;
+	auto v = std::stoi(t);
+	if (t.size() == 4)
+	{
+		switch (v)
+		{
+		case 2010:
+			return 10;
+		case 2012:
+			return 11;
+		case 2013:
+			return 12;
+		case 2015:
+			return 14;
+		case 2017:
+			return 15;
+		case 2019:
+			return 16;
+		}
+	}
+	else if (t.size() == 2)
+	{
+		return v;
+	}
+	throw SW_RUNTIME_ERROR("Unknown or bad VS version: " + t);
+}
+
+std::string getVsToolset(const Version &v)
+{
+    switch (v.getMajor())
+    {
+    case 16:
+        return "v142";
+    case 15:
+        return "v141";
+    case 14:
+        return "v14";
+    case 12:
+        return "v12";
+    case 11:
+        return "v11";
+    case 10:
+        return "v10";
+    case 9:
+        return "v9";
+    case 8:
+        return "v8";
+        // _xp?
+        // v71?
+    }
+    throw SW_RUNTIME_ERROR("Unknown VS version");
+}
+
 std::unique_ptr<Generator> Generator::create(const String &s)
 {
     auto t = fromString(s);
@@ -137,8 +201,12 @@ std::unique_ptr<Generator> Generator::create(const String &s)
     case GeneratorType::VisualStudioNMake:
     case GeneratorType::VisualStudioUtility:
     case GeneratorType::VisualStudioNMakeAndUtility:
-        g = std::make_unique<VSGenerator>();
-        break;
+	{
+		auto g1 = std::make_unique<VSGenerator>();
+		g1->version = Version(vsVersionFromString(s));
+		g = std::move(g1);
+		break;
+	}
     case GeneratorType::Ninja:
         g = std::make_unique<NinjaGenerator>();
         break;
@@ -267,6 +335,15 @@ static String get_project_configuration(const SolutionSettings &s)
         c += " - " + toString(s.TargetOS.Arch);
     c += "|" + generator::toString(s.TargetOS.Arch);
     return c;
+}
+
+static path get_out_dir(const path &dir, const path &projects_dir, const SolutionSettings &s)
+{
+    auto p = fs::current_path();
+    p /= "bin";
+    if (!gOutputNoConfigSubdir)
+        p /= get_configuration(s);
+    return p;
 }
 
 static std::pair<String, String> get_project_configuration_pair(const SolutionSettings &s)
@@ -419,7 +496,7 @@ void FiltersContext::endProject()
 void ProjectContext::beginProject()
 {
     beginBlock("Project", { {"DefaultTargets", "Build"},
-                            {"ToolsVersion", "15.0"},
+                            {"ToolsVersion", std::to_string(parent->version.getMajor()) + ".0"},
                             {"xmlns", "http://schemas.microsoft.com/developer/msbuild/2003"} });
 }
 
@@ -472,7 +549,12 @@ void ProjectContext::addPropertyGroupConfigurationTypes(const Build &b, VSProjec
         beginBlockWithConfiguration("PropertyGroup", s.Settings, {{ "Label","Configuration" } });
         addConfigurationType(t);
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
-        addBlock("PlatformToolset", "v141");
+		if (toolset.empty())
+		{
+            addBlock("PlatformToolset", getVsToolset(parent->version));
+		}
+		else
+			addBlock("PlatformToolset", toolset);
 
         endBlock();
     }
@@ -496,7 +578,12 @@ void ProjectContext::addPropertyGroupConfigurationTypes(const Build &b, const Pa
         addConfigurationType(get_vs_project_type(s.Settings, i->second->getType()));
 
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
-        addBlock("PlatformToolset", "v141");
+		if (toolset.empty())
+		{
+            addBlock("PlatformToolset", getVsToolset(parent->version));
+		}
+		else
+			addBlock("PlatformToolset", toolset);
 
         endBlock();
     }
@@ -515,6 +602,8 @@ void ProjectContext::addPropertySheets(const Build &b)
         endBlock();
     }
 }
+
+String getWin10KitDirName();
 
 void ProjectContext::printProject(
     const String &name, const PackageId &p, const Build &b, SolutionContext &ctx, Generator &g,
@@ -539,10 +628,19 @@ void ProjectContext::printProject(
         pp = pp.parent();
 
     beginBlock("PropertyGroup", { {"Label", "Globals"} });
-    addBlock("VCProjectVersion", "15.0");
+    addBlock("VCProjectVersion", std::to_string(ctx.version.getMajor()) + ".0");
     addBlock("ProjectGuid", "{" + ctx.uuids[name] + "}");
     addBlock("Keyword", "Win32Proj");
-    addBlock("WindowsTargetPlatformVersion", base_nt.getSolution()->Settings.Native.SDK.getWindowsTargetPlatformVersion());
+	if (ctx.version.getMajor() < 16)
+		addBlock("WindowsTargetPlatformVersion", base_nt.getSolution()->Settings.Native.SDK.getWindowsTargetPlatformVersion());
+	else
+	{
+		auto v = base_nt.getSolution()->Settings.Native.SDK.Version.u8string();
+		if (v == getWin10KitDirName())
+			addBlock("WindowsTargetPlatformVersion", v + ".0");
+		else
+			addBlock("WindowsTargetPlatformVersion", base_nt.getSolution()->Settings.Native.SDK.getWindowsTargetPlatformVersion());
+	}
     if (g.type == GeneratorType::VisualStudioNMakeAndUtility && ptype == VSProjectType::Makefile)
         addBlock("ProjectName", PackageId(p.ppath.slice(pp.size()), p.version).toString() + "-build");
     else
@@ -558,15 +656,6 @@ void ProjectContext::printProject(
     auto get_int_dir = [&dir, &projects_dir](auto &nt, auto &s)
     {
         return ::sw::get_int_dir(dir, projects_dir, nt.pkg.toString(), s);
-    };
-
-    auto get_out_dir = [&dir, &projects_dir](auto &nt, auto &s)
-    {
-        auto p = fs::current_path();
-        p /= "bin";
-        if (!gOutputNoConfigSubdir)
-            p /= get_configuration(s);
-        return p;
     };
 
     auto add_excluded_from_build = [this, &b](auto &s)
@@ -672,7 +761,7 @@ void ProjectContext::printProject(
 
         beginBlockWithConfiguration("PropertyGroup", s.Settings);
         {
-            addBlock("OutDir", normalize_path_windows(get_out_dir(nt, s.Settings)) + "\\");
+            addBlock("OutDir", normalize_path_windows(get_out_dir(dir, projects_dir, s.Settings)) + "\\");
             addBlock("IntDir", normalize_path_windows(get_int_dir(nt, s.Settings)) + "\\int\\");
             // full name of target, keep as is (it might have subdirs)
             addBlock("TargetName", nt.pkg.toString());
@@ -713,6 +802,7 @@ void ProjectContext::printProject(
         endBlock();
         endBlock();
 
+        StringMap<String> replacements;
         if (g.type == GeneratorType::VisualStudio)
         {
             beginBlockWithConfiguration("ItemDefinitionGroup", s.Settings);
@@ -736,7 +826,7 @@ void ProjectContext::printProject(
 
             std::set<void*> visited;
             std::function<void(NativeExecutedTarget&)> f;
-            f = [&f, &dir, &s, &visited, &get_out_dir, &t, &ll, this](auto &nt)
+            f = [&f, &dir, &projects_dir, &s, &visited, &t, &ll, this, &replacements](auto &nt)
             {
                 if (visited.find(&nt) != visited.end())
                     return;
@@ -760,7 +850,7 @@ void ProjectContext::printProject(
                                 if (d->target->Scope == TargetScope::Build)
                                 {
                                     deps.insert(parent->build_dependencies_name);
-                                    parent->build_deps.insert(d->target->pkg.toString());
+                                    parent->build_deps.insert(d->target->pkg);
                                 }
                             }
                             else if (!*nt3->HeaderOnly)
@@ -769,12 +859,16 @@ void ProjectContext::printProject(
                                 {
                                     ll.insert(nt3->getImportLibrary());
                                     deps.insert(parent->build_dependencies_name);
-                                    parent->build_deps.insert(d->target->pkg.toString());
+                                    parent->build_deps.insert(d->target->pkg);
 
                                     if ((s.Settings.Native.LibrariesType == LibraryType::Static && d->target->getType() == TargetType::NativeLibrary) ||
                                         d->target->getType() == TargetType::NativeStaticLibrary)
                                     {
                                         f(*nt3);
+                                    }
+                                    else
+                                    {
+                                        parent->copy_deps.insert(d->target->pkg);
                                     }
                                 }
                             }
@@ -782,12 +876,20 @@ void ProjectContext::printProject(
                         continue;
                     }
 
+                    // before dummy
+                    if (auto nt3 = d->target->template as<NativeExecutedTarget>())
+                    {
+                        auto tdir = get_out_dir(dir, projects_dir, s.Settings);
+                        tdir /= d->target->pkg.toString() + ".exe";
+                        replacements[normalize_path_windows(nt3->getOutputFile())] = normalize_path_windows(tdir);
+                    }
+
                     if (d->isDummy())
                         continue;
 
                     deps.insert(d->target->pkg.toString());
 
-                    auto tdir = get_out_dir(nt, s.Settings);
+                    auto tdir = get_out_dir(dir, projects_dir, s.Settings);
                     tdir /= d->target->pkg.toString() + ".lib";
                     ll.insert(tdir);
 
@@ -824,7 +926,7 @@ void ProjectContext::printProject(
             beginBlockWithConfiguration("AdditionalLibraryDirectories", s.Settings);
             for (auto &l : ld)
                 addText(normalize_path_windows(l) + ";");
-            endBlock(true);
+            endBlock();
 
             if (auto c = nt.getSelectedTool())
             {
@@ -881,6 +983,20 @@ void ProjectContext::printProject(
 
                         add_excluded_from_build(s);
 
+                        Files replacement_deps;
+                        auto fix_strings = [&replacements, &replacement_deps](const String &s)
+                        {
+                            auto t = s;
+                            for (auto &[k, v] : replacements)
+                            {
+                                auto prev = t;
+                                boost::replace_all(t, k, v);
+                                if (t != prev)
+                                    replacement_deps.insert(v);
+                            }
+                            return t;
+                        };
+
                         beginBlockWithConfiguration("AdditionalInputs", s.Settings);
                         //addText(normalize_path_windows(gen->program) + ";");
                         if (auto dc = gen->as<driver::cpp::Command>())
@@ -893,11 +1009,11 @@ void ProjectContext::printProject(
                                     if (!gPrintDependencies && !d->target->Local)
                                     {
                                         deps.insert(parent->build_dependencies_name);
-                                        parent->build_deps.insert(d->target->pkg.toString());
+                                        parent->build_deps.insert(d->target->pkg);
                                     }
                                     else
                                     {
-                                        auto tdir = get_out_dir(nt, s.Settings);
+                                        auto tdir = get_out_dir(dir, projects_dir, s.Settings);
                                         tdir /= d->target->pkg.toString() + ".exe";
                                         addText(normalize_path_windows(tdir) + ";");
 
@@ -911,6 +1027,14 @@ void ProjectContext::printProject(
                         }
                         for (auto &o : gen->inputs)
                             addText(normalize_path_windows(o) + ";");
+
+                        // fix commands args, env etc.
+                        for (auto &a : gen->args)
+                            a = fix_strings(a);
+                        // and add new deps
+                        for (auto &d : replacement_deps)
+                            addText(normalize_path_windows(d) + ";");
+
                         endBlock(true);
                         if (!gen->outputs.empty())
                         {
@@ -932,7 +1056,7 @@ void ProjectContext::printProject(
 
                         beginBlock("Message");
                         //addText(gen->getName());
-                        endBlock(true);
+                        endBlock();
 
                         endBlock();
 
@@ -1071,24 +1195,30 @@ void ProjectContext::printProject(
     write_file_if_different(dir / projects_dir / (name + ".vcxproj.filters"), fctx.getText());
 }
 
-SolutionContext::SolutionContext(bool print_version)
-    : Context("\t")
+SolutionContext::SolutionContext()
+    : Context("\t", "\r\n")
 {
-    if (print_version)
-        printVersion();
 }
 
 void SolutionContext::printVersion()
 {
     addLine("Microsoft Visual Studio Solution File, Format Version 12.00");
-    addLine("# Visual Studio 15");
-    addLine("VisualStudioVersion = 15.0.28010.2046");
-    addLine("MinimumVisualStudioVersion = 10.0.40219.1");
+	if (version.getMajor() == 15)
+	{
+		addLine("# Visual Studio " + std::to_string(version.getMajor()));
+		addLine("VisualStudioVersion = 15.0.28010.2046");
+	}
+	else if (version.getMajor() == 16)
+	{
+		addLine("# Visual Studio Version " + std::to_string(version.getMajor()));
+		addLine("VisualStudioVersion = 16.0.28606.126");
+	}
+	addLine("MinimumVisualStudioVersion = 10.0.40219.1");
 }
 
-void SolutionContext::addDirectory(const String &display_name, const String &solution_dir)
+void SolutionContext::addDirectory(const String &display_name)
 {
-    addDirectory(display_name, display_name, solution_dir);
+    addDirectory(display_name, display_name);
 }
 
 void SolutionContext::addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir)
@@ -1098,7 +1228,7 @@ void SolutionContext::addDirectory(const InsecurePath &n, const String &display_
     uuids[s] = uuid2string(up);
 
     addLine("Project(\"" + project_type_uuids[VSProjectType::Directory] + "\") = \"" +
-        display_name + "\", \"" + n.toString("\\") + "\", \"{" + uuids[n] + "}\"");
+        display_name + "\", \"" + display_name + "\", \"{" + uuids[n] + "}\"");
     addLine("EndProject");
 
     if (!solution_dir.empty())
@@ -1123,8 +1253,10 @@ SolutionContext::Project &SolutionContext::addProject(VSProjectType type, const 
 
 void SolutionContext::beginProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir)
 {
+	bool has_dash = n.find("-") != n.npos;
+	PackageId p(n);
     beginBlock("Project(\"" + project_type_uuids[type] + "\") = \"" +
-        n + "\", \"" + (dir / (n + vs_project_ext)).u8string() + "\", \"{" + uuids[n] + "}\"");
+        p.ppath.back() + (has_dash ? "-" + p.version.toString() : "") + "\", \"" + (dir / (n + vs_project_ext)).u8string() + "\", \"{" + uuids[n] + "}\"");
 
     addLine(*projects[n].ctx);
 
@@ -1171,24 +1303,38 @@ void SolutionContext::endGlobalSection()
     endBlock("EndGlobalSection");
 }
 
+struct less
+{
+	bool operator()(const String &s1, const String &s2) const
+	{
+		return boost::ilexicographical_compare(s1, s2);
+	}
+};
+
 void SolutionContext::setSolutionConfigurationPlatforms(const Build &b)
 {
+	// sort like VS does
     beginGlobalSection("SolutionConfigurationPlatforms", "preSolution");
+	std::set<String, less> platforms;
     for (auto &s : b.solutions)
-    {
-        addLine(get_project_configuration(s.Settings) + " = " + get_project_configuration(s.Settings));
-    }
+		platforms.insert(get_project_configuration(s.Settings) + " = " + get_project_configuration(s.Settings));
+	for (auto &s : platforms)
+		addLine(s);
     endGlobalSection();
 }
 
 void SolutionContext::addProjectConfigurationPlatforms(const Build &b, const String &prj, bool build)
 {
+	// sort like VS does
+	std::map<String, String, less> platforms;
     for (auto &s : b.solutions)
     {
-        addKeyValue(getStringUuid(prj) + "." + get_project_configuration(s.Settings) + ".ActiveCfg", get_project_configuration(s.Settings));
+		platforms[getStringUuid(prj) + "." + get_project_configuration(s.Settings) + ".ActiveCfg"] = get_project_configuration(s.Settings);
         if (build)
-            addKeyValue(getStringUuid(prj) + "." + get_project_configuration(s.Settings) + ".Build.0", get_project_configuration(s.Settings));
+			platforms[getStringUuid(prj) + "." + get_project_configuration(s.Settings) + ".Build.0"] = get_project_configuration(s.Settings);
     }
+	for (auto &[k,v] : platforms)
+		addKeyValue(k, v);
 }
 
 void SolutionContext::beginProjectSection(const String &n, const String &disposition)
@@ -1236,7 +1382,7 @@ void SolutionContext::materialize(const Build &b, const path &dir, GeneratorType
     beginGlobalSection("ProjectConfigurationPlatforms", "postSolution");
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (t->Scope != TargetScope::Build)
+        if (b.skipTarget(t->Scope))
             continue;
         if (!gPrintDependencies && !t->Local)
             continue;
@@ -1331,9 +1477,12 @@ void VSGenerator::generate(const Build &b)
     dir = b.getIdeDir() / toPathString(type);
     PackagePathTree tree, local_tree, overridden_tree;
     PackagePathTree::Directories parents, local_parents;
+
     SolutionContext ctx;
-    ctx.all_build_name = all_build_name;
-    ctx.build_dependencies_name = build_dependencies_name;
+	ctx.all_build_name = all_build_name;
+	ctx.build_dependencies_name = build_dependencies_name;
+	ctx.version = version;
+	ctx.printVersion();
 
     ctx.addDirectory(predefined_targets_dir);
     auto &all_tgts_proj = ctx.addProject(type == GeneratorType::VisualStudio ? VSProjectType::Utility : VSProjectType::Makefile, all_build_name, predefined_targets_dir);
@@ -1349,7 +1498,7 @@ void VSGenerator::generate(const Build &b)
         pctx.addProjectConfigurations(b);
 
         pctx.beginBlock("PropertyGroup", { {"Label", "Globals"} });
-        pctx.addBlock("VCProjectVersion", "15.0");
+        pctx.addBlock("VCProjectVersion", std::to_string(ctx.version.getMajor()) + ".0");
         pctx.addBlock("ProjectGuid", "{" + ctx.uuids[all_build_name] + "}");
         pctx.addBlock("Keyword", "Win32Proj");
         if (type != GeneratorType::VisualStudio)
@@ -1426,7 +1575,7 @@ void VSGenerator::generate(const Build &b)
     // use only first
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (t->Scope != TargetScope::Build)
+        if (b.skipTarget(t->Scope))
             continue;
         has_deps |= !t->Local;
         if (t->pkg.getOverriddenDir())
@@ -1461,7 +1610,7 @@ void VSGenerator::generate(const Build &b)
     int n_executable_tgts = 0;
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (t->Scope != TargetScope::Build)
+        if (b.skipTarget(t->Scope))
             continue;
         if (!gPrintDependencies && !t->Local)
             continue;
@@ -1473,7 +1622,7 @@ void VSGenerator::generate(const Build &b)
     bool first_project_set = false;
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (t->Scope != TargetScope::Build)
+        if (b.skipTarget(t->Scope))
             continue;
         if (!gPrintDependencies && !t->Local)
             continue;
@@ -1521,7 +1670,7 @@ void VSGenerator::generate(const Build &b)
     // use only first
     for (auto &[p, t] : b.solutions[0].children)
     {
-        if (t->Scope != TargetScope::Build)
+        if (b.skipTarget(t->Scope))
             continue;
         if (!gPrintDependencies && !t->Local)
             continue;
@@ -1553,7 +1702,7 @@ void VSGenerator::generate(const Build &b)
         pctx.addProjectConfigurations(b);
 
         pctx.beginBlock("PropertyGroup", { {"Label", "Globals"} });
-        pctx.addBlock("VCProjectVersion", "15.0");
+        pctx.addBlock("VCProjectVersion", std::to_string(ctx.version.getMajor()) + ".0");
         pctx.addBlock("ProjectGuid", "{" + ctx.uuids[build_dependencies_name] + "}");
         pctx.addBlock("Keyword", "Win32Proj");
         if (type != GeneratorType::VisualStudio)
@@ -1616,11 +1765,15 @@ void VSGenerator::generate(const Build &b)
             String deps;
             for (auto &p : ctx.build_deps)
             {
-                deps += p + " ";
-                args.push_back(p);
+                deps += p.toString() + " ";
+                args.push_back(p.toString());
             }
 
+            //auto base = int_dir / "sw";
             auto base = int_dir / shorten_hash(blake2b_512(deps), 6);
+
+            args.push_back("-ide-copy-to-dir");
+            args.push_back(normalize_path(get_out_dir(dir, projects_dir, s.Settings)));
 
             args.push_back("-ide-fast-path");
             args.push_back(normalize_path(path(base) += ".deps"));
@@ -2065,7 +2218,7 @@ void MakeGenerator::generate(const Build &b)
     Files outputs;
     for (auto &[p, t] : b.solutions[0].TargetsToBuild)
     {
-        if (t->Scope != TargetScope::Build)
+        if (b.skipTarget(t->Scope))
             continue;
         if (auto nt = t->as<NativeExecutedTarget>(); nt)
         {
@@ -2235,7 +2388,7 @@ void CompilationDatabaseGenerator::generate(const Build &b)
         nlohmann::json j;
         for (auto &[p, t] : b.solutions[0].children)
         {
-            if (t->Scope != TargetScope::Build)
+            if (b.skipTarget(t->Scope))
                 continue;
             if (!t->isLocal())
                 continue;

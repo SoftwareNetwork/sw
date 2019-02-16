@@ -365,6 +365,7 @@ void NativeLinkerOptionsData::merge(const NativeLinkerOptionsData &o, const Grou
 
     unique_merge_containers(Frameworks, o.Frameworks);
     LinkLibraries.insert(LinkLibraries.end(), o.LinkLibraries.begin(), o.LinkLibraries.end());
+    LinkLibraries2.insert(LinkLibraries2.end(), o.LinkLibraries2.begin(), o.LinkLibraries2.end());
     LinkOptions.insert(LinkOptions.end(), o.LinkOptions.begin(), o.LinkOptions.end());
     unique_merge_containers(PreLinkDirectories, o.PreLinkDirectories);
     unique_merge_containers(LinkDirectories, o.LinkDirectories);

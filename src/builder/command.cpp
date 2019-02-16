@@ -463,9 +463,8 @@ void Command::afterCommand()
         for (auto &i : inputs)
             update_time(i);
     }
-    if (0)
-    for (auto &i : intermediate)
-        update_time(i);
+    //for (auto &i : intermediate)
+        //update_time(i);
     for (auto &i : outputs)
         update_time(i);
 

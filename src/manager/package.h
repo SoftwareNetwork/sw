@@ -15,8 +15,6 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#define SW_SDIR_NAME "sdir"
-
 namespace sw
 {
 
@@ -367,6 +365,9 @@ UnresolvedPackage extractFromString(const String &target);
 
 SW_MANAGER_API
 PackageId extractFromStringPackageId(const String &target);
+
+SW_MANAGER_API
+String getSourceDirectoryName();
 
 struct SW_MANAGER_API Package : PackageId
 {

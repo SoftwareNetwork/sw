@@ -130,6 +130,9 @@ std::shared_ptr<Command> VSCommand::clone() const
 
 void VSCommand::postProcess1(bool)
 {
+    // deps are placed into command output,
+    // so we can't skip this filtering
+
     // filter out includes and file name
     static const auto pattern = "Note: including file:"s;
 
@@ -159,8 +162,12 @@ std::shared_ptr<Command> GNUCommand::clone() const
     return std::make_shared<GNUCommand>(*this);
 }
 
-void GNUCommand::postProcess1(bool)
+void GNUCommand::postProcess1(bool ok)
 {
+    // deps are placed into separate file, so we can skip our jobs
+    if (!ok)
+        return;
+
     if (deps_file.empty())
         return;
     if (!fs::exists(deps_file))
@@ -184,12 +191,40 @@ void GNUCommand::postProcess1(bool)
     //
 
     auto f = read_file(deps_file);
-    f = f.substr(f.find(":") + 1); // skip target
 
-    // split with everything; only file names are left
-    // we do not support spaces and quotes here at the moment
-    // TODO: implement if needed
-    auto files = split_string(f, "\r\n\\ "); // we also could add ':' here and skip first file (target)
+    // skip target
+    //  use exactly ': ' because on windows target is 'C:/path/to/file: '
+    //                                           skip up to this space ^
+    f = f.substr(f.find(": ") + 1);
+
+    boost::trim(f);
+    boost::replace_all(f, "\\\r", ""); // CR LF case or just CR
+    boost::replace_all(f, "\\\n", "");
+    boost::replace_all(f, "\r", "");
+    boost::replace_all(f, "\n", "");
+
+    FilesOrdered files;
+    size_t p = 0;
+    while (1)
+    {
+        auto p2 = f.find(' ', p);
+        if (p2 == f.npos)
+        {
+            auto s = f.substr(p);
+            if (!s.empty())
+                files.push_back(s);
+            break;
+        }
+        if (f[p2 - 1] != '\\')
+        {
+            auto s = f.substr(p, p - p2);
+            if (!s.empty())
+                files.push_back(s);
+        }
+        p = p2;
+        p++;
+    }
+
     for (auto &f2 : files)
     {
         auto f3 = normalize_path(f2);
@@ -198,7 +233,7 @@ void GNUCommand::postProcess1(bool)
         if (f3.find(cyg) == 0)
         {
             f3 = f3.substr(cyg.size());
-            f3 = f3[0] + ":" + f3.substr(1);
+            f3 = toupper(f3[0]) + ":" + f3.substr(1);
         }
 #endif
         for (auto &f : outputs)

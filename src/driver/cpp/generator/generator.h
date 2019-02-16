@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cppan_version.h>
 #include <package_path.h>
 
 #include <primitives/context.h>
@@ -51,6 +52,7 @@ struct Generator
 
 struct VSGenerator : Generator
 {
+	Version version;
     String cwd;
     path dir;
     const path projects_dir = "projects";

@@ -19,7 +19,6 @@ struct SW_DRIVER_CPP_API CppDriver : ::sw::Driver
 
     void fetch(const path &file_or_dir, const FetchOptions &opts = {}, bool parallel = true) const override;
     PackageScriptPtr fetch_and_load(const path &file_or_dir, const FetchOptions &opts = {}, bool parallel = true) const override;
-    PackageScriptPtr build(const path &file_or_dir) const override;
     bool buildPackages(const StringSet &pkgs) const override;
     PackageScriptPtr load(const path &file_or_dir) const override;
     bool execute(const path &file_or_dir) const override;

@@ -29,6 +29,13 @@ static cl::opt<bool> separate_bdir("separate-bdir");// , cl::init(true));
 namespace sw
 {
 
+String getSourceDirectoryName()
+{
+    // we cannot change it, because server already has such packages
+    // introduce versions to change this or smth
+    return "sdir";
+}
+
 UnresolvedPackage::UnresolvedPackage(const String &s)
 {
     *this = extractFromString(s);
@@ -109,7 +116,7 @@ path PackageId::getDirSrc2() const
 {
     if (auto d = getOverriddenDir(); d)
         return d.value();
-    return getDirSrc() / SW_SDIR_NAME;
+    return getDirSrc() / getSourceDirectoryName();
 }
 
 path PackageId::getDirObj() const
@@ -121,12 +128,12 @@ path PackageId::getDirObj() const
 
 path PackageId::getDirObjWdir(/* version level, project level (app or project) */) const
 {
-    return getDir(getUserDirectories().storage_dir_dat) / "wdir";
+    return getDir(getUserDirectories().storage_dir_dat) / "wd"; // working directory, was wdir
 }
 
 path PackageId::getDirInfo() const
 {
-    return getDirSrc() / "info";
+    return getDirSrc() / "info"; // make inf?
 }
 
 path PackageId::getStampFilename() const

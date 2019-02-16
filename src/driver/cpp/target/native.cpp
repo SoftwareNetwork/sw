@@ -1830,6 +1830,21 @@ bool NativeExecutedTarget::prepare()
             {
                 remove_bdirs(c);
             }
+
+			// for static libs, we gather and put pdb near output file
+            // btw, VS is clever enough to take this info from .lib
+			/*if (getSelectedTool() == Librarian.get())
+			{
+				if ((getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug ||
+					getSolution()->Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
+					c->PDBFilename.empty())
+				{
+					auto f = getOutputFile();
+					f = f.parent_path() / f.filename().stem();
+					f += ".pdb";
+					c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (pkg.ppath.toString() + ".pdb");
+				}
+			}*/
         };
 
         auto gnu_setup = [this](auto *f, auto *c)

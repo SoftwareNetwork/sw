@@ -88,17 +88,6 @@ bool build(const String &s)
     return build({ s });
 }
 
-PackageScriptPtr build_only(const path &file_or_dir)
-{
-    auto &drivers = getDrivers();
-    for (auto &d : drivers)
-    {
-        if (auto s = d->build(file_or_dir); s)
-            return s;
-    }
-    throw SW_RUNTIME_ERROR("Unknown package driver");
-}
-
 PackageScriptPtr load(const path &file_or_dir)
 {
     auto &drivers = getDrivers();
@@ -119,17 +108,6 @@ PackageScriptPtr fetch_and_load(const path &file_or_dir, const FetchOptions &opt
             return s;
     }
     throw SW_RUNTIME_ERROR("Unknown package driver");
-}
-
-DriverPtr loadDriver(const path &file_or_dir)
-{
-    auto &drivers = getDrivers();
-    for (auto &d : drivers)
-    {
-        //if (auto s = d->load(file_or_dir); s)
-            //return d;
-    }
-    return nullptr;
 }
 
 bool run(const PackageId &package)

@@ -44,7 +44,7 @@ struct TargetBase;
 struct Target;
 struct NativeLinker;
 
-enum VisualStudioVersion
+/*enum class VisualStudioVersion
 {
     Unspecified,
 
@@ -58,7 +58,7 @@ enum VisualStudioVersion
     VS14 = 140,
     VS15 = 150,
     VS16 = 160,
-};
+};*/
 
 SW_DRIVER_CPP_API
 void detectCompilers(struct Solution &s);
@@ -176,7 +176,7 @@ protected:
 
 struct SW_DRIVER_CPP_API VisualStudio
 {
-    VisualStudioVersion vs_version = VisualStudioVersion::Unspecified;
+    //VisualStudioVersion vs_version = VisualStudioVersion::Unspecified;
     String toolset;
 
     virtual ~VisualStudio() = default;
@@ -247,6 +247,7 @@ protected:
 
 struct SW_DRIVER_CPP_API ClangCl : Clang
 {
+    //Version vs_target_version;
 };
 
 struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,

@@ -79,6 +79,7 @@ cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_md));
 extern bool gVerbose;
 bool gWithTesting;
 path gIdeFastPath;
+path gIdeCopyToDir;
 int gNumberOfJobs = -1;
 
 void build_self(sw::Solution &s);
@@ -1250,11 +1251,11 @@ void Solution::findCompiler()
     if (!disable_compiler_lookup)
         detectCompilers(*this);
 
-    using CompilerVector = std::vector<std::pair<PackagePath, CompilerType>>;
+    using CompilerVector = std::vector<std::pair<PackageId, CompilerType>>;
 
     auto activate_one = [this](auto &v)
     {
-        auto r = activateLanguage(v.first);
+        auto r = activateLanguage(v.first.ppath);
         if (r)
             this->Settings.Native.CompilerType = v.second;
         return r;
@@ -1331,39 +1332,44 @@ void Solution::findCompiler()
 
     const CompilerVector msvc =
     {
-        {"com.Microsoft.VisualStudio.VC.clpp", CompilerType::MSVC},
-        {"com.Microsoft.VisualStudio.VC.cl", CompilerType::MSVC},
-        {"com.Microsoft.VisualStudio.VC.ml", CompilerType::MSVC},
-        {"com.Microsoft.VisualStudio.VC.rc", CompilerType::MSVC},
+        {{"com.Microsoft.VisualStudio.VC.cl"}, CompilerType::MSVC},
+        {{"com.Microsoft.VisualStudio.VC.ml"}, CompilerType::MSVC},
+        {{"com.Microsoft.VisualStudio.VC.rc"}, CompilerType::MSVC},
     };
 
     const CompilerVector gnu =
     {
-        {"org.gnu.gcc.gpp", CompilerType::GNU},
-        {"org.gnu.gcc.gcc", CompilerType::GNU},
-        {"org.gnu.gcc.as", CompilerType::GNU},
+        {{"org.gnu.gcc.gpp"}, CompilerType::GNU},
+        {{"org.gnu.gcc.gcc"}, CompilerType::GNU},
+        {{"org.gnu.gcc.as"}, CompilerType::GNU},
     };
 
     const CompilerVector clang =
     {
-        { "org.LLVM.clangpp", CompilerType::Clang },
-        { "org.LLVM.clang", CompilerType::Clang},
+        {{"org.LLVM.clangpp"}, CompilerType::Clang },
+        {{"org.LLVM.clang"}, CompilerType::Clang},
     };
 
     const CompilerVector clangcl =
     {
-        { "org.LLVM.clangcl",CompilerType::ClangCl }
+        {{"org.LLVM.clangcl"},CompilerType::ClangCl }
+    };
+
+    const CompilerVector appleclang =
+    {
+        {{"com.apple.LLVM.clangpp"}, CompilerType::AppleClang },
+        {{"com.apple.LLVM.clang"}, CompilerType::AppleClang},
     };
 
     const CompilerVector other =
     {
-        {"com.Microsoft.VisualStudio.Roslyn.csc", CompilerType::MSVC},
-        {"org.rust.rustc", CompilerType::MSVC},
-        {"org.google.golang.go", CompilerType::MSVC},
-        {"org.gnu.gcc.fortran", CompilerType::MSVC},
-        {"com.oracle.java.javac", CompilerType::MSVC},
-        {"com.JetBrains.kotlin.kotlinc", CompilerType::MSVC},
-        {"org.dlang.dmd.dmd", CompilerType::MSVC},
+        {{"com.Microsoft.VisualStudio.Roslyn.csc"}, CompilerType::MSVC},
+        {{"org.rust.rustc"}, CompilerType::MSVC},
+        {{"org.google.golang.go"}, CompilerType::MSVC},
+        {{"org.gnu.gcc.fortran"}, CompilerType::MSVC},
+        {{"com.oracle.java.javac"}, CompilerType::MSVC},
+        {{"com.JetBrains.kotlin.kotlinc"}, CompilerType::MSVC},
+        {{"org.dlang.dmd.dmd"}, CompilerType::MSVC},
     };
 
     switch (Settings.Native.CompilerType)
@@ -1377,6 +1383,9 @@ void Solution::findCompiler()
     case CompilerType::ClangCl:
         activate_array_or_throw({ clangcl }, "Cannot find clang-cl toolchain");
         break;
+    case CompilerType::AppleClang:
+        activate_array_or_throw({ appleclang }, "Cannot find clang toolchain");
+        break;
     case CompilerType::GNU:
         activate_array_or_throw({ gnu }, "Cannot find gnu toolchain");
         break;
@@ -1384,14 +1393,14 @@ void Solution::findCompiler()
         switch (HostOS.Type)
         {
         case OSType::Windows:
-            activate_array_or_throw({ msvc, clang, clangcl, }, "Try to add more compilers");
+            activate_array_or_throw({ msvc, clangcl, clang, }, "Try to add more compilers");
             break;
         case OSType::Cygwin:
         case OSType::Linux:
             activate_array_or_throw({ gnu, clang, }, "Try to add more compilers");
             break;
         case OSType::Macos:
-            activate_array_or_throw({ clang, gnu, }, "Try to add more compilers");
+            activate_array_or_throw({ clang, appleclang, gnu, }, "Try to add more compilers");
             break;
         }
         break;
@@ -1409,27 +1418,28 @@ void Solution::findCompiler()
     if (HostOS.is(OSType::Windows))
     {
         activate_linker_or_throw({
-            {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
-            {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
-            {"org.gnu.binutils.ar", "org.LLVM.clang.ld",LinkerType::GNU},
+            {{"com.Microsoft.VisualStudio.VC.lib"}, {"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
+            {{"org.gnu.binutils.ar"}, {"org.gnu.gcc.ld"},LinkerType::GNU},
+            {{"org.gnu.binutils.ar"}, {"org.LLVM.clang.ld"},LinkerType::GNU},
             }, "Try to add more linkers");
     }
     else if (HostOS.is(OSType::Macos))
     {
         activate_linker_or_throw({
             // base
-            {"org.gnu.binutils.ar", "org.LLVM.clang.ld",LinkerType::GNU},
-            {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
+            {{"org.gnu.binutils.ar"}, {"org.LLVM.clang.ld"},LinkerType::GNU},
+            {{"org.gnu.binutils.ar"}, {"com.apple.LLVM.clang.ld"},LinkerType::GNU},
+            {{"org.gnu.binutils.ar"}, {"org.gnu.gcc.ld"},LinkerType::GNU},
             }, "Try to add more linkers");
     }
     else
     {
         activate_linker_or_throw({
             // base
-            {"org.gnu.binutils.ar", "org.gnu.gcc.ld",LinkerType::GNU},
-            {"org.gnu.binutils.ar", "org.LLVM.clang.ld",LinkerType::GNU},
+            {{"org.gnu.binutils.ar"}, {"org.gnu.gcc.ld"},LinkerType::GNU},
+            {{"org.gnu.binutils.ar"}, {"org.LLVM.clang.ld"},LinkerType::GNU},
             // cygwin alternative, remove?
-            {"com.Microsoft.VisualStudio.VC.lib", "com.Microsoft.VisualStudio.VC.link",LinkerType::MSVC},
+            {{"com.Microsoft.VisualStudio.VC.lib"}, {"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
             }, "Try to add more linkers");
     }
 
@@ -2051,10 +2061,11 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         // so we create a file with them
         auto hash = getFilesHash({ fn });
         path h;
+        // cannot create aux dir on windows; auxl = auxiliary
         if (is_under_root(fn, getDirectories().storage_dir_pkg))
-            h = fn.parent_path().parent_path() / "aux" / ("defs_" + hash + ".h");
+            h = fn.parent_path().parent_path() / "auxl" / ("defs_" + hash + ".h");
         else
-            h = fn.parent_path() / SW_BINARY_DIR / "aux" / ("defs_" + hash + ".h");
+            h = fn.parent_path() / SW_BINARY_DIR / "auxl" / ("defs_" + hash + ".h");
         primitives::CppContext ctx;
 
         ctx.addLine("#define configure configure_" + hash);
@@ -2249,7 +2260,15 @@ void Build::load(const path &fn, bool configless)
         throw SW_RUNTIME_ERROR("path must be absolute: " + normalize_path(fn));
 
     if (!cl_generator.empty())
+    {
         generator = Generator::create(cl_generator);
+
+        // set early, before prepare
+
+        // also add tests to solution
+        // protect with option
+        with_testing = true;
+    }
 
     if (configless)
         return load_configless(fn);

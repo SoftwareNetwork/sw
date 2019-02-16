@@ -35,21 +35,6 @@ std::optional<path> CppDriver::resolveConfig(const path &file_or_dir) const
     return f;
 }
 
-// build means build config!!!
-// remove, it means nothing for user!
-PackageScriptPtr CppDriver::build(const path &file_or_dir) const
-{
-    auto f = resolveConfig(file_or_dir);
-    if (!f || !Build::isFrontendConfigFilename(f.value()))
-        return {};
-
-    auto b = std::make_unique<Build>();
-    b->Local = true;
-    //b->configure = true;
-    b->build(f.value());
-    return b;
-}
-
 PackageScriptPtr CppDriver::load(const path &file_or_dir) const
 {
     auto f = resolveConfig(file_or_dir);
