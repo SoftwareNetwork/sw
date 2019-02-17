@@ -36,6 +36,7 @@ bool gOutputNoConfigSubdir;
 
 static cl::opt<String> toolset("toolset", cl::desc("Set VS generator toolset"));
 
+extern std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 static String vs_project_ext = ".vcxproj";
 
 namespace sw
@@ -138,12 +139,17 @@ static int vsVersionFromString(const String &s)
 			t += c;
 	}
 	if (t.empty())
-		return 15;
+		return 0;
 	auto v = std::stoi(t);
 	if (t.size() == 4)
 	{
 		switch (v)
 		{
+            // 2003
+        case 2005:
+            return 8;
+        case 2008:
+            return 9;
 		case 2010:
 			return 10;
 		case 2012:
@@ -1444,8 +1450,11 @@ VSGenerator::VSGenerator()
     cwd = "\"" + current_thread_path().string() + "\"";
 }
 
-void VSGenerator::createSolutions(Build &b) const
+void VSGenerator::createSolutions(Build &b)
 {
+    if (type == GeneratorType::VisualStudio)
+        b.Settings.Native.CompilerType = CompilerType::MSVC;
+
     for (auto p : {
              //ArchType::x86,
              ArchType::x86_64,
@@ -1466,9 +1475,44 @@ void VSGenerator::createSolutions(Build &b) const
                  })
             {
                 b.Settings.Native.ConfigurationType = c;
-                b.addSolution();
+                auto &s = b.addSolution();
+
+                if (type == GeneratorType::VisualStudio)
+                {
+                    ProgramPtr prog;
+                    if (version.getMajor() == 0)
+                    {
+                        prog = s.getProgram("com.Microsoft.VisualStudio");
+                        if (!prog)
+                            throw SW_RUNTIME_ERROR("Program not found: com.Microsoft.VisualStudio");
+                    }
+                    else
+                    {
+                        PackageId pkg{ "com.Microsoft.VisualStudio", version };
+                        prog = s.getProgram(pkg, false);
+                        if (!prog)
+                            throw SW_RUNTIME_ERROR("Program not found: " + pkg.toString());
+                    }
+
+                    auto vs = prog->as<VSInstance>();
+                    if (!vs)
+                        throw SW_RUNTIME_ERROR("bad vs");
+
+                    version = vs->version;
+                }
             }
         }
+    }
+}
+
+void VSGenerator::initSolutions(Build &b)
+{
+    for (auto &s : b.solutions)
+    {
+        ProgramPtr prog = s.getProgram({ "com.Microsoft.VisualStudio", version }, false);
+
+        auto vs = prog->as<VSInstance>();
+        vs->activate(s);
     }
 }
 
@@ -1760,6 +1804,10 @@ void VSGenerator::generate(const Build &b)
 
             args.push_back("-d");
             args.push_back(normalize_path(b.config_file_or_dir));
+
+            args.push_back("-activate");
+            args.push_back(PackageId{ "com.Microsoft.VisualStudio", version }.toString());
+
             args.push_back("build");
 
             String deps;

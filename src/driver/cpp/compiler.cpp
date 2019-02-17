@@ -275,19 +275,7 @@ void detectRustCompilers(struct Solution &s)
 #endif
 }
 
-// struct VisualStudio?
-// make it program, register and find easily from generators
-struct VSInstance// : Program
-{
-    path root;
-    Version version;
-
-    // one installation may have more that one versions (tool sets)
-    std::set<Version> cl_versions; // cl has 19.xx versions (19.15, 19.16, 19.20 etc.)
-    std::set<Version> link_versions; // tools has 14.xx versions (14.15, 14.16, 14.20 etc.)
-};
-
-using VSInstances = std::map<Version, VSInstance>;
+using VSInstances = VersionMap<VSInstance>;
 
 VSInstances &gatherVSInstances()
 {
@@ -304,7 +292,7 @@ VSInstances &gatherVSInstances()
 
             // actually, it does not affect cl.exe or other tool versions
             if (i.VSInstallLocation.find(L"Preview") != std::wstring::npos)
-                continue; //v = v.toString() + "-preview";
+                v = v.toString() + "-preview";
 
             VSInstance inst;
             inst.root = root;
@@ -352,7 +340,6 @@ void detectWindowsCompilers(struct Solution &s)
     // reconsider later
 
     auto &instances = gatherVSInstances();
-    //s.registerProgram();
     for (auto &[v, instance] : instances)
     {
         auto root = instance.root / "VC";
@@ -417,6 +404,9 @@ void detectWindowsCompilers(struct Solution &s)
             //Linker->vs_version = VSVersion;
             Linker->Extension = s.Settings.TargetOS.getExecutableExtension();
             *Linker = LOpts;
+
+            if (instance.version.isPreRelease())
+                Linker->getVersion().getExtra() = instance.version.getExtra();
             s.registerProgram("com.Microsoft.VisualStudio.VC.link", Linker);
             instance.link_versions.insert(Linker->getVersion());
 
@@ -426,12 +416,16 @@ void detectWindowsCompilers(struct Solution &s)
                 c->addPathDirectory(host_root);
             }
 
+            //
             auto Librarian = std::make_shared<VisualStudioLibrarian>();
             Librarian->Type = LinkerType::MSVC;
             Librarian->file = compiler.parent_path() / "lib.exe";
             //Librarian->vs_version = VSVersion;
             Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
             *Librarian = LOpts;
+
+            if (instance.version.isPreRelease())
+                Librarian->getVersion().getExtra() = instance.version.getExtra();
             s.registerProgram("com.Microsoft.VisualStudio.VC.lib", Librarian);
             instance.link_versions.insert(Librarian->getVersion());
 
@@ -478,6 +472,9 @@ void detectWindowsCompilers(struct Solution &s)
             //C->vs_version = VSVersion;
             *C = COpts;
             L->compiler = C;
+
+            if (instance.version.isPreRelease())
+                C->getVersion().getExtra() = instance.version.getExtra();
             s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.ml", C, L);
         }
 
@@ -496,6 +493,9 @@ void detectWindowsCompilers(struct Solution &s)
             //C->vs_version = VSVersion;
             *C = COpts;
             L->compiler = C;
+
+            if (instance.version.isPreRelease())
+                C->getVersion().getExtra() = instance.version.getExtra();
             s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.cl", C, L);
             instance.cl_versions.insert(C->getVersion());
 
@@ -505,6 +505,9 @@ void detectWindowsCompilers(struct Solution &s)
                 c->addPathDirectory(host_root);
             }
         }
+
+        // now register
+        s.registerProgram("com.Microsoft.VisualStudio", std::make_shared<VSInstance>(instance));
 
         // .rc
         {
@@ -517,7 +520,7 @@ void detectWindowsCompilers(struct Solution &s)
                 C->system_idirs.push_back(idir);
 
             L->compiler = C;
-            s.registerProgramAndLanguage("com.Microsoft.VisualStudio.VC.rc", C, L);
+            s.registerProgramAndLanguage("com.Microsoft.Windows.rc", C, L);
         }
 
         // clang family
@@ -933,6 +936,44 @@ void detectNativeCompilers(struct Solution &s)
     }
     else
         detectNonWindowsCompilers(s);
+}
+
+void VSInstance::activate(struct Solution &s) const
+{
+    //if (s.Settings.Native.CompilerType != CompilerType::MSVC)
+        //throw SW_RUNTIME_ERROR("unsupported compiler " + toString(s.Settings.Native.CompilerType) + " for generator");
+
+    if (cl_versions.empty())
+        throw SW_RUNTIME_ERROR("missing cl.exe versions");
+    if (link_versions.empty())
+        throw SW_RUNTIME_ERROR("missing vs tools versions");
+
+    if (!s.activateLanguage({ "com.Microsoft.VisualStudio.VC.cl", *cl_versions.rbegin() }, false))
+        throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.cl");
+    if (!s.activateLanguage({ "com.Microsoft.VisualStudio.VC.ml", *link_versions.rbegin() }, false))
+        throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.ml");
+
+    s.Settings.Native.CompilerType = CompilerType::MSVC;
+
+    // linkers
+    auto lib = s.getProgram({ "com.Microsoft.VisualStudio.VC.lib", *link_versions.rbegin() }, false);
+    auto link = s.getProgram({ "com.Microsoft.VisualStudio.VC.link", *link_versions.rbegin() }, false);
+    auto r = lib && link;
+    if (r)
+    {
+        s.Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(lib->clone());
+        s.Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(link->clone());
+        LOG_TRACE(logger, "activated com.Microsoft.VisualStudio.VC.lib and com.Microsoft.VisualStudio.VC.link successfully");
+    }
+    else
+    {
+        if (lib)
+            throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.link");
+        else if (link)
+            throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.lib");
+        else
+            throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.lib and com.Microsoft.VisualStudio.VC.link");
+    }
 }
 
 path NativeToolchain::SDK::getPath(const path &subdir) const

@@ -85,7 +85,7 @@ int main(int argc, char **argv);
 
 int sw_main(const Strings &args);
 void stop();
-void setup_log(const std::string &log_level);
+void setup_log(const std::string &log_level, bool simple = true);
 void self_upgrade();
 void self_upgrade_copy(const path &dst);
 
@@ -120,6 +120,9 @@ static ::cl::opt<int> sleep_seconds("sleep", ::cl::desc("Sleep on startup"), ::c
 
 static ::cl::opt<bool> cl_self_upgrade("self-upgrade", ::cl::desc("Upgrade client"));
 static ::cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", ::cl::desc("Upgrade client: copy file"), ::cl::ReallyHidden);
+
+extern std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
+static ::cl::list<String> cl_activate("activate", ::cl::desc("Activate specific packages"));
 
 extern ::cl::opt<bool> useFileMonitor;
 
@@ -165,7 +168,7 @@ int setup_main(const Strings &args)
     }
 
     if (trace)
-        setup_log("TRACE");
+        setup_log("TRACE");// , false); // add modules for trace logger
     else if (gVerbose)
         setup_log("DEBUG");
     else
@@ -264,10 +267,15 @@ int parse_main(int argc, char **argv)
     //
     ::cl::ParseCommandLineOptions(args, overview);
 
+    // post setup args
+
     if (build_arg.empty())
         build_arg.push_back(".");
     if (build_arg_test.empty())
         build_arg_test.push_back(".");
+
+    for (sw::PackageId p : cl_activate)
+        gUserSelectedPackages[p.ppath] = p.version;
 
     return setup_main(args);
 }
@@ -443,13 +451,13 @@ void stop()
 
 static ::cl::opt<bool> write_log_to_file("log-to-file");
 
-void setup_log(const std::string &log_level)
+void setup_log(const std::string &log_level, bool simple)
 {
     LoggerSettings log_settings;
     log_settings.log_level = log_level;
     if (write_log_to_file && bConsoleMode)
         log_settings.log_file = (get_root_directory() / "sw").string();
-    log_settings.simple_logger = true;
+    log_settings.simple_logger = simple;
     log_settings.print_trace = true;
     initLogger(log_settings);
 

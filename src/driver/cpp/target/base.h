@@ -161,7 +161,7 @@ using SharedLibrary = SharedLibraryTarget;
 */
 struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
 {
-    using TargetMap = PackageVersionMapBase<TargetBaseTypePtr, std::unordered_map, std::map>;
+    using TargetMap = PackageVersionMapBase<TargetBaseTypePtr, std::unordered_map, primitives::version::VersionMap>;
 
     // rename? or keep available via api
     PackageId pkg;

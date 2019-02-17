@@ -29,6 +29,7 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
     virtual path getImportLibrary() const = 0;
     virtual void setOutputFile() = 0;
     void setOutputDir(const path &dir);
+    path getOutputDir() const { return OutputDir; }
 
     //
     virtual void setupCommand(builder::Command &c) const {}
@@ -65,6 +66,8 @@ protected:
 struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     NativeTargetOptionsGroup
 {
+    using TargetsSet = std::unordered_set<Target*>;
+
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::optional<bool> HeaderOnly;
@@ -121,6 +124,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     void autoDetectIncludeDirectories();
     bool hasSourceFiles() const;
     Files gatherIncludeDirectories() const;
+    TargetsSet gatherAllRelatedDependencies() const;
     NativeLinker *getSelectedTool() const;// override;
     //void setOutputFilename(const path &fn);
     void setOutputFile() override;
@@ -163,7 +167,6 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     using TargetBase::operator+=;
 
 protected:
-    using TargetsSet = std::unordered_set<Target*>;
     using once_mutex_t = std::recursive_mutex;
 
     once_mutex_t once;
@@ -174,7 +177,6 @@ protected:
     Files gatherObjectFiles() const;
     Files gatherObjectFilesWithoutLibraries() const;
     TargetsSet gatherDependenciesTargets() const;
-    TargetsSet gatherAllRelatedDependencies() const;
     bool prepareLibrary(LibraryType Type);
     void initLibrary(LibraryType Type);
     void configureFile1(const path &from, const path &to, ConfigureFlags flags);

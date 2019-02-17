@@ -75,6 +75,23 @@ bool isCppHeaderFileExtension(const String &);
 SW_DRIVER_CPP_API
 bool isCppSourceFileExtensions(const String &);
 
+// maybe add Object type?
+struct VSInstance : Program
+{
+    path root;
+    Version version;
+
+    // one installation may have more that one versions (tool sets)
+    VersionSet cl_versions; // cl has 19.xx versions (19.15, 19.16, 19.20 etc.)
+    VersionSet link_versions; // tools has 14.xx versions (14.15, 14.16, 14.20 etc.)
+
+    std::shared_ptr<builder::Command> getCommand() const override { return nullptr; } // return path to devenv?
+    std::shared_ptr<Program> clone() const override { return std::make_shared<VSInstance>(*this); }
+    Version &getVersion() override { return version; }
+
+    void activate(struct Solution &s) const;
+};
+
 // toolchain
 
 struct SW_DRIVER_CPP_API NativeToolchain

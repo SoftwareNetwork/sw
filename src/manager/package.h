@@ -123,9 +123,9 @@ template <
     template <class ...> class PackagePathMap,
     template <class ...> class VersionMap
 >
-struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<Version, T>>
+struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
 {
-    using VM = VersionMap<Version, T>;
+    using VM = VersionMap<T>;
     using Base = PackagePathMap<PackagePath, VM>;
     using This = PackageVersionMapBase;
 
@@ -269,7 +269,7 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<Version, T
         auto ip = find(u.ppath);
         if (ip == end(u.ppath))
             return end();
-        std::set<Version> versions;
+        VersionSet versions;
         for (const auto &[v, t] : ip->second)
             versions.insert(v);
         auto v = u.range.getMaxSatisfyingVersion(versions);
@@ -283,7 +283,7 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<Version, T
         auto ip = find(u.ppath);
         if (ip == end(u.ppath))
             return end();
-        std::set<Version> versions;
+        VersionSet versions;
         for (const auto &[v, t] : ip->second)
             versions.insert(v);
         auto v = u.range.getMaxSatisfyingVersion(versions);

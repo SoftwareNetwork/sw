@@ -22,6 +22,7 @@ namespace sw
 struct Checker;
 struct CheckSet;
 struct ChecksStorage;
+struct NativeExecutedTarget;
 
 namespace builder
 {
@@ -123,6 +124,7 @@ protected:
     virtual void run() const {}
     path getOutputFilename() const;
     Solution setupSolution(const path &f) const;
+    virtual void setupTarget(NativeExecutedTarget &t) const;
 
     [[nodiscard]]
     bool execute(Solution &s) const;
@@ -139,6 +141,9 @@ struct SW_DRIVER_CPP_API FunctionExists : Check
 
     void run() const override;
     String getSourceFileContents() const override;
+
+protected:
+    FunctionExists() = default;
 };
 
 struct SW_DRIVER_CPP_API IncludeExists : Check
@@ -195,16 +200,17 @@ struct SW_DRIVER_CPP_API StructMemberExists : Check
     String getSourceFileContents() const override;
 };
 
-struct SW_DRIVER_CPP_API LibraryFunctionExists : Check
+struct SW_DRIVER_CPP_API LibraryFunctionExists : FunctionExists
 {
     String library;
     String function;
 
     LibraryFunctionExists(const String &library, const String &function, const String &def = "");
 
-    void run() const override;
     size_t getHash() const override;
-    String getSourceFileContents() const override;
+
+private:
+    void setupTarget(NativeExecutedTarget &t) const override;
 };
 
 struct SW_DRIVER_CPP_API SourceCompiles : Check

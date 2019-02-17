@@ -109,7 +109,7 @@ bool LanguageStorage::activateLanguage(const PackagePath &pp)
     auto v = user_defined_languages[pp];
     if (v.empty())
         return false;
-    return activateLanguage({ pp, v.rbegin()->first }, true);
+    return activateLanguage({ pp, v.rbegin_releases()->first }, true);
 }
 
 bool LanguageStorage::activateLanguage(const PackageId &pkg, bool exact_version)
@@ -122,10 +122,11 @@ bool LanguageStorage::activateLanguage(const PackageId &pkg, bool exact_version)
     {
         if (exact_version)
             return false;
-        auto i = primitives::version::findBestMatch(v.rbegin(), v.rend(), pkg.version);
+        auto i = primitives::version::findBestMatch(v.rbegin(), v.rend(), pkg.version, true);
         if (i == v.rend())
             return false;
         L = i.base();
+        L--;
     }
     for (auto &l : L->second->CompiledExtensions)
         extensions[l] = pkg;
@@ -137,15 +138,27 @@ LanguagePtr LanguageStorage::getLanguage(const PackagePath &pp) const
     auto v = user_defined_languages.find(pp);
     if (v == user_defined_languages.end(pp) || v->second.empty())
         return {};
-    return getLanguage({ pp, v->second.rbegin()->first });
+    return getLanguage({ pp, v->second.rbegin_releases()->first });
 }
 
-LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg/*, bool exact_version*/) const
+LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg, bool exact_version) const
 {
-    auto v = user_defined_languages.find(pkg);
-    if (v == user_defined_languages.end(pkg))
+    auto vi = user_defined_languages.find(pkg.ppath);
+    if (vi == user_defined_languages.end(pkg.ppath))
         return {};
-    return v->second;
+    auto &v = vi->second;
+    auto L = v.find(pkg.version);
+    if (L == v.end())
+    {
+        if (exact_version)
+            return {};
+        auto i = primitives::version::findBestMatch(v.rbegin(), v.rend(), pkg.version, true);
+        if (i == v.rend())
+            return false;
+        L = i.base();
+        L--;
+    }
+    return L->second;
 }
 
 std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) const
@@ -153,15 +166,27 @@ std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) cons
     auto v = registered_programs.find(pp);
     if (v == registered_programs.end(pp) || v->second.empty())
         return {};
-    return getProgram({ pp, v->second.rbegin()->first });
+    return getProgram({ pp, v->second.rbegin_releases()->first });
 }
 
-std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg/*, bool exact_version*/) const
+std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg, bool exact_version) const
 {
-    auto v = registered_programs.find(pkg);
-    if (v == registered_programs.end(pkg))
+    auto vi = registered_programs.find(pkg.ppath);
+    if (vi == registered_programs.end(pkg.ppath))
         return {};
-    return v->second;
+    auto &v = vi->second;
+    auto L = v.find(pkg.version);
+    if (L == v.end())
+    {
+        if (exact_version)
+            return {};
+        auto i = primitives::version::findBestMatch(v.rbegin(), v.rend(), pkg.version, true);
+        if (i == v.rend())
+            return false;
+        L = i.base();
+        L--;
+    }
+    return L->second;
 }
 
 Language *LanguageStorage::findLanguageByExtension(const String &ext) const

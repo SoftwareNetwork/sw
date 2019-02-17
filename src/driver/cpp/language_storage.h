@@ -22,8 +22,8 @@ struct SW_DRIVER_CPP_API LanguageStorage
 {
     //LanguageMap languages;
     std::map<String, PackageId> extensions;
-    PackageVersionMapBase<LanguagePtr, std::unordered_map, std::map> user_defined_languages; // main languages!!! (UDL)
-    PackageVersionMapBase<ProgramPtr, std::unordered_map, std::map> registered_programs; // main program storage
+    PackageVersionMapBase<LanguagePtr, std::unordered_map, primitives::version::VersionMap> user_defined_languages; // main languages!!! (UDL)
+    PackageVersionMapBase<ProgramPtr, std::unordered_map, primitives::version::VersionMap> registered_programs; // main program storage
 
     virtual ~LanguageStorage();
 
@@ -47,10 +47,10 @@ struct SW_DRIVER_CPP_API LanguageStorage
     bool activateLanguage(const PackageId &pkg, bool exact_version = true);
 
     LanguagePtr getLanguage(const PackagePath &pp) const; // latest ver
-    LanguagePtr getLanguage(const PackageId &pkg/*, bool exact_version = true*/) const;
+    LanguagePtr getLanguage(const PackageId &pkg, bool exact_version = true) const;
 
     ProgramPtr getProgram(const PackagePath &pp) const; // latest ver
-    ProgramPtr getProgram(const PackageId &pkg/*, bool exact_version = true*/) const;
+    ProgramPtr getProgram(const PackageId &pkg, bool exact_version = true) const;
 
     Program *findProgramByExtension(const String &ext) const;
     Language *findLanguageByExtension(const String &ext) const;

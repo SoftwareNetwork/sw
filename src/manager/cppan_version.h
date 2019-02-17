@@ -11,6 +11,7 @@
 #define LOCAL_BRANCH_NAME "local"
 
 #include <primitives/version.h>
+#include <primitives/version_helpers.h>
 
 namespace sw
 {
@@ -26,6 +27,9 @@ using PackageVersionId = int64_t;
 using PackageVersionGroupNumber = int64_t;
 
 using primitives::version::Version;
+using primitives::version::VersionSet;
+using primitives::version::VersionMap;
+using primitives::version::UnorderedVersionMap;
 
 #pragma warning(push)
 #pragma warning(disable:4275) // warning C4275: non dll-interface struct 'primitives::Command' used as base for dll-interface struct 'sw::builder::Command'

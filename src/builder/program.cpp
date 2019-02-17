@@ -54,7 +54,12 @@ struct VersionStorage
     }
 };
 
-Version Program::getVersion() const
+const Version &Program::getVersion() const
+{
+    return const_cast<Program&>(*this).getVersion();
+}
+
+Version &Program::getVersion()
 {
     if (version)
         return version.value();

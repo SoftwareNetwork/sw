@@ -1087,8 +1087,8 @@ db::PackageVersionId PackagesDatabase::getExactProjectVersionId(const DownloadDe
     };
 
     db::PackageVersionId id = 0;
-    std::set<Version> versions;
-    std::unordered_map<Version, db::PackageVersionId> version_ids;
+    VersionSet versions;
+    UnorderedVersionMap<db::PackageVersionId> version_ids;
 
     const auto pkg_ver = ::db::packages::PackageVersion{};
     for (const auto &row : (*db)(
@@ -1219,7 +1219,7 @@ void PackagesDatabase::listPackages(const String &name) const
     for (auto &pkg : pkgs)
     {
         auto v1 = getVersionsForPackage(pkg);
-        std::set<Version> versions(v1.begin(), v1.end());
+        VersionSet versions(v1.begin(), v1.end());
         String out = pkg.toString();
         out += " (";
         for (auto &v : versions)

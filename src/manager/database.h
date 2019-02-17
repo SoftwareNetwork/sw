@@ -91,7 +91,7 @@ struct SW_MANAGER_API ServiceDatabase : public Database
             return gn;
         }
     };
-    using OverriddenPackages = PackageVersionMapBase<OverriddenPackage, std::unordered_map, std::map>;
+    using OverriddenPackages = PackageVersionMapBase<OverriddenPackage, std::unordered_map, primitives::version::VersionMap>;
 
     ServiceDatabase();
 

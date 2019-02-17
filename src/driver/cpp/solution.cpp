@@ -81,6 +81,7 @@ bool gWithTesting;
 path gIdeFastPath;
 path gIdeCopyToDir;
 int gNumberOfJobs = -1;
+std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 
 void build_self(sw::Solution &s);
 void check_self(sw::Checker &c);
@@ -626,12 +627,65 @@ Commands Solution::getCommands() const
             break;
     }*/
 
-    for (auto &p : chldr)
+    for (auto &[p, t] : chldr)
     {
-        auto c = p.second->getCommands();
+        auto c = t->getCommands();
         for (auto &c2 : c)
             c2->maybe_unused &= ~builder::Command::MU_TRUE;
         cmds.insert(c.begin(), c.end());
+
+        auto nt = t->as<NativeExecutedTarget>();
+        if (!nt)
+            continue;
+
+        // copy output dlls
+        if (auto c = nt->getCommand())
+        {
+            if (nt->getSelectedTool() != nt->Librarian.get())
+            {
+                if (nt->isLocal() && Settings.Native.CopySharedLibraries &&
+                    nt->Scope == TargetScope::Build && nt->getOutputDir().empty())
+                {
+                    for (auto &l : nt->gatherAllRelatedDependencies())
+                    {
+                        auto dt = l->as<NativeExecutedTarget>();
+                        if (!dt)
+                            continue;
+                        if (dt->isLocal())
+                            continue;
+                        if (dt->HeaderOnly.value())
+                            continue;
+                        if (getSolution()->Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
+                            continue;
+                        if (dt->getSelectedTool() == dt->Librarian.get())
+                            continue;
+                        auto in = dt->getOutputFile();
+                        auto o = nt->getOutputDir() / dt->getOutputDir();
+                        //if (OutputFilename.empty())
+                        o /= in.filename();
+                        //else
+                        {
+                            //o /= OutputFilename;
+                            //if (add_d_on_debug && getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug)
+                                //o += "d";
+                            //o += in.extension().u8string();
+                        }
+                        if (in == o)
+                            continue;
+
+                        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file");
+                        copy_cmd->args.push_back(in.u8string());
+                        copy_cmd->args.push_back(o.u8string());
+                        copy_cmd->addInput(dt->getOutputFile());
+                        copy_cmd->addOutput(o);
+                        copy_cmd->dependencies.insert(c);
+                        copy_cmd->name = "copy: " + normalize_path(o);
+                        copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
+                        cmds.insert(copy_cmd);
+                    }
+                }
+            }
+        }
     }
 
     return cmds;
@@ -1261,14 +1315,6 @@ void Solution::findCompiler()
         return r;
     };
 
-    auto activate = [&activate_one](const CompilerVector &a)
-    {
-        return std::any_of(a.begin(), a.end(), [&activate_one](const auto &v)
-        {
-            return activate_one(v);
-        });
-    };
-
     auto activate_all = [&activate_one](const CompilerVector &a)
     {
         return std::all_of(a.begin(), a.end(), [&activate_one](const auto &v)
@@ -1290,43 +1336,9 @@ void Solution::findCompiler()
         });
     };
 
-    auto activate_or_throw = [&activate](const CompilerVector &a, const auto &e)
-    {
-        if (!activate(a))
-            throw SW_RUNTIME_ERROR(e);
-    };
-
     auto activate_array_or_throw = [&activate_array](const std::vector<CompilerVector> &a, const auto &e)
     {
         if (!activate_array(a))
-            throw SW_RUNTIME_ERROR(e);
-    };
-
-    auto activate_linker_or_throw = [this](const std::vector<std::tuple<PackagePath /* lib */, PackagePath /* link */, LinkerType>> &a, const auto &e)
-    {
-        if (!std::any_of(a.begin(), a.end(), [this](const auto &v)
-        {
-            auto lib = getProgram(std::get<0>(v));
-            auto link = getProgram(std::get<1>(v));
-            auto r = lib && link;
-            if (r)
-            {
-                this->Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(lib->clone());
-                this->Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(link->clone());
-                //this->Settings.Native.LinkerType = std::get<2>(v);
-                LOG_TRACE(logger, "activated " << std::get<0>(v).toString() << " and " << std::get<1>(v).toString() << " successfully");
-            }
-            else
-            {
-                if (lib)
-                    LOG_TRACE(logger, "activate " << std::get<1>(v).toString() << " failed");
-                else if (link)
-                    LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " failed");
-                else
-                    LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " and " << std::get<1>(v).toString() << " failed");
-            }
-            return r;
-        }))
             throw SW_RUNTIME_ERROR(e);
     };
 
@@ -1334,7 +1346,7 @@ void Solution::findCompiler()
     {
         {{"com.Microsoft.VisualStudio.VC.cl"}, CompilerType::MSVC},
         {{"com.Microsoft.VisualStudio.VC.ml"}, CompilerType::MSVC},
-        {{"com.Microsoft.VisualStudio.VC.rc"}, CompilerType::MSVC},
+        {{"com.Microsoft.Windows.rc"}, CompilerType::MSVC},
     };
 
     const CompilerVector gnu =
@@ -1359,17 +1371,6 @@ void Solution::findCompiler()
     {
         {{"com.apple.LLVM.clangpp"}, CompilerType::AppleClang },
         {{"com.apple.LLVM.clang"}, CompilerType::AppleClang},
-    };
-
-    const CompilerVector other =
-    {
-        {{"com.Microsoft.VisualStudio.Roslyn.csc"}, CompilerType::MSVC},
-        {{"org.rust.rustc"}, CompilerType::MSVC},
-        {{"org.google.golang.go"}, CompilerType::MSVC},
-        {{"org.gnu.gcc.fortran"}, CompilerType::MSVC},
-        {{"com.oracle.java.javac"}, CompilerType::MSVC},
-        {{"com.JetBrains.kotlin.kotlinc"}, CompilerType::MSVC},
-        {{"org.dlang.dmd.dmd"}, CompilerType::MSVC},
     };
 
     switch (Settings.Native.CompilerType)
@@ -1415,6 +1416,34 @@ void Solution::findCompiler()
     }
 
     // linkers
+    auto activate_linker_or_throw = [this](const std::vector<std::tuple<PackagePath /* lib */, PackagePath /* link */, LinkerType>> &a, const auto &e)
+    {
+        if (!std::any_of(a.begin(), a.end(), [this](const auto &v)
+            {
+                auto lib = getProgram(std::get<0>(v));
+                auto link = getProgram(std::get<1>(v));
+                auto r = lib && link;
+                if (r)
+                {
+                    this->Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(lib->clone());
+                    this->Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(link->clone());
+                    //this->Settings.Native.LinkerType = std::get<2>(v);
+                    LOG_TRACE(logger, "activated " << std::get<0>(v).toString() << " and " << std::get<1>(v).toString() << " successfully");
+                }
+                else
+                {
+                    if (lib)
+                        LOG_TRACE(logger, "activate " << std::get<1>(v).toString() << " failed");
+                    else if (link)
+                        LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " failed");
+                    else
+                        LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " and " << std::get<1>(v).toString() << " failed");
+                }
+                return r;
+            }))
+            throw SW_RUNTIME_ERROR(e);
+    };
+
     if (HostOS.is(OSType::Windows))
     {
         activate_linker_or_throw({
@@ -1443,9 +1472,32 @@ void Solution::findCompiler()
             }, "Try to add more linkers");
     }
 
+    const CompilerVector other =
+    {
+        {{"com.Microsoft.VisualStudio.Roslyn.csc"}, CompilerType::MSVC},
+        {{"org.rust.rustc"}, CompilerType::MSVC},
+        {{"org.google.golang.go"}, CompilerType::MSVC},
+        {{"org.gnu.gcc.fortran"}, CompilerType::MSVC},
+        {{"com.oracle.java.javac"}, CompilerType::MSVC},
+        {{"com.JetBrains.kotlin.kotlinc"}, CompilerType::MSVC},
+        {{"org.dlang.dmd.dmd"}, CompilerType::MSVC},
+    };
+
     // more languages
     for (auto &[a, _] : other)
         activateLanguage(a);
+
+    // use activate
+    // maybe add a condition - do not use in config mode?
+    for (auto &[pp,v] : gUserSelectedPackages)
+    {
+        auto prog = getProgram({ pp, v }, false);
+        if (!prog)
+            throw SW_RUNTIME_ERROR("program is not available: " + pp.toString());
+
+        if (auto vs = prog->as<VSInstance>())
+            vs->activate(*this);
+    }
 
     setSettings();
 }
@@ -1602,7 +1654,7 @@ Solution &Build::addSolutionRaw()
 Solution &Build::addSolution()
 {
     auto &s = addSolutionRaw();
-    s.findCompiler();
+    s.findCompiler(); // too early?
     return s;
 }
 
@@ -2786,15 +2838,6 @@ void Build::createSolutions(const path &dll, bool usedll)
     if (gWithTesting)
         with_testing = true;
 
-    // explicit presets
-#ifdef _WIN32
-    Settings.Native.CompilerType = CompilerType::MSVC;
-#elif __APPLE__
-    Settings.Native.CompilerType = CompilerType::Clang; // switch to apple clang?
-#else
-    Settings.Native.CompilerType = CompilerType::GNU;
-#endif
-
     if (usedll)
         sw_check_abi_version(getModuleStorage(base_ptr).get(dll).sw_get_module_abi_version());
 
@@ -2808,7 +2851,7 @@ void Build::createSolutions(const path &dll, bool usedll)
         {
             if (append_configs)
             {
-                if (auto g = getGenerator(); g)
+                if (auto g = getGenerator())
                 {
                     g->createSolutions(*this);
                 }
@@ -2955,7 +2998,7 @@ void Build::createSolutions(const path &dll, bool usedll)
                 set_tos(s, target_os[i]);
             });
         }
-        else if (auto g = getGenerator(); g)
+        else if (auto g = getGenerator())
         {
             g->createSolutions(*this);
         }
@@ -2970,7 +3013,7 @@ void Build::load_dll(const path &dll, bool usedll)
 {
     createSolutions(dll, usedll);
 
-    if (auto g = getGenerator(); g)
+    if (auto g = getGenerator())
     {
         LOG_INFO(logger, "Generating " << toString(g->type) << " project with " << solutions.size() << " configurations:");
         for (auto &s : solutions)
@@ -2980,7 +3023,12 @@ void Build::load_dll(const path &dll, bool usedll)
     // add cc if needed
     getHostSolution();
 
-    // detect and eliminate solution clones
+    // detect and eliminate solution clones?
+
+    if (auto g = getGenerator())
+    {
+        g->initSolutions(*this);
+    }
 
     // apply config settings
     for (auto &s : solutions)

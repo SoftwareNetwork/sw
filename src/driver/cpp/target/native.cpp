@@ -925,46 +925,6 @@ Commands NativeExecutedTarget::getCommands1() const
                     c->dependencies.insert(c2);
             }
 
-            // copy output dlls
-            if (isLocal() && getSolution()->Settings.Native.CopySharedLibraries &&
-                Scope == TargetScope::Build && OutputDir.empty())
-            {
-                for (auto &l : gatherAllRelatedDependencies())
-                {
-                    auto dt = ((NativeExecutedTarget*)l);
-                    if (dt->isLocal())
-                        continue;
-                    if (dt->HeaderOnly.value())
-                        continue;
-                    if (getSolution()->Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
-                        continue;
-                    if (dt->getSelectedTool() == dt->Librarian.get())
-                        continue;
-                    auto in = dt->getOutputFile();
-                    auto o = getOutputDir() / dt->OutputDir;
-                    //if (OutputFilename.empty())
-                    o /= in.filename();
-                    //else
-                    {
-                        //o /= OutputFilename;
-                        //if (add_d_on_debug && getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug)
-                            //o += "d";
-                        //o += in.extension().u8string();
-                    }
-                    if (in == o)
-                        continue;
-                    SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file");
-                    copy_cmd->args.push_back(in.u8string());
-                    copy_cmd->args.push_back(o.u8string());
-                    copy_cmd->addInput(dt->getOutputFile());
-                    copy_cmd->addOutput(o);
-                    copy_cmd->dependencies.insert(c);
-                    copy_cmd->name = "copy: " + normalize_path(o);
-                    copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
-                    cmds.insert(copy_cmd);
-                }
-            }
-
             // check circular, resolve if possible
             for (auto &d : CircularDependencies)
             {
@@ -2491,7 +2451,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         if (!repl)
         {
             s = m.prefix().str() + m.suffix().str();
-            LOG_TRACE(logger, "configure @ or ${} " << m[1].str() << ": replacement not found");
+            LOG_TRACE(logger, "configure @@ or ${} " << m[1].str() << ": replacement not found");
             continue;
         }
         s = m.prefix().str() + *repl + m.suffix().str();
