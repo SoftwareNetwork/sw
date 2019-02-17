@@ -2765,38 +2765,27 @@ void Build::build_packages(const StringSet &pkgs)
 
                     if (nt->Scope == TargetScope::Build && nt->NativeTarget::getOutputDir().empty())
                     {
-                        for (auto &l : nt->gatherAllRelatedDependencies())
-                        {
-                            auto dt = l->as<NativeExecutedTarget>();
-                            if (!dt)
-                                continue;
-                            if (dt->isLocal())
-                                continue;
-                            if (dt->HeaderOnly.value())
-                                continue;
-                            if (getSolution()->Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
-                                continue;
-                            if (dt->getSelectedTool() == dt->Librarian.get())
-                                continue;
-                            auto in = dt->getOutputFile();
-                            auto o = gIdeCopyToDir / dt->NativeTarget::getOutputDir();
-                            o /= in.filename();
-                            if (in == o)
-                                continue;
+                        auto dt = nt;
+                        if (getSolution()->Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
+                            continue;
+                        auto in = dt->getOutputFile();
+                        auto o = gIdeCopyToDir / dt->NativeTarget::getOutputDir();
+                        o /= in.filename();
+                        if (in == o)
+                            continue;
 
-                            SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file");
-                            copy_cmd->args.push_back(in.u8string());
-                            copy_cmd->args.push_back(o.u8string());
-                            copy_cmd->addInput(dt->getOutputFile());
-                            copy_cmd->addOutput(o);
-                            //copy_cmd->dependencies.insert(nt->getCommand());
-                            copy_cmd->name = "copy: " + normalize_path(o);
-                            copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
-                            copy_cmd->command_storage = builder::Command::CS_LOCAL;
-                            cmds.insert(copy_cmd);
+                        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file");
+                        copy_cmd->args.push_back(in.u8string());
+                        copy_cmd->args.push_back(o.u8string());
+                        copy_cmd->addInput(dt->getOutputFile());
+                        copy_cmd->addOutput(o);
+                        //copy_cmd->dependencies.insert(nt->getCommand());
+                        copy_cmd->name = "copy: " + normalize_path(o);
+                        copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
+                        copy_cmd->command_storage = builder::Command::CS_LOCAL;
+                        cmds.insert(copy_cmd);
 
-                            files.insert(o);
-                        }
+                        files.insert(o);
                     }
                 }
             }

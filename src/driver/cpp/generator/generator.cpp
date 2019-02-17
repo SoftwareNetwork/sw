@@ -882,21 +882,14 @@ void ProjectContext::printProject(
                             }
                             else if (!*nt3->HeaderOnly)
                             {
-                                if (visited.find(nt3) == visited.end())
-                                {
-                                    ll.insert(nt3->getImportLibrary());
-                                    deps.insert(parent->build_dependencies_name);
-                                    parent->build_deps.insert(d->target->pkg);
+                                ll.insert(nt3->getImportLibrary());
+                                deps.insert(parent->build_dependencies_name);
+                                parent->build_deps.insert(d->target->pkg);
 
-                                    if ((s.Settings.Native.LibrariesType == LibraryType::Static && d->target->getType() == TargetType::NativeLibrary) ||
-                                        d->target->getType() == TargetType::NativeStaticLibrary)
-                                    {
-                                        f(*nt3);
-                                    }
-                                    else
-                                    {
-                                        parent->copy_deps.insert(d->target->pkg);
-                                    }
+                                if ((s.Settings.Native.LibrariesType == LibraryType::Static && d->target->getType() == TargetType::NativeLibrary) ||
+                                    d->target->getType() == TargetType::NativeStaticLibrary)
+                                {
+                                    f(*nt3);
                                 }
                             }
                         }
