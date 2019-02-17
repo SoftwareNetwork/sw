@@ -639,15 +639,13 @@ Commands Solution::getCommands() const
         auto nt = t->as<NativeExecutedTarget>();
         if (!nt)
             continue;
-
         if (*nt->HeaderOnly)
             continue;
-
         if (nt->getSelectedTool() == nt->Librarian.get())
             continue;
 
         if (nt->isLocal() && Settings.Native.CopySharedLibraries &&
-            nt->Scope == TargetScope::Build && nt->getOutputDir().empty())
+            nt->Scope == TargetScope::Build && nt->NativeTarget::getOutputDir().empty())
         {
             for (auto &l : nt->gatherAllRelatedDependencies())
             {
@@ -663,16 +661,8 @@ Commands Solution::getCommands() const
                 if (dt->getSelectedTool() == dt->Librarian.get())
                     continue;
                 auto in = dt->getOutputFile();
-                auto o = nt->getOutputDir() / dt->getOutputDir();
-                //if (OutputFilename.empty())
+                auto o = nt->getOutputDir() / dt->NativeTarget::getOutputDir();
                 o /= in.filename();
-                //else
-                {
-                    //o /= OutputFilename;
-                    //if (add_d_on_debug && getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug)
-                        //o += "d";
-                    //o += in.extension().u8string();
-                }
                 if (in == o)
                     continue;
 
@@ -681,7 +671,7 @@ Commands Solution::getCommands() const
                 copy_cmd->args.push_back(o.u8string());
                 copy_cmd->addInput(dt->getOutputFile());
                 copy_cmd->addOutput(o);
-                //copy_cmd->dependencies.insert(c);
+                copy_cmd->dependencies.insert(nt->getCommand());
                 copy_cmd->name = "copy: " + normalize_path(o);
                 copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
                 copy_cmd->command_storage = builder::Command::CS_LOCAL;
@@ -767,20 +757,6 @@ void Solution::execute(CommandExecutionPlan &p) const
 
     for (auto &c : p.commands)
         c->silent = silent;
-
-    std::atomic_size_t current_command = 1;
-    std::atomic_size_t total_commands = 0;
-    for (auto &c : p.commands)
-    {
-        if (!c->outputs.empty())
-            total_commands++;
-    }
-
-    for (auto &c : p.commands)
-    {
-        c->total_commands = &total_commands;
-        c->current_command = &current_command;
-    }
 
     // execute early to prevent commands expansion into response files
     // print misc
@@ -2768,7 +2744,9 @@ void Build::build_packages(const StringSet &pkgs)
     //
     if (!gIdeFastPath.empty())
     {
+        // at the moment we have one solution here
         Files files;
+        Commands cmds;
         for (auto &p : pkgs)
         {
             auto i = solutions[0].children.find(PackageId(p));
@@ -2777,9 +2755,56 @@ void Build::build_packages(const StringSet &pkgs)
             if (auto nt = i->second->as<NativeExecutedTarget>())
             {
                 if (auto c = nt->getCommand())
+                {
                     files.insert(c->outputs.begin(), c->outputs.end());
+
+                    if (*nt->HeaderOnly)
+                        continue;
+                    if (nt->getSelectedTool() == nt->Librarian.get())
+                        continue;
+
+                    if (nt->Scope == TargetScope::Build && nt->NativeTarget::getOutputDir().empty())
+                    {
+                        for (auto &l : nt->gatherAllRelatedDependencies())
+                        {
+                            auto dt = l->as<NativeExecutedTarget>();
+                            if (!dt)
+                                continue;
+                            if (dt->isLocal())
+                                continue;
+                            if (dt->HeaderOnly.value())
+                                continue;
+                            if (getSolution()->Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
+                                continue;
+                            if (dt->getSelectedTool() == dt->Librarian.get())
+                                continue;
+                            auto in = dt->getOutputFile();
+                            auto o = gIdeCopyToDir / dt->NativeTarget::getOutputDir();
+                            o /= in.filename();
+                            if (in == o)
+                                continue;
+
+                            SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file");
+                            copy_cmd->args.push_back(in.u8string());
+                            copy_cmd->args.push_back(o.u8string());
+                            copy_cmd->addInput(dt->getOutputFile());
+                            copy_cmd->addOutput(o);
+                            //copy_cmd->dependencies.insert(nt->getCommand());
+                            copy_cmd->name = "copy: " + normalize_path(o);
+                            copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
+                            copy_cmd->command_storage = builder::Command::CS_LOCAL;
+                            cmds.insert(copy_cmd);
+
+                            files.insert(o);
+                        }
+                    }
+                }
             }
         }
+
+        // perform copy
+        solutions[0].getExecutionPlan(cmds).execute(getExecutor());
+
         String s;
         for (auto &f : files)
         {

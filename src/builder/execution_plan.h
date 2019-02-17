@@ -67,6 +67,15 @@ struct ExecutionPlan
         std::atomic_int running = 0;
         std::atomic_int64_t askip_errors = skip_errors;
 
+        // set numbers
+        std::atomic_size_t current_command = 1;
+        std::atomic_size_t total_commands = commands.size();
+        for (auto &c : commands)
+        {
+            c->total_commands = &total_commands;
+            c->current_command = &current_command;
+        }
+
         std::function<void(PtrT)> run;
         run = [this, &askip_errors, &e, &run, &fs, &all, &m, &stopped, &running](T *c)
         {

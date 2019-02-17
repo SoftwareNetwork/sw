@@ -820,6 +820,27 @@ void ProjectContext::printProject(
                 if (auto L = (*sf.begin())->compiler->as<VisualStudioCompiler>())
                 {
                     L->printIdeSettings(*this);
+
+                    // TODO: remove
+                    beginBlock("RuntimeLibrary");
+                    switch (L->RuntimeLibrary.value())
+                    {
+                    case vs::RuntimeLibraryType::MultiThreaded:
+                        addText("MultiThreaded");
+                        break;
+                    case vs::RuntimeLibraryType::MultiThreadedDebug:
+                        addText("MultiThreadedDebug");
+                        break;
+                    case vs::RuntimeLibraryType::MultiThreadedDLL:
+                        addText("MultiThreadedDLL");
+                        break;
+                    case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
+                        addText("MultiThreadedDebugDLL");
+                        break;
+                    default:
+                        throw SW_RUNTIME_ERROR("unreachable code");
+                    }
+                    endBlock(true);
                 }
             }
             endBlock();
