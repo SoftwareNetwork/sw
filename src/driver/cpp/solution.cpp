@@ -634,56 +634,58 @@ Commands Solution::getCommands() const
             c2->maybe_unused &= ~builder::Command::MU_TRUE;
         cmds.insert(c.begin(), c.end());
 
+        // copy output dlls
+
         auto nt = t->as<NativeExecutedTarget>();
         if (!nt)
             continue;
 
-        // copy output dlls
-        if (auto c = nt->getCommand())
-        {
-            if (nt->getSelectedTool() != nt->Librarian.get())
-            {
-                if (nt->isLocal() && Settings.Native.CopySharedLibraries &&
-                    nt->Scope == TargetScope::Build && nt->getOutputDir().empty())
-                {
-                    for (auto &l : nt->gatherAllRelatedDependencies())
-                    {
-                        auto dt = l->as<NativeExecutedTarget>();
-                        if (!dt)
-                            continue;
-                        if (dt->isLocal())
-                            continue;
-                        if (dt->HeaderOnly.value())
-                            continue;
-                        if (getSolution()->Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
-                            continue;
-                        if (dt->getSelectedTool() == dt->Librarian.get())
-                            continue;
-                        auto in = dt->getOutputFile();
-                        auto o = nt->getOutputDir() / dt->getOutputDir();
-                        //if (OutputFilename.empty())
-                        o /= in.filename();
-                        //else
-                        {
-                            //o /= OutputFilename;
-                            //if (add_d_on_debug && getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug)
-                                //o += "d";
-                            //o += in.extension().u8string();
-                        }
-                        if (in == o)
-                            continue;
+        if (*nt->HeaderOnly)
+            continue;
 
-                        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file");
-                        copy_cmd->args.push_back(in.u8string());
-                        copy_cmd->args.push_back(o.u8string());
-                        copy_cmd->addInput(dt->getOutputFile());
-                        copy_cmd->addOutput(o);
-                        copy_cmd->dependencies.insert(c);
-                        copy_cmd->name = "copy: " + normalize_path(o);
-                        copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
-                        cmds.insert(copy_cmd);
-                    }
+        if (nt->getSelectedTool() == nt->Librarian.get())
+            continue;
+
+        if (nt->isLocal() && Settings.Native.CopySharedLibraries &&
+            nt->Scope == TargetScope::Build && nt->getOutputDir().empty())
+        {
+            for (auto &l : nt->gatherAllRelatedDependencies())
+            {
+                auto dt = l->as<NativeExecutedTarget>();
+                if (!dt)
+                    continue;
+                if (dt->isLocal())
+                    continue;
+                if (dt->HeaderOnly.value())
+                    continue;
+                if (getSolution()->Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
+                    continue;
+                if (dt->getSelectedTool() == dt->Librarian.get())
+                    continue;
+                auto in = dt->getOutputFile();
+                auto o = nt->getOutputDir() / dt->getOutputDir();
+                //if (OutputFilename.empty())
+                o /= in.filename();
+                //else
+                {
+                    //o /= OutputFilename;
+                    //if (add_d_on_debug && getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug)
+                        //o += "d";
+                    //o += in.extension().u8string();
                 }
+                if (in == o)
+                    continue;
+
+                SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file");
+                copy_cmd->args.push_back(in.u8string());
+                copy_cmd->args.push_back(o.u8string());
+                copy_cmd->addInput(dt->getOutputFile());
+                copy_cmd->addOutput(o);
+                //copy_cmd->dependencies.insert(c);
+                copy_cmd->name = "copy: " + normalize_path(o);
+                copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
+                copy_cmd->command_storage = builder::Command::CS_LOCAL;
+                cmds.insert(copy_cmd);
             }
         }
     }
