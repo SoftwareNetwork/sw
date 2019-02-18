@@ -707,6 +707,7 @@ SUBCOMMAND_DECL(uri)
             // before scp
             SCOPE_EXIT
             {
+                sw::getFileStorages().clear(); // free files
                 fs::remove_all(fn.parent_path());
             };
 

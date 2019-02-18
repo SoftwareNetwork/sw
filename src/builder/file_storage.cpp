@@ -140,11 +140,6 @@ void FileStorage::async_file_log(const FileRecord *r)
 
         //fseek(f.f, 0, SEEK_END);
         auto l = getFileLog();
-        if (!l)
-        {
-            LOG_TRACE(logger, "missing file log: " << config << ", file: " << normalize_path(r.file));
-            return;
-        }
         auto sz = v.size();
         fwrite(&sz, sizeof(sz), 1, l->f.getHandle());
         fwrite(&v[0], sz, 1, l->f.getHandle());
