@@ -85,7 +85,7 @@ bool build(const String &s)
     // local file or dir is preferable rather than some remote pkg
     if (fs::exists(s))
         return build(path(s));
-    return build({ s });
+    return build(Strings{ s });
 }
 
 PackageScriptPtr load(const path &file_or_dir)

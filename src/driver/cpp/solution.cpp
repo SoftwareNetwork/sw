@@ -2279,7 +2279,7 @@ void Build::setupSolutionName(const path &file_or_dir)
 
     bool dir = fs::is_directory(file_or_dir);
     if (dir || isFrontendConfigFilename(file_or_dir))
-        ide_solution_name = fs::canonical(file_or_dir).filename().u8string();
+        ide_solution_name = fs::canonical(file_or_dir).parent_path().filename().u8string();
     else
         ide_solution_name = file_or_dir.stem().u8string();
 }
@@ -2636,23 +2636,62 @@ void Build::load_configless(const path &file_or_dir)
 
     bool dir = fs::is_directory(config_file_or_dir);
 
-    auto &s = solutions[0];
-    auto &exe = s.addExecutable(ide_solution_name);
-    bool read_deps_from_comments = false;
+    Strings comments;
     if (!dir)
     {
-        exe += file_or_dir;
+        // for generators
+        config = file_or_dir;
 
-        // read deps from comments
-        // read_deps_from_comments = true;
+        auto f = read_file(file_or_dir);
+
+        auto b = f.find("/*");
+        if (b != f.npos)
+        {
+            auto e = f.find("*/", b);
+            if (e != f.npos)
+            {
+                auto s = f.substr(b + 2, e - b - 2);
+                if (!s.empty())
+                    comments.push_back(s);
+            }
+        }
     }
 
-    if (!read_deps_from_comments)
+    createSolutions("", false);
+    for (auto &s : solutions)
     {
-        for (auto &[p, d] : getPackageStore().resolved_packages)
+        current_solution = &s;
+        if (!dir)
         {
-            if (d.installed)
-                exe += std::make_shared<Dependency>(p.toString());
+            //exe += file_or_dir;
+
+            for (auto &c : comments)
+            {
+                auto root = YAML::Load(c);
+                cppan_load(root, file_or_dir.stem().u8string());
+            }
+
+            if (s.children.size() == 1)
+            {
+                if (auto nt = s.children.begin()->second->as<NativeExecutedTarget>())
+                    *nt += file_or_dir;
+            }
+
+            TargetsToBuild = s.children;
+        }
+        else
+        {
+            auto &exe = s.addExecutable(ide_solution_name);
+            bool read_deps_from_comments = false;
+
+            if (!read_deps_from_comments)
+            {
+                for (auto &[p, d] : getPackageStore().resolved_packages)
+                {
+                    if (d.installed)
+                        exe += std::make_shared<Dependency>(p.toString());
+                }
+            }
         }
     }
 }
@@ -2697,6 +2736,7 @@ void Build::build_packages(const StringSet &pkgs)
         getExecutor(e.get());
     }
 
+    //
     UnresolvedPackages upkgs;
     for (auto &p : pkgs)
         upkgs.insert(extractFromString(p));

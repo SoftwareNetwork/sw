@@ -44,10 +44,7 @@ PackageScriptPtr CppDriver::load(const path &file_or_dir) const
             LOG_INFO(logger, "Unknown config, trying in configless mode. Default mode is native (ASM/C/C++)");
 
         path p = file_or_dir;
-        if (fs::is_directory(p))
-            ;
-        else
-            p = p.parent_path();
+        p = fs::absolute(p);
 
         auto b = std::make_unique<Build>();
         b->Local = true;

@@ -355,7 +355,7 @@ private:
     // other frontends
     void cppan_load();
     void cppan_load(const path &fn);
-    void cppan_load(const yaml &root);
+    void cppan_load(const yaml &root, const String &root_name = {});
     bool cppan_check_config_root(const yaml &root);
 
 public:

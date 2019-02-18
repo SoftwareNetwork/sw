@@ -2824,8 +2824,10 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
         {
             // some code was removed here
             // check out original version (v1) if you encounter some errors
-            auto nppath = dependency.ppath / v;
-            dependency.ppath = nppath;
+
+            //auto nppath = dependency.ppath / v;
+            //dependency.ppath = nppath;
+
             dependency.range = v;
         };
 

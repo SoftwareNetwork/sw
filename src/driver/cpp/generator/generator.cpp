@@ -991,7 +991,7 @@ void ProjectContext::printProject(
                 endBlock(true);
             };
 
-            std::unordered_set<void *> rules;
+            Files rules;
             for (auto &[p, sf] : nt)
             {
                 if (sf->skip)
@@ -1000,12 +1000,12 @@ void ProjectContext::printProject(
                 if (g.type == GeneratorType::VisualStudio && ff.isGenerated())
                 {
                     auto gen = ff.getFileRecord().getGenerator();
-                    if (rules.find(gen.get()) == rules.end())
-                    {
-                        rules.insert(gen.get());
+                    auto rule = get_int_dir(nt, s.Settings) / "rules" / (p.filename().string() + ".rule");
+                    write_file_if_not_exists(rule, "");
 
-                        auto rule = get_int_dir(nt, s.Settings) / "rules" / (p.filename().string() + ".rule");
-                        write_file_if_not_exists(rule, "");
+                    if (rules.find(rule) == rules.end())
+                    {
+                        rules.insert(rule);
 
                         // VS crash
                         // beginBlockWithConfiguration(get_vs_file_type_by_ext(rule), s.Settings, { {"Include", rule.string()} });
@@ -1098,19 +1098,29 @@ void ProjectContext::printProject(
                         fctx.endBlock();
                     }
 
-                    auto t = get_vs_file_type_by_ext(p);
-                    beginBlock(toString(t), { { "Include", p.string() } });
-                    add_excluded_from_build(s);
-                    add_obj_file(t, p);
-                    endBlock();
+                    if (files_added.find(p) == files_added.end())
+                    {
+                        files_added.insert(p);
+
+                        auto t = get_vs_file_type_by_ext(p);
+                        beginBlock(toString(t), { { "Include", p.string() } });
+                        add_excluded_from_build(s);
+                        add_obj_file(t, p);
+                        endBlock();
+                    }
                 }
                 else if (g.type == GeneratorType::VisualStudio && ff.isGeneratedAtAll())
                 {
-                    auto t = get_vs_file_type_by_ext(p);
-                    beginBlock(toString(t), { { "Include", p.string() } });
-                    add_excluded_from_build(s);
-                    add_obj_file(t, p);
-                    endBlock();
+                    if (files_added.find(p) == files_added.end())
+                    {
+                        files_added.insert(p);
+
+                        auto t = get_vs_file_type_by_ext(p);
+                        beginBlock(toString(t), { { "Include", p.string() } });
+                        add_excluded_from_build(s);
+                        add_obj_file(t, p);
+                        endBlock();
+                    }
                 }
                 else
                 {

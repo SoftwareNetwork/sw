@@ -69,7 +69,7 @@ void Build::cppan_load(const path &fn)
     cppan_load(root);
 }
 
-void Build::cppan_load(const yaml &root)
+void Build::cppan_load(const yaml &root, const String &root_name)
 {
     if (!cppan_check_config_root(root))
         return;
@@ -196,7 +196,7 @@ void Build::cppan_load(const yaml &root)
     }
     else
     {
-        add_project(root, "");
+        add_project(root, root_name);
     }
 
     // remove unreferences projects

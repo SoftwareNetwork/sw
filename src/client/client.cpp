@@ -368,6 +368,7 @@ static ::cl::alias override_package2("override", ::cl::desc("Alias for -override
 static ::cl::opt<bool> list_overridden_packages("list-overridden-remote-packages", ::cl::desc("List overridden packages"));
 static ::cl::opt<String> delete_overridden_package("delete-overridden-remote-package", ::cl::value_desc("package"), ::cl::desc("Delete overridden package from index"));
 static ::cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", ::cl::value_desc("sdir"), ::cl::desc("Delete overridden dir packages"));
+static ::cl::alias delete_overridden_package_dir2("delete-override", ::cl::desc("Alias for -delete-overridden-remote-package-dir"), ::cl::aliasopt(delete_overridden_package_dir));
 
 // uri commands
 extern bool gRunAppInContainer;
@@ -800,6 +801,9 @@ extern bool gPrintDependencies;
 static ::cl::opt<bool, true> print_dependencies("print-dependencies", ::cl::location(gPrintDependencies), ::cl::sub(subcommand_generate));
 extern bool gOutputNoConfigSubdir;
 static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", ::cl::location(gOutputNoConfigSubdir), ::cl::sub(subcommand_generate));
+
+// generated solution dir instead of .sw/...
+//static ::cl::opt<String> generate_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
 
 SUBCOMMAND_DECL(generate)
 {

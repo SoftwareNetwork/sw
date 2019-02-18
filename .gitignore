@@ -19,6 +19,7 @@ bin
 *~
 *.user
 
+*.sln
 *.aps
 *.exe
 *.dll
