@@ -340,7 +340,7 @@ void detectWindowsCompilers(struct Solution &s)
     // reconsider later
 
     auto &instances = gatherVSInstances();
-    for (auto &[v, instance] : instances)
+    for (auto &[_, instance] : instances)
     {
         auto root = instance.root / "VC";
         auto &v = instance.version;

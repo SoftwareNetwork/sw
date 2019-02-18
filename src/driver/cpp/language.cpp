@@ -154,7 +154,7 @@ LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg, bool exact_versio
             return {};
         auto i = primitives::version::findBestMatch(v.rbegin(), v.rend(), pkg.version, true);
         if (i == v.rend())
-            return false;
+            return {};
         L = i.base();
         L--;
     }
@@ -182,7 +182,7 @@ std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg, bool 
             return {};
         auto i = primitives::version::findBestMatch(v.rbegin(), v.rend(), pkg.version, true);
         if (i == v.rend())
-            return false;
+            return {};
         L = i.base();
         L--;
     }
