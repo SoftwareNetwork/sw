@@ -3029,15 +3029,22 @@ void Build::load_dll(const path &dll, bool usedll)
 {
     createSolutions(dll, usedll);
 
+    // add cc if needed
+    getHostSolution();
+
     if (auto g = getGenerator())
     {
         LOG_INFO(logger, "Generating " << toString(g->type) << " project with " << solutions.size() << " configurations:");
         for (auto &s : solutions)
             LOG_INFO(logger, s.getConfig());
     }
-
-    // add cc if needed
-    getHostSolution();
+    else
+    {
+        LOG_DEBUG(logger, (getGenerator() ? "Generating " + toString(getGenerator()->type) + " " : "Building ")
+            << "project with " << solutions.size() << " configurations:");
+        for (auto &s : solutions)
+            LOG_DEBUG(logger, s.getConfig());
+    }
 
     // detect and eliminate solution clones?
 

@@ -136,25 +136,32 @@ void VSCommand::postProcess1(bool)
     // filter out includes and file name
     static const auto pattern = "Note: including file:"s;
 
-    std::deque<String> lines;
-    boost::split(lines, out.text, boost::is_any_of("\n"));
-    out.text.clear();
-    // remove filename
-    lines.pop_front();
-
-    for (auto &line : lines)
+    auto perform = [this](auto &text)
     {
-        auto p = line.find(pattern);
-        if (p != 0)
+        std::deque<String> lines;
+        boost::split(lines, text, boost::is_any_of("\n"));
+        text.clear();
+        // remove filename
+        lines.pop_front();
+
+        for (auto &line : lines)
         {
-            out.text += line + "\n";
-            continue;
+            auto p = line.find(pattern);
+            if (p != 0)
+            {
+                text += line + "\n";
+                continue;
+            }
+            auto include = line.substr(pattern.size());
+            boost::trim(include);
+            for (auto &f : outputs)
+                File(f, *fs).addImplicitDependency(include);
         }
-        auto include = line.substr(pattern.size());
-        boost::trim(include);
-        for (auto &f : outputs)
-            File(f, *fs).addImplicitDependency(include);
-    }
+    };
+
+    // on errors msvc puts everything to stderr instead of stdout
+    perform(out.text);
+    perform(err.text);
 }
 
 std::shared_ptr<Command> GNUCommand::clone() const

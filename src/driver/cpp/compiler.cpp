@@ -1093,18 +1093,29 @@ void VisualStudioCompiler::prepareCommand1(const TargetBase &t)
         cmd->name_short = InputFile().filename().u8string();
         //cmd->file = InputFile;
     }
+
     if (CSourceFile)
     {
         cmd->name = normalize_path(CSourceFile());
         cmd->name_short = CSourceFile().filename().u8string();
         //cmd->file = CSourceFile;
     }
-    if (CPPSourceFile)
+    else if (CPPSourceFile)
     {
         cmd->name = normalize_path(CPPSourceFile());
         cmd->name_short = CPPSourceFile().filename().u8string();
         //cmd->file = CPPSourceFile;
     }
+    else if (InputFile && !CompileAsC && !CompileAsCPP)
+    {
+        // .C extension is treated as C language by default (Wt library)
+        auto &exts = getCppSourceFileExtensions();
+        if (exts.find(InputFile().extension().string()) != exts.end())
+        {
+            CompileAsCPP = true;
+        }
+    }
+
     if (Output)
         cmd->working_directory = Output().parent_path();
 
