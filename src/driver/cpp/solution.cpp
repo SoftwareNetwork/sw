@@ -1387,12 +1387,6 @@ void Solution::findCompiler()
         throw SW_RUNTIME_ERROR("solution.cpp: not implemented");
     }
 
-    if (Settings.TargetOS.Type != OSType::Macos)
-    {
-        extensions.erase(".m");
-        extensions.erase(".mm");
-    }
-
     // linkers
     auto activate_linker_or_throw = [this](const std::vector<std::tuple<PackagePath /* lib */, PackagePath /* link */, LinkerType>> &a, const auto &e)
     {
@@ -1475,6 +1469,12 @@ void Solution::findCompiler()
 
         if (auto vs = prog->as<VSInstance>())
             vs->activate(*this);
+    }
+
+    if (Settings.TargetOS.Type != OSType::Macos)
+    {
+        extensions.erase(".m");
+        extensions.erase(".mm");
     }
 
     setSettings();

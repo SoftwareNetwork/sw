@@ -841,6 +841,16 @@ void ProjectContext::printProject(
                         throw SW_RUNTIME_ERROR("unreachable code");
                     }
                     endBlock(true);
+
+                    beginBlockWithConfiguration("Optimization", s.Settings);
+                    auto o = L->Optimizations.getCommandLine();
+                    if (o[0] == "-Od")
+                        addText("Disabled");
+                    else if (o[0] == "-O1")
+                        addText("MinSpace");
+                    else if (o[0] == "-O2")
+                        addText("MaxSpeed");
+                    endBlock(true);
                 }
             }
             endBlock();
