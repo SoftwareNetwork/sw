@@ -71,6 +71,11 @@ void Command::prepare()
 
 path Command::getProgram() const
 {
+    // target may set program explicitly (e.g. to system program)
+    // so we don't check other conditions below
+    if (!program.empty())
+        return program;
+
     auto d = dependency.lock();
     path p;
     if (d)
