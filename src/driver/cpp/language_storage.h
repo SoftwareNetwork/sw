@@ -43,8 +43,8 @@ struct SW_DRIVER_CPP_API LanguageStorage
     void setExtensionLanguage(const String &ext, const LanguagePtr &p); // wrappers
     void setExtensionLanguage(const String &ext, const DependencyPtr &p); // wrappers
 
-    bool activateLanguage(const PackagePath &pp); // latest ver
-    bool activateLanguage(const PackageId &pkg, bool exact_version = true);
+    LanguagePtr activateLanguage(const PackagePath &pp); // latest ver
+    LanguagePtr activateLanguage(const PackageId &pkg, bool exact_version = true);
 
     LanguagePtr getLanguage(const PackagePath &pp) const; // latest ver
     LanguagePtr getLanguage(const PackageId &pkg, bool exact_version = true) const;

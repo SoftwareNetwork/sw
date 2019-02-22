@@ -36,8 +36,6 @@ static cl::opt<bool> save_all_commands("save-all-commands");
 static cl::opt<bool> save_executed_commands("save-executed-commands");
 static cl::opt<bool> explain_outdated("explain-outdated", cl::desc("Explain outdated commands"));
 static cl::opt<bool> explain_outdated_full("explain-outdated-full", cl::desc("Explain outdated commands with more info"));
-static cl::opt<bool> hide_output("hide-output");
-static cl::opt<bool> show_output("show-output");
 
 namespace sw
 {
@@ -564,8 +562,6 @@ void Command::execute1(std::error_code *ec)
 
     auto print_outputs = [this]()
     {
-        if (hide_output)
-            return;
         if (!show_output)
             return;
         boost::trim(out.text);

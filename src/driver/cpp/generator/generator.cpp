@@ -364,6 +364,7 @@ enum class VSFileType
     CustomBuild,
     ClInclude,
     ClCompile,
+    MASM,
 };
 
 String toString(VSFileType t)
@@ -378,6 +379,8 @@ String toString(VSFileType t)
         return "ResourceCompile";
     case VSFileType::CustomBuild:
         return "CustomBuild";
+    case VSFileType::MASM:
+        return "MASM";
     default:
         return "None";
     }
@@ -393,6 +396,8 @@ static VSFileType get_vs_file_type_by_ext(const path &p)
         return VSFileType::ClInclude;
     else if (isCppSourceFileExtensions(p.extension().string()) || p.extension() == ".c")
         return VSFileType::ClCompile;
+    else if (p.extension() == ".asm")
+        return VSFileType::MASM;
     return VSFileType::None;
 }
 
@@ -658,6 +663,14 @@ void ProjectContext::printProject(
     addPropertyGroupConfigurationTypes(b, p);
     addBlock("Import", "", { { "Project", "$(VCTargetsPath)\\Microsoft.Cpp.props" } });
     addPropertySheets(b);
+
+    // make conditional if .asm files are present
+    beginBlock("ImportGroup", { {"Label", "ExtensionSettings"} });
+    addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\BuildCustomizations\\masm.props"} });
+    endBlock();
+    beginBlock("ImportGroup", { {"Label", "ExtensionTargets"} });
+    addBlock("Import", "", { {"Project", "$(VCTargetsPath)\\BuildCustomizations\\masm.targets"} });
+    endBlock();
 
     auto get_int_dir = [&dir, &projects_dir](auto &nt, auto &s)
     {

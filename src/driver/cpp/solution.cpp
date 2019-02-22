@@ -76,6 +76,9 @@ cl::alias win_mt2("mt", cl::desc("Alias for -win-mt"), cl::aliasopt(win_mt));
 static cl::opt<bool> win_md("win-md", cl::desc("Set /MD build"));
 cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_md));
 
+//static cl::opt<bool> hide_output("hide-output");
+static cl::opt<bool> cl_show_output("show-output");
+
 extern bool gVerbose;
 bool gWithTesting;
 path gIdeFastPath;
@@ -410,6 +413,7 @@ Solution::Solution(const Solution &rhs)
     , HostOS(rhs.HostOS)
     , Settings(rhs.Settings)
     , silent(rhs.silent)
+    , show_output(rhs.show_output)
     , base_ptr(rhs.base_ptr)
     //, knownTargets(rhs.knownTargets)
     , source_dirs_by_source(rhs.source_dirs_by_source)
@@ -756,7 +760,10 @@ void Solution::execute(CommandExecutionPlan &p) const
     };
 
     for (auto &c : p.commands)
+    {
         c->silent = silent;
+        c->show_output = show_output;
+    }
 
     // execute early to prevent commands expansion into response files
     // print misc
@@ -1306,10 +1313,13 @@ void Solution::findCompiler()
         return std::any_of(a.begin(), a.end(), [&activate_all](const auto &v)
         {
             auto r = activate_all(v);
-            if (r)
-                LOG_TRACE(logger, "activated " << v.begin()->first.toString() << " successfully");
-            else
-                LOG_TRACE(logger, "activate " << v.begin()->first.toString() << " failed");
+            for (auto &v2 : v)
+            {
+                if (r)
+                    LOG_TRACE(logger, "activated " << v2.first.toString() << " successfully");
+                else
+                    LOG_TRACE(logger, "activate " << v2.first.toString() << " failed");
+            }
             return r;
         });
     };
@@ -2321,6 +2331,11 @@ void Build::load(const path &fn, bool configless)
         cppan_load();
         break;
     }
+
+    // set show output setting
+    show_output = cl_show_output;
+    for (auto &s : solutions)
+        s.show_output = cl_show_output;
 }
 
 static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)

@@ -10,6 +10,7 @@
 #include <nlohmann/json.hpp>
 #include <primitives/constants.h>
 #include <primitives/context.h>
+#include <primitives/debug.h>
 #include <primitives/sw/settings.h>
 
 #include <primitives/log.h>

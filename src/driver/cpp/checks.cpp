@@ -23,13 +23,6 @@ DECLARE_STATIC_LOGGER(logger, "checks");
 
 static cl::opt<bool> print_checks("print-checks", cl::desc("Save extended checks info to file"));
 
-namespace
-{
-
-bool bSilentChecks = true;
-
-}
-
 namespace sw
 {
 
@@ -540,7 +533,7 @@ static path getUniquePath(const path &p)
 Solution Check::setupSolution(const path &f) const
 {
     auto s = *check_set->checker.solution;
-    s.silent = bSilentChecks;
+    s.silent = true;
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     //s.throw_exceptions = false;
     s.BinaryDir = f.parent_path();

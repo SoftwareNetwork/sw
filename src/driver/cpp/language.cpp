@@ -104,33 +104,33 @@ void LanguageStorage::setExtensionLanguage(const String &ext, const DependencyPt
         (*t + extensions[ext])->Dummy = true;
 }
 
-bool LanguageStorage::activateLanguage(const PackagePath &pp)
+LanguagePtr LanguageStorage::activateLanguage(const PackagePath &pp)
 {
     auto v = user_defined_languages[pp];
     if (v.empty())
-        return false;
+        return {};
     return activateLanguage({ pp, v.rbegin_releases()->first }, true);
 }
 
-bool LanguageStorage::activateLanguage(const PackageId &pkg, bool exact_version)
+LanguagePtr LanguageStorage::activateLanguage(const PackageId &pkg, bool exact_version)
 {
     auto v = user_defined_languages[pkg.ppath];
     if (v.empty())
-        return false;
+        return {};
     auto L = v.find(pkg.version);
     if (L == v.end())
     {
         if (exact_version)
-            return false;
+            return {};
         auto i = primitives::version::findBestMatch(v.rbegin(), v.rend(), pkg.version, true);
         if (i == v.rend())
-            return false;
+            return {};
         L = i.base();
         L--;
     }
     for (auto &l : L->second->CompiledExtensions)
         extensions[l] = pkg;
-    return true;
+    return L->second;
 }
 
 LanguagePtr LanguageStorage::getLanguage(const PackagePath &pp) const

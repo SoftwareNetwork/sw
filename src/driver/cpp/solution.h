@@ -137,7 +137,8 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     VariablesType Variables;
 
     // other data
-    bool silent = false;
+    bool silent = false; // some log messages
+    bool show_output = false; // output from commands
 
     // target data
     TargetMap children;
