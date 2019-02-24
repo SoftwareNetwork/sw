@@ -14,25 +14,6 @@
 namespace sw
 {
 
-/*InheritanceType inherit(InheritanceType InType, InheritanceType ChildObject, bool SameProject)
-{
-    if (ChildObject == InheritanceType::Private)
-        throw std::logic_error("Invalid case. You must filter it yourself.");
-
-    std::optional<int>
-
-    switch (InType)
-    {
-    case InheritanceType::Private:
-        return InheritanceType::Private;
-    case InheritanceType::Protected:
-        return InheritanceType::Protected;
-    case InheritanceType::Public:
-    case InheritanceType::Interface:
-        break;
-    }
-}*/
-
 bool Assigner::canProceed(TargetOptions &r) const
 {
     if (allow)
@@ -66,6 +47,7 @@ String toString(ConfigurationType Type)
         CASE(MinimalSizeRelease);
         CASE(Release);
         CASE(ReleaseWithDebugInformation);
+
     default:
         throw std::logic_error("todo: implement config type");
     }
@@ -86,8 +68,11 @@ String toString(CompilerType Type)
         CASE(GNU);
         CASE(MSVC);
         CASE(Other);
+
+    case CompilerType::UnspecifiedCompiler:
+        throw std::logic_error("Compiler type was not set");
     default:
-        throw std::logic_error("todo: implement compiler type");
+        throw std::logic_error("TODO: implement compiler type");
     }
 #undef CASE
 }
@@ -102,6 +87,7 @@ String toString(LinkerType Type)
 
         CASE(LLD);
         CASE(MSVC);
+
     default:
         throw std::logic_error("todo: implement linker type");
     }
@@ -120,6 +106,7 @@ String toString(InheritanceType Type)
         CASE(Protected);
         CASE(Public);
         CASE(Interface);
+
     default:
         throw std::logic_error("todo: implement inheritance type");
     }
@@ -136,6 +123,7 @@ String toString(LibraryType Type)
 
         CASE(Static);
         CASE(Shared);
+
     default:
         throw std::logic_error("todo: implement inheritance type");
     }

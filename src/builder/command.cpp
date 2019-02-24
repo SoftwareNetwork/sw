@@ -571,9 +571,12 @@ void Command::execute1(std::error_code *ec)
             s += out.text + "\n";
         if (!err.text.empty())
             s += err.text + "\n";
-        boost::trim(s);
         if (!s.empty())
-            LOG_INFO(logger, log_string + "\n" + s);
+        {
+            s = log_string + "\n" + s;
+            boost::trim(s);
+            LOG_INFO(logger, s);
+        }
     };
 
     auto make_error_string = [this, &print_outputs](const String &e)
@@ -716,10 +719,11 @@ path Command::writeCommand(const path &p) const
         t += "cd " + norm(working_directory) + "\n\n";
 
     t += "\"" + norm(program) + "\" ";
-    if (!rsp_args.empty())
+    if (needsResponseFile())
     {
-        write_file(p, getResponseFileContents());
-        t += "@" + normalize_path(p) + " ";
+        auto rsp_name = path(p) += ".rsp";
+        write_file(rsp_name, getResponseFileContents());
+        t += "@" + normalize_path(rsp_name) + " ";
     }
     else
     {

@@ -1005,20 +1005,22 @@ void ProjectContext::printProject(
             };
 
             Files rules;
+            std::unordered_set<void *> cmds;
             for (auto &[p, sf] : nt)
             {
-                if (sf->skip)
-                    continue;
                 File ff(p, *s.fs);
+                if (sf->skip && !ff.isGenerated())
+                    continue;
                 if (g.type == GeneratorType::VisualStudio && ff.isGenerated())
                 {
                     auto gen = ff.getFileRecord().getGenerator();
                     auto rule = get_int_dir(nt, s.Settings) / "rules" / (p.filename().string() + ".rule");
                     write_file_if_not_exists(rule, "");
 
-                    if (rules.find(rule) == rules.end())
+                    if (rules.find(rule) == rules.end() && cmds.find(gen.get()) == cmds.end())
                     {
                         rules.insert(rule);
+                        cmds.insert(gen.get());
 
                         // VS crash
                         // beginBlockWithConfiguration(get_vs_file_type_by_ext(rule), s.Settings, { {"Include", rule.string()} });
@@ -1117,8 +1119,17 @@ void ProjectContext::printProject(
 
                         auto t = get_vs_file_type_by_ext(p);
                         beginBlock(toString(t), { { "Include", p.string() } });
-                        add_excluded_from_build(s);
-                        add_obj_file(t, p);
+                        if (sf->skip)
+                        {
+                            beginBlock("ExcludedFromBuild");
+                            addText("true");
+                            endBlock(true);
+                        }
+                        else
+                        {
+                            add_excluded_from_build(s);
+                            add_obj_file(t, p);
+                        }
                         endBlock();
                     }
                 }
@@ -1171,7 +1182,8 @@ void ProjectContext::printProject(
         auto bdp = normalize_path(nt.BinaryPrivateDir);
         for (auto &[f, sf] : nt)
         {
-            if (sf->skip)
+            File ff(f, *s.fs);
+            if (sf->skip && !ff.isGenerated())
                 continue;
 
             String *d = nullptr;
@@ -1522,31 +1534,7 @@ void VSGenerator::createSolutions(Build &b)
                  })
             {
                 b.Settings.Native.ConfigurationType = c;
-                auto &s = b.addSolution();
-
-                if (type == GeneratorType::VisualStudio)
-                {
-                    ProgramPtr prog;
-                    if (version.getMajor() == 0)
-                    {
-                        prog = s.getProgram("com.Microsoft.VisualStudio");
-                        if (!prog)
-                            throw SW_RUNTIME_ERROR("Program not found: com.Microsoft.VisualStudio");
-                    }
-                    else
-                    {
-                        PackageId pkg{ "com.Microsoft.VisualStudio", version };
-                        prog = s.getProgram(pkg, false);
-                        if (!prog)
-                            throw SW_RUNTIME_ERROR("Program not found: " + pkg.toString());
-                    }
-
-                    auto vs = prog->as<VSInstance>();
-                    if (!vs)
-                        throw SW_RUNTIME_ERROR("bad vs");
-
-                    version = vs->version;
-                }
+                b.addSolution();
             }
         }
     }
@@ -1554,18 +1542,38 @@ void VSGenerator::createSolutions(Build &b)
 
 void VSGenerator::initSolutions(Build &b)
 {
+    if (type != GeneratorType::VisualStudio)
+        return;
+
     for (auto &s : b.solutions)
     {
-        ProgramPtr prog = s.getProgram({ "com.Microsoft.VisualStudio", version }, false);
+        ProgramPtr prog;
+        if (version.getMajor() == 0)
+        {
+            prog = s.getProgram("com.Microsoft.VisualStudio");
+            if (!prog)
+                throw SW_RUNTIME_ERROR("Program not found: com.Microsoft.VisualStudio");
+        }
+        else
+        {
+            PackageId pkg{ "com.Microsoft.VisualStudio", version };
+            prog = s.getProgram(pkg, false);
+            if (!prog)
+                throw SW_RUNTIME_ERROR("Program not found: " + pkg.toString());
+        }
 
         auto vs = prog->as<VSInstance>();
+        if (!vs)
+            throw SW_RUNTIME_ERROR("bad vs");
+
+        version = vs->version;
         vs->activate(s);
     }
 }
 
 void VSGenerator::generate(const Build &b)
 {
-    dir = b.getIdeDir() / toPathString(type);
+    dir = b.solutions[0].getIdeDir() / toPathString(type) / version.toString(1);
     PackagePathTree tree, local_tree, overridden_tree;
     PackagePathTree::Directories parents, local_parents;
 
@@ -1870,8 +1878,11 @@ void VSGenerator::generate(const Build &b)
             args.push_back("-ide-copy-to-dir");
             args.push_back(normalize_path(get_out_dir(dir, projects_dir, s.Settings)));
 
+            auto fp = path(base) += ".deps";
+            if (fs::exists(fp))
+                fs::remove(fp);
             args.push_back("-ide-fast-path");
-            args.push_back(normalize_path(path(base) += ".deps"));
+            args.push_back(normalize_path(fp));
 
             auto rsp = normalize_path(path(base) += ".rsp");
             String str;
@@ -1910,9 +1921,9 @@ void VSGenerator::generate(const Build &b)
 
     ctx.materialize(b, projects_dir, type);
 
-    const auto compiler_name = boost::to_lower_copy(toString(b.Settings.Native.CompilerType));
+    const auto compiler_name = boost::to_lower_copy(toString(b.solutions[0].Settings.Native.CompilerType));
     String fn = b.ide_solution_name + "_";
-    fn += compiler_name + "_" + toPathString(type);
+    fn += compiler_name + "_" + toPathString(type) + "_" + version.toString(1);
     fn += ".sln";
     write_file_if_different(dir / fn, ctx.getText());
     auto lnk = current_thread_path() / fn;

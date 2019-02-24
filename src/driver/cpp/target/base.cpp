@@ -151,14 +151,9 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
     auto set_sdir = [&t, this]()
     {
-        if (!t->Local && !t->pkg.toString().empty()/* && t->pkg.ppath.is_pvt()*/)
+        if (!t->isLocal())
         {
             t->SourceDir = getSolution()->getSourceDir(t->pkg);
-        }
-        else if (!Local)
-        {
-            // if we building non-local package that is not
-            //t->PostponeFileResolving = true;
         }
 
         // set source dir

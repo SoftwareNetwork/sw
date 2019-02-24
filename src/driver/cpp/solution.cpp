@@ -67,13 +67,13 @@ static cl::list<String> platform("platform", cl::desc("Set build platform"), cl:
 // simple -static, -shared?
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
 cl::alias static_build2("static", cl::desc("Alias for -static-build"), cl::aliasopt(static_build));
-static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build"));
+static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build (default)"));
 cl::alias shared_build2("shared", cl::desc("Alias for -shared-build"), cl::aliasopt(shared_build));
 
 // simple -mt, -md?
 static cl::opt<bool> win_mt("win-mt", cl::desc("Set /MT build"));
 cl::alias win_mt2("mt", cl::desc("Alias for -win-mt"), cl::aliasopt(win_mt));
-static cl::opt<bool> win_md("win-md", cl::desc("Set /MD build"));
+static cl::opt<bool> win_md("win-md", cl::desc("Set /MD build (default)"));
 cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_md));
 
 //static cl::opt<bool> hide_output("hide-output");
@@ -413,7 +413,7 @@ Solution::Solution(const Solution &rhs)
     , HostOS(rhs.HostOS)
     , Settings(rhs.Settings)
     , silent(rhs.silent)
-    , show_output(rhs.show_output)
+    //, show_output(rhs.show_output) // don't pass to checks
     , base_ptr(rhs.base_ptr)
     //, knownTargets(rhs.knownTargets)
     , source_dirs_by_source(rhs.source_dirs_by_source)
@@ -429,6 +429,7 @@ Solution::Solution(const Solution &rhs)
     , command_storage(rhs.command_storage)
     , prefix_source_dir(rhs.prefix_source_dir)
     , build(rhs.build)
+    , is_config_build(rhs.is_config_build)
 {
     checker.solution = this;
 }
@@ -868,6 +869,7 @@ static path build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     b.execute_jobs = config_jobs;
     b.Local = false;
     b.file_storage_local = false;
+    b.is_config_build = true;
     return b.build_configs(pkgs);
 }
 
@@ -1330,32 +1332,32 @@ void Solution::findCompiler()
             throw SW_RUNTIME_ERROR(e);
     };
 
-    const CompilerVector msvc =
+    static const CompilerVector msvc =
     {
         {{"com.Microsoft.VisualStudio.VC.cl"}, CompilerType::MSVC},
         {{"com.Microsoft.VisualStudio.VC.ml"}, CompilerType::MSVC},
         {{"com.Microsoft.Windows.rc"}, CompilerType::MSVC},
     };
 
-    const CompilerVector gnu =
+    static const CompilerVector gnu =
     {
         {{"org.gnu.gcc.gpp"}, CompilerType::GNU},
         {{"org.gnu.gcc.gcc"}, CompilerType::GNU},
         {{"org.gnu.gcc.as"}, CompilerType::GNU},
     };
 
-    const CompilerVector clang =
+    static const CompilerVector clang =
     {
         {{"org.LLVM.clangpp"}, CompilerType::Clang },
         {{"org.LLVM.clang"}, CompilerType::Clang},
     };
 
-    const CompilerVector clangcl =
+    static const CompilerVector clangcl =
     {
         {{"org.LLVM.clangcl"},CompilerType::ClangCl }
     };
 
-    const CompilerVector appleclang =
+    static const CompilerVector appleclang =
     {
         {{"com.apple.LLVM.clangpp"}, CompilerType::AppleClang },
         {{"com.apple.LLVM.clang"}, CompilerType::AppleClang},
@@ -1454,7 +1456,7 @@ void Solution::findCompiler()
             }, "Try to add more linkers");
     }
 
-    const CompilerVector other =
+    static const CompilerVector other =
     {
         {{"com.Microsoft.VisualStudio.Roslyn.csc"}, CompilerType::MSVC},
         {{"org.rust.rustc"}, CompilerType::MSVC},
@@ -1470,15 +1472,17 @@ void Solution::findCompiler()
         activateLanguage(a);
 
     // use activate
-    // maybe add a condition - do not use in config mode?
-    for (auto &[pp,v] : gUserSelectedPackages)
+    if (!is_config_build)
     {
-        auto prog = getProgram({ pp, v }, false);
-        if (!prog)
-            throw SW_RUNTIME_ERROR("program is not available: " + pp.toString());
+        for (auto &[pp, v] : gUserSelectedPackages)
+        {
+            auto prog = getProgram({ pp, v }, false);
+            if (!prog)
+                throw SW_RUNTIME_ERROR("program is not available: " + pp.toString());
 
-        if (auto vs = prog->as<VSInstance>())
-            vs->activate(*this);
+            if (auto vs = prog->as<VSInstance>())
+                vs->activate(*this);
+        }
     }
 
     if (Settings.TargetOS.Type != OSType::Macos)
@@ -2234,6 +2238,7 @@ const Module &Build::loadModule(const path &p) const
     Build b;
     b.execute_jobs = config_jobs;
     b.file_storage_local = false;
+    b.is_config_build = true;
     path dll;
     //dll = b.getOutputModuleName(fn2);
     //if (File(fn2, *b.solutions[0].fs).isChanged() || File(dll, *b.solutions[0].fs).isChanged())
@@ -2264,6 +2269,7 @@ path Build::build(const path &fn)
         Build b;
         b.execute_jobs = config_jobs;
         b.file_storage_local = false;
+        b.is_config_build = true;
         auto r = b.build_configs_separate({ fn });
         auto dll = r.begin()->second;
         if (do_not_rebuild_config &&
@@ -2719,7 +2725,8 @@ void Build::generateBuildSystem()
     getCommands();
     getExecutionPlan(); // also prepare commands
 
-    fs::remove_all(getExecutionPlansDir());
+    for (auto &s : solutions)
+        fs::remove_all(s.getExecutionPlansDir());
     getGenerator()->generate(*this);
 }
 
@@ -2817,8 +2824,10 @@ void Build::build_packages(const StringSet &pkgs)
                         continue;
                     if (nt->getSelectedTool() == nt->Librarian.get())
                         continue;
+                    if (isExecutable(nt->getType()))
+                        continue;
 
-                    if (nt->Scope == TargetScope::Build && nt->NativeTarget::getOutputDir().empty())
+                    if (nt->Scope == TargetScope::Build)
                     {
                         auto dt = nt;
                         if (getSolution()->Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
@@ -2890,7 +2899,7 @@ void Build::run_package(const String &s)
     run(nt->pkg, *cb.c);
 }
 
-static bool hasUserProvidedInformation()
+static bool hasAnyUserProvidedInformation()
 {
     return 0
         || !configuration.empty()
@@ -2898,6 +2907,20 @@ static bool hasUserProvidedInformation()
         || shared_build
         || win_mt
         || win_md
+        || !platform.empty()
+        || !compiler.empty()
+        || !target_os.empty()
+        ;
+
+    //|| (static_build && shared_build) // when both; but maybe ignore?
+    //|| (win_mt && win_md) // when both; but maybe ignore?
+
+}
+
+static bool hasUserProvidedInformationStrong()
+{
+    return 0
+        || !configuration.empty()
         || !platform.empty()
         || !compiler.empty()
         || !target_os.empty()
@@ -2918,9 +2941,9 @@ void Build::createSolutions(const path &dll, bool usedll)
 
     if (solutions.empty())
     {
-        if (hasUserProvidedInformation())
+        if (hasAnyUserProvidedInformation())
         {
-            if (append_configs)
+            if (append_configs || !hasUserProvidedInformationStrong())
             {
                 if (auto g = getGenerator())
                 {
@@ -3087,6 +3110,18 @@ void Build::load_dll(const path &dll, bool usedll)
     // add cc if needed
     getHostSolution();
 
+    // apply config settings
+    for (auto &s : solutions)
+        s.findCompiler();
+
+    // detect and eliminate solution clones?
+
+    if (auto g = getGenerator())
+    {
+        g->initSolutions(*this);
+    }
+
+    // print info
     if (auto g = getGenerator())
     {
         LOG_INFO(logger, "Generating " << toString(g->type) << " project with " << solutions.size() << " configurations:");
@@ -3100,17 +3135,6 @@ void Build::load_dll(const path &dll, bool usedll)
         for (auto &s : solutions)
             LOG_DEBUG(logger, s.getConfig());
     }
-
-    // detect and eliminate solution clones?
-
-    if (auto g = getGenerator())
-    {
-        g->initSolutions(*this);
-    }
-
-    // apply config settings
-    for (auto &s : solutions)
-        s.findCompiler();
 
     // check
     {

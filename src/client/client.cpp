@@ -499,8 +499,8 @@ SUBCOMMAND_DECL(remove)
     }
 }
 
-static ::cl::opt<String> create_type(::cl::Positional, ::cl::desc("sw create arguments"), ::cl::sub(subcommand_create), ::cl::Required);
-static ::cl::opt<String> create_proj_name(::cl::Positional, ::cl::desc("sw create arguments"), ::cl::sub(subcommand_create));
+static ::cl::opt<String> create_type(::cl::Positional, ::cl::desc("<type>"), ::cl::sub(subcommand_create), ::cl::Required);
+static ::cl::opt<String> create_proj_name(::cl::Positional, ::cl::desc("<project name>"), ::cl::sub(subcommand_create));
 
 static ::cl::opt<String> create_template("template", ::cl::desc("Template project to create"), ::cl::sub(subcommand_create), ::cl::init("exe"));
 static ::cl::alias create_template2("t", ::cl::desc("Alias for -template"), ::cl::aliasopt(create_template));
@@ -515,89 +515,130 @@ static ::cl::alias create_overwrite_files2("ow", ::cl::desc("Alias for -overwrit
 
 SUBCOMMAND_DECL(create)
 {
-    if (create_type != "project")
-        throw SW_RUNTIME_ERROR("Unknown create type");
-
-    if (create_clear_dir)
+    if (create_type == "project")
     {
-        std::cout << "Going to clear current directory. Are you sure? [Yes/No]\n";
+        if (create_clear_dir)
+        {
+            String s;
+            if (!create_clear_dir_y)
+            {
+                std::cout << "Going to clear current directory. Are you sure? [Yes/No]\n";
+                std::cin >> s;
+            }
+            if (create_clear_dir_y || boost::iequals(s, "yes") || boost::iequals(s, "Y"))
+            {
+                for (auto &p : fs::directory_iterator("."))
+                    fs::remove_all(p);
+            }
+            else
+            {
+                if (fs::directory_iterator(".") != fs::directory_iterator())
+                    return;
+            }
+        }
+
+        if (!create_overwrite_files && fs::directory_iterator(".") != fs::directory_iterator())
+            throw SW_RUNTIME_ERROR("directory is not empty");
+
+        String name = fs::current_path().filename().u8string();
+        if (!create_proj_name.empty())
+            name = create_proj_name;
+
+        // TODO: add separate extended template with configure
+        // common sw.cpp
+        primitives::CppContext ctx;
+        ctx.beginFunction("void build(Solution &s)");
+        ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
+        ctx.addLine("// auto &p = s.addProject(\"myproject\");");
+        ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
+        ctx.addLine();
+        ctx.addLine("auto &t = s.addTarget<Executable>(\"" + name + "\");");
+        ctx.addLine("t.CPPVersion = CPPLanguageStandard::CPP17;");
+
         String s;
-        if (!create_clear_dir_y)
-            std::cin >> s;
-        if (create_clear_dir_y || boost::iequals(s, "yes") || boost::iequals(s, "Y"))
+        if (create_language == "cpp")
         {
-            for (auto &p : fs::directory_iterator("."))
-                fs::remove_all(p);
-        }
-        else
-        {
-            if (fs::directory_iterator(".") != fs::directory_iterator())
-                return;
-        }
-    }
+            if (create_template == "sw")
+            {
+                s = R"(#include <primitives/sw/main.h>
+#include <primitives/sw/settings.h>
 
-    if (!create_overwrite_files && fs::directory_iterator(".") != fs::directory_iterator())
-        throw SW_RUNTIME_ERROR("directory is not empty");
+#include <iostream>
 
-    String name = fs::current_path().filename().u8string();
-    if (!create_proj_name.empty())
-        name = create_proj_name;
+int main(int argc, char *argv[])
+{
+    ::cl::ParseCommandLineOptions(argc, argv);
 
-    // TODO: add separate extended template with configure
-    // common sw.cpp
-    primitives::CppContext ctx;
-    ctx.beginFunction("void build(Solution &s)");
-    ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
-    ctx.addLine("// auto &p = s.addProject(\"myproject\");");
-    ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
-    ctx.addLine();
-    ctx.addLine("auto &t = s.addTarget<Executable>(\"" + name + "\");");
+    std::cout << "Hello, World!\n";
+    return 0;
+}
+)";
+            }
+            else
+            {
+                s = R"(#include <iostream>
 
-    String s;
-    if (create_language == "cpp")
-    {
-        s = R"(#include <iostream>
-
-int main()
+int main(int argc, char *argv[])
 {
     std::cout << "Hello, World!\n";
     return 0;
 }
 )";
-        write_file("src/main.cpp", s);
+            }
+            write_file("src/main.cpp", s);
 
-        ctx.addLine("t += \"src/main.cpp\";");
-        ctx.endFunction();
-        write_file("sw.cpp", ctx.getText());
+            ctx.addLine("t += \"src/main.cpp\";");
+            if (create_template == "sw")
+                ctx.addLine("t += \"pub.egorpugin.primitives.sw.main-master\"_dep;");
+            ctx.endFunction();
+            write_file("sw.cpp", ctx.getText());
 
-        if (create_build)
-            cli_build();
-        else
-            cli_generate();
-    }
-    else if (create_language == "c")
-    {
-        s = R"(#include <stdio.h>
+            if (create_build)
+                cli_build();
+            else
+                cli_generate();
+        }
+        else if (create_language == "c")
+        {
+            s = R"(#include <stdio.h>
 
-int main()
+int main(int argc, char *argv[])
 {
     printf("Hello, World!\n");
     return 0;
 }
 )";
-        write_file("src/main.c", s);
+            write_file("src/main.c", s);
 
-        ctx.addLine("t += \"src/main.c\";");
+            ctx.addLine("t += \"src/main.c\";");
+            ctx.endFunction();
+            write_file("sw.cpp", ctx.getText());
+
+            if (create_build)
+                cli_build();
+            else
+                cli_generate();
+        }
+        else
+            throw SW_RUNTIME_ERROR("unknown language");
+    }
+    else if (create_type == "config")
+    {
+        primitives::CppContext ctx;
+        ctx.beginFunction("void build(Solution &s)");
+        ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
+        ctx.addLine("// auto &p = s.addProject(\"myproject\");");
+        ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
+        ctx.addLine();
+        ctx.addLine("auto &t = s.addTarget<Executable>(\"project\");");
+        ctx.addLine("t.CPPVersion = CPPLanguageStandard::CPP17;");
+        ctx.addLine("//t += \"src/main.cpp\";");
+        ctx.addLine("//t += \"pub.egorpugin.primitives.sw.main-master\"_dep;");
         ctx.endFunction();
         write_file("sw.cpp", ctx.getText());
-
-        if (create_build)
-            cli_build();
-        else
-            cli_generate();
     }
     else
-        throw SW_RUNTIME_ERROR("unknown language");
+        throw SW_RUNTIME_ERROR("Unknown create type");
 }
 
 static ::cl::list<String> uri_args(::cl::Positional, ::cl::desc("sw uri arguments"), ::cl::sub(subcommand_uri));

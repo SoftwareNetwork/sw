@@ -133,6 +133,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     bool disable_compiler_lookup = false;
     path prefix_source_dir; // used for fetches (additional root dir to config/sources)
     const Build *build = nullptr;
+    bool is_config_build = false;
 
     VariablesType Variables;
 
