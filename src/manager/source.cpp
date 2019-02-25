@@ -371,8 +371,8 @@ String Git::print() const
     if (r.empty())
         return r;
     STRING_PRINT_NOT_EMPTY(tag);
-    STRING_PRINT_NOT_EMPTY(branch);
-    STRING_PRINT_NOT_EMPTY(commit);
+    else STRING_PRINT_NOT_EMPTY(branch);
+    else STRING_PRINT_NOT_EMPTY(commit);
     return r;
 }
 
@@ -557,7 +557,7 @@ String Bzr::print() const
     if (r.empty())
         return r;
     STRING_PRINT_NOT_EMPTY(tag);
-    STRING_PRINT_NOT_MINUS_ONE(revision);
+    else STRING_PRINT_NOT_MINUS_ONE(revision);
     return r;
 }
 
@@ -706,8 +706,8 @@ String Cvs::print() const
     if (r.empty())
         return r;
     STRING_PRINT_NOT_EMPTY(tag);
-    STRING_PRINT_NOT_EMPTY(branch);
-    STRING_PRINT_NOT_EMPTY(revision);
+    else STRING_PRINT_NOT_EMPTY(branch);
+    else STRING_PRINT_NOT_EMPTY(revision);
     STRING_PRINT_NOT_EMPTY(module);
     return r;
 }
@@ -812,8 +812,8 @@ String Svn::print() const
     if (r.empty())
         return r;
     STRING_PRINT_NOT_EMPTY(tag);
-    STRING_PRINT_NOT_EMPTY(branch);
-    STRING_PRINT_NOT_MINUS_ONE(revision);
+    else STRING_PRINT_NOT_EMPTY(branch);
+    else STRING_PRINT_NOT_MINUS_ONE(revision);
     return r;
 }
 

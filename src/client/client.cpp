@@ -90,7 +90,7 @@ void self_upgrade();
 void self_upgrade_copy(const path &dst);
 
 #ifdef _WIN32
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow)
+/*int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow)
 {
     const std::wstring s = GetCommandLine();
     bConsoleMode = s.find(L"uri sw:") == -1;
@@ -107,7 +107,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 #undef main
     return main(__argc, __argv);
 #pragma pop_macro("main")
-}
+}*/
 #endif
 
 static ::cl::opt<path> working_directory("d", ::cl::desc("Working directory"));
@@ -355,8 +355,6 @@ static ::cl::opt<String> upload_prefix(::cl::Positional, ::cl::desc("Prefix path
 static ::cl::opt<path> upload_path_to_root(::cl::Positional, ::cl::desc("Path to root"), ::cl::sub(subcommand_upload));
 static ::cl::opt<bool> build_before_upload("build", ::cl::desc("Build before upload"), ::cl::sub(subcommand_upload));
 
-static ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
-
 // ide commands
 static ::cl::opt<String> target_build("target", ::cl::desc("Target to build")/*, ::cl::sub(subcommand_ide)*/);
 static ::cl::opt<String> ide_rebuild("rebuild", ::cl::desc("Rebuild target"), ::cl::sub(subcommand_ide));
@@ -512,6 +510,7 @@ static ::cl::opt<bool> create_build("b", ::cl::desc("Build instead of generate")
 static ::cl::alias create_clear_dir2("c", ::cl::desc("Alias for -clear"), ::cl::aliasopt(create_clear_dir));
 static ::cl::opt<bool> create_overwrite_files("overwrite", ::cl::desc("Clear current directory"), ::cl::sub(subcommand_create));
 static ::cl::alias create_overwrite_files2("ow", ::cl::desc("Alias for -overwrite"), ::cl::aliasopt(create_overwrite_files));
+static ::cl::alias create_overwrite_files3("o", ::cl::desc("Alias for -overwrite"), ::cl::aliasopt(create_overwrite_files));
 
 SUBCOMMAND_DECL(create)
 {
@@ -628,7 +627,7 @@ int main(int argc, char *argv[])
         ctx.beginFunction("void build(Solution &s)");
         ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
         ctx.addLine("// auto &p = s.addProject(\"myproject\");");
-        ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
+        ctx.addLine("// p += Git(\"https://github.com/account/project\", \"{v}\", \"{v}\");");
         ctx.addLine();
         ctx.addLine("auto &t = s.addTarget<Executable>(\"project\");");
         ctx.addLine("t.CPPVersion = CPPLanguageStandard::CPP17;");
@@ -1021,10 +1020,13 @@ SUBCOMMAND_DECL(update)
     cli_build();
 }
 
+static ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
+
 SUBCOMMAND_DECL(fetch)
 {
     sw::FetchOptions opts;
     //opts.name_prefix = upload_prefix;
+    opts.dry_run = !build_after_fetch;
     opts.root_dir = fs::current_path() / SW_BINARY_DIR;
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(1);
@@ -1044,6 +1046,7 @@ SUBCOMMAND_DECL(upload)
 
     sw::FetchOptions opts;
     //opts.name_prefix = upload_prefix;
+    opts.dry_run = !build_before_upload;
     opts.root_dir = fs::current_path() / SW_BINARY_DIR;
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(8);

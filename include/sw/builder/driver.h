@@ -50,6 +50,7 @@ struct FetchOptions : SourceDownloadOptions
 {
     String name_prefix;
     bool apply_version_to_source = false;
+    bool dry_run = true;
 };
 
 /**

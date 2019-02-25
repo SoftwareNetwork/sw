@@ -80,8 +80,8 @@ static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &
         {
             auto b = std::make_unique<Build>();
             b->NamePrefix = opts.name_prefix;
-            b->perform_checks = false;
-            b->DryRun = true;
+            b->perform_checks = !pp && !opts.dry_run;
+            b->DryRun = !pp && opts.dry_run;
             b->PostponeFileResolving = pp;
             b->source_dirs_by_source = srcs_old;
             b->prefix_source_dir = opts.source_dir;
@@ -129,8 +129,8 @@ static auto fetch1(const CppDriver *driver, const path &fn, const FetchOptions &
     {
         auto b = std::make_unique<Build>();
         b->NamePrefix = opts.name_prefix;
-        b->perform_checks = false;
-        b->DryRun = true;
+        b->perform_checks = !opts.dry_run;
+        b->DryRun = opts.dry_run;
         b->fetch_dir = d;
         b->prefix_source_dir = opts.source_dir;
         b->load(fn);
