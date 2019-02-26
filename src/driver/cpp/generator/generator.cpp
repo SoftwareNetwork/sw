@@ -32,6 +32,7 @@ DECLARE_STATIC_LOGGER(logger, "solution");
 
 //extern cl::SubCommand subcommand_ide;
 bool gPrintDependencies;
+bool gPrintOverriddenDependencies;
 bool gOutputNoConfigSubdir;
 
 static cl::opt<String> toolset("toolset", cl::desc("Set VS generator toolset"));
@@ -616,6 +617,12 @@ void ProjectContext::addPropertySheets(const Build &b)
 
 String getWin10KitDirName();
 
+static bool shouldAddTarget(const Target &t)
+{
+    // now without overridden
+    return gPrintDependencies || t.isLocal() || (gPrintOverriddenDependencies && t.pkg.getOverriddenDir());
+}
+
 void ProjectContext::printProject(
     const String &name, const PackageId &p, const Build &b, SolutionContext &ctx, Generator &g,
     PackagePathTree::Directories &parents, PackagePathTree::Directories &local_parents,
@@ -891,7 +898,7 @@ void ProjectContext::printProject(
                     if (d->target->pkg == t.pkg)
                         continue;
 
-                    if (!gPrintDependencies && !d->target->Local)
+                    if (!shouldAddTarget(*d->target))
                     {
                         if (auto nt3 = d->target->template as<NativeExecutedTarget>())
                         {
@@ -1051,7 +1058,7 @@ void ProjectContext::printProject(
                             {
                                 if (d->target)
                                 {
-                                    if (!gPrintDependencies && !d->target->Local)
+                                    if (!shouldAddTarget(*d->target))
                                     {
                                         deps.insert(parent->build_dependencies_name);
                                         parent->build_deps.insert(d->target->pkg);
@@ -1419,9 +1426,10 @@ void SolutionContext::addKeyValue(const String &k, const String &v)
 
 String SolutionContext::getStringUuid(const String &k) const
 {
-    if (uuids.find(k) == uuids.end())
-        throw SW_RUNTIME_ERROR("No such uuid (project). Check your invocation flags.");
-    return "{" + uuids[k] + "}";
+    auto i = uuids.find(k);
+    if (i == uuids.end())
+        throw SW_RUNTIME_ERROR("No such uuid (project) - " + k + ". Check your invocation flags.");
+    return "{" + i->second + "}";
 }
 
 void SolutionContext::materialize(const Build &b, const path &dir, GeneratorType type)
@@ -1449,7 +1457,7 @@ void SolutionContext::materialize(const Build &b, const path &dir, GeneratorType
     {
         if (b.skipTarget(t->Scope))
             continue;
-        if (!gPrintDependencies && !t->Local)
+        if (!shouldAddTarget(*t))
             continue;
         addProjectConfigurationPlatforms(b, p.toString(), type == GeneratorType::VisualStudio);
         if (projects.find(p.toString() + "-build") != projects.end())
@@ -1676,7 +1684,9 @@ void VSGenerator::generate(const Build &b)
     {
         if (b.skipTarget(t->Scope))
             continue;
-        has_deps |= !t->Local;
+        if (!shouldAddTarget(*t))
+            continue;
+        has_deps |= !t->isLocal();
         if (t->pkg.getOverriddenDir())
         {
             overridden_tree.add(p.ppath);
@@ -1711,7 +1721,7 @@ void VSGenerator::generate(const Build &b)
     {
         if (b.skipTarget(t->Scope))
             continue;
-        if (!gPrintDependencies && !t->Local)
+        if (!shouldAddTarget(*t))
             continue;
         if (t->isLocal() && isExecutable(t->getType()))
             n_executable_tgts++;
@@ -1723,7 +1733,7 @@ void VSGenerator::generate(const Build &b)
     {
         if (b.skipTarget(t->Scope))
             continue;
-        if (!gPrintDependencies && !t->Local)
+        if (!shouldAddTarget(*t))
             continue;
 
         auto pp = p.ppath.parent();
@@ -1734,8 +1744,9 @@ void VSGenerator::generate(const Build &b)
         auto pps = pp.toString();
         /*if (t->pkg.getOverriddenDir()) // uncomment for overridden
             pps = overridden_deps_subdir / pps;
-        else */if (!t->Local)
-            pps = deps_subdir / pps;
+        else */
+        /*if (!t->Local)
+            pps = deps_subdir / pps;*/
 
         auto t2 = VSProjectType::Makefile;
         if (type == GeneratorType::VisualStudio)
@@ -1771,7 +1782,7 @@ void VSGenerator::generate(const Build &b)
     {
         if (b.skipTarget(t->Scope))
             continue;
-        if (!gPrintDependencies && !t->Local)
+        if (!shouldAddTarget(*t))
             continue;
 
         auto nt = t->as<NativeExecutedTarget>();

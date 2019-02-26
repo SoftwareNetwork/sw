@@ -839,6 +839,8 @@ SUBCOMMAND_DECL(ide)
 extern ::cl::opt<String> cl_generator;
 extern bool gPrintDependencies;
 static ::cl::opt<bool, true> print_dependencies("print-dependencies", ::cl::location(gPrintDependencies), ::cl::sub(subcommand_generate));
+extern bool gPrintOverriddenDependencies;
+static ::cl::opt<bool, true> print_overridden_dependencies("print-overridden-dependencies", ::cl::location(gPrintOverriddenDependencies), ::cl::sub(subcommand_generate));
 extern bool gOutputNoConfigSubdir;
 static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", ::cl::location(gOutputNoConfigSubdir), ::cl::sub(subcommand_generate));
 
