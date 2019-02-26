@@ -46,8 +46,7 @@ DECLARE_STATIC_LOGGER(logger, "solution");
 
 static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
 static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
-cl::opt<String> cl_generator("G", cl::desc("Generator"));
-cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(cl_generator));
+String gGenerator;
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
@@ -2305,9 +2304,9 @@ void Build::load(const path &fn, bool configless)
     if (!fn.is_absolute())
         throw SW_RUNTIME_ERROR("path must be absolute: " + normalize_path(fn));
 
-    if (!cl_generator.empty())
+    if (!gGenerator.empty())
     {
-        generator = Generator::create(cl_generator);
+        generator = Generator::create(gGenerator);
 
         // set early, before prepare
 

@@ -187,6 +187,11 @@ void FileStorage::save()
     getDb().save(*this, files, fs_local);
 }
 
+void FileStorage::clear()
+{
+    files.clear();
+}
+
 void FileStorage::reset()
 {
     /*save();

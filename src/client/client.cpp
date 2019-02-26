@@ -748,7 +748,11 @@ SUBCOMMAND_DECL(uri)
             // before scp
             SCOPE_EXIT
             {
-                sw::getFileStorages().clear(); // free files
+                // free files
+                for (auto &[n,s] : sw::getFileStorages())
+                    s.clear();
+                sw::getFileStorages().clear();
+
                 fs::remove_all(fn.parent_path());
             };
 
@@ -836,7 +840,9 @@ SUBCOMMAND_DECL(ide)
     }
 }
 
-extern ::cl::opt<String> cl_generator;
+extern String gGenerator;
+::cl::opt<String, true> cl_generator("G", ::cl::desc("Generator"), ::cl::location(gGenerator), ::cl::sub(subcommand_generate));
+::cl::alias generator2("g", ::cl::desc("Alias for -G"), ::cl::aliasopt(cl_generator));
 extern bool gPrintDependencies;
 static ::cl::opt<bool, true> print_dependencies("print-dependencies", ::cl::location(gPrintDependencies), ::cl::sub(subcommand_generate));
 extern bool gPrintOverriddenDependencies;
@@ -849,10 +855,10 @@ static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", 
 
 SUBCOMMAND_DECL(generate)
 {
-    if (cl_generator.empty())
+    if (gGenerator.empty())
     {
 #ifdef _WIN32
-        cl_generator = "vs";
+        gGenerator = "vs";
 #endif
     }
     ((Strings&)build_arg).clear();

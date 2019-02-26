@@ -744,8 +744,10 @@ void ProjectContext::printProject(
         }
 
         String idirs;
+        String idirs1;
         for (auto &i : nt.gatherIncludeDirectories())
-            idirs += i.string() + ";";
+            idirs1 += i.string() + ";";
+        idirs += idirs1;
         String add_opts;
         if (!nt.empty())
         {
@@ -807,6 +809,11 @@ void ProjectContext::printProject(
 
         // cl properties, make them like in usual VS project
         beginBlockWithConfiguration("ItemDefinitionGroup", s.Settings);
+        beginBlock("ResourceCompile");
+        addBlock("AdditionalIncludeDirectories", idirs1); // command line is too long
+        //addBlock("PreprocessorDefinitions", defs); // command line is too long
+        endBlock();
+
         beginBlock("ClCompile");
         addBlock("AdditionalIncludeDirectories", idirs);
         addBlock("PreprocessorDefinitions", defs);

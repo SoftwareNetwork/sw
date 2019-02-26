@@ -213,6 +213,8 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, b
         for (auto &[f, d] : f->implicit_dependencies)
             b.write(std::hash<path>()(d->file));
     }*/
+    if (b.empty())
+        return;
     fs::create_directories(f.parent_path());
     b.save(f);
 }
@@ -299,6 +301,8 @@ void FileDb::save(ConcurrentCommandStorage &commands, bool local) const
         b.write(k);
         b.write(*v);
     }*/
+    if (b.empty())
+        return;
     auto p = getCommandsDbFilename(local);
     fs::create_directories(p.parent_path());
     b.save(p);
