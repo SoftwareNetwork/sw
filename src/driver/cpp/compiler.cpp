@@ -345,10 +345,8 @@ void detectWindowsCompilers(struct Solution &s)
         auto root = instance.root / "VC";
         auto &v = instance.version;
 
-        if (v.getMajor() == 15)
+        if (v.getMajor() >= 15)
             root = root / "Tools\\MSVC" / boost::trim_copy(read_file(root / "Auxiliary\\Build\\Microsoft.VCToolsVersion.default.txt"));
-        else if (v.getMajor() >= 16)
-            root = root / "Tools\\MSVC" / boost::trim_copy(read_file(root / ("Auxiliary\\Build\\Microsoft.VCToolsVersion." + getVsToolset(v) + ".default.txt")));
 
         auto compiler = root / "bin";
         NativeCompilerOptions COpts;
