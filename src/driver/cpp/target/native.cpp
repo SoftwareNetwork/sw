@@ -2017,15 +2017,6 @@ bool NativeExecutedTarget::prepare()
             }
         }
 
-        // linker setup - already set up
-        //setOutputFile();
-
-        // legit? actually no
-        // merge here only compiler options
-        // TODO: find more generalized way
-        getSelectedTool()->merge(*this);
-        //getSelectedTool()->LinkOptions.insert(getSelectedTool()->LinkOptions.end(), LinkOptions.begin(), LinkOptions.end());
-
         // pdb
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
         {
@@ -2172,6 +2163,9 @@ bool NativeExecutedTarget::prepare()
             ll(LinkLibraries, false);
             ll(NativeLinkerOptions::System.LinkLibraries, true);
         }
+
+        // right after gatherStaticLinkLibraries()!
+        getSelectedTool()->merge(*this);
 
         // linker setup
         auto obj = gatherObjectFilesWithoutLibraries();

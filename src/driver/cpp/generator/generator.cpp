@@ -1013,7 +1013,8 @@ void ProjectContext::printProject(
                     filenames.insert(p.filename());
                     return;
                 }
-                beginBlockWithConfiguration("ObjectFileName", s.Settings);
+                //beginBlockWithConfiguration("ObjectFileName", s.Settings);
+                beginBlock("ObjectFileName");
                 addText("$(IntDir)/" + p.filename().u8string() + "." + sha256(p.u8string()).substr(0, 8) + ".obj");
                 endBlock(true);
             };
