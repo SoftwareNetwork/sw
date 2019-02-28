@@ -11,6 +11,8 @@
 namespace sw
 {
 
+struct CheckSet;
+
 //struct SW_DRIVER_CPP_API CustomTarget : Target {};
 
 /**
@@ -117,6 +119,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     path getOutputFile() const override;
     path makeOutputFile() const;
     path getImportLibrary() const override;
+    const CheckSet &getChecks(const String &name) const;
     void setChecks(const String &name, bool check_definitions = false);
     void findSources();
     void autoDetectOptions();

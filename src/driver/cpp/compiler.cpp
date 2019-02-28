@@ -1172,8 +1172,9 @@ void VisualStudioASMCompiler::prepareCommand1(const TargetBase &t)
     //cmd->out.capture = true;
     //cmd->base = clone();
 
-    getCommandLineOptions<VisualStudioAssemblerOptions>(cmd.get(), *this);
+    // defs and idirs for asm must go before file
     iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    getCommandLineOptions<VisualStudioAssemblerOptions>(cmd.get(), *this);
 }
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioASMCompiler)

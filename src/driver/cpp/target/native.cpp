@@ -2514,15 +2514,20 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     writeFileOnce(to, s);
 }
 
-void NativeExecutedTarget::setChecks(const String &name, bool check_definitions)
+const CheckSet &NativeExecutedTarget::getChecks(const String &name) const
 {
     auto i0 = solution->checker.sets.find(getSolution()->current_gn);
     if (i0 == solution->checker.sets.end())
-        return;
+        throw SW_RUNTIME_ERROR("No such group number: " + std::to_string(getSolution()->current_gn));
     auto i = i0->second.find(name);
     if (i == i0->second.end())
-        return;
-    for (auto &[k, c] : i->second.check_values)
+        throw SW_RUNTIME_ERROR("No such set: " + name);
+    return i->second;
+}
+
+void NativeExecutedTarget::setChecks(const String &name, bool check_definitions)
+{
+    for (auto &[k, c] : getChecks(name).check_values)
     {
         auto d = c->getDefinition(k);
         const auto v = c->Value.value();
