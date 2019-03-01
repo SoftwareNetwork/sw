@@ -15,6 +15,8 @@
 
 #undef ERROR
 #include <api.grpc.pb.h>
+#undef strtoll
+#undef strtoull
 
 namespace sw
 {

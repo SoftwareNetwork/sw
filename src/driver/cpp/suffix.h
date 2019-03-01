@@ -11,6 +11,9 @@
 namespace sw
 {
 
+inline namespace literals
+{
+
 /*
 reference:
 
@@ -115,4 +118,6 @@ inline Variable operator "" _var(const char *s, size_t)
 
 // more?
 
-}
+} // inline namespace literals
+
+} // namespace sw

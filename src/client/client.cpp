@@ -35,7 +35,8 @@
 #include <primitives/file_monitor.h>
 #include <primitives/lock.h>
 #include <primitives/pack.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
+#include <primitives/sw/settings_program_name.h>
 #include <primitives/sw/main.h>
 #include <primitives/thread.h>
 #include <primitives/win32helpers.h>

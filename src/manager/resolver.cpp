@@ -25,6 +25,7 @@
 #include <primitives/templates.h>
 #include <primitives/win32helpers.h>
 #include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 #include <nlohmann/json.hpp>
 
 #include <primitives/log.h>

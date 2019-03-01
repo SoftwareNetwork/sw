@@ -11,7 +11,7 @@
 #include <primitives/constants.h>
 #include <primitives/context.h>
 #include <primitives/debug.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target.native");
@@ -449,7 +449,7 @@ FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
         }))
         {
             //LOG_TRACE(logger, "Cannot resolve library: " << l);
-            throw SW_RUNTIME_ERROR("Cannot resolve library: " + normalize_path(l));
+            throw SW_RUNTIME_ERROR(pkg.toString() + ": Cannot resolve library: " + normalize_path(l));
         }
 
         //if (!getSolution()->Settings.TargetOS.is(OSType::Windows))

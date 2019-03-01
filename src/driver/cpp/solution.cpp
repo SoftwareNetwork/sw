@@ -36,7 +36,8 @@
 #include <primitives/symbol.h>
 #include <primitives/templates.h>
 #include <primitives/win32helpers.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
+#include <primitives/sw/settings_program_name.h>
 
 #include <boost/dll.hpp>
 #include <nlohmann/json.hpp>
@@ -85,13 +86,13 @@ path gIdeCopyToDir;
 int gNumberOfJobs = -1;
 std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 
-void build_self(sw::Solution &s);
-void check_self(sw::Checker &c);
-
 // TODO: add '#pragma sw driver ...'
 
 namespace sw
 {
+
+void build_self(sw::Solution &s);
+void check_self(sw::Checker &c);
 
 String toString(FrontendType t)
 {
@@ -885,6 +886,15 @@ void Solution::build_and_resolve(int n_runs)
     auto ud = gatherUnresolvedDependencies();
     if (ud.empty())
         return;
+
+    if (is_config_build)
+    {
+        String s;
+        for (auto &u : ud)
+            s += u.first.toString() + ", ";
+        s.resize(s.size() - 2);
+        throw SW_RUNTIME_ERROR("Missing config deps, check your build_self script: " + s);
+    }
 
     if (n_runs > 1)
         LOG_ERROR(logger, "You are here for the third time. This is not intended. Failures are imminent.");

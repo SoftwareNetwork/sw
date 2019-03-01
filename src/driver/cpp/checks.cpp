@@ -16,7 +16,7 @@
 #include <hash.h>
 
 #include <boost/algorithm/string.hpp>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "checks");

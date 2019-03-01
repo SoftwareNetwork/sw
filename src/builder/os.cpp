@@ -9,6 +9,7 @@
 #include <primitives/command.h>
 #include <primitives/templates.h>
 #include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 
 #include <boost/algorithm/string.hpp>
 

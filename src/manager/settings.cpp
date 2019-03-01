@@ -16,6 +16,7 @@
 
 #include <primitives/hasher.h>
 #include <primitives/templates.h>
+#include <primitives/sw/cl.h>
 
 #include <fstream>
 

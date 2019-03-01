@@ -224,8 +224,6 @@ protected:
     bool prepare() override;
 };
 
-using Library = LibraryTarget;
-
 /**
 * \brief Executable target.
 */
@@ -240,8 +238,6 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeExecutedTarget//, Program
 protected:
     bool prepare() override;
 };
-
-using Executable = ExecutableTarget;
 
 /**
 * \brief Static only target.
@@ -262,8 +258,6 @@ protected:
     }
 };
 
-using StaticLibrary = StaticLibraryTarget;
-
 /**
 * \brief Shared only target.
 */
@@ -281,8 +275,6 @@ protected:
         return prepareLibrary(LibraryType::Shared);
     }
 };
-
-using SharedLibrary = SharedLibraryTarget;
 
 // remove?
 /**

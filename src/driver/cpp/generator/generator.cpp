@@ -16,7 +16,7 @@
 #include <execution_plan.h>
 #include <filesystem.h>
 
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 #include <primitives/win32helpers.h>
 
 #include <boost/algorithm/string.hpp>
@@ -366,7 +366,25 @@ enum class VSFileType
     ClInclude,
     ClCompile,
     MASM,
+    Manifest,
 };
+
+static VSFileType get_vs_file_type_by_ext(const path &p)
+{
+    if (p.extension() == ".rc")
+        return VSFileType::ResourceCompile;
+    else if (p.extension() == ".rule")
+        return VSFileType::CustomBuild;
+    else if (isCppHeaderFileExtension(p.extension().string()))
+        return VSFileType::ClInclude;
+    else if (isCppSourceFileExtensions(p.extension().string()) || p.extension() == ".c")
+        return VSFileType::ClCompile;
+    else if (p.extension() == ".asm")
+        return VSFileType::MASM;
+    else if (p.extension() == ".manifest")
+        return VSFileType::Manifest;
+    return VSFileType::None;
+}
 
 String toString(VSFileType t)
 {
@@ -382,24 +400,11 @@ String toString(VSFileType t)
         return "CustomBuild";
     case VSFileType::MASM:
         return "MASM";
+    case VSFileType::Manifest:
+        return "Manifest";
     default:
         return "None";
     }
-}
-
-static VSFileType get_vs_file_type_by_ext(const path &p)
-{
-    if (p.extension() == ".rc")
-        return VSFileType::ResourceCompile;
-    else if (p.extension() == ".rule")
-        return VSFileType::CustomBuild;
-    else if (isCppHeaderFileExtension(p.extension().string()))
-        return VSFileType::ClInclude;
-    else if (isCppSourceFileExtensions(p.extension().string()) || p.extension() == ".c")
-        return VSFileType::ClCompile;
-    else if (p.extension() == ".asm")
-        return VSFileType::MASM;
-    return VSFileType::None;
 }
 
 static VSProjectType get_vs_project_type(const SolutionSettings &s, TargetType t)
@@ -743,6 +748,15 @@ void ProjectContext::printProject(
                 defs += k + "=" + v + ";";
         }
 
+        String defs1;
+        for (auto &[k, v] : nt.Definitions2)
+        {
+            if (v.empty())
+                defs1 += k + ";";
+            else
+                defs1 += k + "=" + v + ";";
+        }
+
         String idirs;
         String idirs1;
         for (auto &i : nt.gatherIncludeDirectories())
@@ -811,7 +825,7 @@ void ProjectContext::printProject(
         beginBlockWithConfiguration("ItemDefinitionGroup", s.Settings);
         beginBlock("ResourceCompile");
         addBlock("AdditionalIncludeDirectories", idirs1); // command line is too long
-        //addBlock("PreprocessorDefinitions", defs); // command line is too long
+        addBlock("PreprocessorDefinitions", defs1); // command line is too long
         endBlock();
 
         beginBlock("ClCompile");
@@ -993,8 +1007,14 @@ void ProjectContext::printProject(
                 }
             }
 
-            endBlock();
-            endBlock();
+            endBlock(); // Link
+
+            /*beginBlock("Manifest");
+            beginBlock("AdditionalManifestFiles");
+            endBlock(true);
+            endBlock();*/
+
+            endBlock(); // ItemDefinitionGroup
         }
 
         if (add_sources)

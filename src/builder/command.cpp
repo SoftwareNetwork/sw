@@ -22,7 +22,8 @@
 #include <primitives/debug.h>
 #include <primitives/executor.h>
 #include <primitives/templates.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
+#include <primitives/sw/settings_program_name.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/thread/thread_pool.hpp>
 

@@ -211,6 +211,7 @@ using DependenciesType = UniqueVector<DependencyPtr>;
 struct SW_DRIVER_CPP_API NativeCompilerOptionsData
 {
     DefinitionsType Definitions;
+    DefinitionsType Definitions2; // untouched defs
     Strings CompileOptions;
     PathOptionsType PreIncludeDirectories;
     PathOptionsType IncludeDirectories;

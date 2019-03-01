@@ -141,8 +141,8 @@ String toString(TargetType T);
 struct NativeExecutedTarget;
 struct Solution;
 struct Target;
-struct Project;
-struct Directory;
+struct ProjectTarget;
+struct DirectoryTarget;
 using TargetBaseType = Target;
 using TargetBaseTypePtr = std::shared_ptr<TargetBaseType>;
 
@@ -283,9 +283,9 @@ public:
     }
 
     template <typename ... Args>
-    Project &addProject(Args && ... args) { return addTarget<Project>(std::forward<Args>(args)...); }
+    ProjectTarget &addProject(Args && ... args) { return addTarget<ProjectTarget>(std::forward<Args>(args)...); }
 
-    Directory &addDirectory(const PackagePath &Name) { return addTarget<Directory>(Name); }
+    DirectoryTarget &addDirectory(const PackagePath &Name) { return addTarget<DirectoryTarget>(Name); }
 
     virtual TargetType getType() const = 0;
     String getTypeName() const { return toString(getType()); }
@@ -462,16 +462,16 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     TargetType getType() const override { return TargetType::Directory; }
 };
 
-struct SW_DRIVER_CPP_API Directory : ProjDirBase
+struct SW_DRIVER_CPP_API DirectoryTarget : ProjDirBase
 {
     using ProjDirBase::ProjDirBase;
-    virtual ~Directory() = default;
+    virtual ~DirectoryTarget() = default;
 };
 
-struct SW_DRIVER_CPP_API Project : ProjDirBase
+struct SW_DRIVER_CPP_API ProjectTarget : ProjDirBase
 {
     using ProjDirBase::ProjDirBase;
-    virtual ~Project() = default;
+    virtual ~ProjectTarget() = default;
 
     TargetType getType() const override { return TargetType::Project; }
 };

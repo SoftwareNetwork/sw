@@ -20,6 +20,9 @@ namespace sw
 
 using SourceKvMap = std::vector<std::pair<String, String>>;
 
+inline namespace source
+{
+
 // prepare for oop
 /*enum SourceType
 {
@@ -358,6 +361,8 @@ struct SW_MANAGER_API RemoteFiles
 
     static String getString() { return "files"; }
 };
+
+} // inline namespace source
 
 // TODO: add: svn, cvs, darcs, p4
 // do not add local files

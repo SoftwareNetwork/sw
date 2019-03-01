@@ -6,8 +6,8 @@
 
 #include "options.h"
 
-#include <package.h>
 #include "target/native.h"
+#include <package.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -153,7 +153,7 @@ UnresolvedPackage Dependency::getPackage() const
 {
     auto t = target;
     if (t)
-        return { t->pkg.ppath, t->pkg.version };
+        return {t->pkg.ppath, t->pkg.version};
     return package;
 }
 
@@ -161,13 +161,13 @@ PackageId Dependency::getResolvedPackage() const
 {
     auto t = target;
     if (t)
-        return { t->pkg.ppath, t->pkg.version };
+        return {t->pkg.ppath, t->pkg.version};
     throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
 }
 
 void Dependency::setTarget(const Target &t)
 {
-    target = (Target*)&t;
+    target = (Target *)&t;
     propagateTargetToChain();
 }
 
@@ -182,45 +182,69 @@ void Dependency::propagateTargetToChain()
 
 void NativeCompilerOptionsData::add(const Definition &d)
 {
+    auto add_def = [this](const String &k, const String &v = {})
+    {
+        if (v.empty())
+        {
+            Definitions[k];
+            Definitions2[k];
+        }
+        else
+        {
+            Definitions[k] = v;
+            Definitions2[k] = v;
+        }
+    };
+
     auto p = d.d.find('=');
     if (p == d.d.npos)
     {
-        Definitions[d.d];// = 1;
+        add_def(d.d); // = 1;
         return;
     }
     auto f = d.d.substr(0, p);
     auto s = d.d.substr(p + 1);
     if (s.empty())
-        Definitions[f + "="];
+        add_def(f + "=");
     else
-        Definitions[f] = s;
+        add_def(f, s);
 }
 
 void NativeCompilerOptionsData::remove(const Definition &d)
 {
+    auto erase_def = [this](const String &k)
+    {
+        Definitions.erase(k);
+        Definitions2.erase(k);
+    };
+
     auto p = d.d.find('=');
     if (p == d.d.npos)
     {
-        Definitions.erase(d.d);
+        erase_def(d.d);
         return;
     }
     auto f = d.d.substr(0, p);
     auto s = d.d.substr(p + 1);
     if (s.empty())
-        Definitions.erase(f + "=");
+        erase_def(f + "=");
     else
-        Definitions.erase(f);
+        erase_def(f);
 }
 
 void NativeCompilerOptionsData::add(const DefinitionsType &defs)
 {
     Definitions.insert(defs.begin(), defs.end());
+    Definitions2.insert(defs.begin(), defs.end());
 }
 
 void NativeCompilerOptionsData::remove(const DefinitionsType &defs)
 {
     for (auto &[k, v] : defs)
+    {
         Definitions.erase(k);
+        Definitions2.erase(k);
+    }
 }
 
 PathOptionsType NativeCompilerOptionsData::gatherIncludeDirectories() const
@@ -235,8 +259,8 @@ PathOptionsType NativeCompilerOptionsData::gatherIncludeDirectories() const
 bool NativeCompilerOptionsData::IsIncludeDirectoriesEmpty() const
 {
     return PreIncludeDirectories.empty() &&
-        IncludeDirectories.empty() &&
-        PostIncludeDirectories.empty();
+           IncludeDirectories.empty() &&
+           PostIncludeDirectories.empty();
 }
 
 void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const GroupSettings &s, bool merge_to_system)
@@ -251,7 +275,7 @@ void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const 
         unique_merge_containers(IncludeDirectories, o.IncludeDirectories);
         unique_merge_containers(PostIncludeDirectories, o.PostIncludeDirectories);
     }
-    else// if (merge_to_system)
+    else // if (merge_to_system)
     {
         unique_merge_containers(IncludeDirectories, o.PreIncludeDirectories);
         unique_merge_containers(IncludeDirectories, o.IncludeDirectories);
@@ -274,8 +298,7 @@ void NativeCompilerOptions::merge(const NativeCompilerOptions &o, const GroupSet
 
 void NativeCompilerOptions::addDefinitionsAndIncludeDirectories(builder::Command &c) const
 {
-    auto print_def = [&c](auto &a)
-    {
+    auto print_def = [&c](auto &a) {
         for (auto &d : a)
         {
             using namespace sw;
@@ -290,8 +313,7 @@ void NativeCompilerOptions::addDefinitionsAndIncludeDirectories(builder::Command
     print_def(System.Definitions);
     print_def(Definitions);
 
-    auto print_idir = [&c](const auto &a, auto &flag)
-    {
+    auto print_idir = [&c](const auto &a, auto &flag) {
         for (auto &d : a)
             c.args.push_back(flag + normalize_path(d));
     };
@@ -304,8 +326,7 @@ void NativeCompilerOptions::addEverything(builder::Command &c) const
 {
     addDefinitionsAndIncludeDirectories(c);
 
-    auto print_idir = [&c](const auto &a, auto &flag)
-    {
+    auto print_idir = [&c](const auto &a, auto &flag) {
         for (auto &d : a)
             c.args.push_back(flag + normalize_path(d));
     };
@@ -326,8 +347,8 @@ PathOptionsType NativeCompilerOptions::gatherIncludeDirectories() const
 
 void NativeLinkerOptionsData::add(const LinkLibrary &l)
 {
-     LinkLibraries.push_back(l.l);
-     LinkLibraries2.push_back(l.l);
+    LinkLibraries.push_back(l.l);
+    LinkLibraries2.push_back(l.l);
 }
 
 void NativeLinkerOptionsData::remove(const LinkLibrary &l)
@@ -355,8 +376,8 @@ LinkLibrariesType NativeLinkerOptionsData::gatherLinkLibraries() const
 bool NativeLinkerOptionsData::IsLinkDirectoriesEmpty() const
 {
     return PreLinkDirectories.empty() &&
-        LinkDirectories.empty() &&
-        PostLinkDirectories.empty();
+           LinkDirectories.empty() &&
+           PostLinkDirectories.empty();
 }
 
 void NativeLinkerOptionsData::merge(const NativeLinkerOptionsData &o, const GroupSettings &s)
@@ -392,8 +413,7 @@ void NativeLinkerOptions::merge(const NativeLinkerOptions &o, const GroupSetting
 
 void NativeLinkerOptions::addEverything(builder::Command &c) const
 {
-    auto print_idir = [&c](const auto &a, auto &flag)
-    {
+    auto print_idir = [&c](const auto &a, auto &flag) {
         for (auto &d : a)
             c.args.push_back(flag + normalize_path(d));
     };
@@ -444,8 +464,7 @@ void NativeLinkerOptions::remove(const Target &t)
 
 void NativeLinkerOptions::add(const DependencyPtr &t)
 {
-    auto i = std::find_if(Dependencies.begin(), Dependencies.end(), [t](const auto &d)
-    {
+    auto i = std::find_if(Dependencies.begin(), Dependencies.end(), [t](const auto &d) {
         return d->getPackage() == t->getPackage();
     });
     if (i == Dependencies.end())
@@ -465,8 +484,7 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
 
 void NativeLinkerOptions::remove(const DependencyPtr &t)
 {
-    auto i = std::find_if(Dependencies.begin(), Dependencies.end(), [t](const auto &d)
-    {
+    auto i = std::find_if(Dependencies.begin(), Dependencies.end(), [t](const auto &d) {
         return d->getPackage() == t->getPackage();
     });
     if (i == Dependencies.end())
@@ -522,4 +540,4 @@ void NativeOptions::merge(const NativeOptions &o, const GroupSettings &s)
     NativeLinkerOptions::merge(o, s);
 }
 
-}
+} // namespace sw
