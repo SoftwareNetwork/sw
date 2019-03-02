@@ -23,6 +23,4 @@ Both of clang/gcc works fine.
 
 ## More links
 
-- [Getting Started](https://github.com/SoftwareNetwork/sw/blob/master/doc/getting_started.md) - Running SW client.
-- [Website Usage](https://github.com/SoftwareNetwork/sw/blob/master/doc/website.md) - Describes basic usage of Software Network site.
-- [F.A.Q.](https://github.com/SoftwareNetwork/sw/blob/master/doc/faq.md)
+Find more info on [SW Wiki](https://github.com/SoftwareNetwork/sw/wiki)
