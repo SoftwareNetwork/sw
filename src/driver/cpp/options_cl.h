@@ -184,7 +184,8 @@ public:
     unsigned skip : 1;
 
     unsigned separate_prefix : 1;
-    unsigned : 7;
+    unsigned create_directory : 1;
+    unsigned : 6;
 
     CommandLineOption1()
     {
@@ -330,6 +331,7 @@ private:
         place_at_the_end = false;
         skip = false;
         separate_prefix = false;
+        create_directory = false;
     }
 
     void assign(const CommandLineOption1 &v)

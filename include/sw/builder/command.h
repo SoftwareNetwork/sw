@@ -137,6 +137,9 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     // then split that command!
     Files outputs;
 
+    // additional create dirs
+    Files output_dirs;
+
     fs::file_time_type mtime;
     std::optional<bool> use_response_files;
     bool remove_outputs_before_execution = false; // was true

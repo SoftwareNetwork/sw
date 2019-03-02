@@ -117,7 +117,6 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     std::shared_ptr<builder::Command> getCommand() const override;
     //Files getGeneratedDirs() const override;
     path getOutputFile() const override;
-    path makeOutputFile() const;
     path getImportLibrary() const override;
     const CheckSet &getChecks(const String &name) const;
     void setChecks(const String &name, bool check_definitions = false);
@@ -196,6 +195,7 @@ private:
 
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
+    path getOutputFileName2() const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
     void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets, bool system);

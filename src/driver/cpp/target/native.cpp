@@ -221,11 +221,11 @@ void NativeExecutedTarget::setOutputFile()
     if (Scope == TargetScope::Build)
     {
         if (getSelectedTool() == Librarian.get())
-            getSelectedTool()->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_lib));
+            getSelectedTool()->setOutputFile(getOutputFileName2());
         else
         {
             getSelectedTool()->setOutputFile(getOutputFileName(getOutputBaseDir()));
-            getSelectedTool()->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
+            getSelectedTool()->setImportLibrary(getOutputFileName2());
         }
     }
     else
@@ -235,14 +235,6 @@ void NativeExecutedTarget::setOutputFile()
         if (getSelectedTool() != Librarian.get())
             getSelectedTool()->setImportLibrary(base);
     }
-}
-
-path NativeExecutedTarget::makeOutputFile() const
-{
-    if (getSelectedTool() == Librarian.get())
-        return getOutputFileName(getUserDirectories().storage_dir_lib);
-    else
-        return getOutputFileName(getOutputBaseDir());
 }
 
 path Target::getOutputFileName() const
@@ -269,6 +261,21 @@ path NativeExecutedTarget::getOutputFileName(const path &root) const
             p = root / getConfig() / OutputDir / getOutputFileName();
     }
     return p;
+}
+
+path NativeExecutedTarget::getOutputFileName2() const
+{
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        return getOutputFileName("");
+    }
+    else
+    {
+        if (IsConfig)
+            return getOutputFileName("");
+        else
+            return BinaryDir.parent_path() / "lib" / getOutputFileName();
+    }
 }
 
 path NativeExecutedTarget::getOutputFile() const
@@ -2123,7 +2130,7 @@ bool NativeExecutedTarget::prepare()
                     auto o = IsConfig;
                     IsConfig = true;
                     CircularLinker->setOutputFile(getOutputFileName(getOutputBaseDir()));
-                    CircularLinker->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
+                    CircularLinker->setImportLibrary(getOutputFileName2());
                     IsConfig = o;
 
                     if (auto c = CircularLinker->as<VisualStudioLinker>())
@@ -3172,6 +3179,7 @@ bool ExecutableTarget::init()
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
         {
             c->ImportLibrary.output_dependency = false; // become optional
+            c->ImportLibrary.create_directory = true; // but create always
         }
     }
     break;

@@ -888,6 +888,11 @@ Files Command::getGeneratedDirs() const
         dirs.insert(d.parent_path());
     for (auto &d : outputs)
         dirs.insert(d.parent_path());
+    for (auto &d : output_dirs)
+    {
+        if (!d.empty())
+            dirs.insert(d);
+    }
     return dirs;
 }
 
