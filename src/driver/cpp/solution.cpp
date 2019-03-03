@@ -132,7 +132,6 @@ static path getImportPchFile()
     return getImportFilePrefix() += ".cpp";
 }
 
-static const std::regex r_header("#pragma sw header on(.*)#pragma sw header off");
 
 static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, const UnresolvedPackage &up)
 {
@@ -154,6 +153,7 @@ static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, co
     if (pos == f.npos)
         throw SW_RUNTIME_ERROR("No end in header for package: " + p.toString());
     f = f.substr(0, pos);
+    //static const std::regex r_header("#pragma sw header on(.*)#pragma sw header off");
     //if (std::regex_search(f, m, r_header))
     {
         primitives::Context ctx;
@@ -2337,6 +2337,10 @@ void Build::load(const path &fn, bool configless)
         fetch_dir = BinaryDir / "src";
 
     auto fe = selectFrontendByFilename(fn);
+    if (!fe)
+        throw SW_RUNTIME_ERROR("frontend was not found for file: " + normalize_path(fn));
+
+    LOG_TRACE(logger, "using " << toString(*fe) << " frontend");
     switch (fe.value())
     {
     case FrontendType::Sw:

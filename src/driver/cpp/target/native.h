@@ -8,6 +8,9 @@
 
 #include "base.h"
 
+//#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
+
 namespace sw
 {
 

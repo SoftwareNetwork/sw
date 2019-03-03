@@ -2465,7 +2465,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         auto repl = find_repl(m[1].str());
         if (!repl)
         {
-            s = m.prefix().str() + "/* #undef " + m[1].str() + " */" + "\n" + m.suffix().str();
+            s = m.prefix().str() + "/* #undef " + m[1].str() + " */\n" + m.suffix().str();
             LOG_TRACE(logger, "configure #mesondefine " << m[1].str() << ": replacement not found");
             continue;
         }
@@ -2484,7 +2484,11 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
                 LOG_TRACE(logger, "configure #undef " << m[1].str() << ": replacement not found");
                 continue;
             }
-            s = m.prefix().str() + "#define " + m[1].str() + " " + *repl + "\n" + m.suffix().str();
+            if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())
+                // space to prevent loops
+                s = m.prefix().str() + "/* # undef " + m[1].str() + " */\n" + m.suffix().str();
+            else
+                s = m.prefix().str() + "#define " + m[1].str() + " " + *repl + "\n" + m.suffix().str();
         }
     }
 

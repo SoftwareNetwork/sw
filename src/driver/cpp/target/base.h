@@ -16,9 +16,6 @@
 #include <source_file.h>
 #include <types.h>
 
-//#include <nlohmann/json_fwd.hpp>
-#include <nlohmann/json.hpp>
-
 #include <any>
 #include <mutex>
 #include <optional>
@@ -632,4 +629,4 @@ std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s)
     return files;
 }
 
-}
+} // namespace sw

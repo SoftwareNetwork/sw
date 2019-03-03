@@ -537,6 +537,12 @@ Solution Check::setupSolution(const path &f) const
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     //s.throw_exceptions = false;
     s.BinaryDir = f.parent_path();
+
+    // some checks may fail in msvc release (functions become intrinsics (mem*) etc.)
+    if (s.Settings.Native.CompilerType == CompilerType::MSVC ||
+        s.Settings.Native.CompilerType == CompilerType::ClangCl)
+        s.Settings.Native.ConfigurationType = ConfigurationType::Debug;
+
     return s;
 }
 

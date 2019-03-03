@@ -653,7 +653,7 @@ String Command::saveCommand() const
         return String{};
 
     // use "fancy" rsp name = command hash
-    auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / (std::to_string(getHash()) + ".rsp");
+    auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / (std::to_string(getHash()));
     writeCommand(p);
 
     String s;
