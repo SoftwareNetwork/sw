@@ -132,7 +132,6 @@ static path getImportPchFile()
     return getImportFilePrefix() += ".cpp";
 }
 
-
 static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, const UnresolvedPackage &up)
 {
     // depends on upkg, not on pkg!
@@ -159,6 +158,7 @@ static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, co
         primitives::Context ctx;
         ctx.addLine("#pragma once");
         ctx.addLine();
+        //ctx.addLine("#line 1 \"" + normalize_path(cfg) + "\""); // determine correct line number first
 
         primitives::Context prefix;
         /*prefix.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");

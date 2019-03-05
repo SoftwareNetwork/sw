@@ -248,12 +248,13 @@ int parse_main(int argc, char **argv)
             overview += "    - " + n + "\n";
     }
 
-    const std::vector<std::string> args0(argv + 1, argv + argc);
+    std::vector<std::string> args0(argv + 1, argv + argc);
     Strings args;
     args.push_back(argv[0]);
     for (auto &a : args0)
     {
         std::vector<std::string> t;
+        //boost::replace_all(a, "%5F", "_");
         boost::split_regex(t, a, boost::regex("%20"));
         args.insert(args.end(), t.begin(), t.end());
     }
@@ -662,12 +663,13 @@ SUBCOMMAND_DECL(uri)
             if (sdb.isPackageInstalled(p))
             {
                 auto pidl = uri_args[0] == "sw:sdir" ?
-                    ILCreateFromPath(p.getDirSrc2().wstring().c_str()) :
-                    ILCreateFromPath(p.getDirObj().wstring().c_str())
-                    ;
+                                    ILCreateFromPath(p.getDirSrc2().wstring().c_str()) :
+                                    ILCreateFromPath(p.getDirObj().wstring().c_str())
+                                    ;
                 if (pidl)
                 {
                     CoInitialize(0);
+                    // ShellExecute does not work here for some scenarios
                     auto r = SHOpenFolderAndSelectItems(pidl, 0, 0, 0);
                     if (FAILED(r))
                     {
@@ -675,12 +677,39 @@ SUBCOMMAND_DECL(uri)
                     }
                     ILFree(pidl);
                 }
+                else
+                {
+                    message_box(sw::getProgramName(), "Error in ILCreateFromPath");
+                }
             }
             else
             {
                 message_box(sw::getProgramName(), "Package '" + p.toString() + "' not installed");
             }
 #endif
+            return;
+        }
+
+        if (uri_args[0] == "sw:open_build_script")
+        {
+#ifdef _WIN32
+            if (sdb.isPackageInstalled(p))
+            {
+                auto f = (p.getDirSrc2() / "sw.cpp").wstring();
+
+                CoInitialize(0);
+                auto r = ShellExecute(0, L"open", f.c_str(), 0, 0, 0);
+                if (r <= (HINSTANCE)HINSTANCE_ERROR)
+                {
+                    message_box(sw::getProgramName(), "Error in ShellExecute");
+                }
+            }
+            else
+            {
+                message_box(sw::getProgramName(), "Package '" + p.toString() + "' not installed");
+            }
+#endif
+            return;
         }
 
         if (uri_args[0] == "sw:install")
@@ -698,6 +727,7 @@ SUBCOMMAND_DECL(uri)
                 message_box(sw::getProgramName(), "Package '" + p.toString() + "' is already installed");
             }
 #endif
+            return;
         }
 
         if (uri_args[0] == "sw:remove")
@@ -705,6 +735,7 @@ SUBCOMMAND_DECL(uri)
             sdb.removeInstalledPackage(p);
             error_code ec;
             fs::remove_all(p.getDir(), ec);
+            return;
         }
 
         if (uri_args[0] == "sw:build")
@@ -717,6 +748,7 @@ SUBCOMMAND_DECL(uri)
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
             sw::build(p.toString());
+            return;
         }
 
         if (uri_args[0] == "sw:run")
@@ -729,6 +761,7 @@ SUBCOMMAND_DECL(uri)
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
             sw::run(p);
+            return;
         }
 
         if (uri_args[0] == "sw:upload")
@@ -770,7 +803,11 @@ SUBCOMMAND_DECL(uri)
             c.out.inherit = true;
             c.err.inherit = true;
             c.execute();*/
+
+            return;
         }
+
+        message_box(sw::getProgramName(), "Unknown command: " + uri_args[0]);
     }
     catch (std::exception &e)
     {
