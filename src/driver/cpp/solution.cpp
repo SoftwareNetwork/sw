@@ -1520,7 +1520,7 @@ void Solution::findCompiler()
             auto prog = getProgram(pp);
             if (prog)
             {
-                if (auto c = prog->as<Compiler>())
+                if (auto c = prog->template as<Compiler>())
                 {
                     String target;
                     target += toString(Settings.TargetOS.Arch);
