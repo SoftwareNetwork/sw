@@ -205,6 +205,7 @@ String toString(OSType e)
         CASE(Linux);
         CASE(Macos);
         CASE(Cygwin);
+        CASE(Android);
     default:
         throw std::logic_error("TODO: implement target os");
     }
@@ -251,17 +252,25 @@ String toStringWindows(ArchType e)
 
 String toString(SubArchType e)
 {
-    return "";
+    switch (e)
+    {
+    case SubArchType::NoSubArch:
+        return "";
+    case SubArchType::ARMSubArch_v7:
+        return "v7a";
+    default:
+        throw SW_RUNTIME_ERROR("not implemented");
+    }
 }
 
 String toString(EnvironmentType e)
 {
-    return "";
+    throw SW_RUNTIME_ERROR("not implemented");
 }
 
 String toString(ObjectFormatType e)
 {
-    return "";
+    throw SW_RUNTIME_ERROR("not implemented");
 }
 
 OSType OSTypeFromStringCaseI(const String &target_os)

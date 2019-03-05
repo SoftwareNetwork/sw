@@ -85,6 +85,7 @@ using sw::PrecompiledHeader;
 using sw::OSType;
 using sw::ArchType;
 using sw::CompilerType;
+using sw::LinkerType;
 using sw::LibraryType;
 using sw::ConfigurationType;
 using sw::TargetScope;
@@ -97,9 +98,13 @@ using sw::Compiler;
 using sw::VisualStudioCompiler;
 using sw::VisualStudioASMCompiler;
 using sw::VisualStudioLinker;
+using sw::GNUCompiler;
+using sw::GNULibrarian;
+using sw::GNULinker;
 
 using sw::NativeLanguage;
 using sw::NativeSourceFile;
+using sw::NativeLinkerOptions;
 
 // TODO: remove
 using sw::WithSourceFileStorage;

@@ -13,6 +13,8 @@ namespace sw
 
 void addConfigElement(String &c, const String &e)
 {
+    if (e.empty())
+        return;
     boost::replace_all(c, "-", "_");
     c += e + "-";
 }

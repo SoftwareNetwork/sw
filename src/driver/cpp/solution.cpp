@@ -373,6 +373,14 @@ void SolutionSettings::init()
             }
         }
     }
+    else if (TargetOS.Type == OSType::Android)
+    {
+        if (TargetOS.Arch == ArchType::arm)
+        {
+            if (TargetOS.SubArch == SubArchType::NoSubArch)
+                TargetOS.SubArch = SubArchType::ARMSubArch_v7;
+        }
+    }
 }
 
 String SolutionSettings::getConfig(const TargetBase *t, bool use_short_config) const
@@ -380,7 +388,11 @@ String SolutionSettings::getConfig(const TargetBase *t, bool use_short_config) c
     String c;
 
     addConfigElement(c, toString(TargetOS.Type));
+    if (TargetOS.Type == OSType::Android)
+        addConfigElement(c, Native.SDK.Version.string());
     addConfigElement(c, toString(TargetOS.Arch));
+    if (TargetOS.Arch == ArchType::arm || TargetOS.Arch == ArchType::aarch64)
+        addConfigElement(c, toString(TargetOS.SubArch)); // concat with previous?
     boost::to_lower(c);
 
     //addConfigElement(c, Native.getConfig());
@@ -1498,6 +1510,36 @@ void Solution::findCompiler()
     {
         extensions.erase(".m");
         extensions.erase(".mm");
+    }
+
+    // maybe add custom switch to prevent this?
+    if (Settings.TargetOS.Type == OSType::Android)
+    {
+        auto add_target = [this](auto &pp)
+        {
+            auto prog = getProgram(pp);
+            if (prog)
+            {
+                if (auto c = prog->as<Compiler>())
+                {
+                    String target;
+                    target += toString(Settings.TargetOS.Arch);
+                    if (this->Settings.TargetOS.Arch == ArchType::arm)
+                        target += toString(Settings.TargetOS.SubArch);
+                    target += "-linux-android";
+                    if (this->Settings.TargetOS.Arch == ArchType::arm)
+                        target += "eabi";
+                    target += Settings.Native.SDK.Version.string();
+
+                    auto cmd = c->createCommand();
+                    cmd->args.push_back("-target");
+                    cmd->args.push_back(target);
+                }
+            }
+        };
+
+        add_target("org.LLVM.clang");
+        add_target("org.LLVM.clangpp");
     }
 
     setSettings();

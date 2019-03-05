@@ -120,7 +120,7 @@ driver::cpp::CommandBuilder NativeExecutedTarget::addCommand() const
     // sdir or bdir?
     cb.c->working_directory = SourceDir;
     setupCommand(*cb.c);
-    cb << *this;
+    cb << *this; // this adds to storage
     return cb;
 }
 

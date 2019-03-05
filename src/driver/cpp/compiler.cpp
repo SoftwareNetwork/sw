@@ -994,6 +994,11 @@ String NativeToolchain::SDK::getWindowsTargetPlatformVersion() const
     return BuildNumber.u8string();
 }
 
+void NativeToolchain::SDK::setAndroidApiVersion(int v)
+{
+    Version = std::to_string(v);
+}
+
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
     : Program(rhs)
 {
