@@ -5,6 +5,7 @@
 
 #include "bazel/driver.h"
 
+#undef yylex
 #define yylex(p) p.lex()
 %}
 

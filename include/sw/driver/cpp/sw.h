@@ -48,6 +48,7 @@ using sw::FileRegex;
 using sw::IncludeDirectory;
 using sw::Definition;
 using sw::DefinitionsType;
+using sw::LinkLibrary;
 using sw::Dependency;
 using sw::DependencyPtr;
 
@@ -117,6 +118,9 @@ using sw::CommandLineOption;
 //using sw::CommandLineOptions;
 
 using sw::CPPLanguageStandard;
+
+// functions
+using sw::toString;
 
 // disable custom pragma warnings
 #ifdef _MSC_VER

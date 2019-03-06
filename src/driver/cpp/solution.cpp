@@ -385,6 +385,8 @@ void SolutionSettings::init()
 
 String SolutionSettings::getConfig(const TargetBase *t, bool use_short_config) const
 {
+    // TODO: add get real config, lengthy and with all info
+
     String c;
 
     addConfigElement(c, toString(TargetOS.Type));
