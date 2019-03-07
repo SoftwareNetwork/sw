@@ -807,7 +807,7 @@ SUBCOMMAND_DECL(uri)
             return;
         }
 
-        message_box(sw::getProgramName(), "Unknown command: " + uri_args[0]);
+        throw SW_RUNTIME_ERROR("Unknown command: " + uri_args[0]);
     }
     catch (std::exception &e)
     {
