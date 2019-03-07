@@ -2978,7 +2978,6 @@ static bool hasUserProvidedInformationStrong()
 {
     return 0
         || !configuration.empty()
-        || !platform.empty()
         || !compiler.empty()
         || !target_os.empty()
         ;

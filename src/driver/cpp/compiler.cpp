@@ -78,7 +78,7 @@ const StringSet &getCppSourceFileExtensions()
         ".CC",
         ".cpp",
         ".cxx",
-        ".ixx", // msvc modules
+        //".ixx", // msvc modules?
         // cppm - clang?
         // mxx, mpp - build2?
         ".c++",
