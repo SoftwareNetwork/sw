@@ -52,6 +52,9 @@ String DataSource::getUrl(const PackageId &pkg) const
 
 bool DataSource::downloadPackage(const Package &d, const String &hash, const path &fn, String &dl_hash) const
 {
+    if (flags[fDisabled])
+        return false;
+
     auto download_from_source = [&](const auto &url)
     {
         try
