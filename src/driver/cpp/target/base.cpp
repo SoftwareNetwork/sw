@@ -361,7 +361,11 @@ void TargetBase::applyRootDirectory()
 {
     // but append only in some cases
     if (!PostponeFileResolving/* && Local*/)
-        SourceDir /= RootDirectory;
+    {
+        // prevent adding last delimeter
+        if (!RootDirectory.empty())
+            SourceDir /= RootDirectory;
+    }
 }
 
 String TargetBase::getConfig(bool use_short_config) const

@@ -506,7 +506,7 @@ bool Check::lessDuringExecution(const Check &rhs) const
 
     if (dependencies.size() != rhs.dependencies.size())
         return dependencies.size() < rhs.dependencies.size();
-    return dependendent_commands.size() > dependendent_commands.size();
+    return dependent_commands.size() > dependent_commands.size();
 }
 
 path Check::getOutputFilename() const

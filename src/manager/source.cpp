@@ -390,6 +390,15 @@ SourceKvMap Git::printKv() const
 
 void Git::applyVersion(const Version &v)
 {
+    // add precompute thing?
+    /*if (tag.empty() && branch.empty())
+    {
+        if (v.isVersion())
+            tag = "{v}";
+        else
+            branch = "{v}";
+    }*/
+
     SourceUrl::applyVersion(v);
     v.format(tag);
     v.format(branch);

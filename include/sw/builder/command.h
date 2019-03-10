@@ -54,7 +54,7 @@ struct CommandData
     std::unordered_set<std::shared_ptr<T>> dependencies;
 
     std::atomic_size_t dependencies_left = 0;
-    std::unordered_set<std::shared_ptr<T>> dependendent_commands;
+    std::unordered_set<std::shared_ptr<T>> dependent_commands;
 
     std::atomic_size_t *current_command = nullptr;
     std::atomic_size_t *total_commands = nullptr;
@@ -68,7 +68,7 @@ struct CommandData
 
     void clear()
     {
-        dependendent_commands.clear();
+        dependent_commands.clear();
         dependencies.clear();
     }
 };

@@ -972,7 +972,7 @@ bool Command::lessDuringExecution(const Command &rhs) const
         return true;
     else if (rhs.strict_order)
         return false;
-    return dependendent_commands.size() > dependendent_commands.size();
+    return dependent_commands.size() > dependent_commands.size();
 }
 
 void Command::onBeforeRun()
