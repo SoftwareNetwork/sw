@@ -625,7 +625,11 @@ String getWin10KitDirName();
 static bool shouldAddTarget(const Target &t)
 {
     // now without overridden
-    return gPrintDependencies || t.isLocal() || (gPrintOverriddenDependencies && t.pkg.getOverriddenDir());
+    return 0
+        || gPrintDependencies
+        || t.isLocal()
+        || (gPrintOverriddenDependencies && t.pkg.getOverriddenDir())
+        ;
 }
 
 void ProjectContext::printProject(
