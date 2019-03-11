@@ -1907,7 +1907,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
             //#ifdef CPPAN_DEBUG
-            L->GenerateDebugInfo = vs::link::Debug::FULL;
+            L->GenerateDebugInformation = vs::link::Debug::Full;
             //#endif
             L->Force = vs::ForceType::Multiple;
             L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
@@ -2263,7 +2263,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     {
         L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
         //#ifdef CPPAN_DEBUG
-        L->GenerateDebugInfo = vs::link::Debug::FULL;
+        L->GenerateDebugInformation = vs::link::Debug::Full;
         //#endif
         L->Force = vs::ForceType::Multiple;
         L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored

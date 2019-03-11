@@ -2,6 +2,7 @@
 
 #include "bazel/bazel.h"
 #include <directories.h>
+#include <generator/generator.h>
 #include <functions.h>
 #include <solution.h>
 #include <suffix.h>
@@ -1820,14 +1821,14 @@ bool NativeExecutedTarget::prepare()
             switch (getSolution()->Settings.Native.ConfigurationType)
             {
             case ConfigurationType::Debug:
-                c->GenerateDebugInfo = true;
+                c->GenerateDebugInformation = true;
                 //c->Optimizations().Level = 0; this is the default
                 break;
             case ConfigurationType::Release:
                 c->Optimizations().Level = 3;
                 break;
             case ConfigurationType::ReleaseWithDebugInformation:
-                c->GenerateDebugInfo = true;
+                c->GenerateDebugInformation = true;
                 c->Optimizations().Level = 2;
                 break;
             case ConfigurationType::MinimalSizeRelease:
@@ -2027,15 +2028,22 @@ bool NativeExecutedTarget::prepare()
         // pdb
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
         {
-            if (!c->GenerateDebugInfo &&
-                (getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug ||
-                getSolution()->Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation))
-                c->GenerateDebugInfo = vs::link::Debug::FULL;
+            if (!c->GenerateDebugInformation)
+            {
+                if (getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug ||
+                    getSolution()->Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+                {
+                    if (auto g = getSolution()->build->getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                        c->GenerateDebugInformation = vs::link::Debug::FastLink;
+                    else
+                        c->GenerateDebugInformation = vs::link::Debug::Full;
+                }
+                else
+                    c->GenerateDebugInformation = vs::link::Debug::None;
+            }
 
-            // TODO: set FASTLINK for debug builds for IDE (VS)!
-
-            //if ((!c->GenerateDebugInfo || c->GenerateDebugInfo() != vs::link::Debug::NONE) &&
-            if ((c->GenerateDebugInfo && c->GenerateDebugInfo() != vs::link::Debug::NONE) &&
+            //if ((!c->GenerateDebugInformation || c->GenerateDebugInformation() != vs::link::Debug::None) &&
+            if ((c->GenerateDebugInformation && c->GenerateDebugInformation() != vs::link::Debug::None) &&
                 c->PDBFilename.empty())
             {
                 auto f = getOutputFile();
@@ -2048,7 +2056,7 @@ bool NativeExecutedTarget::prepare()
 
             if (Linker->Type == LinkerType::LLD)
             {
-                if (c->GenerateDebugInfo)
+                if (c->GenerateDebugInformation)
                     c->InputFiles().insert("msvcrtd.lib");
                 else
                     c->InputFiles().insert("msvcrt.lib");

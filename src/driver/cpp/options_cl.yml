@@ -501,14 +501,17 @@ types:
                     - flag_before_each_value
 
             dbg:
-                name: GenerateDebugInfo
+                name: GenerateDebugInformation
                 namespace: vs::link
                 type: Debug
                 flag: "DEBUG:"
                 enum:
-                    - FASTLINK
-                    - FULL
-                    - NONE
+                    - FastLink: DebugFastLink
+                    - Full: DebugFull
+                    - None: false
+                    #- True: true or Default?
+                properties:
+                    - print_to_ide
 
             incrdis:
                 name: DisableIncrementalLink
@@ -754,7 +757,7 @@ types:
                 type: gnu::Optimizations
 
             dbg:
-                name: GenerateDebugInfo
+                name: GenerateDebugInformation
                 flag: g
                 type: bool
 

@@ -186,13 +186,13 @@ DECLARE_OPTION_SPECIALIZATION(vs::link::Debug)
     Strings s;
     switch (value())
     {
-    case vs::link::Debug::NONE:
+    case vs::link::Debug::None:
         s.push_back(getCommandLineFlag() + "NONE");
         break;
-    case vs::link::Debug::FASTLINK:
+    case vs::link::Debug::FastLink:
         s.push_back(getCommandLineFlag() + "FASTLINK");
         break;
-    case vs::link::Debug::FULL:
+    case vs::link::Debug::Full:
         s.push_back(getCommandLineFlag() + "FULL");
         break;
     }
