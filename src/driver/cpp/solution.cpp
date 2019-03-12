@@ -876,9 +876,9 @@ static path build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 static void sw_check_abi_version(int v)
 {
     if (v > SW_MODULE_ABI_VERSION)
-        throw SW_RUNTIME_ERROR("Module ABI is greater than binary ABI. Update your sw binary.");
+        throw SW_RUNTIME_ERROR("Module ABI (" + std::to_string(v) + ") is greater than binary ABI (" + std::to_string(SW_MODULE_ABI_VERSION) + "). Update your sw binary.");
     if (v < SW_MODULE_ABI_VERSION)
-        throw SW_RUNTIME_ERROR("Module ABI is less than binary ABI. Update sw driver headers (or ask driver maintainer).");
+        throw SW_RUNTIME_ERROR("Module ABI (" + std::to_string(v) + ") is less than binary ABI (" + std::to_string(SW_MODULE_ABI_VERSION) + "). Update sw driver headers (or ask driver maintainer).");
 }
 
 void Solution::build_and_resolve(int n_runs)
@@ -893,7 +893,10 @@ void Solution::build_and_resolve(int n_runs)
     // first round
     UnresolvedPackages pkgs;
     for (auto &[pkg, d] : ud)
+    {
         pkgs.insert(pkg);
+        LOG_DEBUG(logger, "Unresolved dependency: " << pkg.toString());
+    }
 
     // resolve only deps needed
     Resolver r;
