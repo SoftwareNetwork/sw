@@ -654,7 +654,7 @@ String Command::saveCommand() const
 
     // use "fancy" rsp name = command hash
     auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / (std::to_string(getHash()));
-    writeCommand(p);
+    p = writeCommand(p);
 
     String s;
     s += "\n";
@@ -713,7 +713,13 @@ path Command::writeCommand(const path &p) const
     {
         if (bat)
             t += "set ";
-        t += k + "=" + v + "\n\n";
+        t += k + "=";
+        if (!bat)
+            t += "\"";
+        t += v;
+        if (!bat)
+            t += "\"";
+        t += "\n\n";
     }
 
     if (!working_directory.empty())
