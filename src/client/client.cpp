@@ -35,7 +35,8 @@
 #include <primitives/file_monitor.h>
 #include <primitives/lock.h>
 #include <primitives/pack.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
+#include <primitives/sw/settings_program_name.h>
 #include <primitives/sw/main.h>
 #include <primitives/thread.h>
 #include <primitives/win32helpers.h>
@@ -247,12 +248,13 @@ int parse_main(int argc, char **argv)
             overview += "    - " + n + "\n";
     }
 
-    const std::vector<std::string> args0(argv + 1, argv + argc);
+    std::vector<std::string> args0(argv + 1, argv + argc);
     Strings args;
     args.push_back(argv[0]);
     for (auto &a : args0)
     {
         std::vector<std::string> t;
+        //boost::replace_all(a, "%5F", "_");
         boost::split_regex(t, a, boost::regex("%20"));
         args.insert(args.end(), t.begin(), t.end());
     }
@@ -661,12 +663,13 @@ SUBCOMMAND_DECL(uri)
             if (sdb.isPackageInstalled(p))
             {
                 auto pidl = uri_args[0] == "sw:sdir" ?
-                    ILCreateFromPath(p.getDirSrc2().wstring().c_str()) :
-                    ILCreateFromPath(p.getDirObj().wstring().c_str())
-                    ;
+                                    ILCreateFromPath(p.getDirSrc2().wstring().c_str()) :
+                                    ILCreateFromPath(p.getDirObj().wstring().c_str())
+                                    ;
                 if (pidl)
                 {
                     CoInitialize(0);
+                    // ShellExecute does not work here for some scenarios
                     auto r = SHOpenFolderAndSelectItems(pidl, 0, 0, 0);
                     if (FAILED(r))
                     {
@@ -674,12 +677,39 @@ SUBCOMMAND_DECL(uri)
                     }
                     ILFree(pidl);
                 }
+                else
+                {
+                    message_box(sw::getProgramName(), "Error in ILCreateFromPath");
+                }
             }
             else
             {
                 message_box(sw::getProgramName(), "Package '" + p.toString() + "' not installed");
             }
 #endif
+            return;
+        }
+
+        if (uri_args[0] == "sw:open_build_script")
+        {
+#ifdef _WIN32
+            if (sdb.isPackageInstalled(p))
+            {
+                auto f = (p.getDirSrc2() / "sw.cpp").wstring();
+
+                CoInitialize(0);
+                auto r = ShellExecute(0, L"open", f.c_str(), 0, 0, 0);
+                if (r <= (HINSTANCE)HINSTANCE_ERROR)
+                {
+                    message_box(sw::getProgramName(), "Error in ShellExecute");
+                }
+            }
+            else
+            {
+                message_box(sw::getProgramName(), "Package '" + p.toString() + "' not installed");
+            }
+#endif
+            return;
         }
 
         if (uri_args[0] == "sw:install")
@@ -697,6 +727,7 @@ SUBCOMMAND_DECL(uri)
                 message_box(sw::getProgramName(), "Package '" + p.toString() + "' is already installed");
             }
 #endif
+            return;
         }
 
         if (uri_args[0] == "sw:remove")
@@ -704,6 +735,7 @@ SUBCOMMAND_DECL(uri)
             sdb.removeInstalledPackage(p);
             error_code ec;
             fs::remove_all(p.getDir(), ec);
+            return;
         }
 
         if (uri_args[0] == "sw:build")
@@ -716,6 +748,7 @@ SUBCOMMAND_DECL(uri)
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
             sw::build(p.toString());
+            return;
         }
 
         if (uri_args[0] == "sw:run")
@@ -728,6 +761,7 @@ SUBCOMMAND_DECL(uri)
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
             sw::run(p);
+            return;
         }
 
         if (uri_args[0] == "sw:upload")
@@ -748,7 +782,11 @@ SUBCOMMAND_DECL(uri)
             // before scp
             SCOPE_EXIT
             {
-                sw::getFileStorages().clear(); // free files
+                // free files
+                for (auto &[n,s] : sw::getFileStorages())
+                    s.clear();
+                sw::getFileStorages().clear();
+
                 fs::remove_all(fn.parent_path());
             };
 
@@ -765,7 +803,11 @@ SUBCOMMAND_DECL(uri)
             c.out.inherit = true;
             c.err.inherit = true;
             c.execute();*/
+
+            return;
         }
+
+        throw SW_RUNTIME_ERROR("Unknown command: " + uri_args[0]);
     }
     catch (std::exception &e)
     {
@@ -836,9 +878,21 @@ SUBCOMMAND_DECL(ide)
     }
 }
 
-extern ::cl::opt<String> cl_generator;
+extern String gGenerator;
+::cl::opt<String, true> cl_generator("G", ::cl::desc("Generator"), ::cl::location(gGenerator), ::cl::sub(subcommand_generate));
+::cl::alias generator2("g", ::cl::desc("Alias for -G"), ::cl::aliasopt(cl_generator));
 extern bool gPrintDependencies;
 static ::cl::opt<bool, true> print_dependencies("print-dependencies", ::cl::location(gPrintDependencies), ::cl::sub(subcommand_generate));
+// ad = all deps?
+::cl::alias print_dependencies4("ad", ::cl::desc("Alias for -print-dependencies"), ::cl::aliasopt(print_dependencies));
+::cl::alias print_dependencies2("d", ::cl::desc("Alias for -print-dependencies"), ::cl::aliasopt(print_dependencies));
+::cl::alias print_dependencies3("deps", ::cl::desc("Alias for -print-dependencies"), ::cl::aliasopt(print_dependencies));
+extern bool gPrintOverriddenDependencies;
+static ::cl::opt<bool, true> print_overridden_dependencies("print-overridden-dependencies", ::cl::location(gPrintOverriddenDependencies), ::cl::sub(subcommand_generate));
+// o = od?
+::cl::alias print_overridden_dependencies4("o", ::cl::desc("Alias for -print-overridden-dependencies"), ::cl::aliasopt(print_overridden_dependencies));
+::cl::alias print_overridden_dependencies2("od", ::cl::desc("Alias for -print-overridden-dependencies"), ::cl::aliasopt(print_overridden_dependencies));
+::cl::alias print_overridden_dependencies3("odeps", ::cl::desc("Alias for -print-overridden-dependencies"), ::cl::aliasopt(print_overridden_dependencies));
 extern bool gOutputNoConfigSubdir;
 static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", ::cl::location(gOutputNoConfigSubdir), ::cl::sub(subcommand_generate));
 
@@ -847,10 +901,10 @@ static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", 
 
 SUBCOMMAND_DECL(generate)
 {
-    if (cl_generator.empty())
+    if (gGenerator.empty())
     {
 #ifdef _WIN32
-        cl_generator = "vs";
+        gGenerator = "vs";
 #endif
     }
     ((Strings&)build_arg).clear();

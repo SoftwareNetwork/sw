@@ -11,9 +11,23 @@ void both(primitives::CppContext &hctx, primitives::CppContext &cctx, Args && ..
     cctx.addLine(args...);
 };
 
+struct EnumValue
+{
+    String name;
+    String ide_name;
+
+    String getIdeName() const
+    {
+        if (!ide_name.empty())
+            return ide_name;
+        return name;
+    }
+};
+
 struct Flag
 {
     String name;
+    String ide_name;
     String flag;
     String ns; // c++ namespace
     String type;
@@ -23,7 +37,7 @@ struct Flag
     String function_current;
     StringSet properties;
     int order = 0;
-    Strings enum_vals;
+    StringMap<EnumValue> enum_vals;
     bool print_to_ide = false;
 
     String getTypeWithNs() const
@@ -33,6 +47,13 @@ struct Flag
             s += "::";
         s += type;
         return s;
+    }
+
+    String getIdeName() const
+    {
+        if (!ide_name.empty())
+            return ide_name;
+        return name;
     }
 };
 
@@ -67,7 +88,7 @@ struct Type
                 if (!v->ns.empty())
                     h.beginNamespace(v->ns);
                 h.beginBlock("enum class " + v->type);
-                for (auto &e : v->enum_vals)
+                for (auto &[e, ev] : v->enum_vals)
                     h.addLine(e + ",");
                 h.endBlock(true);
                 h.emptyLines(1);
@@ -166,9 +187,9 @@ struct Type
 
             if (!v->enum_vals.empty())
             {
-                cpp.addLine("ctx.beginBlock(\"" + v->name + "\");");
+                cpp.addLine("ctx.beginBlock(\"" + v->getIdeName() + "\");");
                 cpp.beginBlock("switch (" + v->name + ".value())");
-                for (auto &e : v->enum_vals)
+                for (auto &[e, ev] : v->enum_vals)
                 {
                     cpp.addLine("case ");
                     if (!v->ns.empty())
@@ -177,7 +198,7 @@ struct Type
                         cpp.addText(v->type + "::");
                     cpp.addText(e + ":");
                     cpp.increaseIndent();
-                    cpp.addLine("ctx.addText(\"" + e + "\");");
+                    cpp.addLine("ctx.addText(\"" + ev.getIdeName() + "\");");
                     cpp.addLine("break;");
                     cpp.decreaseIndent();
                 }
@@ -254,6 +275,8 @@ void read_flags(const yaml &root, Flags &flags)
             fl.name = kv.second["name"].template as<String>();
         else
             throw SW_RUNTIME_ERROR("missing name field");
+        if (kv.second["ide_name"].IsDefined())
+            fl.ide_name = kv.second["ide_name"].template as<String>();
         if (kv.second["flag"].IsDefined())
             fl.flag = kv.second["flag"].template as<String>();
         if (kv.second["namespace"].IsDefined())
@@ -271,7 +294,25 @@ void read_flags(const yaml &root, Flags &flags)
         {
             if (!kv.second["enum"].IsSequence())
                 throw SW_RUNTIME_ERROR("enum must be a sequence");
-            fl.enum_vals = get_sequence<String>(kv.second["enum"]);
+            get_sequence_and_iterate(kv.second, "enum", [&fl](const auto &v)
+            {
+                if (v.IsScalar())
+                {
+                    auto u = v.template as<String>();
+                    fl.enum_vals[u].name = u;
+                }
+                else if (v.IsMap())
+                {
+                    for (const auto &kv2 : v)
+                    {
+                        auto u = kv2.first.template as<String>();
+                        fl.enum_vals[u].name = u;
+                        fl.enum_vals[u].ide_name = kv2.second.template as<String>();
+                    }
+                }
+                else
+                    throw SW_RUNTIME_ERROR(fl.name + ": enum value must be a scalar or map");
+            });
         }
         if (kv.second["order"].IsDefined())
             fl.order = kv.second["order"].template as<int>();

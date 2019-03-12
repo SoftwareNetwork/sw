@@ -95,7 +95,7 @@ struct ExecutionPlan
                 if (throw_on_errors)
                     throw; // don't go futher on DAG by default
             }
-            for (auto &d : c->dependendent_commands)
+            for (auto &d : c->dependent_commands)
             {
                 if (--d->dependencies_left == 0)
                 {
@@ -389,7 +389,7 @@ private:
         {
             c->dependencies_left = c->dependencies.size();
             for (auto &d : c->dependencies)
-                d->dependendent_commands.insert(c->shared_from_this());
+                d->dependent_commands.insert(c->shared_from_this());
         }
 
         std::sort(commands.begin(), commands.end(), [](const auto &c1, const auto &c2)
@@ -488,6 +488,9 @@ private:
                     for (auto &d2 : d->dependencies)
                         cmds2.insert(d2.get());
                 }
+                // also take explicit dependent commands
+                for (auto &d : c->dependent_commands)
+                    cmds2.insert(d.get());
             }
             cmds = std::move(cmds2);
 

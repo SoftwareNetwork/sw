@@ -45,6 +45,7 @@ struct SW_BUILDER_API FileStorage
 
     void load();
     void save();
+    void clear();
     void reset();
     void closeLogs();
 

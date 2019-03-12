@@ -54,7 +54,7 @@ struct CommandData
     std::unordered_set<std::shared_ptr<T>> dependencies;
 
     std::atomic_size_t dependencies_left = 0;
-    std::unordered_set<std::shared_ptr<T>> dependendent_commands;
+    std::unordered_set<std::shared_ptr<T>> dependent_commands;
 
     std::atomic_size_t *current_command = nullptr;
     std::atomic_size_t *total_commands = nullptr;
@@ -68,7 +68,7 @@ struct CommandData
 
     void clear()
     {
-        dependendent_commands.clear();
+        dependent_commands.clear();
         dependencies.clear();
     }
 };
@@ -136,6 +136,9 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     // C I1 O1 I2 O2
     // then split that command!
     Files outputs;
+
+    // additional create dirs
+    Files output_dirs;
 
     fs::file_time_type mtime;
     std::optional<bool> use_response_files;

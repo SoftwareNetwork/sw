@@ -177,8 +177,10 @@ void Build::cppan_load(const yaml &root, const String &root_name)
             return current_solution->addStaticLibrary(name).cppan_load_project(root);
         else if (lt == "shared" || lt == "dll" || shared_only)
             return current_solution->addSharedLibrary(name).cppan_load_project(root);
+        else if (lt.empty())
+            throw SW_RUNTIME_ERROR(name + ": empty library type");
         else
-            throw SW_RUNTIME_ERROR("Unknown library type");
+            throw SW_RUNTIME_ERROR(name + ": unknown library type: " + lt);
 
         //if (project.name.empty())
             //project.name = name;

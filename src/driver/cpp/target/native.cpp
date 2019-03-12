@@ -2,6 +2,7 @@
 
 #include "bazel/bazel.h"
 #include <directories.h>
+#include <generator/generator.h>
 #include <functions.h>
 #include <solution.h>
 #include <suffix.h>
@@ -11,7 +12,7 @@
 #include <primitives/constants.h>
 #include <primitives/context.h>
 #include <primitives/debug.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target.native");
@@ -120,7 +121,7 @@ driver::cpp::CommandBuilder NativeExecutedTarget::addCommand() const
     // sdir or bdir?
     cb.c->working_directory = SourceDir;
     setupCommand(*cb.c);
-    cb << *this;
+    cb << *this; // this adds to storage
     return cb;
 }
 
@@ -221,11 +222,11 @@ void NativeExecutedTarget::setOutputFile()
     if (Scope == TargetScope::Build)
     {
         if (getSelectedTool() == Librarian.get())
-            getSelectedTool()->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_lib));
+            getSelectedTool()->setOutputFile(getOutputFileName2());
         else
         {
             getSelectedTool()->setOutputFile(getOutputFileName(getOutputBaseDir()));
-            getSelectedTool()->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
+            getSelectedTool()->setImportLibrary(getOutputFileName2());
         }
     }
     else
@@ -235,14 +236,6 @@ void NativeExecutedTarget::setOutputFile()
         if (getSelectedTool() != Librarian.get())
             getSelectedTool()->setImportLibrary(base);
     }
-}
-
-path NativeExecutedTarget::makeOutputFile() const
-{
-    if (getSelectedTool() == Librarian.get())
-        return getOutputFileName(getUserDirectories().storage_dir_lib);
-    else
-        return getOutputFileName(getOutputBaseDir());
 }
 
 path Target::getOutputFileName() const
@@ -269,6 +262,21 @@ path NativeExecutedTarget::getOutputFileName(const path &root) const
             p = root / getConfig() / OutputDir / getOutputFileName();
     }
     return p;
+}
+
+path NativeExecutedTarget::getOutputFileName2() const
+{
+    if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        return getOutputFileName("");
+    }
+    else
+    {
+        if (IsConfig)
+            return getOutputFileName("");
+        else
+            return BinaryDir.parent_path() / "lib" / getOutputFileName();
+    }
 }
 
 path NativeExecutedTarget::getOutputFile() const
@@ -449,7 +457,7 @@ FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
         }))
         {
             //LOG_TRACE(logger, "Cannot resolve library: " << l);
-            throw SW_RUNTIME_ERROR("Cannot resolve library: " + normalize_path(l));
+            throw SW_RUNTIME_ERROR(pkg.toString() + ": Cannot resolve library: " + normalize_path(l));
         }
 
         //if (!getSolution()->Settings.TargetOS.is(OSType::Windows))
@@ -1813,14 +1821,14 @@ bool NativeExecutedTarget::prepare()
             switch (getSolution()->Settings.Native.ConfigurationType)
             {
             case ConfigurationType::Debug:
-                c->GenerateDebugInfo = true;
+                c->GenerateDebugInformation = true;
                 //c->Optimizations().Level = 0; this is the default
                 break;
             case ConfigurationType::Release:
                 c->Optimizations().Level = 3;
                 break;
             case ConfigurationType::ReleaseWithDebugInformation:
-                c->GenerateDebugInfo = true;
+                c->GenerateDebugInformation = true;
                 c->Optimizations().Level = 2;
                 break;
             case ConfigurationType::MinimalSizeRelease:
@@ -2017,27 +2025,25 @@ bool NativeExecutedTarget::prepare()
             }
         }
 
-        // linker setup - already set up
-        //setOutputFile();
-
-        // legit? actually no
-        // merge here only compiler options
-        // TODO: find more generalized way
-        getSelectedTool()->merge(*this);
-        //getSelectedTool()->LinkOptions.insert(getSelectedTool()->LinkOptions.end(), LinkOptions.begin(), LinkOptions.end());
-
         // pdb
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
         {
-            if (!c->GenerateDebugInfo &&
-                (getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug ||
-                getSolution()->Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation))
-                c->GenerateDebugInfo = vs::link::Debug::FULL;
+            if (!c->GenerateDebugInformation)
+            {
+                if (getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug ||
+                    getSolution()->Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+                {
+                    if (auto g = getSolution()->build->getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                        c->GenerateDebugInformation = vs::link::Debug::FastLink;
+                    else
+                        c->GenerateDebugInformation = vs::link::Debug::Full;
+                }
+                else
+                    c->GenerateDebugInformation = vs::link::Debug::None;
+            }
 
-            // TODO: set FASTLINK for debug builds for IDE (VS)!
-
-            //if ((!c->GenerateDebugInfo || c->GenerateDebugInfo() != vs::link::Debug::NONE) &&
-            if ((c->GenerateDebugInfo && c->GenerateDebugInfo() != vs::link::Debug::NONE) &&
+            //if ((!c->GenerateDebugInformation || c->GenerateDebugInformation() != vs::link::Debug::None) &&
+            if ((c->GenerateDebugInformation && c->GenerateDebugInformation() != vs::link::Debug::None) &&
                 c->PDBFilename.empty())
             {
                 auto f = getOutputFile();
@@ -2050,7 +2056,7 @@ bool NativeExecutedTarget::prepare()
 
             if (Linker->Type == LinkerType::LLD)
             {
-                if (c->GenerateDebugInfo)
+                if (c->GenerateDebugInformation)
                     c->InputFiles().insert("msvcrtd.lib");
                 else
                     c->InputFiles().insert("msvcrt.lib");
@@ -2132,7 +2138,7 @@ bool NativeExecutedTarget::prepare()
                     auto o = IsConfig;
                     IsConfig = true;
                     CircularLinker->setOutputFile(getOutputFileName(getOutputBaseDir()));
-                    CircularLinker->setImportLibrary(getOutputFileName(getUserDirectories().storage_dir_lib));
+                    CircularLinker->setImportLibrary(getOutputFileName2());
                     IsConfig = o;
 
                     if (auto c = CircularLinker->as<VisualStudioLinker>())
@@ -2172,6 +2178,9 @@ bool NativeExecutedTarget::prepare()
             ll(LinkLibraries, false);
             ll(NativeLinkerOptions::System.LinkLibraries, true);
         }
+
+        // right after gatherStaticLinkLibraries()!
+        getSelectedTool()->merge(*this);
 
         // linker setup
         auto obj = gatherObjectFilesWithoutLibraries();
@@ -2464,7 +2473,7 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
         auto repl = find_repl(m[1].str());
         if (!repl)
         {
-            s = m.prefix().str() + "/* #undef " + m[1].str() + " */" + "\n" + m.suffix().str();
+            s = m.prefix().str() + "/* #undef " + m[1].str() + " */\n" + m.suffix().str();
             LOG_TRACE(logger, "configure #mesondefine " << m[1].str() << ": replacement not found");
             continue;
         }
@@ -2483,7 +2492,11 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
                 LOG_TRACE(logger, "configure #undef " << m[1].str() << ": replacement not found");
                 continue;
             }
-            s = m.prefix().str() + "#define " + m[1].str() + " " + *repl + "\n" + m.suffix().str();
+            if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())
+                // space to prevent loops
+                s = m.prefix().str() + "/* # undef " + m[1].str() + " */\n" + m.suffix().str();
+            else
+                s = m.prefix().str() + "#define " + m[1].str() + " " + *repl + "\n" + m.suffix().str();
         }
     }
 
@@ -2520,15 +2533,20 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     writeFileOnce(to, s);
 }
 
-void NativeExecutedTarget::setChecks(const String &name, bool check_definitions)
+const CheckSet &NativeExecutedTarget::getChecks(const String &name) const
 {
     auto i0 = solution->checker.sets.find(getSolution()->current_gn);
     if (i0 == solution->checker.sets.end())
-        return;
+        throw SW_RUNTIME_ERROR("No such group number: " + std::to_string(getSolution()->current_gn));
     auto i = i0->second.find(name);
     if (i == i0->second.end())
-        return;
-    for (auto &[k, c] : i->second.check_values)
+        throw SW_RUNTIME_ERROR("No such set: " + name);
+    return i->second;
+}
+
+void NativeExecutedTarget::setChecks(const String &name, bool check_definitions)
+{
+    for (auto &[k, c] : getChecks(name).check_values)
     {
         auto d = c->getDefinition(k);
         const auto v = c->Value.value();
@@ -3173,6 +3191,7 @@ bool ExecutableTarget::init()
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
         {
             c->ImportLibrary.output_dependency = false; // become optional
+            c->ImportLibrary.create_directory = true; // but create always
         }
     }
     break;

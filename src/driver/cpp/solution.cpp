@@ -36,7 +36,8 @@
 #include <primitives/symbol.h>
 #include <primitives/templates.h>
 #include <primitives/win32helpers.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
+#include <primitives/sw/settings_program_name.h>
 
 #include <boost/dll.hpp>
 #include <nlohmann/json.hpp>
@@ -46,8 +47,7 @@ DECLARE_STATIC_LOGGER(logger, "solution");
 
 static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
 static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
-cl::opt<String> cl_generator("G", cl::desc("Generator"));
-cl::alias generator2("g", cl::desc("Alias for -G"), cl::aliasopt(cl_generator));
+String gGenerator;
 static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
@@ -86,13 +86,13 @@ path gIdeCopyToDir;
 int gNumberOfJobs = -1;
 std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 
-void build_self(sw::Solution &s);
-void check_self(sw::Checker &c);
-
 // TODO: add '#pragma sw driver ...'
 
 namespace sw
 {
+
+void build_self(sw::Solution &s);
+void check_self(sw::Checker &c);
 
 String toString(FrontendType t)
 {
@@ -132,8 +132,6 @@ static path getImportPchFile()
     return getImportFilePrefix() += ".cpp";
 }
 
-static const std::regex r_header("#pragma sw header on(.*)#pragma sw header off");
-
 static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, const UnresolvedPackage &up)
 {
     // depends on upkg, not on pkg!
@@ -154,11 +152,13 @@ static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, co
     if (pos == f.npos)
         throw SW_RUNTIME_ERROR("No end in header for package: " + p.toString());
     f = f.substr(0, pos);
+    //static const std::regex r_header("#pragma sw header on(.*)#pragma sw header off");
     //if (std::regex_search(f, m, r_header))
     {
         primitives::Context ctx;
         ctx.addLine("#pragma once");
         ctx.addLine();
+        //ctx.addLine("#line 1 \"" + normalize_path(cfg) + "\""); // determine correct line number first
 
         primitives::Context prefix;
         /*prefix.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");
@@ -373,14 +373,28 @@ void SolutionSettings::init()
             }
         }
     }
+    else if (TargetOS.Type == OSType::Android)
+    {
+        if (TargetOS.Arch == ArchType::arm)
+        {
+            if (TargetOS.SubArch == SubArchType::NoSubArch)
+                TargetOS.SubArch = SubArchType::ARMSubArch_v7;
+        }
+    }
 }
 
 String SolutionSettings::getConfig(const TargetBase *t, bool use_short_config) const
 {
+    // TODO: add get real config, lengthy and with all info
+
     String c;
 
     addConfigElement(c, toString(TargetOS.Type));
+    if (TargetOS.Type == OSType::Android)
+        addConfigElement(c, Native.SDK.Version.string());
     addConfigElement(c, toString(TargetOS.Arch));
+    if (TargetOS.Arch == ArchType::arm || TargetOS.Arch == ArchType::aarch64)
+        addConfigElement(c, toString(TargetOS.SubArch)); // concat with previous?
     boost::to_lower(c);
 
     //addConfigElement(c, Native.getConfig());
@@ -886,6 +900,15 @@ void Solution::build_and_resolve(int n_runs)
     auto ud = gatherUnresolvedDependencies();
     if (ud.empty())
         return;
+
+    if (is_config_build)
+    {
+        String s;
+        for (auto &u : ud)
+            s += u.first.toString() + ", ";
+        s.resize(s.size() - 2);
+        throw SW_RUNTIME_ERROR("Missing config deps, check your build_self script: " + s);
+    }
 
     if (n_runs > 1)
         LOG_ERROR(logger, "You are here for the third time. This is not intended. Failures are imminent.");
@@ -1494,6 +1517,36 @@ void Solution::findCompiler()
         extensions.erase(".mm");
     }
 
+    // maybe add custom switch to prevent this?
+    if (Settings.TargetOS.Type == OSType::Android)
+    {
+        auto add_target = [this](auto &pp)
+        {
+            auto prog = getProgram(pp);
+            if (prog)
+            {
+                if (auto c = prog->template as<Compiler>())
+                {
+                    String target;
+                    target += toString(Settings.TargetOS.Arch);
+                    if (this->Settings.TargetOS.Arch == ArchType::arm)
+                        target += toString(Settings.TargetOS.SubArch);
+                    target += "-linux-android";
+                    if (this->Settings.TargetOS.Arch == ArchType::arm)
+                        target += "eabi";
+                    target += Settings.Native.SDK.Version.string();
+
+                    auto cmd = c->createCommand();
+                    cmd->args.push_back("-target");
+                    cmd->args.push_back(target);
+                }
+            }
+        };
+
+        add_target("org.LLVM.clang");
+        add_target("org.LLVM.clangpp");
+    }
+
     setSettings();
 }
 
@@ -1857,7 +1910,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
             //#ifdef CPPAN_DEBUG
-            L->GenerateDebugInfo = vs::link::Debug::FULL;
+            L->GenerateDebugInformation = vs::link::Debug::Full;
             //#endif
             L->Force = vs::ForceType::Multiple;
             L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
@@ -2213,7 +2266,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     {
         L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
         //#ifdef CPPAN_DEBUG
-        L->GenerateDebugInfo = vs::link::Debug::FULL;
+        L->GenerateDebugInformation = vs::link::Debug::Full;
         //#endif
         L->Force = vs::ForceType::Multiple;
         L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
@@ -2308,9 +2361,9 @@ void Build::load(const path &fn, bool configless)
     if (!fn.is_absolute())
         throw SW_RUNTIME_ERROR("path must be absolute: " + normalize_path(fn));
 
-    if (!cl_generator.empty())
+    if (!gGenerator.empty())
     {
-        generator = Generator::create(cl_generator);
+        generator = Generator::create(gGenerator);
 
         // set early, before prepare
 
@@ -2331,6 +2384,10 @@ void Build::load(const path &fn, bool configless)
         fetch_dir = BinaryDir / "src";
 
     auto fe = selectFrontendByFilename(fn);
+    if (!fe)
+        throw SW_RUNTIME_ERROR("frontend was not found for file: " + normalize_path(fn));
+
+    LOG_TRACE(logger, "using " << toString(*fe) << " frontend");
     switch (fe.value())
     {
     case FrontendType::Sw:
@@ -2924,7 +2981,6 @@ static bool hasUserProvidedInformationStrong()
 {
     return 0
         || !configuration.empty()
-        || !platform.empty()
         || !compiler.empty()
         || !target_os.empty()
         ;

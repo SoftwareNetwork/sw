@@ -5,6 +5,7 @@
 
 #include "bazel/driver.h"
 
+#undef yylex
 #define yylex(p) p.lex()
 %}
 
@@ -17,7 +18,7 @@
 %locations
 %verbose
 %no-lines
-%error-verbose
+%define parse.error verbose
 
 ////////////////////////////////////////
 

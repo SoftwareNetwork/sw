@@ -16,7 +16,7 @@
 #include <hash.h>
 
 #include <boost/algorithm/string.hpp>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "checks");
@@ -506,7 +506,7 @@ bool Check::lessDuringExecution(const Check &rhs) const
 
     if (dependencies.size() != rhs.dependencies.size())
         return dependencies.size() < rhs.dependencies.size();
-    return dependendent_commands.size() > dependendent_commands.size();
+    return dependent_commands.size() > dependent_commands.size();
 }
 
 path Check::getOutputFilename() const
@@ -537,6 +537,12 @@ Solution Check::setupSolution(const path &f) const
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     //s.throw_exceptions = false;
     s.BinaryDir = f.parent_path();
+
+    // some checks may fail in msvc release (functions become intrinsics (mem*) etc.)
+    if (s.Settings.Native.CompilerType == CompilerType::MSVC ||
+        s.Settings.Native.CompilerType == CompilerType::ClangCl)
+        s.Settings.Native.ConfigurationType = ConfigurationType::Debug;
+
     return s;
 }
 

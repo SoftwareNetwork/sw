@@ -22,7 +22,8 @@
 #include <primitives/debug.h>
 #include <primitives/executor.h>
 #include <primitives/templates.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
+#include <primitives/sw/settings_program_name.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/thread/thread_pool.hpp>
 
@@ -652,7 +653,7 @@ String Command::saveCommand() const
         return String{};
 
     // use "fancy" rsp name = command hash
-    auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / (std::to_string(getHash()) + ".rsp");
+    auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / (std::to_string(getHash()));
     writeCommand(p);
 
     String s;
@@ -882,11 +883,30 @@ void Command::setProgram(std::shared_ptr<Program> p)
 
 Files Command::getGeneratedDirs() const
 {
+    // we do normalize path because it is possible to get bad paths
+    // like c:\\dir1\\dir2/file.f
+    // so parent_path() will give you bad parent
+    // c:\\dir1 instead of c:\\dir1\\dir2
+
+    auto get_parent = [](auto &p)
+    {
+//#ifdef _WIN32
+        //return path(normalize_path(p)).parent_path();
+//#else
+        return p.parent_path();
+//#endif
+    };
+
     Files dirs;
     for (auto &d : intermediate)
-        dirs.insert(d.parent_path());
+        dirs.insert(get_parent(d));
     for (auto &d : outputs)
-        dirs.insert(d.parent_path());
+        dirs.insert(get_parent(d));
+    for (auto &d : output_dirs)
+    {
+        if (!d.empty())
+            dirs.insert(d);
+    }
     return dirs;
 }
 
@@ -952,7 +972,7 @@ bool Command::lessDuringExecution(const Command &rhs) const
         return true;
     else if (rhs.strict_order)
         return false;
-    return dependendent_commands.size() > dependendent_commands.size();
+    return dependent_commands.size() > dependent_commands.size();
 }
 
 void Command::onBeforeRun()

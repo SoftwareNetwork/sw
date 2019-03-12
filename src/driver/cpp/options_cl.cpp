@@ -43,6 +43,8 @@ DECLARE_OPTION_SPECIALIZATION(path)
         c->addIntermediate(value());
     if (output_dependency)
         c->addOutput(value());
+    if (create_directory)
+        c->output_dirs.insert(value().parent_path());
     if (separate_prefix)
         return { getCommandLineFlag(), normalize_path(value()) };
     return { getCommandLineFlag() + normalize_path(value()) };

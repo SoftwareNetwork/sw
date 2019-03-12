@@ -1400,8 +1400,7 @@ DataSources PackagesDatabase::getDataSources()
         DataSource s;
         s.raw_url = row.url;
         s.flags = row.flags.value();
-        if (!s.flags[DataSource::fDisabled])
-            dss.push_back(s);
+        dss.push_back(s);
     }
     return dss;
 }

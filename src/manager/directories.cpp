@@ -8,6 +8,8 @@
 
 #include "settings.h"
 
+#include <primitives/sw/cl.h>
+
 #include <boost/algorithm/string.hpp>
 
 static cl::opt<path> storage_dir_override("storage-dir");

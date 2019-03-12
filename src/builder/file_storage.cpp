@@ -10,7 +10,7 @@
 
 #include <primitives/debug.h>
 #include <primitives/file_monitor.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "file_storage");
@@ -185,6 +185,11 @@ void FileStorage::load()
 void FileStorage::save()
 {
     getDb().save(*this, files, fs_local);
+}
+
+void FileStorage::clear()
+{
+    files.clear();
 }
 
 void FileStorage::reset()

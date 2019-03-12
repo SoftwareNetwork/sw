@@ -16,7 +16,7 @@
 #include <execution_plan.h>
 #include <filesystem.h>
 
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 #include <primitives/win32helpers.h>
 
 #include <boost/algorithm/string.hpp>
@@ -32,6 +32,7 @@ DECLARE_STATIC_LOGGER(logger, "solution");
 
 //extern cl::SubCommand subcommand_ide;
 bool gPrintDependencies;
+bool gPrintOverriddenDependencies;
 bool gOutputNoConfigSubdir;
 
 static cl::opt<String> toolset("toolset", cl::desc("Set VS generator toolset"));
@@ -365,7 +366,25 @@ enum class VSFileType
     ClInclude,
     ClCompile,
     MASM,
+    Manifest,
 };
+
+static VSFileType get_vs_file_type_by_ext(const path &p)
+{
+    if (p.extension() == ".rc")
+        return VSFileType::ResourceCompile;
+    else if (p.extension() == ".rule")
+        return VSFileType::CustomBuild;
+    else if (isCppHeaderFileExtension(p.extension().string()))
+        return VSFileType::ClInclude;
+    else if (isCppSourceFileExtensions(p.extension().string()) || p.extension() == ".c")
+        return VSFileType::ClCompile;
+    else if (p.extension() == ".asm")
+        return VSFileType::MASM;
+    else if (p.extension() == ".manifest")
+        return VSFileType::Manifest;
+    return VSFileType::None;
+}
 
 String toString(VSFileType t)
 {
@@ -381,24 +400,11 @@ String toString(VSFileType t)
         return "CustomBuild";
     case VSFileType::MASM:
         return "MASM";
+    case VSFileType::Manifest:
+        return "Manifest";
     default:
         return "None";
     }
-}
-
-static VSFileType get_vs_file_type_by_ext(const path &p)
-{
-    if (p.extension() == ".rc")
-        return VSFileType::ResourceCompile;
-    else if (p.extension() == ".rule")
-        return VSFileType::CustomBuild;
-    else if (isCppHeaderFileExtension(p.extension().string()))
-        return VSFileType::ClInclude;
-    else if (isCppSourceFileExtensions(p.extension().string()) || p.extension() == ".c")
-        return VSFileType::ClCompile;
-    else if (p.extension() == ".asm")
-        return VSFileType::MASM;
-    return VSFileType::None;
 }
 
 static VSProjectType get_vs_project_type(const SolutionSettings &s, TargetType t)
@@ -616,6 +622,16 @@ void ProjectContext::addPropertySheets(const Build &b)
 
 String getWin10KitDirName();
 
+static bool shouldAddTarget(const Target &t)
+{
+    // now without overridden
+    return 0
+        || gPrintDependencies
+        || t.isLocal()
+        || (gPrintOverriddenDependencies && t.pkg.getOverriddenDir())
+        ;
+}
+
 void ProjectContext::printProject(
     const String &name, const PackageId &p, const Build &b, SolutionContext &ctx, Generator &g,
     PackagePathTree::Directories &parents, PackagePathTree::Directories &local_parents,
@@ -736,9 +752,20 @@ void ProjectContext::printProject(
                 defs += k + "=" + v + ";";
         }
 
+        String defs1;
+        for (auto &[k, v] : nt.Definitions2)
+        {
+            if (v.empty())
+                defs1 += k + ";";
+            else
+                defs1 += k + "=" + v + ";";
+        }
+
         String idirs;
+        String idirs1;
         for (auto &i : nt.gatherIncludeDirectories())
-            idirs += i.string() + ";";
+            idirs1 += i.string() + ";";
+        idirs += idirs1;
         String add_opts;
         if (!nt.empty())
         {
@@ -800,6 +827,11 @@ void ProjectContext::printProject(
 
         // cl properties, make them like in usual VS project
         beginBlockWithConfiguration("ItemDefinitionGroup", s.Settings);
+        beginBlock("ResourceCompile");
+        addBlock("AdditionalIncludeDirectories", idirs1); // command line is too long
+        addBlock("PreprocessorDefinitions", defs1); // command line is too long
+        endBlock();
+
         beginBlock("ClCompile");
         addBlock("AdditionalIncludeDirectories", idirs);
         addBlock("PreprocessorDefinitions", defs);
@@ -891,7 +923,7 @@ void ProjectContext::printProject(
                     if (d->target->pkg == t.pkg)
                         continue;
 
-                    if (!gPrintDependencies && !d->target->Local)
+                    if (!shouldAddTarget(*d->target))
                     {
                         if (auto nt3 = d->target->template as<NativeExecutedTarget>())
                         {
@@ -909,8 +941,8 @@ void ProjectContext::printProject(
                                 deps.insert(parent->build_dependencies_name);
                                 parent->build_deps.insert(d->target->pkg);
 
-                                if ((s.Settings.Native.LibrariesType == LibraryType::Static && d->target->getType() == TargetType::NativeLibrary) ||
-                                    d->target->getType() == TargetType::NativeStaticLibrary)
+                                //if ((s.Settings.Native.LibrariesType == LibraryType::Static && d->target->getType() == TargetType::NativeLibrary) ||
+                                    //d->target->getType() == TargetType::NativeStaticLibrary)
                                 {
                                     f(*nt3);
                                 }
@@ -979,8 +1011,14 @@ void ProjectContext::printProject(
                 }
             }
 
-            endBlock();
-            endBlock();
+            endBlock(); // Link
+
+            /*beginBlock("Manifest");
+            beginBlock("AdditionalManifestFiles");
+            endBlock(true);
+            endBlock();*/
+
+            endBlock(); // ItemDefinitionGroup
         }
 
         if (add_sources)
@@ -999,7 +1037,8 @@ void ProjectContext::printProject(
                     filenames.insert(p.filename());
                     return;
                 }
-                beginBlockWithConfiguration("ObjectFileName", s.Settings);
+                //beginBlockWithConfiguration("ObjectFileName", s.Settings);
+                beginBlock("ObjectFileName");
                 addText("$(IntDir)/" + p.filename().u8string() + "." + sha256(p.u8string()).substr(0, 8) + ".obj");
                 endBlock(true);
             };
@@ -1051,7 +1090,7 @@ void ProjectContext::printProject(
                             {
                                 if (d->target)
                                 {
-                                    if (!gPrintDependencies && !d->target->Local)
+                                    if (!shouldAddTarget(*d->target))
                                     {
                                         deps.insert(parent->build_dependencies_name);
                                         parent->build_deps.insert(d->target->pkg);
@@ -1419,9 +1458,10 @@ void SolutionContext::addKeyValue(const String &k, const String &v)
 
 String SolutionContext::getStringUuid(const String &k) const
 {
-    if (uuids.find(k) == uuids.end())
-        throw SW_RUNTIME_ERROR("No such uuid (project). Check your invocation flags.");
-    return "{" + uuids[k] + "}";
+    auto i = uuids.find(k);
+    if (i == uuids.end())
+        throw SW_RUNTIME_ERROR("No such uuid (project) - " + k + ". Check your invocation flags.");
+    return "{" + i->second + "}";
 }
 
 void SolutionContext::materialize(const Build &b, const path &dir, GeneratorType type)
@@ -1449,7 +1489,7 @@ void SolutionContext::materialize(const Build &b, const path &dir, GeneratorType
     {
         if (b.skipTarget(t->Scope))
             continue;
-        if (!gPrintDependencies && !t->Local)
+        if (!shouldAddTarget(*t))
             continue;
         addProjectConfigurationPlatforms(b, p.toString(), type == GeneratorType::VisualStudio);
         if (projects.find(p.toString() + "-build") != projects.end())
@@ -1676,7 +1716,9 @@ void VSGenerator::generate(const Build &b)
     {
         if (b.skipTarget(t->Scope))
             continue;
-        has_deps |= !t->Local;
+        if (!shouldAddTarget(*t))
+            continue;
+        has_deps |= !t->isLocal();
         if (t->pkg.getOverriddenDir())
         {
             overridden_tree.add(p.ppath);
@@ -1711,7 +1753,7 @@ void VSGenerator::generate(const Build &b)
     {
         if (b.skipTarget(t->Scope))
             continue;
-        if (!gPrintDependencies && !t->Local)
+        if (!shouldAddTarget(*t))
             continue;
         if (t->isLocal() && isExecutable(t->getType()))
             n_executable_tgts++;
@@ -1723,7 +1765,7 @@ void VSGenerator::generate(const Build &b)
     {
         if (b.skipTarget(t->Scope))
             continue;
-        if (!gPrintDependencies && !t->Local)
+        if (!shouldAddTarget(*t))
             continue;
 
         auto pp = p.ppath.parent();
@@ -1734,8 +1776,9 @@ void VSGenerator::generate(const Build &b)
         auto pps = pp.toString();
         /*if (t->pkg.getOverriddenDir()) // uncomment for overridden
             pps = overridden_deps_subdir / pps;
-        else */if (!t->Local)
-            pps = deps_subdir / pps;
+        else */
+        /*if (!t->Local)
+            pps = deps_subdir / pps;*/
 
         auto t2 = VSProjectType::Makefile;
         if (type == GeneratorType::VisualStudio)
@@ -1771,7 +1814,7 @@ void VSGenerator::generate(const Build &b)
     {
         if (b.skipTarget(t->Scope))
             continue;
-        if (!gPrintDependencies && !t->Local)
+        if (!shouldAddTarget(*t))
             continue;
 
         auto nt = t->as<NativeExecutedTarget>();

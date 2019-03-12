@@ -13,6 +13,8 @@ namespace sw
 
 void addConfigElement(String &c, const String &e)
 {
+    if (e.empty())
+        return;
     boost::replace_all(c, "-", "_");
     c += e + "-";
 }
@@ -29,7 +31,7 @@ String hashConfig(String &c, bool use_short_config)
     if (!use_short_config && c.size() + h.size() < 255/* && !use_short_hash*/) // max path part in many FSes
     {
         // hash
-        addConfigElement(c, h);
+        //addConfigElement(c, h); // we decided to not add last hash element
         remove_last_dash(c);
         return c;
     }

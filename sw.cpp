@@ -11,6 +11,8 @@ void configure(Build &s)
         s.loadModule("utils/cc/cygwin2macos.cpp").call<void(Solution&)>("configure", s);
     else if (s.isConfigSelected("win2macos"))
         s.loadModule("utils/cc/win2macos.cpp").call<void(Solution&)>("configure", s);
+    else if (s.isConfigSelected("win2android"))
+        s.loadModule("utils/cc/win2android.cpp").call<void(Solution&)>("configure", s);
 
     //s.Settings.Native.CompilerType = CompilerType::ClangCl;
     //s.Settings.Native.CompilerType = CompilerType::Clang;

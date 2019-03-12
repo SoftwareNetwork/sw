@@ -78,7 +78,7 @@ const StringSet &getCppSourceFileExtensions()
         ".CC",
         ".cpp",
         ".cxx",
-        ".ixx", // msvc modules
+        //".ixx", // msvc modules?
         // cppm - clang?
         // mxx, mpp - build2?
         ".c++",
@@ -345,10 +345,8 @@ void detectWindowsCompilers(struct Solution &s)
         auto root = instance.root / "VC";
         auto &v = instance.version;
 
-        if (v.getMajor() == 15)
+        if (v.getMajor() >= 15)
             root = root / "Tools\\MSVC" / boost::trim_copy(read_file(root / "Auxiliary\\Build\\Microsoft.VCToolsVersion.default.txt"));
-        else if (v.getMajor() >= 16)
-            root = root / "Tools\\MSVC" / boost::trim_copy(read_file(root / ("Auxiliary\\Build\\Microsoft.VCToolsVersion." + getVsToolset(v) + ".default.txt")));
 
         auto compiler = root / "bin";
         NativeCompilerOptions COpts;
@@ -996,6 +994,11 @@ String NativeToolchain::SDK::getWindowsTargetPlatformVersion() const
     return BuildNumber.u8string();
 }
 
+void NativeToolchain::SDK::setAndroidApiVersion(int v)
+{
+    Version = std::to_string(v);
+}
+
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
     : Program(rhs)
 {
@@ -1174,8 +1177,9 @@ void VisualStudioASMCompiler::prepareCommand1(const TargetBase &t)
     //cmd->out.capture = true;
     //cmd->base = clone();
 
-    getCommandLineOptions<VisualStudioAssemblerOptions>(cmd.get(), *this);
+    // defs and idirs for asm must go before file
     iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    getCommandLineOptions<VisualStudioAssemblerOptions>(cmd.get(), *this);
 }
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioASMCompiler)

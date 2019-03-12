@@ -260,15 +260,20 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     //t->languages = languages;
     //t->extensions = extensions;
 
+    // inherit from this
     t->solution = getSolution();
-    t->Local = Local;
-    t->source = source;
-    t->PostponeFileResolving = PostponeFileResolving;
-    t->DryRun = DryRun;
-    t->UseStorageBinaryDir = UseStorageBinaryDir;
-    t->IsConfig = IsConfig;
     t->Scope = Scope;
-    t->ParallelSourceDownload = ParallelSourceDownload;
+    t->source = source;
+
+    t->IsConfig = IsConfig; // TODO: inherit from reconsider
+    t->Local = Local; // TODO: inherit from reconsider
+    t->DryRun = DryRun; // TODO: inherit from reconsider
+    t->UseStorageBinaryDir = UseStorageBinaryDir; // TODO: inherit from reconsider
+
+    // inherit from solution
+    t->PostponeFileResolving = getSolution()->PostponeFileResolving;
+    t->ParallelSourceDownload = getSolution()->ParallelSourceDownload;
+
     //auto p = getSolution()->getKnownTarget(t->pkg.ppath);
     //if (!p.toString().empty())
 }
@@ -356,7 +361,11 @@ void TargetBase::applyRootDirectory()
 {
     // but append only in some cases
     if (!PostponeFileResolving/* && Local*/)
-        SourceDir /= RootDirectory;
+    {
+        // prevent adding last delimeter
+        if (!RootDirectory.empty())
+            SourceDir /= RootDirectory;
+    }
 }
 
 String TargetBase::getConfig(bool use_short_config) const

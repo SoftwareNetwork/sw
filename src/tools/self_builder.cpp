@@ -10,7 +10,8 @@
 #include <primitives/context.h>
 #include <primitives/executor.h>
 #include <primitives/sw/main.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
+#include <primitives/sw/settings_program_name.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "self_builder");
@@ -115,6 +116,9 @@ int main(int argc, char **argv)
 
         /// no sources were kept behind this wall
         /// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+        {{"org.sw.demo.python.lib", "3"}, {true}},
+        {{"org.sw.demo.expat", "*"}, {true}},
 
         {{"org.sw.demo.grisumbras.enum_flags", "master"}, {}},
         {{"org.sw.demo.nlohmann.json", "3"}, {}},

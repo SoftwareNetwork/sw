@@ -8,7 +8,7 @@
 
 #include <boost/dll.hpp>
 #include <boost/thread/lock_types.hpp>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "module");

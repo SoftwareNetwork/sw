@@ -8,8 +8,13 @@
 
 #include "base.h"
 
+//#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
+
 namespace sw
 {
+
+struct CheckSet;
 
 //struct SW_DRIVER_CPP_API CustomTarget : Target {};
 
@@ -115,8 +120,8 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     std::shared_ptr<builder::Command> getCommand() const override;
     //Files getGeneratedDirs() const override;
     path getOutputFile() const override;
-    path makeOutputFile() const;
     path getImportLibrary() const override;
+    const CheckSet &getChecks(const String &name) const;
     void setChecks(const String &name, bool check_definitions = false);
     void findSources();
     void autoDetectOptions();
@@ -193,6 +198,7 @@ private:
 
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
+    path getOutputFileName2() const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
     void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets, bool system);
@@ -221,8 +227,6 @@ protected:
     bool prepare() override;
 };
 
-using Library = LibraryTarget;
-
 /**
 * \brief Executable target.
 */
@@ -237,8 +241,6 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeExecutedTarget//, Program
 protected:
     bool prepare() override;
 };
-
-using Executable = ExecutableTarget;
 
 /**
 * \brief Static only target.
@@ -259,8 +261,6 @@ protected:
     }
 };
 
-using StaticLibrary = StaticLibraryTarget;
-
 /**
 * \brief Shared only target.
 */
@@ -278,8 +278,6 @@ protected:
         return prepareLibrary(LibraryType::Shared);
     }
 };
-
-using SharedLibrary = SharedLibraryTarget;
 
 // remove?
 /**

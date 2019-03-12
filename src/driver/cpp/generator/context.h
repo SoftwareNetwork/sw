@@ -110,7 +110,7 @@ struct SolutionContext : primitives::Context
     String all_build_name;
     String build_dependencies_name;
     PackagesIdSet build_deps;
-    mutable std::unordered_map<String, String> uuids;
+    std::unordered_map<String, String> uuids;
     std::map<String, Project> projects;
     const Project *first_project = nullptr;
 

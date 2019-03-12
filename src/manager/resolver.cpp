@@ -25,6 +25,7 @@
 #include <primitives/templates.h>
 #include <primitives/win32helpers.h>
 #include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 #include <nlohmann/json.hpp>
 
 #include <primitives/log.h>
@@ -480,7 +481,7 @@ void Resolver::download_and_unpack()
         {
             throw;
         }
-        catch (RuntimeError &)
+        catch (const std::runtime_error &)
         {
             LOG_TRACE(logger, "d.hash = " << d.hash << ", stampfile_hash = " << stampfile_hash);
             throw;
@@ -705,7 +706,7 @@ Packages resolve_dependency(const String &target_name)
     {
         pkgs2 = resolve_dependencies({ p });
     }
-    catch (const sw::RuntimeError &)
+    catch (const std::runtime_error &)
     {
         if (!added_suffix)
             throw;

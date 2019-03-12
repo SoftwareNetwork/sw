@@ -21,6 +21,9 @@
 
 #include <build_self.generated.h>
 
+namespace sw
+{
+
 void check_self(Checker &c)
 {
     check_self_generated(c);
@@ -48,3 +51,5 @@ void build_self(Solution &s)
     SwapAndRestore sr(s.Local, false);
     build_self_generated(s);
 }
+
+} // namespace sw

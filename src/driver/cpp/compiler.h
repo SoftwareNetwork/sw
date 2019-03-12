@@ -105,6 +105,7 @@ struct SW_DRIVER_CPP_API NativeToolchain
         // sdk dir in root
         // win: 7.0 7.0A, 7.1, 7.1A, 8, 8.1, 10 ...
         // osx: 10.12, 10.13, 10.14 ...
+        // android: 1, 2, 3, ..., 28
         path Version; // make string?
 
         // windows10:
@@ -113,6 +114,7 @@ struct SW_DRIVER_CPP_API NativeToolchain
 
         path getPath(const path &subdir = {}) const;
         String getWindowsTargetPlatformVersion() const;
+        void setAndroidApiVersion(int v);
     };
 
     struct SDK SDK;
