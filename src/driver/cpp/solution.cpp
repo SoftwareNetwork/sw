@@ -2357,6 +2357,8 @@ void Build::load(const path &fn, bool configless)
 {
     if (!fn.is_absolute())
         throw SW_RUNTIME_ERROR("path must be absolute: " + normalize_path(fn));
+    if (!fs::exists(fn))
+        throw SW_RUNTIME_ERROR("path does not exists: " + normalize_path(fn));
 
     if (!gGenerator.empty())
     {

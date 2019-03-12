@@ -56,7 +56,7 @@ bool build(const Strings &packages)
 {
     if (std::all_of(packages.begin(), packages.end(), [](const auto &p)
     {
-        return fs::exists(p);
+        return path(p).is_absolute() || fs::exists(p);
     }))
     {
         Files files;
