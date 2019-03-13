@@ -168,6 +168,8 @@ public:
 
     DataSources getDataSources();
 
+    std::optional<ExtendedPackageData> getPackageInformation(const PackageId &) const;
+
 private:
     path db_repo_dir;
 

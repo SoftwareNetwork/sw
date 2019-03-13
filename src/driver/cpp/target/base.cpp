@@ -433,6 +433,11 @@ int TargetBase::getCommandStorageType() const
     return (isLocal() && !IsConfig) ? builder::Command::CS_LOCAL : builder::Command::CS_GLOBAL;
 }
 
+/*bool TargetBase::isLocal() const
+{
+    return !pkg.ppath.isAbsolute() || pkg.ppath.is_loc();
+}*/
+
 Commands Target::getCommands() const
 {
     auto cmds = getCommands1();

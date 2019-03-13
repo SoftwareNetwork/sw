@@ -1405,4 +1405,28 @@ DataSources PackagesDatabase::getDataSources()
     return dss;
 }
 
+std::optional<ExtendedPackageData> PackagesDatabase::getPackageInformation(const PackageId &p) const
+{
+    const auto pkg_ver = ::db::packages::PackageVersion{};
+
+    ExtendedPackageData d;
+    d.ppath = p.ppath;
+    d.version = p.version;
+
+    auto q = (*db)(
+        select(pkg_ver.hash, pkg_ver.flags, pkg_ver.updated, pkg_ver.groupNumber, pkg_ver.prefix)
+        .from(pkg_ver)
+        .where(pkg_ver.packageId == getPackageId(p.ppath) && pkg_ver.version == d.version.toString()));
+    if (q.empty())
+        return {};
+        //throw SW_RUNTIME_ERROR("No such package in local db: " + p.toString());
+    auto &row = q.front();
+    d.hash = row.hash.value();
+    d.flags = row.flags.value();
+    d.group_number = row.groupNumber.value();
+    d.prefix = (int)row.prefix.value();
+
+    return d;
+}
+
 }

@@ -897,7 +897,7 @@ static void sw_check_abi_version(int v)
 
 void Solution::build_and_resolve(int n_runs)
 {
-    auto ud = gatherUnresolvedDependencies();
+    auto ud = gatherUnresolvedDependencies(n_runs);
     if (ud.empty())
         return;
 
@@ -948,7 +948,11 @@ void Solution::build_and_resolve(int n_runs)
 
     // all deps must be resolved in the first run!
     if (n_runs > 0)
+    {
         LOG_ERROR(logger, "You are here for the second time. This is not intended. Expect failures.");
+        for (auto &pkg : pkgs)
+            LOG_ERROR(logger, "Unresolved dependency: " << pkg.toString());
+    }
 
     auto dll = ::sw::build_configs(cfgs);
     //used_modules.insert(dll);
@@ -1126,7 +1130,7 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
     }
 }
 
-UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
+UnresolvedDependenciesType Solution::gatherUnresolvedDependencies(int n_runs) const
 {
     UnresolvedDependenciesType deps;
     std::unordered_set<UnresolvedPackage> known;
@@ -1169,6 +1173,16 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies() const
         known.insert(known2.begin(), known2.end());
 
         deps.insert(c.begin(), c.end());
+
+        if (n_runs && !c.empty())
+        {
+            String s;
+            for (auto &u : c)
+                s += u.first.toString() + ", ";
+            s.resize(s.size() - 2);
+
+            LOG_ERROR(logger, p.first.toString() + " unresolved deps on run " << n_runs << ": " + s);
+        }
     }
     return deps;
 }

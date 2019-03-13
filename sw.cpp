@@ -177,6 +177,8 @@ void build(Solution &s)
     client += cpp_driver,
         "pub.egorpugin.primitives.sw.main-master"_dep,
         "org.sw.demo.giovannidicanio.winreg-master"_dep;
+    if (s.Settings.Native.CompilerType == CompilerType::MSVC)
+        client.CompileOptions.push_back("-bigobj");
     if (s.Settings.TargetOS.Type == OSType::Linux)
     {
         //client.getSelectedTool()->LinkOptions.push_back("-static-libstdc++");

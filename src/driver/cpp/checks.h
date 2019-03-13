@@ -304,6 +304,12 @@ struct SW_DRIVER_CPP_API CheckSet
     Check &checkSourceLinks(const String &def, const String &src, LanguageType L = LanguageType::C);
     Check &checkSourceRuns(const String &def, const String &src, LanguageType L = LanguageType::C);
 
+    auto begin() { return all.begin(); }
+    auto end() { return all.end(); }
+
+    auto begin() const { return all.begin(); }
+    auto end() const { return all.end(); }
+
 private:
     // set's checks
     std::unordered_map<size_t /* hash */, CheckPtr> checks;

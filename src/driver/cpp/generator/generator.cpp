@@ -435,7 +435,7 @@ static VSProjectType get_vs_project_type(const SolutionSettings &s, TargetType t
 static path get_int_dir(const path &dir, const path &projects_dir, const String &name)
 {
     auto tdir = dir / projects_dir;
-    return tdir / shorten_hash(blake2b_512(name), 6);
+    return tdir / "i" / shorten_hash(blake2b_512(name), 6);
 }
 
 static path get_int_dir(const path &dir, const path &projects_dir, const String &name, const SolutionSettings &s)

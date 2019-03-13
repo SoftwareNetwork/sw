@@ -628,7 +628,7 @@ int main(int argc, char *argv[])
         primitives::CppContext ctx;
         ctx.beginFunction("void build(Solution &s)");
         ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
-        ctx.addLine("// auto &p = s.addProject(\"myproject\");");
+        ctx.addLine("// auto &p = s.addProject(\"myproject\", \"master\");");
         ctx.addLine("// p += Git(\"https://github.com/account/project\", \"{v}\", \"{v}\");");
         ctx.addLine();
         ctx.addLine("auto &t = s.addTarget<Executable>(\"project\");");

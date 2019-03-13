@@ -92,8 +92,9 @@ bool DataSource::downloadPackage(const Package &d, const String &hash, const pat
 
 std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
 {
-    if (channel)
-        return channel;
+    // keeping channel for too long causes issues
+    //if (channel)
+        //return channel;
 
     static std::mutex m;
     std::unique_lock lk(m);
@@ -107,26 +108,29 @@ std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
         host = "api." + host;
     }
 
-    static const path cert_dir = get_root_directory() / "certs";
-    path cert_file = cert_dir / "roots.pem";
-
-    grpc::SslCredentialsOptions ssl_options;
-
-#ifdef _WIN32
-    if (!fs::exists(cert_file))
-        download_file("https://raw.githubusercontent.com/grpc/grpc/master/etc/roots.pem", cert_file);
-    ssl_options.pem_root_certs = read_file(cert_file);
-#else
-    cert_file = "/etc/ssl/certs/ca-certificates.crt";
-    if (!fs::exists(cert_file))
-        cert_file = "/etc/ssl/certs/ca-bundle.crt";
-    if (!fs::exists(cert_file))
+    static const grpc::SslCredentialsOptions ssl_options = []()
     {
-        cert_file = cert_dir / "roots.pem";
-        download_file("https://raw.githubusercontent.com/grpc/grpc/master/etc/roots.pem", cert_file);
-    }
-    ssl_options.pem_root_certs = read_file(cert_file);
+        static const path cert_dir = get_root_directory() / "certs";
+        path cert_file = cert_dir / "roots.pem";
+
+        grpc::SslCredentialsOptions ssl_options;
+#ifdef _WIN32
+        if (!fs::exists(cert_file))
+            download_file("https://raw.githubusercontent.com/grpc/grpc/master/etc/roots.pem", cert_file);
+        ssl_options.pem_root_certs = read_file(cert_file);
+#else
+        cert_file = "/etc/ssl/certs/ca-certificates.crt";
+        if (!fs::exists(cert_file))
+            cert_file = "/etc/ssl/certs/ca-bundle.crt";
+        if (!fs::exists(cert_file))
+        {
+            cert_file = cert_dir / "roots.pem";
+            download_file("https://raw.githubusercontent.com/grpc/grpc/master/etc/roots.pem", cert_file);
+        }
+        ssl_options.pem_root_certs = read_file(cert_file);
 #endif
+        return ssl_options;
+    }();
 
     auto creds = grpc::SslCredentials(ssl_options);
     channel = grpc::CreateChannel(host, secure ? creds : grpc::InsecureChannelCredentials());

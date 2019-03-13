@@ -259,7 +259,7 @@ private:
     mutable std::unordered_map<UnresolvedPackage, TargetBaseTypePtr> resolved_targets;
 
     //void checkPrepared() const;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const;
+    UnresolvedDependenciesType gatherUnresolvedDependencies(int n_runs = 0) const;
     void build_and_resolve(int n_runs = 0);
 
     // cross-compilation lies here

@@ -177,11 +177,11 @@ std::unordered_set<ExtendedPackageData> resolveAllDependencies(const UnresolvedP
     return r.getDownloadDependencies();
 }
 
-void resolve_and_download(const UnresolvedPackage &p, const path &fn)
+/*void resolve_and_download(const UnresolvedPackage &p, const path &fn)
 {
     Resolver r;
     r.resolve_and_download(p, fn);
-}
+}*/
 
 std::unordered_set<ExtendedPackageData> Resolver::getDownloadDependencies() const
 {
@@ -197,6 +197,13 @@ std::unordered_map<ExtendedPackageData, PackageVersionGroupNumber> Resolver::get
     for (auto &dl : download_dependencies_)
         s[dl] = dl.group_number;
     return s;
+}
+
+void Resolver::resolve(const UnresolvedPackages &deps)
+{
+    resolve(deps, []{});
+
+    markAsResolved(deps);
 }
 
 void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies, bool clean_resolve)
@@ -235,13 +242,21 @@ void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies, bool
     for (auto &d : known_deps)
         download_dependencies_.insert(resolved_packages[d]);
 
+    markAsResolved(deps);
+
+    getPackageStore().resolved_packages.insert(resolved_packages.begin(), resolved_packages.end());
+    getPackageStore().download_dependencies_.insert(download_dependencies_.begin(), download_dependencies_.end());
+}
+
+void Resolver::markAsResolved(const UnresolvedPackages &deps)
+{
     // mark packages as resolved
     for (auto &d : deps)
     {
         for (auto &dl : download_dependencies_)
         {
             /*if (!dl.flags[pfDirectDependency])
-                continue;*/
+            continue;*/
             if (d.ppath == dl.ppath)
             {
                 resolved_packages[d] = dl;
@@ -252,15 +267,12 @@ void Resolver::resolve_dependencies(const UnresolvedPackages &dependencies, bool
 
             // we do not allow d.ppath.isRootOf() here as it was in cppan
             //if (d.ppath.isRootOf(dl.second.ppath))
-                //resolved_packages[d] = dl.second;
+            //resolved_packages[d] = dl.second;
         }
     }
-
-    getPackageStore().resolved_packages.insert(resolved_packages.begin(), resolved_packages.end());
-    getPackageStore().download_dependencies_.insert(download_dependencies_.begin(), download_dependencies_.end());
 }
 
-void Resolver::resolve_and_download(const UnresolvedPackage &p, const path &fn)
+/*void Resolver::resolve_and_download(const UnresolvedPackage &p, const path &fn)
 {
     resolve({ p }, [&]
     {
@@ -273,7 +285,7 @@ void Resolver::resolve_and_download(const UnresolvedPackage &p, const path &fn)
             }
         }
     });
-}
+}*/
 
 void Resolver::add_dep(Dependencies &dd, const PackageId &d)
 {
@@ -598,6 +610,7 @@ void Resolver::download_and_unpack()
 Resolver::Dependencies getDependenciesFromRemote(const UnresolvedPackages &deps, const Remote *current_remote)
 {
     Api api(*current_remote);
+    api.deadline_secs = 10;
 
     IdDependencies id_deps;
 

@@ -52,7 +52,8 @@ public:
     Resolver(const Resolver &) = delete;
 
     void resolve_dependencies(const UnresolvedPackages &deps, bool clean_resolve = false);
-    void resolve_and_download(const UnresolvedPackage &p, const path &fn);
+    //void resolve_and_download(const UnresolvedPackage &p, const path &fn);
+    void resolve(const UnresolvedPackages &pkgs);
 
     std::unordered_set<ExtendedPackageData> getDownloadDependencies() const;
     std::unordered_map<ExtendedPackageData, PackageVersionGroupNumber> getDownloadDependenciesWithGroupNumbers() const;
@@ -67,11 +68,12 @@ private:
     void resolve(const UnresolvedPackages &deps, std::function<void()> resolve_action);
     void resolve1(const UnresolvedPackages &deps, std::function<void()> resolve_action);
     void download(const ExtendedPackageData &d, const path &fn);
+    void markAsResolved(const UnresolvedPackages &deps);
     static void add_dep(Dependencies &dd, const PackageId &d);
 };
 
-SW_MANAGER_API
-void resolve_and_download(const Package &p, const path &fn);
+//SW_MANAGER_API
+//void resolve_and_download(const Package &p, const path &fn);
 
 SW_MANAGER_API
 Packages resolve_dependency(const String &d);
