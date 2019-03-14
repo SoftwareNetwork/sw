@@ -327,6 +327,22 @@ void TargetBase::setRootDirectory(const path &p)
 void TargetBase::setSource(const Source &s)
 {
     source = s;
+
+    // apply some defaults
+    if (auto g = std::get_if<Git>(&source); g && !g->isValid())
+    {
+        if (pkg.version.isBranch())
+        {
+            if (g->branch.empty())
+                g->branch = "{v}";
+        }
+        else
+        {
+            if (g->tag.empty())
+                g->tag = "{v}";
+        }
+    }
+
     auto d = getSolution()->fetch_dir;
     if (d.empty()/* || !ParallelSourceDownload*/ || !isLocal())
         return;
@@ -622,6 +638,18 @@ DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
             deps.insert(d);
     }
     return deps;
+}
+
+path NativeTargetOptionsGroup::getFile(const Target &dep, const path &fn)
+{
+    (*this + dep)->Dummy = true;
+    return dep.SourceDir / fn;
+}
+
+path NativeTargetOptionsGroup::getFile(const DependencyPtr &dep, const path &fn)
+{
+    (*this + dep)->Dummy = true;
+    return dep->getPackage().resolve().getDirSrc2() / fn;
 }
 
 }

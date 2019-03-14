@@ -629,7 +629,7 @@ int main(int argc, char *argv[])
         ctx.beginFunction("void build(Solution &s)");
         ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
         ctx.addLine("// auto &p = s.addProject(\"myproject\", \"master\");");
-        ctx.addLine("// p += Git(\"https://github.com/account/project\", \"{v}\", \"{v}\");");
+        ctx.addLine("// p += Git(\"https://github.com/account/project\");");
         ctx.addLine();
         ctx.addLine("auto &t = s.addTarget<Executable>(\"project\");");
         ctx.addLine("t.CPPVersion = CPPLanguageStandard::CPP17;");

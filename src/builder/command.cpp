@@ -492,14 +492,14 @@ path Command::getResponseFilename() const
 String Command::getResponseFileContents(bool showIncludes) const
 {
     String rsp;
-    for (auto &a : args)
+    for (auto a = args.begin() + first_response_file_argument; a != args.end(); a++)
     {
-        if (!showIncludes && a == "-showIncludes")
+        if (!showIncludes && *a == "-showIncludes")
             continue;
         if (protect_args_with_quotes)
-            rsp += "\"" + escape_cmd_arg(a) + "\"";
+            rsp += "\"" + escape_cmd_arg(*a) + "\"";
         else
-            rsp += escape_cmd_arg(a);
+            rsp += escape_cmd_arg(*a);
         rsp += "\n";
     }
     if (!rsp.empty())
@@ -552,6 +552,9 @@ void Command::execute1(std::error_code *ec)
         t = t.parent_path();
         rsp_file = t / getProgramName() / "rsp" / fn;
         write_file(rsp_file, getResponseFileContents(true));
+
+        for (int i = 0; i < first_response_file_argument; i++)
+            rsp_args.push_back(args[i]);
         rsp_args.push_back("@" + rsp_file.u8string());
     }
 
@@ -730,6 +733,9 @@ path Command::writeCommand(const path &p) const
     {
         auto rsp_name = path(p) += ".rsp";
         write_file(rsp_name, getResponseFileContents());
+
+        for (int i = 0; i < first_response_file_argument; i++)
+            t += args[i] + " ";
         t += "@" + normalize_path(rsp_name) + " ";
     }
     else
@@ -796,8 +802,8 @@ bool Command::needsResponseFile() const
 
     // 3 = 1 + 2 = space + quotes
     size_t sz = program.u8string().size() + 3;
-    for (auto &a : args)
-        sz += a.size() + 3;
+    for (auto a = args.begin() + first_response_file_argument; a != args.end(); a++)
+        sz += a->size() + 3;
 
     if (use_response_files)
     {

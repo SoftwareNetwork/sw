@@ -142,6 +142,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
 
     fs::file_time_type mtime;
     std::optional<bool> use_response_files;
+    int first_response_file_argument = 0;
     bool remove_outputs_before_execution = false; // was true
     bool protect_args_with_quotes = true;
     bool always = false;

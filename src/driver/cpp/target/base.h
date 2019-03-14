@@ -165,6 +165,7 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
 
     // hide?
     // Target Source.
+    // use struct Source Source;
     Source source;
 
     // New root directory after downloading and unpacking.
@@ -603,6 +604,10 @@ public:
 
     Files gatherAllFiles() const;
     DependenciesType gatherDependencies() const;
+
+    // from other target
+    path getFile(const DependencyPtr &dep, const path &fn);
+    path getFile(const Target &dep, const path &fn);
 };
 
 #undef ASSIGN_TYPES
