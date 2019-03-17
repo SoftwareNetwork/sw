@@ -126,16 +126,27 @@ static int checkEmpty()
     return 0;
 }
 
+static int checkNotEmpty()
+{
+    return 0;
+}
+
 template <typename First, typename ... Args>
 static int checkEmpty(First &&f, Args && ... args)
 {
     return isEmpty(f) + checkEmpty(std::forward<Args>(args)...);
 }
 
+template <typename First, typename ... Args>
+static int checkNotEmpty(First &&f, Args && ... args)
+{
+    return !isEmpty(f) + checkNotEmpty(std::forward<Args>(args)...);
+}
+
 template <typename ... Args>
 static String checkOne(const String &name, Args && ... args)
 {
-    int n = checkEmpty(std::forward<Args>(args)...);
+    int n = checkNotEmpty(std::forward<Args>(args)...);
     if (n == 0)
         return "No " + name + " sources available";
     if (n > 1)

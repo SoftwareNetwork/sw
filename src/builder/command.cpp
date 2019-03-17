@@ -450,9 +450,11 @@ void Command::afterCommand()
         //fr.updateLwt();
         if (!fs::exists(i))
         {
-            String e = "Output file was not created: " + normalize_path(i);
+            auto e = "Output file was not created: " + normalize_path(i) + "\n" + getError();
             throw SW_RUNTIME_ERROR(makeErrorString(e));
         }
+        //if (fr.data->last_write_time < start_time)
+            //err
         mtime = std::max(mtime, fr.getMaxTime());
     };
 
@@ -564,29 +566,10 @@ void Command::execute1(std::error_code *ec)
             fs::remove(rsp_file);
     };
 
-    auto print_outputs = [this]()
-    {
-        if (!show_output)
-            return;
-        boost::trim(out.text);
-        boost::trim(err.text);
-        String s;
-        if (!out.text.empty())
-            s += out.text + "\n";
-        if (!err.text.empty())
-            s += err.text + "\n";
-        if (!s.empty())
-        {
-            s = log_string + "\n" + s;
-            boost::trim(s);
-            LOG_INFO(logger, s);
-        }
-    };
-
-    auto make_error_string = [this, &print_outputs](const String &e)
+    auto make_error_string = [this](const String &e)
     {
         postProcess(false);
-        print_outputs();
+        printOutputs();
 
         return makeErrorString(e);
     };
@@ -605,7 +588,7 @@ void Command::execute1(std::error_code *ec)
             if (ec)
             {
                 // TODO: save error string
-                make_error_string("FIXME");
+                make_error_string(getError());
                 return;
             }
         }
@@ -618,12 +601,31 @@ void Command::execute1(std::error_code *ec)
         }
 
         postProcess(); // process deps
-        print_outputs();
+        printOutputs();
     }
     catch (std::exception &e)
     {
         auto err = make_error_string(e.what());
         throw SW_RUNTIME_ERROR(err);
+    }
+}
+
+void Command::printOutputs()
+{
+    if (!show_output)
+        return;
+    boost::trim(out.text);
+    boost::trim(err.text);
+    String s;
+    if (!out.text.empty())
+        s += out.text + "\n";
+    if (!err.text.empty())
+        s += err.text + "\n";
+    if (!s.empty())
+    {
+        s = log_string + "\n" + s;
+        boost::trim(s);
+        LOG_INFO(logger, s);
     }
 }
 
@@ -869,7 +871,7 @@ void Command::printLog() const
         {
             c->log_string = "[" + std::to_string((*c->current_command)++) + "/" + std::to_string(c->total_commands->load()) + "] " + c->getName();
 
-            // we cannot use this one because we must sync with print_outputs() call, both must use the same logger or (synced)stdout
+            // we cannot use this one because we must sync with printOutputs() call, both must use the same logger or (synced)stdout
             //std::cout << "\r" << log_string;
 
             // use this when logger won't call endl (custom sink is required)

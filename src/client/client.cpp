@@ -137,6 +137,8 @@ extern path gIdeFastPath;
 static ::cl::opt<path, true> build_ide_fast_path("ide-fast-path", ::cl::sub(subcommand_build), ::cl::Hidden, ::cl::location(gIdeFastPath));
 extern path gIdeCopyToDir;
 static ::cl::opt<path, true> build_ide_copy_to_dir("ide-copy-to-dir", ::cl::sub(subcommand_build), ::cl::Hidden, ::cl::location(gIdeCopyToDir));
+// TODO: https://github.com/tomtom-international/cpp-dependencies
+static ::cl::list<bool> build_graph("g", ::cl::desc("Print .dot graph of build targets"), ::cl::sub(subcommand_build));
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
@@ -563,6 +565,7 @@ SUBCOMMAND_DECL(create)
             {
                 s = R"(#include <primitives/sw/main.h>
 #include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 
 #include <iostream>
 

@@ -249,6 +249,7 @@ private:
     size_t getHashAndSave() const;
     String makeErrorString(const String &e);
     String saveCommand() const;
+    void printOutputs();
 };
 
 } // namespace bulder

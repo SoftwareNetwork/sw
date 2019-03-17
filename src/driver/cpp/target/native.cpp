@@ -1083,7 +1083,31 @@ void NativeExecutedTarget::findSources()
     detectLicenseFile();
 }
 
-static const Strings source_dir_names = { "src", "source", "sources", "lib", "library" };
+// these are the same on win/macos, maybe change somehow?
+static const Strings include_dir_names =
+{
+    "include",
+    "includes",
+
+    "Include",
+    "Includes",
+};
+
+// these are the same on win/macos, maybe change somehow?
+static const Strings source_dir_names =
+{
+    "src",
+    "source",
+    "sources",
+    "lib",
+    "library",
+
+    "Src",
+    "Source",
+    "Sources",
+    "Lib",
+    "Library",
+};
 
 void NativeExecutedTarget::autoDetectOptions()
 {
@@ -1108,15 +1132,14 @@ void NativeExecutedTarget::autoDetectSources()
         LOG_TRACE(logger, getPackage().toString() + ": Autodetecting sources");
 
         bool added = false;
-        if (fs::exists(SourceDir / "include"))
+        for (auto &d : include_dir_names)
         {
-            add("include/.*"_rr);
-            added = true;
-        }
-        else if (fs::exists(SourceDir / "includes"))
-        {
-            add("includes/.*"_rr);
-            added = true;
+            if (fs::exists(SourceDir / d))
+            {
+                add(FileRegex(d, std::regex(".*"), true));
+                added = true;
+                break; // break here!
+            }
         }
         for (auto &d : source_dir_names)
         {
@@ -1124,6 +1147,7 @@ void NativeExecutedTarget::autoDetectSources()
             {
                 add(FileRegex(d, std::regex(".*"), true));
                 added = true;
+                break; // break here!
             }
         }
         if (!added)
@@ -1179,12 +1203,18 @@ void NativeExecutedTarget::autoDetectIncludeDirectories()
     {
         LOG_TRACE(logger, getPackage().toString() + ": Autodetecting include dirs");
 
-        if (fs::exists(SourceDir / "include"))
-            Public.IncludeDirectories.insert(SourceDir / "include");
-        else if (fs::exists(SourceDir / "includes"))
-            Public.IncludeDirectories.insert(SourceDir / "includes");
-        else if (!SourceDir.empty())
+        if (!std::any_of(include_dir_names.begin(), include_dir_names.end(), [this](const auto & i)
+        {
+            if (fs::exists(SourceDir / i))
+            {
+                Public.IncludeDirectories.insert(SourceDir / i);
+                return true;
+            }
+            return false;
+        }))
+        {
             Public.IncludeDirectories.insert(SourceDir);
+        }
 
         std::function<void(const Strings &)> autodetect_source_dir;
         autodetect_source_dir = [this, &autodetect_source_dir](const Strings &dirs)
@@ -1193,12 +1223,18 @@ void NativeExecutedTarget::autoDetectIncludeDirectories()
             const auto &next = dirs[1];
             if (fs::exists(SourceDir / current))
             {
-                if (fs::exists(SourceDir / "include"))
-                    Private.IncludeDirectories.insert(SourceDir / current);
-                else if (fs::exists(SourceDir / "includes"))
-                    Private.IncludeDirectories.insert(SourceDir / current);
-                else
+                if (!std::any_of(include_dir_names.begin(), include_dir_names.end(), [this, &current](const auto & i)
+                {
+                    if (fs::exists(SourceDir / i))
+                    {
+                        Private.IncludeDirectories.insert(SourceDir / current);
+                        return true;
+                    }
+                    return false;
+                }))
+                {
                     Public.IncludeDirectories.insert(SourceDir / current);
+                }
             }
             else
             {
@@ -2088,7 +2124,7 @@ bool NativeExecutedTarget::prepare()
                 {
                     if (!f->skip && p.extension() == ".def")
                     {
-                        VSL->DefinitionFile = p;
+                        VSL->ModuleDefinitionFile = p;
                         HeaderOnly = false;
                     }
                 }

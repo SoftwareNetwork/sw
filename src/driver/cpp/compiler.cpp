@@ -1467,7 +1467,7 @@ path VisualStudioLibraryTool::getImportLibrary() const
 
 void VisualStudioLibraryTool::prepareCommand1(const TargetBase &t)
 {
-    if (InputFiles.empty() && DefinitionFile.empty())
+    if (InputFiles.empty() && ModuleDefinitionFile.empty())
     {
         // why? maybe throw?
         cmd.reset();
@@ -1514,7 +1514,7 @@ void VisualStudioLinker::setInputLibraryDependencies(const FilesOrdered &files)
 
 void VisualStudioLinker::prepareCommand1(const TargetBase &t)
 {
-    if (InputFiles.empty() && DefinitionFile.empty())
+    if (InputFiles.empty() && ModuleDefinitionFile.empty())
     {
         // why? maybe throw?
         cmd.reset();
@@ -1612,7 +1612,7 @@ void GNULinker::getAdditionalOptions(driver::cpp::Command *cmd) const
 
 void GNULinker::prepareCommand1(const TargetBase &t)
 {
-    if (InputFiles.empty()/* && DefinitionFile.empty()*/)
+    if (InputFiles.empty()/* && ModuleDefinitionFile.empty()*/)
     {
         // why? maybe throw?
         cmd.reset();
@@ -1683,7 +1683,7 @@ void GNULibrarian::getAdditionalOptions(driver::cpp::Command *cmd) const
 
 void GNULibrarian::prepareCommand1(const TargetBase &t)
 {
-    if (InputFiles.empty()/* && DefinitionFile.empty()*/)
+    if (InputFiles.empty()/* && ModuleDefinitionFile.empty()*/)
     {
         // why? maybe throw?
         cmd.reset();

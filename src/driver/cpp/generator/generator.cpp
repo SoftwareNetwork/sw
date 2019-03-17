@@ -1007,6 +1007,7 @@ void ProjectContext::printProject(
             {
                 if (auto L = c->as<VisualStudioLinker>())
                 {
+                    L->VisualStudioLibraryToolOptions::printIdeSettings(*this);
                     L->VisualStudioLinkerOptions::printIdeSettings(*this);
                 }
             }
@@ -1211,6 +1212,8 @@ void ProjectContext::printProject(
     if (!add_sources)
         return;
 
+    // filters
+    files_added.clear();
     for (auto &s : b.solutions)
     {
         auto &t = *s.children.find(p)->second;
@@ -1224,6 +1227,10 @@ void ProjectContext::printProject(
             File ff(f, *s.fs);
             if (sf->skip && !ff.isGenerated())
                 continue;
+
+            if (files_added.find(f) != files_added.end())
+                continue;
+            files_added.insert(f);
 
             String *d = nullptr;
             size_t p = 0;
@@ -1278,7 +1285,7 @@ void ProjectContext::printProject(
             }
 
             fctx.beginBlock(toString(get_vs_file_type_by_ext(f)), { {"Include", f.string()} });
-            if (!filter.empty())
+            if (!filter.empty() && !filter.is_absolute())
                 fctx.addBlock("Filter", make_backslashes(filter.string()));
             fctx.endBlock();
         }

@@ -180,6 +180,11 @@ struct Type
         cpp.emptyLines(1);
 
         cpp.beginBlock("void " + name + "::printIdeSettings(ProjectContext &ctx)");
+        if (!parent.empty())
+        {
+            cpp.addLine(parent + "::printIdeSettings(ctx);");
+            cpp.emptyLines(1);
+        }
         for (auto &v : flags2)
         {
             if (!v->print_to_ide)
@@ -208,27 +213,33 @@ struct Type
                 continue;
             }
 
+            if (v->default_ide_value.empty())
+                cpp.beginBlock("if (" + v->name + ")");
+            cpp.addLine("ctx.beginBlock(\"" + v->name + "\");");
+            if (!v->default_ide_value.empty())
+                cpp.beginBlock("if (" + v->name + ")");
             if (v->type == "bool")
-            {
-                if (v->default_ide_value.empty())
-                    cpp.beginBlock("if (" + v->name + ")");
-                cpp.addLine("ctx.beginBlock(\"" + v->name + "\");");
-                if (!v->default_ide_value.empty())
-                    cpp.beginBlock("if (" + v->name + ")");
                 cpp.addLine("ctx.addText(" + v->name + ".value() ? \"true\" : \"false\");");
-                if (!v->default_ide_value.empty())
-                {
-                    cpp.endBlock();
-                    cpp.beginBlock("else");
+            else if (v->type == "path")
+                cpp.addLine("ctx.addText(" + v->name + ".value().u8string());");
+            else if (v->type == "String" || v->type == "std::string")
+                cpp.addLine("ctx.addText(" + v->name + ".value().u8string());");
+            else // numeric
+                cpp.addLine("ctx.addText(std::to_string(" + v->name + ".value()));");
+            if (!v->default_ide_value.empty())
+            {
+                cpp.endBlock();
+                cpp.beginBlock("else");
+                if (v->type == "bool")
                     cpp.addLine("ctx.addText(" + v->default_ide_value + " ? \"true\" : \"false\");");
-                    cpp.endBlock();
-                }
-                cpp.addLine("ctx.endBlock(true);");
-                if (v->default_ide_value.empty())
-                    cpp.endBlock();
-                cpp.emptyLines(1);
+                else
+                    cpp.addLine("ctx.addText(" + v->default_ide_value + "");
+                cpp.endBlock();
             }
-
+            cpp.addLine("ctx.endBlock(true);");
+            if (v->default_ide_value.empty())
+                cpp.endBlock();
+            cpp.emptyLines(1);
         }
         cpp.endBlock();
         cpp.emptyLines(1);

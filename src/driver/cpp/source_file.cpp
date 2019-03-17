@@ -340,10 +340,13 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
     auto &files = glob_cache[dir][r.recursive];
     if (files.empty())
         files = enumerate_files_fast(dir, r.recursive);
+
     bool matches = false;
     for (auto &f : files)
     {
         auto s = normalize_path(f);
+        if (s.size() < root_s.size() + 1)
+            continue; // file is in bdir or somthing like that
         s = s.substr(root_s.size() + 1); // + 1 to skip first slash
         if (std::regex_match(s, r.r))
         {
@@ -522,6 +525,8 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
     for (auto &[p, f] : *this)
     {
         auto s = normalize_path(p);
+        if (s.size() < root_s.size() + 1)
+            continue; // file is in bdir or somthing like that
         s = s.substr(root_s.size() + 1); // + 1 to skip first slash
         if (std::regex_match(s, r.r))
             files[p] = f;

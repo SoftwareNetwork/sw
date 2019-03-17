@@ -445,11 +445,12 @@ types:
                 default: vs::MachineType::X64
 
             def:
-                name: DefinitionFile
+                name: ModuleDefinitionFile
                 type: path
                 flag: "DEF:"
                 properties:
                     - input_dependency
+                    - print_to_ide
 
             implib:
                 name: ImportLibrary
