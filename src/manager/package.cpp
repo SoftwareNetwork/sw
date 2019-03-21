@@ -29,6 +29,23 @@ static cl::opt<bool> separate_bdir("separate-bdir");// , cl::init(true));
 namespace sw
 {
 
+static std::pair<String, String> split_package_string(const String &s)
+{
+    /*
+    different variants:
+        org.sw.demo.package-1.0.0   - the main one currently
+        org.sw.demo.package 1.0.0   - very obvious and solid, but not very practical?
+        org.sw.demo.package@1.0.0   - not that bad
+        org.sw.demo.package/1.0.0   - not that bad, but probably bad rather than good?
+    */
+
+    // allow (remove) dashes?
+    auto pos = s.find_first_of("-"); // " -@/"
+    if (pos == s.npos)
+        return { s, {} };
+    return { s.substr(0, pos), s.substr(pos + 1) };
+}
+
 String getSourceDirectoryName()
 {
     // we cannot change it, because server already has such packages
@@ -73,14 +90,10 @@ ExtendedPackageData UnresolvedPackage::resolve() const
 
 PackageId::PackageId(const String &target)
 {
-    auto pos = target.find('-');
-    if (pos == target.npos)
-        ppath = target;
-    else
-    {
-        ppath = target.substr(0, pos);
-        version = target.substr(pos + 1);
-    }
+    auto [p, v] = split_package_string(target);
+    ppath = p;
+    if (!v.empty())
+        version = v;
 }
 
 PackageId::PackageId(const PackagePath &p, const Version &v)
@@ -154,6 +167,7 @@ String PackageId::getHash() const
 {
     // stable, do not change
     // or you could add version/schema
+    // affects everything (including server storage)
     static const auto delim = "-";
     return blake2b_512(ppath.toStringLower() + delim + version.toString());
 }
@@ -181,7 +195,8 @@ static path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_sub
 path PackageId::getHashPathFull() const
 {
     // stable, do not change
-    // or you could add version/schema
+    // add version/schema!
+    // affects everything server storage
     return ::sw::getHashPathFromHash(getHash(), 4, 2); // remote consistent storage paths
 }
 
@@ -232,32 +247,23 @@ String PackageId::toString(const String &delim) const
 
 PackageId extractFromStringPackageId(const String &target)
 {
-    auto pos = target.find('-');
-
     PackageId p;
-    if (pos == target.npos)
-        throw SW_RUNTIME_ERROR("Bad target");
-    else
-    {
-        p.ppath = target.substr(0, pos);
-        p.version = target.substr(pos + 1);
-    }
+    auto [pp, v] = split_package_string(target);
+    if (v.empty())
+        throw SW_RUNTIME_ERROR("Bad target: " + target);
+    p.ppath = pp;
+    p.version = v;
     return p;
 }
 
 UnresolvedPackage extractFromString(const String &target)
 {
-    auto pos = target.find('-');
-
-    UnresolvedPackage p;
-    if (pos == target.npos)
-        p.ppath = target;
-    else
-    {
-        p.ppath = target.substr(0, pos);
-        p.range = target.substr(pos + 1);
-    }
-    return p;
+    UnresolvedPackage u;
+    auto [p, v] = split_package_string(target);
+    u.ppath = p;
+    if (!v.empty())
+        u.range = v;
+    return u;
 }
 
 }
