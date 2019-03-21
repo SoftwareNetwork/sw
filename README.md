@@ -14,7 +14,7 @@
 
 ### Using SW (self build)
 
-1. Download client from https://github.com/SoftwareNetwork/binaries
+1. Download client from https://software-network.org/client/
 2. Unpack, add to PATH
 3. Run
 ```
@@ -25,20 +25,7 @@ sw build
 
 (optional) Run `sw generate` to generate VS solution.
 
-### Using CPPAN
-
-1. Download CPPAN client from https://cppan.org/client/
-2. Run 
-```
-git clone https://github.com/SoftwareNetwork/sw
-cd sw
-cppan --generate .
-```
-3. Open generated solution file for Visual Studio.
-
-For other build types or OSs, run cppan with config option `cppan --generate . --config gcc8_debug`.
-
-Check out config options at https://github.com/SoftwareNetwork/sw/blob/master/cppan.yml#L7
+(optional) Run `sw -override org.sw` for smooth development.
 
 ### Support SW
 
