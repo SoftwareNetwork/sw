@@ -647,7 +647,17 @@ IncludeExists::IncludeExists(const String &i, const String &def)
     data = i;
 
     if (def.empty())
+    {
         Definitions.insert(make_include_var(data));
+
+        // some libs expect HAVE_SYSTIME_H and not HAVE_SYS_TIME_H
+        if (data.find("sys/") == 0)
+        {
+            auto d2 = data;
+            d2 = "sys" + data.substr(4);
+            Definitions.insert(make_include_var(d2));
+        }
+    }
     else
         Definitions.insert(def);
 

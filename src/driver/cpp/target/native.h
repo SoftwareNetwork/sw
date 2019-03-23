@@ -277,6 +277,7 @@ protected:
 };
 
 // remove?
+// module target is dll target without import lib generated
 /**
 * \brief Module only target.
 */

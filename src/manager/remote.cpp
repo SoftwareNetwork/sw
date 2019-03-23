@@ -38,12 +38,10 @@ Remotes get_default_remotes()
 
 String DataSource::getUrl(const PackageId &pkg) const
 {
-    // {DD} = base data dir
     // {PHPF} = package hash path full
     // {PH64} = package hash, length = 64
     // {FN} = archive name
     return fmt::format(raw_url,
-        fmt::arg("DD", pkg.isPrivate() ? getDataDirPrivate() : getDataDir()),
         fmt::arg("PHPF", normalize_path(pkg.getHashPathFull())),
         fmt::arg("PH64", pkg.getHash().substr(0, 64)),
         fmt::arg("FN", make_archive_name())

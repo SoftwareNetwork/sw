@@ -165,11 +165,15 @@ String PackageId::getStampHash() const
 
 String PackageId::getHash() const
 {
-    // stable, do not change
-    // or you could add version/schema
-    // affects everything (including server storage)
-    static const auto delim = "-";
-    return blake2b_512(ppath.toStringLower() + delim + version.toString());
+    static const int hash_schema_version = 1;
+
+    switch (hash_schema_version)
+    {
+    case 1:
+        return blake2b_512(ppath.toStringLower() + "-" + version.toString());
+    }
+
+    throw SW_RUNTIME_ERROR("unreachable");
 }
 
 String PackageId::getFilesystemHash() const
@@ -194,10 +198,15 @@ static path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_sub
 
 path PackageId::getHashPathFull() const
 {
-    // stable, do not change
-    // add version/schema!
-    // affects everything server storage
-    return ::sw::getHashPathFromHash(getHash(), 4, 2); // remote consistent storage paths
+    static const int hash_path_from_hash_schema_version = 1;
+
+    switch (hash_path_from_hash_schema_version)
+    {
+    case 1:
+        return ::sw::getHashPathFromHash(getHash(), 4, 2); // remote consistent storage paths
+    }
+
+    throw SW_RUNTIME_ERROR("unreachable");
 }
 
 #define SHORT_HASH_LEN 8 // was 12 (12 for remote storages)

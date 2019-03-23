@@ -14,9 +14,7 @@
 namespace sw
 {
 
-String getDataDir();
-String getDataDirPrivate(const String &base = {});
-
+// rename to Storage
 struct Directories
 {
     path storage_dir;

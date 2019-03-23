@@ -27,16 +27,6 @@ void checkPath(const path &p, const String &msg)
     }
 }
 
-String getDataDir()
-{
-    return "data";
-}
-
-String getDataDirPrivate(const String &base)
-{
-    return (base.empty() ? getDataDir() : base) + "_private";
-}
-
 void Directories::set_storage_dir(const path &p)
 {
     auto make_canonical = [](const path &p)

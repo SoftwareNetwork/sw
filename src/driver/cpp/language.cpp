@@ -109,7 +109,9 @@ LanguagePtr LanguageStorage::activateLanguage(const PackagePath &pp)
     auto v = user_defined_languages[pp];
     if (v.empty())
         return {};
-    return activateLanguage({ pp, v.rbegin_releases()->first }, true);
+    if (!v.empty_releases())
+        return activateLanguage({ pp, v.rbegin_releases()->first }, true);
+    return activateLanguage({ pp, v.rbegin()->first }, true);
 }
 
 LanguagePtr LanguageStorage::activateLanguage(const PackageId &pkg, bool exact_version)
@@ -135,10 +137,15 @@ LanguagePtr LanguageStorage::activateLanguage(const PackageId &pkg, bool exact_v
 
 LanguagePtr LanguageStorage::getLanguage(const PackagePath &pp) const
 {
-    auto v = user_defined_languages.find(pp);
-    if (v == user_defined_languages.end(pp) || v->second.empty())
+    auto i = user_defined_languages.find(pp);
+    if (i == user_defined_languages.end(pp))
         return {};
-    return getLanguage({ pp, v->second.rbegin_releases()->first });
+    auto &v = i->second;
+    if (v.empty())
+        return {};
+    if (!v.empty_releases())
+        return getLanguage({ pp, v.rbegin_releases()->first }, true);
+    return getLanguage({ pp, v.rbegin()->first }, true);
 }
 
 LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg, bool exact_version) const
@@ -163,10 +170,15 @@ LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg, bool exact_versio
 
 std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) const
 {
-    auto v = registered_programs.find(pp);
-    if (v == registered_programs.end(pp) || v->second.empty())
+    auto i = registered_programs.find(pp);
+    if (i == registered_programs.end(pp))
         return {};
-    return getProgram({ pp, v->second.rbegin_releases()->first });
+    auto &v = i->second;
+    if (v.empty())
+        return {};
+    if (!v.empty_releases())
+        return getProgram({ pp, v.rbegin_releases()->first }, true);
+    return getProgram({ pp, v.rbegin()->first }, true);
 }
 
 std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg, bool exact_version) const
