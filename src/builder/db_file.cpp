@@ -6,8 +6,7 @@
 
 #include "db_file.h"
 
-#include <directories.h>
-//#include <target.h>
+#include <storage.h>
 
 #include <sqlite_database.h>
 #include <sqlite3.h>
@@ -44,7 +43,7 @@ static path getDir(bool local)
 {
     if (local)
         return path(SW_BINARY_DIR) / "db";
-    return getUserDirectories().storage_dir_tmp / "db";
+    return getStorage().storage_dir_tmp / "db";
 }
 
 static path getFilesDbFilename(const String &config, bool local)

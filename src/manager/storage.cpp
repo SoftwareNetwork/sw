@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "directories.h"
+#include "storage.h"
 
 #include "settings.h"
 
@@ -17,7 +17,7 @@ static cl::opt<path> storage_dir_override("storage-dir");
 namespace sw
 {
 
-void checkPath(const path &p, const String &msg)
+static void checkPath(const path &p, const String &msg)
 {
     const auto s = p.string();
     for (auto &c : s)
@@ -27,7 +27,7 @@ void checkPath(const path &p, const String &msg)
     }
 }
 
-void Directories::set_storage_dir(const path &p)
+void Storage::set_storage_dir(const path &p)
 {
     auto make_canonical = [](const path &p)
     {
@@ -53,17 +53,17 @@ void Directories::set_storage_dir(const path &p)
 #define DIR(x)                          \
     storage_dir_##x = storage_dir / #x; \
     fs::create_directories(storage_dir_##x);
-#include "directories.inl"
+#include "storage_directories.inl"
 #undef SET
 }
 
-void Directories::set_build_dir(const path &p)
+void Storage::set_build_dir(const path &p)
 {
     checkPath(p, "build directory");
     build_dir = p;
 }
 
-void Directories::update(const Directories &dirs, SettingsType t)
+void Storage::update(const Storage &dirs, SettingsType t)
 {
     if (t > type)
         return;
@@ -72,35 +72,20 @@ void Directories::update(const Directories &dirs, SettingsType t)
     type = t;
 }
 
-/*path Directories::get_include_dir() const
-{
-    return storage_dir_usr / "include";
-}
-
-path Directories::get_local_dir() const
-{
-    return storage_dir_usr / "local";
-}*/
-
-path Directories::get_static_files_dir() const
+path Storage::get_static_files_dir() const
 {
     return storage_dir_etc / "static";
 }
 
-Directories &getDirectoriesUnsafe()
+Storage &getStorageUnsafe()
 {
-    static Directories directories;
+    static Storage directories;
     return directories;
 }
 
-const Directories &getDirectories()
+const Storage &getStorage()
 {
-    return getDirectoriesUnsafe();
-}
-
-const Directories &getUserDirectories()
-{
-    static Directories directories;
+    auto &directories = getStorageUnsafe();
     if (directories.empty())
         directories.set_storage_dir(Settings::get_user_settings().storage_dir);
     return directories;

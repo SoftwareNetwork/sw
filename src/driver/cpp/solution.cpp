@@ -18,11 +18,11 @@
 #include "frontend/cppan/yaml.h"
 #include <target/native.h>
 
-#include <directories.h>
 #include <database.h>
 #include <execution_plan.h>
 #include <hash.h>
 #include <settings.h>
+#include <storage.h>
 
 #include <sw/driver/cpp/sw_abi_version.h>
 
@@ -114,7 +114,7 @@ static String getCurrentModuleId()
 
 static path getImportFilePrefix()
 {
-    return getUserDirectories().storage_dir_tmp / ("sw_" + getCurrentModuleId());
+    return getStorage().storage_dir_tmp / ("sw_" + getCurrentModuleId());
 }
 
 static path getImportDefinitionsFile()
@@ -606,7 +606,7 @@ path Solution::getChecksDir() const
 
 void Solution::performChecks()
 {
-    checker.performChecks(getUserDirectories().storage_dir_cfg / getConfig());
+    checker.performChecks(getStorage().storage_dir_cfg / getConfig());
 }
 
 Commands Solution::getCommands() const
@@ -2176,7 +2176,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         auto hash = getFilesHash({ fn });
         path h;
         // cannot create aux dir on windows; auxl = auxiliary
-        if (is_under_root(fn, getDirectories().storage_dir_pkg))
+        if (is_under_root(fn, getStorage().storage_dir_pkg))
             h = fn.parent_path().parent_path() / "auxl" / ("defs_" + hash + ".h");
         else
             h = fn.parent_path() / SW_BINARY_DIR / "auxl" / ("defs_" + hash + ".h");

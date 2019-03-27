@@ -8,7 +8,6 @@
 
 #include <sw/builder/driver.h>
 
-#include <directories.h>
 #include <resolver.h>
 
 #include <primitives/date_time.h>

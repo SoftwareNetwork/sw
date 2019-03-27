@@ -6,8 +6,8 @@
 
 #include "remote.h"
 
-#include "directories.h"
 #include "package.h"
+#include "storage.h"
 
 #include <hash.h>
 #include <http.h>

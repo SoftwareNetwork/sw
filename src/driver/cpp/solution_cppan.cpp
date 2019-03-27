@@ -16,7 +16,6 @@
 #include "run.h"
 #include "frontend/cppan/yaml.h"
 
-#include <directories.h>
 #include <hash.h>
 #include <settings.h>
 #include <target/native.h>

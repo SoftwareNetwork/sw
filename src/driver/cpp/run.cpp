@@ -26,7 +26,7 @@ TODO:
 
 #include "run.h"
 
-#include <directories.h>
+#include <storage.h>
 
 #include <primitives/command.h>
 
@@ -101,7 +101,7 @@ void run(const PackageId &pkg, primitives::Command &c)
             }
 
             // set permissions
-            auto paths = { c.working_directory, getDirectories().storage_dir_bin, pkg.getDirSrc2() };
+            auto paths = { c.working_directory, getStorage().storage_dir_bin, pkg.getDirSrc2() };
             if (!std::all_of(paths.begin(), paths.end(), [&sid, &err](auto &p)
                 {
                     if (!GrantNamedObjectAccess(sid, p, SE_FILE_OBJECT, FILE_ALL_ACCESS & ~DELETE))

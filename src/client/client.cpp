@@ -7,13 +7,13 @@
 #include <api.h>
 #include <command.h>
 #include <database.h>
-#include <directories.h>
 #include <exceptions.h>
 #include <file.h>
 #include <package_data.h>
 #include <resolver.h>
 #include <settings.h>
 #include <solution.h>
+#include <storage.h>
 
 // globals
 #include <command_storage.h>
@@ -168,6 +168,9 @@ int setup_main(const Strings &args)
             fs::current_path(working_directory.parent_path());
         else
             fs::current_path(working_directory);
+
+        void sw_append_symbol_path(const path &in);
+        sw_append_symbol_path(fs::current_path());
     }
 
     if (trace)
@@ -747,7 +750,7 @@ SUBCOMMAND_DECL(uri)
             SetupConsole();
             bUseSystemPause = true;
 #endif
-            auto d = getUserDirectories().storage_dir_tmp / "build";// / fs::unique_path();
+            auto d = getStorage().storage_dir_tmp / "build";// / fs::unique_path();
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
             sw::build(p.toString());
@@ -760,7 +763,7 @@ SUBCOMMAND_DECL(uri)
             SetupConsole();
             bUseSystemPause = true;
 #endif
-            auto d = getUserDirectories().storage_dir_tmp / "build";// / fs::unique_path();
+            auto d = getStorage().storage_dir_tmp / "build";// / fs::unique_path();
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
             sw::run(p);

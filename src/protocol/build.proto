@@ -1,0 +1,51 @@
+// Copyright (C) 2019 Egor Pugin <egor.pugin@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+syntax = "proto3";
+
+option cc_enable_arenas = true;
+
+package sw.api.build;
+
+//import "google/protobuf/empty.proto";
+
+// support network streaming?!
+message Stream {
+    string file = 1;
+    bool inherit = 2; // stream back and forth?
+}
+
+// CommandRequest?
+message Command {
+    string program = 1;
+    repeated string arguments = 2;
+    map<string, string> environment = 3;
+    string working_directory = 4;
+
+    // generalize to custom fds?
+    Stream in = 8;
+    Stream out = 9;
+    Stream err = 10;
+}
+
+// CommandResponse?
+message CommandResult {
+    int64 exit_code = 1;
+
+    // pid?
+
+    // generalize to custom fds?
+    string out = 9;
+    string err = 10;
+}
+
+// add execution plan?
+
+// rename? RemoteSw or ...?
+// remove distributed if we have namespace?
+service DistributedBuildService {
+    rpc ExecuteCommand(Command) returns (CommandResult);
+}

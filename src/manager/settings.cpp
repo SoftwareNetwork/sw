@@ -7,10 +7,10 @@
 #include "settings.h"
 
 #include "database.h"
-#include "directories.h"
 #include "exceptions.h"
 #include "hash.h"
 #include "stamp.h"
+#include "storage.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -23,7 +23,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "settings");
 
-#define CPPAN_LOCAL_BUILD_PREFIX "sw-build-"
 #define CONFIG_ROOT "/etc/sw/"
 
 static cl::opt<String> default_remote("r", cl::desc("Select default remote"));
@@ -31,7 +30,7 @@ static cl::opt<String> default_remote("r", cl::desc("Select default remote"));
 namespace sw
 {
 
-Directories &getDirectoriesUnsafe();
+Storage &getStorageUnsafe();
 
 Settings::Settings()
 {
@@ -82,14 +81,14 @@ void Settings::load(const yaml &root, const SettingsType type)
         }
     };
 
-    Directories dirs;
+    Storage dirs;
     dirs.storage_dir_type = storage_dir_type;
     auto sd = get_storage_dir(storage_dir_type);
     dirs.set_storage_dir(sd);
     dirs.build_dir_type = build_dir_type;
     dirs.set_build_dir(get_build_dir(build_dir, build_dir_type, dirs));
 
-    getDirectoriesUnsafe().update(dirs, type);
+    getStorageUnsafe().update(dirs, type);
 }
 
 void Settings::load_main(const yaml &root, const SettingsType type)

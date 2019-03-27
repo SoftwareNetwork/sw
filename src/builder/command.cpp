@@ -16,7 +16,6 @@
 
 #include <file_storage.h>
 #include <hash.h>
-#include <directories.h>
 #include <filesystem.h>
 #include <primitives/context.h>
 #include <primitives/debug.h>
@@ -367,7 +366,17 @@ void Command::prepare()
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
     if (!program.empty() && !File(program, *fs).isGeneratedAtAll() && !program.is_absolute() && !fs::exists(program))
-        program = resolveExecutable(program);
+    {
+        auto new_prog = resolveExecutable(program);
+        if (new_prog.empty())
+            throw SW_RUNTIME_ERROR("resolved program '" + program.u8string() + "' is empty: " + getCommandId(*this));
+
+        program = new_prog;
+    }
+
+    // extra check
+    if (program.empty())
+        throw SW_RUNTIME_ERROR("empty program: " + getCommandId(*this));
 
     getHashAndSave();
 
@@ -1040,7 +1049,7 @@ path resolveExecutable(const path &in)
     static const auto p_where = primitives::resolve_executable("where");
 
     if (p_which.empty() && p_where.empty())
-        return {};
+        throw SW_RUNTIME_ERROR("which and where were not found, cannot resolve executable: " + in.u8string());
 
     String result;
 

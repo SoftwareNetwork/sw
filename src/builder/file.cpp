@@ -10,7 +10,6 @@
 #include "db.h"
 #include "file_storage.h"
 
-#include <directories.h>
 #include <hash.h>
 #include <settings.h>
 

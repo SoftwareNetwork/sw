@@ -1,10 +1,10 @@
 #include "native.h"
 
 #include "bazel/bazel.h"
-#include <directories.h>
 #include <generator/generator.h>
 #include <functions.h>
 #include <solution.h>
+#include <storage.h>
 #include <suffix.h>
 
 #include <boost/algorithm/string.hpp>
@@ -204,9 +204,9 @@ void NativeExecutedTarget::addPackageDefinitions(bool defs)
 path NativeExecutedTarget::getOutputBaseDir() const
 {
     if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
-        return getUserDirectories().storage_dir_bin;
+        return getStorage().storage_dir_bin;
     else
-        return getUserDirectories().storage_dir_lib;
+        return getStorage().storage_dir_lib;
 }
 
 path NativeExecutedTarget::getOutputDir() const
@@ -524,8 +524,8 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
     auto gch_fn = pch.parent_path() / (p.header.filename().string() + ".gch");
     auto gch_fn_clang = pch.parent_path() / (p.header.filename().string() + ".pch");
 #ifndef _WIN32
-    pch_dir = getUserDirectories().storage_dir_tmp;
-    gch_fn = getUserDirectories().storage_dir_tmp / "sw/driver/cpp/sw.h.gch";
+    pch_dir = getStorage().storage_dir_tmp;
+    gch_fn = getStorage().storage_dir_tmp / "sw/driver/cpp/sw.h.gch";
 #endif
 
     auto setup_use_vc = [&force_include_pch_header_to_target_source_files, &p, &pch_fn, &pdb_fn](auto &c)
@@ -3266,7 +3266,7 @@ bool ExecutableTarget::prepare()
 
 path ExecutableTarget::getOutputBaseDir() const
 {
-    return getUserDirectories().storage_dir_bin;
+    return getStorage().storage_dir_bin;
 }
 
 void ExecutableTarget::cppan_load_project(const yaml &root)

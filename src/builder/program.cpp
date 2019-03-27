@@ -8,7 +8,7 @@
 
 #include "file_storage.h"
 
-#include <directories.h>
+#include <storage.h>
 
 #include <sw/builder/command.h>
 
@@ -50,7 +50,7 @@ struct VersionStorage
 
     static path get_fn()
     {
-        return getDirectories().storage_dir_tmp / "db" / "program_versions.txt";
+        return getStorage().storage_dir_tmp / "db" / "program_versions.txt";
     }
 };
 

@@ -8,12 +8,12 @@
 
 #include "api.h"
 #include "database.h"
-#include "directories.h"
 #include "exceptions.h"
 #include "lock.h"
 #include "property_tree.h"
 #include "settings.h"
 #include "sqlite_database.h"
+#include "storage.h"
 #include "yaml.h"
 
 #include <boost/algorithm/string.hpp>
@@ -537,7 +537,7 @@ void Resolver::download_and_unpack()
         };
 
 #ifdef _WIN32
-        create_link(d.getDirSrc().parent_path(), getUserDirectories().storage_dir_lnk / "src" / (d.toString() + ".lnk"));
+        create_link(d.getDirSrc().parent_path(), getStorage().storage_dir_lnk / "src" / (d.toString() + ".lnk"));
         //create_link(d.getDirObj(), directories.storage_dir_lnk / "obj" / (cc.first.target_name + ".lnk"));
 #endif
     };

@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include "directories.h"
+#include "storage.h"
 
 #include <primitives/lock.h>
 
 inline path get_lock(const path &fn)
 {
-    return sw::getDirectories().storage_dir_etc / "locks" / fn.filename();
+    return sw::getStorage().storage_dir_etc / "locks" / fn.filename();
 }

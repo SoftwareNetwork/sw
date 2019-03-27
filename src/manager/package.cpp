@@ -7,10 +7,10 @@
 #include "dependency.h"
 
 #include "database.h"
-#include "directories.h"
 #include "hash.h"
 #include "lock.h"
 #include "resolver.h"
+#include "storage.h"
 
 #include <primitives/sw/cl.h>
 
@@ -112,7 +112,7 @@ std::optional<path> PackageId::getOverriddenDir() const
 
 path PackageId::getDir() const
 {
-    return getDir(getUserDirectories().storage_dir_pkg);
+    return getDir(getStorage().storage_dir_pkg);
 }
 
 path PackageId::getDir(const path &p) const
@@ -122,7 +122,7 @@ path PackageId::getDir(const path &p) const
 
 path PackageId::getDirSrc() const
 {
-    return getDir(getUserDirectories().storage_dir_pkg) / "src";
+    return getDir(getStorage().storage_dir_pkg) / "src";
 }
 
 path PackageId::getDirSrc2() const
@@ -135,13 +135,13 @@ path PackageId::getDirSrc2() const
 path PackageId::getDirObj() const
 {
     if (!separate_bdir)
-        return getDir(getUserDirectories().storage_dir_pkg) / "obj";
-    return getDir(getUserDirectories().storage_dir_obj) / "obj";
+        return getDir(getStorage().storage_dir_pkg) / "obj";
+    return getDir(getStorage().storage_dir_obj) / "obj";
 }
 
 path PackageId::getDirObjWdir(/* version level, project level (app or project) */) const
 {
-    return getDir(getUserDirectories().storage_dir_dat) / "wd"; // working directory, was wdir
+    return getDir(getStorage().storage_dir_dat) / "wd"; // working directory, was wdir
 }
 
 path PackageId::getDirInfo() const

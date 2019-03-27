@@ -6,7 +6,6 @@
 
 #include "database.h"
 
-#include "directories.h"
 #include "enums.h"
 #include "exceptions.h"
 #include "hash.h"
@@ -15,6 +14,7 @@
 #include "settings.h"
 #include "sqlite_database.h"
 #include "stamp.h"
+#include "storage.h"
 
 #include <primitives/command.h>
 #include <primitives/lock.h>
@@ -86,7 +86,7 @@ std::vector<StartupAction> startup_actions{
 path getDbDirectory()
 {
     // db per storage
-    return getUserDirectories().storage_dir_etc / db_dir_name;
+    return getStorage().storage_dir_etc / db_dir_name;
 }
 
 int readPackagesDbSchemaVersion(const path &dir)
@@ -237,6 +237,8 @@ void ServiceDatabase::init()
 
 void ServiceDatabase::performStartupActions() const
 {
+    return;
+
     // perform startup actions on client update
     try
     {
@@ -280,26 +282,26 @@ void ServiceDatabase::performStartupActions() const
 
             /*if (a.action & StartupAction::ClearStorageDirExp)
             {
-                remove_all_from_dir(getDirectories().storage_dir_exp);
+                remove_all_from_dir(getStorage().storage_dir_exp);
             }*/
 
             if (a.action & StartupAction::ClearStorageDirBin)
             {
                 // also remove exp to trigger cmake
-                //remove_all_from_dir(getDirectories().storage_dir_exp);
-                remove_all_from_dir(getDirectories().storage_dir_bin);
+                //remove_all_from_dir(getStorage().storage_dir_exp);
+                remove_all_from_dir(getStorage().storage_dir_bin);
             }
 
             if (a.action & StartupAction::ClearStorageDirLib)
             {
                 // also remove exp to trigger cmake
-                //remove_all_from_dir(getDirectories().storage_dir_exp);
-                remove_all_from_dir(getDirectories().storage_dir_lib);
+                //remove_all_from_dir(getStorage().storage_dir_exp);
+                remove_all_from_dir(getStorage().storage_dir_lib);
             }
 
             if (a.action & StartupAction::ClearCfgDirs)
             {
-                for (auto &i : boost::make_iterator_range(fs::directory_iterator(getDirectories().storage_dir_cfg), {}))
+                for (auto &i : boost::make_iterator_range(fs::directory_iterator(getStorage().storage_dir_cfg), {}))
                 {
                     if (fs::is_directory(i))
                         fs::remove_all(i);

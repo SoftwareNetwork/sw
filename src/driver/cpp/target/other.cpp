@@ -1,6 +1,6 @@
 #include "other.h"
 
-#include <directories.h>
+#include <storage.h>
 
 namespace sw
 {
@@ -24,7 +24,7 @@ bool CSharpTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getStorage().storage_dir_bin));
     }
     else
     {
@@ -79,7 +79,7 @@ bool RustTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getStorage().storage_dir_bin));
     }
     else
     {
@@ -134,7 +134,7 @@ bool GoTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getStorage().storage_dir_bin));
     }
     else
     {
@@ -189,7 +189,7 @@ bool FortranTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getStorage().storage_dir_bin));
     }
     else
     {
@@ -244,7 +244,7 @@ bool JavaTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     /*if (Scope == TargetScope::Build)
     {
-        //compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+        //compiler->setOutputFile(getOutputFileName(getStorage().storage_dir_bin));
     }
     else
     {*/
@@ -302,7 +302,7 @@ bool KotlinTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getStorage().storage_dir_bin));
     }
     else
     {
@@ -357,7 +357,7 @@ bool DTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getUserDirectories().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getStorage().storage_dir_bin));
     }
     else
     {

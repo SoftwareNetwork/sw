@@ -13,9 +13,9 @@
 #include <suffix.h>
 #include <solution.h>
 
-#include <directories.h>
 #include <package_data.h>
 #include <resolver.h>
+#include <storage.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target");
@@ -173,7 +173,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     {
         // do not create projects under storage yourself!
         //if (Local)
-        t->Local = !is_under_root(t->SourceDir, getDirectories().storage_dir_pkg);
+        t->Local = !is_under_root(t->SourceDir, getStorage().storage_dir_pkg);
 
         // try to set again
         if (!t->Local)

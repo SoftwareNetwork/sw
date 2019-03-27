@@ -50,8 +50,8 @@ void build(Solution &s)
         "org.sw.demo.google.grpc.grpcpp-1"_dep,
         "pub.egorpugin.primitives.templates-master"_dep,
         "pub.egorpugin.primitives.log-master"_dep;
-    gen_grpc("org.sw.demo.google.protobuf-3"_dep,
-        "org.sw.demo.google.grpc.grpc_cpp_plugin-1"_dep, protos, protos.SourceDir / "src/protocol/api.proto", true);
+    for (auto &[p, _] : protos["src/protocol/.*\\.proto"_rr])
+        gen_grpc("org.sw.demo.google.protobuf-3"_dep, "org.sw.demo.google.grpc.grpc_cpp_plugin-1"_dep, protos, p, true);
 
     auto &manager = p.addTarget<LibraryTarget>("manager");
     manager.ApiName = "SW_MANAGER_API";

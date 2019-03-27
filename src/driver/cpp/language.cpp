@@ -104,14 +104,24 @@ void LanguageStorage::setExtensionLanguage(const String &ext, const DependencyPt
         (*t + extensions[ext])->Dummy = true;
 }
 
-LanguagePtr LanguageStorage::activateLanguage(const PackagePath &pp)
+template <class T>
+static std::optional<Version> select_version(T &v)
 {
-    auto v = user_defined_languages[pp];
     if (v.empty())
         return {};
     if (!v.empty_releases())
-        return activateLanguage({ pp, v.rbegin_releases()->first }, true);
-    return activateLanguage({ pp, v.rbegin()->first }, true);
+        return v.rbegin_releases()->first;
+    return v.rbegin()->first;
+}
+
+LanguagePtr LanguageStorage::activateLanguage(const PackagePath &pp)
+{
+    auto i = user_defined_languages.find(pp);
+    if (i == user_defined_languages.end(pp))
+        return {};
+    if (auto v = select_version(i->second); v)
+        return activateLanguage({ pp, *v }, true);
+    return {};
 }
 
 LanguagePtr LanguageStorage::activateLanguage(const PackageId &pkg, bool exact_version)
@@ -140,12 +150,9 @@ LanguagePtr LanguageStorage::getLanguage(const PackagePath &pp) const
     auto i = user_defined_languages.find(pp);
     if (i == user_defined_languages.end(pp))
         return {};
-    auto &v = i->second;
-    if (v.empty())
-        return {};
-    if (!v.empty_releases())
-        return getLanguage({ pp, v.rbegin_releases()->first }, true);
-    return getLanguage({ pp, v.rbegin()->first }, true);
+    if (auto v = select_version(i->second); v)
+        return getLanguage({ pp, *v }, true);
+    return {};
 }
 
 LanguagePtr LanguageStorage::getLanguage(const PackageId &pkg, bool exact_version) const
@@ -173,12 +180,9 @@ std::shared_ptr<Program> LanguageStorage::getProgram(const PackagePath &pp) cons
     auto i = registered_programs.find(pp);
     if (i == registered_programs.end(pp))
         return {};
-    auto &v = i->second;
-    if (v.empty())
-        return {};
-    if (!v.empty_releases())
-        return getProgram({ pp, v.rbegin_releases()->first }, true);
-    return getProgram({ pp, v.rbegin()->first }, true);
+    if (auto v = select_version(i->second); v)
+        return getProgram({ pp, *v }, true);
+    return {};
 }
 
 std::shared_ptr<Program> LanguageStorage::getProgram(const PackageId &pkg, bool exact_version) const
