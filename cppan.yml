@@ -169,15 +169,15 @@ projects:
         export_if_static: true
 
         files:
-            - include/sw/driver/cpp/.*
-            - src/driver/cpp/.*
+            - include/sw/driver/.*
+            - src/driver/.*
         exclude_from_build:
-            - src/driver/cpp/misc/.*
-            - src/driver/cpp/inserts/cppan.cpp
+            - src/driver/misc/.*
+            - src/driver/inserts/cppan.cpp
 
         include_directories:
             - include
-            - src/driver/cpp # make private
+            - src/driver # make private
 
         options:
             any:
@@ -218,14 +218,14 @@ projects:
 
         post_sources: |
             if (WIN32)
-                add_src_dir(src/driver/cpp/misc/*)
+                add_src_dir(src/driver/misc/*)
             endif()
 
             file(GLOB_RECURSE x "${SDIR}/*")
             source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
 
-            embed(${SDIR}/src/driver/cpp/inserts/inserts.cpp.in ${SDIR}/src/driver/cpp/inserts/cppan.cpp)
-            set_source_files_properties(${SDIR}/src/driver/cpp/inserts/cppan.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
+            embed(${SDIR}/src/driver/inserts/inserts.cpp.in ${SDIR}/src/driver/inserts/cppan.cpp)
+            set_source_files_properties(${SDIR}/src/driver/inserts/cppan.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
 
             set(f ${BDIR}/build_self.generated.h ${BDIR}/build_self.packages.generated.h)
             add_custom_command(OUTPUT ${f}
@@ -236,13 +236,13 @@ projects:
 
             set(f ${BDIR}/options_cl.generated.h)
             add_custom_command(OUTPUT ${f}
-                COMMAND ${cl_generator} ${SDIR}/src/driver/cpp/options_cl.yml ${f} ${BDIR}/options_cl.generated.cpp
-                DEPENDS ${cl_generator} ${SDIR}/src/driver/cpp/options_cl.yml
+                COMMAND ${cl_generator} ${SDIR}/src/driver/options_cl.yml ${f} ${BDIR}/options_cl.generated.cpp
+                DEPENDS ${cl_generator} ${SDIR}/src/driver/options_cl.yml
             )
-            set(src ${src} ${f} ${SDIR}/src/driver/cpp/options_cl.yml)
+            set(src ${src} ${f} ${SDIR}/src/driver/options_cl.yml)
 
         post_target: |
-            cppan_flex_bison_internal(src/driver/cpp/bazel/lexer.ll PARSERS src/driver/cpp/bazel/grammar.yy)
+            cppan_flex_bison_internal(src/driver/bazel/lexer.ll PARSERS src/driver/bazel/grammar.yy)
 
 
     builder:
@@ -299,6 +299,7 @@ projects:
             - pvt.cppan.demo.google.grpc.grpc_cpp_plugin: 1
         post_sources: |
             gen_grpc(${SDIR}/api.proto)
+            gen_grpc(${SDIR}/build.proto)
 
     manager:
         type: library
