@@ -166,8 +166,9 @@ int setup_main(const Strings &args)
         else
             fs::current_path(working_directory);
 
-        void sw_append_symbol_path(const path &in);
+#ifdef _WIN32
         sw_append_symbol_path(fs::current_path());
+#endif
     }
 
     if (trace)

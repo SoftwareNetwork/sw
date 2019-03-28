@@ -1211,17 +1211,13 @@ void NativeExecutedTarget::autoDetectIncludeDirectories()
     LOG_TRACE(logger, getPackage().toString() + ": Autodetecting include dirs");
 
     // public idirs
-    if (!std::any_of(include_dir_names.begin(), include_dir_names.end(), [this](const auto & i)
+    for (auto &d : include_dir_names)
     {
-        if (fs::exists(SourceDir / i))
+        if (fs::exists(SourceDir / d))
         {
-            Public.IncludeDirectories.insert(SourceDir / i);
-            return true;
+            Public.IncludeDirectories.insert(SourceDir / d);
+            break;
         }
-        return false;
-    }))
-    {
-        Public.IncludeDirectories.insert(SourceDir);
     }
 
     // source (private) idirs
@@ -1230,18 +1226,6 @@ void NativeExecutedTarget::autoDetectIncludeDirectories()
         if (!fs::exists(SourceDir / d))
             continue;
 
-        /*if (!std::any_of(include_dir_names.begin(), include_dir_names.end(), [this, &d](const auto &i)
-        {
-            if (fs::exists(SourceDir / i))
-            {
-                Private.IncludeDirectories.insert(SourceDir / d);
-                return true;
-            }
-            return false;
-        }))*/
-        {
-            //Public.IncludeDirectories.insert(SourceDir / d);
-        }
         if (!Public.IncludeDirectories.empty())
             Private.IncludeDirectories.insert(SourceDir / d);
         else
