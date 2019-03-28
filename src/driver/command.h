@@ -496,14 +496,4 @@ CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
 
 } // namespace driver
 
-namespace cmd
-{
-
-inline ::sw::driver::CommandBuilder command()
-{
-    return {};
-}
-
-} // namespace cmd
-
 } // namespace sw
