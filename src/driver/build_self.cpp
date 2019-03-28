@@ -5,7 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #define SW_PACKAGE_API
-#include <sw/driver/cpp/sw.h>
+#include <sw/driver/sw.h>
 
 #include <resolver.h>
 

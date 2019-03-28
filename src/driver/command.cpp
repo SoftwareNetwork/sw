@@ -19,7 +19,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "cpp.command");
 
-namespace sw::driver::cpp
+namespace sw::driver
 {
 
 namespace detail

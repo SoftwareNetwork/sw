@@ -113,9 +113,9 @@ void NativeExecutedTarget::setupCommand(builder::Command &c) const
     c.addPathDirectory(getOutputBaseDir() / getConfig());
 }
 
-driver::cpp::CommandBuilder NativeExecutedTarget::addCommand() const
+driver::CommandBuilder NativeExecutedTarget::addCommand() const
 {
-    driver::cpp::CommandBuilder cb(*getSolution()->fs);
+    driver::CommandBuilder cb(*getSolution()->fs);
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?
@@ -525,7 +525,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
     auto gch_fn_clang = pch.parent_path() / (p.header.filename().string() + ".pch");
 #ifndef _WIN32
     pch_dir = getStorage().storage_dir_tmp;
-    gch_fn = getStorage().storage_dir_tmp / "sw/driver/cpp/sw.h.gch";
+    gch_fn = getStorage().storage_dir_tmp / "sw/driver/sw.h.gch";
 #endif
 
     auto setup_use_vc = [&force_include_pch_header_to_target_source_files, &p, &pch_fn, &pdb_fn](auto &c)
@@ -918,7 +918,7 @@ Commands NativeExecutedTarget::getCommands1() const
                 auto cmds2 = nt->getGeneratedCommands();
                 for (auto &c : cmds)
                 {
-                    if (auto c2 = c->as<driver::cpp::detail::Command>(); c2 && c2->ignore_deps_generated_commands)
+                    if (auto c2 = c->as<driver::detail::Command>(); c2 && c2->ignore_deps_generated_commands)
                         continue;
                     c->dependencies.insert(cmds2.begin(), cmds2.end());
                 }
@@ -1107,6 +1107,10 @@ static const Strings source_dir_names =
     "Sources",
     "Lib",
     "Library",
+
+    // keep the empty entry at the end
+    // this will add current source dir as include directory
+    "",
 };
 
 void NativeExecutedTarget::autoDetectOptions()
@@ -1126,132 +1130,123 @@ void NativeExecutedTarget::autoDetectSources()
     //bool sources_empty = gatherSourceFiles().empty();
     bool sources_empty = sizeKnown() == 0;
 
-    // files
-    if (sources_empty && !already_built)
+    if (!(sources_empty && !already_built))
+        return;
+
+    LOG_TRACE(logger, getPackage().toString() + ": Autodetecting sources");
+
+    bool added = false;
+    for (auto &d : include_dir_names)
     {
-        LOG_TRACE(logger, getPackage().toString() + ": Autodetecting sources");
-
-        bool added = false;
-        for (auto &d : include_dir_names)
+        if (fs::exists(SourceDir / d))
         {
-            if (fs::exists(SourceDir / d))
-            {
-                add(FileRegex(d, std::regex(".*"), true));
-                added = true;
-                break; // break here!
-            }
+            add(FileRegex(d, std::regex(".*"), true));
+            added = true;
+            break; // break here!
         }
-        for (auto &d : source_dir_names)
-        {
-            if (fs::exists(SourceDir / d))
-            {
-                add(FileRegex(d, std::regex(".*"), true));
-                added = true;
-                break; // break here!
-            }
-        }
-        if (!added)
-        {
-            // no include, source dirs
-            // try to add all types of C/C++ program files to gather
-            // regex means all sources in root dir (without slashes '/')
-
-            auto escape_regex_symbols = [](const String &s)
-            {
-                return boost::replace_all_copy(s, "+", "\\+");
-            };
-
-            // iterate over languages: ASM, C, CPP, ObjC, ObjCPP
-            // check that all exts is in languages!
-
-            static const std::set<String> other_source_file_extensions{
-                ".s",
-                ".S",
-                ".asm",
-                ".ipp",
-                ".inl",
-            };
-
-            static auto source_file_extensions = []()
-            {
-                auto source_file_extensions = getCppSourceFileExtensions();
-                source_file_extensions.insert(".c");
-                return source_file_extensions;
-            }();
-
-            for (auto &v : getCppHeaderFileExtensions())
-                add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
-            for (auto &v : source_file_extensions)
-                add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
-            for (auto &v : other_source_file_extensions)
-                add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
-        }
-
-        // erase config file, add a condition to not perform this code
-        path f = "sw.cpp";
-        check_absolute(f, true);
-        operator^=(f);
     }
+    for (auto &d : source_dir_names)
+    {
+        if (fs::exists(SourceDir / d))
+        {
+            add(FileRegex(d, std::regex(".*"), true));
+            added = true;
+            break; // break here!
+        }
+    }
+    if (!added)
+    {
+        // no include, source dirs
+        // try to add all types of C/C++ program files to gather
+        // regex means all sources in root dir (without slashes '/')
+
+        auto escape_regex_symbols = [](const String &s)
+        {
+            return boost::replace_all_copy(s, "+", "\\+");
+        };
+
+        // iterate over languages: ASM, C, CPP, ObjC, ObjCPP
+        // check that all exts is in languages!
+
+        static const std::set<String> other_source_file_extensions{
+            ".s",
+            ".S",
+            ".asm",
+            ".ipp",
+            ".inl",
+        };
+
+        static auto source_file_extensions = []()
+        {
+            auto source_file_extensions = getCppSourceFileExtensions();
+            source_file_extensions.insert(".c");
+            return source_file_extensions;
+        }();
+
+        for (auto &v : getCppHeaderFileExtensions())
+            add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
+        for (auto &v : source_file_extensions)
+            add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
+        for (auto &v : other_source_file_extensions)
+            add(FileRegex(std::regex(".*\\" + escape_regex_symbols(v)), false));
+    }
+
+    // erase config file, add a condition to not perform this code
+    path f = "sw.cpp";
+    check_absolute(f, true);
+    operator^=(f);
 }
 
 void NativeExecutedTarget::autoDetectIncludeDirectories()
 {
-    bool idirs_empty = true;
-
-    // idirs
-    if (idirs_empty)
+    auto &is = getInheritanceStorage().raw();
+    if (std::any_of(is.begin(), is.end(), [](auto *ptr)
     {
-        LOG_TRACE(logger, getPackage().toString() + ": Autodetecting include dirs");
+        return ptr && !ptr->IncludeDirectories.empty();
+    }))
+    {
+        return;
+    }
 
-        if (!std::any_of(include_dir_names.begin(), include_dir_names.end(), [this](const auto & i)
+    LOG_TRACE(logger, getPackage().toString() + ": Autodetecting include dirs");
+
+    // public idirs
+    if (!std::any_of(include_dir_names.begin(), include_dir_names.end(), [this](const auto & i)
+    {
+        if (fs::exists(SourceDir / i))
+        {
+            Public.IncludeDirectories.insert(SourceDir / i);
+            return true;
+        }
+        return false;
+    }))
+    {
+        Public.IncludeDirectories.insert(SourceDir);
+    }
+
+    // source (private) idirs
+    for (auto &d : source_dir_names)
+    {
+        if (!fs::exists(SourceDir / d))
+            continue;
+
+        /*if (!std::any_of(include_dir_names.begin(), include_dir_names.end(), [this, &d](const auto &i)
         {
             if (fs::exists(SourceDir / i))
             {
-                Public.IncludeDirectories.insert(SourceDir / i);
+                Private.IncludeDirectories.insert(SourceDir / d);
                 return true;
             }
             return false;
-        }))
+        }))*/
         {
-            Public.IncludeDirectories.insert(SourceDir);
+            //Public.IncludeDirectories.insert(SourceDir / d);
         }
-
-        std::function<void(const Strings &)> autodetect_source_dir;
-        autodetect_source_dir = [this, &autodetect_source_dir](const Strings &dirs)
-        {
-            const auto &current = dirs[0];
-            const auto &next = dirs[1];
-            if (fs::exists(SourceDir / current))
-            {
-                if (!std::any_of(include_dir_names.begin(), include_dir_names.end(), [this, &current](const auto & i)
-                {
-                    if (fs::exists(SourceDir / i))
-                    {
-                        Private.IncludeDirectories.insert(SourceDir / current);
-                        return true;
-                    }
-                    return false;
-                }))
-                {
-                    Public.IncludeDirectories.insert(SourceDir / current);
-                }
-            }
-            else
-            {
-                // now check next dir
-                if (!next.empty())
-                    autodetect_source_dir({ dirs.begin() + 1, dirs.end() });
-            }
-        };
-        static Strings dirs = []
-        {
-            Strings dirs(source_dir_names.begin(), source_dir_names.end());
-            // keep the empty entry at the end for autodetect_source_dir()
-            if (dirs.back() != "")
-                dirs.push_back("");
-            return dirs;
-        }();
-        autodetect_source_dir(dirs);
+        if (!Public.IncludeDirectories.empty())
+            Private.IncludeDirectories.insert(SourceDir / d);
+        else
+            Public.IncludeDirectories.insert(SourceDir / d);
+        break;
     }
 }
 
@@ -1564,6 +1559,13 @@ bool NativeExecutedTarget::prepare()
         {
             size_t operator()(const DependencyPtr &p) const
             {
+                if (!p->target)
+                {
+                    LOG_ERROR(logger, "Unresolved package on stage 2: " + p->package.toString());
+                    // do not throw, error will be detected later, won't be it?
+                    //throw SW_RUNTIME_ERROR("empty target");
+                    return 0;
+                }
                 return std::hash<PackageId>()(p->target->pkg);
             }
         };

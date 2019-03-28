@@ -11,9 +11,8 @@
 
 #include <dependency.h>
 #include <file_storage.h>
+#include <package_data.h>
 #include <target/base.h>
-
-#include <sw/builder/driver.h>
 
 #include <boost/bimap.hpp>
 #include <boost/bimap/multiset_of.hpp>
@@ -83,13 +82,13 @@ enum class FrontendType
 SW_DRIVER_CPP_API
 String toString(FrontendType T);
 
-struct SW_DRIVER_CPP_API Test : driver::cpp::CommandBuilder
+struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
 {
-    using driver::cpp::CommandBuilder::CommandBuilder;
+    using driver::CommandBuilder::CommandBuilder;
 
     Test() = default;
-    Test(const driver::cpp::CommandBuilder &cb)
-        : driver::cpp::CommandBuilder(cb)
+    Test(const driver::CommandBuilder &cb)
+        : driver::CommandBuilder(cb)
     {}
 
     void prepare(const Solution &s)
@@ -223,6 +222,8 @@ public:
     virtual CommandExecutionPlan getExecutionPlan() const;
     CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
 
+    PackageDescriptionMap getPackages() const;
+
     // events
     template <class ... Args>
     void registerCallback(Args &&... args)
@@ -282,7 +283,7 @@ private:
 /**
 * \brief Main build class, controls solutions.
 */
-struct SW_DRIVER_CPP_API Build : Solution, PackageScript
+struct SW_DRIVER_CPP_API Build : Solution
 {
     struct FetchInfo
     {
@@ -308,7 +309,7 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
     void build_package(const String &pkg);
     void build_packages(const StringSet &pkgs);
     void run_package(const String &pkg);
-    bool execute() override;
+    void execute();
 
     bool isConfigSelected(const String &s) const;
     const Module &loadModule(const path &fn) const;
@@ -328,9 +329,6 @@ struct SW_DRIVER_CPP_API Build : Solution, PackageScript
 
     // hide?
     path build_configs(const std::unordered_set<ExtendedPackageData> &pkgs);
-
-protected:
-    PackageDescriptionMap getPackages() const override;
 
 private:
     bool remove_ide_explans = false;

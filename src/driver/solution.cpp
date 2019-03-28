@@ -24,7 +24,7 @@
 #include <settings.h>
 #include <storage.h>
 
-#include <sw/driver/cpp/sw_abi_version.h>
+#include <sw/driver/sw_abi_version.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/range/combine.hpp>
@@ -1577,6 +1577,97 @@ void Solution::prepareForCustomToolchain()
     disable_compiler_lookup = true;
 }
 
+PackageDescriptionMap Solution::getPackages() const
+{
+    PackageDescriptionMap m;
+
+    for (auto &[pkg, t] : children)
+    {
+        // deps
+        if (pkg.ppath.isAbsolute())
+            continue;
+
+        // do not participate in build
+        if (t->Scope != TargetScope::Build)
+            continue;
+
+        nlohmann::json j;
+
+        // source, version, path
+        save_source(j["source"], t->source);
+        j["version"] = pkg.getVersion().toString();
+        j["path"] = pkg.ppath.toString();
+
+        auto rd = SourceDir;
+        if (!build->fetch_info.sources.empty())
+        {
+            auto src = t->source; // copy
+            checkSourceAndVersion(src, t->pkg.version);
+            auto si = build->fetch_info.sources.find(src);
+            if (si == build->fetch_info.sources.end())
+                throw SW_RUNTIME_ERROR("no such source");
+            rd = si->second;
+        }
+        j["root_dir"] = normalize_path(rd);
+
+        // files
+        // we do not use nt->gatherSourceFiles(); as it removes deleted files
+        Files files;
+        for (auto &f : t->gatherAllFiles())
+        {
+            if (File(f, *fs).isGeneratedAtAll())
+                continue;
+            files.insert(f.lexically_normal());
+        }
+
+        if (auto nt = t->as<NativeExecutedTarget>())
+        {
+            // TODO: BUG: interface files are not gathered!
+            if (files.empty() && !nt->Empty)
+                throw SW_RUNTIME_ERROR(pkg.toString() + ": No files found");
+            if (!files.empty() && nt->Empty)
+                throw SW_RUNTIME_ERROR(pkg.toString() + ": Files were found, but target is marked as empty");
+        }
+
+        // we put files under SW_SDIR_NAME to keep space near it
+        // e.g. for patch dir or other dirs (server provided files)
+        // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
+        nlohmann::json jm;
+        auto files_map1 = primitives::pack::prepare_files(files, rd.lexically_normal());
+        for (const auto &[f1, f2] : files_map1)
+        {
+            nlohmann::json jf;
+            jf["from"] = normalize_path(f1);
+            jf["to"] = normalize_path(f2);
+            if (!prefix_source_dir.empty() && f2.u8string().find(prefix_source_dir.u8string()) == 0)
+            {
+                auto t = normalize_path(f2);
+                t = t.substr(prefix_source_dir.u8string().size());
+                if (!t.empty() && t.front() == '/')
+                    t = t.substr(1);
+                jf["to"] = t;
+            }
+            j["files"].push_back(jf);
+        }
+
+        // deps
+        for (auto &d : t->gatherDependencies())
+        {
+            if (d->target && d->target->Scope != TargetScope::Build)
+                continue;
+
+            nlohmann::json jd;
+            jd["path"] = d->getPackage().ppath.toString();
+            jd["range"] = d->getPackage().range.toString();
+            j["dependencies"].push_back(jd);
+        }
+
+        auto s = j.dump();
+        m[pkg] = std::make_unique<JsonPackageDescription>(s);
+    }
+    return m;
+}
+
 Build::Build()
 {
     HostOS = getHostOS();
@@ -1749,11 +1840,14 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
     return lib;
 }
 
+// TODO: remove '.cpp' part later
+#define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp"
+
 static void addDeps(NativeExecutedTarget &lib, Solution &solution)
 {
     lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.version");
 
-    auto &drv = solution.getTarget<NativeTarget>("org.sw.sw.client.driver.cpp");
+    auto &drv = solution.getTarget<NativeTarget>(SW_DRIVER_NAME);
     auto d = lib + drv;
     d->IncludeDirectoriesOnly = true;
 
@@ -1764,7 +1858,7 @@ static void addDeps(NativeExecutedTarget &lib, Solution &solution)
 // add Dirs?
 static path getDriverIncludeDir(Solution &solution)
 {
-    return solution.getTarget<NativeTarget>("org.sw.sw.client.driver.cpp").SourceDir / "include";
+    return solution.getTarget<NativeTarget>(SW_DRIVER_NAME).SourceDir / "include";
 }
 
 static path getDriverIncludePath(Solution &solution, const path &fn)
@@ -1779,7 +1873,7 @@ static String getDriverIncludePathString(Solution &solution, const path &fn)
 
 static path getMainPchFilename()
 {
-    return "sw/driver/cpp/sw.h";
+    return "sw/driver/sw.h";
 }
 
 static void write_pch(Solution &solution)
@@ -1880,21 +1974,21 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             if (auto c = sf->compiler->template as<VisualStudioCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
             }
             else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw1.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw1.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
             }
         }
 
@@ -2189,11 +2283,11 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
 
         write_file_if_different(h, ctx.getText());
         c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
+        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw1.h");
 
         for (auto &h : headers)
             c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
+        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
     };
 
     for (auto &fn : files)
@@ -2217,14 +2311,14 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
                 add_defs(c);
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler>())
             {
                 add_defs(c);
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw_check_abi_version.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
             }
             else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
@@ -2245,11 +2339,11 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
         {
             if (auto c = sf->compiler->template as<ClangCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw1.h");
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/cpp/sw1.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw1.h");
             }
         }
     }
@@ -2458,7 +2552,7 @@ static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
             {
             case 1:
             {
-                auto c2 = std::make_shared<driver::cpp::VSCommand>();
+                auto c2 = std::make_shared<driver::VSCommand>();
                 //c2->file.fs = s.fs;
                 c = c2;
                 //c2->file.file = read_string();
@@ -2466,7 +2560,7 @@ static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
                 break;
             case 2:
             {
-                auto c2 = std::make_shared<driver::cpp::GNUCommand>();
+                auto c2 = std::make_shared<driver::GNUCommand>();
                 //c2->file.fs = s.fs;
                 c = c2;
                 //c2->file.file = read_string();
@@ -2475,7 +2569,7 @@ static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
                 break;
             case 3:
             {
-                auto c2 = std::make_shared<driver::cpp::ExecuteBuiltinCommand>();
+                auto c2 = std::make_shared<driver::ExecuteBuiltinCommand>();
                 c = c2;
             }
                 break;
@@ -2590,20 +2684,20 @@ void save(const path &fn, const Solution::CommandExecutionPlan &p)
         ctx.write(c);
 
         uint8_t type = 0;
-        if (auto c2 = c->as<driver::cpp::VSCommand>(); c2)
+        if (auto c2 = c->as<driver::VSCommand>(); c2)
         {
             type = 1;
             ctx.write(type);
             //print_string(c2->file.file.u8string());
         }
-        else if (auto c2 = c->as<driver::cpp::GNUCommand>(); c2)
+        else if (auto c2 = c->as<driver::GNUCommand>(); c2)
         {
             type = 2;
             ctx.write(type);
             //print_string(c2->file.file.u8string());
             print_string(c2->deps_file.u8string());
         }
-        else if (auto c2 = c->as<driver::cpp::ExecuteBuiltinCommand>(); c2)
+        else if (auto c2 = c->as<driver::ExecuteBuiltinCommand>(); c2)
         {
             type = 3;
             ctx.write(type);
@@ -2652,7 +2746,7 @@ void save(const path &fn, const Solution::CommandExecutionPlan &p)
     ctx.save(fn);
 }
 
-bool Build::execute()
+void Build::execute()
 {
     dry_run = ::dry_run;
 
@@ -2675,7 +2769,7 @@ bool Build::execute()
 
                 auto p = ::sw::load(fn, s);
                 s.execute(p);
-                return true;
+                return;
             }
         }
     }
@@ -2708,7 +2802,7 @@ bool Build::execute()
     if (getGenerator())
     {
         generateBuildSystem();
-        return true;
+        return;
     }
 
     Solution::execute();
@@ -2721,8 +2815,6 @@ bool Build::execute()
         auto p = Solution::getExecutionPlan(cmds);
         Solution::execute(p);
     }
-
-    return true;
 }
 
 void Build::load_configless(const path &file_or_dir)
@@ -3245,130 +3337,6 @@ void Build::load_dll(const path &dll, bool usedll)
             continue;
         s.TargetsToBuild = s.children;
     }
-}
-
-PackageDescriptionMap Build::getPackages() const
-{
-    PackageDescriptionMap m;
-    if (solutions.empty())
-        return m;
-
-    auto &s = *solutions.begin();
-    for (auto &[pkg, t] : s.children)
-    {
-        if (t->Scope != TargetScope::Build)
-            continue;
-
-        nlohmann::json j;
-
-        // source, version, path
-        save_source(j["source"], t->source);
-        j["version"] = pkg.getVersion().toString();
-        j["path"] = pkg.ppath.toString();
-
-        auto rd = s.SourceDir;
-        if (!fetch_info.sources.empty())
-        {
-            auto src = t->source; // copy
-            checkSourceAndVersion(src, t->pkg.version);
-            auto si = fetch_info.sources.find(src);
-            if (si == fetch_info.sources.end())
-                throw SW_RUNTIME_ERROR("no such source");
-            rd = si->second;
-        }
-        j["root_dir"] = normalize_path(rd);
-
-        // files
-        // we do not use nt->gatherSourceFiles(); as it removes deleted files
-        Files files;
-        for (auto &f : t->gatherAllFiles())
-        {
-            if (File(f, *fs).isGeneratedAtAll())
-                continue;
-            files.insert(f.lexically_normal());
-        }
-
-        if (auto nt = t->as<NativeExecutedTarget>())
-        {
-            // TODO: BUG: interface files are not gathered!
-            if (files.empty() && !nt->Empty)
-                throw SW_RUNTIME_ERROR(pkg.toString() + ": No files found");
-            if (!files.empty() && nt->Empty)
-                throw SW_RUNTIME_ERROR(pkg.toString() + ": Files were found, but target is marked as empty");
-        }
-
-        // we put files under SW_SDIR_NAME to keep space near it
-        // e.g. for patch dir or other dirs (server provided files)
-        // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
-        nlohmann::json jm;
-        // 'from' field is calculated relative to fetch/sln dir
-        auto files_map1 = primitives::pack::prepare_files(files, rd.lexically_normal());
-        // but 'to' field is calculated based on target's own view
-        /*auto files_map2 = primitives::pack::prepare_files(files, t->SourceDir.lexically_normal());
-        if (files_map1.size() != files_map2.size())
-        {
-            auto fm2 = files_map2;
-            for (auto &[f, _] : files_map1)
-                files_map2.erase(f);
-            for (auto &[f, _] : fm2)
-                files_map1.erase(f);
-            String s;
-            if (!files_map1.empty())
-            {
-                s += "from first map: ";
-                for (auto &[f, _] : files_map1)
-                    s += normalize_path(f) + ", ";
-            }
-            if (!files_map2.empty())
-            {
-                s += "from second map: ";
-                for (auto &[f, _] : files_map2)
-                    s += normalize_path(f) + ", ";
-            }
-            throw SW_RUNTIME_ERROR("Target: " + pkg.toString() + " Maps are not the same: " + s);
-        }
-        for (const auto &tup : boost::combine(files_map1, files_map2))
-        {
-            std::pair<path, path> f1, f2;
-            boost::tie(f1, f2) = tup;
-
-            nlohmann::json jf;
-            jf["from"] = normalize_path(f1.first);
-            jf["to"] = normalize_path(f2.second);
-            j["files"].push_back(jf);
-        }*/
-        for (const auto &[f1, f2] : files_map1)
-        {
-            nlohmann::json jf;
-            jf["from"] = normalize_path(f1);
-            jf["to"] = normalize_path(f2);
-            if (!prefix_source_dir.empty() && f2.u8string().find(prefix_source_dir.u8string()) == 0)
-            {
-                auto t = normalize_path(f2);
-                t = t.substr(prefix_source_dir.u8string().size());
-                if (!t.empty() && t.front() == '/')
-                    t = t.substr(1);
-                jf["to"] = t;
-            }
-            j["files"].push_back(jf);
-        }
-
-        // deps
-        for (auto &d : t->gatherDependencies())
-        {
-            if (d->target && d->target->Scope != TargetScope::Build)
-                continue;
-
-            nlohmann::json jd;
-            jd["path"] = d->getPackage().ppath.toString();
-            jd["range"] = d->getPackage().range.toString();
-            j["dependencies"].push_back(jd);
-        }
-
-        auto s = j.dump();
-        m[pkg] = std::make_unique<JsonPackageDescription>(s);
-    }
-    return m;
 }
 
 const Solution *Build::getHostSolution() const

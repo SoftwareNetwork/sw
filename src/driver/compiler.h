@@ -34,7 +34,7 @@ namespace builder
 struct Command;
 }
 
-namespace driver::cpp
+namespace driver
 {
 struct Command;
 }
@@ -163,11 +163,11 @@ struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
     std::shared_ptr<builder::Command> createCommand();
 
 protected:
-    std::shared_ptr<driver::cpp::Command> cmd;
+    std::shared_ptr<driver::Command> cmd;
     bool prepared = false;
 
     virtual void prepareCommand1(const TargetBase &t) = 0;
-    virtual std::shared_ptr<driver::cpp::Command> createCommand1() const;
+    virtual std::shared_ptr<driver::Command> createCommand1() const;
 };
 
 struct SW_DRIVER_CPP_API Compiler : CompilerBaseProgram
@@ -217,7 +217,7 @@ struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
     void setSourceFile(const path &input_file, path &output_file) override;
 
 protected:
-    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
+    std::shared_ptr<driver::Command> createCommand1() const override;
 
 private:
     Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
@@ -238,7 +238,7 @@ struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
     String getObjectExtension() const override { return ".obj"; }
 
 protected:
-    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
+    std::shared_ptr<driver::Command> createCommand1() const override;
 
 private:
     Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
@@ -261,7 +261,7 @@ struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
     path getOutputFile() const override;
 
 protected:
-    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
+    std::shared_ptr<driver::Command> createCommand1() const override;
 };
 
 struct SW_DRIVER_CPP_API ClangCl : Clang
@@ -284,7 +284,7 @@ struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
     path getOutputFile() const override;
 
 protected:
-    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
+    std::shared_ptr<driver::Command> createCommand1() const override;
 };
 
 struct SW_DRIVER_CPP_API GNU
@@ -306,7 +306,7 @@ struct SW_DRIVER_CPP_API GNUASMCompiler : GNU, NativeCompiler,
     path getOutputFile() const override;
 
 protected:
-    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
+    std::shared_ptr<driver::Command> createCommand1() const override;
 };
 
 struct SW_DRIVER_CPP_API ClangASMCompiler : GNUASMCompiler
@@ -327,7 +327,7 @@ struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
     path getOutputFile() const override;
 
 protected:
-    std::shared_ptr<driver::cpp::Command> createCommand1() const override;
+    std::shared_ptr<driver::Command> createCommand1() const override;
 };
 
 // linkers
@@ -370,7 +370,7 @@ struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
     path getImportLibrary() const override;
 
 protected:
-    virtual void getAdditionalOptions(driver::cpp::Command *c) const = 0;
+    virtual void getAdditionalOptions(driver::Command *c) const = 0;
 
     void prepareCommand1(const TargetBase &t) override;
 
@@ -384,7 +384,7 @@ struct SW_DRIVER_CPP_API VisualStudioLinker : VisualStudioLibraryTool,
     using NativeLinkerOptions::operator=;
 
     SW_DECLARE_PROGRAM_CLONE;
-    void getAdditionalOptions(driver::cpp::Command *c) const override;
+    void getAdditionalOptions(driver::Command *c) const override;
     void setInputLibraryDependencies(const FilesOrdered &files) override;
 
 protected:
@@ -397,7 +397,7 @@ struct SW_DRIVER_CPP_API VisualStudioLibrarian : VisualStudioLibraryTool,
     using NativeLinkerOptions::operator=;
 
     SW_DECLARE_PROGRAM_CLONE;
-    void getAdditionalOptions(driver::cpp::Command *c) const override;
+    void getAdditionalOptions(driver::Command *c) const override;
 };
 
 struct SW_DRIVER_CPP_API GNULibraryTool : GNU,
@@ -405,7 +405,7 @@ struct SW_DRIVER_CPP_API GNULibraryTool : GNU,
     CommandLineOptions<GNULibraryToolOptions>
 {
 protected:
-    virtual void getAdditionalOptions(driver::cpp::Command *c) const = 0;
+    virtual void getAdditionalOptions(driver::Command *c) const = 0;
 };
 
 struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
@@ -415,7 +415,7 @@ struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
 
     using NativeLinkerOptions::operator=;
 
-    void getAdditionalOptions(driver::cpp::Command *c) const override;
+    void getAdditionalOptions(driver::Command *c) const override;
 
     void setInputLibraryDependencies(const FilesOrdered &files) override;
     void setObjectFiles(const Files &files) override;
@@ -434,7 +434,7 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
 {
     using NativeLinkerOptions::operator=;
 
-    void getAdditionalOptions(driver::cpp::Command *c) const override;
+    void getAdditionalOptions(driver::Command *c) const override;
 
     void setObjectFiles(const Files &files) override;
     void setOutputFile(const path &out) override;

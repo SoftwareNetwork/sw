@@ -27,7 +27,7 @@ namespace sw
 
 struct Solution;
 
-namespace driver::cpp
+namespace driver
 {
 
 struct CommandBuilder;
@@ -171,7 +171,7 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
     // New root directory after downloading and unpacking.
     path UnpackDirectory;
 
-    // command storage, use driver::cpp::Commands?
+    // command storage, use driver::Commands?
     // not needed? actual commands may be hidden in programs that lie in common Storage below
     //std::vector<std::shared_ptr<builder::Command>> CommandStorage;
 

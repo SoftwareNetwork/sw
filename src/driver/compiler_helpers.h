@@ -10,7 +10,7 @@ namespace sw
 {
 
 template <class T>
-static void getCommandLineOptions(driver::cpp::Command *c, const CommandLineOptions<T> &t, const String prefix = "", bool end_options = false)
+static void getCommandLineOptions(driver::Command *c, const CommandLineOptions<T> &t, const String prefix = "", bool end_options = false)
 {
     for (auto &o : t)
     {

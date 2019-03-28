@@ -29,7 +29,7 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
     SW_MAKE_COMPILER_COMMAND(t)
 
 #define SW_CREATE_COMPILER_COMMAND(t, m, ct)                        \
-    std::shared_ptr<driver::cpp::Command> t::createCommand1() const \
+    std::shared_ptr<driver::Command> t::createCommand1() const \
     {                                                               \
         m(ct);                                                      \
         return c;                                                   \
@@ -105,7 +105,7 @@ bool isCppSourceFileExtensions(const String &e)
     return exts.find(e) != exts.end();
 }
 
-static void add_args(driver::cpp::Command &c, const Strings &args)
+static void add_args(driver::Command &c, const Strings &args)
 {
     for (auto &a : args)
         c.args.push_back(a);
@@ -1038,7 +1038,7 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
     return cmd;
 }
 
-SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, SW_MAKE_COMPILER_COMMAND, driver::cpp::Command)
+SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, SW_MAKE_COMPILER_COMMAND, driver::Command)
 
 Strings NativeCompiler::getClangCppStdOption(CPPLanguageStandard std) const
 {
@@ -1086,7 +1086,7 @@ Strings NativeCompiler::getGNUCppStdOption(CPPLanguageStandard std) const
     return { s };
 }
 
-SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::VSCommand)
+SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::VSCommand)
 
 void VisualStudioCompiler::prepareCommand1(const TargetBase &t)
 {
@@ -1155,7 +1155,7 @@ path VisualStudioCompiler::getOutputFile() const
     return Output();
 }
 
-SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::VSCommand)
+SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::VSCommand)
 
 void VisualStudioASMCompiler::prepareCommand1(const TargetBase &t)
 {
@@ -1200,11 +1200,11 @@ void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(ClangCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::GNUCommand)
+SW_CREATE_COMPILER_COMMAND(ClangCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::GNUCommand)
 
 void ClangCompiler::prepareCommand1(const TargetBase &t)
 {
-    auto cmd = std::static_pointer_cast<driver::cpp::GNUCommand>(this->cmd);
+    auto cmd = std::static_pointer_cast<driver::GNUCommand>(this->cmd);
 
     if (InputFile)
     {
@@ -1253,7 +1253,7 @@ void ClangCompiler::setSourceFile(const path &input_file, path &output_file)
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(ClangClCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::VSCommand)
+SW_CREATE_COMPILER_COMMAND(ClangClCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::VSCommand)
 
 void ClangClCompiler::prepareCommand1(const TargetBase &t)
 {
@@ -1310,7 +1310,7 @@ void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::GNUCommand)
+SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::GNUCommand)
 
 void GNUASMCompiler::prepareCommand1(const TargetBase &t)
 {
@@ -1352,11 +1352,11 @@ void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
 
 SW_DEFINE_PROGRAM_CLONE(ClangASMCompiler)
 
-SW_CREATE_COMPILER_COMMAND(GNUCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::cpp::GNUCommand)
+SW_CREATE_COMPILER_COMMAND(GNUCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::GNUCommand)
 
 void GNUCompiler::prepareCommand1(const TargetBase &t)
 {
-    auto cmd = std::static_pointer_cast<driver::cpp::GNUCommand>(this->cmd);
+    auto cmd = std::static_pointer_cast<driver::GNUCommand>(this->cmd);
 
     if (InputFile)
     {
@@ -1502,7 +1502,7 @@ void VisualStudioLibraryTool::prepareCommand1(const TargetBase &t)
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioLinker)
 
-void VisualStudioLinker::getAdditionalOptions(driver::cpp::Command *cmd) const
+void VisualStudioLinker::getAdditionalOptions(driver::Command *cmd) const
 {
     getCommandLineOptions<VisualStudioLinkerOptions>(cmd, *this);
 }
@@ -1550,7 +1550,7 @@ void VisualStudioLinker::prepareCommand1(const TargetBase &t)
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioLibrarian)
 
-void VisualStudioLibrarian::getAdditionalOptions(driver::cpp::Command *cmd) const
+void VisualStudioLibrarian::getAdditionalOptions(driver::Command *cmd) const
 {
     getCommandLineOptions<VisualStudioLibrarianOptions>(cmd, *this);
 }
@@ -1605,7 +1605,7 @@ path GNULinker::getImportLibrary() const
     return Output;
 }
 
-void GNULinker::getAdditionalOptions(driver::cpp::Command *cmd) const
+void GNULinker::getAdditionalOptions(driver::Command *cmd) const
 {
     getCommandLineOptions<GNULinkerOptions>(cmd, *this);
 }
@@ -1676,7 +1676,7 @@ path GNULibrarian::getImportLibrary() const
     return p.parent_path() / (p.filename().stem() += ".a");
 }
 
-void GNULibrarian::getAdditionalOptions(driver::cpp::Command *cmd) const
+void GNULibrarian::getAdditionalOptions(driver::Command *cmd) const
 {
     getCommandLineOptions<GNULibrarianOptions>(cmd, *this);
 }

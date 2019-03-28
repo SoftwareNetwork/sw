@@ -18,7 +18,7 @@
 #include <boost/algorithm/string.hpp>
 
 //using namespace sw;
-//using namespace sw::driver::cpp;
+//using namespace sw::driver;
 
 // maybe with api?
 // using namespace sw::vN; // where N - version of sw api
@@ -40,7 +40,7 @@ using sw::Solution;
 using sw::Checker;
 using sw::Test;
 
-using sw::driver::cpp::Command;
+using sw::driver::Command;
 
 // options
 using sw::File;

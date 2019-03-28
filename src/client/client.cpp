@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "build.h"
+
 #include <api.h>
 #include <command.h>
 #include <database.h>
@@ -21,9 +23,6 @@
 #include <db_file.h>
 #include <file_storage.h>
 
-#include <sw/builder/build.h>
-#include <sw/builder/driver.h>
-#include <sw/driver/cpp/driver.h>
 #include <jumppad.h>
 
 #include <boost/algorithm/string.hpp>
@@ -69,8 +68,6 @@ using namespace sw;
 
 bool bConsoleMode = true;
 bool bUseSystemPause = false;
-
-namespace sw::driver::cpp { SW_REGISTER_PACKAGE_DRIVER(CppDriver); }
 
 /*
 // check args here to see if we want gui or not!
@@ -243,7 +240,6 @@ int parse_main(int argc, char **argv)
     String overview = "SW: Software Network Client\n"
         "\n"
         "  SW is a Universal Package Manager and Build System...\n";
-    if (auto &driver = getDrivers(); !driver.empty())
     {
         //overview += "\n  Available drivers:\n";
         //for (auto &d : driver)
@@ -832,11 +828,11 @@ SUBCOMMAND_DECL(uri)
 void override_package_perform()
 {
     auto s = sw::load(".");
-    auto &b = *((sw::Build*)s.get());
+    auto &b = *s.get();
     b.prepareStep();
 
     //auto s = sw::load(override_package[1]);
-    for (auto &[pkg, desc] : s->getPackages())
+    for (auto &[pkg, desc] : b.solutions[0].getPackages())
     {
         sw::PackagePath prefix = override_package;
         sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
@@ -1115,10 +1111,16 @@ SUBCOMMAND_DECL(upload)
         opts.source_dir = fs::relative(fs::current_path(), fs::current_path() / upload_path_to_root);
     auto s = sw::fetch_and_load(build_arg_update.getValue(), opts);
     if (build_before_upload)
+    {
         s->execute();
 
+        // after execution such solution has resolved deps and deps of the deps
+        // we must not add them
+        throw SW_RUNTIME_ERROR("not uploaded: not implemented");
+    }
+
     sw::Api api(*current_remote);
-    api.addVersion(upload_prefix, s->getPackages(), sw::read_config(build_arg_update.getValue()).value());
+    api.addVersion(upload_prefix, s->solutions[0].getPackages(), sw::read_config(build_arg_update.getValue()).value());
 }
 
 EXPORT_FROM_EXECUTABLE

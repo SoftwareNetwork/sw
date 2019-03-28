@@ -776,7 +776,7 @@ void ProjectContext::printProject(
                     for (auto &i : v->gatherIncludeDirectories())
                         idirs += i.string() + ";";
 
-                    auto cmd = std::make_shared<driver::cpp::Command>();
+                    auto cmd = std::make_shared<driver::Command>();
                     cmd->fs = nt.getSolution()->fs;
                     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *v);
                     for (auto &a : cmd->args)
@@ -1084,7 +1084,7 @@ void ProjectContext::printProject(
 
                         beginBlockWithConfiguration("AdditionalInputs", s.Settings);
                         //addText(normalize_path_windows(gen->program) + ";");
-                        if (auto dc = gen->as<driver::cpp::Command>())
+                        if (auto dc = gen->as<driver::Command>())
                         {
                             auto d = dc->dependency.lock();
                             if (d)

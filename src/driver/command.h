@@ -277,7 +277,7 @@ inline tag_env env(const String &k, const String &v)
 
 } // namespace cmd
 
-namespace driver::cpp
+namespace driver
 {
 
 namespace detail
@@ -349,14 +349,14 @@ private:
 
 #ifdef _MSC_VER
 #define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
-    SW_MAKE_CUSTOM_COMMAND(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
+    SW_MAKE_CUSTOM_COMMAND(::sw::driver::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
 #define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
-    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
 #else
 #define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
-    SW_MAKE_CUSTOM_COMMAND(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
+    SW_MAKE_CUSTOM_COMMAND(::sw::driver::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
 #define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
-    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::cpp::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
 #endif
 
 struct VSCommand : Command
@@ -494,12 +494,12 @@ CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
 
 #undef DECLARE_STREAM_OP
 
-} // namespace driver::cpp
+} // namespace driver
 
 namespace cmd
 {
 
-inline ::sw::driver::cpp::CommandBuilder command()
+inline ::sw::driver::CommandBuilder command()
 {
     return {};
 }

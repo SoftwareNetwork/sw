@@ -139,7 +139,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
     bool mustResolveDeps() const override { return prepare_pass == 2; }
 
-    driver::cpp::CommandBuilder addCommand() const;
+    driver::CommandBuilder addCommand() const;
     // add executed command?
 
     void writeFileOnce(const path &fn, const String &content = {}) const;

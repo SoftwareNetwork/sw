@@ -133,13 +133,13 @@ void build(Solution &s)
         "org.sw.demo.boost.assign-1"_dep,
         "org.sw.demo.boost.bimap-1"_dep,
         "org.sw.demo.boost.uuid-1"_dep;
-    cpp_driver += "src/driver/cpp/.*"_rr, "include/sw/driver/cpp/.*"_rr;
-    cpp_driver -= "src/driver/cpp/inserts/.*"_rr;
+    cpp_driver += "src/driver/.*"_rr, "include/sw/driver/.*"_rr;
+    cpp_driver -= "src/driver/inserts/.*"_rr;
     if (s.Settings.TargetOS.Type != OSType::Windows)
-        cpp_driver -= "src/driver/cpp/misc/.*"_rr;
-    cpp_driver.Public += "include"_idir, "src/driver/cpp"_idir;
-    embed("pub.egorpugin.primitives.tools.embedder-master"_dep, cpp_driver, "src/driver/cpp/inserts/inserts.cpp.in");
-    gen_flex_bison("org.sw.demo.lexxmark.winflexbison-master"_dep, cpp_driver, "src/driver/cpp/bazel/lexer.ll", "src/driver/cpp/bazel/grammar.yy");
+        cpp_driver -= "src/driver/misc/.*"_rr;
+    cpp_driver.Public += "include"_idir, "src/driver"_idir;
+    embed("pub.egorpugin.primitives.tools.embedder-master"_dep, cpp_driver, "src/driver/inserts/inserts.cpp.in");
+    gen_flex_bison("org.sw.demo.lexxmark.winflexbison-master"_dep, cpp_driver, "src/driver/bazel/lexer.ll", "src/driver/bazel/grammar.yy");
     if (s.Settings.Native.CompilerType == CompilerType::MSVC)
         cpp_driver.CompileOptions.push_back("-bigobj");
     //else if (s.Settings.Native.CompilerType == CompilerType::GNU)
@@ -154,7 +154,7 @@ void build(Solution &s)
     {
         auto c = cpp_driver.addCommand();
         c << cmd::prog(cl_generator)
-            << cmd::in("src/driver/cpp/options_cl.yml")
+            << cmd::in("src/driver/options_cl.yml")
             << cmd::out("options_cl.generated.h")
             << cmd::out("options_cl.generated.cpp", cmd::Skip)
             ;
@@ -163,7 +163,7 @@ void build(Solution &s)
     if (!s.Variables["SW_SELF_BUILD"])
     {
         /*PrecompiledHeader pch;
-        pch.header = "src/driver/cpp/pch.h";
+        pch.header = "src/driver/pch.h";
         pch.force_include_pch = true;*/
         //cpp_driver.addPrecompiledHeader(pch);
     }

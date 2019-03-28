@@ -1,0 +1,39 @@
+templates:
+    language:
+        c:
+            exe:
+                target: Executable
+                files:
+                    src/main.c: |
+                        #include <stdio.h>
+
+                        int main()
+                        {
+                            printf("Hello, World!\n");
+                            return 0;
+                        }
+
+        cpp:
+            exe:
+                target: Executable
+                files:
+                    src/main.cpp: |
+                        #include <iostream>
+
+                        int main()
+                        {
+                            std::cout << "Hello, World!\n";
+                            return 0;
+                        }
+
+            lib:
+                target: Library
+                files:
+                    src/lib.h: |
+                        LIB_API int f();
+
+                    src/lib.cpp: |
+                        int f()
+                        {
+                            return 42;
+                        }
