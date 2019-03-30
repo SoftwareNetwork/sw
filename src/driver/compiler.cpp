@@ -63,6 +63,7 @@ const StringSet &getCppHeaderFileExtensions()
         ".hm",
         ".hpp",
         ".hxx",
+        ".tcc",
         ".h++",
         ".H++",
         ".HPP",
@@ -77,6 +78,7 @@ const StringSet &getCppSourceFileExtensions()
         ".cc",
         ".CC",
         ".cpp",
+        ".cp",
         ".cxx",
         //".ixx", // msvc modules?
         // cppm - clang?
@@ -771,7 +773,9 @@ void detectNonWindowsCompilers(struct Solution &s)
 
         auto L = std::make_shared<NativeLanguage>();
         //L->Type = LanguageType::ASM;
-        L->CompiledExtensions = { ".s", ".S" };
+        // .s - pure asm
+        // .S - with #define (accepts -D) and #include (accepts -I), also .sx
+        L->CompiledExtensions = { ".s", ".S", ".sx" };
         //s.registerLanguage(L);
 
         //auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
@@ -1314,11 +1318,13 @@ SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, d
 
 void GNUASMCompiler::prepareCommand1(const TargetBase &t)
 {
+    bool assembly = false;
     if (InputFile)
     {
         cmd->name = normalize_path(InputFile());
         cmd->name_short = InputFile().filename().u8string();
         //cmd->file = InputFile;
+        assembly = InputFile().extension() == ".s";
     }
     if (OutputFile)
         cmd->working_directory = OutputFile().parent_path();
@@ -1329,7 +1335,9 @@ void GNUASMCompiler::prepareCommand1(const TargetBase &t)
     //cmd->out.capture = true;
 
     getCommandLineOptions<GNUAssemblerOptions>(cmd.get(), *this);
-    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+
+    if (!InputFile && !assembly)
+        iterate([this](auto & v, auto & gs) { v.addEverything(*cmd); });
 }
 
 SW_DEFINE_PROGRAM_CLONE(GNUASMCompiler)

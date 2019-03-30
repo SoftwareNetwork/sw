@@ -372,7 +372,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
         if (!all[0]->check_absolute(p, true))
             p = all[0]->BinaryDir / p;
 
-    cb.c->redirectStdout(p);
+    cb.c->redirectStdout(p, t.append);
     if (t.add_to_targets)
     {
         for (auto tgt : all)
@@ -397,7 +397,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
         if (!all[0]->check_absolute(p, true))
             p = all[0]->BinaryDir / p;
 
-    cb.c->redirectStderr(p);
+    cb.c->redirectStderr(p, t.append);
     if (t.add_to_targets)
     {
         for (auto tgt : all)

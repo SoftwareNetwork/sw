@@ -201,8 +201,8 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     void addOutput(const path &p);
     void addOutput(const Files &p);
     path redirectStdin(const path &p);
-    path redirectStdout(const path &p);
-    path redirectStderr(const path &p);
+    path redirectStdout(const path &p, bool append = false);
+    path redirectStderr(const path &p, bool append = false);
     size_t getHash() const;
     void updateCommandTime() const;
     void addPathDirectory(const path &p);
@@ -215,8 +215,8 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     //void load(BinaryContext &bctx);
     //void save(BinaryContext &bctx);
 
-    void onBeforeRun() override;
-    void onEnd() override;
+    void onBeforeRun() noexcept override;
+    void onEnd() noexcept override;
 
     path getResponseFilename() const;
     virtual String getResponseFileContents(bool showIncludes = false) const;

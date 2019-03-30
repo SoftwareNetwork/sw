@@ -308,16 +308,18 @@ path Command::redirectStdin(const path &p)
     return p;
 }
 
-path Command::redirectStdout(const path &p)
+path Command::redirectStdout(const path &p, bool append)
 {
     out.file = p;
+    out.append = append;
     addOutput(p);
     return p;
 }
 
-path Command::redirectStderr(const path &p)
+path Command::redirectStderr(const path &p, bool append)
 {
     err.file = p;
+    err.append = append;
     addOutput(p);
     return p;
 }
@@ -751,20 +753,26 @@ path Command::writeCommand(const path &p) const
     }
     else
     {
+        static const String bat_next_line = "^\n    ";
+        if (!args.empty())
+        {
+            if (bat)
+                t += bat_next_line;
+        }
         for (auto &a : args)
         {
             if (a == "-showIncludes")
                 continue;
             t += "\"" + escape_cmd_arg(a) + "\" ";
             if (bat)
-                t += "^\n    ";
+                t += bat_next_line;
             else
                 t += "\\\n\t";
         }
         if (!args.empty())
         {
             if (bat)
-                t.resize(t.size() - 6);
+                t.resize(t.size() - bat_next_line.size());
             else
                 t.resize(t.size() - 3);
         }
@@ -998,13 +1006,13 @@ bool Command::lessDuringExecution(const Command &rhs) const
     return dependent_commands.size() > dependent_commands.size();
 }
 
-void Command::onBeforeRun()
+void Command::onBeforeRun() noexcept
 {
     tid = std::this_thread::get_id();
     t_begin = Clock::now();
 }
 
-void Command::onEnd()
+void Command::onEnd() noexcept
 {
     t_end = Clock::now();
 }

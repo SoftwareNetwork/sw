@@ -1086,16 +1086,21 @@ void NativeExecutedTarget::findSources()
 // these are the same on win/macos, maybe change somehow?
 static const Strings include_dir_names =
 {
+    // sort by rarity
     "include",
     "includes",
 
     "Include",
     "Includes",
+
+    "headers",
+    "Headers",
 };
 
 // these are the same on win/macos, maybe change somehow?
 static const Strings source_dir_names =
 {
+    // sort by rarity
     "src",
     "source",
     "sources",

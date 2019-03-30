@@ -54,6 +54,7 @@ struct tag_targets
 // in/out data tags
 struct tag_do_not_add_to_targets {};
 struct tag_skip {};
+struct tag_append {};
 struct tag_normalize_path {};
 
 struct tag_files_data
@@ -83,6 +84,12 @@ struct tag_io_files : tag_files, tag_targets, tag_files_data
     using tag_files_data::populate;
 };
 
+struct tag_out_err
+{
+    bool append = false;
+    void populate(tag_append) { append = true; }
+};
+
 template <class T, class First, class... Args>
 void populate(T &t, const First &arg, Args &&... args)
 {
@@ -106,7 +113,9 @@ T in_out(const String &name, Args &&... args)
 
 static detail::tag_do_not_add_to_targets DoNotAddToTargets;
 static detail::tag_skip Skip;
+static detail::tag_append Append;
 static detail::tag_normalize_path NormalizePath;
+// TODO: add target list tag, this will simplify lots of code
 
 template <class T>
 struct tag_prog { T *t; };
@@ -114,8 +123,16 @@ struct tag_wdir : detail::tag_path {};
 struct tag_in : detail::tag_io_files {};
 struct tag_out : detail::tag_io_files {};
 struct tag_stdin : detail::tag_io_file {};
-struct tag_stdout : detail::tag_io_file {};
-struct tag_stderr : detail::tag_io_file {};
+struct tag_stdout : detail::tag_io_file, detail::tag_out_err
+{
+    using tag_io_file::populate;
+    using tag_out_err::populate;
+};
+struct tag_stderr : detail::tag_io_file, detail::tag_out_err
+{
+    using tag_io_file::populate;
+    using tag_out_err::populate;
+};
 struct tag_env { String k, v; };
 struct tag_end {};
 
@@ -236,12 +253,20 @@ tag_stdout std_out(const path &file, bool add_to_targets)
     return { file, targets, add_to_targets };
 }
 
-template <class ... Args>
+/*template <class ... Args>
 tag_stdout std_out(const path &file, Args && ... args)
 {
     std::vector<NativeExecutedTarget*> targets;
     (targets.push_back(&args), ...);
     return { file, targets };
+}*/
+
+template <class... Args>
+tag_stdout std_out(Args &&... args)
+{
+    tag_stdout t;
+    detail::populate(t, std::forward<Args>(args)...);
+    return t;
 }
 
 inline
@@ -251,12 +276,20 @@ tag_stderr std_err(const path &file, bool add_to_targets)
     return { file, targets, add_to_targets };
 }
 
-template <class ... Args>
+/*template <class ... Args>
 tag_stderr std_err(const path &file, Args && ... args)
 {
     std::vector<NativeExecutedTarget*> targets;
     (targets.push_back(&args), ...);
     return { file, targets };
+}*/
+
+template <class... Args>
+tag_stderr std_err(Args &&... args)
+{
+    tag_stderr t;
+    detail::populate(t, std::forward<Args>(args)...);
+    return t;
 }
 
 template <class ... Args>
