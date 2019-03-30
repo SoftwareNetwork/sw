@@ -255,6 +255,12 @@ void GNUCommand::postProcess1(bool ok)
 
 ///
 
+CommandBuilder &CommandBuilder::operator|(CommandBuilder &c2)
+{
+    *c | *c2.c;
+    return *this;
+}
+
 CommandBuilder &operator<<(CommandBuilder &cb, const NativeExecutedTarget &t)
 {
     auto nt = (NativeExecutedTarget*)&t;

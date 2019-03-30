@@ -399,6 +399,17 @@ void Command::prepare()
     }
 
     prepared = true;
+
+    if (prev)
+    {
+        if (auto c = static_cast<Command*>(prev))
+            c->prepare();
+    }
+    if (next)
+    {
+        if (auto c = static_cast<Command*>(next))
+            c->prepare();
+    }
 }
 
 void Command::execute()
@@ -536,6 +547,8 @@ Strings &Command::getArgs()
 
 void Command::execute1(std::error_code *ec)
 {
+    primitives::ScopedThreadName tn(": " + getName(), true);
+
     if (remove_outputs_before_execution)
     {
         // Some programs won't update their binaries even in case of updated sources/deps.
@@ -1026,6 +1039,18 @@ void Command::save(BinaryContext &bctx)
 {
 
 }*/
+
+Command &Command::operator|(Command &c2)
+{
+    Base::operator|(c2);
+    return *this;
+}
+
+Command &Command::operator|=(Command &c2)
+{
+    Base::operator|=(c2);
+    return *this;
+}
 
 }
 

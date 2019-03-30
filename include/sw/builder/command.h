@@ -223,6 +223,9 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
 
     Strings &getArgs() override;
 
+    Command &operator|(Command &);
+    Command &operator|=(Command &);
+
 protected:
     bool prepared = false;
     bool executed_ = false;
