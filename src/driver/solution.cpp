@@ -412,6 +412,25 @@ String SolutionSettings::getConfig(const TargetBase *t, bool use_short_config) c
     return hashConfig(c, use_short_config);
 }
 
+String SolutionSettings::getTargetTriplet() const
+{
+    // See https://clang.llvm.org/docs/CrossCompilation.html
+
+    String target;
+    target += toTripletString(TargetOS.Arch);
+    if (TargetOS.Arch == ArchType::arm)
+        target += toTripletString(TargetOS.SubArch);
+    target += "-unknown"; // vendor
+    target += "-" + toTripletString(TargetOS.Type);
+    if (TargetOS.Type == OSType::Android)
+        target += "-android";
+    if (TargetOS.Arch == ArchType::arm)
+        target += "eabi";
+    if (TargetOS.Type == OSType::Android)
+        target += Native.SDK.Version.string();
+    return target;
+}
+
 Solution::Solution()
     : base_ptr(*this)
 {
@@ -1383,7 +1402,7 @@ void Solution::findCompiler()
     {
         {{"org.gnu.gcc.gpp"}, CompilerType::GNU},
         {{"org.gnu.gcc.gcc"}, CompilerType::GNU},
-        {{"org.gnu.gcc.as"}, CompilerType::GNU},
+        //{{"org.gnu.gcc.as"}, CompilerType::GNU},
     };
 
     static const CompilerVector clang =
@@ -1439,61 +1458,86 @@ void Solution::findCompiler()
         throw SW_RUNTIME_ERROR("solution.cpp: not implemented");
     }
 
-    // linkers
-    auto activate_linker_or_throw = [this](const std::vector<std::tuple<PackagePath /* lib */, PackagePath /* link */, LinkerType>> &a, const auto &e)
+    // before linkers
+    if (isClangFamily(Settings.Native.CompilerType))
     {
-        if (!std::any_of(a.begin(), a.end(), [this](const auto &v)
+        if (auto p = getProgram("org.LLVM.ld"))
+        {
+            if (auto l = p->template as<GNULinker>())
             {
-                auto lib = getProgram(std::get<0>(v));
-                auto link = getProgram(std::get<1>(v));
-                auto r = lib && link;
-                if (r)
+                auto cmd = l->createCommand();
+                cmd->args.push_back("-fuse-ld=lld");
+                cmd->args.push_back("-target");
+                cmd->args.push_back(Settings.getTargetTriplet());
+            }
+        }
+    }
+
+    // lib/link
+    auto activate_lib_link_or_throw = [this](const std::vector<std::tuple<PackagePath /* lib */, LinkerType>> &a, const auto &e, bool link = false)
+    {
+        if (!std::any_of(a.begin(), a.end(), [this, &link](const auto &v)
+            {
+                auto p = getProgram(std::get<0>(v));
+                if (p)
                 {
-                    this->Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(lib->clone());
-                    this->Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(link->clone());
-                    //this->Settings.Native.LinkerType = std::get<2>(v);
-                    LOG_TRACE(logger, "activated " << std::get<0>(v).toString() << " and " << std::get<1>(v).toString() << " successfully");
+                    if (!link)
+                        this->Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(p->clone());
+                    else
+                        this->Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(p->clone());
+                    //this->Settings.Native.LinkerType = std::get<1>(v);
+                    LOG_TRACE(logger, "activated " << std::get<0>(v).toString() << " successfully");
                 }
                 else
                 {
-                    if (lib)
-                        LOG_TRACE(logger, "activate " << std::get<1>(v).toString() << " failed");
-                    else if (link)
-                        LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " failed");
-                    else
-                        LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " and " << std::get<1>(v).toString() << " failed");
+                    LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " failed");
                 }
-                return r;
+                return p;
             }))
             throw SW_RUNTIME_ERROR(e);
     };
 
-    if (HostOS.is(OSType::Windows))
+    if (Settings.TargetOS.is(OSType::Windows))
     {
-        activate_linker_or_throw({
-            {{"com.Microsoft.VisualStudio.VC.lib"}, {"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
-            {{"org.gnu.binutils.ar"}, {"org.gnu.gcc.ld"},LinkerType::GNU},
-            {{"org.gnu.binutils.ar"}, {"org.LLVM.clang.ld"},LinkerType::GNU},
-            }, "Try to add more linkers");
+        activate_lib_link_or_throw({
+            {{"com.Microsoft.VisualStudio.VC.lib"},LinkerType::MSVC},
+            {{"org.gnu.binutils.ar"},LinkerType::GNU},
+            {{"org.LLVM.ar"},LinkerType::GNU},
+            }, "Try to add more librarians");
+        activate_lib_link_or_throw({
+            {{"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
+            {{"org.gnu.gcc.ld"},LinkerType::GNU},
+            {{"org.LLVM.ld"},LinkerType::GNU},
+            }, "Try to add more linkers", true);
     }
-    else if (HostOS.is(OSType::Macos))
+    else if (Settings.TargetOS.is(OSType::Macos))
     {
-        activate_linker_or_throw({
-            // base
-            {{"org.gnu.binutils.ar"}, {"org.LLVM.clang.ld"},LinkerType::GNU},
-            {{"org.gnu.binutils.ar"}, {"com.apple.LLVM.clang.ld"},LinkerType::GNU},
-            {{"org.gnu.binutils.ar"}, {"org.gnu.gcc.ld"},LinkerType::GNU},
-            }, "Try to add more linkers");
+        activate_lib_link_or_throw({
+            {{"org.LLVM.ar"},LinkerType::GNU},
+            {{"org.gnu.binutils.ar"},LinkerType::GNU},
+            }, "Try to add more librarians");
+        activate_lib_link_or_throw({
+            {{"org.LLVM.ld"},LinkerType::GNU},
+            {{"com.apple.LLVM.ld"},LinkerType::GNU},
+            {{"org.gnu.gcc.ld"},LinkerType::GNU},
+            }, "Try to add more linkers", true);
     }
     else
     {
-        activate_linker_or_throw({
+        activate_lib_link_or_throw({
             // base
-            {{"org.gnu.binutils.ar"}, {"org.gnu.gcc.ld"},LinkerType::GNU},
-            {{"org.gnu.binutils.ar"}, {"org.LLVM.clang.ld"},LinkerType::GNU},
+            {{"org.gnu.binutils.ar"},LinkerType::GNU},
+            {{"org.LLVM.ar"},LinkerType::GNU},
             // cygwin alternative, remove?
-            {{"com.Microsoft.VisualStudio.VC.lib"}, {"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
-            }, "Try to add more linkers");
+            {{"com.Microsoft.VisualStudio.VC.lib"},LinkerType::MSVC},
+            }, "Try to add more librarians");
+        activate_lib_link_or_throw({
+            // base
+            {{"org.gnu.gcc.ld"},LinkerType::GNU},
+            {{"org.LLVM.ld"},LinkerType::GNU},
+            // cygwin alternative, remove?
+            {{"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
+            }, "Try to add more linkers", true);
     }
 
     static const CompilerVector other =
@@ -1531,28 +1575,16 @@ void Solution::findCompiler()
         extensions.erase(".mm");
     }
 
-    // maybe add custom switch to prevent this?
-    if (Settings.TargetOS.Type == OSType::Android)
+    if (isClangFamily(Settings.Native.CompilerType))
     {
-        auto add_target = [this](auto &pp)
+        auto add_target = [this](auto & pp)
         {
             auto prog = getProgram(pp);
             if (prog)
             {
-                if (auto c = prog->template as<Compiler>())
+                if (auto c = prog->template as<ClangCompiler>())
                 {
-                    String target;
-                    target += toString(Settings.TargetOS.Arch);
-                    if (this->Settings.TargetOS.Arch == ArchType::arm)
-                        target += toString(Settings.TargetOS.SubArch);
-                    target += "-linux-android";
-                    if (this->Settings.TargetOS.Arch == ArchType::arm)
-                        target += "eabi";
-                    target += Settings.Native.SDK.Version.string();
-
-                    auto cmd = c->createCommand();
-                    cmd->args.push_back("-target");
-                    cmd->args.push_back(target);
+                    c->Target = Settings.getTargetTriplet();
                 }
             }
         };
@@ -1818,6 +1850,13 @@ Solution &Build::addCustomSolution()
     return s;
 }
 
+std::optional<std::reference_wrapper<Solution>> Build::addFirstSolution()
+{
+    if (solutions.empty())
+        return addSolution();
+    return solutions[0];
+}
+
 static auto getFilesHash(const Files &files)
 {
     String h;
@@ -1886,8 +1925,7 @@ static void write_pch(Solution &solution)
 
 path Build::getOutputModuleName(const path &p)
 {
-    if (solutions.empty())
-        addSolution();
+    addFirstSolution();
 
     auto &solution = solutions[0];
 
@@ -1904,8 +1942,7 @@ FilesMap Build::build_configs_separate(const Files &files)
     if (files.empty())
         return r;
 
-    if (solutions.empty())
-        addSolution();
+    addFirstSolution();
 
     auto &solution = solutions[0];
 
@@ -2057,7 +2094,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     bool init = false;
     if (solutions.empty())
     {
-        addSolution();
+        addFirstSolution();
 
         auto &solution = solutions[0];
 
@@ -3106,168 +3143,156 @@ void Build::createSolutions(const path &dll, bool usedll)
     if (usedll && configure)
         getModuleStorage(base_ptr).get(dll).configure(*this);
 
-    if (solutions.empty())
+    if (hasAnyUserProvidedInformation())
     {
-        if (hasAnyUserProvidedInformation())
+        if (append_configs || !hasUserProvidedInformationStrong())
         {
-            if (append_configs || !hasUserProvidedInformationStrong())
+            if (auto g = getGenerator())
             {
-                if (auto g = getGenerator())
-                {
-                    g->createSolutions(*this);
-                }
-
-                // one more time, if generator did not add solution or whatever
-                if (solutions.empty())
-                {
-                    addSolution();
-                }
+                g->createSolutions(*this);
             }
-            else
+        }
+
+        // one more time, if generator did not add solution or whatever
+        addFirstSolution();
+
+        auto times = [this](int n)
+        {
+            if (n <= 1)
+                return;
+            auto s2 = solutions;
+            for (int i = 1; i < n; i++)
             {
-                // add basic solution
-                addSolution();
+                for (auto &s : s2)
+                    solutions.push_back(s);
             }
+        };
 
-            auto times = [this](int n)
+        auto mult_and_action = [this, &times](int n, auto f)
+        {
+            times(n);
+            for (int i = 0; i < n; i++)
             {
-                if (n <= 1)
-                    return;
-                auto s2 = solutions;
-                for (int i = 1; i < n; i++)
-                {
-                    for (auto &s : s2)
-                        solutions.push_back(s);
-                }
-            };
-
-            auto mult_and_action = [this, &times](int n, auto f)
-            {
-                times(n);
-                for (int i = 0; i < n; i++)
-                {
-                    int mult = solutions.size() / n;
-                    for (int j = i * mult; j < (i + 1) * mult; j++)
-                        f(solutions[j], i);
-                }
-            };
-
-            // configuration
-            auto set_conf = [this](auto &s, const String &configuration)
-            {
-                auto t = configurationTypeFromStringCaseI(configuration);
-                if (toIndex(t))
-                    s.Settings.Native.ConfigurationType = t;
-            };
-
-            Strings configs;
-            for (auto &c : configuration)
-            {
-                if (used_configs.find(c) == used_configs.end())
-                {
-                    if (isConfigSelected(c))
-                        LOG_WARN(logger, "config was not used: " + c);
-                }
-                if (!isConfigSelected(c))
-                    configs.push_back(c);
+                int mult = solutions.size() / n;
+                for (int j = i * mult; j < (i + 1) * mult; j++)
+                    f(solutions[j], i);
             }
-            mult_and_action(configs.size(), [&set_conf, &configs](auto &s, int i)
-            {
-                set_conf(s, configs[i]);
-            });
+        };
 
-            // static/shared
-            if (static_build && shared_build)
+        // configuration
+        auto set_conf = [this](auto &s, const String &configuration)
+        {
+            auto t = configurationTypeFromStringCaseI(configuration);
+            if (toIndex(t))
+                s.Settings.Native.ConfigurationType = t;
+        };
+
+        Strings configs;
+        for (auto &c : configuration)
+        {
+            if (used_configs.find(c) == used_configs.end())
             {
-                mult_and_action(2, [&set_conf](auto &s, int i)
-                {
-                    if (i == 0)
-                        s.Settings.Native.LibrariesType = LibraryType::Static;
-                    if (i == 1)
-                        s.Settings.Native.LibrariesType = LibraryType::Shared;
-                });
+                if (isConfigSelected(c))
+                    LOG_WARN(logger, "config was not used: " + c);
             }
-            else
-            {
-                for (auto &s : solutions)
-                {
-                    if (static_build)
-                        s.Settings.Native.LibrariesType = LibraryType::Static;
-                    if (shared_build)
-                        s.Settings.Native.LibrariesType = LibraryType::Shared;
-                }
-            }
+            if (!isConfigSelected(c))
+                configs.push_back(c);
+        }
+        mult_and_action(configs.size(), [&set_conf, &configs](auto &s, int i)
+        {
+            set_conf(s, configs[i]);
+        });
 
-            // mt/md
-            if (win_mt && win_md)
+        // static/shared
+        if (static_build && shared_build)
+        {
+            mult_and_action(2, [&set_conf](auto &s, int i)
             {
-                mult_and_action(2, [&set_conf](auto &s, int i)
-                {
-                    if (i == 0)
-                        s.Settings.Native.MT = true;
-                    if (i == 1)
-                        s.Settings.Native.MT = false;
-                });
-            }
-            else
-            {
-                for (auto &s : solutions)
-                {
-                    if (win_mt)
-                        s.Settings.Native.MT = true;
-                    if (win_md)
-                        s.Settings.Native.MT = false;
-                }
-            }
-
-            // platform
-            auto set_pl = [](auto &s, const String &platform)
-            {
-                auto t = archTypeFromStringCaseI(platform);
-                if (toIndex(t))
-                    s.Settings.TargetOS.Arch = t;
-            };
-
-            mult_and_action(platform.size(), [&set_pl](auto &s, int i)
-            {
-                set_pl(s, platform[i]);
-            });
-
-            // compiler
-            auto set_cl = [](auto &s, const String &compiler)
-            {
-                auto t = compilerTypeFromStringCaseI(compiler);
-                if (toIndex(t))
-                    s.Settings.Native.CompilerType = t;
-            };
-
-            mult_and_action(compiler.size(), [&set_cl](auto &s, int i)
-            {
-                set_cl(s, compiler[i]);
-            });
-
-            // target_os
-            auto set_tos = [](auto &s, const String &target_os)
-            {
-                auto t = OSTypeFromStringCaseI(target_os);
-                if (toIndex(t))
-                    s.Settings.TargetOS.Type = t;
-            };
-
-            mult_and_action(target_os.size(), [&set_tos](auto &s, int i)
-            {
-                set_tos(s, target_os[i]);
+                if (i == 0)
+                    s.Settings.Native.LibrariesType = LibraryType::Static;
+                if (i == 1)
+                    s.Settings.Native.LibrariesType = LibraryType::Shared;
             });
         }
-        else if (auto g = getGenerator())
+        else
         {
-            g->createSolutions(*this);
+            for (auto &s : solutions)
+            {
+                if (static_build)
+                    s.Settings.Native.LibrariesType = LibraryType::Static;
+                if (shared_build)
+                    s.Settings.Native.LibrariesType = LibraryType::Shared;
+            }
         }
+
+        // mt/md
+        if (win_mt && win_md)
+        {
+            mult_and_action(2, [&set_conf](auto &s, int i)
+            {
+                if (i == 0)
+                    s.Settings.Native.MT = true;
+                if (i == 1)
+                    s.Settings.Native.MT = false;
+            });
+        }
+        else
+        {
+            for (auto &s : solutions)
+            {
+                if (win_mt)
+                    s.Settings.Native.MT = true;
+                if (win_md)
+                    s.Settings.Native.MT = false;
+            }
+        }
+
+        // platform
+        auto set_pl = [](auto &s, const String &platform)
+        {
+            auto t = archTypeFromStringCaseI(platform);
+            if (toIndex(t))
+                s.Settings.TargetOS.Arch = t;
+        };
+
+        mult_and_action(platform.size(), [&set_pl](auto &s, int i)
+        {
+            set_pl(s, platform[i]);
+        });
+
+        // compiler
+        auto set_cl = [](auto &s, const String &compiler)
+        {
+            auto t = compilerTypeFromStringCaseI(compiler);
+            if (toIndex(t))
+                s.Settings.Native.CompilerType = t;
+        };
+
+        mult_and_action(compiler.size(), [&set_cl](auto &s, int i)
+        {
+            set_cl(s, compiler[i]);
+        });
+
+        // target_os
+        auto set_tos = [](auto &s, const String &target_os)
+        {
+            auto t = OSTypeFromStringCaseI(target_os);
+            if (toIndex(t))
+                s.Settings.TargetOS.Type = t;
+        };
+
+        mult_and_action(target_os.size(), [&set_tos](auto &s, int i)
+        {
+            set_tos(s, target_os[i]);
+        });
+    }
+    else if (auto g = getGenerator())
+    {
+        g->createSolutions(*this);
     }
 
     // one more time, if generator did not add solution or whatever
-    if (solutions.empty())
-        addSolution();
+    addFirstSolution();
 }
 
 void Build::load_dll(const path &dll, bool usedll)

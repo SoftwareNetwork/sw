@@ -376,13 +376,13 @@ Files NativeExecutedTarget::gatherObjectFilesWithoutLibraries() const
 bool NativeExecutedTarget::hasSourceFiles() const
 {
     return std::any_of(this->begin(), this->end(), [](const auto &f) {
-        return f.second->isActive();
-    }) ||
-        std::any_of(this->begin(), this->end(), [](const auto &f) {
-        return f.first.extension() == ".obj"
-            //|| f.first.extension() == ".def"
-            ;
-    });
+               return f.second->isActive();
+           }) ||
+           std::any_of(this->begin(), this->end(), [](const auto &f) {
+               return f.first.extension() == ".obj"
+                   //|| f.first.extension() == ".def"
+                   ;
+           });
 }
 
 void NativeExecutedTarget::resolvePostponedSourceFiles()
@@ -1865,6 +1865,8 @@ bool NativeExecutedTarget::prepare()
             }
             if (f->file.extension() != ".c")
                 c->CPPStandard = CPPVersion;
+            else
+                c->CStandard = CVersion;
 
             if (ExportAllSymbols)
                 c->VisibilityHidden = false;

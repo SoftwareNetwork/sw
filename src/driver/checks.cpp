@@ -699,7 +699,7 @@ void IncludeExists::run() const
 
     auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
     auto o = f;
-    c->setSourceFile(f, o += ".obj");
+    c->setSourceFile(f, o += c->getObjectExtension());
 
     auto cmd = c->getCommand(*check_set->checker.solution);
     cmd->command_storage = builder::Command::CS_DO_NOT_SAVE;
@@ -1081,7 +1081,7 @@ void SourceCompiles::run() const
 
     auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
     auto o = f;
-    c->setSourceFile(f, o += ".obj");
+    c->setSourceFile(f, o += c->getObjectExtension());
 
     auto cmd = c->getCommand(*check_set->checker.solution);
     cmd->command_storage = builder::Command::CS_DO_NOT_SAVE;

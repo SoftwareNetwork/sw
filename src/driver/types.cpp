@@ -14,6 +14,13 @@
 namespace sw
 {
 
+bool isClangFamily(CompilerType t)
+{
+    return t == CompilerType::AppleClang ||
+           t == CompilerType::Clang ||
+           t == CompilerType::ClangCl;
+}
+
 bool Assigner::canProceed(TargetOptions &r) const
 {
     if (allow)

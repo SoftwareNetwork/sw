@@ -117,6 +117,7 @@ using sw::WithoutNativeOptions;
 using sw::CommandLineOption;
 //using sw::CommandLineOptions;
 
+using sw::CLanguageStandard;
 using sw::CPPLanguageStandard;
 
 // functions

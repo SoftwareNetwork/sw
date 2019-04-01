@@ -202,6 +202,15 @@ SW_BUILDER_API
 String toString(ObjectFormatType e);
 
 SW_BUILDER_API
+String toTripletString(OSType e);
+
+SW_BUILDER_API
+String toTripletString(ArchType e);
+
+SW_BUILDER_API
+String toTripletString(SubArchType e);
+
+SW_BUILDER_API
 OSType OSTypeFromStringCaseI(const String &s);
 
 SW_BUILDER_API

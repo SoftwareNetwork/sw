@@ -459,17 +459,13 @@ void detectWindowsCompilers(struct Solution &s)
         // ASM
         {
             auto L = std::make_shared<NativeLanguage>();
-            //L->Type = LanguageType::ASM;
             L->CompiledExtensions = { ".asm" };
-            //s.registerLanguage(L);
 
-            //auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
             auto C = std::make_shared<VisualStudioASMCompiler>();
             C->Type = CompilerType::MSVC;
             C->file = s.Settings.TargetOS.Arch == ArchType::x86_64 ?
                 (compiler.parent_path() / "ml64.exe") :
                 (compiler.parent_path() / "ml.exe");
-            //C->vs_version = VSVersion;
             *C = COpts;
             L->compiler = C;
 
@@ -481,16 +477,12 @@ void detectWindowsCompilers(struct Solution &s)
         // C, C++
         {
             auto L = std::make_shared<NativeLanguage>();
-            //L->Type = LanguageType::C;
             L->CompiledExtensions = getCppSourceFileExtensions();
             L->CompiledExtensions.insert(".c");
-            //s.registerLanguage(L);
 
-            //auto L = (CLanguage*)s.languages[LanguageType::C].get();
             auto C = std::make_shared<VisualStudioCompiler>();
             C->Type = CompilerType::MSVC;
             C->file = compiler;
-            //C->vs_version = VSVersion;
             *C = COpts;
             L->compiler = C;
 
@@ -534,12 +526,9 @@ void detectWindowsCompilers(struct Solution &s)
         // C, C++
         {
             auto L = std::make_shared<NativeLanguage>();
-            //L->Type = LanguageType::C;
             L->CompiledExtensions = getCppSourceFileExtensions();
             L->CompiledExtensions.insert(".c");
-            //s.registerLanguage(L);
 
-            //auto L = (CLanguage*)s.languages[LanguageType::C].get();
             auto C = std::make_shared<ClangClCompiler>();
             C->Type = CompilerType::ClangCl;
             C->file = bin_llvm_path / "clang-cl.exe";
@@ -586,11 +575,8 @@ void detectWindowsCompilers(struct Solution &s)
         // C
         {
             auto L = std::make_shared<NativeLanguage>();
-            //L->Type = LanguageType::C;
             L->CompiledExtensions = { ".c" };
-            //s.registerLanguage(L);
 
-            //auto L = (CLanguage*)s.languages[LanguageType::C].get();
             auto C = std::make_shared<ClangCompiler>();
             C->Type = CompilerType::Clang;
             C->file = bin_llvm_path / "clang.exe";
@@ -609,11 +595,8 @@ void detectWindowsCompilers(struct Solution &s)
         // C++
         {
             auto L = std::make_shared<NativeLanguage>();
-            //L->Type = LanguageType::C;
             L->CompiledExtensions = getCppSourceFileExtensions();
-            //s.registerLanguage(L);
 
-            //auto L = (CLanguage*)s.languages[LanguageType::C].get();
             auto C = std::make_shared<ClangCompiler>();
             C->Type = CompilerType::Clang;
             C->file = bin_llvm_path / "clang++.exe";
@@ -672,9 +655,9 @@ void detectNonWindowsCompilers(struct Solution &s)
 
     NativeLinkerOptions LOpts;
 
-    LOpts.System.LinkLibraries.push_back("pthread"); // remove and add to progs explicitly?
-    LOpts.System.LinkLibraries.push_back("dl"); // remove and add to progs explicitly?
-    LOpts.System.LinkLibraries.push_back("m"); // remove and add to progs explicitly?
+    //LOpts.System.LinkLibraries.push_back("pthread"); // remove and add to progs explicitly?
+    //LOpts.System.LinkLibraries.push_back("dl"); // remove and add to progs explicitly?
+    //LOpts.System.LinkLibraries.push_back("m"); // remove and add to progs explicitly?
 
     auto resolve = [](const path &p)
     {
@@ -730,16 +713,14 @@ void detectNonWindowsCompilers(struct Solution &s)
         {
             auto Linker = std::make_shared<GNULinker>();
 
-            if (s.HostOS.is(OSType::Cygwin))
-                Linker->rdynamic = false;
             if (s.HostOS.is(OSType::Macos))
                 Linker->use_start_end_groups = false;
             Linker->Type = LinkerType::GNU;
             Linker->file = p;
 
             auto lopts2 = LOpts;
-            lopts2.System.LinkLibraries.push_back("stdc++"); // remove and add to progs explicitly?
-            lopts2.System.LinkLibraries.push_back("stdc++fs"); // remove and add to progs explicitly?
+            //lopts2.System.LinkLibraries.push_back("stdc++"); // remove and add to progs explicitly?
+            //lopts2.System.LinkLibraries.push_back("stdc++fs"); // remove and add to progs explicitly?
 
             *Linker = lopts2;
             s.registerProgram("org.gnu.gcc.ld", Linker);
@@ -768,7 +749,7 @@ void detectNonWindowsCompilers(struct Solution &s)
     };
 
     // ASM
-    {
+    /*{
         p = resolve("as");
 
         auto L = std::make_shared<NativeLanguage>();
@@ -785,7 +766,7 @@ void detectNonWindowsCompilers(struct Solution &s)
         *C = COpts;
         L->compiler = C;
         s.registerProgramAndLanguage("org.gnu.gcc.as", C, L);
-    }
+    }*/
 
     for (auto &v : gcc_vers)
     {
@@ -795,11 +776,11 @@ void detectNonWindowsCompilers(struct Solution &s)
             // C
             {
                 auto L = std::make_shared<NativeLanguage>();
-                //L->Type = LanguageType::C;
-                L->CompiledExtensions = { ".c" };
-                //s.registerLanguage(L);
+                // also with asm
+                // .s - pure asm
+                // .S - with #define (accepts -D) and #include (accepts -I), also .sx
+                L->CompiledExtensions = { ".c", ".s", ".S" };
 
-                //auto L = (CLanguage*)s.languages[LanguageType::C].get();
                 auto C = std::make_shared<GNUCompiler>();
                 C->Type = CompilerType::GNU;
                 C->file = p;
@@ -821,11 +802,8 @@ void detectNonWindowsCompilers(struct Solution &s)
             // CPP
             {
                 auto L = std::make_shared<NativeLanguage>();
-                //L->Type = LanguageType::C;
                 L->CompiledExtensions = getCppSourceFileExtensions();
-                //s.registerLanguage(L);
 
-                //auto L = (CPPLanguage*)s.languages[LanguageType::CPP].get();
                 auto C = std::make_shared<GNUCompiler>();
                 C->Type = CompilerType::GNU;
                 C->file = p;
@@ -839,8 +817,21 @@ void detectNonWindowsCompilers(struct Solution &s)
         }
     }
 
-    // clang
+    // llvm/clang
     {
+        p = resolve("llvm-ar");
+        if (!p.empty())
+        {
+            auto Librarian = std::make_shared<GNULibrarian>();
+            Librarian->Type = LinkerType::GNU;
+            Librarian->file = p;
+            Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
+            *Librarian = LOpts;
+            s.registerProgram("org.LLVM.ar", Librarian);
+            //if (s.HostOS.is(OSType::Macos))
+            //Librarian->createCommand()->use_response_files = false;
+        }
+
         //p = resolve("ld.gold");
         for (auto &v : clang_vers)
         //for (auto &v : clangpp_vers) // this links correct c++ library
@@ -852,19 +843,17 @@ void detectNonWindowsCompilers(struct Solution &s)
 
                 auto Linker = std::make_shared<GNULinker>();
 
-                if (s.HostOS.is(OSType::Cygwin))
-                    Linker->rdynamic = false;
                 if (s.HostOS.is(OSType::Macos))
                     Linker->use_start_end_groups = false;
                 Linker->Type = LinkerType::GNU;
                 Linker->file = p;
 
                 auto lopts2 = LOpts;
-                lopts2.System.LinkLibraries.push_back("c++"); // remove and add to progs explicitly?
-                lopts2.System.LinkLibraries.push_back("c++fs"); // remove and add to progs explicitly?
+                //lopts2.System.LinkLibraries.push_back("c++"); // remove and add to progs explicitly?
+                //lopts2.System.LinkLibraries.push_back("c++fs"); // remove and add to progs explicitly?
 
                 *Linker = lopts2;
-                s.registerProgram(appleclang ? "com.apple.LLVM.clang.ld" : "org.LLVM.clang.ld", Linker);
+                s.registerProgram(appleclang ? "com.apple.LLVM.ld" : "org.LLVM.ld", Linker);
 
                 if (s.HostOS.is(OSType::Macos))
                 {
@@ -877,13 +866,13 @@ void detectNonWindowsCompilers(struct Solution &s)
                 // C
                 {
                     auto L = std::make_shared<NativeLanguage>();
-                    //L->Type = LanguageType::C;
-                    L->CompiledExtensions = { ".c" };
-                    //s.registerLanguage(L);
+                    // also with asm
+                    // .s - pure asm
+                    // .S - with #define (accepts -D) and #include (accepts -I), also .sx
+                    L->CompiledExtensions = { ".c", ".s", ".S" };
 
                     bool appleclang = is_apple_clang(p);
 
-                    //auto L = (CLanguage*)s.languages[LanguageType::C].get();
                     auto C = std::make_shared<ClangCompiler>();
                     C->Type = appleclang ? CompilerType::AppleClang : CompilerType::Clang;
                     C->file = p;
@@ -905,13 +894,10 @@ void detectNonWindowsCompilers(struct Solution &s)
                 // CPP
                 {
                     auto L = std::make_shared<NativeLanguage>();
-                    //L->Type = LanguageType::C;
                     L->CompiledExtensions = getCppSourceFileExtensions();
-                    //s.registerLanguage(L);
 
                     bool appleclang = is_apple_clang(p);
 
-                    //auto L = (CLanguage*)s.languages[LanguageType::C].get();
                     auto C = std::make_shared<ClangCompiler>();
                     C->Type = appleclang ? CompilerType::AppleClang : CompilerType::Clang;
                     C->file = p;
@@ -929,7 +915,8 @@ void detectNonWindowsCompilers(struct Solution &s)
 
 void detectNativeCompilers(struct Solution &s)
 {
-    auto &os = s.HostOS;
+    //auto &os = s.HostOS;
+    auto &os = s.Settings.TargetOS;
     if (os.is(OSType::Windows) || os.is(OSType::Cygwin))
     {
         if (os.is(OSType::Cygwin))
@@ -1043,6 +1030,29 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
 }
 
 SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, SW_MAKE_COMPILER_COMMAND, driver::Command)
+
+Strings NativeCompiler::getCStdOption(CLanguageStandard std) const
+{
+    String s = "-std=c";
+    switch (std)
+    {
+    case CLanguageStandard::C89:
+        s += "89";
+        break;
+    case CLanguageStandard::C99:
+        s += "99";
+        break;
+    case CLanguageStandard::C11:
+        s += "11";
+        break;
+    case CLanguageStandard::C18:
+        s += "18";
+        break;
+    default:
+        return {};
+    }
+    return { s };
+}
 
 Strings NativeCompiler::getClangCppStdOption(CPPLanguageStandard std) const
 {
@@ -1222,21 +1232,14 @@ void ClangCompiler::prepareCommand1(const TargetBase &t)
         cmd->working_directory = OutputFile().parent_path();
     }
 
+    add_args(*cmd, getCStdOption(CStandard()));
+    CStandard.skip = true;
     add_args(*cmd, getClangCppStdOption(CPPStandard()));
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
     iterate([this](auto &v, auto &gs) { v.addEverything(*this->cmd); });
     getCommandLineOptions<ClangOptions>(cmd.get(), *this, "", true);
-}
-
-String ClangCompiler::getObjectExtension() const
-{
-#ifdef _WIN32
-    return ".obj";
-#else
-    return ".o";
-#endif
 }
 
 void ClangCompiler::setOutputFile(const path &output_file)
@@ -1383,6 +1386,8 @@ void GNUCompiler::prepareCommand1(const TargetBase &t)
 
     //cmd->out.capture = true;
 
+    add_args(*cmd, getCStdOption(CStandard()));
+    CStandard.skip = true;
     add_args(*cmd, getGNUCppStdOption(CPPStandard()));
     CPPStandard.skip = true;
 

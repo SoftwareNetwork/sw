@@ -14,6 +14,7 @@
 namespace sw
 {
 
+DEFINE_OPTION_SPECIALIZATION_DUMMY(CLanguageStandard);
 DEFINE_OPTION_SPECIALIZATION_DUMMY(CPPLanguageStandard);
 
 namespace vs

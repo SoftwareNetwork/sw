@@ -429,6 +429,7 @@ struct SW_DRIVER_CPP_API CommandBuilder
     CommandBuilder &operator=(const CommandBuilder &) = default;
 
     CommandBuilder &operator|(CommandBuilder &);
+    CommandBuilder &operator|(::sw::builder::Command &);
 };
 
 #define DECLARE_STREAM_OP(t) \

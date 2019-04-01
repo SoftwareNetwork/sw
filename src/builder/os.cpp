@@ -263,6 +263,21 @@ String toString(SubArchType e)
     }
 }
 
+String toTripletString(OSType e)
+{
+    return boost::to_lower_copy(toString(e));
+}
+
+String toTripletString(ArchType e)
+{
+    return boost::to_lower_copy(toString(e));
+}
+
+String toTripletString(SubArchType e)
+{
+    return boost::to_lower_copy(toString(e));
+}
+
 String toString(EnvironmentType e)
 {
     throw SW_RUNTIME_ERROR("not implemented");

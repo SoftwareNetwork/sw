@@ -257,8 +257,14 @@ void GNUCommand::postProcess1(bool ok)
 
 CommandBuilder &CommandBuilder::operator|(CommandBuilder &c2)
 {
-    *c | *c2.c;
+    operator|(*c2.c);
     return *this;
+}
+
+CommandBuilder &CommandBuilder::operator|(::sw::builder::Command &c2)
+{
+    *c | c2;
+    return * this;
 }
 
 CommandBuilder &operator<<(CommandBuilder &cb, const NativeExecutedTarget &t)

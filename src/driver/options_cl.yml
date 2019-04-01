@@ -729,6 +729,10 @@ types:
                 flag: x
                 order: -10
 
+            cstd:
+                name: CStandard
+                type: CLanguageStandard
+
             cppstd:
                 name: CPPStandard
                 type: CPPLanguageStandard
@@ -782,7 +786,7 @@ types:
                 name: DisableWarnings
                 flag: w
                 type: bool
-                default: true
+                #default: true
 
             wdno:
                 name: WriteDependenciesNearOutputWithoutSystemFiles
@@ -837,6 +841,13 @@ types:
                 flag: Xclang -emit-pch
                 type: bool
 
+            tgt:
+                name: Target
+                flag: target
+                type: String
+                properties:
+                    - separate_prefix
+
     clangclopt:
         name: ClangClOptions
 
@@ -883,7 +894,7 @@ types:
                 name: rdynamic
                 flag: rdynamic
                 type: bool
-                default: true
+                #default: true
 
             sg:
                 name: StartGroup

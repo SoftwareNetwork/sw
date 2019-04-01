@@ -107,9 +107,8 @@ struct SW_DRIVER_CPP_API SolutionSettings
 
     void init();
     String getConfig(const TargetBase *t, bool use_short_config = false) const;
+    String getTargetTriplet() const;
 };
-
-struct Build;
 
 /**
 * \brief Single configuration solution.
@@ -131,7 +130,7 @@ struct SW_DRIVER_CPP_API Solution : TargetBase
     path config_file_or_dir; // original file or dir
     bool disable_compiler_lookup = false;
     path prefix_source_dir; // used for fetches (additional root dir to config/sources)
-    const Build *build = nullptr;
+    const struct Build *build = nullptr;
     bool is_config_build = false;
 
     VariablesType Variables;
@@ -336,6 +335,7 @@ private:
     mutable StringSet used_configs;
     std::unique_ptr<Generator> generator;
 
+    std::optional<std::reference_wrapper<Solution>> addFirstSolution();
     void setupSolutionName(const path &file_or_dir);
     SharedLibraryTarget &createTarget(const Files &files);
     path getOutputModuleName(const path &p);

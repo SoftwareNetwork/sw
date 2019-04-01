@@ -39,6 +39,9 @@ enum class CompilerType
     GCC = GNU,
 };
 
+SW_DRIVER_CPP_API
+bool isClangFamily(CompilerType);
+
 enum class LinkerType
 {
     UnspecifiedLinker,
@@ -152,9 +155,9 @@ enum class CLanguageStandard
 
     ANSI,
     C89 = ANSI,
-    C90 = C89,
+    C90 = C89, // ansi is different from c90?
     C95,
-    C98,
+    C99,
     C11,
     C17,
     C18 = C17,

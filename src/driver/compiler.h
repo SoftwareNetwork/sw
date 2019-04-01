@@ -189,6 +189,7 @@ struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
 protected:
     mutable Files dependencies;
 
+    Strings getCStdOption(CLanguageStandard s) const;
     Strings getClangCppStdOption(CPPLanguageStandard s) const;
     Strings getGNUCppStdOption(CPPLanguageStandard s) const;
 };
@@ -256,7 +257,6 @@ struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
     SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
-    String getObjectExtension() const override;
     void setSourceFile(const path &input_file, path &output_file) override;
     path getOutputFile() const override;
 
@@ -302,7 +302,6 @@ struct SW_DRIVER_CPP_API GNUASMCompiler : GNU, NativeCompiler,
 
     void setSourceFile(const path &input_file, path &output_file) override;
     void setOutputFile(const path &output_file);
-    String getObjectExtension() const override { return ".o"; }
     path getOutputFile() const override;
 
 protected:
@@ -322,7 +321,6 @@ struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
     SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
-    String getObjectExtension() const override { return ".o"; }
     void setSourceFile(const path &input_file, path &output_file) override;
     path getOutputFile() const override;
 
