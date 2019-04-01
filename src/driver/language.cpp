@@ -232,7 +232,8 @@ std::optional<PackageId> LanguageStorage::findPackageIdByExtension(const String 
 template <class SF, class C>
 path NativeLanguageBase<SF, C>::getOutputFile(const path &input, const Target &t) const
 {
-    auto o = t.BinaryDir.parent_path() / "obj" / (SourceFile::getObjectFilename(t, input) + this->compiler->getObjectExtension());
+    auto o = t.BinaryDir.parent_path() / "obj" /
+        (SourceFile::getObjectFilename(t, input) + this->compiler->getObjectExtension(t.getSolution()->Settings.TargetOS));
     o = fs::absolute(o);
     return o;
 }

@@ -177,6 +177,18 @@ String OS::getStaticLibraryExtension() const
     }
 }
 
+String OS::getLibraryPrefix() const
+{
+    switch (Type)
+    {
+    case OSType::Cygwin: // empty for cygwin or lib?
+    case OSType::Windows:
+        return "";
+    default:
+        return "lib";
+    }
+}
+
 String OS::getSharedLibraryExtension() const
 {
     switch (Type)
@@ -189,6 +201,17 @@ String OS::getSharedLibraryExtension() const
         return ".dylib";
     default:
         return ".so";
+    }
+}
+
+String OS::getObjectFileExtension() const
+{
+    switch (Type)
+    {
+    case OSType::Windows:
+        return ".obj";
+    default:
+        return ".o";
     }
 }
 

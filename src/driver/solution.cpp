@@ -1884,7 +1884,8 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
 
 static void addDeps(NativeExecutedTarget &lib, Solution &solution)
 {
-    lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.version");
+    //lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.version");
+    lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.templates"); // for SW_RUNTIME_ERROR
 
     auto &drv = solution.getTarget<NativeTarget>(SW_DRIVER_NAME);
     auto d = lib + drv;

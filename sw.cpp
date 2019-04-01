@@ -7,6 +7,12 @@ void configure(Build &s)
     s.Settings.Native.LibrariesType = LibraryType::Static;
     s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
 
+    s.registerCallback([](auto &t)
+    {
+        auto &nt = dynamic_cast<NativeExecutedTarget&>(t);
+        nt.ExportIfStatic = true;
+    }, "pub.egorpugin.primitives.version-master", sw::CallbackType::CreateTarget);
+
     if (s.isConfigSelected("cygwin2macos"))
         s.loadModule("utils/cc/cygwin2macos.cpp").call<void(Solution&)>("configure", s);
     else if (s.isConfigSelected("win2macos"))

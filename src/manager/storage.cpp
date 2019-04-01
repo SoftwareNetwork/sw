@@ -17,6 +17,101 @@ static cl::opt<path> storage_dir_override("storage-dir");
 namespace sw
 {
 
+namespace detail
+{
+
+struct VirtualFileSystem
+{
+    virtual ~VirtualFileSystem() = default;
+
+    virtual void writeFile(const PackageId &pkg, const path &local_file, const path &vfs_file) const = 0;
+};
+
+// default fs
+struct LocalFileSystem : VirtualFileSystem
+{
+
+};
+
+// more than one destination
+struct VirtualFileSystemMultiplexer : VirtualFileSystem
+{
+    std::vector<std::shared_ptr<VirtualFileSystem>> filesystems;
+
+    void writeFile(const PackageId &pkg, const path &local_file, const path &vfs_file) const override
+    {
+        for (auto &fs : filesystems)
+            fs->writeFile(pkg, local_file, vfs_file);
+    }
+};
+
+struct StorageFileVerifier
+{
+    // can be hash
+    // can be digital signature
+};
+
+struct IStorage
+{
+    virtual ~IStorage() = default;
+
+    virtual path getRelativePath(const path &p) const = 0;
+
+    // bool isDirectory()?
+
+    // when available?
+    // commit()
+    // rollback()
+};
+
+struct Storage : IStorage
+{
+    // make IStorage?
+    std::shared_ptr<VirtualFileSystem> vfs;
+
+    Storage(const std::shared_ptr<VirtualFileSystem> &vfs)
+        : vfs(vfs)
+    {
+    }
+
+    virtual ~Storage() = default;
+
+    path getRelativePath(const path &p) const override
+    {
+        if (p.is_relative())
+            return p;
+        return p;
+    }
+
+    // from remote
+
+    // low level
+    void copyFile(const Storage &remote_storage, const path &p);
+    // fine
+    void copyFile(const Storage &remote_storage, const PackageId &pkg, const path &p);
+    // less generic
+    void copyFile(const Storage &remote_storage, const PackageId &pkg, const path &p, const String &hash); // with hash or signature check?
+    // fine
+    void copyFile(const Storage &remote_storage, const PackageId &pkg, const path &p, const StorageFileVerifier &v);
+
+    // to remote
+
+    // low level
+    void copyFile(const path &p, const Storage &remote_storage);
+
+    // low level
+    void copyFile(const PackageId &pkg, const path &p, const Storage &remote_storage);
+
+    // isn't it better?
+    void getFile(); // alias for copy?
+    void putFile(); // ?
+};
+
+// HttpsStorage; // read only
+// RsyncStorage;?
+
+}
+
 static void checkPath(const path &p, const String &msg)
 {
     const auto s = p.string();

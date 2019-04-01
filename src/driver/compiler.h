@@ -152,6 +152,7 @@ struct SW_DRIVER_CPP_API NativeToolchain
 
 struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
 {
+    String Prefix;
     String Extension;
 
     CompilerBaseProgram() = default;
@@ -184,7 +185,7 @@ struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
 
     virtual path getOutputFile() const = 0;
     virtual void setSourceFile(const path &input_file, path &output_file) = 0;
-    virtual String getObjectExtension() const { return ".o"; }
+    String getObjectExtension(const struct OS &o) const;
 
 protected:
     mutable Files dependencies;
@@ -213,7 +214,6 @@ struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
     SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
-    String getObjectExtension() const override { return ".obj"; }
     path getOutputFile() const override;
     void setSourceFile(const path &input_file, path &output_file) override;
 
@@ -236,7 +236,6 @@ struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
     path getOutputFile() const override;
     void setSourceFile(const path &input_file, path &output_file) override;
     void setOutputFile(const path &output_file);
-    String getObjectExtension() const override { return ".obj"; }
 
 protected:
     std::shared_ptr<driver::Command> createCommand1() const override;
@@ -279,7 +278,6 @@ struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
     SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
-    String getObjectExtension() const override { return ".obj"; }
     void setSourceFile(const path &input_file, path &output_file) override;
     path getOutputFile() const override;
 
@@ -460,7 +458,7 @@ struct SW_DRIVER_CPP_API RcTool :
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file);
-    String getObjectExtension() const { return ".res"; }
+    String getObjectExtension(const OS &) const { return ".res"; }
 
 protected:
     Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }

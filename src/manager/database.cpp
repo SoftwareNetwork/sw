@@ -689,7 +689,7 @@ PackagesDatabase::PackagesDatabase()
 
     if (created)
     {
-        LOG_INFO(logger, "Packages database was not found");
+        LOG_DEBUG(logger, "Packages database was not found");
         download();
         load();
     }

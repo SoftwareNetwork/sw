@@ -165,6 +165,7 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     std::shared_ptr<NativeCompiler> compiler;
     std::unordered_set<SourceFile*> dependencies;
     BuildAsType BuildAs = BuildAsType::BasedOnExtension;
+    bool skip_linking = false;
 
     NativeSourceFile(const Target &t, NativeCompiler *c, const path &input, const path &output);
     NativeSourceFile(const NativeSourceFile &rhs);

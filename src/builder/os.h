@@ -241,6 +241,8 @@ struct SW_BUILDER_API OS
     String getExecutableExtension() const;
     String getStaticLibraryExtension() const;
     String getSharedLibraryExtension() const;
+    String getObjectFileExtension() const;
+    String getLibraryPrefix() const;
 
     String getShellExtension() const;
     ShellType getShellType() const;

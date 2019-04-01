@@ -803,7 +803,7 @@ types:
         flags:
             # COMMAND_LINE_OPTION(NoStdIncludesCPP, bool){ cl::CommandFlag{ "nostdinc++" }, true };
             nostdinc:
-                name: NoStdIncludesC
+                name: nostdinc
                 flag: nostdinc
                 type: bool
                 #default: true
@@ -844,6 +844,7 @@ types:
             tgt:
                 name: Target
                 flag: target
+                # or flag: -target with no separate_prefix
                 type: String
                 properties:
                     - separate_prefix
@@ -890,6 +891,30 @@ types:
             - fpic
 
         flags:
+            nostdlib:
+                name: nostdlib
+                flag: nostdlib
+                type: bool
+
+            nostartfiles:
+                name: nostartfiles
+                flag: nostartfiles
+                type: bool
+
+            startfiles:
+                name: StartFiles
+                type: FilesOrdered
+                order: -1000000
+                properties:
+                    - input_dependency
+
+            endfiles:
+                name: EndFiles
+                type: FilesOrdered
+                order: 1000000
+                properties:
+                    - input_dependency
+
             rdyn:
                 name: rdynamic
                 flag: rdynamic

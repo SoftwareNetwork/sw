@@ -676,6 +676,7 @@ void detectNonWindowsCompilers(struct Solution &s)
         auto Librarian = std::make_shared<GNULibrarian>();
         Librarian->Type = LinkerType::GNU;
         Librarian->file = p;
+        Librarian->Prefix = s.Settings.TargetOS.getLibraryPrefix();
         Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
         *Librarian = LOpts;
         s.registerProgram("org.gnu.binutils.ar", Librarian);
@@ -721,6 +722,8 @@ void detectNonWindowsCompilers(struct Solution &s)
                 Linker->use_start_end_groups = false;
             Linker->Type = LinkerType::GNU;
             Linker->file = p;
+            Linker->Prefix = s.Settings.TargetOS.getLibraryPrefix();
+            Linker->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
 
             auto lopts2 = LOpts;
             //lopts2.System.LinkLibraries.push_back("stdc++"); // remove and add to progs explicitly?
@@ -829,6 +832,7 @@ void detectNonWindowsCompilers(struct Solution &s)
             auto Librarian = std::make_shared<GNULibrarian>();
             Librarian->Type = LinkerType::GNU;
             Librarian->file = p;
+            Librarian->Prefix = s.Settings.TargetOS.getLibraryPrefix();
             Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
             *Librarian = LOpts;
             s.registerProgram("org.LLVM.ar", Librarian);
@@ -851,6 +855,8 @@ void detectNonWindowsCompilers(struct Solution &s)
                     Linker->use_start_end_groups = false;
                 Linker->Type = LinkerType::GNU;
                 Linker->file = p;
+                Linker->Prefix = s.Settings.TargetOS.getLibraryPrefix();
+                Linker->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
 
                 auto lopts2 = LOpts;
                 //lopts2.System.LinkLibraries.push_back("c++"); // remove and add to progs explicitly?
@@ -997,6 +1003,7 @@ void NativeToolchain::SDK::setAndroidApiVersion(int v)
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
     : Program(rhs)
 {
+    Prefix = rhs.Prefix;
     Extension = rhs.Extension;
     if (rhs.cmd)
         cmd = rhs.cmd->clone();
@@ -1102,6 +1109,11 @@ Strings NativeCompiler::getGNUCppStdOption(CPPLanguageStandard std) const
         return {};
     }
     return { s };
+}
+
+String NativeCompiler::getObjectExtension(const OS &o) const
+{
+    return o.getObjectFileExtension();
 }
 
 SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::VSCommand)
@@ -1572,6 +1584,9 @@ void VisualStudioLibrarian::getAdditionalOptions(driver::Command *cmd) const
     getCommandLineOptions<VisualStudioLibrarianOptions>(cmd, *this);
 }
 
+// https://dev.gentoo.org/~vapier/crt.txt
+// http://gcc.gnu.org/onlinedocs/gccint/Initialization.html
+
 SW_DEFINE_PROGRAM_CLONE(GNULinker)
 
 void GNULinker::setObjectFiles(const Files &files)
@@ -1579,9 +1594,22 @@ void GNULinker::setObjectFiles(const Files &files)
     InputFiles().insert(files.begin(), files.end());
 }
 
+static auto add_prefix_and_suffix(const path &p, const String &prefix, const String &ext)
+{
+    return p.parent_path() / (prefix + p.filename().u8string() + ext);
+}
+
+static auto remove_prefix_and_suffix(const path &p)
+{
+    auto s = p.stem().u8string();
+    if (s.find("lib") == 0)
+        s = s.substr(3);
+    return s;
+}
+
 void GNULinker::setOutputFile(const path &out)
 {
-    Output = out.u8string() + Extension;
+    Output = add_prefix_and_suffix(out, Prefix, Extension).u8string();
 }
 
 void GNULinker::setImportLibrary(const path &out)
@@ -1647,7 +1675,7 @@ void GNULinker::prepareCommand1(const TargetBase &t)
     //((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
     ((GNULinker*)this)->GNULinkerOptions::SystemLinkLibraries = gatherLinkLibraries(true);
 
-    if (t.getSolution()->HostOS.is(OSType::Windows))
+    //if (t.getSolution()->HostOS.is(OSType::Windows))
     {
         // lld will add windows absolute paths to libraries
         //
@@ -1663,22 +1691,29 @@ void GNULinker::prepareCommand1(const TargetBase &t)
         for (auto &d : origin_dirs)
             dirs.push_back(d);
 
-        auto update_libs = [&dirs](auto &a)
+        auto update_libs = [&dirs, this](auto &a, bool add_inputs = false)
         {
             for (auto &ll : a)
             {
                 if (ll.is_relative())
                     continue;
+                if (add_inputs)
+                    cmd->addInput(ll);
                 dirs.insert(ll.parent_path());
-                ll = ll.filename();
+                ll = "-l" + remove_prefix_and_suffix(ll);
             }
         };
 
+        // we also now provide manual handling of input files
+
         update_libs(NativeLinker::LinkLibraries);
         update_libs(NativeLinker::System.LinkLibraries);
-        update_libs(GNULinkerOptions::InputLibraryDependencies());
-        update_libs(GNULinkerOptions::LinkLibraries());
+        update_libs(GNULinkerOptions::InputLibraryDependencies(), true);
+        update_libs(GNULinkerOptions::LinkLibraries(), true);
         update_libs(GNULinkerOptions::SystemLinkLibraries());
+
+        GNULinkerOptions::InputLibraryDependencies.input_dependency = false;
+        GNULinkerOptions::LinkLibraries.input_dependency = false;
 
         origin_dirs.clear();
         for (auto &d : dirs)
@@ -1714,7 +1749,7 @@ void GNULibrarian::setObjectFiles(const Files &files)
 
 void GNULibrarian::setOutputFile(const path &out)
 {
-    Output = out.u8string() + Extension;
+    Output = add_prefix_and_suffix(out, Prefix, Extension).u8string();
 }
 
 void GNULibrarian::setImportLibrary(const path &out)

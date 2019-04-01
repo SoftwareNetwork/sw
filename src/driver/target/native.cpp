@@ -351,6 +351,8 @@ Files NativeExecutedTarget::gatherObjectFilesWithoutLibraries() const
     Files obj;
     for (auto &f : gatherSourceFiles())
     {
+        if (f->skip_linking)
+            continue;
         if (f->output.file.extension() != ".gch" &&
             f->output.file.extension() != ".pch"
             )
@@ -742,28 +744,6 @@ Commands NativeExecutedTarget::getCommands1() const
 
     // add generated files
     auto generated = getGeneratedCommands();
-
-    // also from deps???
-    // remove?
-    // who is responsible for this? users? program?
-    /*for (auto &d : Dependencies)
-    {
-        if (d->target == this)
-            continue;
-        if (d->isDummy())
-            continue;
-
-        for (auto &f : *(NativeExecutedTarget*)d->target)
-        {
-            File p(f.first);
-            if (!p.isGenerated())
-                continue;
-            if (f.first.string().find(".symbols.def") != -1)
-                continue;
-            auto c = p.getFileRecord().getGenerator();
-            generated.insert(c);
-        }
-    }*/
 
     Commands cmds;
     if (HeaderOnly && HeaderOnly.value())
@@ -1869,7 +1849,7 @@ bool NativeExecutedTarget::prepare()
             else
                 c->CStandard = CVersion;
 
-            if (ExportAllSymbols)
+            if (ExportAllSymbols && getSelectedTool() == Linker.get())
                 c->VisibilityHidden = false;
         };
 
@@ -3212,6 +3192,9 @@ bool ExecutableTarget::init()
     {
     case 2:
     {
+        Linker->Prefix.clear();
+        Linker->Extension = getSolution()->Settings.TargetOS.getExecutableExtension();
+
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
         {
             c->ImportLibrary.output_dependency = false; // become optional
