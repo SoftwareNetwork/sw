@@ -1723,6 +1723,7 @@ bool NativeExecutedTarget::prepare()
                 continue;
 
             GroupSettings s;
+            s.include_directories_only = d->IncludeDirectoriesOnly;
             //s.merge_to_self = false;
             merge(*(NativeExecutedTarget*)d->target, s);
         }

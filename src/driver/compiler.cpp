@@ -580,7 +580,9 @@ void detectWindowsCompilers(struct Solution &s)
             auto C = std::make_shared<ClangCompiler>();
             C->Type = CompilerType::Clang;
             C->file = bin_llvm_path / "clang.exe";
-            C->PositionIndependentCode = false; // not available for msvc triple
+            // not available for msvc triple
+            // must be enabled on per target basis (when shared lib is built)?
+            C->PositionIndependentCode = false;
             auto COpts2 = COpts;
             // is it able to find VC STL itself?
             //COpts2.System.IncludeDirectories.erase(root / "include");
@@ -600,7 +602,9 @@ void detectWindowsCompilers(struct Solution &s)
             auto C = std::make_shared<ClangCompiler>();
             C->Type = CompilerType::Clang;
             C->file = bin_llvm_path / "clang++.exe";
-            C->PositionIndependentCode = false; // not available for msvc triple
+            // not available for msvc triple
+            // must be enabled on per target basis (when shared lib is built)?
+            C->PositionIndependentCode = false;
             auto COpts2 = COpts;
             // is it able to find VC STL itself?
             //COpts2.System.IncludeDirectories.erase(root / "include");
@@ -1642,6 +1646,48 @@ void GNULinker::prepareCommand1(const TargetBase &t)
     //LinkDirectories() = gatherLinkDirectories();
     //((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
     ((GNULinker*)this)->GNULinkerOptions::SystemLinkLibraries = gatherLinkLibraries(true);
+
+    if (t.getSolution()->HostOS.is(OSType::Windows))
+    {
+        // lld will add windows absolute paths to libraries
+        //
+        //  ldd -d test-0.0.1
+        //      linux-vdso.so.1 (0x00007ffff724c000)
+        //      D:\temp\9\musl\.sw\linux_x86_64_clang_9.0_shared_Release\musl-1.1.21.so => not found
+        //      D:\temp\9\musl\.sw\linux_x86_64_clang_9.0_shared_Release\compiler_rt.builtins-0.0.1.so => not found
+        //
+        // so we strip abs paths and pass them to -L
+
+        UniqueVector<path> dirs;
+        auto &origin_dirs = GNULinkerOptions::LinkDirectories();
+        for (auto &d : origin_dirs)
+            dirs.push_back(d);
+
+        auto update_libs = [&dirs](auto &a)
+        {
+            for (auto &ll : a)
+            {
+                if (ll.is_relative())
+                    continue;
+                dirs.insert(ll.parent_path());
+                ll = ll.filename();
+            }
+        };
+
+        update_libs(NativeLinker::LinkLibraries);
+        update_libs(NativeLinker::System.LinkLibraries);
+        update_libs(GNULinkerOptions::InputLibraryDependencies());
+        update_libs(GNULinkerOptions::LinkLibraries());
+        update_libs(GNULinkerOptions::SystemLinkLibraries());
+
+        origin_dirs.clear();
+        for (auto &d : dirs)
+            origin_dirs.push_back(d);
+
+        // remove later?
+        cmd->args.push_back("-rpath");
+        cmd->args.push_back("./");
+    }
 
     //cmd->out.capture = true;
     //cmd->base = clone();

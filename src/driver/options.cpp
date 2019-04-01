@@ -268,7 +268,9 @@ void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const 
     // report conflicts?
 
     Definitions.insert(o.Definitions.begin(), o.Definitions.end());
-    CompileOptions.insert(CompileOptions.end(), o.CompileOptions.begin(), o.CompileOptions.end());
+    if (!s.include_directories_only)
+        CompileOptions.insert(CompileOptions.end(), o.CompileOptions.begin(), o.CompileOptions.end());
+
     if (s.merge_to_self)
     {
         unique_merge_containers(PreIncludeDirectories, o.PreIncludeDirectories);
@@ -413,7 +415,8 @@ void NativeLinkerOptions::merge(const NativeLinkerOptions &o, const GroupSetting
 
 void NativeLinkerOptions::addEverything(builder::Command &c) const
 {
-    auto print_idir = [&c](const auto &a, auto &flag) {
+    auto print_idir = [&c](const auto &a, auto &flag)
+    {
         for (auto &d : a)
             c.args.push_back(flag + normalize_path(d));
     };
@@ -537,7 +540,8 @@ void NativeLinkerOptions::remove(const PackageId &p)
 void NativeOptions::merge(const NativeOptions &o, const GroupSettings &s)
 {
     NativeCompilerOptions::merge(o, s);
-    NativeLinkerOptions::merge(o, s);
+    if (!s.include_directories_only)
+        NativeLinkerOptions::merge(o, s);
 }
 
 } // namespace sw

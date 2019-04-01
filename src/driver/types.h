@@ -190,7 +190,7 @@ struct SW_DRIVER_CPP_API GroupSettings
     ConfigurationType Configuration = ConfigurationType::Release;
     bool has_same_parent = false;
     bool merge_to_self = true;
-    bool dependencies_only = false;
+    bool include_directories_only = false;
 };
 
 template <class T>
