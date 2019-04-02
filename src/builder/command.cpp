@@ -383,10 +383,10 @@ void Command::prepare()
     getHashAndSave();
 
     // add redirected generated files
-    if (!out.file.empty())
+    /*if (!out.file.empty())
         addOutput(out.file);
     if (!err.file.empty())
-        addOutput(err.file);
+        addOutput(err.file);*/
 
     // add more deps
     addInputOutputDeps();
@@ -402,8 +402,12 @@ void Command::prepare()
 
     if (prev)
     {
-        if (auto c = static_cast<Command*>(prev))
+        if (auto c = static_cast<Command *>(prev))
+        {
             c->prepare();
+            // take only deps from prev command
+            dependencies.insert(c->dependencies.begin(), c->dependencies.end());
+        }
     }
     if (next)
     {
@@ -1043,12 +1047,13 @@ void Command::save(BinaryContext &bctx)
 Command &Command::operator|(Command &c2)
 {
     Base::operator|(c2);
+    //dependencies.insert(c2.shared_from_this());
     return *this;
 }
 
 Command &Command::operator|=(Command &c2)
 {
-    Base::operator|=(c2);
+    operator|(c2);
     return *this;
 }
 
