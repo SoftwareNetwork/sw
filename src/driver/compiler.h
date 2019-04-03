@@ -191,10 +191,6 @@ struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
 
 protected:
     mutable Files dependencies;
-
-    Strings getCStdOption(CLanguageStandard s) const;
-    Strings getClangCppStdOption(CPPLanguageStandard s) const;
-    Strings getGNUCppStdOption(CPPLanguageStandard s) const;
 };
 
 struct SW_DRIVER_CPP_API VisualStudio

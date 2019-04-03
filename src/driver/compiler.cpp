@@ -1042,9 +1042,9 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
 
 SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, SW_MAKE_COMPILER_COMMAND, driver::Command)
 
-Strings NativeCompiler::getCStdOption(CLanguageStandard std) const
+static Strings getCStdOption(CLanguageStandard std, bool gnuext)
 {
-    String s = "-std=c";
+    String s = "-std="s + (gnuext ? "gnu" : "c");
     switch (std)
     {
     case CLanguageStandard::C89:
@@ -1065,9 +1065,9 @@ Strings NativeCompiler::getCStdOption(CLanguageStandard std) const
     return { s };
 }
 
-Strings NativeCompiler::getClangCppStdOption(CPPLanguageStandard std) const
+static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang, const Version &clver)
 {
-    String s = "-std=c++";
+    String s = "-std="s + (gnuext ? "gnu" : "c") + "++";
     switch (std)
     {
     case CPPLanguageStandard::CPP11:
@@ -1077,30 +1077,10 @@ Strings NativeCompiler::getClangCppStdOption(CPPLanguageStandard std) const
         s += "14";
         break;
     case CPPLanguageStandard::CPP17:
-        s += getVersion() > Version(5) ? "17" : "1z";
-        break;
-    case CPPLanguageStandard::CPPLatest:
-        s += "2a";
-        break;
-    default:
-        return {};
-    }
-    return { s };
-}
-
-Strings NativeCompiler::getGNUCppStdOption(CPPLanguageStandard std) const
-{
-    String s = "-std=c++";
-    switch (std)
-    {
-    case CPPLanguageStandard::CPP11:
-        s += "11";
-        break;
-    case CPPLanguageStandard::CPP14:
-        s += "14";
-        break;
-    case CPPLanguageStandard::CPP17:
-        s += getVersion() > Version(6) ? "17" : "1z";
+        if (clang)
+            s += clver > Version(5) ? "17" : "1z";
+        else
+            s += clver > Version(6) ? "17" : "1z";
         break;
     case CPPLanguageStandard::CPPLatest:
         s += "2a";
@@ -1248,9 +1228,10 @@ void ClangCompiler::prepareCommand1(const TargetBase &t)
         cmd->working_directory = OutputFile().parent_path();
     }
 
-    add_args(*cmd, getCStdOption(CStandard()));
+    add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeExecutedTarget&>(t).CExtensions));
     CStandard.skip = true;
-    add_args(*cmd, getClangCppStdOption(CPPStandard()));
+    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeExecutedTarget&>(t).CPPExtensions,
+        true, getVersion()));
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
@@ -1307,7 +1288,10 @@ void ClangClCompiler::prepareCommand1(const TargetBase &t)
     //cmd->out.capture = true;
     //cmd->base = clone();
 
-    add_args(*cmd, getClangCppStdOption(CPPStandard()));
+    add_args(*cmd, getCStdOption(dynamic_cast<const NativeExecutedTarget&>(t).CVersion,
+        dynamic_cast<const NativeExecutedTarget&>(t).CExtensions));
+    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeExecutedTarget&>(t).CPPExtensions,
+        true, getVersion()));
     CPPStandard.skip = true;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
@@ -1402,9 +1386,10 @@ void GNUCompiler::prepareCommand1(const TargetBase &t)
 
     //cmd->out.capture = true;
 
-    add_args(*cmd, getCStdOption(CStandard()));
+    add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeExecutedTarget&>(t).CExtensions));
     CStandard.skip = true;
-    add_args(*cmd, getGNUCppStdOption(CPPStandard()));
+    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeExecutedTarget&>(t).CPPExtensions,
+        false, getVersion()));
     CPPStandard.skip = true;
 
     getCommandLineOptions<GNUOptions>(cmd.get(), *this);

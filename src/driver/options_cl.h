@@ -131,7 +131,7 @@ struct ManualHandling : CommandLineOptionBaseValue {};
 struct PlaceAtTheEnd : CommandLineOptionBaseValue {};
 
 /**
-* \brief Skip this option.
+* \brief Skip this option during automatic conversion to args.
 */
 struct Skip : CommandLineOptionBaseValue {};
 
