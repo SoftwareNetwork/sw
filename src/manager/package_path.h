@@ -8,6 +8,14 @@
 
 #include <../support/hash.h>
 
+// object path
+// users:
+// 1. package path
+// 2. setting path? (double check)
+
+// pp - case insensitive
+// sp - case sensitive
+
 namespace sw
 {
 
@@ -23,17 +31,16 @@ struct PathBase : protected std::vector<PathElement>
     using const_iterator = typename Base::const_iterator;
 
     using CheckSymbol = bool(*)(int);
-    using Replacements = std::unordered_map<element_type, element_type>;
 
     PathBase() = default;
     ~PathBase() = default;
 
-    PathBase(const char *s, CheckSymbol check_symbol = nullptr, const Replacements &repl = Replacements())
-        : PathBase(String(s), check_symbol, repl)
+    PathBase(const element_type *s, CheckSymbol check_symbol = nullptr)
+        : PathBase(PathElement(s), check_symbol)
     {
     }
 
-    PathBase(String s, CheckSymbol check_symbol = nullptr, const Replacements &repl = Replacements())
+    PathBase(PathElement s, CheckSymbol check_symbol = nullptr)
     {
         auto prev = s.begin();
         for (auto i = s.begin(); i != s.end(); ++i)
@@ -41,9 +48,6 @@ struct PathBase : protected std::vector<PathElement>
             auto &c = *i;
             if (check_symbol && !check_symbol(c))
                 throw SW_RUNTIME_ERROR("Bad symbol '"s + c + "' in path: '" + s + "'");
-            auto it = repl.find(c);
-            if (it != repl.end())
-                c = it->second;
             if (c == '.')
             {
                 Base::emplace_back(prev, i);
@@ -59,10 +63,9 @@ struct PathBase : protected std::vector<PathElement>
     {
     }
 
-    //String toString(char delim = '.') const { return toString(String() += delim); }
-    String toString(const String &delim = ".") const
+    PathElement toString(const PathElement &delim = ".") const
     {
-        String p;
+        PathElement p;
         if (empty())
             return p;
         for (auto &e : *this)
@@ -71,7 +74,7 @@ struct PathBase : protected std::vector<PathElement>
         return p;
     }
 
-    String toStringLower(const String &delim = ".") const
+    PathElement toStringLower(const PathElement &delim = ".") const
     {
         auto s = toString(delim);
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
@@ -150,7 +153,7 @@ struct PathBase : protected std::vector<PathElement>
         return *this = *this / e;
     }
 
-    operator String() const
+    operator PathElement() const
     {
         return toString();
     }
@@ -165,7 +168,7 @@ struct PathBase : protected std::vector<PathElement>
         {
             auto lower = e;
             std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-            hash_combine(h, std::hash<String>()(lower));
+            hash_combine(h, std::hash<PathElement>()(lower));
         }
         return h;
     }

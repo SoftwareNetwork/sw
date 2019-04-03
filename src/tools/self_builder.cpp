@@ -91,7 +91,7 @@ int main(int argc, char **argv)
         {{"org.sw.demo.gnu.gettext.intl", "0"}, {true}},
         {{"org.sw.demo.gnu.gss", "1"}, {true}},
 
-        {{"org.sw.demo.libxml2", "2"}, {true}},
+        {{"org.sw.demo.xmlsoft.libxml2", "2"}, {true}},
         {{"org.sw.demo.xz_utils.lzma", "5"}, {true}},
 
         {{"org.sw.demo.gnu.nettle.nettle", "3"}, {true}},

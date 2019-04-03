@@ -382,12 +382,6 @@ void Command::prepare()
 
     getHashAndSave();
 
-    // add redirected generated files
-    /*if (!out.file.empty())
-        addOutput(out.file);
-    if (!err.file.empty())
-        addOutput(err.file);*/
-
     // add more deps
     addInputOutputDeps();
 
@@ -1047,7 +1041,6 @@ void Command::save(BinaryContext &bctx)
 Command &Command::operator|(Command &c2)
 {
     Base::operator|(c2);
-    //dependencies.insert(c2.shared_from_this());
     return *this;
 }
 

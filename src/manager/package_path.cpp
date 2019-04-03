@@ -12,16 +12,12 @@
 namespace sw
 {
 
-static const PackagePath::Replacements repls{
-    { '-', '_' }
-};
-
 bool isValidPackagePathSymbol(int c)
 {
     return
         c > 0 && c <= 127 // this prevents isalnum() errors
         &&
-        (isalnum(c) || c == '.' || c == '_' || c == '-');
+        (isalnum(c) || c == '.' || c == '_'/* || c == '-'*/);
 }
 
 PackagePath::PackagePath(const char *s)
@@ -30,7 +26,7 @@ PackagePath::PackagePath(const char *s)
 }
 
 PackagePath::PackagePath(String s)
-    : Base(s, isValidPackagePathSymbol, repls)
+    : Base(s, isValidPackagePathSymbol)
 {
     if (s.size() > 4096)
         throw SW_RUNTIME_ERROR("Too long project path (must be <= 4096)");

@@ -992,30 +992,6 @@ Commands NativeExecutedTarget::getCommands1() const
             return {};
     }*/
 
-    // also take chain commands after everything to not trigger bad deps
-    /*auto cmds1 = cmds;
-    for (auto &c : cmds1)
-    {
-        if (c->prev)
-        {
-            auto c2 = c.get();
-            while (c2 && static_cast<sw::builder::Command *>(c2->prev))
-            {
-                cmds.insert(static_cast<sw::builder::Command *>(c2->prev)->shared_from_this());
-                c2 = static_cast<sw::builder::Command *>(c2->prev);
-            }
-        }
-        if (c->next)
-        {
-            auto c2 = c.get();
-            while (c2 && static_cast<sw::builder::Command *>(c2->next))
-            {
-                cmds.insert(static_cast<sw::builder::Command *>(c2->next)->shared_from_this());
-                c2 = static_cast<sw::builder::Command *>(c2->next);
-            }
-        }
-    }*/
-
     return cmds;
 }
 
@@ -2413,6 +2389,9 @@ void NativeExecutedTarget::removeFile(const path &fn, bool binary_dir)
 
 void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags)
 {
+    // add to target
+    operator-=(from);
+
     // before resolving
     if (!to.is_absolute())
         to = BinaryDir / to;

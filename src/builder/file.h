@@ -80,6 +80,10 @@ struct FileData
     std::weak_ptr<builder::Command> generator;
     bool generated = false;
 
+    // downloaded etc.
+    // we cut DAG below commands with all such outputs
+    bool provided = false;
+
     // if file info is updated during this run
     std::atomic<RefreshType> refreshed{ RefreshType::Unrefreshed };
 

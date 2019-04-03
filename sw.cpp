@@ -7,11 +7,17 @@ void configure(Build &s)
     s.Settings.Native.LibrariesType = LibraryType::Static;
     s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
 
-    s.registerCallback([](auto &t)
+    s.registerCallback([](auto &t, auto cbt)
     {
-        auto &nt = dynamic_cast<NativeExecutedTarget&>(t);
-        nt.ExportIfStatic = true;
-    }, "pub.egorpugin.primitives.version-master", sw::CallbackType::CreateTarget);
+        if (cbt != sw::CallbackType::CreateTarget)
+            return;
+        if (t.pkg == PackageId{ "pub.egorpugin.primitives.version-master" }/* ||
+            t.pkg == PackageId{ "pub.egorpugin.primitives.filesystem-master" }*/)
+        {
+            auto &nt = dynamic_cast<NativeExecutedTarget &>(t);
+            nt.ExportIfStatic = true;
+        }
+    });
 
     if (s.isConfigSelected("cygwin2macos"))
         s.loadModule("utils/cc/cygwin2macos.cpp").call<void(Solution&)>("configure", s);

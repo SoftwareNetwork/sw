@@ -57,6 +57,8 @@ static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace
 
 static cl::opt<int> config_jobs("jc", cl::desc("Number of config jobs"));
 
+static cl::list<String> libc("libc", cl::CommaSeparated);
+//static cl::list<String> libcpp("libcpp", cl::CommaSeparated);
 static cl::list<String> target_os("target-os", cl::CommaSeparated);
 static cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::CommaSeparated);
 static cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
@@ -3116,6 +3118,7 @@ static bool hasAnyUserProvidedInformation()
         || !platform.empty()
         || !compiler.empty()
         || !target_os.empty()
+        || !libc.empty()
         ;
 
     //|| (static_build && shared_build) // when both; but maybe ignore?

@@ -33,14 +33,29 @@ static std::pair<String, String> split_package_string(const String &s)
 {
     /*
     different variants:
-        org.sw.demo.package-1.0.0   - the main one currently
+        org.sw.demo.package-1.0.0   - the main one currently, but it's hard to use '-' in ppath
         org.sw.demo.package 1.0.0   - very obvious and solid, but not very practical?
         org.sw.demo.package@1.0.0   - not that bad
         org.sw.demo.package/1.0.0   - not that bad, but probably bad rather than good?
+
+    other cases (?):
+        org.sw.demo.package-with-dashes--1.0.0   - double dash to indicate halfs (@ and ' ' also work)
     */
 
-    // allow (remove) dashes?
-    auto pos = s.find_first_of("-"); // " -@/"
+    size_t pos;
+
+    // fancy case
+    /*pos = s.find_first_of("@/"); // space (' ') can be met in version, so we'll fail in this case
+    if (pos != s.npos)
+        return { s.substr(0, pos), s.substr(pos + 1) };
+
+    // double dashed case
+    pos = s.find("--");
+    if (pos != s.npos)
+        return { s.substr(0, pos), s.substr(pos + 1) };*/
+
+    // simple dash + space case
+    pos = s.find_first_of("-"); // also space ' '?
     if (pos == s.npos)
         return { s, {} };
     return { s.substr(0, pos), s.substr(pos + 1) };
