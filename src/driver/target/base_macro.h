@@ -13,6 +13,8 @@
     do {var++; return true;} while (0)
 #define SW_RETURN_MULTIPASS_END return false
 
+// move things below into separate header without pragma once
+
 #define ASSIGN_WRAPPER(f, t)          \
     struct f##_files : Assigner       \
     {                                 \

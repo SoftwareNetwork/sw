@@ -610,10 +610,6 @@ public:
     path getFile(const Target &dep, const path &fn);
 };
 
-#undef ASSIGN_TYPES
-#undef ASSIGN_OP_ACTION
-#undef ASSIGN_OP
-
 // from target.cpp
 
 #define SW_IS_LOCAL_BINARY_DIR isLocal() && !UseStorageBinaryDir

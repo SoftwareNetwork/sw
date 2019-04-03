@@ -14,7 +14,7 @@
 #include <package_data.h>
 #include <resolver.h>
 #include <settings.h>
-#include <solution.h>
+#include <solution_build.h>
 #include <storage.h>
 
 // globals

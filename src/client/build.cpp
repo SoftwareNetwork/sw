@@ -6,8 +6,8 @@
 
 #include "build.h"
 
+#include <solution_build.h>
 #include <filesystem.h>
-#include <solution.h>
 
 #include <optional>
 

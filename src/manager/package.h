@@ -32,6 +32,8 @@ struct SW_MANAGER_API UnresolvedPackage
     UnresolvedPackage(const String &s);
     UnresolvedPackage(const PackageId &);
 
+    UnresolvedPackage &operator=(const String &s);
+
     String toString(const String &delim = "-") const;
     bool canBe(const PackageId &id) const;
 

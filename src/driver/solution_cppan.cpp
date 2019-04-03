@@ -6,6 +6,7 @@
 
 #include <solution.h>
 
+#include "solution_build.h"
 #include "checks_storage.h"
 #include "file_storage.h"
 #include "functions.h"

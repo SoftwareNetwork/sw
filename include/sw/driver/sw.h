@@ -7,7 +7,7 @@
 #pragma once
 
 // builder stuff
-#include <solution.h>
+#include <solution_build.h>
 #include <suffix.h>
 #include <jumppad.h>
 #include <compiler_helpers.h>
@@ -117,8 +117,13 @@ using sw::WithoutNativeOptions;
 using sw::CommandLineOption;
 //using sw::CommandLineOptions;
 
+// language standards
 using sw::CLanguageStandard;
 using sw::CPPLanguageStandard;
+
+#define STD_MACRO(x, p) using sw::detail::p##x;
+#include <target/std.inl>
+#undef STD_MACRO
 
 // functions
 using sw::toString;

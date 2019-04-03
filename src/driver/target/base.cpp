@@ -172,49 +172,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     if (!IsConfig)
     {
         // do not create projects under storage yourself!
-        //if (Local)
         t->Local = !is_under_root(t->SourceDir, getStorage().storage_dir_pkg);
-
-        // try to set again
-        if (!t->Local)
-        {
-            // TODO: reconsider and remove
-            if (t->pkg.ppath.is_pvt() || t->pkg.ppath[PackagePath::ElementType::Namespace] != "demo")
-            {
-                set_sdir();
-            }
-            else
-            {
-                PackagePath p;
-                auto pf = t->SourceDir.parent_path() / "cache" / "path.txt";
-                auto jf = t->SourceDir.parent_path() / "sw.json";
-                if (fs::exists(pf))
-                {
-                    p = read_file(pf);
-                }
-                else
-                {
-                    if (!fs::exists(jf))
-                        throw SW_RUNTIME_ERROR("please, recreate package: " + t->pkg.toString());
-
-                    auto j = nlohmann::json::parse(read_file(jf));
-                    p = j["path"].get<std::string>();
-                    write_file(pf, t->pkg.ppath.toString());
-                }
-
-                t->NamePrefix = p.slice(0, 2);
-
-                if (t->pkg.ppath == p.slice(2))
-                {
-                    throw SW_RUNTIME_ERROR("unreachable code");
-                    t->pkg.ppath = constructTargetName(Name);
-                    //t->pkg.createNames();
-
-                    //set_sdir();
-                    t->SourceDir = getSolution()->getSourceDir(t->pkg);
-                }
-            }
-        }
     }
 
     t->setRootDirectory(RootDirectory); // keep root dir growing

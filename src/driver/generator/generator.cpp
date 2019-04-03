@@ -10,7 +10,7 @@
 #include <command.h>
 #include "compiler.h"
 #include "compiler_helpers.h"
-#include "solution.h"
+#include "solution_build.h"
 #include <target/native.h>
 
 #include <execution_plan.h>
@@ -23,6 +23,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <nlohmann/json.hpp>
 
 #include <sstream>
 #include <stack>

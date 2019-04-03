@@ -104,7 +104,6 @@ void Module::build(Solution &s) const
 
 void Module::configure(Build &s) const
 {
-    configure_.s = &s;
     configure_(s);
 }
 

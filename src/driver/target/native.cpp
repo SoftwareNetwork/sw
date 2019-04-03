@@ -3,6 +3,7 @@
 #include "bazel/bazel.h"
 #include <generator/generator.h>
 #include <functions.h>
+#include <solution_build.h>
 #include <solution.h>
 #include <storage.h>
 #include <suffix.h>
@@ -98,8 +99,6 @@ bool NativeExecutedTarget::init()
     case 2:
     {
         setOutputFile();
-
-        tryLoadPrecomputedData();
     }
     SW_RETURN_MULTIPASS_END;
     }
@@ -1272,124 +1271,6 @@ void NativeExecutedTarget::detectLicenseFile()
     }
 }
 
-path NativeExecutedTarget::getPrecomputedDataFilename()
-{
-    // binary dir!
-    return BinaryDir.parent_path() / "info" / "precomputed.12.json";
-}
-
-void NativeExecutedTarget::tryLoadPrecomputedData()
-{
-    return;
-
-    //if (isLocalOrOverridden())
-        //return;
-
-    auto fn = getPrecomputedDataFilename();
-    if (!fs::exists(fn))
-        return;
-
-    // TODO: detect frontend
-    if (File(pkg.getDirSrc2() / "sw.cpp", *getSolution()->fs).isChanged())
-    {
-        fs::remove(fn);
-        return;
-    }
-
-    //precomputed_data = nlohmann::json::parse(read_file(fn));
-    const auto &j = nlohmann::json::parse(read_file(fn));
-    for (const auto &kv : j["storage"].items())
-    {
-        auto i = std::stoi(kv.key());
-        auto &s = getInheritanceStorage()[i];
-
-        if (!kv.value()["gc"].is_null())
-        {
-            for (const auto &f : kv.value()["gc"].get<nlohmann::json::object_t>())
-            {
-                auto &v = s.glob_cache[f.first];
-                for (const auto &e : f.second.items())
-                {
-                    for (const auto &f3 : e.value())
-                        v[e.key() == "1"].insert(f3.get<String>());
-                }
-            }
-        }
-
-        if (!kv.value()["fc"].is_null())
-        {
-            for (const auto &f : kv.value()["fc"].items())
-            {
-                s.files_cache[f.key()] = f.value().get<String>();
-            }
-        }
-    }
-}
-
-void NativeExecutedTarget::applyPrecomputedData()
-{
-}
-
-void NativeExecutedTarget::savePrecomputedData()
-{
-    return;
-
-    //if (isLocalOrOverridden())
-        //return;
-
-    auto fn = getPrecomputedDataFilename();
-    if (fs::exists(fn))
-        return;
-
-    nlohmann::json j;
-    for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
-    {
-        auto s = getInheritanceStorage().raw()[i];
-        if (!s)
-            continue;
-
-        nlohmann::json ji;
-
-        for (auto &[p, _] : *s)
-        {
-            ji["source_files"].push_back(normalize_path(p)); // add flags: skip, postpone(?) etc.
-        }
-        for (auto &d : s->Dependencies)
-        {
-            auto &jd = ji["dependencies"][d->getResolvedPackage().toString()];
-            jd["idir"] = d->IncludeDirectoriesOnly;
-            jd["dummy"] = d->Dummy;
-        }
-
-        nlohmann::json fc;
-        for (auto &[k, v] : files_cache)
-            fc[k.u8string()] = v.u8string();
-        ji["fc"] = fc;
-
-        nlohmann::json gc;
-        for (auto &[p, c] : glob_cache)
-        {
-            nlohmann::json jp;
-            for (auto &[b, files] : c)
-            {
-                for (auto &f : files)
-                {
-                    jp[b ? "1" : "0"].push_back(f.u8string());
-                }
-            }
-            gc[p.u8string()] = jp;
-        }
-        ji["gc"] = gc;
-
-        j[std::to_string(i)] = ji;
-    }
-
-    nlohmann::json s;
-    s["storage"] = j; // inheritance storage
-
-    write_file(getPrecomputedDataFilename(), s.dump());
-}
-
 bool NativeExecutedTarget::prepare()
 {
     if (getSolution()->skipTarget(Scope))
@@ -2229,7 +2110,6 @@ bool NativeExecutedTarget::prepare()
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 8:
-        savePrecomputedData();
         clearGlobCache();
     SW_RETURN_MULTIPASS_END;
     }
@@ -3186,6 +3066,40 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
         patch.load(patch_node);
 #endif
 }
+
+#define STD(x)                                          \
+    void NativeExecutedTarget::add(detail::__sw_##c##x) \
+    {                                                   \
+        CVersion = CLanguageStandard::c##x;             \
+    }
+#include "cstd.inl"
+#undef STD
+
+#define STD(x)                                            \
+    void NativeExecutedTarget::add(detail::__sw_##gnu##x) \
+    {                                                     \
+        CVersion = CLanguageStandard::c##x;               \
+        CExtensions = true;                               \
+    }
+#include "cstd.inl"
+#undef STD
+
+#define STD(x)                                            \
+    void NativeExecutedTarget::add(detail::__sw_##cpp##x) \
+    {                                                     \
+        CPPVersion = CPPLanguageStandard::cpp##x;         \
+    }
+#include "cppstd.inl"
+#undef STD
+
+#define STD(x)                                              \
+    void NativeExecutedTarget::add(detail::__sw_##gnupp##x) \
+    {                                                       \
+        CPPVersion = CPPLanguageStandard::cpp##x;           \
+        CPPExtensions = true;                               \
+    }
+#include "cppstd.inl"
+#undef STD
 
 bool ExecutableTarget::init()
 {

@@ -84,6 +84,11 @@ UnresolvedPackage::UnresolvedPackage(const PackageId &pkg)
 {
 }
 
+UnresolvedPackage &UnresolvedPackage::operator=(const String &s)
+{
+    return *this = extractFromString(s);
+}
+
 String UnresolvedPackage::toString(const String &delim) const
 {
     return ppath.toString() + delim + range.toString();

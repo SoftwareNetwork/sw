@@ -8,15 +8,17 @@
 
 #include "base.h"
 
-//#include <nlohmann/json_fwd.hpp>
-#include <nlohmann/json.hpp>
-
 namespace sw
 {
 
-struct CheckSet;
+namespace detail
+{
 
-//struct SW_DRIVER_CPP_API CustomTarget : Target {};
+#define STD_MACRO(x, p) static struct __sw_ ## p ## x {} p ## x;
+#include "std.inl"
+#undef STD_MACRO
+
+}
 
 /**
 * \brief Native Target is a binary target that produces binary files (probably executables).
@@ -45,24 +47,7 @@ protected:
     path OutputDir;
 };
 
-// <SHARED | STATIC | MODULE | UNKNOWN>
-/*struct SW_DRIVER_CPP_API ImportedTarget : NativeTarget
-{
-    using NativeTarget::NativeTarget;
-
-    virtual ~ImportedTarget() = default;
-
-    std::shared_ptr<Command> getCommand() const override {}
-    path getOutputFile() const override;
-    path getImportLibrary() const override;
-};*/
-
-// why?
-// to have header only targets
-//struct SW_DRIVER_CPP_API InterfaceTarget : NativeTarget {};
-
-// same source files must be autodetected and compiled once!
-// but why? we already compare commands
+// target without linking?
 //struct SW_DRIVER_CPP_API ObjectTarget : NativeTarget {};
 
 /**
@@ -71,6 +56,11 @@ protected:
 struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     NativeTargetOptionsGroup
 {
+private:
+    ASSIGN_WRAPPER(add, NativeExecutedTarget);
+    //ASSIGN_WRAPPER(remove, NativeExecutedTarget);
+
+public:
     using TargetsSet = std::unordered_set<Target*>;
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
@@ -102,11 +92,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
 
     bool UseModules = false;
 
-    // add properies - values
-
-    // unstable
-    //bool add_d_on_debug = false;
-
+    //
     virtual ~NativeExecutedTarget();
 
     TargetType getType() const override { return TargetType::NativeLibrary; }
@@ -121,7 +107,7 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     //Files getGeneratedDirs() const override;
     path getOutputFile() const override;
     path getImportLibrary() const override;
-    const CheckSet &getChecks(const String &name) const;
+    const struct CheckSet &getChecks(const String &name) const;
     void setChecks(const String &name, bool check_definitions = false);
     void findSources();
     void autoDetectOptions();
@@ -168,6 +154,12 @@ struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
     using TargetBase::operator=;
     using TargetBase::operator+=;
 
+#define STD_MACRO(x, p)            \
+    void add(detail::__sw_##p##x); \
+    ASSIGN_TYPES_NO_REMOVE(detail::__sw_##p##x);
+#include "std.inl"
+#undef STD_MACRO
+
 protected:
     using once_mutex_t = std::recursive_mutex;
 
@@ -185,8 +177,6 @@ protected:
     void detectLicenseFile();
 
 private:
-    std::optional<nlohmann::json> precomputed_data;
-    //path OutputFilename;
     bool already_built = false;
     std::map<path, path> break_gch_deps;
     mutable std::optional<Commands> generated_commands;
@@ -201,11 +191,6 @@ private:
     void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets, bool system);
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
-
-    void tryLoadPrecomputedData();
-    void applyPrecomputedData();
-    void savePrecomputedData();
-    path getPrecomputedDataFilename();
 
     path getPatchDir(bool binary_dir) const;
 };

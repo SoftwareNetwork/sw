@@ -163,6 +163,17 @@ enum class CLanguageStandard
     C18 = C17,
 
     CLatest = C18,
+
+    // for quick standards
+    cansi = ANSI,
+    c89 = C89,
+    c90 = C90,
+    c95 = C95,
+    c99 = C99,
+    c11 = C11,
+    c17 = C17,
+    c18 = C18,
+    clatest = CLatest,
 };
 
 enum class CPPLanguageStandard
@@ -182,6 +193,21 @@ enum class CPPLanguageStandard
     CPP2a = CPP20,
 
     CPPLatest = CPP2a,
+
+    // for quick standards
+    cpp98 = CPP98,
+    cpp03 = CPP03,
+    cpp11 = CPP11,
+    cpp14 = CPP14,
+    cpp17 = CPP17,
+    cpp20 = CPP20,
+
+    cpp0x = CPP0x,
+    cpp1y = CPP1y,
+    cpp1z = CPP1z,
+    cpp2a = CPP2a,
+
+    cpplatest = CPPLatest,
 };
 
 struct SW_DRIVER_CPP_API GroupSettings
