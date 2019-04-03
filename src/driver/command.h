@@ -351,6 +351,9 @@ struct SW_DRIVER_CPP_API Command : detail::Command
     void pushLazyArg(LazyCallback f);
     void addLazyAction(LazyAction f);
 
+    using Base::operator|;
+    Command &operator|(struct CommandBuilder &);
+
 private:
     std::map<int, LazyCallback> callbacks;
     std::vector<LazyAction> actions;

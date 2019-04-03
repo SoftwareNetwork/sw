@@ -474,8 +474,17 @@ void setup_log(const std::string &log_level, bool simple)
 static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
 static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
 
+static ::cl::opt<bool> build_fetch("fetch", ::cl::desc("Fetch sources, then build"), ::cl::sub(subcommand_build));
+static ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
+
 SUBCOMMAND_DECL(build)
 {
+    if (build_fetch)
+    {
+        build_after_fetch = true;
+        return cli_fetch();
+    }
+
     // defaults or only one of build_arg and -S specified
     //  -S == build_arg
     //  -B == fs::current_path()
@@ -1076,8 +1085,6 @@ SUBCOMMAND_DECL(update)
     build_arg.push_back(build_arg_update.getValue());
     cli_build();
 }
-
-static ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
 
 SUBCOMMAND_DECL(fetch)
 {

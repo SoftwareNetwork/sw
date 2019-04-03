@@ -527,7 +527,7 @@ path Check::getOutputFilename() const
 
 static path getUniquePath(const path &p)
 {
-    return p.parent_path().filename();
+    return boost::replace_all_copy(p.parent_path().filename().u8string(), "-", "_");
 }
 
 Solution Check::setupSolution(const path &f) const

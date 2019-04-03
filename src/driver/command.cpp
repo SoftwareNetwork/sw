@@ -128,6 +128,12 @@ void Command::addLazyAction(LazyAction f)
     actions.push_back(f);
 }
 
+Command &Command::operator|(CommandBuilder &c)
+{
+    Base::operator|(*c.c);
+    return *this;
+}
+
 std::shared_ptr<Command> VSCommand::clone() const
 {
     return std::make_shared<VSCommand>(*this);
