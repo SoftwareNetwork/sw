@@ -140,14 +140,14 @@ bool patch(const path &fn, const String &patch, const path &lock_dir)
         return true;
 
     auto r = primitives::patch::patch(t, patch);
-    if (!r)
+    if (!r.first)
     {
         //throw SW_RUNTIME_ERROR("cannot apply patch to: " + normalize_path(fn));
-        LOG_ERROR(logger, "cannot apply patch to: " << fn);
+        LOG_ERROR(logger, "cannot apply patch to: " << fn << ", error: " << r.second);
         return false;
     }
 
-    write_file(fn, *r);
+    write_file(fn, r.second);
     write_file(fn_patch, t); // save orig
 
     return true;
