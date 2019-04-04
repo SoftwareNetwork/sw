@@ -261,7 +261,7 @@ int parse_main(int argc, char **argv)
         args.insert(args.end(), t.begin(), t.end());
     }
 
-    if (args.size() > 1 && args[1] == "internal-call-builtin-function")
+    if (args.size() > 1 && args[1] == sw::driver::getInternalCallBuiltinFunctionName())
     {
         return jumppad_call(args);
     }
@@ -378,7 +378,7 @@ static ::cl::opt<bool, true> run_app_in_container("in-container", ::cl::desc("Pr
 
 extern bool gUseLockFile;
 
-//static ::cl::list<String> builtin_function("internal-call-builtin-function", ::cl::desc("Call built-in function"), ::cl::Hidden);
+//static ::cl::list<String> builtin_function(sw::driver::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
 
 void override_package_perform();
 
@@ -565,7 +565,7 @@ SUBCOMMAND_DECL(create)
         ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
         ctx.addLine();
         ctx.addLine("auto &t = s.addTarget<Executable>(\"" + name + "\");");
-        ctx.addLine("t.CPPVersion = CPPLanguageStandard::CPP17;");
+        ctx.addLine("t += cpp17;");
 
         String s;
         if (create_language == "cpp")
@@ -644,7 +644,7 @@ int main(int argc, char *argv[])
         ctx.addLine("// p += Git(\"https://github.com/account/project\");");
         ctx.addLine();
         ctx.addLine("auto &t = s.addTarget<Executable>(\"project\");");
-        ctx.addLine("t.CPPVersion = CPPLanguageStandard::CPP17;");
+        ctx.addLine("t += cpp17;");
         ctx.addLine("//t += \"src/main.cpp\";");
         ctx.addLine("//t += \"pub.egorpugin.primitives.sw.main-master\"_dep;");
         ctx.endFunction();

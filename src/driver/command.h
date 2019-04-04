@@ -533,6 +533,18 @@ CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
 
 #undef DECLARE_STREAM_OP
 
+SW_DRIVER_CPP_API
+String getInternalCallBuiltinFunctionName();
+
+enum class BuiltinCommandArgumentId
+{
+    ArgumentKeyword,
+    ModulePath,
+    FunctionName,
+    FunctionVersion,
+    FirstArgument,
+};
+
 } // namespace driver
 
 } // namespace sw

@@ -474,7 +474,7 @@ ExecuteBuiltinCommand::ExecuteBuiltinCommand()
 ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name, void *f, int version)
     : ExecuteBuiltinCommand()
 {
-    args.push_back("internal-call-builtin-function");
+    args.push_back(getInternalCallBuiltinFunctionName());
     args.push_back(normalize_path(primitives::getModuleNameForSymbol(f))); // add dependency on this? or on function (command) version
     args.push_back(cmd_name);
     args.push_back(std::to_string(version));
@@ -526,6 +526,11 @@ size_t ExecuteBuiltinCommand::getHash1() const
         hash_combine(h, std::hash<String>()(a));
 
     return h;
+}
+
+String getInternalCallBuiltinFunctionName()
+{
+    return "internal-call-builtin-function";
 }
 
 }

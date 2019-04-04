@@ -19,7 +19,7 @@
 DECLARE_STATIC_LOGGER(logger, "target.native");
 
 #define NATIVE_TARGET_DEF_SYMBOLS_FILE \
-    (BinaryDir / ".sw.symbols.def")
+    (BinaryPrivateDir / ".sw.symbols.def")
 
 #define RETURN_PREPARE_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(prepare_pass)
 #define RETURN_INIT_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(init_pass)
