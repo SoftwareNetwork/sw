@@ -944,6 +944,11 @@ void ProjectContext::printProject(
             {
                 if (t != VSFileType::ClCompile)
                     return;
+
+                // TODO: but when we turn on file back in IDE, what will happen there?
+                if (sf->skip)
+                    return;
+
                 // VS disables /MP when it sees object filename
                 // so we turn it on only for files with the same names
                 if (filenames.find(p.filename()) == filenames.end())
@@ -967,8 +972,8 @@ void ProjectContext::printProject(
             for (auto &[p, sf] : nt)
             {
                 File ff(p, *s.fs);
-                if (sf->skip && !ff.isGenerated())
-                    continue;
+                //if (sf->skip && !ff.isGenerated())
+                    //continue;
                 if (g.type == GeneratorType::VisualStudio && ff.isGenerated())
                 {
                     auto gen = ff.getFileRecord().getGenerator();
@@ -1123,6 +1128,12 @@ void ProjectContext::printProject(
                         beginBlock(toString(t), { { "Include", p.string() } });
                         add_excluded_from_build(s);
                         add_obj_file(t, p, sf);
+                        if (sf->skip)
+                        {
+                            beginBlock("ExcludedFromBuild");
+                            addText("true");
+                            endBlock(true);
+                        }
                         endBlock();
                     }
                 }
@@ -1135,6 +1146,12 @@ void ProjectContext::printProject(
                         auto t = get_vs_file_type_by_ext(p);
                         beginBlock(toString(t), { { "Include", p.string() } });
                         add_obj_file(t, p, sf);
+                        if (sf->skip)
+                        {
+                            beginBlock("ExcludedFromBuild");
+                            addText("true");
+                            endBlock(true);
+                        }
                         endBlock();
                     }
                 }
@@ -1165,8 +1182,8 @@ void ProjectContext::printProject(
         for (auto &[f, sf] : nt)
         {
             File ff(f, *s.fs);
-            if (sf->skip && !ff.isGenerated())
-                continue;
+            //if (sf->skip && !ff.isGenerated())
+                //continue;
 
             if (files_added.find(f) != files_added.end())
                 continue;
