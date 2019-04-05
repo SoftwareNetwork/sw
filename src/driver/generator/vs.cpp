@@ -817,6 +817,9 @@ void ProjectContext::printProject(
             // so link directly
             beginBlock("Link");
 
+            if (nt.hasCircularDependency())
+                addLine("<ImportLibrary />"); // no produced implib
+
             Files ll;
 
             std::set<void*> visited;
@@ -969,6 +972,164 @@ void ProjectContext::printProject(
 
             Files rules;
             std::unordered_set<void *> cmds;
+            auto generate_file = [
+                this, &rules, &get_int_dir, &s, &nt,
+                &cmds, &add_excluded_from_build, &replacements, &dir,
+                &projects_dir, &filters, &fctx, &files_added, &add_obj_file]
+            (const path &p, const std::shared_ptr<SourceFile> &sf)
+            {
+                File ff(p, *s.fs);
+                auto gen = ff.getFileRecord().getGenerator();
+                auto rule = get_int_dir(nt, s.Settings) / "rules" / (p.filename().string() + ".rule");
+                write_file_if_not_exists(rule, "");
+
+                if (rules.find(rule) == rules.end() && cmds.find(gen.get()) == cmds.end())
+                {
+                    rules.insert(rule);
+                    cmds.insert(gen.get());
+
+                    // VS crash
+                    // beginBlockWithConfiguration(get_vs_file_type_by_ext(rule), s.Settings, { {"Include", rule.string()} });
+                    beginBlock(toString(get_vs_file_type_by_ext(rule)), { {"Include", rule.string()} });
+
+                    add_excluded_from_build(s);
+
+                    Files replacement_deps;
+                    auto fix_strings = [&replacements, &replacement_deps](const String &s)
+                    {
+                        auto t = s;
+                        for (auto &[k, v] : replacements)
+                        {
+                            auto prev = t;
+                            boost::replace_all(t, k, v);
+                            if (t != prev)
+                                replacement_deps.insert(v);
+                        }
+                        return t;
+                    };
+
+                    beginBlockWithConfiguration("AdditionalInputs", s.Settings);
+                    //addText(normalize_path_windows(gen->program) + ";");
+                    if (auto dc = gen->as<driver::Command>())
+                    {
+                        auto d = dc->dependency.lock();
+                        if (d)
+                        {
+                            if (d->target)
+                            {
+                                if (!shouldAddTarget(*d->target))
+                                {
+                                    deps.insert(parent->build_dependencies_name);
+                                    parent->build_deps.insert(d->target->pkg);
+                                }
+                                else
+                                {
+                                    auto tdir = get_out_dir(dir, projects_dir, s.Settings);
+                                    tdir /= d->target->pkg.toString() + ".exe";
+                                    addText(normalize_path_windows(tdir) + ";");
+
+                                    // fix program
+                                    gen->program = tdir;
+
+                                    deps.insert(d->target->pkg.toString());
+                                }
+                            }
+                        }
+                    }
+                    else if (auto dc = gen->as<driver::ExecuteBuiltinCommand>())
+                    {
+                        if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
+                            dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::driver::getInternalCallBuiltinFunctionName())
+                        {
+                            if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
+                                dc->args[toIndex(driver::BuiltinCommandArgumentId::FunctionName)] == "sw_create_def_file")
+                            {
+                                Files filenames;
+                                for (int i = toIndex(driver::BuiltinCommandArgumentId::FirstArgument) + 2; i < dc->args.size(); i++)
+                                {
+                                    path f = dc->args[i];
+                                    auto fn = f.stem().stem().stem();
+                                    fn += f.extension();
+                                    if (filenames.find(fn) != filenames.end())
+                                        fn = f.filename();
+                                    filenames.insert(fn);
+                                    dc->args[i] = normalize_path(get_int_dir(nt, s.Settings) / "int" / fn.u8string());
+                                }
+                            }
+                        }
+                    }
+                    for (auto &o : gen->inputs)
+                        addText(normalize_path_windows(o) + ";");
+
+                    // fix commands args, env etc.
+                    for (auto &a : gen->args)
+                        a = fix_strings(a);
+                    // and add new deps
+                    for (auto &d : replacement_deps)
+                        addText(normalize_path_windows(d) + ";");
+
+                    endBlock(true);
+                    if (!gen->outputs.empty())
+                    {
+                        beginBlockWithConfiguration("Outputs", s.Settings);
+                        for (auto &o : gen->outputs)
+                            addText(normalize_path_windows(o) + ";");
+                        endBlock(true);
+                    }
+
+                    auto batch = get_int_dir(nt, s.Settings) / "commands" / std::to_string(gen->getHash());
+                    batch = gen->writeCommand(batch);
+
+                    beginBlockWithConfiguration("Command", s.Settings);
+                    // call batch files with 'call' command
+                    // otherwise it won't run multiple custom commands, only the first one
+                    // https://docs.microsoft.com/en-us/cpp/ide/specifying-custom-build-tools?view=vs-2017
+                    addText("call \"" + normalize_path_windows(batch) + "\"");
+                    endBlock(true);
+
+                    beginBlock("Message");
+                    //addText(gen->getName());
+                    endBlock();
+
+                    endBlock();
+
+                    auto filter = ". SW Rules";
+                    filters.insert(filter);
+
+                    fctx.beginBlock(toString(get_vs_file_type_by_ext(rule)), { {"Include", rule.string()} });
+                    fctx.addBlock("Filter", make_backslashes(filter));
+                    fctx.endBlock();
+                }
+
+                if (files_added.find(p) == files_added.end())
+                {
+                    files_added.insert(p);
+
+                    auto t = get_vs_file_type_by_ext(p);
+                    beginBlock(toString(t), { { "Include", p.string() } });
+                    if (!sf || sf->skip)
+                    {
+                        beginBlock("ExcludedFromBuild");
+                        addText("true");
+                        endBlock(true);
+                    }
+                    else
+                    {
+                        add_excluded_from_build(s);
+                        add_obj_file(t, p, sf);
+                    }
+                    endBlock();
+                }
+            };
+
+            // not really working atm
+            if (nt.hasCircularDependency())
+            {
+                std::cerr << "Target " << nt.pkg.toString() << " has circular dependency, but it is not supported in IDE right now "
+                    "(only console builds via 'sw build' are supported).\n";
+                generate_file(*std::prev(nt.Librarian->getCommand()->outputs.end()), nullptr);
+            }
+
             for (auto &[p, sf] : nt)
             {
                 File ff(p, *s.fs);
@@ -976,147 +1137,7 @@ void ProjectContext::printProject(
                     //continue;
                 if (g.type == GeneratorType::VisualStudio && ff.isGenerated())
                 {
-                    auto gen = ff.getFileRecord().getGenerator();
-                    auto rule = get_int_dir(nt, s.Settings) / "rules" / (p.filename().string() + ".rule");
-                    write_file_if_not_exists(rule, "");
-
-                    if (rules.find(rule) == rules.end() && cmds.find(gen.get()) == cmds.end())
-                    {
-                        rules.insert(rule);
-                        cmds.insert(gen.get());
-
-                        // VS crash
-                        // beginBlockWithConfiguration(get_vs_file_type_by_ext(rule), s.Settings, { {"Include", rule.string()} });
-                        beginBlock(toString(get_vs_file_type_by_ext(rule)), { {"Include", rule.string()} });
-
-                        add_excluded_from_build(s);
-
-                        Files replacement_deps;
-                        auto fix_strings = [&replacements, &replacement_deps](const String &s)
-                        {
-                            auto t = s;
-                            for (auto &[k, v] : replacements)
-                            {
-                                auto prev = t;
-                                boost::replace_all(t, k, v);
-                                if (t != prev)
-                                    replacement_deps.insert(v);
-                            }
-                            return t;
-                        };
-
-                        beginBlockWithConfiguration("AdditionalInputs", s.Settings);
-                        //addText(normalize_path_windows(gen->program) + ";");
-                        if (auto dc = gen->as<driver::Command>())
-                        {
-                            auto d = dc->dependency.lock();
-                            if (d)
-                            {
-                                if (d->target)
-                                {
-                                    if (!shouldAddTarget(*d->target))
-                                    {
-                                        deps.insert(parent->build_dependencies_name);
-                                        parent->build_deps.insert(d->target->pkg);
-                                    }
-                                    else
-                                    {
-                                        auto tdir = get_out_dir(dir, projects_dir, s.Settings);
-                                        tdir /= d->target->pkg.toString() + ".exe";
-                                        addText(normalize_path_windows(tdir) + ";");
-
-                                        // fix program
-                                        gen->program = tdir;
-
-                                        deps.insert(d->target->pkg.toString());
-                                    }
-                                }
-                            }
-                        }
-                        else if (auto dc = gen->as<driver::ExecuteBuiltinCommand>())
-                        {
-                            if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
-                                dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::driver::getInternalCallBuiltinFunctionName())
-                            {
-                                if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
-                                    dc->args[toIndex(driver::BuiltinCommandArgumentId::FunctionName)] == "sw_create_def_file")
-                                {
-                                    Files filenames;
-                                    for (int i = toIndex(driver::BuiltinCommandArgumentId::FirstArgument) + 2; i < dc->args.size(); i++)
-                                    {
-                                        path f = dc->args[i];
-                                        auto fn = f.stem().stem().stem();
-                                        fn += f.extension();
-                                        if (filenames.find(fn) != filenames.end())
-                                            fn = f.filename();
-                                        filenames.insert(fn);
-                                        dc->args[i] = normalize_path(get_int_dir(nt, s.Settings) / "int" / fn.u8string());
-                                    }
-                                }
-                            }
-                        }
-                        for (auto &o : gen->inputs)
-                            addText(normalize_path_windows(o) + ";");
-
-                        // fix commands args, env etc.
-                        for (auto &a : gen->args)
-                            a = fix_strings(a);
-                        // and add new deps
-                        for (auto &d : replacement_deps)
-                            addText(normalize_path_windows(d) + ";");
-
-                        endBlock(true);
-                        if (!gen->outputs.empty())
-                        {
-                            beginBlockWithConfiguration("Outputs", s.Settings);
-                            for (auto &o : gen->outputs)
-                                addText(normalize_path_windows(o) + ";");
-                            endBlock(true);
-                        }
-
-                        auto batch = get_int_dir(nt, s.Settings) / "commands" / std::to_string(gen->getHash());
-                        batch = gen->writeCommand(batch);
-
-                        beginBlockWithConfiguration("Command", s.Settings);
-                        // call batch files with 'call' command
-                        // otherwise it won't run multiple custom commands, only the first one
-                        // https://docs.microsoft.com/en-us/cpp/ide/specifying-custom-build-tools?view=vs-2017
-                        addText("call \"" + normalize_path_windows(batch) + "\"");
-                        endBlock(true);
-
-                        beginBlock("Message");
-                        //addText(gen->getName());
-                        endBlock();
-
-                        endBlock();
-
-                        auto filter = ". SW Rules";
-                        filters.insert(filter);
-
-                        fctx.beginBlock(toString(get_vs_file_type_by_ext(rule)), { {"Include", rule.string()} });
-                        fctx.addBlock("Filter", make_backslashes(filter));
-                        fctx.endBlock();
-                    }
-
-                    if (files_added.find(p) == files_added.end())
-                    {
-                        files_added.insert(p);
-
-                        auto t = get_vs_file_type_by_ext(p);
-                        beginBlock(toString(t), { { "Include", p.string() } });
-                        if (sf->skip)
-                        {
-                            beginBlock("ExcludedFromBuild");
-                            addText("true");
-                            endBlock(true);
-                        }
-                        else
-                        {
-                            add_excluded_from_build(s);
-                            add_obj_file(t, p, sf);
-                        }
-                        endBlock();
-                    }
+                    generate_file(p, sf);
                 }
                 else if (g.type == GeneratorType::VisualStudio && ff.isGeneratedAtAll())
                 {

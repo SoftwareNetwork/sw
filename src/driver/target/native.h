@@ -151,6 +151,9 @@ public:
     //
     virtual void cppan_load_project(const yaml &root);
 
+    //
+    bool hasCircularDependency() const;
+
     using TargetBase::operator=;
     using TargetBase::operator+=;
 

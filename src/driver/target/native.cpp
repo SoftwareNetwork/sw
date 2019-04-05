@@ -965,6 +965,11 @@ Commands NativeExecutedTarget::getCommands1() const
     return cmds;
 }
 
+bool NativeExecutedTarget::hasCircularDependency() const
+{
+    return circular_dependency;
+}
+
 void NativeExecutedTarget::findSources()
 {
     // We add root dir if we postponed resolving and iif it's a local package.
