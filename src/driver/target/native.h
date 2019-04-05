@@ -161,12 +161,8 @@ public:
 #undef STD_MACRO
 
 protected:
-    using once_mutex_t = std::recursive_mutex;
-
-    once_mutex_t once;
     mutable NativeLinker *SelectedTool = nullptr;
-    UniqueVector<Dependency*> CircularDependencies;
-    std::shared_ptr<NativeLinker> CircularLinker;
+    bool circular_dependency = false;
 
     Files gatherObjectFiles() const;
     Files gatherObjectFilesWithoutLibraries() const;
@@ -185,7 +181,7 @@ private:
 
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
-    path getOutputFileName2() const;
+    path getOutputFileName2(const path &subdir) const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
     void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets, bool system);

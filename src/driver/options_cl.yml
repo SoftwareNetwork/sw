@@ -471,6 +471,17 @@ types:
     vslib:
         name: VisualStudioLibrarianOptions
 
+        flags:
+            def:
+                name: CreateImportLibrary
+                type: bool
+                flag: DEF
+
+            name:
+                name: DllName
+                type: String
+                flag: "Name:"
+
     # https://docs.microsoft.com/en-us/cpp/build/reference/linker-options
     vslink:
         name: VisualStudioLinkerOptions

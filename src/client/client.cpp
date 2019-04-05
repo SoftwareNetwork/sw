@@ -862,6 +862,17 @@ void override_package_perform()
     }
 }
 
+SUBCOMMAND_DECL(mirror)
+{
+    enum storage_file_type
+    {
+        SourceArchive,
+        SpecificationFirstFile,
+        About,
+        BuildArchive, // binary archive?
+    };
+}
+
 SUBCOMMAND_DECL(ide)
 {
     //useFileMonitor = false;

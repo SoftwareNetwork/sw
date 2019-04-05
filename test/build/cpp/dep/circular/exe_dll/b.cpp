@@ -1,15 +1,5 @@
-#include <iostream>
-
-MY_B_API int b(int a)
-{
-    return a * 2;
-}
 MY_A_API int a(int);
-
-int main()
+MY_B_API int b(int aa)
 {
-    auto r = b(5);
-    r = a(r);
-    std::cout << r;
-    return 0;
+    return a(aa) * 2;
 }

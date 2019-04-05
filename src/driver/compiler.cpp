@@ -1011,7 +1011,9 @@ CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
 
 std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand() const
 {
-    if (!cmd || !prepared)
+    if (!cmd)
+        throw SW_RUNTIME_ERROR("Command is not created");
+    if (!prepared)
         throw SW_RUNTIME_ERROR("Command is not prepared");
     return cmd;
 }

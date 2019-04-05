@@ -221,11 +221,14 @@ void NativeExecutedTarget::setOutputFile()
     if (Scope == TargetScope::Build)
     {
         if (getSelectedTool() == Librarian.get())
-            getSelectedTool()->setOutputFile(getOutputFileName2());
+            getSelectedTool()->setOutputFile(getOutputFileName2("lib"));
         else
         {
-            getSelectedTool()->setOutputFile(getOutputFileName(getOutputBaseDir()));
-            getSelectedTool()->setImportLibrary(getOutputFileName2());
+            if (getType() == TargetType::NativeExecutable)
+                getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
+            else
+                getSelectedTool()->setOutputFile(getOutputFileName(getOutputBaseDir()));
+            getSelectedTool()->setImportLibrary(getOutputFileName2("lib"));
         }
     }
     else
@@ -263,7 +266,7 @@ path NativeExecutedTarget::getOutputFileName(const path &root) const
     return p;
 }
 
-path NativeExecutedTarget::getOutputFileName2() const
+path NativeExecutedTarget::getOutputFileName2(const path &subdir) const
 {
     if (SW_IS_LOCAL_BINARY_DIR)
     {
@@ -274,7 +277,7 @@ path NativeExecutedTarget::getOutputFileName2() const
         if (IsConfig)
             return getOutputFileName("");
         else
-            return BinaryDir.parent_path() / "lib" / getOutputFileName();
+            return BinaryDir.parent_path() / subdir / getOutputFileName();
     }
 }
 
@@ -907,40 +910,8 @@ Commands NativeExecutedTarget::getCommands1() const
         // link deps
         if (getSelectedTool() != Librarian.get())
         {
-            for (auto &l : gatherDependenciesTargets())
-            {
-                if (auto c2 = ((NativeExecutedTarget*)l)->getCommand())
-                    c->dependencies.insert(c2);
-            }
-
-            // check circular, resolve if possible
-            for (auto &d : CircularDependencies)
-            {
-                auto dt = ((NativeExecutedTarget*)d->target);
-                auto non_circ_cmd = dt->getSelectedTool()->getCommand(*this);
-
-                // one command must be executed after the second to free implib files from any compiler locks
-                // we choose it based on ptr address
-                //if (c < non_circ_cmd)
-                c->dependencies.erase(non_circ_cmd);
-
-                if (dt->CircularLinker)
-                {
-                    auto cd = dt->CircularLinker->getCommand(*this);
-                    c->dependencies.insert(cd);
-                }
-                //cmds.insert(cd);
-            }
-
-            if (CircularLinker)
-            {
-                // execute this command after unresolved (circular) cmd
-                c->dependencies.insert(CircularLinker->getCommand(*this));
-
-                // we reset generator of implib from usual build command (c = getCommand()) to circular linker generator to overcome
-                // automatic circular dependency generation in command.cpp
-                //File(getImportLibrary()).getFileRecord().generator = CircularLinker->getCommand();
-            }
+            if (circular_dependency)
+                cmds.insert(Librarian->getCommand(*this));
         }
 
         cmds.insert(c);
@@ -1997,6 +1968,8 @@ bool NativeExecutedTarget::prepare()
     case 6:
         // link libraries
     {
+        auto L = Linker->as<VisualStudioLinker>();
+
         // add link libraries from deps
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
         {
@@ -2011,30 +1984,19 @@ bool NativeExecutedTarget::prepare()
 
                 auto dt = ((NativeExecutedTarget*)d->target);
 
-                for (auto &d2 : dt->Dependencies)
+                // circular deps detection
+                if (L)
                 {
-                    if (d2->target != this)
-                        continue;
-                    if (d2->IncludeDirectoriesOnly)
-                        continue;
-
-                    CircularDependencies.insert(d.get());
-                }
-
-                if (!CircularDependencies.empty())
-                {
-                    CircularLinker = std::static_pointer_cast<NativeLinker>(getSelectedTool()->clone());
-
-                    // set to temp paths
-                    auto o = IsConfig;
-                    IsConfig = true;
-                    CircularLinker->setOutputFile(getOutputFileName(getOutputBaseDir()));
-                    CircularLinker->setImportLibrary(getOutputFileName2());
-                    IsConfig = o;
-
-                    if (auto c = CircularLinker->as<VisualStudioLinker>())
+                    for (auto &d2 : dt->Dependencies)
                     {
-                        c->Force = vs::ForceType::Unresolved;
+                        if (d2->target != this)
+                            continue;
+                        if (d2->IncludeDirectoriesOnly)
+                            continue;
+
+                        circular_dependency = true;
+                        L->ImportLibrary.clear();
+                        break;
                     }
                 }
 
@@ -2077,30 +2039,26 @@ bool NativeExecutedTarget::prepare()
         auto obj = gatherObjectFilesWithoutLibraries();
         auto O1 = gatherLinkLibraries();
 
-        if (CircularLinker)
-        {
-            // O1 -= Li
-            for (auto &d : CircularDependencies)
-                O1.erase(std::remove(O1.begin(), O1.end(), ((NativeTarget*)d->target)->getImportLibrary()), O1.end());
-
-            // CL1 = O1
-            CircularLinker->setInputLibraryDependencies(O1);
-
-            // O1 += CLi
-            for (auto &d : CircularDependencies)
-            {
-                if (d->target && ((NativeExecutedTarget*)d->target)->CircularLinker)
-                    O1.push_back(((NativeExecutedTarget*)d->target)->CircularLinker->getImportLibrary());
-            }
-
-            // prepare command here to prevent races
-            CircularLinker->getCommand(*this);
-        }
-
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
         {
             for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
                 obj.insert(f->output.file);
+        }
+
+        if (circular_dependency)
+        {
+            Librarian->setObjectFiles(obj);
+            Librarian->setOutputFile(getOutputFileName2("lib"));
+            if (auto L = Librarian->as<VisualStudioLibrarian>())
+            {
+                L->CreateImportLibrary = true;
+                L->DllName = Linker->getOutputFile().filename().u8string();
+            }
+
+            auto exp = Librarian->getImportLibrary();
+            exp = exp.parent_path() / (exp.stem().u8string() + ".exp");
+            Librarian->createCommand()->addOutput(exp);
+            obj.insert(exp);
         }
 
         getSelectedTool()->setObjectFiles(obj);
