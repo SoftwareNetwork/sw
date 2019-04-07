@@ -149,17 +149,25 @@ types:
 
             cl_as_c:
                 name: CompileAsC
+                ide_name: CompileAs
                 flag: TC
                 type: bool
+                ide_value: CompileAsC
                 disallow_with:
                     - cl_as_c
+                properties:
+                    - print_to_ide
 
             cl_as_cpp:
                 name: CompileAsCPP
+                ide_name: CompileAs
                 flag: TP
                 type: bool
+                ide_value: CompileAsCpp
                 disallow_with:
                     - cl_as_cpp
+                properties:
+                    - print_to_ide
 
             dbgfmt:
                 name: DebugInformationFormat
@@ -237,7 +245,7 @@ types:
                 name: MultiProcessorCompilation
                 flag: MP
                 type: bool
-                default_ide: true
+                default_ide_value: true
 
             sync_pdb:
                 name: ForceSynchronousPDBWrites

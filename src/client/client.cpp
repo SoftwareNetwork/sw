@@ -263,6 +263,19 @@ int parse_main(int argc, char **argv)
 
     if (args.size() > 1 && args[1] == sw::driver::getInternalCallBuiltinFunctionName())
     {
+        // name of subcommand must outlive it (StringRef is used)
+        auto n = sw::driver::getInternalCallBuiltinFunctionName();
+        ::cl::SubCommand subcommand_icbf(n, "");
+        ::cl::opt<String> icbf_arg(::cl::Positional, ::cl::sub(subcommand_icbf)); // module name
+        ::cl::list<String> icbf_args(::cl::ConsumeAfter, ::cl::sub(subcommand_icbf)); // rest
+
+        ::cl::ParseCommandLineOptions(args);
+
+        Strings args;
+        args.push_back(argv[0]);
+        args.push_back(sw::driver::getInternalCallBuiltinFunctionName());
+        args.push_back(icbf_arg);
+        args.insert(args.end(), icbf_args.begin(), icbf_args.end());
         return jumppad_call(args);
     }
 

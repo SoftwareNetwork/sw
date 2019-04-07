@@ -474,6 +474,7 @@ ExecuteBuiltinCommand::ExecuteBuiltinCommand()
 ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name, void *f, int version)
     : ExecuteBuiltinCommand()
 {
+    first_response_file_argument = 1;
     args.push_back(getInternalCallBuiltinFunctionName());
     args.push_back(normalize_path(primitives::getModuleNameForSymbol(f))); // add dependency on this? or on function (command) version
     args.push_back(cmd_name);

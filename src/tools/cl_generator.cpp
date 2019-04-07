@@ -33,6 +33,7 @@ struct Flag
     String type;
     String default_value;
     String default_ide_value;
+    String ide_value;
     String function;
     String function_current;
     StringSet properties;
@@ -215,11 +216,16 @@ struct Type
 
             if (v->default_ide_value.empty())
                 cpp.beginBlock("if (" + v->name + ")");
-            cpp.addLine("ctx.beginBlock(\"" + v->name + "\");");
+            cpp.addLine("ctx.beginBlock(\"" + v->getIdeName() + "\");");
             if (!v->default_ide_value.empty())
                 cpp.beginBlock("if (" + v->name + ")");
             if (v->type == "bool")
-                cpp.addLine("ctx.addText(" + v->name + ".value() ? \"true\" : \"false\");");
+            {
+                if (v->ide_value.empty())
+                    cpp.addLine("ctx.addText(" + v->name + ".value() ? \"true\" : \"false\");");
+                else
+                    cpp.addLine("ctx.addText(" + v->name + ".value() ? \"" + v->ide_value + "\" : \"false\");");
+            }
             else if (v->type == "path")
                 cpp.addLine("ctx.addText(" + v->name + ".value().u8string());");
             else if (v->type == "String" || v->type == "std::string")
@@ -296,11 +302,13 @@ void read_flags(const yaml &root, Flags &flags)
             fl.type = kv.second["type"].template as<String>();
         if (kv.second["default"].IsDefined())
             fl.default_value = kv.second["default"].template as<String>();
-        if (kv.second["default_ide"].IsDefined())
+        if (kv.second["default_ide_value"].IsDefined())
         {
-            fl.default_ide_value = kv.second["default_ide"].template as<String>();
+            fl.default_ide_value = kv.second["default_ide_value"].template as<String>();
             fl.print_to_ide = true;
         }
+        if (kv.second["ide_value"].IsDefined())
+            fl.ide_value = kv.second["ide_value"].template as<String>();
         if (kv.second["enum"].IsDefined())
         {
             if (!kv.second["enum"].IsSequence())

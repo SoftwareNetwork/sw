@@ -773,6 +773,7 @@ void ProjectContext::printProject(
 
             beginBlock("ClCompile");
             auto sf = nt.gatherSourceFiles();
+            // FIXME: now taking cl settings from just one file
             if (!sf.empty())
             {
                 if (auto L = (*sf.begin())->compiler->as<VisualStudioCompiler>())
@@ -812,6 +813,54 @@ void ProjectContext::printProject(
                 }
             }
             endBlock();
+
+            // export all symbols
+            for (auto &[p, sf] : nt)
+            {
+                File ff(p, *s.fs);
+                auto gen = ff.getFileRecord().getGenerator();
+
+                if (auto dc = gen->as<driver::ExecuteBuiltinCommand>())
+                {
+                    if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
+                        dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::driver::getInternalCallBuiltinFunctionName())
+                    {
+                        if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
+                            dc->args[toIndex(driver::BuiltinCommandArgumentId::FunctionName)] == "sw_create_def_file")
+                        {
+                            beginBlock("PreLinkEvent");
+
+                            Files filenames;
+                            for (int i = toIndex(driver::BuiltinCommandArgumentId::FirstArgument) + 2; i < dc->args.size(); i++)
+                            {
+                                path f = dc->args[i];
+                                auto fn = f.stem().stem().stem();
+                                fn += f.extension();
+                                if (filenames.find(fn) != filenames.end())
+                                    fn = f.filename();
+                                filenames.insert(fn);
+                                dc->args[i] = normalize_path(get_int_dir(nt, s.Settings) / "int" / fn.u8string());
+                            }
+
+                            auto batch = get_int_dir(nt, s.Settings) / "commands" / std::to_string(gen->getHash());
+                            batch = gen->writeCommand(batch);
+
+                            beginBlock("Command");
+                            // call batch files with 'call' command
+                            // otherwise it won't run multiple custom commands, only the first one
+                            // https://docs.microsoft.com/en-us/cpp/ide/specifying-custom-build-tools?view=vs-2017
+                            addText("call \"" + normalize_path_windows(batch) + "\"");
+                            endBlock(true);
+
+                            beginBlock("Message");
+                            //addText(gen->getName());
+                            endBlock();
+
+                            endBlock();
+                        }
+                    }
+                }
+            }
 
             // references does not work well with C++ projects
             // so link directly
@@ -980,6 +1029,20 @@ void ProjectContext::printProject(
             {
                 File ff(p, *s.fs);
                 auto gen = ff.getFileRecord().getGenerator();
+
+                if (auto dc = gen->as<driver::ExecuteBuiltinCommand>())
+                {
+                    if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
+                        dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::driver::getInternalCallBuiltinFunctionName())
+                    {
+                        if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
+                            dc->args[toIndex(driver::BuiltinCommandArgumentId::FunctionName)] == "sw_create_def_file")
+                        {
+                            return;
+                        }
+                    }
+                }
+
                 auto rule = get_int_dir(nt, s.Settings) / "rules" / (p.filename().string() + ".rule");
                 write_file_if_not_exists(rule, "");
 
@@ -1032,28 +1095,6 @@ void ProjectContext::printProject(
                                     gen->program = tdir;
 
                                     deps.insert(d->target->pkg.toString());
-                                }
-                            }
-                        }
-                    }
-                    else if (auto dc = gen->as<driver::ExecuteBuiltinCommand>())
-                    {
-                        if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
-                            dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::driver::getInternalCallBuiltinFunctionName())
-                        {
-                            if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
-                                dc->args[toIndex(driver::BuiltinCommandArgumentId::FunctionName)] == "sw_create_def_file")
-                            {
-                                Files filenames;
-                                for (int i = toIndex(driver::BuiltinCommandArgumentId::FirstArgument) + 2; i < dc->args.size(); i++)
-                                {
-                                    path f = dc->args[i];
-                                    auto fn = f.stem().stem().stem();
-                                    fn += f.extension();
-                                    if (filenames.find(fn) != filenames.end())
-                                        fn = f.filename();
-                                    filenames.insert(fn);
-                                    dc->args[i] = normalize_path(get_int_dir(nt, s.Settings) / "int" / fn.u8string());
                                 }
                             }
                         }
