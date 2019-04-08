@@ -977,6 +977,12 @@ void ProjectContext::printProject(
                 }
             }
 
+            beginBlockWithConfiguration("AdditionalOptions", s.Settings);
+            for (auto &o : nt.LinkOptions)
+                addText(o + " ");
+            addText("%(AdditionalOptions)");
+            endBlock();
+
             endBlock(); // Link
 
             /*beginBlock("Manifest");

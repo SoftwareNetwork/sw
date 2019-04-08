@@ -7,6 +7,7 @@
 #pragma once
 
 // builder stuff
+#include <storage.h>
 #include <solution_build.h>
 #include <suffix.h>
 #include <jumppad.h>
