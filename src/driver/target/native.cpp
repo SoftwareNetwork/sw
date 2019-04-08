@@ -165,6 +165,7 @@ void NativeExecutedTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_URL"] = q + q;
         a["PACKAGE_TARNAME"] = q + pkg.ppath.toString() + q; // must be lowercase version of PACKAGE_NAME
         a["PACKAGE_VENDOR"] = q + pkg.ppath.getOwner() + q;
+        a["PACKAGE_YEAR"] = std::to_string(1900 + t.tm_year); // custom
         a["PACKAGE_COPYRIGHT_YEAR"] = std::to_string(1900 + t.tm_year);
 
         a["PACKAGE_ROOT_DIR"] = q + normalize_path(pkg.ppath.is_loc() ? RootDirectory : pkg.getDirSrc()) + q;
@@ -1050,6 +1051,9 @@ static const Strings include_dir_names =
 
     "headers",
     "Headers",
+
+    "inc",
+    "Inc",
 };
 
 // these are the same on win/macos, maybe change somehow?

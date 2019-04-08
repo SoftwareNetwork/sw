@@ -1867,7 +1867,11 @@ void Build::createSolutions(const path &dll, bool usedll)
     }
     else if (auto g = getGenerator())
     {
-        g->createSolutions(*this);
+        // check if created previously
+        if (solutions.empty())
+        {
+            g->createSolutions(*this);
+        }
     }
 
     // one more time, if generator did not add solution or whatever

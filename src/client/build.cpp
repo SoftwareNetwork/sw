@@ -50,7 +50,7 @@ std::unique_ptr<Build> load(const path &file_or_dir)
 
         auto b = std::make_unique<Build>();
         b->Local = true;
-        b->SourceDir = p;
+        b->SourceDir = fs::is_directory(p) ? p : p.parent_path();
         b->load(p, true);
         return b;
     }
