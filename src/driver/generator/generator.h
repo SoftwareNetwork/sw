@@ -9,7 +9,7 @@
 #include <cppan_version.h>
 #include <package_path.h>
 
-#include <primitives/context.h>
+#include <primitives/emitter.h>
 #include <primitives/filesystem.h>
 
 namespace sw

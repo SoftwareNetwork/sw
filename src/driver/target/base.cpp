@@ -26,6 +26,15 @@ DECLARE_STATIC_LOGGER(logger, "target");
 namespace sw
 {
 
+struct TargetSettings
+{
+    SolutionSettings ss;
+    // features (options)
+    // deps
+
+    bool operator<(const TargetSettings &) const;
+};
+
 bool isExecutable(TargetType t)
 {
     return

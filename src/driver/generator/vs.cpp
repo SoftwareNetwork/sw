@@ -356,32 +356,32 @@ static path get_int_dir(const path &dir, const path &projects_dir, const String 
     return get_int_dir(dir, projects_dir, name) / shorten_hash(blake2b_512(get_project_configuration(s)), 6);
 }
 
-XmlContext::XmlContext(bool print_version)
-    : Context("  ")
+XmlEmitter::XmlEmitter(bool print_version)
+    : Emitter("  ")
 {
     if (print_version)
         addLine(R"(<?xml version="1.0" encoding="utf-8"?>)");
 }
 
-void XmlContext::beginBlock(const String &n, const std::map<String, String> &params, bool empty)
+void XmlEmitter::beginBlock(const String &n, const std::map<String, String> &params, bool empty)
 {
     beginBlock1(n, params, empty);
     increaseIndent();
 }
 
-void XmlContext::beginBlockWithConfiguration(const String &n, const SolutionSettings &s, std::map<String, String> params, bool empty)
+void XmlEmitter::beginBlockWithConfiguration(const String &n, const SolutionSettings &s, std::map<String, String> params, bool empty)
 {
     params.insert(get_project_configuration_pair(s));
     beginBlock(n, params, empty);
 }
 
-void XmlContext::endBlock(bool text)
+void XmlEmitter::endBlock(bool text)
 {
     decreaseIndent();
     endBlock1(text);
 }
 
-void XmlContext::addBlock(const String &n, const String &v, const std::map<String, String> &params)
+void XmlEmitter::addBlock(const String &n, const String &v, const std::map<String, String> &params)
 {
     beginBlock1(n, params, v.empty());
     if (v.empty())
@@ -390,7 +390,7 @@ void XmlContext::addBlock(const String &n, const String &v, const std::map<Strin
     endBlock1(true);
 }
 
-void XmlContext::beginBlock1(const String &n, const std::map<String, String> &params, bool empty)
+void XmlEmitter::beginBlock1(const String &n, const std::map<String, String> &params, bool empty)
 {
     blocks.push(n);
     addLine("<" + blocks.top());
@@ -403,7 +403,7 @@ void XmlContext::beginBlock1(const String &n, const std::map<String, String> &pa
         blocks.pop();
 }
 
-void XmlContext::endBlock1(bool text)
+void XmlEmitter::endBlock1(bool text)
 {
     if (text)
         addText("</" + blocks.top() + ">");
@@ -412,30 +412,30 @@ void XmlContext::endBlock1(bool text)
     blocks.pop();
 }
 
-void FiltersContext::beginProject()
+void FiltersEmitter::beginProject()
 {
     beginBlock("Project", { {"ToolsVersion", "4.0"},
                             {"xmlns", "http://schemas.microsoft.com/developer/msbuild/2003"} });
 }
 
-void FiltersContext::endProject()
+void FiltersEmitter::endProject()
 {
     endBlock();
 }
 
-void ProjectContext::beginProject()
+void ProjectEmitter::beginProject()
 {
     beginBlock("Project", { {"DefaultTargets", "Build"},
                             {"ToolsVersion", std::to_string(parent->version.getMajor()) + ".0"},
                             {"xmlns", "http://schemas.microsoft.com/developer/msbuild/2003"} });
 }
 
-void ProjectContext::endProject()
+void ProjectEmitter::endProject()
 {
     endBlock();
 }
 
-void ProjectContext::addProjectConfigurations(const Build &b)
+void ProjectEmitter::addProjectConfigurations(const Build &b)
 {
     beginBlock("ItemGroup", { {"Label","ProjectConfigurations"} });
     for (auto &s : b.solutions)
@@ -448,7 +448,7 @@ void ProjectContext::addProjectConfigurations(const Build &b)
     endBlock();
 }
 
-void ProjectContext::addConfigurationType(VSProjectType t)
+void ProjectEmitter::addConfigurationType(VSProjectType t)
 {
     switch (t)
     {
@@ -472,7 +472,7 @@ void ProjectContext::addConfigurationType(VSProjectType t)
     }
 }
 
-void ProjectContext::addPropertyGroupConfigurationTypes(const Build &b, VSProjectType t)
+void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b, VSProjectType t)
 {
     for (auto &s : b.solutions)
     {
@@ -490,12 +490,12 @@ void ProjectContext::addPropertyGroupConfigurationTypes(const Build &b, VSProjec
     }
 }
 
-void ProjectContext::addPropertyGroupConfigurationTypes(const Build &b)
+void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b)
 {
     addPropertyGroupConfigurationTypes(b, ptype);
 }
 
-void ProjectContext::addPropertyGroupConfigurationTypes(const Build &b, const PackageId &p)
+void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b, const PackageId &p)
 {
     for (auto &s : b.solutions)
     {
@@ -519,7 +519,7 @@ void ProjectContext::addPropertyGroupConfigurationTypes(const Build &b, const Pa
     }
 }
 
-void ProjectContext::addPropertySheets(const Build &b)
+void ProjectEmitter::addPropertySheets(const Build &b)
 {
     for (auto &s : b.solutions)
     {
@@ -545,8 +545,8 @@ static bool shouldAddTarget(const Target &t)
         ;
 }
 
-void ProjectContext::printProject(
-    const String &name, const PackageId &p, const Build &b, SolutionContext &ctx, Generator &g,
+void ProjectEmitter::printProject(
+    const String &name, const PackageId &p, const Build &b, SolutionEmitter &ctx, Generator &g,
     PackagePathTree::Directories &parents, PackagePathTree::Directories &local_parents,
     const path &dir, const path &projects_dir
 )
@@ -620,7 +620,7 @@ void ProjectContext::printProject(
     };
 
     StringSet filters; // dirs
-    FiltersContext fctx;
+    FiltersEmitter fctx;
     fctx.beginProject();
     fctx.beginBlock("ItemGroup");
 
@@ -761,7 +761,7 @@ void ProjectContext::printProject(
         beginBlockWithConfiguration("AdditionalOptions", s.Settings);
         for (auto &o : nt.CompileOptions)
             addText(o + " ");
-        endBlock();
+        endBlock(true);
 
         endBlock();
         endBlock();
@@ -966,7 +966,7 @@ void ProjectContext::printProject(
             beginBlockWithConfiguration("AdditionalLibraryDirectories", s.Settings);
             for (auto &l : ld)
                 addText(normalize_path_windows(l) + ";");
-            endBlock();
+            endBlock(true);
 
             if (auto c = nt.getSelectedTool())
             {
@@ -981,7 +981,7 @@ void ProjectContext::printProject(
             for (auto &o : nt.LinkOptions)
                 addText(o + " ");
             addText("%(AdditionalOptions)");
-            endBlock();
+            endBlock(true);
 
             endBlock(); // Link
 
@@ -1331,12 +1331,12 @@ void ProjectContext::printProject(
     write_file_if_different(dir / projects_dir / (name + ".vcxproj.filters"), fctx.getText());
 }
 
-SolutionContext::SolutionContext()
-    : Context("\t", "\r\n")
+SolutionEmitter::SolutionEmitter()
+    : Emitter("\t", "\r\n")
 {
 }
 
-void SolutionContext::printVersion()
+void SolutionEmitter::printVersion()
 {
     addLine("Microsoft Visual Studio Solution File, Format Version 12.00");
 	if (version.getMajor() == 15)
@@ -1352,12 +1352,12 @@ void SolutionContext::printVersion()
 	addLine("MinimumVisualStudioVersion = 10.0.40219.1");
 }
 
-void SolutionContext::addDirectory(const String &display_name)
+void SolutionEmitter::addDirectory(const String &display_name)
 {
     addDirectory(display_name, display_name);
 }
 
-void SolutionContext::addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir)
+void SolutionEmitter::addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir)
 {
     auto s = n.toString();
     auto up = boost::uuids::name_generator_sha1(boost::uuids::ns::oid())(s);
@@ -1371,7 +1371,7 @@ void SolutionContext::addDirectory(const InsecurePath &n, const String &display_
         nested_projects[s] = solution_dir;
 }
 
-SolutionContext::Project &SolutionContext::addProject(VSProjectType type, const String &n, const String &solution_dir)
+SolutionEmitter::Project &SolutionEmitter::addProject(VSProjectType type, const String &n, const String &solution_dir)
 {
     auto up = boost::uuids::name_generator_sha1(boost::uuids::ns::oid())(n);
     uuids[n] = uuid2string(up);
@@ -1387,7 +1387,7 @@ SolutionContext::Project &SolutionContext::addProject(VSProjectType type, const 
     return projects[n];
 }
 
-void SolutionContext::beginProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir)
+void SolutionEmitter::beginProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir)
 {
 	bool has_dash = n.find("-") != n.npos;
 	PackageId p(n);
@@ -1400,41 +1400,41 @@ void SolutionContext::beginProject(VSProjectType type, const String &n, const pa
         nested_projects[n] = solution_dir;
 }
 
-void SolutionContext::endProject()
+void SolutionEmitter::endProject()
 {
     endBlock("EndProject");
 }
 
-void SolutionContext::beginBlock(const String &s)
+void SolutionEmitter::beginBlock(const String &s)
 {
     addLine(s);
     increaseIndent();
 }
 
-void SolutionContext::endBlock(const String &s)
+void SolutionEmitter::endBlock(const String &s)
 {
     decreaseIndent();
     addLine(s);
 }
 
-void SolutionContext::beginGlobal()
+void SolutionEmitter::beginGlobal()
 {
     beginBlock("Global");
 }
 
-void SolutionContext::endGlobal()
+void SolutionEmitter::endGlobal()
 {
     printNestedProjects();
 
     endBlock("EndGlobal");
 }
 
-void SolutionContext::beginGlobalSection(const String &name, const String &post)
+void SolutionEmitter::beginGlobalSection(const String &name, const String &post)
 {
     beginBlock("GlobalSection(" + name + ") = " + post);
 }
 
-void SolutionContext::endGlobalSection()
+void SolutionEmitter::endGlobalSection()
 {
     endBlock("EndGlobalSection");
 }
@@ -1447,7 +1447,7 @@ struct less
 	}
 };
 
-void SolutionContext::setSolutionConfigurationPlatforms(const Build &b)
+void SolutionEmitter::setSolutionConfigurationPlatforms(const Build &b)
 {
 	// sort like VS does
     beginGlobalSection("SolutionConfigurationPlatforms", "preSolution");
@@ -1459,7 +1459,7 @@ void SolutionContext::setSolutionConfigurationPlatforms(const Build &b)
     endGlobalSection();
 }
 
-void SolutionContext::addProjectConfigurationPlatforms(const Build &b, const String &prj, bool build)
+void SolutionEmitter::addProjectConfigurationPlatforms(const Build &b, const String &prj, bool build)
 {
 	// sort like VS does
 	std::map<String, String, less> platforms;
@@ -1473,22 +1473,22 @@ void SolutionContext::addProjectConfigurationPlatforms(const Build &b, const Str
 		addKeyValue(k, v);
 }
 
-void SolutionContext::beginProjectSection(const String &n, const String &disposition)
+void SolutionEmitter::beginProjectSection(const String &n, const String &disposition)
 {
     beginBlock("ProjectSection(" + n + ") = " + disposition);
 }
 
-void SolutionContext::endProjectSection()
+void SolutionEmitter::endProjectSection()
 {
     endBlock("EndProjectSection");
 }
 
-void SolutionContext::addKeyValue(const String &k, const String &v)
+void SolutionEmitter::addKeyValue(const String &k, const String &v)
 {
     addLine(k + " = " + v);
 }
 
-String SolutionContext::getStringUuid(const String &k) const
+String SolutionEmitter::getStringUuid(const String &k) const
 {
     auto i = uuids.find(k);
     if (i == uuids.end())
@@ -1496,7 +1496,7 @@ String SolutionContext::getStringUuid(const String &k) const
     return "{" + i->second + "}";
 }
 
-void SolutionContext::materialize(const Build &b, const path &dir, GeneratorType type)
+void SolutionEmitter::materialize(const Build &b, const path &dir, GeneratorType type)
 {
     auto bp = [&](const auto &n, const auto &p)
     {
@@ -1534,7 +1534,7 @@ void SolutionContext::materialize(const Build &b, const path &dir, GeneratorType
     endGlobal();
 }
 
-SolutionContext::Text SolutionContext::getText() const
+SolutionEmitter::Text SolutionEmitter::getText() const
 {
     for (auto &[n, p] : projects)
     {
@@ -1548,7 +1548,7 @@ SolutionContext::Text SolutionContext::getText() const
     return Base::getText();
 }
 
-void SolutionContext::printNestedProjects()
+void SolutionEmitter::printNestedProjects()
 {
     beginGlobalSection("NestedProjects", "preSolution");
     for (auto &[k,v]: nested_projects)
@@ -1649,7 +1649,7 @@ void VSGenerator::generate(const Build &b)
     PackagePathTree tree, local_tree, overridden_tree;
     PackagePathTree::Directories parents, local_parents;
 
-    SolutionContext ctx;
+    SolutionEmitter ctx;
 	ctx.all_build_name = all_build_name;
 	ctx.build_dependencies_name = build_dependencies_name;
 	ctx.version = version;

@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- Copyright (C) 2018 Egor Pugin <egor.pugin@gmail.com>
+-- Copyright (C) 2018-2019 Egor Pugin <egor.pugin@gmail.com>
 --
 -- This Source Code Form is subject to the terms of the Mozilla Public
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -42,17 +42,6 @@ CREATE TABLE installed_package (
     group_number INTEGER NOT NULL,
 
     UNIQUE (path, version)
-);
-
---------------------------------------------------------------------------------
---
---------------------------------------------------------------------------------
-
-CREATE TABLE startup_action (
-    startup_action_id INTEGER NOT NULL,
-    action INTEGER NOT NULL,
-
-    PRIMARY KEY (startup_action_id, action)
 );
 
 --------------------------------------------------------------------------------
@@ -161,6 +150,12 @@ DELETE FROM override_remote_package;
 
 ALTER TABLE override_remote_package_version
 ADD COLUMN prefix INTEGER NOT NULL DEFAULT 2;
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+DROP TABLE startup_action;
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available

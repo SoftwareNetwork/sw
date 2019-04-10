@@ -106,7 +106,7 @@ void build(Solution &s)
     self_builder += "src/tools/self_builder.cpp";
     self_builder +=
         manager,
-        "pub.egorpugin.primitives.context-master"_dep,
+        "pub.egorpugin.primitives.emitter-master"_dep,
         "pub.egorpugin.primitives.sw.main-master"_dep;
 
     auto &cl_generator = tools.addTarget<ExecutableTarget>("cl_generator");
@@ -114,7 +114,7 @@ void build(Solution &s)
     cl_generator.CPPVersion = CPPLanguageStandard::CPP17;
     cl_generator += "src/tools/cl_generator.cpp";
     cl_generator +=
-        "pub.egorpugin.primitives.context-master"_dep,
+        "pub.egorpugin.primitives.emitter-master"_dep,
         "pub.egorpugin.primitives.yaml-master"_dep,
         "pub.egorpugin.primitives.main-master"_dep;
 
@@ -126,7 +126,7 @@ void build(Solution &s)
     builder.Public += "include"_idir, "src/builder"_idir;
     builder -= "src/builder/db_sqlite.*"_rr;
     builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep,
-        "pub.egorpugin.primitives.context-master"_dep;
+        "pub.egorpugin.primitives.emitter-master"_dep;
     if (!s.Variables["SW_SELF_BUILD"])
     {
         /*PrecompiledHeader pch;

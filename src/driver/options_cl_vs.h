@@ -14,7 +14,7 @@
 namespace sw
 {
 
-struct ProjectContext;
+struct ProjectEmitter;
 
 namespace vs
 {

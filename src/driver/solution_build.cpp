@@ -28,7 +28,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/range/combine.hpp>
 #include <boost/thread/lock_types.hpp>
-#include <primitives/context.h>
+#include <primitives/emitter.h>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
 #include <primitives/pack.h>
@@ -167,12 +167,12 @@ static path getPackageHeader(const ExtendedPackageData &p /* resolved pkg */, co
     //static const std::regex r_header("#pragma sw header on(.*)#pragma sw header off");
     //if (std::regex_search(f, m, r_header))
     {
-        primitives::Context ctx;
+        primitives::Emitter ctx;
         ctx.addLine("#pragma once");
         ctx.addLine();
         //ctx.addLine("#line 1 \"" + normalize_path(cfg) + "\""); // determine correct line number first
 
-        primitives::Context prefix;
+        primitives::Emitter prefix;
         /*prefix.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");
         prefix.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + p.ppath.slice(p.prefix).toString() + "\"");
         prefix.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
@@ -755,15 +755,15 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
     path many_files_fn;
     if (many_files)
     {
-        primitives::CppContext ctx;
+        primitives::CppEmitter ctx;
 
-        primitives::CppContext build;
+        primitives::CppEmitter build;
         build.beginFunction("void build(Solution &s)");
 
-        primitives::CppContext check;
+        primitives::CppEmitter check;
         check.beginFunction("void check(Checker &c)");
 
-        primitives::CppContext abi;
+        primitives::CppEmitter abi;
         abi.addLine("SW_PACKAGE_API");
         abi.beginFunction("int sw_get_module_abi_version()");
         abi.addLine("int v = -1, t;");
@@ -876,7 +876,7 @@ path Build::build_configs(const std::unordered_set<ExtendedPackageData> &pkgs)
             h = fn.parent_path().parent_path() / "auxl" / ("defs_" + hash + ".h");
         else
             h = fn.parent_path() / SW_BINARY_DIR / "auxl" / ("defs_" + hash + ".h");
-        primitives::CppContext ctx;
+        primitives::CppEmitter ctx;
 
         ctx.addLine("#define configure configure_" + hash);
         ctx.addLine("#define build build_" + hash);
@@ -1120,7 +1120,7 @@ void Build::load(const path &fn, bool configless)
 
 static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
 {
-    primitives::BinaryContext ctx;
+    primitives::BinaryStream ctx;
     ctx.load(fn);
 
     size_t sz;
@@ -1254,7 +1254,7 @@ static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
 
 void save(const path &fn, const Solution::CommandExecutionPlan &p)
 {
-    primitives::BinaryContext ctx;
+    primitives::BinaryStream ctx;
 
     auto strings = p.gatherStrings();
 
@@ -1704,6 +1704,10 @@ void Build::createSolutions(const path &dll, bool usedll)
     if (gWithTesting)
         with_testing = true;
 
+    if (solutions_created)
+        return;
+    solutions_created = true;
+
     if (usedll)
         sw_check_abi_version(getModuleStorage(base_ptr).get(dll).sw_get_module_abi_version());
 
@@ -1867,11 +1871,7 @@ void Build::createSolutions(const path &dll, bool usedll)
     }
     else if (auto g = getGenerator())
     {
-        // check if created previously
-        if (solutions.empty())
-        {
-            g->createSolutions(*this);
-        }
+        g->createSolutions(*this);
     }
 
     // one more time, if generator did not add solution or whatever

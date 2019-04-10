@@ -66,6 +66,7 @@ private:
     std::optional<const Solution *> host;
     mutable StringSet used_configs;
     std::shared_ptr<Generator> generator; // not unique - just allow us to copy builds
+    bool solutions_created = false;
 
     std::optional<std::reference_wrapper<Solution>> addFirstSolution();
     void setupSolutionName(const path &file_or_dir);

@@ -24,26 +24,6 @@ namespace sw
 class SqliteDatabase;
 struct PackageId;
 
-struct StartupAction
-{
-    enum Type
-    {
-        // append only
-        ClearCache = 0x0000,
-        ServiceDbClearConfigHashes = 0x0001,
-        //CheckSchema                 = 0x0002,
-        ClearStorageDirExp = 0x0004,
-        //ClearSourceGroups           = 0x0008,
-        ClearStorageDirBin = 0x0010,
-        ClearStorageDirLib = 0x0020,
-        ClearCfgDirs = 0x0040,
-        ClearPackagesDatabase = 0x0080,
-    };
-
-    int id;
-    int action;
-};
-
 class SW_MANAGER_API Database
 {
 public:
@@ -97,17 +77,12 @@ struct SW_MANAGER_API ServiceDatabase : public Database
 
     void init();
 
-    void performStartupActions() const;
-
     void checkForUpdates() const;
     TimePoint getLastClientUpdateCheck() const;
     void setLastClientUpdateCheck(const TimePoint &p = Clock::now()) const;
 
     int getPackagesDbSchemaVersion() const;
     void setPackagesDbSchemaVersion(int version) const;
-
-    bool isActionPerformed(const StartupAction &action) const;
-    void setActionPerformed(const StartupAction &action) const;
 
     String getConfigByHash(const String &settings_hash) const;
     int addConfig(const String &config) const;

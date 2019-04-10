@@ -119,7 +119,7 @@ GeneratorType fromString(const String &s)
     return GeneratorType::UnspecifiedGenerator;
 }
 
-struct NinjaContext : primitives::Context
+struct NinjaEmitter : primitives::Emitter
 {
     void addCommand(const Build &b, const path &dir, const builder::Command &c)
     {
@@ -244,7 +244,7 @@ void NinjaGenerator::generate(const Build &b)
 
     const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
 
-    NinjaContext ctx;
+    NinjaEmitter ctx;
 
     auto ep = b.getExecutionPlan();
     for (auto &c : ep.commands)
@@ -257,14 +257,14 @@ void NinjaGenerator::generate(const Build &b)
     write_file(dir / "build.ninja", t);
 }
 
-struct MakeContext : primitives::Context
+struct MakeEmitter : primitives::Emitter
 {
     bool nmake = false;
     std::unordered_map<path, size_t> programs;
     std::unordered_map<path, size_t> generated_programs;
 
-    MakeContext()
-        : Context("\t")
+    MakeEmitter()
+        : Emitter("\t")
     {}
 
     void gatherPrograms(const Solution::CommandExecutionPlan::Vec &commands)
@@ -497,7 +497,7 @@ void MakeGenerator::generate(const Build &b)
 
     auto ep = b.solutions[0].getExecutionPlan();
 
-    MakeContext ctx;
+    MakeEmitter ctx;
     ctx.nmake = type == GeneratorType::NMake;
     ctx.gatherPrograms(ep.commands);
 
@@ -537,9 +537,9 @@ void MakeGenerator::generate(const Build &b)
     for (auto &c : ep.commands)
         outputs.insert(c->outputs.begin(), c->outputs.end());
     if (ctx.nmake)
-        ctx.addTarget("clean", {}, { "@del " + normalize_path_windows(MakeContext::printFiles(outputs, true)) });
+        ctx.addTarget("clean", {}, { "@del " + normalize_path_windows(MakeEmitter::printFiles(outputs, true)) });
     else
-        ctx.addTarget("clean", {}, { "@rm -f " + MakeContext::printFiles(outputs, true) });
+        ctx.addTarget("clean", {}, { "@rm -f " + MakeEmitter::printFiles(outputs, true) });
 
     write_file(d / "Makefile", ctx.getText());
 }

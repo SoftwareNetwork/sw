@@ -71,18 +71,6 @@ static TimePoint tstart;
 namespace sw
 {
 
-std::vector<StartupAction> startup_actions{
-    {1, StartupAction::ClearCache},
-    {2, StartupAction::ServiceDbClearConfigHashes},
-    {5, StartupAction::ClearStorageDirExp},
-    //{ 6, StartupAction::ClearSourceGroups },
-    {7, StartupAction::ClearStorageDirExp | StartupAction::ClearStorageDirBin | StartupAction::ClearStorageDirLib},
-    {8, StartupAction::ClearCfgDirs},
-    {9, StartupAction::ClearStorageDirExp},
-    {10, StartupAction::ClearPackagesDatabase},
-    {11, StartupAction::ServiceDbClearConfigHashes},
-};
-
 path getDbDirectory()
 {
     // db per storage
@@ -231,89 +219,7 @@ void ServiceDatabase::init()
     RUN_ONCE
     {
         checkForUpdates();
-        performStartupActions();
     };
-}
-
-void ServiceDatabase::performStartupActions() const
-{
-    return;
-
-    // perform startup actions on client update
-    try
-    {
-        static bool once = false;
-        if (once)
-            return;
-
-        std::set<int> actions_performed; // prevent multiple execution of the same actions
-        for (auto &a : startup_actions)
-        {
-            if (isActionPerformed(a) ||
-                actions_performed.find(a.action) != actions_performed.end())
-                continue;
-
-            if (!once)
-                LOG_INFO(logger, "Performing actions for the new client version");
-            once = true;
-
-            actions_performed.insert(a.action);
-            setActionPerformed(a);
-
-            // do actions
-            if (a.action & StartupAction::ClearCache)
-            {
-                //CMakePrinter().clear_cache();
-            }
-
-            if (a.action & StartupAction::ServiceDbClearConfigHashes)
-            {
-                clearConfigHashes();
-
-                // also cleanup temp build dir
-                error_code ec;
-                fs::remove_all(temp_directory_path(), ec);
-            }
-
-            if (a.action & StartupAction::ClearPackagesDatabase)
-            {
-                fs::remove(getDbDirectory() / packages_db_name);
-            }
-
-            /*if (a.action & StartupAction::ClearStorageDirExp)
-            {
-                remove_all_from_dir(getStorage().storage_dir_exp);
-            }*/
-
-            if (a.action & StartupAction::ClearStorageDirBin)
-            {
-                // also remove exp to trigger cmake
-                //remove_all_from_dir(getStorage().storage_dir_exp);
-                remove_all_from_dir(getStorage().storage_dir_bin);
-            }
-
-            if (a.action & StartupAction::ClearStorageDirLib)
-            {
-                // also remove exp to trigger cmake
-                //remove_all_from_dir(getStorage().storage_dir_exp);
-                remove_all_from_dir(getStorage().storage_dir_lib);
-            }
-
-            if (a.action & StartupAction::ClearCfgDirs)
-            {
-                for (auto &i : boost::make_iterator_range(fs::directory_iterator(getStorage().storage_dir_cfg), {}))
-                {
-                    if (fs::is_directory(i))
-                        fs::remove_all(i);
-                }
-            }
-        }
-    }
-    catch (std::exception &e)
-    {
-        // do not fail
-        LOG_WARN(logger, "Warning: " << e.what());
-    }
 }
 
 void ServiceDatabase::checkForUpdates() const
@@ -347,26 +253,6 @@ TimePoint ServiceDatabase::getLastClientUpdateCheck() const
 void ServiceDatabase::setLastClientUpdateCheck(const TimePoint &p) const
 {
     setValue("NextClientVersionCheck", Clock::to_time_t(p));
-}
-
-bool ServiceDatabase::isActionPerformed(const StartupAction &action) const
-{
-    const auto actions = ::db::service::StartupAction{};
-    auto c = ((*db)(
-        select(count(actions.startupActionId))
-        .from(actions)
-        .where(actions.startupActionId == action.id and actions.action == action.action)
-        )).front().count.value();
-    return c == 1;
-}
-
-void ServiceDatabase::setActionPerformed(const StartupAction &action) const
-{
-    const auto actions = ::db::service::StartupAction{};
-    (*db)(insert_into(actions).set(
-        actions.startupActionId = action.id,
-        actions.action = action.action
-    ));
 }
 
 int ServiceDatabase::getPackagesDbSchemaVersion() const

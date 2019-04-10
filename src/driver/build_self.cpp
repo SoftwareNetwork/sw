@@ -10,7 +10,6 @@
 #include <resolver.h>
 
 #include <boost/algorithm/string.hpp>
-#include <primitives/context.h>
 
 // disable custom pragma warnings
 #ifdef _MSC_VER

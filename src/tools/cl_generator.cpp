@@ -1,11 +1,11 @@
-#include <primitives/context.h>
+#include <primitives/emitter.h>
 #include <primitives/main.h>
 #include <primitives/yaml.h>
 
 #include <algorithm>
 
 template <class ... Args>
-void both(primitives::CppContext &hctx, primitives::CppContext &cctx, Args && ... args)
+void both(primitives::CppEmitter &hctx, primitives::CppEmitter &cctx, Args && ... args)
 {
     hctx.addLine(args...);
     cctx.addLine(args...);
@@ -68,7 +68,7 @@ struct Type
 
     mutable bool printed = false;
 
-    void print(primitives::CppContext &h, primitives::CppContext &cpp) const
+    void print(primitives::CppEmitter &h, primitives::CppEmitter &cpp) const
     {
         if (printed)
             return;
@@ -165,7 +165,7 @@ struct Type
         h.emptyLines(1);
 
         h.addLine("Strings getCommandLine(const ::sw::builder::Command &c);");
-        h.addLine("void printIdeSettings(ProjectContext &);");
+        h.addLine("void printIdeSettings(ProjectEmitter &);");
 
         cpp.addLine("DEFINE_OPTION_SPECIALIZATION_DUMMY(" + name + ")");
         cpp.addLine();
@@ -180,7 +180,7 @@ struct Type
         cpp.endBlock();
         cpp.emptyLines(1);
 
-        cpp.beginBlock("void " + name + "::printIdeSettings(ProjectContext &ctx)");
+        cpp.beginBlock("void " + name + "::printIdeSettings(ProjectEmitter &ctx)");
         if (!parent.empty())
         {
             cpp.addLine(parent + "::printIdeSettings(ctx);");
@@ -265,7 +265,7 @@ struct File
     Flags flags;
     Types types;
 
-    void print_type(const Type &t, primitives::CppContext &h, primitives::CppContext &cpp) const
+    void print_type(const Type &t, primitives::CppEmitter &h, primitives::CppEmitter &cpp) const
     {
         if (!t.parent.empty())
         {
@@ -276,7 +276,7 @@ struct File
         t.print(h, cpp);
     }
 
-    void print(primitives::CppContext &h, primitives::CppContext &cpp) const
+    void print(primitives::CppEmitter &h, primitives::CppEmitter &cpp) const
     {
         for (const auto &[k, v] : types)
             print_type(v, h, cpp);
@@ -415,7 +415,7 @@ int main(int argc, char **argv)
         f.types[tn] = t;
     });
 
-    primitives::CppContext hctx, cctx;
+    primitives::CppEmitter hctx, cctx;
 
     both(hctx, cctx, "// generated file, do not edit");
     both(hctx, cctx);

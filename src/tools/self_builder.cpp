@@ -7,7 +7,7 @@
 #include <database.h>
 #include <resolver.h>
 
-#include <primitives/context.h>
+#include <primitives/emitter.h>
 #include <primitives/executor.h>
 #include <primitives/sw/main.h>
 #include <primitives/sw/cl.h>
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
         {{"pub.egorpugin.primitives.filesystem", "master"}, {}},
         {{"pub.egorpugin.primitives.file_monitor", "master"}, {}},
         {{"pub.egorpugin.primitives.templates", "master"}, {}},
-        {{"pub.egorpugin.primitives.context", "master"}, {}},
+        {{"pub.egorpugin.primitives.emitter", "master"}, {}},
         {{"pub.egorpugin.primitives.executor", "master"}, {}},
         {{"pub.egorpugin.primitives.command", "master"}, {}},
         {{"pub.egorpugin.primitives.date_time", "master"}, {}},
@@ -243,7 +243,7 @@ int main(int argc, char **argv)
         {{"org.sw.sw.client.driver.cpp", "0"}, {}},
     };
 
-    primitives::CppContext ctx_packages;
+    primitives::CppEmitter ctx_packages;
     ctx_packages.beginBlock("static UnresolvedPackages required_packages");
 
     UnresolvedPackages deps;
@@ -262,16 +262,16 @@ int main(int argc, char **argv)
     ctx_packages.endBlock(true);
     write_file_if_different(packages, ctx_packages.getText());
 
-    primitives::CppContext ctx;
+    primitives::CppEmitter ctx;
     //ctx.addLine("#define SW_PRAGMA_HEADER 1");
     ctx.addLine();
 
-    primitives::CppContext build;
+    primitives::CppEmitter build;
     build.beginFunction("void build_self_generated(Solution &s)");
     build.addLine("auto sdir_old = s.SourceDir;");
     build.addLine();
 
-    primitives::CppContext check;
+    primitives::CppEmitter check;
     check.beginFunction("void check_self_generated(Checker &c)");
 
     std::set<PackageVersionGroupNumber> used_gns;

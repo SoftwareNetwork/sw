@@ -11,7 +11,7 @@
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/constants.h>
-#include <primitives/context.h>
+#include <primitives/emitter.h>
 #include <primitives/debug.h>
 #include <primitives/sw/cl.h>
 
@@ -1775,11 +1775,11 @@ bool NativeExecutedTarget::prepare()
             && Scope == TargetScope::Build
             )
         {
-            struct RcContext : primitives::Context
+            struct RcEmitter : primitives::Emitter
             {
-                using Base = primitives::Context;
+                using Base = primitives::Emitter;
 
-                RcContext(Version file_ver, Version product_ver)
+                RcEmitter(Version file_ver, Version product_ver)
                 {
                     if (file_ver.isBranch())
                         file_ver = Version();
@@ -1832,7 +1832,7 @@ bool NativeExecutedTarget::prepare()
                 }
             };
 
-            RcContext ctx(pkg.version, pkg.version);
+            RcEmitter ctx(pkg.version, pkg.version);
             ctx.begin();
 
             ctx.beginBlock("StringFileInfo");
@@ -2181,15 +2181,18 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
             Interface.Definitions[api + "_EXTERN"] = "extern";
         };
 
-        if (Type == LibraryType::Shared)
+        if (SwDefinitions)
         {
-            Definitions["CPPAN_SHARED_BUILD"];
-            //Definitions["SW_SHARED_BUILD"];
-        }
-        else if (Type == LibraryType::Static)
-        {
-            Definitions["CPPAN_STATIC_BUILD"];
-            //Definitions["SW_STATIC_BUILD"];
+            if (Type == LibraryType::Shared)
+            {
+                //Definitions["CPPAN_SHARED_BUILD"];
+                Definitions["SW_SHARED_BUILD"];
+            }
+            else if (Type == LibraryType::Static)
+            {
+                //Definitions["CPPAN_STATIC_BUILD"];
+                Definitions["SW_STATIC_BUILD"];
+            }
         }
 
         set_api(ApiName);
@@ -3112,8 +3115,9 @@ bool ExecutableTarget::prepare()
             }
         };
 
-        Definitions["CPPAN_EXECUTABLE"];
-        //Definitions["SW_EXECUTABLE"];
+        if (SwDefinitions)
+            Definitions["SW_EXECUTABLE"];
+        //Definitions["CPPAN_EXECUTABLE"];
 
         set_api(ApiName);
         for (auto &a : ApiNames)

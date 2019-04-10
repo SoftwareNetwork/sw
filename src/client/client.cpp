@@ -29,7 +29,7 @@
 #include <boost/algorithm/string_regex.hpp>
 #include <boost/dll.hpp>
 #include <boost/regex.hpp>
-#include <primitives/context.h>
+#include <primitives/emitter.h>
 #include <primitives/executor.h>
 #include <primitives/file_monitor.h>
 #include <primitives/lock.h>
@@ -571,7 +571,7 @@ SUBCOMMAND_DECL(create)
 
         // TODO: add separate extended template with configure
         // common sw.cpp
-        primitives::CppContext ctx;
+        primitives::CppEmitter ctx;
         ctx.beginFunction("void build(Solution &s)");
         ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
         ctx.addLine("// auto &p = s.addProject(\"myproject\");");
@@ -650,7 +650,7 @@ int main(int argc, char *argv[])
     }
     else if (create_type == "config")
     {
-        primitives::CppContext ctx;
+        primitives::CppEmitter ctx;
         ctx.beginFunction("void build(Solution &s)");
         ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
         ctx.addLine("// auto &p = s.addProject(\"myproject\", \"master\");");

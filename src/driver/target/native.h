@@ -77,6 +77,7 @@ public:
     bool ExportAllSymbols = false;
     bool ExportIfStatic = false;
     bool PackageDefinitions = false;
+    bool SwDefinitions = false;
     bool StartupProject = false; // move to description? move to Generator.VS... struct? IDE struct?
     bool GenerateWindowsResource = true; // internal?
 

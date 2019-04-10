@@ -36,11 +36,11 @@ struct PackagePathTree
     Directories getDirectories(const PackagePath &p = {});
 };
 
-struct XmlContext : primitives::Context
+struct XmlEmitter : primitives::Emitter
 {
     std::stack<String> blocks;
 
-    XmlContext(bool print_version = true);
+    XmlEmitter(bool print_version = true);
 
     void beginBlock(const String &n, const std::map<String, String> &params = {}, bool empty = false);
     void beginBlockWithConfiguration(const String &n, const SolutionSettings &s, std::map<String, String> params = {}, bool empty = false);
@@ -52,17 +52,17 @@ protected:
     void endBlock1(bool text = false);
 };
 
-struct FiltersContext : XmlContext
+struct FiltersEmitter : XmlEmitter
 {
     void beginProject();
     void endProject();
 };
 
-struct SolutionContext;
+struct SolutionEmitter;
 
-struct ProjectContext : XmlContext
+struct ProjectEmitter : XmlEmitter
 {
-    SolutionContext *parent = nullptr;
+    SolutionEmitter *parent = nullptr;
     std::set<String> deps;
     VSProjectType ptype;
 
@@ -78,24 +78,24 @@ struct ProjectContext : XmlContext
     void addPropertySheets(const Build &b);
 
     void printProject(
-        const String &name, const PackageId &p, const Build &b, SolutionContext &ctx, Generator &g,
+        const String &name, const PackageId &p, const Build &b, SolutionEmitter &ctx, Generator &g,
         PackagePathTree::Directories &parents, PackagePathTree::Directories &local_parents,
         const path &dir, const path &projects_dir
     );
 };
 
-struct SolutionContext : primitives::Context
+struct SolutionEmitter : primitives::Emitter
 {
     struct Project
     {
         String name;
-        std::unique_ptr<SolutionContext> ctx;
-        ProjectContext pctx;
+        std::unique_ptr<SolutionEmitter> ctx;
+        ProjectEmitter pctx;
         String solution_dir;
 
         Project()
         {
-            ctx = std::make_unique<SolutionContext>();
+            ctx = std::make_unique<SolutionEmitter>();
         }
         ~Project()
         {
@@ -104,7 +104,7 @@ struct SolutionContext : primitives::Context
         }
     };
 
-    using Base = primitives::Context;
+    using Base = primitives::Emitter;
 
     Version version;
     String all_build_name;
@@ -114,7 +114,7 @@ struct SolutionContext : primitives::Context
     std::map<String, Project> projects;
     const Project *first_project = nullptr;
 
-    SolutionContext();
+    SolutionEmitter();
 
     void printVersion();
 

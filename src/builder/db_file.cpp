@@ -13,7 +13,7 @@
 
 void save_from_memory_to_file(const path &fn, sqlite3 *db);
 
-#include <primitives/context.h>
+#include <primitives/emitter.h>
 #include <primitives/date_time.h>
 #include <primitives/debug.h>
 #include <primitives/exceptions.h>
@@ -73,7 +73,7 @@ static void load(FileStorage &fs, const path &fn,
 {
     ScopedShareableFileLock lk(fn);
 
-    primitives::BinaryContext b;
+    primitives::BinaryStream b;
     try
     {
         b.load(fn);
@@ -185,7 +185,7 @@ void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, b
         }*/
     }
 
-    primitives::BinaryContext b(10'000'000); // reserve amount
+    primitives::BinaryStream b(10'000'000); // reserve amount
     std::vector<uint8_t> v;
     for (auto i = files.getIterator(); i.isValid(); i.next())
     {
@@ -254,7 +254,7 @@ void FileDb::write(std::vector<uint8_t> &v, const FileRecord &f) const
 
 static void load(const path &fn, ConcurrentCommandStorage &commands)
 {
-    primitives::BinaryContext b;
+    primitives::BinaryStream b;
     try
     {
         b.load(fn);
@@ -289,7 +289,7 @@ void FileDb::load(ConcurrentCommandStorage &commands, bool local) const
 
 void FileDb::save(ConcurrentCommandStorage &commands, bool local) const
 {
-    primitives::BinaryContext b(10'000'000); // reserve amount
+    primitives::BinaryStream b(10'000'000); // reserve amount
     for (auto i = commands.getIterator(); i.isValid(); i.next())
     {
         b.write(i.getKey());

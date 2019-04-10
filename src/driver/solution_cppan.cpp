@@ -23,7 +23,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/thread/lock_types.hpp>
-#include <primitives/context.h>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
 #include <primitives/pack.h>
