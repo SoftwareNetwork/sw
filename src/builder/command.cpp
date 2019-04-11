@@ -447,6 +447,15 @@ bool Command::beforeCommand()
 
     executed_ = true;
 
+    // check our resources (before log)
+    if (pool)
+        pool->lock();
+    SCOPE_EXIT
+    {
+        if (pool)
+        pool->unlock();
+    };
+
     printLog();
     return true;
 }
@@ -554,15 +563,6 @@ void Command::execute1(std::error_code *ec)
         for (auto &o : outputs)
             fs::remove(o, ec);
     }
-
-    // check our resources
-    if (pool)
-        pool->lock();
-    SCOPE_EXIT
-    {
-        if (pool)
-            pool->unlock();
-    };
 
     // Try to construct command line first.
     // Some systems have limitation on its length.

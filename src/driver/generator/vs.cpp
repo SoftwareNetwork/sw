@@ -320,9 +320,14 @@ String toString(VSFileType t)
     }
 }
 
-static VSProjectType get_vs_project_type(const SolutionSettings &s, TargetType t)
+static VSProjectType get_vs_project_type(const SolutionSettings &s, const Target &t)
 {
-    switch (t)
+    if (auto nt = t.as<NativeExecutedTarget>())
+    {
+        if (!nt->getCommand())
+            return VSProjectType::Utility;
+    }
+    switch (t.getType())
     {
     case TargetType::NativeLibrary:
         if (s.Native.LibrariesType == LibraryType::Shared)
@@ -505,7 +510,7 @@ void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b, const Pa
         if (i == s.children.end())
             throw SW_RUNTIME_ERROR("bad target: " + p.toString());
 
-        addConfigurationType(get_vs_project_type(s.Settings, i->second->getType()));
+        addConfigurationType(get_vs_project_type(s.Settings, *i->second));
 
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
 		if (toolset.empty())
@@ -929,9 +934,15 @@ void ProjectEmitter::printProject(
 
                     deps.insert(d->target->pkg.toString());
 
-                    auto tdir = get_out_dir(dir, projects_dir, s.Settings);
-                    tdir /= d->target->pkg.toString() + ".lib";
-                    ll.insert(tdir);
+                    if (auto nt3 = d->target->template as<NativeExecutedTarget>())
+                    {
+                        if (!*nt3->HeaderOnly)
+                        {
+                            auto tdir = get_out_dir(dir, projects_dir, s.Settings);
+                            tdir /= d->target->pkg.toString() + ".lib";
+                            ll.insert(tdir);
+                        }
+                    }
 
                     if ((s.Settings.Native.LibrariesType == LibraryType::Static && d->target->getType() == TargetType::NativeLibrary) ||
                         d->target->getType() == TargetType::NativeStaticLibrary)
@@ -1815,7 +1826,7 @@ void VSGenerator::generate(const Build &b)
         auto t2 = VSProjectType::Makefile;
         if (type == GeneratorType::VisualStudio)
         {
-            t2 = get_vs_project_type(b.solutions[0].Settings, t->getType());
+            t2 = get_vs_project_type(b.solutions[0].Settings, *t);
         }
         else if (type != GeneratorType::VisualStudioNMake)
         {
