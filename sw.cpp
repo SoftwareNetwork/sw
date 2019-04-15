@@ -11,8 +11,8 @@ void configure(Build &s)
     {
         if (cbt != sw::CallbackType::CreateTarget)
             return;
-        if (t.pkg == PackageId{ "pub.egorpugin.primitives.version-master" }/* ||
-            t.pkg == PackageId{ "pub.egorpugin.primitives.filesystem-master" }*/)
+        if (t.getPackage() == PackageId{ "pub.egorpugin.primitives.version-master" }/* ||
+            t.getPackage() == PackageId{ "pub.egorpugin.primitives.filesystem-master" }*/)
         {
             auto &nt = dynamic_cast<NativeExecutedTarget &>(t);
             nt.ExportIfStatic = true;
@@ -32,13 +32,12 @@ void configure(Build &s)
 
 void build(Solution &s)
 {
-    auto &p = s.addProject("sw.client", "0.3.0");
+    auto &p = s.addProject("sw.client", "0.3.1");
     p += Git("https://github.com/SoftwareNetwork/sw", "", "master");
 
     auto &support = p.addTarget<StaticLibraryTarget>("support");
     support.CPPVersion = CPPLanguageStandard::CPP17;
-    support += "src/support/.*"_rr;
-    support.Public += "src/support"_idir;
+    support += "src/sw/support/.*"_rr;
     support.Public +=
         "pub.egorpugin.primitives.http-master"_dep,
         "pub.egorpugin.primitives.hash-master"_dep,
@@ -56,19 +55,19 @@ void build(Solution &s)
 
     auto &protos = p.addTarget<StaticLibraryTarget>("protos");
     protos.CPPVersion = CPPLanguageStandard::CPP17;
-    protos += "src/protocol/.*"_rr;
-    protos.Public += "src/protocol"_idir;
+    protos += "src/sw/protocol/.*"_rr;
     protos.Public +=
         "org.sw.demo.google.grpc.grpcpp-1"_dep,
         "pub.egorpugin.primitives.templates-master"_dep,
         "pub.egorpugin.primitives.log-master"_dep;
-    for (auto &[p, _] : protos["src/protocol/.*\\.proto"_rr])
+    for (auto &[p, _] : protos["src/sw/protocol/.*\\.proto"_rr])
         gen_grpc("org.sw.demo.google.protobuf-3"_dep, "org.sw.demo.google.grpc.grpc_cpp_plugin-1"_dep, protos, p, true);
 
     auto &manager = p.addTarget<LibraryTarget>("manager");
     manager.ApiName = "SW_MANAGER_API";
     manager.ExportIfStatic = true;
     manager.CPPVersion = CPPLanguageStandard::CPP17;
+    manager.Public += "BOOST_DLL_USE_STD_FS"_def;
     manager.Public += support, protos,
         "pub.egorpugin.primitives.yaml-master"_dep,
         "pub.egorpugin.primitives.date_time-master"_dep,
@@ -82,19 +81,20 @@ void build(Solution &s)
         "pub.egorpugin.primitives.version-master"_dep,
         "pub.egorpugin.primitives.sw.settings-master"_dep,
         "pub.egorpugin.primitives.win32helpers-master"_dep;
-    manager += "src/manager/.*"_rr, "include/sw/manager/.*"_rr;
-    manager.Public += "include"_idir, "src/manager"_idir;
+    manager += "src/sw/manager/.*"_rr;
     manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().version.getMajor());
     manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().version.getMinor());
     manager.Public.Definitions["VERSION_PATCH"] += std::to_string(manager.getPackage().version.getPatch());
-    embed("pub.egorpugin.primitives.tools.embedder-master"_dep, manager, "src/manager/inserts/inserts.cpp.in");
-    gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep, manager, manager.SourceDir / "src/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
-    gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep, manager, manager.SourceDir / "src/manager/inserts/service_db_schema.sql", "db_service.h", "db::service");
+    embed("pub.egorpugin.primitives.tools.embedder-master"_dep, manager, "src/sw/manager/inserts/inserts.cpp.in");
+    gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep,
+        manager, manager.SourceDir / "src/sw/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
+    gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep,
+        manager, manager.SourceDir / "src/sw/manager/inserts/service_db_schema.sql", "db_service.h", "db::service");
 
     PrecompiledHeader pch;
     if (!s.Variables["SW_SELF_BUILD"])
     {
-        pch.header = manager.SourceDir / "src/manager/pch.h";
+        pch.header = manager.SourceDir / "src/sw/manager/pch.h";
         pch.force_include_pch = true;
         //manager.addPrecompiledHeader(pch);
     }
@@ -103,7 +103,7 @@ void build(Solution &s)
     auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
     self_builder.PackageDefinitions = true;
     self_builder.CPPVersion = CPPLanguageStandard::CPP17;
-    self_builder += "src/tools/self_builder.cpp";
+    self_builder += "src/sw/tools/self_builder.cpp";
     self_builder +=
         manager,
         "pub.egorpugin.primitives.emitter-master"_dep,
@@ -112,7 +112,7 @@ void build(Solution &s)
     auto &cl_generator = tools.addTarget<ExecutableTarget>("cl_generator");
     cl_generator.PackageDefinitions = true;
     cl_generator.CPPVersion = CPPLanguageStandard::CPP17;
-    cl_generator += "src/tools/cl_generator.cpp";
+    cl_generator += "src/sw/tools/cl_generator.cpp";
     cl_generator +=
         "pub.egorpugin.primitives.emitter-master"_dep,
         "pub.egorpugin.primitives.yaml-master"_dep,
@@ -122,15 +122,14 @@ void build(Solution &s)
     builder.ApiName = "SW_BUILDER_API";
     builder.ExportIfStatic = true;
     builder.CPPVersion = CPPLanguageStandard::CPP17;
-    builder += "src/builder/.*"_rr, "include/sw/builder/.*"_rr;
-    builder.Public += "include"_idir, "src/builder"_idir;
-    builder -= "src/builder/db_sqlite.*"_rr;
+    builder += "src/sw/builder/.*"_rr;
+    builder -= "src/sw/builder/db_sqlite.*"_rr;
     builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep,
         "pub.egorpugin.primitives.emitter-master"_dep;
     if (!s.Variables["SW_SELF_BUILD"])
     {
         /*PrecompiledHeader pch;
-        pch.header = "src/builder/pch.h";
+        pch.header = "src/sw/builder/pch.h";
         pch.force_include_pch = true;*/
         //builder.addPrecompiledHeader(pch);
     }
@@ -145,13 +144,12 @@ void build(Solution &s)
         "org.sw.demo.boost.assign-1"_dep,
         "org.sw.demo.boost.bimap-1"_dep,
         "org.sw.demo.boost.uuid-1"_dep;
-    cpp_driver += "src/driver/.*"_rr, "include/sw/driver/.*"_rr;
-    cpp_driver -= "src/driver/inserts/.*"_rr;
+    cpp_driver += "src/sw/driver/.*"_rr;
+    cpp_driver -= "src/sw/driver/inserts/.*"_rr;
     if (s.Settings.TargetOS.Type != OSType::Windows)
-        cpp_driver -= "src/driver/misc/.*"_rr;
-    cpp_driver.Public += "include"_idir, "src/driver"_idir;
-    embed("pub.egorpugin.primitives.tools.embedder-master"_dep, cpp_driver, "src/driver/inserts/inserts.cpp.in");
-    gen_flex_bison("org.sw.demo.lexxmark.winflexbison-master"_dep, cpp_driver, "src/driver/bazel/lexer.ll", "src/driver/bazel/grammar.yy");
+        cpp_driver -= "src/sw/driver/misc/.*"_rr;
+    embed("pub.egorpugin.primitives.tools.embedder-master"_dep, cpp_driver, "src/sw/driver/inserts/inserts.cpp.in");
+    gen_flex_bison("org.sw.demo.lexxmark.winflexbison-master"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
     if (s.Settings.Native.CompilerType == CompilerType::MSVC)
         cpp_driver.CompileOptions.push_back("-bigobj");
     //else if (s.Settings.Native.CompilerType == CompilerType::GNU)
@@ -166,7 +164,7 @@ void build(Solution &s)
     {
         auto c = cpp_driver.addCommand();
         c << cmd::prog(cl_generator)
-            << cmd::in("src/driver/options_cl.yml")
+            << cmd::in("src/sw/driver/options_cl.yml")
             << cmd::out("options_cl.generated.h")
             << cmd::out("options_cl.generated.cpp", cmd::Skip)
             ;
@@ -175,7 +173,7 @@ void build(Solution &s)
     if (!s.Variables["SW_SELF_BUILD"])
     {
         /*PrecompiledHeader pch;
-        pch.header = "src/driver/pch.h";
+        pch.header = "src/sw/driver/pch.h";
         pch.force_include_pch = true;*/
         //cpp_driver.addPrecompiledHeader(pch);
     }
@@ -183,8 +181,7 @@ void build(Solution &s)
     auto &client = p.addTarget<ExecutableTarget>("sw");
     client.PackageDefinitions = true;
     client.StartupProject = true;
-    client += "src/client/.*"_rr;
-    client += "src/client"_idir;
+    client += "src/sw/client/.*"_rr;
     client.CPPVersion = CPPLanguageStandard::CPP17;
     client += cpp_driver,
         "pub.egorpugin.primitives.sw.main-master"_dep,
@@ -200,7 +197,7 @@ void build(Solution &s)
     if (s.Settings.TargetOS.Type == OSType::Windows)
     {
         auto &client = tools.addTarget<ExecutableTarget>("client");
-        client += "src/tools/client.cpp";
+        client += "src/sw/tools/client.cpp";
         client +=
             "org.sw.demo.boost.dll-1"_dep,
             "org.sw.demo.boost.filesystem-1"_dep,
