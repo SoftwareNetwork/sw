@@ -735,10 +735,6 @@ void Solution::build_and_resolve(int n_runs)
     // resolve only deps needed
     auto m = swctx.resolve(pkgs);
 
-    // remove?
-    if (m.empty())
-        throw SW_RUNTIME_ERROR("Empty download dependencies");
-
     auto &e = getExecutor();
     for (auto &[u, p] : m)
         e.push([&p] { p.install(); });

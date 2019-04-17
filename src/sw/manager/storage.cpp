@@ -194,6 +194,7 @@ StorageWithPackagesDatabase::resolve(const UnresolvedPackages &pkgs, UnresolvedP
     auto r = resolve_no_deps(pkgs, unresolved_pkgs);
     while (1)
     {
+        // TODO: improve algorithm (check already resolved packages and do not resolve them again)
         auto r2 = r;
         auto sz = r.size();
         for (auto &[u, p] : r2)

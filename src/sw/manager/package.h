@@ -107,7 +107,7 @@ struct SW_MANAGER_API LocalPackage : Package
     path getDirSrc() const;
     path getDirSrc2() const;
     path getDirObj() const;
-    //path getDirObjWdir() const;
+    path getDirObjWdir() const;
     path getDirInfo() const;
     path getStampFilename() const;
     String getStampHash() const;

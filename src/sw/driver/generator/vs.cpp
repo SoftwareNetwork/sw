@@ -542,13 +542,11 @@ String getWin10KitDirName();
 
 static bool shouldAddTarget(const Target &t)
 {
-    SW_UNIMPLEMENTED;
-
     // now without overridden
     return 0
         || gPrintDependencies
         || t.isLocal()
-        //|| (gPrintOverriddenDependencies && t.pkg.getOverriddenDir())
+        || (gPrintOverriddenDependencies && t.getPackage().getOverriddenDir())
         ;
 }
 
@@ -1764,8 +1762,7 @@ void VSGenerator::generate(const Build &b)
         if (!shouldAddTarget(*t))
             continue;
         has_deps |= !t->isLocal();
-        SW_UNIMPLEMENTED;
-        //if (t->pkg.getOverriddenDir())
+        if (t->getPackage().getOverriddenDir())
         {
             overridden_tree.add(p.ppath);
             has_overridden = true;

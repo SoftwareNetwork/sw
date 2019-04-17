@@ -374,11 +374,18 @@ bool RemoteStorage::isCurrentDbOld() const
 
 LocalPackage RemoteStorage::install(const Package &id) const
 {
+    LocalPackage p(ls, id);
     if (ls.getPackagesDatabase().isPackageInstalled(id))
-        return LocalPackage(ls, id);
+        return p;
+
+    // actually we may want to remove only stamps, hashes etc.
+    // but remove everything for now
+    std::error_code ec;
+    fs::remove_all(p.getDir(), ec);
+
     ls.get(*this, id, StorageFileType::SourceArchive);
     ls.getPackagesDatabase().installPackage(id);
-    return LocalPackage(ls, id);
+    return p;
 }
 
 std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFileType t) const

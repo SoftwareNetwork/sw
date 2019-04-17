@@ -632,10 +632,8 @@ path NativeTargetOptionsGroup::getFile(const Target &dep, const path &fn)
 
 path NativeTargetOptionsGroup::getFile(const DependencyPtr &dep, const path &fn)
 {
-    SW_UNIMPLEMENTED;
-
     (*this + dep)->Dummy = true;
-    //return dep->getPackage().resolve().getDirSrc2() / fn;
+    return target->getSolution()->swctx.resolve(dep->getPackage()).getDirSrc2() / fn;
 }
 
 }

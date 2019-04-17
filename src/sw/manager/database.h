@@ -155,7 +155,6 @@ struct SW_MANAGER_API PackagesDatabase : public Database
 
 private:
     std::mutex m;
-    std::map<std::pair<std::string, PackageVersionGroupNumber>, PackageVersionGroupNumber> storage_gns;
 
     PackageVersionGroupNumber getMaxGroupNumber() const;
 

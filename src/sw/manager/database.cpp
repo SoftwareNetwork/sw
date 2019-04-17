@@ -636,11 +636,8 @@ void PackagesDatabase::installPackage(const Package &p)
     }
 
     PackageVersionGroupNumber gn;
-    auto i = storage_gns.find({ p.storage.getName(), p.getData().group_number });
-    if (i == storage_gns.end())
-        gn = storage_gns[{ p.storage.getName(), p.getData().group_number }] = getMaxGroupNumber() + 1;
-    else
-        gn = storage_gns[{ p.storage.getName(), p.getData().group_number }];
+    auto h = std::hash<String>()(p.storage.getName());
+    gn = hash_combine(h, p.getData().group_number);
 
     // insert version
     (*db)(insert_into(pkgv).set(

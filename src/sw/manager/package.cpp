@@ -292,12 +292,13 @@ LocalPackage LocalPackage::getGroupLeader() const
     return LocalPackage(storage, id);
 }
 
-/*path Package::getDirObjWdir(
+path LocalPackage::getDirObjWdir(
 // version level, project level (app or project)
 ) const
 {
-    return getDir(getStorage().storage_dir_dat) / "wd"; // working directory, was wdir
-}*/
+    //return getDir(getStorage().storage_dir_dat) / "wd"; // working directory, was wdir
+    return getDir() / "wd"; // working directory, was wdir
+}
 
 PackageId extractPackageIdFromString(const String &target)
 {

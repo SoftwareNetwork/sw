@@ -1481,7 +1481,8 @@ void Build::load_configless(const path &file_or_dir)
 
             if (!read_deps_from_comments)
             {
-                SW_UNIMPLEMENTED;
+                SW_UNIMPLEMENTED; // and never was
+
                 /*for (auto &[p, d] : getPackageStore().resolved_packages)
                 {
                     if (d.installed)
@@ -1538,28 +1539,33 @@ void Build::build_packages(const StringSet &pkgs)
     for (auto &p : pkgs)
         upkgs.insert(extractFromString(p));
 
-    SW_UNIMPLEMENTED;
-
     // resolve only deps needed
-    /*Resolver r;
-    r.resolve_dependencies(upkgs, true);
-    auto dd = r.getDownloadDependencies();
-    for (auto &p : dd)
+    auto m = swctx.resolve(upkgs);
+
+    for (auto &[u, p] : m)
+        e->push([&p] { p.install(); });
+    e->wait();
+
+    for (auto &[u, p] : m)
         knownTargets.insert(p);
 
-    std::unordered_map<PackageVersionGroupNumber, ExtendedPackageData> cfgs2;
-    for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
-        cfgs2[gn] = p;
-    std::unordered_set<ExtendedPackageData> cfgs;
+    std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
+    for (auto &[u, p] : m)
+    {
+        knownTargets.insert(p);
+        // gather packages
+        cfgs2.emplace(p.getData().group_number, p.install());
+    }
+    std::unordered_set<LocalPackage> cfgs;
     for (auto &[gn, s] : cfgs2)
         cfgs.insert(s);
 
     Local = false;
     configure = false;
 
-    auto dll = ::sw::build_configs(cfgs);
+    auto dll = ::sw::build_configs(swctx, cfgs);
 
-    SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->prefix));
+    SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->getData().prefix));
     if (cfgs.size() != 1)
         sr.restoreNow(true);
 
@@ -1575,7 +1581,7 @@ void Build::build_packages(const StringSet &pkgs)
 
     // now we set ours TargetsToBuild to this object
     // execute() will propagate them to solutions
-    for (auto &[porig, p] : r.resolved_packages)
+    for (auto &[porig, p] : m)
         TargetsToBuild[p];
 
     execute();
@@ -1642,7 +1648,7 @@ void Build::build_packages(const StringSet &pkgs)
             File(f, swctx.getFileStorage(ide_fs, true)).isChanged();
         }
         write_file(gIdeFastPath, s);
-    }*/
+    }
 }
 
 void Build::build_package(const String &s)
@@ -1654,9 +1660,7 @@ void Build::run_package(const String &s)
 {
     build_package(s);
 
-    SW_UNIMPLEMENTED;
-
-    /*auto nt = solutions[0].getTargetPtr(extractFromString(s).resolve())->as<NativeExecutedTarget>();
+    auto nt = solutions[0].getTargetPtr(swctx.resolve(extractFromString(s)))->as<NativeExecutedTarget>();
     if (!nt || nt->getType() != TargetType::NativeExecutable)
         throw SW_RUNTIME_ERROR("Unsupported package type");
 
@@ -1675,7 +1679,7 @@ void Build::run_package(const String &s)
     //else
         cb.c->detached = true;
 
-    run(nt->pkg, *cb.c);*/
+    run(nt->getPackage(), *cb.c);
 }
 
 static bool hasAnyUserProvidedInformation()
