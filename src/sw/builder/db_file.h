@@ -6,19 +6,28 @@
 
 #pragma once
 
-#include "db.h"
+// TODO: RENAME THIS FILE?
+
+#include "command_storage.h"
+#include "file_storage.h"
+
+#include <primitives/templates.h>
 
 namespace sw
 {
 
-struct FileDb : Db
+struct FileDb
 {
-    void load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const override;
-    void save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const override;
-    void write(std::vector<uint8_t> &v, const FileRecord &r) const override;
+    const SwContext &swctx;
 
-    void load(ConcurrentCommandStorage &commands, bool local) const override;
-    void save(ConcurrentCommandStorage &commands, bool local) const override;
+    FileDb(const SwContext &swctx);
+
+    void load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const;
+    void save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const;
+    void write(std::vector<uint8_t> &v, const FileRecord &r) const;
+
+    void load(ConcurrentCommandStorage &commands, bool local) const;
+    void save(ConcurrentCommandStorage &commands, bool local) const;
 };
 
 }

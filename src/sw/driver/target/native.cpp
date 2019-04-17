@@ -117,7 +117,7 @@ void NativeExecutedTarget::setupCommand(builder::Command &c) const
 
 driver::CommandBuilder NativeExecutedTarget::addCommand() const
 {
-    driver::CommandBuilder cb(*getSolution()->fs);
+    driver::CommandBuilder cb(getSolution()->swctx, *getSolution()->fs);
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?
@@ -573,7 +573,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
                     c->ForcedIncludeFiles().push_back(p.header);
 
                 c->PrecompiledHeader = gch_fn_clang;
-                c->createCommand()->addInput(gch_fn_clang);
+                c->createCommand(getSolution()->swctx)->addInput(gch_fn_clang);
             }
             else if (auto c = sf->compiler->as<GNUCompiler>())
             {
@@ -582,7 +582,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
 
-                c->createCommand()->addInput(gch_fn);
+                c->createCommand(getSolution()->swctx)->addInput(gch_fn);
             }
         }
     }
@@ -1537,7 +1537,10 @@ bool NativeExecutedTarget::prepare()
             auto &dc = getSolution()->dummy_children;
             for (auto &d2 : Dependencies)
             {
+                // only for tools?
                 if (d2->target &&
+                    //d2->target->Scope != TargetScope::Build &&
+                    d2->target->Scope == TargetScope::Tool &&
                     c.find(d2->target->getPackage()) == c.end(d2->target->getPackage()) &&
                     dc.find(d2->target->getPackage()) != dc.end(d2->target->getPackage()))
                 {
@@ -2069,7 +2072,7 @@ bool NativeExecutedTarget::prepare()
 
             auto exp = Librarian->getImportLibrary();
             exp = exp.parent_path() / (exp.stem().u8string() + ".exp");
-            Librarian->createCommand()->addOutput(exp);
+            Librarian->createCommand(getSolution()->swctx)->addOutput(exp);
             obj.insert(exp);
         }
 

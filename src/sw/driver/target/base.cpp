@@ -78,7 +78,7 @@ TargetBase::TargetBase()
 TargetBase::TargetBase(const TargetBase &rhs)
     : LanguageStorage(rhs)
     , ProjectDirectories(rhs)
-    , pkg(std::make_unique<LocalPackage>(static_cast<const LocalStorage &>(rhs.pkg->storage), rhs.pkg->ppath, rhs.pkg->version))
+    //, pkg(std::make_unique<LocalPackage>(static_cast<const LocalStorage &>(rhs.pkg->storage), rhs.pkg->ppath, rhs.pkg->version))
     , source(rhs.source)
     , Scope(rhs.Scope)
     , Local(rhs.Local)
@@ -426,11 +426,15 @@ bool TargetBase::isLocal() const
 
 const LocalPackage &TargetBase::getPackage() const
 {
+    if (!pkg)
+        throw SW_LOGIC_ERROR("pkg not created");
     return *pkg;
 }
 
 LocalPackage &TargetBase::getPackageMutable()
 {
+    if (!pkg)
+        throw SW_LOGIC_ERROR("pkg not created");
     return *pkg;
 }
 
@@ -466,10 +470,8 @@ bool Target::init()
 {
     auto get_config_with_deps = [this]() -> String
     {
-        SW_UNIMPLEMENTED;
-
-        /*StringSet ss;
-        for (const auto &[unr, res] : getPackageStore().resolved_packages)
+        StringSet ss;
+        /*for (const auto &[unr, res] : getPackageStore().resolved_packages)
         {
             if (res == getPackage())
             {
@@ -477,7 +479,7 @@ bool Target::init()
                     ss.insert(dep.toString());
                 break;
             }
-        }
+        }*/
         String s;
         for (auto &v : ss)
             s += v + "\n";
@@ -486,7 +488,7 @@ bool Target::init()
         //if (!s.empty())
             //addConfigElement(c, s);
         c = hashConfig(c, short_config);
-        return c;*/
+        return c;
     };
 
     if (SW_IS_LOCAL_BINARY_DIR)

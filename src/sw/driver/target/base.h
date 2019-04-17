@@ -211,10 +211,10 @@ public:
             if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>)
                 return addTarget1<T>(Name, std::forward<Args>(args)...);
             else
-                return addTarget1<T>(Name, getPackage().version, std::forward<Args>(args)...);
+                return addTarget1<T>(Name, pkg ? getPackage().version : Version(), std::forward<Args>(args)...);
         }
         else
-            return addTarget1<T>(Name, getPackage().version, std::forward<Args>(args)...);
+            return addTarget1<T>(Name, pkg ? getPackage().version : Version(), std::forward<Args>(args)...);
     }
 
     /**
@@ -247,9 +247,10 @@ public:
         auto i = getChildren().find(Name);
         if (i == getChildren().end(Name))
         {
-            i = getChildren().find(getPackage().ppath / Name);
-            if (i == getChildren().end(Name))
-                throw SW_RUNTIME_ERROR("No such target: " + Name.toString() + " or " + (getPackage().ppath / Name).toString());
+            auto pkgname = pkg ? getPackage().ppath / Name : Name;
+            i = getChildren().find(pkgname);
+            if (i == getChildren().end(pkgname))
+                throw SW_RUNTIME_ERROR("No such target: " + Name.toString() + " or " + (pkgname).toString());
         }
         if (i->second.size() > 1)
             throw SW_RUNTIME_ERROR("Target: " + i->first.toString() + " has more than one version");

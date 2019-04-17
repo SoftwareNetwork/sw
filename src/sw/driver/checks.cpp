@@ -10,7 +10,6 @@
 #include "solution.h"
 #include "target/native.h"
 
-#include <sw/builder/db.h>
 #include <sw/builder/execution_plan.h>
 #include <sw/support/filesystem.h>
 #include <sw/support/hash.h>

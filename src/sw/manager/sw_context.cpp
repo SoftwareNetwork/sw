@@ -37,19 +37,19 @@ const LocalStorage &SwManagerContext::getLocalStorage() const
     return static_cast<const LocalStorage&>(*storages[0]);
 }
 
-std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const UnresolvedPackages &pkgs)
+std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const UnresolvedPackages &pkgs) const
 {
-    UnresolvedPackages resolved;
-    return resolve1(pkgs);
+    std::lock_guard lk(m);
+    return resolve(pkgs, resolved_packages);
 }
 
-std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve1(const UnresolvedPackages &pkgs)
+std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const UnresolvedPackages &pkgs, std::unordered_map<UnresolvedPackage, Package> &resolved_packages) const
 {
     if (pkgs.empty())
         return {};
 
-    auto pkgs2 = pkgs;
     std::unordered_map<UnresolvedPackage, Package> resolved;
+    auto pkgs2 = pkgs;
     for (auto &s : storages)
     {
         UnresolvedPackages unresolved;
@@ -67,19 +67,17 @@ std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve1(const 
         throw SW_RUNTIME_ERROR("Some packages (" + std::to_string(pkgs2.size()) + ") are unresolved: " + s);
     }
 
-    // resolve children deps
-    UnresolvedPackages unresolved;
-    for (auto &[u, p] : resolved)
-    {
-        auto &deps = p.getData().dependencies;
-        unresolved.insert(deps.begin(), deps.end());
-        resolved_packages.insert(u);
-    }
-    for (auto &u : resolved_packages)
-        unresolved.erase(u);
-    resolved.merge(resolve1(unresolved));
-
     return resolved;
+}
+
+bool SwManagerContext::isResolved(const UnresolvedPackage &pkg) const
+{
+    return resolved_packages.find(pkg) != resolved_packages.end();
+}
+
+LocalPackage SwManagerContext::resolve(const UnresolvedPackage &pkg) const
+{
+    return resolve(UnresolvedPackages{ pkg }).find(pkg)->second.install();
 }
 
 }

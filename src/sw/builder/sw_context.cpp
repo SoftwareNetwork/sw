@@ -6,6 +6,8 @@
 
 #include "sw_context.h"
 
+#include "command_storage.h"
+#include "db_file.h"
 #include "file_storage.h"
 #include "program_version_storage.h"
 
@@ -20,7 +22,9 @@ SwContext::SwContext(const path &local_storage_root_dir)
     : SwManagerContext(local_storage_root_dir)
 {
     HostOS = getHostOS();
-    //pvs = std::make_unique<ProgramVersionStorage>(getLocalStorage().storage_dir_tmp / "db" / "program_versions.txt");
+
+    db = std::make_unique<FileDb>(*this);
+    cs = std::make_unique<CommandStorage>(*this);
 
     fshm = std::make_unique<FileDataHashMap>();
 
@@ -28,6 +32,8 @@ SwContext::SwContext(const path &local_storage_root_dir)
     file_storages[{true, "service"}] = std::make_unique<FileStorage>(*this, "service");
 
     file_storage_executor = std::make_unique<Executor>("async log writer", 1);
+
+    pvs = std::make_unique<ProgramVersionStorage>(getServiceFileStorage(), getLocalStorage().storage_dir_tmp / "db" / "program_versions.txt");
 }
 
 SwContext::~SwContext() = default;
@@ -55,6 +61,21 @@ FileStorage &SwContext::getServiceFileStorage() const
 SwContext::FileDataHashMap &SwContext::getFileData() const
 {
     return *fshm;
+}
+
+FileDb &SwContext::getDb() const
+{
+    return *db;
+}
+
+CommandStorage &SwContext::getCommandStorage() const
+{
+    return *cs;
+}
+
+ProgramVersionStorage &SwContext::getVersionStorage() const
+{
+    return *pvs;
 }
 
 }

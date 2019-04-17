@@ -25,14 +25,13 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler");
 
-#define SW_MAKE_COMPILER_COMMAND_WITH_FILE(t) \
-    SW_MAKE_COMPILER_COMMAND(t)
-
-#define SW_CREATE_COMPILER_COMMAND(t, m, ct)                        \
-    std::shared_ptr<driver::Command> t::createCommand1() const \
-    {                                                               \
-        m(ct);                                                      \
-        return c;                                                   \
+#define SW_CREATE_COMPILER_COMMAND(t, ct)                                            \
+    std::shared_ptr<driver::Command> t::createCommand1(const SwContext &swctx) const \
+    {                                                                                \
+        auto c = std::make_shared<ct>(swctx);                                        \
+        c->fs = fs;                                                                  \
+        c->setProgram(file);                                                         \
+        return c;                                                                    \
     }
 
 //static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
@@ -158,7 +157,7 @@ void detectDCompilers(struct Solution &s)
     auto L = std::make_shared<DLanguage>();
     L->CompiledExtensions = { ".d" };
 
-    auto C = std::make_shared<DCompiler>();
+    auto C = std::make_shared<DCompiler>(s.swctx);
     C->file = compiler;
     C->Extension = s.Settings.TargetOS.getExecutableExtension();
     L->compiler = C;
@@ -175,7 +174,7 @@ void detectKotlinCompilers(struct Solution &s)
     auto L = std::make_shared<KotlinLanguage>();
     L->CompiledExtensions = { ".kt", ".kts" };
 
-    auto C = std::make_shared<KotlinCompiler>();
+    auto C = std::make_shared<KotlinCompiler>(s.swctx);
     C->file = compiler;
     L->compiler = C;
     s.registerProgramAndLanguage("com.JetBrains.kotlin.kotlinc", C, L);
@@ -192,7 +191,7 @@ void detectJavaCompilers(struct Solution &s)
     auto L = std::make_shared<JavaLanguage>();
     L->CompiledExtensions = { ".java", };
 
-    auto C = std::make_shared<JavaCompiler>();
+    auto C = std::make_shared<JavaCompiler>(s.swctx);
     C->file = compiler;
     L->compiler = C;
     s.registerProgramAndLanguage("com.oracle.java.javac", C, L);
@@ -230,7 +229,7 @@ void detectFortranCompilers(struct Solution &s)
         ".FPP",
     };
 
-    auto C = std::make_shared<FortranCompiler>();
+    auto C = std::make_shared<FortranCompiler>(s.swctx);
     C->file = compiler;
     C->Extension = s.Settings.TargetOS.getExecutableExtension();
     L->compiler = C;
@@ -248,7 +247,7 @@ void detectGoCompilers(struct Solution &s)
     auto L = std::make_shared<GoLanguage>();
     L->CompiledExtensions = { ".go" };
 
-    auto C = std::make_shared<GoCompiler>();
+    auto C = std::make_shared<GoCompiler>(s.swctx);
     C->file = compiler;
     C->Extension = s.Settings.TargetOS.getExecutableExtension();
     L->compiler = C;
@@ -268,7 +267,7 @@ void detectRustCompilers(struct Solution &s)
     auto L = std::make_shared<RustLanguage>();
     L->CompiledExtensions = { ".rs" };
 
-    auto C = std::make_shared<RustCompiler>();
+    auto C = std::make_shared<RustCompiler>(s.swctx);
     C->file = compiler;
     C->Extension = s.Settings.TargetOS.getExecutableExtension();
     L->compiler = C;
@@ -279,9 +278,9 @@ void detectRustCompilers(struct Solution &s)
 
 using VSInstances = VersionMap<VSInstance>;
 
-VSInstances &gatherVSInstances()
+VSInstances &gatherVSInstances(struct Solution &s)
 {
-    static VSInstances instances = []()
+    static VSInstances instances = [&s]()
     {
         VSInstances instances;
 #ifdef _WIN32
@@ -296,10 +295,10 @@ VSInstances &gatherVSInstances()
             if (i.VSInstallLocation.find(L"Preview") != std::wstring::npos)
                 v = v.toString() + "-preview";
 
-            VSInstance inst;
+            VSInstance inst(s.swctx);
             inst.root = root;
             inst.version = v;
-            instances[v] = inst;
+            instances.emplace(v, inst);
         }
 #endif
         return instances;
@@ -309,7 +308,7 @@ VSInstances &gatherVSInstances()
 
 void detectCSharpCompilers(struct Solution &s)
 {
-    auto &instances = gatherVSInstances();
+    auto &instances = gatherVSInstances(s);
     for (auto &[v, i] : instances)
     {
         auto root = i.root;
@@ -327,7 +326,7 @@ void detectCSharpCompilers(struct Solution &s)
         auto L = std::make_shared<CSharpLanguage>();
         L->CompiledExtensions = { ".cs" };
 
-        auto C = std::make_shared<VisualStudioCSharpCompiler>();
+        auto C = std::make_shared<VisualStudioCSharpCompiler>(s.swctx);
         C->file = compiler;
         C->Extension = s.Settings.TargetOS.getExecutableExtension();
         L->compiler = C;
@@ -341,7 +340,7 @@ void detectWindowsCompilers(struct Solution &s)
     // but what if we're on Wine?
     // reconsider later
 
-    auto &instances = gatherVSInstances();
+    auto &instances = gatherVSInstances(s);
     for (auto &[_, instance] : instances)
     {
         auto root = instance.root / "VC";
@@ -398,7 +397,7 @@ void detectWindowsCompilers(struct Solution &s)
 
         // lib, link
         {
-            auto Linker = std::make_shared<VisualStudioLinker>();
+            auto Linker = std::make_shared<VisualStudioLinker>(s.swctx);
             Linker->Type = LinkerType::MSVC;
             Linker->file = compiler.parent_path() / "link.exe";
             //Linker->vs_version = VSVersion;
@@ -412,12 +411,12 @@ void detectWindowsCompilers(struct Solution &s)
 
             if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
             {
-                auto c = Linker->createCommand();
+                auto c = Linker->createCommand(s.swctx);
                 c->addPathDirectory(host_root);
             }
 
             //
-            auto Librarian = std::make_shared<VisualStudioLibrarian>();
+            auto Librarian = std::make_shared<VisualStudioLibrarian>(s.swctx);
             Librarian->Type = LinkerType::MSVC;
             Librarian->file = compiler.parent_path() / "lib.exe";
             //Librarian->vs_version = VSVersion;
@@ -431,7 +430,7 @@ void detectWindowsCompilers(struct Solution &s)
 
             if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
             {
-                auto c = Librarian->createCommand();
+                auto c = Librarian->createCommand(s.swctx);
                 c->addPathDirectory(host_root);
             }
 
@@ -461,7 +460,7 @@ void detectWindowsCompilers(struct Solution &s)
             auto L = std::make_shared<NativeLanguage>();
             L->CompiledExtensions = { ".asm" };
 
-            auto C = std::make_shared<VisualStudioASMCompiler>();
+            auto C = std::make_shared<VisualStudioASMCompiler>(s.swctx);
             C->Type = CompilerType::MSVC;
             C->file = s.Settings.TargetOS.Arch == ArchType::x86_64 ?
                 (compiler.parent_path() / "ml64.exe") :
@@ -480,7 +479,7 @@ void detectWindowsCompilers(struct Solution &s)
             L->CompiledExtensions = getCppSourceFileExtensions();
             L->CompiledExtensions.insert(".c");
 
-            auto C = std::make_shared<VisualStudioCompiler>();
+            auto C = std::make_shared<VisualStudioCompiler>(s.swctx);
             C->Type = CompilerType::MSVC;
             C->file = compiler;
             *C = COpts;
@@ -493,7 +492,7 @@ void detectWindowsCompilers(struct Solution &s)
 
             if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
             {
-                auto c = C->createCommand();
+                auto c = C->createCommand(s.swctx);
                 c->addPathDirectory(host_root);
             }
         }
@@ -506,7 +505,7 @@ void detectWindowsCompilers(struct Solution &s)
             auto L = std::make_shared<RcToolLanguage>();
             L->CompiledExtensions = { ".rc" };
 
-            auto C = std::make_shared<RcTool>();
+            auto C = std::make_shared<RcTool>(s.swctx);
             C->file = s.Settings.Native.SDK.getPath("bin") / dir_suffix.host / "rc.exe";
             for (auto &idir : COpts.System.IncludeDirectories)
                 C->system_idirs.push_back(idir);
@@ -529,7 +528,7 @@ void detectWindowsCompilers(struct Solution &s)
             L->CompiledExtensions = getCppSourceFileExtensions();
             L->CompiledExtensions.insert(".c");
 
-            auto C = std::make_shared<ClangClCompiler>();
+            auto C = std::make_shared<ClangClCompiler>(s.swctx);
             C->Type = CompilerType::ClangCl;
             C->file = bin_llvm_path / "clang-cl.exe";
             //C->file = base_llvm_path / "msbuild-bin" / "cl.exe";
@@ -577,7 +576,7 @@ void detectWindowsCompilers(struct Solution &s)
             auto L = std::make_shared<NativeLanguage>();
             L->CompiledExtensions = { ".c" };
 
-            auto C = std::make_shared<ClangCompiler>();
+            auto C = std::make_shared<ClangCompiler>(s.swctx);
             C->Type = CompilerType::Clang;
             C->file = bin_llvm_path / "clang.exe";
             // not available for msvc triple
@@ -599,7 +598,7 @@ void detectWindowsCompilers(struct Solution &s)
             auto L = std::make_shared<NativeLanguage>();
             L->CompiledExtensions = getCppSourceFileExtensions();
 
-            auto C = std::make_shared<ClangCompiler>();
+            auto C = std::make_shared<ClangCompiler>(s.swctx);
             C->Type = CompilerType::Clang;
             C->file = bin_llvm_path / "clang++.exe";
             // not available for msvc triple
@@ -673,7 +672,7 @@ void detectNonWindowsCompilers(struct Solution &s)
     p = resolve("ar");
     if (!p.empty())
     {
-        auto Librarian = std::make_shared<GNULibrarian>();
+        auto Librarian = std::make_shared<GNULibrarian>(s.swctx);
         Librarian->Type = LinkerType::GNU;
         Librarian->file = p;
         Librarian->Prefix = s.Settings.TargetOS.getLibraryPrefix();
@@ -681,7 +680,7 @@ void detectNonWindowsCompilers(struct Solution &s)
         *Librarian = LOpts;
         s.registerProgram("org.gnu.binutils.ar", Librarian);
         if (s.HostOS.is(OSType::Macos))
-            Librarian->createCommand()->use_response_files = false;
+            Librarian->createCommand(s.swctx)->use_response_files = false;
     }
 
     FilesOrdered gcc_vers{ "gcc" };
@@ -716,7 +715,7 @@ void detectNonWindowsCompilers(struct Solution &s)
         p = resolve(v);
         if (!p.empty())
         {
-            auto Linker = std::make_shared<GNULinker>();
+            auto Linker = std::make_shared<GNULinker>(s.swctx);
 
             if (s.HostOS.is(OSType::Macos))
                 Linker->use_start_end_groups = false;
@@ -788,7 +787,7 @@ void detectNonWindowsCompilers(struct Solution &s)
                 // .S - with #define (accepts -D) and #include (accepts -I), also .sx
                 L->CompiledExtensions = { ".c", ".s", ".S" };
 
-                auto C = std::make_shared<GNUCompiler>();
+                auto C = std::make_shared<GNUCompiler>(s.swctx);
                 C->Type = CompilerType::GNU;
                 C->file = p;
                 *C = COpts;
@@ -811,7 +810,7 @@ void detectNonWindowsCompilers(struct Solution &s)
                 auto L = std::make_shared<NativeLanguage>();
                 L->CompiledExtensions = getCppSourceFileExtensions();
 
-                auto C = std::make_shared<GNUCompiler>();
+                auto C = std::make_shared<GNUCompiler>(s.swctx);
                 C->Type = CompilerType::GNU;
                 C->file = p;
                 *C = COpts;
@@ -829,7 +828,7 @@ void detectNonWindowsCompilers(struct Solution &s)
         p = resolve("llvm-ar");
         if (!p.empty())
         {
-            auto Librarian = std::make_shared<GNULibrarian>();
+            auto Librarian = std::make_shared<GNULibrarian>(s.swctx);
             Librarian->Type = LinkerType::GNU;
             Librarian->file = p;
             Librarian->Prefix = s.Settings.TargetOS.getLibraryPrefix();
@@ -849,7 +848,7 @@ void detectNonWindowsCompilers(struct Solution &s)
             {
                 bool appleclang = is_apple_clang(p);
 
-                auto Linker = std::make_shared<GNULinker>();
+                auto Linker = std::make_shared<GNULinker>(s.swctx);
 
                 if (s.HostOS.is(OSType::Macos))
                     Linker->use_start_end_groups = false;
@@ -883,7 +882,7 @@ void detectNonWindowsCompilers(struct Solution &s)
 
                     bool appleclang = is_apple_clang(p);
 
-                    auto C = std::make_shared<ClangCompiler>();
+                    auto C = std::make_shared<ClangCompiler>(s.swctx);
                     C->Type = appleclang ? CompilerType::AppleClang : CompilerType::Clang;
                     C->file = p;
                     *C = COpts;
@@ -908,7 +907,7 @@ void detectNonWindowsCompilers(struct Solution &s)
 
                     bool appleclang = is_apple_clang(p);
 
-                    auto C = std::make_shared<ClangCompiler>();
+                    auto C = std::make_shared<ClangCompiler>(s.swctx);
                     C->Type = appleclang ? CompilerType::AppleClang : CompilerType::Clang;
                     C->file = p;
                     *C = COpts;
@@ -1018,11 +1017,11 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand() const
     return cmd;
 }
 
-std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand()
+std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const SwContext &swctx)
 {
     if (cmd)
         return cmd;
-    return cmd = createCommand1();
+    return cmd = createCommand1(swctx);
 }
 
 std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const TargetBase &t)
@@ -1035,14 +1034,14 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
 {
     if (prepared)
         return cmd;
-    createCommand(); // do some init
+    createCommand(t.getSolution()->swctx); // do some init
     cmd->fs = t.getSolution()->fs;
     prepareCommand1(t);
     prepared = true;
     return cmd;
 }
 
-SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, SW_MAKE_COMPILER_COMMAND, driver::Command)
+SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, driver::Command)
 
 static Strings getCStdOption(CLanguageStandard std, bool gnuext)
 {
@@ -1098,7 +1097,7 @@ String NativeCompiler::getObjectExtension(const OS &o) const
     return o.getObjectFileExtension();
 }
 
-SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::VSCommand)
+SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::VSCommand)
 
 void VisualStudioCompiler::prepareCommand1(const TargetBase &t)
 {
@@ -1167,7 +1166,7 @@ path VisualStudioCompiler::getOutputFile() const
     return Output();
 }
 
-SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::VSCommand)
+SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, driver::VSCommand)
 
 void VisualStudioASMCompiler::prepareCommand1(const TargetBase &t)
 {
@@ -1212,7 +1211,7 @@ void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(ClangCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::GNUCommand)
+SW_CREATE_COMPILER_COMMAND(ClangCompiler, driver::GNUCommand)
 
 void ClangCompiler::prepareCommand1(const TargetBase &t)
 {
@@ -1259,7 +1258,7 @@ void ClangCompiler::setSourceFile(const path &input_file, path &output_file)
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(ClangClCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::VSCommand)
+SW_CREATE_COMPILER_COMMAND(ClangClCompiler, driver::VSCommand)
 
 void ClangClCompiler::prepareCommand1(const TargetBase &t)
 {
@@ -1319,7 +1318,7 @@ void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::GNUCommand)
+SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, driver::GNUCommand)
 
 void GNUASMCompiler::prepareCommand1(const TargetBase &t)
 {
@@ -1365,7 +1364,7 @@ void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
 
 SW_DEFINE_PROGRAM_CLONE(ClangASMCompiler)
 
-SW_CREATE_COMPILER_COMMAND(GNUCompiler, SW_MAKE_COMPILER_COMMAND_WITH_FILE, driver::GNUCommand)
+SW_CREATE_COMPILER_COMMAND(GNUCompiler, driver::GNUCommand)
 
 void GNUCompiler::prepareCommand1(const TargetBase &t)
 {

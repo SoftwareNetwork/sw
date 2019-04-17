@@ -30,7 +30,7 @@ struct ISwContext
     virtual const LocalStorage &getLocalStorage() const = 0;
 
     // rename to resolvePackages?
-    virtual std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) = 0;
+    virtual std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) const = 0;
 };
 
 struct SW_MANAGER_API SwManagerContext : ISwContext
@@ -44,15 +44,17 @@ struct SW_MANAGER_API SwManagerContext : ISwContext
     LocalStorage &getLocalStorage() override;
     const LocalStorage &getLocalStorage() const override;
 
-    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) override;
+    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) const override;
+
+    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &unresolved, std::unordered_map<UnresolvedPackage, Package> &resolved_packages) const;
+    bool isResolved(const UnresolvedPackage &pkg) const;
+    LocalPackage resolve(const UnresolvedPackage &) const;
 
 protected:
     mutable std::mutex m; // main context mutex
 
 private:
-    UnresolvedPackages resolved_packages;
-
-    std::unordered_map<UnresolvedPackage, Package> resolve1(const UnresolvedPackages &unresolved);
+    mutable std::unordered_map<UnresolvedPackage, Package> resolved_packages;
 };
 
 } // namespace sw

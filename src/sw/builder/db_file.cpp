@@ -6,6 +6,8 @@
 
 #include "db_file.h"
 
+#include "sw_context.h"
+
 #include <sw/manager/storage.h>
 
 #include <primitives/emitter.h>
@@ -34,35 +36,33 @@ static String getCurrentModuleNameHash()
     return shorten_hash(blake2b_512(getCurrentModuleName().u8string()), 12);
 }
 
-static path getDir(bool local)
+static path getDir(const SwContext &swctx, bool local)
 {
-    SW_UNIMPLEMENTED;
-
-    /*if (local)
+    if (local)
         return path(SW_BINARY_DIR) / "db";
-    return getStorage().storage_dir_tmp / "db";*/
+    return swctx.getLocalStorage().storage_dir_tmp / "db";
 }
 
-static path getFilesDbFilename(const String &config, bool local)
+static path getFilesDbFilename(const SwContext &swctx, const String &config, bool local)
 {
-    return getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
+    return getDir(swctx, local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
 }
 
-path getFilesLogFileName(const String &config, bool local)
+path getFilesLogFileName(const SwContext &swctx, const String &config, bool local)
 {
     auto cfg = shorten_hash(blake2b_512(getCurrentModuleNameHash() + "_" + config), 12);
-    return getDir(local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
+    return getDir(swctx, local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
 }
 
-static path getCommandsDbFilename(bool local)
+static path getCommandsDbFilename(const SwContext &swctx, bool local)
 {
-    return getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / "commands.bin";
+    return getDir(swctx, local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / "commands.bin";
 }
 
-path getCommandsLogFileName(bool local)
+path getCommandsLogFileName(const SwContext &swctx, bool local)
 {
     auto cfg = shorten_hash(blake2b_512(getCurrentModuleNameHash()), 12);
-    return getDir(local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("log_" + cfg + ".bin");
+    return getDir(swctx, local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("log_" + cfg + ".bin");
 }
 
 static void load(FileStorage &fs, const path &fn,
@@ -124,18 +124,21 @@ static void load(FileStorage &fs, const path &fn,
     }
 }
 
-SW_DEFINE_GLOBAL_STATIC_FUNCTION(Db, getDb);
+FileDb::FileDb(const SwContext &swctx)
+    : swctx(swctx)
+{
+}
 
 void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const
 {
     std::unordered_map<int64_t, std::unordered_set<int64_t>> deps;
 
-    sw::load(fs, getFilesDbFilename(fs.config, local), files, deps);
+    sw::load(fs, getFilesDbFilename(swctx, fs.config, local), files, deps);
     //try {
-        sw::load(fs, getFilesLogFileName(fs.config, local), files, deps);
+        sw::load(fs, getFilesLogFileName(swctx, fs.config, local), files, deps);
     //} catch (...) {}
     error_code ec;
-    fs::remove(getFilesLogFileName(fs.config, local), ec);
+    fs::remove(getFilesLogFileName(swctx, fs.config, local), ec);
 
     for (auto &[k, v] : deps)
     {
@@ -152,7 +155,7 @@ void FileDb::load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, b
 
 void FileDb::save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const
 {
-    const auto f = getFilesDbFilename(fs.config, local);
+    const auto f = getFilesDbFilename(swctx, fs.config, local);
 
     // first, we load current copy of files
     // disable for now
@@ -276,12 +279,12 @@ static void load(const path &fn, ConcurrentCommandStorage &commands)
 
 void FileDb::load(ConcurrentCommandStorage &commands, bool local) const
 {
-    sw::load(getCommandsDbFilename(local), commands);
+    sw::load(getCommandsDbFilename(swctx, local), commands);
     try {
-        sw::load(getCommandsLogFileName(local), commands);
+        sw::load(getCommandsLogFileName(swctx, local), commands);
     } catch (...) {}
     error_code ec;
-    fs::remove(getCommandsLogFileName(local), ec);
+    fs::remove(getCommandsLogFileName(swctx, local), ec);
 }
 
 void FileDb::save(ConcurrentCommandStorage &commands, bool local) const
@@ -299,7 +302,7 @@ void FileDb::save(ConcurrentCommandStorage &commands, bool local) const
     }*/
     if (b.empty())
         return;
-    auto p = getCommandsDbFilename(local);
+    auto p = getCommandsDbFilename(swctx, local);
     fs::create_directories(p.parent_path());
     b.save(p);
 }

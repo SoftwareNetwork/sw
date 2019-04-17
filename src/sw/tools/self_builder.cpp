@@ -232,6 +232,7 @@ int main(int argc, char **argv)
         {{"pub.egorpugin.primitives.settings", "master"}, {}},
         {{"pub.egorpugin.primitives.sw.settings", "master"}, {}},
         {{"pub.egorpugin.primitives.sw.main", "master"}, {}},
+        {{"pub.egorpugin.primitives.symbol", "master"}, {}},
         {{"pub.egorpugin.primitives.tools.embedder", "master"}, {}},
         {{"pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp", "master"}, {}},
         {{"pub.egorpugin.primitives.version", "master"}, {}},
@@ -259,14 +260,11 @@ int main(int argc, char **argv)
     e.wait();
 
     // write resolved deps!
-    std::map<UnresolvedPackage, pkg_data> pkgs_sorted;
-    for (auto &[p, d] : pkgs)
-        pkgs_sorted.emplace(p, d);
-    for (auto &[p, d] : pkgs_sorted)
-    {
-        auto &pkg = m.find(p)->second;
-        ctx_packages.addLine("\"" + pkg.toString() + "\"s,");
-    }
+    StringSet pkgs_sorted;
+    for (auto &[p, d] : m)
+        pkgs_sorted.insert(d.toString());
+    for (auto &s : pkgs_sorted)
+        ctx_packages.addLine("\"" + s + "\"s,");
 
     ctx_packages.endBlock(true);
     write_file_if_different(packages, ctx_packages.getText());

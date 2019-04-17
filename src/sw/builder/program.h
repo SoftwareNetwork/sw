@@ -31,8 +31,15 @@
 namespace sw
 {
 
+struct SwContext;
+
 struct SW_BUILDER_API Program : File, detail::Executable
 {
+    const SwContext &swctx;
+
+    Program(const SwContext &swctx);
+    Program(const Program &);
+    //Program &operator=(const Program &);
     virtual ~Program() = default;
 
     virtual std::shared_ptr<Program> clone() const = 0;

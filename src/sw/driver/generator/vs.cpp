@@ -696,7 +696,7 @@ void ProjectEmitter::printProject(
                     for (auto &i : v->gatherIncludeDirectories())
                         idirs += i.string() + ";";
 
-                    auto cmd = std::make_shared<driver::Command>();
+                    auto cmd = std::make_shared<driver::Command>(s.swctx);
                     cmd->fs = nt.getSolution()->fs;
                     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *v);
                     for (auto &a : cmd->args)

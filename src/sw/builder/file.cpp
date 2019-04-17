@@ -6,8 +6,8 @@
 
 #include "file.h"
 
+#include "command.h"
 #include "concurrent_map.h"
-#include "db.h"
 #include "file_storage.h"
 
 #include <sw/manager/settings.h>

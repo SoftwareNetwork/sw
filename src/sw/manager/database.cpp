@@ -495,8 +495,6 @@ std::unordered_map<UnresolvedPackage, PackageId> PackagesDatabase::resolve(const
 {
     const auto pkgs = ::db::packages::Package{};
 
-    //preInitFindDependencies();
-
     std::unordered_map<UnresolvedPackage, PackageId> r;
     for (auto &pkg : in_pkgs)
     {
@@ -1098,12 +1096,7 @@ PackageId PackagesDatabase::getGroupLeader(PackageVersionGroupNumber n) const
         .order_by(vpkgs.groupNumber.asc()))
         )
     {
-        SW_UNIMPLEMENTED;
-
-        /*PackageId p;
-        p.ppath = row.path.value();
-        p.version = row.version.value();
-        return p;*/
+        return { row.path.value(), row.version.value() };
     }
     throw SW_RUNTIME_ERROR("Group leader not found for group: " + std::to_string(n));
 }

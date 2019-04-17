@@ -73,41 +73,38 @@ void LanguageStorage::setExtensionLanguage(const String &ext, const UnresolvedPa
     SW_UNIMPLEMENTED;
 
     // late resolve version
-    /*extensions[ext] = p.resolve();
+    //extensions.insert_or_assign(ext, p.resolve());
 
     // add a dependency to current target
     if (auto t = dynamic_cast<NativeExecutedTarget*>(this); t)
-        (*t + extensions[ext])->Dummy = true;*/
+        (*t + extensions.find(ext)->second)->Dummy = true;
 }
 
 void LanguageStorage::setExtensionLanguage(const String &ext, const LanguagePtr &L)
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto &pkg = extensions[ext];
-    if (pkg.empty())
+    auto i = extensions.find(ext);
+    if (i == extensions.end())
     {
         // add phantom pkg instead?
         //throw SW_RUNTIME_ERROR("No packages for this language");
 
-        pkg = "loc.sw.lang" + std::to_string((size_t)L.get());
+        extensions.emplace(ext, "loc.sw.lang" + std::to_string((size_t)L.get()));
     }
+    auto &pkg = extensions.find(ext)->second;
     user_defined_languages[pkg.ppath][pkg.version] = L;
 
     // add a dependency to current target
     if (auto t = dynamic_cast<NativeExecutedTarget*>(this); t)
-        (*t + extensions[ext])->Dummy = true;*/
+        (*t + extensions.find(ext)->second)->Dummy = true;
 }
 
 void LanguageStorage::setExtensionLanguage(const String &ext, const DependencyPtr &d)
 {
-    SW_UNIMPLEMENTED;
-
-    /*extensions[ext] = d->getResolvedPackage();
+    extensions.insert_or_assign(ext, d->getResolvedPackage());
 
     // add a dependency to current target
     if (auto t = dynamic_cast<NativeExecutedTarget*>(this); t)
-        (*t + extensions[ext])->Dummy = true;*/
+        (*t + extensions.find(ext)->second)->Dummy = true;
 }
 
 template <class T>
@@ -146,9 +143,8 @@ LanguagePtr LanguageStorage::activateLanguage(const PackageId &pkg, bool exact_v
         L = i.base();
         L--;
     }
-    SW_UNIMPLEMENTED;
-    //for (auto &l : L->second->CompiledExtensions)
-        //extensions[l] = pkg;
+    for (auto &l : L->second->CompiledExtensions)
+        extensions.insert_or_assign(l, pkg);
     return L->second;
 }
 

@@ -107,11 +107,7 @@ std::unordered_map<UnresolvedPackage, Package>
 RemoteStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     preInitFindDependencies();
-
-    std::unordered_map<UnresolvedPackage, Package> r;
-    for (auto &[ud, pkg] : pkgdb->resolve(pkgs, unresolved_pkgs))
-        r.emplace(ud, Package(*this, pkg));
-    return r;
+    return StorageWithPackagesDatabase::resolve(pkgs, unresolved_pkgs);
 }
 
 void RemoteStorage::download() const

@@ -10,10 +10,11 @@
 #include <sw/builder/command.h>
 
 #include "command_storage.h"
-#include "db.h"
+#include "db_file.h"
 #include "file_storage.h"
 #include "os.h"
 #include "program.h"
+#include "sw_context.h"
 
 #include <sw/support/filesystem.h>
 #include <sw/support/hash.h>
@@ -40,14 +41,13 @@ static cl::opt<bool> explain_outdated_full("explain-outdated-full", cl::desc("Ex
 namespace sw
 {
 
-SW_DEFINE_GLOBAL_STATIC_FUNCTION(CommandStorage, getCommandStorage)
-
-static ConcurrentCommandStorage &getCommandStorage(bool local)
+static ConcurrentCommandStorage &getCommandStorage(const SwContext &swctx, bool local)
 {
-    return getCommandStorage().getStorage(local);
+    return swctx.getCommandStorage().getStorage(local);
 }
 
-CommandStorage::CommandStorage()
+CommandStorage::CommandStorage(const SwContext &swctx)
+    : swctx(swctx)
 {
     load();
 }
@@ -66,14 +66,14 @@ CommandStorage::~CommandStorage()
 
 void CommandStorage::load()
 {
-    getDb().load(commands_local, true);
-    getDb().load(commands_global, false);
+    swctx.getDb().load(commands_local, true);
+    swctx.getDb().load(commands_global, false);
 }
 
 void CommandStorage::save()
 {
-    getDb().save(commands_local, true);
-    getDb().save(commands_global, false);
+    swctx.getDb().save(commands_local, true);
+    swctx.getDb().save(commands_global, false);
 }
 
 ConcurrentCommandStorage &CommandStorage::getStorage(bool local)
@@ -84,12 +84,13 @@ ConcurrentCommandStorage &CommandStorage::getStorage(bool local)
 namespace builder
 {
 
-Command::Command()
+Command::Command(const SwContext &swctx)
+    : swctx(swctx)
 {
 }
 
-Command::Command(::sw::FileStorage &fs)
-    : fs(&fs)
+Command::Command(const SwContext &swctx, ::sw::FileStorage &fs)
+    : swctx(swctx), fs(&fs)
 {
 }
 
@@ -145,7 +146,7 @@ bool Command::isOutdated() const
     }
 
     auto k = getHash();
-    auto r = getCommandStorage(command_storage == CS_LOCAL).insert_ptr(k, 0);
+    auto r = getCommandStorage(swctx, command_storage == CS_LOCAL).insert_ptr(k, 0);
     if (r.second)
     {
         // we have insertion, no previous value available
@@ -227,7 +228,7 @@ void Command::updateCommandTime() const
 {
     auto k = getHash();
     auto c = mtime.time_since_epoch().count();
-    auto r = getCommandStorage(command_storage == CS_LOCAL).insert_ptr(k, c);
+    auto r = getCommandStorage(swctx, command_storage == CS_LOCAL).insert_ptr(k, c);
     if (!r.second)
         *r.first = c;
 }

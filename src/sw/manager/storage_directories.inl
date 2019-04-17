@@ -1,14 +1,12 @@
 DIR(bin)
-DIR(cfg)
-DIR(dat)
+//DIR(cfg) // moved to etc/sw/checks
+//DIR(dat)
 DIR(etc)
-//DIR(exp)
-DIR(lib)
+DIR(lib) // files are moved to pkg dir, remove? single user is target/native.cpp
 #ifdef _WIN32
 DIR(lnk)
 #endif
-DIR(obj)
+//DIR(obj) // files are moved to pkg dir
 DIR(pkg)
-//DIR(src)
 DIR(tmp)
 //DIR(usr)

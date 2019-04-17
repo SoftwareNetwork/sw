@@ -26,15 +26,25 @@ namespace sw::driver
 namespace detail
 {
 
-Command::Command(::sw::FileStorage &fs)
-    : Base::Command(fs)
+Command::Command(const SwContext &swctx)
+    : Base::Command(swctx)
+{
+}
+
+Command::Command(const SwContext &swctx, ::sw::FileStorage &fs)
+    : Base::Command(swctx, fs)
 {
 }
 
 }
 
-Command::Command(::sw::FileStorage &fs)
-    : Base::Command(fs)
+Command::Command(const SwContext &swctx)
+    : Base::Command(swctx)
+{
+}
+
+Command::Command(const SwContext &swctx, ::sw::FileStorage &fs)
+    : Base::Command(swctx, fs)
 {
 }
 
@@ -262,6 +272,16 @@ void GNUCommand::postProcess1(bool ok)
 
 ///
 
+CommandBuilder::CommandBuilder(const SwContext &swctx)
+{
+    c = std::make_shared<Command>(swctx);
+}
+CommandBuilder::CommandBuilder(const SwContext &swctx, ::sw::FileStorage &fs)
+    : CommandBuilder(swctx)
+{
+    c->fs = &fs;
+}
+
 CommandBuilder &CommandBuilder::operator|(CommandBuilder &c2)
 {
     operator|(*c2.c);
@@ -467,13 +487,14 @@ CommandBuilder &operator<<(CommandBuilder &cb, const Command::LazyCallback &t)
     return cb;
 }
 
-ExecuteBuiltinCommand::ExecuteBuiltinCommand()
+ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwContext &swctx)
+    : Command(swctx)
 {
     program = boost::dll::program_location().string();
 }
 
-ExecuteBuiltinCommand::ExecuteBuiltinCommand(const String &cmd_name, void *f, int version)
-    : ExecuteBuiltinCommand()
+ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwContext &swctx, const String &cmd_name, void *f, int version)
+    : ExecuteBuiltinCommand(swctx)
 {
     first_response_file_argument = 1;
     args.push_back(getInternalCallBuiltinFunctionName());

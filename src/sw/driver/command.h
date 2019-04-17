@@ -321,8 +321,8 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 
     bool ignore_deps_generated_commands = false;
 
-    Command() = default;
-    Command(::sw::FileStorage &fs);
+    Command(const SwContext &swctx);
+    Command(const SwContext &swctx, ::sw::FileStorage &fs);
 };
 
 }
@@ -336,8 +336,8 @@ struct SW_DRIVER_CPP_API Command : detail::Command
     bool program_set = false;
     std::weak_ptr<Dependency> dependency;
 
-    Command() = default;
-    Command(::sw::FileStorage &fs);
+    Command(const SwContext &swctx);
+    Command(const SwContext &swctx, ::sw::FileStorage &fs);
     virtual ~Command() = default;
 
     virtual std::shared_ptr<Command> clone() const;
@@ -363,8 +363,8 @@ struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : detail::Command
 {
     using F = std::function<void(void)>;
 
-    ExecuteBuiltinCommand();
-    ExecuteBuiltinCommand(const String &cmd_name, void *f = nullptr, int version = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION);
+    ExecuteBuiltinCommand(const SwContext &swctx);
+    ExecuteBuiltinCommand(const SwContext &swctx, const String &cmd_name, void *f = nullptr, int version = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION);
     virtual ~ExecuteBuiltinCommand() = default;
 
     //path getProgram() const override { return "ExecuteBuiltinCommand"; };
@@ -396,6 +396,8 @@ private:
 
 struct VSCommand : Command
 {
+    using Command::Command;
+
     std::shared_ptr<Command> clone() const override;
 
 private:
@@ -405,6 +407,8 @@ private:
 struct GNUCommand : Command
 {
     path deps_file;
+
+    using Command::Command;
 
     std::shared_ptr<Command> clone() const override;
 
@@ -418,15 +422,8 @@ struct SW_DRIVER_CPP_API CommandBuilder
     std::vector<NativeExecutedTarget*> targets;
     bool stopped = false;
 
-    CommandBuilder()
-    {
-        c = std::make_shared<Command>();
-    }
-    CommandBuilder(::sw::FileStorage &fs)
-        : CommandBuilder()
-    {
-        c->fs = &fs;
-    }
+    CommandBuilder(const SwContext &swctx);
+    CommandBuilder(const SwContext &swctx, ::sw::FileStorage &fs);
     CommandBuilder(const CommandBuilder &) = default;
     CommandBuilder &operator=(const CommandBuilder &) = default;
 

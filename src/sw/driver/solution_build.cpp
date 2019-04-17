@@ -207,7 +207,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
     return h;
 }
 
-static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const path &p)
+static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwContext &swctx, const path &p)
 {
     UnresolvedPackages udeps;
     FilesOrdered headers;
@@ -225,17 +225,16 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const pa
         if (m1 == "header")
         {
             auto upkg = extractFromString(m[3].str());
-            SW_UNIMPLEMENTED;
-            /*auto pkg = upkg.resolve();
+            auto pkg = swctx.resolve(upkg);
             auto h = getPackageHeader(pkg, upkg);
-            auto [headers2,udeps2] = getFileDependencies(h);
+            auto [headers2,udeps2] = getFileDependencies(swctx, h);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
-            headers.push_back(h);*/
+            headers.push_back(h);
         }
         else if (m1 == "local")
         {
-            auto [headers2, udeps2] = getFileDependencies(m[3].str());
+            auto [headers2, udeps2] = getFileDependencies(swctx, m[3].str());
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
         }
@@ -247,17 +246,15 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const pa
     return { headers, udeps };
 }
 
-path build_configs(const SwContext &swctx, const std::unordered_set<Package> &pkgs)
+path build_configs(const SwContext &swctx, const std::unordered_set<LocalPackage> &pkgs)
 {
-    SW_UNIMPLEMENTED;
-
     //static
     Build b(swctx); // cache?
     b.execute_jobs = config_jobs;
     b.Local = false;
     b.file_storage_local = false;
     b.is_config_build = true;
-    //return b.build_configs(pkgs);
+    return b.build_configs(pkgs);
 }
 
 void sw_check_abi_version(int v)
@@ -271,7 +268,7 @@ void sw_check_abi_version(int v)
 Build::Build(const SwContext &swctx)
     : Solution(swctx)
 {
-    HostOS = getHostOS();
+    HostOS = swctx.HostOS;
     Settings.TargetOS = HostOS; // default
 
     // load service local fs by default
@@ -450,6 +447,7 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
 
 // TODO: remove '.cpp' part later
 #define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp"
+#define SW_DRIVER_INCLUDE_DIR "src"
 
 static void addDeps(NativeExecutedTarget &lib, Solution &solution)
 {
@@ -467,7 +465,7 @@ static void addDeps(NativeExecutedTarget &lib, Solution &solution)
 // add Dirs?
 static path getDriverIncludeDir(Solution &solution)
 {
-    return solution.getTarget<NativeTarget>(SW_DRIVER_NAME).SourceDir / "include";
+    return solution.getTarget<NativeTarget>(SW_DRIVER_NAME).SourceDir / SW_DRIVER_INCLUDE_DIR;
 }
 
 static path getDriverIncludePath(Solution &solution, const path &fn)
@@ -552,7 +550,7 @@ FilesMap Build::build_configs_separate(const Files &files)
         pch.force_include_pch = true;
         lib.addPrecompiledHeader(pch);
 
-        auto [headers, udeps] = getFileDependencies(fn);
+        auto [headers, udeps] = getFileDependencies(swctx, fn);
 
         for (auto &h : headers)
         {
@@ -680,9 +678,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
     // make parallel?
     auto get_real_package = [](const auto &pkg) -> LocalPackage
     {
-        SW_UNIMPLEMENTED;
-
-        /*if (pkg.group_number)
+        if (pkg.getData().group_number)
             return pkg;
         auto p = pkg.getGroupLeader();
         if (fs::exists(p.getDirSrc2() / "sw.cpp"))
@@ -690,7 +686,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
         fs::create_directories(p.getDirSrc2());
         fs::copy_file(pkg.getDirSrc2() / "sw.cpp", p.getDirSrc2() / "sw.cpp");
         //resolve_dependencies({p}); // p might not be downloaded
-        return p;*/
+        return p;
     };
 
     auto get_real_package_config = [&get_real_package](const auto &pkg)
@@ -900,7 +896,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
 
     for (auto &fn : files)
     {
-        auto[headers, udeps] = getFileDependencies(fn);
+        auto[headers, udeps] = getFileDependencies(swctx, fn);
         if (auto sf = lib[fn].template as<NativeSourceFile>())
         {
             auto add_defs = [&many_files, &fn](auto &c)
@@ -1124,7 +1120,7 @@ void Build::load(const path &fn, bool configless)
         s.show_output = cl_show_output;
 }
 
-static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
+static Solution::CommandExecutionPlan load(const SwContext &swctx, const path &fn, const Solution &s)
 {
     primitives::BinaryStream ctx;
     ctx.load(fn);
@@ -1152,7 +1148,7 @@ static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
 
     std::map<size_t, std::shared_ptr<builder::Command>> commands;
 
-    auto add_command = [&commands, &s, &read_string](size_t id, uint8_t type)
+    auto add_command = [&swctx, &commands, &s, &read_string](size_t id, uint8_t type)
     {
         auto it = commands.find(id);
         if (it == commands.end())
@@ -1162,7 +1158,7 @@ static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
             {
             case 1:
             {
-                auto c2 = std::make_shared<driver::VSCommand>();
+                auto c2 = std::make_shared<driver::VSCommand>(swctx);
                 //c2->file.fs = s.fs;
                 c = c2;
                 //c2->file.file = read_string();
@@ -1170,7 +1166,7 @@ static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
                 break;
             case 2:
             {
-                auto c2 = std::make_shared<driver::GNUCommand>();
+                auto c2 = std::make_shared<driver::GNUCommand>(swctx);
                 //c2->file.fs = s.fs;
                 c = c2;
                 //c2->file.file = read_string();
@@ -1179,12 +1175,12 @@ static Solution::CommandExecutionPlan load(const path &fn, const Solution &s)
                 break;
             case 3:
             {
-                auto c2 = std::make_shared<driver::ExecuteBuiltinCommand>();
+                auto c2 = std::make_shared<driver::ExecuteBuiltinCommand>(swctx);
                 c = c2;
             }
                 break;
             default:
-                c = std::make_shared<builder::Command>();
+                c = std::make_shared<builder::Command>(swctx);
                 break;
             }
             commands[id] = c;
@@ -1377,7 +1373,7 @@ void Build::execute()
                 // prevent double assign generators
                 fs->reset();
 
-                auto p = ::sw::load(fn, s);
+                auto p = ::sw::load(swctx, fn, s);
                 s.execute(p);
                 return;
             }

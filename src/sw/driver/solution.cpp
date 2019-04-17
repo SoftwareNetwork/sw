@@ -55,7 +55,7 @@ std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 namespace sw
 {
 
-path build_configs(const std::unordered_set<LocalPackage> &pkgs);
+path build_configs(const SwContext &swctx, const std::unordered_set<LocalPackage> &pkgs);
 void sw_check_abi_version(int v);
 
 String toString(FrontendType t)
@@ -424,7 +424,7 @@ Test Solution::addTest()
 
 Test Solution::addTest(const String &name)
 {
-    Test cb(*fs);
+    Test cb(swctx, *fs);
     addTest(cb, name);
     return cb;
 }
@@ -436,7 +436,7 @@ path Solution::getChecksDir() const
 
 void Solution::performChecks()
 {
-    checker.performChecks(swctx.getLocalStorage().storage_dir_cfg / getConfig());
+    checker.performChecks(swctx.getLocalStorage().storage_dir_etc / "sw" / "checks" / getConfig());
 }
 
 Commands Solution::getCommands() const
@@ -732,22 +732,28 @@ void Solution::build_and_resolve(int n_runs)
         LOG_DEBUG(logger, "Unresolved dependency: " << pkg.toString());
     }
 
-    SW_UNIMPLEMENTED;
-
     // resolve only deps needed
-    /*Resolver r;
-    r.resolve_dependencies(pkgs, true);
-    auto dd = r.getDownloadDependencies();
-    if (dd.empty())
+    auto m = swctx.resolve(pkgs);
+
+    // remove?
+    if (m.empty())
         throw SW_RUNTIME_ERROR("Empty download dependencies");
 
-    for (auto &p : dd)
-        knownTargets.insert(p);
+    auto &e = getExecutor();
+    for (auto &[u, p] : m)
+        e.push([&p] { p.install(); });
+    e.wait();
 
-    // gather packages
+    // after install
+
     std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
-    for (auto &[p, gn] : r.getDownloadDependenciesWithGroupNumbers())
-        cfgs2[gn] = p;
+    for (auto &[u, p] : m)
+    {
+        knownTargets.insert(p);
+        // gather packages
+        cfgs2.emplace(p.getData().group_number, p.install());
+    }
+
     std::unordered_set<LocalPackage> cfgs;
     for (auto &[gn, s] : cfgs2)
     {
@@ -767,12 +773,12 @@ void Solution::build_and_resolve(int n_runs)
             LOG_ERROR(logger, "Unresolved dependency: " << pkg.toString());
     }
 
-    auto dll = ::sw::build_configs(cfgs);
+    auto dll = ::sw::build_configs(swctx, cfgs);
     //used_modules.insert(dll);
 
     Local = false;
 
-    SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->prefix));
+    SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->getData().prefix));
     if (cfgs.size() != 1)
         sr.restoreNow(true);
 
@@ -785,12 +791,11 @@ void Solution::build_and_resolve(int n_runs)
 
     sr.restoreNow(true);
 
-    auto rd = r.resolved_packages;
-    for (auto &[porig, p] : rd)
+    for (auto &[porig, p] : m)
     {
         for (auto &[n, t] : getChildren())
         {
-            if (p == t->pkg && ud[porig])
+            if (p == t->getPackage() && ud[porig])
             {
                 ud[porig]->setTarget(*std::static_pointer_cast<NativeTarget>(t).get());
                 //t->SourceDir = p.getDirSrc2();
@@ -803,11 +808,11 @@ void Solution::build_and_resolve(int n_runs)
         UnresolvedPackages pkgs;
         for (auto &[pkg, d] : ud)
             pkgs.insert(pkg);
-        r.resolve_dependencies(pkgs);
+        swctx.resolve(pkgs);
 
         if (ud.empty())
             return;
-    }*/
+    }
 
     // we have unloaded deps, load them
     // they are runtime deps either due to local overridden packages
@@ -890,7 +895,19 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
         if (d->Dummy)
             h = host;
         else if (d->isResolved())
+        {
+            if (h->getChildren().find(d->getPackage()) == h->getChildren().end() &&
+                h->dummy_children.find(d->getPackage()) != h->dummy_children.end())
+            {
+                if (d->target->Scope != TargetScope::Tool)
+                {
+                    auto err = "Package: " + t.getPackage().toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
+                    err += " (but target is set to dummy child)";
+                    throw SW_LOGIC_ERROR(err);
+                }
+            }
             continue;
+        }
 
         auto i = h->getChildren().find(d->getPackage());
         if (i != h->getChildren().end())
@@ -911,9 +928,14 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
         {
             // allow dummy scoped tools
             auto i = h->dummy_children.find(d->getPackage());
-            if (i != h->dummy_children.end() &&
-                i->second->Scope == TargetScope::Tool)
+            if (i != h->dummy_children.end())
             {
+                if (i->second->Scope != TargetScope::Tool)
+                {
+                    auto err = "Package: " + t.getPackage().toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
+                    err += " (but target is set to dummy child)";
+                    throw SW_LOGIC_ERROR(err);
+                }
                 auto t = std::static_pointer_cast<NativeTarget>(i->second);
                 if (t)
                     d->setTarget(*t);
@@ -931,15 +953,13 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
                     err += " (but target is set to " + d->target->getPackage().toString() + ")";
                 if (auto d = t.getPackage().getOverriddenDir(); d)
                 {
-                    SW_UNIMPLEMENTED;
-
-                    /*err += ".\nPackage: " + t.getPackage().toString() + " is overridden locally. "
+                    err += ".\nPackage: " + t.getPackage().toString() + " is overridden locally. "
                         "This means you have new dependency that is not in db.\n"
                         "Run following command in attempt to fix this issue: "
                         "'sw -d " + normalize_path(d.value()) + " -override-remote-package " +
-                        t.getPackage().ppath.slice(0, getServiceDatabase().getOverriddenPackage(t.getPackage()).value().prefix).toString() + "'";*/
+                        t.getPackage().ppath.slice(0, t.getPackage().getData().prefix).toString() + "'";
                 }
-                throw std::logic_error(err);
+                throw SW_LOGIC_ERROR(err);
             }
         }
     }
@@ -961,14 +981,13 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies(int n_runs) co
         if (c.empty())
             continue;
 
-        SW_UNIMPLEMENTED;
-
-        /*std::unordered_set<UnresolvedPackage> known2;
+        std::unordered_set<UnresolvedPackage> known2;
         for (auto &[up, dptr] : c)
         {
-            if (auto r = getPackageStore().isPackageResolved(up); r)
+            if (swctx.isResolved(up))
             {
-                auto i = children.find(r.value());
+                auto r = swctx.resolve(up);
+                auto i = children.find(r);
                 if (i != children.end())
                 {
                     dptr->setTarget(*std::static_pointer_cast<NativeTarget>(i->second).get());
@@ -999,7 +1018,7 @@ UnresolvedDependenciesType Solution::gatherUnresolvedDependencies(int n_runs) co
             s.resize(s.size() - 2);
 
             LOG_ERROR(logger, p.first.toString() + " unresolved deps on run " << n_runs << ": " + s);
-        }*/
+        }
     }
     return deps;
 }
@@ -1263,7 +1282,7 @@ void Solution::findCompiler()
         {
             if (auto l = p->template as<GNULinker>())
             {
-                auto cmd = l->createCommand();
+                auto cmd = l->createCommand(swctx);
                 cmd->args.push_back("-fuse-ld=lld");
                 cmd->args.push_back("-target");
                 cmd->args.push_back(Settings.getTargetTriplet());

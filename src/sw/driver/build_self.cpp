@@ -7,9 +7,13 @@
 #define SW_PACKAGE_API
 #include <sw/driver/sw.h>
 
+#include "solution.h"
+
+#include <sw/builder/sw_context.h>
 #include <sw/manager/resolver.h>
 
 #include <boost/algorithm/string.hpp>
+#include <primitives/executor.h>
 
 // disable custom pragma warnings
 #ifdef _MSC_VER
@@ -31,19 +35,15 @@ void build_self(Solution &s)
 {
 #include <build_self.packages.generated.h>
 
-    SW_UNIMPLEMENTED;
-
+    //static UnresolvedPackages store; // tmp store
+    auto m = s.swctx.resolve(required_packages/*, store*/);
+    auto &e = getExecutor();
+    for (auto &[u, p] : m)
     {
-        /*SwapAndRestore store(getPackageStore(), PackageStore());
-
-        // this provides initial download of driver dependencies
-        Resolver r;
-        r.add_downloads = false; // we hide our activity
-        r.resolve_dependencies(required_packages);
-        //auto pkgs = resolve_dependencies(required_packages);
-        for (auto &p : r.getDownloadDependencies())
-            s.knownTargets.insert(p);*/
+        e.push([&p] { p.install(); });
+        s.knownTargets.insert(p);
     }
+    e.wait();
 
     s.Settings.Native.LibrariesType = LibraryType::Static;
     s.Variables["SW_SELF_BUILD"] = 1;

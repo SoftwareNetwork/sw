@@ -8,6 +8,8 @@
 
 #include "command.h"
 #include "file_storage.h"
+#include "program_version_storage.h"
+#include "sw_context.h"
 
 #include <sw/manager/storage.h>
 
@@ -19,6 +21,22 @@
 
 namespace sw
 {
+
+Program::Program(const SwContext &swctx)
+    : swctx(swctx)
+{
+}
+
+Program::Program(const Program &rhs)
+    : File(rhs), swctx(rhs.swctx)
+{
+}
+
+/*Program &Program::operator=(const Program &rhs)
+{
+    //swctx = rhs.swctx;
+    return *this;
+}*/
 
 const Version &Program::getVersion() const
 {
@@ -36,9 +54,7 @@ Version &Program::getVersion()
         return version.value();
     }
 
-    SW_UNIMPLEMENTED;
-
-    /*static VersionStorage vs;
+    auto &vs = swctx.getVersionStorage();
     static boost::upgrade_mutex m;
 
     boost::upgrade_lock lk(m);
@@ -55,7 +71,7 @@ Version &Program::getVersion()
         return version.value();
 
     version = vs.versions[file] = gatherVersion();
-    return version.value();*/
+    return version.value();
 }
 
 Version Program::gatherVersion(const path &program, const String &arg, const String &in_regex) const

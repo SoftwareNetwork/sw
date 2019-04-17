@@ -185,6 +185,32 @@ PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
 
 void StorageWithPackagesDatabase::get(const IStorage &source, const PackageId &id, StorageFileType)
 {
+    SW_UNIMPLEMENTED;
+}
+
+std::unordered_map<UnresolvedPackage, Package>
+StorageWithPackagesDatabase::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+{
+    auto r = resolve_no_deps(pkgs, unresolved_pkgs);
+    while (1)
+    {
+        auto r2 = r;
+        auto sz = r.size();
+        for (auto &[u, p] : r2)
+            r.merge(resolve_no_deps(p.getData().dependencies, unresolved_pkgs));
+        if (r.size() == sz)
+            break;
+    }
+    return r;
+}
+
+std::unordered_map<UnresolvedPackage, Package>
+StorageWithPackagesDatabase::resolve_no_deps(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+{
+    std::unordered_map<UnresolvedPackage, Package> r;
+    for (auto &[ud, pkg] : pkgdb->resolve(pkgs, unresolved_pkgs))
+        r.emplace(ud, Package(*this, pkg));
+    return r;
 }
 
 LocalStorage::LocalStorage(const path &local_storage_root_dir)
@@ -236,15 +262,6 @@ void LocalStorage::migrateStorage(int from, int to)
         throw SW_RUNTIME_ERROR("Not yet released");
         break;
     }
-}
-
-std::unordered_map<UnresolvedPackage, Package>
-LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
-{
-    std::unordered_map<UnresolvedPackage, Package> r;
-    for (auto &[ud, pkg] : pkgdb->resolve(pkgs, unresolved_pkgs))
-        r.emplace(ud, Package(*this, pkg));
-    return r;
 }
 
 /*LocalPackage LocalStorage::download(const PackageId &id) const

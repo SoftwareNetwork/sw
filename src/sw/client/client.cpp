@@ -19,11 +19,6 @@
 #include <sw/manager/storage.h>
 #include <sw/support/exceptions.h>
 
-// globals, remove
-#include <sw/builder/command_storage.h>
-#include <sw/builder/db.h>
-#include <sw/builder/db_file.h>
-
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
 #include <boost/dll.hpp>
@@ -192,13 +187,6 @@ int setup_main(const Strings &args)
         // Destroy the QSBR context for the main thread.
         //destroyConcurrentContext(context);
     };
-
-    // before CommandStorage and FileStorages
-    sw::FileDb db;
-    sw::getDb(&db);
-
-    sw::CommandStorage cs;
-    sw::getCommandStorage(&cs);
 
     // after everything
     std::unique_ptr<Executor> e;

@@ -6,10 +6,11 @@
 
 #include "file_storage.h"
 
-#include "db.h"
+#include "db_file.h"
 #include "sw_context.h"
 
 #include <primitives/debug.h>
+#include <primitives/executor.h>
 #include <primitives/file_monitor.h>
 #include <primitives/sw/cl.h>
 
@@ -51,23 +52,23 @@ FileStorage::FileStorage(const SwContext &swctx, const String &config)
 FileStorage::file_holder *FileStorage::getFileLog()
 {
     if (!async_file_log_)
-        async_file_log_ = std::make_unique<file_holder>(getFilesLogFileName(config, fs_local));
+        async_file_log_ = std::make_unique<file_holder>(getFilesLogFileName(swctx, config, fs_local));
     return async_file_log_.get();
 }
 
-path getCommandsLogFileName(bool local);
+path getCommandsLogFileName(const SwContext &swctx, bool local);
 
 FileStorage::file_holder *FileStorage::getCommandLog(bool local)
 {
     if (local)
     {
         if (!async_command_log_local_)
-            async_command_log_local_ = std::make_unique<file_holder>(getCommandsLogFileName(local));
+            async_command_log_local_ = std::make_unique<file_holder>(getCommandsLogFileName(swctx, local));
         return async_command_log_local_.get();
     }
 
     if (!async_command_log_)
-        async_command_log_ = std::make_unique<file_holder>(getCommandsLogFileName(local));
+        async_command_log_ = std::make_unique<file_holder>(getCommandsLogFileName(swctx, local));
     return async_command_log_.get();
 }
 
@@ -109,7 +110,7 @@ void FileStorage::async_file_log(const FileRecord *r)
     swctx.getFileStorageExecutor().push([this, r = *r] {
 #endif
         // write record to vector v
-        getDb().write(v, r);
+        swctx.getDb().write(v, r);
 
         //fseek(f.f, 0, SEEK_END);
         auto l = getFileLog();
@@ -143,7 +144,7 @@ void FileStorage::async_command_log(size_t hash, size_t lwt, bool local)
 
 void FileStorage::load()
 {
-    getDb().load(*this, files, fs_local);
+    swctx.getDb().load(*this, files, fs_local);
 
     for (auto i = files.getIterator(); i.isValid(); i.next())
     {
@@ -157,7 +158,7 @@ void FileStorage::load()
 
 void FileStorage::save()
 {
-    getDb().save(*this, files, fs_local);
+    swctx.getDb().save(*this, files, fs_local);
 }
 
 void FileStorage::clear()

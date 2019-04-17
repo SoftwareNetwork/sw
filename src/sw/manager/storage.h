@@ -115,11 +115,12 @@ struct IStorage
 
 struct SW_MANAGER_API Storage : IStorage
 {
-    String name;
-
     Storage(const String &name);
 
     String getName() const override { return name; }
+
+private:
+    String name;
 };
 
 struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
@@ -133,6 +134,10 @@ struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
 
     PackageData loadData(const PackageId &) const override;
     void get(const IStorage &source, const PackageId &id, StorageFileType) override;
+    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+
+private:
+    std::unordered_map<UnresolvedPackage, Package> resolve_no_deps(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
 };
 
 struct SW_MANAGER_API LocalStorage : Directories, StorageWithPackagesDatabase
@@ -146,7 +151,6 @@ struct SW_MANAGER_API LocalStorage : Directories, StorageWithPackagesDatabase
     int getHashPathFromHashSchemaVersion() const override;
     //LocalPackage download(const PackageId &) const override;
     LocalPackage install(const Package &) const override;
-    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const override;
     void get(const IStorage &source, const PackageId &id, StorageFileType) override;
 

@@ -19,7 +19,7 @@
     (target).setupCommand(*name)
 
 #define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
-    auto name = std::make_shared<type>(__VA_ARGS__);    \
+    auto name = std::make_shared<type>((target).getSolution()->swctx, __VA_ARGS__);    \
     SW_INTERNAL_INIT_COMMAND(name, target)
 
 #ifdef _MSC_VER
@@ -47,6 +47,7 @@ namespace sw
 
 struct FileStorage;
 struct Program;
+struct SwContext;
 
 template <class T>
 struct CommandData
@@ -123,6 +124,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     using Base = primitives::Command;
     using Clock = std::chrono::high_resolution_clock;
 
+    const SwContext &swctx;
     FileStorage *fs = nullptr;
 
     String name;
@@ -176,8 +178,8 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     };
     int command_storage = 0;
 
-    Command();
-    Command(::sw::FileStorage &fs);
+    Command(const SwContext &swctx);
+    Command(const SwContext &swctx, ::sw::FileStorage &fs);
     virtual ~Command();
 
     void prepare() override;
