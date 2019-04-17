@@ -14,8 +14,8 @@
 #include "yaml.h"
 
 #include <sw/support/filesystem.h>
-#include <sw/support/http.h>
 
+#include <primitives/http.h>
 #include <primitives/sw/settings.h>
 
 namespace sw

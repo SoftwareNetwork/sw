@@ -6,6 +6,8 @@
 
 #include "package_data.h"
 
+#include "source.h"
+
 #include <nlohmann/json.hpp>
 
 namespace sw
@@ -32,9 +34,9 @@ void detail::PackageData::applyPrefix(const PackagePath &prefix)
     dependencies = deps2;
 }
 
-void detail::PackageData::checkSourceAndVersion()
+void detail::PackageData::applyVersion()
 {
-    ::sw::checkSourceAndVersion(source, version);
+    source->applyVersion(version);
 }
 
 PackageDescription::PackageDescription(const std::string &s)
@@ -51,7 +53,7 @@ detail::PackageData JsonPackageDescription::getData() const
 {
     auto j = nlohmann::json::parse(*this);
     detail::PackageData d;
-    d.source = load_source(j["source"]);
+    d.source = Source::load(j["source"]);
     d.version = j["version"].get<std::string>();
     d.ppath = j["path"].get<std::string>();
     for (auto &v : j["files"])
@@ -71,14 +73,6 @@ detail::PackageData YamlPackageDescription::getData() const
     //const auto &s = *this;
     detail::PackageData d;
     throw SW_RUNTIME_ERROR("Not implemented");
-}
-
-void checkSourceAndVersion(Source &s, const Version &v)
-{
-    applyVersionToUrl(s, v);
-
-    if (!isValidSourceUrl(s))
-        throw SW_RUNTIME_ERROR("Invalid source: " + print_source(s));
 }
 
 }

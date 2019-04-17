@@ -11,12 +11,12 @@
 #include "storage.h"
 
 #include <sw/support/hash.h>
-#include <sw/support/http.h>
 
-#include <fmt/ostream.h>
-#include <primitives/templates.h>
-#include <grpcpp/grpcpp.h>
 #include <boost/dll.hpp>
+#include <fmt/ostream.h>
+#include <grpcpp/grpcpp.h>
+#include <primitives/http.h>
+#include <primitives/templates.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "remote");

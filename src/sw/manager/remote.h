@@ -9,7 +9,6 @@
 #include "enums.h"
 
 #include <sw/support/filesystem.h>
-#include <sw/support/http.h>
 
 #include <functional>
 #include <optional>

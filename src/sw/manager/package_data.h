@@ -7,12 +7,13 @@
 #pragma once
 
 #include "package.h"
-#include "source.h"
 
 // !!! see more fields here https://github.com/aws/aws-sdk-cpp/blob/master/aws-cpp-sdk-s3/nuget/aws-cpp-sdk-s3.autopkg
 
 namespace sw
 {
+
+inline namespace source { struct Source; }
 
 namespace detail
 {
@@ -30,7 +31,7 @@ struct PackageData
 {
     // basic fields, but not mandatory
 
-    Source source;
+    std::unique_ptr<Source> source;
 
     /// by default is 0.0.1
     Version version;
@@ -95,7 +96,7 @@ struct PackageData
 
     PackageId getPackageId(const PackagePath &prefix = PackagePath()) const;
     void applyPrefix(const PackagePath &prefix);
-    void checkSourceAndVersion();
+    void applyVersion();
 };
 
 }
@@ -132,8 +133,5 @@ struct SW_MANAGER_API YamlPackageDescription : PackageDescription
 
     detail::PackageData getData() const override;
 };
-
-SW_MANAGER_API
-void checkSourceAndVersion(Source &s, const Version &v);
 
 }

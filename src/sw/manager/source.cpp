@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2018 Egor Pugin <egor.pugin@gmail.com>
+// Copyright (C) 2016-2019 Egor Pugin <egor.pugin@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,20 +6,19 @@
 
 #include "source.h"
 
-#include "yaml.h"
+#include "sw/support/filesystem.h"
 
-#include <sw/support/hash.h>
-#include <sw/support/http.h>
-
+#include <fmt/format.h>
 #include <primitives/command.h>
 #include <primitives/date_time.h>
 #include <primitives/exceptions.h>
 #include <primitives/executor.h>
 #include <primitives/filesystem.h>
+#include <primitives/hash.h>
+#include <primitives/http.h>
 #include <primitives/overload.h>
 #include <primitives/pack.h>
-
-#include <fmt/format.h>
+#include <primitives/yaml.h>
 #include <nlohmann/json.hpp>
 
 #include <regex>
@@ -62,6 +61,37 @@ using primitives::Command;
 
 namespace sw
 {
+
+static bool isValidSourceUrl(const String &url)
+{
+    if (url.empty())
+        return false;
+    if (!isUrl(url))
+        return false;
+    if (url.find_first_of(R"bbb('"`\|;$ @!#^*()<>[],)bbb") != url.npos)
+        return false;
+    // remove? will fail: ssh://name:pass@web.site
+    if (std::count(url.begin(), url.end(), ':') > 1)
+        return false;
+    if (url.find("&&") != url.npos)
+        return false;
+#ifndef CPPAN_TEST
+    if (url.find("file:") == 0) // prevent loading local files
+        return false;
+#endif
+    for (auto &c : url)
+    {
+        if (c < 0 || c > 127)
+            return false;
+    }
+    return true;
+}
+
+static void checkSourceUrl(const String &url)
+{
+    if (!isValidSourceUrl(url))
+        throw SW_RUNTIME_ERROR("Bad source url: " + url);
+}
 
 static void download_file_checked(const String &url, const path &fn, int64_t max_file_size = 0)
 {
@@ -156,29 +186,37 @@ static String toString(SourceType t)
 {
     switch (t)
     {
-    case SourceType::Undefined:
-        return "undefined";
-    case SourceType::Empty:
-        return "empty";
-    case SourceType::Git:
-        return "git";
-    case SourceType::Mercurial:
-        return "hg";
-    case SourceType::Bazaar:
-        return "bzr";
-    case SourceType::Fossil:
-        return "fossil";
-    case SourceType::Cvs:
-        return "cvs";
-    case SourceType::Svn:
-        return "svn";
-    case SourceType::RemoteFile:
-        return "remote";
-    case SourceType::RemoteFiles:
-        return "files";
-    default:
-        SW_UNIMPLEMENTED;
+#define SOURCE(e, s) case SourceType::e: return s;
+#include "source.inl"
+#undef SOURCE
     }
+
+    SW_UNREACHABLE;
+}
+
+static SourceType fromString(const String &t)
+{
+    if (0) return {};
+#define SOURCE(e, s) else if (t == s) return SourceType::e;
+#include "source.inl"
+#undef SOURCE
+    else throw SW_RUNTIME_ERROR("Bad source: " + t);
+}
+
+String Source::getHash() const
+{
+    return shorten_hash(blake2b_512(print()), 12);
+}
+
+String Source::print() const
+{
+    return getString() + ":\n" + print1();
+}
+
+void Source::download(const path &dir) const
+{
+    fs::create_directories(dir);
+    download1(dir);
 }
 
 String Source::getString() const
@@ -186,24 +224,123 @@ String Source::getString() const
     return toString(getType());
 }
 
-SourceKvMap UndefinedSource::printKv() const
+void Source::save(nlohmann::json &j) const
 {
-    return { {"Source", getString()} };
+    save1(j[getString()]);
 }
 
-SourceKvMap EmptySource::printKv() const
+void Source::save(yaml &root) const
 {
-    return { {"Source", getString()} };
+    auto r = root[getString()];
+    save1(r);
 }
 
-/*SourceUrl::SourceUrl(const yaml &root, const String &name)
+void Source::save(ptree &p) const
 {
-    YAML_EXTRACT_VAR(root, url, name, String);
-}*/
+    ptree p2;
+    save1(p2);
+    p.add_child(getString(), p2);
+}
+
+SourceKvMap Source::printKv() const
+{
+    SourceKvMap m{ {"Source", getString()} };
+    printKv(m);
+    return m;
+}
+
+std::unique_ptr<Source> Source::load(const nlohmann::json &j)
+{
+    if (j.size() != 1)
+        throw SW_RUNTIME_ERROR("Bad json source (0 or >1 objects)");
+    if (!j.is_object())
+        throw SW_RUNTIME_ERROR("Bad yaml source (not an object)");
+
+    auto type_string = j.begin().key();
+    auto t = fromString(type_string);
+
+    switch (t)
+    {
+#define SOURCE(e, s) case SourceType::e: return e::load(j.begin().value());
+#include "source.inl"
+#undef SOURCE
+    }
+
+    SW_UNREACHABLE;
+}
+
+std::unique_ptr<Source> Source::load(const ptree &p)
+{
+    if (p.size() != 1)
+        throw SW_RUNTIME_ERROR("Bad ptree source (0 or >1 objects)");
+
+    auto type_string = p.begin()->first;
+    auto t = fromString(type_string);
+
+    switch (t)
+    {
+#define SOURCE(e, s) case SourceType::e: return e::load(p.begin()->second);
+#include "source.inl"
+#undef SOURCE
+    }
+
+    SW_UNREACHABLE;
+}
+
+std::unique_ptr<Source> Source::load(const yaml &root)
+{
+    if (root.size() != 1)
+        throw SW_RUNTIME_ERROR("Bad yaml source (0 or >1 objects)");
+    if (!root.IsMap())
+        throw SW_RUNTIME_ERROR("Bad yaml source (not a map object)");
+
+    auto type_string = root.begin()->first.template as<String>();
+    auto t = fromString(type_string);
+
+    switch (t)
+    {
+#define SOURCE(e, s) case SourceType::e: return e::load(root.begin()->second);
+#include "source.inl"
+#undef SOURCE
+    }
+
+    SW_UNREACHABLE;
+}
+
+std::unique_ptr<Source> Source::clone() const
+{
+    // funny non-virtual (but switch-style) clone
+    switch (getType())
+    {
+#define SOURCE(e, s) case SourceType::e: return std::make_unique<e>(static_cast<const e &>(*this));
+#include "source.inl"
+#undef SOURCE
+    }
+
+    SW_UNREACHABLE;
+}
 
 SourceUrl::SourceUrl(const String &url)
     : url(url)
 {
+    checkUrl();
+}
+
+SourceUrl::SourceUrl(const nlohmann::json &j)
+{
+    JSON_GET_STRING(url);
+    checkUrl();
+}
+
+SourceUrl::SourceUrl(const ptree &p)
+{
+    PTREE_GET_STRING(url);
+    checkUrl();
+}
+
+SourceUrl::SourceUrl(const yaml &root)
+{
+    YAML_EXTRACT_AUTO(url);
     checkUrl();
 }
 
@@ -212,49 +349,31 @@ void SourceUrl::checkUrl() const
     checkSourceUrl(url);
 }
 
-/*
-bool SourceUrl::isValid(const String &name, String *error) const
-{
-    if (!empty())
-        return true;
-    if (error)
-        *error = name + " url is missing";
-    return false;
-}
-*/
-
-void SourceUrl::save(ptree &p) const
+void SourceUrl::save1(ptree &p) const
 {
     PTREE_ADD(url);
 }
 
-void SourceUrl::save(nlohmann::json &j) const
+void SourceUrl::save1(nlohmann::json &j) const
 {
     JSON_ADD(url);
 }
 
-void SourceUrl::save(yaml &root) const
+void SourceUrl::save1(yaml &root) const
 {
-    YAML_SET(url, getString());
+    YAML_SET_NOT_EMPTY(url);
 }
 
-/*void SourceUrl::load_source(const ptree &p)
-{
-    PTREE_GET_STRING(url);
-    return !empty();
-}
-
-bool SourceUrl::load(const nlohmann::json &j)
-{
-    JSON_GET_STRING(url);
-    return !empty();
-}*/
-
-String SourceUrl::print() const
+String SourceUrl::print1() const
 {
     String r;
     STRING_PRINT(url);
     return r;
+}
+
+void SourceUrl::printKv(SourceKvMap &m) const
+{
+    KV_ADD_IF_NOT_EMPTY("Url", url);
 }
 
 void SourceUrl::applyVersion(const Version &v)
@@ -262,21 +381,40 @@ void SourceUrl::applyVersion(const Version &v)
     v.format(url);
 }
 
-/*Git::Git(const yaml &root, const String &name)
-    : SourceUrl(root, name)
-{
-    YAML_EXTRACT_AUTO(tag);
-    YAML_EXTRACT_AUTO(branch);
-    YAML_EXTRACT_AUTO(commit);
-}*/
-
 Git::Git(const String &url, const String &tag, const String &branch, const String &commit)
     : SourceUrl(url), tag(tag), branch(branch), commit(commit)
 {
     checkOne(getString(), tag, branch, commit);
 }
 
-void Git::download(const path &dir) const
+Git::Git(const nlohmann::json &j)
+    : SourceUrl(j)
+{
+    JSON_GET_STRING(tag);
+    JSON_GET_STRING(branch);
+    JSON_GET_STRING(commit);
+    checkOne(getString(), tag, branch, commit);
+}
+
+Git::Git(const ptree &p)
+    : SourceUrl(p)
+{
+    PTREE_GET_STRING(tag);
+    PTREE_GET_STRING(branch);
+    PTREE_GET_STRING(commit);
+    checkOne(getString(), tag, branch, commit);
+}
+
+Git::Git(const yaml &root)
+    : SourceUrl(root)
+{
+    YAML_EXTRACT_AUTO(tag);
+    YAML_EXTRACT_AUTO(branch);
+    YAML_EXTRACT_AUTO(commit);
+    checkOne(getString(), tag, branch, commit);
+}
+
+void Git::download1(const path &dir) const
 {
     // try to speed up git downloads from github
     // add more sites below
@@ -314,14 +452,14 @@ void Git::download(const path &dir) const
         }
         catch (std::exception &e)
         {
-            // go to usual git download
+            // go to usual git download1
             LOG_WARN(logger, e.what());
             if (fs::exists(fn))
                 fs::remove(fn);
         }
     }
 
-    // usual git download via clone
+    // usual git download1 via clone
 #ifdef CPPAN_TEST
     if (fs::exists(".git"))
         return;
@@ -349,69 +487,44 @@ void Git::download(const path &dir) const
     });
 }
 
-/*void Git::load(const ptree &p)
+void Git::save1(ptree &p) const
 {
-    if (!SourceUrl::load(p))
-        return false;
-    PTREE_GET_STRING(tag);
-    PTREE_GET_STRING(branch);
-    PTREE_GET_STRING(commit);
-    return true;
-}*/
-
-void Git::save(ptree &p) const
-{
-    SourceUrl::save(p);
+    SourceUrl::save1(p);
     PTREE_ADD_NOT_EMPTY(tag);
     PTREE_ADD_NOT_EMPTY(branch);
     PTREE_ADD_NOT_EMPTY(commit);
 }
 
-/*void Git::load(const nlohmann::json &j)
+void Git::save1(nlohmann::json &j) const
 {
-    SourceUrl::load(j);
-    JSON_GET_STRING(tag);
-    JSON_GET_STRING(branch);
-    JSON_GET_STRING(commit);
-}*/
-
-void Git::save(nlohmann::json &j) const
-{
-    SourceUrl::save(j);
+    SourceUrl::save1(j);
     JSON_ADD_NOT_EMPTY(tag);
     JSON_ADD_NOT_EMPTY(branch);
     JSON_ADD_NOT_EMPTY(commit);
 }
 
-void Git::save(yaml &root) const
+void Git::save1(yaml &root) const
 {
-    SourceUrl::save(root);
+    SourceUrl::save1(root);
     YAML_SET_NOT_EMPTY(tag);
     YAML_SET_NOT_EMPTY(branch);
     YAML_SET_NOT_EMPTY(commit);
 }
 
-String Git::print() const
+String Git::print1() const
 {
-    auto r = SourceUrl::print();
-    if (r.empty())
-        return r;
+    auto r = SourceUrl::print1();
     STRING_PRINT_NOT_EMPTY(tag);
     else STRING_PRINT_NOT_EMPTY(branch);
     else STRING_PRINT_NOT_EMPTY(commit);
     return r;
 }
 
-SourceKvMap Git::printKv() const
+void Git::printKv(SourceKvMap &m) const
 {
-    SourceKvMap m{ {"Source", getString()} };
-
-    KV_ADD_IF_NOT_EMPTY("Url", url);
     KV_ADD_IF_NOT_EMPTY("Tag", tag);
     KV_ADD_IF_NOT_EMPTY("Branch", branch);
     KV_ADD_IF_NOT_EMPTY("Commit", commit);
-
-    return m;
 }
 
 void Git::applyVersion(const Version &v)
@@ -421,19 +534,34 @@ void Git::applyVersion(const Version &v)
     v.format(branch);
 }
 
-/*Hg::Hg(const yaml &root, const String &name)
-    : Git(root, name)
-{
-    YAML_EXTRACT_AUTO(revision);
-}*/
-
 Hg::Hg(const String &url, const String &tag, const String &branch, const String &commit, int64_t revision)
     : Git(url, tag, branch, commit), revision(revision)
 {
     checkOne(getString(), tag, branch, commit, revision);
 }
 
-void Hg::download(const path &dir) const
+Hg::Hg(const nlohmann::json &j)
+    : Git(j)
+{
+    JSON_GET_INT(revision);
+    checkOne(getString(), tag, branch, commit, revision);
+}
+
+Hg::Hg(const ptree &p)
+    : Git(p)
+{
+    PTREE_GET_INT(revision);
+    checkOne(getString(), tag, branch, commit, revision);
+}
+
+Hg::Hg(const yaml &root)
+    : Git(root)
+{
+    YAML_EXTRACT_AUTO(revision);
+    checkOne(getString(), tag, branch, commit, revision);
+}
+
+void Hg::download1(const path &dir) const
 {
     downloadRepository([this, dir]()
     {
@@ -450,68 +578,36 @@ void Hg::download(const path &dir) const
     });
 }
 
-/*bool Hg::load(const ptree &p)
+void Hg::save1(ptree &p) const
 {
-    if (!Git::load(p))
-        return false;
-    PTREE_GET_INT(revision);
-    return true;
-}*/
-
-void Hg::save(ptree &p) const
-{
-    Git::save(p);
+    Git::save1(p);
     PTREE_ADD_NOT_MINUS_ONE(revision);
 }
 
-/*bool Hg::load(const nlohmann::json &j)
+void Hg::save1(nlohmann::json &j) const
 {
-    if (!Git::load(j))
-        return false;
-    JSON_GET_INT(revision);
-    return !empty();
-}*/
-
-void Hg::save(nlohmann::json &j) const
-{
-    Git::save(j);
+    Git::save1(j);
     JSON_ADD_NOT_MINUS_ONE(revision);
 }
 
-void Hg::save(yaml &root) const
+void Hg::save1(yaml &root) const
 {
-    Git::save(root);
+    Git::save1(root);
     YAML_SET_NOT_MINUS_ONE(revision);
 }
 
-String Hg::print() const
+String Hg::print1() const
 {
-    auto r = Git::print();
-    if (r.empty())
-        return r;
+    auto r = Git::print1();
     STRING_PRINT_NOT_MINUS_ONE(revision);
     return r;
 }
 
-SourceKvMap Hg::printKv() const
+void Hg::printKv(SourceKvMap &m) const
 {
-    SourceKvMap m{ {"Source", getString()} };
-
-    KV_ADD_IF_NOT_EMPTY("Url", url);
-    KV_ADD_IF_NOT_EMPTY("Tag", tag);
-    KV_ADD_IF_NOT_EMPTY("Branch", branch);
-    KV_ADD_IF_NOT_EMPTY("Commit", commit);
+    Git::printKv(m);
     KV_ADD_IF_NOT_EMPTY_NUMBER("Revision", revision);
-
-    return m;
 }
-
-/*Bzr::Bzr(const yaml &root, const String &name)
-    : SourceUrl(root, name)
-{
-    YAML_EXTRACT_AUTO(tag);
-    YAML_EXTRACT_AUTO(revision);
-}*/
 
 Bzr::Bzr(const String &url, const String &tag, int64_t revision)
     : SourceUrl(url), tag(tag), revision(revision)
@@ -519,7 +615,28 @@ Bzr::Bzr(const String &url, const String &tag, int64_t revision)
     checkOne(getString(), tag, revision);
 }
 
-void Bzr::download(const path &dir) const
+Bzr::Bzr(const nlohmann::json &j)
+    : SourceUrl(j)
+{
+    JSON_GET_STRING(tag);
+    JSON_GET_INT(revision);
+}
+
+Bzr::Bzr(const ptree &p)
+    : SourceUrl(p)
+{
+    PTREE_GET_STRING(tag);
+    PTREE_GET_INT(revision);
+}
+
+Bzr::Bzr(const yaml &root)
+    : SourceUrl(root)
+{
+    YAML_EXTRACT_AUTO(tag);
+    YAML_EXTRACT_AUTO(revision);
+}
+
+void Bzr::download1(const path &dir) const
 {
     downloadRepository([this, dir]()
     {
@@ -532,72 +649,48 @@ void Bzr::download(const path &dir) const
     });
 }
 
-/*bool Bzr::load(const ptree &p)
+void Bzr::applyVersion(const Version &v)
 {
-    if (!SourceUrl::load(p))
-        return false;
-    PTREE_GET_STRING(tag);
-    PTREE_GET_INT(revision);
-    return true;
-}*/
+    SourceUrl::applyVersion(v);
+    v.format(tag);
+}
 
-void Bzr::save(ptree &p) const
+void Bzr::save1(ptree &p) const
 {
-    SourceUrl::save(p);
+    SourceUrl::save1(p);
     PTREE_ADD_NOT_EMPTY(tag);
     PTREE_ADD_NOT_MINUS_ONE(revision);
 }
 
-/*bool Bzr::load(const nlohmann::json &j)
+void Bzr::save1(nlohmann::json &j) const
 {
-    if (!SourceUrl::load(j))
-        return false;
-    JSON_GET_STRING(tag);
-    JSON_GET_INT(revision);
-    return !empty();
-}*/
-
-void Bzr::save(nlohmann::json &j) const
-{
-    SourceUrl::save(j);
+    SourceUrl::save1(j);
     JSON_ADD_NOT_EMPTY(tag);
     JSON_ADD_NOT_MINUS_ONE(revision);
 }
 
-void Bzr::save(yaml &root) const
+void Bzr::save1(yaml &root) const
 {
-    SourceUrl::save(root);
+    SourceUrl::save1(root);
     YAML_SET_NOT_EMPTY(tag);
     YAML_SET_NOT_MINUS_ONE(revision);
 }
 
-String Bzr::print() const
+String Bzr::print1() const
 {
-    auto r = SourceUrl::print();
-    if (r.empty())
-        return r;
+    auto r = SourceUrl::print1();
     STRING_PRINT_NOT_EMPTY(tag);
     else STRING_PRINT_NOT_MINUS_ONE(revision);
     return r;
 }
 
-SourceKvMap Bzr::printKv() const
+void Bzr::printKv(SourceKvMap &m) const
 {
-    SourceKvMap m{ {"Source", getString()} };
-
-    KV_ADD_IF_NOT_EMPTY("Url", url);
     KV_ADD_IF_NOT_EMPTY("Tag", tag);
     KV_ADD_IF_NOT_EMPTY_NUMBER("Revision", revision);
-
-    return m;
 }
 
-/*Fossil::Fossil(const yaml &root, const String &name)
-    : Git(root, name)
-{
-}*/
-
-void Fossil::download(const path &dir) const
+void Fossil::download1(const path &dir) const
 {
     downloadRepository([this, dir]()
     {
@@ -613,38 +706,39 @@ void Fossil::download(const path &dir) const
     });
 }
 
-/*void Fossil::save(yaml &root, const String &name) const
-{
-    Git::save(root, name);
-}*/
-
-/*SourceKvMap Fossil::printKv() const
-{
-    SourceKvMap m{ {"Source", getString()} };
-
-    KV_ADD_IF_NOT_EMPTY("Url", url);
-    KV_ADD_IF_NOT_EMPTY("Tag", tag);
-    KV_ADD_IF_NOT_EMPTY("Branch", branch);
-    KV_ADD_IF_NOT_EMPTY("Commit", commit);
-
-    return m;
-}*/
-
-/*Cvs::Cvs(const yaml &root, const String &name)
-    : SourceUrl(root, name)
-{
-    YAML_EXTRACT_AUTO(tag);
-    YAML_EXTRACT_AUTO(branch);
-    YAML_EXTRACT_AUTO(revision);
-    YAML_EXTRACT_AUTO(module);
-}*/
-
 Cvs::Cvs(const String &url, const String &module, const String &tag, const String &branch, const String &revision)
     : SourceUrl(url), module(module), tag(tag), branch(branch), revision(revision)
 {
     if (module.empty())
         throw SW_RUNTIME_ERROR("cvs: empty module");
     checkOne(getString(), tag, branch, revision);
+}
+
+Cvs::Cvs(const nlohmann::json &j)
+    : SourceUrl(j)
+{
+    JSON_GET_STRING(tag);
+    JSON_GET_STRING(branch);
+    JSON_GET_STRING(revision);
+    JSON_GET_STRING(module);
+}
+
+Cvs::Cvs(const ptree &p)
+    : SourceUrl(p)
+{
+    PTREE_GET_STRING(tag);
+    PTREE_GET_STRING(branch);
+    PTREE_GET_STRING(revision);
+    PTREE_GET_STRING(module);
+}
+
+Cvs::Cvs(const yaml &root)
+    : SourceUrl(root)
+{
+    YAML_EXTRACT_AUTO(tag);
+    YAML_EXTRACT_AUTO(branch);
+    YAML_EXTRACT_AUTO(revision);
+    YAML_EXTRACT_AUTO(module);
 }
 
 void Cvs::checkUrl() const
@@ -654,7 +748,7 @@ void Cvs::checkUrl() const
         throw SW_RUNTIME_ERROR("Invalid cvs url: " + url);
 }
 
-void Cvs::download(const path &dir) const
+void Cvs::download1(const path &dir) const
 {
     downloadRepository([this, dir]()
     {
@@ -669,60 +763,45 @@ void Cvs::download(const path &dir) const
     });
 }
 
-/*bool Cvs::load(const ptree &p)
+void Cvs::applyVersion(const Version &v)
 {
-    if (!SourceUrl::load(p))
-        return false;
-    PTREE_GET_STRING(tag);
-    PTREE_GET_STRING(branch);
-    PTREE_GET_STRING(revision);
-    PTREE_GET_STRING(module);
-    return true;
-}*/
+    SourceUrl::applyVersion(v);
+    //v.format(module); // ?
+    v.format(tag);
+    v.format(branch);
+    v.format(revision); // ?
+}
 
-void Cvs::save(ptree &p) const
+void Cvs::save1(ptree &p) const
 {
-    SourceUrl::save(p);
+    SourceUrl::save1(p);
     PTREE_ADD_NOT_EMPTY(tag);
     PTREE_ADD_NOT_EMPTY(branch);
     PTREE_ADD_NOT_EMPTY(revision);
     PTREE_ADD_NOT_EMPTY(module);
 }
 
-/*bool Cvs::load(const nlohmann::json &j)
+void Cvs::save1(nlohmann::json &j) const
 {
-    if (!SourceUrl::load(j))
-        return false;
-    JSON_GET_STRING(tag);
-    JSON_GET_STRING(branch);
-    JSON_GET_STRING(revision);
-    JSON_GET_STRING(module);
-    return !empty();
-}*/
-
-void Cvs::save(nlohmann::json &j) const
-{
-    SourceUrl::save(j);
+    SourceUrl::save1(j);
     JSON_ADD_NOT_EMPTY(tag);
     JSON_ADD_NOT_EMPTY(branch);
     JSON_ADD_NOT_EMPTY(revision);
     JSON_ADD_NOT_EMPTY(module);
 }
 
-void Cvs::save(yaml &root) const
+void Cvs::save1(yaml &root) const
 {
-    SourceUrl::save(root);
+    SourceUrl::save1(root);
     YAML_SET_NOT_EMPTY(tag);
     YAML_SET_NOT_EMPTY(branch);
     YAML_SET_NOT_EMPTY(revision);
     YAML_SET_NOT_EMPTY(module);
 }
 
-String Cvs::print() const
+String Cvs::print1() const
 {
-    auto r = SourceUrl::print();
-    if (r.empty())
-        return r;
+    auto r = SourceUrl::print1();
     STRING_PRINT_NOT_EMPTY(tag);
     else STRING_PRINT_NOT_EMPTY(branch);
     else STRING_PRINT_NOT_EMPTY(revision);
@@ -730,31 +809,13 @@ String Cvs::print() const
     return r;
 }
 
-SourceKvMap Cvs::printKv() const
+void Cvs::printKv(SourceKvMap &m) const
 {
-    SourceKvMap m{ {"Source", getString()} };
-
-    KV_ADD_IF_NOT_EMPTY("Url", url);
     KV_ADD_IF_NOT_EMPTY("Tag", tag);
     KV_ADD_IF_NOT_EMPTY("Branch", branch);
     KV_ADD_IF_NOT_EMPTY("Revision", revision);
     KV_ADD_IF_NOT_EMPTY("Module", module);
-
-    return m;
 }
-
-/*String Cvs::printCpp() const
-{
-    return String();
-}*/
-
-/*Svn::Svn(const yaml &root, const String &name)
-    : SourceUrl(root, name)
-{
-    YAML_EXTRACT_AUTO(tag);
-    YAML_EXTRACT_AUTO(branch);
-    YAML_EXTRACT_AUTO(revision);
-}*/
 
 Svn::Svn(const String &url, const String &tag, const String &branch, int64_t revision)
     : SourceUrl(url), tag(tag), branch(branch), revision(revision)
@@ -762,7 +823,31 @@ Svn::Svn(const String &url, const String &tag, const String &branch, int64_t rev
     checkOne(getString(), tag, branch, revision);
 }
 
-void Svn::download(const path &dir) const
+Svn::Svn(const nlohmann::json &j)
+    : SourceUrl(j)
+{
+    JSON_GET_STRING(tag);
+    JSON_GET_STRING(branch);
+    JSON_GET_INT(revision);
+}
+
+Svn::Svn(const ptree &p)
+    : SourceUrl(p)
+{
+    PTREE_GET_STRING(tag);
+    PTREE_GET_STRING(branch);
+    PTREE_GET_INT(revision);
+}
+
+Svn::Svn(const yaml &root)
+    : SourceUrl(root)
+{
+    YAML_EXTRACT_AUTO(tag);
+    YAML_EXTRACT_AUTO(branch);
+    YAML_EXTRACT_AUTO(revision);
+}
+
+void Svn::download1(const path &dir) const
 {
     downloadRepository([this, dir]()
     {
@@ -777,118 +862,57 @@ void Svn::download(const path &dir) const
     });
 }
 
-/*bool Svn::isValid(String *error) const
+void Svn::applyVersion(const Version &v)
 {
-    return checkValid(getString(), error, tag, branch, revision);
+    SourceUrl::applyVersion(v);
+    v.format(tag);
+    v.format(branch);
 }
 
-bool Svn::load(const ptree &p)
+void Svn::save1(ptree &p) const
 {
-    if (!SourceUrl::load(p))
-        return false;
-    PTREE_GET_STRING(tag);
-    PTREE_GET_STRING(branch);
-    PTREE_GET_INT(revision);
-    return true;
-}*/
-
-void Svn::save(ptree &p) const
-{
-    SourceUrl::save(p);
+    SourceUrl::save1(p);
     PTREE_ADD_NOT_EMPTY(tag);
     PTREE_ADD_NOT_EMPTY(branch);
     PTREE_ADD_NOT_MINUS_ONE(revision);
 }
 
-/*bool Svn::load(const nlohmann::json &j)
+void Svn::save1(nlohmann::json &j) const
 {
-    if (!SourceUrl::load(j))
-        return false;
-    JSON_GET_STRING(tag);
-    JSON_GET_STRING(branch);
-    JSON_GET_INT(revision);
-    return !empty();
-}*/
-
-void Svn::save(nlohmann::json &j) const
-{
-    SourceUrl::save(j);
+    SourceUrl::save1(j);
     JSON_ADD_NOT_EMPTY(tag);
     JSON_ADD_NOT_EMPTY(branch);
     JSON_ADD_NOT_MINUS_ONE(revision);
 }
 
-void Svn::save(yaml &root) const
+void Svn::save1(yaml &root) const
 {
-    SourceUrl::save(root);
+    SourceUrl::save1(root);
     YAML_SET_NOT_EMPTY(tag);
     YAML_SET_NOT_EMPTY(branch);
     YAML_SET_NOT_MINUS_ONE(revision);
 }
 
-String Svn::print() const
+String Svn::print1() const
 {
-    auto r = SourceUrl::print();
-    if (r.empty())
-        return r;
+    auto r = SourceUrl::print1();
     STRING_PRINT_NOT_EMPTY(tag);
     else STRING_PRINT_NOT_EMPTY(branch);
     else STRING_PRINT_NOT_MINUS_ONE(revision);
     return r;
 }
 
-SourceKvMap Svn::printKv() const
+void Svn::printKv(SourceKvMap &m) const
 {
-    SourceKvMap m{ {"Source", getString()} };
-
-    KV_ADD_IF_NOT_EMPTY("Url", url);
     KV_ADD_IF_NOT_EMPTY("Tag", tag);
     KV_ADD_IF_NOT_EMPTY("Branch", branch);
     KV_ADD_IF_NOT_EMPTY_NUMBER("Revision", revision);
-
-    return m;
 }
 
-/*String Svn::printCpp() const
-{
-    return String();
-}*/
-
-/*RemoteFile::RemoteFile(const String &url)
-    : SourceUrl(url)
-{
-}
-
-RemoteFile::RemoteFile(const yaml &root, const String &name)
-    : SourceUrl(root, name)
-{
-    if (url.empty())
-        throw SW_RUNTIME_ERROR("Remote url is missing");
-}*/
-
-void RemoteFile::download(const path &dir) const
+void RemoteFile::download1(const path &dir) const
 {
     download_and_unpack(url, dir / path(url).filename(), dir);
 }
-
-/*void RemoteFile::save(yaml &root, const String &name) const
-{
-    SourceUrl::save(root, name);
-}*/
-
-/*void RemoteFile::applyVersion(const Version &v)
-{
-    v.format(url);
-}*/
-
-/*SourceKvMap RemoteFile::printKv() const
-{
-    SourceKvMap m{ {"Source", getString()} };
-
-    KV_ADD_IF_NOT_EMPTY("Url", url);
-
-    return m;
-}*/
 
 RemoteFiles::RemoteFiles(const StringSet &urls)
     : urls(urls)
@@ -897,33 +921,30 @@ RemoteFiles::RemoteFiles(const StringSet &urls)
         checkSourceUrl(url);
 }
 
-/*RemoteFiles::RemoteFiles(const yaml &root, const String &name)
+RemoteFiles::RemoteFiles(const nlohmann::json &j)
 {
-    urls = get_sequence_set<String>(root, name);
-    if (urls.empty())
-        throw SW_RUNTIME_ERROR("Empty remote files");
-}*/
+    Strings s = j["url"];
+    urls.insert(s.begin(), s.end());
+}
 
-void RemoteFiles::download(const path &dir) const
+RemoteFiles::RemoteFiles(const ptree &p)
+{
+    for (auto &url : p)
+        urls.insert(url.second.get("url", ""s));
+}
+
+RemoteFiles::RemoteFiles(const yaml &root)
+{
+    urls = get_sequence_set<String>(root);
+}
+
+void RemoteFiles::download1(const path &dir) const
 {
     for (auto &rf : urls)
         download_file_checked(rf, dir / path(rf).filename());
 }
 
-/*bool RemoteFiles::isValidUrl() const
-{
-    return std::all_of(urls.begin(), urls.end(),
-        [](auto &u) { return ::isValidSourceUrl(u); });
-}*/
-
-/*bool RemoteFiles::load(const ptree &p)
-{
-    for (auto &url : p)
-        urls.insert(url.second.get("url", ""s));
-    return !empty();
-}*/
-
-void RemoteFiles::save(ptree &p) const
+void RemoteFiles::save1(ptree &p) const
 {
     for (auto &rf : urls)
     {
@@ -933,26 +954,19 @@ void RemoteFiles::save(ptree &p) const
     }
 }
 
-/*bool RemoteFiles::load(const nlohmann::json &j)
-{
-    Strings s = j["url"];
-    urls.insert(s.begin(), s.end());
-    return !empty();
-}*/
-
-void RemoteFiles::save(nlohmann::json &j) const
+void RemoteFiles::save1(nlohmann::json &j) const
 {
     for (auto &rf : urls)
         j["url"].push_back(rf);
 }
 
-void RemoteFiles::save(yaml &root) const
+void RemoteFiles::save1(yaml &root) const
 {
     for (auto &rf : urls)
         root[getString()].push_back(rf);
 }
 
-String RemoteFiles::print() const
+String RemoteFiles::print1() const
 {
     String r;
     for (auto &rf : urls)
@@ -960,32 +974,16 @@ String RemoteFiles::print() const
     return r;
 }
 
-SourceKvMap RemoteFiles::printKv() const
+void RemoteFiles::printKv(SourceKvMap &m) const
 {
-    SourceKvMap m{ {"Source", getString()} };
-
     for (auto &url : urls)
         KV_ADD_IF_NOT_EMPTY("Url", url);
-
-    return m;
 }
 
 void RemoteFiles::applyVersion(const Version &v)
 {
-    decltype(urls) urls2;
-    for (auto &rf : urls)
-    {
-        auto u = rf;
+    for (auto &u : urls)
         v.format(u);
-        urls2.insert(u);
-    }
-    urls = urls2;
-}
-
-/*void download(const Source &source, const path &dir)
-{
-    fs::create_directories(dir);
-    visit([dir](auto &v) { v.download(dir); }, source);
 }
 
 void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
@@ -994,15 +992,15 @@ void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
     Futures<void> fs;
     for (auto &src : sources)
     {
-        fs.push_back(e.push([src = src.first, &d = src.second, &opts]
+        fs.push_back(e.push([src = src.first.get(), &d = src.second, &opts]
         {
             path t = d;
             t += ".stamp";
 
             auto dl = [&src, d, &t]()
             {
-                LOG_INFO(logger, "Downloading source:\n" << print_source(src));
-                download(src, d);
+                LOG_INFO(logger, "Downloading source:\n" << src->print());
+                src->download(d);
                 write_file(t, timepoint2string(getUtc()));
             };
 
@@ -1012,7 +1010,7 @@ void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
             }
             else if (!opts.ignore_existing_dirs)
             {
-                throw SW_RUNTIME_ERROR("Directory exists " + normalize_path(d) + " for source " + print_source(src));
+                throw SW_RUNTIME_ERROR("Directory exists " + normalize_path(d) + " for source " + src->print());
             }
             else
             {
@@ -1036,115 +1034,9 @@ SourceDirMap download(SourceDirSet &sset, const SourceDownloadOptions &opts)
 {
     SourceDirMap sources;
     for (auto &s : sset)
-        sources[s] = opts.root_dir.empty() ? get_temp_filename("dl") : (opts.root_dir / get_source_hash(s));
+        sources[s->clone()] = opts.root_dir.empty() ? get_temp_filename("dl") : (opts.root_dir / s->getHash());
     download(sources, opts);
     return sources;
 }
-
-bool isValidSourceUrl(const Source &source)
-{
-    return visit([](auto &v) { return v.isValidUrl(); }, source);
-}
-
-String get_source_hash(const Source &source)
-{
-    return shorten_hash(blake2b_512(print_source(source)), 12);
-}
-
-bool load_source(const yaml &root, Source &source)
-{
-    static const auto sources =
-    {
-#define GET_STRING(x) x::getString()
-        SOURCE_TYPES(GET_STRING, DELIM_COMMA)
-    };
-
-    auto &src = root["source"];
-    if (!src.IsDefined())
-        return false;
-
-    String s;
-    for (auto &i : sources)
-    {
-        YAML_EXTRACT_VAR(src, s, i, String);
-        if (!s.empty())
-        {
-            s = i;
-            break;
-        }
-    }
-
-    if (0);
-#define IF_SOURCE(x) else if (s == x::getString()) source = x(src)
-    SOURCE_TYPES(IF_SOURCE, DELIM_SEMICOLON);
-else
-throw SW_RUNTIME_ERROR("Empty source");
-    return true;
-}
-
-void save_source(yaml &root, const Source &source)
-{
-    // do not remove 'r' var, it creates 'source' key
-    visit([&root](auto &v) { auto r = root["source"]; v.save(r); }, source);
-}
-
-Source load_source(const ptree &p)
-{
-    auto c = p.get_child("source");
-#define TRY_TO_LOAD_SOURCE(x)                               \
-    if (c.find(x::getString()) != c.not_found())            \
-    {                                                       \
-        x x##_;                                             \
-        x##_.load(c.get_child(x::getString()));             \
-        return x##_;                                        \
-    }
-    SOURCE_TYPES(TRY_TO_LOAD_SOURCE, DELIM_SEMICOLON);
-#undef TRY_TO_LOAD_SOURCE
-    throw SW_RUNTIME_ERROR("Bad source");
-}
-
-void save_source(ptree &p, const Source &source)
-{
-    return visit([&p](auto &v)
-    {
-        ptree p2;
-        v.save(p2);
-        p.add_child("source." + v.getString(), p2);
-    }, source);
-}
-
-Source load_source(const nlohmann::json &j)
-{
-#define TRY_TO_LOAD_SOURCE(x)              \
-    if (j.find(x::getString()) != j.end()) \
-    {                                      \
-        x x##_;                            \
-        x##_.load(j[x::getString()]);      \
-        return x##_;                       \
-    }
-    SOURCE_TYPES(TRY_TO_LOAD_SOURCE, DELIM_SEMICOLON);
-#undef TRY_TO_LOAD_SOURCE
-    throw SW_RUNTIME_ERROR("Bad source");
-}
-
-void save_source(nlohmann::json &j, const Source &source)
-{
-    return visit([&j](auto &v) { v.save(j[v.getString()]); }, source);
-}
-
-String print_source(const Source &source)
-{
-    return visit([](auto &v) { return v.getString() + ":\n" + v.print(); }, source);
-}
-
-SourceKvMap print_source_kv(const Source &source)
-{
-    return visit([](auto &v) { return v.printKv(); }, source);
-}
-
-void applyVersionToUrl(Source &source, const Version &v)
-{
-    visit([&v](auto &s) { s.applyVersion(v); }, source);
-}*/
 
 }

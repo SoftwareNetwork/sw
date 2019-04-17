@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2018 Egor Pugin <egor.pugin@gmail.com>
+// Copyright (C) 2016-2019 Egor Pugin <egor.pugin@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -23,93 +23,91 @@ using SourceKvMap = std::vector<std::pair<String, String>>;
 inline namespace source
 {
 
-// prepare for oop
 enum class SourceType
 {
-    Undefined, // remove?
+#define SOURCE(e, s) e,
+#include "source.inl"
+#undef SOURCE
 
-    Empty, // sometimes we have everything in the config file
-    Git,
-    Mercurial, // Hg also?
-    Bazaar,
-    Fossil,
-    Cvs,
-    Svn,
-    RemoteFile,
-    RemoteFiles,
-
-    //darcs,
-    //perforce aka p4
-
-    // do not add local files
+    // aliases
+    Hg = Mercurial,
+    Bzr = Bazaar,
+    Empty = EmptySource,
 };
 
 struct SW_MANAGER_API Source
 {
     virtual ~Source() = default;
 
-    /// download subject to destination directory
-    virtual void download(const path &dir) const = 0;
+    String getHash() const;
+    String print() const;
+    SourceKvMap printKv() const;
 
-    /// save to global object with 'source' subobject
-    virtual void save(ptree &p) const = 0;
+    /// download files to destination directory
+    void download(const path &dir) const;
 
-    /// save to current (passed) object
-    virtual void save(nlohmann::json &j) const = 0;
+    ///
+    std::unique_ptr<Source> clone() const;
 
-    /// save to global object with 'source' subobject
-    virtual void save(yaml &root) const = 0;
+    // save
 
-    virtual String print() const = 0;
-    virtual SourceKvMap printKv() const = 0;
-    virtual String getHash() const = 0;
-    virtual bool isValidSourceUrl() const = 0;
+    /// save to current object with 'getString()' subobject
+    void save(nlohmann::json &j) const;
+
+    /// save to current object with 'getString()' subobject
+    void save(ptree &p) const;
+
+    /// save to current object with 'getString()' subobject
+    void save(yaml &root) const;
+
+    // virtual
 
     ///
     virtual void applyVersion(const Version &v) = 0;
 
-    /// load from global object with 'source' subobject
-    static std::unique_ptr<Source> load(const ptree &p);
+    // static
 
-    /// load from current (passed) object
+    /// load from current (passed) object, detects 'getString()' subobject
     static std::unique_ptr<Source> load(const nlohmann::json &j);
 
-    /// load from global object with 'source' subobject
+    /// load from current (passed) object, detects 'getString()' subobject
+    static std::unique_ptr<Source> load(const ptree &p);
+
+    /// load from current (passed) object, detects 'getString()' subobject
     static std::unique_ptr<Source> load(const yaml &root);
 
 protected:
     virtual SourceType getType() const = 0;
     String getString() const;
-};
-
-struct SW_MANAGER_API UndefinedSource : Source
-{
-    void save(ptree &p) const override {}
-    void save(nlohmann::json &p) const override {}
-    void save(yaml &root) const override {}
-
-    String print() const override { return ""; }
-    SourceKvMap printKv() const override;
-    void applyVersion(const Version &v) override {}
-    void download(const path &dir) const override {}
 
 private:
-    SourceType getType() const override { return SourceType::Undefined; }
+    virtual String print1() const = 0;
+    virtual void download1(const path &dir) const = 0;
+    virtual void save1(nlohmann::json &j) const = 0;
+    virtual void save1(yaml &root) const = 0;
+    virtual void save1(ptree &p) const = 0;
+    virtual void printKv(SourceKvMap &) const {}
 };
 
-struct SW_MANAGER_API EmptySource : Source
-{
-    void save(ptree &p) const override {}
-    void save(nlohmann::json &p) const override {}
-    void save(yaml &root) const override {}
+using SourcePtr = std::unique_ptr<Source>;
 
-    String print() const override { return ""; }
-    SourceKvMap printKv() const override;
+struct EmptySource : Source
+{
+    EmptySource() {}
+
+    EmptySource(const nlohmann::json &j) {}
+    EmptySource(const ptree &p) {}
+    EmptySource(const yaml &root) {}
+
     void applyVersion(const Version &v) override {}
-    void download(const path &dir) const override {}
 
 private:
     SourceType getType() const override { return SourceType::Empty; }
+    String print1() const override { return ""; }
+    void download1(const path &dir) const override {}
+    void save1(nlohmann::json &p) const override {}
+    void save1(yaml &root) const override {}
+    void save1(ptree &p) const override {}
 };
 
 struct SW_MANAGER_API SourceUrl : Source
@@ -118,12 +116,18 @@ struct SW_MANAGER_API SourceUrl : Source
 
     SourceUrl(const String &url);
 
-    void save(ptree &p) const override;
-    void save(nlohmann::json &p) const override;
-    void save(yaml &root) const override;
+    SourceUrl(const nlohmann::json &j);
+    SourceUrl(const ptree &p);
+    SourceUrl(const yaml &root);
 
-    String print() const override;
     void applyVersion(const Version &v) override;
+
+protected:
+    String print1() const override;
+    void save1(nlohmann::json &p) const override;
+    void save1(yaml &root) const override;
+    void save1(ptree &p) const override;
+    void printKv(SourceKvMap &) const override;
 
 private:
     virtual void checkUrl() const;
@@ -137,17 +141,22 @@ struct SW_MANAGER_API Git : SourceUrl
 
     Git(const String &url, const String &tag = "", const String &branch = "", const String &commit = "");
 
-    void save(ptree &p) const override;
-    void save(nlohmann::json &p) const override;
-    void save(yaml &root) const override;
+    Git(const nlohmann::json &j);
+    Git(const ptree &p);
+    Git(const yaml &root);
 
-    String print() const override;
-    SourceKvMap printKv() const override;
     void applyVersion(const Version &v) override;
-    void download(const path &dir) const override;
+
+protected:
+    String print1() const override;
+    void save1(nlohmann::json &p) const override;
+    void save1(yaml &root) const override;
+    void save1(ptree &p) const override;
+    void printKv(SourceKvMap &) const override;
 
 private:
     SourceType getType() const override { return SourceType::Git; }
+    void download1(const path &dir) const override;
 };
 
 struct SW_MANAGER_API Hg : Git
@@ -156,18 +165,21 @@ struct SW_MANAGER_API Hg : Git
 
     Hg(const String &url, const String &tag = "", const String &branch = "", const String &commit = "", int64_t revision = -1);
 
-    void save(ptree &p) const override;
-    void save(nlohmann::json &p) const override;
-    void save(yaml &root) const override;
-
-    String print() const override;
-    SourceKvMap printKv() const override;
-    void applyVersion(const Version &v) override;
-    void download(const path &dir) const override;
+    Hg(const nlohmann::json &j);
+    Hg(const ptree &p);
+    Hg(const yaml &root);
 
 private:
     SourceType getType() const override { return SourceType::Mercurial; }
+    String print1() const override;
+    void download1(const path &dir) const override;
+    void save1(nlohmann::json &p) const override;
+    void save1(yaml &root) const override;
+    void save1(ptree &p) const override;
+    void printKv(SourceKvMap &) const override;
 };
+
+using Mercurial = Hg;
 
 struct SW_MANAGER_API Bzr : SourceUrl
 {
@@ -176,27 +188,31 @@ struct SW_MANAGER_API Bzr : SourceUrl
 
     Bzr(const String &url, const String &tag = "", int64_t revision = -1);
 
-    void save(ptree &p) const override;
-    void save(nlohmann::json &p) const override;
-    void save(yaml &root) const override;
+    Bzr(const nlohmann::json &j);
+    Bzr(const ptree &p);
+    Bzr(const yaml &root);
 
-    String print() const override;
-    SourceKvMap printKv() const override;
     void applyVersion(const Version &v) override;
-    void download(const path &dir) const override;
 
 private:
     SourceType getType() const override { return SourceType::Bazaar; }
+    String print1() const override;
+    void download1(const path &dir) const override;
+    void save1(nlohmann::json &p) const override;
+    void save1(yaml &root) const override;
+    void save1(ptree &p) const override;
+    void printKv(SourceKvMap &) const override;
 };
+
+using Bazaar = Bzr;
 
 struct SW_MANAGER_API Fossil : Git
 {
     using Git::Git;
 
-    void download(const path &dir) const override;
-
 private:
     SourceType getType() const override { return SourceType::Fossil; }
+    void download1(const path &dir) const override;
 };
 
 struct SW_MANAGER_API Cvs : SourceUrl
@@ -208,18 +224,21 @@ struct SW_MANAGER_API Cvs : SourceUrl
 
     Cvs(const String &url, const String &module, const String &tag = "", const String &branch = "", const String &revision = "");
 
-    void save(ptree &p) const override;
-    void save(nlohmann::json &p) const override;
-    void save(yaml &root) const override;
+    Cvs(const nlohmann::json &j);
+    Cvs(const ptree &p);
+    Cvs(const yaml &root);
 
-    String print() const override;
-    SourceKvMap printKv() const override;
     void applyVersion(const Version &v) override;
-    void download(const path &dir) const override;
 
 private:
     SourceType getType() const override { return SourceType::Cvs; }
     void checkUrl() const override;
+    String print1() const override;
+    void download1(const path &dir) const override;
+    void save1(nlohmann::json &p) const override;
+    void save1(yaml &root) const override;
+    void save1(ptree &p) const override;
+    void printKv(SourceKvMap &) const override;
 };
 
 struct Svn : SourceUrl
@@ -230,27 +249,29 @@ struct Svn : SourceUrl
 
     Svn(const String &url, const String &tag = "", const String &branch = "", int64_t revision = -1);
 
-    void save(ptree &p) const override;
-    void save(nlohmann::json &p) const override;
-    void save(yaml &root) const override;
+    Svn(const nlohmann::json &j);
+    Svn(const ptree &p);
+    Svn(const yaml &root);
 
-    String print() const override;
-    SourceKvMap printKv() const override;
     void applyVersion(const Version &v) override;
-    void download(const path &dir) const override;
 
 private:
     SourceType getType() const override { return SourceType::Svn; }
+    String print1() const override;
+    void download1(const path &dir) const override;
+    void save1(nlohmann::json &p) const override;
+    void save1(yaml &root) const override;
+    void save1(ptree &p) const override;
+    void printKv(SourceKvMap &) const override;
 };
 
 struct SW_MANAGER_API RemoteFile : SourceUrl
 {
     using SourceUrl::SourceUrl;
 
-    void download(const path &dir) const override;
-
 private:
     SourceType getType() const override { return SourceType::RemoteFile; }
+    void download1(const path &dir) const override;
 };
 
 struct SW_MANAGER_API RemoteFiles : Source
@@ -259,23 +280,26 @@ struct SW_MANAGER_API RemoteFiles : Source
 
     RemoteFiles(const StringSet &urls);
 
-    void save(ptree &p) const override;
-    void save(nlohmann::json &p) const override;
-    void save(yaml &root) const override;
+    RemoteFiles(const nlohmann::json &j);
+    RemoteFiles(const ptree &p);
+    RemoteFiles(const yaml &root);
 
-    String print() const override;
-    SourceKvMap printKv() const override;
     void applyVersion(const Version &v) override;
-    void download(const path &dir) const override;
 
 private:
     SourceType getType() const override { return SourceType::RemoteFiles; }
+    String print1() const override;
+    void download1(const path &dir) const override;
+    void save1(nlohmann::json &p) const override;
+    void save1(yaml &root) const override;
+    void save1(ptree &p) const override;
+    void printKv(SourceKvMap &) const override;
 };
 
 } // inline namespace source
 
-//using SourceDirMap = std::unordered_map<Source, path>;
-//using SourceDirSet = std::unordered_set<Source>;
+using SourceDirMap = std::unordered_map<SourcePtr, path>;
+using SourceDirSet = std::unordered_set<SourcePtr>;
 
 struct SourceDownloadOptions
 {
@@ -286,22 +310,22 @@ struct SourceDownloadOptions
     bool adjust_root_dir = true;
 };
 
-//SW_MANAGER_API
-//void download(SourceDirMap &sources, const SourceDownloadOptions &opts = {});
+SW_MANAGER_API
+void download(SourceDirMap &sources, const SourceDownloadOptions &opts = {});
 
-//SW_MANAGER_API
-//SourceDirMap download(SourceDirSet &sources, const SourceDownloadOptions &opts = {});
+SW_MANAGER_API
+SourceDirMap download(SourceDirSet &sources, const SourceDownloadOptions &opts = {});
 
 }
 
 namespace std
 {
 
-template<> struct hash<::sw::Source>
+template<> struct hash<::sw::SourcePtr>
 {
-    size_t operator()(const ::sw::Source &p) const
+    size_t operator()(const ::sw::SourcePtr &p) const
     {
-        return hash<String>()(p.print());
+        return hash<String>()(p->print());
     }
 };
 
