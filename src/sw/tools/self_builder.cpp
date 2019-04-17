@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <sw/manager/database.h>
-#include <sw/manager/resolver.h>
 #include <sw/manager/settings.h>
 #include <sw/manager/storage.h>
 #include <sw/manager/sw_context.h>

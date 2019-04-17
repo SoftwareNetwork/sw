@@ -40,8 +40,6 @@ struct SW_BUILDER_API FileStorage
     ConcurrentHashMap<path, FileRecord> files;
 
     FileStorage(const SwContext &swctx, const String &config);
-    //FileStorage(const FileStorage &) = delete;
-    //FileStorage &operator=(const FileStorage &) = delete;
     FileStorage(FileStorage &&) = default;
     FileStorage &operator=(FileStorage &&) = default;
     ~FileStorage();

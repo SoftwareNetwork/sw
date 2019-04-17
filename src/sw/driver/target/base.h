@@ -7,12 +7,12 @@
 #pragma once
 
 #include "sw/driver/language_storage.h"
+#include "sw/driver/license.h"
 #include "sw/driver/types.h"
 #include "sw/driver/source_file.h"
 
 #include <sw/builder/node.h>
 #include <sw/builder/os.h>
-#include <sw/manager/license.h>
 #include <sw/manager/package.h>
 #include <sw/manager/package_path.h>
 #include <sw/manager/source.h>

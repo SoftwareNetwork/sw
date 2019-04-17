@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "version.h"
+#include <sw/manager/version.h>
 
 #include <set>
 #include <string>
@@ -200,7 +200,7 @@ enum class LicensePropery
     Unknown,
 };
 
-struct SW_MANAGER_API License
+struct SW_DRIVER_CPP_API License
 {
     enum Approval
     {

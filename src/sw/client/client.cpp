@@ -102,8 +102,14 @@ void self_upgrade_copy(const path &dst);
 }*/
 #endif
 
+extern bool gForceServerQuery;
+static ::cl::opt<bool, true> force_server_query1("s", ::cl::desc("Force server check"), ::cl::location(gForceServerQuery));
+static ::cl::alias force_server_query2("server", ::cl::desc("Alias for -s"), ::cl::aliasopt(force_server_query1));
+
 static ::cl::opt<path> working_directory("d", ::cl::desc("Working directory"));
-extern bool gVerbose;
+bool gVerbose;
+static ::cl::opt<bool, true> verbose_opt("verbose", ::cl::desc("Verbose output"), ::cl::location(gVerbose));
+static ::cl::alias verbose_opt2("v", ::cl::desc("Alias for -verbose"), ::cl::aliasopt(verbose_opt));
 static ::cl::opt<bool> trace("trace", ::cl::desc("Trace output"));
 extern int gNumberOfJobs;
 static ::cl::opt<int, true> jobs("j", ::cl::desc("Number of jobs"), ::cl::location(gNumberOfJobs));
@@ -363,7 +369,8 @@ static ::cl::alias delete_overridden_package_dir2("delete-override", ::cl::desc(
 extern bool gRunAppInContainer;
 static ::cl::opt<bool, true> run_app_in_container("in-container", ::cl::desc("Print file with build graph"), ::cl::location(gRunAppInContainer), ::cl::sub(subcommand_uri));
 
-extern bool gUseLockFile;
+bool gUseLockFile;
+static ::cl::opt<bool, true> use_lock_file("l", ::cl::desc("Use lock file"), ::cl::location(gUseLockFile));// , cl::init(true));
 
 //static ::cl::list<String> builtin_function(sw::driver::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
 

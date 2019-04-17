@@ -20,7 +20,6 @@
 #include <sw/builder/file_storage.h>
 #include <sw/builder/program.h>
 #include <sw/manager/database.h>
-#include <sw/manager/resolver.h>
 #include <sw/manager/settings.h>
 #include <sw/manager/storage.h>
 

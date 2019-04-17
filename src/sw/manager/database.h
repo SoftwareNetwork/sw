@@ -31,9 +31,8 @@ struct SW_MANAGER_API Database
 {
     std::unique_ptr<sqlpp::sqlite3::connection> db;
     path fn;
-    path db_dir;
 
-    Database(const path &db_dir, const String &name, const String &schema);
+    Database(const path &db_name, const String &schema);
     ~Database();
 
     void open(bool read_only = false);
@@ -51,69 +50,6 @@ protected:
 
     template <typename T>
     void setValue(const String &key, const T &v) const;
-};
-
-struct SW_MANAGER_API ServiceDatabase : public Database
-{
-    struct OverriddenPackage
-    {
-        path sdir;
-        UnresolvedPackages deps;
-
-        // extended
-        db::PackageVersionId id = 0; // overridden id is less than 0
-        int prefix = 2;
-
-        int64_t getGroupNumber() const
-        {
-            auto gn = std::hash<path>()(sdir);
-            if (gn > 0)
-                gn = -gn;
-            return gn;
-        }
-    };
-    using OverriddenPackages = PackageVersionMapBase<OverriddenPackage, std::unordered_map, primitives::version::VersionMap>;
-
-    ServiceDatabase(const path &db_dir);
-
-    void init();
-
-    void checkForUpdates() const;
-    TimePoint getLastClientUpdateCheck() const;
-    void setLastClientUpdateCheck(const TimePoint &p = Clock::now()) const;
-
-    int getPackagesDbSchemaVersion() const;
-    void setPackagesDbSchemaVersion(int version) const;
-
-    String getConfigByHash(const String &settings_hash) const;
-    int addConfig(const String &config) const;
-    int getConfig(const String &config) const;
-    void addConfigHash(const String &settings_hash, const String &config, const String &config_hash) const;
-    void clearConfigHashes() const;
-    void removeConfigHashes(const String &config_hash) const;
-
-    void setPackageDependenciesHash(const PackageId &p, const String &hash) const;
-    bool hasPackageDependenciesHash(const PackageId &p, const String &hash) const;
-
-    void addInstalledPackage(const PackageId &p, PackageVersionGroupNumber group_number) const;
-    void removeInstalledPackage(const PackageId &p) const;
-    String getInstalledPackageHash(const PackageId &p) const;
-    int64_t getInstalledPackageId(const PackageId &p) const;
-    int getInstalledPackageConfigId(const PackageId &p, const String &config) const;
-    SomeFlags getInstalledPackageFlags(const PackageId &p, const String &config) const;
-    void setInstalledPackageFlags(const PackageId &p, const String &config, const SomeFlags &f) const;
-    bool isPackageInstalled(const PackageId &p) const { return getInstalledPackageId(p) != 0; }
-    Packages getInstalledPackages() const;
-
-    std::optional<OverriddenPackage> getOverriddenPackage(const PackageId &pkg) const;
-    const OverriddenPackages &getOverriddenPackages() const;
-    void overridePackage(const PackageId &pkg, const OverriddenPackage &opkg) const;
-    void deleteOverriddenPackage(const PackageId &pkg) const;
-    void deleteOverriddenPackageDir(const path &sdir) const;
-    UnresolvedPackages getOverriddenPackageVersionDependencies(db::PackageVersionId project_version_id);
-
-private:
-    mutable std::optional<OverriddenPackages> override_remote_packages;
 };
 
 struct SW_MANAGER_API PackagesDatabase : public Database

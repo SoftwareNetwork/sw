@@ -195,24 +195,9 @@ FileRecord *FileStorage::registerFile(const File &in_f)
 
     auto d = swctx.getFileData().insert(in_f.file);
     auto r = files.insert(in_f.file);
-    if (r.second)
-    {
-        //r.first->load(in_f.file);
-        /*if (!in_f.file.empty())
-            r.first->data->file = in_f.file;*/
-    }
-    //else
-        //r.first->isChanged();
     in_f.r = r.first;
     r.first->data = d.first;
     r.first->fs = this;
-    //if (d.second || d.first->last_write_time.time_since_epoch().count() == 0)
-        //r.first->load(in_f.file);
-
-    /*if (d.second)
-    {
-        r.first->load(in_f.file);
-    }*/
 
     return r.first;
 }

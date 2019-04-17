@@ -10,7 +10,6 @@
 #include "solution.h"
 
 #include <sw/builder/sw_context.h>
-#include <sw/manager/resolver.h>
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/executor.h>

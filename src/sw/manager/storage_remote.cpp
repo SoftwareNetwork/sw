@@ -37,7 +37,7 @@ const String db_version_url = "https://raw.githubusercontent.com/" + db_repo_nam
 // it is used for detecting young packages
 static TimePoint tstart;
 
-extern bool gForceServerQuery;
+bool gForceServerQuery;
 
 static const String packages_db_name = "packages.db";
 
@@ -326,7 +326,7 @@ void RemoteStorage::updateDb() const
     if (version_remote > readPackagesDbVersion(db_repo_dir))
     {
         // multiprocess aware
-        single_process_job(pkgdb->db_dir / "db_update", [this] {
+        single_process_job(pkgdb->fn.parent_path() / "db_update", [this] {
             download();
             load();
         });
@@ -346,12 +346,12 @@ void RemoteStorage::writeDownloadTime() const
 {
     auto tp = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(tp);
-    write_file(pkgdb->db_dir / PACKAGES_DB_DOWNLOAD_TIME_FILE, std::to_string(time));
+    write_file(pkgdb->fn.parent_path() / PACKAGES_DB_DOWNLOAD_TIME_FILE, std::to_string(time));
 }
 
 TimePoint RemoteStorage::readDownloadTime() const
 {
-    auto fn = pkgdb->db_dir / PACKAGES_DB_DOWNLOAD_TIME_FILE;
+    auto fn = pkgdb->fn.parent_path() / PACKAGES_DB_DOWNLOAD_TIME_FILE;
     String ts = "0";
     if (fs::exists(fn))
         ts = read_file(fn);

@@ -21,9 +21,7 @@
 #include <sw/builder/program.h>
 #include <sw/builder/sw_context.h>
 #include <sw/manager/database.h>
-#include <sw/manager/resolver.h>
 #include <sw/manager/settings.h>
-#include <sw/manager/storage.h>
 #include <sw/manager/storage.h>
 
 #include <boost/algorithm/string.hpp>

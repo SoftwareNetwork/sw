@@ -6,12 +6,11 @@
 
 #pragma once
 
-#include "version.h"
-#include "dependency.h"
 #include "enums.h"
 #include "package.h"
 #include "package_data.h"
 #include "remote.h"
+#include "version.h"
 
 #undef ERROR
 #include <api.grpc.pb.h>

@@ -6,7 +6,6 @@
 
 #include "sw_context.h"
 
-#include "resolver.h"  // remove when vs bug is fixed
 #include "storage.h"
 
 #include <primitives/log.h>
@@ -15,10 +14,11 @@ DECLARE_STATIC_LOGGER(logger, "icontext");
 namespace sw
 {
 
+// remove whn msvc bug is fixed
+struct PackageStore {};
+
 SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
 {
-    //store = std::make_unique<PackageStore>(*this);
-
     auto p = local_storage_root_dir;
     p += "2";
     storages.emplace_back(std::make_unique<LocalStorage>(p));
