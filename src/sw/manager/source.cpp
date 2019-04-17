@@ -4,8 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// TODO: Remove all ScopedCurrentPath
-
 #include "source.h"
 
 #include "yaml.h"
@@ -145,38 +143,76 @@ static int checkNotEmpty(First &&f, Args && ... args)
 }
 
 template <typename ... Args>
-static String checkOne(const String &name, Args && ... args)
+static void checkOne(const String &name, Args && ... args)
 {
     int n = checkNotEmpty(std::forward<Args>(args)...);
     if (n == 0)
-        return "No " + name + " sources available";
+        throw SW_RUNTIME_ERROR("No " + name + " sources available");
     if (n > 1)
-        return "Only one " + name + " source must be specified";
-    return "";
+        throw SW_RUNTIME_ERROR("Only one " + name + " source must be specified");
 }
 
-SourceUrl::SourceUrl(const yaml &root, const String &name)
+static String toString(SourceType t)
+{
+    switch (t)
+    {
+    case SourceType::Undefined:
+        return "undefined";
+    case SourceType::Empty:
+        return "empty";
+    case SourceType::Git:
+        return "git";
+    case SourceType::Mercurial:
+        return "hg";
+    case SourceType::Bazaar:
+        return "bzr";
+    case SourceType::Fossil:
+        return "fossil";
+    case SourceType::Cvs:
+        return "cvs";
+    case SourceType::Svn:
+        return "svn";
+    case SourceType::RemoteFile:
+        return "remote";
+    case SourceType::RemoteFiles:
+        return "files";
+    default:
+        SW_UNIMPLEMENTED;
+    }
+}
+
+String Source::getString() const
+{
+    return toString(getType());
+}
+
+SourceKvMap UndefinedSource::printKv() const
+{
+    return { {"Source", getString()} };
+}
+
+SourceKvMap EmptySource::printKv() const
+{
+    return { {"Source", getString()} };
+}
+
+/*SourceUrl::SourceUrl(const yaml &root, const String &name)
 {
     YAML_EXTRACT_VAR(root, url, name, String);
-}
+}*/
 
 SourceUrl::SourceUrl(const String &url)
     : url(url)
 {
+    checkUrl();
 }
 
-template <typename ... Args>
-bool SourceUrl::checkValid(const String &name, String *error, Args && ... args) const
+void SourceUrl::checkUrl() const
 {
-    if (!isValid(name, error))
-        return false;
-    auto e = checkOne(name, std::forward<Args>(args)...);
-    auto ret = e.empty();
-    if (!ret && error)
-        *error = e;
-    return ret;
+    checkSourceUrl(url);
 }
 
+/*
 bool SourceUrl::isValid(const String &name, String *error) const
 {
     if (!empty())
@@ -185,50 +221,38 @@ bool SourceUrl::isValid(const String &name, String *error) const
         *error = name + " url is missing";
     return false;
 }
+*/
 
-bool SourceUrl::isValidUrl() const
+void SourceUrl::save(ptree &p) const
 {
-    return ::isValidSourceUrl(url);
+    PTREE_ADD(url);
 }
 
-bool SourceUrl::load(const ptree &p)
+void SourceUrl::save(nlohmann::json &j) const
+{
+    JSON_ADD(url);
+}
+
+void SourceUrl::save(yaml &root) const
+{
+    YAML_SET(url, getString());
+}
+
+/*void SourceUrl::load_source(const ptree &p)
 {
     PTREE_GET_STRING(url);
     return !empty();
-}
-
-bool SourceUrl::save(ptree &p) const
-{
-    if (empty())
-        return false;
-    PTREE_ADD(url);
-    return true;
 }
 
 bool SourceUrl::load(const nlohmann::json &j)
 {
     JSON_GET_STRING(url);
     return !empty();
-}
-
-bool SourceUrl::save(nlohmann::json &j) const
-{
-    if (empty())
-        return false;
-    JSON_ADD(url);
-    return true;
-}
-
-void SourceUrl::save(yaml &root, const String &name) const
-{
-    YAML_SET(url, name);
-}
+}*/
 
 String SourceUrl::print() const
 {
     String r;
-    if (empty())
-        return r;
     STRING_PRINT(url);
     return r;
 }
@@ -238,17 +262,18 @@ void SourceUrl::applyVersion(const Version &v)
     v.format(url);
 }
 
-Git::Git(const yaml &root, const String &name)
+/*Git::Git(const yaml &root, const String &name)
     : SourceUrl(root, name)
 {
     YAML_EXTRACT_AUTO(tag);
     YAML_EXTRACT_AUTO(branch);
     YAML_EXTRACT_AUTO(commit);
-}
+}*/
 
 Git::Git(const String &url, const String &tag, const String &branch, const String &commit)
     : SourceUrl(url), tag(tag), branch(branch), commit(commit)
 {
+    checkOne(getString(), tag, branch, commit);
 }
 
 void Git::download(const path &dir) const
@@ -324,12 +349,7 @@ void Git::download(const path &dir) const
     });
 }
 
-bool Git::isValid(String *error) const
-{
-    return checkValid(getString(), error, tag, branch, commit);
-}
-
-bool Git::load(const ptree &p)
+/*void Git::load(const ptree &p)
 {
     if (!SourceUrl::load(p))
         return false;
@@ -337,41 +357,35 @@ bool Git::load(const ptree &p)
     PTREE_GET_STRING(branch);
     PTREE_GET_STRING(commit);
     return true;
-}
+}*/
 
-bool Git::save(ptree &p) const
+void Git::save(ptree &p) const
 {
-    if (!SourceUrl::save(p))
-        return false;
+    SourceUrl::save(p);
     PTREE_ADD_NOT_EMPTY(tag);
     PTREE_ADD_NOT_EMPTY(branch);
     PTREE_ADD_NOT_EMPTY(commit);
-    return true;
 }
 
-bool Git::load(const nlohmann::json &j)
+/*void Git::load(const nlohmann::json &j)
 {
-    if (!SourceUrl::load(j))
-        return false;
+    SourceUrl::load(j);
     JSON_GET_STRING(tag);
     JSON_GET_STRING(branch);
     JSON_GET_STRING(commit);
-    return !empty();
-}
+}*/
 
-bool Git::save(nlohmann::json &j) const
+void Git::save(nlohmann::json &j) const
 {
-    if (!SourceUrl::save(j))
-        return false;
+    SourceUrl::save(j);
     JSON_ADD_NOT_EMPTY(tag);
     JSON_ADD_NOT_EMPTY(branch);
     JSON_ADD_NOT_EMPTY(commit);
-    return true;
 }
 
-void Git::save(yaml &root, const String &name) const
+void Git::save(yaml &root) const
 {
-    SourceUrl::save(root, name);
+    SourceUrl::save(root);
     YAML_SET_NOT_EMPTY(tag);
     YAML_SET_NOT_EMPTY(branch);
     YAML_SET_NOT_EMPTY(commit);
@@ -402,24 +416,21 @@ SourceKvMap Git::printKv() const
 
 void Git::applyVersion(const Version &v)
 {
-    // add precompute thing?
-    /*if (tag.empty() && branch.empty())
-    {
-        if (v.isVersion())
-            tag = "{v}";
-        else
-            branch = "{v}";
-    }*/
-
     SourceUrl::applyVersion(v);
     v.format(tag);
     v.format(branch);
 }
 
-Hg::Hg(const yaml &root, const String &name)
+/*Hg::Hg(const yaml &root, const String &name)
     : Git(root, name)
 {
     YAML_EXTRACT_AUTO(revision);
+}*/
+
+Hg::Hg(const String &url, const String &tag, const String &branch, const String &commit, int64_t revision)
+    : Git(url, tag, branch, commit), revision(revision)
+{
+    checkOne(getString(), tag, branch, commit, revision);
 }
 
 void Hg::download(const path &dir) const
@@ -439,46 +450,37 @@ void Hg::download(const path &dir) const
     });
 }
 
-bool Hg::isValid(String *error) const
-{
-    return checkValid(getString(), error, tag, branch, commit, revision);
-}
-
-bool Hg::load(const ptree &p)
+/*bool Hg::load(const ptree &p)
 {
     if (!Git::load(p))
         return false;
     PTREE_GET_INT(revision);
     return true;
-}
+}*/
 
-bool Hg::save(ptree &p) const
+void Hg::save(ptree &p) const
 {
-    if (!Git::save(p))
-        return false;
+    Git::save(p);
     PTREE_ADD_NOT_MINUS_ONE(revision);
-    return true;
 }
 
-bool Hg::load(const nlohmann::json &j)
+/*bool Hg::load(const nlohmann::json &j)
 {
     if (!Git::load(j))
         return false;
     JSON_GET_INT(revision);
     return !empty();
-}
+}*/
 
-bool Hg::save(nlohmann::json &j) const
+void Hg::save(nlohmann::json &j) const
 {
-    if (!Git::save(j))
-        return false;
+    Git::save(j);
     JSON_ADD_NOT_MINUS_ONE(revision);
-    return true;
 }
 
-void Hg::save(yaml &root, const String &name) const
+void Hg::save(yaml &root) const
 {
-    Git::save(root, name);
+    Git::save(root);
     YAML_SET_NOT_MINUS_ONE(revision);
 }
 
@@ -504,11 +506,17 @@ SourceKvMap Hg::printKv() const
     return m;
 }
 
-Bzr::Bzr(const yaml &root, const String &name)
+/*Bzr::Bzr(const yaml &root, const String &name)
     : SourceUrl(root, name)
 {
     YAML_EXTRACT_AUTO(tag);
     YAML_EXTRACT_AUTO(revision);
+}*/
+
+Bzr::Bzr(const String &url, const String &tag, int64_t revision)
+    : SourceUrl(url), tag(tag), revision(revision)
+{
+    checkOne(getString(), tag, revision);
 }
 
 void Bzr::download(const path &dir) const
@@ -524,50 +532,41 @@ void Bzr::download(const path &dir) const
     });
 }
 
-bool Bzr::isValid(String *error) const
-{
-    return checkValid(getString(), error, tag, revision);
-}
-
-bool Bzr::load(const ptree &p)
+/*bool Bzr::load(const ptree &p)
 {
     if (!SourceUrl::load(p))
         return false;
     PTREE_GET_STRING(tag);
     PTREE_GET_INT(revision);
     return true;
-}
+}*/
 
-bool Bzr::save(ptree &p) const
+void Bzr::save(ptree &p) const
 {
-    if (!SourceUrl::save(p))
-        return false;
+    SourceUrl::save(p);
     PTREE_ADD_NOT_EMPTY(tag);
     PTREE_ADD_NOT_MINUS_ONE(revision);
-    return true;
 }
 
-bool Bzr::load(const nlohmann::json &j)
+/*bool Bzr::load(const nlohmann::json &j)
 {
     if (!SourceUrl::load(j))
         return false;
     JSON_GET_STRING(tag);
     JSON_GET_INT(revision);
     return !empty();
-}
+}*/
 
-bool Bzr::save(nlohmann::json &j) const
+void Bzr::save(nlohmann::json &j) const
 {
-    if (!SourceUrl::save(j))
-        return false;
+    SourceUrl::save(j);
     JSON_ADD_NOT_EMPTY(tag);
     JSON_ADD_NOT_MINUS_ONE(revision);
-    return true;
 }
 
-void Bzr::save(yaml &root, const String &name) const
+void Bzr::save(yaml &root) const
 {
-    SourceUrl::save(root, name);
+    SourceUrl::save(root);
     YAML_SET_NOT_EMPTY(tag);
     YAML_SET_NOT_MINUS_ONE(revision);
 }
@@ -593,10 +592,10 @@ SourceKvMap Bzr::printKv() const
     return m;
 }
 
-Fossil::Fossil(const yaml &root, const String &name)
+/*Fossil::Fossil(const yaml &root, const String &name)
     : Git(root, name)
 {
-}
+}*/
 
 void Fossil::download(const path &dir) const
 {
@@ -614,12 +613,12 @@ void Fossil::download(const path &dir) const
     });
 }
 
-void Fossil::save(yaml &root, const String &name) const
+/*void Fossil::save(yaml &root, const String &name) const
 {
     Git::save(root, name);
-}
+}*/
 
-SourceKvMap Fossil::printKv() const
+/*SourceKvMap Fossil::printKv() const
 {
     SourceKvMap m{ {"Source", getString()} };
 
@@ -629,23 +628,30 @@ SourceKvMap Fossil::printKv() const
     KV_ADD_IF_NOT_EMPTY("Commit", commit);
 
     return m;
-}
+}*/
 
-Cvs::Cvs(const yaml &root, const String &name)
+/*Cvs::Cvs(const yaml &root, const String &name)
     : SourceUrl(root, name)
 {
     YAML_EXTRACT_AUTO(tag);
     YAML_EXTRACT_AUTO(branch);
     YAML_EXTRACT_AUTO(revision);
     YAML_EXTRACT_AUTO(module);
+}*/
+
+Cvs::Cvs(const String &url, const String &module, const String &tag, const String &branch, const String &revision)
+    : SourceUrl(url), module(module), tag(tag), branch(branch), revision(revision)
+{
+    if (module.empty())
+        throw SW_RUNTIME_ERROR("cvs: empty module");
+    checkOne(getString(), tag, branch, revision);
 }
 
-bool Cvs::isValidUrl() const
+void Cvs::checkUrl() const
 {
     static const std::regex checkCvs("-d:([a-z0-9_-]+):([a-z0-9_-]+)@(\\S*):(\\S*)");
-    if (std::regex_match(url, checkCvs))
-        return true;
-    return false;
+    if (!std::regex_match(url, checkCvs))
+        throw SW_RUNTIME_ERROR("Invalid cvs url: " + url);
 }
 
 void Cvs::download(const path &dir) const
@@ -663,12 +669,7 @@ void Cvs::download(const path &dir) const
     });
 }
 
-bool Cvs::isValid(String *error) const
-{
-    return checkValid(getString(), error, tag, branch, revision);
-}
-
-bool Cvs::load(const ptree &p)
+/*bool Cvs::load(const ptree &p)
 {
     if (!SourceUrl::load(p))
         return false;
@@ -677,20 +678,18 @@ bool Cvs::load(const ptree &p)
     PTREE_GET_STRING(revision);
     PTREE_GET_STRING(module);
     return true;
-}
+}*/
 
-bool Cvs::save(ptree &p) const
+void Cvs::save(ptree &p) const
 {
-    if (!SourceUrl::save(p))
-        return false;
+    SourceUrl::save(p);
     PTREE_ADD_NOT_EMPTY(tag);
     PTREE_ADD_NOT_EMPTY(branch);
     PTREE_ADD_NOT_EMPTY(revision);
     PTREE_ADD_NOT_EMPTY(module);
-    return true;
 }
 
-bool Cvs::load(const nlohmann::json &j)
+/*bool Cvs::load(const nlohmann::json &j)
 {
     if (!SourceUrl::load(j))
         return false;
@@ -699,22 +698,20 @@ bool Cvs::load(const nlohmann::json &j)
     JSON_GET_STRING(revision);
     JSON_GET_STRING(module);
     return !empty();
-}
+}*/
 
-bool Cvs::save(nlohmann::json &j) const
+void Cvs::save(nlohmann::json &j) const
 {
-    if (!SourceUrl::save(j))
-        return false;
+    SourceUrl::save(j);
     JSON_ADD_NOT_EMPTY(tag);
     JSON_ADD_NOT_EMPTY(branch);
     JSON_ADD_NOT_EMPTY(revision);
     JSON_ADD_NOT_EMPTY(module);
-    return true;
 }
 
-void Cvs::save(yaml &root, const String &name) const
+void Cvs::save(yaml &root) const
 {
-    SourceUrl::save(root, name);
+    SourceUrl::save(root);
     YAML_SET_NOT_EMPTY(tag);
     YAML_SET_NOT_EMPTY(branch);
     YAML_SET_NOT_EMPTY(revision);
@@ -746,17 +743,23 @@ SourceKvMap Cvs::printKv() const
     return m;
 }
 
-String Cvs::printCpp() const
+/*String Cvs::printCpp() const
 {
     return String();
-}
+}*/
 
-Svn::Svn(const yaml &root, const String &name)
+/*Svn::Svn(const yaml &root, const String &name)
     : SourceUrl(root, name)
 {
     YAML_EXTRACT_AUTO(tag);
     YAML_EXTRACT_AUTO(branch);
     YAML_EXTRACT_AUTO(revision);
+}*/
+
+Svn::Svn(const String &url, const String &tag, const String &branch, int64_t revision)
+    : SourceUrl(url), tag(tag), branch(branch), revision(revision)
+{
+    checkOne(getString(), tag, branch, revision);
 }
 
 void Svn::download(const path &dir) const
@@ -774,7 +777,7 @@ void Svn::download(const path &dir) const
     });
 }
 
-bool Svn::isValid(String *error) const
+/*bool Svn::isValid(String *error) const
 {
     return checkValid(getString(), error, tag, branch, revision);
 }
@@ -787,19 +790,17 @@ bool Svn::load(const ptree &p)
     PTREE_GET_STRING(branch);
     PTREE_GET_INT(revision);
     return true;
-}
+}*/
 
-bool Svn::save(ptree &p) const
+void Svn::save(ptree &p) const
 {
-    if (!SourceUrl::save(p))
-        return false;
+    SourceUrl::save(p);
     PTREE_ADD_NOT_EMPTY(tag);
     PTREE_ADD_NOT_EMPTY(branch);
     PTREE_ADD_NOT_MINUS_ONE(revision);
-    return true;
 }
 
-bool Svn::load(const nlohmann::json &j)
+/*bool Svn::load(const nlohmann::json &j)
 {
     if (!SourceUrl::load(j))
         return false;
@@ -807,21 +808,19 @@ bool Svn::load(const nlohmann::json &j)
     JSON_GET_STRING(branch);
     JSON_GET_INT(revision);
     return !empty();
-}
+}*/
 
-bool Svn::save(nlohmann::json &j) const
+void Svn::save(nlohmann::json &j) const
 {
-    if (!SourceUrl::save(j))
-        return false;
+    SourceUrl::save(j);
     JSON_ADD_NOT_EMPTY(tag);
     JSON_ADD_NOT_EMPTY(branch);
     JSON_ADD_NOT_MINUS_ONE(revision);
-    return true;
 }
 
-void Svn::save(yaml &root, const String &name) const
+void Svn::save(yaml &root) const
 {
-    SourceUrl::save(root, name);
+    SourceUrl::save(root);
     YAML_SET_NOT_EMPTY(tag);
     YAML_SET_NOT_EMPTY(branch);
     YAML_SET_NOT_MINUS_ONE(revision);
@@ -850,12 +849,12 @@ SourceKvMap Svn::printKv() const
     return m;
 }
 
-String Svn::printCpp() const
+/*String Svn::printCpp() const
 {
     return String();
-}
+}*/
 
-RemoteFile::RemoteFile(const String &url)
+/*RemoteFile::RemoteFile(const String &url)
     : SourceUrl(url)
 {
 }
@@ -865,38 +864,45 @@ RemoteFile::RemoteFile(const yaml &root, const String &name)
 {
     if (url.empty())
         throw SW_RUNTIME_ERROR("Remote url is missing");
-}
+}*/
 
 void RemoteFile::download(const path &dir) const
 {
     download_and_unpack(url, dir / path(url).filename(), dir);
 }
 
-void RemoteFile::save(yaml &root, const String &name) const
+/*void RemoteFile::save(yaml &root, const String &name) const
 {
     SourceUrl::save(root, name);
-}
+}*/
 
-void RemoteFile::applyVersion(const Version &v)
+/*void RemoteFile::applyVersion(const Version &v)
 {
     v.format(url);
-}
+}*/
 
-SourceKvMap RemoteFile::printKv() const
+/*SourceKvMap RemoteFile::printKv() const
 {
     SourceKvMap m{ {"Source", getString()} };
 
     KV_ADD_IF_NOT_EMPTY("Url", url);
 
     return m;
+}*/
+
+RemoteFiles::RemoteFiles(const StringSet &urls)
+    : urls(urls)
+{
+    for (auto &url : urls)
+        checkSourceUrl(url);
 }
 
-RemoteFiles::RemoteFiles(const yaml &root, const String &name)
+/*RemoteFiles::RemoteFiles(const yaml &root, const String &name)
 {
     urls = get_sequence_set<String>(root, name);
     if (urls.empty())
         throw SW_RUNTIME_ERROR("Empty remote files");
-}
+}*/
 
 void RemoteFiles::download(const path &dir) const
 {
@@ -904,59 +910,51 @@ void RemoteFiles::download(const path &dir) const
         download_file_checked(rf, dir / path(rf).filename());
 }
 
-bool RemoteFiles::isValidUrl() const
+/*bool RemoteFiles::isValidUrl() const
 {
     return std::all_of(urls.begin(), urls.end(),
         [](auto &u) { return ::isValidSourceUrl(u); });
-}
+}*/
 
-bool RemoteFiles::load(const ptree &p)
+/*bool RemoteFiles::load(const ptree &p)
 {
     for (auto &url : p)
         urls.insert(url.second.get("url", ""s));
     return !empty();
-}
+}*/
 
-bool RemoteFiles::save(ptree &p) const
+void RemoteFiles::save(ptree &p) const
 {
-    if (empty())
-        return false;
     for (auto &rf : urls)
     {
         ptree c;
         c.put("url", rf);
         p.push_back(std::make_pair("", c));
     }
-    return true;
 }
 
-bool RemoteFiles::load(const nlohmann::json &j)
+/*bool RemoteFiles::load(const nlohmann::json &j)
 {
     Strings s = j["url"];
     urls.insert(s.begin(), s.end());
     return !empty();
-}
+}*/
 
-bool RemoteFiles::save(nlohmann::json &j) const
+void RemoteFiles::save(nlohmann::json &j) const
 {
-    if (empty())
-        return false;
     for (auto &rf : urls)
         j["url"].push_back(rf);
-    return true;
 }
 
-void RemoteFiles::save(yaml &root, const String &name) const
+void RemoteFiles::save(yaml &root) const
 {
     for (auto &rf : urls)
-        root[name].push_back(rf);
+        root[getString()].push_back(rf);
 }
 
 String RemoteFiles::print() const
 {
     String r;
-    if (empty())
-        return r;
     for (auto &rf : urls)
         STRING_PRINT_VALUE(url, rf);
     return r;
@@ -984,7 +982,7 @@ void RemoteFiles::applyVersion(const Version &v)
     urls = urls2;
 }
 
-void download(const Source &source, const path &dir)
+/*void download(const Source &source, const path &dir)
 {
     fs::create_directories(dir);
     visit([dir](auto &v) { v.download(dir); }, source);
@@ -1147,6 +1145,6 @@ SourceKvMap print_source_kv(const Source &source)
 void applyVersionToUrl(Source &source, const Version &v)
 {
     visit([&v](auto &s) { s.applyVersion(v); }, source);
-}
+}*/
 
 }
