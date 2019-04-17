@@ -380,14 +380,13 @@ int sw_main(sw::SwContext &swctx, const Strings &args)
 {
     if (list_overridden_packages)
     {
-        SW_UNIMPLEMENTED;
-
-        /*std::map<sw::PackageId, path> pkgs;
-        for (auto &[pkg, p] : getServiceDatabase().getOverriddenPackages())
-            pkgs[pkg] = p.sdir;
-        for (auto &[n, p] : pkgs)
-            std::cout << n.toString() << " " << p << "\n";
-        return 0;*/
+        // sort
+        std::set<sw::LocalPackage> pkgs;
+        for (auto &p : swctx.getLocalStorage().getOverriddenPackagesStorage().getPackages())
+            pkgs.emplace(p);
+        for (auto &p : pkgs)
+            std::cout << p.toString() << " " << *p.getOverriddenDir() << "\n";
+        return 0;
     }
 
     if (!override_package.empty())
@@ -398,33 +397,29 @@ int sw_main(sw::SwContext &swctx, const Strings &args)
 
     if (!delete_overridden_package.empty())
     {
-        SW_UNIMPLEMENTED;
-
-        /*sw::PackageId pkg{ delete_overridden_package };
+        sw::PackageId pkg{ delete_overridden_package };
         LOG_INFO(logger, "Delete override for " + pkg.toString());
-        getServiceDatabase().deleteOverriddenPackage(pkg);
-        return 0;*/
+        swctx.getLocalStorage().getOverriddenPackagesStorage().deletePackage(pkg);
+        return 0;
     }
 
     if (!delete_overridden_package_dir.empty())
     {
-        SW_UNIMPLEMENTED;
-
-        /*LOG_INFO(logger, "Delete override for sdir " + delete_overridden_package_dir.u8string());
+        LOG_INFO(logger, "Delete override for sdir " + delete_overridden_package_dir.u8string());
 
         auto d = fs::canonical(delete_overridden_package_dir);
 
-        std::map<sw::PackageId, path> pkgs;
-        for (auto &[pkg, p] : getServiceDatabase().getOverriddenPackages())
+        std::set<sw::LocalPackage> pkgs;
+        for (auto &p : swctx.getLocalStorage().getOverriddenPackagesStorage().getPackages())
         {
-            if (p.sdir == d)
-                pkgs[pkg] = p.sdir;
+            if (*p.getOverriddenDir() == d)
+                pkgs.emplace(p);
         }
-        for (auto &[n, p] : pkgs)
-            std::cout << "Deleting " << n.toString() << "\n";
+        for (auto &p : pkgs)
+            std::cout << "Deleting " << p.toString() << "\n";
 
-        getServiceDatabase().deleteOverriddenPackageDir(delete_overridden_package_dir);
-        return 0;*/
+        swctx.getLocalStorage().getOverriddenPackagesStorage().deletePackageDir(delete_overridden_package_dir);
+        return 0;
     }
 
     if (gUseLockFile && fs::exists(fs::current_path() / "sw.lock"))
@@ -454,7 +449,6 @@ void stop()
     if (gUseLockFile)
     {
         SW_UNIMPLEMENTED;
-
         //getPackageStore().saveLockFile(fs::current_path() / "sw.lock");
     }
 }
@@ -508,15 +502,12 @@ static ::cl::list<String> remove_arg(::cl::Positional, ::cl::desc("package to re
 
 SUBCOMMAND_DECL(remove)
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto &sdb = getServiceDatabase();
     for (auto &a : remove_arg)
     {
-        auto p = sw::extractFromStringPackageId(a);
-        sdb.removeInstalledPackage(p);
+        sw::LocalPackage p(swctx.getLocalStorage(), a);
+        //sdb.removeInstalledPackage(p); // TODO: remove from db
         fs::remove_all(p.getDir());
-    }*/
+    }
 }
 
 static ::cl::opt<String> create_type(::cl::Positional, ::cl::desc("<type>"), ::cl::sub(subcommand_create), ::cl::Required);
@@ -673,12 +664,11 @@ SUBCOMMAND_DECL(uri)
     if (uri_args.size() == 1)
         return;
 
-    SW_UNIMPLEMENTED;
-
     try
     {
-        /*auto p = extractFromStringPackageId(uri_args[1]);
-        auto &sdb = getServiceDatabase();
+        auto id = extractPackageIdFromString(uri_args[1]);
+        auto &sdb = swctx.getLocalStorage();
+        LocalPackage p(sdb, id);
 
         if (uri_args[0] == "sw:sdir" || uri_args[0] == "sw:bdir")
         {
@@ -742,8 +732,11 @@ SUBCOMMAND_DECL(uri)
             {
                 SetupConsole();
                 bUseSystemPause = true;
-                Resolver r;
-                r.resolve_dependencies({ {p.ppath, p.version} });
+                auto m = swctx.resolve(UnresolvedPackages{ UnresolvedPackage{p.ppath, p.version} });
+                auto &e = getExecutor();
+                for (auto &[u, p] : m)
+                    e.push([&p] { p.install(); });
+                e.wait();
             }
             else
             {
@@ -755,7 +748,9 @@ SUBCOMMAND_DECL(uri)
 
         if (uri_args[0] == "sw:remove")
         {
-            sdb.removeInstalledPackage(p);
+            SW_UNIMPLEMENTED;
+
+            //sdb.removeInstalledPackage(p); // TODO: remove from db
             error_code ec;
             fs::remove_all(p.getDir(), ec);
             return;
@@ -767,10 +762,10 @@ SUBCOMMAND_DECL(uri)
             SetupConsole();
             bUseSystemPause = true;
 #endif
-            auto d = getStorage().storage_dir_tmp / "build";// / fs::unique_path();
+            auto d = swctx.getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
-            sw::build(p.toString());
+            sw::build(swctx, p.toString());
             return;
         }
 
@@ -780,10 +775,10 @@ SUBCOMMAND_DECL(uri)
             SetupConsole();
             bUseSystemPause = true;
 #endif
-            auto d = getStorage().storage_dir_tmp / "build";// / fs::unique_path();
+            auto d = swctx.getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
-            sw::run(p);
+            sw::run(swctx, p);
             return;
         }
 
@@ -792,11 +787,15 @@ SUBCOMMAND_DECL(uri)
             if (uri_args.size() != 4)
                 return;
 
-            PackageId pkg(uri_args[1]);
+            auto rs = swctx.getRemoteStorages();
+            if (rs.empty())
+                throw SW_RUNTIME_ERROR("No remote storages found");
+
+            Package pkg(*rs.front(), uri_args[1]);
             Version new_version(uri_args[2]);
 
             String url = "https://raw.githubusercontent.com/SoftwareNetwork/specifications/master/";
-            url += normalize_path(pkg.getHashPathFull() / "sw.cpp");
+            url += normalize_path(pkg.getHashPath() / "sw.cpp");
             auto fn = get_temp_filename("uploads") / "sw.cpp";
             auto spec_data = download_file(url);
             boost::replace_all(spec_data, pkg.version.toString(), new_version.toString());
@@ -806,9 +805,10 @@ SUBCOMMAND_DECL(uri)
             SCOPE_EXIT
             {
                 // free files
-                for (auto &[n,s] : sw::getFileStorages())
+                // TODO:
+                /*for (auto &[n,s] : sw::getFileStorages())
                     s.clear();
-                sw::getFileStorages().clear();
+                sw::getFileStorages().clear();*/
 
                 fs::remove_all(fn.parent_path());
             };
@@ -816,7 +816,7 @@ SUBCOMMAND_DECL(uri)
             // run secure as below?
             ScopedCurrentPath scp(fn.parent_path());
             upload_prefix = pkg.ppath.slice(0, std::stoi(uri_args[3]));
-            cli_upload();
+            cli_upload(swctx);
 
             /*primitives::Command c;
             c.program = "sw";
@@ -825,12 +825,12 @@ SUBCOMMAND_DECL(uri)
             c.args.push_back(pkg.ppath.slice(0, std::stoi(uri_args[3])));
             c.out.inherit = true;
             c.err.inherit = true;
-            //c.execute();
+            //c.execute();*/
 
             return;
         }
 
-        throw SW_RUNTIME_ERROR("Unknown command: " + uri_args[0]);*/
+        throw SW_RUNTIME_ERROR("Unknown command: " + uri_args[0]);
     }
     catch (std::exception &e)
     {
@@ -852,10 +852,8 @@ void override_package_perform(sw::SwContext &swctx)
     auto &b = *s.get();
     b.prepareStep();
 
-    SW_UNIMPLEMENTED;
-
-    //auto s = sw::load(override_package[1]);
-    /*for (auto &[pkg, desc] : b.solutions[0].getPackages())
+    auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
+    for (auto &[pkg, desc] : b.solutions[0].getPackages())
     {
         sw::PackagePath prefix = override_package;
         sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
@@ -871,8 +869,15 @@ void override_package_perform(sw::SwContext &swctx)
             else
                 deps.insert({ prefix / d.ppath, d.range });
         }
-        getServiceDatabase().overridePackage(pkg2, { dir, deps, 0, (int)prefix.size() });
-    }*/
+        LocalPackage lp(swctx.getLocalStorage().getOverriddenPackagesStorage(), pkg2);
+        PackageData d;
+        d.sdir = dir;
+        d.dependencies = deps;
+        d.group_number = gn;
+        d.prefix = (int)prefix.size();
+        lp.setData(d);
+        swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp);
+    }
 }
 
 SUBCOMMAND_DECL(mirror)
@@ -892,17 +897,15 @@ SUBCOMMAND_DECL(ide)
 
     if (!target_build.empty())
     {
-        SW_UNIMPLEMENTED;
-
-        /*try_single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", []()
+        try_single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", [&swctx]()
         {
-            auto s = sw::load(working_directory);
+            auto s = sw::load(swctx, working_directory);
             auto &b = *((sw::Build*)s.get());
             b.ide = true;
-            auto pkg = sw::extractFromStringPackageId(target_build);
+            auto pkg = sw::extractPackageIdFromString(target_build);
             b.TargetsToBuild[pkg] = b.children[pkg];
             s->execute();
-        });*/
+        });
     }
     else
     {
@@ -1070,8 +1073,11 @@ SUBCOMMAND_DECL(remote)
 
 SUBCOMMAND_DECL(list)
 {
-    SW_UNIMPLEMENTED;
-    //getPackagesDatabase().listPackages(list_arg);
+    auto rs = swctx.getRemoteStorages();
+    if (rs.empty())
+        throw SW_RUNTIME_ERROR("No remote storages found");
+
+    static_cast<StorageWithPackagesDatabase&>(*rs.front()).getPackagesDatabase().listPackages(list_arg);
 }
 
 SUBCOMMAND_DECL(pack)
@@ -1092,17 +1098,17 @@ SUBCOMMAND_DECL(install)
 {
     SW_UNIMPLEMENTED;
 
-    /*sw::UnresolvedPackages pkgs;
+    sw::UnresolvedPackages pkgs;
     install_args.push_back(install_arg);
     for (auto &p : install_args)
         pkgs.insert(extractFromString(p));
-    resolveAllDependencies(pkgs);
-    for (auto &[p1, d] : getPackageStore().resolved_packages)
+    auto m = swctx.resolve(pkgs);
+    for (auto &[p1, d] : m)
     {
-        for (auto &p2 : install_args)
-            if (p1 == p2)
-                d.installed = true;
-    }*/
+        //for (auto &p2 : install_args)
+            //if (p1 == p2)
+                //d.installed = true;
+    }
 }
 
 extern ::cl::opt<bool> dry_run;
@@ -1110,11 +1116,10 @@ SUBCOMMAND_DECL(update)
 {
     SW_UNIMPLEMENTED;
 
-    /*getPackageStore() = sw::PackageStore();
     dry_run = true;
     ((Strings&)build_arg).clear();
     build_arg.push_back(build_arg_update.getValue());
-    cli_build(swctx);*/
+    cli_build(swctx);
 }
 
 SUBCOMMAND_DECL(fetch)

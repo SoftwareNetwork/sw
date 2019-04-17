@@ -2577,20 +2577,18 @@ void NativeExecutedTarget::pushBackToFileOnce(const path &fn, const String &text
     //f.getFileRecord().load();
 }
 
-void load_source_and_version(const yaml &root, Source &source, Version &version)
+static std::unique_ptr<Source> load_source_and_version(const yaml &root, Version &version)
 {
     String ver;
     YAML_EXTRACT_VAR(root, ver, "version", String);
     if (!ver.empty())
         version = Version(ver);
-    if (!load_source(root, source))
-        return;
-    //visit([&version](auto &v) { v.loadVersion(version); }, source);
+    return Source::load(root["source"]);
 }
 
 void NativeExecutedTarget::cppan_load_project(const yaml &root)
 {
-    load_source_and_version(root, source, getPackageMutable().version);
+    *this += load_source_and_version(root, getPackageMutable().version);
 
     YAML_EXTRACT_AUTO2(Empty, "empty");
     YAML_EXTRACT_VAR(root, HeaderOnly, "header_only", bool);

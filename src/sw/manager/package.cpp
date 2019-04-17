@@ -198,6 +198,11 @@ String Package::getHashShort() const
     return shorten_hash(getHash(), 8);
 }
 
+void Package::setData(const PackageData &d) const
+{
+    data = std::make_unique<PackageData>(d);
+}
+
 const PackageData &Package::getData() const
 {
     if (!data)
@@ -237,7 +242,7 @@ const LocalStorage &LocalPackage::getLocalStorage() const
 
 std::optional<path> LocalPackage::getOverriddenDir() const
 {
-    return getLocalStorage().getPackagesDatabase().getOverriddenDir(*this);
+    return getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getOverriddenDir(*this);
 }
 
 path LocalPackage::getDir() const

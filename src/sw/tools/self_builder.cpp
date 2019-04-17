@@ -235,6 +235,7 @@ int main(int argc, char **argv)
         {{"pub.egorpugin.primitives.tools.embedder", "master"}, {}},
         {{"pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp", "master"}, {}},
         {{"pub.egorpugin.primitives.version", "master"}, {}},
+        {{"pub.egorpugin.primitives.source", "master"}, {}},
 
         {{"org.sw.sw.client.support", "0"}, {}},
         {{"org.sw.sw.client.protos", "0"}, {}},

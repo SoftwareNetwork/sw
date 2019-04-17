@@ -125,36 +125,64 @@ private:
 
 struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
 {
-    std::unique_ptr<PackagesDatabase> pkgdb;
-
     StorageWithPackagesDatabase(const String &name, const path &db_dir);
     virtual ~StorageWithPackagesDatabase();
-
-    PackagesDatabase &getPackagesDatabase() const;
 
     PackageData loadData(const PackageId &) const override;
     void get(const IStorage &source, const PackageId &id, StorageFileType) override;
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
+//protected:?
+    PackagesDatabase &getPackagesDatabase() const;
+
 private:
+    std::unique_ptr<PackagesDatabase> pkgdb;
+
     std::unordered_map<UnresolvedPackage, Package> resolve_no_deps(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
 };
 
-struct SW_MANAGER_API LocalStorage : Directories, StorageWithPackagesDatabase
+struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
+{
+    LocalStorageBase(const String &name, const path &db_dir);
+    virtual ~LocalStorageBase();
+
+    int getHashSchemaVersion() const override;
+    int getHashPathFromHashSchemaVersion() const override;
+
+    std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const override;
+
+    void deletePackage(const PackageId &id) const;
+};
+
+struct SW_MANAGER_API OverriddenPackagesStorage : LocalStorageBase
+{
+    OverriddenPackagesStorage(const path &db_dir);
+    virtual ~OverriddenPackagesStorage();
+
+    LocalPackage install(const Package &) const override;
+
+    std::unordered_set<LocalPackage> getPackages() const;
+    void deletePackageDir(const path &sdir) const;
+};
+
+struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
 {
     LocalStorage(const path &local_storage_root_dir);
     virtual ~LocalStorage();
 
     path getDatabaseRootDir() const;
 
-    int getHashSchemaVersion() const override;
-    int getHashPathFromHashSchemaVersion() const override;
     //LocalPackage download(const PackageId &) const override;
     LocalPackage install(const Package &) const override;
-    std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const override;
     void get(const IStorage &source, const PackageId &id, StorageFileType) override;
+    bool isPackageInstalled(const Package &id) const;
+
+    OverriddenPackagesStorage &getOverriddenPackagesStorage();
+    const OverriddenPackagesStorage &getOverriddenPackagesStorage() const;
 
 private:
+    OverriddenPackagesStorage ovs;
+
     void migrateStorage(int from, int to);
 };
 

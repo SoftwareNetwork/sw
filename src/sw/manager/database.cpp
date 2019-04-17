@@ -175,7 +175,7 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
     PackageData d;
 
     auto q = (*db)(
-        select(pkg_ver.packageVersionId, pkg_ver.hash, pkg_ver.flags, pkg_ver.updated, pkg_ver.groupNumber, pkg_ver.prefix)
+        select(pkg_ver.packageVersionId, pkg_ver.hash, pkg_ver.flags, pkg_ver.updated, pkg_ver.groupNumber, pkg_ver.prefix, pkg_ver.sdir)
         .from(pkg_ver)
         .where(pkg_ver.packageId == getPackageId(p.ppath) && pkg_ver.version == p.version.toString()));
     if (q.empty())
@@ -185,6 +185,7 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
     d.flags = row.flags.value();
     d.group_number = row.groupNumber.value();
     d.prefix = (int)row.prefix.value();
+    d.sdir = row.sdir.value();
 
     for (const auto &row : (*db)(
         select(pkgs.packageId, pkgs.path, pkgdeps.versionRange)
@@ -289,9 +290,9 @@ void PackagesDatabase::installPackage(const Package &p)
         pkgv.archiveVersion = 1,
 
         // misc
-        pkgv.updated = ""
+        pkgv.updated = "",
 
-        //pkgv.sdir = fs::canonical(opkg.sdir).u8string(),
+        pkgv.sdir = sqlpp::tvin(p.getData().sdir.u8string())
     ));
 
     // get version id
@@ -354,6 +355,43 @@ std::optional<path> PackagesDatabase::getOverriddenDir(const Package &p) const
     if (q.empty() || q.front().sdir.is_null())
         return {};
     return q.front().sdir.value();
+}
+
+std::unordered_set<PackageId> PackagesDatabase::getOverriddenPackages() const
+{
+    const auto pkg_ver = ::db::packages::PackageVersion{};
+
+    std::unordered_set<PackageId> r;
+    for (const auto &row : (*db)(
+        select(pkg_ver.packageVersionId, pkg_ver.packageId, pkg_ver.version)
+        .from(pkg_ver)
+        .where(pkg_ver.sdir.is_not_null())))
+    {
+        r.emplace(getPackagePath(row.packageId.value()), row.version.value());
+    }
+    return r;
+}
+
+void PackagesDatabase::deletePackage(const PackageId &p) const
+{
+    const auto pkg_ver = ::db::packages::PackageVersion{};
+
+    (*db)(
+        update(pkg_ver)
+        .set(pkg_ver.sdir = sqlpp::null)
+        .where(pkg_ver.packageId == getPackageId(p.ppath) && pkg_ver.version == p.version.toString())
+        );
+}
+
+void PackagesDatabase::deleteOverriddenPackageDir(const path &sdir) const
+{
+    const auto pkg_ver = ::db::packages::PackageVersion{};
+
+    (*db)(
+        update(pkg_ver)
+        .set(pkg_ver.sdir = sqlpp::null)
+        .where(pkg_ver.sdir == normalize_path(sdir))
+        );
 }
 
 void PackagesDatabase::listPackages(const String &name) const
@@ -440,6 +478,20 @@ db::PackageId PackagesDatabase::getPackageId(const PackagePath &ppath) const
     if (q.empty())
         return 0;
     return q.front().packageId.value();
+}
+
+String PackagesDatabase::getPackagePath(db::PackageId id) const
+{
+    const auto pkgs = ::db::packages::Package{};
+
+    for (const auto &row : (*db)(
+        select(pkgs.path)
+        .from(pkgs)
+        .where(pkgs.packageId == id)))
+    {
+        return row.path.value();
+    }
+    throw SW_RUNTIME_ERROR("No such package: " + std::to_string(id));
 }
 
 PackageId PackagesDatabase::getGroupLeader(PackageVersionGroupNumber n) const

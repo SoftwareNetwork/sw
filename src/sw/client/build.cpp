@@ -145,11 +145,9 @@ static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &o
             SourceDirMap srcs;
             for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
             {
-                auto s = t->source; // make a copy!
-                checkSourceAndVersion(s, pkg.getVersion());
-                if (!isValidSourceUrl(s))
-                    throw SW_RUNTIME_ERROR("Invalid source: " + print_source(s));
-                srcs[s] = d / get_source_hash(s);
+                auto s = t->getSource().clone(); // make a copy!
+                s->applyVersion(pkg.getVersion());
+                srcs[s->clone()] = d / s->getHash(); // UGLY clone()!!!
             }
 
             // src_old has correct root dirs
@@ -213,10 +211,13 @@ std::unique_ptr<Build> fetch_and_load(const SwContext &swctx, const path &file_o
     {
         for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
         {
-            auto s = t->source; // make a copy!
-            applyVersionToUrl(s, pkg.version);
+            auto s = t->getSource().clone(); // make a copy!
+            s->applyVersion(pkg.version);
             if (opts.apply_version_to_source)
-                applyVersionToUrl(t->source, pkg.version);
+            {
+                SW_UNIMPLEMENTED;
+                //applyVersionToUrl(t->source, pkg.version);
+            }
         }
     }
     b->prepareStep();

@@ -54,25 +54,27 @@ protected:
 
 struct SW_MANAGER_API PackagesDatabase : public Database
 {
-    //using Dependencies = DownloadDependency::DbDependencies;
-    //using Dependencies = DownloadDependency::IdDependenciesSet; // see dependency.h note
-    //using DependenciesMap = std::map<PackageId, DownloadDependency>;
-
     PackagesDatabase(const path &db_fn);
 
     std::unordered_map<UnresolvedPackage, PackageId> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
+
     PackageData getPackageData(const PackageId &) const;
 
     int64_t getInstalledPackageId(const PackageId &p) const;
     String getInstalledPackageHash(const PackageId &p) const;
     bool isPackageInstalled(const Package &p) const;
     void installPackage(const Package &p);
-    DataSources getDataSources() const;
+    void deletePackage(const PackageId &id) const;
+
+    // overridden
     std::optional<path> getOverriddenDir(const Package &p) const;
+    std::unordered_set<PackageId> getOverriddenPackages() const;
+    void deleteOverriddenPackageDir(const path &sdir) const;
 
-    //IdDependencies findDependencies(const UnresolvedPackages &deps) const;
-    //void findLocalDependencies(IdDependencies &id_deps, const UnresolvedPackages &deps) const;
+    DataSources getDataSources() const;
+    PackageVersionGroupNumber getMaxGroupNumber() const;
 
+    //
     void listPackages(const String &name = String()) const;
 
     template <template <class...> class C>
@@ -85,17 +87,11 @@ struct SW_MANAGER_API PackagesDatabase : public Database
     Packages getTransitiveDependentPackages(const Packages &pkgs);
 
     db::PackageId getPackageId(const PackagePath &ppath) const;
+    String getPackagePath(db::PackageId) const;
     PackageId getGroupLeader(PackageVersionGroupNumber) const;
-
-    //std::optional<ExtendedPackageData> getPackageInformation(const PackageId &) const;
 
 private:
     std::mutex m;
-
-    PackageVersionGroupNumber getMaxGroupNumber() const;
-
-    //db::PackageVersionId getExactProjectVersionId(const DownloadDependency &project, Version &version, SomeFlags &flags, String &hash, PackageVersionGroupNumber &gn, int &prefix) const;
-    //Dependencies getProjectDependencies(db::PackageVersionId project_version_id, DependenciesMap &dm) const;
 };
 
 }

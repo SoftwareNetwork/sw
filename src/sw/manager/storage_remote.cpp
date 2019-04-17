@@ -77,18 +77,18 @@ RemoteStorage::RemoteStorage(LocalStorage &ls, const String &name, const path &d
 
     static const auto db_loaded_var = "db_loaded";
 
-    if (!pkgdb->getIntValue(db_loaded_var))
+    if (!getPackagesDatabase().getIntValue(db_loaded_var))
     {
         LOG_DEBUG(logger, "Packages database was not found");
         download();
         load();
-        pkgdb->setIntValue(db_loaded_var, 1);
+        getPackagesDatabase().setIntValue(db_loaded_var, 1);
     }
     else
         updateDb();
 
     // at the end we always reopen packages db as read only
-    pkgdb->open(true);
+    getPackagesDatabase().open(true);
 }
 
 RemoteStorage::~RemoteStorage() = default;
@@ -199,7 +199,7 @@ void RemoteStorage::load() const
     sdb.setPackagesDbSchemaVersion(sver);
     }*/
 
-    auto mdb = pkgdb->db->native_handle();
+    auto mdb = getPackagesDatabase().db->native_handle();
     sqlite3_stmt *stmt = nullptr;
 
     // load only known tables
@@ -207,8 +207,8 @@ void RemoteStorage::load() const
     // but we don't do this
     Strings data_tables;
     sqlite3 *db2;
-    if (sqlite3_open_v2(pkgdb->fn.u8string().c_str(), &db2, SQLITE_OPEN_READONLY, 0) != SQLITE_OK)
-        throw SW_RUNTIME_ERROR("cannot open db: " + pkgdb->fn.u8string());
+    if (sqlite3_open_v2(getPackagesDatabase().fn.u8string().c_str(), &db2, SQLITE_OPEN_READONLY, 0) != SQLITE_OK)
+        throw SW_RUNTIME_ERROR("cannot open db: " + getPackagesDatabase().fn.u8string());
     int rc = sqlite3_exec(db2, "select name from sqlite_master as tables where type='table' and name not like '/_%' ESCAPE '/';",
         [](void *o, int, char **cols, char **)
         {
@@ -218,10 +218,10 @@ void RemoteStorage::load() const
         }, &data_tables, 0);
     sqlite3_close(db2);
     if (rc != SQLITE_OK)
-        throw SW_RUNTIME_ERROR("cannot query db for tables: " + pkgdb->fn.u8string());
+        throw SW_RUNTIME_ERROR("cannot query db for tables: " + getPackagesDatabase().fn.u8string());
 
-    pkgdb->db->execute("PRAGMA foreign_keys = OFF;");
-    pkgdb->db->execute("BEGIN;");
+    getPackagesDatabase().db->execute("PRAGMA foreign_keys = OFF;");
+    getPackagesDatabase().db->execute("BEGIN;");
 
     auto split_csv_line = [](auto &s)
     {
@@ -230,7 +230,7 @@ void RemoteStorage::load() const
 
     for (auto &td : data_tables)
     {
-        pkgdb->db->execute("delete from " + td);
+        getPackagesDatabase().db->execute("delete from " + td);
 
         auto fn = db_repo_dir / (td + ".csv");
         std::ifstream ifile(fn);
@@ -298,8 +298,8 @@ void RemoteStorage::load() const
             throw SW_RUNTIME_ERROR("sqlite3_finalize() failed: "s + sqlite3_errmsg(mdb));
     }
 
-    pkgdb->db->execute("COMMIT;");
-    pkgdb->db->execute("PRAGMA foreign_keys = ON;");
+    getPackagesDatabase().db->execute("COMMIT;");
+    getPackagesDatabase().db->execute("PRAGMA foreign_keys = ON;");
 }
 
 void RemoteStorage::updateDb() const
@@ -326,7 +326,7 @@ void RemoteStorage::updateDb() const
     if (version_remote > readPackagesDbVersion(db_repo_dir))
     {
         // multiprocess aware
-        single_process_job(pkgdb->fn.parent_path() / "db_update", [this] {
+        single_process_job(getPackagesDatabase().fn.parent_path() / "db_update", [this] {
             download();
             load();
         });
@@ -346,12 +346,12 @@ void RemoteStorage::writeDownloadTime() const
 {
     auto tp = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(tp);
-    write_file(pkgdb->fn.parent_path() / PACKAGES_DB_DOWNLOAD_TIME_FILE, std::to_string(time));
+    write_file(getPackagesDatabase().fn.parent_path() / PACKAGES_DB_DOWNLOAD_TIME_FILE, std::to_string(time));
 }
 
 TimePoint RemoteStorage::readDownloadTime() const
 {
-    auto fn = pkgdb->fn.parent_path() / PACKAGES_DB_DOWNLOAD_TIME_FILE;
+    auto fn = getPackagesDatabase().fn.parent_path() / PACKAGES_DB_DOWNLOAD_TIME_FILE;
     String ts = "0";
     if (fs::exists(fn))
         ts = read_file(fn);
@@ -375,7 +375,7 @@ bool RemoteStorage::isCurrentDbOld() const
 LocalPackage RemoteStorage::install(const Package &id) const
 {
     LocalPackage p(ls, id);
-    if (ls.getPackagesDatabase().isPackageInstalled(id))
+    if (ls.isPackageInstalled(id))
         return p;
 
     // actually we may want to remove only stamps, hashes etc.
@@ -437,7 +437,7 @@ std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFi
     {
     case StorageFileType::SourceArchive:
     {
-        auto provs = pkgdb->getDataSources();
+        auto provs = getPackagesDatabase().getDataSources();
         Package pkg(*this, id);
         auto rf = std::make_unique<RemoteFileWithHashVerification>();
         rf->hash = pkg.getData().hash;

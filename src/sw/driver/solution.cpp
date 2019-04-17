@@ -346,9 +346,9 @@ path Solution::getSourceDir(const LocalPackage &p) const
 
 std::optional<path> Solution::getSourceDir(const Source &s, const Version &v) const
 {
-    auto s2 = s;
-    applyVersionToUrl(s2, v);
-    auto i = source_dirs_by_source.find(s2);
+    auto s2 = s.clone();
+    s2->applyVersion(v);
+    auto i = source_dirs_by_source.find(s2->clone()); // UGLY!!!
     if (i == source_dirs_by_source.end())
         return {};
     return i->second;
@@ -1438,16 +1438,16 @@ PackageDescriptionMap Solution::getPackages() const
         nlohmann::json j;
 
         // source, version, path
-        save_source(j["source"], t->source);
+        t->getSource().save(j["source"]);
         j["version"] = pkg.getVersion().toString();
         j["path"] = pkg.ppath.toString();
 
         auto rd = SourceDir;
         if (!build->fetch_info.sources.empty())
         {
-            auto src = t->source; // copy
-            checkSourceAndVersion(src, t->getPackage().version);
-            auto si = build->fetch_info.sources.find(src);
+            auto src = t->getSource().clone(); // copy
+            src->applyVersion(t->getPackage().version);
+            auto si = build->fetch_info.sources.find(src->clone()); // UGLY!!!
             if (si == build->fetch_info.sources.end())
                 throw SW_RUNTIME_ERROR("no such source");
             rd = si->second;

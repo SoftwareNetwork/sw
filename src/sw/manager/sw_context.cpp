@@ -14,14 +14,15 @@ DECLARE_STATIC_LOGGER(logger, "icontext");
 namespace sw
 {
 
-// remove whn msvc bug is fixed
-struct PackageStore {};
-
 SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
 {
     auto p = local_storage_root_dir;
     p += "2";
+
+    local_storage_id = storages.size();
     storages.emplace_back(std::make_unique<LocalStorage>(p));
+
+    first_remote_storage_id = storages.size();
     storages.emplace_back(std::make_unique<RemoteStorage>(getLocalStorage(), "software-network", getLocalStorage().getDatabaseRootDir()));
 }
 
@@ -29,12 +30,28 @@ SwManagerContext::~SwManagerContext() = default;
 
 LocalStorage &SwManagerContext::getLocalStorage()
 {
-    return static_cast<LocalStorage&>(*storages[0]);
+    return static_cast<LocalStorage&>(*storages[local_storage_id]);
 }
 
 const LocalStorage &SwManagerContext::getLocalStorage() const
 {
-    return static_cast<const LocalStorage&>(*storages[0]);
+    return static_cast<const LocalStorage&>(*storages[local_storage_id]);
+}
+
+std::vector<Storage *> SwManagerContext::getRemoteStorages()
+{
+    std::vector<Storage *> r;
+    for (int i = first_remote_storage_id; i < storages.size(); i++)
+        r.push_back(storages[i].get());
+    return r;
+}
+
+std::vector<const Storage *> SwManagerContext::getRemoteStorages() const
+{
+    std::vector<const Storage *> r;
+    for (int i = first_remote_storage_id; i < storages.size(); i++)
+        r.push_back(storages[i].get());
+    return r;
 }
 
 std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const UnresolvedPackages &pkgs) const

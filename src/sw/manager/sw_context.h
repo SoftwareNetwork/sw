@@ -18,7 +18,7 @@ namespace sw
 {
 
 struct LocalStorage;
-struct PackageStore;  // remove when vs bug is fixed
+struct OverriddenPackagesStorage;
 struct Storage;
 
 // sw_context_t
@@ -35,14 +35,13 @@ struct ISwContext
 
 struct SW_MANAGER_API SwManagerContext : ISwContext
 {
-    std::unique_ptr<PackageStore> store; // remove when vs bug is fixed
-    std::vector<std::unique_ptr<Storage>> storages;
-
     SwManagerContext(const path &local_storage_root_dir);
     virtual ~SwManagerContext();
 
     LocalStorage &getLocalStorage() override;
     const LocalStorage &getLocalStorage() const override;
+    std::vector<Storage *> getRemoteStorages();
+    std::vector<const Storage *> getRemoteStorages() const;
 
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) const override;
 
@@ -54,6 +53,9 @@ protected:
     mutable std::mutex m; // main context mutex
 
 private:
+    int local_storage_id;
+    int first_remote_storage_id;
+    std::vector<std::unique_ptr<Storage>> storages;
     mutable std::unordered_map<UnresolvedPackage, Package> resolved_packages;
 };
 

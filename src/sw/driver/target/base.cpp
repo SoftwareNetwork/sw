@@ -77,8 +77,7 @@ TargetBase::TargetBase()
 TargetBase::TargetBase(const TargetBase &rhs)
     : LanguageStorage(rhs)
     , ProjectDirectories(rhs)
-    //, pkg(std::make_unique<LocalPackage>(static_cast<const LocalStorage &>(rhs.pkg->storage), rhs.pkg->ppath, rhs.pkg->version))
-    , source(rhs.source)
+    , source(rhs.source ? rhs.source->clone() : nullptr)
     , Scope(rhs.Scope)
     , Local(rhs.Local)
     , UseStorageBinaryDir(rhs.UseStorageBinaryDir)
@@ -173,8 +172,11 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
             t->SourceDir = getSolution()->SourceDir;
 
         // try to get solution provided source dir
-        if (auto sd = getSolution()->getSourceDir(t->source, t->getPackage().version); sd)
-            t->SourceDir = sd.value();
+        if (t->source)
+        {
+            if (auto sd = getSolution()->getSourceDir(t->getSource(), t->getPackage().version); sd)
+                t->SourceDir = sd.value();
+        }
     };
 
     set_sdir();
@@ -232,7 +234,8 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     // inherit from this
     t->solution = getSolution();
     t->Scope = Scope;
-    t->source = source;
+    if (source)
+        t->source = source->clone();
 
     t->IsConfig = IsConfig; // TODO: inherit from reconsider
     t->Local = Local; // TODO: inherit from reconsider
@@ -295,10 +298,10 @@ void TargetBase::setRootDirectory(const path &p)
 
 void TargetBase::setSource(const Source &s)
 {
-    source = s;
+    source = s.clone();
 
     // apply some defaults
-    if (auto g = std::get_if<Git>(&source); g && !g->isValid())
+    if (auto g = dynamic_cast<Git*>(source.get()); g && !g->isValid())
     {
         if (getPackage().version.isBranch())
         {
@@ -316,18 +319,18 @@ void TargetBase::setSource(const Source &s)
     if (d.empty()/* || !ParallelSourceDownload*/ || !isLocal())
         return;
 
-    auto s2 = source; // make a copy!
-    checkSourceAndVersion(s2, getPackage().getVersion());
-    d /= get_source_hash(s2);
+    auto s2 = source->clone(); // make a copy!
+    s2->applyVersion(getPackage().getVersion());
+    d /= s2->getHash();
 
     if (!fs::exists(d))
     {
-        LOG_INFO(logger, "Downloading source:\n" << print_source(s2));
-        download(s2, d);
+        LOG_INFO(logger, "Downloading source:\n" << s2->print());
+        s2->download(d);
     }
     d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
     d /= getSolution()->prefix_source_dir;
-    getSolution()->source_dirs_by_source[s2] = d;
+    getSolution()->source_dirs_by_source[s2->clone()] = d;
     /*getSolution()->SourceDir = */SourceDir = d;
 }
 
@@ -335,6 +338,11 @@ TargetBase &TargetBase::operator+=(const Source &s)
 {
     setSource(s);
     return *this;
+}
+
+TargetBase &TargetBase::operator+=(std::unique_ptr<Source> s)
+{
+    return operator+=(*s);
 }
 
 void TargetBase::operator=(const Source &s)
@@ -390,20 +398,22 @@ void TargetBase::fetch()
         return;
 
     static SourceDirMap fetched_dirs;
-    auto i = fetched_dirs.find(source);
+
+    auto s2 = getSource().clone(); // make a copy!
+    auto i = fetched_dirs.find(s2->clone()); // UGLY!!!
     if (i == fetched_dirs.end())
     {
-        path d = get_source_hash(source);
+        path d = s2->getHash();
         d = BinaryDir / d;
         if (!fs::exists(d))
         {
-            applyVersionToUrl(source, getPackage().version);
-            download(source, d);
+            s2->applyVersion(getPackage().version);
+            s2->download(d);
         }
         d = d / findRootDirectory(d);
         SourceDir = d;
 
-        fetched_dirs[source] = d;
+        fetched_dirs[s2->clone()] = d;
     }
     else
     {
@@ -435,6 +445,13 @@ LocalPackage &TargetBase::getPackageMutable()
     if (!pkg)
         throw SW_LOGIC_ERROR("pkg not created");
     return *pkg;
+}
+
+const Source &TargetBase::getSource() const
+{
+    if (!source)
+        throw SW_LOGIC_ERROR("source is undefined");
+    return *source;
 }
 
 Commands Target::getCommands() const

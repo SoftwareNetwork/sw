@@ -161,13 +161,8 @@ struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
 {
     using TargetMap = PackageVersionMapBase<TargetBaseTypePtr, std::unordered_map, primitives::version::VersionMap>;
 
-    // hide?
-    // Target Source.
-    // use struct Source Source;
-    Source source;
-
     // New root directory after downloading and unpacking.
-    path UnpackDirectory;
+    //path UnpackDirectory;
 
     // command storage, use driver::Commands?
     // not needed? actual commands may be hidden in programs that lie in common Storage below
@@ -296,18 +291,16 @@ public:
     path getTempDir() const;
 
     void setRootDirectory(const path &);
-    void setSource(const Source &);
-    Source &getSource() { return source; }
-    const Source &getSource() const { return source; }
 
     // really local package
     bool isLocal() const;
     //bool isLocalOrOverridden() const { return Local && || ? getPackage().getOverriddenDir(); }
 
     TargetBase &operator+=(const Source &);
-
-    // remove?
-    void operator=(const Source &);
+    TargetBase &operator+=(std::unique_ptr<Source>);
+    void operator=(const Source &); // remove?
+    void setSource(const Source &);
+    const Source &getSource() const;
 
     void fetch();
 
@@ -333,6 +326,7 @@ protected:
 
 private:
     std::unique_ptr<LocalPackage> pkg;
+    std::unique_ptr<Source> source;
 
     template <typename T, typename ... Args>
     T &addTarget1(const PackagePath &Name, const Version &V, Args && ... args)

@@ -7,13 +7,12 @@
 #pragma once
 
 #include "package.h"
+#include "source.h"
 
 // !!! see more fields here https://github.com/aws/aws-sdk-cpp/blob/master/aws-cpp-sdk-s3/nuget/aws-cpp-sdk-s3.autopkg
 
 namespace sw
 {
-
-inline namespace source { struct Source; }
 
 namespace detail
 {

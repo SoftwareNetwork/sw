@@ -18,9 +18,6 @@
 
 #include "sw/driver/bazel/bazel.h"
 
-#include <sw/manager/resolver.h>
-#include <sw/support/http.h>
-
 #include <boost/algorithm/string.hpp>
 
 #include <primitives/command.h>

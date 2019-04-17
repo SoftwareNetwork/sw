@@ -214,8 +214,47 @@ StorageWithPackagesDatabase::resolve_no_deps(const UnresolvedPackages &pkgs, Unr
     return r;
 }
 
+LocalStorageBase::LocalStorageBase(const String &name, const path &db_dir)
+    : StorageWithPackagesDatabase(name, db_dir)
+{
+}
+
+LocalStorageBase::~LocalStorageBase() = default;
+
+int LocalStorageBase::getHashSchemaVersion() const
+{
+    return 1;
+}
+
+int LocalStorageBase::getHashPathFromHashSchemaVersion() const
+{
+    return 2;
+}
+
+std::unique_ptr<vfs::File> LocalStorageBase::getFile(const PackageId &id, StorageFileType t) const
+{
+    SW_UNIMPLEMENTED;
+
+    switch (t)
+    {
+    case StorageFileType::SourceArchive:
+    {
+        LocalPackage p(*this, id);
+        auto d = p.getDirSrc() / make_archive_name();
+        //return d.u8string();
+    }
+    default:
+        SW_UNIMPLEMENTED;
+    }
+}
+
+void LocalStorageBase::deletePackage(const PackageId &id) const
+{
+    getPackagesDatabase().deletePackage(id);
+}
+
 LocalStorage::LocalStorage(const path &local_storage_root_dir)
-    : Directories(local_storage_root_dir), StorageWithPackagesDatabase("local", getDatabaseRootDir())
+    : Directories(local_storage_root_dir), LocalStorageBase("local", getDatabaseRootDir()), ovs(getDatabaseRootDir())
 {
 /*#define SW_CURRENT_LOCAL_STORAGE_VERSION 0
 #define SW_CURRENT_LOCAL_STORAGE_VERSION_KEY "storage_version"
@@ -226,7 +265,7 @@ LocalStorage::LocalStorage(const path &local_storage_root_dir)
         sdb->setIntValue(SW_CURRENT_LOCAL_STORAGE_VERSION_KEY, version + 1);
     }*/
 
-    pkgdb->open();
+    getPackagesDatabase().open();
 }
 
 LocalStorage::~LocalStorage() = default;
@@ -234,16 +273,6 @@ LocalStorage::~LocalStorage() = default;
 path LocalStorage::getDatabaseRootDir() const
 {
     return storage_dir_etc / "sw" / "database";
-}
-
-int LocalStorage::getHashSchemaVersion() const
-{
-    return 1;
-}
-
-int LocalStorage::getHashPathFromHashSchemaVersion() const
-{
-    return 2;
 }
 
 void LocalStorage::migrateStorage(int from, int to)
@@ -272,28 +301,17 @@ void LocalStorage::migrateStorage(int from, int to)
     return LocalPackage(*this, id);
 }*/
 
-LocalPackage LocalStorage::install(const Package &id) const
+bool LocalStorage::isPackageInstalled(const Package &pkg) const
 {
-    if (!getPackagesDatabase().isPackageInstalled(id))
-        throw SW_RUNTIME_ERROR("package not installed: " + id.toString());
-    return LocalPackage(*this, id);
+    LocalPackage p(*this, pkg);
+    return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(p.getDir());
 }
 
-std::unique_ptr<vfs::File> LocalStorage::getFile(const PackageId &id, StorageFileType t) const
+LocalPackage LocalStorage::install(const Package &id) const
 {
-    SW_UNIMPLEMENTED;
-
-    switch (t)
-    {
-    case StorageFileType::SourceArchive:
-    {
-        LocalPackage p(*this, id);
-        auto d = p.getDirSrc() / make_archive_name();
-        //return d.u8string();
-    }
-    default:
-        SW_UNIMPLEMENTED;
-    }
+    if (!isPackageInstalled(id))
+        throw SW_RUNTIME_ERROR("package not installed: " + id.toString());
+    return LocalPackage(*this, id);
 }
 
 void LocalStorage::get(const IStorage &source, const PackageId &id, StorageFileType t)
@@ -317,6 +335,43 @@ void LocalStorage::get(const IStorage &source, const PackageId &id, StorageFileT
     unpack_file(dst, lp.getDirSrc());
 
     // now move .new to usual archive (or remove archive)
+}
+
+OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage()
+{
+    return ovs;
+}
+
+const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() const
+{
+    return ovs;
+}
+
+OverriddenPackagesStorage::OverriddenPackagesStorage(const path &db_dir)
+    : LocalStorageBase("overridden", db_dir)
+{
+    getPackagesDatabase().open();
+}
+
+OverriddenPackagesStorage::~OverriddenPackagesStorage() = default;
+
+std::unordered_set<LocalPackage> OverriddenPackagesStorage::getPackages() const
+{
+    std::unordered_set<LocalPackage> pkgs;
+    for (auto &id : getPackagesDatabase().getOverriddenPackages())
+        pkgs.emplace(*this, id);
+    return pkgs;
+}
+
+void OverriddenPackagesStorage::deletePackageDir(const path &sdir) const
+{
+    getPackagesDatabase().deleteOverriddenPackageDir(sdir);
+}
+
+LocalPackage OverriddenPackagesStorage::install(const Package &id) const
+{
+    getPackagesDatabase().installPackage(id);
+    return LocalPackage(*this, id);
 }
 
 }

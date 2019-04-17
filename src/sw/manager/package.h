@@ -59,14 +59,19 @@ struct PackageData
     // length of prefix path
     // e.g., if package path is 'myproject.pkg' and it's added to 'org.sw',
     // then prefix equals to size of 'org.sw', thus 2
-    int prefix;
+    int prefix = 2;
 
     // packages added in one bunch (=group) have the same group number
-    PackageVersionGroupNumber group_number;
+    PackageVersionGroupNumber group_number = 0;
 
     //
     UnresolvedPackages dependencies;
+
+    // for overridden pkgs
+    path sdir;
 };
+
+struct LocalPackage;
 
 struct SW_MANAGER_API Package : PackageId
 {
@@ -85,9 +90,10 @@ struct SW_MANAGER_API Package : PackageId
     String getHashShort() const;
     path getHashPath() const;
 
+    void setData(const PackageData &) const;
     const PackageData &getData() const;
-    //struct LocalPackage download() const;
-    struct LocalPackage install() const;
+    //LocalPackage download(file type) const;
+    LocalPackage install() const;
 
 private:
     mutable std::unique_ptr<PackageData> data;

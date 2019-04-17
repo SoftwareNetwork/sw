@@ -11,8 +11,10 @@ void configure(Build &s)
     {
         if (cbt != sw::CallbackType::CreateTarget)
             return;
-        if (t.getPackage() == PackageId{ "pub.egorpugin.primitives.version-master" }/* ||
-            t.getPackage() == PackageId{ "pub.egorpugin.primitives.filesystem-master" }*/)
+        if (0
+            || t.getPackage() == PackageId{ "pub.egorpugin.primitives.source-master" }
+            || t.getPackage() == PackageId{ "pub.egorpugin.primitives.version-master" }
+            /* || t.getPackage() == PackageId{ "pub.egorpugin.primitives.filesystem-master" }*/)
         {
             auto &nt = dynamic_cast<NativeExecutedTarget &>(t);
             nt.ExportIfStatic = true;
@@ -69,18 +71,20 @@ void build(Solution &s)
     manager.CPPVersion = CPPLanguageStandard::CPP17;
     manager.Public += "BOOST_DLL_USE_STD_FS"_def;
     manager.Public += support, protos,
-        "pub.egorpugin.primitives.yaml-master"_dep,
         "pub.egorpugin.primitives.date_time-master"_dep,
+        "pub.egorpugin.primitives.db.sqlite3-master"_dep,
         "pub.egorpugin.primitives.lock-master"_dep,
         "pub.egorpugin.primitives.pack-master"_dep,
+        "pub.egorpugin.primitives.source-master"_dep,
+        "pub.egorpugin.primitives.sw.settings-master"_dep,
+        "pub.egorpugin.primitives.version-master"_dep,
+        "pub.egorpugin.primitives.win32helpers-master"_dep,
+        "pub.egorpugin.primitives.yaml-master"_dep,
         "org.sw.demo.nlohmann.json-3"_dep,
         "org.sw.demo.boost.variant-1"_dep,
         "org.sw.demo.boost.dll-1"_dep,
-        "pub.egorpugin.primitives.db.sqlite3-master"_dep,
-        "org.sw.demo.rbock.sqlpp11_connector_sqlite3-develop"_dep,
-        "pub.egorpugin.primitives.version-master"_dep,
-        "pub.egorpugin.primitives.sw.settings-master"_dep,
-        "pub.egorpugin.primitives.win32helpers-master"_dep;
+        "org.sw.demo.rbock.sqlpp11_connector_sqlite3-develop"_dep
+        ;
     manager += "src/sw/manager/.*"_rr;
     manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().version.getMajor());
     manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().version.getMinor());
