@@ -382,7 +382,7 @@ SourceFile &SourceFileStorage::operator[](path F)
     if (!f)
     {
         // here we may let other fibers progress until language is registered
-        throw SW_RUNTIME_ERROR("Empty source file: " + F.u8string());
+        throw SW_RUNTIME_ERROR(target->getPackage().toString() + ": Empty source file: " + F.u8string());
     }
     return *f;
 }
@@ -449,7 +449,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
                 {
                     if (ignore_errors)
                         return false;
-                    String err = "Cannot find source file: " + (target->SourceDir / F).u8string();
+                    String err = target->getPackage().toString() + ": Cannot find source file: " + (target->SourceDir / F).u8string();
                     if (ignore_source_files_errors)
                     {
                         LOG_INFO(logger, err);
@@ -471,7 +471,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
             {
                 if (ignore_errors)
                     return false;
-                String err = "Cannot find source file: " + F.u8string();
+                String err = target->getPackage().toString() + ": Cannot find source file: " + F.u8string();
                 if (ignore_source_files_errors)
                 {
                     LOG_INFO(logger, err);

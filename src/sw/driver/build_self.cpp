@@ -35,14 +35,9 @@ void build_self(Solution &s)
 #include <build_self.packages.generated.h>
 
     //static UnresolvedPackages store; // tmp store
-    auto m = s.swctx.resolve(required_packages/*, store*/);
-    auto &e = getExecutor();
+    auto m = s.swctx.resolveAndInstall(required_packages/*, store*/);
     for (auto &[u, p] : m)
-    {
-        e.push([&p] { p.install(); });
         s.knownTargets.insert(p);
-    }
-    e.wait();
 
     s.Settings.Native.LibrariesType = LibraryType::Static;
     s.Variables["SW_SELF_BUILD"] = 1;

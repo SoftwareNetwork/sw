@@ -732,12 +732,7 @@ void Solution::build_and_resolve(int n_runs)
     }
 
     // resolve only deps needed
-    auto m = swctx.resolve(pkgs);
-
-    auto &e = getExecutor();
-    for (auto &[u, p] : m)
-        e.push([&p] { p.install(); });
-    e.wait();
+    auto m = swctx.resolveAndInstall(pkgs);
 
     // after install
 
@@ -803,7 +798,7 @@ void Solution::build_and_resolve(int n_runs)
         UnresolvedPackages pkgs;
         for (auto &[pkg, d] : ud)
             pkgs.insert(pkg);
-        swctx.resolve(pkgs);
+        swctx.resolveAndInstall(pkgs);
 
         if (ud.empty())
             return;

@@ -732,11 +732,7 @@ SUBCOMMAND_DECL(uri)
             {
                 SetupConsole();
                 bUseSystemPause = true;
-                auto m = swctx.resolve(UnresolvedPackages{ UnresolvedPackage{p.ppath, p.version} });
-                auto &e = getExecutor();
-                for (auto &[u, p] : m)
-                    e.push([&p] { p.install(); });
-                e.wait();
+                auto m = swctx.resolveAndInstall(UnresolvedPackages{ UnresolvedPackage{p.ppath, p.version} });
             }
             else
             {
@@ -1102,7 +1098,7 @@ SUBCOMMAND_DECL(install)
     install_args.push_back(install_arg);
     for (auto &p : install_args)
         pkgs.insert(extractFromString(p));
-    auto m = swctx.resolve(pkgs);
+    auto m = swctx.resolveAndInstall(pkgs);
     for (auto &[p1, d] : m)
     {
         //for (auto &p2 : install_args)

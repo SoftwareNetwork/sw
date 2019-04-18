@@ -1538,11 +1538,7 @@ void Build::build_packages(const StringSet &pkgs)
         upkgs.insert(extractFromString(p));
 
     // resolve only deps needed
-    auto m = swctx.resolve(upkgs);
-
-    for (auto &[u, p] : m)
-        e->push([&p] { p.install(); });
-    e->wait();
+    auto m = swctx.resolveAndInstall(upkgs);
 
     for (auto &[u, p] : m)
         knownTargets.insert(p);
