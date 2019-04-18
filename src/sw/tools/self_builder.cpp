@@ -254,10 +254,7 @@ int main(int argc, char **argv)
     for (auto &[p, d] : pkgs)
         deps.insert(p);
 
-    auto m = swctx.resolve(deps);
-    for (auto &[u, p] : m)
-        e.push([&p]{ p.install(); });
-    e.wait();
+    auto m = swctx.resolveAndInstall(deps);
 
     // write resolved deps!
     StringSet pkgs_sorted;

@@ -254,7 +254,7 @@ void LocalStorageBase::deletePackage(const PackageId &id) const
 }
 
 LocalStorage::LocalStorage(const path &local_storage_root_dir)
-    : Directories(local_storage_root_dir), LocalStorageBase("local", getDatabaseRootDir()), ovs(getDatabaseRootDir())
+    : Directories(local_storage_root_dir), LocalStorageBase("local", getDatabaseRootDir()), ovs(*this, getDatabaseRootDir())
 {
 /*#define SW_CURRENT_LOCAL_STORAGE_VERSION 0
 #define SW_CURRENT_LOCAL_STORAGE_VERSION_KEY "storage_version"
@@ -309,6 +309,8 @@ bool LocalStorage::isPackageInstalled(const Package &pkg) const
 
 LocalPackage LocalStorage::install(const Package &id) const
 {
+    if (&id.storage == this)
+        throw SW_RUNTIME_ERROR("Can't install from self to self");
     if (!isPackageInstalled(id))
         throw SW_RUNTIME_ERROR("package not installed: " + id.toString());
     return LocalPackage(*this, id);
@@ -347,8 +349,8 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
     return ovs;
 }
 
-OverriddenPackagesStorage::OverriddenPackagesStorage(const path &db_dir)
-    : LocalStorageBase("overridden", db_dir)
+OverriddenPackagesStorage::OverriddenPackagesStorage(const LocalStorage &ls, const path &db_dir)
+    : LocalStorageBase("overridden", db_dir), ls(ls)
 {
     getPackagesDatabase().open();
 }
@@ -370,8 +372,10 @@ void OverriddenPackagesStorage::deletePackageDir(const path &sdir) const
 
 LocalPackage OverriddenPackagesStorage::install(const Package &id) const
 {
-    getPackagesDatabase().installPackage(id);
-    return LocalPackage(*this, id);
+    // we can't install from ourselves
+    if (&id.storage != this)
+        getPackagesDatabase().installPackage(id);
+    return LocalPackage(ls, id);
 }
 
 }

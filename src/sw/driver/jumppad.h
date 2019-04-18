@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <primitives/exceptions.h>
 #include <primitives/filesystem.h>
 
 #include <gsl/span>

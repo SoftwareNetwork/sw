@@ -156,7 +156,9 @@ struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
 
 struct SW_MANAGER_API OverriddenPackagesStorage : LocalStorageBase
 {
-    OverriddenPackagesStorage(const path &db_dir);
+    const LocalStorage &ls;
+
+    OverriddenPackagesStorage(const LocalStorage &ls, const path &db_dir);
     virtual ~OverriddenPackagesStorage();
 
     LocalPackage install(const Package &) const override;

@@ -348,7 +348,7 @@ std::optional<path> Solution::getSourceDir(const Source &s, const Version &v) co
 {
     auto s2 = s.clone();
     s2->applyVersion(v);
-    auto i = source_dirs_by_source.find(s2->clone()); // UGLY!!!
+    auto i = source_dirs_by_source.find(s2->getHash());
     if (i == source_dirs_by_source.end())
         return {};
     return i->second;
@@ -1447,7 +1447,7 @@ PackageDescriptionMap Solution::getPackages() const
         {
             auto src = t->getSource().clone(); // copy
             src->applyVersion(t->getPackage().version);
-            auto si = build->fetch_info.sources.find(src->clone()); // UGLY!!!
+            auto si = build->fetch_info.sources.find(src->getHash());
             if (si == build->fetch_info.sources.end())
                 throw SW_RUNTIME_ERROR("no such source");
             rd = si->second;

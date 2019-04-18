@@ -15,7 +15,6 @@ inline namespace source
 {
 
 using primitives::source::Source;
-using primitives::source::SourcePtr;
 
 using primitives::source::EmptySource;
 using primitives::source::Hg;
@@ -33,6 +32,7 @@ struct SW_MANAGER_API Git : primitives::source::Git
     using primitives::source::Git::Git;
 
     Git(const String &url);
+    Git(const Git &) = default;
 
     bool isValid();
 
@@ -42,13 +42,8 @@ private:
 
 }
 
-using SourceSharedPtr = std::shared_ptr<Source>;
-// it's better to have SourcePtr instead of SourceSharedPtr
-// this causes build errors atm
-//using SourceDirMap = std::unordered_map<SourcePtr, path>;
-//using SourceDirSet = std::unordered_set<SourcePtr>;
-using SourceDirMap = std::unordered_map<SourceSharedPtr, path>;
-using SourceDirSet = std::unordered_set<SourceSharedPtr>;
+using SourcePtr = std::unique_ptr<Source>;
+using SourceDirMap = std::unordered_map<String, path>;
 
 struct SourceDownloadOptions
 {
@@ -60,9 +55,9 @@ struct SourceDownloadOptions
 };
 
 SW_MANAGER_API
-void download(SourceDirMap &sources, const SourceDownloadOptions &opts = {});
+void download(const std::unordered_set<SourcePtr> &sources, SourceDirMap &source_dirs, const SourceDownloadOptions &opts = {});
 
 SW_MANAGER_API
-SourceDirMap download(SourceDirSet &sources, const SourceDownloadOptions &opts = {});
+SourceDirMap download(const std::unordered_set<SourcePtr> &sources, const SourceDownloadOptions &opts = {});
 
 }

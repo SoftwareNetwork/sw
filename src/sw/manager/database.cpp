@@ -175,11 +175,13 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
     PackageData d;
 
     auto q = (*db)(
-        select(pkg_ver.packageVersionId, pkg_ver.hash, pkg_ver.flags, pkg_ver.updated, pkg_ver.groupNumber, pkg_ver.prefix, pkg_ver.sdir)
+        select(pkg_ver.packageVersionId, pkg_ver.hash, pkg_ver.flags, pkg_ver.groupNumber, pkg_ver.prefix, pkg_ver.sdir)
         .from(pkg_ver)
         .where(pkg_ver.packageId == getPackageId(p.ppath) && pkg_ver.version == p.version.toString()));
     if (q.empty())
+    {
         throw SW_RUNTIME_ERROR("No such package in db: " + p.toString());
+    }
     auto &row = q.front();
     d.hash = row.hash.value();
     d.flags = row.flags.value();
@@ -241,7 +243,19 @@ void PackagesDatabase::installPackage(const Package &p)
 
     db->start_transaction();
 
+    ScopeGuard sg([this]()
+    {
+        db->rollback_transaction(false);
+        //throw SW_RUNTIME_ERROR("db transaction not finished");
+    });
+
     int64_t package_id = 0;
+
+    // we might remove our package below, so find group number here
+    // main issue - p.getData() call
+    PackageVersionGroupNumber gn;
+    auto h = std::hash<String>()(p.storage.getName());
+    gn = hash_combine(h, p.getData().group_number);
 
     // get package id
     auto q = (*db)(select(pkg.packageId).from(pkg).where(
@@ -270,10 +284,6 @@ void PackagesDatabase::installPackage(const Package &p)
             pkgv.version == p.version.toString()
             ));
     }
-
-    PackageVersionGroupNumber gn;
-    auto h = std::hash<String>()(p.storage.getName());
-    gn = hash_combine(h, p.getData().group_number);
 
     // insert version
     (*db)(insert_into(pkgv).set(
@@ -328,6 +338,7 @@ void PackagesDatabase::installPackage(const Package &p)
     }
 
     db->commit_transaction();
+    sg.dismiss();
 }
 
 PackageVersionGroupNumber PackagesDatabase::getMaxGroupNumber() const

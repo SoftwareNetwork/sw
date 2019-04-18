@@ -143,11 +143,15 @@ static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &o
             b->load(fn);
 
             SourceDirMap srcs;
+            std::unordered_set<SourcePtr> sources;
             for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
             {
                 auto s = t->getSource().clone(); // make a copy!
                 s->applyVersion(pkg.getVersion());
-                srcs[s->clone()] = d / s->getHash(); // UGLY clone()!!!
+                if (srcs.find(s->getHash()) != srcs.end())
+                    continue;
+                srcs[s->getHash()] = d / s->getHash();
+                sources.emplace(std::move(s));
             }
 
             // src_old has correct root dirs
@@ -172,7 +176,7 @@ static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &o
             // For other cases uses non-parallel mode.
             pp = false;
 
-            download(srcs, opts);
+            download(sources, srcs, opts);
             srcs_old = srcs;
         }
     }

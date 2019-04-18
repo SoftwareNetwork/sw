@@ -32,13 +32,13 @@ bool Git::isValid()
     return i == 1;
 }
 
-void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
+void download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_dirs, const SourceDownloadOptions &opts)
 {
     auto &e = getExecutor();
     Futures<void> fs;
-    for (auto &src : sources)
+    for (auto &src : sset)
     {
-        fs.push_back(e.push([src = src.first.get(), &d = src.second, &opts]
+        fs.push_back(e.push([src = src.get(), &d = source_dirs[src->getHash()], &opts]
         {
             path t = d;
             t += ".stamp";
@@ -76,12 +76,12 @@ void download(SourceDirMap &sources, const SourceDownloadOptions &opts)
     waitAndGet(fs);
 }
 
-SourceDirMap download(SourceDirSet &sset, const SourceDownloadOptions &opts)
+SourceDirMap download(const std::unordered_set<SourcePtr> &sset, const SourceDownloadOptions &opts)
 {
     SourceDirMap sources;
     for (auto &s : sset)
-        sources[s->clone()] = opts.root_dir.empty() ? get_temp_filename("dl") : (opts.root_dir / s->getHash());
-    download(sources, opts);
+        sources[s->getHash()] = opts.root_dir.empty() ? get_temp_filename("dl") : (opts.root_dir / s->getHash());
+    download(sset, sources, opts);
     return sources;
 }
 

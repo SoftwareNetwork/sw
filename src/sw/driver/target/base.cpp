@@ -330,7 +330,7 @@ void TargetBase::setSource(const Source &s)
     }
     d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
     d /= getSolution()->prefix_source_dir;
-    getSolution()->source_dirs_by_source[s2->clone()] = d;
+    getSolution()->source_dirs_by_source[s2->getHash()] = d;
     /*getSolution()->SourceDir = */SourceDir = d;
 }
 
@@ -397,10 +397,11 @@ void TargetBase::fetch()
     if (PostponeFileResolving || DryRun)
         return;
 
+    // move to swctx?
     static SourceDirMap fetched_dirs;
 
     auto s2 = getSource().clone(); // make a copy!
-    auto i = fetched_dirs.find(s2->clone()); // UGLY!!!
+    auto i = fetched_dirs.find(s2->getHash());
     if (i == fetched_dirs.end())
     {
         path d = s2->getHash();
@@ -413,7 +414,7 @@ void TargetBase::fetch()
         d = d / findRootDirectory(d);
         SourceDir = d;
 
-        fetched_dirs[s2->clone()] = d;
+        fetched_dirs.emplace(s2->getHash(), d);
     }
     else
     {

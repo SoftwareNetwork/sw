@@ -8,6 +8,8 @@
 
 #include "storage.h"
 
+#include <primitives/executor.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "icontext");
 
@@ -19,6 +21,7 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
     auto p = local_storage_root_dir;
     p += "2";
 
+    // keep installed packages, but do not resolve from it
     local_storage_id = storages.size();
     storages.emplace_back(std::make_unique<LocalStorage>(p));
 
@@ -67,10 +70,19 @@ std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const U
 
     std::unordered_map<UnresolvedPackage, Package> resolved;
     auto pkgs2 = pkgs;
-    for (auto &s : storages)
+    for (const auto &[i, s] : enumerate(storages))
     {
+        const Storage *storage = s.get();
+
+        // do not resolve from local storage (it is only for keepeing installed index),
+        // but resolve from overridden instead
+        if (i == local_storage_id)
+        {
+            storage = &static_cast<const LocalStorage *>(s.get())->getOverriddenPackagesStorage();
+        }
+
         UnresolvedPackages unresolved;
-        auto rpkgs = s->resolve(pkgs2, unresolved);
+        auto rpkgs = storage->resolve(pkgs2, unresolved);
         resolved.merge(rpkgs);
         pkgs2 = std::move(unresolved);
     }
@@ -85,6 +97,19 @@ std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const U
     }
 
     return resolved;
+}
+
+std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolveAndInstall(const UnresolvedPackages &pkgs) const
+{
+    auto m = resolve(pkgs);
+
+    auto &e = getExecutor();
+    Futures<void> fs;
+    for (auto &[u, p] : m)
+        fs.push_back(e.push([&p]{ p.install(); }));
+    waitAndGet(fs);
+
+    return m;
 }
 
 bool SwManagerContext::isResolved(const UnresolvedPackage &pkg) const
