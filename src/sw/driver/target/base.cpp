@@ -250,12 +250,6 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     //if (!p.toString().empty())
 }
 
-void TargetBase::add(const TargetBaseTypePtr &t)
-{
-    t->solution = getSolution();
-    addChild(t);
-}
-
 bool TargetBase::exists(const PackageId &p) const
 {
     throw SW_RUNTIME_ERROR("unreachable code");
@@ -573,6 +567,8 @@ void TargetOptions::add(const IncludeDirectory &i)
     {
         //&& !fs::exists(idir))
         idir = target->SourceDir / idir;
+
+        // check if exists, if not add bdir?
     }
     IncludeDirectories.insert(idir);
 }

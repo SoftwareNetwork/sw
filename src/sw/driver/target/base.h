@@ -193,8 +193,6 @@ public:
     TargetBase();
     virtual ~TargetBase();
 
-    void add(const TargetBaseTypePtr &t);
-
     /**
     * \brief Add child target.
     */

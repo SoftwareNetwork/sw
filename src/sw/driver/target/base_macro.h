@@ -54,13 +54,17 @@
 
 #define ASSIGN_TYPES_NO_REMOVE(t)        \
     ASSIGN_OP(+=, add, t)                \
-    ASSIGN_OP_ACTION(=, add, t, clear()) \
-    ASSIGN_OP(<<, add, t)
+    ASSIGN_OP_ACTION(=, add, t, clear())
+
+// disabled
+//ASSIGN_OP(<<, add, t)
 
 #define ASSIGN_TYPES(t)       \
     ASSIGN_TYPES_NO_REMOVE(t) \
-    ASSIGN_OP(-=, remove, t)  \
-    ASSIGN_OP(>>, remove, t)
+    ASSIGN_OP(-=, remove, t)
+
+// disabled
+//ASSIGN_OP(>>, remove, t)
 
 #define ASSIGN_TYPES_AND_EXCLUDE(t) \
     ASSIGN_TYPES(t)                 \
@@ -70,7 +74,9 @@
     using t::operator+=;              \
     using t::operator-=;              \
     using t::operator=;               \
-    using t::operator<<;              \
-    using t::operator>>;              \
     using t::add;                     \
     using t::remove
+
+// disabled
+//using t::operator<<;
+//using t::operator>>;

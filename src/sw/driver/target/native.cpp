@@ -1396,7 +1396,8 @@ bool NativeExecutedTarget::prepare()
             {
                 if (!p->target)
                 {
-                    LOG_ERROR(logger, t->getPackage().toString() + ": Unresolved package on stage 2: " + p->package.toString());
+                    // do not show error, it will be printed later
+                    //LOG_ERROR(logger, t->getPackage().toString() + ": Unresolved package on stage 2: " + p->package.toString());
                     // do not throw, error will be detected later, won't be it?
                     //throw SW_RUNTIME_ERROR("empty target");
                     return 0;
@@ -1443,7 +1444,9 @@ bool NativeExecutedTarget::prepare()
                 // simple check
                 if (d->target == nullptr)
                 {
-                    throw std::logic_error(getPackage().toString() + ": Unresolved package on stage 2: " + d->package.toString());
+                    throw std::logic_error(getPackage().toString() + ": Unresolved package on stage 2: " + d->package.toString()
+                        //+ (d->owner ? ", owner: " + d->owner->getPackage().toString() : "")
+                    );
                 }
 
                 // iterate over child deps
