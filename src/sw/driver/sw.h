@@ -109,11 +109,6 @@ using sw::NativeLanguage;
 using sw::NativeSourceFile;
 using sw::NativeLinkerOptions;
 
-// TODO: remove
-using sw::WithSourceFileStorage;
-using sw::WithoutSourceFileStorage;
-using sw::WithNativeOptions;
-using sw::WithoutNativeOptions;
 //
 
 using sw::CommandLineOption;

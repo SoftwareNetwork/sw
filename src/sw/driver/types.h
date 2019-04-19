@@ -218,22 +218,6 @@ struct SW_DRIVER_CPP_API GroupSettings
     bool include_directories_only = false;
 };
 
-template <class T>
-struct SW_DRIVER_CPP_API IterableOptions
-{
-    template <class F, class ... Args>
-    auto iterate(F &&f, const GroupSettings &s = GroupSettings())
-    {
-        std::forward<F>(f)(*(T *)this, s);
-    }
-
-    template <class F, class ... Args>
-    auto iterate(F &&f, const GroupSettings &s = GroupSettings()) const
-    {
-        std::forward<F>(f)(*(T *)this, s);
-    }
-};
-
 template <class F>
 struct stream_list_inserter : boost::assign::list_inserter<F>
 {

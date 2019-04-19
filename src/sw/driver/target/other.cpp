@@ -13,11 +13,10 @@ bool CSharpTarget::init()
     Target::init();
 
     // propagate this pointer to all
-    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    TargetOptionsGroup::iterate([this](auto &v, auto i)
     {
         v.target = this;
     });
-    //LanguageStorage::target = this;
 
     if (auto p = SourceFileStorage::findProgramByExtension(".cs"); p)
         compiler = std::dynamic_pointer_cast<CSharpCompiler>(p->clone());
@@ -68,11 +67,10 @@ bool RustTarget::init()
     Target::init();
 
     // propagate this pointer to all
-    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    TargetOptionsGroup::iterate([this](auto &v, auto i)
     {
         v.target = this;
     });
-    //LanguageStorage::target = this;
 
     if (auto p = SourceFileStorage::findProgramByExtension(".rs"); p)
         compiler = std::dynamic_pointer_cast<RustCompiler>(p->clone());
@@ -123,11 +121,10 @@ bool GoTarget::init()
     Target::init();
 
     // propagate this pointer to all
-    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    TargetOptionsGroup::iterate([this](auto &v, auto i)
     {
         v.target = this;
     });
-    //LanguageStorage::target = this;
 
     if (auto p = SourceFileStorage::findProgramByExtension(".go"); p)
         compiler = std::dynamic_pointer_cast<GoCompiler>(p->clone());
@@ -178,11 +175,10 @@ bool FortranTarget::init()
     Target::init();
 
     // propagate this pointer to all
-    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    TargetOptionsGroup::iterate([this](auto &v, auto i)
     {
         v.target = this;
     });
-    //LanguageStorage::target = this;
 
     if (auto p = SourceFileStorage::findProgramByExtension(".f"); p)
         compiler = std::dynamic_pointer_cast<FortranCompiler>(p->clone());
@@ -233,11 +229,10 @@ bool JavaTarget::init()
     Target::init();
 
     // propagate this pointer to all
-    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    TargetOptionsGroup::iterate([this](auto &v, auto i)
     {
         v.target = this;
     });
-    //LanguageStorage::target = this;
 
     if (auto p = SourceFileStorage::findProgramByExtension(".java"); p)
         compiler = std::dynamic_pointer_cast<JavaCompiler>(p->clone());
@@ -291,11 +286,10 @@ bool KotlinTarget::init()
     Target::init();
 
     // propagate this pointer to all
-    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    TargetOptionsGroup::iterate([this](auto &v, auto i)
     {
         v.target = this;
     });
-    //LanguageStorage::target = this;
 
     if (auto p = SourceFileStorage::findProgramByExtension(".kt"); p)
         compiler = std::dynamic_pointer_cast<KotlinCompiler>(p->clone());
@@ -346,11 +340,10 @@ bool DTarget::init()
     Target::init();
 
     // propagate this pointer to all
-    TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+    TargetOptionsGroup::iterate([this](auto &v, auto i)
     {
         v.target = this;
     });
-    //LanguageStorage::target = this;
 
     if (auto p = SourceFileStorage::findProgramByExtension(".d"); p)
         compiler = std::dynamic_pointer_cast<DCompiler>(p->clone());

@@ -1139,7 +1139,7 @@ void VisualStudioCompiler::prepareCommand1(const TargetBase &t)
     //cmd->out.capture = true;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
-    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    addEverything(*cmd);
 
     if (PreprocessToFile)
     {
@@ -1189,7 +1189,7 @@ void VisualStudioASMCompiler::prepareCommand1(const TargetBase &t)
     //cmd->base = clone();
 
     // defs and idirs for asm must go before file
-    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    addEverything(*cmd);
     getCommandLineOptions<VisualStudioAssemblerOptions>(cmd.get(), *this);
 }
 
@@ -1236,7 +1236,7 @@ void ClangCompiler::prepareCommand1(const TargetBase &t)
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
-    iterate([this](auto &v, auto &gs) { v.addEverything(*this->cmd); });
+    addEverything(*this->cmd);
     getCommandLineOptions<ClangOptions>(cmd.get(), *this, "", true);
 }
 
@@ -1297,7 +1297,7 @@ void ClangClCompiler::prepareCommand1(const TargetBase &t)
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
     getCommandLineOptions<ClangClOptions>(cmd.get(), *this/*, "-Xclang"*/);
-    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    addEverything(*cmd);
 }
 
 void ClangClCompiler::setOutputFile(const path &output_file)
@@ -1341,7 +1341,7 @@ void GNUASMCompiler::prepareCommand1(const TargetBase &t)
     getCommandLineOptions<GNUAssemblerOptions>(cmd.get(), *this);
 
     if (!InputFile && !assembly)
-        iterate([this](auto & v, auto & gs) { v.addEverything(*cmd); });
+        addEverything(*cmd);
 }
 
 SW_DEFINE_PROGRAM_CLONE(GNUASMCompiler)
@@ -1394,7 +1394,7 @@ void GNUCompiler::prepareCommand1(const TargetBase &t)
     CPPStandard.skip = true;
 
     getCommandLineOptions<GNUOptions>(cmd.get(), *this);
-    iterate([this](auto &v, auto &gs) { v.addEverything(*this->cmd); });
+    addEverything(*this->cmd);
     getCommandLineOptions<GNUOptions>(cmd.get(), *this, "", true);
 }
 
@@ -1419,36 +1419,34 @@ void GNUCompiler::setSourceFile(const path &input_file, path &output_file)
 FilesOrdered NativeLinker::gatherLinkDirectories() const
 {
     FilesOrdered dirs;
-    iterate([&dirs](auto &v, auto &gs)
-    {
-        auto get_ldir = [&dirs](const auto &a)
-        {
-            for (auto &d : a)
-                dirs.push_back(d);
-        };
 
-        get_ldir(v.gatherLinkDirectories());
-        get_ldir(v.System.gatherLinkDirectories());
-    });
+    auto get_ldir = [&dirs](const auto &a)
+    {
+        for (auto &d : a)
+            dirs.push_back(d);
+    };
+
+    get_ldir(NativeLinkerOptions::gatherLinkDirectories());
+    get_ldir(NativeLinkerOptions::System.gatherLinkDirectories());
+
     return dirs;
 }
 
 FilesOrdered NativeLinker::gatherLinkLibraries(bool system) const
 {
     FilesOrdered dirs;
-    iterate([&dirs, &system](auto &v, auto &gs)
-    {
-        auto get_ldir = [&dirs](const auto &a)
-        {
-            for (auto &d : a)
-                dirs.push_back(d);
-        };
 
-        if (system)
-            get_ldir(v.System.gatherLinkLibraries());
-        else
-            get_ldir(v.gatherLinkLibraries());
-    });
+    auto get_ldir = [&dirs](const auto &a)
+    {
+        for (auto &d : a)
+            dirs.push_back(d);
+    };
+
+    if (system)
+        get_ldir(NativeLinkerOptions::System.gatherLinkLibraries());
+    else
+        get_ldir(NativeLinkerOptions::gatherLinkLibraries());
+
     return dirs;
 }
 
@@ -1511,7 +1509,7 @@ void VisualStudioLibraryTool::prepareCommand1(const TargetBase &t)
     ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<VisualStudioLibraryToolOptions>(cmd.get(), *this);
-    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    addEverything(*cmd);
     getAdditionalOptions(cmd.get());
 }
 
@@ -1559,7 +1557,7 @@ void VisualStudioLinker::prepareCommand1(const TargetBase &t)
     ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<VisualStudioLibraryToolOptions>(cmd.get(), *this);
-    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    addEverything(*cmd);
     getAdditionalOptions(cmd.get());
 }
 
@@ -1722,7 +1720,7 @@ void GNULinker::prepareCommand1(const TargetBase &t)
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<GNULinkerOptions>(cmd.get(), *this);
-    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    addEverything(*cmd);
     //getAdditionalOptions(cmd.get());
 }
 
@@ -1796,7 +1794,7 @@ void GNULibrarian::prepareCommand1(const TargetBase &t)
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<GNULibrarianOptions>(cmd.get(), *this);
-    iterate([this](auto &v, auto &gs) { v.addEverything(*cmd); });
+    addEverything(*cmd);
     //getAdditionalOptions(cmd.get());
 }
 

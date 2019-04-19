@@ -46,7 +46,7 @@ FileStorage::FileStorage(const SwContext &swctx, const String &config)
 {
     //if (config.empty())
         //throw SW_RUNTIME_ERROR("Empty config");
-    //load();
+    load();
 }
 
 FileStorage::file_holder *FileStorage::getFileLog()

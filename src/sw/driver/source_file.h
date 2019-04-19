@@ -41,8 +41,7 @@ using SourceFileMap = std::unordered_map<path, std::shared_ptr<T>>;
  *
  */
  //template <class T>
-struct SW_DRIVER_CPP_API SourceFileStorage : protected SourceFileMap<SourceFile>,
-    IterableOptions<SourceFileStorage>
+struct SW_DRIVER_CPP_API SourceFileStorage : protected SourceFileMap<SourceFile>
 {
 public:
     using SourceFileMapThis = SourceFileMap<SourceFile>;

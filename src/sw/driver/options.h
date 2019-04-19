@@ -249,8 +249,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptionsData
     void remove(const LinkLibrary &l);
 };
 
-struct SW_DRIVER_CPP_API NativeCompilerOptions : IterableOptions<NativeCompilerOptions>,
-    NativeCompilerOptionsData
+struct SW_DRIVER_CPP_API NativeCompilerOptions : NativeCompilerOptionsData
 {
     NativeCompilerOptionsData System;
 
@@ -265,8 +264,7 @@ struct SW_DRIVER_CPP_API NativeCompilerOptions : IterableOptions<NativeCompilerO
     PathOptionsType gatherIncludeDirectories() const;
 };
 
-struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptions>,
-    NativeLinkerOptionsData
+struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
 {
     // 1. remove dups somewhere: implement unique_vector
     // 2. move Dependencies out - ???
@@ -308,15 +306,12 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : IterableOptions<NativeLinkerOptio
 using UnresolvedDependenciesType = std::unordered_map<UnresolvedPackage, DependencyPtr>;
 
 struct SW_DRIVER_CPP_API NativeOptions : NativeCompilerOptions,
-    NativeLinkerOptions,
-    IterableOptions<NativeOptions>
+    NativeLinkerOptions
 {
     using NativeCompilerOptions::add;
     using NativeCompilerOptions::remove;
     using NativeLinkerOptions::add;
     using NativeLinkerOptions::remove;
-
-    using IterableOptions<NativeOptions>::iterate;
 
     void merge(const NativeOptions &o, const GroupSettings &s = GroupSettings());
 };
@@ -470,36 +465,15 @@ public:
         //Public.merge(g.Interface);
     }
 
-    template <class F, class ... Args>
-    void iterate(F &&f, const GroupSettings &s = GroupSettings())
+    template <class F>
+    void iterate(F &&f) const
     {
-        auto s2 = s;
-
-        s2.Inheritance = InheritanceType::Private;
-        //T::template iterate<F, Args...>(std::forward<F>(f), s);
-        Private.template iterate<F, Args...>(std::forward<F>(f), s);
-        s2.Inheritance = InheritanceType::Protected;
-        Protected.template iterate<F, Args...>(std::forward<F>(f), s2);
-        s2.Inheritance = InheritanceType::Public;
-        Public.template iterate<F, Args...>(std::forward<F>(f), s2);
-        s2.Inheritance = InheritanceType::Interface;
-        Interface.template iterate<F, Args...>(std::forward<F>(f), s2);
-    }
-
-    template <class F, class ... Args>
-    void iterate(F &&f, const GroupSettings &s = GroupSettings()) const
-    {
-        auto s2 = s;
-
-        s2.Inheritance = InheritanceType::Private;
-        //T::template iterate<F, Args...>(std::forward<F>(f), s);
-        Private.template iterate<F, Args...>(std::forward<F>(f), s);
-        s2.Inheritance = InheritanceType::Protected;
-        Protected.template iterate<F, Args...>(std::forward<F>(f), s2);
-        s2.Inheritance = InheritanceType::Public;
-        Public.template iterate<F, Args...>(std::forward<F>(f), s2);
-        s2.Inheritance = InheritanceType::Interface;
-        Interface.template iterate<F, Args...>(std::forward<F>(f), s2);
+        for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
+        {
+            auto s = getInheritanceStorage().raw()[i];
+            if (s)
+                f(*s, (InheritanceType)i);
+        }
     }
 
     // merge to T, always w/o interface

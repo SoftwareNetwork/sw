@@ -82,11 +82,10 @@ bool NativeExecutedTarget::init()
         Target::init();
 
         // propagate this pointer to all
-        TargetOptionsGroup::iterate<WithSourceFileStorage, WithoutNativeOptions>([this](auto &v, auto &gs)
+        TargetOptionsGroup::iterate([this](auto &v, auto i)
         {
             v.target = this;
         });
-        //LanguageStorage::target = this;
 
         Librarian = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Librarian->clone());
         Linker = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Linker->clone());
@@ -342,8 +341,8 @@ std::unordered_set<NativeSourceFile*> NativeExecutedTarget::gatherSourceFiles() 
 Files NativeExecutedTarget::gatherIncludeDirectories() const
 {
     Files idirs;
-    ((NativeExecutedTarget*)this)->TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-        [this, &idirs](auto &v, auto &s)
+    TargetOptionsGroup::iterate(
+        [this, &idirs](auto &v, auto i)
     {
         auto idirs2 = v.gatherIncludeDirectories();
         for (auto &i2 : idirs2)
@@ -1418,8 +1417,8 @@ bool NativeExecutedTarget::prepare()
         std::vector<DependencyPtr> deps_ordered;
 
         // set our initial deps
-        TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-            [this, &deps, &deps_ordered](auto &v, auto &s)
+        TargetOptionsGroup::iterate(
+            [this, &deps, &deps_ordered](auto &v, auto i)
         {
             //DEBUG_BREAK_IF_STRING_HAS(getPackage().ppath.toString(), "sw.server.protos");
 
@@ -1430,7 +1429,7 @@ bool NativeExecutedTarget::prepare()
                 if (d->isDummy())
                     continue;
 
-                deps.emplace(d, s.Inheritance);
+                deps.emplace(d, i);
                 deps_ordered.push_back(d);
             }
         });
@@ -1450,11 +1449,11 @@ bool NativeExecutedTarget::prepare()
                 }
 
                 // iterate over child deps
-                (*(NativeExecutedTarget*)d->target).TargetOptionsGroup::iterate<WithoutSourceFileStorage, WithNativeOptions>(
-                    [this, &new_dependency, &deps, d = d.get(), &deps_ordered](auto &v, auto &s)
+                (*(NativeExecutedTarget*)d->target).TargetOptionsGroup::iterate(
+                    [this, &new_dependency, &deps, d = d.get(), &deps_ordered](auto &v, auto Inheritance)
                 {
                     // nothing to do with private inheritance
-                    if (s.Inheritance == InheritanceType::Private)
+                    if (Inheritance == InheritanceType::Private)
                         return;
 
                     for (auto &d2 : v.Dependencies)
@@ -1464,13 +1463,13 @@ bool NativeExecutedTarget::prepare()
                         if (d2->isDummy())
                             continue;
 
-                        if (s.Inheritance == InheritanceType::Protected && !hasSameParent(d2->target))
+                        if (Inheritance == InheritanceType::Protected && !hasSameParent(d2->target))
                             continue;
 
                         auto copy = std::make_shared<Dependency>(*d2);
                         auto[i, inserted] = deps.emplace(copy,
-                            s.Inheritance == InheritanceType::Interface ?
-                            InheritanceType::Public : s.Inheritance
+                            Inheritance == InheritanceType::Interface ?
+                            InheritanceType::Public : Inheritance
                         );
                         if (inserted)
                             deps_ordered.push_back(copy);

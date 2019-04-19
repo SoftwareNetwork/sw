@@ -469,11 +469,6 @@ struct SW_DRIVER_CPP_API ProjectTarget : ProjDirBase
     TargetType getType() const override { return TargetType::Project; }
 };
 
-struct WithSourceFileStorage {};
-struct WithoutSourceFileStorage {};
-struct WithNativeOptions {};
-struct WithoutNativeOptions {};
-
 //template <class ... Args>
 //struct SW_DRIVER_CPP_API TargetOptions : Args...
 struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
@@ -488,22 +483,6 @@ struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
 
     void add(const IncludeDirectory &i);
     void remove(const IncludeDirectory &i);
-
-    template <class F>
-    void iterate(F &&f, const GroupSettings &s = GroupSettings())
-    {
-        SourceFileStorage::iterate(std::forward<F>(f), s);
-        NativeOptions::iterate(std::forward<F>(f), s);
-    }
-
-    template <class F, class SFS, class NO, class ... Args>
-    void iterate(F &&f, const GroupSettings &s = GroupSettings())
-    {
-        if constexpr (std::is_same_v<SFS, WithSourceFileStorage>)
-            SourceFileStorage::iterate(std::forward<F>(f), s);
-        if constexpr (std::is_same_v<NO, WithNativeOptions>)
-            NativeOptions::iterate(std::forward<F>(f), s);
-    }
 
     void merge(const TargetOptions &g, const GroupSettings &s = GroupSettings())
     {
@@ -558,12 +537,6 @@ public:
     void inheritance(const TargetOptionsGroup &g, const GroupSettings &s = GroupSettings())
     {
         InheritanceGroup<TargetOptions>::inheritance(g, s);
-    }
-
-    template <class SFS, class NO, class F>
-    void iterate(F &&f, const GroupSettings &s = GroupSettings())
-    {
-        InheritanceGroup<TargetOptions>::iterate<F, SFS, NO>(std::forward<F>(f), s);
     }
 
     // self merge

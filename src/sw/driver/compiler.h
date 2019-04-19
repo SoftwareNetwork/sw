@@ -117,8 +117,10 @@ struct SW_DRIVER_CPP_API NativeToolchain
     };
 
     struct SDK SDK;
+    // also OS SDK (win sdk, macos sdk, linux headers etc.)
+    //std::optional<UnresolvedPackage> os sdk
     std::optional<UnresolvedPackage> libc;
-    //std::optional<UnresolvedPackage> libcpp; // ?
+    //std::optional<UnresolvedPackage> libcpp;
 
     std::shared_ptr<NativeLinker> Librarian;
     std::shared_ptr<NativeLinker> Linker;
