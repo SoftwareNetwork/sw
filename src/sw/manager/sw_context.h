@@ -46,7 +46,7 @@ struct SW_MANAGER_API SwManagerContext : ISwContext
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) const override;
 
     // move to builder?
-    std::unordered_map<UnresolvedPackage, Package> resolveAndInstall(const UnresolvedPackages &) const;
+    std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &) const;
 
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &unresolved, std::unordered_map<UnresolvedPackage, Package> &resolved_packages) const;
     bool isResolved(const UnresolvedPackage &pkg) const;

@@ -1538,7 +1538,7 @@ void Build::build_packages(const StringSet &pkgs)
         upkgs.insert(extractFromString(p));
 
     // resolve only deps needed
-    auto m = swctx.resolveAndInstall(upkgs);
+    auto m = swctx.install(upkgs);
 
     for (auto &[u, p] : m)
         knownTargets.insert(p);
@@ -1548,7 +1548,7 @@ void Build::build_packages(const StringSet &pkgs)
     {
         knownTargets.insert(p);
         // gather packages
-        cfgs2.emplace(p.getData().group_number, p.install());
+        cfgs2.emplace(p.getData().group_number, p);
     }
     std::unordered_set<LocalPackage> cfgs;
     for (auto &[gn, s] : cfgs2)

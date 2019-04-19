@@ -349,6 +349,11 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
     return ovs;
 }
 
+std::unordered_map<UnresolvedPackage, Package> LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+{
+    return ovs.resolve(pkgs, unresolved_pkgs);
+}
+
 OverriddenPackagesStorage::OverriddenPackagesStorage(const LocalStorage &ls, const path &db_dir)
     : LocalStorageBase("overridden", db_dir), ls(ls)
 {

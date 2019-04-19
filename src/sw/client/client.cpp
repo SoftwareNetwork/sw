@@ -732,7 +732,7 @@ SUBCOMMAND_DECL(uri)
             {
                 SetupConsole();
                 bUseSystemPause = true;
-                auto m = swctx.resolveAndInstall(UnresolvedPackages{ UnresolvedPackage{p.ppath, p.version} });
+                swctx.install(UnresolvedPackages{ UnresolvedPackage{p.ppath, p.version} });
             }
             else
             {
@@ -1098,7 +1098,7 @@ SUBCOMMAND_DECL(install)
     install_args.push_back(install_arg);
     for (auto &p : install_args)
         pkgs.insert(extractFromString(p));
-    auto m = swctx.resolveAndInstall(pkgs);
+    auto m = swctx.install(pkgs);
     for (auto &[p1, d] : m)
     {
         //for (auto &p2 : install_args)

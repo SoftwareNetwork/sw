@@ -1390,11 +1390,13 @@ bool NativeExecutedTarget::prepare()
     {
         struct H
         {
+            const Target *t;
+
             size_t operator()(const DependencyPtr &p) const
             {
                 if (!p->target)
                 {
-                    LOG_ERROR(logger, "Unresolved package on stage 2: " + p->package.toString());
+                    LOG_ERROR(logger, t->getPackage().toString() + ": Unresolved package on stage 2: " + p->package.toString());
                     // do not throw, error will be detected later, won't be it?
                     //throw SW_RUNTIME_ERROR("empty target");
                     return 0;
@@ -1411,7 +1413,7 @@ bool NativeExecutedTarget::prepare()
         };
 
         // we have ptrs, so do custom sorting
-        std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps;
+        std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{ this });
         std::vector<DependencyPtr> deps_ordered;
 
         // set our initial deps
@@ -1441,7 +1443,7 @@ bool NativeExecutedTarget::prepare()
                 // simple check
                 if (d->target == nullptr)
                 {
-                    throw std::logic_error("Package: " + getPackage().toString() + ": Unresolved package on stage 2: " + d->package.toString());
+                    throw std::logic_error(getPackage().toString() + ": Unresolved package on stage 2: " + d->package.toString());
                 }
 
                 // iterate over child deps

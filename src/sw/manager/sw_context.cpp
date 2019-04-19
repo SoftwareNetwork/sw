@@ -72,17 +72,8 @@ std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const U
     auto pkgs2 = pkgs;
     for (const auto &[i, s] : enumerate(storages))
     {
-        const Storage *storage = s.get();
-
-        // do not resolve from local storage (it is only for keepeing installed index),
-        // but resolve from overridden instead
-        if (i == local_storage_id)
-        {
-            storage = &static_cast<const LocalStorage *>(s.get())->getOverriddenPackagesStorage();
-        }
-
         UnresolvedPackages unresolved;
-        auto rpkgs = storage->resolve(pkgs2, unresolved);
+        auto rpkgs = s->resolve(pkgs2, unresolved);
         resolved.merge(rpkgs);
         pkgs2 = std::move(unresolved);
     }
@@ -99,17 +90,28 @@ std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const U
     return resolved;
 }
 
-std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolveAndInstall(const UnresolvedPackages &pkgs) const
+std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(const UnresolvedPackages &pkgs) const
 {
     auto m = resolve(pkgs);
 
+    // two unresolved pkgs may point to single pkg,
+    // so make pkgs unique
+    std::unordered_set<Package> pkgs2;
+    for (auto &[u, p] : m)
+        pkgs2.emplace(p);
+
     auto &e = getExecutor();
     Futures<void> fs;
-    for (auto &[u, p] : m)
+    for (auto &p : pkgs2)
         fs.push_back(e.push([&p]{ p.install(); }));
     waitAndGet(fs);
 
-    return m;
+    // install should be fast enough here
+    std::unordered_map<UnresolvedPackage, LocalPackage> pkgs3;
+    for (auto &[u, p] : m)
+        pkgs3.emplace(u, p.install());
+
+    return pkgs3;
 }
 
 bool SwManagerContext::isResolved(const UnresolvedPackage &pkg) const

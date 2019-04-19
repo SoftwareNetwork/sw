@@ -732,7 +732,7 @@ void Solution::build_and_resolve(int n_runs)
     }
 
     // resolve only deps needed
-    auto m = swctx.resolveAndInstall(pkgs);
+    auto m = swctx.install(pkgs);
 
     // after install
 
@@ -741,7 +741,7 @@ void Solution::build_and_resolve(int n_runs)
     {
         knownTargets.insert(p);
         // gather packages
-        cfgs2.emplace(p.getData().group_number, p.install());
+        cfgs2.emplace(p.getData().group_number, p);
     }
 
     std::unordered_set<LocalPackage> cfgs;
@@ -798,7 +798,7 @@ void Solution::build_and_resolve(int n_runs)
         UnresolvedPackages pkgs;
         for (auto &[pkg, d] : ud)
             pkgs.insert(pkg);
-        swctx.resolveAndInstall(pkgs);
+        swctx.install(pkgs);
 
         if (ud.empty())
             return;

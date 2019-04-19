@@ -35,7 +35,7 @@ void build_self(Solution &s)
 #include <build_self.packages.generated.h>
 
     //static UnresolvedPackages store; // tmp store
-    auto m = s.swctx.resolveAndInstall(required_packages/*, store*/);
+    auto m = s.swctx.install(required_packages/*, store*/);
     for (auto &[u, p] : m)
         s.knownTargets.insert(p);
 

@@ -254,7 +254,7 @@ int main(int argc, char **argv)
     for (auto &[p, d] : pkgs)
         deps.insert(p);
 
-    auto m = swctx.resolveAndInstall(deps);
+    auto m = swctx.install(deps);
 
     // write resolved deps!
     StringSet pkgs_sorted;
@@ -291,7 +291,7 @@ int main(int argc, char **argv)
         ctx.addLine("#define build build_" + r.getVariableName());
         if (data.has_checks)
             ctx.addLine("#define check check_" + r.getVariableName());
-        ctx.addLine("#include \"" + normalize_path(r.install().getDirSrc2() / "sw.cpp") + "\"");
+        ctx.addLine("#include \"" + normalize_path(r.getDirSrc2() / "sw.cpp") + "\"");
         ctx.addLine();
 
         build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, d.prefix).toString() + "\";");
