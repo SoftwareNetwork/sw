@@ -38,6 +38,7 @@ struct Command;
 struct Solution;
 struct TargetBase;
 struct Target;
+struct NativeExecutedTarget;
 struct NativeLinker;
 
 /*enum class VisualStudioVersion
@@ -117,10 +118,10 @@ struct SW_DRIVER_CPP_API NativeToolchain
     };
 
     struct SDK SDK;
-    // also OS SDK (win sdk, macos sdk, linux headers etc.)
-    //std::optional<UnresolvedPackage> os sdk
-    std::optional<UnresolvedPackage> libc;
-    //std::optional<UnresolvedPackage> libcpp;
+
+    // libc, libcpp
+    // OS SDK (win sdk, macos sdk, linux headers etc.)
+    std::vector<NativeExecutedTarget*> ForcedDependencies;
 
     std::shared_ptr<NativeLinker> Librarian;
     std::shared_ptr<NativeLinker> Linker;

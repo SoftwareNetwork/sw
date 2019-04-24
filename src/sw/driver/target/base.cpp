@@ -159,27 +159,25 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
     getSolution()->call_event(*t, CallbackType::CreateTarget);
 
-    auto set_sdir = [&t, this]()
+    // sdir
+    if (!t->isLocal())
     {
-        if (!t->isLocal())
-        {
-            t->SourceDir = getSolution()->getSourceDir(t->getPackage());
-        }
+        t->SourceDir = getSolution()->getSourceDir(t->getPackage());
+    }
+    if (auto d = t->getPackage().getOverriddenDir())
+        t->SourceDir = *d;
 
-        // set source dir
-        if (t->SourceDir.empty())
-            //t->SourceDir = SourceDir.empty() ? getSolution()->SourceDir : SourceDir;
-            t->SourceDir = getSolution()->SourceDir;
+    // set source dir
+    if (t->SourceDir.empty())
+        //t->SourceDir = SourceDir.empty() ? getSolution()->SourceDir : SourceDir;
+        t->SourceDir = getSolution()->SourceDir;
 
-        // try to get solution provided source dir
-        if (t->source)
-        {
-            if (auto sd = getSolution()->getSourceDir(t->getSource(), t->getPackage().version); sd)
-                t->SourceDir = sd.value();
-        }
-    };
-
-    set_sdir();
+    // try to get solution provided source dir
+    if (t->source)
+    {
+        if (auto sd = getSolution()->getSourceDir(t->getSource(), t->getPackage().version); sd)
+            t->SourceDir = sd.value();
+    }
 
     // try to guess, very naive
     if (!IsConfig)

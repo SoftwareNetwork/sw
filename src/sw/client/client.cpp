@@ -865,7 +865,7 @@ void override_package_perform(sw::SwContext &swctx)
             else
                 deps.insert({ prefix / d.ppath, d.range });
         }
-        LocalPackage lp(swctx.getLocalStorage().getOverriddenPackagesStorage(), pkg2);
+        LocalPackage lp(swctx.getLocalStorage(), pkg2);
         PackageData d;
         d.sdir = dir;
         d.dependencies = deps;

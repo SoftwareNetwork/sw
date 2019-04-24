@@ -5,3 +5,4 @@ PACKAGE_PATH(com) // org repos (proprietary licenses including binary only)
 PACKAGE_PATH(pvt) // private user repos including binary only
 // enc(rypted)?
 // sys(tem)? - OS specific, OS purposes
+// arh(archive)? - files

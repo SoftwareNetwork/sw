@@ -63,6 +63,8 @@ struct SW_MANAGER_API Directories
 #undef DIR
 
     Directories(const path &root);
+
+    path getDatabaseRootDir() const;
 };
 
 enum class StorageFileType
@@ -92,25 +94,37 @@ struct IStorage
     virtual String getName() const = 0;
 
     // storage schema/settings/capabilities/versions
+
+    /// what hash is used
     virtual int getHashSchemaVersion() const = 0;
+
+    /// how hash is processed to get path to files
     virtual int getHashPathFromHashSchemaVersion() const = 0;
 
     //
+
+    /// load package data from this storage
     virtual PackageData loadData(const PackageId &) const = 0;
-    //virtual LocalPackage download(const PackageId &) const = 0;
-    virtual LocalPackage install(const Package &) const = 0;
+
+    /// resolve packages from this storage
     virtual std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
+
+    /// get file from this storage
+    virtual std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const = 0;
+
+    // ?
+
+    //virtual LocalPackage download(const PackageId &) const = 0;
+    //virtual LocalPackage install(const Package &) const = 0;
 
     // data exchange
 
     // get predefined file
-    virtual void get(const IStorage &source, const PackageId &id, StorageFileType) = 0;
+    //virtual void get(const IStorage &source, const PackageId &id, StorageFileType) = 0;
 
     /// get specific file from storage from package directory
     //virtual void get(const IStorage &source, const PackageId &id, const path &from_rel_path, const path &to_file) = 0;
 
-    // return array of multiple re-try paths?
-    virtual std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const = 0;
 };
 
 struct SW_MANAGER_API Storage : IStorage
@@ -129,7 +143,7 @@ struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
     virtual ~StorageWithPackagesDatabase();
 
     PackageData loadData(const PackageId &) const override;
-    void get(const IStorage &source, const PackageId &id, StorageFileType) override;
+    //void get(const IStorage &source, const PackageId &id, StorageFileType) override;
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
 //protected:?
@@ -149,6 +163,7 @@ struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
     int getHashSchemaVersion() const override;
     int getHashPathFromHashSchemaVersion() const override;
 
+    virtual LocalPackage install(const Package &) const = 0;
     std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const override;
 
     void deletePackage(const PackageId &id) const;
@@ -162,6 +177,7 @@ struct SW_MANAGER_API OverriddenPackagesStorage : LocalStorageBase
     virtual ~OverriddenPackagesStorage();
 
     LocalPackage install(const Package &) const override;
+    bool isPackageInstalled(const Package &p) const;
 
     std::unordered_set<LocalPackage> getPackages() const;
     void deletePackageDir(const path &sdir) const;
@@ -172,12 +188,12 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     LocalStorage(const path &local_storage_root_dir);
     virtual ~LocalStorage();
 
-    path getDatabaseRootDir() const;
-
     //LocalPackage download(const PackageId &) const override;
     LocalPackage install(const Package &) const override;
-    void get(const IStorage &source, const PackageId &id, StorageFileType) override;
+    void get(const IStorage &source, const PackageId &id, StorageFileType) const /* override*/;
     bool isPackageInstalled(const Package &id) const;
+    bool isPackageOverridden(const PackageId &id) const;
+    PackageData loadData(const PackageId &) const override;
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
     OverriddenPackagesStorage &getOverriddenPackagesStorage();
@@ -200,7 +216,7 @@ struct SW_MANAGER_API RemoteStorage : StorageWithPackagesDatabase
     int getHashSchemaVersion() const override;
     int getHashPathFromHashSchemaVersion() const override;
     //LocalPackage download(const PackageId &) const override;
-    LocalPackage install(const Package &) const override;
+    //LocalPackage install(const Package &) const;
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const override;
 
@@ -216,5 +232,24 @@ private:
     TimePoint readDownloadTime() const;
     bool isCurrentDbOld() const;
 };
+
+struct SW_MANAGER_API RemoteStorageWithFallbackToRemoteResolving : RemoteStorage
+{
+    using RemoteStorage::RemoteStorage;
+
+    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+};
+
+SW_MANAGER_API
+int readPackagesDbSchemaVersion(const path &dir);
+
+SW_MANAGER_API
+void writePackagesDbSchemaVersion(const path &dir);
+
+SW_MANAGER_API
+int readPackagesDbVersion(const path &dir);
+
+SW_MANAGER_API
+void writePackagesDbVersion(const path &dir, int version);
 
 } // namespace sw

@@ -7,44 +7,13 @@
 #pragma once
 
 #include "enums.h"
-#include "package_unresolved.h"
+#include "package_id.h"
 
 namespace sw
 {
 
 struct Storage;
 struct LocalStorage;
-
-struct SW_MANAGER_API PackageId
-{
-    PackagePath ppath;
-    Version version;
-
-    //PackageId() = default;
-    // try to extract from string
-    PackageId(const String &);
-    PackageId(const PackagePath &, const Version &);
-
-    PackagePath getPath() const { return ppath; }
-    Version getVersion() const { return version; }
-
-    //bool canBe(const PackageId &rhs) const;
-    //bool empty() const { return ppath.empty(); }
-
-    bool isPublic() const { return ppath.isPublic(); }
-    bool isPrivate() const { return ppath.isPrivate(); }
-
-    bool isUser() const { return ppath.isUser(); }
-    bool isOrganization() const { return ppath.isOrganization(); }
-
-    bool operator<(const PackageId &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
-    bool operator==(const PackageId &rhs) const { return std::tie(ppath, version) == std::tie(rhs.ppath, rhs.version); }
-    bool operator!=(const PackageId &rhs) const { return !operator==(rhs); }
-
-    String getVariableName() const;
-
-    String toString(const String &delim = "-") const;
-};
 
 struct PackageData
 {
@@ -72,14 +41,15 @@ struct PackageData
 };
 
 struct LocalPackage;
+struct OverriddenPackagesStorage;
 
 struct SW_MANAGER_API Package : PackageId
 {
     const Storage &storage;
 
-    Package(const Storage &storage, const String &);
-    Package(const Storage &storage, const PackagePath &, const Version &);
-    Package(const Storage &storage, const PackageId &id);
+    Package(const Storage &, const String &);
+    Package(const Storage &, const PackagePath &, const Version &);
+    Package(const Storage &, const PackageId &);
     Package(const Package &);
     Package &operator=(const Package &);
     Package(Package &&) = default;
@@ -93,7 +63,7 @@ struct SW_MANAGER_API Package : PackageId
     void setData(const PackageData &) const;
     const PackageData &getData() const;
     //LocalPackage download(file type) const;
-    LocalPackage install() const;
+    //LocalPackage install() const;
 
 private:
     mutable std::unique_ptr<PackageData> data;
@@ -101,12 +71,11 @@ private:
 
 struct SW_MANAGER_API LocalPackage : Package
 {
-    using Package::Package;
+    LocalPackage(const LocalStorage &, const String &);
+    LocalPackage(const LocalStorage &, const PackagePath &, const Version &);
+    LocalPackage(const LocalStorage &, const PackageId &);
 
-    LocalPackage(const LocalStorage &storage, const String &);
-    LocalPackage(const LocalStorage &storage, const PackagePath &, const Version &);
-    LocalPackage(const LocalStorage &storage, const PackageId &id);
-
+    bool isOverridden() const;
     std::optional<path> getOverriddenDir() const;
 
     path getDir() const;
@@ -121,47 +90,16 @@ struct SW_MANAGER_API LocalPackage : Package
     LocalPackage getGroupLeader() const;
 
 private:
-    path getDir(const path &p) const;
+    path getDir(const path &root) const;
     const LocalStorage &getLocalStorage() const;
 };
 
-using PackageIdSet = std::unordered_set<PackageId>;
 using Packages = std::unordered_set<Package>;
-
-struct SW_MANAGER_API PackageDescriptionInternal
-{
-    virtual ~PackageDescriptionInternal() = default;
-    virtual std::tuple<path /* root dir */, Files> getFiles() const = 0;
-    virtual UnresolvedPackages getDependencies() const = 0;
-
-    // source
-    // icons
-    // screenshots, previews
-    // desc: type, summary,
-};
-
-SW_MANAGER_API
-UnresolvedPackage extractFromString(const String &target);
-
-SW_MANAGER_API
-PackageId extractPackageIdFromString(const String &target);
-
-SW_MANAGER_API
-String getSourceDirectoryName();
 
 }
 
 namespace std
 {
-
-template<> struct hash<::sw::PackageId>
-{
-    size_t operator()(const ::sw::PackageId &p) const
-    {
-        auto h = std::hash<::sw::PackagePath>()(p.ppath);
-        return hash_combine(h, std::hash<::sw::Version>()(p.version));
-    }
-};
 
 template<> struct hash<::sw::Package>
 {

@@ -18,15 +18,13 @@ namespace sw
 
 SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
 {
-    auto p = local_storage_root_dir;
-    p += "2";
-
     // keep installed packages, but do not resolve from it
     local_storage_id = storages.size();
-    storages.emplace_back(std::make_unique<LocalStorage>(p));
+    storages.emplace_back(std::make_unique<LocalStorage>(local_storage_root_dir));
 
     first_remote_storage_id = storages.size();
-    storages.emplace_back(std::make_unique<RemoteStorage>(getLocalStorage(), "software-network", getLocalStorage().getDatabaseRootDir()));
+    storages.emplace_back(std::make_unique<RemoteStorageWithFallbackToRemoteResolving>(
+        getLocalStorage(), "software-network", getLocalStorage().getDatabaseRootDir()));
 }
 
 SwManagerContext::~SwManagerContext() = default;
@@ -103,15 +101,20 @@ std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(co
     auto &e = getExecutor();
     Futures<void> fs;
     for (auto &p : pkgs2)
-        fs.push_back(e.push([&p]{ p.install(); }));
+        fs.push_back(e.push([this, &p]{ install(p); }));
     waitAndGet(fs);
 
     // install should be fast enough here
     std::unordered_map<UnresolvedPackage, LocalPackage> pkgs3;
     for (auto &[u, p] : m)
-        pkgs3.emplace(u, p.install());
+        pkgs3.emplace(u, install(p));
 
     return pkgs3;
+}
+
+LocalPackage SwManagerContext::install(const Package &p) const
+{
+    return getLocalStorage().install(p);
 }
 
 bool SwManagerContext::isResolved(const UnresolvedPackage &pkg) const
@@ -121,7 +124,7 @@ bool SwManagerContext::isResolved(const UnresolvedPackage &pkg) const
 
 LocalPackage SwManagerContext::resolve(const UnresolvedPackage &pkg) const
 {
-    return resolve(UnresolvedPackages{ pkg }).find(pkg)->second.install();
+    return install(resolve(UnresolvedPackages{ pkg }).find(pkg)->second);
 }
 
 }

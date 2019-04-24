@@ -28,7 +28,7 @@ struct Api
 
     void addDownloads(const std::set<int64_t> &);
     void addClientCall();
-    //IdDependencies resolvePackages(const UnresolvedPackages &);
+    void resolvePackages(const UnresolvedPackages &);
 
     void addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script);
     void addVersion(const PackagePath &prefix, const String &script);

@@ -1864,7 +1864,7 @@ void Build::createSolutions(const path &dll, bool usedll)
         });
 
         // libc
-        auto set_libc = [](auto &s, const String &libc)
+        /*auto set_libc = [](auto &s, const String &libc)
         {
             s.Settings.Native.libc = libc;
         };
@@ -1872,7 +1872,7 @@ void Build::createSolutions(const path &dll, bool usedll)
         mult_and_action(libc.size(), [&set_libc](auto &s, int i)
         {
             set_libc(s, libc[i]);
-        });
+        });*/
     }
     else if (auto g = getGenerator())
     {

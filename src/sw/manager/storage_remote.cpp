@@ -6,6 +6,7 @@
 
 #include "storage.h"
 
+#include "api.h"
 #include "database.h"
 #include "settings.h"
 
@@ -44,7 +45,7 @@ static const String packages_db_name = "packages.db";
 namespace sw
 {
 
-static int readPackagesDbSchemaVersion(const path &dir)
+int readPackagesDbSchemaVersion(const path &dir)
 {
     auto p = dir / PACKAGES_DB_SCHEMA_VERSION_FILE;
     if (!fs::exists(p))
@@ -52,12 +53,12 @@ static int readPackagesDbSchemaVersion(const path &dir)
     return std::stoi(read_file(p));
 }
 
-static void writePackagesDbSchemaVersion(const path &dir)
+void writePackagesDbSchemaVersion(const path &dir)
 {
     write_file(dir / PACKAGES_DB_SCHEMA_VERSION_FILE, std::to_string(PACKAGES_DB_SCHEMA_VERSION));
 }
 
-static int readPackagesDbVersion(const path &dir)
+int readPackagesDbVersion(const path &dir)
 {
     auto p = dir / PACKAGES_DB_VERSION_FILE;
     if (!fs::exists(p))
@@ -65,7 +66,7 @@ static int readPackagesDbVersion(const path &dir)
     return std::stoi(read_file(p));
 }
 
-static void writePackagesDbVersion(const path &dir, int version)
+void writePackagesDbVersion(const path &dir, int version)
 {
     write_file(dir / PACKAGES_DB_VERSION_FILE, std::to_string(version));
 }
@@ -372,7 +373,7 @@ bool RemoteStorage::isCurrentDbOld() const
     return LocalPackage(ls, id);
 }*/
 
-LocalPackage RemoteStorage::install(const Package &id) const
+/*LocalPackage RemoteStorage::install(const Package &id) const
 {
     LocalPackage p(ls, id);
     if (ls.isPackageInstalled(id))
@@ -386,7 +387,7 @@ LocalPackage RemoteStorage::install(const Package &id) const
     ls.get(*this, id, StorageFileType::SourceArchive);
     ls.getPackagesDatabase().installPackage(id);
     return p;
-}
+}*/
 
 std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFileType t) const
 {
@@ -448,6 +449,48 @@ std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFi
     default:
         SW_UNIMPLEMENTED;
     }
+}
+
+std::unordered_map<UnresolvedPackage, Package>
+RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+{
+    auto m = RemoteStorage::resolve(pkgs, unresolved_pkgs);
+    if (!unresolved_pkgs.empty())
+    {
+        // fallback to really remote db
+
+        // we clear our previous results as they might be outdated
+        m.clear();
+
+        auto &us = Settings::get_user_settings();
+        auto cr = us.remotes.begin();
+
+        Api api(*cr);
+        api.deadline_secs = 10;
+
+        //IdDependencies id_deps;
+
+        LOG_INFO(logger, "Requesting dependency list... ");
+        {
+            int ct = 5;
+            int t = 10;
+            int n_tries = 3;
+            while (1)
+            {
+                try
+                {
+                    /*id_deps = */api.resolvePackages(pkgs);
+                    break;
+                }
+                catch (...)
+                {
+                    throw;
+                    LOG_INFO(logger, "Retrying... ");
+                }
+            }
+        }
+    }
+    return m;
 }
 
 }

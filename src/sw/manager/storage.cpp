@@ -160,6 +160,11 @@ Directories::Directories(const path &p)
 #undef SET
 }
 
+path Directories::getDatabaseRootDir() const
+{
+    return storage_dir_etc / "sw" / "database";
+}
+
 Storage::Storage(const String &name)
     : name(name)
 {
@@ -183,10 +188,10 @@ PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
     return *pkgdb;
 }
 
-void StorageWithPackagesDatabase::get(const IStorage &source, const PackageId &id, StorageFileType)
+/*void StorageWithPackagesDatabase::get(const IStorage &source, const PackageId &id, StorageFileType)
 {
     SW_UNIMPLEMENTED;
-}
+}*/
 
 std::unordered_map<UnresolvedPackage, Package>
 StorageWithPackagesDatabase::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
@@ -239,8 +244,8 @@ std::unique_ptr<vfs::File> LocalStorageBase::getFile(const PackageId &id, Storag
     {
     case StorageFileType::SourceArchive:
     {
-        LocalPackage p(*this, id);
-        auto d = p.getDirSrc() / make_archive_name();
+        //LocalPackage p(*this, id);
+        //auto d = p.getDirSrc() / make_archive_name();
         //return d.u8string();
     }
     default:
@@ -269,11 +274,6 @@ LocalStorage::LocalStorage(const path &local_storage_root_dir)
 }
 
 LocalStorage::~LocalStorage() = default;
-
-path LocalStorage::getDatabaseRootDir() const
-{
-    return storage_dir_etc / "sw" / "database";
-}
 
 void LocalStorage::migrateStorage(int from, int to)
 {
@@ -307,16 +307,44 @@ bool LocalStorage::isPackageInstalled(const Package &pkg) const
     return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(p.getDir());
 }
 
-LocalPackage LocalStorage::install(const Package &id) const
+bool LocalStorage::isPackageOverridden(const PackageId &pkg) const
 {
-    if (&id.storage == this)
-        throw SW_RUNTIME_ERROR("Can't install from self to self");
-    if (!isPackageInstalled(id))
-        throw SW_RUNTIME_ERROR("package not installed: " + id.toString());
-    return LocalPackage(*this, id);
+    LocalPackage p(*this, pkg);
+    return ovs.isPackageInstalled(p);
 }
 
-void LocalStorage::get(const IStorage &source, const PackageId &id, StorageFileType t)
+PackageData LocalStorage::loadData(const PackageId &id) const
+{
+    if (isPackageOverridden(id))
+        return ovs.getPackagesDatabase().getPackageData(id);
+    return StorageWithPackagesDatabase::loadData(id);
+}
+
+LocalPackage LocalStorage::install(const Package &id) const
+{
+    /*//if (&id.storage == this)
+        //throw SW_RUNTIME_ERROR("Can't install from self to self");
+    if (!isPackageInstalled(id))
+        throw SW_RUNTIME_ERROR("package not installed: " + id.toString());
+    return LocalPackage(*this, id);*/
+
+    LocalPackage p(*this, id);
+    if (isPackageInstalled(id))
+        return p;
+    if (isPackageOverridden(id))
+        return LocalPackage(*this, id);
+
+    // actually we may want to remove only stamps, hashes etc.
+    // but remove everything for now
+    std::error_code ec;
+    fs::remove_all(p.getDir(), ec);
+
+    get(id.storage, id, StorageFileType::SourceArchive);
+    getPackagesDatabase().installPackage(id);
+    return p;
+}
+
+void LocalStorage::get(const IStorage &source, const PackageId &id, StorageFileType t) const
 {
     LocalPackage lp(*this, id);
 
@@ -337,6 +365,8 @@ void LocalStorage::get(const IStorage &source, const PackageId &id, StorageFileT
     unpack_file(dst, lp.getDirSrc());
 
     // now move .new to usual archive (or remove archive)
+    // we're removing for now
+    fs::remove(dst);
 }
 
 OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage()
@@ -366,7 +396,7 @@ std::unordered_set<LocalPackage> OverriddenPackagesStorage::getPackages() const
 {
     std::unordered_set<LocalPackage> pkgs;
     for (auto &id : getPackagesDatabase().getOverriddenPackages())
-        pkgs.emplace(*this, id);
+        pkgs.emplace(ls, id);
     return pkgs;
 }
 
@@ -381,6 +411,11 @@ LocalPackage OverriddenPackagesStorage::install(const Package &id) const
     if (&id.storage != this)
         getPackagesDatabase().installPackage(id);
     return LocalPackage(ls, id);
+}
+
+bool OverriddenPackagesStorage::isPackageInstalled(const Package &p) const
+{
+    return getPackagesDatabase().getInstalledPackageId(p) != 0;
 }
 
 }

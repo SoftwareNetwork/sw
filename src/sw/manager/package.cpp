@@ -18,38 +18,6 @@ DECLARE_STATIC_LOGGER(logger, "package");
 namespace sw
 {
 
-static std::pair<String, String> split_package_string(const String &s)
-{
-    /*
-    different variants:
-        org.sw.demo.package-1.0.0   - the main one currently, but it's hard to use '-' in ppath
-        org.sw.demo.package 1.0.0   - very obvious and solid, but not very practical?
-        org.sw.demo.package@1.0.0   - not that bad
-        org.sw.demo.package/1.0.0   - not that bad, but probably bad rather than good?
-
-    other cases (?):
-        org.sw.demo.package-with-dashes--1.0.0   - double dash to indicate halfs (@ and ' ' also work)
-    */
-
-    size_t pos;
-
-    // fancy case
-    /*pos = s.find_first_of("@/"); // space (' ') can be met in version, so we'll fail in this case
-    if (pos != s.npos)
-        return { s.substr(0, pos), s.substr(pos + 1) };
-
-    // double dashed case
-    pos = s.find("--");
-    if (pos != s.npos)
-        return { s.substr(0, pos), s.substr(pos + 1) };*/
-
-    // simple dash + space case
-    pos = s.find_first_of("-"); // also space ' '?
-    if (pos == s.npos)
-        return { s, {} };
-    return { s.substr(0, pos), s.substr(pos + 1) };
-}
-
 static path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_subdir)
 {
     path p;
@@ -65,75 +33,6 @@ String getSourceDirectoryName()
     // we cannot change it, because server already has such packages
     // introduce versions to change this or smth
     return "sdir";
-}
-
-UnresolvedPackage::UnresolvedPackage(const String &s)
-{
-    *this = extractFromString(s);
-}
-
-UnresolvedPackage::UnresolvedPackage(const PackagePath &p, const VersionRange &r)
-{
-    ppath = p;
-    range = r;
-}
-
-UnresolvedPackage::UnresolvedPackage(const PackageId &pkg)
-    : UnresolvedPackage(pkg.ppath, pkg.version)
-{
-}
-
-UnresolvedPackage &UnresolvedPackage::operator=(const String &s)
-{
-    return *this = extractFromString(s);
-}
-
-String UnresolvedPackage::toString(const String &delim) const
-{
-    return ppath.toString() + delim + range.toString();
-}
-
-bool UnresolvedPackage::canBe(const PackageId &id) const
-{
-    return ppath == id.ppath && range.hasVersion(id.version);
-}
-
-/*ExtendedPackageData UnresolvedPackage::resolve() const
-{
-    return resolve_dependencies({*this})[*this];
-}*/
-
-PackageId::PackageId(const String &target)
-{
-    auto [p, v] = split_package_string(target);
-    ppath = p;
-    if (!v.empty())
-        version = v;
-}
-
-PackageId::PackageId(const PackagePath &p, const Version &v)
-    : ppath(p), version(v)
-{
-}
-
-String PackageId::getVariableName() const
-{
-    auto v = version.toString();
-    auto vname = ppath.toString() + "_" + (v == "*" ? "" : ("_" + v));
-    std::replace(vname.begin(), vname.end(), '.', '_');
-    return vname;
-}
-
-/*bool PackageId::canBe(const PackageId &rhs) const
-{
-return ppath == rhs.ppath
-// && version.canBe(rhs.version)
-;
-}*/
-
-String PackageId::toString(const String &delim) const
-{
-    return ppath.toString() + delim + version.toString();
 }
 
 Package::Package(const Storage &storage, const String &s)
@@ -215,10 +114,10 @@ const PackageData &Package::getData() const
     return storage.download(*this);
 }*/
 
-LocalPackage Package::install() const
+/*LocalPackage Package::install() const
 {
     return storage.install(*this);
-}
+}*/
 
 LocalPackage::LocalPackage(const LocalStorage &storage, const String &s)
     : Package(storage, s)
@@ -240,9 +139,16 @@ const LocalStorage &LocalPackage::getLocalStorage() const
     return static_cast<const LocalStorage &>(storage);
 }
 
+bool LocalPackage::isOverridden() const
+{
+    return getLocalStorage().isPackageOverridden(*this);
+}
+
 std::optional<path> LocalPackage::getOverriddenDir() const
 {
-    return getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getOverriddenDir(*this);
+    if (isOverridden() && !getData().sdir.empty())
+        return getData().sdir;
+    return {};
 }
 
 path LocalPackage::getDir() const
@@ -294,7 +200,7 @@ String LocalPackage::getStampHash() const
 LocalPackage LocalPackage::getGroupLeader() const
 {
     auto id = getLocalStorage().getPackagesDatabase().getGroupLeader(getData().group_number);
-    return LocalPackage(storage, id);
+    return LocalPackage(getLocalStorage(), id);
 }
 
 path LocalPackage::getDirObjWdir(
@@ -303,24 +209,6 @@ path LocalPackage::getDirObjWdir(
 {
     //return getDir(getStorage().storage_dir_dat) / "wd"; // working directory, was wdir
     return getDir() / "wd"; // working directory, was wdir
-}
-
-PackageId extractPackageIdFromString(const String &target)
-{
-    auto [pp, v] = split_package_string(target);
-    if (v.empty())
-        throw SW_RUNTIME_ERROR("Bad target: " + target);
-    return {pp, v};
-}
-
-UnresolvedPackage extractFromString(const String &target)
-{
-    UnresolvedPackage u;
-    auto [p, v] = split_package_string(target);
-    u.ppath = p;
-    if (!v.empty())
-        u.range = v;
-    return u;
 }
 
 }

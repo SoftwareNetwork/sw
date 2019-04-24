@@ -347,12 +347,13 @@ void detectWindowsCompilers(struct Solution &s)
         auto &v = instance.version;
 
         if (v.getMajor() >= 15)
-            root = root / "Tools\\MSVC" / boost::trim_copy(read_file(root / "Auxiliary\\Build\\Microsoft.VCToolsVersion.default.txt"));
+            root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
 
         auto compiler = root / "bin";
         NativeCompilerOptions COpts;
         COpts.System.IncludeDirectories.insert(root / "include");
-        COpts.System.IncludeDirectories.insert(root / "ATLMFC\\include"); // also add
+        if (fs::exists(root / "ATLMFC" / "include"))
+            COpts.System.IncludeDirectories.insert(root / "ATLMFC" / "include");
 
         struct DirSuffix
         {
@@ -371,9 +372,10 @@ void detectWindowsCompilers(struct Solution &s)
         if (v.getMajor() >= 15)
         {
             // always use host tools and host arch for building config files
-            compiler /= "Host" + dir_suffix.host + "\\" + dir_suffix.target + "\\cl.exe";
-            LOpts.System.LinkDirectories.insert(root / ("lib\\" + dir_suffix.target));
-            LOpts.System.LinkDirectories.insert(root / ("ATLMFC\\lib\\" + dir_suffix.target)); // also add
+            compiler /= path("Host" + dir_suffix.host) / dir_suffix.target / "cl.exe";
+            LOpts.System.LinkDirectories.insert(root / "lib" / dir_suffix.target);
+            if (fs::exists(root / "ATLMFC" / "lib" / dir_suffix.target))
+                LOpts.System.LinkDirectories.insert(root / "ATLMFC" / "lib" / dir_suffix.target);
         }
         else
         {
@@ -517,7 +519,7 @@ void detectWindowsCompilers(struct Solution &s)
         // clang family
 
         // create programs
-        const path base_llvm_path = "c:\\Program Files\\LLVM";
+        const path base_llvm_path = path("c:") / "Program Files" / "LLVM";
         const path bin_llvm_path = base_llvm_path / "bin";
 
         // clang-cl
@@ -629,7 +631,7 @@ void detectWindowsCompilers(struct Solution &s)
         if (e)
         {
             root = e;
-            root /= "..\\..\\VC\\";
+            root = root.parent_path().parent_path() / "VC";
             return root;
         }
         return {};

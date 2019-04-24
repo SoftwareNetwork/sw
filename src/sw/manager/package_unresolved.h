@@ -41,6 +41,9 @@ struct SW_MANAGER_API UnresolvedPackage
 
 using UnresolvedPackages = std::unordered_set<UnresolvedPackage>;
 
+SW_MANAGER_API
+UnresolvedPackage extractFromString(const String &target);
+
 }
 
 namespace std

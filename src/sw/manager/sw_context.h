@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "package.h"
+#include "storage.h"
 
 #include <sw/support/filesystem.h>
 
@@ -17,17 +17,13 @@
 namespace sw
 {
 
-struct LocalStorage;
-struct OverriddenPackagesStorage;
-struct Storage;
-
 // sw_context_t
 struct ISwContext
 {
     virtual ~ISwContext() = default;
 
-    virtual LocalStorage &getLocalStorage() = 0;
-    virtual const LocalStorage &getLocalStorage() const = 0;
+    virtual Storage &getLocalStorage() = 0;
+    virtual const Storage &getLocalStorage() const = 0;
 
     // rename to resolvePackages?
     virtual std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) const = 0;
@@ -47,6 +43,7 @@ struct SW_MANAGER_API SwManagerContext : ISwContext
 
     // move to builder?
     std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &) const;
+    LocalPackage install(const Package &) const;
 
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &unresolved, std::unordered_map<UnresolvedPackage, Package> &resolved_packages) const;
     bool isResolved(const UnresolvedPackage &pkg) const;
