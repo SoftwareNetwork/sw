@@ -22,13 +22,23 @@ namespace sw
 
 struct Api
 {
+    struct RemotePackageData : PackageId, PackageData
+    {
+        using PackageId::PackageId;
+
+        db::PackageVersionId id;
+        std::unordered_set<db::PackageVersionId> deps;
+    };
+
+    using IdDependencies = std::unordered_map<db::PackageVersionId, RemotePackageData>;
+
     int deadline_secs = 5;
 
     Api(const Remote &r);
 
     void addDownloads(const std::set<int64_t> &);
     void addClientCall();
-    void resolvePackages(const UnresolvedPackages &);
+    IdDependencies resolvePackages(const UnresolvedPackages &);
 
     void addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script);
     void addVersion(const PackagePath &prefix, const String &script);

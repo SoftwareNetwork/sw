@@ -185,6 +185,7 @@ struct PrecompiledHeader
     path source;
     // path pch; // file itself
     bool force_include_pch = false;
+    bool force_include_pch_to_source = false;
 
     // internal
     bool created = false;

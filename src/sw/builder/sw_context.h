@@ -39,6 +39,8 @@ struct SW_BUILDER_API SwContext : SwManagerContext
     FileDb &getDb() const;
     CommandStorage &getCommandStorage() const;
 
+    void clearFileStorages();
+
 private:
     using FileStorages = std::map<std::pair<bool, String>, std::unique_ptr<FileStorage>>;
 

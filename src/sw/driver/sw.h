@@ -15,16 +15,9 @@
 #include "compiler_helpers.h"
 
 #include <sw/manager/storage.h>
-//#include <sw/manager/sw_context.h>
 
 // support stuff
 #include <boost/algorithm/string.hpp>
-
-//using namespace sw;
-//using namespace sw::driver;
-
-// maybe with api?
-// using namespace sw::vN; // where N - version of sw api
 
 // precise usings and namespaces
 
@@ -38,7 +31,7 @@ namespace vs = sw::vs;
 namespace cl = sw::cl;
 
 // general
-//using sw::SwContext;
+using sw::SwContext;
 using sw::Build;
 using sw::Solution;
 using sw::Checker;
@@ -133,6 +126,6 @@ using sw::toString;
 #pragma warning(disable : 4068) // unknown #pragma
 #endif
 
-#ifdef _MSC_VER
+//#ifdef _MSC_VER
 #include "sw1.h"
-#endif
+//#endif

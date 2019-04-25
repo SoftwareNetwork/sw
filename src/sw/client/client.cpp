@@ -75,7 +75,7 @@ bool bUseSystemPause = false;
 int main(int argc, char **argv);
 #pragma pop_macro("main")
 
-int sw_main(sw::SwContext &swctx, const Strings &args);
+int sw_main(const Strings &args);
 void stop();
 void setup_log(const std::string &log_level, bool simple = true);
 void self_upgrade();
@@ -142,6 +142,11 @@ static ::cl::list<bool> build_graph("g", ::cl::desc("Print .dot graph of build t
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
 
+sw::SwContext createSwContext()
+{
+    return sw::SwContext(sw::Settings::get_user_settings().storage_dir);
+}
+
 int setup_main(const Strings &args)
 {
     // some initial stuff
@@ -180,9 +185,6 @@ int setup_main(const Strings &args)
     else
         setup_log("INFO");
 
-    // init
-    sw::SwContext swctx(sw::Settings::get_user_settings().storage_dir);
-
     // before storages
     // Create QSBR context for the main thread.
     //auto context = createConcurrentContext();
@@ -211,7 +213,7 @@ int setup_main(const Strings &args)
     io_service.run();*/
 
     // actual execution
-    return sw_main(swctx, args);
+    return sw_main(args);
 }
 
 int parse_main(int argc, char **argv)
@@ -330,8 +332,9 @@ int main(int argc, char **argv)
     return r;
 }
 
-#define SUBCOMMAND_DECL(n) void cli_##n(sw::SwContext &swctx)
-#define SUBCOMMAND(n, d) SUBCOMMAND_DECL(n);
+#define SUBCOMMAND_DECL(n) void cli_##n()
+#define SUBCOMMAND_DECL2(n) void cli_##n(sw::SwContext &swctx)
+#define SUBCOMMAND(n, d) SUBCOMMAND_DECL(n); SUBCOMMAND_DECL2(n);
 #include "commands.inl"
 #undef SUBCOMMAND
 
@@ -376,10 +379,11 @@ static ::cl::opt<bool, true> use_lock_file("l", ::cl::desc("Use lock file"), ::c
 
 void override_package_perform(sw::SwContext &swctx);
 
-int sw_main(sw::SwContext &swctx, const Strings &args)
+int sw_main(const Strings &args)
 {
     if (list_overridden_packages)
     {
+        auto swctx = createSwContext();
         // sort
         std::set<sw::LocalPackage> pkgs;
         for (auto &p : swctx.getLocalStorage().getOverriddenPackagesStorage().getPackages())
@@ -391,12 +395,14 @@ int sw_main(sw::SwContext &swctx, const Strings &args)
 
     if (!override_package.empty())
     {
+        auto swctx = createSwContext();
         override_package_perform(swctx);
         return 0;
     }
 
     if (!delete_overridden_package.empty())
     {
+        auto swctx = createSwContext();
         sw::PackageId pkg{ delete_overridden_package };
         LOG_INFO(logger, "Delete override for " + pkg.toString());
         swctx.getLocalStorage().getOverriddenPackagesStorage().deletePackage(pkg);
@@ -409,6 +415,7 @@ int sw_main(sw::SwContext &swctx, const Strings &args)
 
         auto d = fs::canonical(delete_overridden_package_dir);
 
+        auto swctx = createSwContext();
         std::set<sw::LocalPackage> pkgs;
         for (auto &p : swctx.getLocalStorage().getOverriddenPackagesStorage().getPackages())
         {
@@ -435,7 +442,7 @@ int sw_main(sw::SwContext &swctx, const Strings &args)
     }*/
 
     if (0);
-#define SUBCOMMAND(n, d) else if (subcommand_##n) { cli_##n(swctx); return 0; }
+#define SUBCOMMAND(n, d) else if (subcommand_##n) { cli_##n(); return 0; }
 #include "commands.inl"
 #undef SUBCOMMAND
 
@@ -470,8 +477,6 @@ void setup_log(const std::string &log_level, bool simple)
     LOG_TRACE(logger, "Starting sw...");
 }
 
-#define SUBCOMMAND_DECL_URI(c) SUBCOMMAND_DECL(uri_ ## c)
-
 static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
 static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
 
@@ -479,6 +484,12 @@ static ::cl::opt<bool> build_fetch("fetch", ::cl::desc("Fetch sources, then buil
 static ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
 
 SUBCOMMAND_DECL(build)
+{
+    auto swctx = createSwContext();
+    cli_build(swctx);
+}
+
+SUBCOMMAND_DECL2(build)
 {
     if (build_fetch)
     {
@@ -502,6 +513,7 @@ static ::cl::list<String> remove_arg(::cl::Positional, ::cl::desc("package to re
 
 SUBCOMMAND_DECL(remove)
 {
+    auto swctx = createSwContext();
     for (auto &a : remove_arg)
     {
         sw::LocalPackage p(swctx.getLocalStorage(), a);
@@ -527,6 +539,7 @@ static ::cl::alias create_overwrite_files3("o", ::cl::desc("Alias for -overwrite
 
 SUBCOMMAND_DECL(create)
 {
+    auto swctx = createSwContext();
     if (create_type == "project")
     {
         if (create_clear_dir)
@@ -659,6 +672,8 @@ static ::cl::list<String> uri_args(::cl::Positional, ::cl::desc("sw uri argument
 
 SUBCOMMAND_DECL(uri)
 {
+    fs::current_path(temp_directory_path());
+
     if (uri_args.empty())
         return;
     if (uri_args.size() == 1)
@@ -666,6 +681,7 @@ SUBCOMMAND_DECL(uri)
 
     try
     {
+        auto swctx = createSwContext();
         auto id = extractPackageIdFromString(uri_args[1]);
         auto &sdb = swctx.getLocalStorage();
         LocalPackage p(sdb, id);
@@ -801,11 +817,7 @@ SUBCOMMAND_DECL(uri)
             SCOPE_EXIT
             {
                 // free files
-                // TODO:
-                /*for (auto &[n,s] : sw::getFileStorages())
-                    s.clear();
-                sw::getFileStorages().clear();*/
-
+                swctx.clearFileStorages();
                 fs::remove_all(fn.parent_path());
             };
 
@@ -890,6 +902,7 @@ SUBCOMMAND_DECL(ide)
 {
     //useFileMonitor = false;
 
+    auto swctx = createSwContext();
     if (!target_build.empty())
     {
         try_single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", [&swctx]()
@@ -936,6 +949,12 @@ static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", 
 //static ::cl::opt<String> generate_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
 
 SUBCOMMAND_DECL(generate)
+{
+    auto swctx = createSwContext();
+    cli_generate(swctx);
+}
+
+SUBCOMMAND_DECL2(generate)
 {
     if (gGenerator.empty())
     {
@@ -1068,6 +1087,7 @@ SUBCOMMAND_DECL(remote)
 
 SUBCOMMAND_DECL(list)
 {
+    auto swctx = createSwContext();
     auto rs = swctx.getRemoteStorages();
     if (rs.empty())
         throw SW_RUNTIME_ERROR("No remote storages found");
@@ -1084,6 +1104,7 @@ extern bool gWithTesting;
 
 SUBCOMMAND_DECL(test)
 {
+    auto swctx = createSwContext();
     gWithTesting = true;
     (Strings&)build_arg = (Strings&)build_arg_test;
     cli_build(swctx);
@@ -1093,6 +1114,7 @@ SUBCOMMAND_DECL(install)
 {
     SW_UNIMPLEMENTED;
 
+    auto swctx = createSwContext();
     sw::UnresolvedPackages pkgs;
     install_args.push_back(install_arg);
     for (auto &p : install_args)
@@ -1111,6 +1133,7 @@ SUBCOMMAND_DECL(update)
 {
     SW_UNIMPLEMENTED;
 
+    auto swctx = createSwContext();
     dry_run = true;
     ((Strings&)build_arg).clear();
     build_arg.push_back(build_arg_update.getValue());
@@ -1118,6 +1141,12 @@ SUBCOMMAND_DECL(update)
 }
 
 SUBCOMMAND_DECL(fetch)
+{
+    auto swctx = createSwContext();
+    cli_fetch(swctx);
+}
+
+SUBCOMMAND_DECL2(fetch)
 {
     sw::FetchOptions opts;
     //opts.name_prefix = upload_prefix;
@@ -1132,6 +1161,12 @@ SUBCOMMAND_DECL(fetch)
 }
 
 SUBCOMMAND_DECL(upload)
+{
+    auto swctx = createSwContext();
+    cli_upload(swctx);
+}
+
+SUBCOMMAND_DECL2(upload)
 {
     // select remote first
     auto &us = Settings::get_user_settings();

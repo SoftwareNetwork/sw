@@ -51,6 +51,12 @@ struct ExecutionPlan
     {
         auto break_commands = [](auto &a)
         {
+            // FIXME: clear() may destroy our next pointer in a,
+            // so we make a copy of everything :(
+            std::vector<SPtrT> copy;
+            copy.reserve(a.size());
+            for (auto &c : a)
+                copy.emplace_back(c->shared_from_this());
             for (auto &c : a)
                 c->clear();
         };

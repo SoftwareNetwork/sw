@@ -23,16 +23,17 @@ SwContext::SwContext(const path &local_storage_root_dir)
 {
     HostOS = getHostOS();
 
+    //
     db = std::make_unique<FileDb>(*this);
     cs = std::make_unique<CommandStorage>(*this);
 
+    //
     fshm = std::make_unique<FileDataHashMap>();
 
-    // create service fs
-    file_storages[{true, "service"}] = std::make_unique<FileStorage>(*this, "service");
-
+    //
     file_storage_executor = std::make_unique<Executor>("async log writer", 1);
 
+    //
     pvs = std::make_unique<ProgramVersionStorage>(getServiceFileStorage(), getLocalStorage().storage_dir_tmp / "db" / "program_versions.txt");
 }
 
@@ -55,7 +56,7 @@ FileStorage &SwContext::getFileStorage(const String &config, bool local) const
 
 FileStorage &SwContext::getServiceFileStorage() const
 {
-    return *file_storages.find({true, "service"})->second;
+    return getFileStorage("service", true);
 }
 
 SwContext::FileDataHashMap &SwContext::getFileData() const
@@ -76,6 +77,11 @@ CommandStorage &SwContext::getCommandStorage() const
 ProgramVersionStorage &SwContext::getVersionStorage() const
 {
     return *pvs;
+}
+
+void SwContext::clearFileStorages()
+{
+    file_storages.clear();
 }
 
 }

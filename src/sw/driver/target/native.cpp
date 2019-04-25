@@ -515,7 +515,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
         if (!fs::exists(pch))
             write_file_if_different(pch, "");
         pch_dir = pch.parent_path();
-        force_include_pch_header_to_pch_source = false;
+        force_include_pch_header_to_pch_source = p.force_include_pch_to_source;
     }
     else
     {

@@ -466,26 +466,32 @@ static path getDriverIncludeDir(Solution &solution)
     return solution.getTarget<NativeTarget>(SW_DRIVER_NAME).SourceDir / SW_DRIVER_INCLUDE_DIR;
 }
 
-static path getDriverIncludePath(Solution &solution, const path &fn)
-{
-    return getDriverIncludeDir(solution) / fn;
-}
-
-static String getDriverIncludePathString(Solution &solution, const path &fn)
-{
-    return normalize_path(getDriverIncludeDir(solution) / fn);
-}
-
 static path getMainPchFilename()
 {
-    return "sw/driver/sw.h";
+    return path("sw") / "driver" / "sw.h";
+}
+
+static path getSwHeader()
+{
+    return getMainPchFilename();
+}
+
+static path getSw1Header()
+{
+    return path("sw") / "driver" / "sw1.h";
+}
+
+static path getSwCheckAbiVersionHeader()
+{
+    return path("sw") / "driver" / "sw_check_abi_version.h";
 }
 
 static void write_pch(Solution &solution)
 {
     write_file_if_different(getImportPchFile(solution.swctx),
+        //"#include <" + normalize_path(getDriverIncludeDir(solution) / getMainPchFilename()) + ">\n\n" +
         //"#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
-        "#include <" + normalize_path(getMainPchFilename()) + ">\n\n" +
+        //"#include <" + normalize_path(getMainPchFilename()) + ">\n\n" + // the last one
         cppan_cpp);
 }
 
@@ -542,16 +548,17 @@ FilesMap Build::build_configs_separate(const Files &files)
         lib += fn;
         write_pch(solution);
         PrecompiledHeader pch;
-        //pch.header = getDriverIncludePathString(solution, getMainPchFilename());
-        pch.header = getMainPchFilename();
+        pch.header = getDriverIncludeDir(solution) / getMainPchFilename();
         pch.source = getImportPchFile(swctx);
         pch.force_include_pch = true;
+        pch.force_include_pch_to_source = true;
         lib.addPrecompiledHeader(pch);
 
         auto [headers, udeps] = getFileDependencies(swctx, fn);
 
         for (auto &h : headers)
         {
+            // TODO: refactor this and same cases below
             if (auto sf = lib[fn].template as<NativeSourceFile>())
             {
                 if (auto c = sf->compiler->template as<VisualStudioCompiler>())
@@ -577,21 +584,21 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             if (auto c = sf->compiler->template as<VisualStudioCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
             }
             else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw1.h");
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
+                //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw1.h");
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
+                //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
             }
         }
 
@@ -859,10 +866,10 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
     // after files
     write_pch(solution);
     PrecompiledHeader pch;
-    //pch.header = getDriverIncludePathString(solution, getMainPchFilename());
-    pch.header = getMainPchFilename();
+    pch.header = getDriverIncludeDir(solution) / getMainPchFilename();
     pch.source = getImportPchFile(swctx);
     pch.force_include_pch = true;
+    pch.force_include_pch_to_source = true;
     lib.addPrecompiledHeader(pch);
 
     auto gnu_setup = [this, &solution](auto *c, const auto &headers, const path &fn)
@@ -885,11 +892,11 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
 
         write_file_if_different(h, ctx.getText());
         c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw1.h");
+        //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
 
         for (auto &h : headers)
             c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
+        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
     };
 
     for (auto &fn : files)
@@ -913,14 +920,14 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
                 add_defs(c);
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler>())
             {
                 add_defs(c);
                 for (auto &h : headers)
                     c->ForcedIncludeFiles().push_back(h);
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw_check_abi_version.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
             }
             else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
@@ -935,20 +942,20 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
             lib += std::make_shared<Dependency>(d);
     }
 
-    if (many_files)
+    /*if (many_files)
     {
         if (auto sf = lib[many_files_fn].template as<NativeSourceFile>())
         {
             if (auto c = sf->compiler->template as<ClangCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw1.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / "sw/driver/sw1.h");
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
             }
         }
-    }
+    }*/
 
     if (solution.Settings.TargetOS.is(OSType::Windows))
     {

@@ -77,7 +77,7 @@ void Api::addClientCall()
     GRPC_CALL(api_, AddClientCall, google::protobuf::Empty);
 }
 
-void Api::resolvePackages(const UnresolvedPackages &pkgs)
+Api::IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
 {
     api::UnresolvedPackages request;
     for (auto &pkg : pkgs)
@@ -89,25 +89,21 @@ void Api::resolvePackages(const UnresolvedPackages &pkgs)
     auto context = getContext();
     GRPC_CALL_THROWS(api_, ResolvePackages, api::ResolvedPackages);
 
-    //IdDependencies id_deps;
+    IdDependencies id_deps;
     for (auto &pkg : response.packages())
     {
-        /*DownloadDependency d;
+        RemotePackageData d(pkg.package().path(), pkg.package().version());
         d.id = pkg.id();
-        d.ppath = pkg.package().path();
-        d.version = pkg.package().version();
         d.flags = pkg.flags();
         d.hash = pkg.hash();
         d.group_number = pkg.group_number();
         d.prefix = pkg.prefix();
 
-        std::unordered_set<db::PackageVersionId> idx;
         for (auto &tree_dep : pkg.dependencies())
-            idx.insert(tree_dep.id());
-        d.setDependencyIds(idx);
-        id_deps[d.id] = d;*/
+            d.deps.insert(tree_dep.id());
+        id_deps.emplace(d.id, d);
     }
-    //return id_deps;
+    return id_deps;
 }
 
 void Api::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script)

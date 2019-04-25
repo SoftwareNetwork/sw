@@ -468,7 +468,7 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
         Api api(*cr);
         api.deadline_secs = 10;
 
-        //IdDependencies id_deps;
+        Api::IdDependencies id_deps;
 
         LOG_INFO(logger, "Requesting dependency list... ");
         {
@@ -479,7 +479,7 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
             {
                 try
                 {
-                    /*id_deps = */api.resolvePackages(pkgs);
+                    id_deps = api.resolvePackages(pkgs);
                     break;
                 }
                 catch (...)
