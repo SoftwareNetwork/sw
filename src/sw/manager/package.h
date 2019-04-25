@@ -50,8 +50,8 @@ struct SW_MANAGER_API Package : PackageId
     Package(const Storage &, const String &);
     Package(const Storage &, const PackagePath &, const Version &);
     Package(const Storage &, const PackageId &);
-    Package(const Package &);
-    Package &operator=(const Package &);
+    Package(const Package &) = default;
+    Package &operator=(const Package &) = default;
     Package(Package &&) = default;
     Package &operator=(Package &&) = default;
     ~Package();
@@ -60,13 +60,10 @@ struct SW_MANAGER_API Package : PackageId
     String getHashShort() const;
     path getHashPath() const;
 
-    void setData(const PackageData &) const;
+    //void setData(const PackageData &) const;
     const PackageData &getData() const;
     //LocalPackage download(file type) const;
     //LocalPackage install() const;
-
-private:
-    mutable std::unique_ptr<PackageData> data;
 };
 
 struct SW_MANAGER_API LocalPackage : Package

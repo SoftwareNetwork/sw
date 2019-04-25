@@ -871,8 +871,7 @@ void override_package_perform(sw::SwContext &swctx)
         d.dependencies = deps;
         d.group_number = gn;
         d.prefix = (int)prefix.size();
-        lp.setData(d);
-        swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp);
+        swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
     }
 }
 

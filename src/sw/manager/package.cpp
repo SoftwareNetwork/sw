@@ -50,20 +50,6 @@ Package::Package(const Storage &storage, const PackageId &id)
 {
 }
 
-Package::Package(const Package &rhs)
-    : storage(rhs.storage), PackageId(rhs)
-{
-}
-
-Package &Package::operator=(const Package &rhs)
-{
-    if (this == &rhs)
-        return *this;
-    (PackageId &)(*this) = rhs;
-    data.reset();
-    return *this;
-}
-
 Package::~Package() = default;
 
 String Package::getHash() const
@@ -97,16 +83,14 @@ String Package::getHashShort() const
     return shorten_hash(getHash(), 8);
 }
 
-void Package::setData(const PackageData &d) const
+/*void Package::setData(const PackageData &d) const
 {
     data = std::make_unique<PackageData>(d);
-}
+}*/
 
 const PackageData &Package::getData() const
 {
-    if (!data)
-        data = std::make_unique<PackageData>(storage.loadData(*this));
-    return *data;
+    return storage.loadData(*this);
 }
 
 /*LocalPackage Package::download() const

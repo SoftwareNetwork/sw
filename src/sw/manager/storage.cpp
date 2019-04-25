@@ -178,9 +178,13 @@ StorageWithPackagesDatabase::StorageWithPackagesDatabase(const String &name, con
 
 StorageWithPackagesDatabase::~StorageWithPackagesDatabase() = default;
 
-PackageData StorageWithPackagesDatabase::loadData(const PackageId &id) const
+const PackageData &StorageWithPackagesDatabase::loadData(const PackageId &id) const
 {
-    return pkgdb->getPackageData(id);
+    std::lock_guard lk(m);
+    auto i = data.find(id);
+    if (i == data.end())
+        return data.emplace(id, pkgdb->getPackageData(id)).first->second;
+    return i->second;
 }
 
 PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
@@ -313,10 +317,10 @@ bool LocalStorage::isPackageOverridden(const PackageId &pkg) const
     return ovs.isPackageInstalled(p);
 }
 
-PackageData LocalStorage::loadData(const PackageId &id) const
+const PackageData &LocalStorage::loadData(const PackageId &id) const
 {
     if (isPackageOverridden(id))
-        return ovs.getPackagesDatabase().getPackageData(id);
+        return ovs.loadData(id);
     return StorageWithPackagesDatabase::loadData(id);
 }
 
@@ -340,7 +344,12 @@ LocalPackage LocalStorage::install(const Package &id) const
     fs::remove_all(p.getDir(), ec);
 
     get(id.storage, id, StorageFileType::SourceArchive);
-    getPackagesDatabase().installPackage(id);
+
+    auto h = std::hash<String>()(id.storage.getName());
+    auto d = id.getData();
+    d.group_number = hash_combine(h, d.group_number);
+
+    getPackagesDatabase().installPackage(id, d);
     return p;
 }
 
@@ -405,11 +414,22 @@ void OverriddenPackagesStorage::deletePackageDir(const path &sdir) const
     getPackagesDatabase().deleteOverriddenPackageDir(sdir);
 }
 
-LocalPackage OverriddenPackagesStorage::install(const Package &id) const
+LocalPackage OverriddenPackagesStorage::install(const Package &p) const
 {
     // we can't install from ourselves
-    if (&id.storage != this)
-        getPackagesDatabase().installPackage(id);
+    if (&p.storage == this)
+        return LocalPackage(ls, p);
+
+    auto h = std::hash<String>()(p.storage.getName());
+    auto d = p.getData();
+    d.group_number = hash_combine(h, d.group_number);
+
+    return install(p, d);
+}
+
+LocalPackage OverriddenPackagesStorage::install(const PackageId &id, const PackageData &d) const
+{
+    getPackagesDatabase().installPackage(id, d);
     return LocalPackage(ls, id);
 }
 

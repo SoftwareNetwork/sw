@@ -15,6 +15,7 @@
 #include "compiler_helpers.h"
 
 #include <sw/manager/storage.h>
+//#include <sw/manager/sw_context.h>
 
 // support stuff
 #include <boost/algorithm/string.hpp>
@@ -37,6 +38,7 @@ namespace vs = sw::vs;
 namespace cl = sw::cl;
 
 // general
+//using sw::SwContext;
 using sw::Build;
 using sw::Solution;
 using sw::Checker;

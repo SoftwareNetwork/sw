@@ -104,7 +104,7 @@ struct IStorage
     //
 
     /// load package data from this storage
-    virtual PackageData loadData(const PackageId &) const = 0;
+    virtual const PackageData &loadData(const PackageId &) const = 0;
 
     /// resolve packages from this storage
     virtual std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
@@ -142,7 +142,7 @@ struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
     StorageWithPackagesDatabase(const String &name, const path &db_dir);
     virtual ~StorageWithPackagesDatabase();
 
-    PackageData loadData(const PackageId &) const override;
+    const PackageData &loadData(const PackageId &) const override;
     //void get(const IStorage &source, const PackageId &id, StorageFileType) override;
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
@@ -151,6 +151,8 @@ struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
 
 private:
     std::unique_ptr<PackagesDatabase> pkgdb;
+    mutable std::mutex m;
+    mutable std::unordered_map<PackageId, PackageData> data;
 
     std::unordered_map<UnresolvedPackage, Package> resolve_no_deps(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
 };
@@ -177,6 +179,7 @@ struct SW_MANAGER_API OverriddenPackagesStorage : LocalStorageBase
     virtual ~OverriddenPackagesStorage();
 
     LocalPackage install(const Package &) const override;
+    LocalPackage install(const PackageId &, const PackageData &) const;
     bool isPackageInstalled(const Package &p) const;
 
     std::unordered_set<LocalPackage> getPackages() const;
@@ -193,7 +196,7 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     void get(const IStorage &source, const PackageId &id, StorageFileType) const /* override*/;
     bool isPackageInstalled(const Package &id) const;
     bool isPackageOverridden(const PackageId &id) const;
-    PackageData loadData(const PackageId &) const override;
+    const PackageData &loadData(const PackageId &) const override;
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
     OverriddenPackagesStorage &getOverriddenPackagesStorage();

@@ -25,7 +25,7 @@ CREATE TABLE package (
     path TEXT(4096) NOT NULL COLLATE NOCASE,
     flags INTEGER NOT NULL DEFAULT 0
 );
-CREATE UNIQUE INDEX ux_package_path ON package (path COLLATE NOCASE ASC);
+CREATE UNIQUE INDEX ux_package_path ON package (path ASC);
 
 --------------------------------------------------------------------------------
 --
@@ -50,6 +50,7 @@ CREATE TABLE package_version (
     -- local overridden sdir
     sdir TEXT
 );
+CREATE INDEX ix_package_id ON package_version (package_id COLLATE NOCASE ASC);
 
 --------------------------------------------------------------------------------
 --
@@ -94,6 +95,12 @@ CREATE TABLE data_source (
 
 ALTER TABLE package_version
 ADD COLUMN sdir TEXT;
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+CREATE INDEX ix_package_id ON package_version (package_id ASC);
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available

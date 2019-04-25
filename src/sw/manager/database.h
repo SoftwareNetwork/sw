@@ -35,7 +35,7 @@ struct SW_MANAGER_API Database
     Database(const path &db_name, const String &schema);
     ~Database();
 
-    void open(bool read_only = false);
+    void open(bool read_only = false, bool in_memory = false);
 
     int getIntValue(const String &key);
     void setIntValue(const String &key, int v);
@@ -55,16 +55,20 @@ protected:
 struct SW_MANAGER_API PackagesDatabase : public Database
 {
     PackagesDatabase(const path &db_fn);
+    ~PackagesDatabase();
+
+    void open(bool read_only = false, bool in_memory = false);
 
     std::unordered_map<UnresolvedPackage, PackageId> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
 
     PackageData getPackageData(const PackageId &) const;
 
-    int64_t getInstalledPackageId(const PackageId &p) const;
-    String getInstalledPackageHash(const PackageId &p) const;
-    bool isPackageInstalled(const Package &p) const;
-    void installPackage(const Package &p);
-    void deletePackage(const PackageId &id) const;
+    int64_t getInstalledPackageId(const PackageId &) const;
+    String getInstalledPackageHash(const PackageId &) const;
+    bool isPackageInstalled(const Package &) const;
+    void installPackage(const Package &);
+    void installPackage(const PackageId &, const PackageData &);
+    void deletePackage(const PackageId &) const;
 
     // overridden
     std::optional<path> getOverriddenDir(const Package &p) const;
@@ -92,6 +96,7 @@ struct SW_MANAGER_API PackagesDatabase : public Database
 
 private:
     std::mutex m;
+    std::unique_ptr<struct PreparedStatements> pps;
 };
 
 }

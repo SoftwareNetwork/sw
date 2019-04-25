@@ -89,7 +89,7 @@ RemoteStorage::RemoteStorage(LocalStorage &ls, const String &name, const path &d
         updateDb();
 
     // at the end we always reopen packages db as read only
-    getPackagesDatabase().open(true);
+    getPackagesDatabase().open(true, true);
 }
 
 RemoteStorage::~RemoteStorage() = default;

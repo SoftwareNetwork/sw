@@ -92,8 +92,6 @@ void build(Solution &s)
     embed("pub.egorpugin.primitives.tools.embedder-master"_dep, manager, "src/sw/manager/inserts/inserts.cpp.in");
     gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep,
         manager, manager.SourceDir / "src/sw/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
-    gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep,
-        manager, manager.SourceDir / "src/sw/manager/inserts/service_db_schema.sql", "db_service.h", "db::service");
 
     PrecompiledHeader pch;
     if (!s.Variables["SW_SELF_BUILD"])
