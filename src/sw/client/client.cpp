@@ -139,13 +139,18 @@ static ::cl::opt<path, true> build_ide_copy_to_dir("ide-copy-to-dir", ::cl::sub(
 // TODO: https://github.com/tomtom-international/cpp-dependencies
 static ::cl::list<bool> build_graph("g", ::cl::desc("Print .dot graph of build targets"), ::cl::sub(subcommand_build));
 
+static ::cl::list<path> internal_sign_file("internal-sign-file", ::cl::value_desc("<file> <private.key>"), ::cl::desc("Sign file with private key"), ::cl::ReallyHidden, ::cl::multi_val(2));
+static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value_desc("<file> <sigfile> <public.key>"), ::cl::desc("Verify signature with public key"), ::cl::ReallyHidden, ::cl::multi_val(3));
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
 
-sw::SwContext createSwContext()
+static sw::SwContext createSwContext()
 {
     return sw::SwContext(sw::Settings::get_user_settings().storage_dir);
 }
+
+#include "sig.h"
 
 int setup_main(const Strings &args)
 {
@@ -154,17 +159,7 @@ int setup_main(const Strings &args)
     if (sleep_seconds > 0)
         std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
 
-    if (!cl_self_upgrade_copy.empty())
-    {
-        self_upgrade_copy(cl_self_upgrade_copy);
-        return 0;
-    }
-
-    if (cl_self_upgrade)
-    {
-        self_upgrade();
-        return 0;
-    }
+    // try to do as less as possible before log init
 
     if (!working_directory.empty())
     {
@@ -184,6 +179,34 @@ int setup_main(const Strings &args)
         setup_log("DEBUG");
     else
         setup_log("INFO");
+
+    // after log initialized
+
+    if (!cl_self_upgrade_copy.empty())
+    {
+        self_upgrade_copy(cl_self_upgrade_copy);
+        return 0;
+    }
+
+    if (cl_self_upgrade)
+    {
+        self_upgrade();
+        return 0;
+    }
+
+    if (!internal_sign_file.empty())
+    {
+        SW_UNIMPLEMENTED;
+        ds_sign_file(internal_sign_file[0], internal_sign_file[1]);
+        return 0;
+    }
+
+    if (!internal_verify_file.empty())
+    {
+        SW_UNIMPLEMENTED;
+        ds_verify_file(internal_verify_file[0], internal_verify_file[1], internal_verify_file[2]);
+        return 0;
+    }
 
     // before storages
     // Create QSBR context for the main thread.
@@ -1227,14 +1250,21 @@ void self_upgrade()
 
     auto &s = Settings::get_user_settings();
 
-    std::cout << "Downloading checksum file" << "\n";
-    auto md5sum = boost::algorithm::trim_copy(download_file(s.remotes[0].url + client.u8string() + ".md5"));
+    std::cout << "Downloading signature file" << "\n";
+    static const auto algo = "sha512"s;
+    auto sig = boost::algorithm::trim_copy(download_file(s.remotes[0].url + client.u8string() + "." + algo + ".ssig"));
 
     auto fn = fs::temp_directory_path() / (unique_path() += client.extension());
     std::cout << "Downloading the latest client" << "\n";
     download_file(s.remotes[0].url + client.u8string(), fn, 50_MB);
-    if (md5sum != md5(fn))
-        throw std::runtime_error("Downloaded bad file (md5 check failed)");
+    try
+    {
+        ds_verify_sw_file(fn, algo, sig);
+    }
+    catch (const std::exception &e)
+    {
+        throw std::runtime_error("Downloaded bad file (signature check failed): "s + e.what());
+    }
 
     std::cout << "Unpacking" << "\n";
     auto tmp_dir = fs::temp_directory_path() / "sw.bak";
