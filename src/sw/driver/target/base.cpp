@@ -170,7 +170,8 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     // set source dir
     if (t->SourceDir.empty())
         //t->SourceDir = SourceDir.empty() ? getSolution()->SourceDir : SourceDir;
-        t->SourceDir = getSolution()->SourceDir;
+        //t->SourceDir = getSolution()->SourceDir;
+        t->SourceDir = /*getSolution()->*/SourceDir; // take from this
 
     // try to get solution provided source dir
     if (t->source)
@@ -227,6 +228,9 @@ void TargetBase::setupTarget(TargetBaseType *t) const
 
     // lang storage
     //t->languages = languages;
+
+    // if parent target has new exts set up (e.g., .asm),
+    // maybe children also want those exts automatically?
     //t->extensions = extensions;
 
     // inherit from this
@@ -334,7 +338,9 @@ TargetBase &TargetBase::operator+=(const Source &s)
 
 TargetBase &TargetBase::operator+=(std::unique_ptr<Source> s)
 {
-    return operator+=(*s);
+    if (s)
+        return operator+=(*s);
+    return *this;
 }
 
 void TargetBase::operator=(const Source &s)
@@ -637,13 +643,13 @@ DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
 
 path NativeTargetOptionsGroup::getFile(const Target &dep, const path &fn)
 {
-    (*this + dep)->Dummy = true;
+    (*this + dep)->setDummy(true);
     return dep.SourceDir / fn;
 }
 
 path NativeTargetOptionsGroup::getFile(const DependencyPtr &dep, const path &fn)
 {
-    (*this + dep)->Dummy = true;
+    (*this + dep)->setDummy(true);
     return target->getSolution()->swctx.resolve(dep->getPackage()).getDirSrc2() / fn;
 }
 

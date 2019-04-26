@@ -882,7 +882,7 @@ void Solution::resolvePass(const Target &t, const DependenciesType &deps, const 
     for (auto &d : deps)
     {
         auto h = this;
-        if (d->Dummy)
+        if (d->isDummy())
             h = host;
         else if (d->isResolved())
         {

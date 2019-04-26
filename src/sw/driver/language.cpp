@@ -7,10 +7,12 @@
 #include "language.h"
 #include "language_storage.h"
 
-//#include <dependency.h>
+#include "target/base.h"
 #include "source_file.h"
 #include "solution.h"
 #include "target/native.h"
+
+#include <sw/builder/sw_context.h>
 
 #include <primitives/hash.h>
 
@@ -70,14 +72,16 @@ void LanguageStorage::registerLanguage(const TargetBase &t, const LanguagePtr &L
 
 void LanguageStorage::setExtensionLanguage(const String &ext, const UnresolvedPackage &p)
 {
-    SW_UNIMPLEMENTED;
+    auto t = dynamic_cast<Target*>(this);
+    if (!t)
+        throw SW_RUNTIME_ERROR("not a target");
 
     // late resolve version
-    //extensions.insert_or_assign(ext, p.resolve());
+    extensions.insert_or_assign(ext, t->getSolution()->swctx.resolve(p));
 
     // add a dependency to current target
     if (auto t = dynamic_cast<NativeExecutedTarget*>(this); t)
-        (*t + extensions.find(ext)->second)->Dummy = true;
+        (*t + extensions.find(ext)->second)->setDummy(true);
 }
 
 void LanguageStorage::setExtensionLanguage(const String &ext, const LanguagePtr &L)
@@ -95,7 +99,7 @@ void LanguageStorage::setExtensionLanguage(const String &ext, const LanguagePtr 
 
     // add a dependency to current target
     if (auto t = dynamic_cast<NativeExecutedTarget*>(this); t)
-        (*t + extensions.find(ext)->second)->Dummy = true;
+        (*t + extensions.find(ext)->second)->setDummy(true);
 }
 
 void LanguageStorage::setExtensionLanguage(const String &ext, const DependencyPtr &d)
@@ -104,7 +108,7 @@ void LanguageStorage::setExtensionLanguage(const String &ext, const DependencyPt
 
     // add a dependency to current target
     if (auto t = dynamic_cast<NativeExecutedTarget*>(this); t)
-        (*t + extensions.find(ext)->second)->Dummy = true;
+        (*t + extensions.find(ext)->second)->setDummy(true);
 }
 
 template <class T>

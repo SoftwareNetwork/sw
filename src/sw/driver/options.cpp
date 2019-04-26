@@ -181,6 +181,12 @@ void Dependency::propagateTargetToChain()
     }
 }
 
+void Dependency::setDummy(bool d)
+{
+    if (chain.empty())
+        Dummy = d;
+}
+
 void NativeCompilerOptionsData::add(const Definition &d)
 {
     auto add_def = [this](const String &k, const String &v = {})

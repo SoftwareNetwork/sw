@@ -174,7 +174,9 @@ struct SW_DRIVER_CPP_API Dependency
 
     bool Disabled = false;
     bool GenerateCommandsBefore = false; // do not make true by default
+//private:
     bool Dummy = false; // bool Runtime = false; ?
+//public:
 
     // cpp (native) options
     bool IncludeDirectoriesOnly = false;
@@ -192,7 +194,9 @@ struct SW_DRIVER_CPP_API Dependency
     bool operator==(const Dependency &t) const;
     bool operator< (const Dependency &t) const;
 
-    bool isDummy() const { return Disabled || Dummy; }
+    void setDummy(bool);
+    bool isDummy() const { return Dummy; }
+    bool isDisabledOrDummy() const { return Disabled || isDummy(); }
 
     operator bool() const { return target; }
     bool isResolved() const { return operator bool(); }

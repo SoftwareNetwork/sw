@@ -929,7 +929,7 @@ void ProjectEmitter::printProject(
                         replacements[normalize_path_windows(nt3->getOutputFile())] = normalize_path_windows(tdir);
                     }
 
-                    if (d->isDummy())
+                    if (d->isDisabledOrDummy())
                         continue;
 
                     deps.insert(d->target->getPackage().toString());

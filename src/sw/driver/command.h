@@ -472,7 +472,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
     for (auto tgt : cb.targets)
     {
         auto d = *tgt + *t.t;
-        d->Dummy = true;
+        d->setDummy(true);
         if (!once)
         {
             cb.c->setProgram(d);

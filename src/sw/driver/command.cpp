@@ -463,12 +463,12 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_dep &t)
         for (auto &t : t.targets)
         {
             auto d = *tgt + *t;
-            d->Dummy = true;
+            d->setDummy(true);
         }
         for (auto &t : t.target_ptrs)
         {
             auto d = *tgt + t;
-            d->Dummy = true;
+            d->setDummy(true);
         }
     }
     return cb;

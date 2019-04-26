@@ -301,7 +301,7 @@ NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherDependenciesTargets
     {
         if (d->target == this)
             continue;
-        if (d->isDummy())
+        if (d->isDisabledOrDummy())
             continue;
 
         if (d->IncludeDirectoriesOnly)
@@ -885,7 +885,7 @@ Commands NativeExecutedTarget::getCommands1() const
             {
                 if (d->target == this)
                     continue;
-                if (d->isDummy())
+                if (d->isDisabledOrDummy())
                     continue;
 
                 if (d->IncludeDirectoriesOnly && !d->GenerateCommandsBefore)
@@ -1258,7 +1258,7 @@ bool NativeExecutedTarget::prepare()
     if (getSolution()->skipTarget(Scope))
         return false;
 
-    //DEBUG_BREAK_IF_STRING_HAS(getPackage().ppath.toString(), "aspia.codec");
+    //DEBUG_BREAK_IF_STRING_HAS(getPackage().ppath.toString(), "GDCM.gdcm");
 
     /*{
         auto is_changed = [this](const path &p)
@@ -1426,7 +1426,7 @@ bool NativeExecutedTarget::prepare()
             {
                 if (d->target == this)
                     continue;
-                if (d->isDummy())
+                if (d->isDisabledOrDummy())
                     continue;
 
                 deps.emplace(d, i);
@@ -1460,7 +1460,7 @@ bool NativeExecutedTarget::prepare()
                     {
                         if (d2->target == this)
                             continue;
-                        if (d2->isDummy())
+                        if (d2->isDisabledOrDummy())
                             continue;
 
                         if (Inheritance == InheritanceType::Protected && !hasSameParent(d2->target))
@@ -1517,6 +1517,9 @@ bool NativeExecutedTarget::prepare()
                                 }
                             }
                         }
+
+                        // dummy flag handling
+                        //di->Dummy &= d2->Dummy;
                     }
                 });
             }
@@ -1570,7 +1573,7 @@ bool NativeExecutedTarget::prepare()
             // we also apply targets to deps chains as we finished with deps
             d->propagateTargetToChain();
 
-            if (d->isDummy())
+            if (d->isDisabledOrDummy())
                 continue;
 
             GroupSettings s;
@@ -1996,7 +1999,7 @@ bool NativeExecutedTarget::prepare()
             {
                 if (d->target == this)
                     continue;
-                if (d->isDummy())
+                if (d->isDisabledOrDummy())
                     continue;
                 if (d->IncludeDirectoriesOnly)
                     continue;
@@ -2102,7 +2105,7 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
     {
         if (d->target == this)
             continue;
-        if (d->isDummy())
+        if (d->isDisabledOrDummy())
             continue;
         if (d->IncludeDirectoriesOnly)
             continue;
@@ -2141,7 +2144,7 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
                     continue;
                 if (d2->target == d->target)
                     continue;
-                if (d2->isDummy())
+                if (d2->isDisabledOrDummy())
                     continue;
                 if (d2->IncludeDirectoriesOnly)
                     continue;
@@ -2249,8 +2252,16 @@ void NativeExecutedTarget::removeFile(const path &fn, bool binary_dir)
 
 void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags)
 {
-    // add to target
-    operator-=(from);
+    // add to target if not already added
+    if (PostponeFileResolving || DryRun)
+        operator-=(from);
+    else
+    {
+        auto fr = from;
+        check_absolute(fr);
+        if (find(fr) == end())
+            operator-=(from);
+    }
 
     // before resolving
     if (!to.is_absolute())
@@ -2587,7 +2598,9 @@ static std::unique_ptr<Source> load_source_and_version(const yaml &root, Version
     YAML_EXTRACT_VAR(root, ver, "version", String);
     if (!ver.empty())
         version = Version(ver);
-    return Source::load(root["source"]);
+    if (root["source"].IsDefined())
+        return Source::load(root["source"]);
+    return nullptr;
 }
 
 void NativeExecutedTarget::cppan_load_project(const yaml &root)
