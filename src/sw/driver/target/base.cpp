@@ -162,22 +162,22 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     // sdir
     if (!t->isLocal())
     {
-        t->SourceDir = getSolution()->getSourceDir(t->getPackage());
+        t->setSourceDir(getSolution()->getSourceDir(t->getPackage()));
     }
     if (auto d = t->getPackage().getOverriddenDir())
-        t->SourceDir = *d;
+        t->setSourceDir(*d);
 
     // set source dir
     if (t->SourceDir.empty())
         //t->SourceDir = SourceDir.empty() ? getSolution()->SourceDir : SourceDir;
         //t->SourceDir = getSolution()->SourceDir;
-        t->SourceDir = /*getSolution()->*/SourceDir; // take from this
+        t->setSourceDir(/*getSolution()->*/SourceDirBase); // take from this
 
     // try to get solution provided source dir
     if (t->source)
     {
         if (auto sd = getSolution()->getSourceDir(t->getSource(), t->getPackage().version); sd)
-            t->SourceDir = sd.value();
+            t->setSourceDir(sd.value());
     }
 
     // try to guess, very naive
@@ -327,7 +327,7 @@ void TargetBase::setSource(const Source &s)
     d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
     d /= getSolution()->prefix_source_dir;
     getSolution()->source_dirs_by_source[s2->getHash()] = d;
-    /*getSolution()->SourceDir = */SourceDir = d;
+    /*getSolution()->*/setSourceDir(d);
 }
 
 TargetBase &TargetBase::operator+=(const Source &s)
@@ -410,13 +410,13 @@ void TargetBase::fetch()
             s2->download(d);
         }
         d = d / findRootDirectory(d);
-        SourceDir = d;
+        setSourceDir(d);
 
         fetched_dirs.emplace(s2->getHash(), d);
     }
     else
     {
-        SourceDir = i->second;
+        setSourceDir(i->second);
     }
 }
 

@@ -50,14 +50,14 @@ std::unique_ptr<Build> load(const SwContext &swctx, const path &file_or_dir)
 
         auto b = std::make_unique<Build>(swctx);
         b->Local = true;
-        b->SourceDir = fs::is_directory(p) ? p : p.parent_path();
+        b->setSourceDir(fs::is_directory(p) ? p : p.parent_path());
         b->load(p, true);
         return b;
     }
 
     auto b = std::make_unique<Build>(swctx);
     b->Local = true;
-    b->SourceDir = f.value().parent_path();
+    b->setSourceDir(f.value().parent_path());
     b->load(f.value());
 
     return b;

@@ -1555,7 +1555,7 @@ bool NativeExecutedTarget::prepare()
 
                     // such packages are not completely independent
                     // they share same source dir (but not binary?) with parent etc.
-                    d2->target->SourceDir = SourceDir;
+                    d2->target->setSourceDir(SourceDir);
                 }
             }
         }

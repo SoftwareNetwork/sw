@@ -274,7 +274,7 @@ Solution::Solution(const SwContext &swctx)
     checker.solution = this;
 
     // canonical makes disk letter uppercase on windows
-    SourceDir = fs::canonical(fs::current_path());
+    setSourceDir(fs::canonical(fs::current_path()));
     BinaryDir = SourceDir / SW_BINARY_DIR;
 }
 
@@ -788,7 +788,6 @@ void Solution::build_and_resolve(int n_runs)
             if (p == t->getPackage() && ud[porig])
             {
                 ud[porig]->setTarget(*std::static_pointer_cast<NativeTarget>(t).get());
-                //t->SourceDir = p.getDirSrc2();
             }
         }
     }
