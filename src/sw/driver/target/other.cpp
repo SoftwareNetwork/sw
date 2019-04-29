@@ -18,7 +18,7 @@ bool CSharpTarget::init()
         v.target = this;
     });
 
-    if (auto p = SourceFileStorage::findProgramByExtension(".cs"); p)
+    if (auto p = findProgramByExtension(".cs"); p)
         compiler = std::dynamic_pointer_cast<CSharpCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No C# compiler found");
@@ -53,7 +53,7 @@ path CSharpTarget::getOutputFileName(const path &root) const
 
 Commands CSharpTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<CSharpSourceFile>(*this))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->addSourceFile(f->file);
 
     Commands cmds;
@@ -72,7 +72,7 @@ bool RustTarget::init()
         v.target = this;
     });
 
-    if (auto p = SourceFileStorage::findProgramByExtension(".rs"); p)
+    if (auto p = findProgramByExtension(".rs"); p)
         compiler = std::dynamic_pointer_cast<RustCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No Rust compiler found");
@@ -107,7 +107,7 @@ path RustTarget::getOutputFileName(const path &root) const
 
 Commands RustTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<RustSourceFile>(*this))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
@@ -126,7 +126,7 @@ bool GoTarget::init()
         v.target = this;
     });
 
-    if (auto p = SourceFileStorage::findProgramByExtension(".go"); p)
+    if (auto p = findProgramByExtension(".go"); p)
         compiler = std::dynamic_pointer_cast<GoCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No Go compiler found");
@@ -161,7 +161,7 @@ path GoTarget::getOutputFileName(const path &root) const
 
 Commands GoTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<GoSourceFile>(*this))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
@@ -180,7 +180,7 @@ bool FortranTarget::init()
         v.target = this;
     });
 
-    if (auto p = SourceFileStorage::findProgramByExtension(".f"); p)
+    if (auto p = findProgramByExtension(".f"); p)
         compiler = std::dynamic_pointer_cast<FortranCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No Fortran compiler found");
@@ -215,7 +215,7 @@ path FortranTarget::getOutputFileName(const path &root) const
 
 Commands FortranTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<FortranSourceFile>(*this))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
@@ -234,7 +234,7 @@ bool JavaTarget::init()
         v.target = this;
     });
 
-    if (auto p = SourceFileStorage::findProgramByExtension(".java"); p)
+    if (auto p = findProgramByExtension(".java"); p)
         compiler = std::dynamic_pointer_cast<JavaCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No Java compiler found");
@@ -270,7 +270,7 @@ path JavaTarget::getOutputFileName(const path &root) const
 Commands JavaTarget::getCommands1() const
 {
     Commands cmds;
-    for (auto f : gatherSourceFiles<JavaSourceFile>(*this))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
     {
         compiler->setSourceFile(f->file);
         cmds.insert(compiler->prepareCommand(*this));
@@ -291,7 +291,7 @@ bool KotlinTarget::init()
         v.target = this;
     });
 
-    if (auto p = SourceFileStorage::findProgramByExtension(".kt"); p)
+    if (auto p = findProgramByExtension(".kt"); p)
         compiler = std::dynamic_pointer_cast<KotlinCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No Kotlin compiler found");
@@ -326,7 +326,7 @@ path KotlinTarget::getOutputFileName(const path &root) const
 
 Commands KotlinTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<KotlinSourceFile>(*this))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
@@ -345,7 +345,7 @@ bool DTarget::init()
         v.target = this;
     });
 
-    if (auto p = SourceFileStorage::findProgramByExtension(".d"); p)
+    if (auto p = findProgramByExtension(".d"); p)
         compiler = std::dynamic_pointer_cast<DCompiler>(p->clone());
     else
         throw SW_RUNTIME_ERROR("No D compiler found");
@@ -381,7 +381,7 @@ path DTarget::getOutputFileName(const path &root) const
 
 Commands DTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<DSourceFile>(*this))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->setSourceFile(f->file);
 
     Commands cmds;

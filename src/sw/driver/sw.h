@@ -101,7 +101,6 @@ using sw::GNUCompiler;
 using sw::GNULibrarian;
 using sw::GNULinker;
 
-using sw::NativeLanguage;
 using sw::NativeSourceFile;
 using sw::NativeLinkerOptions;
 

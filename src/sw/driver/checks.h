@@ -6,10 +6,11 @@
 
 #pragma once
 
-#include "language.h"
+#include "options.h"
 #include "types.h"
 
 #include <sw/manager/package.h>
+#include <sw/builder/command.h>
 
 #include <list>
 #include <unordered_map>
@@ -23,6 +24,7 @@ struct Checker;
 struct CheckSet;
 struct ChecksStorage;
 struct NativeExecutedTarget;
+struct Solution;
 
 namespace builder
 {
@@ -273,36 +275,36 @@ struct SW_DRIVER_CPP_API CheckSet
 
     void prepareChecksForUse();
 
-    FunctionExists &checkFunctionExists(const String &function, LanguageType L = LanguageType::C);
-    FunctionExists &checkFunctionExists(const String &function, const String &def, LanguageType L = LanguageType::C);
+    FunctionExists &checkFunctionExists(const String &function, bool cpp = false);
+    FunctionExists &checkFunctionExists(const String &function, const String &def, bool cpp = false);
 
-    Check &checkIncludeExists(const String &function, LanguageType L = LanguageType::C);
-    Check &checkIncludeExists(const String &function, const String &def, LanguageType L = LanguageType::C);
+    Check &checkIncludeExists(const String &function, bool cpp = false);
+    Check &checkIncludeExists(const String &function, const String &def, bool cpp = false);
 
-    Check &checkLibraryExists(const String &library, LanguageType L = LanguageType::C);
-    Check &checkLibraryExists(const String &library, const String &def, LanguageType L = LanguageType::C);
+    Check &checkLibraryExists(const String &library, bool cpp = false);
+    Check &checkLibraryExists(const String &library, const String &def, bool cpp = false);
 
-    Check &checkLibraryFunctionExists(const String &library, const String &function, LanguageType L = LanguageType::C);
-    Check &checkLibraryFunctionExists(const String &library, const String &function, const String &def, LanguageType L = LanguageType::C);
+    Check &checkLibraryFunctionExists(const String &library, const String &function, bool cpp = false);
+    Check &checkLibraryFunctionExists(const String &library, const String &function, const String &def, bool cpp = false);
 
-    Check &checkSymbolExists(const String &symbol, LanguageType L = LanguageType::C);
-    Check &checkSymbolExists(const String &symbol, const String &def, LanguageType L = LanguageType::C);
+    Check &checkSymbolExists(const String &symbol, bool cpp = false);
+    Check &checkSymbolExists(const String &symbol, const String &def, bool cpp = false);
 
-    Check &checkStructMemberExists(const String &s, const String &member, LanguageType L = LanguageType::C);
-    Check &checkStructMemberExists(const String &s, const String &member, const String &def, LanguageType L = LanguageType::C);
+    Check &checkStructMemberExists(const String &s, const String &member, bool cpp = false);
+    Check &checkStructMemberExists(const String &s, const String &member, const String &def, bool cpp = false);
 
-    Check &checkDeclarationExists(const String &decl, LanguageType L = LanguageType::C);
-    Check &checkDeclarationExists(const String &decl, const String &def, LanguageType L = LanguageType::C);
+    Check &checkDeclarationExists(const String &decl, bool cpp = false);
+    Check &checkDeclarationExists(const String &decl, const String &def, bool cpp = false);
 
-    Check &checkTypeSize(const String &type, LanguageType L = LanguageType::C);
-    Check &checkTypeSize(const String &type, const String &def, LanguageType L = LanguageType::C);
+    Check &checkTypeSize(const String &type, bool cpp = false);
+    Check &checkTypeSize(const String &type, const String &def, bool cpp = false);
 
-    Check &checkTypeAlignment(const String &type, LanguageType L = LanguageType::C);
-    Check &checkTypeAlignment(const String &type, const String &def, LanguageType L = LanguageType::C);
+    Check &checkTypeAlignment(const String &type, bool cpp = false);
+    Check &checkTypeAlignment(const String &type, const String &def, bool cpp = false);
 
-    Check &checkSourceCompiles(const String &def, const String &src, LanguageType L = LanguageType::C);
-    Check &checkSourceLinks(const String &def, const String &src, LanguageType L = LanguageType::C);
-    Check &checkSourceRuns(const String &def, const String &src, LanguageType L = LanguageType::C);
+    Check &checkSourceCompiles(const String &def, const String &src, bool cpp = false);
+    Check &checkSourceLinks(const String &def, const String &src, bool cpp = false);
+    Check &checkSourceRuns(const String &def, const String &src, bool cpp = false);
 
     auto begin() { return all.begin(); }
     auto end() { return all.end(); }

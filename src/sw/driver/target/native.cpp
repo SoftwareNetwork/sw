@@ -1320,24 +1320,25 @@ bool NativeExecutedTarget::prepare()
                 case NativeSourceFile::BasedOnExtension:
                     break;
                 case NativeSourceFile::C:
-                    if (auto L = SourceFileStorage::findLanguageByExtension(".c"); L)
+                    if (auto p = findProgramByExtension(".c"))
                     {
-                        if (auto c = f2->compiler->as<VisualStudioCompiler>(); c)
+                        if (auto c = f2->compiler->as<VisualStudioCompiler>())
                             c->CompileAsC = true;
                     }
                     else
                         throw std::logic_error("no C language found");
                     break;
                 case NativeSourceFile::CPP:
-                    if (auto L = SourceFileStorage::findLanguageByExtension(".cpp"); L)
+                    if (auto p = findProgramByExtension(".cpp"))
                     {
-                        if (auto c = f2->compiler->as<VisualStudioCompiler>(); c)
+                        if (auto c = f2->compiler->as<VisualStudioCompiler>())
                             c->CompileAsCPP = true;
                     }
                     else
                         throw std::logic_error("no CPP language found");
                     break;
                 case NativeSourceFile::ASM:
+                    SW_UNIMPLEMENTED; // actually remove this to make noop?
                     /*if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
                         L->clone()->createSourceFile(f.first, this);
                     else
@@ -1593,27 +1594,14 @@ bool NativeExecutedTarget::prepare()
                 continue;
 
             auto ext = p.extension().string();
-            auto i = SourceFileStorage::findLanguageByExtension(ext);
-
-            if (!i)
+            auto prog = findProgramByExtension(ext);
+            if (!prog)
                 throw std::logic_error("User defined program not registered");
 
-            /*auto e = target->extensions.find(ext);
-            if (e == target->extensions.end())
-                throw std::logic_error("Bad extension - someone removed it?");
-
-            auto &program = e->second;
-            auto i = target->getLanguage(program);
-            if (!i)
-            {
-                //auto i2 = getSolution()->children.find(program);
-                //if (i2 == getSolution()->children.end())
-                    throw std::logic_error("User defined program not registered");
-                //target->registerLanguage(*i2->second, );
-            }*/
-
-            auto L = i->clone(); // clone program here
-            f = this->SourceFileMapThis::operator[](p) = L->createSourceFile(*this, p);
+            auto p2 = dynamic_cast<FileToFileTransformProgram*>(prog);
+            if (!p2)
+                throw SW_RUNTIME_ERROR("Bad program type");
+            f = this->SourceFileMapThis::operator[](p) = p2->createSourceFile(*this, p);
         }
 
         auto files = gatherSourceFiles();

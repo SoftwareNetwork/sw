@@ -75,7 +75,7 @@ TargetBase::TargetBase()
 }
 
 TargetBase::TargetBase(const TargetBase &rhs)
-    : LanguageStorage(rhs)
+    : ProgramStorage(rhs)
     , ProjectDirectories(rhs)
     , source(rhs.source ? rhs.source->clone() : nullptr)
     , Scope(rhs.Scope)
@@ -451,6 +451,33 @@ const Source &TargetBase::getSource() const
     if (!source)
         throw SW_LOGIC_ERROR("source is undefined");
     return *source;
+}
+
+ProgramStorage::ProgramType::element_type *TargetBase::findProgramByExtension(const String &ext) const
+{
+    if (!hasExtension(ext))
+        return {};
+    auto e = ProgramStorage::findProgramByExtension(ext);
+    if (!e)
+    {
+        auto pkg = ProgramStorage::getPackage(ext);
+        if (pkg)
+        {
+            e = getProgram(*pkg, true).get();
+            if (!e)
+                e = getSolution()->getProgram(*pkg, true).get();
+        }
+        else
+            e = getSolution()->ProgramStorage::findProgramByExtension(ext);
+    }
+    return e;
+}
+
+bool TargetBase::hasExtension(const String &ext) const
+{
+    return
+        ProgramStorage::hasExtension(ext) ||
+        getSolution()->ProgramStorage::hasExtension(ext);
 }
 
 Commands Target::getCommands() const

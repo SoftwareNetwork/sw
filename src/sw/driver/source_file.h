@@ -7,120 +7,20 @@
 #pragma once
 
 #include "compiler.h"
-#include "language_type.h"
 #include "types.h"
 
 #include <sw/builder/node.h>
 
 #include <memory>
 
+#include "source_file_storage.h"
+
 namespace sw
 {
 
-struct Language;
 struct SourceFile;
 struct Target;
 struct TargetBase;
-
-template <class T>
-using SourceFileMap = std::unordered_map<path, std::shared_ptr<T>>;
-
-/**
- * \brief Keeps target files.
- *
- *  There are 3 cases for source file:
- *   1. no file at all
- *   2. file present but empty (unknown ext)
- *   3. file present and has known ext
- *
- *  There are 4 cases for source files:
- *   1. no files at all         = autodetection
- *   2. all files are skipped   = autodetection
- *   3. mix of skipped and normal files
- *   4. all files are not skipped
- *
- */
- //template <class T>
-struct SW_DRIVER_CPP_API SourceFileStorage : protected SourceFileMap<SourceFile>
-{
-public:
-    using SourceFileMapThis = SourceFileMap<SourceFile>;
-    using SourceFileMapThis::begin;
-    using SourceFileMapThis::end;
-    using SourceFileMapThis::empty;
-    using SourceFileMapThis::size;
-
-public:
-    Target *target = nullptr;
-
-    SourceFileStorage();
-    virtual ~SourceFileStorage();
-
-    //void add(const String &file) { add(path(file)); }
-    void add(const path &file);
-    void add(const Files &files);
-    void add(const FileRegex &r);
-    void add(const path &root, const FileRegex &r);
-
-    //void remove(const String &file) { remove(path(file)); }
-    void remove(const path &file);
-    void remove(const Files &files);
-    void remove(const FileRegex &r);
-    void remove(const path &root, const FileRegex &r);
-
-    //void remove_exclude(const String &file) { remove(path(file)); }
-    void remove_exclude(const path &file);
-    void remove_exclude(const Files &files);
-    void remove_exclude(const FileRegex &r);
-    void remove_exclude(const path &root, const FileRegex &r);
-
-    size_t sizeKnown() const;
-    size_t sizeSkipped() const;
-
-    void resolve();
-    //void resolveRemoved();
-
-    SourceFile &operator[](path F);
-    SourceFileMap<SourceFile> operator[](const FileRegex &r) const;
-
-    // for option groups
-    void merge(const SourceFileStorage &v, const GroupSettings &s = GroupSettings());
-
-    bool check_absolute(path &file, bool ignore_errors = false, bool *source_dir = nullptr) const;
-
-    // internal
-    mutable std::unordered_map<path, std::map<bool /* recursive */, Files>> glob_cache;
-    mutable FilesMap files_cache;
-
-protected:
-    bool autodetect = false;
-
-    void clearGlobCache();
-    void remove_full(const path &file);
-
-    std::optional<PackageId> findPackageIdByExtension(const String &e) const;
-    Program *findProgramByExtension(const String &e) const;
-    Language *findLanguageByPackageId(const PackageId &) const;
-    Language *findLanguageByExtension(const String &e) const;
-
-private:
-    struct FileOperation
-    {
-        std::variant<path, FileRegex> op;
-        bool add = true;
-    };
-    using Op = void (SourceFileStorage::*)(const path &);
-
-    std::vector<FileOperation> file_ops;
-
-    void add_unchecked(const path &f, bool skip = false);
-    void add1(const FileRegex &r);
-    void remove1(const FileRegex &r);
-    void remove_full1(const FileRegex &r);
-    void op(const FileRegex &r, Op f);
-
-    SourceFileMap<SourceFile> enumerate_files(const FileRegex &r) const;
-};
 
 // other files can be source files, but not compiled files
 // they'll be processed with other tools
@@ -140,8 +40,6 @@ struct SW_DRIVER_CPP_API SourceFile : File
     virtual ~SourceFile() = default;
 
     virtual std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const { return nullptr; }
-    //virtual Files getGeneratedDirs() const { return Files(); }
-    virtual std::shared_ptr<SourceFile> clone() const { return std::make_shared<SourceFile>(*this); }
 
     bool isActive() const;
 
@@ -156,29 +54,30 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     enum BuildAsType
     {
         BasedOnExtension,
-        ASM = (int)LanguageType::ASM,
-        C = (int)LanguageType::C,
-        CPP = (int)LanguageType::CPP,
+        ASM,
+        C,
+        CPP,
     };
 
-    File output;
+    File output; // object file
     std::shared_ptr<NativeCompiler> compiler;
-    std::unordered_set<SourceFile*> dependencies;
+    std::unordered_set<SourceFile*> dependencies; // explicit file deps? currently used for pchs
     BuildAsType BuildAs = BuildAsType::BasedOnExtension;
-    bool skip_linking = false;
+    bool skip_linking = false; // produce object file only
 
-    NativeSourceFile(const Target &t, NativeCompiler *c, const path &input, const path &output);
+    NativeSourceFile(const Target &t, const NativeCompiler &c, const path &input, const path &output);
     NativeSourceFile(const NativeSourceFile &rhs);
     virtual ~NativeSourceFile();
 
     std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const override;
-    //virtual Files getGeneratedDirs() const override;
+
     //void setSourceFile(const path &input, const path &output);
     void setOutputFile(const TargetBase &t, const path &input, const path &output_dir); // bad name?
     void setOutputFile(const path &output);
     String getObjectFilename(const TargetBase &t, const path &p);
 };
 
+// TODO: move to some other place
 struct PrecompiledHeader
 {
     path header;
@@ -196,46 +95,9 @@ struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
     File output;
     std::shared_ptr<RcTool> compiler;
 
-    RcToolSourceFile(const Target &t, RcTool *c, const path &input, const path &output);
+    RcToolSourceFile(const Target &t, const RcTool &c, const path &input, const path &output);
 
     std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const override;
 };
-
-struct SW_DRIVER_CPP_API CSharpSourceFile : SourceFile
-{
-    using SourceFile::SourceFile;
-};
-
-struct SW_DRIVER_CPP_API RustSourceFile : SourceFile
-{
-    using SourceFile::SourceFile;
-};
-
-struct SW_DRIVER_CPP_API GoSourceFile : SourceFile
-{
-    using SourceFile::SourceFile;
-};
-
-struct SW_DRIVER_CPP_API FortranSourceFile : SourceFile
-{
-    using SourceFile::SourceFile;
-};
-
-struct SW_DRIVER_CPP_API JavaSourceFile : SourceFile
-{
-    using SourceFile::SourceFile;
-};
-
-struct SW_DRIVER_CPP_API KotlinSourceFile : SourceFile
-{
-    using SourceFile::SourceFile;
-};
-
-struct SW_DRIVER_CPP_API DSourceFile : SourceFile
-{
-    using SourceFile::SourceFile;
-};
-
-// TODO: maybe use virtual function with enum instead of different types for SFs?
 
 }

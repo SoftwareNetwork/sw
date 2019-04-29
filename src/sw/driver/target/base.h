@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "sw/driver/language_storage.h"
+#include "sw/driver/program_storage.h"
 #include "sw/driver/license.h"
 #include "sw/driver/types.h"
 #include "sw/driver/source_file.h"
@@ -157,7 +157,7 @@ using SharedLibrary = SharedLibraryTarget;
 /**
 * \brief TargetBase
 */
-struct SW_DRIVER_CPP_API TargetBase : Node, LanguageStorage, ProjectDirectories
+struct SW_DRIVER_CPP_API TargetBase : Node, ProgramStorage, ProjectDirectories
 {
     using TargetMap = PackageVersionMapBase<TargetBaseTypePtr, std::unordered_map, primitives::version::VersionMap>;
 
@@ -304,6 +304,9 @@ public:
 
     Solution *getSolution();
     const Solution *getSolution() const;
+
+    ProgramStorage::ProgramType::element_type *findProgramByExtension(const String &ext) const;
+    bool hasExtension(const String &ext) const;
 
 protected:
     // impl
@@ -583,13 +586,15 @@ public:
 #define SW_IS_LOCAL_BINARY_DIR isLocal() && !UseStorageBinaryDir
 
 template <class SF>
-std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s)
+std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s, const StringSet &exts = {})
 {
     // maybe cache result?
     std::unordered_set<SF*> files;
     for (auto &[p, f] : s)
     {
         if (!f->isActive())
+            continue;
+        if (!exts.empty() && exts.find(p.extension().string()) == exts.end())
             continue;
         auto f2 = f->template as<SF>();
         if (f2)

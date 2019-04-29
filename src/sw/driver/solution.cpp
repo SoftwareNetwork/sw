@@ -236,10 +236,10 @@ String SolutionSettings::getConfig(const TargetBase *t, bool use_short_config) c
 
     //addConfigElement(c, Native.getConfig());
     addConfigElement(c, toString(Native.CompilerType));
-    auto i = t->getSolution()->extensions.find(".cpp");
-    if (i == t->getSolution()->extensions.end())
+    auto p = t->getSolution()->findProgramByExtension(".cpp");
+    if (!p)
         throw std::logic_error("no cpp compiler");
-    addConfigElement(c, i->second.version.toString(2));
+    addConfigElement(c, p->getVersion().toString(2));
     addConfigElement(c, toString(Native.LibrariesType));
     if (TargetOS.Type == OSType::Windows && Native.MT)
         addConfigElement(c, "mt");
@@ -1141,8 +1141,7 @@ void Solution::setSettings()
 {
     fs = &swctx.getFileStorage(getConfig(), file_storage_local);
 
-    for (auto &[_, p] : registered_programs)
-        p->fs = fs;
+    setFs(fs);
 
     if (Settings.Native.Librarian)
         Settings.Native.Librarian->fs = fs;
@@ -1159,9 +1158,9 @@ void Solution::findCompiler()
 
     using CompilerVector = std::vector<std::pair<PackageId, CompilerType>>;
 
-    auto activate_one = [this](auto &v)
+    auto activate_one = [this](auto &v) -> ProgramPtr
     {
-        auto r = activateLanguage(v.first.ppath);
+        auto r = activateProgram(v.first.ppath);
         if (r)
             this->Settings.Native.CompilerType = v.second;
         return r;
@@ -1359,7 +1358,7 @@ void Solution::findCompiler()
 
     // more languages
     for (auto &[a, _] : other)
-        activateLanguage(a);
+        activateProgram(a);
 
     // use activate
     if (!is_config_build)
@@ -1377,8 +1376,8 @@ void Solution::findCompiler()
 
     if (Settings.TargetOS.Type != OSType::Macos)
     {
-        extensions.erase(".m");
-        extensions.erase(".mm");
+        removeExtension(".m");
+        removeExtension(".mm");
     }
 
     if (isClangFamily(Settings.Native.CompilerType))
@@ -1409,9 +1408,7 @@ bool Solution::canRunTargetExecutables() const
 
 void Solution::prepareForCustomToolchain()
 {
-    extensions.clear();
-    user_defined_languages.clear();
-    registered_programs.clear();
+    removeAllExtensions();
     disable_compiler_lookup = true;
 }
 

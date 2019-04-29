@@ -7,7 +7,6 @@
 #include "source_file.h"
 
 #include "command.h"
-#include "language.h"
 #include "solution.h"
 #include "target/native.h"
 
@@ -27,7 +26,7 @@ namespace sw
 {
 
 #ifdef _WIN32
-bool IsWindows7OrLater() {
+static bool IsWindows7OrLater() {
     OSVERSIONINFOEX version_info =
     { sizeof(OSVERSIONINFOEX), 6, 1, 0, 0,{ 0 }, 0, 0, 0, 0, 0 };
     DWORDLONG comparison = 0;
@@ -37,7 +36,7 @@ bool IsWindows7OrLater() {
         &version_info, VER_MAJORVERSION | VER_MINORVERSION, comparison);
 }
 
-Files enumerate_files1(const path &dir, bool recursive = true)
+static Files enumerate_files1(const path &dir, bool recursive = true)
 {
     Files files;
     // FindExInfoBasic is 30% faster than FindExInfoStandard.
@@ -81,7 +80,7 @@ Files enumerate_files1(const path &dir, bool recursive = true)
 }
 #endif
 
-Files enumerate_files_fast(const path &dir, bool recursive = true)
+static Files enumerate_files_fast(const path &dir, bool recursive = true)
 {
     return
 #ifdef _WIN32
@@ -99,50 +98,6 @@ SourceFileStorage::~SourceFileStorage()
 {
 }
 
-Program *SourceFileStorage::findProgramByExtension(const String &ext) const
-{
-    auto pi = findPackageIdByExtension(ext);
-    if (!pi)
-        return nullptr;
-    auto &pkg = pi.value();
-    auto p = target->registered_programs.find(pkg);
-    if (p == target->registered_programs.end(pkg))
-    {
-        p = target->getSolution()->registered_programs.find(pkg);
-        if (p == target->getSolution()->registered_programs.end(pkg))
-            return nullptr;
-    }
-    return p->second.get();
-}
-
-std::optional<PackageId> SourceFileStorage::findPackageIdByExtension(const String &ext) const
-{
-    auto e = target->findPackageIdByExtension(ext);
-    if (!e)
-        e = target->getSolution()->findPackageIdByExtension(ext);
-    return e;
-}
-
-Language *SourceFileStorage::findLanguageByPackageId(const PackageId &p) const
-{
-    auto i = target->getLanguage(p);
-    if (!i)
-    {
-        i = target->getSolution()->getLanguage(p);
-        if (!i)
-            return nullptr;
-    }
-    return i.get();
-}
-
-Language *SourceFileStorage::findLanguageByExtension(const String &ext) const
-{
-    auto e = findPackageIdByExtension(ext);
-    if (!e)
-        return {};
-    return findLanguageByPackageId(e.value());
-}
-
 void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 {
     auto file = file_in;
@@ -152,10 +107,9 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     auto f = this->SourceFileMapThis::operator[](file);
 
     auto ext = file.extension().string();
-    auto p = findPackageIdByExtension(ext);
     auto nt = target->as<NativeExecutedTarget>();
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
-    if (!p || ho)
+    if (!target->hasExtension(ext) || ho)
     {
         f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(*target, file);
         f->created = false;
@@ -164,9 +118,8 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     {
         if (!f || f->postponed)
         {
-            auto program = p.value();
-            auto i = findLanguageByPackageId(program);
-            if (!i)
+            auto p = target->ProgramStorage::findProgramByExtension(ext);
+            if (target->ProgramStorage::hasExtension(ext) && !p)
             {
                 //if (f && f->postponed)
                     //throw SW_RUNTIME_ERROR("Postponing postponed file");
@@ -175,9 +128,13 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
             }
             else
             {
+                if (!p)
+                    p = target->findProgramByExtension(ext);
                 auto f2 = f;
-                auto L = i->clone(); // clone program here
-                f = this->SourceFileMapThis::operator[](file) = L->createSourceFile(*target, file);
+                auto p2 = dynamic_cast<FileToFileTransformProgram*>(p);
+                if (!p2)
+                    throw SW_RUNTIME_ERROR("Bad program type");
+                f = this->SourceFileMapThis::operator[](file) = p2->createSourceFile(*target, file);
                 if (f2 && f2->postponed)
                 {
                     // retain some data
@@ -185,10 +142,6 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
                     f->skip = f2->skip;
                 }
             }
-
-            // but maybe we create dummy file?
-            //auto L = e->second->clone(); // clone program here
-            //f = this->SourceFileMapThis::operator[](file) = L->createSourceFile(file, target);
         }
     }
     if (autodetect)
@@ -561,9 +514,9 @@ bool SourceFile::isActive() const
     return created && !skip /* && !isRemoved(f.first)*/;
 }
 
-NativeSourceFile::NativeSourceFile(const Target &t, NativeCompiler *c, const path &input, const path &o)
+NativeSourceFile::NativeSourceFile(const Target &t, const NativeCompiler &c, const path &input, const path &o)
     : SourceFile(t, input)
-    , compiler(c ? std::static_pointer_cast<NativeCompiler>(c->clone()) : nullptr)
+    , compiler(std::static_pointer_cast<NativeCompiler>(c.clone()))
     , output(o, *t.getSolution()->fs)
 {
     compiler->setSourceFile(input, output.file);
@@ -607,9 +560,9 @@ std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const TargetBase 
     return cmd;
 }
 
-RcToolSourceFile::RcToolSourceFile(const Target &t, RcTool *c, const path &input, const path &o)
+RcToolSourceFile::RcToolSourceFile(const Target &t, const RcTool &c, const path &input, const path &o)
     : SourceFile(t, input)
-    , compiler(c ? std::static_pointer_cast<RcTool>(c->clone()) : nullptr)
+    , compiler(std::static_pointer_cast<RcTool>(c.clone()))
     , output(o, *t.getSolution()->fs)
 {
     compiler->setSourceFile(input);

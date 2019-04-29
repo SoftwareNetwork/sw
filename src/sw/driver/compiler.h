@@ -9,9 +9,9 @@
 #include "options.h"
 #include "options_cl.h"
 #include "options_cl_vs.h"
+#include "program.h"
 #include "types.h"
 
-#include <sw/builder/program.h>
 #include <sw/manager/version.h>
 
 #include <primitives/exceptions.h>
@@ -73,7 +73,7 @@ SW_DRIVER_CPP_API
 bool isCppSourceFileExtensions(const String &);
 
 // maybe add Object type?
-struct VSInstance : Program
+struct VSInstance : ProgramGroup
 {
     path root;
     Version version;
@@ -82,14 +82,12 @@ struct VSInstance : Program
     VersionSet cl_versions; // cl has 19.xx versions (19.15, 19.16, 19.20 etc.)
     VersionSet link_versions; // tools has 14.xx versions (14.15, 14.16, 14.20 etc.)
 
-    using Program::Program;
-    //using Program::operator=;
+    using ProgramGroup::ProgramGroup;
 
-    std::shared_ptr<builder::Command> getCommand() const override { return nullptr; } // return path to devenv?
     std::shared_ptr<Program> clone() const override { return std::make_shared<VSInstance>(*this); }
     Version &getVersion() override { return version; }
 
-    void activate(struct Solution &s) const;
+    void activate(Solution &s) const;
 };
 
 // toolchain
@@ -154,12 +152,12 @@ struct SW_DRIVER_CPP_API NativeToolchain
 
 // compilers
 
-struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
+struct SW_DRIVER_CPP_API CompilerBaseProgram : FileToFileTransformProgram
 {
     String Prefix;
     String Extension;
 
-    using Program::Program;
+    using FileToFileTransformProgram::FileToFileTransformProgram;
     CompilerBaseProgram(const CompilerBaseProgram &);
 
     std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t);
@@ -173,6 +171,9 @@ protected:
 
     virtual void prepareCommand1(const TargetBase &t) = 0;
     virtual std::shared_ptr<driver::Command> createCommand1(const SwContext &swctx) const;
+
+private:
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
 };
 
 struct SW_DRIVER_CPP_API Compiler : CompilerBaseProgram
@@ -195,6 +196,9 @@ struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
 
 protected:
     mutable Files dependencies;
+
+private:
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
 };
 
 struct SW_DRIVER_CPP_API VisualStudio
@@ -484,6 +488,9 @@ struct SW_DRIVER_CPP_API RcTool :
 
 protected:
     Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
+
+private:
+    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
 };
 
 // C#
