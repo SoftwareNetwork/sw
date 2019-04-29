@@ -449,9 +449,8 @@ void PackagesDatabase::deletePackage(const PackageId &p) const
 void PackagesDatabase::deleteOverriddenPackageDir(const path &sdir) const
 {
     (*db)(
-        update(pkg_ver)
-        .set(pkg_ver.sdir = sqlpp::null)
-        .where(pkg_ver.sdir == normalize_path(sdir))
+        remove_from(pkg_ver)
+        .where(pkg_ver.sdir == sdir.u8string())
         );
 }
 

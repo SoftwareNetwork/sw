@@ -448,7 +448,7 @@ int sw_main(const Strings &args)
         for (auto &p : pkgs)
             std::cout << "Deleting " << p.toString() << "\n";
 
-        swctx.getLocalStorage().getOverriddenPackagesStorage().deletePackageDir(delete_overridden_package_dir);
+        swctx.getLocalStorage().getOverriddenPackagesStorage().deletePackageDir(d);
         return 0;
     }
 

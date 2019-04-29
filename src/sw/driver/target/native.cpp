@@ -1166,9 +1166,17 @@ void NativeExecutedTarget::autoDetectSources()
 void NativeExecutedTarget::autoDetectIncludeDirectories()
 {
     auto &is = getInheritanceStorage().raw();
-    if (std::any_of(is.begin(), is.end(), [](auto *ptr)
+    if (std::any_of(is.begin(), is.end(), [this](auto *ptr)
     {
-        return ptr && !ptr->IncludeDirectories.empty();
+        if (!ptr || ptr->IncludeDirectories.empty())
+            return false;
+        return !std::all_of(ptr->IncludeDirectories.begin(), ptr->IncludeDirectories.end(), [this](const auto &i)
+        {
+            // tools may add their idirs to bdirs
+            return
+                i.u8string().find(BinaryDir.u8string()) == 0 ||
+                i.u8string().find(BinaryPrivateDir.u8string()) == 0;
+        });
     }))
     {
         return;
