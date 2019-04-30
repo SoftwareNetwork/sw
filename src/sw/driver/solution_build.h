@@ -37,7 +37,7 @@ struct SW_DRIVER_CPP_API Build : Solution
 
     path build(const path &fn);
     void load(const path &fn, bool configless = false);
-    void build_package(const String &pkg);
+    void load_packages(const StringSet &pkgs);
     void build_packages(const StringSet &pkgs);
     void run_package(const String &pkg);
     void execute();

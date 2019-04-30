@@ -7,6 +7,7 @@
 #include "database.h"
 
 #include "enums.h"
+#include "inserts.h"
 #include "settings.h"
 #include "stamp.h"
 #include "storage.h"
@@ -39,7 +40,6 @@ DECLARE_STATIC_LOGGER(logger, "db");
 
 namespace sql = sqlpp::sqlite3;
 
-#include <inserts.cpp>
 #include "database_pps.h"
 
 namespace sw

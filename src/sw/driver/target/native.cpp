@@ -1377,15 +1377,16 @@ bool NativeExecutedTarget::prepare()
         }
 
         // default macros
+        // public to make sure integrations also take these
         if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
         {
-            Definitions["SW_EXPORT"] = "__declspec(dllexport)";
-            Definitions["SW_IMPORT"] = "__declspec(dllimport)";
+            Public.Definitions["SW_EXPORT"] = "__declspec(dllexport)";
+            Public.Definitions["SW_IMPORT"] = "__declspec(dllimport)";
         }
         else
         {
-            Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
-            Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
+            Public.Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
+            Public.Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
         }
         //Definitions["SW_STATIC="];
     }

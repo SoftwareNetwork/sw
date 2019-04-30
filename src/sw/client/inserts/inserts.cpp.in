@@ -1,17 +1,21 @@
-// Copyright (C) 2018 Egor Pugin <egor.pugin@gmail.com>
+// Copyright (C) 2019 Egor Pugin <egor.pugin@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <sw/manager/inserts.h>
+#include <sw/client/inserts.h>
 
 #define DECLARE_TEXT_VAR_BEGIN(x) const uint8_t _##x[] = {
 #define DECLARE_TEXT_VAR_END(x) }; static const std::string x = (const char *)&_##x[0];
 
-DECLARE_TEXT_VAR_BEGIN(packages_db_schema)
-EMBED<packages_db_schema.sql>
-DECLARE_TEXT_VAR_END(packages_db_schema);
+DECLARE_TEXT_VAR_BEGIN(sw_config_cmake)
+EMBED<SWConfig.cmake>
+DECLARE_TEXT_VAR_END(sw_config_cmake);
+
+DECLARE_TEXT_VAR_BEGIN(header_cmake)
+EMBED<header.cmake>
+DECLARE_TEXT_VAR_END(header_cmake);
 
 #undef DECLARE_TEXT_VAR_BEGIN
 #undef DECLARE_TEXT_VAR_END

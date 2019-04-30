@@ -5,6 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "build.h"
+#include "commands.h"
+#include "inserts.h"
 
 //#include <resolver.h>
 #include <sw/builder/file.h>
@@ -145,7 +147,7 @@ static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
 
-static sw::SwContext createSwContext()
+sw::SwContext createSwContext()
 {
     return sw::SwContext(sw::Settings::get_user_settings().storage_dir);
 }
@@ -354,12 +356,6 @@ int main(int argc, char **argv)
 
     return r;
 }
-
-#define SUBCOMMAND_DECL(n) void cli_##n()
-#define SUBCOMMAND_DECL2(n) void cli_##n(sw::SwContext &swctx)
-#define SUBCOMMAND(n, d) SUBCOMMAND_DECL(n); SUBCOMMAND_DECL2(n);
-#include "commands.inl"
-#undef SUBCOMMAND
 
 //
 //static ::cl::list<path> build_arg0(::cl::Positional, ::cl::desc("Files or directoris to build"));
@@ -990,6 +986,21 @@ SUBCOMMAND_DECL2(generate)
     cli_build(swctx);
 }
 
+static void registerCmakePackage(sw::SwContext &swctx)
+{
+#ifdef _WIN32
+    auto dir = swctx.getLocalStorage().storage_dir_etc / "sw" / "static";
+    // if we write into HKLM, we won't be able to access the pkg file in admins folder
+    winreg::RegKey icon(/*is_elevated() ? HKEY_LOCAL_MACHINE : */HKEY_CURRENT_USER, L"Software\\Kitware\\CMake\\Packages\\SW");
+    icon.SetStringValue(L"", dir.wstring().c_str());
+    write_file_if_different(dir / "SWConfig.cmake", sw_config_cmake);
+#else
+    auto cppan_cmake_dir = get_home_directory() / ".cmake" / "packages";
+    write_file_if_different(cppan_cmake_dir / "SW" / "1", cppan_cmake_dir.string());
+    write_file_if_different(cppan_cmake_dir / cppan_cmake_config_filename, cppan_cmake_config);
+#endif
+}
+
 SUBCOMMAND_DECL(setup)
 {
     elevate();
@@ -1029,6 +1040,9 @@ SUBCOMMAND_DECL(setup)
         p.SetStringValue(L"", prog + L" build %1");
     }
 #endif
+
+    auto swctx = createSwContext();
+    registerCmakePackage(swctx);
 }
 
 sw::Remote *find_remote(sw::Settings &s, const String &name)

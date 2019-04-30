@@ -188,6 +188,7 @@ void build(Solution &s)
     client += cpp_driver,
         "pub.egorpugin.primitives.sw.main-master"_dep,
         "org.sw.demo.giovannidicanio.winreg-master"_dep;
+    embed("pub.egorpugin.primitives.tools.embedder-master"_dep, client, "src/sw/client/inserts/inserts.cpp.in");
     if (s.Settings.Native.CompilerType == CompilerType::MSVC)
         client.CompileOptions.push_back("-bigobj");
     if (s.Settings.TargetOS.Type == OSType::Linux)

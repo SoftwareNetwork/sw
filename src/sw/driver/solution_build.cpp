@@ -707,7 +707,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
         files.insert(p);
         output_names.emplace(p, pkg);
     }
-    bool many_files = files.size() > 1;
+    bool many_files = true;
     auto h = getFilesHash(files);
 
     auto &lib = createTarget(files);
@@ -1511,16 +1511,17 @@ void Build::generateBuildSystem()
     getGenerator()->generate(*this);
 }
 
-void Build::build_packages(const StringSet &pkgs)
+static const auto ide_fs = "ide_vs";
+
+// on fast path we do not create a lot of threads in main()
+// we do it here
+static std::unique_ptr<Executor> e;
+static bool fast_path_exit;
+
+void Build::load_packages(const StringSet &pkgs)
 {
     if (pkgs.empty())
         return;
-
-    static const auto ide_fs = "ide_vs";
-
-    // on fast path we do not create a lot of threads in main()
-    // we do it here
-    std::unique_ptr<Executor> e;
 
     if (!gIdeFastPath.empty())
     {
@@ -1529,8 +1530,9 @@ void Build::build_packages(const StringSet &pkgs)
             auto files = read_lines(gIdeFastPath);
             if (std::none_of(files.begin(), files.end(), [this](auto &f) {
                 return File(f, swctx.getFileStorage(ide_fs, true)).isChanged();
-            }))
+                }))
             {
+                fast_path_exit = true;
                 return;
             }
             solutions.clear();
@@ -1542,7 +1544,7 @@ void Build::build_packages(const StringSet &pkgs)
     //
     UnresolvedPackages upkgs;
     for (auto &p : pkgs)
-        upkgs.insert(extractFromString(p));
+        upkgs.insert(p);
 
     // resolve only deps needed
     auto m = swctx.install(upkgs);
@@ -1584,18 +1586,32 @@ void Build::build_packages(const StringSet &pkgs)
     // execute() will propagate them to solutions
     for (auto &[porig, p] : m)
         TargetsToBuild[p];
+}
 
+void Build::build_packages(const StringSet &pkgs)
+{
+    if (pkgs.empty())
+        return;
+
+    load_packages(pkgs);
+    if (fast_path_exit)
+        return;
     execute();
 
     //
     if (!gIdeFastPath.empty())
     {
+        UnresolvedPackages upkgs;
+        for (auto &p : pkgs)
+            upkgs.insert(p);
+        auto pkgs2 = swctx.resolve(upkgs);
+
         // at the moment we have one solution here
         Files files;
         Commands cmds;
         for (auto &p : pkgs)
         {
-            auto i = solutions[0].children.find(PackageId(p));
+            auto i = solutions[0].children.find(pkgs2.find(p)->second);
             if (i == solutions[0].children.end())
                 throw SW_RUNTIME_ERROR("No such target in fast path: " + p);
             if (auto nt = i->second->as<NativeExecutedTarget>())
@@ -1652,14 +1668,9 @@ void Build::build_packages(const StringSet &pkgs)
     }
 }
 
-void Build::build_package(const String &s)
-{
-    build_packages({ s });
-}
-
 void Build::run_package(const String &s)
 {
-    build_package(s);
+    build_packages({ s });
 
     auto nt = solutions[0].getTargetPtr(swctx.resolve(extractFromString(s)))->as<NativeExecutedTarget>();
     if (!nt || nt->getType() != TargetType::NativeExecutable)

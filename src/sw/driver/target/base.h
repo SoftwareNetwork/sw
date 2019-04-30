@@ -161,13 +161,6 @@ struct SW_DRIVER_CPP_API TargetBase : Node, ProgramStorage, ProjectDirectories
 {
     using TargetMap = PackageVersionMapBase<TargetBaseTypePtr, std::unordered_map, primitives::version::VersionMap>;
 
-    // New root directory after downloading and unpacking.
-    //path UnpackDirectory;
-
-    // command storage, use driver::Commands?
-    // not needed? actual commands may be hidden in programs that lie in common Storage below
-    //std::vector<std::shared_ptr<builder::Command>> CommandStorage;
-
     // Data storage for objects that must be alive with the target.
     // For example, program clones etc.
     std::vector<std::any> Storage;

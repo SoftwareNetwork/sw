@@ -25,6 +25,7 @@ SUBCOMMAND(fetch, "Fetch sources") COMMA
 SUBCOMMAND(ide, "Used to invoke sw application to do IDE tasks: generate project files, clean, rebuild etc.") COMMA
 SUBCOMMAND(create, "Create different projects.") COMMA
 SUBCOMMAND(install, "Add package to lock.") COMMA
+SUBCOMMAND(integrate, "Integrate sw into different tools.") COMMA
 SUBCOMMAND(list, "List packages in database.") COMMA
 SUBCOMMAND(mirror, "Manage software mirrors.") COMMA
 SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
