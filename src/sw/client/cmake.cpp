@@ -184,6 +184,21 @@ SUBCOMMAND_DECL(integrate)
             }
             break;
         }
+        // deps
+        for (auto &s : b.solutions)
+        {
+            for (auto &[pkg, t] : s.getChildren())
+            {
+                auto &nt = *t->as<sw::NativeExecutedTarget>();
+
+                if (t->getType() == sw::TargetType::NativeExecutable)
+                    continue;
+
+                for (auto &d : nt.Dependencies)
+                    ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + d->getResolvedPackage().toString() + ")");
+            }
+            break;
+        }
         write_file_if_different(integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
     }
 }
