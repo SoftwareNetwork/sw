@@ -20,10 +20,11 @@ self-upgrade - upgrade the client. implement via upgrade?
 */
 
 SUBCOMMAND(build, "Build files, dirs or packages") COMMA
+SUBCOMMAND(configure, "Create build script") COMMA
+SUBCOMMAND(create, "Create different projects.") COMMA
 SUBCOMMAND(generate, "Generate IDE projects") COMMA
 SUBCOMMAND(fetch, "Fetch sources") COMMA
 SUBCOMMAND(ide, "Used to invoke sw application to do IDE tasks: generate project files, clean, rebuild etc.") COMMA
-SUBCOMMAND(create, "Create different projects.") COMMA
 SUBCOMMAND(install, "Add package to lock.") COMMA
 SUBCOMMAND(integrate, "Integrate sw into different tools.") COMMA
 SUBCOMMAND(list, "List packages in database.") COMMA

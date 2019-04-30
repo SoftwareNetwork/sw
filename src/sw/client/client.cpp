@@ -946,6 +946,11 @@ SUBCOMMAND_DECL(ide)
     }
 }
 
+SUBCOMMAND_DECL(configure)
+{
+    SW_UNIMPLEMENTED;
+}
+
 extern String gGenerator;
 ::cl::opt<String, true> cl_generator("G", ::cl::desc("Generator"), ::cl::location(gGenerator), ::cl::sub(subcommand_generate));
 ::cl::alias generator2("g", ::cl::desc("Alias for -G"), ::cl::aliasopt(cl_generator));

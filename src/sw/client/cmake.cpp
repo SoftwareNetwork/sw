@@ -86,10 +86,20 @@ SUBCOMMAND_DECL(integrate)
             {
                 auto &nt = *t->as<sw::NativeExecutedTarget>();
 
+                if (t->getType() == sw::TargetType::NativeExecutable)
+                    continue;
+
                 ctx.if_("NOT TARGET " + pkg.toString());
 
                 // tgt
-                ctx.addLine("add_library(" + pkg.toString() + " STATIC IMPORTED GLOBAL)");
+                auto st = "STATIC";
+                if (t->getType() == sw::TargetType::NativeStaticLibrary)
+                    ;
+                else if (
+                    t->getType() == sw::TargetType::NativeSharedLibrary ||
+                    s.Settings.Native.LibrariesType == sw::LibraryType::Shared)
+                    st = "SHARED";
+                ctx.addLine("add_library(" + pkg.toString() + " " + st + " IMPORTED GLOBAL)");
 
                 // props
                 ctx.increaseIndent("set_target_properties(" + pkg.toString() + " PROPERTIES");
