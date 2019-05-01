@@ -8,7 +8,6 @@
 
 #include "sw/driver/command.h"
 #include "sw/driver/jumppad.h"
-#include "sw/driver/suffix.h"
 #include "sw/driver/solution.h"
 
 #include <sw/builder/sw_context.h>

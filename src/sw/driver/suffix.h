@@ -32,6 +32,12 @@ _r - regex
 _rr - recursive regex
 _s?, _sf? - source file
 
+sources:
+    _git
+    _git_v - means that version is a tag 'v{v}'
+    _remote
+    ...
+
 */
 
 // definition
@@ -114,6 +120,22 @@ inline Variable operator "" _v(const char *s, size_t)
 inline Variable operator "" _var(const char *s, size_t)
 {
     return Variable{ s };
+}
+
+// sources
+
+inline Git operator "" _git(const char *s, size_t)
+{
+    return Git(s);
+}
+inline Git operator "" _git_v(const char *s, size_t)
+{
+    return Git(s, "v{v}");
+}
+
+inline RemoteFile operator "" _remote(const char *s, size_t)
+{
+    return RemoteFile(s);
 }
 
 // more?

@@ -5,7 +5,6 @@
 #include "sw/driver/functions.h"
 #include "sw/driver/solution_build.h"
 #include "sw/driver/solution.h"
-#include "sw/driver/suffix.h"
 
 #include <sw/builder/sw_context.h>
 #include <sw/manager/storage.h>
@@ -1634,10 +1633,10 @@ bool NativeExecutedTarget::prepare()
 
         // before merge
         if (getSolution()->Settings.Native.ConfigurationType != ConfigurationType::Debug)
-            *this += "NDEBUG"_d;
+            *this += Definition("NDEBUG");
         // allow to other compilers?
         else if (getSolution()->Settings.Native.CompilerType == CompilerType::MSVC)
-            *this += "_DEBUG"_d;
+            *this += Definition("_DEBUG");
 
         auto remove_bdirs = [this](auto *c)
         {
