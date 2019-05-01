@@ -1609,11 +1609,11 @@ void Build::build_packages(const StringSet &pkgs)
         // at the moment we have one solution here
         Files files;
         Commands cmds;
-        for (auto &p : pkgs)
+        for (auto &[u, p] : pkgs2)
         {
-            auto i = solutions[0].children.find(pkgs2.find(p)->second);
+            auto i = solutions[0].children.find(p);
             if (i == solutions[0].children.end())
-                throw SW_RUNTIME_ERROR("No such target in fast path: " + p);
+                throw SW_RUNTIME_ERROR("No such target in fast path: " + p.toString());
             if (auto nt = i->second->as<NativeExecutedTarget>())
             {
                 if (auto c = nt->getCommand())

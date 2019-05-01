@@ -14,6 +14,29 @@ set(SW_DEPS_FILE ${SW_DEPS_DIR}/sw.txt CACHE STRING "SW local deps file.")
 file(WRITE ${SW_DEPS_FILE} "")
 
 ########################################
+# FUNCTION find_flag
+########################################
+
+function(find_flag in_flags f out)
+    if (NOT "${${out}}" STREQUAL "")
+        return()
+    endif()
+    if ("${in_flags}" STREQUAL "")
+        set(${out} 0 PARENT_SCOPE)
+        return()
+    endif()
+    set(flags ${in_flags})
+    string(TOLOWER ${f} f)
+    string(TOLOWER ${flags} flags)
+    string(FIND "${flags}" "${f}" flags)
+    if (NOT ${flags} EQUAL -1)
+        set(${out} 1 PARENT_SCOPE)
+    else()
+        set(${out} 0 PARENT_SCOPE)
+    endif()
+endfunction(find_flag)
+
+########################################
 # FUNCTION sw_add_dependency
 ########################################
 
@@ -46,9 +69,27 @@ function(sw_execute)
         set(platform x86)
     endif()
 
+    set(mt_flag)
+    if (MSVC)
+        find_flag("${CMAKE_C_FLAGS_RELEASE}"              /MT       C_MTR        )
+        find_flag("${CMAKE_C_FLAGS_RELWITHDEBINFO}"       /MT       C_MTRWDI     )
+        find_flag("${CMAKE_C_FLAGS_MINSIZEREL}"           /MT       C_MTMSR      )
+        find_flag("${CMAKE_C_FLAGS_DEBUG}"                /MTd      C_MTD        )
+        find_flag("${CMAKE_CXX_FLAGS_RELEASE}"            /MT     CXX_MTR        )
+        find_flag("${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"     /MT     CXX_MTRWDI     )
+        find_flag("${CMAKE_CXX_FLAGS_MINSIZEREL}"         /MT     CXX_MTMSR      )
+        find_flag("${CMAKE_CXX_FLAGS_DEBUG}"              /MTd    CXX_MTD        )
+
+        if (  C_MTR OR   C_MTRWDI OR   C_MTMSR OR   C_MTD OR
+            CXX_MTR OR CXX_MTRWDI OR CXX_MTMSR OR CXX_MTD)
+            set(mt_flag -mt)
+        endif()
+    endif()
+
     set(sw_platform_args
         ${stsh}
         -platform ${platform}
+        ${mt_flag}
         #-compiler msvc
     )
 
@@ -86,6 +127,7 @@ function(sw_execute)
         COMMAND
             sw
                 ${sw_platform_args}
+                -d "${SW_DEPS_DIR}"
                 -config
                     $<$<CONFIG:Debug>:d>
                     $<$<CONFIG:MinSizeRel>:msr>

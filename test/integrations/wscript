@@ -1,0 +1,36 @@
+top = '.'
+out = 'build_waf'
+
+import subprocess
+swdir = out + '/.sw'
+swdeps = swdir + '/deps.txt'
+def sw_configure(ctx):
+    deps = [
+        'org.sw.demo.sqlite3',
+        'org.sw.demo.glennrp.png',
+    ]
+
+    f = open(swdeps, 'w')
+    for d in deps:
+        f.write(d + '\n')
+    f.close()
+    p = subprocess.Popen(['sw', '-mt', '-d', swdir, 'integrate', '-waf-deps', 'deps.txt'])
+    if p.wait():
+        ctx.fatal("Error during sw call")
+
+def sw_build(ctx):
+    p = subprocess.Popen(['sw', '-mt', '-d', swdir, 'build', '@' + swdeps,
+        '-ide-copy-to-dir', '..', '-ide-fast-path', 'fp.txt'])
+    if p.wait():
+        ctx.fatal("Error during sw call")
+
+def options(opt):
+    opt.load('compiler_cxx')
+
+def configure(ctx):
+    ctx.load('compiler_cxx')
+    ctx.recurse(swdir)
+
+def build(bld):
+    bld.program(source='sqlite3.cpp', target='sqlite3', use='org.sw.demo.sqlite3')
+    bld.program(source='png.cpp', target='png', use='org.sw.demo.glennrp.png')
