@@ -13,9 +13,5 @@ DECLARE_TEXT_VAR_BEGIN(sw_config_cmake)
 EMBED<SWConfig.cmake>
 DECLARE_TEXT_VAR_END(sw_config_cmake);
 
-DECLARE_TEXT_VAR_BEGIN(header_cmake)
-EMBED<header.cmake>
-DECLARE_TEXT_VAR_END(header_cmake);
-
 #undef DECLARE_TEXT_VAR_BEGIN
 #undef DECLARE_TEXT_VAR_END

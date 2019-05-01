@@ -6,11 +6,7 @@ local_settings:
     #use_cache: true
     builds:
         vs_release:
-            generator: Visual Studio 15 2017 #Win64
-
-        vs_preview:
-            c_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.12.25805/bin/Hostx64/x64/cl.exe
-            cxx_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.12.25805/bin/Hostx64/x64/cl.exe
+            generator: Visual Studio 16 2019
 
         vs_llvm:
             generator: Visual Studio 15 2017 Win64
@@ -100,7 +96,7 @@ common_settings:
 
 projects:
     tools.client:
-        root_directory: src/tools
+        root_directory: src/sw/tools
         files: client.cpp
         condition: WIN32
         output_name: client.com
@@ -114,33 +110,33 @@ projects:
             - pvt.cppan.demo.boost.filesystem: 1
 
     tools.self_builder:
-        root_directory: src/tools
+        root_directory: src/sw/tools
         files: self_builder.cpp
         dependencies:
             - manager
             - name: pvt.egorpugin.primitives.sw.main
               version: master
               local: primitives.sw.main
-            - name: pvt.egorpugin.primitives.context
+            - name: pvt.egorpugin.primitives.emitter
               version: master
-              local: primitives.context
+              local: primitives.emitter
 
     tools.cl_generator:
-        root_directory: src/tools
+        root_directory: src/sw/tools
         files: cl_generator.cpp
         dependencies:
             - name: pvt.egorpugin.primitives.main
               version: master
               local: primitives.sw.main
-            - name: pvt.egorpugin.primitives.context
+            - name: pvt.egorpugin.primitives.emitter
               version: master
-              local: primitives.context
+              local: primitives.emitter
             - name: pvt.egorpugin.primitives.yaml
               version: master
               local: primitives.yaml
 
     client:
-        root_directory: src/client
+        root_directory: src/sw/client
         #executable_type: win32
         files:
             - .*
@@ -162,22 +158,20 @@ projects:
             file(GLOB_RECURSE x "${SDIR}/*")
             source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
 
+            embed(${SDIR}/inserts/inserts.cpp.in
+                ${SDIR}/inserts/SWConfig.cmake
+            )
+
     driver.cpp:
         type: library
         #static_only: true
         api_name: SW_DRIVER_CPP_API
         export_if_static: true
 
-        files:
-            - include/sw/driver/.*
-            - src/driver/.*
+        files: src/sw/driver/.*
         exclude_from_build:
-            - src/driver/misc/.*
-            - src/driver/inserts/cppan.cpp
-
-        include_directories:
-            - include
-            - src/driver # make private
+            - src/sw/driver/misc/.*
+            - src/sw/driver/inserts/cppan.cpp
 
         options:
             any:
@@ -218,14 +212,14 @@ projects:
 
         post_sources: |
             if (WIN32)
-                add_src_dir(src/driver/misc/*)
+                add_src_dir(src/sw/driver/misc/*)
             endif()
 
             file(GLOB_RECURSE x "${SDIR}/*")
             source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
 
-            embed(${SDIR}/src/driver/inserts/inserts.cpp.in ${SDIR}/src/driver/inserts/cppan.cpp)
-            set_source_files_properties(${SDIR}/src/driver/inserts/cppan.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
+            embed(${SDIR}/src/sw/driver/inserts/inserts.cpp.in ${SDIR}/src/sw/driver/inserts/cppan.cpp)
+            set_source_files_properties(${SDIR}/src/sw/driver/inserts/cppan.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
 
             set(f ${BDIR}/build_self.generated.h ${BDIR}/build_self.packages.generated.h)
             add_custom_command(OUTPUT ${f}
@@ -236,13 +230,13 @@ projects:
 
             set(f ${BDIR}/options_cl.generated.h)
             add_custom_command(OUTPUT ${f}
-                COMMAND ${cl_generator} ${SDIR}/src/driver/options_cl.yml ${f} ${BDIR}/options_cl.generated.cpp
-                DEPENDS ${cl_generator} ${SDIR}/src/driver/options_cl.yml
+                COMMAND ${cl_generator} ${SDIR}/src/sw/driver/options_cl.yml ${f} ${BDIR}/options_cl.generated.cpp
+                DEPENDS ${cl_generator} ${SDIR}/src/sw/driver/options_cl.yml
             )
-            set(src ${src} ${f} ${SDIR}/src/driver/options_cl.yml)
+            set(src ${src} ${f} ${SDIR}/src/sw/driver/options_cl.yml)
 
         post_target: |
-            cppan_flex_bison_internal(src/driver/bazel/lexer.ll PARSERS src/driver/bazel/grammar.yy)
+            cppan_flex_bison_internal(src/sw/driver/bazel/lexer.ll PARSERS src/sw/driver/bazel/grammar.yy)
 
 
     builder:
@@ -250,16 +244,10 @@ projects:
         api_name: SW_BUILDER_API
         export_if_static: true
 
-        files:
-            - include/sw/builder/.*
-            - src/builder/.*
+        files: src/sw/builder/.*
         exclude_from_build:
-            - src/builder/db_sqlite.*
-            - src/builder/inserts/.*
-
-        include_directories:
-            - include
-            - src/builder # make private
+            - src/sw/builder/db_sqlite.*
+            - src/sw/builder/inserts/.*
 
         options:
             any:
@@ -273,9 +261,9 @@ projects:
             public:
                 - manager
                 - pvt.cppan.demo.preshing.junction: master
-                - name: pvt.egorpugin.primitives.context
+                - name: pvt.egorpugin.primitives.emitter
                   version: master
-                  local: primitives.context
+                  local: primitives.emitter
 
         post_sources: |
             file(GLOB_RECURSE x "${SDIR}/*")
@@ -284,7 +272,7 @@ projects:
     protos:
         type: lib
         static_only: true
-        root_directory: src/protocol
+        root_directory: src/sw/protocol
         files: .*
         dependencies:
             - name: pvt.egorpugin.primitives.log
@@ -308,13 +296,7 @@ projects:
             - SW_MANAGER_API
         export_if_static: true
 
-        files:
-            - include/sw/manager/.*
-            - src/manager/.*
-
-        include_directories:
-            - include
-            - src/manager # make private
+        files: src/sw/manager/.*
 
         options:
             any:
@@ -340,6 +322,9 @@ projects:
             - name: pvt.egorpugin.primitives.yaml
               version: master
               local: primitives.yaml
+            - name: pvt.egorpugin.primitives.source
+              version: master
+              local: primitives.source
             - name: pvt.egorpugin.primitives.version
               version: master
               local: primitives.version
@@ -372,20 +357,18 @@ projects:
             file(GLOB_RECURSE x "${SDIR}/*")
             source_group(TREE ${SDIR} PREFIX "Source Files" FILES ${x})
 
-            embed(${SDIR}/src/manager/inserts/inserts.cpp.in
-                ${SDIR}/src/manager/inserts/packages_db_schema.sql
-                ${SDIR}/src/manager/inserts/service_db_schema.sql
+            embed(${SDIR}/src/sw/manager/inserts/inserts.cpp.in
+                ${SDIR}/src/sw/manager/inserts/packages_db_schema.sql
             )
 
-            sqlite2cpp_gen_sql(${SDIR}/src/manager/inserts/packages_db_schema.sql db_packages.h db::packages)
-            sqlite2cpp_gen_sql(${SDIR}/src/manager/inserts/service_db_schema.sql db_service.h db::service)
+            sqlite2cpp_gen_sql(${SDIR}/src/sw/manager/inserts/packages_db_schema.sql db_packages.h db::packages)
 
     support:
         type: library
         api_name:
             - SW_SUPPORT_API
 
-        root_directory: src/support
+        root_directory: src/sw/support
         files: .*
 
         options:
@@ -461,10 +444,10 @@ x:
         api_name: SW_MANAGER_API
         files:
             - test/unit/path.cpp
-            - src/manager/package_path.cpp
-            - src/manager/package_path.h
+            - src/sw/manager/package_path.cpp
+            - src/sw/manager/package_path.h
         include_directories:
-            - src/manager
+            - src/sw/manager
         dependencies:
             - support
             - pvt.cppan.demo.catchorg.catch2: 2
@@ -486,10 +469,10 @@ x:
         copy_to_output_dir: false
         files:
             - test/unit/property.cpp
-            - src/manager/property.cpp
-            - src/manager/property.h
+            - src/sw/manager/property.cpp
+            - src/sw/manager/property.h
         include_directories:
-            - src/manager
+            - src/sw/manager
         dependencies:
             - support
             - pvt.cppan.demo.catchorg.catch2: 2

@@ -7,4 +7,3 @@
 #include <string>
 
 extern const std::string sw_config_cmake;
-extern const std::string header_cmake;

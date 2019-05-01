@@ -1908,7 +1908,7 @@ void Build::load_dll(const path &dll, bool usedll)
     // add cc if needed
     getHostSolution();
 
-    for (auto &[i,s] : enumerate(solutions))
+    for (auto &s : solutions)
     {
         // apply config settings
         s.findCompiler();
