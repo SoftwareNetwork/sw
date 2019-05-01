@@ -370,7 +370,7 @@ void LocalStorage::get(const IStorage &source, const PackageId &id, StorageFileT
     if (!source.getFile(id, t)->copy(dst))
         throw SW_RUNTIME_ERROR("Error downloading file for package: " + id.toString() + ", file: " + toUserString(t));
 
-    LOG_INFO(logger, "Unpacking: [" + id.toString() + "]/[" + toUserString(t) + "]");
+    LOG_INFO(logger, "Unpacking  : [" + id.toString() + "]/[" + toUserString(t) + "]");
     unpack_file(dst, lp.getDirSrc());
 
     // now move .new to usual archive (or remove archive)

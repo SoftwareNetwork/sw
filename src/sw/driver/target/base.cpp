@@ -29,8 +29,8 @@ namespace sw
 struct TargetSettings
 {
     SolutionSettings ss;
-    // features (options)
     // deps
+    // features (options)
 
     bool operator<(const TargetSettings &) const;
 };
