@@ -7,7 +7,7 @@
 #include "source_file.h"
 
 #include "command.h"
-#include "solution.h"
+#include "build.h"
 #include "target/native.h"
 
 #include <primitives/sw/cl.h>
@@ -107,7 +107,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     auto f = this->SourceFileMapThis::operator[](file);
 
     auto ext = file.extension().string();
-    auto nt = target->as<NativeExecutedTarget>();
+    auto nt = target->as<NativeCompiledTarget>();
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
     if (!target->hasExtension(ext) || ho)
     {
@@ -118,8 +118,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     {
         if (!f || f->postponed)
         {
-            auto p = target->ProgramStorage::findProgramByExtension(ext);
-            if (target->ProgramStorage::hasExtension(ext) && !p)
+            if (target->hasExtension(ext) == ProgramStorage::HAS_PACKAGE_EXTENSION)
             {
                 //if (f && f->postponed)
                     //throw SW_RUNTIME_ERROR("Postponing postponed file");
@@ -128,8 +127,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
             }
             else
             {
-                if (!p)
-                    p = target->findProgramByExtension(ext);
+                auto p = target->findProgramByExtension(ext);
                 auto f2 = f;
                 auto p2 = dynamic_cast<FileToFileTransformProgram*>(p);
                 if (!p2)
@@ -398,7 +396,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
                 *source_dir = false;
             if (!fs::exists(p))
             {
-                if (!File(p, *target->getSolution()->fs).isGeneratedAtAll())
+                if (!File(p, *target->getSolution().fs).isGeneratedAtAll())
                 {
                     if (ignore_errors)
                         return false;
@@ -420,7 +418,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
     {
         if (!found && !fs::exists(F))
         {
-            if (!File(F, *target->getSolution()->fs).isGeneratedAtAll())
+            if (!File(F, *target->getSolution().fs).isGeneratedAtAll())
             {
                 if (ignore_errors)
                     return false;
@@ -496,11 +494,11 @@ void SourceFileStorage::clearGlobCache()
 }
 
 SourceFile::SourceFile(const Target &t, const path &input)
-    : File(input, *t.getSolution()->fs)
+    : File(input, *t.getSolution().fs)
 {
 }
 
-String SourceFile::getObjectFilename(const TargetBase &t, const path &p)
+String SourceFile::getObjectFilename(const Target &t, const path &p)
 {
     // target may push its files to outer packages,
     // so files must be concatenated with its target name
@@ -517,7 +515,7 @@ bool SourceFile::isActive() const
 NativeSourceFile::NativeSourceFile(const Target &t, const NativeCompiler &c, const path &input, const path &o)
     : SourceFile(t, input)
     , compiler(std::static_pointer_cast<NativeCompiler>(c.clone()))
-    , output(o, *t.getSolution()->fs)
+    , output(o, *t.getSolution().fs)
 {
     compiler->setSourceFile(input, output.file);
 }
@@ -539,17 +537,17 @@ void NativeSourceFile::setOutputFile(const path &o)
     compiler->setSourceFile(file, output.file);
 }
 
-void NativeSourceFile::setOutputFile(const TargetBase &t, const path &input, const path &output_dir)
+void NativeSourceFile::setOutputFile(const Target &t, const path &input, const path &output_dir)
 {
     setOutputFile(output_dir / getObjectFilename(t, input));
 }
 
-String NativeSourceFile::getObjectFilename(const TargetBase &t, const path &p)
+String NativeSourceFile::getObjectFilename(const Target &t, const path &p)
 {
-    return SourceFile::getObjectFilename(t, p) + compiler->getObjectExtension(t.getSolution()->Settings.TargetOS);
+    return SourceFile::getObjectFilename(t, p) + compiler->getObjectExtension(t.getSettings().TargetOS);
 }
 
-std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const TargetBase &t) const
+std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const Target &t) const
 {
     auto cmd = compiler->getCommand(t);
     for (auto &d : dependencies)
@@ -563,13 +561,13 @@ std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const TargetBase 
 RcToolSourceFile::RcToolSourceFile(const Target &t, const RcTool &c, const path &input, const path &o)
     : SourceFile(t, input)
     , compiler(std::static_pointer_cast<RcTool>(c.clone()))
-    , output(o, *t.getSolution()->fs)
+    , output(o, *t.getSolution().fs)
 {
     compiler->setSourceFile(input);
     compiler->setOutputFile(output.file);
 }
 
-std::shared_ptr<builder::Command> RcToolSourceFile::getCommand(const TargetBase &t) const
+std::shared_ptr<builder::Command> RcToolSourceFile::getCommand(const Target &t) const
 {
     auto cmd = compiler->getCommand(t);
     return cmd;

@@ -96,7 +96,7 @@ Module::~Module()
     delete module;
 }
 
-void Module::build(Solution &s) const
+void Module::build(Build &s) const
 {
     build_.s = &s;
     build_(s);
@@ -107,7 +107,7 @@ void Module::configure(Build &s) const
     configure_(s);
 }
 
-void Module::check(Solution &s, Checker &c) const
+void Module::check(Build &s, Checker &c) const
 {
     check_.s = &s;
     check_(c);
@@ -118,7 +118,7 @@ int Module::sw_get_module_abi_version() const
     return sw_get_module_abi_version_();
 }
 
-ModuleStorage &getModuleStorage(Solution &owner)
+ModuleStorage &getModuleStorage(Build &owner)
 {
     static std::map<void*, ModuleStorage> s;
     return s[&owner];

@@ -6,7 +6,7 @@
 
 #include "compiler.h"
 
-#include "solution.h"
+#include "build.h"
 #include "compiler_helpers.h"
 #include "target/native.h"
 
@@ -44,14 +44,14 @@ namespace sw
 
 std::string getVsToolset(const Version &v);
 
-void detectNativeCompilers(Solution &s);
-void detectCSharpCompilers(Solution &s);
-void detectRustCompilers(Solution &s);
-void detectGoCompilers(Solution &s);
-void detectFortranCompilers(Solution &s);
-void detectJavaCompilers(Solution &s);
-void detectKotlinCompilers(Solution &s);
-void detectDCompilers(Solution &s);
+void detectNativeCompilers(Build &s);
+void detectCSharpCompilers(Build &s);
+void detectRustCompilers(Build &s);
+void detectGoCompilers(Build &s);
+void detectFortranCompilers(Build &s);
+void detectJavaCompilers(Build &s);
+void detectKotlinCompilers(Build &s);
+void detectDCompilers(Build &s);
 
 const StringSet &getCppHeaderFileExtensions()
 {
@@ -132,21 +132,30 @@ bool findDefaultVS(path &root, int &VSVersion)
     return false;
 }
 
-void detectCompilers(Solution &s)
+void detectCompilers(Build &s)
 {
     detectNativeCompilers(s);
 
     // others
-    detectCSharpCompilers(s);
+    /*detectCSharpCompilers(s);
     detectRustCompilers(s);
     detectGoCompilers(s);
     detectFortranCompilers(s);
     detectJavaCompilers(s);
     detectKotlinCompilers(s);
-    detectDCompilers(s);
+    detectDCompilers(s);*/
 }
 
-void detectDCompilers(Solution &s)
+template <class T = PredefinedTarget>
+static decltype(auto) addProgram(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &cl)
+{
+    auto &t = s.add<T>(pp, cl->getVersion());
+    t.program = cl;
+    t.sw_provided = true;
+    return t;
+}
+
+void detectDCompilers(Build &s)
 {
     path compiler;
     compiler = resolveExecutable("dmd");
@@ -155,12 +164,12 @@ void detectDCompilers(Solution &s)
 
     auto C = std::make_shared<DCompiler>(s.swctx);
     C->file = compiler;
-    C->Extension = s.Settings.TargetOS.getExecutableExtension();
-    C->input_extensions = { ".d" };
-    s.registerProgram("org.dlang.dmd.dmd", C);
+    C->Extension = s.getSettings().TargetOS.getExecutableExtension();
+    //C->input_extensions = { ".d" };
+    addProgram(s, "org.dlang.dmd.dmd", C);
 }
 
-void detectKotlinCompilers(Solution &s)
+void detectKotlinCompilers(Build &s)
 {
     path compiler;
     compiler = resolveExecutable("kotlinc");
@@ -169,11 +178,11 @@ void detectKotlinCompilers(Solution &s)
 
     auto C = std::make_shared<KotlinCompiler>(s.swctx);
     C->file = compiler;
-    C->input_extensions = { ".kt", ".kts" };
-    s.registerProgram("com.JetBrains.kotlin.kotlinc", C);
+    //C->input_extensions = { ".kt", ".kts" };
+    //s.registerProgram("com.JetBrains.kotlin.kotlinc", C);
 }
 
-void detectJavaCompilers(Solution &s)
+void detectJavaCompilers(Build &s)
 {
     path compiler;
     compiler = resolveExecutable("javac");
@@ -183,11 +192,11 @@ void detectJavaCompilers(Solution &s)
 
     auto C = std::make_shared<JavaCompiler>(s.swctx);
     C->file = compiler;
-    C->input_extensions = { ".java", };
-    s.registerProgram("com.oracle.java.javac", C);
+    //C->input_extensions = { ".java", };
+    //s.registerProgram("com.oracle.java.javac", C);
 }
 
-void detectFortranCompilers(Solution &s)
+void detectFortranCompilers(Build &s)
 {
     path compiler;
     compiler = resolveExecutable("gfortran");
@@ -206,8 +215,9 @@ void detectFortranCompilers(Solution &s)
 
     auto C = std::make_shared<FortranCompiler>(s.swctx);
     C->file = compiler;
-    C->Extension = s.Settings.TargetOS.getExecutableExtension();
-    C->input_extensions = {
+    SW_UNIMPLEMENTED;
+    //C->Extension = s.Settings.TargetOS.getExecutableExtension();
+    /*C->input_extensions = {
         ".f",
         ".FOR",
         ".for",
@@ -219,11 +229,11 @@ void detectFortranCompilers(Solution &s)
         ".F",
         ".fpp",
         ".FPP",
-    };
-    s.registerProgram("org.gnu.gcc.fortran", C);
+    };*/
+    //s.registerProgram("org.gnu.gcc.fortran", C);
 }
 
-void detectGoCompilers(Solution &s)
+void detectGoCompilers(Build &s)
 {
 #if defined(_WIN32)
     auto compiler = path("go");
@@ -233,14 +243,15 @@ void detectGoCompilers(Solution &s)
 
     auto C = std::make_shared<GoCompiler>(s.swctx);
     C->file = compiler;
-    C->Extension = s.Settings.TargetOS.getExecutableExtension();
-    C->input_extensions = { ".go", };
-    s.registerProgram("org.google.golang.go", C);
+    SW_UNIMPLEMENTED;
+    //C->Extension = s.Settings.TargetOS.getExecutableExtension();
+    //C->input_extensions = { ".go", };
+    //s.registerProgram("org.google.golang.go", C);
 #else
 #endif
 }
 
-void detectRustCompilers(Solution &s)
+void detectRustCompilers(Build &s)
 {
 #if defined(_WIN32)
     auto compiler = get_home_directory() / ".cargo" / "bin" / "rustc";
@@ -250,16 +261,17 @@ void detectRustCompilers(Solution &s)
 
     auto C = std::make_shared<RustCompiler>(s.swctx);
     C->file = compiler;
-    C->Extension = s.Settings.TargetOS.getExecutableExtension();
-    C->input_extensions = { ".rs", };
-    s.registerProgram("org.rust.rustc", C);
+    SW_UNIMPLEMENTED;
+    //C->Extension = s.Settings.TargetOS.getExecutableExtension();
+    //C->input_extensions = { ".rs", };
+    //s.registerProgram("org.rust.rustc", C);
 #else
 #endif
 }
 
 using VSInstances = VersionMap<VSInstance>;
 
-VSInstances &gatherVSInstances(Solution &s)
+VSInstances &gatherVSInstances(Build &s)
 {
     static VSInstances instances = [&s]()
     {
@@ -287,32 +299,36 @@ VSInstances &gatherVSInstances(Solution &s)
     return instances;
 }
 
-void detectCSharpCompilers(Solution &s)
+void detectCSharpCompilers(Build &s)
 {
     auto &instances = gatherVSInstances(s);
     for (auto &[v, i] : instances)
     {
         auto root = i.root;
-        /*if (v.getMajor() == 15)
-        {*/
-            root = root / "MSBuild" / "15.0" / "Bin" / "Roslyn";
-        /*}
-        if (v.getMajor() == 16)
+        switch (v.getMajor())
         {
+        case 15:
+            root = root / "MSBuild" / "15.0" / "Bin" / "Roslyn";
+            break;
+        case 16:
             root = root / "MSBuild" / "Current" / "Bin" / "Roslyn";
-        }*/
+            break;
+        default:
+            SW_UNIMPLEMENTED;
+        }
 
         auto compiler = root / "csc.exe";
 
         auto C = std::make_shared<VisualStudioCSharpCompiler>(s.swctx);
         C->file = compiler;
-        C->Extension = s.Settings.TargetOS.getExecutableExtension();
-        C->input_extensions = { ".cs", };
-        s.registerProgram("com.Microsoft.VisualStudio.Roslyn.csc", C);
+        SW_UNIMPLEMENTED;
+        //C->Extension = s.Settings.TargetOS.getExecutableExtension();
+        //C->input_extensions = { ".cs", };
+        //s.registerProgram("com.Microsoft.VisualStudio.Roslyn.csc", C);
     }
 }
 
-void detectWindowsCompilers(Solution &s)
+void detectWindowsCompilers(Build &s)
 {
     // we need ifdef because of cmVSSetupAPIHelper
     // but what if we're on Wine?
@@ -327,50 +343,22 @@ void detectWindowsCompilers(Solution &s)
         if (v.getMajor() >= 15)
             root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
 
-        auto compiler = root / "bin";
-        NativeCompilerOptions COpts;
-        COpts.System.IncludeDirectories.insert(root / "include");
-        if (fs::exists(root / "ATLMFC" / "include"))
-            COpts.System.IncludeDirectories.insert(root / "ATLMFC" / "include");
-
-        struct DirSuffix
-        {
-            std::string host;
-            std::string target;
-        } dir_suffix;
-
         // get suffix
-        dir_suffix.host = toStringWindows(s.HostOS.Arch);
-        dir_suffix.target = toStringWindows(s.Settings.TargetOS.Arch);
+        auto host = toStringWindows(s.getHostOs().Arch);
+        auto target = toStringWindows(s.getSettings().TargetOS.Arch);
 
-        auto host_root = compiler / ("Host" + dir_suffix.host) / dir_suffix.host;
-        NativeLinkerOptions LOpts;
+        auto compiler = root / "bin";
+        auto host_root = compiler / ("Host" + host) / host;
 
-        // continue
         if (v.getMajor() >= 15)
         {
             // always use host tools and host arch for building config files
-            compiler /= path("Host" + dir_suffix.host) / dir_suffix.target / "cl.exe";
-            LOpts.System.LinkDirectories.insert(root / "lib" / dir_suffix.target);
-            if (fs::exists(root / "ATLMFC" / "lib" / dir_suffix.target))
-                LOpts.System.LinkDirectories.insert(root / "ATLMFC" / "lib" / dir_suffix.target);
+            compiler /= path("Host" + host) / target / "cl.exe";
         }
         else
         {
             // but we won't detect host&arch stuff on older versions
             compiler /= "cl.exe";
-        }
-
-        // add kits include dirs
-        for (auto &i : fs::directory_iterator(s.Settings.Native.SDK.getPath("Include")))
-        {
-            if (fs::is_directory(i))
-                COpts.System.IncludeDirectories.insert(i);
-        }
-        for (auto &i : fs::directory_iterator(s.Settings.Native.SDK.getPath("Lib")))
-        {
-            if (fs::is_directory(i))
-                LOpts.System.LinkDirectories.insert(i / path(dir_suffix.target));
         }
 
         // create programs
@@ -380,16 +368,14 @@ void detectWindowsCompilers(Solution &s)
             auto Linker = std::make_shared<VisualStudioLinker>(s.swctx);
             Linker->Type = LinkerType::MSVC;
             Linker->file = compiler.parent_path() / "link.exe";
-            //Linker->vs_version = VSVersion;
-            Linker->Extension = s.Settings.TargetOS.getExecutableExtension();
-            *Linker = LOpts;
+            Linker->Extension = s.getSettings().TargetOS.getExecutableExtension();
 
             if (instance.version.isPreRelease())
                 Linker->getVersion().getExtra() = instance.version.getExtra();
-            s.registerProgram("com.Microsoft.VisualStudio.VC.link", Linker);
+            addProgram(s, "com.Microsoft.VisualStudio.VC.link", Linker);
             instance.link_versions.insert(Linker->getVersion());
 
-            if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
+            if (s.getHostOs().Arch != s.getSettings().TargetOS.Arch)
             {
                 auto c = Linker->createCommand(s.swctx);
                 c->addPathDirectory(host_root);
@@ -399,22 +385,20 @@ void detectWindowsCompilers(Solution &s)
             auto Librarian = std::make_shared<VisualStudioLibrarian>(s.swctx);
             Librarian->Type = LinkerType::MSVC;
             Librarian->file = compiler.parent_path() / "lib.exe";
-            //Librarian->vs_version = VSVersion;
-            Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
-            *Librarian = LOpts;
+            Librarian->Extension = s.getSettings().TargetOS.getStaticLibraryExtension();
 
             if (instance.version.isPreRelease())
                 Librarian->getVersion().getExtra() = instance.version.getExtra();
-            s.registerProgram("com.Microsoft.VisualStudio.VC.lib", Librarian);
+            addProgram(s, "com.Microsoft.VisualStudio.VC.lib", Librarian);
             instance.link_versions.insert(Librarian->getVersion());
 
-            if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
+            if (s.getHostOs().Arch != s.getSettings().TargetOS.Arch)
             {
                 auto c = Librarian->createCommand(s.swctx);
                 c->addPathDirectory(host_root);
             }
 
-            switch (s.Settings.TargetOS.Arch)
+            switch (s.getSettings().TargetOS.Arch)
             {
             case ArchType::x86_64:
                 Librarian->Machine = vs::MachineType::X64;
@@ -439,15 +423,14 @@ void detectWindowsCompilers(Solution &s)
         {
             auto C = std::make_shared<VisualStudioASMCompiler>(s.swctx);
             C->Type = CompilerType::MSVC;
-            C->file = s.Settings.TargetOS.Arch == ArchType::x86_64 ?
+            C->file = s.getSettings().TargetOS.Arch == ArchType::x86_64 ?
                 (compiler.parent_path() / "ml64.exe") :
                 (compiler.parent_path() / "ml.exe");
-            *C = COpts;
 
             if (instance.version.isPreRelease())
                 C->getVersion().getExtra() = instance.version.getExtra();
-            C->input_extensions = { ".asm", };
-            s.registerProgram("com.Microsoft.VisualStudio.VC.ml", C);
+            //C->input_extensions = { ".asm", };
+            addProgram(s, "com.Microsoft.VisualStudio.VC.ml", C);
         }
 
         // C, C++
@@ -458,15 +441,14 @@ void detectWindowsCompilers(Solution &s)
             auto C = std::make_shared<VisualStudioCompiler>(s.swctx);
             C->Type = CompilerType::MSVC;
             C->file = compiler;
-            *C = COpts;
 
             if (instance.version.isPreRelease())
                 C->getVersion().getExtra() = instance.version.getExtra();
-            C->input_extensions = exts;
-            s.registerProgram("com.Microsoft.VisualStudio.VC.cl", C);
+            //C->input_extensions = exts;
+            addProgram(s, "com.Microsoft.VisualStudio.VC.cl", C);
             instance.cl_versions.insert(C->getVersion());
 
-            if (s.HostOS.Arch != s.Settings.TargetOS.Arch)
+            if (s.getHostOs().Arch != s.getSettings().TargetOS.Arch)
             {
                 auto c = C->createCommand(s.swctx);
                 c->addPathDirectory(host_root);
@@ -474,18 +456,9 @@ void detectWindowsCompilers(Solution &s)
         }
 
         // now register
-        s.registerProgram("com.Microsoft.VisualStudio", std::make_shared<VSInstance>(instance));
+        addProgram(s, "com.Microsoft.VisualStudio", std::make_shared<VSInstance>(instance));
 
-        // .rc
-        {
-            auto C = std::make_shared<RcTool>(s.swctx);
-            C->file = s.Settings.Native.SDK.getPath("bin") / dir_suffix.host / "rc.exe";
-            for (auto &idir : COpts.System.IncludeDirectories)
-                C->system_idirs.push_back(idir);
-
-            C->input_extensions = { ".rc", };
-            s.registerProgram("com.Microsoft.Windows.rc", C);
-        }
+        continue;
 
         // clang family
 
@@ -496,7 +469,7 @@ void detectWindowsCompilers(Solution &s)
         // clang-cl
 
         // C, C++
-        {
+        /*{
             auto exts = getCppSourceFileExtensions();
             exts.insert(".c");
 
@@ -512,10 +485,10 @@ void detectWindowsCompilers(Solution &s)
             COpts2.System.IncludeDirectories.insert(bin_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
             COpts2.System.CompileOptions.push_back("-Wno-everything");
             *C = COpts2;
-            C->input_extensions = exts;
-            s.registerProgram("org.LLVM.clangcl", C);
+            //C->input_extensions = exts;
+            addProgram(s, "org.LLVM.clangcl", C);
 
-            switch (s.Settings.TargetOS.Arch)
+            switch (s.getSettings().TargetOS.Arch)
             {
             case ArchType::x86_64:
                 C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
@@ -531,7 +504,7 @@ void detectWindowsCompilers(Solution &s)
 
         // clang
 
-        /*auto Linker = std::make_shared<VisualStudioLinker>();
+        auto Linker = std::make_shared<VisualStudioLinker>();
         Linker->Type = LinkerType::LLD;
         Linker->file = bin_llvm_path / "lld-link.exe";
         Linker->vs_version = VSVersion;
@@ -541,7 +514,7 @@ void detectWindowsCompilers(Solution &s)
         Librarian->Type = LinkerType::LLD;
         Librarian->file = bin_llvm_path / "llvm-ar.exe"; // ?
         Librarian->vs_version = VSVersion;
-        *Librarian = LOpts;*/
+        *Librarian = LOpts;
 
         // C
         {
@@ -558,8 +531,8 @@ void detectWindowsCompilers(Solution &s)
             COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
             COpts2.System.CompileOptions.push_back("-Wno-everything");
             *C = COpts2;
-            C->input_extensions = { ".c", };
-            s.registerProgram("org.LLVM.clang", C);
+            //C->input_extensions = { ".c", };
+            addProgram(s, "org.LLVM.clang", C);
         }
 
         // C++
@@ -577,10 +550,76 @@ void detectWindowsCompilers(Solution &s)
             COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
             COpts2.System.CompileOptions.push_back("-Wno-everything");
             *C = COpts2;
-            C->input_extensions = getCppSourceFileExtensions();
-            s.registerProgram("org.LLVM.clangpp", C);
+            //C->input_extensions = getCppSourceFileExtensions();
+            addProgram(s, "org.LLVM.clangpp", C);
+        }*/
+    }
+
+    // .rc
+    {
+        auto C = std::make_shared<RcTool>(s.swctx);
+        C->file = s.getSettings().Native.SDK.getPath("bin") / toStringWindows(s.getHostOs().Arch) / "rc.exe";
+        //for (auto &idir : COpts.System.IncludeDirectories)
+            //C->system_idirs.push_back(idir);
+
+        //C->input_extensions = { ".rc", };
+        addProgram(s, "com.Microsoft.Windows.rc", C);
+    }
+
+    // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
+    for (auto &[_, instance] : instances)
+    {
+        auto root = instance.root / "VC";
+        auto &v = instance.version;
+
+        if (v.getMajor() >= 15)
+            root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
+
+        //auto &vcruntime = s.addLibrary("com.Microsoft.VisualStudio.VC.vcruntime", v);
+
+        auto &libcpp = s.addLibrary("com.Microsoft.VisualStudio.VC.libcpp", v);
+        libcpp.AutoDetectOptions = false;
+        libcpp.sw_provided = true;
+        libcpp.Public.NativeCompilerOptions::System.IncludeDirectories.push_back(root / "include");
+
+        auto &atlmfc = s.addLibrary("com.Microsoft.VisualStudio.VC.ATLMFC", v);
+        atlmfc.AutoDetectOptions = false;
+        atlmfc.sw_provided = true;
+        if (fs::exists(root / "ATLMFC" / "include"))
+            atlmfc.Public.NativeCompilerOptions::System.IncludeDirectories.push_back(root / "ATLMFC" / "include");
+
+        // get suffix
+        auto host = toStringWindows(s.getHostOs().Arch);
+        auto target = toStringWindows(s.getSettings().TargetOS.Arch);
+
+        if (v.getMajor() >= 15)
+        {
+            libcpp.Public += LinkDirectory(root / "lib" / target);
+            if (fs::exists(root / "ATLMFC" / "lib" / target))
+                atlmfc.Public += LinkDirectory(root / "ATLMFC" / "lib" / target);
         }
-    };
+        else
+        {
+            SW_UNIMPLEMENTED;
+        }
+    }
+
+    // rename to libc? to crt?
+    auto &ucrt = s.addLibrary("com.Microsoft.Windows.SDK.ucrt", s.getSettings().Native.SDK.getWindowsTargetPlatformVersion());
+    ucrt.AutoDetectOptions = false;
+    ucrt.sw_provided = true;
+
+    // add kits include dirs
+    for (auto &i : fs::directory_iterator(s.getSettings().Native.SDK.getPath("Include")))
+    {
+        if (fs::is_directory(i))
+            ucrt.Public.NativeCompilerOptions::System.IncludeDirectories.insert(i);
+    }
+    for (auto &i : fs::directory_iterator(s.getSettings().Native.SDK.getPath("Lib")))
+    {
+        if (fs::is_directory(i))
+            ucrt.Public.NativeLinkerOptions::System.LinkDirectories.insert(i / toStringWindows(s.getSettings().TargetOS.Arch));
+    }
 
     return;
 
@@ -601,7 +640,6 @@ void detectWindowsCompilers(Solution &s)
         return {};
     };
 
-
     //!find_comn_tools(VisualStudioVersion::VS16);
     //!find_comn_tools(VisualStudioVersion::VS15);
 
@@ -618,7 +656,7 @@ void detectWindowsCompilers(Solution &s)
     }
 }
 
-void detectNonWindowsCompilers(Solution &s)
+void detectNonWindowsCompilers(Build &s)
 {
     path p;
 
@@ -641,11 +679,12 @@ void detectNonWindowsCompilers(Solution &s)
         auto Librarian = std::make_shared<GNULibrarian>(s.swctx);
         Librarian->Type = LinkerType::GNU;
         Librarian->file = p;
-        Librarian->Prefix = s.Settings.TargetOS.getLibraryPrefix();
-        Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
+        SW_UNIMPLEMENTED;
+        //Librarian->Prefix = s.Settings.TargetOS.getLibraryPrefix();
+        //Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
         *Librarian = LOpts;
-        s.registerProgram("org.gnu.binutils.ar", Librarian);
-        if (s.HostOS.is(OSType::Macos))
+        //s.registerProgram("org.gnu.binutils.ar", Librarian);
+        if (s.getHostOs().is(OSType::Macos))
             Librarian->createCommand(s.swctx)->use_response_files = false;
     }
 
@@ -663,7 +702,7 @@ void detectNonWindowsCompilers(Solution &s)
         clang_vers.push_back(path(clang_vers[0]) += "-" + std::to_string(i));
         clangpp_vers.push_back(path(clangpp_vers[0]) += "-" + std::to_string(i));
     }
-    if (s.HostOS.is(OSType::Macos))
+    if (s.getHostOs().is(OSType::Macos))
     {
         // also detect brew
         if (fs::exists("/usr/local/Cellar/llvm"))
@@ -683,27 +722,29 @@ void detectNonWindowsCompilers(Solution &s)
         {
             auto Linker = std::make_shared<GNULinker>(s.swctx);
 
-            if (s.HostOS.is(OSType::Macos))
+            if (s.getHostOs().is(OSType::Macos))
                 Linker->use_start_end_groups = false;
             Linker->Type = LinkerType::GNU;
             Linker->file = p;
-            Linker->Prefix = s.Settings.TargetOS.getLibraryPrefix();
-            Linker->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
+            SW_UNIMPLEMENTED;
+            //Linker->Prefix = s.Settings.TargetOS.getLibraryPrefix();
+            //Linker->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
 
             auto lopts2 = LOpts;
             //lopts2.System.LinkLibraries.push_back("stdc++"); // remove and add to progs explicitly?
             //lopts2.System.LinkLibraries.push_back("stdc++fs"); // remove and add to progs explicitly?
 
             *Linker = lopts2;
-            s.registerProgram("org.gnu.gcc.ld", Linker);
+            //s.registerProgram("org.gnu.gcc.ld", Linker);
         }
     }
 
     NativeCompilerOptions COpts;
 
     path macos_sdk_dir;
-    if (s.Settings.TargetOS.is(OSType::Macos) || s.Settings.TargetOS.is(OSType::IOS))
-        macos_sdk_dir = s.Settings.Native.SDK.getPath();
+    SW_UNIMPLEMENTED;
+    //if (s.Settings.TargetOS.is(OSType::Macos) || s.Settings.TargetOS.is(OSType::IOS))
+        //macos_sdk_dir = s.Settings.Native.SDK.getPath();
 
     auto is_apple_clang = [](const path &p)
     {
@@ -754,8 +795,8 @@ void detectNonWindowsCompilers(Solution &s)
                 // also with asm
                 // .s - pure asm
                 // .S - with #define (accepts -D) and #include (accepts -I), also .sx
-                C->input_extensions = { ".c", ".s", ".S" };
-                s.registerProgram("org.gnu.gcc.gcc", C);
+                //C->input_extensions = { ".c", ".s", ".S" };
+                //s.registerProgram("org.gnu.gcc.gcc", C);
 
                 if (!macos_sdk_dir.empty())
                     C->IncludeSystemRoot = macos_sdk_dir;
@@ -774,8 +815,8 @@ void detectNonWindowsCompilers(Solution &s)
                 C->Type = CompilerType::GNU;
                 C->file = p;
                 *C = COpts;
-                C->input_extensions = getCppSourceFileExtensions();
-                s.registerProgram("org.gnu.gcc.gpp", C);
+                //C->input_extensions = getCppSourceFileExtensions();
+                //s.registerProgram("org.gnu.gcc.gpp", C);
 
                 if (!macos_sdk_dir.empty())
                     C->IncludeSystemRoot = macos_sdk_dir;
@@ -791,11 +832,12 @@ void detectNonWindowsCompilers(Solution &s)
             auto Librarian = std::make_shared<GNULibrarian>(s.swctx);
             Librarian->Type = LinkerType::GNU;
             Librarian->file = p;
-            Librarian->Prefix = s.Settings.TargetOS.getLibraryPrefix();
-            Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
+            SW_UNIMPLEMENTED;
+            //Librarian->Prefix = s.Settings.TargetOS.getLibraryPrefix();
+            //Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
             *Librarian = LOpts;
-            s.registerProgram("org.LLVM.ar", Librarian);
-            //if (s.HostOS.is(OSType::Macos))
+            //s.registerProgram("org.LLVM.ar", Librarian);
+            //if (s.getHostOs().is(OSType::Macos))
             //Librarian->createCommand()->use_response_files = false;
         }
 
@@ -810,21 +852,22 @@ void detectNonWindowsCompilers(Solution &s)
 
                 auto Linker = std::make_shared<GNULinker>(s.swctx);
 
-                if (s.HostOS.is(OSType::Macos))
+                if (s.getHostOs().is(OSType::Macos))
                     Linker->use_start_end_groups = false;
                 Linker->Type = LinkerType::GNU;
                 Linker->file = p;
-                Linker->Prefix = s.Settings.TargetOS.getLibraryPrefix();
-                Linker->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
+                SW_UNIMPLEMENTED;
+                //Linker->Prefix = s.Settings.TargetOS.getLibraryPrefix();
+                //Linker->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
 
                 auto lopts2 = LOpts;
                 //lopts2.System.LinkLibraries.push_back("c++"); // remove and add to progs explicitly?
                 //lopts2.System.LinkLibraries.push_back("c++fs"); // remove and add to progs explicitly?
 
                 *Linker = lopts2;
-                s.registerProgram(appleclang ? "com.apple.LLVM.ld" : "org.LLVM.ld", Linker);
+                //s.registerProgram(appleclang ? "com.apple.LLVM.ld" : "org.LLVM.ld", Linker);
 
-                if (s.HostOS.is(OSType::Macos))
+                if (s.getHostOs().is(OSType::Macos))
                 {
                     if (!appleclang)
                         Linker->GNULinkerOptions::LinkDirectories().push_back(p.parent_path().parent_path() / "lib");
@@ -843,8 +886,8 @@ void detectNonWindowsCompilers(Solution &s)
                     // also with asm
                     // .s - pure asm
                     // .S - with #define (accepts -D) and #include (accepts -I), also .sx
-                    C->input_extensions = { ".c", ".s", ".S" };
-                    s.registerProgram(appleclang ? "com.apple.LLVM.clang" : "org.LLVM.clang", C);
+                    //C->input_extensions = { ".c", ".s", ".S" };
+                    //s.registerProgram(appleclang ? "com.apple.LLVM.clang" : "org.LLVM.clang", C);
 
                     if (!macos_sdk_dir.empty())
                         C->IncludeSystemRoot = macos_sdk_dir;
@@ -865,8 +908,8 @@ void detectNonWindowsCompilers(Solution &s)
                     C->Type = appleclang ? CompilerType::AppleClang : CompilerType::Clang;
                     C->file = p;
                     *C = COpts;
-                    C->input_extensions = getCppSourceFileExtensions();
-                    s.registerProgram(appleclang ? "com.apple.LLVM.clangpp" : "org.LLVM.clangpp", C);
+                    //C->input_extensions = getCppSourceFileExtensions();
+                    //s.registerProgram(appleclang ? "com.apple.LLVM.clangpp" : "org.LLVM.clangpp", C);
 
                     if (!macos_sdk_dir.empty())
                         C->IncludeSystemRoot = macos_sdk_dir;
@@ -876,10 +919,9 @@ void detectNonWindowsCompilers(Solution &s)
     }
 }
 
-void detectNativeCompilers(Solution &s)
+void detectNativeCompilers(Build &s)
 {
-    //auto &os = s.HostOS;
-    auto &os = s.Settings.TargetOS;
+    auto &os = s.getSettings().TargetOS;
     if (os.is(OSType::Windows) || os.is(OSType::Cygwin))
     {
         if (os.is(OSType::Cygwin))
@@ -890,12 +932,11 @@ void detectNativeCompilers(Solution &s)
         detectNonWindowsCompilers(s);
 }
 
-void VSInstance::activate(Solution &s) const
+void VSInstance::activate(Build &s) const
 {
-    //if (s.Settings.Native.CompilerType != CompilerType::MSVC)
-        //throw SW_RUNTIME_ERROR("unsupported compiler " + toString(s.Settings.Native.CompilerType) + " for generator");
+    SW_UNIMPLEMENTED;
 
-    if (cl_versions.empty())
+    /*if (cl_versions.empty())
         throw SW_RUNTIME_ERROR("missing cl.exe versions");
     if (link_versions.empty())
         throw SW_RUNTIME_ERROR("missing vs tools versions");
@@ -905,7 +946,8 @@ void VSInstance::activate(Solution &s) const
     if (!s.activateProgram({ "com.Microsoft.VisualStudio.VC.ml", *link_versions.rbegin() }, false))
         throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.ml");
 
-    s.Settings.Native.CompilerType = CompilerType::MSVC;
+    SW_UNIMPLEMENTED;
+    //s.Settings.Native.CompilerType = CompilerType::MSVC;
 
     // linkers
     auto lib = s.getProgram({ "com.Microsoft.VisualStudio.VC.lib", *link_versions.rbegin() }, false);
@@ -913,8 +955,9 @@ void VSInstance::activate(Solution &s) const
     auto r = lib && link;
     if (r)
     {
-        s.Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(lib->clone());
-        s.Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(link->clone());
+        SW_UNIMPLEMENTED;
+        //s.Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(lib->clone());
+        //s.Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(link->clone());
         LOG_TRACE(logger, "activated com.Microsoft.VisualStudio.VC.lib and com.Microsoft.VisualStudio.VC.link successfully");
     }
     else
@@ -925,7 +968,7 @@ void VSInstance::activate(Solution &s) const
             throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.lib");
         else
             throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.lib and com.Microsoft.VisualStudio.VC.link");
-    }
+    }*/
 }
 
 path NativeToolchain::SDK::getPath(const path &subdir) const
@@ -951,6 +994,28 @@ String NativeToolchain::SDK::getWindowsTargetPlatformVersion() const
 void NativeToolchain::SDK::setAndroidApiVersion(int v)
 {
     Version = std::to_string(v);
+}
+
+bool NativeToolchain::SDK::operator<(const SDK &rhs) const
+{
+    return std::tie(Root, Version, BuildNumber) < std::tie(rhs.Root, rhs.Version, rhs.BuildNumber);
+}
+
+bool NativeToolchain::SDK::operator==(const SDK &rhs) const
+{
+    return std::tie(Root, Version, BuildNumber) == std::tie(rhs.Root, rhs.Version, rhs.BuildNumber);
+}
+
+bool NativeToolchain::operator<(const NativeToolchain &rhs) const
+{
+    return std::tie(/*CompilerType, */LibrariesType, ConfigurationType, MT, SDK) <
+        std::tie(/*rhs.CompilerType, */rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
+}
+
+bool NativeToolchain::operator==(const NativeToolchain &rhs) const
+{
+    return std::tie(/*CompilerType, */LibrariesType, ConfigurationType, MT, SDK) ==
+        std::tie(/*rhs.CompilerType, */rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
 }
 
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
@@ -988,8 +1053,8 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
 {
     if (prepared)
         return cmd;
-    createCommand(t.getSolution()->swctx); // do some init
-    cmd->fs = t.getSolution()->fs;
+    createCommand(t.getSolution().swctx); // do some init
+    cmd->fs = t.getSolution().fs;
     prepareCommand1(t);
     prepared = true;
     return cmd;
@@ -1060,7 +1125,7 @@ template <class C>
 static path getOutputFile(const Target &t, const C &c, const path &input)
 {
     auto o = t.BinaryDir.parent_path() / "obj" /
-        (SourceFile::getObjectFilename(t, input) + c.getObjectExtension(t.getSolution()->Settings.TargetOS));
+        (SourceFile::getObjectFilename(t, input) + c.getObjectExtension(t.getSettings().TargetOS));
     o = fs::absolute(o);
     return o;
 }
@@ -1202,9 +1267,9 @@ void ClangCompiler::prepareCommand1(const TargetBase &t)
         cmd->working_directory = OutputFile().parent_path();
     }
 
-    add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeExecutedTarget&>(t).CExtensions));
+    add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
-    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeExecutedTarget&>(t).CPPExtensions,
+    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
         true, getVersion()));
     CPPStandard.skip = true;
 
@@ -1262,9 +1327,9 @@ void ClangClCompiler::prepareCommand1(const TargetBase &t)
     //cmd->out.capture = true;
     //cmd->base = clone();
 
-    add_args(*cmd, getCStdOption(dynamic_cast<const NativeExecutedTarget&>(t).CVersion,
-        dynamic_cast<const NativeExecutedTarget&>(t).CExtensions));
-    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeExecutedTarget&>(t).CPPExtensions,
+    add_args(*cmd, getCStdOption(dynamic_cast<const NativeCompiledTarget&>(t).CVersion,
+        dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
+    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
         true, getVersion()));
     CPPStandard.skip = true;
 
@@ -1360,9 +1425,9 @@ void GNUCompiler::prepareCommand1(const TargetBase &t)
 
     //cmd->out.capture = true;
 
-    add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeExecutedTarget&>(t).CExtensions));
+    add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
-    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeExecutedTarget&>(t).CPPExtensions,
+    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
         false, getVersion()));
     CPPStandard.skip = true;
 
@@ -1453,16 +1518,6 @@ path VisualStudioLibraryTool::getImportLibrary() const
 
 void VisualStudioLibraryTool::prepareCommand1(const TargetBase &t)
 {
-    if (InputFiles.empty() && ModuleDefinitionFile.empty())
-    {
-        // why? maybe throw?
-        cmd.reset();
-        return;
-    }
-
-    if (Output.empty())
-        throw SW_RUNTIME_ERROR("Output file is not set");
-
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
         //return nullptr;
@@ -1500,16 +1555,6 @@ void VisualStudioLinker::setInputLibraryDependencies(const FilesOrdered &files)
 
 void VisualStudioLinker::prepareCommand1(const TargetBase &t)
 {
-    if (InputFiles.empty() && ModuleDefinitionFile.empty())
-    {
-        // why? maybe throw?
-        cmd.reset();
-        return;
-    }
-
-    if (Output.empty())
-        throw SW_RUNTIME_ERROR("Output file is not set");
-
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
         //return nullptr;
@@ -1614,16 +1659,6 @@ void GNULinker::getAdditionalOptions(driver::Command *cmd) const
 
 void GNULinker::prepareCommand1(const TargetBase &t)
 {
-    if (InputFiles.empty()/* && ModuleDefinitionFile.empty()*/)
-    {
-        // why? maybe throw?
-        cmd.reset();
-        return;
-    }
-
-    if (Output.empty())
-        throw SW_RUNTIME_ERROR("Output file is not set");
-
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
         //return nullptr;
@@ -1632,7 +1667,7 @@ void GNULinker::prepareCommand1(const TargetBase &t)
     //((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
     ((GNULinker*)this)->GNULinkerOptions::SystemLinkLibraries = gatherLinkLibraries(true);
 
-    //if (t.getSolution()->HostOS.is(OSType::Windows))
+    //if (t.getSolution().getHostOs().is(OSType::Windows))
     {
         // lld will add windows absolute paths to libraries
         //
@@ -1734,16 +1769,6 @@ void GNULibrarian::getAdditionalOptions(driver::Command *cmd) const
 
 void GNULibrarian::prepareCommand1(const TargetBase &t)
 {
-    if (InputFiles.empty()/* && ModuleDefinitionFile.empty()*/)
-    {
-        // why? maybe throw?
-        cmd.reset();
-        return;
-    }
-
-    if (Output.empty())
-        throw SW_RUNTIME_ERROR("Output file is not set");
-
     // these's some issue with archives not recreated, but keeping old symbols
     // TODO: investigate, fix and remove?
     cmd->remove_outputs_before_execution = true;
@@ -1783,7 +1808,7 @@ void RcTool::prepareCommand1(const TargetBase &t)
         cmd->name_short = InputFile().filename().u8string();
     }
 
-    t.template asRef<NativeExecutedTarget>().NativeCompilerOptions::addDefinitionsAndIncludeDirectories(*cmd);
+    t.template asRef<NativeCompiledTarget>().NativeCompilerOptions::addDefinitionsAndIncludeDirectories(*cmd);
 
     // ms bug: https://developercommunity.visualstudio.com/content/problem/417189/rcexe-incorrect-behavior-with.html
     //for (auto &i : system_idirs)

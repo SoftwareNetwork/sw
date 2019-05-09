@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "solution.h"
+#include "build.h"
 
 #include <boost/dll/shared_library.hpp>
 #include <boost/thread/shared_mutex.hpp>
@@ -23,7 +23,7 @@ struct SW_DRIVER_CPP_API Module
         using std_function_type = std::function<F>;
 
         String name;
-        const Solution *s = nullptr;
+        const Build *s = nullptr;
         const Module *m = nullptr;
         std_function_type f;
 
@@ -89,9 +89,9 @@ struct SW_DRIVER_CPP_API Module
     ~Module();
 
     // api
-    void build(Solution &s) const;
+    void build(Build &s) const;
     void configure(Build &s) const;
-    void check(Solution &s, Checker &c) const;
+    void check(Build &s, Checker &c) const;
     int sw_get_module_abi_version() const;
 
     template <class F, class ... Args>
@@ -103,7 +103,7 @@ struct SW_DRIVER_CPP_API Module
     }
 
 private:
-    mutable LibraryCall<void(Solution &), true> build_;
+    mutable LibraryCall<void(Build &), true> build_;
     mutable LibraryCall<void(Build &)> configure_;
     mutable LibraryCall<void(Checker &)> check_;
     mutable LibraryCall<int(), true> sw_get_module_abi_version_;
@@ -120,6 +120,6 @@ struct SW_DRIVER_CPP_API ModuleStorage
     const Module &get(const path &dll);
 };
 
-ModuleStorage &getModuleStorage(Solution &owner);
+ModuleStorage &getModuleStorage(Build &owner);
 
 }

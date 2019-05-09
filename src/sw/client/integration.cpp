@@ -2,7 +2,7 @@
 #include "inserts.h"
 
 #include <primitives/emitter.h>
-#include <sw/driver/solution_build.h>
+#include <sw/driver/build.h>
 #include <sw/driver/target/native.h>
 
 static ::cl::opt<path> integrate_cmake_deps("cmake-deps", ::cl::sub(subcommand_integrate));
@@ -56,7 +56,9 @@ static String toCmakeString(sw::ConfigurationType t)
 
 SUBCOMMAND_DECL(integrate)
 {
-    if (!integrate_cmake_deps.empty())
+    SW_UNIMPLEMENTED;
+
+    /*if (!integrate_cmake_deps.empty())
     {
         auto lines = read_lines(integrate_cmake_deps);
 
@@ -88,7 +90,7 @@ SUBCOMMAND_DECL(integrate)
         {
             for (auto &[pkg, t] : s.getChildren())
             {
-                auto &nt = *t->as<sw::NativeExecutedTarget>();
+                auto &nt = *t->as<sw::NativeCompiledTarget>();
                 if (t->getType() == sw::TargetType::NativeExecutable)
                     continue;
 
@@ -154,7 +156,7 @@ SUBCOMMAND_DECL(integrate)
                 // imported configs
                 for (auto &s : b.solutions)
                 {
-                    auto &nt = *s.getChildren().find(pkg)->second->as<sw::NativeExecutedTarget>();
+                    auto &nt = *s.getChildren().find(pkg)->second->as<sw::NativeCompiledTarget>();
 
                     ctx.addLine("set_property(TARGET " + pkg.toString() + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " + toCmakeString(s.Settings.Native.ConfigurationType) + ")");
 
@@ -199,7 +201,7 @@ SUBCOMMAND_DECL(integrate)
         {
             for (auto &[pkg, t] : s.getChildren())
             {
-                auto &nt = *t->as<sw::NativeExecutedTarget>();
+                auto &nt = *t->as<sw::NativeCompiledTarget>();
                 if (t->getType() == sw::TargetType::NativeExecutable)
                     continue;
 
@@ -232,7 +234,7 @@ SUBCOMMAND_DECL(integrate)
         {
             for (auto &[pkg, t] : s.getChildren())
             {
-                auto &nt = *t->as<sw::NativeExecutedTarget>();
+                auto &nt = *t->as<sw::NativeCompiledTarget>();
                 if (t->getType() == sw::TargetType::NativeExecutable)
                     continue;
 
@@ -255,8 +257,8 @@ SUBCOMMAND_DECL(integrate)
 
                 ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(nt.getImportLibrary())) + "', lib)");
 
-                std::function<void(sw::NativeExecutedTarget&)> process;
-                std::unordered_set<sw::NativeExecutedTarget *> visited;
+                std::function<void(sw::NativeCompiledTarget&)> process;
+                std::unordered_set<sw::NativeCompiledTarget *> visited;
                 process = [&process, &s, &ctx, &remove_ext, &visited](auto &nt)
                 {
                     if (visited.find(&nt) != visited.end())
@@ -298,7 +300,7 @@ SUBCOMMAND_DECL(integrate)
                         if (t->getType() == sw::TargetType::NativeExecutable)
                             continue;
 
-                        auto &nt = *s.getChildren().find(d->getResolvedPackage())->second->as<sw::NativeExecutedTarget>();
+                        auto &nt = *s.getChildren().find(d->getResolvedPackage())->second->as<sw::NativeCompiledTarget>();
                         ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(nt.getImportLibrary())) + "', lib)");
 
                         process(nt);
@@ -316,7 +318,7 @@ SUBCOMMAND_DECL(integrate)
         write_file_if_different("wscript", ctx.getText());
 
         return;
-    }
+    }*/
 
     SW_UNIMPLEMENTED;
 }

@@ -13,7 +13,7 @@
 #include <sw/builder/sw_context.h>
 #include <sw/driver/command.h>
 #include <sw/driver/jumppad.h>
-#include <sw/driver/solution_build.h>
+#include <sw/driver/build.h>
 #include <sw/manager/api.h>
 #include <sw/manager/database.h>
 #include <sw/manager/package_data.h>
@@ -109,7 +109,7 @@ static ::cl::opt<bool, true> force_server_query1("s", ::cl::desc("Force server c
 static ::cl::alias force_server_query2("server", ::cl::desc("Alias for -s"), ::cl::aliasopt(force_server_query1));
 
 static ::cl::opt<path> working_directory("d", ::cl::desc("Working directory"));
-bool gVerbose;
+extern bool gVerbose;
 static ::cl::opt<bool, true> verbose_opt("verbose", ::cl::desc("Verbose output"), ::cl::location(gVerbose));
 static ::cl::alias verbose_opt2("v", ::cl::desc("Alias for -verbose"), ::cl::aliasopt(verbose_opt));
 static ::cl::opt<bool> trace("trace", ::cl::desc("Trace output"));
@@ -253,7 +253,7 @@ int parse_main(int argc, char **argv)
         //for (auto &d : driver)
             //overview += "    - " + d->getName() + "\n";
         overview += "\n  Available frontends:\n";
-        for (const auto &n : Solution::getAvailableFrontendNames())
+        for (const auto &n : Build::getAvailableFrontendNames())
             overview += "    - " + n + "\n";
     }
 
@@ -875,7 +875,9 @@ SUBCOMMAND_DECL(uri)
 
 void override_package_perform(sw::SwContext &swctx)
 {
-    auto s = sw::load(swctx, ".");
+    SW_UNIMPLEMENTED;
+
+    /*auto s = sw::load(swctx, ".");
     auto &b = *s.get();
     b.prepareStep();
 
@@ -903,7 +905,7 @@ void override_package_perform(sw::SwContext &swctx)
         d.group_number = gn;
         d.prefix = (int)prefix.size();
         swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
-    }
+    }*/
 }
 
 SUBCOMMAND_DECL(mirror)
@@ -919,9 +921,9 @@ SUBCOMMAND_DECL(mirror)
 
 SUBCOMMAND_DECL(ide)
 {
-    //useFileMonitor = false;
+    SW_UNIMPLEMENTED;
 
-    auto swctx = createSwContext();
+    /*auto swctx = createSwContext();
     if (!target_build.empty())
     {
         try_single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", [&swctx]()
@@ -943,7 +945,7 @@ SUBCOMMAND_DECL(ide)
             b.ide = true;
             s->execute();
         });
-    }
+    }*/
 }
 
 SUBCOMMAND_DECL(configure)
@@ -1235,8 +1237,10 @@ SUBCOMMAND_DECL2(upload)
         throw SW_RUNTIME_ERROR("not uploaded: not implemented");
     }
 
+    // send signatures (gpg)
+    // -k KEY1 -k KEY2
     sw::Api api(*current_remote);
-    api.addVersion(upload_prefix, s->solutions[0].getPackages(), sw::read_config(build_arg_update.getValue()).value());
+    api.addVersion(upload_prefix, s->getPackages(), sw::read_config(build_arg_update.getValue()).value());
 }
 
 EXPORT_FROM_EXECUTABLE

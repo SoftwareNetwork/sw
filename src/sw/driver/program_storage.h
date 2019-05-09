@@ -7,63 +7,44 @@
 #pragma once
 
 #include "options.h"
-#include "program.h"
 
-#include <sw/manager/package_version_map.h>
-
-#include <primitives/filesystem.h>
+#include <sw/builder/program.h>
 
 #include <optional>
 
 namespace sw
 {
 
-struct FileStorage;
-struct TargetBase;
+struct Target;
 
 struct SW_DRIVER_CPP_API ProgramStorage
 {
-    using ProgramType = ProgramPtr;
-    using StorageMap = PackageVersionMapBase<ProgramType, std::unordered_map, primitives::version::VersionMap>;
+    enum
+    {
+        NO_EXTENSION,
+        HAS_PROGRAM_EXTENSION,
+        HAS_PACKAGE_EXTENSION,
+    };
 
     // make type polymorphic for dyncasts
     virtual ~ProgramStorage();
 
-    // direct registration of program without extensions activation
-    void registerProgram(const PackagePath &pp, const ProgramType &);
-    void registerProgram(const TargetBase &t, const ProgramType &);
-    void registerProgram(const PackageId &pp, const ProgramType &); // main
-
     // late resolving registration with potential activation
-    void setExtensionProgram(const String &ext, const UnresolvedPackage &p);
-    void setExtensionProgram(const String &ext, const ProgramType &p);
-    void setExtensionProgram(const String &ext, const DependencyPtr &p);
+    void setExtensionProgram(const String &ext, const PackageId &);
+    void setExtensionProgram(const String &ext, const UnresolvedPackage &);
+    void setExtensionProgram(const String &ext, const DependencyPtr &);
+    void setExtensionProgram(const String &ext, const ProgramPtr &);
 
-    // activate by ppath/pkgid
-    ProgramType activateProgram(const PackagePath &pp); // latest ver
-    ProgramType activateProgram(const PackageId &pkg, bool exact_version = true);
+    int hasExtension(const String &ext) const;
+    std::optional<PackageId> getExtPackage(const String &ext) const;
+    Program *getProgram(const String &ext) const;
 
-    ProgramType getProgram(const PackagePath &pp) const; // latest ver
-    ProgramType getProgram(const PackageId &pkg, bool exact_version = true) const;
-
-    std::optional<PackageId> getPackage(const String &ext) const;
-
-    void setFs(FileStorage *);
-    void removeAllExtensions();
+    void clearExtensions();
     void removeExtension(const String &ext);
-
-    ProgramType::element_type *findProgramByExtension(const String &ext) const;
-    bool hasExtension(const String &ext) const;
 
 private:
     std::map<String, PackageId> extension_packages;
-    std::map<String, ProgramType> extension_programs;
-    StorageMap registered_programs;
-
-    void activateProgram1(const ProgramType &);
-
-    std::optional<PackageId> getPackage(const PackagePath &pp) const; // latest ver
-    std::optional<PackageId> getPackage(const PackageId &pkg, bool exact_version = true) const;
+    std::map<String, ProgramPtr> extension_programs;
 };
 
 }

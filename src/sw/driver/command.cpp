@@ -7,7 +7,7 @@
 #include "command.h"
 
 #include "jumppad.h"
-#include "solution.h"
+#include "build.h"
 #include "target/native.h"
 
 #include <sw/builder/platform.h>
@@ -94,19 +94,25 @@ path Command::getProgram() const
         auto t = d->target;
         if (!t)
             throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
-        if (auto nt = t->as<NativeTarget>())
+        if (auto nt = t->as<NativeCompiledTarget>())
         {
             p = nt->getOutputFile();
             if (p.empty())
                 throw SW_RUNTIME_ERROR("Empty program from package: " + t->getPackage().toString());
             if (!File(p, *fs).isGenerated())
             {
-                if (auto nt = t->as<NativeExecutedTarget>(); nt && *nt->HeaderOnly)
+                if (*nt->HeaderOnly)
                     throw SW_RUNTIME_ERROR("Program is used from package: " + t->getPackage().toString() + " which is header only");
                 if (!File(p, *fs).isGeneratedAtAll())
                     throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated at all: " + normalize_path(p));
                 throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated: " + normalize_path(p));
             }
+        }
+        else if (auto nt = t->as<NativeTarget>())
+        {
+            p = nt->getOutputFile();
+            if (p.empty())
+                throw SW_RUNTIME_ERROR("Empty program from package: " + t->getPackage().toString());
         }
         else
             throw SW_RUNTIME_ERROR("Package: " + t->getPackage().toString() + " has unknown type");
@@ -276,6 +282,7 @@ CommandBuilder::CommandBuilder(const SwContext &swctx)
 {
     c = std::make_shared<Command>(swctx);
 }
+
 CommandBuilder::CommandBuilder(const SwContext &swctx, ::sw::FileStorage &fs)
     : CommandBuilder(swctx)
 {
@@ -294,13 +301,13 @@ CommandBuilder &CommandBuilder::operator|(::sw::builder::Command &c2)
     return * this;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const NativeExecutedTarget &t)
+CommandBuilder &operator<<(CommandBuilder &cb, const NativeCompiledTarget &t)
 {
-    auto nt = (NativeExecutedTarget*)&t;
+    auto nt = (NativeCompiledTarget*)&t;
     cb.targets.push_back(nt);
     nt->Storage.push_back(cb.c);
     if (!cb.c->fs)
-        cb.c->fs = nt->getSolution()->fs;
+        cb.c->fs = nt->getSolution().fs;
     return cb;
 }
 

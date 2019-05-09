@@ -32,6 +32,16 @@ IncludeDirectory::IncludeDirectory(const path &p)
     i = p.string();
 }
 
+LinkDirectory::LinkDirectory(const String &s)
+{
+    d = s;
+}
+
+LinkDirectory::LinkDirectory(const path &p)
+{
+    d = p.string();
+}
+
 LinkLibrary::LinkLibrary(const String &s)
 {
     l = s;
@@ -352,6 +362,16 @@ PathOptionsType NativeCompilerOptions::gatherIncludeDirectories() const
     i = System.gatherIncludeDirectories();
     idirs.insert(i.begin(), i.end());
     return idirs;
+}
+
+void NativeLinkerOptionsData::add(const LinkDirectory &l)
+{
+    LinkDirectories.push_back(l.d);
+}
+
+void NativeLinkerOptionsData::remove(const LinkDirectory &l)
+{
+    LinkDirectories.erase(l.d);
 }
 
 void NativeLinkerOptionsData::add(const LinkLibrary &l)

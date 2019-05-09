@@ -4,15 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "solution.h"
-
 #include "frontend/cppan/yaml.h"
 #include "functions.h"
 #include "generator/generator.h"
 #include "inserts.h"
 #include "module.h"
 #include "run.h"
-#include "solution_build.h"
+#include "build.h"
 #include "sw_abi_version.h"
 #include "target/native.h"
 
@@ -54,14 +52,16 @@ bool Build::cppan_check_config_root(const yaml &root)
 
 void Build::cppan_load()
 {
-    if (solutions.empty())
+    SW_UNIMPLEMENTED;
+
+    /*if (solutions.empty())
         addSolution();
 
     for (auto &s : solutions)
     {
         current_solution = &s;
         cppan_load(config.value());
-    }
+    }*/
 }
 
 void Build::cppan_load(const path &fn)
@@ -155,7 +155,9 @@ void Build::cppan_load(const yaml &root, const String &root_name)
         if (name.empty())
             YAML_EXTRACT_AUTO(name);
 
-        String pt;
+        SW_UNIMPLEMENTED;
+
+        /*String pt;
         YAML_EXTRACT_VAR(root, pt, "type", String);
         if (pt == "l" || pt == "lib" || pt == "library")
             ;
@@ -181,7 +183,7 @@ void Build::cppan_load(const yaml &root, const String &root_name)
         else if (lt.empty())
             throw SW_RUNTIME_ERROR(name + ": empty library type");
         else
-            throw SW_RUNTIME_ERROR(name + ": unknown library type: " + lt);
+            throw SW_RUNTIME_ERROR(name + ": unknown library type: " + lt);*/
 
         //if (project.name.empty())
             //project.name = name;

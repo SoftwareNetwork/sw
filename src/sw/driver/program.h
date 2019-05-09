@@ -11,7 +11,7 @@
 namespace sw
 {
 
-struct Solution;
+struct Build;
 struct SourceFile;
 struct Target;
 
@@ -26,7 +26,7 @@ struct Target;
 struct TransformProgram : Program
 {
     //TransformType type = TransformType::Unspecified;
-    StringSet input_extensions;
+    //StringSet input_extensions;
 
     using Program::Program;
 };
@@ -47,7 +47,7 @@ struct ProgramGroup : Program
     std::shared_ptr<builder::Command> getCommand() const override { return nullptr; }
     //Version &getVersion() override { SW_UNIMPLEMENTED; }
 
-    virtual void activate(Solution &s) const = 0;
+    virtual void activate(Build &s) const = 0;
 };
 
 using ProgramGroupPtr = std::shared_ptr<ProgramGroup>;

@@ -6,7 +6,7 @@
 
 #include "build.h"
 
-#include <sw/driver/solution_build.h>
+#include <sw/driver/build.h>
 #include <sw/support/filesystem.h>
 
 #include <optional>
@@ -144,8 +144,11 @@ static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &o
 
             SourceDirMap srcs;
             std::unordered_set<SourcePtr> sources;
-            for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
+            for (const auto &[pkg, tgts] : b->getChildren())
             {
+                auto &t = tgts.begin()->second;
+                if (t->sw_provided)
+                    continue;
                 auto s = t->getSource().clone(); // make a copy!
                 s->applyVersion(pkg.getVersion());
                 if (srcs.find(s->getHash()) != srcs.end())
@@ -162,9 +165,6 @@ static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &o
 
                 // reset
                 b->fetch_dir.clear();
-                for (auto &s : b->solutions)
-                    s.fetch_dir.clear();
-
                 b->fetch_info.sources = srcs_old;
 
                 return b;
@@ -194,9 +194,6 @@ static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &o
 
         // reset
         b->fetch_dir.clear();
-        for (auto &s : b->solutions)
-            s.fetch_dir.clear();
-
         b->fetch_info.sources = srcs_old;
 
         return b;
@@ -213,8 +210,11 @@ std::unique_ptr<Build> fetch_and_load(const SwContext &swctx, const path &file_o
 
     if (opts.parallel)
     {
-        for (const auto &[pkg, t] : b->solutions.begin()->getChildren())
+        for (const auto &[pkg, tgts] : b->getChildren())
         {
+            auto &t = tgts.begin()->second;
+            if (t->sw_provided)
+                continue;
             auto s = t->getSource().clone(); // make a copy!
             s->applyVersion(pkg.version);
             if (opts.apply_version_to_source)

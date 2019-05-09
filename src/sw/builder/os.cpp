@@ -215,6 +215,18 @@ String OS::getObjectFileExtension() const
     }
 }
 
+bool OS::operator<(const OS &rhs) const
+{
+    return std::tie(Type, Arch, SubArch, Version) <
+        std::tie(rhs.Type, rhs.Arch, rhs.SubArch, rhs.Version);
+}
+
+bool OS::operator==(const OS &rhs) const
+{
+    return std::tie(Type, Arch, SubArch, Version) ==
+        std::tie(rhs.Type, rhs.Arch, rhs.SubArch, rhs.Version);
+}
+
 String toString(OSType e)
 {
 #define ENUM OSType

@@ -35,10 +35,11 @@ namespace driver
 struct Command;
 }
 
-struct Solution;
+struct SolutionSettings;
+struct Build;
 struct TargetBase;
 struct Target;
-struct NativeExecutedTarget;
+struct NativeCompiledTarget;
 struct NativeLinker;
 
 /*enum class VisualStudioVersion
@@ -58,7 +59,7 @@ struct NativeLinker;
 };*/
 
 SW_DRIVER_CPP_API
-void detectCompilers(struct Solution &s);
+void detectCompilers(Build &);
 
 SW_DRIVER_CPP_API
 const StringSet &getCppHeaderFileExtensions();
@@ -87,7 +88,7 @@ struct VSInstance : ProgramGroup
     std::shared_ptr<Program> clone() const override { return std::make_shared<VSInstance>(*this); }
     Version &getVersion() override { return version; }
 
-    void activate(Solution &s) const;
+    void activate(Build &s) const override;
 };
 
 // toolchain
@@ -113,21 +114,24 @@ struct SW_DRIVER_CPP_API NativeToolchain
         path getPath(const path &subdir = {}) const;
         String getWindowsTargetPlatformVersion() const;
         void setAndroidApiVersion(int v);
+
+        bool operator<(const SDK &) const;
+        bool operator==(const SDK &) const;
     };
 
     struct SDK SDK;
 
     // libc, libcpp
     // OS SDK (win sdk, macos sdk, linux headers etc.)
-    std::vector<NativeExecutedTarget*> ForcedDependencies;
+    //std::vector<NativeCompiledTarget*> ForcedDependencies;
 
-    std::shared_ptr<NativeLinker> Librarian;
-    std::shared_ptr<NativeLinker> Linker;
+    //std::shared_ptr<NativeLinker> Librarian;
+    //std::shared_ptr<NativeLinker> Linker;
 
     // rc (resource compiler)
     // ar, more tools...
     // more native compilers (cuda etc.)
-    ::sw::CompilerType CompilerType = CompilerType::UnspecifiedCompiler;
+    //::sw::CompilerType CompilerType = CompilerType::UnspecifiedCompiler;
     //LinkerType LinkerType; // rename - use type from selected tool
     BuildLibrariesAs LibrariesType = LibraryType::Shared;
     ::sw::ConfigurationType ConfigurationType = ConfigurationType::Release;
@@ -139,7 +143,7 @@ struct SW_DRIVER_CPP_API NativeToolchain
     // more settings
 
     // misc
-    bool CopySharedLibraries = true;
+    //bool CopySharedLibraries = true;
 
     // service
 
@@ -148,6 +152,9 @@ struct SW_DRIVER_CPP_API NativeToolchain
 
     // members
     //String getConfig() const;
+
+    bool operator<(const NativeToolchain &) const;
+    bool operator==(const NativeToolchain &) const;
 };
 
 // compilers

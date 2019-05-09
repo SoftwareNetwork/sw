@@ -4,8 +4,10 @@
 
 void configure(Build &s)
 {
-    s.Settings.Native.LibrariesType = LibraryType::Static;
-    s.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
+    SW_UNIMPLEMENTED;
+
+    //s.getSettings().Native.LibrariesType = LibraryType::Static;
+    //s.getSettings().Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
 
     s.registerCallback([](auto &t, auto cbt)
     {
@@ -28,8 +30,8 @@ void configure(Build &s)
     else if (s.isConfigSelected("win2android"))
         s.loadModule("utils/cc/win2android.cpp").call<void(Solution&)>("configure", s);
 
-    //s.Settings.Native.CompilerType = CompilerType::ClangCl;
-    //s.Settings.Native.CompilerType = CompilerType::Clang;
+    //s.getSettings().Native.CompilerType = CompilerType::ClangCl;
+    //s.getSettings().Native.CompilerType = CompilerType::Clang;
 }
 
 void build(Solution &s)
@@ -50,9 +52,9 @@ void build(Solution &s)
         "org.sw.demo.boost.property_tree-1"_dep,
         "org.sw.demo.boost.stacktrace-1"_dep;
     support.ApiName = "SW_SUPPORT_API";
-    if (s.Settings.TargetOS.Type == OSType::Windows)
+    if (support.getSettings().TargetOS.Type == OSType::Windows)
         support.Public += "UNICODE"_d;
-    if (s.Settings.TargetOS.Type == OSType::Macos)
+    if (support.getSettings().TargetOS.Type == OSType::Macos)
         support.Public += "BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED"_def;
 
     auto &protos = p.addTarget<StaticLibraryTarget>("protos");
@@ -93,13 +95,13 @@ void build(Solution &s)
     gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep,
         manager, manager.SourceDir / "src/sw/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
 
-    PrecompiledHeader pch;
+    /*PrecompiledHeader pch;
     if (!s.Variables["SW_SELF_BUILD"])
     {
         pch.header = manager.SourceDir / "src/sw/manager/pch.h";
         pch.force_include_pch = true;
         //manager.addPrecompiledHeader(pch);
-    }
+    }*/
 
     auto &tools = p.addDirectory("tools");
     auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
@@ -128,7 +130,7 @@ void build(Solution &s)
     builder -= "src/sw/builder/db_sqlite.*"_rr;
     builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep,
         "pub.egorpugin.primitives.emitter-master"_dep;
-    if (!s.Variables["SW_SELF_BUILD"])
+    //if (!s.Variables["SW_SELF_BUILD"])
     {
         /*PrecompiledHeader pch;
         pch.header = "src/sw/builder/pch.h";
@@ -148,13 +150,13 @@ void build(Solution &s)
         "org.sw.demo.boost.uuid-1"_dep;
     cpp_driver += "src/sw/driver/.*"_rr;
     cpp_driver -= "src/sw/driver/inserts/.*"_rr;
-    if (s.Settings.TargetOS.Type != OSType::Windows)
+    if (cpp_driver.getSettings().TargetOS.Type != OSType::Windows)
         cpp_driver -= "src/sw/driver/misc/.*"_rr;
     embed("pub.egorpugin.primitives.tools.embedder-master"_dep, cpp_driver, "src/sw/driver/inserts/inserts.cpp.in");
     gen_flex_bison("org.sw.demo.lexxmark.winflexbison-master"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
-    if (s.Settings.Native.CompilerType == CompilerType::MSVC)
+    if (cpp_driver.getCompilerType() == CompilerType::MSVC)
         cpp_driver.CompileOptions.push_back("-bigobj");
-    //else if (s.Settings.Native.CompilerType == CompilerType::GNU)
+    //else if (s.getSettings().Native.CompilerType == CompilerType::GNU)
         //cpp_driver.CompileOptions.push_back("-Wa,-mbig-obj");
     {
         auto c = cpp_driver.addCommand();
@@ -172,7 +174,7 @@ void build(Solution &s)
             ;
         c.c->ignore_deps_generated_commands = true;
     }
-    if (!s.Variables["SW_SELF_BUILD"])
+    //if (!s.Variables["SW_SELF_BUILD"])
     {
         /*PrecompiledHeader pch;
         pch.header = "src/sw/driver/pch.h";
@@ -189,15 +191,15 @@ void build(Solution &s)
         "pub.egorpugin.primitives.sw.main-master"_dep,
         "org.sw.demo.giovannidicanio.winreg-master"_dep;
     embed("pub.egorpugin.primitives.tools.embedder-master"_dep, client, "src/sw/client/inserts/inserts.cpp.in");
-    if (s.Settings.Native.CompilerType == CompilerType::MSVC)
+    if (client.getCompilerType() == CompilerType::MSVC)
         client.CompileOptions.push_back("-bigobj");
-    if (s.Settings.TargetOS.Type == OSType::Linux)
+    if (client.getSettings().TargetOS.Type == OSType::Linux)
     {
         //client.getSelectedTool()->LinkOptions.push_back("-static-libstdc++");
         //client.getSelectedTool()->LinkOptions.push_back("-static-libgcc");
     }
 
-    if (s.Settings.TargetOS.Type == OSType::Windows)
+    if (client.getSettings().TargetOS.Type == OSType::Windows)
     {
         auto &client = tools.addTarget<ExecutableTarget>("client");
         client += "src/sw/tools/client.cpp";
@@ -205,7 +207,7 @@ void build(Solution &s)
             "org.sw.demo.boost.dll-1"_dep,
             "org.sw.demo.boost.filesystem-1"_dep,
             "user32.lib"_slib;
-        if (s.Settings.TargetOS.Type == OSType::Windows)
+        if (client.getSettings().TargetOS.Type == OSType::Windows)
             client.Public += "UNICODE"_d;
     }
 }

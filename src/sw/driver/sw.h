@@ -9,7 +9,7 @@
 // builder stuff
 #include "jumppad.h"
 #include "module.h"
-#include "solution_build.h"
+#include "build.h"
 #include "suffix.h"
 #include "target/all.h"
 #include "compiler_helpers.h"
@@ -34,7 +34,7 @@ namespace cl = sw::cl;
 // general
 using sw::SwContext;
 using sw::Build;
-using sw::Solution;
+using Solution = Build;
 using sw::Checker;
 using sw::Test;
 
@@ -64,7 +64,8 @@ using sw::Target;
 using sw::ProjectTarget;
 using sw::DirectoryTarget;
 using sw::NativeTarget;
-using sw::NativeExecutedTarget;
+using sw::NativeCompiledTarget;
+using NativeExecutedTarget = NativeCompiledTarget; // old
 using sw::LibraryTarget;
 using sw::StaticLibraryTarget;
 using sw::SharedLibraryTarget;

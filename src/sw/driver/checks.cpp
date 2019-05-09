@@ -7,7 +7,7 @@
 #include "checks.h"
 
 #include "checks_storage.h"
-#include "solution.h"
+#include "build.h"
 #include "target/native.h"
 
 #include <sw/builder/execution_plan.h>
@@ -163,8 +163,10 @@ CheckSet &Checker::addSet(const String &name)
     return p.first->second;
 }
 
-void Checker::performChecks(path fn)
+void Checker::performChecks(path fn) // root dir
 {
+    return;
+
     fn /= "checks.3.txt";
 
     // load
@@ -293,7 +295,7 @@ int main() { return IsBigEndian(); }
 
         // remove tmp dir
         error_code ec;
-        fs::remove_all(solution->getChecksDir(), ec);
+        fs::remove_all(build->getChecksDir(), ec);
 
         for (auto &[gn, s2] : sets)
         {
@@ -322,7 +324,7 @@ int main() { return IsBigEndian(); }
                     {
                         if (c->requires_manual_setup)
                         {
-                            auto dst = (cc_dir / std::to_string(c->getHash())) += solution->Settings.TargetOS.getExecutableExtension();
+                            auto dst = (cc_dir / std::to_string(c->getHash())) += build->getSettings().TargetOS.getExecutableExtension();
                             if (!fs::exists(dst))
                                 fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
                         }
@@ -337,7 +339,7 @@ int main() { return IsBigEndian(); }
         if (!checksStorage->manual_checks.empty())
         {
             // save executables
-            auto &os = solution->Settings.TargetOS;
+            auto &os = build->getSettings().TargetOS;
             auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
 
             auto bat = os.getShellType() == ShellType::Batch;
@@ -362,7 +364,7 @@ int main() { return IsBigEndian(); }
                 s += "echo \"# " + defs + "\" >> " + mfn + "\n";
                 if (!bat)
                     s += "./";
-                s += std::to_string(c->getHash()) + solution->Settings.TargetOS.getExecutableExtension() + "\n";
+                s += std::to_string(c->getHash()) + build->getSettings().TargetOS.getExecutableExtension() + "\n";
                 s += "echo " + std::to_string(c->getHash()) + " ";
                 if (!bat)
                     s += "$? ";
@@ -403,7 +405,7 @@ int main() { return IsBigEndian(); }
     }
     s += "}";
 
-    auto d = solution->getServiceDir();
+    auto d = build->getServiceDir();
     auto cyclic_path = d / "cyclic";
     write_file(cyclic_path / "deps_checks.dot", s);
 
@@ -510,7 +512,9 @@ bool Check::lessDuringExecution(const Check &rhs) const
 
 path Check::getOutputFilename() const
 {
-    auto d = check_set->checker.solution->getChecksDir();
+    SW_UNIMPLEMENTED;
+
+    /*auto d = check_set->checker.build->getChecksDir();
     //static std::atomic_int64_t n = 0;
     auto up = unique_path();
     //auto up = std::to_string(++n);
@@ -521,7 +525,7 @@ path Check::getOutputFilename() const
         f /= "x.c";
     else
         f /= "x.cpp";
-    return f;
+    return f;*/
 }
 
 static path getUniquePath(const path &p)
@@ -529,9 +533,11 @@ static path getUniquePath(const path &p)
     return boost::replace_all_copy(p.parent_path().filename().u8string(), "-", "_");
 }
 
-Solution Check::setupSolution(const path &f) const
+Build Check::setupSolution(const path &f) const
 {
-    auto s = *check_set->checker.solution;
+    SW_UNIMPLEMENTED;
+
+    /*auto s = *check_set->checker.build;
     s.silent = true;
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     //s.throw_exceptions = false;
@@ -542,19 +548,21 @@ Solution Check::setupSolution(const path &f) const
         s.Settings.Native.CompilerType == CompilerType::ClangCl)
         s.Settings.Native.ConfigurationType = ConfigurationType::Debug;
 
-    return s;
+    return s;*/
 }
 
-void Check::setupTarget(NativeExecutedTarget &e) const
+void Check::setupTarget(NativeCompiledTarget &e) const
 {
     e.GenerateWindowsResource = false;
     if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
         L->DisableIncrementalLink = true;
 }
 
-bool Check::execute(Solution &s) const
+bool Check::execute(Build &s) const
 {
-    s.prepare();
+    SW_UNIMPLEMENTED;
+
+    /*s.prepare();
     try
     {
         auto p = s.getExecutionPlan();
@@ -574,7 +582,7 @@ bool Check::execute(Solution &s) const
         LOG_TRACE(logger, "Check " + data + ": check unknown issue");
         return false;
     }
-    return true;
+    return true;*/
 }
 
 FunctionExists::FunctionExists(const String &f, const String &def)
@@ -693,14 +701,16 @@ int main()
 
 void IncludeExists::run() const
 {
-    auto f = getOutputFilename();
+    SW_UNIMPLEMENTED;
+
+    /*auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
+    auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.build->findProgramByExtension(f.extension().string())->clone());
     auto o = f;
-    c->setSourceFile(f, o += c->getObjectExtension(check_set->checker.solution->Settings.TargetOS));
+    c->setSourceFile(f, o += c->getObjectExtension(check_set->checker.build->Settings.TargetOS));
 
-    auto cmd = c->getCommand(*check_set->checker.solution);
+    auto cmd = c->getCommand(*check_set->checker.build);
     cmd->command_storage = builder::Command::CS_DO_NOT_SAVE;
     if (!cmd)
     {
@@ -709,7 +719,7 @@ void IncludeExists::run() const
     }
     error_code ec;
     cmd->execute(ec);
-    Value = (cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
+    Value = (cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;*/
 }
 
 TypeSize::TypeSize(const String &t, const String &def)
@@ -750,7 +760,9 @@ String TypeSize::getSourceFileContents() const
 
 void TypeSize::run() const
 {
-    auto f = getOutputFilename();
+    SW_UNIMPLEMENTED;
+
+    /*auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
     auto s = setupSolution(f);
@@ -780,7 +792,7 @@ void TypeSize::run() const
     c.program = e.getOutputFile();
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code;
+    Value = c.exit_code;*/
 }
 
 TypeAlignment::TypeAlignment(const String &t, const String &def)
@@ -825,7 +837,9 @@ int main()
 
 void TypeAlignment::run() const
 {
-    auto f = getOutputFilename();
+    SW_UNIMPLEMENTED;
+
+    /*auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
     auto s = setupSolution(f);
@@ -855,7 +869,7 @@ void TypeAlignment::run() const
     c.program = e.getOutputFile();
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code;
+    Value = c.exit_code;*/
 }
 
 SymbolExists::SymbolExists(const String &s, const String &def)
@@ -1052,7 +1066,7 @@ size_t LibraryFunctionExists::getHash() const
 }
 
 
-void LibraryFunctionExists::setupTarget(NativeExecutedTarget &e) const
+void LibraryFunctionExists::setupTarget(NativeCompiledTarget &e) const
 {
     FunctionExists::setupTarget(e);
     e.Definitions["CHECK_FUNCTION_EXISTS"] = function;
@@ -1075,14 +1089,16 @@ String SourceCompiles::getSourceFileContents() const
 
 void SourceCompiles::run() const
 {
-    auto f = getOutputFilename();
+    SW_UNIMPLEMENTED;
+
+    /*auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
+    auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.build->findProgramByExtension(f.extension().string())->clone());
     auto o = f;
-    c->setSourceFile(f, o += c->getObjectExtension(check_set->checker.solution->Settings.TargetOS));
+    c->setSourceFile(f, o += c->getObjectExtension(check_set->checker.build->Settings.TargetOS));
 
-    auto cmd = c->getCommand(*check_set->checker.solution);
+    auto cmd = c->getCommand(*check_set->checker.build);
     cmd->command_storage = builder::Command::CS_DO_NOT_SAVE;
     if (!cmd)
     {
@@ -1091,7 +1107,7 @@ void SourceCompiles::run() const
     }
     error_code ec;
     cmd->execute(ec);
-    Value = (cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
+    Value = (cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;*/
 }
 
 SourceLinks::SourceLinks(const String &def, const String &source)
@@ -1113,7 +1129,9 @@ void SourceLinks::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.solution->findProgramByExtension(f.extension().string())->clone());
+    SW_UNIMPLEMENTED;
+
+    /*auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.build->findProgramByExtension(f.extension().string())->clone());
 
     auto s = setupSolution(f);
 
@@ -1124,7 +1142,7 @@ void SourceLinks::run() const
     if (!execute(s))
         return;
 
-    Value = 1;
+    Value = 1;*/
 }
 
 SourceRuns::SourceRuns(const String &def, const String &source)
@@ -1143,7 +1161,9 @@ String SourceRuns::getSourceFileContents() const
 
 void SourceRuns::run() const
 {
-    auto f = getOutputFilename();
+    SW_UNIMPLEMENTED;
+
+    /*auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
     auto s = setupSolution(f);
@@ -1173,7 +1193,7 @@ void SourceRuns::run() const
     c.program = e.getOutputFile();
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code;
+    Value = c.exit_code;*/
 }
 
 FunctionExists &CheckSet::checkFunctionExists(const String &function, bool cpp)

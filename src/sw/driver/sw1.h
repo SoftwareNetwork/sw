@@ -8,17 +8,18 @@
 
 /// everything for building
 SW_PACKAGE_API
-void build(sw::Solution &s);
+void build(Solution &s);
 
 /// everything for configuring
 SW_PACKAGE_API
-void configure(sw::Build &s);
+void configure(Build &s);
 
 /// checker
 SW_PACKAGE_API
-void check(sw::Checker &c);
+void check(Checker &c);
 
 // void setup() - current config?
 // void fetch() - fetch sources
 // void self(); // for self build instructions? why?
 // void test(); // ?
+// custom steps like in waf?

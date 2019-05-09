@@ -17,7 +17,7 @@
 namespace sw
 {
 
-struct NativeExecutedTarget;
+struct NativeCompiledTarget;
 
 namespace cmd
 {
@@ -45,9 +45,9 @@ struct tag_files
 
 struct tag_targets
 {
-    std::vector<NativeExecutedTarget *> targets;
+    std::vector<NativeCompiledTarget *> targets;
 
-    void populate(NativeExecutedTarget &t) { targets.push_back(&t); }
+    void populate(NativeCompiledTarget &t) { targets.push_back(&t); }
 };
 
 // in/out data tags
@@ -139,9 +139,9 @@ struct tag_dep : detail::tag_targets
 {
     std::vector<DependencyPtr> target_ptrs;
 
-    void add(const NativeExecutedTarget &t)
+    void add(const NativeCompiledTarget &t)
     {
-        targets.push_back((NativeExecutedTarget*)&t);
+        targets.push_back((NativeCompiledTarget*)&t);
     }
 
     void add(const DependencyPtr &t)
@@ -180,37 +180,37 @@ inline tag_end end()
 #define ADD(X)                                                                              \
     inline tag_##X X(const path &file, bool add_to_targets)                                 \
     {                                                                                       \
-        std::vector<NativeExecutedTarget *> targets;                                        \
+        std::vector<NativeCompiledTarget *> targets;                                        \
         return {FilesOrdered{file}, targets, add_to_targets};                               \
     }                                                                                       \
                                                                                             \
     inline tag_##X X(const path &file, const String &prefix, bool add_to_targets)           \
     {                                                                                       \
-        std::vector<NativeExecutedTarget *> targets;                                        \
+        std::vector<NativeCompiledTarget *> targets;                                        \
         return {FilesOrdered{file}, targets, add_to_targets, prefix};                       \
     }                                                                                       \
                                                                                             \
     inline tag_##X X(const FilesOrdered &files, bool add_to_targets)                        \
     {                                                                                       \
-        std::vector<NativeExecutedTarget *> targets;                                        \
+        std::vector<NativeCompiledTarget *> targets;                                        \
         return {files, targets, add_to_targets};                                            \
     }                                                                                       \
                                                                                             \
     inline tag_##X X(const FilesOrdered &files, const String &prefix, bool add_to_targets)  \
     {                                                                                       \
-        std::vector<NativeExecutedTarget *> targets;                                        \
+        std::vector<NativeCompiledTarget *> targets;                                        \
         return {files, targets, add_to_targets, prefix};                                    \
     }                                                                                       \
                                                                                             \
     inline tag_##X X(const Files &files, bool add_to_targets)                               \
     {                                                                                       \
-        std::vector<NativeExecutedTarget *> targets;                                        \
+        std::vector<NativeCompiledTarget *> targets;                                        \
         return {FilesOrdered{files.begin(), files.end()}, targets, add_to_targets};         \
     }                                                                                       \
                                                                                             \
     inline tag_##X X(const Files &files, const String &prefix, bool add_to_targets)         \
     {                                                                                       \
-        std::vector<NativeExecutedTarget *> targets;                                        \
+        std::vector<NativeCompiledTarget *> targets;                                        \
         return {FilesOrdered{files.begin(), files.end()}, targets, add_to_targets, prefix}; \
     }
 
@@ -233,14 +233,14 @@ ADD2(out)
 inline
 tag_stdin std_in(const path &file, bool add_to_targets)
 {
-    std::vector<NativeExecutedTarget*> targets;
+    std::vector<NativeCompiledTarget*> targets;
     return { file, targets, add_to_targets };
 }
 
 template <class ... Args>
 tag_stdin std_in(const path &file, Args && ... args)
 {
-    std::vector<NativeExecutedTarget*> targets;
+    std::vector<NativeCompiledTarget*> targets;
     (targets.push_back(&args), ...);
     return { file, targets };
 }
@@ -248,14 +248,14 @@ tag_stdin std_in(const path &file, Args && ... args)
 inline
 tag_stdout std_out(const path &file, bool add_to_targets)
 {
-    std::vector<NativeExecutedTarget*> targets;
+    std::vector<NativeCompiledTarget*> targets;
     return { file, targets, add_to_targets };
 }
 
 /*template <class ... Args>
 tag_stdout std_out(const path &file, Args && ... args)
 {
-    std::vector<NativeExecutedTarget*> targets;
+    std::vector<NativeCompiledTarget*> targets;
     (targets.push_back(&args), ...);
     return { file, targets };
 }*/
@@ -271,14 +271,14 @@ tag_stdout std_out(Args &&... args)
 inline
 tag_stderr std_err(const path &file, bool add_to_targets)
 {
-    std::vector<NativeExecutedTarget*> targets;
+    std::vector<NativeCompiledTarget*> targets;
     return { file, targets, add_to_targets };
 }
 
 /*template <class ... Args>
 tag_stderr std_err(const path &file, Args && ... args)
 {
-    std::vector<NativeExecutedTarget*> targets;
+    std::vector<NativeCompiledTarget*> targets;
     (targets.push_back(&args), ...);
     return { file, targets };
 }*/
@@ -419,7 +419,7 @@ private:
 struct SW_DRIVER_CPP_API CommandBuilder
 {
     std::shared_ptr<Command> c;
-    std::vector<NativeExecutedTarget*> targets;
+    std::vector<NativeCompiledTarget*> targets;
     bool stopped = false;
 
     CommandBuilder(const SwContext &swctx);
@@ -435,7 +435,7 @@ struct SW_DRIVER_CPP_API CommandBuilder
     SW_DRIVER_CPP_API        \
     CommandBuilder &operator<<(CommandBuilder &, const t &)
 
-DECLARE_STREAM_OP(NativeExecutedTarget);
+DECLARE_STREAM_OP(NativeCompiledTarget);
 DECLARE_STREAM_OP(::sw::cmd::tag_in);
 DECLARE_STREAM_OP(::sw::cmd::tag_out);
 DECLARE_STREAM_OP(::sw::cmd::tag_stdin);
@@ -514,9 +514,9 @@ CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
         if (!cb.stopped)
             add_arg(std::to_string(t));
     }
-    else if constexpr (std::is_base_of_v<NativeExecutedTarget, T>)
+    else if constexpr (std::is_base_of_v<NativeCompiledTarget, T>)
     {
-        return cb << (const NativeExecutedTarget&)t;
+        return cb << (const NativeCompiledTarget&)t;
     }
     else
     {

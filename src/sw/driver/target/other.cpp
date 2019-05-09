@@ -1,6 +1,6 @@
 #include "other.h"
 
-#include "sw/driver/solution.h"
+#include "sw/driver/build.h"
 
 #include <sw/builder/sw_context.h>
 #include <sw/manager/storage.h>
@@ -26,7 +26,7 @@ bool CSharpTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution()->swctx.getLocalStorage().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -53,13 +53,15 @@ path CSharpTarget::getOutputFileName(const path &root) const
 
 Commands CSharpTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    SW_UNIMPLEMENTED;
+
+    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->addSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 bool RustTarget::init()
@@ -80,7 +82,7 @@ bool RustTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution()->swctx.getLocalStorage().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -107,13 +109,15 @@ path RustTarget::getOutputFileName(const path &root) const
 
 Commands RustTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    SW_UNIMPLEMENTED;
+
+    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 bool GoTarget::init()
@@ -134,7 +138,7 @@ bool GoTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution()->swctx.getLocalStorage().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -161,13 +165,15 @@ path GoTarget::getOutputFileName(const path &root) const
 
 Commands GoTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    SW_UNIMPLEMENTED;
+
+    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 bool FortranTarget::init()
@@ -188,7 +194,7 @@ bool FortranTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution()->swctx.getLocalStorage().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -215,13 +221,15 @@ path FortranTarget::getOutputFileName(const path &root) const
 
 Commands FortranTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    SW_UNIMPLEMENTED;
+
+    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 bool JavaTarget::init()
@@ -242,7 +250,7 @@ bool JavaTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     /*if (Scope == TargetScope::Build)
     {
-        //compiler->setOutputFile(getOutputFileName(getSolution()->swctx.getLocalStorage().storage_dir_bin));
+        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {*/
@@ -269,7 +277,9 @@ path JavaTarget::getOutputFileName(const path &root) const
 
 Commands JavaTarget::getCommands1() const
 {
-    Commands cmds;
+    SW_UNIMPLEMENTED;
+
+    /*Commands cmds;
     for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
     {
         compiler->setSourceFile(f->file);
@@ -278,7 +288,7 @@ Commands JavaTarget::getCommands1() const
 
     //auto c = compiler->getCommand(*this);
     //cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 bool KotlinTarget::init()
@@ -299,7 +309,7 @@ bool KotlinTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution()->swctx.getLocalStorage().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -326,13 +336,15 @@ path KotlinTarget::getOutputFileName(const path &root) const
 
 Commands KotlinTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    SW_UNIMPLEMENTED;
+
+    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 bool DTarget::init()
@@ -353,7 +365,7 @@ bool DTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution()->swctx.getLocalStorage().storage_dir_bin));
+        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -381,13 +393,15 @@ path DTarget::getOutputFileName(const path &root) const
 
 Commands DTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    SW_UNIMPLEMENTED;
+
+    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 }

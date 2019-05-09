@@ -135,6 +135,15 @@ struct SW_DRIVER_CPP_API IncludeDirectory
     explicit IncludeDirectory(const path &p);
 };
 
+struct SW_DRIVER_CPP_API LinkDirectory
+{
+    String d;
+
+    LinkDirectory() = default;
+    explicit LinkDirectory(const String &p);
+    explicit LinkDirectory(const path &p);
+};
+
 struct SW_DRIVER_CPP_API LinkLibrary
 {
     String l;
@@ -248,6 +257,9 @@ struct SW_DRIVER_CPP_API NativeLinkerOptionsData
     LinkLibrariesType gatherLinkLibraries() const;
     bool IsLinkDirectoriesEmpty() const;
     void merge(const NativeLinkerOptionsData &o, const GroupSettings &s = GroupSettings());
+
+    void add(const LinkDirectory &l);
+    void remove(const LinkDirectory &l);
 
     void add(const LinkLibrary &l);
     void remove(const LinkLibrary &l);

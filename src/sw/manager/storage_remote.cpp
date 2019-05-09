@@ -22,7 +22,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "storage");
 
-#define PACKAGES_DB_REFRESH_TIME_MINUTES 15
+#define PACKAGES_DB_REFRESH_TIME_MINUTES 0//15
 
 #define PACKAGES_DB_SCHEMA_VERSION 4
 #define PACKAGES_DB_SCHEMA_VERSION_FILE "schema.version"

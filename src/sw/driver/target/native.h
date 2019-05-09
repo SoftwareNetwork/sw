@@ -11,6 +11,11 @@
 namespace sw
 {
 
+namespace driver
+{
+struct CommandBuilder;
+}
+
 namespace detail
 {
 
@@ -20,6 +25,24 @@ namespace detail
 
 }
 
+enum class ConfigureFlags
+{
+    Empty = 0x0,
+
+    AtOnly = 0x1, // @
+    CopyOnly = 0x2,
+    EnableUndefReplacements = 0x4,
+    AddToBuild = 0x8,
+    ReplaceUndefinedVariablesWithZeros = 0x10,
+
+    Default = Empty, //AddToBuild,
+};
+
+struct PredefinedTarget : Target
+{
+    std::shared_ptr<Program> program;
+};
+
 /**
 * \brief Native Target is a binary target that produces binary files (probably executables).
 */
@@ -28,23 +51,12 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
 {
     using Target::Target;
 
-    NativeTarget() = default;
-    virtual ~NativeTarget() = default;
-
-    virtual std::shared_ptr<builder::Command> getCommand() const = 0;
     virtual path getOutputFile() const = 0;
-    virtual path getImportLibrary() const = 0;
-    virtual void setOutputFile() = 0;
-    void setOutputDir(const path &dir);
-    path getOutputDir() const { return OutputDir; }
 
     //
     virtual void setupCommand(builder::Command &c) const {}
     // move to runnable target? since we might have data only targets
     virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
-
-protected:
-    path OutputDir;
 };
 
 // target without linking?
@@ -53,12 +65,12 @@ protected:
 /**
 * \brief Native Executed Target is a binary target that must be built.
 */
-struct SW_DRIVER_CPP_API NativeExecutedTarget : NativeTarget,
+struct SW_DRIVER_CPP_API NativeCompiledTarget : NativeTarget,
     NativeTargetOptionsGroup
 {
 private:
-    ASSIGN_WRAPPER(add, NativeExecutedTarget);
-    //ASSIGN_WRAPPER(remove, NativeExecutedTarget);
+    ASSIGN_WRAPPER(add, NativeCompiledTarget);
+    //ASSIGN_WRAPPER(remove, NativeCompiledTarget);
 
 public:
     using TargetsSet = std::unordered_set<Target*>;
@@ -93,8 +105,11 @@ public:
 
     bool UseModules = false;
 
+    CompilerType ct = CompilerType::UnspecifiedCompiler;
+    CompilerType getCompilerType() const { return ct; }
+
     //
-    virtual ~NativeExecutedTarget();
+    virtual ~NativeCompiledTarget();
 
     TargetType getType() const override { return TargetType::NativeLibrary; }
 
@@ -104,10 +119,10 @@ public:
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
 
     void addPackageDefinitions(bool defs = false);
-    std::shared_ptr<builder::Command> getCommand() const override;
+    std::shared_ptr<builder::Command> getCommand() const;
     //Files getGeneratedDirs() const override;
     path getOutputFile() const override;
-    path getImportLibrary() const override;
+    virtual path getImportLibrary() const;
     const struct CheckSet &getChecks(const String &name) const;
     void setChecks(const String &name, bool check_definitions = false);
     void findSources();
@@ -119,12 +134,13 @@ public:
     TargetsSet gatherAllRelatedDependencies() const;
     NativeLinker *getSelectedTool() const;// override;
     //void setOutputFilename(const path &fn);
-    void setOutputFile() override;
+    virtual void setOutputFile();
     virtual path getOutputBaseDir() const; // used in commands
     path getOutputDir() const;
     void removeFile(const path &fn, bool binary_dir = false) override;
     std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
     bool mustResolveDeps() const override { return prepare_pass == 2; }
+    void setOutputDir(const path &dir);
 
     driver::CommandBuilder addCommand() const;
     // add executed command?
@@ -142,7 +158,7 @@ public:
 
     void addPrecompiledHeader(const path &h, const path &cpp = path());
     void addPrecompiledHeader(PrecompiledHeader &pch);
-    NativeExecutedTarget &operator=(PrecompiledHeader &pch);
+    NativeCompiledTarget &operator=(PrecompiledHeader &pch);
 
     void setupCommand(builder::Command &c) const override;
 
@@ -167,6 +183,7 @@ public:
 protected:
     mutable NativeLinker *SelectedTool = nullptr;
     bool circular_dependency = false;
+    path OutputDir;
 
     Files gatherObjectFiles() const;
     Files gatherObjectFilesWithoutLibraries() const;
@@ -188,7 +205,7 @@ private:
     path getOutputFileName2(const path &subdir) const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
-    void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets, bool system);
+    void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeCompiledTarget*> &targets, bool system);
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
 
@@ -198,9 +215,9 @@ private:
 /**
 * \brief Library target that can be built as static and shared.
 */
-struct SW_DRIVER_CPP_API LibraryTarget : NativeExecutedTarget
+struct SW_DRIVER_CPP_API LibraryTarget : NativeCompiledTarget
 {
-    using NativeExecutedTarget::operator=;
+    using NativeCompiledTarget::operator=;
 
     bool init() override;
     path getImportLibrary() const override;
@@ -212,7 +229,7 @@ protected:
 /**
 * \brief Executable target.
 */
-struct SW_DRIVER_CPP_API ExecutableTarget : NativeExecutedTarget//, Program
+struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget//, Program
 {
     TargetType getType() const override { return TargetType::NativeExecutable; }
 
@@ -227,7 +244,7 @@ protected:
 /**
 * \brief Static only target.
 */
-struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeExecutedTarget
+struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeCompiledTarget
 {
     bool isStaticOnly() const override { return true; }
 
@@ -246,7 +263,7 @@ protected:
 /**
 * \brief Shared only target.
 */
-struct SW_DRIVER_CPP_API SharedLibraryTarget : NativeExecutedTarget
+struct SW_DRIVER_CPP_API SharedLibraryTarget : NativeCompiledTarget
 {
     bool isSharedOnly() const override { return true; }
 

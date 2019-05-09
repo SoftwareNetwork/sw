@@ -7,7 +7,7 @@
 #define SW_PACKAGE_API
 #include <sw/driver/sw.h>
 
-#include "solution.h"
+#include "build.h"
 
 #include <sw/builder/sw_context.h>
 
@@ -30,20 +30,25 @@ void check_self(Checker &c)
     check_self_generated(c);
 }
 
-void build_self(Solution &s)
+void Build::build_self()
 {
 #include <build_self.packages.generated.h>
 
     //static UnresolvedPackages store; // tmp store
-    auto m = s.swctx.install(required_packages/*, store*/);
+    //auto m = s.swctx.install(required_packages, store);
+
+    auto m = swctx.install(required_packages);
     for (auto &[u, p] : m)
-        s.knownTargets.insert(p);
+        knownTargets.insert(p);
 
-    s.Settings.Native.LibrariesType = LibraryType::Static;
-    s.Variables["SW_SELF_BUILD"] = 1;
+    auto ss = createSettings();
+    ss.Native.LibrariesType = LibraryType::Static;
+    addSettings(ss);
 
-    SwapAndRestore sr(s.Local, false);
-    build_self_generated(s);
+    //Variables["SW_SELF_BUILD"] = 1;
+
+    SwapAndRestore sr(Local, false);
+    build_self_generated(*this);
 }
 
 } // namespace sw

@@ -10,7 +10,7 @@
 #include "sw/driver/command.h"
 #include "sw/driver/compiler.h"
 #include "sw/driver/compiler_helpers.h"
-#include "sw/driver/solution_build.h"
+#include "sw/driver/build.h"
 #include "sw/driver/target/native.h"
 
 #include <sw/builder/execution_plan.h>
@@ -123,7 +123,9 @@ struct NinjaEmitter : primitives::Emitter
 {
     void addCommand(const Build &b, const path &dir, const builder::Command &c)
     {
-        String command;
+        SW_UNIMPLEMENTED;
+
+        /*String command;
 
         auto prog = c.getProgram().u8string();
         if (prog == "ExecuteCommand")
@@ -206,7 +208,7 @@ struct NinjaEmitter : primitives::Emitter
         addText(": c" + std::to_string(c.getHash()) + " ");
         for (auto &i : c.inputs)
             addText(prepareString(b, getShortName(i)) + " ");
-        addLine();
+        addLine();*/
     }
 
 private:
@@ -226,8 +228,9 @@ private:
 
     String prepareString(const Build &b, const String &s, bool quotes = false)
     {
-        if (b.Settings.TargetOS.Type != OSType::Windows)
-            quotes = false;
+        SW_UNIMPLEMENTED;
+        //if (b.Settings.TargetOS.Type != OSType::Windows)
+            //quotes = false;
 
         auto s2 = s;
         boost::replace_all(s2, ":", "$:");
@@ -242,19 +245,16 @@ void NinjaGenerator::generate(const Build &b)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
+    SW_UNIMPLEMENTED;
+
+    /*const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
 
     NinjaEmitter ctx;
 
     auto ep = b.getExecutionPlan();
     for (auto &c : ep.commands)
         ctx.addCommand(b, dir, *c);
-
-    auto t = ctx.getText();
-    //if (b.Settings.TargetOS.Type != OSType::Windows)
-        //std::replace(t.begin(), t.end(), '\\', '/');
-
-    write_file(dir / "build.ninja", t);
+    write_file(dir / "build.ninja", ctx.getText());*/
 }
 
 struct MakeEmitter : primitives::Emitter
@@ -267,7 +267,7 @@ struct MakeEmitter : primitives::Emitter
         : Emitter("\t")
     {}
 
-    void gatherPrograms(const Solution::CommandExecutionPlan::Vec &commands)
+    void gatherPrograms(const Build::CommandExecutionPlan::Vec &commands)
     {
         // gather programs
         for (auto &c : commands)
@@ -492,8 +492,11 @@ struct MakeEmitter : primitives::Emitter
 void MakeGenerator::generate(const Build &b)
 {
     // https://www.gnu.org/software/make/manual/html_node/index.html
+    // https://en.wikipedia.org/wiki/Make_(software)
 
-    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig());
+    SW_UNIMPLEMENTED;
+
+    /*const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig());
 
     auto ep = b.solutions[0].getExecutionPlan();
 
@@ -514,7 +517,7 @@ void MakeGenerator::generate(const Build &b)
     {
         if (b.skipTarget(t->Scope))
             continue;
-        if (auto nt = t->as<NativeExecutedTarget>(); nt)
+        if (auto nt = t->as<NativeCompiledTarget>(); nt)
         {
             auto c = nt->getCommand();
             outputs.insert(c->outputs.begin(), c->outputs.end());
@@ -541,7 +544,7 @@ void MakeGenerator::generate(const Build &b)
     else
         ctx.addTarget("clean", {}, { "@rm -f " + MakeEmitter::printFiles(outputs, true) });
 
-    write_file(d / "Makefile", ctx.getText());
+    write_file(d / "Makefile", ctx.getText());*/
 }
 
 void BatchGenerator::generate(const Build &b)
@@ -661,18 +664,22 @@ void BatchGenerator::generate(const Build &b)
         write_file(p, t + s);
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
+    SW_UNIMPLEMENTED;
+
+    /*const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
 
     auto p = b.solutions[0].getExecutionPlan();
 
     print_commands(p, d / "commands.bat");
     print_commands_raw(p, d / "commands_raw.bat");
-    print_numbers(p, d / "numbers.txt");
+    print_numbers(p, d / "numbers.txt");*/
 }
 
 void CompilationDatabaseGenerator::generate(const Build &b)
 {
-    auto print_comp_db = [&b](const ExecutionPlan<builder::Command> &ep, const path &p)
+    SW_UNIMPLEMENTED;
+
+    /*auto print_comp_db = [&b](const ExecutionPlan<builder::Command> &ep, const path &p)
     {
         if (b.solutions.empty())
             return;
@@ -712,7 +719,7 @@ void CompilationDatabaseGenerator::generate(const Build &b)
 
     auto p = b.solutions[0].getExecutionPlan();
 
-    print_comp_db(p, d / "compile_commands.json");
+    print_comp_db(p, d / "compile_commands.json");*/
 }
 
 void ShellGenerator::generate(const Build &b)

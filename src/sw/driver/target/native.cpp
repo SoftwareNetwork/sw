@@ -3,8 +3,7 @@
 #include "sw/driver/bazel/bazel.h"
 #include "sw/driver/generator/generator.h"
 #include "sw/driver/functions.h"
-#include "sw/driver/solution_build.h"
-#include "sw/driver/solution.h"
+#include "sw/driver/build.h"
 
 #include <sw/builder/sw_context.h>
 #include <sw/manager/storage.h>
@@ -59,20 +58,30 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_copy_file, copy_file)
 namespace sw
 {
 
-void NativeTarget::setOutputDir(const path &dir)
+NativeCompiledTarget::~NativeCompiledTarget()
+{
+    // incomplete type cannot be in default dtor
+    // in our case it is nlohmann::json member
+}
+
+void NativeCompiledTarget::setOutputDir(const path &dir)
 {
     //SwapAndRestore sr(OutputDir, dir);
     OutputDir = dir;
     setOutputFile();
 }
 
-NativeExecutedTarget::~NativeExecutedTarget()
+template <class T>
+static std::optional<Version> select_version(T &v)
 {
-    // incomplete type cannot be in default dtor
-    // in our case it is nlohmann::json member
+    if (v.empty())
+        return {};
+    if (!v.empty_releases())
+        return v.rbegin_releases()->first;
+    return v.rbegin()->first;
 }
 
-bool NativeExecutedTarget::init()
+bool NativeCompiledTarget::init()
 {
     switch (init_pass)
     {
@@ -86,8 +95,308 @@ bool NativeExecutedTarget::init()
             v.target = this;
         });
 
-        Librarian = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Librarian->clone());
-        Linker = std::dynamic_pointer_cast<NativeLinker>(getSolution()->Settings.Native.Linker->clone());
+        //
+
+        struct CompilerDesc
+        {
+            PackagePath id;
+            StringSet exts;
+            ::sw::CompilerType type;
+        };
+
+        using CompilerVector = std::vector<CompilerDesc>;
+
+        auto activate_one = [this](const CompilerDesc &v)
+        {
+            auto cld = getSolution().getChildren();
+            auto &pp = v.id;
+
+            auto i = cld.find(pp);
+            if (i == cld.end(pp))
+                return false;
+            auto vo = select_version(i->second);
+            if (!vo)
+                return false;
+            auto j = i->second.find(*vo);
+            TargetSettings tid{ getSettings() };
+            auto k = j->second.find(tid);
+            if (k == j->second.end())
+            {
+                for (auto &e : v.exts)
+                    setExtensionProgram(e, PackageId{ v.id, *vo });
+                return true;
+            }
+            if (auto t = k->second->as<PredefinedTarget>())
+            {
+                for (auto &e : v.exts)
+                    setExtensionProgram(e, t->program);
+            }
+            else if (auto t = k->second->as<NativeCompiledTarget>())
+            {
+                for (auto &e : v.exts)
+                    setExtensionProgram(e, PackageId{ v.id, *vo });
+            }
+            return true;
+        };
+
+        auto activate_all = [this, &activate_one](const CompilerVector &a)
+        {
+            return std::all_of(a.begin(), a.end(), [this, &activate_one](const auto &v)
+            {
+                auto r = activate_one(v);
+                if (r)
+                    ct = v.type;
+                return r;
+            });
+        };
+
+        auto activate_array = [&activate_all](const std::vector<CompilerVector> &a)
+        {
+            return std::any_of(a.begin(), a.end(), [&activate_all](const auto &v)
+            {
+                auto r = activate_all(v);
+                for (auto &v2 : v)
+                {
+                    if (r)
+                        LOG_TRACE(logger, "activated " << v2.id.toString() << " successfully");
+                    else
+                        LOG_TRACE(logger, "activate " << v2.id.toString() << " failed");
+                }
+                return r;
+            });
+        };
+
+        auto activate_array_or_throw = [&activate_array](const std::vector<CompilerVector> &a, const auto &e)
+        {
+            if (!activate_array(a))
+                throw SW_RUNTIME_ERROR(e);
+        };
+
+        static const CompilerVector msvc =
+        {
+            {{"com.Microsoft.VisualStudio.VC.cl"}, getCppSourceFileExtensions(), CompilerType::MSVC},
+            {{"com.Microsoft.VisualStudio.VC.cl"}, { ".c" }, CompilerType::MSVC},
+            {{"com.Microsoft.VisualStudio.VC.ml"}, { ".asm" }, CompilerType::MSVC},
+            {{"com.Microsoft.Windows.rc"}, { ".rc" }, CompilerType::MSVC},
+        };
+
+        /*static const CompilerVector gnu =
+        {
+            {{"org.gnu.gcc.gpp"}, CompilerType::GNU},
+            {{"org.gnu.gcc.gcc"}, CompilerType::GNU},
+            //{{"org.gnu.gcc.as"}, CompilerType::GNU},
+        };
+
+        static const CompilerVector clang =
+        {
+            {{"org.LLVM.clangpp"}, CompilerType::Clang },
+            {{"org.LLVM.clang"}, CompilerType::Clang},
+        };
+
+        static const CompilerVector clangcl =
+        {
+            {{"org.LLVM.clangcl"},CompilerType::ClangCl }
+        };
+
+        static const CompilerVector appleclang =
+        {
+            {{"com.apple.LLVM.clangpp"}, CompilerType::AppleClang },
+            {{"com.apple.LLVM.clang"}, CompilerType::AppleClang},
+        };*/
+
+        activate_array_or_throw({ msvc, /*clangcl, clang,*/ }, "Try to add more compilers");
+
+        /*switch (getSettings().Native.CompilerType)
+        {
+        case CompilerType::MSVC:
+            activate_array_or_throw({ msvc }, "Cannot find msvc toolchain");
+            break;
+        case CompilerType::Clang:
+            activate_array_or_throw({ clang }, "Cannot find clang toolchain");
+            break;
+        case CompilerType::ClangCl:
+            activate_array_or_throw({ clangcl }, "Cannot find clang-cl toolchain");
+            break;
+        case CompilerType::AppleClang:
+            activate_array_or_throw({ appleclang }, "Cannot find clang toolchain");
+            break;
+        case CompilerType::GNU:
+            activate_array_or_throw({ gnu }, "Cannot find gnu toolchain");
+            break;
+        case CompilerType::UnspecifiedCompiler:
+            switch (getSolution().getHostOs().Type)
+            {
+            case OSType::Windows:
+                activate_array_or_throw({ msvc, clangcl, clang, }, "Try to add more compilers");
+                break;
+            case OSType::Cygwin:
+            case OSType::Linux:
+                activate_array_or_throw({ gnu, clang, }, "Try to add more compilers");
+                break;
+            case OSType::Macos:
+                activate_array_or_throw({ clang, appleclang, gnu, }, "Try to add more compilers");
+                break;
+            }
+            break;
+        default:
+            throw SW_RUNTIME_ERROR("solution.cpp: not implemented");
+        }*/
+
+        // before linkers
+        /*if (isClangFamily(getSettings().Native.CompilerType))
+        {
+            if (auto p = getProgram("org.LLVM.ld"))
+            {
+                if (auto l = p->template as<GNULinker>())
+                {
+                    auto cmd = l->createCommand(getSolution().swctx);
+                    cmd->args.push_back("-fuse-ld=lld");
+                    cmd->args.push_back("-target");
+                    cmd->args.push_back(getSettings().getTargetTriplet());
+                }
+            }
+        }
+
+        if (getSettings().TargetOS.Type != OSType::Macos)
+        {
+            removeExtension(".m");
+            removeExtension(".mm");
+        }*/
+
+        // lib/link
+        auto activate_lib_link_or_throw = [this](const std::vector<std::tuple<PackagePath, LinkerType>> &a, const auto &e, bool link = false)
+        {
+            if (!std::any_of(a.begin(), a.end(), [this, &link](const auto &in) -> bool
+                {
+                    auto cld = getSolution().getChildren();
+                    auto pp = std::get<0>(in);
+
+                    auto i = cld.find(pp);
+                    if (i == cld.end(pp))
+                        return false;
+                    auto vo = select_version(i->second);
+                    if (!vo)
+                        return false;
+
+                    auto &v = *vo;
+                    auto j = i->second.find(v);
+
+                    TargetSettings tid{ getSettings() };
+                    auto k = j->second.find(tid);
+                    if (k == j->second.end())
+                        return false;
+
+                    auto t = k->second->as<PredefinedTarget>();
+                    if (!t)
+                        return false;
+
+                    if (link)
+                        this->Linker = std::dynamic_pointer_cast<NativeLinker>(t->program->clone());
+                    else
+                        this->Librarian = std::dynamic_pointer_cast<NativeLinker>(t->program->clone());
+                    LOG_TRACE(logger, "activated " << std::get<0>(in).toString() << " successfully");
+
+                    return true;
+
+                    /*auto p = getProgram(std::get<0>(v));
+                    if (p)
+                    {
+                        if (!link)
+                            this->Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(p->clone());
+                        else
+                            this->Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(p->clone());
+                        //this->Settings.Native.LinkerType = std::get<1>(v);
+                        LOG_TRACE(logger, "activated " << std::get<0>(v).toString() << " successfully");
+                    }
+                    else
+                    {
+                        LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " failed");
+                    }
+                    return p;*/
+                }))
+                throw SW_RUNTIME_ERROR(e);
+        };
+
+        if (getSettings().TargetOS.is(OSType::Windows))
+        {
+            activate_lib_link_or_throw({
+                {{"com.Microsoft.VisualStudio.VC.lib"},LinkerType::MSVC},
+                {{"org.gnu.binutils.ar"},LinkerType::GNU},
+                {{"org.LLVM.ar"},LinkerType::GNU},
+                }, "Try to add more librarians");
+            activate_lib_link_or_throw({
+                {{"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
+                {{"org.gnu.gcc.ld"},LinkerType::GNU},
+                {{"org.LLVM.ld"},LinkerType::GNU},
+                }, "Try to add more linkers", true);
+        }
+        else if (getSettings().TargetOS.is(OSType::Macos))
+        {
+            activate_lib_link_or_throw({
+                {{"org.LLVM.ar"},LinkerType::GNU},
+                {{"org.gnu.binutils.ar"},LinkerType::GNU},
+                }, "Try to add more librarians");
+            activate_lib_link_or_throw({
+                {{"org.LLVM.ld"},LinkerType::GNU},
+                {{"com.apple.LLVM.ld"},LinkerType::GNU},
+                {{"org.gnu.gcc.ld"},LinkerType::GNU},
+                }, "Try to add more linkers", true);
+        }
+        else
+        {
+            activate_lib_link_or_throw({
+                // base
+                {{"org.gnu.binutils.ar"},LinkerType::GNU},
+                {{"org.LLVM.ar"},LinkerType::GNU},
+                // cygwin alternative, remove?
+                {{"com.Microsoft.VisualStudio.VC.lib"},LinkerType::MSVC},
+                }, "Try to add more librarians");
+            activate_lib_link_or_throw({
+                // base
+                {{"org.gnu.gcc.ld"},LinkerType::GNU},
+                {{"org.LLVM.ld"},LinkerType::GNU},
+                // cygwin alternative, remove?
+                {{"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
+                }, "Try to add more linkers", true);
+        }
+
+        if (getSettings().TargetOS.is(OSType::Windows))
+        {
+            static const CompilerDesc rc
+            {
+                "com.Microsoft.Windows.rc", { ".rc" },
+            };
+            if (!activate_one(rc))
+                throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
+        }
+
+        // libc
+        auto add_libc = [this](const auto &pp)
+        {
+            auto cld = getSolution().getChildren();
+            auto i = cld.find(pp);
+            if (i == cld.end(pp))
+                return false;
+            auto vo = select_version(i->second);
+            if (!vo)
+                return false;
+            auto j = i->second.find(*vo);
+            TargetSettings tid{ getSettings() };
+            auto k = j->second.find(tid);
+            if (k == j->second.end())
+                return false;
+            if (auto t = k->second->as<NativeCompiledTarget>())
+            {
+                *this += *t;
+                return true;
+            }
+            return false;
+        };
+        if (!(add_libc("com.Microsoft.VisualStudio.VC.libcpp")
+            //&& add_libc("com.Microsoft.VisualStudio.VC.ATLMFC")
+            && add_libc("com.Microsoft.Windows.SDK.ucrt")))
+            ; // FIXME: uncomment later
+            // throw SW_RUNTIME_ERROR("No libc activated");
 
         addPackageDefinitions();
 
@@ -106,16 +415,16 @@ bool NativeExecutedTarget::init()
     SW_RETURN_MULTIPASS_END;
 }
 
-void NativeExecutedTarget::setupCommand(builder::Command &c) const
+void NativeCompiledTarget::setupCommand(builder::Command &c) const
 {
     NativeTarget::setupCommand(c);
 
     c.addPathDirectory(getOutputBaseDir() / getConfig());
 }
 
-driver::CommandBuilder NativeExecutedTarget::addCommand() const
+driver::CommandBuilder NativeCompiledTarget::addCommand() const
 {
-    driver::CommandBuilder cb(getSolution()->swctx, *getSolution()->fs);
+    driver::CommandBuilder cb(getSolution().swctx, *getSolution().fs);
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?
@@ -125,7 +434,7 @@ driver::CommandBuilder NativeExecutedTarget::addCommand() const
     return cb;
 }
 
-void NativeExecutedTarget::addPackageDefinitions(bool defs)
+void NativeCompiledTarget::addPackageDefinitions(bool defs)
 {
     tm t;
     auto tim = time(0);
@@ -202,22 +511,22 @@ void NativeExecutedTarget::addPackageDefinitions(bool defs)
         set_pkg_info(Variables, false); // false?
 }
 
-path NativeExecutedTarget::getOutputBaseDir() const
+path NativeCompiledTarget::getOutputBaseDir() const
 {
-    if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
-        return getSolution()->swctx.getLocalStorage().storage_dir_bin;
+    if (getSettings().TargetOS.Type == OSType::Windows)
+        return getSolution().swctx.getLocalStorage().storage_dir_bin;
     else
-        return getSolution()->swctx.getLocalStorage().storage_dir_lib;
+        return getSolution().swctx.getLocalStorage().storage_dir_lib;
 }
 
-path NativeExecutedTarget::getOutputDir() const
+path NativeCompiledTarget::getOutputDir() const
 {
     if (OutputDir.empty())
         return getOutputFile().parent_path();
     return getTargetsDir().parent_path() / OutputDir;
 }
 
-void NativeExecutedTarget::setOutputFile()
+void NativeCompiledTarget::setOutputFile()
 {
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
@@ -247,13 +556,13 @@ path Target::getOutputFileName() const
     return getPackage().toString();
 }
 
-path NativeExecutedTarget::getOutputFileName(const path &root) const
+path NativeCompiledTarget::getOutputFileName(const path &root) const
 {
     path p;
     if (SW_IS_LOCAL_BINARY_DIR)
     {
         if (IsConfig)
-            p = getSolution()->BinaryDir / "cfg" / getPackage().ppath.toString() / getConfig() / "out" / getOutputFileName();
+            p = getSolution().BinaryDir / "cfg" / getPackage().ppath.toString() / getConfig() / "out" / getOutputFileName();
         else
             p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
     }
@@ -268,7 +577,7 @@ path NativeExecutedTarget::getOutputFileName(const path &root) const
     return p;
 }
 
-path NativeExecutedTarget::getOutputFileName2(const path &subdir) const
+path NativeCompiledTarget::getOutputFileName2(const path &subdir) const
 {
     if (SW_IS_LOCAL_BINARY_DIR)
     {
@@ -283,17 +592,17 @@ path NativeExecutedTarget::getOutputFileName2(const path &subdir) const
     }
 }
 
-path NativeExecutedTarget::getOutputFile() const
+path NativeCompiledTarget::getOutputFile() const
 {
     return getSelectedTool()->getOutputFile();
 }
 
-path NativeExecutedTarget::getImportLibrary() const
+path NativeCompiledTarget::getImportLibrary() const
 {
     return getSelectedTool()->getImportLibrary();
 }
 
-NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherDependenciesTargets() const
+NativeCompiledTarget::TargetsSet NativeCompiledTarget::gatherDependenciesTargets() const
 {
     TargetsSet deps;
     for (auto &d : Dependencies)
@@ -310,7 +619,7 @@ NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherDependenciesTargets
     return deps;
 }
 
-NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherAllRelatedDependencies() const
+NativeCompiledTarget::TargetsSet NativeCompiledTarget::gatherAllRelatedDependencies() const
 {
     auto libs = gatherDependenciesTargets();
     while (1)
@@ -318,7 +627,7 @@ NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherAllRelatedDependenc
         auto sz = libs.size();
         for (auto &d : libs)
         {
-            auto dt = ((NativeExecutedTarget*)d);
+            auto dt = ((NativeCompiledTarget*)d);
             auto libs2 = dt->gatherDependenciesTargets();
 
             auto sz2 = libs.size();
@@ -332,12 +641,12 @@ NativeExecutedTarget::TargetsSet NativeExecutedTarget::gatherAllRelatedDependenc
     return libs;
 }
 
-std::unordered_set<NativeSourceFile*> NativeExecutedTarget::gatherSourceFiles() const
+std::unordered_set<NativeSourceFile*> NativeCompiledTarget::gatherSourceFiles() const
 {
     return ::sw::gatherSourceFiles<NativeSourceFile>(*this);
 }
 
-Files NativeExecutedTarget::gatherIncludeDirectories() const
+Files NativeCompiledTarget::gatherIncludeDirectories() const
 {
     Files idirs;
     TargetOptionsGroup::iterate(
@@ -350,7 +659,7 @@ Files NativeExecutedTarget::gatherIncludeDirectories() const
     return idirs;
 }
 
-Files NativeExecutedTarget::gatherObjectFilesWithoutLibraries() const
+Files NativeCompiledTarget::gatherObjectFilesWithoutLibraries() const
 {
     Files obj;
     for (auto &f : gatherSourceFiles())
@@ -379,7 +688,7 @@ Files NativeExecutedTarget::gatherObjectFilesWithoutLibraries() const
     return obj;
 }
 
-bool NativeExecutedTarget::hasSourceFiles() const
+bool NativeCompiledTarget::hasSourceFiles() const
 {
     return std::any_of(this->begin(), this->end(), [](const auto &f) {
                return f.second->isActive();
@@ -391,7 +700,7 @@ bool NativeExecutedTarget::hasSourceFiles() const
            });
 }
 
-void NativeExecutedTarget::resolvePostponedSourceFiles()
+void NativeCompiledTarget::resolvePostponedSourceFiles()
 {
     // gather exts
     StringSet exts;
@@ -419,7 +728,7 @@ void NativeExecutedTarget::resolvePostponedSourceFiles()
     }*/
 }
 
-FilesOrdered NativeExecutedTarget::gatherLinkDirectories() const
+FilesOrdered NativeCompiledTarget::gatherLinkDirectories() const
 {
     FilesOrdered dirs;
     auto get_ldir = [&dirs](const auto &a)
@@ -437,7 +746,7 @@ FilesOrdered NativeExecutedTarget::gatherLinkDirectories() const
     return dirs2;
 }
 
-FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
+FilesOrdered NativeCompiledTarget::gatherLinkLibraries() const
 {
     FilesOrdered libs;
     const auto dirs = gatherLinkDirectories();
@@ -466,13 +775,13 @@ FilesOrdered NativeExecutedTarget::gatherLinkLibraries() const
             throw SW_RUNTIME_ERROR(getPackage().toString() + ": Cannot resolve library: " + normalize_path(l));
         }
 
-        //if (!getSolution()->Settings.TargetOS.is(OSType::Windows))
+        //if (!getSettings().TargetOS.is(OSType::Windows))
             //libs.push_back("-l" + l.u8string());
     }
     return libs;
 }
 
-Files NativeExecutedTarget::gatherObjectFiles() const
+Files NativeCompiledTarget::gatherObjectFiles() const
 {
     auto obj = gatherObjectFilesWithoutLibraries();
     auto ll = gatherLinkLibraries();
@@ -480,7 +789,7 @@ Files NativeExecutedTarget::gatherObjectFiles() const
     return obj;
 }
 
-NativeLinker *NativeExecutedTarget::getSelectedTool() const
+NativeLinker *NativeCompiledTarget::getSelectedTool() const
 {
     if (SelectedTool)
         return SelectedTool;
@@ -491,7 +800,7 @@ NativeLinker *NativeExecutedTarget::getSelectedTool() const
     throw SW_RUNTIME_ERROR("No tool selected");
 }
 
-void NativeExecutedTarget::addPrecompiledHeader(const path &h, const path &cpp)
+void NativeCompiledTarget::addPrecompiledHeader(const path &h, const path &cpp)
 {
     PrecompiledHeader pch;
     pch.header = h;
@@ -499,7 +808,7 @@ void NativeExecutedTarget::addPrecompiledHeader(const path &h, const path &cpp)
     addPrecompiledHeader(pch);
 }
 
-void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
+void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
 {
     /*check_absolute(p.header);
     if (!p.source.empty())
@@ -530,8 +839,8 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
     auto gch_fn = pch.parent_path() / (p.header.filename().string() + ".gch");
     auto gch_fn_clang = pch.parent_path() / (p.header.filename().string() + ".pch");
 #ifndef _WIN32
-    pch_dir = getSolution()->swctx.getLocalStorage().storage_dir_tmp;
-    gch_fn = getSolution()->swctx.getLocalStorage().storage_dir_tmp / "sw/driver/sw.h.gch";
+    pch_dir = getSolution().swctx.getLocalStorage().storage_dir_tmp;
+    gch_fn = getSolution().swctx.getLocalStorage().storage_dir_tmp / "sw/driver/sw.h.gch";
 #endif
 
     auto setup_use_vc = [&force_include_pch_header_to_target_source_files, &p, &pch_fn, &pdb_fn](auto &c)
@@ -571,7 +880,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
                     c->ForcedIncludeFiles().push_back(p.header);
 
                 c->PrecompiledHeader = gch_fn_clang;
-                c->createCommand(getSolution()->swctx)->addInput(gch_fn_clang);
+                c->createCommand(getSolution().swctx)->addInput(gch_fn_clang);
             }
             else if (auto c = sf->compiler->as<GNUCompiler>())
             {
@@ -580,7 +889,7 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
 
-                c->createCommand(getSolution()->swctx)->addInput(gch_fn);
+                c->createCommand(getSolution().swctx)->addInput(gch_fn);
             }
         }
     }
@@ -660,20 +969,20 @@ void NativeExecutedTarget::addPrecompiledHeader(PrecompiledHeader &p)
     }
 }
 
-NativeExecutedTarget &NativeExecutedTarget::operator=(PrecompiledHeader &pch)
+NativeCompiledTarget &NativeCompiledTarget::operator=(PrecompiledHeader &pch)
 {
     addPrecompiledHeader(pch);
     return *this;
 }
 
-std::shared_ptr<builder::Command> NativeExecutedTarget::getCommand() const
+std::shared_ptr<builder::Command> NativeCompiledTarget::getCommand() const
 {
     if (HeaderOnly && HeaderOnly.value())
         return nullptr;
     return getSelectedTool()->getCommand(*this);
 }
 
-Commands NativeExecutedTarget::getGeneratedCommands() const
+Commands NativeCompiledTarget::getGeneratedCommands() const
 {
     if (generated_commands)
         return generated_commands.value();
@@ -691,7 +1000,7 @@ Commands NativeExecutedTarget::getGeneratedCommands() const
     // add generated commands
     for (auto &[f, _] : *this)
     {
-        File p(f, *getSolution()->fs);
+        File p(f, *getSolution().fs);
         if (!p.isGenerated())
             continue;
         if (f == def)
@@ -716,7 +1025,7 @@ Commands NativeExecutedTarget::getGeneratedCommands() const
     Commands deps_commands;
     /*for (auto &f : FileDependencies)
     {
-        File p(f, *getSolution()->fs);
+        File p(f, *getSolution().fs);
         if (!p.isGenerated())
             continue;
         auto c = p.getFileRecord().getGenerator();
@@ -736,9 +1045,9 @@ Commands NativeExecutedTarget::getGeneratedCommands() const
     return generated;
 }
 
-Commands NativeExecutedTarget::getCommands1() const
+Commands NativeCompiledTarget::getCommands1() const
 {
-    if (getSolution()->skipTarget(Scope))
+    if (getSolution().skipTarget(Scope))
         return {};
 
     if (already_built)
@@ -784,9 +1093,9 @@ Commands NativeExecutedTarget::getCommands1() const
                 if (sd.size() < p.size() && p.find(sd) == 0)
                 {
                     String prefix;
-                    /*if (f->compiler == getSolution()->Settings.Native.CCompiler)
+                    /*if (f->compiler == getSettings().Native.CCompiler)
                         prefix = "Building C object ";
-                    else if (f->compiler == getSolution()->Settings.Native.CPPCompiler)
+                    else if (f->compiler == getSettings().Native.CPPCompiler)
                         prefix = "Building CXX object ";*/
                     auto n = p.substr(sd.size());
                     if (!n.empty() && n[0] != '/')
@@ -867,7 +1176,7 @@ Commands NativeExecutedTarget::getCommands1() const
     {
         c->dependencies.insert(cmds.begin(), cmds.end());
 
-        File d(def, *getSolution()->fs);
+        File d(def, *getSolution().fs);
         if (d.isGenerated())
         {
             auto g = d.getFileRecord().getGenerator();
@@ -897,7 +1206,7 @@ Commands NativeExecutedTarget::getCommands1() const
         // add dependencies on generated commands from dependent targets
         for (auto &l : get_tgts())
         {
-            if (auto nt = l->as<NativeExecutedTarget>(); nt)
+            if (auto nt = l->as<NativeCompiledTarget>(); nt)
             {
                 auto cmds2 = nt->getGeneratedCommands();
                 for (auto &c : cmds)
@@ -923,19 +1232,20 @@ Commands NativeExecutedTarget::getCommands1() const
         {
             c->name.clear();
 
-            if (getSolution()->build->solutions.size() > 1)
+            // not implemented
+            /*if (getSolution().solutions.size() > 1)
             {
-                auto i = std::find_if(getSolution()->build->solutions.begin(), getSolution()->build->solutions.end(), [this](auto &s)
+                auto i = std::find_if(getSolution().build->solutions.begin(), getSolution().build->solutions.end(), [this](auto &s)
                 {
                     return &s == getSolution();
                 });
-                if (i == getSolution()->build->solutions.end())
+                if (i == getSolution().build->solutions.end())
                     // add trace message?
                     ;// throw SW_RUNTIME_ERROR("Wrong sln");
                 else
-                    c->name += "sln [" + std::to_string(i - getSolution()->build->solutions.begin() + 1) +
-                        "/" + std::to_string(getSolution()->build->solutions.size()) + "] ";
-            }
+                    c->name += "sln [" + std::to_string(i - getSolution().build->solutions.begin() + 1) +
+                        "/" + std::to_string(getSolution().build->solutions.size()) + "] ";
+            }*/
             c->name += "[" + getPackage().toString() + "]" + getSelectedTool()->Extension;
         }
 
@@ -960,19 +1270,19 @@ Commands NativeExecutedTarget::getCommands1() const
 
     /*if (!IsConfig && !Local)
     {
-        if (!File(getOutputFile(), *getSolution()->fs).isChanged())
+        if (!File(getOutputFile(), *getSolution().fs).isChanged())
             return {};
     }*/
 
     return cmds;
 }
 
-bool NativeExecutedTarget::hasCircularDependency() const
+bool NativeCompiledTarget::hasCircularDependency() const
 {
     return circular_dependency;
 }
 
-void NativeExecutedTarget::findSources()
+void NativeCompiledTarget::findSources()
 {
     // We add root dir if we postponed resolving and iif it's a local package.
     // Downloaded package already appended root dir.
@@ -1078,7 +1388,7 @@ static const Strings source_dir_names =
     "",
 };
 
-void NativeExecutedTarget::autoDetectOptions()
+void NativeCompiledTarget::autoDetectOptions()
 {
     // TODO: add dirs with first capital letter:
     // Include, Source etc.
@@ -1089,7 +1399,7 @@ void NativeExecutedTarget::autoDetectOptions()
     autoDetectSources();
 }
 
-void NativeExecutedTarget::autoDetectSources()
+void NativeCompiledTarget::autoDetectSources()
 {
     // gather things to check
     //bool sources_empty = gatherSourceFiles().empty();
@@ -1162,7 +1472,7 @@ void NativeExecutedTarget::autoDetectSources()
     operator^=(f);
 }
 
-void NativeExecutedTarget::autoDetectIncludeDirectories()
+void NativeCompiledTarget::autoDetectIncludeDirectories()
 {
     auto &is = getInheritanceStorage().raw();
     if (std::any_of(is.begin(), is.end(), [this](auto *ptr)
@@ -1207,7 +1517,7 @@ void NativeExecutedTarget::autoDetectIncludeDirectories()
     }
 }
 
-void NativeExecutedTarget::detectLicenseFile()
+void NativeCompiledTarget::detectLicenseFile()
 {
     // license
     auto check_license = [this](path name, String *error = nullptr)
@@ -1260,9 +1570,9 @@ void NativeExecutedTarget::detectLicenseFile()
     }
 }
 
-bool NativeExecutedTarget::prepare()
+bool NativeCompiledTarget::prepare()
 {
-    if (getSolution()->skipTarget(Scope))
+    if (getSolution().skipTarget(Scope))
         return false;
 
     //DEBUG_BREAK_IF_STRING_HAS(getPackage().ppath.toString(), "GDCM.gdcm");
@@ -1272,7 +1582,7 @@ bool NativeExecutedTarget::prepare()
         {
             if (p.empty())
                 return false;
-            return !(fs::exists(p) && File(p, *getSolution()->fs).isChanged());
+            return !(fs::exists(p) && File(p, *getSolution().fs).isChanged());
         };
 
         auto i = getImportLibrary();
@@ -1291,22 +1601,25 @@ bool NativeExecutedTarget::prepare()
     {
         LOG_TRACE(logger, "Preparing target: " + getPackage().ppath.toString());
 
-        getSolution()->call_event(*this, CallbackType::BeginPrepare);
+        getSolution().call_event(*this, CallbackType::BeginPrepare);
 
         if (UseModules)
         {
-            if (getSolution()->Settings.Native.CompilerType != CompilerType::MSVC)
+            if (getCompilerType() != CompilerType::MSVC)
                 throw SW_RUNTIME_ERROR("Currently modules are implemented for MSVC only");
             CPPVersion = CPPLanguageStandard::CPP2a;
         }
 
         findSources();
 
-        // add pvt binary dir
-        IncludeDirectories.insert(BinaryPrivateDir);
+        if (!sw_provided)
+        {
+            // add pvt binary dir
+            IncludeDirectories.insert(BinaryPrivateDir);
 
-        // always add bdir to include dirs
-        Public.IncludeDirectories.insert(BinaryDir);
+            // always add bdir to include dirs
+            Public.IncludeDirectories.insert(BinaryDir);
+        }
 
         resolvePostponedSourceFiles();
         HeaderOnly = !hasSourceFiles();
@@ -1377,7 +1690,7 @@ bool NativeExecutedTarget::prepare()
 
         // default macros
         // public to make sure integrations also take these
-        if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
+        if (getSettings().TargetOS.Type == OSType::Windows)
         {
             Public.Definitions["SW_EXPORT"] = "__declspec(dllexport)";
             Public.Definitions["SW_IMPORT"] = "__declspec(dllimport)";
@@ -1458,7 +1771,7 @@ bool NativeExecutedTarget::prepare()
                 }
 
                 // iterate over child deps
-                (*(NativeExecutedTarget*)d->target).TargetOptionsGroup::iterate(
+                (*(NativeCompiledTarget*)d->target).TargetOptionsGroup::iterate(
                     [this, &new_dependency, &deps, d = d.get(), &deps_ordered](auto &v, auto Inheritance)
                 {
                     // nothing to do with private inheritance
@@ -1549,8 +1862,9 @@ bool NativeExecutedTarget::prepare()
         // Example: helpers, small tools, code generators.
         // TODO: maybe reconsider
         {
-            auto &c = getSolution()->children;
-            auto &dc = getSolution()->dummy_children;
+            // not implemented
+            /*auto &c = getSolution().children;
+            auto &dc = getSolution().dummy_children;
             for (auto &d2 : Dependencies)
             {
                 // only for tools?
@@ -1566,7 +1880,7 @@ bool NativeExecutedTarget::prepare()
                     // they share same source dir (but not binary?) with parent etc.
                     d2->target->setSourceDir(SourceDir);
                 }
-            }
+            }*/
         }
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
@@ -1588,7 +1902,7 @@ bool NativeExecutedTarget::prepare()
             GroupSettings s;
             s.include_directories_only = d->IncludeDirectoriesOnly;
             //s.merge_to_self = false;
-            merge(*(NativeExecutedTarget*)d->target, s);
+            merge(*(NativeCompiledTarget*)d->target, s);
         }
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
@@ -1621,7 +1935,7 @@ bool NativeExecutedTarget::prepare()
             fs::create_directories(d);
             for (auto &[p, fp] : *this)
             {
-                File f(p, *getSolution()->fs);
+                File f(p, *getSolution().fs);
                 if (f.isGenerated())
                     continue;
                 // is_header_ext()
@@ -1632,10 +1946,10 @@ bool NativeExecutedTarget::prepare()
         }
 
         // before merge
-        if (getSolution()->Settings.Native.ConfigurationType != ConfigurationType::Debug)
+        if (getSettings().Native.ConfigurationType != ConfigurationType::Debug)
             *this += Definition("NDEBUG");
         // allow to other compilers?
-        else if (getSolution()->Settings.Native.CompilerType == CompilerType::MSVC)
+        else if (getCompilerType() == CompilerType::MSVC)
             *this += Definition("_DEBUG");
 
         auto remove_bdirs = [this](auto *c)
@@ -1648,14 +1962,14 @@ bool NativeExecutedTarget::prepare()
 
         auto vs_setup = [this, &remove_bdirs](auto *f, auto *c)
         {
-            if (getSolution()->Settings.Native.MT)
+            if (getSettings().Native.MT)
                 c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
 
-            switch (getSolution()->Settings.Native.ConfigurationType)
+            switch (getSettings().Native.ConfigurationType)
             {
             case ConfigurationType::Debug:
                 c->RuntimeLibrary =
-                    getSolution()->Settings.Native.MT ?
+                    getSettings().Native.MT ?
                     vs::RuntimeLibraryType::MultiThreadedDebug :
                     vs::RuntimeLibraryType::MultiThreadedDLLDebug;
                 c->Optimizations().Disable = true;
@@ -1682,8 +1996,8 @@ bool NativeExecutedTarget::prepare()
             // btw, VS is clever enough to take this info from .lib
 			/*if (getSelectedTool() == Librarian.get())
 			{
-				if ((getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug ||
-					getSolution()->Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
+				if ((getSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+					getSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
 					c->PDBFilename.empty())
 				{
 					auto f = getOutputFile();
@@ -1696,7 +2010,7 @@ bool NativeExecutedTarget::prepare()
 
         auto gnu_setup = [this](auto *f, auto *c)
         {
-            switch (getSolution()->Settings.Native.ConfigurationType)
+            switch (getSettings().Native.ConfigurationType)
             {
             case ConfigurationType::Debug:
                 c->GenerateDebugInformation = true;
@@ -1734,7 +2048,7 @@ bool NativeExecutedTarget::prepare()
                 if (UseModules)
                 {
                     c->UseModules = UseModules;
-                    //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getSolution()->Settings.TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+                    //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
                     c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
                     c->UTF8 = false; // utf8 is not used in std modules and produce a warning
 
@@ -1780,7 +2094,7 @@ bool NativeExecutedTarget::prepare()
             && getSelectedTool() == Linker.get()
             && !HeaderOnly.value()
             && !IsConfig
-            && getSolution()->Settings.TargetOS.is(OSType::Windows)
+            && getSettings().TargetOS.is(OSType::Windows)
             && Scope == TargetScope::Build
             )
         {
@@ -1867,7 +2181,7 @@ bool NativeExecutedTarget::prepare()
             write_file_if_different(p, ctx.getText());
 
             // more info for generators
-            File(p, *getSolution()->fs).getFileRecord().setGenerated(true);
+            File(p, *getSolution().fs).getFileRecord().setGenerated(true);
 
             operator+=(p);
         }
@@ -1910,13 +2224,14 @@ bool NativeExecutedTarget::prepare()
         {
             if (!c->GenerateDebugInformation)
             {
-                if (getSolution()->Settings.Native.ConfigurationType == ConfigurationType::Debug ||
-                    getSolution()->Settings.Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+                if (getSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+                    getSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
                 {
-                    if (auto g = getSolution()->build->getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                    SW_UNIMPLEMENTED;
+                    /*if (auto g = getSolution().build->getGenerator(); g && g->type == GeneratorType::VisualStudio)
                         c->GenerateDebugInformation = vs::link::Debug::FastLink;
                     else
-                        c->GenerateDebugInformation = vs::link::Debug::Full;
+                        c->GenerateDebugInformation = vs::link::Debug::Full;*/
                 }
                 else
                     c->GenerateDebugInformation = vs::link::Debug::None;
@@ -1944,7 +2259,7 @@ bool NativeExecutedTarget::prepare()
         }
 
         // export all symbols
-        if (ExportAllSymbols && getSolution()->Settings.TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
+        if (ExportAllSymbols && getSettings().TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
         {
             const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
             Files objs;
@@ -1976,7 +2291,7 @@ bool NativeExecutedTarget::prepare()
         }
 
         // on macos we explicitly say that dylib should resolve symbols on dlopen
-        if (IsConfig && getSolution()->HostOS.is(OSType::Macos))
+        if (IsConfig && getSolution().getHostOs().is(OSType::Macos))
         {
             if (auto c = getSelectedTool()->as<GNULinker>())
                 c->Undefined = "dynamic_lookup";
@@ -2000,7 +2315,7 @@ bool NativeExecutedTarget::prepare()
                 if (d->IncludeDirectoriesOnly)
                     continue;
 
-                auto dt = ((NativeExecutedTarget*)d->target);
+                auto dt = ((NativeCompiledTarget*)d->target);
 
                 // circular deps detection
                 if (L)
@@ -2022,9 +2337,9 @@ bool NativeExecutedTarget::prepare()
                 {
                     path o;
                     if (dt->getSelectedTool() == dt->Librarian.get())
-                        o = ((NativeTarget*)d.get()->target)->getOutputFile();
+                        o = ((NativeCompiledTarget*)d.get()->target)->getOutputFile();
                     else
-                        o = ((NativeTarget*)d.get()->target)->getImportLibrary();
+                        o = ((NativeCompiledTarget*)d.get()->target)->getImportLibrary();
                     if (!o.empty())
                         LinkLibraries.push_back(o);
                 }
@@ -2040,7 +2355,7 @@ bool NativeExecutedTarget::prepare()
         {
             auto ll = [this](auto &l, bool system)
             {
-                std::unordered_set<NativeExecutedTarget*> targets;
+                std::unordered_set<NativeCompiledTarget*> targets;
                 Files added;
                 added.insert(l.begin(), l.end());
                 gatherStaticLinkLibraries(l, added, targets, system);
@@ -2075,14 +2390,14 @@ bool NativeExecutedTarget::prepare()
 
             auto exp = Librarian->getImportLibrary();
             exp = exp.parent_path() / (exp.stem().u8string() + ".exp");
-            Librarian->createCommand(getSolution()->swctx)->addOutput(exp);
+            Librarian->createCommand(getSolution().swctx)->addOutput(exp);
             obj.insert(exp);
         }
 
         getSelectedTool()->setObjectFiles(obj);
         getSelectedTool()->setInputLibraryDependencies(O1);
 
-        getSolution()->call_event(*this, CallbackType::EndPrepare);
+        getSolution().call_event(*this, CallbackType::EndPrepare);
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 8:
@@ -2093,7 +2408,7 @@ bool NativeExecutedTarget::prepare()
     SW_RETURN_MULTIPASS_END;
 }
 
-void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeExecutedTarget*> &targets, bool system)
+void NativeCompiledTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeCompiledTarget*> &targets, bool system)
 {
     if (!targets.insert(this).second)
         return;
@@ -2106,7 +2421,7 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
         if (d->IncludeDirectoriesOnly)
             continue;
 
-        auto dt = ((NativeExecutedTarget*)d->target);
+        auto dt = ((NativeCompiledTarget*)d->target);
 
         // here we must gather all static (and header only?) lib deps in recursive manner
         if (dt->getSelectedTool() == dt->Librarian.get() || dt->HeaderOnly.value())
@@ -2145,7 +2460,7 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
                 if (d2->IncludeDirectoriesOnly)
                     continue;
 
-                auto dt2 = ((NativeExecutedTarget*)d2->target);
+                auto dt2 = ((NativeCompiledTarget*)d2->target);
                 if (!dt2->HeaderOnly.value())
                     add(dt2, dt2->getImportLibrary(), system);
                 dt2->gatherStaticLinkLibraries(ll, added, targets, system);
@@ -2154,7 +2469,7 @@ void NativeExecutedTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
     }
 }
 
-bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
+bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
 {
     switch (prepare_pass)
     {
@@ -2165,7 +2480,7 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
             if (api.empty())
                 return;
 
-            if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
+            if (getSettings().TargetOS.Type == OSType::Windows)
             {
                 if (Type == LibraryType::Shared)
                 {
@@ -2211,15 +2526,15 @@ bool NativeExecutedTarget::prepareLibrary(LibraryType Type)
     break;
     }
 
-    return NativeExecutedTarget::prepare();
+    return NativeCompiledTarget::prepare();
 }
 
-void NativeExecutedTarget::initLibrary(LibraryType Type)
+void NativeCompiledTarget::initLibrary(LibraryType Type)
 {
     if (Type == LibraryType::Shared)
     {
         // probably setting dll must affect .dll extension automatically
-        Linker->Extension = getSolution()->Settings.TargetOS.getSharedLibraryExtension();
+        Linker->Extension = getSettings().TargetOS.getSharedLibraryExtension();
         if (Linker->Type == LinkerType::MSVC)
         {
             // set machine to target os arch
@@ -2231,7 +2546,7 @@ void NativeExecutedTarget::initLibrary(LibraryType Type)
             auto L = Linker->as<GNULinker>();
             L->SharedObject = true;
         }
-        if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
+        if (getSettings().TargetOS.Type == OSType::Windows)
             Definitions["_WINDLL"];
     }
     else
@@ -2240,13 +2555,13 @@ void NativeExecutedTarget::initLibrary(LibraryType Type)
     }
 }
 
-void NativeExecutedTarget::removeFile(const path &fn, bool binary_dir)
+void NativeCompiledTarget::removeFile(const path &fn, bool binary_dir)
 {
     remove_full(fn);
     Target::removeFile(fn, binary_dir);
 }
 
-void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flags)
+void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flags)
 {
     // add to target if not already added
     if (PostponeFileResolving || DryRun)
@@ -2262,7 +2577,7 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
     // before resolving
     if (!to.is_absolute())
         to = BinaryDir / to;
-    File(to, *getSolution()->fs).getFileRecord().setGenerated();
+    File(to, *getSolution().fs).getFileRecord().setGenerated();
 
     if (PostponeFileResolving || DryRun)
         return;
@@ -2289,7 +2604,7 @@ void NativeExecutedTarget::configureFile(path from, path to, ConfigureFlags flag
         operator+=(to);
 }
 
-void NativeExecutedTarget::configureFile1(const path &from, const path &to, ConfigureFlags flags)
+void NativeCompiledTarget::configureFile1(const path &from, const path &to, ConfigureFlags flags)
 {
     static const std::regex cmDefineRegex(R"xxx(#cmakedefine[ \t]+([A-Za-z_0-9]*)([^\r\n]*?)[\r\n])xxx");
     static const std::regex cmDefine01Regex(R"xxx(#cmakedefine01[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
@@ -2413,19 +2728,22 @@ void NativeExecutedTarget::configureFile1(const path &from, const path &to, Conf
     writeFileOnce(to, s);
 }
 
-const CheckSet &NativeExecutedTarget::getChecks(const String &name) const
+const CheckSet &NativeCompiledTarget::getChecks(const String &name) const
 {
-    auto i0 = solution->checker.sets.find(getSolution()->current_gn);
-    if (i0 == solution->checker.sets.end())
-        throw SW_RUNTIME_ERROR("No such group number: " + std::to_string(getSolution()->current_gn));
+    SW_UNIMPLEMENTED;
+
+    /*auto i0 = getSolution().checker.sets.find(getSolution().current_gn);
+    if (i0 == getSolution().checker.sets.end())
+        throw SW_RUNTIME_ERROR("No such group number: " + std::to_string(getSolution().current_gn));
     auto i = i0->second.find(name);
     if (i == i0->second.end())
         throw SW_RUNTIME_ERROR("No such set: " + name);
-    return i->second;
+    return i->second;*/
 }
 
-void NativeExecutedTarget::setChecks(const String &name, bool check_definitions)
+void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 {
+    return;
     for (auto &[k, c] : getChecks(name).check_values)
     {
         auto d = c->getDefinition(k);
@@ -2458,7 +2776,7 @@ void NativeExecutedTarget::setChecks(const String &name, bool check_definitions)
     }
 }
 
-path NativeExecutedTarget::getPatchDir(bool binary_dir) const
+path NativeCompiledTarget::getPatchDir(bool binary_dir) const
 {
     path base;
     if (auto d = getPackage().getOverriddenDir(); d)
@@ -2466,7 +2784,7 @@ path NativeExecutedTarget::getPatchDir(bool binary_dir) const
     else if (!Local)
         base = getPackage().getDirSrc();
     else
-        base = getSolution()->BinaryDir;
+        base = getSolution().BinaryDir;
     return base / "patch";
 
     //auto base = ((binary_dir || Local) ? BinaryDir : SourceDir;
@@ -2475,11 +2793,11 @@ path NativeExecutedTarget::getPatchDir(bool binary_dir) const
     /*path base;
     if (isLocal())
         base = "";
-    auto base = Local ? getSolution()->bi : SourceDir;
+    auto base = Local ? getSolution().bi : SourceDir;
     return base / "patch";*/
 }
 
-void NativeExecutedTarget::writeFileOnce(const path &fn, const String &content) const
+void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content) const
 {
     bool source_dir = false;
     path p = fn;
@@ -2497,7 +2815,7 @@ void NativeExecutedTarget::writeFileOnce(const path &fn, const String &content) 
     // only in bdir case
     if (!source_dir)
     {
-        File f(p, *getSolution()->fs);
+        File f(p, *getSolution().fs);
         f.getFileRecord().setGenerated();
     }
 
@@ -2506,11 +2824,11 @@ void NativeExecutedTarget::writeFileOnce(const path &fn, const String &content) 
 
     ::sw::writeFileOnce(p, content, getPatchDir(!source_dir));
 
-    //File f(p, *getSolution()->fs);
+    //File f(p, *getSolution().fs);
     //f.getFileRecord().load();
 }
 
-void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content) const
+void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content) const
 {
     if (PostponeFileResolving || DryRun)
         return;
@@ -2521,16 +2839,16 @@ void NativeExecutedTarget::writeFileSafe(const path &fn, const String &content) 
         p = BinaryDir / p;
     ::sw::writeFileSafe(p, content, getPatchDir(!source_dir));
 
-    //File f(fn, *getSolution()->fs);
+    //File f(fn, *getSolution().fs);
     //f.getFileRecord().load();
 }
 
-void NativeExecutedTarget::replaceInFileOnce(const path &fn, const String &from, const String &to) const
+void NativeCompiledTarget::replaceInFileOnce(const path &fn, const String &from, const String &to) const
 {
     patch(fn, from, to);
 }
 
-void NativeExecutedTarget::patch(const path &fn, const String &from, const String &to) const
+void NativeCompiledTarget::patch(const path &fn, const String &from, const String &to) const
 {
     if (PostponeFileResolving || DryRun)
         return;
@@ -2540,11 +2858,11 @@ void NativeExecutedTarget::patch(const path &fn, const String &from, const Strin
     check_absolute(p, false, &source_dir);
     ::sw::replaceInFileOnce(p, from, to, getPatchDir(!source_dir));
 
-    //File f(p, *getSolution()->fs);
+    //File f(p, *getSolution().fs);
     //f.getFileRecord().load();
 }
 
-void NativeExecutedTarget::patch(const path &fn, const String &patch_str) const
+void NativeCompiledTarget::patch(const path &fn, const String &patch_str) const
 {
     if (PostponeFileResolving || DryRun)
         return;
@@ -2555,12 +2873,12 @@ void NativeExecutedTarget::patch(const path &fn, const String &patch_str) const
     ::sw::patch(p, patch_str, getPatchDir(!source_dir));
 }
 
-void NativeExecutedTarget::deleteInFileOnce(const path &fn, const String &from) const
+void NativeCompiledTarget::deleteInFileOnce(const path &fn, const String &from) const
 {
     replaceInFileOnce(fn, from, "");
 }
 
-void NativeExecutedTarget::pushFrontToFileOnce(const path &fn, const String &text) const
+void NativeCompiledTarget::pushFrontToFileOnce(const path &fn, const String &text) const
 {
     if (PostponeFileResolving || DryRun)
         return;
@@ -2570,11 +2888,11 @@ void NativeExecutedTarget::pushFrontToFileOnce(const path &fn, const String &tex
     check_absolute(p, false, &source_dir);
     ::sw::pushFrontToFileOnce(p, text, getPatchDir(!source_dir));
 
-    //File f(p, *getSolution()->fs);
+    //File f(p, *getSolution().fs);
     //f.getFileRecord().load();
 }
 
-void NativeExecutedTarget::pushBackToFileOnce(const path &fn, const String &text) const
+void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text) const
 {
     if (PostponeFileResolving || DryRun)
         return;
@@ -2584,7 +2902,7 @@ void NativeExecutedTarget::pushBackToFileOnce(const path &fn, const String &text
     check_absolute(p, false, &source_dir);
     ::sw::pushBackToFileOnce(p, text, getPatchDir(!source_dir));
 
-    //File f(p, *getSolution()->fs);
+    //File f(p, *getSolution().fs);
     //f.getFileRecord().load();
 }
 
@@ -2599,7 +2917,7 @@ static std::unique_ptr<Source> load_source_and_version(const yaml &root, Version
     return nullptr;
 }
 
-void NativeExecutedTarget::cppan_load_project(const yaml &root)
+void NativeCompiledTarget::cppan_load_project(const yaml &root)
 {
     *this += load_source_and_version(root, getPackageMutable().version);
 
@@ -3055,7 +3373,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
 }
 
 #define STD(x)                                          \
-    void NativeExecutedTarget::add(detail::__sw_##c##x) \
+    void NativeCompiledTarget::add(detail::__sw_##c##x) \
     {                                                   \
         CVersion = CLanguageStandard::c##x;             \
     }
@@ -3063,7 +3381,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
 #undef STD
 
 #define STD(x)                                            \
-    void NativeExecutedTarget::add(detail::__sw_##gnu##x) \
+    void NativeCompiledTarget::add(detail::__sw_##gnu##x) \
     {                                                     \
         CVersion = CLanguageStandard::c##x;               \
         CExtensions = true;                               \
@@ -3072,7 +3390,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
 #undef STD
 
 #define STD(x)                                            \
-    void NativeExecutedTarget::add(detail::__sw_##cpp##x) \
+    void NativeCompiledTarget::add(detail::__sw_##cpp##x) \
     {                                                     \
         CPPVersion = CPPLanguageStandard::cpp##x;         \
     }
@@ -3080,7 +3398,7 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
 #undef STD
 
 #define STD(x)                                              \
-    void NativeExecutedTarget::add(detail::__sw_##gnupp##x) \
+    void NativeCompiledTarget::add(detail::__sw_##gnupp##x) \
     {                                                       \
         CPPVersion = CPPLanguageStandard::cpp##x;           \
         CPPExtensions = true;                               \
@@ -3090,14 +3408,14 @@ void NativeExecutedTarget::cppan_load_project(const yaml &root)
 
 bool ExecutableTarget::init()
 {
-    auto r = NativeExecutedTarget::init();
+    auto r = NativeCompiledTarget::init();
 
     switch (init_pass)
     {
     case 2:
     {
         Linker->Prefix.clear();
-        Linker->Extension = getSolution()->Settings.TargetOS.getExecutableExtension();
+        Linker->Extension = getSettings().TargetOS.getExecutableExtension();
 
         if (auto c = getSelectedTool()->as<VisualStudioLinker>())
         {
@@ -3121,7 +3439,7 @@ bool ExecutableTarget::prepare()
         {
             if (api.empty())
                 return;
-            if (getSolution()->Settings.TargetOS.Type == OSType::Windows)
+            if (getSettings().TargetOS.Type == OSType::Windows)
             {
                 Private.Definitions[api] = "SW_EXPORT";
                 Interface.Definitions[api] = "SW_IMPORT";
@@ -3143,12 +3461,12 @@ bool ExecutableTarget::prepare()
     break;
     }
 
-    return NativeExecutedTarget::prepare();
+    return NativeCompiledTarget::prepare();
 }
 
 path ExecutableTarget::getOutputBaseDir() const
 {
-    return getSolution()->swctx.getLocalStorage().storage_dir_bin;
+    return getSolution().swctx.getLocalStorage().storage_dir_bin;
 }
 
 void ExecutableTarget::cppan_load_project(const yaml &root)
@@ -3158,18 +3476,18 @@ void ExecutableTarget::cppan_load_project(const yaml &root)
     if (et == "win32")
         executable_type = ExecutableType::Win32;*/
 
-    NativeExecutedTarget::cppan_load_project(root);
+    NativeCompiledTarget::cppan_load_project(root);
 }
 
 bool LibraryTarget::prepare()
 {
-    return prepareLibrary(getSolution()->Settings.Native.LibrariesType);
+    return prepareLibrary(getSettings().Native.LibrariesType);
 }
 
 bool LibraryTarget::init()
 {
-    auto r = NativeExecutedTarget::init();
-    initLibrary(getSolution()->Settings.Native.LibrariesType);
+    auto r = NativeCompiledTarget::init();
+    initLibrary(getSettings().Native.LibrariesType);
     return r;
 }
 
@@ -3182,14 +3500,14 @@ path LibraryTarget::getImportLibrary() const
 
 bool StaticLibraryTarget::init()
 {
-    auto r = NativeExecutedTarget::init();
+    auto r = NativeCompiledTarget::init();
     initLibrary(LibraryType::Static);
     return r;
 }
 
 bool SharedLibraryTarget::init()
 {
-    auto r = NativeExecutedTarget::init();
+    auto r = NativeCompiledTarget::init();
     initLibrary(LibraryType::Shared);
     return r;
 }

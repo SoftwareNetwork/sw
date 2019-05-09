@@ -68,19 +68,13 @@ path getCommandsLogFileName(const SwContext &swctx, bool local)
 static void load(FileStorage &fs, const path &fn,
     ConcurrentHashMap<path, FileRecord> &files, std::unordered_map<int64_t, std::unordered_set<int64_t>> &deps)
 {
+    if (!fs::exists(fn))
+        return;
+
     ScopedShareableFileLock lk(fn);
 
     primitives::BinaryStream b;
-    try
-    {
-        b.load(fn);
-    }
-    catch (std::exception &)
-    {
-        if (fs::exists(fn))
-            throw;
-        return;
-    }
+    b.load(fn);
     while (!b.eof())
     {
         size_t sz; // record size
@@ -254,17 +248,10 @@ void FileDb::write(std::vector<uint8_t> &v, const FileRecord &f) const
 
 static void load(const path &fn, ConcurrentCommandStorage &commands)
 {
-    primitives::BinaryStream b;
-    try
-    {
-        b.load(fn);
-    }
-    catch (std::exception &)
-    {
-        if (fs::exists(fn))
-            throw;
+    if (!fs::exists(fn))
         return;
-    }
+    primitives::BinaryStream b;
+    b.load(fn);
     while (!b.eof())
     {
         size_t k;

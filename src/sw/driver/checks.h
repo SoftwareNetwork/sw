@@ -20,11 +20,11 @@
 namespace sw
 {
 
+struct Build;
 struct Checker;
 struct CheckSet;
 struct ChecksStorage;
-struct NativeExecutedTarget;
-struct Solution;
+struct NativeCompiledTarget;
 
 namespace builder
 {
@@ -125,11 +125,11 @@ struct SW_DRIVER_CPP_API Check : std::enable_shared_from_this<Check>, CommandDat
 protected:
     virtual void run() const {}
     path getOutputFilename() const;
-    Solution setupSolution(const path &f) const;
-    virtual void setupTarget(NativeExecutedTarget &t) const;
+    Build setupSolution(const path &f) const;
+    virtual void setupTarget(NativeCompiledTarget &t) const;
 
     [[nodiscard]]
-    bool execute(Solution &s) const;
+    bool execute(Build &s) const;
 
 private:
     mutable std::vector<std::shared_ptr<builder::Command>> commands; // for cleanup
@@ -212,7 +212,7 @@ struct SW_DRIVER_CPP_API LibraryFunctionExists : FunctionExists
     size_t getHash() const override;
 
 private:
-    void setupTarget(NativeExecutedTarget &t) const override;
+    void setupTarget(NativeCompiledTarget &t) const override;
 };
 
 struct SW_DRIVER_CPP_API SourceCompiles : Check
@@ -321,7 +321,7 @@ private:
 
 struct SW_DRIVER_CPP_API Checker
 {
-    const struct Solution *solution = nullptr;
+    const Build *build = nullptr;
 
     /// child sets
     std::unordered_map<PackageVersionGroupNumber, std::unordered_map<String /* set name */, CheckSet>> sets;

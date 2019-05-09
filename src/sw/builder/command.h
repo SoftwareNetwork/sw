@@ -15,11 +15,11 @@
 #include <mutex>
 
 #define SW_INTERNAL_INIT_COMMAND(name, target) \
-    name->fs = (target).getSolution()->fs;     \
+    name->fs = (target).getSolution().fs;     \
     (target).setupCommand(*name)
 
 #define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
-    auto name = std::make_shared<type>((target).getSolution()->swctx, __VA_ARGS__);    \
+    auto name = std::make_shared<type>((target).getSolution().swctx, __VA_ARGS__);    \
     SW_INTERNAL_INIT_COMMAND(name, target)
 
 #ifdef _MSC_VER

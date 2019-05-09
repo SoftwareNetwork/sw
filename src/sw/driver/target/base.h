@@ -15,6 +15,7 @@
 #include <sw/builder/os.h>
 #include <sw/manager/package.h>
 #include <sw/manager/package_path.h>
+#include <sw/manager/package_version_map.h>
 #include <sw/manager/source.h>
 
 #include <any>
@@ -25,15 +26,6 @@
 
 namespace sw
 {
-
-struct Solution;
-
-namespace driver
-{
-
-struct CommandBuilder;
-
-}
 
 // ? (re)move?
 enum class TargetScope
@@ -66,19 +58,6 @@ enum class CallbackType
     // preBuild?
     // postBuild?
     // postLink?
-};
-
-enum class ConfigureFlags
-{
-    Empty = 0x0,
-
-    AtOnly = 0x1, // @
-    CopyOnly = 0x2,
-    EnableUndefReplacements = 0x4,
-    AddToBuild = 0x8,
-    ReplaceUndefinedVariablesWithZeros = 0x10,
-
-    Default = Empty, //AddToBuild,
 };
 
 // passed (serialized) via strings
@@ -136,8 +115,9 @@ bool isExecutable(TargetType T);
 SW_DRIVER_CPP_API
 String toString(TargetType T);
 
-struct NativeExecutedTarget;
-struct Solution;
+struct NativeCompiledTarget;
+struct Build;
+struct SolutionSettings;
 struct Target;
 struct ProjectTarget;
 struct DirectoryTarget;
@@ -149,17 +129,36 @@ struct LibraryTarget;
 struct StaticLibraryTarget;
 struct SharedLibraryTarget;
 
-using Executable = ExecutableTarget;
-using Library = LibraryTarget;
-using StaticLibrary = StaticLibraryTarget;
-using SharedLibrary = SharedLibraryTarget;
+struct TargetInternalId
+{
+    const SolutionSettings &ss;
+    std::set<PackageId> dependencies;
+    StringSet features; // make map with values?
+
+    String getConfig() const;
+
+    bool operator<(const TargetInternalId &rhs) const;
+};
+
+struct TargetEntryPoint
+{
+    virtual ~TargetEntryPoint() = default;
+
+    //virtual TargetBaseTypePtr create() = 0;
+};
+
+struct TargetSettings : TargetInternalId
+{
+    TargetEntryPoint *ep = nullptr;
+};
 
 /**
 * \brief TargetBase
 */
-struct SW_DRIVER_CPP_API TargetBase : Node, ProgramStorage, ProjectDirectories
+struct SW_DRIVER_CPP_API TargetBase : Node, ProjectDirectories
 {
-    using TargetMap = PackageVersionMapBase<TargetBaseTypePtr, std::unordered_map, primitives::version::VersionMap>;
+    using TargetMapInternal = std::map<TargetSettings, TargetBaseTypePtr>;
+    using TargetMap = PackageVersionMapBase<TargetMapInternal, std::unordered_map, primitives::version::VersionMap>;
 
     // Data storage for objects that must be alive with the target.
     // For example, program clones etc.
@@ -180,7 +179,7 @@ struct SW_DRIVER_CPP_API TargetBase : Node, ProgramStorage, ProjectDirectories
     bool DryRun = false;
 
     PackagePath NamePrefix;
-    const Solution *solution = nullptr;
+    const Build *build = nullptr;
 
 public:
     TargetBase();
@@ -212,78 +211,28 @@ public:
         return add<T>(std::forward<Args>(args)...);
     }
 
-#define ADD_TARGET(t)                               \
-    template <typename... Args>                     \
-    t &add##t(Args &&... args)                      \
-    {                                               \
-        return add<t>(std::forward<Args>(args)...); \
+#define ADD_TARGET(t)                                       \
+    template <typename... Args>                             \
+    t##Target &add##t(Args &&... args)                      \
+    {                                                       \
+        return add<t##Target>(std::forward<Args>(args)...); \
     }
-
     // remove?
     ADD_TARGET(Executable)
     ADD_TARGET(Library)
     ADD_TARGET(StaticLibrary)
     ADD_TARGET(SharedLibrary)
-
 #undef ADD_TARGET
-
-    template <typename T = Target>
-    T &getTarget(const PackagePath &Name)
-    {
-        auto i = getChildren().find(Name);
-        if (i == getChildren().end(Name))
-        {
-            auto pkgname = pkg ? getPackage().ppath / Name : Name;
-            i = getChildren().find(pkgname);
-            if (i == getChildren().end(pkgname))
-                throw SW_RUNTIME_ERROR("No such target: " + Name.toString() + " or " + (pkgname).toString());
-        }
-        if (i->second.size() > 1)
-            throw SW_RUNTIME_ERROR("Target: " + i->first.toString() + " has more than one version");
-        return (T&)*i->second.begin()->second;
-    }
-
-    template <typename T = Target>
-    T &getTarget(const PackageId &p)
-    {
-        auto i = getChildren().find(p);
-        return getTarget<T>(i, p.toString());
-    }
-
-    template <typename T = Target>
-    std::shared_ptr<T> getTargetPtr(const PackagePath &Name)
-    {
-        auto i = std::find_if(getChildren().begin(), getChildren().end(),
-            [&Name](const auto &e) { return e.first.ppath == Name; });
-        return getTargetPtr<T>(i, Name.toString());
-    }
-
-    template <typename T = Target>
-    std::shared_ptr<T> getTargetPtr(const PackageId &p)
-    {
-        auto i = getChildren().find(p);
-        return getTargetPtr<T>(i, p.toString());
-    }
 
     template <typename ... Args>
     ProjectTarget &addProject(Args && ... args) { return addTarget<ProjectTarget>(std::forward<Args>(args)...); }
-
     DirectoryTarget &addDirectory(const PackagePath &Name) { return addTarget<DirectoryTarget>(Name); }
 
-    virtual TargetType getType() const = 0;
+    virtual TargetType getType() const { return TargetType::Unspecified; }
     String getTypeName() const { return toString(getType()); }
     const LocalPackage &getPackage() const;
 
-    String getConfig(bool use_short_config = false) const;
-    path getBaseDir() const;
-    path getServiceDir() const;
-    path getTargetsDir() const;
-    path getTargetDirShort(const path &root) const;
-    path getTempDir() const;
-
-    void setRootDirectory(const path &);
-
-    // really local package
+    // clarify
     bool isLocal() const;
     //bool isLocalOrOverridden() const { return Local && || ? getPackage().getOverriddenDir(); }
 
@@ -295,28 +244,19 @@ public:
 
     void fetch();
 
-    Solution *getSolution();
-    const Solution *getSolution() const;
-
-    ProgramStorage::ProgramType::element_type *findProgramByExtension(const String &ext) const;
-    bool hasExtension(const String &ext) const;
+    Build &getSolution();
+    const Build &getSolution() const;
+    path getServiceDir() const;
 
 protected:
     // impl
-    path RootDirectory;
     bool prepared = false;
 
     TargetBase(const TargetBase &);
-    //TargetBase &operator=(const TargetBase &);
 
     LocalPackage &getPackageMutable();
-
     bool hasSameParent(const TargetBase *t) const;
     int getCommandStorageType() const;
-
-    path getObjectDir() const;
-    path getObjectDir(const LocalPackage &pkg) const;
-    static path getObjectDir(const LocalPackage &pkg, const String &cfg);
 
 private:
     std::unique_ptr<LocalPackage> pkg;
@@ -328,49 +268,15 @@ private:
         static_assert(std::is_base_of_v<Target, T>, "Provide a valid Target type.");
 
         auto t = std::make_shared<T>(std::forward<Args>(args)...);
-        return (T&)addTarget2(t, Name, V);
+        addTarget2(t, Name, V);
+        return *t;
     }
 
     TargetBase &addTarget2(const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V);
 
-    template <typename T = Target>
-    T &getTarget(const TargetMap::iterator &i, const String &n)
-    {
-        return (T &)*getTargetPtr(i, n);
-    }
-
-    template <typename T = Target>
-    T &getTarget(const TargetMap::const_iterator &i, const String &n) const
-    {
-        return (T &)*getTargetPtr(i, n);
-    }
-
-    template <typename T = Target>
-    std::shared_ptr<T> getTargetPtr(const TargetMap::iterator &i, const String &n)
-    {
-        if (i == getChildren().end())
-            throw SW_RUNTIME_ERROR("No such target: " + n);
-        return std::static_pointer_cast<T>(i->second);
-    }
-
-    template <typename T = Target>
-    std::shared_ptr<T> getTargetPtr(const TargetMap::const_iterator &i, const String &n) const
-    {
-        if (i == getChildren().end())
-            throw SW_RUNTIME_ERROR("No such target: " + n);
-        return std::static_pointer_cast<T>(i->second);
-    }
-
     PackagePath constructTargetName(const PackagePath &Name) const;
-
     void addChild(const TargetBaseTypePtr &t);
     virtual void setupTarget(TargetBaseType *t) const;
-    void applyRootDirectory();
-
-    // impl, unreachable
-    virtual bool exists(const PackageId &p) const;
-    virtual TargetMap &getChildren();
-    virtual const TargetMap &getChildren() const;
 
     friend struct Assigner;
 };
@@ -400,12 +306,16 @@ struct SW_DRIVER_CPP_API TargetDescription
 /**
 * \brief Single project target.
 */
-struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Target>
+struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared_from_this<Target>
     //,protected SourceFileStorage
     //, Executable // impl, must not be visible to users
 {
+    const TargetSettings *ts = nullptr;
+
     // rename to information?
     TargetDescription Description; // or inherit?
+    bool skip = false;
+    bool sw_provided = false;
 
     using TargetBase::TargetBase;
     Target() = default;
@@ -415,6 +325,16 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     DependencyPtr getDependency() const; // returns current target as dependency
     void registerCommand(builder::Command &cmd) const;
+
+    String getConfig(bool use_short_config = false) const;
+    path getBaseDir() const;
+    path getTargetsDir() const;
+    path getTargetDirShort(const path &root) const;
+    path getTempDir() const;
+
+    void setRootDirectory(const path &);
+
+    const SolutionSettings &getSettings() const;
 
     // main apis
     virtual bool init(); // multipass init,
@@ -428,16 +348,28 @@ struct SW_DRIVER_CPP_API Target : TargetBase, std::enable_shared_from_this<Targe
     //auto getPreparePass() const { return prepare_pass; }
     virtual bool mustResolveDeps() const { return deps_resolved ? false : (deps_resolved = true); }
 
+    Program *findProgramByExtension(const String &ext) const;
+
+    // using in build, move to protected when not used
+    path getObjectDir() const;
+    path getObjectDir(const LocalPackage &pkg) const;
+    static path getObjectDir(const LocalPackage &pkg, const String &cfg);
+
     using TargetBase::operator+=;
 
 protected:
+    path RootDirectory;
     SW_MULTIPASS_VARIABLE(prepare_pass);
     SW_MULTIPASS_VARIABLE(init_pass);
     mutable bool deps_resolved = false;
 
+    Target(const Target &);
+
     path getOutputFileName() const;
 
 private:
+    void applyRootDirectory();
+
     virtual Commands getCommands1() const { return Commands{}; }
 };
 
@@ -505,6 +437,7 @@ public:
 
     // linker options
     ASSIGN_TYPES(Target)
+    ASSIGN_TYPES(LinkDirectory)
     ASSIGN_TYPES(LinkLibrary)
     ASSIGN_TYPES(SystemLinkLibrary)
 

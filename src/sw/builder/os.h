@@ -247,6 +247,9 @@ struct SW_BUILDER_API OS
 
     String getShellExtension() const;
     ShellType getShellType() const;
+
+    bool operator<(const OS &rhs) const;
+    bool operator==(const OS &rhs) const;
 };
 
 SW_BUILDER_API

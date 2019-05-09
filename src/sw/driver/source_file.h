@@ -20,7 +20,6 @@ namespace sw
 
 struct SourceFile;
 struct Target;
-struct TargetBase;
 
 // other files can be source files, but not compiled files
 // they'll be processed with other tools
@@ -39,14 +38,14 @@ struct SW_DRIVER_CPP_API SourceFile : File
     SourceFile(const SourceFile &) = default;
     virtual ~SourceFile() = default;
 
-    virtual std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const { return nullptr; }
+    virtual std::shared_ptr<builder::Command> getCommand(const Target &t) const { return nullptr; }
 
     bool isActive() const;
 
     void showInIde(bool s) { show_in_ide = s; }
     bool showInIde() { return show_in_ide; }
 
-    static String getObjectFilename(const TargetBase &t, const path &p);
+    static String getObjectFilename(const Target &t, const path &p);
 };
 
 struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
@@ -69,12 +68,12 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     NativeSourceFile(const NativeSourceFile &rhs);
     virtual ~NativeSourceFile();
 
-    std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const override;
+    std::shared_ptr<builder::Command> getCommand(const Target &t) const override;
 
     //void setSourceFile(const path &input, const path &output);
-    void setOutputFile(const TargetBase &t, const path &input, const path &output_dir); // bad name?
+    void setOutputFile(const Target &t, const path &input, const path &output_dir); // bad name?
     void setOutputFile(const path &output);
-    String getObjectFilename(const TargetBase &t, const path &p);
+    String getObjectFilename(const Target &t, const path &p);
 };
 
 // TODO: move to some other place
@@ -97,7 +96,7 @@ struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
 
     RcToolSourceFile(const Target &t, const RcTool &c, const path &input, const path &output);
 
-    std::shared_ptr<builder::Command> getCommand(const TargetBase &t) const override;
+    std::shared_ptr<builder::Command> getCommand(const Target &t) const override;
 };
 
 }
