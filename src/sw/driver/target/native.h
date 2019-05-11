@@ -123,7 +123,7 @@ public:
     //Files getGeneratedDirs() const override;
     path getOutputFile() const override;
     virtual path getImportLibrary() const;
-    const struct CheckSet &getChecks(const String &name) const;
+    struct CheckSet &getChecks(const String &name);
     void setChecks(const String &name, bool check_definitions = false);
     void findSources();
     void autoDetectOptions();
@@ -222,7 +222,6 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeCompiledTarget
     bool init() override;
     path getImportLibrary() const override;
 
-protected:
     bool prepare() override;
 };
 
@@ -237,7 +236,6 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget//, Program
     void cppan_load_project(const yaml &root) override;
     path getOutputBaseDir() const override;
 
-protected:
     bool prepare() override;
 };
 
@@ -253,7 +251,6 @@ struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeCompiledTarget
     TargetType getType() const override { return TargetType::NativeStaticLibrary; }
     path getImportLibrary() const override { return getOutputFile(); }
 
-protected:
     bool prepare() override
     {
         return prepareLibrary(LibraryType::Static);
@@ -271,7 +268,6 @@ struct SW_DRIVER_CPP_API SharedLibraryTarget : NativeCompiledTarget
 
     TargetType getType() const override { return TargetType::NativeSharedLibrary; }
 
-protected:
     bool prepare() override
     {
         return prepareLibrary(LibraryType::Shared);

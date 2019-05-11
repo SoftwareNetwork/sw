@@ -8,6 +8,7 @@
 
 #include "build.h"
 #include "compiler_helpers.h"
+#include "sw_context.h"
 #include "target/native.h"
 
 #include <primitives/sw/settings.h>
@@ -602,6 +603,10 @@ void detectWindowsCompilers(Build &s)
         {
             SW_UNIMPLEMENTED;
         }
+
+        // early prepare
+        while (libcpp.prepare());
+        while (atlmfc.prepare());
     }
 
     // rename to libc? to crt?
@@ -620,6 +625,8 @@ void detectWindowsCompilers(Build &s)
         if (fs::is_directory(i))
             ucrt.Public.NativeLinkerOptions::System.LinkDirectories.insert(i / toStringWindows(s.getSettings().TargetOS.Arch));
     }
+    // early prepare
+    while (ucrt.prepare());
 
     return;
 

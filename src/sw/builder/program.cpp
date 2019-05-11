@@ -22,7 +22,7 @@
 namespace sw
 {
 
-Program::Program(const SwContext &swctx)
+Program::Program(const SwBuilderContext &swctx)
     : swctx(swctx)
 {
 }

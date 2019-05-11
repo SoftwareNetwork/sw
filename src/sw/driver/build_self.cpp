@@ -8,8 +8,7 @@
 #include <sw/driver/sw.h>
 
 #include "build.h"
-
-#include <sw/builder/sw_context.h>
+#include "sw_context.h"
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/executor.h>

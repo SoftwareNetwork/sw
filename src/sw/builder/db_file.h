@@ -18,9 +18,9 @@ namespace sw
 
 struct FileDb
 {
-    const SwContext &swctx;
+    const SwBuilderContext &swctx;
 
-    FileDb(const SwContext &swctx);
+    FileDb(const SwBuilderContext &swctx);
 
     void load(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const;
     void save(FileStorage &fs, ConcurrentHashMap<path, FileRecord> &files, bool local) const;

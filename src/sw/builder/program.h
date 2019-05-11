@@ -31,13 +31,13 @@
 namespace sw
 {
 
-struct SwContext;
+struct SwBuilderContext;
 
 struct SW_BUILDER_API Program : File, detail::Executable
 {
-    const SwContext &swctx;
+    const SwBuilderContext &swctx;
 
-    Program(const SwContext &swctx);
+    Program(const SwBuilderContext &swctx);
     Program(const Program &);
     //Program &operator=(const Program &);
     virtual ~Program() = default;

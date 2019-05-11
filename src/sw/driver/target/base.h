@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "sw/driver/build_settings.h"
 #include "sw/driver/program_storage.h"
 #include "sw/driver/license.h"
 #include "sw/driver/types.h"
@@ -117,7 +118,6 @@ String toString(TargetType T);
 
 struct NativeCompiledTarget;
 struct Build;
-struct SolutionSettings;
 struct Target;
 struct ProjectTarget;
 struct DirectoryTarget;
@@ -131,7 +131,7 @@ struct SharedLibraryTarget;
 
 struct TargetInternalId
 {
-    const SolutionSettings &ss;
+    BuildSettings ss;
     std::set<PackageId> dependencies;
     StringSet features; // make map with values?
 
@@ -334,7 +334,7 @@ struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared
 
     void setRootDirectory(const path &);
 
-    const SolutionSettings &getSettings() const;
+    const BuildSettings &getSettings() const;
 
     // main apis
     virtual bool init(); // multipass init,

@@ -25,6 +25,41 @@ static cl::opt<bool> print_checks("print-checks", cl::desc("Save extended checks
 namespace sw
 {
 
+static String toString(CheckType t)
+{
+    switch (t)
+    {
+    case CheckType::Function:
+        return "function";
+    case CheckType::Include:
+        return "include";
+    case CheckType::Type:
+        return "type";
+    case CheckType::TypeAlignment:
+        return "alignment";
+    case CheckType::Library:
+        return "library";
+    case CheckType::LibraryFunction:
+        return "library function";
+    case CheckType::Symbol:
+        return "symbol";
+    case CheckType::StructMember:
+        return "struct member";
+    case CheckType::SourceCompiles:
+        return "source compiles";
+    case CheckType::SourceLinks:
+        return "source links";
+    case CheckType::SourceRuns:
+        return "source runs";
+    case CheckType::Declaration:
+        return "source declaration";
+    case CheckType::Custom:
+        return "custom";
+    default:
+        SW_UNREACHABLE;
+    }
+}
+
 void ChecksStorage::load(const path &fn)
 {
     if (loaded)
@@ -152,9 +187,10 @@ CheckSet::CheckSet(Checker &checker)
 {
 }
 
-Checker::Checker()
+Checker::Checker(const Build &build)
+    : build(build)
 {
-    checksStorage = std::make_unique<ChecksStorage>();
+    //checksStorage = std::make_unique<ChecksStorage>();
 }
 
 CheckSet &Checker::addSet(const String &name)
@@ -170,7 +206,7 @@ void Checker::performChecks(path fn) // root dir
     fn /= "checks.3.txt";
 
     // load
-    checksStorage->load(fn);
+    //checksStorage->load(fn);
 
     // add common checks
     for (auto &[gn, s2] : sets)
@@ -205,9 +241,9 @@ int main() { return IsBigEndian(); }
         checks[h] = c;
         s.checks[h] = c;
 
-        auto i = checksStorage->all_checks.find(h);
+        /*auto i = checksStorage->all_checks.find(h);
         if (i != checksStorage->all_checks.end())
-            c->Value = i->second;
+            c->Value = i->second;*/
         return std::pair{ true, c };
     };
 
@@ -277,8 +313,8 @@ int main() { return IsBigEndian(); }
 
     if (unchecked.empty())
     {
-        if (checksStorage->new_manual_checks_loaded)
-            checksStorage->save(fn);
+        /*if (checksStorage->new_manual_checks_loaded)
+            checksStorage->save(fn);*/
         return;
     }
 
@@ -295,7 +331,7 @@ int main() { return IsBigEndian(); }
 
         // remove tmp dir
         error_code ec;
-        fs::remove_all(build->getChecksDir(), ec);
+        fs::remove_all(build.getChecksDir(), ec);
 
         for (auto &[gn, s2] : sets)
         {
@@ -303,7 +339,7 @@ int main() { return IsBigEndian(); }
             {
                 for (auto &[h, c] : set.checks)
                 {
-                    checksStorage->add(*c);
+                    //checksStorage->add(*c);
                 }
             }
         }
@@ -311,7 +347,7 @@ int main() { return IsBigEndian(); }
         auto cc_dir = fn.parent_path() / "cc";
 
         // separate loop
-        if (!checksStorage->manual_checks.empty())
+        /*if (!checksStorage->manual_checks.empty())
         {
             fs::remove_all(cc_dir);
             fs::create_directories(cc_dir);
@@ -324,7 +360,7 @@ int main() { return IsBigEndian(); }
                     {
                         if (c->requires_manual_setup)
                         {
-                            auto dst = (cc_dir / std::to_string(c->getHash())) += build->getSettings().TargetOS.getExecutableExtension();
+                            auto dst = (cc_dir / std::to_string(c->getHash())) += build.getSettings().TargetOS.getExecutableExtension();
                             if (!fs::exists(dst))
                                 fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
                         }
@@ -339,7 +375,7 @@ int main() { return IsBigEndian(); }
         if (!checksStorage->manual_checks.empty())
         {
             // save executables
-            auto &os = build->getSettings().TargetOS;
+            auto &os = build.getSettings().TargetOS;
             auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
 
             auto bat = os.getShellType() == ShellType::Batch;
@@ -364,7 +400,7 @@ int main() { return IsBigEndian(); }
                 s += "echo \"# " + defs + "\" >> " + mfn + "\n";
                 if (!bat)
                     s += "./";
-                s += std::to_string(c->getHash()) + build->getSettings().TargetOS.getExecutableExtension() + "\n";
+                s += std::to_string(c->getHash()) + build.getSettings().TargetOS.getExecutableExtension() + "\n";
                 s += "echo " + std::to_string(c->getHash()) + " ";
                 if (!bat)
                     s += "$? ";
@@ -384,7 +420,7 @@ int main() { return IsBigEndian(); }
                 "Results will be gathered into required file. "
                 "Binaries directory: " + cc_dir.u8string()
             );
-        }
+        }*/
 
         return;
     }
@@ -405,11 +441,224 @@ int main() { return IsBigEndian(); }
     }
     s += "}";
 
-    auto d = build->getServiceDir();
+    auto d = build.getServiceDir();
     auto cyclic_path = d / "cyclic";
     write_file(cyclic_path / "deps_checks.dot", s);
 
     throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");
+}
+
+void CheckSet::performChecks() // root dir
+{
+    // add common checks
+    checkSourceRuns("WORDS_BIGENDIAN", R"(
+int IsBigEndian()
+{
+    volatile int i=1;
+    return ! *((char *)&i);
+}
+int main() { return IsBigEndian(); }
+)");
+
+    // returns true if inserted
+    auto add_dep = [this](auto &c)
+    {
+        auto h = c->getHash();
+        auto ic = checks.find(h);
+        if (ic != checks.end())
+        {
+            checks[h] = ic->second;
+            ic->second->Definitions.insert(c->Definitions.begin(), c->Definitions.end());
+            ic->second->Prefixes.insert(c->Prefixes.begin(), c->Prefixes.end());
+            return std::pair{ false, ic->second };
+        }
+        checks[h] = c;
+
+        /*auto i = checksStorage->all_checks.find(h);
+        if (i != checksStorage->all_checks.end())
+            c->Value = i->second;*/
+        return std::pair{ true, c };
+    };
+
+    // prepare loaded checks
+    for (auto &c : all)
+    {
+        auto[inserted, dep] = add_dep(c);
+        auto deps = c->gatherDependencies();
+        for (auto &d : deps)
+        {
+            auto [inserted, dep2] = add_dep(d);
+            dep->dependencies.insert(dep2);
+        }
+
+        // add to check_values only requested defs
+        // otherwise we'll get also defs from other sets (e.g. with prefixes from ICU 'U_')
+        for (auto &d : c->Definitions)
+        {
+            check_values[d];
+            for (auto &p : c->Prefixes)
+                check_values[p + d];
+        }
+    }
+    all.clear();
+
+    // perform
+    std::unordered_set<CheckPtr> unchecked;
+    for (auto &[h, c] : checks)
+    {
+        if (!c->isChecked())
+            unchecked.insert(c);
+    }
+
+    SCOPE_EXIT
+    {
+        prepareChecksForUse();
+        if (print_checks)
+        {
+            SW_UNIMPLEMENTED;
+
+            /*std::ofstream o(fn.parent_path() / (std::to_string(gn) + "." + n +  + ".checks.txt"));
+            if (!o)
+                return;
+            std::map<String, CheckPtr> check_values(set.check_values.begin(), set.check_values.end());
+            for (auto &[d, c] : check_values)
+            {
+                if (c->Value)
+                    o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
+            }*/
+        }
+        // cleanup
+        for (auto &[h, c] : checks)
+        {
+            c->clean();
+        }
+    };
+
+    if (unchecked.empty())
+    {
+        //if (checksStorage->new_manual_checks_loaded)
+            //checksStorage->save(fn);
+        return;
+    }
+
+    auto ep = ExecutionPlan<Check>::createExecutionPlan(unchecked);
+    if (ep)
+    {
+        LOG_INFO(logger, "Performing " << unchecked.size() << " check(s)");
+
+        //auto &e = getExecutor();
+        Executor e(getExecutor().numberOfThreads()); // separate executor!
+                                                     //ep.throw_on_errors = false;
+                                                     //ep.skip_errors = ep.commands.size();
+        ep.execute(e);
+
+        // remove tmp dir
+        /*error_code ec;
+        fs::remove_all(build.getChecksDir(), ec);
+
+        for (auto &[h, c] : checks)
+        {
+            checksStorage->add(*c);
+        }
+
+        auto cc_dir = fn.parent_path() / "cc";
+
+        // separate loop
+        if (!checksStorage->manual_checks.empty())
+        {
+            fs::remove_all(cc_dir);
+            fs::create_directories(cc_dir);
+
+            for (auto &[h, c] : checks)
+            {
+                if (c->requires_manual_setup)
+                {
+                    auto dst = (cc_dir / std::to_string(c->getHash())) += build.getSettings().TargetOS.getExecutableExtension();
+                    if (!fs::exists(dst))
+                        fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
+                }
+            }
+        }
+
+        // save
+        checksStorage->save(fn);
+
+        if (!checksStorage->manual_checks.empty())
+        {
+            // save executables
+            auto &os = build.getSettings().TargetOS;
+            auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
+
+            auto bat = os.getShellType() == ShellType::Batch;
+
+            String s;
+            if (!bat)
+                s += "#!/bin/sh\n\n";
+            s += "echo \"\" > " + mfn + "\n\n";
+            for (auto &[h, c] : checksStorage->manual_checks)
+            {
+                String defs;
+                for (auto &d : c->Definitions)
+                    defs += d + " ";
+                defs.resize(defs.size() - 1);
+
+                s += bat ? "::" : "#";
+                s += " " + defs + "\n";
+                s += "echo ";
+                //if (!bat)
+                //s += "-n ";
+                s += "\"Checking: " + defs + "... \"\n";
+                s += "echo \"# " + defs + "\" >> " + mfn + "\n";
+                if (!bat)
+                    s += "./";
+                s += std::to_string(c->getHash()) + build.getSettings().TargetOS.getExecutableExtension() + "\n";
+                s += "echo " + std::to_string(c->getHash()) + " ";
+                if (!bat)
+                    s += "$? ";
+                else
+                    s += "%errorlevel% ";
+                s += ">> " + mfn + "\n";
+                if (!bat)
+                    s += "echo ok\n";
+                s += "echo \"\" >> " + mfn + "\n";
+                s += "\n";
+            }
+            write_file((cc_dir / "run") += os.getShellExtension(), s);
+
+            throw SW_RUNTIME_ERROR("Some manual checks are missing, please set them in order to continue. "
+                "Manual checks file: " + (path(fn) += MANUAL_CHECKS).u8string() + ". "
+                "You also may copy produced binaries to target platform and run them there using prepared script. "
+                "Results will be gathered into required file. "
+                "Binaries directory: " + cc_dir.u8string()
+            );
+        }*/
+
+        return;
+    }
+
+    // error!
+
+    // print our deps graph
+    String s;
+    s += "digraph G {\n";
+    for (auto &c : ep.unprocessed_commands_set)
+    {
+        for (auto &d : c->dependencies)
+        {
+            if (ep.unprocessed_commands_set.find(static_cast<Check*>(d.get())) == ep.unprocessed_commands_set.end())
+                continue;
+            s += *c->Definitions.begin() + "->" + *std::static_pointer_cast<Check>(d)->Definitions.begin() + ";";
+        }
+    }
+    s += "}";
+
+    SW_UNIMPLEMENTED;
+
+    /*auto d = build.getServiceDir();
+    auto cyclic_path = d / "cyclic";
+    write_file(cyclic_path / "deps_checks.dot", s);
+
+    throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");*/
 }
 
 Check::~Check()
@@ -489,7 +738,7 @@ void Check::execute()
         }
         throw SW_RUNTIME_ERROR("Check " + *Definitions.begin() + ": value was not set");
     }
-    LOG_DEBUG(logger, "Checking " << *Definitions.begin() << ": " << Value.value());
+    LOG_DEBUG(logger, "Checking " << toString(getType()) << " " << *Definitions.begin() << ": " << Value.value());
 }
 
 std::vector<CheckPtr> Check::gatherDependencies()
@@ -512,9 +761,7 @@ bool Check::lessDuringExecution(const Check &rhs) const
 
 path Check::getOutputFilename() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto d = check_set->checker.build->getChecksDir();
+    auto d = check_set->checker.build.getChecksDir();
     //static std::atomic_int64_t n = 0;
     auto up = unique_path();
     //auto up = std::to_string(++n);
@@ -525,7 +772,7 @@ path Check::getOutputFilename() const
         f /= "x.c";
     else
         f /= "x.cpp";
-    return f;*/
+    return f;
 }
 
 static path getUniquePath(const path &p)
@@ -535,20 +782,24 @@ static path getUniquePath(const path &p)
 
 Build Check::setupSolution(const path &f) const
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto s = *check_set->checker.build;
+    auto s = check_set->checker.build;
     s.silent = true;
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     //s.throw_exceptions = false;
     s.BinaryDir = f.parent_path();
+    s.NamePrefix.clear();
+
+    auto ss = check_set->t->getSettings();
 
     // some checks may fail in msvc release (functions become intrinsics (mem*) etc.)
-    if (s.Settings.Native.CompilerType == CompilerType::MSVC ||
-        s.Settings.Native.CompilerType == CompilerType::ClangCl)
-        s.Settings.Native.ConfigurationType = ConfigurationType::Debug;
+    if (check_set->t->getCompilerType() == CompilerType::MSVC ||
+        check_set->t->getCompilerType() == CompilerType::ClangCl)
+        ss.Native.ConfigurationType = ConfigurationType::Debug;
 
-    return s;*/
+    s.addSettings(ss);
+    detectCompilers(s);
+
+    return s;
 }
 
 void Check::setupTarget(NativeCompiledTarget &e) const
@@ -560,9 +811,7 @@ void Check::setupTarget(NativeCompiledTarget &e) const
 
 bool Check::execute(Build &s) const
 {
-    SW_UNIMPLEMENTED;
-
-    /*s.prepare();
+    s.prepare();
     try
     {
         auto p = s.getExecutionPlan();
@@ -582,7 +831,7 @@ bool Check::execute(Build &s) const
         LOG_TRACE(logger, "Check " + data + ": check unknown issue");
         return false;
     }
-    return true;*/
+    return true;
 }
 
 FunctionExists::FunctionExists(const String &f, const String &def)
@@ -701,25 +950,20 @@ int main()
 
 void IncludeExists::run() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto f = getOutputFilename();
+    auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.build->findProgramByExtension(f.extension().string())->clone());
-    auto o = f;
-    c->setSourceFile(f, o += c->getObjectExtension(check_set->checker.build->Settings.TargetOS));
+    auto s = setupSolution(f);
 
-    auto cmd = c->getCommand(*check_set->checker.build);
-    cmd->command_storage = builder::Command::CS_DO_NOT_SAVE;
-    if (!cmd)
-    {
-        Value = 0;
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    setupTarget(e);
+    e += f;
+
+    if (!execute(s))
         return;
-    }
-    error_code ec;
-    cmd->execute(ec);
-    Value = (cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;*/
+
+    auto cmd = e.getCommand();
+    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
 TypeSize::TypeSize(const String &t, const String &def)
@@ -760,9 +1004,7 @@ String TypeSize::getSourceFileContents() const
 
 void TypeSize::run() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto f = getOutputFilename();
+    auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
     auto s = setupSolution(f);
@@ -781,7 +1023,7 @@ void TypeSize::run() const
         return;
     }
 
-    if (!s.canRunTargetExecutables())
+    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();
@@ -792,7 +1034,7 @@ void TypeSize::run() const
     c.program = e.getOutputFile();
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code;*/
+    Value = c.exit_code;
 }
 
 TypeAlignment::TypeAlignment(const String &t, const String &def)
@@ -837,9 +1079,7 @@ int main()
 
 void TypeAlignment::run() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto f = getOutputFilename();
+    auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
     auto s = setupSolution(f);
@@ -858,7 +1098,7 @@ void TypeAlignment::run() const
         return;
     }
 
-    if (!s.canRunTargetExecutables())
+    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();
@@ -869,7 +1109,7 @@ void TypeAlignment::run() const
     c.program = e.getOutputFile();
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code;*/
+    Value = c.exit_code;
 }
 
 SymbolExists::SymbolExists(const String &s, const String &def)
@@ -1065,7 +1305,6 @@ size_t LibraryFunctionExists::getHash() const
     return h;
 }
 
-
 void LibraryFunctionExists::setupTarget(NativeCompiledTarget &e) const
 {
     FunctionExists::setupTarget(e);
@@ -1089,25 +1328,24 @@ String SourceCompiles::getSourceFileContents() const
 
 void SourceCompiles::run() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto f = getOutputFilename();
+    auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.build->findProgramByExtension(f.extension().string())->clone());
-    auto o = f;
-    c->setSourceFile(f, o += c->getObjectExtension(check_set->checker.build->Settings.TargetOS));
+    auto s = setupSolution(f);
 
-    auto cmd = c->getCommand(*check_set->checker.build);
-    cmd->command_storage = builder::Command::CS_DO_NOT_SAVE;
-    if (!cmd)
-    {
-        Value = 0;
+    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    setupTarget(e);
+    e += f;
+
+    if (!execute(s))
         return;
-    }
-    error_code ec;
-    cmd->execute(ec);
-    Value = (cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;*/
+
+    auto cmds = e.getCommands();
+    cmds.erase(e.getCommand());
+    if (cmds.size() != 1)
+        return;
+    auto &cmd = *cmds.begin();
+    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
 SourceLinks::SourceLinks(const String &def, const String &source)
@@ -1129,10 +1367,6 @@ void SourceLinks::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SW_UNIMPLEMENTED;
-
-    /*auto c = std::dynamic_pointer_cast<NativeCompiler>(check_set->checker.build->findProgramByExtension(f.extension().string())->clone());
-
     auto s = setupSolution(f);
 
     auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
@@ -1142,7 +1376,7 @@ void SourceLinks::run() const
     if (!execute(s))
         return;
 
-    Value = 1;*/
+    Value = 1;
 }
 
 SourceRuns::SourceRuns(const String &def, const String &source)
@@ -1161,9 +1395,7 @@ String SourceRuns::getSourceFileContents() const
 
 void SourceRuns::run() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto f = getOutputFilename();
+    auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
     auto s = setupSolution(f);
@@ -1182,7 +1414,7 @@ void SourceRuns::run() const
         return;
     }
 
-    if (!s.canRunTargetExecutables())
+    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();
@@ -1193,7 +1425,7 @@ void SourceRuns::run() const
     c.program = e.getOutputFile();
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code;*/
+    Value = c.exit_code;
 }
 
 FunctionExists &CheckSet::checkFunctionExists(const String &function, bool cpp)

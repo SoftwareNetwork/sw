@@ -18,7 +18,7 @@
 namespace sw
 {
 
-SwContext::SwContext(const path &local_storage_root_dir)
+SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
     : SwManagerContext(local_storage_root_dir)
 {
     HostOS = getHostOS();
@@ -37,14 +37,14 @@ SwContext::SwContext(const path &local_storage_root_dir)
     pvs = std::make_unique<ProgramVersionStorage>(getServiceFileStorage(), getLocalStorage().storage_dir_tmp / "db" / "program_versions.txt");
 }
 
-SwContext::~SwContext() = default;
+SwBuilderContext::~SwBuilderContext() = default;
 
-Executor &SwContext::getFileStorageExecutor() const
+Executor &SwBuilderContext::getFileStorageExecutor() const
 {
     return *file_storage_executor;
 }
 
-FileStorage &SwContext::getFileStorage(const String &config, bool local) const
+FileStorage &SwBuilderContext::getFileStorage(const String &config, bool local) const
 {
     auto i = file_storages.find({ local, config });
     if (i != file_storages.end())
@@ -54,32 +54,32 @@ FileStorage &SwContext::getFileStorage(const String &config, bool local) const
     return *file_storages[{ local, config }];
 }
 
-FileStorage &SwContext::getServiceFileStorage() const
+FileStorage &SwBuilderContext::getServiceFileStorage() const
 {
     return getFileStorage("service", true);
 }
 
-SwContext::FileDataHashMap &SwContext::getFileData() const
+SwBuilderContext::FileDataHashMap &SwBuilderContext::getFileData() const
 {
     return *fshm;
 }
 
-FileDb &SwContext::getDb() const
+FileDb &SwBuilderContext::getDb() const
 {
     return *db;
 }
 
-CommandStorage &SwContext::getCommandStorage() const
+CommandStorage &SwBuilderContext::getCommandStorage() const
 {
     return *cs;
 }
 
-ProgramVersionStorage &SwContext::getVersionStorage() const
+ProgramVersionStorage &SwBuilderContext::getVersionStorage() const
 {
     return *pvs;
 }
 
-void SwContext::clearFileStorages()
+void SwBuilderContext::clearFileStorages()
 {
     file_storages.clear();
 }

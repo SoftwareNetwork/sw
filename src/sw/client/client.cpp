@@ -10,10 +10,10 @@
 
 //#include <resolver.h>
 #include <sw/builder/file.h>
-#include <sw/builder/sw_context.h>
 #include <sw/driver/command.h>
 #include <sw/driver/jumppad.h>
 #include <sw/driver/build.h>
+#include <sw/driver/sw_context.h>
 #include <sw/manager/api.h>
 #include <sw/manager/database.h>
 #include <sw/manager/package_data.h>

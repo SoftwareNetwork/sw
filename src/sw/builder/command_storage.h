@@ -16,16 +16,16 @@ namespace sw
 {
 
 using ConcurrentCommandStorage = ConcurrentMapSimple<size_t>;
-struct SwContext;
+struct SwBuilderContext;
 
 struct SW_BUILDER_API CommandStorage
 {
-    const SwContext &swctx;
+    const SwBuilderContext &swctx;
 
     ConcurrentCommandStorage commands_local;
     ConcurrentCommandStorage commands_global;
 
-    CommandStorage(const SwContext &swctx);
+    CommandStorage(const SwBuilderContext &swctx);
     CommandStorage(const CommandStorage &) = delete;
     CommandStorage &operator=(const CommandStorage &) = delete;
     ~CommandStorage();

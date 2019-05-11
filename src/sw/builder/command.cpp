@@ -41,12 +41,12 @@ static cl::opt<bool> explain_outdated_full("explain-outdated-full", cl::desc("Ex
 namespace sw
 {
 
-static ConcurrentCommandStorage &getCommandStorage(const SwContext &swctx, bool local)
+static ConcurrentCommandStorage &getCommandStorage(const SwBuilderContext &swctx, bool local)
 {
     return swctx.getCommandStorage().getStorage(local);
 }
 
-CommandStorage::CommandStorage(const SwContext &swctx)
+CommandStorage::CommandStorage(const SwBuilderContext &swctx)
     : swctx(swctx)
 {
     load();
@@ -84,12 +84,12 @@ ConcurrentCommandStorage &CommandStorage::getStorage(bool local)
 namespace builder
 {
 
-Command::Command(const SwContext &swctx)
+Command::Command(const SwBuilderContext &swctx)
     : swctx(swctx)
 {
 }
 
-Command::Command(const SwContext &swctx, ::sw::FileStorage &fs)
+Command::Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs)
     : swctx(swctx), fs(&fs)
 {
 }

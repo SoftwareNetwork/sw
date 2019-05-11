@@ -44,7 +44,7 @@ enum class CheckType
     SourceCompiles,
     SourceLinks,
     SourceRuns,
-    Decl,
+    Declaration,
     Custom,
 
     Max,
@@ -118,6 +118,7 @@ struct SW_DRIVER_CPP_API Check : std::enable_shared_from_this<Check>, CommandDat
     std::optional<String> getDefinition() const;
     std::optional<String> getDefinition(const String &d) const;
     virtual String getSourceFileContents() const = 0;
+    virtual CheckType getType() const = 0;
     void clean() const;
 
     bool lessDuringExecution(const Check &rhs) const;
@@ -143,6 +144,7 @@ struct SW_DRIVER_CPP_API FunctionExists : Check
 
     void run() const override;
     String getSourceFileContents() const override;
+    CheckType getType() const override { return CheckType::Function; }
 
 protected:
     FunctionExists() = default;
@@ -154,6 +156,7 @@ struct SW_DRIVER_CPP_API IncludeExists : Check
 
     void run() const override;
     String getSourceFileContents() const override;
+    CheckType getType() const override { return CheckType::Include; }
 };
 
 struct SW_DRIVER_CPP_API TypeSize : Check
@@ -162,6 +165,7 @@ struct SW_DRIVER_CPP_API TypeSize : Check
 
     void run() const override;
     String getSourceFileContents() const override;
+    CheckType getType() const override { return CheckType::Type; }
 };
 
 struct SW_DRIVER_CPP_API TypeAlignment : Check
@@ -170,6 +174,7 @@ struct SW_DRIVER_CPP_API TypeAlignment : Check
 
     void run() const override;
     String getSourceFileContents() const override;
+    CheckType getType() const override { return CheckType::TypeAlignment; }
 };
 
 // If the symbol is a type, enum value, or intrinsic it will not be recognized
@@ -180,6 +185,7 @@ struct SW_DRIVER_CPP_API SymbolExists : Check
 
     void run() const override;
     String getSourceFileContents() const override;
+    CheckType getType() const override { return CheckType::Symbol; }
 };
 
 struct SW_DRIVER_CPP_API DeclarationExists : Check
@@ -188,6 +194,7 @@ struct SW_DRIVER_CPP_API DeclarationExists : Check
 
     void run() const override;
     String getSourceFileContents() const override;
+    CheckType getType() const override { return CheckType::Declaration; }
 };
 
 struct SW_DRIVER_CPP_API StructMemberExists : Check
@@ -200,6 +207,7 @@ struct SW_DRIVER_CPP_API StructMemberExists : Check
     void run() const override;
     size_t getHash() const override;
     String getSourceFileContents() const override;
+    CheckType getType() const override { return CheckType::StructMember; }
 };
 
 struct SW_DRIVER_CPP_API LibraryFunctionExists : FunctionExists
@@ -210,6 +218,7 @@ struct SW_DRIVER_CPP_API LibraryFunctionExists : FunctionExists
     LibraryFunctionExists(const String &library, const String &function, const String &def = "");
 
     size_t getHash() const override;
+    CheckType getType() const override { return CheckType::LibraryFunction; }
 
 private:
     void setupTarget(NativeCompiledTarget &t) const override;
@@ -221,6 +230,7 @@ struct SW_DRIVER_CPP_API SourceCompiles : Check
 
     void run() const override;
     String getSourceFileContents() const override;
+    CheckType getType() const override { return CheckType::SourceCompiles; }
 };
 
 struct SW_DRIVER_CPP_API SourceLinks : Check
@@ -229,6 +239,7 @@ struct SW_DRIVER_CPP_API SourceLinks : Check
 
     void run() const override;
     String getSourceFileContents() const override;
+    CheckType getType() const override { return CheckType::SourceLinks; }
 };
 
 struct SW_DRIVER_CPP_API SourceRuns : Check
@@ -237,11 +248,13 @@ struct SW_DRIVER_CPP_API SourceRuns : Check
 
     void run() const override;
     String getSourceFileContents() const override;
+    CheckType getType() const override { return CheckType::SourceRuns; }
 };
 
 struct SW_DRIVER_CPP_API CheckSet
 {
     Checker &checker;
+    const NativeCompiledTarget *t = nullptr;
     std::unordered_map<String, CheckPtr> check_values;
 
     // we store all checks first, because they are allowed to have post setup
@@ -274,6 +287,7 @@ struct SW_DRIVER_CPP_API CheckSet
     }
 
     void prepareChecksForUse();
+    void performChecks();
 
     FunctionExists &checkFunctionExists(const String &function, bool cpp = false);
     FunctionExists &checkFunctionExists(const String &function, const String &def, bool cpp = false);
@@ -321,7 +335,7 @@ private:
 
 struct SW_DRIVER_CPP_API Checker
 {
-    const Build *build = nullptr;
+    const Build &build;
 
     /// child sets
     std::unordered_map<PackageVersionGroupNumber, std::unordered_map<String /* set name */, CheckSet>> sets;
@@ -329,7 +343,7 @@ struct SW_DRIVER_CPP_API Checker
     /// some unique identification of current module
     PackageVersionGroupNumber current_gn = 0;
 
-    Checker();
+    Checker(const Build &build);
 
     CheckSet &addSet(const String &name);
     void performChecks(path checks_results_dir);

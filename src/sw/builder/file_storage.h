@@ -21,7 +21,7 @@ class FileMonitor;
 namespace sw
 {
 
-struct SwContext;
+struct SwBuilderContext;
 
 struct SW_BUILDER_API FileStorage
 {
@@ -34,12 +34,12 @@ struct SW_BUILDER_API FileStorage
         ~file_holder();
     };
 
-    const SwContext &swctx;
+    const SwBuilderContext &swctx;
     String config;
     bool fs_local;
     ConcurrentHashMap<path, FileRecord> files;
 
-    FileStorage(const SwContext &swctx, const String &config);
+    FileStorage(const SwBuilderContext &swctx, const String &config);
     FileStorage(FileStorage &&) = default;
     FileStorage &operator=(FileStorage &&) = default;
     ~FileStorage();

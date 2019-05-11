@@ -9,9 +9,8 @@
 #include "target/base.h"
 #include "source_file.h"
 #include "build.h"
+#include "sw_context.h"
 #include "target/native.h"
-
-#include <sw/builder/sw_context.h>
 
 //#include <primitives/log.h>
 //DECLARE_STATIC_LOGGER(logger, "program_storage");

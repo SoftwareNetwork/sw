@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "build_settings.h"
 #include "checks_storage.h"
 #include "command.h"
 #include "target/base.h"
@@ -99,23 +100,6 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
     }
 };
 
-struct SW_DRIVER_CPP_API SolutionSettings
-{
-    OS TargetOS;
-    NativeToolchain Native;
-    bool activated = false;
-
-    // other langs?
-    // make polymorphic?
-
-    void init();
-    String getConfig() const;
-    String getTargetTriplet() const;
-
-    bool operator<(const SolutionSettings &rhs) const;
-    bool operator==(const SolutionSettings &rhs) const;
-};
-
 // simple interface for users
 struct SolutionX : TargetBase
 {
@@ -142,9 +126,9 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     // most important
     const SwContext &swctx;
     TargetMap children;
-    std::vector<SolutionSettings> settings;
-    //const SolutionSettings *host_settings = nullptr;
-    const SolutionSettings *current_settings = nullptr;
+    std::vector<BuildSettings> settings;
+    //const BuildSettings *host_settings = nullptr;
+    const BuildSettings *current_settings = nullptr;
     //std::map<String, std::vector<TargetSettingsData>> target_settings; // regex, some data
 
     //
@@ -172,8 +156,8 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     std::unordered_set<LocalPackage> known_cfgs;
 
     const OS &getHostOs() const;
-    //const SolutionSettings &getHostSettings() const { return *host_settings; }
-    const SolutionSettings &getSettings() const;
+    //const BuildSettings &getHostSettings() const { return *host_settings; }
+    const BuildSettings &getSettings() const;
     bool isKnownTarget(const LocalPackage &p) const;
     path getSourceDir(const LocalPackage &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
@@ -192,6 +176,8 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     void addFirstConfig();
     void detectCompilers();
     PackageDescriptionMap getPackages() const;
+    BuildSettings createSettings() const;
+    const BuildSettings &addSettings(const BuildSettings &);
 
     /*void addTargetSettings(const String &ppath_regex, const VersionRange &vr, const TargetSettingsDataContainer &);
     template <class T>
@@ -247,8 +233,6 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     static std::optional<FrontendType> selectFrontendByFilename(const path &fn);
 
 private:
-    SolutionSettings createSettings() const;
-    const SolutionSettings &addSettings(const SolutionSettings &);
     void build_self();
     void resolvePass(const Target &t, const DependenciesType &deps) const;
     void prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_pass) const;
@@ -293,6 +277,7 @@ public:
     bool ide = false;
 
     Build(const SwContext &swctx);
+    Build(const Build &);
     ~Build();
 
     TargetType getType() const override { return TargetType::Build; }

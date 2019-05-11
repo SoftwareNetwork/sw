@@ -239,7 +239,7 @@ static String add_space_if_not_empty(const String &s)
     return " " + s;
 }
 
-static String get_configuration(const SolutionSettings &s)
+static String get_configuration(const BuildSettings &s)
 {
     String c = generator::toString(s.Native.ConfigurationType) + generator::toString(s.Native.LibrariesType);
     if (s.Native.MT)
@@ -247,7 +247,7 @@ static String get_configuration(const SolutionSettings &s)
     return c;
 }
 
-static String get_project_configuration(const SolutionSettings &s)
+static String get_project_configuration(const BuildSettings &s)
 {
     String c;
     c += get_configuration(s);
@@ -257,7 +257,7 @@ static String get_project_configuration(const SolutionSettings &s)
     return c;
 }
 
-static path get_out_dir(const path &dir, const path &projects_dir, const SolutionSettings &s)
+static path get_out_dir(const path &dir, const path &projects_dir, const BuildSettings &s)
 {
     auto p = fs::current_path();
     p /= "bin";
@@ -266,7 +266,7 @@ static path get_out_dir(const path &dir, const path &projects_dir, const Solutio
     return p;
 }
 
-static std::pair<String, String> get_project_configuration_pair(const SolutionSettings &s)
+static std::pair<String, String> get_project_configuration_pair(const BuildSettings &s)
 {
     return { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s) + "'" };
 }
@@ -320,7 +320,7 @@ String toString(VSFileType t)
     }
 }
 
-static VSProjectType get_vs_project_type(const SolutionSettings &s, const Target &t)
+static VSProjectType get_vs_project_type(const BuildSettings &s, const Target &t)
 {
     if (auto nt = t.as<NativeCompiledTarget>())
     {
@@ -356,7 +356,7 @@ static path get_int_dir(const path &dir, const path &projects_dir, const String 
     return tdir / "i" / shorten_hash(blake2b_512(name), 6);
 }
 
-static path get_int_dir(const path &dir, const path &projects_dir, const String &name, const SolutionSettings &s)
+static path get_int_dir(const path &dir, const path &projects_dir, const String &name, const BuildSettings &s)
 {
     return get_int_dir(dir, projects_dir, name) / shorten_hash(blake2b_512(get_project_configuration(s)), 6);
 }
@@ -374,7 +374,7 @@ void XmlEmitter::beginBlock(const String &n, const std::map<String, String> &par
     increaseIndent();
 }
 
-void XmlEmitter::beginBlockWithConfiguration(const String &n, const SolutionSettings &s, std::map<String, String> params, bool empty)
+void XmlEmitter::beginBlockWithConfiguration(const String &n, const BuildSettings &s, std::map<String, String> params, bool empty)
 {
     params.insert(get_project_configuration_pair(s));
     beginBlock(n, params, empty);

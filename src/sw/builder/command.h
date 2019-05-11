@@ -47,7 +47,7 @@ namespace sw
 
 struct FileStorage;
 struct Program;
-struct SwContext;
+struct SwBuilderContext;
 
 template <class T>
 struct CommandData
@@ -124,7 +124,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     using Base = primitives::Command;
     using Clock = std::chrono::high_resolution_clock;
 
-    const SwContext &swctx;
+    const SwBuilderContext &swctx;
     FileStorage *fs = nullptr;
 
     String name;
@@ -178,8 +178,8 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     };
     int command_storage = 0;
 
-    Command(const SwContext &swctx);
-    Command(const SwContext &swctx, ::sw::FileStorage &fs);
+    Command(const SwBuilderContext &swctx);
+    Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs);
     virtual ~Command();
 
     void prepare() override;

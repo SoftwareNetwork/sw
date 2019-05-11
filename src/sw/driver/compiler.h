@@ -35,8 +35,9 @@ namespace driver
 struct Command;
 }
 
-struct SolutionSettings;
+struct BuildSettings;
 struct Build;
+struct SwContext;
 struct TargetBase;
 struct Target;
 struct NativeCompiledTarget;

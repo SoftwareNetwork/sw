@@ -4,9 +4,9 @@
 
 void configure(Build &s)
 {
-    SW_UNIMPLEMENTED;
-
-    //s.getSettings().Native.LibrariesType = LibraryType::Static;
+    auto ss = s.createSettings();
+    ss.Native.LibrariesType = LibraryType::Static;
+    s.addSettings(ss);
     //s.getSettings().Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
 
     s.registerCallback([](auto &t, auto cbt)

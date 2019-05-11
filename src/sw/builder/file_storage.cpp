@@ -41,7 +41,7 @@ FileStorage::file_holder::~file_holder()
     fs::remove(fn, ec);
 }
 
-FileStorage::FileStorage(const SwContext &swctx, const String &config)
+FileStorage::FileStorage(const SwBuilderContext &swctx, const String &config)
     : swctx(swctx), config(config)
 {
     //if (config.empty())
@@ -56,7 +56,7 @@ FileStorage::file_holder *FileStorage::getFileLog()
     return async_file_log_.get();
 }
 
-path getCommandsLogFileName(const SwContext &swctx, bool local);
+path getCommandsLogFileName(const SwBuilderContext &swctx, bool local);
 
 FileStorage::file_holder *FileStorage::getCommandLog(bool local)
 {

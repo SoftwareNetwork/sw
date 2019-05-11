@@ -36,30 +36,30 @@ static String getCurrentModuleNameHash()
     return shorten_hash(blake2b_512(getCurrentModuleName().u8string()), 12);
 }
 
-static path getDir(const SwContext &swctx, bool local)
+static path getDir(const SwBuilderContext &swctx, bool local)
 {
     if (local)
         return path(SW_BINARY_DIR) / "db";
     return swctx.getLocalStorage().storage_dir_tmp / "db";
 }
 
-static path getFilesDbFilename(const SwContext &swctx, const String &config, bool local)
+static path getFilesDbFilename(const SwBuilderContext &swctx, const String &config, bool local)
 {
     return getDir(swctx, local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / "files.bin";
 }
 
-path getFilesLogFileName(const SwContext &swctx, const String &config, bool local)
+path getFilesLogFileName(const SwBuilderContext &swctx, const String &config, bool local)
 {
     auto cfg = shorten_hash(blake2b_512(getCurrentModuleNameHash() + "_" + config), 12);
     return getDir(swctx, local) / std::to_string(FILE_DB_FORMAT_VERSION) / config / ("log_" + cfg + ".bin");
 }
 
-static path getCommandsDbFilename(const SwContext &swctx, bool local)
+static path getCommandsDbFilename(const SwBuilderContext &swctx, bool local)
 {
     return getDir(swctx, local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / "commands.bin";
 }
 
-path getCommandsLogFileName(const SwContext &swctx, bool local)
+path getCommandsLogFileName(const SwBuilderContext &swctx, bool local)
 {
     auto cfg = shorten_hash(blake2b_512(getCurrentModuleNameHash()), 12);
     return getDir(swctx, local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("log_" + cfg + ".bin");
@@ -118,7 +118,7 @@ static void load(FileStorage &fs, const path &fn,
     }
 }
 
-FileDb::FileDb(const SwContext &swctx)
+FileDb::FileDb(const SwBuilderContext &swctx)
     : swctx(swctx)
 {
 }

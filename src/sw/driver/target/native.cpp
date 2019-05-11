@@ -4,8 +4,8 @@
 #include "sw/driver/generator/generator.h"
 #include "sw/driver/functions.h"
 #include "sw/driver/build.h"
+#include "sw/driver/sw_context.h"
 
-#include <sw/builder/sw_context.h>
 #include <sw/manager/storage.h>
 #include <sw/manager/yaml.h>
 
@@ -2227,11 +2227,10 @@ bool NativeCompiledTarget::prepare()
                 if (getSettings().Native.ConfigurationType == ConfigurationType::Debug ||
                     getSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
                 {
-                    SW_UNIMPLEMENTED;
-                    /*if (auto g = getSolution().build->getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                    if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
                         c->GenerateDebugInformation = vs::link::Debug::FastLink;
                     else
-                        c->GenerateDebugInformation = vs::link::Debug::Full;*/
+                        c->GenerateDebugInformation = vs::link::Debug::Full;
                 }
                 else
                     c->GenerateDebugInformation = vs::link::Debug::None;
@@ -2728,23 +2727,25 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
     writeFileOnce(to, s);
 }
 
-const CheckSet &NativeCompiledTarget::getChecks(const String &name) const
+CheckSet &NativeCompiledTarget::getChecks(const String &name)
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto i0 = getSolution().checker.sets.find(getSolution().current_gn);
+    auto i0 = getSolution().checker.sets.find(getSolution().current_gn);
     if (i0 == getSolution().checker.sets.end())
         throw SW_RUNTIME_ERROR("No such group number: " + std::to_string(getSolution().current_gn));
     auto i = i0->second.find(name);
     if (i == i0->second.end())
         throw SW_RUNTIME_ERROR("No such set: " + name);
-    return i->second;*/
+    return i->second;
 }
 
 void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 {
-    return;
-    for (auto &[k, c] : getChecks(name).check_values)
+    auto &checks_set = getChecks(name);
+    checks_set.t = this;
+    checks_set.performChecks();
+
+    // set results
+    for (auto &[k, c] : checks_set.check_values)
     {
         auto d = c->getDefinition(k);
         const auto v = c->Value.value();
@@ -2753,26 +2754,8 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
         if (check_definitions && d)
         {
             add(Definition{ d.value() });
-
-            //Public.Definitions[d.value()];
-
-            //for (auto &p : c->Prefixes)
-                //add(Definition{ p + d.value() });
-            /*for (auto &d2 : c->Definitions)
-            {
-                for (auto &p : c->Prefixes)
-                    Definitions[p + d2] = v;
-            }*/
         }
         Variables[k] = v;
-
-        //for (auto &p : c->Prefixes)
-            //Variables[p + k] = v;
-        /*for (auto &d2 : c->Definitions)
-        {
-            for (auto &p : c->Prefixes)
-                Variables[p + d2] = v;
-        }*/
     }
 }
 

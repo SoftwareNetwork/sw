@@ -9,8 +9,8 @@
 #include "sw/driver/command.h"
 #include "sw/driver/jumppad.h"
 #include "sw/driver/build.h"
+#include "sw/driver/sw_context.h"
 
-#include <sw/builder/sw_context.h>
 #include <sw/manager/database.h>
 #include <sw/manager/package_data.h>
 #include <sw/manager/storage.h>
@@ -477,7 +477,7 @@ void Target::removeFile(const path &fn, bool binary_dir)
     fs::remove(p, ec);
 }
 
-const SolutionSettings &Target::getSettings() const
+const BuildSettings &Target::getSettings() const
 {
     return ts->ss;
 }

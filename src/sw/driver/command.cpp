@@ -8,6 +8,7 @@
 
 #include "jumppad.h"
 #include "build.h"
+#include "sw_context.h"
 #include "target/native.h"
 
 #include <sw/builder/platform.h>

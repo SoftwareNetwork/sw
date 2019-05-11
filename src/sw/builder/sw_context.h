@@ -22,14 +22,14 @@ struct FileDb;
 struct FileStorage;
 struct ProgramVersionStorage;
 
-struct SW_BUILDER_API SwContext : SwManagerContext
+struct SW_BUILDER_API SwBuilderContext : SwManagerContext
 {
     using FileDataHashMap = ConcurrentHashMap<path, FileData>;
 
     OS HostOS;
 
-    SwContext(const path &local_storage_root_dir);
-    virtual ~SwContext();
+    SwBuilderContext(const path &local_storage_root_dir);
+    virtual ~SwBuilderContext();
 
     ProgramVersionStorage &getVersionStorage() const;
     FileStorage &getFileStorage(const String &config, bool local) const;

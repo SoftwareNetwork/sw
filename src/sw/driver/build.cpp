@@ -14,12 +14,12 @@
 #include "run.h"
 #include "suffix.h"
 #include "sw_abi_version.h"
+#include "sw_context.h"
 #include "target/native.h"
 
 #include <sw/builder/execution_plan.h>
 #include <sw/builder/file_storage.h>
 #include <sw/builder/program.h>
-#include <sw/builder/sw_context.h>
 #include <sw/manager/database.h>
 #include <sw/manager/settings.h>
 #include <sw/manager/storage.h>
@@ -194,7 +194,7 @@ static std::set<path> listWindows10Kits()
     return kits;
 }
 
-void SolutionSettings::init()
+void BuildSettings::init()
 {
     if (TargetOS.is(OSType::Windows))
     {
@@ -258,7 +258,7 @@ void SolutionSettings::init()
     }
 }
 
-String SolutionSettings::getConfig() const
+String BuildSettings::getConfig() const
 {
     // TODO: add get real config, lengthy and with all info
 
@@ -287,7 +287,7 @@ String SolutionSettings::getConfig() const
     return c;
 }
 
-String SolutionSettings::getTargetTriplet() const
+String BuildSettings::getTargetTriplet() const
 {
     // See https://clang.llvm.org/docs/CrossCompilation.html
 
@@ -306,12 +306,12 @@ String SolutionSettings::getTargetTriplet() const
     return target;
 }
 
-bool SolutionSettings::operator<(const SolutionSettings &rhs) const
+bool BuildSettings::operator<(const BuildSettings &rhs) const
 {
     return std::tie(TargetOS, Native) < std::tie(rhs.TargetOS, rhs.Native);
 }
 
-bool SolutionSettings::operator==(const SolutionSettings &rhs) const
+bool BuildSettings::operator==(const BuildSettings &rhs) const
 {
     return std::tie(TargetOS, Native) == std::tie(rhs.TargetOS, rhs.Native);
 }
@@ -490,7 +490,7 @@ void sw_check_abi_version(int v)
 }
 
 Build::Build(const SwContext &swctx)
-    : swctx(swctx)
+    : swctx(swctx), checker(*this)
 {
     //auto ss = createSettings();
     //addSettings(ss);
@@ -500,8 +500,30 @@ Build::Build(const SwContext &swctx)
     fs = &swctx.getServiceFileStorage();
 
     // canonical makes disk letter uppercase on windows
-    setSourceDir(fs::canonical(fs::current_path()));
+    setSourceDir(swctx.source_dir);
     BinaryDir = SourceDir / SW_BINARY_DIR;
+}
+
+Build::Build(const Build &rhs)
+    : TargetBase(rhs)
+    , swctx(rhs.swctx)
+    , silent(rhs.silent)
+    //, show_output(rhs.show_output) // don't pass to checks
+    //, knownTargets(rhs.knownTargets)
+    , source_dirs_by_source(rhs.source_dirs_by_source)
+    , fs(rhs.fs)
+    , fetch_dir(rhs.fetch_dir)
+    , with_testing(rhs.with_testing)
+    , ide_solution_name(rhs.ide_solution_name)
+    , disable_compiler_lookup(rhs.disable_compiler_lookup)
+    , config_file_or_dir(rhs.config_file_or_dir)
+    , events(rhs.events)
+    , file_storage_local(rhs.file_storage_local)
+    , command_storage(rhs.command_storage)
+    , prefix_source_dir(rhs.prefix_source_dir)
+    , is_config_build(rhs.is_config_build)
+    , checker(*this)
+{
 }
 
 Build::~Build()
@@ -517,15 +539,15 @@ Build::~Build()
         getModuleStorage(*this).modules.clear();
 }
 
-SolutionSettings Build::createSettings() const
+BuildSettings Build::createSettings() const
 {
-    SolutionSettings ss;
+    BuildSettings ss;
     ss.TargetOS = getHostOs();
     ss.init();
     return ss;
 }
 
-const SolutionSettings &Build::addSettings(const SolutionSettings &ss)
+const BuildSettings &Build::addSettings(const BuildSettings &ss)
 {
     auto i = std::find(settings.begin(), settings.end(), ss);
     if (i == settings.end())
@@ -1310,7 +1332,7 @@ path Build::getOutputModuleName(const path &p)
     return lib.getOutputFile();*/
 }
 
-const SolutionSettings &Build::getSettings() const
+const BuildSettings &Build::getSettings() const
 {
     if (!current_settings)
         throw SW_LOGIC_ERROR("no settings was set");
@@ -3062,8 +3084,8 @@ void Build::load_dll(const path &dll, bool usedll)
         // make parallel?
         if (usedll)
         {
-            //for (auto &s : settings)
-                //getModuleStorage(*this).get(dll).check(s, s.checker);
+            for (auto &s : settings)
+                getModuleStorage(*this).get(dll).check(*this, checker);
         }
         performChecks();
     }
