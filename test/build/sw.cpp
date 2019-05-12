@@ -27,75 +27,47 @@ void configure(Solution &s)
             ConfigurationType::Release,
             ConfigurationType::ReleaseWithDebugInformation})
         {
-            auto &c1 = s.addSolution();
-            c1.Settings.Native.ConfigurationType = C;
-            c1.Settings.Native.LibrariesType = LT;
+            auto c1 = s.createSettings();
+            c1.Native.ConfigurationType = C;
+            c1.Native.LibrariesType = LT;
+            s.addSettings(c1);
         }
     }
 }
 
 void build(Solution &s)
 {
-    auto psd = s.SourceDir;
-    //return;
-
     basic_tests(s);
     deps_tests(s);
 }
 
-void test(Solution &s)
-{
-
-}
-
 void set_dirs(Solution &s)
 {
-    s.SourceDir = ::current_thread_path();
-    //s.BinaryDir = "bin";
+    s.setSourceDir(fs::current_path());
 }
 
 void basic_tests(Solution &s)
 {
-    //auto &p = s.addProject("basic");
     set_dirs(s);
-    //p.addLanguage(LanguageType::C);
-    //p.addLanguage(LanguageType::CPP);
-    //p.addLanguage({ LanguageType::C, LanguageType::CPP });
-    //p.removeLanguage(LanguageType::C, LanguageType::CPP);
-    //p.addLanguage(LanguageType::C, LanguageType::C, LanguageType::C, LanguageType::C, LanguageType::CPP);
-    //p.removeLanguage(LanguageType::C);
-    //p.setLanguage(LanguageType::C, LanguageType::CPP);
-    //p.addLanguage({ LanguageType::C, LanguageType::CPP });
-
-    // set compiler, linker flags for the whole project
-    //p.getLanguageProgram(LanguageType::C);
-
-    auto psd = s.SourceDir;
-
-
-    s.SourceDir = psd / "cpp" / "exe2";
 
     // simple exe
     {
         auto &t = s.addTarget<ExecutableTarget>(make_name("exe"));
+        t.setRootDirectory("cpp/exe2");
         t += ".*"_rr;
     }
 
-    //return;
-
-    s.SourceDir = psd / "c" / "exe";
-
     // simple exe
     {
         auto &t = s.addTarget<ExecutableTarget>(make_name("exe"));
+        t.setRootDirectory("c/exe");
         t += ".*\\.[ch]"_rr;
     }
 
-    s.SourceDir = psd / "cpp" / "exe";
-
     // simple exe
     {
         auto &t = s.addTarget<ExecutableTarget>(make_name("exe"));
+        t.setRootDirectory("cpp/exe");
 
         t.Definitions["AND_MY_STRING"] = "\"my string\"";
         t.Definitions["AND_MY_STRING1"] = "\"my string\"";
@@ -113,30 +85,25 @@ void basic_tests(Solution &s)
         t += "1/x.cpp";
     }
 
-    s.SourceDir = psd / "cpp" / "dll";
-
     // simple dll
     {
         auto &t = s.addTarget<SharedLibraryTarget>(make_name("dll"));
+        t.setRootDirectory("cpp/dll");
         t += ".*"_r;
     }
-    s.SourceDir = psd / "cpp" / "lib";
 
     // simple lib
     {
         auto &t = s.addTarget<StaticLibraryTarget>(make_name("lib"));
+        t.setRootDirectory("cpp/lib");
         t += ".*"_r;
     }
 }
 
 void deps_tests(Solution &s)
 {
-    //auto &p = s.addProject("deps");
     set_dirs(s);
-
-    auto psd = s.SourceDir;
-
-    s.SourceDir = psd / "cpp" / "dep" / "exe_dll";
+    s.SourceDirBase /= path("cpp") / "dep" / "exe_dll";
 
     // simple exe+dll+api name
     {
@@ -149,7 +116,8 @@ void deps_tests(Solution &s)
         exe += dll;
     }
 
-    s.SourceDir = psd / "cpp" / "dep" / "exe_lib";
+    set_dirs(s);
+    s.SourceDirBase /= path("cpp") / "dep" / "exe_lib";
 
     // simple exe+lib
     {
@@ -162,7 +130,8 @@ void deps_tests(Solution &s)
         exe += lib;
     }
 
-    s.SourceDir = psd / "cpp" / "dep" / "exe_lib_st_sh";
+    set_dirs(s);
+    s.SourceDirBase /= path("cpp") / "dep" / "exe_lib_st_sh";
 
     // simple exe+lib
     {
@@ -175,7 +144,8 @@ void deps_tests(Solution &s)
         exe += lib;
     }
 
-    s.SourceDir = psd / "cpp" / "dep" / "exe_dll_dll";
+    set_dirs(s);
+    s.SourceDirBase /= path("cpp") / "dep" / "exe_dll_dll";
 
     // exe+dll+dll2
     {
@@ -193,7 +163,8 @@ void deps_tests(Solution &s)
         exe += dllb;
     }
 
-    s.SourceDir = psd / "cpp" / "dep" / "circular" / "dll";
+    set_dirs(s);
+    s.SourceDirBase /= path("cpp") / "dep" / "circular" / "dll";
 
     // circular dependencies test (dll+dll)
     {
@@ -209,7 +180,8 @@ void deps_tests(Solution &s)
         b += a;
     }
 
-    s.SourceDir = psd / "cpp" / "dep" / "circular" / "exe";
+    set_dirs(s);
+    s.SourceDirBase /= path("cpp") / "dep" / "circular" / "exe";
 
     // circular dependencies test (exe+exe)
     {
@@ -225,7 +197,8 @@ void deps_tests(Solution &s)
         b += a;
     }
 
-    s.SourceDir = psd / "cpp" / "dep" / "circular" / "exe_dll";
+    set_dirs(s);
+    s.SourceDirBase /= path("cpp") / "dep" / "circular" / "exe_dll";
 
     // circular dependencies test (exe+dll)
     {

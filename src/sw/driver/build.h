@@ -132,7 +132,6 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     //std::map<String, std::vector<TargetSettingsData>> target_settings; // regex, some data
 
     //
-    FileStorage *fs = nullptr;
     int command_storage = 0;
     String current_module;
     PackageVersionGroupNumber current_gn = 0; // for checks
@@ -322,7 +321,6 @@ private:
     //const Solution *getHostSolution();
     //const Solution *getHostSolution() const;
 
-    void performChecks();
     FilesMap build_configs_separate(const Files &files);
 
     void generateBuildSystem();

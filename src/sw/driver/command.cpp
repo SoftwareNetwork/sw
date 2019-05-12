@@ -308,7 +308,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const NativeCompiledTarget &t)
     cb.targets.push_back(nt);
     nt->Storage.push_back(cb.c);
     if (!cb.c->fs)
-        cb.c->fs = nt->getSolution().fs;
+        cb.c->fs = &nt->getFs();
     return cb;
 }
 

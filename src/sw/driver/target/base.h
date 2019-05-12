@@ -326,7 +326,11 @@ struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared
     DependencyPtr getDependency() const; // returns current target as dependency
     void registerCommand(builder::Command &cmd) const;
 
+    virtual String getConfigRaw() const;
     String getConfig(bool use_short_config = false) const;
+
+    FileStorage &getFs() const;
+
     path getBaseDir() const;
     path getTargetsDir() const;
     path getTargetDirShort(const path &root) const;

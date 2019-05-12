@@ -29,7 +29,6 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
     std::shared_ptr<driver::Command> t::createCommand1(const SwContext &swctx) const \
     {                                                                                \
         auto c = std::make_shared<ct>(swctx);                                        \
-        c->fs = fs;                                                                  \
         c->setProgram(file);                                                         \
         return c;                                                                    \
     }
@@ -1050,18 +1049,18 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const SwCon
     return cmd = createCommand1(swctx);
 }
 
-std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const TargetBase &t)
+std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const Target &t)
 {
     prepareCommand(t);
     return getCommand();
 }
 
-std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const TargetBase &t)
+std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Target &t)
 {
     if (prepared)
         return cmd;
     createCommand(t.getSolution().swctx); // do some init
-    cmd->fs = t.getSolution().fs;
+    cmd->fs = &t.getFs();
     prepareCommand1(t);
     prepared = true;
     return cmd;
@@ -1144,7 +1143,7 @@ std::shared_ptr<SourceFile> NativeCompiler::createSourceFile(const Target &t, co
 
 SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::VSCommand)
 
-void VisualStudioCompiler::prepareCommand1(const TargetBase &t)
+void VisualStudioCompiler::prepareCommand1(const Target &t)
 {
     if (InputFile)
     {
@@ -1213,7 +1212,7 @@ path VisualStudioCompiler::getOutputFile() const
 
 SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, driver::VSCommand)
 
-void VisualStudioASMCompiler::prepareCommand1(const TargetBase &t)
+void VisualStudioASMCompiler::prepareCommand1(const Target &t)
 {
     if (file.filename() == "ml64.exe")
         ((VisualStudioASMCompiler*)this)->SafeSEH = false;
@@ -1258,7 +1257,7 @@ void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output
 
 SW_CREATE_COMPILER_COMMAND(ClangCompiler, driver::GNUCommand)
 
-void ClangCompiler::prepareCommand1(const TargetBase &t)
+void ClangCompiler::prepareCommand1(const ::sw::Target &t)
 {
     auto cmd = std::static_pointer_cast<driver::GNUCommand>(this->cmd);
 
@@ -1305,7 +1304,7 @@ void ClangCompiler::setSourceFile(const path &input_file, path &output_file)
 
 SW_CREATE_COMPILER_COMMAND(ClangClCompiler, driver::VSCommand)
 
-void ClangClCompiler::prepareCommand1(const TargetBase &t)
+void ClangClCompiler::prepareCommand1(const Target &t)
 {
     if (InputFile)
     {
@@ -1365,7 +1364,7 @@ void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
 
 SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, driver::GNUCommand)
 
-void GNUASMCompiler::prepareCommand1(const TargetBase &t)
+void GNUASMCompiler::prepareCommand1(const Target &t)
 {
     bool assembly = false;
     if (InputFile)
@@ -1411,7 +1410,7 @@ SW_DEFINE_PROGRAM_CLONE(ClangASMCompiler)
 
 SW_CREATE_COMPILER_COMMAND(GNUCompiler, driver::GNUCommand)
 
-void GNUCompiler::prepareCommand1(const TargetBase &t)
+void GNUCompiler::prepareCommand1(const Target &t)
 {
     auto cmd = std::static_pointer_cast<driver::GNUCommand>(this->cmd);
 
@@ -1523,7 +1522,7 @@ path VisualStudioLibraryTool::getImportLibrary() const
     return p.parent_path() / (p.filename().stem() += ".lib");
 }
 
-void VisualStudioLibraryTool::prepareCommand1(const TargetBase &t)
+void VisualStudioLibraryTool::prepareCommand1(const Target &t)
 {
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
@@ -1560,7 +1559,7 @@ void VisualStudioLinker::setInputLibraryDependencies(const FilesOrdered &files)
     InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
 }
 
-void VisualStudioLinker::prepareCommand1(const TargetBase &t)
+void VisualStudioLinker::prepareCommand1(const Target &t)
 {
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
@@ -1664,7 +1663,7 @@ void GNULinker::getAdditionalOptions(driver::Command *cmd) const
     getCommandLineOptions<GNULinkerOptions>(cmd, *this);
 }
 
-void GNULinker::prepareCommand1(const TargetBase &t)
+void GNULinker::prepareCommand1(const Target &t)
 {
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
@@ -1774,7 +1773,7 @@ void GNULibrarian::getAdditionalOptions(driver::Command *cmd) const
     getCommandLineOptions<GNULibrarianOptions>(cmd, *this);
 }
 
-void GNULibrarian::prepareCommand1(const TargetBase &t)
+void GNULibrarian::prepareCommand1(const Target &t)
 {
     // these's some issue with archives not recreated, but keeping old symbols
     // TODO: investigate, fix and remove?
@@ -1805,7 +1804,7 @@ void GNULibrarian::prepareCommand1(const TargetBase &t)
 
 SW_DEFINE_PROGRAM_CLONE(RcTool)
 
-void RcTool::prepareCommand1(const TargetBase &t)
+void RcTool::prepareCommand1(const Target &t)
 {
     cmd->protect_args_with_quotes = false;
 
@@ -1872,7 +1871,7 @@ std::shared_ptr<SourceFile> RcTool::createSourceFile(const Target &t, const path
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioCSharpCompiler)
 
-void VisualStudioCSharpCompiler::prepareCommand1(const TargetBase &t)
+void VisualStudioCSharpCompiler::prepareCommand1(const ::sw::Target &t)
 {
     getCommandLineOptions<VisualStudioCSharpCompilerOptions>(cmd.get(), *this);
 }
@@ -1889,7 +1888,7 @@ void VisualStudioCSharpCompiler::addSourceFile(const path &input_file)
 
 SW_DEFINE_PROGRAM_CLONE(RustCompiler)
 
-void RustCompiler::prepareCommand1(const TargetBase &t)
+void RustCompiler::prepareCommand1(const Target &t)
 {
     getCommandLineOptions<RustCompilerOptions>(cmd.get(), *this);
 }
@@ -1906,7 +1905,7 @@ void RustCompiler::setSourceFile(const path &input_file)
 
 SW_DEFINE_PROGRAM_CLONE(GoCompiler)
 
-void GoCompiler::prepareCommand1(const TargetBase &t)
+void GoCompiler::prepareCommand1(const Target &t)
 {
     getCommandLineOptions<GoCompilerOptions>(cmd.get(), *this);
 }
@@ -1923,7 +1922,7 @@ void GoCompiler::setSourceFile(const path &input_file)
 
 SW_DEFINE_PROGRAM_CLONE(FortranCompiler)
 
-void FortranCompiler::prepareCommand1(const TargetBase &t)
+void FortranCompiler::prepareCommand1(const Target &t)
 {
     getCommandLineOptions<FortranCompilerOptions>(cmd.get(), *this);
 }
@@ -1940,7 +1939,7 @@ void FortranCompiler::setSourceFile(const path &input_file)
 
 SW_DEFINE_PROGRAM_CLONE(JavaCompiler)
 
-void JavaCompiler::prepareCommand1(const TargetBase &t)
+void JavaCompiler::prepareCommand1(const Target &t)
 {
     getCommandLineOptions<JavaCompilerOptions>(cmd.get(), *this);
 
@@ -1964,7 +1963,7 @@ void JavaCompiler::setSourceFile(const path &input_file)
 
 SW_DEFINE_PROGRAM_CLONE(KotlinCompiler)
 
-void KotlinCompiler::prepareCommand1(const TargetBase &t)
+void KotlinCompiler::prepareCommand1(const Target &t)
 {
     getCommandLineOptions<KotlinCompilerOptions>(cmd.get(), *this);
 }
@@ -1982,7 +1981,7 @@ void KotlinCompiler::setSourceFile(const path &input_file)
 
 SW_DEFINE_PROGRAM_CLONE(DCompiler)
 
-void DCompiler::prepareCommand1(const TargetBase &t)
+void DCompiler::prepareCommand1(const Target &t)
 {
     getCommandLineOptions<DCompilerOptions>(cmd.get(), *this);
 }

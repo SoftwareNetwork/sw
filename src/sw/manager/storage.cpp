@@ -130,7 +130,7 @@ String toUserString(StorageFileType t)
     case StorageFileType::SourceArchive:
         return "Source Archive";
     default:
-        SW_UNIMPLEMENTED;
+        SW_UNREACHABLE;
     }
 }
 
@@ -253,7 +253,7 @@ std::unique_ptr<vfs::File> LocalStorageBase::getFile(const PackageId &id, Storag
         //return d.u8string();
     }
     default:
-        SW_UNIMPLEMENTED;
+        SW_UNREACHABLE;
     }
 }
 

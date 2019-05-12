@@ -78,11 +78,13 @@ int ProgramStorage::hasExtension(const String &ext) const
 void ProgramStorage::clearExtensions()
 {
     extension_packages.clear();
+    extension_programs.clear();
 }
 
 void ProgramStorage::removeExtension(const String &ext)
 {
     extension_packages.erase(ext);
+    extension_programs.erase(ext);
 }
 
 }

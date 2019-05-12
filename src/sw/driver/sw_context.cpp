@@ -6,6 +6,8 @@
 
 #include "sw_context.h"
 
+#include "checks_storage.h"
+
 namespace sw
 {
 
@@ -16,6 +18,29 @@ SwContext::SwContext(const path &local_storage_root_dir)
 }
 
 SwContext::~SwContext() = default;
+
+ChecksStorage &SwContext::getChecksStorage(const String &config) const
+{
+    auto i = checksStorages.find(config);
+    if (i == checksStorages.end())
+    {
+        auto [i, _] = checksStorages.emplace(config, std::make_unique<ChecksStorage>());
+        return *i->second;
+    }
+    return *i->second;
+}
+
+ChecksStorage &SwContext::getChecksStorage(const String &config, const path &fn) const
+{
+    auto i = checksStorages.find(config);
+    if (i == checksStorages.end())
+    {
+        auto [i, _] = checksStorages.emplace(config, std::make_unique<ChecksStorage>());
+        i->second->load(fn);
+        return *i->second;
+    }
+    return *i->second;
+}
 
 }
 

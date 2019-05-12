@@ -39,22 +39,3 @@
 
     return r;
 }*/
-
-namespace sw
-{
-
-/// resolve from db
-std::optional<Version> VersionRange::getMinSatisfyingVersion() const
-{
-    SW_UNIMPLEMENTED;
-    return {};
-}
-
-/// resolve from db
-std::optional<Version> VersionRange::getMaxSatisfyingVersion() const
-{
-    SW_UNIMPLEMENTED;
-    return {};
-}
-
-}

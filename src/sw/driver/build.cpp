@@ -270,7 +270,6 @@ String BuildSettings::getConfig() const
     addConfigElement(c, toString(TargetOS.Arch));
     if (TargetOS.Arch == ArchType::arm || TargetOS.Arch == ArchType::aarch64)
         addConfigElement(c, toString(TargetOS.SubArch)); // concat with previous?
-    boost::to_lower(c);
 
     //addConfigElement(c, Native.getConfig());
     /*addConfigElement(c, toString(Native.CompilerType));
@@ -281,7 +280,6 @@ String BuildSettings::getConfig() const
     addConfigElement(c, toString(Native.LibrariesType));
     if (TargetOS.Type == OSType::Windows && Native.MT)
         addConfigElement(c, "mt");
-    boost::to_lower(c);
     addConfigElement(c, toString(Native.ConfigurationType));
 
     return c;
@@ -496,9 +494,6 @@ Build::Build(const SwContext &swctx)
     //addSettings(ss);
     //host_settings = &addSettings(ss);
 
-    // load service local fs by default
-    fs = &swctx.getServiceFileStorage();
-
     // canonical makes disk letter uppercase on windows
     setSourceDir(swctx.source_dir);
     BinaryDir = SourceDir / SW_BINARY_DIR;
@@ -511,7 +506,6 @@ Build::Build(const Build &rhs)
     //, show_output(rhs.show_output) // don't pass to checks
     //, knownTargets(rhs.knownTargets)
     , source_dirs_by_source(rhs.source_dirs_by_source)
-    , fs(rhs.fs)
     , fetch_dir(rhs.fetch_dir)
     , with_testing(rhs.with_testing)
     , ide_solution_name(rhs.ide_solution_name)
@@ -535,8 +529,9 @@ Build::~Build()
     // or are they solution-specific?
 
     // do not clear modules on exception, because it may come from there
-    if (!std::uncaught_exceptions())
-        getModuleStorage(*this).modules.clear();
+    // TODO: cleanup modules data first
+    //if (!std::uncaught_exceptions())
+        //getModuleStorage(*this).modules.clear();
 }
 
 BuildSettings Build::createSettings() const
@@ -590,18 +585,6 @@ const OS &Build::getHostOs() const
 path Build::getChecksDir() const
 {
     return getServiceDir() / "checks";
-}
-
-void Build::performChecks()
-{
-    LOG_DEBUG(logger, "Performing checks");
-
-    ScopedTime t;
-
-    checker.performChecks(swctx.getLocalStorage().storage_dir_etc / "sw" / "checks"/* / getConfig()*/);
-
-    if (!silent)
-        LOG_DEBUG(logger, "Checks time: " << t.getTimeFloat() << " s.");
 }
 
 void Build::build_and_resolve(int n_runs)
@@ -673,7 +656,6 @@ void Build::build_and_resolve(int n_runs)
 
     sw_check_abi_version(getModuleStorage(*this).get(dll).sw_get_module_abi_version());
     getModuleStorage(*this).get(dll).check(*this, checker);
-    performChecks();
     // we can use new (clone of this) solution, then copy known targets
     // to allow multiple passes-builds
     getModuleStorage(*this).get(dll).build(*this);
@@ -1366,7 +1348,6 @@ FilesMap Build::build_configs_separate(const Files &files)
         if (!once)
         {
             check_self(checker);
-            performChecks();
             build_self();
             addDeps(lib, *this);
             once = true;
@@ -1557,7 +1538,6 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
     if (init)
     {
         check_self(solution.checker);
-        solution.performChecks();
         build_self();
     }
     addDeps(lib, solution);
@@ -1583,8 +1563,8 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
         if (auto f = lib[p].as<NativeSourceFile>(); f)
         {
             return
-                File(p, *fs).isChanged() ||
-                File(f->compiler->getOutputFile(), *fs).isChanged()
+                File(p, swctx.getServiceFileStorage()).isChanged() ||
+                File(f->compiler->getOutputFile(), swctx.getServiceFileStorage()).isChanged()
                 ;
         }
         return true;
@@ -1882,7 +1862,7 @@ path Build::build(const path &fn)
         auto r = b.build_configs_separate({ fn });
         auto dll = r.begin()->second;
         if (do_not_rebuild_config &&
-            (File(fn, *fs).isChanged() || File(dll, *fs).isChanged()))
+            (File(fn, swctx.getServiceFileStorage()).isChanged() || File(dll, swctx.getServiceFileStorage()).isChanged()))
         {
             remove_ide_explans = true;
             do_not_rebuild_config = false;
@@ -2026,7 +2006,7 @@ static Build::CommandExecutionPlan load(const SwContext &swctx, const path &fn, 
                 break;
             }
             commands[id] = c;
-            c->fs = s.fs;
+            c->fs = &swctx.getServiceFileStorage();
             return c;
         }
         return it->second;
@@ -2235,7 +2215,7 @@ void Build::execute()
             if (fs::exists(fn))
             {
                 // prevent double assign generators
-                fs->reset();
+                swctx.getServiceFileStorage().reset();
 
                 SW_UNIMPLEMENTED;
                 //auto p = ::sw::load(swctx, fn, s);
@@ -3087,7 +3067,6 @@ void Build::load_dll(const path &dll, bool usedll)
             for (auto &s : settings)
                 getModuleStorage(*this).get(dll).check(*this, checker);
         }
-        performChecks();
     }
 
     // build
@@ -3324,7 +3303,7 @@ PackageDescriptionMap Build::getPackages() const
         Files files;
         for (auto &f : t->gatherAllFiles())
         {
-            if (File(f, *fs).isGeneratedAtAll())
+            if (File(f, t->getFs()).isGeneratedAtAll())
                 continue;
             files.insert(f.lexically_normal());
         }

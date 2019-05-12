@@ -141,6 +141,7 @@ public:
     std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
     bool mustResolveDeps() const override { return prepare_pass == 2; }
     void setOutputDir(const path &dir);
+    String getConfigRaw() const override;
 
     driver::CommandBuilder addCommand() const;
     // add executed command?
@@ -208,6 +209,7 @@ private:
     void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeCompiledTarget*> &targets, bool system);
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
+    void merge1();
 
     path getPatchDir(bool binary_dir) const;
 };

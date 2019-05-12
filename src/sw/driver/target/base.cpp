@@ -387,9 +387,14 @@ Program *Target::findProgramByExtension(const String &ext) const
     SW_UNIMPLEMENTED;
 }
 
+String Target::getConfigRaw() const
+{
+    return ts->getConfig();
+}
+
 String Target::getConfig(bool use_short_config) const
 {
-    return hashConfig(ts->getConfig(), use_short_config);
+    return hashConfig(getConfigRaw(), use_short_config);
 }
 
 path Target::getBaseDir() const
@@ -480,6 +485,11 @@ void Target::removeFile(const path &fn, bool binary_dir)
 const BuildSettings &Target::getSettings() const
 {
     return ts->ss;
+}
+
+FileStorage &Target::getFs() const
+{
+    return getSolution().swctx.getFileStorage(getConfig(), Local);
 }
 
 bool Target::init()

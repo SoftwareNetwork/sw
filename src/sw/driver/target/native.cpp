@@ -87,8 +87,6 @@ bool NativeCompiledTarget::init()
     {
     case 1:
     {
-        Target::init();
-
         // propagate this pointer to all
         TargetOptionsGroup::iterate([this](auto &v, auto i)
         {
@@ -255,13 +253,13 @@ bool NativeCompiledTarget::init()
                     cmd->args.push_back(getSettings().getTargetTriplet());
                 }
             }
-        }
+        }*/
 
         if (getSettings().TargetOS.Type != OSType::Macos)
         {
             removeExtension(".m");
             removeExtension(".mm");
-        }*/
+        }
 
         // lib/link
         auto activate_lib_link_or_throw = [this](const std::vector<std::tuple<PackagePath, LinkerType>> &a, const auto &e, bool link = false)
@@ -398,6 +396,16 @@ bool NativeCompiledTarget::init()
             ; // FIXME: uncomment later
             // throw SW_RUNTIME_ERROR("No libc activated");
 
+        // early setup compilers after libc, libcpp
+        merge1();
+        if (auto c = findProgramByExtension(".c")->as<NativeCompiler>())
+            c->merge(*this);
+        if (auto c = findProgramByExtension(".cpp")->as<NativeCompiler>())
+            c->merge(*this);
+
+        // after compilers
+        Target::init();
+
         addPackageDefinitions();
 
         // we set output file, but sometimes overridden call must set it later
@@ -424,7 +432,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 
 driver::CommandBuilder NativeCompiledTarget::addCommand() const
 {
-    driver::CommandBuilder cb(getSolution().swctx, *getSolution().fs);
+    driver::CommandBuilder cb(getSolution().swctx, getFs());
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?
@@ -554,6 +562,17 @@ void NativeCompiledTarget::setOutputFile()
 path Target::getOutputFileName() const
 {
     return getPackage().toString();
+}
+
+String NativeCompiledTarget::getConfigRaw() const
+{
+    auto c = Target::getConfigRaw();
+    addConfigElement(c, toString(getCompilerType()));
+    auto p = findProgramByExtension(".cpp");
+    if (!p)
+        throw std::logic_error("no cpp compiler");
+    addConfigElement(c, p->getVersion().toString(2));
+    return c;
 }
 
 path NativeCompiledTarget::getOutputFileName(const path &root) const
@@ -1000,7 +1019,7 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
     // add generated commands
     for (auto &[f, _] : *this)
     {
-        File p(f, *getSolution().fs);
+        File p(f, getFs());
         if (!p.isGenerated())
             continue;
         if (f == def)
@@ -1025,7 +1044,7 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
     Commands deps_commands;
     /*for (auto &f : FileDependencies)
     {
-        File p(f, *getSolution().fs);
+        File p(f, getFs());
         if (!p.isGenerated())
             continue;
         auto c = p.getFileRecord().getGenerator();
@@ -1176,7 +1195,7 @@ Commands NativeCompiledTarget::getCommands1() const
     {
         c->dependencies.insert(cmds.begin(), cmds.end());
 
-        File d(def, *getSolution().fs);
+        File d(def, getFs());
         if (d.isGenerated())
         {
             auto g = d.getFileRecord().getGenerator();
@@ -1270,7 +1289,7 @@ Commands NativeCompiledTarget::getCommands1() const
 
     /*if (!IsConfig && !Local)
     {
-        if (!File(getOutputFile(), *getSolution().fs).isChanged())
+        if (!File(getOutputFile(), getFs()).isChanged())
             return {};
     }*/
 
@@ -1570,6 +1589,27 @@ void NativeCompiledTarget::detectLicenseFile()
     }
 }
 
+void NativeCompiledTarget::merge1()
+{
+    // merge self
+    merge();
+
+    // merge deps' stuff
+    for (auto &d : Dependencies)
+    {
+        // we also apply targets to deps chains as we finished with deps
+        d->propagateTargetToChain();
+
+        if (d->isDisabledOrDummy())
+            continue;
+
+        GroupSettings s;
+        s.include_directories_only = d->IncludeDirectoriesOnly;
+        //s.merge_to_self = false;
+        merge(*(NativeCompiledTarget*)d->target, s);
+    }
+}
+
 bool NativeCompiledTarget::prepare()
 {
     if (getSolution().skipTarget(Scope))
@@ -1582,7 +1622,7 @@ bool NativeCompiledTarget::prepare()
         {
             if (p.empty())
                 return false;
-            return !(fs::exists(p) && File(p, *getSolution().fs).isChanged());
+            return !(fs::exists(p) && File(p, getFs()).isChanged());
         };
 
         auto i = getImportLibrary();
@@ -1887,23 +1927,7 @@ bool NativeCompiledTarget::prepare()
     case 4:
         // merge
     {
-        // merge self
-        merge();
-
-        // merge deps' stuff
-        for (auto &d : Dependencies)
-        {
-            // we also apply targets to deps chains as we finished with deps
-            d->propagateTargetToChain();
-
-            if (d->isDisabledOrDummy())
-                continue;
-
-            GroupSettings s;
-            s.include_directories_only = d->IncludeDirectoriesOnly;
-            //s.merge_to_self = false;
-            merge(*(NativeCompiledTarget*)d->target, s);
-        }
+        merge1();
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 5:
@@ -1935,7 +1959,7 @@ bool NativeCompiledTarget::prepare()
             fs::create_directories(d);
             for (auto &[p, fp] : *this)
             {
-                File f(p, *getSolution().fs);
+                File f(p, getFs());
                 if (f.isGenerated())
                     continue;
                 // is_header_ext()
@@ -2181,7 +2205,7 @@ bool NativeCompiledTarget::prepare()
             write_file_if_different(p, ctx.getText());
 
             // more info for generators
-            File(p, *getSolution().fs).getFileRecord().setGenerated(true);
+            File(p, getFs()).getFileRecord().setGenerated(true);
 
             operator+=(p);
         }
@@ -2389,7 +2413,8 @@ bool NativeCompiledTarget::prepare()
 
             auto exp = Librarian->getImportLibrary();
             exp = exp.parent_path() / (exp.stem().u8string() + ".exp");
-            Librarian->createCommand(getSolution().swctx)->addOutput(exp);
+            Librarian->merge(*this);
+            Librarian->prepareCommand(*this)->addOutput(exp);
             obj.insert(exp);
         }
 
@@ -2576,7 +2601,7 @@ void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flag
     // before resolving
     if (!to.is_absolute())
         to = BinaryDir / to;
-    File(to, *getSolution().fs).getFileRecord().setGenerated();
+    File(to, getFs()).getFileRecord().setGenerated();
 
     if (PostponeFileResolving || DryRun)
         return;
@@ -2742,7 +2767,7 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 {
     auto &checks_set = getChecks(name);
     checks_set.t = this;
-    checks_set.performChecks();
+    checks_set.performChecks(getConfig());
 
     // set results
     for (auto &[k, c] : checks_set.check_values)
@@ -2798,7 +2823,7 @@ void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content) 
     // only in bdir case
     if (!source_dir)
     {
-        File f(p, *getSolution().fs);
+        File f(p, getFs());
         f.getFileRecord().setGenerated();
     }
 
@@ -2807,7 +2832,7 @@ void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content) 
 
     ::sw::writeFileOnce(p, content, getPatchDir(!source_dir));
 
-    //File f(p, *getSolution().fs);
+    //File f(p, getFs());
     //f.getFileRecord().load();
 }
 
@@ -2822,7 +2847,7 @@ void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content) 
         p = BinaryDir / p;
     ::sw::writeFileSafe(p, content, getPatchDir(!source_dir));
 
-    //File f(fn, *getSolution().fs);
+    //File f(fn, getFs());
     //f.getFileRecord().load();
 }
 
@@ -2841,7 +2866,7 @@ void NativeCompiledTarget::patch(const path &fn, const String &from, const Strin
     check_absolute(p, false, &source_dir);
     ::sw::replaceInFileOnce(p, from, to, getPatchDir(!source_dir));
 
-    //File f(p, *getSolution().fs);
+    //File f(p, getFs());
     //f.getFileRecord().load();
 }
 
@@ -2871,7 +2896,7 @@ void NativeCompiledTarget::pushFrontToFileOnce(const path &fn, const String &tex
     check_absolute(p, false, &source_dir);
     ::sw::pushFrontToFileOnce(p, text, getPatchDir(!source_dir));
 
-    //File f(p, *getSolution().fs);
+    //File f(p, getFs());
     //f.getFileRecord().load();
 }
 
@@ -2885,7 +2910,7 @@ void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text
     check_absolute(p, false, &source_dir);
     ::sw::pushBackToFileOnce(p, text, getPatchDir(!source_dir));
 
-    //File f(p, *getSolution().fs);
+    //File f(p, getFs());
     //f.getFileRecord().load();
 }
 

@@ -447,7 +447,7 @@ std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFi
         return rf;
     }
     default:
-        SW_UNIMPLEMENTED;
+        SW_UNREACHABLE;
     }
 }
 

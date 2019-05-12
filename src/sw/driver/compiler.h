@@ -20,7 +20,7 @@
 
 #define SW_COMMON_COMPILER_API                          \
     SW_DECLARE_PROGRAM_CLONE;                           \
-    void prepareCommand1(const TargetBase &t) override
+    void prepareCommand1(const ::sw::Target &t) override
 
 namespace sw
 {
@@ -38,7 +38,6 @@ struct Command;
 struct BuildSettings;
 struct Build;
 struct SwContext;
-struct TargetBase;
 struct Target;
 struct NativeCompiledTarget;
 struct NativeLinker;
@@ -168,8 +167,8 @@ struct SW_DRIVER_CPP_API CompilerBaseProgram : FileToFileTransformProgram
     using FileToFileTransformProgram::FileToFileTransformProgram;
     CompilerBaseProgram(const CompilerBaseProgram &);
 
-    std::shared_ptr<builder::Command> prepareCommand(const TargetBase &t);
-    std::shared_ptr<builder::Command> getCommand(const TargetBase &t);
+    std::shared_ptr<builder::Command> prepareCommand(const Target &t);
+    std::shared_ptr<builder::Command> getCommand(const Target &t);
     std::shared_ptr<builder::Command> getCommand() const override;
     std::shared_ptr<builder::Command> createCommand(const SwContext &swctx);
 
@@ -177,7 +176,7 @@ protected:
     std::shared_ptr<driver::Command> cmd;
     bool prepared = false;
 
-    virtual void prepareCommand1(const TargetBase &t) = 0;
+    virtual void prepareCommand1(const Target &t) = 0;
     virtual std::shared_ptr<driver::Command> createCommand1(const SwContext &swctx) const;
 
 private:
@@ -394,7 +393,7 @@ struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
 protected:
     virtual void getAdditionalOptions(driver::Command *c) const = 0;
 
-    void prepareCommand1(const TargetBase &t) override;
+    void prepareCommand1(const Target &t) override;
 
 private:
     Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
@@ -411,7 +410,7 @@ struct SW_DRIVER_CPP_API VisualStudioLinker : VisualStudioLibraryTool,
     void setInputLibraryDependencies(const FilesOrdered &files) override;
 
 protected:
-    void prepareCommand1(const TargetBase &t) override;
+    void prepareCommand1(const Target &t) override;
 };
 
 struct SW_DRIVER_CPP_API VisualStudioLibrarian : VisualStudioLibraryTool,

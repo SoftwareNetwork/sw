@@ -8,6 +8,7 @@
 
 #include "checks_storage.h"
 #include "build.h"
+#include "sw_context.h"
 #include "target/native.h"
 
 #include <sw/builder/execution_plan.h>
@@ -196,260 +197,16 @@ Checker::Checker(const Build &build)
 CheckSet &Checker::addSet(const String &name)
 {
     auto p = sets[current_gn].emplace(name, CheckSet(*this));
+    p.first->second.name = name;
     return p.first->second;
 }
 
-void Checker::performChecks(path fn) // root dir
+void CheckSet::performChecks(const String &config)
 {
-    return;
+    static const auto checks_dir = checker.build.swctx.getLocalStorage().storage_dir_etc / "sw" / "checks";
+    auto fn = checks_dir / config / "checks.3.txt";
+    auto &cs = checker.build.swctx.getChecksStorage(config, fn);
 
-    fn /= "checks.3.txt";
-
-    // load
-    //checksStorage->load(fn);
-
-    // add common checks
-    for (auto &[gn, s2] : sets)
-    {
-        for (auto &s : s2)
-        {
-            s.second.checkSourceRuns("WORDS_BIGENDIAN", R"(
-int IsBigEndian()
-{
-    volatile int i=1;
-    return ! *((char *)&i);
-}
-int main() { return IsBigEndian(); }
-)");
-        }
-    }
-
-    // returns true if inserted
-    auto add_dep = [this](auto &s, auto &c)
-    {
-        auto h = c->getHash();
-        auto ic = checks.find(h);
-        if (ic != checks.end())
-        {
-            //if (c->Value != ic->second->Value)
-                //throw SW_RUNTIME_ERROR("Different check values");
-            s.checks[h] = ic->second;
-            ic->second->Definitions.insert(c->Definitions.begin(), c->Definitions.end());
-            ic->second->Prefixes.insert(c->Prefixes.begin(), c->Prefixes.end());
-            return std::pair{ false, ic->second };
-        }
-        checks[h] = c;
-        s.checks[h] = c;
-
-        /*auto i = checksStorage->all_checks.find(h);
-        if (i != checksStorage->all_checks.end())
-            c->Value = i->second;*/
-        return std::pair{ true, c };
-    };
-
-    // prepare loaded checks
-    for (auto &[gn, s2] : sets)
-    {
-        for (auto &[n, s] : s2)
-        {
-            for (auto &c : s.all)
-            {
-                auto[inserted, dep] = add_dep(s, c);
-                auto deps = c->gatherDependencies();
-                for (auto &d : deps)
-                {
-                    auto [inserted, dep2] = add_dep(s, d);
-                    dep->dependencies.insert(dep2);
-                }
-
-                // add to check_values only requested defs
-                // otherwise we'll get also defs from other sets (e.g. with prefixes from ICU 'U_')
-                for (auto &d : c->Definitions)
-                {
-                    s.check_values[d];
-                    for (auto &p : c->Prefixes)
-                        s.check_values[p + d];
-                }
-            }
-            s.all.clear();
-        }
-    }
-
-    // perform
-    std::unordered_set<CheckPtr> unchecked;
-    for (auto &[h, c] : checks)
-    {
-        if (!c->isChecked())
-            unchecked.insert(c);
-    }
-
-    SCOPE_EXIT
-    {
-        for (auto &[gn, s2] : sets)
-        {
-            for (auto &[n, set] : s2)
-            {
-                set.prepareChecksForUse();
-                if (print_checks)
-                {
-                    std::ofstream o(fn.parent_path() / (std::to_string(gn) + "." + n +  + ".checks.txt"));
-                    if (!o)
-                        continue;
-                    std::map<String, CheckPtr> check_values(set.check_values.begin(), set.check_values.end());
-                    for (auto &[d, c] : check_values)
-                    {
-                        if (c->Value)
-                            o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
-                    }
-                }
-                // cleanup
-                for (auto &[h, c] : set.checks)
-                {
-                    c->clean();
-                }
-            }
-        }
-    };
-
-    if (unchecked.empty())
-    {
-        /*if (checksStorage->new_manual_checks_loaded)
-            checksStorage->save(fn);*/
-        return;
-    }
-
-    auto ep = ExecutionPlan<Check>::createExecutionPlan(unchecked);
-    if (ep)
-    {
-        LOG_INFO(logger, "Performing " << unchecked.size() << " check(s)");
-
-        //auto &e = getExecutor();
-        Executor e(getExecutor().numberOfThreads()); // separate executor!
-        //ep.throw_on_errors = false;
-        //ep.skip_errors = ep.commands.size();
-        ep.execute(e);
-
-        // remove tmp dir
-        error_code ec;
-        fs::remove_all(build.getChecksDir(), ec);
-
-        for (auto &[gn, s2] : sets)
-        {
-            for (auto &[d, set] : s2)
-            {
-                for (auto &[h, c] : set.checks)
-                {
-                    //checksStorage->add(*c);
-                }
-            }
-        }
-
-        auto cc_dir = fn.parent_path() / "cc";
-
-        // separate loop
-        /*if (!checksStorage->manual_checks.empty())
-        {
-            fs::remove_all(cc_dir);
-            fs::create_directories(cc_dir);
-
-            for (auto &[gn, s2] : sets)
-            {
-                for (auto &[d, set] : s2)
-                {
-                    for (auto &[h, c] : set.checks)
-                    {
-                        if (c->requires_manual_setup)
-                        {
-                            auto dst = (cc_dir / std::to_string(c->getHash())) += build.getSettings().TargetOS.getExecutableExtension();
-                            if (!fs::exists(dst))
-                                fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
-                        }
-                    }
-                }
-            }
-        }
-
-        // save
-        checksStorage->save(fn);
-
-        if (!checksStorage->manual_checks.empty())
-        {
-            // save executables
-            auto &os = build.getSettings().TargetOS;
-            auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
-
-            auto bat = os.getShellType() == ShellType::Batch;
-
-            String s;
-            if (!bat)
-                s += "#!/bin/sh\n\n";
-            s += "echo \"\" > " + mfn + "\n\n";
-            for (auto &[h, c] : checksStorage->manual_checks)
-            {
-                String defs;
-                for (auto &d : c->Definitions)
-                    defs += d + " ";
-                defs.resize(defs.size() - 1);
-
-                s += bat ? "::" : "#";
-                s += " " + defs + "\n";
-                s += "echo ";
-                //if (!bat)
-                    //s += "-n ";
-                s += "\"Checking: " + defs + "... \"\n";
-                s += "echo \"# " + defs + "\" >> " + mfn + "\n";
-                if (!bat)
-                    s += "./";
-                s += std::to_string(c->getHash()) + build.getSettings().TargetOS.getExecutableExtension() + "\n";
-                s += "echo " + std::to_string(c->getHash()) + " ";
-                if (!bat)
-                    s += "$? ";
-                else
-                    s += "%errorlevel% ";
-                s += ">> " + mfn + "\n";
-                if (!bat)
-                    s += "echo ok\n";
-                s += "echo \"\" >> " + mfn + "\n";
-                s += "\n";
-            }
-            write_file((cc_dir / "run") += os.getShellExtension(), s);
-
-            throw SW_RUNTIME_ERROR("Some manual checks are missing, please set them in order to continue. "
-                "Manual checks file: " + (path(fn) += MANUAL_CHECKS).u8string() + ". "
-                "You also may copy produced binaries to target platform and run them there using prepared script. "
-                "Results will be gathered into required file. "
-                "Binaries directory: " + cc_dir.u8string()
-            );
-        }*/
-
-        return;
-    }
-
-    // error!
-
-    // print our deps graph
-    String s;
-    s += "digraph G {\n";
-    for (auto &c : ep.unprocessed_commands_set)
-    {
-        for (auto &d : c->dependencies)
-        {
-            if (ep.unprocessed_commands_set.find(static_cast<Check*>(d.get())) == ep.unprocessed_commands_set.end())
-                continue;
-            s += *c->Definitions.begin() + "->" + *std::static_pointer_cast<Check>(d)->Definitions.begin() + ";";
-        }
-    }
-    s += "}";
-
-    auto d = build.getServiceDir();
-    auto cyclic_path = d / "cyclic";
-    write_file(cyclic_path / "deps_checks.dot", s);
-
-    throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");
-}
-
-void CheckSet::performChecks() // root dir
-{
     // add common checks
     checkSourceRuns("WORDS_BIGENDIAN", R"(
 int IsBigEndian()
@@ -461,7 +218,7 @@ int main() { return IsBigEndian(); }
 )");
 
     // returns true if inserted
-    auto add_dep = [this](auto &c)
+    auto add_dep = [this, &cs](auto &c)
     {
         auto h = c->getHash();
         auto ic = checks.find(h);
@@ -474,9 +231,9 @@ int main() { return IsBigEndian(); }
         }
         checks[h] = c;
 
-        /*auto i = checksStorage->all_checks.find(h);
-        if (i != checksStorage->all_checks.end())
-            c->Value = i->second;*/
+        auto i = cs.all_checks.find(h);
+        if (i != cs.all_checks.end())
+            c->Value = i->second;
         return std::pair{ true, c };
     };
 
@@ -515,17 +272,15 @@ int main() { return IsBigEndian(); }
         prepareChecksForUse();
         if (print_checks)
         {
-            SW_UNIMPLEMENTED;
-
-            /*std::ofstream o(fn.parent_path() / (std::to_string(gn) + "." + n +  + ".checks.txt"));
+            std::ofstream o(fn.parent_path() / (std::to_string(checker.build.current_gn) + "." + name + ".checks.txt"));
             if (!o)
                 return;
-            std::map<String, CheckPtr> check_values(set.check_values.begin(), set.check_values.end());
+            std::map<String, CheckPtr> check_values(check_values.begin(), check_values.end());
             for (auto &[d, c] : check_values)
             {
                 if (c->Value)
                     o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
-            }*/
+            }
         }
         // cleanup
         for (auto &[h, c] : checks)
@@ -536,15 +291,15 @@ int main() { return IsBigEndian(); }
 
     if (unchecked.empty())
     {
-        //if (checksStorage->new_manual_checks_loaded)
-            //checksStorage->save(fn);
+        if (cs.new_manual_checks_loaded)
+            cs.save(fn);
         return;
     }
 
     auto ep = ExecutionPlan<Check>::createExecutionPlan(unchecked);
     if (ep)
     {
-        LOG_INFO(logger, "Performing " << unchecked.size() << " check(s)");
+        LOG_INFO(logger, "Performing " << unchecked.size() << " check(s): " << name);
 
         //auto &e = getExecutor();
         Executor e(getExecutor().numberOfThreads()); // separate executor!
@@ -553,18 +308,18 @@ int main() { return IsBigEndian(); }
         ep.execute(e);
 
         // remove tmp dir
-        /*error_code ec;
-        fs::remove_all(build.getChecksDir(), ec);
+        error_code ec;
+        fs::remove_all(checker.build.getChecksDir(), ec);
 
         for (auto &[h, c] : checks)
         {
-            checksStorage->add(*c);
+            cs.add(*c);
         }
 
         auto cc_dir = fn.parent_path() / "cc";
 
         // separate loop
-        if (!checksStorage->manual_checks.empty())
+        if (!cs.manual_checks.empty())
         {
             fs::remove_all(cc_dir);
             fs::create_directories(cc_dir);
@@ -573,7 +328,7 @@ int main() { return IsBigEndian(); }
             {
                 if (c->requires_manual_setup)
                 {
-                    auto dst = (cc_dir / std::to_string(c->getHash())) += build.getSettings().TargetOS.getExecutableExtension();
+                    auto dst = (cc_dir / std::to_string(c->getHash())) += checker.build.getSettings().TargetOS.getExecutableExtension();
                     if (!fs::exists(dst))
                         fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
                 }
@@ -581,12 +336,12 @@ int main() { return IsBigEndian(); }
         }
 
         // save
-        checksStorage->save(fn);
+        cs.save(fn);
 
-        if (!checksStorage->manual_checks.empty())
+        if (!cs.manual_checks.empty())
         {
             // save executables
-            auto &os = build.getSettings().TargetOS;
+            auto &os = checker.build.getSettings().TargetOS;
             auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
 
             auto bat = os.getShellType() == ShellType::Batch;
@@ -595,7 +350,7 @@ int main() { return IsBigEndian(); }
             if (!bat)
                 s += "#!/bin/sh\n\n";
             s += "echo \"\" > " + mfn + "\n\n";
-            for (auto &[h, c] : checksStorage->manual_checks)
+            for (auto &[h, c] : cs.manual_checks)
             {
                 String defs;
                 for (auto &d : c->Definitions)
@@ -611,7 +366,7 @@ int main() { return IsBigEndian(); }
                 s += "echo \"# " + defs + "\" >> " + mfn + "\n";
                 if (!bat)
                     s += "./";
-                s += std::to_string(c->getHash()) + build.getSettings().TargetOS.getExecutableExtension() + "\n";
+                s += std::to_string(c->getHash()) + checker.build.getSettings().TargetOS.getExecutableExtension() + "\n";
                 s += "echo " + std::to_string(c->getHash()) + " ";
                 if (!bat)
                     s += "$? ";
@@ -631,7 +386,7 @@ int main() { return IsBigEndian(); }
                 "Results will be gathered into required file. "
                 "Binaries directory: " + cc_dir.u8string()
             );
-        }*/
+        }
 
         return;
     }
@@ -652,13 +407,11 @@ int main() { return IsBigEndian(); }
     }
     s += "}";
 
-    SW_UNIMPLEMENTED;
-
-    /*auto d = build.getServiceDir();
+    auto d = checker.build.getServiceDir();
     auto cyclic_path = d / "cyclic";
     write_file(cyclic_path / "deps_checks.dot", s);
 
-    throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");*/
+    throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");
 }
 
 Check::~Check()

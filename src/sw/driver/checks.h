@@ -254,6 +254,7 @@ struct SW_DRIVER_CPP_API SourceRuns : Check
 struct SW_DRIVER_CPP_API CheckSet
 {
     Checker &checker;
+    String name;
     const NativeCompiledTarget *t = nullptr;
     std::unordered_map<String, CheckPtr> check_values;
 
@@ -287,7 +288,7 @@ struct SW_DRIVER_CPP_API CheckSet
     }
 
     void prepareChecksForUse();
-    void performChecks();
+    void performChecks(const String &config);
 
     FunctionExists &checkFunctionExists(const String &function, bool cpp = false);
     FunctionExists &checkFunctionExists(const String &function, const String &def, bool cpp = false);
@@ -346,13 +347,10 @@ struct SW_DRIVER_CPP_API Checker
     Checker(const Build &build);
 
     CheckSet &addSet(const String &name);
-    void performChecks(path checks_results_dir);
 
 private:
     // all checks are stored here
     std::unordered_map<size_t /* hash */, CheckPtr> checks;
-
-    std::unique_ptr<ChecksStorage> checksStorage;
 };
 
 }

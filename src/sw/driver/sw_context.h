@@ -8,8 +8,12 @@
 
 #include <sw/builder/sw_context.h>
 
+#include <unordered_map>
+
 namespace sw
 {
+
+struct ChecksStorage;
 
 struct SW_DRIVER_CPP_API SwContext : SwBuilderContext
 {
@@ -17,6 +21,12 @@ struct SW_DRIVER_CPP_API SwContext : SwBuilderContext
 
     SwContext(const path &local_storage_root_dir);
     virtual ~SwContext();
+
+    ChecksStorage &getChecksStorage(const String &config) const;
+    ChecksStorage &getChecksStorage(const String &config, const path &fn) const;
+
+private:
+    mutable std::unordered_map<String, std::unique_ptr<ChecksStorage>> checksStorages;
 };
 
 } // namespace sw

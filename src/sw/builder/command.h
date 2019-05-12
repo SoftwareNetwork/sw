@@ -15,7 +15,7 @@
 #include <mutex>
 
 #define SW_INTERNAL_INIT_COMMAND(name, target) \
-    name->fs = (target).getSolution().fs;     \
+    name->fs = &(target).getFs();              \
     (target).setupCommand(*name)
 
 #define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
