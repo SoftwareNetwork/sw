@@ -147,12 +147,24 @@ void detectCompilers(Build &s)
 }
 
 template <class T = PredefinedTarget>
-static decltype(auto) addProgram(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &cl)
+static decltype(auto) addProgramNoFile(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
 {
-    auto &t = s.add<T>(pp, cl->getVersion());
-    t.program = cl;
+    auto &t = s.add<T>(pp, p->getVersion());
+    t.program = p;
     t.sw_provided = true;
     return t;
+}
+
+template <class T = PredefinedTarget>
+static void addProgram(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
+{
+    if (!fs::exists(p->file))
+    {
+        //throw SW_RUNTIME_ERROR("Program does not exist: " + normalize_path(p->file));
+        LOG_TRACE(logger, "Program does not exist: " + normalize_path(p->file));
+        return;
+    }
+    addProgramNoFile(s, pp, p);
 }
 
 void detectDCompilers(Build &s)
@@ -420,6 +432,7 @@ void detectWindowsCompilers(Build &s)
         }
 
         // ASM
+        if (s.getSettings().TargetOS.Arch == ArchType::x86_64 || s.getSettings().TargetOS.Arch == ArchType::x86)
         {
             auto C = std::make_shared<VisualStudioASMCompiler>(s.swctx);
             C->Type = CompilerType::MSVC;
@@ -429,7 +442,6 @@ void detectWindowsCompilers(Build &s)
 
             if (instance.version.isPreRelease())
                 C->getVersion().getExtra() = instance.version.getExtra();
-            //C->input_extensions = { ".asm", };
             addProgram(s, "com.Microsoft.VisualStudio.VC.ml", C);
         }
 
@@ -456,7 +468,7 @@ void detectWindowsCompilers(Build &s)
         }
 
         // now register
-        addProgram(s, "com.Microsoft.VisualStudio", std::make_shared<VSInstance>(instance));
+        addProgramNoFile(s, "com.Microsoft.VisualStudio", std::make_shared<VSInstance>(instance));
 
         continue;
 

@@ -630,10 +630,14 @@ void Build::build_and_resolve(int n_runs)
         sr.restoreNow(true);
 
     sw_check_abi_version(getModuleStorage(*this).get(dll).sw_get_module_abi_version());
-    getModuleStorage(*this).get(dll).check(*this, checker);
-    // we can use new (clone of this) solution, then copy known targets
-    // to allow multiple passes-builds
-    getModuleStorage(*this).get(dll).build(*this);
+    for (auto &s : settings)
+    {
+        current_settings = &s;
+        getModuleStorage(*this).get(dll).check(*this, checker);
+        // we can use new (clone of this) solution, then copy known targets
+        // to allow multiple passes-builds
+        getModuleStorage(*this).get(dll).build(*this);
+    }
 
     sr.restoreNow(true);
 
@@ -842,9 +846,12 @@ void Build::resolvePass(const Target &t, const DependenciesType &deps) const
         auto i = h->getChildren().find(d->getPackage());
         if (i != h->getChildren().end())
         {
-            auto t = std::static_pointer_cast<NativeTarget>(i->second.begin()->second);
-            if (t)
-                d->setTarget(*t);
+            auto i2 = i->second.find(TargetSettings{ t.getSettings() });
+            if (i2 == i->second.end())
+                throw SW_RUNTIME_ERROR("no such target: " + d->getPackage().toString());
+            auto t2 = std::static_pointer_cast<NativeTarget>(i2->second);
+            if (t2)
+                d->setTarget(*t2);
             else
                 throw SW_RUNTIME_ERROR("bad target cast to NativeTarget during resolve");
 
@@ -903,11 +910,9 @@ void Build::addFirstConfig()
     addSettings(ss);
 }
 
-void Build::findCompiler()
+/*void Build::findCompiler()
 {
-    SW_UNIMPLEMENTED;
-
-    /*Settings.init();
+    Settings.init();
 
     if (!disable_compiler_lookup)
         detectCompilers(*this);
@@ -1154,8 +1159,8 @@ void Build::findCompiler()
         add_target("org.LLVM.clangpp");
     }
 
-    setSettings();*/
-}
+    setSettings();
+}*/
 
 static auto getFilesHash(const Files &files)
 {
@@ -2612,7 +2617,7 @@ void Build::load_packages(const StringSet &pkgs)
     // now we set ours TargetsToBuild to this object
     // execute() will propagate them to solutions
     for (auto &[porig, p] : m)
-        TargetsToBuild[p];
+        TargetsToBuild[p] = getChildren()[p];
 }
 
 void Build::build_packages(const StringSet &pkgs)
@@ -2887,10 +2892,9 @@ void Build::createSolutions(const path &dll, bool usedll)
         // compiler
         auto set_cl = [](auto &s, const String &compiler)
         {
-            SW_UNIMPLEMENTED;
             auto t = compilerTypeFromStringCaseI(compiler);
-            //if (toIndex(t))
-                //s.Native.CompilerType = t;
+            if (toIndex(t))
+                s.Native.CompilerType1 = t;
         };
 
         mult_and_action(compiler.size(), [&set_cl](auto &s, int i)
@@ -2941,12 +2945,10 @@ void Build::load_dll(const path &dll, bool usedll)
     // add cc if needed
     //getHostSolution();
 
+    // initiate libc
     for (auto &s : settings)
     {
-        // apply config settings
-        //s.findCompiler();
-
-        // initiate libc
+        current_settings = &s;
         //if (s.Settings.Native.libc)
         //{
         //    Resolver r;
@@ -3001,7 +3003,10 @@ void Build::load_dll(const path &dll, bool usedll)
         if (usedll)
         {
             for (auto &s : settings)
+            {
+                current_settings = &s;
                 getModuleStorage(*this).get(dll).check(*this, checker);
+            }
         }
     }
 

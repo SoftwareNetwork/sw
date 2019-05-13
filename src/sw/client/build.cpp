@@ -149,6 +149,8 @@ static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &o
                 auto &t = tgts.begin()->second;
                 if (t->sw_provided)
                     continue;
+                if (t->skip)
+                    continue;
                 auto s = t->getSource().clone(); // make a copy!
                 s->applyVersion(pkg.getVersion());
                 if (srcs.find(s->getHash()) != srcs.end())
@@ -214,6 +216,8 @@ std::unique_ptr<Build> fetch_and_load(const SwContext &swctx, const path &file_o
         {
             auto &t = tgts.begin()->second;
             if (t->sw_provided)
+                continue;
+            if (t->skip)
                 continue;
             auto s = t->getSource().clone(); // make a copy!
             s->applyVersion(pkg.version);

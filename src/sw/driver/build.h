@@ -161,7 +161,6 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     path getSourceDir(const LocalPackage &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
     bool skipTarget(TargetScope Scope) const;
-    void findCompiler();
     //bool exists(const PackageId &p) const;
     TargetMap &getChildren() { return children; }
     const TargetMap &getChildren() const { return children; }

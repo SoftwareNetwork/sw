@@ -210,6 +210,7 @@ private:
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
     void merge1();
+    void findCompiler();
 
     path getPatchDir(bool binary_dir) const;
 };
