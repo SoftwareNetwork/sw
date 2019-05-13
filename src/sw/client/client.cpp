@@ -875,14 +875,12 @@ SUBCOMMAND_DECL(uri)
 
 void override_package_perform(sw::SwContext &swctx)
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto s = sw::load(swctx, ".");
+    auto s = sw::load(swctx, ".");
     auto &b = *s.get();
     b.prepareStep();
 
     auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
-    for (auto &[pkg, desc] : b.solutions[0].getPackages())
+    for (auto &[pkg, desc] : b.getPackages())
     {
         sw::PackagePath prefix = override_package;
         sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
@@ -905,7 +903,7 @@ void override_package_perform(sw::SwContext &swctx)
         d.group_number = gn;
         d.prefix = (int)prefix.size();
         swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
-    }*/
+    }
 }
 
 SUBCOMMAND_DECL(mirror)
@@ -921,9 +919,7 @@ SUBCOMMAND_DECL(mirror)
 
 SUBCOMMAND_DECL(ide)
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto swctx = createSwContext();
+    auto swctx = createSwContext();
     if (!target_build.empty())
     {
         try_single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", [&swctx]()
@@ -945,7 +941,7 @@ SUBCOMMAND_DECL(ide)
             b.ide = true;
             s->execute();
         });
-    }*/
+    }
 }
 
 SUBCOMMAND_DECL(configure)

@@ -442,17 +442,15 @@ void ProjectEmitter::endProject()
 
 void ProjectEmitter::addProjectConfigurations(const Build &b)
 {
-    SW_UNIMPLEMENTED;
-
-    /*beginBlock("ItemGroup", { {"Label","ProjectConfigurations"} });
-    for (auto &s : b.solutions)
+    beginBlock("ItemGroup", { {"Label","ProjectConfigurations"} });
+    for (auto &s : b.settings)
     {
-        beginBlock("ProjectConfiguration", { {"Include", get_project_configuration(s.Settings) } });
-        addBlock("Configuration", get_configuration(s.Settings));
-        addBlock("Platform", generator::toString(s.Settings.TargetOS.Arch));
+        beginBlock("ProjectConfiguration", { {"Include", get_project_configuration(s) } });
+        addBlock("Configuration", get_configuration(s));
+        addBlock("Platform", generator::toString(s.TargetOS.Arch));
         endBlock();
     }
-    endBlock();*/
+    endBlock();
 }
 
 void ProjectEmitter::addConfigurationType(VSProjectType t)
@@ -481,11 +479,9 @@ void ProjectEmitter::addConfigurationType(VSProjectType t)
 
 void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b, VSProjectType t)
 {
-    SW_UNIMPLEMENTED;
-
-    /*for (auto &s : b.solutions)
+    for (auto &s : b.settings)
     {
-        beginBlockWithConfiguration("PropertyGroup", s.Settings, {{ "Label","Configuration" } });
+        beginBlockWithConfiguration("PropertyGroup", s, {{ "Label","Configuration" } });
         addConfigurationType(t);
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
 		if (toolset.empty())
@@ -496,7 +492,7 @@ void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b, VSProjec
 			addBlock("PlatformToolset", toolset);
 
         endBlock();
-    }*/
+    }
 }
 
 void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b)
@@ -506,17 +502,15 @@ void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b)
 
 void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b, const PackageId &p)
 {
-    SW_UNIMPLEMENTED;
-
-    /*for (auto &s : b.solutions)
+    for (auto &s : b.settings)
     {
-        beginBlockWithConfiguration("PropertyGroup", s.Settings, { { "Label","Configuration" } });
+        beginBlockWithConfiguration("PropertyGroup", s, { { "Label","Configuration" } });
 
-        auto i = s.children.find(p);
-        if (i == s.children.end())
+        auto i = b.children.find(p);
+        if (i == b.children.end())
             throw SW_RUNTIME_ERROR("bad target: " + p.toString());
 
-        addConfigurationType(get_vs_project_type(s.Settings, *i->second));
+        addConfigurationType(get_vs_project_type(s, *i->second.find(TargetSettings{ s })->second));
 
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
 		if (toolset.empty())
@@ -527,23 +521,21 @@ void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b, const Pa
 			addBlock("PlatformToolset", toolset);
 
         endBlock();
-    }*/
+    }
 }
 
 void ProjectEmitter::addPropertySheets(const Build &b)
 {
-    SW_UNIMPLEMENTED;
-
-    /*for (auto &s : b.solutions)
+    for (auto &s : b.settings)
     {
         beginBlock("ImportGroup", { { "Condition", "'$(Configuration)|$(Platform)'=='" +
-            get_project_configuration(s.Settings) + "'" },{ "Label","PropertySheets" } });
+            get_project_configuration(s) + "'" },{ "Label","PropertySheets" } });
         addBlock("Import", "", {
             {"Project","$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props" },
             { "Condition","exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')" },
             { "Label","LocalAppDataPlatform" }, });
         endBlock();
-    }*/
+    }
 }
 
 String getWin10KitDirName();
@@ -1470,32 +1462,28 @@ struct less
 
 void SolutionEmitter::setSolutionConfigurationPlatforms(const Build &b)
 {
-    SW_UNIMPLEMENTED;
-
 	// sort like VS does
-    /*beginGlobalSection("SolutionConfigurationPlatforms", "preSolution");
+    beginGlobalSection("SolutionConfigurationPlatforms", "preSolution");
 	std::set<String, less> platforms;
-    for (auto &s : b.solutions)
-		platforms.insert(get_project_configuration(s.Settings) + " = " + get_project_configuration(s.Settings));
+    for (auto &s : b.settings)
+		platforms.insert(get_project_configuration(s) + " = " + get_project_configuration(s));
 	for (auto &s : platforms)
 		addLine(s);
-    endGlobalSection();*/
+    endGlobalSection();
 }
 
 void SolutionEmitter::addProjectConfigurationPlatforms(const Build &b, const String &prj, bool build)
 {
-    SW_UNIMPLEMENTED;
-
 	// sort like VS does
-	/*std::map<String, String, less> platforms;
-    for (auto &s : b.solutions)
+	std::map<String, String, less> platforms;
+    for (auto &s : b.settings)
     {
-		platforms[getStringUuid(prj) + "." + get_project_configuration(s.Settings) + ".ActiveCfg"] = get_project_configuration(s.Settings);
+		platforms[getStringUuid(prj) + "." + get_project_configuration(s) + ".ActiveCfg"] = get_project_configuration(s);
         if (build)
-			platforms[getStringUuid(prj) + "." + get_project_configuration(s.Settings) + ".Build.0"] = get_project_configuration(s.Settings);
+			platforms[getStringUuid(prj) + "." + get_project_configuration(s) + ".Build.0"] = get_project_configuration(s);
     }
 	for (auto &[k,v] : platforms)
-		addKeyValue(k, v);*/
+		addKeyValue(k, v);
 }
 
 void SolutionEmitter::beginProjectSection(const String &n, const String &disposition)
@@ -1539,26 +1527,25 @@ void SolutionEmitter::materialize(const Build &b, const path &dir, GeneratorType
         bp(n, p);
     }
 
-    SW_UNIMPLEMENTED;
-
-    /*beginGlobal();
+    beginGlobal();
     setSolutionConfigurationPlatforms(b);
     beginGlobalSection("ProjectConfigurationPlatforms", "postSolution");
-    for (auto &[p, t] : b.solutions[0].children)
+    for (auto &[p, t] : b.children)
     {
-        if (b.skipTarget(t->Scope))
+        SW_UNIMPLEMENTED;
+        /*if (b.skipTarget(t->Scope))
             continue;
         if (!shouldAddTarget(*t))
             continue;
         addProjectConfigurationPlatforms(b, p.toString(), type == GeneratorType::VisualStudio);
         if (projects.find(p.toString() + "-build") != projects.end())
-            addProjectConfigurationPlatforms(b, p.toString() + "-build");
+            addProjectConfigurationPlatforms(b, p.toString() + "-build");*/
     }
     // we do not need it here
     if (type != GeneratorType::VisualStudio)
         addProjectConfigurationPlatforms(b, all_build_name, true);
     endGlobalSection();
-    endGlobal();*/
+    endGlobal();
 }
 
 SolutionEmitter::Text SolutionEmitter::getText() const

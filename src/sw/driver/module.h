@@ -120,6 +120,6 @@ struct SW_DRIVER_CPP_API ModuleStorage
     const Module &get(const path &dll);
 };
 
-ModuleStorage &getModuleStorage(Build &owner);
+ModuleStorage &getModuleStorage(const Build &owner);
 
 }

@@ -271,12 +271,6 @@ String BuildSettings::getConfig() const
     if (TargetOS.Arch == ArchType::arm || TargetOS.Arch == ArchType::aarch64)
         addConfigElement(c, toString(TargetOS.SubArch)); // concat with previous?
 
-    //addConfigElement(c, Native.getConfig());
-    /*addConfigElement(c, toString(Native.CompilerType));
-    auto p = t->getSolution().findProgramByExtension(".cpp");
-    if (!p)
-        throw std::logic_error("no cpp compiler");
-    addConfigElement(c, p->getVersion().toString(2));*/
     addConfigElement(c, toString(Native.LibrariesType));
     if (TargetOS.Type == OSType::Windows && Native.MT)
         addConfigElement(c, "mt");
@@ -396,16 +390,6 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
         //ctx.addLine("#line 1 \"" + normalize_path(cfg) + "\""); // determine correct line number first
 
         primitives::Emitter prefix;
-        /*prefix.addLine("#define THIS_PREFIX \"" + p.ppath.slice(0, p.prefix).toString() + "\"");
-        prefix.addLine("#define THIS_RELATIVE_PACKAGE_PATH \"" + p.ppath.slice(p.prefix).toString() + "\"");
-        prefix.addLine("#define THIS_PACKAGE_PATH THIS_PREFIX \".\" THIS_RELATIVE_PACKAGE_PATH");
-        //prefix.addLine("#define THIS_VERSION \"" + p.version.toString() + "\"");
-        //prefix.addLine("#define THIS_VERSION_DEPENDENCY \"" + p.version.toString() + "\"_dep");
-        prefix.addLine("#define THIS_VERSION_DEPENDENCY \"" + up.range.toString() + "\"_dep"); // here we use range! our packages must depend on exactly specified range
-        //prefix.addLine("#define THIS_PACKAGE THIS_PACKAGE_PATH \"-\" THIS_VERSION");
-        prefix.addLine("#define THIS_PACKAGE_DEPENDENCY THIS_PACKAGE_PATH \"-\" THIS_VERSION_DEPENDENCY");
-        prefix.addLine();*/
-
         auto ins_pre = "#pragma sw header insert prefix";
         if (f.find(ins_pre) != f.npos)
             boost::replace_all(f, ins_pre, prefix.getText());
@@ -414,15 +398,6 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
 
         ctx.addLine(f);
         ctx.addLine();
-
-        /*ctx.addLine("#undef THIS_PREFIX");
-        ctx.addLine("#undef THIS_RELATIVE_PACKAGE_PATH");
-        ctx.addLine("#undef THIS_PACKAGE_PATH");
-        ctx.addLine("#undef THIS_VERSION");
-        ctx.addLine("#undef THIS_VERSION_DEPENDENCY");
-        ctx.addLine("#undef THIS_PACKAGE");
-        ctx.addLine("#undef THIS_PACKAGE_DEPENDENCY");
-        ctx.addLine();*/
 
         write_file_if_different(h, ctx.getText());
     }
@@ -918,34 +893,6 @@ void Build::resolvePass(const Target &t, const DependenciesType &deps) const
         }
     }
 }
-
-/*Solution &Build::addSolutionRaw()
-{
-    auto &s = solutions.emplace_back(*this);
-    s.build = this;
-    return s;
-}
-
-Solution &Build::addSolution()
-{
-    auto &s = addSolutionRaw();
-    s.findCompiler(); // too early?
-    return s;
-}
-
-Solution &Build::addCustomSolution()
-{
-    auto &s = addSolutionRaw();
-    s.prepareForCustomToolchain();
-    return s;
-}
-
-std::optional<std::reference_wrapper<Solution>> Build::addFirstConfig()
-{
-    if (solutions.empty())
-        return addSolution();
-    return solutions[0];
-}*/
 
 void Build::addFirstConfig()
 {
@@ -1818,9 +1765,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
 // s.build->loadModule("client/sw.cpp").call<void(Solution &)>("build", s);
 const Module &Build::loadModule(const path &p) const
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto fn2 = p;
+    auto fn2 = p;
     if (!fn2.is_absolute())
         fn2 = SourceDir / fn2;
 
@@ -1835,7 +1780,7 @@ const Module &Build::loadModule(const path &p) const
         auto r = b.build_configs_separate({ fn2 });
         dll = r.begin()->second;
     }
-    return getModuleStorage(*this).get(dll);*/
+    return getModuleStorage(*this).get(dll);
 }
 
 path Build::build(const path &fn)
@@ -1903,8 +1848,7 @@ void Build::load(const path &fn, bool configless)
 
         // also add tests to solution
         // protect with option
-        SW_UNIMPLEMENTED;
-        //with_testing = true;
+        with_testing = true;
     }
 
     if (configless)
@@ -1917,8 +1861,7 @@ void Build::load(const path &fn, bool configless)
 
     if (fetch_sources)
     {
-        SW_UNIMPLEMENTED;
-        //fetch_dir = BinaryDir / "src";
+        fetch_dir = BinaryDir / "src";
     }
 
     auto fe = selectFrontendByFilename(fn);
@@ -1938,8 +1881,6 @@ void Build::load(const path &fn, bool configless)
 
     // set show output setting
     show_output = cl_show_output;
-    //for (auto &s : solutions)
-        //s.show_output = cl_show_output;
 }
 
 static Build::CommandExecutionPlan load(const SwContext &swctx, const path &fn, const Build &s)
@@ -2073,8 +2014,7 @@ static Build::CommandExecutionPlan load(const SwContext &swctx, const path &fn, 
     Commands commands2;
     for (auto &[_, c] : commands)
         commands2.insert(c);
-    SW_UNIMPLEMENTED;
-    //return Solution::CommandExecutionPlan::createExecutionPlan(commands2);
+    return Build::CommandExecutionPlan::createExecutionPlan(commands2);
 }
 
 void save(const path &fn, const Build::CommandExecutionPlan &p)
@@ -2177,9 +2117,9 @@ void save(const path &fn, const Build::CommandExecutionPlan &p)
 
 path Build::getIdeDir() const
 {
-    SW_UNIMPLEMENTED;
     //const auto compiler_name = boost::to_lower_copy(toString(getSettings().Native.CompilerType));
-    //return BinaryDir / "sln" / ide_solution_name / compiler_name;
+    const auto compiler_name = "msvc";
+    return BinaryDir / "sln" / ide_solution_name / compiler_name;
 }
 
 path Build::getExecutionPlansDir() const
@@ -2189,11 +2129,10 @@ path Build::getExecutionPlansDir() const
 
 path Build::getExecutionPlanFilename() const
 {
-    SW_UNIMPLEMENTED;
     String n;
     for (auto &[pkg, _] : TargetsToBuild)
         n += pkg.toString();
-    //return getExecutionPlansDir() / (getConfig() + "_" + sha1(n).substr(0, 8) + ".explan");
+    return getExecutionPlansDir() / (getSettings().getConfig() + "_" + sha1(n).substr(0, 8) + ".explan");
 }
 
 void Build::execute()
@@ -2209,19 +2148,15 @@ void Build::execute()
             fs::remove_all(getExecutionPlansDir());
         }
 
-        //for (auto &s : solutions)
+        auto fn = getExecutionPlanFilename();
+        if (fs::exists(fn))
         {
-            auto fn = getExecutionPlanFilename();
-            if (fs::exists(fn))
-            {
-                // prevent double assign generators
-                swctx.getServiceFileStorage().reset();
+            // prevent double assign generators
+            swctx.getServiceFileStorage().reset();
 
-                SW_UNIMPLEMENTED;
-                //auto p = ::sw::load(swctx, fn, s);
-                //s.execute(p);
-                return;
-            }
+            auto p = ::sw::load(swctx, fn, *this);
+            execute(p);
+            return;
         }
     }
 
@@ -2432,8 +2367,8 @@ Commands Build::getCommands() const
                 continue;
 
             // copy
-            /*if (nt->isLocal() && Settings.Native.CopySharedLibraries &&
-                nt->Scope == TargetScope::Build && nt->NativeTarget::getOutputDir().empty())
+            if (nt->isLocal() && //getSettings().Native.CopySharedLibraries &&
+                nt->Scope == TargetScope::Build && nt->getOutputDir().empty())
             {
                 for (auto &l : nt->gatherAllRelatedDependencies())
                 {
@@ -2444,12 +2379,12 @@ Commands Build::getCommands() const
                         continue;
                     if (dt->HeaderOnly.value())
                         continue;
-                    if (getSolution().Settings.Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
+                    if (getSolution().getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
                         continue;
                     if (dt->getSelectedTool() == dt->Librarian.get())
                         continue;
                     auto in = dt->getOutputFile();
-                    auto o = nt->getOutputDir() / dt->NativeTarget::getOutputDir();
+                    auto o = nt->getOutputDir() / dt->getOutputDir();
                     o /= in.filename();
                     if (in == o)
                         continue;
@@ -2465,7 +2400,7 @@ Commands Build::getCommands() const
                     copy_cmd->command_storage = builder::Command::CS_LOCAL;
                     cmds.insert(copy_cmd);
                 }
-            }*/
+            }
         }
     }
 
@@ -2521,9 +2456,7 @@ Build::CommandExecutionPlan Build::getExecutionPlan(const Commands &cmds) const
 
 void Build::load_configless(const path &file_or_dir)
 {
-    SW_UNIMPLEMENTED;
-
-    /*setupSolutionName(file_or_dir);
+    setupSolutionName(file_or_dir);
 
     load_dll({}, false);
 
@@ -2551,9 +2484,9 @@ void Build::load_configless(const path &file_or_dir)
     }
 
     createSolutions("", false);
-    for (auto &s : solutions)
+    for (auto &s : settings)
     {
-        current_solution = &s;
+        current_settings = &s;
         if (!dir)
         {
             //exe += file_or_dir;
@@ -2564,17 +2497,19 @@ void Build::load_configless(const path &file_or_dir)
                 cppan_load(root, file_or_dir.stem().u8string());
             }
 
-            if (s.children.size() == 1)
+            // count non sw targets
+            SW_UNIMPLEMENTED;
+            /*if (s.children.size() == 1)
             {
                 if (auto nt = s.children.begin()->second->as<NativeCompiledTarget>())
                     *nt += file_or_dir;
             }
 
-            TargetsToBuild = s.children;
+            TargetsToBuild = s.children;*/
         }
         else
         {
-            auto &exe = s.addExecutable(ide_solution_name);
+            auto &exe = addExecutable(ide_solution_name);
             bool read_deps_from_comments = false;
 
             if (!read_deps_from_comments)
@@ -2588,22 +2523,23 @@ void Build::load_configless(const path &file_or_dir)
                 //}
             }
         }
-    }*/
+    }
 }
 
 void Build::generateBuildSystem()
 {
-    SW_UNIMPLEMENTED;
-
-    /*if (!getGenerator())
+    if (!getGenerator())
         return;
 
     getCommands();
     getExecutionPlan(); // also prepare commands
 
-    for (auto &s : solutions)
-        fs::remove_all(s.getExecutionPlansDir());
-    getGenerator()->generate(*this);*/
+    for (auto &s : settings)
+    {
+        current_settings = &s;
+        fs::remove_all(getExecutionPlanFilename());
+    }
+    getGenerator()->generate(*this);
 }
 
 static const auto ide_fs = "ide_vs";
@@ -3356,6 +3292,52 @@ PackageDescriptionMap Build::getPackages() const
         m[pkg] = std::make_unique<JsonPackageDescription>(s);
     }
     return m;
+}
+
+path Build::getTestDir() const
+{
+    return BinaryDir / "test" / getSettings().getConfig();
+}
+
+void Build::addTest(Test &cb, const String &name)
+{
+    auto dir = getTestDir() / name;
+    fs::remove_all(dir); // also makea condition here
+
+    auto &c = *cb.c;
+    c.name = "test: [" + name + "]";
+    c.always = true;
+    c.working_directory = dir;
+    c.addPathDirectory(BinaryDir / getSettings().getConfig());
+    c.out.file = dir / "stdout.txt";
+    c.err.file = dir / "stderr.txt";
+    tests.insert(cb.c);
+}
+
+Test Build::addTest(const ExecutableTarget &t)
+{
+    return addTest("test." + std::to_string(tests.size() + 1), t);
+}
+
+Test Build::addTest(const String &name, const ExecutableTarget &tgt)
+{
+    auto c = tgt.addCommand();
+    c << cmd::prog(tgt);
+    Test t(c);
+    addTest(t, name);
+    return t;
+}
+
+Test Build::addTest()
+{
+    return addTest("test." + std::to_string(tests.size() + 1));
+}
+
+Test Build::addTest(const String &name)
+{
+    Test cb(swctx, swctx.getServiceFileStorage());
+    addTest(cb, name);
+    return cb;
 }
 
 }

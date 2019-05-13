@@ -217,11 +217,11 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
     Commands tests;
-    /*Test addTest(const ExecutableTarget &t);
+    Test addTest(const ExecutableTarget &t);
     Test addTest(const String &name, const ExecutableTarget &t);
     Test addTest();
     Test addTest(const String &name);
-    path getTestDir() const;*/
+    path getTestDir() const;
 
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
     static const AvailableFrontends &getAvailableFrontends();
@@ -238,6 +238,7 @@ private:
     bool prepareStep(const TargetBaseTypePtr &t) const;
     UnresolvedDependenciesType gatherUnresolvedDependencies(int n_runs = 0) const;
     void build_and_resolve(int n_runs = 0);
+    void addTest(Test &cb, const String &name);
 
 public:
 
