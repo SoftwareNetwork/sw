@@ -188,7 +188,7 @@ CheckSet::CheckSet(Checker &checker)
 {
 }
 
-Checker::Checker(const Build &build)
+Checker::Checker(Build &build)
     : build(build)
 {
     //checksStorage = std::make_unique<ChecksStorage>();
@@ -196,7 +196,7 @@ Checker::Checker(const Build &build)
 
 CheckSet &Checker::addSet(const String &name)
 {
-    auto p = sets[current_gn].emplace(name, CheckSet(*this));
+    auto p = sets[build.current_gn].emplace(name, CheckSet(*this));
     p.first->second.name = name;
     return p.first->second;
 }

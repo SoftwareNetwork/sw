@@ -7,6 +7,7 @@
 #include "sw_context.h"
 
 #include "checks_storage.h"
+#include "module.h"
 
 namespace sw
 {
@@ -15,9 +16,16 @@ SwContext::SwContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
 {
     source_dir = fs::canonical(fs::current_path());
+    module_storage = std::make_unique<ModuleStorage>();
 }
 
-SwContext::~SwContext() = default;
+SwContext::~SwContext()
+{
+    // do not clear modules on exception, because it may come from there
+    // TODO: cleanup modules data first
+    if (std::uncaught_exceptions())
+        module_storage.release();
+}
 
 ChecksStorage &SwContext::getChecksStorage(const String &config) const
 {
@@ -40,6 +48,11 @@ ChecksStorage &SwContext::getChecksStorage(const String &config, const path &fn)
         return *i->second;
     }
     return *i->second;
+}
+
+ModuleStorage &SwContext::getModuleStorage() const
+{
+    return *module_storage;
 }
 
 }

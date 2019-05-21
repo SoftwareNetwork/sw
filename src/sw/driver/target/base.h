@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "enums.h"
 #include "sw/driver/build_settings.h"
 #include "sw/driver/program_storage.h"
 #include "sw/driver/license.h"
@@ -28,88 +29,6 @@
 namespace sw
 {
 
-// ? (re)move?
-enum class TargetScope
-{
-    Analyze,
-    Benchmark,
-    Build,
-    Coverage,
-    Documentation,
-    Example,
-    Format,
-    Helper, // same as tool?
-    Profile,
-    Sanitize,
-    Tool,
-    Test,
-    UnitTest,
-    Valgrind,
-};
-
-enum class CallbackType
-{
-    CreateTarget,
-    CreateTargetInitialized,
-    BeginPrepare,
-    EndPrepare,
-
-    //    std::vector<TargetEvent> PreBuild;
-    // addCustomCommand()?
-    // preBuild?
-    // postBuild?
-    // postLink?
-};
-
-// passed (serialized) via strings
-enum class TargetType : int32_t
-{
-    Unspecified,
-
-    Build,
-    Solution,
-
-    Project, // explicitly created
-    Directory, // implicitly created?
-
-    NativeLibrary,
-    NativeStaticLibrary,
-    NativeSharedLibrary,
-    NativeExecutable,
-
-    CSharpLibrary,
-    CSharpExecutable,
-
-    RustLibrary,
-    RustExecutable,
-
-    GoLibrary,
-    GoExecutable,
-
-    FortranLibrary,
-    FortranExecutable,
-
-    // add/replace with java jar?
-    JavaLibrary,
-    JavaExecutable,
-
-    // add/replace with java jar?
-    KotlinLibrary,
-    KotlinExecutable,
-
-    DLibrary,
-    DStaticLibrary,
-    DSharedLibrary,
-    DExecutable,
-};
-
-// enforcement rules apply to target to say how many checks it should perform
-enum class EnforcementType
-{
-    ChechFiles,
-    CheckRegexes,
-};
-
 SW_DRIVER_CPP_API
 bool isExecutable(TargetType T);
 
@@ -129,7 +48,7 @@ struct LibraryTarget;
 struct StaticLibraryTarget;
 struct SharedLibraryTarget;
 
-struct TargetInternalId
+struct TargetSettings
 {
     BuildSettings ss;
     std::set<PackageId> dependencies;
@@ -137,19 +56,7 @@ struct TargetInternalId
 
     String getConfig() const;
 
-    bool operator<(const TargetInternalId &rhs) const;
-};
-
-struct TargetEntryPoint
-{
-    virtual ~TargetEntryPoint() = default;
-
-    //virtual TargetBaseTypePtr create() = 0;
-};
-
-struct TargetSettings : TargetInternalId
-{
-    TargetEntryPoint *ep = nullptr;
+    bool operator<(const TargetSettings &rhs) const;
 };
 
 /**
@@ -157,9 +64,6 @@ struct TargetSettings : TargetInternalId
 */
 struct SW_DRIVER_CPP_API TargetBase : Node, ProjectDirectories
 {
-    using TargetMapInternal = std::map<TargetSettings, TargetBaseTypePtr>;
-    using TargetMap = PackageVersionMapBase<TargetMapInternal, std::unordered_map, primitives::version::VersionMap>;
-
     // Data storage for objects that must be alive with the target.
     // For example, program clones etc.
     std::vector<std::any> Storage;

@@ -128,5 +128,5 @@ using sw::toString;
 #endif
 
 //#ifdef _MSC_VER
-#include "sw1.h"
+//#include "sw1.h"
 //#endif

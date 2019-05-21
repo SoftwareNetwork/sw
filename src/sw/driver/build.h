@@ -100,6 +100,23 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
     }
 };
 
+struct TargetEntryPoint
+{
+    virtual ~TargetEntryPoint() = default;
+
+    virtual TargetBaseTypePtr create(const PackageIdSet &pkgs) = 0;
+};
+
+using TargetMapInternal1 = std::map<TargetSettings, TargetBaseTypePtr>;
+struct TargetMapInternal : TargetMapInternal1
+{
+    std::shared_ptr<TargetEntryPoint> ep;
+
+    void create();
+};
+using TargetMap = PackageVersionMapBase<TargetMapInternal, std::unordered_map, primitives::version::VersionMap>;
+
+
 // simple interface for users
 struct SolutionX : TargetBase
 {
@@ -176,6 +193,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     PackageDescriptionMap getPackages() const;
     BuildSettings createSettings() const;
     const BuildSettings &addSettings(const BuildSettings &);
+    path build_configs(const std::unordered_set<LocalPackage> &pkgs);
 
     /*void addTargetSettings(const String &ppath_regex, const VersionRange &vr, const TargetSettingsDataContainer &);
     template <class T>
@@ -290,7 +308,7 @@ public:
     void execute(CommandExecutionPlan &p) const;
 
     bool isConfigSelected(const String &s) const;
-    const Module &loadModule(const path &fn) const;
+    Module loadModule(const path &fn) const;
 
     void prepare();
     bool prepareStep();
@@ -302,9 +320,6 @@ public:
     //Solution &addSolutionRaw();
     //Solution &addSolution();
     //Solution &addCustomSolution();
-
-    // hide?
-    path build_configs(const std::unordered_set<LocalPackage> &pkgs);
 
 private:
     bool remove_ide_explans = false;

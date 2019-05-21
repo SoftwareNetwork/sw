@@ -7,12 +7,6 @@
 #define SW_PACKAGE_API
 #include <sw/driver/sw.h>
 
-#include "build.h"
-#include "sw_context.h"
-
-#include <boost/algorithm/string.hpp>
-#include <primitives/executor.h>
-
 // disable custom pragma warnings
 #ifdef _MSC_VER
 #pragma warning(push)

@@ -112,6 +112,10 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
         if (has_checks)
             ctx.addLine("#define check check_" + r.getVariableName());
         ctx.addLine("#include \"" + normalize_path(r.getDirSrc2() / "sw.cpp") + "\"");
+        ctx.addLine("#undef configure");
+        ctx.addLine("#undef build");
+        if (has_checks)
+            ctx.addLine("#undef check");
         ctx.addLine();
 
         build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, d.prefix).toString() + "\";");
@@ -122,7 +126,7 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
 
         if (has_checks)
         {
-            check.addLine("c.current_gn = " + std::to_string(d.group_number) + ";");
+            check.addLine("c.build.current_gn = " + std::to_string(d.group_number) + ";");
             check.addLine("check_" + r.getVariableName() + "(c);");
             check.addLine();
         }
@@ -132,7 +136,7 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     build.addLine("s.current_module.clear();");
     build.addLine("s.current_gn = 0;");
     build.endFunction();
-    check.addLine("c.current_gn = 0;");
+    check.addLine("c.build.current_gn = 0;");
     check.endFunction();
 
     ctx += build;

@@ -7,6 +7,7 @@
 #include "module.h"
 
 #include <boost/dll.hpp>
+#include <boost/dll/import_mangled.hpp>
 #include <boost/thread/lock_types.hpp>
 #include <primitives/sw/cl.h>
 
@@ -18,13 +19,7 @@ static cl::opt<bool> do_not_remove_bad_module("do-not-remove-bad-module");
 namespace sw
 {
 
-ModuleStorage &getModuleStorage()
-{
-    static ModuleStorage modules;
-    return modules;
-}
-
-const Module &ModuleStorage::get(const path &dll)
+const Module::DynamicLibrary &ModuleStorage::get(const path &dll)
 {
     if (dll.empty())
         throw SW_RUNTIME_ERROR("Empty module");
@@ -32,27 +27,19 @@ const Module &ModuleStorage::get(const path &dll)
     boost::upgrade_lock lk(m);
     auto i = modules.find(dll);
     if (i != modules.end())
-        return i->second;
+        return *i->second;
     boost::upgrade_to_unique_lock lk2(lk);
-    return modules.emplace(dll, dll).first->second;
-}
 
-Module::Module(const path &dll)
-    : dll(dll)
-{
     String err;
     err = "Module " + normalize_path(dll) + " is in bad shape";
     try
     {
-        module = new boost::dll::shared_library(
-#ifdef _WIN32
-            dll.wstring()
-#else
-            dll.u8string()
-#endif
-            , boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global
+        auto module = std::make_unique<Module::DynamicLibrary>(dll,
+            boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global
             //, ec
         );
+
+        return *modules.emplace(dll, std::move(module)).first->second;
     }
     catch (std::exception &e)
     {
@@ -70,14 +57,18 @@ Module::Module(const path &dll)
             fs::remove(dll);
         throw;
     }
+}
 
-#define LOAD_NAME(f, n)                                           \
-    do                                                            \
-    {                                                             \
-        f##_.name = #f;                                           \
-        f##_.m = this;                                            \
-        if (module->has(n))                                       \
-            f##_ = module->get<decltype(f##_)::function_type>(n); \
+Module::Module(const Module::DynamicLibrary &dll, const String &suffix)
+    : module(dll)
+{
+#define LOAD_NAME(f, n)                                                                               \
+    do                                                                                                \
+    {                                                                                                 \
+        f##_.name = #f;                                                                               \
+        f##_.m = this;                                                                                \
+        if (!module.symbol_storage().get_function<decltype(f##_)::function_type>(n + suffix).empty()) \
+            f##_ = module.get_function<decltype(f##_)::function_type>(n + suffix);                    \
     } while (0)
 
 #define LOAD(f) LOAD_NAME(f, f##_.name)
@@ -91,9 +82,9 @@ Module::Module(const path &dll)
 #undef LOAD_NAME
 }
 
-Module::~Module()
+path Module::getLocation() const
 {
-    delete module;
+    return module.shared_lib().location();
 }
 
 void Module::build(Build &s) const

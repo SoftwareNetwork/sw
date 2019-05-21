@@ -14,6 +14,7 @@ namespace sw
 {
 
 struct ChecksStorage;
+struct ModuleStorage;
 
 struct SW_DRIVER_CPP_API SwContext : SwBuilderContext
 {
@@ -24,9 +25,11 @@ struct SW_DRIVER_CPP_API SwContext : SwBuilderContext
 
     ChecksStorage &getChecksStorage(const String &config) const;
     ChecksStorage &getChecksStorage(const String &config, const path &fn) const;
+    ModuleStorage &getModuleStorage() const;
 
 private:
     mutable std::unordered_map<String, std::unique_ptr<ChecksStorage>> checksStorages;
+    std::unique_ptr<ModuleStorage> module_storage;
 };
 
 } // namespace sw

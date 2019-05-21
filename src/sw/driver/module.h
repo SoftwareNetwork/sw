@@ -8,7 +8,7 @@
 
 #include "build.h"
 
-#include <boost/dll/shared_library.hpp>
+#include <boost/dll/smart_library.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
 namespace sw
@@ -16,6 +16,8 @@ namespace sw
 
 struct SW_DRIVER_CPP_API Module
 {
+    using DynamicLibrary = boost::dll::experimental::smart_library;
+
     template <class F, bool Required = false>
     struct LibraryCall
     {
@@ -46,7 +48,7 @@ struct SW_DRIVER_CPP_API Module
                 {
                     String err = "error in module";
                     if (m)
-                        err += " (" + normalize_path(m->dll) + ")";
+                        err += " (" + normalize_path(m->getLocation()) + ")";
                     err += ": ";
                     if (s && !s->current_module.empty())
                         err += s->current_module + ": ";
@@ -57,7 +59,7 @@ struct SW_DRIVER_CPP_API Module
                 {
                     String err = "error in module";
                     if (m)
-                        err += " (" + normalize_path(m->dll) + ")";
+                        err += " (" + normalize_path(m->getLocation()) + ")";
                     err += ": ";
                     if (s && !s->current_module.empty())
                         err += s->current_module + ": ";
@@ -72,7 +74,7 @@ struct SW_DRIVER_CPP_API Module
                     err += " '" + name + "'";
                 err += " is not present in the module";
                 if (m)
-                    err += " (" + normalize_path(m->dll) + ")";
+                    err += " (" + normalize_path(m->getLocation()) + ")";
                 if (s && !s->current_module.empty())
                     err += ": " + s->current_module;
                 throw SW_RUNTIME_ERROR(err);
@@ -81,12 +83,9 @@ struct SW_DRIVER_CPP_API Module
         }
     };
 
-    path dll;
-    boost::dll::shared_library *module = nullptr;
+    const DynamicLibrary &module;
 
-    Module(const path &dll);
-    Module(const Module &) = delete;
-    ~Module();
+    Module(const Module::DynamicLibrary &, const String &suffix = {});
 
     // api
     void build(Build &s) const;
@@ -99,7 +98,7 @@ struct SW_DRIVER_CPP_API Module
     {
         if (!module)
             throw SW_RUNTIME_ERROR("empty module");
-        return module->get<F>(name)(std::forward<Args>(args)...);
+        return module.get_function<F>(name)(std::forward<Args>(args)...);
     }
 
 private:
@@ -107,19 +106,19 @@ private:
     mutable LibraryCall<void(Build &)> configure_;
     mutable LibraryCall<void(Checker &)> check_;
     mutable LibraryCall<int(), true> sw_get_module_abi_version_;
+
+    path getLocation() const;
 };
 
 struct SW_DRIVER_CPP_API ModuleStorage
 {
-    std::unordered_map<path, Module> modules;
+    std::unordered_map<path, std::unique_ptr<Module::DynamicLibrary>> modules;
     boost::upgrade_mutex m;
 
     ModuleStorage() = default;
     ModuleStorage(const ModuleStorage &) = delete;
 
-    const Module &get(const path &dll);
+    const Module::DynamicLibrary &get(const path &dll);
 };
-
-ModuleStorage &getModuleStorage(const Build &owner);
 
 }

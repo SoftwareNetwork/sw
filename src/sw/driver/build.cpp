@@ -93,6 +93,28 @@ std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 namespace sw
 {
 
+struct NativeTargetEntryPoint : TargetEntryPoint
+{
+    const Module &m;
+
+    NativeTargetEntryPoint(const Module &m)
+        : m(m)
+    {
+    }
+
+    TargetBaseTypePtr create(const PackageIdSet &pkgs) override
+    {
+        SW_UNIMPLEMENTED;
+    }
+};
+
+void TargetMapInternal::create()
+{
+    if (!ep)
+        throw SW_RUNTIME_ERROR("No entry point provided");
+    ep->create({});
+}
+
 void check_self(Checker &c);
 
 String toString(FrontendType t)
@@ -443,9 +465,8 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return { headers, udeps };
 }
 
-path build_configs(const SwContext &swctx, const std::unordered_set<LocalPackage> &pkgs)
+static auto build_configs(const SwContext &swctx, const std::unordered_set<LocalPackage> &pkgs)
 {
-    //static
     Build b(swctx); // cache?
     b.execute_jobs = config_jobs;
     b.Local = false;
@@ -454,12 +475,17 @@ path build_configs(const SwContext &swctx, const std::unordered_set<LocalPackage
     return b.build_configs(pkgs);
 }
 
-void sw_check_abi_version(int v)
+static void sw_check_abi_version(int v)
 {
     if (v > SW_MODULE_ABI_VERSION)
         throw SW_RUNTIME_ERROR("Module ABI (" + std::to_string(v) + ") is greater than binary ABI (" + std::to_string(SW_MODULE_ABI_VERSION) + "). Update your sw binary.");
     if (v < SW_MODULE_ABI_VERSION)
         throw SW_RUNTIME_ERROR("Module ABI (" + std::to_string(v) + ") is less than binary ABI (" + std::to_string(SW_MODULE_ABI_VERSION) + "). Update sw driver headers (or ask driver maintainer).");
+}
+
+static String gn2suffix(PackageVersionGroupNumber gn)
+{
+    return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
 }
 
 Build::Build(const SwContext &swctx)
@@ -495,19 +521,7 @@ Build::Build(const Build &rhs)
 {
 }
 
-Build::~Build()
-{
-    // goes first
-    children.clear();
-
-    // maybe also clear checks?
-    // or are they solution-specific?
-
-    // do not clear modules on exception, because it may come from there
-    // TODO: cleanup modules data first
-    //if (!std::uncaught_exceptions())
-        //getModuleStorage(*this).modules.clear();
-}
+Build::~Build() = default;
 
 BuildSettings Build::createSettings() const
 {
@@ -621,25 +635,30 @@ void Build::build_and_resolve(int n_runs)
     }
 
     auto dll = ::sw::build_configs(swctx, cfgs);
-    //used_modules.insert(dll);
+
+    for (auto &[u, p] : m)
+        children[p].ep = std::make_unique<NativeTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
 
     Local = false;
 
-    SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->getData().prefix));
-    if (cfgs.size() != 1)
-        sr.restoreNow(true);
-
-    sw_check_abi_version(getModuleStorage(*this).get(dll).sw_get_module_abi_version());
-    for (auto &s : settings)
+    for (auto &[gn, p] : cfgs2)
     {
-        current_settings = &s;
-        getModuleStorage(*this).get(dll).check(*this, checker);
-        // we can use new (clone of this) solution, then copy known targets
-        // to allow multiple passes-builds
-        getModuleStorage(*this).get(dll).build(*this);
+        NamePrefix = p.ppath.slice(0, p.getData().prefix);
+        current_gn = gn;
+        current_module = p.toString();
+        sw_check_abi_version(Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
+        for (auto &s : settings)
+        {
+            current_settings = &s;
+            Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
+            // we can use new (clone of this) solution, then copy known targets
+            // to allow multiple passes-builds
+            Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
+        }
     }
-
-    sr.restoreNow(true);
+    current_gn = 0;
+    NamePrefix.clear();
+    current_module.clear();
 
     for (auto &[porig, p] : m)
     {
@@ -1195,7 +1214,7 @@ static NativeCompiledTarget &getDriverTarget(Build &solution)
         throw SW_RUNTIME_ERROR("no driver target");
     if (i->second.empty_releases())
         throw SW_RUNTIME_ERROR("no driver target");
-    auto j = i->second.rbegin_releases()->second;
+    auto &j = i->second.rbegin_releases()->second;
     TargetSettings tid{ solution.getSettings() };
     auto k = j.find(tid);
     if (k == j.end())
@@ -1292,6 +1311,7 @@ FilesMap Build::build_configs_separate(const Files &files)
     {
         auto &lib = createTarget({ fn });
 
+        // must check is changed?
         if (do_not_rebuild_config && fs::exists(lib.getOutputFile()))
             return lib.getOutputFile();
 
@@ -1348,10 +1368,12 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             if (auto c = sf->compiler->template as<VisualStudioCompiler>())
             {
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSw1Header());
                 c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSwCheckAbiVersionHeader());
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler>())
             {
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSw1Header());
                 c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSwCheckAbiVersionHeader());
             }
             else if (auto c = sf->compiler->template as<ClangCompiler>())
@@ -1373,7 +1395,7 @@ FilesMap Build::build_configs_separate(const Files &files)
             lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
             lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
             // do not use api name because we use C linkage
-            lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __declspec(dllexport)";
+            lib.Definitions["SW_PACKAGE_API"] = "__declspec(dllexport)";
         }
         else
         {
@@ -1382,7 +1404,7 @@ FilesMap Build::build_configs_separate(const Files &files)
             lib.Definitions["SW_BUILDER_API="];
             lib.Definitions["SW_DRIVER_CPP_API="];
             // do not use api name because we use C linkage
-            lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __attribute__ ((visibility (\"default\")))";
+            lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
         }
 
         if (getSettings().TargetOS.is(OSType::Windows))
@@ -1472,8 +1494,6 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
         files.insert(p);
         output_names.emplace(p, pkg);
     }
-    bool many_files = true;
-    auto h = getFilesHash(files);
 
     auto &lib = createTarget(files);
 
@@ -1482,6 +1502,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
         solution.children.erase(lib.getPackage());
     };
 
+    // must check is changed?
     if (do_not_rebuild_config && fs::exists(lib.getOutputFile()))
         return lib.getOutputFile();
 
@@ -1510,124 +1531,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
             lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
     }
 
-    auto is_changed = [this, &lib](const path &p)
-    {
-        if (auto f = lib[p].as<NativeSourceFile>(); f)
-        {
-            return
-                File(p, swctx.getServiceFileStorage()).isChanged() ||
-                File(f->compiler->getOutputFile(), swctx.getServiceFileStorage()).isChanged()
-                ;
-        }
-        return true;
-    };
-
-    // generate main source file
-    path many_files_fn;
-    if (many_files)
-    {
-        primitives::CppEmitter ctx;
-
-        primitives::CppEmitter build;
-        build.beginFunction("void build(Solution &s)");
-
-        primitives::CppEmitter check;
-        check.beginFunction("void check(Checker &c)");
-
-        primitives::CppEmitter abi;
-        abi.addLine("SW_PACKAGE_API");
-        abi.beginFunction("int sw_get_module_abi_version()");
-        abi.addLine("int v = -1, t;");
-        abi.addLine("String current_module, prev_module;");
-        abi.addLine();
-
-        abi.beginBlock("auto check = [&t, &v, &current_module, &prev_module]()");
-        abi.addLine("if (v == -1)");
-        abi.increaseIndent();
-        abi.addLine("v = t;");
-        abi.decreaseIndent();
-        abi.addLine("if (t != v)");
-        abi.increaseIndent();
-        abi.addLine("throw SW_RUNTIME_ERROR(\"ABI mismatch in loaded modules: previous "
-            "(\" + std::to_string(v) + \", \" + prev_module + \") != current (\" + std::to_string(t) + \", \" + current_module + \")\");");
-        abi.decreaseIndent();
-        abi.addLine("prev_module = current_module;");
-        abi.endBlock(true);
-        abi.addLine();
-
-        for (auto &r : pkgs)
-        {
-            auto fn = get_real_package_config(r);
-            auto h = getFilesHash({ fn });
-            ctx.addLine("// " + r.toString());
-            ctx.addLine("// " + normalize_path(fn));
-            if (getHostOs().Type != OSType::Windows)
-                ctx.addLine("extern \"C\"");
-            ctx.addLine("void build_" + h + "(Solution &);");
-            if (getHostOs().Type != OSType::Windows)
-                ctx.addLine("extern \"C\"");
-            ctx.addLine("void check_" + h + "(Checker &);");
-            ctx.addLine("SW_PACKAGE_API");
-            ctx.addLine("int sw_get_module_abi_version_" + h + "();");
-            ctx.addLine();
-
-            build.addLine("// " + r.toString());
-            build.addLine("// " + normalize_path(fn));
-            build.addLine("s.NamePrefix = \"" + r.ppath.slice(0, r.getData().prefix).toString() + "\";");
-            build.addLine("s.current_module = \"" + r.toString() + "\";");
-            build.addLine("s.current_gn = " + std::to_string(r.getData().group_number) + ";");
-            build.addLine("build_" + h + "(s);");
-            build.addLine();
-
-            abi.addLine("// " + r.toString());
-            abi.addLine("// " + normalize_path(fn));
-            abi.addLine("t = sw_get_module_abi_version_" + h + "();");
-            abi.addLine("current_module = \"" + r.toString() + "\";");
-            abi.addLine("check();");
-            abi.addLine();
-
-            auto cfg = read_file(fn);
-            if (cfg.find("void check(") != cfg.npos)
-            {
-                check.addLine("// " + r.toString());
-                check.addLine("c.current_gn = " + std::to_string(r.getData().group_number) + ";");
-                check.addLine("check_" + h + "(c);");
-                check.addLine();
-            }
-        }
-
-        build.addLine("s.NamePrefix.clear();");
-        build.addLine("s.current_module.clear();");
-        build.addLine("s.current_gn = 0;");
-        build.endFunction();
-        check.addLine("c.current_gn = 0;");
-        check.endFunction();
-        abi.addLine("return v;");
-        abi.endFunction();
-
-        ctx += build;
-        ctx += check;
-        ctx += abi;
-
-        auto p = many_files_fn = BinaryDir / "self" / ("sw." + h + ".cpp");
-        write_file_if_different(p, ctx.getText());
-        lib += p;
-        lib[p].fancy_name = "[multiconfig]";
-        if (gVerbose)
-            lib[p].fancy_name += " (" + normalize_path(p) + ")";
-
-        //if (!(is_changed(p) ||
-              //File(lib.getOutputFile(), *fs).isChanged() ||
-              //std::any_of(files.begin(), files.end(), [&is_changed](const auto &p) {
-                  //return is_changed(p);
-              //})))
-            //return lib.getOutputFile();
-    }
-    //else if (!(is_changed(*files.begin()) ||
-               //File(lib.getOutputFile(), *fs).isChanged()))
-        //return lib.getOutputFile();
-
-    // after files
+    //
     write_pch(solution);
     PrecompiledHeader pch;
     pch.header = getDriverIncludeDir(solution) / getMainPchFilename();
@@ -1636,90 +1540,60 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
     pch.force_include_pch_to_source = true;
     lib.addPrecompiledHeader(pch);
 
-    auto gnu_setup = [this, &solution](auto *c, const auto &headers, const path &fn)
+    auto gnu_setup = [this, &solution](auto *c, const auto &headers, const path &fn, LocalPackage &pkg)
     {
         // we use pch, but cannot add more defs on CL
         // so we create a file with them
-        auto hash = getFilesHash({ fn });
+        auto gn = pkg.getData().group_number;
+        auto hash = gn2suffix(gn);
         path h;
         // cannot create aux dir on windows; auxl = auxiliary
         if (is_under_root(fn, swctx.getLocalStorage().storage_dir_pkg))
-            h = fn.parent_path().parent_path() / "auxl" / ("defs_" + hash + ".h");
+            h = fn.parent_path().parent_path() / "auxl" / ("defs" + hash + ".h");
         else
-            h = fn.parent_path() / SW_BINARY_DIR / "auxl" / ("defs_" + hash + ".h");
+            h = fn.parent_path() / SW_BINARY_DIR / "auxl" / ("defs" + hash + ".h");
         primitives::CppEmitter ctx;
 
-        ctx.addLine("#define configure configure_" + hash);
-        ctx.addLine("#define build build_" + hash);
-        ctx.addLine("#define check check_" + hash);
-        ctx.addLine("#define sw_get_module_abi_version sw_get_module_abi_version_" + hash);
+        ctx.addLine("#define configure configure" + hash);
+        ctx.addLine("#define build build" + hash);
+        ctx.addLine("#define check check" + hash);
+        ctx.addLine("#define sw_get_module_abi_version sw_get_module_abi_version" + hash);
 
         write_file_if_different(h, ctx.getText());
+
         c->ForcedIncludeFiles().push_back(h);
-        //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
+        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
 
         for (auto &h : headers)
             c->ForcedIncludeFiles().push_back(h);
         c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
     };
 
-    for (auto &fn : files)
+    for (auto &[fn, pkg] : output_names)
     {
         auto[headers, udeps] = getFileDependencies(swctx, fn);
         if (auto sf = lib[fn].template as<NativeSourceFile>())
         {
-            auto add_defs = [&many_files, &fn](auto &c)
-            {
-                if (!many_files)
-                    return;
-                auto h = getFilesHash({ fn });
-                c->Definitions["configure"] = "configure_" + h;
-                c->Definitions["build"] = "build_" + h;
-                c->Definitions["check"] = "check_" + h;
-                c->Definitions["sw_get_module_abi_version"] = "sw_get_module_abi_version_" + h;
-            };
-
             if (auto c = sf->compiler->template as<VisualStudioCompiler>())
             {
-                add_defs(c);
-                for (auto &h : headers)
-                    c->ForcedIncludeFiles().push_back(h);
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
+                gnu_setup(c, headers, fn, pkg);
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler>())
             {
-                add_defs(c);
-                for (auto &h : headers)
-                    c->ForcedIncludeFiles().push_back(h);
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
+                gnu_setup(c, headers, fn, pkg);
             }
             else if (auto c = sf->compiler->template as<ClangCompiler>())
             {
-                gnu_setup(c, headers, fn);
+                gnu_setup(c, headers, fn, pkg);
             }
             else if (auto c = sf->compiler->template as<GNUCompiler>())
             {
-                gnu_setup(c, headers, fn);
+                gnu_setup(c, headers, fn, pkg);
             }
         }
         for (auto &d : udeps)
             lib += std::make_shared<Dependency>(d);
     }
-
-    //if (many_files)
-    //{
-    //    if (auto sf = lib[many_files_fn].template as<NativeSourceFile>())
-    //    {
-    //        if (auto c = sf->compiler->template as<ClangCompiler>())
-    //        {
-    //            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
-    //        }
-    //        else if (auto c = sf->compiler->template as<GNUCompiler>())
-    //        {
-    //            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
-    //        }
-    //    }
-    //}
 
     if (settings[0].TargetOS.is(OSType::Windows))
     {
@@ -1728,7 +1602,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
         lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
         lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
         // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __declspec(dllexport)";
+        lib.Definitions["SW_PACKAGE_API"] = "__declspec(dllexport)";
     }
     else
     {
@@ -1737,7 +1611,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
         lib.Definitions["SW_BUILDER_API="];
         lib.Definitions["SW_DRIVER_CPP_API="];
         // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "extern \"C\" __attribute__ ((visibility (\"default\")))";
+        lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
     }
 
     if (settings[0].TargetOS.is(OSType::Windows))
@@ -1768,7 +1642,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
 
 // can be used in configs to load subdir configs
 // s.build->loadModule("client/sw.cpp").call<void(Solution &)>("build", s);
-const Module &Build::loadModule(const path &p) const
+Module Build::loadModule(const path &p) const
 {
     auto fn2 = p;
     if (!fn2.is_absolute())
@@ -1785,7 +1659,7 @@ const Module &Build::loadModule(const path &p) const
         auto r = b.build_configs_separate({ fn2 });
         dll = r.begin()->second;
     }
-    return getModuleStorage(*this).get(dll);
+    return swctx.getModuleStorage().get(dll);
 }
 
 path Build::build(const path &fn)
@@ -2603,13 +2477,15 @@ void Build::load_packages(const StringSet &pkgs)
     configure = false;
 
     auto dll = ::sw::build_configs(swctx, cfgs);
+    for (auto &[u, p] : m)
+        children[p].ep = std::make_unique<NativeTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
 
     SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->getData().prefix));
     if (cfgs.size() != 1)
         sr.restoreNow(true);
 
     createSolutions(dll, true);
-    load_dll(dll);
+    //load_dll(dll);
 
     // clear TargetsToBuild that is set inside load_dll()
     TargetsToBuild.clear();
@@ -2766,11 +2642,11 @@ void Build::createSolutions(const path &dll, bool usedll)
     solutions_created = true;
 
     if (usedll)
-        sw_check_abi_version(getModuleStorage(*this).get(dll).sw_get_module_abi_version());
+        sw_check_abi_version(Module(swctx.getModuleStorage().get(dll)).sw_get_module_abi_version());
 
     // configure may change defaults, so we must care below
     if (usedll && configure)
-        getModuleStorage(*this).get(dll).configure(*this);
+        Module(swctx.getModuleStorage().get(dll)).configure(*this);
 
     if (hasAnyUserProvidedInformation())
     {
@@ -3005,7 +2881,7 @@ void Build::load_dll(const path &dll, bool usedll)
             for (auto &s : settings)
             {
                 current_settings = &s;
-                getModuleStorage(*this).get(dll).check(*this, checker);
+                Module(swctx.getModuleStorage().get(dll)).check(*this, checker);
             }
         }
     }
@@ -3018,7 +2894,7 @@ void Build::load_dll(const path &dll, bool usedll)
             if (settings.size() > 1)
                 LOG_INFO(logger, "[" << (i + 1) << "/" << settings.size() << "] load pass " << s.getConfig());
             current_settings = &s;
-            getModuleStorage(*this).get(dll).build(*this);
+            Module(swctx.getModuleStorage().get(dll)).build(*this);
         }
     }
 

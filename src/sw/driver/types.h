@@ -160,8 +160,9 @@ enum class CLanguageStandard
     C11,
     C17,
     C18 = C17,
+    C2x,
 
-    CLatest = C18,
+    CLatest = C2x,
 
     // for quick standards
     cansi = ANSI,
@@ -172,6 +173,7 @@ enum class CLanguageStandard
     c11 = C11,
     c17 = C17,
     c18 = C18,
+    c2x = C2x,
     clatest = CLatest,
 };
 

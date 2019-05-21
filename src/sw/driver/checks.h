@@ -336,15 +336,12 @@ private:
 
 struct SW_DRIVER_CPP_API Checker
 {
-    const Build &build;
+    Build &build;
 
     /// child sets
     std::unordered_map<PackageVersionGroupNumber, std::unordered_map<String /* set name */, CheckSet>> sets;
 
-    /// some unique identification of current module
-    PackageVersionGroupNumber current_gn = 0;
-
-    Checker(const Build &build);
+    Checker(Build &build);
 
     CheckSet &addSet(const String &name);
 

@@ -75,12 +75,12 @@ String toString(TargetType T)
     throw SW_RUNTIME_ERROR("unreachable code");
 }
 
-bool TargetInternalId::operator<(const TargetInternalId &rhs) const
+bool TargetSettings::operator<(const TargetSettings &rhs) const
 {
     return std::tie(ss, dependencies, features) < std::tie(rhs.ss, rhs.dependencies, rhs.features);
 }
 
-String TargetInternalId::getConfig() const
+String TargetSettings::getConfig() const
 {
     return ss.getConfig();
 }
