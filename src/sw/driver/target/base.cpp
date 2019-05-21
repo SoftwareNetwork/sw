@@ -92,9 +92,7 @@ TargetBase::TargetBase()
 TargetBase::TargetBase(const TargetBase &rhs)
     : ProjectDirectories(rhs)
     , source(rhs.source ? rhs.source->clone() : nullptr)
-    , Scope(rhs.Scope)
     , Local(rhs.Local)
-    , UseStorageBinaryDir(rhs.UseStorageBinaryDir)
     , DryRun(rhs.DryRun)
     , NamePrefix(rhs.NamePrefix)
     , build(rhs.build)
@@ -207,14 +205,12 @@ void TargetBase::setupTarget(TargetBaseType *t) const
 
     // inherit from this
     t->build = &getSolution();
-    t->Scope = Scope;
     if (source)
         t->source = source->clone();
 
     t->IsConfig = IsConfig; // TODO: inherit from reconsider
     t->Local = Local; // TODO: inherit from reconsider
     t->DryRun = DryRun; // TODO: inherit from reconsider
-    t->UseStorageBinaryDir = UseStorageBinaryDir; // TODO: inherit from reconsider
 
     // inherit from solution
     t->ParallelSourceDownload = getSolution().ParallelSourceDownload;
@@ -365,6 +361,7 @@ const Source &TargetBase::getSource() const
 Target::Target(const Target &rhs)
     : TargetBase(rhs)
     , ProgramStorage(rhs)
+    , Scope(rhs.Scope)
     , RootDirectory(rhs.RootDirectory)
 {
 }

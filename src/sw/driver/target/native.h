@@ -82,6 +82,7 @@ public:
     std::shared_ptr<NativeLinker> Linker;
     std::shared_ptr<NativeLinker> Librarian;
     path InstallDirectory;
+    path OutputDir; // subdir
 
     String ApiName;
     StringSet ApiNames;
@@ -184,7 +185,6 @@ public:
 protected:
     mutable NativeLinker *SelectedTool = nullptr;
     bool circular_dependency = false;
-    path OutputDir;
 
     Files gatherObjectFiles() const;
     Files gatherObjectFilesWithoutLibraries() const;

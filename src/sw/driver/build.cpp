@@ -1224,8 +1224,11 @@ static NativeCompiledTarget &getDriverTarget(Build &solution)
 
 static void addDeps(NativeCompiledTarget &lib, Build &solution)
 {
-    //lib += solution.getTarget<NativeTarget>("pub.egorpugin.primitives.version");
     lib += "pub.egorpugin.primitives.templates-master"_dep; // for SW_RUNTIME_ERROR
+
+    // uncomment when you need help
+    lib += "pub.egorpugin.primitives.source-master"_dep;
+    lib += "pub.egorpugin.primitives.version-master"_dep;
 
     auto &drv = getDriverTarget(solution);
     auto d = lib + drv;
@@ -2480,14 +2483,28 @@ void Build::load_packages(const StringSet &pkgs)
     for (auto &[u, p] : m)
         children[p].ep = std::make_unique<NativeTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
 
-    SwapAndRestore sr(NamePrefix, cfgs.begin()->ppath.slice(0, cfgs.begin()->getData().prefix));
-    if (cfgs.size() != 1)
-        sr.restoreNow(true);
-
     createSolutions(dll, true);
-    //load_dll(dll);
 
-    // clear TargetsToBuild that is set inside load_dll()
+    for (auto &[gn, p] : cfgs2)
+    {
+        NamePrefix = p.ppath.slice(0, p.getData().prefix);
+        current_gn = gn;
+        current_module = p.toString();
+        sw_check_abi_version(Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
+        for (auto &s : settings)
+        {
+            current_settings = &s;
+            Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
+            // we can use new (clone of this) solution, then copy known targets
+            // to allow multiple passes-builds
+            Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
+        }
+    }
+    current_gn = 0;
+    NamePrefix.clear();
+    current_module.clear();
+
+    // clear TargetsToBuild that is set before
     TargetsToBuild.clear();
 
     // now we set ours TargetsToBuild to this object
@@ -2541,7 +2558,7 @@ void Build::build_packages(const StringSet &pkgs)
                         if (getSolution().getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
                             continue;
                         auto in = dt->getOutputFile();
-                        auto o = gIdeCopyToDir / dt->getOutputDir();
+                        auto o = gIdeCopyToDir / dt->OutputDir;
                         o /= in.filename();
                         if (in == o)
                             continue;
@@ -2641,8 +2658,8 @@ void Build::createSolutions(const path &dll, bool usedll)
         return;
     solutions_created = true;
 
-    if (usedll)
-        sw_check_abi_version(Module(swctx.getModuleStorage().get(dll)).sw_get_module_abi_version());
+    //if (usedll)
+        //sw_check_abi_version(Module(swctx.getModuleStorage().get(dll)).sw_get_module_abi_version());
 
     // configure may change defaults, so we must care below
     if (usedll && configure)

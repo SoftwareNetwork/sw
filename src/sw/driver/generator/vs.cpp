@@ -2007,7 +2007,7 @@ void VSGenerator::generate(const Build &b)
 
             pctx.beginBlockWithConfiguration("ItemDefinitionGroup", s);
             pctx.beginBlock("PreBuildEvent");
-            pctx.addBlock("Command", "sw @" + rsp);
+            pctx.addBlock("Command", "sw2 @" + rsp);
             pctx.endBlock();
             pctx.endBlock();
         }

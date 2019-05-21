@@ -64,23 +64,11 @@ struct TargetSettings
 */
 struct SW_DRIVER_CPP_API TargetBase : Node, ProjectDirectories
 {
-    // Data storage for objects that must be alive with the target.
-    // For example, program clones etc.
-    std::vector<std::any> Storage;
-
-    /**
-    * \brief Target scope.
-    */
-    TargetScope Scope = TargetScope::Build;
-
     // flags
-    // local projects, not fetched
-    bool Local = true;
-    bool UseStorageBinaryDir = false;
+    bool Local = true; // local projects
     bool IsConfig = false;
     bool ParallelSourceDownload = true;
     bool DryRun = false;
-
     PackagePath NamePrefix;
     const Build *build = nullptr;
 
@@ -214,6 +202,15 @@ struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared
     //, Executable // impl, must not be visible to users
 {
     const TargetSettings *ts = nullptr;
+
+    // Data storage for objects that must be alive with the target.
+    // For example, program clones etc.
+    std::vector<std::any> Storage;
+
+    /**
+    * \brief Target scope.
+    */
+    TargetScope Scope = TargetScope::Build;
 
     // rename to information?
     TargetDescription Description; // or inherit?
@@ -416,7 +413,7 @@ public:
 
 // from target.cpp
 
-#define SW_IS_LOCAL_BINARY_DIR isLocal() && !UseStorageBinaryDir
+#define SW_IS_LOCAL_BINARY_DIR isLocal()
 
 template <class SF>
 std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s, const StringSet &exts = {})

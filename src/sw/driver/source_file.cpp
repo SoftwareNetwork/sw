@@ -151,9 +151,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 void SourceFileStorage::add(const path &file)
 {
     if (target->DryRun)
-    {
         return;
-    }
 
     add_unchecked(file);
 }
@@ -167,9 +165,7 @@ void SourceFileStorage::add(const Files &Files)
 void SourceFileStorage::add(const FileRegex &r)
 {
     if (target->DryRun)
-    {
         return;
-    }
 
     add(target->SourceDir, r);
 }
@@ -177,9 +173,7 @@ void SourceFileStorage::add(const FileRegex &r)
 void SourceFileStorage::add(const path &root, const FileRegex &r)
 {
     if (target->DryRun)
-    {
         return;
-    }
 
     auto r2 = r;
     r2.dir = root / r2.dir;
@@ -189,9 +183,7 @@ void SourceFileStorage::add(const path &root, const FileRegex &r)
 void SourceFileStorage::remove(const path &file)
 {
     if (target->DryRun)
-    {
         return;
-    }
 
     add_unchecked(file, true);
 }
@@ -205,9 +197,7 @@ void SourceFileStorage::remove(const Files &files)
 void SourceFileStorage::remove(const FileRegex &r)
 {
     if (target->DryRun)
-    {
         return;
-    }
 
     remove(target->SourceDir, r);
 }
@@ -215,9 +205,7 @@ void SourceFileStorage::remove(const FileRegex &r)
 void SourceFileStorage::remove(const path &root, const FileRegex &r)
 {
     if (target->DryRun)
-    {
         return;
-    }
 
     auto r2 = r;
     r2.dir = root / r2.dir;

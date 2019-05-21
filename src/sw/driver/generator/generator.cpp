@@ -123,9 +123,7 @@ struct NinjaEmitter : primitives::Emitter
 {
     void addCommand(const Build &b, const path &dir, const builder::Command &c)
     {
-        SW_UNIMPLEMENTED;
-
-        /*String command;
+        String command;
 
         auto prog = c.getProgram().u8string();
         if (prog == "ExecuteCommand")
@@ -143,7 +141,7 @@ struct NinjaEmitter : primitives::Emitter
         increaseIndent();
         addLine("description = " + c.getName());
         addLine("command = ");
-        if (b.Settings.TargetOS.Type == OSType::Windows)
+        if (b.getSettings().TargetOS.Type == OSType::Windows)
         {
             addText("cmd /S /C ");
             addText("\"");
@@ -152,16 +150,16 @@ struct NinjaEmitter : primitives::Emitter
             //addText("bash -c ");
         for (auto &[k, v] : c.environment)
         {
-            if (b.Settings.TargetOS.Type == OSType::Windows)
+            if (b.getSettings().TargetOS.Type == OSType::Windows)
                 addText("set ");
             addText(k + "=" + v + " ");
-            if (b.Settings.TargetOS.Type == OSType::Windows)
+            if (b.getSettings().TargetOS.Type == OSType::Windows)
                 addText("&& ");
         }
         if (!c.working_directory.empty())
         {
             addText("cd ");
-            if (b.Settings.TargetOS.Type == OSType::Windows)
+            if (b.getSettings().TargetOS.Type == OSType::Windows)
                 addText("/D ");
             addText(prepareString(b, getShortName(c.working_directory), true) + " && ");
         }
@@ -184,11 +182,11 @@ struct NinjaEmitter : primitives::Emitter
             addText("> " + prepareString(b, getShortName(c.out.file), true) + " ");
         if (!c.err.file.empty())
             addText("2> " + prepareString(b, getShortName(c.err.file), true) + " ");
-        if (b.Settings.TargetOS.Type == OSType::Windows)
+        if (b.getSettings().TargetOS.Type == OSType::Windows)
             addText("\"");
         if (prog.find("cl.exe") != prog.npos)
             addLine("deps = msvc");
-        if (b.Settings.Native.CompilerType == CompilerType::GCC && has_mmd)
+        else if (has_mmd)
             addLine("depfile = " + (c.outputs.begin()->parent_path() / (c.outputs.begin()->stem().string() + ".d")).u8string());
         if (rsp)
         {
@@ -208,7 +206,7 @@ struct NinjaEmitter : primitives::Emitter
         addText(": c" + std::to_string(c.getHash()) + " ");
         for (auto &i : c.inputs)
             addText(prepareString(b, getShortName(i)) + " ");
-        addLine();*/
+        addLine();
     }
 
 private:
@@ -228,9 +226,8 @@ private:
 
     String prepareString(const Build &b, const String &s, bool quotes = false)
     {
-        SW_UNIMPLEMENTED;
-        //if (b.Settings.TargetOS.Type != OSType::Windows)
-            //quotes = false;
+        if (b.getSettings().TargetOS.Type != OSType::Windows)
+            quotes = false;
 
         auto s2 = s;
         boost::replace_all(s2, ":", "$:");
@@ -245,16 +242,14 @@ void NinjaGenerator::generate(const Build &b)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    SW_UNIMPLEMENTED;
-
-    /*const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
+    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.getSettings().getConfig();
 
     NinjaEmitter ctx;
 
     auto ep = b.getExecutionPlan();
     for (auto &c : ep.commands)
         ctx.addCommand(b, dir, *c);
-    write_file(dir / "build.ninja", ctx.getText());*/
+    write_file(dir / "build.ninja", ctx.getText());
 }
 
 struct MakeEmitter : primitives::Emitter
@@ -494,11 +489,9 @@ void MakeGenerator::generate(const Build &b)
     // https://www.gnu.org/software/make/manual/html_node/index.html
     // https://en.wikipedia.org/wiki/Make_(software)
 
-    SW_UNIMPLEMENTED;
+    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.getSettings().getConfig());
 
-    /*const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig());
-
-    auto ep = b.solutions[0].getExecutionPlan();
+    auto ep = b.getExecutionPlan();
 
     MakeEmitter ctx;
     ctx.nmake = type == GeneratorType::NMake;
@@ -513,20 +506,23 @@ void MakeGenerator::generate(const Build &b)
 
     // all
     Files outputs;
-    for (auto &[p, t] : b.solutions[0].TargetsToBuild)
+    for (auto &[p, tgts] : b.TargetsToBuild)
     {
-        if (b.skipTarget(t->Scope))
-            continue;
-        if (auto nt = t->as<NativeCompiledTarget>(); nt)
+        for (auto &[s, t] : tgts)
         {
-            auto c = nt->getCommand();
-            outputs.insert(c->outputs.begin(), c->outputs.end());
-        }
-        else
-        {
-            LOG_WARN(logger, "Poor implementation of target: " << p.toString() << ". Care...");
-            for (auto &c : t->getCommands())
+            if (b.skipTarget(t->Scope))
+                continue;
+            if (auto nt = t->as<NativeCompiledTarget>(); nt)
+            {
+                auto c = nt->getCommand();
                 outputs.insert(c->outputs.begin(), c->outputs.end());
+            }
+            else
+            {
+                LOG_WARN(logger, "Poor implementation of target: " << p.toString() << ". Care...");
+                for (auto &c : t->getCommands())
+                    outputs.insert(c->outputs.begin(), c->outputs.end());
+            }
         }
     }
     ctx.addTarget("all", outputs);
@@ -544,7 +540,7 @@ void MakeGenerator::generate(const Build &b)
     else
         ctx.addTarget("clean", {}, { "@rm -f " + MakeEmitter::printFiles(outputs, true) });
 
-    write_file(d / "Makefile", ctx.getText());*/
+    write_file(d / "Makefile", ctx.getText());
 }
 
 void BatchGenerator::generate(const Build &b)
@@ -664,62 +660,61 @@ void BatchGenerator::generate(const Build &b)
         write_file(p, t + s);
     };
 
-    SW_UNIMPLEMENTED;
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getSettings().getConfig();
 
-    /*const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
-
-    auto p = b.solutions[0].getExecutionPlan();
+    auto p = b.getExecutionPlan();
 
     print_commands(p, d / "commands.bat");
     print_commands_raw(p, d / "commands_raw.bat");
-    print_numbers(p, d / "numbers.txt");*/
+    print_numbers(p, d / "numbers.txt");
 }
 
 void CompilationDatabaseGenerator::generate(const Build &b)
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto print_comp_db = [&b](const ExecutionPlan<builder::Command> &ep, const path &p)
+    auto print_comp_db = [&b](const ExecutionPlan<builder::Command> &ep, const path &p)
     {
-        if (b.solutions.empty())
+        if (b.getChildren().empty())
             return;
         static std::set<String> exts{
             ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
         };
         nlohmann::json j;
-        for (auto &[p, t] : b.solutions[0].children)
+        for (auto &[p, tgts] : b.getChildren())
         {
-            if (b.skipTarget(t->Scope))
-                continue;
-            if (!t->isLocal())
-                continue;
-            for (auto &c : t->getCommands())
+            for (auto &[s, t] : tgts)
             {
-                if (c->inputs.empty())
+                if (b.skipTarget(t->Scope))
                     continue;
-                if (c->working_directory.empty())
+                if (!t->isLocal())
                     continue;
-                if (c->inputs.size() > 1)
-                    continue;
-                if (exts.find(c->inputs.begin()->extension().string()) == exts.end())
-                    continue;
-                nlohmann::json j2;
-                j2["directory"] = normalize_path(c->working_directory);
-                j2["file"] = normalize_path(*c->inputs.begin());
-                j2["arguments"].push_back(normalize_path(c->program));
-                for (auto &a : c->args)
-                    j2["arguments"].push_back(a);
-                j.push_back(j2);
+                for (auto &c : t->getCommands())
+                {
+                    if (c->inputs.empty())
+                        continue;
+                    if (c->working_directory.empty())
+                        continue;
+                    if (c->inputs.size() > 1)
+                        continue;
+                    if (exts.find(c->inputs.begin()->extension().string()) == exts.end())
+                        continue;
+                    nlohmann::json j2;
+                    j2["directory"] = normalize_path(c->working_directory);
+                    j2["file"] = normalize_path(*c->inputs.begin());
+                    j2["arguments"].push_back(normalize_path(c->program));
+                    for (auto &a : c->args)
+                        j2["arguments"].push_back(a);
+                    j.push_back(j2);
+                }
             }
         }
         write_file(p, j.dump(2));
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.solutions[0].getConfig();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getSettings().getConfig();
 
-    auto p = b.solutions[0].getExecutionPlan();
+    auto p = b.getExecutionPlan();
 
-    print_comp_db(p, d / "compile_commands.json");*/
+    print_comp_db(p, d / "compile_commands.json");
 }
 
 void ShellGenerator::generate(const Build &b)
