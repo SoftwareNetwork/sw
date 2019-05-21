@@ -95,7 +95,6 @@ TargetBase::TargetBase(const TargetBase &rhs)
     , Scope(rhs.Scope)
     , Local(rhs.Local)
     , UseStorageBinaryDir(rhs.UseStorageBinaryDir)
-    , PostponeFileResolving(rhs.PostponeFileResolving)
     , DryRun(rhs.DryRun)
     , NamePrefix(rhs.NamePrefix)
     , build(rhs.build)
@@ -174,7 +173,7 @@ void TargetBase::addChild(const TargetBaseTypePtr &t)
         // also disable resolving for such targets
         if (!bad_type && unknown_tgt)
         {
-            t->PostponeFileResolving = true;
+            t->DryRun = true;
         }
         t->skip = true;
     }
@@ -218,7 +217,6 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->UseStorageBinaryDir = UseStorageBinaryDir; // TODO: inherit from reconsider
 
     // inherit from solution
-    t->PostponeFileResolving = getSolution().PostponeFileResolving;
     t->ParallelSourceDownload = getSolution().ParallelSourceDownload;
 
     //auto p = getSolution().getKnownTarget(t->getPackage().ppath);
@@ -298,7 +296,7 @@ void TargetBase::operator=(const Source &s)
 
 void TargetBase::fetch()
 {
-    if (PostponeFileResolving || DryRun)
+    if (DryRun)
         return;
 
     // move to swctx?
@@ -446,7 +444,7 @@ void Target::setRootDirectory(const path &p)
 void Target::applyRootDirectory()
 {
     // but append only in some cases
-    if (!PostponeFileResolving/* && Local*/)
+    if (!DryRun/* && Local*/)
     {
         // prevent adding last delimeter
         if (!RootDirectory.empty())

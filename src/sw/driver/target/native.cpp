@@ -1305,11 +1305,6 @@ bool NativeCompiledTarget::hasCircularDependency() const
 
 void NativeCompiledTarget::findSources()
 {
-    // We add root dir if we postponed resolving and iif it's a local package.
-    // Downloaded package already appended root dir.
-    //if (PostponeFileResolving && Local)
-        //SourceDir /= RootDirectory;
-
     if (ImportFromBazel)
     {
         path bfn;
@@ -1360,13 +1355,9 @@ void NativeCompiledTarget::findSources()
             add_files(n);
     }
 
-    if (!already_built)
-        resolve();
-
     // we autodetect even if already built
     if (!AutoDetectOptions || (AutoDetectOptions && AutoDetectOptions.value()))
         autoDetectOptions();
-    //resolveRemoved();
 
     detectLicenseFile();
 }
@@ -2590,7 +2581,7 @@ void NativeCompiledTarget::removeFile(const path &fn, bool binary_dir)
 void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flags)
 {
     // add to target if not already added
-    if (PostponeFileResolving || DryRun)
+    if (DryRun)
         operator-=(from);
     else
     {
@@ -2605,7 +2596,7 @@ void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flag
         to = BinaryDir / to;
     File(to, getFs()).getFileRecord().setGenerated();
 
-    if (PostponeFileResolving || DryRun)
+    if (DryRun)
         return;
 
     if (!from.is_absolute())
@@ -2829,7 +2820,7 @@ void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content) 
         f.getFileRecord().setGenerated();
     }
 
-    if (PostponeFileResolving || DryRun)
+    if (DryRun)
         return;
 
     ::sw::writeFileOnce(p, content, getPatchDir(!source_dir));
@@ -2840,7 +2831,7 @@ void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content) 
 
 void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content) const
 {
-    if (PostponeFileResolving || DryRun)
+    if (DryRun)
         return;
 
     bool source_dir = false;
@@ -2860,7 +2851,7 @@ void NativeCompiledTarget::replaceInFileOnce(const path &fn, const String &from,
 
 void NativeCompiledTarget::patch(const path &fn, const String &from, const String &to) const
 {
-    if (PostponeFileResolving || DryRun)
+    if (DryRun)
         return;
 
     bool source_dir = false;
@@ -2874,7 +2865,7 @@ void NativeCompiledTarget::patch(const path &fn, const String &from, const Strin
 
 void NativeCompiledTarget::patch(const path &fn, const String &patch_str) const
 {
-    if (PostponeFileResolving || DryRun)
+    if (DryRun)
         return;
 
     bool source_dir = false;
@@ -2890,7 +2881,7 @@ void NativeCompiledTarget::deleteInFileOnce(const path &fn, const String &from) 
 
 void NativeCompiledTarget::pushFrontToFileOnce(const path &fn, const String &text) const
 {
-    if (PostponeFileResolving || DryRun)
+    if (DryRun)
         return;
 
     bool source_dir = false;
@@ -2904,7 +2895,7 @@ void NativeCompiledTarget::pushFrontToFileOnce(const path &fn, const String &tex
 
 void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text) const
 {
-    if (PostponeFileResolving || DryRun)
+    if (DryRun)
         return;
 
     bool source_dir = false;

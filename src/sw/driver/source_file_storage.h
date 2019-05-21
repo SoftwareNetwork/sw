@@ -74,9 +74,6 @@ public:
     size_t sizeKnown() const;
     size_t sizeSkipped() const;
 
-    void resolve();
-    //void resolveRemoved();
-
     SourceFile &operator[](path F);
     SourceFileMap<SourceFile> operator[](const FileRegex &r) const;
 
@@ -96,14 +93,7 @@ protected:
     void remove_full(const path &file);
 
 private:
-    struct FileOperation
-    {
-        std::variant<path, FileRegex> op;
-        bool add = true;
-    };
     using Op = void (SourceFileStorage::*)(const path &);
-
-    std::vector<FileOperation> file_ops;
 
     void add_unchecked(const path &f, bool skip = false);
     void add1(const FileRegex &r);

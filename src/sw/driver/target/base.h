@@ -77,7 +77,6 @@ struct SW_DRIVER_CPP_API TargetBase : Node, ProjectDirectories
     // local projects, not fetched
     bool Local = true;
     bool UseStorageBinaryDir = false;
-    bool PostponeFileResolving = false;
     bool IsConfig = false;
     bool ParallelSourceDownload = true;
     bool DryRun = false;

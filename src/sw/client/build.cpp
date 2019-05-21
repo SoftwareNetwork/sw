@@ -134,8 +134,7 @@ static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &o
             auto b = std::make_unique<Build>(swctx);
             b->NamePrefix = opts.name_prefix;
             b->perform_checks = !pp && !opts.dry_run;
-            b->DryRun = !pp && opts.dry_run;
-            b->PostponeFileResolving = pp;
+            b->DryRun = pp;
             b->source_dirs_by_source = srcs_old;
             b->prefix_source_dir = opts.source_dir;
             if (!pp)

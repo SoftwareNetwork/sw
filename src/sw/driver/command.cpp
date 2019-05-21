@@ -328,7 +328,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
-    if (!all.empty() && all[0]->PostponeFileResolving)
+    if (!all.empty() && all[0]->DryRun)
         return cb;
 
     for (auto p : t.files)

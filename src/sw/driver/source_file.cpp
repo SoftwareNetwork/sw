@@ -150,9 +150,8 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 
 void SourceFileStorage::add(const path &file)
 {
-    if (target->PostponeFileResolving)
+    if (target->DryRun)
     {
-        file_ops.push_back({ file, true });
         return;
     }
 
@@ -167,9 +166,8 @@ void SourceFileStorage::add(const Files &Files)
 
 void SourceFileStorage::add(const FileRegex &r)
 {
-    if (target->PostponeFileResolving)
+    if (target->DryRun)
     {
-        file_ops.push_back({ r, true });
         return;
     }
 
@@ -178,11 +176,8 @@ void SourceFileStorage::add(const FileRegex &r)
 
 void SourceFileStorage::add(const path &root, const FileRegex &r)
 {
-    if (target->PostponeFileResolving)
+    if (target->DryRun)
     {
-        auto r2 = r;
-        r2.dir = root / r2.dir;
-        file_ops.push_back({ r2, true });
         return;
     }
 
@@ -193,9 +188,8 @@ void SourceFileStorage::add(const path &root, const FileRegex &r)
 
 void SourceFileStorage::remove(const path &file)
 {
-    if (target->PostponeFileResolving)
+    if (target->DryRun)
     {
-        file_ops.push_back({ file, false });
         return;
     }
 
@@ -210,9 +204,8 @@ void SourceFileStorage::remove(const Files &files)
 
 void SourceFileStorage::remove(const FileRegex &r)
 {
-    if (target->PostponeFileResolving)
+    if (target->DryRun)
     {
-        file_ops.push_back({ r, false });
         return;
     }
 
@@ -221,11 +214,8 @@ void SourceFileStorage::remove(const FileRegex &r)
 
 void SourceFileStorage::remove(const path &root, const FileRegex &r)
 {
-    if (target->PostponeFileResolving)
+    if (target->DryRun)
     {
-        auto r2 = r;
-        r2.dir = root / r2.dir;
-        file_ops.push_back({ r2, false });
         return;
     }
 
@@ -326,7 +316,7 @@ size_t SourceFileStorage::sizeSkipped() const
 SourceFile &SourceFileStorage::operator[](path F)
 {
     static SourceFile sf(*target, "static_source_file");
-    if (target->PostponeFileResolving)
+    if (target->DryRun)
         return sf;
     check_absolute(F);
     auto f = this->SourceFileMapThis::operator[](F);
@@ -341,39 +331,6 @@ SourceFile &SourceFileStorage::operator[](path F)
 SourceFileMap<SourceFile> SourceFileStorage::operator[](const FileRegex &r) const
 {
     return enumerate_files(r);
-}
-
-void SourceFileStorage::resolve()
-{
-    target->PostponeFileResolving = false;
-
-    for (auto &op : file_ops)
-    {
-        if (op.add)
-        {
-            switch (op.op.index())
-            {
-            case 0:
-                add(std::get<0>(op.op));
-                break;
-            case 1:
-                add1(std::get<1>(op.op));
-                break;
-            }
-        }
-        else
-        {
-            switch (op.op.index())
-            {
-            case 0:
-                remove(std::get<0>(op.op));
-                break;
-            case 1:
-                remove1(std::get<1>(op.op));
-                break;
-            }
-        }
-    }
 }
 
 bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source_dir) const
