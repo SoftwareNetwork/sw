@@ -32,8 +32,6 @@ struct Api
 
     using IdDependencies = std::unordered_map<db::PackageVersionId, RemotePackageData>;
 
-    int deadline_secs = 5;
-
     Api(const Remote &r);
 
     void addDownloads(const std::set<int64_t> &);

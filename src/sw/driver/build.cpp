@@ -1227,8 +1227,8 @@ static void addDeps(NativeCompiledTarget &lib, Build &solution)
     lib += "pub.egorpugin.primitives.templates-master"_dep; // for SW_RUNTIME_ERROR
 
     // uncomment when you need help
-    lib += "pub.egorpugin.primitives.source-master"_dep;
-    lib += "pub.egorpugin.primitives.version-master"_dep;
+    //lib += "pub.egorpugin.primitives.source-master"_dep;
+    //lib += "pub.egorpugin.primitives.version-master"_dep;
 
     auto &drv = getDriverTarget(solution);
     auto d = lib + drv;
@@ -2250,7 +2250,7 @@ Commands Build::getCommands() const
 
             // copy
             if (nt->isLocal() && //getSettings().Native.CopySharedLibraries &&
-                nt->Scope == TargetScope::Build && nt->getOutputDir().empty())
+                nt->Scope == TargetScope::Build && nt->OutputDir.empty())
             {
                 for (auto &l : nt->gatherAllRelatedDependencies())
                 {
@@ -2261,12 +2261,12 @@ Commands Build::getCommands() const
                         continue;
                     if (dt->HeaderOnly.value())
                         continue;
-                    if (getSolution().getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
+                    if (dt->getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
                         continue;
                     if (dt->getSelectedTool() == dt->Librarian.get())
                         continue;
                     auto in = dt->getOutputFile();
-                    auto o = nt->getOutputDir() / dt->getOutputDir();
+                    auto o = nt->getOutputDir() / dt->OutputDir;
                     o /= in.filename();
                     if (in == o)
                         continue;
@@ -2555,7 +2555,7 @@ void Build::build_packages(const StringSet &pkgs)
                     if (nt->Scope == TargetScope::Build)
                     {
                         auto dt = nt;
-                        if (getSolution().getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
+                        if (dt->getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
                             continue;
                         auto in = dt->getOutputFile();
                         auto o = gIdeCopyToDir / dt->OutputDir;

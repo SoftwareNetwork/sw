@@ -240,7 +240,11 @@ struct SW_MANAGER_API RemoteStorageWithFallbackToRemoteResolving : RemoteStorage
 {
     using RemoteStorage::RemoteStorage;
 
+    const PackageData &loadData(const PackageId &) const override;
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+
+private:
+    mutable std::unordered_map<PackageId, PackageData> data;
 };
 
 SW_MANAGER_API

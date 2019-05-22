@@ -580,20 +580,17 @@ String NativeCompiledTarget::getConfigRaw() const
 path NativeCompiledTarget::getOutputFileName(const path &root) const
 {
     path p;
-    if (SW_IS_LOCAL_BINARY_DIR)
+    if (IsConfig)
     {
-        if (IsConfig)
-            p = getSolution().BinaryDir / "cfg" / getPackage().ppath.toString() / getConfig() / "out" / getOutputFileName();
-        else
-            p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+        p = getSolution().BinaryDir / "cfg" / getConfig(true) / getOutputFileName();
+    }
+    else if (SW_IS_LOCAL_BINARY_DIR)
+    {
+        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
     }
     else
     {
-        if (IsConfig)
-            p = getPackage().getDir() / "out" / getConfig() / getOutputFileName();
-        //p = BinaryDir / "out";
-        else
-            p = root / getConfig() / OutputDir / getOutputFileName();
+        p = root / getConfig() / OutputDir / getOutputFileName();
     }
     return p;
 }

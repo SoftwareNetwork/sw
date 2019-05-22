@@ -305,7 +305,6 @@ void RemoteStorage::load() const
 
 void RemoteStorage::updateDb() const
 {
-    return;
     if (!gForceServerQuery)
     {
         if (!Settings::get_system_settings().can_update_packages_db || !isCurrentDbOld())
@@ -456,42 +455,51 @@ std::unordered_map<UnresolvedPackage, Package>
 RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     auto m = RemoteStorage::resolve(pkgs, unresolved_pkgs);
-    if (!unresolved_pkgs.empty())
+    if (unresolved_pkgs.empty())
+        return m;
+
+    // fallback to really remote db
+
+    // we clear our previous results as they might be outdated
+    m.clear();
+
+    auto &us = Settings::get_user_settings();
+    auto cr = us.remotes.begin();
+
+    LOG_INFO(logger, "Requesting dependency list... ");
+
+    Api api(*cr);
+    auto id_deps = api.resolvePackages(pkgs);
+    for (auto &[vid, d] : id_deps)
     {
-        // fallback to really remote db
-
-        // we clear our previous results as they might be outdated
-        m.clear();
-
-        auto &us = Settings::get_user_settings();
-        auto cr = us.remotes.begin();
-
-        Api api(*cr);
-        api.deadline_secs = 10;
-
-        Api::IdDependencies id_deps;
-
-        LOG_INFO(logger, "Requesting dependency list... ");
+        for (auto &u : pkgs)
         {
-            int ct = 5;
-            int t = 10;
-            int n_tries = 3;
-            while (1)
+            if (u.canBe(d))
             {
-                try
-                {
-                    id_deps = api.resolvePackages(pkgs);
-                    break;
-                }
-                catch (...)
-                {
-                    throw;
-                    LOG_INFO(logger, "Retrying... ");
-                }
+                unresolved_pkgs.erase(u);
+                auto [i, inserted] = m.emplace(u, Package(*this, d));
+                // it's fine
+                //if (!inserted)
+                    //throw SW_RUNTIME_ERROR("Duplicate resolved dep: " + d.toString());
+
+                // copy data
+                data[d] = d;
+
+                // emulate unresolved deps
+                for (auto &id : d.deps)
+                    data[d].dependencies.insert(id_deps.find(id)->second);
             }
         }
     }
     return m;
+}
+
+const PackageData &RemoteStorageWithFallbackToRemoteResolving::loadData(const PackageId &pkg) const
+{
+    auto i = data.find(pkg);
+    if (i == data.end())
+        return RemoteStorage::loadData(pkg);
+    return i->second;
 }
 
 }
