@@ -46,10 +46,19 @@ Executor &SwBuilderContext::getFileStorageExecutor() const
 
 FileStorage &SwBuilderContext::getFileStorage(const String &config, bool local) const
 {
+    {
+        std::shared_lock lk(file_storages_mutex);
+        auto i = file_storages.find({ local, config });
+        if (i != file_storages.end())
+            return *i->second;
+    }
+    std::lock_guard lk(file_storages_mutex);
+
+    // double check
     auto i = file_storages.find({ local, config });
     if (i != file_storages.end())
         return *i->second;
-    std::lock_guard lk(m);
+
     file_storages[{ local, config }] = std::make_unique<FileStorage>(*this, config);
     return *file_storages[{ local, config }];
 }

@@ -71,10 +71,10 @@ void writePackagesDbVersion(const path &dir, int version)
     write_file(dir / PACKAGES_DB_VERSION_FILE, std::to_string(version));
 }
 
-RemoteStorage::RemoteStorage(LocalStorage &ls, const String &name, const path &db_dir)
-    : StorageWithPackagesDatabase(name, db_dir), ls(ls)
+RemoteStorage::RemoteStorage(LocalStorage &ls, const String &n, const path &db_dir)
+    : StorageWithPackagesDatabase(n, db_dir), ls(ls)
 {
-    db_repo_dir = db_dir / name / "repository";
+    db_repo_dir = db_dir / getName() / "repository";
 
     static const auto db_loaded_var = "db_loaded";
 
@@ -108,6 +108,11 @@ std::unordered_map<UnresolvedPackage, Package>
 RemoteStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     preInitFindDependencies();
+    if (gForceServerQuery)
+    {
+        unresolved_pkgs = pkgs;
+        return {};
+    }
     return StorageWithPackagesDatabase::resolve(pkgs, unresolved_pkgs);
 }
 

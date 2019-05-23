@@ -144,7 +144,8 @@ void NativeCompiledTarget::findCompiler()
             for (auto &v2 : v)
             {
                 if (r)
-                    LOG_TRACE(logger, "activated " << v2.id.toString() << " successfully");
+                    ;
+                    //LOG_TRACE(logger, "activated " << v2.id.toString() << " successfully");
                 else
                     LOG_TRACE(logger, "activate " << v2.id.toString() << " failed");
             }
@@ -279,7 +280,7 @@ void NativeCompiledTarget::findCompiler()
                     this->Linker = std::dynamic_pointer_cast<NativeLinker>(t->program->clone());
                 else
                     this->Librarian = std::dynamic_pointer_cast<NativeLinker>(t->program->clone());
-                LOG_TRACE(logger, "activated " << std::get<0>(in).toString() << " successfully");
+                //LOG_TRACE(logger, "activated " << std::get<0>(in).toString() << " successfully");
 
                 return true;
 

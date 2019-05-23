@@ -364,6 +364,8 @@ Target::Target(const Target &rhs)
     , Scope(rhs.Scope)
     , RootDirectory(rhs.RootDirectory)
 {
+    // if root dir is provided, we set it early
+    //applyRootDirectory();
 }
 
 Program *Target::findProgramByExtension(const String &ext) const
@@ -445,7 +447,8 @@ void Target::applyRootDirectory()
     {
         // prevent adding last delimeter
         if (!RootDirectory.empty())
-            SourceDir /= RootDirectory;
+            setSourceDir(SourceDir / RootDirectory);
+            //SourceDir /= RootDirectory;
     }
 }
 

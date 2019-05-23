@@ -11,6 +11,8 @@
 
 #include <sw/manager/sw_context.h>
 
+#include <shared_mutex>
+
 struct Executor;
 
 namespace sw
@@ -51,6 +53,8 @@ private:
     std::unique_ptr<FileDataHashMap> fshm; // before FileStorages!
     mutable FileStorages file_storages;
     std::unique_ptr<Executor> file_storage_executor; // after everything!
+
+    mutable std::shared_mutex file_storages_mutex;
 };
 
 } // namespace sw

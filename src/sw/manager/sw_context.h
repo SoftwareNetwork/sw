@@ -50,7 +50,7 @@ struct SW_MANAGER_API SwManagerContext : ISwContext
     LocalPackage resolve(const UnresolvedPackage &) const;
 
 protected:
-    mutable std::mutex m; // main context mutex
+    mutable std::mutex resolve_mutex;
 
 private:
     int local_storage_id;

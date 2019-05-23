@@ -138,12 +138,12 @@ void ChecksStorage::add(const Check &c)
     all_checks[h] = c.Value.value();
 }
 
-String make_function_var(const String &d, const String &prefix = "HAVE_")
+static String make_function_var(const String &d, const String &prefix = "HAVE_")
 {
     return prefix + boost::algorithm::to_upper_copy(d);
 }
 
-String make_include_var(const String &i)
+static String make_include_var(const String &i)
 {
     auto v_def = make_function_var(i);
     for (auto &c : v_def)
@@ -154,7 +154,7 @@ String make_include_var(const String &i)
     return v_def;
 }
 
-String make_type_var(const String &t, const String &prefix = "HAVE_")
+static String make_type_var(const String &t, const String &prefix = "HAVE_")
 {
     String v_def = make_function_var(t, prefix);
     for (auto &c : v_def)
@@ -167,17 +167,17 @@ String make_type_var(const String &t, const String &prefix = "HAVE_")
     return v_def;
 }
 
-String make_struct_member_var(const String &s, const String &m)
+static String make_struct_member_var(const String &s, const String &m)
 {
     return make_include_var(s + " " + m);
 }
 
-String make_alignment_var(const String &i)
+static String make_alignment_var(const String &i)
 {
     return make_type_var(i, "ALIGNOF_");
 }
 
-void check_def(const String &d)
+static void check_def(const String &d)
 {
     if (d.empty())
         throw SW_RUNTIME_ERROR("Empty check definition");
@@ -302,7 +302,7 @@ int main() { return IsBigEndian(); }
         LOG_INFO(logger, "Performing " << unchecked.size() << " check(s): " << name);
 
         //auto &e = getExecutor();
-        Executor e(getExecutor().numberOfThreads()); // separate executor!
+        static Executor e(getExecutor().numberOfThreads()); // separate executor!
                                                      //ep.throw_on_errors = false;
                                                      //ep.skip_errors = ep.commands.size();
         ep.execute(e);
@@ -541,6 +541,7 @@ Build Check::setupSolution(const path &f) const
     //s.throw_exceptions = false;
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
+    s.Local = true;
 
     auto ss = check_set->t->getSettings();
 
@@ -548,6 +549,9 @@ Build Check::setupSolution(const path &f) const
     if (check_set->t->getCompilerType() == CompilerType::MSVC ||
         check_set->t->getCompilerType() == CompilerType::ClangCl)
         ss.Native.ConfigurationType = ConfigurationType::Debug;
+
+    // settings may contain more than one elements
+    s.settings.clear();
 
     s.addSettings(ss);
     detectCompilers(s);

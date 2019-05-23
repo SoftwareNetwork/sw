@@ -13,6 +13,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "icontext");
 
+extern bool gForceServerQuery;
+
 namespace sw
 {
 
@@ -23,6 +25,11 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
     storages.emplace_back(std::make_unique<LocalStorage>(local_storage_root_dir));
 
     first_remote_storage_id = storages.size();
+    // .0 for local counterpart
+    // .1 for remote's temporary storage
+    //if (!gForceServerQuery)
+    //storages.emplace_back(std::make_unique<RemoteStorage>(
+        //getLocalStorage(), "software-network.0", getLocalStorage().getDatabaseRootDir()));
     storages.emplace_back(std::make_unique<RemoteStorageWithFallbackToRemoteResolving>(
         getLocalStorage(), "software-network", getLocalStorage().getDatabaseRootDir()));
 }
@@ -57,7 +64,7 @@ std::vector<const Storage *> SwManagerContext::getRemoteStorages() const
 
 std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const UnresolvedPackages &pkgs) const
 {
-    std::lock_guard lk(m);
+    std::lock_guard lk(resolve_mutex);
     return resolve(pkgs, resolved_packages);
 }
 
