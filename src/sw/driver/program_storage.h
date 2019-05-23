@@ -11,6 +11,7 @@
 #include <sw/builder/program.h>
 
 #include <optional>
+#include <variant>
 
 namespace sw
 {
@@ -19,32 +20,24 @@ struct Target;
 
 struct SW_DRIVER_CPP_API ProgramStorage
 {
-    enum
-    {
-        NO_EXTENSION,
-        HAS_PROGRAM_EXTENSION,
-        HAS_PACKAGE_EXTENSION,
-    };
-
     // make type polymorphic for dyncasts
     virtual ~ProgramStorage();
 
     // late resolving registration with potential activation
-    void setExtensionProgram(const String &ext, const PackageId &);
+    //void setExtensionProgram(const String &ext, const PackageId &);
     void setExtensionProgram(const String &ext, const UnresolvedPackage &);
     void setExtensionProgram(const String &ext, const DependencyPtr &);
     void setExtensionProgram(const String &ext, const ProgramPtr &);
 
-    int hasExtension(const String &ext) const;
-    std::optional<PackageId> getExtPackage(const String &ext) const;
+    bool hasExtension(const String &ext) const;
+    std::optional<UnresolvedPackage> getExtPackage(const String &ext) const;
     Program *getProgram(const String &ext) const;
 
     void clearExtensions();
     void removeExtension(const String &ext);
 
 private:
-    std::map<String, PackageId> extension_packages;
-    std::map<String, ProgramPtr> extension_programs;
+    std::map<String, std::variant<UnresolvedPackage, ProgramPtr>> extensions;
 };
 
 }

@@ -118,8 +118,9 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     {
         if (!f || f->postponed)
         {
-            if (target->hasExtension(ext) == ProgramStorage::HAS_PACKAGE_EXTENSION)
+            if (!target->getProgram(ext))
             {
+                // only unresolved dep for now
                 //if (f && f->postponed)
                     //throw SW_RUNTIME_ERROR("Postponing postponed file");
                 f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(*target, file);
@@ -127,6 +128,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
             }
             else
             {
+                // program was provided
                 auto p = target->findProgramByExtension(ext);
                 auto f2 = f;
                 auto p2 = dynamic_cast<FileToFileTransformProgram*>(p);

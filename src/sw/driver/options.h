@@ -495,7 +495,7 @@ public:
     // merge to T, always w/o interface
     void merge(const GroupSettings &s = GroupSettings())
     {
-        T::merge(Private, s);
+        //T::merge(Private, s); T == Private
         T::merge(Protected, s);
         T::merge(Public, s);
     }
@@ -504,7 +504,7 @@ public:
     template <class U>
     void merge(const InheritanceGroup<U> &g, const GroupSettings &s = GroupSettings())
     {
-        //T::merge(g.Private, s);
+        //T::merge(g.Private, s); T == Private
         T::merge(g.Protected, s);
         T::merge(g.Public, s);
         T::merge(g.Interface, s);

@@ -483,7 +483,7 @@ struct SW_DRIVER_CPP_API RcTool :
     CompilerBaseProgram,
     CommandLineOptions<RcToolOptions>
 {
-    FilesOrdered system_idirs;
+    FilesOrdered idirs;
 
     using CompilerBaseProgram::CompilerBaseProgram;
 

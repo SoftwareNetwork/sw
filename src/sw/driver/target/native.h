@@ -38,9 +38,8 @@ enum class ConfigureFlags
     Default = Empty, //AddToBuild,
 };
 
-struct PredefinedTarget : Target
+struct PredefinedTarget : Target, PredefinedProgram
 {
-    std::shared_ptr<Program> program;
 };
 
 /**
@@ -231,7 +230,7 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeCompiledTarget
 /**
 * \brief Executable target.
 */
-struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget//, Program
+struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProgram
 {
     TargetType getType() const override { return TargetType::NativeExecutable; }
 

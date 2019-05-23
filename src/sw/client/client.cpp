@@ -1233,10 +1233,15 @@ SUBCOMMAND_DECL2(upload)
         throw SW_RUNTIME_ERROR("not uploaded: not implemented");
     }
 
+    auto m = s->getPackages();
+    // dbg purposes
+    for (auto &[id, d] : m)
+        write_file(fs::current_path() / SW_BINARY_DIR / "upload" / id.toString() += ".json", *d);
+
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     sw::Api api(*current_remote);
-    api.addVersion(upload_prefix, s->getPackages(), sw::read_config(build_arg_update.getValue()).value());
+    api.addVersion(upload_prefix, m, sw::read_config(build_arg_update.getValue()).value());
 }
 
 EXPORT_FROM_EXECUTABLE

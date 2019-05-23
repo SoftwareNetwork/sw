@@ -20,14 +20,14 @@ namespace sw
 
 ProgramStorage::~ProgramStorage() = default;
 
-void ProgramStorage::setExtensionProgram(const String &ext, const PackageId &pkg)
+/*void ProgramStorage::setExtensionProgram(const String &ext, const PackageId &pkg)
 {
-    extension_packages.insert_or_assign(ext, pkg);
-}
+    extensions.insert_or_assign(ext, pkg);
+}*/
 
 void ProgramStorage::setExtensionProgram(const String &ext, const ProgramPtr &p)
 {
-    extension_programs.insert_or_assign(ext, p);
+    extensions.insert_or_assign(ext, p);
 }
 
 void ProgramStorage::setExtensionProgram(const String &ext, const DependencyPtr &d)
@@ -42,8 +42,8 @@ void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPack
         throw SW_RUNTIME_ERROR("not a target");
 
     // late resolve version
-    auto pkg = t->getSolution().swctx.resolve(p);
-    extension_packages.insert_or_assign(ext, pkg);
+    //auto pkg = t->getSolution().swctx.resolve(p);
+    extensions.insert_or_assign(ext, p);
 
     // add a dependency to current target
     if (auto t = dynamic_cast<NativeCompiledTarget*>(this); t)
@@ -52,39 +52,39 @@ void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPack
 
 Program *ProgramStorage::getProgram(const String &ext) const
 {
-    auto i = extension_programs.find(ext);
-    if (i == extension_programs.end())
+    auto i = extensions.find(ext);
+    if (i == extensions.end())
         return {};
-    return i->second.get();
+    auto p = std::get_if<ProgramPtr>(&i->second);
+    if (!p)
+        return {};
+    return p->get();
 }
 
-std::optional<PackageId> ProgramStorage::getExtPackage(const String &ext) const
+std::optional<UnresolvedPackage> ProgramStorage::getExtPackage(const String &ext) const
 {
-    auto i = extension_packages.find(ext);
-    if (i == extension_packages.end())
+    auto i = extensions.find(ext);
+    if (i == extensions.end())
         return {};
-    return i->second;
+    auto p = std::get_if<UnresolvedPackage>(&i->second);
+    if (!p)
+        return {};
+    return *p;
 }
 
-int ProgramStorage::hasExtension(const String &ext) const
+bool ProgramStorage::hasExtension(const String &ext) const
 {
-    if (extension_programs.find(ext) != extension_programs.end())
-        return HAS_PROGRAM_EXTENSION;
-    if (extension_packages.find(ext) != extension_packages.end())
-        return HAS_PACKAGE_EXTENSION;
-    return NO_EXTENSION;
+    return extensions.find(ext) != extensions.end();
 }
 
 void ProgramStorage::clearExtensions()
 {
-    extension_packages.clear();
-    extension_programs.clear();
+    extensions.clear();
 }
 
 void ProgramStorage::removeExtension(const String &ext)
 {
-    extension_packages.erase(ext);
-    extension_programs.erase(ext);
+    extensions.erase(ext);
 }
 
 }

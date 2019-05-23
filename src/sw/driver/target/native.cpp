@@ -112,15 +112,14 @@ void NativeCompiledTarget::findCompiler()
                 setExtensionProgram(e, PackageId{ v.id, *vo });
             return true;
         }
-        if (auto t = k->second->as<PredefinedTarget>())
+        if (auto t = k->second->as<PredefinedProgram>())
         {
             for (auto &e : v.exts)
                 setExtensionProgram(e, t->program);
         }
-        else if (auto t = k->second->as<NativeCompiledTarget>())
+        else
         {
-            for (auto &e : v.exts)
-                setExtensionProgram(e, PackageId{ v.id, *vo });
+            throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + PackageId(v.id, *vo).toString());
         }
         return true;
     };
@@ -272,7 +271,7 @@ void NativeCompiledTarget::findCompiler()
                 if (k == j->second.end())
                     return false;
 
-                auto t = k->second->as<PredefinedTarget>();
+                auto t = k->second->as<PredefinedProgram>();
                 if (!t)
                     return false;
 
@@ -2101,6 +2100,13 @@ bool NativeCompiledTarget::prepare()
                     remove_bdirs(c);
                 }
             }
+        }
+
+        // also merge rc files
+        for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
+        {
+            // add casual idirs?
+            f->compiler->idirs = NativeCompilerOptions::System.IncludeDirectories;
         }
 
         //

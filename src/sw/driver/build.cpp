@@ -426,7 +426,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
     return h;
 }
 
-static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwContext &swctx, const path &p)
+static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwContext &swctx, const path &p, std::set<PackageVersionGroupNumber> &gns)
 {
     UnresolvedPackages udeps;
     FilesOrdered headers;
@@ -445,24 +445,33 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
         {
             auto upkg = extractFromString(m[3].str());
             auto pkg = swctx.resolve(upkg);
+            if (!gns.insert(pkg.getData().group_number).second)
+                throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
             auto h = getPackageHeader(pkg, upkg);
-            auto [headers2,udeps2] = getFileDependencies(swctx, h);
+            auto [headers2,udeps2] = getFileDependencies(swctx, h, gns);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
             headers.push_back(h);
         }
         else if (m1 == "local")
         {
-            auto [headers2, udeps2] = getFileDependencies(swctx, m[3].str());
+            SW_UNIMPLEMENTED;
+            auto [headers2, udeps2] = getFileDependencies(swctx, m[3].str(), gns);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
         }
         else
             udeps.insert(extractFromString(m1));
         f = m.suffix().str();
-    }
+}
 
     return { headers, udeps };
+}
+
+static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwContext &swctx, const path &in_config_file)
+{
+    std::set<PackageVersionGroupNumber> gns;
+    return getFileDependencies(swctx, in_config_file, gns);
 }
 
 static auto build_configs(const SwContext &swctx, const std::unordered_set<LocalPackage> &pkgs)
@@ -1342,7 +1351,6 @@ FilesMap Build::build_configs_separate(const Files &files)
         lib.addPrecompiledHeader(pch);
 
         auto [headers, udeps] = getFileDependencies(swctx, fn);
-
         for (auto &h : headers)
         {
             // TODO: refactor this and same cases below
@@ -1574,7 +1582,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
 
     for (auto &[fn, pkg] : output_names)
     {
-        auto[headers, udeps] = getFileDependencies(swctx, fn);
+        auto [headers, udeps] = getFileDependencies(swctx, fn);
         if (auto sf = lib[fn].template as<NativeSourceFile>())
         {
             if (auto c = sf->compiler->template as<VisualStudioCompiler>())

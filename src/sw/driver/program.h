@@ -52,4 +52,9 @@ struct ProgramGroup : Program
 
 using ProgramGroupPtr = std::shared_ptr<ProgramGroup>;
 
+struct PredefinedProgram
+{
+    std::shared_ptr<Program> program;
+};
+
 }

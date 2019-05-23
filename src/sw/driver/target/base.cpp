@@ -364,8 +364,6 @@ Target::Target(const Target &rhs)
     , Scope(rhs.Scope)
     , RootDirectory(rhs.RootDirectory)
 {
-    // if root dir is provided, we set it early
-    //applyRootDirectory();
 }
 
 Program *Target::findProgramByExtension(const String &ext) const
@@ -374,14 +372,29 @@ Program *Target::findProgramByExtension(const String &ext) const
         return {};
     if (auto p = getProgram(ext))
         return p;
-    auto pkg = getExtPackage(ext);
-    if (!pkg)
+    auto u = getExtPackage(ext);
+    if (!u)
         return {};
+    // resolve via swctx because it might provide other version rather than cld.find(*u)
+    auto pkg = getSolution().swctx.resolve(*u);
     auto cld = getSolution().getChildren();
-    auto i = cld.find(*pkg);
+    auto i = cld.find(pkg);
     if (i == cld.end())
         return {};
-    SW_UNIMPLEMENTED;
+
+    auto &j = i;
+    // TODO: get host settings
+    TargetSettings tid{ getSettings() };
+    auto k = j->second.find(tid);
+    if (k == j->second.end())
+    {
+        throw SW_RUNTIME_ERROR("Target was not found with host settings: " + pkg.toString());
+    }
+    if (auto t = k->second->as<PredefinedProgram>())
+    {
+        return t->program.get();
+    }
+    throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + pkg.toString());
 }
 
 String Target::getConfigRaw() const

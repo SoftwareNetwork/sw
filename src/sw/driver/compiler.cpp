@@ -1834,7 +1834,7 @@ void RcTool::prepareCommand1(const Target &t)
 
     // use env
     String s;
-    for (auto &i : system_idirs)
+    for (auto &i : idirs)
         s += normalize_path(i) + ";";
     cmd->environment["INCLUDE"] = s;
 
