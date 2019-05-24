@@ -101,7 +101,9 @@ SourceFileStorage::~SourceFileStorage()
 void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 {
     auto file = file_in;
-    if (!check_absolute(file, skip))
+
+    // ignore missing file when file is skipped and non local
+    if (!check_absolute(file, !target->Local && skip))
         return;
 
     auto f = this->SourceFileMapThis::operator[](file);
@@ -240,7 +242,8 @@ void SourceFileStorage::remove_exclude(const path &root, const FileRegex &r)
 void SourceFileStorage::remove_full(const path &file)
 {
     auto F = file;
-    if (check_absolute(F, true))
+    // ignore missing file only when non local
+    if (check_absolute(F, !target->Local))
         erase(F);
 }
 

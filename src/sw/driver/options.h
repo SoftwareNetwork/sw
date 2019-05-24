@@ -476,9 +476,6 @@ public:
             Protected.merge(g.Protected);
         Public.merge(g.Public);
         Public.merge(g.Interface);
-
-        // Interface, same as last in public
-        //Public.merge(g.Interface);
     }
 
     template <class F>
@@ -495,7 +492,6 @@ public:
     // merge to T, always w/o interface
     void merge(const GroupSettings &s = GroupSettings())
     {
-        //T::merge(Private, s); T == Private
         T::merge(Protected, s);
         T::merge(Public, s);
     }
@@ -504,16 +500,9 @@ public:
     template <class U>
     void merge(const InheritanceGroup<U> &g, const GroupSettings &s = GroupSettings())
     {
-        //T::merge(g.Private, s); T == Private
         T::merge(g.Protected, s);
         T::merge(g.Public, s);
         T::merge(g.Interface, s);
-
-        /*T::merge(g, s);
-        Private.merge(g.Private);
-        Protected.merge(g.Protected);
-        Public.merge(g.Public);
-        Interface.merge(g.Interface);*/
     }
 
     InheritanceStorage<T> &getInheritanceStorage() { return data; }

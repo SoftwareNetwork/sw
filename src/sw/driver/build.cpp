@@ -3185,8 +3185,20 @@ PackageDescriptionMap Build::getPackages() const
         {
             if (d->target && d->target->Scope != TargetScope::Build)
                 continue;
-            if (d->target && d->target->sw_provided)
-                continue;
+            if (d->target)
+            {
+                if (d->target->sw_provided)
+                    continue;
+            }
+            else
+            {
+                auto i = getChildren().find(d->getPackage());
+                if (i != getChildren().end())
+                {
+                    if (i->second.begin()->second->sw_provided)
+                        continue;
+                }
+            }
 
             nlohmann::json jd;
             jd["path"] = d->getPackage().ppath.toString();
