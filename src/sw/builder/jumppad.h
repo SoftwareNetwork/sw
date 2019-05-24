@@ -16,7 +16,7 @@
 #ifdef SW_PACKAGE_API
 #define SW_JUMPPAD_API SW_PACKAGE_API
 #else
-#define SW_JUMPPAD_API SW_DRIVER_CPP_API
+#define SW_JUMPPAD_API SW_BUILDER_API
 #endif
 
 #define SW_JUMPPAD_PREFIX _sw_fn_jumppad_
@@ -167,10 +167,10 @@ struct VisibleFunctionJumppad<R(ArgTypes...)>
 template <class R, class ... ArgTypes>
 VisibleFunctionJumppad(R(*)(ArgTypes...), const String &, int = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION)->VisibleFunctionJumppad<R(ArgTypes...)>;
 
-SW_DRIVER_CPP_API
+SW_BUILDER_API
 int jumppad_call(const path &module, const String &name, int version, const Strings &s = {});
 
-SW_DRIVER_CPP_API
+SW_BUILDER_API
 int jumppad_call(const Strings &s);
 
 }

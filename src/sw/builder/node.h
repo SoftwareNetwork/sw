@@ -18,6 +18,7 @@ struct Command;
 
 }
 
+// rename to object?
 struct SW_BUILDER_API Node
 {
     virtual ~Node() = default;

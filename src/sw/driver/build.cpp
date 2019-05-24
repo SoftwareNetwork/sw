@@ -505,7 +505,7 @@ Build::Build(const SwContext &swctx)
     //host_settings = &addSettings(ss);
 
     // canonical makes disk letter uppercase on windows
-    setSourceDir(swctx.source_dir);
+    setSourceDirectory(swctx.source_dir);
     BinaryDir = SourceDir / SW_BINARY_DIR;
 }
 
@@ -1828,7 +1828,7 @@ static Build::CommandExecutionPlan load(const SwContext &swctx, const path &fn, 
                 break;
             case 3:
             {
-                auto c2 = std::make_shared<driver::ExecuteBuiltinCommand>(swctx);
+                auto c2 = std::make_shared<ExecuteBuiltinCommand>(swctx);
                 c = c2;
             }
                 break;
@@ -1956,7 +1956,7 @@ void save(const path &fn, const Build::CommandExecutionPlan &p)
             //print_string(c2->file.file.u8string());
             print_string(c2->deps_file.u8string());
         }
-        else if (auto c2 = c->as<driver::ExecuteBuiltinCommand>(); c2)
+        else if (auto c2 = c->as<ExecuteBuiltinCommand>(); c2)
         {
             type = 3;
             ctx.write(type);

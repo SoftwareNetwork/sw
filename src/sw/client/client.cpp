@@ -10,8 +10,8 @@
 
 //#include <resolver.h>
 #include <sw/builder/file.h>
+#include <sw/builder/jumppad.h>
 #include <sw/driver/command.h>
-#include <sw/driver/jumppad.h>
 #include <sw/driver/build.h>
 #include <sw/driver/sw_context.h>
 #include <sw/manager/api.h>
@@ -268,10 +268,10 @@ int parse_main(int argc, char **argv)
         args.insert(args.end(), t.begin(), t.end());
     }
 
-    if (args.size() > 1 && args[1] == sw::driver::getInternalCallBuiltinFunctionName())
+    if (args.size() > 1 && args[1] == sw::builder::getInternalCallBuiltinFunctionName())
     {
         // name of subcommand must outlive it (StringRef is used)
-        auto n = sw::driver::getInternalCallBuiltinFunctionName();
+        auto n = sw::builder::getInternalCallBuiltinFunctionName();
         ::cl::SubCommand subcommand_icbf(n, "");
         ::cl::opt<String> icbf_arg(::cl::Positional, ::cl::sub(subcommand_icbf)); // module name
         ::cl::list<String> icbf_args(::cl::ConsumeAfter, ::cl::sub(subcommand_icbf)); // rest
@@ -280,7 +280,7 @@ int parse_main(int argc, char **argv)
 
         Strings args;
         args.push_back(argv[0]);
-        args.push_back(sw::driver::getInternalCallBuiltinFunctionName());
+        args.push_back(sw::builder::getInternalCallBuiltinFunctionName());
         args.push_back(icbf_arg);
         args.insert(args.end(), icbf_args.begin(), icbf_args.end());
         return jumppad_call(args);
@@ -394,7 +394,7 @@ static ::cl::opt<bool, true> run_app_in_container("in-container", ::cl::desc("Pr
 bool gUseLockFile;
 static ::cl::opt<bool, true> use_lock_file("l", ::cl::desc("Use lock file"), ::cl::location(gUseLockFile));// , cl::init(true));
 
-//static ::cl::list<String> builtin_function(sw::driver::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
+//static ::cl::list<String> builtin_function(sw::builder::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
 
 void override_package_perform(sw::SwContext &swctx);
 

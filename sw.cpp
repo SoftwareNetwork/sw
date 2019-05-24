@@ -129,6 +129,7 @@ void build(Solution &s)
     builder += "src/sw/builder/.*"_rr;
     builder -= "src/sw/builder/db_sqlite.*"_rr;
     builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep,
+        "org.sw.demo.microsoft.gsl-*"_dep,
         "pub.egorpugin.primitives.emitter-master"_dep;
     //if (!s.Variables["SW_SELF_BUILD"])
     {
@@ -144,7 +145,6 @@ void build(Solution &s)
     cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
     cpp_driver.Public += builder,
         "pub.egorpugin.primitives.patch-master"_dep,
-        "org.sw.demo.microsoft.gsl-*"_dep,
         "org.sw.demo.boost.assign-1"_dep,
         "org.sw.demo.boost.bimap-1"_dep,
         "org.sw.demo.boost.uuid-1"_dep;

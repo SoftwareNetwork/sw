@@ -7,13 +7,13 @@
 #include "base.h"
 
 #include "sw/driver/command.h"
-#include "sw/driver/jumppad.h"
 #include "sw/driver/build.h"
 #include "sw/driver/sw_context.h"
 
 #include <sw/manager/database.h>
 #include <sw/manager/package_data.h>
 #include <sw/manager/storage.h>
+#include <sw/builder/jumppad.h>
 #include <sw/support/hash.h>
 
 #include <primitives/log.h>
@@ -127,22 +127,22 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     // sdir
     if (!t->isLocal())
     {
-        t->setSourceDir(getSolution().getSourceDir(t->getPackage()));
+        t->setSourceDirectory(getSolution().getSourceDir(t->getPackage()));
     }
     if (auto d = t->getPackage().getOverriddenDir())
-        t->setSourceDir(*d);
+        t->setSourceDirectory(*d);
 
     // set source dir
     if (t->SourceDir.empty())
         //t->SourceDir = SourceDir.empty() ? getSolution().SourceDir : SourceDir;
         //t->SourceDir = getSolution().SourceDir;
-        t->setSourceDir(/*getSolution().*/SourceDirBase); // take from this
+        t->setSourceDirectory(/*getSolution().*/SourceDirBase); // take from this
 
     // try to get solution provided source dir
     if (t->source)
     {
         if (auto sd = getSolution().getSourceDir(t->getSource(), t->getPackage().version); sd)
-            t->setSourceDir(sd.value());
+            t->setSourceDirectory(sd.value());
     }
 
     // try to guess, very naive
@@ -269,7 +269,7 @@ void TargetBase::setSource(const Source &s)
     d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
     d /= getSolution().prefix_source_dir;
     getSolution().source_dirs_by_source[s2->getHash()] = d;
-    setSourceDir(d);
+    setSourceDirectory(d);
 }
 
 TargetBase &TargetBase::operator+=(const Source &s)
@@ -310,13 +310,13 @@ void TargetBase::fetch()
             s2->download(d);
         }
         d = d / findRootDirectory(d);
-        setSourceDir(d);
+        setSourceDirectory(d);
 
         fetched_dirs.emplace(s2->getHash(), d);
     }
     else
     {
-        setSourceDir(i->second);
+        setSourceDirectory(i->second);
     }
 }
 
@@ -460,8 +460,8 @@ void Target::applyRootDirectory()
     {
         // prevent adding last delimeter
         if (!RootDirectory.empty())
-            setSourceDir(SourceDir / RootDirectory);
-            //SourceDir /= RootDirectory;
+            //setSourceDirectory(SourceDir / RootDirectory);
+            SourceDir /= RootDirectory;
     }
 }
 

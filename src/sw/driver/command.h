@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include "jumppad.h"
 #include "options.h"
 
 #include <sw/builder/command.h>
@@ -360,41 +359,6 @@ private:
     bool dependency_set = false;
 };
 
-struct SW_DRIVER_CPP_API ExecuteBuiltinCommand : detail::Command
-{
-    using F = std::function<void(void)>;
-
-    ExecuteBuiltinCommand(const SwContext &swctx);
-    ExecuteBuiltinCommand(const SwContext &swctx, const String &cmd_name, void *f = nullptr, int version = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION);
-    virtual ~ExecuteBuiltinCommand() = default;
-
-    //path getProgram() const override { return "ExecuteBuiltinCommand"; };
-
-    //template <class T>
-    //auto push_back(T &&v) { args.push_back(v); }
-
-    void push_back(const Files &files);
-
-    bool isTimeChanged() const override;
-
-private:
-    void execute1(std::error_code *ec = nullptr) override;
-    size_t getHash1() const override;
-    void prepare() override {}
-};
-
-#ifdef _MSC_VER
-#define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
-    SW_MAKE_CUSTOM_COMMAND(::sw::driver::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
-#define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
-    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
-#else
-#define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
-    SW_MAKE_CUSTOM_COMMAND(::sw::driver::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
-#define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
-    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::driver::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
-#endif
-
 struct VSCommand : Command
 {
     using Command::Command;
@@ -529,9 +493,6 @@ CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
 }
 
 #undef DECLARE_STREAM_OP
-
-SW_DRIVER_CPP_API
-String getInternalCallBuiltinFunctionName();
 
 enum class BuiltinCommandArgumentId
 {

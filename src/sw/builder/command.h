@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "jumppad.h"
 #include "node.h"
 
 #include <primitives/command.h>
@@ -41,6 +42,19 @@
     SW_MAKE_CUSTOM_COMMAND(ExecuteCommand, name, target, __FILE__, __LINE__)
 #define _SW_MAKE_EXECUTE_COMMAND_AND_ADD(name, target) \
     SW_MAKE_CUSTOM_COMMAND_AND_ADD(ExecuteCommand, name, target, __FILE__, __LINE__)
+
+// ExecuteBuiltinCommand
+#ifdef _MSC_VER
+#define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
+    SW_MAKE_CUSTOM_COMMAND(::sw::builder::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
+#define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::builder::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
+#else
+#define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
+    SW_MAKE_CUSTOM_COMMAND(::sw::builder::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
+#define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
+    SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::builder::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
+#endif
 
 namespace sw
 {
@@ -257,8 +271,35 @@ private:
     void printOutputs();
 };
 
+struct SW_BUILDER_API ExecuteBuiltinCommand : Command
+{
+    using F = std::function<void(void)>;
+
+    ExecuteBuiltinCommand(const SwBuilderContext &swctx);
+    ExecuteBuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f = nullptr, int version = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION);
+    virtual ~ExecuteBuiltinCommand() = default;
+
+    //path getProgram() const override { return "ExecuteBuiltinCommand"; };
+
+    //template <class T>
+    //auto push_back(T &&v) { args.push_back(v); }
+
+    void push_back(const Files &files);
+
+    bool isTimeChanged() const override;
+
+private:
+    void execute1(std::error_code *ec = nullptr) override;
+    size_t getHash1() const override;
+    void prepare() override {}
+};
+
+SW_BUILDER_API
+String getInternalCallBuiltinFunctionName();
+
 } // namespace bulder
 
+using builder::ExecuteBuiltinCommand;
 using Commands = std::unordered_set<std::shared_ptr<builder::Command>>;
 
 #if defined(_WIN32)// || defined(__APPLE__)

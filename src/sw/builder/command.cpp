@@ -19,13 +19,15 @@
 #include <sw/support/filesystem.h>
 #include <sw/support/hash.h>
 
+#include <boost/algorithm/string.hpp>
+#include <boost/dll.hpp>
+#include <boost/thread/thread_pool.hpp>
 #include <primitives/debug.h>
 #include <primitives/executor.h>
+#include <primitives/symbol.h>
 #include <primitives/templates.h>
 #include <primitives/sw/cl.h>
 #include <primitives/sw/settings_program_name.h>
-#include <boost/algorithm/string.hpp>
-#include <boost/thread/thread_pool.hpp>
 
 #include <iostream>
 
@@ -1051,7 +1053,77 @@ Command &Command::operator|=(Command &c2)
     return *this;
 }
 
+
+ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx)
+    : Command(swctx)
+{
+    program = boost::dll::program_location().string();
 }
+
+ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version)
+    : ExecuteBuiltinCommand(swctx)
+{
+    first_response_file_argument = 1;
+    args.push_back(getInternalCallBuiltinFunctionName());
+    args.push_back(normalize_path(primitives::getModuleNameForSymbol(f))); // add dependency on this? or on function (command) version
+    args.push_back(cmd_name);
+    args.push_back(std::to_string(version));
+}
+
+void ExecuteBuiltinCommand::push_back(const Files &files)
+{
+    args.push_back(std::to_string(files.size()));
+    for (auto &o : FilesSorted{ files.begin(), files.end() })
+        args.push_back(normalize_path(o));
+}
+
+void ExecuteBuiltinCommand::execute1(std::error_code *ec)
+{
+    // add try catch?
+    jumppad_call(args[1], args[2], std::stoi(args[3]), Strings{ args.begin() + 4, args.end() });
+}
+
+bool ExecuteBuiltinCommand::isTimeChanged() const
+{
+    try
+    {
+        return std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
+            return check_if_file_newer(i, "input", true);
+            }) ||
+            std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
+                return check_if_file_newer(i, "output", false);
+                });
+    }
+    catch (std::exception &e)
+    {
+        String s = "Command: " + getName() + "\n";
+        s += e.what();
+        throw SW_RUNTIME_ERROR(s);
+    }
+}
+
+size_t ExecuteBuiltinCommand::getHash1() const
+{
+    size_t h = 0;
+    // ignore program!
+
+    hash_combine(h, std::hash<String>()(args[2])); // include function name
+    hash_combine(h, std::hash<String>()(args[3])); // include version
+
+                                                   // must sort args first, why?
+    std::set<String> args_sorted(args.begin() + 4, args.end());
+    for (auto &a : args_sorted)
+        hash_combine(h, std::hash<String>()(a));
+
+    return h;
+}
+
+String getInternalCallBuiltinFunctionName()
+{
+    return "internal-call-builtin-function";
+}
+
+} // namespace builder
 
 // libuv cannot resolve /such/paths/on/cygwin, so we explicitly use which/where
 path resolveExecutable(const path &in)
@@ -1149,4 +1221,4 @@ path resolveExecutable(const FilesOrdered &paths)
     return path();
 }
 
-}
+} // namespace sw

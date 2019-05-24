@@ -825,10 +825,10 @@ void ProjectEmitter::printProject(
                 File ff(p, nt.getFs());
                 auto gen = ff.getFileRecord().getGenerator();
 
-                if (auto dc = gen->as<driver::ExecuteBuiltinCommand>())
+                if (auto dc = gen->as<ExecuteBuiltinCommand>())
                 {
                     if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
-                        dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::driver::getInternalCallBuiltinFunctionName())
+                        dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::builder::getInternalCallBuiltinFunctionName())
                     {
                         if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
                             dc->args[toIndex(driver::BuiltinCommandArgumentId::FunctionName)] == "sw_create_def_file")
@@ -1051,10 +1051,10 @@ void ProjectEmitter::printProject(
                 File ff(p, nt.getFs());
                 auto gen = ff.getFileRecord().getGenerator();
 
-                if (auto dc = gen->as<driver::ExecuteBuiltinCommand>())
+                if (auto dc = gen->as<ExecuteBuiltinCommand>())
                 {
                     if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
-                        dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::driver::getInternalCallBuiltinFunctionName())
+                        dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::builder::getInternalCallBuiltinFunctionName())
                     {
                         if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
                             dc->args[toIndex(driver::BuiltinCommandArgumentId::FunctionName)] == "sw_create_def_file")

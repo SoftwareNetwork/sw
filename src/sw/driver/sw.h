@@ -7,7 +7,6 @@
 #pragma once
 
 // builder stuff
-#include "jumppad.h"
 #include "module.h"
 #include "build.h"
 #include "suffix.h"
@@ -16,6 +15,7 @@
 #include "sw_context.h"
 
 #include <sw/manager/storage.h>
+#include <sw/builder/jumppad.h>
 
 // support stuff
 #include <boost/algorithm/string.hpp>

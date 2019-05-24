@@ -6,7 +6,6 @@
 
 #include "command.h"
 
-#include "jumppad.h"
 #include "build.h"
 #include "sw_context.h"
 #include "target/native.h"
@@ -493,75 +492,6 @@ CommandBuilder &operator<<(CommandBuilder &cb, const Command::LazyCallback &t)
     if (!cb.stopped)
         cb.c->pushLazyArg(t);
     return cb;
-}
-
-ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwContext &swctx)
-    : Command(swctx)
-{
-    program = boost::dll::program_location().string();
-}
-
-ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwContext &swctx, const String &cmd_name, void *f, int version)
-    : ExecuteBuiltinCommand(swctx)
-{
-    first_response_file_argument = 1;
-    args.push_back(getInternalCallBuiltinFunctionName());
-    args.push_back(normalize_path(primitives::getModuleNameForSymbol(f))); // add dependency on this? or on function (command) version
-    args.push_back(cmd_name);
-    args.push_back(std::to_string(version));
-}
-
-void ExecuteBuiltinCommand::push_back(const Files &files)
-{
-    args.push_back(std::to_string(files.size()));
-    for (auto &o : FilesSorted{ files.begin(), files.end() })
-        args.push_back(normalize_path(o));
-}
-
-void ExecuteBuiltinCommand::execute1(std::error_code *ec)
-{
-    // add try catch?
-    jumppad_call(args[1], args[2], std::stoi(args[3]), Strings{ args.begin() + 4, args.end() });
-}
-
-bool ExecuteBuiltinCommand::isTimeChanged() const
-{
-    try
-    {
-        return std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
-                   return check_if_file_newer(i, "input", true);
-               }) ||
-               std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
-                   return check_if_file_newer(i, "output", false);
-               });
-    }
-    catch (std::exception &e)
-    {
-        String s = "Command: " + getName() + "\n";
-        s += e.what();
-        throw SW_RUNTIME_ERROR(s);
-    }
-}
-
-size_t ExecuteBuiltinCommand::getHash1() const
-{
-    size_t h = 0;
-    // ignore program!
-
-    hash_combine(h, std::hash<String>()(args[2])); // include function name
-    hash_combine(h, std::hash<String>()(args[3])); // include version
-
-    // must sort args first, why?
-    std::set<String> args_sorted(args.begin() + 4, args.end());
-    for (auto &a : args_sorted)
-        hash_combine(h, std::hash<String>()(a));
-
-    return h;
-}
-
-String getInternalCallBuiltinFunctionName()
-{
-    return "internal-call-builtin-function";
 }
 
 }
