@@ -38,8 +38,6 @@ void Build::build_self()
     ss.Native.LibrariesType = LibraryType::Static;
     addSettings(ss);
 
-    //Variables["SW_SELF_BUILD"] = 1;
-
     SwapAndRestore sr(Local, false);
     build_self_generated(*this);
 }

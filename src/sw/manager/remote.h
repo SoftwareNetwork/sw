@@ -18,7 +18,7 @@
 namespace grpc
 {
 
-class Channel;
+class ChannelInterface;
 
 }
 
@@ -66,7 +66,7 @@ struct Remote
     std::map<String, Publisher> publishers;
     bool secure = true;
 
-    std::shared_ptr<grpc::Channel> getGrpcChannel() const;
+    std::shared_ptr<grpc::ChannelInterface> getGrpcChannel() const;
 };
 
 using Remotes = std::vector<Remote>;

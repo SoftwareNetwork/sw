@@ -86,7 +86,7 @@ bool DataSource::downloadPackage(const Package &d, const path &fn, String &dl_ha
     return false;
 }
 
-std::shared_ptr<grpc::Channel> Remote::getGrpcChannel() const
+std::shared_ptr<grpc::ChannelInterface> Remote::getGrpcChannel() const
 {
     // keeping channel for too long causes issues
     // so we create a new one every time

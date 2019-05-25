@@ -43,7 +43,7 @@ void build(Solution &s)
 
 void set_dirs(Solution &s)
 {
-    s.setSourceDir(fs::current_path());
+    s.setSourceDirectory(fs::current_path());
 }
 
 void basic_tests(Solution &s)
