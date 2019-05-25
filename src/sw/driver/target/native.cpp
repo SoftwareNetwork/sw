@@ -1476,9 +1476,10 @@ void NativeCompiledTarget::autoDetectSources()
     }
 
     // erase config file, add a condition to not perform this code
+    // get proper config file
     path f = "sw.cpp";
-    check_absolute(f, true);
-    operator^=(f);
+    if (check_absolute(f, true))
+        operator^=(f);
 }
 
 void NativeCompiledTarget::autoDetectIncludeDirectories()
