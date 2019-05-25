@@ -1239,7 +1239,7 @@ Commands NativeCompiledTarget::getCommands1() const
         // link deps
         if (getSelectedTool() != Librarian.get())
         {
-            if (circular_dependency)
+            if (hasCircularDependency())
                 cmds.insert(Librarian->getCommand(*this));
         }
 
@@ -2399,7 +2399,7 @@ bool NativeCompiledTarget::prepare()
                 obj.insert(f->output.file);
         }
 
-        if (circular_dependency)
+        if (hasCircularDependency())
         {
             Librarian->setObjectFiles(obj);
             Librarian->setOutputFile(getOutputFileName2("lib"));

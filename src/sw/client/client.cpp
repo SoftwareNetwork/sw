@@ -149,7 +149,7 @@ static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value
 
 sw::SwContext createSwContext()
 {
-    return sw::SwContext(sw::Settings::get_user_settings().storage_dir);
+    return sw::SwContext(storage_dir_override.empty() ? sw::Settings::get_user_settings().storage_dir : storage_dir_override);
 }
 
 #include "sig.h"

@@ -355,22 +355,34 @@ static path getImportPchFile(const SwContext &swctx)
     return getImportFilePrefix(swctx) += ".cpp";
 }
 
-static void addImportLibrary(const SwContext &swctx, NativeCompiledTarget &t)
+#ifdef _WIN32
+static Strings getExports(HMODULE lib)
 {
-#if defined(CPPAN_OS_WINDOWS)
-    HMODULE lib = (HMODULE)primitives::getModuleForSymbol();
-    PIMAGE_NT_HEADERS header = (PIMAGE_NT_HEADERS)((BYTE *)lib + ((PIMAGE_DOS_HEADER)lib)->e_lfanew);
-    PIMAGE_EXPORT_DIRECTORY exports = (PIMAGE_EXPORT_DIRECTORY)((BYTE *)lib + header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
-    assert(exports->AddressOfNames && "No exports found");
-    int* names = (int*)((uint64_t)lib + exports->AddressOfNames);
-    String defs;
-    defs += "LIBRARY " IMPORT_LIBRARY "\n";
-    defs += "EXPORTS\n";
+    auto header = (PIMAGE_NT_HEADERS)((BYTE *)lib + ((PIMAGE_DOS_HEADER)lib)->e_lfanew);
+    auto exports = (PIMAGE_EXPORT_DIRECTORY)((BYTE *)lib + header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+    auto names = (int*)((uint64_t)lib + exports->AddressOfNames);
+    Strings syms;
     for (DWORD i = 0; i < exports->NumberOfNames; i++)
     {
         const char *n = (const char *)lib + names[i];
-        defs += "    "s + n + "\n";
+        syms.push_back(n);
     }
+    return syms;
+}
+#endif
+
+static void addImportLibrary(const SwContext &swctx, NativeCompiledTarget &t)
+{
+#ifdef _WIN32
+    auto lib = (HMODULE)primitives::getModuleForSymbol();
+    auto syms = getExports(lib);
+    if (syms.empty())
+        throw SW_RUNTIME_ERROR("No exports found");
+    String defs;
+    defs += "LIBRARY " IMPORT_LIBRARY "\n";
+    defs += "EXPORTS\n";
+    for (auto &s : syms)
+        defs += "    "s + s + "\n";
     write_file_if_different(getImportDefinitionsFile(swctx), defs);
 
     auto c = t.addCommand();
