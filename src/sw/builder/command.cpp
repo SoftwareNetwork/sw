@@ -1053,7 +1053,6 @@ Command &Command::operator|=(Command &c2)
     return *this;
 }
 
-
 ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx)
     : Command(swctx)
 {

@@ -7,6 +7,7 @@
 #include "build.h"
 #include "commands.h"
 #include "inserts.h"
+#include <gitrev.h>
 
 //#include <resolver.h>
 #include <sw/builder/file.h>
@@ -1247,11 +1248,21 @@ SUBCOMMAND_DECL2(upload)
 EXPORT_FROM_EXECUTABLE
 std::string getVersionString()
 {
+    String gitrev = SW_GIT_REV;
+    if (!gitrev.empty())
+    {
+        gitrev = "git revision " + gitrev;
+        if (SW_GIT_CHANGED_FILES)
+            gitrev += " plus " + std::to_string(SW_GIT_CHANGED_FILES) + " modified files";
+        gitrev += "\n";
+    }
+
     std::string s;
     s += ::sw::getProgramName();
     s += " version ";
     s += PACKAGE_VERSION;
     s += "\n";
+    s += gitrev;
     s += "assembled " __DATE__ " " __TIME__;
     return s;
 }

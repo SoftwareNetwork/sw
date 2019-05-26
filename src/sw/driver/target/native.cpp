@@ -1179,7 +1179,7 @@ Commands NativeCompiledTarget::getCommands1() const
         auto o = getOutputDir();
         o /= f->install_dir / p.filename();
 
-        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file");
+        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file", nullptr);
         copy_cmd->args.push_back(p.u8string());
         copy_cmd->args.push_back(o.u8string());
         copy_cmd->addInput(p);
@@ -1297,7 +1297,9 @@ Commands NativeCompiledTarget::getCommands1() const
 
 bool NativeCompiledTarget::hasCircularDependency() const
 {
-    return circular_dependency;
+    return circular_dependency
+        //|| (getSolution().getGenerator() && getSelectedTool() != Librarian.get())
+        ;
 }
 
 void NativeCompiledTarget::findSources()
@@ -2286,7 +2288,7 @@ bool NativeCompiledTarget::prepare()
             Files objs;
             for (auto &f : files)
                 objs.insert(f->output.file);
-            SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_create_def_file");
+            SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_create_def_file", nullptr);
             c->record_inputs_mtime = true;
             c->args.push_back(def.u8string());
             c->push_back(objs);
@@ -3458,7 +3460,6 @@ bool ExecutableTarget::prepare()
 
         if (SwDefinitions)
             Definitions["SW_EXECUTABLE"];
-        //Definitions["CPPAN_EXECUTABLE"];
 
         set_api(ApiName);
         for (auto &a : ApiNames)

@@ -276,7 +276,7 @@ struct SW_BUILDER_API ExecuteBuiltinCommand : Command
     using F = std::function<void(void)>;
 
     ExecuteBuiltinCommand(const SwBuilderContext &swctx);
-    ExecuteBuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f = nullptr, int version = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION);
+    ExecuteBuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION);
     virtual ~ExecuteBuiltinCommand() = default;
 
     //path getProgram() const override { return "ExecuteBuiltinCommand"; };

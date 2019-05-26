@@ -2291,7 +2291,7 @@ Commands Build::getCommands() const
                     if (in == o)
                         continue;
 
-                    SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file");
+                    SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
                     copy_cmd->args.push_back(in.u8string());
                     copy_cmd->args.push_back(o.u8string());
                     copy_cmd->addInput(dt->getOutputFile());
@@ -2583,7 +2583,7 @@ void Build::build_packages(const StringSet &pkgs)
                         if (in == o)
                             continue;
 
-                        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file");
+                        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
                         copy_cmd->args.push_back(in.u8string());
                         copy_cmd->args.push_back(o.u8string());
                         copy_cmd->addInput(dt->getOutputFile());
