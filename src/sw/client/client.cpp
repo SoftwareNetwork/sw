@@ -1256,7 +1256,7 @@ std::string getVersionString()
     s += PACKAGE_VERSION;
     s += "\n";
     s += getGitRev();
-    s += "assembled " + getBuildTime();
+    s += "assembled on " + getBuildTime();
     return s;
 }
 

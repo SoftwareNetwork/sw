@@ -7,7 +7,7 @@
 
 static int create_git_rev(path git, path wdir, path outfn)
 {
-    String rev, status;
+    String rev, status, time;
 
     {
         primitives::Command c;
@@ -33,9 +33,14 @@ static int create_git_rev(path git, path wdir, path outfn)
             status = std::to_string(split_lines(status).size());
     }
 
+    {
+        time = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+    }
+
     String t;
     t += "#define SW_GIT_REV \"" + rev + "\"\n";
     t += "#define SW_GIT_CHANGED_FILES " + status + "\n";
+    t += "#define SW_BUILD_TIME_T " + time + "LL\n";
 
     write_file(outfn, t);
     return 0;
@@ -251,12 +256,22 @@ void build(Solution &s)
             //client.getSelectedTool()->LinkOptions.push_back("-static-libstdc++");
             //client.getSelectedTool()->LinkOptions.push_back("-static-libgcc");
         }
-        SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, client, "create_git_rev", create_git_rev);
-        c->args.push_back(sw::resolveExecutable("git").u8string());
-        c->args.push_back(client.SourceDir.u8string());
-        c->args.push_back((client.BinaryDir / "gitrev.h").u8string());
-        c->addOutput(client.BinaryDir / "gitrev.h");
-        client += "gitrev.h";
+
+        // TODO: add a condition to skip this in bootstrap build
+        // if (bootstrap build)
+        {
+            SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, client, "create_git_rev", create_git_rev);
+            c->args.push_back(sw::resolveExecutable("git").u8string());
+            c->args.push_back(client.SourceDir.u8string());
+            c->args.push_back((client.BinaryDir / "gitrev.h").u8string());
+            c->addOutput(client.BinaryDir / "gitrev.h");
+            c->always = true;
+            client += "gitrev.h";
+        }
+        /*else
+        {
+            client.writeFileOnce("gitrev.h", ...);
+        }*/
 
         if (client.getSettings().TargetOS.Type == OSType::Windows)
         {

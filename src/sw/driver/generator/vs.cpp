@@ -1131,11 +1131,13 @@ void ProjectEmitter::printProject(
                         addText(normalize_path_windows(d) + ";");
 
                     endBlock(true);
-                    if (!gen->outputs.empty())
+                    if (!gen->outputs.empty() || gen->always)
                     {
                         beginBlockWithConfiguration("Outputs", s);
                         for (auto &o : gen->outputs)
                             addText(normalize_path_windows(o) + ";");
+                        if (gen->always)
+                            addText(normalize_path_windows("/sw/very/inexistent/file") + ";");
                         endBlock(true);
                     }
 

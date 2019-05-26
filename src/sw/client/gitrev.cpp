@@ -13,16 +13,10 @@
 
 std::string getBuildTime()
 {
-    std::tm tm = {};
-    std::stringstream ss(__DATE__ " " __TIME__);
-    ss >> std::get_time(&tm, "%b %d %Y %H:%M:%S");
-    auto t = mktime(&tm);
-    auto utc = std::chrono::system_clock::from_time_t(t) - std::chrono::hours{ 3 }; // +3 TZ
-    auto t2 = std::chrono::system_clock::to_time_t(utc);
-    auto tm2 = localtime(&t2);
+    auto t = SW_BUILD_TIME_T;
     std::ostringstream ss2;
-    ss2 << std::put_time(tm2, "%d.%m.%Y %H:%M:%S");
-    return ss2.str() + " UTC";
+    ss2 << std::put_time(localtime(&t), "%d.%m.%Y %H:%M:%S %Z");
+    return ss2.str();
 }
 
 std::string getGitRev()
