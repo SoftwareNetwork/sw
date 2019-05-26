@@ -147,8 +147,16 @@ static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
 
+static ::cl::opt<bool> curl_verbose("curl-verbose");
+static ::cl::opt<bool> ignore_ssl_checks("ignore-ssl-checks");
+
 sw::SwContext createSwContext()
 {
+    // load proxy settings early
+    httpSettings.verbose = curl_verbose;
+    httpSettings.ignore_ssl_checks = ignore_ssl_checks;
+    httpSettings.proxy = Settings::get_local_settings().proxy;
+
     return sw::SwContext(storage_dir_override.empty() ? sw::Settings::get_user_settings().storage_dir : storage_dir_override);
 }
 
