@@ -27,7 +27,9 @@ static int create_git_rev(path git, path wdir, path outfn)
         c.args.push_back("--porcelain");
         c.execute();
         status = boost::trim_copy(c.out.text);
-        if (!status.empty())
+        if (status.empty())
+            status = "0";
+        else
             status = std::to_string(split_lines(status).size());
     }
 
