@@ -1288,7 +1288,7 @@ void self_upgrade()
 
     std::cout << "Downloading signature file" << "\n";
     static const auto algo = "sha512"s;
-    auto sig = boost::algorithm::trim_copy(download_file(s.remotes[0].url + client.u8string() + "." + algo + ".sig"));
+    auto sig = download_file(s.remotes[0].url + client.u8string() + "." + algo + ".sig");
 
     auto fn = fs::temp_directory_path() / (unique_path() += client.extension());
     std::cout << "Downloading the latest client" << "\n";
