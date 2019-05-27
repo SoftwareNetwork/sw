@@ -71,6 +71,18 @@ inline int64_t from_string(gsl::span<const String> &s)
 }
 
 template <>
+inline Strings from_string(gsl::span<const String> &s)
+{
+    auto b = s.begin();
+    Strings f;
+    auto n = std::stoi(*b++);
+    while (n--)
+        f.push_back(*b++);
+    s = s.subspan(b - s.begin());
+    return f;
+}
+
+template <>
 inline Files from_string(gsl::span<const String> &s)
 {
     auto b = s.begin();
@@ -92,6 +104,22 @@ template <class T>
 inline size_t get_n_arg(gsl::span<const String> &s)
 {
     s = s.subspan(1);
+    return 1;
+}
+
+template <>
+inline size_t get_n_arg<Strings>(gsl::span<const String> &s)
+{
+    try
+    {
+        auto n = std::stoi(*s.begin());
+        s = s.subspan(n + 1);
+    }
+    catch (...)
+    {
+        // on invalid number, we consider this as zero
+        return 0;
+    }
     return 1;
 }
 

@@ -284,6 +284,7 @@ struct SW_BUILDER_API ExecuteBuiltinCommand : Command
     //template <class T>
     //auto push_back(T &&v) { args.push_back(v); }
 
+    void push_back(const Strings &strings);
     void push_back(const Files &files);
 
     bool isTimeChanged() const override;

@@ -28,6 +28,7 @@ SUBCOMMAND(ide, "Used to invoke sw application to do IDE tasks: generate project
 SUBCOMMAND(install, "Add package to lock.") COMMA
 SUBCOMMAND(integrate, "Integrate sw into different tools.") COMMA
 SUBCOMMAND(list, "List packages in database.") COMMA
+SUBCOMMAND(open, "Open package directory.") COMMA
 SUBCOMMAND(mirror, "Manage software mirrors.") COMMA
 SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
 SUBCOMMAND(remote, "Manage remotes.") COMMA

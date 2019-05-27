@@ -1076,6 +1076,13 @@ void ExecuteBuiltinCommand::push_back(const Files &files)
         args.push_back(normalize_path(o));
 }
 
+void ExecuteBuiltinCommand::push_back(const Strings &strings)
+{
+    args.push_back(std::to_string(strings.size()));
+    for (auto &o : strings)
+        args.push_back(normalize_path(o));
+}
+
 void ExecuteBuiltinCommand::execute1(std::error_code *ec)
 {
     // add try catch?

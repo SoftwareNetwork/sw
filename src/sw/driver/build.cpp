@@ -2270,7 +2270,7 @@ Commands Build::getCommands() const
 
             // copy
             if (nt->isLocal() && //getSettings().Native.CopySharedLibraries &&
-                nt->Scope == TargetScope::Build && nt->OutputDir.empty())
+                nt->Scope == TargetScope::Build && nt->OutputDir.empty() && !nt->createWindowsRpath())
             {
                 for (auto &l : nt->gatherAllRelatedDependencies())
                 {

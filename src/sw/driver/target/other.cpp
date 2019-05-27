@@ -26,7 +26,8 @@ bool CSharpTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
+        SW_UNIMPLEMENTED;
+        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -82,7 +83,8 @@ bool RustTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
+        SW_UNIMPLEMENTED;
+        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -138,7 +140,8 @@ bool GoTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
+        SW_UNIMPLEMENTED;
+        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -194,7 +197,8 @@ bool FortranTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
+        SW_UNIMPLEMENTED;
+        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -309,7 +313,8 @@ bool KotlinTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
+        SW_UNIMPLEMENTED;
+        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {
@@ -365,7 +370,8 @@ bool DTarget::init()
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
-        compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
+        SW_UNIMPLEMENTED;
+        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
     }
     else
     {

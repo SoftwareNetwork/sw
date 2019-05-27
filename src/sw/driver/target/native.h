@@ -142,6 +142,7 @@ public:
     bool mustResolveDeps() const override { return prepare_pass == 2; }
     void setOutputDir(const path &dir);
     String getConfigRaw() const override;
+    bool createWindowsRpath() const;
 
     driver::CommandBuilder addCommand() const;
     // add executed command?
@@ -197,6 +198,8 @@ private:
     bool already_built = false;
     std::map<path, path> break_gch_deps;
     mutable std::optional<Commands> generated_commands;
+    path outputfile;
+    Commands cmds;
 
     Commands getCommands1() const override;
 
@@ -210,6 +213,7 @@ private:
     FilesOrdered gatherLinkLibraries() const;
     void merge1();
     void findCompiler();
+    void processCircular(Files &objs);
 
     path getPatchDir(bool binary_dir) const;
 };

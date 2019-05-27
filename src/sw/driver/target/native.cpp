@@ -16,6 +16,8 @@
 #include <primitives/debug.h>
 #include <primitives/sw/cl.h>
 
+#include <charconv>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target.native");
 
@@ -54,6 +56,85 @@ static int copy_file(path in, path out)
 }
 
 SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_copy_file, copy_file)
+
+const int symbol_len_max = 240; // 256 causes errors
+const int symbol_len_len = 2; // 256 causes errors
+
+#ifdef _WIN32
+#include <DbgHelp.h>
+
+static DWORD rva2Offset(DWORD rva, PIMAGE_SECTION_HEADER psh, PIMAGE_NT_HEADERS pnt)
+{
+    if (!rva)
+        return rva;
+    auto pSeh = psh;
+    for (WORD i = 0; i < pnt->FileHeader.NumberOfSections; i++)
+    {
+        if (rva >= pSeh->VirtualAddress && rva < pSeh->VirtualAddress + pSeh->Misc.VirtualSize)
+            break;
+        pSeh++;
+    }
+    return rva - pSeh->VirtualAddress + pSeh->PointerToRawData;
+}
+
+static int replace_dll_import(path in, path out, Strings indlls)
+{
+    if (indlls.empty())
+    {
+        fs::copy_file(in, out, fs::copy_options::overwrite_existing);
+        return 0;
+    }
+
+    if (indlls.size() % 2 == 1)
+        throw SW_RUNTIME_ERROR("Number of inputs is not even");
+
+    std::map<String, String> dlls;
+    for (int i = 0; i < indlls.size(); i += 2)
+        dlls[indlls[i]] = indlls[i+1];
+
+    auto f = read_file(in);
+    void *h = f.data();
+
+    auto ntheaders = (PIMAGE_NT_HEADERS)(PCHAR(h) + PIMAGE_DOS_HEADER(h)->e_lfanew);
+    auto pSech = IMAGE_FIRST_SECTION(ntheaders);
+
+    ULONG sz;
+    PIMAGE_SECTION_HEADER sh;
+    auto pImportDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)ImageDirectoryEntryToDataEx(
+        h, false, IMAGE_DIRECTORY_ENTRY_IMPORT, &sz, &sh);
+    if (!pImportDescriptor)
+        throw SW_RUNTIME_ERROR("Bad import descriptor");
+
+    while (pImportDescriptor->Name)
+    {
+        auto ptr = (PCHAR)((DWORD_PTR)h + rva2Offset(pImportDescriptor->Name, pSech, ntheaders));
+        String s = ptr;
+        int sz;
+        if (auto [p, ec] = std::from_chars(ptr, ptr + symbol_len_len, sz, 16); ec == std::errc() && p == ptr + symbol_len_len)
+        {
+            s = s.substr(symbol_len_len, sz);
+            auto i = dlls.find(s);
+            if (i != dlls.end())
+            {
+                auto &repl = i->second;
+                if (repl.size() > symbol_len_max)
+                {
+                    throw SW_RUNTIME_ERROR("replacement size (" + std::to_string(sz) +
+                        ") is greater than max (" + std::to_string(symbol_len_max) + ")");
+                }
+                memcpy(ptr, repl.data(), repl.size() + 1);
+            }
+        }
+        pImportDescriptor++;
+    }
+
+    write_file(out, f);
+    return 0;
+}
+
+SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
+
+#endif
 
 namespace sw
 {
@@ -429,7 +510,8 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 {
     NativeTarget::setupCommand(c);
 
-    c.addPathDirectory(getOutputBaseDir() / getConfig());
+    //c.addPathDirectory(getOutputBaseDir() / getConfig());
+    c.addPathDirectory(getSolution().swctx.getLocalStorage().storage_dir);
 }
 
 driver::CommandBuilder NativeCompiledTarget::addCommand() const
@@ -523,10 +605,11 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
 
 path NativeCompiledTarget::getOutputBaseDir() const
 {
-    if (getSettings().TargetOS.Type == OSType::Windows)
+    SW_UNIMPLEMENTED;
+    /*if (getSettings().TargetOS.Type == OSType::Windows)
         return getSolution().swctx.getLocalStorage().storage_dir_bin;
     else
-        return getSolution().swctx.getLocalStorage().storage_dir_lib;
+        return getSolution().swctx.getLocalStorage().storage_dir_lib;*/
 }
 
 path NativeCompiledTarget::getOutputDir() const
@@ -548,7 +631,8 @@ void NativeCompiledTarget::setOutputFile()
             if (getType() == TargetType::NativeExecutable)
                 getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
             else
-                getSelectedTool()->setOutputFile(getOutputFileName(getOutputBaseDir()));
+                getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
+                //getSelectedTool()->setOutputFile(getOutputFileName(getOutputBaseDir()));
             getSelectedTool()->setImportLibrary(getOutputFileName2("lib"));
         }
     }
@@ -612,6 +696,8 @@ path NativeCompiledTarget::getOutputFileName2(const path &subdir) const
 
 path NativeCompiledTarget::getOutputFile() const
 {
+    if (!outputfile.empty())
+        return outputfile;
     return getSelectedTool()->getOutputFile();
 }
 
@@ -1237,11 +1323,8 @@ Commands NativeCompiledTarget::getCommands1() const
         }
 
         // link deps
-        if (getSelectedTool() != Librarian.get())
-        {
-            if (hasCircularDependency())
-                cmds.insert(Librarian->getCommand(*this));
-        }
+        if (hasCircularDependency() || createWindowsRpath())
+            cmds.insert(Librarian->getCommand(*this));
 
         cmds.insert(c);
 
@@ -1292,13 +1375,31 @@ Commands NativeCompiledTarget::getCommands1() const
             return {};
     }*/
 
+    cmds.insert(this->cmds.begin(), this->cmds.end());
+
     return cmds;
 }
 
 bool NativeCompiledTarget::hasCircularDependency() const
 {
-    return circular_dependency
-        //|| (getSolution().getGenerator() && getSelectedTool() != Librarian.get())
+    return
+        1
+        && getSelectedTool() == Linker.get()
+        && circular_dependency
+        //|| (getSolution().getGenerator())
+        ;
+}
+
+bool NativeCompiledTarget::createWindowsRpath() const
+{
+    // http://nibblestew.blogspot.com/2019/05/emulating-rpath-on-windows-via-binary.html
+    return
+        1
+        && !IsConfig
+        && getSettings().TargetOS.is(OSType::Windows)
+        //&& !isLocal()
+        && getSelectedTool() == Linker.get()
+        && !getSolution().getGenerator()
         ;
 }
 
@@ -2390,7 +2491,11 @@ bool NativeCompiledTarget::prepare()
 
         // right after gatherStaticLinkLibraries()!
         getSelectedTool()->merge(*this);
-
+    }
+    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
+    case 8:
+        // linker
+    {
         // linker setup
         auto obj = gatherObjectFilesWithoutLibraries();
         auto O1 = gatherLinkLibraries();
@@ -2401,22 +2506,8 @@ bool NativeCompiledTarget::prepare()
                 obj.insert(f->output.file);
         }
 
-        if (hasCircularDependency())
-        {
-            Librarian->setObjectFiles(obj);
-            Librarian->setOutputFile(getOutputFileName2("lib"));
-            if (auto L = Librarian->as<VisualStudioLibrarian>())
-            {
-                L->CreateImportLibrary = true;
-                L->DllName = Linker->getOutputFile().filename().u8string();
-            }
-
-            auto exp = Librarian->getImportLibrary();
-            exp = exp.parent_path() / (exp.stem().u8string() + ".exp");
-            Librarian->merge(*this);
-            Librarian->prepareCommand(*this)->addOutput(exp);
-            obj.insert(exp);
-        }
+        // circular and windows rpath processing
+        processCircular(obj);
 
         getSelectedTool()->setObjectFiles(obj);
         getSelectedTool()->setInputLibraryDependencies(O1);
@@ -2424,12 +2515,127 @@ bool NativeCompiledTarget::prepare()
         getSolution().call_event(*this, CallbackType::EndPrepare);
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 8:
+    case 9:
         clearGlobCache();
     SW_RETURN_MULTIPASS_END;
     }
 
     SW_RETURN_MULTIPASS_END;
+}
+
+void NativeCompiledTarget::processCircular(Files &obj)
+{
+    if (!hasCircularDependency() && !createWindowsRpath())
+        return;
+    if (hasCircularDependency() && createWindowsRpath())
+        SW_UNIMPLEMENTED;
+    if (*HeaderOnly || getSelectedTool() == Librarian.get())
+        return;
+
+    auto lib_exe = Librarian->as<VisualStudioLibrarian>();
+    if (!lib_exe)
+        throw SW_RUNTIME_ERROR("Unsupported librarian");
+
+    auto link_exe = Linker->as<VisualStudioLinker>();
+    if (!link_exe)
+        throw SW_RUNTIME_ERROR("Unsupported linker");
+
+    // protect output file renaming
+    static std::mutex m;
+
+    auto name = Linker->getOutputFile().filename().u8string();
+    if (createWindowsRpath())
+    {
+        Strings dlls;
+        for (auto &d : Dependencies)
+        {
+            if (d->target == this)
+                continue;
+            if (d->isDisabledOrDummy())
+                continue;
+            if (d->IncludeDirectoriesOnly)
+                continue;
+
+            auto nt = ((NativeCompiledTarget*)d->target);
+
+            if (!*nt->HeaderOnly)
+            {
+                if (nt->getSelectedTool() == nt->Linker.get())
+                {
+                    dlls.push_back(nt->getPackage().toString() + ".dll"); // in
+
+                    // don't replace local targets' deps
+                    if (d->target->isLocal())
+                    {
+                        // same as in
+                        dlls.push_back(nt->getPackage().toString() + ".dll"); // out
+                        continue;
+                    }
+
+                    path out;
+                    {
+                        std::lock_guard lk(m);
+                        out = nt->getOutputFile().parent_path();
+                    }
+                    out = out.lexically_relative(getSolution().swctx.getLocalStorage().storage_dir);
+                    out /= nt->getPackage().toString() + ".dll";
+                    dlls.push_back(out.u8string()); // out
+                }
+            }
+        }
+
+        // even if dlls are empty we still need to do this!
+
+        auto sz = name.size();
+        if (sz > symbol_len_max)
+        {
+            throw SW_RUNTIME_ERROR("name size (" + std::to_string(sz) +
+                ") is greater than max (" + std::to_string(symbol_len_max) + ")");
+        }
+        std::stringstream stream;
+        stream << std::setfill('0') << std::setw(symbol_len_len) << std::hex << sz;
+        name = stream.str() + name;
+        name.resize(symbol_len_max, 's');
+        link_exe->ImportLibrary.clear();
+
+        path out;
+        {
+            std::lock_guard lk(m);
+            out = Linker->getOutputFile();
+            Linker->setOutputFile(path(out) += ".1");
+        }
+
+        SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_replace_dll_import", nullptr);
+        c->args.push_back(Linker->getOutputFile().u8string());
+        c->args.push_back(out.u8string());
+        c->addInput(Linker->getOutputFile());
+        c->addOutput(out);
+        auto cmd = Linker->createCommand(getSolution().swctx);
+        cmd->dependent_commands.insert(c);
+        c->push_back(dlls);
+        cmds.insert(c);
+        outputfile = out;
+    }
+
+    lib_exe->CreateImportLibrary = true;
+    lib_exe->DllName = name;
+
+    if (!link_exe->ModuleDefinitionFile)
+    {
+        Librarian->setObjectFiles(obj);
+    }
+    else
+    {
+        lib_exe->ModuleDefinitionFile = link_exe->ModuleDefinitionFile;
+    }
+    Librarian->setOutputFile(getOutputFileName2("lib"));
+
+    //
+    auto exp = Librarian->getImportLibrary();
+    exp = exp.parent_path() / (exp.stem().u8string() + ".exp");
+    Librarian->merge(*this);
+    Librarian->prepareCommand(*this)->addOutput(exp);
+    obj.insert(exp);
 }
 
 void NativeCompiledTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeCompiledTarget*> &targets, bool system)
@@ -3473,7 +3679,8 @@ bool ExecutableTarget::prepare()
 
 path ExecutableTarget::getOutputBaseDir() const
 {
-    return getSolution().swctx.getLocalStorage().storage_dir_bin;
+    SW_UNIMPLEMENTED;
+    //return getSolution().swctx.getLocalStorage().storage_dir_bin;
 }
 
 void ExecutableTarget::cppan_load_project(const yaml &root)
