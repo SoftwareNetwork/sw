@@ -32,22 +32,6 @@ struct SW_DRIVER_CPP_API ExceptionHandling
 
 using ExceptionHandlingVector = std::vector<ExceptionHandling>;
 
-enum class MachineType
-{
-    ARM,
-    ARM64,
-    EBC,
-    IA64,
-    MIPS,
-    MIPS16,
-    MIPSFPU,
-    MIPSFPU16,
-    SH4,
-    THUMB,
-    X64,
-    X86,
-};
-
 enum class RuntimeLibraryType
 {
     MultiThreaded,
@@ -116,7 +100,6 @@ enum class Target
 }
 
 DECLARE_OPTION_SPECIALIZATION(vs::ExceptionHandlingVector);
-DECLARE_OPTION_SPECIALIZATION(vs::MachineType);
 DECLARE_OPTION_SPECIALIZATION(vs::RuntimeLibraryType);
 DECLARE_OPTION_SPECIALIZATION(vs::DebugInformationFormatType);
 DECLARE_OPTION_SPECIALIZATION(vs::PrecompiledHeaderVs);

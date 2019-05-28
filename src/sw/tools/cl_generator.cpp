@@ -35,6 +35,68 @@ String Flag::getIdeName() const
     return name;
 }
 
+void Flag::printDecl(primitives::CppEmitter &ctx) const
+{
+    if (disabled)
+        return;
+
+    ctx.beginBlock("CommandLineOption<" + getTypeWithNs() + "> " + name);
+    if (!flag.empty())
+        ctx.addLine("cl::CommandFlag{ \"" + flag + "\" },");
+    if (!default_value.empty())
+    {
+        ctx.addLine(ns);
+        if (!ns.empty())
+            ctx.addText("::");
+        if (!enum_vals.empty())
+            ctx.addText(type + "::");
+        ctx.addText(default_value + ",");
+    }
+    if (!function_current.empty())
+        ctx.addLine("cl::CommandLineFunction<CPPLanguageStandard>{&" + function_current + "},");
+    for (auto &p : properties)
+    {
+        if (0);
+        else if (p == "input_dependency")
+            ctx.addLine("cl::InputDependency{},");
+        else if (p == "intermediate_file")
+            ctx.addLine("cl::IntermediateFile{},");
+        else if (p == "output_dependency")
+            ctx.addLine("cl::OutputDependency{},");
+        else if (p == "flag_before_each_value")
+            ctx.addLine("cl::CommandFlagBeforeEachValue{},");
+        else if (p == "config_variable")
+            ctx.addLine("cl::ConfigVariable{},");
+        else if (p == "separate_prefix")
+            ctx.addLine("cl::SeparatePrefix{},");
+        else
+            throw SW_RUNTIME_ERROR("unknown property: " + p);
+    }
+    ctx.endBlock(true);
+    ctx.emptyLines(1);
+}
+
+void Flag::printEnum(primitives::CppEmitter &ctx) const
+{
+    if (disabled)
+        return;
+    if (enum_vals.empty())
+        return;
+
+    if (!ns.empty())
+        ctx.beginNamespace(ns);
+    ctx.beginBlock("enum class " + type);
+    for (auto &[e, ev] : enum_vals)
+        ctx.addLine(e + ",");
+    ctx.endBlock(true);
+    ctx.emptyLines(1);
+    if (!ns.empty())
+        ctx.endNamespace(ns);
+    ctx.emptyLines(1);
+    ctx.addLine("DECLARE_OPTION_SPECIALIZATION(" + getTypeWithNs() + ");");
+    ctx.emptyLines(1);
+}
+
 void Flag::printStruct(primitives::CppEmitter &ctx) const
 {
     if (disabled)
@@ -70,6 +132,103 @@ void Flag::printStructFunction(primitives::CppEmitter &ctx) const
     ctx.emptyLines(1);
 }
 
+void Flag::printToIde(primitives::CppEmitter &ctx) const
+{
+    if (disabled)
+        return;
+    if (!print_to_ide)
+        return;
+
+    if (!enum_vals.empty())
+    {
+        ctx.addLine("ctx.beginBlock(\"" + getIdeName() + "\");");
+        ctx.beginBlock("switch (" + name + ".value())");
+        for (auto &[e, ev] : enum_vals)
+        {
+            ctx.addLine("case ");
+            if (!ns.empty())
+                ctx.addText(ns + "::");
+            if (!enum_vals.empty())
+                ctx.addText(type + "::");
+            ctx.addText(e + ":");
+            ctx.increaseIndent();
+            ctx.addLine("ctx.addText(\"" + ev.getIdeName() + "\");");
+            ctx.addLine("break;");
+            ctx.decreaseIndent();
+        }
+        ctx.endBlock();
+        ctx.addLine("ctx.endBlock(true);");
+        ctx.emptyLines(1);
+        return;
+    }
+
+    if (default_ide_value.empty())
+        ctx.beginBlock("if (" + name + ")");
+    ctx.addLine("ctx.beginBlock(\"" + getIdeName() + "\");");
+    if (!default_ide_value.empty())
+        ctx.beginBlock("if (" + name + ")");
+    if (type == "bool")
+    {
+        if (ide_value.empty())
+            ctx.addLine("ctx.addText(" + name + ".value() ? \"true\" : \"false\");");
+        else
+            ctx.addLine("ctx.addText(" + name + ".value() ? \"" + ide_value + "\" : \"false\");");
+    }
+    else if (type == "path")
+        ctx.addLine("ctx.addText(" + name + ".value().u8string());");
+    else if (type == "String" || type == "std::string")
+        ctx.addLine("ctx.addText(" + name + ".value().u8string());");
+    else // numeric
+        ctx.addLine("ctx.addText(std::to_string(" + name + ".value()));");
+    if (!default_ide_value.empty())
+    {
+        ctx.endBlock();
+        ctx.beginBlock("else");
+        if (type == "bool")
+            ctx.addLine("ctx.addText(" + default_ide_value + " ? \"true\" : \"false\");");
+        else
+            ctx.addLine("ctx.addText(" + default_ide_value + "");
+        ctx.endBlock();
+    }
+    ctx.addLine("ctx.endBlock(true);");
+    if (default_ide_value.empty())
+        ctx.endBlock();
+    ctx.emptyLines(1);
+}
+
+void Flag::printCommandLine(primitives::CppEmitter &ctx) const
+{
+    if (disabled)
+        return;
+    if (type.empty())
+        return;
+
+    if (0);
+    else if (type == "bool")
+    {
+        ctx.increaseIndent("if (" + name + ")");
+        ctx.addLine("s.push_back(\"-" + flag + "\");");
+        ctx.decreaseIndent();
+    }
+    else if (type == "path")
+    {
+    }
+    //else
+    //throw SW_RUNTIME_ERROR("unknown cpp type: " + v.type);
+}
+
+std::vector<const Flag *> Type::sortFlags() const
+{
+    std::vector<const Flag*> flags2;
+    for (auto &[k, v] : flags)
+        flags2.push_back(&v);
+    std::sort(flags2.begin(), flags2.end(), [](const auto &f1, const auto &f2)
+        {
+            return f1->order < f2->order;
+        });
+    return flags2;
+}
+
 void Type::print(primitives::CppEmitter &h, primitives::CppEmitter &cpp) const
 {
     if (printed)
@@ -83,78 +242,19 @@ void Type::print(primitives::CppEmitter &h, primitives::CppEmitter &cpp) const
 
 void Type::printH(primitives::CppEmitter &h) const
 {
-    std::vector<const Flag*> flags2;
-    for (auto &[k, v] : flags)
-        flags2.push_back(&v);
-    std::sort(flags2.begin(), flags2.end(), [](const auto &f1, const auto &f2)
-        {
-            return f1->order < f2->order;
-        });
+    auto flags2 = sortFlags();
 
     // print enums and struct
     for (auto &v : flags2)
     {
-        if (!v->enum_vals.empty())
-        {
-            if (!v->ns.empty())
-                h.beginNamespace(v->ns);
-            h.beginBlock("enum class " + v->type);
-            for (auto &[e, ev] : v->enum_vals)
-                h.addLine(e + ",");
-            h.endBlock(true);
-            h.emptyLines(1);
-            if (!v->ns.empty())
-                h.endNamespace(v->ns);
-            h.emptyLines(1);
-            h.addLine("DECLARE_OPTION_SPECIALIZATION(" + v->getTypeWithNs() + ");");
-            h.emptyLines(1);
-        }
-
+        v->printEnum(h);
         v->printStruct(h);
     }
-
-    auto print_flag_decl = [&](const auto &v)
-    {
-        h.beginBlock("CommandLineOption<" + v.getTypeWithNs() + "> " + v.name);
-        if (!v.flag.empty())
-            h.addLine("cl::CommandFlag{ \"" + v.flag + "\" },");
-        if (!v.default_value.empty())
-        {
-            h.addLine(v.ns);
-            if (!v.ns.empty())
-                h.addText("::");
-            if (!v.enum_vals.empty())
-                h.addText(v.type + "::");
-            h.addText(v.default_value + ",");
-        }
-        if (!v.function_current.empty())
-            h.addLine("cl::CommandLineFunction<CPPLanguageStandard>{&" + v.function_current + "},");
-        for (auto &p : v.properties)
-        {
-            if (0);
-            else if (p == "input_dependency")
-                h.addLine("cl::InputDependency{},");
-            else if (p == "intermediate_file")
-                h.addLine("cl::IntermediateFile{},");
-            else if (p == "output_dependency")
-                h.addLine("cl::OutputDependency{},");
-            else if (p == "flag_before_each_value")
-                h.addLine("cl::CommandFlagBeforeEachValue{},");
-            else if (p == "config_variable")
-                h.addLine("cl::ConfigVariable{},");
-            else if (p == "separate_prefix")
-                h.addLine("cl::SeparatePrefix{},");
-            else
-                throw SW_RUNTIME_ERROR("unknown property: " + p);
-        }
-        h.endBlock(true);
-        h.emptyLines(1);
-    };
 
     // print command opts
     h.beginBlock("struct SW_DRIVER_CPP_API " + name + (parent.empty() ? "" : (" : " + parent)));
     for (auto &v : flags2)
-        print_flag_decl(*v);
+        v->printDecl(h);
     h.emptyLines(1);
 
     h.addLine("Strings getCommandLine(const ::sw::builder::Command &c);");
@@ -167,32 +267,7 @@ void Type::printH(primitives::CppEmitter &h) const
 
 void Type::printCpp(primitives::CppEmitter &cpp) const
 {
-    std::vector<const Flag*> flags2;
-    for (auto &[k, v] : flags)
-        flags2.push_back(&v);
-    std::sort(flags2.begin(), flags2.end(), [](const auto &f1, const auto &f2)
-        {
-            return f1->order < f2->order;
-        });
-
-    auto print_flag = [&](const auto &v)
-    {
-        if (!v.type.empty())
-        {
-            if (0);
-            else if (v.type == "bool")
-            {
-                cpp.increaseIndent("if (" + v.name + ")");
-                cpp.addLine("s.push_back(\"-" + v.flag + "\");");
-                cpp.decreaseIndent();
-            }
-            else if (v.type == "path")
-            {
-            }
-            //else
-            //throw SW_RUNTIME_ERROR("unknown cpp type: " + v.type);
-        }
-    };
+    auto flags2 = sortFlags();
 
     cpp.addLine("DEFINE_OPTION_SPECIALIZATION_DUMMY(" + name + ")");
     cpp.addLine();
@@ -202,7 +277,7 @@ void Type::printCpp(primitives::CppEmitter &cpp) const
     if (!parent.empty())
         cpp.addLine("s = " + parent + "::getCommandLine(c);");
     for (auto &v : flags2)
-        print_flag(*v);
+        v->printCommandLine(cpp);
     cpp.addLine("return s;");
     cpp.endBlock();
     cpp.emptyLines(1);
@@ -216,66 +291,7 @@ void Type::printCpp(primitives::CppEmitter &cpp) const
     }
 
     for (auto &v : flags2)
-    {
-        if (!v->print_to_ide)
-            continue;
-
-        if (!v->enum_vals.empty())
-        {
-            cpp.addLine("ctx.beginBlock(\"" + v->getIdeName() + "\");");
-            cpp.beginBlock("switch (" + v->name + ".value())");
-            for (auto &[e, ev] : v->enum_vals)
-            {
-                cpp.addLine("case ");
-                if (!v->ns.empty())
-                    cpp.addText(v->ns + "::");
-                if (!v->enum_vals.empty())
-                    cpp.addText(v->type + "::");
-                cpp.addText(e + ":");
-                cpp.increaseIndent();
-                cpp.addLine("ctx.addText(\"" + ev.getIdeName() + "\");");
-                cpp.addLine("break;");
-                cpp.decreaseIndent();
-            }
-            cpp.endBlock();
-            cpp.addLine("ctx.endBlock(true);");
-            cpp.emptyLines(1);
-            continue;
-        }
-
-        if (v->default_ide_value.empty())
-            cpp.beginBlock("if (" + v->name + ")");
-        cpp.addLine("ctx.beginBlock(\"" + v->getIdeName() + "\");");
-        if (!v->default_ide_value.empty())
-            cpp.beginBlock("if (" + v->name + ")");
-        if (v->type == "bool")
-        {
-            if (v->ide_value.empty())
-                cpp.addLine("ctx.addText(" + v->name + ".value() ? \"true\" : \"false\");");
-            else
-                cpp.addLine("ctx.addText(" + v->name + ".value() ? \"" + v->ide_value + "\" : \"false\");");
-        }
-        else if (v->type == "path")
-            cpp.addLine("ctx.addText(" + v->name + ".value().u8string());");
-        else if (v->type == "String" || v->type == "std::string")
-            cpp.addLine("ctx.addText(" + v->name + ".value().u8string());");
-        else // numeric
-            cpp.addLine("ctx.addText(std::to_string(" + v->name + ".value()));");
-        if (!v->default_ide_value.empty())
-        {
-            cpp.endBlock();
-            cpp.beginBlock("else");
-            if (v->type == "bool")
-                cpp.addLine("ctx.addText(" + v->default_ide_value + " ? \"true\" : \"false\");");
-            else
-                cpp.addLine("ctx.addText(" + v->default_ide_value + "");
-            cpp.endBlock();
-        }
-        cpp.addLine("ctx.endBlock(true);");
-        if (v->default_ide_value.empty())
-            cpp.endBlock();
-        cpp.emptyLines(1);
-    }
+        v->printToIde(cpp);
     cpp.endBlock();
     cpp.emptyLines(1);
 

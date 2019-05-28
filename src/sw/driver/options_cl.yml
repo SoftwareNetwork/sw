@@ -173,68 +173,69 @@ types:
                 name: DebugInformationFormat
                 type: vs::DebugInformationFormatType
                 default: vs::DebugInformationFormatType::ProgramDatabase
-                disabled: true
 
-                struct: |
-                    enum class DebugInformationFormatType
-                    {
-                        None,
-                        ObjectFile,
-                        ProgramDatabase,
-                        ProgramDatabaseEditAndContinue,
+                x:
+                    struct: |
+                        enum class DebugInformationFormatType
+                        {
+                            None,
+                            ObjectFile,
+                            ProgramDatabase,
+                            ProgramDatabaseEditAndContinue,
 
-                        Z7 = ObjectFile,
-                        Zi = ProgramDatabase,
-                        ZI = ProgramDatabaseEditAndContinue,
-                    };
+                            Z7 = ObjectFile,
+                            Zi = ProgramDatabase,
+                            ZI = ProgramDatabaseEditAndContinue,
+                        };
 
-                function: |
-                    using namespace vs;
+                    function: |
+                        using namespace vs;
 
-                    auto s = "-"s;
-                    switch (value())
-                    {
-                    case DebugInformationFormatType::None:
-                        return {};
-                    case DebugInformationFormatType::ObjectFile:
-                        s += "Z7";
-                        break;
-                    case DebugInformationFormatType::ProgramDatabase:
-                        s += "Zi";
-                        break;
-                    case DebugInformationFormatType::ProgramDatabaseEditAndContinue:
-                        s += "ZI";
-                        break;
-                    default:
-                        throw SW_RUNTIME_ERROR("unreachable code");
-                    }
-                    return { s };
+                        auto s = "-"s;
+                        switch (value())
+                        {
+                        case DebugInformationFormatType::None:
+                            return {};
+                        case DebugInformationFormatType::ObjectFile:
+                            s += "Z7";
+                            break;
+                        case DebugInformationFormatType::ProgramDatabase:
+                            s += "Zi";
+                            break;
+                        case DebugInformationFormatType::ProgramDatabaseEditAndContinue:
+                            s += "ZI";
+                            break;
+                        default:
+                            throw SW_RUNTIME_ERROR("unreachable code");
+                        }
+                        return { s };
 
             exh:
                 name: ExceptionHandlingModel
-                type: vs::ExceptionHandlingVector
-                default: vs::ExceptionHandlingVector{ vs::ExceptionHandling{} }
-                disabled: true
+                type: ExceptionHandlingVector
+                namespace: vs
+                default: ExceptionHandlingVector{ vs::ExceptionHandling{} }
 
-                struct: |
-                    struct ExceptionHandling
-                    {
-                        bool SEH = false;               // a
-                        bool CPP = true;                // s
-                        bool ExternCMayThrow = false;   // c
-                        bool TerminationChecks = false; // r
-                        bool ClearFlag = false;         // -
+                x:
+                    struct: |
+                        struct ExceptionHandling
+                        {
+                            bool SEH = false;               // a
+                            bool CPP = true;                // s
+                            bool ExternCMayThrow = false;   // c
+                            bool TerminationChecks = false; // r
+                            bool ClearFlag = false;         // -
 
-                        String getCommandLine() const;
-                    };
+                            String getCommandLine() const;
+                        };
 
-                    using ExceptionHandlingVector = std::vector<ExceptionHandling>;
+                        using ExceptionHandlingVector = std::vector<ExceptionHandling>;
 
-                function: |
-                    Strings s;
-                    for (auto &e : value())
-                        s.push_back(e.getCommandLine());
-                    return s;
+                    function: |
+                        Strings s;
+                        for (auto &e : value())
+                            s.push_back(e.getCommandLine());
+                        return s;
 
             force_include:
                 name: ForcedIncludeFiles
@@ -258,34 +259,34 @@ types:
             opt:
                 name: Optimizations
                 type: vs::Optimizations
-                disabled: true
 
-                struct: |
-                    struct Optimizations
-                    {
-                        bool Disable = false;
-                        int Level = 2;
-                        bool SmallCode = false;
-                        bool FastCode = false;
-                    };
+                x:
+                    struct: |
+                        struct Optimizations
+                        {
+                            bool Disable = false;
+                            int Level = 2;
+                            bool SmallCode = false;
+                            bool FastCode = false;
+                        };
 
-                function: |
-                    using namespace vs;
+                    function: |
+                        using namespace vs;
 
-                    auto &o = value();
+                        auto &o = value();
 
-                    Strings s;
-                    if (!o.Disable)
-                    {
-                        if (o.Level == 1 || o.SmallCode)
-                            s.push_back("-O1");
-                        else if (o.Level == 2 || o.FastCode)
-                            s.push_back("-O2");
-                    }
-                    if (o.Disable)
-                        s.push_back("-Od");
+                        Strings s;
+                        if (!o.Disable)
+                        {
+                            if (o.Level == 1 || o.SmallCode)
+                                s.push_back("-O1");
+                            else if (o.Level == 2 || o.FastCode)
+                                s.push_back("-O2");
+                        }
+                        if (o.Disable)
+                            s.push_back("-Od");
 
-                    return { s };
+                        return { s };
 
             pdbfn:
                 name: PDBFilename
@@ -303,21 +304,21 @@ types:
             pch:
                 name: PrecompiledHeader
                 type: vs::PrecompiledHeaderVs
-                disabled: true
 
-                struct: |
-                    struct PrecompiledHeaderVs
-                    {
-                        bool ignore = false;
-                        bool with_debug_info = false;
-                        std::optional<path> create;
-                        std::optional<path> use;
+                x:
+                    struct: |
+                        struct PrecompiledHeaderVs
+                        {
+                            bool ignore = false;
+                            bool with_debug_info = false;
+                            std::optional<path> create;
+                            std::optional<path> use;
 
-                        Strings getCommandLine(::sw::builder::Command *c) const;
-                    };
+                            Strings getCommandLine(::sw::builder::Command *c) const;
+                        };
 
-                function: |
-                    return value().getCommandLine(c);
+                    function: |
+                        return value().getCommandLine(c);
 
             pptofile:
                 name: PreprocessToFile
@@ -340,44 +341,21 @@ types:
                 name: RuntimeLibrary
                 type: vs::RuntimeLibraryType
                 default: vs::RuntimeLibraryType::MultiThreadedDLL
-                disabled: true
 
-                struct: |
-                    enum class RuntimeLibraryType
-                    {
-                        MultiThreaded,
-                        MultiThreadedDebug,
-                        MultiThreadedDLL,
-                        MultiThreadedDLLDebug,
+                x:
+                    struct: |
+                        enum class RuntimeLibraryType
+                        {
+                            MultiThreaded,
+                            MultiThreadedDebug,
+                            MultiThreadedDLL,
+                            MultiThreadedDLLDebug,
 
-                        MT = MultiThreaded,
-                        MTd = MultiThreadedDebug,
-                        MD = MultiThreadedDLL,
-                        MDd = MultiThreadedDLLDebug,
-                    };
-
-                function: |
-                    using namespace vs;
-
-                    auto s = "-"s;
-                    switch (value())
-                    {
-                    case RuntimeLibraryType::MultiThreaded:
-                        s += "MT";
-                        break;
-                    case RuntimeLibraryType::MultiThreadedDebug:
-                        s += "MTd";
-                        break;
-                    case RuntimeLibraryType::MultiThreadedDLL:
-                        s += "MD";
-                        break;
-                    case RuntimeLibraryType::MultiThreadedDLLDebug:
-                        s += "MDd";
-                        break;
-                    default:
-                        throw SW_RUNTIME_ERROR("unreachable code");
-                    }
-                    return { s };
+                            MT = MultiThreaded,
+                            MTd = MultiThreadedDebug,
+                            MD = MultiThreadedDLL,
+                            MDd = MultiThreadedDLLDebug,
+                        };
 
             wrn:
                 name: Warnings
@@ -451,9 +429,23 @@ types:
 
             mt:
                 name: Machine
-                type: vs::MachineType
+                type: MachineType
+                namespace: vs
                 flag: "MACHINE:"
-                default: vs::MachineType::X64
+                default: X64
+                enum:
+                    - ARM
+                    - ARM64
+                    - EBC
+                    - IA64
+                    - MIPS
+                    - MIPS16
+                    - MIPSFPU
+                    - MIPSFPU16
+                    - SH4
+                    - THUMB
+                    - X64
+                    - X86
 
             def:
                 name: ModuleDefinitionFile

@@ -30,8 +30,12 @@ struct Flag
     String getTypeWithNs() const;
     String getIdeName() const;
 
+    void printDecl(primitives::CppEmitter &) const;
+    void printEnum(primitives::CppEmitter &) const;
     void printStruct(primitives::CppEmitter &) const;
     void printStructFunction(primitives::CppEmitter &) const;
+    void printToIde(primitives::CppEmitter &) const;
+    void printCommandLine(primitives::CppEmitter &) const;
 };
 
 using Flags = std::map<String, Flag>;
@@ -49,6 +53,7 @@ struct Type
 private:
     void printH(primitives::CppEmitter &) const;
     void printCpp(primitives::CppEmitter &) const;
+    std::vector<const Flag *> sortFlags() const;
 };
 
 using Types = std::map<String, Type>;
