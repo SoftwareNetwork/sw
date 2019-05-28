@@ -211,6 +211,8 @@ void build(Solution &s)
         gen_flex_bison("org.sw.demo.lexxmark.winflexbison-master"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
         if (cpp_driver.getCompilerType() == CompilerType::MSVC)
             cpp_driver.CompileOptions.push_back("-bigobj");
+        if (cpp_driver.getSettings().TargetOS.Type == OSType::Windows)
+            cpp_driver += "dbghelp.lib"_slib;
         //else if (s.getSettings().Native.CompilerType == CompilerType::GNU)
             //cpp_driver.CompileOptions.push_back("-Wa,-mbig-obj");
         {

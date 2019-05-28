@@ -32,6 +32,9 @@ extern bool gVerbose;
 static cl::opt<bool> do_not_mangle_object_names("do-not-mangle-object-names");
 //static cl::opt<bool> full_build("full", cl::desc("Full build (check all conditions)"));
 
+static cl::opt<bool> standalone("standalone", cl::desc("Build standalone binaries"));
+static cl::alias standalone2("sa", cl::aliasopt(standalone));
+
 void createDefFile(const path &def, const Files &obj_files)
 #if defined(CPPAN_OS_WINDOWS)
 ;
@@ -1400,6 +1403,7 @@ bool NativeCompiledTarget::createWindowsRpath() const
         //&& !isLocal()
         && getSelectedTool() == Linker.get()
         && !getSolution().getGenerator()
+        && !standalone
         ;
 }
 
@@ -1710,24 +1714,6 @@ bool NativeCompiledTarget::prepare()
         return false;
 
     //DEBUG_BREAK_IF_STRING_HAS(getPackage().ppath.toString(), "GDCM.gdcm");
-
-    /*{
-        auto is_changed = [this](const path &p)
-        {
-            if (p.empty())
-                return false;
-            return !(fs::exists(p) && File(p, getFs()).isChanged());
-        };
-
-        auto i = getImportLibrary();
-        auto o = getOutputFile();
-
-        if (!is_changed(i) && !is_changed(o))
-        {
-            std::cout << "skipping prepare for: " << getPackage().toString() << "\n";
-            return false;
-        }
-    }*/
 
     switch (prepare_pass)
     {
@@ -2439,12 +2425,12 @@ bool NativeCompiledTarget::prepare()
                 if (d->IncludeDirectoriesOnly)
                     continue;
 
-                auto dt = ((NativeCompiledTarget*)d->target);
+                auto nt = ((NativeCompiledTarget*)d->target);
 
                 // circular deps detection
                 if (L)
                 {
-                    for (auto &d2 : dt->Dependencies)
+                    for (auto &d2 : nt->Dependencies)
                     {
                         if (d2->target != this)
                             continue;
@@ -2457,22 +2443,16 @@ bool NativeCompiledTarget::prepare()
                     }
                 }
 
-                if (!dt->HeaderOnly.value())
+                if (!*nt->HeaderOnly)
                 {
-                    path o;
-                    if (dt->getSelectedTool() == dt->Librarian.get())
-                        o = ((NativeCompiledTarget*)d.get()->target)->getOutputFile();
-                    else
-                        o = ((NativeCompiledTarget*)d.get()->target)->getImportLibrary();
-                    if (!o.empty())
-                        LinkLibraries.push_back(o);
+                    LinkLibraries.push_back(nt->getImportLibrary());
                 }
             }
         }
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 7:
-        // linker
+        // linker 1
     {
         // add more link libraries from deps
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
@@ -2494,7 +2474,7 @@ bool NativeCompiledTarget::prepare()
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 8:
-        // linker
+        // linker 2
     {
         // linker setup
         auto obj = gatherObjectFilesWithoutLibraries();
@@ -2527,8 +2507,6 @@ void NativeCompiledTarget::processCircular(Files &obj)
 {
     if (!hasCircularDependency() && !createWindowsRpath())
         return;
-    if (hasCircularDependency() && createWindowsRpath())
-        SW_UNIMPLEMENTED;
     if (*HeaderOnly || getSelectedTool() == Librarian.get())
         return;
 
@@ -2628,7 +2606,8 @@ void NativeCompiledTarget::processCircular(Files &obj)
     {
         lib_exe->ModuleDefinitionFile = link_exe->ModuleDefinitionFile;
     }
-    Librarian->setOutputFile(getOutputFileName2("lib"));
+    // add rp only for winrpaths
+    Librarian->setOutputFile(getOutputFileName2("lib")/* += "rp.lib"*/);
 
     //
     auto exp = Librarian->getImportLibrary();
