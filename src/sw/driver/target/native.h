@@ -235,6 +235,8 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeCompiledTarget
 */
 struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProgram
 {
+    using PredefinedProgram::getProgram;
+
     TargetType getType() const override { return TargetType::NativeExecutable; }
 
     bool init() override;

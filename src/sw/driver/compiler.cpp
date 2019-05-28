@@ -150,7 +150,7 @@ template <class T = PredefinedTarget>
 static decltype(auto) addProgramNoFile(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
 {
     auto &t = s.add<T>(pp, p->getVersion());
-    t.program = p;
+    t.setProgram(p);
     t.sw_provided = true;
     return t;
 }

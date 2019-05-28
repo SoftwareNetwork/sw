@@ -198,6 +198,17 @@ struct TargetMap : PackageVersionMapBase<TargetMapInternal, std::unordered_map, 
         return std::pair<Version, TargetBaseTypePtr>{ i->first, j->second };
     }
 
+    TargetBaseTypePtr find(const PackageId &pkg, const TargetSettings &ts)
+    {
+        auto i = find(pkg);
+        if (i == end())
+            return {};
+        auto k = i->second.find(ts);
+        if (k == i->second.end())
+            return {};
+        return k->second;
+    }
+
     //
 
     template <class T>

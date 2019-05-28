@@ -378,21 +378,14 @@ Program *Target::findProgramByExtension(const String &ext) const
     // resolve via swctx because it might provide other version rather than cld.find(*u)
     auto pkg = getSolution().swctx.resolve(*u);
     auto cld = getSolution().getChildren();
-    auto i = cld.find(pkg);
-    if (i == cld.end())
-        return {};
-
-    auto &j = i;
-    // TODO: get host settings
+    // TODO: get host settings?
     TargetSettings tid{ getSettings() };
-    auto k = j->second.find(tid);
-    if (k == j->second.end())
+    auto tgt = cld.find(pkg, tid);
+    if (!tgt)
+        return {};
+    if (auto t = tgt->as<PredefinedProgram>())
     {
-        throw SW_RUNTIME_ERROR("Target was not found with host settings: " + pkg.toString());
-    }
-    if (auto t = k->second->as<PredefinedProgram>())
-    {
-        return t->program.get();
+        return t->getProgram().get();
     }
     throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + pkg.toString());
 }

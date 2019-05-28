@@ -183,7 +183,7 @@ void NativeCompiledTarget::findCompiler()
         if (auto t = (*i).second->as<PredefinedProgram>())
         {
             for (auto &e : v.exts)
-                setExtensionProgram(e, t->program);
+                setExtensionProgram(e, t->getProgram());
         }
         else
         {
@@ -333,9 +333,9 @@ void NativeCompiledTarget::findCompiler()
             if (!t)
                 return false;
             if (link)
-                this->Linker = std::dynamic_pointer_cast<NativeLinker>(t->program->clone());
+                this->Linker = std::dynamic_pointer_cast<NativeLinker>(t->getProgram()->clone());
             else
-                this->Librarian = std::dynamic_pointer_cast<NativeLinker>(t->program->clone());
+                this->Librarian = std::dynamic_pointer_cast<NativeLinker>(t->getProgram()->clone());
             return true;
         }))
         {
@@ -497,6 +497,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
         return;
     }
 
+    // more under if (createWindowsRpath())?
     c.addPathDirectory(getSolution().swctx.getLocalStorage().storage_dir);
 
     if (createWindowsRpath())
