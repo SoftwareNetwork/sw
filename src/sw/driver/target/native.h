@@ -135,7 +135,6 @@ public:
     NativeLinker *getSelectedTool() const;// override;
     //void setOutputFilename(const path &fn);
     virtual void setOutputFile();
-    virtual path getOutputBaseDir() const; // used in commands
     path getOutputDir() const;
     void removeFile(const path &fn, bool binary_dir = false) override;
     std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
@@ -240,7 +239,6 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProg
 
     bool init() override;
     void cppan_load_project(const yaml &root) override;
-    path getOutputBaseDir() const override;
 
     bool prepare() override;
 };

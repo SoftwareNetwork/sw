@@ -32,7 +32,7 @@ extern bool gVerbose;
 static cl::opt<bool> do_not_mangle_object_names("do-not-mangle-object-names");
 //static cl::opt<bool> full_build("full", cl::desc("Full build (check all conditions)"));
 
-static cl::opt<bool> standalone("standalone", cl::desc("Build standalone binaries"));
+static cl::opt<bool> standalone("standalone", cl::desc("Build standalone binaries"), cl::init(true));
 static cl::alias standalone2("sa", cl::aliasopt(standalone));
 
 void createDefFile(const path &def, const Files &obj_files)
@@ -155,16 +155,6 @@ void NativeCompiledTarget::setOutputDir(const path &dir)
     setOutputFile();
 }
 
-template <class T>
-static std::optional<Version> select_version(T &v)
-{
-    if (v.empty())
-        return {};
-    if (!v.empty_releases())
-        return v.rbegin_releases()->first;
-    return v.rbegin()->first;
-}
-
 void NativeCompiledTarget::findCompiler()
 {
     struct CompilerDesc
@@ -178,32 +168,26 @@ void NativeCompiledTarget::findCompiler()
 
     auto activate_one = [this](const CompilerDesc &v)
     {
-        auto cld = getSolution().getChildren();
-        auto &pp = v.id;
+        auto &cld = getSolution().getChildren();
 
-        auto i = cld.find(pp);
-        if (i == cld.end(pp))
-            return false;
-        auto vo = select_version(i->second);
-        if (!vo)
-            return false;
-        auto j = i->second.find(*vo);
         TargetSettings tid{ getSettings() };
-        auto k = j->second.find(tid);
-        if (k == j->second.end())
+        auto i = cld.find(v.id, tid);
+        if (!i)
+            return false;
+        if (!(*i).second)
         {
             for (auto &e : v.exts)
-                setExtensionProgram(e, PackageId{ v.id, *vo });
+                setExtensionProgram(e, PackageId{ v.id, (*i).first });
             return true;
         }
-        if (auto t = k->second->as<PredefinedProgram>())
+        if (auto t = (*i).second->as<PredefinedProgram>())
         {
             for (auto &e : v.exts)
                 setExtensionProgram(e, t->program);
         }
         else
         {
-            throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + PackageId(v.id, *vo).toString());
+            throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + (*i).second->getPackage().toString());
         }
         return true;
     };
@@ -336,54 +320,27 @@ void NativeCompiledTarget::findCompiler()
     auto activate_lib_link_or_throw = [this](const std::vector<std::tuple<PackagePath, LinkerType>> &a, const auto &e, bool link = false)
     {
         if (!std::any_of(a.begin(), a.end(), [this, &link](const auto &in) -> bool
-            {
-                auto cld = getSolution().getChildren();
-                auto pp = std::get<0>(in);
+        {
+            auto &cld = getSolution().getChildren();
 
-                auto i = cld.find(pp);
-                if (i == cld.end(pp))
-                    return false;
-                auto vo = select_version(i->second);
-                if (!vo)
-                    return false;
-
-                auto &v = *vo;
-                auto j = i->second.find(v);
-
-                TargetSettings tid{ getSettings() };
-                auto k = j->second.find(tid);
-                if (k == j->second.end())
-                    return false;
-
-                auto t = k->second->as<PredefinedProgram>();
-                if (!t)
-                    return false;
-
-                if (link)
-                    this->Linker = std::dynamic_pointer_cast<NativeLinker>(t->program->clone());
-                else
-                    this->Librarian = std::dynamic_pointer_cast<NativeLinker>(t->program->clone());
-                //LOG_TRACE(logger, "activated " << std::get<0>(in).toString() << " successfully");
-
-                return true;
-
-                /*auto p = getProgram(std::get<0>(v));
-                if (p)
-                {
-                    if (!link)
-                        this->Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(p->clone());
-                    else
-                        this->Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(p->clone());
-                    //this->Settings.Native.LinkerType = std::get<1>(v);
-                    LOG_TRACE(logger, "activated " << std::get<0>(v).toString() << " successfully");
-                }
-                else
-                {
-                    LOG_TRACE(logger, "activate " << std::get<0>(v).toString() << " failed");
-                }
-                return p;*/
-            }))
+            TargetSettings tid{ getSettings() };
+            auto i = cld.find(std::get<0>(in), tid);
+            if (!i)
+                return false;
+            if (!(*i).second)
+                return false;
+            auto t = (*i).second->as<PredefinedProgram>();
+            if (!t)
+                return false;
+            if (link)
+                this->Linker = std::dynamic_pointer_cast<NativeLinker>(t->program->clone());
+            else
+                this->Librarian = std::dynamic_pointer_cast<NativeLinker>(t->program->clone());
+            return true;
+        }))
+        {
             throw SW_RUNTIME_ERROR(e);
+        }
     };
 
     if (getSettings().TargetOS.is(OSType::Windows))
@@ -442,30 +399,26 @@ void NativeCompiledTarget::findCompiler()
     // libc
     auto add_libc = [this](const auto &pp)
     {
-        auto cld = getSolution().getChildren();
-        auto i = cld.find(pp);
-        if (i == cld.end(pp))
-            return false;
-        auto vo = select_version(i->second);
-        if (!vo)
-            return false;
-        auto j = i->second.find(*vo);
+        auto &cld = getSolution().getChildren();
         TargetSettings tid{ getSettings() };
-        auto k = j->second.find(tid);
-        if (k == j->second.end())
+        auto i = cld.find(pp, tid);
+        if (!i)
             return false;
-        if (auto t = k->second->as<NativeCompiledTarget>())
+        if (!(*i).second)
+            return false;
+        if (auto t = (*i).second->as<NativeCompiledTarget>())
         {
             *this += *t;
             return true;
         }
         return false;
     };
-    if (!(add_libc("com.Microsoft.VisualStudio.VC.libcpp")
-        //&& add_libc("com.Microsoft.VisualStudio.VC.ATLMFC")
-        && add_libc("com.Microsoft.Windows.SDK.ucrt")))
-        ; // FIXME: uncomment later
-        // throw SW_RUNTIME_ERROR("No libc activated");
+    auto add_libc_libs =
+        add_libc("com.Microsoft.VisualStudio.VC.libcpp")
+        && add_libc("com.Microsoft.Windows.SDK.ucrt");
+    // FIXME: uncomment later
+    //if (!add_libc_libs)
+        //throw SW_RUNTIME_ERROR("No libc activated");
 }
 
 bool NativeCompiledTarget::init()
@@ -513,8 +466,48 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 {
     NativeTarget::setupCommand(c);
 
-    //c.addPathDirectory(getOutputBaseDir() / getConfig());
+    // perform this after prepare?
+    auto for_deps = [this](auto &a)
+    {
+        for (auto &d : Dependencies)
+        {
+            if (!d->target)
+                continue;
+            if (d->target == this)
+                continue;
+            if (d->isDisabledOrDummy())
+                continue;
+            if (d->IncludeDirectoriesOnly)
+                continue;
+
+            auto nt = ((NativeCompiledTarget*)d->target);
+            if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
+            {
+                a(nt);
+            }
+        }
+    };
+
+    if (standalone)
+    {
+        for_deps([&c](auto nt)
+        {
+            c.addPathDirectory(nt->getOutputFile().parent_path());
+        });
+        return;
+    }
+
     c.addPathDirectory(getSolution().swctx.getLocalStorage().storage_dir);
+
+    if (createWindowsRpath())
+    {
+        for_deps([&c](auto nt)
+        {
+            // dlls, when emulating rpath, are created after executables and commands running them
+            // so we put explicit dependency on them
+            c.addInput(nt->getOutputFile());
+        });
+    }
 }
 
 driver::CommandBuilder NativeCompiledTarget::addCommand() const
@@ -606,15 +599,6 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         set_pkg_info(Variables, false); // false?
 }
 
-path NativeCompiledTarget::getOutputBaseDir() const
-{
-    SW_UNIMPLEMENTED;
-    /*if (getSettings().TargetOS.Type == OSType::Windows)
-        return getSolution().swctx.getLocalStorage().storage_dir_bin;
-    else
-        return getSolution().swctx.getLocalStorage().storage_dir_lib;*/
-}
-
 path NativeCompiledTarget::getOutputDir() const
 {
     if (OutputDir.empty())
@@ -635,7 +619,6 @@ void NativeCompiledTarget::setOutputFile()
                 getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
             else
                 getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
-                //getSelectedTool()->setOutputFile(getOutputFileName(getOutputBaseDir()));
             getSelectedTool()->setImportLibrary(getOutputFileName2("lib"));
         }
     }
@@ -671,7 +654,7 @@ path NativeCompiledTarget::getOutputFileName(const path &root) const
     {
         p = getSolution().BinaryDir / "cfg" / getConfig(true) / getOutputFileName();
     }
-    else if (SW_IS_LOCAL_BINARY_DIR)
+    else if (isLocal())
     {
         p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
     }
@@ -684,7 +667,7 @@ path NativeCompiledTarget::getOutputFileName(const path &root) const
 
 path NativeCompiledTarget::getOutputFileName2(const path &subdir) const
 {
-    if (SW_IS_LOCAL_BINARY_DIR)
+    if (isLocal())
     {
         return getOutputFileName("");
     }
@@ -1184,7 +1167,7 @@ Commands NativeCompiledTarget::getCommands1() const
             c->args.insert(c->args.end(), f->args.begin(), f->args.end());
 
             // set fancy name
-            if (/*!Local && */!IsConfig && !do_not_mangle_object_names)
+            if (!IsConfig && !do_not_mangle_object_names)
             {
                 auto p = normalize_path(f->file);
                 if (bdp.size() < p.size() && p.find(bdp) == 0)
@@ -1332,7 +1315,7 @@ Commands NativeCompiledTarget::getCommands1() const
         cmds.insert(c);
 
         // set fancy name
-        if (/*!Local && */!IsConfig && !do_not_mangle_object_names)
+        if (!IsConfig && !do_not_mangle_object_names)
         {
             c->name.clear();
 
@@ -1400,7 +1383,6 @@ bool NativeCompiledTarget::createWindowsRpath() const
         1
         && !IsConfig
         && getSettings().TargetOS.is(OSType::Windows)
-        //&& !isLocal()
         && getSelectedTool() == Linker.get()
         && !getSolution().getGenerator()
         && !standalone
@@ -1788,24 +1770,6 @@ bool NativeCompiledTarget::prepare()
                     throw std::logic_error("not implemented");
                 }
             }
-        }
-
-        if (!Local)
-        {
-            // activate later?
-            /*auto p = getPackage();
-            auto c = getConfig();
-            auto &sdb = getServiceDatabase();
-            auto f = sdb.getInstalledPackageFlags(p, c);
-            if (already_built)
-            {
-                HeaderOnly = f[pfHeaderOnly];
-            }
-            else if (HeaderOnly.value())
-            {
-                f.set(pfHeaderOnly, HeaderOnly.value());
-                sdb.setInstalledPackageFlags(p, c, f);
-            }*/
         }
 
         // default macros
@@ -2376,7 +2340,7 @@ bool NativeCompiledTarget::prepare()
             for (auto &f : files)
                 objs.insert(f->output.file);
             SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_create_def_file", nullptr);
-            c->record_inputs_mtime = true;
+            //c->record_inputs_mtime = true;
             c->args.push_back(def.u8string());
             c->push_back(objs);
             c->addInput(objs);
@@ -2405,6 +2369,12 @@ bool NativeCompiledTarget::prepare()
         {
             if (auto c = getSelectedTool()->as<GNULinker>())
                 c->Undefined = "dynamic_lookup";
+        }
+
+        // also fix rpath libname here
+        if (createWindowsRpath())
+        {
+            getSelectedTool()->setImportLibrary(getOutputFileName2("lib") += ".rp");
         }
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
@@ -2551,12 +2521,14 @@ void NativeCompiledTarget::processCircular(Files &obj)
                     }
 
                     path out;
+                    String ext;
                     {
                         std::lock_guard lk(m);
+                        ext = nt->getOutputFile().extension().u8string();
                         out = nt->getOutputFile().parent_path();
                     }
                     out = out.lexically_relative(getSolution().swctx.getLocalStorage().storage_dir);
-                    out /= nt->getPackage().toString() + ".dll";
+                    out /= nt->getPackage().toString() + ext + ".rp" + ext;
                     dlls.push_back(out.u8string()); // out
                 }
             }
@@ -2582,6 +2554,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
             out = Linker->getOutputFile();
             Linker->setOutputFile(path(out) += ".1");
         }
+        out += ".rp" + out.extension().u8string();
 
         SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_replace_dll_import", nullptr);
         c->args.push_back(Linker->getOutputFile().u8string());
@@ -2605,9 +2578,13 @@ void NativeCompiledTarget::processCircular(Files &obj)
     else
     {
         lib_exe->ModuleDefinitionFile = link_exe->ModuleDefinitionFile;
+        link_exe->ModuleDefinitionFile.clear(); // it will use .exp
     }
     // add rp only for winrpaths
-    Librarian->setOutputFile(getOutputFileName2("lib")/* += "rp.lib"*/);
+    if (createWindowsRpath())
+        Librarian->setOutputFile(getOutputFileName2("lib") += ".rp");
+    else
+        Librarian->setOutputFile(getOutputFileName2("lib"));
 
     //
     auto exp = Librarian->getImportLibrary();
@@ -2979,15 +2956,6 @@ path NativeCompiledTarget::getPatchDir(bool binary_dir) const
     else
         base = getSolution().BinaryDir;
     return base / "patch";
-
-    //auto base = ((binary_dir || Local) ? BinaryDir : SourceDir;
-    //return base.parent_path() / "patch";
-
-    /*path base;
-    if (isLocal())
-        base = "";
-    auto base = Local ? getSolution().bi : SourceDir;
-    return base / "patch";*/
 }
 
 void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content) const
@@ -3654,12 +3622,6 @@ bool ExecutableTarget::prepare()
     }
 
     return NativeCompiledTarget::prepare();
-}
-
-path ExecutableTarget::getOutputBaseDir() const
-{
-    SW_UNIMPLEMENTED;
-    //return getSolution().swctx.getLocalStorage().storage_dir_bin;
 }
 
 void ExecutableTarget::cppan_load_project(const yaml &root)

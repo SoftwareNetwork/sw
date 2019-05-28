@@ -123,9 +123,7 @@ public:
     String getTypeName() const { return toString(getType()); }
     const LocalPackage &getPackage() const;
 
-    // clarify
     bool isLocal() const;
-    //bool isLocalOrOverridden() const { return Local && || ? getPackage().getOverriddenDir(); }
 
     TargetBase &operator+=(const Source &);
     TargetBase &operator+=(std::unique_ptr<Source>);
@@ -410,10 +408,6 @@ public:
     path getFile(const DependencyPtr &dep, const path &fn);
     path getFile(const Target &dep, const path &fn);
 };
-
-// from target.cpp
-
-#define SW_IS_LOCAL_BINARY_DIR isLocal()
 
 template <class SF>
 std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s, const StringSet &exts = {})

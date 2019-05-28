@@ -53,7 +53,7 @@ void configure(Build &s)
     auto ss = s.createSettings();
     ss.Native.LibrariesType = LibraryType::Static;
     s.addSettings(ss);
-    //s.getSettings().Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
+    s.detectCompilers();
 
     s.registerCallback([](auto &t, auto cbt)
     {
@@ -76,6 +76,7 @@ void configure(Build &s)
     else if (s.isConfigSelected("win2android"))
         s.loadModule("utils/cc/win2android.cpp").call<void(Solution&)>("configure", s);
 
+    //s.getSettings().Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
     //s.getSettings().Native.CompilerType = CompilerType::ClangCl;
     //s.getSettings().Native.CompilerType = CompilerType::Clang;
 }
@@ -100,7 +101,10 @@ void build(Solution &s)
             "org.sw.demo.boost.stacktrace-1"_dep;
         support.ApiName = "SW_SUPPORT_API";
         if (support.getSettings().TargetOS.Type == OSType::Windows)
+        {
+            support.Protected += "_CRT_SECURE_NO_WARNINGS"_d;
             support.Public += "UNICODE"_d;
+        }
         if (support.getSettings().TargetOS.Type == OSType::Macos)
             support.Public += "BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED"_def;
     }
@@ -168,7 +172,7 @@ void build(Solution &s)
     auto &cl_generator = tools.addTarget<ExecutableTarget>("cl_generator");
     cl_generator.PackageDefinitions = true;
     cl_generator.CPPVersion = CPPLanguageStandard::CPP17;
-    cl_generator += "src/sw/tools/cl_generator.cpp";
+    cl_generator += "src/sw/tools/cl_generator.*"_rr;
     cl_generator +=
         "pub.egorpugin.primitives.emitter-master"_dep,
         "pub.egorpugin.primitives.yaml-master"_dep,

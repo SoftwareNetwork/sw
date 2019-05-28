@@ -41,7 +41,7 @@ bool CSharpTarget::init()
 path CSharpTarget::getOutputFileName(const path &root) const
 {
     path p;
-    if (SW_IS_LOCAL_BINARY_DIR)
+    if (isLocal())
     {
         p = getTargetsDir().parent_path() / getOutputFileName();
     }
@@ -98,7 +98,7 @@ bool RustTarget::init()
 path RustTarget::getOutputFileName(const path &root) const
 {
     path p;
-    if (SW_IS_LOCAL_BINARY_DIR)
+    if (isLocal())
     {
         p = getTargetsDir().parent_path() / getOutputFileName();
     }
@@ -155,7 +155,7 @@ bool GoTarget::init()
 path GoTarget::getOutputFileName(const path &root) const
 {
     path p;
-    if (SW_IS_LOCAL_BINARY_DIR)
+    if (isLocal())
     {
         p = getTargetsDir().parent_path() / getOutputFileName();
     }
@@ -212,7 +212,7 @@ bool FortranTarget::init()
 path FortranTarget::getOutputFileName(const path &root) const
 {
     path p;
-    if (SW_IS_LOCAL_BINARY_DIR)
+    if (isLocal())
     {
         p = getTargetsDir().parent_path() / getOutputFileName();
     }
@@ -268,7 +268,7 @@ bool JavaTarget::init()
 path JavaTarget::getOutputFileName(const path &root) const
 {
     path p;
-    if (SW_IS_LOCAL_BINARY_DIR)
+    if (isLocal())
     {
         p = getTargetsDir().parent_path() / getOutputFileName();
     }
@@ -328,7 +328,7 @@ bool KotlinTarget::init()
 path KotlinTarget::getOutputFileName(const path &root) const
 {
     path p;
-    if (SW_IS_LOCAL_BINARY_DIR)
+    if (isLocal())
     {
         p = getTargetsDir().parent_path() / getOutputFileName();
     }
@@ -386,7 +386,7 @@ bool DTarget::init()
 path DTarget::getOutputFileName(const path &root) const
 {
     path p;
-    if (SW_IS_LOCAL_BINARY_DIR)
+    if (isLocal())
     {
         p = getTargetsDir().parent_path() / getOutputFileName();
     }

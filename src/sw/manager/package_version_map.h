@@ -20,8 +20,8 @@ template <
 >
 struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
 {
-    using VM = VersionMap<T>;
-    using Base = PackagePathMap<PackagePath, VM>;
+    using version_map_type = VersionMap<T>;
+    using Base = PackagePathMap<PackagePath, version_map_type>;
     using This = PackageVersionMapBase;
 
     template <class U>
@@ -37,7 +37,7 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
         using value_type = std::pair<const PackageId, reference>;
 
         using base_iterator = cond_iterator_t<typename U::Base, typename U::Base>;
-        using vm_iterator = cond_iterator_t<typename U::VM, typename U::VM>;
+        using vm_iterator = cond_iterator_t<typename U::version_map_type, typename U::version_map_type>;
 
         U *t;
         base_iterator p;
@@ -219,7 +219,7 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
         return v.emplace(pkg.version, val);
     }
 
-    VM &operator[](const PackagePath &p)
+    version_map_type &operator[](const PackagePath &p)
     {
         return Base::operator[](p);
     }

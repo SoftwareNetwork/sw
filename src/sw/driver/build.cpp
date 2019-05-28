@@ -1352,6 +1352,8 @@ FilesMap Build::build_configs_separate(const Files &files)
         addImportLibrary(swctx, lib);
         lib.AutoDetectOptions = false;
         lib.CPPVersion = CPPLanguageStandard::CPP17;
+        if (lib.getSettings().TargetOS.is(OSType::Windows))
+            lib += "_CRT_SECURE_NO_WARNINGS"_def;
 
         lib += fn;
         write_pch(*this);
@@ -1393,6 +1395,9 @@ FilesMap Build::build_configs_separate(const Files &files)
             {
                 c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSw1Header());
                 c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSwCheckAbiVersionHeader());
+
+                // deprecated warning
+                c->Warnings().TreatAsError.push_back(4996);
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler>())
             {

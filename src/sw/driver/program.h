@@ -23,7 +23,7 @@ struct Target;
     FilesToFile,    // many-to-1 (linkers)
 };*/
 
-struct TransformProgram : Program
+struct SW_DRIVER_CPP_API TransformProgram : Program
 {
     //TransformType type = TransformType::Unspecified;
     //StringSet input_extensions;
@@ -31,7 +31,7 @@ struct TransformProgram : Program
     using Program::Program;
 };
 
-struct FileToFileTransformProgram : TransformProgram
+struct SW_DRIVER_CPP_API FileToFileTransformProgram : TransformProgram
 {
     using TransformProgram::TransformProgram;
 

@@ -173,6 +173,7 @@ types:
                 name: DebugInformationFormat
                 type: vs::DebugInformationFormatType
                 default: vs::DebugInformationFormatType::ProgramDatabase
+                disabled: true
 
                 struct: |
                     enum class DebugInformationFormatType
@@ -213,6 +214,7 @@ types:
                 name: ExceptionHandlingModel
                 type: vs::ExceptionHandlingVector
                 default: vs::ExceptionHandlingVector{ vs::ExceptionHandling{} }
+                disabled: true
 
                 struct: |
                     struct ExceptionHandling
@@ -256,6 +258,7 @@ types:
             opt:
                 name: Optimizations
                 type: vs::Optimizations
+                disabled: true
 
                 struct: |
                     struct Optimizations
@@ -300,6 +303,7 @@ types:
             pch:
                 name: PrecompiledHeader
                 type: vs::PrecompiledHeaderVs
+                disabled: true
 
                 struct: |
                     struct PrecompiledHeaderVs
@@ -336,6 +340,7 @@ types:
                 name: RuntimeLibrary
                 type: vs::RuntimeLibraryType
                 default: vs::RuntimeLibraryType::MultiThreadedDLL
+                disabled: true
 
                 struct: |
                     enum class RuntimeLibraryType
@@ -376,21 +381,19 @@ types:
 
             wrn:
                 name: Warnings
-                type: vs::Warnings
+                type: Warnings
+                namespace: vs
 
                 struct: |
-                    struct Warnings
-                    {
-                        bool DisableAll = false;
-                        bool EnableAll = false;
-                        int Level = 3;
-                        std::vector<int> Disable;
-                        std::map<int, std::vector<int>> DisableOnLevel;
-                        bool TreatAllWarningsAsError = false;
-                        std::vector<int> TreatAsError;
-                        std::vector<int> DisplayOnce;
-                        bool EnableOneLineDiagnostics = false;
-                    };
+                    bool DisableAll = false;
+                    bool EnableAll = false;
+                    int Level = 3;
+                    std::vector<int> Disable;
+                    std::map<int, std::vector<int>> DisableOnLevel;
+                    bool TreatAllWarningsAsError = false;
+                    std::vector<int> TreatAsError;
+                    std::vector<int> DisplayOnce;
+                    bool EnableOneLineDiagnostics = false;
 
                 function: |
                     using namespace vs;

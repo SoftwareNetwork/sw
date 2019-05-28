@@ -89,19 +89,6 @@ enum class ForceType
     Unresolved,
 };
 
-struct Warnings
-{
-    bool DisableAll = false;
-    bool EnableAll = false;
-    int Level = 3;
-    std::vector<int> Disable;
-    std::map<int, std::vector<int>> DisableOnLevel;
-    bool TreatAllWarningsAsError = false;
-    std::vector<int> TreatAsError;
-    std::vector<int> DisplayOnce;
-    bool EnableOneLineDiagnostics = false;
-};
-
 struct Optimizations
 {
     bool Disable = false;
@@ -134,7 +121,6 @@ DECLARE_OPTION_SPECIALIZATION(vs::RuntimeLibraryType);
 DECLARE_OPTION_SPECIALIZATION(vs::DebugInformationFormatType);
 DECLARE_OPTION_SPECIALIZATION(vs::PrecompiledHeaderVs);
 DECLARE_OPTION_SPECIALIZATION(vs::ForceType);
-DECLARE_OPTION_SPECIALIZATION(vs::Warnings);
 DECLARE_OPTION_SPECIALIZATION(vs::Optimizations);
 DECLARE_OPTION_SPECIALIZATION(CLanguageStandard);
 DECLARE_OPTION_SPECIALIZATION(CPPLanguageStandard);

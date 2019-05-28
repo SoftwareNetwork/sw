@@ -20,6 +20,7 @@
 #include <boost/thread/shared_mutex.hpp>
 
 #include <any>
+#include <variant>
 
 namespace sw
 {
@@ -114,13 +115,104 @@ struct TargetMapInternal : TargetMapInternal1
 
     void create();
 };
-using TargetMap = PackageVersionMapBase<TargetMapInternal, std::unordered_map, primitives::version::VersionMap>;
 
+struct SimpleExpectedErrorCode
+{
+    int ec;
+    String message;
+
+    SimpleExpectedErrorCode(int ec = 0)
+        : ec(ec)
+    {}
+    SimpleExpectedErrorCode(int ec, const String &msg)
+        : ec(ec), message(msg)
+    {}
+
+    bool operator==(int i) const { return ec == i; }
+    const String &getMessage() const { return message; }
+};
+
+template <class T, class ... Args>
+struct SimpleExpected : std::variant<SimpleExpectedErrorCode, T, Args...>
+{
+    using Base = std::variant<SimpleExpectedErrorCode, T, Args...>;
+
+    using Base::Base;
+
+    SimpleExpected(const SimpleExpectedErrorCode &e)
+        : Base(e)
+    {}
+
+    operator bool() const { return index() == 1; }
+    T &operator*() { return std::get<1>(*this); }
+    const T &operator*() const { return std::get<1>(*this); }
+    T &operator->() { return std::get<1>(*this); }
+    const T &operator->() const { return std::get<1>(*this); }
+    const SimpleExpectedErrorCode &ec() { return std::get<0>(*this); }
+};
+
+struct TargetMap : PackageVersionMapBase<TargetMapInternal, std::unordered_map, primitives::version::VersionMap>
+{
+    using Base = PackageVersionMapBase<TargetMapInternal, std::unordered_map, primitives::version::VersionMap>;
+
+    enum
+    {
+        Ok,
+        PackagePathNotFound,
+        PackageNotFound,
+        TargetNotCreated, // by settings
+    };
+
+    using Base::find;
+
+    SimpleExpected<Base::version_map_type::iterator> find_and_select_version(const PackagePath &pp)
+    {
+        auto i = find(pp);
+        if (i == end(pp))
+            return PackagePathNotFound;
+        auto vo = select_version(i->second);
+        if (!vo)
+            return PackageNotFound;
+        return i->second.find(*vo);
+    }
+
+    SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const
+    {
+        auto i = find(pp);
+        if (i == end(pp))
+            return PackagePathNotFound;
+        auto vo = select_version(i->second);
+        if (!vo)
+            return PackageNotFound;
+        return i->second.find(*vo);
+    }
+
+    SimpleExpected<std::pair<Version, TargetBaseTypePtr>> find(const PackagePath &pp, const TargetSettings &ts)
+    {
+        auto i = find_and_select_version(pp);
+        if (!i)
+            return i.ec();
+        auto j = i->second.find(ts);
+        if (j == i->second.end())
+            return std::pair<Version, TargetBaseTypePtr>{ i->first, nullptr };
+        return std::pair<Version, TargetBaseTypePtr>{ i->first, j->second };
+    }
+
+    //
+
+    template <class T>
+    static std::optional<Version> select_version(T &v)
+    {
+        if (v.empty())
+            return {};
+        if (!v.empty_releases())
+            return v.rbegin_releases()->first;
+        return v.rbegin()->first;
+    }
+};
 
 // simple interface for users
-struct SolutionX : TargetBase
-{
-};
+struct SolutionX : TargetBase {};
 
 /**
 * \brief Main build class, controls solutions.

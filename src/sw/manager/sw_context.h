@@ -18,7 +18,7 @@ namespace sw
 {
 
 // sw_context_t
-struct ISwContext
+struct SW_MANAGER_API ISwContext
 {
     virtual ~ISwContext() = default;
 

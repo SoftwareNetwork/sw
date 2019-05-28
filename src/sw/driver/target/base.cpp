@@ -334,7 +334,7 @@ int TargetBase::getCommandStorageType() const
 
 bool TargetBase::isLocal() const
 {
-    return Local && !getPackage().getOverriddenDir();
+    return Local;
 }
 
 const LocalPackage &TargetBase::getPackage() const
@@ -534,7 +534,7 @@ bool Target::init()
                                         //t->applyRootDirectory();
                                         //t->SourceDirBase = t->SourceDir;
 
-    if (SW_IS_LOCAL_BINARY_DIR)
+    if (isLocal())
     {
         BinaryDir = getTargetDirShort(getSolution().BinaryDir);
     }

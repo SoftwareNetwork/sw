@@ -87,7 +87,7 @@ struct PackagesDatabase;
 struct ServiceDatabase;
 struct SwContext;
 
-struct IStorage
+struct SW_MANAGER_API IStorage
 {
     virtual ~IStorage() = default;
 

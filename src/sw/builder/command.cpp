@@ -218,6 +218,10 @@ size_t Command::getHash1() const
         hash_combine(h, std::hash<String>()(v));
     }
 
+    // command may depend on files not listed on the command line (dlls)?
+    //for (auto &i : inputs)
+        //hash_combine(h, std::hash<path>()(i));
+
     return h;
 }
 
@@ -1116,7 +1120,7 @@ size_t ExecuteBuiltinCommand::getHash1() const
     hash_combine(h, std::hash<String>()(args[2])); // include function name
     hash_combine(h, std::hash<String>()(args[3])); // include version
 
-                                                   // must sort args first, why?
+    // must sort args first, why?
     std::set<String> args_sorted(args.begin() + 4, args.end());
     for (auto &a : args_sorted)
         hash_combine(h, std::hash<String>()(a));

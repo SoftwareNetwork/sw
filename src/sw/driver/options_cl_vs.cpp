@@ -224,38 +224,6 @@ DECLARE_OPTION_SPECIALIZATION(vs::PrecompiledHeaderVs)
     return value().getCommandLine(c);
 }
 
-DECLARE_OPTION_SPECIALIZATION(vs::Warnings)
-{
-    using namespace vs;
-
-    auto &w = value();
-
-    Strings s;
-    if (w.DisableAll)
-        s.push_back("-w");
-    if (w.EnableAll)
-        s.push_back("-Wall");
-    if (w.Level >= 0 && w.Level <= 4)
-        s.push_back("-W" + std::to_string(w.Level));
-    for (auto &d : w.Disable)
-        s.push_back("-wd" + std::to_string(d));
-    for (auto &[l, ws] : w.DisableOnLevel)
-    {
-        for (auto &d : ws)
-            s.push_back("-wd" + std::to_string(l) + std::to_string(d));
-    }
-    if (w.TreatAllWarningsAsError)
-        s.push_back("-WX");
-    for (auto &d : w.TreatAsError)
-        s.push_back("-we" + std::to_string(d));
-    for (auto &d : w.DisplayOnce)
-        s.push_back("-wo" + std::to_string(d));
-    if (w.EnableOneLineDiagnostics)
-        s.push_back("-WL");
-
-    return { s };
-}
-
 DECLARE_OPTION_SPECIALIZATION(vs::Optimizations)
 {
     using namespace vs;
