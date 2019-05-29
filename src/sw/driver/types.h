@@ -281,12 +281,7 @@ struct SW_DRIVER_CPP_API ProjectDirectories
     path BinaryDir;
     path BinaryPrivateDir;
 
-    //void restoreSourceDir() { SourceDir = SourceDirBase; }
-    void setSourceDirectory(const path &d)
-    {
-        SourceDirBase = d;
-        SourceDir = d;
-    }
+    void setSourceDirectory(const path &d);
 };
 
 String toString(CompilerType Type);

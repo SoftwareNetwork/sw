@@ -42,6 +42,22 @@ bool Assigner::canProceed(TargetOptions &r) const
     return true;
 }
 
+void ProjectDirectories::setSourceDirectory(const path &d)
+{
+    if (d.empty())
+        return;
+    if (d.is_absolute())
+    {
+        SourceDirBase = d;
+        SourceDir = d;
+    }
+    else
+    {
+        SourceDirBase /= d;
+        SourceDir /= d;
+    }
+}
+
 String toString(ConfigurationType Type)
 {
     switch (Type)
