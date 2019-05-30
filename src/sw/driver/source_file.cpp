@@ -426,6 +426,7 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
         if (std::regex_match(s, r.r))
             files[p] = f;
     }
+    if (!target->DryRun) // special case
     if (files.empty() && target->Local)
         throw SW_RUNTIME_ERROR("No files matching regex: " + r.getRegexString());
     return files;

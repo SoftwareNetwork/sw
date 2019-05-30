@@ -123,7 +123,7 @@ FileRegex::FileRegex(const path &d, const std::regex &r, bool recursive)
 
 String FileRegex::getRegexString() const
 {
-    return normalize_path(dir / regex_string);
+    return normalize_path(dir / "") + regex_string;
 }
 
 template <class C>
