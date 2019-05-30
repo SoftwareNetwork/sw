@@ -12,6 +12,7 @@
 #include "command_storage.h"
 #include "db_file.h"
 #include "file_storage.h"
+#include "jumppad.h"
 #include "os.h"
 #include "program.h"
 #include "sw_context.h"
@@ -250,18 +251,7 @@ void Command::clean() const
 
 path Command::getProgram() const
 {
-    path p;
-    /*if (base)
-    {
-        p = base->file;
-        if (p.empty())
-            throw SW_RUNTIME_ERROR("Empty program from base program");
-    }
-    else */if (!program.empty())
-        p = program;
-    else
-        p = Base::getProgram();
-    return p;
+    return program;
 }
 
 void Command::addInput(const path &p)
@@ -276,8 +266,6 @@ void Command::addIntermediate(const path &p)
     if (p.empty())
         return;
     intermediate.insert(p);
-    //auto &r = File(p, *fs).getFileRecord();
-    //r.setGenerator(shared_from_this());
 }
 
 void Command::addOutput(const path &p)
@@ -286,7 +274,6 @@ void Command::addOutput(const path &p)
         return;
     outputs.insert(p);
     auto &r = File(p, *fs).getFileRecord();
-    //r.setGenerated(true);
     r.setGenerator(shared_from_this(), true);
 }
 
@@ -335,29 +322,13 @@ void Command::addInputOutputDeps()
 {
     if (File(program, *fs).isGenerated())
         dependencies.insert(File(program, *fs).getFileRecord().getGenerator());
-    //inputs.insert(program);
 
     for (auto &p : inputs)
     {
         File f(p, *fs);
         if (f.isGenerated())
             dependencies.insert(f.getFileRecord().getGenerator());
-        else
-        {
-            // do we really need this? yes!
-            // if input's dep is generated, we add a dependency
-            // no? cyclic deps become real
-            //auto deps = f.gatherDependentGenerators();
-            //dependencies.insert(deps.begin(), deps.end());
-        }
     }
-    // do we really need this?
-    /*for (auto &p : outputs)
-    {
-        File f(p, *fs);
-        f.addExplicitDependency(inputs);
-        //f.addImplicitDependency(inputs);
-    }*/
 }
 
 path detail::ResolvableCommand::resolveProgram(const path &in) const
@@ -370,7 +341,15 @@ void Command::prepare()
     if (prepared)
         return;
 
-    program = getProgram();
+    auto p = getProgram();
+    if (program.empty() && p.empty() && !getArgs().empty())
+    {
+        // take first arg
+        p = getArgs()[0];
+        auto t = std::move(getArgs());
+        getArgs().assign(t.begin() + 1, t.end());
+    }
+    program = p;
 
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
@@ -552,7 +531,7 @@ String Command::escape_cmd_arg(String s)
     return s;
 }
 
-Strings &Command::getArgs()
+Command::Args &Command::getArgs()
 {
     if (rsp_args.empty())
         return Base::getArgs();
@@ -781,7 +760,10 @@ path Command::writeCommand(const path &p) const
         {
             if (a == "-showIncludes")
                 continue;
-            t += "\"" + escape_cmd_arg(a) + "\" ";
+            auto a2 = escape_cmd_arg(a);
+            if (bat)
+                boost::replace_all(a2, "%", "%%");
+            t += "\"" + a2 + "\" ";
             if (bat)
                 t += bat_next_line;
             else
@@ -1055,6 +1037,64 @@ Command &Command::operator|=(Command &c2)
 {
     operator|(c2);
     return *this;
+}
+
+void CommandSequence::addCommand(const std::shared_ptr<Command> &c)
+{
+    commands.push_back(c);
+}
+
+void CommandSequence::execute1(std::error_code *ec)
+{
+    for (auto &c : commands)
+    {
+        c->always = true; // skip some checks
+        c->execute();
+    }
+}
+
+size_t CommandSequence::getHash1() const
+{
+    size_t h = 0;
+    for (auto &c : commands)
+        hash_combine(h, c->getHash());
+    return h;
+}
+
+void CommandSequence::prepare()
+{
+    for (auto &c : commands)
+        c->prepare();
+}
+
+void CommandSequence::addInputOutputDeps()
+{
+    for (auto &p : inputs)
+    {
+        File f(p, *fs);
+        if (f.isGenerated())
+            dependencies.insert(f.getFileRecord().getGenerator());
+    }
+}
+
+bool CommandSequence::isTimeChanged() const
+{
+    try
+    {
+        return
+            std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
+            return check_if_file_newer(i, "input", true);
+                }) ||
+            std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
+                    return check_if_file_newer(i, "output", false);
+                });
+    }
+    catch (std::exception &e)
+    {
+        String s = "Command: " + getName() + "\n";
+        s += e.what();
+        throw SW_RUNTIME_ERROR(s);
+    }
 }
 
 ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx)

@@ -287,12 +287,8 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
             matches = true;
         }
     }
-    // some libs may declare common regex for changing files in generic manner
-    // this check will fail for them
-    // reconsider
-    // apply EnforcementType::CheckRegexes
-    //if (!matches)
-        //throw SW_RUNTIME_ERROR("No files matches regex");
+    if (!matches && target->Local)
+        throw SW_RUNTIME_ERROR("No files matching regex: " + r.getRegexString());
 }
 
 size_t SourceFileStorage::sizeKnown() const
@@ -408,7 +404,6 @@ void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s
         if (!f)
             add(s.first);
     }
-    //this->SourceFileMapThis::operator[](s.first) = s.second->clone();
 }
 
 SourceFileMap<SourceFile>
@@ -426,14 +421,13 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
     {
         auto s = normalize_path(p);
         if (s.size() < root_s.size() + 1)
-            continue; // file is in bdir or somthing like that
+            continue; // file is in bdir or something like that
         s = s.substr(root_s.size() + 1); // + 1 to skip first slash
         if (std::regex_match(s, r.r))
             files[p] = f;
     }
-    // apply EnforcementType::CheckRegexes
-    //if (files.empty())
-        //throw SW_RUNTIME_ERROR("No files matches regex");
+    if (files.empty() && target->Local)
+        throw SW_RUNTIME_ERROR("No files matching regex: " + r.getRegexString());
     return files;
 }
 

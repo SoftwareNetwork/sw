@@ -1250,6 +1250,8 @@ static void addDeps(NativeCompiledTarget &lib, Build &solution)
     // uncomment when you need help
     //lib += "pub.egorpugin.primitives.source-master"_dep;
     //lib += "pub.egorpugin.primitives.version-master"_dep;
+    //lib += "pub.egorpugin.primitives.command-master"_dep;
+    //lib += "pub.egorpugin.primitives.filesystem-master"_dep;
 
     auto &drv = getDriverTarget(solution);
     auto d = lib + drv;

@@ -6,6 +6,7 @@
 #include "sw/driver/build.h"
 #include "sw/driver/sw_context.h"
 
+#include <sw/builder/jumppad.h>
 #include <sw/manager/storage.h>
 #include <sw/manager/yaml.h>
 
@@ -59,6 +60,15 @@ static int copy_file(path in, path out)
 }
 
 SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_copy_file, copy_file)
+
+static int remove_file(path f)
+{
+    std::error_code ec;
+    fs::remove(f, ec);
+    return 0;
+}
+
+SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_remove_file, remove_file)
 
 const int symbol_len_max = 240; // 256 causes errors
 const int symbol_len_len = 2; // 256 causes errors
@@ -475,10 +485,13 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 continue;
             if (d->target == this)
                 continue;
-            if (d->isDisabledOrDummy())
-                continue;
-            if (d->IncludeDirectoriesOnly)
-                continue;
+            if (!d->isRuntime())
+            {
+                if (d->isDisabledOrDummy())
+                    continue;
+                if (d->IncludeDirectoriesOnly)
+                    continue;
+            }
 
             auto nt = ((NativeCompiledTarget*)d->target);
             if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
@@ -518,7 +531,7 @@ driver::CommandBuilder NativeCompiledTarget::addCommand() const
     // source dir contains more files than bdir?
     // sdir or bdir?
     cb.c->working_directory = SourceDir;
-    setupCommand(*cb.c);
+    //setupCommand(*cb.c);
     cb << *this; // this adds to storage
     return cb;
 }

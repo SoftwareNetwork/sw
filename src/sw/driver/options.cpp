@@ -74,7 +74,8 @@ FileRegex::FileRegex(const String &fn, bool recursive)
         p = fn.find_first_of("/*?+[.\\", p);
         if (p == -1 || fn[p] != '/')
         {
-            r = fn.substr(p0);
+            regex_string = fn.substr(p0);
+            r = regex_string;
             return;
         }
 
@@ -92,7 +93,8 @@ FileRegex::FileRegex(const String &fn, bool recursive)
 
         if (s.find_first_of("*?+.[](){}") != -1)
         {
-            r = fn.substr(p0);
+            regex_string = fn.substr(p0);
+            r = regex_string;
             return;
         }
 
@@ -117,6 +119,11 @@ FileRegex::FileRegex(const std::regex &r, bool recursive)
 FileRegex::FileRegex(const path &d, const std::regex &r, bool recursive)
     : dir(d), r(r), recursive(recursive)
 {
+}
+
+String FileRegex::getRegexString() const
+{
+    return normalize_path(dir / regex_string);
 }
 
 template <class C>

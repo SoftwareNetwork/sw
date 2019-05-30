@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include "jumppad.h"
 #include "node.h"
 
 #include <primitives/command.h>
@@ -223,7 +222,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     void updateCommandTime() const;
     void addPathDirectory(const path &p);
     Files getGeneratedDirs() const; // used by generators
-    void addInputOutputDeps();
+    virtual void addInputOutputDeps();
     path writeCommand(const path &basename) const;
 
     bool lessDuringExecution(const Command &rhs) const;
@@ -237,7 +236,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     path getResponseFilename() const;
     virtual String getResponseFileContents(bool showIncludes = false) const;
 
-    Strings &getArgs() override;
+    Args &getArgs() override;
 
     Command &operator|(Command &);
     Command &operator|=(Command &);
@@ -252,7 +251,7 @@ protected:
 
 private:
     mutable size_t hash = 0;
-    Strings rsp_args;
+    Args rsp_args;
     mutable String log_string;
 
     virtual void execute1(std::error_code *ec = nullptr);
@@ -271,12 +270,41 @@ private:
     void printOutputs();
 };
 
+struct SW_BUILDER_API CommandSequence : Command
+{
+    using Command::Command;
+
+    void addCommand(const std::shared_ptr<Command> &c);
+
+    template <class C = Command, class ... Args>
+    std::shared_ptr<C> addCommand(Args && ... args)
+    {
+        auto c = std::make_shared<C>(swctx, std::forward<Args>(args)...);
+        c->fs = fs;
+        commands.push_back(c);
+        return c;
+    }
+
+    const std::vector<std::shared_ptr<Command>> &getCommands() { return commands; }
+
+private:
+    std::vector<std::shared_ptr<Command>> commands;
+
+    void execute1(std::error_code *ec = nullptr) override;
+    size_t getHash1() const override;
+    void prepare() override;
+    void addInputOutputDeps() override;
+    bool isTimeChanged() const override;
+};
+
+// remove? probably no, just don't use it much
+// we always can create executable commands that is not builtin into modules
 struct SW_BUILDER_API ExecuteBuiltinCommand : Command
 {
     using F = std::function<void(void)>;
 
     ExecuteBuiltinCommand(const SwBuilderContext &swctx);
-    ExecuteBuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version = SW_JUMPPAD_DEFAULT_FUNCTION_VERSION);
+    ExecuteBuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version = 0);
     virtual ~ExecuteBuiltinCommand() = default;
 
     //path getProgram() const override { return "ExecuteBuiltinCommand"; };

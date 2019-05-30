@@ -126,9 +126,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
     // sdir
     if (!t->isLocal())
-    {
         t->setSourceDirectory(getSolution().getSourceDir(t->getPackage()));
-    }
     if (auto d = t->getPackage().getOverriddenDir())
         t->setSourceDirectory(*d);
 
@@ -139,7 +137,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
         t->setSourceDirectory(/*getSolution().*/SourceDirBase); // take from this
 
     // try to get solution provided source dir
-    if (t->source)
+    if (t->source && t->SourceDir.empty())
     {
         if (auto sd = getSolution().getSourceDir(t->getSource(), t->getPackage().version); sd)
             t->setSourceDirectory(sd.value());
@@ -449,7 +447,7 @@ void Target::setRootDirectory(const path &p)
 void Target::applyRootDirectory()
 {
     // but append only in some cases
-    if (!DryRun/* && Local*/)
+    //if (!DryRun)
     {
         // prevent adding last delimeter
         if (!RootDirectory.empty())

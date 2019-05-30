@@ -6,7 +6,6 @@
 
 #pragma once
 
-// builder stuff
 #include "module.h"
 #include "build.h"
 #include "suffix.h"
@@ -14,8 +13,8 @@
 #include "compiler_helpers.h"
 #include "sw_context.h"
 
-#include <sw/manager/storage.h>
 #include <sw/builder/jumppad.h>
+#include <sw/manager/storage.h>
 
 // support stuff
 #include <boost/algorithm/string.hpp>
@@ -38,6 +37,7 @@ using Solution = Build;
 using sw::Checker;
 using sw::Test;
 
+using sw::builder::CommandSequence;
 using sw::driver::Command;
 
 // options

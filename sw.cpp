@@ -53,7 +53,6 @@ void configure(Build &s)
     auto ss = s.createSettings();
     ss.Native.LibrariesType = LibraryType::Static;
     s.addSettings(ss);
-    s.detectCompilers();
 
     s.registerCallback([](auto &t, auto cbt)
     {
@@ -62,7 +61,9 @@ void configure(Build &s)
         if (0
             || t.getPackage() == PackageId{ "pub.egorpugin.primitives.source-master" }
             || t.getPackage() == PackageId{ "pub.egorpugin.primitives.version-master" }
-            /* || t.getPackage() == PackageId{ "pub.egorpugin.primitives.filesystem-master" }*/)
+            || t.getPackage() == PackageId{ "pub.egorpugin.primitives.command-master" }
+            || t.getPackage() == PackageId{ "pub.egorpugin.primitives.filesystem-master" }
+            )
         {
             auto &nt = dynamic_cast<NativeExecutedTarget &>(t);
             nt.ExportIfStatic = true;
@@ -184,7 +185,6 @@ void build(Solution &s)
         builder.ExportIfStatic = true;
         builder.CPPVersion = CPPLanguageStandard::CPP17;
         builder += "src/sw/builder/.*"_rr;
-        builder -= "src/sw/builder/db_sqlite.*"_rr;
         builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep,
             "org.sw.demo.microsoft.gsl-*"_dep,
             "pub.egorpugin.primitives.emitter-master"_dep;

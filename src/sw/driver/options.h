@@ -172,6 +172,11 @@ struct SW_DRIVER_CPP_API FileRegex
     FileRegex(const std::regex &r, bool recursive);
     FileRegex(const path &dir, const String &r, bool recursive);
     FileRegex(const path &dir, const std::regex &r, bool recursive);
+
+    String getRegexString() const;
+
+private:
+    String regex_string;
 };
 
 struct SW_DRIVER_CPP_API Dependency
@@ -184,7 +189,8 @@ struct SW_DRIVER_CPP_API Dependency
     bool Disabled = false;
     bool GenerateCommandsBefore = false; // do not make true by default
 //private:
-    bool Dummy = false; // bool Runtime = false; ?
+    bool Dummy = false;
+    bool Runtime = false; // example: program dynamically loads dll
 //public:
 
     // cpp (native) options
@@ -204,7 +210,8 @@ struct SW_DRIVER_CPP_API Dependency
     bool operator< (const Dependency &t) const;
 
     void setDummy(bool);
-    bool isDummy() const { return Dummy; }
+    bool isDummy() const { return Dummy || Runtime; }
+    bool isRuntime() const { return Runtime; }
     bool isDisabledOrDummy() const { return Disabled || isDummy(); }
 
     operator bool() const { return target; }
