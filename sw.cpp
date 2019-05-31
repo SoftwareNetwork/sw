@@ -1,6 +1,3 @@
-#pragma sw require pub.egorpugin.primitives.command-master
-#pragma sw require pub.egorpugin.primitives.filesystem-master
-
 #pragma sw require header pub.egorpugin.primitives.tools.embedder-master
 #pragma sw require header org.sw.demo.google.grpc.grpc_cpp_plugin-1
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
