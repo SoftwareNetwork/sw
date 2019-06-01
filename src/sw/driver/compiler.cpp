@@ -26,7 +26,7 @@
 DECLARE_STATIC_LOGGER(logger, "compiler");
 
 #define SW_CREATE_COMPILER_COMMAND(t, ct)                                            \
-    std::shared_ptr<driver::Command> t::createCommand1(const SwContext &swctx) const \
+    std::shared_ptr<driver::Command> t::createCommand1(const SwDriverContext &swctx) const \
     {                                                                                \
         auto c = std::make_shared<ct>(swctx);                                        \
         c->setProgram(file);                                                         \
@@ -1054,7 +1054,7 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand() const
     return cmd;
 }
 
-std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const SwContext &swctx)
+std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const SwDriverContext &swctx)
 {
     if (cmd)
         return cmd;

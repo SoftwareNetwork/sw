@@ -11,9 +11,9 @@
 //#include <resolver.h>
 #include <sw/builder/file.h>
 #include <sw/builder/jumppad.h>
+#include <sw/core/sw_context.h>
 #include <sw/driver/command.h>
-#include <sw/driver/build.h>
-#include <sw/driver/sw_context.h>
+#include <sw/driver/driver.h>
 #include <sw/manager/api.h>
 #include <sw/manager/database.h>
 #include <sw/manager/package_data.h>
@@ -150,14 +150,16 @@ static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value
 static ::cl::opt<bool> curl_verbose("curl-verbose");
 static ::cl::opt<bool> ignore_ssl_checks("ignore-ssl-checks");
 
-sw::SwContext createSwContext()
+std::unique_ptr<sw::SwContext> createSwContext()
 {
     // load proxy settings early
     httpSettings.verbose = curl_verbose;
     httpSettings.ignore_ssl_checks = ignore_ssl_checks;
     httpSettings.proxy = Settings::get_local_settings().proxy;
 
-    return sw::SwContext(storage_dir_override.empty() ? sw::Settings::get_user_settings().storage_dir : storage_dir_override);
+    auto swctx = std::make_unique<sw::SwContext>(storage_dir_override.empty() ? sw::Settings::get_user_settings().storage_dir : storage_dir_override);
+    swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
+    return swctx;
 }
 
 #include "sig.h"
@@ -261,8 +263,8 @@ int parse_main(int argc, char **argv)
         //for (auto &d : driver)
             //overview += "    - " + d->getName() + "\n";
         overview += "\n  Available frontends:\n";
-        for (const auto &n : Build::getAvailableFrontendNames())
-            overview += "    - " + n + "\n";
+        //for (const auto &n : Build::getAvailableFrontendNames())
+            //overview += "    - " + n + "\n";
     }
 
     std::vector<std::string> args0(argv + 1, argv + argc);
@@ -413,7 +415,7 @@ int sw_main(const Strings &args)
         auto swctx = createSwContext();
         // sort
         std::set<sw::LocalPackage> pkgs;
-        for (auto &p : swctx.getLocalStorage().getOverriddenPackagesStorage().getPackages())
+        for (auto &p : swctx->getLocalStorage().getOverriddenPackagesStorage().getPackages())
             pkgs.emplace(p);
         for (auto &p : pkgs)
             std::cout << p.toString() << " " << *p.getOverriddenDir() << "\n";
@@ -423,7 +425,7 @@ int sw_main(const Strings &args)
     if (!override_package.empty())
     {
         auto swctx = createSwContext();
-        override_package_perform(swctx);
+        override_package_perform(*swctx);
         return 0;
     }
 
@@ -432,7 +434,7 @@ int sw_main(const Strings &args)
         auto swctx = createSwContext();
         sw::PackageId pkg{ delete_overridden_package };
         LOG_INFO(logger, "Delete override for " + pkg.toString());
-        swctx.getLocalStorage().getOverriddenPackagesStorage().deletePackage(pkg);
+        swctx->getLocalStorage().getOverriddenPackagesStorage().deletePackage(pkg);
         return 0;
     }
 
@@ -444,7 +446,7 @@ int sw_main(const Strings &args)
 
         auto swctx = createSwContext();
         std::set<sw::LocalPackage> pkgs;
-        for (auto &p : swctx.getLocalStorage().getOverriddenPackagesStorage().getPackages())
+        for (auto &p : swctx->getLocalStorage().getOverriddenPackagesStorage().getPackages())
         {
             if (*p.getOverriddenDir() == d)
                 pkgs.emplace(p);
@@ -452,7 +454,7 @@ int sw_main(const Strings &args)
         for (auto &p : pkgs)
             std::cout << "Deleting " << p.toString() << "\n";
 
-        swctx.getLocalStorage().getOverriddenPackagesStorage().deletePackageDir(d);
+        swctx->getLocalStorage().getOverriddenPackagesStorage().deletePackageDir(d);
         return 0;
     }
 
@@ -513,7 +515,7 @@ static ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"
 SUBCOMMAND_DECL(build)
 {
     auto swctx = createSwContext();
-    cli_build(swctx);
+    cli_build(*swctx);
 }
 
 SUBCOMMAND_DECL2(build)
@@ -533,7 +535,7 @@ SUBCOMMAND_DECL2(build)
 
     // if -B specified, it is used as is
 
-    sw::build(swctx, build_arg);
+    swctx.build(build_arg);
 }
 
 static ::cl::list<String> remove_arg(::cl::Positional, ::cl::desc("package to remove"), ::cl::sub(subcommand_remove));
@@ -543,7 +545,7 @@ SUBCOMMAND_DECL(remove)
     auto swctx = createSwContext();
     for (auto &a : remove_arg)
     {
-        sw::LocalPackage p(swctx.getLocalStorage(), a);
+        sw::LocalPackage p(swctx->getLocalStorage(), a);
         //sdb.removeInstalledPackage(p); // TODO: remove from db
         fs::remove_all(p.getDir());
     }
@@ -554,8 +556,8 @@ static ::cl::opt<String> open_arg(::cl::Positional, ::cl::desc("package to open"
 SUBCOMMAND_DECL(open)
 {
     auto swctx = createSwContext();
-    auto &sdb = swctx.getLocalStorage();
-    sw::LocalPackage p(swctx.getLocalStorage(), open_arg);
+    auto &sdb = swctx->getLocalStorage();
+    sw::LocalPackage p(swctx->getLocalStorage(), open_arg);
 
 #ifdef _WIN32
     if (sdb.isPackageInstalled(p))
@@ -685,9 +687,9 @@ int main(int argc, char *argv[])
             write_file("sw.cpp", ctx.getText());
 
             if (create_build)
-                cli_build(swctx);
+                cli_build(*swctx);
             else
-                cli_generate(swctx);
+                cli_generate(*swctx);
         }
         else if (create_language == "c")
         {
@@ -706,9 +708,9 @@ int main(int argc, char *argv[])
             write_file("sw.cpp", ctx.getText());
 
             if (create_build)
-                cli_build(swctx);
+                cli_build(*swctx);
             else
-                cli_generate(swctx);
+                cli_generate(*swctx);
         }
         else
             throw SW_RUNTIME_ERROR("unknown language");
@@ -748,7 +750,7 @@ SUBCOMMAND_DECL(uri)
     {
         auto swctx = createSwContext();
         auto id = extractPackageIdFromString(uri_args[1]);
-        auto &sdb = swctx.getLocalStorage();
+        auto &sdb = swctx->getLocalStorage();
         LocalPackage p(sdb, id);
 
         if (uri_args[0] == "sw:sdir" || uri_args[0] == "sw:bdir")
@@ -813,7 +815,7 @@ SUBCOMMAND_DECL(uri)
             {
                 SetupConsole();
                 bUseSystemPause = true;
-                swctx.install(UnresolvedPackages{ UnresolvedPackage{p.ppath, p.version} });
+                swctx->install(UnresolvedPackages{ UnresolvedPackage{p.ppath, p.version} });
             }
             else
             {
@@ -839,10 +841,10 @@ SUBCOMMAND_DECL(uri)
             SetupConsole();
             bUseSystemPause = true;
 #endif
-            auto d = swctx.getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
+            auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
-            sw::build(swctx, p.toString());
+            swctx->build(p.toString());
             return;
         }
 
@@ -852,10 +854,11 @@ SUBCOMMAND_DECL(uri)
             SetupConsole();
             bUseSystemPause = true;
 #endif
-            auto d = swctx.getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
+            auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
-            sw::run(swctx, p);
+            SW_UNIMPLEMENTED;
+            //sw::run(swctx, p);
             return;
         }
 
@@ -864,7 +867,7 @@ SUBCOMMAND_DECL(uri)
             if (uri_args.size() != 4)
                 return;
 
-            auto rs = swctx.getRemoteStorages();
+            auto rs = swctx->getRemoteStorages();
             if (rs.empty())
                 throw SW_RUNTIME_ERROR("No remote storages found");
 
@@ -882,14 +885,14 @@ SUBCOMMAND_DECL(uri)
             SCOPE_EXIT
             {
                 // free files
-                swctx.clearFileStorages();
+                swctx->clearFileStorages();
                 fs::remove_all(fn.parent_path());
             };
 
             // run secure as below?
             ScopedCurrentPath scp(fn.parent_path());
             upload_prefix = pkg.ppath.slice(0, std::stoi(uri_args[3]));
-            cli_upload(swctx);
+            cli_upload(*swctx);
 
             /*primitives::Command c;
             c.program = "sw";
@@ -921,11 +924,13 @@ SUBCOMMAND_DECL(uri)
 
 void override_package_perform(sw::SwContext &swctx)
 {
-    auto s = sw::load(swctx, ".");
+    SW_UNIMPLEMENTED;
+
+    /*auto s = sw::load(swctx, ".");
     auto &b = *s.get();
     b.prepareStep();
 
-    auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
+    auto gn = swctx->getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
     for (auto &[pkg, desc] : b.getPackages())
     {
         sw::PackagePath prefix = override_package;
@@ -942,14 +947,14 @@ void override_package_perform(sw::SwContext &swctx)
             else
                 deps.insert({ prefix / d.ppath, d.range });
         }
-        LocalPackage lp(swctx.getLocalStorage(), pkg2);
+        LocalPackage lp(swctx->getLocalStorage(), pkg2);
         PackageData d;
         d.sdir = dir;
         d.dependencies = deps;
         d.group_number = gn;
         d.prefix = (int)prefix.size();
-        swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
-    }
+        swctx->getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
+    }*/
 }
 
 SUBCOMMAND_DECL(mirror)
@@ -965,7 +970,9 @@ SUBCOMMAND_DECL(mirror)
 
 SUBCOMMAND_DECL(ide)
 {
-    auto swctx = createSwContext();
+    SW_UNIMPLEMENTED;
+
+    /*auto swctx = createSwContext();
     if (!target_build.empty())
     {
         try_single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", [&swctx]()
@@ -987,7 +994,7 @@ SUBCOMMAND_DECL(ide)
             b.ide = true;
             s->execute();
         });
-    }
+    }*/
 }
 
 SUBCOMMAND_DECL(configure)
@@ -1019,7 +1026,7 @@ static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", 
 SUBCOMMAND_DECL(generate)
 {
     auto swctx = createSwContext();
-    cli_generate(swctx);
+    cli_generate(*swctx);
 }
 
 SUBCOMMAND_DECL2(generate)
@@ -1091,7 +1098,7 @@ SUBCOMMAND_DECL(setup)
 #endif
 
     auto swctx = createSwContext();
-    registerCmakePackage(swctx);
+    registerCmakePackage(*swctx);
 }
 
 sw::Remote *find_remote(sw::Settings &s, const String &name)
@@ -1174,7 +1181,7 @@ SUBCOMMAND_DECL(remote)
 SUBCOMMAND_DECL(list)
 {
     auto swctx = createSwContext();
-    auto rs = swctx.getRemoteStorages();
+    auto rs = swctx->getRemoteStorages();
     if (rs.empty())
         throw SW_RUNTIME_ERROR("No remote storages found");
 
@@ -1193,7 +1200,7 @@ SUBCOMMAND_DECL(test)
     auto swctx = createSwContext();
     gWithTesting = true;
     (Strings&)build_arg = (Strings&)build_arg_test;
-    cli_build(swctx);
+    cli_build(*swctx);
 }
 
 SUBCOMMAND_DECL(install)
@@ -1205,7 +1212,7 @@ SUBCOMMAND_DECL(install)
     install_args.push_back(install_arg);
     for (auto &p : install_args)
         pkgs.insert(extractFromString(p));
-    auto m = swctx.install(pkgs);
+    auto m = swctx->install(pkgs);
     for (auto &[p1, d] : m)
     {
         //for (auto &p2 : install_args)
@@ -1223,18 +1230,20 @@ SUBCOMMAND_DECL(update)
     dry_run = true;
     ((Strings&)build_arg).clear();
     build_arg.push_back(build_arg_update.getValue());
-    cli_build(swctx);
+    cli_build(*swctx);
 }
 
 SUBCOMMAND_DECL(fetch)
 {
     auto swctx = createSwContext();
-    cli_fetch(swctx);
+    cli_fetch(*swctx);
 }
 
 SUBCOMMAND_DECL2(fetch)
 {
-    sw::FetchOptions opts;
+    SW_UNIMPLEMENTED;
+
+    /*sw::FetchOptions opts;
     //opts.name_prefix = upload_prefix;
     opts.dry_run = !build_after_fetch;
     opts.root_dir = fs::current_path() / SW_BINARY_DIR;
@@ -1243,19 +1252,21 @@ SUBCOMMAND_DECL2(fetch)
     //opts.apply_version_to_source = true;
     auto s = sw::fetch_and_load(swctx, ".", opts);
     if (build_after_fetch)
-        s->execute();
+        s->execute();*/
 }
 
 SUBCOMMAND_DECL(upload)
 {
     auto swctx = createSwContext();
-    cli_upload(swctx);
+    cli_upload(*swctx);
 }
 
 SUBCOMMAND_DECL2(upload)
 {
+    SW_UNIMPLEMENTED;
+
     // select remote first
-    auto &us = Settings::get_user_settings();
+    /*auto &us = Settings::get_user_settings();
     auto current_remote = &*us.remotes.begin();
     if (!upload_remote.empty())
         current_remote = find_remote(us, upload_remote);
@@ -1292,7 +1303,7 @@ SUBCOMMAND_DECL2(upload)
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     sw::Api api(*current_remote);
-    api.addVersion(upload_prefix, m, sw::read_config(build_arg_update.getValue()).value());
+    api.addVersion(upload_prefix, m, sw::read_config(build_arg_update.getValue()).value());*/
 }
 
 String getBuildTime();

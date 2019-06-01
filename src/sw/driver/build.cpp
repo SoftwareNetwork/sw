@@ -335,22 +335,22 @@ static String getCurrentModuleId()
     return shorten_hash(sha1(getProgramName()), 6);
 }
 
-static path getImportFilePrefix(const SwContext &swctx)
+static path getImportFilePrefix(const SwDriverContext &swctx)
 {
     return swctx.getLocalStorage().storage_dir_tmp / ("sw_" + getCurrentModuleId());
 }
 
-static path getImportDefinitionsFile(const SwContext &swctx)
+static path getImportDefinitionsFile(const SwDriverContext &swctx)
 {
     return getImportFilePrefix(swctx) += ".def";
 }
 
-static path getImportLibraryFile(const SwContext &swctx)
+static path getImportLibraryFile(const SwDriverContext &swctx)
 {
     return getImportFilePrefix(swctx) += ".lib";
 }
 
-static path getImportPchFile(const SwContext &swctx)
+static path getImportPchFile(const SwDriverContext &swctx)
 {
     return getImportFilePrefix(swctx) += ".cpp";
 }
@@ -371,7 +371,7 @@ static Strings getExports(HMODULE lib)
 }
 #endif
 
-static void addImportLibrary(const SwContext &swctx, NativeCompiledTarget &t)
+static void addImportLibrary(const SwDriverContext &swctx, NativeCompiledTarget &t)
 {
 #ifdef _WIN32
     auto lib = (HMODULE)primitives::getModuleForSymbol();
@@ -438,7 +438,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
     return h;
 }
 
-static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwContext &swctx, const path &p, std::set<PackageVersionGroupNumber> &gns)
+static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwDriverContext &swctx, const path &p, std::set<PackageVersionGroupNumber> &gns)
 {
     UnresolvedPackages udeps;
     FilesOrdered headers;
@@ -480,13 +480,13 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return { headers, udeps };
 }
 
-static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwContext &swctx, const path &in_config_file)
+static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwDriverContext &swctx, const path &in_config_file)
 {
     std::set<PackageVersionGroupNumber> gns;
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-static auto build_configs(const SwContext &swctx, const std::unordered_set<LocalPackage> &pkgs)
+static auto build_configs(const SwDriverContext &swctx, const std::unordered_set<LocalPackage> &pkgs)
 {
     Build b(swctx); // cache?
     b.execute_jobs = config_jobs;
@@ -509,7 +509,7 @@ static String gn2suffix(PackageVersionGroupNumber gn)
     return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
 }
 
-Build::Build(const SwContext &swctx)
+Build::Build(const SwDriverContext &swctx)
     : swctx(swctx), checker(*this)
 {
     //auto ss = createSettings();
@@ -1792,7 +1792,7 @@ void Build::load(const path &fn, bool configless)
     show_output = cl_show_output;
 }
 
-static Build::CommandExecutionPlan load(const SwContext &swctx, const path &fn, const Build &s)
+static Build::CommandExecutionPlan load(const SwDriverContext &swctx, const path &fn, const Build &s)
 {
     primitives::BinaryStream ctx;
     ctx.load(fn);
@@ -3055,10 +3055,28 @@ const Build::AvailableFrontends &Build::getAvailableFrontends()
     static AvailableFrontends m = []
     {
         AvailableFrontends m;
+        auto exts = getCppSourceFileExtensions();
+
+        // objc
+        exts.erase(".m");
+        exts.erase(".mm");
+
+        // top priority
         m.insert({ FrontendType::Sw, "sw.cpp" });
-        m.insert({ FrontendType::Sw, "sw.cc" });
         m.insert({ FrontendType::Sw, "sw.cxx" });
+        m.insert({ FrontendType::Sw, "sw.cc" });
+
+        exts.erase(".cpp");
+        exts.erase(".cxx");
+        exts.erase(".cc");
+
+        // rest
+        for (auto &e : exts)
+            m.insert({ FrontendType::Sw, "sw" + e });
+
+        // cppan fe
         m.insert({ FrontendType::Cppan, "cppan.yml" });
+
         return m;
     }();
     return m;

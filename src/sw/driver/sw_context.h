@@ -16,12 +16,12 @@ namespace sw
 struct ChecksStorage;
 struct ModuleStorage;
 
-struct SW_DRIVER_CPP_API SwContext : SwBuilderContext
+struct SW_DRIVER_CPP_API SwDriverContext : SwBuilderContext
 {
     path source_dir;
 
-    SwContext(const path &local_storage_root_dir);
-    virtual ~SwContext();
+    SwDriverContext(const path &local_storage_root_dir);
+    virtual ~SwDriverContext();
 
     ChecksStorage &getChecksStorage(const String &config) const;
     ChecksStorage &getChecksStorage(const String &config, const path &fn) const;

@@ -6,8 +6,10 @@
 
 #include "build.h"
 
-#include <sw/driver/build.h>
+//#include <sw/driver/build.h>
 #include <sw/support/filesystem.h>
+
+#include <primitives/exceptions.h>
 
 #include <optional>
 
@@ -19,10 +21,12 @@ namespace sw
 
 std::optional<path> findConfig(const path &dir)
 {
-    for (auto &fn : Build::getAvailableFrontendConfigFilenames())
+    SW_UNIMPLEMENTED;
+
+    /*for (auto &fn : Build::getAvailableFrontendConfigFilenames())
         if (fs::exists(dir / fn))
             return dir / fn;
-    return {};
+    return {};*/
 }
 
 std::optional<path> resolveConfig(const path &file_or_dir)
@@ -39,7 +43,9 @@ std::optional<path> resolveConfig(const path &file_or_dir)
 
 std::unique_ptr<Build> load(const SwContext &swctx, const path &file_or_dir)
 {
-    auto f = resolveConfig(file_or_dir);
+    SW_UNIMPLEMENTED;
+
+    /*auto f = resolveConfig(file_or_dir);
     if (!f || !Build::isFrontendConfigFilename(f.value()))
     {
         if (f && !Build::isFrontendConfigFilename(f.value()))
@@ -60,57 +66,14 @@ std::unique_ptr<Build> load(const SwContext &swctx, const path &file_or_dir)
     b->setSourceDirectory(f.value().parent_path());
     b->load(f.value());
 
-    return b;
-}
-
-void build(const SwContext &swctx, const path &p)
-{
-    auto s = load(swctx, p);
-    s->execute();
-}
-
-void build(const SwContext &swctx, const Files &files_or_dirs)
-{
-    if (files_or_dirs.size() == 1)
-        return build(swctx, *files_or_dirs.begin());
-
-    // proper multibuilds must get commands and create a single execution plan
-    throw SW_RUNTIME_ERROR("not implemented");
-}
-
-void build(const SwContext &swctx, const Strings &packages)
-{
-    if (std::all_of(packages.begin(), packages.end(), [](const auto &p)
-    {
-        return path(p).is_absolute() || fs::exists(p);
-    }))
-    {
-        Files files;
-        for (auto &p : packages)
-            files.insert(p);
-        return build(swctx, files);
-    }
-
-    StringSet p2;
-    for (auto &p : packages)
-        p2.insert(p);
-
-    auto b = std::make_unique<Build>(swctx);
-    b->build_packages(p2);
-}
-
-void build(const SwContext &swctx, const String &s)
-{
-    // local file or dir is preferable rather than some remote pkg
-    if (fs::exists(s))
-        return build(swctx, path(s));
-    return build(swctx, Strings{ s });
+    return b;*/
 }
 
 void run(const SwContext &swctx, const PackageId &package)
 {
-    auto b = std::make_unique<Build>(swctx);
-    b->run_package(package.toString());
+    SW_UNIMPLEMENTED;
+    //auto b = std::make_unique<Build>(swctx);
+    //b->run_package(package.toString());
 }
 
 std::optional<String> read_config(const path &file_or_dir)
@@ -123,7 +86,9 @@ std::optional<String> read_config(const path &file_or_dir)
 
 static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &opts)
 {
-    auto d = fn.parent_path() / SW_BINARY_DIR / "src";
+    SW_UNIMPLEMENTED;
+
+    /*auto d = fn.parent_path() / SW_BINARY_DIR / "src";
 
     SourceDirMap srcs_old;
     if (opts.parallel)
@@ -198,12 +163,14 @@ static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &o
         b->fetch_info.sources = srcs_old;
 
         return b;
-    }
+    }*/
 }
 
 std::unique_ptr<Build> fetch_and_load(const SwContext &swctx, const path &file_or_dir, const FetchOptions &opts)
 {
-    auto f = resolveConfig(file_or_dir);
+    SW_UNIMPLEMENTED;
+
+    /*auto f = resolveConfig(file_or_dir);
     if (!f || !Build::isFrontendConfigFilename(f.value()))
         throw SW_RUNTIME_ERROR("no config found");
 
@@ -228,7 +195,7 @@ std::unique_ptr<Build> fetch_and_load(const SwContext &swctx, const path &file_o
         }
     }
     b->prepareStep();
-    return std::move(b);
+    return std::move(b);*/
 }
 
 }

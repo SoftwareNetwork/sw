@@ -244,7 +244,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
     // most important
-    const SwContext &swctx;
+    const SwDriverContext &swctx;
     TargetMap children;
     std::vector<BuildSettings> settings;
     //const BuildSettings *host_settings = nullptr;
@@ -252,6 +252,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     //std::map<String, std::vector<TargetSettingsData>> target_settings; // regex, some data
 
     //
+    std::vector<TargetBaseTypePtr> dummy_children;
     int command_storage = 0;
     String current_module;
     PackageVersionGroupNumber current_gn = 0; // for checks
@@ -396,7 +397,7 @@ public:
     bool perform_checks = true;
     bool ide = false;
 
-    Build(const SwContext &swctx);
+    Build(const SwDriverContext &swctx);
     Build(const Build &);
     ~Build();
 

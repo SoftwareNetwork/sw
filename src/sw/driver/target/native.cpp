@@ -423,7 +423,8 @@ void NativeCompiledTarget::findCompiler()
         }
         return false;
     };
-    auto add_libc_libs = add_libc("com.Microsoft.VisualStudio.VC.libcpp")
+    auto add_libc_libs =
+        add_libc("com.Microsoft.VisualStudio.VC.libcpp")
         && add_libc("com.Microsoft.Windows.SDK.ucrt");
     // FIXME: uncomment later
     //if (!add_libc_libs)

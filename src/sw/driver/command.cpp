@@ -26,24 +26,24 @@ namespace sw::driver
 namespace detail
 {
 
-Command::Command(const SwContext &swctx)
+Command::Command(const SwDriverContext &swctx)
     : Base::Command(swctx)
 {
 }
 
-Command::Command(const SwContext &swctx, ::sw::FileStorage &fs)
+Command::Command(const SwDriverContext &swctx, ::sw::FileStorage &fs)
     : Base::Command(swctx, fs)
 {
 }
 
 }
 
-Command::Command(const SwContext &swctx)
+Command::Command(const SwDriverContext &swctx)
     : Base::Command(swctx)
 {
 }
 
-Command::Command(const SwContext &swctx, ::sw::FileStorage &fs)
+Command::Command(const SwDriverContext &swctx, ::sw::FileStorage &fs)
     : Base::Command(swctx, fs)
 {
 }
@@ -278,12 +278,12 @@ void GNUCommand::postProcess1(bool ok)
 
 ///
 
-CommandBuilder::CommandBuilder(const SwContext &swctx)
+CommandBuilder::CommandBuilder(const SwDriverContext &swctx)
 {
     c = std::make_shared<Command>(swctx);
 }
 
-CommandBuilder::CommandBuilder(const SwContext &swctx, ::sw::FileStorage &fs)
+CommandBuilder::CommandBuilder(const SwDriverContext &swctx, ::sw::FileStorage &fs)
     : CommandBuilder(swctx)
 {
     c->fs = &fs;

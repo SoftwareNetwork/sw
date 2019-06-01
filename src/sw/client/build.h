@@ -17,12 +17,6 @@ struct Build;
 struct PackageId;
 struct SwContext;
 
-void build(const SwContext &swctx, const path &file_or_dir);
-void build(const SwContext &swctx, const Files &files_or_dirs);
-void build(const SwContext &swctx, const String &file_or_dir_or_packagename);
-void build(const SwContext &swctx, const String &pkg);
-void build(const SwContext &swctx, const Strings &packages);
-
 std::optional<String> read_config(const path &file_or_dir);
 std::unique_ptr<Build> load(const SwContext &swctx, const path &file_or_dir);
 void run(const SwContext &swctx, const PackageId &package);

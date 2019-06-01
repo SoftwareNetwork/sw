@@ -2,8 +2,8 @@
 #include "inserts.h"
 
 #include <primitives/emitter.h>
-#include <sw/driver/build.h>
-#include <sw/driver/target/native.h>
+//#include <sw/driver/build.h>
+//#include <sw/driver/target/native.h>
 
 static ::cl::opt<path> integrate_cmake_deps("cmake-deps", ::cl::sub(subcommand_integrate));
 static ::cl::opt<path> integrate_waf_deps("waf-deps", ::cl::sub(subcommand_integrate));
@@ -41,7 +41,7 @@ struct CMakeEmitter : primitives::Emitter
     }
 };
 
-static String toCmakeString(sw::ConfigurationType t)
+/*static String toCmakeString(sw::ConfigurationType t)
 {
     switch (t)
     {
@@ -52,7 +52,7 @@ static String toCmakeString(sw::ConfigurationType t)
     default:
         SW_UNIMPLEMENTED;
     }
-}
+}*/
 
 SUBCOMMAND_DECL(integrate)
 {

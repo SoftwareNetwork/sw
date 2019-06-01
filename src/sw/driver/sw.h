@@ -31,7 +31,7 @@ namespace vs = sw::vs;
 namespace cl = sw::cl;
 
 // general
-using sw::SwContext;
+//using sw::SwContext;
 using sw::Build;
 using Solution = Build;
 using sw::Checker;

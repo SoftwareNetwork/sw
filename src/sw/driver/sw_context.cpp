@@ -12,14 +12,14 @@
 namespace sw
 {
 
-SwContext::SwContext(const path &local_storage_root_dir)
+SwDriverContext::SwDriverContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
 {
     source_dir = fs::canonical(fs::current_path());
     module_storage = std::make_unique<ModuleStorage>();
 }
 
-SwContext::~SwContext()
+SwDriverContext::~SwDriverContext()
 {
     // do not clear modules on exception, because it may come from there
     // TODO: cleanup modules data first
@@ -27,7 +27,7 @@ SwContext::~SwContext()
         module_storage.release();
 }
 
-ChecksStorage &SwContext::getChecksStorage(const String &config) const
+ChecksStorage &SwDriverContext::getChecksStorage(const String &config) const
 {
     auto i = checksStorages.find(config);
     if (i == checksStorages.end())
@@ -38,7 +38,7 @@ ChecksStorage &SwContext::getChecksStorage(const String &config) const
     return *i->second;
 }
 
-ChecksStorage &SwContext::getChecksStorage(const String &config, const path &fn) const
+ChecksStorage &SwDriverContext::getChecksStorage(const String &config, const path &fn) const
 {
     auto i = checksStorages.find(config);
     if (i == checksStorages.end())
@@ -50,7 +50,7 @@ ChecksStorage &SwContext::getChecksStorage(const String &config, const path &fn)
     return *i->second;
 }
 
-ModuleStorage &SwContext::getModuleStorage() const
+ModuleStorage &SwDriverContext::getModuleStorage() const
 {
     return *module_storage;
 }

@@ -161,16 +161,16 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
 void TargetBase::addChild(const TargetBaseTypePtr &t)
 {
-    bool bad_type = t->getType() <= TargetType::Directory;
-    // we do not activate targets that are not for current builds
-    bool unknown_tgt = /*!IsConfig && */!Local && !getSolution().isKnownTarget(t->getPackage());
-    if (bad_type || unknown_tgt)
+    if (t->getType() <= TargetType::Directory)
     {
-        // also disable resolving for such targets
-        if (!bad_type && unknown_tgt)
-        {
-            t->DryRun = true;
-        }
+        getSolution().dummy_children.push_back(t);
+        return;
+    }
+
+    // we do not activate targets that are not selected for current builds
+    if (!Local && !getSolution().isKnownTarget(t->getPackage()))
+    {
+        t->DryRun = true;
         t->skip = true;
     }
 

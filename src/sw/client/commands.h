@@ -1,7 +1,7 @@
 #pragma once
 
 #include <primitives/sw/cl.h>
-#include <sw/builder/sw_context.h>
+#include <sw/core/sw_context.h>
 
 #define SUBCOMMAND_DECL(n) void cli_##n()
 #define SUBCOMMAND_DECL2(n) void cli_##n(sw::SwContext &swctx)
@@ -13,4 +13,4 @@
 #include "commands.inl"
 #undef SUBCOMMAND
 
-sw::SwContext createSwContext();
+std::unique_ptr<sw::SwContext> createSwContext();

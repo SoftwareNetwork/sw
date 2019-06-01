@@ -85,7 +85,6 @@ String toUserString(StorageFileType);
 
 struct PackagesDatabase;
 struct ServiceDatabase;
-struct SwContext;
 
 struct SW_MANAGER_API IStorage
 {
