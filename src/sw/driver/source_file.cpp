@@ -241,6 +241,9 @@ void SourceFileStorage::remove_exclude(const path &root, const FileRegex &r)
 
 void SourceFileStorage::remove_full(const path &file)
 {
+    if (target->DryRun)
+        return;
+
     auto F = file;
     // ignore missing file only when non local
     if (check_absolute(F, !target->Local))

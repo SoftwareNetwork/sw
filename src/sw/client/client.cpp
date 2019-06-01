@@ -1282,7 +1282,12 @@ SUBCOMMAND_DECL2(upload)
     auto m = s->getPackages();
     // dbg purposes
     for (auto &[id, d] : m)
+    {
         write_file(fs::current_path() / SW_BINARY_DIR / "upload" / id.toString() += ".json", *d);
+        auto id2 = id;
+        id2.ppath = PackagePath(upload_prefix) / id2.ppath;
+        LOG_INFO(logger, "Uploading " + id2.toString());
+    }
 
     // send signatures (gpg)
     // -k KEY1 -k KEY2

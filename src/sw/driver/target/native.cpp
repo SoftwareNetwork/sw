@@ -423,8 +423,7 @@ void NativeCompiledTarget::findCompiler()
         }
         return false;
     };
-    auto add_libc_libs =
-        add_libc("com.Microsoft.VisualStudio.VC.libcpp")
+    auto add_libc_libs = add_libc("com.Microsoft.VisualStudio.VC.libcpp")
         && add_libc("com.Microsoft.Windows.SDK.ucrt");
     // FIXME: uncomment later
     //if (!add_libc_libs)
@@ -1522,12 +1521,15 @@ void NativeCompiledTarget::autoDetectSources()
 
     LOG_TRACE(logger, getPackage().toString() + ": Autodetecting sources");
 
+    // all files except starting from point
+    static const auto files_regex = "[^\\.].*";
+
     bool added = false;
     for (auto &d : include_dir_names)
     {
         if (fs::exists(SourceDir / d))
         {
-            add(FileRegex(d, std::regex(".*"), true));
+            add(FileRegex(d, std::regex(files_regex), true));
             added = true;
             break; // break here!
         }
@@ -1536,7 +1538,7 @@ void NativeCompiledTarget::autoDetectSources()
     {
         if (fs::exists(SourceDir / d))
         {
-            add(FileRegex(d, std::regex(".*"), true));
+            add(FileRegex(d, std::regex(files_regex), true));
             added = true;
             break; // break here!
         }
