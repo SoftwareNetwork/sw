@@ -7,6 +7,7 @@
 #include "driver.h"
 
 #include "build.h"
+#include "module.h"
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
@@ -24,6 +25,23 @@ static std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s)
     return {};
 }
 
+Driver::Driver(const SwContext &swctx)
+    : swctx(swctx)
+{
+    build = std::make_unique<Build>(swctx, *this);
+
+    //source_dir = fs::canonical(fs::current_path());
+    module_storage = std::make_unique<ModuleStorage>();
+}
+
+Driver::~Driver()
+{
+    // do not clear modules on exception, because it may come from there
+    // TODO: cleanup modules data first
+    if (std::uncaught_exceptions())
+        module_storage.release();
+}
+
 PackageId Driver::getPackageId() const
 {
     return "org.sw.sw.driver.cpp-0.3.0";
@@ -33,10 +51,6 @@ bool Driver::canLoad(const Input &i) const
 {
     switch (i.getType())
     {
-    case InputType::PackageId:
-        // create package, install, get source dir, find there spec file
-        // or install driver of package ...
-        return true;
     case InputType::SpecificationFile:
     {
         auto &fes = Build::getAvailableFrontendConfigFilenames();
@@ -56,31 +70,51 @@ bool Driver::canLoad(const Input &i) const
     return false;
 }
 
-void Driver::load(const Input &i)
+void Driver::load(const std::set<Input> &inputs)
 {
+    if (inputs.size() > 1)
+        SW_UNREACHABLE;
+    auto &i = *inputs.begin();
     switch (i.getType())
     {
     case InputType::DirectorySpecificationFile:
     {
         auto p = *findConfig(i.getPath(), Build::getAvailableFrontendConfigFilenames());
+        build->load_spec_file(p);
+        build->execute();
+        break;
     }
     default:
         SW_UNREACHABLE;
     }
+}
 
-    /*auto b = std::make_unique<Build>(swctx);
-    b->Local = true;
-    b->setSourceDirectory(fs::is_directory(p) ? p : p.parent_path());
-    b->load(p, true);
-    return b;*/
+ChecksStorage &Driver::getChecksStorage(const String &config) const
+{
+    auto i = checksStorages.find(config);
+    if (i == checksStorages.end())
+    {
+        auto [i, _] = checksStorages.emplace(config, std::make_unique<ChecksStorage>());
+        return *i->second;
+    }
+    return *i->second;
+}
 
-    SW_UNIMPLEMENTED;
+ChecksStorage &Driver::getChecksStorage(const String &config, const path &fn) const
+{
+    auto i = checksStorages.find(config);
+    if (i == checksStorages.end())
+    {
+        auto [i, _] = checksStorages.emplace(config, std::make_unique<ChecksStorage>());
+        i->second->load(fn);
+        return *i->second;
+    }
+    return *i->second;
+}
 
-    /*auto b = std::make_unique<Build>(swctx);
-    b->Local = true;
-    b->setSourceDirectory(f.value().parent_path());
-    b->load(f.value());
-    return b;*/
+ModuleStorage &Driver::getModuleStorage() const
+{
+    return *module_storage;
 }
 
 }

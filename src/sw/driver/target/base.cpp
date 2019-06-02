@@ -8,12 +8,12 @@
 
 #include "sw/driver/command.h"
 #include "sw/driver/build.h"
-#include "sw/driver/sw_context.h"
 
+#include <sw/builder/jumppad.h>
+#include <sw/core/sw_context.h>
 #include <sw/manager/database.h>
 #include <sw/manager/package_data.h>
 #include <sw/manager/storage.h>
-#include <sw/builder/jumppad.h>
 #include <sw/support/hash.h>
 
 #include <primitives/log.h>
@@ -161,7 +161,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
 void TargetBase::addChild(const TargetBaseTypePtr &t)
 {
-    if (t->getType() <= TargetType::Directory)
+    if (t->getType() == TargetType::Directory || t->getType() == TargetType::Project)
     {
         getSolution().dummy_children.push_back(t);
         return;

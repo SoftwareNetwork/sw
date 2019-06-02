@@ -4,9 +4,9 @@
 #include "sw/driver/generator/generator.h"
 #include "sw/driver/functions.h"
 #include "sw/driver/build.h"
-#include "sw/driver/sw_context.h"
 
 #include <sw/builder/jumppad.h>
+#include <sw/core/sw_context.h>
 #include <sw/manager/storage.h>
 #include <sw/manager/yaml.h>
 

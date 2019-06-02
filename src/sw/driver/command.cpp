@@ -7,10 +7,10 @@
 #include "command.h"
 
 #include "build.h"
-#include "sw_context.h"
 #include "target/native.h"
 
 #include <sw/builder/platform.h>
+#include <sw/core/sw_context.h>
 
 #include <primitives/symbol.h>
 
@@ -26,24 +26,24 @@ namespace sw::driver
 namespace detail
 {
 
-Command::Command(const SwDriverContext &swctx)
+Command::Command(const SwContext &swctx)
     : Base::Command(swctx)
 {
 }
 
-Command::Command(const SwDriverContext &swctx, ::sw::FileStorage &fs)
+Command::Command(const SwContext &swctx, ::sw::FileStorage &fs)
     : Base::Command(swctx, fs)
 {
 }
 
 }
 
-Command::Command(const SwDriverContext &swctx)
+Command::Command(const SwContext &swctx)
     : Base::Command(swctx)
 {
 }
 
-Command::Command(const SwDriverContext &swctx, ::sw::FileStorage &fs)
+Command::Command(const SwContext &swctx, ::sw::FileStorage &fs)
     : Base::Command(swctx, fs)
 {
 }
@@ -278,12 +278,12 @@ void GNUCommand::postProcess1(bool ok)
 
 ///
 
-CommandBuilder::CommandBuilder(const SwDriverContext &swctx)
+CommandBuilder::CommandBuilder(const SwContext &swctx)
 {
     c = std::make_shared<Command>(swctx);
 }
 
-CommandBuilder::CommandBuilder(const SwDriverContext &swctx, ::sw::FileStorage &fs)
+CommandBuilder::CommandBuilder(const SwContext &swctx, ::sw::FileStorage &fs)
     : CommandBuilder(swctx)
 {
     c->fs = &fs;

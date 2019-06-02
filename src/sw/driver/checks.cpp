@@ -8,7 +8,7 @@
 
 #include "checks_storage.h"
 #include "build.h"
-#include "sw_context.h"
+#include "driver.h"
 #include "target/native.h"
 
 #include <sw/builder/execution_plan.h>
@@ -205,7 +205,7 @@ void CheckSet::performChecks(const String &config)
 {
     static const auto checks_dir = checker.build.swctx.getLocalStorage().storage_dir_etc / "sw" / "checks";
     auto fn = checks_dir / config / "checks.3.txt";
-    auto &cs = checker.build.swctx.getChecksStorage(config, fn);
+    auto &cs = checker.build.driver.getChecksStorage(config, fn);
 
     // add common checks
     checkSourceRuns("WORDS_BIGENDIAN", R"(

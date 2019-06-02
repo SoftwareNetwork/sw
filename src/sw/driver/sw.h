@@ -11,7 +11,6 @@
 #include "suffix.h"
 #include "target/all.h"
 #include "compiler_helpers.h"
-#include "sw_context.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/manager/storage.h>

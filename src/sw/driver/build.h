@@ -26,8 +26,10 @@ namespace sw
 {
 
 struct Build;
+namespace driver::cpp { struct Driver; }
 struct Generator;
 struct Module;
+struct ModuleStorage;
 
 template <class T>
 struct ExecutionPlan;
@@ -244,7 +246,8 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
     // most important
-    const SwDriverContext &swctx;
+    const SwContext &swctx;
+    const driver::cpp::Driver &driver;
     TargetMap children;
     std::vector<BuildSettings> settings;
     //const BuildSettings *host_settings = nullptr;
@@ -397,11 +400,15 @@ public:
     bool perform_checks = true;
     bool ide = false;
 
-    Build(const SwDriverContext &swctx);
+    Build(const SwContext &swctx, const driver::cpp::Driver &driver);
     Build(const Build &);
     ~Build();
 
     TargetType getType() const override { return TargetType::Build; }
+
+    void load_spec_file(const path &);
+    void load_inline_spec(const path &);
+    void load_dir(const path &);
 
     path build(const path &fn);
     void load(const path &fn, bool configless = false);

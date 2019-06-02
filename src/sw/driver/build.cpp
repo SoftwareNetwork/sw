@@ -6,6 +6,7 @@
 
 #include "build.h"
 
+#include "driver.h"
 #include "frontend/cppan/yaml.h"
 #include "functions.h"
 #include "generator/generator.h"
@@ -14,12 +15,12 @@
 #include "run.h"
 #include "suffix.h"
 #include "sw_abi_version.h"
-#include "sw_context.h"
 #include "target/native.h"
 
 #include <sw/builder/execution_plan.h>
 #include <sw/builder/file_storage.h>
 #include <sw/builder/program.h>
+#include <sw/core/sw_context.h>
 #include <sw/manager/database.h>
 #include <sw/manager/settings.h>
 #include <sw/manager/storage.h>
@@ -335,22 +336,22 @@ static String getCurrentModuleId()
     return shorten_hash(sha1(getProgramName()), 6);
 }
 
-static path getImportFilePrefix(const SwDriverContext &swctx)
+static path getImportFilePrefix(const SwContext &swctx)
 {
     return swctx.getLocalStorage().storage_dir_tmp / ("sw_" + getCurrentModuleId());
 }
 
-static path getImportDefinitionsFile(const SwDriverContext &swctx)
+static path getImportDefinitionsFile(const SwContext &swctx)
 {
     return getImportFilePrefix(swctx) += ".def";
 }
 
-static path getImportLibraryFile(const SwDriverContext &swctx)
+static path getImportLibraryFile(const SwContext &swctx)
 {
     return getImportFilePrefix(swctx) += ".lib";
 }
 
-static path getImportPchFile(const SwDriverContext &swctx)
+static path getImportPchFile(const SwContext &swctx)
 {
     return getImportFilePrefix(swctx) += ".cpp";
 }
@@ -371,7 +372,7 @@ static Strings getExports(HMODULE lib)
 }
 #endif
 
-static void addImportLibrary(const SwDriverContext &swctx, NativeCompiledTarget &t)
+static void addImportLibrary(const SwContext &swctx, NativeCompiledTarget &t)
 {
 #ifdef _WIN32
     auto lib = (HMODULE)primitives::getModuleForSymbol();
@@ -438,7 +439,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
     return h;
 }
 
-static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwDriverContext &swctx, const path &p, std::set<PackageVersionGroupNumber> &gns)
+static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwContext &swctx, const path &p, std::set<PackageVersionGroupNumber> &gns)
 {
     UnresolvedPackages udeps;
     FilesOrdered headers;
@@ -480,15 +481,15 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return { headers, udeps };
 }
 
-static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwDriverContext &swctx, const path &in_config_file)
+static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwContext &swctx, const path &in_config_file)
 {
     std::set<PackageVersionGroupNumber> gns;
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-static auto build_configs(const SwDriverContext &swctx, const std::unordered_set<LocalPackage> &pkgs)
+static auto build_configs(const SwContext &swctx, const driver::cpp::Driver &driver, const std::unordered_set<LocalPackage> &pkgs)
 {
-    Build b(swctx); // cache?
+    Build b(swctx, driver); // cache?
     b.execute_jobs = config_jobs;
     b.Local = false;
     b.file_storage_local = false;
@@ -509,8 +510,8 @@ static String gn2suffix(PackageVersionGroupNumber gn)
     return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
 }
 
-Build::Build(const SwDriverContext &swctx)
-    : swctx(swctx), checker(*this)
+Build::Build(const SwContext &swctx, const driver::cpp::Driver &driver)
+    : swctx(swctx), driver(driver), checker(*this)
 {
     //auto ss = createSettings();
     //addSettings(ss);
@@ -524,6 +525,7 @@ Build::Build(const SwDriverContext &swctx)
 Build::Build(const Build &rhs)
     : TargetBase(rhs)
     , swctx(rhs.swctx)
+    , driver(rhs.driver)
     , silent(rhs.silent)
     //, show_output(rhs.show_output) // don't pass to checks
     //, knownTargets(rhs.knownTargets)
@@ -542,7 +544,9 @@ Build::Build(const Build &rhs)
 {
 }
 
-Build::~Build() = default;
+Build::~Build()
+{
+}
 
 BuildSettings Build::createSettings() const
 {
@@ -655,10 +659,10 @@ void Build::build_and_resolve(int n_runs)
             LOG_ERROR(logger, "Unresolved dependency: " << pkg.toString());
     }
 
-    auto dll = ::sw::build_configs(swctx, cfgs);
+    auto dll = ::sw::build_configs(swctx, driver, cfgs);
 
     for (auto &[u, p] : m)
-        children[p].ep = std::make_unique<NativeTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
+        children[p].ep = std::make_unique<NativeTargetEntryPoint>(Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
 
     Local = false;
 
@@ -667,14 +671,14 @@ void Build::build_and_resolve(int n_runs)
         NamePrefix = p.ppath.slice(0, p.getData().prefix);
         current_gn = gn;
         current_module = p.toString();
-        sw_check_abi_version(Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
+        sw_check_abi_version(Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
         for (auto &s : settings)
         {
             current_settings = &s;
-            Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
+            Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
             // we can use new (clone of this) solution, then copy known targets
             // to allow multiple passes-builds
-            Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
+            Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
         }
     }
     current_gn = 0;
@@ -1678,7 +1682,7 @@ Module Build::loadModule(const path &p) const
     if (!fn2.is_absolute())
         fn2 = SourceDir / fn2;
 
-    Build b(swctx);
+    Build b(swctx, driver);
     b.execute_jobs = config_jobs;
     b.file_storage_local = false;
     b.is_config_build = true;
@@ -1689,7 +1693,7 @@ Module Build::loadModule(const path &p) const
         auto r = b.build_configs_separate({ fn2 });
         dll = r.begin()->second;
     }
-    return swctx.getModuleStorage().get(dll);
+    return driver.getModuleStorage().get(dll);
 }
 
 path Build::build(const path &fn)
@@ -1709,7 +1713,7 @@ path Build::build(const path &fn)
     case FrontendType::Sw:
     {
         // separate build
-        Build b(swctx);
+        Build b(swctx, driver);
         b.execute_jobs = config_jobs;
         b.file_storage_local = false;
         b.is_config_build = true;
@@ -1742,8 +1746,62 @@ void Build::setupSolutionName(const path &file_or_dir)
         ide_solution_name = file_or_dir.stem().u8string();
 }
 
+void Build::load_spec_file(const path &fn)
+{
+    if (!gGenerator.empty())
+    {
+        generator = Generator::create(gGenerator);
+
+        // set early, before prepare
+
+        // also add tests to solution
+        // protect with option
+        with_testing = true;
+    }
+
+    auto dll = build(fn);
+
+    //fs->save(); // remove?
+    //fs->reset();
+
+    if (fetch_sources)
+    {
+        fetch_dir = BinaryDir / "src";
+    }
+
+    auto fe = selectFrontendByFilename(fn);
+    if (!fe)
+        throw SW_RUNTIME_ERROR("frontend was not found for file: " + normalize_path(fn));
+
+    LOG_TRACE(logger, "using " << toString(*fe) << " frontend");
+    switch (fe.value())
+    {
+    case FrontendType::Sw:
+        load_dll(dll);
+        break;
+    case FrontendType::Cppan:
+        cppan_load();
+        break;
+    }
+
+    // set show output setting
+    show_output = cl_show_output;
+}
+
+void Build::load_inline_spec(const path &fn)
+{
+    load_configless(fn);
+}
+
+void Build::load_dir(const path &)
+{
+    SW_UNIMPLEMENTED;
+}
+
 void Build::load(const path &fn, bool configless)
 {
+    SW_UNIMPLEMENTED;
+
     if (!fn.is_absolute())
         throw SW_RUNTIME_ERROR("path must be absolute: " + normalize_path(fn));
     if (!fs::exists(fn))
@@ -1792,7 +1850,7 @@ void Build::load(const path &fn, bool configless)
     show_output = cl_show_output;
 }
 
-static Build::CommandExecutionPlan load(const SwDriverContext &swctx, const path &fn, const Build &s)
+static Build::CommandExecutionPlan load(const SwContext &swctx, const path &fn, const Build &s)
 {
     primitives::BinaryStream ctx;
     ctx.load(fn);
@@ -2506,9 +2564,9 @@ void Build::load_packages(const StringSet &pkgs)
     Local = false;
     configure = false;
 
-    auto dll = ::sw::build_configs(swctx, cfgs);
+    auto dll = ::sw::build_configs(swctx, driver, cfgs);
     for (auto &[u, p] : m)
-        children[p].ep = std::make_unique<NativeTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
+        children[p].ep = std::make_unique<NativeTargetEntryPoint>(Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
 
     createSolutions(dll, true);
 
@@ -2517,14 +2575,14 @@ void Build::load_packages(const StringSet &pkgs)
         NamePrefix = p.ppath.slice(0, p.getData().prefix);
         current_gn = gn;
         current_module = p.toString();
-        sw_check_abi_version(Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
+        sw_check_abi_version(Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
         for (auto &s : settings)
         {
             current_settings = &s;
-            Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
+            Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
             // we can use new (clone of this) solution, then copy known targets
             // to allow multiple passes-builds
-            Module(swctx.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
+            Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
         }
     }
     current_gn = 0;
@@ -2690,7 +2748,7 @@ void Build::createSolutions(const path &dll, bool usedll)
 
     // configure may change defaults, so we must care below
     if (usedll && configure)
-        Module(swctx.getModuleStorage().get(dll)).configure(*this);
+        Module(driver.getModuleStorage().get(dll)).configure(*this);
 
     if (hasAnyUserProvidedInformation())
     {
@@ -2925,7 +2983,7 @@ void Build::load_dll(const path &dll, bool usedll)
             for (auto &s : settings)
             {
                 current_settings = &s;
-                Module(swctx.getModuleStorage().get(dll)).check(*this, checker);
+                Module(driver.getModuleStorage().get(dll)).check(*this, checker);
             }
         }
     }
@@ -2938,7 +2996,7 @@ void Build::load_dll(const path &dll, bool usedll)
             if (settings.size() > 1)
                 LOG_INFO(logger, "[" << (i + 1) << "/" << settings.size() << "] load pass " << s.getConfig());
             current_settings = &s;
-            Module(swctx.getModuleStorage().get(dll)).build(*this);
+            Module(driver.getModuleStorage().get(dll)).build(*this);
         }
     }
 

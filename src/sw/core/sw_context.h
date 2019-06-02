@@ -18,9 +18,6 @@ enum class InputType : int32_t
     Unspecified = 0,
 
     ///
-    PackageId,
-
-    ///
     SpecificationFile,
 
     /// from some regular file
@@ -43,12 +40,19 @@ struct IDriver
     //virtual FilesOrdered getAvailableFrontendConfigFilenames() const = 0;
 
     virtual bool canLoad(const Input &) const = 0;
-    virtual void load(const Input &) = 0;
+    virtual void load(const std::set<Input> &) = 0;
     // prepare()
     // getCommands()
 };
 
 //struct INativeDriver : IDriver {}; // ?
+
+struct ITarget
+{
+    virtual ~ITarget() = 0;
+
+    // get deps
+};
 
 struct SW_CORE_API SwContext : SwBuilderContext
 {
@@ -62,6 +66,7 @@ struct SW_CORE_API SwContext : SwBuilderContext
     using Drivers = std::map<PackageId, std::unique_ptr<IDriver>>;
     using Inputs = std::set<InputVariant>; // unique
 
+    // move to drivers?
     path source_dir;
 
     SwContext(const path &local_storage_root_dir);
@@ -77,7 +82,7 @@ struct SW_CORE_API SwContext : SwBuilderContext
 
     // move privates to impl?
 private:
-    using ProcessedInputs = std::vector<Input>;
+    using ProcessedInputs = std::set<Input>;
 
     Drivers drivers;
 
@@ -95,10 +100,11 @@ struct Input
     IDriver &getDriver() const { return *driver; }
     InputType getType() const { return type; }
     path getPath() const;
-    PackageId getPackageId() const;
+
+    bool operator<(const Input &rhs) const { return subject < rhs.subject; }
 
 private:
-    std::variant<path, PackageId> subject;
+    path subject;
     InputType type;
     IDriver *driver = nullptr;
     // settings?

@@ -7,6 +7,8 @@
 #define SW_PACKAGE_API
 #include <sw/driver/sw.h>
 
+#include <sw/core/sw_context.h>
+
 // disable custom pragma warnings
 #ifdef _MSC_VER
 #pragma warning(push)

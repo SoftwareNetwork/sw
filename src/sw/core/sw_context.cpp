@@ -32,16 +32,12 @@ void SwContext::build(const Strings &strings)
 {
     auto inputs = makeInputs(strings);
     load(inputs);
-
-    SW_UNIMPLEMENTED;
 }
 
 void SwContext::build(const Inputs &strings)
 {
     auto inputs = makeInputs(strings);
     load(inputs);
-
-    SW_UNIMPLEMENTED;
 }
 
 SwContext::ProcessedInputs SwContext::makeInputs(const Inputs &strings)
@@ -52,13 +48,13 @@ SwContext::ProcessedInputs SwContext::makeInputs(const Inputs &strings)
         switch (s.index())
         {
         case 0:
-            inputs.emplace_back(std::get<String>(s), *this);
+            inputs.emplace(std::get<String>(s), *this);
             break;
         case 1:
-            inputs.emplace_back(std::get<path>(s), *this);
+            inputs.emplace(std::get<path>(s), *this);
             break;
         case 2:
-            inputs.emplace_back(std::get<PackageId>(s), *this);
+            inputs.emplace(std::get<PackageId>(s), *this);
             break;
         default:
             SW_UNREACHABLE;
@@ -71,14 +67,19 @@ SwContext::ProcessedInputs SwContext::makeInputs(const Strings &strings)
 {
     ProcessedInputs inputs;
     for (auto &s : strings)
-        inputs.emplace_back(s, *this);
+        inputs.emplace(s, *this);
     return inputs;
 }
 
 void SwContext::load(const ProcessedInputs &inputs)
 {
+    std::map<IDriver *, ProcessedInputs> grouped;
     for (auto &i : inputs)
-        i.getDriver().load(i);
+        grouped[&i.getDriver()].insert(i);
+    for (auto &[d, g] : grouped)
+    {
+        d->load(g);
+    }
 }
 
 void SwContext::registerDriver(std::unique_ptr<IDriver> driver)
@@ -175,18 +176,17 @@ void Input::init(const path &in, const SwContext &swctx)
 
 void Input::init(const PackageId &p)
 {
-    subject = p;
-    type = InputType::PackageId;
+    // create package, install, get source dir, find there spec file
+    // or install driver of package ...
+    SW_UNIMPLEMENTED;
+
+    //subject = p;
+    //type = InputType::PackageId;
 }
 
 path Input::getPath() const
 {
-    return std::get<path>(subject);
-}
-
-PackageId Input::getPackageId() const
-{
-    return std::get<PackageId>(subject);
+    return subject;
 }
 
 }

@@ -11,8 +11,8 @@
 //#include <resolver.h>
 #include <sw/builder/file.h>
 #include <sw/builder/jumppad.h>
-#include <sw/core/sw_context.h>
 #include <sw/driver/command.h>
+#include <sw/driver/build.h>
 #include <sw/driver/driver.h>
 #include <sw/manager/api.h>
 #include <sw/manager/database.h>
@@ -158,7 +158,7 @@ std::unique_ptr<sw::SwContext> createSwContext()
     httpSettings.proxy = Settings::get_local_settings().proxy;
 
     auto swctx = std::make_unique<sw::SwContext>(storage_dir_override.empty() ? sw::Settings::get_user_settings().storage_dir : storage_dir_override);
-    swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
+    swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>(*swctx));
     return swctx;
 }
 
@@ -257,15 +257,7 @@ int parse_main(int argc, char **argv)
 
     String overview = "SW: Software Network Client\n"
         "\n"
-        "  SW is a Universal Package Manager and Build System...\n";
-    {
-        //overview += "\n  Available drivers:\n";
-        //for (auto &d : driver)
-            //overview += "    - " + d->getName() + "\n";
-        overview += "\n  Available frontends:\n";
-        //for (const auto &n : Build::getAvailableFrontendNames())
-            //overview += "    - " + n + "\n";
-    }
+        "  SW is a Universal Package Manager and Build System\n";
 
     std::vector<std::string> args0(argv + 1, argv + argc);
     Strings args;
@@ -1000,6 +992,8 @@ SUBCOMMAND_DECL(ide)
 SUBCOMMAND_DECL(configure)
 {
     SW_UNIMPLEMENTED;
+
+    // generate execution plan
 }
 
 extern String gGenerator;
@@ -1205,8 +1199,6 @@ SUBCOMMAND_DECL(test)
 
 SUBCOMMAND_DECL(install)
 {
-    SW_UNIMPLEMENTED;
-
     auto swctx = createSwContext();
     sw::UnresolvedPackages pkgs;
     install_args.push_back(install_arg);
@@ -1241,9 +1233,7 @@ SUBCOMMAND_DECL(fetch)
 
 SUBCOMMAND_DECL2(fetch)
 {
-    SW_UNIMPLEMENTED;
-
-    /*sw::FetchOptions opts;
+    sw::FetchOptions opts;
     //opts.name_prefix = upload_prefix;
     opts.dry_run = !build_after_fetch;
     opts.root_dir = fs::current_path() / SW_BINARY_DIR;
@@ -1252,7 +1242,7 @@ SUBCOMMAND_DECL2(fetch)
     //opts.apply_version_to_source = true;
     auto s = sw::fetch_and_load(swctx, ".", opts);
     if (build_after_fetch)
-        s->execute();*/
+        s->execute();
 }
 
 SUBCOMMAND_DECL(upload)
@@ -1263,10 +1253,8 @@ SUBCOMMAND_DECL(upload)
 
 SUBCOMMAND_DECL2(upload)
 {
-    SW_UNIMPLEMENTED;
-
     // select remote first
-    /*auto &us = Settings::get_user_settings();
+    auto &us = Settings::get_user_settings();
     auto current_remote = &*us.remotes.begin();
     if (!upload_remote.empty())
         current_remote = find_remote(us, upload_remote);
@@ -1287,7 +1275,7 @@ SUBCOMMAND_DECL2(upload)
 
         // after execution such solution has resolved deps and deps of the deps
         // we must not add them
-        throw SW_RUNTIME_ERROR("not uploaded: not implemented");
+        SW_UNIMPLEMENTED;
     }
 
     auto m = s->getPackages();
@@ -1303,7 +1291,7 @@ SUBCOMMAND_DECL2(upload)
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     sw::Api api(*current_remote);
-    api.addVersion(upload_prefix, m, sw::read_config(build_arg_update.getValue()).value());*/
+    api.addVersion(upload_prefix, m, sw::read_config(build_arg_update.getValue()).value());
 }
 
 String getBuildTime();
