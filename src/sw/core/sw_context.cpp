@@ -24,118 +24,61 @@ SwContext::SwContext(const path &local_storage_root_dir)
 
 SwContext::~SwContext()
 {
-}
-
-void SwContext::build(const path &p)
-{
-    load(p);
-    SW_UNIMPLEMENTED;
-    //s->execute();
-}
-
-void SwContext::build(const Files &files_or_dirs)
-{
-    if (files_or_dirs.size() == 1)
-        return build(*files_or_dirs.begin());
-
-    // proper multibuilds must get commands and create a single execution plan
-    throw SW_RUNTIME_ERROR("not implemented");
+    path p1, p2;
+    std::string s1, s2;
 }
 
 void SwContext::build(const Strings &strings)
 {
     auto inputs = makeInputs(strings);
-
-    /*if (std::all_of(packages.begin(), packages.end(), [](const auto &p)
-        {
-            return path(p).is_absolute() || fs::exists(p);
-        }))
-    {
-        Files files;
-        for (auto &p : packages)
-            files.insert(p);
-        return build(files);
-    }
-
-    StringSet p2;
-    for (auto &p : packages)
-        p2.insert(p);*/
+    load(inputs);
 
     SW_UNIMPLEMENTED;
-    //auto b = std::make_unique<Build>(swctx);
-    //b->build_packages(p2);
 }
 
-std::vector<Input> SwContext::makeInputs(const Strings &strings)
+void SwContext::build(const Inputs &strings)
 {
-    std::vector<Input> inputs;
+    auto inputs = makeInputs(strings);
+    load(inputs);
+
+    SW_UNIMPLEMENTED;
+}
+
+SwContext::ProcessedInputs SwContext::makeInputs(const Inputs &strings)
+{
+    ProcessedInputs inputs;
+    for (auto &s : strings)
+    {
+        switch (s.index())
+        {
+        case 0:
+            inputs.emplace_back(std::get<String>(s), *this);
+            break;
+        case 1:
+            inputs.emplace_back(std::get<path>(s), *this);
+            break;
+        case 2:
+            inputs.emplace_back(std::get<PackageId>(s), *this);
+            break;
+        default:
+            SW_UNREACHABLE;
+        }
+    }
+    return inputs;
+}
+
+SwContext::ProcessedInputs SwContext::makeInputs(const Strings &strings)
+{
+    ProcessedInputs inputs;
     for (auto &s : strings)
         inputs.emplace_back(s, *this);
     return inputs;
 }
 
-void SwContext::build(const String &s)
+void SwContext::load(const ProcessedInputs &inputs)
 {
-    // local file or dir is preferable rather than some remote pkg
-    if (fs::exists(s))
-        return build(path(s));
-    return build(Strings{ s });
-}
-
-std::optional<path> SwContext::findConfig(const path &dir, const FilesOrdered &fe_s)
-{
-    for (auto &fn : fe_s)
-    {
-        if (fs::exists(dir / fn))
-            return dir / fn;
-    }
-    return {};
-}
-
-std::optional<path> SwContext::resolveConfig(const path &file_or_dir, const FilesOrdered &fe_s)
-{
-    auto f = file_or_dir;
-    if (f.empty())
-        f = fs::current_path();
-    if (!f.is_absolute())
-        f = fs::absolute(f);
-    if (fs::is_directory(f))
-        return findConfig(f, fe_s);
-    return f;
-}
-
-void SwContext::load(const path &file_or_dir)
-{
-    auto fes = getAvailableFrontendConfigFilenames();
-    auto f = resolveConfig(file_or_dir, fes);
-    if (!f || std::find(fes.begin(), fes.end(), f->filename().u8string()) == fes.end())
-    {
-        if (f)
-        {
-            LOG_INFO(logger, "Unknown config, trying in configless mode. Default mode is native (ASM/C/C++)");
-
-            // find in file first: 'sw driver package-id', call that driver on whole file
-        }
-
-        path p = file_or_dir;
-        p = fs::absolute(p);
-
-        SW_UNIMPLEMENTED;
-
-        /*auto b = std::make_unique<Build>(swctx);
-        b->Local = true;
-        b->setSourceDirectory(fs::is_directory(p) ? p : p.parent_path());
-        b->load(p, true);
-        return b;*/
-    }
-
-    SW_UNIMPLEMENTED;
-
-    /*auto b = std::make_unique<Build>(swctx);
-    b->Local = true;
-    b->setSourceDirectory(f.value().parent_path());
-    b->load(f.value());
-    return b;*/
+    for (auto &i : inputs)
+        i.getDriver().load(i);
 }
 
 void SwContext::registerDriver(std::unique_ptr<IDriver> driver)
@@ -143,37 +86,32 @@ void SwContext::registerDriver(std::unique_ptr<IDriver> driver)
     drivers.insert_or_assign(driver->getPackageId(), std::move(driver));
 }
 
-FilesOrdered SwContext::getAvailableFrontendConfigFilenames() const
-{
-    SW_UNIMPLEMENTED;
-
-    /*FilesOrdered s;
-    for (auto &[pkg, drv] : drivers)
-    {
-        auto s2 = drv->getAvailableFrontendConfigFilenames();
-        s.insert(s.end(), s2.begin(), s2.end());
-    }
-    return s;*/
-}
-
 Input::Input(const String &s, const SwContext &swctx)
 {
-    path p = s;
-    auto status = fs::status(p);
-    if (status.type() == fs::file_type::not_found)
-    {
-        type = InputType::PackageId;
-        subject = PackageId(s).toString(); // force package id check
-        return;
-    }
+    init(s, swctx);
+}
 
-    if (p.empty())
-        p = fs::current_path();
-    if (!p.is_absolute())
-        p = fs::absolute(p);
+Input::Input(const path &p, const SwContext &swctx)
+{
+    init(p, swctx);
+}
 
-    subject = normalize_path(p);
+Input::Input(const PackageId &p, const SwContext &swctx)
+{
+    init(p);
+}
 
+void Input::init(const String &s, const SwContext &swctx)
+{
+    path p(s);
+    if (fs::exists(p))
+        init(p, swctx);
+    else
+        init(PackageId(s));
+}
+
+void Input::init(const path &in, const SwContext &swctx)
+{
     auto find_driver = [this, &swctx](auto t)
     {
         type = t;
@@ -187,6 +125,15 @@ Input::Input(const String &s, const SwContext &swctx)
         }
         return false;
     };
+
+    path p = in;
+    if (p.empty())
+        p = swctx.source_dir;
+    if (!p.is_absolute())
+        p = fs::absolute(p);
+
+    auto status = fs::status(p);
+    subject = path(normalize_path(p));
 
     // spec or regular file
     if (status.type() == fs::file_type::regular)
@@ -205,12 +152,12 @@ Input::Input(const String &s, const SwContext &swctx)
             SW_UNIMPLEMENTED;
 
             /*
-                - install driver
-                - load & register it
-                - re-run this ctor
+            - install driver
+            - load & register it
+            - re-run this ctor
             */
 
-            auto driver_pkg = swctx.install({ m[1].str() })[m[1].str()];
+            auto driver_pkg = swctx.install({ m[1].str() }).find(m[1].str());
             return;
         }
     }
@@ -221,9 +168,25 @@ Input::Input(const String &s, const SwContext &swctx)
             return;
     }
     else
-        throw SW_RUNTIME_ERROR("Bad file type: " + s);
+        throw SW_RUNTIME_ERROR("Bad file type: " + normalize_path(p));
 
-    throw SW_RUNTIME_ERROR("Cannot select driver for " + subject);
+    throw SW_RUNTIME_ERROR("Cannot select driver for " + normalize_path(p));
+}
+
+void Input::init(const PackageId &p)
+{
+    subject = p;
+    type = InputType::PackageId;
+}
+
+path Input::getPath() const
+{
+    return std::get<path>(subject);
+}
+
+PackageId Input::getPackageId() const
+{
+    return std::get<PackageId>(subject);
 }
 
 }

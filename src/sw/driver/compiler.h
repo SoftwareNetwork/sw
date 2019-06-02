@@ -140,6 +140,7 @@ struct SW_DRIVER_CPP_API NativeToolchain
     bool MT = false;
     // toolset
     // win sdk
+    // add XP support
     // more settings
 
     // misc

@@ -13,10 +13,12 @@ namespace sw::driver::cpp
 
 struct SW_DRIVER_CPP_API Driver : IDriver
 {
+    Driver(const SwContext &swctx);
     virtual ~Driver() = default;
 
     PackageId getPackageId() const override;
-    FilesOrdered getAvailableFrontendConfigFilenames() const override;
+    bool canLoad(const Input &) const override;
+    void load(const Input &) override;
 };
 
 }

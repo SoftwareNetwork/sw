@@ -42,8 +42,8 @@ struct IDriver
     virtual PackageId getPackageId() const = 0;
     //virtual FilesOrdered getAvailableFrontendConfigFilenames() const = 0;
 
-    virtual bool canLoad(const Input &) const { return false; }
-    virtual void load(const Input &);
+    virtual bool canLoad(const Input &) const = 0;
+    virtual void load(const Input &) = 0;
     // prepare()
     // getCommands()
 };
@@ -52,7 +52,15 @@ struct IDriver
 
 struct SW_CORE_API SwContext : SwBuilderContext
 {
+    struct InputVariant : std::variant<String, path, PackageId>
+    {
+        using Base = std::variant<String, path, PackageId>;
+        using Base::Base;
+        InputVariant(const char *p) : Base(std::string(p)) {}
+    };
+
     using Drivers = std::map<PackageId, std::unique_ptr<IDriver>>;
+    using Inputs = std::set<InputVariant>; // unique
 
     path source_dir;
 
@@ -62,41 +70,42 @@ struct SW_CORE_API SwContext : SwBuilderContext
     void registerDriver(std::unique_ptr<IDriver> driver);
     const Drivers &getDrivers() const { return drivers; }
 
-    void build(const Strings &inputs);
+    void build(const Strings &inputs); // dynamic detection
+    void build(const Inputs &inputs);  // separate types
     // void load(); // only
     // void configure(); // = load() + save execution plan
 
     // move privates to impl?
 private:
+    using ProcessedInputs = std::vector<Input>;
+
     Drivers drivers;
 
-    std::vector<Input> makeInputs(const Strings &inputs);
-
-    void load(const path &file_or_dir);
-    FilesOrdered getAvailableFrontendConfigFilenames() const;
-    static std::optional<path> resolveConfig(const path &file_or_dir, const FilesOrdered &fe_s);
-    static std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s);
-
-    void build(const path &file_or_dir);
-    void build(const Files &files_or_dirs);
-    void build(const String &file_or_dir_or_package);
-
-    friend struct Input;
+    ProcessedInputs makeInputs(const Strings &inputs);
+    ProcessedInputs makeInputs(const Inputs &inputs);
+    void load(const ProcessedInputs &inputs);
 };
 
 struct Input
 {
-    String subject;
-    // settings?
+    Input(const String &, const SwContext &);
+    Input(const path &, const SwContext &);
+    Input(const PackageId &, const SwContext &);
 
-    Input(const String &subject, const SwContext &);
-
+    IDriver &getDriver() const { return *driver; }
     InputType getType() const { return type; }
-    IDriver &getDriver() { return *driver; }
+    path getPath() const;
+    PackageId getPackageId() const;
 
 private:
+    std::variant<path, PackageId> subject;
     InputType type;
     IDriver *driver = nullptr;
+    // settings?
+
+    void init(const String &, const SwContext &);
+    void init(const path &, const SwContext &);
+    void init(const PackageId &);
 };
 
 } // namespace sw

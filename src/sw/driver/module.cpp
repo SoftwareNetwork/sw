@@ -109,10 +109,4 @@ int Module::sw_get_module_abi_version() const
     return sw_get_module_abi_version_();
 }
 
-ModuleStorage &getModuleStorage(const Build &owner)
-{
-    static std::map<const void*, ModuleStorage> s;
-    return s[&owner];
-}
-
 }

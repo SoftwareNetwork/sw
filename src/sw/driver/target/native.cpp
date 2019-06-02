@@ -643,6 +643,12 @@ void NativeCompiledTarget::setOutputFile()
         if (getSelectedTool() != Librarian.get())
             getSelectedTool()->setImportLibrary(base);
     }
+
+    // set generated early
+    if (auto f = getOutputFile(); !f.empty())
+        File(f, getFs()).getFileRecord().setGenerated(true);
+    if (auto f = getOutputFile(); !f.empty())
+        File(f, getFs()).getFileRecord().setGenerated(true);
 }
 
 path Target::getOutputFileName() const
