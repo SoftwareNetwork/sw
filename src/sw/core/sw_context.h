@@ -63,8 +63,19 @@ struct SW_CORE_API SwContext : SwBuilderContext
         InputVariant(const char *p) : Base(std::string(p)) {}
     };
 
+    // unique
+    struct Inputs : std::set<InputVariant>
+    {
+        using Base = std::set<InputVariant>;
+        using Base::Base; // separate types
+        Inputs(const Strings &inputs) // dynamic detection
+        {
+            for (auto &i : inputs)
+                insert(i);
+        }
+    };
+
     using Drivers = std::map<PackageId, std::unique_ptr<IDriver>>;
-    using Inputs = std::set<InputVariant>; // unique
 
     // move to drivers?
     path source_dir;
@@ -75,8 +86,7 @@ struct SW_CORE_API SwContext : SwBuilderContext
     void registerDriver(std::unique_ptr<IDriver> driver);
     const Drivers &getDrivers() const { return drivers; }
 
-    void build(const Strings &inputs); // dynamic detection
-    void build(const Inputs &inputs);  // separate types
+    void build(const Inputs &inputs);
     // void load(); // only
     // void configure(); // = load() + save execution plan
 
@@ -86,7 +96,6 @@ private:
 
     Drivers drivers;
 
-    ProcessedInputs makeInputs(const Strings &inputs);
     ProcessedInputs makeInputs(const Inputs &inputs);
     void load(const ProcessedInputs &inputs);
 };

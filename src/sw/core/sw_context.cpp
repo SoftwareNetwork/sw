@@ -28,12 +28,6 @@ SwContext::~SwContext()
     std::string s1, s2;
 }
 
-void SwContext::build(const Strings &strings)
-{
-    auto inputs = makeInputs(strings);
-    load(inputs);
-}
-
 void SwContext::build(const Inputs &strings)
 {
     auto inputs = makeInputs(strings);
@@ -60,14 +54,6 @@ SwContext::ProcessedInputs SwContext::makeInputs(const Inputs &strings)
             SW_UNREACHABLE;
         }
     }
-    return inputs;
-}
-
-SwContext::ProcessedInputs SwContext::makeInputs(const Strings &strings)
-{
-    ProcessedInputs inputs;
-    for (auto &s : strings)
-        inputs.emplace(s, *this);
     return inputs;
 }
 

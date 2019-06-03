@@ -19,28 +19,6 @@ DECLARE_STATIC_LOGGER(logger, "build");
 namespace sw
 {
 
-std::optional<path> findConfig(const path &dir)
-{
-    SW_UNIMPLEMENTED;
-
-    /*for (auto &fn : Build::getAvailableFrontendConfigFilenames())
-        if (fs::exists(dir / fn))
-            return dir / fn;
-    return {};*/
-}
-
-std::optional<path> resolveConfig(const path &file_or_dir)
-{
-    auto f = file_or_dir;
-    if (f.empty())
-        f = fs::current_path();
-    if (!f.is_absolute())
-        f = fs::absolute(f);
-    if (fs::is_directory(f))
-        return findConfig(f);
-    return f;
-}
-
 std::unique_ptr<Build> load(const SwContext &swctx, const path &file_or_dir)
 {
     SW_UNIMPLEMENTED;
@@ -78,10 +56,11 @@ void run(const SwContext &swctx, const PackageId &package)
 
 std::optional<String> read_config(const path &file_or_dir)
 {
-    auto f = findConfig(file_or_dir);
+    SW_UNIMPLEMENTED;
+    /*auto f = findConfig(file_or_dir);
     if (!f)
         return {};
-    return read_file(f.value());
+    return read_file(f.value());*/
 }
 
 static auto fetch1(const SwContext &swctx, const path &fn, const FetchOptions &opts)

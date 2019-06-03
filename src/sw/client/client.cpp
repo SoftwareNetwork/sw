@@ -527,7 +527,7 @@ SUBCOMMAND_DECL2(build)
 
     // if -B specified, it is used as is
 
-    swctx.build(build_arg);
+    swctx.build((Strings&)build_arg);
 }
 
 static ::cl::list<String> remove_arg(::cl::Positional, ::cl::desc("package to remove"), ::cl::sub(subcommand_remove));
