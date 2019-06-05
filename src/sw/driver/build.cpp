@@ -1224,22 +1224,18 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
     return lib;
 }
 
-// TODO: remove '.cpp' part later
-#define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp"
+#define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-0.3.0"
 #define SW_DRIVER_INCLUDE_DIR "src"
 
 static NativeCompiledTarget &getDriverTarget(Build &solution)
 {
-    auto i = solution.getChildren().find(SW_DRIVER_NAME);
-    if (i == solution.getChildren().end(SW_DRIVER_NAME))
+    auto i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
+    if (i == solution.getChildren().end())
         throw SW_RUNTIME_ERROR("no driver target");
-    if (i->second.empty_releases())
-        throw SW_RUNTIME_ERROR("no driver target");
-    auto &j = i->second.rbegin_releases()->second;
     TargetSettings tid{ solution.getSettings() };
-    auto k = j.find(tid);
-    if (k == j.end())
-        throw SW_RUNTIME_ERROR("no driver target");
+    auto k = i->second.find(tid);
+    if (k == i->second.end())
+        throw SW_RUNTIME_ERROR("no driver target (by settings)");
     return *std::dynamic_pointer_cast<NativeCompiledTarget>(k->second);
 }
 
