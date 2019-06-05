@@ -40,8 +40,13 @@ void detail::PackageData::applyVersion()
 }
 
 PackageDescription::PackageDescription(const std::string &s)
-    : base(s)
+    : data(s)
 {
+}
+
+const String &PackageDescription::getString() const
+{
+    return data;
 }
 
 JsonPackageDescription::JsonPackageDescription(const std::string &s)
@@ -51,7 +56,7 @@ JsonPackageDescription::JsonPackageDescription(const std::string &s)
 
 detail::PackageData JsonPackageDescription::getData() const
 {
-    auto j = nlohmann::json::parse(*this);
+    auto j = nlohmann::json::parse(getString());
     detail::PackageData d;
     d.source = Source::load(j["source"]);
     d.version = j["version"].get<std::string>();

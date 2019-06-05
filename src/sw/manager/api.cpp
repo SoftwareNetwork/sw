@@ -114,7 +114,7 @@ void Api::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, cons
     nlohmann::json jm;
     for (auto &[pkg, d] : pkgs)
     {
-        auto j = nlohmann::json::parse(*d);
+        auto j = nlohmann::json::parse(d->getString());
         auto rd = j["root_dir"].get<String>();
         auto sz = rd.size();
         if (rd.back() != '\\' && rd.back() != '/')
