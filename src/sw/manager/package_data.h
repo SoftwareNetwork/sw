@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "package.h"
+#include "package_id.h"
 #include "source.h"
 
 // !!! see more fields here https://github.com/aws/aws-sdk-cpp/blob/master/aws-cpp-sdk-s3/nuget/aws-cpp-sdk-s3.autopkg
@@ -103,15 +103,19 @@ struct PackageData
 /**
 * generic pkg desc
 */
-struct SW_MANAGER_API PackageDescription : std::string
+struct SW_MANAGER_API PackageDescription
 {
-    using base = std::string;
-
     PackageDescription(const std::string &);
     virtual ~PackageDescription() = default;
 
     /// convert to internal data
     virtual detail::PackageData getData() const = 0;
+
+    //
+    const String &getString() const;
+
+private:
+    std::string data;
 };
 
 using PackageDescriptionPtr = std::unique_ptr<PackageDescription>;
