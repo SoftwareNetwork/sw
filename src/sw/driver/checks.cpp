@@ -301,20 +301,37 @@ int main() { return IsBigEndian(); }
     {
         LOG_INFO(logger, "Performing " << unchecked.size() << " check(s): " << name);
 
+        SCOPE_EXIT
+        {
+            // remove tmp dir
+            error_code ec;
+            fs::remove_all(checker.build.getChecksDir(), ec);
+        };
+
         //auto &e = getExecutor();
         static Executor e(getExecutor().numberOfThreads()); // separate executor!
                                                      //ep.throw_on_errors = false;
                                                      //ep.skip_errors = ep.commands.size();
-        ep.execute(e);
 
-        // remove tmp dir
-        error_code ec;
-        fs::remove_all(checker.build.getChecksDir(), ec);
+        try
+        {
+            ep.execute(e);
+        }
+        catch (...)
+        {
+            // in case of error, some checks may be unchecked
+            // and we record only checked checks
+            for (auto &[h, c] : checks)
+            {
+                if (c->Value)
+                    cs.add(*c);
+            }
+            cs.save(fn);
+            throw;
+        }
 
         for (auto &[h, c] : checks)
-        {
             cs.add(*c);
-        }
 
         auto cc_dir = fn.parent_path() / "cc";
 
@@ -543,6 +560,7 @@ Build Check::setupSolution(const path &f) const
     s.NamePrefix.clear();
     s.Local = true;
     s.checks_build = true;
+    s.DryRun = false;
 
     auto ss = check_set->t->getSettings();
 

@@ -160,7 +160,7 @@ int main(int argc, char **argv)
     getExecutor(&e);
 
     SwManagerContext swctx(Settings::get_user_settings().storage_dir);
-    auto m = swctx.install({{"org.sw.sw.client.driver.cpp"}});
+    auto m = swctx.install({{"org.sw.sw.client.driver.cpp-0.3.1"}});
 
     write_required_packages(m);
     write_build_script(m);
