@@ -373,7 +373,6 @@ static ::cl::list<String> install_args(::cl::ConsumeAfter, ::cl::desc("Packages 
 // upload
 static ::cl::opt<String> upload_remote(::cl::Positional, ::cl::desc("Remote name"), ::cl::sub(subcommand_upload));
 static ::cl::opt<String> upload_prefix(::cl::Positional, ::cl::desc("Prefix path"), ::cl::sub(subcommand_upload), ::cl::Required);
-static ::cl::opt<path> upload_path_to_root(::cl::Positional, ::cl::desc("Path to root"), ::cl::sub(subcommand_upload));
 static ::cl::opt<bool> build_before_upload("build", ::cl::desc("Build before upload"), ::cl::sub(subcommand_upload));
 
 // ide commands
@@ -916,19 +915,18 @@ SUBCOMMAND_DECL(uri)
 
 void override_package_perform(sw::SwContext &swctx)
 {
-    SW_UNIMPLEMENTED;
+    swctx.load({"."});
 
-    /*auto s = sw::load(swctx, ".");
-    auto &b = *s.get();
-    b.prepareStep();
+    // one prepare step will find sources
+    // maybe add explicit enum value
+    swctx.prepareStep();
 
-    auto gn = swctx->getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
-    for (auto &[pkg, desc] : b.getPackages())
+    auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
+    for (auto &[pkg, desc] : swctx.getPackages())
     {
         sw::PackagePath prefix = override_package;
         sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
         auto dir = fs::absolute(".");
-        //auto dir = fs::absolute(override_package[1]);
         LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
         // fix deps' prefix
         sw::UnresolvedPackages deps;
@@ -939,14 +937,14 @@ void override_package_perform(sw::SwContext &swctx)
             else
                 deps.insert({ prefix / d.ppath, d.range });
         }
-        LocalPackage lp(swctx->getLocalStorage(), pkg2);
+        LocalPackage lp(swctx.getLocalStorage(), pkg2);
         PackageData d;
         d.sdir = dir;
         d.dependencies = deps;
         d.group_number = gn;
         d.prefix = (int)prefix.size();
-        swctx->getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
-    }*/
+        swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
+    }
 }
 
 SUBCOMMAND_DECL(mirror)
@@ -1266,8 +1264,6 @@ SUBCOMMAND_DECL2(upload)
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(8);
     //opts.apply_version_to_source = true;
-    if (!upload_path_to_root.empty())
-        opts.source_dir = fs::relative(fs::current_path(), fs::current_path() / upload_path_to_root);
     auto s = sw::fetch_and_load(swctx, build_arg_update.getValue(), opts);
     if (build_before_upload)
     {
@@ -1278,7 +1274,7 @@ SUBCOMMAND_DECL2(upload)
         SW_UNIMPLEMENTED;
     }
 
-    auto m = s->getPackages();
+    /*auto m = s->getPackages();
     // dbg purposes
     for (auto &[id, d] : m)
     {
@@ -1291,7 +1287,7 @@ SUBCOMMAND_DECL2(upload)
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     sw::Api api(*current_remote);
-    api.addVersion(upload_prefix, m, sw::read_config(build_arg_update.getValue()).value());
+    api.addVersion(upload_prefix, m, sw::read_config(build_arg_update.getValue()).value());*/
 }
 
 String getBuildTime();

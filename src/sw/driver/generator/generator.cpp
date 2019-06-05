@@ -508,11 +508,12 @@ void MakeGenerator::generate(const Build &b)
     Files outputs;
     for (auto &[p, tgts] : b.TargetsToBuild)
     {
-        for (auto &[s, t] : tgts)
+        for (auto &tgt : tgts)
         {
+            auto t = tgt->as<Target*>();
             if (b.skipTarget(t->Scope))
                 continue;
-            if (auto nt = t->as<NativeCompiledTarget>(); nt)
+            if (auto nt = t->as<NativeCompiledTarget*>(); nt)
             {
                 auto c = nt->getCommand();
                 outputs.insert(c->outputs.begin(), c->outputs.end());
@@ -681,8 +682,9 @@ void CompilationDatabaseGenerator::generate(const Build &b)
         nlohmann::json j;
         for (auto &[p, tgts] : b.getChildren())
         {
-            for (auto &[s, t] : tgts)
+            for (auto &tgt : tgts)
             {
+                auto t = tgt->as<Target*>();
                 if (b.skipTarget(t->Scope))
                     continue;
                 if (!t->isLocal())

@@ -9,6 +9,7 @@
 #include "compiler.h"
 
 #include <sw/builder/os.h>
+#include <sw/core/target.h>
 
 namespace sw
 {
@@ -17,6 +18,8 @@ struct SW_DRIVER_CPP_API BuildSettings
 {
     OS TargetOS;
     NativeToolchain Native;
+
+    //
     bool activated = false;
 
     // other langs?
@@ -25,6 +28,8 @@ struct SW_DRIVER_CPP_API BuildSettings
     void init();
     String getConfig() const;
     String getTargetTriplet() const;
+
+    TargetSettings getTargetSettings() const;
 
     bool operator<(const BuildSettings &rhs) const;
     bool operator==(const BuildSettings &rhs) const;

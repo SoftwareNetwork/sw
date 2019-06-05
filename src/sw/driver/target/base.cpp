@@ -75,7 +75,7 @@ String toString(TargetType T)
     throw SW_RUNTIME_ERROR("unreachable code");
 }
 
-bool TargetSettings::operator<(const TargetSettings &rhs) const
+/*bool TargetSettings::operator<(const TargetSettings &rhs) const
 {
     return std::tie(ss, dependencies, features) < std::tie(rhs.ss, rhs.dependencies, rhs.features);
 }
@@ -83,6 +83,20 @@ bool TargetSettings::operator<(const TargetSettings &rhs) const
 String TargetSettings::getConfig() const
 {
     return ss.getConfig();
+}*/
+
+SettingsComparator::~SettingsComparator()
+{
+}
+
+bool SettingsComparator::equal(const TargetSettings &s1, const TargetSettings &s2) const
+{
+    return s1 == s2;
+}
+
+bool SettingsComparator::less(const TargetSettings &s1, const TargetSettings &s2) const
+{
+    return s1 < s2;
 }
 
 TargetBase::TargetBase()
@@ -91,7 +105,6 @@ TargetBase::TargetBase()
 
 TargetBase::TargetBase(const TargetBase &rhs)
     : ProjectDirectories(rhs)
-    , source(rhs.source ? rhs.source->clone() : nullptr)
     , Local(rhs.Local)
     , DryRun(rhs.DryRun)
     , NamePrefix(rhs.NamePrefix)
@@ -110,14 +123,16 @@ bool TargetBase::hasSameParent(const TargetBase *t) const
     return getPackage().ppath.hasSameParent(t->getPackage().ppath);
 }
 
-TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V)
+TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V)
 {
     auto N = constructTargetName(Name);
 
     t->pkg = std::make_unique<LocalPackage>(getSolution().swctx.getLocalStorage(), N, V);
 
-    TargetSettings tid{ getSolution().getSettings() };
-    t->ts = &tid;
+    //TargetSettings tid{ getSolution().getSettings().getTargetSettings() };
+    //t->ts = &tid;
+    t->bs = getSolution().getSettings();
+    t->ts = getSolution().getSettings().getTargetSettings();
 
     // set some general settings, then init, then register
     setupTarget(t.get());
@@ -152,19 +167,26 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
 
     while (t->init())
         ;
-    addChild(t);
 
+    if (!add)
+    {
+        getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
+        return *t;
+    }
+
+    auto &ref = addChild(t, getSolution().getSettings().getTargetSettings());
+    t->bs = getSolution().getSettings();
+    t->ts = getSolution().getSettings().getTargetSettings();
     getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
-
-    return *t;
+    return ref;
 }
 
-void TargetBase::addChild(const TargetBaseTypePtr &t)
+TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
 {
     if (t->getType() == TargetType::Directory || t->getType() == TargetType::Project)
     {
         getSolution().dummy_children.push_back(t);
-        return;
+        return *t;
     }
 
     // we do not activate targets that are not selected for current builds
@@ -174,20 +196,23 @@ void TargetBase::addChild(const TargetBaseTypePtr &t)
         t->skip = true;
     }
 
-    TargetSettings tid{ getSolution().getSettings() };
+    return addChild(t, getSolution().getSettings().getTargetSettings());
+}
+
+TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t, const TargetSettings &tid)
+{
     auto i = getSolution().getChildren().find(t->getPackage());
     if (i != getSolution().getChildren().end())
     {
         auto j = i->second.find(tid);
         if (j != i->second.end())
+        {
             throw SW_RUNTIME_ERROR("Target already exists: " + t->getPackage().toString());
-        getSolution().children[t->getPackage()][tid] = t;
+            //return (*j)->as<TargetBase>();
+        }
     }
-    else
-    {
-        getSolution().children[t->getPackage()][tid] = t;
-    }
-    t->ts = &getSolution().children[t->getPackage()].find(tid)->first;
+    getSolution().getChildren()[t->getPackage()].push_back(t);
+    return *t;
 }
 
 void TargetBase::setupTarget(TargetBaseType *t) const
@@ -203,8 +228,6 @@ void TargetBase::setupTarget(TargetBaseType *t) const
 
     // inherit from this
     t->build = &getSolution();
-    if (source)
-        t->source = source->clone();
 
     t->IsConfig = IsConfig; // TODO: inherit from reconsider
     t->Local = Local; // TODO: inherit from reconsider
@@ -230,92 +253,6 @@ Build &TargetBase::getSolution()
 const Build &TargetBase::getSolution() const
 {
     return build ? *build : (const Build &)*this;
-}
-
-void TargetBase::setSource(const Source &s)
-{
-    source = s.clone();
-
-    // apply some defaults
-    if (auto g = dynamic_cast<Git*>(source.get()); g && !g->isValid())
-    {
-        if (getPackage().version.isBranch())
-        {
-            if (g->branch.empty())
-                g->branch = "{v}";
-        }
-        else
-        {
-            if (g->tag.empty())
-                g->tag = "{v}";
-        }
-    }
-
-    auto d = getSolution().fetch_dir;
-    if (d.empty() || !isLocal())
-        return;
-
-    auto s2 = source->clone(); // make a copy!
-    s2->applyVersion(getPackage().getVersion());
-    d /= s2->getHash();
-
-    if (!fs::exists(d))
-    {
-        LOG_INFO(logger, "Downloading source:\n" << s2->print());
-        s2->download(d);
-    }
-    d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
-    d /= getSolution().prefix_source_dir;
-    getSolution().source_dirs_by_source[s2->getHash()] = d;
-    setSourceDirectory(d);
-}
-
-TargetBase &TargetBase::operator+=(const Source &s)
-{
-    setSource(s);
-    return *this;
-}
-
-TargetBase &TargetBase::operator+=(std::unique_ptr<Source> s)
-{
-    if (s)
-        return operator+=(*s);
-    return *this;
-}
-
-void TargetBase::operator=(const Source &s)
-{
-    setSource(s);
-}
-
-void TargetBase::fetch()
-{
-    if (DryRun)
-        return;
-
-    // move to swctx?
-    static SourceDirMap fetched_dirs;
-
-    auto s2 = getSource().clone(); // make a copy!
-    auto i = fetched_dirs.find(s2->getHash());
-    if (i == fetched_dirs.end())
-    {
-        path d = s2->getHash();
-        d = BinaryDir / d;
-        if (!fs::exists(d))
-        {
-            s2->applyVersion(getPackage().version);
-            s2->download(d);
-        }
-        d = d / findRootDirectory(d);
-        setSourceDirectory(d);
-
-        fetched_dirs.emplace(s2->getHash(), d);
-    }
-    else
-    {
-        setSourceDirectory(i->second);
-    }
 }
 
 path TargetBase::getServiceDir() const
@@ -349,19 +286,124 @@ LocalPackage &TargetBase::getPackageMutable()
     return *pkg;
 }
 
-const Source &TargetBase::getSource() const
+Target::Target(const Target &rhs)
+    : TargetBase(rhs)
+    , ProgramStorage(rhs)
+    , source(rhs.source ? rhs.source->clone() : nullptr)
+    , Scope(rhs.Scope)
+    , RootDirectory(rhs.RootDirectory)
+{
+}
+
+const Source &Target::getSource() const
 {
     if (!source)
         throw SW_LOGIC_ERROR("source is undefined");
     return *source;
 }
 
-Target::Target(const Target &rhs)
-    : TargetBase(rhs)
-    , ProgramStorage(rhs)
-    , Scope(rhs.Scope)
-    , RootDirectory(rhs.RootDirectory)
+void Target::setSource(const Source &s)
 {
+    source = s.clone();
+
+    // apply some defaults
+    if (auto g = dynamic_cast<Git*>(source.get()); g && !g->isValid())
+    {
+        if (getPackage().version.isBranch())
+        {
+            if (g->branch.empty())
+                g->branch = "{v}";
+        }
+        else
+        {
+            if (g->tag.empty())
+                g->tag = "{v}";
+        }
+    }
+
+    auto d = getSolution().fetch_dir;
+    if (d.empty() || !isLocal())
+        return;
+
+    auto s2 = source->clone(); // make a copy!
+    s2->applyVersion(getPackage().getVersion());
+    d /= s2->getHash();
+
+    if (!fs::exists(d))
+    {
+        LOG_INFO(logger, "Downloading source:\n" << s2->print());
+        s2->download(d);
+    }
+    d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
+    getSolution().source_dirs_by_source[s2->getHash()] = d;
+    setSourceDirectory(d);
+}
+
+Target &Target::operator+=(const Source &s)
+{
+    setSource(s);
+    return *this;
+}
+
+Target &Target::operator+=(std::unique_ptr<Source> s)
+{
+    if (s)
+        return operator+=(*s);
+    return *this;
+}
+
+void Target::operator=(const Source &s)
+{
+    setSource(s);
+}
+
+void Target::fetch()
+{
+    if (DryRun)
+        return;
+
+    // move to swctx?
+    static SourceDirMap fetched_dirs;
+
+    auto s2 = getSource().clone(); // make a copy!
+    auto i = fetched_dirs.find(s2->getHash());
+    if (i == fetched_dirs.end())
+    {
+        path d = s2->getHash();
+        d = BinaryDir / d;
+        if (!fs::exists(d))
+        {
+            s2->applyVersion(getPackage().version);
+            s2->download(d);
+        }
+        d = d / findRootDirectory(d);
+        setSourceDirectory(d);
+
+        fetched_dirs.emplace(s2->getHash(), d);
+    }
+    else
+    {
+        setSourceDirectory(i->second);
+    }
+}
+
+bool Target::operator==(const TargetSettings &s) const
+{
+    if (scmp)
+        return scmp->equal(ts, s);
+    return ts == s;
+}
+
+bool Target::operator<(const TargetSettings &s) const
+{
+    if (scmp)
+        return scmp->less(ts, s);
+    return ts < s;
+}
+
+void Target::setSettingsComparator(std::unique_ptr<SettingsComparator> cmp)
+{
+    scmp = std::move(cmp);
 }
 
 Program *Target::findProgramByExtension(const String &ext) const
@@ -377,25 +419,19 @@ Program *Target::findProgramByExtension(const String &ext) const
     auto pkg = getSolution().swctx.resolve(*u);
     auto cld = getSolution().getChildren();
     // TODO: get host settings?
-    TargetSettings tid{ getSettings() };
-    auto tgt = cld.find(pkg, tid);
+    auto tgt = cld.find(pkg, getSettings().getTargetSettings());
     if (!tgt)
         return {};
-    if (auto t = tgt->as<PredefinedProgram>())
+    if (auto t = tgt->as<PredefinedProgram*>())
     {
         return t->getProgram().get();
     }
     throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + pkg.toString());
 }
 
-String Target::getConfigRaw() const
+String Target::getConfig() const
 {
-    return ts->getConfig();
-}
-
-String Target::getConfig(bool use_short_config) const
-{
-    return hashConfig(getConfigRaw(), use_short_config);
+    return ts.getHash();
 }
 
 path Target::getBaseDir() const
@@ -411,7 +447,7 @@ path Target::getTargetsDir() const
 path Target::getTargetDirShort(const path &root) const
 {
     // make t subdir or tgt? or tgts?
-    return root / "t" / getConfig(true) / shorten_hash(blake2b_512(getPackage().toString()), 6);
+    return root / "t" / getConfig() / shorten_hash(blake2b_512(getPackage().toString()), 6);
 }
 
 path Target::getTempDir() const
@@ -421,12 +457,12 @@ path Target::getTempDir() const
 
 path Target::getObjectDir() const
 {
-    return getObjectDir(getPackage(), getConfig(true));
+    return getObjectDir(getPackage(), getConfig());
 }
 
 path Target::getObjectDir(const LocalPackage &in) const
 {
-    return getObjectDir(in, getConfig(true));
+    return getObjectDir(in, getConfig());
 }
 
 path Target::getObjectDir(const LocalPackage &pkg, const String &cfg)
@@ -486,7 +522,7 @@ void Target::removeFile(const path &fn, bool binary_dir)
 
 const BuildSettings &Target::getSettings() const
 {
-    return ts->ss;
+    return bs;
 }
 
 FileStorage &Target::getFs() const
@@ -511,11 +547,7 @@ bool Target::init()
         String s;
         for (auto &v : ss)
             s += v + "\n";
-        bool short_config = true;
-        auto c = getConfig(short_config);
-        //if (!s.empty())
-            //addConfigElement(c, s);
-        c = hashConfig(c, short_config);
+        auto c = getConfig();
         return c;
     };
 

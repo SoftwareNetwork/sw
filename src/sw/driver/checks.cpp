@@ -542,6 +542,7 @@ Build Check::setupSolution(const path &f) const
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
     s.Local = true;
+    s.checks_build = true;
 
     auto ss = check_set->t->getSettings();
 
@@ -562,7 +563,7 @@ Build Check::setupSolution(const path &f) const
 void Check::setupTarget(NativeCompiledTarget &e) const
 {
     e.GenerateWindowsResource = false;
-    if (auto L = e.getSelectedTool()->as<VisualStudioLinker>())
+    if (auto L = e.getSelectedTool()->as<VisualStudioLinker*>())
         L->DisableIncrementalLink = true;
 }
 

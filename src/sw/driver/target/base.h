@@ -42,21 +42,19 @@ struct ProjectTarget;
 struct DirectoryTarget;
 using TargetBaseType = Target;
 using TargetBaseTypePtr = std::shared_ptr<TargetBaseType>;
+//using TargetBaseTypePtr = ITargetPtr;
 
 struct ExecutableTarget;
 struct LibraryTarget;
 struct StaticLibraryTarget;
 struct SharedLibraryTarget;
 
-struct TargetSettings
+struct SW_DRIVER_CPP_API SettingsComparator
 {
-    BuildSettings ss;
-    std::set<PackageId> dependencies;
-    StringSet features; // make map with values?
+    virtual ~SettingsComparator() = 0;
 
-    String getConfig() const;
-
-    bool operator<(const TargetSettings &rhs) const;
+    virtual bool equal(const TargetSettings &s1, const TargetSettings &s2) const;
+    virtual bool less(const TargetSettings &s1, const TargetSettings &s2) const;
 };
 
 /**
@@ -102,6 +100,38 @@ public:
         return add<T>(std::forward<Args>(args)...);
     }
 
+    /**
+    * \brief Make target.
+    */
+    template <typename T, typename ... Args>
+    T& make(const PackagePath &Name, Args && ... args)
+    {
+        if constexpr (sizeof...(Args) > 0)
+        {
+            if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>)
+                return makeTarget1<T>(Name, std::forward<Args>(args)...);
+            else
+                return makeTarget1<T>(Name, pkg ? getPackage().version : Version(), std::forward<Args>(args)...);
+        }
+        else
+            return makeTarget1<T>(Name, pkg ? getPackage().version : Version(), std::forward<Args>(args)...);
+    }
+
+    /**
+    * \brief Make target.
+    */
+    template <typename T, typename ... Args>
+    T &makeTarget(Args && ... args)
+    {
+        return make<T>(std::forward<Args>(args)...);
+    }
+
+    template <typename T>
+    T &registerTarget(const std::shared_ptr<T> &t)
+    {
+        return addChild(t);
+    }
+
 #define ADD_TARGET(t)                                       \
     template <typename... Args>                             \
     t##Target &add##t(Args &&... args)                      \
@@ -125,14 +155,6 @@ public:
 
     bool isLocal() const;
 
-    TargetBase &operator+=(const Source &);
-    TargetBase &operator+=(std::unique_ptr<Source>);
-    void operator=(const Source &); // remove?
-    void setSource(const Source &);
-    const Source &getSource() const;
-
-    void fetch();
-
     Build &getSolution();
     const Build &getSolution() const;
     path getServiceDir() const;
@@ -149,7 +171,6 @@ protected:
 
 private:
     std::unique_ptr<LocalPackage> pkg;
-    std::unique_ptr<Source> source;
 
     template <typename T, typename ... Args>
     T &addTarget1(const PackagePath &Name, const Version &V, Args && ... args)
@@ -157,14 +178,25 @@ private:
         static_assert(std::is_base_of_v<Target, T>, "Provide a valid Target type.");
 
         auto t = std::make_shared<T>(std::forward<Args>(args)...);
-        addTarget2(t, Name, V);
+        addTarget2(true, t, Name, V);
         return *t;
     }
 
-    TargetBase &addTarget2(const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V);
+    template <typename T, typename ... Args>
+    std::shared_ptr<T> makeTarget1(const PackagePath &Name, const Version &V, Args && ... args)
+    {
+        static_assert(std::is_base_of_v<Target, T>, "Provide a valid Target type.");
+
+        auto t = std::make_shared<T>(std::forward<Args>(args)...);
+        addTarget2(false, t, Name, V);
+        return t;
+    }
+
+    TargetBase &addTarget2(bool add, const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V);
 
     PackagePath constructTargetName(const PackagePath &Name) const;
-    void addChild(const TargetBaseTypePtr &t);
+    TargetBase &addChild(const TargetBaseTypePtr &t);
+    TargetBase &addChild(const TargetBaseTypePtr &t, const TargetSettings &);
     virtual void setupTarget(TargetBaseType *t) const;
 
     friend struct Assigner;
@@ -195,11 +227,22 @@ struct SW_DRIVER_CPP_API TargetDescription
 /**
 * \brief Single project target.
 */
-struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared_from_this<Target>
-    //,protected SourceFileStorage
-    //, Executable // impl, must not be visible to users
+struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage, std::enable_shared_from_this<Target>
 {
-    const TargetSettings *ts = nullptr;
+    /*struct TargetSettings
+    {
+        BuildSettings ss;
+        std::set<PackageId> dependencies;
+        StringSet features; // make map with values?
+
+        String getConfig() const;
+
+        bool operator<(const TargetSettings &rhs) const;
+    };
+
+    const TargetSettings *ts = nullptr;*/
+    TargetSettings ts;
+    BuildSettings bs;
 
     // Data storage for objects that must be alive with the target.
     // For example, program clones etc.
@@ -219,13 +262,28 @@ struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared
     Target() = default;
     virtual ~Target() = default;
 
+    // api
+    const Source &getSource() const override;
+    bool isReal() const override { return real; }
+    Files getSourceFiles() const override { SW_UNIMPLEMENTED; }
+    UnresolvedPackages getDependencies() const override { SW_UNIMPLEMENTED; }
+    bool operator==(const TargetSettings &) const override;
+    bool operator<(const TargetSettings &) const override;
+    void setSettingsComparator(std::unique_ptr<SettingsComparator>);
+
+    //
     Commands getCommands() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     DependencyPtr getDependency() const; // returns current target as dependency
     void registerCommand(builder::Command &cmd) const;
 
-    virtual String getConfigRaw() const;
-    String getConfig(bool use_short_config = false) const;
+    String getConfig() const; // make api?
+
+    Target &operator+=(const Source &);
+    Target &operator+=(std::unique_ptr<Source>);
+    void operator=(const Source &); // remove?
+    void setSource(const Source &);
+    void fetch();
 
     FileStorage &getFs() const;
 
@@ -236,7 +294,11 @@ struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared
 
     void setRootDirectory(const path &);
 
+    // driver settings
     const BuildSettings &getSettings() const;
+    // general settings
+    TargetSettings &getTargetSettings() { return ts; }
+    const TargetSettings &getTargetSettings() const { return ts; }
 
     // main apis
     virtual bool init(); // multipass init,
@@ -257,22 +319,27 @@ struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared
     path getObjectDir(const LocalPackage &pkg) const;
     static path getObjectDir(const LocalPackage &pkg, const String &cfg);
 
-    using TargetBase::operator+=;
-
 protected:
+    bool real = true;
     path RootDirectory;
     SW_MULTIPASS_VARIABLE(prepare_pass);
     SW_MULTIPASS_VARIABLE(init_pass);
     mutable bool deps_resolved = false;
+    std::unique_ptr<SettingsComparator> scmp;
 
     Target(const Target &);
 
     path getOutputFileName() const;
 
 private:
+    std::unique_ptr<Source> source;
+
     void applyRootDirectory();
 
     virtual Commands getCommands1() const { return Commands{}; }
+
+    // for source access
+    friend struct TargetBase;
 };
 
 struct SW_DRIVER_CPP_API ProjDirBase : Target
@@ -283,6 +350,7 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     virtual ~ProjDirBase() = default;
 
     TargetType getType() const override { return TargetType::Directory; }
+    bool isReal() const { return false; }
 };
 
 struct SW_DRIVER_CPP_API DirectoryTarget : ProjDirBase
@@ -420,8 +488,7 @@ std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s, const Stri
             continue;
         if (!exts.empty() && exts.find(p.extension().string()) == exts.end())
             continue;
-        auto f2 = f->template as<SF>();
-        if (f2)
+        if (auto f2 = f->template as<SF*>())
             files.insert(f2);
     }
     return files;

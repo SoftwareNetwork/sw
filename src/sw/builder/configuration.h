@@ -54,7 +54,4 @@ private:
 SW_BUILDER_API
 void addConfigElement(String &c, const String &e);
 
-SW_BUILDER_API
-String hashConfig(String &c, bool use_short_config);
-
 }

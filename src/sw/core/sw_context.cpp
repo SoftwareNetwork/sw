@@ -6,6 +6,9 @@
 
 #include "sw_context.h"
 
+#include <nlohmann/json.hpp>
+#include <primitives/pack.h>
+
 #include <regex>
 
 #include <primitives/log.h>
@@ -24,14 +27,93 @@ SwContext::SwContext(const path &local_storage_root_dir)
 
 SwContext::~SwContext()
 {
-    path p1, p2;
-    std::string s1, s2;
+}
+
+void SwContext::load(const Inputs &strings)
+{
+    auto inputs = makeInputs(strings);
+    load(inputs);
 }
 
 void SwContext::build(const Inputs &strings)
 {
     auto inputs = makeInputs(strings);
     load(inputs);
+    //build->execute();
+    SW_UNIMPLEMENTED;
+}
+
+bool SwContext::prepareStep()
+{
+    bool r = false;
+    for (auto &[d, g] : active_drivers)
+        r |= d->prepareStep();
+    return r;
+}
+
+PackageDescriptionMap SwContext::getPackages() const
+{
+    PackageDescriptionMap m;
+    for (auto &[pkg, tgts] : getTargets())
+    {
+        // deps
+        if (pkg.ppath.isAbsolute())
+            continue;
+
+        auto &t = *tgts.begin();
+        if (!t->isReal())
+            continue;
+
+        nlohmann::json j;
+
+        // source, version, path
+        t->getSource().save(j["source"]);
+        j["version"] = pkg.getVersion().toString();
+        j["path"] = pkg.ppath.toString();
+
+        auto rd = source_dir;
+        /*if (!fetch_info.sources.empty())
+        {
+            auto src = t->getSource().clone(); // copy
+            src->applyVersion(pkg.version);
+            auto si = fetch_info.sources.find(src->getHash());
+            if (si == fetch_info.sources.end())
+                throw SW_RUNTIME_ERROR("no such source");
+            rd = si->second;
+        }*/
+        j["root_dir"] = normalize_path(rd);
+
+        // double check files (normalize them)
+        Files files;
+        for (auto &f : t->getSourceFiles())
+            files.insert(f.lexically_normal());
+
+        // we put files under SW_SDIR_NAME to keep space near it
+        // e.g. for patch dir or other dirs (server provided files)
+        // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
+        nlohmann::json jm;
+        auto files_map1 = primitives::pack::prepare_files(files, rd.lexically_normal());
+        for (const auto &[f1, f2] : files_map1)
+        {
+            nlohmann::json jf;
+            jf["from"] = normalize_path(f1);
+            jf["to"] = normalize_path(f2);
+            j["files"].push_back(jf);
+        }
+
+        // deps
+        for (auto &d : t->getDependencies())
+        {
+            nlohmann::json jd;
+            jd["path"] = d.ppath.toString();
+            jd["range"] = d.range.toString();
+            j["dependencies"].push_back(jd);
+        }
+
+        auto s = j.dump();
+        m[pkg] = std::make_unique<JsonPackageDescription>(s);
+    }
+    return m;
 }
 
 SwContext::ProcessedInputs SwContext::makeInputs(const Inputs &strings)
@@ -59,13 +141,10 @@ SwContext::ProcessedInputs SwContext::makeInputs(const Inputs &strings)
 
 void SwContext::load(const ProcessedInputs &inputs)
 {
-    std::map<IDriver *, ProcessedInputs> grouped;
     for (auto &i : inputs)
-        grouped[&i.getDriver()].insert(i);
-    for (auto &[d, g] : grouped)
-    {
+        active_drivers[&i.getDriver()].insert(i);
+    for (auto &[d, g] : active_drivers)
         d->load(g);
-    }
 }
 
 void SwContext::registerDriver(std::unique_ptr<IDriver> driver)

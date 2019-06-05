@@ -94,7 +94,7 @@ path Command::getProgram() const
         auto t = d->target;
         if (!t)
             throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
-        if (auto nt = t->as<NativeCompiledTarget>())
+        if (auto nt = t->as<NativeCompiledTarget*>())
         {
             p = nt->getOutputFile();
             if (p.empty())
@@ -108,7 +108,7 @@ path Command::getProgram() const
                 throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated: " + normalize_path(p));
             }
         }
-        else if (auto nt = t->as<NativeTarget>())
+        else if (auto nt = t->as<NativeTarget*>())
         {
             p = nt->getOutputFile();
             if (p.empty())

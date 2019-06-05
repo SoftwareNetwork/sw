@@ -26,8 +26,6 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
-    using TargetBase::operator+=;
-
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
@@ -53,8 +51,6 @@ struct SW_DRIVER_CPP_API RustTarget : Target
     bool init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
-
-    using TargetBase::operator+=;
 
 private:
     using Target::getOutputFileName;
@@ -82,8 +78,6 @@ struct SW_DRIVER_CPP_API GoTarget : Target
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
-    using TargetBase::operator+=;
-
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
@@ -109,8 +103,6 @@ struct SW_DRIVER_CPP_API FortranTarget : Target
     bool init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
-
-    using TargetBase::operator+=;
 
 private:
     using Target::getOutputFileName;
@@ -138,8 +130,6 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
-    using TargetBase::operator+=;
-
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
@@ -166,8 +156,6 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
-    using TargetBase::operator+=;
-
 private:
     using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
@@ -193,8 +181,6 @@ struct SW_DRIVER_CPP_API DTarget : Target
     bool init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
-
-    using TargetBase::operator+=;
 
 private:
     using Target::getOutputFileName;

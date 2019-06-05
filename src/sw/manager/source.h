@@ -47,7 +47,6 @@ using SourceDirMap = std::unordered_map<String, path>;
 
 struct SourceDownloadOptions
 {
-    path source_dir;
     path root_dir; // root to download
     bool ignore_existing_dirs = false;
     std::chrono::seconds existing_dirs_age{ 0 };

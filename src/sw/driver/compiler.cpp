@@ -147,11 +147,17 @@ void detectCompilers(Build &s)
     detectDCompilers(s);*/
 }
 
+struct PredefinedTargetSettingsComparator : SettingsComparator
+{
+    bool equal(const TargetSettings &s1, const TargetSettings &s2) const override { return true; }
+};
+
 template <class T = PredefinedTarget>
 static decltype(auto) addProgramNoFile(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
 {
     auto &t = s.add<T>(pp, p->getVersion());
     t.setProgram(p);
+    //t.setSettingsComparator(std::make_unique<PredefinedTargetSettingsComparator>());
     t.sw_provided = true;
     return t;
 }
@@ -591,18 +597,20 @@ void detectWindowsCompilers(Build &s)
         //auto &vcruntime = s.addLibrary("com.Microsoft.VisualStudio.VC.vcruntime", v);
 
         auto &libcpp = s.addLibrary("com.Microsoft.VisualStudio.VC.libcpp", v);
+        //libcpp.getTargetSettings();
+        libcpp.setSettingsComparator(std::make_unique<PredefinedTargetSettingsComparator>());
         libcpp.AutoDetectOptions = false;
         libcpp.sw_provided = true;
         libcpp.Public.NativeCompilerOptions::System.IncludeDirectories.push_back(root / "include");
 
         auto &atlmfc = s.addLibrary("com.Microsoft.VisualStudio.VC.ATLMFC", v);
+        atlmfc.setSettingsComparator(std::make_unique<PredefinedTargetSettingsComparator>());
         atlmfc.AutoDetectOptions = false;
         atlmfc.sw_provided = true;
         if (fs::exists(root / "ATLMFC" / "include"))
             atlmfc.Public.NativeCompilerOptions::System.IncludeDirectories.push_back(root / "ATLMFC" / "include");
 
         // get suffix
-        auto host = toStringWindows(s.getHostOs().Arch);
         auto target = toStringWindows(s.getSettings().TargetOS.Arch);
 
         if (v.getMajor() >= 15)
@@ -623,6 +631,7 @@ void detectWindowsCompilers(Build &s)
 
     // rename to libc? to crt?
     auto &ucrt = s.addLibrary("com.Microsoft.Windows.SDK.ucrt", s.getSettings().Native.SDK.getWindowsTargetPlatformVersion());
+    ucrt.setSettingsComparator(std::make_unique<PredefinedTargetSettingsComparator>());
     ucrt.AutoDetectOptions = false;
     ucrt.sw_provided = true;
 
@@ -1827,7 +1836,7 @@ void RcTool::prepareCommand1(const Target &t)
         cmd->name_short = InputFile().filename().u8string();
     }
 
-    t.template asRef<NativeCompiledTarget>().NativeCompilerOptions::addDefinitionsAndIncludeDirectories(*cmd);
+    t.template as<NativeCompiledTarget>().NativeCompilerOptions::addDefinitionsAndIncludeDirectories(*cmd);
 
     // ms bug: https://developercommunity.visualstudio.com/content/problem/417189/rcexe-incorrect-behavior-with.html
     //for (auto &i : system_idirs)

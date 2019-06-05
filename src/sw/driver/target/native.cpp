@@ -180,8 +180,7 @@ void NativeCompiledTarget::findCompiler()
     {
         auto &cld = getSolution().getChildren();
 
-        TargetSettings tid{ getSettings() };
-        auto i = cld.find(v.id, tid);
+        auto i = cld.find(v.id, getTargetSettings());
         if (!i)
             return false;
         if (!(*i).second)
@@ -190,14 +189,14 @@ void NativeCompiledTarget::findCompiler()
                 setExtensionProgram(e, PackageId{ v.id, (*i).first });
             return true;
         }
-        if (auto t = (*i).second->as<PredefinedProgram>())
+        if (auto t = (*i).second->as<PredefinedProgram*>())
         {
             for (auto &e : v.exts)
                 setExtensionProgram(e, t->getProgram());
         }
         else
         {
-            throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + (*i).second->getPackage().toString());
+            throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + (*i).first.toString());
         }
         return true;
     };
@@ -269,7 +268,7 @@ void NativeCompiledTarget::findCompiler()
         {{"com.apple.LLVM.clang"}, { ".c" }, CompilerType::AppleClang},
     };
 
-    switch (getSettings().Native.CompilerType1)
+    switch (getCompilerType())
     {
     case CompilerType::MSVC:
         activate_array_or_throw({ msvc }, "Cannot find msvc toolchain");
@@ -333,13 +332,12 @@ void NativeCompiledTarget::findCompiler()
         {
             auto &cld = getSolution().getChildren();
 
-            TargetSettings tid{ getSettings() };
-            auto i = cld.find(std::get<0>(in), tid);
+            auto i = cld.find(std::get<0>(in), getSettings().getTargetSettings());
             if (!i)
                 return false;
             if (!(*i).second)
                 return false;
-            auto t = (*i).second->as<PredefinedProgram>();
+            auto t = (*i).second->as<PredefinedProgram*>();
             if (!t)
                 return false;
             if (link)
@@ -410,13 +408,12 @@ void NativeCompiledTarget::findCompiler()
     auto add_libc = [this](const auto &pp)
     {
         auto &cld = getSolution().getChildren();
-        TargetSettings tid{ getSettings() };
-        auto i = cld.find(pp, tid);
+        auto i = cld.find(pp, getSettings().getTargetSettings());
         if (!i)
             return false;
         if (!(*i).second)
             return false;
-        if (auto t = (*i).second->as<NativeCompiledTarget>())
+        if (auto t = (*i).second->as<NativeCompiledTarget*>())
         {
             *this += *t;
             return true;
@@ -447,9 +444,9 @@ bool NativeCompiledTarget::init()
 
         // early setup compilers after libc, libcpp
         merge1();
-        if (auto c = findProgramByExtension(".c")->as<NativeCompiler>())
+        if (auto c = findProgramByExtension(".c")->as<NativeCompiler*>())
             c->merge(*this);
-        if (auto c = findProgramByExtension(".cpp")->as<NativeCompiler>())
+        if (auto c = findProgramByExtension(".cpp")->as<NativeCompiler*>())
             c->merge(*this);
 
         // after compilers
@@ -656,7 +653,7 @@ path Target::getOutputFileName() const
     return getPackage().toString();
 }
 
-String NativeCompiledTarget::getConfigRaw() const
+/*String NativeCompiledTarget::getConfigRaw() const
 {
     auto c = Target::getConfigRaw();
     addConfigElement(c, toString(getCompilerType()));
@@ -665,14 +662,14 @@ String NativeCompiledTarget::getConfigRaw() const
         throw std::logic_error("no cpp compiler");
     addConfigElement(c, p->getVersion().toString(2));
     return c;
-}
+}*/
 
 path NativeCompiledTarget::getOutputFileName(const path &root) const
 {
     path p;
     if (IsConfig)
     {
-        p = getSolution().BinaryDir / "cfg" / getConfig(true) / getOutputFileName();
+        p = getSolution().BinaryDir / "cfg" / getConfig() / getOutputFileName();
     }
     else if (isLocal())
     {
@@ -970,19 +967,19 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
     CompilerType cc = CompilerType::UnspecifiedCompiler;
     for (auto &f : gatherSourceFiles())
     {
-        if (auto sf = f->as<NativeSourceFile>())
+        if (auto sf = f->as<NativeSourceFile*>())
         {
-            if (auto c = sf->compiler->as<VisualStudioCompiler>())
+            if (auto c = sf->compiler->as<VisualStudioCompiler*>())
             {
                 cc = c->Type;
                 setup_use_vc(c);
             }
-            else if (auto c = sf->compiler->as<ClangClCompiler>())
+            else if (auto c = sf->compiler->as<ClangClCompiler*>())
             {
                 cc = c->Type;
                 setup_use_vc(c);
             }
-            else if (auto c = sf->compiler->as<ClangCompiler>())
+            else if (auto c = sf->compiler->as<ClangCompiler*>())
             {
                 cc = c->Type;
 
@@ -992,7 +989,7 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
                 c->PrecompiledHeader = gch_fn_clang;
                 c->createCommand(getSolution().swctx)->addInput(gch_fn_clang);
             }
-            else if (auto c = sf->compiler->as<GNUCompiler>())
+            else if (auto c = sf->compiler->as<GNUCompiler*>())
             {
                 cc = c->Type;
 
@@ -1009,7 +1006,7 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
     {
         *this += pch;
         (*this)[pch].fancy_name = "[config pch]";
-        if (auto sf = ((*this)[pch]).as<NativeSourceFile>(); sf)
+        if (auto sf = ((*this)[pch]).as<NativeSourceFile*>())
         {
             auto setup_create_vc = [this, &pch, &sf, &force_include_pch_header_to_pch_source, &p, &pch_fn, &pdb_fn, &obj_fn](auto &c)
             {
@@ -1027,15 +1024,15 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
                 //c->PDBFilename.intermediate_file = false;
             };
 
-            if (auto c = sf->compiler->as<VisualStudioCompiler>())
+            if (auto c = sf->compiler->as<VisualStudioCompiler*>())
             {
                 setup_create_vc(c);
             }
-            else if (auto c = sf->compiler->as<ClangClCompiler>())
+            else if (auto c = sf->compiler->as<ClangClCompiler*>())
             {
                 setup_create_vc(c);
             }
-            else if (auto c = sf->compiler->as<ClangCompiler>())
+            else if (auto c = sf->compiler->as<ClangCompiler*>())
             {
                 if (gVerbose)
                     (*this)[pch].fancy_name += " (" + normalize_path(gch_fn_clang) + ")";
@@ -1046,7 +1043,7 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
                     c->ForcedIncludeFiles().push_back(p.header);
                 c->EmitPCH = true;
             }
-            else if (auto c = sf->compiler->as<GNUCompiler>())
+            else if (auto c = sf->compiler->as<GNUCompiler*>())
             {
                 if (gVerbose)
                     (*this)[pch].fancy_name += " (" + normalize_path(gch_fn) + ")";
@@ -1316,12 +1313,12 @@ Commands NativeCompiledTarget::getCommands1() const
         // add dependencies on generated commands from dependent targets
         for (auto &l : get_tgts())
         {
-            if (auto nt = l->as<NativeCompiledTarget>(); nt)
+            if (auto nt = l->as<NativeCompiledTarget*>())
             {
                 auto cmds2 = nt->getGeneratedCommands();
                 for (auto &c : cmds)
                 {
-                    if (auto c2 = c->as<driver::detail::Command>(); c2 && c2->ignore_deps_generated_commands)
+                    if (auto c2 = c->as<driver::detail::Command*>(); c2 && c2->ignore_deps_generated_commands)
                         continue;
                     c->dependencies.insert(cmds2.begin(), cmds2.end());
                 }
@@ -1756,7 +1753,7 @@ bool NativeCompiledTarget::prepare()
         {
             if (f->isActive() && !f->postponed)
             {
-                auto f2 = f->as<NativeSourceFile>();
+                auto f2 = f->as<NativeSourceFile*>();
                 if (!f2)
                     continue;
                 auto ba = f2->BuildAs;
@@ -1767,7 +1764,7 @@ bool NativeCompiledTarget::prepare()
                 case NativeSourceFile::C:
                     if (auto p = findProgramByExtension(".c"))
                     {
-                        if (auto c = f2->compiler->as<VisualStudioCompiler>())
+                        if (auto c = f2->compiler->as<VisualStudioCompiler*>())
                             c->CompileAsC = true;
                     }
                     else
@@ -1776,7 +1773,7 @@ bool NativeCompiledTarget::prepare()
                 case NativeSourceFile::CPP:
                     if (auto p = findProgramByExtension(".cpp"))
                     {
-                        if (auto c = f2->compiler->as<VisualStudioCompiler>())
+                        if (auto c = f2->compiler->as<VisualStudioCompiler*>())
                             c->CompileAsCPP = true;
                     }
                     else
@@ -2134,7 +2131,7 @@ bool NativeCompiledTarget::prepare()
             // set everything before merge!
             f->compiler->merge(*this);
 
-            if (auto c = f->compiler->as<VisualStudioCompiler>())
+            if (auto c = f->compiler->as<VisualStudioCompiler*>())
             {
                 if (UseModules)
                 {
@@ -2154,12 +2151,12 @@ bool NativeCompiledTarget::prepare()
 
                 vs_setup(f, c);
             }
-            else if (auto c = f->compiler->as<ClangClCompiler>())
+            else if (auto c = f->compiler->as<ClangClCompiler*>())
             {
                 vs_setup(f, c);
             }
             // clang compiler is not working atm, gnu is created instead
-            else if (auto c = f->compiler->as<ClangCompiler>())
+            else if (auto c = f->compiler->as<ClangCompiler*>())
             {
                 gnu_setup(f, c);
 
@@ -2168,7 +2165,7 @@ bool NativeCompiledTarget::prepare()
                     remove_bdirs(c);
                 }
             }
-            else if (auto c = f->compiler->as<GNUCompiler>())
+            else if (auto c = f->compiler->as<GNUCompiler*>())
             {
                 gnu_setup(f, c);
 
@@ -2296,7 +2293,7 @@ bool NativeCompiledTarget::prepare()
             std::map<path /* pch file */, std::map<path, PCH> /* pch hdr */> pchs;
             for (auto &f : files)
             {
-                if (auto c = f->compiler->as<VisualStudioCompiler>())
+                if (auto c = f->compiler->as<VisualStudioCompiler*>())
                 {
                     if (c->PrecompiledHeader().create)
                         pchs[c->PrecompiledHeaderFilename()][c->PrecompiledHeader().create.value()].create = f;
@@ -2318,7 +2315,7 @@ bool NativeCompiledTarget::prepare()
         }
 
         // pdb
-        if (auto c = getSelectedTool()->as<VisualStudioLinker>())
+        if (auto c = getSelectedTool()->as<VisualStudioLinker*>())
         {
             if (!c->GenerateDebugInformation)
             {
@@ -2374,7 +2371,7 @@ bool NativeCompiledTarget::prepare()
         // add def file to linker
         if (getSelectedTool() == Linker.get())
         {
-            if (auto VSL = getSelectedTool()->as<VisualStudioLibraryTool>())
+            if (auto VSL = getSelectedTool()->as<VisualStudioLibraryTool*>())
             {
                 for (auto &[p, f] : *this)
                 {
@@ -2390,7 +2387,7 @@ bool NativeCompiledTarget::prepare()
         // on macos we explicitly say that dylib should resolve symbols on dlopen
         if (IsConfig && getSolution().getHostOs().is(OSType::Macos))
         {
-            if (auto c = getSelectedTool()->as<GNULinker>())
+            if (auto c = getSelectedTool()->as<GNULinker*>())
                 c->Undefined = "dynamic_lookup";
         }
 
@@ -2404,7 +2401,7 @@ bool NativeCompiledTarget::prepare()
     case 6:
         // link libraries
     {
-        auto L = Linker->as<VisualStudioLinker>();
+        auto L = Linker->as<VisualStudioLinker*>();
 
         // add link libraries from deps
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
@@ -2418,7 +2415,7 @@ bool NativeCompiledTarget::prepare()
                 if (d->IncludeDirectoriesOnly)
                     continue;
 
-                auto nt = ((NativeCompiledTarget*)d->target);
+                auto nt = d->target->as<NativeCompiledTarget*>();
 
                 // circular deps detection
                 if (L)
@@ -2503,11 +2500,11 @@ void NativeCompiledTarget::processCircular(Files &obj)
     if (*HeaderOnly || getSelectedTool() == Librarian.get())
         return;
 
-    auto lib_exe = Librarian->as<VisualStudioLibrarian>();
+    auto lib_exe = Librarian->as<VisualStudioLibrarian*>();
     if (!lib_exe)
         throw SW_RUNTIME_ERROR("Unsupported librarian");
 
-    auto link_exe = Linker->as<VisualStudioLinker>();
+    auto link_exe = Linker->as<VisualStudioLinker*>();
     if (!link_exe)
         throw SW_RUNTIME_ERROR("Unsupported linker");
 
@@ -2527,7 +2524,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
             if (d->IncludeDirectoriesOnly)
                 continue;
 
-            auto nt = ((NativeCompiledTarget*)d->target);
+            auto nt = d->target->as<NativeCompiledTarget*>();
 
             if (!*nt->HeaderOnly)
             {
@@ -2747,12 +2744,12 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
         if (Linker->Type == LinkerType::MSVC)
         {
             // set machine to target os arch
-            auto L = Linker->as<VisualStudioLinker>();
+            auto L = Linker->as<VisualStudioLinker*>();
             L->Dll = true;
         }
         else if (Linker->Type == LinkerType::GNU)
         {
-            auto L = Linker->as<GNULinker>();
+            auto L = Linker->as<GNULinker*>();
             L->SharedObject = true;
         }
         if (getSettings().TargetOS.Type == OSType::Windows)
@@ -3601,7 +3598,7 @@ bool ExecutableTarget::init()
         Linker->Prefix.clear();
         Linker->Extension = getSettings().TargetOS.getExecutableExtension();
 
-        if (auto c = getSelectedTool()->as<VisualStudioLinker>())
+        if (auto c = getSelectedTool()->as<VisualStudioLinker*>())
         {
             c->ImportLibrary.output_dependency = false; // become optional
             c->ImportLibrary.create_directory = true; // but create always

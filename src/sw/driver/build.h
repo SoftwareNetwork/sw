@@ -12,6 +12,7 @@
 #include "target/base.h"
 
 #include <sw/builder/file_storage.h>
+#include <sw/core/target.h>
 #include <sw/manager/package_data.h>
 
 #include <boost/bimap.hpp>
@@ -103,127 +104,6 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
     }
 };
 
-struct TargetEntryPoint
-{
-    virtual ~TargetEntryPoint() = default;
-
-    virtual TargetBaseTypePtr create(const PackageIdSet &pkgs) = 0;
-};
-
-using TargetMapInternal1 = std::map<TargetSettings, TargetBaseTypePtr>;
-struct TargetMapInternal : TargetMapInternal1
-{
-    std::shared_ptr<TargetEntryPoint> ep;
-
-    void create();
-};
-
-struct SimpleExpectedErrorCode
-{
-    int ec;
-    String message;
-
-    SimpleExpectedErrorCode(int ec = 0)
-        : ec(ec)
-    {}
-    SimpleExpectedErrorCode(int ec, const String &msg)
-        : ec(ec), message(msg)
-    {}
-
-    bool operator==(int i) const { return ec == i; }
-    const String &getMessage() const { return message; }
-};
-
-template <class T, class ... Args>
-struct SimpleExpected : std::variant<SimpleExpectedErrorCode, T, Args...>
-{
-    using Base = std::variant<SimpleExpectedErrorCode, T, Args...>;
-
-    using Base::Base;
-
-    SimpleExpected(const SimpleExpectedErrorCode &e)
-        : Base(e)
-    {}
-
-    operator bool() const { return index() == 1; }
-    T &operator*() { return std::get<1>(*this); }
-    const T &operator*() const { return std::get<1>(*this); }
-    T &operator->() { return std::get<1>(*this); }
-    const T &operator->() const { return std::get<1>(*this); }
-    const SimpleExpectedErrorCode &ec() { return std::get<0>(*this); }
-};
-
-struct TargetMap : PackageVersionMapBase<TargetMapInternal, std::unordered_map, primitives::version::VersionMap>
-{
-    using Base = PackageVersionMapBase<TargetMapInternal, std::unordered_map, primitives::version::VersionMap>;
-
-    enum
-    {
-        Ok,
-        PackagePathNotFound,
-        PackageNotFound,
-        TargetNotCreated, // by settings
-    };
-
-    using Base::find;
-
-    SimpleExpected<Base::version_map_type::iterator> find_and_select_version(const PackagePath &pp)
-    {
-        auto i = find(pp);
-        if (i == end(pp))
-            return PackagePathNotFound;
-        auto vo = select_version(i->second);
-        if (!vo)
-            return PackageNotFound;
-        return i->second.find(*vo);
-    }
-
-    SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const
-    {
-        auto i = find(pp);
-        if (i == end(pp))
-            return PackagePathNotFound;
-        auto vo = select_version(i->second);
-        if (!vo)
-            return PackageNotFound;
-        return i->second.find(*vo);
-    }
-
-    SimpleExpected<std::pair<Version, TargetBaseTypePtr>> find(const PackagePath &pp, const TargetSettings &ts)
-    {
-        auto i = find_and_select_version(pp);
-        if (!i)
-            return i.ec();
-        auto j = i->second.find(ts);
-        if (j == i->second.end())
-            return std::pair<Version, TargetBaseTypePtr>{ i->first, nullptr };
-        return std::pair<Version, TargetBaseTypePtr>{ i->first, j->second };
-    }
-
-    TargetBaseTypePtr find(const PackageId &pkg, const TargetSettings &ts)
-    {
-        auto i = find(pkg);
-        if (i == end())
-            return {};
-        auto k = i->second.find(ts);
-        if (k == i->second.end())
-            return {};
-        return k->second;
-    }
-
-    //
-
-    template <class T>
-    static std::optional<Version> select_version(T &v)
-    {
-        if (v.empty())
-            return {};
-        if (!v.empty_releases())
-            return v.rbegin_releases()->first;
-        return v.rbegin()->first;
-    }
-};
-
 // simple interface for users
 struct SolutionX : TargetBase {};
 
@@ -246,9 +126,8 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
     // most important
-    const SwContext &swctx;
+    SwContext &swctx;
     const driver::cpp::Driver &driver;
-    TargetMap children;
     std::vector<BuildSettings> settings;
     //const BuildSettings *host_settings = nullptr;
     const BuildSettings *current_settings = nullptr;
@@ -260,7 +139,6 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     String current_module;
     PackageVersionGroupNumber current_gn = 0; // for checks
     SourceDirMap source_dirs_by_source;
-    path prefix_source_dir; // used for fetches (additional root dir to config/sources)
     int execute_jobs = 0;
     bool file_storage_local = true;
     bool is_config_build = false;
@@ -277,6 +155,8 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     bool dry_run = false;
     bool with_testing = false;
     std::unordered_set<LocalPackage> known_cfgs;
+    bool checks_build = false; // check targets added to internal children map
+    TargetMap checks_targets;
 
     const OS &getHostOs() const;
     //const BuildSettings &getHostSettings() const { return *host_settings; }
@@ -286,8 +166,8 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
     bool skipTarget(TargetScope Scope) const;
     //bool exists(const PackageId &p) const;
-    TargetMap &getChildren() { return children; }
-    const TargetMap &getChildren() const { return children; }
+    TargetMap &getChildren();
+    const TargetMap &getChildren() const;
     path getChecksDir() const;
     path getIdeDir() const;
     path getExecutionPlansDir() const;
@@ -359,7 +239,7 @@ private:
     void build_self();
     void resolvePass(const Target &t, const DependenciesType &deps) const;
     void prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_pass) const;
-    bool prepareStep(const TargetBaseTypePtr &t) const;
+    bool prepareStep(Target &t) const;
     UnresolvedDependenciesType gatherUnresolvedDependencies(int n_runs = 0) const;
     void build_and_resolve(int n_runs = 0);
     void addTest(Test &cb, const String &name);
@@ -400,7 +280,7 @@ public:
     bool perform_checks = true;
     bool ide = false;
 
-    Build(const SwContext &swctx, const driver::cpp::Driver &driver);
+    Build(SwContext &swctx, const driver::cpp::Driver &driver);
     Build(const Build &);
     ~Build();
 

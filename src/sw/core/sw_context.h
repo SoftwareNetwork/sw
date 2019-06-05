@@ -6,9 +6,11 @@
 
 #pragma once
 
-#include <sw/builder/sw_context.h>
+#include "driver.h"
+#include "target.h"
 
-#include <unordered_map>
+#include <sw/builder/sw_context.h>
+#include <sw/manager/package_data.h>
 
 namespace sw
 {
@@ -28,30 +30,6 @@ enum class InputType : int32_t
 
     /// no input file, use any heuristics
     Directory,
-};
-
-struct Input;
-
-struct IDriver
-{
-    virtual ~IDriver() = 0;
-
-    virtual PackageId getPackageId() const = 0;
-    //virtual FilesOrdered getAvailableFrontendConfigFilenames() const = 0;
-
-    virtual bool canLoad(const Input &) const = 0;
-    virtual void load(const std::set<Input> &) = 0;
-    // prepare()
-    // getCommands()
-};
-
-//struct INativeDriver : IDriver {}; // ?
-
-struct ITarget
-{
-    virtual ~ITarget() = 0;
-
-    // get deps
 };
 
 struct SW_CORE_API SwContext : SwBuilderContext
@@ -77,7 +55,7 @@ struct SW_CORE_API SwContext : SwBuilderContext
 
     using Drivers = std::map<PackageId, std::unique_ptr<IDriver>>;
 
-    // move to drivers?
+    // move to drivers? remove?
     path source_dir;
 
     SwContext(const path &local_storage_root_dir);
@@ -86,15 +64,21 @@ struct SW_CORE_API SwContext : SwBuilderContext
     void registerDriver(std::unique_ptr<IDriver> driver);
     const Drivers &getDrivers() const { return drivers; }
 
+    void load(const Inputs &inputs);
     void build(const Inputs &inputs);
-    // void load(); // only
     // void configure(); // = load() + save execution plan
+    bool prepareStep();
+    PackageDescriptionMap getPackages() const;
 
-    // move privates to impl?
+    TargetMap &getTargets() { return targets; }
+    const TargetMap &getTargets() const { return targets; }
+
 private:
     using ProcessedInputs = std::set<Input>;
 
     Drivers drivers;
+    std::map<IDriver *, ProcessedInputs> active_drivers;
+    TargetMap targets;
 
     ProcessedInputs makeInputs(const Inputs &inputs);
     void load(const ProcessedInputs &inputs);

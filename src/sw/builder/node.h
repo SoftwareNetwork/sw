@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+#include <type_traits>
 
 namespace sw
 {
@@ -23,28 +24,28 @@ struct SW_BUILDER_API Node
 {
     virtual ~Node() = default;
 
-    template <class T>
-    T *as()
+    template <class T, typename = std::enable_if_t<std::is_pointer_v<T>>>
+    std::decay_t<std::remove_pointer_t<T>> *as()
     {
-        return dynamic_cast<T *>(this);
+        return dynamic_cast<std::decay_t<std::remove_pointer_t<T>> *>(this);
     }
 
-    template <class T>
-    const T *as() const
+    template <class T, typename = std::enable_if_t<std::is_pointer_v<T>>>
+    const std::decay_t<std::remove_pointer_t<T>> *as() const
     {
-        return dynamic_cast<const T *>(this);
+        return dynamic_cast<const std::decay_t<std::remove_pointer_t<T>> *>(this);
     }
 
-    template <class T>
-    T &asRef()
+    template <class T, typename = std::enable_if_t<!std::is_pointer_v<T>>>
+    std::decay_t<T> &as()
     {
-        return dynamic_cast<T &>(*this);
+        return dynamic_cast<std::decay_t<T> &>(*this);
     }
 
-    template <class T>
-    const T &asRef() const
+    template <class T, typename = std::enable_if_t<!std::is_pointer_v<T>>>
+    const std::decay_t<T> &as() const
     {
-        return dynamic_cast<const T &>(*this);
+        return dynamic_cast<const std::decay_t<T> &>(*this);
     }
 };
 

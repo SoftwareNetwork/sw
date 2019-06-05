@@ -109,7 +109,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     auto f = this->SourceFileMapThis::operator[](file);
 
     auto ext = file.extension().string();
-    auto nt = target->as<NativeCompiledTarget>();
+    auto nt = target->as<NativeCompiledTarget*>();
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
     if (!target->hasExtension(ext) || ho)
     {

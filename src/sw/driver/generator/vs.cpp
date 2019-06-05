@@ -322,7 +322,7 @@ String toString(VSFileType t)
 
 static VSProjectType get_vs_project_type(const BuildSettings &s, const Target &t)
 {
-    if (auto nt = t.as<NativeCompiledTarget>())
+    if (auto nt = t.as<NativeCompiledTarget*>())
     {
         if (!nt->getCommand())
             return VSProjectType::Utility;
@@ -506,11 +506,12 @@ void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b, const Pa
     {
         beginBlockWithConfiguration("PropertyGroup", s, { { "Label","Configuration" } });
 
-        auto i = b.children.find(p);
-        if (i == b.children.end())
+        auto i = b.getChildren().find(p);
+        if (i == b.getChildren().end())
             throw SW_RUNTIME_ERROR("bad target: " + p.toString());
 
-        addConfigurationType(get_vs_project_type(s, *i->second.find(TargetSettings{ s })->second));
+        SW_UNIMPLEMENTED;
+        //addConfigurationType(get_vs_project_type(s, *i->second.find(s.getTargetSettings())->second));
 
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
 		if (toolset.empty())
@@ -563,12 +564,12 @@ void ProjectEmitter::printProject(
     if (b.getChildren().find(p) == b.getChildren().end())
         throw SW_RUNTIME_ERROR("bad target");
 
-    auto &t = *b.getChildren().find(p)->second.begin()->second;
-    auto &base_nt = *t.as<NativeCompiledTarget>();
+    auto &t = **b.getChildren().find(p)->second.begin();
+    auto &base_nt = t.as<NativeCompiledTarget>();
 
     // project name helper
     auto pp = p.ppath.parent();
-    auto &prnts = t.Local ? local_parents : parents;
+    auto &prnts = base_nt.Local ? local_parents : parents;
     while (!pp.empty() && prnts.find(pp) == prnts.end())
         pp = pp.parent();
 
@@ -640,8 +641,8 @@ void ProjectEmitter::printProject(
     {
         beginBlockWithConfiguration("PropertyGroup", s);
 
-        auto &t = *b.getChildren().find(p)->second.find(TargetSettings{ s })->second;
-        auto &nt = *t.as<NativeCompiledTarget>();
+        auto &t = **b.getChildren().find(p)->second.find(s.getTargetSettings());
+        auto &nt = t.as<NativeCompiledTarget>();
 
         auto o = nt.getOutputFile();
 
@@ -781,7 +782,7 @@ void ProjectEmitter::printProject(
             // FIXME: now taking cl settings from just one file
             if (!sf.empty())
             {
-                if (auto L = (*sf.begin())->compiler->as<VisualStudioCompiler>())
+                if (auto L = (*sf.begin())->compiler->as<VisualStudioCompiler*>())
                 {
                     L->printIdeSettings(*this);
 
@@ -825,7 +826,7 @@ void ProjectEmitter::printProject(
                 File ff(p, nt.getFs());
                 auto gen = ff.getFileRecord().getGenerator();
 
-                if (auto dc = gen->as<ExecuteBuiltinCommand>())
+                if (auto dc = gen->as<ExecuteBuiltinCommand*>())
                 {
                     if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
                         dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::builder::getInternalCallBuiltinFunctionName())
@@ -890,14 +891,14 @@ void ProjectEmitter::printProject(
                         continue;
                     if (!d->target)
                         continue;
-                    if (d->target->getPackage() == t.getPackage())
+                    if (d->target->getPackage() == nt.getPackage())
                         continue;
                     if (d->target->skip || d->target->sw_provided)
                         continue;
 
                     if (!shouldAddTarget(*d->target))
                     {
-                        if (auto nt3 = d->target->template as<NativeCompiledTarget>())
+                        if (auto nt3 = d->target->template as<NativeCompiledTarget*>())
                         {
                             if (d->target->getType() == TargetType::NativeExecutable)
                             {
@@ -924,7 +925,7 @@ void ProjectEmitter::printProject(
                     }
 
                     // before dummy
-                    if (auto nt3 = d->target->template as<NativeCompiledTarget>())
+                    if (auto nt3 = d->target->template as<NativeCompiledTarget*>())
                     {
                         auto tdir = get_out_dir(dir, projects_dir, s);
                         tdir /= d->target->getPackage().toString() + ".exe";
@@ -938,7 +939,7 @@ void ProjectEmitter::printProject(
 
                     deps.insert(d->target->getPackage().toString());
 
-                    if (auto nt3 = d->target->template as<NativeCompiledTarget>())
+                    if (auto nt3 = d->target->template as<NativeCompiledTarget*>())
                     {
                         if (!*nt3->HeaderOnly)
                         {
@@ -951,7 +952,7 @@ void ProjectEmitter::printProject(
                     if ((s.Native.LibrariesType == LibraryType::Static && d->target->getType() == TargetType::NativeLibrary) ||
                         d->target->getType() == TargetType::NativeStaticLibrary)
                     {
-                        if (auto nt3 = d->target->template as<NativeCompiledTarget>())
+                        if (auto nt3 = d->target->template as<NativeCompiledTarget*>())
                         {
                             f(*nt3);
                         }
@@ -985,7 +986,7 @@ void ProjectEmitter::printProject(
 
             if (auto c = nt.getSelectedTool())
             {
-                if (auto L = c->as<VisualStudioLinker>())
+                if (auto L = c->as<VisualStudioLinker*>())
                 {
                     L->VisualStudioLibraryToolOptions::printIdeSettings(*this);
                     L->VisualStudioLinkerOptions::printIdeSettings(*this);
@@ -1030,7 +1031,7 @@ void ProjectEmitter::printProject(
                     return;
                 }
 
-                auto nsf = sf->as<NativeSourceFile>();
+                auto nsf = sf->as<NativeSourceFile*>();
                 if (!nsf)
                     return;
 
@@ -1051,7 +1052,7 @@ void ProjectEmitter::printProject(
                 File ff(p, nt.getFs());
                 auto gen = ff.getFileRecord().getGenerator();
 
-                if (auto dc = gen->as<ExecuteBuiltinCommand>())
+                if (auto dc = gen->as<ExecuteBuiltinCommand*>())
                 {
                     if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
                         dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::builder::getInternalCallBuiltinFunctionName())
@@ -1094,7 +1095,7 @@ void ProjectEmitter::printProject(
 
                     beginBlockWithConfiguration("AdditionalInputs", s);
                     //addText(normalize_path_windows(gen->program) + ";");
-                    if (auto dc = gen->as<driver::Command>())
+                    if (auto dc = gen->as<driver::Command*>())
                     {
                         auto d = dc->dependency.lock();
                         if (d)
@@ -1258,8 +1259,8 @@ void ProjectEmitter::printProject(
     files_added.clear();
     for (auto &s : b.settings)
     {
-        auto &t = *b.getChildren().find(p)->second.find(TargetSettings{ s })->second;
-        auto &nt = *t.as<NativeCompiledTarget>();
+        auto &t = **b.getChildren().find(p)->second.find(s.getTargetSettings());
+        auto &nt = t.as<NativeCompiledTarget>();
 
         auto sd = normalize_path(nt.SourceDir);
         auto bd = normalize_path(nt.BinaryDir);
@@ -1534,9 +1535,9 @@ void SolutionEmitter::materialize(const Build &b, const path &dir, GeneratorType
     beginGlobal();
     setSolutionConfigurationPlatforms(b);
     beginGlobalSection("ProjectConfigurationPlatforms", "postSolution");
-    for (auto &[p, tgts] : b.children)
+    for (auto &[p, tgts] : b.getChildren())
     {
-        auto &t = tgts.begin()->second;
+        auto t = (*tgts.begin())->as<Target*>();
         if (t->skip)
             continue;
         if (t->sw_provided)
@@ -1771,7 +1772,7 @@ void VSGenerator::generate(const Build &b)
     // use only first
     for (auto &[p, tgts] : b.getChildren())
     {
-        auto &t = tgts.begin()->second;
+        auto t = (*tgts.begin())->as<Target*>();
         if (t->skip)
             continue;
         if (t->sw_provided)
@@ -1813,7 +1814,7 @@ void VSGenerator::generate(const Build &b)
     int n_executable_tgts = 0;
     for (auto &[p, tgts] : b.getChildren())
     {
-        auto &t = tgts.begin()->second;
+        auto t = (*tgts.begin())->as<Target*>();
         if (t->skip)
             continue;
         if (t->sw_provided)
@@ -1830,7 +1831,7 @@ void VSGenerator::generate(const Build &b)
     bool first_project_set = false;
     for (auto &[p, tgts] : b.getChildren())
     {
-        auto &t = tgts.begin()->second;
+        auto t = (*tgts.begin())->as<Target*>();
         if (t->skip)
             continue;
         if (t->sw_provided)
@@ -1863,7 +1864,7 @@ void VSGenerator::generate(const Build &b)
         auto &proj = ctx.addProject(t2, p.toString(), pps);
         if (!first_project_set)
         {
-            auto nt = t->as<NativeCompiledTarget>();
+            auto nt = t->as<NativeCompiledTarget*>();
             if ((nt && nt->StartupProject) || (t->isLocal() && isExecutable(t->getType()) && n_executable_tgts == 1))
             {
                 ctx.first_project = &proj;
@@ -1881,7 +1882,7 @@ void VSGenerator::generate(const Build &b)
     // use only first
     for (auto &[p, tgts] : b.getChildren())
     {
-        auto &t = tgts.begin()->second;
+        auto t = (*tgts.begin())->as<Target*>();
         if (t->skip)
             continue;
         if (t->sw_provided)
@@ -1891,7 +1892,7 @@ void VSGenerator::generate(const Build &b)
         if (!shouldAddTarget(*t))
             continue;
 
-        auto nt = t->as<NativeCompiledTarget>();
+        auto nt = t->as<NativeCompiledTarget*>();
         if (!nt)
             continue;
 

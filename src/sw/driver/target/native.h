@@ -140,7 +140,6 @@ public:
     std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
     bool mustResolveDeps() const override { return prepare_pass == 2; }
     void setOutputDir(const path &dir);
-    String getConfigRaw() const override;
     bool createWindowsRpath() const;
 
     driver::CommandBuilder addCommand() const;
@@ -173,7 +172,7 @@ public:
     bool hasCircularDependency() const;
 
     using TargetBase::operator=;
-    using TargetBase::operator+=;
+    using Target::operator+=;
 
 #define STD_MACRO(x, p)            \
     void add(detail::__sw_##p##x); \

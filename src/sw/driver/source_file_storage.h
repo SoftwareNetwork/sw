@@ -82,7 +82,8 @@ public:
 
     bool check_absolute(path &file, bool ignore_errors = false, bool *source_dir = nullptr) const;
 
-    // internal
+    // internal, move to target map?
+    // but we have two parts: stable for sdir files and unknown for bdir files (config specific)
     mutable std::unordered_map<path, std::map<bool /* recursive */, Files>> glob_cache;
     mutable FilesMap files_cache;
 

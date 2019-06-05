@@ -13,6 +13,7 @@
 #include "compiler_helpers.h"
 
 #include <sw/builder/jumppad.h>
+#include <sw/core/sw_context.h> // needed for execute commands
 #include <sw/manager/storage.h>
 
 // support stuff

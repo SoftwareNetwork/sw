@@ -25,7 +25,7 @@ static std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s)
     return {};
 }
 
-Driver::Driver(const SwContext &swctx)
+Driver::Driver(SwContext &swctx)
     : swctx(swctx)
 {
     build = std::make_unique<Build>(swctx, *this);
@@ -81,12 +81,16 @@ void Driver::load(const std::set<Input> &inputs)
     {
         auto p = *findConfig(i.getPath(), Build::getAvailableFrontendConfigFilenames());
         build->load_spec_file(p);
-        build->execute();
         break;
     }
     default:
         SW_UNREACHABLE;
     }
+}
+
+bool Driver::prepareStep()
+{
+    return build->prepareStep();
 }
 
 ChecksStorage &Driver::getChecksStorage(const String &config) const
