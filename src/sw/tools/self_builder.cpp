@@ -43,11 +43,8 @@ void write_required_packages(const std::unordered_map<UnresolvedPackage, LocalPa
         pkgs_sorted.insert(d.toString());
 
     primitives::CppEmitter ctx_packages;
-    ctx_packages.beginBlock("static UnresolvedPackages required_packages");
     for (auto &s : pkgs_sorted)
         ctx_packages.addLine("\"" + s + "\"s,");
-
-    ctx_packages.endBlock(true);
     write_file_if_different(packages, ctx_packages.getText());
 }
 

@@ -27,7 +27,10 @@ void check_self(Checker &c)
 
 void Build::build_self()
 {
+    static UnresolvedPackages required_packages
+    {
 #include <build_self.packages.generated.h>
+    };
 
     //static UnresolvedPackages store; // tmp store
     //auto m = s.swctx.install(required_packages, store);
