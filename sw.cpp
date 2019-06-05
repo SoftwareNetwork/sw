@@ -82,7 +82,7 @@ void configure(Build &s)
 void build(Solution &s)
 {
     auto &p = s.addProject("sw.client", "0.3.0");
-    p += Git("https://github.com/SoftwareNetwork/sw", "", "{v}");
+    p += Git("https://github.com/SoftwareNetwork/sw", "", "b{v}");
 
     auto &support = p.addTarget<StaticLibraryTarget>("support");
     {
