@@ -290,7 +290,7 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
             matches = true;
         }
     }
-    if (!matches && target->Local)
+    if (!matches && target->Local && !target->AllowEmptyRegexes)
         throw SW_RUNTIME_ERROR("No files matching regex: " + r.getRegexString());
 }
 
@@ -430,7 +430,7 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
             files[p] = f;
     }
     if (!target->DryRun) // special case
-    if (files.empty() && target->Local)
+    if (files.empty() && target->Local && !target->AllowEmptyRegexes)
         throw SW_RUNTIME_ERROR("No files matching regex: " + r.getRegexString());
     return files;
 }

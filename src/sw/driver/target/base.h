@@ -214,6 +214,7 @@ struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared
     TargetDescription Description; // or inherit?
     bool skip = false;
     bool sw_provided = false;
+    bool AllowEmptyRegexes = false;
 
     using TargetBase::TargetBase;
     Target() = default;
