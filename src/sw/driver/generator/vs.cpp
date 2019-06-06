@@ -698,7 +698,7 @@ void ProjectEmitter::printProject(
                     cmd->fs = &nt.getFs();
                     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *v);
                     for (auto &a : cmd->args)
-                        add_opts += a + " ";
+                        add_opts += a.get() + " ";
                 }
             }
         }
