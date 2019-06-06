@@ -118,7 +118,7 @@ static String getCommandId(const Command &c)
             s += k + "\n" + v + "\n";
         s += normalize_path(c.program) + "\n";
         for (auto &a : c.args)
-            s += a + "\n";
+            s += a.get() + "\n";
         s.resize(s.size() - 1);
     }
     return s;
@@ -346,8 +346,7 @@ void Command::prepare()
     {
         // take first arg
         p = getArgs()[0];
-        auto t = std::move(getArgs());
-        getArgs().assign(t.begin() + 1, t.end());
+        getArgs().shift();
     }
     program = p;
 
@@ -745,7 +744,7 @@ path Command::writeCommand(const path &p) const
         write_file(rsp_name, getResponseFileContents());
 
         for (int i = 0; i < first_response_file_argument; i++)
-            t += args[i] + " ";
+            t += args[i].get() + " ";
         t += "@" + normalize_path(rsp_name) + " ";
     }
     else

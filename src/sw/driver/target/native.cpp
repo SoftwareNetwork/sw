@@ -1181,7 +1181,7 @@ Commands NativeCompiledTarget::getCommands1() const
 
         auto prepare_command = [this, &cmds, &sd, &bd, &bdp](auto f, auto c)
         {
-            c->args.insert(c->args.end(), f->args.begin(), f->args.end());
+            c->args.push_back(f->args);
 
             // set fancy name
             if (!IsConfig && !do_not_mangle_object_names)

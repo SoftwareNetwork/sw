@@ -393,12 +393,7 @@ struct MakeEmitter : primitives::Emitter
             for (auto &a : c.args)
             {
                 if (should_print(a))
-                    s +=
-                    "\"" +
-                    a
-                    + "\""
-                    + " "
-                    ;
+                    s += a.quote() + " ";
             }
             s.resize(s.size() - 1);
         }
@@ -590,7 +585,7 @@ void BatchGenerator::generate(const Build &b)
                 for (auto &a : c->args)
                 {
                     if (should_print(a))
-                        s += "\"" + a + "\" ";
+                        s += a.quote() + " ";
                 }
                 s.resize(s.size() - 1);
             }
@@ -600,7 +595,7 @@ void BatchGenerator::generate(const Build &b)
                 for (auto &a : c->args)
                 {
                     if (should_print(a))
-                        s += "@echo \"" + a + "\" >> response.rsp\n";
+                        s += "@echo " + a.quote() + " >> response.rsp\n";
                 }
                 s += "%" + program_name(programs[c->getProgram()]) + "% @response.rsp";
             }
@@ -619,7 +614,7 @@ void BatchGenerator::generate(const Build &b)
         {
             s += c->program.u8string() + " ";
             for (auto &a : c->args)
-                s += a + " ";
+                s += a.get() + " ";
             s.resize(s.size() - 1);
             s += "\n\n";
         }
