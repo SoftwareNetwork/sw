@@ -3,6 +3,7 @@
 
 #include <primitives/emitter.h>
 #include <sw/driver/build.h>
+#include <sw/driver/sw_context.h>
 #include <sw/driver/target/native.h>
 
 static ::cl::opt<path> integrate_cmake_deps("cmake-deps", ::cl::sub(subcommand_integrate));
@@ -56,9 +57,7 @@ static String toCmakeString(sw::ConfigurationType t)
 
 SUBCOMMAND_DECL(integrate)
 {
-    SW_UNIMPLEMENTED;
-
-    /*if (!integrate_cmake_deps.empty())
+    if (!integrate_cmake_deps.empty())
     {
         auto lines = read_lines(integrate_cmake_deps);
 
@@ -72,8 +71,9 @@ SUBCOMMAND_DECL(integrate)
             sw::ConfigurationType::Release,
             })
         {
-            auto &s = b.addSolution();
-            s.Settings.Native.ConfigurationType = cfg;
+            auto ss = b.createSettings();
+            ss.Native.ConfigurationType = cfg;
+            b.addSettings(ss);
         }
         b.load_packages(StringSet(lines.begin(), lines.end()));
         b.prepare(); // or step?
@@ -86,10 +86,15 @@ SUBCOMMAND_DECL(integrate)
 
         // targets
         ctx.addLine("# targets");
-        for (auto &s : b.solutions)
+        for (auto &s : b.settings)
         {
-            for (auto &[pkg, t] : s.getChildren())
+            for (auto &[pkg, td] : b.getChildren())
             {
+                if (td.find(sw::TargetSettings{ s }) == td.end())
+                    throw SW_RUNTIME_ERROR(pkg.toString() + ": missing config: " + s.getConfig());
+                auto t = td.find(sw::TargetSettings{ s })->second;
+                if (t->skip || t->sw_provided)
+                    continue;
                 auto &nt = *t->as<sw::NativeCompiledTarget>();
                 if (t->getType() == sw::TargetType::NativeExecutable)
                     continue;
@@ -102,7 +107,7 @@ SUBCOMMAND_DECL(integrate)
                     ;
                 else if (
                     t->getType() == sw::TargetType::NativeSharedLibrary ||
-                    s.Settings.Native.LibrariesType == sw::LibraryType::Shared)
+                    s.Native.LibrariesType == sw::LibraryType::Shared)
                     st = "SHARED";
                 ctx.addLine("add_library(" + pkg.toString() + " " + st + " IMPORTED GLOBAL)");
 
@@ -154,22 +159,25 @@ SUBCOMMAND_DECL(integrate)
                 //
 
                 // imported configs
-                for (auto &s : b.solutions)
+                for (auto &s : b.settings)
                 {
-                    auto &nt = *s.getChildren().find(pkg)->second->as<sw::NativeCompiledTarget>();
+                    auto t = b.getChildren().find(pkg)->second.find(sw::TargetSettings{ s })->second;
+                    if (t->skip || t->sw_provided)
+                        continue;
+                    auto &nt = *t->as<sw::NativeCompiledTarget>();
 
-                    ctx.addLine("set_property(TARGET " + pkg.toString() + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " + toCmakeString(s.Settings.Native.ConfigurationType) + ")");
+                    ctx.addLine("set_property(TARGET " + pkg.toString() + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " + toCmakeString(s.Native.ConfigurationType) + ")");
 
                     // props2
                     ctx.increaseIndent("set_target_properties(" + pkg.toString() + " PROPERTIES");
 
                     // TODO: detect C/CXX language from target files
-                    ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(s.Settings.Native.ConfigurationType) + " \"CXX\"");
+                    ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(s.Native.ConfigurationType) + " \"CXX\"");
 
                     // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
-                    ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(s.Settings.Native.ConfigurationType) + " \"" + normalize_path(nt.getOutputFile()) + "\"");
+                    ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(s.Native.ConfigurationType) + " \"" + normalize_path(nt.getOutputFile()) + "\"");
                     // IMPORTED_IMPLIB = path to .lib (import)
-                    ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(s.Settings.Native.ConfigurationType) + " \"" + normalize_path(nt.getImportLibrary()) + "\"");
+                    ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(s.Native.ConfigurationType) + " \"" + normalize_path(nt.getImportLibrary()) + "\"");
 
                     ctx.decreaseIndent(")");
                     ctx.emptyLines();
@@ -197,16 +205,26 @@ SUBCOMMAND_DECL(integrate)
 
         // deps
         ctx.addLine("# dependencies");
-        for (auto &s : b.solutions)
+        for (auto &s : b.settings)
         {
-            for (auto &[pkg, t] : s.getChildren())
+            for (auto &[pkg, td] : b.getChildren())
             {
+                if (td.find(sw::TargetSettings{ s }) == td.end())
+                    throw SW_RUNTIME_ERROR(pkg.toString() + ": missing config: " + s.getConfig());
+                auto t = td.find(sw::TargetSettings{ s })->second;
+                if (t->skip || t->sw_provided)
+                    continue;
                 auto &nt = *t->as<sw::NativeCompiledTarget>();
                 if (t->getType() == sw::TargetType::NativeExecutable)
                     continue;
 
                 for (auto &d : nt.Dependencies)
+                {
+                    auto t = b.getChildren().find(d->getResolvedPackage())->second.find(sw::TargetSettings{ s })->second;
+                    if (t->skip || t->sw_provided)
+                        continue;
                     ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + d->getResolvedPackage().toString() + ")");
+                }
             }
             break;
         }
@@ -230,10 +248,15 @@ SUBCOMMAND_DECL(integrate)
 
         ctx.increaseIndent("def configure(ctx):");
 
-        for (auto &s : b.solutions)
+        for (auto &s : b.settings)
         {
-            for (auto &[pkg, t] : s.getChildren())
+            for (auto &[pkg, td] : b.getChildren())
             {
+                if (td.find(sw::TargetSettings{ s }) == td.end())
+                    throw SW_RUNTIME_ERROR(pkg.toString() + ": missing config: " + s.getConfig());
+                auto t = td.find(sw::TargetSettings{ s })->second;
+                if (t->skip || t->sw_provided)
+                    continue;
                 auto &nt = *t->as<sw::NativeCompiledTarget>();
                 if (t->getType() == sw::TargetType::NativeExecutable)
                     continue;
@@ -259,7 +282,7 @@ SUBCOMMAND_DECL(integrate)
 
                 std::function<void(sw::NativeCompiledTarget&)> process;
                 std::unordered_set<sw::NativeCompiledTarget *> visited;
-                process = [&process, &s, &ctx, &remove_ext, &visited](auto &nt)
+                process = [&process, &s, &b, &ctx, &remove_ext, &visited](auto &nt)
                 {
                     if (visited.find(&nt) != visited.end())
                         return;
@@ -296,11 +319,13 @@ SUBCOMMAND_DECL(integrate)
                     // deps
                     for (auto &d : nt.Dependencies)
                     {
-                        auto t = s.children[d->getResolvedPackage()];
+                        auto t = b.getChildren().find(d->getResolvedPackage())->second.find(sw::TargetSettings{ s })->second;
+                        if (t->skip || t->sw_provided)
+                            continue;
                         if (t->getType() == sw::TargetType::NativeExecutable)
                             continue;
 
-                        auto &nt = *s.getChildren().find(d->getResolvedPackage())->second->as<sw::NativeCompiledTarget>();
+                        auto &nt = *t->as<sw::NativeCompiledTarget>();
                         ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(nt.getImportLibrary())) + "', lib)");
 
                         process(nt);
@@ -318,7 +343,7 @@ SUBCOMMAND_DECL(integrate)
         write_file_if_different("wscript", ctx.getText());
 
         return;
-    }*/
+    }
 
     SW_UNIMPLEMENTED;
 }
