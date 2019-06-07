@@ -45,8 +45,8 @@ void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPack
     extensions.insert_or_assign(ext, p);
 
     // add a dependency to current target
-    if (auto t = dynamic_cast<NativeCompiledTarget*>(this); t)
-        (*t + std::make_shared<Dependency>(p))->setDummy(true);
+    if (auto t = dynamic_cast<NativeCompiledTarget *>(this); t)
+        t->DummyDependencies.insert(p);
 }
 
 Program *ProgramStorage::getProgram(const String &ext) const

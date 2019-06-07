@@ -3287,11 +3287,12 @@ Test Build::addTest(const ExecutableTarget &t)
 
 Test Build::addTest(const String &name, const ExecutableTarget &tgt)
 {
-    auto c = tgt.addCommand();
+    SW_UNIMPLEMENTED;
+    /*auto c = tgt.addCommand();
     c << cmd::prog(tgt);
     Test t(c);
     addTest(t, name);
-    return t;
+    return t;*/
 }
 
 Test Build::addTest()

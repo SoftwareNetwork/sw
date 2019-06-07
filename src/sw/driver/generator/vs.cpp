@@ -879,7 +879,8 @@ void ProjectEmitter::printProject(
 
             std::set<void*> visited;
             std::function<void(NativeCompiledTarget&)> f;
-            f = [&f, &dir, &projects_dir, &s, &visited, &t, &ll, this, &replacements](auto &nt)
+            SW_UNIMPLEMENTED;
+            /*f = [&f, &dir, &projects_dir, &s, &visited, &t, &ll, this, &replacements](auto &nt)
             {
                 if (visited.find(&nt) != visited.end())
                     return;
@@ -958,7 +959,7 @@ void ProjectEmitter::printProject(
                         }
                     }
                 }
-            };
+            };*/
 
             f(nt);
 

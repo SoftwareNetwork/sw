@@ -476,7 +476,8 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     // perform this after prepare?
     auto for_deps = [this](auto &a)
     {
-        for (auto &d : Dependencies)
+        SW_UNIMPLEMENTED;
+        /*for (auto &d : Dependencies)
         {
             if (!d->target)
                 continue;
@@ -495,7 +496,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
             {
                 a(nt);
             }
-        }
+        }*/
     };
 
     if (standalone)
@@ -712,7 +713,8 @@ path NativeCompiledTarget::getImportLibrary() const
 NativeCompiledTarget::TargetsSet NativeCompiledTarget::gatherDependenciesTargets() const
 {
     TargetsSet deps;
-    for (auto &d : Dependencies)
+    SW_UNIMPLEMENTED;
+    /*for (auto &d : Dependencies)
     {
         if (d->target == this)
             continue;
@@ -722,7 +724,7 @@ NativeCompiledTarget::TargetsSet NativeCompiledTarget::gatherDependenciesTargets
         if (d->IncludeDirectoriesOnly)
             continue;
         deps.insert(d->target);
-    }
+    }*/
     return deps;
 }
 
@@ -1296,7 +1298,8 @@ Commands NativeCompiledTarget::getCommands1() const
         auto get_tgts = [this]()
         {
             TargetsSet deps;
-            for (auto &d : Dependencies)
+            SW_UNIMPLEMENTED;
+            /*for (auto &d : Dependencies)
             {
                 if (d->target == this)
                     continue;
@@ -1306,12 +1309,13 @@ Commands NativeCompiledTarget::getCommands1() const
                 if (d->IncludeDirectoriesOnly && !d->GenerateCommandsBefore)
                     continue;
                 deps.emplace(d->target);
-            }
+            }*/
             return deps;
         };
 
         // add dependencies on generated commands from dependent targets
-        for (auto &l : get_tgts())
+        SW_UNIMPLEMENTED;
+        /*for (auto &l : get_tgts())
         {
             if (auto nt = l->as<NativeCompiledTarget*>())
             {
@@ -1323,7 +1327,7 @@ Commands NativeCompiledTarget::getCommands1() const
                     c->dependencies.insert(cmds2.begin(), cmds2.end());
                 }
             }
-        }
+        }*/
 
         // link deps
         if (hasCircularDependency() || createWindowsRpath())
@@ -1695,7 +1699,8 @@ void NativeCompiledTarget::merge1()
     merge();
 
     // merge deps' stuff
-    for (auto &d : Dependencies)
+    SW_UNIMPLEMENTED;
+    /*for (auto &d : Dependencies)
     {
         // we also apply targets to deps chains as we finished with deps
         d->propagateTargetToChain();
@@ -1707,7 +1712,7 @@ void NativeCompiledTarget::merge1()
         s.include_directories_only = d->IncludeDirectoriesOnly;
         //s.merge_to_self = false;
         merge(*(NativeCompiledTarget*)d->target, s);
-    }
+    }*/
 }
 
 bool NativeCompiledTarget::prepare()
@@ -1843,7 +1848,8 @@ bool NativeCompiledTarget::prepare()
         std::vector<DependencyPtr> deps_ordered;
 
         // set our initial deps
-        TargetOptionsGroup::iterate(
+        SW_UNIMPLEMENTED;
+        /*TargetOptionsGroup::iterate(
             [this, &deps, &deps_ordered](auto &v, auto i)
         {
             //DEBUG_BREAK_IF_STRING_HAS(getPackage().ppath.toString(), "sw.server.protos");
@@ -1858,13 +1864,14 @@ bool NativeCompiledTarget::prepare()
                 deps.emplace(d, i);
                 deps_ordered.push_back(d);
             }
-        });
+        });*/
 
         while (1)
         {
             bool new_dependency = false;
             auto deps2 = deps;
-            for (auto &[d, _] : deps2)
+            SW_UNIMPLEMENTED;
+            /*for (auto &[d, _] : deps2)
             {
                 // simple check
                 if (d->target == nullptr)
@@ -1948,13 +1955,13 @@ bool NativeCompiledTarget::prepare()
                         //di->Dummy &= d2->Dummy;
                     }
                 });
-            }
+            }*/
 
             if (!new_dependency)
             {
-                for (auto &d : deps_ordered)
-                    //add(deps.find(d)->first);
-                    Dependencies.insert(deps.find(d)->first);
+                SW_UNIMPLEMENTED;
+                //for (auto &d : deps_ordered)
+                    //Dependencies.insert(deps.find(d)->first);
                 break;
             }
         }
@@ -2404,7 +2411,8 @@ bool NativeCompiledTarget::prepare()
         auto L = Linker->as<VisualStudioLinker*>();
 
         // add link libraries from deps
-        if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
+        SW_UNIMPLEMENTED;
+        /*if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
         {
             for (auto &d : Dependencies)
             {
@@ -2438,7 +2446,7 @@ bool NativeCompiledTarget::prepare()
                     LinkLibraries.push_back(nt->getImportLibrary());
                 }
             }
-        }
+        }*/
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 7:
@@ -2515,7 +2523,8 @@ void NativeCompiledTarget::processCircular(Files &obj)
     if (createWindowsRpath())
     {
         Strings dlls;
-        for (auto &d : Dependencies)
+        SW_UNIMPLEMENTED;
+        /*for (auto &d : Dependencies)
         {
             if (d->target == this)
                 continue;
@@ -2552,7 +2561,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
                     dlls.push_back(out.u8string()); // out
                 }
             }
-        }
+        }*/
 
         // even if dlls are empty we still need to do this!
 
@@ -2618,7 +2627,8 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
 {
     if (!targets.insert(this).second)
         return;
-    for (auto &d : Dependencies)
+    SW_UNIMPLEMENTED;
+    /*for (auto &d : Dependencies)
     {
         if (d->target == this)
             continue;
@@ -2672,7 +2682,7 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
                 dt2->gatherStaticLinkLibraries(ll, added, targets, system);
             }
         }
-    }
+    }*/
 }
 
 bool NativeCompiledTarget::prepareLibrary(LibraryType Type)

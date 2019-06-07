@@ -10,6 +10,7 @@
 #include "sw/driver/build_settings.h"
 #include "sw/driver/program_storage.h"
 #include "sw/driver/license.h"
+#include "sw/driver/dependency.h"
 #include "sw/driver/types.h"
 #include "sw/driver/source_file.h"
 
@@ -260,8 +261,10 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage, std::enab
     bool AllowEmptyRegexes = false;
 
     // always not inheritable
-    DependenciesType DummyDependencies;
-    DependenciesType RuntimeDependencies;
+    std::unordered_set<DependencyData> DummyDependencies; // host config
+    std::unordered_set<DependencyData> SourceDependencies; // no config, dependency on source files
+    // build dir deps?
+    std::unordered_set<DependencyData> RuntimeDependencies; // this target config
 
     using TargetBase::TargetBase;
     Target() = default;
@@ -323,6 +326,10 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage, std::enab
     path getObjectDir() const;
     path getObjectDir(const LocalPackage &pkg) const;
     static path getObjectDir(const LocalPackage &pkg, const String &cfg);
+
+    // from other target
+    path getFile(const DependencyPtr &dep, const path &fn);
+    path getFile(const Target &dep, const path &fn);
 
 protected:
     bool real = true;
@@ -476,10 +483,6 @@ public:
 
     Files gatherAllFiles() const;
     DependenciesType gatherDependencies() const;
-
-    // from other target
-    path getFile(const DependencyPtr &dep, const path &fn);
-    path getFile(const Target &dep, const path &fn);
 };
 
 template <class SF>

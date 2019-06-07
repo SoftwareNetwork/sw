@@ -465,18 +465,22 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_end &t)
 
 CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_dep &t)
 {
+    SW_UNIMPLEMENTED;
+
     for (auto tgt : cb.targets)
     {
         for (auto &t : t.targets)
         {
             tgt->DummyDependencies.insert(*t);
-            auto d = *tgt + *t;
-            d->setDummy(true);
+            //auto d = *tgt + *t;
+            //d->setDummy(true);
         }
         for (auto &t : t.target_ptrs)
         {
-            auto d = *tgt + t;
-            d->setDummy(true);
+            //tgt->DummyDependencies.insert(t->getPackage());
+            //tgt->SourceDependencies.insert(t->getPackage());
+            //auto d = *tgt + t;
+            //d->setDummy(true);
         }
     }
     return cb;

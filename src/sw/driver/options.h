@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "dependency.h"
 #include "types.h"
 
 #include <sw/builder/configuration.h>
@@ -179,53 +180,6 @@ private:
     String regex_string;
 };
 
-struct SW_DRIVER_CPP_API Dependency
-{
-    Target *target = nullptr;
-    UnresolvedPackage package;
-    // Solution *resolve_from = nullptr; // precise solution selection
-    std::vector<std::shared_ptr<Dependency>> chain;
-
-    bool Disabled = false;
-    bool GenerateCommandsBefore = false; // do not make true by default
-//private:
-    bool Dummy = false;
-    bool Runtime = false; // example: program dynamically loads dll
-//public:
-
-    // cpp (native) options
-    bool IncludeDirectoriesOnly = false;
-    bool WholeArchive = false;
-
-    // optional callback
-    // choose default value
-    std::function<void(Target &)> optional;
-
-    Dependency(const Target &t);
-    Dependency(const UnresolvedPackage &p);
-
-    Dependency &operator=(const Target &t);
-    //Dependency &operator=(const Package *p);
-    bool operator==(const Dependency &t) const;
-    bool operator< (const Dependency &t) const;
-
-    void setDummy(bool);
-    bool isDummy() const { return Dummy || Runtime; }
-    bool isRuntime() const { return Runtime; }
-    bool isDisabledOrDummy() const { return Disabled || isDummy(); }
-
-    operator bool() const { return target; }
-    bool isResolved() const { return operator bool(); }
-
-    UnresolvedPackage getPackage() const;
-    LocalPackage getResolvedPackage() const;
-
-    void setTarget(const Target &t);
-    void propagateTargetToChain();
-};
-
-using DependencyPtr = std::shared_ptr<Dependency>;
-//using DependenciesType = std::unordered_set<Dependency>;
 using DependenciesType = UniqueVector<DependencyPtr>;
 
 struct SW_DRIVER_CPP_API NativeCompilerOptionsData
@@ -289,11 +243,7 @@ struct SW_DRIVER_CPP_API NativeCompilerOptions : NativeCompilerOptionsData
 
 struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
 {
-    // 1. remove dups somewhere: implement unique_vector
-    // 2. move Dependencies out - ???
-
-    DependenciesType Dependencies;
-    //Files FileDependencies; // this can be managed with existing source files
+    DependenciesType Dependencies_;
     NativeLinkerOptionsData System;
 
     using NativeLinkerOptionsData::add;
@@ -520,14 +470,6 @@ public:
 
 namespace std
 {
-
-template<> struct hash<sw::Dependency>
-{
-    size_t operator()(const sw::Dependency& p) const
-    {
-        return std::hash<decltype(p.package)>()(p.package);
-    }
-};
 
 template<> struct hash<sw::Definition>
 {

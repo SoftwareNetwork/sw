@@ -625,7 +625,7 @@ void TargetOptions::add(const IncludeDirectory &i)
     {
         //&& !fs::exists(idir))
         idir = target->SourceDir / idir;
-        if (target->isLocal() && !fs::exists(idir))
+        if (!target->DryRun && target->isLocal() && !fs::exists(idir))
             throw SW_RUNTIME_ERROR(target->getPackage().toString() + ": include directory does not exist: " + normalize_path(idir));
 
         // check if exists, if not add bdir?
@@ -685,28 +685,29 @@ Files NativeTargetOptionsGroup::gatherAllFiles() const
 
 DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
 {
+    SW_UNIMPLEMENTED;
     DependenciesType deps;
     for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
     {
         auto s = getInheritanceStorage().raw()[i];
         if (!s)
             continue;
-        for (auto &d : s->Dependencies)
+        for (auto &d : s->Dependencies_)
             deps.insert(d);
     }
     return deps;
 }
 
-path NativeTargetOptionsGroup::getFile(const Target &dep, const path &fn)
+path Target::getFile(const Target &dep, const path &fn)
 {
-    (*this + dep)->setDummy(true);
+    SourceDependencies.insert(dep);
     return dep.SourceDir / fn;
 }
 
-path NativeTargetOptionsGroup::getFile(const DependencyPtr &dep, const path &fn)
+path Target::getFile(const DependencyPtr &dep, const path &fn)
 {
-    (*this + dep)->setDummy(true);
-    return target->getSolution().swctx.resolve(dep->getPackage()).getDirSrc2() / fn;
+    SourceDependencies.insert(*dep);
+    return getSolution().swctx.resolve(dep->getPackage()).getDirSrc2() / fn;
 }
 
 }

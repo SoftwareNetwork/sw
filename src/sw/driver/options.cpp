@@ -137,20 +137,30 @@ void unique_merge_containers(C &to, const C &from)
     }*/
 }
 
-Dependency::Dependency(const Target &t)
+DependencyData::DependencyData(const Target &t)
 {
-    operator=(t);
+    package = t.getPackage();
 }
 
-Dependency::Dependency(const UnresolvedPackage &p)
+DependencyData::DependencyData(const UnresolvedPackage &p)
 {
     package = p;
 }
 
-Dependency &Dependency::operator=(const Target &t)
+/*Dependency &Dependency::operator=(const Target &t)
 {
     setTarget(t);
     return *this;
+}*/
+
+bool DependencyData::operator==(const DependencyData &t) const
+{
+    return std::tie(package) == std::tie(t.package);
+}
+
+bool DependencyData::operator<(const DependencyData &t) const
+{
+    return std::tie(package) < std::tie(t.package);
 }
 
 bool Dependency::operator==(const Dependency &t) const
@@ -167,42 +177,35 @@ bool Dependency::operator<(const Dependency &t) const
     return std::tie(package, t1) < std::tie(t.package, t2);
 }
 
-UnresolvedPackage Dependency::getPackage() const
+UnresolvedPackage DependencyData::getPackage() const
 {
-    auto t = target;
+    /*auto t = target;
     if (t)
-        return {t->getPackage().ppath, t->getPackage().version};
+        return {t->getPackage().ppath, t->getPackage().version};*/
     return package;
 }
 
 LocalPackage Dependency::getResolvedPackage() const
 {
-    auto t = target;
-    if (t)
-        return t->getPackage();
-    throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
+    if (!target)
+        throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
+    return target->getPackage();
 }
 
 void Dependency::setTarget(const Target &t)
 {
     target = (Target *)&t;
-    propagateTargetToChain();
+    //propagateTargetToChain();
 }
 
-void Dependency::propagateTargetToChain()
+/*void Dependency::propagateTargetToChain()
 {
     for (auto &c : chain)
     {
         if (c.get() != this)
             c->setTarget(*target);
     }
-}
-
-void Dependency::setDummy(bool d)
-{
-    if (chain.empty())
-        Dummy = d;
-}
+}*/
 
 void NativeCompilerOptionsData::add(const Definition &d)
 {
@@ -501,18 +504,18 @@ void NativeLinkerOptions::remove(const Target &t)
 
 void NativeLinkerOptions::add(const DependencyPtr &t)
 {
-    auto i = std::find_if(Dependencies.begin(), Dependencies.end(), [t](const auto &d) {
+    auto i = std::find_if(Dependencies_.begin(), Dependencies_.end(), [t](const auto &d) {
         return d->getPackage() == t->getPackage();
     });
-    if (i == Dependencies.end())
+    if (i == Dependencies_.end())
     {
         t->Disabled = false;
-        Dependencies.insert(t);
+        Dependencies_.insert(t);
     }
     else
     {
         (*i)->Disabled = false;
-        (*i)->chain.push_back(t);
+        //(*i)->chain.push_back(t);
         auto d = (*i)->target;
         if (d)
             t->setTarget(*d);
@@ -521,18 +524,18 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
 
 void NativeLinkerOptions::remove(const DependencyPtr &t)
 {
-    auto i = std::find_if(Dependencies.begin(), Dependencies.end(), [t](const auto &d) {
+    auto i = std::find_if(Dependencies_.begin(), Dependencies_.end(), [t](const auto &d) {
         return d->getPackage() == t->getPackage();
     });
-    if (i == Dependencies.end())
+    if (i == Dependencies_.end())
     {
         t->Disabled = true;
-        Dependencies.insert(t);
+        Dependencies_.insert(t);
     }
     else
     {
         (*i)->Disabled = true;
-        (*i)->chain.push_back(t);
+        //(*i)->chain.push_back(t);
         auto d = (*i)->target;
         if (d)
             t->setTarget(*d);
