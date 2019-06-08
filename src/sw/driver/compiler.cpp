@@ -152,6 +152,8 @@ struct PredefinedTargetSettingsComparator : SettingsComparator
     bool equal(const TargetSettings &s1, const TargetSettings &s2) const override { return true; }
 };
 
+// left join comparator
+
 template <class T = PredefinedTarget>
 static decltype(auto) addProgramNoFile(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
 {

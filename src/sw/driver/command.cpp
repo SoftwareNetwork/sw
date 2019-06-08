@@ -469,6 +469,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_dep &t)
     {
         for (auto &t : t.targets)
         {
+            tgt->DummyDependencies.insert(*t);
             auto d = *tgt + *t;
             d->setDummy(true);
         }

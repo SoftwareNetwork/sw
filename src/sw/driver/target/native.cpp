@@ -1869,7 +1869,7 @@ bool NativeCompiledTarget::prepare()
                 // simple check
                 if (d->target == nullptr)
                 {
-                    throw std::logic_error(getPackage().toString() + ": Unresolved package on stage 2: " + d->package.toString()
+                    throw SW_LOGIC_ERROR(getPackage().toString() + ": Unresolved package on stage 2: " + d->package.toString()
                         //+ (d->owner ? ", owner: " + d->owner->getPackage().toString() : "")
                     );
                 }

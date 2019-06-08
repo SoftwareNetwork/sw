@@ -174,7 +174,7 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
         return *t;
     }
 
-    auto &ref = addChild(t, getSolution().getSettings().getTargetSettings());
+    auto &ref = addChild(t);
     t->bs = getSolution().getSettings();
     t->ts = getSolution().getSettings().getTargetSettings();
     getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
@@ -317,7 +317,10 @@ void Target::setSource(const Source &s)
         else
         {
             if (g->tag.empty())
+            {
                 g->tag = "{v}";
+                g->tryVTagPrefixDuringDownload();
+            }
         }
     }
 

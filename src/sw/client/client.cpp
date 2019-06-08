@@ -1278,7 +1278,7 @@ SUBCOMMAND_DECL2(upload)
     // dbg purposes
     for (auto &[id, d] : m)
     {
-        write_file(fs::current_path() / SW_BINARY_DIR / "upload" / id.toString() += ".json", *d);
+        write_file(fs::current_path() / SW_BINARY_DIR / "upload" / id.toString() += ".json", d->getString());
         auto id2 = id;
         id2.ppath = PackagePath(upload_prefix) / id2.ppath;
         LOG_INFO(logger, "Uploading " + id2.toString());

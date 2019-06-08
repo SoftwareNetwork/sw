@@ -259,6 +259,10 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage, std::enab
     bool sw_provided = false;
     bool AllowEmptyRegexes = false;
 
+    // always not inheritable
+    DependenciesType DummyDependencies;
+    DependenciesType RuntimeDependencies;
+
     using TargetBase::TargetBase;
     Target() = default;
     virtual ~Target() = default;

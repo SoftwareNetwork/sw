@@ -861,6 +861,9 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs) const
                 c.erase(r);
             known.insert(known2.begin(), known2.end());
 
+            if (c.empty())
+                continue;
+
             deps.insert(c.begin(), c.end());
 
             if (n_runs && !c.empty())
