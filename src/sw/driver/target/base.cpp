@@ -247,7 +247,10 @@ void TargetBase::setSource(const Source &s)
         else
         {
             if (g->tag.empty())
+            {
                 g->tag = "{v}";
+                g->tryVTagPrefixDuringDownload();
+            }
         }
     }
 
@@ -590,6 +593,8 @@ void TargetOptions::add(const IncludeDirectory &i)
     {
         //&& !fs::exists(idir))
         idir = target->SourceDir / idir;
+        if (target->isLocal() && !fs::exists(idir))
+            throw SW_RUNTIME_ERROR(target->getPackage().toString() + ": include directory does not exist: " + normalize_path(idir));
 
         // check if exists, if not add bdir?
     }
