@@ -117,14 +117,14 @@ SUBCOMMAND_DECL(integrate)
                     if (v.empty())
                         defs += k + ";";
                     else
-                        defs += k + "=" + v.toString() + ";";
+                        defs += k + "=" + sw::builder::Command::escape_cmd_arg(v.toString()) + ";";
                 }
                 for (auto &[k,v] : nt.Interface.Definitions)
                 {
                     if (v.empty())
                         defs += k + ";";
                     else
-                        defs += k + "=" + v.toString() + ";";
+                        defs += k + "=" + sw::builder::Command::escape_cmd_arg(v.toString()) + ";";
                 }
                 defs += "\"";
                 ctx.addLine("INTERFACE_COMPILE_DEFINITIONS " + defs);
@@ -182,6 +182,7 @@ SUBCOMMAND_DECL(integrate)
                 ctx.addLine("add_dependencies(" + pkg.toString() + " sw_build_dependencies)");
                 ctx.emptyLines();
 
+                if (pkg.version.isVersion())
                 for (auto i = pkg.version.getLevel() - 1; i >= 0; i--)
                 {
                     if (i)
@@ -206,6 +207,12 @@ SUBCOMMAND_DECL(integrate)
                     continue;
 
                 for (auto &d : nt.Dependencies)
+                {
+                    if (d->isDummy())
+                        continue;
+                    auto t = b.getChildren().find(d->getResolvedPackage())->second.find(sw::TargetSettings{ s })->second;
+                    if (t->skip || t->sw_provided)
+                        continue;
                     ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + d->getResolvedPackage().toString() + ")");
             }
             break;
@@ -271,14 +278,14 @@ SUBCOMMAND_DECL(integrate)
                         if (v.empty())
                             ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
                         else
-                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + v.toString() + "', lib)");
+                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + sw::builder::Command::escape_cmd_arg(v.toString()) + "', lib)");
                     }
                     for (auto &[k,v] : nt.Interface.Definitions)
                     {
                         if (v.empty())
                             ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
                         else
-                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + v.toString() + "', lib)");
+                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + sw::builder::Command::escape_cmd_arg(v.toString()) + "', lib)");
                     }
 
                     // idirs

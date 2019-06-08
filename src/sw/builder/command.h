@@ -241,13 +241,13 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     Command &operator|(Command &);
     Command &operator|=(Command &);
 
+    static String escape_cmd_arg(String);
+
 protected:
     bool prepared = false;
     bool executed_ = false;
 
     virtual bool check_if_file_newer(const path &, const String &what, bool throw_on_missing) const;
-
-    static String escape_cmd_arg(String);
 
 private:
     mutable size_t hash = 0;
