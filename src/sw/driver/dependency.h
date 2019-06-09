@@ -56,6 +56,9 @@ struct SW_DRIVER_CPP_API Dependency : DependencyData
 
     void setTarget(const Target &t);
     //void propagateTargetToChain();
+
+    // for backwards compat
+    void setDummy(bool) {}
 };
 
 using DependencyPtr = std::shared_ptr<Dependency>;

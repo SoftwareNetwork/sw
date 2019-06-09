@@ -291,7 +291,15 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
         }
     }
     if (!matches && target->Local && !target->AllowEmptyRegexes)
-        throw SW_RUNTIME_ERROR("No files matching regex: " + r.getRegexString());
+    {
+        String err = target->getPackage().toString() + ": No files matching regex: " + r.getRegexString();
+        if (ignore_source_files_errors)
+        {
+            LOG_INFO(logger, err);
+            return;
+        }
+        throw SW_RUNTIME_ERROR(err);
+    }
 }
 
 size_t SourceFileStorage::sizeKnown() const
@@ -431,7 +439,15 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
     }
     if (!target->DryRun) // special case
     if (files.empty() && target->Local && !target->AllowEmptyRegexes)
-        throw SW_RUNTIME_ERROR("No files matching regex: " + r.getRegexString());
+    {
+        String err = target->getPackage().toString() + ": No files matching regex: " + r.getRegexString();
+        if (ignore_source_files_errors)
+        {
+            LOG_INFO(logger, err);
+            return files;
+        }
+        throw SW_RUNTIME_ERROR(err);
+    }
     return files;
 }
 

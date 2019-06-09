@@ -108,7 +108,17 @@ enum class InheritanceType
     Max = Public + 1,
 };
 
-//InheritanceType inherit(InheritanceType InType, InheritanceType ChildObject, bool SameProject = false);
+inline InheritanceType &operator|(InheritanceType lhs, InheritanceType rhs)
+{
+    using T = std::underlying_type_t<InheritanceType>;
+    return static_cast<InheritanceType>(static_cast<T>(lhs) | static_cast<T>(rhs));
+}
+
+inline InheritanceType &operator|=(InheritanceType &lhs, InheritanceType rhs)
+{
+    lhs = lhs | rhs;
+    return lhs;
+}
 
 enum class LibraryType
 {

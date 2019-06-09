@@ -248,10 +248,10 @@ void BuildSettings::init()
                 sdktype = "iphoneos";
 
             primitives::Command c;
-            c.program = "xcrun";
-            c.args.push_back("--sdk");
-            c.args.push_back(sdktype);
-            c.args.push_back("--show-sdk-path");
+            c.setProgram("xcrun");
+            c.arguments.push_back("--sdk");
+            c.arguments.push_back(sdktype);
+            c.arguments.push_back("--show-sdk-path");
             error_code ec;
             c.execute(ec);
             if (ec)
@@ -1143,9 +1143,9 @@ void Build::addFirstConfig()
             if (auto l = p->template as<GNULinker>())
             {
                 auto cmd = l->createCommand(swctx);
-                cmd->args.push_back("-fuse-ld=lld");
-                cmd->args.push_back("-target");
-                cmd->args.push_back(Settings.getTargetTriplet());
+                cmd->arguments.push_back("-fuse-ld=lld");
+                cmd->arguments.push_back("-target");
+                cmd->arguments.push_back(Settings.getTargetTriplet());
             }
         }
     }
@@ -1995,13 +1995,13 @@ static Build::CommandExecutionPlan load(const SwContext &swctx, const path &fn, 
 
         c->name = read_string();
 
-        c->program = read_string();
+        c->setProgram(read_string());
         c->working_directory = read_string();
 
         size_t n;
         ctx.read(n);
         while (n--)
-            c->args.push_back(read_string());
+            c->arguments.push_back(read_string());
 
         c->redirectStdin(read_string());
         c->redirectStdout(read_string());
@@ -2105,12 +2105,11 @@ void save(const path &fn, const Build::CommandExecutionPlan &p)
 
         print_string(c->getName());
 
-        print_string(c->program.u8string());
         print_string(c->working_directory.u8string());
 
-        ctx.write(c->args.size());
-        for (auto &a : c->args)
-            print_string(a);
+        ctx.write(c->arguments.size());
+        for (auto &a : c->arguments)
+            print_string(a->toString());
 
         print_string(c->in.file.u8string());
         print_string(c->out.file.u8string());
@@ -2421,8 +2420,8 @@ Commands Build::getCommands() const
                         continue;
 
                     SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
-                    copy_cmd->args.push_back(in.u8string());
-                    copy_cmd->args.push_back(o.u8string());
+                    copy_cmd->arguments.push_back(in.u8string());
+                    copy_cmd->arguments.push_back(o.u8string());
                     copy_cmd->addInput(dt->getOutputFile());
                     copy_cmd->addOutput(o);
                     copy_cmd->dependencies.insert(nt->getCommand());
@@ -2713,8 +2712,8 @@ void Build::build_packages(const StringSet &pkgs)
                             continue;
 
                         SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
-                        copy_cmd->args.push_back(in.u8string());
-                        copy_cmd->args.push_back(o.u8string());
+                        copy_cmd->arguments.push_back(in.u8string());
+                        copy_cmd->arguments.push_back(o.u8string());
                         copy_cmd->addInput(dt->getOutputFile());
                         copy_cmd->addOutput(o);
                         //copy_cmd->dependencies.insert(nt->getCommand());

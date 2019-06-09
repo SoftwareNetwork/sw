@@ -30,7 +30,7 @@ bool isHostCygwin()
     static auto cyg = []()
     {
         primitives::Command c;
-        c.args = { "uname", "-o" };
+        c.arguments = { "uname", "-o" };
         error_code ec;
         c.execute(ec);
         if (!ec)

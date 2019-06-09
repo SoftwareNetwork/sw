@@ -1286,8 +1286,8 @@ SUBCOMMAND_DECL2(upload)
 
     // send signatures (gpg)
     // -k KEY1 -k KEY2
-    sw::Api api(*current_remote);
-    api.addVersion(upload_prefix, m, sw::read_config(build_arg_update.getValue()).value());*/
+    auto api = current_remote->getApi();
+    api->addVersion(upload_prefix, m, sw::read_config(build_arg_update.getValue()).value());*/
 }
 
 String getBuildTime();

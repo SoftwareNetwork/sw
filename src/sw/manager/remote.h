@@ -25,6 +25,8 @@ class ChannelInterface;
 namespace sw
 {
 
+using GrpcChannel = std::shared_ptr<grpc::ChannelInterface>;
+
 struct Package;
 struct PackageId;
 
@@ -49,8 +51,20 @@ struct DataSource
 
 using DataSources = std::vector<DataSource>;
 
+struct Api;
+
 struct Remote
 {
+    enum class ApiType
+    {
+        Protobuf = 0,
+        // msgpack
+        // json rpc
+        // soap
+        // ...
+        // etc.
+    };
+
     struct Publisher
     {
         String name;
@@ -65,8 +79,15 @@ struct Remote
 
     std::map<String, Publisher> publishers;
     bool secure = true;
+    ApiType type = ApiType::Protobuf;
 
-    std::shared_ptr<grpc::ChannelInterface> getGrpcChannel() const;
+    std::unique_ptr<Api> getApi() const;
+    ApiType getApiType() const { return type; }
+
+private:
+    GrpcChannel getGrpcChannel() const;
+
+    friend struct ProtobufApi;
 };
 
 using Remotes = std::vector<Remote>;

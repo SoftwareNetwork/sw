@@ -807,7 +807,7 @@ void TypeSize::run() const
     }
 
     primitives::Command c;
-    c.program = e.getOutputFile();
+    c.setProgram(e.getOutputFile());
     error_code ec;
     c.execute(ec);
     Value = c.exit_code;
@@ -882,7 +882,7 @@ void TypeAlignment::run() const
     }
 
     primitives::Command c;
-    c.program = e.getOutputFile();
+    c.setProgram(e.getOutputFile());
     error_code ec;
     c.execute(ec);
     Value = c.exit_code;
@@ -1198,7 +1198,7 @@ void SourceRuns::run() const
     }
 
     primitives::Command c;
-    c.program = e.getOutputFile();
+    c.setProgram(e.getOutputFile());
     error_code ec;
     c.execute(ec);
     Value = c.exit_code;

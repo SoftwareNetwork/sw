@@ -443,7 +443,7 @@ bool NativeCompiledTarget::init()
         findCompiler();
 
         // early setup compilers after libc, libcpp
-        merge1();
+        merge();
         if (auto c = findProgramByExtension(".c")->as<NativeCompiler*>())
             c->merge(*this);
         if (auto c = findProgramByExtension(".cpp")->as<NativeCompiler*>())
@@ -1183,7 +1183,7 @@ Commands NativeCompiledTarget::getCommands1() const
 
         auto prepare_command = [this, &cmds, &sd, &bd, &bdp](auto f, auto c)
         {
-            c->args.push_back(f->args);
+            c->arguments.push_back(f->args);
 
             // set fancy name
             if (!IsConfig && !do_not_mangle_object_names)
@@ -1271,8 +1271,8 @@ Commands NativeCompiledTarget::getCommands1() const
         o /= f->install_dir / p.filename();
 
         SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file", nullptr);
-        copy_cmd->args.push_back(p.u8string());
-        copy_cmd->args.push_back(o.u8string());
+        copy_cmd->arguments.push_back(p.u8string());
+        copy_cmd->arguments.push_back(o.u8string());
         copy_cmd->addInput(p);
         copy_cmd->addOutput(o);
         copy_cmd->name = "copy: " + normalize_path(o);
@@ -2368,7 +2368,7 @@ bool NativeCompiledTarget::prepare()
                 objs.insert(f->output.file);
             SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_create_def_file", nullptr);
             //c->record_inputs_mtime = true;
-            c->args.push_back(def.u8string());
+            c->arguments.push_back(def.u8string());
             c->push_back(objs);
             c->addInput(objs);
             c->addOutput(def);
@@ -2586,8 +2586,8 @@ void NativeCompiledTarget::processCircular(Files &obj)
         out += ".rp" + out.extension().u8string();
 
         SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_replace_dll_import", nullptr);
-        c->args.push_back(Linker->getOutputFile().u8string());
-        c->args.push_back(out.u8string());
+        c->arguments.push_back(Linker->getOutputFile().u8string());
+        c->arguments.push_back(out.u8string());
         c->addInput(Linker->getOutputFile());
         c->addOutput(out);
         auto cmd = Linker->createCommand(getSolution().swctx);

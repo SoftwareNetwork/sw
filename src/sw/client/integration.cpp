@@ -2,8 +2,8 @@
 #include "inserts.h"
 
 #include <primitives/emitter.h>
+#include <sw/core/sw_context.h>
 #include <sw/driver/build.h>
-#include <sw/driver/sw_context.h>
 #include <sw/driver/target/native.h>
 
 static ::cl::opt<path> integrate_cmake_deps("cmake-deps", ::cl::sub(subcommand_integrate));
@@ -42,7 +42,7 @@ struct CMakeEmitter : primitives::Emitter
     }
 };
 
-/*static String toCmakeString(sw::ConfigurationType t)
+static String toCmakeString(sw::ConfigurationType t)
 {
     switch (t)
     {
@@ -53,11 +53,11 @@ struct CMakeEmitter : primitives::Emitter
     default:
         SW_UNIMPLEMENTED;
     }
-}*/
+}
 
 SUBCOMMAND_DECL(integrate)
 {
-    if (!integrate_cmake_deps.empty())
+    /*if (!integrate_cmake_deps.empty())
     {
         auto lines = read_lines(integrate_cmake_deps);
 
@@ -122,14 +122,14 @@ SUBCOMMAND_DECL(integrate)
                     if (v.empty())
                         defs += k + ";";
                     else
-                        defs += k + "=" + sw::builder::Command::escape_cmd_arg(v.toString()) + ";";
+                        defs += k + "=" + primitives::command::Argument::quote(v.toString(), primitives::command::QuoteType::Escape) + ";";
                 }
                 for (auto &[k,v] : nt.Interface.Definitions)
                 {
                     if (v.empty())
                         defs += k + ";";
                     else
-                        defs += k + "=" + sw::builder::Command::escape_cmd_arg(v.toString()) + ";";
+                        defs += k + "=" + primitives::command::Argument::quote(v.toString(), primitives::command::QuoteType::Escape) + ";";
                 }
                 defs += "\"";
                 ctx.addLine("INTERFACE_COMPILE_DEFINITIONS " + defs);
@@ -219,15 +219,20 @@ SUBCOMMAND_DECL(integrate)
                 if (t->getType() == sw::TargetType::NativeExecutable)
                     continue;
 
-                for (auto &d : nt.Dependencies)
+                auto add_deps = [&ctx, &b, &pkg, &s](auto &deps)
                 {
-                    if (d->isDummy())
-                        continue;
-                    auto t = b.getChildren().find(d->getResolvedPackage())->second.find(sw::TargetSettings{ s })->second;
-                    if (t->skip || t->sw_provided)
-                        continue;
-                    ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + d->getResolvedPackage().toString() + ")");
-                }
+                    for (auto &d : deps)
+                    {
+                        if (d->isDummy())
+                            continue;
+                        auto t = b.getChildren().find(d->getResolvedPackage())->second.find(sw::TargetSettings{ s })->second;
+                        if (t->skip || t->sw_provided)
+                            continue;
+                        ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + d->getResolvedPackage().toString() + ")");
+                    }
+                };
+                add_deps(nt.Public.Dependencies);
+                add_deps(nt.Interface.Dependencies);
             }
             break;
         }
@@ -297,14 +302,14 @@ SUBCOMMAND_DECL(integrate)
                         if (v.empty())
                             ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
                         else
-                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + sw::builder::Command::escape_cmd_arg(v.toString()) + "', lib)");
+                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + primitives::command::Argument::quote(v.toString(), primitives::command::QuoteType::Escape) + "', lib)");
                     }
                     for (auto &[k,v] : nt.Interface.Definitions)
                     {
                         if (v.empty())
                             ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
                         else
-                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + sw::builder::Command::escape_cmd_arg(v.toString()) + "', lib)");
+                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + primitives::command::Argument::quote(v.toString(), primitives::command::QuoteType::Escape) + "', lib)");
                     }
 
                     // idirs
@@ -320,19 +325,24 @@ SUBCOMMAND_DECL(integrate)
                         ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d)) + "', lib)");
 
                     // deps
-                    for (auto &d : nt.Dependencies)
+                    auto add_deps = [&ctx, &b, &s, &process, &remove_ext](auto &deps)
                     {
-                        auto t = b.getChildren().find(d->getResolvedPackage())->second.find(sw::TargetSettings{ s })->second;
-                        if (t->skip || t->sw_provided)
-                            continue;
-                        if (t->getType() == sw::TargetType::NativeExecutable)
-                            continue;
+                        for (auto &d : deps)
+                        {
+                            auto t = b.getChildren().find(d->getResolvedPackage())->second.find(sw::TargetSettings{ s })->second;
+                            if (t->skip || t->sw_provided)
+                                continue;
+                            if (t->getType() == sw::TargetType::NativeExecutable)
+                                continue;
 
-                        auto &nt = *t->as<sw::NativeCompiledTarget>();
-                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(nt.getImportLibrary())) + "', lib)");
+                            auto &nt = *t->as<sw::NativeCompiledTarget>();
+                            ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(nt.getImportLibrary())) + "', lib)");
 
-                        process(nt);
-                    }
+                            process(nt);
+                        }
+                    };
+                    add_deps(nt.Public.Dependencies);
+                    add_deps(nt.Interface.Dependencies);
                 };
                 process(nt);
 
@@ -346,7 +356,7 @@ SUBCOMMAND_DECL(integrate)
         write_file_if_different("wscript", ctx.getText());
 
         return;
-    }
+    }*/
 
     SW_UNIMPLEMENTED;
 }

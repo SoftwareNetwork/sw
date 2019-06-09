@@ -225,6 +225,25 @@ struct SW_DRIVER_CPP_API TargetDescription
                     // description-file (or readme file)
 };
 
+struct SW_DRIVER_CPP_API TargetDependency
+{
+    //DependencyData dep;
+    //TargetSettings s;
+    UnresolvedPackage package;
+    InheritanceType type;
+
+    //bool operator==(const TargetDependency &t) const { return std::tie(dep, s) == std::tie(t.dep, t.s); }
+    //bool operator< (const TargetDependency &t) const { return std::tie(dep, s) <  std::tie(t.dep, t.s); }
+    bool operator==(const TargetDependency &t) const { return std::tie(package) == std::tie(t.package); }
+    bool operator< (const TargetDependency &t) const { return std::tie(package) <  std::tie(t.package); }
+
+    TargetDependency &operator|=(const TargetDependency &t)
+    {
+        type |= t.type;
+        return *this;
+    }
+};
+
 /**
 * \brief Single project target.
 */
@@ -260,11 +279,16 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage, std::enab
     bool sw_provided = false;
     bool AllowEmptyRegexes = false;
 
+    // inheritable, move to native? what about other langs?
+    std::set<TargetDependency> tdeps;
     // always not inheritable
-    std::unordered_set<DependencyData> DummyDependencies; // host config
+    std::unordered_set<DependencyData> DummyDependencies; // host config, but allowing some changes (configuration type/mt)
     std::unordered_set<DependencyData> SourceDependencies; // no config, dependency on source files
     // build dir deps?
     std::unordered_set<DependencyData> RuntimeDependencies; // this target config
+
+    void addDummyDependency();
+    //
 
     using TargetBase::TargetBase;
     Target() = default;

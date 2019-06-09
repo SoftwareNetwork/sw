@@ -109,7 +109,7 @@ bool isCppSourceFileExtensions(const String &e)
 static void add_args(driver::Command &c, const Strings &args)
 {
     for (auto &a : args)
-        c.args.push_back(a);
+        c.arguments.push_back(a);
 }
 
 path getProgramFilesX86();
@@ -779,8 +779,8 @@ void detectNonWindowsCompilers(Build &s)
     auto is_apple_clang = [](const path &p)
     {
         primitives::Command c;
-        c.program = p;
-        c.args.push_back("--version");
+        c.setProgram(p);
+        c.arguments.push_back("--version");
         error_code ec;
         c.execute(ec);
         if (ec)
@@ -1742,8 +1742,8 @@ void GNULinker::prepareCommand1(const Target &t)
             origin_dirs.push_back(d);
 
         // remove later?
-        cmd->args.push_back("-rpath");
-        cmd->args.push_back("./");
+        cmd->arguments.push_back("-rpath");
+        cmd->arguments.push_back("./");
     }
 
     //cmd->out.capture = true;
@@ -1838,7 +1838,20 @@ void RcTool::prepareCommand1(const Target &t)
         cmd->name_short = InputFile().filename().u8string();
     }
 
-    t.template as<NativeCompiledTarget>().NativeCompilerOptions::addDefinitionsAndIncludeDirectories(*cmd);
+    t.template as<NativeCompiledTarget>().NativeCompilerOptions::addDefinitions(*cmd);
+
+    // rc need to have -I arg separate to dir and dir must be taken into quotes
+    auto print_idir = [&c = *cmd](const auto &a, auto &flag)
+    {
+        for (auto &d : a)
+        {
+            c.arguments.push_back(flag);
+            c.arguments.push_back("\"" + normalize_path(d) + "\"");
+        }
+    };
+
+    print_idir(t.template as<NativeCompiledTarget>().NativeCompilerOptions::gatherIncludeDirectories(), "-I");
+    print_idir(t.template as<NativeCompiledTarget>().NativeCompilerOptions::System.gatherIncludeDirectories(), "-I");
 
     // ms bug: https://developercommunity.visualstudio.com/content/problem/417189/rcexe-incorrect-behavior-with.html
     //for (auto &i : system_idirs)
@@ -1856,8 +1869,9 @@ void RcTool::prepareCommand1(const Target &t)
 
     // find better way - protect things in addEverything?
 
-    for (auto &a : cmd->args)
+    for (auto &ap : cmd->arguments)
     {
+        auto a = ap->toString();
         if (a.find("-D") == 0)
         {
             auto ep = a.find("=");

@@ -27,6 +27,7 @@ struct ITarget : Node
 
     ///
     virtual Files getSourceFiles() const = 0;
+    // getFiles()? some langs does not have 'sources'
     // also add get binary files?
 
     /// get direct dependencies
@@ -41,6 +42,14 @@ struct ITarget : Node
 
 // shared_ptr for vector storage
 using ITargetPtr = std::shared_ptr<ITarget>;
+
+struct INativeTarget : ITarget
+{
+    virtual path getOutputFile() const = 0;
+    virtual path getImportLibrary() const = 0;
+    // get cl args?
+    // get link args?
+};
 
 struct TargetEntryPoint
 {

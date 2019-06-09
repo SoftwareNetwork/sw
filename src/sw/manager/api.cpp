@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "api.h"
+#include "api_protobuf.h"
 
 #include "package_path.h"
 #include "remote.h"
@@ -23,7 +24,7 @@ DECLARE_STATIC_LOGGER(logger, "api");
 namespace sw
 {
 
-void check_relative(const Remote &r, PackagePath &p)
+static void check_relative(const Remote &r, PackagePath &p)
 {
     throw SW_RUNTIME_ERROR("not implemented");
 
@@ -31,7 +32,7 @@ void check_relative(const Remote &r, PackagePath &p)
         //p = "pvt." + r.user + "." + p.toString();
 }
 
-void apply_auth(const Remote &r, grpc::ClientContext &context)
+static void apply_auth(const Remote &r, grpc::ClientContext &context)
 {
     if (r.publishers.empty())
         throw SW_RUNTIME_ERROR("Empty publishers");
@@ -39,14 +40,19 @@ void apply_auth(const Remote &r, grpc::ClientContext &context)
     context.AddMetadata(SW_GRPC_METADATA_AUTH_TOKEN, r.publishers.begin()->second.token);
 }
 
-Api::Api(const Remote &r)
-    : r(r)
-    , api_(api::ApiService::NewStub(r.getGrpcChannel()))
-    , user_(api::UserService::NewStub(r.getGrpcChannel()))
+Api::~Api()
 {
 }
 
-std::unique_ptr<grpc::ClientContext> Api::getContext()
+ProtobufApi::ProtobufApi(const Remote &r)
+    : r(r)
+    , c(r.getGrpcChannel())
+    , api_(api::ApiService::NewStub(c))
+    , user_(api::UserService::NewStub(c))
+{
+}
+
+std::unique_ptr<grpc::ClientContext> ProtobufApi::getContext() const
 {
     auto context = std::make_unique<grpc::ClientContext>();
     GRPC_SET_DEADLINE(10);
@@ -54,14 +60,14 @@ std::unique_ptr<grpc::ClientContext> Api::getContext()
     return context;
 }
 
-std::unique_ptr<grpc::ClientContext> Api::getContextWithAuth()
+std::unique_ptr<grpc::ClientContext> ProtobufApi::getContextWithAuth() const
 {
     auto ctx = getContext();
     apply_auth(r, *ctx);
     return ctx;
 }
 
-void Api::addDownloads(const std::set<int64_t> &pkgs)
+void ProtobufApi::addDownloads(const std::set<int64_t> &pkgs)
 {
     api::PackageIds request;
     for (auto &id : pkgs)
@@ -70,14 +76,14 @@ void Api::addDownloads(const std::set<int64_t> &pkgs)
     GRPC_CALL(api_, AddDownloads, google::protobuf::Empty);
 }
 
-void Api::addClientCall()
+void ProtobufApi::addClientCall()
 {
     google::protobuf::Empty request;
     auto context = getContext();
     GRPC_CALL(api_, AddClientCall, google::protobuf::Empty);
 }
 
-Api::IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
+Api::IdDependencies ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs) const
 {
     api::UnresolvedPackages request;
     for (auto &pkg : pkgs)
@@ -106,7 +112,7 @@ Api::IdDependencies Api::resolvePackages(const UnresolvedPackages &pkgs)
     return id_deps;
 }
 
-void Api::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script)
+void ProtobufApi::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script) const
 {
     api::NewPackage request;
     request.mutable_package_data()->mutable_script()->set_script(script);
@@ -120,7 +126,12 @@ void Api::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, cons
         if (rd.back() != '\\' && rd.back() != '/')
             sz++;
         for (auto &f : j["files"])
-            f["from"] = f["from"].get<String>().substr(sz);
+        {
+            auto s = f["from"].get<String>();
+            if (s.find(rd) != 0)
+                throw SW_RUNTIME_ERROR("bad file path: " + s);
+            f["from"] = s.substr(sz);
+        }
         jm["packages"][pkg.toString()] = j;
     }
     request.mutable_package_data()->set_data(jm.dump());
@@ -129,7 +140,7 @@ void Api::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, cons
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
 }
 
-void Api::addVersion(const PackagePath &prefix, const String &script)
+void ProtobufApi::addVersion(const PackagePath &prefix, const String &script)
 {
     api::NewPackage request;
     request.mutable_script()->set_script(script);
@@ -139,7 +150,7 @@ void Api::addVersion(const PackagePath &prefix, const String &script)
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
 }
 
-void Api::addVersion(PackagePath p, const Version &vnew, const std::optional<Version> &vold)
+void ProtobufApi::addVersion(PackagePath p, const Version &vnew, const std::optional<Version> &vold)
 {
     check_relative(r, p);
 
@@ -154,7 +165,7 @@ void Api::addVersion(PackagePath p, const Version &vnew, const std::optional<Ver
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
 }
 
-void Api::updateVersion(PackagePath p, const Version &v)
+void ProtobufApi::updateVersion(PackagePath p, const Version &v)
 {
     if (!v.isBranch())
         throw SW_RUNTIME_ERROR("Only branches can be updated");
@@ -170,7 +181,7 @@ void Api::updateVersion(PackagePath p, const Version &v)
     GRPC_CALL_THROWS(user_, UpdatePackage, google::protobuf::Empty);
 }
 
-void Api::removeVersion(PackagePath p, const Version &v)
+void ProtobufApi::removeVersion(PackagePath p, const Version &v)
 {
     check_relative(r, p);
 
@@ -182,7 +193,7 @@ void Api::removeVersion(PackagePath p, const Version &v)
     GRPC_CALL_THROWS(user_, RemovePackage, google::protobuf::Empty);
 }
 
-void Api::getNotifications(int n)
+void ProtobufApi::getNotifications(int n)
 {
     if (n < 0)
         return;
@@ -218,7 +229,7 @@ void Api::getNotifications(int n)
     }
 }
 
-void Api::clearNotifications()
+void ProtobufApi::clearNotifications()
 {
     google::protobuf::Empty request;
     auto context = getContextWithAuth();
