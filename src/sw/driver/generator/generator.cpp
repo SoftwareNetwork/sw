@@ -125,7 +125,7 @@ struct NinjaEmitter : primitives::Emitter
     {
         String command;
 
-        auto prog = c.getProgram().u8string();
+        auto prog = c.getProgram();
         if (prog == "ExecuteCommand")
             return;
 
@@ -166,10 +166,10 @@ struct NinjaEmitter : primitives::Emitter
         addText(prepareString(b, getShortName(prog), true) + " ");
         if (!rsp)
         {
-            for (auto &a : c.args)
+            for (auto &a : c.arguments)
             {
-                addText(prepareString(b, a, true) + " ");
-                has_mmd |= "-MMD" == a;
+                addText(prepareString(b, a->toString(), true) + " ");
+                has_mmd |= "-MMD" == a->toString();
             }
         }
         else
@@ -192,8 +192,8 @@ struct NinjaEmitter : primitives::Emitter
         {
             addLine("rspfile = " + rsp_file.u8string());
             addLine("rspfile_content = ");
-            for (auto &a : c.args)
-                addText(prepareString(b, a, c.protect_args_with_quotes) + " ");
+            for (auto &a : c.arguments)
+                addText(prepareString(b, a->toString(), c.protect_args_with_quotes) + " ");
         }
         decreaseIndent();
         addLine();
@@ -390,10 +390,10 @@ struct MakeEmitter : primitives::Emitter
 
         if (!c.needsResponseFile())
         {
-            for (auto &a : c.args)
+            for (auto &a : c.arguments)
             {
-                if (should_print(a))
-                    s += a.quote() + " ";
+                if (should_print(a->toString()))
+                    s += a->quote() + " ";
             }
             s.resize(s.size() - 1);
         }
@@ -581,20 +581,20 @@ void BatchGenerator::generate(const Build &b)
             if (!c->needsResponseFile())
             {
                 s += "%" + program_name(programs[c->getProgram()]) + "% ";
-                for (auto &a : c->args)
+                for (auto &a : c->arguments)
                 {
-                    if (should_print(a))
-                        s += a.quote() + " ";
+                    if (should_print(a->toString()))
+                        s += a->quote() + " ";
                 }
                 s.resize(s.size() - 1);
             }
             else
             {
                 s += "@echo. 2> response.rsp\n";
-                for (auto &a : c->args)
+                for (auto &a : c->arguments)
                 {
-                    if (should_print(a))
-                        s += "@echo " + a.quote() + " >> response.rsp\n";
+                    if (should_print(a->toString()))
+                        s += "@echo " + a->quote() + " >> response.rsp\n";
                 }
                 s += "%" + program_name(programs[c->getProgram()]) + "% @response.rsp";
             }
@@ -611,9 +611,9 @@ void BatchGenerator::generate(const Build &b)
         std::unordered_map<path, size_t> programs;
         for (auto &c : ep.commands)
         {
-            s += c->program.u8string() + " ";
-            for (auto &a : c->args)
-                s += a.get() + " ";
+            s += c->getProgram() + " ";
+            for (auto &a : c->arguments)
+                s += a->toString() + " ";
             s.resize(s.size() - 1);
             s += "\n\n";
         }
@@ -638,10 +638,10 @@ void BatchGenerator::generate(const Build &b)
 
         for (auto &c : ep.commands)
         {
-            print_string(c->program.u8string());
+            print_string(c->getProgram());
             print_string(c->working_directory.u8string());
-            for (auto &a : c->args)
-                print_string(a);
+            for (auto &a : c->arguments)
+                print_string(a->toString());
             s.resize(s.size() - 1);
             s += "\n";
         }
@@ -695,9 +695,9 @@ void CompilationDatabaseGenerator::generate(const Build &b)
                     nlohmann::json j2;
                     j2["directory"] = normalize_path(c->working_directory);
                     j2["file"] = normalize_path(*c->inputs.begin());
-                    j2["arguments"].push_back(normalize_path(c->program));
-                    for (auto &a : c->args)
-                        j2["arguments"].push_back(a);
+                    j2["arguments"].push_back(normalize_path(c->getProgram()));
+                    for (auto &a : c->arguments)
+                        j2["arguments"].push_back(a->toString());
                     j.push_back(j2);
                 }
             }

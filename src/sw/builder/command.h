@@ -116,6 +116,8 @@ struct SW_BUILDER_API ResourcePool
 namespace builder
 {
 
+using ::primitives::command::QuoteType;
+
 namespace detail
 {
 
@@ -202,12 +204,11 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     bool isExecuted() const { return pid != -1 || executed_; }
 
     String getName(bool short_name = false) const;
-    path getProgram() const override;
 
     virtual bool isOutdated() const;
     bool needsResponseFile() const;
 
-    void setProgram(const path &p);
+    using Base::setProgram;
     void setProgram(std::shared_ptr<Program> p);
     void addInput(const path &p);
     void addInput(const Files &p);
@@ -235,13 +236,13 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
 
     path getResponseFilename() const;
     virtual String getResponseFileContents(bool showIncludes = false) const;
+    int getFirstResponseFileArgument() const;
 
-    Args &getArgs() override;
+    Arguments &getArguments() override;
+    const Arguments &getArguments() const override;
 
     Command &operator|(Command &);
     Command &operator|=(Command &);
-
-    static String escape_cmd_arg(String);
 
 protected:
     bool prepared = false;
@@ -251,7 +252,7 @@ protected:
 
 private:
     mutable size_t hash = 0;
-    Args rsp_args;
+    Arguments rsp_args;
     mutable String log_string;
 
     virtual void execute1(std::error_code *ec = nullptr);

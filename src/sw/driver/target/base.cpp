@@ -593,7 +593,7 @@ void TargetOptions::add(const IncludeDirectory &i)
     {
         //&& !fs::exists(idir))
         idir = target->SourceDir / idir;
-        if (target->isLocal() && !fs::exists(idir))
+        if (!target->DryRun && target->isLocal() && !fs::exists(idir))
             throw SW_RUNTIME_ERROR(target->getPackage().toString() + ": include directory does not exist: " + normalize_path(idir));
 
         // check if exists, if not add bdir?

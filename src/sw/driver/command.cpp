@@ -26,24 +26,24 @@ namespace sw::driver
 namespace detail
 {
 
-Command::Command(const SwContext &swctx)
+Command::Command(const SwBuilderContext &swctx)
     : Base::Command(swctx)
 {
 }
 
-Command::Command(const SwContext &swctx, ::sw::FileStorage &fs)
+Command::Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs)
     : Base::Command(swctx, fs)
 {
 }
 
 }
 
-Command::Command(const SwContext &swctx)
+Command::Command(const SwBuilderContext &swctx)
     : Base::Command(swctx)
 {
 }
 
-Command::Command(const SwContext &swctx, ::sw::FileStorage &fs)
+Command::Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs)
     : Base::Command(swctx, fs)
 {
 }
@@ -58,72 +58,54 @@ void Command::prepare()
     if (prepared)
         return;
 
-    // evaluate lazy args
-    for (auto &[pos, f] : callbacks)
-        args[pos] = f();
+    // evaluate lazy
     for (auto &f : actions)
         f();
 
     // early cleanup
-    callbacks.clear();
     actions.clear();
 
-    auto d = dependency.lock();
-    if (d)
+    // target may set program explicitly (e.g. to system program)
+    // so we don't check other conditions below
+    if (!isProgramSet())
     {
-        auto t = d->target;
-        if (!t)
-            throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
-        ((NativeTarget*)t)->setupCommand(*this);
+        auto d = dependency.lock();
+        if (d)
+        {
+            auto t = d->target;
+            if (!t)
+                throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
+            ((NativeTarget *)t)->setupCommand(*this);
+
+            path p;
+            if (auto nt = t->as<NativeCompiledTarget>())
+            {
+                p = nt->getOutputFile();
+                if (!p.empty() && !File(p, *fs).isGenerated())
+                {
+                    if (*nt->HeaderOnly)
+                        throw SW_RUNTIME_ERROR("Program is used from package: " + t->getPackage().toString() + " which is header only");
+                    if (!File(p, *fs).isGeneratedAtAll())
+                        throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated at all: " + normalize_path(p));
+                    throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated: " + normalize_path(p));
+                }
+            }
+            else if (auto nt = t->as<NativeTarget>())
+                p = nt->getOutputFile();
+            else
+                throw SW_RUNTIME_ERROR("Package: " + t->getPackage().toString() + " has unknown type");
+
+            if (p.empty())
+                throw SW_RUNTIME_ERROR("Empty program from package: " + t->getPackage().toString());
+            setProgram(p);
+        }
+        else if (dependency_set)
+        {
+            throw SW_RUNTIME_ERROR("Command dependency was not resolved: ???UNKNOWN_PROGRAM??? " + print());
+        }
     }
 
     Base::prepare();
-}
-
-path Command::getProgram() const
-{
-    // target may set program explicitly (e.g. to system program)
-    // so we don't check other conditions below
-    if (!program.empty())
-        return program;
-
-    auto d = dependency.lock();
-    path p;
-    if (d)
-    {
-        auto t = d->target;
-        if (!t)
-            throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
-        if (auto nt = t->as<NativeCompiledTarget>())
-        {
-            p = nt->getOutputFile();
-            if (p.empty())
-                throw SW_RUNTIME_ERROR("Empty program from package: " + t->getPackage().toString());
-            if (!File(p, *fs).isGenerated())
-            {
-                if (*nt->HeaderOnly)
-                    throw SW_RUNTIME_ERROR("Program is used from package: " + t->getPackage().toString() + " which is header only");
-                if (!File(p, *fs).isGeneratedAtAll())
-                    throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated at all: " + normalize_path(p));
-                throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated: " + normalize_path(p));
-            }
-        }
-        else if (auto nt = t->as<NativeTarget>())
-        {
-            p = nt->getOutputFile();
-            if (p.empty())
-                throw SW_RUNTIME_ERROR("Empty program from package: " + t->getPackage().toString());
-        }
-        else
-            throw SW_RUNTIME_ERROR("Package: " + t->getPackage().toString() + " has unknown type");
-    }
-    else if (dependency_set)
-    {
-        throw SW_RUNTIME_ERROR("Command dependency was not resolved: ???UNKNOWN_PROGRAM??? " + print());
-    }
-    else
-        p = Base::getProgram();
-    return p;
 }
 
 void Command::setProgram(const std::shared_ptr<Dependency> &d)
@@ -132,12 +114,6 @@ void Command::setProgram(const std::shared_ptr<Dependency> &d)
         throw SW_RUNTIME_ERROR("Setting program twice"); // probably throw, but who knows...
     dependency = d;
     dependency_set = true;
-}
-
-void Command::pushLazyArg(LazyCallback f)
-{
-    callbacks[(int)args.size()] = f;
-    args.push_back("");
 }
 
 void Command::addLazyAction(LazyAction f)
@@ -278,12 +254,12 @@ void GNUCommand::postProcess1(bool ok)
 
 ///
 
-CommandBuilder::CommandBuilder(const SwContext &swctx)
+CommandBuilder::CommandBuilder(const SwBuilderContext &swctx)
 {
     c = std::make_shared<Command>(swctx);
 }
 
-CommandBuilder::CommandBuilder(const SwContext &swctx, ::sw::FileStorage &fs)
+CommandBuilder::CommandBuilder(const SwBuilderContext &swctx, ::sw::FileStorage &fs)
     : CommandBuilder(swctx)
 {
     c->fs = &fs;
@@ -337,7 +313,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
                 p = all[0]->SourceDir / p;
 
         if (!cb.stopped)
-            cb.c->args.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
+            cb.c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
         cb.c->addInput(p);
         if (t.add_to_targets)
         {
@@ -366,7 +342,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
                 p = all[0]->BinaryDir / p;
 
         if (!cb.stopped)
-            cb.c->args.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
+            cb.c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
         cb.c->addOutput(p);
         if (t.add_to_targets)
         {
@@ -489,8 +465,29 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_env &t)
 
 CommandBuilder &operator<<(CommandBuilder &cb, const Command::LazyCallback &t)
 {
+    struct LazyArgument : ::primitives::command::Argument
+    {
+        Command::LazyCallback cb;
+
+        LazyArgument(Command::LazyCallback cb)
+            : cb(cb)
+        {}
+
+        String toString() const override
+        {
+            return cb();
+        }
+
+        std::unique_ptr<::primitives::command::Argument> clone() const
+        {
+            return std::make_unique<LazyArgument>(cb);
+        }
+    };
+
     if (!cb.stopped)
-        cb.c->pushLazyArg(t);
+    {
+        cb.c->arguments.push_back(std::make_unique<LazyArgument>(t));
+    }
     return cb;
 }
 

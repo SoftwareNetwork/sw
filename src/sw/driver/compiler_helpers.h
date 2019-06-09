@@ -22,8 +22,8 @@ static void getCommandLineOptions(driver::Command *c, const CommandLineOptions<T
         for (auto &c2 : cmd)
         {
             if (!prefix.empty())
-                c->args.push_back(prefix);
-            c->args.push_back(c2);
+                c->arguments.push_back(prefix);
+            c->arguments.push_back(c2);
         }
     }
 }

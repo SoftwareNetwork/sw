@@ -11,6 +11,7 @@
 #include "sw/driver/compiler.h"
 #include "sw/driver/compiler_helpers.h"
 #include "sw/driver/build.h"
+#include "sw/driver/sw_context.h"
 #include "sw/driver/target/native.h"
 
 #include <sw/builder/execution_plan.h>
@@ -697,8 +698,8 @@ void ProjectEmitter::printProject(
                     auto cmd = std::make_shared<driver::Command>(b.swctx);
                     cmd->fs = &nt.getFs();
                     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *v);
-                    for (auto &a : cmd->args)
-                        add_opts += a.get() + " ";
+                    for (auto &a : cmd->arguments)
+                        add_opts += a->toString() + " ";
                 }
             }
         }
@@ -827,24 +828,24 @@ void ProjectEmitter::printProject(
 
                 if (auto dc = gen->as<ExecuteBuiltinCommand>())
                 {
-                    if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
-                        dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::builder::getInternalCallBuiltinFunctionName())
+                    if (dc->arguments.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
+                        dc->arguments[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)]->toString() == sw::builder::getInternalCallBuiltinFunctionName())
                     {
-                        if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
-                            dc->args[toIndex(driver::BuiltinCommandArgumentId::FunctionName)] == "sw_create_def_file")
+                        if (dc->arguments.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
+                            dc->arguments[toIndex(driver::BuiltinCommandArgumentId::FunctionName)]->toString() == "sw_create_def_file")
                         {
                             beginBlock("PreLinkEvent");
 
                             Files filenames;
-                            for (int i = toIndex(driver::BuiltinCommandArgumentId::FirstArgument) + 2; i < dc->args.size(); i++)
+                            for (int i = toIndex(driver::BuiltinCommandArgumentId::FirstArgument) + 2; i < dc->arguments.size(); i++)
                             {
-                                path f = dc->args[i];
+                                path f = dc->arguments[i]->toString();
                                 auto fn = f.stem().stem().stem();
                                 fn += f.extension();
                                 if (filenames.find(fn) != filenames.end())
                                     fn = f.filename();
                                 filenames.insert(fn);
-                                dc->args[i] = normalize_path(get_int_dir(nt, s) / "int" / fn.u8string());
+                                dc->arguments[i] = std::make_unique<::primitives::command::SimpleArgument>(normalize_path(get_int_dir(nt, s) / "int" / fn.u8string()));
                             }
 
                             auto batch = get_int_dir(nt, s) / "commands" / std::to_string(gen->getHash());
@@ -1053,11 +1054,11 @@ void ProjectEmitter::printProject(
 
                 if (auto dc = gen->as<ExecuteBuiltinCommand>())
                 {
-                    if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
-                        dc->args[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)] == sw::builder::getInternalCallBuiltinFunctionName())
+                    if (dc->arguments.size() > toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword) &&
+                        dc->arguments[toIndex(driver::BuiltinCommandArgumentId::ArgumentKeyword)]->toString() == sw::builder::getInternalCallBuiltinFunctionName())
                     {
-                        if (dc->args.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
-                            dc->args[toIndex(driver::BuiltinCommandArgumentId::FunctionName)] == "sw_create_def_file")
+                        if (dc->arguments.size() > toIndex(driver::BuiltinCommandArgumentId::FunctionName) &&
+                            dc->arguments[toIndex(driver::BuiltinCommandArgumentId::FunctionName)]->toString() == "sw_create_def_file")
                         {
                             return;
                         }
@@ -1113,7 +1114,7 @@ void ProjectEmitter::printProject(
                                     addText(normalize_path_windows(tdir) + ";");
 
                                     // fix program
-                                    gen->program = tdir;
+                                    gen->setProgram(tdir);
 
                                     deps.insert(d->target->getPackage().toString());
                                 }
@@ -1123,9 +1124,9 @@ void ProjectEmitter::printProject(
                     for (auto &o : gen->inputs)
                         addText(normalize_path_windows(o) + ";");
 
-                    // fix commands args, env etc.
-                    for (auto &a : gen->args)
-                        a = fix_strings(a);
+                    // fix commands arguments, env etc.
+                    for (auto &a : gen->arguments)
+                        a = std::make_unique<::primitives::command::SimpleArgument>(fix_strings(a->toString()));
                     // and add new deps
                     for (auto &d : replacement_deps)
                         addText(normalize_path_windows(d) + ";");
@@ -1943,67 +1944,67 @@ void VSGenerator::generate(const Build &b)
             pctx.addBlock("IntDir", normalize_path_windows(int_dir) + "\\int\\");
             pctx.endBlock();
 
-            Strings args;
-            args.push_back("-configuration");
-            args.push_back(generator::toString(s.Native.ConfigurationType));
-            args.push_back("-platform");
-            args.push_back(generator::toString(s.TargetOS.Arch));
+            Strings arguments;
+            arguments.push_back("-configuration");
+            arguments.push_back(generator::toString(s.Native.ConfigurationType));
+            arguments.push_back("-platform");
+            arguments.push_back(generator::toString(s.TargetOS.Arch));
             if (s.Native.LibrariesType == LibraryType::Static)
-            args.push_back("-static");
+            arguments.push_back("-static");
             if (s.Native.MT)
-            args.push_back("-mt");
+            arguments.push_back("-mt");
 
             /*if (s.Settings.Native.CompilerType == CompilerType::Clang)
             {
-                args.push_back("-compiler");
-                args.push_back("clang");
+                arguments.push_back("-compiler");
+                arguments.push_back("clang");
             }
             else if (s.Settings.Native.CompilerType == CompilerType::ClangCl)
             {
-                args.push_back("-compiler");
-                args.push_back("clangcl");
+                arguments.push_back("-compiler");
+                arguments.push_back("clangcl");
             }
             else if (s.Settings.Native.CompilerType == CompilerType::GNU)
             {
-                args.push_back("-compiler");
-                args.push_back("gnu");
+                arguments.push_back("-compiler");
+                arguments.push_back("gnu");
             }
             else if (s.Settings.Native.CompilerType == CompilerType::MSVC)*/
             {
-                args.push_back("-compiler");
-                args.push_back("msvc");
+                arguments.push_back("-compiler");
+                arguments.push_back("msvc");
             }
 
-            args.push_back("-d");
-            args.push_back(normalize_path(b.config_file_or_dir));
+            arguments.push_back("-d");
+            arguments.push_back(normalize_path(b.config_file_or_dir));
 
-            args.push_back("-activate");
-            args.push_back(PackageId{ "com.Microsoft.VisualStudio", version }.toString());
+            arguments.push_back("-activate");
+            arguments.push_back(PackageId{ "com.Microsoft.VisualStudio", version }.toString());
 
-            args.push_back("build");
+            arguments.push_back("build");
 
             String deps;
             for (auto &p : ctx.build_deps)
             {
                 deps += p.toString() + " ";
-                args.push_back(p.toString());
+                arguments.push_back(p.toString());
             }
 
             //auto base = int_dir / "sw";
             auto base = int_dir / shorten_hash(blake2b_512(deps), 6);
 
-            args.push_back("-ide-copy-to-dir");
-            args.push_back(normalize_path(get_out_dir(dir, projects_dir, s)));
+            arguments.push_back("-ide-copy-to-dir");
+            arguments.push_back(normalize_path(get_out_dir(dir, projects_dir, s)));
 
             auto fp = path(base) += ".deps";
             if (fs::exists(fp))
                 fs::remove(fp);
-            args.push_back("-ide-fast-path");
-            args.push_back(normalize_path(fp));
+            arguments.push_back("-ide-fast-path");
+            arguments.push_back(normalize_path(fp));
 
             auto rsp = normalize_path(path(base) += ".rsp");
             String str;
-            for (auto &a : args)
+            for (auto &a : arguments)
                 str += a + "\n";
             write_file(rsp, str);
 

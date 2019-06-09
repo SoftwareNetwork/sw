@@ -190,10 +190,9 @@ struct ExecutionPlan
         for (auto &c : commands)
         {
             insert(c->getName());
-            insert(c->program.u8string());
             insert(c->working_directory.u8string());
-            for (auto &a : c->args)
-                insert(a);
+            for (auto &a : c->arguments)
+                insert(a->toString());
             insert(c->in.file.u8string());
             insert(c->out.file.u8string());
             insert(c->err.file.u8string());

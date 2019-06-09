@@ -321,8 +321,8 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 
     bool ignore_deps_generated_commands = false;
 
-    Command(const SwContext &swctx);
-    Command(const SwContext &swctx, ::sw::FileStorage &fs);
+    Command(const SwBuilderContext &swctx);
+    Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs);
 };
 
 }
@@ -333,28 +333,24 @@ struct SW_DRIVER_CPP_API Command : detail::Command
     using LazyCallback = std::function<String(void)>;
     using LazyAction = std::function<void(void)>;
 
-    bool program_set = false;
     std::weak_ptr<Dependency> dependency;
 
-    Command(const SwContext &swctx);
-    Command(const SwContext &swctx, ::sw::FileStorage &fs);
+    Command(const SwBuilderContext &swctx);
+    Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs);
     virtual ~Command() = default;
 
     virtual std::shared_ptr<Command> clone() const;
-    path getProgram() const override;
     void prepare() override;
 
     using Base::setProgram;
     void setProgram(const std::shared_ptr<Dependency> &d);
 
-    void pushLazyArg(LazyCallback f);
     void addLazyAction(LazyAction f);
 
     using Base::operator|;
     Command &operator|(struct CommandBuilder &);
 
 private:
-    std::map<int, LazyCallback> callbacks;
     std::vector<LazyAction> actions;
     bool dependency_set = false;
 };
@@ -387,8 +383,8 @@ struct SW_DRIVER_CPP_API CommandBuilder
     std::vector<NativeCompiledTarget*> targets;
     bool stopped = false;
 
-    CommandBuilder(const SwContext &swctx);
-    CommandBuilder(const SwContext &swctx, ::sw::FileStorage &fs);
+    CommandBuilder(const SwBuilderContext &swctx);
+    CommandBuilder(const SwBuilderContext &swctx, ::sw::FileStorage &fs);
     CommandBuilder(const CommandBuilder &) = default;
     CommandBuilder &operator=(const CommandBuilder &) = default;
 
@@ -412,39 +408,27 @@ DECLARE_STREAM_OP(::sw::cmd::tag_dep);
 DECLARE_STREAM_OP(::sw::cmd::tag_env);
 DECLARE_STREAM_OP(Command::LazyCallback);
 
-/*template <class T>
-CommandBuilder operator<<(std::shared_ptr<Command> &c, const T &t)
-{
-    CommandBuilder cb;
-    cb.c = c;
-    cb << t;
-    return cb;
-}*/
-
 template <class T>
 CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
 {
     if constexpr (std::is_same_v<T, path> || std::is_convertible_v<T, String>)
     {
-        throw SW_RUNTIME_ERROR("not implemented");
-
         cb.c->setProgram(*t.t);
-        cb.c->program_set = true;
-        return cb;
     }
-
-    bool once = false;
-    for (auto tgt : cb.targets)
+    else
     {
-        auto d = *tgt + *t.t;
-        d->setDummy(true);
-        if (!once)
+        bool once = false;
+        for (auto tgt : cb.targets)
         {
-            cb.c->setProgram(d);
-            once = true;
+            auto d = *tgt + *t.t;
+            d->setDummy(true);
+            if (!once)
+            {
+                cb.c->setProgram(d);
+                once = true;
+            }
         }
     }
-    cb.c->program_set = true;
     return cb;
 }
 
@@ -455,13 +439,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
     {
         if (cb.stopped)
             return;
-        if (cb.c->args.empty() && !cb.c->program_set)
-        {
-            cb.c->program = s;
-            cb.c->program_set = true;
-        }
-        else
-            cb.c->args.push_back(s);
+        cb.c->arguments.push_back(s);
     };
 
     if constexpr (std::is_same_v<T, path>)
@@ -482,6 +460,10 @@ CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
     else if constexpr (std::is_base_of_v<NativeCompiledTarget, T>)
     {
         return cb << (const NativeCompiledTarget&)t;
+    }
+    else if constexpr (std::is_invocable_v<T>)
+    {
+        return cb << Command::LazyCallback(t);
     }
     else
     {

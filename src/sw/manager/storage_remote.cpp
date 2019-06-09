@@ -473,8 +473,8 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
 
     LOG_INFO(logger, "Requesting dependency list... ");
 
-    Api api(*cr);
-    auto id_deps = api.resolvePackages(pkgs);
+    auto api = cr->getApi();
+    auto id_deps = api->resolvePackages(pkgs);
     for (auto &[vid, d] : id_deps)
     {
         for (auto &u : pkgs)

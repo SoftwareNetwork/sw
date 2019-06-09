@@ -6,9 +6,8 @@
 
 #include "remote.h"
 
-#include "database.h"
+#include "api.h"
 #include "package.h"
-#include "storage.h"
 
 #include <sw/support/hash.h>
 
@@ -86,7 +85,18 @@ bool DataSource::downloadPackage(const Package &d, const path &fn, String &dl_ha
     return false;
 }
 
-std::shared_ptr<grpc::ChannelInterface> Remote::getGrpcChannel() const
+std::unique_ptr<Api> Remote::getApi() const
+{
+    switch (getApiType())
+    {
+    case ApiType::Protobuf:
+        ;
+    default:
+        SW_UNIMPLEMENTED;
+    }
+}
+
+GrpcChannel Remote::getGrpcChannel() const
 {
     // keeping channel for too long causes issues
     // so we create a new one every time

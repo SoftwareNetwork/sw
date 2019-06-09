@@ -108,7 +108,7 @@ static bool isExplainNeeded()
 
 static String getCommandId(const Command &c)
 {
-    String s = c.getName() + ", " + std::to_string(c.getHash()) + ", # of args " + std::to_string(c.args.size());
+    String s = c.getName() + ", " + std::to_string(c.getHash()) + ", # of arguments " + std::to_string(c.arguments.size());
     if (explain_outdated_full)
     {
         s += "\n";
@@ -116,9 +116,8 @@ static String getCommandId(const Command &c)
         s += "env:\n";
         for (auto &[k, v] : c.environment)
             s += k + "\n" + v + "\n";
-        s += normalize_path(c.program) + "\n";
-        for (auto &a : c.args)
-            s += a.get() + "\n";
+        for (auto &a : c.arguments)
+            s += a->toString() + "\n";
         s.resize(s.size() - 1);
     }
     return s;
@@ -169,7 +168,7 @@ bool Command::isTimeChanged() const
 {
     try
     {
-        return check_if_file_newer(program, "program", true) ||
+        return check_if_file_newer(getProgram(), "program", true) ||
                std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
                    return check_if_file_newer(i, "input", true);
                }) ||
@@ -195,14 +194,20 @@ size_t Command::getHash() const
 size_t Command::getHash1() const
 {
     size_t h = 0;
-    hash_combine(h, std::hash<path>()(program));
+    hash_combine(h, std::hash<path>()(getProgram()));
 
-    // must sort args first, why?
-    std::set<String> args_sorted(args.begin(), args.end());
+    // must sort arguments first
+    // because some command may generate args in unspecified order
+    std::set<String> args_sorted;
+
+    Strings sa;
+    for (auto &a : arguments)
+        args_sorted.insert(a->toString());
+
     for (auto &a : args_sorted)
         hash_combine(h, std::hash<String>()(a));
 
-    // redirections are also considered as args
+    // redirections are also considered as arguments
     if (!in.file.empty())
         hash_combine(h, std::hash<path>()(in.file));
     if (!out.file.empty())
@@ -247,11 +252,6 @@ void Command::clean() const
         fs::remove(o, ec);
     for (auto &o : outputs)
         fs::remove(o, ec);
-}
-
-path Command::getProgram() const
-{
-    return program;
 }
 
 void Command::addInput(const path &p)
@@ -320,8 +320,8 @@ path Command::redirectStderr(const path &p, bool append)
 
 void Command::addInputOutputDeps()
 {
-    if (File(program, *fs).isGenerated())
-        dependencies.insert(File(program, *fs).getFileRecord().getGenerator());
+    if (File(getProgram(), *fs).isGenerated())
+        dependencies.insert(File(getProgram(), *fs).getFileRecord().getGenerator());
 
     for (auto &p : inputs)
     {
@@ -341,29 +341,20 @@ void Command::prepare()
     if (prepared)
         return;
 
-    auto p = getProgram();
-    if (program.empty() && p.empty() && !getArgs().empty())
-    {
-        // take first arg
-        p = getArgs()[0];
-        getArgs().shift();
-    }
-    program = p;
-
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
-    if (!program.empty() && !File(program, *fs).isGeneratedAtAll() && !program.is_absolute() && !fs::exists(program))
+    if (!getProgram().empty() && !File(getProgram(), *fs).isGeneratedAtAll() &&
+        !path(getProgram()).is_absolute() && !fs::exists(getProgram()))
     {
-        auto new_prog = resolveExecutable(program);
+        auto new_prog = resolveExecutable(getProgram());
         if (new_prog.empty())
-            throw SW_RUNTIME_ERROR("resolved program '" + program.u8string() + "' is empty: " + getCommandId(*this));
-
-        program = new_prog;
+            throw SW_RUNTIME_ERROR("resolved program '" + getProgram() + "' is empty: " + getCommandId(*this));
+        setProgram(new_prog);
     }
 
     // extra check
-    if (program.empty())
-        throw SW_RUNTIME_ERROR("empty program: " + getCommandId(*this));
+    //if (!program)
+        //throw SW_RUNTIME_ERROR("empty program: " + getCommandId(*this));
 
     getHashAndSave();
 
@@ -474,7 +465,7 @@ void Command::afterCommand()
 
     if (record_inputs_mtime)
     {
-        mtime = std::max(mtime, File(program, *fs).getFileRecord().getMaxTime());
+        mtime = std::max(mtime, File(getProgram(), *fs).getFileRecord().getMaxTime());
         for (auto &i : inputs)
             update_time(i);
     }
@@ -508,14 +499,11 @@ path Command::getResponseFilename() const
 String Command::getResponseFileContents(bool showIncludes) const
 {
     String rsp;
-    for (auto a = args.begin() + first_response_file_argument; a != args.end(); a++)
+    for (auto a = arguments.begin() + getFirstResponseFileArgument(); a != arguments.end(); a++)
     {
-        if (!showIncludes && *a == "-showIncludes")
+        if (!showIncludes && (*a)->toString() == "-showIncludes")
             continue;
-        if (protect_args_with_quotes)
-            rsp += "\"" + escape_cmd_arg(*a) + "\"";
-        else
-            rsp += escape_cmd_arg(*a);
+        rsp += (*a)->quote(protect_args_with_quotes ? QuoteType::SimpleAndEscape : QuoteType::Escape);
         rsp += "\n";
     }
     if (!rsp.empty())
@@ -523,17 +511,23 @@ String Command::getResponseFileContents(bool showIncludes) const
     return rsp;
 }
 
-String Command::escape_cmd_arg(String s)
+int Command::getFirstResponseFileArgument() const
 {
-    boost::replace_all(s, "\\", "\\\\");
-    boost::replace_all(s, "\"", "\\\"");
-    return s;
+    static const auto n_program_args = 1;
+    return first_response_file_argument + n_program_args;
 }
 
-Command::Args &Command::getArgs()
+Command::Arguments &Command::getArguments()
 {
     if (rsp_args.empty())
-        return Base::getArgs();
+        return Base::getArguments();
+    return rsp_args;
+}
+
+const Command::Arguments &Command::getArguments() const
+{
+    if (rsp_args.empty())
+        return Base::getArguments();
     return rsp_args;
 }
 
@@ -562,8 +556,8 @@ void Command::execute1(std::error_code *ec)
         rsp_file = t / getProgramName() / "rsp" / fn;
         write_file(rsp_file, getResponseFileContents(true));
 
-        for (int i = 0; i < first_response_file_argument; i++)
-            rsp_args.push_back(args[i]);
+        for (int i = 0; i < getFirstResponseFileArgument(); i++)
+            rsp_args.push_back(arguments[i]->clone());
         rsp_args.push_back("@" + rsp_file.u8string());
     }
 
@@ -737,29 +731,23 @@ path Command::writeCommand(const path &p) const
     if (!working_directory.empty())
         t += "cd " + norm(working_directory) + "\n\n";
 
-    t += "\"" + norm(program) + "\" ";
     if (needsResponseFile())
     {
         auto rsp_name = path(p) += ".rsp";
         write_file(rsp_name, getResponseFileContents());
 
-        for (int i = 0; i < first_response_file_argument; i++)
-            t += args[i].get() + " ";
+        for (int i = 0; i < getFirstResponseFileArgument(); i++)
+            t += arguments[i]->toString() + " ";
         t += "@" + normalize_path(rsp_name) + " ";
     }
     else
     {
         static const String bat_next_line = "^\n    ";
-        if (!args.empty())
+        for (auto &a : arguments)
         {
-            if (bat)
-                t += bat_next_line;
-        }
-        for (auto &a : args)
-        {
-            if (a == "-showIncludes")
+            if (a->toString() == "-showIncludes")
                 continue;
-            auto a2 = escape_cmd_arg(a);
+            auto a2 = a->quote(QuoteType::Escape);
             if (bat)
                 boost::replace_all(a2, "%", "%%");
             t += "\"" + a2 + "\" ";
@@ -768,7 +756,7 @@ path Command::writeCommand(const path &p) const
             else
                 t += "\\\n\t";
         }
-        if (!args.empty())
+        if (!arguments.empty())
         {
             if (bat)
                 t.resize(t.size() - bat_next_line.size());
@@ -819,9 +807,9 @@ bool Command::needsResponseFile() const
     static constexpr auto nix_sz = 8'100; // something near 2M
 
     // 3 = 1 + 2 = space + quotes
-    size_t sz = program.u8string().size() + 3;
-    for (auto a = args.begin() + first_response_file_argument; a != args.end(); a++)
-        sz += a->size() + 3;
+    size_t sz = getProgram().size() + 3;
+    for (auto a = arguments.begin() + getFirstResponseFileArgument(); a != arguments.end(); a++)
+        sz += (*a)->toString().size() + 3;
 
     if (use_response_files)
     {
@@ -898,15 +886,8 @@ void Command::printLog() const
     }
 }
 
-void Command::setProgram(const path &p)
-{
-    program = p;
-    //addInput(p);
-}
-
 void Command::setProgram(std::shared_ptr<Program> p)
 {
-    //base = p;
     if (p)
         setProgram(p->file);
 }
@@ -1099,37 +1080,47 @@ bool CommandSequence::isTimeChanged() const
 ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx)
     : Command(swctx)
 {
-    program = boost::dll::program_location().string();
+    setProgram(boost::dll::program_location().wstring());
 }
 
 ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version)
     : ExecuteBuiltinCommand(swctx)
 {
     first_response_file_argument = 1;
-    args.push_back(getInternalCallBuiltinFunctionName());
-    args.push_back(normalize_path(primitives::getModuleNameForSymbol(f))); // add dependency on this? or on function (command) version
-    args.push_back(cmd_name);
-    args.push_back(std::to_string(version));
+    arguments.push_back(getInternalCallBuiltinFunctionName());
+    arguments.push_back(normalize_path(primitives::getModuleNameForSymbol(f))); // add dependency on this? or on function (command) version
+    arguments.push_back(cmd_name);
+    arguments.push_back(std::to_string(version));
 }
 
 void ExecuteBuiltinCommand::push_back(const Files &files)
 {
-    args.push_back(std::to_string(files.size()));
+    arguments.push_back(std::to_string(files.size()));
     for (auto &o : FilesSorted{ files.begin(), files.end() })
-        args.push_back(normalize_path(o));
+        arguments.push_back(normalize_path(o));
 }
 
 void ExecuteBuiltinCommand::push_back(const Strings &strings)
 {
-    args.push_back(std::to_string(strings.size()));
+    arguments.push_back(std::to_string(strings.size()));
     for (auto &o : strings)
-        args.push_back(normalize_path(o));
+        arguments.push_back(normalize_path(o));
 }
 
 void ExecuteBuiltinCommand::execute1(std::error_code *ec)
 {
     // add try catch?
-    jumppad_call(args[1], args[2], std::stoi(args[3]), Strings{ args.begin() + 4, args.end() });
+
+    Strings sa;
+    for (auto &a : arguments)
+        sa.push_back(a->toString());
+
+    auto start = getFirstResponseFileArgument();
+    jumppad_call(
+        sa[start + 0],
+        sa[start + 1],
+        std::stoi(sa[start + 2]),
+        Strings{ sa.begin() + start + 3, sa.end() });
 }
 
 bool ExecuteBuiltinCommand::isTimeChanged() const
@@ -1156,11 +1147,18 @@ size_t ExecuteBuiltinCommand::getHash1() const
     size_t h = 0;
     // ignore program!
 
-    hash_combine(h, std::hash<String>()(args[2])); // include function name
-    hash_combine(h, std::hash<String>()(args[3])); // include version
+    auto start = getFirstResponseFileArgument();
+    hash_combine(h, std::hash<String>()(arguments[start + 1]->toString())); // include function name
+    hash_combine(h, std::hash<String>()(arguments[start + 2]->toString())); // include version
 
-    // must sort args first, why?
-    std::set<String> args_sorted(args.begin() + 4, args.end());
+    // must sort arguments first
+    // because some command may generate args in unspecified order
+    std::set<String> args_sorted;
+
+    Strings sa;
+    for (auto &a : arguments)
+        args_sorted.insert(a->toString());
+
     for (auto &a : args_sorted)
         hash_combine(h, std::hash<String>()(a));
 
@@ -1212,16 +1210,16 @@ path resolveExecutable(const path &in)
         // try to use which/where
 
         primitives::Command c;
-        c.program = p_which;
-        c.args.push_back(normalize_path(in));
+        c.setProgram(p_which);
+        c.arguments.push_back(normalize_path(in));
         error_code ec;
         c.execute(ec);
         bool which = true;
         if (ec)
         {
             primitives::Command c;
-            c.program = p_where;
-            c.args.push_back(normalize_path_windows(in));
+            c.setProgram(p_where);
+            c.arguments.push_back(normalize_path_windows(in));
             c.execute(ec);
             which = false;
         }
@@ -1234,9 +1232,9 @@ path resolveExecutable(const path &in)
             if (which && detail::isHostCygwin())
             {
                 primitives::Command c2;
-                c2.program = "cygpath";
-                c2.args.push_back("-w");
-                c2.args.push_back(c.out.text);
+                c2.setProgram("cygpath");
+                c2.arguments.push_back("-w");
+                c2.arguments.push_back(c.out.text);
                 c2.execute(ec);
                 if (!ec)
                     result = boost::trim_copy(c2.out.text);

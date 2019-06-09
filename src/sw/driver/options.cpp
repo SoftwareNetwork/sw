@@ -322,39 +322,51 @@ void NativeCompilerOptions::merge(const NativeCompilerOptions &o, const GroupSet
     }*/
 }
 
-void NativeCompilerOptions::addDefinitionsAndIncludeDirectories(builder::Command &c) const
+void NativeCompilerOptions::addDefinitions(builder::Command &c) const
 {
-    auto print_def = [&c](auto &a) {
+    auto print_def = [&c](auto &a)
+    {
         for (auto &d : a)
         {
             using namespace sw;
 
             if (d.second.empty())
-                c.args.push_back("-D" + d.first);
+                c.arguments.push_back("-D" + d.first);
             else
-                c.args.push_back("-D" + d.first + "=" + d.second);
+                c.arguments.push_back("-D" + d.first + "=" + d.second);
         }
     };
 
     print_def(System.Definitions);
     print_def(Definitions);
+}
 
-    auto print_idir = [&c](const auto &a, auto &flag) {
+void NativeCompilerOptions::addIncludeDirectories(builder::Command &c) const
+{
+    auto print_idir = [&c](const auto &a, auto &flag)
+    {
         for (auto &d : a)
-            c.args.push_back(flag + normalize_path(d));
+            c.arguments.push_back(flag + normalize_path(d));
     };
 
     print_idir(gatherIncludeDirectories(), "-I");
     print_idir(System.gatherIncludeDirectories(), "-I");
 }
 
+void NativeCompilerOptions::addDefinitionsAndIncludeDirectories(builder::Command &c) const
+{
+    addDefinitions(c);
+    addIncludeDirectories(c);
+}
+
 void NativeCompilerOptions::addEverything(builder::Command &c) const
 {
     addDefinitionsAndIncludeDirectories(c);
 
-    auto print_idir = [&c](const auto &a, auto &flag) {
+    auto print_idir = [&c](const auto &a, auto &flag)
+    {
         for (auto &d : a)
-            c.args.push_back(flag + normalize_path(d));
+            c.arguments.push_back(flag + normalize_path(d));
     };
 
     print_idir(System.CompileOptions, "");
@@ -452,7 +464,7 @@ void NativeLinkerOptions::addEverything(builder::Command &c) const
     auto print_idir = [&c](const auto &a, auto &flag)
     {
         for (auto &d : a)
-            c.args.push_back(flag + normalize_path(d));
+            c.arguments.push_back(flag + normalize_path(d));
     };
 
     print_idir(System.LinkOptions, "");

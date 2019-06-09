@@ -22,9 +22,9 @@ int main(int argc, char **argv)
     {
         primitives::Command c;
         c.working_directory = wdir;
-        c.args.push_back(git.u8string());
-        c.args.push_back("rev-parse");
-        c.args.push_back("HEAD");
+        c.arguments.push_back(git.u8string());
+        c.arguments.push_back("rev-parse");
+        c.arguments.push_back("HEAD");
         c.execute();
         rev = boost::trim_copy(c.out.text);
     }
@@ -32,9 +32,9 @@ int main(int argc, char **argv)
     {
         primitives::Command c;
         c.working_directory = wdir;
-        c.args.push_back(git.u8string());
-        c.args.push_back("status");
-        c.args.push_back("--porcelain");
+        c.arguments.push_back(git.u8string());
+        c.arguments.push_back("status");
+        c.arguments.push_back("--porcelain");
         c.execute();
         status = boost::trim_copy(c.out.text);
         if (status.empty())
