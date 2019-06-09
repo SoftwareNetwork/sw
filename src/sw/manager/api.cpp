@@ -126,7 +126,12 @@ void ProtobufApi::addVersion(PackagePath prefix, const PackageDescriptionMap &pk
         if (rd.back() != '\\' && rd.back() != '/')
             sz++;
         for (auto &f : j["files"])
-            f["from"] = f["from"].get<String>().substr(sz);
+        {
+            auto s = f["from"].get<String>();
+            if (s.find(rd) != 0)
+                throw SW_RUNTIME_ERROR("bad file path: " + s);
+            f["from"] = s.substr(sz);
+        }
         jm["packages"][pkg.toString()] = j;
     }
     request.mutable_package_data()->set_data(jm.dump());
