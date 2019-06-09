@@ -7,6 +7,7 @@
 #include "remote.h"
 
 #include "api.h"
+#include "api_protobuf.h"
 #include "package.h"
 
 #include <sw/support/hash.h>
@@ -90,7 +91,7 @@ std::unique_ptr<Api> Remote::getApi() const
     switch (getApiType())
     {
     case ApiType::Protobuf:
-        ;
+        return std::make_unique<ProtobufApi>(*this);
     default:
         SW_UNIMPLEMENTED;
     }
