@@ -119,6 +119,18 @@ function(sw_execute)
         set(outdir ${CMAKE_BINARY_DIR})
     endif()
 
+    set(append_config 0)
+    string(FIND "${CMAKE_GENERATOR}" "Visual Studio" found)
+    if (NOT ${found} EQUAL -1)
+        set(append_config 1)
+    endif()
+    if (XCODE)
+        set(append_config 1)
+    endif()
+    if (append_config)
+        set(outdir ${outdir}/$<CONFIG>)
+    endif()
+
     string(SHA1 depshash "${sw_platform_args}")
     string(SUBSTRING "${depshash}" 0 8 depshash)
 
@@ -135,7 +147,7 @@ function(sw_execute)
                     $<$<CONFIG:Release>:r>
                 build @${SW_DEPS_FILE}
                 -ide-copy-to-dir
-                ${outdir}/$<CONFIG>
+                ${outdir}
                 -ide-fast-path
                 ${SW_DEPS_DIR}/$<CONFIG>-${depshash}.deps
     )
