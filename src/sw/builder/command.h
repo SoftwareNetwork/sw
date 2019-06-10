@@ -18,6 +18,9 @@
     name->fs = &(target).getFs();              \
     (target).setupCommand(*name)
 
+#define SW_INTERNAL_ADD_COMMAND(name, target) \
+    (target).Storage.push_back(name)
+
 #define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
     auto name = std::make_shared<type>((target).getSolution().swctx, __VA_ARGS__);    \
     SW_INTERNAL_INIT_COMMAND(name, target)
@@ -25,11 +28,11 @@
 #ifdef _MSC_VER
 #define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
     SW_MAKE_CUSTOM_COMMAND(type, name, target, __VA_ARGS__);    \
-    (target).Storage.push_back(name)
+    SW_INTERNAL_ADD_COMMAND(name, target)
 #else
 #define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
     SW_MAKE_CUSTOM_COMMAND(type, name, target, ##__VA_ARGS__);  \
-    (target).Storage.push_back(name)
+    SW_INTERNAL_ADD_COMMAND(name, target)
 #endif
 
 #define SW_MAKE_COMMAND(name, target) \
