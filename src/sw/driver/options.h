@@ -119,6 +119,14 @@ struct SW_DRIVER_CPP_API Variable
     String v;
 };
 
+struct SW_DRIVER_CPP_API ApiNameType
+{
+    String a;
+
+    ApiNameType() = default;
+    explicit ApiNameType(const String &p);
+};
+
 struct SW_DRIVER_CPP_API Definition
 {
     String d;
@@ -245,12 +253,19 @@ struct SW_DRIVER_CPP_API NativeCompilerOptions : NativeCompilerOptionsData
 
 struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
 {
-    DependenciesType Dependencies_;
     NativeLinkerOptionsData System;
 
     using NativeLinkerOptionsData::add;
     using NativeLinkerOptionsData::remove;
 
+    void add(const SystemLinkLibrary &l);
+    void remove(const SystemLinkLibrary &l);
+
+    void merge(const NativeLinkerOptions &o, const GroupSettings &s = GroupSettings());
+    void addEverything(builder::Command &c) const;
+    FilesOrdered gatherLinkLibraries() const;
+
+    //
     void add(const Target &t);
     void remove(const Target &t);
 
@@ -266,16 +281,14 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
     void add(const PackageId &t);
     void remove(const PackageId &t);
 
-    void add(const SystemLinkLibrary &l);
-    void remove(const SystemLinkLibrary &l);
-
-    void merge(const NativeLinkerOptions &o, const GroupSettings &s = GroupSettings());
-    void addEverything(builder::Command &c) const;
-    FilesOrdered gatherLinkLibraries() const;
-
     DependencyPtr operator+(const Target &t);
     DependencyPtr operator+(const DependencyPtr &d);
     DependencyPtr operator+(const PackageId &d);
+
+    const std::vector<DependencyPtr> &getRawDependencies() const { return deps; }
+
+private:
+    std::vector<DependencyPtr> deps;
 };
 
 using UnresolvedDependenciesType = std::unordered_map<UnresolvedPackage, DependencyPtr>;
@@ -289,183 +302,6 @@ struct SW_DRIVER_CPP_API NativeOptions : NativeCompilerOptions,
     using NativeLinkerOptions::remove;
 
     void merge(const NativeOptions &o, const GroupSettings &s = GroupSettings());
-};
-
-template <class T>
-struct InheritanceStorage : std::vector<T*>
-{
-    using base = std::vector<T*>;
-
-    InheritanceStorage(T *pvt)
-        : base(toIndex(InheritanceType::Max), nullptr)
-    {
-        base::operator[](1) = pvt;
-    }
-
-    ~InheritanceStorage()
-    {
-        // we do not own 0 and 1 elements
-        for (int i = toIndex(InheritanceType::Min) + 1; i < toIndex(InheritanceType::Max); i++)
-            delete base::operator[](i);
-    }
-
-    T &operator[](int i)
-    {
-        auto &e = base::operator[](i);
-        if (!e)
-            e = new T;
-        return *e;
-    }
-
-    const T &operator[](int i) const
-    {
-        return *base::operator[](i);
-    }
-
-    T &operator[](InheritanceType i)
-    {
-        return operator[](toIndex(i));
-    }
-
-    const T &operator[](InheritanceType i) const
-    {
-        return operator[](toIndex(i));
-    }
-
-    base &raw() { return *this; }
-    const base &raw() const { return *this; }
-};
-
-/**
-* \brief By default, group items considered as Private scope.
-*/
-template <class T>
-struct InheritanceGroup : T
-{
-private:
-    InheritanceStorage<T> data;
-
-public:
-    /**
-    * \brief visible only in current target
-    */
-    T &Private;
-
-    /**
-    * \brief visible only in target and current project
-    */
-    T &Protected;
-    // T &Project; ???
-
-    /**
-    * \brief visible both in target and its users
-    */
-    T &Public;
-
-    /**
-    * \brief visible in target's users
-    */
-    T &Interface;
-
-    InheritanceGroup()
-        : T()
-        , data(this)
-        , Private(*this)
-        , Protected(data[InheritanceType::Protected])
-        , Public(data[InheritanceType::Public])
-        , Interface(data[InheritanceType::Interface])
-    {
-    }
-
-    using T::operator=;
-
-    T &get(InheritanceType Type)
-    {
-        switch (Type)
-        {
-        case InheritanceType::Private:
-            return Private;
-        case InheritanceType::Protected:
-            return Protected;
-        case InheritanceType::Public:
-            return Public;
-        case InheritanceType::Interface:
-            return Interface;
-        default:
-            return data[Type];
-        }
-        throw SW_RUNTIME_ERROR("unreachable code");
-    }
-
-    const T &get(InheritanceType Type) const
-    {
-        switch (Type)
-        {
-        case InheritanceType::Private:
-            return Private;
-        case InheritanceType::Protected:
-            return Protected;
-        case InheritanceType::Public:
-            return Public;
-        case InheritanceType::Interface:
-            return Interface;
-        default:
-            return data[Type];
-        }
-        throw SW_RUNTIME_ERROR("unreachable code");
-    }
-
-    template <class U>
-    void inheritance(const InheritanceGroup<U> &g, const GroupSettings &s = GroupSettings())
-    {
-        // Private
-        if (s.has_same_parent)
-            Private.merge(g.Protected);
-        Private.merge(g.Public);
-        Private.merge(g.Interface);
-
-        // Protected
-        if (s.has_same_parent)
-            Protected.merge(g.Protected);
-        Protected.merge(g.Public);
-        Protected.merge(g.Interface);
-
-        // Public
-        if (s.has_same_parent)
-            Protected.merge(g.Protected);
-        Public.merge(g.Public);
-        Public.merge(g.Interface);
-    }
-
-    template <class F>
-    void iterate(F &&f) const
-    {
-        for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
-        {
-            auto s = getInheritanceStorage().raw()[i];
-            if (s)
-                f(*s, (InheritanceType)i);
-        }
-    }
-
-    // merge to T, always w/o interface
-    void merge(const GroupSettings &s = GroupSettings())
-    {
-        T::merge(Protected, s);
-        T::merge(Public, s);
-    }
-
-    // merge from other group, always w/ interface
-    template <class U>
-    void merge(const InheritanceGroup<U> &g, const GroupSettings &s = GroupSettings())
-    {
-        T::merge(g.Protected, s);
-        T::merge(g.Public, s);
-        T::merge(g.Interface, s);
-    }
-
-    InheritanceStorage<T> &getInheritanceStorage() { return data; }
-    const InheritanceStorage<T> &getInheritanceStorage() const { return data; }
 };
 
 }

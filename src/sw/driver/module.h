@@ -46,30 +46,33 @@ struct SW_DRIVER_CPP_API Module
                 }
                 catch (const std::exception &e)
                 {
-                    String err = "error in module";
+                    SW_UNIMPLEMENTED;
+                    /*String err = "error in module";
                     if (m)
                         err += " (" + normalize_path(m->getLocation()) + ")";
                     err += ": ";
                     if (s && !s->current_module.empty())
                         err += s->current_module + ": ";
                     err += e.what();
-                    throw SW_RUNTIME_ERROR(err);
+                    throw SW_RUNTIME_ERROR(err);*/
                 }
                 catch (...)
                 {
-                    String err = "error in module";
+                    SW_UNIMPLEMENTED;
+                    /*String err = "error in module";
                     if (m)
                         err += " (" + normalize_path(m->getLocation()) + ")";
                     err += ": ";
                     if (s && !s->current_module.empty())
                         err += s->current_module + ": ";
                     err += "unknown error";
-                    throw SW_RUNTIME_ERROR(err);
+                    throw SW_RUNTIME_ERROR(err);*/
                 }
             }
             else if (Required)
             {
-                String err = "Required function";
+                SW_UNIMPLEMENTED;
+                /*String err = "Required function";
                 if (!name.empty())
                     err += " '" + name + "'";
                 err += " is not present in the module";
@@ -77,7 +80,7 @@ struct SW_DRIVER_CPP_API Module
                     err += " (" + normalize_path(m->getLocation()) + ")";
                 if (s && !s->current_module.empty())
                     err += ": " + s->current_module;
-                throw SW_RUNTIME_ERROR(err);
+                throw SW_RUNTIME_ERROR(err);*/
             }
             return typename std_function_type::result_type();
         }

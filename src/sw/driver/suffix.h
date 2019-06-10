@@ -17,6 +17,7 @@ inline namespace literals
 /*
 reference:
 
+_api - add api definition
 _d, _def - definition
 _dep - dependency
 _f, _fr? - framework (macos)
@@ -39,6 +40,13 @@ sources:
     ...
 
 */
+
+// api definition
+// _api
+inline ApiNameType operator "" _api(const char *s, size_t)
+{
+    return ApiNameType(String(s));
+}
 
 // definition
 // _d or _def

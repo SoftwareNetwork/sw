@@ -447,12 +447,13 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_dep &t)
     {
         for (auto &t : t.targets)
         {
-            tgt->DummyDependencies.insert(*t);
+            tgt->addDummyDependency(*t);
             //auto d = *tgt + *t;
             //d->setDummy(true);
         }
         for (auto &t : t.target_ptrs)
         {
+            SW_UNIMPLEMENTED;
             //tgt->DummyDependencies.insert(t->getPackage());
             //tgt->SourceDependencies.insert(t->getPackage());
             //auto d = *tgt + t;

@@ -54,72 +54,6 @@ enum class LinkerType
     LD = GNU,
 };
 
-struct InheritanceScope
-{
-    enum
-    {
-        Package = 1 << 0,
-        Project = 1 << 1, // consists of packages
-        Other   = 1 << 2, // consists of projects and packages
-
-        Private = Package,
-        Group = Project,
-        World = Other,
-    };
-};
-
-enum class InheritanceType
-{
-    // 8 types
-    // - 000 type (invalid)
-    // = 7 types
-
-    // 001 - usual private options
-    Private = InheritanceScope::Package,
-
-    // 011 - private and project
-    Protected = InheritanceScope::Package | InheritanceScope::Project,
-
-    // 111 - everyone
-    Public = InheritanceScope::Package | InheritanceScope::Project | InheritanceScope::World,
-
-    // 110 - project and others
-    Interface = InheritanceScope::Project | InheritanceScope::World,
-
-    // rarely used
-
-    // 100 - only others
-    // TODO: set new name?
-    ProjectInterface = InheritanceScope::World,
-    // or ProtectedInterface?
-
-    // 010 - Project?
-    // TODO: set new name
-    ProjectOnly = InheritanceScope::Project,
-
-    // 101 - package and others
-    // TODO: set new name
-    NotProject = InheritanceScope::Package | InheritanceScope::World,
-
-    // alternative names
-
-    Default = Private,
-    Min = Private,
-    Max = Public + 1,
-};
-
-inline InheritanceType &operator|(InheritanceType lhs, InheritanceType rhs)
-{
-    using T = std::underlying_type_t<InheritanceType>;
-    return static_cast<InheritanceType>(static_cast<T>(lhs) | static_cast<T>(rhs));
-}
-
-inline InheritanceType &operator|=(InheritanceType &lhs, InheritanceType rhs)
-{
-    lhs = lhs | rhs;
-    return lhs;
-}
-
 enum class LibraryType
 {
     Unspecified,
@@ -221,15 +155,6 @@ enum class CPPLanguageStandard
     cpplatest = CPPLatest,
 };
 
-struct SW_DRIVER_CPP_API GroupSettings
-{
-    InheritanceType Inheritance = InheritanceType::Private;
-    ConfigurationType Configuration = ConfigurationType::Release;
-    bool has_same_parent = false;
-    bool merge_to_self = true;
-    bool include_directories_only = false;
-};
-
 template <class F>
 struct stream_list_inserter : boost::assign::list_inserter<F>
 {
@@ -296,7 +221,6 @@ struct SW_DRIVER_CPP_API ProjectDirectories
 
 String toString(CompilerType Type);
 String toString(LinkerType Type);
-String toString(InheritanceType Type);
 String toString(LibraryType Type);
 String toString(ConfigurationType Type);
 

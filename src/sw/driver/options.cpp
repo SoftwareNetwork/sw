@@ -17,6 +17,11 @@
 namespace sw
 {
 
+ApiNameType::ApiNameType(const String &s)
+{
+    a = s;
+}
+
 Definition::Definition(const String &s)
 {
     d = s;
@@ -516,18 +521,17 @@ void NativeLinkerOptions::remove(const Target &t)
 
 void NativeLinkerOptions::add(const DependencyPtr &t)
 {
-    auto i = std::find_if(Dependencies_.begin(), Dependencies_.end(), [t](const auto &d) {
+    auto i = std::find_if(deps.begin(), deps.end(), [t](const auto &d) {
         return d->getPackage() == t->getPackage();
     });
-    if (i == Dependencies_.end())
+    if (i == deps.end())
     {
         t->Disabled = false;
-        Dependencies_.insert(t);
+        deps.push_back(t);
     }
     else
     {
         (*i)->Disabled = false;
-        //(*i)->chain.push_back(t);
         auto d = (*i)->target;
         if (d)
             t->setTarget(*d);
@@ -536,18 +540,17 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
 
 void NativeLinkerOptions::remove(const DependencyPtr &t)
 {
-    auto i = std::find_if(Dependencies_.begin(), Dependencies_.end(), [t](const auto &d) {
+    auto i = std::find_if(deps.begin(), deps.end(), [t](const auto &d) {
         return d->getPackage() == t->getPackage();
     });
-    if (i == Dependencies_.end())
+    if (i == deps.end())
     {
         t->Disabled = true;
-        Dependencies_.insert(t);
+        deps.push_back(t);
     }
     else
     {
         (*i)->Disabled = true;
-        //(*i)->chain.push_back(t);
         auto d = (*i)->target;
         if (d)
             t->setTarget(*d);

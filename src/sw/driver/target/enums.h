@@ -47,9 +47,6 @@ enum class TargetType : int
 {
     Unspecified,
 
-    Build,
-    Solution,
-
     Project, // explicitly created
     Directory, // implicitly created?
 

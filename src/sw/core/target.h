@@ -55,8 +55,8 @@ struct TargetEntryPoint
 {
     virtual ~TargetEntryPoint() = 0;
 
-    //
-    virtual void loadPackages(const PackageIdSet &allowed_packages) = 0;
+    // on zero input packages, load all
+    virtual void loadPackages(const PackageIdSet &allowed_packages = {}) = 0;
 };
 
 // it is impossible to keep targets in std::map<TargetSettings, ITargetPtr>,

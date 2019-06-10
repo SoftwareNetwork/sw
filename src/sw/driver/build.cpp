@@ -94,23 +94,6 @@ std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 namespace sw
 {
 
-struct NativeTargetEntryPoint : TargetEntryPoint
-{
-    const Module &m;
-
-    NativeTargetEntryPoint(const Module &m)
-        : m(m)
-    {
-    }
-
-    void loadPackages(const PackageIdSet &pkgs) override
-    {
-        SW_UNIMPLEMENTED;
-    }
-};
-
-void check_self(Checker &c);
-
 String toString(FrontendType t)
 {
     switch (t)
@@ -122,6 +105,24 @@ String toString(FrontendType t)
     default:
         throw std::logic_error("not implemented");
     }
+}
+
+NativeTargetEntryPoint::NativeTargetEntryPoint(Build &b)
+    : b(b)
+{
+}
+
+NativeModuleTargetEntryPoint::NativeModuleTargetEntryPoint(Build &b, const Module &m)
+    : NativeTargetEntryPoint(b), m(m)
+{
+}
+
+void NativeModuleTargetEntryPoint::loadPackages(const PackageIdSet &pkgs)
+{
+    SwapAndRestore sr1(b.knownTargets, pkgs);
+    SwapAndRestore sr2(b.module_data, module_data);
+    SwapAndRestore sr3(b.NamePrefix, module_data.NamePrefix);
+    SW_UNIMPLEMENTED;
 }
 
 namespace detail
@@ -616,7 +617,7 @@ Build::Build(SwContext &swctx, const driver::cpp::Driver &driver)
 }
 
 Build::Build(const Build &rhs)
-    : TargetBase(rhs)
+    : Base(rhs)
     , swctx(rhs.swctx)
     , driver(rhs.driver)
     , silent(rhs.silent)
@@ -754,15 +755,20 @@ void Build::build_and_resolve(int n_runs)
     auto dll = ::sw::build_configs(swctx, driver, cfgs);
 
     for (auto &[u, p] : m)
-        getChildren()[p].setEntryPoint(std::make_unique<NativeTargetEntryPoint>(Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number))));
+    {
+        auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*this,
+            Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
+        ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
+        ep->module_data.current_gn = p.getData().group_number;
+        ep->module_data.current_module = p.toString();
+        getChildren()[p].setEntryPoint(std::move(ep));
+    }
 
     Local = false;
 
     for (auto &[gn, p] : cfgs2)
     {
-        NamePrefix = p.ppath.slice(0, p.getData().prefix);
-        current_gn = gn;
-        current_module = p.toString();
+        SW_UNIMPLEMENTED;
         sw_check_abi_version(Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
         for (auto &s : settings)
         {
@@ -773,9 +779,6 @@ void Build::build_and_resolve(int n_runs)
             Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
         }
     }
-    current_gn = 0;
-    NamePrefix.clear();
-    current_module.clear();
 
     for (auto &[porig, p] : m)
     {
@@ -1288,6 +1291,7 @@ PackagePath Build::getSelfTargetName(const Files &files)
 
 SharedLibraryTarget &Build::createTarget(const Files &files)
 {
+    TargetBase b;
     auto &solution = *this;
     solution.IsConfig = true;
     auto &lib = solution.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
@@ -1411,7 +1415,6 @@ FilesMap Build::build_configs_separate(const Files &files)
 
         if (!once)
         {
-            check_self(checker);
             build_self();
             addDeps(lib, *this);
             once = true;
@@ -1605,10 +1608,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
     do_not_rebuild_config = false;
 
     if (init)
-    {
-        check_self(solution.checker);
         build_self();
-    }
     addDeps(lib, solution);
 
     addImportLibrary(swctx, lib);
@@ -2629,15 +2629,16 @@ void Build::load_packages(const StringSet &pkgs)
 
     auto dll = ::sw::build_configs(swctx, driver, cfgs);
     for (auto &[u, p] : m)
-        getChildren()[p].setEntryPoint(std::make_unique<NativeTargetEntryPoint>(Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number))));
+    {
+        getChildren()[p].setEntryPoint(std::make_unique<NativeModuleTargetEntryPoint>(*this,
+            Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number))));
+    }
 
     createSolutions(dll, true);
 
     for (auto &[gn, p] : cfgs2)
     {
-        NamePrefix = p.ppath.slice(0, p.getData().prefix);
-        current_gn = gn;
-        current_module = p.toString();
+        SW_UNIMPLEMENTED;
         sw_check_abi_version(Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
         for (auto &s : settings)
         {
@@ -2648,9 +2649,6 @@ void Build::load_packages(const StringSet &pkgs)
             Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
         }
     }
-    current_gn = 0;
-    NamePrefix.clear();
-    current_module.clear();
 
     // clear TargetsToBuild that is set before
     TargetsToBuild.clear();

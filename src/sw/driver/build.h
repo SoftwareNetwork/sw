@@ -104,15 +104,42 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
     }
 };
 
-// simple interface for users
-struct SolutionX : TargetBase {};
-
-/**
-* \brief Main build class, controls solutions.
-*/
-// : SolutionX
-struct SW_DRIVER_CPP_API Build : TargetBase
+struct ModuleSwappableData
 {
+    PackagePath NamePrefix;
+    String current_module;
+    // for checks
+    PackageVersionGroupNumber current_gn = 0;
+};
+
+struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetEntryPoint
+{
+    ModuleSwappableData module_data;
+
+    NativeTargetEntryPoint(Build &b);
+
+protected:
+    Build &b;
+};
+
+struct SW_DRIVER_CPP_API NativeModuleTargetEntryPoint : NativeTargetEntryPoint
+{
+    NativeModuleTargetEntryPoint(Build &b, const Module &m);
+
+    void loadPackages(const PackageIdSet &pkgs = {}) override;
+
+private:
+    const Module &m;
+};
+
+struct SimpleBuild : TargetBase
+{
+};
+
+struct SW_DRIVER_CPP_API Build : SimpleBuild
+{
+    using Base = SimpleBuild;
+
     // rename to preferences?
     /*using TargetSettingsDataContainer = std::any; // or void*?
     struct TargetSettingsData
@@ -136,8 +163,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     //
     std::vector<TargetBaseTypePtr> dummy_children;
     int command_storage = 0;
-    String current_module;
-    PackageVersionGroupNumber current_gn = 0; // for checks
+    ModuleSwappableData module_data;
     SourceDirMap source_dirs_by_source;
     int execute_jobs = 0;
     bool file_storage_local = true;
@@ -283,8 +309,6 @@ public:
     Build(SwContext &swctx, const driver::cpp::Driver &driver);
     Build(const Build &);
     ~Build();
-
-    TargetType getType() const override { return TargetType::Build; }
 
     void load_spec_file(const path &);
     void load_inline_spec(const path &);

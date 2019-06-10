@@ -196,9 +196,10 @@ Checker::Checker(Build &build)
 
 CheckSet &Checker::addSet(const String &name)
 {
-    auto p = sets[build.current_gn].emplace(name, CheckSet(*this));
+    SW_UNIMPLEMENTED;
+    /*auto p = sets[build.current_gn].emplace(name, CheckSet(*this));
     p.first->second.name = name;
-    return p.first->second;
+    return p.first->second;*/
 }
 
 void CheckSet::performChecks(const String &config)
@@ -272,7 +273,8 @@ int main() { return IsBigEndian(); }
         prepareChecksForUse();
         if (print_checks)
         {
-            std::ofstream o(fn.parent_path() / (std::to_string(checker.build.current_gn) + "." + name + ".checks.txt"));
+            SW_UNIMPLEMENTED;
+            /*std::ofstream o(fn.parent_path() / (std::to_string(checker.build.current_gn) + "." + name + ".checks.txt"));
             if (!o)
                 return;
             std::map<String, CheckPtr> check_values(check_values.begin(), check_values.end());
@@ -280,7 +282,7 @@ int main() { return IsBigEndian(); }
             {
                 if (c->Value)
                     o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
-            }
+            }*/
         }
         // cleanup
         for (auto &[h, c] : checks)
@@ -557,7 +559,8 @@ Build Check::setupSolution(const path &f) const
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     //s.throw_exceptions = false;
     s.BinaryDir = f.parent_path();
-    s.NamePrefix.clear();
+    SW_UNIMPLEMENTED;
+    //s.NamePrefix.clear();
     s.Local = true;
     s.checks_build = true;
     s.DryRun = false;

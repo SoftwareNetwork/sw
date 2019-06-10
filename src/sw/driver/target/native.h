@@ -69,11 +69,14 @@ struct SW_DRIVER_CPP_API NativeCompiledTarget : NativeTarget,
 {
 private:
     ASSIGN_WRAPPER(add, NativeCompiledTarget);
-    //ASSIGN_WRAPPER(remove, NativeCompiledTarget);
+    ASSIGN_WRAPPER(remove, NativeCompiledTarget);
 
 public:
     using TargetsSet = std::unordered_set<Target*>;
 
+    ASSIGN_TYPES(ApiNameType)
+    void add(const ApiNameType &i);
+    void remove(const ApiNameType &i);
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::optional<bool> HeaderOnly;
@@ -198,6 +201,12 @@ private:
     mutable std::optional<Commands> generated_commands;
     path outputfile;
     Commands cmds;
+
+    using ActiveDeps = std::vector<TargetDependency>;
+    std::optional<ActiveDeps> active_deps;
+    ActiveDeps all_deps;
+    ActiveDeps &getActiveDeps();
+    const ActiveDeps &getActiveDeps() const;
 
     Commands getCommands1() const override;
 

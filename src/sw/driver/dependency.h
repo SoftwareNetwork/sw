@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include "inheritance.h"
+
+#include <sw/core/settings.h>
 #include <sw/manager/package.h>
 
 #include <memory>
@@ -20,11 +23,16 @@ struct SW_DRIVER_CPP_API DependencyData
     // ITarget?
     Target *target = nullptr;
     UnresolvedPackage package;
+    //DependencyData dep;
+    //TargetSettings s;
+    //InheritanceType type; // known in advance
+    bool Disabled = false;
 
     DependencyData(const Target &t);
     DependencyData(const UnresolvedPackage &p);
 
     UnresolvedPackage getPackage() const;
+    bool isDisabled() const { return Disabled; }
 
     bool operator==(const DependencyData &t) const;
     bool operator< (const DependencyData &t) const;
@@ -32,7 +40,6 @@ struct SW_DRIVER_CPP_API DependencyData
 
 struct SW_DRIVER_CPP_API Dependency : DependencyData
 {
-    bool Disabled = false;
     bool GenerateCommandsBefore = false; // do not make true by default
 
     // cpp (native) options
@@ -53,9 +60,7 @@ struct SW_DRIVER_CPP_API Dependency : DependencyData
     bool isResolved() const { return operator bool(); }
 
     LocalPackage getResolvedPackage() const;
-
     void setTarget(const Target &t);
-    //void propagateTargetToChain();
 
     // for backwards compat
     void setDummy(bool) {}
@@ -64,6 +69,24 @@ struct SW_DRIVER_CPP_API Dependency : DependencyData
 using DependencyPtr = std::shared_ptr<Dependency>;
 //using DependenciesType = std::unordered_set<Dependency>;
 //using DependenciesType = UniqueVector<DependencyPtr>;
+
+struct SW_DRIVER_CPP_API TargetDependency
+{
+    DependencyPtr dep;
+    TargetSettings settings;
+    InheritanceType inhtype;
+
+    //bool operator==(const TargetDependency &t) const { return std::tie(dep, s) == std::tie(t.dep, t.s); }
+    //bool operator< (const TargetDependency &t) const { return std::tie(dep, s) <  std::tie(t.dep, t.s); }
+    //bool operator==(const TargetDependency &t) const { return std::tie(package) == std::tie(t.package); }
+    //bool operator< (const TargetDependency &t) const { return std::tie(package) <  std::tie(t.package); }
+
+    /*TargetDependency &operator|=(const TargetDependency &t)
+    {
+        type |= t.type;
+        return *this;
+    }*/
+};
 
 }
 

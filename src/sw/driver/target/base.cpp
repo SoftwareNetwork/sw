@@ -63,8 +63,6 @@ String toString(TargetType T)
     case TargetType::x: \
         return #x
 
-        CASE(Build);
-        CASE(Solution);
         CASE(Project);
         CASE(Directory);
         CASE(NativeLibrary);
@@ -104,11 +102,7 @@ TargetBase::TargetBase()
 }
 
 TargetBase::TargetBase(const TargetBase &rhs)
-    : ProjectDirectories(rhs)
-    , Local(rhs.Local)
-    , DryRun(rhs.DryRun)
-    , NamePrefix(rhs.NamePrefix)
-    , build(rhs.build)
+    : TargetBaseData(rhs)
 {
 }
 
@@ -121,6 +115,11 @@ bool TargetBase::hasSameParent(const TargetBase *t) const
     if (this == t)
         return true;
     return getPackage().ppath.hasSameParent(t->getPackage().ppath);
+}
+
+PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
+{
+    return NamePrefix / (pkg ? getPackage().ppath / Name : Name);
 }
 
 TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V)
@@ -240,11 +239,6 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     //if (!p.toString().empty())
 }
 
-PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
-{
-    return NamePrefix / (pkg ? getPackage().ppath / Name : Name);
-}
-
 Build &TargetBase::getSolution()
 {
     return (Build &)*(build ? build : this);
@@ -255,7 +249,7 @@ const Build &TargetBase::getSolution() const
     return build ? *build : (const Build &)*this;
 }
 
-path TargetBase::getServiceDir() const
+path TargetBaseData::getServiceDir() const
 {
     return BinaryDir / "misc";
 }
@@ -692,21 +686,45 @@ DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
         auto s = getInheritanceStorage().raw()[i];
         if (!s)
             continue;
-        for (auto &d : s->Dependencies_)
-            deps.insert(d);
+        //for (auto &d : s->Dependencies_)
+            //deps.insert(d);
     }
     return deps;
 }
 
+void Target::addDummyDependency(const DependencyPtr &t)
+{
+    SW_UNIMPLEMENTED;
+    //SourceDependencies.insert(dep);
+}
+
+void Target::addDummyDependency(const Target &t)
+{
+    SW_UNIMPLEMENTED;
+    //SourceDependencies.insert(dep);
+}
+
+void Target::addSourceDependency(const DependencyPtr &t)
+{
+    SW_UNIMPLEMENTED;
+    //SourceDependencies.insert(dep);
+}
+
+void Target::addSourceDependency(const Target &t)
+{
+    SW_UNIMPLEMENTED;
+    //SourceDependencies.insert(dep);
+}
+
 path Target::getFile(const Target &dep, const path &fn)
 {
-    SourceDependencies.insert(dep);
+    addSourceDependency(dep);
     return dep.SourceDir / fn;
 }
 
 path Target::getFile(const DependencyPtr &dep, const path &fn)
 {
-    SourceDependencies.insert(*dep);
+    addSourceDependency(dep);
     return getSolution().swctx.resolve(dep->getPackage()).getDirSrc2() / fn;
 }
 

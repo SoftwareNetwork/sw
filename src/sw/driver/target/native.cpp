@@ -611,6 +611,18 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         set_pkg_info(Variables, false); // false?
 }
 
+void NativeCompiledTarget::add(const ApiNameType &i)
+{
+    ApiNames.insert(i.a);
+}
+
+void NativeCompiledTarget::remove(const ApiNameType &i)
+{
+    ApiNames.erase(i.a);
+    if (ApiName == i.a)
+        ApiName.clear();
+}
+
 path NativeCompiledTarget::getOutputDir() const
 {
     if (OutputDir.empty())
@@ -1693,6 +1705,39 @@ void NativeCompiledTarget::detectLicenseFile()
     }
 }
 
+NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDeps()
+{
+    if (!active_deps)
+    {
+        ActiveDeps deps;
+        TargetOptionsGroup::iterate([this, &deps](auto &v, auto i)
+        {
+            for (auto &d : v.getRawDependencies())
+            {
+                if (d->target == this)
+                    continue;
+                if (d->isDisabled())
+                    continue;
+
+                TargetDependency td;
+                td.dep = d;
+                td.inhtype = i;
+                td.settings = getSettings().getTargetSettings();
+                deps.push_back(td);
+            }
+        });
+        active_deps = deps;
+    }
+    return *active_deps;
+}
+
+const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDeps() const
+{
+    if (!active_deps)
+        throw SW_RUNTIME_ERROR("no active deps calculated");
+    return *active_deps;
+}
+
 void NativeCompiledTarget::merge1()
 {
     // merge self
@@ -1809,7 +1854,11 @@ bool NativeCompiledTarget::prepare()
             Public.Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
             Public.Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
         }
-        //Definitions["SW_STATIC="];
+
+        // gather deps into one list of active deps
+
+        // set our initial deps
+        getActiveDeps();
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 2:
@@ -1848,30 +1897,17 @@ bool NativeCompiledTarget::prepare()
         std::vector<DependencyPtr> deps_ordered;
 
         // set our initial deps
-        SW_UNIMPLEMENTED;
-        /*TargetOptionsGroup::iterate(
-            [this, &deps, &deps_ordered](auto &v, auto i)
+        for (auto &d : getActiveDeps())
         {
-            //DEBUG_BREAK_IF_STRING_HAS(getPackage().ppath.toString(), "sw.server.protos");
-
-            for (auto &d : v.Dependencies)
-            {
-                if (d->target == this)
-                    continue;
-                if (d->isDisabledOrDummy())
-                    continue;
-
-                deps.emplace(d, i);
-                deps_ordered.push_back(d);
-            }
-        });*/
+            deps.emplace(d.dep, d.inhtype);
+            deps_ordered.push_back(d.dep);
+        }
 
         while (1)
         {
             bool new_dependency = false;
             auto deps2 = deps;
-            SW_UNIMPLEMENTED;
-            /*for (auto &[d, _] : deps2)
+            for (auto &[d, _] : deps2)
             {
                 // simple check
                 if (d->target == nullptr)
@@ -1892,8 +1928,6 @@ bool NativeCompiledTarget::prepare()
                     for (auto &d2 : v.Dependencies)
                     {
                         if (d2->target == this)
-                            continue;
-                        if (d2->isDisabledOrDummy())
                             continue;
 
                         if (Inheritance == InheritanceType::Protected && !hasSameParent(d2->target))
@@ -1955,13 +1989,14 @@ bool NativeCompiledTarget::prepare()
                         //di->Dummy &= d2->Dummy;
                     }
                 });
-            }*/
+            }
 
             if (!new_dependency)
             {
                 SW_UNIMPLEMENTED;
                 //for (auto &d : deps_ordered)
-                    //Dependencies.insert(deps.find(d)->first);
+                    //all_deps.push_back(deps.find(d)->first);
+                //Dependencies.insert(deps.find(d)->first);
                 break;
             }
         }
@@ -2946,13 +2981,14 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
 
 CheckSet &NativeCompiledTarget::getChecks(const String &name)
 {
-    auto i0 = getSolution().checker.sets.find(getSolution().current_gn);
+    SW_UNIMPLEMENTED;
+    /*auto i0 = getSolution().checker.sets.find(getSolution().current_gn);
     if (i0 == getSolution().checker.sets.end())
         throw SW_RUNTIME_ERROR("No such group number: " + std::to_string(getSolution().current_gn));
     auto i = i0->second.find(name);
     if (i == i0->second.end())
         throw SW_RUNTIME_ERROR("No such set: " + name);
-    return i->second;
+    return i->second;*/
 }
 
 void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)

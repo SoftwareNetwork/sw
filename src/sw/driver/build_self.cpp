@@ -5,9 +5,40 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #define SW_PACKAGE_API
-#include <sw/driver/sw.h>
+#include "sw.h"
 
 #include <sw/core/sw_context.h>
+#include <sw/core/target.h>
+
+namespace sw
+{
+
+struct SW_DRIVER_CPP_API NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
+{
+    using BuildFunction = void(*)(Solution &);
+    using CheckFunction = void(*)(Checker &);
+
+    BuildFunction bf = nullptr;
+    CheckFunction cf = nullptr;
+
+    NativeBuiltinTargetEntryPoint(Build &b)
+        : NativeTargetEntryPoint(b)
+    {}
+
+    void loadPackages(const PackageIdSet &pkgs = {}) override
+    {
+        SwapAndRestore sr1(b.knownTargets, pkgs);
+        SwapAndRestore sr2(b.module_data, module_data);
+        SwapAndRestore sr3(b.NamePrefix, module_data.NamePrefix);
+        if (cf)
+            cf(b.checker);
+        if (!bf)
+            throw SW_RUNTIME_ERROR("No internal build function set");
+        bf(b);
+    }
+};
+
+}
 
 // disable custom pragma warnings
 #ifdef _MSC_VER
@@ -19,11 +50,6 @@
 
 namespace sw
 {
-
-void check_self(Checker &c)
-{
-    check_self_generated(c);
-}
 
 void Build::build_self()
 {
@@ -38,10 +64,6 @@ void Build::build_self()
     auto m = swctx.install(required_packages);
     for (auto &[u, p] : m)
         knownTargets.insert(p);
-
-    auto ss = createSettings();
-    ss.Native.LibrariesType = LibraryType::Static;
-    addSettings(ss);
 
     SwapAndRestore sr(Local, false);
     build_self_generated(*this);

@@ -32,6 +32,12 @@ enum class InputType : int32_t
     Directory,
 };
 
+// represents user request (if possible) returned from sw context
+struct SW_CORE_API Request
+{
+
+};
+
 struct SW_CORE_API SwContext : SwBuilderContext
 {
     struct InputVariant : std::variant<String, path, PackageId>
@@ -64,7 +70,8 @@ struct SW_CORE_API SwContext : SwBuilderContext
     void registerDriver(std::unique_ptr<IDriver> driver);
     const Drivers &getDrivers() const { return drivers; }
 
-    void load(const Inputs &inputs);
+    // TODO: return some build object
+    std::unique_ptr<Request> load(const Inputs &inputs);
     void build(const Inputs &inputs);
     // void configure(); // = load() + save execution plan
     bool prepareStep();

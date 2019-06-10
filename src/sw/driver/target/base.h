@@ -58,10 +58,7 @@ struct SW_DRIVER_CPP_API SettingsComparator
     virtual bool less(const TargetSettings &s1, const TargetSettings &s2) const;
 };
 
-/**
-* \brief TargetBase
-*/
-struct SW_DRIVER_CPP_API TargetBase : Node, ProjectDirectories
+struct SW_DRIVER_CPP_API TargetBaseData : Node, ProjectDirectories
 {
     // flags
     bool Local = true; // local projects
@@ -71,7 +68,11 @@ struct SW_DRIVER_CPP_API TargetBase : Node, ProjectDirectories
     PackagePath NamePrefix;
     const Build *build = nullptr;
 
-public:
+    path getServiceDir() const;
+};
+
+struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
+{
     TargetBase();
     virtual ~TargetBase();
 
@@ -150,15 +151,12 @@ public:
     ProjectTarget &addProject(Args && ... args) { return addTarget<ProjectTarget>(std::forward<Args>(args)...); }
     DirectoryTarget &addDirectory(const PackagePath &Name) { return addTarget<DirectoryTarget>(Name); }
 
-    virtual TargetType getType() const { return TargetType::Unspecified; }
-    String getTypeName() const { return toString(getType()); }
     const LocalPackage &getPackage() const;
 
     bool isLocal() const;
 
     Build &getSolution();
     const Build &getSolution() const;
-    path getServiceDir() const;
 
 protected:
     // impl
@@ -225,25 +223,6 @@ struct SW_DRIVER_CPP_API TargetDescription
                     // description-file (or readme file)
 };
 
-struct SW_DRIVER_CPP_API TargetDependency
-{
-    //DependencyData dep;
-    //TargetSettings s;
-    UnresolvedPackage package;
-    InheritanceType type;
-
-    //bool operator==(const TargetDependency &t) const { return std::tie(dep, s) == std::tie(t.dep, t.s); }
-    //bool operator< (const TargetDependency &t) const { return std::tie(dep, s) <  std::tie(t.dep, t.s); }
-    bool operator==(const TargetDependency &t) const { return std::tie(package) == std::tie(t.package); }
-    bool operator< (const TargetDependency &t) const { return std::tie(package) <  std::tie(t.package); }
-
-    TargetDependency &operator|=(const TargetDependency &t)
-    {
-        type |= t.type;
-        return *this;
-    }
-};
-
 /**
 * \brief Single project target.
 */
@@ -280,14 +259,19 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage, std::enab
     bool AllowEmptyRegexes = false;
 
     // inheritable, move to native? what about other langs?
-    std::set<TargetDependency> tdeps;
+    //std::vector<TargetDependency> tdeps;
     // always not inheritable
-    std::unordered_set<DependencyData> DummyDependencies; // host config, but allowing some changes (configuration type/mt)
-    std::unordered_set<DependencyData> SourceDependencies; // no config, dependency on source files
+    std::vector<DependencyData> DummyDependencies; // host config, but allowing some changes (configuration type/mt)
+    std::vector<DependencyData> SourceDependencies; // no config, dependency on source files
     // build dir deps?
-    std::unordered_set<DependencyData> RuntimeDependencies; // this target config
+    std::vector<DependencyData> RuntimeDependencies; // this target config
 
-    void addDummyDependency();
+    void addDummyDependency(const Target &);
+    void addDummyDependency(const DependencyPtr &);
+private:
+    void addSourceDependency(const Target &);
+    void addSourceDependency(const DependencyPtr &);
+public:
     //
 
     using TargetBase::TargetBase;
@@ -354,6 +338,10 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage, std::enab
     // from other target
     path getFile(const DependencyPtr &dep, const path &fn);
     path getFile(const Target &dep, const path &fn);
+
+    //
+    virtual TargetType getType() const { return TargetType::Unspecified; }
+    String getTypeName() const { return toString(getType()); }
 
 protected:
     bool real = true;
@@ -442,12 +430,12 @@ public:
     ASSIGN_TYPES(IncludeDirectory)
 
     // linker options
-    ASSIGN_TYPES(Target)
     ASSIGN_TYPES(LinkDirectory)
     ASSIGN_TYPES(LinkLibrary)
     ASSIGN_TYPES(SystemLinkLibrary)
 
     //
+    ASSIGN_TYPES(Target)
     ASSIGN_TYPES(PackageId)
     ASSIGN_TYPES(DependencyPtr)
     ASSIGN_TYPES(UnresolvedPackage)

@@ -29,10 +29,11 @@ SwContext::~SwContext()
 {
 }
 
-void SwContext::load(const Inputs &strings)
+std::unique_ptr<Request> SwContext::load(const Inputs &strings)
 {
     auto inputs = makeInputs(strings);
     load(inputs);
+    return {};
 }
 
 void SwContext::build(const Inputs &strings)
