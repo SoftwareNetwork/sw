@@ -7,7 +7,7 @@
 #define BOOST_THREAD_PROVIDES_EXECUTORS
 #define BOOST_THREAD_PROVIDES_VARIADIC_THREAD
 #define BOOST_THREAD_VERSION 5
-#include <sw/builder/command.h>
+#include "command.h"
 
 #include "command_storage.h"
 #include "db_file.h"

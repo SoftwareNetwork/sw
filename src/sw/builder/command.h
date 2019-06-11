@@ -127,10 +127,11 @@ namespace detail
 #pragma warning(push)
 #pragma warning(disable:4275) // warning C4275: non dll-interface struct 'primitives::Command' used as base for dll-interface struct 'sw::builder::Command'
 
-struct SW_BUILDER_API ResolvableCommand : primitives::Command
+struct SW_BUILDER_API ResolvableCommand : ::primitives::Command
 {
 #pragma warning(pop)
 
+    using ::primitives::Command::push_back;
     path resolveProgram(const path &p) const override;
 };
 
@@ -139,7 +140,7 @@ struct SW_BUILDER_API ResolvableCommand : primitives::Command
 struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     CommandData<::sw::builder::Command>, detail::ResolvableCommand // hide?
 {
-    using Base = primitives::Command;
+    using Base = detail::ResolvableCommand;
     using Clock = std::chrono::high_resolution_clock;
 
     const SwBuilderContext &swctx;
@@ -211,6 +212,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     virtual bool isOutdated() const;
     bool needsResponseFile() const;
 
+    using Base::push_back;
     using Base::setProgram;
     void setProgram(std::shared_ptr<Program> p);
     void addInput(const path &p);
@@ -316,6 +318,7 @@ struct SW_BUILDER_API ExecuteBuiltinCommand : Command
     //template <class T>
     //auto push_back(T &&v) { args.push_back(v); }
 
+    using Command::push_back;
     void push_back(const Strings &strings);
     void push_back(const Files &files);
 
