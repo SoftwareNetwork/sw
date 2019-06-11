@@ -1714,15 +1714,13 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDeps()
         {
             for (auto &d : v.getRawDependencies())
             {
-                if (d->target == this)
-                    continue;
                 if (d->isDisabled())
                     continue;
 
                 TargetDependency td;
                 td.dep = d;
                 td.inhtype = i;
-                td.settings = getSettings().getTargetSettings();
+                td.dep->settings = getSettings().getTargetSettings();
                 deps.push_back(td);
             }
         });
@@ -1744,20 +1742,13 @@ void NativeCompiledTarget::merge1()
     merge();
 
     // merge deps' stuff
-    SW_UNIMPLEMENTED;
-    /*for (auto &d : Dependencies)
+    for (auto &d : getAllDependencies())
     {
-        // we also apply targets to deps chains as we finished with deps
-        d->propagateTargetToChain();
-
-        if (d->isDisabledOrDummy())
-            continue;
-
         GroupSettings s;
         s.include_directories_only = d->IncludeDirectoriesOnly;
         //s.merge_to_self = false;
-        merge(*(NativeCompiledTarget*)d->target, s);
-    }*/
+        merge((const NativeCompiledTarget&)d->getTarget(), s);
+    }
 }
 
 bool NativeCompiledTarget::prepare()
@@ -1863,37 +1854,37 @@ bool NativeCompiledTarget::prepare()
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 2:
         // resolve
+    {
+        for (auto &d : getActiveDeps())
+        {
+            auto t = getSolution().getChildren().find(d.dep->getPackage(), d.dep->settings);
+            if (!t)
+                throw SW_RUNTIME_ERROR("No such target");
+            d.dep->setTarget(*t);
+
+        }
+    }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 3:
         // inheritance
     {
         struct H
         {
-            const Target *t;
-
             size_t operator()(const DependencyPtr &p) const
             {
-                if (!p->target)
-                {
-                    // do not show error, it will be printed later
-                    //LOG_ERROR(logger, t->getPackage().toString() + ": Unresolved package on stage 2: " + p->package.toString());
-                    // do not throw, error will be detected later, won't be it?
-                    //throw SW_RUNTIME_ERROR("empty target");
-                    return 0;
-                }
-                return std::hash<PackageId>()(p->target->getPackage());
+                return std::hash<PackageId>()(p->getTarget().getPackage());
             }
         };
         struct EQ
         {
             size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
             {
-                return p1->target == p2->target;
+                return &p1->getTarget() == &p2->getTarget();
             }
         };
 
         // we have ptrs, so do custom sorting
-        std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{ this });
+        std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{});
         std::vector<DependencyPtr> deps_ordered;
 
         // set our initial deps
@@ -1909,94 +1900,80 @@ bool NativeCompiledTarget::prepare()
             auto deps2 = deps;
             for (auto &[d, _] : deps2)
             {
-                // simple check
-                if (d->target == nullptr)
-                {
-                    throw SW_LOGIC_ERROR(getPackage().toString() + ": Unresolved package on stage 2: " + d->package.toString()
-                        //+ (d->owner ? ", owner: " + d->owner->getPackage().toString() : "")
-                    );
-                }
-
                 // iterate over child deps
-                (*(NativeCompiledTarget*)d->target).TargetOptionsGroup::iterate(
-                    [this, &new_dependency, &deps, d = d.get(), &deps_ordered](auto &v, auto Inheritance)
+                for (auto &dep : ((const NativeCompiledTarget&)d->getTarget()).getActiveDeps())
                 {
+                    auto Inheritance = dep.inhtype;
+                    auto d2 = dep.dep;
+
+                    if (&d2->getTarget() == this)
+                        continue;
+
                     // nothing to do with private inheritance
                     if (Inheritance == InheritanceType::Private)
-                        return;
+                        continue;
 
-                    for (auto &d2 : v.Dependencies)
+                    if (Inheritance == InheritanceType::Protected && !hasSameParent(d2->getTarget()))
+                        continue;
+
+                    auto copy = std::make_shared<Dependency>(*d2);
+                    auto[i, inserted] = deps.emplace(copy,
+                        Inheritance == InheritanceType::Interface ?
+                        InheritanceType::Public : Inheritance
+                    );
+                    if (inserted)
+                        deps_ordered.push_back(copy);
+
+                    // include directories only handling
+                    auto di = i->first;
+                    if (inserted)
                     {
-                        if (d2->target == this)
-                            continue;
-
-                        if (Inheritance == InheritanceType::Protected && !hasSameParent(d2->target))
-                            continue;
-
-                        auto copy = std::make_shared<Dependency>(*d2);
-                        auto[i, inserted] = deps.emplace(copy,
-                            Inheritance == InheritanceType::Interface ?
-                            InheritanceType::Public : Inheritance
-                        );
-                        if (inserted)
-                            deps_ordered.push_back(copy);
-
-                        // include directories only handling
-                        auto di = i->first;
-                        if (inserted)
+                        // new dep is added
+                        if (d->IncludeDirectoriesOnly)
                         {
-                            // new dep is added
-                            if (d->IncludeDirectoriesOnly)
-                            {
-                                // if we inserted 3rd party dep (d2=di) of idir_only dep (d),
-                                // we mark it always as idir_only
-                                di->IncludeDirectoriesOnly = true;
-                            }
-                            else
-                            {
-                                // otherwise we keep idir_only flag as is
-                            }
-                            new_dependency = true;
+                            // if we inserted 3rd party dep (d2=di) of idir_only dep (d),
+                            // we mark it always as idir_only
+                            di->IncludeDirectoriesOnly = true;
                         }
                         else
                         {
-                            // we already have this dep
-                            if (d->IncludeDirectoriesOnly)
+                            // otherwise we keep idir_only flag as is
+                        }
+                        new_dependency = true;
+                    }
+                    else
+                    {
+                        // we already have this dep
+                        if (d->IncludeDirectoriesOnly)
+                        {
+                            // left as is if parent (d) idir_only
+                        }
+                        else
+                        {
+                            // if parent dep is not idir_only, then we choose whether to build dep
+                            if (d2->IncludeDirectoriesOnly)
                             {
-                                // left as is if parent (d) idir_only
+                                // left as is if d2 idir_only
                             }
                             else
                             {
-                                // if parent dep is not idir_only, then we choose whether to build dep
-                                if (d2->IncludeDirectoriesOnly)
+                                if (di->IncludeDirectoriesOnly)
                                 {
-                                    // left as is if d2 idir_only
+                                    // also mark as new dependency (!) if processing changed for it
+                                    new_dependency = true;
                                 }
-                                else
-                                {
-                                    if (di->IncludeDirectoriesOnly)
-                                    {
-                                        // also mark as new dependency (!) if processing changed for it
-                                        new_dependency = true;
-                                    }
-                                    // if d2 is not idir_only, we set so for di
-                                    di->IncludeDirectoriesOnly = false;
-                                }
+                                // if d2 is not idir_only, we set so for di
+                                di->IncludeDirectoriesOnly = false;
                             }
                         }
-
-                        // dummy flag handling
-                        //di->Dummy &= d2->Dummy;
                     }
-                });
+                }
             }
 
             if (!new_dependency)
             {
-                SW_UNIMPLEMENTED;
-                //for (auto &d : deps_ordered)
-                    //all_deps.push_back(deps.find(d)->first);
-                //Dependencies.insert(deps.find(d)->first);
+                for (auto &d : deps_ordered)
+                    all_deps.insert(deps.find(d)->first);
                 break;
             }
         }
@@ -2446,26 +2423,23 @@ bool NativeCompiledTarget::prepare()
         auto L = Linker->as<VisualStudioLinker*>();
 
         // add link libraries from deps
-        SW_UNIMPLEMENTED;
-        /*if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
+        if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
         {
-            for (auto &d : Dependencies)
+            for (auto &d : getAllDependencies())
             {
-                if (d->target == this)
-                    continue;
-                if (d->isDisabledOrDummy())
+                if (&d->getTarget() == this)
                     continue;
                 if (d->IncludeDirectoriesOnly)
                     continue;
 
-                auto nt = d->target->as<NativeCompiledTarget*>();
+                auto nt = d->getTarget().template as<NativeCompiledTarget*>();
 
                 // circular deps detection
                 if (L)
                 {
-                    for (auto &d2 : nt->Dependencies)
+                    for (auto &d2 : nt->getAllDependencies())
                     {
-                        if (d2->target != this)
+                        if (&d2->getTarget() != this)
                             continue;
                         if (d2->IncludeDirectoriesOnly)
                             continue;
@@ -2481,7 +2455,7 @@ bool NativeCompiledTarget::prepare()
                     LinkLibraries.push_back(nt->getImportLibrary());
                 }
             }
-        }*/
+        }
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 7:

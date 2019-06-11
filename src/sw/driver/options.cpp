@@ -142,7 +142,7 @@ void unique_merge_containers(C &to, const C &from)
     }*/
 }
 
-DependencyData::DependencyData(const Target &t)
+DependencyData::DependencyData(const ITarget &t)
 {
     package = t.getPackage();
 }
@@ -158,7 +158,7 @@ DependencyData::DependencyData(const UnresolvedPackage &p)
     return *this;
 }*/
 
-bool DependencyData::operator==(const DependencyData &t) const
+/*bool DependencyData::operator==(const DependencyData &t) const
 {
     return std::tie(package) == std::tie(t.package);
 }
@@ -180,7 +180,7 @@ bool Dependency::operator<(const Dependency &t) const
     auto t1 = target;
     auto t2 = t.target;
     return std::tie(package, t1) < std::tie(t.package, t2);
-}
+}*/
 
 UnresolvedPackage DependencyData::getPackage() const
 {
@@ -190,27 +190,24 @@ UnresolvedPackage DependencyData::getPackage() const
     return package;
 }
 
-LocalPackage Dependency::getResolvedPackage() const
+LocalPackage DependencyData::getResolvedPackage() const
 {
     if (!target)
         throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
     return target->getPackage();
 }
 
-void Dependency::setTarget(const Target &t)
+void DependencyData::setTarget(const ITarget &t)
 {
-    target = (Target *)&t;
-    //propagateTargetToChain();
+    target = &t;
 }
 
-/*void Dependency::propagateTargetToChain()
+const ITarget &DependencyData::getTarget() const
 {
-    for (auto &c : chain)
-    {
-        if (c.get() != this)
-            c->setTarget(*target);
-    }
-}*/
+    if (!target)
+        throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
+    return *target;
+}
 
 void NativeCompilerOptionsData::add(const Definition &d)
 {
@@ -532,9 +529,10 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
     else
     {
         (*i)->Disabled = false;
-        auto d = (*i)->target;
+        deps.push_back(t);
+        /*auto d = &(*i)->getTarget();
         if (d)
-            t->setTarget(*d);
+            t->setTarget(*d);*/
     }
 }
 
@@ -551,9 +549,10 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
     else
     {
         (*i)->Disabled = true;
-        auto d = (*i)->target;
+        deps.push_back(t);
+        /*auto d = &(*i)->getTarget();
         if (d)
-            t->setTarget(*d);
+            t->setTarget(*d);*/
     }
 }
 

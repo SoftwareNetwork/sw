@@ -72,31 +72,29 @@ void Command::prepare()
         auto d = dependency.lock();
         if (d)
         {
-            auto t = d->target;
-            if (!t)
-                throw SW_RUNTIME_ERROR("Command dependency target was not resolved: " + d->getPackage().toString());
-            ((NativeTarget *)t)->setupCommand(*this);
+            auto &t = d->getTarget();
+            ((const NativeTarget &)t).setupCommand(*this);
 
             path p;
-            if (auto nt = t->as<NativeCompiledTarget*>())
+            if (auto nt = t.as<NativeCompiledTarget*>())
             {
                 p = nt->getOutputFile();
                 if (!p.empty() && !File(p, *fs).isGenerated())
                 {
                     if (*nt->HeaderOnly)
-                        throw SW_RUNTIME_ERROR("Program is used from package: " + t->getPackage().toString() + " which is header only");
+                        throw SW_RUNTIME_ERROR("Program is used from package: " + t.getPackage().toString() + " which is header only");
                     if (!File(p, *fs).isGeneratedAtAll())
-                        throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated at all: " + normalize_path(p));
-                    throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated: " + normalize_path(p));
+                        throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated at all: " + normalize_path(p));
+                    throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated: " + normalize_path(p));
                 }
             }
-            else if (auto nt = t->as<NativeTarget*>())
+            else if (auto nt = t.as<NativeTarget*>())
                 p = nt->getOutputFile();
             else
-                throw SW_RUNTIME_ERROR("Package: " + t->getPackage().toString() + " has unknown type");
+                throw SW_RUNTIME_ERROR("Package: " + t.getPackage().toString() + " has unknown type");
 
             if (p.empty())
-                throw SW_RUNTIME_ERROR("Empty program from package: " + t->getPackage().toString());
+                throw SW_RUNTIME_ERROR("Empty program from package: " + t.getPackage().toString());
             setProgram(p);
         }
         else if (dependency_set)

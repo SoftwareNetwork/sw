@@ -110,11 +110,11 @@ TargetBase::~TargetBase()
 {
 }
 
-bool TargetBase::hasSameParent(const TargetBase *t) const
+bool Target::hasSameParent(const ITarget &t) const
 {
-    if (this == t)
+    if (this == &t)
         return true;
-    return getPackage().ppath.hasSameParent(t->getPackage().ppath);
+    return getPackage().ppath.hasSameParent(t.getPackage().ppath);
 }
 
 PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
@@ -600,7 +600,7 @@ UnresolvedDependenciesType Target::gatherUnresolvedDependencies() const
     UnresolvedDependenciesType deps;
     for (auto &d : gatherDependencies())
     {
-        if (/*!getSolution().resolveTarget(d->package) && */!d->target)
+        if (/*!getSolution().resolveTarget(d->package) && */!*d)
             deps.insert({ d->package, d });
     }
     return deps;
@@ -679,15 +679,14 @@ Files NativeTargetOptionsGroup::gatherAllFiles() const
 
 DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
 {
-    SW_UNIMPLEMENTED;
     DependenciesType deps;
     for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
     {
         auto s = getInheritanceStorage().raw()[i];
         if (!s)
             continue;
-        //for (auto &d : s->Dependencies_)
-            //deps.insert(d);
+        for (auto &d : s->getRawDependencies())
+            deps.insert(d);
     }
     return deps;
 }

@@ -19,6 +19,8 @@ struct ITarget : Node
 {
     virtual ~ITarget() = 0;
 
+    virtual const LocalPackage &getPackage() const = 0;
+
     /// can be registered to software network
     virtual bool isReal() const = 0;
 
@@ -66,13 +68,13 @@ struct TargetData : std::vector<ITargetPtr>
     using Base = std::vector<ITargetPtr>;
 
     void loadPackages(const PackageIdSet &allowed_packages);
-    void setEntryPoint(std::unique_ptr<TargetEntryPoint>);
+    void setEntryPoint(const std::shared_ptr<TargetEntryPoint> &);
 
     Base::iterator find(const TargetSettings &s);
     Base::const_iterator find(const TargetSettings &s) const;
 
 private:
-    // need shared, because we have targets to build
+    // shared, because multiple pkgs has same entry point
     std::shared_ptr<TargetEntryPoint> ep;
     // regex storage
     // files cache
@@ -167,6 +169,18 @@ struct TargetMap : PackageVersionMapBase<TargetData, std::unordered_map, primiti
 
     ITarget *find(const PackageId &pkg, const TargetSettings &ts)
     {
+        auto i = find(pkg);
+        if (i == end())
+            return {};
+        auto k = i->second.find(ts);
+        if (k == i->second.end())
+            return {};
+        return k->get();
+    }
+
+    ITarget *find(const UnresolvedPackage &pkg, const TargetSettings &ts)
+    {
+        // TODO: consider provided resolving into find()
         auto i = find(pkg);
         if (i == end())
             return {};

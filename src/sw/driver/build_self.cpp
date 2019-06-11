@@ -46,6 +46,8 @@ struct SW_DRIVER_CPP_API NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
 #pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition
 #endif
 
+using TargetEntryPointMap = std::unordered_map<sw::PackageVersionGroupNumber, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>;
+
 #include <build_self.generated.h>
 
 namespace sw
@@ -61,12 +63,16 @@ void Build::build_self()
     //static UnresolvedPackages store; // tmp store
     //auto m = s.swctx.install(required_packages, store);
 
+    SwapAndRestore sr(Local, false);
+    auto epm = build_self_generated(*this);
+
     auto m = swctx.install(required_packages);
     for (auto &[u, p] : m)
-        knownTargets.insert(p);
-
-    SwapAndRestore sr(Local, false);
-    build_self_generated(*this);
+    {
+        auto &ep = epm[p.getData().group_number];
+        ep->known_targets.insert(p);
+        getChildren()[p].setEntryPoint(ep);
+    }
 }
 
 } // namespace sw

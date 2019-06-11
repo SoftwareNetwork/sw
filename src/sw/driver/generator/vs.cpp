@@ -1102,23 +1102,24 @@ void ProjectEmitter::printProject(
                         auto d = dc->dependency.lock();
                         if (d)
                         {
-                            if (d->target && !d->target->skip && !d->target->sw_provided)
+                            auto &t = (const Target &)d->getTarget();
+                            if (!t.skip && !t.sw_provided)
                             {
-                                if (!shouldAddTarget(*d->target))
+                                if (!shouldAddTarget(t))
                                 {
                                     deps.insert(parent->build_dependencies_name);
-                                    parent->build_deps.insert(d->target->getPackage());
+                                    parent->build_deps.insert(d->getTarget().getPackage());
                                 }
                                 else
                                 {
                                     auto tdir = get_out_dir(dir, projects_dir, s);
-                                    tdir /= d->target->getPackage().toString() + ".exe";
+                                    tdir /= d->getTarget().getPackage().toString() + ".exe";
                                     addText(normalize_path_windows(tdir) + ";");
 
                                     // fix program
                                     gen->setProgram(tdir);
 
-                                    deps.insert(d->target->getPackage().toString());
+                                    deps.insert(d->getTarget().getPackage().toString());
                                 }
                             }
                         }

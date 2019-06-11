@@ -16,26 +16,35 @@
 namespace sw
 {
 
-struct Target;
+struct ITarget;
 
 struct SW_DRIVER_CPP_API DependencyData
 {
-    // ITarget?
-    Target *target = nullptr;
     UnresolvedPackage package;
     //DependencyData dep;
-    //TargetSettings s;
+    TargetSettings settings;
     //InheritanceType type; // known in advance
     bool Disabled = false;
 
-    DependencyData(const Target &t);
+    DependencyData(const ITarget &t);
     DependencyData(const UnresolvedPackage &p);
 
     UnresolvedPackage getPackage() const;
+    void setTarget(const ITarget &t);
+    const ITarget &getTarget() const;
+
     bool isDisabled() const { return Disabled; }
 
-    bool operator==(const DependencyData &t) const;
-    bool operator< (const DependencyData &t) const;
+    //bool operator==(const DependencyData &t) const;
+    //bool operator< (const DependencyData &t) const;
+
+    operator bool() const { return target; }
+    bool isResolved() const { return operator bool(); }
+
+    LocalPackage getResolvedPackage() const;
+
+private:
+    const ITarget *target = nullptr;
 };
 
 struct SW_DRIVER_CPP_API Dependency : DependencyData
@@ -47,20 +56,14 @@ struct SW_DRIVER_CPP_API Dependency : DependencyData
 
     // optional callback
     // choose default value
-    std::function<void(Target &)> optional;
+    //std::function<void(Target &)> optional;
 
     using DependencyData::DependencyData;
 
     //Dependency &operator=(const Target &t);
     //Dependency &operator=(const Package *p);
-    bool operator==(const Dependency &t) const;
-    bool operator< (const Dependency &t) const;
-
-    operator bool() const { return target; }
-    bool isResolved() const { return operator bool(); }
-
-    LocalPackage getResolvedPackage() const;
-    void setTarget(const Target &t);
+    //bool operator==(const Dependency &t) const;
+    //bool operator< (const Dependency &t) const;
 
     // for backwards compat
     void setDummy(bool) {}
@@ -73,7 +76,7 @@ using DependencyPtr = std::shared_ptr<Dependency>;
 struct SW_DRIVER_CPP_API TargetDependency
 {
     DependencyPtr dep;
-    TargetSettings settings;
+    //TargetSettings settings;
     InheritanceType inhtype;
 
     //bool operator==(const TargetDependency &t) const { return std::tie(dep, s) == std::tie(t.dep, t.s); }

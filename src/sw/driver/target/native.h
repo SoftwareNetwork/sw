@@ -204,9 +204,10 @@ private:
 
     using ActiveDeps = std::vector<TargetDependency>;
     std::optional<ActiveDeps> active_deps;
-    ActiveDeps all_deps;
+    DependenciesType all_deps;
     ActiveDeps &getActiveDeps();
     const ActiveDeps &getActiveDeps() const;
+    const DependenciesType &getAllDependencies() const { return all_deps; }
 
     Commands getCommands1() const override;
 

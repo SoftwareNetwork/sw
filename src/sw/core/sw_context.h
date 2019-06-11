@@ -33,9 +33,10 @@ enum class InputType : int32_t
 };
 
 // represents user request (if possible) returned from sw context
+// or sw context = single request?
+// or ... ?
 struct SW_CORE_API Request
 {
-
 };
 
 struct SW_CORE_API SwContext : SwBuilderContext
@@ -70,8 +71,9 @@ struct SW_CORE_API SwContext : SwBuilderContext
     void registerDriver(std::unique_ptr<IDriver> driver);
     const Drivers &getDrivers() const { return drivers; }
 
-    // TODO: return some build object
-    std::unique_ptr<Request> load(const Inputs &inputs);
+    // TODO: return some build object? why? swctx IS buildobj, isn't it?
+    //std::unique_ptr<Request> load(const Inputs &inputs);
+    void load(const Inputs &inputs);
     void build(const Inputs &inputs);
     // void configure(); // = load() + save execution plan
     bool prepareStep();

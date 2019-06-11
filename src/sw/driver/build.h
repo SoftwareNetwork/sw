@@ -40,15 +40,15 @@ namespace detail
 
 struct EventCallback
 {
-    using BasicEventCallback = std::function<void(TargetBase &t, CallbackType e)>;
-    using TypedEventCallback = std::function<void(TargetBase &t)>;
+    using BasicEventCallback = std::function<void(Target &t, CallbackType e)>;
+    using TypedEventCallback = std::function<void(Target &t)>;
 
     PackageIdSet pkgs;
     std::set<CallbackType> types;
     BasicEventCallback cb;
     bool typed_cb = false;
 
-    void operator()(TargetBase &t, CallbackType e);
+    void operator()(Target &t, CallbackType e);
 
     template <class F, class ... Args>
     void add(const F &a, Args &&... args)
@@ -60,7 +60,7 @@ struct EventCallback
             std::is_convertible_v<F, TypedEventCallback>)
         {
             typed_cb = true;
-            cb = [a](TargetBase &t, CallbackType)
+            cb = [a](Target &t, CallbackType)
             {
                 a(t);
             };
@@ -108,8 +108,9 @@ struct ModuleSwappableData
 {
     PackagePath NamePrefix;
     String current_module;
-    // for checks
     PackageVersionGroupNumber current_gn = 0;
+    const BuildSettings *current_settings = nullptr;
+    PackageIdSet known_targets;
 };
 
 struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetEntryPoint
@@ -155,9 +156,8 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     // most important
     SwContext &swctx;
     const driver::cpp::Driver &driver;
-    std::vector<BuildSettings> settings;
+    std::vector<BuildSettings> settings; // initial settings
     //const BuildSettings *host_settings = nullptr;
-    const BuildSettings *current_settings = nullptr;
     //std::map<String, std::vector<TargetSettingsData>> target_settings; // regex, some data
 
     //
@@ -176,7 +176,6 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     // other data
     bool silent = false; // some log messages
     bool show_output = false; // output from commands
-    PackageIdSet knownTargets;
     path fetch_dir;
     bool dry_run = false;
     bool with_testing = false;
@@ -241,7 +240,7 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
         c.add(std::forward<Args>(args)...);
         events.push_back(c);
     }
-    void call_event(TargetBase &t, CallbackType et);
+    void call_event(Target &t, CallbackType et);
     //
 
     // tests
@@ -347,7 +346,6 @@ private:
     //std::optional<std::reference_wrapper<Solution>> addFirstSolution();
     void setupSolutionName(const path &file_or_dir);
     SharedLibraryTarget &createTarget(const Files &files);
-    path getOutputModuleName(const path &p);
     //const Solution *getHostSolution();
     //const Solution *getHostSolution() const;
 

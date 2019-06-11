@@ -91,6 +91,12 @@ std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 
 // TODO: add '#pragma sw driver ...'
 
+// Note
+// We have separate Build for configs, because stored build scripts
+// may differ from remote ones (until we deny overriding package versions).
+// Later we may have these rules stored in memory in order to load and build subsequents requests.
+// But we also have overridden packages which breaks everything above.
+
 namespace sw
 {
 
@@ -128,7 +134,7 @@ void NativeModuleTargetEntryPoint::loadPackages(const PackageIdSet &pkgs)
 namespace detail
 {
 
-void EventCallback::operator()(TargetBase &t, CallbackType e)
+void EventCallback::operator()(Target &t, CallbackType e)
 {
     if (!pkgs.empty() && pkgs.find(t.getPackage()) == pkgs.end())
         return;
@@ -706,7 +712,7 @@ void Build::build_and_resolve(int n_runs)
         for (auto &u : ud)
             s += u.first.toString() + ", ";
         s.resize(s.size() - 2);
-        throw SW_RUNTIME_ERROR("Missing config deps, check your build_self script: " + s);
+        throw SW_RUNTIME_ERROR("Missing config deps, check your self build script: " + s);
     }
 
     if (n_runs > 1)
@@ -855,8 +861,12 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs) const
                 auto i = getChildren().find(up);
                 if (i != getChildren().end())
                 {
-                    dptr->setTarget((*i->second.begin())->as<NativeTarget>());
-                    known2.insert(up);
+                    auto k = i->second.find(dptr->settings);
+                    if (k != i->second.end())
+                    {
+                        dptr->setTarget((*i->second.begin())->as<NativeTarget>());
+                        known2.insert(up);
+                    }
                 }
             }
 
@@ -1291,7 +1301,6 @@ PackagePath Build::getSelfTargetName(const Files &files)
 
 SharedLibraryTarget &Build::createTarget(const Files &files)
 {
-    TargetBase b;
     auto &solution = *this;
     solution.IsConfig = true;
     auto &lib = solution.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
@@ -1300,6 +1309,7 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
 }
 
 #define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-0.3.1"
+#define SW_DRIVER_NAME_DEP "org.sw.sw.client.driver.cpp-0.3.1"_dep
 #define SW_DRIVER_INCLUDE_DIR "src"
 
 static NativeCompiledTarget &getDriverTarget(Build &solution)
@@ -1309,7 +1319,12 @@ static NativeCompiledTarget &getDriverTarget(Build &solution)
         throw SW_RUNTIME_ERROR("no driver target");
     auto k = i->second.find(solution.getSettings().getTargetSettings());
     if (k == i->second.end())
-        throw SW_RUNTIME_ERROR("no driver target (by settings)");
+    {
+        i->second.loadPackages(solution.knownTargets);
+        k = i->second.find(solution.getSettings().getTargetSettings());
+        if (k == i->second.end())
+            throw SW_RUNTIME_ERROR("no driver target (by settings)");
+    }
     return (*k)->as<NativeCompiledTarget>();
 }
 
@@ -1327,7 +1342,8 @@ static void addDeps(NativeCompiledTarget &lib, Build &solution)
     auto d = lib + drv;
     d->IncludeDirectoriesOnly = true;
 
-    // generated file
+    // generated file, because it won't build in IncludeDirectoriesOnly
+    // FIXME: ^^^ this is wrong, generated header must be built in idirs only
     lib += drv.BinaryDir / "options_cl.generated.h";
 }
 
@@ -1364,21 +1380,6 @@ static void write_pch(Build &solution)
         //"#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
         //"#include <" + normalize_path(getMainPchFilename()) + ">\n\n" + // the last one
         cppan_cpp);
-}
-
-path Build::getOutputModuleName(const path &p)
-{
-    SW_UNIMPLEMENTED;
-
-    /*addFirstConfig();
-
-    auto &solution = solutions[0];
-
-    solution.Settings.Native.LibrariesType = LibraryType::Static;
-    if (debug_configs)
-        solution.Settings.Native.ConfigurationType = ConfigurationType::Debug;
-    auto &lib = createTarget({ p });
-    return lib.getOutputFile();*/
 }
 
 const BuildSettings &Build::getSettings() const
@@ -1749,7 +1750,6 @@ Module Build::loadModule(const path &p) const
     b.file_storage_local = false;
     b.is_config_build = true;
     path dll;
-    //dll = b.getOutputModuleName(fn2);
     //if (File(fn2, *b.solutions[0].fs).isChanged() || File(dll, *b.solutions[0].fs).isChanged())
     {
         auto r = b.build_configs_separate({ fn2 });
@@ -3130,7 +3130,7 @@ bool Build::isConfigSelected(const String &s) const
     return cfgs.find(s) != cfgs.end();
 }
 
-void Build::call_event(TargetBase &t, CallbackType et)
+void Build::call_event(Target &t, CallbackType et)
 {
     for (auto &e : events)
     {

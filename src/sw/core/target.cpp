@@ -20,7 +20,7 @@ void TargetData::loadPackages(const PackageIdSet &whitelist)
     ep->loadPackages(whitelist);
 }
 
-void TargetData::setEntryPoint(std::unique_ptr<TargetEntryPoint> e)
+void TargetData::setEntryPoint(const std::shared_ptr<TargetEntryPoint> &e)
 {
     ep = std::move(e);
 }

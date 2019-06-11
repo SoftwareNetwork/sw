@@ -151,8 +151,6 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     ProjectTarget &addProject(Args && ... args) { return addTarget<ProjectTarget>(std::forward<Args>(args)...); }
     DirectoryTarget &addDirectory(const PackagePath &Name) { return addTarget<DirectoryTarget>(Name); }
 
-    const LocalPackage &getPackage() const;
-
     bool isLocal() const;
 
     Build &getSolution();
@@ -165,8 +163,8 @@ protected:
     TargetBase(const TargetBase &);
 
     LocalPackage &getPackageMutable();
-    bool hasSameParent(const TargetBase *t) const;
     int getCommandStorageType() const;
+    const LocalPackage &getPackage() const;
 
 private:
     std::unique_ptr<LocalPackage> pkg;
@@ -279,6 +277,7 @@ public:
     virtual ~Target() = default;
 
     // api
+    const LocalPackage &getPackage() const override { return TargetBase::getPackage(); }
     const Source &getSource() const override;
     bool isReal() const override { return real; }
     Files getSourceFiles() const override { SW_UNIMPLEMENTED; }
@@ -342,6 +341,7 @@ public:
     //
     virtual TargetType getType() const { return TargetType::Unspecified; }
     String getTypeName() const { return toString(getType()); }
+    bool hasSameParent(const ITarget &t) const;
 
 protected:
     bool real = true;

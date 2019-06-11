@@ -15,8 +15,10 @@
 #include <mutex>
 
 #define SW_INTERNAL_INIT_COMMAND(name, target) \
-    name->fs = &(target).getFs();              \
-    (target).setupCommand(*name)
+    name->fs = &(target).getFs();
+
+    // this is performed later
+    //(target).setupCommand(*name)
 
 #define SW_INTERNAL_ADD_COMMAND(name, target) \
     (target).Storage.push_back(name)
