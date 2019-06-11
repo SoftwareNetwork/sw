@@ -221,6 +221,7 @@ struct SW_DRIVER_CPP_API Dependency
     LocalPackage getResolvedPackage() const;
 
     void setTarget(const Target &t);
+    const Target &getTarget() const;
     void propagateTargetToChain();
 };
 

@@ -189,6 +189,13 @@ void Dependency::setTarget(const Target &t)
     propagateTargetToChain();
 }
 
+const Target &Dependency::getTarget() const
+{
+    if (!target)
+        throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
+    return *target;
+}
+
 void Dependency::propagateTargetToChain()
 {
     for (auto &c : chain)
