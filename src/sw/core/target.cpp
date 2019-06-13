@@ -13,11 +13,11 @@ ITarget::~ITarget() = default;
 
 TargetEntryPoint::~TargetEntryPoint() = default;
 
-void TargetData::loadPackages(const PackageIdSet &whitelist)
+void TargetData::loadPackages(const TargetSettings &s, const PackageIdSet &whitelist)
 {
     if (!ep)
         throw SW_RUNTIME_ERROR("No entry point provided");
-    ep->loadPackages(whitelist);
+    ep->loadPackages(s, whitelist);
 }
 
 void TargetData::setEntryPoint(const std::shared_ptr<TargetEntryPoint> &e)

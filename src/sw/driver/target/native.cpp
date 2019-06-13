@@ -207,7 +207,17 @@ void NativeCompiledTarget::findCompiler()
         {
             auto r = activate_one(v);
             if (r)
+            {
+                switch (v.type)
+                {
+                case CompilerType::MSVC:
+                    ts["compiler.c"] = "msvc-version";
+                    break;
+                default:
+                    SW_UNIMPLEMENTED;
+                }
                 ct = v.type;
+            }
             return r;
         });
     };
@@ -332,7 +342,7 @@ void NativeCompiledTarget::findCompiler()
         {
             auto &cld = getSolution().getChildren();
 
-            auto i = cld.find(std::get<0>(in), getSettings().getTargetSettings());
+            auto i = cld.find(std::get<0>(in), getTargetSettings());
             if (!i)
                 return false;
             if (!(*i).second)
@@ -408,7 +418,7 @@ void NativeCompiledTarget::findCompiler()
     auto add_libc = [this](const auto &pp)
     {
         auto &cld = getSolution().getChildren();
-        auto i = cld.find(pp, getSettings().getTargetSettings());
+        auto i = cld.find(pp, getTargetSettings());
         if (!i)
             return false;
         if (!(*i).second)
@@ -476,27 +486,22 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     // perform this after prepare?
     auto for_deps = [this](auto &a)
     {
-        SW_UNIMPLEMENTED;
-        /*for (auto &d : Dependencies)
+        for (auto &d : getAllDependencies())
         {
-            if (!d->target)
+            if (&d->getTarget() == this)
                 continue;
-            if (d->target == this)
-                continue;
-            if (!d->isRuntime())
+            //if (!d->isRuntime())
             {
-                if (d->isDisabledOrDummy())
-                    continue;
                 if (d->IncludeDirectoriesOnly)
                     continue;
             }
 
-            auto nt = ((NativeCompiledTarget*)d->target);
+            auto nt = d->getTarget().as<NativeCompiledTarget*>();
             if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
             {
                 a(nt);
             }
-        }*/
+        }
     };
 
     if (standalone)
@@ -725,18 +730,14 @@ path NativeCompiledTarget::getImportLibrary() const
 NativeCompiledTarget::TargetsSet NativeCompiledTarget::gatherDependenciesTargets() const
 {
     TargetsSet deps;
-    SW_UNIMPLEMENTED;
-    /*for (auto &d : Dependencies)
+    for (auto &d : getAllDependencies())
     {
-        if (d->target == this)
+        if (&d->getTarget() == this)
             continue;
-        if (d->isDisabledOrDummy())
-            continue;
-
         if (d->IncludeDirectoriesOnly)
             continue;
-        deps.insert(d->target);
-    }*/
+        deps.insert(&d->getTarget());
+    }
     return deps;
 }
 
@@ -1098,7 +1099,7 @@ NativeCompiledTarget &NativeCompiledTarget::operator=(PrecompiledHeader &pch)
 
 std::shared_ptr<builder::Command> NativeCompiledTarget::getCommand() const
 {
-    if (HeaderOnly && HeaderOnly.value())
+    if (HeaderOnly && *HeaderOnly)
         return nullptr;
     return getSelectedTool()->getCommand(*this);
 }
@@ -1180,7 +1181,7 @@ Commands NativeCompiledTarget::getCommands1() const
     auto generated = getGeneratedCommands();
 
     Commands cmds;
-    if (HeaderOnly && HeaderOnly.value())
+    if (HeaderOnly && *HeaderOnly)
     {
         //LOG_TRACE(logger, "target " << getPackage().toString() << " is header only");
         cmds.insert(generated.begin(), generated.end());
@@ -1310,24 +1311,17 @@ Commands NativeCompiledTarget::getCommands1() const
         auto get_tgts = [this]()
         {
             TargetsSet deps;
-            SW_UNIMPLEMENTED;
-            /*for (auto &d : Dependencies)
+            for (auto &d : getAllDependencies())
             {
-                if (d->target == this)
-                    continue;
-                if (d->isDisabledOrDummy())
-                    continue;
-
                 if (d->IncludeDirectoriesOnly && !d->GenerateCommandsBefore)
                     continue;
-                deps.emplace(d->target);
-            }*/
+                deps.insert(&d->getTarget());
+            }
             return deps;
         };
 
         // add dependencies on generated commands from dependent targets
-        SW_UNIMPLEMENTED;
-        /*for (auto &l : get_tgts())
+        for (auto &l : get_tgts())
         {
             if (auto nt = l->as<NativeCompiledTarget*>())
             {
@@ -1339,7 +1333,7 @@ Commands NativeCompiledTarget::getCommands1() const
                     c->dependencies.insert(cmds2.begin(), cmds2.end());
                 }
             }
-        }*/
+        }
 
         // link deps
         if (hasCircularDependency() || createWindowsRpath())
@@ -1675,7 +1669,7 @@ void NativeCompiledTarget::detectLicenseFile()
         return true;
     };
 
-    if (!Local)
+    if (!isLocal())
     {
         if (!Description.LicenseFilename.empty())
         {
@@ -1705,7 +1699,15 @@ void NativeCompiledTarget::detectLicenseFile()
     }
 }
 
-NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDeps()
+DependenciesType NativeCompiledTarget::gatherDependencies() const
+{
+    DependenciesType deps;
+    for (auto &d : ((NativeCompiledTarget*)this)->getActiveDependencies())
+        deps.insert(d.dep);
+    return deps;
+}
+
+NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
 {
     if (!active_deps)
     {
@@ -1720,7 +1722,7 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDeps()
                 TargetDependency td;
                 td.dep = d;
                 td.inhtype = i;
-                td.dep->settings = getSettings().getTargetSettings();
+                td.dep->settings = ts;
                 deps.push_back(td);
             }
         });
@@ -1729,7 +1731,7 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDeps()
     return *active_deps;
 }
 
-const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDeps() const
+const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies() const
 {
     if (!active_deps)
         throw SW_RUNTIME_ERROR("no active deps calculated");
@@ -1849,19 +1851,18 @@ bool NativeCompiledTarget::prepare()
         // gather deps into one list of active deps
 
         // set our initial deps
-        getActiveDeps();
+        getActiveDependencies();
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 2:
         // resolve
     {
-        for (auto &d : getActiveDeps())
+        for (auto &d : getActiveDependencies())
         {
             auto t = getSolution().getChildren().find(d.dep->getPackage(), d.dep->settings);
             if (!t)
                 throw SW_RUNTIME_ERROR("No such target");
             d.dep->setTarget(*t);
-
         }
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
@@ -1888,7 +1889,7 @@ bool NativeCompiledTarget::prepare()
         std::vector<DependencyPtr> deps_ordered;
 
         // set our initial deps
-        for (auto &d : getActiveDeps())
+        for (auto &d : getActiveDependencies())
         {
             deps.emplace(d.dep, d.inhtype);
             deps_ordered.push_back(d.dep);
@@ -1901,7 +1902,7 @@ bool NativeCompiledTarget::prepare()
             for (auto &[d, _] : deps2)
             {
                 // iterate over child deps
-                for (auto &dep : ((const NativeCompiledTarget&)d->getTarget()).getActiveDeps())
+                for (auto &dep : ((const NativeCompiledTarget&)d->getTarget()).getActiveDependencies())
                 {
                     auto Inheritance = dep.inhtype;
                     auto d2 = dep.dep;
@@ -1973,7 +1974,10 @@ bool NativeCompiledTarget::prepare()
             if (!new_dependency)
             {
                 for (auto &d : deps_ordered)
-                    all_deps.insert(deps.find(d)->first);
+                {
+                    if (&d->getTarget() != this)
+                        all_deps.insert(deps.find(d)->first);
+                }
                 break;
             }
         }
@@ -2206,7 +2210,7 @@ bool NativeCompiledTarget::prepare()
         if (GenerateWindowsResource
             && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
             && getSelectedTool() == Linker.get()
-            && !HeaderOnly.value()
+            && !*HeaderOnly
             && !IsConfig
             && getSettings().TargetOS.is(OSType::Windows)
             && Scope == TargetScope::Build
@@ -2423,7 +2427,7 @@ bool NativeCompiledTarget::prepare()
         auto L = Linker->as<VisualStudioLinker*>();
 
         // add link libraries from deps
-        if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
+        if (!*HeaderOnly && getSelectedTool() != Librarian.get())
         {
             for (auto &d : getAllDependencies())
             {
@@ -2462,11 +2466,11 @@ bool NativeCompiledTarget::prepare()
         // linker 1
     {
         // add more link libraries from deps
-        if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
+        if (!*HeaderOnly && getSelectedTool() != Librarian.get())
         {
             auto ll = [this](auto &l, bool system)
             {
-                std::unordered_set<NativeCompiledTarget*> targets;
+                std::unordered_set<const NativeCompiledTarget*> targets;
                 Files added;
                 added.insert(l.begin(), l.end());
                 gatherStaticLinkLibraries(l, added, targets, system);
@@ -2487,7 +2491,7 @@ bool NativeCompiledTarget::prepare()
         auto obj = gatherObjectFilesWithoutLibraries();
         auto O1 = gatherLinkLibraries();
 
-        if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
+        if (!*HeaderOnly && getSelectedTool() != Librarian.get())
         {
             for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
                 obj.insert(f->output.file);
@@ -2632,24 +2636,20 @@ void NativeCompiledTarget::processCircular(Files &obj)
     obj.insert(exp);
 }
 
-void NativeCompiledTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeCompiledTarget*> &targets, bool system)
+void NativeCompiledTarget::gatherStaticLinkLibraries(
+    LinkLibrariesType &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, bool system) const
 {
     if (!targets.insert(this).second)
         return;
-    SW_UNIMPLEMENTED;
-    /*for (auto &d : Dependencies)
+    for (auto &d : getAllDependencies())
     {
-        if (d->target == this)
-            continue;
-        if (d->isDisabledOrDummy())
-            continue;
         if (d->IncludeDirectoriesOnly)
             continue;
 
-        auto dt = ((NativeCompiledTarget*)d->target);
+        auto dt = d->getTarget().template as<const NativeCompiledTarget*>();
 
         // here we must gather all static (and header only?) lib deps in recursive manner
-        if (dt->getSelectedTool() == dt->Librarian.get() || dt->HeaderOnly.value())
+        if (dt->getSelectedTool() == dt->Librarian.get() || *dt->HeaderOnly)
         {
             auto add = [&added, &ll](auto &dt, const path &base, bool system)
             {
@@ -2670,28 +2670,26 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(LinkLibrariesType &ll, File
                 }
             };
 
-            if (!dt->HeaderOnly.value())
+            if (!*dt->HeaderOnly)
                 add(dt, dt->getOutputFile(), system);
 
             // if dep is a static library, we take all its deps link libraries too
-            for (auto &d2 : dt->Dependencies)
+            for (auto &d2 : dt->getAllDependencies())
             {
-                if (d2->target == this)
+                if (&d2->getTarget() == this)
                     continue;
-                if (d2->target == d->target)
-                    continue;
-                if (d2->isDisabledOrDummy())
+                if (&d2->getTarget() == &d->getTarget())
                     continue;
                 if (d2->IncludeDirectoriesOnly)
                     continue;
 
-                auto dt2 = ((NativeCompiledTarget*)d2->target);
-                if (!dt2->HeaderOnly.value())
+                auto dt2 = d2->getTarget().template as<const NativeCompiledTarget*>();
+                if (!*dt2->HeaderOnly)
                     add(dt2, dt2->getImportLibrary(), system);
                 dt2->gatherStaticLinkLibraries(ll, added, targets, system);
             }
         }
-    }*/
+    }
 }
 
 bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
@@ -2955,14 +2953,13 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
 
 CheckSet &NativeCompiledTarget::getChecks(const String &name)
 {
-    SW_UNIMPLEMENTED;
-    /*auto i0 = getSolution().checker.sets.find(getSolution().current_gn);
+    auto i0 = getSolution().checker.sets.find(getSolution().getCurrentGroupNumber());
     if (i0 == getSolution().checker.sets.end())
-        throw SW_RUNTIME_ERROR("No such group number: " + std::to_string(getSolution().current_gn));
+        throw SW_RUNTIME_ERROR("No such group number: " + std::to_string(getSolution().getCurrentGroupNumber()));
     auto i = i0->second.find(name);
     if (i == i0->second.end())
         throw SW_RUNTIME_ERROR("No such set: " + name);
-    return i->second;*/
+    return i->second;
 }
 
 void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
@@ -2991,7 +2988,7 @@ path NativeCompiledTarget::getPatchDir(bool binary_dir) const
     path base;
     if (auto d = getPackage().getOverriddenDir(); d)
         base = d.value() / SW_BINARY_DIR;
-    else if (!Local)
+    else if (!isLocal())
         base = getPackage().getDirSrc();
     else
         base = getSolution().BinaryDir;
@@ -3105,6 +3102,11 @@ void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text
 
     //File f(p, getFs());
     //f.getFileRecord().load();
+}
+
+CompilerType NativeCompiledTarget::getCompilerType() const
+{
+    return getSettings().Native.CompilerType1;
 }
 
 static std::unique_ptr<Source> load_source_and_version(const yaml &root, Version &version)

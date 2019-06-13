@@ -196,10 +196,9 @@ Checker::Checker(Build &build)
 
 CheckSet &Checker::addSet(const String &name)
 {
-    SW_UNIMPLEMENTED;
-    /*auto p = sets[build.current_gn].emplace(name, CheckSet(*this));
+    auto p = sets[build.getCurrentGroupNumber()].emplace(name, CheckSet(*this));
     p.first->second.name = name;
-    return p.first->second;*/
+    return p.first->second;
 }
 
 void CheckSet::performChecks(const String &config)
@@ -347,7 +346,7 @@ int main() { return IsBigEndian(); }
             {
                 if (c->requires_manual_setup)
                 {
-                    auto dst = (cc_dir / std::to_string(c->getHash())) += checker.build.getSettings().TargetOS.getExecutableExtension();
+                    auto dst = (cc_dir / std::to_string(c->getHash())) += checker.build.getBuildSettings().TargetOS.getExecutableExtension();
                     if (!fs::exists(dst))
                         fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
                 }
@@ -360,7 +359,7 @@ int main() { return IsBigEndian(); }
         if (!cs.manual_checks.empty())
         {
             // save executables
-            auto &os = checker.build.getSettings().TargetOS;
+            auto &os = checker.build.getBuildSettings().TargetOS;
             auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
 
             auto bat = os.getShellType() == ShellType::Batch;
@@ -385,7 +384,7 @@ int main() { return IsBigEndian(); }
                 s += "echo \"# " + defs + "\" >> " + mfn + "\n";
                 if (!bat)
                     s += "./";
-                s += std::to_string(c->getHash()) + checker.build.getSettings().TargetOS.getExecutableExtension() + "\n";
+                s += std::to_string(c->getHash()) + checker.build.getBuildSettings().TargetOS.getExecutableExtension() + "\n";
                 s += "echo " + std::to_string(c->getHash()) + " ";
                 if (!bat)
                     s += "$? ";
@@ -559,10 +558,8 @@ Build Check::setupSolution(const path &f) const
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     //s.throw_exceptions = false;
     s.BinaryDir = f.parent_path();
-    SW_UNIMPLEMENTED;
-    //s.NamePrefix.clear();
-    s.Local = true;
-    s.checks_build = true;
+    s.NamePrefix.clear();
+    s.use_separate_target_map = true;
     s.DryRun = false;
 
     auto ss = check_set->t->getSettings();

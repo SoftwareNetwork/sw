@@ -72,7 +72,7 @@ private:
     ASSIGN_WRAPPER(remove, NativeCompiledTarget);
 
 public:
-    using TargetsSet = std::unordered_set<Target*>;
+    using TargetsSet = std::unordered_set<const ITarget*>;
 
     ASSIGN_TYPES(ApiNameType)
     void add(const ApiNameType &i);
@@ -108,9 +108,6 @@ public:
 
     bool UseModules = false;
 
-    CompilerType ct = CompilerType::UnspecifiedCompiler;
-    CompilerType getCompilerType() const { return ct; }
-
     //
     virtual ~NativeCompiledTarget();
 
@@ -119,7 +116,7 @@ public:
     bool init() override;
     bool prepare() override;
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
-    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    DependenciesType gatherDependencies() const override;
 
     void addPackageDefinitions(bool defs = false);
     std::shared_ptr<builder::Command> getCommand() const;
@@ -144,6 +141,9 @@ public:
     bool mustResolveDeps() const override { return prepare_pass == 2; }
     void setOutputDir(const path &dir);
     bool createWindowsRpath() const;
+
+    // reconsider?
+    CompilerType getCompilerType() const;
 
     driver::CommandBuilder addCommand() const;
     // add executed command?
@@ -196,6 +196,7 @@ protected:
     void detectLicenseFile();
 
 private:
+    CompilerType ct = CompilerType::UnspecifiedCompiler;
     bool already_built = false;
     std::map<path, path> break_gch_deps;
     mutable std::optional<Commands> generated_commands;
@@ -205,8 +206,8 @@ private:
     using ActiveDeps = std::vector<TargetDependency>;
     std::optional<ActiveDeps> active_deps;
     DependenciesType all_deps;
-    ActiveDeps &getActiveDeps();
-    const ActiveDeps &getActiveDeps() const;
+    ActiveDeps &getActiveDependencies();
+    const ActiveDeps &getActiveDependencies() const;
     const DependenciesType &getAllDependencies() const { return all_deps; }
 
     Commands getCommands1() const override;
@@ -216,7 +217,7 @@ private:
     path getOutputFileName2(const path &subdir) const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
-    void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<NativeCompiledTarget*> &targets, bool system);
+    void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, bool system) const;
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
     void merge1();

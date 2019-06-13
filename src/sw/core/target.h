@@ -58,7 +58,7 @@ struct TargetEntryPoint
     virtual ~TargetEntryPoint() = 0;
 
     // on zero input packages, load all
-    virtual void loadPackages(const PackageIdSet &allowed_packages = {}) = 0;
+    virtual void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages = {}) = 0;
 };
 
 // it is impossible to keep targets in std::map<TargetSettings, ITargetPtr>,
@@ -67,7 +67,7 @@ struct TargetData : std::vector<ITargetPtr>
 {
     using Base = std::vector<ITargetPtr>;
 
-    void loadPackages(const PackageIdSet &allowed_packages);
+    void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages = {});
     void setEntryPoint(const std::shared_ptr<TargetEntryPoint> &);
 
     Base::iterator find(const TargetSettings &s);

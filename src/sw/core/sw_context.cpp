@@ -40,8 +40,8 @@ void SwContext::build(const Inputs &strings)
 {
     auto inputs = makeInputs(strings);
     load(inputs);
-    //build->execute();
-    SW_UNIMPLEMENTED;
+    for (auto &[d, g] : active_drivers)
+        d->execute();
 }
 
 bool SwContext::prepareStep()

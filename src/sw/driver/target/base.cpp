@@ -130,13 +130,38 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
 
     //TargetSettings tid{ getSolution().getSettings().getTargetSettings() };
     //t->ts = &tid;
-    t->bs = getSolution().getSettings();
-    t->ts = getSolution().getSettings().getTargetSettings();
+    t->ts = getSolution().getSettings();
+    t->bs = t->ts;
 
     // set some general settings, then init, then register
     setupTarget(t.get());
 
     getSolution().call_event(*t, CallbackType::CreateTarget);
+
+    // try to guess whether it's local package or not
+    // TODO: one more case is when config is not local
+    /*t->Local = 0
+        // config -> local
+        || IsConfig
+
+        // if not under storage -> local
+        //|| !is_under_root(t->SourceDir, getSolution().swctx.getLocalStorage().storage_dir_pkg)
+
+        // if under storage but without prefix -> local
+        //|| t->NamePrefix.empty()
+
+        // absolute -> local
+        || !t->pkg->ppath.isAbsolute()
+
+        // local -> local
+        || t->pkg->ppath.is_loc()
+
+        ;*/
+
+    t->Local = 0
+        || getSolution().getCurrentGroupNumber() == 0
+        || t->pkg->getOverriddenDir()
+        ;
 
     // sdir
     if (!t->isLocal())
@@ -157,12 +182,26 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
             t->setSourceDirectory(sd.value());
     }
 
-    // try to guess, very naive
-    if (!IsConfig)
-    {
-        // do not create projects under storage yourself!
-        t->Local = !is_under_root(t->SourceDir, getSolution().swctx.getLocalStorage().storage_dir_pkg);
-    }
+    // second try
+    // try to guess whether it's local package or not
+    // TODO: one more case is when config is not local
+    /*t->Local = 0
+        // config -> local
+        || IsConfig
+
+        // if not under storage -> local
+        || !is_under_root(t->SourceDir, getSolution().swctx.getLocalStorage().storage_dir_pkg)
+
+        // if under storage but without prefix -> local
+        //|| t->NamePrefix.empty()
+
+        // absolute -> local
+        || !t->pkg->ppath.isAbsolute()
+
+        // local -> local
+        || t->pkg->ppath.is_loc()
+
+        ;*/
 
     while (t->init())
         ;
@@ -174,8 +213,8 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
     }
 
     auto &ref = addChild(t);
-    t->bs = getSolution().getSettings();
-    t->ts = getSolution().getSettings().getTargetSettings();
+    t->ts = getSolution().getSettings();
+    t->bs = t->ts;
     getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
     return ref;
 }
@@ -189,13 +228,13 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
     }
 
     // we do not activate targets that are not selected for current builds
-    if (!Local && !getSolution().isKnownTarget(t->getPackage()))
+    if (!isLocal() && !getSolution().isKnownTarget(t->getPackage()))
     {
         t->DryRun = true;
         t->skip = true;
     }
 
-    return addChild(t, getSolution().getSettings().getTargetSettings());
+    return addChild(t, getSolution().getSettings());
 }
 
 TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t, const TargetSettings &tid)
@@ -210,7 +249,7 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t, const TargetSetting
             //return (*j)->as<TargetBase>();
         }
     }
-    getSolution().getChildren()[t->getPackage()].push_back(t);
+    getSolution().addChild(t);
     return *t;
 }
 
@@ -229,7 +268,6 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->build = &getSolution();
 
     t->IsConfig = IsConfig; // TODO: inherit from reconsider
-    t->Local = Local; // TODO: inherit from reconsider
     t->DryRun = DryRun; // TODO: inherit from reconsider
 
     // inherit from solution
@@ -415,8 +453,7 @@ Program *Target::findProgramByExtension(const String &ext) const
     // resolve via swctx because it might provide other version rather than cld.find(*u)
     auto pkg = getSolution().swctx.resolve(*u);
     auto cld = getSolution().getChildren();
-    // TODO: get host settings?
-    auto tgt = cld.find(pkg, getSettings().getTargetSettings());
+    auto tgt = cld.find(pkg, getSolution().getHostSettings());
     if (!tgt)
         return {};
     if (auto t = tgt->as<PredefinedProgram*>())
@@ -524,7 +561,7 @@ const BuildSettings &Target::getSettings() const
 
 FileStorage &Target::getFs() const
 {
-    return getSolution().swctx.getFileStorage(getConfig(), Local);
+    return getSolution().swctx.getFileStorage(getConfig(), isLocal());
 }
 
 bool Target::init()
@@ -600,7 +637,12 @@ UnresolvedDependenciesType Target::gatherUnresolvedDependencies() const
     UnresolvedDependenciesType deps;
     for (auto &d : gatherDependencies())
     {
-        if (/*!getSolution().resolveTarget(d->package) && */!*d)
+        if (!*d)
+            deps.insert({ d->package, d });
+    }
+    for (auto &d : DummyDependencies)
+    {
+        if (!*d)
             deps.insert({ d->package, d });
     }
     return deps;
@@ -693,14 +735,14 @@ DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
 
 void Target::addDummyDependency(const DependencyPtr &t)
 {
-    SW_UNIMPLEMENTED;
-    //SourceDependencies.insert(dep);
+    DummyDependencies.push_back(t);
+    for (auto &[k, v] : getSolution().getHostSettings())
+        DummyDependencies.back()->settings.insert_or_assign(k, v);
 }
 
 void Target::addDummyDependency(const Target &t)
 {
-    SW_UNIMPLEMENTED;
-    //SourceDependencies.insert(dep);
+    addDummyDependency(std::make_shared<Dependency>(t));
 }
 
 void Target::addSourceDependency(const DependencyPtr &t)

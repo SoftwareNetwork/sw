@@ -106,31 +106,46 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
 
 struct ModuleSwappableData
 {
+    //std::weak_ptr<TargetEntryPoint> ep;
     PackagePath NamePrefix;
     String current_module;
     PackageVersionGroupNumber current_gn = 0;
-    const BuildSettings *current_settings = nullptr;
+    TargetSettings current_settings;
+    BuildSettings bs;
     PackageIdSet known_targets;
+    std::vector<Target*> added_targets;
 };
 
-struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetEntryPoint
+// this driver ep
+struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetEntryPoint,
+    std::enable_shared_from_this<NativeTargetEntryPoint>
 {
     ModuleSwappableData module_data;
 
     NativeTargetEntryPoint(Build &b);
 
+    void loadPackages(const TargetSettings &, const PackageIdSet &pkgs = {}) override;
+    void addChild(const TargetBaseTypePtr &t);
+
 protected:
     Build &b;
-};
-
-struct SW_DRIVER_CPP_API NativeModuleTargetEntryPoint : NativeTargetEntryPoint
-{
-    NativeModuleTargetEntryPoint(Build &b, const Module &m);
-
-    void loadPackages(const PackageIdSet &pkgs = {}) override;
 
 private:
-    const Module &m;
+    virtual void loadPackages1() = 0;
+};
+
+struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
+{
+    using BuildFunction = void(*)(Build &);
+    using CheckFunction = void(*)(Checker &);
+
+    BuildFunction bf = nullptr;
+    CheckFunction cf = nullptr;
+
+    NativeBuiltinTargetEntryPoint(Build &b, BuildFunction bf);
+
+private:
+    void loadPackages1() override;
 };
 
 struct SimpleBuild : TargetBase
@@ -157,13 +172,16 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     SwContext &swctx;
     const driver::cpp::Driver &driver;
     std::vector<BuildSettings> settings; // initial settings
-    //const BuildSettings *host_settings = nullptr;
+private:
+    TargetSettings host_settings;
+public:
     //std::map<String, std::vector<TargetSettingsData>> target_settings; // regex, some data
 
     //
     std::vector<TargetBaseTypePtr> dummy_children;
     int command_storage = 0;
-    ModuleSwappableData module_data;
+    const ModuleSwappableData *module_data = nullptr;
+    std::weak_ptr<NativeTargetEntryPoint> ntep;
     SourceDirMap source_dirs_by_source;
     int execute_jobs = 0;
     bool file_storage_local = true;
@@ -180,12 +198,15 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     bool dry_run = false;
     bool with_testing = false;
     std::unordered_set<LocalPackage> known_cfgs;
-    bool checks_build = false; // check targets added to internal children map
-    TargetMap checks_targets;
+    bool use_separate_target_map = false; // check targets added to internal children map
+private:
+    TargetMap internal_targets;
+public:
 
     const OS &getHostOs() const;
-    //const BuildSettings &getHostSettings() const { return *host_settings; }
-    const BuildSettings &getSettings() const;
+    const TargetSettings &getHostSettings() const;
+    const BuildSettings &getBuildSettings() const;
+    const TargetSettings &getSettings() const;
     bool isKnownTarget(const LocalPackage &p) const;
     path getSourceDir(const LocalPackage &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
@@ -204,8 +225,13 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     void detectCompilers();
     PackageDescriptionMap getPackages() const;
     BuildSettings createSettings() const;
-    const BuildSettings &addSettings(const BuildSettings &);
+    void addSettings(const BuildSettings &);
     path build_configs(const std::unordered_set<LocalPackage> &pkgs);
+    const ModuleSwappableData &getModuleData() const;
+    PackageVersionGroupNumber getCurrentGroupNumber() const;
+    const String &getCurrentModule() const;
+    //std::shared_ptr<TargetEntryPoint> getEntryPoint() const;
+    void addChild(const TargetBaseTypePtr &t);
 
     /*void addTargetSettings(const String &ppath_regex, const VersionRange &vr, const TargetSettingsDataContainer &);
     template <class T>
@@ -260,12 +286,13 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     static bool isFrontendConfigFilename(const path &fn);
     static std::optional<FrontendType> selectFrontendByFilename(const path &fn);
 
-private:
     void build_self();
+
+private:
     void resolvePass(const Target &t, const DependenciesType &deps) const;
     void prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_pass) const;
     bool prepareStep(Target &t) const;
-    UnresolvedDependenciesType gatherUnresolvedDependencies(int n_runs = 0) const;
+    UnresolvedDependenciesType gatherUnresolvedDependencies(int n_runs = 0);
     void build_and_resolve(int n_runs = 0);
     void addTest(Test &cb, const String &name);
 
@@ -354,7 +381,7 @@ private:
     void generateBuildSystem();
 
     // basic frontends
-    void load_dll(const path &dll, bool usedll = true);
+    void load_dll(const path &dll);
     void load_configless(const path &file_or_dir);
     void createSolutions(const path &dll, bool usedll = true);
 
@@ -363,9 +390,6 @@ private:
     void cppan_load(const path &fn);
     void cppan_load(const yaml &root, const String &root_name = {});
     bool cppan_check_config_root(const yaml &root);
-
-public:
-    static PackagePath getSelfTargetName(const Files &files);
 };
 
 }

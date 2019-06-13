@@ -90,7 +90,7 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     }
 
     primitives::CppEmitter build;
-    build.beginFunction("TargetEntryPointMap build_self_generated(Solution &s)");
+    build.beginFunction("TargetEntryPointMap build_self_generated(Build &b)");
     build.addLine("TargetEntryPointMap epm;");
     build.addLine();
 
@@ -115,15 +115,14 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
         auto gn = std::to_string(d.group_number) + "LL";
 
         build.beginBlock();
-        build.addLine("auto ep = std::make_shared<sw::NativeBuiltinTargetEntryPoint>(s);");
+        build.addLine("auto ep = std::make_shared<sw::NativeBuiltinTargetEntryPoint>(b, build_" + r.getVariableName() + ");");
         build.addLine("PackageId p = \"" + r.toString() + "\";");
-        build.addLine("ep->bf = build_" + r.getVariableName() + ";");
         if (has_checks)
             build.addLine("ep->cf = check_" + r.getVariableName() + ";");
         build.addLine("ep->module_data.NamePrefix = \"" + r.ppath.slice(0, d.prefix).toString() + "\";");
         build.addLine("ep->module_data.current_module = p.toString();");
         build.addLine("ep->module_data.current_gn = " + gn + ";");
-        build.addLine("s.getChildren()[p].setEntryPoint(ep);");
+        build.addLine("b.getChildren()[p].setEntryPoint(ep);");
         build.addLine("epm[" + gn + "] = ep;");
         build.endBlock();
         build.addLine();

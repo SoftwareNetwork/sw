@@ -141,7 +141,7 @@ struct NinjaEmitter : primitives::Emitter
         increaseIndent();
         addLine("description = " + c.getName());
         addLine("command = ");
-        if (b.getSettings().TargetOS.Type == OSType::Windows)
+        if (b.getBuildSettings().TargetOS.Type == OSType::Windows)
         {
             addText("cmd /S /C ");
             addText("\"");
@@ -150,16 +150,16 @@ struct NinjaEmitter : primitives::Emitter
             //addText("bash -c ");
         for (auto &[k, v] : c.environment)
         {
-            if (b.getSettings().TargetOS.Type == OSType::Windows)
+            if (b.getBuildSettings().TargetOS.Type == OSType::Windows)
                 addText("set ");
             addText(k + "=" + v + " ");
-            if (b.getSettings().TargetOS.Type == OSType::Windows)
+            if (b.getBuildSettings().TargetOS.Type == OSType::Windows)
                 addText("&& ");
         }
         if (!c.working_directory.empty())
         {
             addText("cd ");
-            if (b.getSettings().TargetOS.Type == OSType::Windows)
+            if (b.getBuildSettings().TargetOS.Type == OSType::Windows)
                 addText("/D ");
             addText(prepareString(b, getShortName(c.working_directory), true) + " && ");
         }
@@ -182,7 +182,7 @@ struct NinjaEmitter : primitives::Emitter
             addText("> " + prepareString(b, getShortName(c.out.file), true) + " ");
         if (!c.err.file.empty())
             addText("2> " + prepareString(b, getShortName(c.err.file), true) + " ");
-        if (b.getSettings().TargetOS.Type == OSType::Windows)
+        if (b.getBuildSettings().TargetOS.Type == OSType::Windows)
             addText("\"");
         if (prog.find("cl.exe") != prog.npos)
             addLine("deps = msvc");
@@ -226,7 +226,7 @@ private:
 
     String prepareString(const Build &b, const String &s, bool quotes = false)
     {
-        if (b.getSettings().TargetOS.Type != OSType::Windows)
+        if (b.getBuildSettings().TargetOS.Type != OSType::Windows)
             quotes = false;
 
         auto s2 = s;
@@ -242,7 +242,7 @@ void NinjaGenerator::generate(const Build &b)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.getSettings().getConfig();
+    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildSettings().getConfig();
 
     NinjaEmitter ctx;
 
@@ -484,7 +484,7 @@ void MakeGenerator::generate(const Build &b)
     // https://www.gnu.org/software/make/manual/html_node/index.html
     // https://en.wikipedia.org/wiki/Make_(software)
 
-    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.getSettings().getConfig());
+    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.getBuildSettings().getConfig());
 
     auto ep = b.getExecutionPlan();
 
@@ -656,7 +656,7 @@ void BatchGenerator::generate(const Build &b)
         write_file(p, t + s);
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getSettings().getConfig();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildSettings().getConfig();
 
     auto p = b.getExecutionPlan();
 
@@ -707,7 +707,7 @@ void CompilationDatabaseGenerator::generate(const Build &b)
         write_file(p, j.dump(2));
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getSettings().getConfig();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildSettings().getConfig();
 
     auto p = b.getExecutionPlan();
 

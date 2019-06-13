@@ -46,47 +46,42 @@ struct SW_DRIVER_CPP_API Module
                 }
                 catch (const std::exception &e)
                 {
-                    SW_UNIMPLEMENTED;
-                    /*String err = "error in module";
+                    String err = "error in module";
                     if (m)
                         err += " (" + normalize_path(m->getLocation()) + ")";
                     err += ": ";
-                    if (s && !s->current_module.empty())
-                        err += s->current_module + ": ";
+                    if (s && !s->getCurrentModule().empty())
+                        err += s->getCurrentModule() + ": ";
                     err += e.what();
-                    throw SW_RUNTIME_ERROR(err);*/
+                    throw SW_RUNTIME_ERROR(err);
                 }
                 catch (...)
                 {
-                    SW_UNIMPLEMENTED;
-                    /*String err = "error in module";
+                    String err = "error in module";
                     if (m)
                         err += " (" + normalize_path(m->getLocation()) + ")";
                     err += ": ";
-                    if (s && !s->current_module.empty())
-                        err += s->current_module + ": ";
+                    if (s && !s->getCurrentModule().empty())
+                        err += s->getCurrentModule() + ": ";
                     err += "unknown error";
-                    throw SW_RUNTIME_ERROR(err);*/
+                    throw SW_RUNTIME_ERROR(err);
                 }
             }
             else if (Required)
             {
-                SW_UNIMPLEMENTED;
-                /*String err = "Required function";
+                String err = "Required function";
                 if (!name.empty())
                     err += " '" + name + "'";
                 err += " is not present in the module";
                 if (m)
                     err += " (" + normalize_path(m->getLocation()) + ")";
-                if (s && !s->current_module.empty())
-                    err += ": " + s->current_module;
-                throw SW_RUNTIME_ERROR(err);*/
+                if (s && !s->getCurrentModule().empty())
+                    err += ": " + s->getCurrentModule();
+                throw SW_RUNTIME_ERROR(err);
             }
             return typename std_function_type::result_type();
         }
     };
-
-    const DynamicLibrary &module;
 
     Module(const Module::DynamicLibrary &, const String &suffix = {});
 
@@ -96,6 +91,7 @@ struct SW_DRIVER_CPP_API Module
     void check(Build &s, Checker &c) const;
     int sw_get_module_abi_version() const;
 
+    // needed in scripts
     template <class F, class ... Args>
     auto call(const String &name, Args && ... args) const
     {
@@ -105,6 +101,8 @@ struct SW_DRIVER_CPP_API Module
     }
 
 private:
+    const DynamicLibrary &module;
+
     mutable LibraryCall<void(Build &), true> build_;
     mutable LibraryCall<void(Build &)> configure_;
     mutable LibraryCall<void(Checker &)> check_;

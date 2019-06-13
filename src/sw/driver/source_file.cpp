@@ -103,7 +103,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     auto file = file_in;
 
     // ignore missing file when file is skipped and non local
-    if (!check_absolute(file, !target->Local && skip))
+    if (!check_absolute(file, !target->isLocal() && skip))
         return;
 
     auto f = this->SourceFileMapThis::operator[](file);
@@ -246,7 +246,7 @@ void SourceFileStorage::remove_full(const path &file)
 
     auto F = file;
     // ignore missing file only when non local
-    if (check_absolute(F, !target->Local))
+    if (check_absolute(F, !target->isLocal()))
         erase(F);
 }
 
@@ -290,7 +290,7 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
             matches = true;
         }
     }
-    if (!matches && target->Local && !target->AllowEmptyRegexes)
+    if (!matches && target->isLocal() && !target->AllowEmptyRegexes)
     {
         String err = target->getPackage().toString() + ": No files matching regex: " + r.getRegexString();
         if (ignore_source_files_errors)
@@ -438,7 +438,7 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
             files[p] = f;
     }
     if (!target->DryRun) // special case
-    if (files.empty() && target->Local && !target->AllowEmptyRegexes)
+    if (files.empty() && target->isLocal() && !target->AllowEmptyRegexes)
     {
         String err = target->getPackage().toString() + ": No files matching regex: " + r.getRegexString();
         if (ignore_source_files_errors)

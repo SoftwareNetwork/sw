@@ -25,6 +25,9 @@ struct SW_DRIVER_CPP_API BuildSettings
     // other langs?
     // make polymorphic?
 
+    BuildSettings() = default;
+    BuildSettings(const TargetSettings &);
+
     void init();
     String getConfig() const;
     String getTargetTriplet() const;

@@ -255,6 +255,9 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
 {
     NativeLinkerOptionsData System;
 
+    // to use dyncasts
+    virtual ~NativeLinkerOptions() = default;
+
     using NativeLinkerOptionsData::add;
     using NativeLinkerOptionsData::remove;
 

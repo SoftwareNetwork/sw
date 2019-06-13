@@ -36,7 +36,7 @@ void ProgramStorage::setExtensionProgram(const String &ext, const DependencyPtr 
 
 void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPackage &p)
 {
-    auto t = dynamic_cast<TargetBase*>(this);
+    auto t = dynamic_cast<Target*>(this);
     if (!t)
         throw SW_RUNTIME_ERROR("not a target");
 
@@ -44,10 +44,12 @@ void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPack
     //auto pkg = t->getSolution().swctx.resolve(p);
     extensions.insert_or_assign(ext, p);
 
+    //if (t->sw_provided)
+        //return;
+
     // add a dependency to current target
-    SW_UNIMPLEMENTED;
-    //if (auto t = dynamic_cast<NativeCompiledTarget *>(this); t)
-        //t->addDummyDependency(p);
+    if (auto t = dynamic_cast<NativeCompiledTarget *>(this); t)
+        t->addDummyDependency(*t);
 }
 
 Program *ProgramStorage::getProgram(const String &ext) const

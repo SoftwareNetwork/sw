@@ -61,7 +61,6 @@ struct SW_DRIVER_CPP_API SettingsComparator
 struct SW_DRIVER_CPP_API TargetBaseData : Node, ProjectDirectories
 {
     // flags
-    bool Local = true; // local projects
     bool IsConfig = false;
     bool ParallelSourceDownload = true;
     bool DryRun = false;
@@ -168,6 +167,7 @@ protected:
 
 private:
     std::unique_ptr<LocalPackage> pkg;
+    bool Local = true; // local projects
 
     template <typename T, typename ... Args>
     T &addTarget1(const PackagePath &Name, const Version &V, Args && ... args)
@@ -259,10 +259,10 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage, std::enab
     // inheritable, move to native? what about other langs?
     //std::vector<TargetDependency> tdeps;
     // always not inheritable
-    std::vector<DependencyData> DummyDependencies; // host config, but allowing some changes (configuration type/mt)
-    std::vector<DependencyData> SourceDependencies; // no config, dependency on source files
+    std::vector<DependencyPtr> DummyDependencies; // host config, but allowing some changes (configuration type/mt)
+    std::vector<DependencyPtr> SourceDependencies; // no config, dependency on source files
     // build dir deps?
-    std::vector<DependencyData> RuntimeDependencies; // this target config
+    std::vector<DependencyPtr> RuntimeDependencies; // this target config
 
     void addDummyDependency(const Target &);
     void addDummyDependency(const DependencyPtr &);

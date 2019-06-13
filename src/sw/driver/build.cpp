@@ -100,36 +100,62 @@ std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 namespace sw
 {
 
-String toString(FrontendType t)
-{
-    switch (t)
-    {
-    case FrontendType::Sw:
-        return "sw";
-    case FrontendType::Cppan:
-        return "cppan";
-    default:
-        throw std::logic_error("not implemented");
-    }
-}
-
 NativeTargetEntryPoint::NativeTargetEntryPoint(Build &b)
     : b(b)
 {
 }
 
-NativeModuleTargetEntryPoint::NativeModuleTargetEntryPoint(Build &b, const Module &m)
-    : NativeTargetEntryPoint(b), m(m)
+void NativeTargetEntryPoint::loadPackages(const TargetSettings &s, const PackageIdSet &pkgs)
+{
+    //module_data.ep = shared_from_this();
+    b.ntep = shared_from_this();
+    SwapAndRestore sr1(module_data.known_targets, pkgs);
+    if (pkgs.empty())
+        sr1.restoreNow(true);
+    SwapAndRestore sr2(b.module_data, &module_data);
+    SwapAndRestore sr3(b.NamePrefix, module_data.NamePrefix);
+    SwapAndRestore sr4(module_data.current_settings, s);
+    SwapAndRestore sr5(module_data.bs, BuildSettings(s));
+    loadPackages1();
+}
+
+void NativeTargetEntryPoint::addChild(const TargetBaseTypePtr &t)
+{
+    b.getChildren()[t->getPackage()].push_back(t);
+    b.getChildren()[t->getPackage()].setEntryPoint(shared_from_this());
+    module_data.added_targets.push_back(t.get());
+}
+
+NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(Build &b, BuildFunction bf/*, const BuildSettings &s*/)
+    : NativeTargetEntryPoint(b), bf(bf)
 {
 }
 
-void NativeModuleTargetEntryPoint::loadPackages(const PackageIdSet &pkgs)
+void NativeBuiltinTargetEntryPoint::loadPackages1()
 {
-    SwapAndRestore sr1(b.knownTargets, pkgs);
-    SwapAndRestore sr2(b.module_data, module_data);
-    SwapAndRestore sr3(b.NamePrefix, module_data.NamePrefix);
-    SW_UNIMPLEMENTED;
+    if (cf)
+        cf(b.checker);
+    if (!bf)
+        throw SW_RUNTIME_ERROR("No internal build function set");
+    bf(b);
 }
+
+struct SW_DRIVER_CPP_API NativeModuleTargetEntryPoint : NativeTargetEntryPoint
+{
+    NativeModuleTargetEntryPoint(Build &b, const Module &m)
+        : NativeTargetEntryPoint(b), m(m)
+    {
+    }
+
+private:
+    Module m;
+
+    void loadPackages1() override
+    {
+        m.check(b, b.checker);
+        m.build(b);
+    }
+};
 
 namespace detail
 {
@@ -149,285 +175,17 @@ void EventCallback::operator()(Target &t, CallbackType e)
 
 }
 
-path getProgramFilesX86()
+String toString(FrontendType t)
 {
-    auto e = getenv("programfiles(x86)");
-    if (!e)
-        throw SW_RUNTIME_ERROR("Cannot get 'programfiles(x86)' env. var.");
-    return e;
-}
-
-static path getWindowsKitRoot()
-{
-    auto p = getProgramFilesX86() / "Windows Kits";
-    if (fs::exists(p))
-        return p;
-    throw SW_RUNTIME_ERROR("No Windows Kits available");
-}
-
-String getWin10KitDirName()
-{
-    return "10";
-}
-
-static Strings listWindowsKits()
-{
-    Strings kits;
-    auto kr = getWindowsKitRoot();
-    for (auto &k : Strings{ getWin10KitDirName(), "8.1", "8.0", "7.1A", "7.0A", "6.0A" })
+    switch (t)
     {
-        auto d = kr / k;
-        if (fs::exists(d))
-            kits.push_back(k);
-    }
-    return kits;
-}
-
-static path getLatestWindowsKit()
-{
-    auto allkits = listWindowsKits();
-    if (allkits.empty())
-        throw SW_RUNTIME_ERROR("No Windows Kits available");
-    return allkits[0];
-}
-
-static path getWin10KitInspectionDir()
-{
-    auto kr = getWindowsKitRoot();
-    auto dir = kr / getWin10KitDirName() / "Include";
-    return dir;
-}
-
-static std::set<path> listWindows10Kits()
-{
-    std::set<path> kits;
-    auto dir = getWin10KitInspectionDir();
-    for (auto &i : fs::directory_iterator(dir))
-    {
-        if (fs::is_directory(i))
-        {
-            auto d = i.path().filename().u8string();
-            Version v = d;
-            if (v.isVersion())
-                kits.insert(d);
-        }
-    }
-    if (kits.empty())
-        throw SW_RUNTIME_ERROR("No Windows 10 Kits available");
-    return kits;
-}
-
-void BuildSettings::init()
-{
-    if (TargetOS.is(OSType::Windows))
-    {
-        if (Native.SDK.Root.empty())
-            Native.SDK.Root = getWindowsKitRoot();
-        if (Native.SDK.Version.empty())
-            Native.SDK.Version = getLatestWindowsKit();
-        if (Native.SDK.BuildNumber.empty())
-        {
-            if (TargetOS.Version >= Version(10) && Native.SDK.Version == getWin10KitDirName())
-            {
-                // take current or the latest version!
-                // sometimes current does not work:
-                //  on appveyor we have win10.0.14393.0, but no sdk
-                //  but we have the latest sdk there: win10.0.17763.0
-                auto dir = getWin10KitInspectionDir();
-                path cursdk = TargetOS.Version.toString(4);
-                path curdir = dir / cursdk;
-                // also check for some executable inside our dir
-                if (fs::exists(curdir) &&
-                    (fs::exists(Native.SDK.getPath("bin") / cursdk / "x64" / "rc.exe") ||
-                        fs::exists(Native.SDK.getPath("bin") / cursdk / "x86" / "rc.exe")))
-                    Native.SDK.BuildNumber = curdir.filename();
-                else
-                    Native.SDK.BuildNumber = *listWindows10Kits().rbegin();
-            }
-        }
-    }
-    else if (TargetOS.is(OSType::Macos) || TargetOS.is(OSType::IOS))
-    {
-        if (Native.SDK.Root.empty())
-        {
-            String sdktype = "macosx";
-            if (TargetOS.is(OSType::IOS))
-                sdktype = "iphoneos";
-
-            primitives::Command c;
-            c.setProgram("xcrun");
-            c.arguments.push_back("--sdk");
-            c.arguments.push_back(sdktype);
-            c.arguments.push_back("--show-sdk-path");
-            error_code ec;
-            c.execute(ec);
-            if (ec)
-            {
-                LOG_DEBUG(logger, "cannot find " + sdktype + " sdk path using xcrun");
-            }
-            else
-            {
-                Native.SDK.Root = boost::trim_copy(c.out.text);
-            }
-        }
-    }
-    else if (TargetOS.Type == OSType::Android)
-    {
-        if (TargetOS.Arch == ArchType::arm)
-        {
-            if (TargetOS.SubArch == SubArchType::NoSubArch)
-                TargetOS.SubArch = SubArchType::ARMSubArch_v7;
-        }
-    }
-}
-
-String BuildSettings::getConfig() const
-{
-    // TODO: add get real config, lengthy and with all info
-
-    String c;
-
-    addConfigElement(c, toString(TargetOS.Type));
-    if (TargetOS.Type == OSType::Android)
-        addConfigElement(c, Native.SDK.Version.string());
-    addConfigElement(c, toString(TargetOS.Arch));
-    if (TargetOS.Arch == ArchType::arm || TargetOS.Arch == ArchType::aarch64)
-        addConfigElement(c, toString(TargetOS.SubArch)); // concat with previous?
-
-    addConfigElement(c, toString(Native.LibrariesType));
-    if (TargetOS.Type == OSType::Windows && Native.MT)
-        addConfigElement(c, "mt");
-    addConfigElement(c, toString(Native.ConfigurationType));
-
-    return c;
-}
-
-String BuildSettings::getTargetTriplet() const
-{
-    // See https://clang.llvm.org/docs/CrossCompilation.html
-
-    String target;
-    target += toTripletString(TargetOS.Arch);
-    if (TargetOS.Arch == ArchType::arm)
-        target += toTripletString(TargetOS.SubArch);
-    target += "-unknown"; // vendor
-    target += "-" + toTripletString(TargetOS.Type);
-    if (TargetOS.Type == OSType::Android)
-        target += "-android";
-    if (TargetOS.Arch == ArchType::arm)
-        target += "eabi";
-    if (TargetOS.Type == OSType::Android)
-        target += Native.SDK.Version.string();
-    return target;
-}
-
-bool BuildSettings::operator<(const BuildSettings &rhs) const
-{
-    return std::tie(TargetOS, Native) < std::tie(rhs.TargetOS, rhs.Native);
-}
-
-bool BuildSettings::operator==(const BuildSettings &rhs) const
-{
-    return std::tie(TargetOS, Native) == std::tie(rhs.TargetOS, rhs.Native);
-}
-
-// move to OS?
-static OS fromTargetSettings(const TargetSettings &)
-{
-    SW_UNIMPLEMENTED;
-}
-
-static TargetSettings toTargetSettings(const OS &o)
-{
-    TargetSettings s;
-    switch (o.Type)
-    {
-    case OSType::Windows:
-        s["os.kernel"] = "com.Microsoft.Windows.NT";
-        break;
+    case FrontendType::Sw:
+        return "sw";
+    case FrontendType::Cppan:
+        return "cppan";
     default:
-        SW_UNIMPLEMENTED;
+        throw std::logic_error("not implemented");
     }
-
-    switch (o.Arch)
-    {
-    case ArchType::x86:
-        s["os.arch"] = "x86";
-        break;
-    case ArchType::x86_64:
-        s["os.arch"] = "x86_64";
-        break;
-    default:
-        SW_UNIMPLEMENTED;
-    }
-
-    /*switch (o.SubArch)
-    {
-    case SubArchType:::
-        s["os.subarch"] = "";
-        break;
-    default:
-        SW_UNIMPLEMENTED;
-    }*/
-
-    // no version at the moment
-    // it is not clear if it's needed
-
-    return s;
-}
-
-TargetSettings BuildSettings::getTargetSettings() const
-{
-    TargetSettings s;
-    s.merge(toTargetSettings(TargetOS));
-
-    switch (Native.CompilerType1)
-    {
-    case CompilerType::UnspecifiedCompiler:
-        break;
-    case CompilerType::MSVC:
-        s["compiler.c"] = "msvc-version";
-        break;
-    default:
-        SW_UNIMPLEMENTED;
-    }
-
-    switch (Native.LibrariesType)
-    {
-    case LibraryType::Static:
-        s["library"] = "static";
-        break;
-    case LibraryType::Shared:
-        s["library"] = "shared";
-        break;
-    default:
-        SW_UNIMPLEMENTED;
-    }
-
-    switch (Native.ConfigurationType)
-    {
-    case ConfigurationType::Debug:
-        s["configuration"] = "Debug";
-        break;
-    case ConfigurationType::MinimalSizeRelease:
-        s["configuration"] = "MinimalSizeRelease";
-        break;
-    case ConfigurationType::Release:
-        s["configuration"] = "Release";
-        break;
-    case ConfigurationType::ReleaseWithDebugInformation:
-        s["configuration"] = "ReleaseWithDebugInformation";
-        break;
-    default:
-        SW_UNIMPLEMENTED;
-    }
-
-    if (TargetOS.is(OSType::Windows))
-        s["mt"] = Native.MT ? "true" : "false";
-
-    // debug, release, ...
-
-    return s;
 }
 
 static String getCurrentModuleId()
@@ -591,9 +349,9 @@ static auto build_configs(SwContext &swctx, const driver::cpp::Driver &driver, c
 {
     Build b(swctx, driver); // cache?
     b.execute_jobs = config_jobs;
-    b.Local = false;
     b.file_storage_local = false;
     b.is_config_build = true;
+    b.use_separate_target_map = true;
     return b.build_configs(pkgs);
 }
 
@@ -613,9 +371,7 @@ static String gn2suffix(PackageVersionGroupNumber gn)
 Build::Build(SwContext &swctx, const driver::cpp::Driver &driver)
     : swctx(swctx), driver(driver), checker(*this)
 {
-    //auto ss = createSettings();
-    //addSettings(ss);
-    //host_settings = &addSettings(ss);
+    host_settings = createSettings().getTargetSettings();
 
     // canonical makes disk letter uppercase on windows
     setSourceDirectory(swctx.source_dir);
@@ -628,7 +384,6 @@ Build::Build(const Build &rhs)
     , driver(rhs.driver)
     , silent(rhs.silent)
     //, show_output(rhs.show_output) // don't pass to checks
-    //, knownTargets(rhs.knownTargets)
     , source_dirs_by_source(rhs.source_dirs_by_source)
     , fetch_dir(rhs.fetch_dir)
     , with_testing(rhs.with_testing)
@@ -640,6 +395,7 @@ Build::Build(const Build &rhs)
     , command_storage(rhs.command_storage)
     , is_config_build(rhs.is_config_build)
     , checker(*this)
+    , module_data(rhs.module_data)
 {
 }
 
@@ -655,19 +411,19 @@ BuildSettings Build::createSettings() const
     return ss;
 }
 
-const BuildSettings &Build::addSettings(const BuildSettings &ss)
+void Build::addSettings(const BuildSettings &ss)
 {
     auto i = std::find(settings.begin(), settings.end(), ss);
     if (i == settings.end())
     {
-        current_settings = &ss;
+        //current_settings = &ss;
         //detectCompilers(*this);
         settings.push_back(ss);
-        current_settings = &settings.back();
+        //current_settings = &settings.back();
     }
-    else
-        current_settings = &*i;
-    return getSettings();
+    /*else
+        current_settings = &*i;*/
+    //return getSettings();
 }
 
 void Build::detectCompilers()
@@ -676,8 +432,8 @@ void Build::detectCompilers()
     {
         if (s.activated)
             continue;
-        current_settings = &s;
-        ::sw::detectCompilers(*this);
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(*this, ::sw::detectCompilers);
+        ep->loadPackages(s.getTargetSettings());
         s.activated = true;
     }
 }
@@ -734,7 +490,7 @@ void Build::build_and_resolve(int n_runs)
     std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
     for (auto &[u, p] : m)
     {
-        knownTargets.insert(p);
+        //knownTargets.insert(p);
         // gather packages
         cfgs2.emplace(p.getData().group_number, p);
     }
@@ -762,7 +518,7 @@ void Build::build_and_resolve(int n_runs)
 
     for (auto &[u, p] : m)
     {
-        auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*this,
+        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this,
             Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
         ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
         ep->module_data.current_gn = p.getData().group_number;
@@ -770,15 +526,13 @@ void Build::build_and_resolve(int n_runs)
         getChildren()[p].setEntryPoint(std::move(ep));
     }
 
-    Local = false;
-
     for (auto &[gn, p] : cfgs2)
     {
         SW_UNIMPLEMENTED;
         sw_check_abi_version(Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
         for (auto &s : settings)
         {
-            current_settings = &s;
+            //current_settings = &s;
             Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
             // we can use new (clone of this) solution, then copy known targets
             // to allow multiple passes-builds
@@ -822,73 +576,65 @@ void Build::build_and_resolve(int n_runs)
     build_and_resolve(n_runs + 1);
 }
 
-UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs) const
+UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
 {
     UnresolvedDependenciesType deps;
-    std::unordered_set<UnresolvedPackage> known;
 
-    for (const auto &[pkg, tgts] : getChildren())
+    // make copy to not invalidate things
+    while (1)
     {
-        for (auto &tgt : tgts)
+        bool again = false;
+        auto chld = getChildren();
+        for (const auto &[pkg, tgts] : chld)
         {
-            auto t = tgt->as<Target*>();
-            if (t->skip)
-                continue;
-            auto c = t->gatherUnresolvedDependencies();
-            if (c.empty())
-                continue;
-
-            for (auto &r : known)
-                c.erase(r);
-            if (c.empty())
-                continue;
-
-            std::unordered_set<UnresolvedPackage> known2;
-            for (auto &[up, dptr] : c)
+            for (auto &tgt : tgts)
             {
-                if (swctx.isResolved(up))
+                auto t = tgt->as<Target *>();
+                if (t->skip)
+                    continue;
+
+                auto c = t->gatherUnresolvedDependencies();
+                if (c.empty())
+                    continue;
+
+                std::unordered_set<UnresolvedPackage> known2;
+                for (auto &[up, dptr] : c)
                 {
-                    auto r = swctx.resolve(up);
-                    auto i = getChildren().find(r);
+                    auto i = getChildren().find(up);
                     if (i != getChildren().end())
                     {
-                        dptr->setTarget((*i->second.begin())->as<NativeTarget>());
+                        auto k = i->second.find(dptr->settings);
+                        if (k == i->second.end())
+                        {
+                            i->second.loadPackages(dptr->settings);
+                            k = i->second.find(dptr->settings);
+                            if (k == i->second.end())
+                                throw SW_RUNTIME_ERROR("cannot load package with current settings");
+                            again = true;
+                        }
+                        dptr->setTarget((*k)->as<NativeTarget>());
                         known2.insert(up);
                         continue;
                     }
                 }
 
-                auto i = getChildren().find(up);
-                if (i != getChildren().end())
+                for (auto &r : known2)
+                    c.erase(r);
+                deps.insert(c.begin(), c.end());
+
+                if (n_runs && !c.empty())
                 {
-                    auto k = i->second.find(dptr->settings);
-                    if (k != i->second.end())
-                    {
-                        dptr->setTarget((*i->second.begin())->as<NativeTarget>());
-                        known2.insert(up);
-                    }
+                    String s;
+                    for (auto &u : c)
+                        s += u.first.toString() + ", ";
+                    s.resize(s.size() - 2);
+
+                    LOG_ERROR(logger, pkg.toString() + " unresolved deps on run " << n_runs << ": " + s);
                 }
             }
-
-            for (auto &r : known2)
-                c.erase(r);
-            known.insert(known2.begin(), known2.end());
-
-            if (c.empty())
-                continue;
-
-            deps.insert(c.begin(), c.end());
-
-            if (n_runs && !c.empty())
-            {
-                String s;
-                for (auto &u : c)
-                    s += u.first.toString() + ", ";
-                s.resize(s.size() - 2);
-
-                LOG_ERROR(logger, pkg.toString() + " unresolved deps on run " << n_runs << ": " + s);
-            }
         }
+        if (!again)
+            break;
     }
     return deps;
 }
@@ -1294,7 +1040,7 @@ static auto getFilesHash(const Files &files)
     return shorten_hash(blake2b_512(h), 6);
 }
 
-PackagePath Build::getSelfTargetName(const Files &files)
+static PackagePath getSelfTargetName(const Files &files)
 {
     return "loc.sw.self." + getFilesHash(files);
 }
@@ -1312,23 +1058,23 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
 #define SW_DRIVER_NAME_DEP "org.sw.sw.client.driver.cpp-0.3.1"_dep
 #define SW_DRIVER_INCLUDE_DIR "src"
 
-static NativeCompiledTarget &getDriverTarget(Build &solution)
+static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarget &lib)
 {
     auto i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
     if (i == solution.getChildren().end())
         throw SW_RUNTIME_ERROR("no driver target");
-    auto k = i->second.find(solution.getSettings().getTargetSettings());
+    auto k = i->second.find(lib.getSettings().getTargetSettings());
     if (k == i->second.end())
     {
-        i->second.loadPackages(solution.knownTargets);
-        k = i->second.find(solution.getSettings().getTargetSettings());
+        i->second.loadPackages(solution.getSettings(), solution.module_data->known_targets);
+        k = i->second.find(lib.getSettings().getTargetSettings());
         if (k == i->second.end())
             throw SW_RUNTIME_ERROR("no driver target (by settings)");
     }
     return (*k)->as<NativeCompiledTarget>();
 }
 
-static void addDeps(NativeCompiledTarget &lib, Build &solution)
+static void addDeps(Build &solution, NativeCompiledTarget &lib)
 {
     lib += "pub.egorpugin.primitives.templates-master"_dep; // for SW_RUNTIME_ERROR
 
@@ -1338,7 +1084,7 @@ static void addDeps(NativeCompiledTarget &lib, Build &solution)
     //lib += "pub.egorpugin.primitives.command-master"_dep;
     //lib += "pub.egorpugin.primitives.filesystem-master"_dep;
 
-    auto &drv = getDriverTarget(solution);
+    auto &drv = getDriverTarget(solution, lib);
     auto d = lib + drv;
     d->IncludeDirectoriesOnly = true;
 
@@ -1348,9 +1094,9 @@ static void addDeps(NativeCompiledTarget &lib, Build &solution)
 }
 
 // add Dirs?
-static path getDriverIncludeDir(Build &solution)
+static path getDriverIncludeDir(Build &solution, NativeCompiledTarget &lib)
 {
-    return getDriverTarget(solution).SourceDir / SW_DRIVER_INCLUDE_DIR;
+    return getDriverTarget(solution, lib).SourceDir / SW_DRIVER_INCLUDE_DIR;
 }
 
 static path getMainPchFilename()
@@ -1382,61 +1128,111 @@ static void write_pch(Build &solution)
         cppan_cpp);
 }
 
-const BuildSettings &Build::getSettings() const
+const ModuleSwappableData &Build::getModuleData() const
 {
-    if (!current_settings)
-        throw SW_LOGIC_ERROR("no settings was set");
-    return *current_settings;
+    if (!module_data)
+        throw SW_LOGIC_ERROR("no module data was set");
+    return *module_data;
 }
 
-FilesMap Build::build_configs_separate(const Files &files)
+const TargetSettings &Build::getSettings() const
 {
-    FilesMap r;
-    if (files.empty())
-        return r;
+    return getModuleData().current_settings;
+}
 
-    addFirstConfig();
+const BuildSettings &Build::getBuildSettings() const
+{
+    return getModuleData().bs;
+}
 
-    settings[0].Native.LibrariesType = LibraryType::Static;
-    if (debug_configs)
-        settings[0].Native.ConfigurationType = ConfigurationType::Debug;
+const TargetSettings &Build::getHostSettings() const
+{
+    return host_settings;
+}
 
-    detectCompilers();
+PackageVersionGroupNumber Build::getCurrentGroupNumber() const
+{
+    return getModuleData().current_gn;
+}
 
-    bool once = false;
-    auto prepare_config = [this, &once](const auto &fn)
+const String &Build::getCurrentModule() const
+{
+    return getModuleData().current_module;
+}
+
+/*std::shared_ptr<TargetEntryPoint> Build::getEntryPoint() const
+{
+    return getModuleData().ep.lock();
+}*/
+
+void Build::addChild(const TargetBaseTypePtr &t)
+{
+    auto p = ntep.lock();
+    if (!p)
+        throw SW_RUNTIME_ERROR("Entry point was not set");
+    p->addChild(t);
+}
+
+struct PrepareConfigEntryPoint : NativeTargetEntryPoint
+{
+    using NativeTargetEntryPoint::NativeTargetEntryPoint;
+
+    FilesMap &r;
+    const Files &files;
+
+    PrepareConfigEntryPoint(Build &b, FilesMap &r, const Files &files)
+        : NativeTargetEntryPoint(b), r(r), files(files)
+    {}
+
+private:
+    void loadPackages1() override
+    {
+        prepare_config();
+    }
+
+    void prepare_config()
+    {
+        b.build_self();
+        for (auto &fn : files)
+            r[fn] = prepare_config(fn);
+    }
+
+    SharedLibraryTarget &createTarget(const Files &files)
+    {
+        b.IsConfig = true;
+        auto &lib = b.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
+        b.IsConfig = false;
+        return lib;
+    }
+
+    path prepare_config(const path &fn)
     {
         auto &lib = createTarget({ fn });
 
         // must check is changed?
-        if (do_not_rebuild_config && fs::exists(lib.getOutputFile()))
-            return lib.getOutputFile();
+        //if (do_not_rebuild_config && fs::exists(lib.getOutputFile()))
+            //return lib.getOutputFile();
 
         do_not_rebuild_config = false;
 
-        if (!once)
-        {
-            build_self();
-            addDeps(lib, *this);
-            once = true;
-        }
+        addDeps(b, lib);
 
-        addImportLibrary(swctx, lib);
+        addImportLibrary(b.swctx, lib);
         lib.AutoDetectOptions = false;
         lib.CPPVersion = CPPLanguageStandard::CPP17;
         if (lib.getSettings().TargetOS.is(OSType::Windows))
             lib += "_CRT_SECURE_NO_WARNINGS"_def;
 
         lib += fn;
-        write_pch(*this);
+        write_pch(b);
         PrecompiledHeader pch;
-        pch.header = getDriverIncludeDir(*this) / getMainPchFilename();
-        pch.source = getImportPchFile(swctx);
+        pch.header = getDriverIncludeDir(b, lib) / getMainPchFilename();
+        pch.source = getImportPchFile(b.swctx);
         pch.force_include_pch = true;
         pch.force_include_pch_to_source = true;
         lib.addPrecompiledHeader(pch);
 
-        auto [headers, udeps] = getFileDependencies(swctx, fn);
+        auto [headers, udeps] = getFileDependencies(b.swctx, fn);
         for (auto &h : headers)
         {
             // TODO: refactor this and same cases below
@@ -1465,30 +1261,30 @@ FilesMap Build::build_configs_separate(const Files &files)
         {
             if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSw1Header());
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSwCheckAbiVersionHeader());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
 
                 // deprecated warning
                 c->Warnings().TreatAsError.push_back(4996);
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler*>())
             {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSw1Header());
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSwCheckAbiVersionHeader());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
             }
             else if (auto c = sf->compiler->template as<ClangCompiler*>())
             {
                 //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSwCheckAbiVersionHeader());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
             }
             else if (auto c = sf->compiler->template as<GNUCompiler*>())
             {
                 //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(*this) / getSwCheckAbiVersionHeader());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
             }
         }
 
-        if (getSettings().TargetOS.is(OSType::Windows))
+        if (lib.getSettings().TargetOS.is(OSType::Windows))
         {
             lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
             lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
@@ -1507,7 +1303,7 @@ FilesMap Build::build_configs_separate(const Files &files)
             lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
         }
 
-        if (getSettings().TargetOS.is(OSType::Windows))
+        if (lib.getSettings().TargetOS.is(OSType::Windows))
             lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
 
         if (auto L = lib.Linker->template as<VisualStudioLinker*>())
@@ -1519,23 +1315,38 @@ FilesMap Build::build_configs_separate(const Files &files)
             L->Force = vs::ForceType::Multiple;
             L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
             L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
-            // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
-            //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
+                                                // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
+                                                //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
         }
 
         for (auto &d : udeps)
             lib += std::make_shared<Dependency>(d);
 
-        auto i = this->getChildren().find(lib.getPackage());
-        if (i == this->getChildren().end())
+        auto i = b.getChildren().find(lib.getPackage());
+        if (i == b.getChildren().end())
             throw std::logic_error("config target not found");
-        this->TargetsToBuild[i->first] = i->second;
+        b.TargetsToBuild[i->first] = i->second;
 
         return lib.getOutputFile();
-    };
+    }
+};
 
-    for (auto &fn : files)
-        r[fn] = prepare_config(fn);
+FilesMap Build::build_configs_separate(const Files &files)
+{
+    FilesMap r;
+    if (files.empty())
+        return r;
+
+    addFirstConfig();
+
+    settings[0].Native.LibrariesType = LibraryType::Static;
+    if (debug_configs)
+        settings[0].Native.ConfigurationType = ConfigurationType::Debug;
+
+    detectCompilers();
+
+    auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, r, files);
+    ep->loadPackages(settings[0].getTargetSettings());
 
     if (!do_not_rebuild_config)
     {
@@ -1610,7 +1421,7 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
 
     if (init)
         build_self();
-    addDeps(lib, solution);
+    addDeps(solution, lib);
 
     addImportLibrary(swctx, lib);
     lib.AutoDetectOptions = false;
@@ -1631,13 +1442,13 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
     //
     write_pch(solution);
     PrecompiledHeader pch;
-    pch.header = getDriverIncludeDir(solution) / getMainPchFilename();
+    pch.header = getDriverIncludeDir(solution, lib) / getMainPchFilename();
     pch.source = getImportPchFile(swctx);
     pch.force_include_pch = true;
     pch.force_include_pch_to_source = true;
     lib.addPrecompiledHeader(pch);
 
-    auto gnu_setup = [this, &solution](auto *c, const auto &headers, const path &fn, LocalPackage &pkg)
+    auto gnu_setup = [this, &solution, &lib](auto *c, const auto &headers, const path &fn, LocalPackage &pkg)
     {
         // we use pch, but cannot add more defs on CL
         // so we create a file with them
@@ -1659,11 +1470,11 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
         write_file_if_different(h, ctx.getText());
 
         c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
+        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution, lib) / getSw1Header());
 
         for (auto &h : headers)
             c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSwCheckAbiVersionHeader());
+        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution, lib) / getSwCheckAbiVersionHeader());
     };
 
     for (auto &[fn, pkg] : output_names)
@@ -1749,6 +1560,7 @@ Module Build::loadModule(const path &p) const
     b.execute_jobs = config_jobs;
     b.file_storage_local = false;
     b.is_config_build = true;
+    b.use_separate_target_map = true;
     path dll;
     //if (File(fn2, *b.solutions[0].fs).isChanged() || File(dll, *b.solutions[0].fs).isChanged())
     {
@@ -1779,6 +1591,7 @@ path Build::build(const path &fn)
         b.execute_jobs = config_jobs;
         b.file_storage_local = false;
         b.is_config_build = true;
+        b.use_separate_target_map = true;
         auto r = b.build_configs_separate({ fn });
         auto dll = r.begin()->second;
         if (do_not_rebuild_config &&
@@ -2160,7 +1973,8 @@ path Build::getExecutionPlanFilename() const
     String n;
     for (auto &[pkg, _] : TargetsToBuild)
         n += pkg.toString();
-    return getExecutionPlansDir() / (getSettings().getConfig() + "_" + sha1(n).substr(0, 8) + ".explan");
+    SW_UNIMPLEMENTED;
+    //return getExecutionPlansDir() / (getSettings().getConfig() + "_" + sha1(n).substr(0, 8) + ".explan");
 }
 
 void Build::execute()
@@ -2488,7 +2302,8 @@ void Build::load_configless(const path &file_or_dir)
 {
     setupSolutionName(file_or_dir);
 
-    load_dll({}, false);
+    SW_UNIMPLEMENTED;
+    //load_dll({}, false);
 
     bool dir = fs::is_directory(config_file_or_dir);
 
@@ -2516,7 +2331,7 @@ void Build::load_configless(const path &file_or_dir)
     createSolutions("", false);
     for (auto &s : settings)
     {
-        current_settings = &s;
+        //current_settings = &s;
         if (!dir)
         {
             //exe += file_or_dir;
@@ -2566,7 +2381,7 @@ void Build::generateBuildSystem()
 
     for (auto &s : settings)
     {
-        current_settings = &s;
+        //current_settings = &s;
         fs::remove_all(getExecutionPlanFilename());
     }
     getGenerator()->generate(*this);
@@ -2610,13 +2425,15 @@ void Build::load_packages(const StringSet &pkgs)
     // resolve only deps needed
     auto m = swctx.install(upkgs);
 
-    for (auto &[u, p] : m)
-        knownTargets.insert(p);
+    SW_UNIMPLEMENTED;
+    //for (auto &[u, p] : m)
+        //knownTargets.insert(p);
 
     std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
     for (auto &[u, p] : m)
     {
-        knownTargets.insert(p);
+        SW_UNIMPLEMENTED;
+        //knownTargets.insert(p);
         // gather packages
         cfgs2.emplace(p.getData().group_number, p);
     }
@@ -2624,13 +2441,12 @@ void Build::load_packages(const StringSet &pkgs)
     for (auto &[gn, s] : cfgs2)
         cfgs.insert(s);
 
-    Local = false;
     configure = false;
 
     auto dll = ::sw::build_configs(swctx, driver, cfgs);
     for (auto &[u, p] : m)
     {
-        getChildren()[p].setEntryPoint(std::make_unique<NativeModuleTargetEntryPoint>(*this,
+        getChildren()[p].setEntryPoint(std::make_shared<NativeModuleTargetEntryPoint>(*this,
             Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number))));
     }
 
@@ -2642,7 +2458,7 @@ void Build::load_packages(const StringSet &pkgs)
         sw_check_abi_version(Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
         for (auto &s : settings)
         {
-            current_settings = &s;
+            //current_settings = &s;
             Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
             // we can use new (clone of this) solution, then copy known targets
             // to allow multiple passes-builds
@@ -2656,7 +2472,11 @@ void Build::load_packages(const StringSet &pkgs)
     // now we set ours TargetsToBuild to this object
     // execute() will propagate them to solutions
     for (auto &[porig, p] : m)
-        TargetsToBuild[p] = getChildren()[p];
+    {
+        SW_UNIMPLEMENTED;
+        //for (auto &s : settings)
+            //TargetsToBuild[p][s] = getChildren()[p].find(s);
+    }
 }
 
 void Build::build_packages(const StringSet &pkgs)
@@ -2977,9 +2797,9 @@ void Build::createSolutions(const path &dll, bool usedll)
     detectCompilers();
 }
 
-void Build::load_dll(const path &dll, bool usedll)
+void Build::load_dll(const path &dll)
 {
-    createSolutions(dll, usedll);
+    createSolutions(dll, false);
 
     // add cc if needed
     //getHostSolution();
@@ -2987,7 +2807,7 @@ void Build::load_dll(const path &dll, bool usedll)
     // initiate libc
     for (auto &s : settings)
     {
-        current_settings = &s;
+        //current_settings = &s;
         //if (s.Settings.Native.libc)
         //{
         //    Resolver r;
@@ -3033,8 +2853,12 @@ void Build::load_dll(const path &dll, bool usedll)
             LOG_DEBUG(logger, s.getConfig());
     }
 
+    auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this, driver.getModuleStorage().get(dll));
+    for (auto &s : settings)
+        ep->loadPackages(s.getTargetSettings());
+
     // check
-    {
+    /*{
         // some packages want checks in their build body
         // because they use variables from checks
 
@@ -3043,7 +2867,7 @@ void Build::load_dll(const path &dll, bool usedll)
         {
             for (auto &s : settings)
             {
-                current_settings = &s;
+                //current_settings = &s;
                 Module(driver.getModuleStorage().get(dll)).check(*this, checker);
             }
         }
@@ -3056,19 +2880,26 @@ void Build::load_dll(const path &dll, bool usedll)
         {
             if (settings.size() > 1)
                 LOG_INFO(logger, "[" << (i + 1) << "/" << settings.size() << "] load pass " << s.getConfig());
-            current_settings = &s;
+            //current_settings = &s;
             Module(driver.getModuleStorage().get(dll)).build(*this);
         }
-    }
+    }*/
 
     // we build only targets from this package
     // for example, on linux we do not build skipped windows projects
     /*for (auto &s : settings)
     {
         // only exception is cc host solution
-        if (getHostSolution() == &s)
-            continue;
-        s.TargetsToBuild = s.children;
+        //if (getHostSolution() == &s)
+            //continue;
+        TargetsToBuild = getChildren()[][s];
+    }*/
+    /*for (auto t : ep->module_data.added_targets)
+    {
+        // only exception is cc host solution
+        //if (getHostSolution() == &s)
+        //continue;
+        TargetsToBuild[t->getPackage()] = t;
     }*/
 }
 
@@ -3237,9 +3068,11 @@ bool Build::skipTarget(TargetScope Scope) const
 
 bool Build::isKnownTarget(const LocalPackage &p) const
 {
-    return knownTargets.empty() ||
+    if (!module_data)
+        throw SW_RUNTIME_ERROR("no module data set");
+    return module_data->known_targets.empty() ||
         p.ppath.is_loc() ||
-        knownTargets.find(p) != knownTargets.end();
+        module_data->known_targets.find(p) != module_data->known_targets.end();
 }
 
 path Build::getSourceDir(const LocalPackage &p) const
@@ -3259,7 +3092,8 @@ std::optional<path> Build::getSourceDir(const Source &s, const Version &v) const
 
 path Build::getTestDir() const
 {
-    return BinaryDir / "test" / getSettings().getConfig();
+    SW_UNIMPLEMENTED;
+    //return BinaryDir / "test" / getSettings().getConfig();
 }
 
 void Build::addTest(Test &cb, const String &name)
@@ -3271,7 +3105,8 @@ void Build::addTest(Test &cb, const String &name)
     c.name = "test: [" + name + "]";
     c.always = true;
     c.working_directory = dir;
-    c.addPathDirectory(BinaryDir / getSettings().getConfig());
+    SW_UNIMPLEMENTED;
+    //c.addPathDirectory(BinaryDir / getSettings().getConfig());
     c.out.file = dir / "stdout.txt";
     c.err.file = dir / "stderr.txt";
     tests.insert(cb.c);
@@ -3306,12 +3141,12 @@ Test Build::addTest(const String &name)
 
 TargetMap &Build::getChildren()
 {
-    return checks_build ? checks_targets : swctx.getTargets();
+    return use_separate_target_map ? internal_targets : swctx.getTargets();
 }
 
 const TargetMap &Build::getChildren() const
 {
-    return checks_build ? checks_targets : swctx.getTargets();
+    return use_separate_target_map ? internal_targets : swctx.getTargets();
 }
 
 }

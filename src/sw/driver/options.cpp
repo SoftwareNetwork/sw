@@ -534,6 +534,13 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
         if (d)
             t->setTarget(*d);*/
     }
+
+    auto t2 = t;
+    if (auto t = dynamic_cast<Target *>(this))
+    {
+        for (auto &[k, v] : t->getTargetSettings())
+            t2->settings.insert_or_assign(k, v);
+    }
 }
 
 void NativeLinkerOptions::remove(const DependencyPtr &t)
@@ -553,6 +560,13 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
         /*auto d = &(*i)->getTarget();
         if (d)
             t->setTarget(*d);*/
+    }
+
+    auto t2 = t;
+    if (auto t = dynamic_cast<Target *>(this))
+    {
+        for (auto &[k, v] : t->getTargetSettings())
+            t2->settings.insert_or_assign(k, v);
     }
 }
 

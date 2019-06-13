@@ -570,7 +570,7 @@ void ProjectEmitter::printProject(
 
     // project name helper
     auto pp = p.ppath.parent();
-    auto &prnts = base_nt.Local ? local_parents : parents;
+    auto &prnts = base_nt.isLocal() ? local_parents : parents;
     while (!pp.empty() && prnts.find(pp) == prnts.end())
         pp = pp.parent();
 
@@ -1706,7 +1706,7 @@ void VSGenerator::generate(const Build &b)
         else
         {
             pctx.addBlock("RootNamespace", all_build_name);
-            pctx.addBlock("WindowsTargetPlatformVersion", b.getSettings().Native.SDK.getWindowsTargetPlatformVersion());
+            pctx.addBlock("WindowsTargetPlatformVersion", b.getBuildSettings().Native.SDK.getWindowsTargetPlatformVersion());
         }
         pctx.endBlock();
 
@@ -1791,7 +1791,7 @@ void VSGenerator::generate(const Build &b)
             has_overridden = true;
             //continue; // uncomment for overridden
         }
-        (t->Local ? local_tree : tree).add(p.ppath);
+        (t->isLocal() ? local_tree : tree).add(p.ppath);
     }
     if (has_deps && gPrintDependencies)
         ctx.addDirectory(deps_subdir);
@@ -1845,7 +1845,7 @@ void VSGenerator::generate(const Build &b)
             continue;
 
         auto pp = p.ppath.parent();
-        auto &prnts = t->Local ? local_parents : parents;
+        auto &prnts = t->isLocal() ? local_parents : parents;
         while (!pp.empty() && prnts.find(pp) == prnts.end())
             pp = pp.parent();
 
@@ -1856,7 +1856,7 @@ void VSGenerator::generate(const Build &b)
         auto t2 = VSProjectType::Makefile;
         if (type == GeneratorType::VisualStudio)
         {
-            t2 = get_vs_project_type(b.getSettings(), *t);
+            t2 = get_vs_project_type(t->getSettings(), *t);
         }
         else if (type != GeneratorType::VisualStudioNMake)
         {
@@ -1930,7 +1930,7 @@ void VSGenerator::generate(const Build &b)
         else
         {
             pctx.addBlock("RootNamespace", build_dependencies_name);
-            pctx.addBlock("WindowsTargetPlatformVersion", b.getSettings().Native.SDK.getWindowsTargetPlatformVersion());
+            pctx.addBlock("WindowsTargetPlatformVersion", b.getBuildSettings().Native.SDK.getWindowsTargetPlatformVersion());
         }
         pctx.endBlock();
 

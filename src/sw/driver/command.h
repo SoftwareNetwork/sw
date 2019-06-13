@@ -414,19 +414,23 @@ CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
     if constexpr (std::is_same_v<T, path> || std::is_convertible_v<T, String>)
     {
         cb.c->setProgram(*t.t);
+        return cb;
     }
+
+    DependencyPtr d;
+    if constexpr (std::is_same_v<T, DependencyPtr>)
+        d = *t.t;
     else
+        d = std::make_shared<Dependency>(*t.t);
+
+    bool once = false;
+    for (auto tgt : cb.targets)
     {
-        bool once = false;
-        for (auto tgt : cb.targets)
+        tgt->addDummyDependency(d);
+        if (!once)
         {
-            auto d = *tgt + *t.t;
-            d->setDummy(true);
-            if (!once)
-            {
-                cb.c->setProgram(d);
-                once = true;
-            }
+            cb.c->setProgram(d);
+            once = true;
         }
     }
     return cb;

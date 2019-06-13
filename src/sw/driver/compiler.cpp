@@ -152,6 +152,31 @@ struct PredefinedTargetSettingsComparator : SettingsComparator
     bool equal(const TargetSettings &s1, const TargetSettings &s2) const override { return true; }
 };
 
+struct SomeSettingsSettingsComparator : SettingsComparator
+{
+    Strings s;
+
+    SomeSettingsSettingsComparator(const Strings &s) : s(s) {}
+
+    bool equal(const TargetSettings &s1, const TargetSettings &s2) const override
+    {
+        return all_of(s.begin(), s.end(), [&s1, &s2](auto &s)
+        {
+            auto i1 = s1.find(s);
+            auto i2 = s2.find(s);
+            return i1 != s1.end() && i2 != s2.end() && i1->second == i2->second;
+        });
+    }
+};
+
+struct CompilerSettingsComparator : SomeSettingsSettingsComparator
+{
+    CompilerSettingsComparator()
+        : SomeSettingsSettingsComparator({"os.kernel", "os.arch"})
+    {
+    }
+};
+
 // left join comparator
 
 template <class T = PredefinedTarget>
@@ -159,21 +184,16 @@ static decltype(auto) addProgramNoFile(Build &s, const PackagePath &pp, const st
 {
     auto &t = s.add<T>(pp, p->getVersion());
     t.setProgram(p);
-    //t.setSettingsComparator(std::make_unique<PredefinedTargetSettingsComparator>());
     t.sw_provided = true;
     return t;
 }
 
 template <class T = PredefinedTarget>
-static void addProgram(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
+static decltype(auto) addProgram(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
 {
-    if (!fs::exists(p->file))
-    {
+    //if (!fs::exists(p->file))
         //throw SW_RUNTIME_ERROR("Program does not exist: " + normalize_path(p->file));
-        LOG_TRACE(logger, "Program does not exist: " + normalize_path(p->file));
-        return;
-    }
-    addProgramNoFile(s, pp, p);
+    return addProgramNoFile(s, pp, p);
 }
 
 void detectDCompilers(Build &s)
@@ -185,7 +205,7 @@ void detectDCompilers(Build &s)
 
     auto C = std::make_shared<DCompiler>(s.swctx);
     C->file = compiler;
-    C->Extension = s.getSettings().TargetOS.getExecutableExtension();
+    C->Extension = s.getBuildSettings().TargetOS.getExecutableExtension();
     //C->input_extensions = { ".d" };
     addProgram(s, "org.dlang.dmd.dmd", C);
 }
@@ -366,7 +386,7 @@ void detectWindowsCompilers(Build &s)
 
         // get suffix
         auto host = toStringWindows(s.getHostOs().Arch);
-        auto target = toStringWindows(s.getSettings().TargetOS.Arch);
+        auto target = toStringWindows(s.getBuildSettings().TargetOS.Arch);
 
         auto compiler = root / "bin";
         auto host_root = compiler / ("Host" + host) / host;
@@ -389,14 +409,15 @@ void detectWindowsCompilers(Build &s)
             auto Linker = std::make_shared<VisualStudioLinker>(s.swctx);
             Linker->Type = LinkerType::MSVC;
             Linker->file = compiler.parent_path() / "link.exe";
-            Linker->Extension = s.getSettings().TargetOS.getExecutableExtension();
+            Linker->Extension = s.getBuildSettings().TargetOS.getExecutableExtension();
 
             if (instance.version.isPreRelease())
                 Linker->getVersion().getExtra() = instance.version.getExtra();
-            addProgram(s, "com.Microsoft.VisualStudio.VC.link", Linker);
+            auto &link = addProgram(s, "com.Microsoft.VisualStudio.VC.link", Linker);
+            link.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
             instance.link_versions.insert(Linker->getVersion());
 
-            if (s.getHostOs().Arch != s.getSettings().TargetOS.Arch)
+            if (s.getHostOs().Arch != s.getBuildSettings().TargetOS.Arch)
             {
                 auto c = Linker->createCommand(s.swctx);
                 c->addPathDirectory(host_root);
@@ -406,20 +427,21 @@ void detectWindowsCompilers(Build &s)
             auto Librarian = std::make_shared<VisualStudioLibrarian>(s.swctx);
             Librarian->Type = LinkerType::MSVC;
             Librarian->file = compiler.parent_path() / "lib.exe";
-            Librarian->Extension = s.getSettings().TargetOS.getStaticLibraryExtension();
+            Librarian->Extension = s.getBuildSettings().TargetOS.getStaticLibraryExtension();
 
             if (instance.version.isPreRelease())
                 Librarian->getVersion().getExtra() = instance.version.getExtra();
-            addProgram(s, "com.Microsoft.VisualStudio.VC.lib", Librarian);
+            auto &lib = addProgram(s, "com.Microsoft.VisualStudio.VC.lib", Librarian);
+            lib.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
             instance.link_versions.insert(Librarian->getVersion());
 
-            if (s.getHostOs().Arch != s.getSettings().TargetOS.Arch)
+            if (s.getHostOs().Arch != s.getBuildSettings().TargetOS.Arch)
             {
                 auto c = Librarian->createCommand(s.swctx);
                 c->addPathDirectory(host_root);
             }
 
-            switch (s.getSettings().TargetOS.Arch)
+            switch (s.getBuildSettings().TargetOS.Arch)
             {
             case ArchType::x86_64:
                 Librarian->Machine = vs::MachineType::X64;
@@ -441,17 +463,18 @@ void detectWindowsCompilers(Build &s)
         }
 
         // ASM
-        if (s.getSettings().TargetOS.Arch == ArchType::x86_64 || s.getSettings().TargetOS.Arch == ArchType::x86)
+        if (s.getBuildSettings().TargetOS.Arch == ArchType::x86_64 || s.getBuildSettings().TargetOS.Arch == ArchType::x86)
         {
             auto C = std::make_shared<VisualStudioASMCompiler>(s.swctx);
             C->Type = CompilerType::MSVC;
-            C->file = s.getSettings().TargetOS.Arch == ArchType::x86_64 ?
+            C->file = s.getBuildSettings().TargetOS.Arch == ArchType::x86_64 ?
                 (compiler.parent_path() / "ml64.exe") :
                 (compiler.parent_path() / "ml.exe");
 
             if (instance.version.isPreRelease())
                 C->getVersion().getExtra() = instance.version.getExtra();
-            addProgram(s, "com.Microsoft.VisualStudio.VC.ml", C);
+            auto &ml = addProgram(s, "com.Microsoft.VisualStudio.VC.ml", C);
+            ml.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
         }
 
         // C, C++
@@ -466,10 +489,11 @@ void detectWindowsCompilers(Build &s)
             if (instance.version.isPreRelease())
                 C->getVersion().getExtra() = instance.version.getExtra();
             //C->input_extensions = exts;
-            addProgram(s, "com.Microsoft.VisualStudio.VC.cl", C);
+            auto &cl = addProgram(s, "com.Microsoft.VisualStudio.VC.cl", C);
+            cl.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
             instance.cl_versions.insert(C->getVersion());
 
-            if (s.getHostOs().Arch != s.getSettings().TargetOS.Arch)
+            if (s.getHostOs().Arch != s.getBuildSettings().TargetOS.Arch)
             {
                 auto c = C->createCommand(s.swctx);
                 c->addPathDirectory(host_root);
@@ -509,7 +533,7 @@ void detectWindowsCompilers(Build &s)
             //C->input_extensions = exts;
             addProgram(s, "org.LLVM.clangcl", C);
 
-            switch (s.getSettings().TargetOS.Arch)
+            switch (s.getBuildSettings().TargetOS.Arch)
             {
             case ArchType::x86_64:
                 C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
@@ -579,12 +603,13 @@ void detectWindowsCompilers(Build &s)
     // .rc
     {
         auto C = std::make_shared<RcTool>(s.swctx);
-        C->file = s.getSettings().Native.SDK.getPath("bin") / toStringWindows(s.getHostOs().Arch) / "rc.exe";
+        C->file = s.getBuildSettings().Native.SDK.getPath("bin") / toStringWindows(s.getHostOs().Arch) / "rc.exe";
         //for (auto &idir : COpts.System.IncludeDirectories)
             //C->system_idirs.push_back(idir);
 
         //C->input_extensions = { ".rc", };
-        addProgram(s, "com.Microsoft.Windows.rc", C);
+        auto &rc = addProgram(s, "com.Microsoft.Windows.rc", C);
+        rc.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
     }
 
     // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
@@ -603,17 +628,19 @@ void detectWindowsCompilers(Build &s)
         libcpp.setSettingsComparator(std::make_unique<PredefinedTargetSettingsComparator>());
         libcpp.AutoDetectOptions = false;
         libcpp.sw_provided = true;
+        libcpp.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
         libcpp.Public.NativeCompilerOptions::System.IncludeDirectories.push_back(root / "include");
 
         auto &atlmfc = s.addLibrary("com.Microsoft.VisualStudio.VC.ATLMFC", v);
         atlmfc.setSettingsComparator(std::make_unique<PredefinedTargetSettingsComparator>());
         atlmfc.AutoDetectOptions = false;
         atlmfc.sw_provided = true;
+        atlmfc.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
         if (fs::exists(root / "ATLMFC" / "include"))
             atlmfc.Public.NativeCompilerOptions::System.IncludeDirectories.push_back(root / "ATLMFC" / "include");
 
         // get suffix
-        auto target = toStringWindows(s.getSettings().TargetOS.Arch);
+        auto target = toStringWindows(s.getBuildSettings().TargetOS.Arch);
 
         if (v.getMajor() >= 15)
         {
@@ -632,21 +659,24 @@ void detectWindowsCompilers(Build &s)
     }
 
     // rename to libc? to crt?
-    auto &ucrt = s.addLibrary("com.Microsoft.Windows.SDK.ucrt", s.getSettings().Native.SDK.getWindowsTargetPlatformVersion());
+    auto &ucrt = s.addLibrary("com.Microsoft.Windows.SDK.ucrt", s.getBuildSettings().Native.SDK.getWindowsTargetPlatformVersion());
     ucrt.setSettingsComparator(std::make_unique<PredefinedTargetSettingsComparator>());
     ucrt.AutoDetectOptions = false;
     ucrt.sw_provided = true;
+    auto ucmp = std::make_unique<CompilerSettingsComparator>();
+    ucmp->s.push_back("os.version");
+    ucrt.setSettingsComparator(std::move(ucmp));
 
     // add kits include dirs
-    for (auto &i : fs::directory_iterator(s.getSettings().Native.SDK.getPath("Include")))
+    for (auto &i : fs::directory_iterator(s.getBuildSettings().Native.SDK.getPath("Include")))
     {
         if (fs::is_directory(i))
             ucrt.Public.NativeCompilerOptions::System.IncludeDirectories.insert(i);
     }
-    for (auto &i : fs::directory_iterator(s.getSettings().Native.SDK.getPath("Lib")))
+    for (auto &i : fs::directory_iterator(s.getBuildSettings().Native.SDK.getPath("Lib")))
     {
         if (fs::is_directory(i))
-            ucrt.Public.NativeLinkerOptions::System.LinkDirectories.insert(i / toStringWindows(s.getSettings().TargetOS.Arch));
+            ucrt.Public.NativeLinkerOptions::System.LinkDirectories.insert(i / toStringWindows(s.getBuildSettings().TargetOS.Arch));
     }
     // early prepare
     while (ucrt.prepare());
@@ -951,7 +981,7 @@ void detectNonWindowsCompilers(Build &s)
 
 void detectNativeCompilers(Build &s)
 {
-    auto &os = s.getSettings().TargetOS;
+    auto &os = s.getBuildSettings().TargetOS;
     if (os.is(OSType::Windows) || os.is(OSType::Cygwin))
     {
         if (os.is(OSType::Cygwin))

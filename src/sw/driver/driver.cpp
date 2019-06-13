@@ -88,6 +88,11 @@ void Driver::load(const std::set<Input> &inputs)
     }
 }
 
+void Driver::execute()
+{
+    build->execute();
+}
+
 bool Driver::prepareStep()
 {
     return build->prepareStep();
