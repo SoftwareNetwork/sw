@@ -11,7 +11,7 @@ namespace sw
 
 ITarget::~ITarget() = default;
 
-TargetEntryPoint::~TargetEntryPoint() = default;
+TargetLoader::~TargetLoader() = default;
 
 void TargetData::loadPackages(const TargetSettings &s, const PackageIdSet &whitelist)
 {
@@ -20,7 +20,7 @@ void TargetData::loadPackages(const TargetSettings &s, const PackageIdSet &white
     ep->loadPackages(s, whitelist);
 }
 
-void TargetData::setEntryPoint(const std::shared_ptr<TargetEntryPoint> &e)
+void TargetData::setEntryPoint(const std::shared_ptr<TargetLoader> &e)
 {
     ep = std::move(e);
 }

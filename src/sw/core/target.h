@@ -53,9 +53,9 @@ struct INativeTarget : ITarget
     // get link args?
 };
 
-struct TargetEntryPoint
+struct TargetLoader
 {
-    virtual ~TargetEntryPoint() = 0;
+    virtual ~TargetLoader() = 0;
 
     // on zero input packages, load all
     virtual void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages = {}) = 0;
@@ -68,14 +68,14 @@ struct TargetData : std::vector<ITargetPtr>
     using Base = std::vector<ITargetPtr>;
 
     void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages = {});
-    void setEntryPoint(const std::shared_ptr<TargetEntryPoint> &);
+    void setEntryPoint(const std::shared_ptr<TargetLoader> &);
 
     Base::iterator find(const TargetSettings &s);
     Base::const_iterator find(const TargetSettings &s) const;
 
 private:
     // shared, because multiple pkgs has same entry point
-    std::shared_ptr<TargetEntryPoint> ep;
+    std::shared_ptr<TargetLoader> ep;
     // regex storage
     // files cache
 };

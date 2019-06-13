@@ -117,7 +117,7 @@ struct ModuleSwappableData
 };
 
 // this driver ep
-struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetEntryPoint,
+struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetLoader,
     std::enable_shared_from_this<NativeTargetEntryPoint>
 {
     ModuleSwappableData module_data;

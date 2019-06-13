@@ -435,6 +435,7 @@ void Build::detectCompilers()
         auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(*this, ::sw::detectCompilers);
         ep->loadPackages(s.getTargetSettings());
         s.activated = true;
+        break;
     }
 }
 
@@ -2182,6 +2183,9 @@ Commands Build::getCommands() const
         }
     }
 
+    if (TargetsToBuild.empty())
+        throw SW_RUNTIME_ERROR("no targets were selected for building");
+
     Commands cmds;
     // FIXME: drop children from here, always build only precisely picked TargetsToBuild
     auto &chldr = TargetsToBuild.empty() ? getChildren() : TargetsToBuild;
@@ -2894,13 +2898,10 @@ void Build::load_dll(const path &dll)
             //continue;
         TargetsToBuild = getChildren()[][s];
     }*/
-    /*for (auto t : ep->module_data.added_targets)
+    for (auto t : ep->module_data.added_targets)
     {
-        // only exception is cc host solution
-        //if (getHostSolution() == &s)
-        //continue;
-        TargetsToBuild[t->getPackage()] = t;
-    }*/
+        TargetsToBuild[t->getPackage()].push_back(t->shared_from_this());
+    }
 }
 
 /*const Solution *Build::getHostSolution() const
