@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include "options.h"
-#include "options_cl.h"
-#include "options_cl_vs.h"
-#include "program.h"
-#include "types.h"
+#include "../options.h"
+#include "../options_cl.h"
+#include "../options_cl_vs.h"
+#include "../program.h"
+#include "../types.h"
 
 #include <sw/manager/version.h>
 

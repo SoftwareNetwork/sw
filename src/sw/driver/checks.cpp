@@ -573,7 +573,7 @@ Build Check::setupSolution(const path &f) const
     s.settings.clear();
 
     s.addSettings(ss);
-    detectCompilers(s);
+    s.detectCompilers();
 
     return s;
 }
@@ -583,6 +583,7 @@ void Check::setupTarget(NativeCompiledTarget &e) const
     e.GenerateWindowsResource = false;
     if (auto L = e.getSelectedTool()->as<VisualStudioLinker*>())
         L->DisableIncrementalLink = true;
+    e.getSolution().TargetsToBuild[e.getPackage()].push_back(e.shared_from_this());
 }
 
 bool Check::execute(Build &s) const

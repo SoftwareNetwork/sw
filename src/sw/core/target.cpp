@@ -41,4 +41,60 @@ TargetData::Base::const_iterator TargetData::find(const TargetSettings &s) const
     });
 }
 
+detail::SimpleExpected<TargetMap::Base::version_map_type::iterator> TargetMap::find_and_select_version(const PackagePath &pp)
+{
+    auto i = find(pp);
+    if (i == end(pp))
+        return PackagePathNotFound;
+    auto vo = select_version(i->second);
+    if (!vo)
+        return PackageNotFound;
+    return i->second.find(*vo);
+}
+
+detail::SimpleExpected<TargetMap::Base::version_map_type::const_iterator> TargetMap::find_and_select_version(const PackagePath &pp) const
+{
+    auto i = find(pp);
+    if (i == end(pp))
+        return PackagePathNotFound;
+    auto vo = select_version(i->second);
+    if (!vo)
+        return PackageNotFound;
+    return i->second.find(*vo);
+}
+
+detail::SimpleExpected<std::pair<Version, ITarget*>> TargetMap::find(const PackagePath &pp, const TargetSettings &ts) const
+{
+    auto i = find_and_select_version(pp);
+    if (!i)
+        return i.ec();
+    auto j = i->second.find(ts);
+    if (j == i->second.end())
+        return std::pair<Version, ITarget*>{ i->first, nullptr };
+    return std::pair<Version, ITarget*>{ i->first, j->get() };
+}
+
+ITarget *TargetMap::find(const PackageId &pkg, const TargetSettings &ts) const
+{
+    auto i = find(pkg);
+    if (i == end())
+        return {};
+    auto k = i->second.find(ts);
+    if (k == i->second.end())
+        return {};
+    return k->get();
+}
+
+ITarget *TargetMap::find(const UnresolvedPackage &pkg, const TargetSettings &ts) const
+{
+    // TODO: consider provided resolving into find()
+    auto i = find(pkg);
+    if (i == end())
+        return {};
+    auto k = i->second.find(ts);
+    if (k == i->second.end())
+        return {};
+    return k->get();
+}
+
 }

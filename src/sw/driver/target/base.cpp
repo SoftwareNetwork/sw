@@ -203,18 +203,18 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
 
         ;*/
 
+    // before init
+    if (!add)
+        return *t;
+
     while (t->init())
         ;
 
-    if (!add)
-    {
-        getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
-        return *t;
-    }
+    getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
 
     auto &ref = addChild(t);
-    t->ts = getSolution().getSettings();
-    t->bs = t->ts;
+    //t->ts = getSolution().getSettings();
+    //t->bs = t->ts;
     getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
     return ref;
 }
@@ -234,7 +234,7 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
         t->skip = true;
     }
 
-    return addChild(t, getSolution().getSettings());
+    return addChild(t, t->getTargetSettings());
 }
 
 TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t, const TargetSettings &tid)
@@ -245,7 +245,7 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t, const TargetSetting
         auto j = i->second.find(tid);
         if (j != i->second.end())
         {
-            throw SW_RUNTIME_ERROR("Target already exists: " + t->getPackage().toString());
+            //throw SW_RUNTIME_ERROR("Target already exists: " + t->getPackage().toString());
             //return (*j)->as<TargetBase>();
         }
     }
@@ -475,7 +475,7 @@ path Target::getBaseDir() const
 
 path Target::getTargetsDir() const
 {
-    return getSolution().BinaryDir / getConfig() / "targets";
+    return getSolution().BinaryDir / "out" / getConfig();
 }
 
 path Target::getTargetDirShort(const path &root) const

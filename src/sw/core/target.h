@@ -134,61 +134,11 @@ struct TargetMap : PackageVersionMapBase<TargetData, std::unordered_map, primiti
 
     using Base::find;
 
-    detail::SimpleExpected<Base::version_map_type::iterator> find_and_select_version(const PackagePath &pp)
-    {
-        auto i = find(pp);
-        if (i == end(pp))
-            return PackagePathNotFound;
-        auto vo = select_version(i->second);
-        if (!vo)
-            return PackageNotFound;
-        return i->second.find(*vo);
-    }
-
-    detail::SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const
-    {
-        auto i = find(pp);
-        if (i == end(pp))
-            return PackagePathNotFound;
-        auto vo = select_version(i->second);
-        if (!vo)
-            return PackageNotFound;
-        return i->second.find(*vo);
-    }
-
-    detail::SimpleExpected<std::pair<Version, ITarget*>> find(const PackagePath &pp, const TargetSettings &ts)
-    {
-        auto i = find_and_select_version(pp);
-        if (!i)
-            return i.ec();
-        auto j = i->second.find(ts);
-        if (j == i->second.end())
-            return std::pair<Version, ITarget*>{ i->first, nullptr };
-        return std::pair<Version, ITarget*>{ i->first, j->get() };
-    }
-
-    ITarget *find(const PackageId &pkg, const TargetSettings &ts)
-    {
-        auto i = find(pkg);
-        if (i == end())
-            return {};
-        auto k = i->second.find(ts);
-        if (k == i->second.end())
-            return {};
-        return k->get();
-    }
-
-    ITarget *find(const UnresolvedPackage &pkg, const TargetSettings &ts)
-    {
-        // TODO: consider provided resolving into find()
-        auto i = find(pkg);
-        if (i == end())
-            return {};
-        auto k = i->second.find(ts);
-        if (k == i->second.end())
-            return {};
-        return k->get();
-    }
+    detail::SimpleExpected<Base::version_map_type::iterator> find_and_select_version(const PackagePath &pp);
+    detail::SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const;
+    detail::SimpleExpected<std::pair<Version, ITarget *>> find(const PackagePath &pp, const TargetSettings &ts) const;
+    ITarget *find(const PackageId &pkg, const TargetSettings &ts) const;
+    ITarget *find(const UnresolvedPackage &pkg, const TargetSettings &ts) const;
 
     //
 

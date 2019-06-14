@@ -24,4 +24,23 @@ String TargetSettings::getHash() const
     return shorten_hash(blake2b_512(getConfig()), 6);
 }
 
+String TargetSettings::toString() const
+{
+    String c;
+    for (auto &[k, v] : *this)
+        c += k + ": " + v + "\n";
+    return c;
+}
+
+bool TargetSettings::operator==(const TargetSettings &rhs) const
+{
+    const auto &main = size() < rhs.size() ? *this : rhs;
+    const auto &other = size() >= rhs.size() ? *this : rhs;
+    return std::all_of(main.begin(), main.end(), [&other](const auto &p)
+    {
+        auto i = other.find(p.first);
+        return i != other.end() && i->second == p.second;
+    });
+}
+
 } // namespace sw

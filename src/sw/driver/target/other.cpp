@@ -42,7 +42,7 @@ path CSharpTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir().parent_path() / getOutputFileName();
+        p = getTargetsDir() / getOutputFileName();
     }
     else
     {
@@ -99,7 +99,7 @@ path RustTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir().parent_path() / getOutputFileName();
+        p = getTargetsDir() / getOutputFileName();
     }
     else
     {
@@ -156,7 +156,7 @@ path GoTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir().parent_path() / getOutputFileName();
+        p = getTargetsDir() / getOutputFileName();
     }
     else
     {
@@ -213,7 +213,7 @@ path FortranTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir().parent_path() / getOutputFileName();
+        p = getTargetsDir() / getOutputFileName();
     }
     else
     {
@@ -269,7 +269,7 @@ path JavaTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir().parent_path() / getOutputFileName();
+        p = getTargetsDir() / getOutputFileName();
     }
     else
     {
@@ -329,7 +329,7 @@ path KotlinTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir().parent_path() / getOutputFileName();
+        p = getTargetsDir() / getOutputFileName();
     }
     else
     {
@@ -387,7 +387,7 @@ path DTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir().parent_path() / getOutputFileName();
+        p = getTargetsDir() / getOutputFileName();
     }
     else
     {

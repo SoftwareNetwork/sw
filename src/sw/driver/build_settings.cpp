@@ -176,6 +176,8 @@ static OS fromTargetSettings(const TargetSettings &ts)
         if (0);
         IF_SETTING("x86", os.Arch, ArchType::x86);
         IF_SETTING("x86_64", os.Arch, ArchType::x86_64);
+        IF_SETTING("arm", os.Arch, ArchType::arm);
+        IF_SETTING("aarch64", os.Arch, ArchType::aarch64);
         else
             SW_UNIMPLEMENTED;
     IF_END
@@ -203,6 +205,12 @@ static TargetSettings toTargetSettings(const OS &o)
         break;
     case ArchType::x86_64:
         s["os.arch"] = "x86_64";
+        break;
+    case ArchType::arm:
+        s["os.arch"] = "arm";
+        break;
+    case ArchType::aarch64:
+        s["os.arch"] = "aarch64";
         break;
     default:
         SW_UNIMPLEMENTED;

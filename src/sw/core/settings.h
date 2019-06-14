@@ -31,7 +31,10 @@ struct SW_CORE_API TargetSettings : std::map<TargetSettingKey, TargetSettingValu
 {
     String getConfig() const; // getShortConfig()?
     String getHash() const;
-    // String toString(); // to json?
+    String toString() const;
+    // to json?
+
+    bool operator==(const TargetSettings &) const;
 };
 
 } // namespace sw

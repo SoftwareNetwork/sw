@@ -194,6 +194,7 @@ protected:
     void initLibrary(LibraryType Type);
     void configureFile1(const path &from, const path &to, ConfigureFlags flags);
     void detectLicenseFile();
+    bool isHeaderOnly() const;
 
 private:
     CompilerType ct = CompilerType::UnspecifiedCompiler;

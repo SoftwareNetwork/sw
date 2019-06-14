@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "compiler.h"
+#include "compiler/compiler.h"
 
 #include <sw/builder/os.h>
 #include <sw/core/target.h>
@@ -18,9 +18,6 @@ struct SW_DRIVER_CPP_API BuildSettings
 {
     OS TargetOS;
     NativeToolchain Native;
-
-    //
-    bool activated = false;
 
     // other langs?
     // make polymorphic?

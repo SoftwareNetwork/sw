@@ -8,8 +8,8 @@
 #include "context.h"
 
 #include "sw/driver/command.h"
-#include "sw/driver/compiler.h"
-#include "sw/driver/compiler_helpers.h"
+#include "sw/driver/compiler/compiler.h"
+#include "sw/driver/compiler/compiler_helpers.h"
 #include "sw/driver/build.h"
 #include "sw/driver/target/native.h"
 

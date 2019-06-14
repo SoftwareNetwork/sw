@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "compiler.h"
+#include "compiler/compiler.h"
 #include "types.h"
 
 #include <sw/builder/node.h>

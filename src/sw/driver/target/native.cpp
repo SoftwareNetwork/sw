@@ -350,10 +350,35 @@ void NativeCompiledTarget::findCompiler()
             auto t = (*i).second->as<PredefinedProgram*>();
             if (!t)
                 return false;
+
+            auto set_arch = [this](auto in)
+            {
+                auto L = in->as<VisualStudioLibraryTool*>();
+                switch (getSettings().TargetOS.Arch)
+                {
+                case ArchType::x86_64:
+                    L->Machine = vs::MachineType::X64;
+                    break;
+                case ArchType::x86:
+                    L->Machine = vs::MachineType::X86;
+                    break;
+                case ArchType::arm:
+                    L->Machine = vs::MachineType::ARM;
+                    break;
+                case ArchType::aarch64:
+                    L->Machine = vs::MachineType::ARM64;
+                    break;
+                default:
+                    SW_UNIMPLEMENTED;
+                }
+            };
+
+            auto nl = std::dynamic_pointer_cast<NativeLinker>(t->getProgram()->clone());
             if (link)
-                this->Linker = std::dynamic_pointer_cast<NativeLinker>(t->getProgram()->clone());
+                this->Linker = nl;
             else
-                this->Librarian = std::dynamic_pointer_cast<NativeLinker>(t->getProgram()->clone());
+                this->Librarian = nl;
+            set_arch(nl);
             return true;
         }))
         {
@@ -450,14 +475,18 @@ bool NativeCompiledTarget::init()
             v.target = this;
         });
 
-        findCompiler();
+        if (!isHeaderOnly())
+            findCompiler();
 
         // early setup compilers after libc, libcpp
         merge();
-        if (auto c = findProgramByExtension(".c")->as<NativeCompiler*>())
-            c->merge(*this);
-        if (auto c = findProgramByExtension(".cpp")->as<NativeCompiler*>())
-            c->merge(*this);
+        if (!isHeaderOnly())
+        {
+            if (auto c = findProgramByExtension(".c")->as<NativeCompiler *>())
+                c->merge(*this);
+            if (auto c = findProgramByExtension(".cpp")->as<NativeCompiler *>())
+                c->merge(*this);
+        }
 
         // after compilers
         Target::init();
@@ -628,15 +657,23 @@ void NativeCompiledTarget::remove(const ApiNameType &i)
         ApiName.clear();
 }
 
+bool NativeCompiledTarget::isHeaderOnly() const
+{
+    return HeaderOnly && *HeaderOnly;
+}
+
 path NativeCompiledTarget::getOutputDir() const
 {
     if (OutputDir.empty())
         return getOutputFile().parent_path();
-    return getTargetsDir().parent_path() / OutputDir;
+    return getTargetsDir() / OutputDir;
 }
 
 void NativeCompiledTarget::setOutputFile()
 {
+    if (isHeaderOnly())
+        return;
+
     /* || add a considiton so user could change nont build output dir*/
     if (Scope == TargetScope::Build)
     {
@@ -691,7 +728,7 @@ path NativeCompiledTarget::getOutputFileName(const path &root) const
     }
     else if (isLocal())
     {
-        p = getTargetsDir().parent_path() / OutputDir / getOutputFileName();
+        p = getTargetsDir() / OutputDir / getOutputFileName();
     }
     else
     {
@@ -862,7 +899,9 @@ FilesOrdered NativeCompiledTarget::gatherLinkDirectories() const
     get_ldir(NativeLinkerOptions::gatherLinkDirectories());
     get_ldir(NativeLinkerOptions::System.gatherLinkDirectories());
 
-    auto dirs2 = getSelectedTool()->gatherLinkDirectories();
+    FilesOrdered dirs2;
+    if (getSelectedTool())
+        dirs2 = getSelectedTool()->gatherLinkDirectories();
     // tool dirs + lib dirs, not vice versa
     dirs2.insert(dirs2.end(), dirs.begin(), dirs.end());
     return dirs2;
@@ -919,6 +958,8 @@ NativeLinker *NativeCompiledTarget::getSelectedTool() const
         return Linker.get();
     if (Librarian)
         return Librarian.get();
+    if (isHeaderOnly())
+        return {};
     throw SW_RUNTIME_ERROR("No tool selected");
 }
 
@@ -2208,9 +2249,9 @@ bool NativeCompiledTarget::prepare()
 
         //
         if (GenerateWindowsResource
+            && !*HeaderOnly
             && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
             && getSelectedTool() == Linker.get()
-            && !*HeaderOnly
             && !IsConfig
             && getSettings().TargetOS.is(OSType::Windows)
             && Scope == TargetScope::Build
@@ -2338,40 +2379,43 @@ bool NativeCompiledTarget::prepare()
         }
 
         // pdb
-        if (auto c = getSelectedTool()->as<VisualStudioLinker*>())
+        if (getSelectedTool())
         {
-            if (!c->GenerateDebugInformation)
+            if (auto c = getSelectedTool()->as<VisualStudioLinker *>())
             {
-                if (getSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-                    getSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+                if (!c->GenerateDebugInformation)
                 {
-                    if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
-                        c->GenerateDebugInformation = vs::link::Debug::FastLink;
+                    if (getSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+                        getSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+                    {
+                        if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                            c->GenerateDebugInformation = vs::link::Debug::FastLink;
+                        else
+                            c->GenerateDebugInformation = vs::link::Debug::Full;
+                    }
                     else
-                        c->GenerateDebugInformation = vs::link::Debug::Full;
+                        c->GenerateDebugInformation = vs::link::Debug::None;
+                }
+
+                //if ((!c->GenerateDebugInformation || c->GenerateDebugInformation() != vs::link::Debug::None) &&
+                if ((c->GenerateDebugInformation && c->GenerateDebugInformation() != vs::link::Debug::None) &&
+                    c->PDBFilename.empty())
+                {
+                    auto f = getOutputFile();
+                    f = f.parent_path() / f.filename().stem();
+                    f += ".pdb";
+                    c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().ppath.toString() + ".pdb");
                 }
                 else
-                    c->GenerateDebugInformation = vs::link::Debug::None;
-            }
+                    c->PDBFilename.output_dependency = false;
 
-            //if ((!c->GenerateDebugInformation || c->GenerateDebugInformation() != vs::link::Debug::None) &&
-            if ((c->GenerateDebugInformation && c->GenerateDebugInformation() != vs::link::Debug::None) &&
-                c->PDBFilename.empty())
-            {
-                auto f = getOutputFile();
-                f = f.parent_path() / f.filename().stem();
-                f += ".pdb";
-                c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().ppath.toString() + ".pdb");
-            }
-            else
-                c->PDBFilename.output_dependency = false;
-
-            if (Linker->Type == LinkerType::LLD)
-            {
-                if (c->GenerateDebugInformation)
-                    c->InputFiles().insert("msvcrtd.lib");
-                else
-                    c->InputFiles().insert("msvcrt.lib");
+                if (Linker->Type == LinkerType::LLD)
+                {
+                    if (c->GenerateDebugInformation)
+                        c->InputFiles().insert("msvcrtd.lib");
+                    else
+                        c->InputFiles().insert("msvcrt.lib");
+                }
             }
         }
 
@@ -2392,7 +2436,7 @@ bool NativeCompiledTarget::prepare()
         }
 
         // add def file to linker
-        if (getSelectedTool() == Linker.get())
+        if (getSelectedTool() && getSelectedTool() == Linker.get())
         {
             if (auto VSL = getSelectedTool()->as<VisualStudioLibraryTool*>())
             {
@@ -2408,7 +2452,7 @@ bool NativeCompiledTarget::prepare()
         }
 
         // on macos we explicitly say that dylib should resolve symbols on dlopen
-        if (IsConfig && getSolution().getHostOs().is(OSType::Macos))
+        if (IsConfig && getSolution().getHostOs().is(OSType::Macos) && getSelectedTool())
         {
             if (auto c = getSelectedTool()->as<GNULinker*>())
                 c->Undefined = "dynamic_lookup";
@@ -2424,11 +2468,10 @@ bool NativeCompiledTarget::prepare()
     case 6:
         // link libraries
     {
-        auto L = Linker->as<VisualStudioLinker*>();
-
         // add link libraries from deps
         if (!*HeaderOnly && getSelectedTool() != Librarian.get())
         {
+            auto L = Linker->as<VisualStudioLinker*>();
             for (auto &d : getAllDependencies())
             {
                 if (&d->getTarget() == this)
@@ -2481,7 +2524,8 @@ bool NativeCompiledTarget::prepare()
         }
 
         // right after gatherStaticLinkLibraries()!
-        getSelectedTool()->merge(*this);
+        if (getSelectedTool())
+            getSelectedTool()->merge(*this);
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 8:
@@ -2500,8 +2544,11 @@ bool NativeCompiledTarget::prepare()
         // circular and windows rpath processing
         processCircular(obj);
 
-        getSelectedTool()->setObjectFiles(obj);
-        getSelectedTool()->setInputLibraryDependencies(O1);
+        if (getSelectedTool())
+        {
+            getSelectedTool()->setObjectFiles(obj);
+            getSelectedTool()->setInputLibraryDependencies(O1);
+        }
 
         getSolution().call_event(*this, CallbackType::EndPrepare);
     }
@@ -2754,6 +2801,8 @@ bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
 
 void NativeCompiledTarget::initLibrary(LibraryType Type)
 {
+    if (isHeaderOnly())
+        return;
     if (Type == LibraryType::Shared)
     {
         // probably setting dll must affect .dll extension automatically
@@ -3620,10 +3669,13 @@ bool ExecutableTarget::init()
         Linker->Prefix.clear();
         Linker->Extension = getSettings().TargetOS.getExecutableExtension();
 
-        if (auto c = getSelectedTool()->as<VisualStudioLinker*>())
+        if (getSelectedTool())
         {
-            c->ImportLibrary.output_dependency = false; // become optional
-            c->ImportLibrary.create_directory = true; // but create always
+            if (auto c = getSelectedTool()->as<VisualStudioLinker *>())
+            {
+                c->ImportLibrary.output_dependency = false; // become optional
+                c->ImportLibrary.create_directory = true; // but create always
+            }
         }
     }
     break;

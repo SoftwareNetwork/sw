@@ -10,7 +10,7 @@
 #include "build.h"
 #include "suffix.h"
 #include "target/all.h"
-#include "compiler_helpers.h"
+#include "compiler/compiler_helpers.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/core/sw_context.h> // needed for execute commands

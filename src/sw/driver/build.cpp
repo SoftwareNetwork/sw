@@ -371,7 +371,8 @@ static String gn2suffix(PackageVersionGroupNumber gn)
 Build::Build(SwContext &swctx, const driver::cpp::Driver &driver)
     : swctx(swctx), driver(driver), checker(*this)
 {
-    host_settings = createSettings().getTargetSettings();
+    auto hs = createSettings();
+    host_settings = hs.getTargetSettings();
 
     // canonical makes disk letter uppercase on windows
     setSourceDirectory(swctx.source_dir);
@@ -396,6 +397,7 @@ Build::Build(const Build &rhs)
     , is_config_build(rhs.is_config_build)
     , checker(*this)
     , module_data(rhs.module_data)
+    , host_settings(rhs.host_settings)
 {
 }
 
@@ -428,15 +430,8 @@ void Build::addSettings(const BuildSettings &ss)
 
 void Build::detectCompilers()
 {
-    for (auto &s : settings)
-    {
-        if (s.activated)
-            continue;
-        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(*this, ::sw::detectCompilers);
-        ep->loadPackages(s.getTargetSettings());
-        s.activated = true;
-        break;
-    }
+    auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(*this, ::sw::detectCompilers);
+    ep->loadPackages(getHostSettings());
 }
 
 const OS &Build::getHostOs() const
@@ -610,7 +605,8 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
                             i->second.loadPackages(dptr->settings);
                             k = i->second.find(dptr->settings);
                             if (k == i->second.end())
-                                throw SW_RUNTIME_ERROR("cannot load package with current settings");
+                                throw SW_RUNTIME_ERROR(pkg.toString() + ": cannot load package " + dptr->getPackage().toString() +
+                                    " with current settings: " + dptr->settings.toString());
                             again = true;
                         }
                         dptr->setTarget((*k)->as<NativeTarget>());
@@ -1070,7 +1066,11 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
         i->second.loadPackages(solution.getSettings(), solution.module_data->known_targets);
         k = i->second.find(lib.getSettings().getTargetSettings());
         if (k == i->second.end())
-            throw SW_RUNTIME_ERROR("no driver target (by settings)");
+        {
+            //if (i->second.empty())
+                throw SW_RUNTIME_ERROR("no driver target (by settings)");
+            //k = i->second.begin();
+        }
     }
     return (*k)->as<NativeCompiledTarget>();
 }
@@ -2183,6 +2183,7 @@ Commands Build::getCommands() const
         }
     }
 
+    // but checks sometimes has zero targets?
     if (TargetsToBuild.empty())
         throw SW_RUNTIME_ERROR("no targets were selected for building");
 

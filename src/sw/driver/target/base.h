@@ -105,7 +105,7 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     * \brief Make target.
     */
     template <typename T, typename ... Args>
-    T& make(const PackagePath &Name, Args && ... args)
+    std::shared_ptr<T> make(const PackagePath &Name, Args && ... args)
     {
         if constexpr (sizeof...(Args) > 0)
         {
@@ -122,7 +122,7 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     * \brief Make target.
     */
     template <typename T, typename ... Args>
-    T &makeTarget(Args && ... args)
+    std::shared_ptr<T> makeTarget(Args && ... args)
     {
         return make<T>(std::forward<Args>(args)...);
     }
@@ -130,7 +130,8 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     template <typename T>
     T &registerTarget(const std::shared_ptr<T> &t)
     {
-        return addChild(t);
+        addChild(t);
+        return *t;
     }
 
 #define ADD_TARGET(t)                                       \
