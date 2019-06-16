@@ -1264,6 +1264,7 @@ SUBCOMMAND_DECL2(upload)
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(8);
     //opts.apply_version_to_source = true;
+    //swctx.
     auto s = sw::fetch_and_load(swctx, build_arg_update.getValue(), opts);
     if (build_before_upload)
     {

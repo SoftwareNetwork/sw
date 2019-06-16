@@ -32,7 +32,7 @@ struct ITarget : Node
     // getFiles()? some langs does not have 'sources'
     // also add get binary files?
 
-    /// get direct dependencies
+    /// get all direct dependencies
     virtual UnresolvedPackages getDependencies() const = 0;
 
     // get output config
@@ -45,13 +45,14 @@ struct ITarget : Node
 // shared_ptr for vector storage
 using ITargetPtr = std::shared_ptr<ITarget>;
 
-struct INativeTarget : ITarget
+/*struct INativeTarget : ITarget
 {
+    // header only does not provide these
     virtual path getOutputFile() const = 0;
     virtual path getImportLibrary() const = 0;
     // get cl args?
     // get link args?
-};
+};*/
 
 struct TargetLoader
 {
@@ -63,6 +64,7 @@ struct TargetLoader
 
 // it is impossible to keep targets in std::map<TargetSettings, ITargetPtr>,
 // because each target knows how to compare itself
+// also TargetSettings are mutable?
 struct TargetData : std::vector<ITargetPtr>
 {
     using Base = std::vector<ITargetPtr>;

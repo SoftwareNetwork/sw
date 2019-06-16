@@ -16,6 +16,8 @@
 #include <sw/manager/storage.h>
 #include <sw/support/hash.h>
 
+#include <nlohmann/json.hpp>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target");
 
@@ -475,7 +477,9 @@ path Target::getBaseDir() const
 
 path Target::getTargetsDir() const
 {
-    return getSolution().BinaryDir / "out" / getConfig();
+    auto d = getSolution().BinaryDir / "out" / getConfig();
+    write_file(d / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
+    return d;
 }
 
 path Target::getTargetDirShort(const path &root) const
@@ -736,8 +740,43 @@ DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
 void Target::addDummyDependency(const DependencyPtr &t)
 {
     DummyDependencies.push_back(t);
-    for (auto &[k, v] : getSolution().getHostSettings())
-        DummyDependencies.back()->settings.insert_or_assign(k, v);
+
+    auto &hs = getSolution().getHostSettings();
+    auto &ds = DummyDependencies.back()->settings;
+
+    auto equal = [this, &hs](auto &s)
+    {
+        auto i1 = ts.find(s);
+        auto i2 = hs.find(s);
+        return
+            i1 != ts.end() &&
+            i2 != hs.end() &&
+            i1->second == i2->second;
+    };
+
+    bool use_current_settings =
+        equal("os.kernel") &&
+        equal("os.arch");
+    if (!use_current_settings)
+    {
+        // 64-bit windows can run 32-bit apps
+        auto i = hs.find("os.kernel");
+        if (i != hs.end() && i->second == "com.Microsoft.Windows.NT")
+        {
+            auto i = hs.find("os.arch");
+            if (i != hs.end() && i->second == "x86_64")
+            {
+                auto i = ts.find("os.arch");
+                if (i != ts.end() && i->second == "x86")
+                {
+                    use_current_settings = true;
+                }
+            }
+        }
+    }
+
+    for (auto &[k, v] : (use_current_settings ? ts : hs))
+        ds.insert_or_assign(k, v);
 }
 
 void Target::addDummyDependency(const Target &t)

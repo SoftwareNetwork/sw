@@ -8,6 +8,8 @@
 
 #include <sw/support/hash.h>
 
+#include <nlohmann/json.hpp>
+
 namespace sw
 {
 
@@ -24,7 +26,28 @@ String TargetSettings::getHash() const
     return shorten_hash(blake2b_512(getConfig()), 6);
 }
 
-String TargetSettings::toString() const
+String TargetSettings::toString(int type) const
+{
+    switch (type)
+    {
+    case Simple:
+        return toStringKeyValue();
+    case Json:
+        return toJsonString();
+    default:
+        SW_UNIMPLEMENTED;
+    }
+}
+
+String TargetSettings::toJsonString() const
+{
+    nlohmann::json j;
+    for (auto &[k, v] : *this)
+        j[k] = v;
+    return j.dump();
+}
+
+String TargetSettings::toStringKeyValue() const
 {
     String c;
     for (auto &[k, v] : *this)

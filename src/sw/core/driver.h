@@ -18,7 +18,6 @@ struct IDriver
     virtual ~IDriver() = 0;
 
     virtual PackageId getPackageId() const = 0;
-    //virtual FilesOrdered getAvailableFrontendConfigFilenames() const = 0;
 
     virtual bool canLoad(const Input &) const = 0;
     virtual void load(const std::set<Input> &) = 0;

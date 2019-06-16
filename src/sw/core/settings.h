@@ -29,12 +29,25 @@ using TargetSettingValue = String;
 // make map internal?
 struct SW_CORE_API TargetSettings : std::map<TargetSettingKey, TargetSettingValue>
 {
+    enum StringType : int
+    {
+        KeyValue    = 0,
+
+        Json,
+        // yml
+
+        Simple      = KeyValue,
+    };
+
     String getConfig() const; // getShortConfig()?
     String getHash() const;
-    String toString() const;
-    // to json?
+    String toString(int type = Simple) const;
 
     bool operator==(const TargetSettings &) const;
+
+private:
+    String toStringKeyValue() const;
+    String toJsonString() const;
 };
 
 } // namespace sw
