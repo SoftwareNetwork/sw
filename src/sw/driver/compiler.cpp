@@ -1834,7 +1834,11 @@ void RcTool::prepareCommand1(const Target &t)
         for (auto &d : a)
         {
             c.arguments.push_back(flag);
-            c.arguments.push_back("\"" + normalize_path(d) + "\"");
+            auto p = normalize_path(d);
+            if (p.find(' ') != p.npos)
+                c.arguments.push_back("\"" + p + "\"");
+            else
+                c.arguments.push_back(normalize_path(d));
         }
     };
 

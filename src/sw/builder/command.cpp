@@ -737,8 +737,8 @@ path Command::writeCommand(const path &p) const
         write_file(rsp_name, getResponseFileContents());
 
         for (int i = 0; i < getFirstResponseFileArgument(); i++)
-            t += arguments[i]->toString() + " ";
-        t += "@" + normalize_path(rsp_name) + " ";
+            t += arguments[i]->quote() + " ";
+        t += "\"@" + normalize_path(rsp_name) + "\" ";
     }
     else
     {
