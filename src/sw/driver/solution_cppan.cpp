@@ -155,14 +155,12 @@ void Build::cppan_load(const yaml &root, const String &root_name)
         if (name.empty())
             YAML_EXTRACT_AUTO(name);
 
-        SW_UNIMPLEMENTED;
-
-        /*String pt;
+        String pt;
         YAML_EXTRACT_VAR(root, pt, "type", String);
         if (pt == "l" || pt == "lib" || pt == "library")
             ;
         else if (pt.empty() || pt == "e" || pt == "exe" || pt == "executable")
-            return current_solution->addExecutable(name).cppan_load_project(root);
+            return addExecutable(name).cppan_load_project(root);
         else
             throw SW_RUNTIME_ERROR("Unknown project type");
 
@@ -177,13 +175,13 @@ void Build::cppan_load(const yaml &root, const String &root_name)
         String lt;
         YAML_EXTRACT_VAR(root, lt, "library_type", String);
         if (lt == "static" || static_only)
-            return current_solution->addStaticLibrary(name).cppan_load_project(root);
+            return addStaticLibrary(name).cppan_load_project(root);
         else if (lt == "shared" || lt == "dll" || shared_only)
-            return current_solution->addSharedLibrary(name).cppan_load_project(root);
+            return addSharedLibrary(name).cppan_load_project(root);
         else if (lt.empty())
             throw SW_RUNTIME_ERROR(name + ": empty library type");
         else
-            throw SW_RUNTIME_ERROR(name + ": unknown library type: " + lt);*/
+            throw SW_RUNTIME_ERROR(name + ": unknown library type: " + lt);
 
         //if (project.name.empty())
             //project.name = name;
