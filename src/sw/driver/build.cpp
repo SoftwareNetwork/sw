@@ -2377,7 +2377,7 @@ void Build::load_configless(const path &file_or_dir)
         auto b = f.find("/*");
         if (b != f.npos)
         {
-            auto e = f.find("*//*", b);
+            auto e = f.find("*/", b);
             if (e != f.npos)
             {
                 auto s = f.substr(b + 2, e - b - 2);
@@ -2402,14 +2402,13 @@ void Build::load_configless(const path &file_or_dir)
             }
 
             // count non sw targets
-            SW_UNIMPLEMENTED;
-            /*if (s.children.size() == 1)
+            /*if (getChildren().size() == 1)
             {
-                if (auto nt = s.children.begin()->second->as<NativeCompiledTarget>())
+                if (auto nt = getChildren().begin()->second.begin()->second->as<NativeCompiledTarget>())
                     *nt += file_or_dir;
-            }
+            }*/
 
-            TargetsToBuild = s.children;*/
+            TargetsToBuild = getChildren();
         }
         else
         {
