@@ -282,8 +282,8 @@ public:
     const LocalPackage &getPackage() const override { return TargetBase::getPackage(); }
     const Source &getSource() const override;
     bool isReal() const override { return real; }
-    Files getSourceFiles() const override { SW_UNIMPLEMENTED; }
-    UnresolvedPackages getDependencies() const override { SW_UNIMPLEMENTED; }
+    Files getSourceFiles() const override;
+    UnresolvedPackages getDependencies() const override;
     bool operator==(const TargetSettings &) const override;
     bool operator<(const TargetSettings &) const override;
     void setSettingsComparator(std::unique_ptr<SettingsComparator>);
@@ -318,8 +318,8 @@ public:
     const TargetSettings &getTargetSettings() const { return ts; }
 
     // main apis
-    virtual bool init(); // multipass init,
-    virtual bool prepare() { return false; } // multipass prepare,
+    virtual bool init(); // multipass init
+    virtual bool prepare() override { return false; } // multipass prepare
     virtual Files gatherAllFiles() const { return {}; }
     virtual DependenciesType gatherDependencies() const { return DependenciesType{}; }
 

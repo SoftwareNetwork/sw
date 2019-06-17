@@ -9,6 +9,7 @@
 #include "driver.h"
 #include "target.h"
 
+#include <sw/builder/execution_plan.h>
 #include <sw/builder/sw_context.h>
 #include <sw/manager/package_data.h>
 
@@ -60,6 +61,7 @@ struct SW_CORE_API SwContext : SwBuilderContext
         }
     };
 
+    using CommandExecutionPlan = ExecutionPlan<builder::Command>;
     using Drivers = std::map<PackageId, std::unique_ptr<IDriver>>;
 
     // move to drivers? remove?
@@ -68,6 +70,8 @@ struct SW_CORE_API SwContext : SwBuilderContext
     SwContext(const path &local_storage_root_dir);
     virtual ~SwContext();
 
+    using SwBuilderContext::resolve;
+
     void registerDriver(std::unique_ptr<IDriver> driver);
     const Drivers &getDrivers() const { return drivers; }
 
@@ -75,8 +79,8 @@ struct SW_CORE_API SwContext : SwBuilderContext
     //std::unique_ptr<Request> load(const Inputs &inputs);
     void load(const Inputs &inputs);
     void build(const Inputs &inputs);
+    void execute();
     // void configure(); // = load() + save execution plan
-    bool prepareStep();
     PackageDescriptionMap getPackages() const;
 
     TargetMap &getTargets() { return targets; }
@@ -88,9 +92,16 @@ private:
     Drivers drivers;
     std::map<IDriver *, ProcessedInputs> active_drivers;
     TargetMap targets;
+    TargetMap targets_to_build;
 
     ProcessedInputs makeInputs(const Inputs &inputs);
     void load(const ProcessedInputs &inputs);
+    bool prepareStep();
+    void resolve();
+    void execute(CommandExecutionPlan &p) const;
+    CommandExecutionPlan getExecutionPlan() const;
+    CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
+    Commands getCommands() const;
 };
 
 struct Input

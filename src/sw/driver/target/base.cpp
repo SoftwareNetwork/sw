@@ -443,6 +443,32 @@ void Target::setSettingsComparator(std::unique_ptr<SettingsComparator> cmp)
     scmp = std::move(cmp);
 }
 
+Files Target::getSourceFiles() const
+{
+    SW_UNIMPLEMENTED;
+}
+
+UnresolvedPackages Target::getDependencies() const
+{
+    UnresolvedPackages deps;
+    for (auto &d : gatherDependencies())
+    {
+        if (!d->sw_pushed)
+            deps.insert(d->package);
+    }
+    for (auto &d : DummyDependencies)
+    {
+        if (!d->sw_pushed)
+            deps.insert(d->package);
+    }
+    for (auto &d : SourceDependencies)
+    {
+        if (!d->sw_pushed)
+            deps.insert(d->package);
+    }
+    return deps;
+}
+
 Program *Target::findProgramByExtension(const String &ext) const
 {
     if (!hasExtension(ext))
@@ -645,6 +671,11 @@ UnresolvedDependenciesType Target::gatherUnresolvedDependencies() const
             deps.insert({ d->package, d });
     }
     for (auto &d : DummyDependencies)
+    {
+        if (!*d)
+            deps.insert({ d->package, d });
+    }
+    for (auto &d : SourceDependencies)
     {
         if (!*d)
             deps.insert({ d->package, d });

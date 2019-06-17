@@ -28,6 +28,10 @@ struct SW_MANAGER_API UnresolvedPackage
 
     UnresolvedPackage &operator=(const String &s);
 
+    PackagePath getPackagePath() const { return ppath; }
+    VersionRange getRange() const { return range; }
+
+    std::optional<PackageId> toPackageId() const;
     String toString(const String &delim = "-") const;
     bool canBe(const PackageId &id) const;
 

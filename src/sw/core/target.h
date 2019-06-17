@@ -8,6 +8,7 @@
 
 #include "settings.h"
 
+#include <sw/builder/command.h>
 #include <sw/builder/node.h>
 #include <sw/manager/package_version_map.h>
 #include <sw/manager/source.h>
@@ -36,6 +37,12 @@ struct ITarget : Node
     virtual UnresolvedPackages getDependencies() const = 0;
 
     // get output config
+
+    /// returns true if target is not fully prepared yet
+    virtual bool prepare() = 0;
+
+    ///
+    virtual Commands getCommands() const = 0;
 
     // compare using settings
     virtual bool operator==(const TargetSettings &) const = 0;

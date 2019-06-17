@@ -25,6 +25,7 @@ struct SW_DRIVER_CPP_API DependencyData
     TargetSettings settings;
     //InheritanceType type; // known in advance
     bool Disabled = false;
+    bool sw_pushed = false;
 
     DependencyData(const ITarget &t);
     DependencyData(const UnresolvedPackage &p);

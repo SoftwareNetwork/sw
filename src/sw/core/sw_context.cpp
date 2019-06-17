@@ -7,6 +7,7 @@
 #include "sw_context.h"
 
 #include <nlohmann/json.hpp>
+#include <primitives/executor.h>
 #include <primitives/pack.h>
 
 #include <regex>
@@ -33,23 +34,339 @@ void SwContext::load(const Inputs &strings)
 {
     auto inputs = makeInputs(strings);
     load(inputs);
-    //return {};
 }
 
 void SwContext::build(const Inputs &strings)
 {
     auto inputs = makeInputs(strings);
     load(inputs);
-    for (auto &[d, g] : active_drivers)
-        d->execute();
+    execute();
+}
+
+void SwContext::execute()
+{
+    // mark existing targets as targets to build
+    targets_to_build = getTargets();
+
+    resolve();
+
+    while (prepareStep())
+        ;
+
+    auto p = getExecutionPlan();
+    execute(p);
+}
+
+void SwContext::resolve()
+{
+    // gather
+    UnresolvedPackages upkgs;
+    for (const auto &[pkg, tgts] : getTargets())
+    {
+        for (const auto &tgt : tgts)
+        {
+            auto deps = tgt->getDependencies();
+            // we filter out existing targets as they come from same module
+            for (auto &d : deps)
+            {
+                if (auto id = d.toPackageId(); id && getTargets().find(*id) != getTargets().end())
+                    continue;
+                upkgs.insert(d);
+            }
+            break; // take first
+        }
+    }
+
+    // install
+    auto m = install(upkgs);
+
+    // now wee know all drivers
+    Inputs inputs;
+    for (auto &[u, p] : m)
+        inputs.insert(p.getDirSrc2());
+    load(inputs);
+
+    //
 }
 
 bool SwContext::prepareStep()
 {
-    bool r = false;
-    for (auto &[d, g] : active_drivers)
-        r |= d->prepareStep();
-    return r;
+    std::atomic_bool next_pass = false;
+
+    auto &e = getExecutor();
+    Futures<void> fs;
+    for (const auto &[pkg, tgts] : getTargets())
+    {
+        for (const auto &tgt : tgts)
+        {
+            fs.push_back(e.push([tgt, &next_pass]
+            {
+                if (tgt->prepare())
+                    next_pass = true;
+            }));
+        }
+    }
+    waitAndGet(fs);
+
+    return next_pass;
+}
+
+void SwContext::execute(CommandExecutionPlan &p) const
+{
+    auto print_graph = [](const auto &ep, const path &p, bool short_names = false)
+    {
+        String s;
+        s += "digraph G {\n";
+        for (auto &c : ep.commands)
+        {
+            {
+                s += c->getName(short_names) + ";\n";
+                for (auto &d : c->dependencies)
+                    s += c->getName(short_names) + " -> " + d->getName(short_names) + ";\n";
+            }
+            /*s += "{";
+            s += "rank = same;";
+            for (auto &c : level)
+            s += c->getName(short_names) + ";\n";
+            s += "};";*/
+        }
+
+        /*if (ep.Root)
+        {
+        const auto root_name = "all"s;
+        s += root_name + ";\n";
+        for (auto &d : ep.Root->dependencies)
+        s += root_name + " -> " + d->getName(short_names) + ";\n";
+        }*/
+
+        s += "}";
+        write_file(p, s);
+    };
+
+    /*for (auto &c : p.commands)
+    {
+        c->silent = silent;
+        c->show_output = show_output;
+    }*/
+
+    // execute early to prevent commands expansion into response files
+    // print misc
+    /*if (::print_graph && !silent) // && !b console mode
+    {
+        auto d = getServiceDir();
+
+        //message_box(d.string());
+
+        // new graphs
+        //p.printGraph(p.getGraphSkeleton(), d / "build_skeleton");
+        p.printGraph(p.getGraph(), d / "build");
+
+        // old graphs
+        print_graph(p, d / "build_old.dot");
+
+        if (auto b = this->template as<Build*>())
+        {
+            SW_UNIMPLEMENTED;
+            //for (const auto &[i, s] : enumerate(b->solutions))
+            //s.printGraph(d / ("solution." + std::to_string(i + 1) + ".dot"));
+        }
+    }
+
+    if (dry_run)
+        return;*/
+
+    ScopedTime t;
+    std::unique_ptr<Executor> ex;
+    //if (execute_jobs > 0)
+        //ex = std::make_unique<Executor>(execute_jobs);
+    auto &e = /*execute_jobs > 0 ? *ex : */getExecutor();
+
+    // prevent memory leaks (high mem usage)
+    /*updateConcurrentContext();
+    for (int i = 0; i < 1000; i++)
+    e.push([] {updateConcurrentContext(); });*/
+
+    //p.skip_errors = skip_errors.getValue();
+    p.execute(e);
+    /*auto t2 = t.getTimeFloat();
+    if (!silent && t2 > 0.15)
+        LOG_INFO(logger, "Build time: " << t2 << " s.");*/
+
+    // produce chrome tracing log
+    /*if (time_trace)
+    {
+        // calculate minimal time
+        auto min = decltype (builder::Command::t_begin)::clock::now();
+        for (auto &c : p.commands)
+        {
+            if (c->t_begin.time_since_epoch().count() == 0)
+                continue;
+            min = std::min(c->t_begin, min);
+        }
+
+        auto tid_to_ll = [](auto &id)
+        {
+            std::ostringstream ss;
+            ss << id;
+            return ss.str();
+        };
+
+        nlohmann::json trace;
+        nlohmann::json events;
+        for (auto &c : p.commands)
+        {
+            if (c->t_begin.time_since_epoch().count() == 0)
+                continue;
+
+            nlohmann::json b;
+            b["name"] = c->getName();
+            b["cat"] = "BUILD";
+            b["pid"] = 1;
+            b["tid"] = tid_to_ll(c->tid);
+            b["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c->t_begin - min).count();
+            b["ph"] = "B";
+            events.push_back(b);
+
+            nlohmann::json e;
+            e["name"] = c->getName();
+            e["cat"] = "BUILD";
+            e["pid"] = 1;
+            e["tid"] = tid_to_ll(c->tid);
+            e["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c->t_end - min).count();
+            e["ph"] = "E";
+            events.push_back(e);
+        }
+        trace["traceEvents"] = events;
+        write_file(getServiceDir() / "time_trace.json", trace.dump(2));
+    }*/
+
+    // prevent memory leaks (high mem usage)
+    /*updateConcurrentContext();
+    for (int i = 0; i < 1000; i++)
+    e.push([] {updateConcurrentContext(); });*/
+}
+
+Commands SwContext::getCommands() const
+{
+    // calling this for all targets in any case to set proper command dependencies
+    for (const auto &[pkg, tgts] : getTargets())
+    {
+        for (auto &tgt : tgts)
+        {
+            for (auto &c : tgt->getCommands())
+                c->maybe_unused = builder::Command::MU_TRUE; // why?
+        }
+    }
+
+    if (targets_to_build.empty())
+        throw SW_RUNTIME_ERROR("no targets were selected for building");
+
+    Commands cmds;
+    for (auto &[p, tgts] : targets_to_build)
+    {
+        for (auto &tgt : tgts)
+        {
+            auto c = tgt->getCommands();
+            for (auto &c2 : c)
+                c2->maybe_unused &= ~builder::Command::MU_TRUE;
+            cmds.insert(c.begin(), c.end());
+
+            // copy output dlls
+
+            /*auto nt = t->as<NativeCompiledTarget*>();
+            if (!nt)
+                continue;
+            if (*nt->HeaderOnly)
+                continue;
+            if (nt->getSelectedTool() == nt->Librarian.get())
+                continue;
+
+            // copy
+            if (nt->isLocal() && //getSettings().Native.CopySharedLibraries &&
+                nt->Scope == TargetScope::Build && nt->OutputDir.empty() && !nt->createWindowsRpath())
+            {
+                for (auto &l : nt->gatherAllRelatedDependencies())
+                {
+                    auto dt = l->as<NativeCompiledTarget*>();
+                    if (!dt)
+                        continue;
+                    if (dt->isLocal())
+                        continue;
+                    if (dt->HeaderOnly.value())
+                        continue;
+                    if (dt->getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
+                        continue;
+                    if (dt->getSelectedTool() == dt->Librarian.get())
+                        continue;
+                    auto in = dt->getOutputFile();
+                    auto o = nt->getOutputDir() / dt->OutputDir;
+                    o /= in.filename();
+                    if (in == o)
+                        continue;
+
+                    SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
+                    copy_cmd->arguments.push_back(in.u8string());
+                    copy_cmd->arguments.push_back(o.u8string());
+                    copy_cmd->addInput(dt->getOutputFile());
+                    copy_cmd->addOutput(o);
+                    copy_cmd->dependencies.insert(nt->getCommand());
+                    copy_cmd->name = "copy: " + normalize_path(o);
+                    copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
+                    copy_cmd->command_storage = builder::Command::CS_LOCAL;
+                    cmds.insert(copy_cmd);
+                }
+            }*/
+        }
+    }
+
+    return cmds;
+}
+
+SwContext::CommandExecutionPlan SwContext::getExecutionPlan() const
+{
+    return getExecutionPlan(getCommands());
+}
+
+SwContext::CommandExecutionPlan SwContext::getExecutionPlan(const Commands &cmds) const
+{
+    auto ep = CommandExecutionPlan::createExecutionPlan(cmds);
+    if (ep)
+        return ep;
+
+    // error!
+
+    /*auto d = getServiceDir();
+
+    auto [g, n, sc] = ep.getStrongComponents();
+
+    using Subgraph = boost::subgraph<CommandExecutionPlan::Graph>;
+
+    // fill copy of g
+    Subgraph root(g.m_vertices.size());
+    for (auto &e : g.m_edges)
+        boost::add_edge(e.m_source, e.m_target, root);
+
+    std::vector<Subgraph*> subs(n);
+    for (decltype(n) i = 0; i < n; i++)
+        subs[i] = &root.create_subgraph();
+    for (int i = 0; i < sc.size(); i++)
+        boost::add_vertex(i, *subs[sc[i]]);
+
+    auto cyclic_path = d / "cyclic";
+    fs::create_directories(cyclic_path);
+    for (decltype(n) i = 0; i < n; i++)
+    {
+        if (subs[i]->m_graph.m_vertices.size() > 1)
+            CommandExecutionPlan::printGraph(subs[i]->m_graph, cyclic_path / std::to_string(i));
+    }
+
+    ep.printGraph(ep.getGraph(), cyclic_path / "processed", ep.commands, true);
+    ep.printGraph(ep.getGraphUnprocessed(), cyclic_path / "unprocessed", ep.unprocessed_commands, true);*/
+
+    //String error = "Cannot create execution plan because of cyclic dependencies: strong components = " + std::to_string(n);
+    String error = "Cannot create execution plan because of cyclic dependencies";
+
+    throw SW_RUNTIME_ERROR(error);
 }
 
 PackageDescriptionMap SwContext::getPackages() const

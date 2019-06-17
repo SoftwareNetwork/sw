@@ -67,6 +67,14 @@ UnresolvedPackage &UnresolvedPackage::operator=(const String &s)
     return *this = extractFromString(s);
 }
 
+std::optional<PackageId> UnresolvedPackage::toPackageId() const
+{
+    auto v = range.toVersion();
+    if (!v)
+        return {};
+    return PackageId{ ppath, *v };
+}
+
 String UnresolvedPackage::toString(const String &delim) const
 {
     return ppath.toString() + delim + range.toString();

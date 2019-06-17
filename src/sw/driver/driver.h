@@ -27,8 +27,8 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     PackageId getPackageId() const override;
     bool canLoad(const Input &) const override;
     void load(const std::set<Input> &) override;
-    void execute() override;
-    bool prepareStep() override;
+    void execute();
+    bool prepareStep();
 
     // own
     ChecksStorage &getChecksStorage(const String &config) const;

@@ -919,7 +919,7 @@ void override_package_perform(sw::SwContext &swctx)
 
     // one prepare step will find sources
     // maybe add explicit enum value
-    swctx.prepareStep();
+    //swctx.prepareStep();
 
     auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
     for (auto &[pkg, desc] : swctx.getPackages())

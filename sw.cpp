@@ -1,5 +1,5 @@
 #pragma sw require header pub.egorpugin.primitives.tools.embedder-master
-#pragma sw require header org.sw.demo.google.grpc.grpc_cpp_plugin-1
+#pragma sw require header org.sw.demo.google.grpc.grpc_cpp_plugin
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
 
 void configure(Build &s)
@@ -52,8 +52,8 @@ void build(Solution &s)
             "pub.egorpugin.primitives.log-master"_dep,
             "pub.egorpugin.primitives.executor-master"_dep,
             "pub.egorpugin.primitives.symbol-master"_dep,
-            "org.sw.demo.boost.property_tree-1"_dep,
-            "org.sw.demo.boost.stacktrace-1"_dep;
+            "org.sw.demo.boost.property_tree"_dep,
+            "org.sw.demo.boost.stacktrace"_dep;
         support.ApiName = "SW_SUPPORT_API";
         if (support.getSettings().TargetOS.Type == OSType::Windows)
         {
@@ -69,11 +69,11 @@ void build(Solution &s)
         protos.CPPVersion = CPPLanguageStandard::CPP17;
         protos += "src/sw/protocol/.*"_rr;
         protos.Public +=
-            "org.sw.demo.google.grpc.grpcpp-1"_dep,
+            "org.sw.demo.google.grpc.grpcpp"_dep,
             "pub.egorpugin.primitives.templates-master"_dep,
             "pub.egorpugin.primitives.log-master"_dep;
         for (auto &[p, _] : protos["src/sw/protocol/.*\\.proto"_rr])
-            gen_grpc("org.sw.demo.google.protobuf-3"_dep, "org.sw.demo.google.grpc.grpc_cpp_plugin-1"_dep, protos, p, true);
+            gen_grpc("org.sw.demo.google.protobuf-3"_dep, "org.sw.demo.google.grpc.grpc_cpp_plugin"_dep, protos, p, true);
     }
 
     auto &manager = p.addTarget<LibraryTarget>("manager");
@@ -93,8 +93,8 @@ void build(Solution &s)
             "pub.egorpugin.primitives.win32helpers-master"_dep,
             "pub.egorpugin.primitives.yaml-master"_dep,
             "org.sw.demo.nlohmann.json-3"_dep,
-            "org.sw.demo.boost.variant-1"_dep,
-            "org.sw.demo.boost.dll-1"_dep,
+            "org.sw.demo.boost.variant"_dep,
+            "org.sw.demo.boost.dll"_dep,
             "org.sw.demo.rbock.sqlpp11_connector_sqlite3-develop"_dep
             ;
         manager += "src/sw/manager/.*"_rr;
@@ -147,6 +147,7 @@ void build(Solution &s)
         builder.CPPVersion = CPPLanguageStandard::CPP17;
         builder += "src/sw/builder/.*"_rr;
         builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep,
+            "org.sw.demo.boost.graph"_dep,
             "org.sw.demo.microsoft.gsl-*"_dep,
             "pub.egorpugin.primitives.emitter-master"_dep;
         //if (!s.Variables["SW_SELF_BUILD"])
@@ -174,9 +175,9 @@ void build(Solution &s)
         cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
         cpp_driver.Public += core,
             "pub.egorpugin.primitives.patch-master"_dep,
-            "org.sw.demo.boost.assign-1"_dep,
-            "org.sw.demo.boost.bimap-1"_dep,
-            "org.sw.demo.boost.uuid-1"_dep;
+            "org.sw.demo.boost.assign"_dep,
+            "org.sw.demo.boost.bimap"_dep,
+            "org.sw.demo.boost.uuid"_dep;
         cpp_driver += "src/sw/driver/.*"_rr;
         cpp_driver -= "src/sw/driver/inserts/.*"_rr;
         if (cpp_driver.getSettings().TargetOS.Type != OSType::Windows)
@@ -247,8 +248,8 @@ void build(Solution &s)
             auto &client = tools.addTarget<ExecutableTarget>("client");
             client += "src/sw/tools/client.cpp";
             client +=
-                "org.sw.demo.boost.dll-1"_dep,
-                "org.sw.demo.boost.filesystem-1"_dep,
+                "org.sw.demo.boost.dll"_dep,
+                "org.sw.demo.boost.filesystem"_dep,
                 "user32.lib"_slib;
             if (client.getSettings().TargetOS.Type == OSType::Windows)
                 client.Public += "UNICODE"_d;

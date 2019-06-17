@@ -450,7 +450,7 @@ void NativeCompiledTarget::findCompiler()
             return false;
         if (auto t = (*i).second->as<NativeCompiledTarget*>())
         {
-            *this += *t;
+            (*this + *t)->sw_pushed = true;
             return true;
         }
         return false;
