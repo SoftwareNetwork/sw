@@ -33,7 +33,7 @@ namespace sw
 
 struct SwBuilderContext;
 
-struct SW_BUILDER_API Program : File, detail::Executable
+struct SW_BUILDER_API Program : ICastable, File, detail::Executable
 {
     const SwBuilderContext &swctx;
 

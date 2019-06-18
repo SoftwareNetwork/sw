@@ -9,6 +9,7 @@
 #include "inheritance.h"
 
 #include <sw/core/settings.h>
+#include <sw/core/target.h>
 #include <sw/manager/package.h>
 
 #include <memory>
@@ -18,7 +19,7 @@ namespace sw
 
 struct ITarget;
 
-struct SW_DRIVER_CPP_API DependencyData
+struct SW_DRIVER_CPP_API DependencyData : IDependency
 {
     UnresolvedPackage package;
     //DependencyData dep;
@@ -31,7 +32,8 @@ struct SW_DRIVER_CPP_API DependencyData
     DependencyData(const UnresolvedPackage &p);
 
     UnresolvedPackage getPackage() const;
-    void setTarget(const ITarget &t);
+    UnresolvedPackage getUnresolvedPackage() const override { return getPackage(); }
+    void setTarget(const ITarget &t) override;
     const ITarget &getTarget() const;
 
     bool isDisabled() const { return Disabled; }
@@ -40,7 +42,9 @@ struct SW_DRIVER_CPP_API DependencyData
     //bool operator< (const DependencyData &t) const;
 
     operator bool() const { return target; }
-    bool isResolved() const { return operator bool(); }
+    bool isResolved() const override { return operator bool(); }
+
+    const TargetSettings &getSettings() const override { return settings; }
 
     LocalPackage getResolvedPackage() const;
 

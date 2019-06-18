@@ -58,7 +58,7 @@ struct SW_DRIVER_CPP_API SettingsComparator
     virtual bool less(const TargetSettings &s1, const TargetSettings &s2) const;
 };
 
-struct SW_DRIVER_CPP_API TargetBaseData : Node, ProjectDirectories
+struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories
 {
     // flags
     bool IsConfig = false;
@@ -283,7 +283,7 @@ public:
     const Source &getSource() const override;
     bool isReal() const override { return real; }
     Files getSourceFiles() const override;
-    UnresolvedPackages getDependencies() const override;
+    std::vector<IDependency *> getDependencies() const override;
     bool operator==(const TargetSettings &) const override;
     bool operator<(const TargetSettings &) const override;
     void setSettingsComparator(std::unique_ptr<SettingsComparator>);

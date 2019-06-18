@@ -2086,7 +2086,7 @@ void Build::execute(CommandExecutionPlan &p) const
         // old graphs
         print_graph(p, d / "build_old.dot");
 
-        if (auto b = this->template as<Build*>())
+        //if (auto b = this->template as<Build*>())
         {
             SW_UNIMPLEMENTED;
             //for (const auto &[i, s] : enumerate(b->solutions))

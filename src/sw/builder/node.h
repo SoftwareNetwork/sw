@@ -12,17 +12,10 @@
 namespace sw
 {
 
-namespace builder
+/// provides castable interface (as() methods)
+struct SW_BUILDER_API ICastable
 {
-
-struct Command;
-
-}
-
-// rename to object?
-struct SW_BUILDER_API Node
-{
-    virtual ~Node() = default;
+    virtual ~ICastable() = 0;
 
     template <class T, typename = std::enable_if_t<std::is_pointer_v<T>>>
     std::decay_t<std::remove_pointer_t<T>> *as()
@@ -49,10 +42,12 @@ struct SW_BUILDER_API Node
     }
 };
 
+namespace builder { struct Command; }
+
 namespace detail
 {
 
-struct SW_BUILDER_API Executable : virtual Node
+struct SW_BUILDER_API Executable
 {
     virtual ~Executable() = default;
 

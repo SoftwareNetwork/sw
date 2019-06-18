@@ -139,7 +139,7 @@ struct SW_BUILDER_API ResolvableCommand : ::primitives::Command
 
 }
 
-struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
+struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>,
     CommandData<::sw::builder::Command>, detail::ResolvableCommand // hide?
 {
     using Base = detail::ResolvableCommand;

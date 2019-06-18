@@ -448,23 +448,23 @@ Files Target::getSourceFiles() const
     SW_UNIMPLEMENTED;
 }
 
-UnresolvedPackages Target::getDependencies() const
+std::vector<IDependency *> Target::getDependencies() const
 {
-    UnresolvedPackages deps;
+    std::vector<IDependency *> deps;
     for (auto &d : gatherDependencies())
     {
         if (!d->sw_pushed)
-            deps.insert(d->package);
+            deps.push_back(d.get());
     }
     for (auto &d : DummyDependencies)
     {
         if (!d->sw_pushed)
-            deps.insert(d->package);
+            deps.push_back(d.get());
     }
     for (auto &d : SourceDependencies)
     {
         if (!d->sw_pushed)
-            deps.insert(d->package);
+            deps.push_back(d.get());
     }
     return deps;
 }

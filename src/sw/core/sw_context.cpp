@@ -69,24 +69,62 @@ void SwContext::resolve()
             // we filter out existing targets as they come from same module
             for (auto &d : deps)
             {
-                if (auto id = d.toPackageId(); id && getTargets().find(*id) != getTargets().end())
+                if (auto id = d->getUnresolvedPackage().toPackageId(); id && getTargets().find(*id) != getTargets().end())
                     continue;
-                upkgs.insert(d);
+                upkgs.insert(d->getUnresolvedPackage());
             }
-            break; // take first
+            break; // take first as all deps are equal
         }
     }
 
     // install
     auto m = install(upkgs);
 
-    // now wee know all drivers
+    // now we know all drivers
     Inputs inputs;
     for (auto &[u, p] : m)
         inputs.insert(p.getDirSrc2());
     load(inputs);
 
-    //
+    // load
+    while (1)
+    {
+        bool again = false;
+        auto chld = getTargets(); // copy, loop may change children
+        for (const auto &[pkg, tgts] : chld)
+        {
+            for (const auto &tgt : tgts)
+            {
+                auto deps = tgt->getDependencies();
+                for (auto &d : deps)
+                {
+                    if (d->isResolved())
+                        continue;
+
+                    auto i = chld.find(d->getUnresolvedPackage());
+                    if (i != chld.end())
+                    {
+                        auto k = i->second.find(d->getSettings());
+                        if (k != i->second.end())
+                        {
+                            d->setTarget(**k);
+                            continue;
+                        }
+                        i->second.loadPackages(d->getSettings());
+                        k = i->second.find(d->getSettings());
+                        if (k == i->second.end())
+                        {
+                            throw SW_RUNTIME_ERROR(pkg.toString() + ": cannot load package " + d->getUnresolvedPackage().toString() +
+                                " with current settings: " + d->getSettings().toString());
+                        }
+                        again = true;
+                    }
+                }
+            }
+        }
+        if (!again)
+            break;
+    }
 }
 
 bool SwContext::prepareStep()
@@ -423,8 +461,8 @@ PackageDescriptionMap SwContext::getPackages() const
         for (auto &d : t->getDependencies())
         {
             nlohmann::json jd;
-            jd["path"] = d.ppath.toString();
-            jd["range"] = d.range.toString();
+            jd["path"] = d->getUnresolvedPackage().ppath.toString();
+            jd["range"] = d->getUnresolvedPackage().range.toString();
             j["dependencies"].push_back(jd);
         }
 

@@ -10,8 +10,8 @@ namespace sw
 {
 
 ITarget::~ITarget() = default;
-
 TargetLoader::~TargetLoader() = default;
+IDependency::~IDependency() = default;
 
 void TargetData::loadPackages(const TargetSettings &s, const PackageIdSet &whitelist)
 {

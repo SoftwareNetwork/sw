@@ -16,7 +16,19 @@
 namespace sw
 {
 
-struct ITarget : Node
+struct ITarget;
+
+struct IDependency
+{
+    virtual ~IDependency() = 0;
+
+    virtual const TargetSettings &getSettings() const = 0;
+    virtual UnresolvedPackage getUnresolvedPackage() const = 0;
+    virtual bool isResolved() const = 0;
+    virtual void setTarget(const ITarget &) = 0;
+};
+
+struct ITarget : ICastable
 {
     virtual ~ITarget() = 0;
 
@@ -34,9 +46,10 @@ struct ITarget : Node
     // also add get binary files?
 
     /// get all direct dependencies
-    virtual UnresolvedPackages getDependencies() const = 0;
+    virtual std::vector<IDependency *> getDependencies() const = 0;
 
     // get output config
+    // get settings()?
 
     /// returns true if target is not fully prepared yet
     virtual bool prepare() = 0;

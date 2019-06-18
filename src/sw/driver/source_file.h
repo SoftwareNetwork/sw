@@ -24,7 +24,7 @@ struct Target;
 // other files can be source files, but not compiled files
 // they'll be processed with other tools
 // so we cannot replace or inherit SourceFile from Compiler
-struct SW_DRIVER_CPP_API SourceFile : File
+struct SW_DRIVER_CPP_API SourceFile : File, ICastable
 {
     bool created = true;
     bool skip = false;

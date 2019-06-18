@@ -11,6 +11,10 @@
 namespace sw
 {
 
+ICastable::~ICastable()
+{
+}
+
 void detail::Executable::execute() const
 {
     if (auto c = getCommand())
