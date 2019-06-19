@@ -1188,11 +1188,6 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
 private:
     void loadPackages1() override
     {
-        prepare_config();
-    }
-
-    void prepare_config()
-    {
         b.build_self();
         for (auto &fn : files)
             r[fn] = prepare_config(fn);
@@ -1380,29 +1375,31 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
     auto &solution = *this;
 
     // make parallel?
-    auto get_real_package = [](const auto &pkg) -> LocalPackage
+    auto get_package_config = [](const auto &pkg) -> path
     {
         if (pkg.getData().group_number)
-            return pkg;
+        {
+            auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
+            if (!d)
+                throw SW_RUNTIME_ERROR("cannot find config");
+            return *d;
+        }
         auto p = pkg.getGroupLeader();
-        if (fs::exists(p.getDirSrc2() / "sw.cpp"))
-            return p;
+        if (auto d = findConfig(p.getDirSrc2(), Build::getAvailableFrontendConfigFilenames()))
+            return *d;
+        auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
+        if (!d)
+            throw SW_RUNTIME_ERROR("cannot find config");
         fs::create_directories(p.getDirSrc2());
-        fs::copy_file(pkg.getDirSrc2() / "sw.cpp", p.getDirSrc2() / "sw.cpp");
-        //resolve_dependencies({p}); // p might not be downloaded
-        return p;
-    };
-
-    auto get_real_package_config = [&get_real_package](const auto &pkg)
-    {
-        return get_real_package(pkg).getDirSrc2() / "sw.cpp";
+        fs::copy_file(*d, p.getDirSrc2() / d->filename());
+        return p.getDirSrc2() / d->filename();
     };
 
     Files files;
     std::unordered_map<path, LocalPackage> output_names;
     for (auto &pkg : pkgs)
     {
-        auto p = get_real_package_config(pkg);
+        auto p = get_package_config(pkg);
         files.insert(p);
         output_names.emplace(p, pkg);
     }
@@ -1553,6 +1550,8 @@ path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
 // s.build->loadModule("client/sw.cpp").call<void(Solution &)>("build", s);
 Module Build::loadModule(const path &p) const
 {
+    SW_UNIMPLEMENTED;
+
     auto fn2 = p;
     if (!fn2.is_absolute())
         fn2 = SourceDir / fn2;

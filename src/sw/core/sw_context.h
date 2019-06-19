@@ -20,6 +20,10 @@ enum class InputType : int32_t
 {
     Unspecified = 0,
 
+    /// drivers may use their own methods for better loading packages
+    /// rather than when direct spec file provided
+    InstalledPackage,
+
     ///
     SpecificationFile,
 
@@ -113,18 +117,19 @@ struct Input
     IDriver &getDriver() const { return *driver; }
     InputType getType() const { return type; }
     path getPath() const;
+    PackageId getPackageId() const;
 
-    bool operator<(const Input &rhs) const { return subject < rhs.subject; }
+    bool operator<(const Input &rhs) const;
 
 private:
-    path subject;
+    std::variant<path, PackageId> data;
     InputType type;
     IDriver *driver = nullptr;
     // settings?
 
     void init(const String &, const SwContext &);
     void init(const path &, const SwContext &);
-    void init(const PackageId &);
+    void init(const PackageId &, const SwContext &);
 };
 
 } // namespace sw

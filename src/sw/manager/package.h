@@ -54,7 +54,7 @@ struct SW_MANAGER_API Package : PackageId
     Package &operator=(const Package &) = default;
     Package(Package &&) = default;
     Package &operator=(Package &&) = default;
-    ~Package();
+    ~Package() = default;
 
     String getHash() const;
     String getHashShort() const;
@@ -71,6 +71,12 @@ struct SW_MANAGER_API LocalPackage : Package
     LocalPackage(const LocalStorage &, const String &);
     LocalPackage(const LocalStorage &, const PackagePath &, const Version &);
     LocalPackage(const LocalStorage &, const PackageId &);
+
+    LocalPackage(const LocalPackage &) = default;
+    LocalPackage &operator=(const LocalPackage &) = default;
+    LocalPackage(LocalPackage &&) = default;
+    LocalPackage &operator=(LocalPackage &&) = default;
+    ~LocalPackage() = default;
 
     bool isOverridden() const;
     std::optional<path> getOverriddenDir() const;

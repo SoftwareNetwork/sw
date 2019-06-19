@@ -287,6 +287,7 @@ public:
     static std::optional<FrontendType> selectFrontendByFilename(const path &fn);
 
     void build_self();
+    FilesMap build_configs_separate(const Files &files);
 
 private:
     void resolvePass(const Target &t, const DependenciesType &deps) const;
@@ -375,8 +376,6 @@ private:
     SharedLibraryTarget &createTarget(const Files &files);
     //const Solution *getHostSolution();
     //const Solution *getHostSolution() const;
-
-    FilesMap build_configs_separate(const Files &files);
 
     void generateBuildSystem();
 

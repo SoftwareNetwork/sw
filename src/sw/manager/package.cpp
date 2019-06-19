@@ -50,8 +50,6 @@ Package::Package(const Storage &storage, const PackageId &id)
 {
 }
 
-Package::~Package() = default;
-
 String Package::getHash() const
 {
     // move these calculations to storage?

@@ -83,7 +83,7 @@ void SwContext::resolve()
     // now we know all drivers
     Inputs inputs;
     for (auto &[u, p] : m)
-        inputs.insert(p.getDirSrc2());
+        inputs.insert(p);
     load(inputs);
 
     // load
@@ -520,7 +520,7 @@ Input::Input(const path &p, const SwContext &swctx)
 
 Input::Input(const PackageId &p, const SwContext &swctx)
 {
-    init(p);
+    init(p, swctx);
 }
 
 void Input::init(const String &s, const SwContext &swctx)
@@ -529,7 +529,7 @@ void Input::init(const String &s, const SwContext &swctx)
     if (fs::exists(p))
         init(p, swctx);
     else
-        init(PackageId(s));
+        init(PackageId(s), swctx);
 }
 
 void Input::init(const path &in, const SwContext &swctx)
@@ -555,7 +555,7 @@ void Input::init(const path &in, const SwContext &swctx)
         p = fs::absolute(p);
 
     auto status = fs::status(p);
-    subject = path(normalize_path(p));
+    data = path(normalize_path(p));
 
     // spec or regular file
     if (status.type() == fs::file_type::regular)
@@ -595,19 +595,26 @@ void Input::init(const path &in, const SwContext &swctx)
     throw SW_RUNTIME_ERROR("Cannot select driver for " + normalize_path(p));
 }
 
-void Input::init(const PackageId &p)
+void Input::init(const PackageId &p, const SwContext &swctx)
 {
-    // create package, install, get source dir, find there spec file
-    // or install driver of package ...
-    SW_UNIMPLEMENTED;
-
-    //subject = p;
-    //type = InputType::PackageId;
+    data = p;
+    type = InputType::InstalledPackage;
+    driver = swctx.getDrivers().begin()->second.get();
 }
 
 path Input::getPath() const
 {
-    return subject;
+    return std::get<path>(data);
+}
+
+PackageId Input::getPackageId() const
+{
+    return std::get<PackageId>(data);
+}
+
+bool Input::operator<(const Input &rhs) const
+{
+    return data < rhs.data;
 }
 
 }

@@ -12,10 +12,10 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 
-namespace sw::driver::cpp
+namespace sw
 {
 
-static std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s)
+std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s)
 {
     for (auto &fn : fe_s)
     {
@@ -24,6 +24,9 @@ static std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s)
     }
     return {};
 }
+
+namespace driver::cpp
+{
 
 Driver::Driver(SwContext &swctx)
     : swctx(swctx)
@@ -72,19 +75,66 @@ bool Driver::canLoad(const Input &i) const
 
 void Driver::load(const std::set<Input> &inputs)
 {
-    if (inputs.size() > 1)
-        SW_UNREACHABLE;
-    auto &i = *inputs.begin();
-    switch (i.getType())
+    std::unordered_set<LocalPackage> pkgs;
+    for (auto &i : inputs)
     {
-    case InputType::DirectorySpecificationFile:
-    {
-        auto p = *findConfig(i.getPath(), Build::getAvailableFrontendConfigFilenames());
-        build->load_spec_file(p);
-        break;
+        switch (i.getType())
+        {
+        case InputType::InstalledPackage:
+        {
+            pkgs.insert(swctx.resolve(i.getPackageId()));
+            break;
+        }
+        case InputType::DirectorySpecificationFile:
+        {
+            auto p = *findConfig(i.getPath(), Build::getAvailableFrontendConfigFilenames());
+            build->load_spec_file(p);
+            break;
+        }
+        default:
+            SW_UNREACHABLE;
+        }
     }
-    default:
-        SW_UNREACHABLE;
+
+    if (!pkgs.empty())
+    {
+        Build b(swctx, *this); // cache?
+        //b.execute_jobs = config_jobs;
+        b.file_storage_local = false;
+        b.is_config_build = true;
+        b.use_separate_target_map = true;
+
+        b.build_configs(pkgs);
+
+        /*auto get_package_config = [](const auto &pkg) -> path
+        {
+            if (pkg.getData().group_number)
+            {
+                auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
+                if (!d)
+                    throw SW_RUNTIME_ERROR("cannot find config");
+                return *d;
+            }
+            auto p = pkg.getGroupLeader();
+            if (auto d = findConfig(p.getDirSrc2(), Build::getAvailableFrontendConfigFilenames()))
+                return *d;
+            auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
+            if (!d)
+                throw SW_RUNTIME_ERROR("cannot find config");
+            fs::create_directories(p.getDirSrc2());
+            fs::copy_file(*d, p.getDirSrc2() / d->filename());
+            return p.getDirSrc2() / d->filename();
+        };
+
+        Files files;
+        std::unordered_map<path, LocalPackage> output_names;
+        for (auto &pkg : pkgs)
+        {
+            auto p = get_package_config(pkg);
+            files.insert(p);
+            output_names.emplace(p, pkg);
+        }
+        b.build_configs_separate(files);*/
     }
 }
 
@@ -124,6 +174,8 @@ ChecksStorage &Driver::getChecksStorage(const String &config, const path &fn) co
 ModuleStorage &Driver::getModuleStorage() const
 {
     return *module_storage;
+}
+
 }
 
 }

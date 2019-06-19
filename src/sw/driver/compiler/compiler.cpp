@@ -898,7 +898,6 @@ void RcTool::prepareCommand1(const Target &t)
     };
 
     print_idir(t.template as<NativeCompiledTarget>().NativeCompilerOptions::gatherIncludeDirectories(), "-I");
-    print_idir(t.template as<NativeCompiledTarget>().NativeCompilerOptions::System.gatherIncludeDirectories(), "-I");
 
     // ms bug: https://developercommunity.visualstudio.com/content/problem/417189/rcexe-incorrect-behavior-with.html
     //for (auto &i : system_idirs)

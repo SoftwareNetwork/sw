@@ -44,4 +44,6 @@ private:
 
 } // namespace driver::cpp
 
+std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s);
+
 } // namespace sw
