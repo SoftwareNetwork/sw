@@ -193,7 +193,7 @@ void NativeCompiledTarget::findCompiler()
         if (auto t = (*i).second->as<PredefinedProgram>())
         {
             for (auto &e : v.exts)
-                setExtensionProgram(e, t->getProgram());
+                setExtensionProgram(e, t->getProgram()->clone());
         }
         else
         {
