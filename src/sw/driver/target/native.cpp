@@ -192,7 +192,7 @@ void NativeCompiledTarget::findCompiler()
         if (auto t = (*i).second->as<PredefinedProgram*>())
         {
             for (auto &e : v.exts)
-                setExtensionProgram(e, t->getProgram()->clone());
+                setExtensionProgram(e, t->getProgram().clone());
         }
         else
         {
@@ -373,7 +373,7 @@ void NativeCompiledTarget::findCompiler()
                 }
             };
 
-            auto nl = std::dynamic_pointer_cast<NativeLinker>(t->getProgram()->clone());
+            auto nl = std::dynamic_pointer_cast<NativeLinker>(t->getProgram().clone());
             if (link)
                 this->Linker = nl;
             else

@@ -486,7 +486,7 @@ Program *Target::findProgramByExtension(const String &ext) const
         return {};
     if (auto t = tgt->as<PredefinedProgram*>())
     {
-        return t->getProgram().get();
+        return &t->getProgram();
     }
     throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + pkg.toString());
 }

@@ -55,7 +55,8 @@ using ProgramGroupPtr = std::shared_ptr<ProgramGroup>;
 struct PredefinedProgram
 {
     void setProgram(const ProgramPtr &p) { program = p; }
-    virtual ProgramPtr getProgram() const { return program; }
+    Program &getProgram();
+    const Program &getProgram() const;
 
 private:
     ProgramPtr program;
