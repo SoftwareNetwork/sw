@@ -46,7 +46,6 @@ DECLARE_STATIC_LOGGER(logger, "build");
 
 static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
 String gGenerator;
-static cl::opt<bool> do_not_rebuild_config("do-not-rebuild-config", cl::Hidden);
 cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 static cl::opt<bool> fetch_sources("fetch", cl::desc("Fetch files in process"));
@@ -695,7 +694,7 @@ void Build::prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_p
         for (auto &tgt : tgts)
         {
             auto t = tgt->as<Target*>();
-            if (t->skip)
+            if (t->skip || t->DryRun)
                 continue;
             fs.push_back(e.push([this, t, &next_pass]
                 {
@@ -1178,19 +1177,29 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
 {
     using NativeTargetEntryPoint::NativeTargetEntryPoint;
 
-    FilesMap &r;
-    const Files &files;
+    path out;
+    FilesMap r;
 
-    PrepareConfigEntryPoint(Build &b, FilesMap &r, const Files &files)
-        : NativeTargetEntryPoint(b), r(r), files(files)
+    PrepareConfigEntryPoint(Build &b, const std::unordered_set<LocalPackage> &pkgs)
+        : NativeTargetEntryPoint(b), pkgs_(pkgs)
+    {}
+
+    PrepareConfigEntryPoint(Build &b, const Files &files)
+        : NativeTargetEntryPoint(b), files_(files)
     {}
 
 private:
+    const std::unordered_set<LocalPackage> pkgs_;
+    Files files_;
+
     void loadPackages1() override
     {
         b.build_self();
-        for (auto &fn : files)
-            r[fn] = prepare_config(fn);
+
+        if (files_.empty())
+            many2one(pkgs_);
+        else
+            many2many(files_);
     }
 
     SharedLibraryTarget &createTarget(const Files &files)
@@ -1201,25 +1210,20 @@ private:
         return lib;
     }
 
-    path prepare_config(const path &fn)
+    decltype(auto) commonActions(const Files &files)
     {
-        auto &lib = createTarget({ fn });
-
-        // must check is changed?
-        //if (do_not_rebuild_config && fs::exists(lib.getOutputFile()))
-            //return lib.getOutputFile();
-
-        do_not_rebuild_config = false;
+        auto &lib = createTarget(files);
 
         addDeps(b, lib);
-
         addImportLibrary(b.swctx, lib);
         lib.AutoDetectOptions = false;
         lib.CPPVersion = CPPLanguageStandard::CPP17;
-        if (lib.getSettings().TargetOS.is(OSType::Windows))
-            lib += "_CRT_SECURE_NO_WARNINGS"_def;
 
-        lib += fn;
+        // add files
+        for (auto &fn : files)
+            lib += fn;
+
+        //
         write_pch(b);
         PrecompiledHeader pch;
         pch.header = getDriverIncludeDir(b, lib) / getMainPchFilename();
@@ -1228,58 +1232,11 @@ private:
         pch.force_include_pch_to_source = true;
         lib.addPrecompiledHeader(pch);
 
-        auto [headers, udeps] = getFileDependencies(b.swctx, fn);
-        for (auto &h : headers)
-        {
-            // TODO: refactor this and same cases below
-            if (auto sf = lib[fn].template as<NativeSourceFile*>())
-            {
-                if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
-                {
-                    c->ForcedIncludeFiles().push_back(h);
-                }
-                else if (auto c = sf->compiler->template as<ClangClCompiler*>())
-                {
-                    c->ForcedIncludeFiles().push_back(h);
-                }
-                else if (auto c = sf->compiler->template as<ClangCompiler*>())
-                {
-                    c->ForcedIncludeFiles().push_back(h);
-                }
-                else if (auto c = sf->compiler->template as<GNUCompiler*>())
-                {
-                    c->ForcedIncludeFiles().push_back(h);
-                }
-            }
-        }
+        return lib;
+    }
 
-        if (auto sf = lib[fn].template as<NativeSourceFile*>())
-        {
-            if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
-            {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
-
-                // deprecated warning
-                c->Warnings().TreatAsError.push_back(4996);
-            }
-            else if (auto c = sf->compiler->template as<ClangClCompiler*>())
-            {
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
-            }
-            else if (auto c = sf->compiler->template as<ClangCompiler*>())
-            {
-                //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
-            }
-            else if (auto c = sf->compiler->template as<GNUCompiler*>())
-            {
-                //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
-                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
-            }
-        }
-
+    void commonActions2(SharedLibraryTarget &lib)
+    {
         if (lib.getSettings().TargetOS.is(OSType::Windows))
         {
             lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
@@ -1299,7 +1256,7 @@ private:
             lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
         }
 
-        if (lib.getSettings().TargetOS.is(OSType::Windows))
+        if (b.settings[0].TargetOS.is(OSType::Windows))
             lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
 
         if (auto L = lib.Linker->template as<VisualStudioLinker*>())
@@ -1311,28 +1268,209 @@ private:
             L->Force = vs::ForceType::Multiple;
             L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
             L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
-                                                // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
-                                                //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
+                                              // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
+                                              //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
         }
-
-        for (auto &d : udeps)
-            lib += std::make_shared<Dependency>(d);
 
         auto i = b.getChildren().find(lib.getPackage());
         if (i == b.getChildren().end())
             throw std::logic_error("config target not found");
         b.TargetsToBuild[i->first] = i->second;
 
-        return lib.getOutputFile();
+        out = lib.getOutputFile();
+    }
+
+    // many input files into one dll
+    void many2one(const std::unordered_set<LocalPackage> &pkgs)
+    {
+        // make parallel?
+        auto get_package_config = [](const auto &pkg) -> path
+        {
+            if (pkg.getData().group_number)
+            {
+                auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
+                if (!d)
+                    throw SW_RUNTIME_ERROR("cannot find config");
+                return *d;
+            }
+            auto p = pkg.getGroupLeader();
+            if (auto d = findConfig(p.getDirSrc2(), Build::getAvailableFrontendConfigFilenames()))
+                return *d;
+            auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
+            if (!d)
+                throw SW_RUNTIME_ERROR("cannot find config");
+            fs::create_directories(p.getDirSrc2());
+            fs::copy_file(*d, p.getDirSrc2() / d->filename());
+            return p.getDirSrc2() / d->filename();
+        };
+
+        Files files;
+        std::unordered_map<path, LocalPackage> output_names;
+        for (auto &pkg : pkgs)
+        {
+            auto p = get_package_config(pkg);
+            files.insert(p);
+            output_names.emplace(p, pkg);
+        }
+
+        auto &lib = commonActions(files);
+
+        // make fancy names
+        for (auto &[fn, pkg] : output_names)
+        {
+            lib[fn].fancy_name = "[" + output_names.find(fn)->second.toString() + "]/[config]";
+            // configs depend on pch, and pch depends on getCurrentModuleId(), so we add name to the file
+            // to make sure we have different config .objs for different pchs
+            lib[fn].as<NativeSourceFile>().setOutputFile(lib, fn.u8string() + "." + getCurrentModuleId(), lib.getObjectDir(pkg) / "self");
+            if (gVerbose)
+                lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
+        }
+
+        // file deps
+        auto gnu_setup = [this, &lib](auto *c, const auto &headers, const path &fn, LocalPackage &pkg)
+        {
+            // we use pch, but cannot add more defs on CL
+            // so we create a file with them
+            auto gn = pkg.getData().group_number;
+            auto hash = gn2suffix(gn);
+            path h;
+            // cannot create aux dir on windows; auxl = auxiliary
+            if (is_under_root(fn, b.swctx.getLocalStorage().storage_dir_pkg))
+                h = fn.parent_path().parent_path() / "auxl" / ("defs" + hash + ".h");
+            else
+                h = fn.parent_path() / SW_BINARY_DIR / "auxl" / ("defs" + hash + ".h");
+            primitives::CppEmitter ctx;
+
+            ctx.addLine("#define configure configure" + hash);
+            ctx.addLine("#define build build" + hash);
+            ctx.addLine("#define check check" + hash);
+            ctx.addLine("#define sw_get_module_abi_version sw_get_module_abi_version" + hash);
+
+            write_file_if_different(h, ctx.getText());
+
+            c->ForcedIncludeFiles().push_back(h);
+            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
+
+            for (auto &h : headers)
+                c->ForcedIncludeFiles().push_back(h);
+            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+        };
+
+        for (auto &[fn, pkg] : output_names)
+        {
+            auto [headers, udeps] = getFileDependencies(b.swctx, fn);
+            if (auto sf = lib[fn].template as<NativeSourceFile*>())
+            {
+                if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
+                {
+                    gnu_setup(c, headers, fn, pkg);
+                }
+                else if (auto c = sf->compiler->template as<ClangClCompiler*>())
+                {
+                    gnu_setup(c, headers, fn, pkg);
+                }
+                else if (auto c = sf->compiler->template as<ClangCompiler*>())
+                {
+                    gnu_setup(c, headers, fn, pkg);
+                }
+                else if (auto c = sf->compiler->template as<GNUCompiler*>())
+                {
+                    gnu_setup(c, headers, fn, pkg);
+                }
+            }
+            for (auto &d : udeps)
+                lib += std::make_shared<Dependency>(d);
+        }
+
+        commonActions2(lib);
+    }
+
+    // many input files to many dlls
+    void many2many(const Files &files)
+    {
+        for (auto &fn : files)
+        {
+            one2one(fn);
+            r[fn] = out;
+        }
+    }
+
+    // one input file to one dll
+    void one2one(const path &fn)
+    {
+        auto &lib = commonActions({ fn });
+
+        // turn on later again
+        //if (lib.getSettings().TargetOS.is(OSType::Windows))
+            //lib += "_CRT_SECURE_NO_WARNINGS"_def;
+
+        // file deps
+        {
+            auto [headers, udeps] = getFileDependencies(b.swctx, fn);
+            for (auto &h : headers)
+            {
+                // TODO: refactor this and same cases below
+                if (auto sf = lib[fn].template as<NativeSourceFile *>())
+                {
+                    if (auto c = sf->compiler->template as<VisualStudioCompiler *>())
+                    {
+                        c->ForcedIncludeFiles().push_back(h);
+                    }
+                    else if (auto c = sf->compiler->template as<ClangClCompiler *>())
+                    {
+                        c->ForcedIncludeFiles().push_back(h);
+                    }
+                    else if (auto c = sf->compiler->template as<ClangCompiler *>())
+                    {
+                        c->ForcedIncludeFiles().push_back(h);
+                    }
+                    else if (auto c = sf->compiler->template as<GNUCompiler *>())
+                    {
+                        c->ForcedIncludeFiles().push_back(h);
+                    }
+                }
+            }
+            for (auto &d : udeps)
+                lib += std::make_shared<Dependency>(d);
+        }
+
+        if (auto sf = lib[fn].template as<NativeSourceFile*>())
+        {
+            if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
+            {
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+
+                // deprecated warning
+                // activate later
+                // this causes cl warning (PCH is built without it)
+                // we must build two PCHs? for storage pks and local pkgs
+                //c->Warnings().TreatAsError.push_back(4996);
+            }
+            else if (auto c = sf->compiler->template as<ClangClCompiler*>())
+            {
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            }
+            else if (auto c = sf->compiler->template as<ClangCompiler*>())
+            {
+                //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            }
+            else if (auto c = sf->compiler->template as<GNUCompiler*>())
+            {
+                //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
+                c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            }
+        }
+
+        commonActions2(lib);
     }
 };
 
-FilesMap Build::build_configs_separate(const Files &files)
+template <class T>
+std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
 {
-    FilesMap r;
-    if (files.empty())
-        return r;
-
     addFirstConfig();
 
     settings[0].Native.LibrariesType = LibraryType::Static;
@@ -1341,209 +1479,26 @@ FilesMap Build::build_configs_separate(const Files &files)
 
     detectCompilers();
 
-    auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, r, files);
+    auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, objs);
     ep->loadPackages(settings[0].getTargetSettings());
 
-    if (!do_not_rebuild_config)
-    {
-        //Solution::execute();
-        execute();
-    }
+    execute();
 
-    return r;
+    return ep;
+}
+
+FilesMap Build::build_configs_separate(const Files &files)
+{
+    if (files.empty())
+        return {};
+    return build_configs1(files)->r;
 }
 
 path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
 {
     if (pkgs.empty())
         return {};
-
-    bool init = false;
-    if (settings.empty())
-    {
-        addFirstConfig();
-
-        settings[0].Native.LibrariesType = LibraryType::Static;
-        if (debug_configs)
-            settings[0].Native.ConfigurationType = ConfigurationType::Debug;
-
-        detectCompilers();
-
-        init = true;
-    }
-
-    auto &solution = *this;
-
-    // make parallel?
-    auto get_package_config = [](const auto &pkg) -> path
-    {
-        if (pkg.getData().group_number)
-        {
-            auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
-            if (!d)
-                throw SW_RUNTIME_ERROR("cannot find config");
-            return *d;
-        }
-        auto p = pkg.getGroupLeader();
-        if (auto d = findConfig(p.getDirSrc2(), Build::getAvailableFrontendConfigFilenames()))
-            return *d;
-        auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
-        if (!d)
-            throw SW_RUNTIME_ERROR("cannot find config");
-        fs::create_directories(p.getDirSrc2());
-        fs::copy_file(*d, p.getDirSrc2() / d->filename());
-        return p.getDirSrc2() / d->filename();
-    };
-
-    Files files;
-    std::unordered_map<path, LocalPackage> output_names;
-    for (auto &pkg : pkgs)
-    {
-        auto p = get_package_config(pkg);
-        files.insert(p);
-        output_names.emplace(p, pkg);
-    }
-
-    auto &lib = createTarget(files);
-
-    SCOPE_EXIT
-    {
-        solution.getChildren().erase(lib.getPackage());
-    };
-
-    // must check is changed?
-    if (do_not_rebuild_config && fs::exists(lib.getOutputFile()))
-        return lib.getOutputFile();
-
-    do_not_rebuild_config = false;
-
-    if (init)
-        build_self();
-    addDeps(solution, lib);
-
-    addImportLibrary(swctx, lib);
-    lib.AutoDetectOptions = false;
-    lib.CPPVersion = CPPLanguageStandard::CPP17;
-
-    // separate loop
-    for (auto &[fn, pkg] : output_names)
-    {
-        lib += fn;
-        lib[fn].fancy_name = "[" + output_names.find(fn)->second.toString() + "]/[config]";
-        // configs depend on pch, and pch depends on getCurrentModuleId(), so we add name to the file
-        // to make sure we have different config .objs for different pchs
-        lib[fn].as<NativeSourceFile>().setOutputFile(lib, fn.u8string() + "." + getCurrentModuleId(), lib.getObjectDir(pkg) / "self");
-        if (gVerbose)
-            lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
-    }
-
-    //
-    write_pch(solution);
-    PrecompiledHeader pch;
-    pch.header = getDriverIncludeDir(solution, lib) / getMainPchFilename();
-    pch.source = getImportPchFile(swctx);
-    pch.force_include_pch = true;
-    pch.force_include_pch_to_source = true;
-    lib.addPrecompiledHeader(pch);
-
-    auto gnu_setup = [this, &solution, &lib](auto *c, const auto &headers, const path &fn, LocalPackage &pkg)
-    {
-        // we use pch, but cannot add more defs on CL
-        // so we create a file with them
-        auto gn = pkg.getData().group_number;
-        auto hash = gn2suffix(gn);
-        path h;
-        // cannot create aux dir on windows; auxl = auxiliary
-        if (is_under_root(fn, swctx.getLocalStorage().storage_dir_pkg))
-            h = fn.parent_path().parent_path() / "auxl" / ("defs" + hash + ".h");
-        else
-            h = fn.parent_path() / SW_BINARY_DIR / "auxl" / ("defs" + hash + ".h");
-        primitives::CppEmitter ctx;
-
-        ctx.addLine("#define configure configure" + hash);
-        ctx.addLine("#define build build" + hash);
-        ctx.addLine("#define check check" + hash);
-        ctx.addLine("#define sw_get_module_abi_version sw_get_module_abi_version" + hash);
-
-        write_file_if_different(h, ctx.getText());
-
-        c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution, lib) / getSw1Header());
-
-        for (auto &h : headers)
-            c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution, lib) / getSwCheckAbiVersionHeader());
-    };
-
-    for (auto &[fn, pkg] : output_names)
-    {
-        auto [headers, udeps] = getFileDependencies(swctx, fn);
-        if (auto sf = lib[fn].template as<NativeSourceFile*>())
-        {
-            if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
-            {
-                gnu_setup(c, headers, fn, pkg);
-            }
-            else if (auto c = sf->compiler->template as<ClangClCompiler*>())
-            {
-                gnu_setup(c, headers, fn, pkg);
-            }
-            else if (auto c = sf->compiler->template as<ClangCompiler*>())
-            {
-                gnu_setup(c, headers, fn, pkg);
-            }
-            else if (auto c = sf->compiler->template as<GNUCompiler*>())
-            {
-                gnu_setup(c, headers, fn, pkg);
-            }
-        }
-        for (auto &d : udeps)
-            lib += std::make_shared<Dependency>(d);
-    }
-
-    if (settings[0].TargetOS.is(OSType::Windows))
-    {
-        lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
-        // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "__declspec(dllexport)";
-    }
-    else
-    {
-        lib.Definitions["SW_SUPPORT_API="];
-        lib.Definitions["SW_MANAGER_API="];
-        lib.Definitions["SW_BUILDER_API="];
-        lib.Definitions["SW_DRIVER_CPP_API="];
-        // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
-    }
-
-    if (settings[0].TargetOS.is(OSType::Windows))
-        lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
-
-    if (auto L = lib.Linker->template as<VisualStudioLinker*>())
-    {
-        L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
-        //#ifdef CPPAN_DEBUG
-        L->GenerateDebugInformation = vs::link::Debug::Full;
-        //#endif
-        L->Force = vs::ForceType::Multiple;
-        L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
-        L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
-        // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
-        //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
-    }
-
-    auto i = solution.getChildren().find(lib.getPackage());
-    if (i == solution.getChildren().end())
-        throw std::logic_error("config target not found");
-    solution.TargetsToBuild[i->first] = i->second;
-
-    execute();
-
-    return lib.getOutputFile();
+    return build_configs1(pkgs)->out;
 }
 
 // can be used in configs to load subdir configs
@@ -1593,15 +1548,7 @@ path Build::build(const path &fn)
         b.is_config_build = true;
         b.use_separate_target_map = true;
         auto r = b.build_configs_separate({ fn });
-        auto dll = r.begin()->second;
-        if (do_not_rebuild_config &&
-            (File(fn, swctx.getServiceFileStorage()).isChanged() || File(dll, swctx.getServiceFileStorage()).isChanged()))
-        {
-            remove_ide_explans = true;
-            do_not_rebuild_config = false;
-            return build(fn);
-        }
-        return dll;
+        return r.begin()->second;
     }
     case FrontendType::Cppan:
         // no need to build
@@ -1619,6 +1566,65 @@ void Build::setupSolutionName(const path &file_or_dir)
         ide_solution_name = fs::canonical(file_or_dir).parent_path().filename().u8string();
     else
         ide_solution_name = file_or_dir.stem().u8string();
+}
+
+void Build::load_packages(const PackageIdSet &pkgsids)
+{
+    std::unordered_set<LocalPackage> in_pkgs;
+    for (auto &p : pkgsids)
+        in_pkgs.emplace(swctx.getLocalStorage(), p);
+
+    // make pkgs unique
+    std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
+    for (auto &p : in_pkgs)
+        cfgs2.emplace(p.getData().group_number, p);
+
+    std::unordered_set<LocalPackage> pkgs;
+    for (auto &[gn, p] : cfgs2)
+        pkgs.insert(p);
+
+    auto dll = ::sw::build_configs(swctx, driver, pkgs);
+
+    for (auto &p : in_pkgs)
+    {
+        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this,
+            Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
+        ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
+        ep->module_data.current_gn = p.getData().group_number;
+        ep->module_data.current_module = p.toString();
+        ep->module_data.known_targets = pkgsids;
+        getChildren()[p].setEntryPoint(std::move(ep));
+    }
+
+    /*auto get_package_config = [](const auto &pkg) -> path
+    {
+        if (pkg.getData().group_number)
+        {
+            auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
+            if (!d)
+                throw SW_RUNTIME_ERROR("cannot find config");
+            return *d;
+        }
+        auto p = pkg.getGroupLeader();
+        if (auto d = findConfig(p.getDirSrc2(), Build::getAvailableFrontendConfigFilenames()))
+            return *d;
+        auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
+        if (!d)
+            throw SW_RUNTIME_ERROR("cannot find config");
+        fs::create_directories(p.getDirSrc2());
+        fs::copy_file(*d, p.getDirSrc2() / d->filename());
+        return p.getDirSrc2() / d->filename();
+    };
+
+    Files files;
+    std::unordered_map<path, LocalPackage> output_names;
+    for (auto &pkg : pkgs)
+    {
+        auto p = get_package_config(pkg);
+        files.insert(p);
+        output_names.emplace(p, pkg);
+    }
+    b.build_configs_separate(files);*/
 }
 
 void Build::load_spec_file(const path &fn)

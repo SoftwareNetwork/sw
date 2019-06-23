@@ -49,7 +49,6 @@ struct ITarget : ICastable
     virtual std::vector<IDependency *> getDependencies() const = 0;
 
     // get output config
-    // get settings()?
 
     /// returns true if target is not fully prepared yet
     virtual bool prepare() = 0;
@@ -57,7 +56,16 @@ struct ITarget : ICastable
     ///
     virtual Commands getCommands() const = 0;
 
+    // get settings()?
+
+    /*
+    virtual
+    map<string key, arguments> get public settings()?
+    get interface settings?
+    */
+
     // compare using settings
+    // remove?
     virtual bool operator==(const TargetSettings &) const = 0;
     virtual bool operator<(const TargetSettings &) const = 0;
 };

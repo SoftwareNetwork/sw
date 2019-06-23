@@ -265,35 +265,16 @@ bool FileRecord::isChanged()
 
 bool FileRecord::isChangedWithDeps()
 {
-    // refresh all first
+    // refresh all first, also find first changed
+    bool deps_changed = false;
     for (auto &[f, d] : implicit_dependencies)
-        d->isChanged();
+        deps_changed |= d->isChanged();
 
     // explain inside
-    if (isChanged())
+    if (isChanged() || deps_changed)
         return true;
 
-    FileRecord *cd = nullptr;
-    bool c = std::any_of(implicit_dependencies.begin(), implicit_dependencies.end(),
-        [&cd](const auto &p)
-    {
-        auto r = p.second->isChanged();
-        if (r)
-            cd = p.second;
-        return r;
-    });
-    if (c)
-    {
-        return true;
-    }
-
-    auto t = getMaxTime();
-    if (t > data->last_write_time)
-    {
-        return true;
-    }
-
-    return false;
+    return getMaxTime() > data->last_write_time;
 }
 
 std::optional<String> FileRecord::isChanged(const fs::file_time_type &in, bool throw_on_missing)

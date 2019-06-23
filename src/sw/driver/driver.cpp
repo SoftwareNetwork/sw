@@ -75,14 +75,14 @@ bool Driver::canLoad(const Input &i) const
 
 void Driver::load(const std::set<Input> &inputs)
 {
-    std::unordered_set<LocalPackage> pkgs;
+    PackageIdSet pkgsids;
     for (auto &i : inputs)
     {
         switch (i.getType())
         {
         case InputType::InstalledPackage:
         {
-            pkgs.insert(swctx.resolve(i.getPackageId()));
+            pkgsids.insert(i.getPackageId());
             break;
         }
         case InputType::DirectorySpecificationFile:
@@ -96,46 +96,8 @@ void Driver::load(const std::set<Input> &inputs)
         }
     }
 
-    if (!pkgs.empty())
-    {
-        Build b(swctx, *this); // cache?
-        //b.execute_jobs = config_jobs;
-        b.file_storage_local = false;
-        b.is_config_build = true;
-        b.use_separate_target_map = true;
-
-        b.build_configs(pkgs);
-
-        /*auto get_package_config = [](const auto &pkg) -> path
-        {
-            if (pkg.getData().group_number)
-            {
-                auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
-                if (!d)
-                    throw SW_RUNTIME_ERROR("cannot find config");
-                return *d;
-            }
-            auto p = pkg.getGroupLeader();
-            if (auto d = findConfig(p.getDirSrc2(), Build::getAvailableFrontendConfigFilenames()))
-                return *d;
-            auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
-            if (!d)
-                throw SW_RUNTIME_ERROR("cannot find config");
-            fs::create_directories(p.getDirSrc2());
-            fs::copy_file(*d, p.getDirSrc2() / d->filename());
-            return p.getDirSrc2() / d->filename();
-        };
-
-        Files files;
-        std::unordered_map<path, LocalPackage> output_names;
-        for (auto &pkg : pkgs)
-        {
-            auto p = get_package_config(pkg);
-            files.insert(p);
-            output_names.emplace(p, pkg);
-        }
-        b.build_configs_separate(files);*/
-    }
+    if (!pkgsids.empty())
+        build->load_packages(pkgsids);
 }
 
 void Driver::execute()

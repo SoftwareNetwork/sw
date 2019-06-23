@@ -66,6 +66,7 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories
     bool DryRun = false;
     PackagePath NamePrefix;
     const Build *build = nullptr;
+    const ProjectTarget *current_project = nullptr;
 
     path getServiceDir() const;
 };
@@ -343,7 +344,7 @@ public:
     //
     virtual TargetType getType() const { return TargetType::Unspecified; }
     String getTypeName() const { return toString(getType()); }
-    bool hasSameParent(const ITarget &t) const;
+    bool hasSameProject(const ITarget &t) const;
 
 protected:
     bool real = true;
@@ -390,6 +391,7 @@ struct SW_DRIVER_CPP_API ProjectTarget : ProjDirBase
     using ProjDirBase::ProjDirBase;
     virtual ~ProjectTarget() = default;
 
+    bool init() override;
     TargetType getType() const override { return TargetType::Project; }
 };
 

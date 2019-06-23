@@ -89,8 +89,8 @@ void SwContext::resolve()
     // load
     while (1)
     {
-        bool again = false;
-        auto chld = getTargets(); // copy, loop may change children
+        std::map<TargetSettings, TargetData *> load;
+        auto &chld = getTargets();
         for (const auto &[pkg, tgts] : chld)
         {
             for (const auto &tgt : tgts)
@@ -110,20 +110,24 @@ void SwContext::resolve()
                             d->setTarget(**k);
                             continue;
                         }
-                        i->second.loadPackages(d->getSettings());
-                        k = i->second.find(d->getSettings());
-                        if (k == i->second.end())
-                        {
-                            throw SW_RUNTIME_ERROR(pkg.toString() + ": cannot load package " + d->getUnresolvedPackage().toString() +
-                                " with current settings: " + d->getSettings().toString());
-                        }
-                        again = true;
+                        load[d->getSettings()] = &i->second;
                     }
                 }
             }
         }
-        if (!again)
+        if (load.empty())
             break;
+        for (auto &[s, d] : load)
+        {
+            d->loadPackages(s);
+            auto k = d->find(s);
+            if (k == d->end())
+            {
+                throw SW_RUNTIME_ERROR("cannot load package with current settings:\n" + s.toString());
+                //throw SW_RUNTIME_ERROR(pkg.toString() + ": cannot load package " + d->getUnresolvedPackage().toString() +
+                    //" with current settings\n" + d->getSettings().toString());
+            }
+        }
     }
 }
 

@@ -1796,6 +1796,8 @@ void NativeCompiledTarget::merge1()
 
 bool NativeCompiledTarget::prepare()
 {
+    if (skip || DryRun)
+        return false;
     if (getSolution().skipTarget(Scope))
         return false;
 
@@ -1902,7 +1904,7 @@ bool NativeCompiledTarget::prepare()
         {
             auto t = getSolution().getChildren().find(d.dep->getPackage(), d.dep->settings);
             if (!t)
-                throw SW_RUNTIME_ERROR("No such target");
+                throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
             d.dep->setTarget(*t);
         }
     }
@@ -1955,7 +1957,7 @@ bool NativeCompiledTarget::prepare()
                     if (Inheritance == InheritanceType::Private)
                         continue;
 
-                    if (Inheritance == InheritanceType::Protected && !hasSameParent(d2->getTarget()))
+                    if (Inheritance == InheritanceType::Protected && !hasSameProject(d2->getTarget()))
                         continue;
 
                     auto copy = std::make_shared<Dependency>(*d2);

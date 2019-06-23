@@ -116,6 +116,8 @@ struct ModuleSwappableData
     std::vector<Target*> added_targets;
 };
 
+struct PrepareConfigEntryPoint;
+
 // this driver ep
 struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetLoader,
     std::enable_shared_from_this<NativeTargetEntryPoint>
@@ -226,7 +228,6 @@ public:
     PackageDescriptionMap getPackages() const;
     BuildSettings createSettings() const;
     void addSettings(const BuildSettings &);
-    path build_configs(const std::unordered_set<LocalPackage> &pkgs);
     const ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;
     const String &getCurrentModule() const;
@@ -288,6 +289,7 @@ public:
 
     void build_self();
     FilesMap build_configs_separate(const Files &files);
+    path build_configs(const std::unordered_set<LocalPackage> &pkgs);
 
 private:
     void resolvePass(const Target &t, const DependenciesType &deps) const;
@@ -296,6 +298,9 @@ private:
     UnresolvedDependenciesType gatherUnresolvedDependencies(int n_runs = 0);
     void build_and_resolve(int n_runs = 0);
     void addTest(Test &cb, const String &name);
+
+    template <class T>
+    std::shared_ptr<PrepareConfigEntryPoint> build_configs1(const T &objs);
 
 public:
 
@@ -343,6 +348,7 @@ public:
 
     path build(const path &fn);
     void load(const path &fn, bool configless = false);
+    void load_packages(const PackageIdSet &pkgs);
     void load_packages(const StringSet &pkgs);
     void build_packages(const StringSet &pkgs);
     void run_package(const String &pkg);

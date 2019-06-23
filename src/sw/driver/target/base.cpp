@@ -112,11 +112,15 @@ TargetBase::~TargetBase()
 {
 }
 
-bool Target::hasSameParent(const ITarget &t) const
+bool Target::hasSameProject(const ITarget &t) const
 {
     if (this == &t)
         return true;
-    return getPackage().ppath.hasSameParent(t.getPackage().ppath);
+    auto t2 = t.as<const Target*>();
+    if (!t2)
+        return false;
+    return current_project && current_project == t2->current_project;
+    //return getPackage().ppath.hasSameParent(t.getPackage().ppath);
 }
 
 PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
@@ -230,7 +234,7 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
     }
 
     // we do not activate targets that are not selected for current builds
-    if (!isLocal() && !getSolution().isKnownTarget(t->getPackage()))
+    if (/*!isLocal() && */!getSolution().isKnownTarget(t->getPackage()))
     {
         t->DryRun = true;
         t->skip = true;
@@ -837,6 +841,12 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
 {
     addSourceDependency(dep);
     return getSolution().swctx.resolve(dep->getPackage()).getDirSrc2() / fn;
+}
+
+bool ProjectTarget::init()
+{
+    current_project = this;
+    return Target::init();
 }
 
 }
