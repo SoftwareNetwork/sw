@@ -4,11 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "build.h"
-#include "commands.h"
-#include "inserts.h"
+#include "command/commands.h"
 
-//#include <resolver.h>
 #include <sw/builder/file.h>
 #include <sw/builder/jumppad.h>
 #include <sw/driver/command.h>
@@ -129,11 +126,9 @@ extern ::cl::opt<bool> useFileMonitor;
 static ::cl::opt<path> storage_dir_override("storage-dir");
 
 #define SUBCOMMAND(n, d) ::cl::SubCommand subcommand_##n(#n, d);
-#include "commands.inl"
+#include "command/commands.inl"
 #undef SUBCOMMAND
 
-static ::cl::list<String> build_arg_test(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::sub(subcommand_test));
-static ::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
 extern path gIdeFastPath;
 static ::cl::opt<path, true> build_ide_fast_path("ide-fast-path", ::cl::sub(subcommand_build), ::cl::Hidden, ::cl::location(gIdeFastPath));
 extern path gIdeCopyToDir;
@@ -150,6 +145,9 @@ static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value
 static ::cl::opt<bool> curl_verbose("curl-verbose");
 static ::cl::opt<bool> ignore_ssl_checks("ignore-ssl-checks");
 
+extern ::cl::list<String> build_arg;
+extern ::cl::list<String> build_arg_test;
+
 std::unique_ptr<sw::SwContext> createSwContext()
 {
     // load proxy settings early
@@ -161,8 +159,6 @@ std::unique_ptr<sw::SwContext> createSwContext()
     swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>(*swctx));
     return swctx;
 }
-
-#include "sig.h"
 
 int setup_main(const Strings &args)
 {
@@ -209,14 +205,14 @@ int setup_main(const Strings &args)
     if (!internal_sign_file.empty())
     {
         SW_UNIMPLEMENTED;
-        ds_sign_file(internal_sign_file[0], internal_sign_file[1]);
+        //ds_sign_file(internal_sign_file[0], internal_sign_file[1]);
         return 0;
     }
 
     if (!internal_verify_file.empty())
     {
         SW_UNIMPLEMENTED;
-        ds_verify_file(internal_verify_file[0], internal_verify_file[1], internal_verify_file[2]);
+        //ds_verify_file(internal_verify_file[0], internal_verify_file[1], internal_verify_file[2]);
         return 0;
     }
 
@@ -362,19 +358,6 @@ int main(int argc, char **argv)
 //
 //static ::cl::list<path> build_arg0(::cl::Positional, ::cl::desc("Files or directoris to build"));
 
-// build commands
-// must be opt<String>!
-static ::cl::opt<String> build_arg_generate(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_generate));
-static ::cl::opt<String> build_arg_update(::cl::Positional, ::cl::desc("Update lock"), ::cl::init("."), ::cl::sub(subcommand_update));
-static ::cl::opt<String> list_arg(::cl::Positional, ::cl::desc("Package regex to list"), ::cl::init("."), ::cl::sub(subcommand_list));
-static ::cl::opt<String> install_arg(::cl::Positional, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
-static ::cl::list<String> install_args(::cl::ConsumeAfter, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
-
-// upload
-static ::cl::opt<String> upload_remote(::cl::Positional, ::cl::desc("Remote name"), ::cl::sub(subcommand_upload));
-static ::cl::opt<String> upload_prefix(::cl::Positional, ::cl::desc("Prefix path"), ::cl::sub(subcommand_upload), ::cl::Required);
-static ::cl::opt<bool> build_before_upload("build", ::cl::desc("Build before upload"), ::cl::sub(subcommand_upload));
-
 // ide commands
 static ::cl::opt<String> target_build("target", ::cl::desc("Target to build")/*, ::cl::sub(subcommand_ide)*/);
 static ::cl::opt<String> ide_rebuild("rebuild", ::cl::desc("Rebuild target"), ::cl::sub(subcommand_ide));
@@ -463,7 +446,7 @@ int sw_main(const Strings &args)
 
     if (0);
 #define SUBCOMMAND(n, d) else if (subcommand_##n) { cli_##n(); return 0; }
-#include "commands.inl"
+#include "command/commands.inl"
 #undef SUBCOMMAND
 
     LOG_WARN(logger, "No command was issued");
@@ -495,422 +478,6 @@ void setup_log(const std::string &log_level, bool simple)
     // first trace message
     LOG_TRACE(logger, "----------------------------------------");
     LOG_TRACE(logger, "Starting sw...");
-}
-
-static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
-static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
-
-static ::cl::opt<bool> build_fetch("fetch", ::cl::desc("Fetch sources, then build"), ::cl::sub(subcommand_build));
-static ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
-
-SUBCOMMAND_DECL(build)
-{
-    auto swctx = createSwContext();
-    cli_build(*swctx);
-}
-
-SUBCOMMAND_DECL2(build)
-{
-    if (build_fetch)
-    {
-        build_after_fetch = true;
-        return cli_fetch(swctx);
-    }
-
-    // defaults or only one of build_arg and -S specified
-    //  -S == build_arg
-    //  -B == fs::current_path()
-
-    // if -S and build_arg specified:
-    //  source dir is taken as -S, config dir is taken as build_arg
-
-    // if -B specified, it is used as is
-
-    swctx.build((Strings&)build_arg);
-}
-
-static ::cl::list<String> remove_arg(::cl::Positional, ::cl::desc("package to remove"), ::cl::sub(subcommand_remove));
-
-SUBCOMMAND_DECL(remove)
-{
-    auto swctx = createSwContext();
-    for (auto &a : remove_arg)
-    {
-        sw::LocalPackage p(swctx->getLocalStorage(), a);
-        //sdb.removeInstalledPackage(p); // TODO: remove from db
-        fs::remove_all(p.getDir());
-    }
-}
-
-static ::cl::opt<String> open_arg(::cl::Positional, ::cl::desc("package to open"), ::cl::sub(subcommand_open));
-
-SUBCOMMAND_DECL(open)
-{
-    auto swctx = createSwContext();
-    auto &sdb = swctx->getLocalStorage();
-    sw::LocalPackage p(swctx->getLocalStorage(), open_arg);
-
-#ifdef _WIN32
-    if (sdb.isPackageInstalled(p))
-    {
-        LOG_INFO(logger, "package: " + p.toString());
-        LOG_INFO(logger, "package dir: " + p.getDir().u8string());
-
-        auto pidl = ILCreateFromPath((p.getDirSrc() / "").wstring().c_str());
-        if (pidl)
-        {
-            CoInitialize(0);
-            // ShellExecute does not work here for some scenarios
-            auto r = SHOpenFolderAndSelectItems(pidl, 0, 0, 0);
-            if (FAILED(r))
-            {
-                LOG_INFO(logger, "Error in SHOpenFolderAndSelectItems");
-            }
-            ILFree(pidl);
-        }
-        else
-        {
-            LOG_INFO(logger, "Error in ILCreateFromPath");
-        }
-    }
-    else
-    {
-        LOG_INFO(logger, "Package '" + p.toString() + "' not installed");
-    }
-#endif
-}
-
-static ::cl::opt<String> create_type(::cl::Positional, ::cl::desc("<type>"), ::cl::sub(subcommand_create), ::cl::Required);
-static ::cl::opt<String> create_proj_name(::cl::Positional, ::cl::desc("<project name>"), ::cl::sub(subcommand_create));
-
-static ::cl::opt<String> create_template("template", ::cl::desc("Template project to create"), ::cl::sub(subcommand_create), ::cl::init("exe"));
-static ::cl::alias create_template2("t", ::cl::desc("Alias for -template"), ::cl::aliasopt(create_template));
-static ::cl::opt<String> create_language("language", ::cl::desc("Template project language to create"), ::cl::sub(subcommand_create), ::cl::init("cpp"));
-static ::cl::alias create_language2("l", ::cl::desc("Alias for -language"), ::cl::aliasopt(create_language));
-static ::cl::opt<bool> create_clear_dir("clear", ::cl::desc("Clear current directory"), ::cl::sub(subcommand_create));
-static ::cl::opt<bool> create_clear_dir_y("y", ::cl::desc("Answer yes"), ::cl::sub(subcommand_create));
-static ::cl::opt<bool> create_build("b", ::cl::desc("Build instead of generate"), ::cl::sub(subcommand_create));
-static ::cl::alias create_clear_dir2("c", ::cl::desc("Alias for -clear"), ::cl::aliasopt(create_clear_dir));
-static ::cl::opt<bool> create_overwrite_files("overwrite", ::cl::desc("Clear current directory"), ::cl::sub(subcommand_create));
-static ::cl::alias create_overwrite_files2("ow", ::cl::desc("Alias for -overwrite"), ::cl::aliasopt(create_overwrite_files));
-static ::cl::alias create_overwrite_files3("o", ::cl::desc("Alias for -overwrite"), ::cl::aliasopt(create_overwrite_files));
-
-SUBCOMMAND_DECL(create)
-{
-    auto swctx = createSwContext();
-    if (create_type == "project")
-    {
-        if (create_clear_dir)
-        {
-            String s;
-            if (!create_clear_dir_y)
-            {
-                std::cout << "Going to clear current directory. Are you sure? [Yes/No]\n";
-                std::cin >> s;
-            }
-            if (create_clear_dir_y || boost::iequals(s, "yes") || boost::iequals(s, "Y"))
-            {
-                for (auto &p : fs::directory_iterator("."))
-                    fs::remove_all(p);
-            }
-            else
-            {
-                if (fs::directory_iterator(".") != fs::directory_iterator())
-                    return;
-            }
-        }
-
-        if (!create_overwrite_files && fs::directory_iterator(".") != fs::directory_iterator())
-            throw SW_RUNTIME_ERROR("directory is not empty");
-
-        String name = fs::current_path().filename().u8string();
-        if (!create_proj_name.empty())
-            name = create_proj_name;
-
-        // TODO: add separate extended template with configure
-        // common sw.cpp
-        primitives::CppEmitter ctx;
-        ctx.beginFunction("void build(Solution &s)");
-        ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
-        ctx.addLine("// auto &p = s.addProject(\"myproject\");");
-        ctx.addLine("// p += Git(\"enter your url here\", \"enter tag here\", \"or branch here\");");
-        ctx.addLine();
-        ctx.addLine("auto &t = s.addTarget<Executable>(\"" + name + "\");");
-        ctx.addLine("t += cpp17;");
-
-        String s;
-        if (create_language == "cpp")
-        {
-            if (create_template == "sw")
-            {
-                s = R"(#include <primitives/sw/main.h>
-#include <primitives/sw/settings.h>
-#include <primitives/sw/cl.h>
-
-#include <iostream>
-
-int main(int argc, char *argv[])
-{
-    ::cl::ParseCommandLineOptions(argc, argv);
-
-    std::cout << "Hello, World!\n";
-    return 0;
-}
-)";
-            }
-            else
-            {
-                s = R"(#include <iostream>
-
-int main(int argc, char *argv[])
-{
-    std::cout << "Hello, World!\n";
-    return 0;
-}
-)";
-            }
-            write_file("src/main.cpp", s);
-
-            ctx.addLine("t += \"src/main.cpp\";");
-            if (create_template == "sw")
-                ctx.addLine("t += \"pub.egorpugin.primitives.sw.main-master\"_dep;");
-            ctx.endFunction();
-            write_file("sw.cpp", ctx.getText());
-
-            if (create_build)
-                cli_build(*swctx);
-            else
-                cli_generate(*swctx);
-        }
-        else if (create_language == "c")
-        {
-            s = R"(#include <stdio.h>
-
-int main(int argc, char *argv[])
-{
-    printf("Hello, World!\n");
-    return 0;
-}
-)";
-            write_file("src/main.c", s);
-
-            ctx.addLine("t += \"src/main.c\";");
-            ctx.endFunction();
-            write_file("sw.cpp", ctx.getText());
-
-            if (create_build)
-                cli_build(*swctx);
-            else
-                cli_generate(*swctx);
-        }
-        else
-            throw SW_RUNTIME_ERROR("unknown language");
-    }
-    else if (create_type == "config")
-    {
-        primitives::CppEmitter ctx;
-        ctx.beginFunction("void build(Solution &s)");
-        ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
-        ctx.addLine("// auto &p = s.addProject(\"myproject\", \"master\");");
-        ctx.addLine("// p += Git(\"https://github.com/account/project\");");
-        ctx.addLine();
-        ctx.addLine("auto &t = s.addTarget<Executable>(\"project\");");
-        ctx.addLine("t += cpp17;");
-        ctx.addLine("//t += \"src/main.cpp\";");
-        ctx.addLine("//t += \"pub.egorpugin.primitives.sw.main-master\"_dep;");
-        ctx.endFunction();
-        write_file("sw.cpp", ctx.getText());
-    }
-    else
-        throw SW_RUNTIME_ERROR("Unknown create type");
-}
-
-static ::cl::list<String> uri_args(::cl::Positional, ::cl::desc("sw uri arguments"), ::cl::sub(subcommand_uri));
-//static ::cl::opt<String> uri_sdir("sw:sdir", ::cl::desc("Open source dir in file browser"), ::cl::sub(subcommand_uri));
-
-SUBCOMMAND_DECL(uri)
-{
-    fs::current_path(temp_directory_path());
-
-    if (uri_args.empty())
-        return;
-    if (uri_args.size() == 1)
-        return;
-
-    try
-    {
-        auto swctx = createSwContext();
-        auto id = extractPackageIdFromString(uri_args[1]);
-        auto &sdb = swctx->getLocalStorage();
-        LocalPackage p(sdb, id);
-
-        if (uri_args[0] == "sw:sdir" || uri_args[0] == "sw:bdir")
-        {
-#ifdef _WIN32
-            if (sdb.isPackageInstalled(p))
-            {
-                auto pidl = uri_args[0] == "sw:sdir" ?
-                                    ILCreateFromPath(p.getDirSrc2().wstring().c_str()) :
-                                    ILCreateFromPath(p.getDirObj().wstring().c_str())
-                                    ;
-                if (pidl)
-                {
-                    CoInitialize(0);
-                    // ShellExecute does not work here for some scenarios
-                    auto r = SHOpenFolderAndSelectItems(pidl, 0, 0, 0);
-                    if (FAILED(r))
-                    {
-                        message_box(sw::getProgramName(), "Error in SHOpenFolderAndSelectItems");
-                    }
-                    ILFree(pidl);
-                }
-                else
-                {
-                    message_box(sw::getProgramName(), "Error in ILCreateFromPath");
-                }
-            }
-            else
-            {
-                message_box(sw::getProgramName(), "Package '" + p.toString() + "' not installed");
-            }
-#endif
-            return;
-        }
-
-        if (uri_args[0] == "sw:open_build_script")
-        {
-#ifdef _WIN32
-            if (sdb.isPackageInstalled(p))
-            {
-                auto f = (p.getDirSrc2() / "sw.cpp").wstring();
-
-                CoInitialize(0);
-                auto r = ShellExecute(0, L"open", f.c_str(), 0, 0, 0);
-                if (r <= (HINSTANCE)HINSTANCE_ERROR)
-                {
-                    message_box(sw::getProgramName(), "Error in ShellExecute");
-                }
-            }
-            else
-            {
-                message_box(sw::getProgramName(), "Package '" + p.toString() + "' not installed");
-            }
-#endif
-            return;
-        }
-
-        if (uri_args[0] == "sw:install")
-        {
-#ifdef _WIN32
-            if (!sdb.isPackageInstalled(p))
-            {
-                SetupConsole();
-                bUseSystemPause = true;
-                swctx->install(UnresolvedPackages{ UnresolvedPackage{p.ppath, p.version} });
-            }
-            else
-            {
-                message_box(sw::getProgramName(), "Package '" + p.toString() + "' is already installed");
-            }
-#endif
-            return;
-        }
-
-        if (uri_args[0] == "sw:remove")
-        {
-            SW_UNIMPLEMENTED;
-
-            //sdb.removeInstalledPackage(p); // TODO: remove from db
-            error_code ec;
-            fs::remove_all(p.getDir(), ec);
-            return;
-        }
-
-        if (uri_args[0] == "sw:build")
-        {
-#ifdef _WIN32
-            SetupConsole();
-            bUseSystemPause = true;
-#endif
-            auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
-            fs::create_directories(d);
-            ScopedCurrentPath scp(d, CurrentPathScope::All);
-            swctx->build({ p });
-            return;
-        }
-
-        if (uri_args[0] == "sw:run")
-        {
-#ifdef _WIN32
-            SetupConsole();
-            bUseSystemPause = true;
-#endif
-            auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
-            fs::create_directories(d);
-            ScopedCurrentPath scp(d, CurrentPathScope::All);
-            SW_UNIMPLEMENTED;
-            //sw::run(swctx, p);
-            return;
-        }
-
-        if (uri_args[0] == "sw:upload")
-        {
-            if (uri_args.size() != 4)
-                return;
-
-            auto rs = swctx->getRemoteStorages();
-            if (rs.empty())
-                throw SW_RUNTIME_ERROR("No remote storages found");
-
-            Package pkg(*rs.front(), uri_args[1]);
-            Version new_version(uri_args[2]);
-
-            String url = "https://raw.githubusercontent.com/SoftwareNetwork/specifications/master/";
-            url += normalize_path(pkg.getHashPath() / "sw.cpp");
-            auto fn = get_temp_filename("uploads") / "sw.cpp";
-            auto spec_data = download_file(url);
-            boost::replace_all(spec_data, pkg.version.toString(), new_version.toString());
-            write_file(fn, spec_data);
-
-            // before scp
-            SCOPE_EXIT
-            {
-                // free files
-                swctx->clearFileStorages();
-                fs::remove_all(fn.parent_path());
-            };
-
-            // run secure as below?
-            ScopedCurrentPath scp(fn.parent_path());
-            upload_prefix = pkg.ppath.slice(0, std::stoi(uri_args[3]));
-            cli_upload(*swctx);
-
-            /*primitives::Command c;
-            c.program = "sw";
-            c.working_directory = fn.parent_path();
-            c.args.push_back("upload");
-            c.args.push_back(pkg.ppath.slice(0, std::stoi(uri_args[3])));
-            c.out.inherit = true;
-            c.err.inherit = true;
-            //c.execute();*/
-
-            return;
-        }
-
-        throw SW_RUNTIME_ERROR("Unknown command: " + uri_args[0]);
-    }
-    catch (std::exception &e)
-    {
-#ifdef _WIN32
-        message_box(sw::getProgramName(), e.what());
-#endif
-    }
-    catch (...)
-    {
-#ifdef _WIN32
-        message_box(sw::getProgramName(), "Unknown exception");
-#endif
-    }
 }
 
 void override_package_perform(sw::SwContext &swctx)
@@ -994,301 +561,10 @@ SUBCOMMAND_DECL(configure)
     // generate execution plan
 }
 
-extern String gGenerator;
-::cl::opt<String, true> cl_generator("G", ::cl::desc("Generator"), ::cl::location(gGenerator), ::cl::sub(subcommand_generate));
-::cl::alias generator2("g", ::cl::desc("Alias for -G"), ::cl::aliasopt(cl_generator));
-extern bool gPrintDependencies;
-static ::cl::opt<bool, true> print_dependencies("print-dependencies", ::cl::location(gPrintDependencies), ::cl::sub(subcommand_generate));
-// ad = all deps?
-::cl::alias print_dependencies4("ad", ::cl::desc("Alias for -print-dependencies"), ::cl::aliasopt(print_dependencies));
-::cl::alias print_dependencies2("d", ::cl::desc("Alias for -print-dependencies"), ::cl::aliasopt(print_dependencies));
-::cl::alias print_dependencies3("deps", ::cl::desc("Alias for -print-dependencies"), ::cl::aliasopt(print_dependencies));
-extern bool gPrintOverriddenDependencies;
-static ::cl::opt<bool, true> print_overridden_dependencies("print-overridden-dependencies", ::cl::location(gPrintOverriddenDependencies), ::cl::sub(subcommand_generate));
-// o = od?
-::cl::alias print_overridden_dependencies4("o", ::cl::desc("Alias for -print-overridden-dependencies"), ::cl::aliasopt(print_overridden_dependencies));
-::cl::alias print_overridden_dependencies2("od", ::cl::desc("Alias for -print-overridden-dependencies"), ::cl::aliasopt(print_overridden_dependencies));
-::cl::alias print_overridden_dependencies3("odeps", ::cl::desc("Alias for -print-overridden-dependencies"), ::cl::aliasopt(print_overridden_dependencies));
-extern bool gOutputNoConfigSubdir;
-static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", ::cl::location(gOutputNoConfigSubdir), ::cl::sub(subcommand_generate));
-
-// generated solution dir instead of .sw/...
-//static ::cl::opt<String> generate_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
-
-SUBCOMMAND_DECL(generate)
-{
-    auto swctx = createSwContext();
-    cli_generate(*swctx);
-}
-
-SUBCOMMAND_DECL2(generate)
-{
-    if (gGenerator.empty())
-    {
-#ifdef _WIN32
-        gGenerator = "vs";
-#endif
-    }
-    ((Strings&)build_arg).clear();
-    build_arg.push_back(build_arg_generate.getValue());
-    cli_build(swctx);
-}
-
-static void registerCmakePackage(sw::SwContext &swctx)
-{
-#ifdef _WIN32
-    auto dir = swctx.getLocalStorage().storage_dir_etc / "sw" / "static";
-    // if we write into HKLM, we won't be able to access the pkg file in admins folder
-    winreg::RegKey icon(/*is_elevated() ? HKEY_LOCAL_MACHINE : */HKEY_CURRENT_USER, L"Software\\Kitware\\CMake\\Packages\\SW");
-    icon.SetStringValue(L"", dir.wstring().c_str());
-    write_file_if_different(dir / "SWConfig.cmake", sw_config_cmake);
-#else
-    auto cppan_cmake_dir = get_home_directory() / ".cmake" / "packages";
-    write_file_if_different(cppan_cmake_dir / "SW" / "1", cppan_cmake_dir.string());
-    write_file_if_different(cppan_cmake_dir / cppan_cmake_config_filename, cppan_cmake_config);
-#endif
-}
-
-SUBCOMMAND_DECL(setup)
-{
-    elevate();
-
-#ifdef _WIN32
-    auto prog = boost::dll::program_location().wstring();
-
-    // set common environment variable
-    //winreg::RegKey env(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment");
-    //env.SetStringValue(L"SW_TOOL", boost::dll::program_location().wstring());
-
-    // set up protocol handler
-    {
-        const std::wstring id = L"sw";
-
-        winreg::RegKey url(HKEY_CLASSES_ROOT, id);
-        url.SetStringValue(L"URL Protocol", L"");
-
-        winreg::RegKey icon(HKEY_CLASSES_ROOT, id + L"\\DefaultIcon");
-        icon.SetStringValue(L"", prog);
-
-        winreg::RegKey open(HKEY_CLASSES_ROOT, id + L"\\shell\\open\\command");
-        open.SetStringValue(L"", prog + L" uri %1");
-    }
-
-    // register .sw extension
-    {
-        const std::wstring id = L"sw.1";
-
-        winreg::RegKey ext(HKEY_CLASSES_ROOT, L".sw");
-        ext.SetStringValue(L"", id);
-
-        winreg::RegKey icon(HKEY_CLASSES_ROOT, id + L"\\DefaultIcon");
-        icon.SetStringValue(L"", prog);
-
-        winreg::RegKey p(HKEY_CLASSES_ROOT, id + L"\\shell\\open\\command");
-        p.SetStringValue(L"", prog + L" build %1");
-    }
-#endif
-
-    auto swctx = createSwContext();
-    registerCmakePackage(*swctx);
-}
-
-sw::Remote *find_remote(sw::Settings &s, const String &name)
-{
-    sw::Remote *current_remote = nullptr;
-    for (auto &r : s.remotes)
-    {
-        if (r.name == name)
-        {
-            current_remote = &r;
-            break;
-        }
-    }
-    if (!current_remote)
-        throw SW_RUNTIME_ERROR("Remote not found: " + name);
-    return current_remote;
-}
-
-static ::cl::opt<String> remote_subcommand(::cl::Positional, ::cl::desc("remote subcomand"), ::cl::sub(subcommand_remote), ::cl::Required);
-static ::cl::list<String> remote_rest(::cl::desc("other remote args"), ::cl::sub(subcommand_remote), ::cl::ConsumeAfter);
-
-SUBCOMMAND_DECL(remote)
-{
-    // subcommands: add, alter, rename, remove
-
-    // sw remote add origin url:port
-    // sw remote remove origin
-    // sw remote rename origin origin2
-    // sw remote alter origin add token TOKEN
-
-    if (remote_subcommand == "alter" || remote_subcommand == "change")
-    {
-        int i = 0;
-        if (remote_rest.size() > i + 1)
-        {
-            auto token = remote_rest[i];
-            auto &us = Settings::get_user_settings();
-            auto r = find_remote(us, remote_rest[i]);
-
-            i++;
-            if (remote_rest.size() > i + 1)
-            {
-                if (remote_rest[i] == "add")
-                {
-                    i++;
-                    if (remote_rest.size() > i + 1)
-                    {
-                        if (remote_rest[i] == "token")
-                        {
-                            i++;
-                            if (remote_rest.size() >= i + 2) // publisher + token
-                            {
-                                sw::Remote::Publisher p;
-                                p.name = remote_rest[i];
-                                p.token = remote_rest[i+1];
-                                r->publishers[p.name] = p;
-                                us.save(get_config_filename());
-                            }
-                            else
-                                throw SW_RUNTIME_ERROR("missing publisher or token");
-                        }
-                        else
-                            throw SW_RUNTIME_ERROR("unknown add object: " + remote_rest[i]);
-                    }
-                    else
-                        throw SW_RUNTIME_ERROR("missing add object");
-                }
-                else
-                    throw SW_RUNTIME_ERROR("unknown alter command: " + remote_rest[i]);
-            }
-            else
-                throw SW_RUNTIME_ERROR("missing alter command");
-        }
-        else
-            throw SW_RUNTIME_ERROR("missing remote name");
-        return;
-    }
-}
-
-SUBCOMMAND_DECL(list)
-{
-    auto swctx = createSwContext();
-    auto rs = swctx->getRemoteStorages();
-    if (rs.empty())
-        throw SW_RUNTIME_ERROR("No remote storages found");
-
-    static_cast<StorageWithPackagesDatabase&>(*rs.front()).getPackagesDatabase().listPackages(list_arg);
-}
-
 SUBCOMMAND_DECL(pack)
 {
     // http://www.king-foo.com/2011/11/creating-debianubuntu-deb-packages/
-}
-
-extern bool gWithTesting;
-
-SUBCOMMAND_DECL(test)
-{
-    auto swctx = createSwContext();
-    gWithTesting = true;
-    (Strings&)build_arg = (Strings&)build_arg_test;
-    cli_build(*swctx);
-}
-
-SUBCOMMAND_DECL(install)
-{
-    auto swctx = createSwContext();
-    sw::UnresolvedPackages pkgs;
-    install_args.push_back(install_arg);
-    for (auto &p : install_args)
-        pkgs.insert(extractFromString(p));
-    auto m = swctx->install(pkgs);
-    for (auto &[p1, d] : m)
-    {
-        //for (auto &p2 : install_args)
-            //if (p1 == p2)
-                //d.installed = true;
-    }
-}
-
-extern ::cl::opt<bool> dry_run;
-SUBCOMMAND_DECL(update)
-{
     SW_UNIMPLEMENTED;
-
-    auto swctx = createSwContext();
-    dry_run = true;
-    ((Strings&)build_arg).clear();
-    build_arg.push_back(build_arg_update.getValue());
-    cli_build(*swctx);
-}
-
-SUBCOMMAND_DECL(fetch)
-{
-    auto swctx = createSwContext();
-    cli_fetch(*swctx);
-}
-
-SUBCOMMAND_DECL2(fetch)
-{
-    sw::FetchOptions opts;
-    //opts.name_prefix = upload_prefix;
-    opts.dry_run = !build_after_fetch;
-    opts.root_dir = fs::current_path() / SW_BINARY_DIR;
-    opts.ignore_existing_dirs = true;
-    opts.existing_dirs_age = std::chrono::hours(1);
-    //opts.apply_version_to_source = true;
-    auto s = sw::fetch_and_load(swctx, ".", opts);
-    if (build_after_fetch)
-        s->execute();
-}
-
-SUBCOMMAND_DECL(upload)
-{
-    auto swctx = createSwContext();
-    cli_upload(*swctx);
-}
-
-SUBCOMMAND_DECL2(upload)
-{
-    // select remote first
-    auto &us = Settings::get_user_settings();
-    auto current_remote = &*us.remotes.begin();
-    if (!upload_remote.empty())
-        current_remote = find_remote(us, upload_remote);
-
-    sw::FetchOptions opts;
-    //opts.name_prefix = upload_prefix;
-    opts.dry_run = !build_before_upload;
-    opts.root_dir = fs::current_path() / SW_BINARY_DIR;
-    opts.ignore_existing_dirs = true;
-    opts.existing_dirs_age = std::chrono::hours(8);
-    //opts.apply_version_to_source = true;
-    //swctx.
-    auto s = sw::fetch_and_load(swctx, build_arg_update.getValue(), opts);
-    if (build_before_upload)
-    {
-        s->execute();
-
-        // after execution such solution has resolved deps and deps of the deps
-        // we must not add them
-        SW_UNIMPLEMENTED;
-    }
-
-    /*auto m = s->getPackages();
-    // dbg purposes
-    for (auto &[id, d] : m)
-    {
-        write_file(fs::current_path() / SW_BINARY_DIR / "upload" / id.toString() += ".json", d->getString());
-        auto id2 = id;
-        id2.ppath = PackagePath(upload_prefix) / id2.ppath;
-        LOG_INFO(logger, "Uploading " + id2.toString());
-    }
-
-    // send signatures (gpg)
-    // -k KEY1 -k KEY2
-    auto api = current_remote->getApi();
-    api->addVersion(upload_prefix, m, sw::read_config(build_arg_update.getValue()).value());*/
 }
 
 String getBuildTime();
@@ -1311,86 +587,6 @@ EXPORT_FROM_EXECUTABLE
 std::string getProgramName()
 {
     return PACKAGE_NAME_CLEAN;
-}
-
-void self_upgrade()
-{
-#ifdef _WIN32
-    path client = "/client/sw-master-windows-client.zip";
-#elif __APPLE__
-    path client = "/client/sw-master-macos-client.tar.gz";
-#else
-    path client = "/client/sw-master-linux-client.tar.gz";
-#endif
-
-    auto &s = Settings::get_user_settings();
-
-    std::cout << "Downloading signature file" << "\n";
-    static const auto algo = "sha512"s;
-    auto sig = download_file(s.remotes[0].url + client.u8string() + "." + algo + ".sig");
-
-    auto fn = fs::temp_directory_path() / (unique_path() += client.extension());
-    std::cout << "Downloading the latest client" << "\n";
-    download_file(s.remotes[0].url + client.u8string(), fn, 50_MB);
-    try
-    {
-        ds_verify_sw_file(fn, algo, sig);
-    }
-    catch (const std::exception &e)
-    {
-        throw std::runtime_error("Downloaded bad file (signature check failed): "s + e.what());
-    }
-
-    std::cout << "Unpacking" << "\n";
-    auto tmp_dir = fs::temp_directory_path() / "sw.bak";
-    unpack_file(fn, tmp_dir);
-    fs::remove(fn);
-
-    // self update
-    auto program = path(boost::dll::program_location().wstring());
-#ifdef _WIN32
-    auto exe = (tmp_dir / "sw.exe").wstring();
-    auto arg0 = L"\"" + exe + L"\"";
-    auto dst = L"\"" + program.wstring() + L"\"";
-    std::cout << "Replacing client" << "\n";
-    auto cmd_line = arg0 + L" -internal-self-upgrade-copy " + dst;
-    STARTUPINFO si = { 0 };
-    PROCESS_INFORMATION pi = { 0 };
-    if (!CreateProcess(exe.c_str(), &cmd_line[0], 0, 0, 0, 0, 0, 0, &si, &pi))
-    {
-        throw std::runtime_error("errno = "s + std::to_string(errno) + "\n" +
-            "Cannot do a self upgrade. Replace this file with newer SW client manually.");
-    }
-#else
-    auto cppan = tmp_dir / "sw";
-    fs::permissions(cppan, fs::perms::owner_all | fs::perms::group_exec | fs::perms::others_exec);
-    fs::remove(program);
-    fs::copy_file(cppan, program);
-    fs::remove(cppan);
-#endif
-}
-
-void self_upgrade_copy(const path &dst)
-{
-    int n = 3;
-    while (n--)
-    {
-        std::cout << "Waiting old program to exit...\n";
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-        try
-        {
-            fs::copy_file(boost::dll::program_location().wstring(), dst, fs::copy_options::overwrite_existing);
-            break;
-        }
-        catch (std::exception &e)
-        {
-            std::cerr << "Cannot replace program with new executable: " << e.what() << "\n";
-            if (n == 0)
-                throw;
-            std::cerr << "Retrying... (" << n << ")\n";
-        }
-    }
-    std::cout << "Success!\n";
 }
 
 #if _MSC_VER

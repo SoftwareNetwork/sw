@@ -9,7 +9,7 @@
 #include "driver.h"
 #include "frontend/cppan/yaml.h"
 #include "functions.h"
-#include "generator/generator.h"
+//#include "generator/generator.h"
 #include "inserts.h"
 #include "module.h"
 #include "run.h"
@@ -418,15 +418,7 @@ void Build::addSettings(const BuildSettings &ss)
 {
     auto i = std::find(settings.begin(), settings.end(), ss);
     if (i == settings.end())
-    {
-        //current_settings = &ss;
-        //detectCompilers(*this);
         settings.push_back(ss);
-        //current_settings = &settings.back();
-    }
-    /*else
-        current_settings = &*i;*/
-    //return getSettings();
 }
 
 void Build::detectCompilers()
@@ -440,14 +432,6 @@ const OS &Build::getHostOs() const
     return swctx.HostOS;
 }
 
-/*void Build::addTargetSettings(const String &ppath_regex, const VersionRange &vr, const TargetSettingsDataContainer &c)
-{
-    auto &d = target_settings[ppath_regex].emplace_back();
-    d.r_ppath = ppath_regex;
-    d.range = vr;
-    d.data = c;
-}*/
-
 path Build::getChecksDir() const
 {
     return getServiceDir() / "checks";
@@ -459,118 +443,11 @@ void Build::build_and_resolve(int n_runs)
     if (ud.empty())
         return;
 
-    if (is_config_build)
-    {
-        String s;
-        for (auto &u : ud)
-            s += u.first.toString() + ", ";
-        s.resize(s.size() - 2);
-        throw SW_RUNTIME_ERROR("Missing config deps, check your self build script: " + s);
-    }
-
-    if (n_runs > 1)
-        LOG_ERROR(logger, "You are here for the third time. This is not intended. Failures are imminent.");
-
-    // first round
-    UnresolvedPackages pkgs;
-    for (auto &[pkg, d] : ud)
-    {
-        pkgs.insert(pkg);
-        LOG_DEBUG(logger, "Unresolved dependency: " << pkg.toString());
-    }
-
-    // resolve only deps needed
-    auto m = swctx.install(pkgs);
-
-    // after install
-
-    std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
-    for (auto &[u, p] : m)
-    {
-        //knownTargets.insert(p);
-        // gather packages
-        cfgs2.emplace(p.getData().group_number, p);
-    }
-
-    std::unordered_set<LocalPackage> cfgs;
-    for (auto &[gn, s] : cfgs2)
-    {
-        if (known_cfgs.find(s) == known_cfgs.end() &&
-            getChildren().find(s) == getChildren().end())
-            cfgs.insert(s);
-    }
-    known_cfgs.insert(cfgs.begin(), cfgs.end());
-    if (cfgs.empty())
-        return;
-
-    // all deps must be resolved in the first run!
-    if (n_runs > 0)
-    {
-        LOG_ERROR(logger, "You are here for the second time. This is not intended. Expect failures.");
-        for (auto &pkg : pkgs)
-            LOG_ERROR(logger, "Unresolved dependency: " << pkg.toString());
-    }
-
-    auto dll = ::sw::build_configs(swctx, driver, cfgs);
-
-    for (auto &[u, p] : m)
-    {
-        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this,
-            Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
-        ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
-        ep->module_data.current_gn = p.getData().group_number;
-        ep->module_data.current_module = p.toString();
-        getChildren()[p].setEntryPoint(std::move(ep));
-    }
-
-    for (auto &[gn, p] : cfgs2)
-    {
-        SW_UNIMPLEMENTED;
-        sw_check_abi_version(Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
-        for (auto &s : settings)
-        {
-            //current_settings = &s;
-            Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
-            // we can use new (clone of this) solution, then copy known targets
-            // to allow multiple passes-builds
-            Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
-        }
-    }
-
-    for (auto &[porig, p] : m)
-    {
-        for (auto &[n, tgts] : getChildren())
-        {
-            for (auto &tgt : tgts)
-            {
-                auto t = tgt->as<Target*>();
-                if (t->skip)
-                    continue;
-                if (p == t->getPackage() && ud[porig])
-                {
-                    ud[porig]->setTarget(t->as<NativeTarget>());
-                }
-            }
-        }
-    }
-
-    {
-        ud = gatherUnresolvedDependencies();
-        UnresolvedPackages pkgs;
-        for (auto &[pkg, d] : ud)
-            pkgs.insert(pkg);
-        swctx.install(pkgs);
-
-        if (ud.empty())
-            return;
-    }
-
-    // we have unloaded deps, load them
-    // they are runtime deps either due to local overridden packages
-    // or to unregistered deps in sw - probably something wrong or
-    // malicious
-
-    build_and_resolve(n_runs + 1);
+    String s;
+    for (auto &u : ud)
+        s += u.first.toString() + ", ";
+    s.resize(s.size() - 2);
+    throw SW_RUNTIME_ERROR("Missing config deps, check your self build script: " + s);
 }
 
 UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
@@ -639,38 +516,15 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
 
 void Build::prepare()
 {
-    //if (prepared)
-        //return;
-
     ScopedTime t;
 
-    // all targets are set stay unchanged from user
-    // so, we're ready to some preparation passes
-
     build_and_resolve();
-
-    // decide if we need cross compilation
 
     // multipass prepare()
     // if we add targets inside this loop,
     // it will automatically handle this situation
     while (prepareStep())
         ;
-
-    // prepare tests
-    /*if (with_testing)
-    {
-        for (auto &s : solutions)
-        {
-            for (auto &t : s.tests)
-                ;
-        }
-    }*/
-
-    //prepared = true;
-
-    // prevent memory leaks (high mem usage)
-    //updateConcurrentContext();
 
     if (!silent)
         LOG_DEBUG(logger, "Prepare time: " << t.getTimeFloat() << " s.");
@@ -700,73 +554,11 @@ void Build::prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_p
                 continue;
             fs.push_back(e.push([this, t, &next_pass]
                 {
-                    if (prepareStep(*t))
+                    if (t->prepare())
                         next_pass = true;
                 }));
         }
     }
-}
-
-bool Build::prepareStep(Target &t) const
-{
-    // try to run as early as possible
-    //if (t.mustResolveDeps())
-        //resolvePass(t, t.gatherDependencies());
-
-    return t.prepare();
-}
-
-void Build::resolvePass(const Target &t, const DependenciesType &deps) const
-{
-    SW_UNIMPLEMENTED;
-
-    /*auto host = this;
-    bool select_targets = host;
-    if (!host)
-        host = this;
-    for (auto &d : deps)
-    {
-        auto h = this;
-        if (d->isDummy())
-            h = host;
-        else if (d->isResolved())
-        {
-            continue;
-        }
-
-        auto i = h->getChildren().find(d->getPackage());
-        if (i != h->getChildren().end())
-        {
-            auto i2 = i->second.find(TargetSettings{ t.getSettings() });
-            if (i2 == i->second.end())
-                throw SW_RUNTIME_ERROR("no such target: " + d->getPackage().toString());
-            auto t2 = i2->second->as<NativeTarget*>();
-            if (t2)
-                d->setTarget(*t2);
-            else
-                throw SW_RUNTIME_ERROR("bad target cast to NativeTarget during resolve");
-
-            // turn on only needed targets during cc
-            //if (select_targets)
-                //host->TargetsToBuild[i->second->getPackage()] = i->second;
-        }
-        // we fail in any case here, no matter if dependency were resolved previously
-        else
-        {
-            auto err = "Package: " + t.getPackage().toString() + ": Unresolved package on stage 1: " + d->getPackage().toString();
-            if (d->target)
-                err += " (but target is set to " + d->target->getPackage().toString() + ")";
-            if (auto d = t.getPackage().getOverriddenDir(); d)
-            {
-                err += ".\nPackage: " + t.getPackage().toString() + " is overridden locally. "
-                    "This means you have new dependency that is not in db.\n"
-                    "Run following command in attempt to fix this issue: "
-                    "'sw -d " + normalize_path(d.value()) + " -override-remote-package " +
-                    t.getPackage().ppath.slice(0, t.getPackage().getData().prefix).toString() + "'";
-            }
-            throw SW_LOGIC_ERROR(err);
-        }
-    }*/
 }
 
 void Build::addFirstConfig()
@@ -1631,21 +1423,7 @@ void Build::load_packages(const PackageIdSet &pkgsids)
 
 void Build::load_spec_file(const path &fn)
 {
-    if (!gGenerator.empty())
-    {
-        generator = Generator::create(gGenerator);
-
-        // set early, before prepare
-
-        // also add tests to solution
-        // protect with option
-        with_testing = true;
-    }
-
     auto dll = build(fn);
-
-    //fs->save(); // remove?
-    //fs->reset();
 
     if (fetch_sources)
     {
@@ -1690,7 +1468,7 @@ void Build::load(const path &fn, bool configless)
     if (!fs::exists(fn))
         throw SW_RUNTIME_ERROR("path does not exists: " + normalize_path(fn));
 
-    if (!gGenerator.empty())
+    /*if (!gGenerator.empty())
     {
         generator = Generator::create(gGenerator);
 
@@ -1699,7 +1477,7 @@ void Build::load(const path &fn, bool configless)
         // also add tests to solution
         // protect with option
         with_testing = true;
-    }
+    }*/
 
     if (configless)
         return load_configless(fn);
@@ -2021,11 +1799,11 @@ void Build::execute()
             save(fn, p);
     }
 
-    if (getGenerator())
+    /*if (getGenerator())
     {
         generateBuildSystem();
         return;
-    }
+    }*/
 
     prepare();
     auto p = getExecutionPlan();
@@ -2048,25 +1826,10 @@ void Build::execute(CommandExecutionPlan &p) const
         s += "digraph G {\n";
         for (auto &c : ep.commands)
         {
-            {
-                s += c->getName(short_names) + ";\n";
-                for (auto &d : c->dependencies)
-                    s += c->getName(short_names) + " -> " + d->getName(short_names) + ";\n";
-            }
-            /*s += "{";
-            s += "rank = same;";
-            for (auto &c : level)
             s += c->getName(short_names) + ";\n";
-            s += "};";*/
+            for (auto &d : c->dependencies)
+                s += c->getName(short_names) + " -> " + d->getName(short_names) + ";\n";
         }
-
-        /*if (ep.Root)
-        {
-        const auto root_name = "all"s;
-        s += root_name + ";\n";
-        for (auto &d : ep.Root->dependencies)
-        s += root_name + " -> " + d->getName(short_names) + ";\n";
-        }*/
 
         s += "}";
         write_file(p, s);
@@ -2109,11 +1872,6 @@ void Build::execute(CommandExecutionPlan &p) const
     if (execute_jobs > 0)
         ex = std::make_unique<Executor>(execute_jobs);
     auto &e = execute_jobs > 0 ? *ex : getExecutor();
-
-    // prevent memory leaks (high mem usage)
-    /*updateConcurrentContext();
-    for (int i = 0; i < 1000; i++)
-    e.push([] {updateConcurrentContext(); });*/
 
     p.skip_errors = skip_errors.getValue();
     p.execute(e);
@@ -2168,11 +1926,6 @@ void Build::execute(CommandExecutionPlan &p) const
         trace["traceEvents"] = events;
         write_file(getServiceDir() / "time_trace.json", trace.dump(2));
     }
-
-    // prevent memory leaks (high mem usage)
-    /*updateConcurrentContext();
-    for (int i = 0; i < 1000; i++)
-    e.push([] {updateConcurrentContext(); });*/
 }
 
 Commands Build::getCommands() const
@@ -2384,8 +2137,10 @@ void Build::load_configless(const path &file_or_dir)
 
 void Build::generateBuildSystem()
 {
-    if (!getGenerator())
-        return;
+    SW_UNIMPLEMENTED;
+
+    //if (!getGenerator())
+        //return;
 
     getCommands();
     getExecutionPlan(); // also prepare commands
@@ -2395,7 +2150,7 @@ void Build::generateBuildSystem()
         //current_settings = &s;
         fs::remove_all(getExecutionPlanFilename());
     }
-    getGenerator()->generate(*this);
+    //getGenerator()->generate(*this);
 }
 
 static const auto ide_fs = "ide_vs";
@@ -2646,10 +2401,10 @@ void Build::createSolutions(const path &dll, bool usedll)
     {
         if (append_configs || !hasUserProvidedInformationStrong())
         {
-            if (auto g = getGenerator())
+            /*if (auto g = getGenerator())
             {
                 g->createSolutions(*this);
-            }
+            }*/
         }
 
         // one more time, if generator did not add solution or whatever
@@ -2796,10 +2551,10 @@ void Build::createSolutions(const path &dll, bool usedll)
         //    set_libc(s, libc[i]);
         //});
     }
-    else if (auto g = getGenerator())
+    /*else if (auto g = getGenerator())
     {
         g->createSolutions(*this);
-    }
+    }*/
 
     // one more time, if generator did not add solution or whatever
     addFirstConfig();
@@ -2844,13 +2599,13 @@ void Build::load_dll(const path &dll)
 
     // detect and eliminate solution clones?
 
-    if (auto g = getGenerator())
+    /*if (auto g = getGenerator())
     {
         g->initSolutions(*this);
-    }
+    }*/
 
     // print info
-    if (auto g = getGenerator())
+    /*if (auto g = getGenerator())
     {
         LOG_INFO(logger, "Generating " << toString(g->type) << " project with " << settings.size() << " configurations:");
         for (auto &s : settings)
@@ -2862,7 +2617,7 @@ void Build::load_dll(const path &dll)
             << "project with " << settings.size() << " configurations:");
         for (auto &s : settings)
             LOG_DEBUG(logger, s.getConfig());
-    }
+    }*/
 
     auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this, driver.getModuleStorage().get(dll));
     for (auto &s : settings)
@@ -2910,49 +2665,6 @@ void Build::load_dll(const path &dll)
         TargetsToBuild[t->getPackage()].push_back(t->shared_from_this());
     }
 }
-
-/*const Solution *Build::getHostSolution() const
-{
-    if (host)
-        return host.value();
-    throw SW_RUNTIME_ERROR("no host solution selected");
-}
-
-const Solution *Build::getHostSolution()
-{
-    if (host)
-        return host.value();
-
-    auto needs_cc = [](auto &s)
-    {
-        return !s.getHostOs().canRunTargetExecutables(s.Settings.TargetOS);
-    };
-
-    if (std::any_of(solutions.begin(), solutions.end(), needs_cc))
-    {
-        LOG_DEBUG(logger, "Cross compilation is required");
-        for (auto &s : solutions)
-        {
-            if (!needs_cc(s))
-            {
-                LOG_DEBUG(logger, "CC solution was found");
-                host = &s;
-                break;
-            }
-        }
-        if (!host)
-        {
-            // add
-            LOG_DEBUG(logger, "Cross compilation solution was not found, creating a new one");
-            auto &s = addSolution();
-            host = &s;
-        }
-    }
-    else
-        host = nullptr;
-
-    return host.value();
-}*/
 
 bool Build::isConfigSelected(const String &s) const
 {

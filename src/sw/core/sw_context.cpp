@@ -32,32 +32,25 @@ SwContext::~SwContext()
 
 void SwContext::load(const Inputs &strings)
 {
-    auto inputs = makeInputs(strings);
-    load(inputs);
+    auto inputs2 = makeInputs(strings);
+    load(inputs2);
+    inputs.insert(inputs2.begin(), inputs2.end());
 }
 
 void SwContext::build(const Inputs &strings)
 {
-    auto inputs = makeInputs(strings);
-    load(inputs);
+    load(strings);
     execute();
 }
 
 void SwContext::execute()
 {
-    // mark existing targets as targets to build
-    targets_to_build = getTargets();
-
-    resolve();
-
-    while (prepareStep())
-        ;
-
+    configure();
     auto p = getExecutionPlan();
     execute(p);
 }
 
-void SwContext::resolve()
+void SwContext::resolvePackages()
 {
     // gather
     UnresolvedPackages upkgs;
@@ -151,6 +144,16 @@ bool SwContext::prepareStep()
     waitAndGet(fs);
 
     return next_pass;
+}
+
+void SwContext::configure()
+{
+    // mark existing targets as targets to build
+    targets_to_build = getTargets();
+
+    resolvePackages();
+    while (prepareStep())
+        ;
 }
 
 void SwContext::execute(CommandExecutionPlan &p) const
@@ -476,6 +479,14 @@ PackageDescriptionMap SwContext::getPackages() const
     return m;
 }
 
+String SwContext::getBuildHash() const
+{
+    String s;
+    for (auto &i : inputs)
+        s += i.getHash();
+    return shorten_hash(blake2b_512(s), 6);
+}
+
 SwContext::ProcessedInputs SwContext::makeInputs(const Inputs &strings)
 {
     ProcessedInputs inputs;
@@ -525,6 +536,21 @@ Input::Input(const path &p, const SwContext &swctx)
 Input::Input(const PackageId &p, const SwContext &swctx)
 {
     init(p, swctx);
+}
+
+String Input::getHash() const
+{
+    String s;
+    switch (getType())
+    {
+    case InputType::InstalledPackage:
+        s = getPackageId().toString();
+        break;
+    default:
+        s = normalize_path(getPath());
+        break;
+    }
+    return s += settings.getHash();
 }
 
 void Input::init(const String &s, const SwContext &swctx)
@@ -619,6 +645,19 @@ PackageId Input::getPackageId() const
 bool Input::operator<(const Input &rhs) const
 {
     return data < rhs.data;
+}
+
+bool Input::isChanged() const
+{
+    return true;
+
+    switch (getType())
+    {
+    //case InputType::SpecificationFile:
+        //return true;
+    default:
+        SW_UNIMPLEMENTED;
+    }
 }
 
 }

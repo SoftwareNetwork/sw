@@ -258,7 +258,7 @@ void Type::printH(primitives::CppEmitter &h) const
     h.emptyLines(1);
 
     h.addLine("Strings getCommandLine(const ::sw::builder::Command &c);");
-    h.addLine("void printIdeSettings(ProjectEmitter &);");
+    //h.addLine("void printIdeSettings(ProjectEmitter &);");
 
     h.endBlock(true);
     h.addLine("DECLARE_OPTION_SPECIALIZATION(" + name + ");");
@@ -282,7 +282,7 @@ void Type::printCpp(primitives::CppEmitter &cpp) const
     cpp.endBlock();
     cpp.emptyLines(1);
 
-    cpp.beginBlock("void " + name + "::printIdeSettings(ProjectEmitter &ctx)");
+    /*cpp.beginBlock("void " + name + "::printIdeSettings(ProjectEmitter &ctx)");
 
     if (!parent.empty())
     {
@@ -293,7 +293,7 @@ void Type::printCpp(primitives::CppEmitter &cpp) const
     for (auto &v : flags2)
         v->printToIde(cpp);
     cpp.endBlock();
-    cpp.emptyLines(1);
+    cpp.emptyLines(1);*/
 
     for (auto &v : flags2)
         v->printStructFunction(cpp);

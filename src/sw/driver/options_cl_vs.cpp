@@ -7,7 +7,7 @@
 #include "options_cl_vs.h"
 
 #include "command.h"
-#include "generator/context.h"
+//#include "generator/context.h"
 
 #include "options_cl.generated.cpp"
 

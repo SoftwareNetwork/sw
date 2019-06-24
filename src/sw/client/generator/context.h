@@ -69,7 +69,7 @@ struct ProjectEmitter : XmlEmitter
     void beginProject();
     void endProject();
 
-    void addProjectConfigurations(const Build &b);
+    /*void addProjectConfigurations(const Build &b);
     void addPropertyGroupConfigurationTypes(const Build &b);
     void addPropertyGroupConfigurationTypes(const Build &b, const PackageId &p);
     void addPropertyGroupConfigurationTypes(const Build &b, VSProjectType t);
@@ -81,7 +81,7 @@ struct ProjectEmitter : XmlEmitter
         const String &name, const PackageId &p, const Build &b, SolutionEmitter &ctx, Generator &g,
         PackagePathTree::Directories &parents, PackagePathTree::Directories &local_parents,
         const path &dir, const path &projects_dir
-    );
+    );*/
 };
 
 struct SolutionEmitter : primitives::Emitter
@@ -134,8 +134,8 @@ struct SolutionEmitter : primitives::Emitter
     void beginGlobalSection(const String &name, const String &post);
     void endGlobalSection();
 
-    void setSolutionConfigurationPlatforms(const Build &b);
-    void addProjectConfigurationPlatforms(const Build &b, const String &prj, bool build = false);
+    //void setSolutionConfigurationPlatforms(const Build &b);
+    //void addProjectConfigurationPlatforms(const Build &b, const String &prj, bool build = false);
 
     void beginProjectSection(const String &n, const String &disposition);
     void endProjectSection();
@@ -143,7 +143,7 @@ struct SolutionEmitter : primitives::Emitter
     void addKeyValue(const String &k, const String &v);
     String getStringUuid(const String &k) const;
     Text getText() const override;
-    void materialize(const Build &b, const path &dir, GeneratorType t);
+    //void materialize(const Build &b, const path &dir, GeneratorType t);
 
 private:
     std::map<String, String> nested_projects;

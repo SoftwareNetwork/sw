@@ -40,41 +40,43 @@ enum class InputType : int32_t
 // represents user request (if possible) returned from sw context
 // or sw context = single request?
 // or ... ?
-struct SW_CORE_API Request
+//struct SW_CORE_API Request {};
+
+namespace detail
 {
+
+struct InputVariant : std::variant<String, path, PackageId>
+{
+    using Base = std::variant<String, path, PackageId>;
+    using Base::Base;
+    InputVariant(const char *p) : Base(std::string(p)) {}
 };
+
+// unique
+struct Inputs : std::set<InputVariant>
+{
+    using Base = std::set<InputVariant>;
+    using Base::Base; // separate types
+    Inputs(const Strings &inputs) // dynamic detection
+    {
+        for (auto &i : inputs)
+            insert(i);
+    }
+};
+
+}
 
 struct SW_CORE_API SwContext : SwBuilderContext
 {
-    struct InputVariant : std::variant<String, path, PackageId>
-    {
-        using Base = std::variant<String, path, PackageId>;
-        using Base::Base;
-        InputVariant(const char *p) : Base(std::string(p)) {}
-    };
-
-    // unique
-    struct Inputs : std::set<InputVariant>
-    {
-        using Base = std::set<InputVariant>;
-        using Base::Base; // separate types
-        Inputs(const Strings &inputs) // dynamic detection
-        {
-            for (auto &i : inputs)
-                insert(i);
-        }
-    };
-
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
     using Drivers = std::map<PackageId, std::unique_ptr<IDriver>>;
+    using Inputs = detail::Inputs;
 
     // move to drivers? remove?
     path source_dir;
 
     SwContext(const path &local_storage_root_dir);
     virtual ~SwContext();
-
-    using SwBuilderContext::resolve;
 
     void registerDriver(std::unique_ptr<IDriver> driver);
     const Drivers &getDrivers() const { return drivers; }
@@ -84,26 +86,30 @@ struct SW_CORE_API SwContext : SwBuilderContext
     void load(const Inputs &inputs);
     void build(const Inputs &inputs);
     void execute();
+    void configure();
+    CommandExecutionPlan getExecutionPlan() const;
     // void configure(); // = load() + save execution plan
     PackageDescriptionMap getPackages() const;
+    String getBuildHash() const;
 
     TargetMap &getTargets() { return targets; }
     const TargetMap &getTargets() const { return targets; }
+    const TargetMap &getTargetsToBuild() const { return targets_to_build; }
 
 private:
     using ProcessedInputs = std::set<Input>;
 
     Drivers drivers;
     std::map<IDriver *, ProcessedInputs> active_drivers;
+    ProcessedInputs inputs;
     TargetMap targets;
     TargetMap targets_to_build;
 
     ProcessedInputs makeInputs(const Inputs &inputs);
     void load(const ProcessedInputs &inputs);
     bool prepareStep();
-    void resolve();
+    void resolvePackages();
     void execute(CommandExecutionPlan &p) const;
-    CommandExecutionPlan getExecutionPlan() const;
     CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
     Commands getCommands() const;
 };
@@ -118,6 +124,9 @@ struct Input
     InputType getType() const { return type; }
     path getPath() const;
     PackageId getPackageId() const;
+    bool isChanged() const;
+    const TargetSettings &getSettings() const { return settings; }
+    String getHash() const;
 
     bool operator<(const Input &rhs) const;
 
@@ -125,7 +134,7 @@ private:
     std::variant<path, PackageId> data;
     InputType type;
     IDriver *driver = nullptr;
-    // settings?
+    TargetSettings settings;
 
     void init(const String &, const SwContext &);
     void init(const path &, const SwContext &);

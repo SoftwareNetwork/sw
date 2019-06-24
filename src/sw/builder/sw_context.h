@@ -40,6 +40,7 @@ struct SW_BUILDER_API SwBuilderContext : SwManagerContext
     FileDataHashMap &getFileData() const;
     FileDb &getDb() const;
     CommandStorage &getCommandStorage() const;
+    const OS &getHostOs() const { return HostOS; }
 
     void clearFileStorages();
 

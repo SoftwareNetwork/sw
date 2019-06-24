@@ -1,7 +1,7 @@
 #include "native.h"
 
 #include "sw/driver/bazel/bazel.h"
-#include "sw/driver/generator/generator.h"
+//#include "sw/driver/generator/generator.h"
 #include "sw/driver/functions.h"
 #include "sw/driver/build.h"
 
@@ -1452,7 +1452,7 @@ bool NativeCompiledTarget::createWindowsRpath() const
         && !IsConfig
         && getSettings().TargetOS.is(OSType::Windows)
         && getSelectedTool() == Linker.get()
-        && !getSolution().getGenerator()
+        //&& !getSolution().getGenerator()
         && !standalone
         ;
 }
@@ -2390,9 +2390,9 @@ bool NativeCompiledTarget::prepare()
                     if (getSettings().Native.ConfigurationType == ConfigurationType::Debug ||
                         getSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
                     {
-                        if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                        /*if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
                             c->GenerateDebugInformation = vs::link::Debug::FastLink;
-                        else
+                        else*/
                             c->GenerateDebugInformation = vs::link::Debug::Full;
                     }
                     else

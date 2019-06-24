@@ -28,7 +28,7 @@ namespace sw
 
 struct Build;
 namespace driver::cpp { struct Driver; }
-struct Generator;
+//struct Generator;
 struct Module;
 struct ModuleStorage;
 
@@ -234,29 +234,6 @@ public:
     //std::shared_ptr<TargetEntryPoint> getEntryPoint() const;
     void addChild(const TargetBaseTypePtr &t);
 
-    /*void addTargetSettings(const String &ppath_regex, const VersionRange &vr, const TargetSettingsDataContainer &);
-    template <class T>
-    std::vector<const T *> getTargetSettings(const PackageId &id) const
-    {
-        auto s = id.ppath.toString();
-        std::vector<const T *> d;
-        for (auto &[k, v] : target_settings)
-        {
-            for (auto &ts : v)
-            {
-                if (!std::regex_match(s, ts.r_ppath))
-                    continue;
-                if (!ts.range.hasVersion(id.version))
-                    continue;
-                if (!ts.data.has_value())
-                    continue;
-                if (auto d2 = std::any_cast<T>(&ts.data))
-                    d.push_back(d2);
-            }
-        }
-        return d;
-    }*/
-
     // events
     template <class ... Args>
     void registerCallback(Args &&... args)
@@ -292,9 +269,7 @@ public:
     path build_configs(const std::unordered_set<LocalPackage> &pkgs);
 
 private:
-    void resolvePass(const Target &t, const DependenciesType &deps) const;
     void prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_pass) const;
-    bool prepareStep(Target &t) const;
     UnresolvedDependenciesType gatherUnresolvedDependencies(int n_runs = 0);
     void build_and_resolve(int n_runs = 0);
     void addTest(Test &cb, const String &name);
@@ -361,8 +336,8 @@ public:
     void prepare();
     bool prepareStep();
 
-    Generator *getGenerator() { if (generator) return generator.get(); return nullptr; }
-    const Generator *getGenerator() const { if (generator) return generator.get(); return nullptr; }
+    //Generator *getGenerator() { if (generator) return generator.get(); return nullptr; }
+    //const Generator *getGenerator() const { if (generator) return generator.get(); return nullptr; }
 
     // helper
     //Solution &addSolutionRaw();
@@ -373,7 +348,7 @@ private:
     bool remove_ide_explans = false;
     //std::optional<const Solution *> host;
     mutable StringSet used_configs;
-    std::shared_ptr<Generator> generator; // not unique - just allow us to copy builds
+    //std::shared_ptr<Generator> generator; // not unique - just allow us to copy builds
     bool solutions_created = false;
     std::vector<detail::EventCallback> events;
 

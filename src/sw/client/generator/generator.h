@@ -15,7 +15,7 @@
 namespace sw
 {
 
-struct Build;
+struct SwContext;
 
 enum class GeneratorType
 {
@@ -39,14 +39,14 @@ struct Generator
 {
     GeneratorType type = GeneratorType::UnspecifiedGenerator;
     //path dir;
-    path file;
+    //path file;
 
     virtual ~Generator() = default;
 
-    virtual void generate(const Build &b) = 0;
-    void generate(const path &file, const Build &b);
-    virtual void createSolutions(Build &b) {}
-    virtual void initSolutions(Build &b) {}
+    virtual void generate(const SwContext &) = 0;
+    //void generate(const path &file, const Build &b);
+    //virtual void createSolutions(Build &b) {}
+    //virtual void initSolutions(Build &b) {}
 
     static std::unique_ptr<Generator> create(const String &s);
 };
@@ -65,34 +65,34 @@ struct VSGenerator : Generator
 
     VSGenerator();
 
-    void generate(const Build &b) override;
-    void createSolutions(Build &b) override;
-    void initSolutions(Build &b) override;
+    void generate(const SwContext &b) override;
+    //void createSolutions(Build &b) override;
+    //void initSolutions(Build &b) override;
 };
 
 struct NinjaGenerator : Generator
 {
-    void generate(const Build &b) override;
+    void generate(const SwContext &) override;
 };
 
 struct MakeGenerator : Generator
 {
-    void generate(const Build &b) override;
+    void generate(const SwContext &b) override;
 };
 
 struct ShellGenerator : Generator
 {
-    void generate(const Build &b) override;
+    void generate(const SwContext &b) override;
 };
 
 struct BatchGenerator : Generator
 {
-    void generate(const Build &b) override;
+    void generate(const SwContext &b) override;
 };
 
 struct CompilationDatabaseGenerator : Generator
 {
-    void generate(const Build &b) override;
+    void generate(const SwContext &b) override;
 };
 
 String toString(GeneratorType Type);

@@ -5,16 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "generator.h"
-#include "context.h"
 
-#include "sw/driver/command.h"
-#include "sw/driver/compiler/compiler.h"
-#include "sw/driver/compiler/compiler_helpers.h"
-#include "sw/driver/build.h"
-#include "sw/driver/target/native.h"
-
-#include <sw/builder/execution_plan.h>
-#include <sw/support/filesystem.h>
+#include <sw/builder/file.h>
+#include <sw/core/sw_context.h>
 
 #include <primitives/sw/cl.h>
 #include <primitives/win32helpers.h>
@@ -22,14 +15,13 @@
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 
-#include <sstream>
-#include <stack>
-
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator");
 
 namespace sw
 {
+
+int vsVersionFromString(const String &s);
 
 String toPathString(GeneratorType t)
 {
@@ -119,97 +111,141 @@ GeneratorType fromString(const String &s)
     return GeneratorType::UnspecifiedGenerator;
 }
 
+struct ProgramShortCutter1
+{
+    struct iter
+    {
+        ProgramShortCutter1 &sc;
+        size_t i;
+
+        bool operator!=(const iter &rhs) const { return i != rhs.i; }
+        auto operator*() { return sc.programs.find(sc.nprograms[i]); }
+
+        iter &operator++()
+        {
+            i++;
+            return *this;
+        }
+    };
+
+    ProgramShortCutter1(const String &prefix = "SW_PROGRAM_")
+        : prefix(prefix)
+    {}
+
+    String getProgramName(const String &in)
+    {
+        if (programs[in].empty())
+        {
+            programs[in] = prefix + std::to_string(programs.size());
+            nprograms[programs.size()] = in;
+        }
+        return programs[in];
+    }
+
+    bool empty() const { return programs.empty(); }
+
+    auto begin() const { return iter{ (ProgramShortCutter1 &)*this, 1 }; }
+    auto end() const { return iter{ (ProgramShortCutter1 &)*this, programs.size() + 1 }; }
+
+private:
+    String prefix;
+    std::map<String, String> programs;
+    std::map<size_t, String> nprograms;
+};
+
+struct ProgramShortCutter
+{
+    ProgramShortCutter1 sc;
+    ProgramShortCutter1 sc_generated;
+
+    ProgramShortCutter()
+        : sc_generated("SW_PROGRAM_GENERATED_")
+    {}
+
+    String getProgramName(const String &in, const builder::Command &c)
+    {
+        bool gen = File(c.getProgram(), *c.fs).isGeneratedAtAll();
+        auto &progs = gen ? sc_generated : sc;
+        return progs.getProgramName(in);
+    }
+
+    void printPrograms(primitives::Emitter &ctx) const
+    {
+        auto print_progs = [&ctx](auto &a)
+        {
+            for (auto &kv : a)
+                ctx.addLine(kv->second + " = " + kv->first);
+        };
+
+        // print programs
+        print_progs(sc);
+        ctx.emptyLines();
+        print_progs(sc_generated);
+        ctx.emptyLines();
+    }
+};
+
+std::unique_ptr<Generator> Generator::create(const String &s)
+{
+    auto t = fromString(s);
+    std::unique_ptr<Generator> g;
+    switch (t)
+    {
+    case GeneratorType::VisualStudio:
+    case GeneratorType::VisualStudioNMake:
+    case GeneratorType::VisualStudioUtility:
+    case GeneratorType::VisualStudioNMakeAndUtility:
+    {
+        auto g1 = std::make_unique<VSGenerator>();
+        g1->version = Version(vsVersionFromString(s));
+        g = std::move(g1);
+        break;
+    }
+    case GeneratorType::Ninja:
+        g = std::make_unique<NinjaGenerator>();
+        break;
+    case GeneratorType::NMake:
+    case GeneratorType::Make:
+        g = std::make_unique<MakeGenerator>();
+        break;
+    case GeneratorType::Batch:
+        g = std::make_unique<BatchGenerator>();
+        break;
+    case GeneratorType::Shell:
+        g = std::make_unique<ShellGenerator>();
+        break;
+    case GeneratorType::CompilationDatabase:
+        g = std::make_unique<CompilationDatabaseGenerator>();
+        break;
+    default:
+        throw std::logic_error("not implemented");
+    }
+    g->type = t;
+    return g;
+}
+
 struct NinjaEmitter : primitives::Emitter
 {
-    void addCommand(const Build &b, const path &dir, const builder::Command &c)
+    NinjaEmitter(const SwContext &swctx, const path &dir)
     {
-        String command;
+        const String commands_fn = "commands.ninja";
+        addLine("include " + commands_fn);
+        emptyLines(1);
 
-        auto prog = c.getProgram();
-        if (prog == "ExecuteCommand")
-            return;
+        auto ep = swctx.getExecutionPlan();
 
-        bool rsp = c.needsResponseFile();
-        path rsp_dir = dir / "rsp";
-        path rsp_file = fs::absolute(rsp_dir / (std::to_string(c.getHash()) + ".rsp"));
-        if (rsp)
-            fs::create_directories(rsp_dir);
+        for (auto &c : ep.commands)
+            addCommand(swctx, *c);
 
-        auto has_mmd = false;
-
-        addLine("rule c" + std::to_string(c.getHash()));
-        increaseIndent();
-        addLine("description = " + c.getName());
-        addLine("command = ");
-        if (b.getBuildSettings().TargetOS.Type == OSType::Windows)
-        {
-            addText("cmd /S /C ");
-            addText("\"");
-        }
-        //else
-            //addText("bash -c ");
-        for (auto &[k, v] : c.environment)
-        {
-            if (b.getBuildSettings().TargetOS.Type == OSType::Windows)
-                addText("set ");
-            addText(k + "=" + v + " ");
-            if (b.getBuildSettings().TargetOS.Type == OSType::Windows)
-                addText("&& ");
-        }
-        if (!c.working_directory.empty())
-        {
-            addText("cd ");
-            if (b.getBuildSettings().TargetOS.Type == OSType::Windows)
-                addText("/D ");
-            addText(prepareString(b, getShortName(c.working_directory), true) + " && ");
-        }
-        addText(prepareString(b, getShortName(prog), true) + " ");
-        if (!rsp)
-        {
-            for (auto &a : c.arguments)
-            {
-                addText(prepareString(b, a->toString(), true) + " ");
-                has_mmd |= "-MMD" == a->toString();
-            }
-        }
-        else
-        {
-            addText("@" + rsp_file.u8string() + " ");
-        }
-        if (!c.in.file.empty())
-            addText("< " + prepareString(b, getShortName(c.in.file), true) + " ");
-        if (!c.out.file.empty())
-            addText("> " + prepareString(b, getShortName(c.out.file), true) + " ");
-        if (!c.err.file.empty())
-            addText("2> " + prepareString(b, getShortName(c.err.file), true) + " ");
-        if (b.getBuildSettings().TargetOS.Type == OSType::Windows)
-            addText("\"");
-        if (prog.find("cl.exe") != prog.npos)
-            addLine("deps = msvc");
-        else if (has_mmd)
-            addLine("depfile = " + (c.outputs.begin()->parent_path() / (c.outputs.begin()->stem().string() + ".d")).u8string());
-        if (rsp)
-        {
-            addLine("rspfile = " + rsp_file.u8string());
-            addLine("rspfile_content = ");
-            for (auto &a : c.arguments)
-                addText(prepareString(b, a->toString(), c.protect_args_with_quotes) + " ");
-        }
-        decreaseIndent();
-        addLine();
-
-        addLine("build ");
-        for (auto &o : c.outputs)
-            addText(prepareString(b, getShortName(o)) + " ");
-        for (auto &o : c.intermediate)
-            addText(prepareString(b, getShortName(o)) + " ");
-        addText(": c" + std::to_string(c.getHash()) + " ");
-        for (auto &i : c.inputs)
-            addText(prepareString(b, getShortName(i)) + " ");
-        addLine();
+        primitives::Emitter ctx_progs;
+        sc.printPrograms(ctx_progs);
+        write_file(dir / commands_fn, ctx_progs.getText());
     }
 
 private:
+    path dir;
+    ProgramShortCutter sc;
+
     String getShortName(const path &p)
     {
 #ifdef _WIN32
@@ -224,9 +260,9 @@ private:
 #endif
     }
 
-    String prepareString(const Build &b, const String &s, bool quotes = false)
+    String prepareString(const SwContext &b, const String &s, bool quotes = false)
     {
-        if (b.getBuildSettings().TargetOS.Type != OSType::Windows)
+        if (b.getHostOs().Type != OSType::Windows)
             quotes = false;
 
         auto s2 = s;
@@ -236,59 +272,131 @@ private:
             return "\"" + s2 + "\"";
         return s2;
     }
+
+    void addCommand(const SwContext &b, const builder::Command &c)
+    {
+        bool rsp = c.needsResponseFile();
+        path rsp_dir = dir / "rsp";
+        path rsp_file = fs::absolute(rsp_dir / (std::to_string(c.getHash()) + ".rsp"));
+        if (rsp)
+            fs::create_directories(rsp_dir);
+
+        auto has_mmd = false;
+        auto prog = c.getProgram();
+
+        addLine("rule c" + std::to_string(c.getHash()));
+        increaseIndent();
+        addLine("description = " + c.getName());
+        addLine("command = ");
+        if (b.getHostOs().Type == OSType::Windows)
+        {
+            addText("cmd /S /C ");
+            addText("\"");
+        }
+        //else
+        //addText("bash -c ");
+
+        // env
+        for (auto &[k, v] : c.environment)
+        {
+            if (b.getHostOs().Type == OSType::Windows)
+                addText("set ");
+            addText(k + "=" + v + " ");
+            if (b.getHostOs().Type == OSType::Windows)
+                addText("&& ");
+        }
+
+        // wdir
+        if (!c.working_directory.empty())
+        {
+            addText("cd ");
+            if (b.getHostOs().Type == OSType::Windows)
+                addText("/D ");
+            addText(prepareString(b, getShortName(c.working_directory), true) + " && ");
+        }
+
+        // prog
+        addText("$" + sc.getProgramName(prepareString(b, getShortName(prog), true), c) + " ");
+
+        // args
+        if (!rsp)
+        {
+            int i = 0;
+            for (auto &a : c.arguments)
+            {
+                // skip exe
+                if (!i++)
+                    continue;
+                addText(prepareString(b, a->toString(), true) + " ");
+                has_mmd |= "-MMD" == a->toString();
+            }
+        }
+        else
+        {
+            addText("@" + rsp_file.u8string() + " ");
+        }
+
+        // redirections
+        if (!c.in.file.empty())
+            addText("< " + prepareString(b, getShortName(c.in.file), true) + " ");
+        if (!c.out.file.empty())
+            addText("> " + prepareString(b, getShortName(c.out.file), true) + " ");
+        if (!c.err.file.empty())
+            addText("2> " + prepareString(b, getShortName(c.err.file), true) + " ");
+
+        //
+        if (b.getHostOs().Type == OSType::Windows)
+            addText("\"");
+        if (prog.find("cl.exe") != prog.npos)
+            addLine("deps = msvc");
+        else if (has_mmd)
+            addLine("depfile = " + (c.outputs.begin()->parent_path() / (c.outputs.begin()->stem().string() + ".d")).u8string());
+        if (rsp)
+        {
+            addLine("rspfile = " + rsp_file.u8string());
+            addLine("rspfile_content = ");
+            int i = 0;
+            for (auto &a : c.arguments)
+            {
+                // skip exe
+                if (!i++)
+                    continue;
+                addText(prepareString(b, a->toString(), c.protect_args_with_quotes) + " ");
+            }
+        }
+        decreaseIndent();
+        addLine();
+
+        addLine("build ");
+        for (auto &o : c.outputs)
+            addText(prepareString(b, getShortName(o)) + " ");
+        for (auto &o : c.intermediate)
+            addText(prepareString(b, getShortName(o)) + " ");
+        addText(": c" + std::to_string(c.getHash()) + " ");
+        for (auto &i : c.inputs)
+            addText(prepareString(b, getShortName(i)) + " ");
+        addLine();
+    }
 };
 
-void NinjaGenerator::generate(const Build &b)
+void NinjaGenerator::generate(const SwContext &swctx)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildSettings().getConfig();
+    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / swctx.getBuildHash();
 
-    NinjaEmitter ctx;
-
-    auto ep = b.getExecutionPlan();
-    for (auto &c : ep.commands)
-        ctx.addCommand(b, dir, *c);
+    NinjaEmitter ctx(swctx, dir);
     write_file(dir / "build.ninja", ctx.getText());
 }
 
 struct MakeEmitter : primitives::Emitter
 {
     bool nmake = false;
-    std::unordered_map<path, size_t> programs;
-    std::unordered_map<path, size_t> generated_programs;
+    ProgramShortCutter sc;
 
     MakeEmitter()
         : Emitter("\t")
     {}
-
-    void gatherPrograms(const Build::CommandExecutionPlan::Vec &commands)
-    {
-        // gather programs
-        for (auto &c : commands)
-        {
-            auto prog = c->getProgram();
-            auto &progs = File(prog, *c->fs).isGeneratedAtAll() ? generated_programs : programs;
-
-            auto n = progs.size() + 1;
-            if (progs.find(prog) == progs.end())
-                progs[prog] = n;
-        }
-
-        auto print_progs = [this](auto &a, bool gen = false)
-        {
-            std::map<int, path> r;
-            for (auto &[k, v] : a)
-                r[v] = k;
-            for (auto &[v, k] : r)
-                addKeyValue(program_name(v, gen), k);
-        };
-
-        // print programs
-        print_progs(programs);
-        addLine();
-        print_progs(generated_programs, true);
-    }
 
     void addKeyValue(const String &key, const String &value)
     {
@@ -333,7 +441,8 @@ struct MakeEmitter : primitives::Emitter
     {
         addLine(name + " : ");
         addText(printFiles(inputs));
-        addCommands(/* name, */ commands);
+        //          name,
+        addCommands(commands);
         addLine();
     }
 
@@ -358,11 +467,11 @@ struct MakeEmitter : primitives::Emitter
                 addText(" ");
             }
         }
-        /*if (c.needsResponseFile())
-        {
-            addText(" ");
-            addText(printFile(rsp));
-        }*/
+//         if (c.needsResponseFile())
+//         {
+//             addText(" ");
+//             addText(printFile(rsp));
+//         }
 
         Strings commands;
         commands.push_back(mkdir(c.getGeneratedDirs(), true));
@@ -384,14 +493,16 @@ struct MakeEmitter : primitives::Emitter
         }
 
         auto prog = c.getProgram();
-        bool gen = File(prog, *c.fs).isGeneratedAtAll();
-        auto &progs = gen ? generated_programs : programs;
-        s += "$(" + program_name(progs[prog], gen) + ") ";
+        s += "$(" + sc.getProgramName("\"" + prog + "\"", c) + ") ";
 
         if (!c.needsResponseFile())
         {
+            int i = 0;
             for (auto &a : c.arguments)
             {
+                // skip exe
+                if (!i++)
+                    continue;
                 if (should_print(a->toString()))
                     s += a->quote() + " ";
             }
@@ -417,18 +528,18 @@ struct MakeEmitter : primitives::Emitter
         {
             write_file_if_different(rsp, c.getResponseFileContents(false));
 
-            /*commands.clear();
-
-            auto rsps = normalize_path(rsp);
-            commands.push_back(mkdir({ rsp.parent_path() }, true));
-            commands.push_back("@echo > " + rsps);
-            for (auto &a : c.args)
-            {
-                if (should_print(a))
-                    commands.push_back("@echo \"\\\"" + a + "\\\"\" >> " + rsps);
-            }
-
-            addTarget(normalize_path(rsp), {}, commands);*/
+//             commands.clear();
+//
+//             auto rsps = normalize_path(rsp);
+//             commands.push_back(mkdir({ rsp.parent_path() }, true));
+//             commands.push_back("@echo > " + rsps);
+//             for (auto &a : c.args)
+//             {
+//                 if (should_print(a))
+//                     commands.push_back("@echo \"\\\"" + a + "\\\"\" >> " + rsps);
+//             }
+//
+//             addTarget(normalize_path(rsp), {}, commands);
         }
     }
 
@@ -461,14 +572,6 @@ struct MakeEmitter : primitives::Emitter
     static bool should_print(const String &o)
     {
         return o.find("showIncludes") == o.npos;
-    };
-
-    static String program_name(int n, bool generated = false)
-    {
-        String s = "SW_PROGRAM_";
-        if (generated)
-            s += "GENERATED_";
-        return s + std::to_string(n);
     }
 
     String mkdir(const Files &p, bool gen = false)
@@ -479,21 +582,19 @@ struct MakeEmitter : primitives::Emitter
     }
 };
 
-void MakeGenerator::generate(const Build &b)
+void MakeGenerator::generate(const SwContext &b)
 {
     // https://www.gnu.org/software/make/manual/html_node/index.html
     // https://en.wikipedia.org/wiki/Make_(software)
 
-    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.getBuildSettings().getConfig());
+    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.getBuildHash());
 
     auto ep = b.getExecutionPlan();
 
     MakeEmitter ctx;
     ctx.nmake = type == GeneratorType::NMake;
-    ctx.gatherPrograms(ep.commands);
 
-    String commands_fn = "commands.mk";
-    write_file(d / commands_fn, ctx.getText());
+    const String commands_fn = "commands.mk";
     ctx.clear();
 
     ctx.include(commands_fn);
@@ -501,26 +602,8 @@ void MakeGenerator::generate(const Build &b)
 
     // all
     Files outputs;
-    for (auto &[p, tgts] : b.TargetsToBuild)
-    {
-        for (auto &tgt : tgts)
-        {
-            auto t = tgt->as<Target*>();
-            if (b.skipTarget(t->Scope))
-                continue;
-            if (auto nt = t->as<NativeCompiledTarget*>(); nt)
-            {
-                auto c = nt->getCommand();
-                outputs.insert(c->outputs.begin(), c->outputs.end());
-            }
-            else
-            {
-                LOG_WARN(logger, "Poor implementation of target: " << p.toString() << ". Care...");
-                for (auto &c : t->getCommands())
-                    outputs.insert(c->outputs.begin(), c->outputs.end());
-            }
-        }
-    }
+    for (auto &c : ep.commands)
+        outputs.insert(c->outputs.begin(), c->outputs.end());
     ctx.addTarget("all", outputs);
 
     // print commands
@@ -528,18 +611,18 @@ void MakeGenerator::generate(const Build &b)
         ctx.addCommand(*c, d);
 
     // clean
-    outputs.clear();
-    for (auto &c : ep.commands)
-        outputs.insert(c->outputs.begin(), c->outputs.end());
     if (ctx.nmake)
         ctx.addTarget("clean", {}, { "@del " + normalize_path_windows(MakeEmitter::printFiles(outputs, true)) });
     else
         ctx.addTarget("clean", {}, { "@rm -f " + MakeEmitter::printFiles(outputs, true) });
 
     write_file(d / "Makefile", ctx.getText());
+    ctx.clear();
+    ctx.sc.printPrograms(ctx);
+    write_file(d / commands_fn, ctx.getText());
 }
 
-void BatchGenerator::generate(const Build &b)
+void BatchGenerator::generate(const SwContext &b)
 {
     auto print_commands = [](const auto &ep, const path &p)
     {
@@ -656,7 +739,7 @@ void BatchGenerator::generate(const Build &b)
         write_file(p, t + s);
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildSettings().getConfig();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildHash();
 
     auto p = b.getExecutionPlan();
 
@@ -665,56 +748,45 @@ void BatchGenerator::generate(const Build &b)
     print_numbers(p, d / "numbers.txt");
 }
 
-void CompilationDatabaseGenerator::generate(const Build &b)
+void CompilationDatabaseGenerator::generate(const SwContext &b)
 {
-    auto print_comp_db = [&b](const ExecutionPlan<builder::Command> &ep, const path &p)
-    {
-        if (b.getChildren().empty())
-            return;
-        static std::set<String> exts{
-            ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
-        };
-        nlohmann::json j;
-        for (auto &[p, tgts] : b.getChildren())
-        {
-            for (auto &tgt : tgts)
-            {
-                auto t = tgt->as<Target*>();
-                if (b.skipTarget(t->Scope))
-                    continue;
-                if (!t->isLocal())
-                    continue;
-                for (auto &c : t->getCommands())
-                {
-                    if (c->inputs.empty())
-                        continue;
-                    if (c->working_directory.empty())
-                        continue;
-                    if (c->inputs.size() > 1)
-                        continue;
-                    if (exts.find(c->inputs.begin()->extension().string()) == exts.end())
-                        continue;
-                    nlohmann::json j2;
-                    j2["directory"] = normalize_path(c->working_directory);
-                    j2["file"] = normalize_path(*c->inputs.begin());
-                    j2["arguments"].push_back(normalize_path(c->getProgram()));
-                    for (auto &a : c->arguments)
-                        j2["arguments"].push_back(a->toString());
-                    j.push_back(j2);
-                }
-            }
-        }
-        write_file(p, j.dump(2));
+    static const std::set<String> exts{
+        ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildSettings().getConfig();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildHash();
 
     auto p = b.getExecutionPlan();
 
-    print_comp_db(p, d / "compile_commands.json");
+    nlohmann::json j;
+    for (auto &[p, tgts] : b.getTargetsToBuild())
+    {
+        for (auto &tgt : tgts)
+        {
+            for (auto &c : tgt->getCommands())
+            {
+                if (c->inputs.empty())
+                    continue;
+                if (c->working_directory.empty())
+                    continue;
+                if (c->inputs.size() > 1)
+                    continue;
+                if (exts.find(c->inputs.begin()->extension().string()) == exts.end())
+                    continue;
+                nlohmann::json j2;
+                j2["directory"] = normalize_path(c->working_directory);
+                j2["file"] = normalize_path(*c->inputs.begin());
+                j2["arguments"].push_back(normalize_path(c->getProgram()));
+                for (auto &a : c->arguments)
+                    j2["arguments"].push_back(a->toString());
+                j.push_back(j2);
+            }
+        }
+    }
+    write_file(d / "compile_commands.json", j.dump(2));
 }
 
-void ShellGenerator::generate(const Build &b)
+void ShellGenerator::generate(const SwContext &b)
 {
     throw SW_RUNTIME_ERROR("not implemented");
 }
