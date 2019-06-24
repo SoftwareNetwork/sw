@@ -268,6 +268,8 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
     auto pos = f.find(on);
     if (pos == f.npos)
         throw SW_RUNTIME_ERROR("No header for package: " + p.toString());
+    auto prefix = f.substr(0, pos);
+    auto nlines = std::count(prefix.begin(), prefix.end(), '\n') + 2;
     f = f.substr(pos + sizeof(on));
     pos = f.find("#pragma sw header off");
     if (pos == f.npos)
@@ -279,7 +281,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
         primitives::Emitter ctx;
         ctx.addLine("#pragma once");
         ctx.addLine();
-        //ctx.addLine("#line 1 \"" + normalize_path(cfg) + "\""); // determine correct line number first
+        ctx.addLine("#line " + std::to_string(nlines) + " \"" + normalize_path(cfg) + "\"");
 
         primitives::Emitter prefix;
         auto ins_pre = "#pragma sw header insert prefix";
