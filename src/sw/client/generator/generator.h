@@ -82,11 +82,8 @@ struct MakeGenerator : Generator
 
 struct ShellGenerator : Generator
 {
-    void generate(const SwContext &b) override;
-};
+    bool batch = false;
 
-struct BatchGenerator : Generator
-{
     void generate(const SwContext &b) override;
 };
 

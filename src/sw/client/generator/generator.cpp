@@ -155,8 +155,8 @@ private:
 
 struct ProgramShortCutter
 {
-    ProgramShortCutter1 sc;
-    ProgramShortCutter1 sc_generated;
+    //                                                           program           alias
+    using F = std::function<void(primitives::Emitter &ctx, const String &, const String &)>;
 
     ProgramShortCutter()
         : sc_generated("SW_PROGRAM_GENERATED_")
@@ -169,12 +169,12 @@ struct ProgramShortCutter
         return progs.getProgramName(in);
     }
 
-    void printPrograms(primitives::Emitter &ctx) const
+    void printPrograms(primitives::Emitter &ctx, F f) const
     {
-        auto print_progs = [&ctx](auto &a)
+        auto print_progs = [&ctx, &f](auto &a)
         {
             for (auto &kv : a)
-                ctx.addLine(kv->second + " = " + kv->first);
+                f(ctx, kv->first, kv->second);
         };
 
         // print programs
@@ -183,6 +183,10 @@ struct ProgramShortCutter
         print_progs(sc_generated);
         ctx.emptyLines();
     }
+
+private:
+    ProgramShortCutter1 sc;
+    ProgramShortCutter1 sc_generated;
 };
 
 std::unique_ptr<Generator> Generator::create(const String &s)
@@ -209,8 +213,12 @@ std::unique_ptr<Generator> Generator::create(const String &s)
         g = std::make_unique<MakeGenerator>();
         break;
     case GeneratorType::Batch:
-        g = std::make_unique<BatchGenerator>();
+    {
+        auto g1 = std::make_unique<ShellGenerator>();
+        g1->batch = true;
+        g = std::move(g1);
         break;
+    }
     case GeneratorType::Shell:
         g = std::make_unique<ShellGenerator>();
         break;
@@ -238,7 +246,10 @@ struct NinjaEmitter : primitives::Emitter
             addCommand(swctx, *c);
 
         primitives::Emitter ctx_progs;
-        sc.printPrograms(ctx_progs);
+        sc.printPrograms(ctx_progs, [](auto &ctx, auto &prog, auto &alias)
+        {
+            ctx.addLine(alias + " = " + prog);
+        });
         write_file(dir / commands_fn, ctx_progs.getText());
     }
 
@@ -253,10 +264,10 @@ private:
         path p2 = normalize_path_windows(p);
         if (!GetShortPathName(p2.wstring().c_str(), buf.data(), buf.size()))
             //throw SW_RUNTIME_ERROR("GetShortPathName failed for path: " + p.u8string());
-            return p.u8string();
-        return to_string(buf);
+            return normalize_path(p);
+        return normalize_path(to_string(buf));
 #else
-        return p.u8string();
+        return normalize_path(p);
 #endif
     }
 
@@ -618,134 +629,115 @@ void MakeGenerator::generate(const SwContext &b)
 
     write_file(d / "Makefile", ctx.getText());
     ctx.clear();
-    ctx.sc.printPrograms(ctx);
+    ctx.sc.printPrograms(ctx, [](auto &ctx, auto &prog, auto &alias)
+    {
+        ctx.addLine(alias + " = " + prog);
+    });
     write_file(d / commands_fn, ctx.getText());
 }
 
-void BatchGenerator::generate(const SwContext &b)
+void ShellGenerator::generate(const SwContext &b)
 {
-    auto print_commands = [](const auto &ep, const path &p)
-    {
-        auto should_print = [](auto &o)
-        {
-            if (o.find("showIncludes") != o.npos)
-                return false;
-            return true;
-        };
-
-        auto program_name = [](auto n)
-        {
-            return "SW_PROGRAM_" + std::to_string(n);
-        };
-
-        String s;
-
-        // gather programs
-        std::unordered_map<path, size_t> programs;
-        for (auto &c : ep.commands)
-        {
-            auto n = programs.size() + 1;
-            if (programs.find(c->getProgram()) == programs.end())
-                programs[c->getProgram()] = n;
-        }
-
-        // print programs
-        for (auto &[k, v] : programs)
-            s += "set " + program_name(v) + "=\"" + normalize_path(k) + "\"\n";
-        s += "\n";
-
-        // print commands
-        for (auto &c : ep.commands)
-        {
-            std::stringstream stream;
-            stream << std::hex << c->getHash();
-            std::string result(stream.str());
-
-            s += "@rem " + c->getName() + ", hash = 0x" + result + "\n";
-            if (!c->needsResponseFile())
-            {
-                s += "%" + program_name(programs[c->getProgram()]) + "% ";
-                for (auto &a : c->arguments)
-                {
-                    if (should_print(a->toString()))
-                        s += a->quote() + " ";
-                }
-                s.resize(s.size() - 1);
-            }
-            else
-            {
-                s += "@echo. 2> response.rsp\n";
-                for (auto &a : c->arguments)
-                {
-                    if (should_print(a->toString()))
-                        s += "@echo " + a->quote() + " >> response.rsp\n";
-                }
-                s += "%" + program_name(programs[c->getProgram()]) + "% @response.rsp";
-            }
-            s += "\n\n";
-        }
-        write_file(p, s);
-    };
-
-    auto print_commands_raw = [](const auto &ep, const path &p)
-    {
-        String s;
-
-        // gather programs
-        std::unordered_map<path, size_t> programs;
-        for (auto &c : ep.commands)
-        {
-            s += c->getProgram() + " ";
-            for (auto &a : c->arguments)
-                s += a->toString() + " ";
-            s.resize(s.size() - 1);
-            s += "\n\n";
-        }
-
-        write_file(p, s);
-    };
-
-    auto print_numbers = [](const auto &ep, const path &p)
-    {
-        String s;
-
-        auto strings = ep.gatherStrings();
-        Strings explain;
-        explain.resize(strings.size());
-
-        auto print_string = [&strings, &explain, &s](const String &in)
-        {
-            auto n = strings[in];
-            s += std::to_string(n) + " ";
-            explain[n - 1] = in;
-        };
-
-        for (auto &c : ep.commands)
-        {
-            print_string(c->getProgram());
-            print_string(c->working_directory.u8string());
-            for (auto &a : c->arguments)
-                print_string(a->toString());
-            s.resize(s.size() - 1);
-            s += "\n";
-        }
-
-        String t;
-        for (auto &e : explain)
-            t += e + "\n";
-        if (!s.empty())
-            t += "\n";
-
-        write_file(p, t + s);
-    };
-
     const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildHash();
 
-    auto p = b.getExecutionPlan();
+    auto ep = b.getExecutionPlan();
 
-    print_commands(p, d / "commands.bat");
-    print_commands_raw(p, d / "commands_raw.bat");
-    print_numbers(p, d / "numbers.txt");
+    auto should_print = [](auto &o)
+    {
+        if (o.find("showIncludes") != o.npos)
+            return false;
+        return true;
+    };
+
+    primitives::Emitter ctx, ctx_progs;
+
+    if (batch)
+    {
+        ctx.addLine("@echo off");
+        ctx.addLine("setlocal");
+    }
+    else
+    {
+        ctx.addLine("#!/bin/bash");
+    }
+    ctx.addLine();
+
+    ctx.addEmitter(ctx_progs);
+
+    ProgramShortCutter sc;
+
+    // print commands
+    int i = 1;
+    for (auto &c : ep.commands)
+    {
+        ctx.addLine("echo [" + std::to_string(i++) + "/" + std::to_string(ep.commands.size()) + "] " + c->getName());
+
+        // set new line
+        ctx.addLine();
+
+        // wdir
+        if (!c->working_directory.empty())
+            ctx.addText("cd \"" + normalize_path(c->working_directory) + "\" && ");
+
+        // env
+        for (auto &[k, v] : c->environment)
+        {
+            if (batch)
+                ctx.addText("set ");
+            ctx.addText(k + "=" + v + " ");
+            if (batch)
+                ctx.addText("&& ");
+        }
+
+        if (!c->needsResponseFile())
+        {
+            ctx.addText(batch ? "%" : "$");
+            ctx.addText(sc.getProgramName(c->getProgram(), *c));
+            if (batch)
+                ctx.addText("%");
+            ctx.addText(" ");
+            int i = 0;
+            for (auto &a : c->arguments)
+            {
+                // skip exe
+                if (!i++)
+                    continue;
+                if (should_print(a->toString()))
+                    ctx.addText(a->quote() + " ");
+            }
+
+            if (!c->in.file.empty())
+                ctx.addText(" < " + normalize_path(c->in.file));
+            if (!c->out.file.empty())
+                ctx.addText(" > " + normalize_path(c->out.file));
+            if (!c->err.file.empty())
+                ctx.addText(" 2> " + normalize_path(c->err.file));
+        }
+        else
+        {
+            ctx.addLine("echo. 2> response.rsp");
+            for (auto &a : c->arguments)
+            {
+                if (should_print(a->toString()))
+                    ctx.addLine("echo " + a->quote() + " >> response.rsp");
+            }
+            ctx.addText(batch ? "%" : "$");
+            ctx.addLine(sc.getProgramName(c->getProgram(), *c));
+            if (batch)
+                ctx.addText("%");
+            ctx.addLine(" @response.rsp");
+        }
+        ctx.emptyLines(1);
+    }
+
+    sc.printPrograms(ctx_progs, [this](auto &ctx, auto &prog, auto &alias)
+    {
+        if (batch)
+            ctx.addLine("set ");
+        ctx.addLine(alias + "=\"" + normalize_path(prog) + "\"");
+    });
+
+    write_file(d / ("commands"s + (batch ? ".bat" : ".sh")), ctx.getText());
 }
 
 void CompilationDatabaseGenerator::generate(const SwContext &b)
@@ -784,11 +776,6 @@ void CompilationDatabaseGenerator::generate(const SwContext &b)
         }
     }
     write_file(d / "compile_commands.json", j.dump(2));
-}
-
-void ShellGenerator::generate(const SwContext &b)
-{
-    throw SW_RUNTIME_ERROR("not implemented");
 }
 
 }
