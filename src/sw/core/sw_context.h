@@ -37,40 +37,10 @@ enum class InputType : int32_t
     Directory,
 };
 
-// represents user request (if possible) returned from sw context
-// or sw context = single request?
-// or ... ?
-//struct SW_CORE_API Request {};
-
-namespace detail
-{
-
-struct InputVariant : std::variant<String, path, PackageId>
-{
-    using Base = std::variant<String, path, PackageId>;
-    using Base::Base;
-    InputVariant(const char *p) : Base(std::string(p)) {}
-};
-
-// unique
-struct Inputs : std::set<InputVariant>
-{
-    using Base = std::set<InputVariant>;
-    using Base::Base; // separate types
-    Inputs(const Strings &inputs) // dynamic detection
-    {
-        for (auto &i : inputs)
-            insert(i);
-    }
-};
-
-}
-
 struct SW_CORE_API SwContext : SwBuilderContext
 {
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
     using Drivers = std::map<PackageId, std::unique_ptr<IDriver>>;
-    using Inputs = detail::Inputs;
 
     // move to drivers? remove?
     path source_dir;
@@ -81,15 +51,18 @@ struct SW_CORE_API SwContext : SwBuilderContext
     void registerDriver(std::unique_ptr<IDriver> driver);
     const Drivers &getDrivers() const { return drivers; }
 
-    // TODO: return some build object? why? swctx IS buildobj, isn't it?
-    //std::unique_ptr<Request> load(const Inputs &inputs);
-    void load(const Inputs &inputs);
-    void build(const Inputs &inputs);
+    Input &addInput(const String &);
+    Input &addInput(const path &);
+    Input &addInput(const PackageId &);
+
+    void load();
+    void build();
     void execute();
     void configure();
+
     CommandExecutionPlan getExecutionPlan() const;
-    // void configure(); // = load() + save execution plan
     PackageDescriptionMap getPackages() const;
+
     String getBuildHash() const;
 
     TargetMap &getTargets() { return targets; }
@@ -105,7 +78,6 @@ private:
     TargetMap targets;
     TargetMap targets_to_build;
 
-    ProcessedInputs makeInputs(const Inputs &inputs);
     void load(const ProcessedInputs &inputs);
     bool prepareStep();
     void resolvePackages();
@@ -116,7 +88,6 @@ private:
 
 struct Input
 {
-    Input(const String &, const SwContext &);
     Input(const path &, const SwContext &);
     Input(const PackageId &, const SwContext &);
 
@@ -136,7 +107,6 @@ private:
     IDriver *driver = nullptr;
     TargetSettings settings;
 
-    void init(const String &, const SwContext &);
     void init(const path &, const SwContext &);
     void init(const PackageId &, const SwContext &);
 };

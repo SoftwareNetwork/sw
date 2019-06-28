@@ -61,7 +61,9 @@ SUBCOMMAND_DECL2(generate)
     ((Strings&)build_arg).clear();
     build_arg.push_back(build_arg_generate.getValue());
 
-    swctx.load((Strings&)build_arg);
+    for (auto &a : build_arg)
+        swctx.addInput(a);
+    swctx.load();
     swctx.configure();
 
     auto generator = sw::Generator::create(gGenerator);

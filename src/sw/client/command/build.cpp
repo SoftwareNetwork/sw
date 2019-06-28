@@ -50,5 +50,7 @@ SUBCOMMAND_DECL2(build)
 
     // if -B specified, it is used as is
 
-    swctx.build((Strings&)build_arg);
+    for (auto &a : build_arg)
+        swctx.addInput(a);
+    swctx.build();
 }

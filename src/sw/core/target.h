@@ -64,6 +64,9 @@ struct ITarget : ICastable
     get interface settings?
     */
 
+    // String get package settings(); // json coded or whatever via interface?
+    // String getDescription()
+
     // compare using settings
     // remove?
     virtual bool operator==(const TargetSettings &) const = 0;

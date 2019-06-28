@@ -494,7 +494,8 @@ void setup_log(const std::string &log_level, bool simple)
 
 void override_package_perform(sw::SwContext &swctx)
 {
-    swctx.load({"."});
+    swctx.addInput(fs::current_path());
+    swctx.load();
 
     // one prepare step will find sources
     // maybe add explicit enum value

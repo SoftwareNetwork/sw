@@ -1531,6 +1531,9 @@ static const Strings include_dir_names =
 
     "inc",
     "Inc",
+
+    "hdr",
+    "Hdr",
 };
 
 // these are the same on win/macos, maybe change somehow?

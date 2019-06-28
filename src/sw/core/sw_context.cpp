@@ -30,16 +30,14 @@ SwContext::~SwContext()
 {
 }
 
-void SwContext::load(const Inputs &strings)
+void SwContext::load()
 {
-    auto inputs2 = makeInputs(strings);
-    load(inputs2);
-    inputs.insert(inputs2.begin(), inputs2.end());
+    load(inputs);
 }
 
-void SwContext::build(const Inputs &strings)
+void SwContext::build()
 {
-    load(strings);
+    load(inputs);
     execute();
 }
 
@@ -74,9 +72,9 @@ void SwContext::resolvePackages()
     auto m = install(upkgs);
 
     // now we know all drivers
-    Inputs inputs;
+    ProcessedInputs inputs;
     for (auto &[u, p] : m)
-        inputs.insert(p);
+        inputs.emplace(p, *this);
     load(inputs);
 
     // load
@@ -487,29 +485,6 @@ String SwContext::getBuildHash() const
     return shorten_hash(blake2b_512(s), 6);
 }
 
-SwContext::ProcessedInputs SwContext::makeInputs(const Inputs &strings)
-{
-    ProcessedInputs inputs;
-    for (auto &s : strings)
-    {
-        switch (s.index())
-        {
-        case 0:
-            inputs.emplace(std::get<String>(s), *this);
-            break;
-        case 1:
-            inputs.emplace(std::get<path>(s), *this);
-            break;
-        case 2:
-            inputs.emplace(std::get<PackageId>(s), *this);
-            break;
-        default:
-            SW_UNREACHABLE;
-        }
-    }
-    return inputs;
-}
-
 void SwContext::load(const ProcessedInputs &inputs)
 {
     for (auto &i : inputs)
@@ -523,9 +498,25 @@ void SwContext::registerDriver(std::unique_ptr<IDriver> driver)
     drivers.insert_or_assign(driver->getPackageId(), std::move(driver));
 }
 
-Input::Input(const String &s, const SwContext &swctx)
+Input &SwContext::addInput(const String &i)
 {
-    init(s, swctx);
+    path p(i);
+    if (fs::exists(p))
+        return addInput(p);
+    else
+        return addInput(PackageId(i));
+}
+
+Input &SwContext::addInput(const path &i)
+{
+    auto p = inputs.emplace(i, *this);
+    return (Input &)*p.first;
+}
+
+Input &SwContext::addInput(const PackageId &i)
+{
+    auto p = inputs.emplace(i, *this);
+    return (Input &)*p.first;
 }
 
 Input::Input(const path &p, const SwContext &swctx)
@@ -551,15 +542,6 @@ String Input::getHash() const
         break;
     }
     return s += settings.getHash();
-}
-
-void Input::init(const String &s, const SwContext &swctx)
-{
-    path p(s);
-    if (fs::exists(p))
-        init(p, swctx);
-    else
-        init(PackageId(s), swctx);
 }
 
 void Input::init(const path &in, const SwContext &swctx)
