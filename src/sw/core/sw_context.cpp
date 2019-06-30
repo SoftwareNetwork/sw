@@ -485,8 +485,9 @@ String SwContext::getBuildHash() const
     return shorten_hash(blake2b_512(s), 6);
 }
 
-void SwContext::load(const ProcessedInputs &inputs)
+void SwContext::load(ProcessedInputs &inputs)
 {
+    std::map<IDriver *, ProcessedInputs> active_drivers;
     for (auto &i : inputs)
         active_drivers[&i.getDriver()].insert(i);
     for (auto &[d, g] : active_drivers)
@@ -529,6 +530,18 @@ Input::Input(const PackageId &p, const SwContext &swctx)
     init(p, swctx);
 }
 
+const std::set<TargetSettings> &Input::getSettings() const
+{
+    if (settings.empty())
+        throw SW_RUNTIME_ERROR("No input settings provided");
+    return settings;
+}
+
+void Input::addSettings(const TargetSettings &s)
+{
+    settings.insert(s);
+}
+
 String Input::getHash() const
 {
     String s;
@@ -541,7 +554,9 @@ String Input::getHash() const
         s = normalize_path(getPath());
         break;
     }
-    return s += settings.getHash();
+    for (auto &ss : settings)
+        s += ss.getHash();
+    return s;
 }
 
 void Input::init(const path &in, const SwContext &swctx)

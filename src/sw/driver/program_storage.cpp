@@ -32,6 +32,11 @@ void ProgramStorage::setExtensionProgram(const String &ext, const ProgramPtr &p)
 void ProgramStorage::setExtensionProgram(const String &ext, const DependencyPtr &d)
 {
     setExtensionProgram(ext, d->getPackage());
+
+    // also add (yes, duplicate!) passed dptr
+    // add a dependency to current target
+    if (auto t = dynamic_cast<NativeCompiledTarget *>(this); t)
+        t->addDummyDependency(d);
 }
 
 void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPackage &p)
@@ -49,7 +54,7 @@ void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPack
 
     // add a dependency to current target
     if (auto t = dynamic_cast<NativeCompiledTarget *>(this); t)
-        t->addDummyDependency(*t);
+        t->addDummyDependency(std::make_shared<Dependency>(p));
 }
 
 Program *ProgramStorage::getProgram(const String &ext) const

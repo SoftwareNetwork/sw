@@ -62,13 +62,15 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories
 {
     // flags
     bool IsConfig = false;
-    bool ParallelSourceDownload = true;
+    //bool ParallelSourceDownload = true;
     bool DryRun = false;
     PackagePath NamePrefix;
-    const Build *build = nullptr;
-    const ProjectTarget *current_project = nullptr;
 
     path getServiceDir() const;
+
+protected:
+    const Build *build = nullptr;
+    const ProjectTarget *current_project = nullptr;
 };
 
 struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
@@ -172,11 +174,17 @@ private:
     bool Local = true; // local projects
 
     template <typename T, typename ... Args>
+    auto createTarget(Args && ... args)
+    {
+        return std::make_shared<T>(std::forward<Args>(args)...);
+    }
+
+    template <typename T, typename ... Args>
     T &addTarget1(const PackagePath &Name, const Version &V, Args && ... args)
     {
         static_assert(std::is_base_of_v<Target, T>, "Provide a valid Target type.");
 
-        auto t = std::make_shared<T>(std::forward<Args>(args)...);
+        auto t = createTarget<T>(std::forward<Args>(args)...);
         addTarget2(true, t, Name, V);
         return *t;
     }
@@ -186,7 +194,7 @@ private:
     {
         static_assert(std::is_base_of_v<Target, T>, "Provide a valid Target type.");
 
-        auto t = std::make_shared<T>(std::forward<Args>(args)...);
+        auto t = createTarget<T>(std::forward<Args>(args)...);
         addTarget2(false, t, Name, V);
         return t;
     }
@@ -282,7 +290,7 @@ public:
     // api
     const LocalPackage &getPackage() const override { return TargetBase::getPackage(); }
     const Source &getSource() const override;
-    bool isReal() const override { return real; }
+    bool isReal() const override;
     Files getSourceFiles() const override;
     std::vector<IDependency *> getDependencies() const override;
     bool operator==(const TargetSettings &) const override;
@@ -354,7 +362,7 @@ protected:
     mutable bool deps_resolved = false;
     std::unique_ptr<SettingsComparator> scmp;
 
-    Target(const Target &);
+    //Target(const Target &);
 
     path getOutputFileName() const;
 

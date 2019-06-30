@@ -88,6 +88,21 @@ void Driver::load(const std::set<Input> &inputs)
         case InputType::DirectorySpecificationFile:
         {
             auto p = *findConfig(i.getPath(), Build::getAvailableFrontendConfigFilenames());
+
+            build->settings.clear();
+            for (auto s : i.getSettings())
+            {
+                s.erase("name-prefix");
+                s.erase("dry-run");
+                s.erase("source-dir-for-source");
+                build->addSettings(s);
+            }
+
+            build->DryRun = (*i.getSettings().begin())["dry-run"] == "true";
+
+            for (auto &[h, d] : (*i.getSettings().begin())["source-dir-for-source"].getSettings())
+                build->source_dirs_by_source[h] = d.getValue();
+
             build->load_spec_file(p);
             break;
         }

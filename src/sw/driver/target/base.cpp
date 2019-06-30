@@ -177,15 +177,19 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
 
     // set source dir
     if (t->SourceDir.empty())
-        //t->SourceDir = SourceDir.empty() ? getSolution().SourceDir : SourceDir;
-        //t->SourceDir = getSolution().SourceDir;
-        t->setSourceDirectory(/*getSolution().*/SourceDirBase); // take from this
-
-    // try to get solution provided source dir
-    if (t->source && t->SourceDir.empty())
     {
-        if (auto sd = getSolution().getSourceDir(t->getSource(), t->getPackage().version); sd)
-            t->setSourceDirectory(sd.value());
+        // try to get solution provided source dir
+        if (t->source)
+        {
+            if (auto sd = getSolution().getSourceDir(t->getSource(), t->getPackage().version); sd)
+                t->setSourceDirectory(sd.value());
+        }
+        if (t->SourceDir.empty())
+        {
+            //t->SourceDir = SourceDir.empty() ? getSolution().SourceDir : SourceDir;
+            //t->SourceDir = getSolution().SourceDir;
+            t->setSourceDirectory(/*getSolution().*/SourceDirBase); // take from this
+        }
     }
 
     // second try
@@ -273,11 +277,14 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     // inherit from this
     t->build = &getSolution();
 
+    if (auto t0 = dynamic_cast<const Target*>(this))
+        t->source = t0->source ? t0->source->clone() : nullptr;
+
     t->IsConfig = IsConfig; // TODO: inherit from reconsider
     t->DryRun = DryRun; // TODO: inherit from reconsider
 
     // inherit from solution
-    t->ParallelSourceDownload = getSolution().ParallelSourceDownload;
+    //t->ParallelSourceDownload = getSolution().ParallelSourceDownload;
 
     //auto p = getSolution().getKnownTarget(t->getPackage().ppath);
     //if (!p.toString().empty())
@@ -324,13 +331,19 @@ LocalPackage &TargetBase::getPackageMutable()
     return *pkg;
 }
 
-Target::Target(const Target &rhs)
+/*Target::Target(const Target &rhs)
     : TargetBase(rhs)
     , ProgramStorage(rhs)
-    , source(rhs.source ? rhs.source->clone() : nullptr)
+    //, source(rhs.source ? rhs.source->clone() : nullptr)
     , Scope(rhs.Scope)
     , RootDirectory(rhs.RootDirectory)
 {
+    SW_UNIMPLEMENTED;
+}*/
+
+bool Target::isReal() const
+{
+    return real && !sw_provided && !skip;
 }
 
 const Source &Target::getSource() const
@@ -484,7 +497,7 @@ Program *Target::findProgramByExtension(const String &ext) const
         return {};
     // resolve via swctx because it might provide other version rather than cld.find(*u)
     auto pkg = getSolution().swctx.resolve(*u);
-    auto cld = getSolution().getChildren();
+    auto &cld = getSolution().getChildren();
     auto tgt = cld.find(pkg, getSolution().getHostSettings());
     if (!tgt)
         return {};
@@ -779,39 +792,19 @@ void Target::addDummyDependency(const DependencyPtr &t)
     auto &hs = getSolution().getHostSettings();
     auto &ds = DummyDependencies.back()->settings;
 
-    auto equal = [this, &hs](auto &s)
-    {
-        auto i1 = ts.find(s);
-        auto i2 = hs.find(s);
-        return
-            i1 != ts.end() &&
-            i2 != hs.end() &&
-            i1->second == i2->second;
-    };
-
     bool use_current_settings =
-        equal("os.kernel") &&
-        equal("os.arch");
-    if (!use_current_settings)
-    {
-        // 64-bit windows can run 32-bit apps
-        auto i = hs.find("os.kernel");
-        if (i != hs.end() && i->second == "com.Microsoft.Windows.NT")
-        {
-            auto i = hs.find("os.arch");
-            if (i != hs.end() && i->second == "x86_64")
-            {
-                auto i = ts.find("os.arch");
-                if (i != ts.end() && i->second == "x86")
-                {
-                    use_current_settings = true;
-                }
-            }
-        }
-    }
-
-    for (auto &[k, v] : (use_current_settings ? ts : hs))
-        ds.insert_or_assign(k, v);
+        (
+            // same os & arch can run apps
+            ts["os.kernel"] == hs["os.kernel"] && ts["os.arch"] == hs["os.arch"]
+        )
+        ||
+        (
+            // 64-bit windows can run 32-bit apps
+            hs["os.kernel"] == "com.Microsoft.Windows.NT" && hs["os.arch"] == "x86_64" &&
+            ts["os.arch"] == "x86"
+        )
+        ;
+    ds.merge(use_current_settings ? ts : hs);
 }
 
 void Target::addDummyDependency(const Target &t)

@@ -152,13 +152,13 @@ static OS fromTargetSettings(const TargetSettings &ts)
     OS os;
 
 #define IF_SETTING(s, var, value) \
-    else if (i->second == s)      \
+    else if (v == s)      \
         var = value
 
-#define IF_KEY(s)            \
-    {{                       \
-        auto i = ts.find(s); \
-        if (i != ts.end())
+#define IF_KEY(k)            \
+    {                       \
+        auto &v = ts[k]; \
+        if (v) {
 #define IF_END }}
 
     IF_KEY("os.kernel")
@@ -169,7 +169,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
     IF_END
 
     IF_KEY("os.version")
-        os.Version = i->second;
+        os.Version = v.getValue();
     IF_END
 
     IF_KEY("os.arch")
@@ -183,52 +183,6 @@ static OS fromTargetSettings(const TargetSettings &ts)
     IF_END
 
     return os;
-}
-
-static TargetSettings toTargetSettings(const OS &o)
-{
-    TargetSettings s;
-    switch (o.Type)
-    {
-    case OSType::Windows:
-        s["os.kernel"] = "com.Microsoft.Windows.NT";
-        break;
-    default:
-        SW_UNIMPLEMENTED;
-    }
-    s["os.version"] = o.Version.toString();
-
-    switch (o.Arch)
-    {
-    case ArchType::x86:
-        s["os.arch"] = "x86";
-        break;
-    case ArchType::x86_64:
-        s["os.arch"] = "x86_64";
-        break;
-    case ArchType::arm:
-        s["os.arch"] = "arm";
-        break;
-    case ArchType::aarch64:
-        s["os.arch"] = "aarch64";
-        break;
-    default:
-        SW_UNIMPLEMENTED;
-    }
-
-    /*switch (o.SubArch)
-    {
-    case SubArchType:::
-    s["os.subarch"] = "";
-    break;
-    default:
-    SW_UNIMPLEMENTED;
-    }*/
-
-    // no version at the moment
-    // it is not clear if it's needed
-
-    return s;
 }
 
 BuildSettings::BuildSettings(const TargetSettings &ts)
@@ -261,7 +215,7 @@ BuildSettings::BuildSettings(const TargetSettings &ts)
     IF_END
 
     IF_KEY("mt")
-        Native.MT = i->second == "true";
+        Native.MT = v == "true";
     IF_END
 
 #undef IF_SETTING

@@ -53,10 +53,11 @@ SUBCOMMAND_DECL2(upload)
     opts.existing_dirs_age = std::chrono::hours(8);
     //opts.apply_version_to_source = true;
     //swctx.
-    auto s = sw::fetch_and_load(swctx, build_arg_update.getValue(), opts);
+    SW_UNIMPLEMENTED;
+    //auto s = sw::fetch_and_load(swctx, build_arg_update.getValue(), opts);
     if (build_before_upload)
     {
-        s->execute();
+        //s->execute();
 
         // after execution such solution has resolved deps and deps of the deps
         // we must not add them

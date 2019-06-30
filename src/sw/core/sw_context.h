@@ -73,12 +73,11 @@ private:
     using ProcessedInputs = std::set<Input>;
 
     Drivers drivers;
-    std::map<IDriver *, ProcessedInputs> active_drivers;
     ProcessedInputs inputs;
     TargetMap targets;
     TargetMap targets_to_build;
 
-    void load(const ProcessedInputs &inputs);
+    void load(ProcessedInputs &inputs);
     bool prepareStep();
     void resolvePackages();
     void execute(CommandExecutionPlan &p) const;
@@ -96,7 +95,9 @@ struct Input
     path getPath() const;
     PackageId getPackageId() const;
     bool isChanged() const;
-    const TargetSettings &getSettings() const { return settings; }
+    const std::set<TargetSettings> &getSettings() const;
+    void addSettings(const TargetSettings &s);
+    void clearSettings() { settings.clear(); }
     String getHash() const;
 
     bool operator<(const Input &rhs) const;
@@ -105,7 +106,7 @@ private:
     std::variant<path, PackageId> data;
     InputType type;
     IDriver *driver = nullptr;
-    TargetSettings settings;
+    std::set<TargetSettings> settings;
 
     void init(const path &, const SwContext &);
     void init(const PackageId &, const SwContext &);

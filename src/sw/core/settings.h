@@ -6,12 +6,16 @@
 
 #pragma once
 
+//#include <nlohmann/json.hpp>
 #include <primitives/string.h>
+
+#include <memory>
+#include <optional>
 
 namespace sw
 {
 
-struct SettingValue
+/*struct SettingValue
 {
     //String value;
     bool used = false;
@@ -21,13 +25,61 @@ struct SettingValue
     // 0 - false
     // >0 - depth
     bool inherit = false;
-};
+};*/
 
 using TargetSettingKey = String;
 using TargetSettingValue = String;
+struct TargetSettings;
+
+struct TargetSetting
+{
+    TargetSetting(const TargetSettingKey &k);
+    TargetSetting(const TargetSetting &);
+    TargetSetting &operator=(const TargetSetting &);
+
+    TargetSetting &operator[](const TargetSettingKey &k);
+    const TargetSetting &operator[](const TargetSettingKey &k) const;
+
+    TargetSetting &operator=(const TargetSettings &u);
+
+    template <class U>
+    TargetSetting &operator=(const U &u)
+    {
+        value = u;
+        return *this;
+    }
+
+    bool operator==(const TargetSetting &) const;
+    bool operator!=(const TargetSetting &) const;
+
+    template <class U>
+    bool operator==(const U &u) const
+    {
+        if (!value.has_value())
+            return false;
+        return *value == u;
+    }
+
+    template <class U>
+    bool operator!=(const U &u) const
+    {
+        return !operator==(u);
+    }
+
+    bool operator<(const TargetSetting &) const;
+    operator bool() const { return !!value; }
+    const String &getValue() const;
+    const TargetSettings &getSettings() const;
+    void merge(const TargetSetting &);
+
+private:
+    TargetSettingKey key;
+    std::optional<TargetSettingValue> value;
+    mutable std::unique_ptr<TargetSettings> settings;
+};
 
 // make map internal?
-struct SW_CORE_API TargetSettings : std::map<TargetSettingKey, TargetSettingValue>
+struct SW_CORE_API TargetSettings
 {
     enum StringType : int
     {
@@ -39,15 +91,32 @@ struct SW_CORE_API TargetSettings : std::map<TargetSettingKey, TargetSettingValu
         Simple      = KeyValue,
     };
 
+    TargetSetting &operator[](const TargetSettingKey &);
+    const TargetSetting &operator[](const TargetSettingKey &) const;
+
+    void merge(const TargetSettings &);
+    void erase(const TargetSettingKey &);
+
     String getConfig() const; // getShortConfig()?
     String getHash() const;
     String toString(int type = Simple) const;
 
     bool operator==(const TargetSettings &) const;
+    bool operator<(const TargetSettings &) const;
+
+    auto begin() { return settings.begin(); }
+    auto end() { return settings.end(); }
+    auto begin() const { return settings.begin(); }
+    auto end() const { return settings.end(); }
 
 private:
+    mutable std::map<TargetSettingKey, TargetSetting> settings;
+
     String toStringKeyValue() const;
     String toJsonString() const;
 };
+
+SW_CORE_API
+TargetSettings toTargetSettings(const struct OS &);
 
 } // namespace sw

@@ -137,9 +137,7 @@ struct SomeSettingsSettingsComparator : SettingsComparator
     {
         return all_of(s.begin(), s.end(), [&s1, &s2](auto &s)
         {
-            auto i1 = s1.find(s);
-            auto i2 = s2.find(s);
-            return i1 != s1.end() && i2 != s2.end() && i1->second == i2->second;
+            return s1[s] == s2[s];
         });
     }
 

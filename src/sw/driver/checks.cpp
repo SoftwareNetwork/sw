@@ -551,6 +551,11 @@ static path getUniquePath(const path &p)
     return boost::replace_all_copy(p.parent_path().filename().u8string(), "-", "_");
 }
 
+static String getTargetName(const path &p)
+{
+    return "loc." + getUniquePath(p).string();
+}
+
 Build Check::setupSolution(const path &f) const
 {
     auto s = check_set->checker.build;
@@ -661,7 +666,7 @@ void FunctionExists::run() const
 
     auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data; // before setup, because it is changed later for LibraryFunctionExists
     setupTarget(e);
     e += f;
@@ -732,7 +737,7 @@ void IncludeExists::run() const
 
     auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
     e += f;
 
@@ -786,7 +791,7 @@ void TypeSize::run() const
 
     auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
     e += f;
 
@@ -861,7 +866,7 @@ void TypeAlignment::run() const
 
     auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
     e += f;
 
@@ -935,7 +940,7 @@ void SymbolExists::run() const
 
     auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
     e += f;
 
@@ -993,7 +998,7 @@ void DeclarationExists::run() const
 
     auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
     e += f;
 
@@ -1048,7 +1053,7 @@ void StructMemberExists::run() const
 
     auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
     e += f;
 
@@ -1110,7 +1115,7 @@ void SourceCompiles::run() const
 
     auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
     e += f;
 
@@ -1146,7 +1151,7 @@ void SourceLinks::run() const
 
     auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
     e += f;
 
@@ -1177,7 +1182,7 @@ void SourceRuns::run() const
 
     auto s = setupSolution(f);
 
-    auto &e = s.addTarget<ExecutableTarget>(getUniquePath(f).string());
+    auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
     e += f;
 

@@ -1953,11 +1953,12 @@ bool NativeCompiledTarget::prepare()
                     auto Inheritance = dep.inhtype;
                     auto d2 = dep.dep;
 
-                    if (&d2->getTarget() == this)
+                    // nothing to do with private inheritance
+                    // before d2->getTarget()!
+                    if (Inheritance == InheritanceType::Private)
                         continue;
 
-                    // nothing to do with private inheritance
-                    if (Inheritance == InheritanceType::Private)
+                    if (&d2->getTarget() == this)
                         continue;
 
                     if (Inheritance == InheritanceType::Protected && !hasSameProject(d2->getTarget()))

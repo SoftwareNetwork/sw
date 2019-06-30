@@ -197,7 +197,6 @@ public:
     bool silent = false; // some log messages
     bool show_output = false; // output from commands
     path fetch_dir;
-    bool dry_run = false;
     bool with_testing = false;
     std::unordered_set<LocalPackage> known_cfgs;
     bool use_separate_target_map = false; // check targets added to internal children map
@@ -300,10 +299,6 @@ public:
 
 
 
-    struct FetchInfo
-    {
-        SourceDirMap sources;
-    } fetch_info;
 
     std::optional<path> config; // current config or empty in configless mode
     // child solutions

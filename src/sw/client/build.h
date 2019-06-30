@@ -41,6 +41,4 @@ struct FetchOptions : SourceDownloadOptions
     bool parallel = true;
 };
 
-std::unique_ptr<Build> fetch_and_load(const SwContext &swctx, const path &file_or_dir, const FetchOptions &opts = {});
-
 }

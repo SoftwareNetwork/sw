@@ -1765,7 +1765,7 @@ path Build::getExecutionPlanFilename() const
 
 void Build::execute()
 {
-    dry_run = ::dry_run;
+    DryRun = ::dry_run;
 
     // read ex plan
     if (ide)
@@ -1864,7 +1864,7 @@ void Build::execute(CommandExecutionPlan &p) const
         }
     }
 
-    if (dry_run)
+    if (DryRun)
         return;
 
     ScopedTime t;
@@ -2565,7 +2565,8 @@ void Build::createSolutions(const path &dll, bool usedll)
 
 void Build::load_dll(const path &dll)
 {
-    createSolutions(dll, false);
+    //createSolutions(dll, false);
+    detectCompilers();
 
     // add cc if needed
     //getHostSolution();
@@ -2791,7 +2792,7 @@ bool Build::isKnownTarget(const LocalPackage &p) const
     if (!module_data)
         throw SW_RUNTIME_ERROR("no module data set");
     return module_data->known_targets.empty() ||
-        p.ppath.is_loc() ||
+        p.ppath.is_loc() || // used by cfg targets and checks
         module_data->known_targets.find(p) != module_data->known_targets.end();
 }
 
