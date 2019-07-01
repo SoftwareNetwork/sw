@@ -139,7 +139,6 @@ std::unique_ptr<Build> fetch_and_load(const SwContext &swctx, const path &file_o
     return std::move(b);
 }*/
 
-
 SUBCOMMAND_DECL2(fetch)
 {
     using namespace sw;
@@ -192,9 +191,6 @@ SUBCOMMAND_DECL2(fetch)
     i.addSettings(ts);
     swctx.load();
 
-    swctx.execute();
-
-    /*auto s = sw::fetch_and_load(swctx, ".", opts);
     if (build_after_fetch)
-        s->execute();*/
+        swctx.execute();
 }
