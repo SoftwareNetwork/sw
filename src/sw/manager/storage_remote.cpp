@@ -484,6 +484,8 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
     if (unresolved_pkgs.empty())
         return m;
 
+    LOG_INFO(logger, "Requesting dependency list... ");
+
     // fallback to really remote db
     return resolveFromRemote(pkgs, unresolved_pkgs);
 }
@@ -495,8 +497,6 @@ RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(const UnresolvedPa
 
     auto &us = Settings::get_user_settings();
     auto cr = us.remotes.begin();
-
-    LOG_INFO(logger, "Requesting dependency list... ");
 
     auto api = cr->getApi();
     auto id_deps = api->resolvePackages(pkgs);
