@@ -394,59 +394,80 @@ bool RemoteStorage::isCurrentDbOld() const
     return p;
 }*/
 
+struct RemoteFileWithHashVerification : vfs::File
+{
+    Strings urls;
+    Package p;
+
+    RemoteFileWithHashVerification(const Package &p) : p(p) {}
+
+    bool copy(const path &fn) const override
+    {
+        if (copy(fn, p.getData().hash))
+            return true;
+
+        if (auto remote_storage = dynamic_cast<const RemoteStorageWithFallbackToRemoteResolving *>(&p.storage))
+        {
+            UnresolvedPackage u = p;
+            UnresolvedPackages upkgs;
+            auto m = remote_storage->resolveFromRemote({ u }, upkgs);
+            if (upkgs.empty())
+            {
+                if (copy(fn, m.find(u)->second.getData().hash))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool copy(const path &fn, const String &hash) const
+    {
+        auto download_from_source = [&](const auto &url)
+        {
+            try
+            {
+                LOG_TRACE(logger, "Downloading file: " << url);
+                download_file(url, fn);
+            }
+            catch (std::exception &e)
+            {
+                LOG_TRACE(logger, "Downloading file: " << url << ", error: " << e.what());
+                return false;
+            }
+            return true;
+        };
+
+        for (auto &url : urls)
+        {
+            if (!download_from_source(url))
+                continue;
+            auto sfh = get_strong_file_hash(fn, hash);
+            if (sfh == hash)
+            {
+                return true;
+            }
+            auto fh = get_file_hash(fn);
+            if (fh == hash)
+            {
+                return true;
+            }
+            LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << sfh);
+        }
+
+        return false;
+    }
+};
+
 std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFileType t) const
 {
-    struct RemoteFileWithHashVerification : vfs::File
-    {
-        Strings urls;
-        String hash;
-
-        bool copy(const path &fn) const override
-        {
-            auto download_from_source = [&](const auto &url)
-            {
-                try
-                {
-                    LOG_TRACE(logger, "Downloading file: " << url);
-                    download_file(url, fn);
-                }
-                catch (std::exception &e)
-                {
-                    LOG_TRACE(logger, "Downloading file: " << url << ", error: " << e.what());
-                    return false;
-                }
-                return true;
-            };
-
-            for (auto &url : urls)
-            {
-                if (!download_from_source(url))
-                    continue;
-                auto sfh = get_strong_file_hash(fn, hash);
-                if (sfh == hash)
-                {
-                    return true;
-                }
-                auto fh = get_file_hash(fn);
-                if (fh == hash)
-                {
-                    return true;
-                }
-                LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << sfh);
-            }
-
-            return false;
-        }
-    };
-
     switch (t)
     {
     case StorageFileType::SourceArchive:
     {
         auto provs = getPackagesDatabase().getDataSources();
         Package pkg(*this, id);
-        auto rf = std::make_unique<RemoteFileWithHashVerification>();
-        rf->hash = pkg.getData().hash;
+        auto rf = std::make_unique<RemoteFileWithHashVerification>(pkg);
         for (auto &p : provs)
             rf->urls.push_back(p.getUrl(pkg));
         return rf;
@@ -464,9 +485,13 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
         return m;
 
     // fallback to really remote db
+    return resolveFromRemote(pkgs, unresolved_pkgs);
+}
 
-    // we clear our previous results as they might be outdated
-    m.clear();
+std::unordered_map<UnresolvedPackage, Package>
+RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+{
+    std::unordered_map<UnresolvedPackage, Package> m;
 
     auto &us = Settings::get_user_settings();
     auto cr = us.remotes.begin();
@@ -485,7 +510,7 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
                 auto [i, inserted] = m.emplace(u, Package(*this, d));
                 // it's fine
                 //if (!inserted)
-                    //throw SW_RUNTIME_ERROR("Duplicate resolved dep: " + d.toString());
+                //throw SW_RUNTIME_ERROR("Duplicate resolved dep: " + d.toString());
 
                 // copy data
                 data[d] = d;
