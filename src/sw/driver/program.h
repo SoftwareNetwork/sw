@@ -52,14 +52,4 @@ struct ProgramGroup : Program
 
 using ProgramGroupPtr = std::shared_ptr<ProgramGroup>;
 
-struct PredefinedProgram
-{
-    void setProgram(const ProgramPtr &p) { program = p; }
-    Program &getProgram();
-    const Program &getProgram() const;
-
-private:
-    ProgramPtr program;
-};
-
 }

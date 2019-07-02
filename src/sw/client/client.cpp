@@ -160,6 +160,10 @@ static ::cl::opt<bool> ignore_ssl_checks("ignore-ssl-checks");
 extern ::cl::list<String> build_arg;
 extern ::cl::list<String> build_arg_test;
 
+#include <sw/core/c.hpp>
+
+sw_driver_t sw_create_driver(void);
+
 std::unique_ptr<sw::SwContext> createSwContext()
 {
     // load proxy settings early
@@ -169,6 +173,7 @@ std::unique_ptr<sw::SwContext> createSwContext()
 
     auto swctx = std::make_unique<sw::SwContext>(storage_dir_override.empty() ? sw::Settings::get_user_settings().storage_dir : storage_dir_override);
     swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>(*swctx));
+    swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
     return swctx;
 }
 

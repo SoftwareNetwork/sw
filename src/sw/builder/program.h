@@ -57,4 +57,14 @@ private:
 
 using ProgramPtr = std::shared_ptr<Program>;
 
+struct PredefinedProgram
+{
+    void setProgram(const ProgramPtr &p) { program = p; }
+    Program &getProgram();
+    const Program &getProgram() const;
+
+private:
+    ProgramPtr program;
+};
+
 }

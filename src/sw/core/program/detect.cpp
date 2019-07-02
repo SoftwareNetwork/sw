@@ -4,19 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "compiler.h"
+#include "sw/core/sw_context.h"
 
-#include "../build.h"
-#include "compiler_helpers.h"
-#include "../target/native.h"
-
-#include <sw/core/sw_context.h>
-
-#include <primitives/sw/settings.h>
-
-#ifdef _WIN32
 #include "misc/cmVSSetupHelper.h"
-#endif
+
+#include <sw/builder/program.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -26,21 +18,19 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler.detect");
 
-//static cl::opt<bool> do_not_resolve_compiler("do-not-resolve-compiler");
-
 namespace sw
 {
 
 std::string getVsToolset(const Version &v);
 
-void detectNativeCompilers(Build &s);
-void detectCSharpCompilers(Build &s);
-void detectRustCompilers(Build &s);
-void detectGoCompilers(Build &s);
-void detectFortranCompilers(Build &s);
-void detectJavaCompilers(Build &s);
-void detectKotlinCompilers(Build &s);
-void detectDCompilers(Build &s);
+void detectNativeCompilers(SwCoreContext &s);
+void detectCSharpCompilers(SwCoreContext &s);
+void detectRustCompilers(SwCoreContext &s);
+void detectGoCompilers(SwCoreContext &s);
+void detectFortranCompilers(SwCoreContext &s);
+void detectJavaCompilers(SwCoreContext &s);
+void detectKotlinCompilers(SwCoreContext &s);
+void detectDCompilers(SwCoreContext &s);
 
 const StringSet &getCppHeaderFileExtensions()
 {
@@ -115,7 +105,7 @@ bool findDefaultVS(path &root, int &VSVersion)
     return false;
 }
 
-void detectCompilers(Build &s)
+void detectCompilers(SwCoreContext &s)
 {
     detectNativeCompilers(s);
 
@@ -129,7 +119,7 @@ void detectCompilers(Build &s)
     detectDCompilers(s);*/
 }
 
-struct SomeSettingsSettingsComparator : SettingsComparator
+/*struct SomeSettingsSettingsComparator : SettingsComparator
 {
     void addSetting(const String &in) { return s.push_back(in); }
 
@@ -154,30 +144,61 @@ struct LinkerSettingsComparator : SomeSettingsSettingsComparator
     }
 };
 
-using CompilerSettingsComparator = LinkerSettingsComparator;
+using CompilerSettingsComparator = LinkerSettingsComparator;*/
 
 // left join comparator
 
-template <class T = PredefinedTarget>
-static decltype(auto) addProgramNoFile(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
+struct PredefinedTarget : ITarget, PredefinedProgram
 {
-    auto &t = s.add<T>(pp, p->getVersion());
-    t.setProgram(p);
-    t.sw_provided = true;
-    return t;
+    PackageId id;
+    TargetSettings ts;
+
+    PredefinedTarget(const PackageId &id) :id(id) {}
+    virtual ~PredefinedTarget() {}
+
+    const PackageId &getPackage() const override { return id; }
+
+    /// can be registered to software network
+    bool isReal() const override { return false; }
+
+    const Source &getSource() const override { SW_UNIMPLEMENTED; }
+    Files getSourceFiles() const override { SW_UNIMPLEMENTED; }
+    std::vector<IDependency *> getDependencies() const override { SW_UNIMPLEMENTED; }
+    bool prepare() override { SW_UNIMPLEMENTED; }
+    Commands getCommands() const override { SW_UNIMPLEMENTED; }
+
+    bool operator==(const TargetSettings &s) const override { return ts == s; }
+    bool operator<(const TargetSettings &s) const override { return ts == s; }
+};
+
+template <class T = PredefinedTarget>
+static T &addProgramNoFile(SwCoreContext &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
+{
+    PackageId id(pp, p->getVersion());
+
+    auto t = std::make_shared<T>(id);
+
+    auto &cld = s.getTargets();
+    cld[id].push_back(t);
+
+    t->setProgram(p);
+    //t.sw_provided = true;
+    return *t;
 }
 
 template <class T = PredefinedTarget>
-static decltype(auto) addProgram(Build &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
+static T &addProgram(SwCoreContext &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
 {
     //if (!fs::exists(p->file))
         //throw SW_RUNTIME_ERROR("Program does not exist: " + normalize_path(p->file));
     return addProgramNoFile(s, pp, p);
 }
 
-void detectDCompilers(Build &s)
+void detectDCompilers(SwCoreContext &s)
 {
-    path compiler;
+    SW_UNIMPLEMENTED;
+
+    /*path compiler;
     compiler = resolveExecutable("dmd");
     if (compiler.empty())
         return;
@@ -186,12 +207,14 @@ void detectDCompilers(Build &s)
     C->file = compiler;
     C->Extension = s.getBuildSettings().TargetOS.getExecutableExtension();
     //C->input_extensions = { ".d" };
-    addProgram(s, "org.dlang.dmd.dmd", C);
+    addProgram(s, "org.dlang.dmd.dmd", C);*/
 }
 
-void detectKotlinCompilers(Build &s)
+void detectKotlinCompilers(SwCoreContext &s)
 {
-    path compiler;
+    SW_UNIMPLEMENTED;
+
+    /*path compiler;
     compiler = resolveExecutable("kotlinc");
     if (compiler.empty())
         return;
@@ -199,12 +222,14 @@ void detectKotlinCompilers(Build &s)
     auto C = std::make_shared<KotlinCompiler>(s.swctx);
     C->file = compiler;
     //C->input_extensions = { ".kt", ".kts" };
-    //s.registerProgram("com.JetBrains.kotlin.kotlinc", C);
+    //s.registerProgram("com.JetBrains.kotlin.kotlinc", C);*/
 }
 
-void detectJavaCompilers(Build &s)
+void detectJavaCompilers(SwCoreContext &s)
 {
-    path compiler;
+    SW_UNIMPLEMENTED;
+
+    /*path compiler;
     compiler = resolveExecutable("javac");
     if (compiler.empty())
         return;
@@ -213,12 +238,14 @@ void detectJavaCompilers(Build &s)
     auto C = std::make_shared<JavaCompiler>(s.swctx);
     C->file = compiler;
     //C->input_extensions = { ".java", };
-    //s.registerProgram("com.oracle.java.javac", C);
+    //s.registerProgram("com.oracle.java.javac", C);*/
 }
 
-void detectFortranCompilers(Build &s)
+void detectFortranCompilers(SwCoreContext &s)
 {
-    path compiler;
+    SW_UNIMPLEMENTED;
+
+    /*path compiler;
     compiler = resolveExecutable("gfortran");
     if (compiler.empty())
     {
@@ -250,13 +277,15 @@ void detectFortranCompilers(Build &s)
         ".fpp",
         ".FPP",
     };*/
-    //s.registerProgram("org.gnu.gcc.fortran", C);
+    //s.registerProgram("org.gnu.gcc.fortran", C);*/
 }
 
-void detectGoCompilers(Build &s)
+void detectGoCompilers(SwCoreContext &s)
 {
+    SW_UNIMPLEMENTED;
+
 #if defined(_WIN32)
-    auto compiler = path("go");
+    /*auto compiler = path("go");
     compiler = resolveExecutable(compiler);
     if (compiler.empty())
         return;
@@ -266,15 +295,17 @@ void detectGoCompilers(Build &s)
     SW_UNIMPLEMENTED;
     //C->Extension = s.Settings.TargetOS.getExecutableExtension();
     //C->input_extensions = { ".go", };
-    //s.registerProgram("org.google.golang.go", C);
+    //s.registerProgram("org.google.golang.go", C);*/
 #else
 #endif
 }
 
-void detectRustCompilers(Build &s)
+void detectRustCompilers(SwCoreContext &s)
 {
+    SW_UNIMPLEMENTED;
+
 #if defined(_WIN32)
-    auto compiler = get_home_directory() / ".cargo" / "bin" / "rustc";
+    /*auto compiler = get_home_directory() / ".cargo" / "bin" / "rustc";
     compiler = resolveExecutable(compiler);
     if (compiler.empty())
         return;
@@ -284,14 +315,33 @@ void detectRustCompilers(Build &s)
     SW_UNIMPLEMENTED;
     //C->Extension = s.Settings.TargetOS.getExecutableExtension();
     //C->input_extensions = { ".rs", };
-    //s.registerProgram("org.rust.rustc", C);
+    //s.registerProgram("org.rust.rustc", C);*/
 #else
 #endif
 }
 
+struct VSInstance
+{
+    path root;
+    Version version;
+};
+
 using VSInstances = VersionMap<VSInstance>;
 
-VSInstances &gatherVSInstances(Build &s)
+struct SimpleProgram : Program
+{
+    using Program::Program;
+
+    std::shared_ptr<Program> clone() const override { return std::make_shared<SimpleProgram>(*this); }
+    std::shared_ptr<builder::Command> getCommand() const override
+    {
+        auto c = std::make_shared<builder::Command>(swctx);
+        c->setProgram(file);
+        return c;
+    }
+};
+
+VSInstances &gatherVSInstances(SwCoreContext &s)
 {
     static VSInstances instances = [&s]()
     {
@@ -308,7 +358,7 @@ VSInstances &gatherVSInstances(Build &s)
             if (i.VSInstallLocation.find(L"Preview") != std::wstring::npos)
                 v = v.toString() + "-preview";
 
-            VSInstance inst(s.swctx);
+            VSInstance inst;
             inst.root = root;
             inst.version = v;
             instances.emplace(v, inst);
@@ -319,9 +369,11 @@ VSInstances &gatherVSInstances(Build &s)
     return instances;
 }
 
-void detectCSharpCompilers(Build &s)
+void detectCSharpCompilers(SwCoreContext &s)
 {
-    auto &instances = gatherVSInstances(s);
+    SW_UNIMPLEMENTED;
+
+    /*auto &instances = gatherVSInstances(s);
     for (auto &[v, i] : instances)
     {
         auto root = i.root;
@@ -345,10 +397,10 @@ void detectCSharpCompilers(Build &s)
         //C->Extension = s.Settings.TargetOS.getExecutableExtension();
         //C->input_extensions = { ".cs", };
         //s.registerProgram("com.Microsoft.VisualStudio.Roslyn.csc", C);
-    }
+    }*/
 }
 
-void detectWindowsCompilers(Build &s)
+void detectWindowsCompilers(SwCoreContext &s)
 {
     // we need ifdef because of cmVSSetupAPIHelper
     // but what if we're on Wine?
@@ -359,8 +411,8 @@ void detectWindowsCompilers(Build &s)
 
     for (auto target_arch : {ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64})
     {
-        auto new_settings = s.getBuildSettings();
-        new_settings.TargetOS.Arch = target_arch;
+        auto new_settings = s.getHostOs();
+        new_settings.Arch = target_arch;
 
         for (auto &[_, instance] : instances)
         {
@@ -391,26 +443,28 @@ void detectWindowsCompilers(Build &s)
 
             // lib, link
             {
-                auto Linker = std::make_shared<VisualStudioLinker>(s.swctx);
-                Linker->Type = LinkerType::MSVC;
-                Linker->file = compiler.parent_path() / "link.exe";
-                Linker->Extension = s.getBuildSettings().TargetOS.getExecutableExtension();
-
+                //auto Linker = std::make_shared<VisualStudioLinker>(s.swctx);
+                //Linker->Type = LinkerType::MSVC;
+                //Linker->file = compiler.parent_path() / "link.exe";
+                //Linker->Extension = s.getBuildSettings().TargetOS.getExecutableExtension();
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler.parent_path() / "link.exe";
                 if (instance.version.isPreRelease())
-                    Linker->getVersion().getExtra() = instance.version.getExtra();
-                auto &link = addProgram(s, "com.Microsoft.VisualStudio.VC.link", Linker);
-                link.ts = new_settings.getTargetSettings();
-                link.setSettingsComparator(std::make_unique<LinkerSettingsComparator>());
-                instance.link_versions.insert(Linker->getVersion());
+                    p->getVersion().getExtra() = instance.version.getExtra();
+                auto &link = addProgram(s, "com.Microsoft.VisualStudio.VC.link", p);
+
+                //link.ts = new_settings.getTargetSettings();
+                //link.setSettingsComparator(std::make_unique<LinkerSettingsComparator>());
+                //instance.link_versions.insert(Linker->getVersion());
 
                 if (s.getHostOs().Arch != target_arch)
                 {
-                    auto c = Linker->createCommand(s.swctx);
+                    auto c = p->getCommand();
                     c->addPathDirectory(host_root);
                 }
 
                 //
-                auto Librarian = std::make_shared<VisualStudioLibrarian>(s.swctx);
+                /*auto Librarian = std::make_shared<VisualStudioLibrarian>(s.swctx);
                 Librarian->Type = LinkerType::MSVC;
                 Librarian->file = compiler.parent_path() / "lib.exe";
                 Librarian->Extension = s.getBuildSettings().TargetOS.getStaticLibraryExtension();
@@ -426,11 +480,11 @@ void detectWindowsCompilers(Build &s)
                 {
                     auto c = Librarian->createCommand(s.swctx);
                     c->addPathDirectory(host_root);
-                }
+                }*/
             }
 
             // ASM
-            if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
+            /*if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
             {
                 auto C = std::make_shared<VisualStudioASMCompiler>(s.swctx);
                 C->Type = CompilerType::MSVC;
@@ -467,10 +521,10 @@ void detectWindowsCompilers(Build &s)
                     auto c = C->createCommand(s.swctx);
                     c->addPathDirectory(host_root);
                 }
-            }
+            }*/
 
             // now register
-            addProgramNoFile(s, "com.Microsoft.VisualStudio", std::make_shared<VSInstance>(instance));
+            //addProgramNoFile(s, "com.Microsoft.VisualStudio", std::make_shared<VSInstance>(instance));
 
             continue;
 
@@ -571,7 +625,7 @@ void detectWindowsCompilers(Build &s)
     }
 
     // .rc
-    {
+    /*{
         auto C = std::make_shared<RcTool>(s.swctx);
         C->file = s.getBuildSettings().Native.SDK.getPath("bin") / toStringWindows(s.getHostOs().Arch) / "rc.exe";
         //for (auto &idir : COpts.System.IncludeDirectories)
@@ -580,12 +634,12 @@ void detectWindowsCompilers(Build &s)
         //C->input_extensions = { ".rc", };
         auto &rc = addProgram(s, "com.Microsoft.Windows.rc", C);
         rc.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
-    }
+    }*/
 
     // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
     for (auto target_arch : { ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64 })
     {
-        auto new_settings = s.getBuildSettings();
+        /*auto new_settings = s.getBuildSettings();
         new_settings.TargetOS.Arch = target_arch;
 
         for (auto &[_, instance] : instances)
@@ -662,7 +716,7 @@ void detectWindowsCompilers(Build &s)
                 ucrt.Public.NativeLinkerOptions::System.LinkDirectories.insert(i / toStringWindows(target_arch));
         }
         // early prepare
-        while (ucrt.prepare());
+        while (ucrt.prepare());*/
     }
 
     return;
@@ -700,11 +754,13 @@ void detectWindowsCompilers(Build &s)
     }
 }
 
-void detectNonWindowsCompilers(Build &s)
+void detectNonWindowsCompilers(SwCoreContext &s)
 {
     path p;
 
-    NativeLinkerOptions LOpts;
+    SW_UNIMPLEMENTED;
+
+    /*NativeLinkerOptions LOpts;
 
     //LOpts.System.LinkLibraries.push_back("pthread"); // remove and add to progs explicitly?
     //LOpts.System.LinkLibraries.push_back("dl"); // remove and add to progs explicitly?
@@ -755,13 +811,15 @@ void detectNonWindowsCompilers(Build &s)
             clang_vers.push_back(d.path() / "bin/clang");
             clangpp_vers.push_back(d.path() / "bin/clang++");
         }
-    }
+    }*/
 
     //p = resolve("ld.gold");
-    for (auto &v : gcc_vers)
+    //for (auto &v : gcc_vers)
     //for (auto &v : gccpp_vers) // this links correct c++ library
     {
-        p = resolve(v);
+        SW_UNIMPLEMENTED;
+
+        /*p = resolve(v);
         if (!p.empty())
         {
             auto Linker = std::make_shared<GNULinker>(s.swctx);
@@ -780,10 +838,10 @@ void detectNonWindowsCompilers(Build &s)
 
             *Linker = lopts2;
             //s.registerProgram("org.gnu.gcc.ld", Linker);
-        }
+        }*/
     }
 
-    NativeCompilerOptions COpts;
+    //NativeCompilerOptions COpts;
 
     path macos_sdk_dir;
     SW_UNIMPLEMENTED;
@@ -825,11 +883,13 @@ void detectNonWindowsCompilers(Build &s)
         s.registerProgram("org.gnu.gcc.as", C);
     }*/
 
-    for (auto &v : gcc_vers)
+    /*for (auto &v : gcc_vers)
     {
         p = resolve(v);
         if (!p.empty())
         {
+            SW_UNIMPLEMENTED;
+
             // C
             {
                 auto C = std::make_shared<GNUCompiler>(s.swctx);
@@ -853,6 +913,8 @@ void detectNonWindowsCompilers(Build &s)
         p = resolve(v);
         if (!p.empty())
         {
+            SW_UNIMPLEMENTED;
+
             // CPP
             {
                 auto C = std::make_shared<GNUCompiler>(s.swctx);
@@ -866,14 +928,17 @@ void detectNonWindowsCompilers(Build &s)
                     C->IncludeSystemRoot = macos_sdk_dir;
             }
         }
-    }
+    }*/
 
     // llvm/clang
     {
-        p = resolve("llvm-ar");
+        SW_UNIMPLEMENTED;
+        //p = resolve("llvm-ar");
         if (!p.empty())
         {
-            auto Librarian = std::make_shared<GNULibrarian>(s.swctx);
+            SW_UNIMPLEMENTED;
+
+            /*auto Librarian = std::make_shared<GNULibrarian>(s.swctx);
             Librarian->Type = LinkerType::GNU;
             Librarian->file = p;
             SW_UNIMPLEMENTED;
@@ -882,16 +947,19 @@ void detectNonWindowsCompilers(Build &s)
             *Librarian = LOpts;
             //s.registerProgram("org.LLVM.ar", Librarian);
             //if (s.getHostOs().is(OSType::Macos))
-            //Librarian->createCommand()->use_response_files = false;
+            //Librarian->createCommand()->use_response_files = false;*/
         }
 
-        //p = resolve("ld.gold");
-        for (auto &v : clang_vers)
+        ////p = resolve("ld.gold");
+        SW_UNIMPLEMENTED;
+        /*for (auto &v : clang_vers)
         //for (auto &v : clangpp_vers) // this links correct c++ library
         {
             p = resolve(v);
             if (!p.empty())
             {
+                SW_UNIMPLEMENTED;
+
                 bool appleclang = is_apple_clang(p);
 
                 auto Linker = std::make_shared<GNULinker>(s.swctx);
@@ -937,9 +1005,10 @@ void detectNonWindowsCompilers(Build &s)
                         C->IncludeSystemRoot = macos_sdk_dir;
                 }
             }
-        }
+        }*/
 
-        for (auto &v : clangpp_vers)
+        SW_UNIMPLEMENTED;
+        /*for (auto &v : clangpp_vers)
         {
             p = resolve(v);
             if (!p.empty())
@@ -959,13 +1028,13 @@ void detectNonWindowsCompilers(Build &s)
                         C->IncludeSystemRoot = macos_sdk_dir;
                 }
             }
-        }
+        }*/
     }
 }
 
-void detectNativeCompilers(Build &s)
+void detectNativeCompilers(SwCoreContext &s)
 {
-    auto &os = s.getBuildSettings().TargetOS;
+    auto &os = s.getHostOs();
     if (os.is(OSType::Windows) || os.is(OSType::Cygwin))
     {
         if (os.is(OSType::Cygwin))
@@ -974,45 +1043,6 @@ void detectNativeCompilers(Build &s)
     }
     else
         detectNonWindowsCompilers(s);
-}
-
-void VSInstance::activate(Build &s) const
-{
-    SW_UNIMPLEMENTED;
-
-    /*if (cl_versions.empty())
-        throw SW_RUNTIME_ERROR("missing cl.exe versions");
-    if (link_versions.empty())
-        throw SW_RUNTIME_ERROR("missing vs tools versions");
-
-    if (!s.activateProgram({ "com.Microsoft.VisualStudio.VC.cl", *cl_versions.rbegin() }, false))
-        throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.cl");
-    if (!s.activateProgram({ "com.Microsoft.VisualStudio.VC.ml", *link_versions.rbegin() }, false))
-        throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.ml");
-
-    SW_UNIMPLEMENTED;
-    //s.Settings.Native.CompilerType = CompilerType::MSVC;
-
-    // linkers
-    auto lib = s.getProgram({ "com.Microsoft.VisualStudio.VC.lib", *link_versions.rbegin() }, false);
-    auto link = s.getProgram({ "com.Microsoft.VisualStudio.VC.link", *link_versions.rbegin() }, false);
-    auto r = lib && link;
-    if (r)
-    {
-        SW_UNIMPLEMENTED;
-        //s.Settings.Native.Librarian = std::dynamic_pointer_cast<NativeLinker>(lib->clone());
-        //s.Settings.Native.Linker = std::dynamic_pointer_cast<NativeLinker>(link->clone());
-        LOG_TRACE(logger, "activated com.Microsoft.VisualStudio.VC.lib and com.Microsoft.VisualStudio.VC.link successfully");
-    }
-    else
-    {
-        if (lib)
-            throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.link");
-        else if (link)
-            throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.lib");
-        else
-            throw SW_RUNTIME_ERROR("cannot activate com.Microsoft.VisualStudio.VC.lib and com.Microsoft.VisualStudio.VC.link");
-    }*/
 }
 
 }

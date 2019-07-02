@@ -180,8 +180,6 @@ void build(Solution &s)
             "org.sw.demo.boost.uuid"_dep;
         cpp_driver += "src/sw/driver/.*"_rr;
         cpp_driver -= "src/sw/driver/inserts/.*"_rr;
-        if (cpp_driver.getSettings().TargetOS.Type != OSType::Windows)
-            cpp_driver -= "src/sw/driver/misc/.*"_rr;
         embed("pub.egorpugin.primitives.tools.embedder-master"_dep, cpp_driver, "src/sw/driver/inserts/inserts.cpp.in");
         gen_flex_bison("org.sw.demo.lexxmark.winflexbison-master"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
         if (cpp_driver.getCompilerType() == CompilerType::MSVC)

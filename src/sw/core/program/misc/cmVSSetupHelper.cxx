@@ -1,5 +1,8 @@
 /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
    file Copyright.txt or https://cmake.org/licensing for details.  */
+
+#ifdef _WIN32
+
 #include "cmVSSetupHelper.h"
 
 #ifndef VSSetupConstants
@@ -274,3 +277,5 @@ bool cmVSSetupAPIHelper::Initialize()
   initializationFailure = false;
   return true;
 }
+
+#endif

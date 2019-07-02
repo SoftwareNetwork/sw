@@ -3,6 +3,8 @@
 #ifndef cmVSSetupHelper_h
 #define cmVSSetupHelper_h
 
+#ifdef _WIN32
+
 #ifndef NOMINMAX
 #define NOMINMAX // Undefine min and max defined by windows.h
 #endif
@@ -144,5 +146,7 @@ private:
   // indicated if COM initialization is successful
   HRESULT comInitialized;
 };
+
+#endif // #ifdef _WIN32
 
 #endif

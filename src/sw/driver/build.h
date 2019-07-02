@@ -31,6 +31,7 @@ namespace driver::cpp { struct Driver; }
 //struct Generator;
 struct Module;
 struct ModuleStorage;
+struct SwCoreContext;
 
 template <class T>
 struct ExecutionPlan;
@@ -171,7 +172,7 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
     // most important
-    SwContext &swctx;
+    SwCoreContext &swctx;
     const driver::cpp::Driver &driver;
     std::vector<BuildSettings> settings; // initial settings
 private:
@@ -308,7 +309,7 @@ public:
     bool perform_checks = true;
     bool ide = false;
 
-    Build(SwContext &swctx, const driver::cpp::Driver &driver);
+    Build(SwCoreContext &swctx, const driver::cpp::Driver &driver);
     Build(const Build &);
     ~Build();
 

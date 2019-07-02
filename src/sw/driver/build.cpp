@@ -192,23 +192,23 @@ static String getCurrentModuleId()
     return shorten_hash(sha1(getProgramName()), 6);
 }
 
-static path getImportFilePrefix(const SwContext &swctx)
+static path getImportFilePrefix(const SwBuilderContext &swctx)
 {
     static const String pch_ver = "1";
     return swctx.getLocalStorage().storage_dir_tmp / ("sw." + pch_ver + "." + getCurrentModuleId());
 }
 
-static path getImportDefinitionsFile(const SwContext &swctx)
+static path getImportDefinitionsFile(const SwBuilderContext &swctx)
 {
     return getImportFilePrefix(swctx) += ".def";
 }
 
-static path getImportLibraryFile(const SwContext &swctx)
+static path getImportLibraryFile(const SwBuilderContext &swctx)
 {
     return getImportFilePrefix(swctx) += ".lib";
 }
 
-static path getImportPchFile(const SwContext &swctx)
+static path getImportPchFile(const SwBuilderContext &swctx)
 {
     return getImportFilePrefix(swctx) += ".cpp";
 }
@@ -229,7 +229,7 @@ static Strings getExports(HMODULE lib)
 }
 #endif
 
-static void addImportLibrary(const SwContext &swctx, NativeCompiledTarget &t)
+static void addImportLibrary(const SwBuilderContext &swctx, NativeCompiledTarget &t)
 {
 #ifdef _WIN32
     auto lib = (HMODULE)primitives::getModuleForSymbol();
@@ -298,7 +298,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
     return h;
 }
 
-static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwContext &swctx, const path &p, std::set<PackageVersionGroupNumber> &gns)
+static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwBuilderContext &swctx, const path &p, std::set<PackageVersionGroupNumber> &gns)
 {
     UnresolvedPackages udeps;
     FilesOrdered headers;
@@ -340,13 +340,13 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return { headers, udeps };
 }
 
-static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwContext &swctx, const path &in_config_file)
+static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwBuilderContext &swctx, const path &in_config_file)
 {
     std::set<PackageVersionGroupNumber> gns;
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-static auto build_configs(SwContext &swctx, const driver::cpp::Driver &driver, const std::unordered_set<LocalPackage> &pkgs)
+static auto build_configs(SwCoreContext &swctx, const driver::cpp::Driver &driver, const std::unordered_set<LocalPackage> &pkgs)
 {
     Build b(swctx, driver); // cache?
     b.execute_jobs = config_jobs;
@@ -369,7 +369,7 @@ static String gn2suffix(PackageVersionGroupNumber gn)
     return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
 }
 
-Build::Build(SwContext &swctx, const driver::cpp::Driver &driver)
+Build::Build(SwCoreContext &swctx, const driver::cpp::Driver &driver)
     : swctx(swctx), driver(driver), checker(*this)
 {
     auto hs = createSettings();
@@ -419,6 +419,11 @@ void Build::addSettings(const BuildSettings &ss)
     auto i = std::find(settings.begin(), settings.end(), ss);
     if (i == settings.end())
         settings.push_back(ss);
+}
+
+void detectCompilers(Build &)
+{
+    //SW_UNIMPLEMENTED;
 }
 
 void Build::detectCompilers()
@@ -1511,7 +1516,7 @@ void Build::load(const path &fn, bool configless)
     show_output = cl_show_output;
 }
 
-static Build::CommandExecutionPlan load(const SwContext &swctx, const path &fn, const Build &s)
+static Build::CommandExecutionPlan load(const SwBuilderContext &swctx, const path &fn, const Build &s)
 {
     primitives::BinaryStream ctx;
     ctx.load(fn);

@@ -375,6 +375,9 @@ void Target::setSource(const Source &s)
         }
     }
 
+    if (auto sd = getSolution().getSourceDir(s, getPackage().version); sd)
+        setSourceDirectory(sd.value());
+
     auto d = getSolution().fetch_dir;
     if (d.empty() || !isLocal())
         return;

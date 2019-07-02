@@ -190,7 +190,7 @@ UnresolvedPackage DependencyData::getPackage() const
     return package;
 }
 
-LocalPackage DependencyData::getResolvedPackage() const
+PackageId DependencyData::getResolvedPackage() const
 {
     if (!target)
         throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());

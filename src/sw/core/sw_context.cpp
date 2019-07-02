@@ -18,12 +18,24 @@ DECLARE_STATIC_LOGGER(logger, "context");
 namespace sw
 {
 
+void detectCompilers(SwCoreContext &s);
+
 IDriver::~IDriver() = default;
 
-SwContext::SwContext(const path &local_storage_root_dir)
+SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
 {
     source_dir = fs::canonical(fs::current_path());
+    detectCompilers(*this);
+}
+
+SwCoreContext::~SwCoreContext()
+{
+}
+
+SwContext::SwContext(const path &local_storage_root_dir)
+    : SwCoreContext(local_storage_root_dir)
+{
 }
 
 SwContext::~SwContext()

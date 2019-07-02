@@ -17,7 +17,6 @@ namespace sw
 {
 
 struct NativeCompiledTarget;
-struct SwContext;
 
 namespace cmd
 {

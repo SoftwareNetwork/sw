@@ -32,7 +32,7 @@ struct ITarget : ICastable
 {
     virtual ~ITarget() = 0;
 
-    virtual const LocalPackage &getPackage() const = 0;
+    virtual const PackageId &getPackage() const = 0;
 
     /// can be registered to software network
     virtual bool isReal() const = 0;
@@ -167,8 +167,6 @@ struct TargetMap : PackageVersionMapBase<TargetData, std::unordered_map, primiti
 
     using Base::find;
 
-    detail::SimpleExpected<Base::version_map_type::iterator> find_and_select_version(const PackagePath &pp);
-    detail::SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const;
     detail::SimpleExpected<std::pair<Version, ITarget *>> find(const PackagePath &pp, const TargetSettings &ts) const;
     ITarget *find(const PackageId &pkg, const TargetSettings &ts) const;
     ITarget *find(const UnresolvedPackage &pkg, const TargetSettings &ts) const;
@@ -184,6 +182,10 @@ struct TargetMap : PackageVersionMapBase<TargetData, std::unordered_map, primiti
             return v.rbegin_releases()->first;
         return v.rbegin()->first;
     }
+
+private:
+    detail::SimpleExpected<Base::version_map_type::iterator> find_and_select_version(const PackagePath &pp);
+    detail::SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const;
 };
 
 } // namespace sw

@@ -31,7 +31,7 @@ using TargetSettingKey = String;
 using TargetSettingValue = String;
 struct TargetSettings;
 
-struct TargetSetting
+struct SW_CORE_API TargetSetting
 {
     TargetSetting(const TargetSettingKey &k);
     TargetSetting(const TargetSetting &);

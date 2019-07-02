@@ -46,7 +46,7 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
 
     const TargetSettings &getSettings() const override { return settings; }
 
-    LocalPackage getResolvedPackage() const;
+    PackageId getResolvedPackage() const;
 
 private:
     const ITarget *target = nullptr;

@@ -28,7 +28,7 @@ std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s)
 namespace driver::cpp
 {
 
-Driver::Driver(SwContext &swctx)
+Driver::Driver(SwCoreContext &swctx)
     : swctx(swctx)
 {
     build = std::make_unique<Build>(swctx, *this);

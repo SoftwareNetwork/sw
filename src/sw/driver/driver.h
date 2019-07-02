@@ -20,7 +20,7 @@ namespace driver::cpp
 
 struct SW_DRIVER_CPP_API Driver : IDriver
 {
-    Driver(SwContext &swctx);
+    Driver(SwCoreContext &swctx);
     virtual ~Driver();
 
     // driver api
@@ -36,7 +36,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     ModuleStorage &getModuleStorage() const;
 
 private:
-    SwContext &swctx;
+    SwCoreContext &swctx;
     mutable std::unordered_map<String, std::unique_ptr<ChecksStorage>> checksStorages;
     std::unique_ptr<ModuleStorage> module_storage;
     std::unique_ptr<Build> build;

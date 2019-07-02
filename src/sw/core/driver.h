@@ -13,7 +13,7 @@ namespace sw
 
 struct Input;
 
-struct IDriver
+struct SW_CORE_API IDriver
 {
     virtual ~IDriver() = 0;
 
