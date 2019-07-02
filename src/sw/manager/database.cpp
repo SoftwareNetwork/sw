@@ -302,11 +302,11 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 {
     std::lock_guard lk(m);
 
-    db->start_transaction();
+    db->execute("BEGIN;");
 
     ScopeGuard sg([this]()
     {
-        db->rollback_transaction(false);
+        db->execute("ROLLBACK;");
         //throw SW_RUNTIME_ERROR("db transaction not finished");
     });
 
@@ -392,7 +392,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         ));
     }
 
-    db->commit_transaction();
+    db->execute("COMMIT;");
     sg.dismiss();
 }
 
