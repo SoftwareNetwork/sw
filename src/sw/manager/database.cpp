@@ -160,6 +160,11 @@ void Database::open(bool read_only, bool in_memory)
 
     // explicit
     db->execute("PRAGMA foreign_keys = ON");
+    if (!in_memory)
+    {
+        db->execute("PRAGMA journal_mode = WAL");
+        db->execute("PRAGMA synchronous = NORMAL");
+    }
 }
 
 template <typename T>
@@ -302,11 +307,11 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 {
     std::lock_guard lk(m);
 
-    db->execute("BEGIN;");
+    db->execute("BEGIN");
 
     ScopeGuard sg([this]()
     {
-        db->execute("ROLLBACK;");
+        db->execute("ROLLBACK");
         //throw SW_RUNTIME_ERROR("db transaction not finished");
     });
 
@@ -392,7 +397,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         ));
     }
 
-    db->execute("COMMIT;");
+    db->execute("COMMIT");
     sg.dismiss();
 }
 
